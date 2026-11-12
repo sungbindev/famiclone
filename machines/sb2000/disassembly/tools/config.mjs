@@ -26,7 +26,7 @@ export const BIOS_DIR = path.join(MACHINE_DIR, 'bios');
 export const BIOS_BUILD_DIR = path.join(BIOS_DIR, 'build');
 
 /** 带调试服务的模拟器可执行文件（在本仓库的 virtuanes/ 里维护，需先编译） */
-export const EMULATOR_EXE = path.join(REPO_ROOT, 'virtuanes', 'out', 'Release', 'bin', 'VirtuaNES.exe');
+export const EMULATOR_EXE = path.join(REPO_ROOT, 'build', 'virtuanes', 'Release', 'bin', 'VirtuaNES.exe');
 
 /** SB2K BIOS 原始 ROM（含 16 字节 iNES 文件头） */
 export const BIOS_ROM = path.join(MACHINE_DIR, 'reference', 'rom', 'SB2K_BIOS.NES');

@@ -78,7 +78,7 @@ export async function buildEmulator() {
     throw new FcdevError('编译模拟器失败', { code: 'EMULATOR_BUILD_FAILED', hint: `${build.stdout}${build.stderr}`.trim().split('\n').slice(-15).join('\n') });
   }
 
-  const builtDir = path.join(sourceDir, 'out', 'Release', 'bin');
+  const builtDir = path.join(REPO_ROOT, 'build', 'virtuanes', 'Release', 'bin');
   const binDir = path.join(EMULATOR_PACKAGE_DIR, 'bin');
   rmSync(binDir, { recursive: true, force: true });
   mkdirSync(binDir, { recursive: true });

@@ -6,7 +6,7 @@
 # 日期：2026-11-10
 # 备注：用法 .\build.ps1 [-Configuration Debug|Release] [-Rebuild] [-Run]；
 #       需要 Visual Studio 2026（含“使用 C++ 的桌面开发”与 v145 工具集）；
-#       输出在 out\<配置>\bin\VirtuaNES.exe，中间文件在 out\<配置>\obj\；
+#       输出在仓库根目录的 build\virtuanes\<配置>\bin\VirtuaNES.exe，中间文件在 build\virtuanes\<配置>\obj\；
 #       只支持 Win32，工程里的 x64 配置缺少可用的 DirectInput 库；
 #       文件需保存为带 BOM 的 UTF-8，否则 Windows PowerShell 5.1 会按 ANSI 读取而使中文乱码。
 # ------------------------------------------------------------------------
@@ -28,7 +28,7 @@ $ErrorActionPreference = 'Stop'
 $sourceRoot = $PSScriptRoot
 $projectPath = Join-Path $sourceRoot 'VirtuaNES\VirtuaNES.vcxproj'
 $exeName = 'VirtuaNES.exe'
-$outDir = Join-Path $sourceRoot "out\$Configuration\bin"
+$outDir = Join-Path (Split-Path $sourceRoot -Parent) "build\virtuanes\$Configuration\bin"
 $exePath = Join-Path $outDir $exeName
 
 # 经 vswhere 查找最新的 MSBuild，避免依赖开发者命令提示符
@@ -43,7 +43,7 @@ if (-not $msbuildPath) {
 
 # 正在运行的程序会占用输出文件，编译前先结束
 Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -and $_.Path.StartsWith($sourceRoot, [System.StringComparison]::OrdinalIgnoreCase) } |
+    Where-Object { $_.Path -and $_.Path.StartsWith($outDir, [System.StringComparison]::OrdinalIgnoreCase) } |
     Stop-Process -Force
 
 $target = if ($Rebuild) { 'Rebuild' } else { 'Build' }

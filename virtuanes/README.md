@@ -11,7 +11,6 @@ virtuanes/
   VirtuaNES.slnx        Visual Studio 2026 解决方案
   build.ps1             命令行编译脚本
   README.md  LICENSE    文档与许可
-  out/                  构建输出（不在 Git 里）：out/<配置>/bin 放 exe、pdb、ini，out/<配置>/obj 放中间文件
   VirtuaNES/            工程与全部源码
     VirtuaNES.vcxproj   工程文件
     lang/Chinese.vlp    中文语言包，编译后复制到 exe 旁
@@ -51,7 +50,7 @@ Windows，Visual Studio 2026（含“使用 C++ 的桌面开发”与 v145 工�
 .\build.ps1 -Configuration Release
 ```
 
-输出 `out\<配置>\bin\VirtuaNES.exe`，同目录有 `Chinese.vlp` 与运行后生成的 `VirtuaNES.ini`；编译前先关闭正在运行的模拟器。没有 `C:\DirectXSDK` 时用 Windows SDK 自带的 DirectInput 头文件即可编译。
+输出在仓库根目录的 `build\virtuanes\<配置>\bin\VirtuaNES.exe`，同目录有 `Chinese.vlp` 与运行后生成的 `VirtuaNES.ini`；编译前先关闭正在运行的模拟器。没有 `C:\DirectXSDK` 时用 Windows SDK 自带的 DirectInput 头文件即可编译。
 
 语言包用相对文件名加载（上游行为），所以要从 exe 所在目录启动（工作目录是该目录），否则界面不显示中文。`build.ps1 -Run` 按此启动。
 

@@ -7,7 +7,7 @@
 ## 环境
 
 - Windows，Node.js 22 及以上（脚本无第三方依赖）。
-- 驱动模拟器的脚本需要先编译本仓库根目录的 `virtuanes/`（见该目录的 `README.md`），`tools/config.mjs` 的 `EMULATOR_EXE` 指向它的 `out/Release/bin/VirtuaNES.exe`。
+- 驱动模拟器的脚本需要先编译本仓库根目录的 `virtuanes/`（见该目录的 `README.md`），`tools/config.mjs` 的 `EMULATOR_EXE` 指向仓库根目录的 `build/virtuanes/Release/bin/VirtuaNES.exe`。
 
 ## 常用命令
 

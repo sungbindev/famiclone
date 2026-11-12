@@ -1772,13 +1772,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(MSBuildThisFileDirectory)..\out\$(Configuration)\bin\</OutDir>
-    <IntDir>$(MSBuildThisFileDirectory)..\out\$(Configuration)\obj\</IntDir>
+    <OutDir>$(MSBuildThisFileDirectory)..\..\build\virtuanes\$(Configuration)\bin\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)..\..\build\virtuanes\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\DirectXSDK\Include;$(IncludePath)</IncludePath>
-    <OutDir>$(MSBuildThisFileDirectory)..\out\$(Configuration)\bin\</OutDir>
-    <IntDir>$(MSBuildThisFileDirectory)..\out\$(Configuration)\obj\</IntDir>
+    <OutDir>$(MSBuildThisFileDirectory)..\..\build\virtuanes\$(Configuration)\bin\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)..\..\build\virtuanes\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

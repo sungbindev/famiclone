@@ -1,10 +1,10 @@
 # bbk-loader
 
-在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行：把机器换成步步高的 BIOS，再从软盘启动步步高的 BBGDOS。用 fcdev 开发，C 语言。BIOS 映像 `bios.bbk` 由 [bbk-bios](../bbk-bios/README.md) 构建。
+在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行：把机器换成步步高的 BIOS，再从软盘启动步步高的 BBGDOS。用 fcdev 开发，C 语言。BIOS 映像 `BIOS.BBK` 由 [bbk-bios](../bbk-bios/README.md) 构建。
 
 ## 使用
 
-把 `START.EXE` 与 `BIOS.BBK`（`bios.bbk` 改成 8.3 文件名）放在同一张盘里，在 DOS 提示符下输入：
+把 `START.EXE` 与 `BIOS.BBK`放在同一张盘里，在 DOS 提示符下输入：
 
 ```text
 start

@@ -25,7 +25,7 @@ export const ORIGINAL_SOURCE_DIR = join(REPO_ROOT, 'reference', 'docs', 'BBKDOS�
 export const ROM_BIOS10 = join(REPO_ROOT, 'reference', 'rom', 'bbk_bios10.nes');
 
 /** 本工程里的原版 BIOS 源码：从原厂资料原样复制（GBK 编码，不要转码保存），分析工具读这一份 */
-export const BIOS_SOURCE = join(BBK_ROOT, 'src', 'bios', 'Bios.asm');
+export const BIOS_SOURCE = join(BBK_ROOT, 'src', 'bios', 'bios.asm');
 
 /**
  * 按文件名取原厂源文件的路径：Bios.asm 用本工程里的副本，其余取原厂目录。

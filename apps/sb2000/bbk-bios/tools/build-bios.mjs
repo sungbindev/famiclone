@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：build-bios.mjs
-// 说明：把 src/Bios.asm 汇编成 bios.bbk：16 字节文件头加 8 个 16K 页，供 START.EXE 加载。
+// 说明：把 src/bios.asm 汇编成 BIOS.BBK：16 字节文件头加 8 个 16K 页，供 START.EXE 加载。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：用法 node tools/build-bios.mjs [输出文件]，缺省输出 build/bin/bios.bbk。
+// 备注：用法 node tools/build-bios.mjs [输出文件]，缺省输出 build/bin/BIOS.BBK。
 //       文件头：0-3 魔数 "BBKB"，4 格式版本（1），5 页数（8），6-7 入口地址（复位入口 Begin，小端），8-15 保留为 0。
 //       页 0-6 是字库点阵，取自 bbk_bios10.nes 的前 7 页；页 7 是汇编结果，起始地址 $C000，空隙填 $FF。
 // ------------------------------------------------------------------------
@@ -26,7 +26,7 @@ const CODE_PAGE_BASE = 0xc000;
 /** 文件头长度 */
 const HEADER_SIZE = 16;
 
-const output = process.argv[2] ?? join(BIN_DIR, 'bios.bbk');
+const output = process.argv[2] ?? join(BIN_DIR, 'BIOS.BBK');
 const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(BIOS_SOURCE);
 if (result.undefinedSymbols.size > 0) throw new Error(`有未定义符号：${[...result.undefinedSymbols.keys()].join(', ')}`);
 const entry = result.symbols.get('begin');

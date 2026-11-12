@@ -2,7 +2,7 @@
   "name": "bbk-bios",
   "version": "0.1.0",
   "private": true,
-  "description": "BBK BIOS ported to the SB2000 (6576 mode), built as bios.bbk",
+  "description": "BBK BIOS ported to the SB2000 (6576 mode), built as BIOS.BBK",
   "type": "module",
   "engines": {
     "node": ">=22"

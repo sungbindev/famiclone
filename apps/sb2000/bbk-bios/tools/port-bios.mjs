@@ -1,11 +1,11 @@
 // ------------------------------------------------------------------------
 // 名称：port-bios.mjs
-// 说明：把原厂 Bios.asm 改成能在 SB2000（6576 模式）上运行的 src/Bios.asm。
+// 说明：把原厂 Bios.asm 改成能在 SB2000（6576 模式）上运行的 src/bios.asm。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：用法 node tools/port-bios.mjs [--force]。读 machines/bbk/src/bios/Bios.asm（原版副本），按下面的规则替换后写入 src/Bios.asm。
-//       src/Bios.asm 是提交进仓库的源码，可以直接手改；再运行本脚本会按规则重新生成，覆盖手工修改，
+// 备注：用法 node tools/port-bios.mjs [--force]。读 machines/bbk/src/bios/bios.asm（原版副本），按下面的规则替换后写入 src/bios.asm。
+//       src/bios.asm 是提交进仓库的源码，可以直接手改；再运行本脚本会按规则重新生成，覆盖手工修改，
 //       所以目标文件与生成结果不同时必须加 --force 才写。
 //       文件按 latin1 读写，GBK 字节原样保留；只替换 ASCII 文字，硬件访问尽量一对一等长替换成对 HAL 的调用，
 //       所以代码布局与原厂一致，只在加入 HAL、去掉监控器的地方变化。

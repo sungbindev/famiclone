@@ -9,7 +9,7 @@
 ## 环境
 
 - Node.js 22 及以上，脚本没有第三方依赖。
-- BIOS 原版源码 [src/bios/Bios.asm](src/bios/Bios.asm) 在本目录里，原样复制自原厂资料（GBK 编码，不要用编辑器转码保存）；分析工具读这一份。
+- BIOS 原版源码 [src/bios/bios.asm](src/bios/bios.asm) 在本目录里，原样复制自原厂资料（GBK 编码，不要用编辑器转码保存）；分析工具读这一份。
 - 其他原厂资料仍在仓库根目录的 `reference/` 下，只引用不复制：`reference/docs/BBKDOS源代码/`（`Command.asm`、`Smcdos.asm` 与三个 `.sys`）、`reference/rom/bbk_bios10.nes`、`reference/rom/bbk_bios20.nes`、`reference/floppy-images/bbk/`。
 
 ## 使用
@@ -36,7 +36,7 @@
 
 ```text
 machines/bbk/
-  src/bios/      原版 BIOS 源码 Bios.asm（从原厂资料复制，GBK 编码）
+  src/bios/      原版 BIOS 源码 bios.asm（从原厂资料复制，GBK 编码）
   src/include/   还原出的符号文件 tvdef.asm
   tools/         GABBG 方言的 6502 汇编器、检查与比对工具、模拟器驱动
   test/          汇编器的测试

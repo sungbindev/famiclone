@@ -4,7 +4,7 @@
 ; 作者：sungbin
 ; 邮箱：sungbin@3578.cn
 ; 日期：2026-11-12
-; 备注：本文件被包含在 Bios.asm 的“临时部分”里（MoveRAMEnding 之前），随它一起复制到 $5800 运行，
+; 备注：本文件被包含在 bios.asm 的“临时部分”里（MoveRAMEnding 之前），随它一起复制到 $5800 运行，
 ;       因此只用相对跳转，不用绝对跳转，各过程只用栈保存寄存器，可以被 NMI 重入。
 ;       $C000-$FFFF 切到 DRAM 时 ROM 里的代码看不见，所以这些过程在 RAM 里也要有一份。
 ;       RAM 里的调用写 HalXxx-$C000+$5800，ROM 里的调用写 HalXxx。

@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：run-bbk.mjs
-// 说明：在模拟器里验证装载器 START.EXE：用 SB2000 的 BIOS 启动 SB-DOS，运行 start 加载 bios.bbk，再运行若干帧并截图。
+// 说明：在模拟器里验证装载器 START.EXE：用 SB2000 的 BIOS 启动 SB-DOS，运行 start 加载 BIOS.BBK，再运行若干帧并截图。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：用法 node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]；先构建 bios.bbk（node tools/port-bios.mjs、node tools/build-bios.mjs）
+// 备注：用法 node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]；先构建 BIOS.BBK（node tools/port-bios.mjs、node tools/build-bios.mjs）
 //       并在 apps/sb2000/bbk-loader 里构建（npm run build）。帧数缺省 300，截图缺省 build/work/shots/bbk.png。
 //       第三个参数写 dos 时，软盘用步步高 DOS 启动盘加上 START.EXE、BIOS.BBK（build/work/dosboot.img），这样步步高系统起来后
 //       可以从同一张盘启动 BBGDOS；缺省只含 START.EXE、BIOS.BBK（build/work/start.img）。
@@ -20,7 +20,7 @@ import { addFat12Files } from './fat12-add.mjs';
 
 const firmware = join(REPO_ROOT, 'reference', 'rom', 'SB2K_BIOS.NES');
 const loader = LOADER_EXE;
-const bios = join(BIN_DIR, 'bios.bbk');
+const bios = join(BIN_DIR, 'BIOS.BBK');
 for (const file of [firmware, loader, bios, DOS_FLOPPY]) {
   if (!existsSync(file)) throw new Error(`找不到 ${file}`);
 }

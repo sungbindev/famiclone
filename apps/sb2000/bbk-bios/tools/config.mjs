@@ -19,12 +19,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const BIOS_ROOT = resolve(here, '..');
 
 /** SB2000 版 BIOS 源码（GBK 编码，不要转码保存）；由原版经 tools/port-bios.mjs 移植而来，构建只读这一份 */
-export const BIOS_SOURCE = join(BIOS_ROOT, 'src', 'Bios.asm');
+export const BIOS_SOURCE = join(BIOS_ROOT, 'src', 'bios.asm');
 
 /** 构建输出目录（不进 Git） */
 export const BUILD_DIR = join(BIOS_ROOT, 'build');
 
-/** 构建产物（bios.bbk）放这里 */
+/** 构建产物（BIOS.BBK）放这里 */
 export const BIN_DIR = join(BUILD_DIR, 'bin');
 
 /** 验证用的临时文件（合并启动盘、截图）放这里，可随时删除 */

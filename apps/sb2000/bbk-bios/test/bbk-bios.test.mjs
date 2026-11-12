@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：bbk-bios.test.mjs
-// 说明：SB2000 版步步高 BIOS 的测试：移植规则命中次数、与提交的源码一致、汇编结果的大小与布局、bios.bbk 的文件格式。
+// 说明：SB2000 版步步高 BIOS 的测试：移植规则命中次数、与提交的源码一致、汇编结果的大小与布局、BIOS.BBK 的文件格式。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：运行 npm test；读取 reference/ 下的原厂源码与 ROM。bios.bbk 在模拟器里能否启动到 A:\> 要用 npm run verify 另行验证。
+// 备注：运行 npm test；读取 reference/ 下的原厂源码与 ROM。BIOS.BBK 在模拟器里能否启动到 A:\> 要用 npm run verify 另行验证。
 // ------------------------------------------------------------------------
 
 import { test } from 'node:test';
@@ -28,9 +28,9 @@ test('移植规则全部命中预期次数', () => {
   assert.deepEqual(bad, []);
 });
 
-test('src/Bios.asm 与移植规则的生成结果一致', () => {
+test('src/bios.asm 与移植规则的生成结果一致', () => {
   const { text } = portBios(readFileSync(ORIGINAL_BIOS_SOURCE, 'latin1'));
-  assert.ok(readFileSync(BIOS_SOURCE).equals(Buffer.from(text, 'latin1')), 'Bios.asm 被手改过：同步修改 tools/port-bios.mjs 的规则，或确认后用 --force 重新生成');
+  assert.ok(readFileSync(BIOS_SOURCE).equals(Buffer.from(text, 'latin1')), 'bios.asm 被手改过：同步修改 tools/port-bios.mjs 的规则，或确认后用 --force 重新生成');
 });
 
 test('源码里不再直接访问 NES PPU 数据口与步步高的 $FF00 区寄存器', () => {
@@ -64,10 +64,10 @@ test('向量表：NMI、复位、IRQ', () => {
   assert.equal(word(0xfffe), symbols.get('brkintentry') - 0xc000 + 0x5800);
 });
 
-test('bios.bbk：文件头、字库页取自原版 ROM、最后一页是汇编结果', () => {
+test('BIOS.BBK：文件头、字库页取自原版 ROM、最后一页是汇编结果', () => {
   const dir = mkdtempSync(join(tmpdir(), 'bbk-bios-'));
   try {
-    const output = join(dir, 'bios.bbk');
+    const output = join(dir, 'BIOS.BBK');
     execFileSync(process.execPath, [join(BIOS_ROOT, 'tools', 'build-bios.mjs'), output], { stdio: 'pipe' });
     const image = readFileSync(output);
     const result = assembleBios();

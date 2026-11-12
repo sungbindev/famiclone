@@ -1,0 +1,42 @@
+{
+  "name": "sb2000",
+  "title": "小霸王学习机 SB2000（SB-DOS）",
+  "cpu": "6502",
+  "cc65Target": "none",
+  "linkConfig": "link.cfg",
+  "startup": ["lib/crt0.o"],
+  "libraries": ["lib/sb2000.lib", "toolchain:lib/none.lib"],
+  "include": ["include"],
+  "asminclude": ["asminc"],
+  "defines": {
+    "__SB2000__": 1
+  },
+  "packager": "flat-exe",
+  "packagerOptions": {
+    "header": "4C????AA55",
+    "maxSize": 16384
+  },
+  "options": {
+    "banks": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "banked": {
+    "option": "banks",
+    "linkConfig": "link-banked.cfg",
+    "generatedFrom": 2,
+    "maxBanks": 113,
+    "memory": "BANK{n}: file = %O, start = $A000, size = $1000, fill = yes;",
+    "segment": "BANK{n}: load = BANK{n}, type = ro, optional = yes;"
+  },
+  "extension": ".EXE",
+  "nameRule": "dos-8.3",
+  "disk": {
+    "packager": "fat-floppy"
+  },
+  "run": {
+    "emulator": "virtuanes",
+    "mode": "firmware-disk"
+  }
+}

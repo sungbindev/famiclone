@@ -1,0 +1,97 @@
+{
+  "name": "fcdev",
+  "displayName": "fcdev 6502 开发",
+  "description": "6502 兼容机（NES、小霸王学习机等）开发：ca65 汇编的语法高亮、悬停、补全、转到定义与符号，以及 cc65 的 C 头文件配置。",
+  "version": "0.1.1",
+  "publisher": "sungbin",
+  "license": "Apache-2.0",
+  "author": "sungbin <sungbin@3578.cn>",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "6502",
+    "cc65",
+    "ca65",
+    "nes",
+    "famicom",
+    "fcdev"
+  ],
+  "extensionPack": [
+    "ms-vscode.cpptools"
+  ],
+  "main": "./out/bootstrap/extension.js",
+  "activationEvents": [
+    "workspaceContains:fcdev.json"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "ca65",
+        "aliases": [
+          "ca65 汇编",
+          "ca65"
+        ],
+        "extensions": [
+          ".s",
+          ".asm",
+          ".inc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ca65",
+        "scopeName": "source.ca65",
+        "path": "./syntaxes/ca65.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "fcdev.syncIntelliSense",
+        "title": "fcdev：同步 C/C++ 智能感知配置"
+      }
+    ],
+    "configuration": {
+      "title": "fcdev",
+      "properties": {
+        "fcdev.intelliSense.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "打开 fcdev 项目、修改 `fcdev.json` 时，自动运行 `fcdev sync`，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。"
+        },
+        "fcdev.intelliSense.promptConfigurationSelection": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "同步后，如果 `.vscode/c_cpp_properties.json` 里除 `fcdev` 外还有其他配置，提示你在 C/C++ 扩展里选择 `fcdev` 配置，每个项目每次会话只提示一次。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json",
+    "lint": "oxlint --deny-warnings src test",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/vscode": "1.95.0",
+    "@vscode/vsce": "^4.0.0",
+    "oxlint": "^1.90.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}

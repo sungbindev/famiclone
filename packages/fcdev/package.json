@@ -1,0 +1,36 @@
+{
+  "name": "fcdev",
+  "version": "0.4.0",
+  "description": "6502 兼容机（NES、学习机等）的开发工具：用 cc65 构建 C 与汇编程序",
+  "license": "Apache-2.0",
+  "author": "sungbin <sungbin@3578.cn>",
+  "keywords": [
+    "6502",
+    "nes",
+    "famicom",
+    "cc65",
+    "ca65",
+    "sb2000",
+    "disassembler"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "fcdev": "bin/fcdev.mjs"
+  },
+  "scripts": {
+    "prepack": "node ../../tools/build-libs.mjs"
+  },
+  "files": [
+    "bin",
+    "docs",
+    "src",
+    "targets"
+  ],
+  "optionalDependencies": {
+    "@rujianjs/fcdev-cc65": "0.4.0",
+    "@rujianjs/fcdev-emulator": "0.4.0"
+  }
+}

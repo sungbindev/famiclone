@@ -1,0 +1,27 @@
+{
+  "name": "nes",
+  "title": "任天堂红白机（NES）",
+  "cpu": "6502",
+  "cc65Target": "nes",
+  "linkConfig": "toolchain:cfg/nes.cfg",
+  "startup": [],
+  "forceImports": ["__STARTUP__"],
+  "libraries": ["lib/fcnes.lib", "toolchain:lib/nes.lib"],
+  "include": ["include"],
+  "asminclude": ["asminc"],
+  "defines": {},
+  "packager": "ines",
+  "extension": ".nes",
+  "nameRule": null,
+  "run": {
+    "emulator": "virtuanes",
+    "mode": "rom"
+  },
+  "options": {
+    "font": {
+      "type": "boolean",
+      "default": true,
+      "links": ["lib/nes-font.o"]
+    }
+  }
+}

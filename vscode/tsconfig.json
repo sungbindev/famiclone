@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022"],
+    "types": ["node", "vscode"],
+    "rootDir": "src",
+    "outDir": "out",
+    "sourceMap": true
+  },
+  "include": [
+    "src/contracts",
+    "src/shared",
+    "src/platform",
+    "src/logic",
+    "src/infra",
+    "src/entry",
+    "src/bootstrap"
+  ]
+}

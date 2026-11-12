@@ -1,0 +1,8 @@
+{
+  "libraries": {
+    "lib/sb2000.lib": ["src/sb2000.s", "src/lib/"]
+  },
+  "objects": {
+    "lib/crt0.o": "src/crt0.s"
+  }
+}

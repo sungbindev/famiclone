@@ -1,0 +1,10 @@
+{
+  "target": "nes",
+  "language": "asm",
+  "title": "任天堂红白机（NES）",
+  "notes": [
+    "  npm run build    生成 build/nes/hello.nes",
+    "  npm start        在模拟器里运行（只支持 Windows）",
+    "  npx fcdev docs   查开发文档"
+  ]
+}

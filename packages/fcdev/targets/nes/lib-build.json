@@ -1,0 +1,9 @@
+{
+  "libraries": {
+    "lib/fcnes.lib": ["src/fcnes.s"]
+  },
+  "objects": {
+    "lib/nes-font.o": "src/nes-font.s"
+  },
+  "binIncludeDirs": ["chr"]
+}

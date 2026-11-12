@@ -1,0 +1,29 @@
+node_modules/
+/build/
+packages/*/build/
+*.tgz
+.cache/
+
+# 工具链包与模拟器包里的二进制是生成物，由 tools/ 下的脚本组装，不入库
+packages/fcdev-cc65/bin/
+packages/fcdev-cc65/include/
+packages/fcdev-cc65/asminc/
+packages/fcdev-cc65/lib/
+packages/fcdev-cc65/cfg/
+packages/fcdev-cc65/manifest.json
+packages/fcdev-cc65/LICENSE
+packages/fcdev-emulator/bin/
+packages/fcdev-emulator/manifest.json
+packages/fcdev-emulator/LICENSE
+
+# 目标运行库由 tools/build-libs.mjs 生成
+packages/fcdev/targets/*/lib/*.o
+packages/fcdev/targets/*/lib/*.lib
+apps/**/build/
+
+# 软盘镜像目录里的盘内文件、生成的镜像、BIOS 与模拟器是第三方文件或生成物，不入库；构建脚本入库
+apps/sb2000/disk/content/
+
+# 由 fcdev sync 生成，含本机路径
+compile_flags.txt
+**/.vscode/c_cpp_properties.json

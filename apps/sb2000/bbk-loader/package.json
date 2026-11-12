@@ -1,5 +1,5 @@
 {
-  "name": "startbbk",
+  "name": "bbk-loader",
   "version": "0.1.0",
   "private": true,
   "description": "SB2000 (SB-DOS) program: switch to the BBK BIOS",

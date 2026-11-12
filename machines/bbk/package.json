@@ -11,9 +11,6 @@
     "check": "node tools/gasm-check.mjs Bios.asm && node tools/gasm-check.mjs Command.asm && node tools/gasm-check.mjs Smcdos.asm",
     "match": "node tools/match-rom.mjs Bios.asm --rom",
     "align": "node tools/align-rom.mjs Bios.asm --rom",
-    "port": "node tools/port-bios.mjs",
-    "build": "node tools/build-bios.mjs",
-    "verify": "node tools/run-bbk.mjs 900 build/work/shots/dos.png dos dir",
     "probe": "node tools/probe-fc.mjs",
     "test": "node --test \"test/**/*.test.mjs\""
   }

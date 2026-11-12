@@ -2,7 +2,7 @@
 
 在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行，在 FC 兼容模式里测试内存写入、PPU、软驱与键盘；用 fcdev 开发，C 与 ca65 汇编。
 
-它是 startbbk 的前期探测程序，结论是 FC 模式走不通，结果和结论见 [machines/bbk/docs/计划与进度.md](../../../machines/bbk/docs/计划与进度.md)。
+它是 bbk-loader 的前期探测程序，结论是 FC 模式走不通，结果和结论见 [machines/bbk/docs/计划与进度.md](../../../machines/bbk/docs/计划与进度.md)。
 
 ## 使用
 

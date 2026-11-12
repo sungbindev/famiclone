@@ -3,8 +3,8 @@
 FC 兼容机（NES、小霸王学习机等 6502 兼容机）的开发工具与机型资料：
 
 - **fcdev**：开发工具集。用 C 或 ca65 汇编写程序，用 cc65 构建成各机型能运行的程序，自带调试用模拟器，也能把已有程序反汇编回 ca65 源码。首批支持 NES 与小霸王学习机 SB2000，以后按“目标”扩展到步步高、裕兴等机型。
-- **machines/**：各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)（小霸王学生电脑：BIOS 反汇编与源码）、[bbk](machines/bbk/README.md)（步步高学生电脑：BIOS 与 DOS 源码，BIOS 已移植到 SB2000 上运行，能启动英文版 BBGDOS）。
-- **apps/**：用 fcdev 开发的应用程序与示例，按机型分目录，目前有 [sb2000](apps/sb2000/)（SB-DOS 的汇编器、编辑器、NES 游戏运行器、软盘镜像脚本，以及 [示例](apps/sb2000/examples/README.md)）。
+- **machines/**：各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)（小霸王学生电脑：BIOS 反汇编与源码）、[bbk](machines/bbk/README.md)（步步高学生电脑：BIOS 与 DOS 原厂源码、汇编器与分析工具；移植到 SB2000 的 BIOS 在 apps/sb2000/bbk-bios）。
+- **apps/**：用 fcdev 开发的应用程序与示例，按机型分目录，目前有 [sb2000](apps/sb2000/)（SB-DOS 的汇编器、编辑器、NES 游戏运行器、步步高 BIOS 移植版与加载器、软盘镜像脚本，以及 [示例](apps/sb2000/examples/README.md)）。
 
 下面是 fcdev 的安装与使用。
 
@@ -56,7 +56,7 @@ fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考�
 | `packages/fcdev-cc65`、`packages/fcdev-emulator` | cc65 与模拟器的包（构建生成，不入库） |
 | `vscode` | VS Code 扩展（独立的 npm 项目，说明见 [vscode/README.md](vscode/README.md)） |
 | `machines` | 各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)、[bbk](machines/bbk/README.md) |
-| `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`disk` 与 `examples` |
+| `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`bbk-bios`、`bbk-loader`、`fcprobe`、`disk` 与 `examples` |
 | `cc65`、`virtuanes` | cc65 与模拟器的源码，在本仓库维护，各自带许可文件 |
 | `tools` | 构建、检查与发布前验证脚本 |
 | `packages/fcdev/docs` | 各部分的开发文档与使用手册，随主包发布；清单见 [01-软件架构设计.md](packages/fcdev/docs/01-软件架构设计.md) 第 9 节，终端里运行 `fcdev docs` 查看 |

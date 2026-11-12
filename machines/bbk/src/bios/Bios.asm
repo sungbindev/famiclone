@@ -1,5 +1,4 @@
         include tvdef.asm
-	include	hal-defs.asm
 	org	$c000			;
 BiosYear        equ     97              ;
 BiosMonth	equ	1		;
@@ -7,55 +6,55 @@ BiosDate	equ	0		;
 ;---------------------------------------;
 ;    Floppy Diskette Controller port.	;
 ;---------------------------------------;
-FDCDMADackIO    equ     $4200           ; 3F1H
-FDCDMATcIO	equ	$4201		; 3F1H
+FDCDMADackIO    equ     $ff80           ; 3F1H
+FDCDMATcIO	equ	$ff88		; 3F1H
 ;---------------------------------------;
-FDCDRQPortI     equ     $4202           ; 3F2H
+FDCDRQPortI     equ     $ff90           ; 3F2H
 ;       Bit 6:  FDC DRQ pin.            ;
-FDCCtrlPortO    equ     $4101           ; 3F2H
+FDCCtrlPortO    equ     $ff90           ; 3F2H
 ;       Bit 5:  Driver B motor enable   ;
 ;       Bit 4:  Driver A motor enable   ;
 ;	Bit 3:	Enable INT and DMA signal
 ;       Bit 2:  not FDC Reset.          ;
 ;       Bit 10: Driver select.          ;
 ;---------------------------------------;
-FDCIRQPortI     equ     $4203           ; 3F3H
+FDCIRQPortI     equ     $ff98           ; 3F3H
 ;       Bit 6:  FDC IRQ pin.            ;
 ;---------------------------------------;
-FDCResetPortO   equ     $4204   ;ff30   ; 3F4H(3F6).
+FDCResetPortO   equ     $ffa0   ;ff30   ; 3F4H(3F6).
 ;	Bit 6:	FDC pin Reset		;
-FDCStatPortI	equ	$4204		; 3F4H.
+FDCStatPortI	equ	$ffa0		; 3F4H.
 ;	Bit 7:	FDC ready to communication.
 ;	Bit 6:	FDC comunication direction.
 ;	Bit 5:	FDC in excution process.
 ;	Bit 4:	
 ;---------------------------------------;
-FDCDataPortIO   equ     $4205           ; 3F5H.
+FDCDataPortIO   equ     $ffa8           ; 3F5H.
 ;---------------------------------------;
-FDCChangePortI  equ     $4207           ; 3F7H.
+FDCChangePortI  equ     $ffb8           ; 3F7H.
 ;	Bit 7:	Disk change.
-FDCSpeedPortO	equ	$4100		; 3F7H.
+FDCSpeedPortO	equ	$ffb8		; 3F7H.
 ;	Bit 10:	00: 500kbps(1.2M,1.44M)
 ;		01: 300kbps(360K)
 ;		10: 250kbps(720K)
 ;---------------------------------------;
-SpeakInitPort	equ	vDummy		;
-SpeakDataPort	equ	vDummy		;
+SpeakInitPort	equ	$ff10		;
+SpeakDataPort	equ	$ff18		;
 ;---------------------------------------;
 ;    PC Controller(Parallel) port.	;
 ;---------------------------------------;
-PCDaCtPortO	equ	vDummy		;
- PCCDataPort    equ     vDummy           ; PCC port base+0
+PCDaCtPortO	equ	$ff40		;
+ PCCDataPort    equ     $ff40           ; PCC port base+0
 ;---------------------------------------;
 ;	   Bit 4: Singal to PC's ERROR.	;
 ;	   Bit 3-0: Output PC data.	;
-PCCtrlPortI	equ	vDummy		;
- PCCStatsPortI	equ	vDummy		; PCC port base+1
+PCCtrlPortI	equ	$ff48		;
+ PCCStatsPortI	equ	$ff48		; PCC port base+1
 ;	   Bit 3: Signal of PC's pin STB
-PCDataPortIH	equ	vDummy		;
+PCDataPortIH	equ	$ff48		;
 ;	   Bit7-4: PC input data.	;
-PCDataPortIL	equ	vDummy		;
- PCCCtrlPoutO	equ	vDummy		; PCC port base+2
+PCDataPortIL	equ	$ff50		;
+ PCCCtrlPoutO	equ	$ff50		; PCC port base+2
 ;	   Bit3-0: PC input data.	;
 ;---------------------------------------;
 ;    Game Card Controller port.		;
@@ -79,7 +78,7 @@ DRAMPagePortEF	equ	$ff2c		;
 ;=======================================;
 SoundPort0	equ	$ff10		;
 SoundPort1	equ	$ff18		;
-KebBoardLEDPort	equ	vDummy		;
+KebBoardLEDPort	equ	$ff00		;
 ;---------------------------------------;
 Addr2000	equ	$6000		;
 Addr2001	equ	$6001		;
@@ -229,6 +228,14 @@ ScrollPanning	equ	Addr2000N+1	; db
 ScrollPanningN	equ	ScrollPanning+1	; db
 BRKASave	equ	ScrollPanningN+1; db
 ;---------------------------------------;
+;comment	%
+MonitorMode	equ	BRKASave+1	; db
+RBlockPoint	equ	MonitorMode+1	; dw
+SBlockPoint	equ	RBlockPoint+2	; dw
+BlockLength	equ	SBlockPoint+2	; dw
+StringLength	equ	BlockLength+2	; db
+BiosParamEnd	equ	StringLength+1	;
+;	%
 ;---------------------------------------; BIOS function command.
 ;    "*": Position can not change.	;
 ;	  because used by application.	;
@@ -321,15 +328,15 @@ MapToROM:				;
         php                             ;
         lda     #$7f                    ;
         and     Addr2000                ;
-        jsr	HalW2000T-$C000+$5800                   ;
+        sta     $2008                   ;
         lda     #$f7                    ;
         sei                             ;
         and     VideoCtrlSave           ;
         sta     VideoCtrlSave           ;
-        jsr	HalVideoCtrl-$C000+$5800           ;
+        sta     VideoCtrlPort           ;
         plp                             ;
         lda     Addr2000                ;
-        jsr	HalW2000-$C000+$5800                   ;
+        sta     $2000                   ;
         pla                             ;
         rts                             ;
 ;---------------------------------------;
@@ -338,15 +345,15 @@ MapToRAM:				;
         php                             ;
         lda     #$7f                    ;
         and     Addr2000                ;
-        jsr	HalW2000T-$C000+$5800                   ;
+        sta     $2008                   ;
         lda     #$08                    ;
         sei                             ;
         ora     VideoCtrlSave           ;
         sta     VideoCtrlSave           ;
-        jsr	HalVideoCtrl-$C000+$5800           ;
+        sta     VideoCtrlPort           ;
         plp                             ;
         lda     Addr2000                ;
-        jsr	HalW2000-$C000+$5800                   ;
+        sta     $2000                   ;
         pla                             ;
         rts                             ;
 ;---------------------------------------;
@@ -382,7 +389,8 @@ RTSInstruction:				;
 ;---------------------------------------;
 MonitorEntryJMP:			;
 	jsr	MapToROM-$C000+$5800	; Set C000-FFFF to ROM.
-	jmp	($fffc)			; ~
+	jmp	MonitorEntryROM		; %
+;	jmp	($fffc)			; ~
 ;---------------------------------------;
 NMIVectorAddr	dw	RTSInstruction-$C000+$5800
 NMIVectorBranch:			;
@@ -390,9 +398,9 @@ NMIVectorBranch:			;
 NMIReturn:				;
 	pla				;
 	sta	DRAMPageSave		;
-	jsr	HalPageA-$C000+$5800		;
+	sta	DRAMPagePort		;
 	lda	VideoCtrlSave		; Map back.
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 	pla				;
 	rti				;
 NMIEntry:				;
@@ -407,25 +415,29 @@ NMIEntry:				;
 nenas04:bit	$2002			;
 	bit	Addr2000		; Original NMI enable?
 	bpl	NMIExit			;
+;comment	%
+	lda	MonitorMode		; Monitor mode?
+	bne	NMIExit			;
+;	%
 	lda	DispBfHead		;
 	cmp	DispBfTail		;
 	beq	nenas08			;
 	lda	VideoCtrlSave		; Map to ROM.
 	and	#$f7			;
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 	jsr	DisplayNMIROM		;
 	lda	VideoCtrlSave		; Map back.
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 nenas08:lda	SplitPoint		; No. Has split screen operation?
 	beq	nenas12			;
 	lda	#0			;
 	sta	SplitPoint		;
 	lda	VideoCtrlSave		; Map to ROM.
 	and	#$f7			;
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 	jsr	SwitchBG		;
 	lda	VideoCtrlSave		; Map back.
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 nenas12:lda	Addr2001		;
 	sta	$2001			;
 	jsr	NMIVectorBranch-$C000+$5800
@@ -440,10 +452,10 @@ nenas12:lda	Addr2001		;
 	php				;
 	lda	NMIDRAMPage		; NMI page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA-$C000+$5800		;
+	sta	DRAMPagePort		;
 	lda	VideoCtrlSave		; Map to RAM.
 	ora	#8			;
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 	bne	NMIAddress	;(jmp)	;
 nenas16:pla				;
 NMIAddress:				;
@@ -466,12 +478,12 @@ SEndAccessRAM:				;
 	pha				;
 	lda	INTDRAMPage		; NMI page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA-$C000+$5800		;
+	sta	DRAMPagePort		;
 	lda	VideoCtrlSave		; Map to RAM.
 	pha				;
 	ora	#8			;
 	sta	VideoCtrlSave		;
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 SendAccessAdd:				;
 SEndAccessSave	equ	SendAccessAdd+1	;
 	jsr	RTSInstruction-$C000+$5800
@@ -482,10 +494,10 @@ SEndAccessSave	equ	SendAccessAdd+1	;
 	and	#8			;
 	ora	VideoCtrlSave		;
 	sta	VideoCtrlSave		;
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 	pla				;
 	sta	DRAMPageSave		;
-	jsr	HalPageA-$C000+$5800		;
+	sta	DRAMPagePort		;
 	pla				;
 	tay				;
 	rts				;
@@ -495,15 +507,75 @@ BRKINTEntry:				;
 	pla				;|4 Flag.
 	pha				;|3
 	and	#$10			;|2 Check if BRK or INT?
-	jsr	HalKbdIrq-$C000+$5800	; SB2000 keyboard IRQ.
-	bcc	nebrk04			;
-	lda	BRKASave		;
-	rti				;
-nebrk04:        lda     BRKASave                ;|4 INT. Restore A.
+;comment	%
+	bne	nenir08			;|2
+;	bit	PCINTPortI	;I	;|4 PC hard INT?
+;BRKModify:			;I	;|
+;	bmi	nenir04		;I	;|2 Yes.
+;	%
+        lda     BRKASave                ;|4 INT. Restore A.
 BRKAddress:				;|0
 BRKAddressSave	equ	BRKAddress+1	;|0
 	jmp	RTIReturn-$C000+$5800	;|3 = 28.
 ;---------------------------------------;
+;comment	%
+nenir04:lda	#$80			;
+	sta	MonitorMode		;
+	jsr	MapToROM-$C000+$5800	; Set C000-FFFF to ROM.
+	jmp	PCINTAccess		;
+nenir08:lda	#$80			;
+	sta	MonitorMode		;
+	jsr	MapToROM-$C000+$5800	; Set C000-FFFF to ROM.
+	jmp	BRKAccess		;
+	brk
+;---------------------------------------;
+TargetGoExit:				;
+	jsr	MapToRAM-$C000+$5800	; Set C000-FFFF to RAM.
+	lda	#0			;
+	sta	MonitorMode		;
+	pla				;
+	rti				;
+;---------------------------------------;
+SearchStringRAM:			;
+	lda	Addr2000		;
+	pha				;
+	and	#$7f			;
+	sta	Addr2000		;
+	jsr	MapToRAM-$C000+$5800	; Set C000-FFFF to RAM.
+	lda	StringBuffer		;
+lpssr08:cmp	($fe),y			; Search first character.
+	bne	nessr20			;
+	ldx	StringLength		;
+	dex				;
+	beq	nessr12			;
+	ldx	#1			; Search string next.
+lpssr12:iny				;
+	lda	StringBuffer,x		;
+	cmp	($fe),y			;
+	bne	nessr16			;
+	inx				;
+	cpx	StringLength		;
+	bne	lpssr12			;
+nessr12:jsr	MapToROM-$C000+$5800	; Set C000-FFFF to ROM.
+	lda	 $ff			; String matching.
+	jsr	SendByte		; Output address.
+	lda	 $fe			;
+	jsr	SendByte		;
+	jsr	MapToRAM-$C000+$5800	; Set C000-FFFF to RAM.
+nessr16:lda	StringBuffer		;
+	ldy	#0			;
+nessr20:inc	 $fe			;
+	bne	nessr24			;
+	inc	 $ff			;
+nessr24:dec	BlockLength		;
+	bne	lpssr08			;
+	dec	BlockLength+1		;
+	bne	lpssr08			;
+	pla				;
+	sta	Addr2000		;
+	jsr	MapToROM-$C000+$5800	; Set C000-FFFF to ROM.
+	jmp	SearchStringRET		;
+;	%
 ;---------------------------------------;
 CallToRAM:				;
 	jsr	MapToRAM-$C000+$5800	; Set C000-FFFF to RAM.
@@ -522,7 +594,7 @@ nespe04:cpx	#0			;
 	bne	nespe08			;
 	ldx	BiosUsePage		;
 nespe08:stx	DRAMPageSave		;
-	jsr	HalPageX-$C000+$5800		;
+	stx	DRAMPagePort		;
 	rts				;
 ;=======================================;
 ;    Set page				;
@@ -564,10 +636,10 @@ KeyBoardNMI:				;
 KeyBoardNMIDo:				;
 	lda	VideoCtrlSave		; Map to ROM.
 	and	#$f7			;
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 	jsr	KeyBoardNMIROM		;
 	lda	VideoCtrlSave		; Map back.
-	jsr	HalVideoCtrl-$C000+$5800		;
+	sta	VideoCtrlPort		;
 nekbn04:rts				;
 ;---------------------------------------;
 PauseRunningRAM:			;
@@ -579,15 +651,13 @@ lpprg04:bit	KeyStatus3		;
 CtrlBreakEntryRAM			;
 	jsr	CtrlBreakEntry		;
 	jmp	MapToROM-$C000+$5800	; Set C000-FFFF to ROM.
-	include	hal-resident.asm
 MoveRAMEnding:				;
 
 db	"系统制作:清华大学计算机系唐瑞春"
 db	"written by Tang ruichun Tsinghua University Computer Department"
 ;---------------------------------------;
 ConnectPCCard:				;
-	lda	#0			; PC link not supported on SB2000.
-	rts				;
+	jsr	EnableNMI		; Open NMI for timeout.
 lpccc04:lda	#$1a			; Set P-ERROR.(Receive end)
 	sta	PCDaCtPortO		; and Output indecate byte($aa).
 lpccc08:ldx	#20			; Wait code:$ff 20 times.
@@ -645,13 +715,13 @@ InitialPalette:                         ;
 	jsr	VRAMAddress		;
   ;	ldy	#0			;
 lpipe04:lda	PaletteTable,y		;
-	jsr	HalW2007			;
+	sta	$2007			;
 	iny				;
 	cpy	#PaletteLength		;
 	bne	lpipe04			;
 	lda	#0			;
-	jsr	HalW2006			;
-	jsr	HalW2006			;
+	sta	$2006			;
+	sta	$2006			;
 	rts				;
 ;---------------------------------------;
 WaitVSyn:				; Wait Vsyn.
@@ -693,7 +763,7 @@ CleanDisplayStg:			;
 	jsr	VRAMAddress		;
 	ldy	#64			; Clear to line.(8 bit high)
 	lda	#$6a			;
-lpcds04:jsr	HalW2007			;
+lpcds04:sta	$2007			;
 	dey				;
 	bne	lpcds04			;
 	pla				; Restore Y.
@@ -718,7 +788,7 @@ lpdsg04:lda	($fe),y			;
 	iny				;
 	cmp	#$ff			;
 	beq	nedsg04			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	bne	lpdsg04			;
 nedsg04:pla				;
 	clc				;
@@ -734,7 +804,7 @@ lpdsg08:lda	($fe),y			;
 	cmp	#$ff			;
 	beq	nedsg08			;
 	adc	#1			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	bne	lpdsg08			;
 nedsg08:
 ;	jsr	OpenScreen		;
@@ -929,12 +999,12 @@ InitialScreen:				;
 lpibf04:ldx	#8			;
 lpibf08:lda	($fe),y			;
 	iny				;
-	jsr	HalW2007			;
+	sta	$2007			;
 	dex				;
 	bne	lpibf08			;
 	lda	#$ff			;
 	ldx	#8			;
-lpibf12:jsr	HalW2007			;
+lpibf12:sta	$2007			;
 	dex				;
 	bne	lpibf12			;
 	tya				;
@@ -949,20 +1019,20 @@ neibf04:dec	$fd			;
 	ldx	#4			; Clear 2000-23bf.
 	lda	#$6a			;
 	ldy	#$c0			;
-lpivm04:jsr	HalW2007			;
+lpivm04:sta	$2007			;
 	dey				;
 	bne	lpivm04			;
 	dex				;
 	bne	lpivm04			;
 	lda	#0			; Clear 23c0-23ff.
 	ldy	#$40			;
-lpivm08:jsr	HalW2007			;
+lpivm08:sta	$2007			;
 	dey				;
 	bne	lpivm08			;
 	rts				;
 ;=======================================;
 Begin:	lda	#0			; Disable NMI.
-	jsr	HalInit			;
+	sta	$2000			;
 	sta	Addr2000		;
 	sta	$2001			;
 	sta	$4015			;
@@ -970,27 +1040,48 @@ Begin:	lda	#0			; Disable NMI.
 	cld				;
 	ldx	#$ff			;
 	txs				;
-	nop
-	nop
-	nop
+	stx	DRAMPagePortEF		; Map Last 16K RAM page to C000-FFFF 
 	dex				;
-	nop
-	nop
-	nop
+	stx	DRAMPagePortCD		;
 	lda	#0			;
 	sta	PCDaCtPortO		; Parallel port initial.
-	sta	vDummy			; For printer initial.
-	jsr	HalVideoCtrl		;
-;---------------------------------------; Check VRAM.(32K fixed)
-	lda	#$f0			; 16 x 2K pages.
+	sta	$ff50			; For printer initial.
+	sta	VideoCtrlPort		;
+;---------------------------------------; Check VRAM.
+	lda	#0			;
+lpcvm04:sta	VideoDataPort		; Set page: 00,80,C0,E0,F0,F8,FC,FE,FF.
+	ldx	#0			; Point to VRAM $0000.
+	ldy	#0			;
+	jsr	VRAMAddress		;
+lpcvm08:sta	$2007			;
+	inx				;
+	bne	lpcvm08			;
+	sec				;
+	ror				;
+	bcc	lpcvm04			;
+	lda	#0			; Set page to 00.
+lpcvm12:sta	VideoDataPort		;
+	ldx	#0			; Point to VRAM $0000.
+	ldy	#0			;
+	jsr	VRAMAddress		;
+	bit	$2007			;
+lpcvm16:cmp	$2007			; Page data same?
+	bne	necvm04			;
+	inx				;
+	bne	lpcvm16			;
+	beq	necvm08	;(jmp)		; Yes.
+necvm04:sec				;
+	ror				;
+	bcc	lpcvm12			;
+;	bcs	VRAMCheckError		; Program Memory Error.
 necvm08:eor	#$ff			;
 	clc				;
 	adc	#1			; Video page size.
 	pha				; Save Video page size.
 	ldx	#4			;
-	jsr	HalSlot0X		;
+	stx	VideoDataPort		;
 	inx				;
-	jsr	HalSlot1X		;
+	stx	VideoDataPort+8		;
 	jsr	WaitVSyn		;
 	jsr	InitialPalette		;
 	jsr	InitialScreen		;
@@ -999,7 +1090,7 @@ necvm08:eor	#$ff			;
 	jsr	VRAMAddress		;
 	ldx	#26			;
 	lda	#$90			;
-lpbeg12:jsr	HalW2007			;
+lpbeg12:sta	$2007			;
 	dex				;
 	bne	lpbeg12			;
 	jsr	OpenScreen		;
@@ -1022,8 +1113,8 @@ lpcpm04:lda	MainMemoryStg,x		; Set string.
 	bpl	lpcpm04			;
 	lda	#5			; Column.
 	sta	$fd			;
-	lda	#$80			;
-lpcpm08:jsr	HalPageA		; Set page: 00,80,C0,E0,F0,F8,FC,FE,FF.
+	lda	#0			;
+lpcpm08:sta	DRAMPagePort		; Set page: 00,80,C0,E0,F0,F8,FC,FE,FF.
 	ldx	#0			;
 lpcpm12:sta	$9a00,x			;
 	inx				;
@@ -1033,7 +1124,7 @@ lpcpm12:sta	$9a00,x			;
 	bcc	lpcpm08			;
 	lda	#0			; Set page to 00.
 lpcpm16:ldx	#0			;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 lpcpm20:cmp	$9a00,x			; Page data same?
 	bne	necpm04			;
 	inx				;
@@ -1073,7 +1164,7 @@ lpcpm28:asl				; * 16.
 	lda	#<$8000			;
 	sta	$01			;
 	lda	$02			;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	ldx	#$18			; Clear 8000-9800.
 	ldy	#0			;
 lpcpm32:sta	($00),y			;
@@ -1241,17 +1332,17 @@ necfc24:inc	$fc			;
 	lda	#$0c			; Turn off motor.
 	sta	FDCCtrlPortO		;
 ;---------------------------------------; Check PC card.
-necdc04:lda	vDummy			; PC card exist?
+necdc04:lda	$ff50			; PC card exist?
 	ldx	#$0c			;
-	stx	vDummy			;
+	stx	$ff50			;
 	and	#$0f			;
 	bne	necdc08			;
-	lda	vDummy			;
+	lda	$ff50			;
 	and	#$0f			;
 	cmp	#$0c			;
 ;	beq	necpc20			;
 necdc08:lda	#$04			; Enable PCDataPortIL input enable.
-	sta	vDummy			;
+	sta	$ff50			;
 	ldx	#<PCCStg		; Yes.
 	ldy	#>PCCStg		;
 	lda	#5			;
@@ -1271,9 +1362,13 @@ necpc16:jsr	DisplayString		;
 	sta	PCCardMessage		;
 	jmp	nebeg04			;
 necpc20:
+;comment	%
+;	lda	#0		     	; Disable PC Card INT access.
+;	sta	BRKModify-$C000+$5800+1	; Change to BMI @+2
+;	%
 ;---------------------------------------;
 nebeg04:lda	#$ff			;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	sta	DRAMPageSave		;
 	lda	#$fe			;
 	sta	BiosUsePage		;
@@ -1289,7 +1384,7 @@ nebeg04:lda	#$ff			;
 	jsr	VRAMAddress		;
 	ldx	#26			;
 	lda	#$90			;
-lpbeg16:jsr	HalW2007			;
+lpbeg16:sta	$2007			;
 	dex				;
 	bne	lpbeg16			;
 ;	ldx	#0			; Set VROM paging.
@@ -1428,8 +1523,8 @@ nebot40:lda	#BootLine+3		;
 ;---------------------------------------;
 VRAMAddress:				;
 	bit	$2002			;
-	jsr	HalW2006X			;
-	jsr	HalW2006Y			;
+	stx	$2006			;
+	sty	$2006			;
 	rts				;
 ;---------------------------------------;
 DisplayNMIROM:				;
@@ -1453,9 +1548,9 @@ lpdnr04:lda	DisplayBuffer,y		;
 	bvc	nednr24			;
 	pha				; Save High.
 	and	#$3f			;
-	jsr	HalW2006			;
+	sta	$2006			;
 	lda	DisplayBuffer,y		;
-	jsr	HalW2006			;
+	sta	$2006			;
 	sta	DispBfHead		; Save Low.
 	iny				;
 	lda	DisplayBuffer,y		; Count
@@ -1463,17 +1558,17 @@ lpdnr04:lda	DisplayBuffer,y		;
 	pha				; Save Count.
 lpdnr08:iny				;
 	lda	DisplayBuffer,y		; Display 3 character one count.
-	jsr	HalW2007			;
+	sta	$2007			;
 	dec	$ff			;
 	beq	nednr20			;
 	iny				;
 	lda	DisplayBuffer,y		;
-	jsr	HalW2007			;
+	sta	$2007			;
 	dec	$ff			;
 	beq	nednr20			;
 	iny				;
 	lda	DisplayBuffer,y		;
-	jsr	HalW2007			;
+	sta	$2007			;
 	dec	$ff			;
 	beq	nednr20			;
 	dex				;
@@ -1508,9 +1603,9 @@ nednr28:lda	DisplayBuffer,y		; 10xxxxx1
 ;---------------------------------------; 01xx. Output Count
 nednr32:bvc	nednr36			;
 	and	#$3f			;
-	jsr	HalW2006			;
+	sta	$2006			;
 	lda	DisplayBuffer,y		;
-	jsr	HalW2006			;
+	sta	$2006			;
 	iny				;
 	lda	DisplayBuffer,y		; Character
 	pha				;
@@ -1519,16 +1614,16 @@ nednr32:bvc	nednr36			;
 	lda	DisplayBuffer,y		; Count.
 	tay				;
 	pla				;
-lpdnr12:jsr	HalW2007			; Display 4 character one count.
+lpdnr12:sta	$2007			; Display 4 character one count.
 	dey				;
 	beq	nednr40			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	dey				;
 	beq	nednr40			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	dey				;
 	beq	nednr40			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	dey				;
 	beq	nednr40			;
 	dex				;
@@ -1548,12 +1643,12 @@ lpdnr12:jsr	HalW2007			; Display 4 character one count.
 	dey				;
 	bcc	nednr56	;(jmp)		;
 ;---------------------------------------; 00xx. Output One.
-nednr36:jsr	HalW2006			;
+nednr36:sta	$2006			;
 	lda	DisplayBuffer,y		; V=0.
-	jsr	HalW2006			;
+	sta	$2006			;
 	iny				;
 	lda	DisplayBuffer,y		;
-	jsr	HalW2007			;
+	sta	$2007			;
 	bvc	nednr48	;(jmp)		;
 nednr40:ldy	$ff			;
 nednr48:iny				;
@@ -1574,7 +1669,7 @@ nednr56:sty	DispBfHead		;
 	lda	ScrollPanning		;
 	sta	$2005			;
 	lda	Addr2000		;
-	jsr	HalW2000			;
+	sta	$2000			;
 	lda	Addr2001		;
 	sta	$2001			;
 	pla				;
@@ -1586,20 +1681,572 @@ nednr56:sty	DispBfHead		;
 DisableNMI:				;
 	lda	Addr2000		;
 	and	#$7f			;
-	jsr	HalW2000			;
+	sta	$2000			;
 	rts				;
 ;---------------------------------------;
 EnableNMI:				;
 	lda	Addr2000		;
 	ora	#$80			;
-	jsr	HalW2000			;
+	sta	$2000			;
 	rts				;
 ;---------------------------------------;
 RestoreNMI:				;
 	lda	Addr2000		;
-	jsr	HalW2000			;
+	sta	$2000			;
 	rts				;
 
+;comment	%
+;---------------------------------------;
+BranchAddress	dw	FunctionsReturn-1,	ReadByte-1		; 0
+		dw	SaveByte-1,		TargetGo-1		; 2
+		dw	ReadByteNext-1,		SaveByteNext-1		; 4
+		dw	GetBlock-1,		SaveBlock-1		; 6
+		dw	SetCurrentPage-1,	RunningInitial-1	; 8
+		dw	GetCurrentPage-1,	SaveBlockDirect-1	; 10
+		dw	IOOutByte-1,		IOInByte-1		; 12
+		dw	SaveVMEMBlock-1,	GetVMEMBlock-1		; 14
+		dw	ReadByteLast-1,		SaveByteLast-1		; 16
+		dw	DecodeVideoBlock-1,	SearchString-1		; 18
+		dw	CallROMBios-1,		CallDosIO-1		; 20
+MonitorFuncs	equ	@-BranchAddress
+;=============================================================================
+JsrBranch:				;
+	tax				;
+	lda	BranchAddress+1,x	;
+	pha				;
+	lda	BranchAddress,x		;
+	pha				;
+	rts				;
+;---------------------------------------;
+MonitorEntryROM:			;
+	lda	#DebugOperation		; Tell PC entry debug mode.
+	jsr	SendByte		;
+	lda	#$80			;
+	sta	MonitorMode		;
+	lda	#$80			; Enable NMI.
+	sta	$2000			;
+;=======================================;
+MainLoop:				;
+	jsr	GetByte			;
+	asl				;
+	cmp	#MonitorFuncs		;
+	bcs	MainLoop		;
+	jsr	JsrBranch		;
+	jmp	MainLoop		;
+;=======================================;
+FunctionsReturn:			;
+	pla				; pop return address.
+	pla				;
+	rts				;
+;=======================================;
+GetBlock:				;
+	jsr	GetByte			; Get block length.
+	sta	BlockLength+1		;
+	jsr	GetByte			;
+	sta	BlockLength		;
+	jsr	ReadByte		;
+lpgbk04:ldx	BlockLength		;
+	bne	negbk04			;
+	dec	BlockLength+1		;
+negbk04:dex				;
+	stx	BlockLength		;
+	txa				;
+	ora	BlockLength+1		;
+	beq	negbk08			;
+	jsr	ReadByteNext		;
+	jmp	lpgbk04			;
+negbk08:rts				;
+;=======================================;
+ReadByteNext:				;
+	ldx	RBlockPoint+1		;
+	ldy	RBlockPoint		;
+	iny				;
+	bne	nerbn04			;
+	inx				;
+	stx	RBlockPoint+1		;
+nerbn04:sty	RBlockPoint		;
+	jmp	ReadOne			;
+;=======================================;
+ReadByteLast:				;
+	ldx	RBlockPoint+1		;
+	ldy	RBlockPoint		;
+	bne	nerbl04			;
+	dex				;
+	stx	RBlockPoint+1		;
+nerbl04:dey				;
+	sty	RBlockPoint		;
+	jmp	ReadOne			;
+;=======================================;
+ReadByte:				;
+	jsr	GetByte			;
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	stx	RBlockPoint+1		;
+	sty	RBlockPoint		;
+;---------------------------------------;
+;	x|y = Address.			;
+;---------------------------------------;
+ReadOne:cpx	#<$8000			; Address >= 8000?
+	bcs	neroe04			;
+	cpy	#$fe			; No. Address < 8000.
+	bcc	neroe16			;
+	bcs	neroe12			;
+neroe04:cpx	#<$C000			; Yes. Address >= c000?
+	bcc	neroe08			;
+	txa				;
+	and	#$bf			;
+	tax				;
+	lda	#$ff			;
+	bne	neroe10			;
+neroe08:lda	DRAMPageSave		; 8000 <= Address < c000.
+neroe10:sta	DRAMPagePort		; Set to current page.
+;---------------------------------------;
+neroe12:lda	 $fc			;
+	pha				;
+	lda	 $fd			;
+	stx	 $fd			;
+	tax				;
+	sty	 $fc			;
+	ldy	#0			;
+	lda	($fc),y			; Get this byte.
+	stx	 $fd			;
+	jsr	SendByte		;
+	pla				;
+	sta	 $fc			;
+	rts				;
+neroe16:lda	 $fe			;
+	pha				;
+	lda	 $ff			;
+	stx	 $ff			;
+	tax				;
+	sty	 $fe			;
+	ldy	#0			;
+	lda	($fe),y			;
+	stx	 $ff			;
+        jsr     SendByte                ;
+	pla				;
+	sta	 $fe			;
+	rts				;
+;=======================================;
+SaveBlock:				;
+	jsr	GetByte			; Get block length.
+	sta	BlockLength+1		;
+	jsr	GetByte			;
+	sta	BlockLength		;
+	jsr	SaveByte		;
+lpsbk04:ldx	BlockLength		;
+	bne	nesbk04			;
+	dec	BlockLength+1		;
+nesbk04:dex				;
+	stx	BlockLength		;
+	txa				;
+	ora	BlockLength+1		;
+	beq	nesbk08			;
+	jsr	SaveByteNext		;
+	jmp	lpsbk04			;
+nesbk08:rts				;
+;=======================================;
+SaveByteNext:				;
+	ldx	SBlockPoint+1		;
+	ldy	SBlockPoint		;
+	iny				;
+	bne	nesbn04			;
+	inx				;
+	stx	SBlockPoint+1		;
+nesbn04:sty	SBlockPoint		;
+	jmp	SaveOne			;
+;=======================================;
+SaveByteLast:				;
+	ldx	SBlockPoint+1		;
+	ldy	SBlockPoint		;
+	bne	nesbl04			;
+	dex				;
+	stx	SBlockPoint+1		;
+nesbl04:dey				;
+	sty	SBlockPoint		;
+	jmp	SaveOne			;
+;=======================================;
+SaveByte:				;
+	jsr	GetByte			;
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	stx	SBlockPoint+1		;
+	sty	SBlockPoint		;
+;---------------------------------------;
+;	x|y = Address.			;
+;---------------------------------------;
+SaveOne:cpx	#<$8000			; Address >= 8000?
+	bcs	nesoe04			;
+	cpy	#$fe			;
+	bcc	nesoe16			;
+	bcs	nesoe12			;
+nesoe04:cpx	#<$C000			; Address >= c000?
+	bcc	nesoe08			;
+	txa				;
+	and	#$bf			;
+	tax				;
+	lda	#$ff			;
+	bne	nesoe10			;
+nesoe08:lda	DRAMPageSave		; No. 8000 <= Address < c000.
+nesoe10:sta	DRAMPagePort		; Set to current page.
+;---------------------------------------;
+nesoe12:lda	 $fc			; Save $fc,$fd.
+	pha				;
+	lda	 $fd			;
+	stx	 $fd			;
+	tax				;
+	sty	 $fc			;
+	jsr	GetByte			;
+	ldy	#0			;
+	sta	($fc),y			;
+	stx	 $fd			; Restore $fc,$fd
+	pla				;
+	sta	 $fc			;
+	rts				;
+nesoe16:lda	 $fe			;
+	pha				;
+	lda	 $ff			;
+	stx	 $ff			;
+	tax				;
+	sty	 $fe			;
+        jsr      GetByte                ;
+        ldy      #0                     ;
+        sta      ($fe),y                ;
+	stx	 $ff			;
+	pla				;
+	sta	 $fe			;
+	rts				;
+;=======================================;
+SaveVMEMBlock:				;
+	lda	#0			; Disable display for correct operation.
+	sta	$2001			;
+	jsr	GetByte			;
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	jsr	VRAMAddress		; Initial set address pointer.
+	jsr	GetByte			; Get block length.
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	beq	lpsvb04			;
+	inx				;
+lpsvb04:jsr	GetByte			;
+	sta	$2007			;
+	dey				;
+	bne	lpsvb04			;
+	dex				;
+	bne	lpsvb04			;
+	lda	#0			;
+	sta	$2005			;
+	lda	Addr2005		;
+	sta	$2005			;
+	lda	Addr2001		;
+	sta	$2001			;
+	rts				;
+;=======================================;
+GetVMEMBlock:				;
+	lda	#0			; Disable display for correct operation.
+	sta	$2001			;
+	jsr	GetByte			;
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	jsr	VRAMAddress		; Initial set address pointer.
+	jsr	GetByte			; Get block length.
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	beq	negvb04			;
+	inx				;
+negvb04:lda	$2007			; Virtual read.
+lpgvb04:lda	$2007			;
+	jsr	SendByte		;
+	dey				;
+	bne	lpgvb04			;
+	dex				;
+	bne	lpgvb04			;
+	lda	#0			;
+	sta	$2005			;
+	lda	Addr2005		;
+	sta	$2005			;
+	lda	Addr2001		;
+	sta	$2001			;
+	rts				;
+;=======================================;
+SetCurrentPage:				;
+	jsr	GetByte			;
+	tax				;
+	bne	nescp04			;
+	lda	BiosUsePage		;
+	bne	nescp12			;
+nescp04:ora	DRAMPageHigh		;
+	cmp	DRAMPageNotUse		; Set to replaceed page?
+	bne	nescp08			;
+	ror				; Yes, disable this page(C=1).
+nescp08:cmp	BiosUsePage		; Set to protect page?
+	bne	nescp12			;
+	lda	DRAMPageNotUse		; Yes, change to replace page.
+nescp12:sta	DRAMPageSave		;
+	sta	DRAMPagePort		;
+	rts				;
+;=======================================;
+GetCurrentPage:				;
+	jsr	GetPage			;
+	jsr	SendByte		;
+	rts				;
+;=======================================;
+;    Output one byte to IO port.	;
+;	Address 4800-4803 and 5800-5807.;
+;---------------------------------------;
+IOOutByte:
+	jsr	GetByte			; Get output address.
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	jsr	GetByte			;
+	sta	$ff00,y			;
+	rts				;
+;=======================================;
+;    Output one byte from IO port.	;
+;	Address 4800-4803 and 5800-5803.;
+;---------------------------------------;
+IOInByte:				;
+	jsr	GetByte			; Get output address.
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	lda	$ff00,y			;
+	jmp	SendByte		;
+;=======================================;
+PCINTAccess:				;
+	lda	#$00			; 0->P-ERROR. (Received INT)
+	sta	PCDaCtPortO		;
+lpnir04:lda	PCCtrlPortI		; P-STB is high?(Read first half)
+	and	#8			;
+	beq	lpnir04			;
+	lda	#$10			; 1->P-ERROR. (Return to receive data).
+	sta	PCDaCtPortO		;
+;=======================================;
+BRKAccess:				;
+	txa				;
+	pha				; Save (X).
+	sei				;
+	cld				;
+	jsr	DisableNMI		; Disable NMI.
+	lda	#BRKOperation		; BRK tag.
+	jsr	SendByte		;
+	tya				; Y.
+	jsr	SendByte		;
+	pla				; X.
+	jsr	SendByte		;
+	lda	BRKASave		; A.
+	jsr	SendByte		;
+	tsx				;
+	lda	$0101,x			; Flag.
+	jsr	SendByte		;
+	lda	DRAMPageSave		; Page.
+	cmp	BiosUsePage		;
+	bne	nebas04			;
+	lda	#0			;
+nebas04:cmp	DRAMPageNotUse		;
+	bne	nebas08			;
+	lda	BiosUsePage		;
+nebas08:jsr	SendByte		;
+	lda	$0102,x			; PC low.
+	jsr	SendByte		;
+	lda	$0103,x			; PC high.
+	jsr	SendByte		;
+	inx				; Pass stack.
+	inx				;
+	inx				;
+	txs				;
+	txa				;
+	jsr	SendByte		; S.
+	lda	VectorSet		; NMI vector has set?
+	beq	nebas12			;
+	lda	#$ff			; Last page.
+	sta	DRAMPagePort		;
+	ldx	BRKAddressSave-$C000+$5800+1; Restore BRK vector.
+	ldy	BRKAddressSave-$C000+$5800
+	stx	$bfff			;
+	sty	$bffe			;
+	ldx	NMIAddressSave-$C000+$5800+1; Restore NMI vector.
+	ldy	NMIAddressSave-$C000+$5800
+	stx	$bffb			;
+	sty	$bffa			;
+nebas12:jsr	EnableNMI		; Enable NMI for flopy diskette's motor turn off.
+	jmp	MainLoop		;
+;=======================================;
+TargetGo:				;
+	jsr	GetByte			; S.
+	tax				;
+	txs				;
+	jsr	GetByte			; PC high.
+	tax				;
+	pha				;
+	jsr	GetByte			; PC low.
+	pha				;
+	lda	#$ff			; Last page.
+	sta	DRAMPagePort		;
+	lda	VectorSet		; NMI vector has set?
+	beq	netgo08			;
+	ldx	$bfff			; Save and set BRK vector.
+	ldy	$bffe			;
+	stx	BRKAddressSave-$C000+$5800+1
+	sty	BRKAddressSave-$C000+$5800
+	ldx	$bffb			; Save and set NMI vector.
+	ldy	$bffa			;
+	stx	NMIAddressSave-$C000+$5800+1
+	sty	NMIAddressSave-$C000+$5800
+netgo08:ldx	#<BRKINTEntry-$C000+$5800
+	ldy	#>BRKINTEntry-$C000+$5800
+	stx	$bfff			;
+	sty	$bffe			;
+	ldx	#<NMIEntry-$C000+$5800	;
+	ldy	#>NMIEntry-$C000+$5800	;
+	stx	$bffb			;
+	sty	$bffa			;
+	jsr	GetByte			; Page.
+	cmp	BiosUsePage		;
+	bne	netgo12			;
+	lda	DRAMPageNotUse		;
+netgo12:tax				;
+	bne	netgo16			;
+	lda	BiosUsePage		;
+netgo16:sta	DRAMPageSave		;
+	sta	DRAMPagePort		;
+	jsr	GetByte			; Flag.
+	pha				;
+;---------------------------------------;
+	jsr	GetByte			; X.
+	tax				;
+	jsr	GetByte			; Y.
+	tay				;
+	jsr	GetByte			; A.
+	pha				;
+	lda	#$40			; Disable CPU internal INT.
+	sta	$4017			;
+	lda	$2002			; Restore port 2000,2001,2005.
+	sta	$2005			;
+	lda	Addr2005		;
+	sta	$2005			;
+	lda	Addr2001		;
+	sta	$2001			;
+	jsr	RestoreNMI		;
+	jmp	TargetGoExit-$C000+$5800;
+;=======================================;
+DecodeVideoBlock:			;
+	jsr	GetByte			; Address.
+	tax				;
+	jsr	GetByte			;
+	tay				;
+	jsr	SendVRAMCmp		;
+	rts				;
+;=======================================;
+;    Running initial.			;
+;---------------------------------------;
+RunningInitial:				;
+	jsr	GetByte			; Flag next.
+	pha				;
+	tax				;
+	jsr	RunInitial		;
+	pla				;
+	and	#4			; Has DRAMPageNotUse data?
+	beq	neril04			;
+	jsr	GetByte			; Yes. get DRAMPageNotUse.
+	ora	DRAMPageHigh		;
+	sta	DRAMPageNotUse		;
+neril04:rts				;
+;=======================================;
+;	Search string from memory.	;
+;---------------------------------------;
+SearchString:				;
+	lda	DRAMPageSave		;
+	sta	DRAMPagePort		;
+	lda	 $ff			;
+	pha				;
+	lda	 $fe			;
+	pha				;
+	jsr	GetByte			; Searching string length.
+	sta	StringLength		;
+	tay				;
+	ldx	#0			;
+lpssg04:jsr	GetByte			; Get string.
+	sta	StringBuffer,x		;
+	inx				;
+	dey				;
+	bne	lpssg04			;
+	jsr	GetByte			;
+	sta	 $ff			;
+	jsr	GetByte			;
+	sta	 $fe			;
+	jsr	GetByte			; Searched range.
+	sta	BlockLength+1		;
+	jsr	GetByte			;
+	tax				;
+	beq	nessg04			;
+	inc	BlockLength+1		;
+nessg04:sta	BlockLength		;
+	jsr	DisableNMI		;
+	ldy	#0			;
+	jmp	SearchStringRAM-$C000+$5800
+SearchStringRET:			;
+	jsr	RestoreNMI		;
+	lda	#$ff			; Search ending.
+	jsr	SendByte		;
+	lda	#$ff			;
+	jsr	SendByte		;
+	lda	#$ff			;
+	jsr	SendByte		;
+	pla				;
+	sta	 $fe			;
+	pla				;
+	sta	 $ff			;
+	rts				;
+
+;=======================================; For DEBUG
+CallROMBios:				;
+	jsr	GetByte			; X.
+	tax				;
+	jsr	GetByte			; Y.
+	tay				;
+	jsr	GetByte			; A
+	jsr	ROMBios			;
+	jsr	SendByte		; A
+	tya				;
+	jsr	SendByte		; Y
+	txa				;
+	jmp	SendByte		; X
+
+;=======================================; For DEBUG
+CallDosIO:				;
+	jsr	GetByte			; X.
+	tax				;
+	jsr	GetByte			; Y.
+	tay				;
+	jsr	GetByte			; A
+	pha				;
+	lda	#>DosIOEntry		;
+	sta	CallAddress-$C000+$5800+1
+	lda	#<DosIOEntry		;
+	sta	CallAddress-$C000+$5800+2
+	pla				;
+	jsr	CallToRAM-$C000+$5800	;
+	pha				;
+	php				;
+	pla				;
+	jsr	SendByte		; Flag.
+	pla				;
+	jsr	SendByte		; A
+	tya				;
+	jsr	SendByte		; Y
+	txa				;
+	jmp	SendByte		; X
+	
+;	%
 ;=============================================================================
 BIOSBranchAddr  dw      SetPageMode-1,          SetPage-1-$C000+$5800    ;1
                 dw      GetPage-1-$C000+$5800,  SetAV10-1                ;3
@@ -1755,7 +2402,7 @@ negbd04:lda	$fd			; Save $fd.
 	lda	#0			;
 	sta	$fe			;
 	lda	DRAMPageSave		;
-	jsr	HalPageA		; Set to current page.
+	sta	DRAMPagePort		; Set to current page.
 lpgbd04:lda	($fe),y			;
 	jsr	SendByte		;
 	iny				;
@@ -1788,7 +2435,7 @@ nesbd04:lda	$fd			; Save $fd.
 	lda	#0			;
 	sta	$fe			;
 	lda	DRAMPageSave		;
-	jsr	HalPageA		; Set to current page.
+	sta	DRAMPagePort		; Set to current page.
 lpsbd04:jsr	GetByte			;
 	sta	($fe),y			;
 	iny				;
@@ -1856,7 +2503,7 @@ FileIOServer:				;
 	sta	$fd			;
 	ldx	#$ff			;
 	stx	DRAMPageSave		;
-	jsr	HalPageX		;
+	stx	DRAMPagePort		;
 nefio04:ldy	#HBUF+1			; No. Modify HBUF point.
 	lda	($fc),y			;
 	cmp	#<$c000			; Is > c000?
@@ -1881,7 +2528,7 @@ lpfio08:lda	($fc),y			;
 	jsr	PCCardServer		;
 	pla				; Restore handle's page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	ldy	#0			;
 lpfio12:jsr	GetByte			;
 	sta	($fc),y			;
@@ -1897,7 +2544,7 @@ lpfio12:jsr	GetByte			;
 	sta	($fc),y			;	
 nefio12:pla				; Restore original page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	pla				;
 	sta	$fc			;
 	pla				;
@@ -1932,7 +2579,7 @@ GetPagedChar:				;
 	jsr	ModifyAddressFE		;
 	lda	($fe),y			;
 	stx	DRAMPageSave		;
-	jsr	HalPageX		;
+	stx	DRAMPagePort		;
 	ldx	BiosTemp1		;
 	stx	$fe+1			;
 	rts				;
@@ -1949,7 +2596,7 @@ SetPagedChar:				;
 	lda	$fd			;
 	sta	($fe),y			;
 	stx	DRAMPageSave		;
-	jsr	HalPageX		;
+	stx	DRAMPagePort		;
 	ldx	BiosTemp1		;
 	stx	$fe+1			;
 	rts				;
@@ -1966,7 +2613,7 @@ nespr04:cpx	#0			;
 	bne	nespr08			;
 	ldx	BiosUsePage		;
 nespr08:stx	DRAMPageSave		;
-	jsr	HalPageX		;
+	stx	DRAMPagePort		;
 	rts				;
 
 ;=======================================;
@@ -1987,13 +2634,13 @@ SetAV10:txa				;
 ;---------------------------------------;
 InitVideoPort:				;
 	ldx	#4			; Initial four display Vpage. Page address's 0,8,16,24.
-	jsr	HalSlot0X		; VROM 0800-0FFF to VPage 4.
+	stx	VideoDataPort		; VROM 0800-0FFF to VPage 4.
 	inx				;
-	jsr	HalSlot1X		;      0800-0FFF to VPage 5.
+	stx	VideoDataPort+8		;      0800-0FFF to VPage 5.
 	inx				;
-	jsr	HalSlot2X	;      0800-0FFF to VPage 6.
+	stx	VideoDataPort+16	;      0800-0FFF to VPage 6.
 	inx				;
-	jsr	HalSlot3X	;      0800-0FFF to VPage 7.
+	stx	VideoDataPort+24	;      0800-0FFF to VPage 7.
 	rts				;
 ;=======================================;
 ;    Program running initial.		;
@@ -2025,7 +2672,7 @@ RunInitial:				;
 	jsr	DisableNMI		;
 	sei				;
 	lda	#$ff			;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	ldx	#<BRKINTEntry-$C000+$5800
 	ldy	#>BRKINTEntry-$C000+$5800
 	stx	$bfff			;
@@ -2035,7 +2682,7 @@ RunInitial:				;
 	stx	$bffb			;
 	sty	$bffa			;
 	lda	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	ldx	#<RTIReturn-$C000+$5800	;
 	ldy	#>RTIReturn-$C000+$5800	;
 	stx	BRKAddressSave-$C000+$5800+1; Restore BRK vector.
@@ -2086,7 +2733,7 @@ lpdio04:lda	DiskIOZB,x		;
 	and	#$bf			;
 	ldx	#$ff			;
 	stx	DRAMPageSave		;
-	jsr	HalPageX		;
+	stx	DRAMPagePort		;
 nedio04:sta	SectorBfPoint0+1	;
 	sty	SectorBfPoint0		;
 	ldy	#DiskIOCmdSize-1	;
@@ -2123,7 +2770,7 @@ DiskIOReturn:				;
 	pha				;
 	lda	DiskIOPageSave		; Restore command buffer's page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	txa				;
 	pha				;
 	ldx	#DiskIOZB_Size-1	;
@@ -2974,7 +3621,7 @@ nerwo44:cpx	#0			;
 	bne	nerwo46			;
 	ldx	BiosUsePage		;
 nerwo46:stx	DRAMPageSave		;
-	jsr	HalPageX		;
+	stx	DRAMPagePort		;
 	tax				;
 	lda	DiskIOZB+Buffer		; Set buffer point to SectorBfPoint.
 	sta	SectorBfPoint0		;
@@ -3007,7 +3654,7 @@ SetVector:				;
 	lda	DRAMPageSave		; No.
 	pha				;
 	lda	#$ff			;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	ldx	$bfff			; Change BRK Vector.
 	ldy	$bffe			;
 	stx	BRKAddressSave-$C000+$5800+1
@@ -3016,6 +3663,10 @@ SetVector:				;
 	ldy	$bffa			;
 	stx	NMIAddressSave-$C000+$5800+1
 	sty	NMIAddressSave-$C000+$5800
+;comment	%
+	bit	MonitorMode		;
+	bmi	nesvr04			;
+;	%
 	ldx	#<BRKINTEntry-$C000+$5800
 	ldy	#>BRKINTEntry-$C000+$5800
 	stx	$bfff			;
@@ -3025,7 +3676,7 @@ SetVector:				;
 	stx	$bffb			;
 	sty	$bffa			;
 nesvr04:pla				;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	jsr	RestoreNMI		;
 	lda	#$80			; Set Vector change flag.
 	sta	VectorSet		;
@@ -3050,7 +3701,7 @@ RstVector:				;
 	lda	DRAMPageSave		; No.
 	pha				;
 	lda	#$ff			;
-	jsr	HalPageA		; Restore BRK Vector.
+	sta	DRAMPagePort		; Restore BRK Vector.
 	ldx	BRKAddressSave-$C000+$5800+1
 	ldy	BRKAddressSave-$C000+$5800
 	stx	$bfff			;
@@ -3060,7 +3711,7 @@ RstVector:				;
 	stx	$bffb			;
 	sty	$bffa			;
 	pla				;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	jmp	RestoreNMI		;
 
 ;=======================================;
@@ -3278,7 +3929,7 @@ lpmbk04:lda	BkLength+1,x		;
 	sta	BiosTemp1		;
 nembk08:lda	BiosTemp2		; Source page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 lpmbk08:lda	(BkSrcAddress,x)	;
 	sta	MoveBuffer,y		;
 	inc	BkSrcAddress,x		;
@@ -3290,7 +3941,7 @@ nembk12:iny				;
 	ldy	#0			;
 	lda	BiosTemp3		; Target page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 lpmbk12:lda	MoveBuffer,y		;
 	sta	(BkTarAddress,x)	;
 	inc	BkTarAddress,x		;
@@ -3325,7 +3976,7 @@ neebk04:sty	BiosTemp1		;
 	pha				;
 	lda	BiosTemp2		;
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 lpebk04:lda	BkLength+1,x		;
 	cmp	#1			;
 	bne	neebk12			;
@@ -3346,7 +3997,7 @@ neebk16:iny				;
 	ldy	#0			;
 	lda	BiosTemp3		; Exchange target and MoveBuffer.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 lpebk12:lda	(BkTarAddress,x)	;
 	pha				;
 	lda	MoveBuffer,y		;
@@ -3365,7 +4016,7 @@ neebk20:iny				;
 	sta	BkSrcAddress+1,x	;
 	lda	BiosTemp2		;
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	ldy	#0			;
 lpebk16:lda	MoveBuffer,y		;
 	sta	(BkSrcAddress,x)	; Move source to MoveBuffer.
@@ -3379,7 +4030,7 @@ neebk24:iny				;
 	bne	lpebk04			;
 neebk28:pla				;
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	pla				; Original target address.
 	cmp	#<$c000			;
 	bcc	neebk32			;
@@ -3489,36 +4140,36 @@ SwitchBG:				;
 	lda	VideoCtrlSave		;
 	and	#$f3			; WORK=0.
 	ora	#$40			; MODE=1.
-	jsr	HalVideoCtrl		;
-	sta	vDummy			; Queue INIT
+	sta	VideoCtrlPort		;
+	sta	$ff12			; Queue INIT
 lpsbg04:lda	SplitScreenDt,x		;
 	beq	nesbg04			;
-	sta	vDummy			; Write to SR queue
+	sta	$ff0a			; Write to SR queue
 	lda	SplitScreenDt+2,x	;
 	asl				;
 	asl				;
 	asl				;
 	asl				;
 	ora	SplitScreenDt+1,x	;
-	sta	vDummy			; Write to VR queue
+	sta	$ff1a			; Write to VR queue
 	txa				;
 	clc				;
 	adc	#5			;
 	tax				;
 	jmp	lpsbg04			;
 nesbg04:stx	SplitPoint		;
-	sta	vDummy			; START
+	sta	$ff22			; START
 	lda	VideoCtrlSave		;
 	ora	#$44			; WORD=1,MODE=1
 	sta	VideoCtrlSave		;
 	and	#$f7			;
-	jsr	HalVideoCtrl		;
+	sta	VideoCtrlPort		;
 	bne	nesbg12		;(jmp)	;
 nesbg08:lda	VideoCtrlSave		;
 	and	#$bb			; WORK=0,MODE=0.
 	sta	VideoCtrlSave		;
 	and	#$f3			;
-	jsr	HalVideoCtrl		;
+	sta	VideoCtrlPort		;
 nesbg12:pla				;
 	tay				;
 	pla				;
@@ -3593,7 +4244,7 @@ SetVideoPage:				;
 	asl				;
 	tax				;
 	tya				;
-	jsr	HalSlotAX		;
+	sta	VideoDataPort,x		;
 	rts				;
 ;---------------------------------------;
 ;    Get All drive message.		;
@@ -3624,10 +4275,10 @@ SendVRAMCmp:				;
 	lda	$2002			; Initial send vram address.
 lpsvc02:ldy	#1			;
 	lda	($fe),y			; VRAM address.
-	jsr	HalW2006			; High.
+	sta	$2006			; High.
 	dey				;
 	lda	($fe),y			;
-	jsr	HalW2006			; Low.
+	sta	$2006			; Low.
 	lda	#$02			; pass first two point of vrom.
 lpsvc04:jsr	PointAdjust		;
 	ldy	#0			;
@@ -3643,7 +4294,7 @@ lpsvc04:jsr	PointAdjust		;
 	tax				;
 	ldy	#1			;
 lpsvc08:lda	($fe),y			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	iny				;
 	dex				;
 	bne	lpsvc08			;
@@ -3653,7 +4304,7 @@ lpsvc08:lda	($fe),y			;
 nesvc04:tax				; Length.
 	ldy	#$01			;
 	lda	($fe),y			; Data.
-lpsvc12:jsr	HalW2007			;
+lpsvc12:sta	$2007			;
 	dex				;
 	bne	lpsvc12			;
 	lda	#2			;
@@ -3682,7 +4333,7 @@ LoadVideoData:				;
 	bne	nelvd04			;
 	lda	DRAMPageNotUse		; Yes, change to replace page.
 nelvd04:sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	tya				;
 	bne	nelvd08			;
 	ldy	1,x			;
@@ -3692,14 +4343,14 @@ nelvd04:sta	DRAMPageSave		;
 	jmp	nelvd20			;
 nelvd08:bit	$2002			;
 	lda	4,x			;
-	jsr	HalW2006			;
+	sta	$2006			;
 	lda	3,x			;
-	jsr	HalW2006			;
+	sta	$2006			;
 	lda	5,x			;
 	beq	lplvd04			;
 	inc	6,x			;
 lplvd04:lda	(1,x)			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	inc	1,x			;
 	bne	nelvd16			;
 	inc	2,x			;
@@ -3709,7 +4360,7 @@ nelvd16:dec	5,x			;
 	bne	lplvd04			;
 nelvd20:pla				;
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	rts				;
 ;---------------------------------------;
 ;   Set User NMI vector.(Call this first)
@@ -4044,14 +4695,14 @@ PaletteASCLen	equ	@-PaletteTableASC
 VRAMBegin:				;
 	ldy	#0			;
 	bit	$2002			;
-	jsr	HalW2006X			;
-	jsr	HalW2006Y			;
+	stx	$2006			;
+	sty	$2006			;
 	rts				;
 ;---------------------------------------;
 Send2007_0:				;
 	lda	#0			;
 Send2007:				;
-lps2704:jsr	HalW2007			;
+lps2704:sta	$2007			;
 	dey				;
 	bne	lps2704			;
 	rts				;
@@ -4059,12 +4710,12 @@ lps2704:jsr	HalW2007			;
 DispInitial:				;
 	lda	#0			; Close screen.
 	sta	Addr2000		;
-	jsr	HalW2000			;
+	sta	$2000			;
 	sta	$2001			;
 	lda	VideoCtrlSave		; Disable count int.
 	and	#$bb			;
 	sta	VideoCtrlSave		;
-	jsr	HalVideoCtrl		;
+	sta	VideoCtrlPort		;
 	lda	#0			;
 	sta	SplitPoint		;
 	jsr	InitVideoPort		;
@@ -4077,7 +4728,7 @@ DispInitial:				;
 	ldx	#>256			;
 	ldy	#0			;
 lpcas04:lda	($fe),y			;
-	jsr	HalW2007			;
+	sta	$2007			;
 	iny				;
 	cpy	#8			;
 	bne	lpcas04			;
@@ -4119,7 +4770,7 @@ lpcas12:jsr	Send2007		;
 	jsr	VRAMBegin		;
 	ldy	#0			;
 lpcas16:lda	PaletteTableASC,y	;
-	jsr	HalW2007			;
+	sta	$2007			;
 	iny				;
 	cpy	#PaletteASCLen		;
 	bne	lpcas16			;
@@ -4273,7 +4924,7 @@ lpubk16:lda	ZeroSave,x		;
 	bpl	lpubk16			;
 	pla				; restore page.
 	sta	DRAMPageSave		;
-	jsr	HalPageA		;
+	sta	DRAMPagePort		;
 	rts				;
 ;---------------------------------------;
 ;	Input	X|Y= Write length.	;
@@ -5541,24 +6192,40 @@ lpcsc16:iny				;
 ;		Cy=1: Zy=0: No scan code;
 ;		      Zy=1: No output.	;
 ;---------------------------------------;
-CheckScanCodeInp:				;
-	jsr	HalKbdGet			; SB2000: XT scan code from the IRQ queue.
-	bcs	necsi12			; No scan code.(Cy=1,Zy=0)
-	cmp	#$e0			; Extend lead code?
-	bne	necsi04			;
-	lda	KeyStatus3		;
-	ora	#$12			;
-	sta	KeyStatus3		;
-	lda	#0			; No output.(Cy=1,Zy=1)
-	sec				;
-	rts				;
-necsi04:sta	TempSave2		;
+CheckScanCodeInp:			;
+	jsr	CheckScanCode		; Scan code changed?
+	bcs	necsi12			;
+	sty	TempSave2		; Yes. Check another times.
+	jsr	CheckScanCode		;
+	cpy	TempSave2		;
+	bne	necsi20			;
+	tay				;
+	eor	LastKeyMap,x		; Modify LastKeyMap.
+	sta	LastKeyMap,x		;
+	tya				;
+	and	LastKeyMap,x		; Press or Release key?
+	tax				;
 	ldy	#0			;
 	sty	AutoRepeatDelay		;
+	ldy	TempSave2		;
+	lda	KeyCodeTable,y		;
+	bpl	necsi04			; Bit 7 of (A) is 1?(101 extend key)
+	tay			
+	lda	KeyStatus3		; Yes. $E0 leading of AT 101.
+	ora	#$12			;
+	sta	KeyStatus3		;
+	tya				;
+	and	#$7f			;
+necsi04:dex				; Release key?
+	bpl	necsi08			;
+	ora	#$80			; Yes.
+necsi08:sta	TempSave2		;
 	jsr	GetKeyCode		;
 	bcc	necsi12			;
 	ldy	#0			; Cy=1 and No output.
 necsi12:rts				;
+necsi20:sec				; No scan code.
+	rts				;
 ;---------------------------------------;
 CheckPrintScreen:			;
 	cpx	#$37			; *(keypad) key?
@@ -5573,10 +6240,10 @@ necps04:sec				;
 	
 ;=======================================; (X)=8. Print output.
 PrintDataDev:				;
-	sty	vDummy			; Port+1
+	sty	$ff40			; Port+1
 	lda	#23			; Delay 10 second.
 	ldx	#0			;
-lppda04:bit	vDummy			; Port+1
+lppda04:bit	$ff48			; Port+1
 	bmi	nepda04			;
 	dey				;
 	bne	lppda04			;
@@ -5588,21 +6255,21 @@ lppda04:bit	vDummy			; Port+1
 	sec				; Time out error.
 	bcs	nepss04	;(jmp)		;
 nepda04:lda	#$0d			;
-	sta	vDummy			; Port+2
+	sta	$ff50			; Port+2
 	pha				; Delay
 	pla				;
 	bne	neipt04		;(jmp)	;
 ;=======================================; (X)=9. Initial printer.
 InitialPrintDev:				;
 	lda	#$08			;
-	sta	vDummy			;
+	sta	$ff50			;
 	ldy	#10			; Delay.
 lpipt04:dex				;
 	bne	lpipt04			;
 	dey				;
 	bne	lpipt04			;
 neipt04:lda	#$0c			;
-	sta	vDummy			;
+	sta	$ff50			;
 	pha				; Delay
 	pla				;
 ;	bne	PrinterStatus	;(jmp)	;
@@ -5614,7 +6281,7 @@ neipt04:lda	#$0c			;
 ;---------------------------------------;
 PrinterStatusDev:
 	clc				;
-nepss04:lda	vDummy			;
+nepss04:lda	$ff48			;
 	and	#$f8			;
 	bcc	nepss08			;
 	ora	#$01			;
@@ -5969,7 +6636,7 @@ SaveBackKeyCodeDev:			;
 nesbb04:lda	Addr2000		; Disable NMI.
 	pha				;
 	and	#$7f			;
-	jsr	HalW2000			;
+	sta	$2000			;
 	sta	Addr2000		;
 	cpx	KBDTail			; Keyboard buffer full?
 	bne	nesbb12			;
@@ -5982,7 +6649,7 @@ nesbb08:sta	KBDTail			;
 nesbb12:stx	KBDHead			;
 	pla				;
 	sta	Addr2000		;
-	jsr	HalW2000			; Restore NMI.
+	sta	$2000			; Restore NMI.
 	tya				;
 	sta	KBDBuffer,x		;
 	lda	$ff			;
@@ -6722,7 +7389,6 @@ nepat36:tax				; Extend code.
 nepat40:jmp	CreateKeyCode		;
 
 ;=======================================;
-	include	hal-ppu.asm
 	org	$ff00			; Reserve for I/O space.
 	org	$ff00+1			; Reservrd for I/O
 DelayTeble	db	13, 26, 48, 51	;

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-bios.mjs
-// 说明：把 src/bios/Bios.asm 汇编成 bios.bbk：16 字节文件头加 8 个 16K 页，供 START.EXE 加载。
+// 说明：把 src/Bios.asm 汇编成 bios.bbk：16 字节文件头加 8 个 16K 页，供 START.EXE 加载。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
@@ -11,7 +11,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { Gasm } from './gasm.mjs';
+import { Gasm } from '../../../../machines/bbk/tools/gasm.mjs';
 import { BIN_DIR, BIOS_SOURCE, INCLUDE_DIR, INES_HEADER_SIZE, ROM_BIOS10 } from './config.mjs';
 
 /** 一页的字节数 */

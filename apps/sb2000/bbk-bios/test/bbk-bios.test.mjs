@@ -13,9 +13,9 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Gasm } from '../tools/gasm.mjs';
+import { Gasm } from '../../../../machines/bbk/tools/gasm.mjs';
 import { portBios } from '../tools/port-bios.mjs';
-import { BBK_ROOT, BIOS_SOURCE, INCLUDE_DIR, INES_HEADER_SIZE, ORIGINAL_SOURCE_DIR, ROM_BIOS10 } from '../tools/config.mjs';
+import { BIOS_ROOT, BIOS_SOURCE, INCLUDE_DIR, INES_HEADER_SIZE, ORIGINAL_BIOS_SOURCE, ROM_BIOS10 } from '../tools/config.mjs';
 
 /** 汇编提交进仓库的 SB2000 版 BIOS */
 function assembleBios() {
@@ -23,13 +23,13 @@ function assembleBios() {
 }
 
 test('移植规则全部命中预期次数', () => {
-  const { report } = portBios(readFileSync(join(ORIGINAL_SOURCE_DIR, 'Bios.asm'), 'latin1'));
+  const { report } = portBios(readFileSync(ORIGINAL_BIOS_SOURCE, 'latin1'));
   const bad = report.filter((item) => item.count !== item.expected).map((item) => `${item.label} ${item.count}/${item.expected}`);
   assert.deepEqual(bad, []);
 });
 
-test('src/bios/Bios.asm 与移植规则的生成结果一致', () => {
-  const { text } = portBios(readFileSync(join(ORIGINAL_SOURCE_DIR, 'Bios.asm'), 'latin1'));
+test('src/Bios.asm 与移植规则的生成结果一致', () => {
+  const { text } = portBios(readFileSync(ORIGINAL_BIOS_SOURCE, 'latin1'));
   assert.ok(readFileSync(BIOS_SOURCE).equals(Buffer.from(text, 'latin1')), 'Bios.asm 被手改过：同步修改 tools/port-bios.mjs 的规则，或确认后用 --force 重新生成');
 });
 
@@ -68,7 +68,7 @@ test('bios.bbk：文件头、字库页取自原版 ROM、最后一页是汇编�
   const dir = mkdtempSync(join(tmpdir(), 'bbk-bios-'));
   try {
     const output = join(dir, 'bios.bbk');
-    execFileSync(process.execPath, [join(BBK_ROOT, 'tools', 'build-bios.mjs'), output], { stdio: 'pipe' });
+    execFileSync(process.execPath, [join(BIOS_ROOT, 'tools', 'build-bios.mjs'), output], { stdio: 'pipe' });
     const image = readFileSync(output);
     const result = assembleBios();
     assert.equal(image.length, 16 + 8 * 0x4000);

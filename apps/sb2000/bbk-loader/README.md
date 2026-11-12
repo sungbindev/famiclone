@@ -1,6 +1,6 @@
-# startbbk
+# bbk-loader
 
-在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行：把机器换成步步高的 BIOS，再从软盘启动步步高的 BBGDOS。用 fcdev 开发，C 语言。BIOS 映像 `bios.bbk` 由 [machines/bbk](../../../machines/bbk/README.md) 构建。
+在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行：把机器换成步步高的 BIOS，再从软盘启动步步高的 BBGDOS。用 fcdev 开发，C 语言。BIOS 映像 `bios.bbk` 由 [bbk-bios](../bbk-bios/README.md) 构建。
 
 ## 使用
 
@@ -29,7 +29,7 @@ npm run build    # 生成 build/sb2000/START.EXE
 npm run disk     # 生成只放有 START.EXE 的软盘镜像 build/sb2000/START.img
 ```
 
-要在模拟器里看到效果，在 `machines/bbk` 里运行 `npm run verify`，它会把 `START.EXE`、`BIOS.BBK` 追加到步步高 DOS 启动盘里再运行。
+要在模拟器里看到效果，在 `apps/sb2000/bbk-bios` 里运行 `npm run verify`，它会把 `START.EXE`、`BIOS.BBK` 追加到步步高 DOS 启动盘里再运行。
 
 ## 做了什么
 
@@ -37,11 +37,11 @@ npm run disk     # 生成只放有 START.EXE 的软盘镜像 build/sb2000/START.
 2. 关 NMI 与中断，用 DMA 把 8 个 16K 页复制到扩展 RAM 的 4K 页 `$E0-$FF`；复制时借用窗口 2，窗口 3 里有 C 软件栈不能换页，所以程序（含数据）必须在 `$A000` 以下。
 3. 把跳板复制到 ERAM `$6000` 运行：窗口 4-7（`$C000-$FFFF`）指向映像的第 7 页，窗口 0-3 指向第 0 页，屏蔽 SB2000 的全部中断，`$2000`、`$2001`、`$2008`、`$4300` 清 0，跳到文件头里记的入口。
 
-始终留在 6576 模式，不写 `$4301`。映像格式与移植设计见 [machines/bbk/docs/计划与进度.md](../../../machines/bbk/docs/计划与进度.md)。
+始终留在 6576 模式，不写 `$4301`。映像格式与移植设计见 [bbk-bios/docs/计划与进度.md](../bbk-bios/docs/计划与进度.md)。
 
 ## 文件
 
 | 文件 | 说明 |
 | --- | --- |
-| `src/startbbk.c` | 程序 |
+| `src/start.c` | 程序 |
 | `fcdev.json` | fcdev 配置：目标 sb2000，程序名 start，固件指向 `reference/rom/SB2K_BIOS.NES` |

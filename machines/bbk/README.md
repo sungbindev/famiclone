@@ -18,8 +18,8 @@
 
 | 命令 | 作用 |
 | --- | --- |
-| `npm run build` | 汇编 `src/bios/Bios.asm`，与 `bbk_bios10.nes` 的前 7 页（字库）拼成 `build/bios.bbk` |
-| `npm run verify` | 在调试版模拟器里验证：生成 `build/dosboot.img`（步步高 DOS 启动盘加 `START.EXE`、`BIOS.BBK`），SB-DOS 里运行 `start`，进入 BBGDOS，回车跳过日期与时间，再执行 `dir`，截图到 `build/shots/dos.png`；画面出现文件列表与 `A:\>` 即成功。先构建 `bios.bbk` 与装载器 |
+| `npm run build` | 汇编 `src/bios/Bios.asm`，与 `bbk_bios10.nes` 的前 7 页（字库）拼成 `build/bin/bios.bbk` |
+| `npm run verify` | 在调试版模拟器里验证：生成 `build/work/dosboot.img`（步步高 DOS 启动盘加 `START.EXE`、`BIOS.BBK`），SB-DOS 里运行 `start`，进入 BBGDOS，回车跳过日期与时间，再执行 `dir`，截图到 `build/work/shots/dos.png`；画面出现文件列表与 `A:\>` 即成功。先构建 `bios.bbk` 与装载器 |
 | `node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]` | 同上，可改帧数与截图位置；不带 `dos` 时软盘只含装载器与 `bios.bbk`，只能看到步步高的开机检测画面 |
 | `npm run port` | 按规则从原厂 `Bios.asm` 重新生成 `src/bios/Bios.asm`，会覆盖对它的手工修改，所以与现有文件不同时要加 `-- --force` |
 | `npm run check` | 汇编原厂的 `Bios.asm`、`Command.asm`、`Smcdos.asm`，列出缺失的包含文件、未定义符号、不认识的宏与重复定义，正常时全部为 0 |
@@ -48,5 +48,6 @@ machines/bbk/
   tools/         GABBG 方言的 6502 汇编器、移植与构建脚本、模拟器验证脚本、分析工具
   test/          汇编器、移植规则、bios.bbk 格式的测试
   docs/          计划、设计与进度
-  build/         构建输出（不进 Git）
+  build/bin/     构建产物 bios.bbk（不进 Git）
+  build/work/    验证用的临时文件：合并启动盘、截图（不进 Git，可随时删除）
 ```

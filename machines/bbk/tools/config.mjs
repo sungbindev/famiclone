@@ -47,3 +47,9 @@ export const INCLUDE_DIR = join(BBK_ROOT, 'src', 'include');
 
 /** 构建输出目录（不进 Git） */
 export const BUILD_DIR = join(BBK_ROOT, 'build');
+
+/** 构建产物（bios.bbk）放这里 */
+export const BIN_DIR = join(BUILD_DIR, 'bin');
+
+/** 验证用的临时文件（合并启动盘、截图）放这里，可随时删除 */
+export const WORK_DIR = join(BUILD_DIR, 'work');

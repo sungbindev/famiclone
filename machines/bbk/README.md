@@ -7,7 +7,8 @@
 ## 环境
 
 - Node.js 22 及以上，脚本没有第三方依赖。
-- 原厂资料在仓库根目录的 `reference/` 下，本目录只引用不复制：`reference/docs/BBKDOS源代码/`（GBK 编码）、`reference/rom/bbk_bios10.nes`、`reference/rom/bbk_bios20.nes`。
+- BIOS 源码 [src/bios/Bios.asm](src/bios/Bios.asm) 在本目录里，原样复制自原厂资料（GBK 编码，不要用编辑器转码保存），之后的修改都改这一份；构建与比对工具只读它。
+- 其他原厂资料仍在仓库根目录的 `reference/` 下，只引用不复制：`reference/docs/BBKDOS源代码/`（`Command.asm`、`Smcdos.asm` 与三个 `.sys`）、`reference/rom/bbk_bios10.nes`、`reference/rom/bbk_bios20.nes`、`reference/floppy-images/bbk/`。
 
 ## 使用
 
@@ -36,6 +37,7 @@
 
 ```text
 machines/bbk/
+  src/bios/      BIOS 源码 Bios.asm（从原厂资料复制，GBK 编码）
   src/include/   还原出的符号文件 tvdef.asm
   tools/         GABBG 方言的 6502 汇编器、检查与比对工具、ROM 构建、模拟器驱动
   test/          汇编器与 ROM 构建的测试

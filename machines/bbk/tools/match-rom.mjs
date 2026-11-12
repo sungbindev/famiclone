@@ -11,9 +11,8 @@
 // ------------------------------------------------------------------------
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { Gasm } from './gasm.mjs';
-import { INCLUDE_DIR, ORIGINAL_SOURCE_DIR, ROM_BIOS10 } from './config.mjs';
+import { INCLUDE_DIR, ROM_BIOS10, resolveSource } from './config.mjs';
 
 const [sourceName, binaryArg, groupArg] = process.argv.slice(2);
 if (!sourceName || !binaryArg) {
@@ -23,7 +22,7 @@ if (!sourceName || !binaryArg) {
 
 const groupSize = Number(groupArg ?? 6);
 const binary = readFileSync(binaryArg === '--rom' ? ROM_BIOS10 : binaryArg);
-const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(join(ORIGINAL_SOURCE_DIR, sourceName));
+const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(resolveSource(sourceName));
 
 let total = 0;
 let found = 0;

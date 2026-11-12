@@ -10,9 +10,8 @@
 // ------------------------------------------------------------------------
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { Gasm } from './gasm.mjs';
-import { INCLUDE_DIR, INES_HEADER_SIZE, ORIGINAL_SOURCE_DIR, ROM_BIOS10 } from './config.mjs';
+import { INCLUDE_DIR, INES_HEADER_SIZE, ROM_BIOS10, resolveSource } from './config.mjs';
 
 const [sourceName, binaryArg, offsetArg, startArg] = process.argv.slice(2);
 if (!sourceName || !binaryArg) {
@@ -20,7 +19,7 @@ if (!sourceName || !binaryArg) {
   process.exit(2);
 }
 
-const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(join(ORIGINAL_SOURCE_DIR, sourceName));
+const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(resolveSource(sourceName));
 const addresses = [...result.memory.keys()].sort((a, b) => a - b);
 const first = startArg ? Number.parseInt(startArg.replace('$', ''), 16) : addresses[0];
 

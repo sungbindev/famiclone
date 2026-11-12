@@ -7,13 +7,12 @@
 // 备注：用法 node tools/gasm-check.mjs Bios.asm；文件名相对原厂源码目录。
 // ------------------------------------------------------------------------
 
-import { join } from 'node:path';
 import { Gasm } from './gasm.mjs';
-import { INCLUDE_DIR, ORIGINAL_SOURCE_DIR } from './config.mjs';
+import { INCLUDE_DIR, resolveSource } from './config.mjs';
 
 const name = process.argv[2] ?? 'Bios.asm';
 const gasm = new Gasm({ includeDirs: [INCLUDE_DIR] });
-const result = gasm.assemble(join(ORIGINAL_SOURCE_DIR, name));
+const result = gasm.assemble(resolveSource(name));
 
 const addresses = [...result.memory.keys()];
 console.log(`${name}: ${result.memory.size} 字节，地址 $${Math.min(...addresses).toString(16)}-$${Math.max(...addresses).toString(16)}`);

@@ -12,9 +12,8 @@
 // ------------------------------------------------------------------------
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { Gasm } from './gasm.mjs';
-import { INCLUDE_DIR, ORIGINAL_SOURCE_DIR, ROM_BIOS10 } from './config.mjs';
+import { INCLUDE_DIR, ROM_BIOS10, resolveSource } from './config.mjs';
 
 const sourceName = process.argv[2] ?? 'Bios.asm';
 const binaryArg = process.argv[3] ?? '--rom';
@@ -22,7 +21,7 @@ const groupSize = Number(process.argv[4] ?? 6);
 const BANK_SIZE = 0x4000;
 const BASE = 0xc000;
 
-const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(join(ORIGINAL_SOURCE_DIR, sourceName));
+const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(resolveSource(sourceName));
 const file = readFileSync(binaryArg === '--rom' ? ROM_BIOS10 : binaryArg);
 const bank = file.subarray(file.length - BANK_SIZE);
 

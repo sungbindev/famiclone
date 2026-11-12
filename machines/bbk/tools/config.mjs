@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：原厂资料放在仓库根目录的 reference/ 下，本工程只引用不复制。
+// 备注：BIOS 源码在本工程的 src/bios 里；其余原厂资料放在仓库根目录的 reference/ 下，只引用不复制。
 // ------------------------------------------------------------------------
 
 import { fileURLToPath } from 'node:url';
@@ -23,6 +23,18 @@ export const ORIGINAL_SOURCE_DIR = join(REPO_ROOT, 'reference', 'docs', 'BBKDOS�
 
 /** 步步高 BIOS 1.0 的 ROM（128KB，含 16 字节 iNES 头） */
 export const ROM_BIOS10 = join(REPO_ROOT, 'reference', 'rom', 'bbk_bios10.nes');
+
+/** 本工程里的 BIOS 源码（从原厂目录复制而来，GBK 编码，工具只读这一份） */
+export const BIOS_SOURCE = join(BBK_ROOT, 'src', 'bios', 'Bios.asm');
+
+/**
+ * 按文件名取源文件的路径：Bios.asm 用本工程里的，其余仍取原厂目录。
+ * @param {string} name 源文件名
+ * @returns {string} 绝对路径
+ */
+export function resolveSource(name) {
+  return name.toLowerCase() === 'bios.asm' ? BIOS_SOURCE : join(ORIGINAL_SOURCE_DIR, name);
+}
 
 /** DOS 启动盘镜像（1.44MB，含 BBGDOS.SYS 与 COMMAND.CMD） */
 export const DOS_FLOPPY = join(REPO_ROOT, 'reference', 'floppy-images', 'bbk', 'dos启动盘.IMG');

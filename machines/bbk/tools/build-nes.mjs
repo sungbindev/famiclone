@@ -12,7 +12,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Gasm } from './gasm.mjs';
-import { BUILD_DIR, INCLUDE_DIR, INES_HEADER_SIZE, ORIGINAL_SOURCE_DIR, ROM_BIOS10 } from './config.mjs';
+import { BIOS_SOURCE, BUILD_DIR, INCLUDE_DIR, INES_HEADER_SIZE, ROM_BIOS10 } from './config.mjs';
 
 /** 一页的字节数 */
 const BANK_SIZE = 0x4000;
@@ -21,7 +21,7 @@ const BANK_SIZE = 0x4000;
 const LAST_BANK_BASE = 0xc000;
 
 const output = process.argv[2] ?? join(BUILD_DIR, 'bbk_src.nes');
-const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(join(ORIGINAL_SOURCE_DIR, 'Bios.asm'));
+const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(BIOS_SOURCE);
 if (result.undefinedSymbols.size > 0) throw new Error(`有未定义符号：${[...result.undefinedSymbols.keys()].join(', ')}`);
 
 const rom = Buffer.from(readFileSync(ROM_BIOS10));

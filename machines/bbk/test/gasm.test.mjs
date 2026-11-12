@@ -13,7 +13,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Gasm, GasmError } from '../tools/gasm.mjs';
-import { INCLUDE_DIR, ORIGINAL_SOURCE_DIR } from '../tools/config.mjs';
+import { BIOS_SOURCE, INCLUDE_DIR, resolveSource } from '../tools/config.mjs';
 
 /**
  * 汇编一段源码并取出字节。
@@ -128,7 +128,7 @@ test('分支超出范围报错并带行号', () => {
 
 test('原厂三个源文件汇编后没有未定义符号、宏与重复定义', () => {
   for (const name of ['Bios.asm', 'Command.asm', 'Smcdos.asm']) {
-    const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(join(ORIGINAL_SOURCE_DIR, name));
+    const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(resolveSource(name));
     assert.equal(result.missingIncludes.length, 0, `${name} 缺少包含文件`);
     assert.equal(result.undefinedSymbols.size, 0, `${name} 有未定义符号：${[...result.undefinedSymbols.keys()].join(',')}`);
     assert.equal(result.unknownOps.size, 0, `${name} 有不认识的宏`);
@@ -137,7 +137,7 @@ test('原厂三个源文件汇编后没有未定义符号、宏与重复定义',
 });
 
 test('Bios.asm 的入口跳转表与原厂 ROM 一致', () => {
-  const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(join(ORIGINAL_SOURCE_DIR, 'Bios.asm'));
+  const result = new Gasm({ includeDirs: [INCLUDE_DIR] }).assemble(BIOS_SOURCE);
   const head = [...Array(9).keys()].map((i) => result.memory.get(0xc000 + i));
   assert.deepEqual(head, [0x4c, 0x67, 0x58, 0x4c, 0x8e, 0x58, 0x4c, 0x92, 0x58]);
 });

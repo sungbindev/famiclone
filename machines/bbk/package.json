@@ -1,0 +1,15 @@
+{
+  "name": "bbk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BBK learning computer BIOS/DOS source tooling",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node tools/gasm-check.mjs Bios.asm && node tools/gasm-check.mjs Command.asm && node tools/gasm-check.mjs Smcdos.asm",
+    "match": "node tools/match-rom.mjs Bios.asm --rom",
+    "test": "node --test \"test/**/*.test.mjs\""
+  }
+}

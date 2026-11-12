@@ -24,16 +24,16 @@ export const ORIGINAL_SOURCE_DIR = join(REPO_ROOT, 'reference', 'docs', 'BBKDOS�
 /** 步步高 BIOS 1.0 的 ROM（128KB，含 16 字节 iNES 头） */
 export const ROM_BIOS10 = join(REPO_ROOT, 'reference', 'rom', 'bbk_bios10.nes');
 
-/** 本工程里的 BIOS 源码（从原厂目录复制而来，GBK 编码，工具只读这一份） */
+/** 本工程里的 BIOS 源码：SB2000 版（GBK 编码），由原厂版经 tools/port-bios.mjs 移植而来，构建 bbk.bios 只读这一份 */
 export const BIOS_SOURCE = join(BBK_ROOT, 'src', 'bios', 'Bios.asm');
 
 /**
- * 按文件名取源文件的路径：Bios.asm 用本工程里的，其余仍取原厂目录。
+ * 按文件名取原厂源文件的路径；分析工具（比对 ROM、查符号）用它，因为 ROM 对应的是原厂版而不是 SB2000 版。
  * @param {string} name 源文件名
  * @returns {string} 绝对路径
  */
 export function resolveSource(name) {
-  return name.toLowerCase() === 'bios.asm' ? BIOS_SOURCE : join(ORIGINAL_SOURCE_DIR, name);
+  return join(ORIGINAL_SOURCE_DIR, name);
 }
 
 /** DOS 启动盘镜像（1.44MB，含 BBGDOS.SYS 与 COMMAND.CMD） */

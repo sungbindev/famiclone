@@ -1,0 +1,498 @@
+;---------------------------------------;
+; 名称：hal-ppu.asm
+; 说明：SB2000 硬件适配层的虚拟 PPU：把步步高 BIOS 按 NES PPU 方式写的 $2006/$2007，转成 6576 的 VRAM 写入。
+; 作者：sungbin
+; 邮箱：sungbin@3578.cn
+; 日期：2026-11-12
+; 备注：本文件在 ROM 里，只能在 $C000-$FFFF 映射为 ROM 时调用（步步高 BIOS 访问 PPU 时本来就是这样）。
+;       虚拟地址空间：$0000-$1FFF 图案表，$2000-$3EFF 名称表，$3F00-$3FFF 调色板。
+;       6576 的显存布局：
+;         图案：扩展显存 $8000 起，虚拟图案槽 n（2K）对应的页号 p，放在 $8000+p*$800；
+;         名称表：CRAM 的 j*$800 处，每个图块 2 字节，低字节 = 图案地址>>4 的低 8 位，
+;                 高字节 = 调色板组<<4 | 图案地址>>12；
+;         调色板：$2040 起，BG 16 组×4 色。
+;       名称表条目就是图块与调色板组的唯一记录，不另存影子：写图块名时保留条目里原有的调色板组，
+;       写属性字节时只改它覆盖的 16 个图块的调色板组。
+;       虚拟 PPU 过程用固定的临时变量，不可重入，与真机上 PPU 地址寄存器被中断打断同样不安全，
+;       步步高 BIOS 自己已避免这种情况。
+;---------------------------------------;
+;    初始化				;
+;	清 HAL 变量，设 6576 为 4 色模式，关 NMI 与显示。保存 A,X,Y 和标志。	;
+;---------------------------------------;
+HalInit:				;
+	php				;
+	pha				;
+	txa				;
+	pha				;
+	lda	#0			;
+	ldx	#HalVarsEnd-HalVars-1	;
+hin04:	sta	HalVars,x		;
+	dex				;
+	bpl	hin04			;
+	sta	$2008			; 4 色模式，精灵图案表 $0000
+	sta	$2000			;
+	sta	$2001			;
+	lda	#$df			; 只留键盘中断不屏蔽
+	sta	$4032			;
+	pla				;
+	tax				;
+	pla				;
+	plp				;
+	rts				;
+;---------------------------------------;
+;    从键盘队列取一个扩展码		;
+;	返回 C=0：A=扩展码；C=1：队列空，A=1（Z=0）。改 X。	;
+;---------------------------------------;
+HalKbdGet:				;
+	jsr	HalKbdIrq		; BBGDOS 常开着中断屏蔽跑，键盘中断进不来，这里主动查一次
+	ldx	vKbHead			;
+	cpx	vKbTail			;
+	beq	hkg08			;
+	inx				;
+	txa				;
+	and	#$0f			;
+	sta	vKbHead			;
+	lda	vKbBuf-1,x		; x 已加 1，前一格就是刚取的字节
+	clc				;
+	rts				;
+hkg08:	lda	#1			;
+	sec				;
+	rts				;
+;---------------------------------------;
+;    图案槽页号：$FF03+8n		;
+;	页号在 X（0-15），保存 A,X,Y 和标志。	;
+;---------------------------------------;
+HalSlot0X:				;
+	php				;
+	pha				;
+	txa				;
+	and	#$0f			;
+	sta	vSlot			;
+	pla				;
+	plp				;
+	rts				;
+HalSlot1X:				;
+	php				;
+	pha				;
+	txa				;
+	and	#$0f			;
+	sta	vSlot+1			;
+	pla				;
+	plp				;
+	rts				;
+HalSlot2X:				;
+	php				;
+	pha				;
+	txa				;
+	and	#$0f			;
+	sta	vSlot+2			;
+	pla				;
+	plp				;
+	rts				;
+HalSlot3X:				;
+	php				;
+	pha				;
+	txa				;
+	and	#$0f			;
+	sta	vSlot+3			;
+	pla				;
+	plp				;
+	rts				;
+HalSlotAX:				; A=页号，X=槽号*8（SetVideoPage 的 VideoDataPort,x）
+	php				;
+	sta	tA			;
+	stx	tX			;
+	txa				;
+	lsr				;
+	lsr				;
+	lsr				;
+	and	#3			;
+	tax				;
+	lda	tA			;
+	and	#$0f			;
+	sta	vSlot,x			;
+	ldx	tX			;
+	lda	tA			;
+	plp				;
+	rts				;
+;---------------------------------------;
+;    虚拟 $2006				;
+;	数据在 A、X 或 Y，保存 A,X,Y 和标志。	;
+;---------------------------------------;
+HalW2006X:				;
+	php				;
+	sta	tA			;
+	txa				;
+	jmp	hw6c			;
+HalW2006Y:				;
+	php				;
+	sta	tA			;
+	tya				;
+	jmp	hw6c			;
+HalW2006:				;
+	php				;
+	sta	tA			;
+hw6c:	sta	t0			;
+	lda	vTog			;
+	bne	hw604			;
+	lda	t0			;
+	and	#$3f			;
+	sta	vVAhi			;
+	lda	#1			;
+	sta	vTog			;
+	jmp	hw608			;
+hw604:	lda	t0			;
+	sta	vVAlo			;
+	lda	#0			;
+	sta	vTog			;
+hw608:	lda	tA			;
+	plp				;
+	rts				;
+;---------------------------------------;
+;    虚拟 $2007 写			;
+;	A=数据，保存 A,X,Y 和标志。	;
+;---------------------------------------;
+HalW2007:				;
+	php				;
+	sta	tA			;
+	stx	tX			;
+	sty	tY			;
+	lda	vVAhi			;
+	cmp	#$20			;
+	bcc	hw704			;
+	cmp	#$3f			;
+	bcs	hw708			;
+	jsr	HalNTWrite		;
+	jmp	hw712			;
+hw704:	jsr	HalPatWrite		;
+	jmp	hw712			;
+hw708:	jsr	HalPalWrite		;
+hw712:	jsr	HalAdvance		;
+	lda	tA			;
+	ldx	tX			;
+	ldy	tY			;
+	plp				;
+	rts				;
+;---------------------------------------; 虚拟地址加 1 或 32
+HalAdvance:				;
+	lda	vReg2000		;
+	and	#4			;
+	beq	hadv04			;
+	lda	#32			;
+	bne	hadv08			;
+hadv04:	lda	#1			;
+hadv08:	clc				;
+	adc	vVAlo			;
+	sta	vVAlo			;
+	bcc	hadv12			;
+	lda	vVAhi			;
+	clc				;
+	adc	#1			;
+	and	#$3f			;
+	sta	vVAhi			;
+hadv12:	rts				;
+;---------------------------------------; 图案区：把虚拟地址换成扩展显存地址写入真 $2006
+HalPatAddr:				;
+	lda	vVAhi			;
+	lsr				;
+	lsr				;
+	lsr				;
+	tax				;
+	lda	vSlot,x			;
+	asl				;
+	asl				;
+	asl				;
+	sta	t0			;
+	lda	vVAhi			;
+	and	#7			;
+	ora	t0			;
+	ora	#$80			;
+	sta	$2006			;
+	lda	vVAlo			;
+	sta	$2006			;
+	rts				;
+HalPatWrite:				;
+	jsr	HalPatAddr		;
+	lda	tA			;
+	sta	$2007			;
+	rts				;
+;---------------------------------------; 调色板：每组的 0 号色是公共背景色
+HalPalWrite:				;
+	lda	vVAlo			;
+	and	#$1f			;
+	tax				;
+	and	#3			;
+	bne	hpw04			;
+	lda	tA			;
+	sta	SBPalette		;
+	sta	SBPalette+4		;
+	sta	SBPalette+8		;
+	sta	SBPalette+12		;
+	rts				;
+hpw04:	lda	tA			;
+	sta	SBPalette,x		;
+	rts				;
+;---------------------------------------; 名称表：按镜像方式写到所有相同的名称表
+HalNTWrite:				;
+	lda	vVAhi			;
+	lsr				;
+	lsr				;
+	and	#3			;
+	sta	t1			;
+	lda	vVAhi			;
+	and	#3			;
+	sta	t2			;
+	ldx	vMir			;
+	lda	HalMaskTbl,x		;
+	sta	t3			;
+	ldx	#0			;
+hnw04:	txa				;
+	eor	t1			;
+	and	t3			;
+	bne	hnw08			;
+	stx	t4			;
+	jsr	HalNTApply		;
+	ldx	t4			;
+hnw08:	inx				;
+	cpx	#4			;
+	bne	hnw04			;
+	rts				;
+HalMaskTbl:	db	$01,$02,$00,$00	; 竖镜像按位 0 判同，横镜像按位 1 判同，单屏全同
+;---------------------------------------; 向名称表 t4 写一个字节：t2=偏移高 2 位，vVAlo=偏移低 8 位
+HalNTApply:				;
+	lda	t2			;
+	cmp	#3			;
+	bcc	hna04			;
+	lda	vVAlo			;
+	cmp	#$c0			;
+	bcs	hna16			;
+hna04:	lda	vVAlo			; 图块名：求行、列
+	and	#$1f			;
+	sta	tCol			;
+	lda	vVAlo			;
+	lsr				;
+	lsr				;
+	lsr				;
+	lsr				;
+	lsr				;
+	sta	t0			;
+	lda	t2			;
+	asl				;
+	asl				;
+	asl				;
+	ora	t0			;
+	sta	tRow			;
+	jmp	HalSetName		;
+hna16:	lda	vVAlo			; 属性字节
+	sec				;
+	sbc	#$c0			;
+	jmp	HalSetAttr		;
+;---------------------------------------; 求图块条目的 6576 显存地址：名称表 t4，行 tRow，列 tCol -> t7 高、t8 低（低字节地址，偶数）
+HalEntryAddr:				;
+	lda	tRow			;
+	lsr				;
+	lsr				;
+	lsr				;
+	sta	t5			; 偏移高字节
+	lda	tRow			;
+	and	#7			;
+	asl				;
+	asl				;
+	asl				;
+	asl				;
+	asl				;
+	ora	tCol			;
+	sta	t6			; 偏移低字节
+	lda	t4			;
+	asl				;
+	asl				;
+	asl				;
+	sta	t7			;
+	lda	t5			;
+	asl				;
+	clc				;
+	adc	t7			;
+	sta	t7			;
+	lda	t6			;
+	asl				; C = 偏移低字节的位 7
+	sta	t8			;
+	lda	t7			;
+	adc	#0			;
+	sta	t7			;
+	rts				;
+;---------------------------------------; 设图块名：tA=名，保留条目里原有的调色板组
+HalSetName:				;
+	jsr	HalEntryAddr		;
+	lda	t7			; 读条目高字节取调色板组
+	sta	$2006			;
+	lda	t8			;
+	ora	#1			;
+	sta	$2006			;
+	lda	$2007			;
+	lda	$2007			;
+	and	#$f0			;
+	sta	t9			;
+	lda	tA			; 图案虚拟地址高字节 = 名>>4 | 背景图案表位
+	lsr				;
+	lsr				;
+	lsr				;
+	lsr				;
+	sta	t0			;
+	lda	vReg2000		;
+	and	#$10			;
+	ora	t0			;
+	sta	t0			;
+	lsr				;
+	lsr				;
+	lsr				;
+	tax				; 图案槽
+	lda	vSlot,x			;
+	asl				;
+	asl				;
+	asl				;
+	sta	t5			;
+	lda	t0			;
+	and	#7			;
+	ora	t5			;
+	ora	#$80			; 扩展显存地址高字节
+	sta	t5			;
+	and	#$0f			; 条目低字节 = 地址高字节低 4 位<<4 | 名低 4 位
+	asl				;
+	asl				;
+	asl				;
+	asl				;
+	sta	t0			;
+	lda	tA			;
+	and	#$0f			;
+	ora	t0			;
+	sta	t0			;
+	lda	t5			; 条目高字节 = 调色板组<<4 | 地址高字节>>4
+	lsr				;
+	lsr				;
+	lsr				;
+	lsr				;
+	ora	t9			;
+	sta	t9			;
+	lda	t7			;
+	sta	$2006			;
+	lda	t8			;
+	sta	$2006			;
+	lda	t0			;
+	sta	$2007			;
+	lda	t9			;
+	sta	$2007			;
+	rts				;
+;---------------------------------------; 设属性字节：A=序号 0-63，tA=值；改它覆盖的 4×4 个图块的调色板组
+HalSetAttr:				;
+	pha				;
+	lsr				;
+	lsr				;
+	lsr				;
+	asl				;
+	asl				;
+	sta	tRow0			;
+	pla				;
+	and	#7			;
+	asl				;
+	asl				;
+	sta	tCol0			;
+	ldx	#0			;
+hsa04:	txa				;
+	clc				;
+	adc	tRow0			;
+	cmp	#30			; 只有 30 行
+	bcs	hsa20			;
+	sta	tRow			;
+	ldy	#0			;
+hsa08:	tya				;
+	clc				;
+	adc	tCol0			;
+	sta	tCol			;
+	stx	tR			;
+	sty	tC			;
+	jsr	HalAttrTile		;
+	ldx	tR			;
+	ldy	tC			;
+	iny				;
+	cpy	#4			;
+	bne	hsa08			;
+	inx				;
+	cpx	#4			;
+	bne	hsa04			;
+hsa20:	rts				;
+HalAttrTile:				; 行 tRow、列 tCol，X、Y 是它在 4×4 里的行、列
+	txa				; 右移 ((行&2)<<1)|(列&2) 位取调色板组
+	and	#2			;
+	asl				;
+	sta	t0			;
+	tya				;
+	and	#2			;
+	ora	t0			;
+	tax				;
+	lda	tA			;
+	cpx	#0			;
+	beq	hat08			;
+hat04:	lsr				;
+	dex				;
+	bne	hat04			;
+hat08:	and	#3			;
+	asl				;
+	asl				;
+	asl				;
+	asl				;
+	sta	t9			;
+	jsr	HalEntryAddr		;
+	lda	t7			;
+	sta	$2006			;
+	lda	t8			;
+	ora	#1			;
+	sta	$2006			;
+	lda	$2007			;
+	lda	$2007			;
+	and	#$0f			;
+	ora	t9			;
+	sta	t9			;
+	lda	t7			;
+	sta	$2006			;
+	lda	t8			;
+	ora	#1			;
+	sta	$2006			;
+	lda	t9			;
+	sta	$2007			;
+	rts				;
+;---------------------------------------;
+;    虚拟 $2007 读			;
+;	返回 A=读缓冲（调色板区直接返回），保存 X,Y，标志只按 A 设 N,Z。	;
+;	名称表区没有影子，读出 0。	;
+;---------------------------------------;
+HalR2007:				;
+	php				;
+	stx	tX			;
+	sty	tY			;
+	lda	vVAhi			;
+	cmp	#$3f			;
+	bcs	hr704			;
+	cmp	#$20			;
+	bcs	hr708			;
+	jsr	HalPatAddr		; 图案区：设真地址后读两次，第二次是数据
+	lda	$2007			;
+	lda	$2007			;
+	jmp	hr716			;
+hr708:	lda	#0			; 名称表区
+	jmp	hr716			;
+hr704:	lda	vVAlo			; 调色板区：直接返回，不经读缓冲
+	and	#$1f			;
+	tax				;
+	lda	SBPalette,x		;
+	sta	tA			;
+	jmp	hr720			;
+hr716:	ldx	vBuf			; 返回旧缓冲，存入新值
+	sta	vBuf			;
+	stx	tA			;
+hr720:	jsr	HalAdvance		;
+	lda	tA			;
+	ldx	tX			;
+	ldy	tY			;
+	plp				;
+	ora	#0			;
+	rts				;

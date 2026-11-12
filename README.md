@@ -3,7 +3,7 @@
 FC 兼容机（NES、小霸王学习机等 6502 兼容机）的开发工具与机型资料：
 
 - **fcdev**：开发工具集。用 C 或 ca65 汇编写程序，用 cc65 构建成各机型能运行的程序，自带调试用模拟器，也能把已有程序反汇编回 ca65 源码。首批支持 NES 与小霸王学习机 SB2000，以后按“目标”扩展到步步高、裕兴等机型。
-- **machines/**：各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)（小霸王学生电脑：BIOS 反汇编与源码）、[bbk](machines/bbk/README.md)（步步高学生电脑：BIOS 与 DOS 源码工具，目标是移植到 SB2000 上运行）。
+- **machines/**：各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)（小霸王学生电脑：BIOS 反汇编与源码）、[bbk](machines/bbk/README.md)（步步高学生电脑：BIOS 与 DOS 源码，BIOS 已移植到 SB2000 上运行，能启动英文版 BBGDOS）。
 - **apps/**：用 fcdev 开发的应用程序与示例，按机型分目录，目前有 [sb2000](apps/sb2000/)（SB-DOS 的汇编器、编辑器、NES 游戏运行器、软盘镜像脚本，以及 [示例](apps/sb2000/examples/README.md)）。
 
 下面是 fcdev 的安装与使用。

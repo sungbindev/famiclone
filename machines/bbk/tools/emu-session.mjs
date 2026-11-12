@@ -86,6 +86,7 @@ if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
       } else {
         const reply = await session.send(step);
         console.log(`${step} -> ${reply.head}`);
+        for (const line of reply.lines) console.log(`  ${line}`);
       }
     }
   } finally {

@@ -1,6 +1,6 @@
 # 步步高学生电脑 BBK
 
-步步高多媒体学生电脑（BBGDOS）的 BIOS 与 DOS 源码工程，把步步高 BIOS 移植到小霸王学习机 SB2000 的硬件上运行：在 SB-DOS 下输入 `startbbk`，机器换成步步高的 BIOS，再从软盘启动 BBGDOS。本目录是 famiclone 仓库里的一个机型目录（`machines/bbk/`）。
+步步高多媒体学生电脑（BBGDOS）的 BIOS 与 DOS 源码工程，把步步高 BIOS 移植到小霸王学习机 SB2000 的硬件上运行：在 SB-DOS 下输入 `start`，机器换成步步高的 BIOS，再从软盘启动 BBGDOS。本目录是 famiclone 仓库里的一个机型目录（`machines/bbk/`）。
 
 计划、设计、进度与未完成事项见 [docs/计划与进度.md](docs/计划与进度.md)。
 
@@ -18,15 +18,15 @@
 
 | 命令 | 作用 |
 | --- | --- |
-| `npm run build` | 汇编 `src/bios/Bios.asm`，与 `bbk_bios10.nes` 的前 7 页（字库）拼成 `build/bbk.bios` |
-| `npm run verify` | 在调试版模拟器里验证：生成 `build/dosboot.img`（步步高 DOS 启动盘加 `STARTBBK.EXE`、`BBK.BIO`），SB-DOS 里运行 `startbbk`，进入 BBGDOS，回车跳过日期与时间，再执行 `dir`，截图到 `build/shots/dos.png`；画面出现文件列表与 `A:\>` 即成功。先构建 `bbk.bios` 与装载器 |
-| `node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]` | 同上，可改帧数与截图位置；不带 `dos` 时软盘只含装载器与 `bbk.bios`，只能看到步步高的开机检测画面 |
+| `npm run build` | 汇编 `src/bios/Bios.asm`，与 `bbk_bios10.nes` 的前 7 页（字库）拼成 `build/bios.bbk` |
+| `npm run verify` | 在调试版模拟器里验证：生成 `build/dosboot.img`（步步高 DOS 启动盘加 `START.EXE`、`BIOS.BBK`），SB-DOS 里运行 `start`，进入 BBGDOS，回车跳过日期与时间，再执行 `dir`，截图到 `build/shots/dos.png`；画面出现文件列表与 `A:\>` 即成功。先构建 `bios.bbk` 与装载器 |
+| `node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]` | 同上，可改帧数与截图位置；不带 `dos` 时软盘只含装载器与 `bios.bbk`，只能看到步步高的开机检测画面 |
 | `npm run port` | 按规则从原厂 `Bios.asm` 重新生成 `src/bios/Bios.asm`，会覆盖对它的手工修改，所以与现有文件不同时要加 `-- --force` |
 | `npm run check` | 汇编原厂的 `Bios.asm`、`Command.asm`、`Smcdos.asm`，列出缺失的包含文件、未定义符号、不认识的宏与重复定义，正常时全部为 0 |
 | `npm run match` | 把原厂 `Bios.asm` 里位置无关的指令按每 6 条一组，在 BIOS 1.0 ROM 里查找，看两者是否属于同一代码 |
 | `npm run align` | 把原厂 `Bios.asm` 按指令块与 BIOS 1.0 ROM 最后一页对齐，列出各自独有的区段 |
 | `npm run probe` | 运行 `apps/sb2000/fcprobe` 的探测程序，打印 SB2000 在 FC 兼容模式下的内存写入、PPU、软驱、键盘测试结果（先在该目录里 build 与 disk） |
-| `npm test` | 汇编器、移植规则、`bbk.bios` 格式与软盘追加文件的测试 |
+| `npm test` | 汇编器、移植规则、`bios.bbk` 格式与软盘追加文件的测试 |
 | `node tools/gasm-check.mjs <文件>` | 汇编原厂目录里的任意一个源文件 |
 | `node tools/compare-rom.mjs <文件> <二进制> <偏移> [起始地址]` | 把汇编结果与二进制逐字节比对 |
 
@@ -46,7 +46,7 @@ machines/bbk/
   src/bios/      SB2000 版 BIOS：Bios.asm（GBK）与硬件适配层 hal-defs.asm、hal-resident.asm、hal-ppu.asm
   src/include/   还原出的符号文件 tvdef.asm
   tools/         GABBG 方言的 6502 汇编器、移植与构建脚本、模拟器验证脚本、分析工具
-  test/          汇编器、移植规则、bbk.bios 格式的测试
+  test/          汇编器、移植规则、bios.bbk 格式的测试
   docs/          计划、设计与进度
   build/         构建输出（不进 Git）
 ```

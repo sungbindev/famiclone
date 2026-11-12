@@ -24,7 +24,7 @@ export const ORIGINAL_SOURCE_DIR = join(REPO_ROOT, 'reference', 'docs', 'BBKDOS�
 /** 步步高 BIOS 1.0 的 ROM（128KB，含 16 字节 iNES 头） */
 export const ROM_BIOS10 = join(REPO_ROOT, 'reference', 'rom', 'bbk_bios10.nes');
 
-/** 本工程里的 BIOS 源码：SB2000 版（GBK 编码），由原厂版经 tools/port-bios.mjs 移植而来，构建 bbk.bios 只读这一份 */
+/** 本工程里的 BIOS 源码：SB2000 版（GBK 编码），由原厂版经 tools/port-bios.mjs 移植而来，构建 bios.bbk 只读这一份 */
 export const BIOS_SOURCE = join(BBK_ROOT, 'src', 'bios', 'Bios.asm');
 
 /**

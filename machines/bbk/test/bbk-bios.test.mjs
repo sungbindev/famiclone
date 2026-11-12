@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：bbk-bios.test.mjs
-// 说明：SB2000 版步步高 BIOS 的测试：移植规则命中次数、与提交的源码一致、汇编结果的大小与布局、bbk.bios 的文件格式。
+// 说明：SB2000 版步步高 BIOS 的测试：移植规则命中次数、与提交的源码一致、汇编结果的大小与布局、bios.bbk 的文件格式。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：运行 npm test；读取 reference/ 下的原厂源码与 ROM。bbk.bios 在模拟器里能否启动到 A:\> 要用 npm run verify 另行验证。
+// 备注：运行 npm test；读取 reference/ 下的原厂源码与 ROM。bios.bbk 在模拟器里能否启动到 A:\> 要用 npm run verify 另行验证。
 // ------------------------------------------------------------------------
 
 import { test } from 'node:test';
@@ -64,10 +64,10 @@ test('向量表：NMI、复位、IRQ', () => {
   assert.equal(word(0xfffe), symbols.get('brkintentry') - 0xc000 + 0x5800);
 });
 
-test('bbk.bios：文件头、字库页取自原版 ROM、最后一页是汇编结果', () => {
+test('bios.bbk：文件头、字库页取自原版 ROM、最后一页是汇编结果', () => {
   const dir = mkdtempSync(join(tmpdir(), 'bbk-bios-'));
   try {
-    const output = join(dir, 'bbk.bios');
+    const output = join(dir, 'bios.bbk');
     execFileSync(process.execPath, [join(BBK_ROOT, 'tools', 'build-bios.mjs'), output], { stdio: 'pipe' });
     const image = readFileSync(output);
     const result = assembleBios();

@@ -1,14 +1,14 @@
 // ------------------------------------------------------------------------
 // 名称：run-bbk.mjs
-// 说明：在模拟器里验证 startbbk：用 SB2000 的 BIOS 启动 SB-DOS，运行 startbbk 加载 bbk.bios，再运行若干帧并截图。
+// 说明：在模拟器里验证装载器 START.EXE：用 SB2000 的 BIOS 启动 SB-DOS，运行 start 加载 bios.bbk，再运行若干帧并截图。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：用法 node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]；先构建 bbk.bios（node tools/port-bios.mjs、node tools/build-bios.mjs）
+// 备注：用法 node tools/run-bbk.mjs [帧数] [截图文件] [dos] [命令]；先构建 bios.bbk（node tools/port-bios.mjs、node tools/build-bios.mjs）
 //       并在 apps/sb2000/startbbk 里构建（npm run build）。帧数缺省 300，截图缺省 build/shots/bbk.png。
-//       第三个参数写 dos 时，软盘用步步高 DOS 启动盘加上 STARTBBK.EXE、BBK.BIO（build/dosboot.img），这样步步高系统起来后
-//       可以从同一张盘启动 BBGDOS；缺省只含 STARTBBK.EXE、BBK.BIO（build/startbbk.img）。
-//       运行中先挂载软盘，等 SB-DOS 起来后输入 startbbk；之后再运行指定帧数。
+//       第三个参数写 dos 时，软盘用步步高 DOS 启动盘加上 START.EXE、BIOS.BBK（build/dosboot.img），这样步步高系统起来后
+//       可以从同一张盘启动 BBGDOS；缺省只含 START.EXE、BIOS.BBK（build/start.img）。
+//       运行中先挂载软盘，等 SB-DOS 起来后输入 start；之后再运行指定帧数。
 // ------------------------------------------------------------------------
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -19,8 +19,8 @@ import { startSession, typeText } from './emu-session.mjs';
 import { addFat12Files } from './fat12-add.mjs';
 
 const firmware = join(REPO_ROOT, 'reference', 'rom', 'SB2K_BIOS.NES');
-const loader = join(REPO_ROOT, 'apps', 'sb2000', 'startbbk', 'build', 'sb2000', 'STARTBBK.EXE');
-const bios = join(BUILD_DIR, 'bbk.bios');
+const loader = join(REPO_ROOT, 'apps', 'sb2000', 'startbbk', 'build', 'sb2000', 'START.EXE');
+const bios = join(BUILD_DIR, 'bios.bbk');
 for (const file of [firmware, loader, bios, DOS_FLOPPY]) {
   if (!existsSync(file)) throw new Error(`找不到 ${file}`);
 }
@@ -31,10 +31,10 @@ const useDos = process.argv[4] === 'dos';
 const command = process.argv[5];
 
 const files = [
-  { name: 'STARTBBK.EXE', data: readFileSync(loader) },
-  { name: 'BBK.BIO', data: readFileSync(bios) },
+  { name: 'START.EXE', data: readFileSync(loader) },
+  { name: 'BIOS.BBK', data: readFileSync(bios) },
 ];
-const image = join(BUILD_DIR, useDos ? 'dosboot.img' : 'startbbk.img');
+const image = join(BUILD_DIR, useDos ? 'dosboot.img' : 'start.img');
 mkdirSync(dirname(image), { recursive: true });
 mkdirSync(dirname(shot), { recursive: true });
 writeFileSync(image, useDos ? addFat12Files(readFileSync(DOS_FLOPPY), files) : buildFat12Image(files, { label: 'BBK' }));
@@ -48,7 +48,7 @@ try {
   await session.send('run 60');
   await typeText(session, '\n');
   await session.send('run 120');
-  await typeText(session, 'startbbk\n');
+  await typeText(session, 'start\n');
   await session.send(`run ${frames}`);
   if (useDos) {
     // BBGDOS 起来后先问日期与时间，回车跳过

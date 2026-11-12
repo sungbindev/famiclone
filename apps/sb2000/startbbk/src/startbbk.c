@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：startbbk.c
- * 说明：在 SB-DOS 下运行：startbbk；读入盘上的 BBK.BIO（步步高 BIOS 映像），换掉小霸王的 BIOS 与 SB-DOS，启动步步高系统。
+ * 说明：在 SB-DOS 下运行：start；读入盘上的 BIOS.BBK（步步高 BIOS 映像），换掉小霸王的 BIOS 与 SB-DOS，启动步步高系统。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-12
@@ -17,13 +17,13 @@
 #include <string.h>
 #include <sb2000.h>
 
-#define MSG_OPEN "Can't open BBK.BIO"
+#define MSG_OPEN "Can't open BIOS.BBK"
 #define MSG_MEMORY "No memory"
 #define MSG_READ "Read error"
 #define MSG_HEADER "Not a BBK BIOS file"
 #define MSG_TOO_BIG "Program too big"
 
-#define BIOS_FILE "BBK.BIO"
+#define BIOS_FILE "BIOS.BBK"
 
 /* 映射器与 DMA 寄存器，含义见 MapperSB2K.cpp */
 #define REG_PPU_CTRL 0x2000
@@ -87,7 +87,7 @@ static const unsigned char trampoline[] = {
 extern unsigned char _BSS_RUN__;
 extern unsigned char _BSS_SIZE__;
 
-/* 读入 BBK.BIO 并检查文件头，成功返回 0，失败返回提示信息；文件占用的页记在 first_page、page_count */
+/* 读入 BIOS.BBK 并检查文件头，成功返回 0，失败返回提示信息；文件占用的页记在 first_page、page_count */
 static const char *load_image(void)
 {
     unsigned char handle;

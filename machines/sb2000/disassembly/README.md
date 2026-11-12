@@ -18,7 +18,7 @@
 | 单元测试 | `npm test` |
 | 构建 BIOS 并与原始 ROM 逐字节比对 | 在 `../bios/` 里运行 `npm run build` |
 | 一键构建、测试、更新生成文档 | `node tools/bios-all.mjs --write`（`npm run docs`） |
-| 运行验证用例（`--only 前缀` 只跑一部分） | `node tools/verify-run.mjs [--fast] [--only 前缀]` |
+| 运行验证用例（已做完，不要日常运行；`--only 前缀` 只跑一部分） | `node tools/verify-run.mjs [--fast] [--only 前缀]` |
 | 覆盖率 | `npm run coverage` |
 | 功能号验证状态 | `node tools/api-verify-status.mjs` |
 | 手动驱动模拟器 | `node tools/sb2kdbg.mjs "run 60" "type dir\n" "run 100" "shot out/dir.png"` |

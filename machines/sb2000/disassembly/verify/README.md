@@ -6,7 +6,7 @@
 
 1. 构建 ROM：`node tools/bios-build.mjs`
 2. 开机用的 DOS 镜像是 `reference/floppy-dos.img`（入库，不是生成的）。
-3. 运行全部用例：`node tools/verify-run.mjs`（自己启动并关闭模拟器），或先 `node tools/sb2kdbg.mjs --launch <ROM 绝对路径>` 再 `node tools/verify-run.mjs --attach`。
+3. 运行全部用例（验证已做完，不要日常运行）：`node tools/verify-run.mjs`（自己启动并关闭模拟器），或先 `node tools/sb2kdbg.mjs --launch <ROM 绝对路径>` 再 `node tools/verify-run.mjs --attach`。
 4. 只跑一部分：`--only p09.fp`（按编号前缀；此时不保存 CDL）。
 5. 完整运行结束时，本次 CDL 保存为 `out/cdl/verify-rom.cdl`，并把 `out/cdl/` 里所有场景的 CDL 合并成 `out/cdl/all-rom.cdl`，随后 `npm run coverage` 看覆盖率。
 

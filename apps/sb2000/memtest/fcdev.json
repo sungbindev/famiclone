@@ -1,0 +1,5 @@
+{
+  "target": "sb2000",
+  "name": "memtest",
+  "firmware": "../../../reference/rom/SB2K_BIOS.NES"
+}

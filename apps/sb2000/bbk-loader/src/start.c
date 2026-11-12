@@ -7,11 +7,14 @@
  * 日期：2026-11-12
  * 备注：映像格式见 apps/sb2000/bbk-bios/docs/计划与进度.md：16 字节头（"BBKB"、版本 1、页数 8、入口地址）加 8 个 16K 页。
  *       流程：读入文件到扩展 RAM 的低页 -> 检查文件头 -> 关 NMI 与中断
- *       -> 用 DMA 把 8 个页复制到扩展 RAM 的页 $E0-$FF（4K 页，共 128K，页 r 在 $E0+4r 起）
+ *       -> 对每个 4K 块：用 DMA 复制到 ERAM 缓冲 $6800-$77FF，再用 CPU 复制到窗口 2 映射的目标页，
+ *          目标是扩展 RAM 的页 $E0-$FF（4K 页，共 128K，页 r 在 $E0+4r 起）
+ *          （真机实测（memtest）：DMA 只能写 ERAM，不能写窗口；$404B 的位 7 必须置 1）
  *       -> 把跳板复制到 ERAM $6000 运行：窗口 4-7（$C000-$FFFF）指向映像的第 7 页（BIOS 代码与向量），
  *          窗口 0-3（$8000-$BFFF）指向第 0 页，屏蔽 SB2000 的全部中断，设置 PPU，然后跳到入口。
  *       始终留在 6576 模式，不用 $4301；步步高系统起来后不再返回 DOS，只能硬复位。
- *       复制时借用窗口 2（$A000），窗口 3 里有 C 软件栈不能换页，所以程序（含数据）必须在 $A000 以下。
+ *       复制时借用窗口 2（$A000），窗口 3 里有 C 软件栈不能换页，所以程序（含数据）必须在 $A000 以下；
+ *       窗口直接写页寄存器 $4042，不再调用 DOS 服务。
  * ------------------------------------------------------------------------
  */
 #include <string.h>
@@ -27,6 +30,7 @@
 
 /* 映射器与 DMA 寄存器，含义见 MapperSB2K.cpp */
 #define REG_PPU_CTRL 0x2000
+#define REG_WINDOW2 0x4042
 #define REG_DMA_MODE 0x4048
 #define REG_DMA_SOURCE_BANK 0x4049
 #define REG_DMA_SOURCE_LOW 0x404A
@@ -36,7 +40,10 @@
 #define REG_DMA_LENGTH_LOW 0x404E
 #define REG_DMA_LENGTH_HIGH 0x404F
 #define DMA_SOURCE_ERAM 0x10
-#define DMA_TO_CPU 0xE0
+#define DMA_TO_CPU 0xA0
+#define DMA_MID_FLAG 0x80
+#define DMA_BUFFER 0x6800
+#define DMA_WAIT 3000U /* 约 2.5 帧；原厂 BIOS 在复制 3840 字节后等 1 帧 */
 
 /* 文件头与映像大小 */
 #define HEADER_SIZE 16
@@ -49,7 +56,6 @@
 #define FIRST_ERAM_PAGE 0x80
 #define IMAGE_FIRST_PAGE 0xE0
 #define IMAGE_BLOCKS 32
-#define COPY_WINDOW 2
 #define COPY_ADDRESS 0xA000
 
 /* ERAM $6000 的跳板 */
@@ -130,18 +136,24 @@ static const char *load_image(void)
     return 0;
 }
 
-/* 用 DMA 从扩展 RAM 的 source 处复制 4K 到窗口 2 当前映射的页；源地址不要求对齐 */
+/* 把扩展 RAM 里 source 处的 4K 经 DMA 、ERAM 缓冲复制到页 page；源地址不要求对齐 */
 static void copy_block(unsigned char page, unsigned long source)
 {
-    sb_window_map(COPY_WINDOW, page);
+    unsigned int wait;
+
     SB_BYTE_AT(REG_DMA_SOURCE_BANK) = DMA_SOURCE_ERAM | (unsigned char)((source >> 15) & 0x0F);
     SB_BYTE_AT(REG_DMA_SOURCE_LOW) = (unsigned char)source;
-    SB_BYTE_AT(REG_DMA_SOURCE_MID) = (unsigned char)(source >> 8) & 0x7F;
-    SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)COPY_ADDRESS;
-    SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(COPY_ADDRESS >> 8);
+    SB_BYTE_AT(REG_DMA_SOURCE_MID) = ((unsigned char)(source >> 8) & 0x7F) | DMA_MID_FLAG;
+    SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)DMA_BUFFER;
+    SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(DMA_BUFFER >> 8);
     SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)BLOCK_SIZE;
     SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)(BLOCK_SIZE >> 8);
     SB_BYTE_AT(REG_DMA_MODE) = DMA_TO_CPU;
+    for (wait = 0; wait != DMA_WAIT; ++wait) {
+        __asm__("nop");
+    }
+    SB_BYTE_AT(REG_WINDOW2) = page;
+    memcpy((void *)COPY_ADDRESS, (void *)DMA_BUFFER, BLOCK_SIZE);
 }
 
 /* 把映像放到页 $E0-$FF 并跳进步步高 BIOS，不会返回 */

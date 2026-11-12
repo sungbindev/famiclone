@@ -1,0 +1,15 @@
+{
+  "name": "memtest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SB2000 (SB-DOS) program: measure memory sizes on the real machine",
+  "scripts": {
+    "build": "fcdev build src",
+    "start": "fcdev run src",
+    "sync": "fcdev sync",
+    "disk": "fcdev disk src"
+  },
+  "devDependencies": {
+    "fcdev": "0.4.0"
+  }
+}

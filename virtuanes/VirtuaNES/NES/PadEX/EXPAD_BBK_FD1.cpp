@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <assert.h>
+#include "DebugServer.h"
 
 #define MOUSE_ENABLE
 //#define BBK_MOUSE_HACK
@@ -132,6 +133,11 @@ static int MouseGenTxData(BYTE data)
 BYTE	EXPAD_BBK_FD1::Read4017()
 {
 	BYTE	data = 0xFE;
+
+	// Merge keys injected by the debug server ("key" command) into the real keyboard state.
+	for (int k = 0; k < 256; k++) {
+		if (g_dbgKeys[k]) DirectInput.m_Sw[k] = 0x80;
+	}
 
 	nRead$4016Count = 0;
 

@@ -24,6 +24,9 @@ export const ORIGINAL_SOURCE_DIR = join(REPO_ROOT, 'reference', 'docs', 'BBKDOS�
 /** 步步高 BIOS 1.0 的 ROM（128KB，含 16 字节 iNES 头） */
 export const ROM_BIOS10 = join(REPO_ROOT, 'reference', 'rom', 'bbk_bios10.nes');
 
+/** DOS 启动盘镜像（1.44MB，含 BBGDOS.SYS 与 COMMAND.CMD） */
+export const DOS_FLOPPY = join(REPO_ROOT, 'reference', 'floppy-images', 'bbk', 'dos启动盘.IMG');
+
 /** iNES 文件头长度 */
 export const INES_HEADER_SIZE = 16;
 

@@ -12,8 +12,8 @@ npm run disk     # 生成含 HWTEST.EXE 的软盘镜像 build/sb2000/HWTEST.img
 
 把 `build/sb2000/HWTEST.EXE` 复制到 SB-DOS 的软盘，在 `A:\>` 下输入 `hwtest`：
 
-1. 屏幕显示“auto tests”，约十几秒内不要碰键盘，程序在关 NMI、关中断的状态下自动跑完全部自动测试。
-2. 结果写成软盘当前目录下的 `HWTEST.TXT`，屏幕上只显示“Saved HWTEST.TXT”与文件大小；显示 `Save failed` 时，后面的数是错误码，请记下来。
+1. 屏幕显示“step by step”，按任意键运行下一项（共 16 项，Esc 提前结束）。每项在关 NMI、关中断的状态下运行，运行之后程序把文字的颜色依次换成红、绿、蓝；文字变灰，说明刚运行的那一项让颜色输出丢失了（在真机上发现过软复位后一直黑白），请记下是第几项。
+2. 全部运行完后，结果写成软盘当前目录下的 `HWTEST.TXT`，屏幕上只显示“Saved HWTEST.TXT”与文件大小；显示 `Save failed` 时，后面的数是错误码，请记下来。
 3. 按 Enter 进入看图场景 V1-V8，任意键翻到下一屏，Esc 提前结束。V7、V8 会改调色板，看完后需要重启 DOS。
 
 把 `HWTEST.TXT` 取回，并附上看图场景的答案（或拍照）。

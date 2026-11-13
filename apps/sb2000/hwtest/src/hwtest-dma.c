@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：dma_run 必须在关 NMI、关中断、显示已关的状态下调用。源数据放在 dma_prepare 申请的扩展 RAM 页里（$404B 位 7 固定为 1）。
+ * 备注：dma_step 必须在关 NMI、关中断、显示已关的状态下调用。源数据放在 dma_prepare 申请的扩展 RAM 页里（$404B 位 7 固定为 1）。
  *       观察点：ERAM $7C00 起 32 字节与显存 $2780 起 32 字节，测前都填 $55，测后看有多少字节变了；两处在测后恢复。
  *       位 15 的测试把长度写成 $8010，目的是扩展显存 bank 14 的 $8000：长度被屏蔽成 $0010 时只写 16 字节，
  *       否则会写 32K 并回绕，会改动扩展显存 bank 14 的内容（DOS 不用）与显存 $0000 起的几个字节（DOS 会重绘）。
@@ -189,7 +189,15 @@ static void test_bit15(void)
     REG(VRAM_BANK) = 0;
 }
 
-void dma_run(void)
+static const char *const step_names[DMA_STEPS] = { "DMA gate by $4020", "DMA length", "DMA length $8010" };
+
+const char *dma_step_name(unsigned char index)
+{
+    return step_names[index];
+}
+
+/* 运行第 index 项，测后恢复两个观察点 */
+void dma_step(unsigned char index)
 {
     unsigned char eram_saved[CELL_BYTES];
     unsigned char vram_saved[CELL_BYTES];
@@ -197,9 +205,13 @@ void dma_run(void)
     memcpy(eram_saved, (void *)ERAM_CELL, CELL_BYTES);
     vram_read_block(VRAM_CELL_ADDRESS, vram_saved, CELL_BYTES);
 
-    test_gating();
-    test_length();
-    test_bit15();
+    if (index == 0) {
+        test_gating();
+    } else if (index == 1) {
+        test_length();
+    } else {
+        test_bit15();
+    }
 
     memcpy((void *)ERAM_CELL, eram_saved, CELL_BYTES);
     vram_write_block(VRAM_CELL_ADDRESS, vram_saved, CELL_BYTES);

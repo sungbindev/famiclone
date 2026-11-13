@@ -68,6 +68,7 @@
 #define ERAM_TEXT ((char *)0x7400) /* ERAM_TEXT_BYTES 字节：要显示的文字与文件名 */
 #define ERAM_LINE ((char *)0x7440) /* 报告的行缓冲 */
 #define ERAM_PATTERN ((unsigned char *)0x7480) /* DMA 源数据样板 */
+#define ERAM_PALETTE ((unsigned char *)0x74C0) /* 测前的 64 项调色板 */
 #define ERAM_TEXT_BYTES 64
 
 /* hwtest.c：界面与垂直消隐 */
@@ -89,14 +90,18 @@ void report_uint(unsigned int value);
 void report_bytes(const char *label, const unsigned char *bytes, unsigned char count);
 unsigned char report_close(unsigned int *length);
 
-/* hwtest-reg.c：寄存器读回、外设探测、定时器 */
-void reg_run(void);
+/* hwtest-reg.c：寄存器读回、外设探测、定时器。逐项运行，序号从 0 起，要在关 NMI、关中断、显示已关时调用 */
+#define REG_STEPS 12
+void reg_step(unsigned char index);
+const char *reg_step_name(unsigned char index);
 void reg_report(void);
 
-/* hwtest-dma.c：DMA */
+/* hwtest-dma.c：DMA，用法同上 */
+#define DMA_STEPS 3
 unsigned char dma_prepare(void);
 void dma_release(void);
-void dma_run(void);
+void dma_step(unsigned char index);
+const char *dma_step_name(unsigned char index);
 void dma_report(void);
 
 /* hwtest-gfx.c：显存读写（需要关着显示，$2000 的地址增量位为 0） */

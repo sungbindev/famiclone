@@ -1,11 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：hwtest.c
- * 说明：在 SB-DOS 下运行：hwtest；在真机上实测 memtest 没有覆盖的硬件行为，自动测试的结果写成当前目录下的 HWTEST.TXT，不在屏幕上显示。
+ * 说明：在 SB-DOS 下运行：hwtest；在真机上实测 memtest 没有覆盖的硬件行为，测试结果写成当前目录下的 HWTEST.TXT，不在屏幕上显示。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：先在关 NMI、关中断的状态下自动跑完寄存器读回、定时器、DMA 与 $2002 标志的测试，再把结果和看图场景的说明写进 HWTEST.TXT（不在关中断时调 DOS）；
+ * 备注：在关 NMI、关中断的状态下逐项跑寄存器读回、定时器、DMA 与 $2002 标志的测试，每项之后把调色板里的文字色换成红、绿、蓝之一并等按键，
+ *       屏幕变灰说明刚才那一项让颜色输出丢了；全部跑完后把结果和看图场景的说明写进 HWTEST.TXT（不在关中断时调 DOS）；
  *       然后可以选择按键翻页，依次看若干屏图形场景（精灵属性、$2001 各位、背景页、$2008 位 0、8×16 精灵、调色板、16 色模式）。
  *       屏幕上只显示简短的提示，每行不超过 31 个 ASCII 字符（屏幕 32 列）。
  * ------------------------------------------------------------------------
@@ -15,6 +16,11 @@
 #define MSG_MEMORY "No memory"
 #define BLANK_LINES 14
 #define VBLANK_LIMIT 0xFFFF
+#define PALETTE_ENTRIES 64
+#define STEP_TOTAL (REG_STEPS + DMA_STEPS + 1)
+
+/* 探测色：红、绿、蓝；每一项之后按顺序用它们换掉所有文字的前景色 */
+static const unsigned char probe_colors[3] = { 0x36, 0x3A, 0x31 };
 
 /* 滚出一屏空白，让接下来的内容从屏幕下部往上排 */
 void ui_blank(void)
@@ -77,28 +83,76 @@ void wait_vblank(void)
     (void)wait_vblank_status();
 }
 
-/* 关着 NMI 与中断，依次跑自动测试；测试里不调用 DOS 服务 */
-static void run_auto(void)
+/* 记下测前的 64 项调色板 */
+static void palette_save(void)
 {
+    unsigned char i;
+
+    sb_display_off();
+    for (i = 0; i < PALETTE_ENTRIES; ++i) {
+        ERAM_PALETTE[i] = REG(PALETTE + i) & 0x3F;
+    }
+    sb_display_on();
+}
+
+static void palette_restore(void)
+{
+    unsigned char i;
+
+    sb_display_off();
+    for (i = 0; i < PALETTE_ENTRIES; ++i) {
+        REG(PALETTE + i) = ERAM_PALETTE[i];
+    }
+    sb_display_on();
+}
+
+static const char *step_name(unsigned char index)
+{
+    if (index < REG_STEPS) {
+        return reg_step_name(index);
+    }
+    if (index < REG_STEPS + DMA_STEPS) {
+        return dma_step_name(index - REG_STEPS);
+    }
+    return "$2002 flags";
+}
+
+/* 关着 NMI 与中断跑第 index 项（测试里不调用 DOS 服务），再把每组调色板的后 3 项改成探测色 */
+static void run_step(unsigned char index)
+{
+    unsigned char i;
+
     sb_display_off();
     REG(PPU_CTRL) = 0;
     __asm__("php");
     __asm__("sei");
 
-    reg_run();
-    dma_run();
-    gfx_flags_run();
+    if (index < REG_STEPS) {
+        reg_step(index);
+    } else if (index < REG_STEPS + DMA_STEPS) {
+        dma_step(index - REG_STEPS);
+    } else {
+        gfx_flags_run();
+    }
 
     __asm__("plp");
+    for (i = 0; i < PALETTE_ENTRIES; ++i) {
+        if ((i & 3) != 0) {
+            REG(PALETTE + i) = probe_colors[index % 3];
+        }
+    }
     sb_display_on();
 }
 
-/* 把全部结果与看图场景的说明写进报告 */
-static void write_report(void)
+/* 把全部结果与看图场景的说明写进报告；done 是已经跑完的项数 */
+static void write_report(unsigned char done)
 {
-    report_line("HWTEST report: SB2000 real machine hardware test");
-    report_line("Please send this file back (or type it in) with the answers to the");
-    report_line("visual scenes at the end. $4020/$4022/$4033 and similar values are hex.");
+    report_line("HWTEST report (values are hex), please send it back");
+    if (done < STEP_TOTAL) {
+        report_text("STOPPED, steps run: ");
+        report_uint(done);
+        report_newline();
+    }
     report_newline();
     reg_report();
     dma_report();
@@ -127,12 +181,16 @@ int main(void)
 {
     unsigned char key;
     unsigned char code;
+    unsigned char step;
     unsigned int length;
 
     ui_blank();
-    ui_puts("hwtest: auto tests");
-    ui_puts("Do not touch the keys.");
-    ui_puts("Please wait about 15 s...");
+    ui_puts("hwtest: step by step");
+    ui_puts("After each step the text");
+    ui_puts("turns red, green, blue in");
+    ui_puts("turn. Note the step after");
+    ui_puts("which it turns gray.");
+    ui_puts("Any key=run step, Esc=quit");
     if (dma_prepare() == 0) {
         ui_puts(MSG_MEMORY);
         sb_getkey();
@@ -144,10 +202,22 @@ int main(void)
         sb_getkey();
         return 0;
     }
-    run_auto();
+    palette_save();
+    for (step = 0; step < STEP_TOTAL; ++step) {
+        ui_print("Step ");
+        sb_print_uint(step + 1);
+        ui_print(": ");
+        ui_print(step_name(step));
+        sb_newline();
+        if (sb_getkey() == KEY_ESC) {
+            break;
+        }
+        run_step(step);
+    }
+    palette_restore();
     dma_release();
 
-    write_report();
+    write_report(step);
     code = report_close(&length);
     show_saved(code, length);
 

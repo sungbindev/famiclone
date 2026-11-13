@@ -6,7 +6,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：reg_run 必须在关 NMI、关中断、显示已关的状态下调用；会改动的单元都在测完后恢复：
+ * 备注：reg_step 逐项运行，必须在关 NMI、关中断、显示已关的状态下调用；会改动的单元都在测完后恢复：
  *       $2008 恢复成 DOS 的影子值，定时器与 $4032 恢复成 DOS 的值，$4023 与 $4022 恢复成测前的值；
  *       OAM 与 BG 调色板第 15 组（$207C-$207F）不恢复，DOS 的下一次 NMI 与重绘会覆盖它们。
  * ------------------------------------------------------------------------
@@ -64,7 +64,7 @@ static void timer_rearm(void)
     REG(IRQ_MASK) = 0x7F;
 }
 
-static void test_ppu_readback(void)
+static void test_ext(void)
 {
     unsigned char i;
     unsigned char ext_saved = REG(SB_PPU_EXT_CTRL_SHADOW);
@@ -74,6 +74,11 @@ static void test_ppu_readback(void)
         ext_back[i] = REG(PPU_EXT);
     }
     REG(PPU_EXT) = ext_saved;
+}
+
+static void test_oam(void)
+{
+    unsigned char i;
 
     REG(OAM_ADDRESS) = OAM_TEST_INDEX;
     for (i = 0; i < 4; ++i) {
@@ -83,6 +88,11 @@ static void test_ppu_readback(void)
         REG(OAM_ADDRESS) = OAM_TEST_INDEX + i;
         oam_back[i] = REG(OAM_DATA);
     }
+}
+
+static void test_palette(void)
+{
+    unsigned char i;
 
     for (i = 0; i < 4; ++i) {
         REG(PALETTE_TEST + i) = pal_values[i];
@@ -90,30 +100,42 @@ static void test_ppu_readback(void)
     for (i = 0; i < 4; ++i) {
         pal_back[i] = REG(PALETTE_TEST + i);
     }
+}
 
+static void test_write_only(void)
+{
     write_only[0] = REG(PPU_CTRL);
     write_only[1] = REG(PPU_MASK);
     write_only[2] = REG(OAM_ADDRESS);
     write_only[3] = REG(PPU_SCROLL);
     write_only[4] = REG(PPU_ADDRESS);
+}
+
+static void test_unmapped(void)
+{
+    unsigned char i;
+
     for (i = 0; i < 8; ++i) {
         unmapped[i] = REG(unmapped_addresses[i]);
     }
 }
 
-static void test_peripherals(void)
+static void test_sound(void)
 {
     unsigned char i;
-    unsigned char mouse_saved;
-    unsigned char key_saved;
 
     for (i = 0; i < 4; ++i) {
         REG(SOUND_ENABLE) = sound_values[i];
         sound_back[i] = REG(SOUND_ENABLE);
     }
     REG(SOUND_ENABLE) = 0xFF;
+}
 
-    /* 只写 CLK 与中断允许位，不动位 0（方向），避免向键盘发出数据 */
+/* 只写 CLK 与中断允许位，不动位 0（方向），避免向键盘发出数据 */
+static void test_keyboard(void)
+{
+    unsigned char key_saved;
+
     key_saved = REG(KEY_CONTROL);
     key_back[0] = key_saved;
     REG(KEY_CONTROL) = 0x80;
@@ -123,6 +145,11 @@ static void test_peripherals(void)
     REG(KEY_CONTROL) = 0xC0;
     key_back[3] = REG(KEY_CONTROL);
     REG(KEY_CONTROL) = 0x80;
+}
+
+static void test_mouse(void)
+{
+    unsigned char mouse_saved;
 
     mouse_saved = REG(MOUSE_SELECT);
     mouse_back[0] = mouse_saved;
@@ -131,7 +158,10 @@ static void test_peripherals(void)
     REG(MOUSE_SELECT) = 0;
     mouse_back[2] = REG(MOUSE_SELECT);
     REG(MOUSE_SELECT) = mouse_saved & 1;
+}
 
+static void test_misc_reads(void)
+{
     misc_back[0] = REG(EXT_IO);
     misc_back[1] = REG(PAD_1);
     misc_back[2] = REG(PAD_1);
@@ -143,8 +173,13 @@ static void test_peripherals(void)
     irq_back[2] = REG(TIMER_CONTROL);
     irq_back[3] = REG(TIMER_PRESET);
     irq_back[4] = REG(TIMER_CURRENT);
+}
 
-    /* 实时时钟：只写地址，不写数据 */
+/* 实时时钟：只写地址，不写数据 */
+static void test_rtc(void)
+{
+    unsigned char i;
+
     rtc_back[0] = REG(RTC_DATA);
     for (i = 0; i < 8; ++i) {
         REG(RTC_ADDRESS) = i;
@@ -222,13 +257,59 @@ static void restore_timer(void)
     REG(IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW);
 }
 
-void reg_run(void)
+static const char *const step_names[REG_STEPS] = {
+    "$2008 readback", "OAM readback", "palette readback", "write-only ports", "unmapped reads", "$4015 sound",
+    "$4022 keyboard", "$4023 mouse", "read $4026 etc.", "RTC address", "timer one-shot", "timer 120 frames"
+};
+
+const char *reg_step_name(unsigned char index)
 {
-    test_ppu_readback();
-    test_peripherals();
-    test_timer_one_shot();
-    test_timer_continuous();
-    restore_timer();
+    return step_names[index];
+}
+
+/* 运行第 index 项；两项定时器测试之后把定时器与 $4032 恢复成 DOS 的值 */
+void reg_step(unsigned char index)
+{
+    switch (index) {
+    case 0:
+        test_ext();
+        break;
+    case 1:
+        test_oam();
+        break;
+    case 2:
+        test_palette();
+        break;
+    case 3:
+        test_write_only();
+        break;
+    case 4:
+        test_unmapped();
+        break;
+    case 5:
+        test_sound();
+        break;
+    case 6:
+        test_keyboard();
+        break;
+    case 7:
+        test_mouse();
+        break;
+    case 8:
+        test_misc_reads();
+        break;
+    case 9:
+        test_rtc();
+        break;
+    case 10:
+        test_timer_one_shot();
+        restore_timer();
+        break;
+    default:
+        test_timer_continuous();
+        restore_timer();
+        break;
+    }
 }
 
 /* R1：图形端口读回 */

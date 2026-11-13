@@ -1,0 +1,435 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：shell.css
+ * 说明：外壳样式：标题栏与菜单栏、活动栏、边栏、标签栏、页面区、底部面板、状态栏、空工作区。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-13
+ * 备注：布局与尺寸沿用如见客户端的外壳；各区域自己画朝向页面区一侧的分割线，页面区不画边框。
+ * ------------------------------------------------------------------------
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+  user-select: none;
+}
+
+/* 标题栏 */
+.shell-title-bar {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: var(--title-bar-height);
+  background: var(--title-bar-bg);
+  color: var(--chrome-text);
+}
+
+.shell-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-page);
+  font-size: var(--font-size-chrome);
+}
+
+.shell-brand-logo {
+  width: var(--title-bar-logo-size);
+  height: var(--title-bar-logo-size);
+  color: var(--accent);
+}
+
+.shell-brand-name {
+  color: var(--title-bar-title-color);
+  font-weight: var(--title-bar-brand-font-weight);
+  letter-spacing: var(--title-bar-title-letter-spacing);
+}
+
+.shell-brand-sub {
+  margin-left: calc(-1 * var(--space-xs));
+  color: var(--title-bar-subtitle-color);
+  font-weight: var(--title-bar-subtitle-font-weight);
+}
+
+.shell-menubar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xxs);
+}
+
+.shell-menubar-button {
+  height: var(--menubar-button-height);
+  padding: 0 var(--menubar-button-padding);
+  border: 0;
+  border-radius: var(--menubar-button-radius);
+  background: transparent;
+  color: var(--chrome-text);
+  font-size: var(--font-size-chrome);
+  cursor: default;
+}
+
+.shell-menubar-button:hover,
+.shell-menubar-button.is-open {
+  background: var(--menubar-selection-bg);
+  color: var(--chrome-text-strong);
+}
+
+.shell-title-spacer {
+  flex: 1;
+}
+
+.shell-title-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0 var(--title-bar-tool-gap);
+}
+
+.shell-window-controls {
+  display: flex;
+}
+
+.shell-window-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--title-bar-tool-width);
+  border: 0;
+  background: transparent;
+  color: var(--chrome-text-strong);
+  cursor: default;
+}
+
+.shell-window-button:hover {
+  background: var(--ghost-hover-background);
+}
+
+.shell-window-button--close:hover {
+  background: var(--dialog-close-hover-bg);
+  color: var(--dialog-close-hover-text);
+}
+
+/* 主体 */
+.shell-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 活动栏 */
+.shell-activity-bar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: var(--activity-bar-width);
+  border-right: var(--space-hairline) solid var(--chrome-border);
+  background: var(--activity-bar-bg);
+}
+
+.shell-activity-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--activity-bar-button-size);
+  height: var(--activity-bar-button-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ghost-foreground);
+  cursor: pointer;
+  transition: color var(--hover-duration);
+}
+
+.shell-activity-button .ui-icon {
+  width: var(--activity-bar-icon-size);
+  height: var(--activity-bar-icon-size);
+  stroke-width: var(--activity-bar-icon-stroke-width);
+}
+
+.shell-activity-button:hover {
+  color: var(--ghost-hover-foreground);
+}
+
+.shell-activity-button.is-active {
+  background: var(--ghost-selected-background);
+  box-shadow: inset var(--activity-bar-indicator-width) 0 0 var(--chrome-indicator);
+  color: var(--ghost-selected-foreground);
+}
+
+/* 边栏 */
+.shell-side-bar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: var(--side-bar-width);
+  min-width: 0;
+  border-right: var(--space-hairline) solid var(--chrome-border);
+  background: var(--chrome-bg);
+}
+
+.shell-panel-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: var(--shell-panel-header-height);
+  padding: 0 var(--content-padding);
+}
+
+.shell-panel-title {
+  color: var(--shell-panel-title-color);
+  font-size: var(--shell-panel-title-font-size);
+  font-weight: var(--shell-panel-title-font-weight);
+}
+
+.shell-side-content {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-xs) var(--content-padding) var(--content-padding);
+}
+
+/* 主区域 */
+.shell-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg);
+}
+
+.shell-tab-bar {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: var(--space-xxs);
+  height: var(--tab-bar-height);
+  padding: var(--space-xs) var(--space-xs) 0;
+  background: var(--chrome-bg);
+}
+
+.shell-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-width: var(--tab-bar-tab-max-width);
+  height: 100%;
+  padding-right: var(--space-xs);
+  border-radius: var(--tab-bar-radius) var(--tab-bar-radius) 0 0;
+  color: var(--shell-panel-tab-color);
+  font-size: var(--font-size-chrome);
+  transition: background-color var(--hover-duration);
+}
+
+.shell-tab:hover {
+  background: var(--tab-bar-hover-bg);
+}
+
+.shell-tab.is-active {
+  background: var(--tab-bar-active-bg);
+  color: var(--text);
+}
+
+.shell-tab-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 100%;
+  padding: 0 0 0 var(--space-md);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.shell-page-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* 空工作区 */
+.shell-empty-workspace {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--empty-state-gap);
+}
+
+.shell-empty-logo {
+  width: var(--empty-state-logo-size);
+  height: var(--empty-state-logo-size);
+  color: var(--empty-state-watermark-bg);
+}
+
+.shell-empty-steps {
+  width: var(--empty-state-steps-width);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shell-empty-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  height: var(--empty-state-step-height);
+  padding: 0 var(--space-md);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-size-chrome);
+  text-align: left;
+  cursor: pointer;
+}
+
+.shell-empty-step .ui-icon {
+  width: var(--empty-state-action-icon-size);
+  height: var(--empty-state-action-icon-size);
+}
+
+.shell-empty-step:hover {
+  background: var(--empty-state-action-hover-bg);
+  color: var(--text);
+}
+
+.shell-empty-step-name {
+  flex: 1;
+}
+
+/* 底部面板 */
+.shell-bottom-panel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  height: var(--bottom-panel-height);
+  border-top: var(--space-hairline) solid var(--chrome-border);
+  background: var(--bg);
+}
+
+.shell-panel-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-page);
+  height: 100%;
+}
+
+.shell-panel-tab {
+  display: flex;
+  align-items: center;
+  border-bottom: var(--activity-bar-indicator-width) solid transparent;
+  color: var(--shell-panel-tab-color);
+  font-size: var(--shell-panel-title-font-size);
+}
+
+.shell-panel-tab.is-selected {
+  border-bottom-color: var(--chrome-indicator);
+  color: var(--shell-panel-title-color);
+}
+
+.shell-panel-actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.shell-message-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--content-padding) var(--content-padding);
+  list-style: none;
+  user-select: text;
+}
+
+.shell-message {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--font-size-caption);
+}
+
+.shell-message time {
+  flex: none;
+  color: var(--text-muted);
+  font-family: var(--code-font-family);
+}
+
+.shell-message-level {
+  flex: none;
+  width: var(--message-level-width);
+  color: var(--text-muted);
+}
+
+.shell-message.is-warning .shell-message-level {
+  color: var(--status-warning);
+}
+
+/* 状态栏 */
+.shell-status-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--status-bar-height);
+  padding: 0 var(--status-bar-padding-x);
+  background: var(--status-bar-bg);
+  color: var(--chrome-text);
+  font-size: var(--status-bar-font-size);
+}
+
+.shell-status-group {
+  display: flex;
+  align-items: center;
+  gap: var(--status-bar-item-gap);
+}
+
+.shell-status-item,
+.shell-status-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-text-gap);
+  height: var(--status-bar-item-height);
+  padding: 0 var(--status-bar-item-padding-x);
+  border-radius: var(--radius-md);
+}
+
+.shell-status-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.shell-status-button:hover {
+  background: var(--ghost-hover-background);
+  color: var(--ghost-hover-foreground);
+}
+
+.shell-status-button .ui-icon {
+  width: var(--status-bar-icon-size);
+  height: var(--status-bar-icon-size);
+}
+
+.shell-status-dot {
+  width: var(--status-dot-size);
+  height: var(--status-dot-size);
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.shell-status-dot[data-state='on'] {
+  background: var(--status-success);
+}
+
+.shell-status-dot[data-state='paused'] {
+  background: var(--status-warning);
+}

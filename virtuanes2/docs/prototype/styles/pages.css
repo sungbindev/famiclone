@@ -1,0 +1,189 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：pages.css
+ * 说明：各页面的版式：运行、卡带库、设备、mapper 插件、首选项，以及关于对话框的内容布局。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-13
+ * 备注：选择器以页面根类开头，只写布局属性，不改写组件的外观。
+ * ------------------------------------------------------------------------
+ */
+
+.page {
+  position: absolute;
+  inset: 0;
+  padding: var(--content-padding);
+  user-select: text;
+}
+
+/* 运行页 */
+.run-stage {
+  --screen-ratio-w: 4;
+  --screen-ratio-h: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-radius: var(--radius-md);
+  background: var(--screen-backdrop);
+  container-type: size;
+}
+
+.run-screen-frame {
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--screen-ratio-w) / var(--screen-ratio-h)));
+  aspect-ratio: var(--screen-ratio-w) / var(--screen-ratio-h);
+  box-shadow: var(--screen-frame-shadow);
+}
+
+.run-screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.run-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  background: var(--screen-overlay-bg);
+  color: var(--screen-overlay-text);
+  text-align: center;
+}
+
+.run-overlay-icon {
+  width: var(--run-overlay-icon-size);
+  height: var(--run-overlay-icon-size);
+}
+
+.run-overlay-title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-strong);
+}
+
+.run-overlay-text {
+  font-size: var(--font-size-caption);
+}
+
+.run-screen-tag,
+.run-mouse-tag {
+  position: absolute;
+  bottom: var(--space-md);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-text-gap);
+  padding: var(--space-xxs) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--screen-overlay-bg);
+  color: var(--screen-overlay-text);
+  font-size: var(--font-size-micro);
+}
+
+.run-screen-tag {
+  left: var(--space-md);
+}
+
+.run-mouse-tag {
+  right: var(--space-md);
+}
+
+.side-button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--action-gap);
+}
+
+/* 设备页 */
+.page--media .ui-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-page);
+  max-width: var(--media-card-max-width);
+}
+
+.media-levels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.media-level {
+  display: grid;
+  grid-template-columns: var(--media-level-label-width) 1fr;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.media-level-label {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+/* mapper 插件页 */
+.map-detail {
+  margin-top: var(--space-page);
+}
+
+/* 首选项页 */
+.page--preferences {
+  display: flex;
+  gap: var(--space-page);
+}
+
+.pref-nav {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--list-gap);
+  width: var(--pref-nav-width);
+}
+
+.pref-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.pref-panel {
+  max-width: var(--pref-content-max-width);
+}
+
+.pref-panel .ui-page-title {
+  margin-bottom: var(--space-sm);
+}
+
+/* 关于对话框 */
+.about-head {
+  display: flex;
+  gap: var(--space-page);
+  margin-bottom: var(--space-page);
+}
+
+.about-logo {
+  width: var(--about-logo-size);
+  height: var(--about-logo-size);
+  color: var(--accent);
+}
+
+.about-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.about-name {
+  font-size: var(--font-size-display);
+  font-weight: var(--title-bar-brand-font-weight);
+  letter-spacing: var(--title-bar-title-letter-spacing);
+}
+
+.about-name-sub {
+  color: var(--text-muted);
+  font-weight: var(--title-bar-subtitle-font-weight);
+}

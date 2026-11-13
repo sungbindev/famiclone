@@ -1,0 +1,409 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：tokens.css
+ * 说明：界面原型的设计令牌：字体、尺寸、间距、外壳尺寸，以及深色与浅色主题的颜色。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-13
+ * 备注：取值与 rujian-ui-kit 的 ui-tokens.css、themes/dark.css、themes/light.css 一致，
+ *       只保留原型用到的令牌；正式实现直接使用组件库，不使用本文件。
+ * ------------------------------------------------------------------------
+ */
+
+:root {
+  --host-font-family: 'Segoe UI', system-ui, -apple-system, 'Microsoft YaHei', sans-serif;
+  --font-family: var(--host-font-family);
+  --code-font-family: ui-monospace, 'Cascadia Mono', Consolas, 'Microsoft YaHei', monospace;
+
+  /* 颜色角色：随主题变化，来自 --host-* */
+  --content-bg: var(--host-editor-background);
+  --bg: var(--content-bg);
+  --text: var(--host-foreground);
+  --text-muted: var(--host-description-foreground);
+  --focus-border: var(--host-focus-border);
+  --accent: var(--host-button-background);
+  --accent-foreground: var(--host-button-foreground);
+
+  /* 间距 */
+  --space-page: 10px;
+  --space-md: 8px;
+  --space-sm: 6px;
+  --space-xs: 4px;
+  --space-xxs: 2px;
+  --space-hairline: 1px;
+  --content-padding: var(--space-page);
+
+  /* 图标 */
+  --icon-size: 14px;
+  --icon-text-gap: var(--space-xs);
+  --icon-stroke-width: 1.5;
+
+  /* 字号、字重、行高 */
+  --font-size-display: 16px;
+  --font-size-title: 13px;
+  --font-size-heading: 12px;
+  --font-size-body: 12px;
+  --font-size-caption: 11px;
+  --font-size-micro: 10px;
+  --font-size-chrome: 13px;
+  --font-weight-regular: 400;
+  --font-weight-strong: 600;
+  --line-height-body: 1.45;
+
+  /* 圆角 */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --card-radius: var(--radius-lg);
+
+  /* 控件 */
+  --btn-height: 22px;
+  --btn-padding-x: var(--space-md);
+  --btn-radius: var(--radius-sm);
+  --btn-font-size: var(--font-size-body);
+  --btn-icon-size: var(--icon-size);
+  --input-height: 24px;
+  --input-font-size: var(--font-size-caption);
+  --input-padding-x: var(--space-md);
+  --input-radius: var(--radius-md);
+  --select-padding-right: 24px;
+  --select-min-width: 88px;
+  --choice-min-height: 24px;
+  --switch-width: 36px;
+  --switch-height: 20px;
+  --switch-thumb-size: 14px;
+  --slider-track-height: 4px;
+  --slider-thumb-size: 12px;
+  --segmented-height: 24px;
+  --field-label-gap: 2px;
+  --setting-row-text-width: 420px;
+  --setting-row-control-width: 280px;
+  --setting-row-padding-y: var(--space-md);
+  --action-gap: var(--space-sm);
+  --callout-padding-y: var(--space-sm);
+  --callout-padding-x: var(--space-page);
+  --facts-label-width: 88px;
+  --facts-row-gap: var(--space-xs);
+  --motion-duration: 0.18s;
+  --hover-duration: 0.15s;
+
+  /* 表格与标签 */
+  --table-font-size: var(--font-size-body);
+  --table-radius: var(--radius-xl);
+  --table-cell-padding-y: var(--space-xs);
+  --table-cell-padding-x: var(--space-page);
+  --table-head-padding-y: var(--space-sm);
+  --table-row-height: 40px;
+  --table-compact-font-size: var(--font-size-caption);
+  --table-compact-row-height: 32px;
+  --table-header-font-size: var(--font-size-caption);
+  --chip-padding-y: 1px;
+  --chip-padding-x: var(--space-md);
+  --chip-font-size: var(--font-size-caption);
+
+  /* 层级 */
+  --menu-z-index: 20;
+  --notice-z-index: 30;
+  --dialog-layer-z-index: 50;
+
+  /* 对话框 */
+  --dialog-titlebar-height: 32px;
+  --dialog-width: 560px;
+  --dialog-title-font-size: var(--font-size-body);
+  --dialog-button-min-width: 72px;
+  --dialog-modal-dim: rgba(0, 0, 0, 0.4);
+
+  /* 通知 */
+  --notice-width: 340px;
+  --notice-offset-bottom: var(--space-page);
+
+  /* 菜单 */
+  --menu-popup-radius: var(--radius-xl);
+  --menu-popup-padding: var(--space-xs) 0;
+  --menu-item-height: 24px;
+  --menu-item-margin-x: var(--space-xs);
+  --menu-item-radius: var(--radius-lg);
+  --menu-mark-column-width: 26px;
+  --menu-item-padding-right: 26px;
+  --menu-separator-margin-y: 5px;
+  --menu-shortcut-gap: 52px;
+  --menubar-popup-min-width: 260px;
+  --menubar-button-height: 24px;
+  --menubar-button-padding: var(--space-md);
+  --menubar-button-radius: var(--radius-lg);
+
+  /* 外壳 */
+  --shell-panel-header-height: 30px;
+  --shell-panel-title-font-size: var(--font-size-chrome);
+  --shell-panel-title-font-weight: var(--font-weight-regular);
+  --shell-panel-title-color: var(--text);
+  --shell-panel-tab-color: var(--text-muted);
+  --chrome-bg: var(--host-sidebar-background);
+  --chrome-border: var(--host-border);
+  --chrome-text: var(--host-description-foreground);
+  --chrome-text-strong: var(--host-foreground);
+  --chrome-indicator: var(--host-button-background);
+  --title-bar-height: 36px;
+  --title-bar-bg: var(--host-titlebar-background);
+  --title-bar-logo-size: 16px;
+  --title-bar-tool-width: 46px;
+  --title-bar-tool-gap: var(--space-page);
+  --title-bar-brand-font-weight: 700;
+  --title-bar-subtitle-font-weight: 500;
+  --title-bar-title-letter-spacing: 0.08em;
+  --activity-bar-width: 40px;
+  --activity-bar-button-size: 40px;
+  --activity-bar-icon-size: 24px;
+  --activity-bar-indicator-width: 2px;
+  --activity-bar-bg: var(--host-activitybar-background);
+  --side-bar-width: 240px;
+  --side-bar-list-secondary-color: var(--text-muted);
+  --side-bar-list-secondary-font-size: var(--font-size-caption);
+  --tab-bar-height: 36px;
+  --tab-bar-tab-max-width: 200px;
+  --tab-bar-radius: var(--radius-xl);
+  --tab-bar-active-bg: var(--host-tab-active-background);
+  --bottom-panel-height: 160px;
+  --status-bar-height: 26px;
+  --status-bar-icon-size: 16px;
+  --status-bar-item-height: 22px;
+  --status-bar-font-size: 12px;
+  --status-bar-padding-x: 8px;
+  --status-bar-item-padding-x: 4px;
+  --status-bar-item-gap: 4px;
+  --status-bar-bg: var(--host-taskbar-background);
+  --empty-state-logo-size: 120px;
+  --empty-state-gap: var(--space-page);
+  --empty-state-steps-width: 320px;
+  --empty-state-step-height: 28px;
+  --empty-state-action-icon-size: 16px;
+  --keybinding-key-min-width: 12px;
+  --keybinding-key-padding: 3px 5px;
+  --keybinding-key-line-height: 10px;
+
+  /* 画面区：模拟器画面周围的底色，不随主题变化 */
+  --screen-backdrop: rgb(0, 0, 0);
+  --screen-frame-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --screen-overlay-bg: rgba(0, 0, 0, 0.55);
+  --screen-overlay-text: rgb(235, 235, 235);
+
+  /* 由当前主题的常态派生：悬停与按下 */
+  --state-lighten: rgb(255, 255, 255);
+  --state-darken: rgb(0, 0, 0);
+  --state-hover-amount: 10%;
+  --state-active-amount: 10%;
+  --accent-hover: color-mix(in srgb, var(--host-button-background), var(--state-lighten) var(--state-hover-amount));
+  --accent-active: color-mix(in srgb, var(--host-button-background), var(--state-darken) var(--state-active-amount));
+  --input-border-hover: color-mix(in srgb, var(--input-border), var(--state-lighten) var(--state-hover-amount));
+  --option-selected-bg: color-mix(in srgb, var(--host-button-background) 30%, transparent);
+  --option-selected-hover-bg: color-mix(in srgb, var(--accent-hover) 30%, transparent);
+  --option-selected-active-bg: color-mix(in srgb, var(--accent-active) 30%, transparent);
+  --switch-off-bg: color-mix(in srgb, var(--text) 20%, transparent);
+  --switch-thumb-bg: rgb(255, 255, 255);
+  --switch-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --slider-track-bg: color-mix(in srgb, var(--text) 20%, transparent);
+  --segmented-border: color-mix(in srgb, var(--text) 28%, transparent);
+  --choice-selected-bg: color-mix(in srgb, var(--text) 8%, transparent);
+  --table-surface: color-mix(in srgb, var(--text) 3%, var(--bg));
+  --table-header-bg: color-mix(in srgb, var(--text) 6%, var(--bg));
+  --table-border: color-mix(in srgb, var(--text) 12%, transparent);
+  --table-row-divider: color-mix(in srgb, var(--text) 8%, transparent);
+  --table-row-hover: color-mix(in srgb, var(--text) 6%, transparent);
+  --chip-bg: color-mix(in srgb, var(--host-button-background) 22%, transparent);
+  --chip-border: color-mix(in srgb, var(--host-button-background) 45%, transparent);
+  --disabled-text: color-mix(in srgb, var(--text) 25%, transparent);
+  --disabled-border: color-mix(in srgb, var(--text) 14%, transparent);
+  --dialog-titlebar-bg: var(--host-titlebar-background);
+  --dialog-titlebar-border: var(--host-border);
+  --dialog-close-hover-bg: var(--host-window-close-hover-background);
+  --dialog-close-hover-text: var(--host-window-close-hover-foreground);
+
+  /* 补充令牌：控件、组件与页面用到的其余取值 */
+  --icon-button-size: var(--btn-height);
+  --input-foreground: var(--host-input-foreground);
+  --select-arrow-size: 5px;
+  --select-arrow-offset: 8px;
+  --slider-height: 22px;
+  --slider-value-width: 32px;
+  --progress-height: 4px;
+  --font-size-subheading: 11px;
+  --group-title-color: var(--text-muted);
+  --group-title-font-size: var(--font-size-subheading);
+  --group-title-padding-bottom: var(--space-xs);
+  --list-gap: var(--space-xs);
+  --list-item-padding-y: var(--space-sm);
+  --list-item-padding-x: var(--space-md);
+  --list-item-radius: var(--radius-md);
+  --panel-padding-y: var(--space-md);
+  --panel-padding-x: var(--space-page);
+  --callout-bg: color-mix(in srgb, var(--host-button-background) 12%, transparent);
+  --callout-border: color-mix(in srgb, var(--host-button-background) 45%, transparent);
+  --chip-ok-bg: color-mix(in srgb, var(--status-success) 18%, transparent);
+  --chip-ok-border: color-mix(in srgb, var(--status-success) 45%, transparent);
+  --chip-warn-bg: color-mix(in srgb, var(--status-warning) 18%, transparent);
+  --chip-warn-border: color-mix(in srgb, var(--status-warning) 45%, transparent);
+  --code-bg: color-mix(in srgb, var(--text) 10%, transparent);
+  --notice-accent-width: 3px;
+  --title-bar-title-color: var(--chrome-text-strong);
+  --title-bar-subtitle-color: var(--chrome-text);
+  --menubar-selection-bg: var(--host-menubar-selection-background);
+  --activity-bar-icon-stroke-width: 1.25;
+  --tab-bar-hover-bg: var(--host-tab-hover-background);
+  --message-level-width: 32px;
+  --status-dot-size: 8px;
+  --run-overlay-icon-size: 32px;
+  --media-card-max-width: 560px;
+  --media-level-label-width: 96px;
+  --pref-nav-width: 160px;
+  --pref-content-max-width: 760px;
+  --about-logo-size: 72px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hover-duration: 0s;
+    --motion-duration: 0s;
+  }
+}
+
+:root.theme-dark {
+  color-scheme: dark;
+
+  --host-foreground: rgb(191, 191, 191);
+  --host-description-foreground: rgb(140, 140, 140);
+  --host-sidebar-background: rgb(25, 26, 27);
+  --host-widget-border: rgb(51, 53, 54);
+  --host-input-foreground: rgb(191, 191, 191);
+  --host-button-background: rgb(41, 122, 160);
+  --host-button-foreground: rgb(255, 255, 255);
+  --host-focus-border: rgb(57, 148, 188);
+  --host-border: rgb(42, 43, 44);
+  --host-tab-active-background: rgb(18, 19, 20);
+  --host-tab-hover-background: rgb(43, 44, 45);
+  --host-titlebar-background: var(--host-sidebar-background);
+  --host-activitybar-background: var(--host-sidebar-background);
+  --host-taskbar-background: var(--host-sidebar-background);
+  --host-editor-background: var(--host-tab-active-background);
+  --host-window-close-hover-background: rgb(196, 43, 28);
+  --host-window-close-hover-foreground: rgb(255, 255, 255);
+  --host-activitybar-active-background: rgb(49, 50, 51);
+  --host-menubar-selection-background: rgb(36, 37, 38);
+
+  --menu-background: color-mix(in srgb, var(--layer-bg) 92%, transparent);
+  --menu-foreground: var(--host-foreground);
+  --menu-border: var(--host-widget-border);
+  --menu-selection-background: rgba(255, 255, 255, 0.12);
+  --menu-selection-foreground: rgb(255, 255, 255);
+  --menu-shadow: 0 8px 32px rgba(0, 0, 0, 0.36);
+  --menu-backdrop-filter: blur(12px);
+  --dialog-shadow: 0 8px 32px rgba(0, 0, 0, 0.36);
+
+  --status-success: rgb(79, 220, 138);
+  --status-warning: rgb(242, 177, 74);
+
+  --card-bg: color-mix(in srgb, var(--bg) 97%, rgb(255, 255, 255));
+  --card-shadow: none;
+  --card-border: color-mix(in srgb, rgb(255, 255, 255) 7%, var(--bg));
+  --divider: color-mix(in srgb, rgb(255, 255, 255) 8%, transparent);
+  --scrollbar-slider-bg: rgba(121, 121, 121, 0.4);
+
+  --input-bg: color-mix(in srgb, var(--bg) 92%, rgb(0, 0, 0));
+  --input-border: color-mix(in srgb, var(--text) 28%, var(--bg));
+  --option-hover-bg: rgba(255, 255, 255, 0.09);
+  --option-active-bg: rgba(0, 0, 0, 0.22);
+
+  --button-secondary-bg: rgba(255, 255, 255, 0.08);
+  --button-secondary-hover-bg: rgba(255, 255, 255, 0.12);
+  --button-secondary-active-bg: rgba(255, 255, 255, 0.05);
+  --button-secondary-text: rgb(191, 191, 191);
+
+  --ghost-foreground: var(--host-description-foreground);
+  --ghost-hover-foreground: rgb(191, 191, 191);
+  --ghost-hover-background: rgba(255, 255, 255, 0.2);
+  --ghost-active-foreground: rgb(255, 255, 255);
+  --ghost-active-background: var(--host-menubar-selection-background);
+  --ghost-selected-foreground: rgb(255, 255, 255);
+  --ghost-selected-background: var(--host-activitybar-active-background);
+
+  --empty-state-action-hover-bg: rgba(90, 93, 94, 0.31);
+  --empty-state-watermark-bg: color-mix(in srgb, var(--host-foreground) 14%, transparent);
+  --keybinding-key-bg: rgba(128, 128, 128, 0.17);
+  --keybinding-key-fg: rgb(204, 204, 204);
+  --keybinding-key-border: rgba(51, 51, 51, 0.6);
+  --keybinding-key-bottom-border: rgba(68, 68, 68, 0.6);
+
+  --layer-bg: var(--host-sidebar-background);
+  --layer-border: color-mix(in srgb, rgb(255, 255, 255) 16%, var(--bg));
+}
+
+:root.theme-light {
+  color-scheme: light;
+
+  --host-foreground: rgb(32, 32, 32);
+  --host-description-foreground: rgb(96, 96, 96);
+  --host-sidebar-background: rgb(250, 250, 253);
+  --host-widget-border: rgb(216, 216, 216);
+  --host-input-foreground: rgb(32, 32, 32);
+  --host-input-background: rgb(255, 255, 255);
+  --host-button-background: rgb(0, 105, 204);
+  --host-button-foreground: rgb(255, 255, 255);
+  --host-focus-border: rgb(0, 105, 204);
+  --host-border: rgb(240, 241, 242);
+  --host-tab-active-background: rgb(255, 255, 255);
+  --host-tab-hover-background: rgb(230, 230, 233);
+  --host-titlebar-background: var(--host-sidebar-background);
+  --host-activitybar-background: var(--host-sidebar-background);
+  --host-taskbar-background: var(--host-sidebar-background);
+  --host-editor-background: var(--host-tab-active-background);
+  --host-window-close-hover-background: rgb(196, 43, 28);
+  --host-window-close-hover-foreground: rgb(255, 255, 255);
+  --host-activitybar-active-background: rgb(214, 214, 214);
+  --host-menubar-selection-background: rgb(234, 234, 234);
+
+  --menu-background: color-mix(in srgb, var(--layer-bg) 92%, transparent);
+  --menu-foreground: var(--host-foreground);
+  --menu-border: var(--host-widget-border);
+  --menu-selection-background: rgba(0, 0, 0, 0.08);
+  --menu-selection-foreground: var(--host-foreground);
+  --menu-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  --menu-backdrop-filter: blur(12px);
+  --dialog-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+
+  --status-success: rgb(31, 122, 63);
+  --status-warning: rgb(169, 106, 16);
+
+  --card-bg: color-mix(in srgb, var(--bg) 62%, rgb(226, 226, 226));
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
+  --card-border: color-mix(in srgb, rgb(0, 0, 0) 22%, rgb(255, 255, 255));
+  --divider: color-mix(in srgb, rgb(0, 0, 0) 8%, transparent);
+  --scrollbar-slider-bg: rgba(100, 100, 100, 0.4);
+
+  --input-bg: color-mix(in srgb, var(--host-input-background) 93%, rgb(217, 217, 217));
+  --input-border: color-mix(in srgb, var(--text) 34%, var(--bg));
+  --option-hover-bg: color-mix(in srgb, var(--text) 9%, transparent);
+  --option-active-bg: color-mix(in srgb, var(--text) 18%, transparent);
+
+  --button-secondary-bg: rgba(90, 90, 90, 0.14);
+  --button-secondary-hover-bg: rgba(90, 90, 90, 0.1);
+  --button-secondary-active-bg: rgba(90, 90, 90, 0.2);
+  --button-secondary-text: rgb(47, 47, 47);
+
+  --ghost-foreground: var(--host-description-foreground);
+  --ghost-hover-foreground: rgb(32, 32, 32);
+  --ghost-hover-background: rgb(214, 214, 216);
+  --ghost-active-foreground: rgb(0, 0, 0);
+  --ghost-active-background: var(--host-menubar-selection-background);
+  --ghost-selected-foreground: rgb(0, 0, 0);
+  --ghost-selected-background: var(--host-activitybar-active-background);
+
+  --empty-state-action-hover-bg: rgba(0, 0, 0, 0.12);
+  --empty-state-watermark-bg: color-mix(in srgb, var(--host-foreground) 14%, transparent);
+  --keybinding-key-bg: rgba(221, 221, 221, 0.4);
+  --keybinding-key-fg: rgb(85, 85, 85);
+  --keybinding-key-border: rgba(204, 204, 204, 0.4);
+  --keybinding-key-bottom-border: rgba(187, 187, 187, 0.4);
+
+  --layer-bg: var(--host-sidebar-background);
+  --layer-border: color-mix(in srgb, rgb(0, 0, 0) 22%, rgb(255, 255, 255));
+}

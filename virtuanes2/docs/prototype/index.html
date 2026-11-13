@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<!--
+========================================================================
+名称：index.html
+说明：VirtuaNES2 界面原型的入口页面：外壳、各页面、对话框的静态结构。
+作者：sungbin
+邮箱：sungbin@3578.cn
+日期：2026-11-13
+备注：仅用于确认界面效果，数据均为示意，不代表真实匹配规则；确认后用 React 与 rujian-ui-kit 重做。
+========================================================================
+-->
+<html lang="zh-CN" class="theme-dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VirtuaNES2 界面原型</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/controls.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/pages.css">
+</head>
+<body>
+  <svg class="ui-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M4 2h16a1 1 0 0 1 1 1v14h-3v4a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-4H3V3a1 1 0 0 1 1-1Z" fill="currentColor" stroke="none"/><rect x="6" y="5" width="12" height="7" rx="1" style="fill: var(--bg); stroke: none"/><path d="M9 17v3M12 17v3M15 17v3" style="stroke: var(--bg)"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+    <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="i-cartridge" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v5h8V3"/><path d="M9 21v-4h6v4"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></symbol>
+    <symbol id="i-drive" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></symbol>
+    <symbol id="i-tape" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/><path d="M8 15h8"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6a1.4 1.4 0 0 1-1 .4H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
+    <symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6a1.4 1.4 0 0 1-1 .4H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></symbol>
+    <symbol id="i-folder-plus" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6"/><path d="M9 13h6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-eject" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M5 19h14"/></symbol>
+    <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="currentColor"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></symbol>
+    <symbol id="i-panel-bottom" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18"/></symbol>
+    <symbol id="i-win-min" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+    <symbol id="i-win-max" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="7"/><path d="M12 6v4"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  </svg>
+
+  <div class="shell" id="shell">
+    <header class="shell-title-bar">
+      <div class="shell-brand">
+        <svg class="ui-icon shell-brand-logo" aria-hidden="true"><use href="#i-logo"/></svg>
+        <span class="shell-brand-name">VIRTUANES</span><span class="shell-brand-sub">2</span>
+      </div>
+      <nav class="shell-menubar" aria-label="菜单栏">
+        <button class="shell-menubar-button" type="button" data-menu="file">文件(F)</button>
+        <button class="shell-menubar-button" type="button" data-menu="machine">机器(M)</button>
+        <button class="shell-menubar-button" type="button" data-menu="view">视图(V)</button>
+        <button class="shell-menubar-button" type="button" data-menu="settings">设置(S)</button>
+        <button class="shell-menubar-button" type="button" data-menu="help">帮助(H)</button>
+      </nav>
+      <div class="shell-title-spacer"></div>
+      <div class="shell-title-tools">
+        <button class="ui-icon-button" type="button" data-command="view.toggleSideBar" aria-label="切换边栏" title="切换边栏 Ctrl+B"><svg class="ui-icon"><use href="#i-sidebar"/></svg></button>
+        <button class="ui-icon-button" type="button" data-command="view.togglePanel" aria-label="切换底部面板" title="切换底部面板 Ctrl+J"><svg class="ui-icon"><use href="#i-panel-bottom"/></svg></button>
+      </div>
+      <div class="shell-window-controls">
+        <button class="shell-window-button" type="button" aria-label="最小化"><svg class="ui-icon"><use href="#i-win-min"/></svg></button>
+        <button class="shell-window-button" type="button" aria-label="最大化"><svg class="ui-icon"><use href="#i-win-max"/></svg></button>
+        <button class="shell-window-button shell-window-button--close" type="button" aria-label="关闭"><svg class="ui-icon"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+
+    <div class="shell-body">
+      <nav class="shell-activity-bar" aria-label="活动栏">
+        <button class="shell-activity-button" type="button" data-open-page="run" aria-label="运行" title="运行"><svg class="ui-icon"><use href="#i-play"/></svg></button>
+        <button class="shell-activity-button" type="button" data-open-page="library" aria-label="卡带库" title="卡带库"><svg class="ui-icon"><use href="#i-library"/></svg></button>
+        <button class="shell-activity-button" type="button" data-open-page="media" aria-label="设备" title="设备（软驱与磁带）"><svg class="ui-icon"><use href="#i-drive"/></svg></button>
+        <button class="shell-activity-button" type="button" data-open-page="mappers" aria-label="mapper 插件" title="mapper 插件"><svg class="ui-icon"><use href="#i-plug"/></svg></button>
+      </nav>
+
+      <aside class="shell-side-bar" id="sideBar" aria-label="边栏">
+        <div class="shell-panel-head"><span class="shell-panel-title" id="sideTitle">运行</span></div>
+        <div class="shell-side-content ui-scroll">
+
+          <section class="side" data-side="run">
+            <div class="ui-group">
+              <h3 class="ui-group-title">机器</h3>
+              <dl class="ui-facts">
+                <div class="ui-facts-row"><dt>主机型号</dt><dd id="factHost">um6576 学习机</dd></div>
+                <div class="ui-facts-row"><dt>卡带</dt><dd id="factCartridge">SB2K_BIOS.NES</dd></div>
+                <div class="ui-facts-row"><dt>mapper</dt><dd id="factPlugin">sb2000 1.0.0</dd></div>
+                <div class="ui-facts-row"><dt>状态</dt><dd id="factState">运行中</dd></div>
+              </dl>
+            </div>
+            <div class="ui-group">
+              <h3 class="ui-group-title">控制</h3>
+              <div class="side-button-grid">
+                <button class="ui-button ui-button--primary" type="button" data-command="machine.powerToggle" id="btnPower"><svg class="ui-icon"><use href="#i-power"/></svg><span>断电</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="machine.pauseToggle" id="btnPause"><svg class="ui-icon"><use href="#i-pause"/></svg><span>暂停</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="machine.softReset"><svg class="ui-icon"><use href="#i-rotate-ccw"/></svg><span>软复位</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="machine.hardReset"><svg class="ui-icon"><use href="#i-refresh"/></svg><span>硬复位</span></button>
+              </div>
+            </div>
+            <div class="ui-group">
+              <h3 class="ui-group-title">速度与声音</h3>
+              <label class="ui-field">
+                <span class="ui-field-label">速度</span>
+                <select class="ui-select" id="selSpeed" aria-label="速度">
+                  <option>100%</option><option>50%</option><option>25%</option><option>200%</option><option>最快</option>
+                </select>
+              </label>
+              <div class="ui-field">
+                <span class="ui-field-label">音量</span>
+                <div class="ui-slider-row">
+                  <button class="ui-icon-button" type="button" data-command="machine.muteToggle" id="btnMute" aria-label="静音" title="静音"><svg class="ui-icon"><use href="#i-volume"/></svg></button>
+                  <input class="ui-slider" type="range" min="0" max="100" value="80" id="sliderVolume" aria-label="音量">
+                  <span class="ui-slider-value" id="volumeValue">80%</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="side" data-side="library" hidden>
+            <div class="ui-group">
+              <label class="ui-field">
+                <span class="ui-field-label">搜索</span>
+                <span class="ui-input-wrap"><svg class="ui-icon ui-input-icon"><use href="#i-search"/></svg><input class="ui-input ui-input--with-icon" type="text" id="libSearch" placeholder="名称或 mapper 号"></span>
+              </label>
+              <label class="ui-field">
+                <span class="ui-field-label">筛选</span>
+                <select class="ui-select" id="libFilter" aria-label="筛选">
+                  <option value="all">全部</option><option value="ok">可运行</option><option value="missing">缺少插件</option>
+                </select>
+              </label>
+              <div class="ui-actions">
+                <button class="ui-button ui-button--secondary" type="button" data-command="library.addFolder"><svg class="ui-icon"><use href="#i-folder-plus"/></svg><span>添加文件夹</span></button>
+              </div>
+            </div>
+            <div class="ui-group">
+              <h3 class="ui-group-title">库文件夹</h3>
+              <ul class="ui-list">
+                <li class="ui-list-item"><span class="ui-list-main">D:\GitCode\famiclone\reference\rom</span><span class="ui-list-secondary">5 个卡带</span></li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="side" data-side="media" hidden>
+            <ul class="ui-list" role="listbox" aria-label="设备">
+              <li><button class="ui-list-button is-selected" type="button" role="option" aria-selected="true" data-device="floppyA"><svg class="ui-icon"><use href="#i-drive"/></svg><span class="ui-list-text"><span class="ui-list-main">软驱 A</span><span class="ui-list-secondary" data-device-state="floppyA">已插入盘片</span></span></button></li>
+              <li><button class="ui-list-button" type="button" role="option" aria-selected="false" data-device="floppyB"><svg class="ui-icon"><use href="#i-drive"/></svg><span class="ui-list-text"><span class="ui-list-main">软驱 B</span><span class="ui-list-secondary" data-device-state="floppyB">空</span></span></button></li>
+              <li><button class="ui-list-button" type="button" role="option" aria-selected="false" data-device="tape"><svg class="ui-icon"><use href="#i-tape"/></svg><span class="ui-list-text"><span class="ui-list-main">磁带机</span><span class="ui-list-secondary" data-device-state="tape">已停止</span></span></button></li>
+            </ul>
+          </section>
+
+          <section class="side" data-side="mappers" hidden>
+            <div class="ui-group">
+              <label class="ui-field">
+                <span class="ui-field-label">搜索</span>
+                <span class="ui-input-wrap"><svg class="ui-icon ui-input-icon"><use href="#i-search"/></svg><input class="ui-input ui-input--with-icon" type="text" id="mapSearch" placeholder="名称或 mapper 号"></span>
+              </label>
+              <label class="ui-field">
+                <span class="ui-field-label">来源</span>
+                <select class="ui-select" id="mapFilter" aria-label="来源">
+                  <option value="all">全部</option><option value="bundled">预装</option><option value="user">用户安装</option><option value="dev">开发目录</option>
+                </select>
+              </label>
+              <div class="ui-actions">
+                <button class="ui-button ui-button--secondary" type="button" data-command="mappers.install"><svg class="ui-icon"><use href="#i-download"/></svg><span>安装插件</span></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </aside>
+
+      <div class="shell-main">
+        <div class="shell-tab-bar" id="tabBar" role="tablist" aria-label="已打开的页面"></div>
+
+        <div class="shell-page-area" id="pageArea">
+
+          <section class="page page--run ui-scroll" data-page="run" hidden>
+            <div class="run-stage" id="runStage">
+              <div class="run-screen-frame">
+                <canvas class="run-screen" id="screen" width="512" height="480" aria-label="模拟器画面"></canvas>
+                <div class="run-overlay" id="screenOverlay" hidden>
+                  <svg class="ui-icon run-overlay-icon" aria-hidden="true"><use href="#i-pause"/></svg>
+                  <div class="run-overlay-title" id="overlayTitle">已暂停</div>
+                  <div class="run-overlay-text" id="overlayText"></div>
+                </div>
+                <span class="run-screen-tag">示意画面</span>
+                <span class="run-mouse-tag" id="mouseTag"><svg class="ui-icon"><use href="#i-mouse"/></svg>点击画面捕获鼠标，双击右键释放</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="page page--library ui-scroll" data-page="library" hidden>
+            <header class="ui-page-head">
+              <h2 class="ui-page-title">卡带库</h2>
+              <p class="ui-page-description" id="libSummary">共 5 个卡带，3 个可运行，2 个缺少 mapper 插件。双击运行。</p>
+            </header>
+            <div class="ui-table-wrap">
+              <table class="ui-table" id="libTable">
+                <thead><tr><th>名称</th><th>mapper</th><th>变体</th><th>主机型号</th><th>匹配的插件</th><th>大小</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr data-row data-status="ok"><td class="ui-table-strong">SB2K_BIOS.NES</td><td>171</td><td>1</td><td>um6576</td><td>sb2000 1.0.0</td><td>128 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
+                  <tr data-row data-status="ok"><td class="ui-table-strong">Super Mario.nes</td><td>0</td><td>0</td><td>fc</td><td>nrom 1.0.0</td><td>40 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
+                  <tr data-row data-status="ok"><td class="ui-table-strong">Tetris.nes</td><td>0</td><td>0</td><td>fc</td><td>nrom 1.0.0</td><td>24 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
+                  <tr data-row data-status="missing"><td class="ui-table-strong">bbk_bios20.nes</td><td>171</td><td>2</td><td>—</td><td>—</td><td>256 KB</td><td><span class="ui-chip ui-chip--warn">缺少插件</span></td></tr>
+                  <tr data-row data-status="missing"><td class="ui-table-strong">qls.nes</td><td>172</td><td>0</td><td>—</td><td>—</td><td>64 KB</td><td><span class="ui-chip ui-chip--warn">缺少插件</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="ui-callout" id="libMissing" hidden><svg class="ui-icon"><use href="#i-link"/></svg><span>选中的卡带缺少 mapper 171、变体 2 的插件。在“mapper 插件”页安装后即可运行。</span></p>
+            <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-search"/></svg><span>表中的卡带与匹配结果仅为原型示意，不代表真实的匹配规则。</span></p>
+          </section>
+
+          <section class="page page--media ui-scroll" data-page="media" hidden>
+            <header class="ui-page-head">
+              <h2 class="ui-page-title" id="devTitle">软驱 A</h2>
+              <p class="ui-page-description" id="devDescription">软驱控制器由卡带挂接，盘片可随时插入或取出，与电源无关。</p>
+            </header>
+
+            <div class="ui-card" data-device-panel="floppyA">
+              <dl class="ui-facts">
+                <div class="ui-facts-row"><dt>状态</dt><dd id="floppyAState">已插入盘片</dd></div>
+                <div class="ui-facts-row"><dt>镜像</dt><dd id="floppyAImage">SB2K_DOS.IMG</dd></div>
+                <div class="ui-facts-row"><dt>大小</dt><dd id="floppyASize">1.44 MB</dd></div>
+                <div class="ui-facts-row"><dt>磁头位置</dt><dd id="floppyATrack">第 12 磁道</dd></div>
+              </dl>
+              <label class="ui-switch-row"><span class="ui-switch-row-label">写保护</span><span class="ui-switch"><input type="checkbox" id="floppyAWp" aria-label="写保护"><span class="ui-switch-track"></span></span></label>
+              <div class="ui-actions">
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyInsert" data-drive="A"><svg class="ui-icon"><use href="#i-download"/></svg><span>插入盘片</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyEject" data-drive="A" id="floppyAEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppySave" data-drive="A" id="floppyASave"><svg class="ui-icon"><use href="#i-save"/></svg><span>保存镜像</span></button>
+              </div>
+            </div>
+
+            <div class="ui-card" data-device-panel="floppyB" hidden>
+              <dl class="ui-facts">
+                <div class="ui-facts-row"><dt>状态</dt><dd id="floppyBState">空</dd></div>
+                <div class="ui-facts-row"><dt>镜像</dt><dd id="floppyBImage">—</dd></div>
+              </dl>
+              <div class="ui-actions">
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyInsert" data-drive="B"><svg class="ui-icon"><use href="#i-download"/></svg><span>插入盘片</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyEject" data-drive="B" id="floppyBEject" disabled><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
+              </div>
+            </div>
+
+            <div class="ui-card" data-device-panel="tape" hidden>
+              <div class="ui-field">
+                <span class="ui-field-label">磁带类型</span>
+                <div class="ui-segmented" role="radiogroup" aria-label="磁带类型" data-segmented="tapeKind">
+                  <button type="button" role="radio" aria-checked="true" data-value="data">数据磁带</button>
+                  <button type="button" role="radio" aria-checked="false" data-value="av">声像磁带</button>
+                </div>
+              </div>
+              <dl class="ui-facts">
+                <div class="ui-facts-row"><dt>状态</dt><dd id="tapeState">已停止</dd></div>
+                <div class="ui-facts-row"><dt>文件</dt><dd id="tapeFile">PROGRAM.vtp</dd></div>
+                <div class="ui-facts-row"><dt>位置</dt><dd id="tapeTime">00:00 / 03:20</dd></div>
+              </dl>
+              <div class="ui-progress" role="progressbar" aria-label="磁带进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="tapeProgress"><span class="ui-progress-fill" id="tapeFill"></span></div>
+              <div class="media-levels" id="tapeLevels" hidden>
+                <div class="media-level"><span class="media-level-label">声道 1 声音</span><span class="ui-progress"><span class="ui-progress-fill" id="levelL"></span></span></div>
+                <div class="media-level"><span class="media-level-label">声道 2 画面</span><span class="ui-progress"><span class="ui-progress-fill" id="levelR"></span></span></div>
+              </div>
+              <div class="ui-actions">
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapePlay" id="tapePlay"><svg class="ui-icon"><use href="#i-play"/></svg><span>播放</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeRecord" id="tapeRecord"><svg class="ui-icon"><use href="#i-record"/></svg><span>录音</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeStop" id="tapeStop" disabled><svg class="ui-icon"><use href="#i-stop"/></svg><span>停止</span></button>
+              </div>
+            </div>
+          </section>
+
+          <section class="page page--mappers ui-scroll" data-page="mappers" hidden>
+            <header class="ui-page-head">
+              <h2 class="ui-page-title">mapper 插件</h2>
+              <p class="ui-page-description">每个插件是卡带上的一个 mapper 芯片，按 NES 文件头的 mapper 号和变体匹配。更新插件不需要升级程序。</p>
+            </header>
+            <div class="ui-table-wrap">
+              <table class="ui-table" id="mapTable">
+                <thead><tr><th>名称</th><th>版本</th><th>匹配</th><th>主机型号</th><th>来源</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr data-row data-source="bundled" data-detail="nrom"><td class="ui-table-strong">NROM</td><td>1.0.0</td><td>mapper 0</td><td>fc</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
+                  <tr data-row data-source="bundled" data-detail="sb2000"><td class="ui-table-strong">小霸王 SB2000</td><td>1.0.0</td><td>mapper 171，变体 1</td><td>um6576</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
+                  <tr data-row data-source="dev" data-detail="demo"><td class="ui-table-strong">示意 mapper</td><td>0.1.0</td><td>mapper 999</td><td>fc</td><td>开发目录</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="ui-card map-detail" id="mapDetail">
+              <h3 class="ui-card-title" id="mapDetailTitle">NROM</h3>
+              <dl class="ui-facts" id="mapDetailFacts"></dl>
+            </div>
+          </section>
+
+          <section class="page page--preferences ui-scroll" data-page="preferences" hidden>
+            <nav class="pref-nav" aria-label="首选项分组">
+              <button class="ui-list-button is-selected" type="button" data-pref-group="appearance">外观</button>
+              <button class="ui-list-button" type="button" data-pref-group="video">画面</button>
+              <button class="ui-list-button" type="button" data-pref-group="audio">声音</button>
+              <button class="ui-list-button" type="button" data-pref-group="input">输入</button>
+              <button class="ui-list-button" type="button" data-pref-group="debug">调试服务</button>
+              <button class="ui-list-button" type="button" data-pref-group="paths">路径</button>
+            </nav>
+            <div class="pref-content ui-scroll">
+
+              <section class="pref-panel" data-pref-panel="appearance">
+                <h2 class="ui-page-title">外观</h2>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">主题</div><div class="ui-setting-description">跟随系统时，系统切换深色或浅色后立即生效。</div></div>
+                  <div class="ui-setting-control">
+                    <div class="ui-segmented" role="radiogroup" aria-label="主题" data-segmented="theme">
+                      <button type="button" role="radio" aria-checked="false" data-value="system">跟随系统</button>
+                      <button type="button" role="radio" aria-checked="true" data-value="dark">深色</button>
+                      <button type="button" role="radio" aria-checked="false" data-value="light">浅色</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="pref-panel" data-pref-panel="video" hidden>
+                <h2 class="ui-page-title">画面</h2>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">画面比例</div><div class="ui-setting-description">只影响显示，不影响模拟。</div></div>
+                  <div class="ui-setting-control"><select class="ui-select" aria-label="画面比例" id="selAspect"><option value="4:3">4:3（电视）</option><option value="8:7">8:7（像素原始比例）</option></select></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">缩放方式</div><div class="ui-setting-description">整数倍缩放能保持像素清晰，窗口放不下时自动取最大的整数倍。</div></div>
+                  <div class="ui-setting-control"><select class="ui-select" aria-label="缩放方式"><option>适应窗口</option><option>整数倍</option></select></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">显示全部 240 行</div><div class="ui-setting-description">关闭时裁掉上下各 8 行。</div></div>
+                  <div class="ui-setting-control"><span class="ui-switch"><input type="checkbox" checked aria-label="显示全部 240 行"><span class="ui-switch-track"></span></span></div>
+                </div>
+              </section>
+
+              <section class="pref-panel" data-pref-panel="audio" hidden>
+                <h2 class="ui-page-title">声音</h2>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">缓冲大小</div><div class="ui-setting-description">缓冲越小延迟越低，电脑负载高时容易爆音。</div></div>
+                  <div class="ui-setting-control"><select class="ui-select" aria-label="缓冲大小"><option>低延迟</option><option selected>标准</option><option>稳定</option></select></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">启动时静音</div><div class="ui-setting-description">音量在边栏的“运行”里调整。</div></div>
+                  <div class="ui-setting-control"><span class="ui-switch"><input type="checkbox" aria-label="启动时静音"><span class="ui-switch-track"></span></span></div>
+                </div>
+              </section>
+
+              <section class="pref-panel" data-pref-panel="input" hidden>
+                <h2 class="ui-page-title">输入</h2>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">点击画面捕获鼠标</div><div class="ui-setting-description">主机或卡带带鼠标时有效；双击鼠标右键释放。</div></div>
+                  <div class="ui-setting-control"><span class="ui-switch"><input type="checkbox" checked aria-label="点击画面捕获鼠标"><span class="ui-switch-track"></span></span></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">手柄 1 按键</div><div class="ui-setting-description">键盘与手柄到按键的映射。</div></div>
+                  <div class="ui-setting-control"><button class="ui-button ui-button--secondary" type="button">设置</button></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">学习机键盘映射</div><div class="ui-setting-description">电脑键盘到学习机键盘的对应关系，按键位而不是按字符对应。</div></div>
+                  <div class="ui-setting-control"><button class="ui-button ui-button--secondary" type="button">设置</button></div>
+                </div>
+              </section>
+
+              <section class="pref-panel" data-pref-panel="debug" hidden>
+                <h2 class="ui-page-title">调试服务</h2>
+                <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-terminal"/></svg><span>调试服务给开发者和 Copilot 使用，通过 TCP 控制模拟器。默认关闭，只监听本机。</span></p>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">启用调试服务</div><div class="ui-setting-description">开启后监听下面的端口；也可用启动参数 <code class="ui-code">--debug-port</code> 开启。</div></div>
+                  <div class="ui-setting-control"><span class="ui-switch"><input type="checkbox" id="swDebug" checked aria-label="启用调试服务"><span class="ui-switch-track"></span></span></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">端口</div><div class="ui-setting-description">只监听 127.0.0.1。</div></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="text" value="5688" aria-label="端口" inputmode="numeric"></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">令牌</div><div class="ui-setting-description">设置后，连接的第一条消息必须带令牌；留空表示不验证。</div></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="password" value="" placeholder="未设置" aria-label="令牌"></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">调试输出目录</div><div class="ui-setting-description">跟踪记录和截图只能写到这个目录。</div></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="text" value="用户数据目录\debug-out" readonly aria-label="调试输出目录"></div>
+                </div>
+              </section>
+
+              <section class="pref-panel" data-pref-panel="paths" hidden>
+                <h2 class="ui-page-title">路径</h2>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">用户插件目录</div><div class="ui-setting-description">用户安装的 mapper 插件放在这里。</div></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="text" value="用户数据目录\plugins" readonly aria-label="用户插件目录"></div>
+                </div>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">开发中的插件目录</div><div class="ui-setting-description">目录下每个子目录是一个未打包的插件，修改后可重新加载。</div></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="text" value="D:\GitCode\my-mappers" aria-label="开发中的插件目录"></div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <div class="shell-empty-workspace" id="emptyWorkspace" hidden>
+            <svg class="ui-icon shell-empty-logo" aria-hidden="true"><use href="#i-logo"/></svg>
+            <ul class="shell-empty-steps">
+              <li><button class="shell-empty-step" type="button" data-command="file.open"><svg class="ui-icon"><use href="#i-cartridge"/></svg><span class="shell-empty-step-name">打开卡带</span><span class="ui-keys"><kbd>Ctrl</kbd><kbd>O</kbd></span></button></li>
+              <li><button class="shell-empty-step" type="button" data-open-page="library"><svg class="ui-icon"><use href="#i-library"/></svg><span class="shell-empty-step-name">卡带库</span></button></li>
+              <li><button class="shell-empty-step" type="button" data-open-page="media"><svg class="ui-icon"><use href="#i-drive"/></svg><span class="shell-empty-step-name">设备</span></button></li>
+              <li><button class="shell-empty-step" type="button" data-open-page="mappers"><svg class="ui-icon"><use href="#i-plug"/></svg><span class="shell-empty-step-name">mapper 插件</span></button></li>
+            </ul>
+          </div>
+        </div>
+
+        <section class="shell-bottom-panel" id="bottomPanel" aria-label="底部面板">
+          <div class="shell-panel-head">
+            <div class="shell-panel-tabs"><span class="shell-panel-tab is-selected">消息</span></div>
+            <div class="shell-panel-actions">
+              <button class="ui-icon-button" type="button" data-command="panel.clear" aria-label="清空消息" title="清空消息"><svg class="ui-icon"><use href="#i-x"/></svg></button>
+              <button class="ui-icon-button" type="button" data-command="view.togglePanel" aria-label="关闭面板" title="关闭"><svg class="ui-icon"><use href="#i-chevron-down"/></svg></button>
+            </div>
+          </div>
+          <ul class="shell-message-list ui-scroll" id="messageList">
+            <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>已装配主机 um6576 学习机</span></li>
+            <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>mapper 171、变体 1 匹配到插件 sb2000 1.0.0</span></li>
+            <li class="shell-message"><time>10:21:05</time><span class="shell-message-level">信息</span><span>软驱 A 已插入 SB2K_DOS.IMG</span></li>
+            <li class="shell-message is-warning"><time>10:21:09</time><span class="shell-message-level">警告</span><span>磁带机里没有磁带</span></li>
+            <li class="shell-message"><time>10:21:12</time><span class="shell-message-level">信息</span><span>调试服务：127.0.0.1:5688 已连接 1 个客户端</span></li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <footer class="shell-status-bar">
+      <div class="shell-status-group">
+        <span class="shell-status-item"><span class="shell-status-dot" id="statusDot" data-state="on"></span><span id="statusPower">运行中</span></span>
+        <span class="shell-status-item" id="statusHost">um6576 学习机</span>
+        <span class="shell-status-item" id="statusCartridge">SB2K_BIOS.NES</span>
+        <span class="shell-status-item" id="statusPlugin">sb2000 1.0.0</span>
+      </div>
+      <div class="shell-status-group">
+        <span class="shell-status-item" id="statusFps">50.0 fps</span>
+        <span class="shell-status-item" id="statusSpeed">速度 100%</span>
+        <span class="shell-status-item" id="statusVolume">音量 80%</span>
+        <button class="shell-status-button" type="button" data-command="settings.debug" id="statusDebug"><svg class="ui-icon"><use href="#i-terminal"/></svg><span id="statusDebugText">调试 127.0.0.1:5688，1 个连接</span></button>
+        <button class="shell-status-button" type="button" aria-label="通知" title="通知"><svg class="ui-icon"><use href="#i-bell"/></svg></button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="ui-notices" id="notices" aria-live="polite"></div>
+  <div class="ui-menu-layer" id="menuLayer"></div>
+
+  <div class="ui-dialog-scrim" id="aboutDialog" hidden>
+    <div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+      <div class="ui-dialog-titlebar">
+        <span class="ui-dialog-title" id="aboutTitle">关于 VirtuaNES2</span>
+        <button class="ui-dialog-close" type="button" data-close-dialog aria-label="关闭"><svg class="ui-icon"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="ui-dialog-body ui-scroll">
+        <div class="about-head">
+          <svg class="ui-icon about-logo" aria-hidden="true"><use href="#i-logo"/></svg>
+          <div class="about-info">
+            <div class="about-name"><span class="about-name-main">VIRTUANES</span><span class="about-name-sub">2</span></div>
+            <dl class="ui-facts">
+              <div class="ui-facts-row"><dt>版本</dt><dd>0.1.0（原型）</dd></div>
+              <div class="ui-facts-row"><dt>核心版本</dt><dd>0.1.0</dd></div>
+              <div class="ui-facts-row"><dt>许可证</dt><dd>GPLv3</dd></div>
+            </dl>
+          </div>
+        </div>
+        <h3 class="ui-section-title">第三方依赖</h3>
+        <p class="ui-description">本软件使用了以下 9 项第三方依赖。</p>
+        <div class="ui-table-wrap">
+          <table class="ui-table ui-table--compact">
+            <thead><tr><th>名称与版本</th><th>作者</th><th>许可</th></tr></thead>
+            <tbody>
+              <tr><td>Electron 45</td><td>Electron contributors</td><td>MIT</td></tr>
+              <tr><td>React 19</td><td>Meta Platforms</td><td>MIT</td></tr>
+              <tr><td>QuickJS-ng 0.18.0</td><td>QuickJS-ng contributors</td><td>MIT</td></tr>
+              <tr><td>miniz 3.1.2</td><td>Rich Geldreich 等</td><td>MIT</td></tr>
+              <tr><td>nlohmann/json 3.12.0</td><td>Niels Lohmann</td><td>MIT</td></tr>
+              <tr><td>SQLite 3.54.1</td><td>SQLite 开发团队</td><td>公有领域</td></tr>
+              <tr><td>miniaudio</td><td>David Reid</td><td>MIT-0 或公有领域</td></tr>
+              <tr><td>FFmpeg 9.0.2</td><td>FFmpeg 开发者</td><td>LGPL-2.1-or-later</td></tr>
+              <tr><td>rujian-ui-kit</td><td>sungbin</td><td>Apache-2.0</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ui-dialog-actions">
+        <button class="ui-button ui-button--secondary" type="button" data-close-dialog>关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts/shell.js"></script>
+  <script src="scripts/machine.js"></script>
+  <script src="scripts/pages.js"></script>
+  <script src="scripts/main.js"></script>
+</body>
+</html>

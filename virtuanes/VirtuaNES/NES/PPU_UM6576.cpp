@@ -109,9 +109,7 @@ BYTE PPU_UM6576::Read ( WORD addr )
 			break;
 		case 0x2004: // R Sprite RAM data port
 			ret = SPRAM[m_bReg2003];
-			// 真机实测：精灵属性字节的位 3、2 读回为 0
-			if (2 == (m_bReg2003 & 3))
-				ret &= 0xF3;
+			// 真机实测：精灵属性字节的位 4-2 读回不固定（见过 E3、F3、FF），这里读回写入的值
 			m_bReg2003++;
 			break;
 		case 0x2007: // R Vram data port

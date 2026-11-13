@@ -68,8 +68,12 @@ public:
 	virtual	~CPU();
 
 	BYTE	RD6502( WORD addr );
+	BYTE	ZpRead( BYTE addr );
+	WORD	ZpReadW( BYTE addr );
+	BYTE	RD6502Body( WORD addr );
 	void	WR6502( WORD addr, BYTE data );
 	WORD	RD6502W( WORD addr );
+	WORD	RD6502WBody( WORD addr );
 
 	void	Reset();
 

@@ -827,6 +827,11 @@ BYTE MapperSB2K::ExRead ( WORD addr )
 			data = m_bReg4033;
 			break;
 
+		case 0x4081: // RTC data
+			// 真机实测：不论有没有设地址，读出的都是固定的 $60
+			data = 0x60;
+			break;
+
 		case 0x4034: // Timer control
 			data = m_bReg4034;
 			break;

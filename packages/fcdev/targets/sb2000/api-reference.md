@@ -2358,7 +2358,7 @@ void sb_window_map_group(unsigned char group);
 | [`sb_ppu_palette_set`](#sb_ppu_palette_set) | 写调色板的一项（$2040 起共 64 项：背景 0-31，精灵 32-63）。 |  |
 | [`sb_ppu_palette_get`](#sb_ppu_palette_get) | 读调色板的一项，只返回低 6 位（读出的位 6 恒为 1，已去掉）。 |  |
 | [`sb_ppu_oam_clear`](#sb_ppu_oam_clear) | 把精灵 RAM 的 256 字节全部填成 $F0，使全部 64 个精灵都在屏幕之外。 |  |
-| [`sb_ppu_oam_put`](#sb_ppu_oam_put) | 写一个精灵（4 字节）。读回时属性的位 4-2 总是 0。 |  |
+| [`sb_ppu_oam_put`](#sb_ppu_oam_put) | 写一个精灵（4 字节）。读回时属性的位 4-2 不固定（真机实测），不要依赖。 |  |
 | [`sb_ppu_wait_vblank`](#sb_ppu_wait_vblank) | 等垂直消隐：轮询 $2002 直到位 7 为 1，最多读 65535 次。 |  |
 | [`sb_ppu_render`](#sb_ppu_render) | 设置控制寄存器与扩展控制寄存器、滚动回到 (0, 0)，最后写显示寄存器打开显示。 |  |
 
@@ -2480,7 +2480,7 @@ void sb_ppu_oam_clear(void);
 void sb_ppu_oam_put(unsigned char index, unsigned char y, unsigned char tile, unsigned char attr, unsigned char x);
 ```
 
-写一个精灵（4 字节）。读回时属性的位 4-2 总是 0。
+写一个精灵（4 字节）。读回时属性的位 4-2 不固定（真机实测），不要依赖。
 
 参数：
 

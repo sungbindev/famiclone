@@ -49,11 +49,11 @@ static int cpu_trace_enable = 0;
 //#define	OP6502W(A)	RD6502W((A))
 
 // ゼロページリード
-#define	ZPRD(A)		(RAM[(BYTE)(A)])
+#define	ZPRD(A)		ZpRead( (BYTE)(A) )
 //#define	ZPRDW(A)	(*((LPWORD)&RAM[(BYTE)(A)]))
-#define	ZPRDW(A)	((WORD)RAM[(BYTE)(A)]+((WORD)RAM[(BYTE)((A)+1)]<<8))
+#define	ZPRDW(A)	ZpReadW( (BYTE)(A) )
 
-#define	ZPWR(A,V)	{ RAM[(BYTE)(A)]=(V); if( g_dbgActive ) DebugHook_OnWrite( (BYTE)(A), (V) ); }
+#define	ZPWR(A,V)	{ RAM[(BYTE)(A)]=(V); nes->SetBusData( (BYTE)(V) ); if( g_dbgActive ) DebugHook_OnWrite( (BYTE)(A), (V) ); }
 #define	ZPWRW(A,V)	{ *((LPWORD)&RAM[(BYTE)(A)])=(WORD)(V); }
 
 // サイクルカウンタ
@@ -635,7 +635,31 @@ inline	WORD	OP6502W( WORD addr )
 }
 #endif
 
+// 每次读写都把数据记为总线最近的值，供悬空读使用（堆栈不经过这里，不记录）
+inline	BYTE	CPU::ZpRead( BYTE addr )
+{
+	BYTE data = RAM[addr];
+	nes->SetBusData( data );
+	return data;
+}
+
+// 零页间接寻址取指针：先读低字节再读高字节，总线上留下的是高字节
+inline	WORD	CPU::ZpReadW( BYTE addr )
+{
+	BYTE low = RAM[addr];
+	BYTE high = RAM[(BYTE)(addr+1)];
+	nes->SetBusData( high );
+	return	(WORD)low + ((WORD)high<<8);
+}
+
 inline	BYTE	CPU::RD6502( WORD addr )
+{
+	BYTE data = RD6502Body( addr );
+	nes->SetBusData( data );
+	return data;
+}
+
+inline	BYTE	CPU::RD6502Body( WORD addr )
 {
 	if( addr < 0x2000 ) {
 	// RAM (Mirror $0800, $1000, $1800)
@@ -687,7 +711,15 @@ inline	BYTE	CPU::RD6502( WORD addr )
 	return	CPU_MEM_BANK[addr>>13][addr&0x1FFF];
 }
 
+// 取字时总线上最后留下的是高字节（绝对寻址里就是操作数的高字节）
 inline	WORD	CPU::RD6502W( WORD addr )
+{
+	WORD data = RD6502WBody( addr );
+	nes->SetBusData( (BYTE)(data >> 8) );
+	return data;
+}
+
+inline	WORD	CPU::RD6502WBody( WORD addr )
 {
 	if( addr < 0x2000 ) {
 	// RAM (Mirror $0800, $1000, $1800)
@@ -730,6 +762,7 @@ inline	void	CPU::WR6502( WORD addr, BYTE data )
 	// Others
 		nes->Write( addr, data );
 	}
+	nes->SetBusData( data );
 	if( g_dbgActive ) DebugHook_OnWrite( addr, data );
 }
 

@@ -172,6 +172,10 @@ public:
 	void SetVariant(NESVARIANT var);
 	NESVARIANT GetVariant() { return m_Variant; }
 
+	// CPU 数据总线上最近一次的值：悬空（没有器件驱动）的位读到它，只在 UM6576 模式下使用
+	void	SetBusData( BYTE data ) { m_BusData = data; }
+	BYTE	GetBusData() { return m_BusData; }
+
 	// 描画方式
 	enum RENDERMETHOD { 
 		POST_ALL_RENDER = 0, // Rendering after executing instructions for the scan line
@@ -304,6 +308,7 @@ protected:
 protected:
 // メンバ変数
 	NESVARIANT m_Variant;
+	BYTE	m_BusData;
 	INT		nIRQtype;
 	BOOL	bVideoMode;
 	BOOL	bFrameIRQ;

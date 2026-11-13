@@ -192,6 +192,7 @@ NES::NES( const char* fname )
 	SAVERAM_SIZE = 8*1024;	// 8K byte
 
 	m_Variant = NESVARIANT_STD;
+	m_BusData = 0;
 
 	// IRQ type
 	nIRQtype = 0;
@@ -977,9 +978,12 @@ BYTE	NES::Read( WORD addr )
 			// 真机实测（memtest）：6576 模式下内部 RAM 也只有 2K，$0800-$1FFF 是它的镜像
 			return	RAM[addr&0x07FF];
 		case	0x01:	// $2000-$3FFF
-			if (NESVARIANT_UM6576 == m_Variant)
+			if (NESVARIANT_UM6576 == m_Variant) {
+				// 真机实测：$203F、$2080 读到总线上最近的值（读指令操作数的高字节 $20）；$2009、$3FFF 另有读数，没有对齐
+				if ((addr >= 0x200A && addr <= 0x203F) || (addr >= 0x2080 && addr <= 0x3FFE))
+					return	m_BusData;
 				return	ppu->Read( addr );
-			else
+			} else
 				return	ppu->Read(addr & 0xE007);
 		case	0x02:	// $4000-$5FFF
 			if( addr < 0x4100 ) {
@@ -1096,6 +1100,14 @@ BYTE	NES::ReadReg( WORD addr )
 
 		case	0x14:
 			return	addr&0xFF;
+			break;
+
+		case	0x18: case	0x19: case	0x1A: case	0x1B:
+		case	0x1C: case	0x1D: case	0x1E: case	0x1F:
+			// 真机实测：$4018、$4019、$401F 读到总线上最近的值（$40）
+			if (NESVARIANT_UM6576 == m_Variant)
+				return	m_BusData;
+			return	mapper->ExRead( addr );
 			break;
 
 		case	0x16:

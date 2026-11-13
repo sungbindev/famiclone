@@ -1,0 +1,15 @@
+{
+  "name": "hwprobe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SB2000 (SB-DOS) program: probe the unclear readback bits on the real machine (OAM attribute bits 4-2, $4015, $4023)",
+  "scripts": {
+    "build": "fcdev build src",
+    "start": "fcdev run src",
+    "sync": "fcdev sync",
+    "disk": "fcdev disk src"
+  },
+  "devDependencies": {
+    "fcdev": "0.5.0"
+  }
+}

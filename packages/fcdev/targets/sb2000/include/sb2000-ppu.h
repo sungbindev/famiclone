@@ -77,7 +77,7 @@ unsigned char sb_ppu_palette_get(unsigned char index);
 void sb_ppu_oam_clear(void);
 
 /**
- * 写一个精灵（4 字节）。读回时属性的位 4-2 总是 0。
+ * 写一个精灵（4 字节）。读回时属性的位 4-2 不固定（真机实测），不要依赖。
  *
  * @param index 精灵序号，0 到 63。
  * @param y 垂直位置，实际显示在 y + 1 行。

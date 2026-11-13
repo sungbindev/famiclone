@@ -34,6 +34,12 @@ const RANGE_END = 0x7b00 + 26896;
 /** 每个阶段最多记录的行数（unique 模式下按实际写出的行数算） */
 const TRACE_LINES = 2000000;
 
+/** 每个阶段最多记录的 $2000-$4FFF 读写行数 */
+const IO_LINES = 6000000;
+
+/** 步步高系统入口：地址、名字与最大记录次数（BIOS、文件、外设、DOS），每次执行到就记录寄存器与调用者；记录太多会拖慢模拟器，运行命令超时后按键就会错位，轮询键盘的外设入口要限制得小 */
+const ENTRY_POINTS = [['5800', 'BIOS', 3000], ['5803', '文件', 3000], ['5809', '外设', 3000], ['580c', 'DOS', 3000]];
+
 /** BASIC 阶段依次输入的行；INPUT、LINPUT 后面紧跟的行是给它们的输入 */
 const BASIC_LINES = [
   'CLS',
@@ -163,6 +169,8 @@ async function startGbasic(session, traceFile) {
   await session.send('run 120');
   await typeText(session, 'gbasic');
   await session.send(`trace ${traceFile} ${TRACE_LINES} unique`);
+  await session.send(`io ${traceFile.replace('trace-', 'io-')} ${IO_LINES}`);
+  for (const [entry, , limit] of ENTRY_POINTS) await session.send(`calllog ${traceFile.replace('trace-', `calls-${entry}-`)} ${entry} 0:1 ${limit}`);
   await press(session, KEY.enter);
   await session.send('run 300');
 }
@@ -226,6 +234,51 @@ const requested = process.argv.slice(2);
 const names = requested.length > 0 ? requested : Object.keys(phases);
 const addresses = new Map();
 const image = readFileSync(ORIGINAL_CMD).subarray(2);
+/** 按（入口、A、X、Y、调用者）汇总的系统入口调用 */
+const calls = new Map();
+
+/**
+ * 读取 calllog 日志，按寄存器与调用者汇总。
+ * @param {string} file calllog 日志
+ * @param {string} label 入口名字
+ * @param {Map<string, {text: string, count: number}>} target 汇总表
+ */
+function collectCalls(file, label, target) {
+  const lines = readFileSync(file, 'utf8').split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^C pc=([0-9A-F]{4}) a=([0-9A-F]{2}) x=([0-9A-F]{2}) y=([0-9A-F]{2})/.exec(lines[index]);
+    if (!match) continue;
+    const stack = (lines[index + 1] ?? '').split(' ').slice(1);
+    // 栈顶两个字节是返回地址减 1（JSR），JMP 进来时栈上是更上层调用者
+    const caller = ((Number.parseInt(stack[1], 16) << 8) | Number.parseInt(stack[0], 16)) + 1;
+    const key = `${label} ${match[1]} A=$${match[2]} X=$${match[3]} Y=$${match[4]} 返回到 $${caller.toString(16).toUpperCase().padStart(4, '0')}`;
+    const entry = target.get(key) ?? { text: key, count: 0 };
+    entry.count += 1;
+    target.set(key, entry);
+  }
+}
+
+/** 按（读写、地址、指令地址）汇总的 $2000-$4FFF 访问 */
+const ioAccesses = new Map();
+
+/**
+ * 读取 io 日志，把指令地址在 GBASIC 范围内的访问汇总进 ioAccesses。
+ * @param {string} file io 日志
+ * @param {Map<string, {mode: string, address: number, pc: number, count: number, values: Set<string>}>} target 汇总表
+ */
+function collectIo(file, target) {
+  for (const line of readFileSync(file, 'utf8').split('\n')) {
+    const match = /^([RW]) ([0-9A-F]{4}) ([0-9A-F]{2}) pc=([0-9A-F]{4})/.exec(line);
+    if (!match) continue;
+    const pc = Number.parseInt(match[4], 16);
+    if (pc < RANGE_START || pc >= RANGE_END) continue;
+    const key = `${match[1]}${match[2]}${match[4]}`;
+    const entry = target.get(key) ?? { mode: match[1], address: Number.parseInt(match[2], 16), pc, count: 0, values: new Set() };
+    entry.count += 1;
+    if (entry.values.size < 8) entry.values.add(match[3]);
+    target.set(key, entry);
+  }
+}
 let port = 5730;
 for (const name of names) {
   if (!phases[name]) throw new Error(`没有这个阶段：${name}，可用的有 ${Object.keys(phases).join('、')}`);
@@ -235,9 +288,13 @@ for (const name of names) {
   try {
     await phases[name](session, traceFile);
     await session.send('trace off');
+    await session.send('io off');
+    await session.send('calllog off');
   } finally {
     session.close();
   }
+  collectIo(traceFile.replace('trace-', 'io-'), ioAccesses);
+  for (const [entry, label] of ENTRY_POINTS) collectCalls(traceFile.replace('trace-', `calls-${entry}-`), label, calls);
   let count = 0;
   for (const line of readFileSync(traceFile, 'utf8').split('\n')) {
     if (line[0] !== 'T') continue;
@@ -253,3 +310,9 @@ for (const name of names) {
 }
 writeFileSync(join(BUILD, 'gbasic-trace.txt'), [...addresses].sort((a, b) => a[0] - b[0]).map((entry) => entry[1]).join('\n') + '\n');
 console.log(`已写入 ${join(BUILD, 'gbasic-trace.txt')}`);
+const ioLines = [...ioAccesses.values()].sort((a, b) => a.pc - b.pc || a.address - b.address).map((entry) => `${entry.mode} $${entry.address.toString(16).toUpperCase().padStart(4, '0')} pc=$${entry.pc.toString(16).toUpperCase().padStart(4, '0')} 次数=${entry.count} 值=${[...entry.values].join(',')}`);
+writeFileSync(join(BUILD, 'gbasic-io.txt'), `${ioLines.join('\n')}\n`);
+console.log(`已写入 ${join(BUILD, 'gbasic-io.txt')}（${ioLines.length} 项）`);
+const callLines = [...calls.values()].map((entry) => `${entry.text} 次数=${entry.count}`).sort();
+writeFileSync(join(BUILD, 'gbasic-calls.txt'), `${callLines.join('\n')}\n`);
+console.log(`已写入 ${join(BUILD, 'gbasic-calls.txt')}（${callLines.length} 项）`);

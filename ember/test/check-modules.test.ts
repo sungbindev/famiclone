@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：check-modules.test.ts
- * 说明：分层与模块检查的测试：本仓库通过检查；在临时项目里构造违规，检查硬件模块之间的引用、模块只能引用对方契约、层间依赖与模块登记都能被发现。
+ * 说明：分层与模块检查的测试：本仓库通过检查；在临时项目里构造违规，检查硬件契约与硬件模块的包含规则、硬件模块之间的引用、模块只能引用对方契约、层间依赖与模块登记都能被发现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -65,6 +65,55 @@ describe('checkProject', () => {
       'core/src/bootstrap/modules/runtime.cpp': '\n'
     });
     expect(checkProject(root).errors).toEqual(['core/src/logic/runtime/runtime.hpp：模块 runtime 只能引用模块 hardware/cpu-6502 的契约，不能包含 logic/hardware/cpu-6502/cpu.hpp']);
+  });
+
+  it('硬件模块可以包含自己目录里的文件、shared 与 platform 的抽象', () => {
+    const root = createProject({
+      'core/src/contracts/hardware/bus.hpp': '#pragma once\n',
+      'core/src/shared/errors/core-error.hpp': '#pragma once\n',
+      'core/src/platform/events/event-sink.hpp': '#pragma once\n',
+      'core/src/logic/hardware/cpu-6502/cpu.hpp': '#include "logic/hardware/cpu-6502/table.hpp"\n#include "contracts/hardware/bus.hpp"\n#include "shared/errors/core-error.hpp"\n#include "platform/events/event-sink.hpp"\n#include <cstdint>\n',
+      'core/src/logic/hardware/cpu-6502/table.hpp': '#pragma once\n'
+    });
+    expect(checkProject(root).errors).toEqual([]);
+  });
+
+  it('硬件模块只能包含 contracts/hardware 的契约，不能包含其他模块的契约', () => {
+    const root = createProject({
+      'core/src/contracts/system/system-service.hpp': '#pragma once\n',
+      'core/src/logic/hardware/cpu-6502/cpu.hpp': '#include "contracts/system/system-service.hpp"\n#include "platform/time/clock.hpp"\n',
+      'core/src/bootstrap/module-list.cpp': '{"system", registerSystem},\n',
+      'core/src/bootstrap/modules/system.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual([
+      'core/src/logic/hardware/cpu-6502/cpu.hpp：硬件模块只能包含 contracts/hardware 的契约，不能包含 contracts/system/system-service.hpp',
+      'core/src/logic/hardware/cpu-6502/cpu.hpp：logic 层只能包含 platform 的抽象，不能包含 platform/time/clock.hpp'
+    ]);
+  });
+
+  it('硬件模块的文件必须放在 logic/hardware/<模块>/ 目录下', () => {
+    const root = createProject({
+      'core/src/logic/hardware/loose.hpp': '#pragma once\n'
+    });
+    expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/loose.hpp：硬件模块的文件必须放在 logic/hardware/<模块>/ 目录下']);
+  });
+
+  it('contracts/hardware 不能引用 logic 与第三方库，只能包含自己、shared 与标准库', () => {
+    const root = createProject({
+      'core/src/contracts/hardware/ok.hpp': '#pragma once\n#include <cstdint>\n#include <span>\n#include "contracts/hardware/other.hpp"\n#include "shared/errors/core-error.hpp"\n',
+      'core/src/contracts/hardware/other.hpp': '#pragma once\n',
+      'core/src/shared/errors/core-error.hpp': '#pragma once\n',
+      'core/src/contracts/hardware/bad.hpp': '#include "logic/hardware/cpu-6502/cpu.hpp"\n#include "contracts/system/system-service.hpp"\n#include "platform/events/event-sink.hpp"\n#include <nlohmann/json.hpp>\n#include <quickjs.h>\n#include <stdint.h>\n',
+      'core/src/logic/hardware/cpu-6502/cpu.hpp': '#pragma once\n'
+    });
+    expect(checkProject(root).errors).toEqual([
+      'core/src/contracts/hardware/bad.hpp：contracts/hardware 只能包含 contracts/hardware 与 shared，不能包含 logic/hardware/cpu-6502/cpu.hpp',
+      'core/src/contracts/hardware/bad.hpp：contracts/hardware 只能包含 contracts/hardware 与 shared，不能包含 contracts/system/system-service.hpp',
+      'core/src/contracts/hardware/bad.hpp：contracts/hardware 只能包含 contracts/hardware 与 shared，不能包含 platform/events/event-sink.hpp',
+      'core/src/contracts/hardware/bad.hpp：contracts/hardware 只能包含标准库头文件，不能包含 <nlohmann/json.hpp>',
+      'core/src/contracts/hardware/bad.hpp：contracts/hardware 只能包含标准库头文件，不能包含 <quickjs.h>',
+      'core/src/contracts/hardware/bad.hpp：contracts/hardware 只能包含标准库头文件，不能包含 <stdint.h>'
+    ]);
   });
 
   it('C++ 各层与第三方头文件的位置受限', () => {

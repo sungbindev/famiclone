@@ -9,3 +9,4 @@ src/contracts/*/generated/
 core/src/contracts/*/generated/
 coverage/
 *.log
+!core/test/data/**/*.log

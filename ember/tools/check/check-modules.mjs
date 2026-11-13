@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：check-modules.mjs
- * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、C++ 各层的 #include 规则、硬件模块之间互不引用；
+ * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、C++ 各层的 #include 规则、硬件契约与硬件模块的规则（模块之间互不引用）；
  *       从 TypeScript 的 import、C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
  *       检查模块目录都在模块清单中登记。
  * 作者：sungbin
@@ -71,6 +71,12 @@ const BINDING_ENTRY = 'bootstrap/core.hpp';
  * 硬件不是业务模块，没有请求，所以不要求登记在模块清单中；硬件模块之间互不引用，只经 contracts/hardware。
  */
 const HARDWARE_DIRECTORY = 'hardware';
+/** 硬件契约的目录前缀（#include 路径与相对 core/src 的文件路径都以它开头）。 */
+const HARDWARE_CONTRACTS_PREFIX = 'contracts/hardware/';
+/** 硬件模块的目录前缀。 */
+const HARDWARE_LOGIC_PREFIX = 'logic/hardware/';
+/** 标准库头文件：没有扩展名与目录的名字（如 <cstdint>、<span>）。 */
+const STANDARD_HEADER = /^[a-z][a-z0-9_]*$/;
 
 /** 递归列出文件。 */
 function listFiles(directory, pattern) {
@@ -162,11 +168,22 @@ function checkCpp(root, errors, edges) {
   for (const file of listFiles(base, /\.(cpp|hpp)$/)) {
     const path = toPosix(relative(base, file));
     const from = cppLocation(path);
+    const inHardwareContracts = path.startsWith(HARDWARE_CONTRACTS_PREFIX);
+    const inHardwareLogic = path.startsWith(HARDWARE_LOGIC_PREFIX);
+    if (inHardwareLogic && path.split('/').length < 4) errors.push(`core/src/${path}：硬件模块的文件必须放在 logic/hardware/<模块>/ 目录下`);
     const text = readFileSync(file, 'utf8');
     for (const match of text.matchAll(/^\s*#include\s+([<"])([^>"]+)[>"]/gm)) {
       const include = match[2];
       if (match[1] === '<') {
+        if (inHardwareContracts) {
+          if (!STANDARD_HEADER.test(include)) errors.push(`core/src/${path}：contracts/hardware 只能包含标准库头文件，不能包含 <${include}>`);
+          continue;
+        }
         if (!thirdPartyAllowed(include, path, from)) errors.push(`core/src/${path}：不能包含 <${include}>`);
+        continue;
+      }
+      if (inHardwareContracts) {
+        if (!include.startsWith(HARDWARE_CONTRACTS_PREFIX) && !include.startsWith('shared/')) errors.push(`core/src/${path}：contracts/hardware 只能包含 contracts/hardware 与 shared，不能包含 ${include}`);
         continue;
       }
       const to = cppLocation(include);
@@ -174,6 +191,7 @@ function checkCpp(root, errors, edges) {
       if (allowed !== undefined && !allowed.includes(to.layer)) errors.push(`core/src/${path}：${from.layer} 层不能包含 ${to.layer} 层的 ${include}`);
       if (from.layer === 'logic' && to.layer === 'platform' && !PLATFORM_ABSTRACTIONS.has(include)) errors.push(`core/src/${path}：logic 层只能包含 platform 的抽象，不能包含 ${include}`);
       if (from.layer === 'binding' && to.layer === 'bootstrap' && include !== BINDING_ENTRY) errors.push(`core/src/${path}：binding 只能经 ${BINDING_ENTRY} 使用核心`);
+      if (inHardwareLogic && to.layer === 'contracts' && !include.startsWith(HARDWARE_CONTRACTS_PREFIX)) errors.push(`core/src/${path}：硬件模块只能包含 contracts/hardware 的契约，不能包含 ${include}`);
       if (from.module !== undefined && to.module !== undefined && from.module !== to.module) {
         if (to.layer !== 'contracts') errors.push(`core/src/${path}：模块 ${from.module} 只能引用模块 ${to.module} 的契约，不能包含 ${include}`);
         edges.push({ from: from.module, to: to.module });

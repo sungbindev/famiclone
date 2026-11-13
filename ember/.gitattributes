@@ -2,3 +2,5 @@
 *.png binary
 *.ico binary
 *.icns binary
+*.nes binary
+core/test/data/**/*.log -text

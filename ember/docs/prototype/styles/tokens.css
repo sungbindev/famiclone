@@ -157,6 +157,7 @@
   --activity-bar-indicator-width: 2px;
   --activity-bar-bg: var(--host-activitybar-background);
   --side-bar-width: 240px;
+  --secondary-side-width: 280px;
   --side-bar-list-secondary-color: var(--text-muted);
   --side-bar-list-secondary-font-size: var(--font-size-caption);
   --tab-bar-height: 36px;
@@ -251,8 +252,7 @@
   --message-level-width: 32px;
   --status-dot-size: 8px;
   --run-overlay-icon-size: 32px;
-  --media-card-max-width: 560px;
-  --media-level-label-width: 96px;
+  --media-level-label-width: 40px;
   --pref-nav-width: 160px;
   --pref-content-max-width: 760px;
   --about-logo-size: 72px;
@@ -299,6 +299,7 @@
 
   --status-success: rgb(79, 220, 138);
   --status-warning: rgb(242, 177, 74);
+  --status-error: rgb(244, 113, 113);
 
   --card-bg: color-mix(in srgb, var(--bg) 97%, rgb(255, 255, 255));
   --card-shadow: none;
@@ -370,6 +371,7 @@
 
   --status-success: rgb(31, 122, 63);
   --status-warning: rgb(169, 106, 16);
+  --status-error: rgb(197, 48, 48);
 
   --card-bg: color-mix(in srgb, var(--bg) 62%, rgb(226, 226, 226));
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);

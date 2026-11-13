@@ -27,13 +27,15 @@
   commands.register('machine.screenshot', () => machine.screenshot());
   commands.register('view.toggleSideBar', () => Ember.shell.toggleSide());
   commands.register('view.togglePanel', () => Ember.shell.togglePanel());
+  commands.register('view.toggleSecondarySide', () => Ember.shell.toggleSecondary());
   commands.register('view.fullscreen', () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen();
   });
-  ['run', 'library', 'media', 'mappers'].forEach((id) => {
+  ['run', 'library', 'mappers'].forEach((id) => {
     commands.register('view.page.' + id, () => Ember.shell.openPage(id));
   });
+  commands.register('view.side.media', () => Ember.shell.showSide('media'));
   commands.register('settings.open', () => Ember.shell.openPage('preferences'));
   commands.register('settings.debug', () => Ember.pages.openPreferences('debug'));
   commands.register('help.logs', () => Ember.notify('原型：这里会打开日志所在的文件夹。'));
@@ -49,6 +51,7 @@
   Ember.keys.bind('Ctrl+Shift+S', 'machine.screenshot');
   Ember.keys.bind('Ctrl+B', 'view.toggleSideBar');
   Ember.keys.bind('Ctrl+J', 'view.togglePanel');
+  Ember.keys.bind('Ctrl+Alt+B', 'view.toggleSecondarySide');
   Ember.keys.bind('F11', 'view.fullscreen');
   Ember.keys.bind('Ctrl+,', 'settings.open');
 
@@ -82,11 +85,12 @@
   Ember.menu.register('view', () => [
     { label: '运行', command: 'view.page.run' },
     { label: '卡带库', command: 'view.page.library' },
-    { label: '设备', command: 'view.page.media' },
+    { label: '设备', command: 'view.side.media' },
     { label: 'mapper 插件', command: 'view.page.mappers' },
     SEPARATOR,
     { label: '边栏', command: 'view.toggleSideBar', checked: Ember.shell.sideVisible(), disabled: !Ember.shell.sideAvailable() },
     { label: '底部面板', command: 'view.togglePanel', checked: !Ember.shell.state.panelCollapsed },
+    { label: '右边栏', command: 'view.toggleSecondarySide', checked: Ember.shell.secondaryVisible(), disabled: !Ember.shell.state.secondaryAvailable },
     SEPARATOR,
     { label: '全屏', command: 'view.fullscreen' },
   ]);

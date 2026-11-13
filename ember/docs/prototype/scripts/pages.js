@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：pages.js
-// 说明：各页面的交互：卡带库、设备（软驱与磁带）、mapper 插件、首选项。
+// 说明：各页面与设备边栏的交互：卡带库、设备（软驱、磁带与打印机）、mapper 插件、首选项。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-13
@@ -110,64 +110,48 @@
   selectRow(mapperTable, $('tr[data-detail="nrom"]', mapperTable));
   showMapperDetail('nrom');
 
-  // ---------- 设备 ----------
+  // ---------- 设备（边栏） ----------
 
-  const DEVICES = {
-    floppyA: { title: '软驱 A', description: '软驱控制器在主机上，盘片可随时插入或取出，与电源无关。' },
-    floppyB: { title: '软驱 B', description: '软驱控制器在主机上，盘片可随时插入或取出，与电源无关。' },
-    tape: { title: '磁带机', description: '数据磁带用于 FBASIC 的 SAVE 与 LOAD；声像磁带带一路声音和一路画面数据，只能播放。' },
-    printer: { title: '打印机', description: '并口上接的是虚拟针式打印机，按 ESC/P 命令打印，每一页保存为一张 PNG。' },
-  };
-  const floppies = { A: { image: 'SB2K_DOS.IMG' }, B: null };
+  // 原型只模拟软驱 A 的读写；B 有盘时显示空闲
+  const floppies = { A: { image: 'SB2K_DOS.IMG', track: 12 }, B: null };
   const SPARE_IMAGES = { A: 'SB2K_DOS.IMG', B: 'DATA01.IMG' };
 
-  function selectDevice(key) {
-    $$('[data-device]').forEach((button) => {
-      const selected = button.dataset.device === key;
-      button.classList.toggle('is-selected', selected);
-      button.setAttribute('aria-selected', String(selected));
-    });
-    $$('[data-device-panel]').forEach((panel) => {
-      panel.hidden = panel.dataset.devicePanel !== key;
-    });
-    $('#devTitle').textContent = DEVICES[key].title;
-    $('#devDescription').textContent = DEVICES[key].description;
+  // 右边栏读取软驱的盘片与写保护状态
+  Ember.devices = {
+    floppy: (drive) => floppies[drive],
+    writeProtected: (drive) => $('#floppy' + drive + 'Wp').checked,
+  };
+
+  function machineRunning() {
+    const machine = Ember.machine.state;
+    return Boolean(machine.cartridge && machine.power && !machine.paused);
   }
 
   function renderFloppy(drive) {
     const disk = floppies[drive];
-    const text = disk ? '已插入盘片' : '空';
-    $('#floppy' + drive + 'State').textContent = text;
-    $('#floppy' + drive + 'Image').textContent = disk ? disk.image : '—';
-    $('[data-device-state="floppy' + drive + '"]').textContent = disk ? '已插入盘片' : '空';
+    let state = '无盘片';
+    if (disk) state = drive === 'A' && machineRunning() ? '读写中，第 ' + disk.track + ' 磁道' : '空闲';
+    $('#floppy' + drive + 'Image').textContent = disk ? disk.image : '空';
+    $('#floppy' + drive + 'State').textContent = state;
     $('#floppy' + drive + 'Eject').disabled = !disk;
-    const size = $('#floppy' + drive + 'Size');
-    if (size) size.textContent = disk ? '1.44 MB' : '—';
-    const save = $('#floppy' + drive + 'Save');
-    if (save) save.disabled = !disk;
-    const protect = $('#floppy' + drive + 'Wp');
-    if (protect) protect.disabled = !disk;
-    const track = $('#floppy' + drive + 'Track');
-    if (track && !disk) track.textContent = '—';
+    $('#floppy' + drive + 'Save').disabled = !disk;
+    $('#floppy' + drive + 'Wp').disabled = !disk;
   }
 
-  $$('[data-device]').forEach((button) => {
-    button.addEventListener('click', () => selectDevice(button.dataset.device));
-  });
-
-  $('#floppyAWp').addEventListener('change', (event) => {
-    Ember.log('信息', '软驱 A 写保护' + (event.target.checked ? '已开启' : '已关闭'));
+  ['A', 'B'].forEach((drive) => {
+    $('#floppy' + drive + 'Wp').addEventListener('change', (event) => {
+      Ember.log('信息', '软驱 ' + drive + ' 写保护' + (event.target.checked ? '已开启' : '已关闭'));
+      Ember.floppyFiles.refresh();
+    });
   });
 
   setInterval(() => {
-    const machine = Ember.machine.state;
-    if (floppies.A && machine.cartridge && machine.power && !machine.paused) {
-      $('#floppyATrack').textContent = '第 ' + Math.floor(Math.random() * 80) + ' 磁道';
-    }
+    if (floppies.A && machineRunning()) floppies.A.track = Math.floor(Math.random() * 80);
+    renderFloppy('A');
   }, 1400);
 
-  const tape = { kind: 'data', mode: 'stopped', position: 0, total: 200 };
-  const TAPE_FILES = { data: 'PROGRAM.vtp', av: 'QLS.m4a' };
+  const tape = { kind: 'data', loaded: false, mode: 'stopped', position: 0, total: 200 };
+  const TAPE_FILES = { data: 'PROGRAM.wav', av: 'QLS.m4a' };
   const TAPE_TOTALS = { data: 200, av: 312 };
   const TAPE_MODE_TEXT = { stopped: '已停止', playing: '播放中', recording: '录音中' };
 
@@ -178,21 +162,22 @@
 
   function renderTape() {
     const stopped = tape.mode === 'stopped';
-    $('#tapeState').textContent = TAPE_MODE_TEXT[tape.mode];
-    $('[data-device-state="tape"]').textContent = TAPE_MODE_TEXT[tape.mode];
-    $('#tapeFile').textContent = TAPE_FILES[tape.kind];
-    $('#tapeTime').textContent = formatTime(tape.position) + ' / ' + formatTime(tape.total);
-    const percent = Math.min(100, (tape.position / tape.total) * 100);
+    $('#tapeFile').textContent = tape.loaded ? TAPE_FILES[tape.kind] : '空';
+    $('#tapeState').textContent = tape.loaded ? TAPE_MODE_TEXT[tape.mode] : '无磁带';
+    $('#tapeTime').textContent = tape.loaded ? formatTime(tape.position) + ' / ' + formatTime(tape.total) : '—';
+    const percent = tape.loaded ? Math.min(100, (tape.position / tape.total) * 100) : 0;
     $('#tapeProgress').setAttribute('aria-valuenow', String(Math.round(percent)));
     $('#tapeFill').style.width = percent + '%';
     $('#tapeLevels').hidden = tape.kind !== 'av';
-    $('#tapePlay').disabled = !stopped;
-    $('#tapeRecord').disabled = !stopped || tape.kind === 'av';
+    $('#tapeLoad').disabled = !stopped;
+    $('#tapeEject').disabled = !tape.loaded || !stopped;
+    $('#tapePlay').disabled = !tape.loaded || !stopped;
+    $('#tapeRecord').disabled = !tape.loaded || !stopped || tape.kind === 'av';
     $('#tapeStop').disabled = stopped;
   }
 
   function startTape(mode) {
-    if (tape.mode !== 'stopped') return;
+    if (!tape.loaded || tape.mode !== 'stopped') return;
     if (mode === 'playing' && tape.position >= tape.total) tape.position = 0;
     tape.mode = mode;
     renderTape();
@@ -224,8 +209,11 @@
     renderTape();
   }, 200);
 
-  const printer = { pending: true, count: 0, last: '—', idleSeconds: 0 };
-  const PRINTER_IDLE_SECONDS = 6;
+  // 打印机只显示实时状态：打印中、打印完成；机器没有运行时为空闲
+  const PRINTER_TEXT = { idle: '空闲', printing: '打印中', done: '打印完成' };
+  const PRINTER_PRINTING_SECONDS = 5;
+  const PRINTER_DONE_SECONDS = 6;
+  const printer = { phase: 'printing', seconds: 0 };
 
   // 文件名按打印时的日期时间生成
   function printerFileName(date) {
@@ -236,37 +224,30 @@
   }
 
   function renderPrinter() {
-    $('#printerState').textContent = printer.pending ? '正在打印，当前页有内容' : '空闲';
-    $('[data-device-state="printer"]').textContent = printer.pending ? '打印中' : '空闲';
-    $('#printerCount').textContent = printer.count + ' 页';
-    $('#printerLast').textContent = printer.last;
-    $('#printerDir').textContent = $('#prefPrinterDir').value;
-    $('#printerFlush').disabled = !printer.pending;
-  }
-
-  function flushPrinter() {
-    if (!printer.pending) return;
-    const name = printerFileName(new Date());
-    printer.pending = false;
-    printer.idleSeconds = 0;
-    printer.count += 1;
-    printer.last = name;
-    renderPrinter();
-    Ember.log('信息', '打印机输出一页：' + name);
-    Ember.notify('已打印：' + name);
+    $('#printerState').textContent = PRINTER_TEXT[printer.phase];
   }
 
   setInterval(() => {
-    const machine = Ember.machine.state;
-    if (printer.pending || !machine.cartridge || !machine.power || machine.paused) return;
-    printer.idleSeconds += 1;
-    if (printer.idleSeconds >= PRINTER_IDLE_SECONDS) {
-      printer.pending = true;
+    if (!machineRunning()) {
+      printer.phase = 'idle';
+      printer.seconds = 0;
       renderPrinter();
+      return;
     }
+    if (printer.phase === 'idle') printer.phase = 'printing';
+    printer.seconds += 1;
+    if (printer.phase === 'printing' && printer.seconds >= PRINTER_PRINTING_SECONDS) {
+      const name = printerFileName(new Date());
+      printer.phase = 'done';
+      printer.seconds = 0;
+      Ember.log('信息', '打印机输出一页：' + name);
+      Ember.notify('已打印：' + name);
+    } else if (printer.phase === 'done' && printer.seconds >= PRINTER_DONE_SECONDS) {
+      printer.phase = 'printing';
+      printer.seconds = 0;
+    }
+    renderPrinter();
   }, 1000);
-
-  $('#prefPrinterDir').addEventListener('input', renderPrinter);
 
   document.addEventListener('segmented-change', (event) => {
     const { name, value } = event.detail;
@@ -274,8 +255,11 @@
     if (name === 'tapeKind') {
       tape.kind = value;
       tape.mode = 'stopped';
+      tape.loaded = false;
       tape.position = 0;
       tape.total = TAPE_TOTALS[value];
+      $('#levelL').style.width = '0';
+      $('#levelR').style.width = '0';
       renderTape();
     }
   });
@@ -306,24 +290,40 @@
   commands.register('mappers.install', () => Ember.notify('原型：这里会打开系统的文件选择窗口，选择 .emap 插件包。'));
   commands.register('media.floppyInsert', (source) => {
     const drive = source.dataset.drive;
-    floppies[drive] = { image: SPARE_IMAGES[drive] };
+    floppies[drive] = { image: SPARE_IMAGES[drive], track: 0 };
     renderFloppy(drive);
-    Ember.log('信息', '软驱 ' + drive + ' 已插入 ' + SPARE_IMAGES[drive]);
+    Ember.floppyFiles.refresh();
+    Ember.machine.refreshScreen();
+    Ember.log('信息', '软驱 ' + drive + ' 已载入 ' + SPARE_IMAGES[drive]);
   });
   commands.register('media.floppyEject', (source) => {
     const drive = source.dataset.drive;
     floppies[drive] = null;
     renderFloppy(drive);
+    Ember.floppyFiles.refresh();
+    Ember.machine.refreshScreen();
     Ember.log('信息', '软驱 ' + drive + ' 已取出盘片');
   });
   commands.register('media.floppySave', (source) => {
+    Ember.floppyFiles.markSaved(source.dataset.drive);
     Ember.notify('软驱 ' + source.dataset.drive + ' 的镜像已保存');
+  });
+  commands.register('media.tapeLoad', () => {
+    tape.loaded = true;
+    tape.position = 0;
+    tape.total = TAPE_TOTALS[tape.kind];
+    renderTape();
+    Ember.log('信息', '磁带机已载入 ' + TAPE_FILES[tape.kind]);
+  });
+  commands.register('media.tapeEject', () => {
+    tape.loaded = false;
+    tape.position = 0;
+    renderTape();
+    Ember.log('信息', '磁带机已取出磁带');
   });
   commands.register('media.tapePlay', () => startTape('playing'));
   commands.register('media.tapeRecord', () => startTape('recording'));
   commands.register('media.tapeStop', stopTape);
-  commands.register('media.printerFlush', flushPrinter);
-  commands.register('media.printerOpenFolder', () => Ember.notify('原型：这里会在系统的文件管理器里打开保存位置。'));
   commands.register('printer.chooseFolder', () => Ember.notify('原型：这里会打开系统的文件夹选择窗口。'));
 
   Ember.pages = {

@@ -134,6 +134,10 @@
   outline: none;
 }
 
+.ui-input[aria-invalid="true"] {
+  border-color: var(--status-error);
+}
+
 .ui-input::placeholder {
   color: var(--text-muted);
 }

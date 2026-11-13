@@ -98,18 +98,7 @@
   gap: var(--action-gap);
 }
 
-/* 设备页 */
-.page--media .ui-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-page);
-  max-width: var(--media-card-max-width);
-}
-
-.page--media .ui-card .ui-callout {
-  margin: 0;
-}
-
+/* 设备边栏的声像磁带电平 */
 .media-levels {
   display: flex;
   flex-direction: column;
@@ -126,6 +115,31 @@
 .media-level-label {
   color: var(--text-muted);
   font-size: var(--font-size-caption);
+}
+
+/* 右边栏的软盘文件 */
+.shell-secondary-side.is-drag-over .shell-side-content {
+  outline: var(--space-hairline) dashed var(--accent);
+  outline-offset: calc(-1 * var(--space-xs));
+}
+
+.ff-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ui-table .ff-size {
+  text-align: right;
+}
+
+.ff-empty {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ff-table tr[data-row].is-changed td {
+  background: var(--option-selected-bg);
 }
 
 /* mapper 插件页 */

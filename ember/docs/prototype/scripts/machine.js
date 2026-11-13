@@ -27,7 +27,6 @@
   const GAME_CLOUD = '#fcfcfc';
   const GAME_PLAYER = '#e02020';
   const PALETTE = ['#000000', '#e04b4b', '#4bc26a', '#e0c34b', '#4b7be0', '#c24bc2', '#4bc2c2', '#ffffff'];
-  const BOOT_LINES = ['SUBOR SB-DOS  Version 1.0', '内存 512K    鼠标 已连接    软驱 A:', '', 'A>DIR', ' SB2K_DOS  IMG    1440K', ' HELLO     EXE       4K', '', 'A>'];
   const HOST_NAMES = { sb2000: 'sb2000 学习机', fc: '经典 FC' };
   const FRAME_RATES = { um6576: '50.0 fps', fc: '60.1 fps' };
 
@@ -42,20 +41,27 @@
     muted: false,
   };
 
-  let visibleLines = BOOT_LINES.length;
+  let visibleLines = Infinity;
   let cursorOn = true;
   let bootTimer = 0;
 
+  // 画面里的 DIR 取软驱 A 当前的文件，右边栏改了文件，这里立即跟着变
+  function bootLines() {
+    const dir = Ember.floppyFiles ? Ember.floppyFiles.dirLines() : [];
+    return ['SUBOR SB-DOS  Version 1.0', '内存 512K    鼠标 已连接    软驱 A:', '', 'A>DIR'].concat(dir, ['', 'A>']);
+  }
+
   function drawDos() {
+    const lines = bootLines();
     context.fillStyle = SCREEN_BACKGROUND;
     context.fillRect(0, 0, WIDTH, HEIGHT);
     context.font = '20px "Cascadia Mono", Consolas, "Microsoft YaHei", monospace';
     context.textBaseline = 'top';
     context.fillStyle = SCREEN_TEXT;
-    for (let i = 0; i < visibleLines; i += 1) context.fillText(BOOT_LINES[i], 24, 24 + i * 28);
-    if (cursorOn && visibleLines === BOOT_LINES.length && !machine.paused) {
-      const last = BOOT_LINES.length - 1;
-      context.fillRect(24 + context.measureText(BOOT_LINES[last]).width + 2, 24 + last * 28 + 2, 12, 20);
+    for (let i = 0; i < Math.min(visibleLines, lines.length); i += 1) context.fillText(lines[i], 24, 24 + i * 28);
+    if (cursorOn && visibleLines >= lines.length && !machine.paused) {
+      const last = lines.length - 1;
+      context.fillRect(24 + context.measureText(lines[last]).width + 2, 24 + last * 28 + 2, 12, 20);
     }
     const cell = (WIDTH - 48) / PALETTE.length;
     PALETTE.forEach((color, i) => {
@@ -95,9 +101,10 @@
     let shown = 0;
     const step = () => {
       shown += 1;
-      visibleLines = shown;
+      const total = bootLines().length;
+      visibleLines = shown >= total ? Infinity : shown;
       draw();
-      if (shown < BOOT_LINES.length) bootTimer = setTimeout(step, 180);
+      if (shown < total) bootTimer = setTimeout(step, 180);
     };
     visibleLines = 0;
     step();
@@ -263,4 +270,5 @@
   }, 530);
 
   Ember.machine.refresh = update;
+  Ember.machine.refreshScreen = draw;
 })();

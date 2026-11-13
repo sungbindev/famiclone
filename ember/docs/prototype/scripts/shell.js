@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：shell.js
-// 说明：外壳行为：命令与快捷键、标签页、边栏与底部面板、菜单、通知、消息日志、对话框、主题。
+// 说明：外壳行为：命令与快捷键、标签页、边栏、右边栏与底部面板、菜单、通知、消息日志、对话框、主题。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-13
@@ -104,6 +104,7 @@
         dialog.hidden = true;
       });
       if (dialogOpener) dialogOpener.focus();
+      document.dispatchEvent(new CustomEvent('dialogs-closed'));
     },
   };
 
@@ -133,18 +134,20 @@
   const PAGES = {
     run: { title: '运行', icon: 'i-play', side: true },
     library: { title: '卡带库', icon: 'i-library', side: true },
-    media: { title: '设备', icon: 'i-drive', side: true },
     mappers: { title: 'mapper 插件', icon: 'i-plug', side: true },
     preferences: { title: '首选项', icon: 'i-sliders', side: false },
   };
-  const state = { tabs: [], active: null, sideCollapsed: false, panelCollapsed: false };
+  // 页面的边栏随页面切换；设备边栏不属于任何页面，只经活动栏按钮打开，不切换页面区
+  const SIDES = { run: '运行', library: '卡带库', media: '设备', mappers: 'mapper 插件' };
+  // 右边栏固定显示软驱里的文件：有盘片才可用，默认折叠
+  const state = { tabs: [], active: null, side: null, sideCollapsed: false, panelCollapsed: false, secondaryOpen: false, secondaryAvailable: false };
 
-  function hasSide(id) {
-    return Boolean(id && PAGES[id].side);
+  function sideOfPage(id) {
+    return id && PAGES[id].side ? id : null;
   }
 
   function sideVisible() {
-    return hasSide(state.active) && !state.sideCollapsed;
+    return Boolean(state.side) && !state.sideCollapsed;
   }
 
   function renderTabs() {
@@ -177,32 +180,44 @@
     });
     $('#emptyWorkspace').hidden = Boolean(state.active);
     $$('.shell-activity-button').forEach((button) => {
-      button.classList.toggle('is-active', button.dataset.openPage === state.active);
+      button.classList.toggle('is-active', (button.dataset.openPage || button.dataset.openSide) === state.side);
     });
     $$('.side').forEach((side) => {
-      side.hidden = side.dataset.side !== state.active;
+      side.hidden = side.dataset.side !== state.side;
     });
-    $('#sideTitle').textContent = state.active ? PAGES[state.active].title : '';
+    $('#sideTitle').textContent = state.side ? SIDES[state.side] : '';
     $('#sideBar').hidden = !sideVisible();
-    $('[data-command="view.toggleSideBar"]').disabled = !hasSide(state.active);
+    $('[data-command="view.toggleSideBar"]').disabled = !state.side;
     $('#bottomPanel').hidden = state.panelCollapsed;
+    $('#secondarySide').hidden = !secondaryVisible();
+    $('[data-command="view.toggleSecondarySide"]').disabled = !state.secondaryAvailable;
   }
 
   function openPage(id) {
     if (!state.tabs.includes(id)) state.tabs.push(id);
     state.active = id;
+    state.side = sideOfPage(id);
     render();
   }
 
   function closeTab(id) {
     const index = state.tabs.indexOf(id);
     state.tabs.splice(index, 1);
-    if (state.active === id) state.active = state.tabs[index] || state.tabs[index - 1] || null;
+    if (state.active === id) {
+      state.active = state.tabs[index] || state.tabs[index - 1] || null;
+      if (state.side !== 'media') state.side = sideOfPage(state.active);
+    }
+    render();
+  }
+
+  function showSide(id) {
+    state.side = id;
+    state.sideCollapsed = false;
     render();
   }
 
   function toggleSide() {
-    if (!hasSide(state.active)) return;
+    if (!state.side) return;
     state.sideCollapsed = !state.sideCollapsed;
     render();
   }
@@ -212,15 +227,34 @@
     render();
   }
 
+  function secondaryVisible() {
+    return state.secondaryOpen && state.secondaryAvailable;
+  }
+
+  function toggleSecondary() {
+    if (!state.secondaryAvailable) return;
+    state.secondaryOpen = !state.secondaryOpen;
+    render();
+  }
+
+  function setSecondaryAvailable(available) {
+    state.secondaryAvailable = available;
+    render();
+  }
+
   Ember.shell = {
     state,
     sideVisible,
     sideAvailable() {
-      return hasSide(state.active);
+      return Boolean(state.side);
     },
     openPage,
+    showSide,
     toggleSide,
     togglePanel,
+    secondaryVisible,
+    toggleSecondary,
+    setSecondaryAvailable,
     start() {
       openPage('run');
     },
@@ -243,13 +277,10 @@
     $$('.shell-menubar-button').forEach((button) => button.classList.remove('is-open'));
   }
 
-  function showMenu(button) {
-    closeMenu();
-    openMenuId = button.dataset.menu;
-    button.classList.add('is-open');
+  function buildMenu(items) {
     const menu = createElement('div', 'ui-menu');
     menu.setAttribute('role', 'menu');
-    menuDefs[openMenuId]().forEach((item) => {
+    items.forEach((item) => {
       if (item.separator) {
         menu.append(createElement('div', 'ui-menu-separator'));
         return;
@@ -266,14 +297,35 @@
       row.addEventListener('click', () => {
         closeMenu();
         if (item.command) Ember.commands.run(item.command);
+        if (item.action) item.action();
       });
       menu.append(row);
     });
+    return menu;
+  }
+
+  function showMenu(button) {
+    closeMenu();
+    openMenuId = button.dataset.menu;
+    button.classList.add('is-open');
+    const menu = buildMenu(menuDefs[openMenuId]());
     const rect = button.getBoundingClientRect();
     menu.style.left = rect.left + 'px';
     menu.style.top = rect.bottom + 'px';
     $('#menuLayer').append(menu);
   }
+
+  // 右键菜单：在鼠标位置弹出，放不下时贴着窗口边缘
+  Ember.menu.popup = function (x, y, items) {
+    closeMenu();
+    const menu = buildMenu(items);
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    $('#menuLayer').append(menu);
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) menu.style.left = Math.max(0, window.innerWidth - rect.width) + 'px';
+    if (rect.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - rect.height) + 'px';
+  };
 
   $$('.shell-menubar-button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -299,8 +351,15 @@
     const pageElement = target.closest('[data-open-page]');
     if (pageElement) {
       const id = pageElement.dataset.openPage;
-      if (id === state.active && hasSide(id) && pageElement.classList.contains('shell-activity-button')) toggleSide();
+      if (id === state.side && pageElement.classList.contains('shell-activity-button')) toggleSide();
       else openPage(id);
+      return;
+    }
+    const sideElement = target.closest('[data-open-side]');
+    if (sideElement) {
+      const id = sideElement.dataset.openSide;
+      if (id === state.side && sideElement.classList.contains('shell-activity-button')) toggleSide();
+      else showSide(id);
       return;
     }
     const closeElement = target.closest('[data-tab-close]');

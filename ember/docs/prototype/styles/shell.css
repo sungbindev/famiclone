@@ -183,6 +183,21 @@
   padding: var(--space-xs) var(--content-padding) var(--content-padding);
 }
 
+/* 右边栏 */
+.shell-secondary-side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: var(--secondary-side-width);
+  min-width: 0;
+  border-left: var(--space-hairline) solid var(--chrome-border);
+  background: var(--chrome-bg);
+}
+
+.shell-secondary-side[hidden] {
+  display: none;
+}
+
 /* 主区域 */
 .shell-main {
   display: flex;

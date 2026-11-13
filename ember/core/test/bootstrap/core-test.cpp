@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：core-test.cpp
- * 说明：核心入口的测试：启动参数、system.version 与 mappers.* 请求、未登记请求被拒绝、错误码、未启动与停止后的请求。
+ * 说明：核心入口的测试：启动参数、system.version、mappers.*、runtime.* 与 cartridges.* 请求、帧处理函数与按键输入、未登记请求被拒绝、错误码、未启动与停止后的请求。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -9,10 +9,15 @@
  */
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <future>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
@@ -20,6 +25,7 @@
 #include "bootstrap/core.hpp"
 #include "shared/errors/core-error.hpp"
 #include "../support/plugin-test-support.hpp"
+#include "../support/runtime-test-support.hpp"
 
 namespace {
 
@@ -74,8 +80,9 @@ TEST_F(CoreTest, StartsAndAnswersSystemVersion) {
   const auto info = nlohmann::json::parse(core.start(options()));
   EXPECT_FALSE(info["coreVersion"].get<std::string>().empty());
   const auto& requests = info["requests"];
-  EXPECT_EQ(requests.size(), 7U);
-  for (const char* name : {"system.version", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled", "mappers.reload"}) {
+  EXPECT_EQ(requests.size(), 16U);
+  for (const char* name : {"system.version", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled", "mappers.reload", "runtime.status",
+                           "runtime.powerOn", "runtime.powerOff", "runtime.reset", "runtime.pause", "runtime.resume", "cartridges.load", "cartridges.eject", "cartridges.info"}) {
     EXPECT_NE(std::find(requests.begin(), requests.end(), nlohmann::json(name)), requests.end()) << name;
   }
 
@@ -173,6 +180,112 @@ TEST_F(CoreTest, MappersRequestsManageTheBundledAndUserPlugins) {
   EXPECT_FALSE(badPackage.ok);
   EXPECT_EQ(badPackage.payload["code"], "mappers.invalidPackage");
   core.stop();
+}
+
+TEST_F(CoreTest, RuntimeAndCartridgeRequestsRunACartridgeAndDeliverFramesAndEvents) {
+  const std::filesystem::path bundled = userData_ / "bundled";
+  std::filesystem::create_directories(bundled);
+  const auto nrom = ember::test::officialPluginPackage("nrom");
+  std::ofstream(bundled / "nrom.emap", std::ios::binary).write(reinterpret_cast<const char*>(nrom.data()), static_cast<std::streamsize>(nrom.size()));
+  ember::test::Assembler program(0x8000);
+  program.jmpSelf();
+  const auto rom = ember::test::makeInesFile(program.bytes());
+  const auto romPath = userData_ / "idle.nes";
+  std::ofstream(romPath, std::ios::binary).write(reinterpret_cast<const char*>(rom.data()), static_cast<std::streamsize>(rom.size()));
+  const auto romText = romPath.u8string();
+
+  Core core;
+  std::atomic<int> frames{0};
+  std::atomic<std::uint32_t> width{0};
+  std::atomic<std::uint32_t> height{0};
+  core.setFrameHandler([&](const ember::platform::FrameView& frame) {
+    width = frame.width;
+    height = frame.height;
+    ++frames;
+  });
+  std::mutex eventsMutex;
+  std::vector<std::string> eventNames;
+  core.setEventHandler([&](const std::string& name, const std::string&) {
+    std::lock_guard lock(eventsMutex);
+    eventNames.push_back(name);
+  });
+  static_cast<void>(core.start(optionsWithBundled(bundled)));
+
+  const auto idle = call(core, "1", "runtime.status", "{}");
+  ASSERT_TRUE(idle.ok);
+  EXPECT_EQ(idle.payload["power"], "off");
+  EXPECT_FALSE(idle.payload.contains("cartridge"));
+  EXPECT_EQ(call(core, "2", "runtime.powerOn", "{}").payload["code"], "runtime.noCartridge");
+  EXPECT_EQ(call(core, "3", "cartridges.info", "{}").payload["code"], "cartridges.empty");
+
+  const auto loaded = call(core, "4", "cartridges.load", nlohmann::json{{"path", std::string(romText.begin(), romText.end())}}.dump());
+  ASSERT_TRUE(loaded.ok) << loaded.payload.dump();
+  EXPECT_EQ(loaded.payload["cartridge"]["pluginId"], "nrom");
+  EXPECT_EQ(loaded.payload["state"], (nlohmann::json{{"power", "on"}, {"mode", "running"}}));
+  ASSERT_TRUE(ember::test::waitFor([&] { return frames.load() >= 10; }));
+  EXPECT_EQ(width.load(), 256U);
+  EXPECT_EQ(height.load(), 240U);
+
+  const auto running = call(core, "5", "runtime.status", "{}");
+  EXPECT_EQ(running.payload["machine"], "fc");
+  EXPECT_EQ(running.payload["cartridge"]["mapper"], 0);
+  EXPECT_GE(running.payload["frame"].get<int>(), 10);
+  EXPECT_EQ(running.payload["speed"], 100);
+
+  EXPECT_EQ(call(core, "6", "runtime.pause", "{}").payload["state"]["mode"], "paused");
+  EXPECT_EQ(call(core, "7", "runtime.resume", "{}").payload["state"]["mode"], "running");
+  EXPECT_TRUE(call(core, "8", "runtime.reset", R"({"kind":"soft"})").ok);
+  EXPECT_TRUE(call(core, "9", "runtime.reset", R"({"kind":"hard"})").ok);
+  EXPECT_EQ(call(core, "10", "runtime.reset", R"({"kind":"warm"})").payload["code"], "core.invalidParams");
+  EXPECT_EQ(call(core, "11", "runtime.reset", "{}").payload["code"], "core.invalidParams");
+  EXPECT_EQ(call(core, "12", "cartridges.load", "{}").payload["code"], "core.invalidParams");
+  EXPECT_EQ(call(core, "13", "cartridges.load", R"({"path":"nothing.nes"})").payload["code"], "cartridges.fileNotFound");
+  EXPECT_EQ(call(core, "14", "runtime.powerOff", "{}").payload["state"]["power"], "off");
+  EXPECT_EQ(call(core, "15", "runtime.powerOn", R"({"resume":true})").payload["state"]["mode"], "running");
+
+  // 按键经命令队列生效；口号越界立即报错。
+  EXPECT_NO_THROW(core.setButtons(0, 0x01));
+  EXPECT_THROW(core.setButtons(2, 0x01), ember::shared::CoreError);
+
+  EXPECT_EQ(call(core, "16", "cartridges.info", "{}").payload["cartridge"]["pluginId"], "nrom");
+  EXPECT_EQ(call(core, "17", "cartridges.eject", "{}").payload["state"]["power"], "off");
+  EXPECT_EQ(call(core, "18", "cartridges.info", "{}").payload["code"], "cartridges.empty");
+
+  {
+    std::lock_guard lock(eventsMutex);
+    EXPECT_NE(std::find(eventNames.begin(), eventNames.end(), "cartridges.loaded"), eventNames.end());
+    EXPECT_NE(std::find(eventNames.begin(), eventNames.end(), "runtime.stateChanged"), eventNames.end());
+  }
+
+  core.stop();
+  const int framesAtStop = frames.load();
+  EXPECT_THROW(core.setButtons(0, 0x01), ember::shared::CoreError);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  EXPECT_EQ(frames.load(), framesAtStop);
+}
+
+TEST_F(CoreTest, StoppingTheCoreWhileACartridgeRunsExitsCleanly) {
+  const std::filesystem::path bundled = userData_ / "bundled";
+  std::filesystem::create_directories(bundled);
+  const auto nrom = ember::test::officialPluginPackage("nrom");
+  std::ofstream(bundled / "nrom.emap", std::ios::binary).write(reinterpret_cast<const char*>(nrom.data()), static_cast<std::streamsize>(nrom.size()));
+  ember::test::Assembler program(0x8000);
+  program.jmpSelf();
+  const auto rom = ember::test::makeInesFile(program.bytes());
+  const auto romPath = userData_ / "idle.nes";
+  std::ofstream(romPath, std::ios::binary).write(reinterpret_cast<const char*>(rom.data()), static_cast<std::streamsize>(rom.size()));
+  const auto romText = romPath.u8string();
+
+  Core core;
+  std::atomic<int> frames{0};
+  core.setFrameHandler([&](const ember::platform::FrameView&) { ++frames; });
+  static_cast<void>(core.start(optionsWithBundled(bundled)));
+  ASSERT_TRUE(call(core, "1", "cartridges.load", nlohmann::json{{"path", std::string(romText.begin(), romText.end())}}.dump()).ok);
+  ASSERT_TRUE(ember::test::waitFor([&] { return frames.load() >= 3; }));
+  // 运行中直接停止：线程干净退出，不死锁；之后的请求以 core.unavailable 拒绝。
+  auto stopped = std::async(std::launch::async, [&] { core.stop(); });
+  ASSERT_EQ(stopped.wait_for(std::chrono::seconds(10)), std::future_status::ready);
+  EXPECT_EQ(call(core, "2", "runtime.status", "{}").payload["code"], "core.unavailable");
 }
 
 TEST_F(CoreTest, RefusesSecondStartAndRequestsAfterStop) {

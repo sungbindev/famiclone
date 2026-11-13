@@ -36,6 +36,10 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
 - 先在 Windows 上开发、调试与编译；macOS 的编译与打包脚本同时写齐，但不在 Windows 上运行或测试。
+- 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出四个抽象。
+- 画面与输入不走请求，用单独的消息端口（`window.ember.streams.requestPorts()`，契约在 `src/contracts/stream-ports/`）：核心到渲染进程的帧消息与渲染进程到核心的按键消息，格式只在 `stream-messages.ts` 里定义；核心宿主对渲染进程发来的输入逐条校验，binding 的帧缓冲槽由 JavaScript 线程创建、不转移、不保存。
+- 主进程自己处理的请求写在 Schema 的 `mainRequests`，经 `window.ember.main` 暴露与 `entry/ipc/core/main-request-ipc.ts` 校验；参数带磁盘路径的核心请求标 `mainOnly`，路径只来自用户在系统窗口里的选择（如 `cartridges.open`）或主进程的启动参数 `--cartridge=`，渲染进程不能传任意路径。
+- TypeScript 的 `platform` 不引用 `contracts`，用结构类型实现契约里的接口，由组装根注入。
 - 使用的第三方开源代码按如见的做法登记 `third-party.json`，由脚本生成“关于”对话框的开源清单与许可全文，不手写。
 
 ## 常用命令
@@ -55,6 +59,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `npm run lint` | oxlint 检查 |
 | `npm run boundaries` | 分层、模块依赖与模块登记检查 |
 | `npm run check` | 以上全部检查与测试 |
+| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、画面帧、输入、页面重载与核心重启（见 docs/06 第 8 节），只结束自己启动的进程 |
 | `npm run package:win` | 打包 Windows x64 版 |
 | `npm run make:win` | 生成 Windows x64 安装程序 |
 | `npm run package:mac` | 打包 macOS arm64 版（只在苹果电脑上运行） |

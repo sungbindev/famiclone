@@ -57,6 +57,7 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
 
   // MapperCartridge
   [[nodiscard]] const std::string& pluginId() const override { return plugin_->manifest.id; }
+  [[nodiscard]] std::vector<contracts::mappers::StorageSummary> storageList() const override;
   [[nodiscard]] const contracts::hardware::StorageRegion* storage(std::string_view id) const override;
   [[nodiscard]] std::optional<std::uint32_t> state(std::string_view name) const override;
   [[nodiscard]] std::optional<contracts::mappers::ScriptFailure> failure() const override { return failure_; }

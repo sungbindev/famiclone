@@ -16,7 +16,13 @@ import { SystemVersionPage } from './SystemVersionPage';
 
 /** 只实现页面用到的请求的接口。 */
 function bridgeWith(version: () => Promise<{ appVersion: string; coreVersion: string }>): EmberBridge {
-  return { core: { system: { version } } as unknown as EmberBridge['core'], onCoreEvent: () => () => undefined, getCoreStatus: () => Promise.reject(new Error('未使用')) };
+  return {
+    core: { system: { version } } as unknown as EmberBridge['core'],
+    main: {} as unknown as EmberBridge['main'],
+    streams: { requestPorts: () => undefined },
+    onCoreEvent: () => () => undefined,
+    getCoreStatus: () => Promise.reject(new Error('未使用'))
+  };
 }
 
 function renderPage(bridge: EmberBridge) {

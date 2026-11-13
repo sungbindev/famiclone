@@ -37,9 +37,13 @@ export type CoreHostInbound =
       readonly nativePath: string;
       readonly userDataPath: string;
       readonly appVersion: string;
+      /** 预装的 mapper 插件目录；没有时省略。 */
+      readonly bundledPluginsPath?: string;
     }
   | { readonly type: 'request'; readonly id: string; readonly name: string; readonly params: unknown }
   | { readonly type: 'cancel'; readonly id: string }
+  /** 交出画面与输入端口：随消息转移两个端口，依次是画面端口与输入端口；核心关闭已有的端口并换用新的。 */
+  | { readonly type: 'streams' }
   | { readonly type: 'stop' };
 
 /** 核心进程发给主进程的消息。 */

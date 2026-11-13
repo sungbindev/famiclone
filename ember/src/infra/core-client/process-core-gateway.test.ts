@@ -12,17 +12,19 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CoreHostInbound, CoreHostOutbound } from '../../contracts/core-gateway/core-messages';
 import type { ErrorLogEntry } from '../../contracts/logging/error-logger';
 import type { CoreProcess } from '../../platform/core-process/core-process';
-import { ProcessCoreGateway } from './process-core-gateway';
+import { ProcessCoreGateway, type ProcessCoreGatewayOptions } from './process-core-gateway';
 
 /** 假的核心进程。 */
 class FakeProcess implements CoreProcess {
   readonly sent: CoreHostInbound[] = [];
+  readonly transfers: Array<readonly object[] | undefined> = [];
   killed = false;
   private messageListener: ((message: unknown) => void) | undefined;
   private exitListener: ((code: number) => void) | undefined;
 
-  postMessage(message: unknown): void {
+  postMessage(message: unknown, transfer?: readonly object[]): void {
     this.sent.push(message as CoreHostInbound);
+    this.transfers.push(transfer);
   }
   onMessage(listener: (message: unknown) => void): void {
     this.messageListener = listener;
@@ -41,7 +43,7 @@ class FakeProcess implements CoreProcess {
   }
 }
 
-function setup(now: () => number = () => 0) {
+function setup(now: () => number = () => 0, extra: Partial<ProcessCoreGatewayOptions> = {}) {
   const processes: FakeProcess[] = [];
   const logs: ErrorLogEntry[] = [];
   let next = 0;
@@ -56,7 +58,8 @@ function setup(now: () => number = () => 0) {
     appVersion: '0.1.0',
     logger: { write: (entry) => logs.push(entry) },
     now,
-    createId: () => `id-${++next}`
+    createId: () => `id-${++next}`,
+    ...extra
   });
   gateway.start();
   return { gateway, processes, logs, current: () => processes[processes.length - 1]! };
@@ -148,5 +151,88 @@ describe('ProcessCoreGateway', () => {
     await stopped;
     expect(processes).toHaveLength(1);
     expect(gateway.status().state).toBe('unavailable');
+  });
+
+  it('给了预装插件目录时随启动消息交给核心', () => {
+    const { current } = setup(() => 0, { bundledPluginsPath: 'D:/ember/build/plugins' });
+    expect(current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0', bundledPluginsPath: 'D:/ember/build/plugins' });
+  });
+
+  it('把画面与输入端口随 streams 消息转移给核心进程', () => {
+    const { gateway, current } = setup();
+    const frames = { name: 'frames' };
+    const input = { name: 'input' };
+    expect(gateway.attachStreams({ frames, input })).toBe(true);
+    expect(current().sent[1]).toEqual({ type: 'streams' });
+    expect(current().transfers[1]).toEqual([frames, input]);
+    // 普通消息不带转移列表。
+    expect(current().transfers[0]).toBeUndefined();
+  });
+
+  it('核心进程不在运行时不交端口：重启之间、启动失败、停止中', async () => {
+    const ports = { frames: {}, input: {} };
+    const gaveUp = setup();
+    for (let index = 0; index < 4; index += 1) gaveUp.current().exit(1);
+    expect(gaveUp.gateway.attachStreams(ports)).toBe(false);
+
+    const failed = setup();
+    failed.current().reply({ type: 'startFailed', error: { code: 'core.internal', message: '数据库打不开' } });
+    expect(failed.gateway.attachStreams(ports)).toBe(false);
+
+    const stopping = setup();
+    const stopped = stopping.gateway.stop();
+    expect(stopping.gateway.attachStreams(ports)).toBe(false);
+    stopping.current().exit(0);
+    await stopped;
+    expect(stopping.current().sent.filter((message) => message.type === 'streams')).toHaveLength(0);
+  });
+
+  it('核心进程每次启动（含重启）都通知订阅者，通知时已经可以交端口', () => {
+    const processes: FakeProcess[] = [];
+    const gateway = new ProcessCoreGateway({
+      startProcess: () => {
+        const child = new FakeProcess();
+        processes.push(child);
+        return child;
+      },
+      nativePath: 'core.node',
+      userDataPath: 'data',
+      appVersion: '0.1.0',
+      logger: { write: () => undefined },
+      now: () => 0
+    });
+    const accepted: boolean[] = [];
+    const off = gateway.onCoreStarted(() => accepted.push(gateway.attachStreams({ frames: {}, input: {} })));
+    gateway.start();
+    expect(accepted).toEqual([true]);
+    processes[0]!.exit(1);
+    expect(processes).toHaveLength(2);
+    expect(accepted).toEqual([true, true]);
+    expect(processes[1]!.sent.map((message) => message.type)).toEqual(['start', 'streams']);
+    off();
+    processes[1]!.exit(1);
+    expect(accepted).toHaveLength(2);
+  });
+
+  it('启动通知的监听者抛出异常时写日志，不影响核心启动', () => {
+    const logs: ErrorLogEntry[] = [];
+    const processes: FakeProcess[] = [];
+    const gateway = new ProcessCoreGateway({
+      startProcess: () => {
+        const child = new FakeProcess();
+        processes.push(child);
+        return child;
+      },
+      nativePath: 'core.node',
+      userDataPath: 'data',
+      appVersion: '0.1.0',
+      logger: { write: (entry) => logs.push(entry) }
+    });
+    gateway.onCoreStarted(() => {
+      throw new Error('监听者出错');
+    });
+    expect(() => gateway.start()).not.toThrow();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.message).toContain('监听者出错');
   });
 });

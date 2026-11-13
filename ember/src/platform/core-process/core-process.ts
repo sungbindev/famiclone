@@ -9,12 +9,12 @@
  * ------------------------------------------------------------------------
  */
 
-import { utilityProcess } from 'electron';
+import { utilityProcess, type MessagePortMain } from 'electron';
 
 /** 一个核心进程。 */
 export interface CoreProcess {
-  /** 发送消息。 */
-  postMessage(message: unknown): void;
+  /** 发送消息；transfer 里的消息端口随消息转移给核心进程，转移后本进程不再能使用它们。 */
+  postMessage(message: unknown, transfer?: readonly object[]): void;
   /** 收到消息。 */
   onMessage(listener: (message: unknown) => void): void;
   /** 进程退出，参数为退出码。 */
@@ -34,7 +34,7 @@ const SERVICE_NAME = 'Ember核心';
 export function startElectronCoreProcess(hostScript: string): CoreProcess {
   const child = utilityProcess.fork(hostScript, [], { serviceName: SERVICE_NAME, stdio: 'inherit' });
   return {
-    postMessage: (message) => child.postMessage(message),
+    postMessage: (message, transfer) => child.postMessage(message, transfer === undefined ? undefined : (transfer as MessagePortMain[])),
     onMessage: (listener) => {
       child.on('message', listener);
     },

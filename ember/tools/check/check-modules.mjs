@@ -19,10 +19,10 @@ import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadSchemas } from '../schema-gen/schema-gen.mjs';
 
-/** 不属于任何业务模块的契约目录（核心网关、外壳、日志）。 */
-const FRAMEWORK_CONTRACTS = new Set(['core-gateway', 'shell', 'logging']);
-/** 不属于任何业务模块的入口目录（通用的核心请求转发、外壳能力）。 */
-const FRAMEWORK_ENTRY = new Set(['core', 'shell']);
+/** 不属于任何业务模块的契约目录（核心网关、外壳、日志、画面与输入的消息端口）。 */
+const FRAMEWORK_CONTRACTS = new Set(['core-gateway', 'shell', 'logging', 'stream-ports']);
+/** 不属于任何业务模块的入口目录（通用的核心请求转发、外壳能力、消息端口）。 */
+const FRAMEWORK_ENTRY = new Set(['core', 'shell', 'streams']);
 /** 不属于任何业务模块的界面目录（外壳）。 */
 const FRAMEWORK_UI = new Set(['shell']);
 
@@ -62,8 +62,10 @@ const CPP_ALLOWED = {
   binding: ['bootstrap', 'shared'],
   bootstrap: ['contracts', 'logic', 'infra', 'requests', 'platform', 'shared', 'bootstrap']
 };
-/** logic 层只能包含的 platform 抽象。 */
-const PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp']);
+/** logic 层只能包含的 platform 抽象：事件、取消、错误日志、帧输出。 */
+const PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp', 'platform/logging/error-log.hpp', 'platform/streams/frame-output.hpp']);
+/** 硬件模块只能包含的 platform 抽象：日志与画面输出不属于硬件。 */
+const HARDWARE_PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp']);
 /** binding 只能包含的核心入口。 */
 const BINDING_ENTRY = 'bootstrap/core.hpp';
 /**
@@ -189,7 +191,9 @@ function checkCpp(root, errors, edges) {
       const to = cppLocation(include);
       const allowed = CPP_ALLOWED[from.layer];
       if (allowed !== undefined && !allowed.includes(to.layer)) errors.push(`core/src/${path}：${from.layer} 层不能包含 ${to.layer} 层的 ${include}`);
-      if (from.layer === 'logic' && to.layer === 'platform' && !PLATFORM_ABSTRACTIONS.has(include)) errors.push(`core/src/${path}：logic 层只能包含 platform 的抽象，不能包含 ${include}`);
+      if (from.layer === 'logic' && to.layer === 'platform' && !(inHardwareLogic ? HARDWARE_PLATFORM_ABSTRACTIONS : PLATFORM_ABSTRACTIONS).has(include)) {
+        errors.push(`core/src/${path}：logic 层只能包含 platform 的抽象，不能包含 ${include}`);
+      }
       if (from.layer === 'binding' && to.layer === 'bootstrap' && include !== BINDING_ENTRY) errors.push(`core/src/${path}：binding 只能经 ${BINDING_ENTRY} 使用核心`);
       if (inHardwareLogic && to.layer === 'contracts' && !include.startsWith(HARDWARE_CONTRACTS_PREFIX)) errors.push(`core/src/${path}：硬件模块只能包含 contracts/hardware 的契约，不能包含 ${include}`);
       if (from.module !== undefined && to.module !== undefined && from.module !== to.module) {

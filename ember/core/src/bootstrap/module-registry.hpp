@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：module-registry.hpp
- * 说明：模块登记时可用的公共能力：请求路由、事件发布、错误日志、时钟、应用版本、核心版本、用户数据目录、模块共享的服务与停止处理。
+ * 说明：模块登记时可用的公共能力：请求路由、事件发布、帧输出、错误日志、时钟、应用版本、核心版本、用户数据目录、模块共享的服务与停止处理。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -21,6 +21,7 @@
 #include "platform/events/event-sink.hpp"
 #include "platform/logging/error-log.hpp"
 #include "platform/requests/request-router.hpp"
+#include "platform/streams/frame-output.hpp"
 #include "platform/time/clock.hpp"
 
 namespace ember::bootstrap {
@@ -38,6 +39,8 @@ struct ModuleRegistry {
   std::filesystem::path userDataPath;
   /** 预装的 mapper 插件目录；没有时为空。 */
   std::filesystem::path bundledPluginsPath;
+  /** 帧输出：运行模块每完成一帧就把画面交给它，由核心入口转给帧处理函数。 */
+  std::shared_ptr<platform::FrameOutput> frames;
   /** 模块之间共享的契约接口。 */
   ModuleServices& services;
   /** 核心停止时、等待请求结束之前按登记的相反顺序调用，用于停下模块自己的后台工作。 */

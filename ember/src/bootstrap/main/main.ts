@@ -1,11 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：main.ts
- * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求的 IPC、创建主窗口，退出时停止核心。
+ * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、创建主窗口，退出时停止核心。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：只创建实现并注入，不写业务判断；原生模块在开发时取 core/build/Release，正式包取应用的 resources 目录。
+ * 备注：只创建实现并注入，不写业务判断；原生模块与预装插件在开发时取 core/build/Release 与 build/plugins，正式包取应用的 resources 目录；
+ *       命令行带 --cartridge=路径（.nes）时，核心启动后由主进程加载这张卡带。
  * ------------------------------------------------------------------------
  */
 
@@ -13,11 +14,19 @@ import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import handledSquirrelEvent from 'electron-squirrel-startup';
 import { CORE_SCHEMAS } from '../../contracts/core-gateway/generated/core-api';
-import { forwardCoreToWindow, registerCoreIpc } from '../../entry/ipc/core/core-ipc';
+import { STREAM_PORTS_WINDOW_MESSAGE } from '../../contracts/stream-ports/stream-messages';
+import { STREAM_CHANNELS } from '../../contracts/stream-ports/stream-ports';
+import { forwardCoreToWindow, registerCoreIpc, requestCoreAsMain, type CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
+import { registerMainRequestIpc, type MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
+import { registerStreamsIpc } from '../../entry/ipc/streams/streams-ipc';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
 import { ProcessCoreGateway } from '../../infra/core-client/process-core-gateway';
+import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
 import { startElectronCoreProcess } from '../../platform/core-process/core-process';
+import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
+import { cartridgePathFromArgv } from '../../platform/launch/launch-args';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
+import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
 import { createAppWindow, denyAllPermissions, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
 import { MAIN_MODULES } from './module-list';
 
@@ -27,6 +36,8 @@ const APP_ID = 'cn.3578.ember';
 const PRODUCT_NAME = 'Ember';
 /** 原生模块文件名。 */
 const NATIVE_FILE = 'ember_core.node';
+/** 预装插件的目录名：开发时在 build 下，正式包在 resources 下。 */
+const PLUGINS_DIRECTORY = 'plugins';
 /** 主进程错误的错误码。 */
 const MAIN_ERROR_CODE = 'shell.mainError';
 
@@ -55,18 +66,24 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const devServerUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
   const rendererFile = join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', NATIVE_FILE);
+  const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(app.getAppPath(), 'build', PLUGINS_DIRECTORY);
 
   const gateway = new ProcessCoreGateway({
     startProcess: () => startElectronCoreProcess(join(__dirname, 'core-host.cjs')),
     nativePath,
     userDataPath,
     appVersion: app.getVersion(),
+    bundledPluginsPath,
     logger
   });
+  const streamHub = new StreamPortHub({ channels: createElectronChannelFactory(), core: gateway, logger });
 
   let mainWindow: BrowserWindow | undefined;
   let quitting = false;
   const isTrustedSender = createSenderCheck((url) => isAppUrl(url, { rendererFile, ...(devServerUrl ? { devServerUrl } : {}) }));
+  const modules = MAIN_MODULES.map((module) => module.schema);
+  /** 以主进程的身份向核心发起请求所需的依赖。 */
+  const coreHandling: CoreRequestHandling = { gateway, modules, schemas: CORE_SCHEMAS };
 
   const createMainWindow = (): void => {
     const window = createAppWindow({
@@ -104,6 +121,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     if (quitting) return;
     quitting = true;
     event.preventDefault();
+    streamHub.stop();
     void gateway
       .stop()
       .catch((error: unknown) => logError(logger, error, { source: 'stopCore' }))
@@ -114,8 +132,26 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     denyAllPermissions();
     removeDefaultMenu();
+    streamHub.start();
     gateway.start();
-    registerCoreIpc({ ipc: ipcMain, gateway, modules: MAIN_MODULES.map((module) => module.schema), schemas: CORE_SCHEMAS, isTrustedSender });
+    registerCoreIpc({ ipc: ipcMain, gateway, modules, schemas: CORE_SCHEMAS, isTrustedSender });
+
+    const fileDialog = createOpenFileDialog(() => mainWindow);
+    const handlers: Record<string, MainRequestHandler> = {};
+    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, core: coreHandling }));
+    registerMainRequestIpc({ ipc: ipcMain, handlers, modules, schemas: CORE_SCHEMAS, isTrustedSender, onError: (error, name) => logError(logger, error, { source: 'mainRequest', name }) });
+    registerStreamsIpc({
+      ipc: ipcMain,
+      connector: streamHub,
+      isTrustedSender,
+      isStreamWindow: (contents) => mainWindow?.webContents === contents,
+      createTarget: (contents) => createWebContentsStreamTarget(contents, STREAM_CHANNELS.ports, STREAM_PORTS_WINDOW_MESSAGE)
+    });
     createMainWindow();
+
+    const cartridgePath = cartridgePathFromArgv(process.argv);
+    if (cartridgePath !== undefined) {
+      requestCoreAsMain(coreHandling, 'cartridges.load', { path: cartridgePath }).catch((error: unknown) => logError(logger, error, { source: 'launchCartridge' }));
+    }
   });
 }

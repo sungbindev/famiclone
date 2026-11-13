@@ -13,6 +13,7 @@
 
 #include "bootstrap/modules/cartridges.hpp"
 #include "bootstrap/modules/mappers.hpp"
+#include "bootstrap/modules/runtime.hpp"
 #include "bootstrap/modules/system.hpp"
 
 namespace ember::bootstrap {
@@ -23,6 +24,7 @@ namespace {
 constexpr ModuleRegistration MODULES[] = {
     {"system", registerSystem},
     {"mappers", registerMappers},
+    {"runtime", registerRuntime},
     {"cartridges", registerCartridges},
 };
 

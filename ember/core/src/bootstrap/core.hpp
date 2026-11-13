@@ -11,12 +11,19 @@
 
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
+
+#include "platform/streams/frame-output.hpp"
+
+namespace ember::contracts::runtime {
+class RuntimeService;
+}  // namespace ember::contracts::runtime
 
 namespace ember::platform {
 class CancellationToken;
@@ -28,6 +35,7 @@ class ThreadPool;
 namespace ember::bootstrap {
 
 class CoreEvents;
+class CoreFrames;
 
 /** 核心入口。 */
 class Core {
@@ -36,6 +44,8 @@ class Core {
   using RequestDone = std::function<void(bool ok, std::string payload)>;
   /** 事件：事件名与数据 JSON。可能在任意线程调用。 */
   using EventHandler = std::function<void(const std::string& name, const std::string& dataJson)>;
+  /** 帧：每完成一帧在模拟线程调用，像素只在调用期间有效，处理函数不能阻塞。 */
+  using FrameHandler = std::function<void(const platform::FrameView& frame)>;
 
   Core();
   ~Core();
@@ -54,6 +64,17 @@ class Core {
   /** 设置事件处理函数；应在 start 之前调用。 */
   void setEventHandler(EventHandler handler);
 
+  /** 设置帧处理函数；应在 start 之前调用，没有处理函数时画面被丢弃。 */
+  void setFrameHandler(FrameHandler handler);
+
+  /**
+   * 设置手柄的按键，经命令队列在模拟线程里生效，不等待执行。
+   * @param port 手柄口编号，0 或 1。
+   * @param buttons 按键掩码，位 0 为 A，位 7 为右。
+   * @throws shared::CoreError core.invalidParams：口号超出范围；core.unavailable：核心未启动或正在停止。
+   */
+  void setButtons(unsigned port, std::uint8_t buttons);
+
   /** 处理请求；结果经 done 返回，未启动或已停止时立即以 core.unavailable 返回。 */
   void request(const std::string& id, const std::string& name, const std::string& paramsJson, RequestDone done);
 
@@ -71,6 +92,8 @@ class Core {
   bool stopping_ = false;
   std::map<std::string, std::shared_ptr<platform::CancellationToken>> running_;
   std::shared_ptr<CoreEvents> events_;
+  std::shared_ptr<CoreFrames> frames_;
+  std::shared_ptr<contracts::runtime::RuntimeService> runtime_;
   std::shared_ptr<platform::ErrorLog> errors_;
   std::unique_ptr<platform::RequestRouter> router_;
   std::unique_ptr<platform::ThreadPool> pool_;

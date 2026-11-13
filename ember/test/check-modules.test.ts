@@ -78,6 +78,27 @@ describe('checkProject', () => {
     expect(checkProject(root).errors).toEqual([]);
   });
 
+  it('业务 logic 模块可以包含 platform 的帧输出与错误日志抽象，硬件模块不能', () => {
+    const root = createProject({
+      'core/src/contracts/hardware/bus.hpp': '#pragma once\n',
+      'core/src/platform/streams/frame-output.hpp': '#pragma once\n',
+      'core/src/platform/logging/error-log.hpp': '#pragma once\n',
+      'core/src/logic/runtime/runtime.hpp': '#include "platform/streams/frame-output.hpp"\n#include "platform/logging/error-log.hpp"\n',
+      'core/src/logic/hardware/ppu-2c02/ppu.hpp': '#include "contracts/hardware/bus.hpp"\n#include "platform/streams/frame-output.hpp"\n',
+      'core/src/bootstrap/module-list.cpp': '{"runtime", registerRuntime},\n',
+      'core/src/bootstrap/modules/runtime.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/ppu-2c02/ppu.hpp：logic 层只能包含 platform 的抽象，不能包含 platform/streams/frame-output.hpp']);
+  });
+
+  it('画面与输入端口的契约目录与入口目录不是业务模块，不要求登记', () => {
+    const root = createProject({
+      'src/contracts/stream-ports/stream-ports.ts': 'export type StreamPort = object;\n',
+      'src/entry/ipc/streams/streams-ipc.ts': "import type { StreamPort } from '../../../contracts/stream-ports/stream-ports';\nexport type Port = StreamPort;\n"
+    });
+    expect(checkProject(root).errors).toEqual([]);
+  });
+
   it('硬件模块只能包含 contracts/hardware 的契约，不能包含其他模块的契约', () => {
     const root = createProject({
       'core/src/contracts/system/system-service.hpp': '#pragma once\n',

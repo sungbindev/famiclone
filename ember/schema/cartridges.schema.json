@@ -1,0 +1,80 @@
+{
+  "$comment": "cartridges 模块：加载 NES 文件（解析、匹配插件、装配主机、插入卡槽）、取出卡带与卡带信息；open 由主进程弹出文件选择窗口后调用 load。规则见 docs/04-调试服务.md 第 4.2 节。",
+  "module": "cartridges",
+  "types": {
+    "LoadedCartridge": {
+      "type": "object",
+      "description": "加载完成的卡带与加载后的运行状态。",
+      "properties": {
+        "cartridge": { "$ref": "runtime#/types/CartridgeSummary" },
+        "state": { "$ref": "runtime#/types/RuntimeState" }
+      },
+      "required": ["cartridge", "state"]
+    }
+  },
+  "requests": {
+    "load": {
+      "description": "读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽；已有的卡带与主机被替换，失败时原有的保持不变。匹配失败的错误码是 mappers.noMatch、mappers.conflict、mappers.hostUnknown，插件加载失败的是 mappers.notFound、mappers.invalidPackage、mappers.limitExceeded。",
+      "mainOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "description": "NES 文件的路径，由主进程根据用户选择的文件给出" },
+          "powerOn": { "type": "boolean", "description": "装入后是否上电，默认 true" },
+          "resume": { "type": "boolean", "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效" }
+        },
+        "required": ["path"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "cartridge": { "$ref": "runtime#/types/CartridgeSummary" },
+          "state": { "$ref": "runtime#/types/RuntimeState" }
+        },
+        "required": ["cartridge", "state"]
+      },
+      "errors": ["cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
+    },
+    "eject": {
+      "description": "取出卡带：主机随之拆除，电源状态变为断电；没有卡带时没有效果。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": { "state": { "$ref": "runtime#/types/RuntimeState" } }, "required": ["state"] },
+      "errors": []
+    },
+    "info": {
+      "description": "当前卡带的描述、匹配到的插件与存储区清单。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": { "cartridge": { "$ref": "runtime#/types/CartridgeSummary" } },
+        "required": ["cartridge"]
+      },
+      "errors": ["cartridges.empty"]
+    }
+  },
+  "mainRequests": {
+    "open": {
+      "description": "弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给 cartridges.load；用户取消选择时 canceled 为 true，不是错误。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "canceled": { "type": "boolean", "description": "用户是否取消了选择" },
+          "loaded": { "$ref": "#/types/LoadedCartridge", "description": "加载结果；取消时没有这一项" }
+        },
+        "required": ["canceled"]
+      },
+      "errors": ["cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
+    }
+  },
+  "events": {
+    "loaded": {
+      "description": "卡带装配完成。",
+      "data": {
+        "type": "object",
+        "properties": { "cartridge": { "$ref": "runtime#/types/CartridgeSummary" } },
+        "required": ["cartridge"]
+      }
+    }
+  }
+}

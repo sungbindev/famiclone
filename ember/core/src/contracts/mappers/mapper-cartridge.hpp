@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -33,11 +34,25 @@ struct ScriptFailure {
   std::string message;
 };
 
+/** 卡带上一块存储区的摘要。 */
+struct StorageSummary {
+  /** 清单里的存储区标识。 */
+  std::string id;
+  hardware::StorageKind kind{hardware::StorageKind::Rom};
+  /** 实际容量（字节），来源为空又没有后备存储时为 0。 */
+  std::size_t size{0};
+  /** 是否带电池，只对 RAM 有意义。 */
+  bool battery{false};
+};
+
 /** 由插件创建的卡带。 */
 class MapperCartridge : public hardware::Cartridge {
  public:
   /** 创建这个卡带的插件标识。 */
   [[nodiscard]] virtual const std::string& pluginId() const = 0;
+
+  /** 卡带上全部存储区的摘要，按清单声明的顺序。 */
+  [[nodiscard]] virtual std::vector<StorageSummary> storageList() const = 0;
 
   /**
    * 按清单里的标识取存储区，用于调试与测试读取；没有这个存储区时返回 nullptr。

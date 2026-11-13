@@ -1,0 +1,142 @@
+{
+  "$comment": "runtime 模块：机器的运行状态、电源、复位、暂停与继续；运行状态变化与每帧事件。规则见 docs/04-调试服务.md 第 3、4.1、5 节；run、step、setSpeed 在后续阶段加入。",
+  "module": "runtime",
+  "types": {
+    "CartridgeStorage": {
+      "type": "object",
+      "description": "卡带上的一块存储区。",
+      "properties": {
+        "id": { "type": "string", "description": "清单里的存储区标识" },
+        "kind": { "type": "string", "enum": ["rom", "ram"], "description": "种类" },
+        "size": { "type": "integer", "minimum": 0, "description": "实际容量（字节）" },
+        "battery": { "type": "boolean", "description": "是否带电池" }
+      },
+      "required": ["id", "kind", "size", "battery"]
+    },
+    "CartridgeSummary": {
+      "type": "object",
+      "description": "插在卡槽里的卡带：文件头描述、匹配到的插件与存储区清单。",
+      "properties": {
+        "path": { "type": "string", "description": "NES 文件的路径" },
+        "mapper": { "type": "integer", "minimum": 0, "description": "mapper 号" },
+        "variant": { "type": "integer", "minimum": 0, "description": "变体" },
+        "prgSize": { "type": "integer", "minimum": 0, "description": "PRG 的字节数" },
+        "chrSize": { "type": "integer", "minimum": 0, "description": "CHR 的字节数，没有 CHR 时为 0" },
+        "mirroring": { "type": "string", "enum": ["horizontal", "vertical", "four"], "description": "文件头里的镜像方式" },
+        "battery": { "type": "boolean", "description": "文件头里的电池标志" },
+        "crc32Prg": { "type": "string", "minLength": 8, "maxLength": 8, "description": "PRG 的 CRC-32，8 位十六进制" },
+        "crc32All": { "type": "string", "minLength": 8, "maxLength": 8, "description": "PRG 加 CHR 的 CRC-32，8 位十六进制" },
+        "pluginId": { "type": "string", "description": "匹配到的插件标识" },
+        "pluginName": { "type": "string", "description": "匹配到的插件显示名称" },
+        "pluginVersion": { "type": "string", "description": "匹配到的插件版本" },
+        "host": { "type": "string", "description": "装配的主机型号" },
+        "storage": { "type": "array", "items": { "$ref": "#/types/CartridgeStorage" }, "description": "存储区清单" }
+      },
+      "required": ["path", "mapper", "variant", "prgSize", "chrSize", "mirroring", "battery", "crc32Prg", "crc32All", "pluginId", "pluginName", "pluginVersion", "host", "storage"]
+    },
+    "RuntimeState": {
+      "type": "object",
+      "description": "运行状态：电源与运行模式；运行模式只在通电时有意义，断电时为 paused。",
+      "properties": {
+        "power": { "type": "string", "enum": ["off", "on"], "description": "电源：off 断电，on 通电" },
+        "mode": { "type": "string", "enum": ["paused", "running"], "description": "运行模式：paused 暂停，running 连续运行" }
+      },
+      "required": ["power", "mode"]
+    }
+  },
+  "requests": {
+    "status": {
+      "description": "返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "power": { "type": "string", "enum": ["off", "on"], "description": "电源" },
+          "mode": { "type": "string", "enum": ["paused", "running"], "description": "运行模式" },
+          "machine": { "type": "string", "description": "主机型号；没有装入卡带时没有这一项" },
+          "cartridge": { "$ref": "#/types/CartridgeSummary", "description": "当前的卡带；没有时没有这一项" },
+          "frame": { "type": "integer", "minimum": 0, "description": "自上电以来完成的帧数" },
+          "cycles": { "type": "integer", "minimum": 0, "description": "自上电以来的 CPU 周期数" },
+          "speed": { "type": "integer", "minimum": 1, "description": "速度百分比，目前固定为 100" }
+        },
+        "required": ["power", "mode", "frame", "cycles", "speed"]
+      }
+    },
+    "powerOn": {
+      "description": "上电：创建或重置全部芯片，卡带的存储区重新从文件载入；默认进入暂停，resume 为 true 时直接运行；已通电时等同硬复位。",
+      "params": {
+        "type": "object",
+        "properties": { "resume": { "type": "boolean", "description": "上电后是否直接运行，默认 false" } },
+        "required": []
+      },
+      "result": { "type": "object", "properties": { "state": { "$ref": "#/types/RuntimeState" } }, "required": ["state"] },
+      "errors": ["runtime.noCartridge"]
+    },
+    "powerOff": {
+      "description": "断电：停止运行，芯片状态丢弃；卡带保持插着。已断电时没有效果。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": { "state": { "$ref": "#/types/RuntimeState" } }, "required": ["state"] },
+      "errors": []
+    },
+    "reset": {
+      "description": "复位：soft 只发 RESET 线，不改变电源与运行模式；hard 断电后再上电，运行模式保持。",
+      "params": {
+        "type": "object",
+        "properties": { "kind": { "type": "string", "enum": ["soft", "hard"], "description": "复位方式" } },
+        "required": ["kind"]
+      },
+      "result": { "type": "object", "properties": { "state": { "$ref": "#/types/RuntimeState" } }, "required": ["state"] },
+      "errors": ["runtime.noCartridge", "runtime.notPowered"]
+    },
+    "pause": {
+      "description": "暂停：已暂停时没有效果；只在通电时有效。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": { "state": { "$ref": "#/types/RuntimeState" } }, "required": ["state"] },
+      "errors": ["runtime.notPowered"]
+    },
+    "resume": {
+      "description": "继续：按真实帧率连续运行；已在运行时没有效果；只在通电时有效。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": { "state": { "$ref": "#/types/RuntimeState" } }, "required": ["state"] },
+      "errors": ["runtime.notPowered"]
+    }
+  },
+  "events": {
+    "stateChanged": {
+      "description": "电源或运行模式改变（含装入或取出卡带）。",
+      "data": {
+        "type": "object",
+        "properties": {
+          "power": { "type": "string", "enum": ["off", "on"], "description": "新的电源状态" },
+          "mode": { "type": "string", "enum": ["paused", "running"], "description": "新的运行模式" },
+          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "error"], "description": "原因" }
+        },
+        "required": ["power", "mode", "reason"]
+      }
+    },
+    "frame": {
+      "description": "每完成一帧发出；默认不订阅，开启后才发布。",
+      "data": {
+        "type": "object",
+        "properties": {
+          "frame": { "type": "integer", "minimum": 0, "description": "帧号" },
+          "cycles": { "type": "integer", "minimum": 0, "description": "自上电以来的 CPU 周期数" },
+          "pc": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "CPU 的程序计数器" }
+        },
+        "required": ["frame", "cycles", "pc"]
+      }
+    },
+    "error": {
+      "description": "运行中的错误，如 mapper 脚本异常；发出后模拟器已暂停。",
+      "data": {
+        "type": "object",
+        "properties": {
+          "module": { "type": "string", "description": "出错的模块" },
+          "code": { "type": "string", "description": "错误码" },
+          "message": { "type": "string", "description": "面向用户的说明" }
+        },
+        "required": ["module", "code", "message"]
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@
 
 #include "bootstrap/module-list.hpp"
 #include "bootstrap/module-registry.hpp"
+#include "contracts/runtime/runtime-service.hpp"
 #include "platform/events/event-sink.hpp"
 #include "platform/logging/file-error-log.hpp"
 #include "platform/requests/cancellation.hpp"
@@ -56,6 +57,34 @@ class CoreEvents final : public platform::EventSink {
   Core::EventHandler handler_;
 };
 
+/** 把运行模块发布的帧转给帧处理函数；没有处理函数时丢弃。 */
+class CoreFrames final : public platform::FrameOutput {
+ public:
+  void setHandler(Core::FrameHandler handler) {
+    auto shared = handler ? std::make_shared<const Core::FrameHandler>(std::move(handler)) : nullptr;
+    std::lock_guard lock(mutex_);
+    handler_ = std::move(shared);
+  }
+
+  void publish(const platform::FrameView& frame) noexcept override {
+    std::shared_ptr<const Core::FrameHandler> handler;
+    {
+      std::lock_guard lock(mutex_);
+      handler = handler_;
+    }
+    if (handler == nullptr) return;
+    try {
+      (*handler)(frame);
+    } catch (...) {
+      // 处理函数失败时这一帧就丢弃，不影响模拟。
+    }
+  }
+
+ private:
+  std::mutex mutex_;
+  std::shared_ptr<const Core::FrameHandler> handler_;
+};
+
 namespace {
 
 /** 错误响应的 JSON 文本。 */
@@ -71,11 +100,23 @@ std::string moduleOf(const std::string& name) {
 
 }  // namespace
 
-Core::Core() : events_(std::make_shared<CoreEvents>()) {}
+Core::Core() : events_(std::make_shared<CoreEvents>()), frames_(std::make_shared<CoreFrames>()) {}
 
 Core::~Core() { stop(); }
 
 void Core::setEventHandler(EventHandler handler) { events_->setHandler(std::move(handler)); }
+
+void Core::setFrameHandler(FrameHandler handler) { frames_->setHandler(std::move(handler)); }
+
+void Core::setButtons(unsigned port, std::uint8_t buttons) {
+  std::shared_ptr<contracts::runtime::RuntimeService> runtime;
+  {
+    std::lock_guard lock(mutex_);
+    if (!started_ || stopping_) throw shared::CoreError(shared::ERROR_UNAVAILABLE, "核心未启动或正在停止");
+    runtime = runtime_;
+  }
+  runtime->setButtons(port, buttons);
+}
 
 std::string Core::start(const std::string& optionsJson) {
   std::lock_guard lock(mutex_);
@@ -103,9 +144,10 @@ std::string Core::start(const std::string& optionsJson) {
 
   std::vector<std::function<void()>> stopHandlers;
   ModuleServices services;
-  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), services, stopHandlers};
+  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), frames_, services, stopHandlers};
   try {
     for (const auto& module : moduleList()) module.registerModule(registry);
+    runtime_ = services.require<contracts::runtime::RuntimeService>();
   } catch (...) {
     for (auto it = stopHandlers.rbegin(); it != stopHandlers.rend(); ++it) (*it)();
     throw;
@@ -190,9 +232,11 @@ void Core::stop() {
   std::lock_guard lock(mutex_);
   pool_.reset();
   router_.reset();
+  runtime_.reset();
   stopHandlers_.clear();
   errors_.reset();
   events_->setHandler(nullptr);
+  frames_->setHandler(nullptr);
   started_ = false;
 }
 

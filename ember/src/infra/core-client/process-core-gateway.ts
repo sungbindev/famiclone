@@ -7,6 +7,7 @@
  * 日期：2026-11-13
  * 备注：一分钟内最多重启 3 次，超过后状态改为不可用；核心启动失败（如数据库打不开）不重启。
  *       核心进程按收到的顺序处理消息，所以启动完成前发出的请求也会在启动后处理。
+ *       同时是画面与输入端口的入口（CoreStreamSink）：端口随消息转移给当前的核心进程，每次启动（含重启）通知订阅者。
  * ------------------------------------------------------------------------
  */
 
@@ -15,6 +16,7 @@ import type { CoreGateway, CoreRequestOptions } from '../../contracts/core-gatew
 import { CORE_ERROR_CODES, CoreRequestError, type CoreErrorInfo, type CoreHostInbound, type CoreHostOutbound, type CoreStatus } from '../../contracts/core-gateway/core-messages';
 import type { CoreEventName, CoreParams, CoreRequestName, CoreResult } from '../../contracts/core-gateway/generated/core-api';
 import type { ErrorLogger } from '../../contracts/logging/error-logger';
+import type { CoreStreamSink, StreamPortPair } from '../../contracts/stream-ports/stream-ports';
 import type { CoreProcess } from '../../platform/core-process/core-process';
 
 /** 统计重启次数的时间窗口。 */
@@ -43,6 +45,8 @@ export interface ProcessCoreGatewayOptions {
   readonly userDataPath: string;
   /** 应用版本。 */
   readonly appVersion: string;
+  /** 预装的 mapper 插件目录；没有时省略。 */
+  readonly bundledPluginsPath?: string;
   /** 错误日志。 */
   readonly logger: ErrorLogger;
   /** 当前时间（毫秒），测试可替换。 */
@@ -59,7 +63,7 @@ interface PendingRequest {
 }
 
 /** 经核心进程实现的核心网关。 */
-export class ProcessCoreGateway implements CoreGateway {
+export class ProcessCoreGateway implements CoreGateway, CoreStreamSink {
   private process: CoreProcess | undefined;
   private current: CoreStatus = { state: 'starting' };
   private stopping = false;
@@ -68,6 +72,7 @@ export class ProcessCoreGateway implements CoreGateway {
   private exitWaiter: (() => void) | undefined;
   private readonly pending = new Map<string, PendingRequest>();
   private readonly eventListeners = new Set<(name: CoreEventName, data: unknown) => void>();
+  private readonly startedListeners = new Set<() => void>();
   private readonly now: () => number;
   private readonly createId: () => string;
 
@@ -138,6 +143,17 @@ export class ProcessCoreGateway implements CoreGateway {
     return this.current;
   }
 
+  attachStreams(ports: StreamPortPair): boolean {
+    if (this.process === undefined || this.stopping || this.startFailed) return false;
+    this.process.postMessage({ type: 'streams' } satisfies CoreHostInbound, [ports.frames, ports.input]);
+    return true;
+  }
+
+  onCoreStarted(listener: () => void): () => void {
+    this.startedListeners.add(listener);
+    return () => this.startedListeners.delete(listener);
+  }
+
   private spawn(): void {
     this.startFailed = false;
     this.setStatus({ state: 'starting' });
@@ -145,8 +161,15 @@ export class ProcessCoreGateway implements CoreGateway {
     this.process = child;
     child.onMessage((message) => this.receive(message as CoreHostOutbound));
     child.onExit((code) => this.exited(child, code));
-    const { nativePath, userDataPath, appVersion } = this.options;
-    this.post({ type: 'start', nativePath, userDataPath, appVersion });
+    const { nativePath, userDataPath, appVersion, bundledPluginsPath } = this.options;
+    this.post({ type: 'start', nativePath, userDataPath, appVersion, ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }) });
+    for (const listener of this.startedListeners) {
+      try {
+        listener();
+      } catch (error) {
+        this.options.logger.write({ process: 'main', code: CORE_ERROR_CODES.internal, message: `核心启动通知失败：${error instanceof Error ? error.message : String(error)}` });
+      }
+    }
   }
 
   private post(message: CoreHostInbound): void {

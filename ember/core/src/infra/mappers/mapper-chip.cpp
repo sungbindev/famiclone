@@ -167,6 +167,16 @@ void MapperChip::reset(bool power) {
   if (script_ != nullptr && script_->hasReset()) runScript([&] { script_->reset(power); });
 }
 
+std::vector<contracts::mappers::StorageSummary> MapperChip::storageList() const {
+  std::vector<contracts::mappers::StorageSummary> list;
+  const auto& decls = plugin_->manifest.storage;
+  for (std::size_t index = 0; index < decls.size(); ++index) {
+    const StorageBlock& block = *storages_[index];
+    list.push_back({decls[index].id, block.kind(), block.size(), block.battery()});
+  }
+  return list;
+}
+
 const hw::StorageRegion* MapperChip::storage(std::string_view id) const {
   const auto& decls = plugin_->manifest.storage;
   const auto found = std::find_if(decls.begin(), decls.end(), [&](const StorageDecl& item) { return item.id == id; });

@@ -1,0 +1,120 @@
+# ------------------------------------------------------------------------
+# 名称：CMakeLists.txt
+# 说明：C++ 核心的构建：核心库（不依赖 Node）、Node-API 原生模块（由 cmake-js 编译时才构建）与测试（EMBER_BUILD_TESTS）。
+# 作者：sungbin
+# 邮箱：sungbin@3578.cn
+# 日期：2026-11-13
+# 备注：第三方库源码放在 core/third_party（清单见 docs/01-软件架构设计.md 第 10 节），编译时不联网；Windows 静态链接 C++ 运行库；
+#       生成的代码（src/contracts/*/generated）由 npm run schema 产生，配置前须先生成；
+#       SQLite、QuickJS-ng 与 miniz 先登记目标，核心库用到时再链接（EXCLUDE_FROM_ALL，没人链接就不编译）。
+# ------------------------------------------------------------------------
+
+cmake_minimum_required(VERSION 3.25)
+cmake_policy(SET CMP0091 NEW)
+
+project(ember_core LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+option(EMBER_BUILD_TESTS "构建 C++ 测试" OFF)
+set(EMBER_CORE_VERSION "0.0.0-dev" CACHE STRING "核心版本，构建脚本取自 package.json")
+set(EMBER_THIRD_PARTY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
+
+# ---------------------------------------------------------------- 第三方库
+
+add_library(ember_json INTERFACE)
+target_include_directories(ember_json SYSTEM INTERFACE ${EMBER_THIRD_PARTY}/nlohmann-json/include)
+
+add_library(ember_sqlite STATIC EXCLUDE_FROM_ALL ${EMBER_THIRD_PARTY}/sqlite/sqlite3.c)
+target_include_directories(ember_sqlite PUBLIC ${EMBER_THIRD_PARTY}/sqlite)
+target_compile_definitions(ember_sqlite PRIVATE SQLITE_DQS=0 SQLITE_DEFAULT_FOREIGN_KEYS=1 SQLITE_OMIT_LOAD_EXTENSION=1 SQLITE_THREADSAFE=1)
+
+# mapper 插件的沙箱：只编译引擎核心，不编译提供文件与进程访问的 quickjs-libc。
+add_library(ember_quickjs STATIC EXCLUDE_FROM_ALL
+  ${EMBER_THIRD_PARTY}/quickjs-ng/quickjs.c
+  ${EMBER_THIRD_PARTY}/quickjs-ng/libregexp.c
+  ${EMBER_THIRD_PARTY}/quickjs-ng/libunicode.c
+  ${EMBER_THIRD_PARTY}/quickjs-ng/dtoa.c)
+target_include_directories(ember_quickjs SYSTEM PUBLIC ${EMBER_THIRD_PARTY}/quickjs-ng)
+set_target_properties(ember_quickjs PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON)
+if(MSVC)
+  target_compile_options(ember_quickjs PRIVATE /W0 /experimental:c11atomics)
+else()
+  target_compile_definitions(ember_quickjs PRIVATE _GNU_SOURCE)
+  target_compile_options(ember_quickjs PRIVATE -w -funsigned-char)
+endif()
+
+add_library(ember_miniz STATIC EXCLUDE_FROM_ALL ${EMBER_THIRD_PARTY}/miniz/miniz.c)
+target_include_directories(ember_miniz SYSTEM PUBLIC ${EMBER_THIRD_PARTY}/miniz)
+target_compile_definitions(ember_miniz PUBLIC MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+
+# ---------------------------------------------------------------- 核心库
+
+file(GLOB_RECURSE EMBER_CORE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+list(FILTER EMBER_CORE_SOURCES EXCLUDE REGEX "/src/binding/")
+# 按平台分开的实现：*-win.cpp 只在 Windows 编译，*-mac.cpp 只在 macOS 编译。
+if(NOT WIN32)
+  list(FILTER EMBER_CORE_SOURCES EXCLUDE REGEX "-win\\.cpp$")
+endif()
+if(NOT APPLE)
+  list(FILTER EMBER_CORE_SOURCES EXCLUDE REGEX "-mac\\.cpp$")
+endif()
+
+add_library(ember_core_lib STATIC ${EMBER_CORE_SOURCES})
+target_include_directories(ember_core_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ember_core_lib PUBLIC ember_json)
+target_compile_definitions(ember_core_lib PUBLIC EMBER_CORE_VERSION="${EMBER_CORE_VERSION}")
+
+if(MSVC)
+  target_compile_options(ember_core_lib PUBLIC /utf-8 /W4 /permissive- /EHsc)
+else()
+  target_compile_options(ember_core_lib PUBLIC -Wall -Wextra -Wpedantic)
+endif()
+
+# ---------------------------------------------------------------- 原生模块（cmake-js）
+
+if(CMAKE_JS_INC)
+  execute_process(
+    COMMAND node -p "require('node-addon-api').include"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    OUTPUT_VARIABLE NODE_ADDON_API_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
+
+  add_library(ember_core SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/binding/binding.cpp ${CMAKE_JS_SRC})
+  set_target_properties(ember_core PROPERTIES PREFIX "" SUFFIX ".node")
+  target_include_directories(ember_core PRIVATE ${CMAKE_JS_INC} ${NODE_ADDON_API_DIR})
+  target_compile_definitions(ember_core PRIVATE NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
+  target_link_libraries(ember_core PRIVATE ember_core_lib ${CMAKE_JS_LIB})
+
+  # 发布构建的调试符号单独保存为 ember_core.pdb，不进入 .node 文件。
+  if(MSVC)
+    target_compile_options(ember_core PRIVATE $<$<CONFIG:Release>:/Zi>)
+    target_compile_options(ember_core_lib PRIVATE $<$<CONFIG:Release>:/Zi>)
+    target_link_options(ember_core PRIVATE "$<$<CONFIG:Release>:/DEBUG;/OPT:REF;/OPT:ICF>")
+  endif()
+
+  if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+    execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+  endif()
+endif()
+
+# ---------------------------------------------------------------- 测试
+
+if(EMBER_BUILD_TESTS)
+  set(INSTALL_GTEST OFF CACHE INTERNAL "")
+  set(gtest_force_shared_crt OFF CACHE INTERNAL "")
+  add_subdirectory(${EMBER_THIRD_PARTY}/googletest ${CMAKE_CURRENT_BINARY_DIR}/googletest EXCLUDE_FROM_ALL)
+
+  enable_testing()
+  file(GLOB_RECURSE EMBER_CORE_TESTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
+  add_executable(ember_core_tests ${EMBER_CORE_TESTS})
+  target_link_libraries(ember_core_tests PRIVATE ember_core_lib GTest::gtest_main)
+  include(GoogleTest)
+  gtest_discover_tests(ember_core_tests DISCOVERY_MODE PRE_TEST)
+endif()

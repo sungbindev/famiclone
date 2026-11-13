@@ -1,0 +1,12 @@
+{
+  "name": "GoogleTest",
+  "version": "1.17.0",
+  "authors": [
+    "Google Inc."
+  ],
+  "license": "BSD-3-Clause",
+  "licenseFile": "LICENSE",
+  "homepage": "https://github.com/google/googletest",
+  "usage": "C++ 测试，只在构建测试时编译",
+  "bundled": false
+}

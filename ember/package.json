@@ -1,0 +1,53 @@
+{
+  "name": "ember",
+  "productName": "Ember",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ember：FC 与学习机模拟器，Electron 外壳与 C++ 核心。",
+  "author": "sungbin <sungbin@3578.cn>",
+  "license": "GPL-3.0-only",
+  "main": ".vite/build/main.cjs",
+  "scripts": {
+    "schema": "node tools/schema-gen/schema-gen.mjs",
+    "core:build": "node tools/build/build-core.mjs",
+    "core:test": "node tools/build/test-core.mjs",
+    "start": "npm run schema && npm run core:build && electron-forge start",
+    "typecheck": "npm run schema && tsc --noEmit",
+    "lint": "oxlint --deny-warnings src tools test",
+    "boundaries": "npm run schema && node tools/check/check-modules.mjs",
+    "test": "npm run schema && vitest run",
+    "check": "npm run typecheck && npm run lint && npm run boundaries && vitest run && npm run core:test",
+    "package": "npm run schema && npm run core:build && electron-forge package",
+    "package:win": "npm run schema && node tools/build/build-core.mjs --arch x64 && electron-forge package --platform win32 --arch x64",
+    "make:win": "npm run schema && node tools/build/build-core.mjs --arch x64 && electron-forge make --platform win32 --arch x64",
+    "package:mac": "bash tools/build/package-mac.sh"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^8.0.1",
+    "@electron-forge/maker-squirrel": "^8.0.1",
+    "@electron-forge/plugin-fuses": "^8.0.1",
+    "@electron-forge/plugin-vite": "^8.0.1",
+    "@electron/fuses": "^2.1.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "cmake-js": "^8.0.0",
+    "electron": "^45.2.1",
+    "jsdom": "^29.1.1",
+    "node-addon-api": "^8.9.2",
+    "oxlint": "^1.90.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  }
+}

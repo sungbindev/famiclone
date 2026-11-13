@@ -11,6 +11,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | [docs/03-mapper插件规范.md](../docs/03-mapper插件规范.md) | mapper 插件的包格式、清单、脚本接口、匹配与加载 |
 | [docs/04-调试服务.md](../docs/04-调试服务.md) | 调试服务的协议、运行控制、请求与事件 |
 | [docs/05-界面.md](../docs/05-界面.md) | 界面布局、页面、菜单、状态栏，界面原型 |
+| [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) | 构建与测试命令、由 Schema 生成的代码、模块的登记方式、依赖检查 |
 
 - 开始任何开发任务前，先阅读架构设计文档与硬件模块文档。
 - 【强制】每次修改代码、配置或脚本后，必须在同一次任务中同步全部受影响的文档（上表所列文档与本文件）；文档未同步不得汇报完成。汇报时逐项列出已同步的文档与位置，以及已检查但无须修改的文档。
@@ -24,7 +25,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 模拟器程序只提供环境，不含任何具体卡带与机型的规则；这些规则只在 mapper 插件里。mapper 清单只能按名字选择主机型号，不能修改芯片内部与主板上的固定资源。
 - 存储按位置分三档：芯片内与主板上的由芯片模块、主机型号写死，卡带上的由 mapper 清单声明，见硬件模块文档。
 - 请求、事件与数据类型只在 `schema/<模块>.schema.json` 中定义和修改，TypeScript 与 C++ 的 `generated/` 目录由脚本生成，不手写、不手改。
-- 调试服务与界面共用同一套请求；调试专用的请求只经调试服务开放，界面不使用。
+- 调试服务与界面共用同一套请求；调试专用的请求在 Schema 里标 `debugOnly`，只经调试服务开放，界面不使用。
+- 新增模块时在各层建立同名模块目录，并在 C++、主进程、渲染进程三份模块清单中登记；分层与模块依赖由 `npm run boundaries` 检查，见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md)。
 - 业务逻辑、模拟与数据读写一律放 C++ 核心；TypeScript 部分只做外壳、界面、入口校验、进程间转接和系统能力。
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
@@ -33,4 +35,20 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 
 ## 常用命令
 
-代码尚未建立，命令在实现时补充。
+在 `ember/` 目录下运行，详见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md)。
+
+| 命令 | 用途 |
+| --- | --- |
+| `npm start` | 生成 Schema 代码、编译原生模块，再启动开发版 |
+| `.\debug.ps1` | 在任意目录下启动开发版（切到项目目录后执行 `npm start`） |
+| `npm run schema` | 由 `schema/` 生成 TypeScript 与 C++ 代码 |
+| `npm run core:build` | 编译 C++ 原生模块，输出 `core/build/Release/ember_core.node`（Windows 用 Visual Studio 自带的 CMake） |
+| `npm run core:test` | 构建并运行 C++ 测试 |
+| `npm test` | 运行 TypeScript 测试 |
+| `npm run typecheck` | 类型检查 |
+| `npm run lint` | oxlint 检查 |
+| `npm run boundaries` | 分层、模块依赖与模块登记检查 |
+| `npm run check` | 以上全部检查与测试 |
+| `npm run package:win` | 打包 Windows x64 版 |
+| `npm run make:win` | 生成 Windows x64 安装程序 |
+| `npm run package:mac` | 打包 macOS arm64 版（只在苹果电脑上运行） |

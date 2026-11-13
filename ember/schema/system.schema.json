@@ -1,0 +1,20 @@
+{
+  "$comment": "系统模块：应用版本与核心版本。用于验证从界面到 C++ 核心的整条请求链路。",
+  "module": "system",
+  "types": {},
+  "requests": {
+    "version": {
+      "description": "返回应用版本与核心版本。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "appVersion": { "type": "string", "minLength": 1, "description": "应用版本，取自安装包的版本号" },
+          "coreVersion": { "type": "string", "minLength": 1, "description": "核心版本，取自核心的构建参数" }
+        },
+        "required": ["appVersion", "coreVersion"]
+      }
+    }
+  },
+  "events": {}
+}

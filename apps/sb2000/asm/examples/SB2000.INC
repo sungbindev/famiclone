@@ -1,6 +1,6 @@
 ; ------------------------------------------------------------------------
 ; 名称：sb2000.inc
-; 说明：SB-DOS 程序接口的符号定义：系统调用变量、功能号、子功能号、出错码、文件打开方式、运行库入口，便于直接用名字写程序。
+; 说明：SB-DOS 程序接口的符号定义：系统调用变量、功能号、子功能号、出错码、文件打开方式、硬件寄存器与位、运行库入口，便于直接用名字写程序。
 ; 作者：sungbin
 ; 邮箱：sungbin@3578.cn
 ; 日期：2026-11-10
@@ -287,6 +287,95 @@ PARAM_0649          = $0649             ; 鼠标 Y 上限，或屏幕缓冲的�
 PARAM_064F          = $064F             ; 个数、长度或字节数，含义随服务而定
 PARAM_0652          = $0652             ; 通用参数，多数服务从这里取输入
 PARAM_0653          = $0653             ; 通用参数或返回值，如读到的字节
+
+; ---- 硬件寄存器：图形（真机为 UM6576，行为以真机实测为准，见 docs/sb2000/03-硬件说明.md）----
+HW_PPU_CTRL         = $2000             ; 控制：位 7 允许 NMI，位 5 精灵 8x16，位 2 地址增量，位 1-0 背景页
+HW_PPU_MASK         = $2001             ; 显示：灰度、最左 8 像素、背景与精灵显示、颜色增强
+HW_PPU_STATUS       = $2002             ; 状态（读）：位 7 垂直消隐，位 6 精灵 0 碰撞，位 5 一行超过 8 个精灵
+HW_OAM_ADDRESS      = $2003             ; 精灵 RAM 地址
+HW_OAM_DATA         = $2004             ; 精灵 RAM 数据
+HW_PPU_SCROLL       = $2005             ; 滚动，连续写两次（X、Y）
+HW_PPU_ADDRESS      = $2006             ; 显存地址，连续写两次（高、低）
+HW_PPU_DATA         = $2007             ; 显存数据，读要先读一次刷新缓冲
+HW_PPU_EXT          = $2008             ; 扩展控制：位 7 背景 16 色，位 3-2 精灵图案表，位 0 名称表起始
+HW_PALETTE          = $2040             ; 调色板，64 项（$2040-$207F）
+HW_OAM_DMA          = $4014             ; 精灵 DMA：写页号，把 $xx00 起的 256 字节送进精灵 RAM
+
+; ---- 硬件寄存器：外设与中断 ----
+HW_SOUND_ENABLE     = $4015             ; 声音通道使能
+HW_PAD_1            = $4016             ; 手柄 1
+HW_PAD_2            = $4017             ; 手柄 2
+HW_KEY_DATA         = $4020             ; 读：键盘扫描码；写：位 7 为 1 时 DMA 控制的位 6、5 才起作用
+HW_KEY_SEND         = $4021             ; 发给键盘的数据
+HW_KEY_CONTROL      = $4022             ; 键盘控制：位 7 键盘时钟，位 2 允许发送完成中断，位 0 方向
+HW_MOUSE_SELECT     = $4023             ; 位 0 选手柄 2 或鼠标
+HW_MOUSE_DATA       = $4024             ; 鼠标数据
+HW_PRINTER_DATA     = $4025             ; 打印机数据
+HW_EXT_IO           = $4026             ; 扩展 I/O
+HW_DAC              = $4027             ; 8 位 DAC
+HW_INIT             = $4031             ; 初始设置：依次写 $65、$76 进入 6576 模式
+HW_IRQ_MASK         = $4032             ; 中断屏蔽：写 1 的位被屏蔽，同时清除 HW_IRQ_PENDING 里对应的位
+HW_IRQ_PENDING      = $4033             ; 待处理的中断（只读）
+HW_TIMER_CONTROL    = $4034             ; 定时器控制：位 7 允许，位 6 连续重载，位 5 行消隐时钟，位 3-0 预分频
+HW_TIMER_PRESET     = $4035             ; 定时器预置值，写入时同时装入当前值
+HW_TIMER_CURRENT    = $4036             ; 定时器当前值（递减）
+HW_RTC_ADDRESS      = $4080             ; 实时时钟地址
+HW_RTC_DATA         = $4081             ; 实时时钟数据
+
+; ---- 硬件寄存器：程序窗口、DMA 与显存 bank ----
+HW_WINDOW_0         = $4040             ; 窗口 0（$8000）的页号，4K 一页
+HW_WINDOW_1         = $4041             ; 窗口 1（$9000）的页号
+HW_WINDOW_2         = $4042             ; 窗口 2（$A000）的页号
+HW_WINDOW_3         = $4043             ; 窗口 3（$B000）的页号
+HW_WINDOW_4         = $4044             ; 窗口 4（$C000）的页号
+HW_WINDOW_5         = $4045             ; 窗口 5（$D000）的页号
+HW_WINDOW_6         = $4046             ; 窗口 6（$E000）的页号
+HW_WINDOW_7         = $4047             ; 窗口 7（$F000）的页号
+HW_DMA_MODE         = $4048             ; DMA 模式：位 7 启动，位 6 高速，位 5 目的是 CPU 地址
+HW_DMA_SOURCE_BANK  = $4049             ; DMA 源 bank：位 4 为 1 取扩展 RAM，低 4 位是源地址的第 18-15 位
+HW_DMA_SOURCE_LOW   = $404A             ; DMA 源地址的第 7-0 位
+HW_DMA_SOURCE_HIGH  = $404B             ; DMA 源地址：位 6-0 是第 14-8 位，位 7 要为 1
+HW_DMA_DEST_LOW     = $404C             ; DMA 目的地址低字节
+HW_DMA_DEST_HIGH    = $404D             ; DMA 目的地址高字节，目的是显存时位 7 为 1 表示扩展显存
+HW_DMA_LENGTH_LOW   = $404E             ; DMA 长度低字节，写“字节数 - 1”
+HW_DMA_LENGTH_HIGH  = $404F             ; DMA 长度高字节
+HW_VRAM_BANK        = $4300             ; 扩展显存的 32K bank
+HW_RESET_6576       = $4301             ; 写 $55 回到 FC 兼容模式
+HW_VOICE_PORT       = $4302             ; 语音端口
+
+; ---- 硬件寄存器的位 ----
+HW_CTRL_NMI         = $80               ; HW_PPU_CTRL：允许 NMI
+HW_CTRL_SPRITE_8X16 = $20               ; HW_PPU_CTRL：精灵 8x16
+HW_CTRL_STEP_32     = $04               ; HW_PPU_CTRL：显存地址每次加 32
+HW_MASK_GRAY        = $01               ; HW_PPU_MASK：灰度
+HW_MASK_BG_LEFT     = $02               ; HW_PPU_MASK：显示背景最左 8 像素
+HW_MASK_SPRITE_LEFT = $04               ; HW_PPU_MASK：显示精灵最左 8 像素
+HW_MASK_BG          = $08               ; HW_PPU_MASK：显示背景
+HW_MASK_SPRITE      = $10               ; HW_PPU_MASK：显示精灵
+HW_MASK_TINT_GREEN  = $20               ; HW_PPU_MASK：增强绿（PAL 顺序）
+HW_MASK_TINT_RED    = $40               ; HW_PPU_MASK：增强红
+HW_MASK_TINT_BLUE   = $80               ; HW_PPU_MASK：增强蓝
+HW_STATUS_VBLANK    = $80               ; HW_PPU_STATUS：垂直消隐
+HW_STATUS_SPRITE0   = $40               ; HW_PPU_STATUS：精灵 0 碰撞
+HW_STATUS_OVERFLOW  = $20               ; HW_PPU_STATUS：一行超过 8 个精灵
+HW_EXT_16_COLOR     = $80               ; HW_PPU_EXT：背景 16 色
+HW_EXT_NAMES_2000   = $01               ; HW_PPU_EXT：名称表从显存 $2000 起
+HW_KEY_DMA_ENABLE   = $80               ; HW_KEY_DATA（写）：使能 DMA 模式的位 6、5
+HW_DMA_START        = $80               ; HW_DMA_MODE：启动
+HW_DMA_FAST         = $40               ; HW_DMA_MODE：高速（1.78MB/s）
+HW_DMA_TO_CPU       = $20               ; HW_DMA_MODE：目的是 CPU 地址（工作 RAM）
+HW_DMA_SOURCE_RAM   = $10               ; HW_DMA_SOURCE_BANK：源是扩展 RAM
+HW_DMA_SOURCE_A15   = $80               ; HW_DMA_SOURCE_HIGH：源地址的第 15 位，真机要求为 1
+HW_TIMER_ENABLE     = $80               ; HW_TIMER_CONTROL：允许
+HW_TIMER_RELOAD     = $40               ; HW_TIMER_CONTROL：连续重载
+HW_TIMER_LINE_CLOCK = $20               ; HW_TIMER_CONTROL：基准时钟用行消隐时钟
+HW_IRQ_TIMER        = $80               ; HW_IRQ_MASK、HW_IRQ_PENDING：定时器
+HW_IRQ_MOUSE        = $40               ; 鼠标
+HW_IRQ_KEYBOARD     = $20               ; 键盘
+HW_IRQ_4            = $10               ; 中断 4
+HW_IRQ_FLOPPY       = $08               ; 软驱
+HW_IRQ_2            = $04               ; 中断 2
+HW_IRQ_1            = $02               ; 中断 1
 
 ; ---- 文件打开方式（FILE_MODE）----
 MODE_OPEN           = $00               ; 打开已有文件

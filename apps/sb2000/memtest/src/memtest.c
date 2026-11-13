@@ -21,23 +21,6 @@
 #define MSG_MEMORY "No memory"
 #define MSG_WAIT "Testing, please wait..."
 
-/* 寄存器：含义见 MapperSB2K.cpp 与 machines/sb2000/disassembly/docs/research/NES兼容模式研究.md */
-#define REG_PPU_CTRL 0x2000
-#define REG_PPU_STATUS 0x2002
-#define REG_PPU_ADDRESS 0x2006
-#define REG_PPU_DATA 0x2007
-#define REG_WINDOW2 0x4042
-#define REG_DMA_MODE 0x4048
-#define REG_DMA_SOURCE_BANK 0x4049
-#define REG_DMA_SOURCE_LOW 0x404A
-#define REG_DMA_SOURCE_MID 0x404B
-#define REG_DMA_DEST_LOW 0x404C
-#define REG_DMA_DEST_HIGH 0x404D
-#define REG_DMA_LENGTH_LOW 0x404E
-#define REG_DMA_LENGTH_HIGH 0x404F
-#define REG_VRAM_BANK 0x4300
-#define DMA_SOURCE_EXT_RAM 0x10
-
 /* 窗口 2 与测试单元 */
 #define WINDOW_ADDRESS 0xA000
 #define CELL_OFFSET 0x0800
@@ -60,7 +43,6 @@
 #define DMA_BYTES 16
 #define DMA_MODES 2
 #define DMA_DEST_ERAM 0x7C00
-#define DMA_MID_FLAG 0x80 /* 原厂 BIOS 每次都把 $404B 的位 7 置 1 */
 
 /* 公共工作区：各项测试依次使用；扩展 RAM 测试用 3 段，每段 128 字节 */
 static unsigned char work[3 * EXT_BANKS];
@@ -84,7 +66,7 @@ extern unsigned char _BSS_RUN__;
 extern unsigned char _BSS_SIZE__;
 
 /* 页寄存器直接选窗口 2，不经 DOS */
-#define MAP_WINDOW2(bank) (SB_BYTE_AT(REG_WINDOW2) = (bank))
+#define MAP_WINDOW2(bank) (SB_BYTE_AT(SB_HW_WINDOW_2) = (bank))
 #define CELL (*(volatile unsigned char *)(WINDOW_ADDRESS + CELL_OFFSET))
 
 /* 统计 work[first .. first+count) 里有多少个非 0 */
@@ -220,31 +202,15 @@ static void test_rom(void)
     rom_period = period;
 }
 
-static void vram_set_address(void)
-{
-    unsigned char sink = SB_BYTE_AT(REG_PPU_STATUS);
-
-    (void)sink;
-    SB_BYTE_AT(REG_PPU_ADDRESS) = (unsigned char)(VRAM_CELL >> 8);
-    SB_BYTE_AT(REG_PPU_ADDRESS) = (unsigned char)VRAM_CELL;
-}
-
-/* 读一个字节：第一次读可能只是刷新缓冲，重设地址后第二次读才是内容 */
+/* 读测试单元：用库函数，设地址后第一次读只刷新缓冲，重设地址后第二次读才是内容 */
 static unsigned char vram_read(void)
 {
-    unsigned char sink;
-
-    vram_set_address();
-    sink = SB_BYTE_AT(REG_PPU_DATA);
-    (void)sink;
-    vram_set_address();
-    return SB_BYTE_AT(REG_PPU_DATA);
+    return sb_ppu_peek(VRAM_CELL);
 }
 
 static void vram_write(unsigned char value)
 {
-    vram_set_address();
-    SB_BYTE_AT(REG_PPU_DATA) = value;
+    sb_ppu_fill(VRAM_CELL, value, 1);
 }
 
 /* 扩展显存 bank 0-31（$4300）：每个 bank 写入 bank 号，读回后数不同的值 */
@@ -255,19 +221,19 @@ static void test_ext_vram(void)
 
     memset(work + VRAM_BANKS, 0, VRAM_BANKS);
     for (k = 0; k < VRAM_BANKS; ++k) {
-        SB_BYTE_AT(REG_VRAM_BANK) = k;
+        SB_BYTE_AT(SB_HW_VRAM_BANK) = k;
         work[k] = vram_read();
         vram_write(k);
     }
     for (k = 0; k < VRAM_BANKS; ++k) {
-        SB_BYTE_AT(REG_VRAM_BANK) = k;
+        SB_BYTE_AT(SB_HW_VRAM_BANK) = k;
         value = vram_read();
         if (value < VRAM_BANKS) {
             work[VRAM_BANKS + value] = 1;
         }
     }
     for (k = VRAM_BANKS; k-- > 0;) {
-        SB_BYTE_AT(REG_VRAM_BANK) = k;
+        SB_BYTE_AT(SB_HW_VRAM_BANK) = k;
         vram_write(work[k]);
     }
     vram_distinct = count_set(VRAM_BANKS, VRAM_BANKS);
@@ -306,14 +272,14 @@ static void dma_copy(unsigned char mode, unsigned int dest, unsigned char mid_fl
     unsigned long source = (unsigned long)(unsigned char)(scratch_page - EXT_FIRST_BANK) << 12;
     unsigned int wait;
 
-    SB_BYTE_AT(REG_DMA_SOURCE_BANK) = DMA_SOURCE_EXT_RAM | (unsigned char)((source >> 15) & 0x0F);
-    SB_BYTE_AT(REG_DMA_SOURCE_LOW) = (unsigned char)source;
-    SB_BYTE_AT(REG_DMA_SOURCE_MID) = ((unsigned char)(source >> 8) & 0x7F) | mid_flag;
-    SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)dest;
-    SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(dest >> 8);
-    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = DMA_BYTES - 1; /* 长度寄存器写“字节数 − 1” */
-    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = 0;
-    SB_BYTE_AT(REG_DMA_MODE) = mode;
+    SB_BYTE_AT(SB_HW_DMA_SOURCE_BANK) = SB_HW_DMA_SOURCE_RAM | (unsigned char)((source >> 15) & 0x0F);
+    SB_BYTE_AT(SB_HW_DMA_SOURCE_LOW) = (unsigned char)source;
+    SB_BYTE_AT(SB_HW_DMA_SOURCE_HIGH) = ((unsigned char)(source >> 8) & 0x7F) | mid_flag;
+    SB_BYTE_AT(SB_HW_DMA_DEST_LOW) = (unsigned char)dest;
+    SB_BYTE_AT(SB_HW_DMA_DEST_HIGH) = (unsigned char)(dest >> 8);
+    SB_BYTE_AT(SB_HW_DMA_LENGTH_LOW) = DMA_BYTES - 1; /* 长度寄存器写“字节数 − 1” */
+    SB_BYTE_AT(SB_HW_DMA_LENGTH_HIGH) = 0;
+    SB_BYTE_AT(SB_HW_DMA_MODE) = mode;
     for (wait = 0; wait != 20000; ++wait) {
         __asm__("nop");
     }
@@ -343,7 +309,7 @@ static void test_dma_normal(void)
     sb_far_write(scratch_page, 0, dma_pattern, DMA_BYTES);
     for (mode = 0; mode < DMA_MODES; ++mode) {
         for (flag = 0; flag < 2; ++flag) {
-            dma_ok[0][mode][flag][0] = dma_try(dma_modes[mode], 0, flag ? DMA_MID_FLAG : 0);
+            dma_ok[0][mode][flag][0] = dma_try(dma_modes[mode], 0, flag ? SB_HW_DMA_SOURCE_A15 : 0);
         }
     }
     memcpy((void *)DMA_DEST_ERAM, saved, DMA_BYTES);
@@ -363,7 +329,7 @@ static void test_dma(void)
     for (mode = 0; mode < DMA_MODES; ++mode) {
         for (flag = 0; flag < 2; ++flag) {
             for (window = 0; window < 2; ++window) {
-                dma_ok[1][mode][flag][window] = dma_try(dma_modes[mode], window, flag ? DMA_MID_FLAG : 0);
+                dma_ok[1][mode][flag][window] = dma_try(dma_modes[mode], window, flag ? SB_HW_DMA_SOURCE_A15 : 0);
             }
         }
     }
@@ -376,7 +342,7 @@ static void run_tests(void)
 
     test_dma_normal();
     sb_display_off();
-    SB_BYTE_AT(REG_PPU_CTRL) = 0;
+    SB_BYTE_AT(SB_HW_PPU_CTRL) = 0;
     __asm__("php");
     __asm__("sei");
 
@@ -388,7 +354,7 @@ static void run_tests(void)
     test_ext_vram();
 
     MAP_WINDOW2(start_page + 2);
-    SB_BYTE_AT(REG_VRAM_BANK) = 0;
+    SB_BYTE_AT(SB_HW_VRAM_BANK) = 0;
     __asm__("plp");
     sb_display_on();
 }

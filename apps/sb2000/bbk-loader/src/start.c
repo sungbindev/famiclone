@@ -28,22 +28,8 @@
 
 #define BIOS_FILE "BIOS.BBK"
 
-/* 映射器与 DMA 寄存器，含义见 MapperSB2K.cpp */
-#define REG_PPU_CTRL 0x2000
-#define REG_WINDOW2 0x4042
-#define REG_DMA_MODE 0x4048
-#define REG_DMA_SOURCE_BANK 0x4049
-#define REG_DMA_SOURCE_LOW 0x404A
-#define REG_DMA_SOURCE_MID 0x404B
-#define REG_DMA_DEST_LOW 0x404C
-#define REG_DMA_DEST_HIGH 0x404D
-#define REG_DMA_LENGTH_LOW 0x404E
-#define REG_DMA_LENGTH_HIGH 0x404F
-#define DMA_SOURCE_ERAM 0x10
-#define DMA_TO_CPU 0xA0
-#define DMA_MID_FLAG 0x80
+/* DMA 的 ERAM 缓冲 */
 #define DMA_BUFFER 0x6800
-#define DMA_WAIT 3000U /* 约 2.5 帧；原厂 BIOS 在复制 3840 字节后等 1 帧 */
 
 /* 文件头与映像大小 */
 #define HEADER_SIZE 16
@@ -139,20 +125,8 @@ static const char *load_image(void)
 /* 把扩展 RAM 里 source 处的 4K 经 DMA 、ERAM 缓冲复制到页 page；源地址不要求对齐 */
 static void copy_block(unsigned char page, unsigned long source)
 {
-    unsigned int wait;
-
-    SB_BYTE_AT(REG_DMA_SOURCE_BANK) = DMA_SOURCE_ERAM | (unsigned char)((source >> 15) & 0x0F);
-    SB_BYTE_AT(REG_DMA_SOURCE_LOW) = (unsigned char)source;
-    SB_BYTE_AT(REG_DMA_SOURCE_MID) = ((unsigned char)(source >> 8) & 0x7F) | DMA_MID_FLAG;
-    SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)DMA_BUFFER;
-    SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(DMA_BUFFER >> 8);
-    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)(BLOCK_SIZE - 1); /* 长度寄存器写“字节数 − 1” */
-    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)((BLOCK_SIZE - 1) >> 8);
-    SB_BYTE_AT(REG_DMA_MODE) = DMA_TO_CPU;
-    for (wait = 0; wait != DMA_WAIT; ++wait) {
-        __asm__("nop");
-    }
-    SB_BYTE_AT(REG_WINDOW2) = page;
+    sb_dma_to_cpu(source, DMA_BUFFER, BLOCK_SIZE);
+    SB_BYTE_AT(SB_HW_WINDOW_2) = page;
     memcpy((void *)COPY_ADDRESS, (void *)DMA_BUFFER, BLOCK_SIZE);
 }
 
@@ -164,7 +138,7 @@ static void start_bios(void)
     unsigned char k;
 
     /* 此后 DOS 的显示与键盘不再运行 */
-    SB_BYTE_AT(REG_PPU_CTRL) = 0;
+    SB_BYTE_AT(SB_HW_PPU_CTRL) = 0;
     __asm__("sei");
 
     for (k = 0; k < IMAGE_BLOCKS; ++k) {

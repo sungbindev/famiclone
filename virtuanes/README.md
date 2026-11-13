@@ -10,7 +10,7 @@ fcdev 使用的调试用模拟器，由 VirtuaNES 改造而来（GPLv3，许可�
 virtuanes/
   VirtuaNES.slnx        Visual Studio 2026 解决方案
   build.ps1             命令行编译脚本
-  README.md  LICENSE    文档与许可
+  README.md  LICENSE  CHANGELOG.md  文档、许可与更新记录
   VirtuaNES/            工程与全部源码
     VirtuaNES.vcxproj   工程文件
     lang/Chinese.vlp    中文语言包，编译后复制到 exe 旁
@@ -28,7 +28,7 @@ virtuanes/
 - `DebugServer.cpp`：新增 `live` 命令，把调试模式切换为自由运行（fcdev 的 `run` 命令使用）。
 - `Config.h`、`MainFrame.cpp`：“后台运行”默认开启；窗口失去焦点或最小化时不再暂停模拟（原先“后台运行”关闭时会暂停，调试模式下 `run` 会因此一直等不到帧），失活时只停止读取键盘，“后台运行”选项对此不再起作用。
 - `Config.h`：“显示 240 线”“以 4:3 比例显示”默认开启。
-- `AboutDlg.cpp`、`AboutDlg.h`、`VirtuaNESres.h`：版本信息对话框显示“v1.0.0 调试版”（只改显示，`VIRTUANES_VERSION` 仍是 0x0097，录像与联机版本校验不受影响），QQ 号（普通文字，不是链接）放在原“E-mail”一行并把标签改成“QQ”，原“网址”一行隐藏；不再使用的 `CHyperLink.h` 已删除。
+- `AboutDlg.cpp`、`AboutDlg.h`、`VirtuaNESres.h`：版本信息对话框显示“v1.1.0 调试版”（只改显示，`VIRTUANES_VERSION` 仍是 0x0097，录像与联机版本校验不受影响），QQ 号（普通文字，不是链接）放在原“E-mail”一行并把标签改成“QQ”，原“网址”一行隐藏；不再使用的 `CHyperLink.h` 已删除。
 - `NES/Nes.cpp/.h`、`Config.h`、`VirtuaNES.vcxproj`：删除“双击版本信息里的网址把 NES 转成 BBK 的 GAM”功能（`NEStoGAM`、`GAM_out` 目录配置与 `NEStoGAM.rar`）。
 - `VirtuaNESres.h`：窗口标题由“VirtuaNES_BBK/Subor/YX”改为“VirtuaNES 调试版”，以便和其他 VirtuaNES 版本区分。
 - `MainFrame.cpp/.h`：窗口最小大小等于 1 倍画面（以 4:3 显示时客户区 320×240），不能再缩小；不以 4:3 显示且 1 倍画面比菜单栏单行宽度窄时，宽度取菜单栏单行宽度、高度按画面比例放大，画面不变形，菜单栏不换行；有鼠标的游戏中，点击画面捕获鼠标，双击鼠标右键退出捕获（原先是按鼠标中键）。

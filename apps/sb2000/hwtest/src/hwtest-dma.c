@@ -71,14 +71,14 @@ static void start_dma(unsigned char mode, unsigned int dest, unsigned int length
 {
     unsigned long source = (unsigned long)(unsigned char)(source_page - SOURCE_FIRST_BANK) << 12;
 
-    REG(DMA_SOURCE_BANK) = 0x10 | (unsigned char)((source >> 15) & 0x0F);
-    REG(DMA_SOURCE_LOW) = (unsigned char)source;
-    REG(DMA_SOURCE_HIGH) = ((unsigned char)(source >> 8) & 0x7F) | 0x80;
-    REG(DMA_DEST_LOW) = (unsigned char)dest;
-    REG(DMA_DEST_HIGH) = (unsigned char)(dest >> 8);
-    REG(DMA_LENGTH_LOW) = (unsigned char)length;
-    REG(DMA_LENGTH_HIGH) = (unsigned char)(length >> 8);
-    REG(DMA_MODE) = mode;
+    REG(SB_HW_DMA_SOURCE_BANK) = 0x10 | (unsigned char)((source >> 15) & 0x0F);
+    REG(SB_HW_DMA_SOURCE_LOW) = (unsigned char)source;
+    REG(SB_HW_DMA_SOURCE_HIGH) = ((unsigned char)(source >> 8) & 0x7F) | 0x80;
+    REG(SB_HW_DMA_DEST_LOW) = (unsigned char)dest;
+    REG(SB_HW_DMA_DEST_HIGH) = (unsigned char)(dest >> 8);
+    REG(SB_HW_DMA_LENGTH_LOW) = (unsigned char)length;
+    REG(SB_HW_DMA_LENGTH_HIGH) = (unsigned char)(length >> 8);
+    REG(SB_HW_DMA_MODE) = mode;
     settle();
 }
 
@@ -86,7 +86,7 @@ static void start_dma(unsigned char mode, unsigned int dest, unsigned int length
 static void fill_cells(void)
 {
     memset((void *)ERAM_CELL, FILL, CELL_BYTES);
-    vram_fill(VRAM_CELL_ADDRESS, FILL, CELL_BYTES);
+    sb_ppu_fill(VRAM_CELL_ADDRESS, FILL, CELL_BYTES);
 }
 
 /* 数 ERAM 观察点里变了几个字节 */
@@ -110,7 +110,7 @@ static unsigned char vram_changed(void)
     unsigned char i;
     unsigned char total = 0;
 
-    vram_read_block(VRAM_CELL_ADDRESS, buffer, CELL_BYTES);
+    sb_ppu_read(VRAM_CELL_ADDRESS, buffer, CELL_BYTES);
     for (i = 0; i < CELL_BYTES; ++i) {
         if (buffer[i] != FILL) {
             ++total;
@@ -128,7 +128,7 @@ static void test_gating(void)
     unsigned char value;
 
     for (row = 0; row < GATE_ROWS; ++row) {
-        REG(KEY_DATA) = gate_values[row];
+        REG(SB_HW_KEY_DATA) = gate_values[row];
         for (mode = 0; mode < GATE_MODES; ++mode) {
             for (target = 0; target < 2; ++target) {
                 dest = target ? VRAM_CELL_ADDRESS : ERAM_CELL;
@@ -145,14 +145,14 @@ static void test_gating(void)
             }
         }
     }
-    REG(KEY_DATA) = 0x80;
+    REG(SB_HW_KEY_DATA) = 0x80;
 }
 
 static void test_length(void)
 {
     unsigned char i;
 
-    REG(KEY_DATA) = 0x80;
+    REG(SB_HW_KEY_DATA) = 0x80;
     for (i = 0; i < LENGTH_CASES; ++i) {
         fill_cells();
         start_dma(0xA0, ERAM_CELL, length_values[i]);
@@ -167,13 +167,13 @@ static void test_bit15(void)
     unsigned char i;
     unsigned char sample[8];
 
-    REG(KEY_DATA) = 0x80;
-    REG(VRAM_BANK) = BANK_TEST;
-    vram_fill(0x8000, FILL, 16);
-    vram_fill(0x8100, FILL, 8);
+    REG(SB_HW_KEY_DATA) = 0x80;
+    REG(SB_HW_VRAM_BANK) = BANK_TEST;
+    sb_ppu_fill(0x8000, FILL, 16);
+    sb_ppu_fill(0x8100, FILL, 8);
     start_dma(0x80, 0x8000, 0x8010);
-    vram_read_block(0x8000, buffer, 16);
-    vram_read_block(0x8100, sample, 8);
+    sb_ppu_read(0x8000, buffer, 16);
+    sb_ppu_read(0x8100, sample, 8);
     bit15_head = 0;
     bit15_changed = 0;
     for (i = 0; i < 16; ++i) {
@@ -186,7 +186,7 @@ static void test_bit15(void)
             ++bit15_changed;
         }
     }
-    REG(VRAM_BANK) = 0;
+    REG(SB_HW_VRAM_BANK) = 0;
 }
 
 static const char *const step_names[DMA_STEPS] = { "DMA gate by $4020", "DMA length", "DMA length $8010" };
@@ -203,7 +203,7 @@ void dma_step(unsigned char index)
     unsigned char vram_saved[CELL_BYTES];
 
     memcpy(eram_saved, (void *)ERAM_CELL, CELL_BYTES);
-    vram_read_block(VRAM_CELL_ADDRESS, vram_saved, CELL_BYTES);
+    sb_ppu_read(VRAM_CELL_ADDRESS, vram_saved, CELL_BYTES);
 
     if (index == 0) {
         test_gating();
@@ -214,7 +214,7 @@ void dma_step(unsigned char index)
     }
 
     memcpy((void *)ERAM_CELL, eram_saved, CELL_BYTES);
-    vram_write_block(VRAM_CELL_ADDRESS, vram_saved, CELL_BYTES);
+    sb_ppu_write(VRAM_CELL_ADDRESS, vram_saved, CELL_BYTES);
 }
 
 /* D1：$4020 门控。每种 $4020 值、每种模式各一行：目的是 ERAM $7C00 和显存 $2780 时各有哪个观察点变了 */

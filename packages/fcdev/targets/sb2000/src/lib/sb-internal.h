@@ -108,4 +108,7 @@ void sbi_poke(unsigned int address, const unsigned char *source, unsigned char c
 /** 把固定地址 address 起的 count 个字节读到 dest。 */
 void sbi_peek(unsigned char *dest, unsigned int address, unsigned char count);
 
+/** 启动一次通用 DMA 并等它完成；length 为 0 或超过 $8000 时返回 SB_ERR_BAD_PARAMETER，否则返回 0。 */
+unsigned char sbi_dma_run(unsigned char mode, unsigned long source, unsigned int dest, unsigned int length);
+
 #endif

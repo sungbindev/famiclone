@@ -14,7 +14,7 @@
 #include "hwtest.h"
 
 #define OAM_TEST_INDEX 240 /* 精灵 60 的 Y 字节地址，DOS 的光标是精灵 0 */
-#define PALETTE_TEST (PALETTE + 60) /* BG 调色板第 15 组 */
+#define PALETTE_TEST (SB_HW_PALETTE + 60) /* BG 调色板第 15 组 */
 #define FRAME_COUNT 120
 #define POLL_LIMIT 60000U
 #define DELAY_SHORT 4000U
@@ -57,23 +57,11 @@ static void delay(unsigned int count)
     }
 }
 
-/* 清掉定时器中断标志并忽略它；$4032 的其余位保持 DOS 的值，不能写 1 去清键盘等中断，否则会丢掉已收到的键盘数据 */
-static void timer_clear(void)
-{
-    REG(IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW) | 0x80;
-}
-
-/* 允许定时器中断标志置位 */
-static void timer_allow(void)
-{
-    REG(IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW) & 0x7F;
-}
-
 /* 清掉并重新允许定时器中断标志 */
 static void timer_rearm(void)
 {
-    timer_clear();
-    timer_allow();
+    sb_timer_mask();
+    sb_timer_unmask();
 }
 
 static void test_ext(void)
@@ -82,23 +70,23 @@ static void test_ext(void)
     unsigned char ext_saved = REG(SB_PPU_EXT_CTRL_SHADOW);
 
     for (i = 0; i < 4; ++i) {
-        REG(PPU_EXT) = ext_values[i];
-        ext_back[i] = REG(PPU_EXT);
+        REG(SB_HW_PPU_EXT) = ext_values[i];
+        ext_back[i] = REG(SB_HW_PPU_EXT);
     }
-    REG(PPU_EXT) = ext_saved;
+    REG(SB_HW_PPU_EXT) = ext_saved;
 }
 
 static void test_oam(void)
 {
     unsigned char i;
 
-    REG(OAM_ADDRESS) = OAM_TEST_INDEX;
+    REG(SB_HW_OAM_ADDRESS) = OAM_TEST_INDEX;
     for (i = 0; i < 4; ++i) {
-        REG(OAM_DATA) = oam_values[i];
+        REG(SB_HW_OAM_DATA) = oam_values[i];
     }
     for (i = 0; i < 4; ++i) {
-        REG(OAM_ADDRESS) = OAM_TEST_INDEX + i;
-        oam_back[i] = REG(OAM_DATA);
+        REG(SB_HW_OAM_ADDRESS) = OAM_TEST_INDEX + i;
+        oam_back[i] = REG(SB_HW_OAM_DATA);
     }
 }
 
@@ -116,11 +104,11 @@ static void test_palette(void)
 
 static void test_write_only(void)
 {
-    write_only[0] = REG(PPU_CTRL);
-    write_only[1] = REG(PPU_MASK);
-    write_only[2] = REG(OAM_ADDRESS);
-    write_only[3] = REG(PPU_SCROLL);
-    write_only[4] = REG(PPU_ADDRESS);
+    write_only[0] = REG(SB_HW_PPU_CTRL);
+    write_only[1] = REG(SB_HW_PPU_MASK);
+    write_only[2] = REG(SB_HW_OAM_ADDRESS);
+    write_only[3] = REG(SB_HW_PPU_SCROLL);
+    write_only[4] = REG(SB_HW_PPU_ADDRESS);
 }
 
 static void test_unmapped(void)
@@ -137,10 +125,10 @@ static void test_sound(void)
     unsigned char i;
 
     for (i = 0; i < 4; ++i) {
-        REG(SOUND_ENABLE) = sound_values[i];
-        sound_back[i] = REG(SOUND_ENABLE);
+        REG(SB_HW_SOUND_ENABLE) = sound_values[i];
+        sound_back[i] = REG(SB_HW_SOUND_ENABLE);
     }
-    REG(SOUND_ENABLE) = 0xFF;
+    REG(SB_HW_SOUND_ENABLE) = 0xFF;
 }
 
 /* 只写 CLK 与中断允许位，不动位 0（方向），避免向键盘发出数据 */
@@ -148,43 +136,43 @@ static void test_keyboard(void)
 {
     unsigned char key_saved;
 
-    key_saved = REG(KEY_CONTROL);
+    key_saved = REG(SB_HW_KEY_CONTROL);
     key_back[0] = key_saved;
-    REG(KEY_CONTROL) = 0x80;
-    key_back[1] = REG(KEY_CONTROL);
-    REG(KEY_CONTROL) = 0x84;
-    key_back[2] = REG(KEY_CONTROL);
-    REG(KEY_CONTROL) = 0xC0;
-    key_back[3] = REG(KEY_CONTROL);
-    REG(KEY_CONTROL) = 0x80;
+    REG(SB_HW_KEY_CONTROL) = 0x80;
+    key_back[1] = REG(SB_HW_KEY_CONTROL);
+    REG(SB_HW_KEY_CONTROL) = 0x84;
+    key_back[2] = REG(SB_HW_KEY_CONTROL);
+    REG(SB_HW_KEY_CONTROL) = 0xC0;
+    key_back[3] = REG(SB_HW_KEY_CONTROL);
+    REG(SB_HW_KEY_CONTROL) = 0x80;
 }
 
 static void test_mouse(void)
 {
     unsigned char mouse_saved;
 
-    mouse_saved = REG(MOUSE_SELECT);
+    mouse_saved = REG(SB_HW_MOUSE_SELECT);
     mouse_back[0] = mouse_saved;
-    REG(MOUSE_SELECT) = 1;
-    mouse_back[1] = REG(MOUSE_SELECT);
-    REG(MOUSE_SELECT) = 0;
-    mouse_back[2] = REG(MOUSE_SELECT);
-    REG(MOUSE_SELECT) = mouse_saved & 1;
+    REG(SB_HW_MOUSE_SELECT) = 1;
+    mouse_back[1] = REG(SB_HW_MOUSE_SELECT);
+    REG(SB_HW_MOUSE_SELECT) = 0;
+    mouse_back[2] = REG(SB_HW_MOUSE_SELECT);
+    REG(SB_HW_MOUSE_SELECT) = mouse_saved & 1;
 }
 
 static void test_misc_reads(void)
 {
-    misc_back[0] = REG(EXT_IO);
-    misc_back[1] = REG(PAD_1);
-    misc_back[2] = REG(PAD_1);
-    misc_back[3] = REG(PAD_2);
-    misc_back[4] = REG(PAD_2);
+    misc_back[0] = REG(SB_HW_EXT_IO);
+    misc_back[1] = REG(SB_HW_PAD_1);
+    misc_back[2] = REG(SB_HW_PAD_1);
+    misc_back[3] = REG(SB_HW_PAD_2);
+    misc_back[4] = REG(SB_HW_PAD_2);
 
-    irq_back[0] = REG(IRQ_MASK);
-    irq_back[1] = REG(IRQ_PENDING);
-    irq_back[2] = REG(TIMER_CONTROL);
-    irq_back[3] = REG(TIMER_PRESET);
-    irq_back[4] = REG(TIMER_CURRENT);
+    irq_back[0] = REG(SB_HW_IRQ_MASK);
+    irq_back[1] = REG(SB_HW_IRQ_PENDING);
+    irq_back[2] = REG(SB_HW_TIMER_CONTROL);
+    irq_back[3] = REG(SB_HW_TIMER_PRESET);
+    irq_back[4] = REG(SB_HW_TIMER_CURRENT);
 }
 
 /* 实时时钟：只写地址，不写数据 */
@@ -192,10 +180,10 @@ static void test_rtc(void)
 {
     unsigned char i;
 
-    rtc_back[0] = REG(RTC_DATA);
+    rtc_back[0] = REG(SB_HW_RTC_DATA);
     for (i = 0; i < 8; ++i) {
-        REG(RTC_ADDRESS) = i;
-        rtc_back[1 + i] = REG(RTC_DATA);
+        REG(SB_HW_RTC_ADDRESS) = i;
+        rtc_back[1 + i] = REG(SB_HW_RTC_DATA);
     }
 }
 
@@ -204,26 +192,26 @@ static void test_timer_one_shot(void)
 {
     unsigned int n;
 
-    timer_clear();
-    REG(TIMER_CONTROL) = 0x00;
-    REG(TIMER_PRESET) = 0x40;
-    one_current_after_write = REG(TIMER_CURRENT);
-    timer_allow();
-    REG(TIMER_CONTROL) = 0x8F;
+    sb_timer_mask();
+    REG(SB_HW_TIMER_CONTROL) = 0x00;
+    REG(SB_HW_TIMER_PRESET) = 0x40;
+    one_current_after_write = REG(SB_HW_TIMER_CURRENT);
+    sb_timer_unmask();
+    REG(SB_HW_TIMER_CONTROL) = 0x8F;
     for (n = 0; n != POLL_LIMIT; ++n) {
-        if (REG(IRQ_PENDING) & 0x80) {
+        if (REG(SB_HW_IRQ_PENDING) & 0x80) {
             break;
         }
     }
-    one_pending = REG(IRQ_PENDING);
-    one_current = REG(TIMER_CURRENT);
+    one_pending = REG(SB_HW_IRQ_PENDING);
+    one_current = REG(SB_HW_TIMER_CURRENT);
     delay(DELAY_SHORT);
-    one_current_later = REG(TIMER_CURRENT);
-    timer_clear();
-    one_pending_cleared = REG(IRQ_PENDING);
-    timer_allow();
+    one_current_later = REG(SB_HW_TIMER_CURRENT);
+    sb_timer_mask();
+    one_pending_cleared = REG(SB_HW_IRQ_PENDING);
+    sb_timer_unmask();
     delay(DELAY_LONG);
-    one_pending_again = REG(IRQ_PENDING);
+    one_pending_again = REG(SB_HW_IRQ_PENDING);
 }
 
 /* 连续计时：数 FRAME_COUNT 个垂直消隐里定时器下溢的次数，一次轮询里同时看垂直消隐与定时器标志 */
@@ -233,24 +221,24 @@ static unsigned int count_ticks(unsigned char control, unsigned char preset)
     unsigned int ticks = 0;
     unsigned long guard = 0;
 
-    timer_clear();
-    REG(TIMER_CONTROL) = 0x00;
-    REG(TIMER_PRESET) = preset;
-    REG(TIMER_CONTROL) = control;
+    sb_timer_mask();
+    REG(SB_HW_TIMER_CONTROL) = 0x00;
+    REG(SB_HW_TIMER_PRESET) = preset;
+    REG(SB_HW_TIMER_CONTROL) = control;
     timer_rearm();
-    wait_vblank();
+    (void)sb_ppu_wait_vblank();
     while (frames < FRAME_COUNT && guard < 250000UL) {
         ++guard;
-        if (REG(PPU_STATUS) & 0x80) {
+        if (REG(SB_HW_PPU_STATUS) & 0x80) {
             ++frames;
         }
-        if (REG(IRQ_PENDING) & 0x80) {
+        if (REG(SB_HW_IRQ_PENDING) & 0x80) {
             ++ticks;
             timer_rearm();
         }
     }
-    REG(TIMER_CONTROL) = 0x00;
-    timer_clear();
+    REG(SB_HW_TIMER_CONTROL) = 0x00;
+    sb_timer_mask();
     return ticks;
 }
 
@@ -272,9 +260,9 @@ static void test_timer_line(void)
 /* 把定时器与中断屏蔽恢复成 DOS 的值 */
 static void restore_timer(void)
 {
-    REG(TIMER_CONTROL) = 0xEF;
-    REG(TIMER_PRESET) = 0x3C;
-    REG(IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW);
+    REG(SB_HW_TIMER_CONTROL) = 0xEF;
+    REG(SB_HW_TIMER_PRESET) = 0x3C;
+    REG(SB_HW_IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW);
 }
 
 static const char *const step_names[REG_STEPS] = {

@@ -16,8 +16,6 @@
 
 #define MSG_TOO_BIG "Program too big"
 
-#define REG_PPU_CTRL 0x2000
-
 /* 第 3 个 128K 窗口：扩展 RAM 页 $E0-$FF，共 32 页，每页 4K */
 #define WINDOW_FIRST_PAGE 0xE0
 #define WINDOW_PAGES 32
@@ -77,7 +75,7 @@ static void prepare_window(void)
 /* 进入 FC 兼容模式，不会返回 */
 static void start_probe(void)
 {
-    SB_BYTE_AT(REG_PPU_CTRL) = 0;
+    SB_BYTE_AT(SB_HW_PPU_CTRL) = 0;
     __asm__("sei");
 
     prepare_window();

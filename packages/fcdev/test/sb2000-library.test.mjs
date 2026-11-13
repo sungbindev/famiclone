@@ -173,6 +173,18 @@ describe('SB2000 运行库（在模拟器里运行）', { skip: SKIP_WITHOUT_SB2
     await runToDone(temp, { sources: ['display.c'] }, 40);
   });
 
+  it('通用 DMA', async () => {
+    await runToDone(temp, { sources: ['dma.c'] }, 20);
+  });
+
+  it('图形端口', async () => {
+    await runToDone(temp, { sources: ['ppu.c'] }, 12);
+  });
+
+  it('硬件定时器', async () => {
+    await runToDone(temp, { sources: ['timer.c'] }, 12);
+  });
+
   it('磁盘扇区服务', async () => {
     await runToDone(temp, { sources: ['disk.c'] }, 30, async (session) => {
       // 读回镜像，核对程序直接写下的扇区与格式化的磁道（逻辑扇区号 = (磁道 × 2 + 面) × 18 + 扇区 - 1）

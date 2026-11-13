@@ -26,6 +26,9 @@
 #include "sb2000-printer.h"
 #include "sb2000-sound.h"
 #include "sb2000-math.h"
+#include "sb2000-dma.h"
+#include "sb2000-ppu.h"
+#include "sb2000-timer.h"
 
 /**
  * 读写一个固定地址的字节，如 SB_BYTE_AT(SB_KEY_ASCII)。

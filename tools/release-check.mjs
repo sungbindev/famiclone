@@ -142,10 +142,18 @@ function checkPackedFiles(packageName, required) {
   return packedSet;
 }
 
-/** 检查 fcdev：说明文件、全部开发文档、各目标的运行库都在发布内容里。 */
+/** 检查 fcdev：说明文件、更新记录、全部开发文档、各目标的运行库都在发布内容里，更新记录里有当前版本的标题。 */
 function checkFcdev() {
   const packageDir = path.join(PACKAGES_DIR, 'fcdev');
-  const required = ['README.md', 'bin/fcdev.mjs'];
+  const required = ['README.md', 'CHANGELOG.md', 'bin/fcdev.mjs'];
+  const changelogFile = path.join(packageDir, 'CHANGELOG.md');
+  if (existsSync(changelogFile)) {
+    const { version } = readJson(path.join(packageDir, 'package.json'));
+    const heading = new RegExp(`^## ${version.replaceAll('.', '\\.')}(?![\\d.])`, 'm');
+    if (!heading.test(readFileSync(changelogFile, 'utf8'))) errors.push(`fcdev 的 CHANGELOG.md 里没有 ${version} 的更新说明（标题写成 "## ${version}（日期）"）`);
+  } else {
+    errors.push('fcdev 没有 CHANGELOG.md');
+  }
   const docsDir = path.join(packageDir, 'docs');
   if (existsSync(docsDir)) required.push(...listFiles(docsDir, packageDir));
   else errors.push('fcdev 没有 docs 目录，开发文档要随主包发布');

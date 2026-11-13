@@ -26,6 +26,7 @@ export const API_DOC_FILE = path.join(TARGET_DIR, 'api-reference.md');
 const MODULE_TITLES = {
   sb2000: '总头文件与通用调用', system: '系统与中断', memory: '内存页与远指针', text: '文字输出', input: '键盘、手柄与鼠标', clock: '日期与时间',
   file: '文件与目录', disk: '软驱扇区', math: '数学', sound: '声音与语音', printer: '打印机', ime: '中文输入法', display: '显示、窗口与图片',
+  dma: '通用 DMA', ppu: '图形端口', timer: '硬件定时器',
 };
 
 /**

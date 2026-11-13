@@ -80,56 +80,6 @@ static char text_buffer[34];
 static unsigned char flag_status[4][3];
 static unsigned char flag_after[4];
 
-/* ---- 显存读写 ---- */
-
-void vram_seek(unsigned int address)
-{
-    unsigned char sink = REG(PPU_STATUS);
-
-    (void)sink;
-    REG(PPU_ADDRESS) = (unsigned char)(address >> 8);
-    REG(PPU_ADDRESS) = (unsigned char)address;
-}
-
-void vram_fill(unsigned int address, unsigned char value, unsigned int count)
-{
-    vram_seek(address);
-    while (count-- != 0) {
-        REG(PPU_DATA) = value;
-    }
-}
-
-void vram_write_block(unsigned int address, const unsigned char *source, unsigned int count)
-{
-    unsigned int i;
-
-    vram_seek(address);
-    for (i = 0; i < count; ++i) {
-        REG(PPU_DATA) = source[i];
-    }
-}
-
-/* 读一个字节：设地址后第一次读只是刷新缓冲，重设地址后第二次读才是内容（与 memtest 相同） */
-unsigned char vram_peek(unsigned int address)
-{
-    unsigned char sink;
-
-    vram_seek(address);
-    sink = REG(PPU_DATA);
-    (void)sink;
-    vram_seek(address);
-    return REG(PPU_DATA);
-}
-
-void vram_read_block(unsigned int address, unsigned char *dest, unsigned int count)
-{
-    unsigned int i;
-
-    for (i = 0; i < count; ++i) {
-        dest[i] = vram_peek(address + i);
-    }
-}
-
 /* ---- 图形准备与恢复（要求显示已关） ---- */
 
 /* 保存会被改动的显存区域，并记下 $2008 的值 */
@@ -137,12 +87,12 @@ void gfx_open(void)
 {
     unsigned char page;
 
-    REG(VRAM_BANK) = 0;
+    REG(SB_HW_VRAM_BANK) = 0;
     ext_dos = REG(SB_PPU_EXT_CTRL_SHADOW);
     ext_default = ext_dos & 0x7F;
-    vram_read_block(SPRITE_ADDRESS, SAVE_SPRITE, SAVE_SPRITE_BYTES);
+    sb_ppu_read(SPRITE_ADDRESS, SAVE_SPRITE, SAVE_SPRITE_BYTES);
     for (page = 0; page < 4; ++page) {
-        vram_read_block((unsigned int)page * 0x800u + SAVE_NAME_OFFSET, SAVE_NAMES(page), SAVE_NAME_BYTES);
+        sb_ppu_read((unsigned int)page * 0x800u + SAVE_NAME_OFFSET, SAVE_NAMES(page), SAVE_NAME_BYTES);
     }
 }
 
@@ -150,12 +100,12 @@ void gfx_close(void)
 {
     unsigned char page;
 
-    REG(VRAM_BANK) = 0;
-    vram_write_block(SPRITE_ADDRESS, SAVE_SPRITE, SAVE_SPRITE_BYTES);
+    REG(SB_HW_VRAM_BANK) = 0;
+    sb_ppu_write(SPRITE_ADDRESS, SAVE_SPRITE, SAVE_SPRITE_BYTES);
     for (page = 0; page < 4; ++page) {
-        vram_write_block((unsigned int)page * 0x800u + SAVE_NAME_OFFSET, SAVE_NAMES(page), SAVE_NAME_BYTES);
+        sb_ppu_write((unsigned int)page * 0x800u + SAVE_NAME_OFFSET, SAVE_NAMES(page), SAVE_NAME_BYTES);
     }
-    REG(PPU_EXT) = ext_dos;
+    REG(SB_HW_PPU_EXT) = ext_dos;
 }
 
 /* 写入测试图块、精灵图案与调色板；之后 $4300 保持为 TEST_BANK，由 gfx_close 恢复成 0 */
@@ -164,45 +114,26 @@ static void assets_write(void)
     unsigned char i;
     unsigned char plane;
 
-    REG(VRAM_BANK) = TEST_BANK;
+    REG(SB_HW_VRAM_BANK) = TEST_BANK;
     for (i = 0; i < 4; ++i) {
-        vram_write_block(ADDRESS_SOLID + (unsigned int)i * 16u, bg_tiles[i], 16);
+        sb_ppu_write(ADDRESS_SOLID + (unsigned int)i * 16u, bg_tiles[i], 16);
     }
-    vram_fill(ADDRESS_BLANK, 0, 16);
+    sb_ppu_fill(ADDRESS_BLANK, 0, 16);
     for (i = 0; i < 16; ++i) {
         for (plane = 0; plane < 4; ++plane) {
-            vram_fill(ADDRESS_COLOR16 + (unsigned int)i * 32u + (unsigned int)plane * 8u, (i >> plane) & 1 ? 0xFF : 0x00, 8);
+            sb_ppu_fill(ADDRESS_COLOR16 + (unsigned int)i * 32u + (unsigned int)plane * 8u, (i >> plane) & 1 ? 0xFF : 0x00, 8);
         }
     }
     for (i = 0; i < SPRITE_COUNT; ++i) {
-        vram_write_block(SPRITE_ADDRESS + (unsigned int)i * 16u, sprite_tiles[i], 16);
+        sb_ppu_write(SPRITE_ADDRESS + (unsigned int)i * 16u, sprite_tiles[i], 16);
     }
     for (i = 0; i < 4; ++i) {
-        REG(PALETTE + 60 + i) = bg_colors[i];
-        REG(PALETTE + 16 + i) = sprite_colors[i];
+        REG(SB_HW_PALETTE + 60 + i) = bg_colors[i];
+        REG(SB_HW_PALETTE + 16 + i) = sprite_colors[i];
     }
 }
 
 /* ---- 场景绘制（要求显示已关） ---- */
-
-static void oam_reset(void)
-{
-    unsigned int i;
-
-    REG(OAM_ADDRESS) = 0;
-    for (i = 0; i < 256; ++i) {
-        REG(OAM_DATA) = 0xF0;
-    }
-}
-
-static void oam_put(unsigned char index, unsigned char y, unsigned char tile, unsigned char attr, unsigned char x)
-{
-    REG(OAM_ADDRESS) = (unsigned char)(index * 4);
-    REG(OAM_DATA) = y;
-    REG(OAM_DATA) = tile;
-    REG(OAM_DATA) = attr;
-    REG(OAM_DATA) = x;
-}
 
 /* 在名称表页 base（页号 * $800 或 $2000）的第 row 行第 col 列起填 width x height 个单元；单元 = 图块号低 12 位 + 调色板组 */
 static void cells_fill(unsigned int base, unsigned char row, unsigned char col, unsigned char width, unsigned char height, unsigned int tile, unsigned char bank)
@@ -213,22 +144,12 @@ static void cells_fill(unsigned int base, unsigned char row, unsigned char col, 
     unsigned char high = (unsigned char)((bank << 4) | (unsigned char)(tile >> 8));
 
     for (y = 0; y < height; ++y) {
-        vram_seek(base + (unsigned int)(row + y) * 64u + (unsigned int)col * 2u);
+        sb_ppu_address(base + (unsigned int)(row + y) * 64u + (unsigned int)col * 2u);
         for (x = 0; x < width; ++x) {
-            REG(PPU_DATA) = low;
-            REG(PPU_DATA) = high;
+            REG(SB_HW_PPU_DATA) = low;
+            REG(SB_HW_PPU_DATA) = high;
         }
     }
-}
-
-/* 打开显示：$2000 的 NMI 位固定为 0，滚动回到 (0, 0) */
-static void render(unsigned char mask, unsigned char ctrl, unsigned char ext)
-{
-    REG(PPU_CTRL) = ctrl;
-    REG(PPU_EXT) = ext;
-    REG(PPU_SCROLL) = 0;
-    REG(PPU_SCROLL) = 0;
-    REG(PPU_MASK) = mask;
 }
 
 /* ---- $2002 位 6、5 标志（关 NMI、关中断状态下调用） ---- */
@@ -237,16 +158,16 @@ static void flags_scene(unsigned char which)
 {
     unsigned char i;
 
-    oam_reset();
+    sb_ppu_oam_clear();
     cells_fill(0, 10, 4, 2, 2, TILE_SOLID2, TEST_BANK);
     cells_fill(0, 10, 18, 2, 2, TILE_BLANK, TEST_BANK); /* 精灵 0 在这里时下面不能有 DOS 的文字，否则会碰撞 */
     if (which == 0) {
-        oam_put(0, 85, SPRITE_SOLID, 0, 36);
+        sb_ppu_oam_put(0, 85, SPRITE_SOLID, 0, 36);
     } else if (which == 1) {
-        oam_put(0, 85, SPRITE_SOLID, 0, 150);
+        sb_ppu_oam_put(0, 85, SPRITE_SOLID, 0, 150);
     } else {
         for (i = 0; i < (which == 2 ? 9 : 8); ++i) {
-            oam_put(8 + i, 149, SPRITE_SOLID, 0, 10 + 16 * i);
+            sb_ppu_oam_put(8 + i, 149, SPRITE_SOLID, 0, 10 + 16 * i);
         }
     }
 }
@@ -259,17 +180,17 @@ void gfx_flags_run(void)
     gfx_open();
     assets_write();
     for (which = 0; which < 4; ++which) {
-        REG(PPU_MASK) = 0;
+        REG(SB_HW_PPU_MASK) = 0;
         flags_scene(which);
-        render(0x1E, 0x00, ext_default);
-        wait_vblank();
-        wait_vblank();
+        sb_ppu_render(0x1E, 0x00, ext_default);
+        (void)sb_ppu_wait_vblank();
+        (void)sb_ppu_wait_vblank();
         for (frame = 0; frame < 3; ++frame) {
-            flag_status[which][frame] = wait_vblank_status();
+            flag_status[which][frame] = sb_ppu_wait_vblank();
         }
-        flag_after[which] = REG(PPU_STATUS);
+        flag_after[which] = REG(SB_HW_PPU_STATUS);
     }
-    REG(PPU_MASK) = 0;
+    REG(SB_HW_PPU_MASK) = 0;
     gfx_close();
 }
 
@@ -355,7 +276,7 @@ static void screen_enter(void)
 {
     label(28, 0, "any key=next, Esc=stop");
     sb_display_off();
-    oam_reset();
+    sb_ppu_oam_clear();
 }
 
 /* 等一个键后恢复 DOS 的显示 */
@@ -363,8 +284,8 @@ static void screen_leave(void)
 {
     unsigned char key = hold();
 
-    REG(PPU_MASK) = 0;
-    REG(PPU_CTRL) = 0;
+    REG(SB_HW_PPU_MASK) = 0;
+    REG(SB_HW_PPU_CTRL) = 0;
     sb_display_on();
     if (key == KEY_ESC) {
         stopped = 1;
@@ -382,15 +303,15 @@ static void scene_attributes(void)
     label(24, 6, "00");
     label(24, 18, "20");
     screen_enter();
-    oam_put(8, 119, SPRITE_F, 0x00, 40);
-    oam_put(9, 119, SPRITE_F, 0x40, 88);
-    oam_put(10, 119, SPRITE_F, 0x80, 136);
-    oam_put(11, 119, SPRITE_F, 0xC0, 184);
+    sb_ppu_oam_put(8, 119, SPRITE_F, 0x00, 40);
+    sb_ppu_oam_put(9, 119, SPRITE_F, 0x40, 88);
+    sb_ppu_oam_put(10, 119, SPRITE_F, 0x80, 136);
+    sb_ppu_oam_put(11, 119, SPRITE_F, 0xC0, 184);
     cells_fill(0, 20, 4, 6, 2, TILE_SOLID2, TEST_BANK);
     cells_fill(0, 20, 16, 6, 2, TILE_SOLID2, TEST_BANK);
-    oam_put(12, 163, SPRITE_SOLID, 0x00, 48);
-    oam_put(13, 163, SPRITE_SOLID, 0x20, 144);
-    render(0x1E, 0x00, ext_default);
+    sb_ppu_oam_put(12, 163, SPRITE_SOLID, 0x00, 48);
+    sb_ppu_oam_put(13, 163, SPRITE_SOLID, 0x20, 144);
+    sb_ppu_render(0x1E, 0x00, ext_default);
     screen_leave();
 }
 
@@ -403,9 +324,9 @@ static void scene_mask_edges(void)
         label_hex(0, "V2 $2001 = ", mask_edges[i]);
         screen_enter();
         cells_fill(0, 22, 0, 2, 3, TILE_SOLID2, TEST_BANK);
-        oam_put(8, 213, SPRITE_SOLID, 0x00, 0);
-        oam_put(9, 213, SPRITE_SOLID, 0x00, 24);
-        render(mask_edges[i], 0x00, ext_default);
+        sb_ppu_oam_put(8, 213, SPRITE_SOLID, 0x00, 0);
+        sb_ppu_oam_put(9, 213, SPRITE_SOLID, 0x00, 24);
+        sb_ppu_render(mask_edges[i], 0x00, ext_default);
         screen_leave();
     }
 }
@@ -422,8 +343,8 @@ static void scene_mask_colors(void)
         cells_fill(0, 20, 8, 2, 4, TILE_SOLID1, TEST_BANK);
         cells_fill(0, 20, 11, 2, 4, TILE_SOLID2, TEST_BANK);
         cells_fill(0, 20, 14, 2, 4, TILE_SOLID3, TEST_BANK);
-        oam_put(8, 163, SPRITE_SOLID, 0x00, 200);
-        render(mask_colors[i], 0x00, ext_default);
+        sb_ppu_oam_put(8, 163, SPRITE_SOLID, 0x00, 200);
+        sb_ppu_render(mask_colors[i], 0x00, ext_default);
         screen_leave();
     }
 }
@@ -440,7 +361,7 @@ static void scene_pages(void)
         for (fill = 0; fill < 4; ++fill) {
             cells_fill((unsigned int)fill * 0x800u, 24, 0, 32, 4, 0x0C00u + (unsigned int)page_tiles[fill], TEST_BANK);
         }
-        render(0x1E, page, ext_default);
+        sb_ppu_render(0x1E, page, ext_default);
         screen_leave();
     }
 }
@@ -455,7 +376,7 @@ static void scene_ext_bit0(void)
         screen_enter();
         cells_fill(0, 24, 0, 32, 4, TILE_SOLID1, TEST_BANK);
         cells_fill(0x2000u, 24, 0, 32, 4, TILE_SOLID2, TEST_BANK);
-        render(0x1E, 0x00, (unsigned char)((ext_default & 0xFE) | bit0));
+        sb_ppu_render(0x1E, 0x00, (unsigned char)((ext_default & 0xFE) | bit0));
         screen_leave();
     }
 }
@@ -468,10 +389,10 @@ static void scene_sprite16(void)
     label(20, 14, "67");
     label(20, 22, "69");
     screen_enter();
-    oam_put(8, 135, 66, 0x00, 48);
-    oam_put(9, 135, 67, 0x00, 112);
-    oam_put(10, 135, 69, 0x00, 176);
-    render(0x1E, 0x20, ext_default);
+    sb_ppu_oam_put(8, 135, 66, 0x00, 48);
+    sb_ppu_oam_put(9, 135, 67, 0x00, 112);
+    sb_ppu_oam_put(10, 135, 69, 0x00, 176);
+    sb_ppu_render(0x1E, 0x20, ext_default);
     screen_leave();
 }
 
@@ -483,18 +404,18 @@ static void scene_palette(void)
     unsigned char entry;
 
     screen_begin();
-    label(0, 0, "V7 PALETTE");
+    label(0, 0, "V7 SB_HW_PALETTE");
     label(26, 0, "0 1 2 3 4 5 6 7 8 9 A B C D E");
     screen_enter();
     for (entry = 0; entry < 60; ++entry) {
-        REG(PALETTE + entry) = entry;
+        REG(SB_HW_PALETTE + entry) = entry;
     }
     for (bank = 0; bank < 15; ++bank) {
         for (row = 0; row < 4; ++row) {
             cells_fill(0, 16 + 2 * row, (unsigned char)(2 * bank), 2, 2, row == 0 ? TILE_BLANK : TILE_SOLID1 + row - 1, bank);
         }
     }
-    render(0x1E, 0x00, ext_default);
+    sb_ppu_render(0x1E, 0x00, ext_default);
     screen_leave();
 }
 
@@ -507,10 +428,10 @@ static void scene_color16(void)
     label(0, 0, "V8 16-COLOR");
     screen_enter();
     for (k = 0; k < 16; ++k) {
-        REG(PALETTE + k) = 0x20 + k;
+        REG(SB_HW_PALETTE + k) = 0x20 + k;
         cells_fill(0, 22, (unsigned char)(2 * k), 2, 4, TILE_COLOR16 + 2u * k, 0);
     }
-    render(0x1E, 0x00, (unsigned char)(ext_default | 0x80));
+    sb_ppu_render(0x1E, 0x00, (unsigned char)(ext_default | 0x80));
     screen_leave();
 }
 

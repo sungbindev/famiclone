@@ -29,24 +29,12 @@
 #define MSG_TRUNCATED "File is truncated"
 #define MSG_TOO_BIG "Program too big"
 
-/* 映射器与 DMA 寄存器，含义见 MapperSB2K.cpp */
-#define REG_PPU_CTRL 0x2000
-#define REG_VRAM_BANK 0x4300
-#define REG_RESET_6576 0x4301
+/* 映射器寄存器，含义见 MapperSB2K.cpp；其余寄存器用 sb2000.h 里的 SB_HW_ 符号 */
 #define REG_EXT_WINDOW 0x5006
-#define REG_DMA_MODE 0x4048
-#define REG_DMA_SOURCE_BANK 0x4049
-#define REG_DMA_SOURCE_LOW 0x404A
-#define REG_DMA_SOURCE_MID 0x404B
-#define REG_DMA_DEST_LOW 0x404C
-#define REG_DMA_DEST_HIGH 0x404D
-#define REG_DMA_LENGTH_LOW 0x404E
-#define REG_DMA_LENGTH_HIGH 0x404F
 
-/* DMA 模式：源是扩展 RAM 时 $4049 的 bit4 为 1；$4048 写它启动，复制到 CPU 地址或扩展显存 */
-#define DMA_SOURCE_ERAM 0x10
-#define DMA_TO_CPU 0xE0
-#define DMA_TO_VRAM 0xC0
+/* DMA 的目的：复制到 CPU 地址或扩展显存（真机上目的在程序窗口时 sb_dma_to_cpu 会拒绝，见待办备忘） */
+#define DMA_TO_CPU 0
+#define DMA_TO_VRAM 1
 
 /* 文件与窗口 */
 #define MAX_FILE_SIZE 0x040010UL /* 头 16 字节 + 128K PRG + 128K CHR */
@@ -212,14 +200,11 @@ static const char *load_game(void)
 /* 用 DMA 从扩展 RAM 的 source 处复制 4K 到 destination：mode 为 DMA_TO_CPU 或 DMA_TO_VRAM；源地址不要求对齐 */
 static void dma_block(unsigned long source, unsigned int destination, unsigned char mode)
 {
-    SB_BYTE_AT(REG_DMA_SOURCE_BANK) = DMA_SOURCE_ERAM | (unsigned char)((source >> 15) & 0x0F);
-    SB_BYTE_AT(REG_DMA_SOURCE_LOW) = (unsigned char)source;
-    SB_BYTE_AT(REG_DMA_SOURCE_MID) = (unsigned char)(source >> 8) & 0x7F;
-    SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)destination;
-    SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(destination >> 8);
-    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)(BLOCK_SIZE - 1); /* 长度寄存器写“字节数 − 1” */
-    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)((BLOCK_SIZE - 1) >> 8);
-    SB_BYTE_AT(REG_DMA_MODE) = mode;
+    if (mode == DMA_TO_CPU) {
+        sb_dma_to_cpu(source, destination, BLOCK_SIZE);
+    } else {
+        sb_dma_to_vram(source, destination, BLOCK_SIZE);
+    }
 }
 
 /* 把 source 处的 4K 复制到扩展 RAM 页 page：先把该页映射到窗口 2，再让 DMA 写 CPU 地址 */
@@ -244,7 +229,7 @@ static void start_game(void)
     unsigned char k;
 
     /* 此后 DOS 的显示与键盘不再运行 */
-    SB_BYTE_AT(REG_PPU_CTRL) = 0;
+    SB_BYTE_AT(SB_HW_PPU_CTRL) = 0;
     __asm__("sei");
 
     for (k = 0; k < prg_blocks; ++k) {
@@ -265,7 +250,7 @@ static void start_game(void)
 
     /* CHR 紧接在 PRG 之后，每 4K 一块，8 块（32K）占一个显存 bank */
     for (k = 0; k < chr_blocks; ++k) {
-        SB_BYTE_AT(REG_VRAM_BANK) = VRAM_BANK_FIRST + (k >> 3);
+        SB_BYTE_AT(SB_HW_VRAM_BANK) = VRAM_BANK_FIRST + (k >> 3);
         dma_block(base + HEADER_SIZE + ((unsigned long)(prg_blocks + k) << 12), VRAM_WINDOW_BIT | ((unsigned int)(k & 7) << 12), DMA_TO_VRAM);
     }
 

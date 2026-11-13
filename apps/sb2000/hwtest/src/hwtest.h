@@ -16,45 +16,6 @@
 
 #define REG(address) SB_BYTE_AT(address)
 
-/* 图形端口 */
-#define PPU_CTRL 0x2000
-#define PPU_MASK 0x2001
-#define PPU_STATUS 0x2002
-#define OAM_ADDRESS 0x2003
-#define OAM_DATA 0x2004
-#define PPU_SCROLL 0x2005
-#define PPU_ADDRESS 0x2006
-#define PPU_DATA 0x2007
-#define PPU_EXT 0x2008
-#define PALETTE 0x2040
-
-/* 声音、键盘、鼠标与外设 */
-#define SOUND_ENABLE 0x4015
-#define PAD_1 0x4016
-#define PAD_2 0x4017
-#define KEY_DATA 0x4020
-#define KEY_CONTROL 0x4022
-#define MOUSE_SELECT 0x4023
-#define EXT_IO 0x4026
-#define IRQ_MASK 0x4032
-#define IRQ_PENDING 0x4033
-#define TIMER_CONTROL 0x4034
-#define TIMER_PRESET 0x4035
-#define TIMER_CURRENT 0x4036
-#define RTC_ADDRESS 0x4080
-#define RTC_DATA 0x4081
-
-/* DMA */
-#define DMA_MODE 0x4048
-#define DMA_SOURCE_BANK 0x4049
-#define DMA_SOURCE_LOW 0x404A
-#define DMA_SOURCE_HIGH 0x404B
-#define DMA_DEST_LOW 0x404C
-#define DMA_DEST_HIGH 0x404D
-#define DMA_LENGTH_LOW 0x404E
-#define DMA_LENGTH_HIGH 0x404F
-#define VRAM_BANK 0x4300
-
 /* 菜单与按键 */
 #define KEY_ESC 0x1B
 
@@ -77,8 +38,6 @@ void ui_blank(void);
 void ui_puts(const char *text);
 void ui_print(const char *text);
 unsigned char ui_wait(const char *tail);
-void wait_vblank(void);
-unsigned char wait_vblank_status(void);
 
 /* hwtest-report.c：报告文件。文字先写进申请到的扩展 RAM 页，report_close 时整个写成 HWTEST.TXT */
 unsigned char report_open(void);
@@ -104,14 +63,7 @@ void dma_step(unsigned char index);
 const char *dma_step_name(unsigned char index);
 void dma_report(void);
 
-/* hwtest-gfx.c：显存读写（需要关着显示，$2000 的地址增量位为 0） */
-void vram_seek(unsigned int address);
-void vram_fill(unsigned int address, unsigned char value, unsigned int count);
-void vram_read_block(unsigned int address, unsigned char *dest, unsigned int count);
-void vram_write_block(unsigned int address, const unsigned char *source, unsigned int count);
-unsigned char vram_peek(unsigned int address);
-
-/* hwtest-gfx.c：图形 */
+/* hwtest-gfx.c：图形（显存读写等用 sb2000.h 里的 sb_ppu_ 函数） */
 void gfx_open(void);
 void gfx_close(void);
 void gfx_flags_run(void);

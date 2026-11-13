@@ -71,11 +71,11 @@ fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文�
 | 目标 | 产物 | 头文件 | 说明 |
 | --- | --- | --- | --- |
 | `nes` | `.nes` | `nes.h`（cc65）、`fcnes.h` | NROM，16K PRG 加 8K CHR；`fcnes.h` 提供调色板、文字显示与等待垂直消隐 |
-| `sb2000` | `.EXE` | `sb2000.h` | 程序从 `$8000` 起装入，默认最大 16K，设 `targetOptions.banks` 后可换页做到约 468K；C 栈在窗口顶端；运行库把 DOS 的系统调用封装成 180 多个 C 函数（文字、键盘手柄鼠标、文件目录、软驱、显示、声音、数学、打印机、输入法等），用 `fcdev api` 查询，整本文档见 `targets/sb2000/api-reference.md` |
+| `sb2000` | `.EXE` | `sb2000.h` | 程序从 `$8000` 起装入，默认最大 16K，设 `targetOptions.banks` 后可换页做到约 468K；C 栈在窗口顶端；运行库把 DOS 的系统调用和硬件寄存器封装成 200 多个 C 函数（文字、键盘手柄鼠标、文件目录、软驱、显示、声音、数学、打印机、输入法，以及 DMA、图形端口、定时器等硬件操作），用 `fcdev api` 查询，整本文档见 `targets/sb2000/api-reference.md` |
 
 ## 文档
 
-完整的使用手册与开发文档随本包发布，装好后在 `node_modules/fcdev/docs/`。终端里运行 `fcdev docs` 列出全部主题，`fcdev docs <主题>` 给出该文档的本机路径。
+完整的使用手册与开发文档随本包发布，装好后在 `node_modules/fcdev/docs/`。终端里运行 `fcdev docs` 列出全部主题，`fcdev docs <主题>` 给出该文档的本机路径。更新记录在本包的 `CHANGELOG.md`。
 
 | 想做什么 | 主题 | 文档 |
 | --- | --- | --- |

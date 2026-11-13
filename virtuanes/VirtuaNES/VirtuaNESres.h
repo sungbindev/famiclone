@@ -12,7 +12,7 @@
 #define	VIRTUANES_MUTEX					"VirtuaNESmutex"
 
 // VirtuaNES version text and QQ number shown in the version dialog
-#define	VIRTUANES_VERSION_TEXT			"1.0.0 µ÷ÊÔ°æ"
+#define	VIRTUANES_VERSION_TEXT			"1.1.0 µ÷ÊÔ°æ"
 #define	VIRTUANES_QQ			        "46427991"
 
 // VirtuaNES private windows message

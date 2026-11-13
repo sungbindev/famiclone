@@ -64,26 +64,6 @@ unsigned char ui_wait(const char *tail)
     return sb_getkey();
 }
 
-/* 轮询 $2002 位 7，等到下一次垂直消隐开始，返回读到的 $2002（含位 6、5）；读 $2002 会清掉位 7。超时返回 0 */
-unsigned char wait_vblank_status(void)
-{
-    unsigned int n;
-    unsigned char status = REG(PPU_STATUS);
-
-    for (n = 0; n != VBLANK_LIMIT; ++n) {
-        status = REG(PPU_STATUS);
-        if (status & 0x80) {
-            return status;
-        }
-    }
-    return 0;
-}
-
-void wait_vblank(void)
-{
-    (void)wait_vblank_status();
-}
-
 /* 记下测前的 64 项调色板 */
 static void palette_save(void)
 {
@@ -91,7 +71,7 @@ static void palette_save(void)
 
     sb_display_off();
     for (i = 0; i < PALETTE_ENTRIES; ++i) {
-        ERAM_PALETTE[i] = REG(PALETTE + i) & 0x3F;
+        ERAM_PALETTE[i] = REG(SB_HW_PALETTE + i) & 0x3F;
     }
     sb_display_on();
 }
@@ -102,12 +82,12 @@ static void palette_restore(void)
 
     sb_display_off();
     for (i = 0; i < PALETTE_ENTRIES; ++i) {
-        REG(PALETTE + i) = ERAM_PALETTE[i];
+        REG(SB_HW_PALETTE + i) = ERAM_PALETTE[i];
     }
     sb_display_on();
 }
 
-/* \u6309\u952e\u540e\u5148\u7b49\u4e00\u4f1a\u513f\uff08\u4e2d\u65ad\u5f00\u7740\uff09\uff0c\u8ba9 DOS \u628a\u6309\u952e\u7684\u91ca\u653e\u7801\u6536\u5b8c\uff0c\u518d\u5173\u4e2d\u65ad\u505a\u6d4b\u8bd5 */
+/* 按键后先等一会儿（中断开着），让 DOS 把按键的释放码收完，再关中断做测试 */
 static void settle_keys(void)
 {
     unsigned int n;
@@ -134,7 +114,7 @@ static void run_step(unsigned char index)
     unsigned char i;
 
     sb_display_off();
-    REG(PPU_CTRL) = 0;
+    REG(SB_HW_PPU_CTRL) = 0;
     __asm__("php");
     __asm__("sei");
 
@@ -149,7 +129,7 @@ static void run_step(unsigned char index)
     __asm__("plp");
     for (i = 0; i < PALETTE_ENTRIES; ++i) {
         if ((i & 3) != 0) {
-            REG(PALETTE + i) = probe_colors[index % 3];
+            REG(SB_HW_PALETTE + i) = probe_colors[index % 3];
         }
     }
     sb_display_on();

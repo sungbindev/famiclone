@@ -1,7 +1,7 @@
 # SB2000 C 接口参考
 
 本文由头文件 `include/sb2000-*.h` 的文档注释生成，请不要手改；改注释后运行 `node tools/gen-sb2000-api-doc.mjs`。
-共 184 个函数，14 个模块。随时查询用 `fcdev api`：`fcdev api <函数名>` 看完整文档，`fcdev api <模块名>` 看模块的函数列表，`fcdev api '$7B'` 看用到某个系统调用的函数，`fcdev api <词>` 按名称与说明搜索。
+共 204 个函数，17 个模块。随时查询用 `fcdev api`：`fcdev api <函数名>` 看完整文档，`fcdev api <模块名>` 看模块的函数列表，`fcdev api '$7B'` 看用到某个系统调用的函数，`fcdev api <词>` 按名称与说明搜索。
 
 约定：
 
@@ -15,15 +15,18 @@
 - [日期与时间（sb2000-clock.h）](#clock)
 - [软驱扇区（sb2000-disk.h）](#disk)
 - [显示、窗口与图片（sb2000-display.h）](#display)
+- [通用 DMA（sb2000-dma.h）](#dma)
 - [文件与目录（sb2000-file.h）](#file)
 - [中文输入法（sb2000-ime.h）](#ime)
 - [键盘、手柄与鼠标（sb2000-input.h）](#input)
 - [数学（sb2000-math.h）](#math)
 - [内存页与远指针（sb2000-memory.h）](#memory)
+- [图形端口（sb2000-ppu.h）](#ppu)
 - [打印机（sb2000-printer.h）](#printer)
 - [声音与语音（sb2000-sound.h）](#sound)
 - [系统与中断（sb2000-system.h）](#system)
 - [文字输出（sb2000-text.h）](#text)
+- [硬件定时器（sb2000-timer.h）](#timer)
 - [总头文件与通用调用（sb2000.h）](#sb2000)
 - [系统调用覆盖表](#系统调用覆盖表)
 
@@ -847,6 +850,66 @@ unsigned int sb_image_unpack_to_memory(const void *stream, unsigned char group, 
 - `address`：目的窗口地址。
 
 返回：解出的字节数。
+
+<a id="dma"></a>
+## 通用 DMA（sb2000-dma.h）
+
+| 函数 | 说明 | 系统调用 |
+| --- | --- | --- |
+| [`sb_dma_page_address`](#sb_dma_page_address) | 把扩展 RAM 的页号与页内偏移换算成 DMA 的源地址。 |  |
+| [`sb_dma_to_cpu`](#sb_dma_to_cpu) | 用 DMA 把扩展 RAM 里的数据复制到 CPU 地址。只有目的在 ERAM（$6000-$7FFF）时有效，目的范围不能越过 $8000。 |  |
+| [`sb_dma_to_vram`](#sb_dma_to_vram) | 用 DMA 把扩展 RAM 里的数据复制到显存。目的地址不小于 $8000 时是扩展显存，再加 $4300 选的 32K bank，否则是内置字符 RAM。 |  |
+
+<a id="sb_dma_page_address"></a>
+### sb_dma_page_address
+
+```c
+unsigned long sb_dma_page_address(unsigned char page, unsigned int offset);
+```
+
+把扩展 RAM 的页号与页内偏移换算成 DMA 的源地址。
+
+参数：
+
+- `page`：扩展 RAM 页号，0x80 到 0xFF。
+- `offset`：页内偏移，可以超过一页。
+
+返回：源地址，传给 sb_dma_to_cpu、sb_dma_to_vram。
+
+<a id="sb_dma_to_cpu"></a>
+### sb_dma_to_cpu
+
+```c
+unsigned char sb_dma_to_cpu(unsigned long source, unsigned int dest, unsigned int length);
+```
+
+用 DMA 把扩展 RAM 里的数据复制到 CPU 地址。只有目的在 ERAM（$6000-$7FFF）时有效，目的范围不能越过 $8000。
+
+参数：
+
+- `source`：源地址，用 sb_dma_page_address 换算。
+- `dest`：目的 CPU 地址。
+- `length`：字节数，1 到 $8000。
+
+返回：0 成功；SB_ERR_BAD_PARAMETER 长度为 0 或超过 $8000，或目的范围越过 $8000。
+
+<a id="sb_dma_to_vram"></a>
+### sb_dma_to_vram
+
+```c
+unsigned char sb_dma_to_vram(unsigned long source, unsigned int dest, unsigned int length);
+```
+
+用 DMA 把扩展 RAM 里的数据复制到显存。目的地址不小于 $8000 时是扩展显存，再加 $4300 选的 32K bank，否则是内置字符 RAM。
+调用时要关着显示，或在垂直消隐期间。
+
+参数：
+
+- `source`：源地址，用 sb_dma_page_address 换算。
+- `dest`：目的显存地址。
+- `length`：字节数，1 到 $8000。
+
+返回：0 成功；SB_ERR_BAD_PARAMETER 长度为 0 或超过 $8000。
 
 <a id="file"></a>
 ## 文件与目录（sb2000-file.h）
@@ -2282,6 +2345,177 @@ void sb_window_map_group(unsigned char group);
 
 - `group`：页组的首页号。
 
+<a id="ppu"></a>
+## 图形端口（sb2000-ppu.h）
+
+| 函数 | 说明 | 系统调用 |
+| --- | --- | --- |
+| [`sb_ppu_address`](#sb_ppu_address) | 设置显存地址（$2006），之后读写 $2007 从这里开始。 |  |
+| [`sb_ppu_write`](#sb_ppu_write) | 把一段数据写进显存。 |  |
+| [`sb_ppu_fill`](#sb_ppu_fill) | 把显存的一段填成同一个值。 |  |
+| [`sb_ppu_peek`](#sb_ppu_peek) | 读显存的一个字节。设地址后第一次读只刷新缓冲，所以函数设两次地址，取第二次读到的值。 |  |
+| [`sb_ppu_read`](#sb_ppu_read) | 读一段显存。 |  |
+| [`sb_ppu_palette_set`](#sb_ppu_palette_set) | 写调色板的一项（$2040 起共 64 项：背景 0-31，精灵 32-63）。 |  |
+| [`sb_ppu_palette_get`](#sb_ppu_palette_get) | 读调色板的一项，只返回低 6 位（读出的位 6 恒为 1，已去掉）。 |  |
+| [`sb_ppu_oam_clear`](#sb_ppu_oam_clear) | 把精灵 RAM 的 256 字节全部填成 $F0，使全部 64 个精灵都在屏幕之外。 |  |
+| [`sb_ppu_oam_put`](#sb_ppu_oam_put) | 写一个精灵（4 字节）。读回时属性的位 4-2 总是 0。 |  |
+| [`sb_ppu_wait_vblank`](#sb_ppu_wait_vblank) | 等垂直消隐：轮询 $2002 直到位 7 为 1，最多读 65535 次。 |  |
+| [`sb_ppu_render`](#sb_ppu_render) | 设置控制寄存器与扩展控制寄存器、滚动回到 (0, 0)，最后写显示寄存器打开显示。 |  |
+
+<a id="sb_ppu_address"></a>
+### sb_ppu_address
+
+```c
+void sb_ppu_address(unsigned int address);
+```
+
+设置显存地址（$2006），之后读写 $2007 从这里开始。
+
+参数：
+
+- `address`：显存地址。
+
+<a id="sb_ppu_write"></a>
+### sb_ppu_write
+
+```c
+void sb_ppu_write(unsigned int address, const unsigned char *data, unsigned int count);
+```
+
+把一段数据写进显存。
+
+参数：
+
+- `address`：显存起始地址。
+- `data`：数据。
+- `count`：字节数。
+
+<a id="sb_ppu_fill"></a>
+### sb_ppu_fill
+
+```c
+void sb_ppu_fill(unsigned int address, unsigned char value, unsigned int count);
+```
+
+把显存的一段填成同一个值。
+
+参数：
+
+- `address`：显存起始地址。
+- `value`：填充值。
+- `count`：字节数。
+
+<a id="sb_ppu_peek"></a>
+### sb_ppu_peek
+
+```c
+unsigned char sb_ppu_peek(unsigned int address);
+```
+
+读显存的一个字节。设地址后第一次读只刷新缓冲，所以函数设两次地址，取第二次读到的值。
+
+参数：
+
+- `address`：显存地址。
+
+返回：该地址的内容。
+
+<a id="sb_ppu_read"></a>
+### sb_ppu_read
+
+```c
+void sb_ppu_read(unsigned int address, unsigned char *dest, unsigned int count);
+```
+
+读一段显存。
+
+参数：
+
+- `address`：显存起始地址。
+- `dest`：存放数据的缓冲。
+- `count`：字节数。
+
+<a id="sb_ppu_palette_set"></a>
+### sb_ppu_palette_set
+
+```c
+void sb_ppu_palette_set(unsigned char index, unsigned char color);
+```
+
+写调色板的一项（$2040 起共 64 项：背景 0-31，精灵 32-63）。
+
+参数：
+
+- `index`：项号，0 到 63。
+- `color`：颜色：低 4 位色相，位 5-4 亮度。
+
+<a id="sb_ppu_palette_get"></a>
+### sb_ppu_palette_get
+
+```c
+unsigned char sb_ppu_palette_get(unsigned char index);
+```
+
+读调色板的一项，只返回低 6 位（读出的位 6 恒为 1，已去掉）。
+
+参数：
+
+- `index`：项号，0 到 63。
+
+返回：颜色。
+
+<a id="sb_ppu_oam_clear"></a>
+### sb_ppu_oam_clear
+
+```c
+void sb_ppu_oam_clear(void);
+```
+
+把精灵 RAM 的 256 字节全部填成 $F0，使全部 64 个精灵都在屏幕之外。
+
+<a id="sb_ppu_oam_put"></a>
+### sb_ppu_oam_put
+
+```c
+void sb_ppu_oam_put(unsigned char index, unsigned char y, unsigned char tile, unsigned char attr, unsigned char x);
+```
+
+写一个精灵（4 字节）。读回时属性的位 4-2 总是 0。
+
+参数：
+
+- `index`：精灵序号，0 到 63。
+- `y`：垂直位置，实际显示在 y + 1 行。
+- `tile`：图块号。
+- `attr`：属性：位 7 垂直翻转，位 6 水平镜像，位 5 在背景之后，位 1-0 调色板组。
+- `x`：水平位置。
+
+<a id="sb_ppu_wait_vblank"></a>
+### sb_ppu_wait_vblank
+
+```c
+unsigned char sb_ppu_wait_vblank(void);
+```
+
+等垂直消隐：轮询 $2002 直到位 7 为 1，最多读 65535 次。
+
+返回：读到垂直消隐时 $2002 的值；超时返回 0。
+
+<a id="sb_ppu_render"></a>
+### sb_ppu_render
+
+```c
+void sb_ppu_render(unsigned char mask, unsigned char control, unsigned char ext);
+```
+
+设置控制寄存器与扩展控制寄存器、滚动回到 (0, 0)，最后写显示寄存器打开显示。
+
+参数：
+
+- `mask`：显示寄存器（$2001）的值，如 SB_HW_MASK_BG | SB_HW_MASK_SPRITE。
+- `control`：控制寄存器（$2000）的值，不要带允许 NMI 的位，除非 NMI 已经准备好。
+- `ext`：扩展控制寄存器（$2008）的值。
+
 <a id="printer"></a>
 ## 打印机（sb2000-printer.h）
 
@@ -3182,6 +3416,81 @@ void sb_beep(void);
 ```
 
 发一声提示音，用方波通道 2。
+
+<a id="timer"></a>
+## 硬件定时器（sb2000-timer.h）
+
+| 函数 | 说明 | 系统调用 |
+| --- | --- | --- |
+| [`sb_timer_start`](#sb_timer_start) | 设置并启动定时器：先写控制字节，再写预置值（预置值同时装入当前值）。 |  |
+| [`sb_timer_stop`](#sb_timer_stop) | 停止定时器：控制字节写 0。 |  |
+| [`sb_timer_current`](#sb_timer_current) | 读定时器当前值（递减）。 |  |
+| [`sb_timer_pending`](#sb_timer_pending) | 读定时器下溢标志（$4033 的位 7）。 |  |
+| [`sb_timer_mask`](#sb_timer_mask) | 屏蔽定时器中断并清除下溢标志。 |  |
+| [`sb_timer_unmask`](#sb_timer_unmask) | 允许定时器中断：之后下溢时置标志，并产生中断（中断没有被关掉时）。 |  |
+
+<a id="sb_timer_start"></a>
+### sb_timer_start
+
+```c
+void sb_timer_start(unsigned char control, unsigned char preset);
+```
+
+设置并启动定时器：先写控制字节，再写预置值（预置值同时装入当前值）。
+
+参数：
+
+- `control`：控制字节：位 7 允许，位 6 连续重载（0 只计一次），位 5 行消隐时钟（0 是 CPU 时钟），位 3-0 预分频。
+- `preset`：预置值。
+
+<a id="sb_timer_stop"></a>
+### sb_timer_stop
+
+```c
+void sb_timer_stop(void);
+```
+
+停止定时器：控制字节写 0。
+
+<a id="sb_timer_current"></a>
+### sb_timer_current
+
+```c
+unsigned char sb_timer_current(void);
+```
+
+读定时器当前值（递减）。
+
+返回：当前值。
+
+<a id="sb_timer_pending"></a>
+### sb_timer_pending
+
+```c
+unsigned char sb_timer_pending(void);
+```
+
+读定时器下溢标志（$4033 的位 7）。
+
+返回：1 已下溢；0 没有。
+
+<a id="sb_timer_mask"></a>
+### sb_timer_mask
+
+```c
+void sb_timer_mask(void);
+```
+
+屏蔽定时器中断并清除下溢标志。
+
+<a id="sb_timer_unmask"></a>
+### sb_timer_unmask
+
+```c
+void sb_timer_unmask(void);
+```
+
+允许定时器中断：之后下溢时置标志，并产生中断（中断没有被关掉时）。
 
 <a id="sb2000"></a>
 ## 总头文件与通用调用（sb2000.h）

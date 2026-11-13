@@ -1,6 +1,6 @@
 {
   "name": "@rujianjs/fcdev-emulator",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "fcdev 使用的调试模拟器（VirtuaNES 调试版，带调试服务）",
   "license": "GPL-3.0-only",
   "os": [

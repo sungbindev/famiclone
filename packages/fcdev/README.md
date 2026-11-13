@@ -14,17 +14,19 @@ npm install --save-dev fcdev
 
 ## 使用
 
+`fcdev` 装在项目的 `node_modules` 里，没有加入系统的 `PATH`，在终端里直接输入 `fcdev` 会提示找不到命令，要写成 `npx fcdev …`。`package.json` 的 `scripts` 里可以直接写 `fcdev …`，用 `npm run <脚本>` 运行。想直接输入 `fcdev`，可以全局安装：`npm install -g fcdev`。
+
 ```bash
-fcdev build            # 构建当前目录；目录里的全部 .c、.s、.asm 链接成一个程序
-fcdev build src        # 构建目录 src
-fcdev build src/a.c    # 只构建这个文件，它自己是一个程序
-fcdev run src          # 构建后在模拟器里运行
-fcdev disk src         # 构建后把程序放进磁盘镜像（只有声明了磁盘能力的目标）
-fcdev disasm game.nes  # 反汇编成 ca65 源码，并回读校验
-fcdev sync             # 生成 IDE 的 C/C++ 配置
-fcdev info --json      # 显示目标、工具链与头文件目录
-fcdev api sb_file_open # 查询目标的 C 接口文档（函数名、模块名、$功能号或关键词；不带词列出全部模块）
-fcdev docs syscall     # 查开发文档的本机路径（主题名或关键词；不带词列出全部主题）
+npx fcdev build            # 构建当前目录；目录里的全部 .c、.s、.asm 链接成一个程序
+npx fcdev build src        # 构建目录 src
+npx fcdev build src/a.c    # 只构建这个文件，它自己是一个程序
+npx fcdev run src          # 构建后在模拟器里运行
+npx fcdev disk src         # 构建后把程序放进磁盘镜像（只有声明了磁盘能力的目标）
+npx fcdev disasm game.nes  # 反汇编成 ca65 源码，并回读校验
+npx fcdev sync             # 生成 IDE 的 C/C++ 配置
+npx fcdev info --json      # 显示目标、工具链与头文件目录
+npx fcdev api sb_file_open # 查询目标的 C 接口文档（函数名、模块名、$功能号或关键词；不带词列出全部模块）
+npx fcdev docs syscall     # 查开发文档的本机路径（主题名或关键词；不带词列出全部主题）
 ```
 
 入口是 `main`（汇编程序写 `.export _main`）。产物放在项目根的 `build/<目标>/`，中间文件在 `build/obj/`。
@@ -32,9 +34,9 @@ fcdev docs syscall     # 查开发文档的本机路径（主题名或关键词�
 ### 调试
 
 ```bash
-fcdev run --debug --port 5688 src   # 以调试模式启动模拟器，只在收到 run 命令时运行
-FCDEV_DEBUG_PORT=5688 fcdev debug run 60
-FCDEV_DEBUG_PORT=5688 fcdev debug shot screen.png
+npx fcdev run --debug --port 5688 src   # 以调试模式启动模拟器，只在收到 run 命令时运行
+FCDEV_DEBUG_PORT=5688 npx fcdev debug run 60
+FCDEV_DEBUG_PORT=5688 npx fcdev debug shot screen.png
 ```
 
 `debug` 把命令原样转发给模拟器的调试服务，命令表见模拟器的说明文档。调试端口默认 5699。
@@ -42,9 +44,9 @@ FCDEV_DEBUG_PORT=5688 fcdev debug shot screen.png
 ### 反汇编
 
 ```bash
-fcdev disasm game.nes                                   # NES（NROM），入口取自中断向量
-fcdev disasm prog.bin --base 8000 --entry 8008          # 平铺二进制：加载地址与入口
-fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文件
+npx fcdev disasm game.nes                                   # NES（NROM），入口取自中断向量
+npx fcdev disasm prog.bin --base 8000 --entry 8008          # 平铺二进制：加载地址与入口
+npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文件
 ```
 
 用 `da65` 生成源码，再用 `ca65`、`ld65` 重新汇编，与原映像逐字节比较，不一致就报错。只追得到的代码才会按指令输出，其余按数据输出；用 `--cdl`（FCEUX、Mesen 格式）或 `--trace`（模拟器 `trace` 命令的日志）补充运行时才执行到的代码。
@@ -75,7 +77,7 @@ fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文�
 
 ## 文档
 
-完整的使用手册与开发文档随本包发布，装好后在 `node_modules/fcdev/docs/`。终端里运行 `fcdev docs` 列出全部主题，`fcdev docs <主题>` 给出该文档的本机路径。更新记录在本包的 `CHANGELOG.md`。
+完整的使用手册与开发文档随本包发布，装好后在 `node_modules/fcdev/docs/`。终端里运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs <主题>` 给出该文档的本机路径。更新记录在本包的 `CHANGELOG.md`。
 
 | 想做什么 | 主题 | 文档 |
 | --- | --- | --- |
@@ -84,7 +86,7 @@ fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文�
 | 开发 SB2000（SB-DOS）程序 | `sb2000` | `docs/sb2000/01-开发指南.md` |
 | 查 SB-DOS 系统调用与出错码 | `syscall` | `docs/sb2000/02-系统调用手册.md` |
 | 查 SB2000 的硬件行为 | `hardware` | `docs/sb2000/03-硬件说明.md` |
-| 查 SB2000 运行库的 C 函数 | `api` | `targets/sb2000/api-reference.md`（也可以用 `fcdev api` 查询） |
+| 查 SB2000 运行库的 C 函数 | `api` | `targets/sb2000/api-reference.md`（也可以用 `npx fcdev api` 查询） |
 | 在模拟器里运行与调试，查调试命令 | `emulator` | `docs/05-模拟器与调试.md` |
 | 反汇编已有程序 | `disasm` | `docs/06-反汇编.md` |
 | 创建项目与模板 | `create` | `docs/07-创建包与模板.md` |

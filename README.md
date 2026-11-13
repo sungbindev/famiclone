@@ -59,7 +59,7 @@ fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考�
 | `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`bbk-bios`、`bbk-loader`、`memtest`、`fcprobe`、`disk` 与 `examples` |
 | `cc65`、`virtuanes` | cc65 与模拟器的源码，在本仓库维护，各自带许可文件 |
 | `tools` | 构建、检查与发布前验证脚本 |
-| `packages/fcdev/docs` | 各部分的开发文档与使用手册，随主包发布；清单见 [01-软件架构设计.md](packages/fcdev/docs/01-软件架构设计.md) 第 9 节，终端里运行 `fcdev docs` 查看 |
+| `packages/fcdev/docs` | 各部分的开发文档与使用手册，随主包发布；清单见 [01-软件架构设计.md](packages/fcdev/docs/01-软件架构设计.md) 第 9 节，终端里运行 `npx fcdev docs` 查看 |
 
 ## 开发
 

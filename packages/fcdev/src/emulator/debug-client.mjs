@@ -79,7 +79,7 @@ export class DebugClient {
         clearTimeout(timer);
         reject(new FcdevError(`无法连接调试服务（端口 ${port}）`, {
           code: 'DEBUG_CONNECT_FAILED',
-          hint: '先用 fcdev run --debug 启动模拟器，或检查端口是否一致',
+          hint: '先用 npx fcdev run --debug 启动模拟器，或检查端口是否一致',
           cause: error,
         }));
       });

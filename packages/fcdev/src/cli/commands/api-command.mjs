@@ -38,14 +38,14 @@ export async function runApiCommand({ positionals, options, context }) {
     }
     const lines = [`${target.title} 的 C 接口：${functions.length} 个函数，${groups.size} 个模块`, ''];
     for (const [name, items] of groups) lines.push(`  ${name.padEnd(10)} ${String(items.length).padStart(3)} 个函数  ${items[0].header}`);
-    lines.push('', '查询：fcdev api <函数名>（完整文档）、fcdev api <模块名>（函数列表）、fcdev api <$功能号>（用到该系统调用的函数）、fcdev api <词>（按名称与说明搜索）');
+    lines.push('', '查询：npx fcdev api <函数名>（完整文档）、npx fcdev api <模块名>（函数列表）、npx fcdev api <$功能号>（用到该系统调用的函数）、npx fcdev api <词>（按名称与说明搜索）');
     context.stdout.write(`${lines.join('\n')}\n`);
     return 0;
   }
 
   const { kind, matches } = queryApi(functions, query);
   if (matches.length === 0) {
-    throw new FcdevError(`没有找到“${query}”`, { code: 'API_NOT_FOUND', hint: '不带查询词运行 fcdev api 可以看到全部模块' });
+    throw new FcdevError(`没有找到“${query}”`, { code: 'API_NOT_FOUND', hint: '不带查询词运行 npx fcdev api 可以看到全部模块' });
   }
   if (options.json) {
     context.stdout.write(`${JSON.stringify(matches, null, 2)}\n`);

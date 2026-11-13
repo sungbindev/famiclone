@@ -1,7 +1,7 @@
 # SB2000 C 接口参考
 
 本文由头文件 `include/sb2000-*.h` 的文档注释生成，请不要手改；改注释后运行 `node tools/gen-sb2000-api-doc.mjs`。
-共 204 个函数，17 个模块。随时查询用 `fcdev api`：`fcdev api <函数名>` 看完整文档，`fcdev api <模块名>` 看模块的函数列表，`fcdev api '$7B'` 看用到某个系统调用的函数，`fcdev api <词>` 按名称与说明搜索。
+共 204 个函数，17 个模块。随时查询用 `npx fcdev api`：`npx fcdev api <函数名>` 看完整文档，`npx fcdev api <模块名>` 看模块的函数列表，`npx fcdev api '$7B'` 看用到某个系统调用的函数，`npx fcdev api <词>` 按名称与说明搜索。
 
 约定：
 

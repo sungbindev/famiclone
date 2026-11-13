@@ -18,7 +18,7 @@ import { FcdevError } from '../../shared/index.mjs';
  */
 export async function runDiskCommand({ positionals, options, context }) {
   if (positionals.length > 1) {
-    throw new FcdevError('disk 只接受一个路径参数', { code: 'ARGUMENT_INVALID', hint: '用法：fcdev disk [目录或文件]' });
+    throw new FcdevError('disk 只接受一个路径参数', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev disk [目录或文件]' });
   }
   const reporter = {
     log: (message) => context.stdout.write(`${message}\n`),

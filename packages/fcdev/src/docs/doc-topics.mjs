@@ -32,7 +32,7 @@ export const DOC_TOPICS = [
   { topic: 'sb2000', file: 'sb2000/01-开发指南.md', title: 'SB2000 开发指南', summary: '程序格式、内存布局、运行库、大程序换页、常用做法、易错点与示例' },
   { topic: 'syscall', file: 'sb2000/02-系统调用手册.md', title: 'SB-DOS 系统调用手册', summary: '系统调用的参数、结果、出错码与可靠程度' },
   { topic: 'hardware', file: 'sb2000/03-硬件说明.md', title: 'SB2000 硬件说明', summary: 'SB2000 的硬件行为与寄存器' },
-  { topic: 'api', file: 'targets/sb2000/api-reference.md', inPackage: true, title: 'SB2000 C 接口参考', summary: '运行库全部函数的签名、参数、返回值与系统调用，由头文件文档注释生成，查询用 fcdev api' },
+  { topic: 'api', file: 'targets/sb2000/api-reference.md', inPackage: true, title: 'SB2000 C 接口参考', summary: '运行库全部函数的签名、参数、返回值与系统调用，由头文件文档注释生成，查询用 npx fcdev api' },
   { topic: 'todo', file: '待办备忘.md', title: '待办备忘', summary: '已确定以后再做的事项' },
   { topic: 'bugs', file: '缺陷记录.md', title: '缺陷记录', summary: '发现的缺陷及修复情况' },
 ];

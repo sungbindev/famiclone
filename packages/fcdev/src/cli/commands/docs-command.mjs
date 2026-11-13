@@ -31,14 +31,14 @@ export async function runDocsCommand({ positionals, options, context }) {
     const width = Math.max(...docs.map((doc) => doc.topic.length));
     const lines = [`fcdev 开发文档：${docs.length} 份`, `本机目录：${directory}`, ''];
     for (const doc of docs) lines.push(`  ${doc.topic.padEnd(width)}  ${doc.title}：${doc.summary}`);
-    lines.push('', '查询：fcdev docs <主题>（本机路径）、fcdev docs <词>（按主题、文件名、标题与说明搜索）');
+    lines.push('', '查询：npx fcdev docs <主题>（本机路径）、npx fcdev docs <词>（按主题、文件名、标题与说明搜索）');
     context.stdout.write(`${lines.join('\n')}\n`);
     return 0;
   }
 
   const { kind, matches } = queryDocs(query);
   if (matches.length === 0) {
-    throw new FcdevError(`没有找到“${query}”`, { code: 'DOCS_NOT_FOUND', hint: '不带查询词运行 fcdev docs 可以看到全部主题' });
+    throw new FcdevError(`没有找到“${query}”`, { code: 'DOCS_NOT_FOUND', hint: '不带查询词运行 npx fcdev docs 可以看到全部主题' });
   }
   if (options.json) {
     context.stdout.write(`${JSON.stringify(matches, null, 2)}\n`);
@@ -52,7 +52,7 @@ export async function runDocsCommand({ positionals, options, context }) {
   const width = Math.max(...matches.map((doc) => doc.topic.length));
   const lines = [`包含“${query}”的文档：${matches.length} 份（${kind === 'file' ? '按文件名' : '按关键词'}）`];
   for (const doc of matches) lines.push(`  ${doc.topic.padEnd(width)}  ${doc.title}：${doc.summary}`);
-  lines.push('', '用 fcdev docs <主题> 查看某份文档的本机路径');
+  lines.push('', '用 npx fcdev docs <主题> 查看某份文档的本机路径');
   context.stdout.write(`${lines.join('\n')}\n`);
   return 0;
 }

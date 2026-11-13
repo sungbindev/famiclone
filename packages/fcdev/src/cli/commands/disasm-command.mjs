@@ -37,7 +37,7 @@ export function parseAddress(text, option) {
  */
 export async function runDisasmCommand({ positionals, options, context }) {
   if (positionals.length !== 1) {
-    throw new FcdevError('disasm 需要一个输入文件', { code: 'ARGUMENT_INVALID', hint: '用法：fcdev disasm <文件> [--format ines|binary] [--base 地址] [--entry 地址] [--cdl 文件] [--symbols 文件] [--out 目录]' });
+    throw new FcdevError('disasm 需要一个输入文件', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev disasm <文件> [--format ines|binary] [--base 地址] [--entry 地址] [--cdl 文件] [--symbols 文件] [--out 目录]' });
   }
   const inputFile = path.resolve(context.cwd, positionals[0]);
   const config = loadProjectConfig(context.cwd, context.cwd);

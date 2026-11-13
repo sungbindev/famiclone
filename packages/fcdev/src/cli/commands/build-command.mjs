@@ -18,7 +18,7 @@ import { FcdevError } from '../../shared/index.mjs';
  */
 export async function runBuildCommand({ positionals, options, context }) {
   if (positionals.length > 1) {
-    throw new FcdevError('build 只接受一个路径参数', { code: 'ARGUMENT_INVALID', hint: '用法：fcdev build [目录或文件]' });
+    throw new FcdevError('build 只接受一个路径参数', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev build [目录或文件]' });
   }
   const reporter = {
     log: (message) => context.stdout.write(`${message}\n`),

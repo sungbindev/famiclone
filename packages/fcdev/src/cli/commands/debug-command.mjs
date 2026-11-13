@@ -58,7 +58,7 @@ export function resolveCommandPaths(tokens, cwd) {
  */
 export async function runDebugCommand({ positionals, context }) {
   if (positionals.length === 0) {
-    throw new FcdevError('debug 需要一条调试命令', { code: 'ARGUMENT_INVALID', hint: '例如：fcdev debug status、fcdev debug run 60、fcdev debug shot out.png' });
+    throw new FcdevError('debug 需要一条调试命令', { code: 'ARGUMENT_INVALID', hint: '例如：npx fcdev debug status、npx fcdev debug run 60、npx fcdev debug shot out.png' });
   }
   const port = Number(context.env.FCDEV_DEBUG_PORT) || DEFAULT_DEBUG_PORT;
   const tokens = resolveCommandPaths(positionals, context.cwd);

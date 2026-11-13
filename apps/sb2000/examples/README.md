@@ -29,8 +29,8 @@ node packages/fcdev/bin/fcdev.mjs disk apps/sb2000/examples/hello   # 另外生�
 
 ## 运行
 
-fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`，用 `fcdev run apps/sb2000/examples/<名>` 在模拟器里运行（只支持 Windows）；DOS 启动后按两次回车跳过日期与时间提示，再输入程序名。
+fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`，用 `npx fcdev run apps/sb2000/examples/<名>` 在模拟器里运行（只支持 Windows）；DOS 启动后按两次回车跳过日期与时间提示，再输入程序名。
 
-`show`、`copy`、`peek`、`poke` 需要磁盘里有数据文件，可以自己用 `fcdev disk` 生成的镜像加上文件，或在模拟器里挂载别的镜像；`play` 需要 `.nes` 文件，放进软盘镜像时文件名要符合 8.3（如 `mario.nes`）。
+`show`、`copy`、`peek`、`poke` 需要磁盘里有数据文件，可以自己用 `npx fcdev disk` 生成的镜像加上文件，或在模拟器里挂载别的镜像；`play` 需要 `.nes` 文件，放进软盘镜像时文件名要符合 8.3（如 `mario.nes`）。
 
 模拟器的调试命令 `pad 0 01`（按下 1 号手柄 A）、`mouse move dx dy`（移动鼠标）、`mouse btn 掩码`（鼠标按键）可以给 `pad`、`mouse` 注入输入，命令表见 [virtuanes/README.md](../../../virtuanes/README.md)。

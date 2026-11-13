@@ -20,7 +20,7 @@ import { FcdevError } from '../../shared/index.mjs';
  */
 export async function runRunCommand({ positionals, options, context }) {
   if (positionals.length > 1) {
-    throw new FcdevError('run 只接受一个路径参数', { code: 'ARGUMENT_INVALID', hint: '用法：fcdev run [目录或文件]' });
+    throw new FcdevError('run 只接受一个路径参数', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev run [目录或文件]' });
   }
   const reporter = {
     log: (message) => context.stdout.write(`${message}\n`),
@@ -62,7 +62,7 @@ export async function runRunCommand({ positionals, options, context }) {
     context.stdout.write(`等 DOS 启动后，在提示符下输入 ${path.basename(result.outputFile, path.extname(result.outputFile))} 运行程序\n`);
   }
   if (options.debug) {
-    context.stdout.write(`调试模式：端口 ${port}，模拟器只在收到 run 命令时运行，例如 fcdev debug run 60\n`);
+    context.stdout.write(`调试模式：端口 ${port}，模拟器只在收到 run 命令时运行，例如 npx fcdev debug run 60\n`);
   }
   return 0;
 }

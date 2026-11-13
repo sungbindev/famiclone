@@ -212,6 +212,28 @@ describe('checkProject', () => {
     ]);
   });
 
+  it('业务 logic 模块可以包含 platform 的声音输出抽象，硬件模块不能', () => {
+    const root = createProject({
+      'core/src/contracts/hardware/bus.hpp': '#pragma once\n',
+      'core/src/platform/audio/audio-output.hpp': '#pragma once\n',
+      'core/src/logic/runtime/runtime.hpp': '#include "platform/audio/audio-output.hpp"\n',
+      'core/src/logic/hardware/apu-2a03/apu.hpp': '#include "contracts/hardware/bus.hpp"\n#include "platform/audio/audio-output.hpp"\n',
+      'core/src/bootstrap/module-list.cpp': '{"runtime", registerRuntime},\n',
+      'core/src/bootstrap/modules/runtime.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/apu-2a03/apu.hpp：logic 层只能包含 platform 的抽象，不能包含 platform/audio/audio-output.hpp']);
+  });
+
+  it('miniaudio 的头文件只能出现在 platform/audio', () => {
+    const root = createProject({
+      'core/src/platform/audio/miniaudio-output.cpp': '#include <miniaudio.h>\n',
+      'core/src/infra/devices/device.cpp': '#include <miniaudio.h>\n',
+      'core/src/bootstrap/module-list.cpp': '{"devices", registerDevices},\n',
+      'core/src/bootstrap/modules/devices.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual(['core/src/infra/devices/device.cpp：不能包含 <miniaudio.h>']);
+  });
+
   it('发现模块之间的循环依赖', () => {
     const root = createProject({
       'schema/a.schema.json': JSON.stringify({ module: 'a', types: { X: { type: 'object', properties: { b: { $ref: 'b#/types/Y' } } } }, requests: {}, events: {} }),

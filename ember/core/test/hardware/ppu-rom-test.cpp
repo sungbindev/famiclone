@@ -15,86 +15,16 @@
 
 #include <gtest/gtest.h>
 
-#include <cctype>
-#include <cstdint>
-#include <cstring>
 #include <string>
-#include <vector>
 
-#include "fc-test-support.hpp"
+#include "rom-test-support.hpp"
 
 namespace {
 
-using ember::test::FcRig;
-
-/** 结果的读法。 */
-enum class ResultStyle {
-  /** 屏幕上显示 PASSED、FAILED #n，或 blargg 2005 PPU 测试的 $01（通过）。 */
-  Screen,
-  /** $6000 约定：状态 0 为通过。 */
-  Status
-};
-
-struct RomCase {
-  const char* name;
-  const char* path;
-  ResultStyle style;
-  /** 最多运行的帧数，超过仍没有结果算失败。 */
-  int maxFrames;
-  /** 文本里必须出现的内容（核对表格输出），为空则不核对。 */
-  const char* expectedText;
-  /** 除 nrom 以外还要安装的测试插件（core/test/data/test-plugins 下的目录名），没有则为空。 */
-  const char* testPlugin = nullptr;
-};
-
-struct RomResult {
-  bool finished{false};
-  bool passed{false};
-  std::string text;
-};
-
-/** 文字里是否有 “$” 加两位十六进制数（blargg 2005 年的 PPU 测试用它显示结果码），有则返回这个码，否则返回 -1；文字还没打完时返回 -1。 */
-int findResultCode(const std::string& text) {
-  const std::size_t dollar = text.find('$');
-  if (dollar == std::string::npos || dollar + 2 >= text.size()) return -1;
-  if (!std::isxdigit(static_cast<unsigned char>(text[dollar + 1])) || !std::isxdigit(static_cast<unsigned char>(text[dollar + 2]))) return -1;
-  return std::stoi(text.substr(dollar + 1, 2), nullptr, 16);
-}
-
-RomResult runRom(const RomCase& rom) {
-  std::vector<std::vector<std::uint8_t>> plugins;
-  if (rom.testPlugin != nullptr) plugins.push_back(ember::test::testPluginPackage(rom.testPlugin));
-  FcRig rig(rom.path, plugins);
-  RomResult result;
-  for (int frame = 0; frame < rom.maxFrames; ++frame) {
-    rig.machine.runFrame();
-    if (frame % 4 != 3) continue;
-    if (rom.style == ResultStyle::Screen) {
-      const std::string text = rig.screenText();
-      const int code = findResultCode(text);
-      const bool passed = text.find("PASSED") != std::string::npos || code == 1;
-      const bool failed = text.find("FAILED #") != std::string::npos || code > 1;
-      if (passed || failed) {
-        result.finished = true;
-        result.passed = passed;
-        result.text = text;
-        return result;
-      }
-    } else {
-      const auto memory = rig.prgRam();
-      const bool signature = memory[1] == 0xDE && memory[2] == 0xB0 && memory[3] == 0x61;
-      // $80 表示还在运行，$81 表示测试要求复位。
-      if (signature && memory[0] != 0x80 && memory[0] != 0x81) {
-        result.finished = true;
-        result.passed = memory[0] == 0;
-        result.text = std::string(reinterpret_cast<const char*>(memory.data() + 4), strnlen(reinterpret_cast<const char*>(memory.data() + 4), memory.size() - 4));
-        return result;
-      }
-    }
-  }
-  result.text = rig.screenText();
-  return result;
-}
+using ember::test::ResultStyle;
+using ember::test::RomCase;
+using ember::test::RomResult;
+using ember::test::runRom;
 
 const RomCase ROMS[] = {
     // blargg_ppu_tests_2005.09.15b

@@ -6,7 +6,7 @@
 # 日期：2026-11-13
 # 备注：第三方库源码放在 core/third_party（清单见 docs/01-软件架构设计.md 第 10 节），编译时不联网；Windows 静态链接 C++ 运行库；
 #       生成的代码（src/contracts/*/generated）由 npm run schema 产生，配置前须先生成；
-#       SQLite 先登记目标，核心库用到时再链接（EXCLUDE_FROM_ALL，没人链接就不编译）；QuickJS-ng 与 miniz 已被 mapper 插件宿主链接。
+#       SQLite 先登记目标，核心库用到时再链接（EXCLUDE_FROM_ALL，没人链接就不编译）；QuickJS-ng、miniz 与 miniaudio 已被核心库链接。
 # ------------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 3.25)
@@ -60,6 +60,23 @@ add_library(ember_miniz STATIC ${EMBER_THIRD_PARTY}/miniz/miniz.c)
 target_include_directories(ember_miniz SYSTEM PUBLIC ${EMBER_THIRD_PARTY}/miniz)
 target_compile_definitions(ember_miniz PUBLIC MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 
+# 系统声音输出：miniaudio 的实现单独一个编译单元，只编译播放设备部分；第三方代码关闭警告。
+# 这些宏要对头文件的使用者也生效（PUBLIC），与 third_party/miniaudio/miniaudio-impl.c 里的定义一致。
+add_library(ember_miniaudio STATIC ${EMBER_THIRD_PARTY}/miniaudio/miniaudio-impl.c)
+target_include_directories(ember_miniaudio SYSTEM PUBLIC ${EMBER_THIRD_PARTY}/miniaudio)
+target_compile_definitions(ember_miniaudio PUBLIC MA_NO_ENCODING MA_NO_DECODING MA_NO_GENERATION MA_NO_ENGINE MA_NO_NODE_GRAPH MA_NO_RESOURCE_MANAGER)
+set_target_properties(ember_miniaudio PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON)
+if(MSVC)
+  target_compile_options(ember_miniaudio PRIVATE /W0)
+else()
+  target_compile_options(ember_miniaudio PRIVATE -w)
+endif()
+if(APPLE)
+  target_link_libraries(ember_miniaudio PUBLIC "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox")
+elseif(UNIX)
+  target_link_libraries(ember_miniaudio PUBLIC ${CMAKE_DL_LIBS} pthread m)
+endif()
+
 # ---------------------------------------------------------------- 核心库
 
 file(GLOB_RECURSE EMBER_CORE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
@@ -74,8 +91,8 @@ endif()
 
 add_library(ember_core_lib STATIC ${EMBER_CORE_SOURCES})
 target_include_directories(ember_core_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-# miniz 的头文件对使用者可见（测试要写插件包）；QuickJS 只在核心库内部使用，头文件不外露。
-target_link_libraries(ember_core_lib PUBLIC ember_json ember_miniz PRIVATE ember_quickjs)
+# miniz 的头文件对使用者可见（测试要写插件包）；QuickJS 与 miniaudio 只在核心库内部使用，头文件不外露。
+target_link_libraries(ember_core_lib PUBLIC ember_json ember_miniz PRIVATE ember_quickjs ember_miniaudio)
 target_compile_definitions(ember_core_lib PUBLIC EMBER_CORE_VERSION="${EMBER_CORE_VERSION}")
 
 if(MSVC)

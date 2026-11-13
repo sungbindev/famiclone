@@ -186,6 +186,8 @@ rt::RuntimeState SimulationRuntime::state() const {
 
 void SimulationRuntime::startMachine(bool resume) {
   machine_->powerOn();
+  // 上电与硬复位时清空声音缓冲，不让旧的采样接在新的后面。
+  if (options_.audio != nullptr) options_.audio->flush();
   frame_ = 0;
   failureReported_ = false;
   running_ = resume;
@@ -201,12 +203,29 @@ void SimulationRuntime::applyButtons() {
   for (unsigned port = 0; port < BUTTON_PORT_COUNT; ++port) machine_->setButtons(port, buttons_[port]);
 }
 
+void SimulationRuntime::pushAudio() {
+  if (options_.audio == nullptr) return;
+  machine_->takeAudio(audioBuffer_);
+  // 采样率与声音输出不同时不输出（目前所有主机型号都是 48000 赫兹，不会发生）。
+  if (!audioBuffer_.empty() && machine_->audioSampleRate() == options_.audio->sampleRate()) options_.audio->write(audioBuffer_);
+}
+
+void SimulationRuntime::syncAudio() {
+  if (options_.audio == nullptr) return;
+  // 运行中才播放；暂停、断电、出错时淡出到静音，继续时清掉过时的采样再淡入。
+  const bool playing = running();
+  if (playing == audioPlaying_) return;
+  audioPlaying_ = playing;
+  options_.audio->setPlaying(playing);
+}
+
 void SimulationRuntime::publishState(const char* reason) {
   const auto current = state();
   options_.events->publish(rt::RUNTIME_STATE_CHANGED_EVENT, nlohmann::json(rt::RuntimeStateChangedData{current.power, current.mode, reason}));
 }
 
 void SimulationRuntime::publishSnapshot() {
+  syncAudio();
   rt::RuntimeStatusResult snapshot;
   const auto current = state();
   snapshot.power = current.power;
@@ -250,6 +269,7 @@ void SimulationRuntime::runFrame() {
   ++frame_;
   const hw::FrameBuffer picture = machine_->frame();
   if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
+  pushAudio();
   publishSnapshot();
   const auto interval = frameEventInterval_.load(std::memory_order_relaxed);
   if (interval > 0 && frame_ % interval == 0) {
@@ -298,6 +318,7 @@ rt::RuntimeState SimulationRuntime::reset(rt::ResetKind kind) {
     if (kind == rt::ResetKind::Soft) {
       if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电，无法软复位");
       machine_->softReset();
+      if (options_.audio != nullptr) options_.audio->flush();
       failureReported_ = false;
     } else {
       const bool keepRunning = running();

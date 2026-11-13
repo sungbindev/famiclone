@@ -36,7 +36,9 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
 - 先在 Windows 上开发、调试与编译；macOS 的编译与打包脚本同时写齐，但不在 Windows 上运行或测试。
-- 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出四个抽象。
+- 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，把主机生成的声音采样（`Machine::takeAudio`）写进 `platform/audio/audio-output.hpp` 的 `AudioOutput`，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出、声音输出五个抽象，硬件模块只能包含前两个。
+- 声音由核心直接输出到系统（miniaudio，只在 `platform/audio/` 里使用）：模拟线程写、音频回调线程读的无锁环形缓冲，回调里不加锁、不分配内存，用缓冲水位微调重采样比（±0.5%）保持同步；暂停、断电时淡出，继续时清空过时的采样再淡入；设备打不开时降级为空输出并写错误日志；音量与静音只经 `output.setVolume` 请求，保存在核心内存里。
+- 经典 FC 的 APU（`apu-2a03`）按调度器的方式运行（被访问前追赶，会改变 IRQ 线与 RDY 线的时刻预测成调度器事件）；帧计数器、长度计数器与 DMC 的时序以 blargg 的测试 ROM 为准，暂时不一致的项登记在 02 第 12 节“已知差异”并由测试断言；`$4017` 同时属于手柄口与 APU，由主机装配里的 `PadApuPort` 转给两边，两个模块互不引用。
 - 画面与输入不走请求，用单独的消息端口（`window.ember.streams.requestPorts()`，契约在 `src/contracts/stream-ports/`）：核心到渲染进程的帧消息与渲染进程到核心的按键消息，格式只在 `stream-messages.ts` 里定义；核心宿主对渲染进程发来的输入逐条校验，binding 的帧缓冲槽由 JavaScript 线程创建、不转移、不保存。
 - 主进程自己处理的请求写在 Schema 的 `mainRequests`，经 `window.ember.main` 暴露与 `entry/ipc/core/main-request-ipc.ts` 校验；参数带磁盘路径的核心请求标 `mainOnly`，路径只来自用户在系统窗口里的选择（如 `cartridges.open`）或主进程的启动参数 `--cartridge=`，渲染进程不能传任意路径。
 - TypeScript 的 `platform` 不引用 `contracts`，用结构类型实现契约里的接口，由组装根注入。

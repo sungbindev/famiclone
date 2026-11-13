@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：simulation-runtime-test.cpp
- * 说明：运行服务的测试：模拟线程连续运行与帧输出、电源与复位、暂停与继续、运行中换卡带、失败时保持原状、脚本出错暂停、按键输入、帧节拍、停止时线程干净退出。
+ * 说明：运行服务的测试：模拟线程连续运行与帧输出、电源与复位、暂停与继续、运行中换卡带、失败时保持原状、脚本出错暂停、按键输入、帧节拍、声音输出、停止时线程干净退出。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -21,6 +21,7 @@
 #include "bootstrap/machines/machine-catalog.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
+#include "platform/audio/null-audio-output.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace {
@@ -50,6 +51,7 @@ struct Rig {
     options.machines = std::move(machines);
     options.mappers = registry;
     options.frames = frames;
+    options.audio = audio;
     options.events = events;
     options.errors = errors;
     options.framesPerSecond = framesPerSecond;
@@ -77,6 +79,7 @@ struct Rig {
 
   std::shared_ptr<ember::infra::mappers::PluginRegistry> registry;
   std::shared_ptr<FrameCapture> frames = std::make_shared<FrameCapture>();
+  std::shared_ptr<ember::platform::NullAudioOutput> audio = std::make_shared<ember::platform::NullAudioOutput>();
   std::shared_ptr<SyncEventSink> events = std::make_shared<SyncEventSink>();
   std::shared_ptr<ember::test::RecordingErrorLog> errors = std::make_shared<ember::test::RecordingErrorLog>();
   std::unique_ptr<SimulationRuntime> runtime;
@@ -507,6 +510,89 @@ TEST(SimulationRuntime, DestroyingARunningRuntimeIsClean) {
   rig->runtime->insertCartridge(rig->insertion(idleRom()));
   ASSERT_TRUE(rig->waitFrames(3));
   rig.reset();
+  SUCCEED();
+}
+
+TEST(SimulationRuntime, AudioSampleCountMatchesTheFrameCount) {
+  // 每帧 29780.67 个 CPU 周期，按 1789772.67 赫兹换成 48000 赫兹的采样，约 798.7 个。
+  Rig rig;
+  rig.runtime->insertCartridge(rig.insertion(idleRom()));
+  ASSERT_TRUE(rig.waitFrames(120));
+  // 暂停命令在帧边界执行，之后帧数与写入的采样数都不再变化。
+  rig.runtime->pause();
+  const auto firstFrames = rig.runtime->status().frame;
+  const auto firstSamples = rig.audio->stats().writtenSamples;
+
+  rig.runtime->resume();
+  ASSERT_TRUE(rig.waitFrames(120));
+  rig.runtime->pause();
+  const auto frames = rig.runtime->status().frame - firstFrames;
+  const auto samples = rig.audio->stats().writtenSamples - firstSamples;
+  EXPECT_GE(frames, 120);
+  const double expected = static_cast<double>(frames) * 48000.0 / ember::logic::runtime::NTSC_FRAMES_PER_SECOND;
+  EXPECT_NEAR(static_cast<double>(samples), expected, 6.0) << "帧数 " << frames;
+}
+
+TEST(SimulationRuntime, AudioPlaysOnlyWhileRunningAndIsClearedOnPowerOnAndReset) {
+  Rig rig;
+  EXPECT_FALSE(rig.audio->playing());
+  rig.runtime->insertCartridge(rig.insertion(idleRom()));
+  EXPECT_TRUE(rig.audio->playing());
+
+  rig.runtime->pause();
+  EXPECT_FALSE(rig.audio->playing());
+  const auto flushesBeforeResume = rig.audio->flushCount();
+  rig.runtime->resume();
+  EXPECT_TRUE(rig.audio->playing());
+  // 继续运行时丢弃过时的采样再淡入。
+  EXPECT_GT(rig.audio->flushCount(), flushesBeforeResume);
+
+  const auto flushesBeforeSoft = rig.audio->flushCount();
+  rig.runtime->reset(rt::ResetKind::Soft);
+  EXPECT_GT(rig.audio->flushCount(), flushesBeforeSoft);
+  EXPECT_TRUE(rig.audio->playing());
+
+  const auto flushesBeforeHard = rig.audio->flushCount();
+  rig.runtime->reset(rt::ResetKind::Hard);
+  EXPECT_GT(rig.audio->flushCount(), flushesBeforeHard);
+  EXPECT_TRUE(rig.audio->playing());
+
+  rig.runtime->powerOff();
+  EXPECT_FALSE(rig.audio->playing());
+  const auto flushesBeforePowerOn = rig.audio->flushCount();
+  rig.runtime->powerOn(false);
+  EXPECT_GT(rig.audio->flushCount(), flushesBeforePowerOn);
+  // 上电后默认暂停，不播放。
+  EXPECT_FALSE(rig.audio->playing());
+
+  rig.runtime->resume();
+  EXPECT_TRUE(rig.audio->playing());
+  rig.runtime->ejectCartridge();
+  EXPECT_FALSE(rig.audio->playing());
+}
+
+TEST(SimulationRuntime, NoAudioOutputIsFine) {
+  // 没有声音输出（空指针）时照常运行。
+  SimulationRuntimeOptions options;
+  options.machines = std::make_shared<MachineCatalog>();
+  auto registry = std::make_shared<ember::infra::mappers::PluginRegistry>(ember::test::fcRegistryOptions());
+  registry->installPackage(ember::test::officialPluginPackage("nrom"));
+  options.mappers = registry;
+  auto frames = std::make_shared<FrameCapture>();
+  options.frames = frames;
+  options.events = std::make_shared<SyncEventSink>();
+  options.errors = std::make_shared<ember::test::RecordingErrorLog>();
+  options.framesPerSecond = 0;
+  SimulationRuntime runtime(std::move(options));
+  const ember::logic::cartridges::InesCartridgeLoader loader(registry);
+  auto plan = loader.plan(idleRom());
+  rt::CartridgeInsertion insertion;
+  insertion.image = std::move(plan.image);
+  insertion.match = std::move(plan.match);
+  insertion.source = "idle.nes";
+  runtime.insertCartridge(std::move(insertion));
+  ASSERT_TRUE(waitFor([&] { return frames->count() >= 3; }));
+  runtime.pause();
   SUCCEED();
 }
 

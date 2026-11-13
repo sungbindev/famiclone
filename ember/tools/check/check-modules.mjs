@@ -62,9 +62,9 @@ const CPP_ALLOWED = {
   binding: ['bootstrap', 'shared'],
   bootstrap: ['contracts', 'logic', 'infra', 'requests', 'platform', 'shared', 'bootstrap']
 };
-/** logic 层只能包含的 platform 抽象：事件、取消、错误日志、帧输出。 */
-const PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp', 'platform/logging/error-log.hpp', 'platform/streams/frame-output.hpp']);
-/** 硬件模块只能包含的 platform 抽象：日志与画面输出不属于硬件。 */
+/** logic 层只能包含的 platform 抽象：事件、取消、错误日志、帧输出、声音输出。 */
+const PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp', 'platform/logging/error-log.hpp', 'platform/streams/frame-output.hpp', 'platform/audio/audio-output.hpp']);
+/** 硬件模块只能包含的 platform 抽象：日志、画面输出与声音输出不属于硬件（声音经主机的契约取走）。 */
 const HARDWARE_PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp']);
 /** binding 只能包含的核心入口。 */
 const BINDING_ENTRY = 'bootstrap/core.hpp';

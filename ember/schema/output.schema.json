@@ -1,0 +1,28 @@
+{
+  "$comment": "output 模块：声音输出的设置。规则见 docs/04-调试服务.md 第 4.4 节；screenshot 与 setAudioMode 在后续阶段加入。",
+  "module": "output",
+  "types": {},
+  "requests": {
+    "setVolume": {
+      "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。设置保存在核心内存里，核心重启后回到音量 100、未静音；变化平滑过渡，不会产生爆音。",
+      "params": {
+        "type": "object",
+        "properties": {
+          "volume": { "type": "integer", "minimum": 0, "maximum": 100, "description": "音量百分比，0 到 100" },
+          "muted": { "type": "boolean", "description": "是否静音" }
+        },
+        "required": []
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "volume": { "type": "integer", "minimum": 0, "maximum": 100, "description": "当前的音量百分比" },
+          "muted": { "type": "boolean", "description": "当前是否静音" }
+        },
+        "required": ["volume", "muted"]
+      },
+      "errors": []
+    }
+  },
+  "events": {}
+}

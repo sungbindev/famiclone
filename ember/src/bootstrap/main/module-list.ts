@@ -12,8 +12,9 @@
 import type { MainModule } from './main-module';
 import { CARTRIDGES_MAIN_MODULE } from './modules/cartridges';
 import { MAPPERS_MAIN_MODULE } from './modules/mappers';
+import { OUTPUT_MAIN_MODULE } from './modules/output';
 import { RUNTIME_MAIN_MODULE } from './modules/runtime';
 import { SYSTEM_MAIN_MODULE } from './modules/system';
 
 /** 全部模块，按登记顺序排列。 */
-export const MAIN_MODULES: readonly MainModule[] = [SYSTEM_MAIN_MODULE, MAPPERS_MAIN_MODULE, RUNTIME_MAIN_MODULE, CARTRIDGES_MAIN_MODULE];
+export const MAIN_MODULES: readonly MainModule[] = [SYSTEM_MAIN_MODULE, MAPPERS_MAIN_MODULE, OUTPUT_MAIN_MODULE, RUNTIME_MAIN_MODULE, CARTRIDGES_MAIN_MODULE];

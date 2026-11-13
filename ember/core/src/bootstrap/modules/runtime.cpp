@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：取用 mappers 模块的卡带工厂，须排在它之后登记；卡带模块取用本模块的运行服务，须排在本模块之后。
+ * 备注：取用 mappers 模块的卡带工厂与 output 模块的声音输出，须排在它们之后登记；卡带模块取用本模块的运行服务，须排在本模块之后。
  *       定时器精度对象与运行服务同生命周期，停止时一起释放。
  * ------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
+#include "platform/audio/audio-output.hpp"
 #include "platform/time/timer-resolution.hpp"
 #include "requests/runtime/runtime-requests.hpp"
 
@@ -28,6 +29,7 @@ void registerRuntime(ModuleRegistry& registry) {
   options.machines = std::make_shared<MachineCatalog>();
   options.mappers = registry.services.require<contracts::mappers::MapperFactory>();
   options.frames = registry.frames;
+  options.audio = registry.services.require<platform::AudioOutput>();
   options.events = registry.events;
   options.errors = registry.errors;
   auto timer = std::make_shared<platform::TimerResolution>();

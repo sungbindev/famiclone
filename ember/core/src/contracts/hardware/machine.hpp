@@ -12,6 +12,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "contracts/hardware/cartridge-slot.hpp"
 #include "contracts/hardware/clock.hpp"
@@ -50,6 +51,15 @@ class Machine {
 
   /** 最近一次完成的画面；没有完成过画面时宽高为 0。 */
   [[nodiscard]] virtual FrameBuffer frame() const = 0;
+
+  /** 声音的采样率（赫兹），单声道。 */
+  [[nodiscard]] virtual unsigned audioSampleRate() const = 0;
+
+  /**
+   * 取走自上次以来生成的声音采样（单声道，范围 -1 到 1）；先清空 samples 再放入。
+   * 采样追赶到主机当前的时间；断电时没有新采样。没有人取走时主机只保留最近一小段。
+   */
+  virtual void takeAudio(std::vector<float>& samples) = 0;
 
   /**
    * 设置手柄口上标准手柄的按键。

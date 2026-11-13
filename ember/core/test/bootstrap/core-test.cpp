@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：core-test.cpp
- * 说明：核心入口的测试：启动参数、system.version、mappers.*、runtime.* 与 cartridges.* 请求、帧处理函数与按键输入、未登记请求被拒绝、错误码、未启动与停止后的请求。
+ * 说明：核心入口的测试：启动参数、system.version、mappers.*、output.setVolume、runtime.* 与 cartridges.* 请求、帧处理函数与按键输入、未登记请求被拒绝、错误码、未启动与停止后的请求。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -80,8 +80,8 @@ TEST_F(CoreTest, StartsAndAnswersSystemVersion) {
   const auto info = nlohmann::json::parse(core.start(options()));
   EXPECT_FALSE(info["coreVersion"].get<std::string>().empty());
   const auto& requests = info["requests"];
-  EXPECT_EQ(requests.size(), 16U);
-  for (const char* name : {"system.version", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled", "mappers.reload", "runtime.status",
+  EXPECT_EQ(requests.size(), 17U);
+  for (const char* name : {"system.version", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled", "mappers.reload", "output.setVolume", "runtime.status",
                            "runtime.powerOn", "runtime.powerOff", "runtime.reset", "runtime.pause", "runtime.resume", "cartridges.load", "cartridges.eject", "cartridges.info"}) {
     EXPECT_NE(std::find(requests.begin(), requests.end(), nlohmann::json(name)), requests.end()) << name;
   }
@@ -109,6 +109,41 @@ TEST_F(CoreTest, RejectsUnregisteredRequestsAndBadParams) {
   const auto notJson = call(core, "4", "system.version", "{");
   EXPECT_FALSE(notJson.ok);
   EXPECT_EQ(notJson.payload["code"], "core.invalidParams");
+  core.stop();
+}
+
+TEST_F(CoreTest, OutputSetVolumeKeepsTheValuesInCoreMemory) {
+  Core core;
+  static_cast<void>(core.start(options()));
+  // 初始音量 100、未静音；省略的参数保持不变。
+  const auto initial = call(core, "1", "output.setVolume", "{}");
+  ASSERT_TRUE(initial.ok);
+  EXPECT_EQ(initial.payload["volume"], 100);
+  EXPECT_EQ(initial.payload["muted"], false);
+
+  const auto quiet = call(core, "2", "output.setVolume", R"({"volume":35})");
+  ASSERT_TRUE(quiet.ok);
+  EXPECT_EQ(quiet.payload["volume"], 35);
+  EXPECT_EQ(quiet.payload["muted"], false);
+
+  const auto muted = call(core, "3", "output.setVolume", R"({"muted":true})");
+  ASSERT_TRUE(muted.ok);
+  EXPECT_EQ(muted.payload["volume"], 35);
+  EXPECT_EQ(muted.payload["muted"], true);
+
+  const auto both = call(core, "4", "output.setVolume", R"({"volume":0,"muted":false})");
+  ASSERT_TRUE(both.ok);
+  EXPECT_EQ(both.payload["volume"], 0);
+  EXPECT_EQ(both.payload["muted"], false);
+
+  for (const char* bad : {R"({"volume":101})", R"({"volume":-1})", R"({"volume":1.5})", R"({"muted":1})", R"({"volume":"loud"})", R"({"other":1})"}) {
+    const auto reply = call(core, "5", "output.setVolume", bad);
+    EXPECT_FALSE(reply.ok) << bad;
+    EXPECT_EQ(reply.payload["code"], "core.invalidParams") << bad;
+  }
+  // 非法的请求不改变已保存的值。
+  const auto after = call(core, "6", "output.setVolume", "{}");
+  EXPECT_EQ(after.payload["volume"], 0);
   core.stop();
 }
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：fc.hpp
- * 说明：主机型号 fc（经典 FC，NTSC）的装配：2K 内部 RAM、2C02 PPU、精灵 DMA、手柄口、卡槽、2K 名称表显存，APU 以空设备占位。
+ * 说明：主机型号 fc（经典 FC，NTSC）的装配：2K 内部 RAM、2C02 PPU、2A03 APU、精灵 DMA、手柄口、卡槽、2K 名称表显存。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -15,7 +15,9 @@
 #include <array>
 #include <cstdint>
 
+#include "bootstrap/machines/pad-apu-port.hpp"
 #include "contracts/hardware/machine.hpp"
+#include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
@@ -24,7 +26,6 @@
 #include "logic/hardware/lines/line-output.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/nametable-ram/nametable-ram.hpp"
-#include "logic/hardware/null-device/null-device.hpp"
 #include "logic/hardware/pad-2a03/pad-2a03.hpp"
 #include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
 #include "logic/hardware/ram/ram-block.hpp"
@@ -35,6 +36,8 @@ namespace ember::bootstrap {
 /** 经典 FC（NTSC）。 */
 class FcMachine final : public contracts::hardware::Machine {
  public:
+  /** 主时钟频率（赫兹）。 */
+  static constexpr double MASTER_CLOCK_HZ = 21'477'272.0;
   /** 每个 CPU 周期的主时钟周期数。 */
   static constexpr contracts::hardware::MasterTime CPU_TICKS_PER_CYCLE = 12;
   /** 每个 PPU 点的主时钟周期数。 */
@@ -54,6 +57,8 @@ class FcMachine final : public contracts::hardware::Machine {
   void run(contracts::hardware::MasterTime ticks) override;
   void runFrame() override;
   [[nodiscard]] contracts::hardware::FrameBuffer frame() const override { return ppu_.frame(); }
+  [[nodiscard]] unsigned audioSampleRate() const override { return logic::hardware::Apu2a03::SAMPLE_RATE; }
+  void takeAudio(std::vector<float>& samples) override;
   void setButtons(unsigned port, std::uint8_t buttons) override;
   [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
@@ -63,6 +68,8 @@ class FcMachine final : public contracts::hardware::Machine {
   // 测试与调试用
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
   [[nodiscard]] const logic::hardware::Ppu2c02& ppu() const { return ppu_; }
+  [[nodiscard]] logic::hardware::Apu2a03& apu() { return apu_; }
+  [[nodiscard]] const logic::hardware::Apu2a03& apu() const { return apu_; }
   /** 2K 内部 RAM。 */
   [[nodiscard]] const contracts::hardware::StorageRegion& internalRam() const { return ram_; }
   /** 主板上的名称表显存（2K）。 */
@@ -84,11 +91,12 @@ class FcMachine final : public contracts::hardware::Machine {
   logic::hardware::MirroredRam ramDevice_;
   logic::hardware::StandardCartridgeSlot slot_;
   logic::hardware::NametableRam nametableRam_;
-  /** APU 的位置：本阶段是空设备，实现 apu-2a03 后在这里替换。 */
-  logic::hardware::NullDevice apu_;
+  logic::hardware::Apu2a03 apu_;
   logic::hardware::Ppu2c02 ppu_;
   logic::hardware::Dma2a03 dma_;
   logic::hardware::Pad2a03 pad_;
+  /** $4016-$4017：手柄口与 APU 帧计数器共用，写入同时转给两边。 */
+  PadApuPort padApuPort_;
   std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
   logic::hardware::Cpu6502 cpu_;
 

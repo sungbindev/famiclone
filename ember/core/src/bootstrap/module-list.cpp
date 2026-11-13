@@ -13,6 +13,7 @@
 
 #include "bootstrap/modules/cartridges.hpp"
 #include "bootstrap/modules/mappers.hpp"
+#include "bootstrap/modules/output.hpp"
 #include "bootstrap/modules/runtime.hpp"
 #include "bootstrap/modules/system.hpp"
 
@@ -24,6 +25,7 @@ namespace {
 constexpr ModuleRegistration MODULES[] = {
     {"system", registerSystem},
     {"mappers", registerMappers},
+    {"output", registerOutput},
     {"runtime", registerRuntime},
     {"cartridges", registerCartridges},
 };

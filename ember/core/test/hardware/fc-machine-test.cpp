@@ -55,21 +55,23 @@ TEST(FcMachine, InternalRamIsMirroredEveryTwoKilobytes) {
   EXPECT_EQ(ram(rig, 0x07FE), 0x3C);
 }
 
-TEST(FcMachine, ApuPlaceholderAndUnusedAddressesReadTheOpenBus) {
+TEST(FcMachine, ApuStatusIsReadableAndUnusedAddressesReadTheOpenBus) {
   Assembler main(0x8000);
-  main.ldaAbs(0x4015).staAbs(0x0010);  // APU 的空设备
+  main.ldaAbs(0x4015).staAbs(0x0010);  // APU 的状态：上电后没有通道在发声，也还没有帧 IRQ
   main.ldaAbs(0x4018).staAbs(0x0011);  // 没有设备的地址
   main.ldaAbs(0x4014).staAbs(0x0012);  // DMA 寄存器不可读
-  main.ldaImm(0x55).staAbs(0x4000);    // 写 APU 的空设备被忽略
+  main.ldaAbs(0x4000).staAbs(0x0014);  // APU 的其他寄存器只写，读不驱动数据线
+  main.ldaImm(0x55).staAbs(0x4000);    // 写 APU 的寄存器
   main.ldaAbs(0x5000).staAbs(0x0013);  // 卡槽的 $4020-$5FFF 卡带不驱动数据线
   main.jmpSelf();
   FcRig rig(makeNromFile(main));
   runCycles(rig, 200);
   // 读数据时总线上是指令的最后一个操作数（地址高字节）。
-  EXPECT_EQ(ram(rig, 0x10), 0x40);
+  EXPECT_EQ(ram(rig, 0x10), 0x00) << "$4015 的位 5 来自总线（0x40 的位 5 为 0），其余位是 APU 的状态";
   EXPECT_EQ(ram(rig, 0x11), 0x40);
   EXPECT_EQ(ram(rig, 0x12), 0x40);
   EXPECT_EQ(ram(rig, 0x13), 0x50);
+  EXPECT_EQ(ram(rig, 0x14), 0x40);
 }
 
 TEST(FcMachine, PpuRegistersAreMirroredEveryEightBytesUpToTheEndOfTheRange) {

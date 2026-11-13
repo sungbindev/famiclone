@@ -146,8 +146,8 @@ static void copy_block(unsigned char page, unsigned long source)
     SB_BYTE_AT(REG_DMA_SOURCE_MID) = ((unsigned char)(source >> 8) & 0x7F) | DMA_MID_FLAG;
     SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)DMA_BUFFER;
     SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(DMA_BUFFER >> 8);
-    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)BLOCK_SIZE;
-    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)(BLOCK_SIZE >> 8);
+    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)(BLOCK_SIZE - 1); /* 长度寄存器写“字节数 − 1” */
+    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)((BLOCK_SIZE - 1) >> 8);
     SB_BYTE_AT(REG_DMA_MODE) = DMA_TO_CPU;
     for (wait = 0; wait != DMA_WAIT; ++wait) {
         __asm__("nop");

@@ -311,7 +311,7 @@ static void dma_copy(unsigned char mode, unsigned int dest, unsigned char mid_fl
     SB_BYTE_AT(REG_DMA_SOURCE_MID) = ((unsigned char)(source >> 8) & 0x7F) | mid_flag;
     SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)dest;
     SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(dest >> 8);
-    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = DMA_BYTES;
+    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = DMA_BYTES - 1; /* 长度寄存器写“字节数 − 1” */
     SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = 0;
     SB_BYTE_AT(REG_DMA_MODE) = mode;
     for (wait = 0; wait != 20000; ++wait) {

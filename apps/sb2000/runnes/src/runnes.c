@@ -217,8 +217,8 @@ static void dma_block(unsigned long source, unsigned int destination, unsigned c
     SB_BYTE_AT(REG_DMA_SOURCE_MID) = (unsigned char)(source >> 8) & 0x7F;
     SB_BYTE_AT(REG_DMA_DEST_LOW) = (unsigned char)destination;
     SB_BYTE_AT(REG_DMA_DEST_HIGH) = (unsigned char)(destination >> 8);
-    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)BLOCK_SIZE;
-    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)(BLOCK_SIZE >> 8);
+    SB_BYTE_AT(REG_DMA_LENGTH_LOW) = (unsigned char)(BLOCK_SIZE - 1); /* 长度寄存器写“字节数 − 1” */
+    SB_BYTE_AT(REG_DMA_LENGTH_HIGH) = (unsigned char)((BLOCK_SIZE - 1) >> 8);
     SB_BYTE_AT(REG_DMA_MODE) = mode;
 }
 

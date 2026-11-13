@@ -51,7 +51,7 @@ Windows，Visual Studio 2026（含“使用 C++ 的桌面开发”与 v145 工�
 .\build.ps1 -Configuration Release
 ```
 
-输出在仓库根目录的 `build\virtuanes\<配置>\bin\VirtuaNES.exe`，同目录有 `Chinese.vlp` 与运行后生成的 `VirtuaNES.ini`；编译前先关闭正在运行的模拟器。没有 `C:\DirectXSDK` 时用 Windows SDK 自带的 DirectInput 头文件即可编译。
+输出在仓库根目录的 `build\virtuanes\<配置>\bin\VirtuaNES.exe`，同目录有 `Chinese.vlp` 与运行后生成的 `VirtuaNES.ini`；编译前只结束调试实例（调试服务监听 `127.0.0.1` 端口的 `VirtuaNES.exe`）；用户自己打开的模拟器不会被结束，它们占用输出文件时编译报错，需先自行关闭。没有 `C:\DirectXSDK` 时用 Windows SDK 自带的 DirectInput 头文件即可编译。
 
 语言包用相对文件名加载（上游行为），所以要从 exe 所在目录启动（工作目录是该目录），否则界面不显示中文。`build.ps1 -Run` 按此启动。
 

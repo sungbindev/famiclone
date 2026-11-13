@@ -41,10 +41,24 @@ if (-not $msbuildPath) {
     throw '未找到 MSBuild，请在 Visual Studio 中安装“使用 C++ 的桌面开发”。'
 }
 
-# 正在运行的程序会占用输出文件，编译前先结束
-Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -and $_.Path.StartsWith($outDir, [System.StringComparison]::OrdinalIgnoreCase) } |
-    Stop-Process -Force
+# 正在运行的程序会占用输出文件。调试实例（调试服务监听 127.0.0.1 端口）是 fcdev 或脚本启动的，编译前结束；
+# 其余实例是用户自己打开的，不结束，有它们占用输出文件时报错，由用户关闭。
+$running = @(Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -and $_.Path.StartsWith($outDir, [System.StringComparison]::OrdinalIgnoreCase) })
+$userInstances = @()
+foreach ($process in $running) {
+    $debugPort = Get-NetTCPConnection -State Listen -OwningProcess $process.Id -ErrorAction SilentlyContinue |
+        Where-Object { $_.LocalAddress -eq '127.0.0.1' }
+    if ($debugPort) {
+        Stop-Process -Id $process.Id -Force
+    } else {
+        $userInstances += $process
+    }
+}
+if ($userInstances.Count -gt 0) {
+    $ids = ($userInstances | ForEach-Object { $_.Id }) -join '、'
+    throw "有非调试的模拟器正在运行并占用输出文件（进程 $ids），请先关闭它们再编译。"
+}
 
 $target = if ($Rebuild) { 'Rebuild' } else { 'Build' }
 

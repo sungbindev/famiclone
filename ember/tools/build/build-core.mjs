@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-core.mjs
- * 说明：编译 C++ 原生模块：先生成 Schema 代码，再用 cmake-js 按当前 Electron 版本编译，输出 core/build/Release/ember_core.node。
+ * 说明：编译 C++ 原生模块：先生成 Schema 代码并打包官方插件，再用 cmake-js 按当前 Electron 版本编译，输出 core/build/Release/ember_core.node。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generate } from '../schema-gen/schema-gen.mjs';
 import { findCmake } from './find-cmake.mjs';
+import { packPlugins } from './pack-plugins.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const require = createRequire(import.meta.url);
@@ -35,6 +36,8 @@ try {
   const cmakeJs = join(dirname(require.resolve('cmake-js/package.json')), 'bin', 'cmake-js');
 
   generate(root);
+  // 开发版预装的官方插件随核心一起打包，输出在 build/plugins。
+  packPlugins(root);
   const { cmake } = findCmake();
   execFileSync(
     process.execPath,

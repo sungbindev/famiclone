@@ -21,6 +21,7 @@
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
+#include "logic/hardware/lines/line-output.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/nametable-ram/nametable-ram.hpp"
 #include "logic/hardware/null-device/null-device.hpp"
@@ -57,6 +58,7 @@ class FcMachine final : public contracts::hardware::Machine {
   [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
+  contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
 
   // 测试与调试用
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
@@ -73,6 +75,8 @@ class FcMachine final : public contracts::hardware::Machine {
   logic::hardware::WiredOrIrqLine irq_;
   logic::hardware::WiredOrIrqLine nmi_;
   logic::hardware::WiredOrRdyLine rdy_;
+  /** 卡槽的 IRQ 引脚，在 IRQ 线上占一个固定来源。 */
+  logic::hardware::LineIrqOutput cartridgeIrq_;
   logic::hardware::CpuAddressBus cpuBus_;
   logic::hardware::PpuAddressBus ppuBus_;
 

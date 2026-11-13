@@ -11,6 +11,7 @@
     "schema": "node tools/schema-gen/schema-gen.mjs",
     "core:build": "node tools/build/build-core.mjs",
     "core:test": "node tools/build/test-core.mjs",
+    "plugins:pack": "node tools/build/pack-plugins.mjs",
     "start": "npm run schema && npm run core:build && electron-forge start",
     "typecheck": "npm run schema && tsc --noEmit",
     "lint": "oxlint --deny-warnings src tools test",

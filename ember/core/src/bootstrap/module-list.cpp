@@ -11,6 +11,8 @@
 
 #include "bootstrap/module-list.hpp"
 
+#include "bootstrap/modules/cartridges.hpp"
+#include "bootstrap/modules/mappers.hpp"
 #include "bootstrap/modules/system.hpp"
 
 namespace ember::bootstrap {
@@ -20,6 +22,8 @@ namespace {
 // 取用共享服务的模块排在提供方之后。
 constexpr ModuleRegistration MODULES[] = {
     {"system", registerSystem},
+    {"mappers", registerMappers},
+    {"cartridges", registerCartridges},
 };
 
 }  // namespace

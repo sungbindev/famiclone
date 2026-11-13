@@ -1,13 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：fc-test-support.hpp
- * 说明：经典 FC 测试的公共辅助：测试用 NROM 卡带（按 iNES 文件头读 PRG 与 CHR，水平或垂直镜像）、读取测试数据文件、运行 ROM 的辅助函数。
+ * 说明：经典 FC 测试的公共辅助：读取测试数据文件、手写 6502 程序的小汇编器、构造 iNES 文件、装好卡带的经典 FC（FcRig）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：NROM 卡带只用于测试，核心程序里没有 mapper 的实现（mapper 将来全部是插件）；
- *       为了让 blargg 的测试 ROM 能把结果写到 $6000，卡带在 $6000-$7FFF 带 8K RAM；
- *       另支持 mapper 3（CNROM：写 $8000-$FFFF 选择 8K 的 CHR 页，无总线冲突），只为 ppu_read_buffer 测试。
+ * 备注：卡带经 iNES 解析与 mapper 插件宿主装配：官方的 nrom 插件（mapper 0，带 $6000-$7FFF 的 8K PRG RAM，blargg 的测试 ROM 把结果写在那里），
+ *       需要别的 mapper 时由调用方把测试插件的包传给 FcRig（如 ppu_read_buffer 用的 mapper 3）；核心程序和测试代码里都没有 mapper 的替身实现。
  * ------------------------------------------------------------------------
  */
 
@@ -15,118 +14,24 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <fstream>
 #include <initializer_list>
-#include <iterator>
+#include <memory>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "../support/plugin-test-support.hpp"
 #include "bootstrap/machines/fc.hpp"
-#include "contracts/hardware/cartridge.hpp"
+#include "contracts/mappers/mapper-cartridge.hpp"
+#include "infra/mappers/plugin-registry.hpp"
+#include "logic/cartridges/ines-cartridge-loader.hpp"
 
 namespace ember::test {
 
 namespace hw = ember::contracts::hardware;
 
 /** 读取 core/test/data 下的文件。 */
-inline std::vector<std::uint8_t> readDataFile(const std::string& relativePath) {
-  std::ifstream stream(std::string(EMBER_TEST_DATA_DIR) + "/" + relativePath, std::ios::binary);
-  if (!stream) throw std::runtime_error("无法打开测试数据：" + relativePath);
-  return std::vector<std::uint8_t>(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-}
-
-/** 测试用 NROM 卡带。 */
-class TestNromCartridge final : public hw::Cartridge {
- public:
-  /** @param file 完整的 iNES 文件；文件头不合法或 mapper 不是 0、3 时抛出异常。 */
-  explicit TestNromCartridge(const std::vector<std::uint8_t>& file) : cpuSide_(*this), ppuSide_(*this) {
-    if (file.size() < 16 || file[0] != 'N' || file[1] != 'E' || file[2] != 'S' || file[3] != 0x1A) throw std::runtime_error("不是 iNES 文件");
-    const std::size_t prgSize = static_cast<std::size_t>(file[4]) * 16384;
-    const std::size_t chrSize = static_cast<std::size_t>(file[5]) * 8192;
-    mapper_ = static_cast<std::uint8_t>((file[6] >> 4) | (file[7] & 0xF0));
-    if (mapper_ != 0 && mapper_ != 3) throw std::runtime_error("测试卡带只支持 mapper 0 与 3");
-    vertical_ = (file[6] & 1) != 0;
-    const std::size_t trainer = (file[6] & 4) != 0 ? 512 : 0;
-    if (prgSize == 0 || file.size() < 16 + trainer + prgSize + chrSize) throw std::runtime_error("iNES 文件长度不足");
-    prg_.assign(file.begin() + 16 + static_cast<std::ptrdiff_t>(trainer), file.begin() + 16 + static_cast<std::ptrdiff_t>(trainer + prgSize));
-    if (chrSize == 0) {
-      chr_.assign(8192, 0);
-      chrIsRam_ = true;
-    } else {
-      chr_.assign(file.begin() + 16 + static_cast<std::ptrdiff_t>(trainer + prgSize), file.begin() + 16 + static_cast<std::ptrdiff_t>(trainer + prgSize + chrSize));
-    }
-    prgRam_.assign(8192, 0);
-  }
-
-  hw::BusDevice& cpuSide() override { return cpuSide_; }
-  hw::BusDevice& ppuSide() override { return ppuSide_; }
-
-  [[nodiscard]] hw::CiramControl ciramControl(std::uint16_t ppuAddress) const override { return hw::CiramControl{true, vertical_ ? (ppuAddress & 0x400) != 0 : (ppuAddress & 0x800) != 0}; }
-
-  void reset(bool power) override {
-    if (power) {
-      std::fill(prgRam_.begin(), prgRam_.end(), std::uint8_t{0});
-      chrBank_ = 0;
-    }
-  }
-
-  /** $6000-$7FFF 的 8K RAM，测试读取结果用。 */
-  [[nodiscard]] std::span<const std::uint8_t> prgRam() const { return prgRam_; }
-
- private:
-  class CpuSide final : public hw::BusDevice {
-   public:
-    explicit CpuSide(TestNromCartridge& owner) : owner_(owner) {}
-
-    hw::BusRead read(std::uint16_t address) override {
-      if (address >= 0x8000) return hw::driveBus(owner_.prg_[(address - 0x8000U) % owner_.prg_.size()]);
-      if (address >= 0x6000) return hw::driveBus(owner_.prgRam_[address - 0x6000U]);
-      return hw::releaseBus();
-    }
-
-    void write(std::uint16_t address, std::uint8_t value) override {
-      if (address >= 0x8000) {
-        if (owner_.mapper_ == 3) owner_.chrBank_ = value;
-      } else if (address >= 0x6000) {
-        owner_.prgRam_[address - 0x6000U] = value;
-      }
-    }
-
-   private:
-    TestNromCartridge& owner_;
-  };
-
-  class PpuSide final : public hw::BusDevice {
-   public:
-    explicit PpuSide(TestNromCartridge& owner) : owner_(owner) {}
-
-    hw::BusRead read(std::uint16_t address) override {
-      if (address >= 0x2000) return hw::releaseBus();
-      return hw::driveBus(owner_.chr_[owner_.chrOffset(address)]);
-    }
-
-    void write(std::uint16_t address, std::uint8_t value) override {
-      if (address < 0x2000 && owner_.chrIsRam_) owner_.chr_[owner_.chrOffset(address)] = value;
-    }
-
-   private:
-    TestNromCartridge& owner_;
-  };
-
-  [[nodiscard]] std::size_t chrOffset(std::uint16_t address) const { return (static_cast<std::size_t>(chrBank_) * 8192 + address) % chr_.size(); }
-
-  std::vector<std::uint8_t> prg_;
-  std::vector<std::uint8_t> chr_;
-  std::vector<std::uint8_t> prgRam_;
-  std::uint8_t mapper_{0};
-  std::uint8_t chrBank_{0};
-  bool vertical_{false};
-  bool chrIsRam_{false};
-  CpuSide cpuSide_;
-  PpuSide ppuSide_;
-};
+inline std::vector<std::uint8_t> readDataFile(const std::string& relativePath) { return readBinaryFile(std::string(EMBER_TEST_DATA_DIR) + "/" + relativePath); }
 
 /** 手写 6502 程序的小工具：只提供测试用到的几条指令。 */
 class Assembler {
@@ -194,19 +99,38 @@ inline std::vector<std::uint8_t> makeNromFile(const Assembler& main, const Assem
   return file;
 }
 
-/** 装好卡带的经典 FC：上电前先插卡带。 */
+/** 装好卡带的经典 FC：用 iNES 解析加 nrom 插件（及调用方给的其他测试插件）装配卡带，插入后上电。 */
 struct FcRig {
-  explicit FcRig(const std::vector<std::uint8_t>& file) : cartridge(file) {
-    machine.cartridgeSlot().insert(cartridge);
+  /**
+   * @param file 完整的 NES 文件。
+   * @param extraPlugins 除官方 nrom 以外要安装的插件包。
+   */
+  explicit FcRig(const std::vector<std::uint8_t>& file, const std::vector<std::vector<std::uint8_t>>& extraPlugins = {}) {
+    auto registry = std::make_shared<infra::mappers::PluginRegistry>(fcRegistryOptions());
+    registry->installPackage(officialPluginPackage("nrom"));
+    for (const auto& package : extraPlugins) registry->installPackage(package);
+    const logic::cartridges::InesCartridgeLoader loader(registry);
+    cartridge = loader.assemble(loader.plan(file), machine.cartridgeIrq());
+    machine.cartridgeSlot().insert(*cartridge);
     machine.powerOn();
   }
 
-  /** @param romPath 相对 core/test/data 的 ROM 路径。 */
-  explicit FcRig(const std::string& romPath) : FcRig(readDataFile(romPath)) {}
+  /**
+   * @param romPath 相对 core/test/data 的 ROM 路径。
+   * @param extraPlugins 除官方 nrom 以外要安装的插件包。
+   */
+  explicit FcRig(const std::string& romPath, const std::vector<std::vector<std::uint8_t>>& extraPlugins = {}) : FcRig(readDataFile(romPath), extraPlugins) {}
 
   /** 从空白状态运行 frames 帧。 */
   void runFrames(int frames) {
     for (int i = 0; i < frames; ++i) machine.runFrame();
+  }
+
+  /** $6000-$7FFF 的 8K PRG RAM（卡带的存储区 prg-ram）的全部内容。 */
+  [[nodiscard]] std::vector<std::uint8_t> prgRam() const {
+    std::vector<std::uint8_t> bytes(8192);
+    cartridge->storage("prg-ram")->readBlock(0, bytes);
+    return bytes;
   }
 
   /** 把名称表 0 当作文字读出：每个图块号当作 ASCII 字符，行之间用换行分隔，去掉行尾空格。 */
@@ -225,7 +149,8 @@ struct FcRig {
   }
 
   ember::bootstrap::FcMachine machine;
-  TestNromCartridge cartridge;
+  /** 卡带；声明在主机之后，先于主机销毁。 */
+  std::unique_ptr<contracts::mappers::MapperCartridge> cartridge;
 };
 
 }  // namespace ember::test

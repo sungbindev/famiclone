@@ -1,0 +1,130 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：script-runtime.hpp
+ * 说明：mapper 脚本的沙箱：每个卡带一个独立的 QuickJS 运行时，只向脚本暴露宿主对象 ctx，并限制内存、栈与单次回调的时长。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-14
+ * 备注：规则见 docs/03-mapper插件规范.md 第 6 节。脚本里没有文件、网络、进程、定时器、系统时间与 Math.random，也没有 import；
+ *       ctx 目前实现 header、window、nametable、irq、storage、state、log；device、timer、random、settings 属于后续阶段，脚本里是 undefined。
+ *       宿主对象的实现由 ScriptBindings 提供，本类不认识卡带；quickjs.h 只在 script-runtime.cpp 里出现。
+ * ------------------------------------------------------------------------
+ */
+
+#pragma once
+
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace ember::infra::mappers {
+
+/** 执行限制，默认值见 docs/03 第 6.3 节。 */
+struct ScriptLimits {
+  /** 运行时内存上限（字节）。 */
+  std::size_t memoryBytes{32U * 1024U * 1024U};
+  /** 栈上限（字节）。 */
+  std::size_t stackBytes{256U * 1024U};
+  /** 一次回调（含脚本加载）的时长上限，超过即中止。 */
+  std::chrono::milliseconds callTimeout{50};
+};
+
+/** 脚本给宿主对象传了不合法的参数：作为 RangeError 抛回脚本。 */
+class ScriptArgumentError : public std::runtime_error {
+ public:
+  using std::runtime_error::runtime_error;
+};
+
+/** 脚本可见的名称：宿主按下标识别窗口、存储区与状态。 */
+struct ScriptLayout {
+  /** 窗口标识，下标即 ScriptBindings 里的窗口号。 */
+  std::vector<std::string> windows;
+  /** 存储区标识，下标即存储区号。 */
+  std::vector<std::string> storages;
+  /** 状态名，下标即状态号。 */
+  std::vector<std::string> states;
+  /** ctx.header 的内容，JSON 文本。 */
+  std::string headerJson;
+};
+
+/** 宿主对象的实现：脚本经 ctx 调用时转到这里。参数不合法时抛出 ScriptArgumentError。 */
+class ScriptBindings {
+ public:
+  virtual ~ScriptBindings() = default;
+
+  /** ctx.window(id).setBank(bank)：bank 不能为负。 */
+  virtual void windowSetBank(std::size_t window, std::int64_t bank) = 0;
+  /** ctx.window(id).setOffset(bytes)：偏移不能为负。 */
+  virtual void windowSetOffset(std::size_t window, std::int64_t offset) = 0;
+  /** ctx.window(id).unmap()。 */
+  virtual void windowUnmap(std::size_t window) = 0;
+  /** ctx.nametable.set(mode)：mode 是 horizontal、vertical、single0、single1、four 之一，否则报错。 */
+  virtual void nametableSet(std::string_view mode) = 0;
+  /** ctx.irq.assert()。 */
+  virtual void irqAssert() = 0;
+  /** ctx.irq.release()。 */
+  virtual void irqRelease() = 0;
+  /** ctx.storage(id).size。 */
+  [[nodiscard]] virtual std::size_t storageSize(std::size_t storage) const = 0;
+  /** ctx.storage(id).read(offset)：偏移越界报错。 */
+  virtual std::uint8_t storageRead(std::size_t storage, std::int64_t offset) = 0;
+  /** ctx.storage(id).write(offset, value)：偏移越界报错；ROM 拒绝写入，返回 false。 */
+  virtual bool storageWrite(std::size_t storage, std::int64_t offset, std::uint8_t value) = 0;
+  /** ctx.state 里一项的读取。 */
+  [[nodiscard]] virtual std::uint32_t stateGet(std::size_t state) const = 0;
+  /** ctx.state 里一项的写入：宿主按位宽截断。 */
+  virtual void stateSet(std::size_t state, std::uint32_t value) = 0;
+  /** ctx.log.warn(message)。 */
+  virtual void log(std::string_view message) = 0;
+};
+
+/** 一个插件的脚本运行时。非线程安全：同一时刻只能由一个线程使用，换线程使用没有问题。 */
+class ScriptRuntime {
+ public:
+  /**
+   * 创建运行时并加载脚本（ES 模块，默认导出一个对象，对象上可以有 reset、read、write 三个函数）。
+   * @param pluginId 插件标识，出现在错误说明里。
+   * @param source main.js 的内容。
+   * @param layout ctx 里可见的窗口、存储区与状态。
+   * @param bindings 宿主对象的实现，必须活到本对象销毁。
+   * @param limits 执行限制。
+   * @throws shared::CoreError mappers.invalidPackage：脚本无法加载或导出不合格；mappers.limitExceeded：加载时超限。
+   */
+  ScriptRuntime(std::string pluginId, std::string_view source, ScriptLayout layout, ScriptBindings& bindings, ScriptLimits limits = {});
+  ~ScriptRuntime();
+
+  ScriptRuntime(const ScriptRuntime&) = delete;
+  ScriptRuntime& operator=(const ScriptRuntime&) = delete;
+
+  /** 脚本是否导出了 reset。 */
+  [[nodiscard]] bool hasReset() const noexcept;
+  /** 脚本是否导出了 read。 */
+  [[nodiscard]] bool hasRead() const noexcept;
+  /** 脚本是否导出了 write。 */
+  [[nodiscard]] bool hasWrite() const noexcept;
+
+  /** 调用 reset(ctx, 'power' 或 'soft')；脚本没有 reset 时什么也不做。 */
+  void reset(bool power);
+
+  /**
+   * 调用 read(ctx, bus, addr)。
+   * @return 脚本返回的 0-255 的值；返回 undefined 表示不驱动总线，对应空。
+   * @throws shared::CoreError mappers.scriptError：脚本异常或返回值不合法；mappers.limitExceeded：超限。
+   */
+  [[nodiscard]] std::optional<std::uint8_t> read(bool ppu, std::uint16_t address);
+
+  /** 调用 write(ctx, bus, addr, value)。错误同 read。 */
+  void write(bool ppu, std::uint16_t address, std::uint8_t value);
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
+}  // namespace ember::infra::mappers

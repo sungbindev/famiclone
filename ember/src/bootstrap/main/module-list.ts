@@ -10,7 +10,8 @@
  */
 
 import type { MainModule } from './main-module';
+import { MAPPERS_MAIN_MODULE } from './modules/mappers';
 import { SYSTEM_MAIN_MODULE } from './modules/system';
 
 /** 全部模块，按登记顺序排列。 */
-export const MAIN_MODULES: readonly MainModule[] = [SYSTEM_MAIN_MODULE];
+export const MAIN_MODULES: readonly MainModule[] = [SYSTEM_MAIN_MODULE, MAPPERS_MAIN_MODULE];

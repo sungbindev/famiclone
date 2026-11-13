@@ -43,9 +43,8 @@ afterEach(() => {
 
 describe('generate：system 模块', () => {
   it('生成 TypeScript、C++ 与汇总文件', () => {
-    const root = mkdtempSync(join(tmpdir(), 'ember-schema-gen-'));
-    roots.push(root);
-    cpSync(join(REPO_ROOT, 'schema'), join(root, 'schema'), { recursive: true });
+    const root = createProject({});
+    cpSync(join(REPO_ROOT, 'schema', 'system.schema.json'), join(root, 'schema', 'system.schema.json'));
     const result = generate(root);
     expect(result.modules).toEqual(['system']);
 
@@ -80,6 +79,22 @@ describe('generate：system 模块', () => {
     const removed = generate(root).removed;
     expect(removed.length).toBe(2);
     expect(existsSync(join(root, 'src', 'contracts', 'system', 'generated'))).toBe(false);
+  });
+});
+
+describe('generate：mappers 模块', () => {
+  it('install 只能由主进程发起，其他请求进入界面请求名单，事件与类型照常生成', () => {
+    const root = createProject({});
+    cpSync(join(REPO_ROOT, 'schema', 'mappers.schema.json'), join(root, 'schema', 'mappers.schema.json'));
+    expect(generate(root).modules).toEqual(['mappers']);
+    const api = read(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts');
+    expect(api).toMatch(/CORE_REQUEST_NAMES: readonly string\[\] = \[\s*'mappers\.list',\s*'mappers\.info',\s*'mappers\.uninstall',\s*'mappers\.setEnabled',\s*'mappers\.reload'\s*\]/);
+    expect(api).not.toMatch(/\n\s+install: \(params/);
+    expect(api).toContain("'mappers.changed'");
+    const header = read(root, 'core', 'src', 'contracts', 'mappers', 'generated', 'mappers.hpp');
+    expect(header).toContain('MAPPERS_INSTALL_REQUEST = "mappers.install"');
+    expect(header).toContain('struct MappersInstallParams');
+    expect(header).toContain('struct MapperDetail');
   });
 });
 

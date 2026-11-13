@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：用手写的小程序放进测试用 NROM 卡带运行，再从内部 RAM、PPU 总线与 PPU 内部状态读取结果。
+ * 备注：用手写的小程序经 iNES 解析与 nrom 插件装配成卡带运行，再从内部 RAM、PPU 总线与 PPU 内部状态读取结果。
  * ------------------------------------------------------------------------
  */
 
@@ -200,7 +200,7 @@ TEST(FcMachine, PowerOffStopsRunningAndSoftResetKeepsRamAndCartridgeState) {
   rig.machine.softReset();
   EXPECT_EQ(rig.machine.cpuRegisters().pc, 0x8000);
   EXPECT_EQ(ram(rig, 0x20), 0x99);
-  EXPECT_EQ(rig.cartridge.prgRam()[0], 0x99);
+  EXPECT_EQ(rig.prgRam()[0], 0x99);
 
   rig.machine.powerOff();
   EXPECT_FALSE(rig.machine.isPoweredOn());
@@ -214,7 +214,7 @@ TEST(FcMachine, PowerOffStopsRunningAndSoftResetKeepsRamAndCartridgeState) {
   rig.machine.powerOn();
   EXPECT_TRUE(rig.machine.isPoweredOn());
   EXPECT_EQ(ram(rig, 0x20), 0x00);
-  EXPECT_EQ(rig.cartridge.prgRam()[0], 0x00);
+  EXPECT_EQ(rig.prgRam()[0], 0x00);
   EXPECT_EQ(rig.machine.cpuRegisters().cycles, 7U);
 }
 

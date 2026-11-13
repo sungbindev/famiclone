@@ -28,7 +28,8 @@ constexpr std::size_t INTERNAL_RAM_SIZE = 2048;
 }  // namespace
 
 FcMachine::FcMachine()
-    : ram_(INTERNAL_RAM_SIZE),
+    : cartridgeIrq_(irq_),
+      ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
       nametableRam_(slot_),
       ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, PPU_PHASE_TICKS),
@@ -56,6 +57,7 @@ void FcMachine::powerOn() {
   apu_.reset(true);
   dma_.reset(true);
   ppu_.reset(true);
+  cartridgeIrq_.set(false);
   slot_.reset(true);
   poweredOn_ = true;
   cpu_.reset(true);

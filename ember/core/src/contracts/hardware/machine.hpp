@@ -16,6 +16,7 @@
 #include "contracts/hardware/cartridge-slot.hpp"
 #include "contracts/hardware/clock.hpp"
 #include "contracts/hardware/cpu.hpp"
+#include "contracts/hardware/irq-output.hpp"
 #include "contracts/hardware/ppu.hpp"
 
 namespace ember::contracts::hardware {
@@ -65,6 +66,9 @@ class Machine {
 
   /** 卡槽。 */
   virtual CartridgeSlot& cartridgeSlot() = 0;
+
+  /** 卡槽的 IRQ 引脚：卡带经它向 CPU 发出中断；创建卡带时接入。 */
+  virtual IrqOutput& cartridgeIrq() = 0;
 };
 
 }  // namespace ember::contracts::hardware

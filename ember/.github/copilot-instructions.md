@@ -23,9 +23,11 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 硬件行为以真机资料与实测为准：依据 `../machines/`、`../reference/` 和实测，不以旧版 `../virtuanes/` 的代码为硬件事实；旧代码只参考逻辑，不复制。
 - 每个硬件模块一个型号，模块之间只经契约层的抽象（总线、中断线、时钟、端口等）协作，实现之间不互相引用；具体实现只在组装根按主机型号创建并连线。硬件契约在 `core/src/contracts/hardware/`（只能包含标准库、自己与 `shared`），硬件模块在 `core/src/logic/hardware/<模块>/`（只能包含 `contracts/hardware`、`shared` 与 `platform` 的抽象）。
 - CPU 核用 nestest 日志逐行比对验证，测试数据在 `core/test/data/nestest/`，不改动数据文件。
-- PPU 用公开的测试 ROM 验证（`core/test/data/` 下的 9 组，来源与结果见各目录的 `README.md`），由 `core/test/hardware/ppu-rom-test.cpp` 运行；改动 PPU、DMA、手柄或 `fc` 主机型号后必须重跑，暂时不能通过的项登记在 02 第 12 节“已知差异”，不删测试。测试用的 NROM 卡带只在测试代码里，核心程序里没有 mapper 的实现。
+- PPU 用公开的测试 ROM 验证（`core/test/data/` 下的 9 组，来源与结果见各目录的 `README.md`），由 `core/test/hardware/ppu-rom-test.cpp` 运行；改动 PPU、DMA、手柄或 `fc` 主机型号后必须重跑，暂时不能通过的项登记在 02 第 12 节“已知差异”，不删测试。测试用的卡带经 iNES 解析加真实的 nrom 插件装配（ppu_read_buffer 的 mapper 3 用测试插件 `test-cnrom`），核心程序和测试代码里都没有 mapper 的替身实现。
 - PPU 的 CPU 相位（`fc.hpp` 的 `PPU_PHASE_TICKS`）按 vbl/NMI 时序测试调定，不随意改；PPU 的帧缓冲每像素 4 字节，内存顺序 R、G、B、A，见 02。
 - 模拟器程序只提供环境，不含任何具体卡带与机型的规则；这些规则只在 mapper 插件里。mapper 清单只能按名字选择主机型号，不能修改芯片内部与主板上的固定资源。
+- 官方 mapper 插件的源码在 `plugins/<id>/`（目录名等于清单里的 `id`，只含 `manifest.json`、`main.js`、`icon.png`），用 `npm run plugins:pack` 打包到 `build/plugins/`；核心测试依赖打好的包（`npm run core:test` 会先打包）。改了插件规范或宿主的行为，同步 03，并把与设计不一致处写进 03 第 11 节。
+- mapper 插件包与脚本来自外部，是不可信输入：包的读取要检查路径穿越与大小上限，脚本只能经宿主对象 `ctx` 访问外部，内存、栈、单次回调时长都有上限；C 回调里的 C++ 异常必须在边界截获，脚本出错不能让异常穿过 CPU 的总线访问（卡带记下错误，由运行模块轮询）。
 - 存储按位置分三档：芯片内与主板上的由芯片模块、主机型号写死，卡带上的由 mapper 清单声明，见硬件模块文档。
 - 请求、事件与数据类型只在 `schema/<模块>.schema.json` 中定义和修改，TypeScript 与 C++ 的 `generated/` 目录由脚本生成，不手写、不手改。
 - 调试服务与界面共用同一套请求；调试专用的请求在 Schema 里标 `debugOnly`，只经调试服务开放，界面不使用。
@@ -42,11 +44,12 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm start` | 生成 Schema 代码、编译原生模块，再启动开发版 |
+| `npm start` | 生成 Schema 代码、打包插件、编译原生模块，再启动开发版 |
 | `.\debug.ps1` | 在任意目录下启动开发版（切到项目目录后执行 `npm start`） |
 | `npm run schema` | 由 `schema/` 生成 TypeScript 与 C++ 代码 |
-| `npm run core:build` | 编译 C++ 原生模块，输出 `core/build/Release/ember_core.node`（Windows 用 Visual Studio 自带的 CMake） |
-| `npm run core:test` | 构建并运行 C++ 测试 |
+| `npm run core:build` | 打包官方插件并编译原生模块，输出 `core/build/Release/ember_core.node`（Windows 用 Visual Studio 自带的 CMake） |
+| `npm run core:test` | 打包官方插件，构建并运行 C++ 测试 |
+| `npm run plugins:pack` | 把 `plugins/<插件>/` 打成 `build/plugins/<id>.emap` |
 | `npm test` | 运行 TypeScript 测试 |
 | `npm run typecheck` | 类型检查 |
 | `npm run lint` | oxlint 检查 |

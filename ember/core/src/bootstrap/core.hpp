@@ -45,7 +45,7 @@ class Core {
 
   /**
    * 启动核心。
-   * @param optionsJson {"userDataPath": 用户数据目录, "appVersion": 应用版本, "workerCount"?: 工作线程数}。
+   * @param optionsJson {"userDataPath": 用户数据目录, "appVersion": 应用版本, "workerCount"?: 工作线程数, "bundledPluginsPath"?: 预装的 mapper 插件目录}。
    * @returns {"coreVersion", "requests": [全部请求名]} 的 JSON 文本。
    * @throws shared::CoreError 参数不合格或已启动；std::exception 创建日志等失败。
    */

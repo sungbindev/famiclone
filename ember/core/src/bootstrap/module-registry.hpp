@@ -36,6 +36,8 @@ struct ModuleRegistry {
   /** 核心版本，取自构建参数。 */
   std::string coreVersion;
   std::filesystem::path userDataPath;
+  /** 预装的 mapper 插件目录；没有时为空。 */
+  std::filesystem::path bundledPluginsPath;
   /** 模块之间共享的契约接口。 */
   ModuleServices& services;
   /** 核心停止时、等待请求结束之前按登记的相反顺序调用，用于停下模块自己的后台工作。 */

@@ -6,7 +6,7 @@
 # 日期：2026-11-13
 # 备注：第三方库源码放在 core/third_party（清单见 docs/01-软件架构设计.md 第 10 节），编译时不联网；Windows 静态链接 C++ 运行库；
 #       生成的代码（src/contracts/*/generated）由 npm run schema 产生，配置前须先生成；
-#       SQLite、QuickJS-ng 与 miniz 先登记目标，核心库用到时再链接（EXCLUDE_FROM_ALL，没人链接就不编译）。
+#       SQLite 先登记目标，核心库用到时再链接（EXCLUDE_FROM_ALL，没人链接就不编译）；QuickJS-ng 与 miniz 已被 mapper 插件宿主链接。
 # ------------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 3.25)
@@ -42,7 +42,7 @@ target_include_directories(ember_sqlite PUBLIC ${EMBER_THIRD_PARTY}/sqlite)
 target_compile_definitions(ember_sqlite PRIVATE SQLITE_DQS=0 SQLITE_DEFAULT_FOREIGN_KEYS=1 SQLITE_OMIT_LOAD_EXTENSION=1 SQLITE_THREADSAFE=1)
 
 # mapper 插件的沙箱：只编译引擎核心，不编译提供文件与进程访问的 quickjs-libc。
-add_library(ember_quickjs STATIC EXCLUDE_FROM_ALL
+add_library(ember_quickjs STATIC
   ${EMBER_THIRD_PARTY}/quickjs-ng/quickjs.c
   ${EMBER_THIRD_PARTY}/quickjs-ng/libregexp.c
   ${EMBER_THIRD_PARTY}/quickjs-ng/libunicode.c
@@ -56,7 +56,7 @@ else()
   target_compile_options(ember_quickjs PRIVATE -w -funsigned-char)
 endif()
 
-add_library(ember_miniz STATIC EXCLUDE_FROM_ALL ${EMBER_THIRD_PARTY}/miniz/miniz.c)
+add_library(ember_miniz STATIC ${EMBER_THIRD_PARTY}/miniz/miniz.c)
 target_include_directories(ember_miniz SYSTEM PUBLIC ${EMBER_THIRD_PARTY}/miniz)
 target_compile_definitions(ember_miniz PUBLIC MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 
@@ -74,7 +74,8 @@ endif()
 
 add_library(ember_core_lib STATIC ${EMBER_CORE_SOURCES})
 target_include_directories(ember_core_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(ember_core_lib PUBLIC ember_json)
+# miniz 的头文件对使用者可见（测试要写插件包）；QuickJS 只在核心库内部使用，头文件不外露。
+target_link_libraries(ember_core_lib PUBLIC ember_json ember_miniz PRIVATE ember_quickjs)
 target_compile_definitions(ember_core_lib PUBLIC EMBER_CORE_VERSION="${EMBER_CORE_VERSION}")
 
 if(MSVC)
@@ -123,7 +124,7 @@ if(EMBER_BUILD_TESTS)
   file(GLOB_RECURSE EMBER_CORE_TESTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
   add_executable(ember_core_tests ${EMBER_CORE_TESTS})
   target_link_libraries(ember_core_tests PRIVATE ember_core_lib GTest::gtest_main)
-  target_compile_definitions(ember_core_tests PRIVATE EMBER_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data")
+  target_compile_definitions(ember_core_tests PRIVATE EMBER_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data" EMBER_PLUGIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../build/plugins")
   include(GoogleTest)
   gtest_discover_tests(ember_core_tests DISCOVERY_MODE PRE_TEST)
 endif()

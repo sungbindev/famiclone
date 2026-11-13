@@ -3,7 +3,7 @@
  * 名称：check-modules.mjs
  * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、C++ 各层的 #include 规则、硬件契约与硬件模块的规则（模块之间互不引用）；
  *       从 TypeScript 的 import、C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
- *       检查模块目录都在模块清单中登记。
+ *       检查模块目录都在模块清单中登记；检查官方插件目录 plugins/<id>/：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -349,6 +349,35 @@ function checkRegistration(root, errors, schemaModules) {
   }
 }
 
+// ---------------------------------------------------------------- 官方插件
+
+/** 插件目录里允许的文件，与插件包的格式一致（docs/03-mapper插件规范.md 第 3 节）。 */
+const PLUGIN_FILES = new Set(['manifest.json', 'main.js', 'icon.png']);
+
+/** 检查官方插件目录：只含允许的文件、有清单、清单里的 id 等于目录名。 */
+function checkPlugins(root, errors) {
+  const pluginsDir = join(root, 'plugins');
+  for (const name of listDirectories(pluginsDir)) {
+    const directory = join(pluginsDir, name);
+    for (const entry of readdirSync(directory)) {
+      if (!PLUGIN_FILES.has(entry) || statSync(join(directory, entry)).isDirectory()) errors.push(`plugins/${name}：不允许出现 ${entry}（只允许 ${[...PLUGIN_FILES].join('、')}）`);
+    }
+    const manifestFile = join(directory, 'manifest.json');
+    if (!existsSync(manifestFile)) {
+      errors.push(`plugins/${name}：缺少 manifest.json`);
+      continue;
+    }
+    let manifest;
+    try {
+      manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
+    } catch {
+      errors.push(`plugins/${name}/manifest.json 不是合法的 JSON`);
+      continue;
+    }
+    if (manifest?.id !== name) errors.push(`plugins/${name}：manifest.json 的 id 必须等于目录名`);
+  }
+}
+
 // ---------------------------------------------------------------- 入口
 
 /**
@@ -362,6 +391,7 @@ export function checkProject(root) {
   const edges = schemas.flatMap((schema) => schema.refs.filter((ref) => ref.module !== schema.name).map((ref) => ({ from: schema.name, to: ref.module })));
   checkCpp(root, errors, edges);
   checkTs(root, errors, edges);
+  checkPlugins(root, errors);
   for (const cycle of findCycles(toGraph(edges))) errors.push(`模块之间有循环依赖：${cycle}`);
   checkRegistration(
     root,

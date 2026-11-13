@@ -157,6 +157,40 @@ describe('checkProject', () => {
     ]);
   });
 
+  it('官方插件目录：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png', () => {
+    const root = createProject({
+      'plugins/good/manifest.json': JSON.stringify({ id: 'good' }),
+      'plugins/good/main.js': '',
+      'plugins/wrong/manifest.json': JSON.stringify({ id: 'other' }),
+      'plugins/extra/manifest.json': JSON.stringify({ id: 'extra' }),
+      'plugins/extra/readme.md': 'x',
+      'plugins/nomanifest/main.js': '',
+      'plugins/broken/manifest.json': '{'
+    });
+    expect(checkProject(root).errors).toEqual([
+      'plugins/broken/manifest.json 不是合法的 JSON',
+      'plugins/extra：不允许出现 readme.md（只允许 manifest.json、main.js、icon.png）',
+      'plugins/nomanifest：缺少 manifest.json',
+      'plugins/wrong：manifest.json 的 id 必须等于目录名'
+    ]);
+  });
+
+  it('mapper 插件宿主（infra/mappers）可以用 QuickJS 与 miniz，logic 与 contracts 不行', () => {
+    const root = createProject({
+      'core/src/infra/mappers/host.cpp': '#include <quickjs.h>\n#include <miniz.h>\n#include "contracts/mappers/api.hpp"\n',
+      'core/src/contracts/mappers/api.hpp': '#pragma once\n',
+      'core/src/logic/cartridges/loader.cpp': '#include <quickjs.h>\n#include "infra/mappers/host.hpp"\n#include "contracts/mappers/api.hpp"\n',
+      'core/src/bootstrap/module-list.cpp': '{"mappers", registerMappers},\n{"cartridges", registerCartridges},\n',
+      'core/src/bootstrap/modules/mappers.cpp': '\n',
+      'core/src/bootstrap/modules/cartridges.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual([
+      'core/src/logic/cartridges/loader.cpp：不能包含 <quickjs.h>',
+      'core/src/logic/cartridges/loader.cpp：logic 层不能包含 infra 层的 infra/mappers/host.hpp',
+      'core/src/logic/cartridges/loader.cpp：模块 cartridges 只能引用模块 mappers 的契约，不能包含 infra/mappers/host.hpp'
+    ]);
+  });
+
   it('发现模块之间的循环依赖', () => {
     const root = createProject({
       'schema/a.schema.json': JSON.stringify({ module: 'a', types: { X: { type: 'object', properties: { b: { $ref: 'b#/types/Y' } } } }, requests: {}, events: {} }),

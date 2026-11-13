@@ -9,14 +9,17 @@
  *       结果有两种读法：2005 年的 blargg 测试把结果显示在屏幕上（把名称表 0 的图块号当 ASCII 读出），
  *       2010 年的测试按 $6000 的约定写结果（$6000 为状态，$6001-$6003 为签名 DE B0 61，$6004 起为文本）。
  *       暂时无法通过的项见 docs/02-硬件模块.md 第 6.1 节“已知差异”，对应测试断言当前的失败结果，修复后需要同步改测试与文档。
+ *       卡带用真实的 nrom 插件装配（mapper 3 的 ppu_read_buffer 用测试插件 test-cnrom），没有 mapper 的替身实现。
  * ------------------------------------------------------------------------
  */
 
 #include <gtest/gtest.h>
 
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "fc-test-support.hpp"
 
@@ -40,6 +43,8 @@ struct RomCase {
   int maxFrames;
   /** 文本里必须出现的内容（核对表格输出），为空则不核对。 */
   const char* expectedText;
+  /** 除 nrom 以外还要安装的测试插件（core/test/data/test-plugins 下的目录名），没有则为空。 */
+  const char* testPlugin = nullptr;
 };
 
 struct RomResult {
@@ -57,7 +62,9 @@ int findResultCode(const std::string& text) {
 }
 
 RomResult runRom(const RomCase& rom) {
-  FcRig rig(rom.path);
+  std::vector<std::vector<std::uint8_t>> plugins;
+  if (rom.testPlugin != nullptr) plugins.push_back(ember::test::testPluginPackage(rom.testPlugin));
+  FcRig rig(rom.path, plugins);
   RomResult result;
   for (int frame = 0; frame < rom.maxFrames; ++frame) {
     rig.machine.runFrame();
@@ -74,7 +81,7 @@ RomResult runRom(const RomCase& rom) {
         return result;
       }
     } else {
-      const auto memory = rig.cartridge.prgRam();
+      const auto memory = rig.prgRam();
       const bool signature = memory[1] == 0xDE && memory[2] == 0xB0 && memory[3] == 0x61;
       // $80 表示还在运行，$81 表示测试要求复位。
       if (signature && memory[0] != 0x80 && memory[0] != 0x81) {
@@ -136,7 +143,7 @@ const RomCase ROMS[] = {
     // OAM 与读缓冲
     {"oam_read", "oam-read/oam_read.nes", ResultStyle::Status, 1000, nullptr},
     {"oam_stress", "oam-stress/oam_stress.nes", ResultStyle::Status, 3000, nullptr},
-    {"ppu_read_buffer", "ppu-read-buffer/test_ppu_read_buffer.nes", ResultStyle::Status, 3000, nullptr},
+    {"ppu_read_buffer", "ppu-read-buffer/test_ppu_read_buffer.nes", ResultStyle::Status, 3000, nullptr, "cnrom"},
 };
 
 class PpuRomTest : public testing::TestWithParam<RomCase> {};

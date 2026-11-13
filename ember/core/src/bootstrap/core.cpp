@@ -84,7 +84,7 @@ std::string Core::start(const std::string& optionsJson) {
   const auto options = nlohmann::json::parse(optionsJson, nullptr, false);
   if (options.is_discarded()) throw shared::SchemaError("启动参数不是合法的 JSON");
   json_fields::requireObject(options, "options");
-  json_fields::rejectUnknown(options, "options", {"userDataPath", "appVersion", "workerCount"});
+  json_fields::rejectUnknown(options, "options", {"userDataPath", "appVersion", "workerCount", "bundledPluginsPath"});
   const auto* userDataField = json_fields::find(options, "userDataPath");
   if (userDataField == nullptr) throw shared::SchemaError("options.userDataPath 缺少");
   const auto userDataText = json_fields::readString(*userDataField, "options.userDataPath", 1, std::nullopt, {});
@@ -93,6 +93,8 @@ std::string Core::start(const std::string& optionsJson) {
   const auto appVersion = json_fields::readString(*appVersionField, "options.appVersion", 1, std::nullopt, {});
   const auto* workerField = json_fields::find(options, "workerCount");
   const auto workerCount = workerField == nullptr ? 0 : json_fields::readInteger(*workerField, "options.workerCount", 1, 64);
+  const auto* bundledField = json_fields::find(options, "bundledPluginsPath");
+  const auto bundledText = bundledField == nullptr ? std::string() : json_fields::readString(*bundledField, "options.bundledPluginsPath", 1, std::nullopt, {});
 
   const std::filesystem::path userDataPath(std::u8string(userDataText.begin(), userDataText.end()));
   auto clock = std::make_shared<platform::SystemClock>();
@@ -101,7 +103,7 @@ std::string Core::start(const std::string& optionsJson) {
 
   std::vector<std::function<void()>> stopHandlers;
   ModuleServices services;
-  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, services, stopHandlers};
+  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), services, stopHandlers};
   try {
     for (const auto& module : moduleList()) module.registerModule(registry);
   } catch (...) {

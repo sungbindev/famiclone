@@ -102,7 +102,7 @@
             <div class="ui-group">
               <h3 class="ui-group-title">机器</h3>
               <dl class="ui-facts">
-                <div class="ui-facts-row"><dt>主机型号</dt><dd id="factHost">um6576 学习机</dd></div>
+                <div class="ui-facts-row"><dt>主机型号</dt><dd id="factHost">sb2000 学习机</dd></div>
                 <div class="ui-facts-row"><dt>卡带</dt><dd id="factCartridge">SB2K_BIOS.NES</dd></div>
                 <div class="ui-facts-row"><dt>mapper</dt><dd id="factPlugin">sb2000 1.0.0</dd></div>
                 <div class="ui-facts-row"><dt>状态</dt><dd id="factState">运行中</dd></div>
@@ -218,7 +218,7 @@
               <table class="ui-table" id="libTable">
                 <thead><tr><th>名称</th><th>mapper</th><th>变体</th><th>主机型号</th><th>匹配的插件</th><th>大小</th><th>状态</th></tr></thead>
                 <tbody>
-                  <tr data-row data-status="ok"><td class="ui-table-strong">SB2K_BIOS.NES</td><td>171</td><td>1</td><td>um6576</td><td>sb2000 1.0.0</td><td>128 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
+                  <tr data-row data-status="ok"><td class="ui-table-strong">SB2K_BIOS.NES</td><td>171</td><td>1</td><td>sb2000</td><td>sb2000 1.0.0</td><td>128 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
                   <tr data-row data-status="ok"><td class="ui-table-strong">Super Mario.nes</td><td>0</td><td>0</td><td>fc</td><td>nrom 1.0.0</td><td>40 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
                   <tr data-row data-status="ok"><td class="ui-table-strong">Tetris.nes</td><td>0</td><td>0</td><td>fc</td><td>nrom 1.0.0</td><td>24 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
                   <tr data-row data-status="missing"><td class="ui-table-strong">bbk_bios20.nes</td><td>171</td><td>2</td><td>—</td><td>—</td><td>256 KB</td><td><span class="ui-chip ui-chip--warn">缺少插件</span></td></tr>
@@ -233,7 +233,7 @@
           <section class="page page--media ui-scroll" data-page="media" hidden>
             <header class="ui-page-head">
               <h2 class="ui-page-title" id="devTitle">软驱 A</h2>
-              <p class="ui-page-description" id="devDescription">软驱控制器由卡带挂接，盘片可随时插入或取出，与电源无关。</p>
+              <p class="ui-page-description" id="devDescription">软驱控制器在主机上，盘片可随时插入或取出，与电源无关。</p>
             </header>
 
             <div class="ui-card" data-device-panel="floppyA">
@@ -313,7 +313,7 @@
                 <thead><tr><th>名称</th><th>版本</th><th>匹配</th><th>主机型号</th><th>来源</th><th>状态</th></tr></thead>
                 <tbody>
                   <tr data-row data-source="bundled" data-detail="nrom"><td class="ui-table-strong">NROM</td><td>1.0.0</td><td>mapper 0</td><td>fc</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
-                  <tr data-row data-source="bundled" data-detail="sb2000"><td class="ui-table-strong">小霸王 SB2000</td><td>1.0.0</td><td>mapper 171，变体 1</td><td>um6576</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
+                  <tr data-row data-source="bundled" data-detail="sb2000"><td class="ui-table-strong">小霸王 SB2000</td><td>1.0.0</td><td>mapper 171，变体 1</td><td>sb2000</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
                   <tr data-row data-source="dev" data-detail="demo"><td class="ui-table-strong">示意 mapper</td><td>0.1.0</td><td>mapper 999</td><td>fc</td><td>开发目录</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
                 </tbody>
               </table>
@@ -458,7 +458,7 @@
             </div>
           </div>
           <ul class="shell-message-list ui-scroll" id="messageList">
-            <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>已装配主机 um6576 学习机</span></li>
+            <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>已装配主机 sb2000 学习机</span></li>
             <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>mapper 171、变体 1 匹配到插件 sb2000 1.0.0</span></li>
             <li class="shell-message"><time>10:21:05</time><span class="shell-message-level">信息</span><span>软驱 A 已插入 SB2K_DOS.IMG</span></li>
             <li class="shell-message is-warning"><time>10:21:09</time><span class="shell-message-level">警告</span><span>磁带机里没有磁带</span></li>
@@ -471,7 +471,7 @@
     <footer class="shell-status-bar">
       <div class="shell-status-group">
         <span class="shell-status-item"><span class="shell-status-dot" id="statusDot" data-state="on"></span><span id="statusPower">运行中</span></span>
-        <span class="shell-status-item" id="statusHost">um6576 学习机</span>
+        <span class="shell-status-item" id="statusHost">sb2000 学习机</span>
         <span class="shell-status-item" id="statusCartridge">SB2K_BIOS.NES</span>
         <span class="shell-status-item" id="statusPlugin">sb2000 1.0.0</span>
       </div>

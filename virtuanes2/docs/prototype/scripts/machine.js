@@ -28,14 +28,14 @@
   const GAME_PLAYER = '#e02020';
   const PALETTE = ['#000000', '#e04b4b', '#4bc26a', '#e0c34b', '#4b7be0', '#c24bc2', '#4bc2c2', '#ffffff'];
   const BOOT_LINES = ['SUBOR SB-DOS  Version 1.0', '内存 512K    鼠标 已连接    软驱 A:', '', 'A>DIR', ' SB2K_DOS  IMG    1440K', ' HELLO     EXE       4K', '', 'A>'];
-  const HOST_NAMES = { um6576: 'um6576 学习机', fc: '经典 FC' };
+  const HOST_NAMES = { sb2000: 'sb2000 学习机', fc: '经典 FC' };
   const FRAME_RATES = { um6576: '50.0 fps', fc: '60.1 fps' };
 
   const machine = {
     power: true,
     paused: false,
     cartridge: 'SB2K_BIOS.NES',
-    host: 'um6576',
+    host: 'sb2000',
     plugin: 'sb2000 1.0.0',
     speed: '100%',
     volume: 80,
@@ -82,13 +82,13 @@
     context.fillStyle = SCREEN_BLACK;
     context.fillRect(0, 0, WIDTH, HEIGHT);
     if (!machine.power || !machine.cartridge) return;
-    if (machine.host === 'um6576') drawDos();
+    if (machine.host === 'sb2000') drawDos();
     else drawGame();
   }
 
   function boot() {
     clearTimeout(bootTimer);
-    if (machine.host !== 'um6576') {
+    if (machine.host !== 'sb2000') {
       draw();
       return;
     }
@@ -146,7 +146,7 @@
     $('.side [data-command="machine.softReset"]').disabled = empty || !machine.power;
     $('.side [data-command="machine.hardReset"]').disabled = empty;
     $('#btnMute use').setAttribute('href', machine.muted ? '#i-volume-off' : '#i-volume');
-    $('#mouseTag').hidden = empty || !machine.power || machine.host !== 'um6576';
+    $('#mouseTag').hidden = empty || !machine.power || machine.host !== 'sb2000';
 
     const overlay = $('#screenOverlay');
     let icon = '';
@@ -256,7 +256,7 @@
   });
 
   setInterval(() => {
-    if (machine.cartridge && machine.power && !machine.paused && machine.host === 'um6576') {
+    if (machine.cartridge && machine.power && !machine.paused && machine.host === 'sb2000') {
       cursorOn = !cursorOn;
       draw();
     }

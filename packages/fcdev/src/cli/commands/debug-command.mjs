@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：模拟器的工作目录与终端不同，命令里的相对路径（shot、disk、trace 等）先换成绝对路径；端口取环境变量 FCDEV_DEBUG_PORT，默认 5699。
+// 备注：模拟器的工作目录与终端不同，命令里的相对路径（shot、disk、trace、tape 等）先换成绝对路径；端口取环境变量 FCDEV_DEBUG_PORT，默认 5699。
 // ------------------------------------------------------------------------
 import path from 'node:path';
 import { DEFAULT_DEBUG_PORT, DebugClient } from '../../emulator/index.mjs';
@@ -38,6 +38,9 @@ export function resolveCommandPaths(tokens, cwd) {
   const [name, ...rest] = tokens;
   if (name === 'cdl' && rest[0] === 'save' && rest[1]) {
     return [name, rest[0], path.resolve(cwd, rest[1]), ...rest.slice(2)];
+  }
+  if (name === 'tape' && (rest[0] === 'play' || rest[0] === 'rec') && rest[1]) {
+    return [name, rest[0], path.resolve(cwd, rest.slice(1).join(' '))];
   }
   const position = PATH_POSITIONS[name];
   if (position === undefined || rest.length < position || rest[position - 1] === 'off') return tokens;

@@ -358,6 +358,159 @@ long RunFrames(long n, DWORD timeoutMs)
 	return s_frameNo - startNo;
 }
 
+// ---- 对话框自动关闭 ----
+// 调试时模拟器弹出的消息框、文件框会让线程卡在模态循环里，监视线程发现后自动按下按钮并记录文字，用 dialogs 命令查看。
+
+CRITICAL_SECTION s_dlgLock;
+vector<string> s_dlgLog;
+
+// 系统代码页文本转 UTF-8，调试客户端按 UTF-8 解码应答
+string AcpToUtf8(const string& acp)
+{
+	int wn = MultiByteToWideChar(CP_ACP, 0, acp.c_str(), -1, NULL, 0);
+	if (wn <= 0)
+		return acp;
+
+	vector<wchar_t> wide(wn);
+	MultiByteToWideChar(CP_ACP, 0, acp.c_str(), -1, &wide[0], wn);
+
+	int un = WideCharToMultiByte(CP_UTF8, 0, &wide[0], -1, NULL, 0, NULL, NULL);
+	if (un <= 0)
+		return acp;
+
+	vector<char> utf8(un);
+	WideCharToMultiByte(CP_UTF8, 0, &wide[0], -1, &utf8[0], un, NULL, NULL);
+	return string(&utf8[0]);
+}
+
+struct DialogScan {
+	DWORD pid;
+	vector<HWND> found;
+};
+
+BOOL CALLBACK EnumDialogProc(HWND hwnd, LPARAM lp)
+{
+	DialogScan* scan = (DialogScan*)lp;
+	DWORD pid = 0;
+	char cls[32];
+
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (pid != scan->pid || !IsWindowVisible(hwnd))
+		return TRUE;
+
+	GetClassNameA(hwnd, cls, sizeof(cls));
+	if (strcmp(cls, "#32770") == 0)
+		scan->found.push_back(hwnd);
+	return TRUE;
+}
+
+// 读取窗口文字，对方线程无响应时最多等 200 毫秒
+string WindowTextOf(HWND hwnd)
+{
+	char buf[512];
+	DWORD_PTR len = 0;
+
+	buf[0] = 0;
+	if (!SendMessageTimeoutA(hwnd, WM_GETTEXT, sizeof(buf), (LPARAM)buf, SMTO_ABORTIFHUNG, 200, &len))
+		return "";
+	buf[sizeof(buf) - 1] = 0;
+	return buf;
+}
+
+BOOL CALLBACK EnumDialogChildProc(HWND hwnd, LPARAM lp)
+{
+	string* text = (string*)lp;
+	char cls[32];
+
+	GetClassNameA(hwnd, cls, sizeof(cls));
+	if (_stricmp(cls, "Static") == 0) {
+		string t = WindowTextOf(hwnd);
+		if (!t.empty()) {
+			if (!text->empty())
+				*text += " / ";
+			*text += t;
+		}
+	}
+	return TRUE;
+}
+
+// 按下对话框里最“保守”的按钮：确定、取消、否、忽略、关闭，都没有就发关闭消息；返回按下的按钮编号，0 为关闭消息
+int PressDialogButton(HWND dlg)
+{
+	static const int ids[] = { IDOK, IDCANCEL, IDNO, IDIGNORE, IDCLOSE };
+
+	for (size_t i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
+		HWND btn = GetDlgItem(dlg, ids[i]);
+		if (btn) {
+			PostMessage(dlg, WM_COMMAND, MAKEWPARAM(ids[i], BN_CLICKED), (LPARAM)btn);
+			return ids[i];
+		}
+	}
+	PostMessage(dlg, WM_CLOSE, 0, 0);
+	return 0;
+}
+
+DWORD WINAPI DialogWatchThread(LPVOID)
+{
+	// 刚处理过的对话框 100 毫秒后可能还没销毁，记下句柄与时刻避免重复处理
+	vector<pair<HWND, DWORD> > handled;
+
+	for (;;) {
+		Sleep(100);
+
+		DialogScan scan;
+		scan.pid = GetCurrentProcessId();
+		EnumWindows(EnumDialogProc, (LPARAM)&scan);
+
+		DWORD now = GetTickCount();
+		for (size_t i = 0; i < handled.size();) {
+			if (now - handled[i].second > 2000)
+				handled.erase(handled.begin() + i);
+			else
+				i++;
+		}
+
+		for (size_t i = 0; i < scan.found.size(); i++) {
+			HWND dlg = scan.found[i];
+			bool seen = false;
+
+			for (size_t k = 0; k < handled.size(); k++)
+				if (handled[k].first == dlg)
+					seen = true;
+			if (seen)
+				continue;
+
+			string text;
+			EnumChildWindows(dlg, EnumDialogChildProc, (LPARAM)&text);
+			string title = WindowTextOf(dlg);
+			int pressed = PressDialogButton(dlg);
+
+			EnterCriticalSection(&s_dlgLock);
+			if (s_dlgLog.size() < 200)
+				s_dlgLog.push_back(AcpToUtf8(Fmt("title=%s | text=%s | button=%d", title.c_str(), text.c_str(), pressed)));
+			LeaveCriticalSection(&s_dlgLock);
+
+			handled.push_back(make_pair(dlg, now));
+		}
+	}
+	return 0;
+}
+
+// dialogs [clear]：列出自动关闭过的对话框，clear 时同时清空记录
+string CmdDialogs(const vector<string>& t)
+{
+	string out;
+
+	EnterCriticalSection(&s_dlgLock);
+	out = Fmt("OK count=%u\n", (unsigned)s_dlgLog.size());
+	for (size_t i = 0; i < s_dlgLog.size(); i++)
+		out += s_dlgLog[i] + "\n";
+	if (t.size() >= 2 && t[1] == "clear")
+		s_dlgLog.clear();
+	LeaveCriticalSection(&s_dlgLock);
+	return out;
+}
+
 // ---- 命令处理 ----
 
 string CmdStatus()
@@ -789,6 +942,29 @@ string CmdCdl(const vector<string>& t)
 	return "OK\n";
 }
 
+// tape play|rec <文件>、tape stop、tape status：数据录音机（.vtp），Family BASIC 的 SAVE、LOAD 经它存取；rec 的文件在 stop 后才完整
+string CmdTape(NES* nes, const string& line, const vector<string>& t)
+{
+	const char* usage = "ERR usage: tape play <file> | tape rec <file> | tape stop | tape status\n";
+
+	if (t.size() < 2)
+		return usage;
+
+	if (t[1] == "stop") {
+		if (nes->IsTapePlay() || nes->IsTapeRec())
+			nes->TapeStop();
+		return "OK\n";
+	}
+	if (t[1] == "status")
+		return Fmt("OK play=%d rec=%d\n", nes->IsTapePlay() ? 1 : 0, nes->IsTapeRec() ? 1 : 0);
+	if ((t[1] == "play" || t[1] == "rec") && t.size() >= 3) {
+		string path = RestOf(line, 2);
+		BOOL ok = (t[1] == "play") ? nes->TapePlay(path.c_str()) : nes->TapeRec(path.c_str());
+		return ok ? "OK\n" : "ERR cannot open tape file\n";
+	}
+	return usage;
+}
+
 // 执行一行命令并返回应答文本（不含结束行）
 string Execute(const string& line)
 {
@@ -820,6 +996,8 @@ string Execute(const string& line)
 		return CmdIo(t);
 	if (c == "cdl")
 		return CmdCdl(t);
+	if (c == "dialogs")
+		return CmdDialogs(t);
 	if (c == "calllog")
 		return CmdCallLog(t);
 	if (c == "disklog")
@@ -843,6 +1021,8 @@ string Execute(const string& line)
 		return "OK\n";
 	}
 
+	if (c == "tape")
+		return CmdTape(nes, line, t);
 	if (c == "run")
 		return CmdRun(nes, t);
 	if (c == "step")
@@ -998,6 +1178,8 @@ void DebugServer_Start()
 	g_dbgMode = 1;
 	UpdateActive();
 
+	InitializeCriticalSection(&s_dlgLock);
+	CreateThread(NULL, 0, DialogWatchThread, NULL, 0, NULL);
 	CreateThread(NULL, 0, ServerThread, NULL, 0, NULL);
 }
 

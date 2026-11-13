@@ -7,7 +7,7 @@
 // 备注：信息文件语法见 da65 的文档；RANGE 的结束地址包含在内；各段首尾相接、互不重叠，没有遗漏，da65 才不会把没说明的字节按默认当成代码。
 // ------------------------------------------------------------------------
 import { FcdevError } from '../shared/index.mjs';
-import { KIND_UNKNOWN } from './analysis.mjs';
+import { KIND_ADDRESS, KIND_UNKNOWN } from './byte-kinds.mjs';
 
 /** ca65 标识符 */
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -24,14 +24,14 @@ export const VECTOR_TABLE_SIZE = 6;
 
 /**
  * 把映像划分成连续的段。
- * @param {{kinds: Uint8Array, base: number, hasVectors: boolean}} input 每个字节的分类、起始地址与是否有向量表（占最后 6 字节）
+ * @param {{kinds: Uint8Array, base: number, hasVectors: boolean}} input 每个字节的分类（含地址表）、起始地址与是否有向量表（占最后 6 字节）
  * @returns {Range[]} 覆盖整个映像的段，按地址排序
  */
 export function buildRanges({ kinds, base, hasVectors }) {
   const body = hasVectors ? kinds.length - VECTOR_TABLE_SIZE : kinds.length;
   const ranges = [];
   for (let offset = 0; offset < body; offset += 1) {
-    const type = kinds[offset] === KIND_UNKNOWN ? 'ByteTable' : 'Code';
+    const type = kinds[offset] === KIND_UNKNOWN ? 'ByteTable' : (kinds[offset] === KIND_ADDRESS ? 'AddrTable' : 'Code');
     const last = ranges.at(-1);
     if (last && last.type === type) last.end = base + offset;
     else ranges.push({ start: base + offset, end: base + offset, type });

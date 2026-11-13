@@ -1,23 +1,19 @@
 // ------------------------------------------------------------------------
 // 名称：analysis.mjs
-// 说明：静态追踪：从入口出发沿控制流标出哪些字节是指令的操作码、哪些是操作数；CDL 里的代码段起点也当作入口。
+// 说明：静态追踪：从入口出发沿控制流标出哪些字节是指令的操作码、哪些是操作数；CDL 里的代码段起点也当作入口；追完后再从地址表里找新入口。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
-// 日期：2026-11-10
+// 日期：2026-11-13
 // 备注：处理规则：顺序执行继续，条件分支两路都追，JMP 只追目标，JSR 追目标并假定会返回，RTS、RTI、BRK、间接 JMP 结束这一路；
 //       遇到非法操作码、越界或与已识别指令重叠时放弃这一路并记入警告。没被追到的字节都算数据，这不影响回读校验（da65 对非法操作码输出 .byte）。
+//       待办的入口追完后，查找经地址表分发的跳转（见 address-tables.mjs），表里的目标成为新入口，直到没有新表。
 // ------------------------------------------------------------------------
+import { findAddressTables, markWordTable } from './address-tables.mjs';
+import { KIND_OPCODE, KIND_OPERAND, KIND_UNKNOWN } from './byte-kinds.mjs';
 import { CDL_CODE } from './cdl.mjs';
 import { OPCODES } from './opcode-table.mjs';
 
-/** 字节分类：没有被标成指令 */
-export const KIND_UNKNOWN = 0;
-
-/** 字节分类：指令的第一个字节 */
-export const KIND_OPCODE = 1;
-
-/** 字节分类：指令的操作数 */
-export const KIND_OPERAND = 2;
+export { KIND_ADDRESS, KIND_OPCODE, KIND_OPERAND, KIND_UNKNOWN } from './byte-kinds.mjs';
 
 /**
  * @typedef {object} Analysis
@@ -53,7 +49,17 @@ export function analyzeCode({ bytes, base, entries, cdl = null }) {
     }
   }
 
-  while (pending.length > 0) {
+  const seenTables = new Set();
+  const discoverTables = () => {
+    const tables = findAddressTables({ bytes, base, kinds, seen: seenTables });
+    for (const table of tables) {
+      markWordTable(kinds, table);
+      pending.push(...table.targets);
+    }
+    return tables.length > 0;
+  };
+
+  while (pending.length > 0 || discoverTables()) {
     let address = pending.pop();
     // 沿着顺序执行一路走下去，遇到分支目标或调用目标就放进待办
     for (;;) {

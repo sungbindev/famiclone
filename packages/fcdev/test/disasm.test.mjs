@@ -162,6 +162,37 @@ describe('静态追踪', () => {
     const { kinds } = analyzeCode({ bytes, base: 0x8000, entries: [], cdl });
     assert.deepEqual([...kinds], [0, 0, 0, 1, 2, 1]);
   });
+
+  it('LDA 表,X 与 LDA 表+1,X 成对加 JMP (间接)：字表里的目标被追到，表占的字节标为地址', () => {
+    const bytes = Buffer.from([0x0a, 0xaa, 0xbd, 0x10, 0x80, 0x85, 0x19, 0xbd, 0x11, 0x80, 0x85, 0x1a, 0x6c, 0x19, 0x00, 0xff, 0x14, 0x80, 0x15, 0x80, 0x60, 0x60]);
+    const { kinds, instructions } = analyzeCode({ bytes, base: 0x8000, entries: [0x8000] });
+    assert.deepEqual([...kinds], [1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 0, 3, 3, 3, 3, 1, 1]);
+    assert.equal(instructions, 9);
+  });
+
+  it('表里的目标不是官方操作码时不当作地址表', () => {
+    const bytes = Buffer.from([0x0a, 0xaa, 0xbd, 0x10, 0x80, 0x85, 0x19, 0xbd, 0x11, 0x80, 0x85, 0x1a, 0x6c, 0x19, 0x00, 0xff, 0x0f, 0x80, 0x0f, 0x80, 0x60, 0x60]);
+    const { kinds, instructions } = analyzeCode({ bytes, base: 0x8000, entries: [0x8000] });
+    assert.deepEqual([...kinds], [1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0]);
+    assert.equal(instructions, 7);
+  });
+
+  it('PHA、PHA、RTS 的字表：目标是表里的值加 1', () => {
+    const bytes = Buffer.from([0xbd, 0x0f, 0x80, 0x48, 0xbd, 0x0e, 0x80, 0x48, 0x60, 0xff, 0xff, 0xff, 0xff, 0xff, 0x11, 0x80, 0x12, 0x80, 0x60, 0x60]);
+    const { kinds } = analyzeCode({ bytes, base: 0x8000, entries: [0x8000] });
+    assert.deepEqual([...kinds], [1, 2, 2, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 3, 1, 1]);
+  });
+
+  it('PHA、PHA、RTS 的低、高字节分开的两张表：目标被追到，表保持为数据', () => {
+    const bytes = Buffer.from([0xbd, 0x12, 0x80, 0x48, 0xbd, 0x0f, 0x80, 0x48, 0x60, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x13, 0x14, 0xff, 0x80, 0x80, 0x60, 0x60]);
+    const { kinds } = analyzeCode({ bytes, base: 0x8000, entries: [0x8000] });
+    assert.deepEqual([...kinds], [1, 2, 2, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
+  });
+
+  it('JMP (地址) 的地址在映像内时，那里的字表也被追到', () => {
+    const { kinds } = analyzeCode({ bytes: Buffer.from([0x6c, 0x05, 0x80, 0xff, 0xff, 0x07, 0x80, 0x60]), base: 0x8000, entries: [0x8000] });
+    assert.deepEqual([...kinds], [1, 2, 2, 0, 0, 3, 3, 1]);
+  });
 });
 
 describe('信息文件', () => {
@@ -178,6 +209,11 @@ describe('信息文件', () => {
   it('没有向量表时整个映像都是代码或数据段，相邻的同类段合并', () => {
     const ranges = buildRanges({ kinds: Uint8Array.from([1, 2, 2, 0, 0, 1]), base: 0x8000, hasVectors: false });
     assert.deepEqual(ranges.map((range) => [range.start, range.end, range.type]), [[0x8000, 0x8002, 'Code'], [0x8003, 0x8004, 'ByteTable'], [0x8005, 0x8005, 'Code']]);
+  });
+
+  it('地址表的字节划为 AddrTable 段', () => {
+    const ranges = buildRanges({ kinds: Uint8Array.from([1, 2, 2, 3, 3, 3, 3, 0]), base: 0x8000, hasVectors: false });
+    assert.deepEqual(ranges.map((range) => [range.start, range.end, range.type]), [[0x8000, 0x8002, 'Code'], [0x8003, 0x8006, 'AddrTable'], [0x8007, 0x8007, 'ByteTable']]);
   });
 
   it('信息文件包含全局设置、符号、符号定义文件与各段，同一地址的符号只留第一个', () => {

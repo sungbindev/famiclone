@@ -10,7 +10,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { FcdevError } from '../shared/index.mjs';
 import { runTool } from '../toolchain/index.mjs';
-import { KIND_UNKNOWN, analyzeCode } from './analysis.mjs';
+import { analyzeCode } from './analysis.mjs';
+import { KIND_OPCODE, KIND_OPERAND } from './byte-kinds.mjs';
 import { parseCdl } from './cdl.mjs';
 import { buildRanges, renderInfo } from './info-writer.mjs';
 import { loadBinary, loadInes } from './loaders.mjs';
@@ -99,7 +100,7 @@ export async function disassemble({ inputFile, format, base, entries = [], cdlFi
     });
   }
 
-  const codeBytes = analysis.kinds.reduce((count, value) => count + (value === KIND_UNKNOWN ? 0 : 1), 0);
+  const codeBytes = analysis.kinds.reduce((count, value) => count + (value === KIND_OPCODE || value === KIND_OPERAND ? 1 : 0), 0);
   return {
     sourceFile,
     infoFile,

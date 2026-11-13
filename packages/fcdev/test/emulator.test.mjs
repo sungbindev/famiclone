@@ -153,6 +153,12 @@ describe('debug 命令的路径换算', () => {
     assert.deepEqual(resolveCommandPaths(['cdl', 'save', 'out/boot'], cwd), ['cdl', 'save', path.resolve(cwd, 'out/boot')]);
   });
 
+  it('tape play、rec 的文件换成绝对路径，stop 与 status 保持原样', () => {
+    assert.deepEqual(resolveCommandPaths(['tape', 'rec', 'out/a.vtp'], cwd), ['tape', 'rec', path.resolve(cwd, 'out/a.vtp')]);
+    assert.deepEqual(resolveCommandPaths(['tape', 'play', 'my', 'a.vtp'], cwd), ['tape', 'play', path.resolve(cwd, 'my a.vtp')]);
+    assert.deepEqual(resolveCommandPaths(['tape', 'stop'], cwd), ['tape', 'stop']);
+  });
+
   it('off 与不含路径的命令保持原样', () => {
     assert.deepEqual(resolveCommandPaths(['trace', 'off'], cwd), ['trace', 'off']);
     assert.deepEqual(resolveCommandPaths(['read', 'cpu', '8000', '16'], cwd), ['read', 'cpu', '8000', '16']);

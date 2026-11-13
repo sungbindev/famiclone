@@ -150,7 +150,6 @@
   --title-bar-tool-width: 46px;
   --title-bar-tool-gap: var(--space-page);
   --title-bar-brand-font-weight: 700;
-  --title-bar-subtitle-font-weight: 500;
   --title-bar-title-letter-spacing: 0.08em;
   --activity-bar-width: 40px;
   --activity-bar-button-size: 40px;
@@ -246,7 +245,6 @@
   --code-bg: color-mix(in srgb, var(--text) 10%, transparent);
   --notice-accent-width: 3px;
   --title-bar-title-color: var(--chrome-text-strong);
-  --title-bar-subtitle-color: var(--chrome-text);
   --menubar-selection-bg: var(--host-menubar-selection-background);
   --activity-bar-icon-stroke-width: 1.25;
   --tab-bar-hover-bg: var(--host-tab-hover-background);

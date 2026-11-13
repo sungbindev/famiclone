@@ -187,7 +187,3 @@
   letter-spacing: var(--title-bar-title-letter-spacing);
 }
 
-.about-name-sub {
-  color: var(--text-muted);
-  font-weight: var(--title-bar-subtitle-font-weight);
-}

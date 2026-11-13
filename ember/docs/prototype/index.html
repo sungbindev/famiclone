@@ -2,7 +2,7 @@
 <!--
 ========================================================================
 名称：index.html
-说明：VirtuaNES2 界面原型的入口页面：外壳、各页面、对话框的静态结构。
+说明：Ember 界面原型的入口页面：外壳、各页面、对话框的静态结构。
 作者：sungbin
 邮箱：sungbin@3578.cn
 日期：2026-11-13
@@ -13,7 +13,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VirtuaNES2 界面原型</title>
+  <title>Ember 界面原型</title>
   <link rel="stylesheet" href="styles/tokens.css">
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/controls.css">
@@ -65,7 +65,7 @@
     <header class="shell-title-bar">
       <div class="shell-brand">
         <svg class="ui-icon shell-brand-logo" aria-hidden="true"><use href="#i-logo"/></svg>
-        <span class="shell-brand-name">VIRTUANES</span><span class="shell-brand-sub">2</span>
+        <span class="shell-brand-name">EMBER</span>
       </div>
       <nav class="shell-menubar" aria-label="菜单栏">
         <button class="shell-menubar-button" type="button" data-menu="file">文件(F)</button>
@@ -420,7 +420,7 @@
                 <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-printer"/></svg><span>并口上接的是虚拟针式打印机，打印的每一页保存为一张 PNG 图片。</span></p>
                 <div class="ui-setting-row">
                   <div class="ui-setting-text"><div class="ui-setting-label">图片保存位置</div><div class="ui-setting-description">文件名按打印时的日期时间自动生成，例如 <code class="ui-code">printer-20261113-102105.png</code>，不会弹出保存窗口。</div></div>
-                  <div class="ui-setting-control"><input class="ui-input" type="text" value="D:\Pictures\VirtuaNES2" id="prefPrinterDir" aria-label="图片保存位置"><button class="ui-button ui-button--secondary" type="button" data-command="printer.chooseFolder">选择</button></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="text" value="D:\Pictures\Ember" id="prefPrinterDir" aria-label="图片保存位置"><button class="ui-button ui-button--secondary" type="button" data-command="printer.chooseFolder">选择</button></div>
                 </div>
               </section>
 
@@ -491,14 +491,14 @@
   <div class="ui-dialog-scrim" id="aboutDialog" hidden>
     <div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
       <div class="ui-dialog-titlebar">
-        <span class="ui-dialog-title" id="aboutTitle">关于 VirtuaNES2</span>
+        <span class="ui-dialog-title" id="aboutTitle">关于 Ember</span>
         <button class="ui-dialog-close" type="button" data-close-dialog aria-label="关闭"><svg class="ui-icon"><use href="#i-x"/></svg></button>
       </div>
       <div class="ui-dialog-body ui-scroll">
         <div class="about-head">
           <svg class="ui-icon about-logo" aria-hidden="true"><use href="#i-logo"/></svg>
           <div class="about-info">
-            <div class="about-name"><span class="about-name-main">VIRTUANES</span><span class="about-name-sub">2</span></div>
+            <div class="about-name">EMBER</div>
             <dl class="ui-facts">
               <div class="ui-facts-row"><dt>版本</dt><dd>0.1.0（原型）</dd></div>
               <div class="ui-facts-row"><dt>核心版本</dt><dd>0.1.0</dd></div>

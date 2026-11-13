@@ -1,6 +1,6 @@
-# VirtuaNES2 开发指令
+# Ember 开发指令
 
-VirtuaNES2 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 React，外壳以外的核心代码使用 C++。通用编码规范由 copilot-plugins 插件的规则负责，本文件只写本项目特有的约定。项目的结构与做法参照如见客户端（rujian-client）。
+Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 React，外壳以外的核心代码使用 C++。通用编码规范由 copilot-plugins 插件的规则负责，本文件只写本项目特有的约定。项目的结构与做法参照如见客户端（rujian-client）。
 
 ## 文档
 

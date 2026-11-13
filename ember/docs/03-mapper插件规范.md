@@ -18,7 +18,7 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 | 调用方式 | 脚本只在寄存器读写、定时事件和复位时被调用，不逐周期回调；译码结果（bank 窗口）由宿主保存并直接使用 | 拟定 |
 | 状态可见 | 脚本的内部寄存器必须声明并放在宿主管理的状态对象里，调试服务可随时读写 | 拟定 |
 | 接口版本 | 插件接口版本为整数，当前为 `1`；只在破坏性变更时加一 | 拟定 |
-| 包格式 | 扩展名 `.vn2m` 的 zip 文件 | 拟定 |
+| 包格式 | 扩展名 `.emap` 的 zip 文件 | 拟定 |
 
 ## 2. 概念
 
@@ -29,7 +29,7 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 
 ## 3. 插件包
 
-插件包是扩展名为 `.vn2m` 的 zip 文件，根目录包含：
+插件包是扩展名为 `.emap` 的 zip 文件，根目录包含：
 
 | 文件 | 内容 | 是否必需 |
 | --- | --- | --- |
@@ -179,7 +179,7 @@ sequenceDiagram
 ### 6.1 导出
 
 ```ts
-import { definePlugin } from '@vn2/mapper-sdk';
+import { definePlugin } from '@ember/mapper-sdk';
 
 export default definePlugin({
   reset(ctx, kind) { /* kind 为 'power' 或 'soft'：初始化状态与窗口 */ },
@@ -241,7 +241,7 @@ export default definePlugin({
 
 ## 8. SDK 与测试
 
-- SDK 放在 `sdk/`，发布为 npm 包（包名待定，文中暂记为 `@vn2/mapper-sdk`），内容：声明文件（`definePlugin`、`ctx` 与清单的类型，每个类型与字段有中文文档注释）、清单检查、假宿主、命令行工具（`build`、`pack`）。
+- SDK 放在 `sdk/`，发布为 npm 包（包名待定，文中暂记为 `@ember/mapper-sdk`），内容：声明文件（`definePlugin`、`ctx` 与清单的类型，每个类型与字段有中文文档注释）、清单检查、假宿主、命令行工具（`build`、`pack`）。
 - 假宿主可以不启动模拟器就测试插件：预设卡带文件头和存储区，模拟寄存器读写，检查窗口、名称表、中断、设备访问与状态；规则与核心一致，修改任一侧时同步另一侧。
 - 官方插件在 `plugins/<机型>/`，只经 SDK 的入口引用 SDK，插件之间不互相引用。
 - 自动测试只用假宿主，不访问真实设备；整机行为用 `machines/` 的实测程序在核心里验证。

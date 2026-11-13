@@ -47,12 +47,6 @@
   letter-spacing: var(--title-bar-title-letter-spacing);
 }
 
-.shell-brand-sub {
-  margin-left: calc(-1 * var(--space-xs));
-  color: var(--title-bar-subtitle-color);
-  font-weight: var(--title-bar-subtitle-font-weight);
-}
-
 .shell-menubar {
   display: flex;
   align-items: center;

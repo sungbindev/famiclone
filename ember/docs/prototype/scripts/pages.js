@@ -10,8 +10,8 @@
 (function () {
   'use strict';
 
-  const VN2 = window.VN2;
-  const { $, $$, h } = VN2;
+  const Ember = window.Ember;
+  const { $, $$, h } = Ember;
 
   function selectRow(table, row) {
     $$('tr[data-row]', table).forEach((item) => item.classList.toggle('is-selected', item === row));
@@ -55,10 +55,10 @@
     if (!row) return;
     const info = readCartridge(row);
     if (row.dataset.status === 'missing') {
-      VN2.notify('无法运行 ' + info.name + '：缺少 mapper ' + info.mapper + '、变体 ' + info.variant + ' 的插件。', 'warning');
+      Ember.notify('无法运行 ' + info.name + '：缺少 mapper ' + info.mapper + '、变体 ' + info.variant + ' 的插件。', 'warning');
       return;
     }
-    VN2.machine.load(info);
+    Ember.machine.load(info);
   });
 
   $('#libSearch').addEventListener('input', filterLibrary);
@@ -70,11 +70,11 @@
   const MAPPER_DETAILS = {
     nrom: {
       title: 'NROM',
-      facts: [['标识', 'nrom'], ['版本', '1.0.0'], ['发布者', 'VirtuaNES2'], ['匹配', 'mapper 0'], ['主机型号', 'fc'], ['存储区', 'prg（ROM，来自文件）、chr（ROM；文件没有 CHR 时用 8K RAM）'], ['设备连线', '无'], ['寄存器范围', '无'], ['状态声明', '无']],
+      facts: [['标识', 'nrom'], ['版本', '1.0.0'], ['发布者', 'Ember'], ['匹配', 'mapper 0'], ['主机型号', 'fc'], ['存储区', 'prg（ROM，来自文件）、chr（ROM；文件没有 CHR 时用 8K RAM）'], ['设备连线', '无'], ['寄存器范围', '无'], ['状态声明', '无']],
     },
     sb2000: {
       title: '小霸王 SB2000',
-      facts: [['标识', 'sb2000'], ['版本', '1.0.0'], ['发布者', 'VirtuaNES2'], ['匹配', 'mapper 171，变体 1'], ['主机型号', 'sb2000'], ['存储区', '待按真机资料核对'], ['设备连线', '软驱控制器 fdc（待按真机资料核对）'], ['寄存器范围', '待按真机资料核对'], ['状态声明', '待按真机资料核对']],
+      facts: [['标识', 'sb2000'], ['版本', '1.0.0'], ['发布者', 'Ember'], ['匹配', 'mapper 171，变体 1'], ['主机型号', 'sb2000'], ['存储区', '待按真机资料核对'], ['设备连线', '软驱控制器 fdc（待按真机资料核对）'], ['寄存器范围', '待按真机资料核对'], ['状态声明', '待按真机资料核对']],
     },
     demo: {
       title: '示意 mapper',
@@ -156,11 +156,11 @@
   });
 
   $('#floppyAWp').addEventListener('change', (event) => {
-    VN2.log('信息', '软驱 A 写保护' + (event.target.checked ? '已开启' : '已关闭'));
+    Ember.log('信息', '软驱 A 写保护' + (event.target.checked ? '已开启' : '已关闭'));
   });
 
   setInterval(() => {
-    const machine = VN2.machine.state;
+    const machine = Ember.machine.state;
     if (floppies.A && machine.cartridge && machine.power && !machine.paused) {
       $('#floppyATrack').textContent = '第 ' + Math.floor(Math.random() * 80) + ' 磁道';
     }
@@ -196,7 +196,7 @@
     if (mode === 'playing' && tape.position >= tape.total) tape.position = 0;
     tape.mode = mode;
     renderTape();
-    VN2.log('信息', mode === 'playing' ? '磁带机开始播放' : '磁带机开始录音');
+    Ember.log('信息', mode === 'playing' ? '磁带机开始播放' : '磁带机开始录音');
   }
 
   function stopTape() {
@@ -205,7 +205,7 @@
     $('#levelL').style.width = '0';
     $('#levelR').style.width = '0';
     renderTape();
-    VN2.log('信息', '磁带机已停止');
+    Ember.log('信息', '磁带机已停止');
   }
 
   setInterval(() => {
@@ -252,12 +252,12 @@
     printer.count += 1;
     printer.last = name;
     renderPrinter();
-    VN2.log('信息', '打印机输出一页：' + name);
-    VN2.notify('已打印：' + name);
+    Ember.log('信息', '打印机输出一页：' + name);
+    Ember.notify('已打印：' + name);
   }
 
   setInterval(() => {
-    const machine = VN2.machine.state;
+    const machine = Ember.machine.state;
     if (printer.pending || !machine.cartridge || !machine.power || machine.paused) return;
     printer.idleSeconds += 1;
     if (printer.idleSeconds >= PRINTER_IDLE_SECONDS) {
@@ -270,7 +270,7 @@
 
   document.addEventListener('segmented-change', (event) => {
     const { name, value } = event.detail;
-    if (name === 'theme') VN2.theme.set(value);
+    if (name === 'theme') Ember.theme.set(value);
     if (name === 'tapeKind') {
       tape.kind = value;
       tape.mode = 'stopped';
@@ -296,39 +296,39 @@
   $('#swDebug').addEventListener('change', (event) => {
     const on = event.target.checked;
     $('#statusDebugText').textContent = on ? '调试 127.0.0.1:5688，1 个连接' : '调试已关闭';
-    VN2.log('信息', on ? '调试服务已开启：127.0.0.1:5688' : '调试服务已关闭');
+    Ember.log('信息', on ? '调试服务已开启：127.0.0.1:5688' : '调试服务已关闭');
   });
 
   // ---------- 命令 ----------
 
-  const commands = VN2.commands;
-  commands.register('library.addFolder', () => VN2.notify('原型：这里会打开系统的文件夹选择窗口。'));
-  commands.register('mappers.install', () => VN2.notify('原型：这里会打开系统的文件选择窗口，选择 .vn2m 插件包。'));
+  const commands = Ember.commands;
+  commands.register('library.addFolder', () => Ember.notify('原型：这里会打开系统的文件夹选择窗口。'));
+  commands.register('mappers.install', () => Ember.notify('原型：这里会打开系统的文件选择窗口，选择 .emap 插件包。'));
   commands.register('media.floppyInsert', (source) => {
     const drive = source.dataset.drive;
     floppies[drive] = { image: SPARE_IMAGES[drive] };
     renderFloppy(drive);
-    VN2.log('信息', '软驱 ' + drive + ' 已插入 ' + SPARE_IMAGES[drive]);
+    Ember.log('信息', '软驱 ' + drive + ' 已插入 ' + SPARE_IMAGES[drive]);
   });
   commands.register('media.floppyEject', (source) => {
     const drive = source.dataset.drive;
     floppies[drive] = null;
     renderFloppy(drive);
-    VN2.log('信息', '软驱 ' + drive + ' 已取出盘片');
+    Ember.log('信息', '软驱 ' + drive + ' 已取出盘片');
   });
   commands.register('media.floppySave', (source) => {
-    VN2.notify('软驱 ' + source.dataset.drive + ' 的镜像已保存');
+    Ember.notify('软驱 ' + source.dataset.drive + ' 的镜像已保存');
   });
   commands.register('media.tapePlay', () => startTape('playing'));
   commands.register('media.tapeRecord', () => startTape('recording'));
   commands.register('media.tapeStop', stopTape);
   commands.register('media.printerFlush', flushPrinter);
-  commands.register('media.printerOpenFolder', () => VN2.notify('原型：这里会在系统的文件管理器里打开保存位置。'));
-  commands.register('printer.chooseFolder', () => VN2.notify('原型：这里会打开系统的文件夹选择窗口。'));
+  commands.register('media.printerOpenFolder', () => Ember.notify('原型：这里会在系统的文件管理器里打开保存位置。'));
+  commands.register('printer.chooseFolder', () => Ember.notify('原型：这里会打开系统的文件夹选择窗口。'));
 
-  VN2.pages = {
+  Ember.pages = {
     openPreferences(group) {
-      VN2.shell.openPage('preferences');
+      Ember.shell.openPage('preferences');
       selectPreferenceGroup(group);
     },
   };

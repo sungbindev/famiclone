@@ -10,8 +10,8 @@
 (function () {
   'use strict';
 
-  const VN2 = window.VN2;
-  const { $, h } = VN2;
+  const Ember = window.Ember;
+  const { $, h } = Ember;
 
   const canvas = $('#screen');
   const context = canvas.getContext('2d');
@@ -104,7 +104,7 @@
   }
 
   function setButton(button, iconId, label) {
-    button.replaceChildren(VN2.icon(iconId), h('span', '', label));
+    button.replaceChildren(Ember.icon(iconId), h('span', '', label));
   }
 
   function update() {
@@ -171,7 +171,7 @@
     draw();
   }
 
-  VN2.machine = {
+  Ember.machine = {
     state: machine,
     powerToggle() {
       if (!machine.cartridge) return;
@@ -179,21 +179,21 @@
       machine.paused = false;
       if (machine.power) boot();
       update();
-      VN2.log('信息', machine.power ? '上电' : '断电');
+      Ember.log('信息', machine.power ? '上电' : '断电');
     },
     pauseToggle() {
       if (!machine.cartridge || !machine.power) return;
       machine.paused = !machine.paused;
       update();
-      VN2.log('信息', machine.paused ? '已暂停' : '继续运行');
+      Ember.log('信息', machine.paused ? '已暂停' : '继续运行');
     },
     softReset() {
       if (!machine.cartridge || !machine.power) return;
       machine.paused = false;
       boot();
       update();
-      VN2.log('信息', '软复位');
-      VN2.notify('已软复位');
+      Ember.log('信息', '软复位');
+      Ember.notify('已软复位');
     },
     hardReset() {
       if (!machine.cartridge) return;
@@ -201,8 +201,8 @@
       machine.paused = false;
       boot();
       update();
-      VN2.log('信息', '硬复位');
-      VN2.notify('已硬复位');
+      Ember.log('信息', '硬复位');
+      Ember.notify('已硬复位');
     },
     muteToggle() {
       machine.muted = !machine.muted;
@@ -210,7 +210,7 @@
     },
     eject() {
       if (!machine.cartridge) return;
-      VN2.log('信息', '已取出卡带 ' + machine.cartridge);
+      Ember.log('信息', '已取出卡带 ' + machine.cartridge);
       machine.cartridge = null;
       update();
     },
@@ -222,24 +222,24 @@
       machine.paused = false;
       boot();
       update();
-      VN2.log('信息', '已装配主机 ' + HOST_NAMES[info.host]);
-      VN2.log('信息', 'mapper ' + info.mapper + '、变体 ' + info.variant + ' 匹配到插件 ' + info.plugin);
-      VN2.shell.openPage('run');
+      Ember.log('信息', '已装配主机 ' + HOST_NAMES[info.host]);
+      Ember.log('信息', 'mapper ' + info.mapper + '、变体 ' + info.variant + ' 匹配到插件 ' + info.plugin);
+      Ember.shell.openPage('run');
     },
     screenshot() {
       if (!machine.cartridge || !machine.power) {
-        VN2.notify('机器没有画面，无法截图。', 'warning');
+        Ember.notify('机器没有画面，无法截图。', 'warning');
         return;
       }
-      VN2.log('信息', '截图已保存');
-      VN2.notify('截图已保存到图片文件夹');
+      Ember.log('信息', '截图已保存');
+      Ember.notify('截图已保存到图片文件夹');
     },
   };
 
   $('#selSpeed').addEventListener('change', (event) => {
     machine.speed = event.target.value;
     update();
-    VN2.log('信息', '速度改为 ' + machine.speed);
+    Ember.log('信息', '速度改为 ' + machine.speed);
   });
 
   $('#sliderVolume').addEventListener('input', (event) => {
@@ -262,5 +262,5 @@
     }
   }, 530);
 
-  VN2.machine.refresh = update;
+  Ember.machine.refresh = update;
 })();

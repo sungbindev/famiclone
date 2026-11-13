@@ -10,16 +10,16 @@
 (function () {
   'use strict';
 
-  const VN2 = (window.VN2 = window.VN2 || {});
+  const Ember = (window.Ember = window.Ember || {});
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-  VN2.$ = $;
-  VN2.$$ = $$;
+  Ember.$ = $;
+  Ember.$$ = $$;
 
   // 创建带图标引用的 svg 元素
-  VN2.icon = function (id) {
+  Ember.icon = function (id) {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', 'ui-icon');
     const use = document.createElementNS(SVG_NS, 'use');
@@ -34,12 +34,12 @@
     if (text !== undefined) element.textContent = text;
     return element;
   }
-  VN2.h = createElement;
+  Ember.h = createElement;
 
   // ---------- 命令与快捷键 ----------
 
   const commands = new Map();
-  VN2.commands = {
+  Ember.commands = {
     register(id, handler) {
       commands.set(id, handler);
     },
@@ -51,7 +51,7 @@
 
   const bindings = new Map();
   const shortcutOf = new Map();
-  VN2.keys = {
+  Ember.keys = {
     bind(combo, commandId) {
       bindings.set(combo, commandId);
       shortcutOf.set(commandId, combo);
@@ -72,13 +72,13 @@
 
   // ---------- 通知与消息 ----------
 
-  VN2.notify = function (message, kind) {
+  Ember.notify = function (message, kind) {
     const notice = createElement('div', 'ui-notice' + (kind === 'warning' ? ' ui-notice--warning' : ''), message);
     $('#notices').append(notice);
     setTimeout(() => notice.remove(), 4000);
   };
 
-  VN2.log = function (level, text) {
+  Ember.log = function (level, text) {
     const item = createElement('li', 'shell-message' + (level === '警告' ? ' is-warning' : ''));
     const time = createElement('time', '', new Date().toTimeString().slice(0, 8));
     item.append(time, createElement('span', 'shell-message-level', level), createElement('span', '', text));
@@ -87,12 +87,12 @@
     list.scrollTop = list.scrollHeight;
   };
 
-  VN2.commands.register('panel.clear', () => $('#messageList').replaceChildren());
+  Ember.commands.register('panel.clear', () => $('#messageList').replaceChildren());
 
   // ---------- 对话框 ----------
 
   let dialogOpener = null;
-  VN2.dialog = {
+  Ember.dialog = {
     open(id) {
       const dialog = document.getElementById(id);
       dialogOpener = document.activeElement;
@@ -118,7 +118,7 @@
     document.documentElement.classList.add('theme-' + resolved);
   }
 
-  VN2.theme = {
+  Ember.theme = {
     set(mode) {
       themeMode = mode;
       applyTheme();
@@ -159,12 +159,12 @@
       select.setAttribute('role', 'tab');
       select.setAttribute('aria-selected', String(active));
       select.dataset.tabSelect = id;
-      select.append(VN2.icon(page.icon), createElement('span', '', page.title));
+      select.append(Ember.icon(page.icon), createElement('span', '', page.title));
       const close = createElement('button', 'ui-icon-button');
       close.type = 'button';
       close.setAttribute('aria-label', '关闭' + page.title);
       close.dataset.tabClose = id;
-      close.append(VN2.icon('i-x'));
+      close.append(Ember.icon('i-x'));
       tab.append(select, close);
       bar.append(tab);
     });
@@ -212,7 +212,7 @@
     render();
   }
 
-  VN2.shell = {
+  Ember.shell = {
     state,
     sideVisible,
     sideAvailable() {
@@ -231,7 +231,7 @@
   const menuDefs = {};
   let openMenuId = null;
 
-  VN2.menu = {
+  Ember.menu = {
     register(id, buildItems) {
       menuDefs[id] = buildItems;
     },
@@ -259,13 +259,13 @@
       row.setAttribute('role', 'menuitem');
       row.disabled = Boolean(item.disabled);
       const mark = createElement('span', 'ui-menu-mark');
-      if (item.checked) mark.append(VN2.icon('i-check'));
-      const shortcut = item.arrow ? '' : VN2.keys.of(item.command) || item.shortcut || '';
+      if (item.checked) mark.append(Ember.icon('i-check'));
+      const shortcut = item.arrow ? '' : Ember.keys.of(item.command) || item.shortcut || '';
       row.append(mark, createElement('span', 'ui-menu-label', item.label), createElement('span', 'ui-menu-shortcut', shortcut));
-      if (item.arrow) row.lastChild.append(VN2.icon('i-chevron-right'));
+      if (item.arrow) row.lastChild.append(Ember.icon('i-chevron-right'));
       row.addEventListener('click', () => {
         closeMenu();
-        if (item.command) VN2.commands.run(item.command);
+        if (item.command) Ember.commands.run(item.command);
       });
       menu.append(row);
     });
@@ -293,7 +293,7 @@
 
     const commandElement = target.closest('[data-command]');
     if (commandElement && !commandElement.disabled) {
-      VN2.commands.run(commandElement.dataset.command, commandElement);
+      Ember.commands.run(commandElement.dataset.command, commandElement);
       return;
     }
     const pageElement = target.closest('[data-open-page]');
@@ -314,7 +314,7 @@
       return;
     }
     if (target.closest('[data-close-dialog]')) {
-      VN2.dialog.closeAll();
+      Ember.dialog.closeAll();
       return;
     }
     const segment = target.closest('.ui-segmented button');
@@ -328,13 +328,13 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeMenu();
-      VN2.dialog.closeAll();
+      Ember.dialog.closeAll();
       return;
     }
     const commandId = bindings.get(comboOf(event));
     if (commandId) {
       event.preventDefault();
-      VN2.commands.run(commandId);
+      Ember.commands.run(commandId);
     }
   });
 

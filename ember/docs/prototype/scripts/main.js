@@ -10,53 +10,53 @@
 (function () {
   'use strict';
 
-  const VN2 = window.VN2;
-  const commands = VN2.commands;
-  const machine = VN2.machine;
+  const Ember = window.Ember;
+  const commands = Ember.commands;
+  const machine = Ember.machine;
 
   // ---------- 命令 ----------
 
-  commands.register('file.open', () => VN2.notify('原型：这里会打开系统的文件选择窗口，选择 NES 文件。'));
+  commands.register('file.open', () => Ember.notify('原型：这里会打开系统的文件选择窗口，选择 NES 文件。'));
   commands.register('file.close', () => machine.eject());
-  commands.register('app.exit', () => VN2.notify('原型：这里会关闭程序。'));
+  commands.register('app.exit', () => Ember.notify('原型：这里会关闭程序。'));
   commands.register('machine.powerToggle', () => machine.powerToggle());
   commands.register('machine.pauseToggle', () => machine.pauseToggle());
   commands.register('machine.softReset', () => machine.softReset());
   commands.register('machine.hardReset', () => machine.hardReset());
   commands.register('machine.muteToggle', () => machine.muteToggle());
   commands.register('machine.screenshot', () => machine.screenshot());
-  commands.register('view.toggleSideBar', () => VN2.shell.toggleSide());
-  commands.register('view.togglePanel', () => VN2.shell.togglePanel());
+  commands.register('view.toggleSideBar', () => Ember.shell.toggleSide());
+  commands.register('view.togglePanel', () => Ember.shell.togglePanel());
   commands.register('view.fullscreen', () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen();
   });
   ['run', 'library', 'media', 'mappers'].forEach((id) => {
-    commands.register('view.page.' + id, () => VN2.shell.openPage(id));
+    commands.register('view.page.' + id, () => Ember.shell.openPage(id));
   });
-  commands.register('settings.open', () => VN2.shell.openPage('preferences'));
-  commands.register('settings.debug', () => VN2.pages.openPreferences('debug'));
-  commands.register('help.logs', () => VN2.notify('原型：这里会打开日志所在的文件夹。'));
-  commands.register('help.about', () => VN2.dialog.open('aboutDialog'));
+  commands.register('settings.open', () => Ember.shell.openPage('preferences'));
+  commands.register('settings.debug', () => Ember.pages.openPreferences('debug'));
+  commands.register('help.logs', () => Ember.notify('原型：这里会打开日志所在的文件夹。'));
+  commands.register('help.about', () => Ember.dialog.open('aboutDialog'));
 
   // ---------- 快捷键 ----------
 
-  VN2.keys.bind('Ctrl+O', 'file.open');
-  VN2.keys.bind('F9', 'machine.powerToggle');
-  VN2.keys.bind('F8', 'machine.pauseToggle');
-  VN2.keys.bind('F7', 'machine.softReset');
-  VN2.keys.bind('Ctrl+F7', 'machine.hardReset');
-  VN2.keys.bind('Ctrl+Shift+S', 'machine.screenshot');
-  VN2.keys.bind('Ctrl+B', 'view.toggleSideBar');
-  VN2.keys.bind('Ctrl+J', 'view.togglePanel');
-  VN2.keys.bind('F11', 'view.fullscreen');
-  VN2.keys.bind('Ctrl+,', 'settings.open');
+  Ember.keys.bind('Ctrl+O', 'file.open');
+  Ember.keys.bind('F9', 'machine.powerToggle');
+  Ember.keys.bind('F8', 'machine.pauseToggle');
+  Ember.keys.bind('F7', 'machine.softReset');
+  Ember.keys.bind('Ctrl+F7', 'machine.hardReset');
+  Ember.keys.bind('Ctrl+Shift+S', 'machine.screenshot');
+  Ember.keys.bind('Ctrl+B', 'view.toggleSideBar');
+  Ember.keys.bind('Ctrl+J', 'view.togglePanel');
+  Ember.keys.bind('F11', 'view.fullscreen');
+  Ember.keys.bind('Ctrl+,', 'settings.open');
 
   // ---------- 菜单 ----------
 
   const SEPARATOR = { separator: true };
 
-  VN2.menu.register('file', () => [
+  Ember.menu.register('file', () => [
     { label: '打开卡带…', command: 'file.open' },
     { label: '最近打开', arrow: true },
     { label: '关闭卡带', command: 'file.close', disabled: !machine.state.cartridge },
@@ -64,7 +64,7 @@
     { label: '退出', command: 'app.exit', shortcut: 'Alt+F4' },
   ]);
 
-  VN2.menu.register('machine', () => {
+  Ember.menu.register('machine', () => {
     const state = machine.state;
     const empty = !state.cartridge;
     return [
@@ -79,31 +79,31 @@
     ];
   });
 
-  VN2.menu.register('view', () => [
+  Ember.menu.register('view', () => [
     { label: '运行', command: 'view.page.run' },
     { label: '卡带库', command: 'view.page.library' },
     { label: '设备', command: 'view.page.media' },
     { label: 'mapper 插件', command: 'view.page.mappers' },
     SEPARATOR,
-    { label: '边栏', command: 'view.toggleSideBar', checked: VN2.shell.sideVisible(), disabled: !VN2.shell.sideAvailable() },
-    { label: '底部面板', command: 'view.togglePanel', checked: !VN2.shell.state.panelCollapsed },
+    { label: '边栏', command: 'view.toggleSideBar', checked: Ember.shell.sideVisible(), disabled: !Ember.shell.sideAvailable() },
+    { label: '底部面板', command: 'view.togglePanel', checked: !Ember.shell.state.panelCollapsed },
     SEPARATOR,
     { label: '全屏', command: 'view.fullscreen' },
   ]);
 
-  VN2.menu.register('settings', () => [
+  Ember.menu.register('settings', () => [
     { label: '首选项', command: 'settings.open' },
     { label: 'mapper 插件', command: 'view.page.mappers' },
   ]);
 
-  VN2.menu.register('help', () => [
+  Ember.menu.register('help', () => [
     { label: '打开日志目录', command: 'help.logs' },
     SEPARATOR,
-    { label: '关于 VirtuaNES2', command: 'help.about' },
+    { label: '关于 Ember', command: 'help.about' },
   ]);
 
   // ---------- 启动 ----------
 
   machine.refresh();
-  VN2.shell.start();
+  Ember.shell.start();
 })();

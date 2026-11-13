@@ -21,14 +21,19 @@
   const CHANGED_MILLISECONDS = 1600;
   const GUEST_DEMO_MILLISECONDS = 12000;
 
-  function entry(name, size) {
-    return { name, size };
+  function entry(name, size, modified = new Date()) {
+    return { name, size, modified };
   }
 
   // 镜像里的文件按镜像名保存，取出再载入时内容保持
   const images = {
-    'SB2K_DOS.IMG': [entry('HELLO.EXE', 4096), entry('HELLO.TXT', 512), entry('DEMO.BAS', 2048), entry('SONG01.MID', 18432)],
-    'DATA01.IMG': [entry('NOTES.TXT', 1024), entry('SAVE01.DAT', 8192)],
+    'SB2K_DOS.IMG': [
+      entry('HELLO.EXE', 4096, new Date(2026, 9, 28, 14, 5)),
+      entry('HELLO.TXT', 512, new Date(2026, 9, 28, 14, 7)),
+      entry('DEMO.BAS', 2048, new Date(2026, 10, 2, 20, 41)),
+      entry('SONG01.MID', 18432, new Date(2026, 10, 9, 9, 30)),
+    ],
+    'DATA01.IMG': [entry('NOTES.TXT', 1024, new Date(2026, 10, 5, 18, 12)), entry('SAVE01.DAT', 8192, new Date(2026, 10, 11, 22, 3))],
   };
   const unsaved = new Set();
   const changed = new Set();
@@ -55,6 +60,11 @@
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(bytes % 1024 ? 1 : 0) + ' KB';
     return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  function formatModified(date) {
+    const two = (value) => String(value).padStart(2, '0');
+    return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate()) + ' ' + two(date.getHours()) + ':' + two(date.getMinutes());
   }
 
   function machineRunning() {
@@ -128,9 +138,9 @@
     const image = disk(view.drive).image;
     $('#ffImage').textContent = image + (unsaved.has(image) ? '（有未保存的修改）' : '');
     $('#ffUsed').textContent = formatSize(usedBytes(filesOf(view.drive))) + ' / ' + formatSize(CAPACITY);
-    let sync = '机器没有运行，修改直接作用于镜像';
+    let sync = '未运行，直接改镜像';
     if (Ember.devices.writeProtected(view.drive)) sync = '写保护，不能修改';
-    else if (machineRunning()) sync = '运行中，修改立即对学习机生效';
+    else if (machineRunning()) sync = '运行中，实时同步';
     $('#ffSync').textContent = sync;
   }
 
@@ -166,7 +176,7 @@
     }
     const nameCell = h('td');
     nameCell.append(label);
-    row.append(nameCell, h('td', 'ff-size', formatSize(item.size)));
+    row.append(nameCell, h('td', 'ff-size', formatSize(item.size)), h('td', 'ff-time', formatModified(item.modified)));
     return row;
   }
 
@@ -175,7 +185,7 @@
     if (!files.length) {
       const empty = h('tr');
       const cell = h('td', 'ff-empty', '盘里没有文件');
-      cell.colSpan = 2;
+      cell.colSpan = 3;
       empty.append(cell);
       body.replaceChildren(empty);
       return;
@@ -290,8 +300,9 @@
         const ok = await confirm('替换文件', '软盘里已有“' + name + '”，要替换吗？', '替换');
         if (!ok) continue;
         existing.size = file.size;
+        existing.modified = new Date(file.lastModified);
       } else {
-        files.push(entry(name, file.size));
+        files.push(entry(name, file.size, new Date(file.lastModified)));
       }
       added.push(name);
     }

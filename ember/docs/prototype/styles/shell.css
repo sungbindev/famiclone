@@ -152,6 +152,17 @@
   color: var(--ghost-selected-foreground);
 }
 
+/* 设备图标上的软驱指示灯：读写时亮，其余时候暗 */
+.drive-led {
+  fill: var(--led-off);
+  stroke: none;
+}
+
+.drive-led.is-on {
+  fill: var(--led-on);
+  filter: drop-shadow(0 0 2px var(--led-on));
+}
+
 /* 边栏 */
 .shell-side-bar {
   display: flex;

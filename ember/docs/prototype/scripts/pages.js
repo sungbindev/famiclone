@@ -112,7 +112,6 @@
 
   // ---------- 设备（边栏） ----------
 
-  // 原型只模拟软驱 A 的读写；B 有盘时显示空闲
   const floppies = { A: { image: 'SB2K_DOS.IMG', track: 12 }, B: null };
   const SPARE_IMAGES = { A: 'SB2K_DOS.IMG', B: 'DATA01.IMG' };
 
@@ -127,10 +126,21 @@
     return Boolean(machine.cartridge && machine.power && !machine.paused);
   }
 
+  // 原型只模拟软驱 A 的读写；B 有盘时显示空闲
+  function floppyBusy(drive) {
+    return drive === 'A' && Boolean(floppies.A) && machineRunning();
+  }
+
+  // 活动栏设备图标上的指示灯：任一软驱读写时亮；读写是断续的，所以随机闪动
+  const driveLed = $('#driveLed');
+  setInterval(() => {
+    driveLed.classList.toggle('is-on', (floppyBusy('A') || floppyBusy('B')) && Math.random() < 0.7);
+  }, 150);
+
   function renderFloppy(drive) {
     const disk = floppies[drive];
     let state = '无盘片';
-    if (disk) state = drive === 'A' && machineRunning() ? '读写中，第 ' + disk.track + ' 磁道' : '空闲';
+    if (disk) state = floppyBusy(drive) ? '读写中，第 ' + disk.track + ' 磁道' : '空闲';
     $('#floppy' + drive + 'Image').textContent = disk ? disk.image : '空';
     $('#floppy' + drive + 'State').textContent = state;
     $('#floppy' + drive + 'Eject').disabled = !disk;

@@ -98,6 +98,17 @@
   gap: var(--action-gap);
 }
 
+/* 设备边栏：每个设备一张卡片（面板） */
+.side[data-side="media"]:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-page);
+}
+
+.side[data-side="media"] .ui-panel {
+  --facts-label-width: 40px;
+}
+
 /* 设备边栏的声像磁带电平 */
 .media-levels {
   display: flex;

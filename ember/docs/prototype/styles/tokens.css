@@ -157,7 +157,7 @@
   --activity-bar-indicator-width: 2px;
   --activity-bar-bg: var(--host-activitybar-background);
   --side-bar-width: 240px;
-  --secondary-side-width: 280px;
+  --secondary-side-width: 340px;
   --side-bar-list-secondary-color: var(--text-muted);
   --side-bar-list-secondary-font-size: var(--font-size-caption);
   --tab-bar-height: 36px;
@@ -235,6 +235,10 @@
   --list-item-padding-y: var(--space-sm);
   --list-item-padding-x: var(--space-md);
   --list-item-radius: var(--radius-md);
+  --panel-header-height: 44px;
+  --panel-head-padding-y: var(--space-sm);
+  --panel-compact-header-height: 28px;
+  --panel-compact-head-padding-y: var(--space-xs);
   --panel-padding-y: var(--space-md);
   --panel-padding-x: var(--space-page);
   --callout-bg: color-mix(in srgb, var(--host-button-background) 12%, transparent);
@@ -300,6 +304,8 @@
   --status-success: rgb(79, 220, 138);
   --status-warning: rgb(242, 177, 74);
   --status-error: rgb(244, 113, 113);
+  --led-on: rgb(74, 222, 110);
+  --led-off: color-mix(in srgb, var(--led-on) 22%, var(--bg));
 
   --card-bg: color-mix(in srgb, var(--bg) 97%, rgb(255, 255, 255));
   --card-shadow: none;
@@ -372,6 +378,8 @@
   --status-success: rgb(31, 122, 63);
   --status-warning: rgb(169, 106, 16);
   --status-error: rgb(197, 48, 48);
+  --led-on: rgb(22, 163, 74);
+  --led-off: color-mix(in srgb, var(--led-on) 22%, var(--bg));
 
   --card-bg: color-mix(in srgb, var(--bg) 62%, rgb(226, 226, 226));
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);

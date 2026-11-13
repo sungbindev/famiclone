@@ -222,6 +222,46 @@
   font-weight: var(--font-weight-strong);
 }
 
+/* 面板：带边框的卡片，标题行下有分割线（取自 rujian-ui-kit） */
+.ui-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: var(--space-hairline) solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.ui-panel__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--panel-header-height);
+  padding: var(--panel-head-padding-y) var(--panel-padding-x);
+  border-bottom: var(--space-hairline) solid var(--divider);
+}
+
+.ui-panel--compact-head .ui-panel__head {
+  min-height: var(--panel-compact-header-height);
+  padding-top: var(--panel-compact-head-padding-y);
+  padding-bottom: var(--panel-compact-head-padding-y);
+}
+
+.ui-panel__heading h3 {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+}
+
+.ui-panel__body {
+  display: grid;
+  align-content: start;
+  gap: var(--space-md);
+  padding: var(--panel-padding-y) var(--panel-padding-x);
+}
+
 /* 页面说明区与标题 */
 .ui-page-head {
   margin-bottom: var(--space-page);

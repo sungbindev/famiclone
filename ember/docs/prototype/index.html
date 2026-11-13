@@ -93,7 +93,7 @@
       <nav class="shell-activity-bar" aria-label="活动栏">
         <button class="shell-activity-button" type="button" data-open-page="run" aria-label="运行" title="运行"><svg class="ui-icon"><use href="#i-play"/></svg></button>
         <button class="shell-activity-button" type="button" data-open-page="library" aria-label="卡带库" title="卡带库"><svg class="ui-icon"><use href="#i-library"/></svg></button>
-        <button class="shell-activity-button" type="button" data-open-side="media" aria-label="设备" title="设备（软驱、磁带与打印机）"><svg class="ui-icon"><use href="#i-drive"/></svg></button>
+        <button class="shell-activity-button" type="button" data-open-side="media" aria-label="设备" title="设备（软驱、磁带与打印机）"><svg class="ui-icon" viewBox="0 0 24 24"><use href="#i-drive"/><rect class="drive-led" id="driveLed" x="14" y="15" width="6" height="3" rx="0.5"/></svg></button>
         <button class="shell-activity-button" type="button" data-open-page="mappers" aria-label="mapper 插件" title="mapper 插件"><svg class="ui-icon"><use href="#i-plug"/></svg></button>
       </nav>
 
@@ -164,65 +164,73 @@
           </section>
 
           <section class="side" data-side="media" hidden>
-            <div class="ui-group">
-              <h3 class="ui-group-title">软驱 A</h3>
-              <dl class="ui-facts">
-                <div class="ui-facts-row"><dt>盘片</dt><dd id="floppyAImage">SB2K_DOS.IMG</dd></div>
-                <div class="ui-facts-row"><dt>状态</dt><dd id="floppyAState">空闲</dd></div>
-              </dl>
-              <label class="ui-switch-row"><span class="ui-switch-row-label">写保护</span><span class="ui-switch"><input type="checkbox" id="floppyAWp" aria-label="软驱 A 写保护"><span class="ui-switch-track"></span></span></label>
-              <div class="side-button-grid">
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyInsert" data-drive="A"><svg class="ui-icon"><use href="#i-download"/></svg><span>载入镜像</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyEject" data-drive="A" id="floppyAEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppySave" data-drive="A" id="floppyASave"><svg class="ui-icon"><use href="#i-save"/></svg><span>保存镜像</span></button>
-              </div>
-            </div>
-            <div class="ui-group">
-              <h3 class="ui-group-title">软驱 B</h3>
-              <dl class="ui-facts">
-                <div class="ui-facts-row"><dt>盘片</dt><dd id="floppyBImage">空</dd></div>
-                <div class="ui-facts-row"><dt>状态</dt><dd id="floppyBState">无盘片</dd></div>
-              </dl>
-              <label class="ui-switch-row"><span class="ui-switch-row-label">写保护</span><span class="ui-switch"><input type="checkbox" id="floppyBWp" aria-label="软驱 B 写保护"><span class="ui-switch-track"></span></span></label>
-              <div class="side-button-grid">
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyInsert" data-drive="B"><svg class="ui-icon"><use href="#i-download"/></svg><span>载入镜像</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyEject" data-drive="B" id="floppyBEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.floppySave" data-drive="B" id="floppyBSave"><svg class="ui-icon"><use href="#i-save"/></svg><span>保存镜像</span></button>
-              </div>
-            </div>
-            <div class="ui-group">
-              <h3 class="ui-group-title">磁带机</h3>
-              <div class="ui-field">
-                <span class="ui-field-label">磁带类型</span>
-                <div class="ui-segmented" role="radiogroup" aria-label="磁带类型" data-segmented="tapeKind">
-                  <button type="button" role="radio" aria-checked="true" data-value="data">数据磁带</button>
-                  <button type="button" role="radio" aria-checked="false" data-value="av">声像磁带</button>
+            <section class="ui-panel ui-panel--compact-head">
+              <div class="ui-panel__head"><div class="ui-panel__heading"><h3>软驱 A</h3></div></div>
+              <div class="ui-panel__body">
+                <dl class="ui-facts">
+                  <div class="ui-facts-row"><dt>盘片</dt><dd id="floppyAImage">SB2K_DOS.IMG</dd></div>
+                  <div class="ui-facts-row"><dt>状态</dt><dd id="floppyAState">空闲</dd></div>
+                </dl>
+                <label class="ui-switch-row"><span class="ui-switch-row-label">写保护</span><span class="ui-switch"><input type="checkbox" id="floppyAWp" aria-label="软驱 A 写保护"><span class="ui-switch-track"></span></span></label>
+                <div class="side-button-grid">
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyInsert" data-drive="A"><svg class="ui-icon"><use href="#i-download"/></svg><span>载入镜像</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyEject" data-drive="A" id="floppyAEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.floppySave" data-drive="A" id="floppyASave"><svg class="ui-icon"><use href="#i-save"/></svg><span>保存镜像</span></button>
                 </div>
               </div>
-              <dl class="ui-facts">
-                <div class="ui-facts-row"><dt>磁带</dt><dd id="tapeFile">空</dd></div>
-                <div class="ui-facts-row"><dt>状态</dt><dd id="tapeState">无磁带</dd></div>
-                <div class="ui-facts-row"><dt>位置</dt><dd id="tapeTime">—</dd></div>
-              </dl>
-              <div class="ui-progress" role="progressbar" aria-label="磁带进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="tapeProgress"><span class="ui-progress-fill" id="tapeFill"></span></div>
-              <div class="media-levels" id="tapeLevels" hidden>
-                <div class="media-level"><span class="media-level-label">声音</span><span class="ui-progress"><span class="ui-progress-fill" id="levelL"></span></span></div>
-                <div class="media-level"><span class="media-level-label">画面</span><span class="ui-progress"><span class="ui-progress-fill" id="levelR"></span></span></div>
+            </section>
+            <section class="ui-panel ui-panel--compact-head">
+              <div class="ui-panel__head"><div class="ui-panel__heading"><h3>软驱 B</h3></div></div>
+              <div class="ui-panel__body">
+                <dl class="ui-facts">
+                  <div class="ui-facts-row"><dt>盘片</dt><dd id="floppyBImage">空</dd></div>
+                  <div class="ui-facts-row"><dt>状态</dt><dd id="floppyBState">无盘片</dd></div>
+                </dl>
+                <label class="ui-switch-row"><span class="ui-switch-row-label">写保护</span><span class="ui-switch"><input type="checkbox" id="floppyBWp" aria-label="软驱 B 写保护"><span class="ui-switch-track"></span></span></label>
+                <div class="side-button-grid">
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyInsert" data-drive="B"><svg class="ui-icon"><use href="#i-download"/></svg><span>载入镜像</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.floppyEject" data-drive="B" id="floppyBEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.floppySave" data-drive="B" id="floppyBSave"><svg class="ui-icon"><use href="#i-save"/></svg><span>保存镜像</span></button>
+                </div>
               </div>
-              <div class="side-button-grid">
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeLoad" id="tapeLoad"><svg class="ui-icon"><use href="#i-download"/></svg><span>载入磁带</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeEject" id="tapeEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapePlay" id="tapePlay"><svg class="ui-icon"><use href="#i-play"/></svg><span>播放</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeRecord" id="tapeRecord"><svg class="ui-icon"><use href="#i-record"/></svg><span>录音</span></button>
-                <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeStop" id="tapeStop" disabled><svg class="ui-icon"><use href="#i-stop"/></svg><span>停止</span></button>
+            </section>
+            <section class="ui-panel ui-panel--compact-head">
+              <div class="ui-panel__head"><div class="ui-panel__heading"><h3>磁带机</h3></div></div>
+              <div class="ui-panel__body">
+                <div class="ui-field">
+                  <span class="ui-field-label">磁带类型</span>
+                  <div class="ui-segmented" role="radiogroup" aria-label="磁带类型" data-segmented="tapeKind">
+                    <button type="button" role="radio" aria-checked="true" data-value="data">数据磁带</button>
+                    <button type="button" role="radio" aria-checked="false" data-value="av">声像磁带</button>
+                  </div>
+                </div>
+                <dl class="ui-facts">
+                  <div class="ui-facts-row"><dt>磁带</dt><dd id="tapeFile">空</dd></div>
+                  <div class="ui-facts-row"><dt>状态</dt><dd id="tapeState">无磁带</dd></div>
+                  <div class="ui-facts-row"><dt>位置</dt><dd id="tapeTime">—</dd></div>
+                </dl>
+                <div class="ui-progress" role="progressbar" aria-label="磁带进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="tapeProgress"><span class="ui-progress-fill" id="tapeFill"></span></div>
+                <div class="media-levels" id="tapeLevels" hidden>
+                  <div class="media-level"><span class="media-level-label">声音</span><span class="ui-progress"><span class="ui-progress-fill" id="levelL"></span></span></div>
+                  <div class="media-level"><span class="media-level-label">画面</span><span class="ui-progress"><span class="ui-progress-fill" id="levelR"></span></span></div>
+                </div>
+                <div class="side-button-grid">
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeLoad" id="tapeLoad"><svg class="ui-icon"><use href="#i-download"/></svg><span>载入磁带</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeEject" id="tapeEject"><svg class="ui-icon"><use href="#i-eject"/></svg><span>取出</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.tapePlay" id="tapePlay"><svg class="ui-icon"><use href="#i-play"/></svg><span>播放</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeRecord" id="tapeRecord"><svg class="ui-icon"><use href="#i-record"/></svg><span>录音</span></button>
+                  <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeStop" id="tapeStop" disabled><svg class="ui-icon"><use href="#i-stop"/></svg><span>停止</span></button>
+                </div>
               </div>
-            </div>
-            <div class="ui-group">
-              <h3 class="ui-group-title">打印机</h3>
-              <dl class="ui-facts">
-                <div class="ui-facts-row"><dt>状态</dt><dd id="printerState">打印中</dd></div>
-              </dl>
-            </div>
+            </section>
+            <section class="ui-panel ui-panel--compact-head">
+              <div class="ui-panel__head"><div class="ui-panel__heading"><h3>打印机</h3></div></div>
+              <div class="ui-panel__body">
+                <dl class="ui-facts">
+                  <div class="ui-facts-row"><dt>状态</dt><dd id="printerState">打印中</dd></div>
+                </dl>
+              </div>
+            </section>
           </section>
 
           <section class="side" data-side="mappers" hidden>
@@ -467,7 +475,7 @@
           <div class="ui-group">
             <div class="ui-table-wrap">
               <table class="ui-table ui-table--compact ff-table">
-                <thead><tr><th>名称</th><th class="ff-size">大小</th></tr></thead>
+                <thead><tr><th>名称</th><th class="ff-size">大小</th><th>修改时间</th></tr></thead>
                 <tbody id="ffBody"></tbody>
               </table>
             </div>

@@ -23,6 +23,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 硬件行为以真机资料与实测为准：依据 `../machines/`、`../reference/` 和实测，不以旧版 `../virtuanes/` 的代码为硬件事实；旧代码只参考逻辑，不复制。
 - 每个硬件模块一个型号，模块之间只经契约层的抽象（总线、中断线、时钟、端口等）协作，实现之间不互相引用；具体实现只在组装根按主机型号创建并连线。硬件契约在 `core/src/contracts/hardware/`（只能包含标准库、自己与 `shared`），硬件模块在 `core/src/logic/hardware/<模块>/`（只能包含 `contracts/hardware`、`shared` 与 `platform` 的抽象）。
 - CPU 核用 nestest 日志逐行比对验证，测试数据在 `core/test/data/nestest/`，不改动数据文件。
+- PPU 用公开的测试 ROM 验证（`core/test/data/` 下的 9 组，来源与结果见各目录的 `README.md`），由 `core/test/hardware/ppu-rom-test.cpp` 运行；改动 PPU、DMA、手柄或 `fc` 主机型号后必须重跑，暂时不能通过的项登记在 02 第 12 节“已知差异”，不删测试。测试用的 NROM 卡带只在测试代码里，核心程序里没有 mapper 的实现。
+- PPU 的 CPU 相位（`fc.hpp` 的 `PPU_PHASE_TICKS`）按 vbl/NMI 时序测试调定，不随意改；PPU 的帧缓冲每像素 4 字节，内存顺序 R、G、B、A，见 02。
 - 模拟器程序只提供环境，不含任何具体卡带与机型的规则；这些规则只在 mapper 插件里。mapper 清单只能按名字选择主机型号，不能修改芯片内部与主板上的固定资源。
 - 存储按位置分三档：芯片内与主板上的由芯片模块、主机型号写死，卡带上的由 mapper 清单声明，见硬件模块文档。
 - 请求、事件与数据类型只在 `schema/<模块>.schema.json` 中定义和修改，TypeScript 与 C++ 的 `generated/` 目录由脚本生成，不手写、不手改。

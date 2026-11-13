@@ -11,8 +11,12 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "contracts/hardware/cartridge-slot.hpp"
 #include "contracts/hardware/clock.hpp"
+#include "contracts/hardware/cpu.hpp"
+#include "contracts/hardware/ppu.hpp"
 
 namespace ember::contracts::hardware {
 
@@ -39,6 +43,22 @@ class Machine {
    * @param ticks 要运行的主时钟周期数。
    */
   virtual void run(MasterTime ticks) = 0;
+
+  /** 运行到 PPU 完成下一帧画面，CPU 的指令不会被中途打断。断电时调用无效果。 */
+  virtual void runFrame() = 0;
+
+  /** 最近一次完成的画面；没有完成过画面时宽高为 0。 */
+  [[nodiscard]] virtual FrameBuffer frame() const = 0;
+
+  /**
+   * 设置手柄口上标准手柄的按键。
+   * @param port 手柄口编号，从 0 开始；没有这个口时报错。
+   * @param buttons 按键掩码，位见 button-input.hpp。
+   */
+  virtual void setButtons(unsigned port, std::uint8_t buttons) = 0;
+
+  /** CPU 当前的寄存器，供测试与调试读取；只在指令之间读取有意义。 */
+  [[nodiscard]] virtual CpuRegisters cpuRegisters() const = 0;
 
   /** 主时钟。 */
   [[nodiscard]] virtual const Clock& clock() const = 0;

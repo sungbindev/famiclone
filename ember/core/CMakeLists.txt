@@ -24,6 +24,14 @@ option(EMBER_BUILD_TESTS "构建 C++ 测试" OFF)
 set(EMBER_CORE_VERSION "0.0.0-dev" CACHE STRING "核心版本，构建脚本取自 package.json")
 set(EMBER_THIRD_PARTY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
+# 测试在 Debug 配置下构建，但 ROM 测试要模拟上万帧画面：对 MSVC 改用 /O2，去掉与它冲突的运行时检查，并关闭标准库的迭代器检查。
+if(EMBER_BUILD_TESTS AND MSVC)
+  string(REGEX REPLACE "/RTC[1csu]+" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  string(REPLACE "/Od" "/O2" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  string(REPLACE "/Ob0" "/Ob2" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
+endif()
+
 # ---------------------------------------------------------------- 第三方库
 
 add_library(ember_json INTERFACE)

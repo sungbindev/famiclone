@@ -40,6 +40,12 @@ class CartridgeSlot {
 
   /** 显存控制线；空槽时选择主板显存，A10 为低。 */
   [[nodiscard]] virtual CiramControl ciramControl(std::uint16_t ppuAddress) const = 0;
+
+  /**
+   * 复位：转给插着的卡带，没有卡带时什么也不做。
+   * @param power 为 true 表示上电复位。
+   */
+  virtual void reset(bool power) = 0;
 };
 
 }  // namespace ember::contracts::hardware

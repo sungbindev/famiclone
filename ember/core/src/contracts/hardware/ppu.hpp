@@ -19,7 +19,10 @@
 
 namespace ember::contracts::hardware {
 
-/** 一帧画面：每像素 32 位，格式 0xAARRGGBB，按行从上到下存放。 */
+/**
+ * 一帧画面：按行从上到下存放，每像素 4 个字节，内存中的字节顺序依次为 R、G、B、A（A 恒为 255）。
+ * 以 32 位整数读取时，小端机器上的值为 0xAABBGGRR；核心只支持小端机器。画面可以不经转换直接上传为 RGBA8 纹理。
+ */
 struct FrameBuffer {
   std::uint32_t width{0};
   std::uint32_t height{0};

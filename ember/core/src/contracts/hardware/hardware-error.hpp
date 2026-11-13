@@ -27,5 +27,9 @@ inline constexpr std::string_view ERROR_LINE_SOURCE_LIMIT = "hardware.lineSource
 inline constexpr std::string_view ERROR_CPU_STALLED = "hardware.cpuStalled";
 /** 构造参数不合法（如分频比不大于 0）。 */
 inline constexpr std::string_view ERROR_INVALID_ARGUMENT = "hardware.invalidArgument";
+/** 存储区的偏移或读取范围超出容量。 */
+inline constexpr std::string_view ERROR_STORAGE_OUT_OF_RANGE = "hardware.storageOutOfRange";
+/** 端口编号超出主机上的端口数。 */
+inline constexpr std::string_view ERROR_PORT_NOT_FOUND = "hardware.portNotFound";
 
 }  // namespace ember::contracts::hardware

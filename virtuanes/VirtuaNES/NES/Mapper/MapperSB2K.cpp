@@ -798,7 +798,8 @@ BYTE MapperSB2K::ExRead ( WORD addr )
 			break;
 
 		case 0x4023: // 0:Joystick or 1:Mouse
-			data = m_bReg4023 & 1;
+			// 真机实测（hwprobe）：位 7 是输入线，闲置时为 1；位 0 读回写入值，其余位读 0
+			data = 0x80 | (m_bReg4023 & 1);
 			break;
 
 		case 0x4024: // Mouse data

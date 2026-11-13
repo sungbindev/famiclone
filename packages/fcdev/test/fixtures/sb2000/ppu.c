@@ -71,7 +71,8 @@ int main(void)
         SB_BYTE_AT(SB_HW_OAM_ADDRESS) = (unsigned char)(20 + i);
         readback[i] = SB_BYTE_AT(SB_HW_OAM_DATA);
     }
-    SB_CHECK(readback[0] == 0x10 && readback[1] == 0x22 && readback[2] == 0x01 && readback[3] == 0x40);
+    /* 属性字节的位 4-2 读回时总是 1（真机实测），所以写 $01 读到 $1D */
+    SB_CHECK(readback[0] == 0x10 && readback[1] == 0x22 && readback[2] == 0x1D && readback[3] == 0x40);
     sb_ppu_oam_clear();
 
     /* 设置扩展控制寄存器并打开显示：显示寄存器写 0，显示仍是关的；扩展控制寄存器可以读回 */

@@ -6,7 +6,8 @@
 // 日期：2026-11-10
 // 备注：用法 node tools/build-emulator.mjs；需要 Visual Studio（含“使用 C++ 的桌面开发”）。
 //       模拟器是 32 位程序并动态链接 VC++ 运行库，所以把 vcruntime140.dll、msvcp140.dll 一并放进 bin（应用本地部署）。
-//       模拟器包随附 GPLv3 许可文件，manifest.json 记录各文件的校验值。
+//       模拟器包随附 GPLv3 许可文件，manifest.json 记录各文件的校验值；package.json 的 files 逐个列出清单里的文件，
+//       所以调试时模拟器在 bin 里生成的 VirtuaNES.ini、save/ 等文件不会被发布。
 // ------------------------------------------------------------------------
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -96,10 +97,11 @@ export async function buildEmulator() {
   const source = await readSourceState();
 
   const files = readdirSync(binDir).map((name) => path.join(binDir, name));
+  const manifestFiles = Object.fromEntries(files.map((file) => [`bin/${path.basename(file)}`, hashFile(file)]));
   writeFileSync(path.join(EMULATOR_PACKAGE_DIR, 'manifest.json'), `${JSON.stringify({
     sourceCommit: source.commit,
     sourceDirty: source.dirty,
-    files: Object.fromEntries(files.map((file) => [`bin/${path.basename(file)}`, hashFile(file)])),
+    files: manifestFiles,
   }, null, 2)}\n`);
 
   const version = JSON.parse(readFileSync(path.join(REPO_ROOT, 'packages', 'fcdev', 'package.json'), 'utf8')).version;
@@ -110,7 +112,7 @@ export async function buildEmulator() {
     license: 'GPL-3.0-only',
     os: ['win32'],
     cpu: ['x64'],
-    files: ['bin', 'LICENSE', 'manifest.json'],
+    files: [...Object.keys(manifestFiles), 'LICENSE', 'manifest.json'],
     publishConfig: { access: 'public' },
   }, null, 2)}\n`);
   return { packageDir: EMULATOR_PACKAGE_DIR, files: files.length };

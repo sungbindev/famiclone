@@ -10,7 +10,10 @@
     "x64"
   ],
   "files": [
-    "bin",
+    "bin/Chinese.vlp",
+    "bin/msvcp140.dll",
+    "bin/vcruntime140.dll",
+    "bin/VirtuaNES.exe",
     "LICENSE",
     "manifest.json"
   ],

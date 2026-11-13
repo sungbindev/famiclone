@@ -98,8 +98,9 @@ function checkVersions() {
  * 检查工具链包或模拟器包里的文件与清单记录的校验值一致，且没有清单之外的文件。
  * @param {string} packageName 包目录名
  * @param {string[]} directories 参与清单的目录
+ * @param {boolean} [allowExtra] 为 true 时不检查目录里清单之外的文件（该包的 files 逐个列出清单文件，多出的文件不会发布，由发布内容检查把关）
  */
-function checkManifestFiles(packageName, directories) {
+function checkManifestFiles(packageName, directories, allowExtra = false) {
   const packageDir = path.join(PACKAGES_DIR, packageName);
   const manifestFile = path.join(packageDir, 'manifest.json');
   if (!existsSync(manifestFile)) {
@@ -112,7 +113,7 @@ function checkManifestFiles(packageName, directories) {
     if (!existsSync(full)) errors.push(`${packageName} 缺少清单中的文件：${relative}`);
     else if (sha256Of(full) !== expected) errors.push(`${packageName} 的 ${relative} 与清单的校验值不符，需要重新运行构建脚本`);
   }
-  for (const directory of directories) {
+  for (const directory of allowExtra ? [] : directories) {
     const full = path.join(packageDir, directory);
     if (!existsSync(full) || !statSync(full).isDirectory()) continue;
     for (const relative of listFiles(full, packageDir)) {
@@ -174,13 +175,24 @@ function checkCreate() {
   checkPackedFiles('create-fcdev', ['README.md', 'bin/create-fcdev.mjs', 'templates/_common/gitignore']);
 }
 
+/** 检查模拟器包：必需文件在发布内容里，发布内容只含清单里的文件（调试时模拟器在 bin 里生成的 VirtuaNES.ini、save/ 等不在 files 里，不会发布）。 */
+function checkEmulator() {
+  const packed = checkPackedFiles('fcdev-emulator', ['manifest.json', 'bin/VirtuaNES.exe']);
+  const manifestFile = path.join(PACKAGES_DIR, 'fcdev-emulator', 'manifest.json');
+  if (!existsSync(manifestFile)) return;
+  const allowed = new Set(['LICENSE', 'package.json', 'manifest.json', ...Object.keys(readJson(manifestFile).files ?? {})]);
+  for (const file of packed) {
+    if (!allowed.has(file)) errors.push(`fcdev-emulator 的发布内容含清单之外的文件：${file}`);
+  }
+}
+
 checkVersions();
 checkFcdev();
 checkCreate();
 checkManifestFiles('fcdev-cc65', ['bin', 'include', 'asminc', 'lib', 'cfg', 'LICENSE']);
 checkPackedFiles('fcdev-cc65', ['manifest.json', 'bin/cc65.exe', 'bin/ca65.exe', 'bin/ld65.exe', 'bin/ar65.exe', 'bin/da65.exe']);
-checkManifestFiles('fcdev-emulator', ['bin', 'LICENSE']);
-checkPackedFiles('fcdev-emulator', ['manifest.json', 'bin/VirtuaNES.exe']);
+checkManifestFiles('fcdev-emulator', ['bin', 'LICENSE'], true);
+checkEmulator();
 
 for (const warning of warnings) console.warn(`警告：${warning}`);
 if (errors.length > 0) {

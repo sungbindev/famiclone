@@ -91,7 +91,7 @@ void report_bytes(const char *label, const unsigned char *bytes, unsigned char c
 unsigned char report_close(unsigned int *length);
 
 /* hwtest-reg.c：寄存器读回、外设探测、定时器。逐项运行，序号从 0 起，要在关 NMI、关中断、显示已关时调用 */
-#define REG_STEPS 12
+#define REG_STEPS 14
 void reg_step(unsigned char index);
 const char *reg_step_name(unsigned char index);
 void reg_report(void);

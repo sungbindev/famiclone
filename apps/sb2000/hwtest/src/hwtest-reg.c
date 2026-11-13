@@ -57,11 +57,23 @@ static void delay(unsigned int count)
     }
 }
 
-/* 清掉并重新允许定时器中断标志：写 $4032 位 7 为 1 清标志，再写 0 允许 */
+/* 清掉定时器中断标志并忽略它；$4032 的其余位保持 DOS 的值，不能写 1 去清键盘等中断，否则会丢掉已收到的键盘数据 */
+static void timer_clear(void)
+{
+    REG(IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW) | 0x80;
+}
+
+/* 允许定时器中断标志置位 */
+static void timer_allow(void)
+{
+    REG(IRQ_MASK) = REG(SB_IRQ_MASK_SHADOW) & 0x7F;
+}
+
+/* 清掉并重新允许定时器中断标志 */
 static void timer_rearm(void)
 {
-    REG(IRQ_MASK) = 0xFF;
-    REG(IRQ_MASK) = 0x7F;
+    timer_clear();
+    timer_allow();
 }
 
 static void test_ext(void)
@@ -192,11 +204,11 @@ static void test_timer_one_shot(void)
 {
     unsigned int n;
 
-    REG(IRQ_MASK) = 0xFF;
+    timer_clear();
     REG(TIMER_CONTROL) = 0x00;
     REG(TIMER_PRESET) = 0x40;
     one_current_after_write = REG(TIMER_CURRENT);
-    REG(IRQ_MASK) = 0x7F;
+    timer_allow();
     REG(TIMER_CONTROL) = 0x8F;
     for (n = 0; n != POLL_LIMIT; ++n) {
         if (REG(IRQ_PENDING) & 0x80) {
@@ -207,9 +219,9 @@ static void test_timer_one_shot(void)
     one_current = REG(TIMER_CURRENT);
     delay(DELAY_SHORT);
     one_current_later = REG(TIMER_CURRENT);
-    REG(IRQ_MASK) = 0xFF;
+    timer_clear();
     one_pending_cleared = REG(IRQ_PENDING);
-    REG(IRQ_MASK) = 0x7F;
+    timer_allow();
     delay(DELAY_LONG);
     one_pending_again = REG(IRQ_PENDING);
 }
@@ -221,7 +233,7 @@ static unsigned int count_ticks(unsigned char control, unsigned char preset)
     unsigned int ticks = 0;
     unsigned long guard = 0;
 
-    REG(IRQ_MASK) = 0xFF;
+    timer_clear();
     REG(TIMER_CONTROL) = 0x00;
     REG(TIMER_PRESET) = preset;
     REG(TIMER_CONTROL) = control;
@@ -238,14 +250,22 @@ static unsigned int count_ticks(unsigned char control, unsigned char preset)
         }
     }
     REG(TIMER_CONTROL) = 0x00;
-    REG(IRQ_MASK) = 0xFF;
+    timer_clear();
     return ticks;
 }
 
-static void test_timer_continuous(void)
+static void test_timer_bios(void)
 {
     tick_bios = count_ticks(0xEF, 0x3C);
+}
+
+static void test_timer_cpu(void)
+{
     tick_cpu = count_ticks(0xCF, 0xFF);
+}
+
+static void test_timer_line(void)
+{
     tick_line = count_ticks(0xE0, 0xFF);
 }
 
@@ -259,7 +279,8 @@ static void restore_timer(void)
 
 static const char *const step_names[REG_STEPS] = {
     "$2008 readback", "OAM readback", "palette readback", "write-only ports", "unmapped reads", "$4015 sound",
-    "$4022 keyboard", "$4023 mouse", "read $4026 etc.", "RTC address", "timer one-shot", "timer 120 frames"
+    "$4022 keyboard", "$4023 mouse", "read $4026 etc.", "RTC address", "timer one-shot", "timer BIOS values",
+    "timer CPU clock", "timer line clock"
 };
 
 const char *reg_step_name(unsigned char index)
@@ -305,8 +326,16 @@ void reg_step(unsigned char index)
         test_timer_one_shot();
         restore_timer();
         break;
+    case 11:
+        test_timer_bios();
+        restore_timer();
+        break;
+    case 12:
+        test_timer_cpu();
+        restore_timer();
+        break;
     default:
-        test_timer_continuous();
+        test_timer_line();
         restore_timer();
         break;
     }
@@ -353,7 +382,7 @@ static void report_timer(void)
     report_text("  $4036 later: ");
     report_hex(one_current_later);
     report_newline();
-    report_text("  $4033 after masking (write $FF to $4032): ");
+    report_text("  $4033 after clearing (bit 7 of $4032): ");
     report_hex(one_pending_cleared);
     report_text("  after unmasking and waiting: ");
     report_hex(one_pending_again);

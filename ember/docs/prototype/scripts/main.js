@@ -17,6 +17,11 @@
   // ---------- 命令 ----------
 
   commands.register('file.open', () => Ember.notify('原型：这里会打开系统的文件选择窗口，选择 NES 文件。'));
+  // 空工作区的“开机”入口：在按钮下方弹出与“文件”菜单里“开机…”一样的机型列表
+  commands.register('file.boot', (source) => {
+    const rect = source.getBoundingClientRect();
+    Ember.menu.popup(rect.left, rect.bottom, bootItems());
+  });
   commands.register('file.close', () => machine.eject());
   commands.register('app.exit', () => Ember.notify('原型：这里会关闭程序。'));
   commands.register('machine.powerToggle', () => machine.powerToggle());
@@ -59,7 +64,20 @@
 
   const SEPARATOR = { separator: true };
 
+  // 开机的机型列表：经典 FC 再选 NES 文件；整机机型用已添加的 BIOS，没有 BIOS 或暂未支持的置灰并写明原因
+  function bootItems() {
+    const fc = { label: '经典 FC（再选择 NES 文件）', action: () => commands.run('file.open') };
+    const integrated = Ember.bios.list().map((item) => {
+      let hint = '';
+      if (!item.supported) hint = '暂未支持';
+      else if (!item.file) hint = '未添加 BIOS，请在设置里添加';
+      return { label: item.name, shortcut: hint, disabled: Boolean(hint), action: () => machine.bootMachine(item.id, item.file.name) };
+    });
+    return [fc, SEPARATOR, ...integrated];
+  }
+
   Ember.menu.register('file', () => [
+    { label: '开机…', submenu: bootItems() },
     { label: '打开卡带…', command: 'file.open' },
     { label: '最近打开', arrow: true },
     { label: '关闭卡带', command: 'file.close', disabled: !machine.state.cartridge },
@@ -69,7 +87,7 @@
 
   Ember.menu.register('machine', () => {
     const state = machine.state;
-    const empty = !state.cartridge;
+    const empty = !state.host;
     return [
       { label: state.power ? '断电' : '上电', command: 'machine.powerToggle', disabled: empty },
       { label: state.paused ? '继续' : '暂停', command: 'machine.pauseToggle', disabled: empty || !state.power },

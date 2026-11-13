@@ -83,11 +83,6 @@ api::MapperDetail makeDetail(const LoadedPlugin& plugin, PluginSource source, bo
   }
   detail.nametable = std::string(nametableName(manifest.nametable));
   for (const RegisterDecl& decl : manifest.registers) detail.registers.push_back(api::MapperRegisterInfo{busName(decl.ppu), formatRange(decl.range), decl.read, decl.write});
-  for (const WireDecl& decl : manifest.wires) {
-    detail.wires.push_back(api::MapperWireInfo{busName(decl.ppu), formatRange(decl.address), decl.device, decl.registerNumber, decl.read, decl.write});
-  }
-  detail.uses = manifest.uses;
-  for (const IrqWireDecl& decl : manifest.irq) detail.irq.push_back(api::MapperIrqWireInfo{decl.from, decl.to});
   for (const StateDecl& decl : manifest.state) detail.state.push_back(api::MapperStateInfo{decl.name, decl.bits, decl.description});
   for (const SettingDecl& decl : manifest.settings) {
     api::MapperSettingInfo info;

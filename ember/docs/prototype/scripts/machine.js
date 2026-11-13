@@ -28,14 +28,15 @@
   const GAME_PLAYER = '#e02020';
   const PALETTE = ['#000000', '#e04b4b', '#4bc26a', '#e0c34b', '#4b7be0', '#c24bc2', '#4bc2c2', '#ffffff'];
   const HOST_NAMES = { sb2000: 'sb2000 学习机', fc: '经典 FC' };
-  const FRAME_RATES = { um6576: '50.0 fps', fc: '60.1 fps' };
+  const FRAME_RATES = { sb2000: '50.0 fps', fc: '60.1 fps' };
 
+  // host 为空表示没有开机；经典 FC 有卡带、没有 BIOS，整机机型没有卡带、有 BIOS
   const machine = {
     power: true,
     paused: false,
-    cartridge: 'SB2K_BIOS.NES',
     host: 'sb2000',
-    plugin: 'sb2000 1.0.0',
+    cartridge: null,
+    plugin: null,
     speed: '100%',
     volume: 80,
     muted: false,
@@ -87,7 +88,7 @@
   function draw() {
     context.fillStyle = SCREEN_BLACK;
     context.fillRect(0, 0, WIDTH, HEIGHT);
-    if (!machine.power || !machine.cartridge) return;
+    if (!machine.power || !machine.host) return;
     if (machine.host === 'sb2000') drawDos();
     else drawGame();
   }
@@ -115,11 +116,11 @@
   }
 
   function update() {
-    const empty = !machine.cartridge;
+    const empty = !machine.host;
     let label = '运行中';
     let dot = 'on';
     if (empty) {
-      label = '无卡带';
+      label = '未开机';
       dot = 'off';
     } else if (!machine.power) {
       label = '已断电';
@@ -129,7 +130,7 @@
       dot = 'paused';
     }
     const running = !empty && machine.power && !machine.paused;
-    const cartridgeText = machine.cartridge || '（空）';
+    const cartridgeText = empty ? '（空）' : machine.cartridge || '无（整机 BIOS）';
 
     $('#statusPower').textContent = label;
     $('#statusDot').dataset.state = dot;
@@ -138,8 +139,8 @@
     $('#factCartridge').textContent = cartridgeText;
     $('#statusHost').textContent = empty ? '—' : HOST_NAMES[machine.host];
     $('#factHost').textContent = empty ? '—' : HOST_NAMES[machine.host];
-    $('#statusPlugin').textContent = empty ? '—' : machine.plugin;
-    $('#factPlugin').textContent = empty ? '—' : machine.plugin;
+    $('#statusPlugin').textContent = machine.plugin && !empty ? machine.plugin : '—';
+    $('#factPlugin').textContent = machine.plugin && !empty ? machine.plugin : '—';
     $('#statusFps').textContent = running ? FRAME_RATES[machine.host] : '— fps';
     $('#statusSpeed').textContent = '速度 ' + machine.speed;
     $('#statusVolume').textContent = machine.muted ? '已静音' : '音量 ' + machine.volume + '%';
@@ -160,9 +161,9 @@
     let title = '';
     let text = '';
     if (empty) {
-      icon = 'i-cartridge';
-      title = '未插入卡带';
-      text = '在“文件”菜单里打开 NES 文件，或在“卡带库”页双击卡带。';
+      icon = 'i-power';
+      title = '未开机';
+      text = '在“文件”菜单的“开机…”里选机型（经典 FC 再选 NES 文件，整机机型用设置里添加的 BIOS），或在“卡带库”页双击卡带。';
     } else if (!machine.power) {
       icon = 'i-power';
       title = '已断电';
@@ -181,7 +182,7 @@
   Ember.machine = {
     state: machine,
     powerToggle() {
-      if (!machine.cartridge) return;
+      if (!machine.host) return;
       machine.power = !machine.power;
       machine.paused = false;
       if (machine.power) boot();
@@ -189,13 +190,13 @@
       Ember.log('信息', machine.power ? '上电' : '断电');
     },
     pauseToggle() {
-      if (!machine.cartridge || !machine.power) return;
+      if (!machine.host || !machine.power) return;
       machine.paused = !machine.paused;
       update();
       Ember.log('信息', machine.paused ? '已暂停' : '继续运行');
     },
     softReset() {
-      if (!machine.cartridge || !machine.power) return;
+      if (!machine.host || !machine.power) return;
       machine.paused = false;
       boot();
       update();
@@ -203,7 +204,7 @@
       Ember.notify('已软复位');
     },
     hardReset() {
-      if (!machine.cartridge) return;
+      if (!machine.host) return;
       machine.power = true;
       machine.paused = false;
       boot();
@@ -219,6 +220,7 @@
       if (!machine.cartridge) return;
       Ember.log('信息', '已取出卡带 ' + machine.cartridge);
       machine.cartridge = null;
+      machine.host = null;
       update();
     },
     load(info) {
@@ -233,8 +235,21 @@
       Ember.log('信息', 'mapper ' + info.mapper + '、变体 ' + info.variant + ' 匹配到插件 ' + info.plugin);
       Ember.shell.openPage('run');
     },
+    // 整机机型开机：用设置里已添加的 BIOS，没有卡带，不匹配 mapper 插件
+    bootMachine(id, biosName) {
+      machine.host = id;
+      machine.cartridge = null;
+      machine.plugin = null;
+      machine.power = true;
+      machine.paused = false;
+      boot();
+      update();
+      Ember.log('信息', '已读入 ' + HOST_NAMES[id] + '的 BIOS：' + biosName);
+      Ember.log('信息', '已装配主机 ' + HOST_NAMES[id]);
+      Ember.shell.openPage('run');
+    },
     screenshot() {
-      if (!machine.cartridge || !machine.power) {
+      if (!machine.host || !machine.power) {
         Ember.notify('机器没有画面，无法截图。', 'warning');
         return;
       }
@@ -263,7 +278,7 @@
   });
 
   setInterval(() => {
-    if (machine.cartridge && machine.power && !machine.paused && machine.host === 'sb2000') {
+    if (machine.host && machine.power && !machine.paused && machine.host === 'sb2000') {
       cursorOn = !cursorOn;
       draw();
     }

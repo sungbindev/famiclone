@@ -34,9 +34,9 @@
 
 namespace ember::infra::mappers {
 
-/** 主机型号目录：每个型号上有哪些设备（设备标识）。插件的 host、wires 与 uses 按它检查。 */
+/** 主机型号目录：程序里已有的主机型号名。插件的 host 按它检查。 */
 struct HostCatalog {
-  std::map<std::string, std::set<std::string>> hosts;
+  std::set<std::string> hosts;
 };
 
 /** 插件登记的配置。 */
@@ -75,7 +75,7 @@ class PluginRegistry final : public contracts::mappers::MapperService, public co
 
   /**
    * 安装内存里的插件包：检查全部内容（含试加载脚本），通过后放进用户目录。
-   * @throws shared::CoreError mappers.invalidPackage、mappers.hostUnknown、mappers.deviceUnknown、mappers.limitExceeded。
+   * @throws shared::CoreError mappers.invalidPackage、mappers.hostUnknown、mappers.limitExceeded。
    */
   contracts::mappers::MapperSummary installPackage(std::span<const std::uint8_t> bytes);
 

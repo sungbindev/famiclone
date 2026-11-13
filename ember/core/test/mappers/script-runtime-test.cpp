@@ -272,7 +272,7 @@ TEST(ScriptRuntime, HasNoAccessToFilesNetworkProcessTimersOrNondeterminism) {
           typeof std === 'undefined' && typeof os === 'undefined' && typeof console === 'undefined' && typeof WebSocket === 'undefined' &&
           typeof Math.random === 'undefined';
         // 后续阶段才实现的成员在脚本里是 undefined。
-        const later = typeof ctx.device === 'undefined' && typeof ctx.timer === 'undefined' && typeof ctx.random === 'undefined' && typeof ctx.settings === 'undefined';
+        const later = typeof ctx.timer === 'undefined' && typeof ctx.random === 'undefined' && typeof ctx.settings === 'undefined';
         return absent && later ? 1 : 0;
       },
       write(ctx, bus, addr, value) {

@@ -355,6 +355,12 @@
   gap: var(--space-sm);
 }
 
+/* 暂未支持的设置行整行置灰 */
+.ui-setting-row.is-disabled .ui-setting-label,
+.ui-setting-row.is-disabled .ui-setting-description {
+  color: var(--disabled-text);
+}
+
 /* 进度条 */
 .ui-progress {
   display: block;

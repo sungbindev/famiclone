@@ -1,6 +1,6 @@
 # mapper 插件规范
 
-mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元件、地址如何译码并连到主机上的设备、要哪种主机，并用脚本实现 mapper 芯片的行为。模拟器程序不内置任何 mapper，更新或增加机型适配只需安装或更新插件。本文写给插件作者，也是核心实现插件宿主的依据。硬件结构见 [02-硬件模块.md](02-硬件模块.md)。
+mapper 插件提供 FC 卡带（含插在 FC 类主机上的学习卡）上的 mapper 芯片：声明卡带有哪些存储元件、地址如何译码、要哪种主机，并用脚本实现 mapper 芯片的行为。学习机整机的译码与胶合逻辑在主机型号里，整机的 BIOS 不是卡带，都不属于本规范，见 [02-硬件模块.md](02-硬件模块.md)。模拟器程序不内置任何 mapper，更新或增加卡带适配只需安装或更新插件。本文写给插件作者，也是核心实现插件宿主的依据。硬件结构见 02。
 
 状态说明同 [01-软件架构设计.md](01-软件架构设计.md)。
 
@@ -8,11 +8,11 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 
 | 决策项 | 结论 | 状态 |
 | --- | --- | --- |
-| 插件的含义 | 插件就是卡带上的 mapper 芯片：清单描述卡带的元件和连线，脚本实现芯片行为 | 已定 |
+| 插件的含义 | 插件就是卡带上的 mapper 芯片：清单描述卡带的存储区、窗口与寄存器，脚本实现芯片行为 | 已定 |
+| 范围 | 只描述 FC 卡带（含学习卡）；学习机的译码与胶合逻辑都在主机型号里，插件不连线、不访问主机上的功能模块 | 已定 |
 | 不内置 | 程序里没有任何内置 mapper，包括 NROM；官方 mapper 以插件形式随安装包预装 | 已定 |
-| 主机的选择 | 清单只能按名字选择主机型号（按机型，如 `sb2000`），不能修改芯片内部、主板上的外设与存储 | 已定 |
-| 设备 | 软驱控制器、DAC、并口等外设属于主机，由主机型号提供；清单只能写连线，不能创建、修改设备 | 已定 |
-| 匹配 | 按 NES 文件头的 mapper 号和变体匹配，规则写在清单里；程序只做通用查询，不认识任何具体机型 | 已定 |
+| 主机的选择 | 清单只能按名字选择主机型号（`host` 字段，目前只有 `fc`，以后有别的卡带主机时再用），不能修改芯片内部、主板上的功能模块与存储 | 已定 |
+| 匹配 | 按 NES 文件头的 mapper 号和变体匹配，规则写在清单里；程序只做通用查询，不认识任何具体卡带；mapper 171（BBK、SB2K 的 BIOS 文件）没有匹配的插件时按 `mappers.noMatch` 报错，不自动识别成学习机，学习机 BIOS 只能走“机型与 BIOS”开机 | 已定 |
 | 脚本语言 | JavaScript（ES2023 模块），推荐用 TypeScript 编写后打包为单个文件 | 拟定 |
 | 运行环境 | C++ 核心中的 QuickJS-ng，每个插件一个独立的运行时；不能访问文件、网络与进程，一切外部访问只经宿主对象 `ctx` | 拟定 |
 | 调用方式 | 脚本只在寄存器读写、定时事件和复位时被调用，不逐周期回调；译码结果（bank 窗口）由宿主保存并直接使用 | 拟定 |
@@ -23,7 +23,7 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 ## 2. 概念
 
 - NES 文件是卡带的内容：PRG、CHR、文件头。加载时宿主把它解析成规范化的卡带描述，再按它匹配插件。
-- 插件按清单创建卡带：存储芯片和 mapper 芯片，并把清单里的设备连线接到主机的设备上；然后把卡带插入主机的卡槽。
+- 插件按清单创建卡带：存储芯片和 mapper 芯片；然后把卡带插入主机的卡槽。
 - mapper 芯片的职责与真机一致：响应 CPU 与 PPU 的访问，决定卡槽上的每个地址落在哪个存储芯片的哪个位置，必要时处理寄存器、计时和中断。
 - 译码表：宿主按“窗口”保存译码结果。脚本在寄存器写入时修改窗口（如把 `$8000-$9FFF` 指向 PRG 的第 5 个 8K），之后的读写由宿主直接按窗口访问存储区，不再调用脚本。这与真机一致：译码输出只在寄存器写入时变化。
 
@@ -54,8 +54,10 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 | `apiVersion` | 整数 | 插件接口版本，当前为 `1` |
 | `publisher` | 字符串 | 发布者名称 |
 | `description` | 字符串 | 一两句话的说明，可选 |
-| `host` | 字符串数组 | 要求的主机型号（按机型），如 `["sb2000"]`；宿主按第一个存在的型号装配 |
+| `host` | 字符串数组 | 要求的主机型号，目前只有 `fc`（`["fc"]`）；宿主按第一个存在的型号装配；以后有别的卡带主机时再用 |
 | `match` | 数组 | 匹配条件，见第 4.2 节 |
+
+- 清单里不认识的字段一律拒绝（`mappers.invalidPackage`），包括已取消的 `wires`、`uses`、`irq`：卡带不连线主机上的功能模块，译码与胶合逻辑都在主机型号里；卡带要向 CPU 发中断只能经 `ctx.irq`。
 
 ### 4.2 匹配
 
@@ -79,10 +81,11 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 - 镜像：第 6 字节的位 3 为四屏，否则位 0 为垂直、清零为水平。
 - 错误码：`cartridges.notInes`、`cartridges.truncated`、`cartridges.unsupportedFormat`、`cartridges.invalidHeader`。
 
-- 同一个 mapper 号可以对应多台机器：小霸王 SB2000、步步高软驱一号、步步高 98 都是 mapper 171，用变体或校验值区分。可以写成一个插件的多项匹配，也可以每台机器一个插件。
+- 同一个 mapper 号可以对应多种卡带，用变体或校验值区分；可以写成一个插件的多项匹配，也可以每种卡带一个插件。
 - 多个插件同时匹配时，写出条件更多的优先（一个插件有多项匹配时取它满足的各项里条件最多的）；条件数相同时报冲突，`mappers.conflict` 的说明列出同样匹配的插件，用户停用其中不需要的即可。“用户在 mapper 插件页选择并记住”**后续阶段**再做（需要首选项存储与对应的请求）。
 - 没有任何已启用的插件匹配时不运行，`mappers.noMatch` 的说明写明“缺少 mapper 号 N、变体 V 的插件”（匹配的插件都被停用时改为提示去启用），界面据此给出打开“mapper 插件”页的入口。
-- 宿主只比较这些规范化字段，不理解它们对应哪台机器。
+- 宿主只比较这些规范化字段，不理解它们对应哪张卡带。
+- mapper 171（BBK、SB2K 的 BIOS 文件）是学习机的 BIOS，不是卡带：没有匹配的插件时同样按 `mappers.noMatch` 报错，程序不会把它识别成学习机，也不允许改 mapper 号强行运行；学习机 BIOS 只能走“机型与 BIOS”开机，见 02、05。
 
 ### 4.3 存储区
 
@@ -136,30 +139,11 @@ mapper 插件提供卡带上的 mapper 芯片：声明卡带有哪些存储元�
 - 寄存器范围可以与窗口的地址范围重叠：只读窗口（`access` 为 `r`）上的写入转给脚本，读取仍由窗口直接处理。寄存器按读、写分别优先于窗口：声明了 `read` 的地址读由脚本回答，声明了 `write` 的地址写只给脚本（即使窗口是 `rw`，窗口也不再处理）。
 - 寄存器范围之间不能重叠（同一总线上）；`read`、`write` 至少要有一个为 `true`；同样受窗口的地址限制（CPU 侧 `$4020-$FFFF`，PPU 侧 `$0000-$1FFF`）。
 
-### 4.6 设备连线
-
-设备属于主机，由主机型号提供；清单不创建设备。`wires` 把卡槽上的地址译码到主机上某个设备的寄存器，每项：
-
-| 字段 | 说明 |
-| --- | --- |
-| `bus` | `cpu` 或 `ppu` |
-| `address` | 地址或地址范围，如 `$4100`、`$4200-$4207` |
-| `device` | 主机上的设备标识，如 `fdc`；主机型号没有这个设备时拒绝 |
-| `register` | 设备的寄存器号；地址范围时按地址偏移依次对应 |
-| `read`、`write` | 是否接读、写 |
-
-- 设备标识、寄存器号与含义由主机型号和设备模块规定，mapper 作者对照设备文档使用；mapper 不能创建设备，也不能改设备的选项。
-- 被连线的地址由宿主直接转给设备，不调用脚本；需要条件逻辑的访问不连线，改在 `registers` 里声明范围，由脚本经 `ctx.device` 访问设备。
-- `uses` 列出脚本要直接访问的设备标识（字符串数组），脚本只能访问这里和 `wires` 里出现过的设备。
-- **后续阶段**：`wires`、`uses`、`irq` 目前只解析与检查（格式、地址范围、设备在主机型号上存在），运行时的设备连线与 `ctx.device` 要等有设备的主机型号（`sb2000`）实现。目前的主机型号 `fc` 没有任何设备，所以带设备连线的插件安装时会因 `mappers.deviceUnknown` 被拒绝。
-
-`irq` 声明中断连线，每项 `{ "from": "设备标识.引脚", "to": "cart" }`，表示该设备的中断输出经 mapper 芯片转到卡带的 IRQ 引脚；需要条件控制（如受某个使能位控制）的中断，不在清单里连线，由脚本经 `ctx.irq` 处理。
-
-### 4.7 状态声明
+### 4.6 状态声明
 
 `state` 声明脚本的内部寄存器，每项：`name`（字母开头的 camelCase，不超过 32 个字符）、`bits`（位宽，1 到 32）、`description`。脚本只能读写已声明的状态（`ctx.state` 不能增加属性，写未声明的状态抛出 TypeError），写入时按位宽截断；上电复位时清零。调试服务可以读写它们，见 04（读写请求属于后续阶段，目前经 `MapperCartridge::state` 只读）。
 
-### 4.8 设置项
+### 4.7 设置项
 
 `settings` 声明用户可调的选项（可选），写法同如见的模型插件设置项：`key`、`label`、`kind`（`text`、`choice`、`switch`）、`default`、`description`；`choice` 还要写 `options`（每项 `{ "value", "label" }`，`default` 必须是其中一个取值），`switch` 的 `default` 是布尔值。脚本经 `ctx.settings.get(key)` 读取。**后续阶段**：目前只解析与检查，设置页与 `ctx.settings` 一起实现。
 
@@ -180,17 +164,17 @@ sequenceDiagram
     MAPS-->>UI: mappers.conflict（候选列表）
   else 匹配成功
     MAPS->>RT: 插件与清单
-    RT->>RT: 按 host 装配主机，含主机上的全部设备
+    RT->>RT: 按 host 装配主机，含主机上的全部功能模块
     RT->>RT: 创建存储区，从文件载入
-    RT->>RT: 创建 mapper 芯片，加载脚本，建立窗口、译码表，并按 wires 连到主机的设备
+    RT->>RT: 创建 mapper 芯片，加载脚本，建立窗口和译码表
     RT->>RT: 卡带插入卡槽
     RT-->>UI: 就绪，等待上电
   end
 ```
 
 - 经典 FC 的游戏同样要有匹配的插件，所以必须预装 NROM 等常用插件。
-- 学习机的固件文件走同一入口：它的 mapper 号和变体匹配到对应插件，插件的 `host` 决定装配学习机主机，不会进入经典机的 CPU 与 PPU。
-- 经典机的卡槽上插学习机的卡带，或反过来，不可能发生：主机由插件选择，没有第二条路径。
+- 学习机整机不走本流程：它的 BIOS 由主机型号读入，经“机型与 BIOS”开机（见 02、04 第 4.7 节），不匹配插件。学习卡是卡带，走本流程，用卡带 mapper 插件插在 `fc` 机型上。
+- 插件的 `host` 决定装配哪个主机型号，没有第二条路径。
 - 实现：解析与匹配合为 `CartridgeLoader::plan`（得到卡带映像、匹配到的插件与要装配的主机型号 `host`：插件 `host` 里第一个程序里已有的型号）；调用方据 `host` 装配主机，再用 `assemble` 把主机卡槽上的 IRQ 引脚（`Machine::cartridgeIrq`）交给插件创建卡带。创建时按清单建存储区、窗口与译码表并加载脚本；阶段 2b-2 起由运行模块（`runtime`）把这几步串起来：`cartridges.load` 读文件、`plan`、再把映像与匹配结果交给运行服务，运行服务在模拟线程里创建主机（按 `host`）、经 `MapperFactory::create` 创建卡带并插入卡槽，三步里任何一步失败都不改动正在运行的主机。
 
 ## 6. 脚本接口
@@ -222,7 +206,6 @@ export default definePlugin({
 | `ctx.window(id)` | 窗口：`setBank(n)` 切换 bank，`setOffset(bytes)` 按字节偏移，`unmap()` 取消映射（读按开放总线） |
 | `ctx.nametable.set(mode)` | 设置名称表连法：`horizontal`、`vertical`、`single0`、`single1`、`four` |
 | `ctx.irq` | 卡带的 IRQ 引脚：`assert()` 拉低，`release()` 释放 |
-| `ctx.device(id)` | 主机上的设备：`read(reg)`、`write(reg, value)`，设备标识与寄存器号由主机型号和设备模块规定；只能访问 `uses` 和 `wires` 里出现过的设备 |
 | `ctx.storage(id)` | 存储区：`size`、`read(offset)`、`write(offset, value)`（ROM 拒绝写） |
 | `ctx.timer` | `after(cpuCycles, name)` 登记事件，`cancel(name)` 取消；时间单位是 CPU 周期 |
 | `ctx.state` | 已声明状态的读写，如 `ctx.state.prgBank = 5` |
@@ -231,7 +214,7 @@ export default definePlugin({
 | `ctx.log.warn(message)` | 写入运行消息日志，一条最长 2000 字节 |
 
 - 脚本不能访问文件、网络、进程、系统时间和 `Math.random`；需要随机数时用 `ctx.random`。
-- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.nametable`、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.log.warn`；`ctx.device`、`ctx.timer`、`ctx.random`、`ctx.settings` **后续阶段实现**，目前在脚本里是 `undefined`。
+- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.nametable`、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.log.warn`；`ctx.timer`、`ctx.random`、`ctx.settings` **后续阶段实现**，目前在脚本里是 `undefined`。脚本不能访问主机上的任何功能模块，卡带与主机之间只有卡槽引脚。
 - 沙箱里只加载确定性的内置对象：没有 `Date`、`console`、`performance`、`setTimeout`、`fetch`、`process`、`require` 与 quickjs-libc，`Math.random` 被删除，访问它们报 `ReferenceError` 或 `TypeError`（即 `mappers.scriptError`）。`Promise` 仅作为语言内置保留，宿主不执行异步任务，顶层 `await` 报 `mappers.invalidPackage`。
 - `ctx` 与其中的窗口、存储区对象都是冻结的，`ctx.state` 不能增加属性；参数不合法（bank 为负、不是整数、标识不存在、存储区偏移越界、写入值不在 0 到 255、名称表连法不认识）抛出 `RangeError` 或 `TypeError`，按插件错误处理。`ctx.log.warn` 只接受字符串，超过 2000 字节在 UTF-8 字符边界截断，卡带保留最近 200 条（`MapperCartridge::scriptLog`，运行消息日志模块做好后经它写入）。
 - 宿主对象是脚本与硬件之间的全部接口，所以插件的行为是确定的，同样的输入得到同样的结果，方便测试与调试。
@@ -259,18 +242,18 @@ export default definePlugin({
 - 预装的官方插件随安装包放在应用的资源目录，只读；用户安装的插件放在用户数据目录的插件文件夹。实现：预装目录由启动核心时的可选参数 `bundledPluginsPath` 给出（开发版是 `build/plugins`，由 `npm run plugins:pack` 从 `plugins/` 打包；正式包里是应用资源目录下的 `plugins/`，打包配置把 `build/plugins` 作为额外资源复制过去；主进程在启动核心时传入这个路径，核心启动即自动加载其中的 `nrom` 等预装插件），用户插件目录是 `<用户数据目录>/plugins/`，安装后的文件名是 `<id>.emap`（id 只含小写字母、数字与 `-`，不会写到目录之外）。
 - 同一个 `id` 同时存在时，版本高的生效（按三段数字比较，`10.0.0` 高于 `9.0.0`）；版本相同时用户安装的优先。`mappers.list` 只列生效的那一个。安装的插件与用户目录里已有的同标识插件直接替换，不比较版本。
 - 用户可以停用任何插件，卸载自己安装的插件；预装的插件只能停用，不能删除（`mappers.bundledReadonly`）。停用状态保存在用户插件目录的 `state.json`，重启后保持；插件被完全卸载后对应的停用记录一并清除。
-- 安装时检查：包结构与大小、清单符合规范、`apiVersion` 受支持、`host` 中至少有一个存在的主机型号（`mappers.hostUnknown`）、`wires`、`uses` 与 `irq` 里的设备在 `host` 里每一个存在的主机型号上都存在（`mappers.deviceUnknown`，`host` 里不存在的型号不参与检查）、`main.js` 能加载并导出声明的函数（用空卡带试创建一次，脚本的顶层代码会真的执行，受第 6.3 节的限制）；不通过则拒绝并说明原因。用户目录与预装目录里不合格的包在重新读取时被跳过，写入系统错误日志。
+- 安装时检查：包结构与大小、清单符合规范、`apiVersion` 受支持、`host` 中至少有一个存在的主机型号（`mappers.hostUnknown`）、`main.js` 能加载并导出声明的函数（用空卡带试创建一次，脚本的顶层代码会真的执行，受第 6.3 节的限制）；不通过则拒绝并说明原因。用户目录与预装目录里不合格的包在重新读取时被跳过，写入系统错误日志。
 - 开发目录：首选项里可以指定“开发中的插件目录”，目录下每个子目录是一个未打包的插件；这些插件优先于同 `id` 的已安装插件，用 `mappers.reload` 重新加载，调试服务也提供同名请求。**后续阶段**实现；目前 `mappers.reload` 只重新读取预装目录与用户目录。
 - `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由主进程或调试服务发起），插件变化时发事件 `mappers.changed`；`match`（按文件头预览匹配结果）随 `cartridges.parseHeader` 在**后续阶段**实现。
 
-错误码：`mappers.noMatch`、`mappers.conflict`、`mappers.invalidPackage`、`mappers.hostUnknown`、`mappers.deviceUnknown`、`mappers.scriptError`、`mappers.limitExceeded`，以及插件管理增加的 `mappers.notFound`（没有这个标识的插件）、`mappers.bundledReadonly`（预装插件不能卸载）。
+错误码：`mappers.noMatch`、`mappers.conflict`、`mappers.invalidPackage`、`mappers.hostUnknown`、`mappers.scriptError`、`mappers.limitExceeded`，以及插件管理增加的 `mappers.notFound`（没有这个标识的插件）、`mappers.bundledReadonly`（预装插件不能卸载）。
 
 ## 8. SDK 与测试
 
 - **后续阶段**：本节的 SDK、假宿主与命令行工具目前都没有做。现在的插件脚本是自包含的单文件（沙箱里没有 `import`），官方插件的源码在 `plugins/<插件>/`，用 `npm run plugins:pack` 打包（见 06 第 7 节）；自动测试目前直接在核心的 C++ 测试里用真实的脚本运行时跑（沙箱限制、ctx、卡带的窗口与寄存器、插件登记）。
 - SDK 放在 `sdk/`，发布为 npm 包（包名待定，文中暂记为 `@ember/mapper-sdk`），内容：声明文件（`definePlugin`、`ctx` 与清单的类型，每个类型与字段有中文文档注释）、清单检查、假宿主、命令行工具（`build`、`pack`）。
-- 假宿主可以不启动模拟器就测试插件：预设卡带文件头和存储区，模拟寄存器读写，检查窗口、名称表、中断、设备访问与状态；规则与核心一致，修改任一侧时同步另一侧。
-- 官方插件在 `plugins/<机型>/`，只经 SDK 的入口引用 SDK，插件之间不互相引用。
+- 假宿主可以不启动模拟器就测试插件：预设卡带文件头和存储区，模拟寄存器读写，检查窗口、名称表、中断与状态；规则与核心一致，修改任一侧时同步另一侧。
+- 官方插件在 `plugins/<插件>/`，只经 SDK 的入口引用 SDK，插件之间不互相引用。
 - 自动测试只用假宿主，不访问真实设备；整机行为用 `machines/` 的实测程序在核心里验证。
 
 ## 9. 首批官方插件
@@ -278,16 +261,12 @@ export default definePlugin({
 | 插件 | 匹配 | 主机 | 说明 | 状态 |
 | --- | --- | --- | --- | --- |
 | `nrom` | mapper 0 | `fc` | 没有寄存器，固定映射；第一个要做的插件，用来验证经典 FC 的路径与插件机制，先让超级玛丽运行 | 已完成（见下） |
-| `sb2000` | mapper 171，变体 1 | `sb2000` | 小霸王 SB2000 的固件与整机译码电路 | 待核对 |
+
+- 后续是学习卡等各种 mapper 插件：mapper 241、178、168、169、170、177、560 等，数量很多，都是插在 FC 类主机上的卡带，走 `fc` 机型；声像磁带的 mapper 172 同样是插件。它们需要什么外设（学习机键盘、鼠标等）以及用什么主机，现在不做，见 02 第 11 节待核对。学习机整机的 BIOS（mapper 171）不是插件，见 02。
 
 - `nrom`（`plugins/nrom/manifest.json`）：没有寄存器，所以没有 `main.js`（见第 3 节），卡带不会创建脚本运行时；存储区 `prg`（文件 PRG）、`chr`（文件 CHR，没有时用 8K CHR RAM）、`prg-ram`（8K RAM）；窗口：`$8000-$BFFF` 与 `$C000-$FFFF` 各 16K，分别初始指向第一与最后一个 bank（NROM-128 两个窗口都是唯一的 16K，即镜像；NROM-256 各自一半），PPU `$0000-$1FFF` 映射 CHR，名称表连法按文件头。
 - `nrom` 额外带 `$6000-$7FFF` 的 8K PRG RAM（`prg-ram`）：真机的 NROM 卡带没有（Family BASIC 等才有），这是和真机的一处出入；blargg 的 2010 年系列测试 ROM 把结果写在 `$6000`，没有它就无法用测试 ROM 验收经典机。
 - 测试用的 `test-cnrom`（mapper 3，有寄存器与脚本）在 `core/test/data/test-plugins/cnrom/`，不属于官方插件，不随程序发布。
-- `sb2000` 的清单要点（待核对，依据 `machines/sb2000` 的资料与实测，不在此处写定）：
-  - 存储区：BIOS ROM、扩展 RAM、显存。
-  - 设备连线：主机上的软驱控制器（设备标识 `fdc`）；旧版实现里 `$4100` 是数据率、`$4101` 是 DOR，`$4200-$4207` 对应控制器的 DMA 与状态寄存器。
-  - 软驱中断：控制器每传一个字节置一次中断标志，旧版在 mapper 里按上升沿触发，并受 DOR 位 3 控制；这类条件逻辑放在脚本里。
-- 后续插件：步步高软驱一号、步步高 98、裕兴、小霸王 SB97，以及声像磁带的 mapper 172；它们同样是插件，不需要升级程序，所需的设备与主机型号若程序还没有，才需要升级程序。
 
 ## 10. 示意
 
@@ -335,12 +314,12 @@ export default definePlugin({
 | 部分 | 状态 | 说明 |
 | --- | --- | --- |
 | 插件包（第 3 节） | 已实现 | `core/src/infra/mappers/emap-package.*`；用 miniz 读取，拒绝路径穿越、目录、符号链接、加密、重复与其他文件，限制大小，检查图标 |
-| 清单（第 4 节） | 已实现 | `manifest.*`；全部字段解析与检查；`wires`、`uses`、`irq`、`settings` 只解析与检查，运行时行为后续阶段 |
+| 清单（第 4 节） | 已实现 | `manifest.*`；全部字段解析与检查；`settings` 只解析与检查，运行时行为后续阶段 |
 | 卡带（第 4.3-4.5 节） | 已实现 | `mapper-chip.*`；存储区、窗口译码表、寄存器回调、名称表连法、IRQ 引脚、状态位宽 |
 | 沙箱（第 6 节） | 已实现 | `script-runtime.*`；每个卡带一个 QuickJS-ng 运行时；`ctx` 实现 `header`、`window`、`nametable`、`irq`、`storage`、`state`、`log` |
 | 匹配与加载（第 5 节） | 已实现 | `plugin-registry.*` 与 `logic/cartridges`；条件数优先、冲突与无匹配的错误码 |
 | 插件管理（第 7 节） | 已实现 | `list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 与事件 `mappers.changed` |
-| `ctx.device`、`ctx.timer`、`ctx.random`、`ctx.settings`，设备连线运行时 | 后续阶段 | 需要有设备的主机型号（`sb2000`）与定时器、设置页 |
+| `ctx.timer`、`ctx.random`、`ctx.settings` | 后续阶段 | 需要定时器与设置页 |
 | SDK、假宿主、命令行工具、开发目录、冲突时用户选择并记住、`mappers.match`、训练器载入、存档文件 | 后续阶段 | 见各节标注 |
 
 与前文设计的出入：

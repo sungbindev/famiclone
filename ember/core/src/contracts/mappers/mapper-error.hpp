@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：错误码以模块名 mappers 开头，说明面向用户；前七个见 docs/03-mapper插件规范.md 第 7 节，后两个是插件管理增加的。
+ * 备注：错误码以模块名 mappers 开头，说明面向用户；前六个见 docs/03-mapper插件规范.md 第 7 节，后两个是插件管理增加的。
  * ------------------------------------------------------------------------
  */
 
@@ -23,8 +23,6 @@ inline constexpr std::string_view ERROR_CONFLICT = "mappers.conflict";
 inline constexpr std::string_view ERROR_INVALID_PACKAGE = "mappers.invalidPackage";
 /** 清单的 host 里没有任何已有的主机型号。 */
 inline constexpr std::string_view ERROR_HOST_UNKNOWN = "mappers.hostUnknown";
-/** 清单引用的设备在主机型号上不存在。 */
-inline constexpr std::string_view ERROR_DEVICE_UNKNOWN = "mappers.deviceUnknown";
 /** 脚本抛出异常或返回了不合法的值。 */
 inline constexpr std::string_view ERROR_SCRIPT_ERROR = "mappers.scriptError";
 /** 脚本超出内存、栈或单次回调时长的限制。 */

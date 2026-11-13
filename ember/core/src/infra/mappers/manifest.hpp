@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：字段与规则见 docs/03-mapper插件规范.md 第 4 节；不认识的字段、缺字段、越界、窗口重叠等都拒绝，错误码为 mappers.invalidPackage，说明指出出错的字段。
- *       设备连线、中断连线与设置项本阶段只解析与检查，运行时的行为属于后续阶段。
+ *       设置项本阶段只解析与检查，运行时的行为属于后续阶段。
  * ------------------------------------------------------------------------
  */
 
@@ -105,22 +105,6 @@ struct RegisterDecl {
   bool write{false};
 };
 
-/** 设备连线声明（后续阶段才有运行时行为）。 */
-struct WireDecl {
-  bool ppu{false};
-  AddressRange address;
-  std::string device;
-  std::uint32_t registerNumber{0};
-  bool read{false};
-  bool write{false};
-};
-
-/** 中断连线声明（后续阶段才有运行时行为）。 */
-struct IrqWireDecl {
-  std::string from;
-  std::string to;
-};
-
 /** 脚本状态声明。 */
 struct StateDecl {
   std::string name;
@@ -165,9 +149,6 @@ struct Manifest {
   std::vector<WindowDecl> windows;
   NametableMode nametable{NametableMode::Header};
   std::vector<RegisterDecl> registers;
-  std::vector<WireDecl> wires;
-  std::vector<std::string> uses;
-  std::vector<IrqWireDecl> irq;
   std::vector<StateDecl> state;
   std::vector<SettingDecl> settings;
 

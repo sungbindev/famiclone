@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：主机型号目录列出程序里已有的主机型号及其上的设备；目前只有 fc，没有设备；增加主机型号或设备时在这里登记。
+ * 备注：主机型号目录列出程序里已有的主机型号；目前只有 fc；增加主机型号时在这里登记。
  * ------------------------------------------------------------------------
  */
 
@@ -24,7 +24,7 @@ void registerMappers(ModuleRegistry& registry) {
   infra::mappers::PluginRegistryOptions options;
   options.bundledDirectory = registry.bundledPluginsPath;
   options.userDirectory = registry.userDataPath / "plugins";
-  options.hosts.hosts = {{"fc", {}}};
+  options.hosts.hosts = {"fc"};
   options.errors = registry.errors;
   options.events = registry.events;
   auto plugins = std::make_shared<infra::mappers::PluginRegistry>(std::move(options));

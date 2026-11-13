@@ -38,6 +38,11 @@
     filterRows(libraryTable, $('#libSearch').value, (row) => filter === 'all' || row.dataset.status === filter);
   }
 
+  // mapper 171 是学习机的 BIOS，不是卡带：没有插件时只提示去“开机…”
+  function missingHint(info) {
+    return info.mapper === '171' ? '学习机 BIOS 不是卡带，请在“文件”菜单的“开机…”里选机型开机。' : '在“mapper 插件”页安装后即可运行。';
+  }
+
   libraryTable.addEventListener('click', (event) => {
     const row = event.target.closest('tr[data-row]');
     if (!row) return;
@@ -46,7 +51,7 @@
     callout.hidden = row.dataset.status !== 'missing';
     if (!callout.hidden) {
       const info = readCartridge(row);
-      $('span', callout).textContent = '选中的卡带缺少 mapper ' + info.mapper + '、变体 ' + info.variant + ' 的插件。在“mapper 插件”页安装后即可运行。';
+      $('span', callout).textContent = '选中的文件缺少 mapper ' + info.mapper + '、变体 ' + info.variant + ' 的插件。' + missingHint(info);
     }
   });
 
@@ -55,7 +60,7 @@
     if (!row) return;
     const info = readCartridge(row);
     if (row.dataset.status === 'missing') {
-      Ember.notify('无法运行 ' + info.name + '：缺少 mapper ' + info.mapper + '、变体 ' + info.variant + ' 的插件。', 'warning');
+      Ember.notify('无法运行 ' + info.name + '：缺少 mapper ' + info.mapper + '、变体 ' + info.variant + ' 的插件。' + (info.mapper === '171' ? missingHint(info) : ''), 'warning');
       return;
     }
     Ember.machine.load(info);
@@ -70,15 +75,11 @@
   const MAPPER_DETAILS = {
     nrom: {
       title: 'NROM',
-      facts: [['标识', 'nrom'], ['版本', '1.0.0'], ['发布者', 'Ember'], ['匹配', 'mapper 0'], ['主机型号', 'fc'], ['存储区', 'prg（ROM，来自文件）、chr（ROM；文件没有 CHR 时用 8K RAM）'], ['设备连线', '无'], ['寄存器范围', '无'], ['状态声明', '无']],
-    },
-    sb2000: {
-      title: '小霸王 SB2000',
-      facts: [['标识', 'sb2000'], ['版本', '1.0.0'], ['发布者', 'Ember'], ['匹配', 'mapper 171，变体 1'], ['主机型号', 'sb2000'], ['存储区', '待按真机资料核对'], ['设备连线', '软驱控制器 fdc（待按真机资料核对）'], ['寄存器范围', '待按真机资料核对'], ['状态声明', '待按真机资料核对']],
+      facts: [['标识', 'nrom'], ['版本', '1.0.0'], ['发布者', 'Ember'], ['匹配', 'mapper 0'], ['主机型号', 'fc'], ['存储区', 'prg（ROM，来自文件）、chr（ROM；文件没有 CHR 时用 8K RAM）'], ['寄存器范围', '无'], ['状态声明', '无']],
     },
     demo: {
       title: '示意 mapper',
-      facts: [['标识', 'demo-bank'], ['版本', '0.1.0'], ['发布者', '示例发布者'], ['匹配', 'mapper 999'], ['主机型号', 'fc'], ['存储区', 'prg、chr'], ['设备连线', '无'], ['寄存器范围', 'cpu $8000-$FFFF（写）'], ['状态声明', 'prgBank（8 位）'], ['位置', 'D:\\GitCode\\my-mappers\\demo-bank']],
+      facts: [['标识', 'demo-bank'], ['版本', '0.1.0'], ['发布者', '示例发布者'], ['匹配', 'mapper 999'], ['主机型号', 'fc'], ['存储区', 'prg、chr'], ['寄存器范围', 'cpu $8000-$FFFF（写）'], ['状态声明', 'prgBank（8 位）'], ['位置', 'D:\\GitCode\\my-mappers\\demo-bank']],
     },
   };
 
@@ -123,7 +124,7 @@
 
   function machineRunning() {
     const machine = Ember.machine.state;
-    return Boolean(machine.cartridge && machine.power && !machine.paused);
+    return Boolean(machine.host && machine.power && !machine.paused);
   }
 
   // 原型只模拟软驱 A 的读写；B 有盘时显示空闲
@@ -274,6 +275,37 @@
     }
   });
 
+  // ---------- 机型与 BIOS（首选项） ----------
+
+  // 示意数据：只有 sb2000 已支持并添加了 BIOS；添加、替换、移除只改这份数据，没有真实读写文件
+  const SAMPLE_BIOS = { name: 'SB2K_BIOS.NES', size: '128 KB' };
+  const biosMachines = [
+    { id: 'sb97', name: '小霸王 97', supported: false, file: null },
+    { id: 'sb2000', name: '小霸王 2000', supported: true, file: SAMPLE_BIOS },
+    { id: 'bbk10', name: '步步高 1.0', supported: false, file: null },
+    { id: 'bbk20', name: '步步高 2.0', supported: false, file: null },
+  ];
+
+  // “文件”菜单的“开机…”读取这份数据
+  Ember.bios = { list: () => biosMachines };
+
+  function renderBios() {
+    $$('[data-bios-row]').forEach((row) => {
+      const item = biosMachines.find((candidate) => candidate.id === row.dataset.biosRow);
+      row.classList.toggle('is-disabled', !item.supported);
+      let state = '未添加';
+      if (!item.supported) state = '暂未支持';
+      else if (item.file) state = item.file.name + '（' + item.file.size + '）';
+      $('[data-bios-state]', row).textContent = state;
+      $$('button', row).forEach((button) => {
+        button.disabled = !item.supported;
+      });
+      $('[data-command="machines.addBios"]', row).hidden = Boolean(item.file);
+      $('[data-command="machines.replaceBios"]', row).hidden = !item.file;
+      $('[data-command="machines.removeBios"]', row).hidden = !item.file;
+    });
+  }
+
   // ---------- 首选项 ----------
 
   function selectPreferenceGroup(group) {
@@ -335,6 +367,32 @@
   commands.register('media.tapeRecord', () => startTape('recording'));
   commands.register('media.tapeStop', stopTape);
   commands.register('printer.chooseFolder', () => Ember.notify('原型：这里会打开系统的文件夹选择窗口。'));
+
+  function biosMachineOf(source) {
+    return biosMachines.find((item) => item.id === source.dataset.machine);
+  }
+
+  commands.register('machines.addBios', (source) => {
+    const item = biosMachineOf(source);
+    item.file = SAMPLE_BIOS;
+    renderBios();
+    Ember.log('信息', '已为 ' + item.name + ' 添加 BIOS：' + SAMPLE_BIOS.name);
+    Ember.notify('原型：这里会打开系统的文件选择窗口。选定的 BIOS 文件会复制到软件的 BIOS 目录，这里已示意添加 ' + SAMPLE_BIOS.name + '。');
+  });
+  commands.register('machines.replaceBios', (source) => {
+    const item = biosMachineOf(source);
+    renderBios();
+    Ember.log('信息', '已替换 ' + item.name + ' 的 BIOS：' + SAMPLE_BIOS.name);
+    Ember.notify('原型：这里会打开系统的文件选择窗口。新文件复制到 BIOS 目录后，才删除旧文件。');
+  });
+  commands.register('machines.removeBios', (source) => {
+    const item = biosMachineOf(source);
+    item.file = null;
+    renderBios();
+    Ember.log('信息', '已移除 ' + item.name + ' 的 BIOS');
+    Ember.notify('已移除 ' + item.name + ' 的 BIOS（只删除软件 BIOS 目录里的文件，原文件不受影响）。开机时需要重新添加。');
+  });
+  renderBios();
 
   Ember.pages = {
     openPreferences(group) {

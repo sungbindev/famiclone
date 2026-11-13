@@ -69,28 +69,6 @@
       },
       "required": ["bus", "range", "read", "write"]
     },
-    "MapperWireInfo": {
-      "type": "object",
-      "description": "清单里的一条设备连线。",
-      "properties": {
-        "bus": { "type": "string", "enum": ["cpu", "ppu"], "description": "所在总线" },
-        "address": { "type": "string", "description": "地址或地址范围" },
-        "device": { "type": "string", "description": "主机上的设备标识" },
-        "registerNumber": { "type": "integer", "minimum": 0, "description": "设备的寄存器号" },
-        "read": { "type": "boolean", "description": "是否接读" },
-        "write": { "type": "boolean", "description": "是否接写" }
-      },
-      "required": ["bus", "address", "device", "registerNumber", "read", "write"]
-    },
-    "MapperIrqWireInfo": {
-      "type": "object",
-      "description": "清单里的一条中断连线。",
-      "properties": {
-        "from": { "type": "string", "description": "来源，设备标识.引脚" },
-        "to": { "type": "string", "description": "目标，目前只有 cart" }
-      },
-      "required": ["from", "to"]
-    },
     "MapperStateInfo": {
       "type": "object",
       "description": "清单里声明的一项脚本状态。",
@@ -132,13 +110,10 @@
         "windows": { "type": "array", "items": { "$ref": "#/types/MapperWindowInfo" }, "description": "窗口" },
         "nametable": { "type": "string", "description": "名称表的初始连法" },
         "registers": { "type": "array", "items": { "$ref": "#/types/MapperRegisterInfo" }, "description": "寄存器范围" },
-        "wires": { "type": "array", "items": { "$ref": "#/types/MapperWireInfo" }, "description": "设备连线" },
-        "uses": { "type": "array", "items": { "type": "string" }, "description": "脚本要直接访问的设备" },
-        "irq": { "type": "array", "items": { "$ref": "#/types/MapperIrqWireInfo" }, "description": "中断连线" },
         "state": { "type": "array", "items": { "$ref": "#/types/MapperStateInfo" }, "description": "脚本状态" },
         "settings": { "type": "array", "items": { "$ref": "#/types/MapperSettingInfo" }, "description": "设置项" }
       },
-      "required": ["summary", "storage", "windows", "nametable", "registers", "wires", "uses", "irq", "state", "settings"]
+      "required": ["summary", "storage", "windows", "nametable", "registers", "state", "settings"]
     }
   },
   "requests": {
@@ -180,7 +155,7 @@
         "properties": { "plugin": { "$ref": "#/types/MapperSummary" } },
         "required": ["plugin"]
       },
-      "errors": ["mappers.invalidPackage", "mappers.hostUnknown", "mappers.deviceUnknown", "mappers.limitExceeded"]
+      "errors": ["mappers.invalidPackage", "mappers.hostUnknown", "mappers.limitExceeded"]
     },
     "uninstall": {
       "description": "卸载用户安装的插件；预装的插件只能停用。",

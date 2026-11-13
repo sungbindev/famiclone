@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：manifest-test.cpp
- * 说明：插件清单检查的测试：合格的清单与各字段的解析，以及缺字段、不认识的字段、类型与范围不对、窗口重叠与越界、存储区与窗口的搭配、寄存器、状态、设置项、设备连线等错误。
+ * 说明：插件清单检查的测试：合格的清单与各字段的解析，以及缺字段、不认识的字段、类型与范围不对、窗口重叠与越界、存储区与窗口的搭配、寄存器、状态、设置项等错误。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -37,9 +37,6 @@ json full() {
   manifest["windows"].push_back(json::parse(R"({ "id": "ext", "bus": "cpu", "range": "$6000-$7FFF", "storage": "ext-ram", "size": 8192, "initial": 3, "access": "rw" })"));
   manifest["nametable"] = "vertical";
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$4100-$4107", "read": true, "write": true }, { "bus": "ppu", "range": "$1000-$1FFF", "write": true }])");
-  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200-$4207", "device": "fdc", "register": 0, "read": true, "write": true }])");
-  manifest["uses"] = json::parse(R"(["fdc"])");
-  manifest["irq"] = json::parse(R"([{ "from": "fdc.irq", "to": "cart" }])");
   manifest["state"] = json::parse(R"([{ "name": "prgBank", "bits": 8, "description": "PRG bank" }, { "name": "flags", "bits": 32, "description": "标志" }])");
   manifest["settings"] = json::parse(R"([
     { "key": "title", "label": "标题", "kind": "text", "default": "x" },
@@ -106,11 +103,6 @@ TEST(Manifest, ParsesAManifestWithEveryOptionalPart) {
   EXPECT_TRUE(manifest.registers[1].ppu && !manifest.registers[1].read);
   EXPECT_TRUE(manifest.needsReadHandler());
   EXPECT_TRUE(manifest.needsWriteHandler());
-  ASSERT_EQ(manifest.wires.size(), 1U);
-  EXPECT_EQ(manifest.wires[0].device, "fdc");
-  EXPECT_EQ(manifest.wires[0].address.first, 0x4200U);
-  EXPECT_EQ(manifest.uses, std::vector<std::string>{"fdc"});
-  EXPECT_EQ(manifest.irq[0].from, "fdc.irq");
   ASSERT_EQ(manifest.state.size(), 2U);
   EXPECT_EQ(manifest.state[1].bits, 32U);
   ASSERT_EQ(manifest.settings.size(), 3U);
@@ -388,19 +380,16 @@ TEST(ManifestErrors, RejectsBadSettings) {
   expectInvalid(manifest, "settings 里的键重复：a");
 }
 
-TEST(ManifestErrors, RejectsBadWiresAndIrqWires) {
+TEST(ManifestErrors, RejectsDeviceWiringFieldsAsUnknownFields) {
   json manifest = base();
-  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 256, "read": true }])");
-  expectInvalid(manifest, "wires[0].register");
-  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "FDC", "register": 0, "read": true }])");
-  expectInvalid(manifest, "wires[0].device");
-  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 0 }])");
-  expectInvalid(manifest, "read 与 write 至少要有一个为 true");
+  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 0, "read": true }])");
+  expectInvalid(manifest, "manifest.wires 是不认识的字段");
   manifest = base();
-  manifest["irq"] = json::parse(R"([{ "from": "fdc", "to": "cart" }])");
-  expectInvalid(manifest, "irq[0].from 应写成 设备标识.引脚");
-  manifest["irq"] = json::parse(R"([{ "from": "fdc.irq", "to": "cpu" }])");
-  expectInvalid(manifest, "irq[0].to");
+  manifest["uses"] = json::parse(R"(["fdc"])");
+  expectInvalid(manifest, "manifest.uses 是不认识的字段");
+  manifest = base();
+  manifest["irq"] = json::parse(R"([{ "from": "fdc.irq", "to": "cart" }])");
+  expectInvalid(manifest, "manifest.irq 是不认识的字段");
 }
 
 TEST(ManifestErrors, RejectsABadNametableAndTooManyItems) {

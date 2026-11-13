@@ -106,8 +106,8 @@
               <h3 class="ui-group-title">机器</h3>
               <dl class="ui-facts">
                 <div class="ui-facts-row"><dt>主机型号</dt><dd id="factHost">sb2000 学习机</dd></div>
-                <div class="ui-facts-row"><dt>卡带</dt><dd id="factCartridge">SB2K_BIOS.NES</dd></div>
-                <div class="ui-facts-row"><dt>mapper</dt><dd id="factPlugin">sb2000 1.0.0</dd></div>
+                <div class="ui-facts-row"><dt>卡带</dt><dd id="factCartridge">无（整机 BIOS）</dd></div>
+                <div class="ui-facts-row"><dt>mapper</dt><dd id="factPlugin">—</dd></div>
                 <div class="ui-facts-row"><dt>状态</dt><dd id="factState">运行中</dd></div>
               </dl>
             </div>
@@ -276,13 +276,13 @@
           <section class="page page--library ui-scroll" data-page="library" hidden>
             <header class="ui-page-head">
               <h2 class="ui-page-title">卡带库</h2>
-              <p class="ui-page-description" id="libSummary">共 5 个卡带，3 个可运行，2 个缺少 mapper 插件。双击运行。</p>
+              <p class="ui-page-description" id="libSummary">共 5 个卡带，2 个可运行，3 个缺少 mapper 插件。双击运行。</p>
             </header>
             <div class="ui-table-wrap">
               <table class="ui-table" id="libTable">
                 <thead><tr><th>名称</th><th>mapper</th><th>变体</th><th>主机型号</th><th>匹配的插件</th><th>大小</th><th>状态</th></tr></thead>
                 <tbody>
-                  <tr data-row data-status="ok"><td class="ui-table-strong">SB2K_BIOS.NES</td><td>171</td><td>1</td><td>sb2000</td><td>sb2000 1.0.0</td><td>128 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
+                  <tr data-row data-status="missing"><td class="ui-table-strong">SB2K_BIOS.NES</td><td>171</td><td>1</td><td>—</td><td>—</td><td>128 KB</td><td><span class="ui-chip ui-chip--warn">缺少插件</span></td></tr>
                   <tr data-row data-status="ok"><td class="ui-table-strong">Super Mario.nes</td><td>0</td><td>0</td><td>fc</td><td>nrom 1.0.0</td><td>40 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
                   <tr data-row data-status="ok"><td class="ui-table-strong">Tetris.nes</td><td>0</td><td>0</td><td>fc</td><td>nrom 1.0.0</td><td>24 KB</td><td><span class="ui-chip ui-chip--ok">可运行</span></td></tr>
                   <tr data-row data-status="missing"><td class="ui-table-strong">bbk_bios20.nes</td><td>171</td><td>2</td><td>—</td><td>—</td><td>256 KB</td><td><span class="ui-chip ui-chip--warn">缺少插件</span></td></tr>
@@ -304,7 +304,6 @@
                 <thead><tr><th>名称</th><th>版本</th><th>匹配</th><th>主机型号</th><th>来源</th><th>状态</th></tr></thead>
                 <tbody>
                   <tr data-row data-source="bundled" data-detail="nrom"><td class="ui-table-strong">NROM</td><td>1.0.0</td><td>mapper 0</td><td>fc</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
-                  <tr data-row data-source="bundled" data-detail="sb2000"><td class="ui-table-strong">小霸王 SB2000</td><td>1.0.0</td><td>mapper 171，变体 1</td><td>sb2000</td><td>预装</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
                   <tr data-row data-source="dev" data-detail="demo"><td class="ui-table-strong">示意 mapper</td><td>0.1.0</td><td>mapper 999</td><td>fc</td><td>开发目录</td><td><span class="ui-chip ui-chip--ok">已启用</span></td></tr>
                 </tbody>
               </table>
@@ -321,6 +320,7 @@
               <button class="ui-list-button" type="button" data-pref-group="video">画面</button>
               <button class="ui-list-button" type="button" data-pref-group="audio">声音</button>
               <button class="ui-list-button" type="button" data-pref-group="input">输入</button>
+              <button class="ui-list-button" type="button" data-pref-group="machines">机型与 BIOS</button>
               <button class="ui-list-button" type="button" data-pref-group="debug">调试服务</button>
               <button class="ui-list-button" type="button" data-pref-group="printer">打印机</button>
               <button class="ui-list-button" type="button" data-pref-group="paths">路径</button>
@@ -385,6 +385,43 @@
                 </div>
               </section>
 
+              <section class="pref-panel" data-pref-panel="machines" hidden>
+                <h2 class="ui-page-title">机型与 BIOS</h2>
+                <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-file"/></svg><span>选好机型后添加 BIOS 文件。文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。</span></p>
+                <div class="ui-setting-row" data-bios-row="sb97">
+                  <div class="ui-setting-text"><div class="ui-setting-label">小霸王 97</div><div class="ui-setting-description" data-bios-state></div></div>
+                  <div class="ui-setting-control">
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.addBios" data-machine="sb97">添加 BIOS 文件</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.replaceBios" data-machine="sb97">替换</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.removeBios" data-machine="sb97">移除</button>
+                  </div>
+                </div>
+                <div class="ui-setting-row" data-bios-row="sb2000">
+                  <div class="ui-setting-text"><div class="ui-setting-label">小霸王 2000</div><div class="ui-setting-description" data-bios-state></div></div>
+                  <div class="ui-setting-control">
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.addBios" data-machine="sb2000">添加 BIOS 文件</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.replaceBios" data-machine="sb2000">替换</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.removeBios" data-machine="sb2000">移除</button>
+                  </div>
+                </div>
+                <div class="ui-setting-row" data-bios-row="bbk10">
+                  <div class="ui-setting-text"><div class="ui-setting-label">步步高 1.0</div><div class="ui-setting-description" data-bios-state></div></div>
+                  <div class="ui-setting-control">
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.addBios" data-machine="bbk10">添加 BIOS 文件</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.replaceBios" data-machine="bbk10">替换</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.removeBios" data-machine="bbk10">移除</button>
+                  </div>
+                </div>
+                <div class="ui-setting-row" data-bios-row="bbk20">
+                  <div class="ui-setting-text"><div class="ui-setting-label">步步高 2.0</div><div class="ui-setting-description" data-bios-state></div></div>
+                  <div class="ui-setting-control">
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.addBios" data-machine="bbk20">添加 BIOS 文件</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.replaceBios" data-machine="bbk20">替换</button>
+                    <button class="ui-button ui-button--secondary" type="button" data-command="machines.removeBios" data-machine="bbk20">移除</button>
+                  </div>
+                </div>
+              </section>
+
               <section class="pref-panel" data-pref-panel="debug" hidden>
                 <h2 class="ui-page-title">调试服务</h2>
                 <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-terminal"/></svg><span>调试服务给开发者和 Copilot 使用，通过 TCP 控制模拟器。默认关闭，只监听本机。</span></p>
@@ -432,6 +469,7 @@
           <div class="shell-empty-workspace" id="emptyWorkspace" hidden>
             <svg class="ui-icon shell-empty-logo" aria-hidden="true"><use href="#i-logo"/></svg>
             <ul class="shell-empty-steps">
+              <li><button class="shell-empty-step" type="button" data-command="file.boot"><svg class="ui-icon"><use href="#i-power"/></svg><span class="shell-empty-step-name">开机</span></button></li>
               <li><button class="shell-empty-step" type="button" data-command="file.open"><svg class="ui-icon"><use href="#i-cartridge"/></svg><span class="shell-empty-step-name">打开卡带</span><span class="ui-keys"><kbd>Ctrl</kbd><kbd>O</kbd></span></button></li>
               <li><button class="shell-empty-step" type="button" data-open-page="library"><svg class="ui-icon"><use href="#i-library"/></svg><span class="shell-empty-step-name">卡带库</span></button></li>
               <li><button class="shell-empty-step" type="button" data-open-side="media"><svg class="ui-icon"><use href="#i-drive"/></svg><span class="shell-empty-step-name">设备</span></button></li>
@@ -449,8 +487,8 @@
             </div>
           </div>
           <ul class="shell-message-list ui-scroll" id="messageList">
+            <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>已读入 sb2000 学习机的 BIOS：SB2K_BIOS.NES</span></li>
             <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>已装配主机 sb2000 学习机</span></li>
-            <li class="shell-message"><time>10:21:04</time><span class="shell-message-level">信息</span><span>mapper 171、变体 1 匹配到插件 sb2000 1.0.0</span></li>
             <li class="shell-message"><time>10:21:05</time><span class="shell-message-level">信息</span><span>软驱 A 已载入 SB2K_DOS.IMG</span></li>
             <li class="shell-message is-warning"><time>10:21:09</time><span class="shell-message-level">警告</span><span>磁带机里没有磁带</span></li>
             <li class="shell-message"><time>10:21:12</time><span class="shell-message-level">信息</span><span>调试服务：127.0.0.1:5688 已连接 1 个客户端</span></li>
@@ -489,8 +527,8 @@
       <div class="shell-status-group">
         <span class="shell-status-item"><span class="shell-status-dot" id="statusDot" data-state="on"></span><span id="statusPower">运行中</span></span>
         <span class="shell-status-item" id="statusHost">sb2000 学习机</span>
-        <span class="shell-status-item" id="statusCartridge">SB2K_BIOS.NES</span>
-        <span class="shell-status-item" id="statusPlugin">sb2000 1.0.0</span>
+        <span class="shell-status-item" id="statusCartridge">无（整机 BIOS）</span>
+        <span class="shell-status-item" id="statusPlugin">—</span>
       </div>
       <div class="shell-status-group">
         <span class="shell-status-item" id="statusFps">50.0 fps</span>

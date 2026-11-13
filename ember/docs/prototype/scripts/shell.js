@@ -277,6 +277,24 @@
     $$('.shell-menubar-button').forEach((button) => button.classList.remove('is-open'));
   }
 
+  function closeSubmenus() {
+    $$('.ui-menu[data-submenu]', $('#menuLayer')).forEach((menu) => menu.remove());
+  }
+
+  // 子菜单：在父菜单项的右侧弹出，放不下时改到左侧并贴着窗口边缘
+  function openSubmenu(row, items) {
+    closeSubmenus();
+    const menu = buildMenu(items);
+    menu.dataset.submenu = '';
+    const rect = row.getBoundingClientRect();
+    menu.style.left = rect.right + 'px';
+    menu.style.top = rect.top + 'px';
+    $('#menuLayer').append(menu);
+    const box = menu.getBoundingClientRect();
+    if (box.right > window.innerWidth) menu.style.left = Math.max(0, rect.left - box.width) + 'px';
+    if (box.bottom > window.innerHeight) menu.style.top = Math.max(0, window.innerHeight - box.height) + 'px';
+  }
+
   function buildMenu(items) {
     const menu = createElement('div', 'ui-menu');
     menu.setAttribute('role', 'menu');
@@ -291,14 +309,23 @@
       row.disabled = Boolean(item.disabled);
       const mark = createElement('span', 'ui-menu-mark');
       if (item.checked) mark.append(Ember.icon('i-check'));
-      const shortcut = item.arrow ? '' : Ember.keys.of(item.command) || item.shortcut || '';
+      const hasArrow = Boolean(item.arrow || item.submenu);
+      const shortcut = hasArrow ? '' : Ember.keys.of(item.command) || item.shortcut || '';
       row.append(mark, createElement('span', 'ui-menu-label', item.label), createElement('span', 'ui-menu-shortcut', shortcut));
-      if (item.arrow) row.lastChild.append(Ember.icon('i-chevron-right'));
-      row.addEventListener('click', () => {
-        closeMenu();
-        if (item.command) Ember.commands.run(item.command);
-        if (item.action) item.action();
-      });
+      if (hasArrow) row.lastChild.append(Ember.icon('i-chevron-right'));
+      if (item.submenu) {
+        row.addEventListener('mouseenter', () => openSubmenu(row, item.submenu));
+        row.addEventListener('click', () => openSubmenu(row, item.submenu));
+      } else {
+        row.addEventListener('mouseenter', () => {
+          if (!menu.hasAttribute('data-submenu')) closeSubmenus();
+        });
+        row.addEventListener('click', () => {
+          closeMenu();
+          if (item.command) Ember.commands.run(item.command);
+          if (item.action) item.action();
+        });
+      }
       menu.append(row);
     });
     return menu;

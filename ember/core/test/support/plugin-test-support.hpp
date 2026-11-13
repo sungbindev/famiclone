@@ -134,10 +134,10 @@ class RecordingEventSink final : public platform::EventSink {
   std::vector<std::pair<std::string, nlohmann::json>> events;
 };
 
-/** 只有 fc、没有设备的主机型号目录，不读也不写任何目录。 */
+/** 只有 fc 的主机型号目录，不读也不写任何目录。 */
 inline infra::mappers::PluginRegistryOptions fcRegistryOptions() {
   infra::mappers::PluginRegistryOptions options;
-  options.hosts.hosts = {{"fc", {}}};
+  options.hosts.hosts = {"fc"};
   return options;
 }
 

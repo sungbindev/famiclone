@@ -120,14 +120,10 @@ TEST(PluginRegistry, InfoReturnsTheManifestDetails) {
   expectError([&] { static_cast<void>(registry.info("missing")); }, api::ERROR_NOT_FOUND, "missing");
 }
 
-TEST(PluginRegistry, InfoShowsRegistersStateSettingsAndWiresOfARichManifest) {
-  PluginRegistryOptions options = ember::test::fcRegistryOptions();
-  options.hosts.hosts["fc"] = {"fdc"};
-  PluginRegistry registry(options);
+TEST(PluginRegistry, InfoShowsRegistersStateAndSettingsOfARichManifest) {
+  PluginRegistry registry(ember::test::fcRegistryOptions());
   json manifest = manifestFor("rich-plugin", 9);
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$5000-$5003", "write": true }])");
-  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200-$4207", "device": "fdc", "register": 0, "read": true, "write": true }])");
-  manifest["uses"] = json::parse(R"(["fdc"])");
   manifest["state"] = json::parse(R"([{ "name": "bank", "bits": 6, "description": "bank 号" }])");
   manifest["settings"] = json::parse(R"([{ "key": "mode", "label": "模式", "kind": "choice", "default": "a", "options": [{ "value": "a", "label": "甲" }] }, { "key": "on", "label": "开", "kind": "switch", "default": true }])");
   manifest["match"] = json::parse(R"([{ "mapper": 9, "variant": 1, "crc32Prg": "0000ABCD" }])");
@@ -137,10 +133,6 @@ TEST(PluginRegistry, InfoShowsRegistersStateSettingsAndWiresOfARichManifest) {
   EXPECT_EQ(detail.registers[0].range, "$5000-$5003");
   EXPECT_TRUE(detail.registers[0].write);
   EXPECT_FALSE(detail.registers[0].read);
-  ASSERT_EQ(detail.wires.size(), 1U);
-  EXPECT_EQ(detail.wires[0].address, "$4200-$4207");
-  EXPECT_EQ(detail.wires[0].device, "fdc");
-  EXPECT_EQ(detail.uses, std::vector<std::string>{"fdc"});
   ASSERT_EQ(detail.state.size(), 1U);
   EXPECT_EQ(detail.state[0].bits, 6);
   ASSERT_EQ(detail.settings.size(), 2U);
@@ -209,40 +201,20 @@ TEST(PluginRegistryMatch, TheBestConditionOfAMultiRulePluginCounts) {
   expectError([&] { static_cast<void>(registry.match(description)); }, api::ERROR_CONFLICT);
 }
 
-TEST(PluginRegistryInstall, RejectsPluginsForUnknownHostsAndDevices) {
+TEST(PluginRegistryInstall, RejectsPluginsForUnknownHosts) {
   PluginRegistry registry(ember::test::fcRegistryOptions());
   json unknownHost = manifestFor("odd-host", 7);
   unknownHost["host"] = json::parse(R"(["sb2000"])");
   expectError([&] { static_cast<void>(registry.installPackage(package(unknownHost))); }, api::ERROR_HOST_UNKNOWN, "sb2000");
-
-  json wired = manifestFor("wired", 7);
-  wired["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 0, "read": true }])");
-  expectError([&] { static_cast<void>(registry.installPackage(package(wired))); }, api::ERROR_DEVICE_UNKNOWN, "fdc");
-  json uses = manifestFor("uses-dev", 7);
-  uses["uses"] = json::parse(R"(["printer"])");
-  expectError([&] { static_cast<void>(registry.installPackage(package(uses))); }, api::ERROR_DEVICE_UNKNOWN, "printer");
-  json irq = manifestFor("irq-dev", 7);
-  irq["irq"] = json::parse(R"([{ "from": "timer.irq", "to": "cart" }])");
-  expectError([&] { static_cast<void>(registry.installPackage(package(irq))); }, api::ERROR_DEVICE_UNKNOWN, "timer");
   EXPECT_TRUE(registry.list().plugins.empty());
-
-  // 主机型号上有这个设备时通过。
-  PluginRegistryOptions options = ember::test::fcRegistryOptions();
-  options.hosts.hosts["fc"] = {"fdc"};
-  PluginRegistry withDevice(options);
-  EXPECT_NO_THROW(static_cast<void>(withDevice.installPackage(package(wired))));
 }
 
-TEST(PluginRegistryInstall, DevicesMustExistOnEveryExistingHostOfTheList) {
-  PluginRegistryOptions options = ember::test::fcRegistryOptions();
-  options.hosts.hosts["sb2000"] = {"fdc"};
-  PluginRegistry registry(options);
-  json manifest = manifestFor("two-hosts", 7);
-  manifest["host"] = json::parse(R"(["sb2000", "fc"])");
-  manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 0, "read": true }])");
-  expectError([&] { static_cast<void>(registry.installPackage(package(manifest))); }, api::ERROR_DEVICE_UNKNOWN, "主机型号 fc");
-  manifest["host"] = json::parse(R"(["sb2000"])");
-  EXPECT_NO_THROW(static_cast<void>(registry.installPackage(package(manifest))));
+TEST(PluginRegistryInstall, RejectsDeviceWiringFieldsAsUnknownFields) {
+  PluginRegistry registry(ember::test::fcRegistryOptions());
+  json wired = manifestFor("wired", 7);
+  wired["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 0, "read": true }])");
+  expectError([&] { static_cast<void>(registry.installPackage(package(wired))); }, api::ERROR_INVALID_PACKAGE, "wires");
+  EXPECT_TRUE(registry.list().plugins.empty());
 }
 
 TEST(PluginRegistryInstall, RejectsBadPackagesAndTriesTheScriptBeforeAccepting) {

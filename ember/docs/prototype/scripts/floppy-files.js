@@ -69,7 +69,7 @@
 
   function machineRunning() {
     const machine = Ember.machine.state;
-    return Boolean(machine.cartridge && machine.power && !machine.paused);
+    return Boolean(machine.host && machine.power && !machine.paused);
   }
 
   // ---------- 运行画面里的 DIR ----------

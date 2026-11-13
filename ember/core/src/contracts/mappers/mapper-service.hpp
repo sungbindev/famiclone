@@ -31,7 +31,7 @@ class MapperService {
   /**
    * 安装 .emap 插件包。
    * @param path 包文件的路径。
-   * @throws shared::CoreError 包不合格时的 mappers.invalidPackage、mappers.hostUnknown、mappers.deviceUnknown、mappers.limitExceeded。
+   * @throws shared::CoreError 包不合格时的 mappers.invalidPackage、mappers.hostUnknown、mappers.limitExceeded。
    */
   virtual MappersInstallResult install(const std::string& path) = 0;
 

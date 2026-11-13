@@ -35,9 +35,6 @@ constexpr std::size_t MAX_MATCH_RULES = 32;
 constexpr std::size_t MAX_STORAGE = 16;
 constexpr std::size_t MAX_WINDOWS = 64;
 constexpr std::size_t MAX_REGISTERS = 64;
-constexpr std::size_t MAX_WIRES = 64;
-constexpr std::size_t MAX_USES = 16;
-constexpr std::size_t MAX_IRQ_WIRES = 16;
 constexpr std::size_t MAX_STATE = 64;
 constexpr std::size_t MAX_SETTINGS = 32;
 constexpr std::size_t MAX_OPTIONS = 32;
@@ -263,33 +260,6 @@ RegisterDecl readRegister(const json& item, const std::string& path) {
   return decl;
 }
 
-WireDecl readWire(const json& item, const std::string& path) {
-  json_fields::requireObject(item, path);
-  json_fields::rejectUnknown(item, path, {"bus", "address", "device", "register", "read", "write"});
-  WireDecl decl;
-  decl.ppu = readBus(item, path);
-  decl.address = readRange(item, "address", path, decl.ppu);
-  decl.device = readIdentifier(item, "device", path, 32);
-  decl.registerNumber = static_cast<std::uint32_t>(readInt(item, "register", path, 0, 255));
-  decl.read = readFlag(item, "read", path);
-  decl.write = readFlag(item, "write", path);
-  if (!decl.read && !decl.write) fail(path + " 的 read 与 write 至少要有一个为 true");
-  return decl;
-}
-
-IrqWireDecl readIrqWire(const json& item, const std::string& path) {
-  json_fields::requireObject(item, path);
-  json_fields::rejectUnknown(item, path, {"from", "to"});
-  IrqWireDecl decl;
-  decl.from = readText(item, "from", path, 3, 65);
-  const std::size_t dot = decl.from.find('.');
-  if (dot == std::string::npos || dot == 0 || dot + 1 == decl.from.size() || !isLowerIdentifier(decl.from.substr(0, dot), 1, 32) || !isLowerIdentifier(decl.from.substr(dot + 1), 1, 32)) {
-    fail(path + ".from 应写成 设备标识.引脚");
-  }
-  decl.to = json_fields::readString(requireField(item, "to", path), path + ".to", 1, 8, {"cart"});
-  return decl;
-}
-
 StateDecl readState(const json& item, const std::string& path) {
   json_fields::requireObject(item, path);
   json_fields::rejectUnknown(item, path, {"name", "bits", "description"});
@@ -393,7 +363,7 @@ Manifest build(const json& root) {
   const std::string path = "manifest";
   json_fields::requireObject(root, path);
   json_fields::rejectUnknown(root, path,
-                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "match", "storage", "windows", "nametable", "registers", "wires", "uses", "irq", "state", "settings"});
+                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "match", "storage", "windows", "nametable", "registers", "state", "settings"});
   Manifest manifest;
   manifest.id = readText(root, "id", path, 3, 40);
   if (!isLowerIdentifier(manifest.id, 3, 40)) fail(path + ".id 只能用小写字母、数字与 -，3 到 40 个字符，且不能以 - 开头");
@@ -425,20 +395,6 @@ Manifest build(const json& root) {
   manifest.nametable = readNametable(root, path);
   if (const json* list = findList(root, "registers", path, MAX_REGISTERS)) {
     for (std::size_t index = 0; index < list->size(); ++index) manifest.registers.push_back(readRegister((*list)[index], path + ".registers[" + std::to_string(index) + "]"));
-  }
-  if (const json* list = findList(root, "wires", path, MAX_WIRES)) {
-    for (std::size_t index = 0; index < list->size(); ++index) manifest.wires.push_back(readWire((*list)[index], path + ".wires[" + std::to_string(index) + "]"));
-  }
-  if (const json* list = findList(root, "uses", path, MAX_USES)) {
-    for (std::size_t index = 0; index < list->size(); ++index) {
-      const std::string usesPath = path + ".uses[" + std::to_string(index) + "]";
-      std::string device = json_fields::readString((*list)[index], usesPath, 1, 32, {});
-      if (!isLowerIdentifier(device, 1, 32)) fail(usesPath + " 只能用小写字母、数字与 -");
-      manifest.uses.push_back(std::move(device));
-    }
-  }
-  if (const json* list = findList(root, "irq", path, MAX_IRQ_WIRES)) {
-    for (std::size_t index = 0; index < list->size(); ++index) manifest.irq.push_back(readIrqWire((*list)[index], path + ".irq[" + std::to_string(index) + "]"));
   }
   if (const json* list = findList(root, "state", path, MAX_STATE)) {
     for (std::size_t index = 0; index < list->size(); ++index) manifest.state.push_back(readState((*list)[index], path + ".state[" + std::to_string(index) + "]"));

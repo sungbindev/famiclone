@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：规则见 docs/03-mapper插件规范.md 第 6 节。脚本里没有文件、网络、进程、定时器、系统时间与 Math.random，也没有 import；
- *       ctx 目前实现 header、window、nametable、irq、storage、state、log；device、timer、random、settings 属于后续阶段，脚本里是 undefined。
+ *       ctx 目前实现 header、window、nametable、irq、storage、state、log；timer、random、settings 属于后续阶段，脚本里是 undefined。
  *       宿主对象的实现由 ScriptBindings 提供，本类不认识卡带；quickjs.h 只在 script-runtime.cpp 里出现。
  * ------------------------------------------------------------------------
  */

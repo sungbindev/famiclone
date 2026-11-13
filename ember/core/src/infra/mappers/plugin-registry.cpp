@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：安装检查按 docs/03 第 7 节：包结构与大小、清单符合规范、apiVersion 受支持、host 里至少有一个存在的主机型号、
- *       wires 与 uses 里的设备在每个存在的主机型号上都有、main.js 能加载并导出声明的函数（用空卡带试创建一次）。
+ *       main.js 能加载并导出声明的函数（用空卡带试创建一次）。
  *       插件包来自外部：用户目录里的文件名只由插件标识生成（小写字母、数字与 -），不会写到目录之外。
  * ------------------------------------------------------------------------
  */
@@ -120,16 +120,8 @@ std::shared_ptr<const LoadedPlugin> PluginRegistry::checkPackage(std::span<const
   }
   if (knownHosts.empty()) {
     std::vector<std::string> available;
-    for (const auto& host : options_.hosts.hosts) available.push_back(host.first);
+    for (const auto& host : options_.hosts.hosts) available.push_back(host);
     throw shared::CoreError(api::ERROR_HOST_UNKNOWN, "插件 " + manifest.id + " 要求的主机型号 " + join(manifest.host) + " 都不存在；程序支持的型号：" + join(available));
-  }
-  std::vector<std::string> devices = manifest.uses;
-  for (const WireDecl& wire : manifest.wires) devices.push_back(wire.device);
-  for (const IrqWireDecl& wire : manifest.irq) devices.push_back(wire.from.substr(0, wire.from.find('.')));
-  for (const std::string& device : devices) {
-    for (const std::string& host : knownHosts) {
-      if (!options_.hosts.hosts.at(host).contains(device)) throw shared::CoreError(api::ERROR_DEVICE_UNKNOWN, "插件 " + manifest.id + " 引用的设备 " + device + " 在主机型号 " + host + " 上不存在");
-    }
   }
 
   // 用空卡带试创建一次：检查脚本能加载并导出了清单声明的函数。

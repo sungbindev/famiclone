@@ -584,6 +584,8 @@ void MapperSB2K::Reset()
 	m_bReg4036   = 0x00;
 
 	m_bTimerPrescaleCnt = 0;
+	m_bTimerOneShotDone = FALSE;
+	m_bTimingSettingControl = 0;
 
 	kbd_send_irq_delay = 0;
 
@@ -829,6 +831,10 @@ BYTE MapperSB2K::ExRead ( WORD addr )
 			data = m_bReg4034;
 			break;
 
+		case 0x4035: // Timer present value（真机实测：可读）
+			data = m_bReg4035;
+			break;
+
 		case 0x4036: // Timer present value
 			data = m_bReg4036;
 			break;
@@ -1039,6 +1045,7 @@ void MapperSB2K::WriteLow(WORD addr, BYTE data)
 					m_bReg4036   = 0x00;
 
 					m_bTimerPrescaleCnt = 0;
+					m_bTimerOneShotDone = FALSE;
 
 					kbd_send_irq_delay = 0;
 
@@ -1311,11 +1318,13 @@ void MapperSB2K::ExWrite( WORD addr, BYTE data )
 			}
 			m_bReg4034 = data;
 			m_bTimerPrescaleCnt = (data & 15) + 1;
+			m_bTimerOneShotDone = FALSE;
 			break;
 
 		case 0x4035: // Timer present value
 			m_bReg4035 = data;
 			m_bReg4036 = data; // Set Timer current value at the same time
+			m_bTimerOneShotDone = FALSE;
 			break;
 
 		default:
@@ -1337,36 +1346,39 @@ void MapperSB2K::ExWrite( WORD addr, BYTE data )
 					int src_addr;
 					int dst_addr;
 					int len;
-					LPBYTE p_src;
 
 					src_addr = ((m_bDmaReg[1] & 15) << 15) | ((m_bDmaReg[3] & 0x7F) << 8) | m_bDmaReg[2];
-					p_src    = ((m_bDmaReg[1] & 0x10) ? EPRAM : BIOS) + src_addr;
 					dst_addr = (m_bDmaReg[5] << 8) | m_bDmaReg[4];
-					len      = ((m_bDmaReg[7] << 8) | m_bDmaReg[6]) + 0;
+					len      = ((m_bDmaReg[7] << 8) | m_bDmaReg[6]) + 1; // 真机实测：长度寄存器的值是字节数减 1（BIOS 也这样用）
 
-					if (len & 1) len++;
+					// 源数据：ROM 或扩展 RAM，超出范围的部分读为 0
+					LPBYTE src_base = (m_bDmaReg[1] & 0x10) ? EPRAM : BIOS;
+					int    src_size = (m_bDmaReg[1] & 0x10) ? (int)sizeof(EPRAM) : nes->rom->GetPROM_SIZE() * 0x4000;
 
-					if (m_bDmaReg[0] & 0x20) {
+					// 真机实测：$4020 位 7 为 0 时模式位 5 不起作用，目的总是显存；为 1 时由模式位 5 选择工作 RAM 或显存
+					if ((m_bTimingSettingControl & 0x80) && (m_bDmaReg[0] & 0x20)) {
 						// Work RAM：真机实测目标在程序窗口（$8000 以上）时写不进去
-						while (len--) {
+						for (int i = 0; i < len; i++) {
 							if (dst_addr < 0x8000)
-								nes->Write(dst_addr, *p_src);
+								nes->Write(dst_addr, (src_addr + i) < src_size ? src_base[src_addr + i] : 0);
 
 							dst_addr++;
-							p_src++;
 						}
 					} else {
-						// VRAM
-						LPBYTE p_dst;
+						// VRAM：地址 $8000 以上是扩展显存（按 $4300 选 32K 的 bank），否则是字符 RAM；地址按 16 位回绕
+						for (int i = 0; i < len; i++) {
+							BYTE b = (src_addr + i) < src_size ? src_base[src_addr + i] : 0;
+							WORD a = (WORD)(dst_addr + i);
 
-						if (dst_addr & 0x8000) {
-							p_dst = EVRAM + (dst_addr & 0x7FFF);
-							p_dst += m_bVbank * 0x8000;
-						} else {
-							p_dst = CRAM + dst_addr;
+							if (a & 0x8000) {
+								int off = m_bVbank * 0x8000 + (a & 0x7FFF);
+
+								if (off < (int)sizeof(EVRAM))
+									EVRAM[off] = b;
+							} else {
+								CRAM[a] = b;
+							}
 						}
-
-						memcpy(p_dst, p_src, len);
 					}
 				}
 			} else {
@@ -1545,6 +1557,10 @@ BOOL MapperSB2K::CheckIRQ()
 
 void MapperSB2K::TimerTick(INT nTick)
 {
+	// 真机实测：一次计时下溢之后当前值保持预置值，不再下溢、不再产生中断
+	if (m_bTimerOneShotDone)
+		return;
+
 	if (m_bDACOn) {
 		// speed up to avoid audio buffer underflowing
 		nTick = (int)(nTick * 1.5);
@@ -1571,10 +1587,12 @@ void MapperSB2K::TimerTick(INT nTick)
 				nes->cpu->SetIRQ(IRQ_MAPPER);
 			}
 
-			if (m_bReg4034 & 0x40)
+			if (m_bReg4034 & 0x40) {
 				m_bReg4036 = m_bReg4035; // Auto load, 0 based
-			else
-				m_bReg4036 = 0;
+			} else {
+				m_bReg4036 = m_bReg4035; // one shot: hold the preset value
+				m_bTimerOneShotDone = TRUE;
+			}
 		} else {
 			m_bReg4036 -= cycles;
 		}

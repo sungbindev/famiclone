@@ -197,7 +197,6 @@ int main(void)
     ui_blank();
     ui_puts("hwtest: step by step");
     ui_puts("Text turns R, G, B per step");
-    ui_puts("Gray = color lost.");
     ui_puts("Enter=run Space=skip Esc=quit");
     if (dma_prepare() == 0) {
         ui_puts(MSG_MEMORY);

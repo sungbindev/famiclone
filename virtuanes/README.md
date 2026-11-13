@@ -43,6 +43,7 @@ virtuanes/
 - `NES/FDC.cpp/.h`、`DebugServer.cpp`：新增 `fdc` 调试命令（软驱故障注入：取盘、写保护、没有索引脉冲、磁头卡住、控制器不响应、指定扇区校验错），用法见 [05-模拟器与调试](../packages/fcdev/docs/05-模拟器与调试.md) 第 5.1 节的命令表。已知隐患：`cmFormatTrack` 用的 `sectorSize` 没有按命令里的 N 参数设置，要先有过一次读写命令才是 512。
 - `DebugServer.cpp`：`trace` 命令新增 `unique` 选项（每个 CPU 地址的指令、每个中断入口只记第一次）；新增 `dialogs` 命令与监视线程（调试服务启动后，本进程弹出的消息框、文件框会被自动按下确定、取消、否、忽略或关闭，文字记录可用 `dialogs` 查看、`dialogs clear` 清空，避免调试停在模态对话框上）；新增 `tape play|rec <文件>`、`tape stop`、`tape status` 命令（数据录音机 `.vtp`），用法见 [05-模拟器与调试](../packages/fcdev/docs/05-模拟器与调试.md) 第 5.1 节的命令表。
 - `NES/Mapper/MapperSB2K.cpp/.h`、`NES/Nes.cpp`、`DebugServer.cpp`：按真机实测（`apps/sb2000/memtest`）对齐 SB2K 的内存与 DMA：6576 模式下内部 RAM 只有 2K（`$0800-$1FFF` 镜像 `$0000-$07FF`），`$4400-$5FFF` 读出 `$68`、写入无效（`$5006` 的写入仍有效果），DMA 在 `$404B` 位 7 为 0 时不传输、目的在程序窗口（`$8000` 以上）时写不进去；FC 兼容模式不变。
+- `NES/PPU_UM6576.cpp/.h`、`NES/Mapper/MapperSB2K.cpp/.h`、`DebugServer.cpp`：按真机实测（`apps/sb2000/hwtest`）继续对齐：UM6576 PPU 实现 `$2001` 位 0、1、2、5、6、7（极性与 NES 相同，增强位按 PAL 顺序：位 5 绿、位 6 红、位 7 蓝）、精灵属性位 7（垂直翻转）、位 6（水平镜像）、位 5（在背景之后）、8×16 精灵图案号低位忽略、`$2002` 位 6、5 与低 5 位的总线值、`$2008` 位 0、OAM 属性读回掩码 `$F3`、调色板读回 `(值 & $3F) | $40`；MapperSB2K 的 DMA 长度按“长度 + 1”、`$4020` 位 7 为 0 时目的总是显存，定时器一次计时下溢后保持预置值，`$4035` 可读；调试服务的 `shot` 按每行的黑白与增强位出图。
 - 没有改的上游行为：`NES/LPT.cpp` 的 `InitPrinterList` 把 `EnumPrinters` 的缓冲传成了 `NULL`，打印机选择列表里只有“PNG image”，看不到系统打印机；SB2K 映射器 `Reset` 里固定使用 Dendy 时序（CPU 1773447 Hz、312 行、50 Hz），游戏选项里改的制式在硬复位后会被改回。
 
 ## 编译

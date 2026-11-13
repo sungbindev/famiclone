@@ -129,6 +129,7 @@ private:
 	BYTE	m_bReg4036;
 
 	BYTE	m_bTimerPrescaleCnt;
+	BOOL	m_bTimerOneShotDone; // 一次计时（$4034 位 6 为 0）已经下溢，当前值保持预置值、不再计时
 
 	BOOL	m_bDACOn;
 

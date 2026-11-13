@@ -789,11 +789,56 @@ string CmdMouse(NES* nes, const vector<string>& t)
 string CmdShot(NES* nes, const string& line)
 {
 	string path = RestOf(line, 1);
-	RGBQUAD rgb[256];
 	PNGWRITE png;
 
 	if (path.empty())
 		return "ERR usage: shot <file.png>\n";
+
+	if (NES::NESVARIANT_UM6576 == nes->GetVariant()) {
+		// SB2000：每一行有自己的颜色模式（$2001 位 0 黑白、位 5-7 增强色），最多取 4 种，每种占 64 项调色板
+		static RGBQUAD all[8 * 256];
+		static RGBQUAD rgb[256];
+		static BYTE img[256 * 240];
+		LPBYTE mode = DirectDraw.GetLineColormode();
+		LPBYTE scr = nes->ppu->GetScreenPtr() + 8;
+		BYTE slotMode[4] = { 0, 0, 0, 0 };
+		int slots = 0;
+
+		memset(all, 0, sizeof(all));
+		memset(rgb, 0, sizeof(rgb));
+		DirectDraw.GetPaletteData2(all);
+
+		for (int y = 0; y < 240; y++) {
+			int slot = 0;
+
+			while (slot < slots && slotMode[slot] != mode[y])
+				slot++;
+			if (slot == slots) {
+				if (slots < 4) {
+					slotMode[slots++] = mode[y];
+				} else {
+					slot = 3; // 超过 4 种时并入最后一种
+				}
+			}
+
+			for (int x = 0; x < 256; x++)
+				img[y * 256 + x] = (BYTE)((scr[y * CDirectDraw::RENDER_WIDTH + x] & 0x3F) + slot * 64);
+		}
+
+		for (int s = 0; s < slots; s++) {
+			for (int i = 0; i < 64; i++) {
+				int m = slotMode[s] & 7;
+
+				rgb[s * 64 + i] = (slotMode[s] & 0x80) ? all[m * 256 + 0x40 + i] : all[m * 256 + i];
+			}
+		}
+
+		if (!png.Write(path.c_str(), 256, 240, rgb, img, 256))
+			return "ERR write failed\n";
+		return "OK\n";
+	}
+
+	RGBQUAD rgb[256];
 
 	memset(rgb, 0, sizeof(rgb));
 	DirectDraw.GetPaletteData(rgb);

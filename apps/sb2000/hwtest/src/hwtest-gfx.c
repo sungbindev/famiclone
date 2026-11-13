@@ -239,6 +239,7 @@ static void flags_scene(unsigned char which)
 
     oam_reset();
     cells_fill(0, 10, 4, 2, 2, TILE_SOLID2, TEST_BANK);
+    cells_fill(0, 10, 18, 2, 2, TILE_BLANK, TEST_BANK); /* 精灵 0 在这里时下面不能有 DOS 的文字，否则会碰撞 */
     if (which == 0) {
         oam_put(0, 85, SPRITE_SOLID, 0, 36);
     } else if (which == 1) {
@@ -307,7 +308,6 @@ void gfx_scenes_report(void)
     report_line("V4 $2000 bits 1-0 = 0..3: bottom band 0 white 1 red 2 green 3 bars?");
     report_line("V5 $2008 bit 0 = 0, 1: band white (names $0000) or red (names $2000)?");
     report_line("V6 8x16 sprites idx 66 67 69: top and bottom letters?");
-    report_line("   (tile 64 F, 66 A, 67 B, 68 C, 69 D, 70 E, 71 H)");
     report_line("V7 palette (entry = 4*column+row), V8 16 colors (bytes 20-2F): photo");
 }
 
@@ -324,10 +324,10 @@ static unsigned char hold(void)
     return (unsigned char)key;
 }
 
-/* 在第 row 行第 col 列画一行标签文字（占 2 行），文字图块按行号分段，不互相覆盖 */
+/* 在第 row 行（偶数）第 col 列起画一行标签文字（占 2 行）；文字图块按行、按列错开（每行 32 个图块号、每列 2 个），标签之间不互相覆盖 */
 static void label(unsigned char row, unsigned char col, const char *text)
 {
-    sb_text_field(0, col, row, eram_text(text), LABEL_BASE + (unsigned int)(row / 2) * 64u, PALETTE_TEXT, 1);
+    sb_text_field(0, col, row, eram_text(text), LABEL_BASE + (unsigned int)row * 32u + (unsigned int)col * 2u, PALETTE_TEXT, 1);
 }
 
 /* 标签 = 前缀 + 两位十六进制 */

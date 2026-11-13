@@ -1,4 +1,4 @@
-/*******************************************************************************
+﻿/*******************************************************************************
  * PPU for UM6576
  *
  *  Author:  <87430545@qq.com>
@@ -48,6 +48,10 @@ PPU_UM6576::PPU_UM6576( NES* parent ) : nes(parent), PPU(parent)
 	m_bReg2002 = 0;
 	m_bReg2003 = 0;
 	m_bReg2008 = 0;
+	m_bBus = 0;
+
+	::memset(m_bBgOpaque, 0, sizeof(m_bBgOpaque));
+	::memset(m_bSpOccupied, 0, sizeof(m_bSpOccupied));
 
 	// mirror table
 	for (int i = 0; i < 256; i++) {
@@ -83,6 +87,7 @@ void PPU_UM6576::Reset()
 	m_bReg2002 = 0;
 	m_bReg2003 = 0;
 	m_bReg2008 = 0;
+	m_bBus = 0;
 
 	if (lpScreen)
 		::memset(lpScreen, 0x3F, SCREEN_WIDTH * SCREEN_HEIGHT);
@@ -96,13 +101,18 @@ BYTE PPU_UM6576::Read ( WORD addr )
 
 	switch (addr) {
 		case 0x2002: // Sprite flag
-			ret = m_bReg2002;
+			// 真机实测：位 7-5 是标志，低 5 位是最后一次写 PPU 寄存器的值
+			ret = (m_bReg2002 & 0xE0) | (m_bBus & 0x1F);
 			m_bReg2002 &= 0x7F; // remove V-Blank flag
 			m_bW2005Toggle = 0;
 			m_bW2006Toggle = 0;
 			break;
 		case 0x2004: // R Sprite RAM data port
-			ret = SPRAM[m_bReg2003++];
+			ret = SPRAM[m_bReg2003];
+			// 真机实测：精灵属性字节的位 3、2 读回为 0
+			if (2 == (m_bReg2003 & 3))
+				ret &= 0xF3;
+			m_bReg2003++;
 			break;
 		case 0x2007: // R Vram data port
 			ret = m_nVramReg; // previous loaded
@@ -122,8 +132,8 @@ BYTE PPU_UM6576::Read ( WORD addr )
 
 		default:
 			if (addr >= 0x2040 && addr < 0x2080) {
-				// Color palette table
-				ret = m_bPalette[addr & 0x3F];
+				// Color palette table：真机实测，只有低 6 位有效，位 6 读出为 1
+				ret = m_bPalette[addr & 0x3F] | 0x40;
 			}
 			break;
 	}
@@ -135,6 +145,9 @@ BYTE PPU_UM6576::Read ( WORD addr )
 
 void PPU_UM6576::Write( WORD addr, BYTE data )
 {
+	if (addr <= 0x2007)
+		m_bBus = data;
+
 	switch (addr) {
 		case 0x2000: // System control
 			m_bReg2000 = data;
@@ -190,7 +203,7 @@ void PPU_UM6576::Write( WORD addr, BYTE data )
 		default:
 			if (addr >= 0x2040 && addr < 0x2080) {
 				// Color palette table
-				m_bPalette[addr & 0x3F] = data;
+				m_bPalette[addr & 0x3F] = data & 0x3F;
 			}
 			break;
 	}
@@ -241,7 +254,8 @@ void PPU_UM6576::VBlankStart()
 
 void PPU_UM6576::VBlankEnd()
 {
-	m_bReg2002 &= 0x7F; // PPU_VBLANK_FLAG
+	// 垂直消隐结束（预渲染行）：清除位 7、6（精灵 0 碰撞）、5（一行超过 8 个精灵）
+	m_bReg2002 &= 0x1F;
 }
 
 void PPU_UM6576::FrameStart() {}
@@ -260,8 +274,16 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 	// dest is lpScanline, with SCREEN_WIDTH
 
 	// to do:
-	// 1. page mode while reg2008.0 = 1
-	// 2. sprite mirroring
+	// 1. sprite limit: draw only the first 8 sprites per line (the overflow flag is already set)
+
+	// 真机实测：$2001 位 5 增强绿、位 6 增强红、位 7 增强蓝（PAL 的顺序），位 0 为黑白；
+	// 渲染层的色表按位 0 红、位 1 绿、位 2 蓝排列，位 7 表示黑白
+	if (lpColormode && scanline >= 0 && scanline < 240) {
+		lpColormode[scanline] = ((m_bReg2001 & 0x40) >> 6) | ((m_bReg2001 & 0x20) >> 4)
+			| ((m_bReg2001 & 0x80) >> 5) | ((m_bReg2001 & 0x01) << 7);
+	}
+
+	::memset(m_bBgOpaque, 0, sizeof(m_bBgOpaque));
 
 	// BG
 	if (m_bReg2001 & 0x08) { // BG enabled
@@ -269,14 +291,21 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 		int tile_base;
 		int tile_y = (scanline + m_bRegPosY) / 8;
 
-		tile_base = (m_bReg2000 & 3) * 2048;
-		if (tile_y >= 32) { // next page
-			tile_y -= 32;
+		// 真机实测：$2008 位 0 为 1 时名称表在显存 $2000 起，只有一页（不随 $2000 位 1-0 变化）
+		if (m_bReg2008 & 1) {
+			tile_base = 0x2000;
+			if (tile_y >= 32)
+				tile_y -= 32;
+		} else {
+			tile_base = (m_bReg2000 & 3) * 2048;
+			if (tile_y >= 32) { // next page
+				tile_y -= 32;
 
-			if (m_bReg2000 & 2)
-				tile_base -= 4096; // 2,3 -> 0,1
-			else
-				tile_base += 4096; // 0,1 -> 2,3
+				if (m_bReg2000 & 2)
+					tile_base -= 4096; // 2,3 -> 0,1
+				else
+					tile_base += 4096; // 0,1 -> 2,3
+			}
 		}
 
 		dst_x = 8;
@@ -294,10 +323,10 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 			int mask;
 			unsigned char plane[4];
 
-			if (tile_x & 0x20) // the next screen
+			if ((m_bReg2008 & 1) || !(tile_x & 0x20)) // 单页模式或第一屏
+				tile_addr = tile_base + tile_y * 32 * 2 + (tile_x & 31) * 2;
+			else // the next screen
 				tile_addr = tile_base + 2048 + tile_y * 32 * 2 + (tile_x & 31) * 2;
-			else
-				tile_addr = tile_base + tile_y * 32 * 2 + tile_x * 2;
 
 			tile_name = nes->mapper->PPU_Read(tile_addr + 1) * 256 + nes->mapper->PPU_Read(tile_addr);
 
@@ -331,7 +360,9 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 					if (plane[2] & mask) index |= 4;
 					if (plane[3] & mask) index |= 8;
 
-					lpScanline[dst_x++] = m_bPalette[tile_bank * 4 + index];
+					m_bBgOpaque[dst_x] = (index != 0);
+					// 真机实测：颜色号为 0 的像素是透明的，显示 $2040 的第 0 项（背景色），不用调色板组自己的第 0 项
+					lpScanline[dst_x++] = index ? m_bPalette[tile_bank * 4 + index] : m_bPalette[0];
 
 					mask >>= 1;
 				}
@@ -350,18 +381,24 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 					if (plane[0] & mask) index |= 1;
 					if (plane[1] & mask) index |= 2;
 
-					lpScanline[dst_x++] = m_bPalette[tile_bank * 4 + index];
+					m_bBgOpaque[dst_x] = (index != 0);
+					lpScanline[dst_x++] = index ? m_bPalette[tile_bank * 4 + index] : m_bPalette[0];
 
 					mask >>= 1;
 				}
+			}
+		}
+		// 真机实测：$2001 位 1 为 0 时背景最左 8 个像素不显示（画面左边有 8 像素的边）
+		if (0 == (m_bReg2001 & 0x02)) {
+			for (i = 8; i < 16; i++) {
+				lpScanline[i] = m_bPalette[0];
+				m_bBgOpaque[i] = 0;
 			}
 		}
 	} else {
 		// BG disabled
 		memset(lpScanline, 0, SCREEN_WIDTH);
 	}
-
-	m_bReg2002 &= ~0x20;//PPU_SPMAX_FLAG;
 
 	if (scanline > 239)
 		return;
@@ -371,26 +408,24 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 		return;
 	}
 
-	// Sprite
+	// Sprite：按序号从小到大处理，序号小的优先（同一个像素只由最前面的不透明精灵决定）
+	memset(m_bSpOccupied, 0, sizeof(m_bSpOccupied));
+
 	LPSPRITE sp = (LPSPRITE)SPRAM;
-	sp += 63; // the last one
 
 	int sp_h = (m_bReg2000 & 0x20) ? 16 : 8;
+	int sp_in_line = 0;
 
-	for (i = 0; i < 64; i++) {
+	for (i = 0; i < 64; i++, sp++) {
 		// Check if SPRITE is in the scanline
 		int sp_y = sp->y + 1;
 
-		if (scanline < sp_y || scanline >= sp_y + sp_h) {
-			sp--;
+		if (scanline < sp_y || scanline >= sp_y + sp_h)
 			continue;
-		}
 
-		if (sp->attr & 0x20) {
-			// BG priority set
-			sp--;
-			continue;
-		}
+		// 真机实测：同一行超过 8 个精灵时 $2002 位 5 置 1（这里仍然全部绘制）
+		if (++sp_in_line > 8)
+			m_bReg2002 |= 0x20;
 
 		// sprite use 4 color only
 		int x, y;
@@ -405,41 +440,56 @@ void PPU_UM6576::Scanline(INT scanline, BOOL bMax, BOOL bLeftClip)
 		tile_x    = sp->x;
 		tile_name = sp->tile;
 
-		// 8x8 tile
 		y = scanline - sp_y;
 
+		// 真机实测：属性位 7 为垂直翻转，位 6 为水平镜像，位 5 为 1 时在背景之后
+		if (sp->attr & 0x80)
+			y = sp_h - 1 - y;
+
 		tile_base = ((m_bReg2008 >> 2) & 3) << 12;
-		tile_offset = tile_base + tile_name * 16;
-		if (m_bReg2000 & 0x20) {
-			// 8x16
-			if (y < 8)
-				tile_offset -= 16; // previous one
-			else
+		if (sp_h == 16) {
+			// 8x16：图块号的位 0 不用，上半是偶数号，下半是它的下一号（真机实测）
+			tile_name &= 0xFE;
+			if (y >= 8) {
+				tile_name++;
 				y -= 8;
+			}
 		}
+		tile_offset = tile_base + tile_name * 16;
 
 		plane[0] = nes->mapper->PPU_Read(tile_offset + 0 + y);
 		plane[1] = nes->mapper->PPU_Read(tile_offset + 8 + y);
 
-		mask = 0x80;
 		for (x = 0; x < 8; x++) {
-			int cr;
 			int index = 0;
+			int sx = tile_x + 8 + x;
+
+			mask = (sp->attr & 0x40) ? (0x01 << x) : (0x80 >> x);
 
 			if (plane[0] & mask) index |= 1;
 			if (plane[1] & mask) index |= 2;
 
-			if (index) {
-				index = (sp->attr & 3) * 4 + index;
+			if (0 == index)
+				continue;
 
-				cr = m_bPalette[16 + index];
-				lpScanline[tile_x + 8 + x] = cr;
-			}
+			// 真机实测：$2001 位 2 为 0 时精灵最左 8 个像素不显示
+			if (tile_x + x < 8 && 0 == (m_bReg2001 & 0x04))
+				continue;
 
-			mask >>= 1;
+			if (m_bSpOccupied[sx])
+				continue;
+			m_bSpOccupied[sx] = 1;
+
+			// 精灵 0 与不透明的背景像素重合：$2002 位 6（最右一列不算）
+			if (0 == i && m_bBgOpaque[sx] && tile_x + x != 255)
+				m_bReg2002 |= 0x40;
+
+			// 在背景之后的精灵：背景不透明处被盖住（仍然挡住序号更大的精灵）
+			if ((sp->attr & 0x20) && m_bBgOpaque[sx])
+				continue;
+
+			lpScanline[sx] = m_bPalette[16 + (sp->attr & 3) * 4 + index];
 		}
-
-		sp--;
 	}
 }
 

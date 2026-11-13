@@ -521,6 +521,176 @@
 /** 通用参数或返回值，如读到的字节 */
 #define SB_PARAM_0653 0x0653
 
+/* 硬件寄存器：图形（真机为 UM6576，行为以真机实测为准，见 docs/sb2000/03-硬件说明.md） */
+/** 控制：位 7 允许 NMI，位 5 精灵 8x16，位 2 地址增量，位 1-0 背景页 */
+#define SB_HW_PPU_CTRL 0x2000
+/** 显示：灰度、最左 8 像素、背景与精灵显示、颜色增强 */
+#define SB_HW_PPU_MASK 0x2001
+/** 状态（读）：位 7 垂直消隐，位 6 精灵 0 碰撞，位 5 一行超过 8 个精灵 */
+#define SB_HW_PPU_STATUS 0x2002
+/** 精灵 RAM 地址 */
+#define SB_HW_OAM_ADDRESS 0x2003
+/** 精灵 RAM 数据 */
+#define SB_HW_OAM_DATA 0x2004
+/** 滚动，连续写两次（X、Y） */
+#define SB_HW_PPU_SCROLL 0x2005
+/** 显存地址，连续写两次（高、低） */
+#define SB_HW_PPU_ADDRESS 0x2006
+/** 显存数据，读要先读一次刷新缓冲 */
+#define SB_HW_PPU_DATA 0x2007
+/** 扩展控制：位 7 背景 16 色，位 3-2 精灵图案表，位 0 名称表起始 */
+#define SB_HW_PPU_EXT 0x2008
+/** 调色板，64 项（$2040-$207F） */
+#define SB_HW_PALETTE 0x2040
+/** 精灵 DMA：写页号，把 $xx00 起的 256 字节送进精灵 RAM */
+#define SB_HW_OAM_DMA 0x4014
+
+/* 硬件寄存器：外设与中断 */
+/** 声音通道使能 */
+#define SB_HW_SOUND_ENABLE 0x4015
+/** 手柄 1 */
+#define SB_HW_PAD_1 0x4016
+/** 手柄 2 */
+#define SB_HW_PAD_2 0x4017
+/** 读：键盘扫描码；写：位 7 为 1 时 DMA 控制的位 6、5 才起作用 */
+#define SB_HW_KEY_DATA 0x4020
+/** 发给键盘的数据 */
+#define SB_HW_KEY_SEND 0x4021
+/** 键盘控制：位 7 键盘时钟，位 2 允许发送完成中断，位 0 方向 */
+#define SB_HW_KEY_CONTROL 0x4022
+/** 位 0 选手柄 2 或鼠标 */
+#define SB_HW_MOUSE_SELECT 0x4023
+/** 鼠标数据 */
+#define SB_HW_MOUSE_DATA 0x4024
+/** 打印机数据 */
+#define SB_HW_PRINTER_DATA 0x4025
+/** 扩展 I/O */
+#define SB_HW_EXT_IO 0x4026
+/** 8 位 DAC */
+#define SB_HW_DAC 0x4027
+/** 初始设置：依次写 $65、$76 进入 6576 模式 */
+#define SB_HW_INIT 0x4031
+/** 中断屏蔽：写 1 的位被屏蔽，同时清除 HW_IRQ_PENDING 里对应的位 */
+#define SB_HW_IRQ_MASK 0x4032
+/** 待处理的中断（只读） */
+#define SB_HW_IRQ_PENDING 0x4033
+/** 定时器控制：位 7 允许，位 6 连续重载，位 5 行消隐时钟，位 3-0 预分频 */
+#define SB_HW_TIMER_CONTROL 0x4034
+/** 定时器预置值，写入时同时装入当前值 */
+#define SB_HW_TIMER_PRESET 0x4035
+/** 定时器当前值（递减） */
+#define SB_HW_TIMER_CURRENT 0x4036
+/** 实时时钟地址 */
+#define SB_HW_RTC_ADDRESS 0x4080
+/** 实时时钟数据 */
+#define SB_HW_RTC_DATA 0x4081
+
+/* 硬件寄存器：程序窗口、DMA 与显存 bank */
+/** 窗口 0（$8000）的页号，4K 一页 */
+#define SB_HW_WINDOW_0 0x4040
+/** 窗口 1（$9000）的页号 */
+#define SB_HW_WINDOW_1 0x4041
+/** 窗口 2（$A000）的页号 */
+#define SB_HW_WINDOW_2 0x4042
+/** 窗口 3（$B000）的页号 */
+#define SB_HW_WINDOW_3 0x4043
+/** 窗口 4（$C000）的页号 */
+#define SB_HW_WINDOW_4 0x4044
+/** 窗口 5（$D000）的页号 */
+#define SB_HW_WINDOW_5 0x4045
+/** 窗口 6（$E000）的页号 */
+#define SB_HW_WINDOW_6 0x4046
+/** 窗口 7（$F000）的页号 */
+#define SB_HW_WINDOW_7 0x4047
+/** DMA 模式：位 7 启动，位 6 高速，位 5 目的是 CPU 地址 */
+#define SB_HW_DMA_MODE 0x4048
+/** DMA 源 bank：位 4 为 1 取扩展 RAM，低 4 位是源地址的第 18-15 位 */
+#define SB_HW_DMA_SOURCE_BANK 0x4049
+/** DMA 源地址的第 7-0 位 */
+#define SB_HW_DMA_SOURCE_LOW 0x404A
+/** DMA 源地址：位 6-0 是第 14-8 位，位 7 要为 1 */
+#define SB_HW_DMA_SOURCE_HIGH 0x404B
+/** DMA 目的地址低字节 */
+#define SB_HW_DMA_DEST_LOW 0x404C
+/** DMA 目的地址高字节，目的是显存时位 7 为 1 表示扩展显存 */
+#define SB_HW_DMA_DEST_HIGH 0x404D
+/** DMA 长度低字节，写“字节数 - 1” */
+#define SB_HW_DMA_LENGTH_LOW 0x404E
+/** DMA 长度高字节 */
+#define SB_HW_DMA_LENGTH_HIGH 0x404F
+/** 扩展显存的 32K bank */
+#define SB_HW_VRAM_BANK 0x4300
+/** 写 $55 回到 FC 兼容模式 */
+#define SB_HW_RESET_6576 0x4301
+/** 语音端口 */
+#define SB_HW_VOICE_PORT 0x4302
+
+/* 硬件寄存器的位 */
+/** HW_PPU_CTRL：允许 NMI */
+#define SB_HW_CTRL_NMI 0x80
+/** HW_PPU_CTRL：精灵 8x16 */
+#define SB_HW_CTRL_SPRITE_8X16 0x20
+/** HW_PPU_CTRL：显存地址每次加 32 */
+#define SB_HW_CTRL_STEP_32 0x04
+/** HW_PPU_MASK：灰度 */
+#define SB_HW_MASK_GRAY 0x01
+/** HW_PPU_MASK：显示背景最左 8 像素 */
+#define SB_HW_MASK_BG_LEFT 0x02
+/** HW_PPU_MASK：显示精灵最左 8 像素 */
+#define SB_HW_MASK_SPRITE_LEFT 0x04
+/** HW_PPU_MASK：显示背景 */
+#define SB_HW_MASK_BG 0x08
+/** HW_PPU_MASK：显示精灵 */
+#define SB_HW_MASK_SPRITE 0x10
+/** HW_PPU_MASK：增强绿（PAL 顺序） */
+#define SB_HW_MASK_TINT_GREEN 0x20
+/** HW_PPU_MASK：增强红 */
+#define SB_HW_MASK_TINT_RED 0x40
+/** HW_PPU_MASK：增强蓝 */
+#define SB_HW_MASK_TINT_BLUE 0x80
+/** HW_PPU_STATUS：垂直消隐 */
+#define SB_HW_STATUS_VBLANK 0x80
+/** HW_PPU_STATUS：精灵 0 碰撞 */
+#define SB_HW_STATUS_SPRITE0 0x40
+/** HW_PPU_STATUS：一行超过 8 个精灵 */
+#define SB_HW_STATUS_OVERFLOW 0x20
+/** HW_PPU_EXT：背景 16 色 */
+#define SB_HW_EXT_16_COLOR 0x80
+/** HW_PPU_EXT：名称表从显存 $2000 起 */
+#define SB_HW_EXT_NAMES_2000 0x01
+/** HW_KEY_DATA（写）：使能 DMA 模式的位 6、5 */
+#define SB_HW_KEY_DMA_ENABLE 0x80
+/** HW_DMA_MODE：启动 */
+#define SB_HW_DMA_START 0x80
+/** HW_DMA_MODE：高速（1.78MB/s） */
+#define SB_HW_DMA_FAST 0x40
+/** HW_DMA_MODE：目的是 CPU 地址（工作 RAM） */
+#define SB_HW_DMA_TO_CPU 0x20
+/** HW_DMA_SOURCE_BANK：源是扩展 RAM */
+#define SB_HW_DMA_SOURCE_RAM 0x10
+/** HW_DMA_SOURCE_HIGH：源地址的第 15 位，真机要求为 1 */
+#define SB_HW_DMA_SOURCE_A15 0x80
+/** HW_TIMER_CONTROL：允许 */
+#define SB_HW_TIMER_ENABLE 0x80
+/** HW_TIMER_CONTROL：连续重载 */
+#define SB_HW_TIMER_RELOAD 0x40
+/** HW_TIMER_CONTROL：基准时钟用行消隐时钟 */
+#define SB_HW_TIMER_LINE_CLOCK 0x20
+/** HW_IRQ_MASK、HW_IRQ_PENDING：定时器 */
+#define SB_HW_IRQ_TIMER 0x80
+/** 鼠标 */
+#define SB_HW_IRQ_MOUSE 0x40
+/** 键盘 */
+#define SB_HW_IRQ_KEYBOARD 0x20
+/** 中断 4 */
+#define SB_HW_IRQ_4 0x10
+/** 软驱 */
+#define SB_HW_IRQ_FLOPPY 0x08
+/** 中断 2 */
+#define SB_HW_IRQ_2 0x04
+/** 中断 1 */
+#define SB_HW_IRQ_1 0x02
+
 /* 文件打开方式（FILE_MODE） */
 /** 打开已有文件 */
 #define SB_MODE_OPEN 0x00

@@ -470,10 +470,34 @@ BOOL CALLBACK EnumDialogChildProc(HWND hwnd, LPARAM lp)
 	return TRUE;
 }
 
+// 文件对话框（打开、另存为）里有 DirectUI 或外壳视图控件
+BOOL CALLBACK EnumFileDialogChildProc(HWND hwnd, LPARAM lp)
+{
+	char cls[64];
+
+	GetClassNameA(hwnd, cls, sizeof(cls));
+	if (strcmp(cls, "DUIViewWndClassName") == 0 || strcmp(cls, "SHELLDLL_DefView") == 0) {
+		*(bool*)lp = true;
+		return FALSE;
+	}
+	return TRUE;
+}
+
 // 按下对话框里最“保守”的按钮：确定、取消、否、忽略、关闭，都没有就发关闭消息；返回按下的按钮编号，0 为关闭消息
+// 文件对话框的“确定”在没有文件名时不起作用，会一直卡住，所以直接按取消
 int PressDialogButton(HWND dlg)
 {
 	static const int ids[] = { IDOK, IDCANCEL, IDNO, IDIGNORE, IDCLOSE };
+	bool isFileDialog = false;
+
+	EnumChildWindows(dlg, EnumFileDialogChildProc, (LPARAM)&isFileDialog);
+	if (isFileDialog) {
+		HWND cancel = GetDlgItem(dlg, IDCANCEL);
+		if (cancel) {
+			PostMessage(dlg, WM_COMMAND, MAKEWPARAM(IDCANCEL, BN_CLICKED), (LPARAM)cancel);
+			return IDCANCEL;
+		}
+	}
 
 	for (size_t i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
 		HWND btn = GetDlgItem(dlg, ids[i]);

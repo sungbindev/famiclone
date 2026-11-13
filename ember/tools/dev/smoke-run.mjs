@@ -1,51 +1,35 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-run.mjs
- * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、渲染进程收到画面帧与输入端口能送达核心、页面重载与核心进程重启后端口重新建立、关闭窗口后应用干净退出，最后只结束自己启动的进程。
+ * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、页面重载与核心进程重启后端口重新建立、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：用法：node tools/dev/smoke-run.mjs [--rom=相对 core/test/data 或绝对路径] [--port=9302] [--seconds=3] [--no-build] [--skip-core-kill]
- *       页面里临时注册的监听只在 CDP 会话里存在（Runtime.evaluate），不写进界面代码；用户数据目录是临时目录，不影响已打开的 Ember；
+ * 备注：用法：node tools/dev/smoke-run.mjs [--rom=相对 core/test/data 或绝对路径] [--port=9302] [--seconds=3] [--no-build] [--skip-core-kill] [--screenshots=目录]
+ *       画面端口由运行页自己请求并转交给渲染 Worker；脚本只在页面里临时挂一个 message 监听来数端口消息（Page.addScriptToEvaluateOnNewDocument，不写进界面代码），
+ *       读 Worker 诊断用开发期才有的 window.emberRuntimeDiagnostics；按键用 CDP 的 Input.dispatchKeyEvent 发到画面区；用户数据目录是临时目录，不影响已打开的 Ember；
  *       只结束本脚本启动的 forge 进程树与它下面的核心进程（按 PID），不按进程名结束任何进程；退出码 0 表示全部检查通过。
  * ------------------------------------------------------------------------
  */
 
-import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
+import { connectCdp, findDescendants, killTree, parseArguments, pressKey, projectRoot as root, saveScreenshot, sleep, startDevApp, waitFor } from './dev-support.mjs';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-/** 默认的测试 ROM：nestest，选单画面是静态的，按开始键会运行测试而改变画面。 */
+/** 默认的测试 ROM：nestest，选单画面是静态的，按开始键（Enter）会运行测试而改变画面。 */
 const DEFAULT_ROM = 'nestest/nestest.nes';
-/** 开始键的按键掩码：A、B、选择、开始…… 位 3。 */
-const START_BUTTON = 0x08;
-/** 等待开发版启动并出现页面的最长时间（毫秒）：首次要先构建主进程、预加载脚本与界面。 */
-const STARTUP_TIMEOUT_MS = 180_000;
-/** 等待其他条件的最长时间（毫秒）。 */
-const WAIT_TIMEOUT_MS = 20_000;
 /** 关闭窗口后应用应在这个时间内自行退出（毫秒）：不超过网关等待核心停止的超时（5 秒）。 */
 const GRACEFUL_EXIT_LIMIT_MS = 4500;
-
-/** 解析命令行：--名称=值 或 --名称。 */
-function parseArguments(argv) {
-  const options = new Map();
-  for (const argument of argv) {
-    const match = /^--([^=]+)(?:=(.*))?$/.exec(argument);
-    if (match) options.set(match[1], match[2] ?? 'true');
-  }
-  return options;
-}
 
 const options = parseArguments(process.argv.slice(2));
 const port = Number(options.get('port') ?? 9302);
 const seconds = Number(options.get('seconds') ?? 3);
 const romOption = options.get('rom') ?? DEFAULT_ROM;
 const romPath = isAbsolute(romOption) ? romOption : join(root, 'core', 'test', 'data', romOption);
+/** 截图保存的目录（可选）：--screenshots=目录；截图只放在临时目录，不进仓库。 */
+const screenshotDirectory = options.get('screenshots');
+if (screenshotDirectory !== undefined) mkdirSync(screenshotDirectory, { recursive: true });
 
 const results = [];
 /** 记录一项检查。 */
@@ -54,132 +38,35 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? '通过' : '失败'}：${name}${detail ? `（${detail}）` : ''}`);
 }
 
-function sleep(milliseconds) {
-  return new Promise((done) => setTimeout(done, milliseconds));
-}
-
-/** 轮询直到条件成立或超时，返回最后一次的值。 */
-async function waitFor(produce, accept, timeout = WAIT_TIMEOUT_MS, interval = 100) {
-  const deadline = Date.now() + timeout;
-  let value = await produce();
-  while (!accept(value) && Date.now() < deadline) {
-    await sleep(interval);
-    value = await produce();
-  }
-  return value;
-}
-
-// ---------------------------------------------------------------- 进程管理
-
-/** 本脚本启动的进程：forge 主进程与它的输出。 */
-let forge;
-let forgeOutput = '';
-let userDataDirectory;
-
-/** 结束一个进程及其全部子进程（按 PID，Windows 用 taskkill /T）。 */
-function killTree(pid) {
-  if (pid === undefined) return;
-  try {
-    if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
-    else process.kill(-pid, 'SIGKILL');
-  } catch {
-    // 进程已经退出。
-  }
-}
-
-/** 列出 forge 进程树下命令行含指定文字的进程 PID（Windows）。 */
-function findDescendants(rootPid, commandLineMarker) {
-  const script = `
-    $all = Get-CimInstance Win32_Process
-    $ids = New-Object System.Collections.Generic.HashSet[int]
-    [void]$ids.Add(${rootPid})
-    do { $added = $false
-      foreach ($p in $all) { if ($ids.Contains([int]$p.ParentProcessId) -and $ids.Add([int]$p.ProcessId)) { $added = $true } }
-    } while ($added)
-    $all | Where-Object { $ids.Contains([int]$_.ProcessId) -and $_.CommandLine -like '*${commandLineMarker}*' } | ForEach-Object { $_.ProcessId }`;
-  const output = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8' }).stdout ?? '';
-  return output
-    .split(/\r?\n/)
-    .map((line) => Number(line.trim()))
-    .filter((value) => Number.isInteger(value) && value > 0);
-}
+/** 本脚本启动的开发版。 */
+let app;
 
 function cleanup() {
-  killTree(forge?.pid);
-  if (userDataDirectory !== undefined) rmSync(userDataDirectory, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
+  app?.stop();
 }
 
-// ---------------------------------------------------------------- CDP
-
-/** 一条到页面的 CDP 连接。 */
-async function connectCdp(url) {
-  const socket = new WebSocket(url);
-  await new Promise((done, fail) => {
-    socket.addEventListener('open', done, { once: true });
-    socket.addEventListener('error', () => fail(new Error('无法连接 CDP')), { once: true });
-  });
-  let counter = 0;
-  const waiting = new Map();
-  socket.addEventListener('message', (event) => {
-    const message = JSON.parse(String(event.data));
-    const entry = waiting.get(message.id);
-    if (entry === undefined) return;
-    waiting.delete(message.id);
-    if (message.error) entry.fail(new Error(message.error.message));
-    else entry.done(message.result);
-  });
-  return {
-    send(method, params = {}) {
-      counter += 1;
-      const id = counter;
-      return new Promise((done, fail) => {
-        waiting.set(id, { done, fail });
-        socket.send(JSON.stringify({ id, method, params }));
-      });
-    },
-    async evaluate(expression) {
-      const result = await this.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-      if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
-      return result.result.value;
-    },
-    close: () => socket.close()
-  };
-}
-
-/** 页面里临时注册的监听：收到端口后记录帧、保存输入端口；只用于冒烟，只存在于本次会话。 */
+/**
+ * 页面里临时注册的监听：只数收到的端口消息、记下输入端口（用来发非法输入）；画面端口由运行页自己转交给渲染 Worker，不碰它。
+ * 只用于冒烟，只存在于本次会话（页面重载后由 Page.addScriptToEvaluateOnNewDocument 重新装上）。
+ */
 const INSTALL_LISTENER = `(() => {
   if (window.__smoke) return true;
-  const state = { portMessages: 0, frames: 0, width: 0, height: 0, format: '', pixelBytes: 0, lastFrame: 0, hash: 0, input: null };
+  const state = { portMessages: 0, input: null };
   window.__smoke = state;
   window.addEventListener('message', (event) => {
     if (event.source !== window || !event.data || event.data.type !== 'ember.stream-ports' || event.ports.length !== 2) return;
     state.portMessages += 1;
     state.input = event.ports[1];
-    event.ports[0].onmessage = (frameEvent) => {
-      const message = frameEvent.data;
-      if (!message || message.type !== 'frame') return;
-      const words = new Uint32Array(message.pixels);
-      let hash = 2166136261;
-      for (let index = 0; index < words.length; index += 61) hash = Math.imul(hash ^ words[index], 16777619) >>> 0;
-      state.frames += 1;
-      state.width = message.width;
-      state.height = message.height;
-      state.format = message.format;
-      state.pixelBytes = message.pixels.byteLength;
-      state.lastFrame = message.frame;
-      state.hash = hash;
-    };
   });
   return true;
 })()`;
 
+/** 读渲染 Worker 的诊断；reset 为 true 时先清空统计。 */
+const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(${reset})`;
+
 // ---------------------------------------------------------------- 主流程
 
 async function main() {
-  const packageName = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).name;
-  if (packageName !== 'ember' || !existsSync(join(root, 'forge.config.mts'))) throw new Error(`不是 Ember 项目目录：${root}`);
-  if (!existsSync(romPath)) throw new Error(`找不到测试 ROM：${romPath}`);
-
   if (!options.has('no-build')) {
     for (const script of ['schema', 'core:build']) {
       const run = spawnSync('npm', ['run', script], { cwd: root, shell: true, stdio: 'inherit' });
@@ -187,36 +74,9 @@ async function main() {
     }
   }
 
-  userDataDirectory = mkdtempSync(join(tmpdir(), 'ember-smoke-'));
-  const forgeBin = join(dirname(createRequire(import.meta.url).resolve('@electron-forge/cli/package.json')), 'dist', 'electron-forge.js');
   console.log(`启动开发版：ROM=${romPath}，调试端口=${port}`);
-  forge = spawn(process.execPath, [forgeBin, 'start', '--', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDirectory}`, `--cartridge=${romPath}`], {
-    cwd: root,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    detached: process.platform !== 'win32',
-    windowsHide: true
-  });
-  forge.stdout.on('data', (chunk) => (forgeOutput = (forgeOutput + chunk).slice(-8000)));
-  forge.stderr.on('data', (chunk) => (forgeOutput = (forgeOutput + chunk).slice(-8000)));
-  let forgeExited = false;
-  forge.on('exit', () => (forgeExited = true));
-
-  // 等页面出现。
-  const target = await waitFor(
-    async () => {
-      if (forgeExited) return 'exited';
-      try {
-        const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-        return targets.find((item) => item.type === 'page' && !item.url.startsWith('devtools://'));
-      } catch {
-        return undefined;
-      }
-    },
-    (value) => value !== undefined,
-    STARTUP_TIMEOUT_MS,
-    500
-  );
-  if (target === 'exited' || target === undefined) throw new Error(target === 'exited' ? '开发版意外退出' : '等不到页面');
+  app = startDevApp({ port, romPath });
+  const target = await app.waitForPage();
   const page = await connectCdp(target.webSocketDebuggerUrl);
   await page.send('Runtime.enable');
 
@@ -251,55 +111,68 @@ async function main() {
   check('帧率接近 NTSC 的 60.1', frameDelta / seconds > 45 && frameDelta / seconds < 66);
   check('周期数在增长', second.cycles > first.cycles);
 
-  // 端口与帧。
+  // 端口与帧：运行页自己请求端口、把画面端口转交给渲染 Worker；这里只读 Worker 的诊断，并临时监听窗口消息数端口。
+  await page.send('Page.enable');
+  await page.send('Page.addScriptToEvaluateOnNewDocument', { source: INSTALL_LISTENER });
   await page.evaluate(INSTALL_LISTENER);
+  const diagnosticsReady = await waitFor(() => page.evaluate('typeof window.emberRuntimeDiagnostics === "object"').catch(() => false), (value) => value === true);
+  check('运行页暴露了开发期的 Worker 诊断', diagnosticsReady === true);
   await page.evaluate('window.ember.streams.requestPorts()');
-  const afterPorts = await waitFor(() => page.evaluate('window.__smoke'), (state) => state.frames > 0);
-  check('渲染进程收到了端口', afterPorts.portMessages === 1);
-  check('渲染进程收到了画面帧', afterPorts.frames > 0, `尺寸 ${afterPorts.width}x${afterPorts.height}，格式 ${afterPorts.format}，像素 ${afterPorts.pixelBytes} 字节`);
-  check('帧尺寸为 256x240，像素格式为 rgba8，缓冲大小匹配', afterPorts.width === 256 && afterPorts.height === 240 && afterPorts.format === 'rgba8' && afterPorts.pixelBytes === 256 * 240 * 4);
-  const received0 = (await page.evaluate('window.__smoke')).frames;
+  const afterPorts = await waitFor(
+    async () => ({ ports: await page.evaluate('window.__smoke.portMessages'), diagnostics: await page.evaluate(readDiagnostics()) }),
+    (value) => value.ports >= 1 && value.diagnostics.received > 0
+  );
+  check('渲染进程收到了端口', afterPorts.ports >= 1);
+  check('渲染 Worker 初始化了 WebGL 并收到画面帧', afterPorts.diagnostics.rendererReady === true && afterPorts.diagnostics.received > 0, `已收到 ${afterPorts.diagnostics.received} 帧，画布 ${afterPorts.diagnostics.canvasWidth}x${afterPorts.diagnostics.canvasHeight}`);
+  check('帧尺寸为 256x240（像素格式与字节数通过 Worker 的校验，没有无效帧）', afterPorts.diagnostics.frameWidth === 256 && afterPorts.diagnostics.frameHeight === 240 && afterPorts.diagnostics.invalid === 0);
+  // 从这里开始统计一段时间。
+  await page.evaluate(readDiagnostics(true));
   await sleep(seconds * 1000);
-  const received1 = await page.evaluate('window.__smoke');
-  const receivedRate = (received1.frames - received0) / seconds;
-  check('渲染进程每秒收到的帧数接近 60', receivedRate > 40 && receivedRate < 70, `${receivedRate.toFixed(1)} 帧/秒`);
-  check('帧号随帧递增', received1.lastFrame > afterPorts.lastFrame);
+  const window1 = await page.evaluate(readDiagnostics());
+  check('渲染进程每秒收到的帧数接近 60', window1.receivedFps > 40 && window1.receivedFps < 70, `${window1.receivedFps.toFixed(1)} 帧/秒`);
+  check('渲染 Worker 每秒画出的帧数接近 60', window1.renderedFps > 40 && window1.renderedFps < 70, `${window1.renderedFps.toFixed(1)} 帧/秒，丢弃 ${window1.dropped} 帧`);
+  check('核心宿主没有因背压丢帧', window1.hostDropped === 0 && window1.coreMissed === 0, `宿主丢弃 ${window1.hostDropped}，帧号缺口 ${window1.coreMissed}`);
+  check('帧号随帧递增', window1.lastFrame > afterPorts.diagnostics.lastFrame, `${afterPorts.diagnostics.lastFrame} → ${window1.lastFrame}`);
+  const picture0 = await page.evaluate(readDiagnostics());
+  check('渲染 Worker 收到的画面非空（有非黑像素）', picture0.lastFrameNonBlackRatio > 0.001, `非黑像素 ${(picture0.lastFrameNonBlackRatio * 100).toFixed(1)}%`);
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu.png'));
 
-  // 输入：选单画面静态，按开始键运行测试，画面改变。
-  const stable0 = (await page.evaluate('window.__smoke')).hash;
+  // 输入：画面区获得焦点后按 Enter（开始键），选单画面是静态的，按下后运行测试，画面改变。
+  const stable0 = (await page.evaluate(readDiagnostics())).lastFrameHash;
   await sleep(400);
-  const stable1 = (await page.evaluate('window.__smoke')).hash;
+  const stable1 = (await page.evaluate(readDiagnostics())).lastFrameHash;
+  await page.evaluate('document.querySelector(\'[role="application"]\').focus()');
   if (stable0 === stable1) {
-    await page.evaluate(`window.__smoke.input.postMessage({ type: 'buttons', port: 0, buttons: ${START_BUTTON} })`);
-    await sleep(300);
-    await page.evaluate(`window.__smoke.input.postMessage({ type: 'buttons', port: 0, buttons: 0 })`);
+    await pressKey(page, { key: 'Enter', code: 'Enter', keyCode: 13 }, 300);
     const changed = await waitFor(
-      async () => (await page.evaluate('window.__smoke')).hash,
+      async () => (await page.evaluate(readDiagnostics())).lastFrameHash,
       (hash) => hash !== stable1,
       5000,
       100
     );
-    check('输入端口的按键送达核心（按开始键后画面改变）', changed !== stable1);
+    check('键盘输入送达核心（画面区按 Enter 后画面改变）', changed !== stable1);
   } else {
-    check('输入端口的按键送达核心（按开始键后画面改变）', false, '选单画面不是静态的，无法判断');
+    check('键盘输入送达核心（画面区按 Enter 后画面改变）', false, '选单画面不是静态的，无法判断');
   }
-  // 校验：格式不对的输入被核心宿主丢弃，不影响运行。
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-after-enter.png'));
+  // 校验：格式不对的输入被核心宿主丢弃，不影响运行；格式不对的帧也不会进来（Worker 一侧的校验由单元测试覆盖）。
   await page.evaluate(`window.__smoke.input.postMessage({ type: 'buttons', port: 9, buttons: 999 }); window.__smoke.input.postMessage('垃圾')`);
-  const afterJunk = (await page.evaluate('window.__smoke')).frames;
+  const afterJunk = (await page.evaluate(readDiagnostics())).received;
   await sleep(500);
-  check('非法输入被丢弃，画面继续', (await page.evaluate('window.__smoke')).frames > afterJunk);
+  check('非法输入被丢弃，画面继续', (await page.evaluate(readDiagnostics())).received > afterJunk);
 
-  // 页面重载后重新建立端口。
+  // 页面重载后：运行页重新请求端口，画面帧继续到达。
   await page.send('Page.reload');
-  await waitFor(() => page.evaluate('typeof window.ember === "object" && !window.__smoke').catch(() => false), (value) => value === true);
-  await page.evaluate(INSTALL_LISTENER);
-  await page.evaluate('window.ember.streams.requestPorts()');
-  const afterReload = await waitFor(() => page.evaluate('window.__smoke'), (state) => state.frames > 5);
-  check('页面重载后重新请求端口，画面帧继续到达', afterReload.portMessages === 1 && afterReload.frames > 5, `${afterReload.frames} 帧`);
+  await waitFor(() => page.evaluate('typeof window.ember === "object" && typeof window.emberRuntimeDiagnostics === "object"').catch(() => false), (value) => value === true);
+  const afterReload = await waitFor(
+    async () => ({ ports: await page.evaluate('window.__smoke.portMessages').catch(() => 0), diagnostics: await page.evaluate(readDiagnostics()).catch(() => ({ received: 0 })) }),
+    (value) => value.ports >= 1 && value.diagnostics.received > 5
+  );
+  check('页面重载后运行页重新请求端口，画面帧继续到达', afterReload.ports >= 1 && afterReload.diagnostics.received > 5, `${afterReload.diagnostics.received} 帧`);
 
   // 核心进程重启后重新建立端口：结束核心进程（forge 进程树下命令行含 NodeService 的进程，即 utilityProcess）。
   if (!options.has('skip-core-kill') && process.platform === 'win32') {
-    const corePids = findDescendants(forge.pid, 'node.mojom.NodeService');
+    const corePids = findDescendants(app.pid, 'node.mojom.NodeService');
     check('找到了核心进程（utilityProcess）', corePids.length === 1, corePids.join(','));
     if (corePids.length === 1) {
       const portMessagesBefore = (await page.evaluate('window.__smoke')).portMessages;
@@ -328,7 +201,7 @@ async function main() {
   const closedAt = Date.now();
   browser.send('Browser.close').catch(() => undefined);
   const exited = await waitFor(
-    () => forgeExited,
+    () => app.exited,
     (value) => value === true,
     GRACEFUL_EXIT_LIMIT_MS * 3,
     100
@@ -343,7 +216,7 @@ try {
 } catch (error) {
   failure = error;
   console.error(`冒烟脚本出错：${error instanceof Error ? error.message : String(error)}`);
-  if (forgeOutput) console.error(`开发版最近的输出：\n${forgeOutput}`);
+  if (app?.output) console.error(`开发版最近的输出：\n${app.output}`);
 } finally {
   cleanup();
 }

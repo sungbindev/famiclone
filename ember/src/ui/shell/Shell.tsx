@@ -5,13 +5,14 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：本阶段只有系统模块的版本信息；活动栏、边栏、标签页等外壳布局见 docs/05-界面.md，以后在此基础上扩展。
+ * 备注：本阶段只有系统模块的版本信息与运行页；活动栏、边栏、标签页等外壳布局见 docs/05-界面.md，以后在此基础上扩展。
  * ------------------------------------------------------------------------
  */
 
-import { Stack, Title } from '@rujianjs/ui-kit';
+import { Title } from '@rujianjs/ui-kit';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import type { ShellModule } from './shell-registry';
+import './shell.css';
 
 /** 应用名。 */
 const APP_NAME = 'Ember';
@@ -28,11 +29,13 @@ export interface ShellProps {
  */
 export function Shell({ bridge, modules }: ShellProps) {
   return (
-    <Stack>
+    <div className="ember-shell">
       <Title as="h1">{APP_NAME}</Title>
-      {modules.map(({ id, Page }) => (
-        <Page key={id} bridge={bridge} />
+      {modules.map(({ id, Page, fill }) => (
+        <div key={id} className={fill === true ? 'ember-shell__page--fill' : undefined}>
+          <Page bridge={bridge} />
+        </div>
       ))}
-    </Stack>
+    </div>
   );
 }

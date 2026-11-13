@@ -7,7 +7,7 @@
  * 日期：2026-11-13
  * 备注：只做转接，不含业务判断；原生模块的参数与结果是 JSON 文本，这里负责与 JSON 值之间的转换。
  *       消息按收到的顺序处理：start 同步完成，之后的请求才会交给原生模块。
- *       画面与输入：主进程随 'streams' 消息交来两个端口（process.parentPort 消息的 ports），核心每完成一帧就经画面端口发出，
+ *       画面与输入：主进程随 'streams' 消息交来两个端口（process.parentPort 消息的 ports），核心每完成一帧就经画面端口发出（带发布时间，在途帧有上限），
  *       输入端口收到的按键校验后调用原生模块的 setButtons；细节见 host-streams.ts。
  * ------------------------------------------------------------------------
  */
@@ -78,7 +78,7 @@ function start(message: Extract<CoreHostInbound, { type: 'start' }>): void {
       }
     });
     const { userDataPath, appVersion, bundledPluginsPath } = message;
-    loaded.onFrame((pixels, width, height, frame) => streams.sendFrame(pixels, width, height, frame));
+    loaded.onFrame((pixels, width, height, frame) => streams.sendFrame(pixels, width, height, frame, Date.now()));
     const info = JSON.parse(loaded.start(JSON.stringify({ userDataPath, appVersion, ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }) }))) as { coreVersion: string };
     native = loaded;
     send({ type: 'ready', coreVersion: info.coreVersion });

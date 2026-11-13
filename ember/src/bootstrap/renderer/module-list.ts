@@ -10,7 +10,8 @@
  */
 
 import type { ShellModule } from '../../ui/shell/shell-registry';
+import { RUNTIME_RENDERER_MODULE } from './modules/runtime';
 import { SYSTEM_RENDERER_MODULE } from './modules/system';
 
 /** 有界面的模块，按登记顺序排列。 */
-export const RENDERER_MODULES: readonly ShellModule[] = [SYSTEM_RENDERER_MODULE];
+export const RENDERER_MODULES: readonly ShellModule[] = [SYSTEM_RENDERER_MODULE, RUNTIME_RENDERER_MODULE];

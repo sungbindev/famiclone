@@ -41,7 +41,9 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，把主机生成的声音采样（`Machine::takeAudio`）写进 `platform/audio/audio-output.hpp` 的 `AudioOutput`，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出、声音输出五个抽象，硬件模块只能包含前两个。
 - 声音由核心直接输出到系统（miniaudio，只在 `platform/audio/` 里使用）：模拟线程写、音频回调线程读的无锁环形缓冲，回调里不加锁、不分配内存，用缓冲水位微调重采样比（±0.5%）保持同步；暂停、断电时淡出，继续时清空过时的采样再淡入；设备打不开时降级为空输出并写错误日志；音量与静音只经 `output.setVolume` 请求，保存在核心内存里。
 - 经典 FC 的 APU（`apu-2a03`）按调度器的方式运行（被访问前追赶，会改变 IRQ 线与 RDY 线的时刻预测成调度器事件）；帧计数器、长度计数器与 DMC 的时序以 blargg 的测试 ROM 为准，暂时不一致的项登记在 02 第 12 节“已知差异”并由测试断言；`$4017` 同时属于手柄口与 APU，由主机装配里的 `PadApuPort` 转给两边，两个模块互不引用。
-- 画面与输入不走请求，用单独的消息端口（`window.ember.streams.requestPorts()`，契约在 `src/contracts/stream-ports/`）：核心到渲染进程的帧消息与渲染进程到核心的按键消息，格式只在 `stream-messages.ts` 里定义；核心宿主对渲染进程发来的输入逐条校验，binding 的帧缓冲槽由 JavaScript 线程创建、不转移、不保存。
+- 画面与输入不走请求，用单独的消息端口（`window.ember.streams.requestPorts()`，契约在 `src/contracts/stream-ports/`）：核心到渲染进程的帧消息（带 `publishedAt` 与 `hostDropped`）、渲染进程在画面端口上回的帧确认（`ack`）与渲染进程到核心的按键消息，格式只在 `stream-messages.ts` 里定义；核心宿主对渲染进程发来的输入与确认逐条校验，在途帧不超过 `MAX_FRAMES_IN_FLIGHT`（背压，超过就丢新帧），binding 的帧缓冲槽由 JavaScript 线程创建、不转移、不保存。
+- 画面在渲染 Worker（`src/ui/runtime/render-worker.ts`）里用 WebGL 显示：Worker 收帧、校验、只保留最新一帧、由它自己的 `requestAnimationFrame` 驱动绘制并确认（每一帧恰好确认一次：画出、被顶掉、格式不符但能读出帧号）；收帧与结算逻辑写成不依赖 Worker 对象的纯类（`frame-session.ts`、`frame-receiver.ts`）以便测试。Worker 与它依赖的文件不得引用 `electron`、Node 内置模块、React、组件库、`.tsx` 与样式文件（`npm run boundaries` 检查）；内容安全策略只给 `worker-src 'self'`，不放宽 `script-src`。开发期诊断入口 `window.emberRuntimeDiagnostics` 只在 `import.meta.env.DEV` 下挂载。
+- 键盘采集只在画面区获得焦点时进行，按物理键位（`KeyboardEvent.code`）查数据化的映射表（`key-capture.ts` 的 `DEFAULT_KEY_MAP`），只在手柄按键掩码变化时发送；失焦、页面隐藏、卸载时松开全部按键，可编辑元素上不采集。
 - 主进程自己处理的请求写在 Schema 的 `mainRequests`，经 `window.ember.main` 暴露与 `entry/ipc/core/main-request-ipc.ts` 校验；参数带磁盘路径的核心请求标 `mainOnly`，路径只来自用户在系统窗口里的选择（如 `cartridges.open`）或主进程的启动参数 `--cartridge=`，渲染进程不能传任意路径。
 - TypeScript 的 `platform` 不引用 `contracts`，用结构类型实现契约里的接口，由组装根注入。
 - 使用的第三方开源代码按如见的做法登记 `third-party.json`，由脚本生成“关于”对话框的开源清单与许可全文，不手写。
@@ -63,7 +65,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `npm run lint` | oxlint 检查 |
 | `npm run boundaries` | 分层、模块依赖与模块登记检查 |
 | `npm run check` | 以上全部检查与测试 |
-| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、画面帧、输入、页面重载与核心重启（见 docs/06 第 8 节），只结束自己启动的进程 |
+| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、页面重载与核心重启（见 docs/06 第 8 节），只结束自己启动的进程 |
+| `node tools/dev/latency-run.mjs` | 画面延迟与丢帧测量：开发版运行 30 秒，打印核心、收到、渲染帧率与各类丢帧、两段延迟（见 docs/06 第 9 节、docs/01 第 7 节），只结束自己启动的进程 |
 | `npm run package:win` | 打包 Windows x64 版 |
 | `npm run make:win` | 生成 Windows x64 安装程序 |
 | `npm run package:mac` | 打包 macOS arm64 版（只在苹果电脑上运行） |

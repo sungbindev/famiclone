@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：check-modules.mjs
- * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、C++ 各层的 #include 规则、硬件契约与硬件模块的规则（模块之间互不引用）；
+ * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、渲染 Worker（ui 层里以 -worker.ts 结尾的入口）的依赖限制、C++ 各层的 #include 规则、硬件契约与硬件模块的规则（模块之间互不引用）；
  *       从 TypeScript 的 import、C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
  *       检查模块目录都在模块清单中登记；检查官方插件目录 plugins/<id>/：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png。
  * 作者：sungbin
@@ -44,6 +44,8 @@ const NO_NODE_LAYERS = new Set(['ui', 'shared', 'contracts']);
 /** 界面库与可以使用它们的层。 */
 const UI_PACKAGES = new Set(['react', 'react-dom', '@rujianjs/ui-kit']);
 const UI_PACKAGE_LAYERS = new Set(['ui', 'bootstrap']);
+/** 渲染 Worker 的入口文件名：以 -worker.ts 结尾，只能放在 ui 层。 */
+const WORKER_ENTRY = /-worker\.ts$/;
 /** 可以使用其他第三方包的层。 */
 const PACKAGE_LAYERS = new Set(['platform', 'bootstrap']);
 /** Node 内置模块名。 */
@@ -251,6 +253,8 @@ function checkTs(root, errors, edges) {
   const sources = all.filter((path) => !/\.test\.tsx?$/.test(path) && !path.endsWith('.d.ts'));
   const files = new Set(all);
   const fileEdges = [];
+  /** 每个文件引用的界面库（react、组件库），用来检查渲染 Worker 的依赖。 */
+  const uiPackageUses = new Map();
   for (const path of sources) {
     const from = tsLocation(path);
     const text = readFileSync(join(base, path), 'utf8');
@@ -275,12 +279,40 @@ function checkTs(root, errors, edges) {
         if (NO_NODE_LAYERS.has(from.layer)) errors.push(`src/${path}：${from.layer} 层不能使用 Node 内置模块 ${specifier}`);
       } else if (UI_PACKAGES.has(name)) {
         if (!UI_PACKAGE_LAYERS.has(from.layer)) errors.push(`src/${path}：${from.layer} 层不能引用 ${name}`);
+        uiPackageUses.set(path, [...(uiPackageUses.get(path) ?? []), name]);
       } else if (!PACKAGE_LAYERS.has(from.layer)) {
         errors.push(`src/${path}：${from.layer} 层不能引用第三方包 ${name}`);
       }
     }
   }
   for (const cycle of findCycles(toGraph(fileEdges))) errors.push(`文件之间有循环引用：${cycle}`);
+  checkWorkers(sources, fileEdges, uiPackageUses, errors);
+}
+
+/**
+ * 渲染 Worker 的依赖限制：入口（-worker.ts）必须在 ui 层；入口与它经 import 依赖的全部文件
+ * 不能引用 react、react-dom、组件库，也不能引用 .tsx 与样式文件（Worker 里没有 DOM，界面代码进不了 Worker）；
+ * electron 与 Node 内置模块已由 ui 层的规则禁止。
+ */
+function checkWorkers(sources, fileEdges, uiPackageUses, errors) {
+  const graph = toGraph(fileEdges);
+  for (const entry of sources.filter((path) => WORKER_ENTRY.test(path))) {
+    if (!entry.startsWith('ui/')) errors.push(`src/${entry}：渲染 Worker 的入口只能放在 ui 层`);
+    const reached = new Set([entry]);
+    const queue = [entry];
+    while (queue.length > 0) {
+      for (const next of graph.get(queue.shift()) ?? []) {
+        if (!reached.has(next)) {
+          reached.add(next);
+          queue.push(next);
+        }
+      }
+    }
+    for (const file of reached) {
+      for (const name of uiPackageUses.get(file) ?? []) errors.push(`src/${file}：渲染 Worker（${entry}）依赖的文件不能引用 ${name}`);
+      if (file !== entry && /\.(tsx|css)$/.test(file)) errors.push(`src/${entry}：渲染 Worker 不能依赖界面文件 ${file}`);
+    }
+  }
 }
 
 /** 直接与间接依赖 target 的模块。 */

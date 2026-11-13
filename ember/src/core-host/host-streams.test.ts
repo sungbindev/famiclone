@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { HostStreams, parseInputMessage, type HostPort } from './host-streams';
+import { HostStreams, parseAckMessage, parseInputMessage, type HostPort } from './host-streams';
 
 /** 假端口：记录发送的消息，可以模拟收到消息与关闭。 */
 class FakePort implements HostPort {
@@ -79,6 +79,117 @@ describe('parseInputMessage', () => {
   });
 });
 
+describe('parseAckMessage', () => {
+  it('接受合格的确认', () => {
+    expect(parseAckMessage({ type: 'ack', frame: 0 })).toEqual({ type: 'ack', frame: 0 });
+    expect(parseAckMessage({ type: 'ack', frame: 123, extra: '多余' })).toEqual({ type: 'ack', frame: 123 });
+  });
+
+  it('丢弃格式不对的确认', () => {
+    const bad: unknown[] = [null, undefined, 'ack', 7, [], {}, { type: 'frame', frame: 1 }, { type: 'ack' }, { type: 'ack', frame: -1 }, { type: 'ack', frame: 1.5 }, { type: 'ack', frame: '1' }, { type: 'ack', frame: Number.NaN }];
+    for (const value of bad) expect(parseAckMessage(value)).toBeUndefined();
+  });
+});
+
+/** 发一帧，像素内容无关紧要。 */
+function send(streams: HostStreams, frame: number): void {
+  streams.sendFrame(new ArrayBuffer(4), 1, 1, frame, 0);
+}
+
+describe('HostStreams 的背压', () => {
+  it('在途帧达到上限后丢弃新帧并计数，没有确认前不再发送', () => {
+    const frames = new FakePort();
+    const streams = new HostStreams(() => undefined);
+    streams.attach([frames, new FakePort()]);
+    for (let frame = 1; frame <= 5; frame += 1) send(streams, frame);
+    expect(frames.posted).toHaveLength(2);
+    expect(streams.framesInFlight).toBe(2);
+    expect(streams.backpressureDropped).toBe(3);
+  });
+
+  it('收到确认后释放名额，之后的帧带着累计的丢弃数发出', () => {
+    const frames = new FakePort();
+    const streams = new HostStreams(() => undefined);
+    streams.attach([frames, new FakePort()]);
+    for (let frame = 1; frame <= 4; frame += 1) send(streams, frame);
+    frames.receive({ type: 'ack', frame: 1 });
+    expect(streams.framesInFlight).toBe(1);
+    send(streams, 5);
+    expect(frames.posted).toHaveLength(3);
+    expect(frames.posted[2]).toMatchObject({ frame: 5, hostDropped: 2 });
+  });
+
+  it('确认可以乱序到达，重复或没发过的确认被忽略', () => {
+    const frames = new FakePort();
+    const streams = new HostStreams(() => undefined);
+    streams.attach([frames, new FakePort()]);
+    send(streams, 1);
+    send(streams, 2);
+    frames.receive({ type: 'ack', frame: 2 });
+    frames.receive({ type: 'ack', frame: 2 });
+    frames.receive({ type: 'ack', frame: 99 });
+    expect(streams.framesInFlight).toBe(1);
+    frames.receive({ type: 'ack', frame: 1 });
+    expect(streams.framesInFlight).toBe(0);
+  });
+
+  it('格式不对的确认被丢弃，不释放名额', () => {
+    const frames = new FakePort();
+    const streams = new HostStreams(() => undefined);
+    streams.attach([frames, new FakePort()]);
+    send(streams, 1);
+    frames.receive({ type: 'ack', frame: '1' });
+    frames.receive('垃圾');
+    expect(streams.framesInFlight).toBe(1);
+  });
+
+  it('渲染进程卡住（一直不确认）时队列里最多两帧，恢复确认后继续发送', () => {
+    const frames = new FakePort();
+    const streams = new HostStreams(() => undefined);
+    streams.attach([frames, new FakePort()]);
+    for (let frame = 1; frame <= 600; frame += 1) send(streams, frame);
+    expect(frames.posted).toHaveLength(2);
+    expect(streams.backpressureDropped).toBe(598);
+    frames.receive({ type: 'ack', frame: 1 });
+    frames.receive({ type: 'ack', frame: 2 });
+    send(streams, 601);
+    expect(frames.posted).toHaveLength(3);
+  });
+
+  it('换端口后在途数与丢弃数清零', () => {
+    const streams = new HostStreams(() => undefined);
+    streams.attach([new FakePort(), new FakePort()]);
+    for (let frame = 1; frame <= 4; frame += 1) send(streams, frame);
+    const frames = new FakePort();
+    streams.attach([frames, new FakePort()]);
+    expect(streams.framesInFlight).toBe(0);
+    expect(streams.backpressureDropped).toBe(0);
+    send(streams, 5);
+    expect(frames.posted[0]).toMatchObject({ frame: 5, hostDropped: 0 });
+  });
+
+  it('旧端口迟到的确认不影响新端口', () => {
+    const oldFrames = new FakePort();
+    const streams = new HostStreams(() => undefined);
+    streams.attach([oldFrames, new FakePort()]);
+    send(streams, 1);
+    const frames = new FakePort();
+    streams.attach([frames, new FakePort()]);
+    send(streams, 1);
+    oldFrames.receive({ type: 'ack', frame: 1 });
+    expect(streams.framesInFlight).toBe(1);
+  });
+
+  it('发送失败的帧不占用在途名额', () => {
+    const frames = new FakePort();
+    frames.failing = true;
+    const streams = new HostStreams(() => undefined);
+    streams.attach([frames, new FakePort()]);
+    send(streams, 1);
+    expect(streams.framesInFlight).toBe(0);
+  });
+});
+
 describe('HostStreams', () => {
   it('按帧格式发送画面，像素原样交给端口', () => {
     const [frames, input] = [new FakePort(), new FakePort()];
@@ -87,8 +198,8 @@ describe('HostStreams', () => {
     expect(frames.started).toBe(true);
     expect(input.started).toBe(true);
     const pixels = new ArrayBuffer(256 * 240 * 4);
-    streams.sendFrame(pixels, 256, 240, 7);
-    expect(frames.posted).toEqual([{ type: 'frame', width: 256, height: 240, format: 'rgba8', frame: 7, pixels }]);
+    streams.sendFrame(pixels, 256, 240, 7, 1_700_000_000_123);
+    expect(frames.posted).toEqual([{ type: 'frame', width: 256, height: 240, format: 'rgba8', frame: 7, publishedAt: 1_700_000_000_123, hostDropped: 0, pixels }]);
     expect((frames.posted[0] as { pixels: ArrayBuffer }).pixels).toBe(pixels);
     expect(input.posted).toHaveLength(0);
   });
@@ -102,7 +213,7 @@ describe('HostStreams', () => {
 
   it('没有端口时丢弃帧', () => {
     const streams = new HostStreams(() => undefined);
-    expect(() => streams.sendFrame(new ArrayBuffer(4), 1, 1, 1)).not.toThrow();
+    expect(() => streams.sendFrame(new ArrayBuffer(4), 1, 1, 1, 0)).not.toThrow();
   });
 
   it('输入端口收到的按键校验后交给回调，格式不对的丢弃', () => {
@@ -124,7 +235,7 @@ describe('HostStreams', () => {
     streams.attach([newFrames, newInput]);
     expect(oldFrames.closed).toBe(true);
     expect(oldInput.closed).toBe(true);
-    streams.sendFrame(new ArrayBuffer(4), 1, 1, 1);
+    streams.sendFrame(new ArrayBuffer(4), 1, 1, 1, 0);
     expect(oldFrames.posted).toHaveLength(0);
     expect(newFrames.posted).toHaveLength(1);
   });
@@ -143,7 +254,7 @@ describe('HostStreams', () => {
     const streams = new HostStreams(() => undefined);
     streams.attach([frames, new FakePort()]);
     frames.remoteClose();
-    streams.sendFrame(new ArrayBuffer(4), 1, 1, 1);
+    streams.sendFrame(new ArrayBuffer(4), 1, 1, 1, 0);
     expect(frames.posted).toHaveLength(0);
   });
 
@@ -152,7 +263,7 @@ describe('HostStreams', () => {
     frames.failing = true;
     const streams = new HostStreams(() => undefined);
     streams.attach([frames, new FakePort()]);
-    expect(() => streams.sendFrame(new ArrayBuffer(4), 1, 1, 1)).not.toThrow();
+    expect(() => streams.sendFrame(new ArrayBuffer(4), 1, 1, 1, 0)).not.toThrow();
   });
 
   it('detach 关闭两个端口，重复调用与关闭失败都不抛出', () => {

@@ -17,6 +17,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -67,7 +68,7 @@ class SyncEventSink final : public platform::EventSink {
   std::vector<std::pair<std::string, nlohmann::json>> events_;
 };
 
-/** 记录收到的帧：次数、尺寸、帧号是否连续、最近一帧的第一个像素。 */
+/** 记录收到的帧：次数、尺寸、帧号是否连续、最近一帧的像素。 */
 class FrameCapture final : public platform::FrameOutput {
  public:
   void publish(const platform::FrameView& frame) noexcept override {
@@ -77,7 +78,7 @@ class FrameCapture final : public platform::FrameOutput {
     width_ = frame.width;
     height_ = frame.height;
     lastNumber_ = frame.number;
-    firstPixel_ = frame.pixels.empty() ? 0 : frame.pixels[0];
+    pixels_.assign(frame.pixels.begin(), frame.pixels.end());
     ++count_;
   }
 
@@ -97,9 +98,20 @@ class FrameCapture final : public platform::FrameOutput {
     std::lock_guard lock(mutex_);
     return lastNumber_;
   }
-  [[nodiscard]] std::uint32_t firstPixel() const {
+  /** 最近一帧里出现次数最多的像素值：渲染关闭时画面是纯色，写调色板的瞬间只会让个别像素偏离，不能用第一个像素代表整帧。 */
+  [[nodiscard]] std::uint32_t dominantPixel() const {
     std::lock_guard lock(mutex_);
-    return firstPixel_;
+    std::unordered_map<std::uint32_t, std::size_t> counts;
+    for (const auto pixel : pixels_) ++counts[pixel];
+    std::uint32_t best = 0;
+    std::size_t bestCount = 0;
+    for (const auto& [pixel, total] : counts) {
+      if (total > bestCount) {
+        best = pixel;
+        bestCount = total;
+      }
+    }
+    return best;
   }
   [[nodiscard]] bool sizeMismatch() const {
     std::lock_guard lock(mutex_);
@@ -117,7 +129,7 @@ class FrameCapture final : public platform::FrameOutput {
   std::uint32_t width_{0};
   std::uint32_t height_{0};
   std::uint64_t lastNumber_{0};
-  std::uint32_t firstPixel_{0};
+  std::vector<std::uint32_t> pixels_;
   bool sizeMismatch_{false};
   bool numberGap_{false};
 };

@@ -24,4 +24,6 @@ export interface ShellModule {
   readonly id: string;
   /** 模块的页面。 */
   readonly Page: ComponentType<ShellPageProps>;
+  /** 页面是否占满外壳的剩余空间（运行页需要），默认按内容高度。 */
+  readonly fill?: boolean;
 }

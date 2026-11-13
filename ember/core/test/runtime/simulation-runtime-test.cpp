@@ -227,28 +227,28 @@ TEST(SimulationRuntime, SoftResetKeepsRamAndHardResetClearsIt) {
   const auto program = ember::test::makeBootMarkerProgram(0x16, 0x2A);
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(program)));
   ASSERT_TRUE(rig.waitFrames(4));
-  const auto cold = rig.frames->firstPixel();
+  const auto cold = rig.frames->dominantPixel();
 
   // 软复位：内部 RAM 保持，程序看到标记，走热启动段，背景色变了；电源与运行模式不变。
   const auto soft = rig.runtime->reset(rt::ResetKind::Soft);
   EXPECT_EQ(soft.power, "on");
   EXPECT_EQ(soft.mode, "running");
   ASSERT_TRUE(rig.waitFrames(4));
-  const auto warm = rig.frames->firstPixel();
+  const auto warm = rig.frames->dominantPixel();
   EXPECT_NE(warm, cold);
   EXPECT_EQ(rig.events->last("runtime.stateChanged")["reason"], "reset");
 
   // 再软复位一次仍是热启动。
   rig.runtime->reset(rt::ResetKind::Soft);
   ASSERT_TRUE(rig.waitFrames(4));
-  EXPECT_EQ(rig.frames->firstPixel(), warm);
+  EXPECT_EQ(rig.frames->dominantPixel(), warm);
 
   // 硬复位：断电再上电，内部 RAM 清零，回到冷启动的颜色；运行模式保持。
   const auto hard = rig.runtime->reset(rt::ResetKind::Hard);
   EXPECT_EQ(hard.power, "on");
   EXPECT_EQ(hard.mode, "running");
   ASSERT_TRUE(rig.waitFrames(4));
-  EXPECT_EQ(rig.frames->firstPixel(), cold);
+  EXPECT_EQ(rig.frames->dominantPixel(), cold);
   EXPECT_FALSE(rig.frames->numberGap());
 }
 
@@ -287,13 +287,13 @@ TEST(SimulationRuntime, ReplacingTheCartridgeWhileRunningSwitchesToTheNewOne) {
   Rig rig;
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(ember::test::makeBootMarkerProgram(0x16, 0x16)), "first.nes"));
   ASSERT_TRUE(rig.waitFrames(4));
-  const auto first = rig.frames->firstPixel();
+  const auto first = rig.frames->dominantPixel();
 
   const auto result = rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(ember::test::makeBootMarkerProgram(0x2A, 0x2A)), "second.nes"));
   EXPECT_EQ(result.cartridge.path, "second.nes");
   EXPECT_EQ(result.state.mode, "running");
   ASSERT_TRUE(rig.waitFrames(4));
-  EXPECT_NE(rig.frames->firstPixel(), first);
+  EXPECT_NE(rig.frames->dominantPixel(), first);
   const auto status = rig.runtime->status();
   ASSERT_TRUE(status.cartridge.has_value());
   EXPECT_EQ(status.cartridge->path, "second.nes");
@@ -380,20 +380,20 @@ TEST(SimulationRuntime, ButtonsReachTheControllerThroughTheCommandQueue) {
   Rig rig;
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
   ASSERT_TRUE(rig.waitFrames(3));
-  const auto released = rig.frames->firstPixel();
+  const auto released = rig.frames->dominantPixel();
 
   rig.runtime->setButtons(0, 0x01);  // 手柄 1 的 A 键
   ASSERT_TRUE(rig.waitFrames(3));
-  const auto pressed = rig.frames->firstPixel();
+  const auto pressed = rig.frames->dominantPixel();
   EXPECT_NE(pressed, released);
 
   rig.runtime->setButtons(1, 0x01);  // 手柄 2 与程序读的口无关
   ASSERT_TRUE(rig.waitFrames(3));
-  EXPECT_EQ(rig.frames->firstPixel(), pressed);
+  EXPECT_EQ(rig.frames->dominantPixel(), pressed);
 
   rig.runtime->setButtons(0, 0x00);
   ASSERT_TRUE(rig.waitFrames(3));
-  EXPECT_EQ(rig.frames->firstPixel(), released);
+  EXPECT_EQ(rig.frames->dominantPixel(), released);
   EXPECT_THROW(rig.runtime->setButtons(2, 0x01), ember::shared::SchemaError);
 }
 
@@ -402,10 +402,10 @@ TEST(SimulationRuntime, ButtonsHeldBeforeTheMachineExistsApplyWhenItIsInserted) 
   rig.runtime->setButtons(0, 0x01);
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
   ASSERT_TRUE(rig.waitFrames(3));
-  const auto pressed = rig.frames->firstPixel();
+  const auto pressed = rig.frames->dominantPixel();
   rig.runtime->setButtons(0, 0x00);
   ASSERT_TRUE(rig.waitFrames(3));
-  EXPECT_NE(rig.frames->firstPixel(), pressed);
+  EXPECT_NE(rig.frames->dominantPixel(), pressed);
 }
 
 TEST(SimulationRuntime, FrameEventsArePublishedOnlyWhenEnabled) {

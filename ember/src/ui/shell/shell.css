@@ -1,0 +1,30 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：shell.css
+ * 说明：最小外壳的版面：页面占满窗口高度，纵向排列，需要占满剩余空间的页面（运行页）撑开。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-14
+ * 备注：阶段 3a 外壳按原型重做时整体替换。
+ * ------------------------------------------------------------------------
+ */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.ember-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ember-shell__page--fill {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}

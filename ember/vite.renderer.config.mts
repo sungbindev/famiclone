@@ -34,5 +34,7 @@ export default defineConfig({
   resolve: {
     alias: uiKitAlias(),
     dedupe: DEDUPE
-  }
+  },
+  // 渲染 Worker 用 ES 模块格式，与 new Worker(..., { type: 'module' }) 一致。
+  worker: { format: 'es' }
 });

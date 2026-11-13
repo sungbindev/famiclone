@@ -163,6 +163,44 @@ describe('checkProject', () => {
     ]);
   });
 
+  it('渲染 Worker 与它依赖的文件可以引用 ui 层的其他文件与 contracts 的类型', () => {
+    const root = createProject({
+      'src/contracts/stream-ports/stream-messages.ts': 'export interface FrameMessage { frame: number }\n',
+      'src/ui/runtime/render-worker.ts': "import { parse } from './frame-receiver';\nimport type { FrameMessage } from '../../contracts/stream-ports/stream-messages';\nexport const run = (m: FrameMessage) => parse(m);\n",
+      'src/ui/runtime/frame-receiver.ts': 'export const parse = (value: unknown) => value;\n',
+      'src/ui/runtime/RuntimePage.tsx': "import { useState } from 'react';\nimport './ember-run.css';\nexport const Page = useState;\n",
+      'src/bootstrap/renderer/modules/runtime.ts': "import { Page } from '../../../ui/runtime/RuntimePage';\nexport const m = Page;\n",
+      'src/bootstrap/renderer/module-list.ts': "import { m } from './modules/runtime';\nexport const list = [m];\n"
+    });
+    expect(checkProject(root).errors).toEqual([]);
+  });
+
+  it('渲染 Worker 及其依赖的文件不能引用 react、组件库、界面文件与样式', () => {
+    const root = createProject({
+      'src/ui/runtime/render-worker.ts': "import { helper } from './helper';\nimport { Page } from './RuntimePage';\nimport './worker.css';\nexport const run = [helper, Page];\n",
+      'src/ui/runtime/helper.ts': "import { useState } from 'react';\nimport { Button } from '@rujianjs/ui-kit';\nexport const helper = [useState, Button];\n",
+      'src/ui/runtime/RuntimePage.tsx': 'export const Page = 1;\n',
+      'src/bootstrap/renderer/modules/runtime.ts': "import { run } from '../../../ui/runtime/render-worker';\nexport const m = run;\n",
+      'src/bootstrap/renderer/module-list.ts': "import { m } from './modules/runtime';\nexport const list = [m];\n"
+    });
+    const { errors } = checkProject(root);
+    expect(errors).toContain('src/ui/runtime/helper.ts：渲染 Worker（ui/runtime/render-worker.ts）依赖的文件不能引用 react');
+    expect(errors).toContain('src/ui/runtime/helper.ts：渲染 Worker（ui/runtime/render-worker.ts）依赖的文件不能引用 @rujianjs/ui-kit');
+    expect(errors).toContain('src/ui/runtime/render-worker.ts：渲染 Worker 不能依赖界面文件 ui/runtime/RuntimePage.tsx');
+    expect(errors).toContain('src/ui/runtime/render-worker.ts：渲染 Worker 不能依赖界面文件 ui/runtime/worker.css');
+  });
+
+  it('渲染 Worker 不能引用 electron 与 Node 内置模块，入口只能放在 ui 层', () => {
+    const root = createProject({
+      'src/ui/runtime/render-worker.ts': "import { app } from 'electron';\nimport { readFileSync } from 'node:fs';\nexport const run = [app, readFileSync];\n",
+      'src/shared/bad-worker.ts': 'export const run = 1;\n'
+    });
+    const { errors } = checkProject(root);
+    expect(errors).toContain('src/ui/runtime/render-worker.ts：ui 层不能引入 electron');
+    expect(errors).toContain('src/ui/runtime/render-worker.ts：ui 层不能使用 Node 内置模块 node:fs');
+    expect(errors).toContain('src/shared/bad-worker.ts：渲染 Worker 的入口只能放在 ui 层');
+  });
+
   it('发现没有登记的模块', () => {
     const root = createProject({
       'schema/demo.schema.json': JSON.stringify({ module: 'demo', types: {}, requests: {}, events: {} }),

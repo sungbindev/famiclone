@@ -170,8 +170,7 @@ async function publish({ dryRun, allowDirty }) {
   for (const item of PUBLISH_ORDER) {
     run('npm', ['publish', '-w', `packages/${item.directory}`, ...(item.scoped ? ['--access', 'public'] : [])]);
   }
-  for (const item of PUBLISH_ORDER) run('npm', ['view', `${item.name}@${version}`, 'version']);
-  console.log(`\n四个包的 ${version} 版都已发布。`);
+  console.log(`\n四个包的 ${version} 版都已提交发布；新发布的包要等 npm 审核，过一会儿才能查到。`);
 }
 
 const [command, ...rest] = process.argv.slice(2);

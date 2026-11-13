@@ -164,7 +164,7 @@ const locationCases = [
 // ---- $3C-$3F 画字符串 ----
 const BUFFER_OFFSET = (0xf8 - 0x80) * 0x1000;
 const STRING_OFFSET = 0x100;
-const DMA = { ctrl: 0x4048, srcHigh: 0x4049, srcLow: 0x404a, srcMid: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
+const DMA = { ctrl: 0x4048, srcBank: 0x4049, srcLow: 0x404a, srcHigh: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
 const FLAG_CONST = [0x00, 0x00, 0xff, 0xff]; // TEXT_PLANE_FILL_TABLE
 const FLAG_GLYPH = [0x00, 0xff, 0xff, 0x00]; // TEXT_PLANE_INVERT_TABLE
 const MODE_SUB = [0x00, 0x02, 0x08, 0x0a, 0x03, 0x01, 0x0b, 0x09, 0x0c, 0x0e, 0x04, 0x06, 0x0f, 0x0d, 0x07, 0x05]; // TEXT_DRAW_FLAGS_NORMAL
@@ -220,7 +220,7 @@ const drawCase = (func, characters, mode, wide, vramTile = 0x0010, title = '', a
   const clipped = destination + want.length - 1 > 0xffff;
   const dmaLength = clipped ? 0xffff - destination : want.length - 1;
   const fullLength = want.length - 1;
-  const dmaWrites = [[DMA.ctrl, [0xc0]], [DMA.srcHigh, [0x1f]], [DMA.srcLow, [0x00]], [DMA.srcMid, [0x80]], [DMA.dstLo, [destination & 0xff]], [DMA.dstHi, [destination >> 8]], [DMA.lenLo, clipped ? [fullLength & 0xff, dmaLength & 0xff] : [dmaLength & 0xff]], [DMA.lenHi, clipped ? [fullLength >> 8, dmaLength >> 8] : [dmaLength >> 8]]];
+  const dmaWrites = [[DMA.ctrl, [0xc0]], [DMA.srcBank, [0x1f]], [DMA.srcLow, [0x00]], [DMA.srcHigh, [0x80]], [DMA.dstLo, [destination & 0xff]], [DMA.dstHi, [destination >> 8]], [DMA.lenLo, clipped ? [fullLength & 0xff, dmaLength & 0xff] : [dmaLength & 0xff]], [DMA.lenHi, clipped ? [fullLength >> 8, dmaLength >> 8] : [dmaLength >> 8]]];
   return {
     id: `text.${hexName(func)}.${characters.map((c) => c.toString(16)).join('-')}.m${hexName(mode)}${wide ? '.wide' : ''}${clipped ? '.clip' : ''}${alt ? '.alt' : ''}`,
     title: `$${hexName(func)}${alt ? '/$80' : ''} ${title}：字符串 ${characters.map((c) => `$${c.toString(16).toUpperCase()}`).join(' ')}、$064E=$${hexName(mode)}、$0638=$${hexName(wide ? 0x80 : 0)}，写 ${want.length} 字节瓦片数据到缓冲，DMA 到显存 $${destination.toString(16).toUpperCase().padStart(4, '0')}`,

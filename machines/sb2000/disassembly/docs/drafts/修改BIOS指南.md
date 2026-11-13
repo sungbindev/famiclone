@@ -22,7 +22,7 @@ node tools/sb2kdbg.mjs --launch <绝对路径>\bios\build\SB2K_BIOS.NES
 npm test
 ```
 
-在模拟器里进 DOS 的命令序列见 README：`reset`、`disk <软盘镜像>`、`run 1100`、两次回车、`run 300`，之后 `type ver` 加回车就能执行命令，`shot 文件名.png` 截图。软盘镜像用 `reference/floppy-dos.img`，自己的程序用 fcdev 的 `fcdev disk` 生成。
+在模拟器里进 DOS 的命令序列见 README：`reset`、`disk <软盘镜像>`、`run 1100`、两次回车、`run 300`，之后 `type ver` 加回车就能执行命令，`shot 文件名.png` 截图。软盘镜像用仓库根目录的 `reference/floppy-dos.img`，自己的程序用 fcdev 的 `fcdev disk` 生成。
 
 ## 3. 常用工具
 

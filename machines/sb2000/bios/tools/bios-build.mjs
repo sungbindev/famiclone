@@ -26,7 +26,7 @@ export const BIOS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 export const BUILD_DIR = path.join(BIOS_DIR, 'build');
 
 /** 原始 BIOS ROM（含 iNES 文件头），构建结果默认与它逐字节比对 */
-export const ORIGINAL_ROM = path.join(BIOS_DIR, '..', 'reference', 'rom', 'SB2K_BIOS.NES');
+export const ORIGINAL_ROM = path.join(BIOS_DIR, '..', '..', '..', 'reference', 'rom', 'SB2K_BIOS.NES');
 
 /** ROM 总页数（512K / 4K） */
 export const PAGE_COUNT = 128;

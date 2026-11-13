@@ -11,7 +11,7 @@
 ; 调用者：IRQ_HANDLER
 KBD_HANDLER:
     LDA #$00
-    STA KBD_ACK
+    STA KBD_CTRL
     LDA KBD_READY
     BNE @ready
     JMP KBD_HANDLER_RETURN
@@ -31,7 +31,7 @@ KBD_HANDLER:
     INC KBD_LED_PENDING
     LDA #$80
     STA KBD_DATA
-    STA KBD_ACK
+    STA KBD_CTRL
     RTS
 @led_state2:
     CMP #$02
@@ -40,20 +40,20 @@ KBD_HANDLER:
     LDA KBD_LEDS
     STA KBD_OUT_PORT
     LDA #$01
-    STA KBD_ACK
+    STA KBD_CTRL
     LDX #$01
     JSR API_1B_WAIT_FRAMES
     LDA #$A0
     STA KBD_DATA
     LDA #$85
-    STA KBD_ACK
+    STA KBD_CTRL
     RTS
 @led_done:
     LDA #$00
     STA KBD_LED_PENDING
     LDA #$80
     STA KBD_DATA
-    STA KBD_ACK
+    STA KBD_CTRL
     RTS
 @check_esc:
     LDA ESC_BREAK
@@ -62,7 +62,7 @@ KBD_HANDLER:
     CPX #$01
     BNE @check_prefix
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
     CLI
     LDA #$1D
     STA SYS_FUNCTION
@@ -240,13 +240,13 @@ KBD_SET_LEDS:
     LDA #$ED
     STA KBD_OUT_PORT
     LDA #$01
-    STA KBD_ACK
+    STA KBD_CTRL
     LDX #$01
     JSR API_1B_WAIT_FRAMES
     LDA #$A0
     STA KBD_DATA
     LDA #$85
-    STA KBD_ACK
+    STA KBD_CTRL
     LDA #$01
     STA KBD_LED_PENDING
     RTS
@@ -374,7 +374,7 @@ KBD_TRANSLATE:
 ; 调用者：KBD_HANDLER、KBD_MODIFIER_KEYS、KBD_TOGGLE_CAPS_LOCK、KBD_TRANSLATE
 KBD_DONE:
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
     RTS
 ; 作用：把 KBD_OUT_ASCII、KBD_OUT_SCAN 两个字节放入按键队列，队列满（12 字节，6 个按键）时丢弃
 ; 调用者：KBD_HANDLER、KBD_TRANSLATE

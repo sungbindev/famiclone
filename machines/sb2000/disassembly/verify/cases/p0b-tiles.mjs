@@ -6,12 +6,12 @@
 // 日期：2026-11-09
 // 备注：预期值按 bios/src/image/（$80CC-$8271）的代码阅读写成模型：输入是 16 字节字典加指令流，$0C/$0D 指向字典（页组 $0642，窗口地址 $8000 起），$064C/$064D 是起始瓦片号（左移 4 位成显存地址）。
 //       指令字节分高 4 位 H、低 4 位 L：$00 结束；H=1-12 把字典第 L 项重复 H 次；H=$D 后跟 L 个原样字节；H=$E 后跟 1 个字节，重复 L 次；H=$F 后跟起始字节，输出 L 个递增字节；H=$D 的 L 为 0 按 256 个原样字节。
-//       输出先放在扩展 RAM 页 $F8 起的缓冲（窗口 $A000），每条指令后缓冲不少于 $1C00 字节就 DMA 到显存并把显存地址前移，结束时缓冲非空再 DMA 一次；DMA 寄存器：$4048 控制、$4049 源高、$404A 源低、$404B 源中、$404C 目的低、$404D 目的高、$404E 长度低、$404F 长度高。
+//       输出先放在扩展 RAM 页 $F8 起的缓冲（窗口 $A000），每条指令后缓冲不少于 $1C00 字节就 DMA 到显存并把显存地址前移，结束时缓冲非空再 DMA 一次；DMA 寄存器：$4048 控制、$4049 源 bank、$404A 源低、$404B 源高、$404C 目的低、$404D 目的高、$404E 长度低、$404F 长度高。
 //       H=$E、$F 的 L 为 0 时按 256 次写入但输出指针不前进（循环计数 Y 回绕成 0，用 Y 加指针），等于什么都没输出；H=$F 的递增用带进位加法，回绕后进位保持为 1，之后每次加 2。
 // ------------------------------------------------------------------------
 const hexName = (value) => value.toString(16).toUpperCase().padStart(2, '0');
 const toHex = (bytes) => [...bytes].map(hexName).join('');
-const DMA = { ctrl: 0x4048, srcHigh: 0x4049, srcLow: 0x404a, srcMid: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
+const DMA = { ctrl: 0x4048, srcBank: 0x4049, srcLow: 0x404a, srcHigh: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
 const BUFFER_PRAM = (0xf8 - 0x80) * 0x1000;
 const SOURCE_PRAM = 0x400;
 const FLUSH_SIZE = 0x1c00;
@@ -66,7 +66,7 @@ const tileCase = (id, title, instructions, { tile = 0x0100, offset = SOURCE_PRAM
   const dmaWrites = Object.fromEntries(Object.keys(DMA).map((name) => [name, []]));
   for (const segment of segments) {
     const length = segment.length - 1;
-    const values = { ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0x00, srcMid: 0x80, dstLo: destination & 0xff, dstHi: destination >> 8, lenLo: length & 0xff, lenHi: length >> 8 };
+    const values = { ctrl: 0xc0, srcBank: 0x1f, srcLow: 0x00, srcHigh: 0x80, dstLo: destination & 0xff, dstHi: destination >> 8, lenLo: length & 0xff, lenHi: length >> 8 };
     for (const name of Object.keys(DMA)) dmaWrites[name].push(values[name]);
     destination = (destination + segment.length) & 0xffff;
   }

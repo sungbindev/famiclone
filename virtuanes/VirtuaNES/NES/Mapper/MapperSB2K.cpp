@@ -621,7 +621,9 @@ BYTE MapperSB2K::Peek(INT addr, BOOL is_logical)
 	BYTE data = 0xEE;
 
 	if (addr < 0x2000) {
-		data = RAM[addr]; // 8K
+		data = RAM[addr & 0x7FF]; // 2K
+	} else if (addr >= 0x4400 && addr < 0x6000 && 2 == nMode6576) {
+		data = 0x68; // 6576 模式下不是 RAM
 	} else if (addr >= 0x5000 && addr < 0x5800) {
 		data = RAM[addr & 0x7FF]; // 2K
 	} else if (addr >= 0x6000 && addr < 0x8000) {
@@ -891,11 +893,16 @@ BYTE MapperSB2K::ReadLow(WORD addr)
 		}
 
 		return data;
-	} else if (addr < 0x5000)
-		return (addr >> 8); // empty
-	else if (addr < 0x6000)
+	} else if (addr < 0x6000) {
+		// 真机实测（memtest）：6576 模式下 $4400-$5FFF 不是 RAM，读出都是 $68
+		if (2 == nMode6576)
+			return 0x68;
+
+		if (addr < 0x5000)
+			return (addr >> 8); // empty
+
 		return WRAM[addr & 0x7FF]; // 2K
-	else
+	} else
 		return ERAM[addr & 0x1FFF]; // 8K
 }
 
@@ -1109,7 +1116,9 @@ void MapperSB2K::WriteLow(WORD addr, BYTE data)
 
 			MMC3_Remap();
 		}
-		WRAM[addr & 0x7FF] = data; // 2K
+		// 真机实测：6576 模式下这一段不是 RAM，写入无效（$5006 的写入仍然有效果）
+		if (2 != nMode6576)
+			WRAM[addr & 0x7FF] = data; // 2K
 	} else { // 6000-7FFF
 		ERAM[addr & 0x1FFF] = data; // 8K
 	}
@@ -1322,7 +1331,8 @@ void MapperSB2K::ExWrite( WORD addr, BYTE data )
 				// DMA
 				m_bDmaReg[addr & 7] = data;
 
-				if (addr == 0x4048 && (data & 0x80)) {
+				// 真机实测（memtest）：$404B 位 7（源地址 A15）为 0 时 DMA 全部失败，所以不传输
+				if (addr == 0x4048 && (data & 0x80) && (m_bDmaReg[3] & 0x80)) {
 					// DMA start
 					int src_addr;
 					int dst_addr;
@@ -1337,10 +1347,14 @@ void MapperSB2K::ExWrite( WORD addr, BYTE data )
 					if (len & 1) len++;
 
 					if (m_bDmaReg[0] & 0x20) {
-						// Work RAM
-						dst_addr = dst_addr;
-						while (len--)
-							nes->Write(dst_addr++, *p_src++);
+						// Work RAM：真机实测目标在程序窗口（$8000 以上）时写不进去
+						while (len--) {
+							if (dst_addr < 0x8000)
+								nes->Write(dst_addr, *p_src);
+
+							dst_addr++;
+							p_src++;
+						}
 					} else {
 						// VRAM
 						LPBYTE p_dst;

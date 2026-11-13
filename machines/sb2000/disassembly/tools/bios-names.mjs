@@ -36,7 +36,7 @@ const KNOWN_NAMES = new Map([
   [0x4031, 'MODE_6576'],
   [0x4040, 'WIN_PAGE_0'], [0x4041, 'WIN_PAGE_1'], [0x4042, 'WIN_PAGE_2'], [0x4043, 'WIN_PAGE_3'],
   [0x4044, 'WIN_PAGE_4'], [0x4045, 'WIN_PAGE_5'], [0x4046, 'WIN_PAGE_6'], [0x4047, 'WIN_PAGE_7'],
-  [0x4048, 'DMA_CTRL'], [0x4049, 'DMA_SRC_HIGH'], [0x404a, 'DMA_SRC_LOW'], [0x404b, 'DMA_SRC_MID'],
+  [0x4048, 'DMA_CTRL'], [0x4049, 'DMA_SRC_BANK'], [0x404a, 'DMA_SRC_LOW'], [0x404b, 'DMA_SRC_HIGH'],
   [0x404c, 'DMA_DST_LO'], [0x404d, 'DMA_DST_HI'], [0x404e, 'DMA_LEN_LO'], [0x404f, 'DMA_LEN_HI'],
   [0x4300, 'VRAM_BANK'], [0x4301, 'MODE_FC'], [0x5006, 'EBANK_128K'],
   // 扩展 RAM 里的 DOS 状态变量

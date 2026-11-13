@@ -21,9 +21,9 @@ export const NT_SIZE = 0x800;
 export const BUFFER_LENGTH = 4 * NT_SIZE;
 const MAP_BUFFER = (0xf8 - 0x80) * 0x1000;
 const SOURCE_PRAM = 0x400;
-const DMA = { ctrl: 0x4048, srcHigh: 0x4049, srcLow: 0x404a, srcMid: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
-const NAMETABLE_MID = [0xa0, 0xa8, 0xb0, 0xb8];
-export const dmaRegisters = (k) => ({ ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0x00, srcMid: NAMETABLE_MID[k], dstLo: 0x00, dstHi: k * 8, lenLo: 0xff, lenHi: 0x07 });
+const DMA = { ctrl: 0x4048, srcBank: 0x4049, srcLow: 0x404a, srcHigh: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
+const NAMETABLE_HIGH = [0xa0, 0xa8, 0xb0, 0xb8];
+export const dmaRegisters = (k) => ({ ctrl: 0xc0, srcBank: 0x1f, srcLow: 0x00, srcHigh: NAMETABLE_HIGH[k], dstLo: 0x00, dstHi: k * 8, lenLo: 0xff, lenHi: 0x07 });
 const EFFECT_NAMES = ['逐行向下', '逐列向右', '逐列向左', '逐行向下（带等待）', '逐行向上', '边框收缩后向外扩展', '边框向内', '从中线向两边', '从两边向中线'];
 
 // ---- 映射流解码模型 ----

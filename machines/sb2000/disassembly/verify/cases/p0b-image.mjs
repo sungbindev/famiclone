@@ -18,7 +18,7 @@ import { BUFFER_LENGTH, NT_BASE, NT_SIZE, applyWrites, clip, decodeMap, dmaRegis
 
 const hexName = (value) => value.toString(16).toUpperCase().padStart(2, '0');
 const toHex = (bytes) => [...bytes].map(hexName).join('');
-const DMA = { ctrl: 0x4048, srcHigh: 0x4049, srcLow: 0x404a, srcMid: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
+const DMA = { ctrl: 0x4048, srcBank: 0x4049, srcLow: 0x404a, srcHigh: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
 const PALETTE_ADDRESSES = Array.from({ length: 0x40 }, (_, i) => 0x2040 + i);
 const SOURCE_PRAM = 0x400;
 const DICTIONARY = Array.from({ length: 16 }, (_, i) => 0x10 + i * 3);
@@ -34,7 +34,7 @@ const tileLoadCase = ({ id, title, tile, length, pointer, group = 0x80, mask = 0
   const total = ((tile << 4) & 0xffff);
   const dmaLength = (length - 1) & 0xffff;
   const waits = 1 + (mask === 0 ? 0 : Math.floor((length >> 8) / 0x1c));
-  const want = { ctrl: 0xc0, srcHigh: page >> 3, srcLow: pointer[0], srcMid: 0x80 + ((page & 7) << 4) + (pointer[1] & 0x0f), dstLo: total & 0xff, dstHi: total >> 8, lenLo: dmaLength & 0xff, lenHi: dmaLength >> 8 };
+  const want = { ctrl: 0xc0, srcBank: page >> 3, srcLow: pointer[0], srcHigh: 0x80 + ((page & 7) << 4) + (pointer[1] & 0x0f), dstLo: total & 0xff, dstHi: total >> 8, lenLo: dmaLength & 0xff, lenHi: dmaLength >> 8 };
   return {
     id: `p0b.5a.${id}`,
     title: `$5A ${title}：起始瓦片 $${tile.toString(16).toUpperCase()}，长度 ${length}，源指针 $${hexName(pointer[1])}${hexName(pointer[0])}、页组 $${hexName(group)}，$062B=$${hexName(mask)}（等 ${waits} 帧）`,
@@ -136,7 +136,7 @@ const tileDmaLists = (tileStream, tile) => {
   let destination = (tile << 4) & 0xffff;
   for (const segment of segments) {
     const length = segment.length - 1;
-    const values = { ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0x00, srcMid: 0x80, dstLo: destination & 0xff, dstHi: destination >> 8, lenLo: length & 0xff, lenHi: length >> 8 };
+    const values = { ctrl: 0xc0, srcBank: 0x1f, srcLow: 0x00, srcHigh: 0x80, dstLo: destination & 0xff, dstHi: destination >> 8, lenLo: length & 0xff, lenHi: length >> 8 };
     for (const name of Object.keys(DMA)) lists[name].push(values[name]);
     destination = (destination + segment.length) & 0xffff;
   }

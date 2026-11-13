@@ -221,7 +221,7 @@ FLAG_SET_MASK_INDEX1:
     .byte $10
     .byte $08
     .byte $02
-; 作用：系统功能 $13：置位或清位中断屏蔽影子 IRQ_MASK_SHADOW 并写 IRQ_MASK。子功能 0-6 按 IRQ_ENABLE_BITS 置位一位，$80-$86 按 FLAG_CLEAR_MASKS 清一位；写入后：$80 设置定时器（TIMER_CTRL=$EF，TIMER_COUNT=$3C）；子功能 2 与 $82 写 KBD_ACK 为 $40 与 $80；$81 按 MOUSE_PACKET_STATE 设置 MOUSE_ABSENT。子功能 $88 把 SYS_ARG_0F 指定的钩子复位为 HOOK_NOP（0 定时器、1 IRQ3、2 IRQ1、3 IRQ4、4 鼠标、5 键盘）；子功能低 4 位不小于 7 时 SYS_STATUS=$FF。
+; 作用：系统功能 $13：置位或清位中断屏蔽影子 IRQ_MASK_SHADOW 并写 IRQ_MASK。子功能 0-6 按 IRQ_ENABLE_BITS 置位一位，$80-$86 按 FLAG_CLEAR_MASKS 清一位；写入后：$80 设置定时器（TIMER_CTRL=$EF，TIMER_COUNT=$3C）；子功能 2 与 $82 写 KBD_CTRL 为 $40 与 $80；$81 按 MOUSE_PACKET_STATE 设置 MOUSE_ABSENT。子功能 $88 把 SYS_ARG_0F 指定的钩子复位为 HOOK_NOP（0 定时器、1 IRQ3、2 IRQ1、3 IRQ4、4 鼠标、5 键盘）；子功能低 4 位不小于 7 时 SYS_STATUS=$FF。
 ; 输入：SYS_SUBFUNCTION，SYS_ARG_0F（子功能 $88 用）。
 ; 调用者：SYSCALL_TABLE（地址表）
 API_13_IRQ_MASK:
@@ -253,9 +253,9 @@ API_13_IRQ_MASK:
     CMP #$80
     BEQ @set_timer
     CMP #$02
-    BEQ @kbd_ack_40
+    BEQ @kbd_ctrl_40
     CMP #$82
-    BEQ @kbd_ack_80
+    BEQ @kbd_ctrl_80
     CMP #$81
     BNE @return
     LDA MOUSE_PACKET_STATE
@@ -274,13 +274,13 @@ API_13_IRQ_MASK:
     LDA #$3C
     STA TIMER_COUNT
     RTS
-@kbd_ack_40:
+@kbd_ctrl_40:
     LDA #$40
-    STA KBD_ACK
+    STA KBD_CTRL
     RTS
-@kbd_ack_80:
+@kbd_ctrl_80:
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
     RTS
 @reset_hook:
     LDX SYS_ARG_0F
@@ -445,7 +445,7 @@ API_15_SET_FLAG_0636:
     LDA #$01
     STA SYS_USER_FLAG
     RTS
-; 作用：系统功能 $17：键盘复位与识别：KBD_READY 置 $FF，先复位自检（KBD_SELF_TEST，要收到 $AA），再发 $F2 读识别码并等应答 $FA 与识别字节，再依次发 $ED（设灯，参数 KBD_LEDS=2）、$F0 与 $01（选扫描码集），最后再发 $F2 收两个识别字节；全部通过 KBD_SELF_TEST_RESULT=1，任一步失败为 0；结束时 KBD_READY 清 0，KBD_ACK=$80，保存和恢复 X、Y。
+; 作用：系统功能 $17：键盘复位与识别：KBD_READY 置 $FF，先复位自检（KBD_SELF_TEST，要收到 $AA），再发 $F2 读识别码并等应答 $FA 与识别字节，再依次发 $ED（设灯，参数 KBD_LEDS=2）、$F0 与 $01（选扫描码集），最后再发 $F2 收两个识别字节；全部通过 KBD_SELF_TEST_RESULT=1，任一步失败为 0；结束时 KBD_READY 清 0，KBD_CTRL=$80，保存和恢复 X、Y。
 ; 输出：KBD_SELF_TEST_RESULT。
 ; 调用者：BOOT_INIT_DEVICES、SYSCALL_TABLE（地址表）
 API_17_KEYBOARD_INIT:
@@ -481,7 +481,7 @@ API_17_KEYBOARD_INIT:
     LDA #>TIMER_DELAY_HOOK
     STA TIMER_HOOK_VEC_HI
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
 @wait_first_id:
     LDA KBD_RESPONSE
     BNE @check_first_id
@@ -504,7 +504,7 @@ API_17_KEYBOARD_INIT:
     LDA #>TIMER_DELAY_HOOK
     STA TIMER_HOOK_VEC_HI
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
 @wait_second_id:
     LDA KBD_RESPONSE
     BNE @set_leds_cmd
@@ -541,7 +541,7 @@ API_17_KEYBOARD_INIT:
     LDA #$00
     STA KBD_RESPONSE
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
 @wait_id_byte:
     LDA KBD_RESPONSE
     BEQ @wait_id_byte
@@ -560,20 +560,20 @@ API_17_KEYBOARD_INIT:
     LDA #$00
     STA KBD_READY
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
     PLA
     TAY
     PLA
     TAX
     RTS
-; 作用：向键盘发送命令字节 A：写 KBD_OUT_PORT，KBD_ACK 握手，经 KBD_DATA、KBD_ACK 并配合定时器延时等待键盘回应，最后取键盘的应答字节。
+; 作用：向键盘发送命令字节 A：写 KBD_OUT_PORT，KBD_CTRL 握手，经 KBD_DATA、KBD_CTRL 并配合定时器延时等待键盘回应，最后取键盘的应答字节。
 ; 输入：A=命令字节。
 ; 输出：A=键盘的应答字节（KBD_SCANCODE），超时 $FF。
 ; 调用者：API_17_KEYBOARD_INIT、KBD_SELF_TEST
 KBD_SEND_COMMAND:
     STA KBD_OUT_PORT
     LDA #$01
-    STA KBD_ACK
+    STA KBD_CTRL
     LDA #$01
     STA TIMER_DELAY_LEFT
     LDA #$50
@@ -598,7 +598,7 @@ KBD_SEND_COMMAND:
     LDA #$00
     STA KBD_RESPONSE
     LDA #$85
-    STA KBD_ACK
+    STA KBD_CTRL
 @wait_response_a0:
     LDA KBD_RESPONSE
     BNE @release
@@ -618,7 +618,7 @@ KBD_SEND_COMMAND:
     LDA #$80
     STA KBD_DATA
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
 @wait_ack:
     LDA KBD_RESPONSE
     BNE @got_ack
@@ -660,7 +660,7 @@ KBD_SELF_TEST:
     LDA TIMER_DELAY_LEFT
     BNE @wait_delay
     LDA #$80
-    STA KBD_ACK
+    STA KBD_CTRL
     LDA #$02
     STA TIMER_DELAY_LEFT
     LDA #$FA
@@ -700,7 +700,7 @@ API_18:
     STA IRQ_MASK_SHADOW
     STA IRQ_MASK
     LDA #$00
-    STA KBD_ACK
+    STA KBD_CTRL
     STA PAD_MOUSE_PORT
     STA JOY1
     STA INPUT_RESERVED_0631

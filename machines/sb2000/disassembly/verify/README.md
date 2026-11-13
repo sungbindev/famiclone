@@ -5,7 +5,7 @@
 ## 运行
 
 1. 构建 ROM：`node tools/bios-build.mjs`
-2. 开机用的 DOS 镜像是 `reference/floppy-dos.img`（入库，不是生成的）。
+2. 开机用的 DOS 镜像是仓库根目录的 `reference/floppy-dos.img`（入库，不是生成的）。
 3. 运行全部用例（验证已做完，不要日常运行）：`node tools/verify-run.mjs`（自己启动并关闭模拟器），或先 `node tools/sb2kdbg.mjs --launch <ROM 绝对路径>` 再 `node tools/verify-run.mjs --attach`。
 4. 只跑一部分：`--only p09.fp`（按编号前缀；此时不保存 CDL）。
 5. 完整运行结束时，本次 CDL 保存为 `out/cdl/verify-rom.cdl`，并把 `out/cdl/` 里所有场景的 CDL 合并成 `out/cdl/all-rom.cdl`，随后 `npm run coverage` 看覆盖率。
@@ -44,7 +44,7 @@
 
 ## 做法与限制
 
-- 磁盘镜像：`verify-run.mjs` 把镜像（默认 `reference/floppy-dos.img`）复制成 `out/verify/floppy-pristine.img`（原样备份）和 `out/verify/floppy-test.img`（模拟器加载的测试镜像）；写盘用例用模拟器的 `savedisk` 保存镜像，用 `verify/lib/fat12.mjs`（独立的 FAT12 读取器）解析后检查，然后 `ctx.restore()` 还原。用例模块要的原样镜像信息见 `verify/lib/disk-check.mjs`。
+- 磁盘镜像：`verify-run.mjs` 把镜像（默认仓库根目录的 `reference/floppy-dos.img`）复制成 `out/verify/floppy-pristine.img`（原样备份）和 `out/verify/floppy-test.img`（模拟器加载的测试镜像）；写盘用例用模拟器的 `savedisk` 保存镜像，用 `verify/lib/fat12.mjs`（独立的 FAT12 读取器）解析后检查，然后 `ctx.restore()` 还原。用例模块要的原样镜像信息见 `verify/lib/disk-check.mjs`。
 - 外壳命令用例（`p60-shell.mjs`）第一步就在提示符下用键盘输入，不能先用桩代码调用（桩会让外壳主循环停下）。
 - 屏幕文字验证：屏幕上的文字是画进名称表的字形，读不回字符，所以 `verify/lib/screen-text.mjs` 用 `calllog` 在运行库显示例程 `LIB_PRINT_STRING`（`$8262`）入口记录 `$4B/$4C` 指向的字符串（取外壳字符串区 `$6300-$6AFF` 与 ROM 第 3 页映射区 `$B000-$BFFF`），按 GBK 解码、合并连续重复，还原成文字行；`shellText(命令)` 在提示符下输入命令并返回文字行，`moreText(按键)` 在命令等输入时继续按键。已知局限：输入回显里连续相同的字符（如 hello 的两个 l）会合并成一个；通过键盘输入 `*` 要用小键盘乘号，`:`、`\` 等要 Shift，Shift 要先按下等几帧、先松开键再松开 Shift（模拟器按扫描码顺序发键，同帧按下会错序）。
 - 外壳输出与提示用例：`p60-shell-output.mjs`（ver、dir 及 /a /b /w、通配符、type、help，文件名、大小、日期、统计数、空闲字节数、卷序列号由 FAT12 读取器算出预期）、`p60-shell-messages.mjs`（copy、del、ren、md、rd、cd 的正常与出错路径，提示文字与磁盘结果一起检查，出错路径要求磁盘不变）、`p60-shell-clock.mjs`（date、time 的设置、非法参数与 ERAM 变量）。

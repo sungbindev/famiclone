@@ -974,11 +974,8 @@ BYTE	NES::Read( WORD addr )
 
 	switch( addr>>13 ) {
 		case	0x00:	// $0000-$1FFF
-			if (NESVARIANT_UM6576 == m_Variant) {
-				return	RAM[addr&0x1FFF]; // 8K
-			} else {
-				return	RAM[addr&0x07FF];
-			}
+			// 真机实测（memtest）：6576 模式下内部 RAM 也只有 2K，$0800-$1FFF 是它的镜像
+			return	RAM[addr&0x07FF];
 		case	0x01:	// $2000-$3FFF
 			if (NESVARIANT_UM6576 == m_Variant)
 				return	ppu->Read( addr );
@@ -1010,11 +1007,7 @@ void	NES::Write( WORD addr, BYTE data )
 {
 	switch( addr>>13 ) {
 		case	0x00:	// $0000-$1FFF
-			if (NESVARIANT_UM6576 == m_Variant) {
-				RAM[addr & 0x1FFF] = data; // 8K
-			} else {
-				RAM[addr & 0x07FF] = data;
-			}
+			RAM[addr & 0x07FF] = data;
 			break;
 		case	0x01:	// $2000-$3FFF
 			if( !rom->IsNSF() ) {

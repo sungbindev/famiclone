@@ -29,13 +29,13 @@ export const BIOS_BUILD_DIR = path.join(BIOS_DIR, 'build');
 export const EMULATOR_EXE = path.join(REPO_ROOT, 'build', 'virtuanes', 'Release', 'bin', 'VirtuaNES.exe');
 
 /** SB2K BIOS 原始 ROM（含 16 字节 iNES 文件头） */
-export const BIOS_ROM = path.join(MACHINE_DIR, 'reference', 'rom', 'SB2K_BIOS.NES');
+export const BIOS_ROM = path.join(REPO_ROOT, 'reference', 'rom', 'SB2K_BIOS.NES');
 
 /** DOS 场景与验证用例的开机镜像：1.44MB FAT12，不含 AUTOEXEC.BAT，开机停在 DOS 提示符，里面有 HELLO.TXT */
-export const DOS_IMAGE = path.join(MACHINE_DIR, 'reference', 'floppy-dos.img');
+export const DOS_IMAGE = path.join(REPO_ROOT, 'reference', 'floppy-dos.img');
 
-/** 真实软件的软盘镜像目录 */
-export const IMAGES_DIR = path.join(MACHINE_DIR, 'reference', 'floppy-images');
+/** 真实软件的软盘镜像目录（小霸王官方软盘 FLPPY0-FLPPY21） */
+export const IMAGES_DIR = path.join(REPO_ROOT, 'reference', 'floppy-images', 'sb2000');
 
 /** 分析产物输出目录 */
 export const OUT_DIR = path.join(WORK_DIR, 'out');

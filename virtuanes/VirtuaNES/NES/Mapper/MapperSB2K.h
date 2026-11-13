@@ -66,6 +66,8 @@ public:
 	LPBYTE	DbgSpace(const char* name, INT& size);
 	// 调试：把 bank 寄存器与扩展寄存器状态写成一行文本
 	void	DbgInfo(char* buf, size_t cap);
+	// 已经完成 $4031 初始设置，处于 6576 模式
+	BOOL	IsMode6576() const { return 2 == nMode6576; }
 
 	BOOL	CheckIRQ();
 //------------------------------------------------------------------------------

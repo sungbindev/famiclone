@@ -18,11 +18,11 @@ const toHex = (bytes) => [...bytes].map(hexName).join('');
 const NT_BASE = (0xfa - 0x80) * 0x1000;
 const NT_SIZE = 0x800;
 const BUFFER_LENGTH = 4 * NT_SIZE;
-const DMA = { ctrl: 0x4048, srcHigh: 0x4049, srcLow: 0x404a, srcMid: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
-const NAMETABLE_MID = [0xa0, 0xa8, 0xb0, 0xb8];
+const DMA = { ctrl: 0x4048, srcBank: 0x4049, srcLow: 0x404a, srcHigh: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
+const NAMETABLE_HIGH = [0xa0, 0xa8, 0xb0, 0xb8];
 
 /** 一次 $30 子功能 k 的 DMA 寄存器写入（$062E 位 0 为 0） */
-const dmaRegisters = (k) => ({ ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0x00, srcMid: NAMETABLE_MID[k], dstLo: 0x00, dstHi: k * 8, lenLo: 0xff, lenHi: 0x07 });
+const dmaRegisters = (k) => ({ ctrl: 0xc0, srcBank: 0x1f, srcLow: 0x00, srcHigh: NAMETABLE_HIGH[k], dstLo: 0x00, dstHi: k * 8, lenLo: 0xff, lenHi: 0x07 });
 
 // ---- 屏幕缓冲模型 ----
 const newBuffer = () => new Uint8Array(BUFFER_LENGTH).fill(0xee);
@@ -402,7 +402,7 @@ const textFieldCase = (func, p) => {
   const tileDestination = (((p.base >> 8) & 0x0f) << 12 | (p.base & 0xff) << 4) & 0xffff;
   const stringBytes = p.chars.flatMap((code) => (code >> 8 === 0 ? [code] : [code >> 8, code & 0xff]));
   const nametableRegisters = dmaRegisters(nametable);
-  const tileRegisters = { ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0x00, srcMid: 0x80, dstLo: tileDestination & 0xff, dstHi: tileDestination >> 8, lenLo: (tiles.length - 1) & 0xff, lenHi: (tiles.length - 1) >> 8 };
+  const tileRegisters = { ctrl: 0xc0, srcBank: 0x1f, srcLow: 0x00, srcHigh: 0x80, dstLo: tileDestination & 0xff, dstHi: tileDestination >> 8, lenLo: (tiles.length - 1) & 0xff, lenHi: (tiles.length - 1) >> 8 };
   const clippedLength = 0xffff - tileDestination;
   const clipped = tiles.length > 0 && tileDestination + tiles.length - 1 > 0xffff;
   const names = p.chars.map((c) => c.toString(16)).join('-');

@@ -208,7 +208,7 @@ int OpLen(BYTE op)
 BYTE PeekCpu(NES* nes, WORD a)
 {
 	if (a < 0x2000)
-		return RAM[a & (nes->GetVariant() == NES::NESVARIANT_UM6576 ? 0x1FFF : 0x07FF)];
+		return RAM[a & 0x07FF];
 	if (a >= 0x8000) {
 		BYTE d = 0xFF;
 		nes->mapper->ReadHigh(a, &d);
@@ -216,6 +216,13 @@ BYTE PeekCpu(NES* nes, WORD a)
 	}
 	if (a >= 0x6000)
 		return ERAM[a & 0x1FFF];
+	// 6576 模式下 $4400-$5FFF 不是 RAM，真机读出都是 $68
+	if (a >= 0x4400 && a < 0x6000) {
+		MapperSB2K* m = GetSb2k(nes);
+
+		if (m && m->IsMode6576())
+			return 0x68;
+	}
 	if (a >= 0x5000)
 		return WRAM[a & 0x07FF];
 	return 0xFF;

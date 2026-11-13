@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-09
-// 备注：预期值按 bios/src/kernel/vram-dma.asm（$EE8D-$F2AF）的代码阅读写成公式。DMA 寄存器：$4048 控制、$4049 源高、$404A 源低、$404B 源中、$404C 目的低、$404D 目的高、$404E 长度低、$404F 长度高；
+// 备注：预期值按 bios/src/kernel/vram-dma.asm（$EE8D-$F2AF）的代码阅读写成公式。DMA 寄存器：$4048 控制、$4049 源 bank、$404A 源低、$404B 源高、$404C 目的低、$404D 目的高、$404E 长度低、$404F 长度高；
 //       核对用 io 记录调用期间对它们的写入。屏幕缓冲在扩展 RAM 页 $FA、$FB（四张名称表各 2KB），区域填充的中转缓冲在页 $F8 起，对应 PRAM 偏移 (页号 - $80) × 4096。
 //       $31 的大区域（长度不小于 $1C00）最后一段的目的地址没有加上前一段的步长（与前一段相同），这是实测到的行为，可能是原程序的疏漏。
 // ------------------------------------------------------------------------
@@ -12,7 +12,7 @@ import { runCall } from '../../tools/rom-driver.mjs';
 
 const hexName = (value) => value.toString(16).toUpperCase().padStart(2, '0');
 const pramOffset = (page) => (page - 0x80) * 0x1000;
-const REG = { ctrl: 0x4048, srcHigh: 0x4049, srcLow: 0x404a, srcMid: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
+const REG = { ctrl: 0x4048, srcBank: 0x4049, srcLow: 0x404a, srcHigh: 0x404b, dstLo: 0x404c, dstHi: 0x404d, lenLo: 0x404e, lenHi: 0x404f };
 const DMA_ADDRESSES = Object.values(REG);
 const SYS_PAGE = 0x641;
 const FAR_OFFSET = 0x14;
@@ -22,24 +22,24 @@ const P_064F = 0x64f;
 const P_0652 = 0x652;
 
 /** 一次 DMA 的寄存器写入：每个寄存器各写一次 */
-const oneDma = ({ ctrl, srcHigh, srcLow, srcMid, dstLo, dstHi, lenLo, lenHi }) => [[REG.ctrl, [ctrl]], [REG.srcHigh, [srcHigh]], [REG.srcLow, [srcLow]], [REG.srcMid, [srcMid]], [REG.dstLo, [dstLo]], [REG.dstHi, [dstHi]], [REG.lenLo, [lenLo]], [REG.lenHi, [lenHi]]];
+const oneDma = ({ ctrl, srcBank, srcLow, srcHigh, dstLo, dstHi, lenLo, lenHi }) => [[REG.ctrl, [ctrl]], [REG.srcBank, [srcBank]], [REG.srcLow, [srcLow]], [REG.srcHigh, [srcHigh]], [REG.dstLo, [dstLo]], [REG.dstHi, [dstHi]], [REG.lenLo, [lenLo]], [REG.lenHi, [lenHi]]];
 
 // ---- $30 子功能 0-3：页 $1F 的名称表 DMA 到显存 ----
-const NAMETABLE_SOURCE_MID = [0xa0, 0xa8, 0xb0, 0xb8];
+const NAMETABLE_SOURCE_HIGH = [0xa0, 0xa8, 0xb0, 0xb8];
 const nametableDma = [0, 1, 2, 3].flatMap((sub) => [0, 1].map((tile) => ({
   id: `dma.30.s${sub}.tile${tile}`,
-  title: `$30 子功能 ${sub}：名称表 DMA（源页 $1F、中位 $${hexName(NAMETABLE_SOURCE_MID[sub])}，目的高位 $${hexName(sub * 8 + tile * 0x20)}，长度 $07FF；$062E 位 0 为 ${tile}）`,
+  title: `$30 子功能 ${sub}：名称表 DMA（源页 $1F、源高 $${hexName(NAMETABLE_SOURCE_HIGH[sub])}，目的高位 $${hexName(sub * 8 + tile * 0x20)}，长度 $07FF；$062E 位 0 为 ${tile}）`,
   func: 0x30,
   sub,
   mem: [[0x62e, [tile]]],
   capture: DMA_ADDRESSES,
-  expectWrites: oneDma({ ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0, srcMid: NAMETABLE_SOURCE_MID[sub], dstLo: 0, dstHi: sub * 8 + tile * 0x20, lenLo: 0xff, lenHi: 0x07 }),
+  expectWrites: oneDma({ ctrl: 0xc0, srcBank: 0x1f, srcLow: 0, srcHigh: NAMETABLE_SOURCE_HIGH[sub], dstLo: 0, dstHi: sub * 8 + tile * 0x20, lenLo: 0xff, lenHi: 0x07 }),
 })));
 
 // ---- $30 子功能 4-7：屏幕缓冲里一个单元的远地址 ----
 /** 按汇编的 8 位运算算出远指针：偏移 = 行 × 64 + 列 × 2 + 名称表基址 × 256（列 × 2 的进位参与加法），再折成页号 $F0 + 高 4 位与 12 位偏移 */
 const cellFarAddress = (sub, column, row) => {
-  const base = NAMETABLE_SOURCE_MID[sub - 4];
+  const base = NAMETABLE_SOURCE_HIGH[sub - 4];
   const rowShifted = row << 6;
   const lowRow = rowShifted & 0xff;
   const highRow = (rowShifted >> 8) & 0xff;
@@ -146,7 +146,7 @@ const clearNametables = [0b0101, 0b1010, 0b1111, 0b0000].map((mask) => ({
 /** 区域表：位 0-6 → 显存目的高位、长度高位 */
 const FILL_REGIONS = [[0x00, 0x08], [0x08, 0x08], [0x10, 0x08], [0x18, 0x08], [0x20, 0x08], [0x28, 0x58], [0x80, 0x80]];
 /** 一段不超过 $1C00 字节的填充：先把 $064C 填满中转缓冲，再用一次 DMA（长度 = 长度 - 1）写到显存 $0646/$0647 */
-const fillSingle = (dstHi, dstLo, length) => oneDma({ ctrl: 0xc0, srcHigh: 0x1f, srcLow: 0, srcMid: 0x80, dstLo, dstHi, lenLo: (length - 1) & 0xff, lenHi: (length - 1) >> 8 });
+const fillSingle = (dstHi, dstLo, length) => oneDma({ ctrl: 0xc0, srcBank: 0x1f, srcLow: 0, srcHigh: 0x80, dstLo, dstHi, lenLo: (length - 1) & 0xff, lenHi: (length - 1) >> 8 });
 const regionCases = [0, 1, 2, 3, 4].map((bit) => ({
   id: `dma.31.bit${bit}`,
   title: `$31 子功能 $${hexName(1 << bit)}：填充显存 $${hexName(FILL_REGIONS[bit][0])}00 起 $0800 字节（一次 DMA，长度 $07FF）`,
@@ -169,7 +169,7 @@ const bigRegionDma = (dstHi, lengthHigh) => {
   }
   if (remaining > 0) starts.push({ dst: high, lenHi: remaining - 1, lenLo: 0xff });
   const column = (key) => starts.map((entry) => entry[key]);
-  return [[REG.ctrl, starts.map(() => 0xc0)], [REG.srcHigh, starts.map(() => 0x1f)], [REG.srcLow, starts.map(() => 0)], [REG.srcMid, starts.map(() => 0x80)], [REG.dstLo, starts.map(() => 0)], [REG.dstHi, column('dst')], [REG.lenLo, column('lenLo')], [REG.lenHi, column('lenHi')]];
+  return [[REG.ctrl, starts.map(() => 0xc0)], [REG.srcBank, starts.map(() => 0x1f)], [REG.srcLow, starts.map(() => 0)], [REG.srcHigh, starts.map(() => 0x80)], [REG.dstLo, starts.map(() => 0)], [REG.dstHi, column('dst')], [REG.lenLo, column('lenLo')], [REG.lenHi, column('lenHi')]];
 };
 const bigRegionCases = [5, 6].map((bit) => ({
   id: `dma.31.bit${bit}`,
@@ -188,7 +188,7 @@ const regionsTogether = {
   sub: 0x03,
   mem: [[P_064C, [0x5a]]],
   capture: DMA_ADDRESSES,
-  expectWrites: [[REG.ctrl, [0xc0, 0xc0]], [REG.srcHigh, [0x1f, 0x1f]], [REG.srcLow, [0, 0]], [REG.srcMid, [0x80, 0x80]], [REG.dstLo, [0, 0]], [REG.dstHi, [0x00, 0x08]], [REG.lenLo, [0xff, 0xff]], [REG.lenHi, [0x07, 0x07]]],
+  expectWrites: [[REG.ctrl, [0xc0, 0xc0]], [REG.srcBank, [0x1f, 0x1f]], [REG.srcLow, [0, 0]], [REG.srcHigh, [0x80, 0x80]], [REG.dstLo, [0, 0]], [REG.dstHi, [0x00, 0x08]], [REG.lenLo, [0xff, 0xff]], [REG.lenHi, [0x07, 0x07]]],
   maxFrames: 60,
 };
 /** $31 子功能位 7：用 $064C 填满 64 字节的调色板缓冲 $2040 起；显示关闭（$062B 位 3、4 为 0）或 NMI 关闭时直接写，NMI 打开时经 $0700 缓冲交给 NMI 上传 */
@@ -258,7 +258,7 @@ const fillBuffer = {
 const farToDma = (page, offsetHigh) => {
   const bits = ((page & 1) << 6) | (((page >> 1) & 1) << 5) | (((page >> 2) & 1) << 4);
   const sum1 = offsetHigh + 0x80;
-  return { high: page >> 3, mid: ((sum1 & 0xff) + bits + (sum1 > 0xff ? 1 : 0)) & 0xff };
+  return { bank: page >> 3, high: ((sum1 & 0xff) + bits + (sum1 > 0xff ? 1 : 0)) & 0xff };
 };
 const toVram = [[0x80, 0x0123, 0x0200, 0x01c0], [0x85, 0x0abc, 0x1000, 0x0010]].map(([page, offset, dst, length]) => {
   const source = farToDma(page, offset >> 8);
@@ -269,7 +269,7 @@ const toVram = [[0x80, 0x0123, 0x0200, 0x01c0], [0x85, 0x0abc, 0x1000, 0x0010]].
     sub: 0,
     mem: [[SYS_PAGE, [page]], [FAR_OFFSET, [offset & 0xff, offset >> 8]], [P_0646, [dst >> 8, dst & 0xff]], [P_064F, [length & 0xff, length >> 8]], [0x62b, [0]]],
     capture: DMA_ADDRESSES,
-    expectWrites: oneDma({ ctrl: 0xc0, srcHigh: source.high, srcLow: offset & 0xff, srcMid: source.mid, dstLo: dst & 0xff, dstHi: dst >> 8, lenLo: (length - 1) & 0xff, lenHi: (length - 1) >> 8 }),
+    expectWrites: oneDma({ ctrl: 0xc0, srcBank: source.bank, srcLow: offset & 0xff, srcHigh: source.high, dstLo: dst & 0xff, dstHi: dst >> 8, lenLo: (length - 1) & 0xff, lenHi: (length - 1) >> 8 }),
     maxFrames: 60,
   };
 });
@@ -283,7 +283,7 @@ const fromVram = [[0x80, 0x0123, 0x0400, 0x0040]].map(([page, offset, dst, lengt
     sub: 0,
     mem: [[SYS_PAGE, [page]], [FAR_OFFSET, [offset & 0xff, offset >> 8]], [0x12, [dst & 0xff, dst >> 8]], [P_064F, [length & 0xff, length >> 8]]],
     capture: DMA_ADDRESSES,
-    expectWrites: oneDma({ ctrl: 0xa0, srcHigh: source.high, srcLow: offset & 0xff, srcMid: source.mid, dstLo: dst & 0xff, dstHi: dst >> 8, lenLo: (length - 1) & 0xff, lenHi: (length - 1) >> 8 }),
+    expectWrites: oneDma({ ctrl: 0xa0, srcBank: source.bank, srcLow: offset & 0xff, srcHigh: source.high, dstLo: dst & 0xff, dstHi: dst >> 8, lenLo: (length - 1) & 0xff, lenHi: (length - 1) >> 8 }),
     maxFrames: 60,
   };
 });

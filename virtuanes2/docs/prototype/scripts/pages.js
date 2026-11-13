@@ -116,6 +116,7 @@
     floppyA: { title: '软驱 A', description: '软驱控制器由卡带挂接，盘片可随时插入或取出，与电源无关。' },
     floppyB: { title: '软驱 B', description: '软驱控制器由卡带挂接，盘片可随时插入或取出，与电源无关。' },
     tape: { title: '磁带机', description: '数据磁带用于 FBASIC 的 SAVE 与 LOAD；声像磁带带一路声音和一路画面数据，只能播放。' },
+    printer: { title: '打印机', description: '并口上接的是虚拟针式打印机，按 ESC/P 命令打印，每一页保存为一张 PNG。' },
   };
   const floppies = { A: { image: 'SB2K_DOS.IMG' }, B: null };
   const SPARE_IMAGES = { A: 'SB2K_DOS.IMG', B: 'DATA01.IMG' };
@@ -223,6 +224,50 @@
     renderTape();
   }, 200);
 
+  const printer = { pending: true, count: 0, last: '—', idleSeconds: 0 };
+  const PRINTER_IDLE_SECONDS = 6;
+
+  // 文件名按打印时的日期时间生成
+  function printerFileName(date) {
+    const two = (value) => String(value).padStart(2, '0');
+    const day = date.getFullYear() + two(date.getMonth() + 1) + two(date.getDate());
+    const time = two(date.getHours()) + two(date.getMinutes()) + two(date.getSeconds());
+    return 'printer-' + day + '-' + time + '.png';
+  }
+
+  function renderPrinter() {
+    $('#printerState').textContent = printer.pending ? '正在打印，当前页有内容' : '空闲';
+    $('[data-device-state="printer"]').textContent = printer.pending ? '打印中' : '空闲';
+    $('#printerCount').textContent = printer.count + ' 页';
+    $('#printerLast').textContent = printer.last;
+    $('#printerDir').textContent = $('#prefPrinterDir').value;
+    $('#printerFlush').disabled = !printer.pending;
+  }
+
+  function flushPrinter() {
+    if (!printer.pending) return;
+    const name = printerFileName(new Date());
+    printer.pending = false;
+    printer.idleSeconds = 0;
+    printer.count += 1;
+    printer.last = name;
+    renderPrinter();
+    VN2.log('信息', '打印机输出一页：' + name);
+    VN2.notify('已打印：' + name);
+  }
+
+  setInterval(() => {
+    const machine = VN2.machine.state;
+    if (printer.pending || !machine.cartridge || !machine.power || machine.paused) return;
+    printer.idleSeconds += 1;
+    if (printer.idleSeconds >= PRINTER_IDLE_SECONDS) {
+      printer.pending = true;
+      renderPrinter();
+    }
+  }, 1000);
+
+  $('#prefPrinterDir').addEventListener('input', renderPrinter);
+
   document.addEventListener('segmented-change', (event) => {
     const { name, value } = event.detail;
     if (name === 'theme') VN2.theme.set(value);
@@ -277,6 +322,9 @@
   commands.register('media.tapePlay', () => startTape('playing'));
   commands.register('media.tapeRecord', () => startTape('recording'));
   commands.register('media.tapeStop', stopTape);
+  commands.register('media.printerFlush', flushPrinter);
+  commands.register('media.printerOpenFolder', () => VN2.notify('原型：这里会在系统的文件管理器里打开保存位置。'));
+  commands.register('printer.chooseFolder', () => VN2.notify('原型：这里会打开系统的文件夹选择窗口。'));
 
   VN2.pages = {
     openPreferences(group) {
@@ -288,4 +336,5 @@
   renderFloppy('A');
   renderFloppy('B');
   renderTape();
+  renderPrinter();
 })();

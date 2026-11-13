@@ -33,6 +33,8 @@
     <symbol id="i-library" viewBox="0 0 24 24"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></symbol>
     <symbol id="i-drive" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></symbol>
     <symbol id="i-tape" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/><path d="M8 15h8"/></symbol>
+    <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
     <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
     <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6a1.4 1.4 0 0 1-1 .4H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
@@ -163,6 +165,7 @@
               <li><button class="ui-list-button is-selected" type="button" role="option" aria-selected="true" data-device="floppyA"><svg class="ui-icon"><use href="#i-drive"/></svg><span class="ui-list-text"><span class="ui-list-main">软驱 A</span><span class="ui-list-secondary" data-device-state="floppyA">已插入盘片</span></span></button></li>
               <li><button class="ui-list-button" type="button" role="option" aria-selected="false" data-device="floppyB"><svg class="ui-icon"><use href="#i-drive"/></svg><span class="ui-list-text"><span class="ui-list-main">软驱 B</span><span class="ui-list-secondary" data-device-state="floppyB">空</span></span></button></li>
               <li><button class="ui-list-button" type="button" role="option" aria-selected="false" data-device="tape"><svg class="ui-icon"><use href="#i-tape"/></svg><span class="ui-list-text"><span class="ui-list-main">磁带机</span><span class="ui-list-secondary" data-device-state="tape">已停止</span></span></button></li>
+              <li><button class="ui-list-button" type="button" role="option" aria-selected="false" data-device="printer"><svg class="ui-icon"><use href="#i-printer"/></svg><span class="ui-list-text"><span class="ui-list-main">打印机</span><span class="ui-list-secondary" data-device-state="printer">打印中</span></span></button></li>
             </ul>
           </section>
 
@@ -283,6 +286,21 @@
                 <button class="ui-button ui-button--secondary" type="button" data-command="media.tapeStop" id="tapeStop" disabled><svg class="ui-icon"><use href="#i-stop"/></svg><span>停止</span></button>
               </div>
             </div>
+
+            <div class="ui-card" data-device-panel="printer" hidden>
+              <dl class="ui-facts">
+                <div class="ui-facts-row"><dt>型号</dt><dd>针式打印机（ESC/P，24 针）</dd></div>
+                <div class="ui-facts-row"><dt>状态</dt><dd id="printerState">正在打印，当前页有内容</dd></div>
+                <div class="ui-facts-row"><dt>已输出</dt><dd id="printerCount">0 页</dd></div>
+                <div class="ui-facts-row"><dt>最近一页</dt><dd id="printerLast">—</dd></div>
+                <div class="ui-facts-row"><dt>保存位置</dt><dd id="printerDir"></dd></div>
+              </dl>
+              <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-printer"/></svg><span>打印的每一页保存为一张 PNG，文件名按日期时间自动生成，不弹出保存窗口。保存位置在首选项的“打印机”里修改。</span></p>
+              <div class="ui-actions">
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.printerFlush" id="printerFlush"><svg class="ui-icon"><use href="#i-download"/></svg><span>输出当前页</span></button>
+                <button class="ui-button ui-button--secondary" type="button" data-command="media.printerOpenFolder"><svg class="ui-icon"><use href="#i-folder"/></svg><span>打开保存位置</span></button>
+              </div>
+            </div>
           </section>
 
           <section class="page page--mappers ui-scroll" data-page="mappers" hidden>
@@ -313,6 +331,7 @@
               <button class="ui-list-button" type="button" data-pref-group="audio">声音</button>
               <button class="ui-list-button" type="button" data-pref-group="input">输入</button>
               <button class="ui-list-button" type="button" data-pref-group="debug">调试服务</button>
+              <button class="ui-list-button" type="button" data-pref-group="printer">打印机</button>
               <button class="ui-list-button" type="button" data-pref-group="paths">路径</button>
             </nav>
             <div class="pref-content ui-scroll">
@@ -393,6 +412,15 @@
                 <div class="ui-setting-row">
                   <div class="ui-setting-text"><div class="ui-setting-label">调试输出目录</div><div class="ui-setting-description">跟踪记录和截图只能写到这个目录。</div></div>
                   <div class="ui-setting-control"><input class="ui-input" type="text" value="用户数据目录\debug-out" readonly aria-label="调试输出目录"></div>
+                </div>
+              </section>
+
+              <section class="pref-panel" data-pref-panel="printer" hidden>
+                <h2 class="ui-page-title">打印机</h2>
+                <p class="ui-callout ui-callout--muted"><svg class="ui-icon"><use href="#i-printer"/></svg><span>并口上接的是虚拟针式打印机，打印的每一页保存为一张 PNG 图片。</span></p>
+                <div class="ui-setting-row">
+                  <div class="ui-setting-text"><div class="ui-setting-label">图片保存位置</div><div class="ui-setting-description">文件名按打印时的日期时间自动生成，例如 <code class="ui-code">printer-20261113-102105.png</code>，不会弹出保存窗口。</div></div>
+                  <div class="ui-setting-control"><input class="ui-input" type="text" value="D:\Pictures\VirtuaNES2" id="prefPrinterDir" aria-label="图片保存位置"><button class="ui-button ui-button--secondary" type="button" data-command="printer.chooseFolder">选择</button></div>
                 </div>
               </section>
 

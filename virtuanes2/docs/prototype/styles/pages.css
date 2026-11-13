@@ -106,6 +106,10 @@
   max-width: var(--media-card-max-width);
 }
 
+.page--media .ui-card .ui-callout {
+  margin: 0;
+}
+
 .media-levels {
   display: flex;
   flex-direction: column;

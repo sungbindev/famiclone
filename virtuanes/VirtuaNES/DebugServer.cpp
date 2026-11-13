@@ -103,6 +103,35 @@ int s_nextBpId = 1;
 // ---- 跟踪与日志 ----
 FILE* s_trace = NULL;
 unsigned __int64 s_traceLeft = 0;
+bool s_traceUnique = false; // 只记每个指令地址、每个中断入口的第一次
+BYTE s_traceSeen[65536];
+vector<unsigned> s_traceSeenInt;
+
+// unique 模式下判断这个指令地址是否已经记录过，没记录过就记下
+bool TraceAlreadySeen(WORD pc)
+{
+	if (!s_traceUnique)
+		return false;
+	if (s_traceSeen[pc])
+		return true;
+	s_traceSeen[pc] = 1;
+	return false;
+}
+
+// unique 模式下判断这个中断入口是否已经记录过，没记录过就记下
+bool TraceInterruptSeen(int type, WORD target)
+{
+	unsigned key = ((unsigned)type << 16) | target;
+
+	if (!s_traceUnique)
+		return false;
+	for (size_t i = 0; i < s_traceSeenInt.size(); i++)
+		if (s_traceSeenInt[i] == key)
+			return true;
+	s_traceSeenInt.push_back(key);
+	return false;
+}
+
 FILE* s_io = NULL;
 unsigned __int64 s_ioLeft = 0;
 bool s_ioWritesOnly = false; // 轮询状态寄存器的读取很多，只看写入时不记录读取
@@ -766,11 +795,21 @@ string CmdShot(NES* nes, const string& line)
 	return "OK\n";
 }
 
+// trace <文件> [最大行数] [unique]、trace off；unique 时每个 CPU 地址的指令、每个中断入口只记第一次，最大行数按实际写出的行数算
 string CmdTrace(const vector<string>& t)
 {
 	if (s_trace) { fclose(s_trace); s_trace = NULL; }
 	if (t.size() >= 2 && t[1] != "off") {
-		s_traceLeft = t.size() >= 3 ? ParseDec(t[2].c_str()) : 1000000;
+		s_traceLeft = 1000000;
+		s_traceUnique = false;
+		for (size_t i = 2; i < t.size(); i++) {
+			if (t[i] == "unique")
+				s_traceUnique = true;
+			else
+				s_traceLeft = ParseDec(t[i].c_str());
+		}
+		memset(s_traceSeen, 0, sizeof(s_traceSeen));
+		s_traceSeenInt.clear();
 		s_trace = fopen(t[1].c_str(), "w");
 		if (!s_trace)
 			return "ERR cannot open file\n";
@@ -1291,7 +1330,7 @@ BOOL DebugHook_OnInstr(WORD pc, BYTE opcode, const R6502& r)
 			MarkCdl(nes, (WORD)(pc + i), CDL_OPERAND);
 	}
 
-	if (s_trace && s_traceLeft) {
+	if (s_trace && s_traceLeft && !TraceAlreadySeen(pc)) {
 		MapperSB2K* m = GetSb2k(nes);
 		INT off = 0;
 		INT space = m ? m->DbgResolve(pc, off) : -1;
@@ -1351,7 +1390,7 @@ void DebugHook_OnWrite(WORD addr, BYTE data)
 
 void DebugHook_OnInterrupt(int type, WORD vectorTarget)
 {
-	if (s_trace && s_traceLeft) {
+	if (s_trace && s_traceLeft && !TraceInterruptSeen(type, vectorTarget)) {
 		fprintf(s_trace, "I %s %04X F=%ld\n", type == 0 ? "NMI" : "IRQ", vectorTarget, (long)s_frameNo);
 		if (--s_traceLeft == 0) { fclose(s_trace); s_trace = NULL; }
 	}

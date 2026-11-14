@@ -43,6 +43,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 主窗口隐藏系统标题栏（系统绘制窗口按钮）；界面只能发起白名单里的窗口动作（`shell.windowAction`，见 `contracts/shell/window-control.ts`），界面状态（窗口位置、区域展开状态、底部面板高度）由主进程保存到用户数据目录的 `config/shell-state.json`，收到的修改整条校验（`shared/shell-state`），文件不存在或损坏时用默认值、不报错，见 01 第 2、9 节。用保存的边界恢复窗口时要用 `setExactBounds`，否则非整数倍缩放下窗口每次启动大 1 像素。
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
 - 先在 Windows 上开发、调试与编译；macOS 的编译与打包脚本同时写齐，但不在 Windows 上运行或测试。
+- 测试分层，不每次都跑全量：开发中只跑与改动相关的用例（`npm run core:test -- -R <名称>`、`vitest run <文件>`）；小阶段做完跑 `npm run core:test -- -E ^Roms/` 加其他检查；只有改了 CPU、PPU、APU、总线、DMA、手柄、`fc` 主机型号、mapper 宿主等底层，或交付前，才跑含测试 ROM 的 `npm run check`。过滤命令的输出时只取需要的行（编译错误用区分大小写的 `error C`、`warning C`，测试结果取 `% tests passed` 与 `FAILED`），不要把用例名整批读进来。
 - 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，把主机生成的声音采样（`Machine::takeAudio`）写进 `platform/audio/audio-output.hpp` 的 `AudioOutput`，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出、声音输出五个抽象，硬件模块只能包含前两个。
 - 声音由核心直接输出到系统（miniaudio，只在 `platform/audio/` 里使用）：模拟线程写、音频回调线程读的无锁环形缓冲，回调里不加锁、不分配内存，用缓冲水位微调重采样比（±0.5%）保持同步；暂停、断电时淡出，继续时清空过时的采样再淡入；设备打不开时降级为空输出并写错误日志；音量与静音只经 `output.setVolume` 请求，音量保存到首选项的 `sound.volume`，静音不保存。
 - 经典 FC 的 APU（`apu-2a03`）按调度器的方式运行（被访问前追赶，会改变 IRQ 线与 RDY 线的时刻预测成调度器事件）；帧计数器、长度计数器与 DMC 的时序以 blargg 的测试 ROM 为准，暂时不一致的项登记在 02 第 12 节“已知差异”并由测试断言；`$4017` 同时属于手柄口与 APU，由主机装配里的 `PadApuPort` 转给两边，两个模块互不引用。
@@ -64,7 +65,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `.\debug.ps1` | 在任意目录下启动开发版（切到项目目录后执行 `npm start`） |
 | `npm run schema` | 由 `schema/` 生成 TypeScript 与 C++ 代码 |
 | `npm run core:build` | 打包官方插件并编译原生模块，输出 `core/build/Release/ember_core.node`（Windows 用 Visual Studio 自带的 CMake） |
-| `npm run core:test` | 打包官方插件，构建并运行 C++ 测试 |
+| `npm run core:test` | 打包官方插件，构建并运行 C++ 测试；`--` 之后的参数交给 CTest：`-- -R <名称>` 只跑匹配的用例，`-- -E ^Roms/` 排除测试 ROM 用例 |
 | `npm run plugins:pack` | 把 `plugins/<插件>/` 打成 `build/plugins/<id>.emap` |
 | `npm test` | 运行 TypeScript 测试 |
 | `npm run typecheck` | 类型检查 |

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：测试不链接 Node-API，只测试核心库。
+ * 备注：测试不链接 Node-API，只测试核心库；命令行里多出的参数原样交给 CTest，如 `npm run core:test -- -R DebugInspector`（只跑匹配的用例）、`-E ^Roms/`（排除测试 ROM 用例）。
  * ------------------------------------------------------------------------
  */
 
@@ -30,7 +30,7 @@ try {
   const { cmake, ctest } = findCmake();
   run(cmake, ['-S', 'core', '-B', 'core/build-test', '-DEMBER_BUILD_TESTS=ON', ...(process.platform === 'win32' ? [] : ['-DCMAKE_BUILD_TYPE=Debug'])]);
   run(cmake, ['--build', 'core/build-test', '--config', 'Debug', '--parallel']);
-  run(ctest, ['--test-dir', 'core/build-test', '-C', 'Debug', '--output-on-failure']);
+  run(ctest, ['--test-dir', 'core/build-test', '-C', 'Debug', '--output-on-failure', ...process.argv.slice(2)]);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

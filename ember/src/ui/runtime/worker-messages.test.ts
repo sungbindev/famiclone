@@ -9,7 +9,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MAX_CANVAS_DIMENSION, nextScreenView, parseWorkerReply, parseWorkerRequest, type ScreenView } from './worker-messages';
+import { MAX_CANVAS_DIMENSION, MAX_CROP_LINES, nextScreenView, parseWorkerReply, parseWorkerRequest, type ScreenView } from './worker-messages';
 
 /** 测试用的假画布与假端口类，只用来通过 instanceof 检查。 */
 class FakeOffscreenCanvas {
@@ -25,13 +25,13 @@ afterEach(() => {
 
 describe('parseWorkerRequest', () => {
   it('接受合格的版面消息', () => {
-    const view = { width: 1280, height: 960, aspect: '4:3', scaling: 'integer' };
+    const view = { width: 1280, height: 960, aspect: '4:3', scaling: 'integer', cropLines: 8 };
     expect(parseWorkerRequest({ type: 'view', view })).toEqual({ type: 'view', view });
-    expect(parseWorkerRequest({ type: 'view', view: { width: 0, height: 0, aspect: '8:7', scaling: 'fit' } })).toBeDefined();
+    expect(parseWorkerRequest({ type: 'view', view: { width: 0, height: 0, aspect: '8:7', scaling: 'fit', cropLines: 0 } })).toBeDefined();
   });
 
   it('丢弃不合格的版面消息', () => {
-    const base = { width: 100, height: 100, aspect: '4:3', scaling: 'fit' };
+    const base = { width: 100, height: 100, aspect: '4:3', scaling: 'fit', cropLines: 0 };
     const bad: unknown[] = [
       undefined,
       null,
@@ -40,7 +40,12 @@ describe('parseWorkerRequest', () => {
       { ...base, width: MAX_CANVAS_DIMENSION + 1 },
       { ...base, width: '100' },
       { ...base, aspect: '16:9' },
-      { ...base, scaling: 'stretch' }
+      { ...base, scaling: 'stretch' },
+      { width: 100, height: 100, aspect: '4:3', scaling: 'fit' },
+      { ...base, cropLines: -1 },
+      { ...base, cropLines: 1.5 },
+      { ...base, cropLines: MAX_CROP_LINES + 1 },
+      { ...base, cropLines: '8' }
     ];
     for (const view of bad) expect(parseWorkerRequest({ type: 'view', view })).toBeUndefined();
   });
@@ -97,21 +102,21 @@ describe('parseWorkerReply', () => {
 
 
 describe('nextScreenView', () => {
-  const current: ScreenView = { width: 1280, height: 960, aspect: '4:3', scaling: 'fit' };
+  const current: ScreenView = { width: 1280, height: 960, aspect: '4:3', scaling: 'fit', cropLines: 0 };
 
   it('尺寸合格时采用新版面', () => {
-    const incoming: ScreenView = { width: 800, height: 600, aspect: '8:7', scaling: 'integer' };
+    const incoming: ScreenView = { width: 800, height: 600, aspect: '8:7', scaling: 'integer', cropLines: 8 };
     expect(nextScreenView(current, incoming)).toEqual(incoming);
   });
 
-  it('宽或高为 0（页面隐藏）时保持上一次的尺寸，画面比例与缩放方式照常更新', () => {
-    expect(nextScreenView(current, { width: 0, height: 0, aspect: '8:7', scaling: 'integer' })).toEqual({ width: 1280, height: 960, aspect: '8:7', scaling: 'integer' });
-    expect(nextScreenView(current, { width: 0, height: 600, aspect: '4:3', scaling: 'fit' })).toEqual(current);
-    expect(nextScreenView(current, { width: 800, height: 0, aspect: '4:3', scaling: 'fit' })).toEqual(current);
+  it('宽或高为 0（页面隐藏）时保持上一次的尺寸，画面比例、缩放方式与裁剪行数照常更新', () => {
+    expect(nextScreenView(current, { width: 0, height: 0, aspect: '8:7', scaling: 'integer', cropLines: 8 })).toEqual({ width: 1280, height: 960, aspect: '8:7', scaling: 'integer', cropLines: 8 });
+    expect(nextScreenView(current, { width: 0, height: 600, aspect: '4:3', scaling: 'fit', cropLines: 0 })).toEqual(current);
+    expect(nextScreenView(current, { width: 800, height: 0, aspect: '4:3', scaling: 'fit', cropLines: 0 })).toEqual(current);
   });
 
   it('一直没有真实尺寸时保持 0', () => {
-    const empty: ScreenView = { width: 0, height: 0, aspect: '4:3', scaling: 'fit' };
+    const empty: ScreenView = { width: 0, height: 0, aspect: '4:3', scaling: 'fit', cropLines: 0 };
     expect(nextScreenView(empty, { ...empty })).toEqual(empty);
   });
 });

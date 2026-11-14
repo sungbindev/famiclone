@@ -47,7 +47,7 @@ function fakePort() {
 let resizeCallback: ((entries: unknown[]) => void) | undefined;
 
 /** 渲染组件，返回画面区与假接口。 */
-function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer' } = {}) {
+function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean } = {}) {
   const requestPorts = vi.fn();
   const bridge = { streams: { requestPorts }, core: {}, main: {}, onCoreEvent: () => () => undefined, getCoreStatus: () => Promise.reject(new Error('未使用')) } as unknown as EmberBridge;
   const screenRef: RefObject<HTMLDivElement | null> = createRef<HTMLDivElement>();
@@ -59,7 +59,7 @@ function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer' } = 
   const screenElement = view.getByRole('application', { name: '模拟器画面' });
   const worker = FakeWorker.instances[FakeWorker.instances.length - 1];
   if (worker === undefined) throw new Error('没有创建 Worker');
-  return { view, screenElement, worker, requestPorts, rerender: (next: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer' }) => view.rerender(<UiProvider><RuntimeScreen bridge={bridge} screenRef={screenRef} {...next} /></UiProvider>) };
+  return { view, screenElement, worker, requestPorts, rerender: (next: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean }) => view.rerender(<UiProvider><RuntimeScreen bridge={bridge} screenRef={screenRef} {...next} /></UiProvider>) };
 }
 
 /** 模拟预加载脚本交来端口。 */
@@ -152,11 +152,11 @@ describe('RuntimeScreen：Worker 与端口', () => {
 });
 
 describe('RuntimeScreen：版面', () => {
-  it('容器尺寸变化时按设备像素尺寸发版面，带上画面比例与缩放方式的默认值', () => {
+  it('容器尺寸变化时按设备像素尺寸发版面，带上画面比例、缩放方式与裁剪行数的默认值（显示全部行）', () => {
     const { worker } = setup();
     act(() => resizeCallback?.([{ devicePixelContentBoxSize: [{ inlineSize: 1280, blockSize: 960 }] }]));
     const views = worker.messages('view');
-    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 1280, height: 960, aspect: '8:7', scaling: 'fit' } });
+    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 1280, height: 960, aspect: '8:7', scaling: 'fit', cropLines: 0 } });
   });
 
   it('属性变化后重新发版面', () => {
@@ -164,7 +164,17 @@ describe('RuntimeScreen：版面', () => {
     act(() => resizeCallback?.([{ devicePixelContentBoxSize: [{ inlineSize: 800, blockSize: 600 }] }]));
     rerender({ aspect: '4:3', scaling: 'integer' });
     const views = worker.messages('view');
-    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 800, height: 600, aspect: '4:3', scaling: 'integer' } });
+    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 800, height: 600, aspect: '4:3', scaling: 'integer', cropLines: 0 } });
+  });
+
+  it('关闭“显示全部 240 行”后上下各裁 8 行，打开后恢复', () => {
+    const { worker, rerender } = setup({ showAllLines: false });
+    act(() => resizeCallback?.([{ devicePixelContentBoxSize: [{ inlineSize: 800, blockSize: 600 }] }]));
+    let views = worker.messages('view');
+    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 800, height: 600, aspect: '8:7', scaling: 'fit', cropLines: 8 } });
+    rerender({ showAllLines: true });
+    views = worker.messages('view');
+    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 800, height: 600, aspect: '8:7', scaling: 'fit', cropLines: 0 } });
   });
 });
 

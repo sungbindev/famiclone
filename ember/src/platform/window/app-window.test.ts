@@ -21,6 +21,7 @@ const created: Array<{
   once: ReturnType<typeof vi.fn>;
   maximize: ReturnType<typeof vi.fn>;
   show: ReturnType<typeof vi.fn>;
+  isDestroyed: ReturnType<typeof vi.fn>;
 }> = [];
 
 vi.mock('electron', () => ({
@@ -31,6 +32,7 @@ vi.mock('electron', () => ({
     }
     once = vi.fn();
     show = vi.fn();
+    isDestroyed = vi.fn(() => false);
     maximize = vi.fn();
     setBounds = vi.fn();
     getNormalBounds = vi.fn(() => ({ x: 100, y: 80, width: 1200, height: 800 }));
@@ -38,16 +40,26 @@ vi.mock('electron', () => ({
     loadFile = vi.fn().mockResolvedValue(undefined);
   },
   Menu: { setApplicationMenu: vi.fn() },
-  nativeTheme: { shouldUseDarkColors: true, on: vi.fn(), removeListener: vi.fn() },
+  nativeTheme: { shouldUseDarkColors: true, themeSource: 'system', on: vi.fn(), removeListener: vi.fn() },
   screen: { getAllDisplays: () => [{ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }] },
   session: {}
 }));
 
-const { createAppWindow, isAppUrl, setExactBounds, visiblePlacement } = await import('./app-window');
+const { applyThemeSource, createAppWindow, isAppUrl, setExactBounds, visiblePlacement } = await import('./app-window');
+const { nativeTheme } = await import('electron');
 
 const RENDERER_FILE = resolve('app', 'renderer', 'index.html');
 const RENDERER_URL = pathToFileURL(RENDERER_FILE).href;
 const OPTIONS = { preloadPath: 'preload.cjs', rendererFile: RENDERER_FILE, title: 'Ember' };
+
+/** 一个可以从外面结束的 Promise。 */
+function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolver: (() => void) | undefined;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolver = resolvePromise;
+  });
+  return { promise, resolve: () => resolver?.() };
+}
 
 describe('isAppUrl', () => {
   it('正式包只认界面入口文件', () => {
@@ -151,7 +163,7 @@ describe('createAppWindow', () => {
   it('没有保存的位置时按最小尺寸创建，内容就绪后显示', () => {
     createAppWindow(OPTIONS);
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ width: 640, height: 592, minWidth: 640, minHeight: 592 });
+    expect(window.options).toMatchObject({ width: 656, height: 605, minWidth: 656, minHeight: 605 });
     expect(window.options.x).toBeUndefined();
     expect(window.setBounds).not.toHaveBeenCalled();
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
@@ -162,8 +174,8 @@ describe('createAppWindow', () => {
   it('有保存的位置时按位置创建，大小仍是最小尺寸，不恢复最大化', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 100, y: 80 } });
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ x: 100, y: 80, width: 640, height: 592 });
-    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 640, height: 592 });
+    expect(window.options).toMatchObject({ x: 100, y: 80, width: 656, height: 605 });
+    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 656, height: 605 });
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
     ready();
     expect(window.show).toHaveBeenCalledTimes(1);
@@ -174,7 +186,7 @@ describe('createAppWindow', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 5000, y: 5000 } });
     const window = created[created.length - 1]!;
     expect(window.options.x).toBeUndefined();
-    expect(window.options).toMatchObject({ width: 640, height: 592 });
+    expect(window.options).toMatchObject({ width: 656, height: 605 });
     expect(window.setBounds).not.toHaveBeenCalled();
   });
 
@@ -191,5 +203,43 @@ describe('createAppWindow', () => {
     const inside = { preventDefault: vi.fn() };
     navigate(inside, RENDERER_URL);
     expect(inside.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('指定了 showAfter 时内容就绪后还要等它结束才显示，成功或失败都显示', async () => {
+    const deferred = createDeferred();
+    createAppWindow({ ...OPTIONS, showAfter: deferred.promise });
+    const waiting = created[created.length - 1]!;
+    (waiting.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void)();
+    expect(waiting.show).not.toHaveBeenCalled();
+    deferred.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(waiting.show).toHaveBeenCalledTimes(1);
+
+    createAppWindow({ ...OPTIONS, showAfter: Promise.reject(new Error('没有拿到')) });
+    const failed = created[created.length - 1]!;
+    (failed.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void)();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(failed.show).toHaveBeenCalledTimes(1);
+  });
+
+  it('等待期间窗口已经销毁就不再显示', async () => {
+    createAppWindow({ ...OPTIONS, showAfter: Promise.resolve() });
+    const window = created[created.length - 1]!;
+    window.isDestroyed.mockReturnValue(true);
+    (window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void)();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(window.show).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyThemeSource', () => {
+  it('把主题来源交给系统，界面与窗口底色随系统主题变化', () => {
+    applyThemeSource('dark');
+    expect(nativeTheme.themeSource).toBe('dark');
+    applyThemeSource('system');
+    expect(nativeTheme.themeSource).toBe('system');
   });
 });

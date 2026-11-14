@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { computeScreenRect, DEFAULT_SCREEN_ASPECT, displayAspectRatio, nominalScreenRatio } from './screen-layout';
+import { computeScreenRect, cropLinesFor, CROPPED_LINES, DEFAULT_SCREEN_ASPECT, displayAspectRatio, nominalScreenRatio } from './screen-layout';
 
 describe('displayAspectRatio', () => {
   it('4:3 固定为 4/3，8:7 按像素宽高比算', () => {
@@ -27,6 +27,19 @@ describe('nominalScreenRatio', () => {
 
   it('可以指定画面比例', () => {
     expect(nominalScreenRatio('4:3')).toBeCloseTo(4 / 3, 10);
+  });
+
+  it('上下各裁掉几行时按剩下的行数算：8:7 变化，4:3 不变', () => {
+    expect(nominalScreenRatio('8:7', 8)).toBeCloseTo((256 * 8) / 7 / 224, 10);
+    expect(nominalScreenRatio('4:3', 8)).toBeCloseTo(4 / 3, 10);
+  });
+});
+
+describe('cropLinesFor', () => {
+  it('显示全部行时不裁，否则上下各裁 8 行', () => {
+    expect(CROPPED_LINES).toBe(8);
+    expect(cropLinesFor(true)).toBe(0);
+    expect(cropLinesFor(false)).toBe(8);
   });
 });
 

@@ -4,6 +4,7 @@
  * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、
  *       运行页边栏与状态栏显示机器状态、边栏按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“开机…”子菜单、
  *       启动时面板全部关闭、展开与折叠面板时窗口大小不变而画面框等比缩放并留在页面区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白与到系统按钮的距离、
+ *       首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、
  *       页面重载与核心进程重启后端口重新建立且边栏状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -306,6 +307,51 @@ async function main() {
   const allClosed = await toggleAndMeasure('切换底部面板');
   check('折叠面板后窗口大小不变，画面框回到原来的大小', sameWindowSize(initial, allClosed) && Math.abs(allClosed.frameWidth - initial.frameWidth) <= 2 && Math.abs(allClosed.frameHeight - initial.frameHeight) <= 2, `画面框 ${allClosed.frameWidth.toFixed(1)}×${allClosed.frameHeight.toFixed(1)}`);
 
+  // 首选项：核心登记的设置项与出厂默认值、非法取值被拒绝；改画面比例与“显示全部 240 行”后运行页的画面框立即跟着变；改主题后系统主题立即切换；调试服务改音量会保存到首选项；最后全部恢复默认。
+  const listed = await page.evaluate('window.ember.core.preferences.list({})');
+  const valueOf = (id) => listed.settings.find((setting) => setting.id === id)?.value;
+  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume'];
+  check('首选项列出了登记的 7 个设置项，取值都是出厂默认值', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.value}`).join('，'));
+  check('出厂默认值：主题跟随系统、画面比例 8:7、适应窗口、显示全部行、缓冲标准、启动时不静音、音量 100', valueOf('appearance.theme') === 'system' && valueOf('display.aspect') === '8:7' && valueOf('display.scaling') === 'fit' && valueOf('display.showAllLines') === true && valueOf('sound.buffer') === 'standard' && valueOf('sound.startMuted') === false && valueOf('sound.volume') === 100);
+  const invalid = await page.evaluate(`window.ember.core.preferences.set({ id: 'display.aspect', value: '16:9' }).then(() => 'accepted', (error) => error?.code ?? 'failed')`);
+  check('不在可选范围内的取值被拒绝（preferences.invalidValue）', invalid === 'preferences.invalidValue', String(invalid));
+  const unknown = await page.evaluate(`window.ember.core.preferences.set({ id: 'display.nothing', value: 1 }).then(() => 'accepted', (error) => error?.code ?? 'failed')`);
+  check('没有登记的设置项被拒绝（preferences.unknown）', unknown === 'preferences.unknown', String(unknown));
+  const ratioOf = async () => {
+    await sleep(500);
+    const geometry = await page.evaluate(GEOMETRY);
+    return geometry.frameWidth / geometry.frameHeight;
+  };
+  await page.evaluate(`window.ember.core.preferences.set({ id: 'display.showAllLines', value: false })`);
+  const croppedRatio = await ratioOf();
+  check('关闭“显示全部 240 行”后画面框按 256x224 的 8:7 比例（64:49）', Math.abs(croppedRatio - 64 / 49) < 0.02, croppedRatio.toFixed(3));
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-cropped.png'));
+  await page.evaluate(`window.ember.core.preferences.set({ id: 'display.aspect', value: '4:3' })`);
+  const ratio43 = await ratioOf();
+  check('画面比例改成 4:3 后画面框是 4:3', Math.abs(ratio43 - 4 / 3) < 0.02, ratio43.toFixed(3));
+  await page.evaluate(`window.ember.core.preferences.reset({ id: 'display.aspect' })`);
+  await page.evaluate(`window.ember.core.preferences.reset({ id: 'display.showAllLines' })`);
+  const restoredRatio = await ratioOf();
+  check('恢复默认后画面框回到 128:105', Math.abs(restoredRatio - FRAME_RATIO) < 0.02, restoredRatio.toFixed(3));
+  await page.evaluate(`window.ember.core.preferences.set({ id: 'appearance.theme', value: 'light' })`);
+  const lightApplied = await waitFor(() => page.evaluate(`window.matchMedia('(prefers-color-scheme: light)').matches`), (matches) => matches === true, 5000, 100);
+  check('主题改成“浅色”后界面立即变成浅色', lightApplied === true);
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-light-theme.png'));
+  await page.evaluate(`window.ember.core.preferences.set({ id: 'appearance.theme', value: 'dark' })`);
+  const darkApplied = await waitFor(() => page.evaluate(`window.matchMedia('(prefers-color-scheme: dark)').matches`), (matches) => matches === true, 5000, 100);
+  check('主题改成“深色”后界面立即变成深色', darkApplied === true);
+  await page.evaluate(`window.ember.core.preferences.reset({ id: 'appearance.theme' })`);
+  await page.evaluate(`window.ember.core.output.setVolume({ volume: 42 })`);
+  const savedVolume = (await page.evaluate('window.ember.core.preferences.list({})')).settings.find((setting) => setting.id === 'sound.volume')?.value;
+  check('音量保存到首选项（sound.volume）', savedVolume === 42, String(savedVolume));
+  await page.evaluate(`window.ember.core.preferences.set({ id: 'sound.buffer', value: 'low' })`);
+  const lowBuffer = (await page.evaluate('window.ember.core.preferences.list({})')).settings.find((setting) => setting.id === 'sound.buffer')?.value;
+  check('缓冲大小可以改成“低延迟”并保存', lowBuffer === 'low', String(lowBuffer));
+  await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.buffer' })`);
+  await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.volume' })`);
+  const afterReset = (await page.evaluate('window.ember.core.preferences.list({})')).settings;
+  check('全部恢复默认后与出厂默认值一致', afterReset.every((setting) => JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)));
+
   // 页面重载后：运行页重新请求端口，画面帧继续到达。
   await page.send('Page.reload');
   await waitFor(() => page.evaluate('typeof window.ember === "object" && typeof window.emberRuntimeDiagnostics === "object"').catch(() => false), (value) => value === true);
@@ -344,6 +390,16 @@ async function main() {
       check('“消息”里有“核心进程已重启”', restartMessage.includes('核心进程已重启'));
     }
   }
+
+  // 首选项页：核心重启之后（页面要重新读取）经“设置”菜单的“首选项”打开，左侧是分组，右侧是设置行。
+  await menuButton('设置');
+  await sleep(300);
+  const settingsItems = await menuItems('.ui-menu__popup');
+  check('“设置”菜单里有“首选项”（Ctrl+,）', settingsItems.some((entry) => entry.label === '首选项' && !entry.disabled && entry.text.includes('Ctrl+,')), settingsItems.map((entry) => entry.text).join('|'));
+  await page.evaluate(`[...document.querySelectorAll('.ui-menu__popup [role^="menuitem"]')].find((item) => item.querySelector('.ui-menu__label')?.textContent === '首选项')?.click()`);
+  const pageText = await waitFor(() => textOf('.ui-app-frame__page'), (text) => text.includes('主题'), 5000, 100);
+  check('首选项页打开：左侧有外观、画面、声音三个分组，默认显示“外观”的“主题”', pageText.includes('外观') && pageText.includes('画面') && pageText.includes('声音') && pageText.includes('主题'), pageText.replace(/\s+/g, ' ').slice(0, 80));
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-preferences.png'));
 
   // 正常退出：经浏览器端点关闭全部窗口，应用走 will-quit → 停止核心的流程自行退出（核心进程的停止超时是 5 秒，快于它说明没有靠超时强杀）。
   page.close();

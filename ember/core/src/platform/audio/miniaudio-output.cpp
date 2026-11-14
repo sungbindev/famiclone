@@ -122,6 +122,8 @@ void MiniaudioOutput::setPlaying(bool playing) {
 
 void MiniaudioOutput::flush() { device_->renderer.requestFlush(); }
 
+void MiniaudioOutput::setBufferProfile(AudioBufferProfile profile) { device_->renderer.setBufferProfile(profile); }
+
 AudioStats MiniaudioOutput::stats() const noexcept {
   return AudioStats{device_->written.load(std::memory_order_relaxed), device_->dropped.load(std::memory_order_relaxed), device_->renderer.underrunSamples()};
 }

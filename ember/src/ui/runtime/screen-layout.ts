@@ -25,12 +25,24 @@ export const DEFAULT_SCREEN_SCALING: ScreenScaling = 'fit';
 /** 标准帧的尺寸（FC 的整帧）：画面框的显示比例按它算，不随当前这一帧的实际尺寸变化。 */
 export const NOMINAL_FRAME = { width: 256, height: 240 } as const;
 
+/** “显示全部 240 行”关闭时，画面上下各裁掉的行数。 */
+export const CROPPED_LINES = 8;
+
+/**
+ * “显示全部 240 行”对应的上下裁剪行数。
+ * @param showAllLines 是否显示全部行。
+ */
+export function cropLinesFor(showAllLines: boolean): number {
+  return showAllLines ? 0 : CROPPED_LINES;
+}
+
 /**
  * 标准帧在指定画面比例下的显示宽高比。
  * @param aspect 画面比例，默认用默认的画面比例。
+ * @param cropLines 上下各裁掉的行数，默认不裁。
  */
-export function nominalScreenRatio(aspect: ScreenAspect = DEFAULT_SCREEN_ASPECT): number {
-  return displayAspectRatio(aspect, NOMINAL_FRAME.width, NOMINAL_FRAME.height);
+export function nominalScreenRatio(aspect: ScreenAspect = DEFAULT_SCREEN_ASPECT, cropLines = 0): number {
+  return displayAspectRatio(aspect, NOMINAL_FRAME.width, NOMINAL_FRAME.height - cropLines * 2);
 }
 
 /** 像素宽高比 8:7 的宽与高。 */

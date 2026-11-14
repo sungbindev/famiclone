@@ -14,7 +14,7 @@ import { MouseCapture, toFramePoint, type PointerBounds, type PointerView } from
 
 /** 画面区 512x480 CSS 像素，画布与它一一对应。 */
 const BOUNDS: PointerBounds = { left: 0, top: 0, width: 512, height: 480 };
-const VIEW: PointerView = { canvasWidth: 512, canvasHeight: 480, aspect: '8:7', scaling: 'fit' };
+const VIEW: PointerView = { canvasWidth: 512, canvasHeight: 480, aspect: '8:7', scaling: 'fit', cropLines: 0 };
 
 describe('toFramePoint', () => {
   it('8:7 的画面在 512x480 里宽 512、高 420、上下各留 30：中心是帧的中心', () => {
@@ -33,21 +33,44 @@ describe('toFramePoint', () => {
 
   it('画面区有偏移与缩放（画布的设备像素是 CSS 像素的两倍）时照样换算', () => {
     const bounds: PointerBounds = { left: 100, top: 50, width: 256, height: 240 };
-    const view: PointerView = { canvasWidth: 512, canvasHeight: 480, aspect: '8:7', scaling: 'fit' };
+    const view: PointerView = { canvasWidth: 512, canvasHeight: 480, aspect: '8:7', scaling: 'fit', cropLines: 0 };
     expect(toFramePoint(228, 170, bounds, view)).toEqual({ x: 128, y: 120 });
   });
 
   it('整数倍缩放按实际画面矩形换算', () => {
     // 画布 600x500：8:7 的整数倍取 2 倍，画面 480 高、585 宽，左右各留 7、上下各留 10。
-    const view: PointerView = { canvasWidth: 600, canvasHeight: 500, aspect: '8:7', scaling: 'integer' };
+    const view: PointerView = { canvasWidth: 600, canvasHeight: 500, aspect: '8:7', scaling: 'integer', cropLines: 0 };
     const point = toFramePoint(300, 250, { left: 0, top: 0, width: 600, height: 500 }, view);
     expect(point).toEqual({ x: 128.22, y: 120 });
   });
 
   it('4:3 的画面比例按 4:3 的矩形换算', () => {
-    const view: PointerView = { canvasWidth: 640, canvasHeight: 480, aspect: '4:3', scaling: 'fit' };
+    const view: PointerView = { canvasWidth: 640, canvasHeight: 480, aspect: '4:3', scaling: 'fit', cropLines: 0 };
     expect(toFramePoint(320, 240, { left: 0, top: 0, width: 640, height: 480 }, view)).toEqual({ x: 128, y: 120 });
     expect(toFramePoint(0, 0, { left: 0, top: 0, width: 640, height: 480 }, view)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('上下各裁掉 8 行时，画面显示第 8 到 232 行，坐标仍是整帧上的行号', () => {
+    // 4:3 的 640x480 画布：画面铺满，显示 224 行；画面最上边是第 8 行，最下边是第 232 行，中心不变。
+    const bounds: PointerBounds = { left: 0, top: 0, width: 640, height: 480 };
+    const view: PointerView = { canvasWidth: 640, canvasHeight: 480, aspect: '4:3', scaling: 'fit', cropLines: 8 };
+    expect(toFramePoint(0, 0, bounds, view)).toEqual({ x: 0, y: 8 });
+    expect(toFramePoint(640, 480, bounds, view)).toEqual({ x: 256, y: 232 });
+    expect(toFramePoint(320, 240, bounds, view)).toEqual({ x: 128, y: 120 });
+  });
+
+  it('裁剪后 8:7 的显示宽高比按 256x224 计算', () => {
+    // 256x224 按 8:7 的显示宽高比是 256*8/7/224 = 1.306，画布 512x480 的宽高比是 1.067：宽度铺满 512，高度 392，上下各留 44。
+    const bounds: PointerBounds = { left: 0, top: 0, width: 512, height: 480 };
+    const view: PointerView = { canvasWidth: 512, canvasHeight: 480, aspect: '8:7', scaling: 'fit', cropLines: 8 };
+    expect(toFramePoint(0, 44, bounds, view)).toEqual({ x: 0, y: 8 });
+    expect(toFramePoint(512, 436, bounds, view)).toEqual({ x: 256, y: 232 });
+  });
+
+  it('裁剪时指针在画面之外也按同一换算超出范围', () => {
+    const bounds: PointerBounds = { left: 0, top: 0, width: 640, height: 480 };
+    const view: PointerView = { canvasWidth: 640, canvasHeight: 480, aspect: '4:3', scaling: 'fit', cropLines: 8 };
+    expect(toFramePoint(320, -48, bounds, view)).toEqual({ x: 128, y: -14.4 });
   });
 
   it('画面区或画布的尺寸无效时没有坐标', () => {

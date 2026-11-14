@@ -21,6 +21,7 @@ import { loadAndRemember } from '../../entry/ipc/cartridges/load-cartridge';
 import { registerMainRequestIpc, type MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
 import { forwardWindowState, registerShellIpc } from '../../entry/ipc/shell/shell-ipc';
 import { registerStreamsIpc } from '../../entry/ipc/streams/streams-ipc';
+import { startThemeSync } from '../../entry/preferences/theme-sync';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
 import { ProcessCoreGateway } from '../../infra/core-client/process-core-gateway';
 import { FileRecentCartridgesService } from '../../infra/recent-cartridges/file-recent-cartridges-service';
@@ -32,7 +33,7 @@ import { cartridgePathFromArgv } from '../../platform/launch/launch-args';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
-import { createAppWindow, denyAllPermissions, followSystemTheme, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
+import { applyThemeSource, createAppWindow, denyAllPermissions, followSystemTheme, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
 import { createWindowController } from '../../platform/window/window-controller';
 import { watchWindow } from '../../platform/window/window-events';
 import { MAIN_MODULES } from './module-list';
@@ -47,6 +48,8 @@ const NATIVE_FILE = 'ember_core.node';
 const PLUGINS_DIRECTORY = 'plugins';
 /** 主进程错误的错误码。 */
 const MAIN_ERROR_CODE = 'shell.mainError';
+/** 显示窗口前最多等保存的主题多久（毫秒），核心起不来时不能一直不显示。 */
+const THEME_WAIT_MS = 2000;
 
 /** 把异常写入日志。 */
 function logError(logger: FileErrorLogger, error: unknown, context: Record<string, unknown>): void {
@@ -93,6 +96,9 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
 
   let mainWindow: BrowserWindow | undefined;
   let quitting = false;
+  // 首选项里的主题由核心保存，读到后设为系统的主题来源；显示窗口前等它（最多 2 秒），避免先闪一下错误的颜色。
+  const themeSync = startThemeSync({ gateway, applyThemeSource, onError: (error) => logError(logger, error, { source: 'themeSync' }) });
+  const themeReady = Promise.race([themeSync.first, new Promise<void>((resolve) => setTimeout(resolve, THEME_WAIT_MS))]);
   const windowController = createWindowController(() => mainWindow, () => app.quit());
   const isTrustedSender = createSenderCheck((url) => isAppUrl(url, { rendererFile, ...(devServerUrl ? { devServerUrl } : {}) }));
   const modules = MAIN_MODULES.map((module) => module.schema);
@@ -106,6 +112,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
       title: PRODUCT_NAME,
       devTools: !app.isPackaged,
       placement: shellState.get().window,
+      showAfter: themeReady,
       ...(devServerUrl ? { devServerUrl } : {})
     });
     mainWindow = window;
@@ -144,6 +151,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     event.preventDefault();
     shellState.flush();
     recentCartridges.flush();
+    themeSync.stop();
     streamHub.stop();
     void gateway
       .stop()

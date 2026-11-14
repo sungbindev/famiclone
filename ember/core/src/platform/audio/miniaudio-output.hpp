@@ -42,6 +42,7 @@ class MiniaudioOutput final : public AudioOutput {
   void setVolume(unsigned percent, bool muted) override;
   void setPlaying(bool playing) override;
   void flush() override;
+  void setBufferProfile(AudioBufferProfile profile) override;
   [[nodiscard]] AudioStats stats() const noexcept override;
 
  private:

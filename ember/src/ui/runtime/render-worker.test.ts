@@ -43,8 +43,8 @@ function send(data: unknown): void {
 }
 
 /** 版面消息。 */
-function view(width: number, height: number, aspect: '4:3' | '8:7' = '4:3'): unknown {
-  return { type: 'view', view: { width, height, aspect, scaling: 'fit' } };
+function view(width: number, height: number, aspect: '4:3' | '8:7' = '4:3', cropLines = 0): unknown {
+  return { type: 'view', view: { width, height, aspect, scaling: 'fit', cropLines } };
 }
 
 /** 假的消息端口：记下 Worker 挂上去的监听函数。 */
@@ -135,5 +135,22 @@ describe('渲染 Worker 的版面', () => {
     send(view(800, 600));
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     expect(renderer.draw.mock.calls[0]?.[0]).toBeUndefined();
+  });
+
+  it('上下裁掉 8 行时按 256x224 计算画面矩形，并把裁剪行数交给渲染器', () => {
+    const port = new FakeMessagePort();
+    send({ type: 'attach', port });
+    send(view(1280, 960, '8:7', 8));
+    port.listener?.({ data: { type: 'frame', width: 256, height: 240, format: 'rgba8', frame: 1, publishedAt: 1000, hostDropped: 0, pixels: new ArrayBuffer(256 * 240 * 4) } } as MessageEvent);
+    const tick = scope.requestAnimationFrame.mock.calls[0]?.[0] as () => void;
+    tick();
+    // 256x224 按 8:7 的宽高比约 1.306，画布 1280x960 的宽高比 1.333 更宽：高度铺满 960，宽度 1254，左右各留 13。
+    expect(renderer.draw.mock.calls.at(-1)?.[1]).toEqual({ x: 13, y: 0, width: 1254, height: 960 });
+    expect(renderer.draw.mock.calls.at(-1)?.[2]).toBe(8);
+    renderer.draw.mockClear();
+    send(view(1280, 960, '8:7', 0));
+    // 不裁时 256x240：宽高比 1.219，宽度 1170。
+    expect(renderer.draw.mock.calls.at(-1)?.[1]).toEqual({ x: 55, y: 0, width: 1170, height: 960 });
+    expect(renderer.draw.mock.calls.at(-1)?.[2]).toBe(0);
   });
 });

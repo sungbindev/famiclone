@@ -22,13 +22,15 @@ void main() {
   v_uv = vec2(a_position.x, 1.0 - a_position.y);
 }`;
 
-/** 片元着色器：最近邻采样。 */
+/** 片元着色器：最近邻采样；u_crop 是上下各裁掉的比例（占整帧高度）。 */
 const FRAGMENT_SHADER = `
 precision mediump float;
 uniform sampler2D u_texture;
+uniform vec2 u_crop;
 varying vec2 v_uv;
 void main() {
-  gl_FragColor = vec4(texture2D(u_texture, v_uv).rgb, 1.0);
+  vec2 uv = vec2(v_uv.x, u_crop.x + v_uv.y * (1.0 - u_crop.x - u_crop.y));
+  gl_FragColor = vec4(texture2D(u_texture, uv).rgb, 1.0);
 }`;
 
 /** 要画的一帧：尺寸与像素。 */
@@ -52,6 +54,7 @@ function compileShader(gl: WebGLRenderingContext, type: number, source: string):
 export class WebGlFrameRenderer {
   private readonly gl: WebGLRenderingContext;
   private program: WebGLProgram | null = null;
+  private cropLocation: WebGLUniformLocation | null = null;
   private texture: WebGLTexture | null = null;
   private buffer: WebGLBuffer | null = null;
   private textureWidth = 0;
@@ -92,8 +95,9 @@ export class WebGlFrameRenderer {
    * 画一帧：上传纹理，清成黑底，再把画面画在矩形里。
    * @param frame 要上传的新帧；传 undefined 时重画纹理里已有的上一帧（版面变化时用，不重新上传）。
    * @param rect 画面矩形（设备像素，左下角为原点）。
+   * @param cropLines 帧上下各裁掉的行数，默认 0（显示全部行）。
    */
-  draw(frame: DrawableFrame | undefined, rect: ScreenRect): void {
+  draw(frame: DrawableFrame | undefined, rect: ScreenRect, cropLines = 0): void {
     if (this.lost || this.program === null) return;
     const { gl } = this;
     if (frame !== undefined) this.upload(frame);
@@ -101,6 +105,8 @@ export class WebGlFrameRenderer {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (this.textureWidth === 0 || rect.width <= 0 || rect.height <= 0) return;
+    const crop = cropLines / this.textureHeight;
+    gl.uniform2f(this.cropLocation, crop, crop);
     gl.viewport(rect.x, rect.y, rect.width, rect.height);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
@@ -117,6 +123,7 @@ export class WebGlFrameRenderer {
     if (gl.getProgramParameter(program, gl.LINK_STATUS) !== true) throw new Error(`着色器程序链接失败：${gl.getProgramInfoLog(program) ?? ''}`);
     gl.useProgram(program);
     gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
+    this.cropLocation = gl.getUniformLocation(program, 'u_crop');
 
     this.buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);

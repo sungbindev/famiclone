@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "platform/audio/audio-output.hpp"
 #include "platform/audio/sample-ring-buffer.hpp"
 
 namespace ember::platform {
@@ -57,6 +58,13 @@ class AudioRenderer {
   /** 请求清空缓冲（任意线程）：由下一次 render 在消费者一侧执行。 */
   void requestFlush() noexcept;
 
+  /** 按档位设置目标水位与预填充（任意线程）：低延迟 800 与 600、标准 1600 与 1200、稳定 3200 与 2400 个采样；下一次 render 起采用。 */
+  void setBufferProfile(AudioBufferProfile profile) noexcept;
+
+  /** 当前的目标水位与预填充（采样数），测试用。 */
+  [[nodiscard]] std::size_t targetFill() const noexcept { return targetFill_.load(std::memory_order_relaxed); }
+  [[nodiscard]] std::size_t primeFill() const noexcept { return primeFill_.load(std::memory_order_relaxed); }
+
   /** 缓冲不足、补了静音的采样数（只在播放时统计）。 */
   [[nodiscard]] std::uint64_t underrunSamples() const noexcept { return underrun_.load(std::memory_order_relaxed); }
 
@@ -90,6 +98,8 @@ class AudioRenderer {
   std::atomic<bool> muted_{false};
   std::atomic<bool> playing_{false};
   std::atomic<std::uint32_t> flushRequest_{0};
+  std::atomic<std::size_t> targetFill_{0};
+  std::atomic<std::size_t> primeFill_{0};
 
   // 统计与观察用。
   std::atomic<std::uint64_t> underrun_{0};

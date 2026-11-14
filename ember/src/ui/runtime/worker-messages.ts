@@ -13,12 +13,14 @@
 import type { ScreenAspect, ScreenScaling } from './screen-layout';
 import type { RenderDiagnostics } from './render-stats';
 
-/** 画布的版面：画布的设备像素尺寸、画面比例与缩放方式。 */
+/** 画布的版面：画布的设备像素尺寸、画面比例、缩放方式与上下各裁掉的行数。 */
 export interface ScreenView {
   readonly width: number;
   readonly height: number;
   readonly aspect: ScreenAspect;
   readonly scaling: ScreenScaling;
+  /** 帧上下各裁掉的行数，0 表示显示全部行。 */
+  readonly cropLines: number;
 }
 
 /** 非渲染统计的诊断：最近收到的一帧的像素摘要与画布尺寸。 */
@@ -66,6 +68,9 @@ export function nextScreenView(current: ScreenView, incoming: ScreenView): Scree
   return { ...incoming, width: current.width, height: current.height };
 }
 
+/** 上下各裁掉行数的上限：防止异常的消息把画面裁光。 */
+export const MAX_CROP_LINES = 64;
+
 /** 是不是画布尺寸（0 到上限的整数）。 */
 function isDimension(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_CANVAS_DIMENSION;
@@ -74,11 +79,12 @@ function isDimension(value: unknown): value is number {
 /** 校验版面。 */
 function parseView(value: unknown): ScreenView | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
-  const { width, height, aspect, scaling } = value as Record<string, unknown>;
+  const { width, height, aspect, scaling, cropLines } = value as Record<string, unknown>;
   if (!isDimension(width) || !isDimension(height)) return undefined;
   if (aspect !== '4:3' && aspect !== '8:7') return undefined;
   if (scaling !== 'fit' && scaling !== 'integer') return undefined;
-  return { width, height, aspect, scaling };
+  if (typeof cropLines !== 'number' || !Number.isInteger(cropLines) || cropLines < 0 || cropLines > MAX_CROP_LINES) return undefined;
+  return { width, height, aspect, scaling, cropLines };
 }
 
 /**

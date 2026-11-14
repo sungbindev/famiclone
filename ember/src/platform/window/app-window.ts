@@ -21,12 +21,12 @@ export type ResolvedTheme = 'dark' | 'light';
 /** 标题栏高度（组件库 --title-bar-height），系统按钮区少 1 像素露出底边线。 */
 const TITLE_BAR_HEIGHT = 36;
 /**
- * 窗口的最小尺寸。宽度保证标题栏放得下图标、名称、三个菜单、至少 48 像素可拖动的空白、三个折叠按钮和系统窗口按钮（实测约 604）；
- * 高度让画面框在最小窗口下四周间距一致：页面区内容宽 640-40(活动栏)-2x10(页面内边距)=580，对应画面高约 476，
- * 再加页面内边距 20、标题栏 36、标签栏 36、状态栏 26，按令牌算共 594；缩放 1.5 倍的实测里页面区比算出来的高约 2.5 像素，所以取 592。
+ * 窗口的最小尺寸。宽度保证标题栏放得下图标、名称、四个菜单、至少 48 像素可拖动的空白、三个折叠按钮和系统窗口按钮（实测约 652）；
+ * 高度让画面框在最小窗口下四周间距一致：页面区内容宽 656-40(活动栏)-2x10(页面内边距)=596，对应画面高约 489，
+ * 再加页面内边距 20、标题栏 36、标签栏 36、状态栏 26，按令牌算共 607；缩放 1.5 倍的实测里页面区比算出来的高约 2.5 像素，所以取 605。
  */
-const MIN_WIDTH = 640;
-const MIN_HEIGHT = 592;
+const MIN_WIDTH = 656;
+const MIN_HEIGHT = 605;
 /** 窗口至少要有这么大一块落在某个屏幕的工作区内，否则恢复为默认位置。 */
 const MIN_VISIBLE = 100;
 
@@ -56,6 +56,8 @@ export interface AppWindowOptions {
   readonly placement?: WindowPlacement | null;
   /** 按 F12 切换开发者工具（只在开发时开启）。 */
   readonly devTools?: boolean;
+  /** 内容就绪后、显示窗口前要等的事（如应用保存的主题，避免启动时频闪一下错误的颜色）；不管成功还是失败都会显示，由调用方负责超时。 */
+  readonly showAfter?: Promise<unknown>;
 }
 
 /** 两个矩形重叠部分的宽与高。 */
@@ -84,6 +86,17 @@ export function visiblePlacement(placement: WindowPlacement | null | undefined, 
 /** 系统当前实际使用的主题。 */
 export function resolvedTheme(): ResolvedTheme {
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+}
+
+/** 主题来源：跟随系统，或固定深色、浅色。 */
+export type ThemeSource = 'system' | 'dark' | 'light';
+
+/**
+ * 设置主题来源。系统会据此重算 shouldUseDarkColors，界面里的 prefers-color-scheme 与窗口底色（followSystemTheme）都随之变化。
+ * @param source 主题来源。
+ */
+export function applyThemeSource(source: ThemeSource): void {
+  nativeTheme.themeSource = source;
 }
 
 /** 系统标题栏按钮区的样式。 */
@@ -181,7 +194,13 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
       }
     });
   }
-  window.once('ready-to-show', () => window.show());
+  const showWindow = (): void => {
+    if (!window.isDestroyed()) window.show();
+  };
+  window.once('ready-to-show', () => {
+    if (options.showAfter === undefined) showWindow();
+    else options.showAfter.then(showWindow, showWindow);
+  });
 
   if (options.devServerUrl) void window.loadURL(options.devServerUrl);
   else void window.loadFile(options.rendererFile);

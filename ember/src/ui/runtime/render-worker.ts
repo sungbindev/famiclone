@@ -43,7 +43,7 @@ const session = new FrameSession(
   { now: () => performance.now(), wallNow: () => Date.now() }
 );
 let renderer: WebGlFrameRenderer | undefined;
-let view: ScreenView = { width: 0, height: 0, aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING };
+let view: ScreenView = { width: 0, height: 0, aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING, cropLines: 0 };
 /** 最近一次画出的帧的尺寸：版面变化时按它算矩形。 */
 let drawnSize: { width: number; height: number } | undefined;
 let loopRunning = false;
@@ -53,8 +53,9 @@ function paint(pending: PendingFrame | undefined): void {
   if (renderer === undefined) return;
   const size = pending === undefined ? drawnSize : { width: pending.frame.width, height: pending.frame.height };
   if (size === undefined) return;
-  const rect = computeScreenRect(view.width, view.height, size.width, size.height, view.aspect, view.scaling);
-  renderer.draw(pending?.frame, rect);
+  // 上下各裁掉 cropLines 行后，只有中间的行参与版面（显示比例、缩放）。
+  const rect = computeScreenRect(view.width, view.height, size.width, size.height - view.cropLines * 2, view.aspect, view.scaling);
+  renderer.draw(pending?.frame, rect, view.cropLines);
   drawnSize = size;
 }
 

@@ -15,7 +15,7 @@
 
 namespace ember::platform {
 
-AudioRenderer::AudioRenderer(SampleRingBuffer& ring, AudioRendererOptions options) : ring_(ring), options_(options) {
+AudioRenderer::AudioRenderer(SampleRingBuffer& ring, AudioRendererOptions options) : ring_(ring), options_(options), targetFill_(options.targetFill), primeFill_(options.primeFill) {
   const double rampSamples = std::max(1.0, options_.rampSeconds * static_cast<double>(options_.sampleRate));
   rampStep_ = 1.0 / rampSamples;
   smoothFill_ = static_cast<double>(options_.targetFill);
@@ -42,6 +42,21 @@ void AudioRenderer::setPlaying(bool playing) noexcept { playing_.store(playing, 
 
 void AudioRenderer::requestFlush() noexcept { flushRequest_.fetch_add(1, std::memory_order_release); }
 
+void AudioRenderer::setBufferProfile(AudioBufferProfile profile) noexcept {
+  // 目标水位与预填充（采样数，48000 赫兹下约 17 毫秒、标准 33 毫秒、稳定 67 毫秒）。
+  std::size_t target = 1600;
+  std::size_t prime = 1200;
+  if (profile == AudioBufferProfile::LowLatency) {
+    target = 800;
+    prime = 600;
+  } else if (profile == AudioBufferProfile::Stable) {
+    target = 3200;
+    prime = 2400;
+  }
+  targetFill_.store(target, std::memory_order_relaxed);
+  primeFill_.store(prime, std::memory_order_relaxed);
+}
+
 void AudioRenderer::applyFlushRequest() noexcept {
   const std::uint32_t request = flushRequest_.load(std::memory_order_acquire);
   if (request == flushSeen_) return;
@@ -49,7 +64,7 @@ void AudioRenderer::applyFlushRequest() noexcept {
   ring_.discardAll();
   buffering_ = true;
   starving_ = false;
-  smoothFill_ = static_cast<double>(options_.targetFill);
+  smoothFill_ = static_cast<double>(targetFill_.load(std::memory_order_relaxed));
   // 正在静音时不留上一个采样的尾巴，否则继续播放时会有一小声；正在出声时让它衰减，不产生咔哒声。
   if (gain_ <= 0.0) held_ = 0.0F;
   previous_ = next_ = held_;
@@ -83,12 +98,12 @@ void AudioRenderer::render(float* out, std::size_t frames) noexcept {
 
   if (!buffering_) {
     smoothFill_ += (static_cast<double>(ring_.size()) - smoothFill_) * FILL_SMOOTHING;
-    ratioNow_ = ratioForFill(smoothFill_, static_cast<double>(options_.targetFill), options_.maxRatioAdjust);
+    ratioNow_ = ratioForFill(smoothFill_, static_cast<double>(targetFill_.load(std::memory_order_relaxed)), options_.maxRatioAdjust);
     ratio_.store(ratioNow_, std::memory_order_relaxed);
   }
 
   for (std::size_t i = 0; i < frames; ++i) {
-    if (buffering_ && playing && ring_.size() >= options_.primeFill) {
+    if (buffering_ && playing && ring_.size() >= primeFill_.load(std::memory_order_relaxed)) {
       // 攒够了：从衰减中的采样平滑地接上新数据，增益从静音淡入。
       buffering_ = false;
       starving_ = false;

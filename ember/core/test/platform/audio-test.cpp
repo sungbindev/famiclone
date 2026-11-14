@@ -195,6 +195,33 @@ TEST(AudioRenderer, WaitsForTheBufferToFillBeforeStarting) {
   EXPECT_LT(ring.size(), 1300U);
 }
 
+TEST(AudioRenderer, TheBufferProfileChangesTheTargetAndPrimeFillRightAway) {
+  SampleRingBuffer ring(8192);
+  AudioRenderer renderer(ring, {});
+  EXPECT_EQ(renderer.targetFill(), 1600U);
+  EXPECT_EQ(renderer.primeFill(), 1200U);
+  renderer.setBufferProfile(ember::platform::AudioBufferProfile::LowLatency);
+  EXPECT_EQ(renderer.targetFill(), 800U);
+  EXPECT_EQ(renderer.primeFill(), 600U);
+  renderer.setBufferProfile(ember::platform::AudioBufferProfile::Stable);
+  EXPECT_EQ(renderer.targetFill(), 3200U);
+  EXPECT_EQ(renderer.primeFill(), 2400U);
+  renderer.setBufferProfile(ember::platform::AudioBufferProfile::Standard);
+  EXPECT_EQ(renderer.targetFill(), 1600U);
+  EXPECT_EQ(renderer.primeFill(), 1200U);
+}
+
+TEST(AudioRenderer, ALargerProfileWaitsForMoreSamplesBeforeStartingAndASmallerOneStartsSooner) {
+  SampleRingBuffer ring(8192);
+  AudioRenderer renderer(ring, {});
+  renderer.setPlaying(true);
+  fill(ring, 1500, 0.5F);
+  renderer.setBufferProfile(ember::platform::AudioBufferProfile::Stable);
+  EXPECT_EQ(maxAbs(render(renderer, 500)), 0.0F) << "稳定档要攒到 2400 个采样才开始";
+  renderer.setBufferProfile(ember::platform::AudioBufferProfile::LowLatency);
+  EXPECT_GT(maxAbs(render(renderer, 1000)), 0.4F) << "低延迟档攒到 600 个采样就开始";
+}
+
 TEST(AudioRenderer, UnderrunFadesTheLastSampleOutInsteadOfClickingAndCountsTheMissingSamples) {
   SampleRingBuffer ring(8192);
   AudioRenderer renderer(ring, {});
@@ -329,6 +356,10 @@ TEST(NullAudioOutput, CountsWrittenSamplesAndRemembersTheSettings) {
   const auto flushes = output.flushCount();
   output.flush();
   EXPECT_EQ(output.flushCount(), flushes + 1);
+
+  EXPECT_EQ(output.bufferProfile(), ember::platform::AudioBufferProfile::Standard);
+  output.setBufferProfile(ember::platform::AudioBufferProfile::Stable);
+  EXPECT_EQ(output.bufferProfile(), ember::platform::AudioBufferProfile::Stable);
 }
 
 TEST(MiniaudioOutput, OpensTheSystemDeviceOrReportsWhyNotWithoutCrashing) {

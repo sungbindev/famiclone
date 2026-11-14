@@ -20,7 +20,7 @@ import { DiagnosticsClient } from './diagnostics-client';
 import { GamepadCapture } from './gamepad-capture';
 import { KeyboardCapture } from './key-capture';
 import { MouseCapture, toFramePoint } from './pointer-capture';
-import { DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING, type ScreenAspect, type ScreenScaling } from './screen-layout';
+import { cropLinesFor, DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING, type ScreenAspect, type ScreenScaling } from './screen-layout';
 import { useStreamPorts } from './use-stream-ports';
 import { parseWorkerReply, type WorkerDiagnostics, type WorkerRequest } from './worker-messages';
 import './ember-run.css';
@@ -48,6 +48,8 @@ export interface RuntimeScreenProps {
   readonly aspect?: ScreenAspect;
   /** 缩放方式，默认适应窗口。 */
   readonly scaling?: ScreenScaling;
+  /** 显示全部 240 行，默认显示；关闭时上下各裁掉 8 行。 */
+  readonly showAllLines?: boolean;
   /** 画面区元素的引用：页面用它在操作后把焦点还给画面。 */
   readonly screenRef: RefObject<HTMLDivElement | null>;
 }
@@ -65,11 +67,11 @@ function measureDevicePixels(container: HTMLElement, entry: ResizeObserverEntry 
  * 画面组件。
  * @param props 属性。
  */
-export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling = DEFAULT_SCREEN_SCALING, screenRef }: RuntimeScreenProps) {
+export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling = DEFAULT_SCREEN_SCALING, showAllLines = true, screenRef }: RuntimeScreenProps) {
   const notify = useNotify();
   const workerRef = useRef<Worker | undefined>(undefined);
   const sizeRef = useRef({ width: 0, height: 0 });
-  const optionsRef = useRef({ aspect, scaling });
+  const optionsRef = useRef({ aspect, scaling, cropLines: cropLinesFor(showAllLines) });
 
   /** 把当前的画布尺寸与显示选项发给 Worker。 */
   const postView = useCallback(() => {
@@ -140,9 +142,9 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
 
   // 画面比例或缩放方式变了：重新发版面。
   useEffect(() => {
-    optionsRef.current = { aspect, scaling };
+    optionsRef.current = { aspect, scaling, cropLines: cropLinesFor(showAllLines) };
     postView();
-  }, [aspect, scaling, postView]);
+  }, [aspect, scaling, showAllLines, postView]);
 
   // 画面端口交给 Worker；Worker 不存在时关闭端口。
   const onFramePort = useCallback((port: MessagePort) => {

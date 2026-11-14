@@ -15,6 +15,7 @@
 #include <string>
 
 #include "bootstrap/module-registry.hpp"
+#include "contracts/preferences/preference-service.hpp"
 #include "platform/audio/audio-output.hpp"
 #include "platform/logging/error-log.hpp"
 
@@ -28,6 +29,9 @@ using AudioOpener = std::function<std::shared_ptr<platform::AudioOutput>(unsigne
  * （上下文里有原因），降级为空输出，不抛出异常。
  */
 std::shared_ptr<platform::AudioOutput> openAudioOutputOrFallback(const AudioOpener& opener, unsigned sampleRate, platform::ErrorLog& errors);
+
+/** 登记声音分组与设置项：缓冲大小、启动时静音、音量（隐藏，只保存）。 */
+void registerSoundSettings(contracts::preferences::PreferenceService& service);
 
 /** 登记输出模块。 */
 void registerOutput(ModuleRegistry& registry);

@@ -28,6 +28,9 @@ struct AudioStats {
   std::uint64_t underrunSamples{0};
 };
 
+/** 缓冲大小的档位：缓冲越小延迟越低，电脑负载高时越容易爆音。 */
+enum class AudioBufferProfile : std::uint8_t { LowLatency, Standard, Stable };
+
 /** 声音输出。 */
 class AudioOutput {
  public:
@@ -62,6 +65,9 @@ class AudioOutput {
 
   /** 清空缓冲（上电、复位时）。 */
   virtual void flush() = 0;
+
+  /** 设置缓冲大小的档位（任意线程）：改变目标水位与预填充，立即生效，不重建设备。 */
+  virtual void setBufferProfile(AudioBufferProfile profile) = 0;
 
   /** 统计。 */
   [[nodiscard]] virtual AudioStats stats() const noexcept = 0;

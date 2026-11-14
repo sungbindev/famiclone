@@ -21,12 +21,14 @@ export interface PointerBounds {
   readonly height: number;
 }
 
-/** 画面当前的显示方式：画布的设备像素尺寸与显示选项。 */
+/** 画面当前的显示方式：画布的设备像素尺寸、显示选项与上下各裁掉的行数。 */
 export interface PointerView {
   readonly canvasWidth: number;
   readonly canvasHeight: number;
   readonly aspect: ScreenAspect;
   readonly scaling: ScreenScaling;
+  /** 帧上下各裁掉的行数；显示的是中间的行，坐标仍然是整帧上的行号。 */
+  readonly cropLines: number;
 }
 
 /** 标准帧上的一个点。 */
@@ -52,13 +54,14 @@ function round(value: number): number {
  */
 export function toFramePoint(clientX: number, clientY: number, bounds: PointerBounds, view: PointerView): FramePoint | undefined {
   if (!(bounds.width > 0 && bounds.height > 0)) return undefined;
-  const rect = computeScreenRect(view.canvasWidth, view.canvasHeight, NOMINAL_FRAME.width, NOMINAL_FRAME.height, view.aspect, view.scaling);
+  const visibleHeight = NOMINAL_FRAME.height - view.cropLines * 2;
+  const rect = computeScreenRect(view.canvasWidth, view.canvasHeight, NOMINAL_FRAME.width, visibleHeight, view.aspect, view.scaling);
   if (rect.width === 0 || rect.height === 0) return undefined;
   const deviceX = ((clientX - bounds.left) * view.canvasWidth) / bounds.width;
   const deviceY = ((clientY - bounds.top) * view.canvasHeight) / bounds.height;
-  // 矩形的原点在画布左下角，换算成从上往下数。
+  // 矩形的原点在画布左下角，换算成从上往下数；裁掉的行在上面，行号要加上它。
   const rectTop = view.canvasHeight - (rect.y + rect.height);
-  return { x: round(((deviceX - rect.x) / rect.width) * NOMINAL_FRAME.width), y: round(((deviceY - rectTop) / rect.height) * NOMINAL_FRAME.height) };
+  return { x: round(((deviceX - rect.x) / rect.width) * NOMINAL_FRAME.width), y: round(view.cropLines + ((deviceY - rectTop) / rect.height) * visibleHeight) };
 }
 
 /** 鼠标采集：记住上一次的位置，把每次事件转成带位移的消息。 */

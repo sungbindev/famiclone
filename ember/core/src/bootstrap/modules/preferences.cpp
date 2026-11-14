@@ -1,0 +1,67 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：preferences.cpp
+ * 说明：首选项模块的登记：创建首选项服务，登记界面类设置项，登记 preferences.* 请求，并把服务提供给其他模块。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-14
+ * 备注：其他模块（如 output）取用 PreferenceService 登记自己的设置项，须排在本模块之后登记；分组按登记的顺序显示：外观、画面在这里，声音在 output 里。
+ * ------------------------------------------------------------------------
+ */
+
+#include "bootstrap/modules/preferences.hpp"
+
+#include <memory>
+
+#include "infra/preferences/preference-registry.hpp"
+#include "requests/preferences/preferences-requests.hpp"
+
+namespace ember::bootstrap {
+
+namespace api = contracts::preferences;
+
+void registerInterfaceSettings(api::PreferenceService& service) {
+  service.addGroup({"appearance", "外观"});
+  service.addSetting({.id = "appearance.theme",
+                      .group = "appearance",
+                      .label = "主题",
+                      .description = "跟随系统时，系统切换深色或浅色后立即生效。",
+                      .kind = api::SettingKind::Choice,
+                      .options = {{"system", "跟随系统"}, {"dark", "深色"}, {"light", "浅色"}},
+                      .defaultValue = std::string("system")});
+
+  service.addGroup({"display", "画面"});
+  service.addSetting({.id = "display.aspect",
+                      .group = "display",
+                      .label = "画面比例",
+                      .description = "只影响显示，不影响模拟。",
+                      .kind = api::SettingKind::Choice,
+                      .options = {{"8:7", "8:7（像素原始比例）"}, {"4:3", "4:3（电视）"}},
+                      .defaultValue = std::string("8:7")});
+  service.addSetting({.id = "display.scaling",
+                      .group = "display",
+                      .label = "缩放方式",
+                      .description = "整数倍缩放能保持像素清晰，窗口放不下时自动取最大的整数倍。",
+                      .kind = api::SettingKind::Choice,
+                      .options = {{"fit", "适应窗口"}, {"integer", "整数倍"}},
+                      .defaultValue = std::string("fit")});
+  service.addSetting({.id = "display.showAllLines",
+                      .group = "display",
+                      .label = "显示全部 240 行",
+                      .description = "关闭时裁掉上下各 8 行。",
+                      .kind = api::SettingKind::Switch,
+                      .defaultValue = true});
+}
+
+void registerPreferences(ModuleRegistry& registry) {
+  infra::preferences::PreferenceRegistryOptions options;
+  options.file = registry.userDataPath / "config" / "preferences.json";
+  options.events = registry.events;
+  options.errors = registry.errors;
+  auto service = std::make_shared<infra::preferences::PreferenceRegistry>(std::move(options));
+  registerInterfaceSettings(*service);
+  registry.services.provide<api::PreferenceService>(service);
+  requests::preferences::addPreferencesRequests(registry.requests, service);
+}
+
+}  // namespace ember::bootstrap

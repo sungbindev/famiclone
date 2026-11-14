@@ -14,6 +14,7 @@
 #include "bootstrap/modules/cartridges.hpp"
 #include "bootstrap/modules/mappers.hpp"
 #include "bootstrap/modules/output.hpp"
+#include "bootstrap/modules/preferences.hpp"
 #include "bootstrap/modules/runtime.hpp"
 #include "bootstrap/modules/system.hpp"
 
@@ -24,6 +25,7 @@ namespace {
 // 取用共享服务的模块排在提供方之后。
 constexpr ModuleRegistration MODULES[] = {
     {"system", registerSystem},
+    {"preferences", registerPreferences},
     {"mappers", registerMappers},
     {"output", registerOutput},
     {"runtime", registerRuntime},

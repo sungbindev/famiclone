@@ -9,7 +9,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MAX_CANVAS_DIMENSION, parseWorkerReply, parseWorkerRequest } from './worker-messages';
+import { MAX_CANVAS_DIMENSION, nextScreenView, parseWorkerReply, parseWorkerRequest, type ScreenView } from './worker-messages';
 
 /** 测试用的假画布与假端口类，只用来通过 instanceof 检查。 */
 class FakeOffscreenCanvas {
@@ -92,5 +92,26 @@ describe('parseWorkerReply', () => {
     for (const value of [null, undefined, 'ready', {}, { type: 'failed' }, { type: 'failed', message: 5 }, { type: 'diagnostics', id: '1', data: {} }, { type: 'diagnostics', id: 1 }, { type: 'diagnostics', id: 1, data: null }, { type: 'other' }]) {
       expect(parseWorkerReply(value)).toBeUndefined();
     }
+  });
+});
+
+
+describe('nextScreenView', () => {
+  const current: ScreenView = { width: 1280, height: 960, aspect: '4:3', scaling: 'fit' };
+
+  it('尺寸合格时采用新版面', () => {
+    const incoming: ScreenView = { width: 800, height: 600, aspect: '8:7', scaling: 'integer' };
+    expect(nextScreenView(current, incoming)).toEqual(incoming);
+  });
+
+  it('宽或高为 0（页面隐藏）时保持上一次的尺寸，画面比例与缩放方式照常更新', () => {
+    expect(nextScreenView(current, { width: 0, height: 0, aspect: '8:7', scaling: 'integer' })).toEqual({ width: 1280, height: 960, aspect: '8:7', scaling: 'integer' });
+    expect(nextScreenView(current, { width: 0, height: 600, aspect: '4:3', scaling: 'fit' })).toEqual(current);
+    expect(nextScreenView(current, { width: 800, height: 0, aspect: '4:3', scaling: 'fit' })).toEqual(current);
+  });
+
+  it('一直没有真实尺寸时保持 0', () => {
+    const empty: ScreenView = { width: 0, height: 0, aspect: '4:3', scaling: 'fit' };
+    expect(nextScreenView(empty, { ...empty })).toEqual(empty);
   });
 });

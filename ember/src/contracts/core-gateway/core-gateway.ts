@@ -26,6 +26,9 @@ export interface CoreGateway {
   /** 订阅核心事件；返回取消订阅的函数。 */
   onEvent(listener: (name: CoreEventName, data: unknown) => void): () => void;
 
+  /** 订阅核心运行状态的变化（启动中、就绪、不可用，核心进程重启也会依次变化）；返回取消订阅的函数。 */
+  onStatusChange(listener: (status: CoreStatus) => void): () => void;
+
   /** 当前的运行状态。 */
   status(): CoreStatus;
 }

@@ -54,6 +54,18 @@ export type WorkerReply =
 /** 画布尺寸的上限（设备像素）：防止异常的消息让 Worker 分配过大的画布。 */
 export const MAX_CANVAS_DIMENSION = 16_384;
 
+/**
+ * 收到新版面时 Worker 采用的版面：页面隐藏或容器收起时 ResizeObserver 会给出 0×0，这样的尺寸不采用，保持上一次的尺寸（窗口重新显示后会收到真实尺寸），
+ * 画面比例与缩放方式照常更新。
+ * @param current 当前的版面。
+ * @param incoming 新收到的版面。
+ * @returns 要采用的版面。
+ */
+export function nextScreenView(current: ScreenView, incoming: ScreenView): ScreenView {
+  if (incoming.width > 0 && incoming.height > 0) return incoming;
+  return { ...incoming, width: current.width, height: current.height };
+}
+
 /** 是不是画布尺寸（0 到上限的整数）。 */
 function isDimension(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_CANVAS_DIMENSION;

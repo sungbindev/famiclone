@@ -72,6 +72,7 @@ export class ProcessCoreGateway implements CoreGateway, CoreStreamSink {
   private exitWaiter: (() => void) | undefined;
   private readonly pending = new Map<string, PendingRequest>();
   private readonly eventListeners = new Set<(name: CoreEventName, data: unknown) => void>();
+  private readonly statusListeners = new Set<(status: CoreStatus) => void>();
   private readonly startedListeners = new Set<() => void>();
   private readonly now: () => number;
   private readonly createId: () => string;
@@ -141,6 +142,11 @@ export class ProcessCoreGateway implements CoreGateway, CoreStreamSink {
 
   status(): CoreStatus {
     return this.current;
+  }
+
+  onStatusChange(listener: (status: CoreStatus) => void): () => void {
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
   }
 
   attachStreams(ports: StreamPortPair): boolean {
@@ -243,5 +249,6 @@ export class ProcessCoreGateway implements CoreGateway, CoreStreamSink {
 
   private setStatus(status: CoreStatus): void {
     this.current = status;
+    for (const listener of this.statusListeners) listener(status);
   }
 }

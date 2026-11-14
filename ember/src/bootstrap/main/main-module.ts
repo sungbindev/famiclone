@@ -9,6 +9,7 @@
  * ------------------------------------------------------------------------
  */
 
+import type { RecentCartridgesService } from '../../contracts/cartridges/recent-cartridges-service';
 import type { FileDialog } from '../../contracts/shell/file-dialog';
 import type { CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
 import type { MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
@@ -20,6 +21,8 @@ export interface MainHandlerContext {
   readonly fileDialog: FileDialog;
   /** 以主进程的身份向核心发起请求所需的依赖。 */
   readonly core: CoreRequestHandling;
+  /** 最近打开的卡带。 */
+  readonly recentCartridges: RecentCartridgesService;
 }
 
 /** 一个模块在主进程中的登记项。 */

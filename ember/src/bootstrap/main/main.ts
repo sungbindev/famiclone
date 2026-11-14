@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：main.ts
- * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、创建主窗口，退出时停止核心。
+ * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、外壳能力（界面状态的保存、窗口动作）、创建主窗口，退出时保存界面状态并停止核心。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
  * 备注：只创建实现并注入，不写业务判断；原生模块与预装插件在开发时取 core/build/Release 与 build/plugins，正式包取应用的 resources 目录；
- *       命令行带 --cartridge=路径（.nes）时，核心启动后由主进程加载这张卡带。
+ *       命令行带 --cartridge=路径（.nes）时，核心启动后由主进程加载这张卡带；界面状态保存在用户数据目录的 config/shell-state.json。
  * ------------------------------------------------------------------------
  */
 
@@ -16,18 +16,25 @@ import handledSquirrelEvent from 'electron-squirrel-startup';
 import { CORE_SCHEMAS } from '../../contracts/core-gateway/generated/core-api';
 import { STREAM_PORTS_WINDOW_MESSAGE } from '../../contracts/stream-ports/stream-messages';
 import { STREAM_CHANNELS } from '../../contracts/stream-ports/stream-ports';
-import { forwardCoreToWindow, registerCoreIpc, requestCoreAsMain, type CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
+import { forwardCoreToWindow, registerCoreIpc, type CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
+import { loadAndRemember } from '../../entry/ipc/cartridges/load-cartridge';
 import { registerMainRequestIpc, type MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
+import { forwardWindowState, registerShellIpc } from '../../entry/ipc/shell/shell-ipc';
 import { registerStreamsIpc } from '../../entry/ipc/streams/streams-ipc';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
 import { ProcessCoreGateway } from '../../infra/core-client/process-core-gateway';
+import { FileRecentCartridgesService } from '../../infra/recent-cartridges/file-recent-cartridges-service';
+import { FileShellStateService } from '../../infra/shell-state/file-shell-state-service';
 import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
 import { startElectronCoreProcess } from '../../platform/core-process/core-process';
 import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
 import { cartridgePathFromArgv } from '../../platform/launch/launch-args';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
+import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
-import { createAppWindow, denyAllPermissions, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
+import { createAppWindow, denyAllPermissions, followSystemTheme, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
+import { createWindowController } from '../../platform/window/window-controller';
+import { watchWindow } from '../../platform/window/window-events';
 import { MAIN_MODULES } from './module-list';
 
 /** 应用标识，与 forge.config.mts 一致。 */
@@ -77,9 +84,16 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     logger
   });
   const streamHub = new StreamPortHub({ channels: createElectronChannelFactory(), core: gateway, logger });
+  const shellState = new FileShellStateService(
+    new JsonFileStore({ path: join(userDataPath, 'config', 'shell-state.json'), onError: (error) => logError(logger, error, { source: 'shellState' }) })
+  );
+  const recentCartridges = new FileRecentCartridgesService(
+    new JsonFileStore({ path: join(userDataPath, 'config', 'recent-cartridges.json'), onError: (error) => logError(logger, error, { source: 'recentCartridges' }) })
+  );
 
   let mainWindow: BrowserWindow | undefined;
   let quitting = false;
+  const windowController = createWindowController(() => mainWindow, () => app.quit());
   const isTrustedSender = createSenderCheck((url) => isAppUrl(url, { rendererFile, ...(devServerUrl ? { devServerUrl } : {}) }));
   const modules = MAIN_MODULES.map((module) => module.schema);
   /** 以主进程的身份向核心发起请求所需的依赖。 */
@@ -91,13 +105,20 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
       rendererFile,
       title: PRODUCT_NAME,
       devTools: !app.isPackaged,
+      placement: shellState.get().window,
       ...(devServerUrl ? { devServerUrl } : {})
     });
     mainWindow = window;
     const stopForwarding = forwardCoreToWindow(gateway, window.webContents);
+    const stopFollowingTheme = followSystemTheme(window);
+    watchWindow(window, {
+      onPlacement: (placement) => shellState.updateWindow(placement),
+      onState: forwardWindowState(window.webContents, () => windowController.state())
+    });
     window.webContents.on('render-process-gone', (_event, details) => logError(logger, new Error(`渲染进程退出：${details.reason}`), { exitCode: details.exitCode }));
     window.on('closed', () => {
       stopForwarding();
+      stopFollowingTheme();
       if (mainWindow === window) mainWindow = undefined;
     });
   };
@@ -121,6 +142,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     if (quitting) return;
     quitting = true;
     event.preventDefault();
+    shellState.flush();
+    recentCartridges.flush();
     streamHub.stop();
     void gateway
       .stop()
@@ -135,10 +158,11 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     streamHub.start();
     gateway.start();
     registerCoreIpc({ ipc: ipcMain, gateway, modules, schemas: CORE_SCHEMAS, isTrustedSender });
+    registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController });
 
     const fileDialog = createOpenFileDialog(() => mainWindow);
     const handlers: Record<string, MainRequestHandler> = {};
-    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, core: coreHandling }));
+    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, core: coreHandling, recentCartridges }));
     registerMainRequestIpc({ ipc: ipcMain, handlers, modules, schemas: CORE_SCHEMAS, isTrustedSender, onError: (error, name) => logError(logger, error, { source: 'mainRequest', name }) });
     registerStreamsIpc({
       ipc: ipcMain,
@@ -151,7 +175,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
 
     const cartridgePath = cartridgePathFromArgv(process.argv);
     if (cartridgePath !== undefined) {
-      requestCoreAsMain(coreHandling, 'cartridges.load', { path: cartridgePath }).catch((error: unknown) => logError(logger, error, { source: 'launchCartridge' }));
+      loadAndRemember({ core: coreHandling, recent: recentCartridges }, cartridgePath).catch((error: unknown) => logError(logger, error, { source: 'launchCartridge' }));
     }
   });
 }

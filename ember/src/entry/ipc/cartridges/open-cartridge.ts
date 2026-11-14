@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-cartridge.ts
- * 说明：cartridges.open 的处理：弹出系统文件选择窗口（只显示 .nes），把用户选定的路径交给核心的 cartridges.load；用户取消时返回明确的结果，不是错误。
+ * 说明：cartridges.open 的处理：弹出系统文件选择窗口（只显示 .nes），把用户选定的路径交给核心的 cartridges.load 并记入最近打开；用户取消时返回明确的结果，不是错误。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -11,8 +11,8 @@
 
 import type { MainResult } from '../../../contracts/core-gateway/generated/core-api';
 import type { FileDialog } from '../../../contracts/shell/file-dialog';
-import { requestCoreAsMain, type CoreRequestHandling } from '../core/core-ipc';
 import type { MainRequestHandler } from '../core/main-request-ipc';
+import { loadAndRemember, type LoadCartridgeOptions } from './load-cartridge';
 
 /** 用户可见的文字。 */
 const TEXT = {
@@ -24,9 +24,8 @@ const TEXT = {
 const CARTRIDGE_EXTENSION = 'nes';
 
 /** 打开卡带处理所需的依赖。 */
-export interface OpenCartridgeOptions {
+export interface OpenCartridgeOptions extends LoadCartridgeOptions {
   readonly dialog: FileDialog;
-  readonly core: CoreRequestHandling;
 }
 
 /**
@@ -38,7 +37,7 @@ export function createOpenCartridgeHandler(options: OpenCartridgeOptions): MainR
   return async (): Promise<MainResult<'cartridges.open'>> => {
     const path = await options.dialog.pickFile({ title: TEXT.title, filters: [{ name: TEXT.filter, extensions: [CARTRIDGE_EXTENSION] }] });
     if (path === undefined) return { canceled: true };
-    const loaded = await requestCoreAsMain(options.core, 'cartridges.load', { path });
+    const loaded = await loadAndRemember(options, path);
     return { canceled: false, loaded };
   };
 }

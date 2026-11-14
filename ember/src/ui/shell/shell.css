@@ -1,30 +1,74 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell.css
- * 说明：最小外壳的版面：页面占满窗口高度，纵向排列，需要占满剩余空间的页面（运行页）撑开。
+ * 说明：外壳的补充样式：页面容器、边栏容器、标题栏标志的强调色、底部面板“消息”页签的列表。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：阶段 3a 外壳按原型重做时整体替换。
+ * 备注：窗口框架、标题栏、活动栏、边栏、标签栏、底部面板与状态栏的外观与尺寸全部来自组件库，这里只写版面，颜色与间距取组件库的令牌，不定义令牌。
  * ------------------------------------------------------------------------
  */
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-}
-
-.ember-shell {
+/* 页面占满页面区；需要占满剩余空间的页面（运行页）在里面用 flex: 1 */
+.ember-shell-page {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.ember-shell__page--fill {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
   min-height: 0;
+}
+
+/* 每个有边栏的页面在边栏里有一个容器，切换页面时只隐藏，状态不丢 */
+.ember-shell-side {
+  height: 100%;
+}
+
+.ember-shell-side[hidden] {
+  display: none;
+}
+
+/* 标题栏的标志用强调色 */
+.ember-logo--brand {
+  color: var(--accent);
+}
+
+/* 消息列表：时间、级别、文字三列，警告与错误的级别文字着色 */
+.ember-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ember-messages__item {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+}
+
+.ember-messages__time {
+  flex: none;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ember-messages__level {
+  flex: none;
+  width: 2em;
+  color: var(--text-muted);
+}
+
+.ember-messages__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ember-messages__item[data-level='warning'] .ember-messages__level {
+  color: var(--status-warning);
+}
+
+.ember-messages__item[data-level='error'] .ember-messages__level {
+  color: var(--status-error);
 }

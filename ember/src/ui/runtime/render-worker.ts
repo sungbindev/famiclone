@@ -14,7 +14,7 @@
 import { FrameSession, type PendingFrame } from './frame-session';
 import { computeScreenRect, DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING } from './screen-layout';
 import { WebGlFrameRenderer } from './webgl-renderer';
-import { parseWorkerRequest, type ScreenView, type WorkerReply, type WorkerRequest } from './worker-messages';
+import { nextScreenView, parseWorkerRequest, type ScreenView, type WorkerReply, type WorkerRequest } from './worker-messages';
 
 /** Worker 全局对象里用到的部分（项目的 TypeScript 库只有 DOM，没有 WebWorker）。 */
 interface RenderWorkerScope {
@@ -114,7 +114,8 @@ function handle(request: WorkerRequest): void {
       attach(request.port);
       return;
     case 'view':
-      view = request.view;
+      // 页面隐藏时可能收到 0×0：保持上一次的画布尺寸，不把画布缩成 0。
+      view = nextScreenView(view, request.view);
       renderer?.resize(view.width, view.height);
       viewDirty = true;
       return;

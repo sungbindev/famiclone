@@ -2,6 +2,15 @@
   "$comment": "cartridges 模块：加载 NES 文件（解析、匹配插件、装配主机、插入卡槽）、取出卡带与卡带信息；open 由主进程弹出文件选择窗口后调用 load。规则见 docs/04-调试服务.md 第 4.2 节。",
   "module": "cartridges",
   "types": {
+    "RecentCartridge": {
+      "type": "object",
+      "description": "最近打开的清单里的一项：给界面看的显示名与编号，不含路径。",
+      "properties": {
+        "id": { "type": "integer", "minimum": 1, "description": "编号：本次运行内有效，用于 openRecent" },
+        "name": { "type": "string", "description": "显示名：文件名" }
+      },
+      "required": ["id", "name"]
+    },
     "LoadedCartridge": {
       "type": "object",
       "description": "加载完成的卡带与加载后的运行状态。",
@@ -65,6 +74,36 @@
         "required": ["canceled"]
       },
       "errors": ["cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
+    },
+    "recent": {
+      "description": "最近打开的卡带清单（最近的在前，最多 10 个）：只给显示名与本次运行内有效的编号，路径只保存在主进程；打开卡带成功之前就已记入清单，加载失败的会被移出。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/types/RecentCartridge" },
+            "description": "清单，最近的在前"
+          }
+        },
+        "required": ["items"]
+      },
+      "errors": []
+    },
+    "openRecent": {
+      "description": "重新打开最近打开清单里的一个卡带：按编号取出路径交给 cartridges.load（powerOn、resume 都用默认值）；加载失败的卡带会从清单里移出。",
+      "params": {
+        "type": "object",
+        "properties": { "id": { "type": "integer", "minimum": 1, "description": "recent 给出的编号" } },
+        "required": ["id"]
+      },
+      "result": {
+        "type": "object",
+        "properties": { "loaded": { "$ref": "#/types/LoadedCartridge", "description": "加载结果" } },
+        "required": ["loaded"]
+      },
+      "errors": ["cartridges.recentNotFound", "cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
     }
   },
   "events": {

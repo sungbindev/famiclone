@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：preload.ts
- * 说明：预加载脚本：向界面暴露 window.ember，界面可发起的核心请求与主进程请求按 Schema 生成的请求名暴露为“模块.操作”的具名方法，另有接收画面与输入端口的方法。
+ * 说明：预加载脚本：向界面暴露 window.ember，界面可发起的核心请求与主进程请求按 Schema 生成的请求名暴露为“模块.操作”的具名方法，另有接收画面与输入端口的方法，以及外壳自己的能力（界面状态的保存、窗口动作）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -13,7 +13,7 @@
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { CORE_REQUEST_NAMES, MAIN_REQUEST_NAMES, type CoreApi, type MainApi } from '../../contracts/core-gateway/generated/core-api';
-import { SHELL_CHANNELS, type CoreRequestReply, type EmberBridge } from '../../contracts/shell/shell-bridge';
+import { SHELL_CHANNELS, type CoreRequestReply, type EmberBridge, type ShellBridge } from '../../contracts/shell/shell-bridge';
 import { STREAM_PORTS_WINDOW_MESSAGE, type StreamPortsWindowMessage } from '../../contracts/stream-ports/stream-messages';
 import { STREAM_CHANNELS, type StreamPortsBridge } from '../../contracts/stream-ports/stream-ports';
 
@@ -63,12 +63,22 @@ const streams: StreamPortsBridge = {
   requestPorts: () => ipcRenderer.send(STREAM_CHANNELS.connect)
 };
 
+const shell: ShellBridge = {
+  getState: () => ipcRenderer.invoke(SHELL_CHANNELS.getState),
+  setLayout: (patch) => ipcRenderer.send(SHELL_CHANNELS.setLayout, patch),
+  windowAction: (action) => ipcRenderer.send(SHELL_CHANNELS.windowAction, action),
+  getWindowState: () => ipcRenderer.invoke(SHELL_CHANNELS.getWindowState),
+  onWindowStateChange: (listener) => subscribe(SHELL_CHANNELS.windowStateChanged, listener)
+};
+
 const bridge: EmberBridge = {
   core: buildApi(CORE_REQUEST_NAMES, SHELL_CHANNELS.coreRequest) as unknown as CoreApi,
   main: buildApi(MAIN_REQUEST_NAMES, SHELL_CHANNELS.mainRequest) as unknown as MainApi,
   streams,
+  shell,
   onCoreEvent: (listener) => subscribe(SHELL_CHANNELS.coreEvent, listener),
-  getCoreStatus: () => ipcRenderer.invoke(SHELL_CHANNELS.coreStatus)
+  getCoreStatus: () => ipcRenderer.invoke(SHELL_CHANNELS.coreStatus),
+  onCoreStatusChange: (listener) => subscribe(SHELL_CHANNELS.coreStatusChanged, listener)
 };
 
 contextBridge.exposeInMainWorld('ember', bridge);

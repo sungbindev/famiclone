@@ -5,12 +5,14 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：正式包使用 index.html 里严格的策略；开发服务器需要 ws 连接和内联样式（Vite 把样式注入为 style 标签）。
+ * 备注：正式包使用 index.html 里严格的策略；开发服务器需要 ws 连接和内联样式（Vite 把样式注入为 style 标签），还要允许访问项目目录之外的组件库。
  * ------------------------------------------------------------------------
  */
 
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import { thirdPartyPlugin } from './tools/third-party/third-party.mjs';
 import { DEDUPE, uiKitAlias, uiKitDirectory } from './ui-kit-source.mts';
 
@@ -35,6 +37,8 @@ export default defineConfig({
     alias: uiKitAlias(),
     dedupe: DEDUPE
   },
+  // 组件库在项目目录之外，开发服务器要允许访问它（标题栏的 Quicksand 字体文件在组件库里）。
+  server: { fs: { allow: [searchForWorkspaceRoot(dirname(fileURLToPath(import.meta.url))), uiKitDirectory()] } },
   // 渲染 Worker 用 ES 模块格式，与 new Worker(..., { type: 'module' }) 一致。
   worker: { format: 'es' }
 });

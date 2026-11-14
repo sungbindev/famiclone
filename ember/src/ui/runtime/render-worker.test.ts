@@ -1,0 +1,113 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：render-worker.test.ts
+ * 说明：渲染 Worker 对 0 尺寸版面的处理测试：页面隐藏时 ResizeObserver 会给出 0×0，Worker 要忽略这个尺寸、保持上一次的画布尺寸，再次显示后用真实尺寸。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-14
+ * 备注：用假的 Worker 全局对象与假的 WebGL 渲染器加载 render-worker.ts，经消息监听器发送消息；不依赖真实的 WebGL。
+ * ------------------------------------------------------------------------
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+/** 渲染器的假实现：记下每次调整画布尺寸。 */
+const renderer = vi.hoisted(() => ({ resize: vi.fn(), draw: vi.fn() }));
+
+vi.mock('./webgl-renderer', () => ({
+  WebGlFrameRenderer: class {
+    readonly size = { width: 0, height: 0 };
+    resize = renderer.resize;
+    draw = renderer.draw;
+  }
+}));
+
+/** 假的离屏画布：只用来通过 init 消息的类型检查。 */
+class FakeOffscreenCanvas {
+  readonly kind = 'canvas';
+}
+
+/** Worker 全局对象的假实现。 */
+interface FakeScope {
+  listener?: (event: MessageEvent) => void;
+  addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
+  postMessage: ReturnType<typeof vi.fn>;
+  requestAnimationFrame: ReturnType<typeof vi.fn>;
+}
+
+let scope: FakeScope;
+
+/** 向 Worker 发一条消息。 */
+function send(data: unknown): void {
+  scope.listener?.({ data } as MessageEvent);
+}
+
+/** 版面消息。 */
+function view(width: number, height: number, aspect: '4:3' | '8:7' = '4:3'): unknown {
+  return { type: 'view', view: { width, height, aspect, scaling: 'fit' } };
+}
+
+beforeEach(async () => {
+  vi.resetModules();
+  renderer.resize.mockClear();
+  renderer.draw.mockClear();
+  scope = {
+    addEventListener(_type, listener) {
+      this.listener = listener;
+    },
+    postMessage: vi.fn(),
+    requestAnimationFrame: vi.fn()
+  };
+  vi.stubGlobal('self', scope);
+  vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+  await import('./render-worker');
+  send({ type: 'init', canvas: new FakeOffscreenCanvas() });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('渲染 Worker 的版面', () => {
+  it('初始化后通知主线程已就绪', () => {
+    expect(scope.postMessage).toHaveBeenCalledWith({ type: 'ready' });
+  });
+
+  it('采用真实尺寸调整画布', () => {
+    send(view(1280, 960));
+    expect(renderer.resize).toHaveBeenLastCalledWith(1280, 960);
+  });
+
+  it('收到 0×0（页面隐藏）时忽略，保持上一次的画布尺寸', () => {
+    send(view(1280, 960));
+    renderer.resize.mockClear();
+    send(view(0, 0));
+    expect(renderer.resize).toHaveBeenCalledTimes(1);
+    expect(renderer.resize).toHaveBeenLastCalledWith(1280, 960);
+    expect(renderer.resize).not.toHaveBeenCalledWith(0, 0);
+  });
+
+  it('只有宽或只有高为 0 时同样忽略', () => {
+    send(view(800, 600));
+    send(view(0, 600));
+    send(view(800, 0));
+    expect(renderer.resize).toHaveBeenLastCalledWith(800, 600);
+    expect(renderer.resize).not.toHaveBeenCalledWith(0, 600);
+    expect(renderer.resize).not.toHaveBeenCalledWith(800, 0);
+  });
+
+  it('页面重新显示后用新的真实尺寸', () => {
+    send(view(1280, 960));
+    send(view(0, 0));
+    send(view(1024, 768));
+    expect(renderer.resize).toHaveBeenLastCalledWith(1024, 768);
+  });
+
+  it('页面隐藏期间画面比例的变化不丢：尺寸保持，之后的真实尺寸仍用新比例', () => {
+    send(view(1280, 960));
+    send(view(0, 0, '8:7'));
+    expect(renderer.resize).toHaveBeenLastCalledWith(1280, 960);
+    send(view(1280, 960, '8:7'));
+    expect(renderer.resize).toHaveBeenLastCalledWith(1280, 960);
+  });
+});

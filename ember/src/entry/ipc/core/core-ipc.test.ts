@@ -15,7 +15,7 @@ import { SYSTEM_SCHEMA } from '../../../contracts/system/generated/system';
 import { handleCoreRequest } from './core-ipc';
 
 function gatewayWith(request: CoreGateway['request']): CoreGateway {
-  return { request, onEvent: () => () => undefined, status: () => ({ state: 'starting' }) };
+  return { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
 }
 
 describe('handleCoreRequest', () => {

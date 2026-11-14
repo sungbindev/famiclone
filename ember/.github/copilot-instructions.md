@@ -25,8 +25,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - CPU 核用 nestest 日志逐行比对验证，测试数据在 `core/test/data/nestest/`，不改动数据文件。
 - PPU 用公开的测试 ROM 验证（`core/test/data/` 下的 9 组，来源与结果见各目录的 `README.md`），由 `core/test/hardware/ppu-rom-test.cpp` 运行；改动 PPU、DMA、手柄或 `fc` 主机型号后必须重跑，暂时不能通过的项登记在 02 第 12 节“已知差异”，不删测试。测试用的卡带经 iNES 解析加真实的 nrom 插件装配（ppu_read_buffer 的 mapper 3 用测试插件 `test-cnrom`），核心程序和测试代码里都没有 mapper 的替身实现。
 - PPU 的 CPU 相位（`fc.hpp` 的 `PPU_PHASE_TICKS`）按 vbl/NMI 时序测试调定，不随意改；PPU 的帧缓冲每像素 4 字节，内存顺序 R、G、B、A，见 02。
-- 模拟器内置主机型号（含学习机整机的地址译码表与胶合逻辑），不含任何具体卡带的规则；卡带的规则只在 mapper 插件里。mapper 清单只能按名字选择主机型号，不能修改芯片内部与主板上的固定资源，也不连线主机上的功能模块。
-- 学习机的 BIOS 不是卡带：不走 mapper 匹配，由用户在首选项的“机型与 BIOS”里按机型添加（复制进用户数据目录的 `bios/`），经“文件”菜单的“开机…”开机；NES 文件只走 fc 卡带路线，mapper 171 没有插件时按 `mappers.noMatch` 报错。整机机型只有 sb97、sb2000、bbk10、bbk20，各是独立的主机型号，目前只做 sb2000；`machines` 模块在学习机阶段实现。
+- 模拟器内置主机型号（含学习机整机的地址译码表与胶合逻辑），不含任何具体卡带的规则；卡带的规则只在 mapper 插件里。mapper 清单只能按名字选择主机型号，不能修改芯片内部与主板上的固定资源；插卡学习机（如裕兴，经典 FC 之后做）的卡带 mapper 在脚本里译码，经 `ctx.device` 读写主机上的软驱等功能模块，清单不声明连线（不恢复 `wires`、`uses`）。
+- 学习机的 BIOS 不是卡带：不走 mapper 匹配，由用户在首选项的“机型与 BIOS”里按机型添加（复制进用户数据目录的 `bios/`），经“文件”菜单的“开机…”开机；NES 文件只走卡带路线（主机按清单的 `host` 自动装配），mapper 171 没有插件时按 `mappers.noMatch` 报错。整机机型只有 sb97、sb2000、bbk10、bbk20，各是独立的主机型号，目前只做 sb2000；`machines` 模块在学习机阶段实现。
 - 功能模块（软驱、打印机、声音、磁带等）各机型共用一份实现，模块与总线地址无关，地址由每个机型的地址译码表在主机装配里挂接；键盘、鼠标协议、整机寄存器与胶合逻辑是机型自己的。划分只看两点：地址由谁译码（主机译码表还是卡带 mapper）、能否由用户插拔（端口上的外部设备），物理上在不在同一颗芯片里不是规则。
 - 官方 mapper 插件的源码在 `plugins/<id>/`（目录名等于清单里的 `id`，只含 `manifest.json`、`main.js`、`icon.png`），用 `npm run plugins:pack` 打包到 `build/plugins/`；核心测试依赖打好的包（`npm run core:test` 会先打包）。改了插件规范或宿主的行为，同步 03，并把与设计不一致处写进 03 第 11 节。
 - mapper 插件包与脚本来自外部，是不可信输入：包的读取要检查路径穿越与大小上限，脚本只能经宿主对象 `ctx` 访问外部，内存、栈、单次回调时长都有上限；C 回调里的 C++ 异常必须在边界截获，脚本出错不能让异常穿过 CPU 的总线访问（卡带记下错误，由运行模块轮询）。
@@ -36,6 +36,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 新增模块时在各层建立同名模块目录，并在 C++、主进程、渲染进程三份模块清单中登记；分层与模块依赖由 `npm run boundaries` 检查，见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md)。
 - 业务逻辑、模拟与数据读写一律放 C++ 核心；TypeScript 部分只做外壳、界面、入口校验、进程间转接和系统能力。
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。
+- 外壳（`src/ui/shell/`）只渲染登记表，不写死任何入口：页面（可声明边栏）、命令与默认快捷键、菜单项、活动栏按钮、底部面板页签、状态项都由模块在 `src/bootstrap/renderer/modules/<模块>.ts` 登记，外壳自己的登记项在 `ui/shell/shell-module.ts`；登记表由 `ui/shell/build-registry.ts` 检查（标识前缀、重复、引用、快捷键冲突），规则见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) 第 3 节“界面登记”；模块的页面、面板与状态项只经 `useShell()` 和外壳交互（打开页面、切换区域、追加消息等）。按键已被画面处理（`defaultPrevented`）时外壳不再响应快捷键。登记项还有子菜单（`menuItems[].submenu`，项随数据变化，如“最近打开”）、可以是函数的命令名称（如“上电”与“断电”的切换）、常驻组件 `Host`（外壳启动后一直挂载，用来订阅事件，模块状态变化后调用 `shell.refreshCommands()` 让外壳重算菜单的名称、勾选与置灰）；焦点在文本输入控件里时，不带 Ctrl 或 Alt 的快捷键不触发。运行模块的状态集中在 `ui/runtime/runtime-controller.ts`（不依赖 React），边栏、状态栏、画面提示与菜单都从它取数据，核心重启时经 `onCoreStatusChange` 清空并重新读取状态；界面层的模块之间不引用对方的契约（最近打开清单的类型取自 `EmberBridge` 的返回值）。
+- 主窗口隐藏系统标题栏（系统绘制窗口按钮）；界面只能发起白名单里的窗口动作（`shell.windowAction`，见 `contracts/shell/window-control.ts`），界面状态（窗口位置、区域展开状态、底部面板高度）由主进程保存到用户数据目录的 `config/shell-state.json`，收到的修改整条校验（`shared/shell-state`），文件不存在或损坏时用默认值、不报错，见 01 第 2、9 节。用保存的边界恢复窗口时要用 `setExactBounds`，否则非整数倍缩放下窗口每次启动大 1 像素。
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
 - 先在 Windows 上开发、调试与编译；macOS 的编译与打包脚本同时写齐，但不在 Windows 上运行或测试。
 - 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，把主机生成的声音采样（`Machine::takeAudio`）写进 `platform/audio/audio-output.hpp` 的 `AudioOutput`，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出、声音输出五个抽象，硬件模块只能包含前两个。
@@ -44,7 +46,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 画面与输入不走请求，用单独的消息端口（`window.ember.streams.requestPorts()`，契约在 `src/contracts/stream-ports/`）：核心到渲染进程的帧消息（带 `publishedAt` 与 `hostDropped`）、渲染进程在画面端口上回的帧确认（`ack`）与渲染进程到核心的按键消息，格式只在 `stream-messages.ts` 里定义；核心宿主对渲染进程发来的输入与确认逐条校验，在途帧不超过 `MAX_FRAMES_IN_FLIGHT`（背压，超过就丢新帧），binding 的帧缓冲槽由 JavaScript 线程创建、不转移、不保存。
 - 画面在渲染 Worker（`src/ui/runtime/render-worker.ts`）里用 WebGL 显示：Worker 收帧、校验、只保留最新一帧、由它自己的 `requestAnimationFrame` 驱动绘制并确认（每一帧恰好确认一次：画出、被顶掉、格式不符但能读出帧号）；收帧与结算逻辑写成不依赖 Worker 对象的纯类（`frame-session.ts`、`frame-receiver.ts`）以便测试。Worker 与它依赖的文件不得引用 `electron`、Node 内置模块、React、组件库、`.tsx` 与样式文件（`npm run boundaries` 检查）；内容安全策略只给 `worker-src 'self'`，不放宽 `script-src`。开发期诊断入口 `window.emberRuntimeDiagnostics` 只在 `import.meta.env.DEV` 下挂载。
 - 键盘采集只在画面区获得焦点时进行，按物理键位（`KeyboardEvent.code`）查数据化的映射表（`key-capture.ts` 的 `DEFAULT_KEY_MAP`），只在手柄按键掩码变化时发送；失焦、页面隐藏、卸载时松开全部按键，可编辑元素上不采集。
-- 主进程自己处理的请求写在 Schema 的 `mainRequests`，经 `window.ember.main` 暴露与 `entry/ipc/core/main-request-ipc.ts` 校验；参数带磁盘路径的核心请求标 `mainOnly`，路径只来自用户在系统窗口里的选择（如 `cartridges.open`）或主进程的启动参数 `--cartridge=`，渲染进程不能传任意路径。
+- 主进程自己处理的请求写在 Schema 的 `mainRequests`，经 `window.ember.main` 暴露与 `entry/ipc/core/main-request-ipc.ts` 校验；参数带磁盘路径的核心请求标 `mainOnly`，路径只来自用户在系统窗口里的选择（如 `cartridges.open`）或主进程的启动参数 `--cartridge=`，渲染进程不能传任意路径。最近打开的卡带由主进程保存（`config/recent-cartridges.json`，最多 10 个，读不到或不合格时用空清单），渲染进程只能经 `cartridges.recent`、`cartridges.openRecent` 拿到编号与显示名并按编号重新打开；打开卡带都经 `entry/ipc/cartridges/load-cartridge.ts`：先记入清单再加载，失败时移出。
 - TypeScript 的 `platform` 不引用 `contracts`，用结构类型实现契约里的接口，由组装根注入。
 - 使用的第三方开源代码按如见的做法登记 `third-party.json`，由脚本生成“关于”对话框的开源清单与许可全文，不手写。
 
@@ -65,7 +67,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `npm run lint` | oxlint 检查 |
 | `npm run boundaries` | 分层、模块依赖与模块登记检查 |
 | `npm run check` | 以上全部检查与测试 |
-| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、页面重载与核心重启（见 docs/06 第 8 节），只结束自己启动的进程 |
+| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、运行页边栏与状态栏的机器状态、F8 快捷键、“文件”菜单的最近打开与开机子菜单、页面重载与核心重启（含重启后边栏状态刷新）（见 docs/06 第 8 节），只结束自己启动的进程 |
 | `node tools/dev/latency-run.mjs` | 画面延迟与丢帧测量：开发版运行 30 秒，打印核心、收到、渲染帧率与各类丢帧、两段延迟（见 docs/06 第 9 节、docs/01 第 7 节），只结束自己启动的进程 |
 | `npm run package:win` | 打包 Windows x64 版 |
 | `npm run make:win` | 生成 Windows x64 安装程序 |

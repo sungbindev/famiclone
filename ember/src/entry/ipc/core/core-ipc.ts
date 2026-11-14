@@ -90,11 +90,18 @@ export function registerCoreIpc(options: CoreIpcOptions): void {
 }
 
 /**
- * 把核心事件转发给窗口。
+ * 把核心事件与核心运行状态的变化转发给窗口。
  * @returns 停止转发的函数。
  */
 export function forwardCoreToWindow(gateway: CoreGateway, contents: WebContents): () => void {
-  return gateway.onEvent((name, data) => {
+  const stopEvents = gateway.onEvent((name, data) => {
     if (!contents.isDestroyed()) contents.send(SHELL_CHANNELS.coreEvent, name, data);
   });
+  const stopStatus = gateway.onStatusChange((status) => {
+    if (!contents.isDestroyed()) contents.send(SHELL_CHANNELS.coreStatusChanged, status);
+  });
+  return () => {
+    stopEvents();
+    stopStatus();
+  };
 }

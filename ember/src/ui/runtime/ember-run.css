@@ -1,15 +1,16 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：ember-run.css
- * 说明：运行页的版面：页面纵向排列，画面区占满剩余空间，画布铺满画面区，开发期操作条在下方。
+ * 说明：运行页的版面：页面纵向排列，画面区占满剩余空间，画布铺满画面区，画面提示覆盖在画面区上；边栏里的按钮网格与音量行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：只写版面，颜色与间距取组件库的令牌；画面区的黑底是画面之外的留边，与主题无关。外壳按原型重做时（阶段 3a）由外壳接管版面。
+ * 备注：只写版面，颜色与间距取组件库的令牌；画面区的黑底与其上的提示都是被模拟的内容，与主题无关（组件库没有对应的令牌）。页面由外壳的页面容器（高度占满页面区的纵向排列）挂载，所以这里用 flex: 1 占满剩余空间。
  * ------------------------------------------------------------------------
  */
 
 .ember-run {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -36,10 +37,59 @@
   height: 100%;
 }
 
-.ember-run-controls {
-  padding: var(--space-sm) var(--space-md);
+.ember-run-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  color: rgb(235, 235, 235);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
 }
 
-.ember-run-controls__volume {
-  width: 120px;
+.ember-run-overlay__icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* 没有开机与断电时机器没有画面：纯黑底色盖住画布里残留的上一帧 */
+.ember-run-overlay[data-blank='true'] {
+  background: black;
+}
+
+.ember-run-overlay__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-strong);
+}
+
+.ember-run-overlay__text {
+  font-size: var(--font-size-caption);
+}
+
+/* 边栏：控制组的四个按钮排成两列，音量行是静音按钮、滑块与数值 */
+.ember-run-side__buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--action-gap);
+}
+
+.ember-run-side__volume {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.ember-run-side__slider {
+  flex: 1;
+  min-width: 0;
+}
+
+.ember-run-side__volume-value {
+  min-width: 3ch;
+  color: var(--text-muted);
+  text-align: right;
 }

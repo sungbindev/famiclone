@@ -11,6 +11,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { CARTRIDGES_SCHEMA } from '../../../contracts/cartridges/generated/cartridges';
+import type { RecentCartridgesService } from '../../../contracts/cartridges/recent-cartridges-service';
 import type { CoreGateway } from '../../../contracts/core-gateway/core-gateway';
 import { CoreRequestError } from '../../../contracts/core-gateway/core-messages';
 import { RUNTIME_SCHEMA } from '../../../contracts/runtime/generated/runtime';
@@ -39,11 +40,24 @@ const LOADED = {
 };
 
 function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = vi.fn().mockResolvedValue(LOADED)) {
-  const gateway: CoreGateway = { request, onEvent: () => () => undefined, status: () => ({ state: 'starting' }) };
+  /** 按发生的先后记下“加入、请求核心、移出”，用来核对“先记入、失败再移出”的顺序。 */
+  const calls: string[] = [];
+  const recording: CoreGateway['request'] = (name, params) => {
+    calls.push(`request ${name}`);
+    return request(name, params);
+  };
+  const gateway: CoreGateway = { request: recording, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
   const schemas = [RUNTIME_SCHEMA, CARTRIDGES_SCHEMA];
   const core = { gateway, modules: [CARTRIDGES_SCHEMA], schemas };
-  const handler = createOpenCartridgeHandler({ dialog: { pickFile: pick }, core });
-  return { gateway, request, call: () => handleMainRequest({ handlers: { 'cartridges.open': handler }, modules: [CARTRIDGES_SCHEMA], schemas }, 'cartridges.open', {}) };
+  const recent: RecentCartridgesService = {
+    list: () => [],
+    add: (path) => calls.push(`add ${path}`),
+    remove: (path) => calls.push(`remove ${path}`),
+    resolve: () => undefined,
+    flush: () => undefined
+  };
+  const handler = createOpenCartridgeHandler({ dialog: { pickFile: pick }, core, recent });
+  return { gateway, request, calls, call: () => handleMainRequest({ handlers: { 'cartridges.open': handler }, modules: [CARTRIDGES_SCHEMA], schemas }, 'cartridges.open', {}) };
 }
 
 describe('cartridges.open', () => {
@@ -56,16 +70,24 @@ describe('cartridges.open', () => {
     expect(request).toHaveBeenCalledWith('cartridges.load', { path: 'D:/roms/idle.nes' });
   });
 
-  it('用户取消选择时返回 canceled，不是错误，也不调用核心', async () => {
-    const { request, call } = setup(vi.fn().mockResolvedValue(undefined));
+  it('用户取消选择时返回 canceled，不是错误，也不调用核心，不记入最近打开', async () => {
+    const { request, calls, call } = setup(vi.fn().mockResolvedValue(undefined));
     await expect(call()).resolves.toEqual({ ok: true, result: { canceled: true } });
     expect(request).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
   });
 
-  it('核心加载失败时返回核心的错误码与说明', async () => {
+  it('加载成功的卡带记入最近打开，记入在加载之前', async () => {
+    const { calls, call } = setup(vi.fn().mockResolvedValue('D:/roms/idle.nes'));
+    await call();
+    expect(calls).toEqual(['add D:/roms/idle.nes', 'request cartridges.load']);
+  });
+
+  it('核心加载失败时返回核心的错误码与说明，并把卡带移出最近打开', async () => {
     const failing = vi.fn().mockRejectedValue(new CoreRequestError({ code: 'cartridges.notInes', message: '文件不是 NES 卡带' }));
-    const { call } = setup(vi.fn().mockResolvedValue('D:/roms/bad.nes'), failing);
+    const { calls, call } = setup(vi.fn().mockResolvedValue('D:/roms/bad.nes'), failing);
     await expect(call()).resolves.toEqual({ ok: false, error: { code: 'cartridges.notInes', message: '文件不是 NES 卡带' } });
+    expect(calls).toEqual(['add D:/roms/bad.nes', 'request cartridges.load', 'remove D:/roms/bad.nes']);
   });
 
   it('文件选择窗口本身出错时返回 core.internal', async () => {

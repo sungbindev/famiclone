@@ -46,8 +46,9 @@ afterEach(() => {
 
 describe('window.ember', () => {
   it('只暴露具名方法，不暴露 ipcRenderer 或通用的调用入口', () => {
-    expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'streams']);
+    expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'onCoreStatusChange', 'shell', 'streams']);
     expect(JSON.stringify(Object.keys(bridge.streams))).toBe('["requestPorts"]');
+    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onWindowStateChange', 'setLayout', 'windowAction']);
     expect('ipcRenderer' in bridge).toBe(false);
     expect('invoke' in bridge).toBe(false);
   });
@@ -63,7 +64,7 @@ describe('window.ember', () => {
 
   it('主进程请求暴露为 main.cartridges.open，走主进程请求通道', async () => {
     expect(Object.keys(bridge.main)).toEqual(['cartridges']);
-    expect(Object.keys(bridge.main.cartridges)).toEqual(['open']);
+    expect(Object.keys(bridge.main.cartridges).toSorted()).toEqual(['open', 'openRecent', 'recent']);
     electron.invoke.mockResolvedValue({ ok: true, result: { canceled: true } });
     await expect(bridge.main.cartridges.open({})).resolves.toEqual({ canceled: true });
     expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.open', {});
@@ -83,6 +84,45 @@ describe('window.ember', () => {
   it('streams.requestPorts 向主进程请求端口', () => {
     bridge.streams.requestPorts();
     expect(electron.send).toHaveBeenCalledWith(STREAM_CHANNELS.connect);
+  });
+
+  it('外壳能力走各自的通道：读取状态与窗口状态用 invoke，保存布局与窗口动作用 send', async () => {
+    electron.invoke.mockResolvedValue('状态');
+    await expect(bridge.shell.getState()).resolves.toBe('状态');
+    await bridge.shell.getWindowState();
+    bridge.shell.setLayout({ rightBarOpen: true });
+    bridge.shell.windowAction('toggleFullScreen');
+    expect(electron.invoke.mock.calls).toEqual([[SHELL_CHANNELS.getState], [SHELL_CHANNELS.getWindowState]]);
+    expect(electron.send.mock.calls).toEqual([
+      [SHELL_CHANNELS.setLayout, { rightBarOpen: true }],
+      [SHELL_CHANNELS.windowAction, 'toggleFullScreen']
+    ]);
+  });
+
+  it('窗口状态的变化只把数据交给回调，不交出 IPC 事件对象', () => {
+    const received: unknown[] = [];
+    bridge.shell.onWindowStateChange((state) => received.push(state));
+    const listener = electron.listeners.get(SHELL_CHANNELS.windowStateChanged);
+    expect(listener).toBeDefined();
+    listener?.({ sender: '事件对象' }, { maximized: true, fullScreen: false });
+    expect(received).toEqual([{ maximized: true, fullScreen: false }]);
+  });
+
+  it('核心运行状态的变化只把数据交给回调，不交出 IPC 事件对象', () => {
+    const received: unknown[] = [];
+    bridge.onCoreStatusChange((status) => received.push(status));
+    const listener = electron.listeners.get(SHELL_CHANNELS.coreStatusChanged);
+    expect(listener).toBeDefined();
+    listener?.({ sender: '事件对象' }, { state: 'ready', coreVersion: '0.1.0' });
+    expect(received).toEqual([{ state: 'ready', coreVersion: '0.1.0' }]);
+  });
+
+  it('最近打开的请求走主进程请求通道', async () => {
+    electron.invoke.mockResolvedValue({ ok: true, result: { items: [] } });
+    await expect(bridge.main.cartridges.recent({})).resolves.toEqual({ items: [] });
+    expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.recent', {});
+    await bridge.main.cartridges.openRecent({ id: 3 });
+    expect(electron.invoke).toHaveBeenLastCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.openRecent', { id: 3 });
   });
 });
 

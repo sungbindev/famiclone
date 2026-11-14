@@ -1,7 +1,9 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-run.mjs
- * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、页面重载与核心进程重启后端口重新建立、关闭窗口后应用干净退出，最后只结束自己启动的进程。
+ * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、
+ *       运行页边栏与状态栏显示机器状态、边栏按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“开机…”子菜单、
+ *       页面重载与核心进程重启后端口重新建立且边栏状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -40,6 +42,8 @@ function check(name, ok, detail = '') {
 
 /** 本脚本启动的开发版。 */
 let app;
+/** 到主窗口页面的 CDP 连接。 */
+let page;
 
 function cleanup() {
   app?.stop();
@@ -64,6 +68,31 @@ const INSTALL_LISTENER = `(() => {
 /** 读渲染 Worker 的诊断；reset 为 true 时先清空统计。 */
 const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(${reset})`;
 
+/** 页面里第一个匹配元素的文字；没有该元素时为空字符串。 */
+async function textOf(selector) {
+  return page.evaluate(`(document.querySelector(${JSON.stringify(selector)})?.textContent ?? '')`);
+}
+
+/** 点边栏里指定文字的按钮；按钮不存在或置灰时返回 false。 */
+async function clickSideButton(name) {
+  return page.evaluate(`(() => { const button = [...document.querySelectorAll('.ui-side-bar button')].find((item) => item.textContent.trim() === ${JSON.stringify(name)}); if (!button || button.disabled) return false; button.click(); return true; })()`);
+}
+
+/** 点菜单栏里的一个菜单名（打开，再点一次关闭）。 */
+async function menuButton(label) {
+  return page.evaluate(`(() => { const button = [...document.querySelectorAll('[role="menubar"] [role="menuitem"]')].find((item) => item.textContent.startsWith(${JSON.stringify(label)})); button?.click(); return Boolean(button); })()`);
+}
+
+/** 某个菜单弹层里的全部菜单项：名称、是否置灰、完整文字。 */
+async function menuItems(popupSelector) {
+  return page.evaluate(`[...document.querySelectorAll(${JSON.stringify(`${popupSelector} [role^="menuitem"]`)})].map((item) => ({ label: item.querySelector('.ui-menu__label')?.textContent ?? '', disabled: item.getAttribute('aria-disabled') === 'true', text: item.textContent }))`);
+}
+
+/** 把指针移到菜单项上（有子菜单的项随之展开）。 */
+async function hoverMenuItem(label) {
+  return page.evaluate(`(() => { const item = [...document.querySelectorAll('.ui-menu__popup [role^="menuitem"]')].find((element) => element.querySelector('.ui-menu__label')?.textContent === ${JSON.stringify(label)}); item?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true })); return Boolean(item); })()`);
+}
+
 // ---------------------------------------------------------------- 主流程
 
 async function main() {
@@ -77,7 +106,7 @@ async function main() {
   console.log(`启动开发版：ROM=${romPath}，调试端口=${port}`);
   app = startDevApp({ port, romPath });
   const target = await app.waitForPage();
-  const page = await connectCdp(target.webSocketDebuggerUrl);
+  page = await connectCdp(target.webSocketDebuggerUrl);
   await page.send('Runtime.enable');
 
   const bridgeReady = await waitFor(() => page.evaluate('typeof window.ember === "object"').catch(() => false), (value) => value === true);
@@ -161,6 +190,38 @@ async function main() {
   await sleep(500);
   check('非法输入被丢弃，画面继续', (await page.evaluate(readDiagnostics())).received > afterJunk);
 
+  // 运行页的边栏、状态栏、菜单与快捷键（原来画面下方的开发期操作条已迁到这里）。
+  const sideText = await textOf('.ui-side-bar');
+  check('运行页边栏显示机器信息（主机型号、卡带、mapper 插件、状态）', ['经典 FC', 'nestest.nes', 'NROM', '运行中'].every((word) => sideText.includes(word)), sideText.replace(/\s+/g, ' ').slice(0, 60));
+  const barText = await textOf('.ui-status-bar');
+  check('状态栏显示电源状态、主机型号、卡带名与音量', ['运行中', '经典 FC', 'nestest.nes', '音量'].every((word) => barText.includes(word)), barText.replace(/\s+/g, ' ').slice(0, 60));
+  check('边栏“暂停”按钮可点击', await clickSideButton('暂停'));
+  const paused = await waitFor(() => page.evaluate('window.ember.core.runtime.status({})'), (value) => value.mode === 'paused');
+  const pausedHint = await waitFor(() => textOf('.ember-run-overlay'), (text) => text.includes('已暂停'));
+  check('点“暂停”后核心暂停，画面上出现“已暂停”提示', paused.mode === 'paused' && pausedHint.includes('已暂停'));
+  await sleep(300);
+  check('边栏操作结束后焦点回到画面', await page.evaluate('document.activeElement?.getAttribute("role") === "application"'));
+  await pressKey(page, { key: 'F8', code: 'F8', keyCode: 119 }, 50);
+  const resumed = await waitFor(() => page.evaluate('window.ember.core.runtime.status({})'), (value) => value.mode === 'running');
+  check('画面获得焦点时按 F8 继续运行（F 键不被画面占用），提示消失', resumed.mode === 'running' && (await waitFor(() => textOf('.ember-run-overlay'), (text) => text === '')) === '');
+  const messageText = await textOf('.ember-messages');
+  check('底部面板的“消息”里有“已暂停”与“继续运行”', messageText.includes('已暂停') && messageText.includes('继续运行'), messageText.slice(0, 60));
+  await menuButton('文件');
+  const fileItems = await menuItems('.ui-menu__popup:not(.ui-menu__popup--sub)');
+  check(
+    '“文件”菜单：开机…、打开卡带…、最近打开（启动参数加载的卡带已记入）、关闭卡带（有卡带可用）、退出',
+    fileItems.map((entry) => entry.label).join('|') === '开机…|打开卡带…|最近打开|关闭卡带|退出' && fileItems.every((entry) => !entry.disabled),
+    JSON.stringify(fileItems)
+  );
+  await hoverMenuItem('开机…');
+  const bootItems = await menuItems('.ui-menu__popup--sub');
+  check('“开机…”子菜单：经典 FC 可用，四个整机机型置灰并注明“暂未支持”', bootItems.length === 5 && !bootItems[0].disabled && bootItems.slice(1).every((entry) => entry.disabled && entry.text.includes('暂未支持')), JSON.stringify(bootItems.map((entry) => entry.label)));
+  await hoverMenuItem('最近打开');
+  const recentItems = await menuItems('.ui-menu__popup--sub');
+  check('“最近打开”子菜单列出启动参数加载的卡带（只给显示名，不含路径）', recentItems.length === 1 && recentItems[0].label === 'nestest.nes' && !recentItems[0].text.includes('\\') && !recentItems[0].text.includes('/'), JSON.stringify(recentItems));
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu-recent.png'));
+  await menuButton('文件');
+
   // 页面重载后：运行页重新请求端口，画面帧继续到达。
   await page.send('Page.reload');
   await waitFor(() => page.evaluate('typeof window.ember === "object" && typeof window.emberRuntimeDiagnostics === "object"').catch(() => false), (value) => value === true);
@@ -191,6 +252,12 @@ async function main() {
         200
       );
       check('重启后的核心可以响应请求（新核心里没有卡带，电源为 off）', status?.power === 'off');
+      const restartedSide = await waitFor(() => textOf('.ui-side-bar'), (text) => text.includes('未开机'), 30_000, 200);
+      check('核心重启后边栏状态重新读取（显示“未开机”，不再显示旧的“运行中”）', restartedSide.includes('未开机') && !restartedSide.includes('运行中'));
+      const restartedBar = await textOf('.ui-status-bar');
+      check('核心重启后状态栏同样刷新', restartedBar.includes('未开机') && !restartedBar.includes('运行中'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
+      const restartMessage = await waitFor(() => textOf('.ember-messages'), (text) => text.includes('核心进程已重启'), 10_000, 200);
+      check('“消息”里有“核心进程已重启”', restartMessage.includes('核心进程已重启'));
     }
   }
 

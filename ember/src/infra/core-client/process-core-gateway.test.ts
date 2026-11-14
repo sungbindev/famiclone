@@ -105,6 +105,19 @@ describe('ProcessCoreGateway', () => {
     expect(listener).toHaveBeenCalledWith('demo.changed', { a: 1 });
   });
 
+  it('状态变化时通知订阅者：核心异常退出后重启依次为启动中、就绪；取消订阅后不再通知', () => {
+    const { gateway, current } = setup();
+    const listener = vi.fn();
+    const off = gateway.onStatusChange(listener);
+    current().reply({ type: 'ready', coreVersion: '1.0.0' });
+    current().exit(1);
+    current().reply({ type: 'ready', coreVersion: '1.0.0' });
+    expect(listener.mock.calls.map(([status]) => (status as { state: string }).state)).toEqual(['ready', 'starting', 'ready']);
+    off();
+    current().exit(1);
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+
   it('异常退出时拒绝进行中的请求、记录错误并重启', async () => {
     const { gateway, processes, logs, current } = setup();
     const pending = gateway.request('system.version', {});

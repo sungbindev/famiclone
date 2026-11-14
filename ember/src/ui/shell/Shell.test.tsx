@@ -258,6 +258,57 @@ describe('边栏', () => {
   });
 });
 
+describe('只有边栏的活动栏按钮', () => {
+  /** 在 MODULES 之外再登记一个“设备”：只有边栏，没有页面。 */
+  const WITH_DEVICES: readonly ShellModule[] = [
+    ...MODULES,
+    { name: 'd', activityItems: [{ id: 'd.btn', label: '设备', icon: ICON, sideBar: { title: '设备', Component: () => <p>设备边栏内容</p> } }] }
+  ];
+
+  it('点设备按钮：边栏换成设备边栏并展开，页面区与标签不变；再点折叠；点回页面的按钮恢复页面自己的边栏', async () => {
+    const user = userEvent.setup();
+    const { container } = renderShell({ modules: WITH_DEVICES });
+    await shown();
+    await user.click(screen.getByRole('button', { name: '设备' }));
+    expect(sideArea(container).hidden).toBe(false);
+    expect(within(sideArea(container)).getByText('设备边栏内容')).toBeTruthy();
+    expect((within(sideArea(container)).getByText('甲边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(true);
+    expect(screen.getByText('甲页内容')).toBeTruthy();
+    expect(screen.getAllByRole('tab')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: '设备' }).getAttribute('aria-current')).toBe('page');
+
+    await user.click(screen.getByRole('button', { name: '设备' }));
+    expect(sideArea(container).hidden).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: '设备' }));
+    await user.click(screen.getByRole('button', { name: '甲' }));
+    expect((within(sideArea(container)).getByText('甲边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(false);
+    expect((within(sideArea(container)).getByText('设备边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(true);
+  });
+
+  it('“视图”菜单里有设备入口，选中同样显示设备边栏', async () => {
+    const user = userEvent.setup();
+    const { container } = renderShell({ modules: WITH_DEVICES });
+    await shown();
+    await user.click(screen.getByRole('menuitem', { name: '视图(V)' }));
+    await user.click(within(document.body).getByRole('menuitem', { name: /^设备/ }));
+    expect((within(sideArea(container)).getByText('设备边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(false);
+  });
+
+  it('切到另一个标签后设备边栏不再生效，边栏回到该页面自己的边栏', async () => {
+    const user = userEvent.setup();
+    const { container } = renderShell({ modules: WITH_DEVICES });
+    await shown();
+    await user.click(screen.getByRole('button', { name: '乙' }));
+    await user.click(screen.getByRole('button', { name: '设备' }));
+    expect(sideArea(container).hidden).toBe(false);
+    await user.click(screen.getByRole('tab', { name: '甲页' }));
+    expect((within(sideArea(container)).getByText('甲边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(false);
+    await user.click(screen.getByRole('tab', { name: '乙页' }));
+    expect(sideArea(container).hidden).toBe(true);
+  });
+});
+
 describe('底部面板与快捷键', () => {
   it('Ctrl+J 与标题栏按钮切换底部面板，“关闭”收起，不保存', async () => {
     const user = userEvent.setup();

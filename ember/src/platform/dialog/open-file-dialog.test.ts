@@ -45,4 +45,12 @@ describe('createOpenFileDialog', () => {
     electron.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [] });
     await expect(createOpenFileDialog(() => undefined).pickFile(OPTIONS)).resolves.toBeUndefined();
   });
+
+  it('选择文件夹：系统窗口只显示文件夹，返回用户选定的路径，取消时返回 undefined', async () => {
+    electron.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['D:/prints'] });
+    await expect(createOpenFileDialog(() => undefined).pickDirectory({ title: '选择文件夹' })).resolves.toBe('D:/prints');
+    expect(electron.showOpenDialog).toHaveBeenCalledWith({ title: '选择文件夹', properties: ['openDirectory', 'createDirectory'] });
+    electron.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+    await expect(createOpenFileDialog(() => undefined).pickDirectory({ title: '选择文件夹' })).resolves.toBeUndefined();
+  });
 });

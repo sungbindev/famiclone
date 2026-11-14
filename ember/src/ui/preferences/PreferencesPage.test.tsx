@@ -23,7 +23,8 @@ vi.mock('@rujianjs/ui-kit', async (importOriginal) => ({ ...(await importOrigina
 
 const GROUPS: PreferenceGroup[] = [
   { id: 'appearance', label: '外观' },
-  { id: 'sound', label: '声音' }
+  { id: 'sound', label: '声音' },
+  { id: 'printer', label: '打印机' }
 ];
 
 function initialSettings(): PreferenceSetting[] {
@@ -46,7 +47,8 @@ function initialSettings(): PreferenceSetting[] {
     { id: 'sound.startMuted', group: 'sound', label: '启动时静音', description: '音量在边栏调整。', kind: 'switch', hidden: false, defaultValue: false, value: false },
     { id: 'sound.fade', group: 'sound', label: '淡入毫秒', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: false, defaultValue: 10, value: 10 },
     { id: 'sound.note', group: 'sound', label: '备注', description: '', kind: 'text', maxLength: 8, hidden: false, defaultValue: '', value: 'abc' },
-    { id: 'sound.volume', group: 'sound', label: '音量', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: true, defaultValue: 100, value: 100 }
+    { id: 'sound.volume', group: 'sound', label: '音量', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: true, defaultValue: 100, value: 100 },
+    { id: 'printer.outputDirectory', group: 'printer', label: '图片保存位置', description: '', kind: 'text', maxLength: 260, picker: 'directory', hidden: false, defaultValue: '', value: '' }
   ];
 }
 
@@ -57,8 +59,10 @@ function setup(listResult: () => Promise<PreferencesListResult> = () => Promise.
   const list = vi.fn(listResult);
   const set = vi.fn((params: { id: string; value: unknown }) => Promise.resolve({ id: params.id, value: params.value }));
   const reset = vi.fn((params: { id: string }) => Promise.resolve({ id: params.id, value: initialSettings().find((item) => item.id === params.id)?.defaultValue }));
+  const pickDirectory = vi.fn((): Promise<{ canceled: boolean; path?: string }> => Promise.resolve({ canceled: false, path: 'D:/prints' }));
   const bridge = {
     core: { preferences: { list, set, reset } },
+    main: { preferences: { pickDirectory } },
     onCoreEvent: (listener: (name: string, data: unknown) => void) => {
       eventListeners.add(listener);
       return () => eventListeners.delete(listener);
@@ -77,6 +81,7 @@ function setup(listResult: () => Promise<PreferencesListResult> = () => Promise.
     list,
     set,
     reset,
+    pickDirectory,
     emit: (name: string, data: unknown) => act(() => eventListeners.forEach((listener) => listener(name, data))),
     setStatus: (status: CoreStatus) => act(() => statusListeners.forEach((listener) => listener(status)))
   };
@@ -111,6 +116,32 @@ describe('PreferencesPage：显示', () => {
 });
 
 describe('PreferencesPage：修改', () => {
+  it('文件夹类设置项的“选择”按钮：弹出选择文件夹窗口，选定的路径立即保存', async () => {
+    const page = setup();
+    await userEvent.click(await screen.findByText('打印机'));
+    await userEvent.click(await screen.findByRole('button', { name: '选择文件夹：图片保存位置' }));
+    expect(page.pickDirectory).toHaveBeenCalledTimes(1);
+    expect(page.set).toHaveBeenCalledWith({ id: 'printer.outputDirectory', value: 'D:/prints' });
+    await waitFor(() => expect((screen.getByRole('textbox', { name: '图片保存位置' }) as HTMLInputElement).value).toBe('D:/prints'));
+  });
+
+  it('在选择文件夹的窗口里取消：不保存，也没有通知', async () => {
+    const page = setup();
+    page.pickDirectory.mockResolvedValueOnce({ canceled: true });
+    await userEvent.click(await screen.findByText('打印机'));
+    await userEvent.click(await screen.findByRole('button', { name: '选择文件夹：图片保存位置' }));
+    await waitFor(() => expect(page.pickDirectory).toHaveBeenCalledTimes(1));
+    expect(page.set).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('没有 picker 的文字设置项没有“选择”按钮', async () => {
+    setup();
+    await userEvent.click(await screen.findByText('声音'));
+    await screen.findByText('备注');
+    expect(screen.queryByRole('button', { name: /选择文件夹/ })).toBeNull();
+  });
+
   it('选择一个值立即保存，保存后显示新值与“恢复默认”', async () => {
     const page = setup();
     await userEvent.click(await screen.findByRole('combobox', { name: '主题' }));

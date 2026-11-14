@@ -9,14 +9,37 @@
  * ------------------------------------------------------------------------
  */
 
+import type { MachineInfo } from '../../contracts/machines/generated/machines';
 import type { PreferenceGroup, PreferenceSetting } from '../../contracts/preferences/generated/preferences';
 
 /** 用户可见的文字。 */
 const TEXT = {
   notInteger: '请输入整数。',
   outOfRange: (min: number, max: number) => `请输入 ${min} 至 ${max} 之间的整数。`,
-  failed: '操作失败。'
+  failed: '操作失败。',
+  machinesGroup: '机型与 BIOS',
+  noBios: '未添加',
+  unsupported: '暂未支持',
+  biosFile: (name: string, kilobytes: number) => `${name}（${kilobytes} KB）`
 } as const;
+
+/** “机型与 BIOS”分组的标识：这个分组不是设置项，内容由页面自己提供（BIOS 的添加、替换与移除）。 */
+export const MACHINES_GROUP_ID = 'machines';
+
+/** 在声音分组之后插入“机型与 BIOS”分组（没有声音分组时放在最后），其余分组保持核心给出的顺序。 */
+export function withMachinesGroup(groups: readonly PreferenceGroup[]): PreferenceGroup[] {
+  const machines: PreferenceGroup = { id: MACHINES_GROUP_ID, label: TEXT.machinesGroup };
+  const soundIndex = groups.findIndex((group) => group.id === 'sound');
+  if (soundIndex < 0) return [...groups, machines];
+  return [...groups.slice(0, soundIndex + 1), machines, ...groups.slice(soundIndex + 1)];
+}
+
+/** 一个机型的 BIOS 状态文字：暂未支持、未添加，或文件名与大小（KB，四舍五入）。 */
+export function biosStatusText(machine: MachineInfo): string {
+  if (!machine.supported) return TEXT.unsupported;
+  if (machine.bios === undefined) return TEXT.noBios;
+  return TEXT.biosFile(machine.bios.fileName, Math.round(machine.bios.size / 1024));
+}
 
 /** 整数输入的解析结果。 */
 export type IntegerParse = { readonly ok: true; readonly value: number } | { readonly ok: false; readonly message: string };

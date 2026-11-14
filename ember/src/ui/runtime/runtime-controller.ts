@@ -24,6 +24,9 @@ export type RuntimeBackend = Pick<EmberBridge, 'core' | 'main' | 'onCoreEvent' |
 /** 最近打开的清单里的一项（取自预加载脚本接口的返回值，不直接引用 cartridges 模块的契约）：编号与显示名，没有路径。 */
 export type RecentCartridge = Awaited<ReturnType<EmberBridge['main']['cartridges']['recent']>>['items'][number];
 
+/** 机型清单里的一项（取自预加载脚本接口的返回值，不直接引用 machines 模块的契约）：标识、名称、是否需要 BIOS、是否已支持与已添加的 BIOS。 */
+export type MachineEntry = Awaited<ReturnType<EmberBridge['core']['machines']['list']>>['machines'][number];
+
 /** 控制器需要外壳提供的能力。 */
 export interface RuntimeHostActions {
   /** 往底部面板的“消息”页签追加一条消息。 */
@@ -40,6 +43,8 @@ export interface RuntimeViewState {
   readonly status: RuntimeStatusResult | undefined;
   /** 最近打开的卡带，最近的在前。 */
   readonly recent: readonly RecentCartridge[];
+  /** 机型清单（经典 FC 与四个整机机型，顺序固定）；还没读到时为空。 */
+  readonly machines: readonly MachineEntry[];
   /** 音量，0 到 100。 */
   readonly volume: number;
   /** 是否静音；静音时音量保持原值。 */
@@ -58,6 +63,7 @@ const TEXT = {
     hardReset: '硬复位',
     eject: '关闭卡带',
     open: '打开卡带',
+    boot: '开机',
     volume: '调整音量'
   },
   messages: {
@@ -68,6 +74,7 @@ const TEXT = {
     softReset: '软复位',
     hardReset: '硬复位',
     eject: (name: string) => `已关闭卡带 ${name}`,
+    booted: (name: string) => `已用 ${name} 开机`,
     loaded: (name: string, mapper: number, plugin: string) => `已装入卡带 ${name}：mapper ${mapper}，匹配插件 ${plugin}`,
     loadedPlain: '已装入卡带',
     coreRestarted: '核心进程已重启，机器状态已重新读取',
@@ -76,7 +83,7 @@ const TEXT = {
 } as const;
 
 /** 没有读到任何状态时的初始值：音量与核心启动后的默认值一致。 */
-const INITIAL_STATE: RuntimeViewState = { status: undefined, recent: [], volume: 100, muted: false };
+const INITIAL_STATE: RuntimeViewState = { status: undefined, recent: [], machines: [], volume: 100, muted: false };
 
 /** 错误的说明文字：核心请求失败时以 {code, message} 拒绝。 */
 function errorText(error: unknown): string {
@@ -223,6 +230,13 @@ export class RuntimeController {
     this.perform(TEXT.actions.open, (backend) => backend.main.cartridges.openRecent({ id }), undefined, true);
   }
 
+  /** 整机机型开机：用已添加的 BIOS 装配主机并上电运行；没有这个机型时什么都不做。 */
+  bootMachine(id: string): void {
+    const machine = this.state.machines.find((item) => item.id === id);
+    if (machine === undefined) return;
+    this.perform(TEXT.actions.boot, (backend) => backend.core.machines.boot({ machine: id }), TEXT.messages.booted(machine.name));
+  }
+
   /** 调整音量（0 到 100）：先在界面上生效，再交给核心，核心返回的值为准；静音状态不变。 */
   setVolume(value: number): void {
     const volume = Math.min(100, Math.max(0, Math.round(value)));
@@ -288,6 +302,8 @@ export class RuntimeController {
       const cartridge = loadedCartridge(data);
       const text = cartridge === undefined ? TEXT.messages.loadedPlain : TEXT.messages.loaded(fileNameOf(cartridge.path), cartridge.mapper, `${cartridge.pluginName} ${cartridge.pluginVersion}`);
       this.attachment?.host.addMessage({ level: 'info', text });
+    } else if (name === 'machines.changed') {
+      this.refreshMachines();
     }
   }
 
@@ -308,11 +324,24 @@ export class RuntimeController {
     this.setState({ status: undefined });
   }
 
-  /** 读取状态、最近打开的清单与音量。 */
+  /** 读取状态、最近打开的清单、机型清单与音量。 */
   private refreshAll(): void {
     this.refreshStatus();
     this.refreshRecent();
+    this.refreshMachines();
     this.refreshVolume();
+  }
+
+  /** 读取机型清单。 */
+  private refreshMachines(): void {
+    const backend = this.attachment?.backend;
+    if (backend === undefined) return;
+    backend.core.machines.list({}).then(
+      (result) => {
+        if (this.attachment?.backend === backend) this.setState({ machines: result.machines });
+      },
+      () => undefined
+    );
   }
 
   /** 读取机器状态；核心没有就绪时读不到，等核心状态推送后再读，不报错。 */

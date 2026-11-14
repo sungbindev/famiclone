@@ -81,10 +81,11 @@ TEST_F(CoreTest, StartsAndAnswersSystemVersion) {
   const auto info = nlohmann::json::parse(core.start(options()));
   EXPECT_FALSE(info["coreVersion"].get<std::string>().empty());
   const auto& requests = info["requests"];
-  EXPECT_EQ(requests.size(), 54U);
+  EXPECT_EQ(requests.size(), 66U);
   for (const char* name : {"system.version", "preferences.list", "preferences.set", "preferences.reset", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled",
                            "mappers.reload", "output.setVolume", "runtime.status", "runtime.powerOn", "runtime.powerOff", "runtime.reset", "runtime.pause", "runtime.resume", "cartridges.load",
-                           "cartridges.eject", "cartridges.info", "debug.hello", "debug.subscribe", "debug.unsubscribe", "debug.status"}) {
+                           "cartridges.eject", "cartridges.info", "debug.hello", "debug.subscribe", "debug.unsubscribe", "debug.status", "machines.list", "machines.boot", "media.floppyInsert",
+                           "media.floppyWriteProtect", "media.printerFlush"}) {
     EXPECT_NE(std::find(requests.begin(), requests.end(), nlohmann::json(name)), requests.end()) << name;
   }
 
@@ -156,10 +157,10 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   ASSERT_TRUE(listed.ok);
   std::vector<std::string> groups;
   for (const auto& group : listed.payload["groups"]) groups.push_back(group["id"]);
-  EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "sound", "debug"}));
+  EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "sound", "printer", "debug"}));
   std::map<std::string, nlohmann::json> byId;
   for (const auto& setting : listed.payload["settings"]) byId[setting["id"]] = setting;
-  EXPECT_EQ(byId.size(), 11U);
+  EXPECT_EQ(byId.size(), 12U);
   EXPECT_EQ(byId["appearance.theme"]["kind"], "choice");
   EXPECT_EQ(byId["appearance.theme"]["value"], "system");
   EXPECT_EQ(byId["appearance.theme"]["options"].size(), 3U);

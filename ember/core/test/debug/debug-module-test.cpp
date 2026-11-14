@@ -107,6 +107,9 @@ TEST_F(DebugModuleTest, IsOffByDefaultButAlreadyHasAToken) {
   EXPECT_EQ(token["value"].get<std::string>().size(), 32u);
   EXPECT_EQ(setting(core, "debug.enabled")["value"], false);
   EXPECT_EQ(setting(core, "debug.port")["value"], 5688);
+  // 打印机的图片保存位置是文件夹路径：页面据此显示“选择”按钮；其他文字设置项没有 picker。
+  EXPECT_EQ(setting(core, "printer.outputDirectory")["picker"], "directory");
+  EXPECT_FALSE(token.contains("picker"));
   core.stop();
 
   // 令牌保存在首选项里，重启后不变。

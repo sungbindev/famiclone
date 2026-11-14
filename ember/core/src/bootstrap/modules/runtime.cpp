@@ -15,6 +15,7 @@
 #include <memory>
 
 #include "bootstrap/machines/machine-catalog.hpp"
+#include "bootstrap/machines/printer-output-relay.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
@@ -25,8 +26,11 @@
 namespace ember::bootstrap {
 
 void registerRuntime(ModuleRegistry& registry) {
+  // 整机机型的打印机把页交给转接对象，media 模块（排在本模块之后）再把真正的接收方绑定上去。
+  auto printerRelay = std::make_shared<PrinterOutputRelay>();
+  registry.services.provide<PrinterOutputRelay>(printerRelay);
   logic::runtime::SimulationRuntimeOptions options;
-  options.machines = std::make_shared<MachineCatalog>();
+  options.machines = std::make_shared<MachineCatalog>(printerRelay);
   options.mappers = registry.services.require<contracts::mappers::MapperFactory>();
   options.frames = registry.frames;
   options.audio = registry.services.require<platform::AudioOutput>();

@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：登记项都绑定同一个控制器（RuntimeController），由 bootstrap/renderer/modules/runtime.ts 创建并传入；规则见 docs/05-界面.md 第 3、4.1、5、6 节与 docs/06 第 3 节。
- *       文件菜单的“开机…”列出经典 FC 与四个整机机型：只有经典 FC 可用（选后等同“打开卡带…”），整机机型置灰并注明“暂未支持”；“最近打开”随最近打开的清单变化，没有记录时置灰。
+ *       文件菜单的“开机…”列出经典 FC 与四个整机机型：经典 FC 总是可用（选后等同“打开卡带…”），整机机型程序里有实现且已添加 BIOS 才可用（选后经 machines.boot 开机），
+ *       没有 BIOS 的置灰并注明“未添加 BIOS，请在设置里添加”，暂未支持的置灰并注明“暂未支持”；“最近打开”随最近打开的清单变化，没有记录时置灰。
  *       快捷键：打开卡带 Ctrl+O，上电或断电 F9，暂停或继续 F8，软复位 F7，硬复位 Ctrl+F7。
  * ------------------------------------------------------------------------
  */
@@ -49,16 +50,17 @@ const TEXT = {
   softReset: '软复位',
   hardReset: '硬复位',
   mute: '静音',
-  unsupported: '暂未支持'
+  unsupported: '暂未支持',
+  noBios: '未添加 BIOS，请在设置里添加'
 } as const;
 
-/** “开机…”里的机型：经典 FC 可用，整机机型暂未支持。 */
-const BOOT_MACHINES: ReadonlyArray<{ readonly id: string; readonly label: string; readonly supported: boolean }> = [
-  { id: 'fc', label: '经典 FC', supported: true },
-  { id: 'sb97', label: '小霸王 97', supported: false },
-  { id: 'sb2000', label: '小霸王 2000', supported: false },
-  { id: 'bbk10', label: '步步高 1.0', supported: false },
-  { id: 'bbk20', label: '步步高 2.0', supported: false }
+/** “开机…”里的机型，顺序固定：经典 FC 选后等同“打开卡带…”，整机机型用设置里添加的 BIOS 开机。 */
+const BOOT_MACHINES: ReadonlyArray<{ readonly id: string; readonly label: string }> = [
+  { id: 'fc', label: '经典 FC' },
+  { id: 'sb97', label: '小霸王 97' },
+  { id: 'sb2000', label: '小霸王 2000' },
+  { id: 'bbk10', label: '步步高 1.0' },
+  { id: 'bbk20', label: '步步高 2.0' }
 ];
 
 /** 把只需要控制器的组件绑定成不带属性的组件。 */
@@ -73,17 +75,22 @@ function bind(Component: ComponentType<RuntimeStatusItemProps>, controller: Runt
  * @param controller 运行页的控制器，边栏、状态栏、菜单与常驻组件共用。
  */
 export function createRuntimeModule(controller: RuntimeController): ShellModule {
-  /** “开机…”的子菜单项。 */
+  /** “开机…”的子菜单项：经典 FC 总是可用；整机机型程序里有实现且已添加 BIOS 才可用，否则置灰并在右侧注明原因。 */
   const bootEntries = (): readonly ShellSubmenuEntry[] =>
-    BOOT_MACHINES.map((machine, index) => ({
-      id: machine.id,
-      label: machine.label,
-      ...(machine.supported ? {} : { hint: TEXT.unsupported, disabled: true }),
-      ...(index === 1 ? { separatorBefore: true } : {}),
-      run: () => {
-        if (machine.supported) controller.openCartridge();
-      }
-    }));
+    BOOT_MACHINES.map((machine, index) => {
+      const info = controller.snapshot().machines.find((item) => item.id === machine.id);
+      const hint = machine.id === 'fc' ? undefined : info === undefined || !info.supported ? TEXT.unsupported : info.bios === undefined ? TEXT.noBios : undefined;
+      return {
+        id: machine.id,
+        label: machine.label,
+        ...(hint === undefined ? {} : { hint, disabled: true }),
+        ...(index === 1 ? { separatorBefore: true } : {}),
+        run: () => {
+          if (machine.id === 'fc') controller.openCartridge();
+          else controller.bootMachine(machine.id);
+        }
+      };
+    });
   /** “最近打开”的子菜单项：最近打开的卡带，选中即重新打开。 */
   const recentEntries = (): readonly ShellSubmenuEntry[] =>
     controller.snapshot().recent.map((item) => ({ id: String(item.id), label: item.name, run: () => controller.openRecent(item.id) }));

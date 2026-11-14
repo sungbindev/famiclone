@@ -11,6 +11,7 @@
 #include "bootstrap/machines/machine-catalog.hpp"
 
 #include "bootstrap/machines/fc.hpp"
+#include "bootstrap/machines/sb2000.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -19,6 +20,11 @@ namespace ember::bootstrap {
 std::unique_ptr<contracts::hardware::Machine> MachineCatalog::create(const std::string& host) const {
   if (host == "fc") return std::make_unique<FcMachine>();
   throw shared::CoreError(contracts::runtime::ERROR_HOST_UNSUPPORTED, "程序里还没有实现主机型号：" + host);
+}
+
+std::unique_ptr<contracts::hardware::Machine> MachineCatalog::createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const {
+  if (machine == "sb2000") return std::make_unique<Sb2000Machine>(std::move(bios), printerOutput_.get());
+  throw shared::CoreError(contracts::runtime::ERROR_HOST_UNSUPPORTED, "程序里还没有实现整机机型：" + machine);
 }
 
 }  // namespace ember::bootstrap

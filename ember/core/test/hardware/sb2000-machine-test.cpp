@@ -1,0 +1,400 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：sb2000-machine-test.cpp
+ * 说明：主机型号 sb2000 的测试：存储布局与译码（用合成的 BIOS 检查）、电源与复位向量、通用 DMA、显存页、输入；以及用真实 BIOS 开机的冒烟测试。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-15
+ * 备注：真实 BIOS 在仓库的 reference/rom/SB2K_BIOS.NES（iNES 文件，16 字节文件头之后是 512KB 的 PRG）；文件不存在时跳过冒烟测试；
+ *       设置环境变量 EMBER_SB2000_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成 PPM 文件，供人工查看。
+ * ------------------------------------------------------------------------
+ */
+
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <set>
+#include <string>
+#include <vector>
+
+#include "bootstrap/machines/sb2000.hpp"
+#include "contracts/hardware/hardware-error.hpp"
+#include "shared/errors/core-error.hpp"
+
+namespace {
+
+namespace hw = ember::contracts::hardware;
+using ember::bootstrap::Sb2000Machine;
+
+/** 合成的 BIOS：每个 4K 页的第一个字节是页号，复位向量指向 $C000，$C000 处是一小段测试程序。 */
+std::vector<std::uint8_t> syntheticBios() {
+  std::vector<std::uint8_t> bios(Sb2000Machine::BIOS_SIZE, 0xEA);
+  for (std::size_t page = 0; page < 128; ++page) bios[page * 0x1000] = static_cast<std::uint8_t>(page);
+  // 向量表：NMI、RESET、IRQ 都指向 $C000 开始的程序。
+  bios[0x7FFA] = 0x00;
+  bios[0x7FFB] = 0xC0;
+  bios[0x7FFC] = 0x00;
+  bios[0x7FFD] = 0xC0;
+  bios[0x7FFE] = 0x00;
+  bios[0x7FFF] = 0xC0;
+  // $C000：进入 6576 模式，打开背景显示，然后在 $0000 上无限计数。
+  const std::uint8_t program[] = {
+      0x78,              // SEI
+      0xA9, 0x65,        // LDA #$65
+      0x8D, 0x31, 0x40,  // STA $4031
+      0xA9, 0x76,        // LDA #$76
+      0x8D, 0x31, 0x40,  // STA $4031
+      0xA9, 0x08,        // LDA #$08
+      0x8D, 0x01, 0x20,  // STA $2001
+      0xE6, 0x00,        // loop: INC $00
+      0x4C, 0x10, 0xC0   // JMP loop（$C010）
+  };
+  std::copy(std::begin(program), std::end(program), bios.begin() + 0x4000);
+  return bios;
+}
+
+/** 读真实的 BIOS：跳过 iNES 文件头；文件不存在时返回空。 */
+std::vector<std::uint8_t> realBios() {
+  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / ".." / "reference" / "rom" / "SB2K_BIOS.NES";
+  std::ifstream stream(path, std::ios::binary);
+  if (!stream) return {};
+  std::vector<std::uint8_t> file((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+  if (file.size() != 16 + Sb2000Machine::BIOS_SIZE) return {};
+  return std::vector<std::uint8_t>(file.begin() + 16, file.end());
+}
+
+/** 读仓库 reference/floppy-images/sb2000 里的盘片镜像；文件不存在时返回空。 */
+std::vector<std::uint8_t> realFloppy(const std::filesystem::path& relative) {
+  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / ".." / relative;
+  std::ifstream stream(path, std::ios::binary);
+  if (!stream) return {};
+  return std::vector<std::uint8_t>((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+}
+
+/** 把画面写成 PPM 文件。 */
+void dumpFrame(const hw::FrameBuffer& picture, const std::string& path) {
+  std::ofstream out(path, std::ios::binary);
+  out << "P6\n256 240\n255\n";
+  for (const std::uint32_t pixel : picture.pixels) {
+    const char rgb[3] = {static_cast<char>(pixel & 0xFF), static_cast<char>((pixel >> 8) & 0xFF), static_cast<char>((pixel >> 16) & 0xFF)};
+    out.write(rgb, 3);
+  }
+}
+
+std::uint8_t peek(Sb2000Machine& machine, std::uint16_t address) { return machine.peekCpuBus(address); }
+
+/** 环境变量 EMBER_SB2000_DUMP 的值；没有设置时为空。 */
+std::string dumpPath() {
+#ifdef _MSC_VER
+  char* value = nullptr;
+  std::size_t length = 0;
+  if (_dupenv_s(&value, &length, "EMBER_SB2000_DUMP") != 0 || value == nullptr) return {};
+  std::string path(value);
+  std::free(value);
+  return path;
+#else
+  const char* value = std::getenv("EMBER_SB2000_DUMP");
+  return value == nullptr ? std::string() : std::string(value);
+#endif
+}
+
+void poke(Sb2000Machine& machine, std::uint16_t address, std::uint8_t value) {
+  const std::uint8_t bytes[] = {value};
+  machine.debugger()->writeMemory("cpu", address, bytes);
+}
+
+TEST(Sb2000Machine, RejectsABiosOfTheWrongSize) {
+  try {
+    Sb2000Machine machine(std::vector<std::uint8_t>(1024, 0));
+    FAIL() << "应该抛出异常";
+  } catch (const ember::shared::CoreError& error) {
+    EXPECT_EQ(error.code(), hw::ERROR_INVALID_ARGUMENT);
+  }
+}
+
+TEST(Sb2000Machine, ProgramWindowsStartAsRomPagesZeroToSeven) {
+  Sb2000Machine machine(syntheticBios());
+  EXPECT_EQ(peek(machine, 0x8000), 0);
+  EXPECT_EQ(peek(machine, 0x9000), 1);
+  EXPECT_EQ(peek(machine, 0xF000), 7);
+}
+
+TEST(Sb2000Machine, PagingRegistersSelectRomOrExtendedRamPages) {
+  Sb2000Machine machine(syntheticBios());
+  poke(machine, 0x4040, 0x05);
+  EXPECT_EQ(peek(machine, 0x8000), 5) << "页号小于 $80 取 BIOS ROM";
+  poke(machine, 0x4041, 0x83);
+  poke(machine, 0x9000, 0x5A);
+  EXPECT_EQ(peek(machine, 0x9000), 0x5A) << "页号不小于 $80 取扩展 RAM，可写";
+  EXPECT_EQ(machine.extendedRam()[3 * 0x1000], 0x5A);
+  poke(machine, 0x8000, 0x77);
+  EXPECT_EQ(peek(machine, 0x8000), 5) << "ROM 页的写入被丢弃";
+}
+
+TEST(Sb2000Machine, InternalRamIsTwoKilobytesMirroredAndExternalRamIsEight) {
+  Sb2000Machine machine(syntheticBios());
+  poke(machine, 0x0000, 0x11);
+  EXPECT_EQ(peek(machine, 0x0800), 0x11);
+  EXPECT_EQ(peek(machine, 0x1800), 0x11);
+  poke(machine, 0x6000, 0x22);
+  poke(machine, 0x6400, 0x33);
+  EXPECT_EQ(peek(machine, 0x6000), 0x22) << "外部 RAM 各 1K 互相独立";
+  EXPECT_EQ(peek(machine, 0x6400), 0x33);
+  poke(machine, 0x7FFF, 0x44);
+  EXPECT_EQ(machine.externalRam().read(0x1FFF), 0x44);
+}
+
+TEST(Sb2000Machine, WorkWindowReadsFixedValueOnceInitialSetupIsDone) {
+  Sb2000Machine machine(syntheticBios());
+  poke(machine, 0x5000, 0x99);
+  EXPECT_EQ(peek(machine, 0x5000), 0x99) << "进入 6576 模式之前 $5000-$5FFF 是 RAM";
+  poke(machine, 0x4031, 0x65);
+  poke(machine, 0x4031, 0x76);
+  EXPECT_EQ(peek(machine, 0x4400), 0x68);
+  EXPECT_EQ(peek(machine, 0x5000), 0x68);
+  poke(machine, 0x5000, 0x55);
+  EXPECT_EQ(peek(machine, 0x5000), 0x68) << "写入无效";
+  EXPECT_EQ(machine.internalRam().read(0), 0x99 & 0xFF) << "没有写进内部 RAM";
+}
+
+TEST(Sb2000Machine, VideoBankRegisterSelectsTheExtendedVramPage) {
+  Sb2000Machine machine(syntheticBios());
+  const std::uint8_t first[] = {0xA1};
+  const std::uint8_t second[] = {0xB2};
+  poke(machine, 0x4300, 0x00);
+  machine.debugger()->writeMemory("ppu", 0x8000, first);
+  poke(machine, 0x4300, 0x03);
+  machine.debugger()->writeMemory("ppu", 0x8000, second);
+  EXPECT_EQ(machine.video().extendedVram()[0], 0xA1);
+  EXPECT_EQ(machine.video().extendedVram()[3 * 0x8000], 0xB2);
+  std::uint8_t out[1] = {0};
+  machine.debugger()->readMemory("ppu", 0x8000, out);
+  EXPECT_EQ(out[0], 0xB2);
+  const std::uint8_t character[] = {0xC3};
+  machine.debugger()->writeMemory("ppu", 0x0123, character);
+  EXPECT_EQ(machine.video().characterRam()[0x0123], 0xC3) << "$0000-$7FFF 是字符 RAM，不受页寄存器影响";
+}
+
+TEST(Sb2000Machine, GeneralDmaCopiesRomIntoVideoMemory) {
+  std::vector<std::uint8_t> bios = syntheticBios();
+  bios[0x100] = 1;
+  bios[0x101] = 2;
+  bios[0x102] = 3;
+  bios[0x103] = 4;
+  Sb2000Machine machine(std::move(bios));
+  poke(machine, 0x4049, 0x00);  // 源：BIOS ROM，页 0
+  poke(machine, 0x404A, 0x00);  // 源地址低
+  poke(machine, 0x404B, 0x81);  // 源地址高：位 7 必须为 1，A14-A8 = 1，所以源在 $0100
+  poke(machine, 0x404C, 0x20);  // 目的低
+  poke(machine, 0x404D, 0x01);  // 目的高：显存 $0120
+  poke(machine, 0x404E, 0x03);  // 长度减 1
+  poke(machine, 0x404F, 0x00);
+  poke(machine, 0x4048, 0xC0);  // 启动，目的是显存
+  EXPECT_EQ(machine.video().characterRam()[0x120], 1);
+  EXPECT_EQ(machine.video().characterRam()[0x121], 2);
+  EXPECT_EQ(machine.video().characterRam()[0x122], 3);
+  EXPECT_EQ(machine.video().characterRam()[0x123], 4);
+  EXPECT_EQ(machine.video().characterRam()[0x124], 0) << "长度寄存器是字节数减 1，所以只搬 4 个字节";
+}
+
+TEST(Sb2000Machine, PowerOnRunsTheResetVectorAndEachFrameTakesFiftyHertzOfLines) {
+  Sb2000Machine machine(syntheticBios());
+  EXPECT_FALSE(machine.isPoweredOn());
+  machine.powerOn();
+  EXPECT_TRUE(machine.isPoweredOn());
+  EXPECT_EQ(machine.frame().width, 0U) << "还没有完成过画面";
+  machine.runFrame();
+  EXPECT_EQ(machine.frame().width, 256U);
+  EXPECT_EQ(machine.frame().height, 240U);
+  EXPECT_EQ(peek(machine, 0x4400), 0x68) << "程序向 $4031 写过 $65、$76";
+  EXPECT_EQ(machine.ppu().mask(), 0x08);
+  const std::uint8_t counter = machine.internalRam().read(0);
+  machine.runFrame();
+  EXPECT_NE(machine.internalRam().read(0), counter) << "$C000 的程序在继续运行";
+  EXPECT_EQ(machine.ppu().frameCount(), 2U);
+  // 画面在第 240 行开始时发布：第一帧经过 240 行，第二帧再经过 312 行；每行 341 点、每点 5 个主时钟周期，CPU 每周期 15 个主时钟周期。
+  const double expectedCycles = (240.0 + 312.0) * 341.0 * 5.0 / 15.0;
+  EXPECT_NEAR(static_cast<double>(machine.cpuRegisters().cycles), expectedCycles, 100.0);
+}
+
+TEST(Sb2000Machine, SoftResetKeepsRamAndHardResetClearsIt) {
+  Sb2000Machine machine(syntheticBios());
+  machine.powerOn();
+  machine.runFrame();
+  poke(machine, 0x0010, 0xAB);
+  machine.softReset();
+  EXPECT_EQ(peek(machine, 0x0010), 0xAB);
+  machine.powerOff();
+  EXPECT_FALSE(machine.isPoweredOn());
+  machine.powerOn();
+  EXPECT_EQ(peek(machine, 0x0010), 0x00);
+}
+
+TEST(Sb2000Machine, DebuggerExposesTheBoardMemorySpaces) {
+  Sb2000Machine machine(syntheticBios());
+  hw::MachineDebugger* debugger = machine.debugger();
+  ASSERT_NE(debugger, nullptr);
+  const auto spaces = debugger->memorySpaces();
+  std::set<std::string> ids;
+  for (const auto& space : spaces) ids.insert(space.id);
+  for (const char* id : {"cpu", "ppu", "board.ram", "board.externalRam", "board.bios", "board.extendedRam", "board.characterRam", "board.extendedVram", "chip.oam", "chip.palette"}) EXPECT_TRUE(ids.count(id) == 1) << id;
+  const std::uint8_t byte[] = {1};
+  EXPECT_THROW(debugger->writeMemory("board.bios", 0, byte), ember::shared::CoreError);
+  const auto target = debugger->resolve("cpu", 0xC000);
+  EXPECT_EQ(target.kind, "rom");
+  EXPECT_EQ(target.region, "board.bios");
+  EXPECT_EQ(target.offset, 0x4000U);
+}
+
+TEST(Sb2000Machine, GamepadEventsDriveThePadPorts) {
+  Sb2000Machine machine(syntheticBios());
+  EXPECT_EQ(machine.padPortCount(), 2U);
+  hw::GamepadInput gamepad;
+  gamepad.index = 1;
+  gamepad.connected = true;
+  gamepad.buttons.assign(16, false);
+  gamepad.buttons[9] = true;
+  EXPECT_NO_THROW(machine.input(gamepad));
+  EXPECT_THROW(machine.setButtons(2, 0), ember::shared::CoreError);
+}
+
+TEST(Sb2000Machine, RealBiosBootsToAPicture) {
+  std::vector<std::uint8_t> bios = realBios();
+  if (bios.empty()) GTEST_SKIP() << "没有找到 reference/rom/SB2K_BIOS.NES";
+  Sb2000Machine machine(std::move(bios));
+  machine.powerOn();
+  for (int frame = 0; frame < 300; ++frame) machine.runFrame();
+  const hw::FrameBuffer picture = machine.frame();
+  ASSERT_EQ(picture.width, 256U);
+  ASSERT_EQ(picture.height, 240U);
+  std::set<std::uint32_t> colors(picture.pixels.begin(), picture.pixels.end());
+  EXPECT_GT(colors.size(), 1U) << "BIOS 开机后画面不应该是纯色";
+  EXPECT_EQ(peek(machine, 0x4400), 0x68) << "BIOS 完成了 6576 的初始设置";
+  if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(picture, dump);
+}
+
+TEST(Sb2000Machine, RealBiosBootsTheSystemDemoDiskFromTheFloppyDrive) {
+  std::vector<std::uint8_t> bios = realBios();
+  std::vector<std::uint8_t> disk = realFloppy(std::filesystem::path(u8"reference/floppy-images/sb2000/FLPPY0系统演示.img"));
+  if (bios.empty() || disk.empty()) GTEST_SKIP() << "没有找到 BIOS 或系统演示盘";
+  Sb2000Machine machine(std::move(bios));
+  ASSERT_EQ(machine.floppyDriveCount(), 1U);
+  machine.floppyDrive(0)->insertImage(std::move(disk), false, "demo.img");
+  machine.powerOn();
+  // BIOS 从软盘读入 SB-Win98 需要约 1500 帧；再跑到第 3000 帧时已经在显示演示画面。
+  std::size_t highestCylinder = 0;
+  for (int frame = 0; frame < 3000; ++frame) {
+    machine.runFrame();
+    highestCylinder = std::max<std::size_t>(highestCylinder, machine.floppyDrive(0)->cylinder());
+  }
+  const hw::FrameBuffer picture = machine.frame();
+  if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(picture, dump + ".demo.ppm");
+  EXPECT_GT(highestCylinder, 40U) << "BIOS 把磁头移到了盘的后部读系统";
+  const std::set<std::uint32_t> colors(picture.pixels.begin(), picture.pixels.end());
+  EXPECT_GT(colors.size(), 4U) << "演示画面有多种颜色";
+}
+
+/** 按一下键：按下、跑几帧、松开、再跑几帧。 */
+void tapKey(Sb2000Machine& machine, const char* code) {
+  machine.input(hw::KeyInput{code, true});
+  for (int frame = 0; frame < 4; ++frame) machine.runFrame();
+  machine.input(hw::KeyInput{code, false});
+  for (int frame = 0; frame < 4; ++frame) machine.runFrame();
+}
+
+/** 在 SB-DOS 的命令行里输入一个由字母组成的命令并回车。 */
+void typeCommand(Sb2000Machine& machine, const std::string& command) {
+  for (const char letter : command) {
+    const std::string code = std::string("Key") + static_cast<char>(std::toupper(static_cast<unsigned char>(letter)));
+    tapKey(machine, code.c_str());
+  }
+  tapKey(machine, "Enter");
+}
+
+TEST(Sb2000Machine, RealMemtestDiskRunsUnderSbDos) {
+  std::vector<std::uint8_t> bios = realBios();
+  std::vector<std::uint8_t> disk = realFloppy(std::filesystem::path(u8"apps/sb2000/memtest/build/sb2000/MEMTEST.img"));
+  const std::string dump = dumpPath();
+  if (bios.empty() || disk.empty() || dump.empty()) GTEST_SKIP() << "只在设置了 EMBER_SB2000_DUMP 且有 BIOS 与 MEMTEST.img 时运行（人工验收用）";
+  Sb2000Machine machine(std::move(bios));
+  machine.floppyDrive(0)->insertImage(std::move(disk), false, "MEMTEST.img");
+  machine.powerOn();
+  for (int frame = 0; frame < 2400; ++frame) machine.runFrame();
+  dumpFrame(machine.frame(), dump + ".memtest0.ppm");
+  // SB-DOS 启动后先问日期与时间，回车跳过。
+  tapKey(machine, "Enter");
+  tapKey(machine, "Enter");
+  for (int frame = 0; frame < 120; ++frame) machine.runFrame();
+  typeCommand(machine, "memtest");
+  for (int frame = 0; frame < 1800; ++frame) machine.runFrame();
+  dumpFrame(machine.frame(), dump + ".memtest1.ppm");
+  tapKey(machine, "Space");
+  for (int frame = 0; frame < 300; ++frame) machine.runFrame();
+  dumpFrame(machine.frame(), dump + ".memtest2.ppm");
+}
+
+/** 在 FAT12 软盘镜像的根目录里按 8.3 名称找文件，沿簇链读出内容；找不到时返回空。 */
+std::vector<std::uint8_t> readRootFile(const std::vector<std::uint8_t>& image, const char* name83) {
+  constexpr std::size_t kSector = 512;
+  const std::size_t fatOffset = 1 * kSector;
+  const std::size_t rootOffset = 19 * kSector;
+  const std::size_t dataOffset = 33 * kSector;
+  for (std::size_t entry = 0; entry < 224; ++entry) {
+    const std::size_t base = rootOffset + entry * 32;
+    if (image.size() < base + 32 || image[base] == 0) break;
+    if (std::string(reinterpret_cast<const char*>(&image[base]), 11) != name83) continue;
+    std::size_t cluster = image[base + 26] | (static_cast<std::size_t>(image[base + 27]) << 8);
+    const std::size_t size = image[base + 28] | (static_cast<std::size_t>(image[base + 29]) << 8) | (static_cast<std::size_t>(image[base + 30]) << 16);
+    std::vector<std::uint8_t> content;
+    while (cluster >= 2 && cluster < 0xFF8 && content.size() < size) {
+      const std::size_t start = dataOffset + (cluster - 2) * kSector;
+      content.insert(content.end(), image.begin() + static_cast<std::ptrdiff_t>(start), image.begin() + static_cast<std::ptrdiff_t>(start + kSector));
+      const std::size_t pair = fatOffset + cluster * 3 / 2;
+      const std::size_t raw = image[pair] | (static_cast<std::size_t>(image[pair + 1]) << 8);
+      cluster = (cluster & 1) ? (raw >> 4) : (raw & 0xFFF);
+    }
+    content.resize(std::min(content.size(), size));
+    return content;
+  }
+  return {};
+}
+
+TEST(Sb2000Machine, RealHwtestDiskRunsUnderSbDos) {
+  std::vector<std::uint8_t> bios = realBios();
+  std::vector<std::uint8_t> disk = realFloppy(std::filesystem::path(u8"apps/sb2000/hwtest/build/sb2000/HWTEST.img"));
+  const std::string dump = dumpPath();
+  if (bios.empty() || disk.empty() || dump.empty()) GTEST_SKIP() << "只在设置了 EMBER_SB2000_DUMP 且有 BIOS 与 HWTEST.img 时运行（人工验收用）";
+  Sb2000Machine machine(std::move(bios));
+  machine.floppyDrive(0)->insertImage(std::move(disk), false, "HWTEST.img");
+  machine.powerOn();
+  for (int frame = 0; frame < 2400; ++frame) machine.runFrame();
+  tapKey(machine, "Enter");
+  tapKey(machine, "Enter");
+  for (int frame = 0; frame < 120; ++frame) machine.runFrame();
+  typeCommand(machine, "hwtest");
+  for (int frame = 0; frame < 300; ++frame) machine.runFrame();
+  dumpFrame(machine.frame(), dump + ".hwtest0.ppm");
+  // 每一项先显示名字并等键：回车运行这一项；共 18 项，每项最多等 20 秒（1000 帧）；多按一次回车用来确认最后一项没有被漏掉。
+  for (int item = 0; item < 19; ++item) {
+    tapKey(machine, "Enter");
+    for (int frame = 0; frame < 1000; ++frame) machine.runFrame();
+  }
+  dumpFrame(machine.frame(), dump + ".hwtest1.ppm");
+  const auto report = readRootFile(machine.floppyDrive(0)->image(), "HWTEST  TXT");
+  std::ofstream out(dump + ".hwtest.txt", std::ios::binary);
+  out.write(reinterpret_cast<const char*>(report.data()), static_cast<std::streamsize>(report.size()));
+  // 看图场景 V1-V8：回车进入，每个场景存一张画面，任意键翻页。
+  for (int scene = 1; scene <= 8; ++scene) {
+    for (int frame = 0; frame < 200; ++frame) machine.runFrame();
+    dumpFrame(machine.frame(), dump + ".hwtestv" + std::to_string(scene) + ".ppm");
+    tapKey(machine, "Space");
+  }
+}
+
+}  // namespace

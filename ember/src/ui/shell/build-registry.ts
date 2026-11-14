@@ -143,9 +143,11 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
   menuItems.push(...shellMenuItems);
   const activityMenuItems: ShellMenuItemDefinition[] = [];
   for (const item of activityItems) {
-    if (!pages.has(item.page)) errors.push(`活动栏按钮“${item.id}”引用的页面不存在：${item.page}`);
+    if ((item.page === undefined) === (item.sideBar === undefined)) errors.push(`活动栏按钮“${item.id}”必须且只能有页面或边栏中的一个`);
+    else if (item.page !== undefined && !pages.has(item.page)) errors.push(`活动栏按钮“${item.id}”引用的页面不存在：${item.page}`);
     const id = activityCommandId(item.id);
-    commands.set(id, { id, title: item.label, run: (shell) => shell.openPage(item.page) });
+    const page = item.page;
+    commands.set(id, { id, title: item.label, run: (shell) => (page === undefined ? shell.showActivity(item.id) : shell.openPage(page)) });
     activityMenuItems.push({ menu: 'view', command: id });
   }
   menuItems.unshift(...activityMenuItems);

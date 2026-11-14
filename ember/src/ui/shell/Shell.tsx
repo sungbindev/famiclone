@@ -156,6 +156,8 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   // 模块通过 refreshCommands 通知命令状态变了：递增一次让菜单重新计算。
   const [, setCommandVersion] = useState(0);
   const [log] = useState(() => new MessageLog());
+  // 当前选中的“只有边栏”的活动（如设备）与选中时的标签：切到另一个标签后就不再生效，边栏回到页面自己的边栏。
+  const [sideActivity, setSideActivity] = useState<{ readonly id: string; readonly tabId: string | null } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -173,8 +175,11 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   }, [bridge]);
 
   const activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+  // 切到另一个标签后，之前选中的设备等边栏作废（以后再切回这个标签也不恢复）；在渲染中直接重置，不用 Effect。
+  if (sideActivity !== null && sideActivity.tabId !== tabs.activeId) setSideActivity(null);
   const activePage = activeTab === undefined ? undefined : registry.pages.get(activeTab.pageId);
-  const hasSideBar = activePage?.sideBar !== undefined;
+  const activeSideActivity = sideActivity !== null && sideActivity.tabId === tabs.activeId ? registry.activityItems.find((item) => item.id === sideActivity.id && item.sideBar !== undefined) : undefined;
+  const hasSideBar = activePage?.sideBar !== undefined || activeSideActivity !== undefined;
   const sideBarOpen = hasSideBar && panels.side;
   const bottomPanelOpen = panels.bottom;
   const rightBarOpen = RIGHT_BAR_AVAILABLE && panels.right;
@@ -193,6 +198,11 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
           return;
         }
         setTabs((state) => openTab(state, page));
+      },
+      showActivity: (activityId) => {
+        if (registry.activityItems.find((item) => item.id === activityId)?.sideBar === undefined) return;
+        setSideActivity({ id: activityId, tabId: live.current.tabs.activeId });
+        setPanels((current) => (current.side ? current : { ...current, side: true }));
       },
       closeActiveTab: () => setTabs((state) => (state.activeId === null || !isClosable(registry, state, state.activeId) ? state : closeTab(state, state.activeId))),
       toggleSideBar: () => {
@@ -322,19 +332,27 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   const handleActivitySelect = (activityId: string): void => {
     const item = registry.activityItems.find((entry) => entry.id === activityId);
     if (item === undefined) return;
+    if (item.sideBar !== undefined) {
+      // 只有边栏的活动：再点选中的按钮折叠或展开边栏，点别的按钮把边栏换成它的。
+      if (activeSideActivity?.id === item.id) api.toggleSideBar();
+      else api.showActivity(item.id);
+      return;
+    }
+    if (item.page === undefined) return;
     // 再点选中的按钮折叠或展开边栏；点别的按钮切到它的页面，页面有边栏而边栏折叠着时展开。
-    if (item.page === activePage?.id) {
+    if (item.page === activePage?.id && activeSideActivity === undefined) {
       api.toggleSideBar();
       return;
     }
-    api.openPage(item.page);
+    setSideActivity(null);
+    if (item.page !== activePage?.id) api.openPage(item.page);
     if (registry.pages.get(item.page)?.sideBar !== undefined && !panels.side) setPanels((current) => ({ ...current, side: true }));
   };
 
   const fullScreen = windowState.fullScreen;
   const start = registry.statusItems.filter((item) => item.align === 'start');
   const end = registry.statusItems.filter((item) => item.align === 'end');
-  const activeActivityId = registry.activityItems.find((item) => item.page === activePage?.id)?.id;
+  const activeActivityId = activeSideActivity?.id ?? registry.activityItems.find((item) => item.page !== undefined && item.page === activePage?.id)?.id;
 
   return (
     <ShellApiContext.Provider value={api}>
@@ -363,16 +381,26 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
               />
             )
           }
-          sideBar={tabs.tabs.map((tab) => {
-            const sideBar = registry.pages.get(tab.pageId)?.sideBar;
-            if (sideBar === undefined) return null;
-            const title = sideBar.title ?? registry.pages.get(tab.pageId)?.title;
-            return (
-              <div key={tab.id} className="ember-shell-side" hidden={tab.id !== tabs.activeId}>
-                <SideBar {...(title === undefined ? {} : { title })}>{createElement(sideBar.Component, { bridge })}</SideBar>
-              </div>
-            );
-          })}
+          sideBar={[
+            ...tabs.tabs.map((tab) => {
+              const sideBar = registry.pages.get(tab.pageId)?.sideBar;
+              if (sideBar === undefined) return null;
+              const title = sideBar.title ?? registry.pages.get(tab.pageId)?.title;
+              return (
+                <div key={tab.id} className="ember-shell-side" hidden={tab.id !== tabs.activeId || activeSideActivity !== undefined}>
+                  <SideBar {...(title === undefined ? {} : { title })}>{createElement(sideBar.Component, { bridge })}</SideBar>
+                </div>
+              );
+            }),
+            ...registry.activityItems.map((item) => {
+              if (item.sideBar === undefined) return null;
+              return (
+                <div key={`activity:${item.id}`} className="ember-shell-side" hidden={activeSideActivity?.id !== item.id}>
+                  <SideBar title={item.sideBar.title ?? item.label}>{createElement(item.sideBar.Component, { bridge })}</SideBar>
+                </div>
+              );
+            })
+          ]}
           sideBarCollapsed={fullScreen || !sideBarOpen}
           tabBar={
             fullScreen ? undefined : (

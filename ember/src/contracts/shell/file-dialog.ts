@@ -25,8 +25,16 @@ export interface FileDialogOptions {
   readonly filters: readonly FileDialogFilter[];
 }
 
+/** 选择文件夹的参数。 */
+export interface DirectoryDialogOptions {
+  /** 窗口标题。 */
+  readonly title: string;
+}
+
 /** 文件选择窗口。 */
 export interface FileDialog {
   /** 请用户选一个文件；用户取消时返回 undefined。 */
   pickFile(options: FileDialogOptions): Promise<string | undefined>;
+  /** 请用户选一个文件夹；用户取消时返回 undefined。 */
+  pickDirectory(options: DirectoryDialogOptions): Promise<string | undefined>;
 }

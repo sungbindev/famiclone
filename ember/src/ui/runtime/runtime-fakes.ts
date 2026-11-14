@@ -11,7 +11,18 @@
 
 import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
 import type { RuntimeStatusResult } from '../../contracts/runtime/generated/runtime';
-import type { RecentCartridge, RuntimeBackend } from './runtime-controller';
+import type { RecentCartridge, RuntimeBackend, MachineEntry } from './runtime-controller';
+
+/** 默认的机型清单：经典 FC、小霸王 2000 已支持（小霸王 2000 还没有 BIOS），其余暂未支持。 */
+export function defaultMachines(): MachineEntry[] {
+  return [
+    { id: 'fc', name: '经典 FC', needsBios: false, supported: true },
+    { id: 'sb97', name: '小霸王 97', needsBios: true, supported: false },
+    { id: 'sb2000', name: '小霸王 2000', needsBios: true, supported: true },
+    { id: 'bbk10', name: '步步高 1.0', needsBios: true, supported: false },
+    { id: 'bbk20', name: '步步高 2.0', needsBios: true, supported: false }
+  ];
+}
 
 /** 构造机器状态；machine 为 undefined 表示没有开机。 */
 export function machineStatus(power: 'off' | 'on', mode: 'paused' | 'running', path?: string): RuntimeStatusResult {
@@ -49,6 +60,8 @@ export class FakeRuntimeBackend {
   muted = false;
   /** 下一次打开卡带时用户选的路径；undefined 表示用户取消。 */
   pickedPath: string | undefined;
+  /** 机型清单（测试可以改写，例如给小霸王 2000 加上 BIOS）。 */
+  machines: MachineEntry[] = defaultMachines();
   /** 按请求名登记的下一次失败的原因。 */
   readonly failures = new Map<string, unknown>();
   /** 每次请求的记录：请求名加参数。 */
@@ -100,6 +113,18 @@ export class FakeRuntimeBackend {
             if (params.volume !== undefined) this.volume = params.volume;
             if (params.muted !== undefined) this.muted = params.muted;
             return { volume: this.volume, muted: this.muted };
+          })
+      },
+      machines: {
+        list: () => this.request('machines.list', {}, () => ({ machines: this.machines })),
+        boot: (params: { machine: string }) =>
+          this.request('machines.boot', params, () => {
+            const machine = this.machines.find((item) => item.id === params.machine);
+            if (machine === undefined) throw { code: 'machines.notFound', message: '没有这个机型' };
+            if (machine.bios === undefined) throw { code: 'machines.noBios', message: '这个机型还没有添加 BIOS' };
+            this.status = { power: 'on', mode: 'running', frame: 0, cycles: 0, speed: 100, machine: machine.id };
+            this.emit('runtime.stateChanged', { power: 'on', mode: 'running', reason: 'load' });
+            return { machine, state: { power: 'on', mode: 'running' } };
           })
       }
     },

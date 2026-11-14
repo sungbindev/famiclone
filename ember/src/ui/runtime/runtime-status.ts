@@ -23,6 +23,7 @@ const TEXT = {
   paused: '已暂停',
   running: '运行中',
   noCartridge: '无',
+  noCartridgeBios: '无（整机 BIOS）',
   noPlugin: '—',
   powerOn: '上电',
   powerOff: '断电',
@@ -33,7 +34,7 @@ const TEXT = {
 } as const;
 
 /** 主机型号的显示名；表里没有的型号显示型号标识本身。 */
-const HOST_NAMES: Readonly<Record<string, string>> = { fc: '经典 FC' };
+const HOST_NAMES: Readonly<Record<string, string>> = { fc: '经典 FC', sb97: '小霸王 97', sb2000: '小霸王 2000', bbk10: '步步高 1.0', bbk20: '步步高 2.0' };
 
 /** 各控制是否可用。 */
 export interface ControlAvailability {
@@ -76,9 +77,10 @@ export function hostText(status: RuntimeStatusResult | undefined): string {
   return HOST_NAMES[status.machine] ?? status.machine;
 }
 
-/** 卡带的显示文字：卡带文件名；没有卡带时为“无”。 */
+/** 卡带的显示文字：卡带文件名；没有卡带时为“无”，整机机型开机后（没有卡带、用 BIOS 开机）为“无（整机 BIOS）”。 */
 export function cartridgeText(status: RuntimeStatusResult | undefined): string {
-  return status?.cartridge === undefined ? TEXT.noCartridge : fileNameOf(status.cartridge.path);
+  if (status?.cartridge !== undefined) return fileNameOf(status.cartridge.path);
+  return status?.machine !== undefined && status.machine !== 'fc' ? TEXT.noCartridgeBios : TEXT.noCartridge;
 }
 
 /** mapper 插件的显示文字：插件名；没有卡带时为“—”。 */

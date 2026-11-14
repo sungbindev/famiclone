@@ -61,6 +61,8 @@ struct SettingDefinition {
   std::int64_t maxLength{256};
   /** 首选项页不显示，只保存取值。 */
   bool hidden{false};
+  /** text 的取值是文件夹路径时填 directory，页面在输入框旁显示“选择”按钮；空表示没有。 */
+  std::string picker;
   /** 出厂默认值，必须符合种类与范围。 */
   SettingValue defaultValue{false};
 };

@@ -1,0 +1,90 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：standard-floppy-drive.cpp
+ * 说明：软驱驱动器模块的实现。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-15
+ * ------------------------------------------------------------------------
+ */
+
+#include "logic/hardware/floppy-drive/standard-floppy-drive.hpp"
+
+#include <utility>
+
+namespace ember::logic::hardware {
+
+namespace hw = contracts::hardware;
+
+namespace {
+
+constexpr std::size_t KILOBYTE = 1024;
+
+}  // namespace
+
+hw::FloppyFormat StandardFloppyDrive::formatFor(std::size_t imageSize) {
+  switch (imageSize / KILOBYTE) {
+    case 160:
+      return {40, 1, 8, 250};
+    case 180:
+      return {40, 1, 9, 250};
+    case 320:
+      return {40, 2, 8, 250};
+    case 360:
+      return {40, 2, 9, 250};
+    case 720:
+      return {80, 2, 9, 250};
+    case 1200:
+      return {80, 2, 15, 500};
+    case 1440:
+      return {80, 2, 18, 500};
+    case 2880:
+      return {80, 2, 36, 1000};
+    default:
+      // 非标准大小暂按 1.44MB 处理。
+      return {80, 2, 18, 500};
+  }
+}
+
+void StandardFloppyDrive::writeByte(std::size_t offset, std::uint8_t value) {
+  if (!inserted_ || offset >= image_.size()) return;
+  image_[offset] = value;
+  modified_ = true;
+}
+
+void StandardFloppyDrive::insertImage(std::vector<std::uint8_t> image, bool writeProtected, std::string source) {
+  image_ = std::move(image);
+  source_ = std::move(source);
+  format_ = formatFor(image_.size());
+  writeProtected_ = writeProtected;
+  inserted_ = true;
+  suspended_ = false;
+  modified_ = false;
+}
+
+void StandardFloppyDrive::ejectImage() {
+  if (inserted_ || suspended_) changed_ = true;
+  inserted_ = false;
+  suspended_ = false;
+  modified_ = false;
+  image_.clear();
+  image_.shrink_to_fit();
+  source_.clear();
+}
+
+bool StandardFloppyDrive::suspendMedia() {
+  if (!inserted_) return false;
+  inserted_ = false;
+  suspended_ = true;
+  changed_ = true;
+  return true;
+}
+
+bool StandardFloppyDrive::restoreMedia() {
+  if (!suspended_) return false;
+  inserted_ = true;
+  suspended_ = false;
+  return true;
+}
+
+}  // namespace ember::logic::hardware

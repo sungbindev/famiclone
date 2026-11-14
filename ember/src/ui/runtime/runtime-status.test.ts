@@ -59,17 +59,20 @@ describe('controlAvailability', () => {
 });
 
 describe('显示文字', () => {
-  it('主机型号：经典 FC；没有开机时是“—”', () => {
+  it('主机型号：经典 FC 与整机机型的显示名；没有开机时是“—”；不认识的型号显示型号标识', () => {
     expect(hostText(RUNNING)).toBe('经典 FC');
     expect(hostText(NONE)).toBe('—');
     expect(hostText(undefined)).toBe('—');
-    expect(hostText({ ...RUNNING, machine: 'sb2000' })).toBe('sb2000');
+    expect(hostText({ ...RUNNING, machine: 'sb2000' })).toBe('小霸王 2000');
+    expect(hostText({ ...RUNNING, machine: 'other' })).toBe('other');
   });
 
   it('卡带：文件名，没有卡带时是“无”；两种路径分隔符都认', () => {
     expect(cartridgeText(RUNNING)).toBe('nestest.nes');
     expect(cartridgeText(NONE)).toBe('无');
     expect(cartridgeText(undefined)).toBe('无');
+    expect(cartridgeText({ ...NONE, machine: 'sb2000' })).toBe('无（整机 BIOS）');
+    expect(cartridgeText({ ...NONE, machine: 'fc' })).toBe('无');
     expect(fileNameOf('/home/me/mario.nes')).toBe('mario.nes');
   });
 

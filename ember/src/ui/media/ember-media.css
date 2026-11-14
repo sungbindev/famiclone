@@ -1,0 +1,26 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：ember-media.css
+ * 说明：设备边栏的版面：卡片纵向排列，卡片里的按钮横向排列并在放不下时换行。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-15
+ * 备注：只写版面，间距取组件库的令牌；卡片的外观由组件库的 Panel 负责。
+ * ------------------------------------------------------------------------
+ */
+
+.ember-media-side {
+  gap: var(--space-md);
+}
+
+.ember-media-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ember-media-card__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--action-gap);
+}

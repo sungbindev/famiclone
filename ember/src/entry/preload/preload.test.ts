@@ -63,8 +63,11 @@ describe('window.ember', () => {
   });
 
   it('主进程请求暴露为 main.cartridges.open，走主进程请求通道', async () => {
-    expect(Object.keys(bridge.main)).toEqual(['cartridges']);
+    expect(Object.keys(bridge.main)).toEqual(['cartridges', 'machines', 'media', 'preferences']);
     expect(Object.keys(bridge.main.cartridges).toSorted()).toEqual(['open', 'openRecent', 'recent']);
+    expect(Object.keys(bridge.main.machines)).toEqual(['openBios']);
+    expect(Object.keys(bridge.main.media)).toEqual(['openFloppy']);
+    expect(Object.keys(bridge.main.preferences)).toEqual(['pickDirectory']);
     electron.invoke.mockResolvedValue({ ok: true, result: { canceled: true } });
     await expect(bridge.main.cartridges.open({})).resolves.toEqual({ canceled: true });
     expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.open', {});

@@ -56,6 +56,18 @@ struct CartridgeInsertionResult {
   RuntimeState state;
 };
 
+/** 整机机型开机的请求。 */
+struct MachineBoot {
+  /** 机型标识，如 sb2000。 */
+  std::string machine;
+  /** BIOS ROM 的内容（不含文件头）。 */
+  std::vector<std::uint8_t> bios;
+  /** 装配后是否上电。 */
+  bool powerOn{true};
+  /** 上电后是否直接运行；powerOn 为 false 时无效。 */
+  bool resume{true};
+};
+
 /** 一次授权运行（runtime.run）的结果。 */
 struct RunOutcome {
   /** 实际运行的帧数。 */
@@ -132,6 +144,18 @@ class RuntimeService {
 
   /** 取出卡带并拆除主机，电源变为断电；没有卡带时没有效果。 */
   virtual RuntimeState ejectCartridge() = 0;
+
+  /**
+   * 装配整机机型的主机（没有卡带），替换已有的卡带与主机；任何一步失败都不改变已有的主机。
+   * @throws shared::CoreError runtime.hostUnsupported，以及 hardware.invalidArgument（BIOS 大小不对）。
+   */
+  virtual RuntimeState bootMachine(MachineBoot boot) = 0;
+
+  /**
+   * 在模拟线程上用主机做一件事，等它执行完；不要求通电（用于盘片等与电源无关的操作），回调里的异常原样抛给调用方。
+   * @return 有主机并执行了回调返回 true；还没有主机时返回 false。
+   */
+  virtual bool useMachine(const std::function<void(hardware::Machine&)>& action) = 0;
 
   /**
    * 把用户输入（键盘、鼠标、游戏手柄的原始事件）经命令队列交给模拟线程，不等待执行；没有主机时丢弃。

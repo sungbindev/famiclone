@@ -14,7 +14,6 @@
 #include "bootstrap/machines/fc.hpp"
 
 #include <algorithm>
-#include <cstdio>
 #include <string>
 #include <utility>
 #include "contracts/hardware/hardware-error.hpp"
@@ -41,9 +40,7 @@ FcMachine::FcMachine()
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       padApuPort_(pad_, apu_),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
-      peek_([this](std::uint16_t address) { return cpuBus_.peek(address); }),
-      recorders_(peek_),
-      probeHub_(breakpoints_, recorders_) {
+      debug_(cpuBus_, cpu_) {
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
   cpuBus_.mount(0x2000, 0x3FFF, ppu_);
   cpuBus_.mount(0x4000, 0x4013, apu_);
@@ -56,7 +53,6 @@ FcMachine::FcMachine()
   ppuBus_.mount(0x2000, 0x3EFF, nametableRam_);
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
-  cpu_.setInterruptObserver(this);
 }
 
 void FcMachine::powerOn() {
@@ -70,9 +66,9 @@ void FcMachine::powerOn() {
   cartridgeIrq_.set(false);
   slot_.reset(true);
   poweredOn_ = true;
-  skipExecuteAt_.reset();
+  debug_.clearStopState();
   cpu_.reset(true);
-  breakpoints_.discardPending();
+  debug_.discardPendingHit();
 }
 
 void FcMachine::powerOff() { poweredOn_ = false; }
@@ -84,8 +80,7 @@ void FcMachine::softReset() {
   ppu_.reset(false);
   slot_.reset(false);
   cpu_.reset(false);
-  skipExecuteAt_.reset();
-  breakpoints_.discardPending();
+  debug_.clearStopState();
 }
 
 void FcMachine::run(hw::MasterTime ticks) {
@@ -100,19 +95,11 @@ void FcMachine::runFrame() {
   if (!poweredOn_) return;
   const std::uint64_t target = ppu_.frameCount() + 1;
   while (ppu_.frameCount() < target) {
-    if (breakpoints_.hasExecute()) {
-      const std::uint16_t pc = cpu_.registers().pc;
-      const bool skip = skipExecuteAt_ == pc;
-      skipExecuteAt_.reset();
-      if (!skip && breakpoints_.hitsExecute(pc)) {
-        skipExecuteAt_ = pc;
-        return;
-      }
-    }
-    beforeInstruction();
+    if (debug_.stopAtExecuteBreakpoint()) return;
+    debug_.beforeInstruction();
     cpu_.run(1);
     ppu_.catchUp(scheduler_.now());
-    if (breakpoints_.hasPending()) return;
+    if (debug_.hasPendingHit()) return;
   }
   apu_.catchUp(scheduler_.now());
 }
@@ -144,16 +131,9 @@ std::size_t paletteSlot(std::uint32_t address) {
   return index;
 }
 
-/** 检查范围，越界时抛出 hardware.spaceOutOfRange。 */
-void checkRange(std::string_view space, std::size_t size, std::uint32_t address, std::size_t length) {
-  if (address > size || length > size - address) {
-    throw shared::CoreError(hw::ERROR_SPACE_OUT_OF_RANGE, "空间 " + std::string(space) + " 的大小是 " + std::to_string(size) + " 字节，访问 " + std::to_string(address) + " 起的 " + std::to_string(length) + " 字节超出范围");
-  }
-}
-
-[[noreturn]] void unknownSpace(std::string_view space) { throw shared::CoreError(hw::ERROR_UNKNOWN_SPACE, "没有这个内存空间：" + std::string(space)); }
-
-hw::StateField field(const char* name, std::int64_t value, const char* description) { return hw::StateField{name, value, description}; }
+using debugging::checkRange;
+using debugging::field;
+using debugging::unknownSpace;
 
 }  // namespace
 
@@ -197,7 +177,7 @@ void FcMachine::readMemory(std::string_view space, std::uint32_t address, std::s
 
 void FcMachine::writeMemory(std::string_view space, std::uint32_t address, std::span<const std::uint8_t> bytes) {
   // 调试写入不触发读写断点，也不进记录。
-  const ProbeSuspend suspend(*this, true);
+  const CpuDebugKit::Suspend suspend(debug_, true);
   if (space == "cpu") {
     checkRange(space, CPU_SPACE_SIZE, address, bytes.size());
     for (std::size_t index = 0; index < bytes.size(); ++index) cpuBus_.write(static_cast<std::uint16_t>(address + index), bytes[index]);
@@ -252,16 +232,7 @@ hw::AddressTarget FcMachine::resolve(std::string_view space, std::uint32_t addre
 std::vector<std::string> FcMachine::stateModules() const { return {"cpu", "ppu"}; }
 
 std::vector<hw::StateField> FcMachine::readState(std::string_view module) const {
-  if (module == "cpu") {
-    const hw::CpuRegisters registers = cpu_.registers();
-    return {field("pc", registers.pc, "程序计数器，指向下一条要执行的指令"),
-            field("a", registers.a, "累加器"),
-            field("x", registers.x, "X 变址寄存器"),
-            field("y", registers.y, "Y 变址寄存器"),
-            field("sp", registers.sp, "栈指针，栈在 $0100-$01FF"),
-            field("status", registers.status, "状态寄存器（N V - - D I Z C，位 5 恒为 1，位 4 恒为 0）"),
-            field("cycles", static_cast<std::int64_t>(registers.cycles), "自上电以来的 CPU 周期数（只读）")};
-  }
+  if (module == "cpu") return debug_.readCpuState();
   if (module == "ppu") {
     return {field("scanline", ppu_.scanline(), "当前扫描线（0 到 261，261 是预渲染行）"),
             field("dot", ppu_.dot(), "当前点（0 到 340）"),
@@ -280,110 +251,20 @@ std::vector<hw::StateField> FcMachine::readState(std::string_view module) const 
 void FcMachine::writeState(std::string_view module, std::span<const hw::StateField> fields) {
   if (module == "ppu") throw shared::CoreError(hw::ERROR_INVALID_STATE, "ppu 的状态只读");
   if (module != "cpu") throw shared::CoreError(hw::ERROR_INVALID_STATE, "没有这个状态模块：" + std::string(module));
-  hw::CpuRegisters registers = cpu_.registers();
-  for (const hw::StateField& item : fields) {
-    const auto inRange = [&](std::int64_t maximum) {
-      if (item.value < 0 || item.value > maximum) throw shared::CoreError(hw::ERROR_INVALID_STATE, "cpu." + item.name + " 的取值必须在 0 到 " + std::to_string(maximum) + " 之间");
-    };
-    if (item.name == "pc") {
-      inRange(0xFFFF);
-      registers.pc = static_cast<std::uint16_t>(item.value);
-    } else if (item.name == "a" || item.name == "x" || item.name == "y" || item.name == "sp" || item.name == "status") {
-      inRange(0xFF);
-      const auto value = static_cast<std::uint8_t>(item.value);
-      if (item.name == "a") registers.a = value;
-      else if (item.name == "x") registers.x = value;
-      else if (item.name == "y") registers.y = value;
-      else if (item.name == "sp") registers.sp = value;
-      else registers.status = value;
-    } else {
-      throw shared::CoreError(hw::ERROR_INVALID_STATE, "cpu 没有可修改的状态项：" + item.name);
-    }
-  }
-  cpu_.setRegisters(registers);
-  skipExecuteAt_.reset();
-}
-
-void FcMachine::refreshProbe() { cpuBus_.setProbe(probeHub_.needed() ? &probeHub_ : nullptr); }
-
-FcMachine::ProbeSuspend::ProbeSuspend(FcMachine& machine, bool alsoRecording) : machine_(machine), before_(machine.probeHub_.suspend(true, alsoRecording)) {}
-
-FcMachine::ProbeSuspend::~ProbeSuspend() { machine_.probeHub_.restore(before_); }
-
-void FcMachine::beforeInstruction() {
-  const bool recording = recorders_.needsInstructionHook();
-  if (!recording && !cdl_.active()) return;
-  const hw::CpuRegisters registers = cpu_.registers();
-  if (recording) recorders_.onInstruction(registers);
-  if (cdl_.active()) cdl_.onInstruction(registers, peek_);
-}
-
-std::vector<hw::DisassembledInstruction> FcMachine::disassemble(std::uint16_t address, std::uint32_t count) {
-  std::vector<hw::DisassembledInstruction> list;
-  list.reserve(count);
-  const hw::CpuRegisters registers = cpu_.registers();
-  std::uint16_t pc = address;
-  for (std::uint32_t index = 0; index < count; ++index) {
-    const logic::hardware::Disassembly code = logic::hardware::disassemble(pc, registers, peek_);
-    std::string bytes;
-    for (std::uint8_t offset = 0; offset < code.length; ++offset) {
-      char text[4];
-      std::snprintf(text, sizeof(text), "%02X", peek_(static_cast<std::uint16_t>(pc + offset)));
-      if (offset > 0) bytes += ' ';
-      bytes += text;
-    }
-    list.push_back({pc, std::move(bytes), code.text, code.unofficial});
-    pc = static_cast<std::uint16_t>(pc + code.length);
-  }
-  return list;
-}
-
-std::uint32_t FcMachine::startRecorder(const hw::RecorderSpec& spec) {
-  const std::uint32_t id = recorders_.start(spec);
-  refreshProbe();
-  return id;
-}
-
-hw::RecorderOutput FcMachine::stopRecorder(std::uint32_t id) {
-  hw::RecorderOutput output = recorders_.stop(id);
-  refreshProbe();
-  return output;
-}
-
-void FcMachine::onInterrupt(hw::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) {
-  if (recorders_.recordsIrq()) recorders_.onInterrupt(kind, returnAddress, handler, cpu_.registers().cycles);
-}
-
-hw::Breakpoint FcMachine::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last) {
-  const hw::Breakpoint added = breakpoints_.add(kind, first, last);
-  refreshProbe();
-  return added;
-}
-
-bool FcMachine::removeBreakpoint(std::uint32_t id) {
-  const bool removed = breakpoints_.remove(id);
-  refreshProbe();
-  return removed;
-}
-
-std::size_t FcMachine::clearBreakpoints() {
-  const std::size_t removed = breakpoints_.clear();
-  refreshProbe();
-  return removed;
+  debug_.writeCpuState(fields);
 }
 
 hw::StepResult FcMachine::step(hw::StepUnit unit, std::uint64_t count) {
   hw::StepResult result;
   if (!poweredOn_ || count == 0) return result;
   // 单步忽略断点，但照常进记录。
-  const ProbeSuspend suspend(*this, false);
-  skipExecuteAt_.reset();
-  breakpoints_.discardPending();
+  const CpuDebugKit::Suspend suspend(debug_, false);
+  debug_.clearStopState();
   const std::uint64_t startCycles = cpu_.registers().cycles;
   const std::uint64_t startFrames = ppu_.frameCount();
   // 每次 run(1) 执行恰好一条指令（含随后响应的中断序列）。
   const auto instruction = [&] {
-    beforeInstruction();
+    debug_.beforeInstruction();
     cpu_.run(1);
     ppu_.catchUp(scheduler_.now());
     ++result.instructions;

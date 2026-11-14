@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { PreferenceGroup, PreferenceSetting } from '../../contracts/preferences/generated/preferences';
-import { errorText, isChanged, parseInteger, visibleGroups, visibleSettings, withValue } from './preferences-model';
+import { biosStatusText, errorText, isChanged, MACHINES_GROUP_ID, parseInteger, visibleGroups, visibleSettings, withMachinesGroup, withValue } from './preferences-model';
 
 function setting(id: string, group: string, overrides: Partial<PreferenceSetting> = {}): PreferenceSetting {
   return { id, group, label: id, description: '', kind: 'switch', hidden: false, defaultValue: false, value: false, ...overrides };
@@ -21,6 +21,28 @@ const GROUPS: PreferenceGroup[] = [
   { id: 'sound', label: '声音' },
   { id: 'hiddenOnly', label: '只有隐藏项' }
 ];
+
+describe('withMachinesGroup', () => {
+  it('把“机型与 BIOS”放在声音分组之后，没有声音分组时放在最后', () => {
+    const groups: PreferenceGroup[] = [
+      { id: 'sound', label: '声音' },
+      { id: 'printer', label: '打印机' },
+      { id: 'debug', label: '调试服务' }
+    ];
+    expect(withMachinesGroup(groups).map((group) => group.label)).toEqual(['声音', '机型与 BIOS', '打印机', '调试服务']);
+    expect(withMachinesGroup(groups.slice(1)).map((group) => group.id)).toEqual(['printer', 'debug', MACHINES_GROUP_ID]);
+  });
+});
+
+describe('biosStatusText', () => {
+  const base = { id: 'sb2000', name: '小霸王 2000', needsBios: true, supported: true };
+
+  it('暂未支持、未添加、已添加（文件名与大小，KB 四舍五入）', () => {
+    expect(biosStatusText({ ...base, supported: false })).toBe('暂未支持');
+    expect(biosStatusText(base)).toBe('未添加');
+    expect(biosStatusText({ ...base, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } })).toBe('SB2K_BIOS.NES（512 KB）');
+  });
+});
 
 describe('visibleSettings 与 visibleGroups', () => {
   const settings = [setting('appearance.theme', 'appearance'), setting('sound.buffer', 'sound'), setting('sound.volume', 'sound', { hidden: true }), setting('hiddenOnly.x', 'hiddenOnly', { hidden: true })];

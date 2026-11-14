@@ -2528,6 +2528,306 @@
       "x-debugOnly": true
     },
     {
+      "name": "machines.list",
+      "summary": "机型清单，顺序固定为 fc、sb97、sb2000、bbk10、bbk20",
+      "description": "机型清单，顺序固定为 fc、sb97、sb2000、bbk10、bbk20。",
+      "tags": [
+        {
+          "name": "machines"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "machines": {
+              "type": "array",
+              "description": "机型项",
+              "items": {
+                "$ref": "#/components/schemas/machines.MachineInfo"
+              }
+            }
+          },
+          "required": [
+            "machines"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "machines.setBios",
+      "summary": "读取并检查 BIOS 文件，复制进 BIOS 目录（新文件写好之后才删旧文件，失败时原有的 BIOS 不变）",
+      "description": "读取并检查 BIOS 文件，复制进 BIOS 目录（新文件写好之后才删旧文件，失败时原有的 BIOS 不变）；成功后发 machines.changed。",
+      "tags": [
+        {
+          "name": "machines"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "机型标识",
+            "minLength": 1
+          },
+          "description": "机型标识"
+        },
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "BIOS 文件的路径，由主进程根据用户选择的文件给出，调试服务直接给出",
+            "minLength": 1
+          },
+          "description": "BIOS 文件的路径，由主进程根据用户选择的文件给出，调试服务直接给出"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "machine": {
+              "$ref": "#/components/schemas/machines.MachineInfo",
+              "description": "更新后的机型项"
+            }
+          },
+          "required": [
+            "machine"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "machines.notFound",
+          "data": {
+            "code": "machines.notFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosNotNeeded",
+          "data": {
+            "code": "machines.biosNotNeeded"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.unsupported",
+          "data": {
+            "code": "machines.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.fileNotFound",
+          "data": {
+            "code": "machines.fileNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.fileUnreadable",
+          "data": {
+            "code": "machines.fileUnreadable"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosInvalid",
+          "data": {
+            "code": "machines.biosInvalid"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosAccessFailed",
+          "data": {
+            "code": "machines.biosAccessFailed"
+          }
+        }
+      ],
+      "x-mainOnly": true
+    },
+    {
+      "name": "machines.removeBios",
+      "summary": "删除机型的 BIOS 文件",
+      "description": "删除机型的 BIOS 文件；没有 BIOS 时没有效果也不报错；删除后发 machines.changed。",
+      "tags": [
+        {
+          "name": "machines"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "机型标识",
+            "minLength": 1
+          },
+          "description": "机型标识"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "machine": {
+              "$ref": "#/components/schemas/machines.MachineInfo",
+              "description": "更新后的机型项"
+            }
+          },
+          "required": [
+            "machine"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "machines.notFound",
+          "data": {
+            "code": "machines.notFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosNotNeeded",
+          "data": {
+            "code": "machines.biosNotNeeded"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosAccessFailed",
+          "data": {
+            "code": "machines.biosAccessFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "machines.boot",
+      "summary": "整机机型开机：读入已设置的 BIOS，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的",
+      "description": "整机机型开机：读入已设置的 BIOS，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的；成功后发 runtime.stateChanged（原因 load），不发 cartridges.loaded。",
+      "tags": [
+        {
+          "name": "machines"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "机型标识",
+            "minLength": 1
+          },
+          "description": "机型标识"
+        },
+        {
+          "name": "powerOn",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "开机后是否上电，默认 true"
+          },
+          "description": "开机后是否上电，默认 true"
+        },
+        {
+          "name": "resume",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效"
+          },
+          "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "machine": {
+              "$ref": "#/components/schemas/machines.MachineInfo",
+              "description": "开机的机型项"
+            },
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "machine",
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "machines.notFound",
+          "data": {
+            "code": "machines.notFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.cartridgeRequired",
+          "data": {
+            "code": "machines.cartridgeRequired"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.unsupported",
+          "data": {
+            "code": "machines.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.noBios",
+          "data": {
+            "code": "machines.noBios"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosInvalid",
+          "data": {
+            "code": "machines.biosInvalid"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "machines.biosAccessFailed",
+          "data": {
+            "code": "machines.biosAccessFailed"
+          }
+        }
+      ]
+    },
+    {
       "name": "mappers.list",
       "summary": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先",
       "description": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。",
@@ -2806,6 +3106,500 @@
         }
       },
       "errors": []
+    },
+    {
+      "name": "media.floppyInsert",
+      "summary": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片",
+      "description": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片；盘片与电源无关，断电时也可以插入。镜像的格式由大小推断（160、180、320、360、720、1200、1440、2880 KB，其他大小按 1.44MB 处理）。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "drive",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "驱动器编号",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "description": "驱动器编号"
+        },
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "镜像文件的路径",
+            "minLength": 1
+          },
+          "description": "镜像文件的路径"
+        },
+        {
+          "name": "writeProtected",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "是否写保护，默认 false"
+          },
+          "description": "是否写保护，默认 false"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.FloppyStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "media.noMachine",
+          "data": {
+            "code": "media.noMachine"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noDrive",
+          "data": {
+            "code": "media.noDrive"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.fileNotFound",
+          "data": {
+            "code": "media.fileNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.fileUnreadable",
+          "data": {
+            "code": "media.fileUnreadable"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.imageInvalid",
+          "data": {
+            "code": "media.imageInvalid"
+          }
+        }
+      ],
+      "x-mainOnly": true
+    },
+    {
+      "name": "media.floppyEject",
+      "summary": "取出盘片并丢弃镜像（没有保存的修改随之丢失）",
+      "description": "取出盘片并丢弃镜像（没有保存的修改随之丢失）；没有盘片时没有效果。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "drive",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "驱动器编号",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "description": "驱动器编号"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.FloppyStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "media.noMachine",
+          "data": {
+            "code": "media.noMachine"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noDrive",
+          "data": {
+            "code": "media.noDrive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "media.floppySave",
+      "summary": "把驱动器里的镜像写回放入时的文件，并清除“已修改”标志",
+      "description": "把驱动器里的镜像写回放入时的文件，并清除“已修改”标志；外部修改与学习机写盘都只改内存里的镜像，不自动落盘。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "drive",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "驱动器编号",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "description": "驱动器编号"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.FloppyStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "media.noMachine",
+          "data": {
+            "code": "media.noMachine"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noDrive",
+          "data": {
+            "code": "media.noDrive"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noDisk",
+          "data": {
+            "code": "media.noDisk"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.saveFailed",
+          "data": {
+            "code": "media.saveFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "media.floppyWriteProtect",
+      "summary": "设置或取消盘片的写保护",
+      "description": "设置或取消盘片的写保护；写保护的盘片拒绝学习机写入。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "drive",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "驱动器编号",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "description": "驱动器编号"
+        },
+        {
+          "name": "writeProtected",
+          "required": true,
+          "schema": {
+            "type": "boolean",
+            "description": "是否写保护"
+          },
+          "description": "是否写保护"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.FloppyStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "media.noMachine",
+          "data": {
+            "code": "media.noMachine"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noDrive",
+          "data": {
+            "code": "media.noDrive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "media.floppyStatus",
+      "summary": "全部软驱的状态",
+      "description": "全部软驱的状态；还没有主机或主机没有软驱时 drives 为空。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "drives": {
+              "type": "array",
+              "description": "各驱动器的状态，按编号排列",
+              "items": {
+                "$ref": "#/components/schemas/media.FloppyStatus"
+              }
+            }
+          },
+          "required": [
+            "drives"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "media.floppyFault",
+      "summary": "故障注入：取盘、写保护、无索引脉冲、磁头卡住、控制器无响应、指定扇区校验错、全部清除",
+      "description": "故障注入：取盘、写保护、无索引脉冲、磁头卡住、控制器无响应、指定扇区校验错、全部清除；用来检查学习机程序对软驱故障的处理。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "drive",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "驱动器编号",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "description": "驱动器编号"
+        },
+        {
+          "name": "fault",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "故障：ejected 取盘（放回时内容不变），writeProtected 写保护，noIndex 无索引脉冲，seekFail 磁头卡住，unresponsive 控制器无响应，badSector 指定扇区校验错，clear 关闭全部故障、放回盘片、取消写保护",
+            "enum": [
+              "ejected",
+              "writeProtected",
+              "noIndex",
+              "seekFail",
+              "unresponsive",
+              "badSector",
+              "clear"
+            ]
+          },
+          "description": "故障：ejected 取盘（放回时内容不变），writeProtected 写保护，noIndex 无索引脉冲，seekFail 磁头卡住，unresponsive 控制器无响应，badSector 指定扇区校验错，clear 关闭全部故障、放回盘片、取消写保护"
+        },
+        {
+          "name": "enabled",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "打开还是关闭这个故障，默认 true；clear 不用这一项"
+          },
+          "description": "打开还是关闭这个故障，默认 true；clear 不用这一项"
+        },
+        {
+          "name": "sector",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "badSector 的逻辑扇区号（磁道×每道扇区数×面数 + 磁头×每道扇区数 + 扇区号 - 1），badSector 必填",
+            "minimum": 0
+          },
+          "description": "badSector 的逻辑扇区号（磁道×每道扇区数×面数 + 磁头×每道扇区数 + 扇区号 - 1），badSector 必填"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.FloppyStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "media.noMachine",
+          "data": {
+            "code": "media.noMachine"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noDrive",
+          "data": {
+            "code": "media.noDrive"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.sectorRequired",
+          "data": {
+            "code": "media.sectorRequired"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "media.printerStatus",
+      "summary": "打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名",
+      "description": "打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名；还没有主机或主机没有打印机时为空闲。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.PrinterStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "media.printerFlush",
+      "summary": "立即输出当前页，等同打印机收到换页",
+      "description": "立即输出当前页，等同打印机收到换页；页上的内容画成 PNG 保存到首选项“打印机”里设置的目录，成功后发 media.printed。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/components/schemas/media.PrinterStatus"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "media.noMachine",
+          "data": {
+            "code": "media.noMachine"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.noPrinter",
+          "data": {
+            "code": "media.noPrinter"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.printerEmpty",
+          "data": {
+            "code": "media.printerEmpty"
+          }
+        }
+      ]
     },
     {
       "name": "output.setVolume",
@@ -4015,6 +4809,59 @@
         ],
         "additionalProperties": false
       },
+      "machines.BiosFile": {
+        "type": "object",
+        "description": "已添加的 BIOS 文件：文件名与大小。",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "文件名，不含路径"
+          },
+          "size": {
+            "type": "integer",
+            "description": "文件大小（字节），含 iNES 文件头",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "fileName",
+          "size"
+        ],
+        "additionalProperties": false
+      },
+      "machines.MachineInfo": {
+        "type": "object",
+        "description": "一个机型：标识、显示名称、是否需要 BIOS、是否已支持与已添加的 BIOS。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "机型标识：fc、sb97、sb2000、bbk10、bbk20"
+          },
+          "name": {
+            "type": "string",
+            "description": "显示名称"
+          },
+          "needsBios": {
+            "type": "boolean",
+            "description": "是否需要 BIOS；fc 为 false，四个整机机型为 true"
+          },
+          "supported": {
+            "type": "boolean",
+            "description": "是否已支持；未支持的机型不能添加 BIOS，也不能开机"
+          },
+          "bios": {
+            "$ref": "#/components/schemas/machines.BiosFile",
+            "description": "已添加的 BIOS；没有添加、或不需要 BIOS 时没有这一项"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "needsBios",
+          "supported"
+        ],
+        "additionalProperties": false
+      },
       "mappers.MapperMatchRule": {
         "type": "object",
         "description": "一项匹配条件：mapper 号必写，其余可选；写出的条件必须全部满足。",
@@ -4410,6 +5257,133 @@
         ],
         "additionalProperties": false
       },
+      "media.FloppyFaults": {
+        "type": "object",
+        "description": "软驱上注入的故障；全部关闭是正常状态。",
+        "properties": {
+          "ejected": {
+            "type": "boolean",
+            "description": "取盘：盘片被暂时取出（镜像还在，放回后内容不变）"
+          },
+          "noIndex": {
+            "type": "boolean",
+            "description": "没有索引脉冲：读扇区编号、读写与格式化命令一直不结束"
+          },
+          "seekFail": {
+            "type": "boolean",
+            "description": "磁头卡住：寻道与回零不移动"
+          },
+          "unresponsive": {
+            "type": "boolean",
+            "description": "控制器无响应：收到命令字节后不再处理"
+          },
+          "badSectors": {
+            "type": "array",
+            "description": "读时数据校验出错的逻辑扇区号",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "required": [
+          "ejected",
+          "noIndex",
+          "seekFail",
+          "unresponsive",
+          "badSectors"
+        ],
+        "additionalProperties": false
+      },
+      "media.FloppyStatus": {
+        "type": "object",
+        "description": "一个软驱的状态。",
+        "properties": {
+          "drive": {
+            "type": "integer",
+            "description": "驱动器编号，从 0 开始",
+            "minimum": 0
+          },
+          "inserted": {
+            "type": "boolean",
+            "description": "里面有没有盘片"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "盘片来源的文件名，不含路径；没有盘片时没有这一项"
+          },
+          "writeProtected": {
+            "type": "boolean",
+            "description": "盘片是否写保护"
+          },
+          "modified": {
+            "type": "boolean",
+            "description": "镜像自放入或上次保存以来是否被修改过（学习机写盘会改它）"
+          },
+          "size": {
+            "type": "integer",
+            "description": "镜像的大小（字节）；没有盘片时为 0",
+            "minimum": 0
+          },
+          "cylinder": {
+            "type": "integer",
+            "description": "磁头所在的磁道",
+            "minimum": 0
+          },
+          "motor": {
+            "type": "boolean",
+            "description": "马达是否在转"
+          },
+          "faults": {
+            "$ref": "#/components/schemas/media.FloppyFaults"
+          }
+        },
+        "required": [
+          "drive",
+          "inserted",
+          "writeProtected",
+          "modified",
+          "size",
+          "cylinder",
+          "motor",
+          "faults"
+        ],
+        "additionalProperties": false
+      },
+      "media.PrinterStatus": {
+        "type": "object",
+        "description": "并口打印机的状态。",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "状态：idle 空闲（机器没有运行，或还没有内容），printing 打印中（当前页上有内容），done 打印完成（输出过一页且下一页还没有内容）",
+            "enum": [
+              "idle",
+              "printing",
+              "done"
+            ]
+          },
+          "hasContent": {
+            "type": "boolean",
+            "description": "当前页上是否已经有内容"
+          },
+          "pages": {
+            "type": "integer",
+            "description": "本次运行以来已输出的页数",
+            "minimum": 0
+          },
+          "lastFile": {
+            "type": "string",
+            "description": "最近一页的文件名，不含路径；还没有输出过时没有这一项"
+          }
+        },
+        "required": [
+          "state",
+          "hasContent",
+          "pages"
+        ],
+        "additionalProperties": false
+      },
       "preferences.PreferenceGroup": {
         "type": "object",
         "description": "设置项的分组，首选项页左侧的一项。",
@@ -4508,6 +5482,13 @@
           "hidden": {
             "type": "boolean",
             "description": "为 true 时首选项页不显示，只保存取值（如音量）"
+          },
+          "picker": {
+            "type": "string",
+            "description": "text 设置项的取值是文件夹路径时为 directory，页面在输入框旁显示“选择”按钮；其他设置项没有这一项",
+            "enum": [
+              "directory"
+            ]
           },
           "defaultValue": {
             "description": "出厂默认值：choice 为字符串，switch 为布尔值，integer 为整数"
@@ -4810,6 +5791,28 @@
       }
     },
     {
+      "name": "machines.changed",
+      "description": "整机机型的 BIOS 添加、替换或移除。",
+      "tags": [
+        {
+          "name": "machines"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "machine": {
+            "type": "string",
+            "description": "机型标识"
+          }
+        },
+        "required": [
+          "machine"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "mappers.changed",
       "description": "插件安装、卸载、启停或重新加载。",
       "tags": [
@@ -4830,6 +5833,87 @@
         },
         "required": [
           "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "media.changed",
+      "description": "盘片的状态变化：插入、取出、保存或注入故障。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "device": {
+            "type": "string",
+            "description": "设备",
+            "enum": [
+              "floppy"
+            ]
+          },
+          "drive": {
+            "type": "integer",
+            "description": "驱动器编号",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "device",
+          "drive"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "media.printed",
+      "description": "打印机输出了一页：已经保存成 PNG 文件。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "文件名，不含路径"
+          },
+          "page": {
+            "type": "integer",
+            "description": "本次运行以来的页序号",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "fileName",
+          "page"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "media.printFailed",
+      "description": "打印机输出的一页无法保存（目录无法写入等），这一页已丢弃。",
+      "tags": [
+        {
+          "name": "media"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "原因，面向用户"
+          }
+        },
+        "required": [
+          "message"
         ],
         "additionalProperties": false
       }

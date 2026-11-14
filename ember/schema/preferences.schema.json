@@ -34,6 +34,7 @@
         "maximum": { "type": "integer", "description": "integer 的最大值，其他种类没有这一项" },
         "maxLength": { "type": "integer", "minimum": 1, "description": "text 的最大字节数（UTF-8），其他种类没有这一项" },
         "hidden": { "type": "boolean", "description": "为 true 时首选项页不显示，只保存取值（如音量）" },
+        "picker": { "type": "string", "enum": ["directory"], "description": "text 设置项的取值是文件夹路径时为 directory，页面在输入框旁显示“选择”按钮；其他设置项没有这一项" },
         "defaultValue": { "description": "出厂默认值：choice 为字符串，switch 为布尔值，integer 为整数" },
         "value": { "description": "当前取值，类型同 defaultValue" }
       },
@@ -90,6 +91,21 @@
         "required": ["id", "value"]
       },
       "errors": ["preferences.unknown"]
+    }
+  },
+  "mainRequests": {
+    "pickDirectory": {
+      "description": "弹出系统的选择文件夹窗口，返回用户选定的文件夹路径；用户取消选择时 canceled 为 true，不是错误。页面再用 preferences.set 保存取值。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "canceled": { "type": "boolean", "description": "用户是否取消了选择" },
+          "path": { "type": "string", "minLength": 1, "description": "选定的文件夹路径；取消时没有这一项" }
+        },
+        "required": ["canceled"]
+      },
+      "errors": []
     }
   },
   "events": {

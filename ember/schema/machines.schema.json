@@ -1,0 +1,121 @@
+{
+  "$comment": "machines 模块：整机机型（学习机）的清单、BIOS 的添加与移除、整机机型开机；openBios 由主进程弹出文件选择窗口后调用 setBios。规则见 docs/04-调试服务.md 第 4.7 节。",
+  "module": "machines",
+  "types": {
+    "BiosFile": {
+      "type": "object",
+      "description": "已添加的 BIOS 文件：文件名与大小。",
+      "properties": {
+        "fileName": { "type": "string", "description": "文件名，不含路径" },
+        "size": { "type": "integer", "minimum": 0, "description": "文件大小（字节），含 iNES 文件头" }
+      },
+      "required": ["fileName", "size"]
+    },
+    "MachineInfo": {
+      "type": "object",
+      "description": "一个机型：标识、显示名称、是否需要 BIOS、是否已支持与已添加的 BIOS。",
+      "properties": {
+        "id": { "type": "string", "description": "机型标识：fc、sb97、sb2000、bbk10、bbk20" },
+        "name": { "type": "string", "description": "显示名称" },
+        "needsBios": { "type": "boolean", "description": "是否需要 BIOS；fc 为 false，四个整机机型为 true" },
+        "supported": { "type": "boolean", "description": "是否已支持；未支持的机型不能添加 BIOS，也不能开机" },
+        "bios": { "$ref": "#/types/BiosFile", "description": "已添加的 BIOS；没有添加、或不需要 BIOS 时没有这一项" }
+      },
+      "required": ["id", "name", "needsBios", "supported"]
+    }
+  },
+  "requests": {
+    "list": {
+      "description": "机型清单，顺序固定为 fc、sb97、sb2000、bbk10、bbk20。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": { "machines": { "type": "array", "items": { "$ref": "#/types/MachineInfo" }, "description": "机型项" } },
+        "required": ["machines"]
+      },
+      "errors": []
+    },
+    "setBios": {
+      "description": "读取并检查 BIOS 文件，复制进 BIOS 目录（新文件写好之后才删旧文件，失败时原有的 BIOS 不变）；成功后发 machines.changed。",
+      "mainOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "machine": { "type": "string", "minLength": 1, "description": "机型标识" },
+          "path": { "type": "string", "minLength": 1, "description": "BIOS 文件的路径，由主进程根据用户选择的文件给出，调试服务直接给出" }
+        },
+        "required": ["machine", "path"]
+      },
+      "result": {
+        "type": "object",
+        "properties": { "machine": { "$ref": "#/types/MachineInfo", "description": "更新后的机型项" } },
+        "required": ["machine"]
+      },
+      "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.biosInvalid", "machines.biosAccessFailed"]
+    },
+    "removeBios": {
+      "description": "删除机型的 BIOS 文件；没有 BIOS 时没有效果也不报错；删除后发 machines.changed。",
+      "params": {
+        "type": "object",
+        "properties": { "machine": { "type": "string", "minLength": 1, "description": "机型标识" } },
+        "required": ["machine"]
+      },
+      "result": {
+        "type": "object",
+        "properties": { "machine": { "$ref": "#/types/MachineInfo", "description": "更新后的机型项" } },
+        "required": ["machine"]
+      },
+      "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.biosAccessFailed"]
+    },
+    "boot": {
+      "description": "整机机型开机：读入已设置的 BIOS，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的；成功后发 runtime.stateChanged（原因 load），不发 cartridges.loaded。",
+      "params": {
+        "type": "object",
+        "properties": {
+          "machine": { "type": "string", "minLength": 1, "description": "机型标识" },
+          "powerOn": { "type": "boolean", "description": "开机后是否上电，默认 true" },
+          "resume": { "type": "boolean", "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效" }
+        },
+        "required": ["machine"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "machine": { "$ref": "#/types/MachineInfo", "description": "开机的机型项" },
+          "state": { "$ref": "runtime#/types/RuntimeState" }
+        },
+        "required": ["machine", "state"]
+      },
+      "errors": ["machines.notFound", "machines.cartridgeRequired", "machines.unsupported", "machines.noBios", "machines.biosInvalid", "machines.biosAccessFailed"]
+    }
+  },
+  "mainRequests": {
+    "openBios": {
+      "description": "弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给 machines.setBios；用户取消选择时 canceled 为 true，不是错误。",
+      "params": {
+        "type": "object",
+        "properties": { "machine": { "type": "string", "minLength": 1, "description": "机型标识" } },
+        "required": ["machine"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "canceled": { "type": "boolean", "description": "用户是否取消了选择" },
+          "machine": { "$ref": "#/types/MachineInfo", "description": "更新后的机型项；取消时没有这一项" }
+        },
+        "required": ["canceled"]
+      },
+      "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.biosInvalid", "machines.biosAccessFailed"]
+    }
+  },
+  "events": {
+    "changed": {
+      "description": "整机机型的 BIOS 添加、替换或移除。",
+      "data": {
+        "type": "object",
+        "properties": { "machine": { "type": "string", "description": "机型标识" } },
+        "required": ["machine"]
+      }
+    }
+  }
+}

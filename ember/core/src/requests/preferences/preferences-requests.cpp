@@ -71,6 +71,7 @@ contract::PreferenceSetting toSetting(const contract::SettingEntry& entry) {
     setting.maximum = definition.maximum;
   } else if (definition.kind == contract::SettingKind::Text) {
     setting.maxLength = definition.maxLength;
+    if (!definition.picker.empty()) setting.picker = definition.picker;
   }
   return setting;
 }

@@ -82,6 +82,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   contracts::runtime::RuntimeState resume() override;
   contracts::runtime::CartridgeInsertionResult insertCartridge(contracts::runtime::CartridgeInsertion insertion) override;
   contracts::runtime::RuntimeState ejectCartridge() override;
+  contracts::runtime::RuntimeState bootMachine(contracts::runtime::MachineBoot boot) override;
+  bool useMachine(const std::function<void(contracts::hardware::Machine&)>& action) override;
   void sendInput(contracts::hardware::InputEvent event) override;
   void setFrameEventInterval(std::uint32_t frames) override;
   std::shared_future<contracts::runtime::RunOutcome> startRun(std::int64_t frames) override;

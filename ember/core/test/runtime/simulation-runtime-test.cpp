@@ -39,6 +39,7 @@ using ember::test::waitFor;
 class FailingMachines final : public rt::MachineFactory {
  public:
   std::unique_ptr<hw::Machine> create(const std::string&) const override { throw ember::shared::CoreError(rt::ERROR_HOST_UNSUPPORTED, "没有这个型号"); }
+  std::unique_ptr<hw::Machine> createWithBios(const std::string&, std::vector<std::uint8_t>) const override { throw ember::shared::CoreError(rt::ERROR_HOST_UNSUPPORTED, "没有这个型号"); }
 };
 
 /** 运行服务加它用到的一切。 */

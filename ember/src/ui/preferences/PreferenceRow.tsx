@@ -19,7 +19,9 @@ import { isChanged, parseInteger } from './preferences-model';
 const TEXT = {
   switchOn: '开启',
   reset: '恢复默认',
-  resetOf: (label: string) => `恢复默认：${label}`
+  resetOf: (label: string) => `恢复默认：${label}`,
+  pick: '选择',
+  pickOf: (label: string) => `选择文件夹：${label}`
 } as const;
 
 /** 设置项一行的属性。 */
@@ -29,6 +31,8 @@ export interface PreferenceRowProps {
   onChange(setting: PreferenceSetting, value: unknown): Promise<boolean>;
   /** 恢复默认值。 */
   onReset(setting: PreferenceSetting): Promise<void>;
+  /** 选择文件夹并保存（取值是文件夹路径的文字设置项用）；用户取消时什么都不发生。 */
+  onPickDirectory(setting: PreferenceSetting): Promise<void>;
 }
 
 /** 整数输入中的内容：输入的文字、校验提示，以及它基于的当前值。 */
@@ -42,7 +46,7 @@ interface IntegerEdit {
  * 一行设置项。
  * @param props 属性。
  */
-export function PreferenceRow({ setting, onChange, onReset }: PreferenceRowProps) {
+export function PreferenceRow({ setting, onChange, onReset, onPickDirectory }: PreferenceRowProps) {
   const { value } = setting;
   const [edit, setEdit] = useState<IntegerEdit | null>(null);
   const saving = useRef(false);
@@ -112,6 +116,11 @@ export function PreferenceRow({ setting, onChange, onReset }: PreferenceRowProps
       control={
         <Row>
           {control}
+          {setting.kind === 'text' && setting.picker === 'directory' ? (
+            <Button compact aria-label={TEXT.pickOf(setting.label)} onClick={() => void onPickDirectory(setting)}>
+              {TEXT.pick}
+            </Button>
+          ) : null}
           {isChanged(setting) ? (
             <Button compact aria-label={TEXT.resetOf(setting.label)} onClick={() => void onReset(setting)}>
               {TEXT.reset}

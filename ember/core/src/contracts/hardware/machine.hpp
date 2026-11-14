@@ -19,9 +19,11 @@
 #include "contracts/hardware/clock.hpp"
 #include "contracts/hardware/input-event.hpp"
 #include "contracts/hardware/cpu.hpp"
+#include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/hardware/machine-debugger.hpp"
 #include "contracts/hardware/ppu.hpp"
+#include "contracts/hardware/printer-output.hpp"
 
 namespace ember::contracts::hardware {
 
@@ -84,6 +86,20 @@ class Machine : public PadSink {
 
   /** 调试接口；主机型号不支持调试时为空指针。只在模拟线程使用。 */
   virtual MachineDebugger* debugger() { return nullptr; }
+
+  /** 软驱驱动器的个数；没有软驱的主机型号为 0。 */
+  [[nodiscard]] virtual unsigned floppyDriveCount() const { return 0; }
+
+  /**
+   * 取软驱驱动器；编号超出 floppyDriveCount() 时返回空指针。盘片与电源无关：断电时盘片保持不变。只在模拟线程使用。
+   */
+  virtual FloppyDrive* floppyDrive(unsigned index) {
+    static_cast<void>(index);
+    return nullptr;
+  }
+
+  /** 并口打印机的控制；主机型号没有打印机时为空指针。只在模拟线程使用。 */
+  virtual PrinterControl* printer() { return nullptr; }
 };
 
 }  // namespace ember::contracts::hardware

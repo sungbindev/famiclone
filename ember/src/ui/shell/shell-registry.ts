@@ -120,15 +120,20 @@ export interface ShellSubmenuDefinition {
   readonly entries: () => readonly ShellSubmenuEntry[];
 }
 
-/** 活动栏按钮：打开一个页面。 */
+/** 活动栏按钮：打开一个页面，或把边栏换成自己的边栏（page 与 sideBar 二选一）。 */
 export interface ShellActivityDefinition {
   /** 标识，如 runtime.run。 */
   readonly id: string;
   /** 名称，作为悬停提示与可访问名称，也是“视图”菜单里的入口名。 */
   readonly label: string;
   readonly icon: IconData;
-  /** 点击时打开的页面标识。 */
-  readonly page: string;
+  /** 点击时打开的页面标识；与 sideBar 二选一。 */
+  readonly page?: string;
+  /**
+   * 只有边栏的活动（如设备）：点击时边栏换成它，页面区与已打开的标签不变；切到另一个标签时边栏回到页面自己的边栏；与 page 二选一。
+   * 边栏组件一直保持挂载。
+   */
+  readonly sideBar?: ShellSideBarDefinition;
   readonly separatorBefore?: boolean;
 }
 
@@ -179,6 +184,8 @@ export interface ShellMessageInput {
 export interface ShellApi {
   /** 打开页面；单例页面已打开时聚焦它。 */
   openPage(pageId: string): void;
+  /** 显示只有边栏的活动的边栏（边栏折叠着时展开）；活动不存在或不是只有边栏的活动时什么都不做。 */
+  showActivity(activityId: string): void;
   /** 关闭当前标签。 */
   closeActiveTab(): void;
   /** 展开或收起边栏；当前页面没有边栏时什么都不做。 */

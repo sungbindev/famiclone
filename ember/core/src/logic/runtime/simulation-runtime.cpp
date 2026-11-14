@@ -437,6 +437,34 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
   });
 }
 
+rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
+  return submit([this, boot = std::move(boot)] {
+    // 先装配好新的主机，失败时不影响正在运行的旧主机。
+    auto machine = options_.machines->createWithBios(boot.machine, boot.bios);
+    finishRun("interrupted");
+    if (machine_ != nullptr) machine_->cartridgeSlot().eject();
+    cartridge_.reset();
+    machine_ = std::move(machine);
+    summary_.reset();
+    host_ = boot.machine;
+    running_ = false;
+    failureReported_ = false;
+    frame_ = 0;
+    if (boot.powerOn) startMachine(boot.resume);
+    publishState("load");
+    publishSnapshot();
+    return state();
+  });
+}
+
+bool SimulationRuntime::useMachine(const std::function<void(hw::Machine&)>& action) {
+  return submit([this, &action] {
+    if (machine_ == nullptr) return false;
+    action(*machine_);
+    return true;
+  });
+}
+
 rt::RuntimeState SimulationRuntime::ejectCartridge() {
   return submit([this] {
     if (machine_ != nullptr) {

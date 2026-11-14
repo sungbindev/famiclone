@@ -74,8 +74,47 @@ describe('初始读取', () => {
   });
 
   it('没有接上时状态是“还没读到”，音量为默认值', () => {
-    expect(controller.snapshot()).toEqual({ status: undefined, recent: [], volume: 100, muted: false });
+    expect(controller.snapshot()).toEqual({ status: undefined, recent: [], machines: [], volume: 100, muted: false });
     expect(controller.machineState()).toBe('unknown');
+  });
+
+  it('接上后读出机型清单；机型的 BIOS 变化（machines.changed）后重新读取', async () => {
+    await attach();
+    expect(controller.snapshot().machines.map((machine) => machine.id)).toEqual(['fc', 'sb97', 'sb2000', 'bbk10', 'bbk20']);
+    expect(controller.snapshot().machines.find((machine) => machine.id === 'sb2000')?.bios).toBeUndefined();
+    fake.machines = fake.machines.map((machine) => (machine.id === 'sb2000' ? { ...machine, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } } : machine));
+    fake.emit('machines.changed', { machine: 'sb2000' });
+    await settle();
+    expect(controller.snapshot().machines.find((machine) => machine.id === 'sb2000')?.bios?.fileName).toBe('SB2K_BIOS.NES');
+  });
+
+  it('整机机型开机：用已添加的 BIOS 装配主机，状态变为运行中并写一条消息', async () => {
+    fake.machines = fake.machines.map((machine) => (machine.id === 'sb2000' ? { ...machine, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } } : machine));
+    await attach();
+    controller.bootMachine('sb2000');
+    await settle();
+    expect(fake.calls).toContain('machines.boot {"machine":"sb2000"}');
+    expect(controller.machineState()).toBe('running');
+    expect(controller.snapshot().status?.machine).toBe('sb2000');
+    expect(controller.snapshot().status?.cartridge).toBeUndefined();
+    expect(texts()).toEqual(['已用 小霸王 2000 开机']);
+  });
+
+  it('整机机型开机失败（没有 BIOS）：通知加一条错误消息，状态不变', async () => {
+    await attach();
+    controller.bootMachine('sb2000');
+    await settle();
+    expect(context.notices).toEqual(['开机失败：这个机型还没有添加 BIOS']);
+    expect(context.messages).toEqual([{ level: 'error', text: '开机失败：这个机型还没有添加 BIOS' }]);
+    expect(controller.machineState()).toBe('none');
+  });
+
+  it('没有这个机型时开机什么都不做', async () => {
+    await attach();
+    fake.calls.length = 0;
+    controller.bootMachine('nope');
+    await settle();
+    expect(fake.calls).toEqual([]);
   });
 
   it('核心还读不到状态时不报错，状态保持“还没读到”', async () => {

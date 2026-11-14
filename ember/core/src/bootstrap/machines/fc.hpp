@@ -20,15 +20,12 @@
 #include <string_view>
 #include <vector>
 
+#include "bootstrap/machines/cpu-debug-kit.hpp"
 #include "bootstrap/machines/pad-apu-port.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
-#include "logic/hardware/debug/breakpoint-table.hpp"
-#include "logic/hardware/debug/code-data-log.hpp"
-#include "logic/hardware/debug/probe-hub.hpp"
-#include "logic/hardware/debug/recorder-table.hpp"
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
@@ -43,7 +40,7 @@
 namespace ember::bootstrap {
 
 /** 经典 FC（NTSC）。 */
-class FcMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger, private contracts::hardware::InterruptObserver {
+class FcMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger {
  public:
   /** 主时钟频率（赫兹）。 */
   static constexpr double MASTER_CLOCK_HZ = 21'477'272.0;
@@ -99,39 +96,17 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   [[nodiscard]] std::vector<contracts::hardware::StateField> readState(std::string_view module) const override;
   void writeState(std::string_view module, std::span<const contracts::hardware::StateField> fields) override;
   contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count) override;
-  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override;
-  bool removeBreakpoint(std::uint32_t id) override;
-  std::size_t clearBreakpoints() override;
-  [[nodiscard]] std::vector<contracts::hardware::Breakpoint> breakpoints() const override { return breakpoints_.list(); }
-  std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return breakpoints_.take(); }
-  std::uint32_t startRecorder(const contracts::hardware::RecorderSpec& spec) override;
-  contracts::hardware::RecorderOutput stopRecorder(std::uint32_t id) override;
-  [[nodiscard]] std::vector<contracts::hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) override;
-  void startCdl(std::size_t size, contracts::hardware::CdlResolver resolver) override { cdl_.start(size, std::move(resolver)); }
-  void stopCdl() override { cdl_.stop(); }
-  [[nodiscard]] std::optional<std::vector<std::uint8_t>> cdlFlags() const override {
-    if (!cdl_.exists()) return std::nullopt;
-    return cdl_.flags();
-  }
-  /** 即将执行一条指令：通知记录表与代码数据标记。 */
-  void beforeInstruction();
-  // InterruptObserver
-  void onInterrupt(contracts::hardware::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) override;
-  /** 有读写断点或 I/O 记录时在 CPU 总线上安装探针，没有时去掉。 */
-  void refreshProbe();
-
-  /** 构造时暂停断点（alsoRecording 为 true 时连记录一起暂停），析构时恢复：让调试访问不触发读写断点，调试写内存也不进记录。 */
-  class ProbeSuspend {
-   public:
-    ProbeSuspend(FcMachine& machine, bool alsoRecording);
-    ~ProbeSuspend();
-    ProbeSuspend(const ProbeSuspend&) = delete;
-    ProbeSuspend& operator=(const ProbeSuspend&) = delete;
-
-   private:
-    FcMachine& machine_;
-    logic::hardware::ProbeHub::Suspension before_;
-  };
+  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override { return debug_.addBreakpoint(kind, first, last); }
+  bool removeBreakpoint(std::uint32_t id) override { return debug_.removeBreakpoint(id); }
+  std::size_t clearBreakpoints() override { return debug_.clearBreakpoints(); }
+  [[nodiscard]] std::vector<contracts::hardware::Breakpoint> breakpoints() const override { return debug_.breakpoints(); }
+  std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return debug_.takeBreakpointHit(); }
+  std::uint32_t startRecorder(const contracts::hardware::RecorderSpec& spec) override { return debug_.startRecorder(spec); }
+  contracts::hardware::RecorderOutput stopRecorder(std::uint32_t id) override { return debug_.stopRecorder(id); }
+  [[nodiscard]] std::vector<contracts::hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) override { return debug_.disassemble(address, count); }
+  void startCdl(std::size_t size, contracts::hardware::CdlResolver resolver) override { debug_.startCdl(size, std::move(resolver)); }
+  void stopCdl() override { debug_.stopCdl(); }
+  [[nodiscard]] std::optional<std::vector<std::uint8_t>> cdlFlags() const override { return debug_.cdlFlags(); }
 
   logic::hardware::MasterScheduler scheduler_;
   logic::hardware::WiredOrIrqLine irq_;
@@ -154,15 +129,8 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   PadApuPort padApuPort_;
   std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
   logic::hardware::Cpu6502 cpu_;
-
-  logic::hardware::BreakpointTable breakpoints_;
-  /** 无副作用地读 CPU 总线。 */
-  logic::hardware::PeekFunction peek_;
-  logic::hardware::RecorderTable recorders_;
-  logic::hardware::ProbeHub probeHub_;
-  logic::hardware::CodeDataLog cdl_;
-  /** 刚命中执行断点的地址：下一次运行先越过它，不再重复命中。 */
-  std::optional<std::uint16_t> skipExecuteAt_;
+  /** 断点、记录、代码数据标记与反汇编。 */
+  CpuDebugKit debug_;
 
   bool poweredOn_{false};
 };

@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { activityCommandId, buildShellRegistry, checkDefaultShortcut } from './build-registry';
 import { SHELL_COMMANDS, SHELL_MODULE } from './shell-module';
-import { commandTitle, type ShellModule } from './shell-registry';
+import { commandTitle, type ShellApi, type ShellModule } from './shell-registry';
 
 const ICON = ['M0 0'] as const;
 const Page = () => null;
@@ -136,6 +136,18 @@ describe('buildShellRegistry', () => {
 
   it('活动栏按钮引用的页面必须存在', () => {
     expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { activityItems: [{ id: 'a.btn', label: 'A', icon: ICON, page: 'a.none' }] })])).toThrowError(/引用的页面不存在：a\.none/);
+  });
+
+  it('活动栏按钮必须且只能有页面或边栏中的一个；只有边栏的按钮在“视图”菜单里同样有入口命令', () => {
+    expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { activityItems: [{ id: 'a.btn', label: 'A', icon: ICON }] })])).toThrowError(/必须且只能有页面或边栏中的一个/);
+    expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { pages: [{ id: 'a.page', title: '甲', icon: ICON, Component: () => null }], activityItems: [{ id: 'a.btn', label: 'A', icon: ICON, page: 'a.page', sideBar: { Component: () => null } }] })])).toThrowError(
+      /必须且只能有页面或边栏中的一个/
+    );
+    const registry = buildShellRegistry([SHELL_MODULE, moduleOf('a', { activityItems: [{ id: 'a.btn', label: '设备', icon: ICON, sideBar: { Component: () => null } }] })]);
+    const calls: string[] = [];
+    const shell = { openPage: (id: string) => calls.push(`page ${id}`), showActivity: (id: string) => calls.push(`activity ${id}`) } as unknown as ShellApi;
+    registry.commands.get(activityCommandId('a.btn'))?.run(shell);
+    expect(calls).toEqual(['activity a.btn']);
   });
 });
 

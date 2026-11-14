@@ -14,7 +14,8 @@ import { List, Panel, ScrollArea, SplitView, Stack, State, Tree, useNotify, type
 import { useState } from 'react';
 import type { PreferenceSetting } from '../../contracts/preferences/generated/preferences';
 import type { ShellPageProps } from '../shell/shell-registry';
-import { errorText, visibleGroups, visibleSettings } from './preferences-model';
+import { BiosSettings } from './BiosSettings';
+import { errorText, MACHINES_GROUP_ID, visibleGroups, visibleSettings, withMachinesGroup } from './preferences-model';
 import { PreferenceRow } from './PreferenceRow';
 import { usePreferences } from './use-preferences';
 
@@ -55,9 +56,20 @@ export function PreferencesPage({ bridge }: ShellPageProps) {
     }
   };
 
-  const groups = state.kind === 'ready' ? visibleGroups(state.groups, state.settings) : [];
+  /** 弹出系统的选择文件夹窗口，选定后保存为这个设置项的取值；用户取消时什么都不发生。 */
+  const pickDirectory = async (setting: PreferenceSetting): Promise<void> => {
+    try {
+      const picked = await bridge.main.preferences.pickDirectory({});
+      if (picked.canceled || picked.path === undefined) return;
+      await change(setting, picked.path);
+    } catch (error) {
+      notify(errorText(error), 'error');
+    }
+  };
+
+  const groups = state.kind === 'ready' ? withMachinesGroup(visibleGroups(state.groups, state.settings)) : [];
   const current = groups.find((group) => group.id === selected) ?? groups[0];
-  const rows = state.kind === 'ready' && current !== undefined ? visibleSettings(state.settings).filter((setting) => setting.group === current.id) : [];
+  const rows = state.kind === 'ready' && current !== undefined && current.id !== MACHINES_GROUP_ID ? visibleSettings(state.settings).filter((setting) => setting.group === current.id) : [];
   const items: TreeItem[] = groups.map((group) => ({ id: group.id, label: group.label }));
 
   let status = null;
@@ -76,11 +88,12 @@ export function PreferencesPage({ bridge }: ShellPageProps) {
       <ScrollArea bleed horizontal="hidden">
         <Stack>
           {status}
+          {current?.id === MACHINES_GROUP_ID ? <BiosSettings bridge={bridge} /> : null}
           {rows.length === 0 ? null : (
             <Panel fixed>
               <List variant="divided">
                 {rows.map((setting) => (
-                  <PreferenceRow key={setting.id} setting={setting} onChange={change} onReset={restore} />
+                  <PreferenceRow key={setting.id} setting={setting} onChange={change} onReset={restore} onPickDirectory={pickDirectory} />
                 ))}
               </List>
             </Panel>

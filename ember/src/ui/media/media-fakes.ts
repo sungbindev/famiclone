@@ -1,0 +1,141 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：media-fakes.ts
+ * 说明：设备边栏测试用的假核心接口：按预加载脚本的接口形状实现 media 的软驱与打印机请求与主进程的载入镜像请求，保存软驱与打印机的状态，记录每次调用，可以发出核心事件与核心运行状态变化。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-15
+ * 备注：只供测试使用（不含真实的核心逻辑，只做设备边栏需要的最简单的状态转换）；不引用测试框架，所以放在 ui 层也满足依赖检查。
+ * ------------------------------------------------------------------------
+ */
+
+import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
+import type { FloppyStatus, PrinterStatus } from '../../contracts/media/generated/media';
+import type { MediaBackend } from './media-controller';
+
+/** 构造一个软驱的状态；fileName 为 undefined 表示没有盘片。 */
+export function floppyStatus(drive: number, fileName?: string, patch: Partial<FloppyStatus> = {}): FloppyStatus {
+  const base: FloppyStatus = {
+    drive,
+    inserted: fileName !== undefined,
+    writeProtected: false,
+    modified: false,
+    size: fileName === undefined ? 0 : 1474560,
+    cylinder: 0,
+    motor: false,
+    faults: { ejected: false, noIndex: false, seekFail: false, unresponsive: false, badSectors: [] }
+  };
+  return { ...base, ...(fileName === undefined ? {} : { fileName }), ...patch };
+}
+
+/** 假的核心接口。 */
+export class FakeMediaBackend {
+  /** 各软驱的状态；为空表示没有开机或主机没有软驱。 */
+  floppies: FloppyStatus[] = [floppyStatus(0), floppyStatus(1)];
+  printer: PrinterStatus = { state: 'idle', hasContent: false, pages: 0 };
+  /** 下一次载入镜像时用户选的文件名；undefined 表示用户取消。 */
+  pickedFile: string | undefined;
+  /** 按请求名登记的下一次失败的原因。 */
+  readonly failures = new Map<string, unknown>();
+  /** 每次请求的记录：请求名加参数。 */
+  readonly calls: string[] = [];
+  /** 当前核心运行状态。 */
+  coreStatus: CoreStatus = { state: 'ready', coreVersion: '0.1.0' };
+
+  private readonly eventListeners = new Set<(name: string, data: unknown) => void>();
+  private readonly statusListeners = new Set<(status: CoreStatus) => void>();
+
+  /** 预加载脚本接口里设备边栏用到的部分。 */
+  readonly backend: MediaBackend = {
+    core: {
+      media: {
+        floppyStatus: () => this.request('media.floppyStatus', {}, () => ({ drives: this.floppies })),
+        printerStatus: () => this.request('media.printerStatus', {}, () => ({ status: this.printer })),
+        floppyEject: (params: { drive: number }) =>
+          this.request('media.floppyEject', params, () => {
+            const status = this.change(params.drive, () => floppyStatus(params.drive));
+            this.emit('media.changed', { device: 'floppy', drive: params.drive });
+            return { status };
+          }),
+        floppySave: (params: { drive: number }) =>
+          this.request('media.floppySave', params, () => {
+            const status = this.change(params.drive, (current) => ({ ...current, modified: false }));
+            this.emit('media.changed', { device: 'floppy', drive: params.drive });
+            return { status };
+          }),
+        floppyWriteProtect: (params: { drive: number; writeProtected: boolean }) =>
+          this.request('media.floppyWriteProtect', params, () => {
+            const status = this.change(params.drive, (current) => ({ ...current, writeProtected: params.writeProtected }));
+            this.emit('media.changed', { device: 'floppy', drive: params.drive });
+            return { status };
+          })
+      }
+    },
+    main: {
+      media: {
+        openFloppy: (params: { drive: number }) =>
+          this.request('media.openFloppy', params, () => {
+            if (this.pickedFile === undefined) return { canceled: true };
+            const file = this.pickedFile;
+            const status = this.change(params.drive, () => floppyStatus(params.drive, file));
+            this.emit('media.changed', { device: 'floppy', drive: params.drive });
+            return { canceled: false, status };
+          })
+      }
+    },
+    onCoreEvent: (listener: (name: string, data: unknown) => void) => {
+      this.eventListeners.add(listener);
+      return () => this.eventListeners.delete(listener);
+    },
+    onCoreStatusChange: (listener: (status: CoreStatus) => void) => {
+      this.statusListeners.add(listener);
+      return () => this.statusListeners.delete(listener);
+    },
+    getCoreStatus: () => Promise.resolve(this.coreStatus)
+  } as unknown as MediaBackend;
+
+  /** 发出一个核心事件。 */
+  emit(name: string, data: unknown): void {
+    for (const listener of this.eventListeners) listener(name, data);
+  }
+
+  /** 改变核心运行状态并通知订阅者。 */
+  emitCoreStatus(status: CoreStatus): void {
+    this.coreStatus = status;
+    for (const listener of this.statusListeners) listener(status);
+  }
+
+  /** 有多少个核心事件订阅者。 */
+  get eventListenerCount(): number {
+    return this.eventListeners.size;
+  }
+
+  /** 某个请求被调用了几次。 */
+  count(name: string): number {
+    return this.calls.filter((call) => call.startsWith(`${name} `)).length;
+  }
+
+  /** 改写一个软驱的状态并返回新状态。 */
+  private change(drive: number, make: (current: FloppyStatus) => FloppyStatus): FloppyStatus {
+    const index = this.floppies.findIndex((item) => item.drive === drive);
+    if (index < 0) throw { code: 'media.noDrive', message: '没有这个驱动器' };
+    const next = make(this.floppies[index] as FloppyStatus);
+    this.floppies = this.floppies.map((item, position) => (position === index ? next : item));
+    return next;
+  }
+
+  /** 记录一次请求；登记了失败原因的请求以它拒绝（只失败一次）。 */
+  private request<T>(name: string, params: unknown, action: () => T | Promise<T>): Promise<T> {
+    this.calls.push(`${name} ${JSON.stringify(params)}`);
+    if (this.failures.has(name)) {
+      const reason = this.failures.get(name);
+      this.failures.delete(name);
+      return Promise.reject(reason);
+    }
+    try {
+      return Promise.resolve(action());
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+}

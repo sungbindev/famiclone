@@ -15,6 +15,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "bootstrap/input-message.hpp"
 #include "bootstrap/module-list.hpp"
 #include "bootstrap/module-registry.hpp"
 #include "contracts/runtime/runtime-service.hpp"
@@ -108,14 +109,15 @@ void Core::setEventHandler(EventHandler handler) { events_->setHandler(std::move
 
 void Core::setFrameHandler(FrameHandler handler) { frames_->setHandler(std::move(handler)); }
 
-void Core::setButtons(unsigned port, std::uint8_t buttons) {
+void Core::sendInput(const std::string& messageJson) {
+  const auto event = parseInputMessage(messageJson);
   std::shared_ptr<contracts::runtime::RuntimeService> runtime;
   {
     std::lock_guard lock(mutex_);
     if (!started_ || stopping_) throw shared::CoreError(shared::ERROR_UNAVAILABLE, "核心未启动或正在停止");
     runtime = runtime_;
   }
-  runtime->setButtons(port, buttons);
+  runtime->sendInput(event);
 }
 
 std::string Core::start(const std::string& optionsJson) {

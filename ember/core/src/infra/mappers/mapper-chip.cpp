@@ -61,13 +61,21 @@ std::string headerJson(const mapper_error::CartridgeDescription& description) {
 
 }  // namespace
 
-MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, hw::IrqOutput& irq, ScriptLimits limits)
-    : plugin_(std::move(plugin)), irq_(irq), cpuSlots_(CPU_SLOT_COUNT), ppuSlots_(PPU_SLOT_COUNT), cpuSide_(*this, false), ppuSide_(*this, true) {
+MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, hw::IrqOutput& irq, hw::PadSink& pads, ScriptLimits limits)
+    : plugin_(std::move(plugin)),
+      irq_(irq),
+      pads_(pads),
+      padMasks_(pads.padPortCount(), 0),
+      cpuSlots_(CPU_SLOT_COUNT),
+      ppuSlots_(PPU_SLOT_COUNT),
+      cpuSide_(*this, false),
+      ppuSide_(*this, true) {
   const Manifest& manifest = plugin_->manifest;
 
   // 存储区：rom 从文件复制，来源为空且有后备时改用后备的 RAM；ram 清零。
   ScriptLayout layout;
   layout.headerJson = headerJson(image.description);
+  layout.padPorts = padMasks_.size();
   for (const StorageDecl& decl : manifest.storage) {
     std::unique_ptr<StorageBlock> block;
     if (decl.ram) {
@@ -165,6 +173,20 @@ void MapperChip::reset(bool power) {
   failure_.reset();
   if (power) powerCycle();
   if (script_ != nullptr && script_->hasReset()) runScript([&] { script_->reset(power); });
+}
+
+void MapperChip::input(const hw::InputEvent& event) {
+  if (script_ == nullptr) return;
+  if (const auto* key = std::get_if<hw::KeyInput>(&event)) {
+    // 物理键的状态先更新，脚本里 ctx.keys.isDown 读到的就是这次事件之后的状态。
+    if (key->down) heldKeys_.insert(key->code);
+    else heldKeys_.erase(key->code);
+    if (script_->hasKey()) runScript([&] { script_->key(*key); });
+  } else if (const auto* mouse = std::get_if<hw::MouseInput>(&event)) {
+    if (script_->hasMouse()) runScript([&] { script_->mouse(*mouse); });
+  } else if (const auto* gamepad = std::get_if<hw::GamepadInput>(&event)) {
+    if (script_->hasGamepad()) runScript([&] { script_->gamepad(*gamepad); });
+  }
 }
 
 std::vector<contracts::mappers::StorageSummary> MapperChip::storageList() const {
@@ -323,6 +345,27 @@ void MapperChip::log(std::string_view message) {
   }
   log_.emplace_back(message);
   if (log_.size() > MAX_LOG_ENTRIES) log_.erase(log_.begin());
+}
+
+void MapperChip::padSet(std::size_t port, std::string_view button, bool down) {
+  std::uint8_t bit = 0;
+  if (button == "a") bit = hw::pad_button::A;
+  else if (button == "b") bit = hw::pad_button::B;
+  else if (button == "select") bit = hw::pad_button::SELECT;
+  else if (button == "start") bit = hw::pad_button::START;
+  else if (button == "up") bit = hw::pad_button::UP;
+  else if (button == "down") bit = hw::pad_button::DOWN;
+  else if (button == "left") bit = hw::pad_button::LEFT;
+  else if (button == "right") bit = hw::pad_button::RIGHT;
+  else throw ScriptArgumentError("按键必须是 a、b、select、start、up、down、left 或 right");
+  std::uint8_t& mask = padMasks_.at(port);
+  mask = down ? static_cast<std::uint8_t>(mask | bit) : static_cast<std::uint8_t>(mask & ~bit);
+  pads_.setButtons(static_cast<unsigned>(port), mask);
+}
+
+void MapperChip::padRelease(std::size_t port) {
+  padMasks_.at(port) = 0;
+  pads_.setButtons(static_cast<unsigned>(port), 0);
 }
 
 }  // namespace ember::infra::mappers

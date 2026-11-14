@@ -392,17 +392,18 @@ TEST(PluginRegistryCreate, CreatesACartridgeFromTheMatchedPluginUntilItIsRemoved
   image.description = described(0);
   image.prg.assign(16384, 0x5A);
   ember::test::RecordingIrq irq;
+  ember::test::RecordingPads pads;
   const auto match = registry.match(image.description);
-  const auto cartridge = registry.create(match, image, irq);
+  const auto cartridge = registry.create(match, image, irq, pads);
   EXPECT_EQ(cartridge->pluginId(), "nrom");
   EXPECT_EQ(cartridge->cpuSide().read(0x8000).value, 0x5A);
 
   static_cast<void>(registry.setEnabled("nrom", false));
-  expectError([&] { static_cast<void>(registry.create(match, image, irq)); }, api::ERROR_NOT_FOUND, "nrom");
+  expectError([&] { static_cast<void>(registry.create(match, image, irq, pads)); }, api::ERROR_NOT_FOUND, "nrom");
   static_cast<void>(registry.setEnabled("nrom", true));
-  EXPECT_NE(registry.create(match, image, irq), nullptr);
+  EXPECT_NE(registry.create(match, image, irq, pads), nullptr);
   registry.uninstall("nrom");
-  expectError([&] { static_cast<void>(registry.create(match, image, irq)); }, api::ERROR_NOT_FOUND);
+  expectError([&] { static_cast<void>(registry.create(match, image, irq, pads)); }, api::ERROR_NOT_FOUND);
   // 已创建的卡带不受卸载影响：它持有插件。
   EXPECT_EQ(cartridge->cpuSide().read(0xFFFF).value, 0x5A);
 }
@@ -420,11 +421,12 @@ TEST(PluginRegistryConcurrency, ListMatchInstallAndCreateCanRunTogether) {
       image.description = described(0);
       image.prg.assign(16384, 1);
       ember::test::RecordingIrq irq;
+      ember::test::RecordingPads pads;
       while (!stop) {
         try {
           static_cast<void>(registry.list());
           const auto match = registry.match(image.description);
-          static_cast<void>(registry.create(match, image, irq));
+          static_cast<void>(registry.create(match, image, irq, pads));
         } catch (...) {
           ++failures;
         }

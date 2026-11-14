@@ -68,12 +68,11 @@ class Core {
   void setFrameHandler(FrameHandler handler);
 
   /**
-   * 设置手柄的按键，经命令队列在模拟线程里生效，不等待执行。
-   * @param port 手柄口编号，0 或 1。
-   * @param buttons 按键掩码，位 0 为 A，位 7 为右。
-   * @throws shared::CoreError core.invalidParams：口号超出范围；core.unavailable：核心未启动或正在停止。
+   * 把用户输入（键盘、鼠标、游戏手柄的原始事件）校验后经命令队列交给模拟线程，不等待执行。
+   * @param messageJson 消息的 JSON 文本，如 {"type":"key","code":"KeyW","down":true}，格式见 input-message.hpp。
+   * @throws shared::CoreError core.invalidParams：消息不合格；core.unavailable：核心未启动或正在停止。
    */
-  void setButtons(unsigned port, std::uint8_t buttons);
+  void sendInput(const std::string& messageJson);
 
   /** 处理请求；结果经 done 返回，未启动或已停止时立即以 core.unavailable 返回。 */
   void request(const std::string& id, const std::string& name, const std::string& paramsJson, RequestDone done);

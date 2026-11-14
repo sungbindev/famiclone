@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：规则见 docs/03-mapper插件规范.md 第 6 节。脚本里没有文件、网络、进程、定时器、系统时间与 Math.random，也没有 import；
- *       ctx 目前实现 header、window、nametable、irq、storage、state、log；timer、random、settings 属于后续阶段，脚本里是 undefined。
+ *       ctx 目前实现 header、window、nametable、irq、storage、state、log、keys、pad；timer、random、settings 属于后续阶段，脚本里是 undefined。
  *       宿主对象的实现由 ScriptBindings 提供，本类不认识卡带；quickjs.h 只在 script-runtime.cpp 里出现。
  * ------------------------------------------------------------------------
  */
@@ -22,6 +22,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "contracts/hardware/input-event.hpp"
 
 namespace ember::infra::mappers {
 
@@ -51,6 +53,8 @@ struct ScriptLayout {
   std::vector<std::string> states;
   /** ctx.header 的内容，JSON 文本。 */
   std::string headerJson;
+  /** 主机上的手柄口个数，ctx.pad(port) 的有效范围是 0 到 padPorts - 1。 */
+  std::size_t padPorts{0};
 };
 
 /** 宿主对象的实现：脚本经 ctx 调用时转到这里。参数不合法时抛出 ScriptArgumentError。 */
@@ -82,13 +86,19 @@ class ScriptBindings {
   virtual void stateSet(std::size_t state, std::uint32_t value) = 0;
   /** ctx.log.warn(message)。 */
   virtual void log(std::string_view message) = 0;
+  /** ctx.keys.isDown(code)：这个物理键现在是否按着。 */
+  [[nodiscard]] virtual bool keyDown(std::string_view code) const = 0;
+  /** ctx.pad(port).set(button, down)：button 是 a、b、select、start、up、down、left、right 之一，否则报错。 */
+  virtual void padSet(std::size_t port, std::string_view button, bool down) = 0;
+  /** ctx.pad(port).release()：松开这个口的全部按键。 */
+  virtual void padRelease(std::size_t port) = 0;
 };
 
 /** 一个插件的脚本运行时。非线程安全：同一时刻只能由一个线程使用，换线程使用没有问题。 */
 class ScriptRuntime {
  public:
   /**
-   * 创建运行时并加载脚本（ES 模块，默认导出一个对象，对象上可以有 reset、read、write 三个函数）。
+   * 创建运行时并加载脚本（ES 模块，默认导出一个对象，对象上可以有 reset、read、write、onKey、onMouse、onGamepad 几个函数）。
    * @param pluginId 插件标识，出现在错误说明里。
    * @param source main.js 的内容。
    * @param layout ctx 里可见的窗口、存储区与状态。
@@ -108,6 +118,12 @@ class ScriptRuntime {
   [[nodiscard]] bool hasRead() const noexcept;
   /** 脚本是否导出了 write。 */
   [[nodiscard]] bool hasWrite() const noexcept;
+  /** 脚本是否导出了 onKey。 */
+  [[nodiscard]] bool hasKey() const noexcept;
+  /** 脚本是否导出了 onMouse。 */
+  [[nodiscard]] bool hasMouse() const noexcept;
+  /** 脚本是否导出了 onGamepad。 */
+  [[nodiscard]] bool hasGamepad() const noexcept;
 
   /** 调用 reset(ctx, 'power' 或 'soft')；脚本没有 reset 时什么也不做。 */
   void reset(bool power);
@@ -121,6 +137,15 @@ class ScriptRuntime {
 
   /** 调用 write(ctx, bus, addr, value)。错误同 read。 */
   void write(bool ppu, std::uint16_t address, std::uint8_t value);
+
+  /** 调用 onKey(ctx, {code, down})；脚本没有 onKey 时什么也不做。错误同 read。 */
+  void key(const contracts::hardware::KeyInput& input);
+
+  /** 调用 onMouse(ctx, {kind, x, y, dx, dy, buttons, wheel})；脚本没有 onMouse 时什么也不做。错误同 read。 */
+  void mouse(const contracts::hardware::MouseInput& input);
+
+  /** 调用 onGamepad(ctx, {index, connected, buttons, axes})；脚本没有 onGamepad 时什么也不做。错误同 read。 */
+  void gamepad(const contracts::hardware::GamepadInput& input);
 
  private:
   struct Impl;

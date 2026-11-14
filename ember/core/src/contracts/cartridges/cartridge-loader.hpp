@@ -16,6 +16,7 @@
 #include <memory>
 #include <span>
 
+#include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
 #include "contracts/mappers/mapper-cartridge.hpp"
@@ -44,8 +45,9 @@ class CartridgeLoader {
   /**
    * 按计划创建卡带。
    * @param irq 主机卡槽上的 IRQ 引脚，必须活到卡带销毁。
+   * @param pads 主机上的手柄口，必须活到卡带销毁。
    */
-  [[nodiscard]] virtual std::unique_ptr<mappers::MapperCartridge> assemble(const CartridgePlan& plan, hardware::IrqOutput& irq) const = 0;
+  [[nodiscard]] virtual std::unique_ptr<mappers::MapperCartridge> assemble(const CartridgePlan& plan, hardware::IrqOutput& irq, hardware::PadSink& pads) const = 0;
 };
 
 }  // namespace ember::contracts::cartridges

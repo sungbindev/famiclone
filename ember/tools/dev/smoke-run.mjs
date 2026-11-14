@@ -228,7 +228,7 @@ async function main() {
   check('渲染 Worker 收到的画面非空（有非黑像素）', picture0.lastFrameNonBlackRatio > 0.001, `非黑像素 ${(picture0.lastFrameNonBlackRatio * 100).toFixed(1)}%`);
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu.png'));
 
-  // 输入：画面区获得焦点后按 Enter（开始键），选单画面是静态的，按下后运行测试，画面改变。
+  // 输入：画面区获得焦点后按 Enter，nrom 的脚本把它设为手柄 1 的开始键；选单画面是静态的，按下后运行测试，画面改变。
   const stable0 = (await page.evaluate(readDiagnostics())).lastFrameHash;
   await sleep(400);
   const stable1 = (await page.evaluate(readDiagnostics())).lastFrameHash;
@@ -247,7 +247,7 @@ async function main() {
   }
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-after-enter.png'));
   // 校验：格式不对的输入被核心宿主丢弃，不影响运行；格式不对的帧也不会进来（Worker 一侧的校验由单元测试覆盖）。
-  await page.evaluate(`window.__smoke.input.postMessage({ type: 'buttons', port: 9, buttons: 999 }); window.__smoke.input.postMessage('垃圾')`);
+  await page.evaluate(`window.__smoke.input.postMessage({ type: 'key', code: 'bad code', down: true }); window.__smoke.input.postMessage({ type: 'mouse', kind: 'drag' }); window.__smoke.input.postMessage({ type: 'buttons', port: 9, buttons: 999 }); window.__smoke.input.postMessage('垃圾')`);
   const afterJunk = (await page.evaluate(readDiagnostics())).received;
   await sleep(500);
   check('非法输入被丢弃，画面继续', (await page.evaluate(readDiagnostics())).received > afterJunk);

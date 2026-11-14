@@ -23,8 +23,9 @@ contracts::cartridges::CartridgePlan InesCartridgeLoader::plan(std::span<const s
   return result;
 }
 
-std::unique_ptr<contracts::mappers::MapperCartridge> InesCartridgeLoader::assemble(const contracts::cartridges::CartridgePlan& plan, contracts::hardware::IrqOutput& irq) const {
-  return factory_->create(plan.match, plan.image, irq);
+std::unique_ptr<contracts::mappers::MapperCartridge> InesCartridgeLoader::assemble(const contracts::cartridges::CartridgePlan& plan, contracts::hardware::IrqOutput& irq,
+                                                                                    contracts::hardware::PadSink& pads) const {
+  return factory_->create(plan.match, plan.image, irq, pads);
 }
 
 }  // namespace ember::logic::cartridges

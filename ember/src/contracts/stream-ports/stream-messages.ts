@@ -42,20 +42,49 @@ export interface FrameAckMessage {
   readonly frame: number;
 }
 
-/** 手柄口的个数，口号为 0 到 INPUT_PORT_COUNT - 1。 */
-export const INPUT_PORT_COUNT = 2;
-
-/** 手柄的按键：位 0 为 A，位 1 为 B，位 2 为选择，位 3 为开始，位 4 到 7 依次为上、下、左、右。 */
-export interface ButtonsInputMessage {
-  readonly type: 'buttons';
-  /** 手柄口编号，0 或 1。 */
-  readonly port: number;
-  /** 按键掩码，0 到 255；每次发送整个手柄的当前状态。 */
-  readonly buttons: number;
+/** 键盘：一个物理键按下或松开；界面不转发映射，也没有默认键位，由卡带的 mapper 脚本决定怎么用。 */
+export interface KeyInputMessage {
+  readonly type: 'key';
+  /** 物理键位，取 KeyboardEvent.code，如 KeyW、Space、Numpad1。 */
+  readonly code: string;
+  /** true 为按下，false 为松开。 */
+  readonly down: boolean;
 }
 
-/** 渲染进程发给核心的输入。 */
-export type InputMessage = ButtonsInputMessage;
+/** 鼠标事件的种类。 */
+export type MouseKind = 'move' | 'down' | 'up' | 'wheel' | 'leave';
+
+/** 鼠标：位置、按键与滚轮；每次发送事件之后的当前状态。 */
+export interface MouseInputMessage {
+  readonly type: 'mouse';
+  readonly kind: MouseKind;
+  /** 画面坐标，单位是标准帧（256x240）的像素；指针在画面之外时可以超出这个范围。 */
+  readonly x: number;
+  readonly y: number;
+  /** 相对上一次事件的位移，单位同上。 */
+  readonly dx: number;
+  readonly dy: number;
+  /** 当前按住的按键位：1 左键、2 右键、4 中键。 */
+  readonly buttons: number;
+  /** 滚轮的滚动量，向下为正；只有 wheel 事件不为 0。 */
+  readonly wheel: number;
+}
+
+/** 游戏手柄：一个手柄当前的全部状态，顺序同浏览器 Gamepad API 的标准映射。 */
+export interface GamepadInputMessage {
+  readonly type: 'gamepad';
+  /** 手柄编号，同 Gamepad.index。 */
+  readonly index: number;
+  /** 是否连着；拔掉时为 false，按键与轴为空数组。 */
+  readonly connected: boolean;
+  /** 各按键是否按下。 */
+  readonly buttons: readonly boolean[];
+  /** 各轴的值，范围 -1 到 1。 */
+  readonly axes: readonly number[];
+}
+
+/** 渲染进程发给核心的输入：原始事件，没有“这是哪个手柄键”的含义。 */
+export type InputMessage = KeyInputMessage | MouseInputMessage | GamepadInputMessage;
 
 /** 预加载脚本把两个端口交给页面时，窗口消息的类型：端口数组为 [画面端口, 输入端口]。 */
 export const STREAM_PORTS_WINDOW_MESSAGE = 'ember.stream-ports' as const;

@@ -1,19 +1,19 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：use-stream-ports.ts
- * 说明：画面与输入端口的页面一侧：监听预加载脚本交来的端口，把画面端口交给渲染 Worker，保留输入端口用来发送按键。
+ * 说明：画面与输入端口的页面一侧：监听预加载脚本交来的端口，把画面端口交给渲染 Worker，保留输入端口用来发送键盘、鼠标、游戏手柄事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：先监听 message 事件，再调用 requestPorts()；只接受来自本窗口自己、标记与端口数量都对的消息。
  *       核心进程重启或页面再次请求时会收到新的端口，旧的输入端口随即关闭，画面端口由 Worker 一侧替换。
- *       按键消息格式见 src/contracts/stream-ports/stream-messages.ts。
+ *       输入消息格式见 src/contracts/stream-ports/stream-messages.ts。
  * ------------------------------------------------------------------------
  */
 
 import { useEffect, useMemo, useRef } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
-import type { StreamPortsWindowMessage } from '../../contracts/stream-ports/stream-messages';
+import type { InputMessage, StreamPortsWindowMessage } from '../../contracts/stream-ports/stream-messages';
 
 /** 预加载脚本交端口时窗口消息的类型，与契约一致。 */
 const PORTS_MESSAGE_TYPE: StreamPortsWindowMessage['type'] = 'ember.stream-ports';
@@ -49,8 +49,8 @@ export function acceptStreamPorts(event: PortsEventLike, self: unknown): StreamP
 
 /** 页面向核心发送输入的接口。 */
 export interface InputLink {
-  /** 发送某个手柄口当前的整个按键掩码；还没有输入端口时丢弃。 */
-  sendButtons(port: number, buttons: number): void;
+  /** 发送一条键盘、鼠标或游戏手柄事件；还没有输入端口时丢弃。 */
+  send(message: InputMessage): void;
 }
 
 /**
@@ -86,9 +86,9 @@ export function useStreamPorts(bridge: EmberBridge, onFramePort: (port: MessageP
 
   return useMemo<InputLink>(
     () => ({
-      sendButtons: (port, buttons) => {
+      send: (message) => {
         try {
-          inputRef.current?.postMessage({ type: 'buttons', port, buttons });
+          inputRef.current?.postMessage(message);
         } catch {
           // 端口已经失效，等新端口到达。
         }

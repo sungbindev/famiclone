@@ -16,6 +16,7 @@
 #include <optional>
 #include <string>
 
+#include "contracts/hardware/input-event.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/runtime/generated/runtime.hpp"
@@ -93,12 +94,10 @@ class RuntimeService {
   virtual RuntimeState ejectCartridge() = 0;
 
   /**
-   * 设置手柄的按键，经命令队列在模拟线程里生效，不等待执行；没有主机时记住，装入主机后生效。
-   * @param port 手柄口编号，0 或 1。
-   * @param buttons 按键掩码，位 0 为 A，位 7 为右。
-   * @throws shared::CoreError core.invalidParams：口号超出范围。
+   * 把用户输入（键盘、鼠标、游戏手柄的原始事件）经命令队列交给模拟线程，不等待执行；没有主机时丢弃。
+   * 主机型号没有自己的键位，事件交给卡带的 mapper 脚本处理。
    */
-  virtual void setButtons(unsigned port, std::uint8_t buttons) = 0;
+  virtual void sendInput(hardware::InputEvent event) = 0;
 
   /** 设置 runtime.frame 事件的发布间隔，每 frames 帧一次；0 表示不发布（默认）。 */
   virtual void setFrameEventInterval(std::uint32_t frames) = 0;

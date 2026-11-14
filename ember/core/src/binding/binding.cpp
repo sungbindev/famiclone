@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：binding.cpp
- * 说明：Node-API 绑定：导出 start、request、cancel、onEvent、onFrame、setButtons、stop，只做 JavaScript 值与核心消息的转换。
+ * 说明：Node-API 绑定：导出 start、request、cancel、onEvent、onFrame、sendInput、stop，只做 JavaScript 值与核心消息的转换。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -295,17 +295,16 @@ Napi::Value onFrame(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
-Napi::Value setButtons(const Napi::CallbackInfo& info) {
+Napi::Value sendInput(const Napi::CallbackInfo& info) {
   auto env = info.Env();
-  if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsNumber()) throw codeError(env, std::string(ember::shared::ERROR_INVALID_PARAMS), "port 与 buttons 应为数字");
-  const double port = info[0].As<Napi::Number>().DoubleValue();
-  const double buttons = info[1].As<Napi::Number>().DoubleValue();
-  if (port < 0 || port > 255 || port != static_cast<std::uint32_t>(port) || buttons < 0 || buttons > 255 || buttons != static_cast<std::uint32_t>(buttons)) {
-    throw codeError(env, std::string(ember::shared::ERROR_INVALID_PARAMS), "port 与 buttons 应为 0 到 255 的整数");
-  }
+  if (info.Length() < 1 || !info[0].IsObject()) throw codeError(env, std::string(ember::shared::ERROR_INVALID_PARAMS), "输入消息应为对象");
   if (core == nullptr || stopping) throw codeError(env, std::string(ember::shared::ERROR_UNAVAILABLE), "核心未启动或正在停止");
+  // 消息的校验在核心里做，这里只把对象转成 JSON 文本。
+  const Napi::Object json = env.Global().Get("JSON").As<Napi::Object>();
+  const Napi::Value text = json.Get("stringify").As<Napi::Function>().Call(json, {info[0]});
+  if (!text.IsString()) throw codeError(env, std::string(ember::shared::ERROR_INVALID_PARAMS), "输入消息无法转成 JSON");
   try {
-    core->setButtons(static_cast<unsigned>(port), static_cast<std::uint8_t>(buttons));
+    core->sendInput(text.As<Napi::String>().Utf8Value());
   } catch (const ember::shared::CoreError& error) {
     throw codeError(env, error.code(), error.what());
   } catch (const std::exception& error) {
@@ -354,7 +353,7 @@ Napi::Object init(Napi::Env env, Napi::Object exports) {
   exports.Set("cancel", Napi::Function::New(env, cancel, "cancel"));
   exports.Set("onEvent", Napi::Function::New(env, onEvent, "onEvent"));
   exports.Set("onFrame", Napi::Function::New(env, onFrame, "onFrame"));
-  exports.Set("setButtons", Napi::Function::New(env, setButtons, "setButtons"));
+  exports.Set("sendInput", Napi::Function::New(env, sendInput, "sendInput"));
   exports.Set("stop", Napi::Function::New(env, stop, "stop"));
   return exports;
 }

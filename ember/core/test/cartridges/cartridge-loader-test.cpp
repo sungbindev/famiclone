@@ -56,7 +56,7 @@ TEST(CartridgeLoader, PlansAndAssemblesACartridgeFromAnInesFileAndAnInstalledPlu
   EXPECT_EQ(plan.match.host, "fc");
 
   ember::bootstrap::FcMachine machine;
-  const auto cartridge = loader.assemble(plan, machine.cartridgeIrq());
+  const auto cartridge = loader.assemble(plan, machine.cartridgeIrq(), machine);
   EXPECT_EQ(cartridge->pluginId(), "nrom");
   machine.cartridgeSlot().insert(*cartridge);
   EXPECT_TRUE(machine.cartridgeSlot().occupied());

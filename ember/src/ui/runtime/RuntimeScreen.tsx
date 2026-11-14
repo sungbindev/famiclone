@@ -1,13 +1,14 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimeScreen.tsx
- * 说明：运行页的画面组件：一个可聚焦的画面区，里面的画布交给渲染 Worker（OffscreenCanvas + WebGL）；接上画面端口，采集键盘送给核心。
+ * 说明：运行页的画面组件：一个可聚焦的画面区，里面的画布交给渲染 Worker（OffscreenCanvas + WebGL）；接上画面端口，采集键盘、鼠标、游戏手柄的原始事件送给核心。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：画布由本组件在效果里创建（transferControlToOffscreen 对同一个画布只能调用一次，严格模式会重复执行效果）；
  *       画面区跟随容器与设备像素比调整画布的设备像素尺寸，画面比例与缩放方式由属性决定，画面在 Worker 里按比例居中、周围黑底。
- *       键盘事件只在画面区获得焦点时采集；窗口失焦、页面隐藏与卸载时松开全部按键。
+ *       键盘事件只在画面区获得焦点时采集；窗口失焦、页面隐藏与卸载时松开全部按键。鼠标事件发生在画面区上，坐标换算成标准帧的像素；游戏手柄每一帧读一次。
+ *       界面不做任何键位映射，也没有默认键位，原始事件交给卡带的 mapper 脚本处理。
  *       开发期（import.meta.env.DEV）把诊断读取函数挂到 window.emberRuntimeDiagnostics，供 tools/dev 的脚本经 CDP 使用，正式包没有。
  * ------------------------------------------------------------------------
  */
@@ -16,7 +17,9 @@ import { useNotify } from '@rujianjs/ui-kit';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import { DiagnosticsClient } from './diagnostics-client';
+import { GamepadCapture } from './gamepad-capture';
 import { KeyboardCapture } from './key-capture';
+import { MouseCapture, toFramePoint } from './pointer-capture';
 import { DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING, type ScreenAspect, type ScreenScaling } from './screen-layout';
 import { useStreamPorts } from './use-stream-ports';
 import { parseWorkerReply, type WorkerDiagnostics, type WorkerRequest } from './worker-messages';
@@ -33,6 +36,9 @@ const TEXT = {
   label: '模拟器画面',
   workerFailed: '无法启动画面渲染'
 } as const;
+
+/** 像素模式的滚轮：多少像素算一格。 */
+const WHEEL_PIXELS_PER_NOTCH = 100;
 
 /** 画面组件的属性。 */
 export interface RuntimeScreenProps {
@@ -149,24 +155,51 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
     worker.postMessage(request, [port]);
   }, []);
   const input = useStreamPorts(bridge, onFramePort);
-  const capture = useMemo(() => new KeyboardCapture((port, buttons) => input.sendButtons(port, buttons)), [input]);
+  const keyboard = useMemo(() => new KeyboardCapture((message) => input.send(message)), [input]);
+  const mouse = useMemo(() => new MouseCapture((message) => input.send(message)), [input]);
+  const gamepads = useMemo(() => new GamepadCapture((message) => input.send(message)), [input]);
+
+  /** 指针在标准帧上的位置；还没有画布时为 undefined。 */
+  const framePointOf = useCallback(
+    (event: { clientX: number; clientY: number }) => {
+      const element = screenRef.current;
+      if (element === null) return undefined;
+      return toFramePoint(event.clientX, event.clientY, element.getBoundingClientRect(), { canvasWidth: sizeRef.current.width, canvasHeight: sizeRef.current.height, ...optionsRef.current });
+    },
+    [screenRef]
+  );
 
   // 页面显示时自动聚焦；窗口失焦、页面隐藏与卸载时松开全部按键。
   // 用 useLayoutEffect：卸载时它的清理先于普通效果，松开的消息先发出，输入端口随后才关闭。
   useLayoutEffect(() => {
     screenRef.current?.focus({ preventScroll: true });
-    const release = (): void => capture.releaseAll();
+    const release = (): void => keyboard.releaseAll();
     const onVisibility = (): void => {
-      if (document.visibilityState === 'hidden') capture.releaseAll();
+      if (document.visibilityState === 'hidden') keyboard.releaseAll();
     };
     window.addEventListener('blur', release);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('blur', release);
       document.removeEventListener('visibilitychange', onVisibility);
-      capture.releaseAll();
+      keyboard.releaseAll();
     };
-  }, [capture, screenRef]);
+  }, [keyboard, screenRef]);
+
+  // 游戏手柄没有事件可监听，每一帧读一次，变化时上报；卸载时上报断开（同样用 useLayoutEffect，在输入端口关闭之前）。
+  useLayoutEffect(() => {
+    if (typeof navigator.getGamepads !== 'function') return undefined;
+    let frame = 0;
+    const tick = (): void => {
+      gamepads.poll(navigator.getGamepads());
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      gamepads.disconnectAll();
+    };
+  }, [gamepads]);
 
   return (
     <div
@@ -176,12 +209,32 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
       role="application"
       aria-label={TEXT.label}
       onKeyDown={(event) => {
-        if (capture.keyDown(event.code, event.repeat, event.target)) event.preventDefault();
+        if (keyboard.keyDown(event.code, event.repeat, event.target, event)) event.preventDefault();
       }}
       onKeyUp={(event) => {
-        if (capture.keyUp(event.code, event.target)) event.preventDefault();
+        if (keyboard.keyUp(event.code)) event.preventDefault();
       }}
-      onBlur={() => capture.releaseAll()}
+      onBlur={() => keyboard.releaseAll()}
+      onPointerMove={(event) => {
+        const point = framePointOf(event);
+        if (point !== undefined) mouse.report('move', point, event.buttons);
+      }}
+      onPointerDown={(event) => {
+        const point = framePointOf(event);
+        // 按住拖到画面之外再松开，松开事件也要到这里。
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        if (point !== undefined) mouse.report('down', point, event.buttons);
+      }}
+      onPointerUp={(event) => {
+        const point = framePointOf(event);
+        if (point !== undefined) mouse.report('up', point, event.buttons);
+      }}
+      onPointerLeave={(event) => mouse.leave(event.buttons)}
+      onWheel={(event) => {
+        const point = framePointOf(event);
+        if (point !== undefined) mouse.report('wheel', point, event.buttons, event.deltaMode === 1 ? event.deltaY : event.deltaY / WHEEL_PIXELS_PER_NOTCH);
+      }}
+      onContextMenu={(event) => event.preventDefault()}
     />
   );
 }

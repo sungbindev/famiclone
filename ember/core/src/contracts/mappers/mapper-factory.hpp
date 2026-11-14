@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 
+#include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
 #include "contracts/mappers/mapper-cartridge.hpp"
@@ -48,9 +49,10 @@ class MapperFactory {
    * @param match match 的结果。
    * @param image 卡带映像，数据被复制，调用后可释放。
    * @param irq 主机卡槽上的 IRQ 引脚，必须活到卡带销毁。
+   * @param pads 主机上的手柄口，脚本经 ctx.pad 设置按键，必须活到卡带销毁。
    * @throws shared::CoreError mappers.notFound：插件已被卸载；mappers.invalidPackage、mappers.limitExceeded：脚本加载失败。
    */
-  [[nodiscard]] virtual std::unique_ptr<MapperCartridge> create(const MapperMatch& match, const CartridgeImage& image, hardware::IrqOutput& irq) = 0;
+  [[nodiscard]] virtual std::unique_ptr<MapperCartridge> create(const MapperMatch& match, const CartridgeImage& image, hardware::IrqOutput& irq, hardware::PadSink& pads) = 0;
 };
 
 }  // namespace ember::contracts::mappers

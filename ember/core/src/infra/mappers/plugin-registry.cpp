@@ -43,6 +43,13 @@ class NullIrqOutput final : public contracts::hardware::IrqOutput {
   void set(bool) override {}
 };
 
+/** 试创建卡带时用的空手柄口：有两个口，设置的按键直接丢弃。 */
+class NullPadSink final : public contracts::hardware::PadSink {
+ public:
+  [[nodiscard]] unsigned padPortCount() const override { return 2; }
+  void setButtons(unsigned, std::uint8_t) override {}
+};
+
 std::string toUtf8(const fs::path& path) {
   const auto text = path.u8string();
   return std::string(text.begin(), text.end());
@@ -126,7 +133,8 @@ std::shared_ptr<const LoadedPlugin> PluginRegistry::checkPackage(std::span<const
 
   // 用空卡带试创建一次：检查脚本能加载并导出了清单声明的函数。
   NullIrqOutput irq;
-  const MapperChip probe(plugin, api::CartridgeImage{}, irq, options_.limits);
+  NullPadSink pads;
+  const MapperChip probe(plugin, api::CartridgeImage{}, irq, pads, options_.limits);
   return plugin;
 }
 
@@ -359,7 +367,8 @@ api::MapperMatch PluginRegistry::match(const api::CartridgeDescription& descript
   return api::MapperMatch{manifest.id, manifest.name, manifest.version, *host};
 }
 
-std::unique_ptr<api::MapperCartridge> PluginRegistry::create(const api::MapperMatch& match, const api::CartridgeImage& image, contracts::hardware::IrqOutput& irq) {
+std::unique_ptr<api::MapperCartridge> PluginRegistry::create(const api::MapperMatch& match, const api::CartridgeImage& image, contracts::hardware::IrqOutput& irq,
+                                                             contracts::hardware::PadSink& pads) {
   std::shared_ptr<const LoadedPlugin> plugin;
   {
     const std::lock_guard lock(mutex_);
@@ -367,7 +376,7 @@ std::unique_ptr<api::MapperCartridge> PluginRegistry::create(const api::MapperMa
     if (!entry || disabled_.contains(match.pluginId)) throw shared::CoreError(api::ERROR_NOT_FOUND, "插件 " + match.pluginId + " 已被卸载或停用");
     plugin = entry->plugin;
   }
-  return std::make_unique<MapperChip>(std::move(plugin), image, irq, options_.limits);
+  return std::make_unique<MapperChip>(std::move(plugin), image, irq, pads, options_.limits);
 }
 
 }  // namespace ember::infra::mappers

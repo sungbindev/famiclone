@@ -103,6 +103,9 @@ std::string errorCodeOf(Function&& call) {
   return {};
 }
 
+/** 键盘输入事件。 */
+hw::KeyInput key(const char* code, bool down) { return hw::KeyInput{code, down}; }
+
 TEST(SimulationRuntime, StartsPoweredOffWithoutACartridge) {
   Rig rig;
   const auto status = rig.runtime->status();
@@ -121,7 +124,7 @@ TEST(SimulationRuntime, StartsPoweredOffWithoutACartridge) {
   EXPECT_EQ(errorCodeOf([&] { rig.runtime->resume(); }), rt::ERROR_NOT_POWERED);
   EXPECT_EQ(rig.runtime->powerOff().power, "off");
   EXPECT_EQ(rig.runtime->ejectCartridge().power, "off");
-  EXPECT_THROW(rig.runtime->setButtons(2, 0), ember::shared::SchemaError);
+  EXPECT_NO_THROW(rig.runtime->sendInput(key("Space", true)));  // 没有主机时输入被丢弃
   EXPECT_EQ(rig.events->count("runtime.stateChanged"), 0);
 }
 
@@ -376,36 +379,35 @@ std::vector<std::uint8_t> padProbeProgram() {
   return program;
 }
 
-TEST(SimulationRuntime, ButtonsReachTheControllerThroughTheCommandQueue) {
+TEST(SimulationRuntime, InputReachesTheControllerThroughTheCartridgeScript) {
   Rig rig;
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
   ASSERT_TRUE(rig.waitFrames(3));
   const auto released = rig.frames->dominantPixel();
 
-  rig.runtime->setButtons(0, 0x01);  // 手柄 1 的 A 键
+  rig.runtime->sendInput(key("Numpad2", true));  // nrom 的脚本把小键盘 2 设为手柄 1 的 A
   ASSERT_TRUE(rig.waitFrames(3));
   const auto pressed = rig.frames->dominantPixel();
   EXPECT_NE(pressed, released);
 
-  rig.runtime->setButtons(1, 0x01);  // 手柄 2 与程序读的口无关
+  rig.runtime->sendInput(key("KeyQ", true));  // 脚本没有设置的键不影响手柄
   ASSERT_TRUE(rig.waitFrames(3));
   EXPECT_EQ(rig.frames->dominantPixel(), pressed);
 
-  rig.runtime->setButtons(0, 0x00);
+  rig.runtime->sendInput(key("Numpad2", false));
   ASSERT_TRUE(rig.waitFrames(3));
   EXPECT_EQ(rig.frames->dominantPixel(), released);
-  EXPECT_THROW(rig.runtime->setButtons(2, 0x01), ember::shared::SchemaError);
 }
 
-TEST(SimulationRuntime, ButtonsHeldBeforeTheMachineExistsApplyWhenItIsInserted) {
+TEST(SimulationRuntime, InputSentBeforeTheMachineExistsIsDropped) {
   Rig rig;
-  rig.runtime->setButtons(0, 0x01);
+  rig.runtime->sendInput(key("Numpad2", true));
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
   ASSERT_TRUE(rig.waitFrames(3));
-  const auto pressed = rig.frames->dominantPixel();
-  rig.runtime->setButtons(0, 0x00);
+  const auto released = rig.frames->dominantPixel();
+  rig.runtime->sendInput(key("Numpad2", true));
   ASSERT_TRUE(rig.waitFrames(3));
-  EXPECT_NE(rig.frames->dominantPixel(), pressed);
+  EXPECT_NE(rig.frames->dominantPixel(), released);
 }
 
 TEST(SimulationRuntime, FrameEventsArePublishedOnlyWhenEnabled) {
@@ -463,7 +465,7 @@ TEST(SimulationRuntime, StopEndsTheThreadAndRejectsLaterCommands) {
   const auto frames = rig.frames->count();
   EXPECT_EQ(errorCodeOf([&] { rig.runtime->pause(); }), "core.unavailable");
   EXPECT_EQ(errorCodeOf([&] { rig.runtime->powerOn(true); }), "core.unavailable");
-  EXPECT_EQ(errorCodeOf([&] { rig.runtime->setButtons(0, 1); }), "core.unavailable");
+  EXPECT_EQ(errorCodeOf([&] { rig.runtime->sendInput(key("Space", true)); }), "core.unavailable");
   std::this_thread::sleep_for(std::chrono::milliseconds(30));
   EXPECT_EQ(rig.frames->count(), frames);
   EXPECT_NO_THROW(rig.runtime->stop());  // 可以重复停止
@@ -483,7 +485,7 @@ TEST(SimulationRuntime, StoppingWhileOtherThreadsAreSendingCommandsNeverHangs) {
         try {
           rig.runtime->pause();
           rig.runtime->resume();
-          rig.runtime->setButtons(0, 1);
+          rig.runtime->sendInput(key("Space", true));
           static_cast<void>(rig.runtime->status());
         } catch (const ember::shared::CoreError& error) {
           if (error.code() == "core.unavailable") {

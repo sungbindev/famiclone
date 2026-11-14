@@ -30,8 +30,6 @@ namespace {
 constexpr int MAX_LAG_FRAMES = 5;
 /** 状态里的速度百分比；速度调节以后再做。 */
 constexpr std::int64_t SPEED_PERCENT = 100;
-/** 手柄口数量。 */
-constexpr unsigned BUTTON_PORT_COUNT = 2;
 
 /** 8 位十六进制（大写），与插件管理里的写法一致。 */
 std::string hex8(std::uint32_t value) {
@@ -199,10 +197,6 @@ void SimulationRuntime::stopMachine() {
   running_ = false;
 }
 
-void SimulationRuntime::applyButtons() {
-  for (unsigned port = 0; port < BUTTON_PORT_COUNT; ++port) machine_->setButtons(port, buttons_[port]);
-}
-
 void SimulationRuntime::pushAudio() {
   if (options_.audio == nullptr) return;
   machine_->takeAudio(audioBuffer_);
@@ -360,7 +354,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
   return submit([this, insertion = std::move(insertion)] {
     // 先装配好新的主机与卡带，任何一步失败都不影响正在运行的旧主机。
     auto machine = options_.machines->create(insertion.match.host);
-    auto cartridge = options_.mappers->create(insertion.match, insertion.image, machine->cartridgeIrq());
+    auto cartridge = options_.mappers->create(insertion.match, insertion.image, machine->cartridgeIrq(), *machine);
     machine->cartridgeSlot().insert(*cartridge);
     auto summary = makeSummary(insertion, cartridge->storageList());
 
@@ -373,7 +367,6 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     running_ = false;
     failureReported_ = false;
     frame_ = 0;
-    applyButtons();
     if (insertion.powerOn) startMachine(insertion.resume);
     publishState("load");
     publishSnapshot();
@@ -399,12 +392,10 @@ rt::RuntimeState SimulationRuntime::ejectCartridge() {
   });
 }
 
-void SimulationRuntime::setButtons(unsigned port, std::uint8_t buttons) {
-  if (port >= BUTTON_PORT_COUNT) throw shared::SchemaError("手柄口只有 2 个，编号为 0 与 1");
-  post([this, port, buttons](bool cancelled) {
-    if (cancelled) return;
-    buttons_[port] = buttons;
-    if (machine_ != nullptr) machine_->setButtons(port, buttons);
+void SimulationRuntime::sendInput(hw::InputEvent event) {
+  post([this, event = std::move(event)](bool cancelled) {
+    if (cancelled || machine_ == nullptr) return;
+    machine_->input(event);
   });
 }
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimeScreen.test.tsx
- * 说明：画面组件的测试（Worker、画布与端口都用假对象）：创建 Worker 并交出离屏画布、收到端口后画面端口交给 Worker、版面随容器尺寸与属性变化、键盘事件经输入端口送出、失焦与卸载时松开全部按键、可编辑元素不采集、卸载时终止 Worker。
+ * 说明：画面组件的测试（Worker、画布与端口都用假对象）：创建 Worker 并交出离屏画布、收到端口后画面端口交给 Worker、版面随容器尺寸与属性变化、键盘、鼠标、游戏手柄的原始事件经输入端口送出、失焦与卸载时松开全部按键、可编辑元素不采集、卸载时终止 Worker。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -169,7 +169,7 @@ describe('RuntimeScreen：版面', () => {
 });
 
 describe('RuntimeScreen：键盘', () => {
-  it('按下与松开的按键经输入端口送出整套掩码，重复的按下不重复发送', () => {
+  it('按下与松开的键经输入端口送出原始事件，重复的按下不重复发送，没有任何默认键位', () => {
     const { screenElement } = setup();
     const input = fakePort();
     deliverPorts(fakePort(), input);
@@ -177,14 +177,18 @@ describe('RuntimeScreen：键盘', () => {
     fireEvent.keyDown(screenElement, { code: 'KeyX', repeat: true });
     fireEvent.keyDown(screenElement, { code: 'ArrowRight' });
     fireEvent.keyUp(screenElement, { code: 'KeyX' });
-    expect(input.postMessage.mock.calls).toEqual([[{ type: 'buttons', port: 0, buttons: 0x01 }], [{ type: 'buttons', port: 0, buttons: 0x81 }], [{ type: 'buttons', port: 0, buttons: 0x80 }]]);
+    fireEvent.keyUp(screenElement, { code: 'KeyQ' });
+    expect(input.postMessage.mock.calls).toEqual([[{ type: 'key', code: 'KeyX', down: true }], [{ type: 'key', code: 'ArrowRight', down: true }], [{ type: 'key', code: 'KeyX', down: false }]]);
   });
 
-  it('映射里的键阻止默认行为，其他键不阻止', () => {
+  it('上报的键阻止默认行为，功能键与带 Ctrl 的组合不上报也不阻止', () => {
     const { screenElement } = setup();
-    deliverPorts(fakePort(), fakePort());
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
     expect(fireEvent.keyDown(screenElement, { code: 'Enter' })).toBe(false);
-    expect(fireEvent.keyDown(screenElement, { code: 'KeyQ' })).toBe(true);
+    expect(fireEvent.keyDown(screenElement, { code: 'F9' })).toBe(true);
+    expect(fireEvent.keyDown(screenElement, { code: 'KeyO', ctrlKey: true })).toBe(true);
+    expect(input.postMessage.mock.calls).toEqual([[{ type: 'key', code: 'Enter', down: true }]]);
   });
 
   it('画面区失焦、窗口失焦、页面隐藏、卸载时松开全部按键', () => {
@@ -192,7 +196,7 @@ describe('RuntimeScreen：键盘', () => {
     const input = fakePort();
     deliverPorts(fakePort(), input);
     const press = () => fireEvent.keyDown(screenElement, { code: 'KeyZ' });
-    const released = () => input.postMessage.mock.calls.filter(([message]) => (message as { buttons: number }).buttons === 0).length;
+    const released = () => input.postMessage.mock.calls.filter(([message]) => (message as { type: string; down: boolean }).type === 'key' && !(message as { down: boolean }).down).length;
 
     press();
     fireEvent.blur(screenElement);
@@ -225,5 +229,68 @@ describe('RuntimeScreen：键盘', () => {
     screenElement.append(field);
     fireEvent.keyDown(field, { code: 'KeyX' });
     expect(input.postMessage).not.toHaveBeenCalled();
+  });
+});
+
+/** 把画面区设为 512x480 并触发一次尺寸变化：8:7 的画面在它里面宽 512、高 420、上下各留 30。 */
+function sizeScreen(screenElement: HTMLElement): void {
+  screenElement.getBoundingClientRect = () => ({ left: 0, top: 0, width: 512, height: 480, right: 512, bottom: 480, x: 0, y: 0, toJSON: () => ({}) });
+  act(() => resizeCallback?.([{ devicePixelContentBoxSize: [{ inlineSize: 512, blockSize: 480 }] }]));
+}
+
+describe('RuntimeScreen：鼠标', () => {
+  it('移动、按下、松开、滚轮、离开经输入端口送出，坐标换算成标准帧的像素', () => {
+    const { screenElement } = setup();
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    sizeScreen(screenElement);
+    fireEvent.pointerMove(screenElement, { clientX: 256, clientY: 240, buttons: 0 });
+    fireEvent.pointerMove(screenElement, { clientX: 266, clientY: 240, buttons: 0 });
+    fireEvent.pointerDown(screenElement, { clientX: 266, clientY: 240, buttons: 1 });
+    fireEvent.pointerUp(screenElement, { clientX: 266, clientY: 240, buttons: 0 });
+    fireEvent.wheel(screenElement, { clientX: 266, clientY: 240, deltaY: 200 });
+    fireEvent.pointerLeave(screenElement, { buttons: 0 });
+    const common = { type: 'mouse', y: 120, dy: 0 };
+    expect(input.postMessage.mock.calls).toEqual([
+      [{ ...common, kind: 'move', x: 128, dx: 0, buttons: 0, wheel: 0 }],
+      [{ ...common, kind: 'move', x: 133, dx: 5, buttons: 0, wheel: 0 }],
+      [{ ...common, kind: 'down', x: 133, dx: 0, buttons: 1, wheel: 0 }],
+      [{ ...common, kind: 'up', x: 133, dx: 0, buttons: 0, wheel: 0 }],
+      [{ ...common, kind: 'wheel', x: 133, dx: 0, buttons: 0, wheel: 2 }],
+      [{ ...common, kind: 'leave', x: 133, dx: 0, buttons: 0, wheel: 0 }]
+    ]);
+  });
+
+  it('还没有画布尺寸时不上报坐标，画面区上的右键菜单被阻止', () => {
+    const { screenElement } = setup();
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    fireEvent.pointerMove(screenElement, { clientX: 10, clientY: 10 });
+    expect(input.postMessage).not.toHaveBeenCalled();
+    expect(fireEvent.contextMenu(screenElement)).toBe(false);
+  });
+});
+
+describe('RuntimeScreen：游戏手柄', () => {
+  it('每一帧读一次手柄，变化时上报，卸载时上报断开', () => {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => callbacks.push(callback));
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    let pads: unknown[] = [null];
+    Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => pads });
+    const { view } = setup();
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    const tick = () => act(() => callbacks.splice(0).forEach((callback) => callback(0)));
+
+    tick();
+    expect(input.postMessage).not.toHaveBeenCalled();
+    pads = [{ index: 0, connected: true, buttons: [{ pressed: true }, { pressed: false }], axes: [0.5, -1] }];
+    tick();
+    tick();
+    expect(input.postMessage.mock.calls).toEqual([[{ type: 'gamepad', index: 0, connected: true, buttons: [true, false], axes: [0.5, -1] }]]);
+    view.unmount();
+    expect(input.postMessage.mock.calls[1]).toEqual([{ type: 'gamepad', index: 0, connected: false, buttons: [], axes: [] }]);
+    Reflect.deleteProperty(navigator, 'getGamepads');
   });
 });

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：host-streams.ts
- * 说明：核心宿主的画面与输入端口：保存主进程交来的两个端口，把核心的帧发到画面端口，从输入端口接收按键并校验后交给回调。
+ * 说明：核心宿主的画面与输入端口：保存主进程交来的两个端口，把核心的帧发到画面端口，从输入端口接收键盘、鼠标、游戏手柄的原始事件并校验后交给回调。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -11,10 +11,21 @@
  * ------------------------------------------------------------------------
  */
 
-import { FRAME_PIXEL_FORMAT, INPUT_PORT_COUNT, MAX_FRAMES_IN_FLIGHT, type FrameAckMessage, type FrameMessage, type InputMessage } from '../contracts/stream-ports/stream-messages';
+import { FRAME_PIXEL_FORMAT, MAX_FRAMES_IN_FLIGHT, type FrameAckMessage, type FrameMessage, type InputMessage, type MouseKind } from '../contracts/stream-ports/stream-messages';
 
-/** 按键掩码的最大值。 */
-const MAX_BUTTONS = 255;
+/** 键位名的最大长度：KeyboardEvent.code 的名字都很短。 */
+const MAX_KEY_CODE_LENGTH = 32;
+/** 鼠标坐标、位移与滚轮量的绝对值上限。 */
+const MAX_MOUSE_VALUE = 1_000_000;
+/** 鼠标按键位的最大值：左、右、中键三位。 */
+const MAX_MOUSE_BUTTONS = 7;
+/** 游戏手柄的最大编号、按键数与轴数。 */
+const MAX_GAMEPAD_INDEX = 15;
+const MAX_GAMEPAD_BUTTONS = 32;
+const MAX_GAMEPAD_AXES = 16;
+
+/** 鼠标事件的全部种类。 */
+const MOUSE_KINDS: ReadonlySet<string> = new Set<MouseKind>(['move', 'down', 'up', 'wheel', 'leave']);
 
 /** 端口的最小接口，Electron 的 MessagePortMain 满足它。 */
 export interface HostPort {
@@ -25,18 +36,48 @@ export interface HostPort {
   close(): void;
 }
 
+/** 在 limit 之内的有限数。 */
+function isBoundedNumber(value: unknown, limit: number): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= limit;
+}
+
+/** 0 到 maximum 的整数。 */
+function isIntegerUpTo(value: unknown, maximum: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= maximum;
+}
+
 /**
- * 校验渲染进程发来的输入消息：输入来自不可信的页面，格式不对就丢弃。
+ * 校验渲染进程发来的输入消息：输入来自不可信的页面，格式不对就丢弃，多余的字段去掉。
  * @param value 收到的数据。
  * @returns 合格的消息；不合格时为 undefined。
  */
 export function parseInputMessage(value: unknown): InputMessage | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
-  const { type, port, buttons } = value as Record<string, unknown>;
-  if (type !== 'buttons') return undefined;
-  if (typeof port !== 'number' || !Number.isInteger(port) || port < 0 || port >= INPUT_PORT_COUNT) return undefined;
-  if (typeof buttons !== 'number' || !Number.isInteger(buttons) || buttons < 0 || buttons > MAX_BUTTONS) return undefined;
-  return { type, port, buttons };
+  const fields = value as Record<string, unknown>;
+  switch (fields.type) {
+    case 'key': {
+      const { code, down } = fields;
+      if (typeof code !== 'string' || code.length === 0 || code.length > MAX_KEY_CODE_LENGTH || !/^[A-Za-z0-9]+$/.test(code)) return undefined;
+      if (typeof down !== 'boolean') return undefined;
+      return { type: 'key', code, down };
+    }
+    case 'mouse': {
+      const { kind, x, y, dx, dy, buttons, wheel } = fields;
+      if (typeof kind !== 'string' || !MOUSE_KINDS.has(kind)) return undefined;
+      if (!isBoundedNumber(x, MAX_MOUSE_VALUE) || !isBoundedNumber(y, MAX_MOUSE_VALUE) || !isBoundedNumber(dx, MAX_MOUSE_VALUE) || !isBoundedNumber(dy, MAX_MOUSE_VALUE)) return undefined;
+      if (!isBoundedNumber(wheel, MAX_MOUSE_VALUE) || !isIntegerUpTo(buttons, MAX_MOUSE_BUTTONS)) return undefined;
+      return { type: 'mouse', kind: kind as MouseKind, x, y, dx, dy, buttons, wheel };
+    }
+    case 'gamepad': {
+      const { index, connected, buttons, axes } = fields;
+      if (!isIntegerUpTo(index, MAX_GAMEPAD_INDEX) || typeof connected !== 'boolean') return undefined;
+      if (!Array.isArray(buttons) || buttons.length > MAX_GAMEPAD_BUTTONS || !buttons.every((item) => typeof item === 'boolean')) return undefined;
+      if (!Array.isArray(axes) || axes.length > MAX_GAMEPAD_AXES || !axes.every((item) => isBoundedNumber(item, 1))) return undefined;
+      return { type: 'gamepad', index, connected, buttons: buttons as boolean[], axes: axes as number[] };
+    }
+    default:
+      return undefined;
+  }
 }
 
 /**

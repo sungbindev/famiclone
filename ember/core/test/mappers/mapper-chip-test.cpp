@@ -33,6 +33,7 @@ using namespace ember::infra::mappers;
 namespace hw = ember::contracts::hardware;
 namespace mapper_error = ember::contracts::mappers;
 using ember::test::RecordingIrq;
+using ember::test::RecordingPads;
 
 std::uint8_t prgByte(std::size_t index) { return static_cast<std::uint8_t>(index * 7 + index / 256); }
 std::uint8_t chrByte(std::size_t index) { return static_cast<std::uint8_t>(0x80 + index * 3); }
@@ -59,7 +60,7 @@ std::shared_ptr<const LoadedPlugin> makePlugin(const json& manifest, const std::
 
 /** 卡带加记录型的 IRQ 引脚。 */
 struct Rig {
-  Rig(const json& manifest, const std::string& script, const mapper_error::CartridgeImage& image, ScriptLimits limits = {}) : chip(makePlugin(manifest, script), image, irq, limits) {}
+  Rig(const json& manifest, const std::string& script, const mapper_error::CartridgeImage& image, ScriptLimits limits = {}) : chip(makePlugin(manifest, script), image, irq, pads, limits) {}
 
   hw::BusRead cpu(std::uint16_t address) { return chip.cpuSide().read(address); }
   hw::BusRead ppu(std::uint16_t address) { return chip.ppuSide().read(address); }
@@ -67,6 +68,7 @@ struct Rig {
   void ppuWrite(std::uint16_t address, std::uint8_t value) { chip.ppuSide().write(address, value); }
 
   RecordingIrq irq;
+  RecordingPads pads;
   MapperChip chip;
 };
 
@@ -149,7 +151,8 @@ TEST(MapperChip, RegisterWritesCallTheScriptWhichSwitchesAChrBank) {
   plugin->manifest = parseManifest(cnrom.manifestText);
   plugin->script = cnrom.scriptText;
   RecordingIrq irq;
-  MapperChip chip(plugin, makeImage(32768, 32768), irq);
+  RecordingPads pads;
+  MapperChip chip(plugin, makeImage(32768, 32768), irq, pads);
   chip.reset(true);
   EXPECT_EQ(chip.ppuSide().read(0x0000).value, chrByte(0));
   chip.cpuSide().write(0x8000, 2);
@@ -396,6 +399,114 @@ TEST(MapperChipErrors, RegistersWithoutTheMatchingScriptFunctionAreRejected) {
     EXPECT_EQ(error.code(), mapper_error::ERROR_INVALID_PACKAGE);
     EXPECT_NE(std::string(error.what()).find("没有 main.js"), std::string::npos) << error.what();
   }
+}
+
+/** 没有寄存器的最小清单，脚本只处理输入。 */
+Rig inputRig(const std::string& script) { return Rig(json::parse(ember::test::minimalManifest()), script, makeImage(16384, 8192)); }
+
+TEST(MapperChipInput, KeyEventsReachOnKeyAndTheScriptSetsPadButtonsByName) {
+  Rig rig(json::parse(ember::test::minimalManifest()),
+          R"(export default { onKey(ctx, event) {
+            if (event.code === 'KeyA') ctx.pad(0).set('left', event.down);
+            if (event.code === 'KeyB') ctx.pad(0).set('b', event.down);
+            if (event.code === 'KeyP') ctx.pad(1).set('start', event.down);
+            if (event.code === 'KeyR') ctx.pad(0).release();
+          } };)",
+          makeImage(16384, 8192));
+  rig.chip.input(hw::KeyInput{"KeyA", true});
+  EXPECT_EQ(rig.pads.masks[0], hw::pad_button::LEFT);
+  rig.chip.input(hw::KeyInput{"KeyB", true});
+  EXPECT_EQ(rig.pads.masks[0], hw::pad_button::LEFT | hw::pad_button::B);
+  rig.chip.input(hw::KeyInput{"KeyP", true});
+  EXPECT_EQ(rig.pads.masks[1], hw::pad_button::START);
+  rig.chip.input(hw::KeyInput{"KeyA", false});
+  EXPECT_EQ(rig.pads.masks[0], hw::pad_button::B);
+  rig.chip.input(hw::KeyInput{"KeyR", true});
+  EXPECT_EQ(rig.pads.masks[0], 0);
+  EXPECT_EQ(rig.pads.masks[1], hw::pad_button::START);
+  rig.chip.input(hw::KeyInput{"KeyQ", true});  // 脚本没有处理的键什么也不发生
+  EXPECT_FALSE(rig.chip.failure().has_value());
+}
+
+TEST(MapperChipInput, ScriptsSeeWhichKeysAreHeldSoCombinationsWork) {
+  Rig rig(json::parse(ember::test::minimalManifest()),
+          R"(export default { onKey(ctx, event) {
+            if (event.code === 'KeyZ' && ctx.keys.isDown('ShiftLeft')) ctx.pad(0).set('select', event.down);
+          } };)",
+          makeImage(16384, 8192));
+  rig.chip.input(hw::KeyInput{"KeyZ", true});
+  EXPECT_EQ(rig.pads.masks[0], 0);
+  rig.chip.input(hw::KeyInput{"KeyZ", false});
+  rig.chip.input(hw::KeyInput{"ShiftLeft", true});
+  rig.chip.input(hw::KeyInput{"KeyZ", true});
+  EXPECT_EQ(rig.pads.masks[0], hw::pad_button::SELECT);
+  rig.chip.input(hw::KeyInput{"ShiftLeft", false});
+  rig.chip.input(hw::KeyInput{"KeyZ", false});
+  EXPECT_EQ(rig.pads.masks[0], hw::pad_button::SELECT);  // 松开时 Shift 已经松开，组合不成立，选择键保持按下是脚本自己的选择
+}
+
+TEST(MapperChipInput, MouseAndGamepadEventsCarryTheirFieldsToTheScript) {
+  Rig rig(json::parse(ember::test::minimalManifest()),
+          R"(export default {
+            onMouse(ctx, event) { ctx.log.warn(JSON.stringify(event)); },
+            onGamepad(ctx, event) { ctx.log.warn(JSON.stringify(event)); }
+          };)",
+          makeImage(16384, 8192));
+  hw::MouseInput mouse;
+  mouse.kind = hw::MouseKind::Wheel;
+  mouse.x = 10.5;
+  mouse.y = 20;
+  mouse.dx = -1;
+  mouse.dy = 2;
+  mouse.buttons = 5;
+  mouse.wheel = 3;
+  rig.chip.input(mouse);
+  hw::GamepadInput pad;
+  pad.index = 1;
+  pad.connected = true;
+  pad.buttons = {true, false};
+  pad.axes = {0.5, -1};
+  rig.chip.input(pad);
+  ASSERT_EQ(rig.chip.scriptLog().size(), 2U);
+  EXPECT_EQ(json::parse(rig.chip.scriptLog()[0]), json::parse(R"({"kind":"wheel","x":10.5,"y":20,"dx":-1,"dy":2,"buttons":5,"wheel":3})"));
+  EXPECT_EQ(json::parse(rig.chip.scriptLog()[1]), json::parse(R"({"index":1,"connected":true,"buttons":[true,false],"axes":[0.5,-1]})"));
+  EXPECT_FALSE(rig.chip.failure().has_value());
+}
+
+TEST(MapperChipInput, EventsWithoutAHandlerAreIgnored) {
+  Rig noScript(json::parse(ember::test::minimalManifest()), "", makeImage(16384, 8192));
+  noScript.chip.input(hw::KeyInput{"KeyA", true});
+  noScript.chip.input(hw::MouseInput{});
+  noScript.chip.input(hw::GamepadInput{});
+  EXPECT_EQ(noScript.pads.calls, 0);
+
+  Rig onlyKeys = inputRig("export default { onKey() {} };");
+  onlyKeys.chip.input(hw::MouseInput{});
+  onlyKeys.chip.input(hw::GamepadInput{});
+  EXPECT_FALSE(onlyKeys.chip.failure().has_value());
+}
+
+TEST(MapperChipInput, BadPadCallsAreScriptErrorsAndStopTheScript) {
+  Rig badButton = inputRig("export default { onKey(ctx, event) { ctx.pad(0).set('turbo', true); } };");
+  badButton.chip.input(hw::KeyInput{"KeyA", true});
+  ASSERT_TRUE(badButton.chip.failure().has_value());
+  EXPECT_EQ(badButton.chip.failure()->code, mapper_error::ERROR_SCRIPT_ERROR);
+  EXPECT_NE(badButton.chip.failure()->message.find("onKey"), std::string::npos);
+
+  Rig badPort = inputRig("export default { onKey(ctx, event) { ctx.pad(2); } };");
+  badPort.chip.input(hw::KeyInput{"KeyA", true});
+  ASSERT_TRUE(badPort.chip.failure().has_value());
+  EXPECT_EQ(badPort.chip.failure()->code, mapper_error::ERROR_SCRIPT_ERROR);
+
+  Rig badValue = inputRig("export default { onKey(ctx, event) { ctx.pad(0).set('a', 1); } };");
+  badValue.chip.input(hw::KeyInput{"KeyA", true});
+  EXPECT_TRUE(badValue.chip.failure().has_value());
+
+  // 出错之后不再调用脚本，复位清除错误。
+  badButton.chip.input(hw::KeyInput{"KeyB", true});
+  EXPECT_EQ(badButton.pads.calls, 0);
+  badButton.chip.reset(false);
+  EXPECT_FALSE(badButton.chip.failure().has_value());
 }
 
 }  // namespace

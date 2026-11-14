@@ -15,6 +15,7 @@
 #include <cstdint>
 
 #include "contracts/hardware/bus-device.hpp"
+#include "contracts/hardware/input-event.hpp"
 
 namespace ember::contracts::hardware {
 
@@ -48,6 +49,9 @@ class Cartridge {
    * @param power 为 true 表示上电复位。
    */
   virtual void reset(bool power) = 0;
+
+  /** 用户输入：键盘、鼠标、游戏手柄的原始事件，卡带按自己的程序决定怎么用；不用输入的卡带忽略。 */
+  virtual void input(const InputEvent& event) = 0;
 };
 
 }  // namespace ember::contracts::hardware

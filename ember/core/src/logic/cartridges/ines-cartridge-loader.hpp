@@ -26,7 +26,8 @@ class InesCartridgeLoader final : public contracts::cartridges::CartridgeLoader 
 
   [[nodiscard]] contracts::cartridges::CartridgePlan plan(std::span<const std::uint8_t> file) const override;
 
-  [[nodiscard]] std::unique_ptr<contracts::mappers::MapperCartridge> assemble(const contracts::cartridges::CartridgePlan& plan, contracts::hardware::IrqOutput& irq) const override;
+  [[nodiscard]] std::unique_ptr<contracts::mappers::MapperCartridge> assemble(const contracts::cartridges::CartridgePlan& plan, contracts::hardware::IrqOutput& irq,
+                                                                              contracts::hardware::PadSink& pads) const override;
 
  private:
   std::shared_ptr<contracts::mappers::MapperFactory> factory_;

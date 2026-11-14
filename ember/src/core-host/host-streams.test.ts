@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：host-streams.test.ts
- * 说明：核心宿主端口的测试：输入消息的校验、按键转给回调、帧消息的格式与发送、换端口时关闭旧端口、端口关闭或发送失败时丢帧。
+ * 说明：核心宿主端口的测试：输入消息（键盘、鼠标、游戏手柄）的校验、输入转给回调、帧消息的格式与发送、换端口时关闭旧端口、端口关闭或发送失败时丢帧。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -46,36 +46,57 @@ class FakePort implements HostPort {
 }
 
 describe('parseInputMessage', () => {
-  it('接受合格的按键消息', () => {
-    expect(parseInputMessage({ type: 'buttons', port: 0, buttons: 0 })).toEqual({ type: 'buttons', port: 0, buttons: 0 });
-    expect(parseInputMessage({ type: 'buttons', port: 1, buttons: 255 })).toEqual({ type: 'buttons', port: 1, buttons: 255 });
+  const mouse = { type: 'mouse', kind: 'move', x: 10.5, y: -3, dx: 1, dy: 0, buttons: 5, wheel: 0 };
+  const gamepad = { type: 'gamepad', index: 1, connected: true, buttons: [true, false], axes: [0.5, -1] };
+
+  it('接受合格的键盘、鼠标、游戏手柄消息', () => {
+    expect(parseInputMessage({ type: 'key', code: 'KeyW', down: true })).toEqual({ type: 'key', code: 'KeyW', down: true });
+    expect(parseInputMessage({ type: 'key', code: 'Numpad1', down: false })).toEqual({ type: 'key', code: 'Numpad1', down: false });
+    expect(parseInputMessage(mouse)).toEqual(mouse);
+    expect(parseInputMessage(gamepad)).toEqual(gamepad);
+    expect(parseInputMessage({ ...gamepad, connected: false, buttons: [], axes: [] })).toEqual({ ...gamepad, connected: false, buttons: [], axes: [] });
   });
 
   it('丢弃格式不对的消息', () => {
     const bad: unknown[] = [
       null,
       undefined,
-      'buttons',
+      'key',
       42,
       [],
       {},
-      { type: 'keys', port: 0, buttons: 1 },
-      { type: 'buttons', port: 2, buttons: 1 },
-      { type: 'buttons', port: -1, buttons: 1 },
-      { type: 'buttons', port: 0.5, buttons: 1 },
-      { type: 'buttons', port: '0', buttons: 1 },
-      { type: 'buttons', port: 0, buttons: 256 },
-      { type: 'buttons', port: 0, buttons: -1 },
-      { type: 'buttons', port: 0, buttons: 1.5 },
-      { type: 'buttons', port: 0, buttons: Number.NaN },
-      { type: 'buttons', port: 0, buttons: '1' },
-      { type: 'buttons', port: 0 }
+      { type: 'buttons', port: 0, buttons: 1 },
+      { type: 'key', code: 'KeyW' },
+      { type: 'key', code: 'KeyW', down: 1 },
+      { type: 'key', code: '', down: true },
+      { type: 'key', code: 'Key W', down: true },
+      { type: 'key', code: 'K'.repeat(33), down: true },
+      { type: 'key', code: 5, down: true },
+      { ...mouse, kind: 'drag' },
+      { ...mouse, x: Number.NaN },
+      { ...mouse, y: '1' },
+      { ...mouse, dx: Number.POSITIVE_INFINITY },
+      { ...mouse, x: 2_000_000 },
+      { ...mouse, buttons: 8 },
+      { ...mouse, buttons: -1 },
+      { ...mouse, buttons: 1.5 },
+      { ...mouse, wheel: undefined },
+      { ...gamepad, index: 16 },
+      { ...gamepad, index: -1 },
+      { ...gamepad, connected: 1 },
+      { ...gamepad, buttons: 'x' },
+      { ...gamepad, buttons: [1] },
+      { ...gamepad, buttons: Array.from({ length: 33 }, () => true) },
+      { ...gamepad, axes: [2] },
+      { ...gamepad, axes: ['0'] },
+      { ...gamepad, axes: Array.from({ length: 17 }, () => 0) }
     ];
     for (const value of bad) expect(parseInputMessage(value)).toBeUndefined();
   });
 
   it('只保留约定的字段', () => {
-    expect(parseInputMessage({ type: 'buttons', port: 0, buttons: 1, extra: '多余' })).toEqual({ type: 'buttons', port: 0, buttons: 1 });
+    expect(parseInputMessage({ type: 'key', code: 'KeyW', down: true, extra: '多余' })).toEqual({ type: 'key', code: 'KeyW', down: true });
+    expect(parseInputMessage({ ...mouse, extra: 1 })).toEqual(mouse);
   });
 });
 
@@ -216,15 +237,15 @@ describe('HostStreams', () => {
     expect(() => streams.sendFrame(new ArrayBuffer(4), 1, 1, 1, 0)).not.toThrow();
   });
 
-  it('输入端口收到的按键校验后交给回调，格式不对的丢弃', () => {
+  it('输入端口收到的输入校验后交给回调，格式不对的丢弃', () => {
     const onInput = vi.fn();
     const input = new FakePort();
     new HostStreams(onInput).attach([new FakePort(), input]);
-    input.receive({ type: 'buttons', port: 0, buttons: 9 });
-    input.receive({ type: 'buttons', port: 5, buttons: 9 });
+    input.receive({ type: 'key', code: 'Space', down: true });
+    input.receive({ type: 'key', code: 'Sp ace', down: true });
     input.receive('垃圾');
     expect(onInput).toHaveBeenCalledTimes(1);
-    expect(onInput).toHaveBeenCalledWith({ type: 'buttons', port: 0, buttons: 9 });
+    expect(onInput).toHaveBeenCalledWith({ type: 'key', code: 'Space', down: true });
   });
 
   it('换端口时关闭旧端口，之后只往新端口发帧', () => {

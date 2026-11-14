@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cstdint>
 #include <future>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -56,8 +57,15 @@ class FakeBindings final : public ScriptBindings {
   [[nodiscard]] std::uint32_t stateGet(std::size_t state) const override { return states.at(state); }
   void stateSet(std::size_t state, std::uint32_t value) override { states.at(state) = value; }
   void log(std::string_view message) override { logs.emplace_back(message); }
+  [[nodiscard]] bool keyDown(std::string_view code) const override { return held.contains(std::string(code)); }
+  void padSet(std::size_t port, std::string_view button, bool down) override {
+    if (button != "a" && button != "start") throw ScriptArgumentError("按键不对");
+    calls.push_back("pad" + std::to_string(port) + " " + std::string(button) + (down ? " down" : " up"));
+  }
+  void padRelease(std::size_t port) override { calls.push_back("pad" + std::to_string(port) + " release"); }
 
   static inline const std::vector<std::string> WINDOWS = {"chr", "prg"};
+  std::set<std::string> held;
   std::vector<std::string> calls;
   std::vector<std::string> logs;
   std::vector<std::uint8_t> rom{10, 20, 30, 40};
@@ -70,6 +78,7 @@ ScriptLayout layout() {
   result.windows = {"chr", "prg"};
   result.storages = {"rom", "ram"};
   result.states = {"bank", "flags"};
+  result.padPorts = 2;
   result.headerJson = R"({"mapper":7,"variant":1,"prgSize":16384,"chrSize":0,"mirroring":"vertical","battery":false,"trainer":false,"crc32Prg":1,"crc32All":2})";
   return result;
 }
@@ -117,9 +126,69 @@ TEST(ScriptRuntime, FunctionsTheScriptDoesNotExportAreSkipped) {
   FakeBindings bindings;
   ScriptRuntime runtime("demo", "export default {};", layout(), bindings);
   EXPECT_FALSE(runtime.hasReset() || runtime.hasRead() || runtime.hasWrite());
+  EXPECT_FALSE(runtime.hasKey() || runtime.hasMouse() || runtime.hasGamepad());
   runtime.reset(true);
   EXPECT_FALSE(runtime.read(false, 0).has_value());
   runtime.write(false, 0, 0);
+  runtime.key(ember::contracts::hardware::KeyInput{"KeyA", true});
+  runtime.mouse(ember::contracts::hardware::MouseInput{});
+  runtime.gamepad(ember::contracts::hardware::GamepadInput{});
+}
+
+TEST(ScriptRuntime, InputCallbacksGetTheEventAndCanUseTheKeysAndPadObjects) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      onKey(ctx, event) {
+        if (ctx.keys.isDown('ShiftLeft')) ctx.pad(1).set('start', event.down);
+        else ctx.pad(0).set('a', event.down);
+        if (event.code === 'KeyR') ctx.pad(0).release();
+      },
+      onMouse(ctx, event) { ctx.log.warn(event.kind + ' ' + event.x + ' ' + event.buttons); },
+      onGamepad(ctx, event) { ctx.log.warn(event.index + ' ' + event.connected + ' ' + event.buttons.length + ' ' + event.axes[0]); }
+    };)",
+                       layout(), bindings);
+  EXPECT_TRUE(runtime.hasKey() && runtime.hasMouse() && runtime.hasGamepad());
+  runtime.key(ember::contracts::hardware::KeyInput{"KeyA", true});
+  bindings.held.insert("ShiftLeft");
+  runtime.key(ember::contracts::hardware::KeyInput{"KeyA", false});
+  runtime.key(ember::contracts::hardware::KeyInput{"KeyR", true});
+  ember::contracts::hardware::MouseInput mouse;
+  mouse.kind = ember::contracts::hardware::MouseKind::Down;
+  mouse.x = 12;
+  mouse.buttons = 1;
+  runtime.mouse(mouse);
+  ember::contracts::hardware::GamepadInput pad;
+  pad.index = 2;
+  pad.connected = true;
+  pad.buttons = {true, false, true};
+  pad.axes = {0.25};
+  runtime.gamepad(pad);
+  EXPECT_EQ(bindings.calls, (std::vector<std::string>{"pad0 a down", "pad1 start up", "pad1 start down", "pad0 release"}));
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"down 12 1", "2 true 3 0.25"}));
+}
+
+TEST(ScriptRuntime, PadAndKeyArgumentsAreChecked) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      onKey(ctx, event) {
+        if (event.code === 'KeyA') ctx.pad(2);
+        if (event.code === 'KeyB') ctx.pad('x');
+        if (event.code === 'KeyC') ctx.pad(0).set('turbo', true);
+        if (event.code === 'KeyD') ctx.pad(0).set('a', 'yes');
+        if (event.code === 'KeyE') ctx.pad(0).set(5, true);
+        if (event.code === 'KeyF') ctx.keys.isDown(5);
+        if (event.code === 'KeyG') ctx.pad(0).x = 1;
+      }
+    };)",
+                       layout(), bindings);
+  for (const char* code : {"KeyA", "KeyB", "KeyC", "KeyD", "KeyE", "KeyF"}) {
+    expectError([&] { runtime.key(ember::contracts::hardware::KeyInput{code, true}); }, mapper_error::ERROR_SCRIPT_ERROR, "onKey");
+  }
+  // 对象是冻结的，模块里给它加属性在严格模式下报 TypeError。
+  expectError([&] { runtime.key(ember::contracts::hardware::KeyInput{"KeyG", true}); }, mapper_error::ERROR_SCRIPT_ERROR, "onKey");
+  EXPECT_TRUE(bindings.calls.empty());
 }
 
 TEST(ScriptRuntime, HeaderIsTheCartridgeDescriptionAndCannotBeChanged) {

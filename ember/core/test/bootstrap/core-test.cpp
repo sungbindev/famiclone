@@ -278,9 +278,9 @@ TEST_F(CoreTest, RuntimeAndCartridgeRequestsRunACartridgeAndDeliverFramesAndEven
   EXPECT_EQ(call(core, "14", "runtime.powerOff", "{}").payload["state"]["power"], "off");
   EXPECT_EQ(call(core, "15", "runtime.powerOn", R"({"resume":true})").payload["state"]["mode"], "running");
 
-  // 按键经命令队列生效；口号越界立即报错。
-  EXPECT_NO_THROW(core.setButtons(0, 0x01));
-  EXPECT_THROW(core.setButtons(2, 0x01), ember::shared::CoreError);
+  // 输入经命令队列交给卡带的脚本；不合格的消息立即报错。
+  EXPECT_NO_THROW(core.sendInput(R"({"type":"key","code":"Space","down":true})"));
+  EXPECT_THROW(core.sendInput(R"({"type":"key","code":"Sp ace","down":true})"), ember::shared::CoreError);
 
   EXPECT_EQ(call(core, "16", "cartridges.info", "{}").payload["cartridge"]["pluginId"], "nrom");
   EXPECT_EQ(call(core, "17", "cartridges.eject", "{}").payload["state"]["power"], "off");
@@ -294,7 +294,7 @@ TEST_F(CoreTest, RuntimeAndCartridgeRequestsRunACartridgeAndDeliverFramesAndEven
 
   core.stop();
   const int framesAtStop = frames.load();
-  EXPECT_THROW(core.setButtons(0, 0x01), ember::shared::CoreError);
+  EXPECT_THROW(core.sendInput(R"({"type":"key","code":"Space","down":true})"), ember::shared::CoreError);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   EXPECT_EQ(frames.load(), framesAtStop);
 }

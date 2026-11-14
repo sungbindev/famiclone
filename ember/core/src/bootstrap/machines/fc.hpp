@@ -60,6 +60,8 @@ class FcMachine final : public contracts::hardware::Machine {
   [[nodiscard]] unsigned audioSampleRate() const override { return logic::hardware::Apu2a03::SAMPLE_RATE; }
   void takeAudio(std::vector<float>& samples) override;
   void setButtons(unsigned port, std::uint8_t buttons) override;
+  [[nodiscard]] unsigned padPortCount() const override { return static_cast<unsigned>(joypads_.size()); }
+  void input(const contracts::hardware::InputEvent& event) override { slot_.input(event); }
   [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }

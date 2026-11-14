@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -26,6 +27,7 @@
 #include <miniz.h>
 #include <nlohmann/json.hpp>
 
+#include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "infra/mappers/plugin-registry.hpp"
 #include "platform/events/event-sink.hpp"
@@ -87,6 +89,19 @@ class RecordingIrq final : public contracts::hardware::IrqOutput {
  private:
   bool active_{false};
   int assertions_{0};
+};
+
+/** 假的手柄口：两个口，记录每个口当前的按键掩码与被设置的次数。 */
+class RecordingPads final : public contracts::hardware::PadSink {
+ public:
+  [[nodiscard]] unsigned padPortCount() const override { return 2; }
+  void setButtons(unsigned port, std::uint8_t buttons) override {
+    masks.at(port) = buttons;
+    ++calls;
+  }
+
+  std::array<std::uint8_t, 2> masks{};
+  int calls{0};
 };
 
 /** 临时目录：构造时创建，析构时连同里面的内容一起删除。 */

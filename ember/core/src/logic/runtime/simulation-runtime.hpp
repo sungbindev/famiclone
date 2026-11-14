@@ -79,7 +79,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   contracts::runtime::RuntimeState resume() override;
   contracts::runtime::CartridgeInsertionResult insertCartridge(contracts::runtime::CartridgeInsertion insertion) override;
   contracts::runtime::RuntimeState ejectCartridge() override;
-  void setButtons(unsigned port, std::uint8_t buttons) override;
+  void sendInput(contracts::hardware::InputEvent event) override;
   void setFrameEventInterval(std::uint32_t frames) override;
 
  private:
@@ -106,7 +106,6 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void publishSnapshot();
   void reportFailure(const std::string& module, const std::string& code, const std::string& message);
   void checkCartridge();
-  void applyButtons();
   void pushAudio();
   void syncAudio();
 
@@ -134,7 +133,6 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   bool resync_{true};
   bool failureReported_{false};
   std::uint64_t frame_{0};
-  std::array<std::uint8_t, 2> buttons_{};
   /** 从主机取出的采样，反复使用以免每帧分配内存。 */
   std::vector<float> audioBuffer_;
   /** 声音输出当前被设为“在播放”。 */

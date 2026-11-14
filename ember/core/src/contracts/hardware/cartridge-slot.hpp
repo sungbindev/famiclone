@@ -46,6 +46,9 @@ class CartridgeSlot {
    * @param power 为 true 表示上电复位。
    */
   virtual void reset(bool power) = 0;
+
+  /** 用户输入：转给插着的卡带，没有卡带时什么也不做。 */
+  virtual void input(const InputEvent& event) = 0;
 };
 
 }  // namespace ember::contracts::hardware

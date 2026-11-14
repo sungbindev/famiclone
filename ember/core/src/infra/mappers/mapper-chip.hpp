@@ -18,11 +18,13 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "contracts/hardware/bus-device.hpp"
+#include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/cartridge.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
@@ -40,10 +42,12 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
    * @param plugin 插件，卡带持有它的引用计数。
    * @param image 卡带映像，数据被复制。
    * @param irq 主机卡槽上的 IRQ 引脚，必须活到卡带销毁。
+   * @param pads 主机上的手柄口，脚本经 ctx.pad 设置按键，必须活到卡带销毁。
    * @param limits 脚本的执行限制。
    * @throws shared::CoreError mappers.invalidPackage：脚本无法加载或没有导出清单声明的函数；mappers.limitExceeded：加载脚本时超限。
    */
-  MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, contracts::hardware::IrqOutput& irq, ScriptLimits limits = {});
+  MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, contracts::hardware::IrqOutput& irq, contracts::hardware::PadSink& pads,
+             ScriptLimits limits = {});
   ~MapperChip() override;
 
   MapperChip(const MapperChip&) = delete;
@@ -54,6 +58,7 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   contracts::hardware::BusDevice& ppuSide() override { return ppuSide_; }
   [[nodiscard]] contracts::hardware::CiramControl ciramControl(std::uint16_t ppuAddress) const override;
   void reset(bool power) override;
+  void input(const contracts::hardware::InputEvent& event) override;
 
   // MapperCartridge
   [[nodiscard]] const std::string& pluginId() const override { return plugin_->manifest.id; }
@@ -107,6 +112,9 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   [[nodiscard]] std::uint32_t stateGet(std::size_t state) const override { return stateValues_.at(state); }
   void stateSet(std::size_t state, std::uint32_t value) override { stateValues_.at(state) = value & stateMasks_.at(state); }
   void log(std::string_view message) override;
+  [[nodiscard]] bool keyDown(std::string_view code) const override { return heldKeys_.contains(std::string(code)); }
+  void padSet(std::size_t port, std::string_view button, bool down) override;
+  void padRelease(std::size_t port) override;
 
   [[nodiscard]] contracts::hardware::BusRead readBus(bool ppu, std::uint16_t address);
   void writeBus(bool ppu, std::uint16_t address, std::uint8_t value);
@@ -121,6 +129,11 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
 
   std::shared_ptr<const LoadedPlugin> plugin_;
   contracts::hardware::IrqOutput& irq_;
+  contracts::hardware::PadSink& pads_;
+  /** 各手柄口当前按下的按键掩码，由脚本设置。 */
+  std::vector<std::uint8_t> padMasks_;
+  /** 现在按着的物理键（KeyboardEvent.code）。 */
+  std::set<std::string> heldKeys_;
   std::vector<std::unique_ptr<StorageBlock>> storages_;
   std::vector<Window> windows_;
   std::vector<Slot> cpuSlots_;

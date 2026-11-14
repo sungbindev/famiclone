@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "apiVersion": 1,
   "publisher": "Ember",
-  "description": "NROM（mapper 0）：没有寄存器，PRG 固定映射，16K 的 PRG 在两个窗口里镜像；CHR 为 8K ROM，文件没有 CHR 时用 8K CHR RAM；名称表镜像按文件头；$6000-$7FFF 带 8K PRG RAM。",
+  "description": "NROM（mapper 0）：没有寄存器，PRG 固定映射，16K 的 PRG 在两个窗口里镜像；CHR 为 8K ROM，文件没有 CHR 时用 8K CHR RAM；名称表镜像按文件头；$6000-$7FFF 带 8K PRG RAM。键位在 main.js：W、S、A、D 为十字键，小键盘 1 为 B、小键盘 2 为 A，空格为选择，回车为开始。",
   "host": ["fc"],
   "match": [{ "mapper": 0 }],
   "storage": [

@@ -71,7 +71,7 @@ class PluginRegistry final : public contracts::mappers::MapperService, public co
   // MapperFactory
   [[nodiscard]] contracts::mappers::MapperMatch match(const contracts::mappers::CartridgeDescription& description) const override;
   [[nodiscard]] std::unique_ptr<contracts::mappers::MapperCartridge> create(const contracts::mappers::MapperMatch& match, const contracts::mappers::CartridgeImage& image,
-                                                                            contracts::hardware::IrqOutput& irq) override;
+                                                                            contracts::hardware::IrqOutput& irq, contracts::hardware::PadSink& pads) override;
 
   /**
    * 安装内存里的插件包：检查全部内容（含试加载脚本），通过后放进用户目录。

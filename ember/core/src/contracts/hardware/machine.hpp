@@ -14,16 +14,18 @@
 #include <cstdint>
 #include <vector>
 
+#include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/cartridge-slot.hpp"
 #include "contracts/hardware/clock.hpp"
+#include "contracts/hardware/input-event.hpp"
 #include "contracts/hardware/cpu.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/hardware/ppu.hpp"
 
 namespace ember::contracts::hardware {
 
-/** 主机。 */
-class Machine {
+/** 主机；手柄口的集合（PadSink）由主机提供，供卡带的脚本设置按键。 */
+class Machine : public PadSink {
  public:
   virtual ~Machine() = default;
 
@@ -62,11 +64,10 @@ class Machine {
   virtual void takeAudio(std::vector<float>& samples) = 0;
 
   /**
-   * 设置手柄口上标准手柄的按键。
-   * @param port 手柄口编号，从 0 开始；没有这个口时报错。
-   * @param buttons 按键掩码，位见 button-input.hpp。
+   * 用户输入：键盘、鼠标、游戏手柄的原始事件。主机型号没有自己的键位，只转给卡带，由卡带的 mapper 脚本决定怎么用。
+   * @param event 输入事件。
    */
-  virtual void setButtons(unsigned port, std::uint8_t buttons) = 0;
+  virtual void input(const InputEvent& event) = 0;
 
   /** CPU 当前的寄存器，供测试与调试读取；只在指令之间读取有意义。 */
   [[nodiscard]] virtual CpuRegisters cpuRegisters() const = 0;

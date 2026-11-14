@@ -110,7 +110,7 @@ struct FcRig {
     registry->installPackage(officialPluginPackage("nrom"));
     for (const auto& package : extraPlugins) registry->installPackage(package);
     const logic::cartridges::InesCartridgeLoader loader(registry);
-    cartridge = loader.assemble(loader.plan(file), machine.cartridgeIrq());
+    cartridge = loader.assemble(loader.plan(file), machine.cartridgeIrq(), machine);
     machine.cartridgeSlot().insert(*cartridge);
     machine.powerOn();
   }

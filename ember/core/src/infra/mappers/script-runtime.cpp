@@ -26,9 +26,10 @@ namespace ember::infra::mappers {
 namespace {
 
 namespace mapper_error = contracts::mappers;
+namespace hw = contracts::hardware;
 
 /** 宿主函数的编号，经 JS 函数的 magic 传入。 */
-enum Operation : int { WindowSetBank, WindowSetOffset, WindowUnmap, StorageRead, StorageWrite, StateGet, StateSet, IrqAssert, IrqRelease };
+enum Operation : int { WindowSetBank, WindowSetOffset, WindowUnmap, StorageRead, StorageWrite, StateGet, StateSet, IrqAssert, IrqRelease, PadSet, PadRelease };
 
 /** JS 数字能精确表示的最大整数。 */
 constexpr double MAX_SAFE_INTEGER = 9007199254740991.0;
@@ -45,7 +46,8 @@ struct ScriptRuntime::Impl {
     if (js != nullptr) {
       for (const JSValue value : windowObjects) JS_FreeValue(js, value);
       for (const JSValue value : storageObjects) JS_FreeValue(js, value);
-      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
+      for (const JSValue value : padObjects) JS_FreeValue(js, value);
+      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, gamepadFn, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
       JS_FreeContext(js);
     }
     if (runtime != nullptr) JS_FreeRuntime(runtime);
@@ -66,12 +68,16 @@ struct ScriptRuntime::Impl {
   JSValue resetFn = JS_UNDEFINED;
   JSValue readFn = JS_UNDEFINED;
   JSValue writeFn = JS_UNDEFINED;
+  JSValue keyFn = JS_UNDEFINED;
+  JSValue mouseFn = JS_UNDEFINED;
+  JSValue gamepadFn = JS_UNDEFINED;
   JSValue cpuName = JS_UNDEFINED;
   JSValue ppuName = JS_UNDEFINED;
   JSValue powerName = JS_UNDEFINED;
   JSValue softName = JS_UNDEFINED;
   std::vector<JSValue> windowObjects;
   std::vector<JSValue> storageObjects;
+  std::vector<JSValue> padObjects;
   std::chrono::steady_clock::time_point deadline;
   bool timedOut{false};
 
@@ -151,6 +157,18 @@ struct ScriptRuntime::Impl {
     JS_SetPropertyStr(js, log, "warn", JS_NewCFunction(js, &Impl::logWarn, "warn", 1));
     JS_SetPropertyStr(js, hostObject, "log", log);
 
+    JSValue keys = JS_NewObject(js);
+    JS_SetPropertyStr(js, keys, "isDown", JS_NewCFunction(js, &Impl::keysIsDown, "isDown", 1));
+    JS_SetPropertyStr(js, hostObject, "keys", keys);
+    JS_SetPropertyStr(js, hostObject, "pad", JS_NewCFunction(js, &Impl::lookupPad, "pad", 1));
+    for (std::size_t port = 0; port < layout.padPorts; ++port) {
+      JSValue pad = JS_NewObject(js);
+      addFunction(pad, "set", &Impl::hostCall, 2, PadSet, port);
+      addFunction(pad, "release", &Impl::hostCall, 0, PadRelease, port);
+      JS_FreezeObject(js, pad);
+      padObjects.push_back(pad);
+    }
+
     JSValue state = JS_NewObject(js);
     for (std::size_t index = 0; index < layout.states.size(); ++index) {
       JSValue data = JS_NewInt32(js, static_cast<int32_t>(index));
@@ -218,6 +236,9 @@ struct ScriptRuntime::Impl {
     resetFn = readHandler("reset");
     readFn = readHandler("read");
     writeFn = readHandler("write");
+    keyFn = readHandler("onKey");
+    mouseFn = readHandler("onMouse");
+    gamepadFn = readHandler("onGamepad");
   }
 
   JSValue readHandler(const char* name) {
@@ -296,7 +317,10 @@ struct ScriptRuntime::Impl {
   shared::CoreError classifyFailure(const std::string& text, const char* phase, bool loading) const {
     const std::string prefix = "插件 " + pluginId + " 的脚本";
     if (timedOut) return shared::CoreError(mapper_error::ERROR_LIMIT_EXCEEDED, prefix + "在 " + phase + " 时执行超过 " + std::to_string(limits.callTimeout.count()) + " 毫秒，已中止");
-    if (contains(text, "out of memory")) return shared::CoreError(mapper_error::ERROR_LIMIT_EXCEEDED, prefix + "在 " + phase + " 时超出 " + std::to_string(limits.memoryBytes / (1024 * 1024)) + " MB 的内存上限");
+    // 内存耗尽到连错误对象都建不出来时，QuickJS 抛出的是 null。
+    if (contains(text, "out of memory") || text == "null") {
+      return shared::CoreError(mapper_error::ERROR_LIMIT_EXCEEDED, prefix + "在 " + phase + " 时超出 " + std::to_string(limits.memoryBytes / (1024 * 1024)) + " MB 的内存上限");
+    }
     if (contains(text, "Maximum call stack")) return shared::CoreError(mapper_error::ERROR_LIMIT_EXCEEDED, prefix + "在 " + phase + " 时调用栈超出上限");
     if (loading) return shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + pluginId + " 的 main.js 无法" + phase + "：" + text);
     return shared::CoreError(mapper_error::ERROR_SCRIPT_ERROR, prefix + "在 " + phase + " 时出错：" + text);
@@ -310,6 +334,70 @@ struct ScriptRuntime::Impl {
     const JSValue result = JS_Call(js, function, plugin, argc, argv);
     if (JS_IsException(result)) throw describeFailure(phase, false);
     return result;
+  }
+
+  /** 调用输入回调 function(ctx, event)；event 的引用由本函数释放。 */
+  void invokeInput(const char* phase, JSValueConst function, JSValue event) {
+    if (JS_IsException(event)) throw describeFailure("构造输入事件", false);
+    JSValue arguments[2] = {hostObject, event};
+    JSValue result = JS_UNDEFINED;
+    try {
+      result = invoke(phase, function, 2, arguments);
+    } catch (...) {
+      JS_FreeValue(js, event);
+      throw;
+    }
+    JS_FreeValue(js, event);
+    JS_FreeValue(js, result);
+  }
+
+  JSValue keyEvent(const hw::KeyInput& input) {
+    JSValue event = JS_NewObject(js);
+    JS_SetPropertyStr(js, event, "code", JS_NewStringLen(js, input.code.data(), input.code.size()));
+    JS_SetPropertyStr(js, event, "down", JS_NewBool(js, input.down ? 1 : 0));
+    return event;
+  }
+
+  JSValue mouseEvent(const hw::MouseInput& input) {
+    const char* kind = "move";
+    switch (input.kind) {
+      case hw::MouseKind::Move:
+        break;
+      case hw::MouseKind::Down:
+        kind = "down";
+        break;
+      case hw::MouseKind::Up:
+        kind = "up";
+        break;
+      case hw::MouseKind::Wheel:
+        kind = "wheel";
+        break;
+      case hw::MouseKind::Leave:
+        kind = "leave";
+        break;
+    }
+    JSValue event = JS_NewObject(js);
+    JS_SetPropertyStr(js, event, "kind", JS_NewString(js, kind));
+    JS_SetPropertyStr(js, event, "x", JS_NewFloat64(js, input.x));
+    JS_SetPropertyStr(js, event, "y", JS_NewFloat64(js, input.y));
+    JS_SetPropertyStr(js, event, "dx", JS_NewFloat64(js, input.dx));
+    JS_SetPropertyStr(js, event, "dy", JS_NewFloat64(js, input.dy));
+    JS_SetPropertyStr(js, event, "buttons", JS_NewInt32(js, input.buttons));
+    JS_SetPropertyStr(js, event, "wheel", JS_NewFloat64(js, input.wheel));
+    return event;
+  }
+
+  JSValue gamepadEvent(const hw::GamepadInput& input) {
+    JSValue event = JS_NewObject(js);
+    JS_SetPropertyStr(js, event, "index", JS_NewInt32(js, input.index));
+    JS_SetPropertyStr(js, event, "connected", JS_NewBool(js, input.connected ? 1 : 0));
+    JSValue buttons = JS_NewArray(js);
+    for (std::size_t index = 0; index < input.buttons.size(); ++index) JS_SetPropertyUint32(js, buttons, static_cast<std::uint32_t>(index), JS_NewBool(js, input.buttons[index] ? 1 : 0));
+    JS_SetPropertyStr(js, event, "buttons", buttons);
+    JSValue axes = JS_NewArray(js);
+    for (std::size_t index = 0; index < input.axes.size(); ++index) JS_SetPropertyUint32(js, axes, static_cast<std::uint32_t>(index), JS_NewFloat64(js, input.axes[index]));
+    JS_SetPropertyStr(js, event, "axes", axes);
+    return event;
   }
 
   // ------------------------------------------------------------ 宿主函数（C 回调）
@@ -388,6 +476,17 @@ struct ScriptRuntime::Impl {
         case IrqRelease:
           host.irqRelease();
           return JS_UNDEFINED;
+        case PadSet: {
+          std::string button;
+          if (!stringArgument(context, argument(argc, argv, 0), button)) throw ScriptArgumentError("参数 button 必须是字符串");
+          const JSValue down = argument(argc, argv, 1);
+          if (!JS_IsBool(down)) throw ScriptArgumentError("参数 down 必须是布尔值");
+          host.padSet(index, button, JS_ToBool(context, down) != 0);
+          return JS_UNDEFINED;
+        }
+        case PadRelease:
+          host.padRelease(index);
+          return JS_UNDEFINED;
         default:
           throw std::logic_error("未知的宿主函数");
       }
@@ -412,6 +511,24 @@ struct ScriptRuntime::Impl {
   static JSValue lookupStorage(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
     const Impl* runtimeSelf = self(context);
     return lookup(context, argc, argv, runtimeSelf->layout.storages, runtimeSelf->storageObjects, "存储区");
+  }
+
+  /** ctx.pad(port)：按口号找手柄口对象。 */
+  static JSValue lookupPad(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
+    const Impl* runtimeSelf = self(context);
+    return guarded(context, [&]() -> JSValue {
+      const std::int64_t port = integerArgument(context, argument(argc, argv, 0), "port");
+      if (port < 0 || static_cast<std::uint64_t>(port) >= runtimeSelf->padObjects.size()) throw ScriptArgumentError("手柄口不存在：" + std::to_string(port));
+      return JS_DupValue(context, runtimeSelf->padObjects[static_cast<std::size_t>(port)]);
+    });
+  }
+
+  /** ctx.keys.isDown(code)：这个物理键现在是否按着。 */
+  static JSValue keysIsDown(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
+    Impl* runtimeSelf = self(context);
+    std::string code;
+    if (!stringArgument(context, argument(argc, argv, 0), code)) return JS_ThrowTypeError(context, "键位必须是字符串");
+    return guarded(context, [&]() -> JSValue { return JS_NewBool(context, runtimeSelf->bindings.keyDown(code)); });
   }
 
   static JSValue nametableSet(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
@@ -447,6 +564,24 @@ bool ScriptRuntime::hasReset() const noexcept { return !JS_IsUndefined(impl_->re
 bool ScriptRuntime::hasRead() const noexcept { return !JS_IsUndefined(impl_->readFn); }
 
 bool ScriptRuntime::hasWrite() const noexcept { return !JS_IsUndefined(impl_->writeFn); }
+
+bool ScriptRuntime::hasKey() const noexcept { return !JS_IsUndefined(impl_->keyFn); }
+
+bool ScriptRuntime::hasMouse() const noexcept { return !JS_IsUndefined(impl_->mouseFn); }
+
+bool ScriptRuntime::hasGamepad() const noexcept { return !JS_IsUndefined(impl_->gamepadFn); }
+
+void ScriptRuntime::key(const contracts::hardware::KeyInput& input) {
+  if (hasKey()) impl_->invokeInput("onKey", impl_->keyFn, impl_->keyEvent(input));
+}
+
+void ScriptRuntime::mouse(const contracts::hardware::MouseInput& input) {
+  if (hasMouse()) impl_->invokeInput("onMouse", impl_->mouseFn, impl_->mouseEvent(input));
+}
+
+void ScriptRuntime::gamepad(const contracts::hardware::GamepadInput& input) {
+  if (hasGamepad()) impl_->invokeInput("onGamepad", impl_->gamepadFn, impl_->gamepadEvent(input));
+}
 
 void ScriptRuntime::reset(bool power) {
   if (!hasReset()) return;

@@ -44,6 +44,10 @@ class StandardCartridgeSlot final : public contracts::hardware::CartridgeSlot {
     if (cartridge_ != nullptr) cartridge_->reset(power);
   }
 
+  void input(const contracts::hardware::InputEvent& event) override {
+    if (cartridge_ != nullptr) cartridge_->input(event);
+  }
+
  private:
   /** 一侧的总线设备：转给卡带对应的一侧，空槽时什么也不驱动。 */
   class Side final : public contracts::hardware::BusDevice {

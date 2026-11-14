@@ -39,4 +39,20 @@ class ButtonInput {
   virtual void setButtons(std::uint8_t buttons) = 0;
 };
 
+/** 手柄口的输出：主机上所有手柄口的集合，mapper 脚本经它设置各口的按键。 */
+class PadSink {
+ public:
+  virtual ~PadSink() = default;
+
+  /** 手柄口的个数。 */
+  [[nodiscard]] virtual unsigned padPortCount() const = 0;
+
+  /**
+   * 设置某个手柄口上标准手柄的按键。
+   * @param port 手柄口编号，从 0 开始；没有这个口时报错。
+   * @param buttons 按键掩码，位见 pad_button。
+   */
+  virtual void setButtons(unsigned port, std::uint8_t buttons) = 0;
+};
+
 }  // namespace ember::contracts::hardware

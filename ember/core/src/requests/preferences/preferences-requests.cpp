@@ -45,6 +45,8 @@ const char* kindName(contract::SettingKind kind) {
       return "switch";
     case contract::SettingKind::Integer:
       return "integer";
+    case contract::SettingKind::Text:
+      return "text";
   }
   return "switch";
 }
@@ -67,6 +69,8 @@ contract::PreferenceSetting toSetting(const contract::SettingEntry& entry) {
   } else if (definition.kind == contract::SettingKind::Integer) {
     setting.minimum = definition.minimum;
     setting.maximum = definition.maximum;
+  } else if (definition.kind == contract::SettingKind::Text) {
+    setting.maxLength = definition.maxLength;
   }
   return setting;
 }

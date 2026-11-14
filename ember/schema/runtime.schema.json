@@ -99,6 +99,40 @@
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": { "type": "object", "properties": { "state": { "$ref": "#/types/RuntimeState" } }, "required": ["state"] },
       "errors": ["runtime.notPowered"]
+    },
+    "run": {
+      "description": "授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）。wait 为 true 时等运行结束才返回结果（结果里有 stopped）；否则立即返回，运行结束时发事件 runtime.runFinished。已在授权运行中时旧的被打断，由新的替代；等待中的请求被取消（如连接断开）时运行被打断并暂停。之后会加入 cycles、scanlines、instructions 等其他授权量。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "frames": { "type": "integer", "minimum": 1, "maximum": 10000000, "description": "要运行的帧数" },
+          "wait": { "type": "boolean", "description": "是否等运行结束再返回，默认 false" }
+        },
+        "required": ["frames"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "state": { "$ref": "#/types/RuntimeState", "description": "返回时的运行状态" },
+          "frames": { "type": "integer", "minimum": 0, "description": "实际运行的帧数；wait 为 false 时为 0" },
+          "cycles": { "type": "integer", "minimum": 0, "description": "实际经过的 CPU 周期数；wait 为 false 时为 0" },
+          "stopped": { "type": "string", "enum": ["completed", "interrupted", "powerOff", "error"], "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；error 运行出错" }
+        },
+        "required": ["state", "frames", "cycles"]
+      },
+      "errors": ["runtime.noCartridge", "runtime.notPowered"]
+    },
+    "setFrameEvents": {
+      "description": "设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）。这是全局设置，对订阅了 runtime.frame 的所有连接生效。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": { "frames": { "type": "integer", "minimum": 0, "maximum": 3600, "description": "间隔帧数，0 表示不发" } },
+        "required": ["frames"]
+      },
+      "result": { "type": "object", "properties": { "frames": { "type": "integer", "minimum": 0, "description": "设置之后的间隔帧数" } }, "required": ["frames"] },
+      "errors": []
     }
   },
   "events": {
@@ -109,7 +143,7 @@
         "properties": {
           "power": { "type": "string", "enum": ["off", "on"], "description": "新的电源状态" },
           "mode": { "type": "string", "enum": ["paused", "running"], "description": "新的运行模式" },
-          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "error"], "description": "原因" }
+          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "run", "runEnded", "error"], "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停" }
         },
         "required": ["power", "mode", "reason"]
       }
@@ -124,6 +158,18 @@
           "pc": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "CPU 的程序计数器" }
         },
         "required": ["frame", "cycles", "pc"]
+      }
+    },
+    "runFinished": {
+      "description": "授权运行（run）结束：跑完、或被暂停、继续、复位、断电、换卡带、新的授权运行或出错打断。",
+      "data": {
+        "type": "object",
+        "properties": {
+          "frames": { "type": "integer", "minimum": 0, "description": "实际运行的帧数" },
+          "cycles": { "type": "integer", "minimum": 0, "description": "实际经过的 CPU 周期数" },
+          "stopped": { "type": "string", "enum": ["completed", "interrupted", "powerOff", "error"], "description": "停止原因，含义同 run 的结果" }
+        },
+        "required": ["frames", "cycles", "stopped"]
       }
     },
     "error": {

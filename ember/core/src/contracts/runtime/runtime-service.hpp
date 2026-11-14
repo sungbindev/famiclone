@@ -13,8 +13,10 @@
 #pragma once
 
 #include <cstdint>
+#include <future>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "contracts/hardware/input-event.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
@@ -49,6 +51,23 @@ struct CartridgeInsertion {
 struct CartridgeInsertionResult {
   CartridgeSummary cartridge;
   RuntimeState state;
+};
+
+/** 一次授权运行（runtime.run）的结果。 */
+struct RunOutcome {
+  /** 实际运行的帧数。 */
+  std::int64_t frames{0};
+  /** 实际经过的 CPU 周期数。 */
+  std::int64_t cycles{0};
+  /** 停止原因：completed 运行完授权的帧数；interrupted 被暂停、继续、复位、换卡带或新的授权运行打断；powerOff 断电；error 运行出错。 */
+  std::string stopped;
+};
+
+/** 一帧画面：像素按行从上到下，每像素 4 字节，内存顺序 R、G、B、A；没有画面时宽高为 0。 */
+struct FrameImage {
+  std::uint32_t width{0};
+  std::uint32_t height{0};
+  std::vector<std::uint8_t> rgba;
 };
 
 /** 运行服务。 */
@@ -101,6 +120,27 @@ class RuntimeService {
 
   /** 设置 runtime.frame 事件的发布间隔，每 frames 帧一次；0 表示不发布（默认）。 */
   virtual void setFrameEventInterval(std::uint32_t frames) = 0;
+
+  /**
+   * 授权运行：不限速地运行指定的帧数后暂停（运行中不输出声音）。已在授权运行中时旧的被打断（interrupted），由新的替代。
+   * 运行期间收到暂停、继续、硬复位、断电、换卡带会结束它；完成或结束时发 runtime.runFinished。
+   * @param frames 要运行的帧数，正整数。
+   * @returns 结果：运行结束后就绪；调用方可以等，也可以不等。
+   * @throws shared::CoreError runtime.noCartridge、runtime.notPowered。
+   */
+  virtual std::shared_future<RunOutcome> startRun(std::int64_t frames) = 0;
+
+  /** 结束正在进行的授权运行（interrupted），机器暂停；没有授权运行时没有效果。 */
+  virtual void cancelRun() = 0;
+
+  /** 手柄口的个数；没有主机时为 0。 */
+  virtual unsigned padPortCount() = 0;
+
+  /** 直接设置某个手柄口的按键（不经 mapper 脚本）；没有主机或没有这个口时丢弃。 */
+  virtual void setPadButtons(unsigned port, std::uint8_t buttons) = 0;
+
+  /** 最近一次完成的画面的副本（暂停、断电后仍然有上一帧）；没有主机或还没有完成过一帧时宽高为 0。 */
+  virtual FrameImage captureFrame() = 0;
 };
 
 }  // namespace ember::contracts::runtime

@@ -10,6 +10,8 @@
  *       出错就暂停并发 runtime.error。停止时拒绝新命令、结束线程，排队中的命令以 core.unavailable 完成。
  *       声音：每帧完成后把主机生成的采样写进声音输出（环形缓冲）；暂停、断电、出错时声音输出淡出到静音，继续运行时清空过时的采样并淡入，
  *       上电与复位时清空缓冲；没有声音输出（空指针）或采样率与主机不同时不输出声音。
+ *       授权运行（startRun）：不限速地连续跑指定的帧数后暂停，运行中不输出声音，每帧之间照常处理命令队列（输入、暂停等）；
+ *       完成或被打断时把结果交给等待的调用方并发 runtime.runFinished；停止时正在进行的授权运行以 interrupted 结束。
  * ------------------------------------------------------------------------
  */
 
@@ -22,6 +24,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -81,8 +84,21 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   contracts::runtime::RuntimeState ejectCartridge() override;
   void sendInput(contracts::hardware::InputEvent event) override;
   void setFrameEventInterval(std::uint32_t frames) override;
+  std::shared_future<contracts::runtime::RunOutcome> startRun(std::int64_t frames) override;
+  void cancelRun() override;
+  unsigned padPortCount() override;
+  void setPadButtons(unsigned port, std::uint8_t buttons) override;
+  contracts::runtime::FrameImage captureFrame() override;
 
  private:
+  /** 正在进行的授权运行（只由模拟线程访问）。 */
+  struct ActiveRun {
+    std::int64_t total{0};
+    std::int64_t remaining{0};
+    std::uint64_t startCycles{0};
+    std::shared_ptr<std::promise<contracts::runtime::RunOutcome>> promise;
+  };
+
   /** 队列里的命令；cancelled 为 true 表示运行服务已停止，命令不再执行。 */
   using Command = std::function<void(bool cancelled)>;
   using Clock = std::chrono::steady_clock;
@@ -105,6 +121,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void publishState(const char* reason);
   void publishSnapshot();
   void reportFailure(const std::string& module, const std::string& code, const std::string& message);
+  /** 结束正在进行的授权运行：把结果交给等待的调用方并发 runtime.runFinished；没有授权运行时没有效果；不改变电源与运行模式。 */
+  void finishRun(const char* stopped);
   void checkCartridge();
   void pushAudio();
   void syncAudio();
@@ -129,6 +147,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   std::optional<contracts::runtime::CartridgeSummary> summary_;
   std::string host_;
   bool running_{false};
+  /** 正在进行的授权运行。 */
+  std::optional<ActiveRun> run_;
   /** 要重新对齐帧节拍（刚开始运行，或落后太多）。 */
   bool resync_{true};
   bool failureReported_{false};

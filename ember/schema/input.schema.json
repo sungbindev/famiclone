@@ -1,0 +1,78 @@
+{
+  "$comment": "input 模块：经调试服务注入输入。键盘、鼠标与游戏手柄的事件与界面发来的原始事件同一入口、同一格式，交给卡带的 mapper 脚本处理；pad 直接设置主机手柄口，不经脚本。全部只经调试服务开放（debugOnly），界面的输入走消息端口。规则见 docs/04-调试服务.md 第 4.4 节。",
+  "module": "input",
+  "types": {},
+  "requests": {
+    "key": {
+      "description": "按下或松开一个物理键，交给卡带的 mapper 脚本；没有开机时被丢弃。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "minLength": 1, "maxLength": 32, "description": "物理键位，取 KeyboardEvent.code，如 KeyW、Space、Numpad1、Enter" },
+          "down": { "type": "boolean", "description": "true 按下，false 松开" }
+        },
+        "required": ["code", "down"]
+      },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": []
+    },
+    "mouse": {
+      "description": "鼠标事件，交给卡带的 mapper 脚本；坐标单位是标准帧（256x240）的像素，省略的数值按 0 处理。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["move", "down", "up", "wheel", "leave"], "description": "事件种类" },
+          "x": { "type": "number", "description": "指针在标准帧上的横坐标，可以超出画面范围" },
+          "y": { "type": "number", "description": "指针在标准帧上的纵坐标，可以超出画面范围" },
+          "dx": { "type": "number", "description": "相对上一次事件的横向位移" },
+          "dy": { "type": "number", "description": "相对上一次事件的纵向位移" },
+          "buttons": { "type": "integer", "minimum": 0, "maximum": 7, "description": "当前按住的按键位：1 左键、2 右键、4 中键" },
+          "wheel": { "type": "number", "description": "滚轮的滚动量，向下为正，只有 wheel 事件用" }
+        },
+        "required": ["kind"]
+      },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": []
+    },
+    "gamepad": {
+      "description": "游戏手柄一个手柄的当前全部状态，交给卡带的 mapper 脚本；拔掉时 connected 为 false，按键与轴省略。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer", "minimum": 0, "maximum": 7, "description": "手柄编号，同浏览器 Gamepad API 的 index" },
+          "connected": { "type": "boolean", "description": "是否连着" },
+          "buttons": { "type": "array", "items": { "type": "boolean" }, "maxItems": 32, "description": "各按键是否按下，顺序同浏览器的标准映射" },
+          "axes": { "type": "array", "items": { "type": "number" }, "maxItems": 16, "description": "各轴的值，范围 -1 到 1，顺序同浏览器的标准映射" }
+        },
+        "required": ["index", "connected"]
+      },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": []
+    },
+    "pad": {
+      "description": "直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本；位：1 A、2 B、4 选择、8 开始、16 上、32 下、64 左、128 右。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "port": { "type": "integer", "minimum": 0, "maximum": 7, "description": "手柄口编号，从 0 开始" },
+          "buttons": { "type": "integer", "minimum": 0, "maximum": 255, "description": "按键掩码，1 表示按下" }
+        },
+        "required": ["port", "buttons"]
+      },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": ["input.invalidPort"]
+    },
+    "releaseAll": {
+      "description": "松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开。",
+      "debugOnly": true,
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": []
+    }
+  },
+  "events": {}
+}

@@ -10,6 +10,9 @@
 
 #include "requests/runtime/runtime-requests.hpp"
 
+#include <chrono>
+#include <future>
+
 namespace ember::requests::runtime {
 
 namespace contract = ::ember::contracts::runtime;
@@ -39,6 +42,32 @@ void addRuntimeRequests(platform::RequestRouter& router, std::shared_ptr<contrac
   router.add("runtime", contract::RUNTIME_RESUME_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     static_cast<void>(contract::parseRuntimeResumeParams(params, "params"));
     return nlohmann::json(contract::RuntimeResumeResult{service->resume()});
+  });
+  router.add("runtime", contract::RUNTIME_RUN_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken& token) {
+    const auto parsed = contract::parseRuntimeRunParams(params, "params");
+    auto outcome = service->startRun(parsed.frames);
+    contract::RuntimeRunResult result;
+    if (parsed.wait.value_or(false)) {
+      // 等运行结束；请求被取消（连接断开、服务停止）时打断运行，结果给出已经跑的部分。
+      while (outcome.wait_for(std::chrono::milliseconds(20)) != std::future_status::ready) {
+        if (token.isCancelled()) {
+          service->cancelRun();
+          break;
+        }
+      }
+      const auto& finished = outcome.get();
+      result.frames = finished.frames;
+      result.cycles = finished.cycles;
+      result.stopped = finished.stopped;
+    }
+    const auto status = service->status();
+    result.state = contract::RuntimeState{status.power, status.mode};
+    return nlohmann::json(result);
+  });
+  router.add("runtime", contract::RUNTIME_SET_FRAME_EVENTS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseRuntimeSetFrameEventsParams(params, "params");
+    service->setFrameEventInterval(static_cast<std::uint32_t>(parsed.frames));
+    return nlohmann::json(contract::RuntimeSetFrameEventsResult{parsed.frames});
   });
 }
 

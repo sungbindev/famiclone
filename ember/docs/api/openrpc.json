@@ -1,0 +1,2820 @@
+{
+  "openrpc": "1.3.2",
+  "info": {
+    "title": "Ember 调试服务",
+    "version": "1",
+    "description": "经 WebSocket 传输的 JSON-RPC 2.0 接口；连接、握手、令牌、二进制帧与事件订阅的约定见 docs/04-调试服务.md。"
+  },
+  "servers": [
+    {
+      "name": "本机调试服务",
+      "url": "ws://127.0.0.1:{port}/",
+      "variables": {
+        "port": {
+          "default": "5688",
+          "description": "首选项里设置的端口，或启动参数 --debug-port"
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "cartridges.load",
+      "summary": "读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽",
+      "description": "读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽；已有的卡带与主机被替换，失败时原有的保持不变。匹配失败的错误码是 mappers.noMatch、mappers.conflict、mappers.hostUnknown，插件加载失败的是 mappers.notFound、mappers.invalidPackage、mappers.limitExceeded。",
+      "tags": [
+        {
+          "name": "cartridges"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "NES 文件的路径，由主进程根据用户选择的文件给出",
+            "minLength": 1
+          },
+          "description": "NES 文件的路径，由主进程根据用户选择的文件给出"
+        },
+        {
+          "name": "powerOn",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "装入后是否上电，默认 true"
+          },
+          "description": "装入后是否上电，默认 true"
+        },
+        {
+          "name": "resume",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效"
+          },
+          "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "cartridge": {
+              "$ref": "#/components/schemas/runtime.CartridgeSummary"
+            },
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "cartridge",
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "cartridges.fileNotFound",
+          "data": {
+            "code": "cartridges.fileNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.fileUnreadable",
+          "data": {
+            "code": "cartridges.fileUnreadable"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.notInes",
+          "data": {
+            "code": "cartridges.notInes"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.truncated",
+          "data": {
+            "code": "cartridges.truncated"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.unsupportedFormat",
+          "data": {
+            "code": "cartridges.unsupportedFormat"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.invalidHeader",
+          "data": {
+            "code": "cartridges.invalidHeader"
+          }
+        }
+      ],
+      "x-mainOnly": true
+    },
+    {
+      "name": "cartridges.eject",
+      "summary": "取出卡带：主机随之拆除，电源状态变为断电",
+      "description": "取出卡带：主机随之拆除，电源状态变为断电；没有卡带时没有效果。",
+      "tags": [
+        {
+          "name": "cartridges"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "cartridges.info",
+      "summary": "当前卡带的描述、匹配到的插件与存储区清单",
+      "description": "当前卡带的描述、匹配到的插件与存储区清单。",
+      "tags": [
+        {
+          "name": "cartridges"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "cartridge": {
+              "$ref": "#/components/schemas/runtime.CartridgeSummary"
+            }
+          },
+          "required": [
+            "cartridge"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "cartridges.empty",
+          "data": {
+            "code": "cartridges.empty"
+          }
+        }
+      ]
+    },
+    {
+      "name": "debug.hello",
+      "summary": "握手：每条连接上第一个请求必须是它，令牌不对时连接被关闭（关闭码 4001）",
+      "description": "握手：每条连接上第一个请求必须是它，令牌不对时连接被关闭（关闭码 4001）。成功后才能调用其他请求。",
+      "tags": [
+        {
+          "name": "debug"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "client",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "客户端名称，如 copilot、ember-debug-cli",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": "客户端名称，如 copilot、ember-debug-cli"
+        },
+        {
+          "name": "token",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "调试服务的令牌",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": "调试服务的令牌"
+        },
+        {
+          "name": "protocol",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "客户端使用的协议版本，目前只有 1；省略时按 1",
+            "minimum": 1,
+            "maximum": 1
+          },
+          "description": "客户端使用的协议版本，目前只有 1；省略时按 1"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "protocol": {
+              "type": "integer",
+              "description": "服务端的协议版本",
+              "minimum": 1
+            },
+            "coreVersion": {
+              "type": "string",
+              "description": "核心版本"
+            },
+            "appVersion": {
+              "type": "string",
+              "description": "应用版本"
+            },
+            "session": {
+              "type": "integer",
+              "description": "本连接的编号",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "protocol",
+            "coreVersion",
+            "appVersion",
+            "session"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "debug.unauthorized",
+          "data": {
+            "code": "debug.unauthorized"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "debug.unsupportedProtocol",
+          "data": {
+            "code": "debug.unsupportedProtocol"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "debug.subscribe",
+      "summary": "订阅事件",
+      "description": "订阅事件。事件名写成“模块.事件”，也可以写“模块.*”订阅一个模块的全部事件，或“*”订阅全部；已经订阅的重复订阅没有效果。高频事件默认不推送，要订阅才有。",
+      "tags": [
+        {
+          "name": "debug"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "events",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "事件名或通配写法",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "description": "事件名或通配写法"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "events": {
+              "type": "array",
+              "description": "订阅之后本连接订阅的全部事件名或通配写法",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "events"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "debug.unsubscribe",
+      "summary": "取消订阅：写法要与订阅时一致",
+      "description": "取消订阅：写法要与订阅时一致；没有订阅过的忽略。",
+      "tags": [
+        {
+          "name": "debug"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "events",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "事件名或通配写法",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "description": "事件名或通配写法"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "events": {
+              "type": "array",
+              "description": "取消之后本连接订阅的全部事件名或通配写法",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "events"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "debug.status",
+      "summary": "调试服务的状态：是否开启、是否在监听、端口与当前的连接",
+      "description": "调试服务的状态：是否开启、是否在监听、端口与当前的连接。",
+      "tags": [
+        {
+          "name": "debug"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "是否开启（首选项里打开，或启动参数 --debug-port 指定）"
+            },
+            "listening": {
+              "type": "boolean",
+              "description": "是否正在监听；开启但端口被占用时为 false"
+            },
+            "port": {
+              "type": "integer",
+              "description": "监听的端口，没有监听时为 0",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "error": {
+              "type": "string",
+              "description": "开启了但没有监听时的原因；其他情况没有这一项"
+            },
+            "connections": {
+              "type": "array",
+              "description": "当前的连接",
+              "items": {
+                "$ref": "#/components/schemas/debug.DebugConnection"
+              }
+            }
+          },
+          "required": [
+            "enabled",
+            "listening",
+            "port",
+            "connections"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "input.key",
+      "summary": "按下或松开一个物理键，交给卡带的 mapper 脚本",
+      "description": "按下或松开一个物理键，交给卡带的 mapper 脚本；没有开机时被丢弃。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "code",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "物理键位，取 KeyboardEvent.code，如 KeyW、Space、Numpad1、Enter",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "description": "物理键位，取 KeyboardEvent.code，如 KeyW、Space、Numpad1、Enter"
+        },
+        {
+          "name": "down",
+          "required": true,
+          "schema": {
+            "type": "boolean",
+            "description": "true 按下，false 松开"
+          },
+          "description": "true 按下，false 松开"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "input.mouse",
+      "summary": "鼠标事件，交给卡带的 mapper 脚本",
+      "description": "鼠标事件，交给卡带的 mapper 脚本；坐标单位是标准帧（256x240）的像素，省略的数值按 0 处理。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "事件种类",
+            "enum": [
+              "move",
+              "down",
+              "up",
+              "wheel",
+              "leave"
+            ]
+          },
+          "description": "事件种类"
+        },
+        {
+          "name": "x",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "description": "指针在标准帧上的横坐标，可以超出画面范围"
+          },
+          "description": "指针在标准帧上的横坐标，可以超出画面范围"
+        },
+        {
+          "name": "y",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "description": "指针在标准帧上的纵坐标，可以超出画面范围"
+          },
+          "description": "指针在标准帧上的纵坐标，可以超出画面范围"
+        },
+        {
+          "name": "dx",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "description": "相对上一次事件的横向位移"
+          },
+          "description": "相对上一次事件的横向位移"
+        },
+        {
+          "name": "dy",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "description": "相对上一次事件的纵向位移"
+          },
+          "description": "相对上一次事件的纵向位移"
+        },
+        {
+          "name": "buttons",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "当前按住的按键位：1 左键、2 右键、4 中键",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "description": "当前按住的按键位：1 左键、2 右键、4 中键"
+        },
+        {
+          "name": "wheel",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "description": "滚轮的滚动量，向下为正，只有 wheel 事件用"
+          },
+          "description": "滚轮的滚动量，向下为正，只有 wheel 事件用"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "input.gamepad",
+      "summary": "游戏手柄一个手柄的当前全部状态，交给卡带的 mapper 脚本",
+      "description": "游戏手柄一个手柄的当前全部状态，交给卡带的 mapper 脚本；拔掉时 connected 为 false，按键与轴省略。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "index",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "手柄编号，同浏览器 Gamepad API 的 index",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "description": "手柄编号，同浏览器 Gamepad API 的 index"
+        },
+        {
+          "name": "connected",
+          "required": true,
+          "schema": {
+            "type": "boolean",
+            "description": "是否连着"
+          },
+          "description": "是否连着"
+        },
+        {
+          "name": "buttons",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "description": "各按键是否按下，顺序同浏览器的标准映射",
+            "maxItems": 32,
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "description": "各按键是否按下，顺序同浏览器的标准映射"
+        },
+        {
+          "name": "axes",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "description": "各轴的值，范围 -1 到 1，顺序同浏览器的标准映射",
+            "maxItems": 16,
+            "items": {
+              "type": "number"
+            }
+          },
+          "description": "各轴的值，范围 -1 到 1，顺序同浏览器的标准映射"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "input.pad",
+      "summary": "直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本",
+      "description": "直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本；位：1 A、2 B、4 选择、8 开始、16 上、32 下、64 左、128 右。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "port",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "手柄口编号，从 0 开始",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "description": "手柄口编号，从 0 开始"
+        },
+        {
+          "name": "buttons",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "按键掩码，1 表示按下",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "description": "按键掩码，1 表示按下"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "input.invalidPort",
+          "data": {
+            "code": "input.invalidPort"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "input.releaseAll",
+      "summary": "松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开",
+      "description": "松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "mappers.list",
+      "summary": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先",
+      "description": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "plugins": {
+              "type": "array",
+              "description": "插件摘要，按标识排序",
+              "items": {
+                "$ref": "#/components/schemas/mappers.MapperSummary"
+              }
+            }
+          },
+          "required": [
+            "plugins"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "mappers.info",
+      "summary": "返回一个插件的摘要与清单详情",
+      "description": "返回一个插件的摘要与清单详情。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "插件标识",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "description": "插件标识"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "plugin": {
+              "$ref": "#/components/schemas/mappers.MapperDetail"
+            }
+          },
+          "required": [
+            "plugin"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "mappers.notFound",
+          "data": {
+            "code": "mappers.notFound"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mappers.install",
+      "summary": "安装一个 .emap 插件包：检查通过后放进用户插件目录",
+      "description": "安装一个 .emap 插件包：检查通过后放进用户插件目录；已有同标识的用户插件时替换。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "插件包的文件路径，由主进程根据用户选择的文件给出",
+            "minLength": 1
+          },
+          "description": "插件包的文件路径，由主进程根据用户选择的文件给出"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "plugin": {
+              "$ref": "#/components/schemas/mappers.MapperSummary"
+            }
+          },
+          "required": [
+            "plugin"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "mappers.invalidPackage",
+          "data": {
+            "code": "mappers.invalidPackage"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "mappers.hostUnknown",
+          "data": {
+            "code": "mappers.hostUnknown"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "mappers.limitExceeded",
+          "data": {
+            "code": "mappers.limitExceeded"
+          }
+        }
+      ],
+      "x-mainOnly": true
+    },
+    {
+      "name": "mappers.uninstall",
+      "summary": "卸载用户安装的插件",
+      "description": "卸载用户安装的插件；预装的插件只能停用。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "插件标识",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "description": "插件标识"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "mappers.notFound",
+          "data": {
+            "code": "mappers.notFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "mappers.bundledReadonly",
+          "data": {
+            "code": "mappers.bundledReadonly"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mappers.setEnabled",
+      "summary": "启用或停用一个插件",
+      "description": "启用或停用一个插件；停用的插件不参与匹配。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "插件标识",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "description": "插件标识"
+        },
+        {
+          "name": "enabled",
+          "required": true,
+          "schema": {
+            "type": "boolean",
+            "description": "是否启用"
+          },
+          "description": "是否启用"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "plugin": {
+              "$ref": "#/components/schemas/mappers.MapperSummary"
+            }
+          },
+          "required": [
+            "plugin"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "mappers.notFound",
+          "data": {
+            "code": "mappers.notFound"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mappers.reload",
+      "summary": "重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效",
+      "description": "重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效；不合格的包被跳过并写入错误日志。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "plugins": {
+              "type": "array",
+              "description": "重新加载后生效的插件摘要",
+              "items": {
+                "$ref": "#/components/schemas/mappers.MapperSummary"
+              }
+            }
+          },
+          "required": [
+            "plugins"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "output.setVolume",
+      "summary": "设置声音的音量与静音",
+      "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。设置保存在核心内存里，核心重启后回到音量 100、未静音；变化平滑过渡，不会产生爆音。",
+      "tags": [
+        {
+          "name": "output"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "volume",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "音量百分比，0 到 100",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "description": "音量百分比，0 到 100"
+        },
+        {
+          "name": "muted",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "是否静音"
+          },
+          "description": "是否静音"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "volume": {
+              "type": "integer",
+              "description": "当前的音量百分比",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "muted": {
+              "type": "boolean",
+              "description": "当前是否静音"
+            }
+          },
+          "required": [
+            "volume",
+            "muted"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "output.screenshot",
+      "summary": "截取最近一次完成的画面（256x240，暂停与断电后也有上一帧）",
+      "description": "截取最近一次完成的画面（256x240，暂停与断电后也有上一帧）。不带 file 时图像以二进制帧返回（结果里的 data，见 docs/04-调试服务.md 第 2.3 节）；带 file 时保存到调试输出目录下，结果里的 file 是保存后的完整路径，不再返回 data。",
+      "tags": [
+        {
+          "name": "output"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "format",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图像格式，默认 png；rgba 是未压缩的像素，每像素 4 字节，按行从上到下",
+            "enum": [
+              "png",
+              "rgba"
+            ]
+          },
+          "description": "图像格式，默认 png；rgba 是未压缩的像素，每像素 4 字节，按行从上到下"
+        },
+        {
+          "name": "file",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "保存的文件名（不含目录，只能是字母、数字、点、下划线、短横线与空格）；png 没有扩展名时自动补 .png",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": "保存的文件名（不含目录，只能是字母、数字、点、下划线、短横线与空格）；png 没有扩展名时自动补 .png"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "description": "图像格式",
+              "enum": [
+                "png",
+                "rgba"
+              ]
+            },
+            "width": {
+              "type": "integer",
+              "description": "图像宽度（像素）",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "description": "图像高度（像素）",
+              "minimum": 1
+            },
+            "byteLength": {
+              "type": "integer",
+              "description": "图像数据的字节数",
+              "minimum": 1
+            },
+            "file": {
+              "type": "string",
+              "description": "保存后的完整路径；没有带 file 参数时没有这一项"
+            },
+            "data": {
+              "description": "图像数据（二进制，以二进制帧送达）；带 file 参数时没有这一项"
+            }
+          },
+          "required": [
+            "format",
+            "width",
+            "height",
+            "byteLength"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "output.noPicture",
+          "data": {
+            "code": "output.noPicture"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "output.invalidFileName",
+          "data": {
+            "code": "output.invalidFileName"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "output.fileFailed",
+          "data": {
+            "code": "output.fileFailed"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "preferences.list",
+      "summary": "列出全部分组与设置项（含当前取值）",
+      "description": "列出全部分组与设置项（含当前取值）；分组与设置项按登记的顺序排列。",
+      "tags": [
+        {
+          "name": "preferences"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "groups": {
+              "type": "array",
+              "description": "分组",
+              "items": {
+                "$ref": "#/components/schemas/preferences.PreferenceGroup"
+              }
+            },
+            "settings": {
+              "type": "array",
+              "description": "设置项",
+              "items": {
+                "$ref": "#/components/schemas/preferences.PreferenceSetting"
+              }
+            }
+          },
+          "required": [
+            "groups",
+            "settings"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "preferences.set",
+      "summary": "修改一个设置项：核心按登记的种类校验取值，保存到文件，并发出 preferences.changed",
+      "description": "修改一个设置项：核心按登记的种类校验取值，保存到文件，并发出 preferences.changed；取值没有变化时不发事件。",
+      "tags": [
+        {
+          "name": "preferences"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "设置项标识",
+            "minLength": 1
+          },
+          "description": "设置项标识"
+        },
+        {
+          "name": "value",
+          "required": true,
+          "schema": {
+            "description": "新的取值：choice 为 options 里的字符串，switch 为布尔值，integer 为 minimum 到 maximum 之间的整数"
+          },
+          "description": "新的取值：choice 为 options 里的字符串，switch 为布尔值，integer 为 minimum 到 maximum 之间的整数"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "设置项标识",
+              "minLength": 1
+            },
+            "value": {
+              "description": "修改之后的取值"
+            }
+          },
+          "required": [
+            "id",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "preferences.unknown",
+          "data": {
+            "code": "preferences.unknown"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "preferences.invalidValue",
+          "data": {
+            "code": "preferences.invalidValue"
+          }
+        }
+      ]
+    },
+    {
+      "name": "preferences.reset",
+      "summary": "把一个设置项恢复为出厂默认值",
+      "description": "把一个设置项恢复为出厂默认值；取值没有变化时不发事件。",
+      "tags": [
+        {
+          "name": "preferences"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "设置项标识",
+            "minLength": 1
+          },
+          "description": "设置项标识"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "设置项标识",
+              "minLength": 1
+            },
+            "value": {
+              "description": "恢复之后的取值"
+            }
+          },
+          "required": [
+            "id",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "preferences.unknown",
+          "data": {
+            "code": "preferences.unknown"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtime.status",
+      "summary": "返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度",
+      "description": "返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "power": {
+              "type": "string",
+              "description": "电源",
+              "enum": [
+                "off",
+                "on"
+              ]
+            },
+            "mode": {
+              "type": "string",
+              "description": "运行模式",
+              "enum": [
+                "paused",
+                "running"
+              ]
+            },
+            "machine": {
+              "type": "string",
+              "description": "主机型号；没有装入卡带时没有这一项"
+            },
+            "cartridge": {
+              "$ref": "#/components/schemas/runtime.CartridgeSummary",
+              "description": "当前的卡带；没有时没有这一项"
+            },
+            "frame": {
+              "type": "integer",
+              "description": "自上电以来完成的帧数",
+              "minimum": 0
+            },
+            "cycles": {
+              "type": "integer",
+              "description": "自上电以来的 CPU 周期数",
+              "minimum": 0
+            },
+            "speed": {
+              "type": "integer",
+              "description": "速度百分比，目前固定为 100",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "power",
+            "mode",
+            "frame",
+            "cycles",
+            "speed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "runtime.powerOn",
+      "summary": "上电：创建或重置全部芯片，卡带的存储区重新从文件载入",
+      "description": "上电：创建或重置全部芯片，卡带的存储区重新从文件载入；默认进入暂停，resume 为 true 时直接运行；已通电时等同硬复位。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "resume",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "上电后是否直接运行，默认 false"
+          },
+          "description": "上电后是否直接运行，默认 false"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "runtime.noCartridge",
+          "data": {
+            "code": "runtime.noCartridge"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtime.powerOff",
+      "summary": "断电：停止运行，芯片状态丢弃",
+      "description": "断电：停止运行，芯片状态丢弃；卡带保持插着。已断电时没有效果。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "runtime.reset",
+      "summary": "复位：soft 只发 RESET 线，不改变电源与运行模式",
+      "description": "复位：soft 只发 RESET 线，不改变电源与运行模式；hard 断电后再上电，运行模式保持。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "复位方式",
+            "enum": [
+              "soft",
+              "hard"
+            ]
+          },
+          "description": "复位方式"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "runtime.noCartridge",
+          "data": {
+            "code": "runtime.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "runtime.notPowered",
+          "data": {
+            "code": "runtime.notPowered"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtime.pause",
+      "summary": "暂停：已暂停时没有效果",
+      "description": "暂停：已暂停时没有效果；只在通电时有效。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "runtime.notPowered",
+          "data": {
+            "code": "runtime.notPowered"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtime.resume",
+      "summary": "继续：按真实帧率连续运行",
+      "description": "继续：按真实帧率连续运行；已在运行时没有效果；只在通电时有效。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "runtime.notPowered",
+          "data": {
+            "code": "runtime.notPowered"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtime.run",
+      "summary": "授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）",
+      "description": "授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）。wait 为 true 时等运行结束才返回结果（结果里有 stopped）；否则立即返回，运行结束时发事件 runtime.runFinished。已在授权运行中时旧的被打断，由新的替代；等待中的请求被取消（如连接断开）时运行被打断并暂停。之后会加入 cycles、scanlines、instructions 等其他授权量。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "frames",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "要运行的帧数",
+            "minimum": 1,
+            "maximum": 10000000
+          },
+          "description": "要运行的帧数"
+        },
+        {
+          "name": "wait",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "是否等运行结束再返回，默认 false"
+          },
+          "description": "是否等运行结束再返回，默认 false"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState",
+              "description": "返回时的运行状态"
+            },
+            "frames": {
+              "type": "integer",
+              "description": "实际运行的帧数；wait 为 false 时为 0",
+              "minimum": 0
+            },
+            "cycles": {
+              "type": "integer",
+              "description": "实际经过的 CPU 周期数；wait 为 false 时为 0",
+              "minimum": 0
+            },
+            "stopped": {
+              "type": "string",
+              "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；error 运行出错",
+              "enum": [
+                "completed",
+                "interrupted",
+                "powerOff",
+                "error"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "frames",
+            "cycles"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "runtime.noCartridge",
+          "data": {
+            "code": "runtime.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "runtime.notPowered",
+          "data": {
+            "code": "runtime.notPowered"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "runtime.setFrameEvents",
+      "summary": "设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）",
+      "description": "设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）。这是全局设置，对订阅了 runtime.frame 的所有连接生效。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "frames",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "间隔帧数，0 表示不发",
+            "minimum": 0,
+            "maximum": 3600
+          },
+          "description": "间隔帧数，0 表示不发"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "frames": {
+              "type": "integer",
+              "description": "设置之后的间隔帧数",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "frames"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [],
+      "x-debugOnly": true
+    },
+    {
+      "name": "system.version",
+      "summary": "返回应用版本与核心版本",
+      "description": "返回应用版本与核心版本。",
+      "tags": [
+        {
+          "name": "system"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "appVersion": {
+              "type": "string",
+              "description": "应用版本，取自安装包的版本号",
+              "minLength": 1
+            },
+            "coreVersion": {
+              "type": "string",
+              "description": "核心版本，取自核心的构建参数",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "appVersion",
+            "coreVersion"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "rpc.discover",
+      "summary": "返回本文档",
+      "description": "返回描述全部请求与事件的 OpenRPC 文档，工具可据此生成客户端与界面。",
+      "tags": [
+        {
+          "name": "rpc"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "document",
+        "schema": {
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "cartridges.RecentCartridge": {
+        "type": "object",
+        "description": "最近打开的清单里的一项：给界面看的显示名与编号，不含路径。",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "编号：本次运行内有效，用于 openRecent",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "显示名：文件名"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "cartridges.LoadedCartridge": {
+        "type": "object",
+        "description": "加载完成的卡带与加载后的运行状态。",
+        "properties": {
+          "cartridge": {
+            "$ref": "#/components/schemas/runtime.CartridgeSummary"
+          },
+          "state": {
+            "$ref": "#/components/schemas/runtime.RuntimeState"
+          }
+        },
+        "required": [
+          "cartridge",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "debug.DebugConnection": {
+        "type": "object",
+        "description": "一个已经通过握手的调试连接。",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "连接编号，本次运行内唯一",
+            "minimum": 1
+          },
+          "client": {
+            "type": "string",
+            "description": "客户端在 hello 里自报的名称"
+          },
+          "connectedAt": {
+            "type": "string",
+            "description": "握手完成的时间，UTC，ISO 8601"
+          }
+        },
+        "required": [
+          "id",
+          "client",
+          "connectedAt"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperMatchRule": {
+        "type": "object",
+        "description": "一项匹配条件：mapper 号必写，其余可选；写出的条件必须全部满足。",
+        "properties": {
+          "mapper": {
+            "type": "integer",
+            "description": "mapper 号",
+            "minimum": 0,
+            "maximum": 4095
+          },
+          "variant": {
+            "type": "integer",
+            "description": "变体",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "prgSize": {
+            "type": "integer",
+            "description": "PRG 的字节数",
+            "minimum": 0
+          },
+          "chrSize": {
+            "type": "integer",
+            "description": "CHR 的字节数",
+            "minimum": 0
+          },
+          "crc32Prg": {
+            "type": "string",
+            "description": "PRG 的 CRC-32，8 位十六进制",
+            "minLength": 8,
+            "maxLength": 8
+          },
+          "crc32All": {
+            "type": "string",
+            "description": "PRG 加 CHR 的 CRC-32，8 位十六进制",
+            "minLength": 8,
+            "maxLength": 8
+          }
+        },
+        "required": [
+          "mapper"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperSummary": {
+        "type": "object",
+        "description": "插件摘要，列表里的一行。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "插件标识",
+            "minLength": 3,
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "description": "显示名称",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "version": {
+            "type": "string",
+            "description": "插件版本，主.次.修订",
+            "minLength": 5,
+            "maxLength": 32
+          },
+          "publisher": {
+            "type": "string",
+            "description": "发布者",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "description": {
+            "type": "string",
+            "description": "说明",
+            "maxLength": 200
+          },
+          "host": {
+            "type": "array",
+            "description": "要求的主机型号",
+            "items": {
+              "type": "string"
+            }
+          },
+          "match": {
+            "type": "array",
+            "description": "匹配条件，任一项满足即匹配",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperMatchRule"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "来源：bundled 预装，user 用户安装",
+            "enum": [
+              "bundled",
+              "user"
+            ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "是否启用"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "publisher",
+          "host",
+          "match",
+          "source",
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperStorageInfo": {
+        "type": "object",
+        "description": "清单里的一个存储区。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "存储区标识"
+          },
+          "kind": {
+            "type": "string",
+            "description": "种类",
+            "enum": [
+              "rom",
+              "ram"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "description": "rom 的数据来源",
+            "enum": [
+              "file.prg",
+              "file.chr"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "description": "ram 的字节数",
+            "minimum": 0
+          },
+          "battery": {
+            "type": "boolean",
+            "description": "ram 是否带电池"
+          },
+          "fallbackSize": {
+            "type": "integer",
+            "description": "来源为空时改用的 ram 的字节数",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "battery"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperWindowInfo": {
+        "type": "object",
+        "description": "清单里的一个窗口。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "窗口标识"
+          },
+          "bus": {
+            "type": "string",
+            "description": "所在总线",
+            "enum": [
+              "cpu",
+              "ppu"
+            ]
+          },
+          "range": {
+            "type": "string",
+            "description": "地址范围，如 $8000-$9FFF"
+          },
+          "storage": {
+            "type": "string",
+            "description": "访问的存储区"
+          },
+          "size": {
+            "type": "integer",
+            "description": "一个 bank 的字节数",
+            "minimum": 1
+          },
+          "initial": {
+            "type": "string",
+            "description": "复位后指向的 bank：整数、first 或 last"
+          },
+          "access": {
+            "type": "string",
+            "description": "访问方式",
+            "enum": [
+              "r",
+              "rw"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "bus",
+          "range",
+          "storage",
+          "size",
+          "initial",
+          "access"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperRegisterInfo": {
+        "type": "object",
+        "description": "清单里的一段寄存器范围。",
+        "properties": {
+          "bus": {
+            "type": "string",
+            "description": "所在总线",
+            "enum": [
+              "cpu",
+              "ppu"
+            ]
+          },
+          "range": {
+            "type": "string",
+            "description": "地址范围"
+          },
+          "read": {
+            "type": "boolean",
+            "description": "是否回调读"
+          },
+          "write": {
+            "type": "boolean",
+            "description": "是否回调写"
+          }
+        },
+        "required": [
+          "bus",
+          "range",
+          "read",
+          "write"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperStateInfo": {
+        "type": "object",
+        "description": "清单里声明的一项脚本状态。",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "状态名"
+          },
+          "bits": {
+            "type": "integer",
+            "description": "位宽",
+            "minimum": 1,
+            "maximum": 32
+          },
+          "description": {
+            "type": "string",
+            "description": "说明"
+          }
+        },
+        "required": [
+          "name",
+          "bits",
+          "description"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperSettingOption": {
+        "type": "object",
+        "description": "choice 设置项的一个选项。",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "取值"
+          },
+          "label": {
+            "type": "string",
+            "description": "显示文字"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperSettingInfo": {
+        "type": "object",
+        "description": "清单里的一个设置项。",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "设置键"
+          },
+          "label": {
+            "type": "string",
+            "description": "显示文字"
+          },
+          "kind": {
+            "type": "string",
+            "description": "种类",
+            "enum": [
+              "text",
+              "choice",
+              "switch"
+            ]
+          },
+          "defaultValue": {
+            "description": "默认值：text 与 choice 为字符串，switch 为布尔值"
+          },
+          "description": {
+            "type": "string",
+            "description": "说明"
+          },
+          "options": {
+            "type": "array",
+            "description": "choice 的选项",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperSettingOption"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "kind",
+          "defaultValue"
+        ],
+        "additionalProperties": false
+      },
+      "mappers.MapperDetail": {
+        "type": "object",
+        "description": "插件详情：摘要加清单的各部分。",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/mappers.MapperSummary"
+          },
+          "storage": {
+            "type": "array",
+            "description": "存储区",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperStorageInfo"
+            }
+          },
+          "windows": {
+            "type": "array",
+            "description": "窗口",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperWindowInfo"
+            }
+          },
+          "nametable": {
+            "type": "string",
+            "description": "名称表的初始连法"
+          },
+          "registers": {
+            "type": "array",
+            "description": "寄存器范围",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperRegisterInfo"
+            }
+          },
+          "state": {
+            "type": "array",
+            "description": "脚本状态",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperStateInfo"
+            }
+          },
+          "settings": {
+            "type": "array",
+            "description": "设置项",
+            "items": {
+              "$ref": "#/components/schemas/mappers.MapperSettingInfo"
+            }
+          }
+        },
+        "required": [
+          "summary",
+          "storage",
+          "windows",
+          "nametable",
+          "registers",
+          "state",
+          "settings"
+        ],
+        "additionalProperties": false
+      },
+      "preferences.PreferenceGroup": {
+        "type": "object",
+        "description": "设置项的分组，首选项页左侧的一项。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "分组标识，如 appearance",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "description": "分组的显示名称",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "preferences.PreferenceOption": {
+        "type": "object",
+        "description": "选择类设置项的一个可选值。",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "保存的取值",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "description": "显示名称",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "preferences.PreferenceSetting": {
+        "type": "object",
+        "description": "一个设置项：登记的内容与当前的取值。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "设置项标识，分组标识加点再加名称，如 sound.buffer",
+            "minLength": 1
+          },
+          "group": {
+            "type": "string",
+            "description": "所属分组的标识",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "description": "显示名称",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "一两句话的说明"
+          },
+          "kind": {
+            "type": "string",
+            "description": "种类：choice 从 options 里选一个，switch 开关（布尔值），integer 范围内的整数，text 不超过 maxLength 个字节的文字",
+            "enum": [
+              "choice",
+              "switch",
+              "integer",
+              "text"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "description": "choice 的可选值，其他种类没有这一项",
+            "items": {
+              "$ref": "#/components/schemas/preferences.PreferenceOption"
+            }
+          },
+          "minimum": {
+            "type": "integer",
+            "description": "integer 的最小值，其他种类没有这一项"
+          },
+          "maximum": {
+            "type": "integer",
+            "description": "integer 的最大值，其他种类没有这一项"
+          },
+          "maxLength": {
+            "type": "integer",
+            "description": "text 的最大字节数（UTF-8），其他种类没有这一项",
+            "minimum": 1
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "为 true 时首选项页不显示，只保存取值（如音量）"
+          },
+          "defaultValue": {
+            "description": "出厂默认值：choice 为字符串，switch 为布尔值，integer 为整数"
+          },
+          "value": {
+            "description": "当前取值，类型同 defaultValue"
+          }
+        },
+        "required": [
+          "id",
+          "group",
+          "label",
+          "description",
+          "kind",
+          "hidden",
+          "defaultValue",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "runtime.CartridgeStorage": {
+        "type": "object",
+        "description": "卡带上的一块存储区。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "清单里的存储区标识"
+          },
+          "kind": {
+            "type": "string",
+            "description": "种类",
+            "enum": [
+              "rom",
+              "ram"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "description": "实际容量（字节）",
+            "minimum": 0
+          },
+          "battery": {
+            "type": "boolean",
+            "description": "是否带电池"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "size",
+          "battery"
+        ],
+        "additionalProperties": false
+      },
+      "runtime.CartridgeSummary": {
+        "type": "object",
+        "description": "插在卡槽里的卡带：文件头描述、匹配到的插件与存储区清单。",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "NES 文件的路径"
+          },
+          "mapper": {
+            "type": "integer",
+            "description": "mapper 号",
+            "minimum": 0
+          },
+          "variant": {
+            "type": "integer",
+            "description": "变体",
+            "minimum": 0
+          },
+          "prgSize": {
+            "type": "integer",
+            "description": "PRG 的字节数",
+            "minimum": 0
+          },
+          "chrSize": {
+            "type": "integer",
+            "description": "CHR 的字节数，没有 CHR 时为 0",
+            "minimum": 0
+          },
+          "mirroring": {
+            "type": "string",
+            "description": "文件头里的镜像方式",
+            "enum": [
+              "horizontal",
+              "vertical",
+              "four"
+            ]
+          },
+          "battery": {
+            "type": "boolean",
+            "description": "文件头里的电池标志"
+          },
+          "crc32Prg": {
+            "type": "string",
+            "description": "PRG 的 CRC-32，8 位十六进制",
+            "minLength": 8,
+            "maxLength": 8
+          },
+          "crc32All": {
+            "type": "string",
+            "description": "PRG 加 CHR 的 CRC-32，8 位十六进制",
+            "minLength": 8,
+            "maxLength": 8
+          },
+          "pluginId": {
+            "type": "string",
+            "description": "匹配到的插件标识"
+          },
+          "pluginName": {
+            "type": "string",
+            "description": "匹配到的插件显示名称"
+          },
+          "pluginVersion": {
+            "type": "string",
+            "description": "匹配到的插件版本"
+          },
+          "host": {
+            "type": "string",
+            "description": "装配的主机型号"
+          },
+          "storage": {
+            "type": "array",
+            "description": "存储区清单",
+            "items": {
+              "$ref": "#/components/schemas/runtime.CartridgeStorage"
+            }
+          }
+        },
+        "required": [
+          "path",
+          "mapper",
+          "variant",
+          "prgSize",
+          "chrSize",
+          "mirroring",
+          "battery",
+          "crc32Prg",
+          "crc32All",
+          "pluginId",
+          "pluginName",
+          "pluginVersion",
+          "host",
+          "storage"
+        ],
+        "additionalProperties": false
+      },
+      "runtime.RuntimeState": {
+        "type": "object",
+        "description": "运行状态：电源与运行模式；运行模式只在通电时有意义，断电时为 paused。",
+        "properties": {
+          "power": {
+            "type": "string",
+            "description": "电源：off 断电，on 通电",
+            "enum": [
+              "off",
+              "on"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "description": "运行模式：paused 暂停，running 连续运行",
+            "enum": [
+              "paused",
+              "running"
+            ]
+          }
+        },
+        "required": [
+          "power",
+          "mode"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "x-events": [
+    {
+      "name": "cartridges.loaded",
+      "description": "卡带装配完成。",
+      "tags": [
+        {
+          "name": "cartridges"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "cartridge": {
+            "$ref": "#/components/schemas/runtime.CartridgeSummary"
+          }
+        },
+        "required": [
+          "cartridge"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "debug.statusChanged",
+      "description": "服务的状态变了：开始或停止监听、有连接建立或断开。",
+      "tags": [
+        {
+          "name": "debug"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "是否开启"
+          },
+          "listening": {
+            "type": "boolean",
+            "description": "是否正在监听"
+          },
+          "port": {
+            "type": "integer",
+            "description": "监听的端口，没有监听时为 0",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "connections": {
+            "type": "integer",
+            "description": "当前的连接数",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "enabled",
+          "listening",
+          "port",
+          "connections"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "debug.eventsDropped",
+      "description": "只发给订阅事件的那条连接：客户端读得太慢，事件队列已满，丢弃了若干条事件；响应不会被丢弃。",
+      "tags": [
+        {
+          "name": "debug"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "自上一次通知以来丢弃的事件条数",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mappers.changed",
+      "description": "插件安装、卸载、启停或重新加载。",
+      "tags": [
+        {
+          "name": "mappers"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "变化的插件标识；重新加载时为 null"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "preferences.changed",
+      "description": "一个设置项的取值变了（界面修改、恢复默认、核心里的模块修改都会发出）。",
+      "tags": [
+        {
+          "name": "preferences"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "设置项标识",
+            "minLength": 1
+          },
+          "value": {
+            "description": "新的取值"
+          }
+        },
+        "required": [
+          "id",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "runtime.stateChanged",
+      "description": "电源或运行模式改变（含装入或取出卡带）。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "power": {
+            "type": "string",
+            "description": "新的电源状态",
+            "enum": [
+              "off",
+              "on"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "description": "新的运行模式",
+            "enum": [
+              "paused",
+              "running"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停",
+            "enum": [
+              "load",
+              "eject",
+              "powerOn",
+              "powerOff",
+              "reset",
+              "pause",
+              "resume",
+              "run",
+              "runEnded",
+              "error"
+            ]
+          }
+        },
+        "required": [
+          "power",
+          "mode",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "runtime.frame",
+      "description": "每完成一帧发出；默认不订阅，开启后才发布。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "frame": {
+            "type": "integer",
+            "description": "帧号",
+            "minimum": 0
+          },
+          "cycles": {
+            "type": "integer",
+            "description": "自上电以来的 CPU 周期数",
+            "minimum": 0
+          },
+          "pc": {
+            "type": "integer",
+            "description": "CPU 的程序计数器",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        },
+        "required": [
+          "frame",
+          "cycles",
+          "pc"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "runtime.runFinished",
+      "description": "授权运行（run）结束：跑完、或被暂停、继续、复位、断电、换卡带、新的授权运行或出错打断。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "frames": {
+            "type": "integer",
+            "description": "实际运行的帧数",
+            "minimum": 0
+          },
+          "cycles": {
+            "type": "integer",
+            "description": "实际经过的 CPU 周期数",
+            "minimum": 0
+          },
+          "stopped": {
+            "type": "string",
+            "description": "停止原因，含义同 run 的结果",
+            "enum": [
+              "completed",
+              "interrupted",
+              "powerOff",
+              "error"
+            ]
+          }
+        },
+        "required": [
+          "frames",
+          "cycles",
+          "stopped"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "runtime.error",
+      "description": "运行中的错误，如 mapper 脚本异常；发出后模拟器已暂停。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "module": {
+            "type": "string",
+            "description": "出错的模块"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误码"
+          },
+          "message": {
+            "type": "string",
+            "description": "面向用户的说明"
+          }
+        },
+        "required": [
+          "module",
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

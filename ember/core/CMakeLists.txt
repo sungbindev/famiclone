@@ -95,6 +95,11 @@ target_include_directories(ember_core_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
 target_link_libraries(ember_core_lib PUBLIC ember_json ember_miniz PRIVATE ember_quickjs ember_miniaudio)
 target_compile_definitions(ember_core_lib PUBLIC EMBER_CORE_VERSION="${EMBER_CORE_VERSION}")
 
+# 调试服务的 TCP 监听（platform/network）：Windows 用 Winsock。
+if(WIN32)
+  target_link_libraries(ember_core_lib PUBLIC ws2_32)
+endif()
+
 if(MSVC)
   target_compile_options(ember_core_lib PUBLIC /utf-8 /W4 /permissive- /EHsc)
 else()

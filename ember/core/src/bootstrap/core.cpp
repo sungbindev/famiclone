@@ -20,6 +20,7 @@
 #include "bootstrap/module-registry.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "platform/events/event-sink.hpp"
+#include "platform/events/event-source.hpp"
 #include "platform/logging/file-error-log.hpp"
 #include "platform/requests/cancellation.hpp"
 #include "platform/requests/request-router.hpp"
@@ -36,26 +37,47 @@ namespace ember::bootstrap {
 
 namespace json_fields = shared::json_fields;
 
-/** 把模块发布的事件转给事件处理函数。 */
-class CoreEvents final : public platform::EventSink {
+/** 把模块发布的事件转给事件处理函数，并转给其他订阅者（调试服务）。 */
+class CoreEvents final : public platform::EventSink, public platform::EventSource {
  public:
   void setHandler(Core::EventHandler handler) {
     std::lock_guard lock(mutex_);
     handler_ = std::move(handler);
   }
 
+  void subscribe(Listener listener) override {
+    std::lock_guard lock(mutex_);
+    listeners_.push_back(std::move(listener));
+  }
+
+  void clearListeners() {
+    std::lock_guard lock(mutex_);
+    listeners_.clear();
+  }
+
   void publish(std::string_view name, const nlohmann::json& data) override {
     Core::EventHandler handler;
+    std::vector<Listener> listeners;
     {
       std::lock_guard lock(mutex_);
       handler = handler_;
+      listeners = listeners_;
     }
     if (handler) handler(std::string(name), data.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
+    const std::string eventName(name);
+    for (const auto& listener : listeners) {
+      try {
+        listener(eventName, data);
+      } catch (...) {
+        // 订阅者失败不影响事件的发布和其他订阅者。
+      }
+    }
   }
 
  private:
   std::mutex mutex_;
   Core::EventHandler handler_;
+  std::vector<Listener> listeners_;
 };
 
 /** 把运行模块发布的帧转给帧处理函数；没有处理函数时丢弃。 */
@@ -127,7 +149,7 @@ std::string Core::start(const std::string& optionsJson) {
   const auto options = nlohmann::json::parse(optionsJson, nullptr, false);
   if (options.is_discarded()) throw shared::SchemaError("启动参数不是合法的 JSON");
   json_fields::requireObject(options, "options");
-  json_fields::rejectUnknown(options, "options", {"userDataPath", "appVersion", "workerCount", "bundledPluginsPath"});
+  json_fields::rejectUnknown(options, "options", {"userDataPath", "appVersion", "workerCount", "bundledPluginsPath", "debugPort", "debugToken"});
   const auto* userDataField = json_fields::find(options, "userDataPath");
   if (userDataField == nullptr) throw shared::SchemaError("options.userDataPath 缺少");
   const auto userDataText = json_fields::readString(*userDataField, "options.userDataPath", 1, std::nullopt, {});
@@ -138,6 +160,11 @@ std::string Core::start(const std::string& optionsJson) {
   const auto workerCount = workerField == nullptr ? 0 : json_fields::readInteger(*workerField, "options.workerCount", 1, 64);
   const auto* bundledField = json_fields::find(options, "bundledPluginsPath");
   const auto bundledText = bundledField == nullptr ? std::string() : json_fields::readString(*bundledField, "options.bundledPluginsPath", 1, std::nullopt, {});
+  const auto* debugPortField = json_fields::find(options, "debugPort");
+  std::optional<std::uint16_t> debugPort;
+  if (debugPortField != nullptr) debugPort = static_cast<std::uint16_t>(json_fields::readInteger(*debugPortField, "options.debugPort", 1, 65535));
+  const auto* debugTokenField = json_fields::find(options, "debugToken");
+  const auto debugToken = debugTokenField == nullptr ? std::string() : json_fields::readString(*debugTokenField, "options.debugToken", 1, 128, {});
 
   const std::filesystem::path userDataPath(std::u8string(userDataText.begin(), userDataText.end()));
   auto clock = std::make_shared<platform::SystemClock>();
@@ -145,11 +172,13 @@ std::string Core::start(const std::string& optionsJson) {
   auto router = std::make_unique<platform::RequestRouter>();
 
   std::vector<std::function<void()>> stopHandlers;
+  std::vector<std::function<void()>> startHandlers;
   ModuleServices services;
-  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), frames_, services, stopHandlers};
+  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), frames_, services, stopHandlers, startHandlers, events_, debugPort, debugToken};
   try {
     for (const auto& module : moduleList()) module.registerModule(registry);
     runtime_ = services.require<contracts::runtime::RuntimeService>();
+    for (const auto& handler : startHandlers) handler();
   } catch (...) {
     for (auto it = stopHandlers.rbegin(); it != stopHandlers.rend(); ++it) (*it)();
     throw;
@@ -238,6 +267,7 @@ void Core::stop() {
   stopHandlers_.clear();
   errors_.reset();
   events_->setHandler(nullptr);
+  events_->clearListeners();
   frames_->setHandler(nullptr);
   started_ = false;
 }

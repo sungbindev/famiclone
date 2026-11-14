@@ -63,36 +63,41 @@ export function PreferenceRow({ setting, onChange, onReset }: PreferenceRowProps
     }
   };
 
-  const submitInteger = async (): Promise<void> => {
+  const submitInput = async (): Promise<void> => {
     if (active === null) return;
-    const parsed = parseInteger(active.text, setting);
-    if (!parsed.ok) {
-      setEdit({ ...active, error: parsed.message });
-      return;
+    // 整数先解析与检查范围，文字原样提交（长度等限制由核心校验）。
+    let next: unknown = active.text;
+    if (setting.kind === 'integer') {
+      const parsed = parseInteger(active.text, setting);
+      if (!parsed.ok) {
+        setEdit({ ...active, error: parsed.message });
+        return;
+      }
+      next = parsed.value;
     }
-    if (parsed.value === value) {
+    if (next === value) {
       setEdit(null);
       return;
     }
     setEdit({ ...active, error: '' });
     // 成功后输入作废，显示改由刷新后的当前值给出；失败时同样回到原值。
-    await save(parsed.value);
+    await save(next);
     setEdit(null);
   };
 
   let control;
   if (setting.kind === 'switch') {
     control = <Checkbox label={TEXT.switchOn} aria-label={setting.label} checked={value === true} onChange={(checked) => void save(checked)} />;
-  } else if (setting.kind === 'integer') {
+  } else if (setting.kind === 'integer' || setting.kind === 'text') {
     control = (
       <TextInput
-        inputMode="numeric"
+        inputMode={setting.kind === 'integer' ? 'numeric' : 'text'}
         aria-label={setting.label}
         value={text}
         invalid={error !== ''}
         onChange={(next) => setEdit({ basedOn: value, text: next, error: '' })}
-        onBlur={() => void submitInteger()}
-        onEnter={() => void submitInteger()}
+        onBlur={() => void submitInput()}
+        onEnter={() => void submitInput()}
       />
     );
   } else {

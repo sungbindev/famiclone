@@ -39,6 +39,10 @@ export type CoreHostInbound =
       readonly appVersion: string;
       /** 预装的 mapper 插件目录；没有时省略。 */
       readonly bundledPluginsPath?: string;
+      /** 启动参数 --debug-port 指定的调试服务端口；有值时本次运行强制开启调试服务。 */
+      readonly debugPort?: number;
+      /** 启动参数 --debug-token 指定的调试令牌；没有时用首选项里的令牌。 */
+      readonly debugToken?: string;
     }
   | { readonly type: 'request'; readonly id: string; readonly name: string; readonly params: unknown }
   | { readonly type: 'cancel'; readonly id: string }

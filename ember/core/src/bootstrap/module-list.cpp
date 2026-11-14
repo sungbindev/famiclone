@@ -12,6 +12,8 @@
 #include "bootstrap/module-list.hpp"
 
 #include "bootstrap/modules/cartridges.hpp"
+#include "bootstrap/modules/debug.hpp"
+#include "bootstrap/modules/input.hpp"
 #include "bootstrap/modules/mappers.hpp"
 #include "bootstrap/modules/output.hpp"
 #include "bootstrap/modules/preferences.hpp"
@@ -29,7 +31,9 @@ constexpr ModuleRegistration MODULES[] = {
     {"mappers", registerMappers},
     {"output", registerOutput},
     {"runtime", registerRuntime},
+    {"input", registerInput},
     {"cartridges", registerCartridges},
+    {"debug", registerDebug},
 };
 
 }  // namespace

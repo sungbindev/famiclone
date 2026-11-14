@@ -14,11 +14,13 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "bootstrap/module-services.hpp"
 #include "platform/events/event-sink.hpp"
+#include "platform/events/event-source.hpp"
 #include "platform/logging/error-log.hpp"
 #include "platform/requests/request-router.hpp"
 #include "platform/streams/frame-output.hpp"
@@ -45,6 +47,14 @@ struct ModuleRegistry {
   ModuleServices& services;
   /** 核心停止时、等待请求结束之前按登记的相反顺序调用，用于停下模块自己的后台工作。 */
   std::vector<std::function<void()>>& stopHandlers;
+  /** 全部模块登记完之后、开始处理请求之前按登记的顺序调用，用于绑定排在自己后面登记的模块提供的服务。 */
+  std::vector<std::function<void()>>& startHandlers;
+  /** 事件的订阅源：调试服务用它把核心的全部事件推给订阅的连接。 */
+  std::shared_ptr<platform::EventSource> eventSource;
+  /** 启动参数指定的调试端口（主进程的 --debug-port）；有值时本次运行强制开启调试服务，不写入首选项。 */
+  std::optional<std::uint16_t> debugPort;
+  /** 启动参数指定的调试令牌（--debug-token）；空表示用首选项里的令牌。 */
+  std::string debugToken;
 };
 
 /** 一个模块的登记项。 */

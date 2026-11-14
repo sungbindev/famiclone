@@ -25,7 +25,7 @@ namespace ember::contracts::preferences {
 using SettingValue = std::variant<bool, std::int64_t, std::string>;
 
 /** 设置项的种类。 */
-enum class SettingKind : std::uint8_t { Choice, Switch, Integer };
+enum class SettingKind : std::uint8_t { Choice, Switch, Integer, Text };
 
 /** 一个分组。 */
 struct GroupDefinition {
@@ -57,6 +57,8 @@ struct SettingDefinition {
   /** integer 的范围。 */
   std::int64_t minimum{0};
   std::int64_t maximum{0};
+  /** text 的最大字节数（UTF-8）。 */
+  std::int64_t maxLength{256};
   /** 首选项页不显示，只保存取值。 */
   bool hidden{false};
   /** 出厂默认值，必须符合种类与范围。 */
@@ -72,7 +74,7 @@ struct SettingEntry {
 /** 首选项服务。 */
 class PreferenceService {
  public:
-  /** 取值变化的回调：设置项标识与新的取值；在修改的线程里调用，不能阻塞，不能再修改首选项。 */
+  /** 取值变化的回调：设置项标识与新的取值；在修改的线程里、不持有锁时调用，不能阻塞；可以再修改首选项（会再通知一次）。 */
   using Listener = std::function<void(const std::string& id, const SettingValue& value)>;
 
   virtual ~PreferenceService() = default;

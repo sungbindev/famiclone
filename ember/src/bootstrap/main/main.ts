@@ -29,7 +29,7 @@ import { FileShellStateService } from '../../infra/shell-state/file-shell-state-
 import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
 import { startElectronCoreProcess } from '../../platform/core-process/core-process';
 import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
-import { cartridgePathFromArgv } from '../../platform/launch/launch-args';
+import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/launch/launch-args';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
@@ -77,6 +77,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const rendererFile = join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', NATIVE_FILE);
   const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(app.getAppPath(), 'build', PLUGINS_DIRECTORY);
+  // --debug-port 指定时本次运行强制开启调试服务（不写入首选项），--debug-token 指定令牌。
+  const debugLaunch = debugOptionsFromArgv(process.argv);
 
   const gateway = new ProcessCoreGateway({
     startProcess: () => startElectronCoreProcess(join(__dirname, 'core-host.cjs')),
@@ -84,6 +86,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     userDataPath,
     appVersion: app.getVersion(),
     bundledPluginsPath,
+    ...(debugLaunch.port === undefined ? {} : { debugPort: debugLaunch.port }),
+    ...(debugLaunch.token === undefined ? {} : { debugToken: debugLaunch.token }),
     logger
   });
   const streamHub = new StreamPortHub({ channels: createElectronChannelFactory(), core: gateway, logger });

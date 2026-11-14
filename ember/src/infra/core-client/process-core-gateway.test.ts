@@ -171,6 +171,13 @@ describe('ProcessCoreGateway', () => {
     expect(current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0', bundledPluginsPath: 'D:/ember/build/plugins' });
   });
 
+  it('给了调试端口与令牌时随启动消息交给核心，没有时不带这两项', () => {
+    const { current } = setup(() => 0, { debugPort: 5688, debugToken: 'secret' });
+    expect(current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0', debugPort: 5688, debugToken: 'secret' });
+    const plain = setup();
+    expect(plain.current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0' });
+  });
+
   it('把画面与输入端口随 streams 消息转移给核心进程', () => {
     const { gateway, current } = setup();
     const frames = { name: 'frames' };

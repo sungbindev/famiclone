@@ -45,6 +45,7 @@ function initialSettings(): PreferenceSetting[] {
     },
     { id: 'sound.startMuted', group: 'sound', label: '启动时静音', description: '音量在边栏调整。', kind: 'switch', hidden: false, defaultValue: false, value: false },
     { id: 'sound.fade', group: 'sound', label: '淡入毫秒', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: false, defaultValue: 10, value: 10 },
+    { id: 'sound.note', group: 'sound', label: '备注', description: '', kind: 'text', maxLength: 8, hidden: false, defaultValue: '', value: 'abc' },
     { id: 'sound.volume', group: 'sound', label: '音量', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: true, defaultValue: 100, value: 100 }
   ];
 }
@@ -153,6 +154,22 @@ describe('PreferencesPage：修改', () => {
     await userEvent.clear(input);
     await userEvent.type(input, '30{Enter}');
     await waitFor(() => expect(page.set).toHaveBeenCalledWith({ id: 'sound.fade', value: 30 }));
+  });
+
+  it('文字在按回车时原样提交；改回原值时不提交，已经不是默认值时出现“恢复默认”', async () => {
+    const page = setup();
+    await screen.findByText('主题');
+    await userEvent.click(screen.getByText('声音'));
+    const input = await screen.findByRole('textbox', { name: '备注' });
+    expect((input as HTMLInputElement).value).toBe('abc');
+    expect(screen.getByRole('button', { name: '恢复默认：备注' })).toBeTruthy();
+    await userEvent.clear(input);
+    await userEvent.type(input, '新 备注{Enter}');
+    await waitFor(() => expect(page.set).toHaveBeenCalledWith({ id: 'sound.note', value: '新 备注' }));
+    page.set.mockClear();
+    await userEvent.clear(input);
+    await userEvent.type(input, '新 备注{Enter}');
+    expect(page.set).not.toHaveBeenCalled();
   });
 
   it('保存失败时用通知提示核心的说明，控件保持原值', async () => {

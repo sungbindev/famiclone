@@ -16,6 +16,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { generateOpenRpc, generateOpenRpcCpp } from './openrpc.mjs';
 
 const MODULE_NAME_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 /** 各模块 Schema 文件名的后缀，前面是模块名。 */
@@ -593,6 +594,14 @@ export function generate(root) {
     writeIfChanged(join(root, 'core', 'src', 'contracts', module.name, 'generated', `${module.name}.cpp`), cpp.source, written);
   }
   writeIfChanged(join(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts'), generateTsIndex(modules), written);
+  // 调试服务的接口描述文档（OpenRPC）：写到 docs/api，并生成核心 debug 模块里的 C++ 常量。
+  if (modules.some((module) => module.name === 'debug')) {
+    const document = generateOpenRpc(modules);
+    writeIfChanged(join(root, 'docs', 'api', 'openrpc.json'), `${JSON.stringify(document, null, 2)}\n`, written);
+    const cpp = generateOpenRpcCpp(document, CPP_HEADER('schema/*.schema.json'));
+    writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.hpp'), cpp.header, written);
+    writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.cpp'), cpp.source, written);
+  }
   const names = new Set(modules.map((module) => module.name));
   removeStale(join(root, 'src', 'contracts'), names, removed);
   removeStale(join(root, 'core', 'src', 'contracts'), names, removed);

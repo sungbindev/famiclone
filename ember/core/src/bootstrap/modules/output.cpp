@@ -12,10 +12,14 @@
 #include "bootstrap/modules/output.hpp"
 
 #include <exception>
+#include <filesystem>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "bootstrap/machines/machine-catalog.hpp"
+#include "contracts/runtime/runtime-service.hpp"
+#include "infra/output/png-screenshot-service.hpp"
 #include "contracts/output/output-service.hpp"
 #include "contracts/output/output-settings.hpp"
 #include "contracts/preferences/preference-service.hpp"
@@ -76,7 +80,16 @@ void registerOutput(ModuleRegistry& registry) {
   preferences->subscribe([service](const std::string& id, const contracts::preferences::SettingValue& value) { service->applyPreference(id, value); });
   registry.services.provide<platform::AudioOutput>(audio);
   registry.services.provide<contracts::output::OutputService>(service);
-  requests::output::addOutputRequests(registry.requests, service);
+  // 截图要用运行服务（排在本模块之后登记），在全部模块登记完之后再绑定。
+  const auto userData = registry.userDataPath;
+  auto screenshots = std::make_shared<infra::output::PngScreenshotService>([preferences, userData] {
+    const auto value = preferences->value(contracts::output::SETTING_DEBUG_OUTPUT_DIRECTORY);
+    const auto* text = std::get_if<std::string>(&value);
+    if (text == nullptr || text->empty()) return userData / "debug-output";
+    return std::filesystem::path(std::u8string(text->begin(), text->end()));
+  });
+  registry.startHandlers.push_back([screenshots, &registry] { screenshots->bindRuntime(registry.services.require<contracts::runtime::RuntimeService>()); });
+  requests::output::addOutputRequests(registry.requests, service, screenshots);
 }
 
 }  // namespace ember::bootstrap

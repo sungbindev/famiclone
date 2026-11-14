@@ -13,11 +13,12 @@
 #include <memory>
 
 #include "contracts/output/output-service.hpp"
+#include "contracts/output/screenshot-service.hpp"
 #include "platform/requests/request-router.hpp"
 
 namespace ember::requests::output {
 
 /** 登记 output 模块的请求。 */
-void addOutputRequests(platform::RequestRouter& router, std::shared_ptr<contracts::output::OutputService> service);
+void addOutputRequests(platform::RequestRouter& router, std::shared_ptr<contracts::output::OutputService> service, std::shared_ptr<contracts::output::ScreenshotService> screenshots);
 
 }  // namespace ember::requests::output

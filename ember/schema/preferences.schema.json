@@ -28,10 +28,11 @@
         "group": { "type": "string", "minLength": 1, "description": "所属分组的标识" },
         "label": { "type": "string", "minLength": 1, "description": "显示名称" },
         "description": { "type": "string", "description": "一两句话的说明" },
-        "kind": { "type": "string", "enum": ["choice", "switch", "integer"], "description": "种类：choice 从 options 里选一个，switch 开关（布尔值），integer 范围内的整数" },
+        "kind": { "type": "string", "enum": ["choice", "switch", "integer", "text"], "description": "种类：choice 从 options 里选一个，switch 开关（布尔值），integer 范围内的整数，text 不超过 maxLength 个字节的文字" },
         "options": { "type": "array", "items": { "$ref": "#/types/PreferenceOption" }, "description": "choice 的可选值，其他种类没有这一项" },
         "minimum": { "type": "integer", "description": "integer 的最小值，其他种类没有这一项" },
         "maximum": { "type": "integer", "description": "integer 的最大值，其他种类没有这一项" },
+        "maxLength": { "type": "integer", "minimum": 1, "description": "text 的最大字节数（UTF-8），其他种类没有这一项" },
         "hidden": { "type": "boolean", "description": "为 true 时首选项页不显示，只保存取值（如音量）" },
         "defaultValue": { "description": "出厂默认值：choice 为字符串，switch 为布尔值，integer 为整数" },
         "value": { "description": "当前取值，类型同 defaultValue" }

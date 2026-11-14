@@ -78,9 +78,16 @@ function start(message: Extract<CoreHostInbound, { type: 'start' }>): void {
         // 无法解析的事件丢弃。
       }
     });
-    const { userDataPath, appVersion, bundledPluginsPath } = message;
+    const { userDataPath, appVersion, bundledPluginsPath, debugPort, debugToken } = message;
     loaded.onFrame((pixels, width, height, frame) => streams.sendFrame(pixels, width, height, frame, Date.now()));
-    const info = JSON.parse(loaded.start(JSON.stringify({ userDataPath, appVersion, ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }) }))) as { coreVersion: string };
+    const startOptions = {
+      userDataPath,
+      appVersion,
+      ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }),
+      ...(debugPort === undefined ? {} : { debugPort }),
+      ...(debugToken === undefined ? {} : { debugToken })
+    };
+    const info = JSON.parse(loaded.start(JSON.stringify(startOptions))) as { coreVersion: string };
     native = loaded;
     send({ type: 'ready', coreVersion: info.coreVersion });
   } catch (error) {

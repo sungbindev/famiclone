@@ -130,10 +130,10 @@ export async function pressKey(page, { key, code, keyCode }, holdMs) {
 
 /**
  * 启动开发版（electron-forge start）：临时用户数据目录，主进程直接加载一张卡带，开 CDP 调试端口。
- * @param {{ port: number, romPath: string, windowPlacement?: { x: number, y: number } }} settings CDP 端口、卡带路径，以及可选的预置窗口位置（写进临时数据目录的界面状态；窗口大小每次启动都是最小尺寸）。
+ * @param {{ port: number, romPath: string, windowPlacement?: { x: number, y: number }, extraArguments?: string[] }} settings CDP 端口、卡带路径，以及可选的预置窗口位置（写进临时数据目录的界面状态；窗口大小每次启动都是最小尺寸）与附加的启动参数（如 --debug-port）。
  * @returns 句柄：pid、是否已退出、最近的输出、临时数据目录、等页面出现的函数、停止并清理的函数。
  */
-export function startDevApp({ port, romPath, windowPlacement }) {
+export function startDevApp({ port, romPath, windowPlacement, extraArguments = [] }) {
   const packageName = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8')).name;
   if (packageName !== 'ember' || !existsSync(join(projectRoot, 'forge.config.mts'))) throw new Error(`不是 Ember 项目目录：${projectRoot}`);
   if (!existsSync(romPath)) throw new Error(`找不到测试 ROM：${romPath}`);
@@ -144,7 +144,7 @@ export function startDevApp({ port, romPath, windowPlacement }) {
     writeFileSync(join(userDataDirectory, 'config', 'shell-state.json'), JSON.stringify({ window: windowPlacement, layout: { bottomPanelHeight: null } }));
   }
   const forgeBin = join(dirname(createRequire(import.meta.url).resolve('@electron-forge/cli/package.json')), 'dist', 'electron-forge.js');
-  const forge = spawn(process.execPath, [forgeBin, 'start', '--', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDirectory}`, `--cartridge=${romPath}`], {
+  const forge = spawn(process.execPath, [forgeBin, 'start', '--', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDirectory}`, `--cartridge=${romPath}`, ...extraArguments], {
     cwd: projectRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: process.platform !== 'win32',

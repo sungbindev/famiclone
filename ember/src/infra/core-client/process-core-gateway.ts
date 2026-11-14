@@ -47,6 +47,10 @@ export interface ProcessCoreGatewayOptions {
   readonly appVersion: string;
   /** 预装的 mapper 插件目录；没有时省略。 */
   readonly bundledPluginsPath?: string;
+  /** 启动参数 --debug-port 指定的调试服务端口；有值时本次运行强制开启调试服务。 */
+  readonly debugPort?: number;
+  /** 启动参数 --debug-token 指定的令牌；没有时用首选项里的令牌。 */
+  readonly debugToken?: string;
   /** 错误日志。 */
   readonly logger: ErrorLogger;
   /** 当前时间（毫秒），测试可替换。 */
@@ -167,8 +171,16 @@ export class ProcessCoreGateway implements CoreGateway, CoreStreamSink {
     this.process = child;
     child.onMessage((message) => this.receive(message as CoreHostOutbound));
     child.onExit((code) => this.exited(child, code));
-    const { nativePath, userDataPath, appVersion, bundledPluginsPath } = this.options;
-    this.post({ type: 'start', nativePath, userDataPath, appVersion, ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }) });
+    const { nativePath, userDataPath, appVersion, bundledPluginsPath, debugPort, debugToken } = this.options;
+    this.post({
+      type: 'start',
+      nativePath,
+      userDataPath,
+      appVersion,
+      ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }),
+      ...(debugPort === undefined ? {} : { debugPort }),
+      ...(debugToken === undefined ? {} : { debugToken })
+    });
     for (const listener of this.startedListeners) {
       try {
         listener();

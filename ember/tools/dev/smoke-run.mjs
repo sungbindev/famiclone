@@ -17,7 +17,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { connectCdp, findDescendants, killTree, parseArguments, pressKey, projectRoot as root, saveScreenshot, sleep, startDevApp, waitFor } from './dev-support.mjs';
 
@@ -33,9 +33,15 @@ const MIN_SYSTEM_BUTTON_GAP = 8;
 const FRAME_RATIO = 128 / 105;
 /** 预置的窗口位置：窗口大小每次启动都是最小尺寸，这里只固定位置。 */
 const START_PLACEMENT = { x: 400, y: 60 };
+/** 调试服务的令牌（启动参数 --debug-token）。 */
+const DEBUG_TOKEN = 'smoke-token';
+
+/** 比较“当前取值是否等于出厂默认值”时跳过令牌：令牌的默认值是空，核心启动时自动生成并保存。 */
+const comparable = (setting) => setting.id !== 'debug.token';
 
 const options = parseArguments(process.argv.slice(2));
 const port = Number(options.get('port') ?? 9302);
+const debugPort = Number(options.get('debug-port') ?? 5699);
 const seconds = Number(options.get('seconds') ?? 3);
 const romOption = options.get('rom') ?? DEFAULT_ROM;
 const romPath = isAbsolute(romOption) ? romOption : join(root, 'core', 'test', 'data', romOption);
@@ -158,6 +164,53 @@ async function hoverMenuItem(label) {
 
 // ---------------------------------------------------------------- 主流程
 
+/**
+ * 连接调试服务（Node 自带的 WebSocket）：返回 call（发 JSON-RPC 请求并等响应）、收到的通知、关闭码。
+ * @param {string} url 端点文件里的地址。
+ */
+function openDebugSocket(url) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const socket = new WebSocket(url);
+    const pending = new Map();
+    let nextId = 1;
+    const client = { notifications: [], closeCode: undefined, closed: false };
+    client.call = (method, params = {}) =>
+      new Promise((resolveCall) => {
+        const id = nextId++;
+        pending.set(id, resolveCall);
+        socket.send(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
+      });
+    client.close = () => socket.close();
+    socket.addEventListener('message', (event) => {
+      if (typeof event.data !== 'string') return;
+      const message = JSON.parse(event.data);
+      if (message.id !== undefined && pending.has(message.id)) {
+        pending.get(message.id)(message);
+        pending.delete(message.id);
+      } else if (message.method !== undefined) {
+        client.notifications.push(message);
+      }
+    });
+    socket.addEventListener('open', () => resolvePromise(client));
+    socket.addEventListener('error', () => rejectPromise(new Error(`无法连接调试服务：${url}`)));
+    socket.addEventListener('close', (event) => {
+      client.closeCode = event.code;
+      client.closed = true;
+    });
+  });
+}
+
+/** 读端点文件；还没有时为 undefined。 */
+function readEndpoint() {
+  const file = join(app.userDataDirectory, 'run', 'debug-endpoint.json');
+  if (!existsSync(file)) return undefined;
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
 async function main() {
   if (!options.has('no-build')) {
     for (const script of ['schema', 'core:build']) {
@@ -167,7 +220,7 @@ async function main() {
   }
 
   console.log(`启动开发版：ROM=${romPath}，调试端口=${port}`);
-  app = startDevApp({ port, romPath, windowPlacement: START_PLACEMENT });
+  app = startDevApp({ port, romPath, windowPlacement: START_PLACEMENT, extraArguments: [`--debug-port=${debugPort}`, `--debug-token=${DEBUG_TOKEN}`] });
   const target = await app.waitForPage();
   page = await connectCdp(target.webSocketDebuggerUrl);
   await page.send('Runtime.enable');
@@ -310,8 +363,10 @@ async function main() {
   // 首选项：核心登记的设置项与出厂默认值、非法取值被拒绝；改画面比例与“显示全部 240 行”后运行页的画面框立即跟着变；改主题后系统主题立即切换；调试服务改音量会保存到首选项；最后全部恢复默认。
   const listed = await page.evaluate('window.ember.core.preferences.list({})');
   const valueOf = (id) => listed.settings.find((setting) => setting.id === id)?.value;
-  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume'];
-  check('首选项列出了登记的 7 个设置项，取值都是出厂默认值', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.value}`).join('，'));
+  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'debug.enabled', 'debug.port', 'debug.token'];
+  // 令牌的默认值是空，核心启动时自动生成并保存，所以不与默认值比较，单独检查。
+  check('首选项列出了登记的 10 个设置项，取值都是出厂默认值（令牌除外）', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && (!comparable(setting) || JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.id === 'debug.token' ? '…' : setting.value}`).join('，'));
+  check('调试服务的令牌已经自动生成（32 个字母与数字），默认端口 5688、默认不开启（启动参数强制开启不改首选项）', /^[A-Za-z0-9]{32}$/.test(String(valueOf('debug.token'))) && valueOf('debug.port') === 5688 && valueOf('debug.enabled') === false);
   check('出厂默认值：主题跟随系统、画面比例 8:7、适应窗口、显示全部行、缓冲标准、启动时不静音、音量 100', valueOf('appearance.theme') === 'system' && valueOf('display.aspect') === '8:7' && valueOf('display.scaling') === 'fit' && valueOf('display.showAllLines') === true && valueOf('sound.buffer') === 'standard' && valueOf('sound.startMuted') === false && valueOf('sound.volume') === 100);
   const invalid = await page.evaluate(`window.ember.core.preferences.set({ id: 'display.aspect', value: '16:9' }).then(() => 'accepted', (error) => error?.code ?? 'failed')`);
   check('不在可选范围内的取值被拒绝（preferences.invalidValue）', invalid === 'preferences.invalidValue', String(invalid));
@@ -350,7 +405,40 @@ async function main() {
   await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.buffer' })`);
   await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.volume' })`);
   const afterReset = (await page.evaluate('window.ember.core.preferences.list({})')).settings;
-  check('全部恢复默认后与出厂默认值一致', afterReset.every((setting) => JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)));
+  check('全部恢复默认后与出厂默认值一致（令牌除外）', afterReset.filter(comparable).every((setting) => JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)));
+
+  // 调试服务：启动参数 --debug-port 强制开启，端点文件里有地址与令牌；用 WebSocket 握手、请求、订阅事件、发现接口；令牌不对被关闭；界面通道能读到服务状态。
+  const endpoint = await waitFor(() => Promise.resolve(readEndpoint()), (value) => value !== undefined, 10_000, 100);
+  check('调试服务按 --debug-port 开启，端点文件里有地址与令牌', endpoint?.port === debugPort && endpoint?.token === DEBUG_TOKEN && endpoint?.url === `ws://127.0.0.1:${debugPort}/`, JSON.stringify({ url: endpoint?.url, pid: endpoint?.pid }));
+  const debugStatus = await page.evaluate('window.ember.core.debug.status({})');
+  check('界面通道的 debug.status 显示已开启并在监听', debugStatus.enabled === true && debugStatus.listening === true && debugStatus.port === debugPort, JSON.stringify(debugStatus));
+  const debugClient = await openDebugSocket(endpoint.url);
+  const helloReply = await debugClient.call('debug.hello', { client: 'smoke', token: DEBUG_TOKEN });
+  check('调试连接握手成功（协议 1，带应用版本）', helloReply.result?.protocol === 1 && typeof helloReply.result?.appVersion === 'string', JSON.stringify(helloReply.result));
+  const viaDebug = (await debugClient.call('runtime.status')).result;
+  const viaBridge = await page.evaluate('window.ember.core.runtime.status({})');
+  check('经调试连接读到的运行状态与界面通道一致（电源、模式、卡带插件）', viaDebug?.power === viaBridge.power && viaDebug?.mode === viaBridge.mode && viaDebug?.cartridge?.pluginId === viaBridge.cartridge?.pluginId && viaDebug?.power === 'on', `${viaDebug?.power}/${viaDebug?.mode}`);
+  const invalidParams = await debugClient.call('output.setVolume', { volume: 101 });
+  check('调试连接上的参数校验与界面通道相同（JSON-RPC -32602）', invalidParams.error?.code === -32602 && invalidParams.error?.data?.code === 'core.invalidParams');
+  const document = (await debugClient.call('rpc.discover')).result;
+  const methodNames = new Set((document?.methods ?? []).map((method) => method.name));
+  check('rpc.discover 返回 OpenRPC 文档，覆盖运行、卡带、首选项等请求', document?.openrpc === '1.3.2' && ['runtime.status', 'cartridges.load', 'preferences.set', 'debug.hello', 'rpc.discover'].every((name) => methodNames.has(name)), `${methodNames.size} 个方法`);
+  const subscribed = await debugClient.call('debug.subscribe', { events: ['preferences.changed', 'debug.*'] });
+  check('订阅事件成功', subscribed.result?.events?.length === 2);
+  await page.evaluate(`window.ember.core.preferences.set({ id: 'sound.startMuted', value: true })`);
+  const pushed = await waitFor(() => Promise.resolve(debugClient.notifications.find((message) => message.method === 'preferences.changed')), (value) => value !== undefined, 5000, 50);
+  check('在界面里改设置，调试连接收到 preferences.changed 通知', pushed?.params?.id === 'sound.startMuted' && pushed?.params?.value === true, JSON.stringify(pushed?.params));
+  await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.startMuted' })`);
+  const debugListed = (await debugClient.call('debug.status')).result;
+  check('debug.status 里有这条连接', debugListed?.connections?.length === 1 && debugListed.connections[0].client === 'smoke', JSON.stringify(debugListed?.connections));
+  const wrongToken = await openDebugSocket(endpoint.url);
+  const wrongReply = await wrongToken.call('debug.hello', { client: 'intruder', token: 'wrong' });
+  await waitFor(() => Promise.resolve(wrongToken.closed), (closed) => closed === true, 3000, 50);
+  check('令牌不对：返回 debug.unauthorized 并以 4001 关闭连接', wrongReply.error?.data?.code === 'debug.unauthorized' && wrongToken.closeCode === 4001, String(wrongToken.closeCode));
+  const intruderRequest = await openDebugSocket(endpoint.url);
+  const unauthorized = await intruderRequest.call('runtime.status');
+  check('没有握手就发请求：被拒绝并关闭', unauthorized.error?.data?.code === 'debug.unauthorized');
+  debugClient.close();
 
   // 页面重载后：运行页重新请求端口，画面帧继续到达。
   await page.send('Page.reload');
@@ -388,6 +476,16 @@ async function main() {
       check('核心重启后状态栏同样刷新', restartedBar.includes('未开机') && !restartedBar.includes('运行中'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
       const restartMessage = await waitFor(() => textOf('.ember-messages'), (text) => text.includes('核心进程已重启'), 10_000, 200);
       check('“消息”里有“核心进程已重启”', restartMessage.includes('核心进程已重启'));
+      // 调试服务在新核心里重新监听（启动参数会再次交给核心），令牌不变。
+      const afterRestart = await waitFor(
+        () => openDebugSocket(`ws://127.0.0.1:${debugPort}/`).catch(() => undefined),
+        (value) => value !== undefined,
+        20_000,
+        300
+      );
+      const restartedHello = afterRestart === undefined ? undefined : await afterRestart.call('debug.hello', { client: 'smoke-2', token: DEBUG_TOKEN });
+      check('核心进程重启后调试服务重新监听，原令牌仍然有效', restartedHello?.result?.protocol === 1, JSON.stringify(restartedHello?.result));
+      afterRestart?.close();
     }
   }
 
@@ -398,7 +496,7 @@ async function main() {
   check('“设置”菜单里有“首选项”（Ctrl+,）', settingsItems.some((entry) => entry.label === '首选项' && !entry.disabled && entry.text.includes('Ctrl+,')), settingsItems.map((entry) => entry.text).join('|'));
   await page.evaluate(`[...document.querySelectorAll('.ui-menu__popup [role^="menuitem"]')].find((item) => item.querySelector('.ui-menu__label')?.textContent === '首选项')?.click()`);
   const pageText = await waitFor(() => textOf('.ui-app-frame__page'), (text) => text.includes('主题'), 5000, 100);
-  check('首选项页打开：左侧有外观、画面、声音三个分组，默认显示“外观”的“主题”', pageText.includes('外观') && pageText.includes('画面') && pageText.includes('声音') && pageText.includes('主题'), pageText.replace(/\s+/g, ' ').slice(0, 80));
+  check('首选项页打开：左侧有外观、画面、声音、调试服务四个分组，默认显示“外观”的“主题”', pageText.includes('外观') && pageText.includes('画面') && pageText.includes('声音') && pageText.includes('调试服务') && pageText.includes('主题'), pageText.replace(/\s+/g, ' ').slice(0, 80));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-preferences.png'));
 
   // 正常退出：经浏览器端点关闭全部窗口，应用走 will-quit → 停止核心的流程自行退出（核心进程的停止超时是 5 秒，快于它说明没有靠超时强杀）。

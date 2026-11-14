@@ -89,6 +89,8 @@ void SimulationRuntime::stop() {
       rest.swap(commands_);
     }
     for (auto& command : rest) command(true);
+    // 正在进行的授权运行以 interrupted 结束，等待它的调用方才不会永远阻塞。
+    finishRun("interrupted");
     // 卡带先于主机销毁，卡槽先拔出卡带。
     if (machine_ != nullptr) machine_->cartridgeSlot().eject();
     cartridge_.reset();
@@ -160,6 +162,8 @@ void SimulationRuntime::threadMain() {
     lock.unlock();
     runFrame();
     lock.lock();
+    // 授权运行不限速，跑完一帧马上跑下一帧（命令在循环开头处理）。
+    if (run_.has_value()) continue;
     if (framePeriod_.count() <= 0) continue;
     next += framePeriod_;
     const auto now = Clock::now();
@@ -183,6 +187,8 @@ rt::RuntimeState SimulationRuntime::state() const {
 }
 
 void SimulationRuntime::startMachine(bool resume) {
+  // 上电与硬复位会把帧号与周期数清零，正在进行的授权运行先结束。
+  finishRun("interrupted");
   machine_->powerOn();
   // 上电与硬复位时清空声音缓冲，不让旧的采样接在新的后面。
   if (options_.audio != nullptr) options_.audio->flush();
@@ -206,8 +212,8 @@ void SimulationRuntime::pushAudio() {
 
 void SimulationRuntime::syncAudio() {
   if (options_.audio == nullptr) return;
-  // 运行中才播放；暂停、断电、出错时淡出到静音，继续时清掉过时的采样再淡入。
-  const bool playing = running();
+  // 运行中才播放；暂停、断电、出错时淡出到静音，继续时清掉过时的采样再淡入；授权运行不限速，不播放。
+  const bool playing = running() && !run_.has_value();
   if (playing == audioPlaying_) return;
   audioPlaying_ = playing;
   options_.audio->setPlaying(playing);
@@ -236,6 +242,7 @@ void SimulationRuntime::publishSnapshot() {
 }
 
 void SimulationRuntime::reportFailure(const std::string& module, const std::string& code, const std::string& message) {
+  finishRun("error");
   running_ = false;
   failureReported_ = true;
   options_.errors->write({module, code, message, {{"frame", frame_}}});
@@ -263,7 +270,7 @@ void SimulationRuntime::runFrame() {
   ++frame_;
   const hw::FrameBuffer picture = machine_->frame();
   if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
-  pushAudio();
+  if (!run_.has_value()) pushAudio();
   publishSnapshot();
   const auto interval = frameEventInterval_.load(std::memory_order_relaxed);
   if (interval > 0 && frame_ % interval == 0) {
@@ -271,6 +278,25 @@ void SimulationRuntime::runFrame() {
     options_.events->publish(rt::RUNTIME_FRAME_EVENT, nlohmann::json(rt::RuntimeFrameData{static_cast<std::int64_t>(frame_), static_cast<std::int64_t>(registers.cycles), registers.pc}));
   }
   checkCartridge();
+  if (run_.has_value() && --run_->remaining <= 0) {
+    finishRun("completed");
+    running_ = false;
+    publishState("runEnded");
+    publishSnapshot();
+  }
+}
+
+void SimulationRuntime::finishRun(const char* stopped) {
+  if (!run_.has_value()) return;
+  rt::RunOutcome outcome;
+  outcome.frames = run_->total - run_->remaining;
+  const auto cycles = machine_ == nullptr ? 0 : machine_->cpuRegisters().cycles;
+  outcome.cycles = cycles > run_->startCycles ? static_cast<std::int64_t>(cycles - run_->startCycles) : 0;
+  outcome.stopped = stopped;
+  const auto promise = run_->promise;
+  run_.reset();
+  promise->set_value(outcome);
+  options_.events->publish(rt::RUNTIME_RUN_FINISHED_EVENT, nlohmann::json(rt::RuntimeRunFinishedData{outcome.frames, outcome.cycles, outcome.stopped}));
 }
 
 // ---------------------------------------------------------------- 对外接口
@@ -298,6 +324,7 @@ rt::RuntimeState SimulationRuntime::powerOn(bool resume) {
 rt::RuntimeState SimulationRuntime::powerOff() {
   return submit([this] {
     if (powered()) {
+      finishRun("powerOff");
       stopMachine();
       publishState("powerOff");
       publishSnapshot();
@@ -328,6 +355,7 @@ rt::RuntimeState SimulationRuntime::reset(rt::ResetKind kind) {
 rt::RuntimeState SimulationRuntime::pause() {
   return submit([this] {
     if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电，无法暂停");
+    finishRun("interrupted");
     if (running_) {
       running_ = false;
       publishState("pause");
@@ -340,6 +368,12 @@ rt::RuntimeState SimulationRuntime::pause() {
 rt::RuntimeState SimulationRuntime::resume() {
   return submit([this] {
     if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电，无法继续运行");
+    // 继续运行打断授权运行，模式仍然是运行，改按真实帧率。
+    if (run_.has_value()) {
+      finishRun("interrupted");
+      resync_ = true;
+      return state();
+    }
     if (!running_) {
       running_ = true;
       resync_ = true;
@@ -358,6 +392,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     machine->cartridgeSlot().insert(*cartridge);
     auto summary = makeSummary(insertion, cartridge->storageList());
 
+    finishRun("interrupted");
     if (machine_ != nullptr) machine_->cartridgeSlot().eject();
     cartridge_.reset();
     machine_ = std::move(machine);
@@ -377,6 +412,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
 rt::RuntimeState SimulationRuntime::ejectCartridge() {
   return submit([this] {
     if (machine_ != nullptr) {
+      finishRun("interrupted");
       machine_->cartridgeSlot().eject();
       cartridge_.reset();
       machine_.reset();
@@ -400,5 +436,62 @@ void SimulationRuntime::sendInput(hw::InputEvent event) {
 }
 
 void SimulationRuntime::setFrameEventInterval(std::uint32_t frames) { frameEventInterval_.store(frames, std::memory_order_relaxed); }
+
+std::shared_future<rt::RunOutcome> SimulationRuntime::startRun(std::int64_t frames) {
+  return submit([this, frames] {
+    if (machine_ == nullptr) throw shared::CoreError(rt::ERROR_NO_CARTRIDGE, "还没有装入卡带，无法运行");
+    if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电，无法运行");
+    finishRun("interrupted");
+    ActiveRun active;
+    active.total = frames;
+    active.remaining = frames;
+    active.startCycles = machine_->cpuRegisters().cycles;
+    active.promise = std::make_shared<std::promise<rt::RunOutcome>>();
+    auto future = active.promise->get_future().share();
+    run_ = std::move(active);
+    const bool wasRunning = running_;
+    running_ = true;
+    resync_ = true;
+    if (!wasRunning) publishState("run");
+    publishSnapshot();
+    return future;
+  });
+}
+
+void SimulationRuntime::cancelRun() {
+  submit([this] {
+    if (!run_.has_value()) return;
+    finishRun("interrupted");
+    if (running_) {
+      running_ = false;
+      publishState("pause");
+      publishSnapshot();
+    }
+  });
+}
+
+unsigned SimulationRuntime::padPortCount() {
+  return submit([this] { return machine_ == nullptr ? 0U : machine_->padPortCount(); });
+}
+
+void SimulationRuntime::setPadButtons(unsigned port, std::uint8_t buttons) {
+  submit([this, port, buttons] {
+    if (machine_ != nullptr && port < machine_->padPortCount()) machine_->setButtons(port, buttons);
+  });
+}
+
+rt::FrameImage SimulationRuntime::captureFrame() {
+  return submit([this] {
+    rt::FrameImage image;
+    if (machine_ == nullptr) return image;
+    const hw::FrameBuffer picture = machine_->frame();
+    if (picture.width == 0 || picture.height == 0) return image;
+    image.width = picture.width;
+    image.height = picture.height;
+    const auto* bytes = reinterpret_cast<const std::uint8_t*>(picture.pixels.data());
+    image.rgba.assign(bytes, bytes + picture.pixels.size() * sizeof(std::uint32_t));
+    return image;
+  });
+}
 
 }  // namespace ember::logic::runtime

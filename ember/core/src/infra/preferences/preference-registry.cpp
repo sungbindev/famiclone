@@ -75,6 +75,14 @@ bool isValid(const api::SettingDefinition& definition, const api::SettingValue& 
       }
       return true;
     }
+    case api::SettingKind::Text: {
+      const auto* text = std::get_if<std::string>(&value);
+      if (text == nullptr || static_cast<std::int64_t>(text->size()) > definition.maxLength) {
+        reason = "取值必须是不超过 " + std::to_string(definition.maxLength) + " 个字节的文字";
+        return false;
+      }
+      return true;
+    }
   }
   reason = "不认识的设置项种类";
   return false;

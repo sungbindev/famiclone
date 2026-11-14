@@ -60,6 +60,10 @@
 | `inspector.snapshot` | 取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的 |
 | `inspector.watch` | 监视一个状态项：它的取值变化时发事件 inspector.stateChanged |
 | `inspector.unwatch` | 取消监视 |
+| `inspector.disassemble` | 从 address 起反汇编 count 条指令（CPU 总线上的地址） |
+| `inspector.cdlStart` | 开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标） |
+| `inspector.cdlStop` | 停止标记，已有的标记保留到下一次 cdlStart 或换卡带 |
+| `inspector.cdlSave` | 把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen |
 | `inspector.traceStart` | 开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件 |
 | `inspector.traceStop` | 结束跟踪并把内容写成文件 |
 | `inspector.callLogStart` | 开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段 |

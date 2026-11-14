@@ -11,7 +11,7 @@
  */
 
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -117,6 +117,15 @@ await client.api.runtime.step({ unit: 'instruction' });
 const logged = await client.api.inspector.callLogStop({ id: callLog.id });
 check('调用记录：执行到指定地址时记一行，含栈顶', logged.lines === 1 && readFileSync(logged.file, 'utf8').includes(' | STACK '), JSON.stringify(logged));
 await expectRequestError(() => client.api.inspector.traceStop({ id: trace.id }), 'inspector.noRecording');
+
+// 反汇编与代码数据标记（CDL）。
+const listing = (await client.api.inspector.disassemble({ address: pcNow, count: 3 })).instructions;
+check('inspector.disassemble 返回 3 条指令，首条地址是当前 pc', listing.length === 3 && listing[0].address === pcNow && listing[0].text !== '', JSON.stringify(listing[0]));
+const cdl = await client.api.inspector.cdlStart();
+await client.api.runtime.step({ unit: 'instruction', count: 20 });
+const cdlStopped = await client.api.inspector.cdlStop();
+const cdlSaved = await client.api.inspector.cdlSave({ file: 'live.cdl' });
+check('代码数据标记：单步 20 条指令后有 Code 标记，文件大小等于 PRG 大小', cdlStopped.codeBytes >= 20 && statSync(cdlSaved.file).size === cdl.size, JSON.stringify(cdlStopped));
 await expectRequestError(() => client.api.input.pad({ port: 7, buttons: 1 }), 'input.invalidPort');
 await expectRequestError(() => client.api.runtime.run({ frames: 0 }), 'core.invalidParams');
 

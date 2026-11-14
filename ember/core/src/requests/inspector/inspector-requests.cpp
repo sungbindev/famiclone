@@ -26,6 +26,9 @@ namespace hw = ::ember::contracts::hardware;
 /** 记录的默认行数上限，与 Schema 里的说明一致。 */
 constexpr std::int64_t DEFAULT_RECORDER_LINES = 100000;
 
+/** 反汇编的默认条数，与 Schema 里的说明一致。 */
+constexpr std::int64_t DEFAULT_DISASSEMBLE_COUNT = 16;
+
 hw::BreakpointKind kindOf(const std::string& name) {
   if (name == "read") return hw::BreakpointKind::Read;
   if (name == "write") return hw::BreakpointKind::Write;
@@ -115,6 +118,33 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
     const auto parsed = contract::parseInspectorUnwatchParams(params, "params");
     service->unwatch(parsed.path);
     return nlohmann::json(contract::InspectorUnwatchResult{});
+  });
+  router.add("inspector", contract::INSPECTOR_DISASSEMBLE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorDisassembleParams(params, "params");
+    contract::InspectorDisassembleResult result;
+    for (const auto& line : service->disassemble(static_cast<std::uint16_t>(parsed.address), static_cast<std::uint32_t>(parsed.count.value_or(DEFAULT_DISASSEMBLE_COUNT)))) {
+      contract::DisassembledInstruction wire;
+      wire.address = line.address;
+      wire.bytes = line.bytes;
+      wire.text = line.text;
+      wire.unofficial = line.unofficial;
+      result.instructions.push_back(std::move(wire));
+    }
+    return nlohmann::json(result);
+  });
+  router.add("inspector", contract::INSPECTOR_CDL_START_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorCdlStartParams(params, "params"));
+    return nlohmann::json(contract::InspectorCdlStartResult{static_cast<std::int64_t>(service->startCdl().size)});
+  });
+  router.add("inspector", contract::INSPECTOR_CDL_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorCdlStopParams(params, "params"));
+    const auto report = service->stopCdl();
+    return nlohmann::json(contract::InspectorCdlStopResult{static_cast<std::int64_t>(report.size), static_cast<std::int64_t>(report.codeBytes), static_cast<std::int64_t>(report.dataBytes)});
+  });
+  router.add("inspector", contract::INSPECTOR_CDL_SAVE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorCdlSaveParams(params, "params");
+    const auto report = service->saveCdl(parsed.file.value_or(""));
+    return nlohmann::json(contract::InspectorCdlSaveResult{report.file, static_cast<std::int64_t>(report.size), static_cast<std::int64_t>(report.codeBytes), static_cast<std::int64_t>(report.dataBytes)});
   });
   router.add("inspector", contract::INSPECTOR_TRACE_START_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInspectorTraceStartParams(params, "params");

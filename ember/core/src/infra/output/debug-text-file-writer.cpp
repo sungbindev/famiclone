@@ -29,6 +29,16 @@ void DebugTextFileWriter::validateName(const std::string& name) const {
 }
 
 std::string DebugTextFileWriter::writeLines(const std::string& fileName, const std::vector<std::string>& lines) {
+  return writeFile(fileName, [&lines](std::ostream& stream) {
+    for (const std::string& line : lines) stream << line << '\n';
+  });
+}
+
+std::string DebugTextFileWriter::writeBytes(const std::string& fileName, std::span<const std::uint8_t> bytes) {
+  return writeFile(fileName, [bytes](std::ostream& stream) { stream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size())); });
+}
+
+std::string DebugTextFileWriter::writeFile(const std::string& fileName, const std::function<void(std::ostream&)>& fill) {
   validateName(fileName);
   try {
     const fs::path directory = outputDirectory_();
@@ -38,7 +48,7 @@ std::string DebugTextFileWriter::writeLines(const std::string& fileName, const s
     temporary += ".tmp";
     {
       std::ofstream stream(temporary, std::ios::binary | std::ios::trunc);
-      for (const std::string& line : lines) stream << line << '\n';
+      fill(stream);
       stream.flush();
       if (!stream) throw std::runtime_error("无法写入文件");
     }

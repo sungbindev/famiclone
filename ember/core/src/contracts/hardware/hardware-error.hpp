@@ -47,5 +47,7 @@ inline constexpr std::string_view ERROR_BREAKPOINT_LIMIT = "hardware.breakpointL
 inline constexpr std::string_view ERROR_RECORDER_LIMIT = "hardware.recorderLimit";
 /** 没有这个编号的记录。 */
 inline constexpr std::string_view ERROR_NO_RECORDER = "hardware.noRecorder";
+/** 代码与数据标记已经在记录。 */
+inline constexpr std::string_view ERROR_CDL_ACTIVE = "hardware.cdlActive";
 
 }  // namespace ember::contracts::hardware

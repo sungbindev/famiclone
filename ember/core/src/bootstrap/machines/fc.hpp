@@ -26,6 +26,7 @@
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
 #include "logic/hardware/debug/breakpoint-table.hpp"
+#include "logic/hardware/debug/code-data-log.hpp"
 #include "logic/hardware/debug/probe-hub.hpp"
 #include "logic/hardware/debug/recorder-table.hpp"
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
@@ -105,6 +106,15 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return breakpoints_.take(); }
   std::uint32_t startRecorder(const contracts::hardware::RecorderSpec& spec) override;
   contracts::hardware::RecorderOutput stopRecorder(std::uint32_t id) override;
+  [[nodiscard]] std::vector<contracts::hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) override;
+  void startCdl(std::size_t size, contracts::hardware::CdlResolver resolver) override { cdl_.start(size, std::move(resolver)); }
+  void stopCdl() override { cdl_.stop(); }
+  [[nodiscard]] std::optional<std::vector<std::uint8_t>> cdlFlags() const override {
+    if (!cdl_.exists()) return std::nullopt;
+    return cdl_.flags();
+  }
+  /** 即将执行一条指令：通知记录表与代码数据标记。 */
+  void beforeInstruction();
   // InterruptObserver
   void onInterrupt(contracts::hardware::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) override;
   /** 有读写断点或 I/O 记录时在 CPU 总线上安装探针，没有时去掉。 */
@@ -146,8 +156,11 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   logic::hardware::Cpu6502 cpu_;
 
   logic::hardware::BreakpointTable breakpoints_;
+  /** 无副作用地读 CPU 总线。 */
+  logic::hardware::PeekFunction peek_;
   logic::hardware::RecorderTable recorders_;
   logic::hardware::ProbeHub probeHub_;
+  logic::hardware::CodeDataLog cdl_;
   /** 刚命中执行断点的地址：下一次运行先越过它，不再重复命中。 */
   std::optional<std::uint16_t> skipExecuteAt_;
 

@@ -89,7 +89,13 @@ std::uint16_t word(std::uint8_t low, std::uint8_t high) { return static_cast<std
 
 }  // namespace
 
-Disassembly disassemble(std::uint16_t pc, const hw::CpuRegisters& registers, const PeekFunction& peek) {
+/** 只写内存、不读的指令。 */
+static bool isStore(const char* name) {
+  const std::string_view view(name);
+  return view == "STA" || view == "STX" || view == "STY" || view == "SAX" || view == "AHX" || view == "SHX" || view == "SHY" || view == "TAS";
+}
+
+Disassembly disassemble(std::uint16_t pc, const hw::CpuRegisters& registers, const PeekFunction& peek, bool withText) {
   const std::uint8_t opcode = peek(pc);
   const Entry& entry = TABLE[opcode];
   Disassembly result;
@@ -99,66 +105,88 @@ Disassembly disassemble(std::uint16_t pc, const hw::CpuRegisters& registers, con
   const std::uint8_t operand1 = result.length > 1 ? peek(static_cast<std::uint16_t>(pc + 1)) : 0;
   const std::uint8_t operand2 = result.length > 2 ? peek(static_cast<std::uint16_t>(pc + 2)) : 0;
   const std::uint16_t absolute = word(operand1, operand2);
-  const bool jump = std::string_view(name) == "JMP" || std::string_view(name) == "JSR";
+  const bool jump = std::string_view(name) == "JMP";
+  const bool call = std::string_view(name) == "JSR";
+  // 有内存操作数的指令的有效地址；跳转的目标另算。
+  std::optional<std::uint16_t> effective;
 
   switch (entry.mode) {
     case Mode::Imp:
-      result.text = name;
+      if (withText) result.text = name;
       break;
     case Mode::Acc:
-      result.text = format("%s A", name);
+      if (withText) result.text = format("%s A", name);
       break;
     case Mode::Imm:
-      result.text = format("%s #$%02X", name, operand1);
+      if (withText) result.text = format("%s #$%02X", name, operand1);
       break;
     case Mode::Zp:
-      result.text = format("%s $%02X = %02X", name, operand1, peek(operand1));
+      effective = operand1;
+      if (withText) result.text = format("%s $%02X = %02X", name, operand1, peek(operand1));
       break;
     case Mode::Zpx: {
-      const auto effective = static_cast<std::uint8_t>(operand1 + registers.x);
-      result.text = format("%s $%02X,X @ %02X = %02X", name, operand1, effective, peek(effective));
+      effective = static_cast<std::uint8_t>(operand1 + registers.x);
+      if (withText) result.text = format("%s $%02X,X @ %02X = %02X", name, operand1, *effective, peek(*effective));
       break;
     }
     case Mode::Zpy: {
-      const auto effective = static_cast<std::uint8_t>(operand1 + registers.y);
-      result.text = format("%s $%02X,Y @ %02X = %02X", name, operand1, effective, peek(effective));
+      effective = static_cast<std::uint8_t>(operand1 + registers.y);
+      if (withText) result.text = format("%s $%02X,Y @ %02X = %02X", name, operand1, *effective, peek(*effective));
       break;
     }
     case Mode::Abs:
-      result.text = jump ? format("%s $%04X", name, absolute) : format("%s $%04X = %02X", name, absolute, peek(absolute));
+      if (jump || call) {
+        result.flow = jump ? Flow::Jump : Flow::Call;
+        result.target = absolute;
+        if (withText) result.text = format("%s $%04X", name, absolute);
+      } else {
+        effective = absolute;
+        if (withText) result.text = format("%s $%04X = %02X", name, absolute, peek(absolute));
+      }
       break;
     case Mode::Abx: {
-      const auto effective = static_cast<std::uint16_t>(absolute + registers.x);
-      result.text = format("%s $%04X,X @ %04X = %02X", name, absolute, effective, peek(effective));
+      effective = static_cast<std::uint16_t>(absolute + registers.x);
+      if (withText) result.text = format("%s $%04X,X @ %04X = %02X", name, absolute, *effective, peek(*effective));
       break;
     }
     case Mode::Aby: {
-      const auto effective = static_cast<std::uint16_t>(absolute + registers.y);
-      result.text = format("%s $%04X,Y @ %04X = %02X", name, absolute, effective, peek(effective));
+      effective = static_cast<std::uint16_t>(absolute + registers.y);
+      if (withText) result.text = format("%s $%04X,Y @ %04X = %02X", name, absolute, *effective, peek(*effective));
       break;
     }
     case Mode::Ind: {
       // 6502 的间接跳转读指针高字节时不跨页。
       const auto highAddress = static_cast<std::uint16_t>((absolute & 0xFF00U) | ((absolute + 1U) & 0x00FFU));
-      result.text = format("%s ($%04X) = %04X", name, absolute, word(peek(absolute), peek(highAddress)));
+      result.flow = Flow::Jump;
+      result.target = word(peek(absolute), peek(highAddress));
+      result.dataAddress = absolute;
+      if (withText) result.text = format("%s ($%04X) = %04X", name, absolute, result.target);
       break;
     }
     case Mode::Izx: {
       const auto pointer = static_cast<std::uint8_t>(operand1 + registers.x);
-      const std::uint16_t target = word(peek(pointer), peek(static_cast<std::uint8_t>(pointer + 1)));
-      result.text = format("%s ($%02X,X) @ %02X = %04X = %02X", name, operand1, pointer, target, peek(target));
+      effective = word(peek(pointer), peek(static_cast<std::uint8_t>(pointer + 1)));
+      if (withText) result.text = format("%s ($%02X,X) @ %02X = %04X = %02X", name, operand1, pointer, *effective, peek(*effective));
       break;
     }
     case Mode::Izy: {
       const std::uint16_t base = word(peek(operand1), peek(static_cast<std::uint8_t>(operand1 + 1)));
-      const auto effective = static_cast<std::uint16_t>(base + registers.y);
-      result.text = format("%s ($%02X),Y = %04X @ %04X = %02X", name, operand1, base, effective, peek(effective));
+      effective = static_cast<std::uint16_t>(base + registers.y);
+      if (withText) result.text = format("%s ($%02X),Y = %04X @ %04X = %02X", name, operand1, base, *effective, peek(*effective));
       break;
     }
-    case Mode::Rel:
-      result.text = format("%s $%04X", name, static_cast<std::uint16_t>(pc + 2 + static_cast<std::int8_t>(operand1)));
+    case Mode::Rel: {
+      result.flow = Flow::Branch;
+      result.target = static_cast<std::uint16_t>(pc + 2 + static_cast<std::int8_t>(operand1));
+      // 条件分支的操作码：位 7-6 选标志（N、V、C、Z），位 5 是要求这个标志为 1 还是 0。
+      constexpr std::uint8_t FLAGS[4] = {0x80, 0x40, 0x01, 0x02};
+      const bool flagSet = (registers.status & FLAGS[(opcode >> 6) & 3]) != 0;
+      result.taken = flagSet == (((opcode >> 5) & 1) != 0);
+      if (withText) result.text = format("%s $%04X", name, result.target);
       break;
+    }
   }
+  if (effective.has_value() && !isStore(name)) result.dataAddress = effective;
   return result;
 }
 

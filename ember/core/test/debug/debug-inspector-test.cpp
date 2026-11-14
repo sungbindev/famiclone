@@ -646,6 +646,87 @@ TEST_F(DebugInspectorTest, DebugWritesAreNotRecordedAsIo) {
   core.stop();
 }
 
+TEST_F(DebugInspectorTest, DisassembleReadsCodeWithoutSideEffects) {
+  Core core;
+  start(core);
+  EXPECT_EQ(call(core, "inspector.disassemble", {{"address", 0x8000}}).payload["code"], "inspector.noCartridge");
+  loadPaused(core);
+  const auto reply = call(core, "inspector.disassemble", {{"address", 0x8000}, {"count", 4}});
+  ASSERT_TRUE(reply.ok) << reply.payload.dump();
+  const auto& list = reply.payload["instructions"];
+  ASSERT_EQ(list.size(), 4U);
+  EXPECT_EQ(list[0]["address"], 0x8000);
+  EXPECT_EQ(list[0]["bytes"], "A9 42");
+  EXPECT_EQ(list[0]["text"], "LDA #$42");
+  EXPECT_FALSE(list[0]["unofficial"].get<bool>());
+  EXPECT_EQ(list[1]["address"], 0x8002);
+  EXPECT_EQ(list[1]["text"], "STA $10 = 00");
+  EXPECT_EQ(list[3]["bytes"], "E8");
+  EXPECT_EQ(list[3]["text"], "INX");
+  // 默认 16 条；寄存器类地址的取值显示 00，读不改变机器状态
+  EXPECT_EQ(call(core, "inspector.disassemble", {{"address", 0x8000}}).payload["instructions"].size(), 16U);
+  EXPECT_FALSE(call(core, "inspector.disassemble", {{"address", 0x8000}, {"count", 0}}).ok);
+  EXPECT_EQ(field(cpuState(core), "pc"), 0x8000);
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, CdlMarksCodeAndJumpTargetsAndSavesThePrgFlags) {
+  Core core;
+  start(core);
+  EXPECT_EQ(call(core, "inspector.cdlStart").payload["code"], "inspector.noCartridge");
+  loadPaused(core);
+  EXPECT_EQ(call(core, "inspector.cdlStop").payload["code"], "inspector.noCdl");
+  EXPECT_EQ(call(core, "inspector.cdlSave").payload["code"], "inspector.noCdl");
+
+  const auto started = call(core, "inspector.cdlStart");
+  ASSERT_TRUE(started.ok) << started.payload.dump();
+  EXPECT_EQ(started.payload["size"], 16384);
+  EXPECT_EQ(call(core, "inspector.cdlStart").payload["code"], "inspector.cdlActive");
+  ASSERT_TRUE(call(core, "runtime.run", {{"frames", 1}, {"wait", true}}).ok);
+  const auto stopped = call(core, "inspector.cdlStop");
+  ASSERT_TRUE(stopped.ok) << stopped.payload.dump();
+  EXPECT_EQ(stopped.payload["size"], 16384);
+  // 程序共 10 字节都被执行；没有读 ROM 里的数据
+  EXPECT_EQ(stopped.payload["codeBytes"], 10);
+  EXPECT_EQ(stopped.payload["dataBytes"], 0);
+
+  const auto saved = call(core, "inspector.cdlSave", {{"file", "game.cdl"}});
+  ASSERT_TRUE(saved.ok) << saved.payload.dump();
+  std::ifstream stream(pathOf(saved.payload["file"].get<std::string>()), std::ios::binary);
+  const std::vector<std::uint8_t> flags((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+  ASSERT_EQ(flags.size(), 16384U);
+  for (const std::size_t offset : {0U, 1U, 2U, 3U, 4U, 5U, 7U, 8U, 9U}) EXPECT_EQ(flags[offset], 0x01) << offset;
+  // $8006 的 INX 是循环的跳转目标：JMP $8006
+  EXPECT_EQ(flags[6], 0x05);
+  EXPECT_EQ(flags[10], 0x00);
+
+  EXPECT_EQ(call(core, "inspector.cdlSave", {{"file", "a/b.cdl"}}).payload["code"], "inspector.invalidFileName");
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, CdlMarksDataReadsAndSubroutineEntries) {
+  Core core;
+  start(core);
+  // $8000: LDA $8100、JSR $8007；$8007: RTS（$8006 的 4C 不会执行）
+  const auto rom = ember::test::makeInesFile({0xAD, 0x00, 0x81, 0x20, 0x07, 0x80, 0x4C, 0x60});
+  std::ofstream(root_ / "cdl.nes", std::ios::binary).write(reinterpret_cast<const char*>(rom.data()), static_cast<std::streamsize>(rom.size()));
+  const auto path = (root_ / "cdl.nes").u8string();
+  ASSERT_TRUE(call(core, "cartridges.load", {{"path", std::string(path.begin(), path.end())}, {"powerOn", true}, {"resume", false}}).ok);
+  ASSERT_TRUE(call(core, "inspector.cdlStart").ok);
+  // 单步 LDA、JSR、RTS：单步也记
+  ASSERT_TRUE(call(core, "runtime.step", {{"unit", "instruction"}, {"count", 3}}).ok);
+  ASSERT_TRUE(call(core, "inspector.cdlStop").ok);
+  const auto saved = call(core, "inspector.cdlSave");
+  ASSERT_TRUE(saved.ok) << saved.payload.dump();
+  EXPECT_EQ(std::filesystem::path(pathOf(saved.payload["file"].get<std::string>())).filename().string(), "prg.cdl");
+  std::ifstream stream(pathOf(saved.payload["file"].get<std::string>()), std::ios::binary);
+  const std::vector<std::uint8_t> flags((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+  ASSERT_EQ(flags.size(), 16384U);
+  EXPECT_EQ(flags[0x100], 0x02);
+  EXPECT_EQ(flags[7], 0x09);
+  core.stop();
+}
+
 TEST_F(DebugInspectorTest, RecordingErrors) {
   Core core;
   start(core);

@@ -42,6 +42,10 @@ class LocalInspectorService final : public contracts::inspector::InspectorServic
   contracts::inspector::SnapshotReport snapshot(const std::optional<std::string>& module) override;
   contracts::inspector::WatchEntry watch(const std::string& path) override;
   void unwatch(const std::string& path) override;
+  std::vector<contracts::hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) override;
+  contracts::inspector::CdlReport startCdl() override;
+  contracts::inspector::CdlReport stopCdl() override;
+  contracts::inspector::CdlReport saveCdl(const std::string& fileName) override;
   std::uint32_t startRecording(const contracts::hardware::RecorderSpec& spec, const std::string& fileName) override;
   contracts::inspector::RecordingReport stopRecording(std::uint32_t id, bool callLog) override;
   contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override;

@@ -34,6 +34,10 @@ inline constexpr std::string_view ERROR_INVALID_BREAKPOINT = "inspector.invalidB
 inline constexpr std::string_view ERROR_BREAKPOINT_LIMIT = "inspector.breakpointLimit";
 /** 没有这个编号的断点。 */
 inline constexpr std::string_view ERROR_NO_BREAKPOINT = "inspector.noBreakpoint";
+/** 代码与数据标记已经在记录。 */
+inline constexpr std::string_view ERROR_CDL_ACTIVE = "inspector.cdlActive";
+/** 没有记录过代码与数据标记。 */
+inline constexpr std::string_view ERROR_NO_CDL = "inspector.noCdl";
 /** 文件名不合格。 */
 inline constexpr std::string_view ERROR_INVALID_FILE_NAME = "inspector.invalidFileName";
 /** 无法创建目录或写入文件。 */

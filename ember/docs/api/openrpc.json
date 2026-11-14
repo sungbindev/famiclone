@@ -1422,6 +1422,319 @@
       "x-debugOnly": true
     },
     {
+      "name": "inspector.disassemble",
+      "summary": "从 address 起反汇编 count 条指令（CPU 总线上的地址）",
+      "description": "从 address 起反汇编 count 条指令（CPU 总线上的地址）。读内存没有副作用；带索引的寻址用当前的 X、Y 算有效地址与注释里的取值；地址超过 $FFFF 时回到 $0000。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "address",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "起始地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "description": "起始地址"
+        },
+        {
+          "name": "count",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "指令条数，默认 16",
+            "minimum": 1,
+            "maximum": 256
+          },
+          "description": "指令条数，默认 16"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "instructions": {
+              "type": "array",
+              "description": "反汇编的指令",
+              "items": {
+                "$ref": "#/components/schemas/inspector.DisassembledInstruction"
+              }
+            }
+          },
+          "required": [
+            "instructions"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.cdlStart",
+      "summary": "开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标）",
+      "description": "开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标）。标记的是物理位置（按当前的分页换算）。记录属于当前的主机，装入新卡带后作废。需要已开机，卡带要有 PRG-ROM 存储区。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "integer",
+              "description": "PRG-ROM 的字节数，也是标记的字节数",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.cdlActive",
+          "data": {
+            "code": "inspector.cdlActive"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.cdlStop",
+      "summary": "停止标记，已有的标记保留到下一次 cdlStart 或换卡带",
+      "description": "停止标记，已有的标记保留到下一次 cdlStart 或换卡带；已经停止时只返回统计。没有记录过时返回 inspector.noCdl。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "integer",
+              "description": "PRG-ROM 的字节数",
+              "minimum": 1
+            },
+            "codeBytes": {
+              "type": "integer",
+              "description": "标了 Code 的字节数",
+              "minimum": 0
+            },
+            "dataBytes": {
+              "type": "integer",
+              "description": "标了 Data 的字节数",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "size",
+            "codeBytes",
+            "dataBytes"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.noCdl",
+          "data": {
+            "code": "inspector.noCdl"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.cdlSave",
+      "summary": "把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen",
+      "description": "把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen。记录中或停止后都可以保存。没有记录过时返回 inspector.noCdl。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "file",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时用 prg.cdl",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时用 prg.cdl"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "保存的文件的完整路径"
+            },
+            "size": {
+              "type": "integer",
+              "description": "PRG-ROM 的字节数，也是文件的字节数",
+              "minimum": 1
+            },
+            "codeBytes": {
+              "type": "integer",
+              "description": "标了 Code 的字节数",
+              "minimum": 0
+            },
+            "dataBytes": {
+              "type": "integer",
+              "description": "标了 Data 的字节数",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "file",
+            "size",
+            "codeBytes",
+            "dataBytes"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.noCdl",
+          "data": {
+            "code": "inspector.noCdl"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidFileName",
+          "data": {
+            "code": "inspector.invalidFileName"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.fileFailed",
+          "data": {
+            "code": "inspector.fileFailed"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
       "name": "inspector.traceStart",
       "summary": "开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件",
       "description": "开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件。kind：instruction 每执行一条指令记一行（地址、指令字节、反汇编、寄存器与周期数，写法同 nestest 日志；芯片寄存器的取值显示 00）；io 每次访问 $2000-$5FFF（芯片、手柄口、卡带扩展寄存器）以及对 $8000 以上的写（mapper 寄存器）记一行（方向、地址、值、发起访问的指令地址与周期数）；irq 每次 CPU 响应 IRQ、NMI 或 BRK 记一行（种类、返回地址、处理程序地址、周期数）。单步与运行产生的内容都记，调试写内存不记。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。",
@@ -3563,6 +3876,37 @@
           "address",
           "endAddress",
           "hits"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.DisassembledInstruction": {
+        "type": "object",
+        "description": "一条反汇编的指令。",
+        "properties": {
+          "address": {
+            "type": "integer",
+            "description": "指令的地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "bytes": {
+            "type": "string",
+            "description": "指令字节，十六进制，空格隔开，如 A9 42"
+          },
+          "text": {
+            "type": "string",
+            "description": "助记符与操作数，带有效地址与取值的注释，如 LDA $0180 = 33；写法同 nestest 日志，芯片寄存器类地址的取值显示 00"
+          },
+          "unofficial": {
+            "type": "boolean",
+            "description": "是不是非官方指令"
+          }
+        },
+        "required": [
+          "address",
+          "bytes",
+          "text",
+          "unofficial"
         ],
         "additionalProperties": false
       },

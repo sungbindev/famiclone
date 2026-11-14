@@ -14,7 +14,9 @@
 #include "bootstrap/machines/fc.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <string>
+#include <utility>
 #include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -39,7 +41,8 @@ FcMachine::FcMachine()
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       padApuPort_(pad_, apu_),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
-      recorders_([this](std::uint16_t address) { return cpuBus_.peek(address); }),
+      peek_([this](std::uint16_t address) { return cpuBus_.peek(address); }),
+      recorders_(peek_),
       probeHub_(breakpoints_, recorders_) {
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
   cpuBus_.mount(0x2000, 0x3FFF, ppu_);
@@ -106,7 +109,7 @@ void FcMachine::runFrame() {
         return;
       }
     }
-    if (recorders_.needsInstructionHook()) recorders_.onInstruction(cpu_.registers());
+    beforeInstruction();
     cpu_.run(1);
     ppu_.catchUp(scheduler_.now());
     if (breakpoints_.hasPending()) return;
@@ -307,6 +310,34 @@ FcMachine::ProbeSuspend::ProbeSuspend(FcMachine& machine, bool alsoRecording) : 
 
 FcMachine::ProbeSuspend::~ProbeSuspend() { machine_.probeHub_.restore(before_); }
 
+void FcMachine::beforeInstruction() {
+  const bool recording = recorders_.needsInstructionHook();
+  if (!recording && !cdl_.active()) return;
+  const hw::CpuRegisters registers = cpu_.registers();
+  if (recording) recorders_.onInstruction(registers);
+  if (cdl_.active()) cdl_.onInstruction(registers, peek_);
+}
+
+std::vector<hw::DisassembledInstruction> FcMachine::disassemble(std::uint16_t address, std::uint32_t count) {
+  std::vector<hw::DisassembledInstruction> list;
+  list.reserve(count);
+  const hw::CpuRegisters registers = cpu_.registers();
+  std::uint16_t pc = address;
+  for (std::uint32_t index = 0; index < count; ++index) {
+    const logic::hardware::Disassembly code = logic::hardware::disassemble(pc, registers, peek_);
+    std::string bytes;
+    for (std::uint8_t offset = 0; offset < code.length; ++offset) {
+      char text[4];
+      std::snprintf(text, sizeof(text), "%02X", peek_(static_cast<std::uint16_t>(pc + offset)));
+      if (offset > 0) bytes += ' ';
+      bytes += text;
+    }
+    list.push_back({pc, std::move(bytes), code.text, code.unofficial});
+    pc = static_cast<std::uint16_t>(pc + code.length);
+  }
+  return list;
+}
+
 std::uint32_t FcMachine::startRecorder(const hw::RecorderSpec& spec) {
   const std::uint32_t id = recorders_.start(spec);
   refreshProbe();
@@ -352,7 +383,7 @@ hw::StepResult FcMachine::step(hw::StepUnit unit, std::uint64_t count) {
   const std::uint64_t startFrames = ppu_.frameCount();
   // 每次 run(1) 执行恰好一条指令（含随后响应的中断序列）。
   const auto instruction = [&] {
-    if (recorders_.needsInstructionHook()) recorders_.onInstruction(cpu_.registers());
+    beforeInstruction();
     cpu_.run(1);
     ppu_.catchUp(scheduler_.now());
     ++result.instructions;

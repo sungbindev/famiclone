@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -148,6 +149,30 @@ struct RecorderOutput {
   bool truncated{false};
 };
 
+/** 代码与数据标记（CDL）的标记位，每个 PRG-ROM 字节一个标记字节，位定义同 Mesen。 */
+/** 被当作指令执行（含操作数字节）。 */
+inline constexpr std::uint8_t CDL_CODE = 0x01;
+/** 被指令当数据读取。 */
+inline constexpr std::uint8_t CDL_DATA = 0x02;
+/** 是 JMP 或成立的分支的目标。 */
+inline constexpr std::uint8_t CDL_JUMP_TARGET = 0x04;
+/** 是 JSR 的目标（子程序入口）。 */
+inline constexpr std::uint8_t CDL_SUB_ENTRY = 0x08;
+
+/** CPU 地址换算成 PRG-ROM 的偏移（按当前的分页）；不在 PRG-ROM 里时返回空。 */
+using CdlResolver = std::function<std::optional<std::size_t>(std::uint16_t)>;
+
+/** 一条反汇编的指令。 */
+struct DisassembledInstruction {
+  std::uint16_t address{0};
+  /** 指令字节，十六进制，空格隔开，如 "A9 42"。 */
+  std::string bytes;
+  /** 助记符与操作数，带有效地址与取值的注释，如 "LDA $0180 = 33"。 */
+  std::string text;
+  /** 是不是非官方指令。 */
+  bool unofficial{false};
+};
+
 /** 主机的调试接口。 */
 class MachineDebugger {
  public:
@@ -229,6 +254,24 @@ class MachineDebugger {
    * @throws shared::CoreError hardware.noRecorder。
    */
   virtual RecorderOutput stopRecorder(std::uint32_t id) = 0;
+
+  /**
+   * 从 address 起反汇编 count 条指令（CPU 总线上的地址，无副作用地读内存，芯片寄存器类地址的取值显示 00；带索引的寻址用当前的 X、Y）。
+   */
+  [[nodiscard]] virtual std::vector<DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) = 0;
+
+  /**
+   * 开始代码与数据标记：标记清零，之后运行与单步执行的每条指令都打标记。
+   * @param size PRG-ROM 的字节数。
+   * @throws shared::CoreError hardware.cdlActive。
+   */
+  virtual void startCdl(std::size_t size, CdlResolver resolver) = 0;
+
+  /** 停止标记，已有的标记保留到下一次 startCdl 或换主机。 */
+  virtual void stopCdl() = 0;
+
+  /** 标记（每个 PRG 字节一个标记字节）；没有记录过时为空。 */
+  [[nodiscard]] virtual std::optional<std::vector<std::uint8_t>> cdlFlags() const = 0;
 };
 
 }  // namespace ember::contracts::hardware

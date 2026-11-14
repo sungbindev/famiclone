@@ -45,6 +45,7 @@ std::string translate(const std::string& code) {
   if (code == hw::ERROR_BREAKPOINT_LIMIT) return std::string(api::ERROR_BREAKPOINT_LIMIT);
   if (code == hw::ERROR_RECORDER_LIMIT) return std::string(api::ERROR_RECORDING_LIMIT);
   if (code == hw::ERROR_NO_RECORDER) return std::string(api::ERROR_NO_RECORDING);
+  if (code == hw::ERROR_CDL_ACTIVE) return std::string(api::ERROR_CDL_ACTIVE);
   if (code == contracts::output::ERROR_INVALID_FILE_NAME) return std::string(api::ERROR_INVALID_FILE_NAME);
   if (code == contracts::output::ERROR_FILE_FAILED) return std::string(api::ERROR_FILE_FAILED);
   return code;
@@ -86,6 +87,17 @@ std::vector<api::StateReport> collectStates(rt::DebugContext& context, const std
   if (context.cartridge != nullptr && (!module.has_value() || *module == "mapper")) states.push_back(mapperState(*context.cartridge));
   if (module.has_value() && states.empty()) throw shared::CoreError(hw::ERROR_INVALID_STATE, "没有这个状态模块：" + *module);
   return states;
+}
+
+/** 标记的统计。 */
+api::CdlReport cdlStatistics(const std::vector<std::uint8_t>& flags) {
+  api::CdlReport report;
+  report.size = flags.size();
+  for (const std::uint8_t flag : flags) {
+    if ((flag & hw::CDL_CODE) != 0) ++report.codeBytes;
+    if ((flag & hw::CDL_DATA) != 0) ++report.dataBytes;
+  }
+  return report;
 }
 
 }  // namespace
@@ -236,6 +248,54 @@ api::StateReport LocalInspectorService::setState(const std::string& module, std:
     state = {module, module == "cpu", context.debugger.readState(module)};
   });
   return state;
+}
+
+std::vector<hw::DisassembledInstruction> LocalInspectorService::disassemble(std::uint16_t address, std::uint32_t count) {
+  std::vector<hw::DisassembledInstruction> list;
+  inspect([&](rt::DebugContext& context) { list = context.debugger.disassemble(address, count); });
+  return list;
+}
+
+api::CdlReport LocalInspectorService::startCdl() {
+  api::CdlReport report;
+  inspect([&](rt::DebugContext& context) {
+    contracts::mappers::MapperCartridge* cartridge = context.cartridge;
+    const hw::StorageRegion* prg = cartridge == nullptr ? nullptr : cartridge->storage("prg");
+    if (prg == nullptr) throw shared::CoreError(api::ERROR_UNSUPPORTED, "卡带没有 PRG-ROM 存储区，无法做代码与数据标记");
+    // 换算按调用时的分页，标记的是物理位置；只标 PRG-ROM 里的字节。
+    context.debugger.startCdl(prg->size(), [cartridge](std::uint16_t address) -> std::optional<std::size_t> {
+      const auto described = cartridge->describeAddress(false, address);
+      if (described.kind != contracts::mappers::AddressInfo::Kind::Storage || !described.mapped || described.storage != "prg") return std::nullopt;
+      return described.offset;
+    });
+    report.size = prg->size();
+  });
+  return report;
+}
+
+api::CdlReport LocalInspectorService::stopCdl() {
+  api::CdlReport report;
+  inspect([&](rt::DebugContext& context) {
+    const auto flags = context.debugger.cdlFlags();
+    if (!flags.has_value()) throw shared::CoreError(api::ERROR_NO_CDL, "还没有记录过代码与数据标记");
+    context.debugger.stopCdl();
+    report = cdlStatistics(*flags);
+  });
+  return report;
+}
+
+api::CdlReport LocalInspectorService::saveCdl(const std::string& fileName) {
+  const std::string name = fileName.empty() ? "prg.cdl" : fileName;
+  translateErrors([&] { files_->validateName(name); });
+  std::vector<std::uint8_t> flags;
+  inspect([&](rt::DebugContext& context) {
+    auto current = context.debugger.cdlFlags();
+    if (!current.has_value()) throw shared::CoreError(api::ERROR_NO_CDL, "还没有记录过代码与数据标记");
+    flags = std::move(*current);
+  });
+  api::CdlReport report = cdlStatistics(flags);
+  translateErrors([&] { report.file = files_->writeBytes(name, flags); });
+  return report;
 }
 
 std::uint32_t LocalInspectorService::startRecording(const hw::RecorderSpec& spec, const std::string& fileName) {

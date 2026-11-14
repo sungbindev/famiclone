@@ -54,6 +54,16 @@ struct RecordingReport {
   bool truncated{false};
 };
 
+/** 代码与数据标记的统计。 */
+struct CdlReport {
+  /** 保存的文件的完整路径；没有保存时为空。 */
+  std::string file;
+  /** PRG-ROM 的字节数。 */
+  std::size_t size{0};
+  std::size_t codeBytes{0};
+  std::size_t dataBytes{0};
+};
+
 /** 检查器服务。 */
 class InspectorService {
  public:
@@ -85,6 +95,24 @@ class InspectorService {
 
   /** 取消监视；没有监视这个路径时抛出 inspector.noWatch。 */
   virtual void unwatch(const std::string& path) = 0;
+
+  /** 从 address 起反汇编 count 条指令。 */
+  virtual std::vector<hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) = 0;
+
+  /**
+   * 开始代码与数据标记，返回 PRG-ROM 的字节数（CdlReport::size）。
+   * @throws shared::CoreError inspector.unsupported（卡带没有 PRG-ROM 存储区）、inspector.cdlActive。
+   */
+  virtual CdlReport startCdl() = 0;
+
+  /** 停止标记并返回统计。@throws shared::CoreError inspector.noCdl。 */
+  virtual CdlReport stopCdl() = 0;
+
+  /**
+   * 把标记写成调试输出目录下的文件；fileName 为空时用 prg.cdl。
+   * @throws shared::CoreError inspector.noCdl、inspector.invalidFileName、inspector.fileFailed。
+   */
+  virtual CdlReport saveCdl(const std::string& fileName) = 0;
 
   /**
    * 开始跟踪或调用记录：内容记在内存里，stopRecording 时写成调试输出目录下的文件。

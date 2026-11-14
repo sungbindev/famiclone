@@ -27,8 +27,12 @@ class DebugTextFileWriter final : public contracts::output::DebugFileWriter {
 
   void validateName(const std::string& name) const override;
   std::string writeLines(const std::string& fileName, const std::vector<std::string>& lines) override;
+  std::string writeBytes(const std::string& fileName, std::span<const std::uint8_t> bytes) override;
 
  private:
+  /** 先写临时文件再改名；fill 往流里写内容。 */
+  std::string writeFile(const std::string& fileName, const std::function<void(std::ostream&)>& fill);
+
   std::function<std::filesystem::path()> outputDirectory_;
 };
 

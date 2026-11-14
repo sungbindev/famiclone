@@ -13,7 +13,9 @@
 #include <gtest/gtest.h>
 
 #include <fstream>
+#include <initializer_list>
 #include <iterator>
+#include <optional>
 #include <regex>
 #include <string>
 #include <utility>
@@ -23,6 +25,7 @@
 #include "contracts/hardware/hardware-error.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
+#include "logic/hardware/debug/code-data-log.hpp"
 #include "logic/hardware/debug/recorder-table.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
@@ -239,6 +242,104 @@ TEST(RecorderTable, InterruptRecordsTheKindTheReturnAddressAndTheHandler) {
   table.onInterrupt(hw::InterruptKind::Brk, 0xC0AF, 0xC200, 950);
   const auto output = table.stop(id);
   EXPECT_EQ(output.lines, (std::vector<std::string>{"NMI  return:C0AB handler:C100 CYC:500", "IRQ  return:C0AD handler:C200 CYC:900", "BRK  return:C0AF handler:C200 CYC:950"}));
+}
+
+TEST(Disassembler, ReportsFlowTargetsBranchOutcomeAndTheMemoryOperand) {
+  SmallMemory memory;
+  const auto put = [&memory](std::uint16_t address, std::initializer_list<std::uint8_t> bytes) {
+    for (const std::uint8_t byte : bytes) memory.bytes[address++] = byte;
+  };
+  const auto peek = [&memory](std::uint16_t address) { return memory.peek(address); };
+  using ember::logic::hardware::Flow;
+  using ember::logic::hardware::disassemble;
+
+  // 条件分支：BNE $0312，Z 清零时成立，置位时不成立
+  put(0x300, {0xD0, 0x10});
+  auto registers = registersAt(0x300);
+  registers.status = 0x24;
+  auto branch = disassemble(0x300, registers, peek);
+  EXPECT_EQ(branch.flow, Flow::Branch);
+  EXPECT_EQ(branch.target, 0x312);
+  EXPECT_TRUE(branch.taken);
+  EXPECT_FALSE(branch.dataAddress.has_value());
+  registers.status = 0x26;
+  EXPECT_FALSE(disassemble(0x300, registers, peek).taken);
+  // 向后跳：BEQ $02F2
+  put(0x300, {0xF0, 0xF0});
+  EXPECT_EQ(disassemble(0x300, registers, peek).target, 0x2F2);
+  EXPECT_TRUE(disassemble(0x300, registers, peek).taken);
+
+  // JSR、JMP 绝对与间接
+  put(0x400, {0x20, 0x34, 0x12});
+  const auto call = disassemble(0x400, registersAt(0x400), peek);
+  EXPECT_EQ(call.flow, Flow::Call);
+  EXPECT_EQ(call.target, 0x1234);
+  EXPECT_FALSE(call.dataAddress.has_value());
+  put(0x400, {0x6C, 0x10, 0x03});
+  put(0x310, {0x78, 0x56});
+  const auto indirect = disassemble(0x400, registersAt(0x400), peek);
+  EXPECT_EQ(indirect.flow, Flow::Jump);
+  EXPECT_EQ(indirect.target, 0x5678);
+  EXPECT_EQ(indirect.dataAddress, std::optional<std::uint16_t>(0x310));
+
+  // 内存操作数：读的给出有效地址，只写的（STA）不给
+  put(0x500, {0xAD, 0x00, 0x02});
+  EXPECT_EQ(disassemble(0x500, registersAt(0x500), peek).dataAddress, std::optional<std::uint16_t>(0x200));
+  put(0x500, {0x8D, 0x00, 0x02});
+  EXPECT_FALSE(disassemble(0x500, registersAt(0x500), peek).dataAddress.has_value());
+  auto indexed = registersAt(0x500);
+  indexed.x = 5;
+  indexed.y = 2;
+  put(0x500, {0xB5, 0x10});
+  EXPECT_EQ(disassemble(0x500, indexed, peek).dataAddress, std::optional<std::uint16_t>(0x15));
+  put(0x20, {0x00, 0x90});
+  put(0x500, {0xB1, 0x20});
+  EXPECT_EQ(disassemble(0x500, indexed, peek).dataAddress, std::optional<std::uint16_t>(0x9002));
+  // 立即数与隐含寻址没有内存操作数
+  put(0x500, {0xA9, 0x01});
+  EXPECT_FALSE(disassemble(0x500, indexed, peek).dataAddress.has_value());
+  // 不生成文本时只给结构
+  const auto quiet = disassemble(0x500, indexed, peek, false);
+  EXPECT_TRUE(quiet.text.empty());
+  EXPECT_EQ(quiet.length, 2);
+}
+
+TEST(CodeDataLog, MarksCodeDataJumpTargetsAndSubroutineEntriesInThePrgOnly) {
+  SmallMemory memory;
+  const auto put = [&memory](std::uint16_t address, std::initializer_list<std::uint8_t> bytes) {
+    for (const std::uint8_t byte : bytes) memory.bytes[address++] = byte;
+  };
+  // $8000: LDA $8100、JSR $8200、BNE $800A（Z 清零，成立）
+  put(0x8000, {0xAD, 0x00, 0x81, 0x20, 0x00, 0x82, 0xD0, 0x02});
+  const auto peek = [&memory](std::uint16_t address) { return memory.peek(address); };
+  ember::logic::hardware::CodeDataLog log;
+  EXPECT_FALSE(log.exists());
+  log.start(0x4000, [](std::uint16_t address) -> std::optional<std::size_t> {
+    if (address < 0x8000 || address > 0xBFFF) return std::nullopt;
+    return static_cast<std::size_t>(address - 0x8000);
+  });
+  ASSERT_TRUE(log.active());
+  EXPECT_THROW(log.start(0x4000, nullptr), ember::shared::CoreError);
+  log.onInstruction(registersAt(0x8000), peek);
+  log.onInstruction(registersAt(0x8003), peek);
+  log.onInstruction(registersAt(0x8006), peek);
+  // 不在 PRG 里的指令不记
+  put(0x0200, {0xAD, 0x00, 0x81});
+  log.onInstruction(registersAt(0x0200), peek);
+
+  const auto& flags = log.flags();
+  ASSERT_EQ(flags.size(), 0x4000U);
+  for (std::size_t offset : {0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U}) EXPECT_EQ(flags[offset], hw::CDL_CODE) << offset;
+  EXPECT_EQ(flags[0x100], hw::CDL_DATA);
+  EXPECT_EQ(flags[0x200], hw::CDL_SUB_ENTRY);
+  EXPECT_EQ(flags[0x0A], hw::CDL_JUMP_TARGET);
+
+  // 停止后标记保留，再开始就清零
+  log.stop();
+  EXPECT_FALSE(log.active());
+  EXPECT_EQ(log.flags()[0x100], hw::CDL_DATA);
+  log.start(0x4000, [](std::uint16_t) -> std::optional<std::size_t> { return std::nullopt; });
+  EXPECT_EQ(log.flags()[0x100], 0);
 }
 
 TEST(RecorderTable, LimitsTheNumberOfRecordsAndRejectsUnknownIds) {

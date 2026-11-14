@@ -14,6 +14,10 @@
 | [`inspector.snapshot`](#inspectorsnapshot) | 取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的 |
 | [`inspector.watch`](#inspectorwatch) | 监视一个状态项：它的取值变化时发事件 inspector.stateChanged |
 | [`inspector.unwatch`](#inspectorunwatch) | 取消监视 |
+| [`inspector.disassemble`](#inspectordisassemble) | 从 address 起反汇编 count 条指令（CPU 总线上的地址） |
+| [`inspector.cdlStart`](#inspectorcdlstart) | 开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标） |
+| [`inspector.cdlStop`](#inspectorcdlstop) | 停止标记，已有的标记保留到下一次 cdlStart 或换卡带 |
+| [`inspector.cdlSave`](#inspectorcdlsave) | 把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen |
 | [`inspector.traceStart`](#inspectortracestart) | 开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件 |
 | [`inspector.traceStop`](#inspectortracestop) | 结束跟踪并把内容写成文件 |
 | [`inspector.callLogStart`](#inspectorcalllogstart) | 开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段 |
@@ -271,6 +275,128 @@ ember-debug call inspector.unwatch path=<string>
 
 ```ts
 await client.api.inspector.unwatch({ path: … });
+```
+
+### inspector.disassemble
+
+> 只经调试服务开放（界面不能发起）
+
+从 address 起反汇编 count 条指令（CPU 总线上的地址）。读内存没有副作用；带索引的寻址用当前的 X、Y 算有效地址与注释里的取值；地址超过 $FFFF 时回到 $0000。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `address` | `integer（0..65535）` | 是 | 起始地址 |
+| `count` | `integer（1..256）` | 否 | 指令条数，默认 16 |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `instructions` | [inspector.DisassembledInstruction](inspector.md#disassembledinstruction)[] | 是 | 反汇编的指令 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`
+
+**示例**
+
+```text
+ember-debug call inspector.disassemble address=<integer>
+```
+
+```ts
+await client.api.inspector.disassemble({ address: … });
+```
+
+### inspector.cdlStart
+
+> 只经调试服务开放（界面不能发起）
+
+开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标）。标记的是物理位置（按当前的分页换算）。记录属于当前的主机，装入新卡带后作废。需要已开机，卡带要有 PRG-ROM 存储区。
+
+**参数**
+
+（无）
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `size` | `integer（1..）` | 是 | PRG-ROM 的字节数，也是标记的字节数 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.cdlActive`
+
+**示例**
+
+```text
+ember-debug call inspector.cdlStart
+```
+
+```ts
+await client.api.inspector.cdlStart();
+```
+
+### inspector.cdlStop
+
+> 只经调试服务开放（界面不能发起）
+
+停止标记，已有的标记保留到下一次 cdlStart 或换卡带；已经停止时只返回统计。没有记录过时返回 inspector.noCdl。需要已开机。
+
+**参数**
+
+（无）
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `size` | `integer（1..）` | 是 | PRG-ROM 的字节数 |
+| `codeBytes` | `integer（0..）` | 是 | 标了 Code 的字节数 |
+| `dataBytes` | `integer（0..）` | 是 | 标了 Data 的字节数 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.noCdl`
+
+**示例**
+
+```text
+ember-debug call inspector.cdlStop
+```
+
+```ts
+await client.api.inspector.cdlStop();
+```
+
+### inspector.cdlSave
+
+> 只经调试服务开放（界面不能发起）
+
+把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen。记录中或停止后都可以保存。没有记录过时返回 inspector.noCdl。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `file` | `string（长度 1..100）` | 否 | 文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时用 prg.cdl |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `file` | `string` | 是 | 保存的文件的完整路径 |
+| `size` | `integer（1..）` | 是 | PRG-ROM 的字节数，也是文件的字节数 |
+| `codeBytes` | `integer（0..）` | 是 | 标了 Code 的字节数 |
+| `dataBytes` | `integer（0..）` | 是 | 标了 Data 的字节数 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.noCdl`、`inspector.invalidFileName`、`inspector.fileFailed`
+
+**示例**
+
+```text
+ember-debug call inspector.cdlSave
+```
+
+```ts
+await client.api.inspector.cdlSave();
 ```
 
 ### inspector.traceStart
@@ -611,6 +737,17 @@ await client.api.inspector.setState({ module: …, fields: … });
 | `address` | `integer（0..65535）` | 是 | 地址范围的第一个地址 |
 | `endAddress` | `integer（0..65535）` | 是 | 地址范围的最后一个地址（含）；单个地址时与 address 相同 |
 | `hits` | `integer（0..）` | 是 | 已经命中的次数 |
+
+### DisassembledInstruction
+
+一条反汇编的指令。
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `address` | `integer（0..65535）` | 是 | 指令的地址 |
+| `bytes` | `string` | 是 | 指令字节，十六进制，空格隔开，如 A9 42 |
+| `text` | `string` | 是 | 助记符与操作数，带有效地址与取值的注释，如 LDA $0180 = 33；写法同 nestest 日志，芯片寄存器类地址的取值显示 00 |
+| `unofficial` | `boolean` | 是 | 是不是非官方指令 |
 
 ### MemoryRangeSpec
 

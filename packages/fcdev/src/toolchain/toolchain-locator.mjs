@@ -23,8 +23,8 @@ const REQUIRED_TOOLS = ['cc65', 'ca65', 'ld65'];
  * @property {string} source 来源：config、env 或 package
  */
 
-/** 工具链包的名称，放在 @rujianjs 作用域下 */
-export const TOOLCHAIN_PACKAGE_NAME = '@rujianjs/fcdev-cc65';
+/** 工具链包的名称 */
+export const TOOLCHAIN_PACKAGE_NAME = 'fcdev-cc65';
 
 /**
  * 工具程序的完整路径。

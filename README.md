@@ -54,7 +54,7 @@ fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考�
 | `packages/fcdev` | 命令行与各机型目标 |
 | `packages/create-fcdev` | `npm create fcdev` 的创建包与项目模板 |
 | `packages/fcdev-cc65` | cc65 的包（构建生成，不入库） |
-| `packages/ember-debug-sdk` | Ember 调试服务的 SDK、终端客户端与 MCP 服务（`@rujianjs/ember-debug-sdk`），说明见 [README](packages/ember-debug-sdk/README.md) |
+| `packages/ember-debug-sdk` | Ember 调试服务的 SDK、终端客户端与 MCP 服务（`ember-debug-sdk`），说明见 [README](packages/ember-debug-sdk/README.md) |
 | `vscode` | VS Code 扩展（独立的 npm 项目，说明见 [vscode/README.md](vscode/README.md)） |
 | `machines` | 各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)、[bbk](machines/bbk/README.md) |
 | `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`bbk-bios`、`bbk-loader`、`memtest`、`fcprobe`、`disk` 与 `examples` |

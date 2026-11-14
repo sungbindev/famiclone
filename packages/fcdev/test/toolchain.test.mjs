@@ -27,8 +27,8 @@ describe('工具链定位', () => {
 
   afterEach(() => temp.cleanup());
 
-  it('工具链包的包名在 @rujianjs 作用域下', () => {
-    assert.equal(TOOLCHAIN_PACKAGE_NAME, '@rujianjs/fcdev-cc65');
+  it('工具链包的包名是 fcdev-cc65', () => {
+    assert.equal(TOOLCHAIN_PACKAGE_NAME, 'fcdev-cc65');
   });
 
   it('配置项优先于环境变量', () => {

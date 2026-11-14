@@ -1,4 +1,4 @@
-# @rujianjs/ember-debug-sdk
+# ember-debug-sdk
 
 Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSocket 客户端，终端客户端 `ember-debug`，以及给 Copilot 等智能体用的 MCP 服务 `ember-debug-mcp`。
 
@@ -24,7 +24,7 @@ npm pack        # 生成 .tgz，再在你的项目里 npm install 它
 ## 在代码里使用
 
 ```ts
-import { connectToEmber } from '@rujianjs/ember-debug-sdk/node';
+import { connectToEmber } from 'ember-debug-sdk/node';
 
 const client = await connectToEmber(); // 读端点文件；也可以传 { url, token }
 
@@ -39,7 +39,7 @@ await client.api.input.pad({ port: 0, buttons: 0b0000_1000 }); // 按下开始�
 client.close();
 ```
 
-- 在浏览器或 Electron 页面里用 `import { connect } from '@rujianjs/ember-debug-sdk'`，给出 `url` 与 `token`；这个入口不引用 Node 内置模块。
+- 在浏览器或 Electron 页面里用 `import { connect } from 'ember-debug-sdk'`，给出 `url` 与 `token`；这个入口不引用 Node 内置模块。
 - 请求的参数与结果、事件的数据都有完整的 TypeScript 类型，由 Ember 的接口定义生成；`client.request('runtime.run', { frames: 1 })` 与 `client.api.runtime.run({ frames: 1 })` 等价。
 - 结果里的二进制数据（截图、以后的内存内容）是 `Uint8Array`。
 - 要等事件：先 `subscribe`，再 `on` / `onAny` / `waitFor`。没有订阅不会收到任何事件。

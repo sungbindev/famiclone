@@ -19,9 +19,9 @@ const PACKAGES_DIR = path.join(ROOT, 'packages');
 
 /** 发布顺序：工具链包先发，主包随后，创建包最后 */
 const PUBLISH_ORDER = [
-  { directory: 'fcdev-cc65', name: '@rujianjs/fcdev-cc65', scoped: true },
-  { directory: 'fcdev', name: 'fcdev', scoped: false },
-  { directory: 'create-fcdev', name: 'create-fcdev', scoped: false },
+  { directory: 'fcdev-cc65', name: 'fcdev-cc65' },
+  { directory: 'fcdev', name: 'fcdev' },
+  { directory: 'create-fcdev', name: 'create-fcdev' },
 ];
 
 /**
@@ -165,7 +165,7 @@ async function publish({ dryRun, allowDirty }) {
     return;
   }
   for (const item of PUBLISH_ORDER) {
-    run('npm', ['publish', '-w', `packages/${item.directory}`, ...(item.scoped ? ['--access', 'public'] : [])]);
+    run('npm', ['publish', '-w', `packages/${item.directory}`]);
   }
   console.log(`\n三个包的 ${version} 版都已提交发布；新发布的包要等 npm 审核，过一会儿才能查到。`);
 }

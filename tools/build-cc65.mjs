@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-cc65.mjs
-// 说明：用 cc65/ 的源码构建 cc65 工具与 none、nes 运行库，并组装成工具链包 @rujianjs/fcdev-cc65。
+// 说明：用 cc65/ 的源码构建 cc65 工具与 none、nes 运行库，并组装成工具链包 fcdev-cc65。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
@@ -35,10 +35,10 @@ const PACKAGE_CONTENT_DIRS = ['bin', 'include', 'asminc', 'lib', 'cfg'];
 /** 单次构建命令的超时，单位毫秒 */
 const BUILD_TIMEOUT_MS = 15 * 60 * 1000;
 
-/** 工具链包的包名，放在 @rujianjs 作用域下 */
-export const TOOLCHAIN_PACKAGE_NAME = '@rujianjs/fcdev-cc65';
+/** 工具链包的包名 */
+export const TOOLCHAIN_PACKAGE_NAME = 'fcdev-cc65';
 
-/** 工具链包在 packages/ 下的目录名，不含作用域 */
+/** 工具链包在 packages/ 下的目录名 */
 export const TOOLCHAIN_PACKAGE_DIR_NAME = 'fcdev-cc65';
 
 /**
@@ -89,7 +89,6 @@ function writePackageJson(packageDir) {
     os: ['win32'],
     cpu: ['x64'],
     files: [...PACKAGE_CONTENT_DIRS, 'LICENSE', 'manifest.json'],
-    publishConfig: { access: 'public' },
   };
   writeFileSync(path.join(packageDir, 'package.json'), `${JSON.stringify(document, null, 2)}\n`);
 }

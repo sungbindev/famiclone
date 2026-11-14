@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：index.ts
- * 说明：@rujianjs/ember-debug-sdk 的入口（不依赖 Node 内置模块，浏览器与 Electron 页面也能用）：connect、EmberDebugClient、错误类型与全部请求、事件的类型。
+ * 说明：ember-debug-sdk 的入口（不依赖 Node 内置模块，浏览器与 Electron 页面也能用）：connect、EmberDebugClient、错误类型与全部请求、事件的类型。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：请求与事件的类型由 Ember 的 npm run schema 生成（generated/api.ts）；Node 环境下自动查找 Ember 的入口在 @rujianjs/ember-debug-sdk/node。
+ * 备注：请求与事件的类型由 Ember 的 npm run schema 生成（generated/api.ts）；Node 环境下自动查找 Ember 的入口在 ember-debug-sdk/node。
  * ------------------------------------------------------------------------
  */
 

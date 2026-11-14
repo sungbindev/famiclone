@@ -87,7 +87,7 @@ try {
   mkdirSync(creatorDir);
   run('npm', ['install', '--prefix', `"${creatorDir}"`, '--no-audit', '--no-fund', `"${findTarball(packDir, 'create-fcdev-')}"`], workDir);
   const creatorBin = path.join(creatorDir, 'node_modules', 'create-fcdev', 'bin', 'create-fcdev.mjs');
-  const tarballs = [findTarball(packDir, 'fcdev-0'), findTarball(packDir, 'rujianjs-fcdev-cc65-')];
+  const tarballs = [findTarball(packDir, 'fcdev-0'), findTarball(packDir, 'fcdev-cc65-')];
 
   const inspectNes = (file) => (file.subarray(0, 4).equals(Buffer.from([0x4e, 0x45, 0x53, 0x1a])) ? null : '缺少 iNES 文件头');
   const inspectSb2000 = (file) => (file[0] === 0x4c && file[3] === 0xaa && file[4] === 0x55 ? null : '文件头不是 4C ?? ?? AA 55');

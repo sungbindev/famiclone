@@ -70,7 +70,7 @@ function listPackedFiles(packageName) {
   return JSON.parse(output)[0].files.map((file) => file.path);
 }
 
-/** 检查三个包的版本一致，且 fcdev 对工具链包的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里，作用域包声明公开发布。 */
+/** 检查三个包的版本一致，且 fcdev 对工具链包的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里。 */
 function checkVersions() {
   const manifests = Object.fromEntries(PACKAGE_NAMES.map((name) => [name, readJson(path.join(PACKAGES_DIR, name, 'package.json'))]));
   const versions = new Set(Object.values(manifests).map((manifest) => manifest.version));
@@ -81,9 +81,8 @@ function checkVersions() {
   }
   const dependencies = manifests.fcdev.optionalDependencies ?? {};
   for (const directory of PACKAGE_NAMES.filter((name) => name.startsWith('fcdev-'))) {
-    const { name, publishConfig } = manifests[directory];
+    const { name } = manifests[directory];
     if (!(name in dependencies)) errors.push(`fcdev 的 optionalDependencies 里没有 ${name}`);
-    if (name.startsWith('@') && publishConfig?.access !== 'public') errors.push(`${name} 是作用域包，package.json 里要写 publishConfig.access 为 public`);
   }
   for (const name of PACKAGE_NAMES) {
     if (!manifests[name].license) errors.push(`${name} 的 package.json 没有 license`);

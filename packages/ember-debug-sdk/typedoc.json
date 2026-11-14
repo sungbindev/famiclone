@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "name": "@rujianjs/ember-debug-sdk",
+  "name": "ember-debug-sdk",
   "entryPoints": ["src/index.ts", "src/node.ts"],
   "tsconfig": "tsconfig.build.json",
   "readme": "README.md",

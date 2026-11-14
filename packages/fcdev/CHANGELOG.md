@@ -1,8 +1,12 @@
 # 更新记录
 
-适用于 `fcdev`、`create-fcdev`、`@rujianjs/fcdev-cc65` 三个包，它们的版本号相同。
+适用于 `fcdev`、`create-fcdev`、`fcdev-cc65` 三个包，它们的版本号相同。
 
 ## 未发布
+
+### 安装
+
+- cc65 工具链包改名为 `fcdev-cc65`，不再放在 `@rujianjs` 作用域下；`fcdev` 会自动安装它，使用者无须任何操作。
 
 ### 模拟器与调试
 

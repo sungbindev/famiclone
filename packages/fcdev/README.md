@@ -10,7 +10,7 @@
 npm install --save-dev fcdev
 ```
 
-要求 Node.js 22 及以上。cc65 编译器在依赖包 `@rujianjs/fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器不随包提供，`run` 与 `debug` 需要自备：用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指定，调试命令要求该模拟器支持同样的调试服务。
+要求 Node.js 22 及以上。cc65 编译器在依赖包 `fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器不随包提供，`run` 与 `debug` 需要自备：用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指定，调试命令要求该模拟器支持同样的调试服务。
 
 ## 使用
 

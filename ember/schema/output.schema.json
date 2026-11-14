@@ -4,7 +4,7 @@
   "types": {},
   "requests": {
     "setVolume": {
-      "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。设置保存在核心内存里，核心重启后回到音量 100、未静音；变化平滑过渡，不会产生爆音。",
+      "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。音量保存到首选项的 sound.volume，核心重启后保持；静音不保存，每次启动由 sound.startMuted 决定；变化平滑过渡，不会产生爆音。",
       "params": {
         "type": "object",
         "properties": {

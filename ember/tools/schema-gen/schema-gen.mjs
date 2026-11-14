@@ -9,7 +9,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
  * 备注：只支持 JSON Schema 的子集（见 docs/06-构建与模块登记.md 第 2 节）；本仓库的生成目录不提交，内容没变的文件不改写；
- *       已删除的模块，其生成目录一并删除。可作为模块被测试引用（generate），也可直接运行。
+ *       已删除的模块，其生成目录一并删除；调试 SDK 仓库（默认 ../../ember-debug-sdk，可用环境变量 EMBER_DEBUG_SDK_DIR 指定）在本机时，一并写入它的 sdk/generated。可作为模块被测试引用（generate），也可直接运行。
  * ------------------------------------------------------------------------
  */
 
@@ -17,6 +17,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { generateOpenRpc, generateOpenRpcCpp } from './openrpc.mjs';
+import { generateSdkTypes } from './sdk-ts.mjs';
 
 const MODULE_NAME_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 /** 各模块 Schema 文件名的后缀，前面是模块名。 */
@@ -581,9 +582,10 @@ function removeStale(baseDir, modules, removed) {
 /**
  * 生成全部代码。
  * @param {string} root 项目根目录。
+ * @param {{ sdkDirectory?: string }} [options] sdkDirectory：调试 SDK 仓库的根目录，其下有 sdk 目录时才写入。
  * @returns {{ written: string[], removed: string[], modules: string[] }} 写入与删除的文件。
  */
-export function generate(root) {
+export function generate(root, options = {}) {
   const modules = loadSchemas(root);
   const written = [];
   const removed = [];
@@ -601,6 +603,12 @@ export function generate(root) {
     const cpp = generateOpenRpcCpp(document, CPP_HEADER('schema/*.schema.json'));
     writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.hpp'), cpp.header, written);
     writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.cpp'), cpp.source, written);
+    // 调试 SDK 仓库（单独的仓库）：接口文档与类型写到它的 sdk/generated，仓库不在本机时跳过。
+    const sdkGenerated = options.sdkDirectory === undefined ? undefined : join(options.sdkDirectory, 'sdk', 'generated');
+    if (sdkGenerated !== undefined && existsSync(dirname(sdkGenerated))) {
+      writeIfChanged(join(sdkGenerated, 'openrpc.json'), `${JSON.stringify(document, null, 2)}\n`, written);
+      writeIfChanged(join(sdkGenerated, 'api.ts'), generateSdkTypes(document), written);
+    }
   }
   const names = new Set(modules.map((module) => module.name));
   removeStale(join(root, 'src', 'contracts'), names, removed);
@@ -611,7 +619,7 @@ export function generate(root) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
   try {
-    const result = generate(root);
+    const result = generate(root, { sdkDirectory: process.env.EMBER_DEBUG_SDK_DIR ?? resolve(root, '..', '..', 'ember-debug-sdk') });
     console.log(`Schema 代码生成：${result.modules.length} 个模块，写入 ${result.written.length} 个文件，删除 ${result.removed.length} 个目录。`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

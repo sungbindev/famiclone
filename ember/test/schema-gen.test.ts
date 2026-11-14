@@ -98,6 +98,70 @@ describe('generate：mappers 模块', () => {
   });
 });
 
+/** 在临时目录里准备一个带 sdk 目录的 SDK 仓库。 */
+function createSdkRepository(): string {
+  const sdkRoot = mkdtempSync(join(tmpdir(), 'ember-debug-sdk-'));
+  roots.push(sdkRoot);
+  mkdirSync(join(sdkRoot, 'sdk'));
+  return sdkRoot;
+}
+
+describe('generate：调试 SDK', () => {
+  const debug = { module: 'debug', types: {}, requests: {}, events: {} };
+  const shots = {
+    module: 'shots',
+    types: { Frame: { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'] } },
+    requests: {
+      take: {
+        description: '截图。',
+        debugOnly: true,
+        params: { type: 'object', properties: { format: { type: 'string', enum: ['png', 'rgba'] } } },
+        result: { type: 'object', properties: { width: { type: 'integer' }, data: { description: '图像数据（二进制）' }, frame: { $ref: '#/types/Frame' } }, required: ['width'] },
+        errors: ['shots.noPicture']
+      }
+    },
+    events: { taken: { description: '截图完成。', data: { type: 'object', properties: { width: { type: 'integer' } }, required: ['width'] } } }
+  };
+
+  it('给出 SDK 仓库时，把 OpenRPC 文档与类型写到它的 sdk/generated', () => {
+    const root = createProject({ debug, shots });
+    const sdkRoot = createSdkRepository();
+    generate(root, { sdkDirectory: sdkRoot });
+
+    const api = read(sdkRoot, 'sdk', 'generated', 'api.ts');
+    expect(api).toContain('export interface ShotsFrame {');
+    expect(api).toContain('export interface ShotsTakeParams {');
+    expect(api).toContain('format?: "png" | "rgba";');
+    expect(api).toContain('export interface ShotsTakeResult {');
+    expect(api).toContain('frame?: ShotsFrame;');
+    expect(api).toContain('"shots.take": { params: ShotsTakeParams; result: ShotsTakeResult };');
+    expect(api).toContain('"shots.taken": ShotsTakenData;');
+    expect(api).toContain('readonly shots: {');
+    expect(api).toContain('take(params?: ShotsTakeParams): Promise<ShotsTakeResult>;');
+    expect(api).toContain('export type RpcDiscoverResult = Record<string, unknown>;');
+    expect(JSON.parse(read(sdkRoot, 'sdk', 'generated', 'openrpc.json')).methods.map((method: { name: string }) => method.name)).toContain('shots.take');
+  });
+
+  it('没有类型的顶层 data 属性是二进制：OpenRPC 里有 x-binary，SDK 类型是 Uint8Array', () => {
+    const root = createProject({ debug, shots });
+    const sdkRoot = createSdkRepository();
+    generate(root, { sdkDirectory: sdkRoot });
+    const method = JSON.parse(read(sdkRoot, 'sdk', 'generated', 'openrpc.json')).methods.find((item: { name: string }) => item.name === 'shots.take');
+    expect(method.result.schema.properties.data['x-binary']).toBe(true);
+    expect(read(sdkRoot, 'sdk', 'generated', 'api.ts')).toMatch(/\/\*\* 图像数据（二进制） \*\/\n {2}data\?: Uint8Array;/);
+  });
+
+  it('没有给 SDK 仓库、或仓库里没有 sdk 目录时不写', () => {
+    const root = createProject({ debug, shots });
+    const empty = mkdtempSync(join(tmpdir(), 'ember-debug-sdk-'));
+    roots.push(empty);
+    const result = generate(root, { sdkDirectory: empty });
+    expect(existsSync(join(empty, 'sdk'))).toBe(false);
+    expect(result.written.every((path) => !path.startsWith(empty))).toBe(true);
+    expect(generate(createProject({ debug, shots })).written.some((path) => path.endsWith('api.ts') && path.includes('generated') && path.includes('sdk'))).toBe(false);
+  });
+});
+
 describe('generate：请求使用范围', () => {
   const demo = {
     module: 'demo',

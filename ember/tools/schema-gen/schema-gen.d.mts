@@ -19,5 +19,5 @@ export interface LoadedSchema {
 /** 读取并检查全部模块的 Schema。 */
 export function loadSchemas(root: string): LoadedSchema[];
 
-/** 生成全部代码。 */
-export function generate(root: string): { written: string[]; removed: string[]; modules: string[] };
+/** 生成全部代码；给出 sdkDirectory 且其下有 sdk 目录时，另把接口文档与类型写到它的 sdk/generated。 */
+export function generate(root: string, options?: { sdkDirectory?: string }): { written: string[]; removed: string[]; modules: string[] };

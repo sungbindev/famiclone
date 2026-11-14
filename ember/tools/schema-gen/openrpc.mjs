@@ -42,6 +42,13 @@ function toJsonSchema(node, currentModule) {
   return schema;
 }
 
+/** 顶层的 data 属性没有类型时是二进制（协议约定，见 docs/04-调试服务.md 第 2.3 节），加 x-binary 标记。 */
+function markBinaryData(schema) {
+  const data = schema.properties?.data;
+  if (data !== undefined && data.type === undefined && data.$ref === undefined) data['x-binary'] = true;
+  return schema;
+}
+
 /** 请求的参数对象转成 OpenRPC 的按名称参数。 */
 function toParams(node, currentModule) {
   const required = new Set(node.required ?? []);
@@ -72,7 +79,7 @@ export function generateOpenRpc(modules) {
         tags: [{ name }],
         paramStructure: 'by-name',
         params: toParams(request.params, name),
-        result: { name: 'result', schema: toJsonSchema(request.result, name) },
+        result: { name: 'result', schema: markBinaryData(toJsonSchema(request.result, name)) },
         errors: (request.errors ?? []).map((code) => ({ code: APPLICATION_ERROR, message: code, data: { code } }))
       };
       if (request.debugOnly === true) method['x-debugOnly'] = true;
@@ -80,7 +87,7 @@ export function generateOpenRpc(modules) {
       methods.push(method);
     }
     for (const [event, definition] of Object.entries(schema.events ?? {})) {
-      events.push({ name: `${name}.${event}`, description: definition.description ?? '', tags: [{ name }], data: toJsonSchema(definition.data, name) });
+      events.push({ name: `${name}.${event}`, description: definition.description ?? '', tags: [{ name }], data: markBinaryData(toJsonSchema(definition.data, name)) });
     }
   }
   methods.push({

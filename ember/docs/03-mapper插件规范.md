@@ -182,7 +182,7 @@ sequenceDiagram
 ### 6.1 导出
 
 ```ts
-import { definePlugin } from '@ember/mapper-sdk';
+import { definePlugin } from '@rujianjs/ember-mapper-sdk';
 
 export default definePlugin({
   reset(ctx, kind) { /* kind 为 'power' 或 'soft'：初始化状态与窗口 */ },
@@ -284,7 +284,7 @@ export default {
 ## 8. SDK 与测试
 
 - **后续阶段**：本节的 SDK、假宿主与命令行工具目前都没有做。现在的插件脚本是自包含的单文件（沙箱里没有 `import`），官方插件的源码在 `plugins/<插件>/`，用 `npm run plugins:pack` 打包（见 06 第 7 节）；自动测试目前直接在核心的 C++ 测试里用真实的脚本运行时跑（沙箱限制、ctx、卡带的窗口与寄存器、插件登记）。
-- SDK 放在 `sdk/`，发布为 npm 包（包名待定，文中暂记为 `@ember/mapper-sdk`），内容：声明文件（`definePlugin`、`ctx` 与清单的类型，每个类型与字段有中文文档注释）、清单检查、假宿主、命令行工具（`build`、`pack`）。
+- SDK 放在 `sdk/`，发布为 npm 包（包名 `@rujianjs/ember-mapper-sdk`，作用域沿用 `@rujianjs`），内容：声明文件（`definePlugin`、`ctx` 与清单的类型，每个类型与字段有中文文档注释）、清单检查、假宿主、命令行工具（`build`、`pack`）。
 - 假宿主可以不启动模拟器就测试插件：预设卡带文件头和存储区，模拟寄存器读写，检查窗口、名称表、中断与状态；规则与核心一致，修改任一侧时同步另一侧。
 - 官方插件在 `plugins/<插件>/`，只经 SDK 的入口引用 SDK，插件之间不互相引用。
 - 自动测试只用假宿主，不访问真实设备；整机行为用 `machines/` 的实测程序在核心里验证。

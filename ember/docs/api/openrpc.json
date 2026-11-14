@@ -1006,7 +1006,7 @@
     {
       "name": "output.setVolume",
       "summary": "设置声音的音量与静音",
-      "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。设置保存在核心内存里，核心重启后回到音量 100、未静音；变化平滑过渡，不会产生爆音。",
+      "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。音量保存到首选项的 sound.volume，核心重启后保持；静音不保存，每次启动由 sound.startMuted 决定；变化平滑过渡，不会产生爆音。",
       "tags": [
         {
           "name": "output"
@@ -1129,7 +1129,8 @@
               "description": "保存后的完整路径；没有带 file 参数时没有这一项"
             },
             "data": {
-              "description": "图像数据（二进制，以二进制帧送达）；带 file 参数时没有这一项"
+              "description": "图像数据（二进制，以二进制帧送达）；带 file 参数时没有这一项",
+              "x-binary": true
             }
           },
           "required": [

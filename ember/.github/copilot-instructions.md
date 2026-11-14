@@ -32,7 +32,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - mapper 插件包与脚本来自外部，是不可信输入：包的读取要检查路径穿越与大小上限，脚本只能经宿主对象 `ctx` 访问外部，内存、栈、单次回调时长都有上限；C 回调里的 C++ 异常必须在边界截获，脚本出错不能让异常穿过 CPU 的总线访问（卡带记下错误，由运行模块轮询）。
 - 存储按位置分三档：芯片内与主板上（含学习机整机的存储与 BIOS）的由芯片模块、主机型号写死，卡带上的由 mapper 清单声明，见硬件模块文档。
 - 请求、事件与数据类型只在 `schema/<模块>.schema.json` 中定义和修改，TypeScript 与 C++ 的 `generated/` 目录由脚本生成，不手写、不手改。
-- 调试服务与界面共用同一套请求；调试专用的请求在 Schema 里标 `debugOnly`，只经调试服务开放，界面不使用。调试服务（`core/src/infra/debug/`，网络在 `core/src/platform/network/`）是 WebSocket 加 JSON-RPC 2.0，只监听 127.0.0.1，令牌必须；开关、端口、令牌是首选项的 `debug.*`，启动参数 `--debug-port`、`--debug-token` 强制开启；会话逻辑（`DebugSession`）不碰网络，结果或事件数据顶层的 `data` 字段是 `nlohmann::json::binary` 时改发二进制帧；接口描述文档 `docs/api/openrpc.json` 由 `npm run schema` 生成，不手写；修改协议同步 04 文档与 SDK。
+- 调试服务与界面共用同一套请求；调试专用的请求在 Schema 里标 `debugOnly`，只经调试服务开放，界面不使用。调试服务（`core/src/infra/debug/`，网络在 `core/src/platform/network/`）是 WebSocket 加 JSON-RPC 2.0，只监听 127.0.0.1，令牌必须；开关、端口、令牌是首选项的 `debug.*`，启动参数 `--debug-port`、`--debug-token` 强制开启；会话逻辑（`DebugSession`）不碰网络，结果或事件数据顶层的 `data` 字段是 `nlohmann::json::binary` 时改发二进制帧；接口描述文档 `docs/api/openrpc.json` 由 `npm run schema` 生成，不手写；修改协议同步 04 文档，并在 SDK 仓库 `ember-debug-sdk` 提交 `npm run schema` 生成的变化。
 - 新增模块时在各层建立同名模块目录，并在 C++、主进程、渲染进程三份模块清单中登记；分层与模块依赖由 `npm run boundaries` 检查，见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md)。
 - 业务逻辑、模拟与数据读写一律放 C++ 核心；TypeScript 部分只做外壳、界面、入口校验、进程间转接和系统能力。
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。

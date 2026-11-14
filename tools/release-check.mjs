@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：release-check.mjs
-// 说明：发布前检查：三个包的版本一致、工具链包的清单与文件相符、各包的发布内容完整且不含测试与密钥文件。
+// 说明：发布前检查：四个包的版本一致、工具链包的清单与文件相符、各包的发布内容完整且不含测试与密钥文件。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_DIR = path.join(ROOT, 'packages');
-const PACKAGE_NAMES = ['fcdev', 'create-fcdev', 'fcdev-cc65'];
+const PACKAGE_NAMES = ['fcdev', 'create-fcdev', 'fcdev-cc65', 'ember-debug-sdk'];
 
 /** 发布内容里不允许出现的路径 */
 const FORBIDDEN_PATTERNS = [/(^|\/)test\//, /(^|\/)node_modules\//, /(^|\/)\.env/, /\.(pem|key|pfx|p12)$/i, /\.tgz$/i];
@@ -70,11 +70,11 @@ function listPackedFiles(packageName) {
   return JSON.parse(output)[0].files.map((file) => file.path);
 }
 
-/** 检查三个包的版本一致，且 fcdev 对工具链包的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里。 */
+/** 检查四个包的版本一致，且 fcdev 对工具链包的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里。 */
 function checkVersions() {
   const manifests = Object.fromEntries(PACKAGE_NAMES.map((name) => [name, readJson(path.join(PACKAGES_DIR, name, 'package.json'))]));
   const versions = new Set(Object.values(manifests).map((manifest) => manifest.version));
-  if (versions.size !== 1) errors.push(`三个包的版本不一致：${Object.entries(manifests).map(([name, manifest]) => `${name}@${manifest.version}`).join('、')}`);
+  if (versions.size !== 1) errors.push(`各包的版本不一致：${Object.entries(manifests).map(([name, manifest]) => `${name}@${manifest.version}`).join('、')}`);
   const [version] = versions;
   for (const [name, spec] of Object.entries(manifests.fcdev.optionalDependencies ?? {})) {
     if (spec !== version) errors.push(`fcdev 对 ${name} 的依赖是 ${spec}，应与版本 ${version} 一致`);
@@ -165,9 +165,19 @@ function checkCreate() {
   checkPackedFiles('create-fcdev', ['README.md', 'bin/create-fcdev.mjs', 'templates/_common/gitignore']);
 }
 
+/** 检查 ember-debug-sdk：构建产物（不入库）已生成，且说明文件、两个入口、命令行入口与类型声明都在发布内容里。 */
+function checkSdk() {
+  if (!existsSync(path.join(PACKAGES_DIR, 'ember-debug-sdk', 'dist'))) {
+    errors.push('ember-debug-sdk 还没有构建，先运行 npm run build -w packages/ember-debug-sdk');
+    return;
+  }
+  checkPackedFiles('ember-debug-sdk', ['README.md', 'dist/index.js', 'dist/node.js', 'dist/cli.js', 'dist/mcp.js', 'dist/types/src/index.d.ts', 'dist/types/src/node.d.ts']);
+}
+
 checkVersions();
 checkFcdev();
 checkCreate();
+checkSdk();
 checkManifestFiles('fcdev-cc65', ['bin', 'include', 'asminc', 'lib', 'cfg', 'LICENSE']);
 checkPackedFiles('fcdev-cc65', ['manifest.json', 'bin/cc65.exe', 'bin/ca65.exe', 'bin/ld65.exe', 'bin/ar65.exe', 'bin/da65.exe']);
 

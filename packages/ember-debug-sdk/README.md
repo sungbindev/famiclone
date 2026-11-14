@@ -13,7 +13,7 @@ Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSock
 
 ## 安装
 
-需要 Node 22.12 或更高版本。包还没有发布到 npm，在 famiclone 仓库里构建后使用：先在仓库根目录运行 `npm install`，再在 `packages/ember-debug-sdk` 目录里运行：
+需要 Node 22.12 或更高版本。用 npm 安装：`npm install ember-debug-sdk`；要全局使用终端客户端与 MCP 服务时加 `-g`。从 famiclone 仓库源码构建的方法：先在仓库根目录运行 `npm install`，再在 `packages/ember-debug-sdk` 目录里运行：
 
 ```text
 npm run schema     # 生成接口类型与接口文档（等于在 ember 目录运行 npm run schema）

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：verify-install.mjs
-// 说明：安装验证：把三个包打成 tgz，在临时目录里走一遍“创建项目、安装、构建”，确认发布出去的包能用。
+// 说明：安装验证：把四个包打成 tgz，在临时目录里走一遍“创建项目、安装、构建”，确认发布出去的包能用；调试 SDK 单独安装并加载两个入口。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
@@ -15,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PACKAGE_NAMES = ['fcdev', 'create-fcdev', 'fcdev-cc65'];
+const PACKAGE_NAMES = ['fcdev', 'create-fcdev', 'fcdev-cc65', 'ember-debug-sdk'];
 const keep = process.argv.includes('--keep');
 
 /**
@@ -77,6 +77,23 @@ function verifyProject(workDir, creatorBin, tarballs, target, language, inspect,
   assert(problem === null, `应当 ${target}/${language} 的产物格式正确${problem ? `：${problem}` : ''}`);
 }
 
+/**
+ * 在临时目录里安装调试 SDK 的 tgz，确认两个入口能加载、命令行入口文件在。
+ * @param {string} workDir 临时目录
+ * @param {string} tarball SDK 的 tgz 路径
+ */
+function verifySdk(workDir, tarball) {
+  const sdkDir = path.join(workDir, 'sdk-check');
+  mkdirSync(sdkDir);
+  run('npm', ['install', '--prefix', `"${sdkDir}"`, '--no-audit', '--no-fund', `"${tarball}"`], workDir);
+  const script = "const sdk = await import('ember-debug-sdk'); const node = await import('ember-debug-sdk/node'); if (typeof sdk.connect !== 'function' || typeof node.connectToEmber !== 'function') throw new Error('missing export');";
+  run('node', ['--input-type=module', '-e', script], sdkDir);
+  assert(true, '应当 ember-debug-sdk 的两个入口都能加载');
+  for (const file of ['cli.js', 'mcp.js']) {
+    assert(existsSync(path.join(sdkDir, 'node_modules', 'ember-debug-sdk', 'dist', file)), `应当安装出 ember-debug-sdk 的 dist/${file}`);
+  }
+}
+
 const workDir = mkdtempSync(path.join(tmpdir(), 'fcdev-verify-'));
 let failed = false;
 try {
@@ -95,6 +112,7 @@ try {
   verifyProject(workDir, creatorBin, tarballs, 'nes', 'asm', inspectNes, '.nes');
   verifyProject(workDir, creatorBin, tarballs, 'sb2000', 'c', inspectSb2000, '.exe');
   verifyProject(workDir, creatorBin, tarballs, 'sb2000', 'asm', inspectSb2000, '.exe');
+  verifySdk(workDir, findTarball(packDir, 'ember-debug-sdk-'));
   console.log('安装验证通过');
 } catch (error) {
   failed = true;

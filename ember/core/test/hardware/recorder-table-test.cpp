@@ -209,6 +209,31 @@ TEST(RecorderTable, CallLogRecordsRegistersStackAndMemoryAtTheAddress) {
   EXPECT_EQ(output.lines[0], "8123  A:01 X:02 Y:03 P:24 SP:FD CYC:77 | STACK AA BB CC | 0300: 11 22");
 }
 
+TEST(RecorderTable, CallLogSkipsTheCallsWhoseConditionHolds) {
+  SmallMemory memory;
+  RecorderTable table([&memory](std::uint16_t address) { return memory.peek(address); });
+  hw::RecorderSpec spec;
+  spec.kind = hw::RecorderKind::Call;
+  spec.address = 0x8000;
+  spec.skip.push_back({0x0010, 0x01});
+  spec.skip.push_back({0x0011, 0xFF});
+  const auto id = table.start(spec);
+
+  table.onInstruction(registersAt(0x8000, 1));
+  memory.bytes[0x10] = 0x01;
+  table.onInstruction(registersAt(0x8000, 2));
+  memory.bytes[0x10] = 0x02;
+  memory.bytes[0x11] = 0xFF;
+  table.onInstruction(registersAt(0x8000, 3));
+  memory.bytes[0x11] = 0x00;
+  table.onInstruction(registersAt(0x8000, 4));
+  const auto output = table.stop(id);
+  // 只有第 1 次与第 4 次没有任何条件成立
+  ASSERT_EQ(output.lines.size(), 2U);
+  EXPECT_NE(output.lines[0].find("CYC:1"), std::string::npos) << output.lines[0];
+  EXPECT_NE(output.lines[1].find("CYC:4"), std::string::npos) << output.lines[1];
+}
+
 TEST(RecorderTable, IoRecordsRegisterAccessesAndMapperWritesWithTheCurrentInstruction) {
   SmallMemory memory;
   RecorderTable table([&memory](std::uint16_t address) { return memory.peek(address); });

@@ -607,6 +607,21 @@ TEST_F(DebugInspectorTest, CallLogRecordsRegistersStackAndMemoryEachTimeTheAddre
   core.stop();
 }
 
+TEST_F(DebugInspectorTest, CallLogSkipConditionFiltersTheCalls) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  // $8006 的 INX 每次执行时 $10 都是 $42：条件成立，一行也不记
+  const auto skipped = call(core, "inspector.callLogStart", {{"address", 0x8006}, {"skip", json::array({{{"address", 0x10}, {"value", 0x42}}})}});
+  const auto kept = call(core, "inspector.callLogStart", {{"address", 0x8006}, {"skip", json::array({{{"address", 0x10}, {"value", 0x00}}})}, {"maxLines", 3}});
+  ASSERT_TRUE(skipped.ok && kept.ok);
+  ASSERT_TRUE(call(core, "runtime.run", {{"frames", 1}, {"wait", true}}).ok);
+  EXPECT_EQ(call(core, "inspector.callLogStop", {{"id", skipped.payload["id"]}}).payload["lines"], 0);
+  EXPECT_EQ(call(core, "inspector.callLogStop", {{"id", kept.payload["id"]}}).payload["lines"], 3);
+  EXPECT_FALSE(call(core, "inspector.callLogStart", {{"address", 0x8006}, {"skip", json::array({{{"address", 0x10}, {"value", 256}}})}}).ok);
+  core.stop();
+}
+
 TEST_F(DebugInspectorTest, IoAndInterruptTracesRecordRegisterAccessesAndNmi) {
   Core core;
   start(core);

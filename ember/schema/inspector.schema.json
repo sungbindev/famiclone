@@ -46,6 +46,15 @@
       },
       "required": ["id", "kind", "address", "endAddress", "hits"]
     },
+    "ByteCondition": {
+      "type": "object",
+      "description": "一个字节的取值条件：CPU 总线上这个地址的字节等于这个值。",
+      "properties": {
+        "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "地址" },
+        "value": { "type": "integer", "minimum": 0, "maximum": 255, "description": "取值" }
+      },
+      "required": ["address", "value"]
+    },
     "DisassembledInstruction": {
       "type": "object",
       "description": "一条反汇编的指令。",
@@ -304,6 +313,7 @@
           "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "要记录的指令地址" },
           "stackBytes": { "type": "integer", "minimum": 0, "maximum": 32, "description": "每次记录栈顶的字节数，默认 0" },
           "ranges": { "type": "array", "items": { "$ref": "#/types/MemoryRangeSpec" }, "maxItems": 4, "description": "每次记录的内存段，最多 4 段" },
+          "skip": { "type": "array", "items": { "$ref": "#/types/ByteCondition" }, "maxItems": 4, "description": "跳过条件，最多 4 项：执行到这条指令时，任何一项成立（这个地址上的字节等于这个值）就不记录这一次，用来滤掉不关心的调用" },
           "file": { "type": "string", "minLength": 1, "maxLength": 100, "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录" },
           "maxLines": { "type": "integer", "minimum": 1, "maximum": 1000000, "description": "最多记录的行数，满了就不再记录，默认 100000" }
         },

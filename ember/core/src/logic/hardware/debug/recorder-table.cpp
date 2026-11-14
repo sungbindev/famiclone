@@ -131,7 +131,8 @@ void RecorderTable::onInstruction(const hw::CpuRegisters& registers) {
       }
       if (!full(recorder)) recorder.output.lines.push_back(instructionLine(registers));
     } else if (recorder.spec.kind == hw::RecorderKind::Call && recorder.spec.address == registers.pc) {
-      if (!full(recorder)) recorder.output.lines.push_back(callLine(registers, recorder.spec));
+      const bool skipped = std::any_of(recorder.spec.skip.begin(), recorder.spec.skip.end(), [this](const hw::ByteCondition& condition) { return peek_(condition.address) == condition.value; });
+      if (!skipped && !full(recorder)) recorder.output.lines.push_back(callLine(registers, recorder.spec));
     }
   }
 }

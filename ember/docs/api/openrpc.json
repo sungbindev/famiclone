@@ -1982,6 +1982,19 @@
           "description": "每次记录的内存段，最多 4 段"
         },
         {
+          "name": "skip",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "description": "跳过条件，最多 4 项：执行到这条指令时，任何一项成立（这个地址上的字节等于这个值）就不记录这一次，用来滤掉不关心的调用",
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/inspector.ByteCondition"
+            }
+          },
+          "description": "跳过条件，最多 4 项：执行到这条指令时，任何一项成立（这个地址上的字节等于这个值）就不记录这一次，用来滤掉不关心的调用"
+        },
+        {
           "name": "file",
           "required": false,
           "schema": {
@@ -3876,6 +3889,29 @@
           "address",
           "endAddress",
           "hits"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.ByteCondition": {
+        "type": "object",
+        "description": "一个字节的取值条件：CPU 总线上这个地址的字节等于这个值。",
+        "properties": {
+          "address": {
+            "type": "integer",
+            "description": "地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "value": {
+            "type": "integer",
+            "description": "取值",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "required": [
+          "address",
+          "value"
         ],
         "additionalProperties": false
       },

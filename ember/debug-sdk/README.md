@@ -74,7 +74,7 @@ ember-debug screenshot shot.png               截图保存为 PNG
 ember-debug watch runtime.* --timeout 5000    订阅事件并逐行打印
 ```
 
-`call` 的参数写成 `key=value`（值按 JSON 解析，不是 JSON 就当字符串），或一个 JSON 对象；结果以 JSON 打印，二进制数据显示字节数，加 `--out 文件` 保存。选项 `--url`、`--token`、`--endpoint-file`、`--user-data-dir` 指定连接目标，`--compact` 不缩进输出。退出码：0 成功，1 失败，2 用法错误。`ember-debug --help` 看全部用法。
+`call` 的参数写成 `key=value`（值按 JSON 解析，不是 JSON 就当字符串；`0x8000`、`$8000` 是十六进制数，要当字符串就加引号，如 `file='"0x10"'`），或一个 JSON 对象；结果以 JSON 打印，二进制数据显示字节数，加 `--out 文件` 保存。选项 `--url`、`--token`、`--endpoint-file`、`--user-data-dir` 指定连接目标，`--compact` 不缩进输出。退出码：0 成功，1 失败，2 用法错误。`ember-debug --help` 看全部用法。
 
 ## MCP 服务（给 Copilot 等智能体）
 

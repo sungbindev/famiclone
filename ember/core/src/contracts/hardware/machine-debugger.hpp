@@ -127,6 +127,12 @@ struct MemoryRange {
   std::uint16_t length{0};
 };
 
+/** 一个字节的取值条件。 */
+struct ByteCondition {
+  std::uint16_t address{0};
+  std::uint8_t value{0};
+};
+
 /** 开始一项记录的参数。 */
 struct RecorderSpec {
   RecorderKind kind{RecorderKind::Instruction};
@@ -136,6 +142,8 @@ struct RecorderSpec {
   std::uint8_t stackBytes{0};
   /** Call：每次记录的内存段，CPU 总线上的地址。 */
   std::vector<MemoryRange> ranges;
+  /** Call：任何一项成立（这个地址上的字节等于这个值）就不记录这一次。 */
+  std::vector<ByteCondition> skip;
   /** 最多记录的行数，满了就不再记录。 */
   std::uint32_t maxLines{100000};
   /** Instruction：每个地址只记第一次。 */

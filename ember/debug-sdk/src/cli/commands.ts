@@ -54,7 +54,7 @@ const HELP = `ember-debug：Ember 调试服务的终端客户端
   endpoint                    显示正在运行的 Ember 的调试服务地址（令牌默认只显示前 4 位）
   methods [关键字]            列出全部请求（可按名称或简介过滤）
   describe <请求或事件>       显示参数、结果、错误码与示例
-  call <请求> [参数]          发送一个请求；参数写成 key=value（值按 JSON 解析，不是 JSON 就当字符串），或一个 JSON 对象
+  call <请求> [参数]          发送一个请求；参数写成 key=value（值按 JSON 解析，不是 JSON 就当字符串；0x8000 与 $8000 是十六进制数，要当字符串就加引号），或一个 JSON 对象
   screenshot [文件]           截取当前画面并保存为 PNG（默认文件名带时间）；--format rgba 保存未压缩的像素
   watch [事件...]             订阅事件并逐行打印（默认订阅全部）；--count 与 --timeout 限制条数与时长
 

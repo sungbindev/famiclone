@@ -45,6 +45,8 @@ describe('parseCallParams', () => {
   it('没有参数是空对象；key=value 的值按 JSON 解析，不是 JSON 就当字符串', () => {
     expect(parseCallParams([])).toEqual({});
     expect(parseCallParams(['frames=60', 'wait=true', 'path=D:/roms/a b.nes', 'name="x"', 'list=[1,2]'])).toEqual({ frames: 60, wait: true, path: 'D:/roms/a b.nes', name: 'x', list: [1, 2] });
+    // 十六进制整数：0x 或 $ 开头；加引号当字符串
+    expect(parseCallParams(['address=0x8000', 'start=$C000', 'last=0XFF', 'file="0x10"', 'name=0xZZ'])).toEqual({ address: 0x8000, start: 0xc000, last: 0xff, file: '0x10', name: '0xZZ' });
   });
 
   it('一个 JSON 对象也可以', () => {

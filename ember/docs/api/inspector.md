@@ -477,6 +477,7 @@ await client.api.inspector.traceStop({ id: … });
 | `address` | `integer（0..65535）` | 是 | 要记录的指令地址 |
 | `stackBytes` | `integer（0..32）` | 否 | 每次记录栈顶的字节数，默认 0 |
 | `ranges` | [inspector.MemoryRangeSpec](inspector.md#memoryrangespec)[] | 否 | 每次记录的内存段，最多 4 段 |
+| `skip` | [inspector.ByteCondition](inspector.md#bytecondition)[] | 否 | 跳过条件，最多 4 项：执行到这条指令时，任何一项成立（这个地址上的字节等于这个值）就不记录这一次，用来滤掉不关心的调用 |
 | `file` | `string（长度 1..100）` | 否 | 文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录 |
 | `maxLines` | `integer（1..1000000）` | 否 | 最多记录的行数，满了就不再记录，默认 100000 |
 
@@ -737,6 +738,15 @@ await client.api.inspector.setState({ module: …, fields: … });
 | `address` | `integer（0..65535）` | 是 | 地址范围的第一个地址 |
 | `endAddress` | `integer（0..65535）` | 是 | 地址范围的最后一个地址（含）；单个地址时与 address 相同 |
 | `hits` | `integer（0..）` | 是 | 已经命中的次数 |
+
+### ByteCondition
+
+一个字节的取值条件：CPU 总线上这个地址的字节等于这个值。
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `address` | `integer（0..65535）` | 是 | 地址 |
+| `value` | `integer（0..255）` | 是 | 取值 |
 
 ### DisassembledInstruction
 

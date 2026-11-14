@@ -166,6 +166,7 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
     spec.address = static_cast<std::uint16_t>(parsed.address);
     spec.stackBytes = static_cast<std::uint8_t>(parsed.stackBytes.value_or(0));
     for (const auto& range : parsed.ranges.value_or(std::vector<contract::MemoryRangeSpec>{})) spec.ranges.push_back({static_cast<std::uint16_t>(range.address), static_cast<std::uint16_t>(range.length)});
+    for (const auto& condition : parsed.skip.value_or(std::vector<contract::ByteCondition>{})) spec.skip.push_back({static_cast<std::uint16_t>(condition.address), static_cast<std::uint8_t>(condition.value)});
     spec.maxLines = static_cast<std::uint32_t>(parsed.maxLines.value_or(DEFAULT_RECORDER_LINES));
     return nlohmann::json(contract::InspectorCallLogStartResult{static_cast<std::int64_t>(service->startRecording(spec, parsed.file.value_or("")))});
   });

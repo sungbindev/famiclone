@@ -13,8 +13,13 @@ export class UsageError extends Error {
   override name = 'UsageError';
 }
 
-/** 一个值：能按 JSON 解析的（数字、true、false、null、字符串、数组、对象）按 JSON，其余当字符串。 */
+/** 十六进制整数的写法：0x8000 或 $8000。 */
+const HEX_NUMBER = /^(?:0x|\$)([0-9a-f]+)$/i;
+
+/** 一个值：十六进制整数（0x8000、$8000）是数字；能按 JSON 解析的（数字、true、false、null、字符串、数组、对象）按 JSON，其余当字符串。 */
 function parseValue(text: string): unknown {
+  const hex = HEX_NUMBER.exec(text);
+  if (hex?.[1] !== undefined) return Number.parseInt(hex[1], 16);
   try {
     return JSON.parse(text);
   } catch {

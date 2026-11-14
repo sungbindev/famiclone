@@ -34,7 +34,7 @@ describe('FileShellStateService', () => {
     const service = new FileShellStateService(
       createStorage({ window: { x: 1, y: 2, width: 1000, height: 700, maximized: false }, layout: { rightBarOpen: true, bottomPanelHeight: -5 } })
     );
-    expect(service.get().window).toEqual({ x: 1, y: 2, width: 1000, height: 700, maximized: false });
+    expect(service.get().window).toEqual({ x: 1, y: 2 });
     expect(service.get().layout).toEqual({ bottomPanelHeight: null });
   });
 
@@ -51,8 +51,8 @@ describe('FileShellStateService', () => {
   it('记下窗口位置，不影响布局', () => {
     const storage = createStorage(undefined);
     const service = new FileShellStateService(storage);
-    service.updateWindow({ x: 10, y: 20, width: 1100, height: 700, maximized: true });
-    expect(service.get().window).toEqual({ x: 10, y: 20, width: 1100, height: 700, maximized: true });
+    service.updateWindow({ x: 10, y: 20 });
+    expect(service.get().window).toEqual({ x: 10, y: 20 });
     expect(service.get().layout).toEqual(DEFAULT_SHELL_STATE.layout);
   });
 
@@ -78,7 +78,7 @@ describe('配合真实的文件存储', () => {
       const path = join(directory, 'config', 'shell-state.json');
       const first = new FileShellStateService(new JsonFileStore({ path }));
       first.updateLayout({ bottomPanelHeight: 300 });
-      first.updateWindow({ x: 5, y: 6, width: 1300, height: 820, maximized: false });
+      first.updateWindow({ x: 5, y: 6 });
       first.flush();
 
       const second = new FileShellStateService(new JsonFileStore({ path }));

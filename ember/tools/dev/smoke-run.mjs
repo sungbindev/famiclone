@@ -30,8 +30,8 @@ const MIN_DRAG_GAP = 48;
 const MIN_SYSTEM_BUTTON_GAP = 8;
 /** 画面框的显示宽高比：256×240 的整帧、像素宽高比 8:7。 */
 const FRAME_RATIO = 128 / 105;
-/** 预置的窗口位置：尺寸写得比最小尺寸小，启动后就是最小窗口。 */
-const START_PLACEMENT = { x: 400, y: 60, width: 100, height: 100 };
+/** 预置的窗口位置：窗口大小每次启动都是最小尺寸，这里只固定位置。 */
+const START_PLACEMENT = { x: 400, y: 60 };
 
 const options = parseArguments(process.argv.slice(2));
 const port = Number(options.get('port') ?? 9302);

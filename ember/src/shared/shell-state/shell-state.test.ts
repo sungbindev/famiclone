@@ -20,10 +20,14 @@ describe('parseShellState', () => {
 
   it('完整合格的内容原样读出', () => {
     const state = {
-      window: { x: -20, y: 30, width: 1280, height: 800, maximized: true },
+      window: { x: -20, y: 30 },
       layout: { bottomPanelHeight: 240 }
     };
     expect(parseShellState(state)).toEqual(state);
+  });
+
+  it('旧文件里的窗口大小与是否最大化被忽略，只读出位置', () => {
+    expect(parseShellState({ window: { x: 1, y: 2, width: 900, height: 600, maximized: true } }).window).toEqual({ x: 1, y: 2 });
   });
 
   it('旧文件里的面板展开状态被忽略', () => {
@@ -33,18 +37,18 @@ describe('parseShellState', () => {
 
   it('单项不合格时只替换那一项，其他项照常读出', () => {
     const state = parseShellState({
-      window: { x: 1, y: 2, width: 900, height: 600, maximized: false },
+      window: { x: 1, y: 2 },
       layout: { bottomPanelHeight: 1.5 }
     });
     expect(state.layout).toEqual({ bottomPanelHeight: null });
-    expect(state.window).toEqual({ x: 1, y: 2, width: 900, height: 600, maximized: false });
+    expect(state.window).toEqual({ x: 1, y: 2 });
   });
 
   it('窗口位置有一项不合格就整个不用', () => {
-    expect(parseShellState({ window: { x: 0, y: 0, width: 0, height: 600, maximized: false } }).window).toBeNull();
-    expect(parseShellState({ window: { x: 0, y: 0, width: 800, height: 600, maximized: 'no' } }).window).toBeNull();
-    expect(parseShellState({ window: { x: 1.5, y: 0, width: 800, height: 600, maximized: false } }).window).toBeNull();
-    expect(parseShellState({ window: { x: 0, y: 0, width: 800, height: 600 } }).window).toBeNull();
+    expect(parseShellState({ window: { x: 1.5, y: 0 } }).window).toBeNull();
+    expect(parseShellState({ window: { x: 0, y: 'no' } }).window).toBeNull();
+    expect(parseShellState({ window: { x: 0 } }).window).toBeNull();
+    expect(parseShellState({ window: { x: 200_000, y: 0 } }).window).toBeNull();
     expect(parseShellState({ window: 'x' }).window).toBeNull();
   });
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：window-events.test.ts
- * 说明：窗口事件监听的测试：移动、改变大小、最大化、还原与关闭时报告位置（含是否最大化），全屏时不报告位置，窗口已销毁时不报告，状态变化事件通知接收方。
+ * 说明：窗口事件监听的测试：移动、改变大小、最大化、还原与关闭时只报告位置，全屏时不报告位置，窗口已销毁时不报告，状态变化事件通知接收方。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -15,30 +15,26 @@ import { describe, expect, it, vi } from 'vitest';
 import { watchWindow, type WatchedWindow } from './window-events';
 
 /** 假窗口：用事件发射器触发事件，状态可调。 */
-function createWindow(initial: { fullScreen?: boolean; maximized?: boolean; destroyed?: boolean } = {}) {
+function createWindow(initial: { fullScreen?: boolean; destroyed?: boolean } = {}) {
   const emitter = new EventEmitter();
-  const state = { fullScreen: initial.fullScreen ?? false, maximized: initial.maximized ?? false, destroyed: initial.destroyed ?? false };
+  const state = { fullScreen: initial.fullScreen ?? false, destroyed: initial.destroyed ?? false };
   const window: WatchedWindow = {
     on: (event, listener) => emitter.on(event, listener),
     isDestroyed: () => state.destroyed,
     isFullScreen: () => state.fullScreen,
-    isMaximized: () => state.maximized,
     getNormalBounds: () => ({ x: 10, y: 20, width: 1100, height: 700 })
   };
   return { window, emit: (event: string) => emitter.emit(event), state };
 }
 
 describe('watchWindow', () => {
-  it('移动、改变大小、最大化、还原与关闭时报告位置与是否最大化', () => {
-    const { window, emit, state } = createWindow();
+  it('移动、改变大小、最大化、还原与关闭时只报告位置，不含大小与是否最大化', () => {
+    const { window, emit } = createWindow();
     const onPlacement = vi.fn();
     watchWindow(window, { onPlacement, onState: vi.fn() });
-    for (const event of ['move', 'resize', 'unmaximize', 'close']) emit(event);
-    expect(onPlacement).toHaveBeenCalledTimes(4);
-    expect(onPlacement).toHaveBeenLastCalledWith({ x: 10, y: 20, width: 1100, height: 700, maximized: false });
-    state.maximized = true;
-    emit('maximize');
-    expect(onPlacement).toHaveBeenLastCalledWith({ x: 10, y: 20, width: 1100, height: 700, maximized: true });
+    for (const event of ['move', 'resize', 'unmaximize', 'close', 'maximize']) emit(event);
+    expect(onPlacement).toHaveBeenCalledTimes(5);
+    expect(onPlacement).toHaveBeenLastCalledWith({ x: 10, y: 20 });
   });
 
   it('全屏时不报告位置，退出全屏后再报告', () => {

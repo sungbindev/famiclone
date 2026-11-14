@@ -72,22 +72,23 @@ describe('visiblePlacement', () => {
     expect(visiblePlacement(null, [SCREEN])).toBeUndefined();
   });
 
-  it('位置在屏幕内时原样沿用，包括是否最大化', () => {
-    expect(visiblePlacement({ x: 100, y: 80, width: 1200, height: 800, maximized: true }, [SCREEN])).toEqual({ x: 100, y: 80, width: 1200, height: 800, maximized: true });
+  it('位置在屏幕内时原样沿用，只有位置', () => {
+    expect(visiblePlacement({ x: 100, y: 80 }, [SCREEN])).toEqual({ x: 100, y: 80 });
   });
 
   it('位置已不在任何屏幕内（拔掉了副屏）或只露出一条边时返回 undefined', () => {
-    expect(visiblePlacement({ x: 2500, y: 100, width: 1200, height: 800, maximized: false }, [SCREEN])).toBeUndefined();
-    expect(visiblePlacement({ x: 1880, y: 100, width: 1200, height: 800, maximized: false }, [SCREEN])).toBeUndefined();
+    expect(visiblePlacement({ x: 2500, y: 100 }, [SCREEN])).toBeUndefined();
+    expect(visiblePlacement({ x: 1880, y: 100 }, [SCREEN])).toBeUndefined();
   });
 
-  it('保存的尺寸小于窗口最小尺寸时按最小尺寸', () => {
-    expect(visiblePlacement({ x: 0, y: 0, width: 300, height: 200, maximized: false }, [SCREEN])).toEqual({ x: 0, y: 0, width: 640, height: 592, maximized: false });
+  it('按最小尺寸的窗口判断是否在屏幕内：右下角还露出足够一块时有效', () => {
+    expect(visiblePlacement({ x: 1830, y: 950 }, [SCREEN])).toBeUndefined();
+    expect(visiblePlacement({ x: 1700, y: 900 }, [SCREEN])).toEqual({ x: 1700, y: 900 });
   });
 
   it('有第二块屏幕时，落在第二块屏幕内的位置有效', () => {
     const second = { x: 1920, y: 0, width: 1920, height: 1040 };
-    expect(visiblePlacement({ x: 2500, y: 100, width: 1200, height: 800, maximized: false }, [SCREEN, second])).toBeDefined();
+    expect(visiblePlacement({ x: 2500, y: 100 }, [SCREEN, second])).toBeDefined();
   });
 });
 
@@ -147,31 +148,39 @@ describe('createAppWindow', () => {
     if (process.platform !== 'darwin') expect(options.titleBarOverlay).toMatchObject({ color: '#191a1b', height: 35 });
   });
 
-  it('有保存的位置时按位置创建，并在内容就绪后恢复最大化', () => {
-    createAppWindow({ ...OPTIONS, placement: { x: 100, y: 80, width: 1200, height: 800, maximized: true } });
-    const window = created[2]!;
-    expect(window.options).toMatchObject({ x: 100, y: 80, width: 1200, height: 800 });
-    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 1200, height: 800 });
+  it('没有保存的位置时按最小尺寸创建，内容就绪后显示', () => {
+    createAppWindow(OPTIONS);
+    const window = created[created.length - 1]!;
+    expect(window.options).toMatchObject({ width: 640, height: 592, minWidth: 640, minHeight: 592 });
+    expect(window.options.x).toBeUndefined();
+    expect(window.setBounds).not.toHaveBeenCalled();
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
     ready();
-    expect(window.maximize).toHaveBeenCalledTimes(1);
-    expect(window.show).not.toHaveBeenCalled();
+    expect(window.show).toHaveBeenCalledTimes(1);
   });
 
-  it('保存的位置不在屏幕内时用默认位置并正常显示', () => {
-    createAppWindow({ ...OPTIONS, placement: { x: 5000, y: 5000, width: 1200, height: 800, maximized: true } });
-    const window = created[3]!;
-    expect(window.options.x).toBeUndefined();
-    expect(window.options.width).toBe(1280);
+  it('有保存的位置时按位置创建，大小仍是最小尺寸，不恢复最大化', () => {
+    createAppWindow({ ...OPTIONS, placement: { x: 100, y: 80 } });
+    const window = created[created.length - 1]!;
+    expect(window.options).toMatchObject({ x: 100, y: 80, width: 640, height: 592 });
+    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 640, height: 592 });
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
     ready();
     expect(window.show).toHaveBeenCalledTimes(1);
     expect(window.maximize).not.toHaveBeenCalled();
   });
 
+  it('保存的位置不在屏幕内时用默认位置，大小是最小尺寸', () => {
+    createAppWindow({ ...OPTIONS, placement: { x: 5000, y: 5000 } });
+    const window = created[created.length - 1]!;
+    expect(window.options.x).toBeUndefined();
+    expect(window.options).toMatchObject({ width: 640, height: 592 });
+    expect(window.setBounds).not.toHaveBeenCalled();
+  });
+
   it('拒绝新窗口，并拦截跳转到应用以外的地址', () => {
     createAppWindow(OPTIONS);
-    const { webContents } = created[4]!;
+    const { webContents } = created[created.length - 1]!;
     const handler = webContents.setWindowOpenHandler.mock.calls[0]![0] as () => { action: string };
     expect(handler()).toEqual({ action: 'deny' });
 

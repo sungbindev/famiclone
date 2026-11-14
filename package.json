@@ -2,7 +2,7 @@
   "name": "famiclone-workspace",
   "version": "0.1.0",
   "private": true,
-  "description": "famiclone 仓库的工作区：fcdev 命令行、创建包、cc65 与模拟器包",
+  "description": "famiclone 仓库的工作区：fcdev 命令行、创建包、cc65 工具链包与 Ember 调试 SDK",
   "license": "Apache-2.0",
   "author": "sungbin <sungbin@3578.cn>",
   "type": "module",

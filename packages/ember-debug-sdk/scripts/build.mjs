@@ -31,4 +31,4 @@ await build({ ...executable, entryPoints: ['src/mcp/index.ts'], outfile: 'dist/m
 
 const tsc = join(dirname(require.resolve('typescript/package.json')), 'bin', 'tsc');
 execFileSync(process.execPath, [tsc, '-p', join(sdk, 'tsconfig.build.json')], { stdio: 'inherit' });
-console.log('SDK 构建完成：debug-sdk/dist');
+console.log('SDK 构建完成：packages/ember-debug-sdk/dist');

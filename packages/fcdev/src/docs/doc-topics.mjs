@@ -22,7 +22,7 @@ export const DOC_TOPICS = [
   { topic: 'build', file: '02-命令行与构建.md', title: '命令行与构建', summary: '命令、构建规则、配置文件 fcdev.json、构建流程' },
   { topic: 'targets', file: '03-目标规范.md', title: '目标规范', summary: '目标定义、打包器、新增机型的步骤' },
   { topic: 'toolchain', file: '04-cc65工具链.md', title: 'cc65 工具链', summary: 'cc65 源码、构建与工具链包' },
-  { topic: 'emulator', file: '05-模拟器与调试.md', title: '模拟器与调试', summary: '运行方案、调试服务与命令表、模拟器包' },
+  { topic: 'emulator', file: '05-模拟器与调试.md', title: '模拟器与调试', summary: '运行方案、模拟器定位、调试服务与命令表' },
   { topic: 'disasm', file: '06-反汇编.md', title: '反汇编', summary: '反汇编前端的流程、输入与限制' },
   { topic: 'create', file: '07-创建包与模板.md', title: '创建包与模板', summary: 'npm create fcdev 的命令、模板与生成内容' },
   { topic: 'testing', file: '08-测试与验证.md', title: '测试与验证', summary: '测试分层、环境变量与运行方法' },

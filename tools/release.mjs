@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：release.mjs
-// 说明：发布脚本：prepare 升版本号并重新生成两个包的 package.json；publish 做检查、试发布，确认后按顺序发布四个 npm 包。
+// 说明：发布脚本：prepare 升版本号并重新生成工具链包的 package.json；publish 做检查、试发布，确认后按顺序发布三个 npm 包。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
@@ -17,10 +17,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_DIR = path.join(ROOT, 'packages');
 
-/** 发布顺序：工具链包与模拟器包先发，主包随后，创建包最后 */
+/** 发布顺序：工具链包先发，主包随后，创建包最后 */
 const PUBLISH_ORDER = [
   { directory: 'fcdev-cc65', name: '@rujianjs/fcdev-cc65', scoped: true },
-  { directory: 'fcdev-emulator', name: '@rujianjs/fcdev-emulator', scoped: true },
   { directory: 'fcdev', name: 'fcdev', scoped: false },
   { directory: 'create-fcdev', name: 'create-fcdev', scoped: false },
 ];
@@ -68,7 +67,7 @@ function writeManifest(file, document) {
 }
 
 /**
- * 升版本号：主包与创建包的 version，以及主包对两个包的精确依赖；再重新生成两个包的 package.json 与 npm 的锁文件。
+ * 升版本号：主包与创建包的 version，以及主包对工具链包的精确依赖；再重新生成工具链包的 package.json 与 npm 的锁文件。
  * @param {string} version 新版本号
  * @throws {Error} 版本号格式不对或与当前相同
  */
@@ -85,7 +84,6 @@ function prepare(version) {
   writeManifest(creator.file, creator.document);
 
   run(process.execPath, ['tools/build-cc65.mjs']);
-  run(process.execPath, ['tools/build-emulator.mjs']);
   run('npm', ['install', '--no-audit', '--no-fund']);
   console.log(`\n版本号已升到 ${version}。请检查并提交改动，然后运行：node tools/release.mjs publish`);
 }
@@ -154,8 +152,7 @@ async function publish({ dryRun, allowDirty }) {
   }
 
   run('npm', ['test']);
-  run(process.execPath, ['tools/build-emulator.mjs']);
-  run('npm', ['run', 'release:check', ...(allowDirty ? ['--', '--allow-dirty'] : [])]);
+  run('npm', ['run', 'release:check']);
   run('npm', ['run', 'release:verify']);
   for (const item of PUBLISH_ORDER.filter((entry) => !published.has(entry.name))) run('npm', ['publish', '-w', `packages/${item.directory}`, '--dry-run']);
 
@@ -170,7 +167,7 @@ async function publish({ dryRun, allowDirty }) {
   for (const item of PUBLISH_ORDER) {
     run('npm', ['publish', '-w', `packages/${item.directory}`, ...(item.scoped ? ['--access', 'public'] : [])]);
   }
-  console.log(`\n四个包的 ${version} 版都已提交发布；新发布的包要等 npm 审核，过一会儿才能查到。`);
+  console.log(`\n三个包的 ${version} 版都已提交发布；新发布的包要等 npm 审核，过一会儿才能查到。`);
 }
 
 const [command, ...rest] = process.argv.slice(2);

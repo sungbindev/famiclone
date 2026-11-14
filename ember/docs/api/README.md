@@ -1,6 +1,6 @@
 # Ember 调试服务协议参考
 
-本目录由 `npm run docs` 根据随 SDK 打包的 OpenRPC 文档（`debug-sdk/generated/openrpc.json`）生成，不要手改。
+本目录由 `npm run docs` 根据随 SDK 打包的 OpenRPC 文档（`packages/ember-debug-sdk/generated/openrpc.json`）生成，不要手改。
 
 ## 连接
 

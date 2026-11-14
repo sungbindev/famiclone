@@ -4,7 +4,7 @@ packages/*/build/
 *.tgz
 .cache/
 
-# 工具链包与模拟器包里的二进制是生成物，由 tools/ 下的脚本组装，不入库
+# 工具链包里的二进制是生成物，由 tools/ 下的脚本组装，不入库
 packages/fcdev-cc65/bin/
 packages/fcdev-cc65/include/
 packages/fcdev-cc65/asminc/
@@ -12,9 +12,11 @@ packages/fcdev-cc65/lib/
 packages/fcdev-cc65/cfg/
 packages/fcdev-cc65/manifest.json
 packages/fcdev-cc65/LICENSE
-packages/fcdev-emulator/bin/
-packages/fcdev-emulator/manifest.json
-packages/fcdev-emulator/LICENSE
+
+# 调试 SDK 的生成物：generated/ 由 ember 的 npm run schema 生成，dist/ 与 docs/ 由它自己的脚本生成
+packages/ember-debug-sdk/generated/
+packages/ember-debug-sdk/dist/
+packages/ember-debug-sdk/docs/
 
 # 目标运行库由 tools/build-libs.mjs 生成
 packages/fcdev/targets/*/lib/*.o

@@ -27,7 +27,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "schema": "npm --prefix .. run schema",
+    "schema": "npm --prefix ../../ember run schema",
     "build": "node scripts/build.mjs",
     "docs": "node scripts/docs.mjs && typedoc",
     "typecheck": "tsc --noEmit",

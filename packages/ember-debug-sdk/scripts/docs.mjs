@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：TypeDoc 生成的 SDK 接口参考（debug-sdk/docs/api，不提交）由 package.json 的 docs 脚本接着生成。
+ * 备注：TypeDoc 生成的 SDK 接口参考（packages/ember-debug-sdk/docs/api，不提交）由 package.json 的 docs 脚本接着生成。
  * ------------------------------------------------------------------------
  */
 
@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
 const sdk = join(dirname(fileURLToPath(import.meta.url)), '..');
-const output = join(sdk, '..', 'docs', 'api');
+const output = join(sdk, '..', '..', 'ember', 'docs', 'api');
 const work = mkdtempSync(join(tmpdir(), 'ember-debug-docs-'));
 
 try {
@@ -37,7 +37,7 @@ try {
     writeFileSync(path, file.content, 'utf8');
     written += 1;
   }
-  console.log(`协议参考：${files.length} 页，写入 ${written} 页：docs/api`);
+  console.log(`协议参考：${files.length} 页，写入 ${written} 页：ember/docs/api`);
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

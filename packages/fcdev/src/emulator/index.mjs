@@ -8,4 +8,4 @@
 // ------------------------------------------------------------------------
 export { DEFAULT_DEBUG_PORT, DebugClient, parseReply } from './debug-client.mjs';
 export { assertPortFree, launchEmulator } from './emulator-launcher.mjs';
-export { EMULATOR_ENV_NAME, EMULATOR_PACKAGE_NAME, locateEmulator } from './emulator-locator.mjs';
+export { EMULATOR_ENV_NAME, locateEmulator } from './emulator-locator.mjs';

@@ -1,6 +1,6 @@
 # fcdev
 
-6502 兼容机（NES、小霸王学习机等）的开发工具：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，带调试用模拟器，并能把已有程序反汇编回 ca65 源码。首批支持 NES 与小霸王学习机 SB2000，更多机型按“目标”扩展。
+6502 兼容机（NES、小霸王学习机等）的开发工具：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可在模拟器里运行与调试，并能把已有程序反汇编回 ca65 源码。首批支持 NES 与小霸王学习机 SB2000，更多机型按“目标”扩展。
 
 通常不需要手动安装：用 `npm create fcdev@latest` 创建项目时会自动装好。
 
@@ -10,7 +10,7 @@
 npm install --save-dev fcdev
 ```
 
-要求 Node.js 22 及以上。cc65 编译器与模拟器分别在 `@rujianjs/fcdev-cc65`、`@rujianjs/fcdev-emulator` 两个依赖包里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录，用 `FCDEV_EMULATOR` 指向自备的模拟器，但调试命令需要该模拟器支持同样的调试服务。
+要求 Node.js 22 及以上。cc65 编译器在依赖包 `@rujianjs/fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器不随包提供，`run` 与 `debug` 需要自备：用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指定，调试命令要求该模拟器支持同样的调试服务。
 
 ## 使用
 
@@ -65,7 +65,7 @@ npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号�
 | `include` | 空 | 额外的头文件目录 |
 | `toolchain` | 空 | 自备 cc65 的根目录，优先于工具链包 |
 | `firmware` | 无 | 固件（BIOS）文件；SB2000 运行时必填，fcdev 不提供任何 BIOS 或 ROM |
-| `emulator` | 空 | 自备模拟器的路径，优先于模拟器包 |
+| `emulator` | 空 | 模拟器的路径，不设时读环境变量 `FCDEV_EMULATOR` |
 | `targetOptions` | 空 | 目标专用选项，如 NES 的 `font`（是否链接 ASCII 字库，默认 `true`）、SB2000 的 `banks`（大程序的库页个数，默认 0） |
 
 ## 目标
@@ -100,4 +100,4 @@ npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号�
 
 ## 许可证
 
-Apache-2.0。cc65 部分为 zlib 许可，模拟器为 GPL-3.0，各自随工具链包与模拟器包附带许可文件。
+Apache-2.0。cc65 部分为 zlib 许可，随工具链包附带许可文件。

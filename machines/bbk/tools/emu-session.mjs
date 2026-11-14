@@ -15,10 +15,9 @@ import { join } from 'node:path';
 import { launchEmulator } from '../../../packages/fcdev/src/emulator/emulator-launcher.mjs';
 import { REPO_ROOT } from './config.mjs';
 
-/** 模拟器程序，优先用本仓库的编译输出 */
+/** 模拟器程序：本仓库的编译输出 */
 const EMULATOR_CANDIDATES = [
   join(REPO_ROOT, 'build', 'virtuanes', 'Release', 'bin', 'VirtuaNES.exe'),
-  join(REPO_ROOT, 'packages', 'fcdev-emulator', 'bin', 'VirtuaNES.exe'),
 ];
 
 /** 字符到 DirectInput 扫描码（Shift 状态）的映射，只覆盖在 DOS 提示符下常用的字符 */
@@ -40,7 +39,7 @@ const SCAN_CODES = {
  */
 export async function startSession(romFile, port = 5710) {
   const executable = EMULATOR_CANDIDATES.find((path) => existsSync(path));
-  if (!executable) throw new Error('找不到 VirtuaNES.exe，先运行 node tools/build-emulator.mjs');
+  if (!executable) throw new Error('找不到 VirtuaNES.exe，先运行 virtuanes/build.ps1');
   const { client } = await launchEmulator({ executable, romFile, debug: true, port });
   return {
     send: (command) => client.send(command),

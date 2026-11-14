@@ -31,7 +31,6 @@
     "targets"
   ],
   "optionalDependencies": {
-    "@rujianjs/fcdev-cc65": "0.5.0",
-    "@rujianjs/fcdev-emulator": "0.5.0"
+    "@rujianjs/fcdev-cc65": "0.5.0"
   }
 }

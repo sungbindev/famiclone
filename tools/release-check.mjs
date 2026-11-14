@@ -1,12 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：release-check.mjs
-// 说明：发布前检查：四个包的版本一致、工具链包与模拟器包的清单与文件相符、各包的发布内容完整且不含测试与密钥文件。
+// 说明：发布前检查：三个包的版本一致、工具链包的清单与文件相符、各包的发布内容完整且不含测试与密钥文件。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用法 node tools/release-check.mjs [--allow-dirty]；
-//       模拟器清单里的 sourceDirty 为 true 说明构建时仓库有未提交的改动，发布前要提交后重新运行 node tools/build-emulator.mjs；
-//       --allow-dirty 把这一项降为警告，只用于发布前的演练。只检查，不修改任何文件，不执行 npm publish。
+// 备注：用法 node tools/release-check.mjs；只检查，不修改任何文件，不执行 npm publish。
 // ------------------------------------------------------------------------
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -16,14 +14,12 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_DIR = path.join(ROOT, 'packages');
-const PACKAGE_NAMES = ['fcdev', 'create-fcdev', 'fcdev-cc65', 'fcdev-emulator'];
-const allowDirty = process.argv.includes('--allow-dirty');
+const PACKAGE_NAMES = ['fcdev', 'create-fcdev', 'fcdev-cc65'];
 
 /** 发布内容里不允许出现的路径 */
 const FORBIDDEN_PATTERNS = [/(^|\/)test\//, /(^|\/)node_modules\//, /(^|\/)\.env/, /\.(pem|key|pfx|p12)$/i, /\.tgz$/i];
 
 const errors = [];
-const warnings = [];
 
 /**
  * 读取 JSON 文件。
@@ -74,11 +70,11 @@ function listPackedFiles(packageName) {
   return JSON.parse(output)[0].files.map((file) => file.path);
 }
 
-/** 检查四个包的版本一致，且 fcdev 对工具链包与模拟器包的依赖版本与之相同；两个包的包名都在 fcdev 的依赖里，作用域包声明公开发布。 */
+/** 检查三个包的版本一致，且 fcdev 对工具链包的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里，作用域包声明公开发布。 */
 function checkVersions() {
   const manifests = Object.fromEntries(PACKAGE_NAMES.map((name) => [name, readJson(path.join(PACKAGES_DIR, name, 'package.json'))]));
   const versions = new Set(Object.values(manifests).map((manifest) => manifest.version));
-  if (versions.size !== 1) errors.push(`四个包的版本不一致：${Object.entries(manifests).map(([name, manifest]) => `${name}@${manifest.version}`).join('、')}`);
+  if (versions.size !== 1) errors.push(`三个包的版本不一致：${Object.entries(manifests).map(([name, manifest]) => `${name}@${manifest.version}`).join('、')}`);
   const [version] = versions;
   for (const [name, spec] of Object.entries(manifests.fcdev.optionalDependencies ?? {})) {
     if (spec !== version) errors.push(`fcdev 对 ${name} 的依赖是 ${spec}，应与版本 ${version} 一致`);
@@ -95,12 +91,11 @@ function checkVersions() {
 }
 
 /**
- * 检查工具链包或模拟器包里的文件与清单记录的校验值一致，且没有清单之外的文件。
+ * 检查工具链包里的文件与清单记录的校验值一致，且没有清单之外的文件。
  * @param {string} packageName 包目录名
  * @param {string[]} directories 参与清单的目录
- * @param {boolean} [allowExtra] 为 true 时不检查目录里清单之外的文件（该包的 files 逐个列出清单文件，多出的文件不会发布，由发布内容检查把关）
  */
-function checkManifestFiles(packageName, directories, allowExtra = false) {
+function checkManifestFiles(packageName, directories) {
   const packageDir = path.join(PACKAGES_DIR, packageName);
   const manifestFile = path.join(packageDir, 'manifest.json');
   if (!existsSync(manifestFile)) {
@@ -113,16 +108,12 @@ function checkManifestFiles(packageName, directories, allowExtra = false) {
     if (!existsSync(full)) errors.push(`${packageName} 缺少清单中的文件：${relative}`);
     else if (sha256Of(full) !== expected) errors.push(`${packageName} 的 ${relative} 与清单的校验值不符，需要重新运行构建脚本`);
   }
-  for (const directory of allowExtra ? [] : directories) {
+  for (const directory of directories) {
     const full = path.join(packageDir, directory);
     if (!existsSync(full) || !statSync(full).isDirectory()) continue;
     for (const relative of listFiles(full, packageDir)) {
       if (!(relative in (manifest.files ?? {}))) errors.push(`${packageName} 有清单之外的文件：${relative}`);
     }
-  }
-  if (manifest.sourceDirty === true) {
-    const message = `${packageName} 的清单记录构建时仓库有未提交的改动（sourceDirty），提交后重新运行构建脚本`;
-    (allowDirty ? warnings : errors).push(message);
   }
 }
 
@@ -175,30 +166,16 @@ function checkCreate() {
   checkPackedFiles('create-fcdev', ['README.md', 'bin/create-fcdev.mjs', 'templates/_common/gitignore']);
 }
 
-/** 检查模拟器包：必需文件在发布内容里，发布内容只含清单里的文件（调试时模拟器在 bin 里生成的 VirtuaNES.ini、save/ 等不在 files 里，不会发布）。 */
-function checkEmulator() {
-  const packed = checkPackedFiles('fcdev-emulator', ['manifest.json', 'bin/VirtuaNES.exe']);
-  const manifestFile = path.join(PACKAGES_DIR, 'fcdev-emulator', 'manifest.json');
-  if (!existsSync(manifestFile)) return;
-  const allowed = new Set(['LICENSE', 'package.json', 'manifest.json', ...Object.keys(readJson(manifestFile).files ?? {})]);
-  for (const file of packed) {
-    if (!allowed.has(file)) errors.push(`fcdev-emulator 的发布内容含清单之外的文件：${file}`);
-  }
-}
-
 checkVersions();
 checkFcdev();
 checkCreate();
 checkManifestFiles('fcdev-cc65', ['bin', 'include', 'asminc', 'lib', 'cfg', 'LICENSE']);
 checkPackedFiles('fcdev-cc65', ['manifest.json', 'bin/cc65.exe', 'bin/ca65.exe', 'bin/ld65.exe', 'bin/ar65.exe', 'bin/da65.exe']);
-checkManifestFiles('fcdev-emulator', ['bin', 'LICENSE'], true);
-checkEmulator();
 
-for (const warning of warnings) console.warn(`警告：${warning}`);
 if (errors.length > 0) {
   for (const error of errors) console.error(`错误：${error}`);
   console.error(`发布检查未通过：${errors.length} 项错误`);
   process.exitCode = 1;
 } else {
-  console.log(`发布检查通过（${PACKAGE_NAMES.length} 个包${warnings.length ? `，${warnings.length} 项警告` : ''}）`);
+  console.log(`发布检查通过（${PACKAGE_NAMES.length} 个包）`);
 }

@@ -9,7 +9,7 @@
 - Node.js 22 及以上，脚本没有第三方依赖。
 - 汇编器、符号文件 `tvdef.asm` 与字库 ROM 直接用 `machines/bbk` 里的，不复制。
 - 加载器 `START.EXE` 要先在 `apps/sb2000/bbk-loader` 里构建（`npm run build`）。
-- 验证要用调试版模拟器（`node machines/bbk/tools/build-emulator.mjs`，或 `virtuanes/build.ps1`），只支持 Windows。
+- 验证要用调试版模拟器（用 `virtuanes/build.ps1` 编译），只支持 Windows。
 - BIOS 源码 [src/bios.asm](src/bios.asm) 是 SB2000 版，GBK 编码，不要用编辑器转码保存；它由原版（`machines/bbk/src/bios/bios.asm`）经 [tools/port-bios.mjs](tools/port-bios.mjs) 移植而来，之后可以直接修改这一份。
 
 ## 使用

@@ -98,7 +98,7 @@ describe('generate：mappers 模块', () => {
   });
 });
 
-/** 在临时目录里准备一个 SDK 目录（debug-sdk 的位置）。 */
+/** 在临时目录里准备一个 SDK 目录（ember-debug-sdk 的位置）。 */
 function createSdkDirectory(): string {
   const sdkRoot = mkdtempSync(join(tmpdir(), 'ember-debug-sdk-'));
   roots.push(sdkRoot);

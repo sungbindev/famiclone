@@ -9,7 +9,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
  * 备注：只支持 JSON Schema 的子集（见 docs/06-构建与模块登记.md 第 2 节）；本仓库的生成目录不提交，内容没变的文件不改写；
- *       已删除的模块，其生成目录一并删除；调试 SDK（debug-sdk/）的 generated 目录一并写入接口文档与类型。可作为模块被测试引用（generate），也可直接运行。
+ *       已删除的模块，其生成目录一并删除；调试 SDK（packages/ember-debug-sdk）的 generated 目录一并写入接口文档与类型。可作为模块被测试引用（generate），也可直接运行。
  * ------------------------------------------------------------------------
  */
 
@@ -582,7 +582,7 @@ function removeStale(baseDir, modules, removed) {
 /**
  * 生成全部代码。
  * @param {string} root 项目根目录。
- * @param {{ sdkDirectory?: string }} [options] sdkDirectory：调试 SDK 的目录（debug-sdk），目录存在时才写入它的 generated。
+ * @param {{ sdkDirectory?: string }} [options] sdkDirectory：调试 SDK 的目录（packages/ember-debug-sdk），目录存在时才写入它的 generated。
  * @returns {{ written: string[], removed: string[], modules: string[] }} 写入与删除的文件。
  */
 export function generate(root, options = {}) {
@@ -603,7 +603,7 @@ export function generate(root, options = {}) {
     const cpp = generateOpenRpcCpp(document, CPP_HEADER('schema/*.schema.json'));
     writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.hpp'), cpp.header, written);
     writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.cpp'), cpp.source, written);
-    // 调试 SDK（debug-sdk/）：接口文档与类型写到它的 generated，目录不存在时跳过。
+    // 调试 SDK（packages/ember-debug-sdk）：接口文档与类型写到它的 generated，目录不存在时跳过。
     const sdkGenerated = options.sdkDirectory === undefined ? undefined : join(options.sdkDirectory, 'generated');
     if (sdkGenerated !== undefined && existsSync(options.sdkDirectory)) {
       writeIfChanged(join(sdkGenerated, 'openrpc.json'), `${JSON.stringify(document, null, 2)}\n`, written);
@@ -619,7 +619,7 @@ export function generate(root, options = {}) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
   try {
-    const result = generate(root, { sdkDirectory: join(root, 'debug-sdk') });
+    const result = generate(root, { sdkDirectory: join(root, '..', 'packages', 'ember-debug-sdk') });
     console.log(`Schema 代码生成：${result.modules.length} 个模块，写入 ${result.written.length} 个文件，删除 ${result.removed.length} 个目录。`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

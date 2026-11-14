@@ -1,6 +1,12 @@
 # 更新记录
 
-适用于 `fcdev`、`create-fcdev`、`@rujianjs/fcdev-cc65`、`@rujianjs/fcdev-emulator` 四个包，它们的版本号相同。
+适用于 `fcdev`、`create-fcdev`、`@rujianjs/fcdev-cc65` 三个包，它们的版本号相同。
+
+## 未发布
+
+### 模拟器与调试
+
+- 不再提供模拟器包 `@rujianjs/fcdev-emulator`：`fcdev run` 与 `fcdev debug` 需要自备模拟器，用 `fcdev.json` 的 `emulator` 或环境变量 `FCDEV_EMULATOR` 指定。
 
 ## 0.5.0（2026-11-13）
 

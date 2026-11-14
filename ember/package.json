@@ -16,7 +16,7 @@
     "typecheck": "npm run schema && tsc --noEmit",
     "lint": "oxlint --deny-warnings src tools test",
     "boundaries": "npm run schema && node tools/check/check-modules.mjs",
-    "debug-sdk:check": "npm --prefix debug-sdk run check",
+    "debug-sdk:check": "npm --prefix ../packages/ember-debug-sdk run check",
     "test": "npm run schema && vitest run",
     "check": "npm run typecheck && npm run lint && npm run boundaries && vitest run && npm run core:test && npm run debug-sdk:check",
     "package": "npm run schema && npm run core:build && electron-forge package",

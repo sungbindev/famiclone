@@ -2,7 +2,7 @@
 
 Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSocket 客户端，终端客户端 `ember-debug`，以及给 Copilot 等智能体用的 MCP 服务 `ember-debug-mcp`。
 
-调试服务是 Ember 核心里的一个可开关的 WebSocket 服务（JSON-RPC 2.0），模拟器的全部功能都有接口。本 SDK 是它的官方客户端；协议是开放的，也可以用任何语言直接连接，见 [协议参考](../docs/api/README.md)。
+调试服务是 Ember 核心里的一个可开关的 WebSocket 服务（JSON-RPC 2.0），模拟器的全部功能都有接口。本 SDK 是它的官方客户端；协议是开放的，也可以用任何语言直接连接，见 [协议参考](../../ember/docs/api/README.md)。
 
 ## 开启调试服务
 
@@ -13,11 +13,10 @@ Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSock
 
 ## 安装
 
-需要 Node 22.12 或更高版本。包还没有发布到 npm，在 Ember 仓库的 `debug-sdk` 目录里构建后使用：
+需要 Node 22.12 或更高版本。包还没有发布到 npm，在 famiclone 仓库里构建后使用：先在仓库根目录运行 `npm install`，再在 `packages/ember-debug-sdk` 目录里运行：
 
 ```text
-npm install
-npm run schema     # 生成接口类型与接口文档（等于在 Ember 根目录运行 npm run schema）
+npm run schema     # 生成接口类型与接口文档（等于在 ember 目录运行 npm run schema）
 npm run build
 npm pack        # 生成 .tgz，再在你的项目里 npm install 它
 ```
@@ -88,7 +87,7 @@ VS Code 的 `.vscode/mcp.json`：
     "ember": {
       "type": "stdio",
       "command": "node",
-      "args": ["D:/GitCode/famiclone/ember/debug-sdk/dist/mcp.js"]
+      "args": ["D:/GitCode/famiclone/packages/ember-debug-sdk/dist/mcp.js"]
     }
   }
 }
@@ -109,10 +108,10 @@ VS Code 的 `.vscode/mcp.json`：
 
 ## 接口文档
 
-- [协议参考](../docs/api/README.md)：每个请求的参数、结果、错误码与事件，由接口定义生成；也可以用终端客户端的 `describe` 查看。
-- SDK 的接口参考：`npm run docs` 生成到 `docs/api`（在 `debug-sdk` 目录里，不提交）。
+- [协议参考](../../ember/docs/api/README.md)：每个请求的参数、结果、错误码与事件，由接口定义生成；也可以用终端客户端的 `describe` 查看。
+- SDK 的接口参考：`npm run docs` 生成到 `docs/api`（在 `packages/ember-debug-sdk` 目录里，不提交）。
 - 接口定义本身是 OpenRPC 1.3 文档（[openrpc.json](generated/openrpc.json)），连接后用 `rpc.discover` 也能取到，可以据此生成其他语言的客户端。
 
 ## 版本
 
-协议版本在握手时校验（目前是 1）。请求与事件的类型来自 Ember 仓库的 `schema/`，与 Ember 版本同步生成；Ember 新增请求后，重新生成并发布 SDK 即可使用新的类型和工具。老版本的 SDK 不认识新请求，其余请求照常可用。
+协议版本在握手时校验（目前是 1）。请求与事件的类型来自 `ember/schema/`，与 Ember 版本同步生成；Ember 新增请求后，重新生成并发布 SDK 即可使用新的类型和工具。老版本的 SDK 不认识新请求，其余请求照常可用。

@@ -81,7 +81,7 @@ TEST_F(CoreTest, StartsAndAnswersSystemVersion) {
   const auto info = nlohmann::json::parse(core.start(options()));
   EXPECT_FALSE(info["coreVersion"].get<std::string>().empty());
   const auto& requests = info["requests"];
-  EXPECT_EQ(requests.size(), 46U);
+  EXPECT_EQ(requests.size(), 50U);
   for (const char* name : {"system.version", "preferences.list", "preferences.set", "preferences.reset", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled",
                            "mappers.reload", "output.setVolume", "runtime.status", "runtime.powerOn", "runtime.powerOff", "runtime.reset", "runtime.pause", "runtime.resume", "cartridges.load",
                            "cartridges.eject", "cartridges.info", "debug.hello", "debug.subscribe", "debug.unsubscribe", "debug.status"}) {

@@ -108,6 +108,46 @@ struct BreakpointHit {
   std::uint8_t value{0};
 };
 
+/** 记录的种类。 */
+enum class RecorderKind : std::uint8_t {
+  /** 每执行一条指令记一行：地址、字节、反汇编与寄存器。 */
+  Instruction,
+  /** 每次访问芯片寄存器、手柄口、卡带的扩展寄存器（$2000-$5FFF），以及对 $8000 以上的写（mapper 寄存器）记一行。 */
+  Io,
+  /** 每次 CPU 响应 IRQ、NMI 或 BRK 记一行。 */
+  Irq,
+  /** 每次执行到指定地址记一行：寄存器、栈顶与内存段。 */
+  Call
+};
+
+/** 一段内存。 */
+struct MemoryRange {
+  std::uint16_t address{0};
+  std::uint16_t length{0};
+};
+
+/** 开始一项记录的参数。 */
+struct RecorderSpec {
+  RecorderKind kind{RecorderKind::Instruction};
+  /** Call：要记录的地址。 */
+  std::uint16_t address{0};
+  /** Call：每次记录栈顶的字节数。 */
+  std::uint8_t stackBytes{0};
+  /** Call：每次记录的内存段，CPU 总线上的地址。 */
+  std::vector<MemoryRange> ranges;
+  /** 最多记录的行数，满了就不再记录。 */
+  std::uint32_t maxLines{100000};
+  /** Instruction：每个地址只记第一次。 */
+  bool unique{false};
+};
+
+/** 一项记录的结果。 */
+struct RecorderOutput {
+  std::vector<std::string> lines;
+  /** 因为行数满了而少记了。 */
+  bool truncated{false};
+};
+
 /** 主机的调试接口。 */
 class MachineDebugger {
  public:
@@ -176,6 +216,19 @@ class MachineDebugger {
 
   /** 取走最近一次运行停下的断点命中；没有命中时为空。 */
   virtual std::optional<BreakpointHit> takeBreakpointHit() = 0;
+
+  /**
+   * 开始一项记录，之后运行与单步产生的内容记进内存，直到 stopRecorder 取走。记录属于当前的主机。
+   * @return 记录编号。
+   * @throws shared::CoreError hardware.recorderLimit。
+   */
+  virtual std::uint32_t startRecorder(const RecorderSpec& spec) = 0;
+
+  /**
+   * 结束一项记录并取走内容。
+   * @throws shared::CoreError hardware.noRecorder。
+   */
+  virtual RecorderOutput stopRecorder(std::uint32_t id) = 0;
 };
 
 }  // namespace ember::contracts::hardware

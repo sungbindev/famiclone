@@ -14,6 +14,10 @@
 | [`inspector.snapshot`](#inspectorsnapshot) | 取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的 |
 | [`inspector.watch`](#inspectorwatch) | 监视一个状态项：它的取值变化时发事件 inspector.stateChanged |
 | [`inspector.unwatch`](#inspectorunwatch) | 取消监视 |
+| [`inspector.traceStart`](#inspectortracestart) | 开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件 |
+| [`inspector.traceStop`](#inspectortracestop) | 结束跟踪并把内容写成文件 |
+| [`inspector.callLogStart`](#inspectorcalllogstart) | 开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段 |
+| [`inspector.callLogStop`](#inspectorcalllogstop) | 结束调用记录并把内容写成文件 |
 | [`inspector.addBreakpoint`](#inspectoraddbreakpoint) | 添加断点 |
 | [`inspector.listBreakpoints`](#inspectorlistbreakpoints) | 列出全部断点，按编号升序 |
 | [`inspector.removeBreakpoint`](#inspectorremovebreakpoint) | 删除一个断点 |
@@ -269,6 +273,137 @@ ember-debug call inspector.unwatch path=<string>
 await client.api.inspector.unwatch({ path: … });
 ```
 
+### inspector.traceStart
+
+> 只经调试服务开放（界面不能发起）
+
+开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件。kind：instruction 每执行一条指令记一行（地址、指令字节、反汇编、寄存器与周期数，写法同 nestest 日志；芯片寄存器的取值显示 00）；io 每次访问 $2000-$5FFF（芯片、手柄口、卡带扩展寄存器）以及对 $8000 以上的写（mapper 寄存器）记一行（方向、地址、值、发起访问的指令地址与周期数）；irq 每次 CPU 响应 IRQ、NMI 或 BRK 记一行（种类、返回地址、处理程序地址、周期数）。单步与运行产生的内容都记，调试写内存不记。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `kind` | `"instruction" \| "io" \| "irq"` | 是 | 跟踪的种类 |
+| `file` | `string（长度 1..100）` | 否 | 文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录 |
+| `maxLines` | `integer（1..1000000）` | 否 | 最多记录的行数，满了就不再记录，默认 100000 |
+| `unique` | `boolean` | 否 | 只对 instruction 有效：每个地址只记第一次，默认 false |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `integer（1..）` | 是 | 记录编号 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.invalidFileName`、`inspector.recordingLimit`
+
+**示例**
+
+```text
+ember-debug call inspector.traceStart kind=<"instruction" | "io" | "irq">
+```
+
+```ts
+await client.api.inspector.traceStart({ kind: … });
+```
+
+### inspector.traceStop
+
+> 只经调试服务开放（界面不能发起）
+
+结束跟踪并把内容写成文件。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `integer（1..）` | 是 | traceStart 返回的记录编号 |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `file` | `string` | 是 | 保存的文件的完整路径 |
+| `lines` | `integer（0..）` | 是 | 写入的行数 |
+| `truncated` | `boolean` | 是 | 是否因为行数满了而少记了 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.noRecording`、`inspector.fileFailed`
+
+**示例**
+
+```text
+ember-debug call inspector.traceStop id=<integer>
+```
+
+```ts
+await client.api.inspector.traceStop({ id: … });
+```
+
+### inspector.callLogStart
+
+> 只经调试服务开放（界面不能发起）
+
+开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段。内容记在内存里，callLogStop 时写成调试输出目录下的文件。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `address` | `integer（0..65535）` | 是 | 要记录的指令地址 |
+| `stackBytes` | `integer（0..32）` | 否 | 每次记录栈顶的字节数，默认 0 |
+| `ranges` | [inspector.MemoryRangeSpec](inspector.md#memoryrangespec)[] | 否 | 每次记录的内存段，最多 4 段 |
+| `file` | `string（长度 1..100）` | 否 | 文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录 |
+| `maxLines` | `integer（1..1000000）` | 否 | 最多记录的行数，满了就不再记录，默认 100000 |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `integer（1..）` | 是 | 记录编号 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.invalidFileName`、`inspector.recordingLimit`
+
+**示例**
+
+```text
+ember-debug call inspector.callLogStart address=<integer>
+```
+
+```ts
+await client.api.inspector.callLogStart({ address: … });
+```
+
+### inspector.callLogStop
+
+> 只经调试服务开放（界面不能发起）
+
+结束调用记录并把内容写成文件。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `integer（1..）` | 是 | callLogStart 返回的记录编号 |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `file` | `string` | 是 | 保存的文件的完整路径 |
+| `lines` | `integer（0..）` | 是 | 写入的行数 |
+| `truncated` | `boolean` | 是 | 是否因为行数满了而少记了 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.noRecording`、`inspector.fileFailed`
+
+**示例**
+
+```text
+ember-debug call inspector.callLogStop id=<integer>
+```
+
+```ts
+await client.api.inspector.callLogStop({ id: … });
+```
+
 ### inspector.addBreakpoint
 
 > 只经调试服务开放（界面不能发起）
@@ -476,6 +611,15 @@ await client.api.inspector.setState({ module: …, fields: … });
 | `address` | `integer（0..65535）` | 是 | 地址范围的第一个地址 |
 | `endAddress` | `integer（0..65535）` | 是 | 地址范围的最后一个地址（含）；单个地址时与 address 相同 |
 | `hits` | `integer（0..）` | 是 | 已经命中的次数 |
+
+### MemoryRangeSpec
+
+一段内存，CPU 总线上的地址。
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `address` | `integer（0..65535）` | 是 | 起始地址 |
+| `length` | `integer（1..256）` | 是 | 字节数 |
 
 ### WatchedValue
 

@@ -23,6 +23,9 @@ namespace {
 
 namespace hw = ::ember::contracts::hardware;
 
+/** 记录的默认行数上限，与 Schema 里的说明一致。 */
+constexpr std::int64_t DEFAULT_RECORDER_LINES = 100000;
+
 hw::BreakpointKind kindOf(const std::string& name) {
   if (name == "read") return hw::BreakpointKind::Read;
   if (name == "write") return hw::BreakpointKind::Write;
@@ -112,6 +115,34 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
     const auto parsed = contract::parseInspectorUnwatchParams(params, "params");
     service->unwatch(parsed.path);
     return nlohmann::json(contract::InspectorUnwatchResult{});
+  });
+  router.add("inspector", contract::INSPECTOR_TRACE_START_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorTraceStartParams(params, "params");
+    hw::RecorderSpec spec;
+    spec.kind = parsed.kind == "io" ? hw::RecorderKind::Io : (parsed.kind == "irq" ? hw::RecorderKind::Irq : hw::RecorderKind::Instruction);
+    spec.maxLines = static_cast<std::uint32_t>(parsed.maxLines.value_or(DEFAULT_RECORDER_LINES));
+    spec.unique = parsed.unique.value_or(false);
+    return nlohmann::json(contract::InspectorTraceStartResult{static_cast<std::int64_t>(service->startRecording(spec, parsed.file.value_or("")))});
+  });
+  router.add("inspector", contract::INSPECTOR_TRACE_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorTraceStopParams(params, "params");
+    const auto report = service->stopRecording(static_cast<std::uint32_t>(parsed.id), false);
+    return nlohmann::json(contract::InspectorTraceStopResult{report.file, static_cast<std::int64_t>(report.lines), report.truncated});
+  });
+  router.add("inspector", contract::INSPECTOR_CALL_LOG_START_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorCallLogStartParams(params, "params");
+    hw::RecorderSpec spec;
+    spec.kind = hw::RecorderKind::Call;
+    spec.address = static_cast<std::uint16_t>(parsed.address);
+    spec.stackBytes = static_cast<std::uint8_t>(parsed.stackBytes.value_or(0));
+    for (const auto& range : parsed.ranges.value_or(std::vector<contract::MemoryRangeSpec>{})) spec.ranges.push_back({static_cast<std::uint16_t>(range.address), static_cast<std::uint16_t>(range.length)});
+    spec.maxLines = static_cast<std::uint32_t>(parsed.maxLines.value_or(DEFAULT_RECORDER_LINES));
+    return nlohmann::json(contract::InspectorCallLogStartResult{static_cast<std::int64_t>(service->startRecording(spec, parsed.file.value_or("")))});
+  });
+  router.add("inspector", contract::INSPECTOR_CALL_LOG_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorCallLogStopParams(params, "params");
+    const auto report = service->stopRecording(static_cast<std::uint32_t>(parsed.id), true);
+    return nlohmann::json(contract::InspectorCallLogStopResult{report.file, static_cast<std::int64_t>(report.lines), report.truncated});
   });
   router.add("inspector", contract::INSPECTOR_ADD_BREAKPOINT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInspectorAddBreakpointParams(params, "params");

@@ -19,6 +19,8 @@
 
 #include "bootstrap/machines/machine-catalog.hpp"
 #include "contracts/runtime/runtime-service.hpp"
+#include "contracts/output/debug-file-writer.hpp"
+#include "infra/output/debug-text-file-writer.hpp"
 #include "infra/output/png-screenshot-service.hpp"
 #include "contracts/output/output-service.hpp"
 #include "contracts/output/output-settings.hpp"
@@ -82,12 +84,14 @@ void registerOutput(ModuleRegistry& registry) {
   registry.services.provide<contracts::output::OutputService>(service);
   // 截图要用运行服务（排在本模块之后登记），在全部模块登记完之后再绑定。
   const auto userData = registry.userDataPath;
-  auto screenshots = std::make_shared<infra::output::PngScreenshotService>([preferences, userData] {
+  const auto outputDirectory = [preferences, userData] {
     const auto value = preferences->value(contracts::output::SETTING_DEBUG_OUTPUT_DIRECTORY);
     const auto* text = std::get_if<std::string>(&value);
     if (text == nullptr || text->empty()) return userData / "debug-output";
     return std::filesystem::path(std::u8string(text->begin(), text->end()));
-  });
+  };
+  auto screenshots = std::make_shared<infra::output::PngScreenshotService>(outputDirectory);
+  registry.services.provide<contracts::output::DebugFileWriter>(std::make_shared<infra::output::DebugTextFileWriter>(outputDirectory));
   registry.startHandlers.push_back([screenshots, &registry] { screenshots->bindRuntime(registry.services.require<contracts::runtime::RuntimeService>()); });
   requests::output::addOutputRequests(registry.requests, service, screenshots);
 }

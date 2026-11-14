@@ -46,6 +46,15 @@
       },
       "required": ["id", "kind", "address", "endAddress", "hits"]
     },
+    "MemoryRangeSpec": {
+      "type": "object",
+      "description": "一段内存，CPU 总线上的地址。",
+      "properties": {
+        "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "起始地址" },
+        "length": { "type": "integer", "minimum": 1, "maximum": 256, "description": "字节数" }
+      },
+      "required": ["address", "length"]
+    },
     "WatchedValue": {
       "type": "object",
       "description": "一个监视中的状态项。",
@@ -187,6 +196,69 @@
       "params": { "type": "object", "properties": { "path": { "type": "string", "minLength": 3, "maxLength": 128, "description": "状态路径" } }, "required": ["path"] },
       "result": { "type": "object", "properties": {}, "required": [] },
       "errors": ["inspector.noCartridge", "inspector.notPowered", "inspector.unsupported", "inspector.noWatch"]
+    },
+    "traceStart": {
+      "description": "开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件。kind：instruction 每执行一条指令记一行（地址、指令字节、反汇编、寄存器与周期数，写法同 nestest 日志；芯片寄存器的取值显示 00）；io 每次访问 $2000-$5FFF（芯片、手柄口、卡带扩展寄存器）以及对 $8000 以上的写（mapper 寄存器）记一行（方向、地址、值、发起访问的指令地址与周期数）；irq 每次 CPU 响应 IRQ、NMI 或 BRK 记一行（种类、返回地址、处理程序地址、周期数）。单步与运行产生的内容都记，调试写内存不记。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["instruction", "io", "irq"], "description": "跟踪的种类" },
+          "file": { "type": "string", "minLength": 1, "maxLength": 100, "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录" },
+          "maxLines": { "type": "integer", "minimum": 1, "maximum": 1000000, "description": "最多记录的行数，满了就不再记录，默认 100000" },
+          "unique": { "type": "boolean", "description": "只对 instruction 有效：每个地址只记第一次，默认 false" }
+        },
+        "required": ["kind"]
+      },
+      "result": { "type": "object", "properties": { "id": { "type": "integer", "minimum": 1, "description": "记录编号" } }, "required": ["id"] },
+      "errors": ["inspector.noCartridge", "inspector.notPowered", "inspector.unsupported", "inspector.invalidFileName", "inspector.recordingLimit"]
+    },
+    "traceStop": {
+      "description": "结束跟踪并把内容写成文件。需要已开机。",
+      "debugOnly": true,
+      "params": { "type": "object", "properties": { "id": { "type": "integer", "minimum": 1, "description": "traceStart 返回的记录编号" } }, "required": ["id"] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "保存的文件的完整路径" },
+          "lines": { "type": "integer", "minimum": 0, "description": "写入的行数" },
+          "truncated": { "type": "boolean", "description": "是否因为行数满了而少记了" }
+        },
+        "required": ["file", "lines", "truncated"]
+      },
+      "errors": ["inspector.noCartridge", "inspector.notPowered", "inspector.unsupported", "inspector.noRecording", "inspector.fileFailed"]
+    },
+    "callLogStart": {
+      "description": "开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段。内容记在内存里，callLogStop 时写成调试输出目录下的文件。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "要记录的指令地址" },
+          "stackBytes": { "type": "integer", "minimum": 0, "maximum": 32, "description": "每次记录栈顶的字节数，默认 0" },
+          "ranges": { "type": "array", "items": { "$ref": "#/types/MemoryRangeSpec" }, "maxItems": 4, "description": "每次记录的内存段，最多 4 段" },
+          "file": { "type": "string", "minLength": 1, "maxLength": 100, "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录" },
+          "maxLines": { "type": "integer", "minimum": 1, "maximum": 1000000, "description": "最多记录的行数，满了就不再记录，默认 100000" }
+        },
+        "required": ["address"]
+      },
+      "result": { "type": "object", "properties": { "id": { "type": "integer", "minimum": 1, "description": "记录编号" } }, "required": ["id"] },
+      "errors": ["inspector.noCartridge", "inspector.notPowered", "inspector.unsupported", "inspector.invalidFileName", "inspector.recordingLimit"]
+    },
+    "callLogStop": {
+      "description": "结束调用记录并把内容写成文件。需要已开机。",
+      "debugOnly": true,
+      "params": { "type": "object", "properties": { "id": { "type": "integer", "minimum": 1, "description": "callLogStart 返回的记录编号" } }, "required": ["id"] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "保存的文件的完整路径" },
+          "lines": { "type": "integer", "minimum": 0, "description": "写入的行数" },
+          "truncated": { "type": "boolean", "description": "是否因为行数满了而少记了" }
+        },
+        "required": ["file", "lines", "truncated"]
+      },
+      "errors": ["inspector.noCartridge", "inspector.notPowered", "inspector.unsupported", "inspector.noRecording", "inspector.fileFailed"]
     },
     "addBreakpoint": {
       "description": "添加断点。断点在机器运行时生效（自由运行与 runtime.run 都会停下，发事件 runtime.breakpointHit，运行模式变为暂停）；单步（runtime.step）忽略断点；继续运行时会先越过刚命中的执行断点。断点属于当前的主机，装入新卡带后清空。地址是 CPU 总线上的地址。需要已开机。",

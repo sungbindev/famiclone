@@ -535,4 +535,136 @@ TEST_F(DebugInspectorTest, WatchRejectsPathsThatDoNotExist) {
   core.stop();
 }
 
+/** 文本路径转成文件系统路径。 */
+std::filesystem::path pathOf(const std::string& text) { return std::filesystem::path(std::u8string(text.begin(), text.end())); }
+
+/** 读文本文件的全部行。 */
+std::vector<std::string> fileLines(const std::string& path) {
+  std::ifstream file(pathOf(path));
+  std::vector<std::string> lines;
+  std::string line;
+  while (std::getline(file, line)) lines.push_back(line);
+  return lines;
+}
+
+TEST_F(DebugInspectorTest, InstructionTraceIsWrittenToTheOutputDirectoryWithDisassembly) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  const auto started = call(core, "inspector.traceStart", {{"kind", "instruction"}, {"file", "steps.txt"}});
+  ASSERT_TRUE(started.ok) << started.payload.dump();
+  ASSERT_TRUE(call(core, "runtime.step", {{"unit", "instruction"}, {"count", 3}}).ok);
+  const auto stopped = call(core, "inspector.traceStop", {{"id", started.payload["id"]}});
+  ASSERT_TRUE(stopped.ok) << stopped.payload.dump();
+  EXPECT_EQ(stopped.payload["lines"], 3);
+  EXPECT_FALSE(stopped.payload["truncated"].get<bool>());
+  const auto lines = fileLines(stopped.payload["file"].get<std::string>());
+  ASSERT_EQ(lines.size(), 3U);
+  EXPECT_EQ(lines[0].substr(0, 48), "8000  A9 42     LDA #$42                        ");
+  EXPECT_NE(lines[0].find("A:00 X:00 Y:00 P:24 SP:FD CYC:7"), std::string::npos) << lines[0];
+  EXPECT_EQ(lines[1].substr(0, 20), "8002  85 10     STA ");
+  EXPECT_NE(lines[1].find("STA $10 = 00"), std::string::npos) << lines[1];
+  EXPECT_NE(lines[2].find("LDX #$05"), std::string::npos) << lines[2];
+  EXPECT_EQ(pathOf(stopped.payload["file"].get<std::string>()).filename().string(), "steps.txt");
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, TraceOptionsUniqueAndMaxLinesWhileRunning) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  const auto unique = call(core, "inspector.traceStart", {{"kind", "instruction"}, {"unique", true}});
+  const auto limited = call(core, "inspector.traceStart", {{"kind", "instruction"}, {"maxLines", 3}, {"file", "limited.txt"}});
+  ASSERT_TRUE(unique.ok && limited.ok);
+  ASSERT_TRUE(call(core, "runtime.run", {{"frames", 2}, {"wait", true}}).ok);
+  const auto uniqueDone = call(core, "inspector.traceStop", {{"id", unique.payload["id"]}});
+  ASSERT_TRUE(uniqueDone.ok) << uniqueDone.payload.dump();
+  EXPECT_EQ(uniqueDone.payload["lines"], 5);
+  EXPECT_FALSE(uniqueDone.payload["truncated"].get<bool>());
+  EXPECT_EQ(pathOf(uniqueDone.payload["file"].get<std::string>()).filename().string(), "trace-" + std::to_string(unique.payload["id"].get<int>()) + ".txt");
+  const auto limitedDone = call(core, "inspector.traceStop", {{"id", limited.payload["id"]}});
+  EXPECT_EQ(limitedDone.payload["lines"], 3);
+  EXPECT_TRUE(limitedDone.payload["truncated"].get<bool>());
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, CallLogRecordsRegistersStackAndMemoryEachTimeTheAddressIsReached) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  const auto started = call(core, "inspector.callLogStart", {{"address", 0x8006}, {"stackBytes", 2}, {"ranges", json::array({{{"address", 0x10}, {"length", 2}}})}, {"maxLines", 2}, {"file", "calls.txt"}});
+  ASSERT_TRUE(started.ok) << started.payload.dump();
+  ASSERT_TRUE(call(core, "runtime.run", {{"frames", 1}, {"wait", true}}).ok);
+  const auto stopped = call(core, "inspector.callLogStop", {{"id", started.payload["id"]}});
+  ASSERT_TRUE(stopped.ok) << stopped.payload.dump();
+  EXPECT_EQ(stopped.payload["lines"], 2);
+  EXPECT_TRUE(stopped.payload["truncated"].get<bool>());
+  const auto lines = fileLines(stopped.payload["file"].get<std::string>());
+  ASSERT_EQ(lines.size(), 2U);
+  EXPECT_EQ(lines[0].substr(0, 15), "8006  A:42 X:05");
+  EXPECT_NE(lines[0].find(" | STACK "), std::string::npos) << lines[0];
+  EXPECT_NE(lines[0].find(" | 0010: 42 00"), std::string::npos) << lines[0];
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, IoAndInterruptTracesRecordRegisterAccessesAndNmi) {
+  Core core;
+  start(core);
+  // LDA #$80、STA $2000（开 NMI）、LDA $2002、JMP $8005（循环）
+  const auto rom = ember::test::makeInesFile({0xA9, 0x80, 0x8D, 0x00, 0x20, 0xAD, 0x02, 0x20, 0x4C, 0x05, 0x80});
+  std::ofstream(root_ / "io.nes", std::ios::binary).write(reinterpret_cast<const char*>(rom.data()), static_cast<std::streamsize>(rom.size()));
+  const auto path = (root_ / "io.nes").u8string();
+  ASSERT_TRUE(call(core, "cartridges.load", {{"path", std::string(path.begin(), path.end())}, {"powerOn", true}, {"resume", false}}).ok);
+  const auto io = call(core, "inspector.traceStart", {{"kind", "io"}, {"maxLines", 50}});
+  const auto irq = call(core, "inspector.traceStart", {{"kind", "irq"}});
+  ASSERT_TRUE(io.ok && irq.ok);
+  ASSERT_TRUE(call(core, "runtime.run", {{"frames", 3}, {"wait", true}}).ok);
+  const auto ioDone = call(core, "inspector.traceStop", {{"id", io.payload["id"]}});
+  const auto irqDone = call(core, "inspector.traceStop", {{"id", irq.payload["id"]}});
+  ASSERT_TRUE(ioDone.ok && irqDone.ok);
+  const auto ioLines = fileLines(ioDone.payload["file"].get<std::string>());
+  ASSERT_FALSE(ioLines.empty());
+  EXPECT_EQ(ioLines[0].substr(0, 22), "W $2000 = 80  PC:8002 ");
+  EXPECT_EQ(ioLines[1].substr(0, 10), "R $2002 = ");
+  const auto irqLines = fileLines(irqDone.payload["file"].get<std::string>());
+  ASSERT_FALSE(irqLines.empty());
+  EXPECT_EQ(irqLines[0].substr(0, 5), "NMI  ");
+  EXPECT_NE(irqLines[0].find("handler:8000"), std::string::npos) << irqLines[0];
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, DebugWritesAreNotRecordedAsIo) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  const auto io = call(core, "inspector.traceStart", {{"kind", "io"}});
+  ASSERT_TRUE(io.ok);
+  ASSERT_TRUE(call(core, "inspector.writeMemory", {{"space", "cpu"}, {"address", 0x2000}, {"bytes", json::array({0})}}).ok);
+  const auto done = call(core, "inspector.traceStop", {{"id", io.payload["id"]}});
+  ASSERT_TRUE(done.ok);
+  EXPECT_EQ(done.payload["lines"], 0);
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, RecordingErrors) {
+  Core core;
+  start(core);
+  EXPECT_EQ(call(core, "inspector.traceStart", {{"kind", "instruction"}}).payload["code"], "inspector.noCartridge");
+  loadPaused(core);
+  EXPECT_EQ(call(core, "inspector.traceStart", {{"kind", "instruction"}, {"file", "a/b.txt"}}).payload["code"], "inspector.invalidFileName");
+  EXPECT_FALSE(call(core, "inspector.traceStart", {{"kind", "disk"}}).ok);
+  EXPECT_EQ(call(core, "inspector.traceStop", {{"id", 99}}).payload["code"], "inspector.noRecording");
+
+  // 跟踪与调用记录互不相认
+  const auto callLog = call(core, "inspector.callLogStart", {{"address", 0x8000}});
+  ASSERT_TRUE(callLog.ok);
+  EXPECT_EQ(call(core, "inspector.traceStop", {{"id", callLog.payload["id"]}}).payload["code"], "inspector.noRecording");
+  EXPECT_TRUE(call(core, "inspector.callLogStop", {{"id", callLog.payload["id"]}}).ok);
+  EXPECT_EQ(call(core, "inspector.callLogStop", {{"id", callLog.payload["id"]}}).payload["code"], "inspector.noRecording");
+
+  for (int index = 0; index < 8; ++index) ASSERT_TRUE(call(core, "inspector.traceStart", {{"kind", "irq"}}).ok);
+  EXPECT_EQ(call(core, "inspector.traceStart", {{"kind", "irq"}}).payload["code"], "inspector.recordingLimit");
+  core.stop();
+}
+
 }  // namespace

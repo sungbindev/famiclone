@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "contracts/inspector/inspector-service.hpp"
+#include "contracts/output/debug-file-writer.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "logic/inspector/local-inspector-service.hpp"
 #include "requests/inspector/inspector-requests.hpp"
@@ -21,7 +22,8 @@ namespace ember::bootstrap {
 
 void registerInspector(ModuleRegistry& registry) {
   auto runtime = registry.services.require<contracts::runtime::RuntimeService>();
-  auto service = std::make_shared<logic::inspector::LocalInspectorService>(std::move(runtime), registry.events);
+  auto files = registry.services.require<contracts::output::DebugFileWriter>();
+  auto service = std::make_shared<logic::inspector::LocalInspectorService>(std::move(runtime), registry.events, std::move(files));
   registry.services.provide<contracts::inspector::InspectorService>(service);
   requests::inspector::addInspectorRequests(registry.requests, service);
 }

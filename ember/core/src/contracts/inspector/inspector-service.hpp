@@ -44,6 +44,16 @@ struct SnapshotReport {
   std::vector<WatchEntry> watches;
 };
 
+/** 一项记录的结果。 */
+struct RecordingReport {
+  /** 保存的文件的完整路径。 */
+  std::string file;
+  /** 写入的行数。 */
+  std::size_t lines{0};
+  /** 因为行数满了而少记了。 */
+  bool truncated{false};
+};
+
 /** 检查器服务。 */
 class InspectorService {
  public:
@@ -75,6 +85,20 @@ class InspectorService {
 
   /** 取消监视；没有监视这个路径时抛出 inspector.noWatch。 */
   virtual void unwatch(const std::string& path) = 0;
+
+  /**
+   * 开始跟踪或调用记录：内容记在内存里，stopRecording 时写成调试输出目录下的文件。
+   * @param fileName 文件名；为空时按种类与编号生成。
+   * @return 记录编号。
+   * @throws shared::CoreError output.invalidFileName、inspector.recordingLimit。
+   */
+  virtual std::uint32_t startRecording(const hardware::RecorderSpec& spec, const std::string& fileName) = 0;
+
+  /**
+   * 结束记录并写文件。callLog 为 true 时只能结束调用记录，否则只能结束跟踪。
+   * @throws shared::CoreError inspector.noRecording、output.fileFailed。
+   */
+  virtual RecordingReport stopRecording(std::uint32_t id, bool callLog) = 0;
 
   /** 添加断点（CPU 总线上的地址，范围含两端）。 */
   virtual hardware::Breakpoint addBreakpoint(hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) = 0;

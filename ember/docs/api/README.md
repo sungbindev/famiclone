@@ -60,6 +60,10 @@
 | `inspector.snapshot` | 取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的 |
 | `inspector.watch` | 监视一个状态项：它的取值变化时发事件 inspector.stateChanged |
 | `inspector.unwatch` | 取消监视 |
+| `inspector.traceStart` | 开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件 |
+| `inspector.traceStop` | 结束跟踪并把内容写成文件 |
+| `inspector.callLogStart` | 开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段 |
+| `inspector.callLogStop` | 结束调用记录并把内容写成文件 |
 | `inspector.addBreakpoint` | 添加断点 |
 | `inspector.listBreakpoints` | 列出全部断点，按编号升序 |
 | `inspector.removeBreakpoint` | 删除一个断点 |

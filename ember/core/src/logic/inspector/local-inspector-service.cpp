@@ -17,6 +17,7 @@
 #include "contracts/hardware/hardware-error.hpp"
 #include "contracts/inspector/generated/inspector.hpp"
 #include "contracts/inspector/inspector-error.hpp"
+#include "contracts/output/screenshot-service.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -42,6 +43,10 @@ std::string translate(const std::string& code) {
   if (code == hw::ERROR_INVALID_STATE) return std::string(api::ERROR_INVALID_STATE);
   if (code == hw::ERROR_INVALID_BREAKPOINT) return std::string(api::ERROR_INVALID_BREAKPOINT);
   if (code == hw::ERROR_BREAKPOINT_LIMIT) return std::string(api::ERROR_BREAKPOINT_LIMIT);
+  if (code == hw::ERROR_RECORDER_LIMIT) return std::string(api::ERROR_RECORDING_LIMIT);
+  if (code == hw::ERROR_NO_RECORDER) return std::string(api::ERROR_NO_RECORDING);
+  if (code == contracts::output::ERROR_INVALID_FILE_NAME) return std::string(api::ERROR_INVALID_FILE_NAME);
+  if (code == contracts::output::ERROR_FILE_FAILED) return std::string(api::ERROR_FILE_FAILED);
   return code;
 }
 
@@ -85,7 +90,8 @@ std::vector<api::StateReport> collectStates(rt::DebugContext& context, const std
 
 }  // namespace
 
-LocalInspectorService::LocalInspectorService(std::shared_ptr<rt::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events) : runtime_(std::move(runtime)), events_(std::move(events)) {
+LocalInspectorService::LocalInspectorService(std::shared_ptr<rt::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events, std::shared_ptr<contracts::output::DebugFileWriter> files)
+    : runtime_(std::move(runtime)), events_(std::move(events)), files_(std::move(files)) {
   runtime_->setObserver([this](rt::DebugContext& context) {
     if (watcher_.list().empty()) return;
     const auto cycles = static_cast<std::int64_t>(context.machine.cpuRegisters().cycles);
@@ -103,15 +109,19 @@ LocalInspectorService::~LocalInspectorService() {
   }
 }
 
-void LocalInspectorService::inspect(const std::function<void(rt::DebugContext&)>& action) {
+void LocalInspectorService::translateErrors(const std::function<void()>& action) {
   try {
-    runtime_->inspect(action);
+    action();
   } catch (const shared::CoreError& error) {
     const std::string code(error.code());
     const std::string translated = translate(code);
     if (translated == code) throw;
     throw shared::CoreError(translated, error.what());
   }
+}
+
+void LocalInspectorService::inspect(const std::function<void(rt::DebugContext&)>& action) {
+  translateErrors([&] { runtime_->inspect(action); });
 }
 
 std::vector<hw::MemorySpace> LocalInspectorService::listSpaces() {
@@ -226,6 +236,47 @@ api::StateReport LocalInspectorService::setState(const std::string& module, std:
     state = {module, module == "cpu", context.debugger.readState(module)};
   });
   return state;
+}
+
+std::uint32_t LocalInspectorService::startRecording(const hw::RecorderSpec& spec, const std::string& fileName) {
+  if (!fileName.empty()) translateErrors([&] { files_->validateName(fileName); });
+  std::uint32_t id = 0;
+  inspect([&](rt::DebugContext& context) { id = context.debugger.startRecorder(spec); });
+  const bool callLog = spec.kind == hw::RecorderKind::Call;
+  Recording recording{fileName.empty() ? std::string(callLog ? "calllog-" : "trace-") + std::to_string(id) + ".txt" : fileName, callLog};
+  std::lock_guard lock(recordingsMutex_);
+  recordings_[id] = std::move(recording);
+  return id;
+}
+
+api::RecordingReport LocalInspectorService::stopRecording(std::uint32_t id, bool callLog) {
+  Recording recording;
+  {
+    std::lock_guard lock(recordingsMutex_);
+    const auto found = recordings_.find(id);
+    if (found == recordings_.end() || found->second.callLog != callLog) throw shared::CoreError(api::ERROR_NO_RECORDING, "没有编号为 " + std::to_string(id) + " 的" + (callLog ? "调用记录" : "跟踪"));
+    recording = found->second;
+  }
+  hw::RecorderOutput output;
+  try {
+    inspect([&](rt::DebugContext& context) { output = context.debugger.stopRecorder(id); });
+  } catch (const shared::CoreError& error) {
+    // 换了卡带，主机上已经没有这项记录。
+    if (error.code() == api::ERROR_NO_RECORDING) {
+      std::lock_guard lock(recordingsMutex_);
+      recordings_.erase(id);
+    }
+    throw;
+  }
+  {
+    std::lock_guard lock(recordingsMutex_);
+    recordings_.erase(id);
+  }
+  api::RecordingReport report;
+  translateErrors([&] { report.file = files_->writeLines(recording.fileName, output.lines); });
+  report.lines = output.lines.size();
+  report.truncated = output.truncated;
+  return report;
 }
 
 hw::Breakpoint LocalInspectorService::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last) {

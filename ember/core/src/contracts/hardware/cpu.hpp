@@ -29,6 +29,29 @@ struct CpuRegisters {
   std::uint64_t cycles{0};
 };
 
+/** 中断的种类。 */
+enum class InterruptKind : std::uint8_t {
+  /** 可屏蔽中断（IRQ 线）。 */
+  Irq,
+  /** 不可屏蔽中断。 */
+  Nmi,
+  /** BRK 指令。 */
+  Brk
+};
+
+/** CPU 响应中断的通知，调试用；通知在中断序列完成、PC 已指向处理程序之后发出。 */
+class InterruptObserver {
+ public:
+  virtual ~InterruptObserver() = default;
+
+  /**
+   * @param kind 种类。
+   * @param returnAddress 压入栈的返回地址。
+   * @param handler 处理程序的地址（向量的内容）。
+   */
+  virtual void onInterrupt(InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) = 0;
+};
+
 /** CPU。 */
 class Cpu {
  public:

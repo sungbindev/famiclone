@@ -284,6 +284,7 @@ void Cpu6502::interrupt(bool software) {
   push(static_cast<std::uint8_t>(pc_ & 0xFF));
   push(static_cast<std::uint8_t>(status_ | FLAG_UNUSED | (software ? FLAG_BREAK : 0)));
   // 向量在压栈之后才选：此时到来的 NMI 会劫持 IRQ 与 BRK 的向量。
+  const std::uint16_t returnAddress = pc_;
   std::uint16_t vector = IRQ_VECTOR;
   if (needNmi_) {
     needNmi_ = false;
@@ -293,6 +294,7 @@ void Cpu6502::interrupt(bool software) {
   const std::uint8_t low = readCycle(vector);
   const std::uint8_t high = readCycle(static_cast<std::uint16_t>(vector + 1));
   pc_ = makeAddress(low, high);
+  if (observer_ != nullptr) observer_->onInterrupt(software ? hw::InterruptKind::Brk : (vector == NMI_VECTOR ? hw::InterruptKind::Nmi : hw::InterruptKind::Irq), returnAddress, pc_);
 }
 
 std::uint16_t Cpu6502::effectiveAddress(Mode mode, Access access) {

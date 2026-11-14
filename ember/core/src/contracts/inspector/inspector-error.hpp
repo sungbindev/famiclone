@@ -34,6 +34,14 @@ inline constexpr std::string_view ERROR_INVALID_BREAKPOINT = "inspector.invalidB
 inline constexpr std::string_view ERROR_BREAKPOINT_LIMIT = "inspector.breakpointLimit";
 /** 没有这个编号的断点。 */
 inline constexpr std::string_view ERROR_NO_BREAKPOINT = "inspector.noBreakpoint";
+/** 文件名不合格。 */
+inline constexpr std::string_view ERROR_INVALID_FILE_NAME = "inspector.invalidFileName";
+/** 无法创建目录或写入文件。 */
+inline constexpr std::string_view ERROR_FILE_FAILED = "inspector.fileFailed";
+/** 同时进行的记录超过上限。 */
+inline constexpr std::string_view ERROR_RECORDING_LIMIT = "inspector.recordingLimit";
+/** 没有这个编号的记录（或它不是这种记录）。 */
+inline constexpr std::string_view ERROR_NO_RECORDING = "inspector.noRecording";
 /** 监视项数量超过上限。 */
 inline constexpr std::string_view ERROR_WATCH_LIMIT = "inspector.watchLimit";
 /** 没有监视这个路径。 */

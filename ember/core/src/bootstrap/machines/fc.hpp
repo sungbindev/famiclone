@@ -26,6 +26,8 @@
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
 #include "logic/hardware/debug/breakpoint-table.hpp"
+#include "logic/hardware/debug/probe-hub.hpp"
+#include "logic/hardware/debug/recorder-table.hpp"
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
@@ -40,7 +42,7 @@
 namespace ember::bootstrap {
 
 /** 经典 FC（NTSC）。 */
-class FcMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger {
+class FcMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger, private contracts::hardware::InterruptObserver {
  public:
   /** 主时钟频率（赫兹）。 */
   static constexpr double MASTER_CLOCK_HZ = 21'477'272.0;
@@ -101,19 +103,24 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   std::size_t clearBreakpoints() override;
   [[nodiscard]] std::vector<contracts::hardware::Breakpoint> breakpoints() const override { return breakpoints_.list(); }
   std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return breakpoints_.take(); }
-  /** 有读写断点时在 CPU 总线上安装探针，没有时去掉。 */
+  std::uint32_t startRecorder(const contracts::hardware::RecorderSpec& spec) override;
+  contracts::hardware::RecorderOutput stopRecorder(std::uint32_t id) override;
+  // InterruptObserver
+  void onInterrupt(contracts::hardware::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) override;
+  /** 有读写断点或 I/O 记录时在 CPU 总线上安装探针，没有时去掉。 */
   void refreshProbe();
 
-  /** 构造时去掉总线上的读写探针，析构时恢复：让调试写内存与单步不触发读写断点。 */
+  /** 构造时暂停断点（alsoRecording 为 true 时连记录一起暂停），析构时恢复：让调试访问不触发读写断点，调试写内存也不进记录。 */
   class ProbeSuspend {
    public:
-    explicit ProbeSuspend(FcMachine& machine);
+    ProbeSuspend(FcMachine& machine, bool alsoRecording);
     ~ProbeSuspend();
     ProbeSuspend(const ProbeSuspend&) = delete;
     ProbeSuspend& operator=(const ProbeSuspend&) = delete;
 
    private:
     FcMachine& machine_;
+    logic::hardware::ProbeHub::Suspension before_;
   };
 
   logic::hardware::MasterScheduler scheduler_;
@@ -139,6 +146,8 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   logic::hardware::Cpu6502 cpu_;
 
   logic::hardware::BreakpointTable breakpoints_;
+  logic::hardware::RecorderTable recorders_;
+  logic::hardware::ProbeHub probeHub_;
   /** 刚命中执行断点的地址：下一次运行先越过它，不再重复命中。 */
   std::optional<std::uint16_t> skipExecuteAt_;
 

@@ -10,12 +10,15 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
+#include <mutex>
 
 #include "logic/inspector/state-watcher.hpp"
 #include "platform/events/event-sink.hpp"
 
 #include "contracts/inspector/inspector-service.hpp"
+#include "contracts/output/debug-file-writer.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 
 namespace ember::logic::inspector {
@@ -24,7 +27,7 @@ namespace ember::logic::inspector {
 class LocalInspectorService final : public contracts::inspector::InspectorService {
  public:
   /** 向运行服务登记观察者，用来检查监视项并发 inspector.stateChanged。 */
-  LocalInspectorService(std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events);
+  LocalInspectorService(std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events, std::shared_ptr<contracts::output::DebugFileWriter> files);
   ~LocalInspectorService() override;
 
   LocalInspectorService(const LocalInspectorService&) = delete;
@@ -39,6 +42,8 @@ class LocalInspectorService final : public contracts::inspector::InspectorServic
   contracts::inspector::SnapshotReport snapshot(const std::optional<std::string>& module) override;
   contracts::inspector::WatchEntry watch(const std::string& path) override;
   void unwatch(const std::string& path) override;
+  std::uint32_t startRecording(const contracts::hardware::RecorderSpec& spec, const std::string& fileName) override;
+  contracts::inspector::RecordingReport stopRecording(std::uint32_t id, bool callLog) override;
   contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override;
   std::vector<contracts::hardware::Breakpoint> listBreakpoints() override;
   void removeBreakpoint(std::uint32_t id) override;
@@ -47,9 +52,20 @@ class LocalInspectorService final : public contracts::inspector::InspectorServic
  private:
   /** 在模拟线程执行回调，并把错误码转成 inspector 的。 */
   void inspect(const std::function<void(contracts::runtime::DebugContext&)>& action);
+  /** 执行动作，把运行、硬件与 output 的错误码转成 inspector 的。 */
+  static void translateErrors(const std::function<void()>& action);
+
+  /** 进行中的记录：写文件用的名字与种类。 */
+  struct Recording {
+    std::string fileName;
+    bool callLog{false};
+  };
 
   std::shared_ptr<contracts::runtime::RuntimeService> runtime_;
   std::shared_ptr<platform::EventSink> events_;
+  std::shared_ptr<contracts::output::DebugFileWriter> files_;
+  std::mutex recordingsMutex_;
+  std::map<std::uint32_t, Recording> recordings_;
   /** 只在模拟线程访问。 */
   StateWatcher watcher_;
 };

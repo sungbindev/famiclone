@@ -104,6 +104,19 @@ check('监视 cpu.pc：单步后收到 inspector.stateChanged，旧值是监视�
 check('inspector.snapshot 含各模块状态与监视项', snap.states.length >= 2 && snap.watches.length === 1 && snap.watches[0].value === change.newValue);
 await client.api.inspector.unwatch({ path: 'cpu.pc' });
 await expectRequestError(() => client.api.inspector.unwatch({ path: 'cpu.pc' }), 'inspector.noWatch');
+
+// 跟踪与调用记录：单步时记录，结束时写成调试输出目录下的文件。
+const trace = await client.api.inspector.traceStart({ kind: 'instruction', file: 'live-trace.txt' });
+await client.api.runtime.step({ unit: 'instruction', count: 3 });
+const traced = await client.api.inspector.traceStop({ id: trace.id });
+const traceLines = readFileSync(traced.file, 'utf8').split('\n').filter((line) => line !== '');
+check('指令跟踪：单步 3 条指令写出 3 行，每行以地址开头', traced.lines === 3 && traceLines.length === 3 && /^[0-9A-F]{4} {2}/.test(traceLines[0]), traceLines[0]);
+const pcNow = (await client.api.inspector.getState({ module: 'cpu' })).states[0].fields.find((item) => item.name === 'pc').value;
+const callLog = await client.api.inspector.callLogStart({ address: pcNow, stackBytes: 4, file: 'live-calls.txt' });
+await client.api.runtime.step({ unit: 'instruction' });
+const logged = await client.api.inspector.callLogStop({ id: callLog.id });
+check('调用记录：执行到指定地址时记一行，含栈顶', logged.lines === 1 && readFileSync(logged.file, 'utf8').includes(' | STACK '), JSON.stringify(logged));
+await expectRequestError(() => client.api.inspector.traceStop({ id: trace.id }), 'inspector.noRecording');
 await expectRequestError(() => client.api.input.pad({ port: 7, buttons: 1 }), 'input.invalidPort');
 await expectRequestError(() => client.api.runtime.run({ frames: 0 }), 'core.invalidParams');
 

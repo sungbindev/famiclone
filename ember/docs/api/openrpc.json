@@ -1422,6 +1422,420 @@
       "x-debugOnly": true
     },
     {
+      "name": "inspector.traceStart",
+      "summary": "开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件",
+      "description": "开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件。kind：instruction 每执行一条指令记一行（地址、指令字节、反汇编、寄存器与周期数，写法同 nestest 日志；芯片寄存器的取值显示 00）；io 每次访问 $2000-$5FFF（芯片、手柄口、卡带扩展寄存器）以及对 $8000 以上的写（mapper 寄存器）记一行（方向、地址、值、发起访问的指令地址与周期数）；irq 每次 CPU 响应 IRQ、NMI 或 BRK 记一行（种类、返回地址、处理程序地址、周期数）。单步与运行产生的内容都记，调试写内存不记。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "跟踪的种类",
+            "enum": [
+              "instruction",
+              "io",
+              "irq"
+            ]
+          },
+          "description": "跟踪的种类"
+        },
+        {
+          "name": "file",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录"
+        },
+        {
+          "name": "maxLines",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "最多记录的行数，满了就不再记录，默认 100000",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "description": "最多记录的行数，满了就不再记录，默认 100000"
+        },
+        {
+          "name": "unique",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "只对 instruction 有效：每个地址只记第一次，默认 false"
+          },
+          "description": "只对 instruction 有效：每个地址只记第一次，默认 false"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "记录编号",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidFileName",
+          "data": {
+            "code": "inspector.invalidFileName"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.recordingLimit",
+          "data": {
+            "code": "inspector.recordingLimit"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.traceStop",
+      "summary": "结束跟踪并把内容写成文件",
+      "description": "结束跟踪并把内容写成文件。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "traceStart 返回的记录编号",
+            "minimum": 1
+          },
+          "description": "traceStart 返回的记录编号"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "保存的文件的完整路径"
+            },
+            "lines": {
+              "type": "integer",
+              "description": "写入的行数",
+              "minimum": 0
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "是否因为行数满了而少记了"
+            }
+          },
+          "required": [
+            "file",
+            "lines",
+            "truncated"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.noRecording",
+          "data": {
+            "code": "inspector.noRecording"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.fileFailed",
+          "data": {
+            "code": "inspector.fileFailed"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.callLogStart",
+      "summary": "开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段",
+      "description": "开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段。内容记在内存里，callLogStop 时写成调试输出目录下的文件。同时进行的记录最多 8 项，记录属于当前的主机，装入新卡带后作废。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "address",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "要记录的指令地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "description": "要记录的指令地址"
+        },
+        {
+          "name": "stackBytes",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "每次记录栈顶的字节数，默认 0",
+            "minimum": 0,
+            "maximum": 32
+          },
+          "description": "每次记录栈顶的字节数，默认 0"
+        },
+        {
+          "name": "ranges",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "description": "每次记录的内存段，最多 4 段",
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/inspector.MemoryRangeSpec"
+            }
+          },
+          "description": "每次记录的内存段，最多 4 段"
+        },
+        {
+          "name": "file",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": "文件名，只能含字母、数字、点、下划线、短横线与空格，不含目录；省略时按种类与编号生成（trace-编号.txt、calllog-编号.txt）。文件写在调试输出目录"
+        },
+        {
+          "name": "maxLines",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "最多记录的行数，满了就不再记录，默认 100000",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "description": "最多记录的行数，满了就不再记录，默认 100000"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "记录编号",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidFileName",
+          "data": {
+            "code": "inspector.invalidFileName"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.recordingLimit",
+          "data": {
+            "code": "inspector.recordingLimit"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.callLogStop",
+      "summary": "结束调用记录并把内容写成文件",
+      "description": "结束调用记录并把内容写成文件。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "callLogStart 返回的记录编号",
+            "minimum": 1
+          },
+          "description": "callLogStart 返回的记录编号"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "保存的文件的完整路径"
+            },
+            "lines": {
+              "type": "integer",
+              "description": "写入的行数",
+              "minimum": 0
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "是否因为行数满了而少记了"
+            }
+          },
+          "required": [
+            "file",
+            "lines",
+            "truncated"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.noRecording",
+          "data": {
+            "code": "inspector.noRecording"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.fileFailed",
+          "data": {
+            "code": "inspector.fileFailed"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
       "name": "inspector.addBreakpoint",
       "summary": "添加断点",
       "description": "添加断点。断点在机器运行时生效（自由运行与 runtime.run 都会停下，发事件 runtime.breakpointHit，运行模式变为暂停）；单步（runtime.step）忽略断点；继续运行时会先越过刚命中的执行断点。断点属于当前的主机，装入新卡带后清空。地址是 CPU 总线上的地址。需要已开机。",
@@ -3149,6 +3563,29 @@
           "address",
           "endAddress",
           "hits"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.MemoryRangeSpec": {
+        "type": "object",
+        "description": "一段内存，CPU 总线上的地址。",
+        "properties": {
+          "address": {
+            "type": "integer",
+            "description": "起始地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "length": {
+            "type": "integer",
+            "description": "字节数",
+            "minimum": 1,
+            "maximum": 256
+          }
+        },
+        "required": [
+          "address",
+          "length"
         ],
         "additionalProperties": false
       },

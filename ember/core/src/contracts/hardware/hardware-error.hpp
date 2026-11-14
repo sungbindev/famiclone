@@ -43,5 +43,9 @@ inline constexpr std::string_view ERROR_INVALID_STATE = "hardware.invalidState";
 inline constexpr std::string_view ERROR_INVALID_BREAKPOINT = "hardware.invalidBreakpoint";
 /** 断点数量超过上限。 */
 inline constexpr std::string_view ERROR_BREAKPOINT_LIMIT = "hardware.breakpointLimit";
+/** 同时进行的记录超过上限。 */
+inline constexpr std::string_view ERROR_RECORDER_LIMIT = "hardware.recorderLimit";
+/** 没有这个编号的记录。 */
+inline constexpr std::string_view ERROR_NO_RECORDER = "hardware.noRecorder";
 
 }  // namespace ember::contracts::hardware

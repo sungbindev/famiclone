@@ -38,7 +38,9 @@ FcMachine::FcMachine()
       ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, PPU_PHASE_TICKS),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       padApuPort_(pad_, apu_),
-      cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_) {
+      cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
+      recorders_([this](std::uint16_t address) { return cpuBus_.peek(address); }),
+      probeHub_(breakpoints_, recorders_) {
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
   cpuBus_.mount(0x2000, 0x3FFF, ppu_);
   cpuBus_.mount(0x4000, 0x4013, apu_);
@@ -51,6 +53,7 @@ FcMachine::FcMachine()
   ppuBus_.mount(0x2000, 0x3EFF, nametableRam_);
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
+  cpu_.setInterruptObserver(this);
 }
 
 void FcMachine::powerOn() {
@@ -103,6 +106,7 @@ void FcMachine::runFrame() {
         return;
       }
     }
+    if (recorders_.needsInstructionHook()) recorders_.onInstruction(cpu_.registers());
     cpu_.run(1);
     ppu_.catchUp(scheduler_.now());
     if (breakpoints_.hasPending()) return;
@@ -189,8 +193,8 @@ void FcMachine::readMemory(std::string_view space, std::uint32_t address, std::s
 }
 
 void FcMachine::writeMemory(std::string_view space, std::uint32_t address, std::span<const std::uint8_t> bytes) {
-  // 调试写入不触发读写断点。
-  const ProbeSuspend suspend(*this);
+  // 调试写入不触发读写断点，也不进记录。
+  const ProbeSuspend suspend(*this, true);
   if (space == "cpu") {
     checkRange(space, CPU_SPACE_SIZE, address, bytes.size());
     for (std::size_t index = 0; index < bytes.size(); ++index) cpuBus_.write(static_cast<std::uint16_t>(address + index), bytes[index]);
@@ -297,11 +301,27 @@ void FcMachine::writeState(std::string_view module, std::span<const hw::StateFie
   skipExecuteAt_.reset();
 }
 
-void FcMachine::refreshProbe() { cpuBus_.setProbe(breakpoints_.hasAccess() ? &breakpoints_ : nullptr); }
+void FcMachine::refreshProbe() { cpuBus_.setProbe(probeHub_.needed() ? &probeHub_ : nullptr); }
 
-FcMachine::ProbeSuspend::ProbeSuspend(FcMachine& machine) : machine_(machine) { machine_.cpuBus_.setProbe(nullptr); }
+FcMachine::ProbeSuspend::ProbeSuspend(FcMachine& machine, bool alsoRecording) : machine_(machine), before_(machine.probeHub_.suspend(true, alsoRecording)) {}
 
-FcMachine::ProbeSuspend::~ProbeSuspend() { machine_.refreshProbe(); }
+FcMachine::ProbeSuspend::~ProbeSuspend() { machine_.probeHub_.restore(before_); }
+
+std::uint32_t FcMachine::startRecorder(const hw::RecorderSpec& spec) {
+  const std::uint32_t id = recorders_.start(spec);
+  refreshProbe();
+  return id;
+}
+
+hw::RecorderOutput FcMachine::stopRecorder(std::uint32_t id) {
+  hw::RecorderOutput output = recorders_.stop(id);
+  refreshProbe();
+  return output;
+}
+
+void FcMachine::onInterrupt(hw::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) {
+  if (recorders_.recordsIrq()) recorders_.onInterrupt(kind, returnAddress, handler, cpu_.registers().cycles);
+}
 
 hw::Breakpoint FcMachine::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last) {
   const hw::Breakpoint added = breakpoints_.add(kind, first, last);
@@ -324,14 +344,15 @@ std::size_t FcMachine::clearBreakpoints() {
 hw::StepResult FcMachine::step(hw::StepUnit unit, std::uint64_t count) {
   hw::StepResult result;
   if (!poweredOn_ || count == 0) return result;
-  // 单步忽略断点：探针暂时去掉，结束后恢复。
-  const ProbeSuspend suspend(*this);
+  // 单步忽略断点，但照常进记录。
+  const ProbeSuspend suspend(*this, false);
   skipExecuteAt_.reset();
   breakpoints_.discardPending();
   const std::uint64_t startCycles = cpu_.registers().cycles;
   const std::uint64_t startFrames = ppu_.frameCount();
   // 每次 run(1) 执行恰好一条指令（含随后响应的中断序列）。
   const auto instruction = [&] {
+    if (recorders_.needsInstructionHook()) recorders_.onInstruction(cpu_.registers());
     cpu_.run(1);
     ppu_.catchUp(scheduler_.now());
     ++result.instructions;

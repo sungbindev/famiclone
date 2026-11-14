@@ -1,6 +1,6 @@
 {
   "name": "fcdev-cc65",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "fcdev 使用的 cc65 工具链：cc65、ca65、ld65、ar65、da65，以及 none、nes 两个目标的运行库",
   "license": "Zlib",
   "os": [

@@ -53,6 +53,8 @@ export interface ShellPageDefinition {
   readonly singleton?: boolean;
   /** 启动时自动打开。 */
   readonly openOnStart?: boolean;
+  /** 标签上是否有关闭按钮，也决定能否被“关闭当前标签”关掉；默认 true。 */
+  readonly closable?: boolean;
   /** 页面的边栏；没有时边栏自动关闭，折叠按钮置灰。 */
   readonly sideBar?: ShellSideBarDefinition;
 }

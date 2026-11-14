@@ -134,6 +134,12 @@ export function Shell({ bridge, modules }: ShellProps) {
 }
 
 /** 登记表有效之后的外壳。 */
+/** 标签对应的页面是否允许关闭。 */
+function isClosable(registry: ShellRegistry, state: TabState, id: string): boolean {
+  const tab = state.tabs.find((item) => item.id === id);
+  return tab === undefined || registry.pages.get(tab.pageId)?.closable !== false;
+}
+
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
   const [panels, setPanels] = useState<OpenPanels>(ALL_CLOSED);
   // 底部面板的初始高度：读到保存的高度之前为 null，此时不显示界面。
@@ -188,7 +194,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
         }
         setTabs((state) => openTab(state, page));
       },
-      closeActiveTab: () => setTabs((state) => (state.activeId === null ? state : closeTab(state, state.activeId))),
+      closeActiveTab: () => setTabs((state) => (state.activeId === null || !isClosable(registry, state, state.activeId) ? state : closeTab(state, state.activeId))),
       toggleSideBar: () => {
         if (live.current.view.hasSideBar) setPanels((current) => ({ ...current, side: !current.side }));
       },
@@ -374,11 +380,11 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
                 aria-label={TEXT.tabsLabel}
                 tabs={tabs.tabs.map((tab) => {
                   const page = registry.pages.get(tab.pageId);
-                  return { id: tab.id, title: page?.title ?? tab.pageId, ...(page ? { icon: page.icon } : {}) };
+                  return { id: tab.id, title: page?.title ?? tab.pageId, ...(page ? { icon: page.icon } : {}), ...(page?.closable === false ? { closable: false } : {}) };
                 })}
                 {...(tabs.activeId === null ? {} : { activeId: tabs.activeId })}
                 onSelect={(id) => setTabs((state) => activateTab(state, id))}
-                onClose={(id) => setTabs((state) => closeTab(state, id))}
+                onClose={(id) => setTabs((state) => (isClosable(registry, state, id) ? closeTab(state, id) : state))}
               />
             )
           }

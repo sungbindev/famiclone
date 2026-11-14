@@ -97,6 +97,7 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
         icon: iconPlayerPlay,
         Component: (props: ShellPageProps) => <RuntimePage {...props} controller={controller} />,
         openOnStart: true,
+        closable: false,
         sideBar: { Component: () => <RuntimeSideBar controller={controller} /> }
       }
     ],

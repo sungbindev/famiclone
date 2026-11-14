@@ -366,6 +366,27 @@ describe('没有页面时与全屏', () => {
     expect(screen.getByRole('tab', { name: '甲页' })).toBeTruthy();
   });
 
+  it('登记为不可关闭的页面（closable: false）标签上没有关闭按钮，其他页面仍有', async () => {
+    const user = userEvent.setup();
+    const fixed: ShellModule = {
+      name: 'e',
+      pages: [
+        { id: 'e.fixed', title: '固定页', icon: ICON, Component: () => <p>固定页内容</p>, openOnStart: true, closable: false },
+        { id: 'e.other', title: '普通页', icon: ICON, Component: () => <p>普通页内容</p> }
+      ],
+      activityItems: [{ id: 'e.btn', label: '戊', icon: ICON, page: 'e.other' }]
+    };
+    renderShell({ modules: [fixed] });
+    await shown();
+    expect(screen.getByRole('tab', { name: '固定页' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '关闭：固定页' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: '戊' }));
+    expect(screen.getByRole('button', { name: '关闭：普通页' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '关闭：普通页' }));
+    expect(screen.queryByRole('tab', { name: '普通页' })).toBeNull();
+    expect(screen.getByRole('tab', { name: '固定页' })).toBeTruthy();
+  });
+
   it('单例页面重复打开只聚焦已有标签', async () => {
     const user = userEvent.setup();
     renderShell();

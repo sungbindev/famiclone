@@ -33,7 +33,6 @@ function createBridge(layout: Partial<ShellLayout> = {}) {
   const shell = {
     getState: vi.fn(() => Promise.resolve({ window: null, layout: { ...DEFAULT_LAYOUT, ...layout } })),
     setLayout: vi.fn(),
-    setPanelExtents: vi.fn(() => Promise.resolve()),
     windowAction: vi.fn(),
     getWindowState: vi.fn(() => Promise.resolve({ maximized: false, fullScreen: false })),
     onWindowStateChange: (listener: (state: WindowState) => void) => {
@@ -416,47 +415,6 @@ describe('没有页面时与全屏', () => {
     const end = status.querySelector('.ui-status-bar__end') as HTMLElement;
     expect(end.textContent).toBe('右项');
     expect(end.lastElementChild?.getAttribute('aria-label')).toBe('通知');
-  });
-});
-
-describe('窗口随面板伸缩', () => {
-  it('启动时告知全部折叠，展开与折叠面板时告知展开的面板占用的尺寸', async () => {
-    const { shell } = renderShell();
-    await shown();
-    expect(shell.setPanelExtents.mock.calls).toEqual([[{ left: 0, right: 0, bottom: 0 }]]);
-    press(TOGGLE_SIDE_BAR);
-    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 240, right: 0, bottom: 0 });
-    press(TOGGLE_BOTTOM_PANEL);
-    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 240, right: 0, bottom: 160 });
-    press(TOGGLE_SIDE_BAR);
-    press(TOGGLE_BOTTOM_PANEL);
-    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 0, right: 0, bottom: 0 });
-  });
-
-  it('底部面板用保存的高度展开', async () => {
-    const { shell } = renderShell({ layout: { bottomPanelHeight: 220 } });
-    await shown();
-    press(TOGGLE_BOTTOM_PANEL);
-    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 0, right: 0, bottom: 220 });
-  });
-
-  it('当前页面没有边栏时边栏不占尺寸', async () => {
-    const user = userEvent.setup();
-    const { shell } = renderShell();
-    await shown();
-    press(TOGGLE_SIDE_BAR);
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 0, right: 0, bottom: 0 });
-  });
-
-  it('全屏时不告知，退出全屏后面板回到原来的状态，尺寸没变就不再告知', async () => {
-    const { shell, emitWindowState } = renderShell();
-    await shown();
-    press(TOGGLE_SIDE_BAR);
-    const calls = shell.setPanelExtents.mock.calls.length;
-    emitWindowState({ maximized: false, fullScreen: true });
-    emitWindowState({ maximized: false, fullScreen: false });
-    expect(shell.setPanelExtents).toHaveBeenCalledTimes(calls);
   });
 });
 

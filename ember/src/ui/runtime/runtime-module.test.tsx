@@ -50,7 +50,6 @@ async function setup(options: { status?: ReturnType<typeof machineStatus> | unde
   const shell = {
     getState: vi.fn(() => Promise.resolve({ window: null, layout: DEFAULT_LAYOUT })),
     setLayout: vi.fn(),
-    setPanelExtents: vi.fn(() => Promise.resolve()),
     windowAction: vi.fn(),
     getWindowState: vi.fn(() => Promise.resolve({ maximized: false, fullScreen: false })),
     onWindowStateChange: () => () => undefined

@@ -10,7 +10,7 @@
  * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；未激活的页面保持挂载、只隐藏，切回时状态不丢；
  *       页面区里每个页面在组件库的 DialogScope 里（页面内边距与以后的对话框范围）；
  *       画面获得焦点时键盘事件先交给画面（它处理过的按键 defaultPrevented，外壳不再响应）；
- *       各面板每次启动都是关闭的、展开状态不保存；面板展开与折叠时窗口向外伸缩、页面区不变，见 use-window-extents.ts。
+ *       各面板每次启动都是关闭的、展开状态不保存；面板向内展开，窗口大小不变，运行页的画面按页面区剩余空间自动缩放。
  * ------------------------------------------------------------------------
  */
 
@@ -47,14 +47,11 @@ import { MessageLogContext, ShellApiContext } from './shell-context';
 import { MESSAGES_PANEL_ID, SHELL_COMMANDS, SHELL_MODULE } from './shell-module';
 import { commandTitle, SHELL_MENUS, type ShellApi, type ShellMessageInput, type ShellModule, type ShellViewState } from './shell-registry';
 import { activateTab, closeTab, EMPTY_TABS, openTab, type TabState } from './tab-state';
-import { useWindowExtents } from './use-window-extents';
 import './shell.css';
 
 /** 应用名。 */
 const APP_NAME = 'EMBER';
 
-/** 边栏的默认宽度（像素），宽度不保存。 */
-const SIDE_BAR_WIDTH = 240;
 /** 底部面板的默认高度（像素），保存过高度时用保存的。 */
 const BOTTOM_PANEL_HEIGHT = 160;
 /** 右边栏的默认宽度（像素），宽度不保存。 */
@@ -139,9 +136,7 @@ export function Shell({ bridge, modules }: ShellProps) {
 /** 登记表有效之后的外壳。 */
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
   const [panels, setPanels] = useState<OpenPanels>(ALL_CLOSED);
-  const [sideWidth, setSideWidth] = useState(SIDE_BAR_WIDTH);
-  const [rightWidth, setRightWidth] = useState(RIGHT_BAR_WIDTH);
-  // 底部面板的高度：读到保存的高度之前为 null，此时不显示界面。
+  // 底部面板的初始高度：读到保存的高度之前为 null，此时不显示界面。
   const [bottomHeight, setBottomHeight] = useState<number | null>(null);
   const [tabs, setTabs] = useState<TabState>(() =>
     registry.startPages.reduce((state, id) => {
@@ -182,7 +177,6 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   useLayoutEffect(() => {
     live.current = { tabs, view };
   });
-  const { pagesRef, pinnedStyle, onPanelExtentsChange } = useWindowExtents(bridge, windowState.fullScreen);
 
   const api = useMemo<ShellApi>(() => {
     const shell: ShellApi = {
@@ -374,8 +368,6 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             );
           })}
           sideBarCollapsed={fullScreen || !sideBarOpen}
-          sideBarWidth={sideWidth}
-          onSideBarWidthChange={(width) => setSideWidth(Math.round(width))}
           tabBar={
             fullScreen ? undefined : (
               <TabBar
@@ -405,8 +397,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             />
           }
           bottomPanelOpen={!fullScreen && bottomPanelOpen}
-          bottomPanelHeight={bottomHeight}
-          onBottomPanelHeightChange={(height) => setBottomHeight(Math.round(height))}
+          defaultBottomPanelHeight={bottomHeight}
           onBottomPanelHeightCommit={(height) => bridge.shell.setLayout({ bottomPanelHeight: Math.round(height) })}
           rightBar={
             <DockPanel
@@ -416,10 +407,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             />
           }
           rightBarOpen={!fullScreen && rightBarOpen}
-          rightBarWidth={rightWidth}
-          onRightBarWidthChange={(width) => setRightWidth(Math.round(width))}
-          limitPanelsToViewport={false}
-          onPanelExtentsChange={onPanelExtentsChange}
+          defaultRightBarWidth={RIGHT_BAR_WIDTH}
           statusBar={
             fullScreen ? undefined : (
               <StatusBar
@@ -435,17 +423,15 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             )
           }
         >
-          <div ref={pagesRef} className="ember-shell-pages" style={pinnedStyle}>
-            {tabs.tabs.length === 0 ? <EmptyWorkspace logo={<EmberLogo />} subtitle={TEXT.emptyHint} /> : null}
-            {tabs.tabs.map((tab) => {
-              const page = registry.pages.get(tab.pageId);
-              return (
-                <DialogScope key={tab.id} hidden={tab.id !== tabs.activeId}>
-                  <div className="ember-shell-page">{page === undefined ? null : createElement(page.Component, { bridge })}</div>
-                </DialogScope>
-              );
-            })}
-          </div>
+          {tabs.tabs.length === 0 ? <EmptyWorkspace logo={<EmberLogo />} subtitle={TEXT.emptyHint} /> : null}
+          {tabs.tabs.map((tab) => {
+            const page = registry.pages.get(tab.pageId);
+            return (
+              <DialogScope key={tab.id} hidden={tab.id !== tabs.activeId}>
+                <div className="ember-shell-page">{page === undefined ? null : createElement(page.Component, { bridge })}</div>
+              </DialogScope>
+            );
+          })}
         </AppFrame>
         <NotificationCenter />
       </MessageLogContext.Provider>

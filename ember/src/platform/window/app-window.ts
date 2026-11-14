@@ -13,13 +13,19 @@
 
 import { pathToFileURL } from 'node:url';
 import { BrowserWindow, Menu, nativeTheme, screen, session } from 'electron';
-import { BASE_MIN_HEIGHT, BASE_MIN_WIDTH } from './panel-bounds';
 
 /** 实际使用的主题。 */
 export type ResolvedTheme = 'dark' | 'light';
 
 /** 标题栏高度（组件库 --title-bar-height），系统按钮区少 1 像素露出底边线。 */
 const TITLE_BAR_HEIGHT = 36;
+/**
+ * 窗口的最小尺寸。宽度保证标题栏放得下图标、名称、三个菜单、至少 48 像素可拖动的空白、三个折叠按钮和系统窗口按钮（实测约 604）；
+ * 高度让画面框在最小窗口下四周间距一致：页面区内容宽 640-40(活动栏)-2x10(页面内边距)=580，对应画面高约 476，
+ * 再加页面内边距 20、标题栏 36、标签栏 36、状态栏 26，共 594。
+ */
+const MIN_WIDTH = 640;
+const MIN_HEIGHT = 594;
 /** 窗口的初始尺寸。 */
 const INITIAL_WIDTH = 1280;
 const INITIAL_HEIGHT = 800;
@@ -72,7 +78,7 @@ function overlap(a: Electron.Rectangle, b: Electron.Rectangle): { width: number;
  */
 export function visiblePlacement(placement: WindowPlacement | null | undefined, workAreas: readonly Electron.Rectangle[]): WindowPlacement | undefined {
   if (placement === undefined || placement === null) return undefined;
-  const bounds = { x: placement.x, y: placement.y, width: Math.max(placement.width, BASE_MIN_WIDTH), height: Math.max(placement.height, BASE_MIN_HEIGHT) };
+  const bounds = { x: placement.x, y: placement.y, width: Math.max(placement.width, MIN_WIDTH), height: Math.max(placement.height, MIN_HEIGHT) };
   const visible = workAreas.some((area) => {
     const size = overlap(bounds, area);
     return size.width >= MIN_VISIBLE && size.height >= MIN_VISIBLE;
@@ -149,8 +155,8 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
     width: placement?.width ?? INITIAL_WIDTH,
     height: placement?.height ?? INITIAL_HEIGHT,
     ...(placement ? { x: placement.x, y: placement.y } : {}),
-    minWidth: BASE_MIN_WIDTH,
-    minHeight: BASE_MIN_HEIGHT,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     title: options.title,
     show: false,
     backgroundColor: WINDOW_COLORS[theme].background,

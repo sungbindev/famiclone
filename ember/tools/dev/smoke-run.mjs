@@ -3,7 +3,7 @@
  * 名称：smoke-run.mjs
  * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、
  *       运行页边栏与状态栏显示机器状态、边栏按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“开机…”子菜单、
- *       启动时面板全部关闭、展开与折叠面板时窗口向外伸缩而页面区的大小与屏幕位置不变、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白与到系统按钮的距离、
+ *       启动时面板全部关闭、展开与折叠面板时窗口大小不变而画面框等比缩放并留在页面区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白与到系统按钮的距离、
  *       页面重载与核心进程重启后端口重新建立且边栏状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -30,7 +30,7 @@ const MIN_DRAG_GAP = 48;
 const MIN_SYSTEM_BUTTON_GAP = 8;
 /** 画面框的显示宽高比：256×240 的整帧、像素宽高比 8:7。 */
 const FRAME_RATIO = 128 / 105;
-/** 预置的窗口位置：尺寸写小于最小尺寸，启动后就是最小窗口；左侧与下方留足空间，展开边栏与底部面板时窗口不会被屏幕边缘挡住。 */
+/** 预置的窗口位置：尺寸写得比最小尺寸小，启动后就是最小窗口。 */
 const START_PLACEMENT = { x: 400, y: 60, width: 100, height: 100 };
 
 const options = parseArguments(process.argv.slice(2));
@@ -77,15 +77,12 @@ const INSTALL_LISTENER = `(() => {
 /** 读渲染 Worker 的诊断；reset 为 true 时先清空统计。 */
 const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(${reset})`;
 
-/** 页面区、画面框与两个面板的几何信息：页面区的位置换算成屏幕坐标（CSS 像素）。 */
+/** 窗口大小、页面区与画面框的几何信息（CSS 像素）以及两个面板是否关闭。 */
 const GEOMETRY = `(() => {
-  const pages = document.querySelector('.ember-shell-pages').getBoundingClientRect();
   const frame = document.querySelector('.ember-run-frame').getBoundingClientRect();
   const area = document.querySelector('.ui-app-frame__page').getBoundingClientRect();
   return {
     innerWidth: window.innerWidth, innerHeight: window.innerHeight,
-    pagesLeft: Math.round(pages.left + window.screenX), pagesTop: Math.round(pages.top + window.screenY),
-    pagesWidth: Math.round(pages.width), pagesHeight: Math.round(pages.height),
     frameWidth: frame.width, frameHeight: frame.height,
     margins: { left: frame.left - area.left, right: area.right - frame.right, top: frame.top - area.top, bottom: area.bottom - frame.bottom },
     sideHidden: document.querySelector('.ui-app-frame__side').hidden, bottomHidden: document.querySelector('.ui-app-frame__bottom').hidden
@@ -115,17 +112,22 @@ async function clickTool(label) {
   return page.evaluate(`(() => { const button = document.querySelector('.ui-title-bar [aria-label=' + JSON.stringify(${JSON.stringify(label)}) + ']'); if (!button || button.disabled) return false; button.click(); return true; })()`);
 }
 
-/** 点标题栏里指定名称的折叠按钮，等窗口大小变化并稳定后读几何信息。 */
-async function toggleAndMeasure(label, before) {
+/** 点标题栏里指定名称的折叠按钮，等布局稳定后读几何信息。 */
+async function toggleAndMeasure(label) {
   await clickTool(label);
-  await waitFor(() => page.evaluate(GEOMETRY), (value) => value.innerWidth !== before.innerWidth || value.innerHeight !== before.innerHeight, 5000, 100);
-  await sleep(600);
+  await sleep(500);
   return page.evaluate(GEOMETRY);
 }
 
-/** 页面区的大小与屏幕位置是否与 before 一致（误差不超过 2 像素）。 */
-function samePagesArea(before, after) {
-  return ['pagesLeft', 'pagesTop', 'pagesWidth', 'pagesHeight'].every((key) => Math.abs(before[key] - after[key]) <= 2);
+/** 画面框是否完整地在页面区内（允许 1 像素的取整误差），且宽高比仍是 128:105。 */
+function frameFits(geometry) {
+  const inside = Object.values(geometry.margins).every((margin) => margin >= -1);
+  return inside && Math.abs(geometry.frameWidth / geometry.frameHeight - FRAME_RATIO) < 0.02;
+}
+
+/** 窗口大小是否与 before 一致（误差不超过 1 像素）。 */
+function sameWindowSize(before, after) {
+  return Math.abs(before.innerWidth - after.innerWidth) <= 1 && Math.abs(before.innerHeight - after.innerHeight) <= 1;
 }
 
 /** 页面里第一个匹配元素的文字；没有该元素时为空字符串。 */
@@ -282,7 +284,7 @@ async function main() {
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu-recent.png'));
   await menuButton('文件');
 
-  // 面板与窗口：启动时全部关闭，窗口是最小尺寸；先在最小窗口下核对标题栏，再展开面板核对窗口向外伸缩，页面区的大小与屏幕位置不变；画面框不变形。
+  // 面板与窗口：启动时全部关闭，窗口是最小尺寸；先在最小窗口下核对标题栏与画面框，再展开面板核对窗口大小不变、画面框等比缩小并留在页面区内。
   const initial = await page.evaluate(GEOMETRY);
   check('启动时边栏与底部面板都是关闭的', initial.sideHidden && initial.bottomHidden, JSON.stringify({ sideHidden: initial.sideHidden, bottomHidden: initial.bottomHidden }));
   const tiny = await page.evaluate(TITLE_BAR_METRICS);
@@ -295,15 +297,14 @@ async function main() {
   check('画面框的宽高比是 128:105（8:7 的像素宽高比，不变形）', Math.abs(initial.frameWidth / initial.frameHeight - FRAME_RATIO) < 0.02, `${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)}`);
   check('最小窗口下画面框四周的间距一样（误差不超过 2 像素）', Math.max(...Object.values(initial.margins)) - Math.min(...Object.values(initial.margins)) <= 2, JSON.stringify(initial.margins));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-min-window.png'));
-  const sideOpen = await toggleAndMeasure('切换边栏', initial);
-  check('展开边栏：窗口向左变宽，页面区的大小与屏幕位置不变', sideOpen.innerWidth > initial.innerWidth && samePagesArea(initial, sideOpen), `窗口宽 ${initial.innerWidth} → ${sideOpen.innerWidth}，页面区 ${JSON.stringify([initial.pagesLeft, initial.pagesTop, initial.pagesWidth, initial.pagesHeight])} → ${JSON.stringify([sideOpen.pagesLeft, sideOpen.pagesTop, sideOpen.pagesWidth, sideOpen.pagesHeight])}`);
-  const bottomOpen = await toggleAndMeasure('切换底部面板', sideOpen);
-  check('展开底部面板：窗口向下变高，页面区的大小与屏幕位置不变', bottomOpen.innerHeight > sideOpen.innerHeight && samePagesArea(initial, bottomOpen), `窗口高 ${sideOpen.innerHeight} → ${bottomOpen.innerHeight}，页面区 ${JSON.stringify([bottomOpen.pagesLeft, bottomOpen.pagesTop, bottomOpen.pagesWidth, bottomOpen.pagesHeight])}`);
-  check('展开面板后画面框的宽高比与大小不变', Math.abs(bottomOpen.frameWidth / bottomOpen.frameHeight - FRAME_RATIO) < 0.02 && Math.abs(bottomOpen.frameWidth - initial.frameWidth) <= 2, `${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
+  const sideOpen = await toggleAndMeasure('切换边栏');
+  check('展开边栏：窗口大小不变，画面框等比缩小并留在页面区内', sameWindowSize(initial, sideOpen) && frameFits(sideOpen) && sideOpen.frameWidth < initial.frameWidth, `窗口 ${sideOpen.innerWidth}×${sideOpen.innerHeight}，画面框 ${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)} → ${sideOpen.frameWidth.toFixed(1)}×${sideOpen.frameHeight.toFixed(1)}`);
+  const bottomOpen = await toggleAndMeasure('切换底部面板');
+  check('再展开底部面板：窗口大小不变，画面框继续等比缩小并留在页面区内', sameWindowSize(initial, bottomOpen) && frameFits(bottomOpen) && bottomOpen.frameHeight < sideOpen.frameHeight, `窗口 ${bottomOpen.innerWidth}×${bottomOpen.innerHeight}，画面框 ${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-panels-open.png'));
-  await toggleAndMeasure('切换底部面板', bottomOpen);
-  const allClosed = await toggleAndMeasure('切换边栏', await page.evaluate(GEOMETRY));
-  check('折叠面板后窗口缩回原来的大小，页面区不变', Math.abs(allClosed.innerWidth - initial.innerWidth) <= 2 && Math.abs(allClosed.innerHeight - initial.innerHeight) <= 2 && samePagesArea(initial, allClosed), `窗口 ${allClosed.innerWidth}×${allClosed.innerHeight}`);
+  await toggleAndMeasure('切换底部面板');
+  const allClosed = await toggleAndMeasure('切换边栏');
+  check('折叠面板后窗口大小不变，画面框回到原来的大小', sameWindowSize(initial, allClosed) && Math.abs(allClosed.frameWidth - initial.frameWidth) <= 2 && Math.abs(allClosed.frameHeight - initial.frameHeight) <= 2, `画面框 ${allClosed.frameWidth.toFixed(1)}×${allClosed.frameHeight.toFixed(1)}`);
 
   // 页面重载后：运行页重新请求端口，画面帧继续到达。
   await page.send('Page.reload');

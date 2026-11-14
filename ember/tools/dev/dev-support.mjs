@@ -11,7 +11,7 @@
  */
 
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -130,15 +130,19 @@ export async function pressKey(page, { key, code, keyCode }, holdMs) {
 
 /**
  * 启动开发版（electron-forge start）：临时用户数据目录，主进程直接加载一张卡带，开 CDP 调试端口。
- * @param {{ port: number, romPath: string }} settings CDP 端口与卡带路径。
+ * @param {{ port: number, romPath: string, windowPlacement?: { x: number, y: number, width: number, height: number } }} settings CDP 端口、卡带路径，以及可选的预置窗口位置（写进临时数据目录的界面状态，尺寸低于最小尺寸时取最小尺寸）。
  * @returns 句柄：pid、是否已退出、最近的输出、临时数据目录、等页面出现的函数、停止并清理的函数。
  */
-export function startDevApp({ port, romPath }) {
+export function startDevApp({ port, romPath, windowPlacement }) {
   const packageName = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8')).name;
   if (packageName !== 'ember' || !existsSync(join(projectRoot, 'forge.config.mts'))) throw new Error(`不是 Ember 项目目录：${projectRoot}`);
   if (!existsSync(romPath)) throw new Error(`找不到测试 ROM：${romPath}`);
 
   const userDataDirectory = mkdtempSync(join(tmpdir(), 'ember-dev-'));
+  if (windowPlacement !== undefined) {
+    mkdirSync(join(userDataDirectory, 'config'), { recursive: true });
+    writeFileSync(join(userDataDirectory, 'config', 'shell-state.json'), JSON.stringify({ window: { ...windowPlacement, maximized: false }, layout: { bottomPanelHeight: null } }));
+  }
   const forgeBin = join(dirname(createRequire(import.meta.url).resolve('@electron-forge/cli/package.json')), 'dist', 'electron-forge.js');
   const forge = spawn(process.execPath, [forgeBin, 'start', '--', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDirectory}`, `--cartridge=${romPath}`], {
     cwd: projectRoot,

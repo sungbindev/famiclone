@@ -26,16 +26,16 @@ function setup(trusted = true) {
     handle: (channel: string, listener: Listener) => handlers.set(channel, listener),
     on: (channel: string, listener: Listener) => listeners.set(channel, listener)
   } as unknown as IpcMain;
-  const savedState = { ...DEFAULT_SHELL_STATE, layout: { ...DEFAULT_SHELL_STATE.layout, rightBarOpen: true } };
+  const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220 } };
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), flush: vi.fn() };
-  const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false })) };
+  const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false })), setPanelExtents: vi.fn(), panelExtents: vi.fn(() => ({ left: 0, right: 0, bottom: 0 })) };
   registerShellIpc({ ipc, isTrustedSender: () => trusted, state, window });
   const event = {} as IpcMainEvent;
   return {
     state,
     window,
     savedState,
-    invoke: (channel: string) => handlers.get(channel)!(event as unknown as IpcMainInvokeEvent),
+    invoke: (channel: string, ...args: unknown[]) => handlers.get(channel)!(event as unknown as IpcMainInvokeEvent, ...args),
     send: (channel: string, ...args: unknown[]) => listeners.get(channel)!(event, ...args)
   };
 }
@@ -79,13 +79,13 @@ describe('窗口动作', () => {
 describe('布局修改', () => {
   it('合格的修改交给状态服务', () => {
     const { send, state } = setup();
-    send(SHELL_CHANNELS.setLayout, { rightBarOpen: true, bottomPanelHeight: 220 });
-    expect(state.updateLayout).toHaveBeenCalledWith({ rightBarOpen: true, bottomPanelHeight: 220 });
+    send(SHELL_CHANNELS.setLayout, { bottomPanelHeight: 220 });
+    expect(state.updateLayout).toHaveBeenCalledWith({ bottomPanelHeight: 220 });
   });
 
   it('含未知字段、值不合格、不是对象的修改整条丢弃', () => {
     const { send, state } = setup();
-    for (const patch of [{ rightBarOpen: 'yes' }, { sideBarOpen: true, window: {} }, { bottomPanelHeight: -3 }, {}, undefined, null, 'x', []]) {
+    for (const patch of [{ rightBarOpen: true }, { bottomPanelHeight: 200, window: {} }, { bottomPanelHeight: -3 }, {}, undefined, null, 'x', []]) {
       send(SHELL_CHANNELS.setLayout, patch);
     }
     expect(state.updateLayout).not.toHaveBeenCalled();
@@ -93,8 +93,27 @@ describe('布局修改', () => {
 
   it('不可信的发送方发来的修改不保存', () => {
     const { send, state } = setup(false);
-    send(SHELL_CHANNELS.setLayout, { rightBarOpen: true });
+    send(SHELL_CHANNELS.setLayout, { bottomPanelHeight: 220 });
     expect(state.updateLayout).not.toHaveBeenCalled();
+  });
+});
+
+describe('面板占用尺寸', () => {
+  it('合格的尺寸交给窗口控制器，请求在窗口调整完成后才返回', async () => {
+    const { invoke, window } = setup();
+    await invoke(SHELL_CHANNELS.setPanelExtents, { left: 240, right: 0, bottom: 160 });
+    expect(window.setPanelExtents).toHaveBeenCalledWith({ left: 240, right: 0, bottom: 160 });
+  });
+
+  it('不合格的尺寸、不可信的发送方一律丢弃', async () => {
+    const { invoke, window } = setup();
+    for (const raw of [undefined, null, 'x', [], {}, { left: -1, right: 0, bottom: 0 }, { left: 1.5, right: 0, bottom: 0 }, { left: 0, right: 0, bottom: 99_999 }, { left: 0, right: 0, bottom: 0, extra: 1 }]) {
+      await invoke(SHELL_CHANNELS.setPanelExtents, raw);
+    }
+    const untrusted = setup(false);
+    await untrusted.invoke(SHELL_CHANNELS.setPanelExtents, { left: 1, right: 0, bottom: 0 });
+    expect(window.setPanelExtents).not.toHaveBeenCalled();
+    expect(untrusted.window.setPanelExtents).not.toHaveBeenCalled();
   });
 });
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：ember-run.css
- * 说明：运行页的版面：页面纵向排列，画面区占满剩余空间，画布铺满画面区，画面提示覆盖在画面区上；边栏里的按钮网格与音量行。
+ * 说明：运行页的版面：页面纵向排列，舒台占满剩余空间，画面框在舒台里按显示比例居中，画布铺满画面区，画面提示覆盖在画面框上；边栏里的按钮网格与音量行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -17,11 +17,26 @@
   min-height: 0;
 }
 
-.ember-run-screen {
-  position: relative;
+/* 舒台：页面区的全部空间，给画面框量尺寸；剩余的地方是页面底色 */
+.ember-run-stage {
+  display: grid;
   flex: 1;
+  place-items: center;
   min-height: 0;
+  container-type: size;
+}
+
+/* 画面框：按显示宽高比尽量放大并居中，黑底只在框里，所以画面不会变形 */
+.ember-run-frame {
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--ember-screen-ratio)));
+  aspect-ratio: var(--ember-screen-ratio);
   background: black;
+}
+
+.ember-run-screen {
+  position: absolute;
+  inset: 0;
 }
 
 .ember-run-screen:focus-visible {

@@ -67,7 +67,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `npm run lint` | oxlint 检查 |
 | `npm run boundaries` | 分层、模块依赖与模块登记检查 |
 | `npm run check` | 以上全部检查与测试 |
-| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、运行页边栏与状态栏的机器状态、F8 快捷键、“文件”菜单的最近打开与开机子菜单、页面重载与核心重启（含重启后边栏状态刷新）（见 docs/06 第 8 节），只结束自己启动的进程 |
+| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、运行页边栏与状态栏的机器状态、F8 快捷键、“文件”菜单的最近打开与开机子菜单、最小窗口下的标题栏、展开与折叠面板时窗口的伸缩与画面框比例、页面重载与核心重启（含重启后边栏状态刷新）（见 docs/06 第 8 节），只结束自己启动的进程 |
 | `node tools/dev/latency-run.mjs` | 画面延迟与丢帧测量：开发版运行 30 秒，打印核心、收到、渲染帧率与各类丢帧、两段延迟（见 docs/06 第 9 节、docs/01 第 7 节），只结束自己启动的进程 |
 | `npm run package:win` | 打包 Windows x64 版 |
 | `npm run make:win` | 生成 Windows x64 安装程序 |

@@ -12,28 +12,32 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SHELL_STATE, parseLayoutPatch, parseShellState } from './shell-state';
 
 describe('parseShellState', () => {
-  it('没有保存过时：边栏与底部面板展开，右边栏折叠，窗口用默认位置', () => {
+  it('没有保存过时：窗口用默认位置，底部面板用默认高度', () => {
     for (const raw of [undefined, null, 5, 'x', [], {}]) {
-      expect(parseShellState(raw)).toEqual({
-        window: null,
-        layout: { sideBarOpen: true, bottomPanelOpen: true, rightBarOpen: false, bottomPanelHeight: null }
-      });
+      expect(parseShellState(raw)).toEqual({ window: null, layout: { bottomPanelHeight: null } });
     }
   });
 
   it('完整合格的内容原样读出', () => {
     const state = {
       window: { x: -20, y: 30, width: 1280, height: 800, maximized: true },
-      layout: { sideBarOpen: false, bottomPanelOpen: false, rightBarOpen: true, bottomPanelHeight: 240 }
+      layout: { bottomPanelHeight: 240 }
     };
     expect(parseShellState(state)).toEqual(state);
   });
 
+  it('旧文件里的面板展开状态被忽略', () => {
+    const state = parseShellState({ layout: { sideBarOpen: false, bottomPanelOpen: true, rightBarOpen: true, bottomPanelHeight: 200 } });
+    expect(state.layout).toEqual({ bottomPanelHeight: 200 });
+  });
+
   it('单项不合格时只替换那一项，其他项照常读出', () => {
     const state = parseShellState({
-      layout: { sideBarOpen: 'yes', bottomPanelOpen: false, rightBarOpen: true, bottomPanelHeight: 1.5 }
+      window: { x: 1, y: 2, width: 900, height: 600, maximized: false },
+      layout: { bottomPanelHeight: 1.5 }
     });
-    expect(state.layout).toEqual({ sideBarOpen: true, bottomPanelOpen: false, rightBarOpen: true, bottomPanelHeight: null });
+    expect(state.layout).toEqual({ bottomPanelHeight: null });
+    expect(state.window).toEqual({ x: 1, y: 2, width: 900, height: 600, maximized: false });
   });
 
   it('窗口位置有一项不合格就整个不用', () => {
@@ -51,15 +55,14 @@ describe('parseShellState', () => {
   });
 
   it('默认值不被改动', () => {
-    parseShellState({ layout: { sideBarOpen: false } });
-    expect(DEFAULT_SHELL_STATE.layout.sideBarOpen).toBe(true);
+    parseShellState({ layout: { bottomPanelHeight: 300 } });
+    expect(DEFAULT_SHELL_STATE.layout.bottomPanelHeight).toBeNull();
   });
 });
 
 describe('parseLayoutPatch', () => {
   it('合格的修改原样通过', () => {
-    expect(parseLayoutPatch({ rightBarOpen: true })).toEqual({ rightBarOpen: true });
-    expect(parseLayoutPatch({ bottomPanelHeight: 200, sideBarOpen: false })).toEqual({ bottomPanelHeight: 200, sideBarOpen: false });
+    expect(parseLayoutPatch({ bottomPanelHeight: 200 })).toEqual({ bottomPanelHeight: 200 });
     expect(parseLayoutPatch({ bottomPanelHeight: null })).toEqual({ bottomPanelHeight: null });
   });
 
@@ -68,11 +71,11 @@ describe('parseLayoutPatch', () => {
     expect(parseLayoutPatch('x')).toBeNull();
     expect(parseLayoutPatch([])).toBeNull();
     expect(parseLayoutPatch({})).toBeNull();
-    expect(parseLayoutPatch({ rightBarOpen: true, extra: 1 })).toBeNull();
-    expect(parseLayoutPatch({ rightBarOpen: 'true' })).toBeNull();
+    expect(parseLayoutPatch({ bottomPanelHeight: 200, extra: 1 })).toBeNull();
+    expect(parseLayoutPatch({ rightBarOpen: true })).toBeNull();
     expect(parseLayoutPatch({ bottomPanelHeight: -1 })).toBeNull();
     expect(parseLayoutPatch({ bottomPanelHeight: 10.5 })).toBeNull();
-    expect(parseLayoutPatch({ rightBarOpen: true, bottomPanelHeight: 'x' })).toBeNull();
+    expect(parseLayoutPatch({ bottomPanelHeight: 'x' })).toBeNull();
   });
 
   it('原型链上的名字不算字段', () => {

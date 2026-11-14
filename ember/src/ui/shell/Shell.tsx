@@ -3,13 +3,14 @@
  * 名称：Shell.tsx
  * 说明：外壳：用组件库的外壳组件拼出窗口框架（标题栏与菜单、活动栏、边栏、标签栏与页面区、底部面板、右边栏、状态栏、通知），
  *       全部入口都来自登记表（页面、命令与快捷键、菜单项、活动栏按钮、底部面板页签、状态项），自己不写死业务入口；
- *       处理页面与标签、边栏随页面切换、命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、模块的常驻组件、命令状态的刷新、窗口状态与界面状态的保存；全屏时只显示页面区。
+ *       处理页面与标签、边栏随页面切换、命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、模块的常驻组件、命令状态的刷新、窗口状态与底部面板高度的保存；全屏时只显示页面区。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-13
+ * 日期：2026-11-14
  * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；未激活的页面保持挂载、只隐藏，切回时状态不丢；
  *       页面区里每个页面在组件库的 DialogScope 里（页面内边距与以后的对话框范围）；
- *       画面获得焦点时键盘事件先交给画面（它处理过的按键 defaultPrevented，外壳不再响应）。
+ *       画面获得焦点时键盘事件先交给画面（它处理过的按键 defaultPrevented，外壳不再响应）；
+ *       各面板每次启动都是关闭的、展开状态不保存；面板展开与折叠时窗口向外伸缩、页面区不变，见 use-window-extents.ts。
  * ------------------------------------------------------------------------
  */
 
@@ -35,9 +36,8 @@ import {
   type MenuItem,
   type TitleBarTool
 } from '@rujianjs/ui-kit';
-import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
-import type { ShellLayout } from '../../contracts/shell/shell-state-service';
 import type { WindowState } from '../../contracts/shell/window-control';
 import { buildShellRegistry, type ShellRegistry } from './build-registry';
 import { isTextEditingTarget } from './editable-target';
@@ -47,11 +47,14 @@ import { MessageLogContext, ShellApiContext } from './shell-context';
 import { MESSAGES_PANEL_ID, SHELL_COMMANDS, SHELL_MODULE } from './shell-module';
 import { commandTitle, SHELL_MENUS, type ShellApi, type ShellMessageInput, type ShellModule, type ShellViewState } from './shell-registry';
 import { activateTab, closeTab, EMPTY_TABS, openTab, type TabState } from './tab-state';
+import { useWindowExtents } from './use-window-extents';
 import './shell.css';
 
 /** 应用名。 */
 const APP_NAME = 'EMBER';
 
+/** 边栏的默认宽度（像素），宽度不保存。 */
+const SIDE_BAR_WIDTH = 240;
 /** 底部面板的默认高度（像素），保存过高度时用保存的。 */
 const BOTTOM_PANEL_HEIGHT = 160;
 /** 右边栏的默认宽度（像素），宽度不保存。 */
@@ -98,9 +101,18 @@ export interface ShellProps {
   readonly modules: readonly ShellModule[];
 }
 
+/** 各面板是否展开：每次启动都是全部关闭。 */
+interface OpenPanels {
+  readonly side: boolean;
+  readonly bottom: boolean;
+  readonly right: boolean;
+}
+
+/** 全部面板关闭。 */
+const ALL_CLOSED: OpenPanels = { side: false, bottom: false, right: false };
+
 /** 外壳实时读取的状态：事件处理函数用它取最新值，不必随渲染重新创建。 */
 interface LiveState {
-  readonly layout: ShellLayout | null;
   readonly tabs: TabState;
   readonly view: ShellViewState;
 }
@@ -126,7 +138,11 @@ export function Shell({ bridge, modules }: ShellProps) {
 
 /** 登记表有效之后的外壳。 */
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
-  const [layout, setLayout] = useState<ShellLayout | null>(null);
+  const [panels, setPanels] = useState<OpenPanels>(ALL_CLOSED);
+  const [sideWidth, setSideWidth] = useState(SIDE_BAR_WIDTH);
+  const [rightWidth, setRightWidth] = useState(RIGHT_BAR_WIDTH);
+  // 底部面板的高度：读到保存的高度之前为 null，此时不显示界面。
+  const [bottomHeight, setBottomHeight] = useState<number | null>(null);
   const [tabs, setTabs] = useState<TabState>(() =>
     registry.startPages.reduce((state, id) => {
       const page = registry.pages.get(id);
@@ -143,7 +159,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   useEffect(() => {
     let active = true;
     void bridge.shell.getState().then((state) => {
-      if (active) setLayout(state.layout);
+      if (active) setBottomHeight(state.layout.bottomPanelHeight ?? BOTTOM_PANEL_HEIGHT);
     });
     void bridge.shell.getWindowState().then((state) => {
       if (active) setWindowState(state);
@@ -158,23 +174,15 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   const activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
   const activePage = activeTab === undefined ? undefined : registry.pages.get(activeTab.pageId);
   const hasSideBar = activePage?.sideBar !== undefined;
-  const sideBarOpen = hasSideBar && layout?.sideBarOpen === true;
-  const bottomPanelOpen = layout?.bottomPanelOpen === true;
-  const rightBarOpen = RIGHT_BAR_AVAILABLE && layout?.rightBarOpen === true;
+  const sideBarOpen = hasSideBar && panels.side;
+  const bottomPanelOpen = panels.bottom;
+  const rightBarOpen = RIGHT_BAR_AVAILABLE && panels.right;
   const view: ShellViewState = { sideBarOpen, hasSideBar, bottomPanelOpen, rightBarOpen, canOpenRightBar: RIGHT_BAR_AVAILABLE, fullScreen: windowState.fullScreen };
-  const live = useRef<LiveState>({ layout, tabs, view });
+  const live = useRef<LiveState>({ tabs, view });
   useLayoutEffect(() => {
-    live.current = { layout, tabs, view };
+    live.current = { tabs, view };
   });
-
-  /** 修改布局：界面立即生效，并交给主进程保存。 */
-  const patchLayout = useCallback(
-    (patch: Partial<ShellLayout>) => {
-      setLayout((current) => (current === null ? current : { ...current, ...patch }));
-      bridge.shell.setLayout(patch);
-    },
-    [bridge]
-  );
+  const { pagesRef, pinnedStyle, onPanelExtentsChange } = useWindowExtents(bridge, windowState.fullScreen);
 
   const api = useMemo<ShellApi>(() => {
     const shell: ShellApi = {
@@ -188,22 +196,17 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
       },
       closeActiveTab: () => setTabs((state) => (state.activeId === null ? state : closeTab(state, state.activeId))),
       toggleSideBar: () => {
-        const { layout: current, view: now } = live.current;
-        if (current !== null && now.hasSideBar) patchLayout({ sideBarOpen: !current.sideBarOpen });
+        if (live.current.view.hasSideBar) setPanels((current) => ({ ...current, side: !current.side }));
       },
-      toggleBottomPanel: () => {
-        const { layout: current } = live.current;
-        if (current !== null) patchLayout({ bottomPanelOpen: !current.bottomPanelOpen });
-      },
+      toggleBottomPanel: () => setPanels((current) => ({ ...current, bottom: !current.bottom })),
       toggleRightBar: () => {
-        const { layout: current } = live.current;
-        if (current !== null && RIGHT_BAR_AVAILABLE) patchLayout({ rightBarOpen: !current.rightBarOpen });
+        if (RIGHT_BAR_AVAILABLE) setPanels((current) => ({ ...current, right: !current.right }));
       },
       toggleFullScreen: () => bridge.shell.windowAction('toggleFullScreen'),
       quit: () => bridge.shell.windowAction('quit'),
       showBottomPanel: (panelId) => {
         setBottomTab(panelId);
-        if (live.current.layout?.bottomPanelOpen === false) patchLayout({ bottomPanelOpen: true });
+        setPanels((current) => (current.bottom ? current : { ...current, bottom: true }));
       },
       addMessage: (message: ShellMessageInput) => log.append(message),
       runCommand: (commandId) => {
@@ -214,7 +217,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
       refreshCommands: () => setCommandVersion((version) => version + 1)
     };
     return shell;
-  }, [bridge, registry, log, patchLayout]);
+  }, [bridge, registry, log]);
 
   // 全局快捷键与 Alt+助记字母；画面等已经处理过的按键（defaultPrevented）外壳不再响应。
   useEffect(() => {
@@ -242,7 +245,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     return () => window.removeEventListener('keydown', handleKey);
   }, [registry, api]);
 
-  if (layout === null) return null;
+  if (bottomHeight === null) return null;
 
   const menus: MenuBarMenu[] = SHELL_MENUS.flatMap((menu): MenuBarMenu[] => {
     const items = registry.menuItems
@@ -325,7 +328,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
       return;
     }
     api.openPage(item.page);
-    if (registry.pages.get(item.page)?.sideBar !== undefined && !layout.sideBarOpen) patchLayout({ sideBarOpen: true });
+    if (registry.pages.get(item.page)?.sideBar !== undefined && !panels.side) setPanels((current) => ({ ...current, side: true }));
   };
 
   const fullScreen = windowState.fullScreen;
@@ -371,6 +374,8 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             );
           })}
           sideBarCollapsed={fullScreen || !sideBarOpen}
+          sideBarWidth={sideWidth}
+          onSideBarWidthChange={(width) => setSideWidth(Math.round(width))}
           tabBar={
             fullScreen ? undefined : (
               <TabBar
@@ -396,21 +401,25 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
               }))}
               activeTabId={bottomTab}
               onTabChange={setBottomTab}
-              onCollapse={() => patchLayout({ bottomPanelOpen: false })}
+              onCollapse={() => setPanels((current) => ({ ...current, bottom: false }))}
             />
           }
           bottomPanelOpen={!fullScreen && bottomPanelOpen}
-          defaultBottomPanelHeight={layout.bottomPanelHeight ?? BOTTOM_PANEL_HEIGHT}
-          onBottomPanelHeightCommit={(height) => patchLayout({ bottomPanelHeight: Math.round(height) })}
+          bottomPanelHeight={bottomHeight}
+          onBottomPanelHeightChange={(height) => setBottomHeight(Math.round(height))}
+          onBottomPanelHeightCommit={(height) => bridge.shell.setLayout({ bottomPanelHeight: Math.round(height) })}
           rightBar={
             <DockPanel
               aria-label={TEXT.rightBarLabel}
               tabs={[{ id: FLOPPY_PANEL_ID, label: TEXT.floppyFiles, content: <State text={TEXT.noDisk} /> }]}
-              onCollapse={() => patchLayout({ rightBarOpen: false })}
+              onCollapse={() => setPanels((current) => ({ ...current, right: false }))}
             />
           }
           rightBarOpen={!fullScreen && rightBarOpen}
-          defaultRightBarWidth={RIGHT_BAR_WIDTH}
+          rightBarWidth={rightWidth}
+          onRightBarWidthChange={(width) => setRightWidth(Math.round(width))}
+          limitPanelsToViewport={false}
+          onPanelExtentsChange={onPanelExtentsChange}
           statusBar={
             fullScreen ? undefined : (
               <StatusBar
@@ -426,15 +435,17 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             )
           }
         >
-          {tabs.tabs.length === 0 ? <EmptyWorkspace logo={<EmberLogo />} subtitle={TEXT.emptyHint} /> : null}
-          {tabs.tabs.map((tab) => {
-            const page = registry.pages.get(tab.pageId);
-            return (
-              <DialogScope key={tab.id} hidden={tab.id !== tabs.activeId}>
-                <div className="ember-shell-page">{page === undefined ? null : createElement(page.Component, { bridge })}</div>
-              </DialogScope>
-            );
-          })}
+          <div ref={pagesRef} className="ember-shell-pages" style={pinnedStyle}>
+            {tabs.tabs.length === 0 ? <EmptyWorkspace logo={<EmberLogo />} subtitle={TEXT.emptyHint} /> : null}
+            {tabs.tabs.map((tab) => {
+              const page = registry.pages.get(tab.pageId);
+              return (
+                <DialogScope key={tab.id} hidden={tab.id !== tabs.activeId}>
+                  <div className="ember-shell-page">{page === undefined ? null : createElement(page.Component, { bridge })}</div>
+                </DialogScope>
+              );
+            })}
+          </div>
         </AppFrame>
         <NotificationCenter />
       </MessageLogContext.Provider>

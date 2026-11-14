@@ -48,7 +48,7 @@ describe('window.ember', () => {
   it('只暴露具名方法，不暴露 ipcRenderer 或通用的调用入口', () => {
     expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'onCoreStatusChange', 'shell', 'streams']);
     expect(JSON.stringify(Object.keys(bridge.streams))).toBe('["requestPorts"]');
-    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onWindowStateChange', 'setLayout', 'windowAction']);
+    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onWindowStateChange', 'setLayout', 'setPanelExtents', 'windowAction']);
     expect('ipcRenderer' in bridge).toBe(false);
     expect('invoke' in bridge).toBe(false);
   });
@@ -86,15 +86,16 @@ describe('window.ember', () => {
     expect(electron.send).toHaveBeenCalledWith(STREAM_CHANNELS.connect);
   });
 
-  it('外壳能力走各自的通道：读取状态与窗口状态用 invoke，保存布局与窗口动作用 send', async () => {
+  it('外壳能力走各自的通道：读取状态、窗口状态与面板尺寸用 invoke，保存布局与窗口动作用 send', async () => {
     electron.invoke.mockResolvedValue('状态');
     await expect(bridge.shell.getState()).resolves.toBe('状态');
     await bridge.shell.getWindowState();
-    bridge.shell.setLayout({ rightBarOpen: true });
+    await bridge.shell.setPanelExtents({ left: 240, right: 0, bottom: 160 });
+    bridge.shell.setLayout({ bottomPanelHeight: 200 });
     bridge.shell.windowAction('toggleFullScreen');
-    expect(electron.invoke.mock.calls).toEqual([[SHELL_CHANNELS.getState], [SHELL_CHANNELS.getWindowState]]);
+    expect(electron.invoke.mock.calls).toEqual([[SHELL_CHANNELS.getState], [SHELL_CHANNELS.getWindowState], [SHELL_CHANNELS.setPanelExtents, { left: 240, right: 0, bottom: 160 }]]);
     expect(electron.send.mock.calls).toEqual([
-      [SHELL_CHANNELS.setLayout, { rightBarOpen: true }],
+      [SHELL_CHANNELS.setLayout, { bottomPanelHeight: 200 }],
       [SHELL_CHANNELS.windowAction, 'toggleFullScreen']
     ]);
   });

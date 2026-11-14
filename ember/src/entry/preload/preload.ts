@@ -67,6 +67,7 @@ const shell: ShellBridge = {
   getState: () => ipcRenderer.invoke(SHELL_CHANNELS.getState),
   setLayout: (patch) => ipcRenderer.send(SHELL_CHANNELS.setLayout, patch),
   windowAction: (action) => ipcRenderer.send(SHELL_CHANNELS.windowAction, action),
+  setPanelExtents: (extents) => ipcRenderer.invoke(SHELL_CHANNELS.setPanelExtents, extents),
   getWindowState: () => ipcRenderer.invoke(SHELL_CHANNELS.getWindowState),
   onWindowStateChange: (listener) => subscribe(SHELL_CHANNELS.windowStateChanged, listener)
 };

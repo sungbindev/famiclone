@@ -24,11 +24,11 @@ import { RuntimeController } from './runtime-controller';
 import { FakeRuntimeBackend, machineStatus, settle } from './runtime-fakes';
 import { createRuntimeModule, RUNTIME_COMMANDS } from './runtime-module';
 
-const DEFAULT_LAYOUT: ShellLayout = { sideBarOpen: true, bottomPanelOpen: true, rightBarOpen: false, bottomPanelHeight: null };
+const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null };
 const NES = 'D:\\roms\\nestest.nes';
 
-/** 渲染外壳与运行模块；运行页换成一个带输入框的简单页面。 */
-async function setup(options: { status?: ReturnType<typeof machineStatus> | undefined; recent?: string[]; layout?: Partial<ShellLayout> } = {}) {
+/** 渲染外壳与运行模块；运行页换成一个带输入框的简单页面；外壳启动时面板全部关闭，默认打开边栏与底部面板，panelsClosed 为 true 时保持关闭。 */
+async function setup(options: { status?: ReturnType<typeof machineStatus> | undefined; recent?: string[]; panelsClosed?: boolean } = {}) {
   const fake = new FakeRuntimeBackend();
   if ('status' in options) fake.status = options.status;
   fake.recentPaths = options.recent ?? [];
@@ -48,8 +48,9 @@ async function setup(options: { status?: ReturnType<typeof machineStatus> | unde
     }
   ];
   const shell = {
-    getState: vi.fn(() => Promise.resolve({ window: null, layout: { ...DEFAULT_LAYOUT, ...options.layout } })),
+    getState: vi.fn(() => Promise.resolve({ window: null, layout: DEFAULT_LAYOUT })),
     setLayout: vi.fn(),
+    setPanelExtents: vi.fn(() => Promise.resolve()),
     windowAction: vi.fn(),
     getWindowState: vi.fn(() => Promise.resolve({ maximized: false, fullScreen: false })),
     onWindowStateChange: () => () => undefined
@@ -61,6 +62,10 @@ async function setup(options: { status?: ReturnType<typeof machineStatus> | unde
     </UiProvider>
   );
   await screen.findByRole('tablist', { name: '已打开的页面' });
+  if (options.panelsClosed !== true) {
+    fireEvent.keyDown(document.body, { code: 'KeyB', ctrlKey: true });
+    fireEvent.keyDown(document.body, { code: 'KeyJ', ctrlKey: true });
+  }
   await act(async () => settle());
   return { fake, controller, shell, ...result };
 }
@@ -337,7 +342,7 @@ describe('消息接入与通知', () => {
 
 describe('常驻组件', () => {
   it('边栏折叠着、页面没有显示边栏时，菜单与状态栏的状态也是最新的', async () => {
-    const { fake } = await setup({ status: machineStatus('on', 'running', NES), layout: { sideBarOpen: false } });
+    const { fake } = await setup({ status: machineStatus('on', 'running', NES), panelsClosed: true });
     expect(screen.getAllByText('运行中').length).toBeGreaterThan(0);
     fake.status = machineStatus('off', 'paused', NES);
     fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'powerOff' });

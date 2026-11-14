@@ -156,15 +156,15 @@ describe('RuntimeScreen：版面', () => {
     const { worker } = setup();
     act(() => resizeCallback?.([{ devicePixelContentBoxSize: [{ inlineSize: 1280, blockSize: 960 }] }]));
     const views = worker.messages('view');
-    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 1280, height: 960, aspect: '4:3', scaling: 'fit' } });
+    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 1280, height: 960, aspect: '8:7', scaling: 'fit' } });
   });
 
   it('属性变化后重新发版面', () => {
     const { worker, rerender } = setup();
     act(() => resizeCallback?.([{ devicePixelContentBoxSize: [{ inlineSize: 800, blockSize: 600 }] }]));
-    rerender({ aspect: '8:7', scaling: 'integer' });
+    rerender({ aspect: '4:3', scaling: 'integer' });
     const views = worker.messages('view');
-    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 800, height: 600, aspect: '8:7', scaling: 'integer' } });
+    expect(views[views.length - 1]).toEqual({ type: 'view', view: { width: 800, height: 600, aspect: '4:3', scaling: 'integer' } });
   });
 });
 

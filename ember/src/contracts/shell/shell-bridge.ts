@@ -15,7 +15,7 @@ import type { CoreErrorInfo, CoreStatus } from '../core-gateway/core-messages';
 import type { CoreApi, MainApi } from '../core-gateway/generated/core-api';
 import type { StreamPortsBridge } from '../stream-ports/stream-ports';
 import type { ShellLayout, ShellState } from './shell-state-service';
-import type { WindowAction, WindowState } from './window-control';
+import type { PanelExtents, WindowAction, WindowState } from './window-control';
 
 /** IPC 通道名。 */
 export const SHELL_CHANNELS = {
@@ -27,6 +27,7 @@ export const SHELL_CHANNELS = {
   getState: 'shell:get-state',
   setLayout: 'shell:set-layout',
   windowAction: 'shell:window-action',
+  setPanelExtents: 'shell:set-panel-extents',
   getWindowState: 'shell:get-window-state',
   windowStateChanged: 'shell:window-state-changed'
 } as const;
@@ -42,6 +43,8 @@ export interface ShellBridge {
   setLayout(patch: Partial<ShellLayout>): void;
   /** 发起窗口动作；不在白名单里的动作会被主进程丢弃。 */
   windowAction(action: WindowAction): void;
+  /** 告知展开的面板占用的尺寸；主进程伸缩窗口后才返回，界面据此知道窗口已经调整完。 */
+  setPanelExtents(extents: PanelExtents): Promise<void>;
   /** 窗口当前的状态。 */
   getWindowState(): Promise<WindowState>;
   /** 订阅窗口状态的变化；返回取消订阅的函数。 */

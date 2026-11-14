@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：render-worker.test.ts
- * 说明：渲染 Worker 对 0 尺寸版面的处理测试：页面隐藏时 ResizeObserver 会给出 0×0，Worker 要忽略这个尺寸、保持上一次的画布尺寸，再次显示后用真实尺寸。
+ * 说明：渲染 Worker 对版面的处理测试：页面隐藏时 ResizeObserver 会给出 0×0，Worker 要忽略这个尺寸、保持上一次的画布尺寸，再次显示后用真实尺寸；版面变化时立即重画上一帧。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -47,6 +47,17 @@ function view(width: number, height: number, aspect: '4:3' | '8:7' = '4:3'): unk
   return { type: 'view', view: { width, height, aspect, scaling: 'fit' } };
 }
 
+/** 假的消息端口：记下 Worker 挂上去的监听函数。 */
+class FakeMessagePort {
+  listener?: (event: MessageEvent) => void;
+  addEventListener(_type: string, listener: (event: MessageEvent) => void): void {
+    this.listener = listener;
+  }
+  start = vi.fn();
+  close = vi.fn();
+  postMessage = vi.fn();
+}
+
 beforeEach(async () => {
   vi.resetModules();
   renderer.resize.mockClear();
@@ -60,6 +71,7 @@ beforeEach(async () => {
   };
   vi.stubGlobal('self', scope);
   vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+  vi.stubGlobal('MessagePort', FakeMessagePort);
   await import('./render-worker');
   send({ type: 'init', canvas: new FakeOffscreenCanvas() });
 });
@@ -109,5 +121,19 @@ describe('渲染 Worker 的版面', () => {
     expect(renderer.resize).toHaveBeenLastCalledWith(1280, 960);
     send(view(1280, 960, '8:7'));
     expect(renderer.resize).toHaveBeenLastCalledWith(1280, 960);
+  });
+
+  it('改变画布尺寸会清空画布，所以版面变化时立即用上一帧重画，不等下一次 rAF', () => {
+    const port = new FakeMessagePort();
+    send({ type: 'attach', port });
+    send(view(1280, 960));
+    port.listener?.({ data: { type: 'frame', width: 4, height: 2, format: 'rgba8', frame: 1, publishedAt: 1000, hostDropped: 0, pixels: new ArrayBuffer(32) } } as MessageEvent);
+    const tick = scope.requestAnimationFrame.mock.calls[0]?.[0] as () => void;
+    tick();
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
+    renderer.draw.mockClear();
+    send(view(800, 600));
+    expect(renderer.draw).toHaveBeenCalledTimes(1);
+    expect(renderer.draw.mock.calls[0]?.[0]).toBeUndefined();
   });
 });

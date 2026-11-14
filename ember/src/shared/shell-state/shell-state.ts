@@ -1,11 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-state.ts
- * 说明：界面状态的类型、默认值与校验：窗口位置与大小、是否最大化，边栏、底部面板、右边栏的展开状态与底部面板高度。
+ * 说明：界面状态的类型、默认值与校验：窗口位置与大小（面板全部关闭时的基础尺寸）、是否最大化，以及底部面板高度。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：规则见 docs/05-界面.md 第 9 节；读到的内容逐项校验，不合格的项用默认值，不影响其他项；
+ *       边栏、底部面板、右边栏是否展开不保存（每次启动都是全部关闭）；旧文件里的这几项读取时被忽略；
  *       渲染进程发来的布局修改同样经 parseLayoutPatch 校验，含未知字段或不合格的值时整条丢弃。
  * ------------------------------------------------------------------------
  */
@@ -19,14 +20,8 @@ export interface WindowPlacement {
   readonly maximized: boolean;
 }
 
-/** 外壳各区域的展开状态。 */
+/** 外壳需要保存的版面：只有底部面板高度，各面板是否展开每次启动都是关闭。 */
 export interface ShellLayout {
-  /** 边栏是否展开（页面没有边栏时边栏不显示，这里保存的是用户的选择）。 */
-  readonly sideBarOpen: boolean;
-  /** 底部面板是否展开。 */
-  readonly bottomPanelOpen: boolean;
-  /** 右边栏是否展开。 */
-  readonly rightBarOpen: boolean;
   /** 底部面板的高度（像素）；null 表示用默认高度。 */
   readonly bottomPanelHeight: number | null;
 }
@@ -38,10 +33,10 @@ export interface ShellState {
   readonly layout: ShellLayout;
 }
 
-/** 没有保存过时：边栏与底部面板展开，右边栏折叠，窗口用默认位置。 */
+/** 没有保存过时：窗口用默认位置，底部面板用默认高度。 */
 export const DEFAULT_SHELL_STATE: ShellState = {
   window: null,
-  layout: { sideBarOpen: true, bottomPanelOpen: true, rightBarOpen: false, bottomPanelHeight: null }
+  layout: { bottomPanelHeight: null }
 };
 
 /** 窗口坐标的合理范围（多显示器时可以为负）。 */
@@ -73,9 +68,6 @@ function parseWindow(raw: unknown): WindowPlacement | null {
 
 /** 布局各字段的校验函数。 */
 const LAYOUT_VALIDATORS: { readonly [K in keyof ShellLayout]: (value: unknown) => value is ShellLayout[K] } = {
-  sideBarOpen: (value): value is boolean => typeof value === 'boolean',
-  bottomPanelOpen: (value): value is boolean => typeof value === 'boolean',
-  rightBarOpen: (value): value is boolean => typeof value === 'boolean',
   bottomPanelHeight: (value): value is number | null => value === null || isIntegerIn(value, 1, MAX_PANEL_HEIGHT)
 };
 

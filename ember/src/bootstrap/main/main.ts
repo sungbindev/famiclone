@@ -4,14 +4,14 @@
  * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、外壳能力（界面状态的保存、窗口动作）、创建主窗口，退出时保存界面状态并停止核心。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-13
+ * 日期：2026-11-14
  * 备注：只创建实现并注入，不写业务判断；原生模块与预装插件在开发时取 core/build/Release 与 build/plugins，正式包取应用的 resources 目录；
  *       命令行带 --cartridge=路径（.nes）时，核心启动后由主进程加载这张卡带；界面状态保存在用户数据目录的 config/shell-state.json。
  * ------------------------------------------------------------------------
  */
 
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import handledSquirrelEvent from 'electron-squirrel-startup';
 import { CORE_SCHEMAS } from '../../contracts/core-gateway/generated/core-api';
 import { STREAM_PORTS_WINDOW_MESSAGE } from '../../contracts/stream-ports/stream-messages';
@@ -32,7 +32,8 @@ import { cartridgePathFromArgv } from '../../platform/launch/launch-args';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
-import { createAppWindow, denyAllPermissions, followSystemTheme, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
+import { createAppWindow, denyAllPermissions, followSystemTheme, isAppUrl, removeDefaultMenu, setExactBounds } from '../../platform/window/app-window';
+import { baseBounds } from '../../platform/window/panel-bounds';
 import { createWindowController } from '../../platform/window/window-controller';
 import { watchWindow } from '../../platform/window/window-events';
 import { MAIN_MODULES } from './module-list';
@@ -93,7 +94,10 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
 
   let mainWindow: BrowserWindow | undefined;
   let quitting = false;
-  const windowController = createWindowController(() => mainWindow, () => app.quit());
+  const windowController = createWindowController(() => mainWindow, () => app.quit(), {
+    workAreaOf: (rect) => screen.getDisplayMatching(rect).workArea,
+    applyBounds: (window, rect) => setExactBounds(window, rect)
+  });
   const isTrustedSender = createSenderCheck((url) => isAppUrl(url, { rendererFile, ...(devServerUrl ? { devServerUrl } : {}) }));
   const modules = MAIN_MODULES.map((module) => module.schema);
   /** 以主进程的身份向核心发起请求所需的依赖。 */
@@ -112,7 +116,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     const stopForwarding = forwardCoreToWindow(gateway, window.webContents);
     const stopFollowingTheme = followSystemTheme(window);
     watchWindow(window, {
-      onPlacement: (placement) => shellState.updateWindow(placement),
+      // 保存的是面板全部折叠时的基础边界：下次启动面板都是关闭的。
+      onPlacement: (placement) => shellState.updateWindow({ ...baseBounds(placement, windowController.panelExtents()), maximized: placement.maximized }),
       onState: forwardWindowState(window.webContents, () => windowController.state())
     });
     window.webContents.on('render-process-gone', (_event, details) => logError(logger, new Error(`渲染进程退出：${details.reason}`), { exitCode: details.exitCode }));

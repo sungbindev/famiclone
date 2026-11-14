@@ -16,11 +16,22 @@ export type ScreenAspect = '4:3' | '8:7';
 /** 缩放方式：适应窗口（尽量放大）或整数倍（放不下时取最大的整数倍）。 */
 export type ScreenScaling = 'fit' | 'integer';
 
-/** 默认的画面比例。 */
-export const DEFAULT_SCREEN_ASPECT: ScreenAspect = '4:3';
+/** 默认的画面比例：像素宽高比 8:7，画面不变形。 */
+export const DEFAULT_SCREEN_ASPECT: ScreenAspect = '8:7';
 
 /** 默认的缩放方式。 */
 export const DEFAULT_SCREEN_SCALING: ScreenScaling = 'fit';
+
+/** 标准帧的尺寸（FC 的整帧）：画面框的显示比例按它算，不随当前这一帧的实际尺寸变化。 */
+export const NOMINAL_FRAME = { width: 256, height: 240 } as const;
+
+/**
+ * 标准帧在指定画面比例下的显示宽高比。
+ * @param aspect 画面比例，默认用默认的画面比例。
+ */
+export function nominalScreenRatio(aspect: ScreenAspect = DEFAULT_SCREEN_ASPECT): number {
+  return displayAspectRatio(aspect, NOMINAL_FRAME.width, NOMINAL_FRAME.height);
+}
 
 /** 像素宽高比 8:7 的宽与高。 */
 const PIXEL_ASPECT_WIDTH = 8;

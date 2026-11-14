@@ -35,15 +35,15 @@ describe('FileShellStateService', () => {
       createStorage({ window: { x: 1, y: 2, width: 1000, height: 700, maximized: false }, layout: { rightBarOpen: true, bottomPanelHeight: -5 } })
     );
     expect(service.get().window).toEqual({ x: 1, y: 2, width: 1000, height: 700, maximized: false });
-    expect(service.get().layout).toEqual({ sideBarOpen: true, bottomPanelOpen: true, rightBarOpen: true, bottomPanelHeight: null });
+    expect(service.get().layout).toEqual({ bottomPanelHeight: null });
   });
 
   it('修改布局只改传入的字段，并把整个状态交给存储', () => {
     const storage = createStorage(undefined);
     const service = new FileShellStateService(storage);
     service.updateLayout({ bottomPanelHeight: 260 });
-    service.updateLayout({ sideBarOpen: false });
-    expect(service.get().layout).toEqual({ sideBarOpen: false, bottomPanelOpen: true, rightBarOpen: false, bottomPanelHeight: 260 });
+    service.updateLayout({ bottomPanelHeight: 300 });
+    expect(service.get().layout).toEqual({ bottomPanelHeight: 300 });
     expect(storage.writes).toHaveLength(2);
     expect(storage.writes[1]).toEqual(service.get());
   });
@@ -59,9 +59,9 @@ describe('FileShellStateService', () => {
   it('读出的状态不会被后续修改改变', () => {
     const service = new FileShellStateService(createStorage(undefined));
     const before = service.get();
-    service.updateLayout({ rightBarOpen: true });
-    expect(before.layout.rightBarOpen).toBe(false);
-    expect(DEFAULT_SHELL_STATE.layout.rightBarOpen).toBe(false);
+    service.updateLayout({ bottomPanelHeight: 400 });
+    expect(before.layout.bottomPanelHeight).toBeNull();
+    expect(DEFAULT_SHELL_STATE.layout.bottomPanelHeight).toBeNull();
   });
 
   it('flush 转给存储', () => {
@@ -77,7 +77,7 @@ describe('配合真实的文件存储', () => {
     try {
       const path = join(directory, 'config', 'shell-state.json');
       const first = new FileShellStateService(new JsonFileStore({ path }));
-      first.updateLayout({ rightBarOpen: true, bottomPanelHeight: 300 });
+      first.updateLayout({ bottomPanelHeight: 300 });
       first.updateWindow({ x: 5, y: 6, width: 1300, height: 820, maximized: false });
       first.flush();
 

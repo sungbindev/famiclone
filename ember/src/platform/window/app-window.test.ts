@@ -44,6 +44,7 @@ vi.mock('electron', () => ({
 }));
 
 const { createAppWindow, isAppUrl, setExactBounds, visiblePlacement } = await import('./app-window');
+const { BASE_MIN_HEIGHT, BASE_MIN_WIDTH } = await import('./panel-bounds');
 
 const RENDERER_FILE = resolve('app', 'renderer', 'index.html');
 const RENDERER_URL = pathToFileURL(RENDERER_FILE).href;
@@ -82,7 +83,7 @@ describe('visiblePlacement', () => {
   });
 
   it('保存的尺寸小于窗口最小尺寸时按最小尺寸', () => {
-    expect(visiblePlacement({ x: 0, y: 0, width: 300, height: 200, maximized: false }, [SCREEN])).toEqual({ x: 0, y: 0, width: 960, height: 600, maximized: false });
+    expect(visiblePlacement({ x: 0, y: 0, width: 300, height: 200, maximized: false }, [SCREEN])).toEqual({ x: 0, y: 0, width: BASE_MIN_WIDTH, height: BASE_MIN_HEIGHT, maximized: false });
   });
 
   it('有第二块屏幕时，落在第二块屏幕内的位置有效', () => {

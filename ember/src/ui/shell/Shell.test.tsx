@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：Shell.test.tsx
  * 说明：外壳的测试：只渲染登记表（页面、活动栏、菜单、快捷键、边栏、底部面板、状态项）、启动页面、边栏随页面更换与置灰、再点活动栏按钮折叠、
- *       全局快捷键与画面优先、右边栏置灰、退出与全屏经窗口接口、消息追加与清空、没有页面时的空工作区、全屏只显示页面、布局状态的读取与保存、登记错误。
+ *       全局快捷键与画面优先、右边栏置灰、退出与全屏经窗口接口、消息追加与清空、没有页面时的空工作区、全屏只显示页面、启动时各面板全部关闭且展开状态不保存、底部面板高度的读取与保存、登记错误。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -25,7 +25,7 @@ import { Shell } from './Shell';
 const ICON = ['M0 0'] as const;
 
 /** 没有保存过时的布局。 */
-const DEFAULT_LAYOUT: ShellLayout = { sideBarOpen: true, bottomPanelOpen: true, rightBarOpen: false, bottomPanelHeight: null };
+const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null };
 
 /** 假的 window.ember：布局与窗口状态由测试决定，调用都记录下来。 */
 function createBridge(layout: Partial<ShellLayout> = {}) {
@@ -33,6 +33,7 @@ function createBridge(layout: Partial<ShellLayout> = {}) {
   const shell = {
     getState: vi.fn(() => Promise.resolve({ window: null, layout: { ...DEFAULT_LAYOUT, ...layout } })),
     setLayout: vi.fn(),
+    setPanelExtents: vi.fn(() => Promise.resolve()),
     windowAction: vi.fn(),
     getWindowState: vi.fn(() => Promise.resolve({ maximized: false, fullScreen: false })),
     onWindowStateChange: (listener: (state: WindowState) => void) => {
@@ -121,6 +122,11 @@ function press(init: KeyboardEventInit): void {
   fireEvent.keyDown(document.body, init);
 }
 
+/** Ctrl+B：切换边栏。 */
+const TOGGLE_SIDE_BAR = { code: 'KeyB', ctrlKey: true } as const;
+/** Ctrl+J：切换底部面板。 */
+const TOGGLE_BOTTOM_PANEL = { code: 'KeyJ', ctrlKey: true } as const;
+
 describe('登记表驱动的界面', () => {
   it('启动时打开登记了 openOnStart 的页面，活动栏、标签与页面内容都来自登记', async () => {
     renderShell();
@@ -163,23 +169,27 @@ describe('登记表驱动的界面', () => {
     expect(item.getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('没有保存过布局时边栏与底部面板展开，右边栏折叠；底部面板有“消息”页签和“清空”“关闭”', async () => {
+  it('启动时边栏、底部面板、右边栏全部关闭；打开底部面板后有“消息”页签和“清空”“关闭”', async () => {
     const { container } = renderShell();
     await shown();
-    expect(sideArea(container).hidden).toBe(false);
-    expect(bottomArea(container).hidden).toBe(false);
+    expect(sideArea(container).hidden).toBe(true);
+    expect(bottomArea(container).hidden).toBe(true);
     expect(rightArea(container).hidden).toBe(true);
+    press(TOGGLE_BOTTOM_PANEL);
     expect(within(bottomArea(container)).getByRole('tab', { name: '消息' })).toBeTruthy();
     expect(within(bottomArea(container)).getByRole('button', { name: '清空' })).toBeTruthy();
     expect(within(bottomArea(container)).getByRole('button', { name: '关闭' })).toBeTruthy();
     expect(within(bottomArea(container)).getByText('暂无消息')).toBeTruthy();
   });
 
-  it('读出保存的布局：折叠的边栏与底部面板保持折叠', async () => {
-    const { container } = renderShell({ layout: { sideBarOpen: false, bottomPanelOpen: false } });
+  it('读出保存的底部面板高度，展开时用保存的高度；没有保存过时用默认高度', async () => {
+    const saved = renderShell({ layout: { bottomPanelHeight: 220 } });
     await shown();
-    expect(sideArea(container).hidden).toBe(true);
-    expect(bottomArea(container).hidden).toBe(true);
+    expect(bottomArea(saved.container).style.height).toBe('220px');
+    saved.unmount();
+    const fresh = renderShell();
+    await shown();
+    expect(bottomArea(fresh.container).style.height).toBe('160px');
   });
 });
 
@@ -188,6 +198,7 @@ describe('边栏', () => {
     const user = userEvent.setup();
     const { container, shell } = renderShell();
     await shown();
+    press(TOGGLE_SIDE_BAR);
     expect(screen.getByText('甲边栏内容')).toBeTruthy();
     const toggle = screen.getByRole('button', { name: '切换边栏' }) as HTMLButtonElement;
     expect(toggle.disabled).toBe(false);
@@ -196,7 +207,7 @@ describe('边栏', () => {
     expect(screen.getByRole('tab', { name: '乙页' }).getAttribute('aria-selected')).toBe('true');
     expect(sideArea(container).hidden).toBe(true);
     expect(toggle.disabled).toBe(true);
-    // 边栏因页面没有边栏而关闭，不改保存的布局。
+    // 展开状态不保存。
     expect(shell.setLayout).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('tab', { name: '甲页' }));
@@ -204,62 +215,64 @@ describe('边栏', () => {
     expect(toggle.disabled).toBe(false);
   });
 
-  it('没有边栏的页面上边栏的快捷键与菜单项不起作用', async () => {
+  it('没有边栏的页面上边栏的快捷键不起作用，切回有边栏的页面时边栏仍是原来的状态', async () => {
     const user = userEvent.setup();
-    const { shell } = renderShell();
+    const { container } = renderShell();
     await shown();
     await user.click(screen.getByRole('button', { name: '乙' }));
-    press({ code: 'KeyB', ctrlKey: true });
-    expect(shell.setLayout).not.toHaveBeenCalled();
+    press(TOGGLE_SIDE_BAR);
+    await user.click(screen.getByRole('tab', { name: '甲页' }));
+    expect(sideArea(container).hidden).toBe(true);
   });
 
-  it('再点选中的活动栏按钮折叠，再点展开，并保存', async () => {
+  it('再点选中的活动栏按钮展开，再点折叠，不保存', async () => {
     const user = userEvent.setup();
     const { container, shell } = renderShell();
     await shown();
     const button = screen.getByRole('button', { name: '甲' });
     expect(button.getAttribute('aria-current')).toBe('page');
     await user.click(button);
-    expect(sideArea(container).hidden).toBe(true);
-    expect(shell.setLayout).toHaveBeenLastCalledWith({ sideBarOpen: false });
-    await user.click(button);
     expect(sideArea(container).hidden).toBe(false);
-    expect(shell.setLayout).toHaveBeenLastCalledWith({ sideBarOpen: true });
+    await user.click(button);
+    expect(sideArea(container).hidden).toBe(true);
+    expect(shell.setLayout).not.toHaveBeenCalled();
   });
 
   it('边栏折叠时点另一个有边栏页面的按钮会展开边栏', async () => {
     const user = userEvent.setup();
-    const { container } = renderShell({ layout: { sideBarOpen: false } });
+    const { container } = renderShell();
     await shown();
     await user.click(screen.getByRole('button', { name: '乙' }));
     await user.click(screen.getByRole('button', { name: '甲' }));
     expect(sideArea(container).hidden).toBe(false);
   });
 
-  it('标题栏的边栏按钮与 Ctrl+B 切换边栏并保存', async () => {
+  it('标题栏的边栏按钮与 Ctrl+B 切换边栏，不保存', async () => {
     const user = userEvent.setup();
     const { container, shell } = renderShell();
     await shown();
     await user.click(screen.getByRole('button', { name: '切换边栏' }));
-    expect(sideArea(container).hidden).toBe(true);
-    press({ code: 'KeyB', ctrlKey: true });
     expect(sideArea(container).hidden).toBe(false);
-    expect(shell.setLayout.mock.calls.map(([patch]) => patch)).toEqual([{ sideBarOpen: false }, { sideBarOpen: true }]);
+    press(TOGGLE_SIDE_BAR);
+    expect(sideArea(container).hidden).toBe(true);
+    expect(shell.setLayout).not.toHaveBeenCalled();
   });
 });
 
 describe('底部面板与快捷键', () => {
-  it('Ctrl+J 与标题栏按钮切换底部面板，“关闭”收起，并保存', async () => {
+  it('Ctrl+J 与标题栏按钮切换底部面板，“关闭”收起，不保存', async () => {
     const user = userEvent.setup();
     const { container, shell } = renderShell();
     await shown();
-    press({ code: 'KeyJ', ctrlKey: true });
+    press(TOGGLE_BOTTOM_PANEL);
+    expect(bottomArea(container).hidden).toBe(false);
+    await user.click(screen.getByRole('button', { name: '切换底部面板' }));
     expect(bottomArea(container).hidden).toBe(true);
     await user.click(screen.getByRole('button', { name: '切换底部面板' }));
     expect(bottomArea(container).hidden).toBe(false);
     await user.click(within(bottomArea(container)).getByRole('button', { name: '关闭' }));
     expect(bottomArea(container).hidden).toBe(true);
-    expect(shell.setLayout.mock.calls.map(([patch]) => patch)).toEqual([{ bottomPanelOpen: false }, { bottomPanelOpen: true }, { bottomPanelOpen: false }]);
+    expect(shell.setLayout).not.toHaveBeenCalled();
   });
 
   it('F11 请求窗口切换全屏，菜单“文件→退出”请求退出应用', async () => {
@@ -278,6 +291,7 @@ describe('底部面板与快捷键', () => {
     renderShell();
     await shown();
     press({ code: 'KeyH', ctrlKey: true });
+    press(TOGGLE_BOTTOM_PANEL);
     await user.click(screen.getByRole('menuitem', { name: /机器/ }));
     await user.click(screen.getByRole('menuitem', { name: /问好/ }));
     expect(within(screen.getByRole('tabpanel', { name: '消息' })).getAllByText('你好')).toHaveLength(2);
@@ -302,19 +316,19 @@ describe('底部面板与快捷键', () => {
     document.body.append(screenElement);
     screenElement.focus();
     fireEvent.keyDown(screenElement, { code: 'KeyJ', ctrlKey: true });
-    expect(bottomArea(container).hidden).toBe(false);
+    expect(bottomArea(container).hidden).toBe(true);
     expect(shell.setLayout).not.toHaveBeenCalled();
     fireEvent.keyDown(document.body, { code: 'KeyJ', ctrlKey: true });
-    expect(bottomArea(container).hidden).toBe(true);
+    expect(bottomArea(container).hidden).toBe(false);
     screenElement.remove();
   });
 
   it('按住不放产生的重复按键只响应一次', async () => {
-    const { shell } = renderShell();
+    const { container } = renderShell();
     await shown();
-    press({ code: 'KeyJ', ctrlKey: true });
-    press({ code: 'KeyJ', ctrlKey: true, repeat: true });
-    expect(shell.setLayout).toHaveBeenCalledTimes(1);
+    press(TOGGLE_BOTTOM_PANEL);
+    press({ ...TOGGLE_BOTTOM_PANEL, repeat: true });
+    expect(bottomArea(container).hidden).toBe(false);
   });
 });
 
@@ -323,6 +337,7 @@ describe('消息', () => {
     const user = userEvent.setup();
     const { container } = renderShell();
     await shown();
+    press(TOGGLE_BOTTOM_PANEL);
     await user.click(screen.getByRole('button', { name: '丙' }));
     await user.click(screen.getByRole('button', { name: '追加消息' }));
     const panel = bottomArea(container);
@@ -365,6 +380,8 @@ describe('没有页面时与全屏', () => {
   it('全屏时只显示页面：标题栏、活动栏、标签栏、状态栏与各面板都隐藏，退出全屏后恢复，页面不重新挂载', async () => {
     const { container, emitWindowState } = renderShell();
     await shown();
+    press(TOGGLE_SIDE_BAR);
+    press(TOGGLE_BOTTOM_PANEL);
     const page = screen.getByText('甲页内容');
     emitWindowState({ maximized: false, fullScreen: true });
     expect(screen.queryByRole('banner')).toBeNull();
@@ -399,6 +416,47 @@ describe('没有页面时与全屏', () => {
     const end = status.querySelector('.ui-status-bar__end') as HTMLElement;
     expect(end.textContent).toBe('右项');
     expect(end.lastElementChild?.getAttribute('aria-label')).toBe('通知');
+  });
+});
+
+describe('窗口随面板伸缩', () => {
+  it('启动时告知全部折叠，展开与折叠面板时告知展开的面板占用的尺寸', async () => {
+    const { shell } = renderShell();
+    await shown();
+    expect(shell.setPanelExtents.mock.calls).toEqual([[{ left: 0, right: 0, bottom: 0 }]]);
+    press(TOGGLE_SIDE_BAR);
+    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 240, right: 0, bottom: 0 });
+    press(TOGGLE_BOTTOM_PANEL);
+    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 240, right: 0, bottom: 160 });
+    press(TOGGLE_SIDE_BAR);
+    press(TOGGLE_BOTTOM_PANEL);
+    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 0, right: 0, bottom: 0 });
+  });
+
+  it('底部面板用保存的高度展开', async () => {
+    const { shell } = renderShell({ layout: { bottomPanelHeight: 220 } });
+    await shown();
+    press(TOGGLE_BOTTOM_PANEL);
+    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 0, right: 0, bottom: 220 });
+  });
+
+  it('当前页面没有边栏时边栏不占尺寸', async () => {
+    const user = userEvent.setup();
+    const { shell } = renderShell();
+    await shown();
+    press(TOGGLE_SIDE_BAR);
+    await user.click(screen.getByRole('button', { name: '乙' }));
+    expect(shell.setPanelExtents).toHaveBeenLastCalledWith({ left: 0, right: 0, bottom: 0 });
+  });
+
+  it('全屏时不告知，退出全屏后面板回到原来的状态，尺寸没变就不再告知', async () => {
+    const { shell, emitWindowState } = renderShell();
+    await shown();
+    press(TOGGLE_SIDE_BAR);
+    const calls = shell.setPanelExtents.mock.calls.length;
+    emitWindowState({ maximized: false, fullScreen: true });
+    emitWindowState({ maximized: false, fullScreen: false });
+    expect(shell.setPanelExtents).toHaveBeenCalledTimes(calls);
   });
 });
 

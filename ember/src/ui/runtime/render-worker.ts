@@ -7,7 +7,7 @@
  * 日期：2026-11-14
  * 备注：Worker 与界面层同属渲染侧，不访问 Node 与 Electron；主线程发来的消息先按类型校验再处理，格式不对的丢弃。
  *       诊断（统计与最近一帧的像素摘要）经 'diagnostics' 消息读出，只在开发期由画面组件挂到 window 上使用。
- *       渲染循环一直运行（页面可见时 rAF 才会触发）：有新帧就画新帧，没有新帧但版面变了就重画上一帧。
+ *       渲染循环一直运行（页面可见时 rAF 才会触发）：有新帧就画新帧；版面变了（改变画布尺寸会清空画布）就在收到版面消息时立即重画上一帧。
  * ------------------------------------------------------------------------
  */
 
@@ -44,8 +44,6 @@ const session = new FrameSession(
 );
 let renderer: WebGlFrameRenderer | undefined;
 let view: ScreenView = { width: 0, height: 0, aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING };
-/** 版面变了，需要重画。 */
-let viewDirty = true;
 /** 最近一次画出的帧的尺寸：版面变化时按它算矩形。 */
 let drawnSize: { width: number; height: number } | undefined;
 let loopRunning = false;
@@ -60,18 +58,14 @@ function paint(pending: PendingFrame | undefined): void {
   drawnSize = size;
 }
 
-/** 渲染循环：每次浏览器要画下一帧时，画待画的最新一帧，没有新帧但版面变了就重画。 */
+/** 渲染循环：每次浏览器要画下一帧时，画待画的最新一帧。 */
 function tick(): void {
   scope.requestAnimationFrame(tick);
   session.statistics.onTick(performance.now());
   const pending = session.takePending();
   if (pending !== undefined) {
     paint(pending);
-    viewDirty = false;
     session.completeRender(pending);
-  } else if (viewDirty) {
-    paint(undefined);
-    viewDirty = false;
   }
 }
 
@@ -117,7 +111,8 @@ function handle(request: WorkerRequest): void {
       // 页面隐藏时可能收到 0×0：保持上一次的画布尺寸，不把画布缩成 0。
       view = nextScreenView(view, request.view);
       renderer?.resize(view.width, view.height);
-      viewDirty = true;
+      // 改变画布尺寸会清空画布，等下一次 rAF 才重画会闪一下，所以立即重画。
+      paint(undefined);
       return;
     case 'diagnostics': {
       if (request.reset) session.resetStatistics();

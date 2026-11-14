@@ -3,6 +3,7 @@
  * 名称：smoke-run.mjs
  * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、
  *       运行页边栏与状态栏显示机器状态、边栏按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“开机…”子菜单、
+ *       启动时面板全部关闭、展开与折叠面板时窗口向外伸缩而页面区的大小与屏幕位置不变、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白与到系统按钮的距离、
  *       页面重载与核心进程重启后端口重新建立且边栏状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -23,6 +24,14 @@ import { connectCdp, findDescendants, killTree, parseArguments, pressKey, projec
 const DEFAULT_ROM = 'nestest/nestest.nes';
 /** 关闭窗口后应用应在这个时间内自行退出（毫秒）：不超过网关等待核心停止的超时（5 秒）。 */
 const GRACEFUL_EXIT_LIMIT_MS = 4500;
+/** 标题栏菜单与右侧折叠按钮之间至少留的可拖动空白（像素）。 */
+const MIN_DRAG_GAP = 48;
+/** 折叠按钮右边缘到系统窗口按钮之间至少留的距离（像素）。 */
+const MIN_SYSTEM_BUTTON_GAP = 8;
+/** 画面框的显示宽高比：256×240 的整帧、像素宽高比 8:7。 */
+const FRAME_RATIO = 128 / 105;
+/** 预置的窗口位置：尺寸写小于最小尺寸，启动后就是最小窗口；左侧与下方留足空间，展开边栏与底部面板时窗口不会被屏幕边缘挡住。 */
+const START_PLACEMENT = { x: 400, y: 60, width: 100, height: 100 };
 
 const options = parseArguments(process.argv.slice(2));
 const port = Number(options.get('port') ?? 9302);
@@ -68,6 +77,55 @@ const INSTALL_LISTENER = `(() => {
 /** 读渲染 Worker 的诊断；reset 为 true 时先清空统计。 */
 const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(${reset})`;
 
+/** 页面区、画面框与两个面板的几何信息：页面区的位置换算成屏幕坐标（CSS 像素）。 */
+const GEOMETRY = `(() => {
+  const pages = document.querySelector('.ember-shell-pages').getBoundingClientRect();
+  const frame = document.querySelector('.ember-run-frame').getBoundingClientRect();
+  return {
+    innerWidth: window.innerWidth, innerHeight: window.innerHeight,
+    pagesLeft: Math.round(pages.left + window.screenX), pagesTop: Math.round(pages.top + window.screenY),
+    pagesWidth: Math.round(pages.width), pagesHeight: Math.round(pages.height),
+    frameWidth: frame.width, frameHeight: frame.height,
+    sideHidden: document.querySelector('.ui-app-frame__side').hidden, bottomHidden: document.querySelector('.ui-app-frame__bottom').hidden
+  };
+})()`;
+
+/** 标题栏各部分的位置与宽度，以及菜单是否被挤压（文字被截断或折行）。 */
+const TITLE_BAR_METRICS = `(() => {
+  const rect = (selector) => { const box = document.querySelector(selector).getBoundingClientRect(); return { left: box.left, right: box.right, width: box.width }; };
+  const bar = document.querySelector('.ui-title-bar');
+  const barStyle = getComputedStyle(bar);
+  const tools = document.querySelector('.ui-title-bar__tools');
+  const items = [...document.querySelectorAll('.ui-title-bar__menus [role="menuitem"]')];
+  const tops = new Set(items.map((item) => Math.round(item.getBoundingClientRect().top)));
+  return {
+    innerWidth: window.innerWidth, innerHeight: window.innerHeight,
+    paddingLeft: parseFloat(barStyle.paddingLeft), paddingRight: parseFloat(barStyle.paddingRight),
+    brand: rect('.ui-title-bar__brand'), menus: rect('.ui-title-bar__menus'), tools: rect('.ui-title-bar__tools'),
+    brandMargin: parseFloat(getComputedStyle(document.querySelector('.ui-title-bar__brand')).marginRight), toolsMargin: parseFloat(getComputedStyle(tools).marginRight),
+    menuCount: items.length, menuRows: tops.size, menuClipped: items.some((item) => item.scrollWidth > item.clientWidth + 1),
+    overlay: navigator.windowControlsOverlay ? navigator.windowControlsOverlay.getTitlebarAreaRect().width : -1
+  };
+})()`;
+
+/** 点标题栏里指定名称的折叠按钮。 */
+async function clickTool(label) {
+  return page.evaluate(`(() => { const button = document.querySelector('.ui-title-bar [aria-label=' + JSON.stringify(${JSON.stringify(label)}) + ']'); if (!button || button.disabled) return false; button.click(); return true; })()`);
+}
+
+/** 点标题栏里指定名称的折叠按钮，等窗口大小变化并稳定后读几何信息。 */
+async function toggleAndMeasure(label, before) {
+  await clickTool(label);
+  await waitFor(() => page.evaluate(GEOMETRY), (value) => value.innerWidth !== before.innerWidth || value.innerHeight !== before.innerHeight, 5000, 100);
+  await sleep(600);
+  return page.evaluate(GEOMETRY);
+}
+
+/** 页面区的大小与屏幕位置是否与 before 一致（误差不超过 2 像素）。 */
+function samePagesArea(before, after) {
+  return ['pagesLeft', 'pagesTop', 'pagesWidth', 'pagesHeight'].every((key) => Math.abs(before[key] - after[key]) <= 2);
+}
+
 /** 页面里第一个匹配元素的文字；没有该元素时为空字符串。 */
 async function textOf(selector) {
   return page.evaluate(`(document.querySelector(${JSON.stringify(selector)})?.textContent ?? '')`);
@@ -104,7 +162,7 @@ async function main() {
   }
 
   console.log(`启动开发版：ROM=${romPath}，调试端口=${port}`);
-  app = startDevApp({ port, romPath });
+  app = startDevApp({ port, romPath, windowPlacement: START_PLACEMENT });
   const target = await app.waitForPage();
   page = await connectCdp(target.webSocketDebuggerUrl);
   await page.send('Runtime.enable');
@@ -221,6 +279,28 @@ async function main() {
   check('“最近打开”子菜单列出启动参数加载的卡带（只给显示名，不含路径）', recentItems.length === 1 && recentItems[0].label === 'nestest.nes' && !recentItems[0].text.includes('\\') && !recentItems[0].text.includes('/'), JSON.stringify(recentItems));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu-recent.png'));
   await menuButton('文件');
+
+  // 面板与窗口：启动时全部关闭，窗口是最小尺寸；先在最小窗口下核对标题栏，再展开面板核对窗口向外伸缩，页面区的大小与屏幕位置不变；画面框不变形。
+  const initial = await page.evaluate(GEOMETRY);
+  check('启动时边栏与底部面板都是关闭的', initial.sideHidden && initial.bottomHidden, JSON.stringify({ sideHidden: initial.sideHidden, bottomHidden: initial.bottomHidden }));
+  const tiny = await page.evaluate(TITLE_BAR_METRICS);
+  const dragGap = tiny.tools.left - tiny.menus.right;
+  const systemGap = tiny.innerWidth - tiny.paddingRight - tiny.tools.right;
+  console.log(`最小窗口 ${tiny.innerWidth}×${tiny.innerHeight}：图标与名称 ${tiny.brand.width.toFixed(1)}，菜单 ${tiny.menus.left.toFixed(1)}–${tiny.menus.right.toFixed(1)}（宽 ${tiny.menus.width.toFixed(1)}），折叠按钮 ${tiny.tools.left.toFixed(1)}–${tiny.tools.right.toFixed(1)}，系统按钮从 ${(tiny.innerWidth - tiny.paddingRight).toFixed(1)} 起，拖动空白 ${dragGap.toFixed(1)}，到系统按钮的距离 ${systemGap.toFixed(1)}`);
+  check('最小窗口下菜单都在同一行、文字没有被截断', tiny.menuCount > 0 && tiny.menuRows === 1 && !tiny.menuClipped, `${tiny.menuCount} 个菜单，${tiny.menuRows} 行`);
+  check(`最小窗口下菜单与折叠按钮之间至少有 ${MIN_DRAG_GAP} 像素可拖动的空白`, dragGap >= MIN_DRAG_GAP, `${dragGap.toFixed(1)}`);
+  check(`最小窗口下折叠按钮与系统窗口按钮至少相距 ${MIN_SYSTEM_BUTTON_GAP} 像素`, systemGap >= MIN_SYSTEM_BUTTON_GAP, `${systemGap.toFixed(1)}`);
+  check('画面框的宽高比是 128:105（8:7 的像素宽高比，不变形）', Math.abs(initial.frameWidth / initial.frameHeight - FRAME_RATIO) < 0.02, `${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)}`);
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-min-window.png'));
+  const sideOpen = await toggleAndMeasure('切换边栏', initial);
+  check('展开边栏：窗口向左变宽，页面区的大小与屏幕位置不变', sideOpen.innerWidth > initial.innerWidth && samePagesArea(initial, sideOpen), `窗口宽 ${initial.innerWidth} → ${sideOpen.innerWidth}，页面区 ${JSON.stringify([initial.pagesLeft, initial.pagesTop, initial.pagesWidth, initial.pagesHeight])} → ${JSON.stringify([sideOpen.pagesLeft, sideOpen.pagesTop, sideOpen.pagesWidth, sideOpen.pagesHeight])}`);
+  const bottomOpen = await toggleAndMeasure('切换底部面板', sideOpen);
+  check('展开底部面板：窗口向下变高，页面区的大小与屏幕位置不变', bottomOpen.innerHeight > sideOpen.innerHeight && samePagesArea(initial, bottomOpen), `窗口高 ${sideOpen.innerHeight} → ${bottomOpen.innerHeight}，页面区 ${JSON.stringify([bottomOpen.pagesLeft, bottomOpen.pagesTop, bottomOpen.pagesWidth, bottomOpen.pagesHeight])}`);
+  check('展开面板后画面框的宽高比与大小不变', Math.abs(bottomOpen.frameWidth / bottomOpen.frameHeight - FRAME_RATIO) < 0.02 && Math.abs(bottomOpen.frameWidth - initial.frameWidth) <= 2, `${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
+  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-panels-open.png'));
+  await toggleAndMeasure('切换底部面板', bottomOpen);
+  const allClosed = await toggleAndMeasure('切换边栏', await page.evaluate(GEOMETRY));
+  check('折叠面板后窗口缩回原来的大小，页面区不变', Math.abs(allClosed.innerWidth - initial.innerWidth) <= 2 && Math.abs(allClosed.innerHeight - initial.innerHeight) <= 2 && samePagesArea(initial, allClosed), `窗口 ${allClosed.innerWidth}×${allClosed.innerHeight}`);
 
   // 页面重载后：运行页重新请求端口，画面帧继续到达。
   await page.send('Page.reload');

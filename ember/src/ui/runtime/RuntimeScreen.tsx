@@ -38,7 +38,7 @@ const TEXT = {
 export interface RuntimeScreenProps {
   /** 预加载脚本暴露的接口。 */
   readonly bridge: EmberBridge;
-  /** 画面比例，默认 4:3。 */
+  /** 画面比例，默认 8:7。 */
   readonly aspect?: ScreenAspect;
   /** 缩放方式，默认适应窗口。 */
   readonly scaling?: ScreenScaling;

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：screen-layout.test.ts
- * 说明：画面版面计算的测试：两种比例、两种缩放方式、居中、放不下与无效尺寸。
+ * 说明：画面版面计算的测试：两种比例、标准帧的显示比例、两种缩放方式、居中、放不下与无效尺寸。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -9,13 +9,24 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { computeScreenRect, displayAspectRatio } from './screen-layout';
+import { computeScreenRect, DEFAULT_SCREEN_ASPECT, displayAspectRatio, nominalScreenRatio } from './screen-layout';
 
 describe('displayAspectRatio', () => {
   it('4:3 固定为 4/3，8:7 按像素宽高比算', () => {
     expect(displayAspectRatio('4:3', 256, 240)).toBeCloseTo(4 / 3, 10);
     expect(displayAspectRatio('8:7', 256, 240)).toBeCloseTo((256 * 8) / 7 / 240, 10);
     expect(displayAspectRatio('8:7', 256, 224)).toBeCloseTo((256 * 8) / 7 / 224, 10);
+  });
+});
+
+describe('nominalScreenRatio', () => {
+  it('默认的画面比例是 8:7，标准帧的显示宽高比为 128:105', () => {
+    expect(DEFAULT_SCREEN_ASPECT).toBe('8:7');
+    expect(nominalScreenRatio()).toBeCloseTo(128 / 105, 10);
+  });
+
+  it('可以指定画面比例', () => {
+    expect(nominalScreenRatio('4:3')).toBeCloseTo(4 / 3, 10);
   });
 });
 

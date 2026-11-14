@@ -1184,6 +1184,244 @@
       "x-debugOnly": true
     },
     {
+      "name": "inspector.snapshot",
+      "summary": "取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的",
+      "description": "取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的。内存不在快照里，用 readMemory 读。省略 module 时包含全部模块。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "module",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "只取这个模块的状态；省略时取全部",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": "只取这个模块的状态；省略时取全部"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "cycles": {
+              "type": "integer",
+              "description": "自上电以来的 CPU 周期数",
+              "minimum": 0
+            },
+            "states": {
+              "type": "array",
+              "description": "各模块的状态",
+              "items": {
+                "$ref": "#/components/schemas/inspector.ModuleState"
+              }
+            },
+            "breakpoints": {
+              "type": "array",
+              "description": "全部断点",
+              "items": {
+                "$ref": "#/components/schemas/inspector.Breakpoint"
+              }
+            },
+            "watches": {
+              "type": "array",
+              "description": "全部监视项与当前取值",
+              "items": {
+                "$ref": "#/components/schemas/inspector.WatchedValue"
+              }
+            }
+          },
+          "required": [
+            "cycles",
+            "states",
+            "breakpoints",
+            "watches"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidState",
+          "data": {
+            "code": "inspector.invalidState"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.watch",
+      "summary": "监视一个状态项：它的取值变化时发事件 inspector.stateChanged",
+      "description": "监视一个状态项：它的取值变化时发事件 inspector.stateChanged。路径是 <模块>.<状态项>，如 cpu.pc、ppu.scanline、mapper.prgBank（状态项见 getState）。取值在每一帧完成后、单步、命中断点和检查请求执行完之后检查，一帧里变化多次只报告最后的取值。已经在监视的路径再监视没有效果。监视最多 64 项，属于检查器本身，不随卡带更换清除。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "状态路径",
+            "minLength": 3,
+            "maxLength": 128
+          },
+          "description": "状态路径"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "watch": {
+              "$ref": "#/components/schemas/inspector.WatchedValue",
+              "description": "监视项与当前取值"
+            }
+          },
+          "required": [
+            "watch"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidState",
+          "data": {
+            "code": "inspector.invalidState"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.watchLimit",
+          "data": {
+            "code": "inspector.watchLimit"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.unwatch",
+      "summary": "取消监视",
+      "description": "取消监视。没有监视这个路径时返回 inspector.noWatch。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "状态路径",
+            "minLength": 3,
+            "maxLength": 128
+          },
+          "description": "状态路径"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.noWatch",
+          "data": {
+            "code": "inspector.noWatch"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
       "name": "inspector.addBreakpoint",
       "summary": "添加断点",
       "description": "添加断点。断点在机器运行时生效（自由运行与 runtime.run 都会停下，发事件 runtime.breakpointHit，运行模式变为暂停）；单步（runtime.step）忽略断点；继续运行时会先越过刚命中的执行断点。断点属于当前的主机，装入新卡带后清空。地址是 CPU 总线上的地址。需要已开机。",
@@ -2914,6 +3152,25 @@
         ],
         "additionalProperties": false
       },
+      "inspector.WatchedValue": {
+        "type": "object",
+        "description": "一个监视中的状态项。",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "状态路径，如 cpu.pc、ppu.scanline、mapper.prgBank"
+          },
+          "value": {
+            "type": "integer",
+            "description": "当前取值"
+          }
+        },
+        "required": [
+          "path",
+          "value"
+        ],
+        "additionalProperties": false
+      },
       "inspector.ModuleState": {
         "type": "object",
         "description": "一个模块的状态。",
@@ -3693,6 +3950,44 @@
         },
         "required": [
           "count"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "inspector.stateChanged",
+      "description": "监视的状态项取值变了。同一次检查里变化的各项依次发出；监视项属于检查器，重新上电或换卡带之后的变化也会报告。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "状态路径"
+          },
+          "oldValue": {
+            "type": "integer",
+            "description": "上一次检查时的取值"
+          },
+          "newValue": {
+            "type": "integer",
+            "description": "现在的取值"
+          },
+          "cycles": {
+            "type": "integer",
+            "description": "检查时的 CPU 周期数",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "path",
+          "oldValue",
+          "newValue",
+          "cycles"
         ],
         "additionalProperties": false
       }

@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "contracts/hardware/hardware-error.hpp"
+#include "contracts/inspector/generated/inspector.hpp"
 #include "contracts/inspector/inspector-error.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "shared/errors/core-error.hpp"
@@ -70,9 +71,37 @@ api::StateReport mapperState(const contracts::mappers::MapperCartridge& cartridg
   return state;
 }
 
+/** 各模块的状态；module 不为空时只取这一个，没有这个模块时抛出 hardware.invalidState。 */
+std::vector<api::StateReport> collectStates(rt::DebugContext& context, const std::optional<std::string>& module) {
+  std::vector<api::StateReport> states;
+  for (const std::string& name : context.debugger.stateModules()) {
+    if (module.has_value() && *module != name) continue;
+    states.push_back({name, name == "cpu", context.debugger.readState(name)});
+  }
+  if (context.cartridge != nullptr && (!module.has_value() || *module == "mapper")) states.push_back(mapperState(*context.cartridge));
+  if (module.has_value() && states.empty()) throw shared::CoreError(hw::ERROR_INVALID_STATE, "没有这个状态模块：" + *module);
+  return states;
+}
+
 }  // namespace
 
-LocalInspectorService::LocalInspectorService(std::shared_ptr<rt::RuntimeService> runtime) : runtime_(std::move(runtime)) {}
+LocalInspectorService::LocalInspectorService(std::shared_ptr<rt::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events) : runtime_(std::move(runtime)), events_(std::move(events)) {
+  runtime_->setObserver([this](rt::DebugContext& context) {
+    if (watcher_.list().empty()) return;
+    const auto cycles = static_cast<std::int64_t>(context.machine.cpuRegisters().cycles);
+    for (const auto& change : watcher_.observe(context)) {
+      events_->publish(api::INSPECTOR_STATE_CHANGED_EVENT, nlohmann::json(api::InspectorStateChangedData{change.path, change.oldValue, change.newValue, cycles}));
+    }
+  });
+}
+
+LocalInspectorService::~LocalInspectorService() {
+  try {
+    runtime_->setObserver({});
+  } catch (const shared::CoreError&) {
+    // 运行服务已停止，观察者随模拟线程一起结束，没有要取消的。
+  }
+}
 
 void LocalInspectorService::inspect(const std::function<void(rt::DebugContext&)>& action) {
   try {
@@ -164,15 +193,29 @@ hw::AddressTarget LocalInspectorService::resolve(const std::string& space, std::
 
 std::vector<api::StateReport> LocalInspectorService::getState(const std::optional<std::string>& module) {
   std::vector<api::StateReport> states;
-  inspect([&](rt::DebugContext& context) {
-    for (const std::string& name : context.debugger.stateModules()) {
-      if (module.has_value() && *module != name) continue;
-      states.push_back({name, name == "cpu", context.debugger.readState(name)});
-    }
-    if (context.cartridge != nullptr && (!module.has_value() || *module == "mapper")) states.push_back(mapperState(*context.cartridge));
-    if (module.has_value() && states.empty()) throw shared::CoreError(hw::ERROR_INVALID_STATE, "没有这个状态模块：" + *module);
-  });
+  inspect([&](rt::DebugContext& context) { states = collectStates(context, module); });
   return states;
+}
+
+api::SnapshotReport LocalInspectorService::snapshot(const std::optional<std::string>& module) {
+  api::SnapshotReport report;
+  inspect([&](rt::DebugContext& context) {
+    report.cycles = context.machine.cpuRegisters().cycles;
+    report.states = collectStates(context, module);
+    report.breakpoints = context.debugger.breakpoints();
+    report.watches = watcher_.list();
+  });
+  return report;
+}
+
+api::WatchEntry LocalInspectorService::watch(const std::string& path) {
+  api::WatchEntry entry;
+  inspect([&](rt::DebugContext& context) { entry = watcher_.add(context, path); });
+  return entry;
+}
+
+void LocalInspectorService::unwatch(const std::string& path) {
+  inspect([&](rt::DebugContext&) { watcher_.remove(path); });
 }
 
 api::StateReport LocalInspectorService::setState(const std::string& module, std::span<const hw::StateField> fields) {

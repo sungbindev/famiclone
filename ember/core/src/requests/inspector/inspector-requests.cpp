@@ -93,6 +93,26 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
     for (const auto& state : service->getState(parsed.module)) result.states.push_back(toWire(state));
     return nlohmann::json(result);
   });
+  router.add("inspector", contract::INSPECTOR_SNAPSHOT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorSnapshotParams(params, "params");
+    const auto report = service->snapshot(parsed.module);
+    contract::InspectorSnapshotResult result;
+    result.cycles = static_cast<std::int64_t>(report.cycles);
+    for (const auto& state : report.states) result.states.push_back(toWire(state));
+    for (const auto& breakpoint : report.breakpoints) result.breakpoints.push_back(breakpointToWire(breakpoint));
+    for (const auto& watch : report.watches) result.watches.push_back({watch.path, watch.value});
+    return nlohmann::json(result);
+  });
+  router.add("inspector", contract::INSPECTOR_WATCH_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorWatchParams(params, "params");
+    const auto watch = service->watch(parsed.path);
+    return nlohmann::json(contract::InspectorWatchResult{{watch.path, watch.value}});
+  });
+  router.add("inspector", contract::INSPECTOR_UNWATCH_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorUnwatchParams(params, "params");
+    service->unwatch(parsed.path);
+    return nlohmann::json(contract::InspectorUnwatchResult{});
+  });
   router.add("inspector", contract::INSPECTOR_ADD_BREAKPOINT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInspectorAddBreakpointParams(params, "params");
     const auto first = static_cast<std::uint16_t>(parsed.address);

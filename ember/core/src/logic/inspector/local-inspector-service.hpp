@@ -12,6 +12,9 @@
 
 #include <memory>
 
+#include "logic/inspector/state-watcher.hpp"
+#include "platform/events/event-sink.hpp"
+
 #include "contracts/inspector/inspector-service.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 
@@ -20,7 +23,12 @@ namespace ember::logic::inspector {
 /** 检查器服务。 */
 class LocalInspectorService final : public contracts::inspector::InspectorService {
  public:
-  explicit LocalInspectorService(std::shared_ptr<contracts::runtime::RuntimeService> runtime);
+  /** 向运行服务登记观察者，用来检查监视项并发 inspector.stateChanged。 */
+  LocalInspectorService(std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events);
+  ~LocalInspectorService() override;
+
+  LocalInspectorService(const LocalInspectorService&) = delete;
+  LocalInspectorService& operator=(const LocalInspectorService&) = delete;
 
   std::vector<contracts::hardware::MemorySpace> listSpaces() override;
   std::vector<std::uint8_t> readMemory(const std::string& space, std::uint32_t address, std::uint32_t length) override;
@@ -28,6 +36,9 @@ class LocalInspectorService final : public contracts::inspector::InspectorServic
   contracts::hardware::AddressTarget resolve(const std::string& space, std::uint32_t address) override;
   std::vector<contracts::inspector::StateReport> getState(const std::optional<std::string>& module) override;
   contracts::inspector::StateReport setState(const std::string& module, std::span<const contracts::hardware::StateField> fields) override;
+  contracts::inspector::SnapshotReport snapshot(const std::optional<std::string>& module) override;
+  contracts::inspector::WatchEntry watch(const std::string& path) override;
+  void unwatch(const std::string& path) override;
   contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override;
   std::vector<contracts::hardware::Breakpoint> listBreakpoints() override;
   void removeBreakpoint(std::uint32_t id) override;
@@ -38,6 +49,9 @@ class LocalInspectorService final : public contracts::inspector::InspectorServic
   void inspect(const std::function<void(contracts::runtime::DebugContext&)>& action);
 
   std::shared_ptr<contracts::runtime::RuntimeService> runtime_;
+  std::shared_ptr<platform::EventSink> events_;
+  /** 只在模拟线程访问。 */
+  StateWatcher watcher_;
 };
 
 }  // namespace ember::logic::inspector

@@ -57,11 +57,16 @@
 | `inspector.writeMemory` | 写一段内存 |
 | `inspector.resolve` | 解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器 |
 | `inspector.getState` | 读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper） |
+| `inspector.snapshot` | 取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的 |
+| `inspector.watch` | 监视一个状态项：它的取值变化时发事件 inspector.stateChanged |
+| `inspector.unwatch` | 取消监视 |
 | `inspector.addBreakpoint` | 添加断点 |
 | `inspector.listBreakpoints` | 列出全部断点，按编号升序 |
 | `inspector.removeBreakpoint` | 删除一个断点 |
 | `inspector.clearBreakpoints` | 删除全部断点 |
 | `inspector.setState` | 修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读 |
+
+事件：`inspector.stateChanged`
 
 ### [mappers](mappers.md)
 

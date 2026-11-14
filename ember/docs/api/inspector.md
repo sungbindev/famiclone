@@ -11,6 +11,9 @@
 | [`inspector.writeMemory`](#inspectorwritememory) | 写一段内存 |
 | [`inspector.resolve`](#inspectorresolve) | 解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器 |
 | [`inspector.getState`](#inspectorgetstate) | 读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper） |
+| [`inspector.snapshot`](#inspectorsnapshot) | 取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的 |
+| [`inspector.watch`](#inspectorwatch) | 监视一个状态项：它的取值变化时发事件 inspector.stateChanged |
+| [`inspector.unwatch`](#inspectorunwatch) | 取消监视 |
 | [`inspector.addBreakpoint`](#inspectoraddbreakpoint) | 添加断点 |
 | [`inspector.listBreakpoints`](#inspectorlistbreakpoints) | 列出全部断点，按编号升序 |
 | [`inspector.removeBreakpoint`](#inspectorremovebreakpoint) | 删除一个断点 |
@@ -175,6 +178,97 @@ ember-debug call inspector.getState
 await client.api.inspector.getState();
 ```
 
+### inspector.snapshot
+
+> 只经调试服务开放（界面不能发起）
+
+取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的。内存不在快照里，用 readMemory 读。省略 module 时包含全部模块。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `module` | `string（长度 1..64）` | 否 | 只取这个模块的状态；省略时取全部 |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `cycles` | `integer（0..）` | 是 | 自上电以来的 CPU 周期数 |
+| `states` | [inspector.ModuleState](inspector.md#modulestate)[] | 是 | 各模块的状态 |
+| `breakpoints` | [inspector.Breakpoint](inspector.md#breakpoint)[] | 是 | 全部断点 |
+| `watches` | [inspector.WatchedValue](inspector.md#watchedvalue)[] | 是 | 全部监视项与当前取值 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.invalidState`
+
+**示例**
+
+```text
+ember-debug call inspector.snapshot
+```
+
+```ts
+await client.api.inspector.snapshot();
+```
+
+### inspector.watch
+
+> 只经调试服务开放（界面不能发起）
+
+监视一个状态项：它的取值变化时发事件 inspector.stateChanged。路径是 <模块>.<状态项>，如 cpu.pc、ppu.scanline、mapper.prgBank（状态项见 getState）。取值在每一帧完成后、单步、命中断点和检查请求执行完之后检查，一帧里变化多次只报告最后的取值。已经在监视的路径再监视没有效果。监视最多 64 项，属于检查器本身，不随卡带更换清除。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `path` | `string（长度 3..128）` | 是 | 状态路径 |
+
+**结果**
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `watch` | [inspector.WatchedValue](inspector.md#watchedvalue) | 是 | 监视项与当前取值 |
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.invalidState`、`inspector.watchLimit`
+
+**示例**
+
+```text
+ember-debug call inspector.watch path=<string>
+```
+
+```ts
+await client.api.inspector.watch({ path: … });
+```
+
+### inspector.unwatch
+
+> 只经调试服务开放（界面不能发起）
+
+取消监视。没有监视这个路径时返回 inspector.noWatch。需要已开机。
+
+**参数**
+
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `path` | `string（长度 3..128）` | 是 | 状态路径 |
+
+**结果**
+
+（无）
+
+**错误码**：`inspector.noCartridge`、`inspector.notPowered`、`inspector.unsupported`、`inspector.noWatch`
+
+**示例**
+
+```text
+ember-debug call inspector.unwatch path=<string>
+```
+
+```ts
+await client.api.inspector.unwatch({ path: … });
+```
+
 ### inspector.addBreakpoint
 
 > 只经调试服务开放（界面不能发起）
@@ -322,6 +416,21 @@ ember-debug call inspector.setState module=<string> fields=<inspector.StateField
 await client.api.inspector.setState({ module: …, fields: … });
 ```
 
+## 事件
+
+事件要先用 `debug.subscribe` 订阅才会收到，以 JSON-RPC 通知送达。
+
+### inspector.stateChanged
+
+监视的状态项取值变了。同一次检查里变化的各项依次发出；监视项属于检查器，重新上电或换卡带之后的变化也会报告。
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `path` | `string` | 是 | 状态路径 |
+| `oldValue` | `integer` | 是 | 上一次检查时的取值 |
+| `newValue` | `integer` | 是 | 现在的取值 |
+| `cycles` | `integer（0..）` | 是 | 检查时的 CPU 周期数 |
+
 ## 数据类型
 
 ### MemorySpaceInfo
@@ -367,6 +476,15 @@ await client.api.inspector.setState({ module: …, fields: … });
 | `address` | `integer（0..65535）` | 是 | 地址范围的第一个地址 |
 | `endAddress` | `integer（0..65535）` | 是 | 地址范围的最后一个地址（含）；单个地址时与 address 相同 |
 | `hits` | `integer（0..）` | 是 | 已经命中的次数 |
+
+### WatchedValue
+
+一个监视中的状态项。
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `path` | `string` | 是 | 状态路径，如 cpu.pc、ppu.scanline、mapper.prgBank |
+| `value` | `integer` | 是 | 当前取值 |
 
 ### ModuleState
 

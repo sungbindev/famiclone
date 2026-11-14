@@ -92,6 +92,18 @@ check('inspector.listBreakpoints 列出断点并累计命中次数', listed.leng
 const cleared = await client.api.inspector.clearBreakpoints();
 check('inspector.clearBreakpoints 删除全部断点', cleared.removed === 1);
 await expectRequestError(() => client.api.inspector.removeBreakpoint({ id: added.id }), 'inspector.noBreakpoint');
+
+// 监视与快照：监视 cpu.pc，单步后收到 inspector.stateChanged。
+await client.subscribe(['inspector.*']);
+const watched = (await client.api.inspector.watch({ path: 'cpu.pc' })).watch;
+const changedEvent = client.waitFor('inspector.stateChanged', { timeoutMs: 20_000 });
+await client.api.runtime.step({ unit: 'instruction' });
+const change = await changedEvent;
+const snap = await client.api.inspector.snapshot();
+check('监视 cpu.pc：单步后收到 inspector.stateChanged，旧值是监视时的取值', change.path === 'cpu.pc' && change.oldValue === watched.value && change.newValue !== change.oldValue, JSON.stringify(change));
+check('inspector.snapshot 含各模块状态与监视项', snap.states.length >= 2 && snap.watches.length === 1 && snap.watches[0].value === change.newValue);
+await client.api.inspector.unwatch({ path: 'cpu.pc' });
+await expectRequestError(() => client.api.inspector.unwatch({ path: 'cpu.pc' }), 'inspector.noWatch');
 await expectRequestError(() => client.api.input.pad({ port: 7, buttons: 1 }), 'input.invalidPort');
 await expectRequestError(() => client.api.runtime.run({ frames: 0 }), 'core.invalidParams');
 

@@ -91,6 +91,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   contracts::runtime::FrameImage captureFrame() override;
   contracts::runtime::StepOutcome step(contracts::hardware::StepUnit unit, std::int64_t count) override;
   void inspect(const std::function<void(contracts::runtime::DebugContext&)>& action) override;
+  void setObserver(std::function<void(contracts::runtime::DebugContext&)> observer) override;
 
  private:
   /** 正在进行的授权运行（只由模拟线程访问）。 */
@@ -128,6 +129,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   /** 命中断点：结束授权运行（breakpoint）、暂停、发 runtime.breakpointHit 与状态变化。 */
   void handleBreakpoint(const contracts::hardware::BreakpointHit& hit);
   void checkCartridge();
+  /** 主机通电时调用观察者；回调抛出的异常写日志。 */
+  void notifyObserver();
   void pushAudio();
   void syncAudio();
 
@@ -156,6 +159,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   /** 要重新对齐帧节拍（刚开始运行，或落后太多）。 */
   bool resync_{true};
   bool failureReported_{false};
+  /** 观察者（见 RuntimeService::setObserver）。 */
+  std::function<void(contracts::runtime::DebugContext&)> observer_;
   std::uint64_t frame_{0};
   /** 从主机取出的采样，反复使用以免每帧分配内存。 */
   std::vector<float> audioBuffer_;

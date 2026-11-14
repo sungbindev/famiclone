@@ -21,7 +21,7 @@ namespace ember::bootstrap {
 
 void registerInspector(ModuleRegistry& registry) {
   auto runtime = registry.services.require<contracts::runtime::RuntimeService>();
-  auto service = std::make_shared<logic::inspector::LocalInspectorService>(std::move(runtime));
+  auto service = std::make_shared<logic::inspector::LocalInspectorService>(std::move(runtime), registry.events);
   registry.services.provide<contracts::inspector::InspectorService>(service);
   requests::inspector::addInspectorRequests(registry.requests, service);
 }

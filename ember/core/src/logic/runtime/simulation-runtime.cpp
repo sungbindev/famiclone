@@ -278,6 +278,7 @@ void SimulationRuntime::runFrame() {
   if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
   if (!run_.has_value()) pushAudio();
   publishSnapshot();
+  notifyObserver();
   const auto interval = frameEventInterval_.load(std::memory_order_relaxed);
   if (interval > 0 && frame_ % interval == 0) {
     const auto registers = machine_->cpuRegisters();
@@ -310,6 +311,7 @@ void SimulationRuntime::handleBreakpoint(const hw::BreakpointHit& hit) {
   options_.events->publish(rt::RUNTIME_BREAKPOINT_HIT_EVENT, nlohmann::json(data));
   publishState("breakpoint");
   publishSnapshot();
+  notifyObserver();
 }
 
 void SimulationRuntime::finishRun(const char* stopped) {
@@ -543,6 +545,7 @@ rt::StepOutcome SimulationRuntime::step(hw::StepUnit unit, std::int64_t count) {
     publishState("step");
     publishSnapshot();
     checkCartridge();
+    notifyObserver();
     rt::StepOutcome outcome;
     outcome.instructions = static_cast<std::int64_t>(done.instructions);
     outcome.cycles = static_cast<std::int64_t>(done.cycles);
@@ -561,7 +564,24 @@ void SimulationRuntime::inspect(const std::function<void(rt::DebugContext&)>& ac
     if (debugger == nullptr) throw shared::CoreError(rt::ERROR_DEBUG_UNSUPPORTED, "当前主机型号不支持调试");
     rt::DebugContext context{*machine_, *debugger, cartridge_.get()};
     action(context);
+    notifyObserver();
   });
+}
+
+void SimulationRuntime::setObserver(std::function<void(rt::DebugContext&)> observer) {
+  submit([this, &observer] { observer_ = std::move(observer); });
+}
+
+void SimulationRuntime::notifyObserver() {
+  if (!observer_ || machine_ == nullptr || !powered()) return;
+  hw::MachineDebugger* debugger = machine_->debugger();
+  if (debugger == nullptr) return;
+  rt::DebugContext context{*machine_, *debugger, cartridge_.get()};
+  try {
+    observer_(context);
+  } catch (const std::exception& error) {
+    options_.errors->write({"runtime", std::string(shared::ERROR_INTERNAL), error.what(), {{"frame", frame_}}});
+  }
 }
 
 }  // namespace ember::logic::runtime

@@ -452,4 +452,87 @@ TEST_F(DebugInspectorTest, BreakpointErrorsAndRemoval) {
   core.stop();
 }
 
+TEST_F(DebugInspectorTest, SnapshotCollectsStatesBreakpointsAndWatchesAtOnePoint) {
+  Core core;
+  start(core);
+  EXPECT_EQ(call(core, "inspector.snapshot").payload["code"], "inspector.noCartridge");
+  loadPaused(core);
+  ASSERT_TRUE(call(core, "inspector.addBreakpoint", {{"kind", "execute"}, {"address", 0x8004}}).ok);
+  ASSERT_TRUE(call(core, "inspector.watch", {{"path", "cpu.pc"}}).ok);
+  ASSERT_TRUE(call(core, "runtime.step", {{"unit", "instruction"}, {"count", 2}}).ok);
+
+  const auto all = call(core, "inspector.snapshot");
+  ASSERT_TRUE(all.ok) << all.payload.dump();
+  EXPECT_EQ(all.payload["cycles"].get<std::int64_t>(), field(cpuState(core), "cycles"));
+  std::vector<std::string> modules;
+  for (const auto& state : all.payload["states"]) modules.push_back(state["module"]);
+  EXPECT_EQ(modules, (std::vector<std::string>{"cpu", "ppu", "mapper"}));
+  ASSERT_EQ(all.payload["breakpoints"].size(), 1U);
+  ASSERT_EQ(all.payload["watches"].size(), 1U);
+  EXPECT_EQ(all.payload["watches"][0]["path"], "cpu.pc");
+  EXPECT_EQ(all.payload["watches"][0]["value"], 0x8004);
+
+  const auto onlyCpu = call(core, "inspector.snapshot", {{"module", "cpu"}});
+  ASSERT_TRUE(onlyCpu.ok);
+  EXPECT_EQ(onlyCpu.payload["states"].size(), 1U);
+  EXPECT_EQ(call(core, "inspector.snapshot", {{"module", "nowhere"}}).payload["code"], "inspector.invalidState");
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, WatchReportsChangesAfterStepsAndStateWrites) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  const auto watched = call(core, "inspector.watch", {{"path", "cpu.a"}});
+  ASSERT_TRUE(watched.ok) << watched.payload.dump();
+  EXPECT_EQ(watched.payload["watch"]["value"], 0);
+  EXPECT_TRUE(call(core, "inspector.watch", {{"path", "cpu.a"}}).ok);
+  EXPECT_EQ(call(core, "inspector.snapshot").payload["watches"].size(), 1U);
+
+  ASSERT_TRUE(call(core, "runtime.step", {{"unit", "instruction"}}).ok);
+  ASSERT_TRUE(ember::test::waitFor([&] { return !eventsNamed("inspector.stateChanged").empty(); }));
+  const auto first = eventsNamed("inspector.stateChanged").front();
+  EXPECT_EQ(first["path"], "cpu.a");
+  EXPECT_EQ(first["oldValue"], 0);
+  EXPECT_EQ(first["newValue"], 0x42);
+  EXPECT_EQ(first["cycles"].get<std::int64_t>(), field(cpuState(core), "cycles"));
+
+  ASSERT_TRUE(call(core, "inspector.setState", {{"module", "cpu"}, {"fields", json::array({{{"name", "a"}, {"value", 0x77}}})}}).ok);
+  ASSERT_TRUE(ember::test::waitFor([&] { return eventsNamed("inspector.stateChanged").size() >= 2; }));
+  EXPECT_EQ(eventsNamed("inspector.stateChanged")[1]["oldValue"], 0x42);
+  EXPECT_EQ(eventsNamed("inspector.stateChanged")[1]["newValue"], 0x77);
+
+  // 取消监视后不再报告
+  ASSERT_TRUE(call(core, "inspector.unwatch", {{"path", "cpu.a"}}).ok);
+  ASSERT_TRUE(call(core, "inspector.setState", {{"module", "cpu"}, {"fields", json::array({{{"name", "a"}, {"value", 1}}})}}).ok);
+  EXPECT_EQ(call(core, "inspector.unwatch", {{"path", "cpu.a"}}).payload["code"], "inspector.noWatch");
+  EXPECT_EQ(eventsNamed("inspector.stateChanged").size(), 2U);
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, WatchChecksTheFrameBoundariesWhileRunning) {
+  Core core;
+  start(core);
+  loadPaused(core);
+  ASSERT_TRUE(call(core, "inspector.watch", {{"path", "ppu.frame"}}).ok);
+  ASSERT_TRUE(call(core, "runtime.run", {{"frames", 3}, {"wait", true}}).ok);
+  ASSERT_TRUE(ember::test::waitFor([&] { return eventsNamed("inspector.stateChanged").size() >= 3; }));
+  const auto changes = eventsNamed("inspector.stateChanged");
+  EXPECT_EQ(changes[0]["path"], "ppu.frame");
+  EXPECT_EQ(changes[2]["newValue"].get<int>(), changes[2]["oldValue"].get<int>() + 1);
+  core.stop();
+}
+
+TEST_F(DebugInspectorTest, WatchRejectsPathsThatDoNotExist) {
+  Core core;
+  start(core);
+  EXPECT_EQ(call(core, "inspector.watch", {{"path", "cpu.a"}}).payload["code"], "inspector.noCartridge");
+  loadPaused(core);
+  for (const char* path : {"cpu.nothing", "nowhere.a", "cpupc", ".pc", "cpu.", "mapper.nothing"}) {
+    EXPECT_EQ(call(core, "inspector.watch", {{"path", path}}).payload["code"], "inspector.invalidState") << path;
+  }
+  EXPECT_FALSE(call(core, "inspector.watch", {{"path", "a"}}).ok);
+  core.stop();
+}
+
 }  // namespace

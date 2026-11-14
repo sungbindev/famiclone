@@ -28,6 +28,22 @@ struct StateReport {
   std::vector<hardware::StateField> fields;
 };
 
+/** 一个监视中的状态项。 */
+struct WatchEntry {
+  /** 状态路径：<模块>.<状态项>。 */
+  std::string path;
+  std::int64_t value{0};
+};
+
+/** 一个时刻的完整快照。 */
+struct SnapshotReport {
+  /** 自上电以来的 CPU 周期数。 */
+  std::uint64_t cycles{0};
+  std::vector<StateReport> states;
+  std::vector<hardware::Breakpoint> breakpoints;
+  std::vector<WatchEntry> watches;
+};
+
 /** 检查器服务。 */
 class InspectorService {
  public:
@@ -50,6 +66,15 @@ class InspectorService {
 
   /** 修改一个模块的状态，返回修改之后的状态。 */
   virtual StateReport setState(const std::string& module, std::span<const hardware::StateField> fields) = 0;
+
+  /** 完整快照；module 为空时包含全部模块的状态。 */
+  virtual SnapshotReport snapshot(const std::optional<std::string>& module) = 0;
+
+  /** 监视一个状态项（取值变化时发 inspector.stateChanged），返回当前取值；已在监视时没有效果。 */
+  virtual WatchEntry watch(const std::string& path) = 0;
+
+  /** 取消监视；没有监视这个路径时抛出 inspector.noWatch。 */
+  virtual void unwatch(const std::string& path) = 0;
 
   /** 添加断点（CPU 总线上的地址，范围含两端）。 */
   virtual hardware::Breakpoint addBreakpoint(hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) = 0;

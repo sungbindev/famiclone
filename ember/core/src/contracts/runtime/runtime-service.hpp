@@ -174,6 +174,12 @@ class RuntimeService {
    * @throws shared::CoreError runtime.noCartridge、runtime.notPowered、runtime.debugUnsupported。
    */
   virtual void inspect(const std::function<void(DebugContext&)>& action) = 0;
+
+  /**
+   * 设置模拟线程上的观察者（替换已有的，传空函数取消）。主机通电时，每帧完成后、单步后、命中断点后、每次检查请求执行完后调用；
+   * 回调里不要调用本服务的方法，不要抛出异常（抛出的异常只写日志）。
+   */
+  virtual void setObserver(std::function<void(DebugContext&)> observer) = 0;
 };
 
 }  // namespace ember::contracts::runtime

@@ -34,5 +34,9 @@ inline constexpr std::string_view ERROR_INVALID_BREAKPOINT = "inspector.invalidB
 inline constexpr std::string_view ERROR_BREAKPOINT_LIMIT = "inspector.breakpointLimit";
 /** 没有这个编号的断点。 */
 inline constexpr std::string_view ERROR_NO_BREAKPOINT = "inspector.noBreakpoint";
+/** 监视项数量超过上限。 */
+inline constexpr std::string_view ERROR_WATCH_LIMIT = "inspector.watchLimit";
+/** 没有监视这个路径。 */
+inline constexpr std::string_view ERROR_NO_WATCH = "inspector.noWatch";
 
 }  // namespace ember::contracts::inspector

@@ -7,6 +7,9 @@ core/build-test/
 resources/icon.icns
 src/contracts/*/generated/
 core/src/contracts/*/generated/
+debug-sdk/generated/
+debug-sdk/dist/
+debug-sdk/docs/
 coverage/
 *.log
 !core/test/data/**/*.log

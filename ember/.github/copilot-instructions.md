@@ -12,6 +12,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | [docs/04-调试服务.md](../docs/04-调试服务.md) | 调试服务的协议、运行控制、请求与事件 |
 | [docs/05-界面.md](../docs/05-界面.md) | 界面布局、页面、菜单、状态栏，界面原型 |
 | [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) | 构建与测试命令、由 Schema 生成的代码、模块的登记方式、依赖检查 |
+| [docs/07-调试客户端工具.md](../docs/07-调试客户端工具.md) | `debug-sdk/`：SDK、终端客户端 `ember-debug`、MCP 服务 `ember-debug-mcp` 的设计、目录与依赖规则 |
 
 - 开始任何开发任务前，先阅读架构设计文档与硬件模块文档。
 - 【强制】每次修改代码、配置或脚本后，必须在同一次任务中同步全部受影响的文档（上表所列文档与本文件）；文档未同步不得汇报完成。汇报时逐项列出已同步的文档与位置，以及已检查但无须修改的文档。
@@ -32,7 +33,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - mapper 插件包与脚本来自外部，是不可信输入：包的读取要检查路径穿越与大小上限，脚本只能经宿主对象 `ctx` 访问外部，内存、栈、单次回调时长都有上限；C 回调里的 C++ 异常必须在边界截获，脚本出错不能让异常穿过 CPU 的总线访问（卡带记下错误，由运行模块轮询）。
 - 存储按位置分三档：芯片内与主板上（含学习机整机的存储与 BIOS）的由芯片模块、主机型号写死，卡带上的由 mapper 清单声明，见硬件模块文档。
 - 请求、事件与数据类型只在 `schema/<模块>.schema.json` 中定义和修改，TypeScript 与 C++ 的 `generated/` 目录由脚本生成，不手写、不手改。
-- 调试服务与界面共用同一套请求；调试专用的请求在 Schema 里标 `debugOnly`，只经调试服务开放，界面不使用。调试服务（`core/src/infra/debug/`，网络在 `core/src/platform/network/`）是 WebSocket 加 JSON-RPC 2.0，只监听 127.0.0.1，令牌必须；开关、端口、令牌是首选项的 `debug.*`，启动参数 `--debug-port`、`--debug-token` 强制开启；会话逻辑（`DebugSession`）不碰网络，结果或事件数据顶层的 `data` 字段是 `nlohmann::json::binary` 时改发二进制帧；接口描述文档 `docs/api/openrpc.json` 由 `npm run schema` 生成，不手写；修改协议同步 04 文档，并在 SDK 仓库 `ember-debug-sdk` 提交 `npm run schema` 生成的变化。
+- 调试服务与界面共用同一套请求；调试专用的请求在 Schema 里标 `debugOnly`，只经调试服务开放，界面不使用。调试服务（`core/src/infra/debug/`，网络在 `core/src/platform/network/`）是 WebSocket 加 JSON-RPC 2.0，只监听 127.0.0.1，令牌必须；开关、端口、令牌是首选项的 `debug.*`，启动参数 `--debug-port`、`--debug-token` 强制开启；会话逻辑（`DebugSession`）不碰网络，结果或事件数据顶层的 `data` 字段是 `nlohmann::json::binary` 时改发二进制帧；接口描述文档 `docs/api/openrpc.json` 由 `npm run schema` 生成，不手写；修改协议同步 04 文档，并运行 `npm run debug-sdk:check`（`debug-sdk/` 的类型与协议参考跟着 Schema 变）。
+- 调试客户端工具在 `debug-sdk/`（独立的 npm 包 `@rujianjs/ember-debug-sdk`，有自己的 `package.json`、依赖与测试，不进入应用打包），设计见 [docs/07-调试客户端工具.md](../docs/07-调试客户端工具.md)：`debug-sdk/generated/` 由 `npm run schema` 生成，不手写不提交；`debug-sdk/src` 分 `contracts`、`shared`、`logic`、`infra`、`entry`、`cli`、`mcp`，`logic` 不引用 `infra`，库入口不引用 Node 内置模块，不引入第三方运行时依赖；自动测试只用假传输层，真实联调用 `debug-sdk/scripts/live-check.mjs`；终端客户端与 MCP 服务的用户可见文字为中文；修改它的对外用法同步 `debug-sdk/README.md`。
 - 新增模块时在各层建立同名模块目录，并在 C++、主进程、渲染进程三份模块清单中登记；分层与模块依赖由 `npm run boundaries` 检查，见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md)。
 - 业务逻辑、模拟与数据读写一律放 C++ 核心；TypeScript 部分只做外壳、界面、入口校验、进程间转接和系统能力。
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。
@@ -41,7 +43,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
 - 先在 Windows 上开发、调试与编译；macOS 的编译与打包脚本同时写齐，但不在 Windows 上运行或测试。
 - 硬件状态只属于模拟线程（`logic/runtime`）：电源、复位、暂停、继续、装入与取出卡带、按键都投递到它的命令队列，在帧边界执行；每帧完成后经 `platform/streams/frame-output.hpp` 的 `FrameOutput` 发布帧缓冲，把主机生成的声音采样（`Machine::takeAudio`）写进 `platform/audio/audio-output.hpp` 的 `AudioOutput`，`logic` 只能包含 `platform` 的事件、取消、错误日志、帧输出、声音输出五个抽象，硬件模块只能包含前两个。
-- 声音由核心直接输出到系统（miniaudio，只在 `platform/audio/` 里使用）：模拟线程写、音频回调线程读的无锁环形缓冲，回调里不加锁、不分配内存，用缓冲水位微调重采样比（±0.5%）保持同步；暂停、断电时淡出，继续时清空过时的采样再淡入；设备打不开时降级为空输出并写错误日志；音量与静音只经 `output.setVolume` 请求，保存在核心内存里。
+- 声音由核心直接输出到系统（miniaudio，只在 `platform/audio/` 里使用）：模拟线程写、音频回调线程读的无锁环形缓冲，回调里不加锁、不分配内存，用缓冲水位微调重采样比（±0.5%）保持同步；暂停、断电时淡出，继续时清空过时的采样再淡入；设备打不开时降级为空输出并写错误日志；音量与静音只经 `output.setVolume` 请求，音量保存到首选项的 `sound.volume`，静音不保存。
 - 经典 FC 的 APU（`apu-2a03`）按调度器的方式运行（被访问前追赶，会改变 IRQ 线与 RDY 线的时刻预测成调度器事件）；帧计数器、长度计数器与 DMC 的时序以 blargg 的测试 ROM 为准，暂时不一致的项登记在 02 第 12 节“已知差异”并由测试断言；`$4017` 同时属于手柄口与 APU，由主机装配里的 `PadApuPort` 转给两边，两个模块互不引用。
 - 画面与输入不走请求，用单独的消息端口（`window.ember.streams.requestPorts()`，契约在 `src/contracts/stream-ports/`）：核心到渲染进程的帧消息（带 `publishedAt` 与 `hostDropped`）、渲染进程在画面端口上回的帧确认（`ack`）与渲染进程到核心的按键消息，格式只在 `stream-messages.ts` 里定义；核心宿主对渲染进程发来的输入与确认逐条校验，在途帧不超过 `MAX_FRAMES_IN_FLIGHT`（背压，超过就丢新帧），binding 的帧缓冲槽由 JavaScript 线程创建、不转移、不保存。
 - 画面在渲染 Worker（`src/ui/runtime/render-worker.ts`）里用 WebGL 显示：Worker 收帧、校验、只保留最新一帧、由它自己的 `requestAnimationFrame` 驱动绘制并确认（每一帧恰好确认一次：画出、被顶掉、格式不符但能读出帧号）；收帧与结算逻辑写成不依赖 Worker 对象的纯类（`frame-session.ts`、`frame-receiver.ts`）以便测试。Worker 与它依赖的文件不得引用 `electron`、Node 内置模块、React、组件库、`.tsx` 与样式文件（`npm run boundaries` 检查）；内容安全策略只给 `worker-src 'self'`，不放宽 `script-src`。开发期诊断入口 `window.emberRuntimeDiagnostics` 只在 `import.meta.env.DEV` 下挂载。
@@ -67,6 +69,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `npm run typecheck` | 类型检查 |
 | `npm run lint` | oxlint 检查 |
 | `npm run boundaries` | 分层、模块依赖与模块登记检查 |
+| `npm run debug-sdk:check` | `debug-sdk/` 的生成、类型检查、lint、构建与测试（首次前在 `debug-sdk/` 里 `npm install`） |
 | `npm run check` | 以上全部检查与测试 |
 | `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、运行页边栏与状态栏的机器状态、F8 快捷键、“文件”菜单的最近打开与开机子菜单、最小窗口下的标题栏与画面框四周间距、展开与折叠面板时窗口大小不变且画面框等比缩放、页面重载与核心重启（含重启后边栏状态刷新）（见 docs/06 第 8 节），只结束自己启动的进程 |
 | `node tools/dev/latency-run.mjs` | 画面延迟与丢帧测量：开发版运行 30 秒，打印核心、收到、渲染帧率与各类丢帧、两段延迟（见 docs/06 第 9 节、docs/01 第 7 节），只结束自己启动的进程 |

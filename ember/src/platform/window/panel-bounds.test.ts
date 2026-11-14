@@ -59,8 +59,8 @@ describe('boundsForExtents', () => {
   });
 
   it('向下伸出工作区时整体上移', () => {
-    const next = boundsForExtents({ x: 400, y: 500, width: 1000, height: 500 }, NO_PANEL_EXTENTS, { left: 0, right: 0, bottom: 160 }, AREA);
-    expect(next).toEqual({ x: 400, y: 380, width: 1000, height: 660 });
+    const next = boundsForExtents({ x: 400, y: 500, width: 1000, height: 600 }, NO_PANEL_EXTENTS, { left: 0, right: 0, bottom: 160 }, AREA);
+    expect(next).toEqual({ x: 400, y: 280, width: 1000, height: 760 });
   });
 
   it('工作区放不下时缩到工作区大小', () => {

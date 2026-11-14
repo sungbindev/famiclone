@@ -81,11 +81,13 @@ const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(
 const GEOMETRY = `(() => {
   const pages = document.querySelector('.ember-shell-pages').getBoundingClientRect();
   const frame = document.querySelector('.ember-run-frame').getBoundingClientRect();
+  const area = document.querySelector('.ui-app-frame__page').getBoundingClientRect();
   return {
     innerWidth: window.innerWidth, innerHeight: window.innerHeight,
     pagesLeft: Math.round(pages.left + window.screenX), pagesTop: Math.round(pages.top + window.screenY),
     pagesWidth: Math.round(pages.width), pagesHeight: Math.round(pages.height),
     frameWidth: frame.width, frameHeight: frame.height,
+    margins: { left: frame.left - area.left, right: area.right - frame.right, top: frame.top - area.top, bottom: area.bottom - frame.bottom },
     sideHidden: document.querySelector('.ui-app-frame__side').hidden, bottomHidden: document.querySelector('.ui-app-frame__bottom').hidden
   };
 })()`;
@@ -291,6 +293,7 @@ async function main() {
   check(`最小窗口下菜单与折叠按钮之间至少有 ${MIN_DRAG_GAP} 像素可拖动的空白`, dragGap >= MIN_DRAG_GAP, `${dragGap.toFixed(1)}`);
   check(`最小窗口下折叠按钮与系统窗口按钮至少相距 ${MIN_SYSTEM_BUTTON_GAP} 像素`, systemGap >= MIN_SYSTEM_BUTTON_GAP, `${systemGap.toFixed(1)}`);
   check('画面框的宽高比是 128:105（8:7 的像素宽高比，不变形）', Math.abs(initial.frameWidth / initial.frameHeight - FRAME_RATIO) < 0.02, `${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)}`);
+  check('最小窗口下画面框四周的间距一样（误差不超过 2 像素）', Math.max(...Object.values(initial.margins)) - Math.min(...Object.values(initial.margins)) <= 2, JSON.stringify(initial.margins));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-min-window.png'));
   const sideOpen = await toggleAndMeasure('切换边栏', initial);
   check('展开边栏：窗口向左变宽，页面区的大小与屏幕位置不变', sideOpen.innerWidth > initial.innerWidth && samePagesArea(initial, sideOpen), `窗口宽 ${initial.innerWidth} → ${sideOpen.innerWidth}，页面区 ${JSON.stringify([initial.pagesLeft, initial.pagesTop, initial.pagesWidth, initial.pagesHeight])} → ${JSON.stringify([sideOpen.pagesLeft, sideOpen.pagesTop, sideOpen.pagesWidth, sideOpen.pagesHeight])}`);

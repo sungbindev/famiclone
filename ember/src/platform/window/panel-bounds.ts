@@ -22,8 +22,8 @@ export const NO_PANEL_EXTENTS: PanelExtents = { left: 0, right: 0, bottom: 0 };
 
 /** 面板全部关闭时窗口的最小宽度：标题栏要放得下图标、名称、三个菜单、至少 48 像素可拖动的空白、三个折叠按钮和系统窗口按钮（实测这些加起来约 604）。 */
 export const BASE_MIN_WIDTH = 640;
-/** 面板全部关闭时窗口的最小高度：标题栏、标签栏、状态栏与一块能看清的画面。 */
-export const BASE_MIN_HEIGHT = 480;
+/** 面板全部关闭时窗口的最小高度：让画面框在最小窗口下四周间距一致，即页面区的内容宽高比等于画面框的 128:105；页面区内容宽 640-40(活动栏)-2x10(页面内边距)=580，对应画面高约 476，再加页面内边距 20、标题栏 36、标签栏 36、状态栏 26，共 594。 */
+export const BASE_MIN_HEIGHT = 594;
 
 /** 矩形。 */
 export interface Rect {

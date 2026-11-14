@@ -276,10 +276,10 @@ async function main() {
     JSON.stringify(fileItems)
   );
   await hoverMenuItem('开机…');
-  const bootItems = await menuItems('.ui-menu__popup--sub');
+  const bootItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0, 3000, 100);
   check('“开机…”子菜单：经典 FC 可用，四个整机机型置灰并注明“暂未支持”', bootItems.length === 5 && !bootItems[0].disabled && bootItems.slice(1).every((entry) => entry.disabled && entry.text.includes('暂未支持')), JSON.stringify(bootItems.map((entry) => entry.label)));
   await hoverMenuItem('最近打开');
-  const recentItems = await menuItems('.ui-menu__popup--sub');
+  const recentItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0 && items[0].label === 'nestest.nes', 3000, 100);
   check('“最近打开”子菜单列出启动参数加载的卡带（只给显示名，不含路径）', recentItems.length === 1 && recentItems[0].label === 'nestest.nes' && !recentItems[0].text.includes('\\') && !recentItems[0].text.includes('/'), JSON.stringify(recentItems));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu-recent.png'));
   await menuButton('文件');
@@ -297,13 +297,13 @@ async function main() {
   check('画面框的宽高比是 128:105（8:7 的像素宽高比，不变形）', Math.abs(initial.frameWidth / initial.frameHeight - FRAME_RATIO) < 0.02, `${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)}`);
   check('最小窗口下画面框四周的间距一样（误差不超过 2 像素）', Math.max(...Object.values(initial.margins)) - Math.min(...Object.values(initial.margins)) <= 2, JSON.stringify(initial.margins));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-min-window.png'));
-  const sideOpen = await toggleAndMeasure('切换边栏');
-  check('展开边栏：窗口大小不变，画面框等比缩小并留在页面区内', sameWindowSize(initial, sideOpen) && frameFits(sideOpen) && sideOpen.frameWidth < initial.frameWidth, `窗口 ${sideOpen.innerWidth}×${sideOpen.innerHeight}，画面框 ${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)} → ${sideOpen.frameWidth.toFixed(1)}×${sideOpen.frameHeight.toFixed(1)}`);
   const bottomOpen = await toggleAndMeasure('切换底部面板');
-  check('再展开底部面板：窗口大小不变，画面框继续等比缩小并留在页面区内', sameWindowSize(initial, bottomOpen) && frameFits(bottomOpen) && bottomOpen.frameHeight < sideOpen.frameHeight, `窗口 ${bottomOpen.innerWidth}×${bottomOpen.innerHeight}，画面框 ${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
+  check('展开底部面板：窗口大小不变，画面框等比缩小并留在页面区内', sameWindowSize(initial, bottomOpen) && frameFits(bottomOpen) && bottomOpen.frameHeight < initial.frameHeight, `窗口 ${bottomOpen.innerWidth}×${bottomOpen.innerHeight}，画面框 ${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)} → ${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
+  const sideOpen = await toggleAndMeasure('切换边栏');
+  check('再展开边栏：窗口大小不变，画面框继续等比缩小并留在页面区内', sameWindowSize(initial, sideOpen) && frameFits(sideOpen) && sideOpen.frameWidth < bottomOpen.frameWidth, `窗口 ${sideOpen.innerWidth}×${sideOpen.innerHeight}，画面框 ${sideOpen.frameWidth.toFixed(1)}×${sideOpen.frameHeight.toFixed(1)}`);
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-panels-open.png'));
-  await toggleAndMeasure('切换底部面板');
-  const allClosed = await toggleAndMeasure('切换边栏');
+  await toggleAndMeasure('切换边栏');
+  const allClosed = await toggleAndMeasure('切换底部面板');
   check('折叠面板后窗口大小不变，画面框回到原来的大小', sameWindowSize(initial, allClosed) && Math.abs(allClosed.frameWidth - initial.frameWidth) <= 2 && Math.abs(allClosed.frameHeight - initial.frameHeight) <= 2, `画面框 ${allClosed.frameWidth.toFixed(1)}×${allClosed.frameHeight.toFixed(1)}`);
 
   // 页面重载后：运行页重新请求端口，画面帧继续到达。

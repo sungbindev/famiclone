@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
-// 备注：需要模拟器、cc65 与环境变量 FCDEV_TEST_FIRMWARE（SB2000 的 BIOS），没有时跳过；测试程序在 test/fixtures/sb2000/。
+// 备注：Ember 还没有支持学习机整机，整组暂时跳过（见 sb2000-runner.mjs）；用例保留，等 Ember 支持 SB2000 后改用调试服务重写会话类即可恢复；测试程序在 test/fixtures/sb2000/。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
@@ -41,7 +41,7 @@ function makeBigFile() {
   return big;
 }
 
-describe('SB2000 运行库（在模拟器里运行）', { skip: SKIP_WITHOUT_SB2000_RUNTIME }, () => {
+describe('SB2000 运行库（在 Ember 里运行）', { skip: SKIP_WITHOUT_SB2000_RUNTIME }, () => {
   let temp;
 
   beforeEach(() => {

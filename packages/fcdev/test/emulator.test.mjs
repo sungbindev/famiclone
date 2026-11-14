@@ -1,123 +1,73 @@
 // ------------------------------------------------------------------------
 // 名称：emulator.test.mjs
-// 说明：测试模拟器相关功能：调试客户端的应答解析与超时、模拟器定位、端口检查、debug 命令的路径换算，以及真实模拟器里运行 NES 程序并截图。
+// 说明：测试 Ember 相关功能：定位、端口检查、调试用户数据目录与环境变量、run 与 debug 命令的行为，以及真实 Ember 里运行 NES 程序、用 debug 命令连接并截图。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：客户端用本机临时 TCP 服务模拟调试服务；真实模拟器的用例会短暂打开一个窗口，找不到模拟器或不在 Windows 上时跳过，设置 FCDEV_SKIP_GUI_TESTS=1 也会跳过。
+// 备注：debug 命令的用例需要调试 SDK 已构建（npm run build -w packages/ember-debug-sdk），没有时跳过；
+//       真实 Ember 的用例会短暂打开一个窗口，需要环境变量 FCDEV_EMULATOR 指向 Ember 的可执行文件、cc65 与已构建的 SDK，缺一就跳过，设置 FCDEV_SKIP_GUI_TESTS=1 也会跳过。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { resolveCommandPaths } from '../src/cli/commands/debug-command.mjs';
-import { DebugClient, assertPortFree, launchEmulator, locateEmulator, parseReply } from '../src/emulator/index.mjs';
 import { buildPath } from '../src/build/index.mjs';
+import { runCli } from '../src/cli/index.mjs';
+import { assertPortFree, debugEnvironment, debugUserDataDirectory, launchEmulator, locateEmulator, resolveDebugCli } from '../src/emulator/index.mjs';
 import { createTempDir, SKIP_WITHOUT_TOOLCHAIN, writeTestFile } from './helpers.mjs';
 
-/** 在随机空闲端口上启动一个假的调试服务，handler 收到命令后返回应答文本 */
-function startFakeServer(handler) {
+/** 在随机空闲端口上监听，返回服务与端口 */
+function listenOnFreePort() {
   return new Promise((resolve) => {
-    const server = net.createServer((socket) => {
-      socket.setEncoding('utf8');
-      let pending = '';
-      socket.on('data', (chunk) => {
-        pending += chunk;
-        for (let end = pending.indexOf('\n'); end >= 0; end = pending.indexOf('\n')) {
-          const command = pending.slice(0, end);
-          pending = pending.slice(end + 1);
-          const reply = handler(command);
-          if (reply !== null) socket.write(`${reply}\n.\n`);
-        }
-      });
-    });
+    const server = net.createServer();
     server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port }));
   });
 }
 
-describe('调试服务应答解析', () => {
-  it('首行以 OK 开头为成功，其余行放在 lines', () => {
-    assert.deepEqual(parseReply('OK frames=3\nHEX 00 01\n'), { ok: true, head: 'OK frames=3', lines: ['HEX 00 01'] });
-  });
+/** 取一个当前空闲的端口（取到后立即释放） */
+async function findFreePort() {
+  const { server, port } = await listenOnFreePort();
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+}
 
-  it('首行以 ERR 开头为失败', () => {
-    assert.equal(parseReply('ERR usage: audio fast|real\n').ok, false);
-  });
+/** 调试 SDK 是否已构建 */
+function isSdkBuilt() {
+  try {
+    resolveDebugCli();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  it('空应答视为失败', () => {
-    assert.deepEqual(parseReply(''), { ok: false, head: '', lines: [] });
-  });
-});
+const SKIP_WITHOUT_SDK = isSdkBuilt() ? false : '调试 SDK 没有构建（先运行 npm run build -w packages/ember-debug-sdk）';
 
-describe('调试客户端', () => {
-  let fake;
-
-  afterEach(() => fake?.server.close());
-
-  it('发送命令并读到以“.”行结束的应答，连续发送多条', async () => {
-    fake = await startFakeServer((command) => (command === 'status' ? 'OK running=1\nline2' : `ERR unknown ${command}`));
-    const client = await DebugClient.connect({ port: fake.port });
-    try {
-      const first = await client.send('status');
-      assert.deepEqual([first.ok, first.head, first.lines], [true, 'OK running=1', ['line2']]);
-      const second = await client.send('nope');
-      assert.equal(second.ok, false);
-      assert.equal(second.head, 'ERR unknown nope');
-    } finally {
-      client.close();
-    }
-  });
-
-  it('应答超时时报错并说明是哪条命令', async () => {
-    fake = await startFakeServer(() => null);
-    const client = await DebugClient.connect({ port: fake.port });
-    try {
-      await assert.rejects(client.send('run 1', { timeoutMs: 100 }), (error) => error.code === 'DEBUG_TIMEOUT' && error.message.includes('run 1'));
-    } finally {
-      client.close();
-    }
-  });
-
-  it('上一条命令没有返回时不允许发送下一条', async () => {
-    fake = await startFakeServer(() => null);
-    const client = await DebugClient.connect({ port: fake.port });
-    try {
-      const pending = client.send('run 1', { timeoutMs: 200 });
-      assert.throws(() => client.send('status'), (error) => error.code === 'DEBUG_BUSY');
-      await assert.rejects(pending, (error) => error.code === 'DEBUG_TIMEOUT');
-    } finally {
-      client.close();
-    }
-  });
-
-  it('连接不上时给出怎么启动模拟器的提示', async () => {
-    const free = await startFakeServer(() => null);
-    const { port } = free;
-    await new Promise((resolve) => free.server.close(resolve));
-    await assert.rejects(DebugClient.connect({ port }), (error) => error.code === 'DEBUG_CONNECT_FAILED' && error.hint.includes('fcdev run --debug'));
-  });
-});
+/** 运行命令行，返回退出码与输出 */
+async function runFcdev(argv, { cwd, env }) {
+  const stdout = [];
+  const stderr = [];
+  const code = await runCli(argv, { cwd, env, stdout: { write: (text) => stdout.push(text) }, stderr: { write: (text) => stderr.push(text) } });
+  return { code, stdout: stdout.join(''), stderr: stderr.join('') };
+}
 
 describe('端口检查', () => {
   it('被占用的端口报错', async () => {
-    const fake = await startFakeServer(() => null);
+    const { server, port } = await listenOnFreePort();
     try {
-      await assert.rejects(assertPortFree(fake.port), (error) => error.code === 'EMULATOR_PORT_BUSY' && error.hint.includes('--port'));
+      await assert.rejects(assertPortFree(port), (error) => error.code === 'EMULATOR_PORT_BUSY' && error.hint.includes('--port'));
     } finally {
-      fake.server.close();
+      server.close();
     }
   });
 
   it('空闲的端口通过', async () => {
-    const fake = await startFakeServer(() => null);
-    const { port } = fake;
-    await new Promise((resolve) => fake.server.close(resolve));
-    await assertPortFree(port);
+    await assertPortFree(await findFreePort());
   });
 });
 
-describe('模拟器定位', () => {
+describe('Ember 定位', () => {
   let temp;
 
   beforeEach(() => {
@@ -127,57 +77,46 @@ describe('模拟器定位', () => {
   afterEach(() => temp.cleanup());
 
   it('配置项优先于环境变量', () => {
-    const configured = writeTestFile(temp.dir, 'a/emu.exe', '');
-    const fromEnv = writeTestFile(temp.dir, 'b/emu.exe', '');
+    const configured = writeTestFile(temp.dir, 'a/ember.exe', '');
+    const fromEnv = writeTestFile(temp.dir, 'b/ember.exe', '');
     assert.deepEqual(locateEmulator({ configured, env: { FCDEV_EMULATOR: fromEnv } }), { executable: configured, source: 'config' });
   });
 
+  it('只有环境变量时取环境变量', () => {
+    const fromEnv = writeTestFile(temp.dir, 'b/ember.exe', '');
+    assert.deepEqual(locateEmulator({ env: { FCDEV_EMULATOR: fromEnv } }), { executable: fromEnv, source: 'env' });
+  });
+
   it('指定的路径不存在时报错', () => {
-    assert.throws(() => locateEmulator({ configured: path.join(temp.dir, 'none.exe'), env: {} }), (error) => error.code === 'EMULATOR_NOT_FOUND');
+    assert.throws(() => locateEmulator({ configured: path.join(temp.dir, 'none.exe'), env: {} }), (error) => error.code === 'EMULATOR_NOT_FOUND' && error.message.includes('Ember'));
+  });
+
+  it('都没有指定时报错并提示两种指定方式', () => {
+    assert.throws(() => locateEmulator({ env: {} }), (error) => error.code === 'EMULATOR_NOT_FOUND' && error.hint.includes('FCDEV_EMULATOR') && error.hint.includes('emulator'));
   });
 });
 
-describe('debug 命令的路径换算', () => {
-  const cwd = path.resolve('/work/project');
-
-  it('shot、trace 等命令的路径换成绝对路径', () => {
-    assert.deepEqual(resolveCommandPaths(['shot', 'a.png'], cwd), ['shot', path.resolve(cwd, 'a.png')]);
-    assert.deepEqual(resolveCommandPaths(['trace', 't.log', '100'], cwd), ['trace', path.resolve(cwd, 't.log'), '100']);
+describe('调试会话的位置', () => {
+  it('调试用户数据目录按端口区分，放在临时目录的 fcdev-ember 下', () => {
+    const base = path.resolve('/tmp-base');
+    assert.equal(debugUserDataDirectory(5699, base), path.join(base, 'fcdev-ember', '5699'));
+    assert.notEqual(debugUserDataDirectory(5688, base), debugUserDataDirectory(5699, base));
   });
 
-  it('disk 的路径可以含空格', () => {
-    assert.deepEqual(resolveCommandPaths(['disk', 'my', 'disk.img'], cwd), ['disk', path.resolve(cwd, 'my disk.img')]);
+  it('没有显式指定时，按 FCDEV_DEBUG_PORT 推出用户数据目录，没有端口时用默认端口 5699', () => {
+    assert.equal(debugEnvironment({ FCDEV_DEBUG_PORT: '5688' }).EMBER_USER_DATA, debugUserDataDirectory(5688));
+    assert.equal(debugEnvironment({}).EMBER_USER_DATA, debugUserDataDirectory(5699));
   });
 
-  it('cdl save 的前缀换成绝对路径', () => {
-    assert.deepEqual(resolveCommandPaths(['cdl', 'save', 'out/boot'], cwd), ['cdl', 'save', path.resolve(cwd, 'out/boot')]);
-  });
-
-  it('tape play、rec 的文件换成绝对路径，stop 与 status 保持原样', () => {
-    assert.deepEqual(resolveCommandPaths(['tape', 'rec', 'out/a.vtp'], cwd), ['tape', 'rec', path.resolve(cwd, 'out/a.vtp')]);
-    assert.deepEqual(resolveCommandPaths(['tape', 'play', 'my', 'a.vtp'], cwd), ['tape', 'play', path.resolve(cwd, 'my a.vtp')]);
-    assert.deepEqual(resolveCommandPaths(['tape', 'stop'], cwd), ['tape', 'stop']);
-  });
-
-  it('off 与不含路径的命令保持原样', () => {
-    assert.deepEqual(resolveCommandPaths(['trace', 'off'], cwd), ['trace', 'off']);
-    assert.deepEqual(resolveCommandPaths(['read', 'cpu', '8000', '16'], cwd), ['read', 'cpu', '8000', '16']);
+  it('用户显式指定了调试服务的位置时保持原样', () => {
+    for (const name of ['EMBER_DEBUG_URL', 'EMBER_DEBUG_TOKEN', 'EMBER_DEBUG_ENDPOINT', 'EMBER_USER_DATA']) {
+      const env = { [name]: 'x', FCDEV_DEBUG_PORT: '5688' };
+      assert.deepEqual(debugEnvironment(env), env);
+    }
   });
 });
 
-/** 找真实模拟器；没有时返回 null */
-function findRealEmulator() {
-  if (process.env.FCDEV_SKIP_GUI_TESTS === '1') return null;
-  try {
-    return locateEmulator();
-  } catch {
-    return null;
-  }
-}
-
-const realEmulator = findRealEmulator();
-
-describe('真实模拟器', { skip: realEmulator && !SKIP_WITHOUT_TOOLCHAIN ? false : '没有模拟器或 cc65 工具链，或设置了 FCDEV_SKIP_GUI_TESTS' }, () => {
+describe('run 命令', () => {
   let temp;
 
   beforeEach(() => {
@@ -186,25 +125,95 @@ describe('真实模拟器', { skip: realEmulator && !SKIP_WITHOUT_TOOLCHAIN ? fa
 
   afterEach(() => temp.cleanup());
 
-  it('NES 程序在调试模式下运行 60 帧后能截图', async () => {
+  it('学习机目标暂时不能在 Ember 里运行，并提示改用 build 与 disk，且不启动 Ember', async () => {
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'hello' }));
+    writeTestFile(temp.dir, 'src/hello.c', '#include <sb2000.h>\nint main(void) { return 0; }\n');
+    const { code, stderr } = await runFcdev(['run', 'src'], { cwd: temp.dir, env: { ...process.env, FCDEV_EMULATOR: process.execPath } });
+    assert.equal(code, 1);
+    assert.match(stderr, /Ember 暂不支持运行 sb2000/);
+    assert.match(stderr, /fcdev disk/);
+  });
+
+  it('找不到 Ember 时报错，在构建之前就报', async () => {
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'nes' }));
+    writeTestFile(temp.dir, 'hello.c', 'int main(void) { for (;;) { } }\n');
+    const env = { ...process.env };
+    delete env.FCDEV_EMULATOR;
+    const { code, stderr } = await runFcdev(['run', 'hello.c'], { cwd: temp.dir, env });
+    assert.equal(code, 1);
+    assert.match(stderr, /找不到 Ember/);
+  });
+});
+
+describe('debug 命令（需要调试 SDK）', { skip: SKIP_WITHOUT_SDK }, () => {
+  it('参数交给 ember-debug：--version 输出版本号，退出码 0', async () => {
+    const { code, stdout } = await runFcdev(['debug', '--version'], { cwd: process.cwd(), env: process.env });
+    assert.equal(code, 0);
+    assert.match(stdout, /\d+\.\d+\.\d+/);
+  });
+
+  it('没有运行的 Ember 时退出码 1，并说明在 FCDEV_DEBUG_PORT 对应的用户数据目录里找不到端点文件', async () => {
+    const env = { ...process.env, FCDEV_DEBUG_PORT: '1' };
+    for (const name of ['EMBER_DEBUG_URL', 'EMBER_DEBUG_TOKEN', 'EMBER_DEBUG_ENDPOINT', 'EMBER_USER_DATA']) delete env[name];
+    const { code, stderr } = await runFcdev(['debug', 'call', 'runtime.status'], { cwd: process.cwd(), env });
+    assert.equal(code, 1);
+    assert.ok(stderr.includes(debugUserDataDirectory(1)), `错误里应出现 ${debugUserDataDirectory(1)}：${stderr}`);
+  });
+});
+
+/** 找真实的 Ember；没有时返回 null */
+function findRealEmber() {
+  if (process.env.FCDEV_SKIP_GUI_TESTS === '1') return null;
+  try {
+    return locateEmulator();
+  } catch {
+    return null;
+  }
+}
+
+const realEmber = findRealEmber();
+
+describe('真实 Ember', { skip: realEmber && !SKIP_WITHOUT_TOOLCHAIN && !SKIP_WITHOUT_SDK ? false : '没有 Ember（FCDEV_EMULATOR）、cc65 工具链或调试 SDK，或设置了 FCDEV_SKIP_GUI_TESTS' }, () => {
+  let temp;
+
+  beforeEach(() => {
+    temp = createTempDir();
+  });
+
+  afterEach(() => temp.cleanup());
+
+  it('NES 程序在调试模式下载入后停在开机状态，运行 60 帧后能截图，debug 命令能连上同一个 Ember', async () => {
     writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'nes' }));
     writeTestFile(temp.dir, 'hello.c', '#include <fcnes.h>\nint main(void) { nes_screen_off(); nes_print(1, 1, "TEST"); nes_wait_vblank(); nes_screen_on(); for (;;) { } }\n');
     const { result } = await buildPath({ pathArg: 'hello.c', cwd: temp.dir });
-    const probe = await startFakeServer(() => null);
-    const { port } = probe;
-    await new Promise((resolve) => probe.server.close(resolve));
+    const port = await findFreePort();
 
-    const { client } = await launchEmulator({ executable: realEmulator.executable, romFile: result.outputFile, debug: true, port });
+    const { pid, client } = await launchEmulator({ executable: realEmber.executable, romFile: result.outputFile, debug: true, port });
     try {
-      const run = await client.send('run 60', { timeoutMs: 60_000 });
-      assert.ok(run.ok, run.head);
-      assert.match(run.head, /frames=60/);
-      const shot = path.join(temp.dir, 'shot.png');
-      assert.ok((await client.send(`shot ${shot}`)).ok);
-      assert.equal(readFileSync(shot).subarray(1, 4).toString('latin1'), 'PNG');
+      const before = await client.request('runtime.status');
+      assert.deepEqual([before.power, before.mode], ['on', 'paused']);
+      const run = await client.request('runtime.run', { frames: 60, wait: true }, { timeoutMs: 60_000 });
+      assert.equal(run.frames, 60);
+      assert.equal(run.stopped, 'completed');
+      const shot = await client.request('output.screenshot', {});
+      assert.equal(Buffer.from(shot.data).subarray(1, 4).toString('latin1'), 'PNG');
+
+      const env = { ...process.env, FCDEV_DEBUG_PORT: String(port) };
+      const status = await runFcdev(['debug', 'call', 'runtime.status', '--compact'], { cwd: temp.dir, env });
+      assert.equal(status.code, 0, status.stderr);
+      assert.equal(JSON.parse(status.stdout).power, 'on');
+      const saved = await runFcdev(['debug', 'screenshot', 'cli-shot.png'], { cwd: temp.dir, env });
+      assert.equal(saved.code, 0, saved.stderr);
+      assert.equal(readFileSync(path.join(temp.dir, 'cli-shot.png')).subarray(1, 4).toString('latin1'), 'PNG');
     } finally {
-      await client.send('quit').catch(() => {});
       client.close();
+      process.kill(pid);
+      // Ember 退出需要一点时间，目录还被占用时放弃清理也不影响测试结果
+      try {
+        rmSync(debugUserDataDirectory(port), { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+      } catch {
+        // 临时目录留在系统临时目录里，下次启动会覆盖
+      }
     }
   });
 });

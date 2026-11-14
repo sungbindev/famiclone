@@ -2,6 +2,20 @@
 
 适用于 `fcdev`、`create-fcdev`、`fcdev-cc65` 三个包，它们的版本号相同。
 
+## 未发布
+
+### 模拟器与调试
+
+- `fcdev run` 与 `fcdev debug` 改用新模拟器 Ember：用 `fcdev.json` 的 `emulator` 或环境变量 `FCDEV_EMULATOR` 指向 Ember 的可执行文件，不再支持旧模拟器。
+- `fcdev debug` 的参数改为调试终端客户端 `ember-debug` 的命令，如 `debug call runtime.status`、`debug screenshot out.png`，不再支持旧模拟器的单行命令。
+- `fcdev run --debug` 用独立的用户数据目录启动 Ember，可以和平时在用的 Ember 同时运行，程序载入后停在开机状态，等待 `debug` 命令。
+- `fcdev` 依赖调试 SDK `ember-debug-sdk`，安装时自动带上。
+- 学习机目标（SB2000）的程序暂时不能在 Ember 里运行，`fcdev run` 会提示暂不支持；构建与生成磁盘镜像不受影响。
+
+### 反汇编
+
+- `fcdev disasm --trace` 改为读 Ember 记录的指令轨迹，不再读旧模拟器的轨迹。
+
 ## 0.6.0（2026-11-15）
 
 ### 安装

@@ -47,7 +47,7 @@ function detectFormat(buffer, format) {
 
 /**
  * 反汇编一个文件，并回读校验。
- * @param {{inputFile: string, format?: string, base?: number, entries?: number[], cdlFile?: string, traceFile?: string, symbolsFile?: string, outDir: string, toolchain: import('../toolchain/index.mjs').Toolchain, includes?: string[]}} input 输入文件、格式、加载地址、入口、CDL、模拟器轨迹、符号文件、输出目录、工具链与 da65 要读的符号定义文件
+ * @param {{inputFile: string, format?: string, base?: number, entries?: number[], cdlFile?: string, traceFile?: string, symbolsFile?: string, outDir: string, toolchain: import('../toolchain/index.mjs').Toolchain, includes?: string[]}} input 输入文件、格式、加载地址、入口、CDL、Ember 轨迹、符号文件、输出目录、工具链与 da65 要读的符号定义文件
  * @returns {Promise<DisassemblyReport>} 报告
  * @throws {FcdevError} 输入不合法、da65 失败，或回读校验不一致
  */

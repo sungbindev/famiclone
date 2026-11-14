@@ -39,7 +39,7 @@ const KEY_TYPES = {
  * @property {string[]} include 额外头文件目录的绝对路径
  * @property {string|undefined} toolchain 自备 cc65 根目录的绝对路径
  * @property {string|undefined} firmware 固件文件的绝对路径
- * @property {string|undefined} emulator 自备模拟器路径
+ * @property {string|undefined} emulator Ember 可执行文件的路径
  * @property {Record<string, unknown>} targetOptions 目标专用选项
  */
 

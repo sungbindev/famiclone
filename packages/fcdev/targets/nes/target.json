@@ -14,7 +14,7 @@
   "extension": ".nes",
   "nameRule": null,
   "run": {
-    "emulator": "virtuanes",
+    "emulator": "ember",
     "mode": "rom"
   },
   "options": {

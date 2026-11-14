@@ -36,7 +36,7 @@
     "packager": "fat-floppy"
   },
   "run": {
-    "emulator": "virtuanes",
+    "emulator": "ember",
     "mode": "firmware-disk"
   }
 }

@@ -30,6 +30,9 @@
     "src",
     "targets"
   ],
+  "dependencies": {
+    "ember-debug-sdk": "0.6.0"
+  },
   "optionalDependencies": {
     "fcdev-cc65": "0.6.0"
   }

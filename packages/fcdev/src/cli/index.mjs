@@ -47,10 +47,10 @@ const HELP_TEXT = `fcdev：6502 兼容机的开发工具
 
 命令：
   build [目录或文件]   构建：无参数为当前目录；目录整体构成一个程序；文件单独构成一个程序
-  run [目录或文件]     构建后在模拟器里运行（--debug 启动调试模式）
+  run [目录或文件]     构建后在 Ember 里运行（--debug 启动调试模式）
   disk [目录或文件]    构建后把程序放进磁盘镜像（只有支持磁盘的目标可用）
   disasm <文件>       反汇编 NES 程序或平铺二进制为 ca65 源码，并回读校验
-  debug <命令>        把命令转发给模拟器的调试服务，如 debug run 60、debug shot out.png
+  debug <参数>        交给 Ember 调试 SDK 的终端客户端 ember-debug，如 debug call runtime.status、debug screenshot out.png
   sync                 生成 IDE 的 C/C++ 配置
   info [--json]        显示目标、工具链与头文件目录
   api [词] [--json]    查询目标的 C 接口文档：函数名、模块名、$功能号或关键词；不带词列出全部模块
@@ -58,7 +58,7 @@ const HELP_TEXT = `fcdev：6502 兼容机的开发工具
 
 选项：
   --target <名>        指定目标，覆盖 fcdev.json
-  --debug              run 以调试模式启动模拟器
+  --debug              run 以调试模式启动 Ember
   --port <端口>       run 的调试端口，默认 5699；debug 命令读环境变量 FCDEV_DEBUG_PORT，默认也是 5699
   --json               info 输出机器可读格式
 
@@ -67,7 +67,7 @@ disasm 的选项：
   --base <地址>       平铺二进制的加载地址（十六进制）
   --entry <地址>      追踪代码的入口，可重复；iNES 会自动使用中断向量
   --cdl <文件>        CDL（FCEUX、Mesen 格式），代码段的起点也当作入口
-  --trace <文件>      模拟器 trace 命令记录的指令轨迹，执行过的指令地址都当作入口
+  --trace <文件>      Ember 的 inspector.traceStart（instruction）记录的指令轨迹，执行过的指令地址都当作入口
   --symbols <文件>    符号文件，每行“名字 = $地址”
   --out <目录>        输出目录，默认 build/disasm/<文件名>
   -h, --help           显示帮助

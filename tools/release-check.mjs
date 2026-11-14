@@ -70,7 +70,7 @@ function listPackedFiles(packageName) {
   return JSON.parse(output)[0].files.map((file) => file.path);
 }
 
-/** 检查四个包的版本一致，且 fcdev 对工具链包的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里。 */
+/** 检查四个包的版本一致，且 fcdev 对工具链包与调试 SDK 的依赖版本与之相同；工具链包的包名在 fcdev 的依赖里。 */
 function checkVersions() {
   const manifests = Object.fromEntries(PACKAGE_NAMES.map((name) => [name, readJson(path.join(PACKAGES_DIR, name, 'package.json'))]));
   const versions = new Set(Object.values(manifests).map((manifest) => manifest.version));
@@ -84,6 +84,9 @@ function checkVersions() {
     const { name } = manifests[directory];
     if (!(name in dependencies)) errors.push(`fcdev 的 optionalDependencies 里没有 ${name}`);
   }
+  const sdkSpec = manifests.fcdev.dependencies?.['ember-debug-sdk'];
+  if (sdkSpec === undefined) errors.push('fcdev 的 dependencies 里没有 ember-debug-sdk');
+  else if (sdkSpec !== version) errors.push(`fcdev 对 ember-debug-sdk 的依赖是 ${sdkSpec}，应与版本 ${version} 一致`);
   for (const name of PACKAGE_NAMES) {
     if (!manifests[name].license) errors.push(`${name} 的 package.json 没有 license`);
   }

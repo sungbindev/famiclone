@@ -1,18 +1,17 @@
 // ------------------------------------------------------------------------
 // 名称：sb2000.test.mjs
-// 说明：测试 SB2000 目标：构建 C 与汇编程序，文件头、大小与内存布局，disk 命令，缺少固件的提示，以及在模拟器里运行（需要固件）。
+// 说明：测试 SB2000 目标：构建 C 与汇编程序，文件头、大小与内存布局，disk 命令。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：模拟器里的用例需要环境变量 FCDEV_TEST_FIRMWARE 指向 SB2000 的 BIOS 文件（仓库里有 machines/sb2000/reference/rom/SB2K_BIOS.NES），没有时跳过。
+// 备注：在模拟器里运行 SB2000 程序的用例已删除：Ember 还没有支持学习机整机，待支持后再用调试服务补写；fcdev run 对 sb2000 目标报“暂不支持”的用例在 emulator.test.mjs。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { buildPath } from '../src/build/index.mjs';
 import { runCli } from '../src/cli/index.mjs';
-import { DebugClient, launchEmulator, locateEmulator } from '../src/emulator/index.mjs';
 import { listFat12, readFat12File } from '../src/packagers/index.mjs';
 import { createTempDir, SKIP_WITHOUT_TOOLCHAIN, writeTestFile } from './helpers.mjs';
 
@@ -144,86 +143,5 @@ describe('SB2000 目标（需要 cc65）', { skip: SKIP_WITHOUT_TOOLCHAIN }, () 
     const code = await runCli(['disk', 'a.c'], { cwd: temp.dir, env: process.env, stdout: { write: () => {} }, stderr: { write: (text) => stderr.push(text) } });
     assert.equal(code, 1);
     assert.match(stderr.join(''), /不支持磁盘镜像/);
-  });
-
-  it('run 缺少固件时提示怎么配置，并且不启动模拟器', async () => {
-    writeTestFile(temp.dir, 'src/hello.c', HELLO_C);
-    const stderr = [];
-    const code = await runCli(['run', 'src'], { cwd: temp.dir, env: { ...process.env, FCDEV_EMULATOR: process.execPath }, stdout: { write: () => {} }, stderr: { write: (text) => stderr.push(text) } });
-    assert.equal(code, 1);
-    assert.match(stderr.join(''), /需要固件/);
-    assert.match(stderr.join(''), /firmware/);
-  });
-});
-
-/** 模拟器与固件都可用时才运行真实环境的用例 */
-function findRealSetup() {
-  const firmware = process.env.FCDEV_TEST_FIRMWARE;
-  if (!firmware || !existsSync(firmware) || process.env.FCDEV_SKIP_GUI_TESTS === '1' || SKIP_WITHOUT_TOOLCHAIN) return null;
-  try {
-    return { firmware, emulator: locateEmulator() };
-  } catch {
-    return null;
-  }
-}
-
-const realSetup = findRealSetup();
-
-/** DirectInput 扫描码 */
-const SCAN = { enter: 0x1c, h: 0x23, e: 0x12, l: 0x26, o: 0x18 };
-
-/** 按下并松开一个键，期间运行若干帧让 BIOS 读到 */
-async function tapKey(client, scancode) {
-  await client.send(`key ${scancode.toString(16)} 1`);
-  await client.send('run 5');
-  await client.send(`key ${scancode.toString(16)} 0`);
-  await client.send('run 4');
-}
-
-describe('SB2000 程序在模拟器里运行', { skip: realSetup ? false : '需要模拟器、cc65 与环境变量 FCDEV_TEST_FIRMWARE（SB2000 的 BIOS）' }, () => {
-  let temp;
-
-  beforeEach(() => {
-    temp = createTempDir();
-  });
-
-  afterEach(() => temp.cleanup());
-
-  it('在 DOS 提示符下输入程序名后，会执行到 main，按键后返回提示符', async () => {
-    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'hello', firmware: realSetup.firmware }));
-    writeTestFile(temp.dir, 'src/hello.c', HELLO_C);
-    const { plan, result } = await buildPath({ pathArg: 'src', cwd: temp.dir });
-    const mapText = readFileSync(path.join(plan.objectDir, 'hello.map'), 'utf8');
-    const mainAddress = /_main\s+([0-9A-F]{6})/.exec(mapText)[1].slice(2);
-
-    // 找一个空闲端口
-    const net = await import('node:net');
-    const port = await new Promise((resolve) => {
-      const server = net.createServer().listen(0, '127.0.0.1', () => {
-        const { port: free } = server.address();
-        server.close(() => resolve(free));
-      });
-    });
-
-    const { buildDiskImage } = await import('../src/build/index.mjs');
-    const { imageFile } = buildDiskImage(plan, result);
-    const { client } = await launchEmulator({ executable: realSetup.emulator.executable, romFile: realSetup.firmware, debug: true, port });
-    try {
-      assert.ok((await client.send(`disk ${imageFile}`)).ok);
-      assert.ok((await client.send('reset')).ok);
-      await client.send('run 1300', { timeoutMs: 120_000 });
-      await tapKey(client, SCAN.enter);
-      await client.send('run 60');
-      await tapKey(client, SCAN.enter);
-      await client.send('run 400');
-      assert.ok((await client.send(`bp x ${mainAddress}`)).ok);
-      for (const key of [SCAN.h, SCAN.e, SCAN.l, SCAN.l, SCAN.o, SCAN.enter]) await tapKey(client, key);
-      const reached = await client.send('run 600', { timeoutMs: 120_000 });
-      assert.match(reached.head, new RegExp(`stop=exec.*stoppc=${mainAddress}`), `应停在 main（$${mainAddress}）：${reached.head}`);
-      assert.match(reached.head, /s=[CDEF][0-9A-F]/, `main 入口的栈指针应在 $C0 以上：${reached.head}`);
-    } finally {
-      await client.send('quit').catch(() => {});
-      client.close();
-    }
   });
 });

@@ -1,11 +1,11 @@
 // ------------------------------------------------------------------------
 // 名称：index.mjs
-// 说明：emulator 目录的对外入口：定位模拟器、启动模拟器、调试服务客户端。
+// 说明：emulator 目录的对外入口：定位 Ember、启动 Ember、调试 SDK 终端客户端的定位。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
 // 备注：无
 // ------------------------------------------------------------------------
-export { DEFAULT_DEBUG_PORT, DebugClient, parseReply } from './debug-client.mjs';
-export { assertPortFree, launchEmulator } from './emulator-launcher.mjs';
+export { debugEnvironment, resolveDebugCli } from './debug-cli.mjs';
+export { DEFAULT_DEBUG_PORT, assertPortFree, debugUserDataDirectory, launchEmulator } from './emulator-launcher.mjs';
 export { EMULATOR_ENV_NAME, locateEmulator } from './emulator-locator.mjs';

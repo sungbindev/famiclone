@@ -17,12 +17,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES_DIR = path.join(ROOT, 'packages');
 
-/** 发布顺序：工具链包先发，主包随后，创建包与调试 SDK 最后 */
+/** 发布顺序：被依赖的工具链包与调试 SDK 先发，主包随后，创建包最后 */
 const PUBLISH_ORDER = [
   { directory: 'fcdev-cc65', name: 'fcdev-cc65' },
+  { directory: 'ember-debug-sdk', name: 'ember-debug-sdk' },
   { directory: 'fcdev', name: 'fcdev' },
   { directory: 'create-fcdev', name: 'create-fcdev' },
-  { directory: 'ember-debug-sdk', name: 'ember-debug-sdk' },
 ];
 
 /**
@@ -68,7 +68,7 @@ function writeManifest(file, document) {
 }
 
 /**
- * 升版本号：主包、创建包与调试 SDK 的 version，以及主包对工具链包的精确依赖；再重新生成工具链包的 package.json 与 npm 的锁文件。
+ * 升版本号：主包、创建包与调试 SDK 的 version，以及主包对工具链包与调试 SDK 的精确依赖；再重新生成工具链包的 package.json 与 npm 的锁文件。
  * @param {string} version 新版本号
  * @throws {Error} 版本号格式不对或与当前相同
  */
@@ -79,6 +79,7 @@ function prepare(version) {
 
   main.document.version = version;
   for (const name of Object.keys(main.document.optionalDependencies ?? {})) main.document.optionalDependencies[name] = version;
+  for (const name of Object.keys(main.document.dependencies ?? {})) main.document.dependencies[name] = version;
   writeManifest(main.file, main.document);
   const creator = readManifest('create-fcdev');
   creator.document.version = version;

@@ -5,14 +5,14 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
 // 备注：用法 node tools/emu-session.mjs <rom> <软盘镜像|-> <命令...>
-//       命令是用分号分隔的调试服务命令（见 packages/fcdev/docs/05-模拟器与调试.md 第 5.1 节），
+//       命令是用分号分隔的旧模拟器（virtuanes/）调试服务命令（见 virtuanes/README.md），
 //       另有 type:<文字> 按键输入一行文字（含回车）。路径写绝对路径。
 //       每条命令的应答首行会打印；模拟器在结束时关闭。
 // ------------------------------------------------------------------------
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { launchEmulator } from '../../../packages/fcdev/src/emulator/emulator-launcher.mjs';
+import { launchEmulator } from '../../sb2000/disassembly/tools/sb2k-client.mjs';
 import { REPO_ROOT } from './config.mjs';
 
 /** 模拟器程序：本仓库的编译输出 */
@@ -40,7 +40,7 @@ const SCAN_CODES = {
 export async function startSession(romFile, port = 5710) {
   const executable = EMULATOR_CANDIDATES.find((path) => existsSync(path));
   if (!executable) throw new Error('找不到 VirtuaNES.exe，先运行 virtuanes/build.ps1');
-  const { client } = await launchEmulator({ executable, romFile, debug: true, port });
+  const { client } = await launchEmulator({ emulatorExe: executable, rom: romFile, port });
   return {
     send: (command) => client.send(command),
     close: () => {

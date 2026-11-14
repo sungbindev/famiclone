@@ -94,8 +94,18 @@ describe('CDL、轨迹与符号文件', () => {
   });
 
   it('轨迹取出不重复的指令地址，忽略其他行', () => {
-    const text = 'T 8000 -000000 78 00 00 A=00\nT 8001 -000001 D8 00 00 A=00\nT 8000 -000000 78 00 00 A=00\nI NMI\nT C0DE -000000 EA 00 00 A=00\n';
-    assert.deepEqual(parseTrace(text), [0x8000, 0x8001, 0xc0de]);
+    const text = [
+      '8000  78        SEI                             A:00 X:00 Y:00 P:24 SP:FD CYC:7',
+      '8001  D8        CLD                             A:00 X:00 Y:00 P:24 SP:FD CYC:9',
+      '8000  78        SEI                             A:00 X:00 Y:00 P:24 SP:FD CYC:11',
+      'C0DE  EA        NOP                             A:00 X:00 Y:00 P:24 SP:FD CYC:13',
+      'C0DF  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD CYC:15',
+      'R $2002 = 80  PC:C005 CYC:1234',
+      'NMI  return:C0AB handler:C100 CYC:500',
+      '8123  A:01 X:02 Y:03 P:24 SP:FD CYC:77 | STACK AA BB CC | 0300: 11 22',
+      'T 9000 -000000 78 00 00 A=00',
+    ].join('\n');
+    assert.deepEqual(parseTrace(text), [0x8000, 0x8001, 0xc0de, 0xc0df]);
   });
 
   it('符号文件支持等号与空格、$ 与 0x 前缀、注释与空行', () => {
@@ -324,7 +334,7 @@ describe('完整反汇编（需要 cc65）', { skip: SKIP_WITHOUT_TOOLCHAIN }, (
     assert.ok(byCdl.instructions > 5);
 
     const traceFile = path.join(temp.dir, 'sb.trace');
-    writeFileSync(traceFile, `T ${entry.toString(16).toUpperCase()} -000000 A9 00 00 A=00 X=00 Y=00 S=FF P=22 F=0\n`);
+    writeFileSync(traceFile, `${entry.toString(16).toUpperCase().padStart(4, '0')}  A9 00     LDA #$00                        A:00 X:00 Y:00 P:22 SP:FF CYC:7\n`);
     const byTrace = await run({ inputFile: exe, format: 'binary', base: 0x8000, traceFile, outDir: path.join(temp.dir, 'out2') });
     assert.equal(byTrace.verified, true);
     assert.ok(byTrace.instructions > 5);

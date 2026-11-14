@@ -10,7 +10,7 @@
 npm install --save-dev fcdev
 ```
 
-要求 Node.js 22 及以上。cc65 编译器在依赖包 `fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器不随包提供，`run` 与 `debug` 需要自备：用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指定，调试命令要求该模拟器支持同样的调试服务。
+要求 Node.js 22 及以上。cc65 编译器在依赖包 `fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器 Ember 不随包提供，`run` 与 `debug` 需要自备：用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指向 Ember 的可执行文件。调试 SDK `ember-debug-sdk` 是 `fcdev` 的依赖，会自动安装。
 
 ## 使用
 
@@ -20,7 +20,7 @@ npm install --save-dev fcdev
 npx fcdev build            # 构建当前目录；目录里的全部 .c、.s、.asm 链接成一个程序
 npx fcdev build src        # 构建目录 src
 npx fcdev build src/a.c    # 只构建这个文件，它自己是一个程序
-npx fcdev run src          # 构建后在模拟器里运行
+npx fcdev run src          # 构建后在 Ember 里运行
 npx fcdev disk src         # 构建后把程序放进磁盘镜像（只有声明了磁盘能力的目标）
 npx fcdev disasm game.nes  # 反汇编成 ca65 源码，并回读校验
 npx fcdev sync             # 生成 IDE 的 C/C++ 配置
@@ -34,12 +34,12 @@ npx fcdev docs syscall     # 查开发文档的本机路径（主题名或关键
 ### 调试
 
 ```bash
-npx fcdev run --debug --port 5688 src   # 以调试模式启动模拟器，只在收到 run 命令时运行
-FCDEV_DEBUG_PORT=5688 npx fcdev debug run 60
-FCDEV_DEBUG_PORT=5688 npx fcdev debug shot screen.png
+npx fcdev run --debug --port 5688 src   # 以调试模式启动 Ember，程序载入后停在开机状态
+FCDEV_DEBUG_PORT=5688 npx fcdev debug call runtime.run frames=60 wait=true
+FCDEV_DEBUG_PORT=5688 npx fcdev debug screenshot screen.png
 ```
 
-`debug` 把命令原样转发给模拟器的调试服务，命令表见模拟器的说明文档。调试端口默认 5699。
+`debug` 把参数原样交给 Ember 调试 SDK 的终端客户端 `ember-debug`，`npx fcdev debug --help` 查看命令，`npx fcdev debug methods` 列出全部请求。调试端口默认 5699。学习机目标暂时不能在 Ember 里运行。
 
 ### 反汇编
 
@@ -49,7 +49,7 @@ npx fcdev disasm prog.bin --base 8000 --entry 8008          # 平铺二进制：
 npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文件
 ```
 
-用 `da65` 生成源码，再用 `ca65`、`ld65` 重新汇编，与原映像逐字节比较，不一致就报错。只追得到的代码才会按指令输出，其余按数据输出；用 `--cdl`（FCEUX、Mesen 格式）或 `--trace`（模拟器 `trace` 命令的日志）补充运行时才执行到的代码。
+用 `da65` 生成源码，再用 `ca65`、`ld65` 重新汇编，与原映像逐字节比较，不一致就报错。只追得到的代码才会按指令输出，其余按数据输出；用 `--cdl`（FCEUX、Mesen 格式）或 `--trace`（Ember 记录的指令轨迹）补充运行时才执行到的代码。
 
 ## 配置
 
@@ -65,7 +65,7 @@ npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号�
 | `include` | 空 | 额外的头文件目录 |
 | `toolchain` | 空 | 自备 cc65 的根目录，优先于工具链包 |
 | `firmware` | 无 | 固件（BIOS）文件；SB2000 运行时必填，fcdev 不提供任何 BIOS 或 ROM |
-| `emulator` | 空 | 模拟器的路径，不设时读环境变量 `FCDEV_EMULATOR` |
+| `emulator` | 空 | Ember 的路径，不设时读环境变量 `FCDEV_EMULATOR` |
 | `targetOptions` | 空 | 目标专用选项，如 NES 的 `font`（是否链接 ASCII 字库，默认 `true`）、SB2000 的 `banks`（大程序的库页个数，默认 0） |
 
 ## 目标

@@ -450,6 +450,9 @@ async function main() {
   await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.startMuted' })`);
   const debugListed = (await debugClient.call('debug.status')).result;
   check('debug.status 里有这条连接', debugListed?.connections?.length === 1 && debugListed.connections[0].client === 'smoke', JSON.stringify(debugListed?.connections));
+  const debugBarWord = `调试服务 ${debugPort}（1 个连接）`;
+  const debugBar = await waitFor(() => textOf('.ui-status-bar'), (text) => text.includes(debugBarWord), 5000, 100);
+  check('状态栏右侧显示调试服务的端口与连接数', debugBar.includes(debugBarWord), debugBar.replace(/\s+/g, ' ').slice(0, 90));
   const wrongToken = await openDebugSocket(endpoint.url);
   const wrongReply = await wrongToken.call('debug.hello', { client: 'intruder', token: 'wrong' });
   await waitFor(() => Promise.resolve(wrongToken.closed), (closed) => closed === true, 3000, 50);

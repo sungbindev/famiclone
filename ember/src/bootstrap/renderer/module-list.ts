@@ -10,8 +10,9 @@
  */
 
 import type { ShellModule } from '../../ui/shell/shell-registry';
+import { DEBUG_RENDERER_MODULE } from './modules/debug';
 import { PREFERENCES_RENDERER_MODULE } from './modules/preferences';
 import { RUNTIME_RENDERER_MODULE } from './modules/runtime';
 
 /** 有界面的模块，按登记顺序排列（菜单项、活动栏按钮、状态项按这个顺序显示）。 */
-export const RENDERER_MODULES: readonly ShellModule[] = [RUNTIME_RENDERER_MODULE, PREFERENCES_RENDERER_MODULE];
+export const RENDERER_MODULES: readonly ShellModule[] = [RUNTIME_RENDERER_MODULE, DEBUG_RENDERER_MODULE, PREFERENCES_RENDERER_MODULE];

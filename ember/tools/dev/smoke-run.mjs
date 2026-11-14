@@ -171,6 +171,7 @@ async function hoverMenuItem(label) {
 function openDebugSocket(url) {
   return new Promise((resolvePromise, rejectPromise) => {
     const socket = new WebSocket(url);
+    socket.binaryType = 'arraybuffer';
     const pending = new Map();
     let nextId = 1;
     const client = { notifications: [], closeCode: undefined, closed: false };
@@ -182,8 +183,16 @@ function openDebugSocket(url) {
       });
     client.close = () => socket.close();
     socket.addEventListener('message', (event) => {
-      if (typeof event.data !== 'string') return;
-      const message = JSON.parse(event.data);
+      let message;
+      if (typeof event.data === 'string') {
+        message = JSON.parse(event.data);
+      } else {
+        // 二进制帧：4 字节大端长度 + JSON 报文 + data 的原始字节。
+        const bytes = new Uint8Array(event.data);
+        const jsonLength = new DataView(event.data).getUint32(0, false);
+        message = JSON.parse(new TextDecoder().decode(bytes.subarray(4, 4 + jsonLength)));
+        message.binary = bytes.subarray(4 + jsonLength);
+      }
       if (message.id !== undefined && pending.has(message.id)) {
         pending.get(message.id)(message);
         pending.delete(message.id);
@@ -363,9 +372,9 @@ async function main() {
   // 首选项：核心登记的设置项与出厂默认值、非法取值被拒绝；改画面比例与“显示全部 240 行”后运行页的画面框立即跟着变；改主题后系统主题立即切换；调试服务改音量会保存到首选项；最后全部恢复默认。
   const listed = await page.evaluate('window.ember.core.preferences.list({})');
   const valueOf = (id) => listed.settings.find((setting) => setting.id === id)?.value;
-  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'debug.enabled', 'debug.port', 'debug.token'];
+  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'debug.enabled', 'debug.port', 'debug.token', 'debug.outputDirectory'];
   // 令牌的默认值是空，核心启动时自动生成并保存，所以不与默认值比较，单独检查。
-  check('首选项列出了登记的 10 个设置项，取值都是出厂默认值（令牌除外）', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && (!comparable(setting) || JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.id === 'debug.token' ? '…' : setting.value}`).join('，'));
+  check('首选项列出了登记的 11 个设置项，取值都是出厂默认值（令牌除外）', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && (!comparable(setting) || JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.id === 'debug.token' ? '…' : setting.value}`).join('，'));
   check('调试服务的令牌已经自动生成（32 个字母与数字），默认端口 5688、默认不开启（启动参数强制开启不改首选项）', /^[A-Za-z0-9]{32}$/.test(String(valueOf('debug.token'))) && valueOf('debug.port') === 5688 && valueOf('debug.enabled') === false);
   check('出厂默认值：主题跟随系统、画面比例 8:7、适应窗口、显示全部行、缓冲标准、启动时不静音、音量 100', valueOf('appearance.theme') === 'system' && valueOf('display.aspect') === '8:7' && valueOf('display.scaling') === 'fit' && valueOf('display.showAllLines') === true && valueOf('sound.buffer') === 'standard' && valueOf('sound.startMuted') === false && valueOf('sound.volume') === 100);
   const invalid = await page.evaluate(`window.ember.core.preferences.set({ id: 'display.aspect', value: '16:9' }).then(() => 'accepted', (error) => error?.code ?? 'failed')`);
@@ -425,6 +434,16 @@ async function main() {
   check('rpc.discover 返回 OpenRPC 文档，覆盖运行、卡带、首选项等请求', document?.openrpc === '1.3.2' && ['runtime.status', 'cartridges.load', 'preferences.set', 'debug.hello', 'rpc.discover'].every((name) => methodNames.has(name)), `${methodNames.size} 个方法`);
   const subscribed = await debugClient.call('debug.subscribe', { events: ['preferences.changed', 'debug.*'] });
   check('订阅事件成功', subscribed.result?.events?.length === 2);
+  const padReply = await debugClient.call('input.pad', { port: 0, buttons: 8 });
+  check('input.pad 设置手柄口成功，不存在的口返回 input.invalidPort', padReply.result !== undefined && (await debugClient.call('input.pad', { port: 7, buttons: 1 })).error?.data?.code === 'input.invalidPort');
+  await debugClient.call('input.releaseAll');
+  const ran = (await debugClient.call('runtime.run', { frames: 30, wait: true })).result;
+  check('runtime.run 等待跑完 30 帧，停止原因 completed', ran?.stopped === 'completed' && ran?.frames === 30 && ran?.cycles > 0, JSON.stringify(ran));
+  const shot = await debugClient.call('output.screenshot', { format: 'rgba' });
+  check('output.screenshot 以二进制帧返回 256x240 的 RGBA 像素', shot.result?.width === 256 && shot.result?.height === 240 && shot.binary?.length === 256 * 240 * 4 && shot.result?.byteLength === shot.binary.length, `${shot.result?.byteLength}/${shot.binary?.length}`);
+  const pngShot = (await debugClient.call('output.screenshot', { file: 'smoke-shot' })).result;
+  check('output.screenshot 带 file 时保存 PNG 到调试输出目录', typeof pngShot?.file === 'string' && pngShot.file.endsWith('smoke-shot.png') && existsSync(pngShot.file) && pngShot.data === undefined, pngShot?.file);
+  await debugClient.call('runtime.resume');
   await page.evaluate(`window.ember.core.preferences.set({ id: 'sound.startMuted', value: true })`);
   const pushed = await waitFor(() => Promise.resolve(debugClient.notifications.find((message) => message.method === 'preferences.changed')), (value) => value !== undefined, 5000, 50);
   check('在界面里改设置，调试连接收到 preferences.changed 通知', pushed?.params?.id === 'sound.startMuted' && pushed?.params?.value === true, JSON.stringify(pushed?.params));

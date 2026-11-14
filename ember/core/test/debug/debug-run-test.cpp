@@ -103,6 +103,7 @@ TEST_F(DebugRunTest, RunRefusesWithoutACartridgeOrPower) {
   EXPECT_EQ(call(core, "runtime.run", {{"frames", 10}}).payload["code"], "runtime.noCartridge");
   const auto text = (root_ / "test.nes").u8string();
   ASSERT_TRUE(call(core, "cartridges.load", {{"path", std::string(text.begin(), text.end())}}).ok);
+  ASSERT_TRUE(call(core, "runtime.powerOff").ok);
   EXPECT_EQ(call(core, "runtime.run", {{"frames", 10}}).payload["code"], "runtime.notPowered");
   EXPECT_EQ(call(core, "runtime.run", {{"frames", 0}}).payload["code"], "core.invalidParams");
   core.stop();
@@ -151,6 +152,7 @@ TEST_F(DebugRunTest, PowerOffEndsARunWithPowerOff) {
 TEST_F(DebugRunTest, InputRequestsValidateAndAcceptEvents) {
   Core core;
   start(core);
+  loadAndPowerOn(core);
   EXPECT_EQ(call(core, "input.pad", {{"port", 0}, {"buttons", 255}}).ok, true);
   EXPECT_EQ(call(core, "input.pad", {{"port", 7}, {"buttons", 1}}).payload["code"], "input.invalidPort");
   EXPECT_EQ(call(core, "input.pad", {{"port", 0}, {"buttons", 256}}).payload["code"], "core.invalidParams");
@@ -174,7 +176,8 @@ TEST_F(DebugRunTest, ScreenshotHasNoPictureBeforePowerOnAndSavesAPngAfterwards) 
   EXPECT_EQ(saved.payload["width"], 256);
   EXPECT_EQ(saved.payload["height"], 240);
   EXPECT_FALSE(saved.payload.contains("data"));
-  const auto path = std::filesystem::path(std::u8string(saved.payload["file"].get<std::string>().begin(), saved.payload["file"].get<std::string>().end()));
+  const auto savedFile = saved.payload["file"].get<std::string>();
+  const auto path = std::filesystem::path(std::u8string(savedFile.begin(), savedFile.end()));
   EXPECT_EQ(path.filename().string(), "first.png");
   EXPECT_EQ(path.parent_path().filename().string(), "debug-output");
   ASSERT_TRUE(std::filesystem::exists(path));

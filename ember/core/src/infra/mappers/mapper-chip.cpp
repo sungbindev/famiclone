@@ -205,6 +205,20 @@ const hw::StorageRegion* MapperChip::storage(std::string_view id) const {
   return found == decls.end() ? nullptr : storages_[static_cast<std::size_t>(found - decls.begin())].get();
 }
 
+bool MapperChip::pokeStorage(std::string_view id, std::size_t offset, std::uint8_t value) {
+  const auto& decls = plugin_->manifest.storage;
+  const auto found = std::find_if(decls.begin(), decls.end(), [&](const StorageDecl& item) { return item.id == id; });
+  if (found == decls.end()) return false;
+  StorageBlock& block = *storages_[static_cast<std::size_t>(found - decls.begin())];
+  return offset < block.size() && block.write(offset, value);
+}
+
+std::vector<std::string> MapperChip::stateNames() const {
+  std::vector<std::string> names;
+  for (const StateDecl& decl : plugin_->manifest.state) names.push_back(decl.name);
+  return names;
+}
+
 std::optional<std::uint32_t> MapperChip::state(std::string_view name) const {
   const auto& decls = plugin_->manifest.state;
   const auto found = std::find_if(decls.begin(), decls.end(), [&](const StateDecl& item) { return item.name == name; });
@@ -215,6 +229,49 @@ std::optional<std::uint32_t> MapperChip::state(std::string_view name) const {
 // ---------------------------------------------------------------- 总线访问
 
 hw::BusRead MapperChip::Side::read(std::uint16_t address) { return owner_.readBus(ppu_, address); }
+
+hw::BusRead MapperChip::Side::peek(std::uint16_t address) { return owner_.peekBus(ppu_, address); }
+
+hw::BusRead MapperChip::peekBus(bool ppu, std::uint16_t address) const {
+  if (ppu) {
+    if (address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
+    const Slot slot = ppuSlots_[address];
+    if (slot.readRegister) return hw::releaseBus();
+    return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
+  }
+  const Slot slot = cpuSlots_[address];
+  if (slot.readRegister) return hw::releaseBus();
+  return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
+}
+
+contracts::mappers::AddressInfo MapperChip::describeAddress(bool ppu, std::uint16_t address) const {
+  using Info = contracts::mappers::AddressInfo;
+  Info info;
+  if (ppu && address >= PPU_SLOT_COUNT) {
+    info.kind = nametable_ == NametableMode::Four ? Info::Kind::Nametable : Info::Kind::None;
+    info.offset = address & 0xFFFU;
+    return info;
+  }
+  const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
+  if (slot.readRegister || slot.writeRegister) {
+    info.kind = Info::Kind::Register;
+    return info;
+  }
+  if (slot.window < 0) return info;
+  const Window& window = windows_[static_cast<std::size_t>(slot.window)];
+  const std::size_t capacity = window.storage->size();
+  info.mapped = window.mapped && capacity != 0;
+  if (!info.mapped) return info;
+  std::size_t position = window.offset + (address - window.first);
+  if (position >= capacity) position %= capacity;
+  info.kind = Info::Kind::Storage;
+  info.offset = position;
+  const auto& decls = plugin_->manifest.storage;
+  for (std::size_t index = 0; index < decls.size(); ++index) {
+    if (storages_[index].get() == window.storage) info.storage = decls[index].id;
+  }
+  return info;
+}
 
 void MapperChip::Side::write(std::uint16_t address, std::uint8_t value) { owner_.writeBus(ppu_, address, value); }
 

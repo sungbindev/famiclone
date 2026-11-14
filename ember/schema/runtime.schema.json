@@ -117,11 +117,35 @@
           "state": { "$ref": "#/types/RuntimeState", "description": "返回时的运行状态" },
           "frames": { "type": "integer", "minimum": 0, "description": "实际运行的帧数；wait 为 false 时为 0" },
           "cycles": { "type": "integer", "minimum": 0, "description": "实际经过的 CPU 周期数；wait 为 false 时为 0" },
-          "stopped": { "type": "string", "enum": ["completed", "interrupted", "powerOff", "error"], "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；error 运行出错" }
+          "stopped": { "type": "string", "enum": ["completed", "interrupted", "powerOff", "breakpoint", "error"], "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；breakpoint 命中断点；error 运行出错" }
         },
         "required": ["state", "frames", "cycles"]
       },
       "errors": ["runtime.noCartridge", "runtime.notPowered"]
+    },
+    "step": {
+      "description": "单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停。instruction 一条指令（含随后响应的中断序列）；cycle 至少这么多 CPU 周期（指令不被打断，实际周期数可能多几个）；scanline PPU 的扫描线推进这么多行；frame 完成这么多帧画面。结果里的 pc 是停下时下一条要执行的指令地址。经过的帧会照常显示。",
+      "debugOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "unit": { "type": "string", "enum": ["instruction", "cycle", "scanline", "frame"], "description": "单位" },
+          "count": { "type": "integer", "minimum": 1, "maximum": 100000, "description": "数量，默认 1；要运行更长时间用 runtime.run" }
+        },
+        "required": ["unit"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "state": { "$ref": "#/types/RuntimeState", "description": "单步后的运行状态（总是暂停）" },
+          "instructions": { "type": "integer", "minimum": 0, "description": "实际执行的指令数" },
+          "cycles": { "type": "integer", "minimum": 0, "description": "实际经过的 CPU 周期数" },
+          "frames": { "type": "integer", "minimum": 0, "description": "期间完成的帧数" },
+          "pc": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "停下时程序计数器的值，即下一条要执行的指令地址" }
+        },
+        "required": ["state", "instructions", "cycles", "frames", "pc"]
+      },
+      "errors": ["runtime.noCartridge", "runtime.notPowered", "runtime.debugUnsupported"]
     },
     "setFrameEvents": {
       "description": "设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）。这是全局设置，对订阅了 runtime.frame 的所有连接生效。",
@@ -143,7 +167,7 @@
         "properties": {
           "power": { "type": "string", "enum": ["off", "on"], "description": "新的电源状态" },
           "mode": { "type": "string", "enum": ["paused", "running"], "description": "新的运行模式" },
-          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "run", "runEnded", "error"], "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停" }
+          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "run", "runEnded", "step", "breakpoint", "error"], "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停" }
         },
         "required": ["power", "mode", "reason"]
       }
@@ -167,9 +191,28 @@
         "properties": {
           "frames": { "type": "integer", "minimum": 0, "description": "实际运行的帧数" },
           "cycles": { "type": "integer", "minimum": 0, "description": "实际经过的 CPU 周期数" },
-          "stopped": { "type": "string", "enum": ["completed", "interrupted", "powerOff", "error"], "description": "停止原因，含义同 run 的结果" }
+          "stopped": { "type": "string", "enum": ["completed", "interrupted", "powerOff", "breakpoint", "error"], "description": "停止原因，含义同 run 的结果" }
         },
         "required": ["frames", "cycles", "stopped"]
+      }
+    },
+    "breakpointHit": {
+      "description": "命中断点，机器已暂停（自由运行与授权运行都会停下）。执行断点停在指令执行之前，读写断点停在那条指令执行完之后；断点由 inspector.addBreakpoint 添加。",
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "minimum": 1, "description": "断点编号" },
+          "kind": { "type": "string", "enum": ["execute", "read", "write"], "description": "断点种类" },
+          "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "执行断点是将要执行的指令地址；读写断点是被访问的地址" },
+          "value": { "type": "integer", "minimum": 0, "maximum": 255, "description": "读写断点读到或写入的值；执行断点没有这一项" },
+          "pc": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "停下时的程序计数器" },
+          "a": { "type": "integer", "minimum": 0, "maximum": 255, "description": "累加器" },
+          "x": { "type": "integer", "minimum": 0, "maximum": 255, "description": "X 寄存器" },
+          "y": { "type": "integer", "minimum": 0, "maximum": 255, "description": "Y 寄存器" },
+          "sp": { "type": "integer", "minimum": 0, "maximum": 255, "description": "栈指针" },
+          "status": { "type": "integer", "minimum": 0, "maximum": 255, "description": "状态寄存器" }
+        },
+        "required": ["id", "kind", "address", "pc", "a", "x", "y", "sp", "status"]
       }
     },
     "error": {

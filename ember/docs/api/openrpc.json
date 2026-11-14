@@ -724,6 +724,832 @@
       "x-debugOnly": true
     },
     {
+      "name": "inspector.listSpaces",
+      "summary": "列出全部内存空间：总线视角的 cpu 与 ppu，主板与芯片里的存储，以及卡带上的存储区（cart.<存储区标识>）",
+      "description": "列出全部内存空间：总线视角的 cpu 与 ppu，主板与芯片里的存储，以及卡带上的存储区（cart.<存储区标识>）。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "spaces": {
+              "type": "array",
+              "description": "内存空间",
+              "items": {
+                "$ref": "#/components/schemas/inspector.MemorySpaceInfo"
+              }
+            }
+          },
+          "required": [
+            "spaces"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.readMemory",
+      "summary": "读一段内存，不改变主机的任何状态：cpu 与 ppu 空间里寄存器类地址读出 0（不读寄存器，所以不会清标志），卡带脚本的寄存器也不会被回调",
+      "description": "读一段内存，不改变主机的任何状态：cpu 与 ppu 空间里寄存器类地址读出 0（不读寄存器，所以不会清标志），卡带脚本的寄存器也不会被回调。数据以二进制帧返回（结果里的 data，见 docs/04-调试服务.md 第 2.3 节）。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "space",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "空间标识，见 listSpaces",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": "空间标识，见 listSpaces"
+        },
+        {
+          "name": "address",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "起始地址",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "description": "起始地址"
+        },
+        {
+          "name": "length",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "要读的字节数",
+            "minimum": 1,
+            "maximum": 1048576
+          },
+          "description": "要读的字节数"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "space": {
+              "type": "string",
+              "description": "空间标识"
+            },
+            "address": {
+              "type": "integer",
+              "description": "起始地址",
+              "minimum": 0
+            },
+            "length": {
+              "type": "integer",
+              "description": "字节数",
+              "minimum": 1
+            },
+            "data": {
+              "description": "读到的字节（二进制，以二进制帧送达）",
+              "x-binary": true
+            }
+          },
+          "required": [
+            "space",
+            "address",
+            "length"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unknownSpace",
+          "data": {
+            "code": "inspector.unknownSpace"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.outOfRange",
+          "data": {
+            "code": "inspector.outOfRange"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.writeMemory",
+      "summary": "写一段内存",
+      "description": "写一段内存。cpu 与 ppu 空间的写经真实的总线，与 CPU 写一样有副作用（写寄存器会触发相应的行为）；卡带的 ROM 存储区不能写。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "space",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "空间标识，见 listSpaces",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": "空间标识，见 listSpaces"
+        },
+        {
+          "name": "address",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "起始地址",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "description": "起始地址"
+        },
+        {
+          "name": "bytes",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "要写入的字节，每项 0 到 255",
+            "minItems": 1,
+            "maxItems": 65536,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            }
+          },
+          "description": "要写入的字节，每项 0 到 255"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "space": {
+              "type": "string",
+              "description": "空间标识"
+            },
+            "address": {
+              "type": "integer",
+              "description": "起始地址",
+              "minimum": 0
+            },
+            "written": {
+              "type": "integer",
+              "description": "写入的字节数",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "space",
+            "address",
+            "written"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unknownSpace",
+          "data": {
+            "code": "inspector.unknownSpace"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.outOfRange",
+          "data": {
+            "code": "inspector.outOfRange"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.readOnly",
+          "data": {
+            "code": "inspector.readOnly"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.resolve",
+      "summary": "解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器",
+      "description": "解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器；卡带的地址按当前的窗口映射（分页）解析，不回调脚本。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "space",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "总线：cpu 或 ppu",
+            "enum": [
+              "cpu",
+              "ppu"
+            ]
+          },
+          "description": "总线：cpu 或 ppu"
+        },
+        {
+          "name": "address",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "总线地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "description": "总线地址"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "target": {
+              "$ref": "#/components/schemas/inspector.AddressInfo",
+              "description": "解析结果"
+            }
+          },
+          "required": [
+            "target"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unknownSpace",
+          "data": {
+            "code": "inspector.unknownSpace"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.outOfRange",
+          "data": {
+            "code": "inspector.outOfRange"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.getState",
+      "summary": "读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper）",
+      "description": "读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper）。省略 module 时返回全部模块。读取在帧边界或暂停时进行，是一致的快照。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "module",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "模块标识；省略时返回全部",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": "模块标识；省略时返回全部"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "states": {
+              "type": "array",
+              "description": "各模块的状态",
+              "items": {
+                "$ref": "#/components/schemas/inspector.ModuleState"
+              }
+            }
+          },
+          "required": [
+            "states"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidState",
+          "data": {
+            "code": "inspector.invalidState"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.addBreakpoint",
+      "summary": "添加断点",
+      "description": "添加断点。断点在机器运行时生效（自由运行与 runtime.run 都会停下，发事件 runtime.breakpointHit，运行模式变为暂停）；单步（runtime.step）忽略断点；继续运行时会先越过刚命中的执行断点。断点属于当前的主机，装入新卡带后清空。地址是 CPU 总线上的地址。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "种类",
+            "enum": [
+              "execute",
+              "read",
+              "write"
+            ]
+          },
+          "description": "种类"
+        },
+        {
+          "name": "address",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "地址，或地址范围的第一个地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "description": "地址，或地址范围的第一个地址"
+        },
+        {
+          "name": "endAddress",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "地址范围的最后一个地址（含），省略时只有 address 一个地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "description": "地址范围的最后一个地址（含），省略时只有 address 一个地址"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "breakpoint": {
+              "$ref": "#/components/schemas/inspector.Breakpoint",
+              "description": "添加的断点"
+            }
+          },
+          "required": [
+            "breakpoint"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidBreakpoint",
+          "data": {
+            "code": "inspector.invalidBreakpoint"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.breakpointLimit",
+          "data": {
+            "code": "inspector.breakpointLimit"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.listBreakpoints",
+      "summary": "列出全部断点，按编号升序",
+      "description": "列出全部断点，按编号升序。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "breakpoints": {
+              "type": "array",
+              "description": "断点",
+              "items": {
+                "$ref": "#/components/schemas/inspector.Breakpoint"
+              }
+            }
+          },
+          "required": [
+            "breakpoints"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.removeBreakpoint",
+      "summary": "删除一个断点",
+      "description": "删除一个断点。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "description": "断点编号",
+            "minimum": 1
+          },
+          "description": "断点编号"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.noBreakpoint",
+          "data": {
+            "code": "inspector.noBreakpoint"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.clearBreakpoints",
+      "summary": "删除全部断点",
+      "description": "删除全部断点。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "removed": {
+              "type": "integer",
+              "description": "删除的个数",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "removed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "inspector.setState",
+      "summary": "修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读",
+      "description": "修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读。先全部检查，有任何一项不合格就一项也不改。需要已开机。",
+      "tags": [
+        {
+          "name": "inspector"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "module",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "模块标识",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": "模块标识"
+        },
+        {
+          "name": "fields",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "要修改的状态项",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "$ref": "#/components/schemas/inspector.StateField"
+            }
+          },
+          "description": "要修改的状态项"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/inspector.ModuleState",
+              "description": "修改之后的状态"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "inspector.noCartridge",
+          "data": {
+            "code": "inspector.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.notPowered",
+          "data": {
+            "code": "inspector.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.unsupported",
+          "data": {
+            "code": "inspector.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.readOnly",
+          "data": {
+            "code": "inspector.readOnly"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "inspector.invalidState",
+          "data": {
+            "code": "inspector.invalidState"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
       "name": "mappers.list",
       "summary": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先",
       "description": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。",
@@ -1652,11 +2478,12 @@
             },
             "stopped": {
               "type": "string",
-              "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；error 运行出错",
+              "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；breakpoint 命中断点；error 运行出错",
               "enum": [
                 "completed",
                 "interrupted",
                 "powerOff",
+                "breakpoint",
                 "error"
               ]
             }
@@ -1682,6 +2509,110 @@
           "message": "runtime.notPowered",
           "data": {
             "code": "runtime.notPowered"
+          }
+        }
+      ],
+      "x-debugOnly": true
+    },
+    {
+      "name": "runtime.step",
+      "summary": "单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停",
+      "description": "单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停。instruction 一条指令（含随后响应的中断序列）；cycle 至少这么多 CPU 周期（指令不被打断，实际周期数可能多几个）；scanline PPU 的扫描线推进这么多行；frame 完成这么多帧画面。结果里的 pc 是停下时下一条要执行的指令地址。经过的帧会照常显示。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "unit",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "单位",
+            "enum": [
+              "instruction",
+              "cycle",
+              "scanline",
+              "frame"
+            ]
+          },
+          "description": "单位"
+        },
+        {
+          "name": "count",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "数量，默认 1；要运行更长时间用 runtime.run",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "description": "数量，默认 1；要运行更长时间用 runtime.run"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "$ref": "#/components/schemas/runtime.RuntimeState",
+              "description": "单步后的运行状态（总是暂停）"
+            },
+            "instructions": {
+              "type": "integer",
+              "description": "实际执行的指令数",
+              "minimum": 0
+            },
+            "cycles": {
+              "type": "integer",
+              "description": "实际经过的 CPU 周期数",
+              "minimum": 0
+            },
+            "frames": {
+              "type": "integer",
+              "description": "期间完成的帧数",
+              "minimum": 0
+            },
+            "pc": {
+              "type": "integer",
+              "description": "停下时程序计数器的值，即下一条要执行的指令地址",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          "required": [
+            "state",
+            "instructions",
+            "cycles",
+            "frames",
+            "pc"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "runtime.noCartridge",
+          "data": {
+            "code": "runtime.noCartridge"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "runtime.notPowered",
+          "data": {
+            "code": "runtime.notPowered"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "runtime.debugUnsupported",
+          "data": {
+            "code": "runtime.debugUnsupported"
           }
         }
       ],
@@ -1846,6 +2777,167 @@
           "id",
           "client",
           "connectedAt"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.MemorySpaceInfo": {
+        "type": "object",
+        "description": "一个内存空间。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "空间标识：cpu、ppu（总线视角，读不产生副作用）；board.ram 等主板上的存储；chip.oam、chip.palette 等芯片内的存储；cart.<存储区标识> 卡带上的存储区"
+          },
+          "description": {
+            "type": "string",
+            "description": "说明"
+          },
+          "size": {
+            "type": "integer",
+            "description": "大小（字节），地址从 0 到大小减 1",
+            "minimum": 1
+          },
+          "writable": {
+            "type": "boolean",
+            "description": "能否写入；卡带的 ROM 存储区不能写"
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "size",
+          "writable"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.AddressInfo": {
+        "type": "object",
+        "description": "一个总线地址对应的东西。",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "种类：ram 与 rom 是存储区里的字节；register 是芯片、设备或 mapper 脚本的寄存器；none 没有设备响应（读到总线上最近的值）",
+            "enum": [
+              "ram",
+              "rom",
+              "register",
+              "none"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "description": "所在存储区的空间标识（如 board.ram、cart.prg），或寄存器所属的芯片（如 chip.ppu、cart.mapper）；没有时省略"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "在存储区里的偏移，或在寄存器组里的序号；没有时省略",
+            "minimum": 0
+          },
+          "description": {
+            "type": "string",
+            "description": "说明"
+          }
+        },
+        "required": [
+          "kind",
+          "description"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.StateField": {
+        "type": "object",
+        "description": "一项状态。",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "状态项名称",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "value": {
+            "type": "integer",
+            "description": "取值；标志位是 0 或 1"
+          },
+          "description": {
+            "type": "string",
+            "description": "说明（读出时有，写入时可省略）"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.Breakpoint": {
+        "type": "object",
+        "description": "一个断点。",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "断点编号",
+            "minimum": 1
+          },
+          "kind": {
+            "type": "string",
+            "description": "种类：execute CPU 要执行这个地址的指令之前停下；read、write 总线读写这个范围里的地址，那条指令执行完后停下",
+            "enum": [
+              "execute",
+              "read",
+              "write"
+            ]
+          },
+          "address": {
+            "type": "integer",
+            "description": "地址范围的第一个地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "endAddress": {
+            "type": "integer",
+            "description": "地址范围的最后一个地址（含）；单个地址时与 address 相同",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "hits": {
+            "type": "integer",
+            "description": "已经命中的次数",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "address",
+          "endAddress",
+          "hits"
+        ],
+        "additionalProperties": false
+      },
+      "inspector.ModuleState": {
+        "type": "object",
+        "description": "一个模块的状态。",
+        "properties": {
+          "module": {
+            "type": "string",
+            "description": "模块标识：cpu、ppu；卡带的脚本状态是 mapper"
+          },
+          "writable": {
+            "type": "boolean",
+            "description": "状态是否可以用 setState 修改（cpu 的 cycles 除外）"
+          },
+          "fields": {
+            "type": "array",
+            "description": "状态项",
+            "items": {
+              "$ref": "#/components/schemas/inspector.StateField"
+            }
+          }
+        },
+        "required": [
+          "module",
+          "writable",
+          "fields"
         ],
         "additionalProperties": false
       },
@@ -2686,7 +3778,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停",
+            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停",
             "enum": [
               "load",
               "eject",
@@ -2697,6 +3789,8 @@
               "resume",
               "run",
               "runEnded",
+              "step",
+              "breakpoint",
               "error"
             ]
           }
@@ -2773,6 +3867,7 @@
               "completed",
               "interrupted",
               "powerOff",
+              "breakpoint",
               "error"
             ]
           }
@@ -2781,6 +3876,94 @@
           "frames",
           "cycles",
           "stopped"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "runtime.breakpointHit",
+      "description": "命中断点，机器已暂停（自由运行与授权运行都会停下）。执行断点停在指令执行之前，读写断点停在那条指令执行完之后；断点由 inspector.addBreakpoint 添加。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "断点编号",
+            "minimum": 1
+          },
+          "kind": {
+            "type": "string",
+            "description": "断点种类",
+            "enum": [
+              "execute",
+              "read",
+              "write"
+            ]
+          },
+          "address": {
+            "type": "integer",
+            "description": "执行断点是将要执行的指令地址；读写断点是被访问的地址",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "value": {
+            "type": "integer",
+            "description": "读写断点读到或写入的值；执行断点没有这一项",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "pc": {
+            "type": "integer",
+            "description": "停下时的程序计数器",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "a": {
+            "type": "integer",
+            "description": "累加器",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "x": {
+            "type": "integer",
+            "description": "X 寄存器",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y 寄存器",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "sp": {
+            "type": "integer",
+            "description": "栈指针",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态寄存器",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "address",
+          "pc",
+          "a",
+          "x",
+          "y",
+          "sp",
+          "status"
         ],
         "additionalProperties": false
       }

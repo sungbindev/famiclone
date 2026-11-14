@@ -100,6 +100,16 @@ hw::CpuRegisters Cpu6502::registers() const {
   return hw::CpuRegisters{pc_, a_, x_, y_, sp_, static_cast<std::uint8_t>(status_ | FLAG_UNUSED), cycles_};
 }
 
+void Cpu6502::setRegisters(const hw::CpuRegisters& registers) {
+  pc_ = registers.pc;
+  a_ = registers.a;
+  x_ = registers.x;
+  y_ = registers.y;
+  sp_ = registers.sp;
+  // 只保存 C、Z、I、D、V、N 六位。
+  status_ = static_cast<std::uint8_t>(registers.status & 0xCFU);
+}
+
 // ---------------------------------------------------------------- 总线周期
 
 std::uint8_t Cpu6502::readCycle(std::uint16_t address) {

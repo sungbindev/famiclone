@@ -13,13 +13,16 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <future>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "contracts/hardware/input-event.hpp"
+#include "contracts/hardware/machine.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
+#include "contracts/mappers/mapper-cartridge.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/runtime/generated/runtime.hpp"
 
@@ -61,6 +64,24 @@ struct RunOutcome {
   std::int64_t cycles{0};
   /** 停止原因：completed 运行完授权的帧数；interrupted 被暂停、继续、复位、换卡带或新的授权运行打断；powerOff 断电；error 运行出错。 */
   std::string stopped;
+};
+
+/** 一次单步（runtime.step）的结果。 */
+struct StepOutcome {
+  std::int64_t instructions{0};
+  std::int64_t cycles{0};
+  std::int64_t frames{0};
+  /** 停下时的 PC。 */
+  std::uint16_t pc{0};
+  RuntimeState state;
+};
+
+/** 调试访问时，模拟线程交给回调的对象；只在回调里有效。 */
+struct DebugContext {
+  hardware::Machine& machine;
+  hardware::MachineDebugger& debugger;
+  /** 插着的卡带；整机机型没有卡带时为空。 */
+  mappers::MapperCartridge* cartridge;
 };
 
 /** 一帧画面：像素按行从上到下，每像素 4 字节，内存顺序 R、G、B、A；没有画面时宽高为 0。 */
@@ -141,6 +162,18 @@ class RuntimeService {
 
   /** 最近一次完成的画面的副本（暂停、断电后仍然有上一帧）；没有主机或还没有完成过一帧时宽高为 0。 */
   virtual FrameImage captureFrame() = 0;
+
+  /**
+   * 单步：先暂停（打断正在进行的授权运行），再按单位运行指定的数量后保持暂停；经过的帧照常发布。
+   * @throws shared::CoreError runtime.noCartridge、runtime.notPowered、runtime.debugUnsupported。
+   */
+  virtual StepOutcome step(hardware::StepUnit unit, std::int64_t count) = 0;
+
+  /**
+   * 调试访问：在模拟线程上执行回调（运行中在下一帧边界，暂停时立即），等它执行完；回调里的异常原样抛给调用方。
+   * @throws shared::CoreError runtime.noCartridge、runtime.notPowered、runtime.debugUnsupported。
+   */
+  virtual void inspect(const std::function<void(DebugContext&)>& action) = 0;
 };
 
 }  // namespace ember::contracts::runtime

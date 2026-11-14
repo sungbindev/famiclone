@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "contracts/hardware/access-probe.hpp"
 #include "contracts/hardware/bus-device.hpp"
 
 namespace ember::logic::hardware {
@@ -33,6 +34,12 @@ class BusMap {
   /** 写，规则见 contracts::hardware::Bus::write。 */
   void write(std::uint16_t address, std::uint8_t value);
 
+  /** 调试用的读：经设备的 peek，不改变总线上的值，没有设备或设备不驱动的位读出 0。 */
+  [[nodiscard]] std::uint8_t peek(std::uint16_t address) const;
+
+  /** 安装或去掉访问探针（空指针表示去掉）；探针在每次读写之后被通知，必须活到被去掉或总线销毁。 */
+  void setProbe(contracts::hardware::AccessProbe* probe) { probe_ = probe; }
+
  private:
   struct Mapping {
     std::uint32_t first;
@@ -48,6 +55,7 @@ class BusMap {
   std::vector<Mapping> mappings_;
   /** 总线上最近一次的值（读或写）。 */
   std::uint8_t latch_{0};
+  contracts::hardware::AccessProbe* probe_{nullptr};
 };
 
 }  // namespace ember::logic::hardware

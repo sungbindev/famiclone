@@ -59,6 +59,39 @@ check('画面不是全黑', nonBlack);
 await client.api.input.pad({ port: 0, buttons: 8 });
 await client.api.input.releaseAll();
 check('input.pad 与 input.releaseAll 成功', true);
+
+// 检查器：暂停后单步、读状态、读写内存、解析地址。
+await client.api.runtime.pause();
+const stepped = await client.api.runtime.step({ unit: 'instruction', count: 3 });
+const cpuState = (await client.api.inspector.getState({ module: 'cpu' })).states[0];
+const pcField = cpuState?.fields.find((item) => item.name === 'pc');
+check('runtime.step 单步 3 条指令后暂停，pc 与 getState 一致', stepped.instructions === 3 && stepped.state.mode === 'paused' && pcField?.value === stepped.pc, JSON.stringify({ pc: stepped.pc, cycles: stepped.cycles }));
+const spaces = (await client.api.inspector.listSpaces()).spaces.map((item) => item.id);
+check('inspector.listSpaces 含 cpu、board.ram 与卡带的存储区', ['cpu', 'board.ram', 'cart.prg'].every((id) => spaces.includes(id)), spaces.join('、'));
+const prg = await client.api.inspector.readMemory({ space: 'cart.prg', address: 0, length: 16 });
+const viaCpu = await client.api.inspector.readMemory({ space: 'cpu', address: 0x8000, length: 16 });
+check('inspector.readMemory 以二进制帧返回，cpu 空间与卡带存储区读到相同的字节', prg.data instanceof Uint8Array && prg.data.byteLength === 16 && Buffer.from(prg.data).equals(Buffer.from(viaCpu.data)));
+await client.api.inspector.writeMemory({ space: 'board.ram', address: 0x7f0, bytes: [1, 2, 3, 4] });
+const ram = await client.api.inspector.readMemory({ space: 'board.ram', address: 0x7f0, length: 4 });
+check('inspector.writeMemory 写内部 RAM 后读回', Buffer.from(ram.data).equals(Buffer.from([1, 2, 3, 4])));
+const resolved = (await client.api.inspector.resolve({ space: 'cpu', address: 0x8000 })).target;
+check('inspector.resolve 把 $8000 解析到卡带的 PRG', resolved.kind === 'rom' && resolved.region === 'cart.prg', JSON.stringify(resolved));
+await expectRequestError(() => client.api.inspector.readMemory({ space: 'nowhere', address: 0, length: 1 }), 'inspector.unknownSpace');
+const poked = (await client.api.inspector.setState({ module: 'cpu', fields: [{ name: 'a', value: 0x5a }] })).state;
+check('inspector.setState 修改 cpu 的 a', poked.fields.find((item) => item.name === 'a')?.value === 0x5a);
+
+// 断点：对 $8000-$FFFF 设读断点，继续运行后第一次取指就命中，机器暂停。
+const added = (await client.api.inspector.addBreakpoint({ kind: 'read', address: 0x8000, endAddress: 0xffff })).breakpoint;
+const hitEvent = client.waitFor('runtime.breakpointHit', { timeoutMs: 20_000 });
+await client.api.runtime.resume();
+const hit = await hitEvent;
+const afterHit = await client.api.runtime.status();
+check('读断点命中：事件带断点编号与寄存器，机器暂停', hit.id === added.id && hit.kind === 'read' && hit.address >= 0x8000 && typeof hit.pc === 'number' && afterHit.mode === 'paused', JSON.stringify(hit));
+const listed = (await client.api.inspector.listBreakpoints()).breakpoints;
+check('inspector.listBreakpoints 列出断点并累计命中次数', listed.length === 1 && listed[0].hits >= 1);
+const cleared = await client.api.inspector.clearBreakpoints();
+check('inspector.clearBreakpoints 删除全部断点', cleared.removed === 1);
+await expectRequestError(() => client.api.inspector.removeBreakpoint({ id: added.id }), 'inspector.noBreakpoint');
 await expectRequestError(() => client.api.input.pad({ port: 7, buttons: 1 }), 'input.invalidPort');
 await expectRequestError(() => client.api.runtime.run({ frames: 0 }), 'core.invalidParams');
 

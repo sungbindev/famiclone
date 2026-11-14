@@ -78,6 +78,10 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   [[nodiscard]] std::span<const std::uint8_t> palette() const { return palette_; }
   /** 当前每行的精灵数（下一行要画的精灵）。 */
   [[nodiscard]] int lineSpriteCount() const { return spriteCount_; }
+  /** 调试写入：直接改 OAM 的一个字节，不经寄存器。 */
+  void pokeOam(std::size_t index, std::uint8_t value) { oam_.at(index) = value; }
+  /** 调试写入：直接改调色板的一个字节（索引 0 到 31，不做镜像处理）。 */
+  void pokePalette(std::size_t index, std::uint8_t value) { palette_.at(index) = value & 0x3FU; }
 
  private:
   // 寄存器与渲染的内部步骤见 ppu-2c02.cpp（寄存器、时间）与 ppu-2c02-render.cpp（渲染）

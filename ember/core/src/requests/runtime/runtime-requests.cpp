@@ -64,6 +64,22 @@ void addRuntimeRequests(platform::RequestRouter& router, std::shared_ptr<contrac
     result.state = contract::RuntimeState{status.power, status.mode};
     return nlohmann::json(result);
   });
+  router.add("runtime", contract::RUNTIME_STEP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseRuntimeStepParams(params, "params");
+    namespace hw = ::ember::contracts::hardware;
+    hw::StepUnit unit = hw::StepUnit::Instruction;
+    if (parsed.unit == "cycle") unit = hw::StepUnit::Cycle;
+    else if (parsed.unit == "scanline") unit = hw::StepUnit::Scanline;
+    else if (parsed.unit == "frame") unit = hw::StepUnit::Frame;
+    const auto outcome = service->step(unit, parsed.count.value_or(1));
+    contract::RuntimeStepResult result;
+    result.state = outcome.state;
+    result.instructions = outcome.instructions;
+    result.cycles = outcome.cycles;
+    result.frames = outcome.frames;
+    result.pc = outcome.pc;
+    return nlohmann::json(result);
+  });
   router.add("runtime", contract::RUNTIME_SET_FRAME_EVENTS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseRuntimeSetFrameEventsParams(params, "params");
     service->setFrameEventInterval(static_cast<std::uint32_t>(parsed.frames));

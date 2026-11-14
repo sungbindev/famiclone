@@ -89,6 +89,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   unsigned padPortCount() override;
   void setPadButtons(unsigned port, std::uint8_t buttons) override;
   contracts::runtime::FrameImage captureFrame() override;
+  contracts::runtime::StepOutcome step(contracts::hardware::StepUnit unit, std::int64_t count) override;
+  void inspect(const std::function<void(contracts::runtime::DebugContext&)>& action) override;
 
  private:
   /** 正在进行的授权运行（只由模拟线程访问）。 */
@@ -123,6 +125,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void reportFailure(const std::string& module, const std::string& code, const std::string& message);
   /** 结束正在进行的授权运行：把结果交给等待的调用方并发 runtime.runFinished；没有授权运行时没有效果；不改变电源与运行模式。 */
   void finishRun(const char* stopped);
+  /** 命中断点：结束授权运行（breakpoint）、暂停、发 runtime.breakpointHit 与状态变化。 */
+  void handleBreakpoint(const contracts::hardware::BreakpointHit& hit);
   void checkCartridge();
   void pushAudio();
   void syncAudio();

@@ -21,5 +21,7 @@ inline constexpr std::string_view ERROR_NO_CARTRIDGE = "runtime.noCartridge";
 inline constexpr std::string_view ERROR_NOT_POWERED = "runtime.notPowered";
 /** 插件要求的主机型号在程序里没有实现。 */
 inline constexpr std::string_view ERROR_HOST_UNSUPPORTED = "runtime.hostUnsupported";
+/** 当前主机型号不支持调试。 */
+inline constexpr std::string_view ERROR_DEBUG_UNSUPPORTED = "runtime.debugUnsupported";
 
 }  // namespace ember::contracts::runtime

@@ -267,6 +267,12 @@ void SimulationRuntime::runFrame() {
     reportFailure("runtime", std::string(shared::ERROR_INTERNAL), "模拟器内部错误，详情已写入日志");
     return;
   }
+  if (hw::MachineDebugger* debugger = machine_->debugger()) {
+    if (const auto hit = debugger->takeBreakpointHit()) {
+      handleBreakpoint(*hit);
+      return;
+    }
+  }
   ++frame_;
   const hw::FrameBuffer picture = machine_->frame();
   if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
@@ -284,6 +290,26 @@ void SimulationRuntime::runFrame() {
     publishState("runEnded");
     publishSnapshot();
   }
+}
+
+void SimulationRuntime::handleBreakpoint(const hw::BreakpointHit& hit) {
+  finishRun("breakpoint");
+  running_ = false;
+  const hw::CpuRegisters registers = machine_->cpuRegisters();
+  rt::RuntimeBreakpointHitData data;
+  data.id = hit.id;
+  data.kind = hit.kind == hw::BreakpointKind::Execute ? "execute" : (hit.kind == hw::BreakpointKind::Read ? "read" : "write");
+  data.address = hit.address;
+  if (hit.kind != hw::BreakpointKind::Execute) data.value = hit.value;
+  data.pc = registers.pc;
+  data.a = registers.a;
+  data.x = registers.x;
+  data.y = registers.y;
+  data.sp = registers.sp;
+  data.status = registers.status;
+  options_.events->publish(rt::RUNTIME_BREAKPOINT_HIT_EVENT, nlohmann::json(data));
+  publishState("breakpoint");
+  publishSnapshot();
 }
 
 void SimulationRuntime::finishRun(const char* stopped) {
@@ -491,6 +517,50 @@ rt::FrameImage SimulationRuntime::captureFrame() {
     const auto* bytes = reinterpret_cast<const std::uint8_t*>(picture.pixels.data());
     image.rgba.assign(bytes, bytes + picture.pixels.size() * sizeof(std::uint32_t));
     return image;
+  });
+}
+
+rt::StepOutcome SimulationRuntime::step(hw::StepUnit unit, std::int64_t count) {
+  return submit([this, unit, count] {
+    if (machine_ == nullptr) throw shared::CoreError(rt::ERROR_NO_CARTRIDGE, "还没有装入卡带，无法单步");
+    if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电，无法单步");
+    hw::MachineDebugger* debugger = machine_->debugger();
+    if (debugger == nullptr) throw shared::CoreError(rt::ERROR_DEBUG_UNSUPPORTED, "当前主机型号不支持调试");
+    finishRun("interrupted");
+    running_ = false;
+    hw::StepResult done;
+    try {
+      done = debugger->step(unit, static_cast<std::uint64_t>(count));
+    } catch (const shared::CoreError& error) {
+      reportFailure("hardware", error.code(), error.what());
+      throw;
+    }
+    frame_ += done.frames;
+    if (done.frames > 0) {
+      const hw::FrameBuffer picture = machine_->frame();
+      if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
+    }
+    publishState("step");
+    publishSnapshot();
+    checkCartridge();
+    rt::StepOutcome outcome;
+    outcome.instructions = static_cast<std::int64_t>(done.instructions);
+    outcome.cycles = static_cast<std::int64_t>(done.cycles);
+    outcome.frames = static_cast<std::int64_t>(done.frames);
+    outcome.pc = machine_->cpuRegisters().pc;
+    outcome.state = state();
+    return outcome;
+  });
+}
+
+void SimulationRuntime::inspect(const std::function<void(rt::DebugContext&)>& action) {
+  submit([this, &action] {
+    if (machine_ == nullptr) throw shared::CoreError(rt::ERROR_NO_CARTRIDGE, "还没有装入卡带");
+    if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电");
+    hw::MachineDebugger* debugger = machine_->debugger();
+    if (debugger == nullptr) throw shared::CoreError(rt::ERROR_DEBUG_UNSUPPORTED, "当前主机型号不支持调试");
+    rt::DebugContext context{*machine_, *debugger, cartridge_.get()};
+    action(context);
   });
 }
 

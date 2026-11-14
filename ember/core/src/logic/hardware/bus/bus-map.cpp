@@ -72,6 +72,7 @@ std::uint8_t BusMap::read(std::uint16_t address) {
   const hw::BusRead result = mapping->device->read(static_cast<std::uint16_t>(masked));
   // 设备驱动的位取设备的值，其余的位保持总线上的旧值。
   latch_ = static_cast<std::uint8_t>((result.value & result.drivenMask) | (latch_ & ~result.drivenMask));
+  if (probe_ != nullptr) probe_->onAccess(hw::AccessKind::Read, static_cast<std::uint16_t>(masked), latch_);
   return latch_;
 }
 
@@ -80,6 +81,15 @@ void BusMap::write(std::uint16_t address, std::uint8_t value) {
   latch_ = value;
   const Mapping* mapping = find(masked);
   if (mapping != nullptr) mapping->device->write(static_cast<std::uint16_t>(masked), value);
+  if (probe_ != nullptr) probe_->onAccess(hw::AccessKind::Write, static_cast<std::uint16_t>(masked), value);
+}
+
+std::uint8_t BusMap::peek(std::uint16_t address) const {
+  const std::uint32_t masked = address & addressMask_;
+  const Mapping* mapping = find(masked);
+  if (mapping == nullptr) return 0;
+  const hw::BusRead result = mapping->device->peek(static_cast<std::uint16_t>(masked));
+  return static_cast<std::uint8_t>(result.value & result.drivenMask);
 }
 
 }  // namespace ember::logic::hardware

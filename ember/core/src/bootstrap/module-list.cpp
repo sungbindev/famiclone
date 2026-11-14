@@ -14,6 +14,7 @@
 #include "bootstrap/modules/cartridges.hpp"
 #include "bootstrap/modules/debug.hpp"
 #include "bootstrap/modules/input.hpp"
+#include "bootstrap/modules/inspector.hpp"
 #include "bootstrap/modules/mappers.hpp"
 #include "bootstrap/modules/output.hpp"
 #include "bootstrap/modules/preferences.hpp"
@@ -32,6 +33,7 @@ constexpr ModuleRegistration MODULES[] = {
     {"output", registerOutput},
     {"runtime", registerRuntime},
     {"input", registerInput},
+    {"inspector", registerInspector},
     {"cartridges", registerCartridges},
     {"debug", registerDebug},
 };

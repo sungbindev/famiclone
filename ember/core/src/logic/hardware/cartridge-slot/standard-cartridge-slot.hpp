@@ -63,6 +63,11 @@ class StandardCartridgeSlot final : public contracts::hardware::CartridgeSlot {
       if (slot_.cartridge_ != nullptr) target().write(address, value);
     }
 
+    contracts::hardware::BusRead peek(std::uint16_t address) override {
+      if (slot_.cartridge_ == nullptr) return contracts::hardware::releaseBus();
+      return target().peek(address);
+    }
+
    private:
     contracts::hardware::BusDevice& target() { return ppu_ ? slot_.cartridge_->ppuSide() : slot_.cartridge_->cpuSide(); }
 

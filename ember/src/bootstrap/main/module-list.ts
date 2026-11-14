@@ -13,6 +13,7 @@ import type { MainModule } from './main-module';
 import { CARTRIDGES_MAIN_MODULE } from './modules/cartridges';
 import { DEBUG_MAIN_MODULE } from './modules/debug';
 import { INPUT_MAIN_MODULE } from './modules/input';
+import { INSPECTOR_MAIN_MODULE } from './modules/inspector';
 import { MAPPERS_MAIN_MODULE } from './modules/mappers';
 import { OUTPUT_MAIN_MODULE } from './modules/output';
 import { PREFERENCES_MAIN_MODULE } from './modules/preferences';
@@ -20,4 +21,4 @@ import { RUNTIME_MAIN_MODULE } from './modules/runtime';
 import { SYSTEM_MAIN_MODULE } from './modules/system';
 
 /** 全部模块，按登记顺序排列。 */
-export const MAIN_MODULES: readonly MainModule[] = [SYSTEM_MAIN_MODULE, PREFERENCES_MAIN_MODULE, MAPPERS_MAIN_MODULE, OUTPUT_MAIN_MODULE, RUNTIME_MAIN_MODULE, INPUT_MAIN_MODULE, CARTRIDGES_MAIN_MODULE, DEBUG_MAIN_MODULE];
+export const MAIN_MODULES: readonly MainModule[] = [SYSTEM_MAIN_MODULE, PREFERENCES_MAIN_MODULE, MAPPERS_MAIN_MODULE, OUTPUT_MAIN_MODULE, RUNTIME_MAIN_MODULE, INPUT_MAIN_MODULE, INSPECTOR_MAIN_MODULE, CARTRIDGES_MAIN_MODULE, DEBUG_MAIN_MODULE];

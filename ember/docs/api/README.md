@@ -48,6 +48,21 @@
 | `input.pad` | 直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本 |
 | `input.releaseAll` | 松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开 |
 
+### [inspector](inspector.md)
+
+| 请求 | 简介 |
+| --- | --- |
+| `inspector.listSpaces` | 列出全部内存空间：总线视角的 cpu 与 ppu，主板与芯片里的存储，以及卡带上的存储区（cart.<存储区标识>） |
+| `inspector.readMemory` | 读一段内存，不改变主机的任何状态：cpu 与 ppu 空间里寄存器类地址读出 0（不读寄存器，所以不会清标志），卡带脚本的寄存器也不会被回调 |
+| `inspector.writeMemory` | 写一段内存 |
+| `inspector.resolve` | 解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器 |
+| `inspector.getState` | 读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper） |
+| `inspector.addBreakpoint` | 添加断点 |
+| `inspector.listBreakpoints` | 列出全部断点，按编号升序 |
+| `inspector.removeBreakpoint` | 删除一个断点 |
+| `inspector.clearBreakpoints` | 删除全部断点 |
+| `inspector.setState` | 修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读 |
+
 ### [mappers](mappers.md)
 
 | 请求 | 简介 |
@@ -89,9 +104,10 @@
 | `runtime.pause` | 暂停：已暂停时没有效果 |
 | `runtime.resume` | 继续：按真实帧率连续运行 |
 | `runtime.run` | 授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令） |
+| `runtime.step` | 单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停 |
 | `runtime.setFrameEvents` | 设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认） |
 
-事件：`runtime.stateChanged`、`runtime.frame`、`runtime.runFinished`、`runtime.error`
+事件：`runtime.stateChanged`、`runtime.frame`、`runtime.runFinished`、`runtime.breakpointHit`、`runtime.error`
 
 ### [system](system.md)
 

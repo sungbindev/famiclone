@@ -14,12 +14,18 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "bootstrap/machines/pad-apu-port.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
+#include "logic/hardware/debug/breakpoint-table.hpp"
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
@@ -34,7 +40,7 @@
 namespace ember::bootstrap {
 
 /** 经典 FC（NTSC）。 */
-class FcMachine final : public contracts::hardware::Machine {
+class FcMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger {
  public:
   /** 主时钟频率（赫兹）。 */
   static constexpr double MASTER_CLOCK_HZ = 21'477'272.0;
@@ -66,6 +72,7 @@ class FcMachine final : public contracts::hardware::Machine {
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
   contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
+  contracts::hardware::MachineDebugger* debugger() override { return this; }
 
   // 测试与调试用
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
@@ -80,6 +87,35 @@ class FcMachine final : public contracts::hardware::Machine {
   std::uint8_t peekPpuBus(std::uint16_t address) { return ppuBus_.read(address); }
 
  private:
+  // MachineDebugger
+  [[nodiscard]] std::vector<contracts::hardware::MemorySpace> memorySpaces() const override;
+  void readMemory(std::string_view space, std::uint32_t address, std::span<std::uint8_t> out) override;
+  void writeMemory(std::string_view space, std::uint32_t address, std::span<const std::uint8_t> bytes) override;
+  [[nodiscard]] contracts::hardware::AddressTarget resolve(std::string_view space, std::uint32_t address) const override;
+  [[nodiscard]] std::vector<std::string> stateModules() const override;
+  [[nodiscard]] std::vector<contracts::hardware::StateField> readState(std::string_view module) const override;
+  void writeState(std::string_view module, std::span<const contracts::hardware::StateField> fields) override;
+  contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count) override;
+  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override;
+  bool removeBreakpoint(std::uint32_t id) override;
+  std::size_t clearBreakpoints() override;
+  [[nodiscard]] std::vector<contracts::hardware::Breakpoint> breakpoints() const override { return breakpoints_.list(); }
+  std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return breakpoints_.take(); }
+  /** 有读写断点时在 CPU 总线上安装探针，没有时去掉。 */
+  void refreshProbe();
+
+  /** 构造时去掉总线上的读写探针，析构时恢复：让调试写内存与单步不触发读写断点。 */
+  class ProbeSuspend {
+   public:
+    explicit ProbeSuspend(FcMachine& machine);
+    ~ProbeSuspend();
+    ProbeSuspend(const ProbeSuspend&) = delete;
+    ProbeSuspend& operator=(const ProbeSuspend&) = delete;
+
+   private:
+    FcMachine& machine_;
+  };
+
   logic::hardware::MasterScheduler scheduler_;
   logic::hardware::WiredOrIrqLine irq_;
   logic::hardware::WiredOrIrqLine nmi_;
@@ -101,6 +137,10 @@ class FcMachine final : public contracts::hardware::Machine {
   PadApuPort padApuPort_;
   std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
   logic::hardware::Cpu6502 cpu_;
+
+  logic::hardware::BreakpointTable breakpoints_;
+  /** 刚命中执行断点的地址：下一次运行先越过它，不再重复命中。 */
+  std::optional<std::uint16_t> skipExecuteAt_;
 
   bool poweredOn_{false};
 };

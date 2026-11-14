@@ -42,6 +42,8 @@ class Cpu6502 final : public contracts::hardware::Cpu {
 
   [[nodiscard]] contracts::hardware::CpuRegisters registers() const override;
 
+  void setRegisters(const contracts::hardware::CpuRegisters& registers) override;
+
  private:
   /** 内存操作的访问方式：决定带索引的寻址是否一定做一次修正前的空读。 */
   enum class Access : std::uint8_t { Read, Write, Modify };

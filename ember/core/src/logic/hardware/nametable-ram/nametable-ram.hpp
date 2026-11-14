@@ -42,8 +42,17 @@ class NametableRam final : public contracts::hardware::BusDevice {
     ram_[offset(control, address)] = value;
   }
 
+  contracts::hardware::BusRead peek(std::uint16_t address) override {
+    const contracts::hardware::CiramControl control = slot_.ciramControl(address);
+    if (!control.enable) return slot_.ppuSide().peek(address);
+    return contracts::hardware::driveBus(ram_[offset(control, address)]);
+  }
+
   /** 全部清为指定的值（上电或测试用）。 */
   void fill(std::uint8_t value) { ram_.fill(value); }
+
+  /** 调试写入：直接改 2K 显存的一个字节。 */
+  void poke(std::size_t index, std::uint8_t value) { ram_.at(index) = value; }
 
   /** 2K 显存的内容，测试与调试读取。 */
   [[nodiscard]] std::span<const std::uint8_t> bytes() const { return ram_; }

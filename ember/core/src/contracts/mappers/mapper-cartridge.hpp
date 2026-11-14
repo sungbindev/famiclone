@@ -45,9 +45,37 @@ struct StorageSummary {
   bool battery{false};
 };
 
+/** 卡带上一个总线地址对应的东西。 */
+struct AddressInfo {
+  /** 种类。 */
+  enum class Kind : std::uint8_t {
+    /** 窗口映射到存储区。 */
+    Storage,
+    /** 脚本的寄存器，读写都会回调脚本。 */
+    Register,
+    /** 卡带的名称表显存（四屏）。 */
+    Nametable,
+    /** 卡带不响应这个地址。 */
+    None
+  };
+  Kind kind{Kind::None};
+  /** 存储区标识（kind 为 Storage 时）。 */
+  std::string storage;
+  /** 在存储区里的偏移（kind 为 Storage 时）。 */
+  std::size_t offset{0};
+  /** 窗口当前是否映射着存储区（脚本可以取消映射）。 */
+  bool mapped{true};
+};
+
 /** 由插件创建的卡带。 */
 class MapperCartridge : public hardware::Cartridge {
  public:
+  /**
+   * 解析总线地址：经窗口译码到哪块存储区的哪个偏移，不回调脚本。
+   * @param ppu true 表示 PPU 总线，false 表示 CPU 总线。
+   */
+  [[nodiscard]] virtual AddressInfo describeAddress(bool ppu, std::uint16_t address) const = 0;
+
   /** 创建这个卡带的插件标识。 */
   [[nodiscard]] virtual const std::string& pluginId() const = 0;
 
@@ -59,6 +87,15 @@ class MapperCartridge : public hardware::Cartridge {
    * 存储区由卡带拥有，只能经它访问。
    */
   [[nodiscard]] virtual const hardware::StorageRegion* storage(std::string_view id) const = 0;
+
+  /**
+   * 调试写入：直接改存储区的一个字节。
+   * @return 成功返回 true；ROM、没有这个存储区或偏移超出容量返回 false。
+   */
+  virtual bool pokeStorage(std::string_view id, std::size_t offset, std::uint8_t value) = 0;
+
+  /** 脚本状态里全部状态项的名称，按清单声明的顺序。 */
+  [[nodiscard]] virtual std::vector<std::string> stateNames() const = 0;
 
   /** 脚本状态里某项的当前值；没有这项状态时返回空。 */
   [[nodiscard]] virtual std::optional<std::uint32_t> state(std::string_view name) const = 0;

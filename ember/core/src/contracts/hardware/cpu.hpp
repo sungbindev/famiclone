@@ -49,6 +49,9 @@ class Cpu {
 
   /** 当前寄存器状态。只在指令之间读取有意义。 */
   [[nodiscard]] virtual CpuRegisters registers() const = 0;
+
+  /** 调试用：设置 pc、a、x、y、sp 与状态寄存器（状态的位 5 恒为 1、位 4 恒为 0），累计周期数不变；只在指令之间调用。 */
+  virtual void setRegisters(const CpuRegisters& registers) = 0;
 };
 
 }  // namespace ember::contracts::hardware

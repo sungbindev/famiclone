@@ -72,6 +72,8 @@ class MirroredRam final : public contracts::hardware::BusDevice {
 
   void write(std::uint16_t address, std::uint8_t value) override { region_.write(address % region_.size(), value); }
 
+  contracts::hardware::BusRead peek(std::uint16_t address) override { return read(address); }
+
  private:
   contracts::hardware::StorageRegion& region_;
 };

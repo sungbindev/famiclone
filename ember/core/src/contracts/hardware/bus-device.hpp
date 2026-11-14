@@ -49,6 +49,16 @@ class BusDevice {
    * @param value 写入的数据。
    */
   virtual void write(std::uint16_t address, std::uint8_t value) = 0;
+
+  /**
+   * 调试用的读：不改变任何状态、不回调脚本。默认不驱动数据线（寄存器类设备读不到内容）；
+   * 存储类设备覆盖它，返回与 read 相同的数据。
+   * @param address 总线上的绝对地址。
+   */
+  virtual BusRead peek(std::uint16_t address) {
+    static_cast<void>(address);
+    return releaseBus();
+  }
 };
 
 }  // namespace ember::contracts::hardware

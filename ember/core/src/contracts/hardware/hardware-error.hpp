@@ -31,5 +31,17 @@ inline constexpr std::string_view ERROR_INVALID_ARGUMENT = "hardware.invalidArgu
 inline constexpr std::string_view ERROR_STORAGE_OUT_OF_RANGE = "hardware.storageOutOfRange";
 /** 端口编号超出主机上的端口数。 */
 inline constexpr std::string_view ERROR_PORT_NOT_FOUND = "hardware.portNotFound";
+/** 调试访问的内存空间不存在。 */
+inline constexpr std::string_view ERROR_UNKNOWN_SPACE = "hardware.unknownSpace";
+/** 调试访问的范围超出内存空间的大小。 */
+inline constexpr std::string_view ERROR_SPACE_OUT_OF_RANGE = "hardware.spaceOutOfRange";
+/** 调试写入的目标是只读的（ROM），或这个空间不能写。 */
+inline constexpr std::string_view ERROR_SPACE_READ_ONLY = "hardware.spaceReadOnly";
+/** 调试设置的状态项不存在，或取值超出范围。 */
+inline constexpr std::string_view ERROR_INVALID_STATE = "hardware.invalidState";
+/** 断点不合格：地址范围的起点大于终点。 */
+inline constexpr std::string_view ERROR_INVALID_BREAKPOINT = "hardware.invalidBreakpoint";
+/** 断点数量超过上限。 */
+inline constexpr std::string_view ERROR_BREAKPOINT_LIMIT = "hardware.breakpointLimit";
 
 }  // namespace ember::contracts::hardware

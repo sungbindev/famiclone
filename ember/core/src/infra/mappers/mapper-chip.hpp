@@ -64,9 +64,12 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   [[nodiscard]] const std::string& pluginId() const override { return plugin_->manifest.id; }
   [[nodiscard]] std::vector<contracts::mappers::StorageSummary> storageList() const override;
   [[nodiscard]] const contracts::hardware::StorageRegion* storage(std::string_view id) const override;
+  bool pokeStorage(std::string_view id, std::size_t offset, std::uint8_t value) override;
   [[nodiscard]] std::optional<std::uint32_t> state(std::string_view name) const override;
+  [[nodiscard]] std::vector<std::string> stateNames() const override;
   [[nodiscard]] std::optional<contracts::mappers::ScriptFailure> failure() const override { return failure_; }
   [[nodiscard]] std::vector<std::string> scriptLog() const override { return log_; }
+  [[nodiscard]] contracts::mappers::AddressInfo describeAddress(bool ppu, std::uint16_t address) const override;
 
  private:
   /** 窗口：地址范围映射到存储区里的一段，起点由脚本经 setBank、setOffset 改变。 */
@@ -93,6 +96,7 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
     Side(MapperChip& owner, bool ppu) : owner_(owner), ppu_(ppu) {}
     contracts::hardware::BusRead read(std::uint16_t address) override;
     void write(std::uint16_t address, std::uint8_t value) override;
+    contracts::hardware::BusRead peek(std::uint16_t address) override;
 
    private:
     MapperChip& owner_;
@@ -117,6 +121,7 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   void padRelease(std::size_t port) override;
 
   [[nodiscard]] contracts::hardware::BusRead readBus(bool ppu, std::uint16_t address);
+  [[nodiscard]] contracts::hardware::BusRead peekBus(bool ppu, std::uint16_t address) const;
   void writeBus(bool ppu, std::uint16_t address, std::uint8_t value);
   [[nodiscard]] contracts::hardware::BusRead readWindow(const Window& window, std::uint16_t address) const;
   void writeWindow(const Window& window, std::uint16_t address, std::uint8_t value) const;

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：ember-run.css
- * 说明：运行页的版面：页面纵向排列，舒台占满剩余空间，画面框在舒台里按显示比例居中，画布铺满画面区，画面提示覆盖在画面框上；边栏里的按钮网格与音量行。
+ * 说明：运行模块的版面：显示区纵向排列，舞台占满剩余空间，画面框在舞台里按显示比例居中，画布铺满画面区，画面提示覆盖在画面框上；底部面板“运行”页签里的横向分组、按钮网格与音量行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -97,25 +97,53 @@
   font-size: var(--font-size-caption);
 }
 
-/* 边栏：控制组的四个按钮排成两列，音量行是静音按钮、滑块与数值 */
-.ember-run-side__buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* 运行面板：机器信息、四个控制按钮、声音排成一行，放不下时换行；机器信息的每一项是淡色名称加值，字号同组件库的信息列表 */
+.ember-run-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md) calc(var(--space-page) * 2);
+  align-items: center;
+}
+
+.ember-run-panel__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) calc(var(--space-page) * 2);
+  margin: 0;
+}
+
+.ember-run-panel__fact {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.ember-run-panel__fact dt {
+  color: var(--facts-label-color);
+  font-size: var(--facts-label-font-size);
+}
+
+.ember-run-panel__fact dd {
+  margin: 0;
+  font-size: var(--facts-value-font-size);
+}
+
+.ember-run-panel__buttons {
+  display: flex;
   gap: var(--action-gap);
 }
 
-.ember-run-side__volume {
+.ember-run-panel__volume {
   display: flex;
   align-items: center;
   gap: var(--space-md);
 }
 
-.ember-run-side__slider {
-  flex: 1;
-  min-width: 0;
+.ember-run-panel__slider {
+  flex: none;
+  width: 140px;
 }
 
-.ember-run-side__volume-value {
+.ember-run-panel__volume-value {
   min-width: 3ch;
   color: var(--text-muted);
   text-align: right;

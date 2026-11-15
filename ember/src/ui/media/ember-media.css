@@ -1,26 +1,15 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：ember-media.css
- * 说明：设备边栏的版面：卡片纵向排列，卡片里的按钮横向排列并在放不下时换行。
+ * 说明：设备面板的版面：行的外观（悬停底色、列宽、间距）来自组件库的紧凑列表行，这里只让每行的名称用淡色，与运行面板的信息名称一致。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：只写版面，间距取组件库的令牌；卡片的外观由组件库的 Panel 负责。
+ * 备注：只写版面，颜色取组件库的令牌。
  * ------------------------------------------------------------------------
  */
 
-.ember-media-side {
-  gap: var(--space-md);
-}
-
-.ember-media-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.ember-media-card__buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--action-gap);
+.ember-media-list .ui-row-list__leading {
+  color: var(--facts-label-color);
+  font-size: var(--facts-label-font-size);
 }

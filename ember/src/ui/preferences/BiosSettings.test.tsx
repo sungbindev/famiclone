@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：用假的预加载接口；通知经模拟的 useNotify 记录。
+ * 备注：用假的预加载接口；通知经外壳接口的 notify 记录。
  * ------------------------------------------------------------------------
  */
 
@@ -17,9 +17,11 @@ import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
 import type { MachineInfo } from '../../contracts/machines/generated/machines';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import { PreferencesPage } from './PreferencesPage';
+import { ShellApiContext } from '../shell/shell-context';
+import type { ShellApi } from '../shell/shell-registry';
 
 const notify = vi.fn();
-vi.mock('@rujianjs/ui-kit', async (importOriginal) => ({ ...(await importOriginal<typeof import('@rujianjs/ui-kit')>()), useNotify: () => notify }));
+const shell = { notify } as unknown as ShellApi;
 
 /** 默认的机型清单：经典 FC，小霸王 2000 已支持，其余暂未支持。 */
 function machines(): MachineInfo[] {
@@ -63,7 +65,9 @@ function setup(initial: MachineInfo[] = machines()) {
   } as unknown as EmberBridge;
   render(
     <UiProvider>
-      <PreferencesPage bridge={bridge} />
+      <ShellApiContext.Provider value={shell}>
+        <PreferencesPage bridge={bridge} />
+      </ShellApiContext.Provider>
     </UiProvider>
   );
   return {

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：renderer.tsx
- * 说明：界面入口：挂载组件库根组件与外壳，主题跟随系统。
+ * 说明：界面入口：挂载组件库根组件与外壳，主题跟随系统；对话框用独立的系统窗口显示（组件库的 dialogDisplay="window"），主题类随主窗口同步到对话框窗口。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -34,7 +34,7 @@ if (container === null) throw new Error('界面根元素不存在');
 
 createRoot(container).render(
   <StrictMode>
-    <UiProvider>
+    <UiProvider dialogDisplay="window">
       <Shell bridge={getBridge()} modules={RENDERER_MODULES} />
     </UiProvider>
   </StrictMode>

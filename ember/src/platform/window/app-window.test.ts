@@ -31,6 +31,8 @@ vi.mock('electron', () => ({
       created.push(this);
     }
     once = vi.fn();
+    on = vi.fn();
+    static getFocusedWindow = () => null;
     show = vi.fn();
     isDestroyed = vi.fn(() => false);
     maximize = vi.fn();
@@ -163,7 +165,7 @@ describe('createAppWindow', () => {
   it('没有保存的位置时按最小尺寸创建，内容就绪后显示', () => {
     createAppWindow(OPTIONS);
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ width: 656, height: 605, minWidth: 656, minHeight: 605 });
+    expect(window.options).toMatchObject({ width: 560, height: 529, minWidth: 560, minHeight: 529 });
     expect(window.options.x).toBeUndefined();
     expect(window.setBounds).not.toHaveBeenCalled();
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
@@ -174,8 +176,8 @@ describe('createAppWindow', () => {
   it('有保存的位置时按位置创建，大小仍是最小尺寸，不恢复最大化', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 100, y: 80 } });
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ x: 100, y: 80, width: 656, height: 605 });
-    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 656, height: 605 });
+    expect(window.options).toMatchObject({ x: 100, y: 80, width: 560, height: 529 });
+    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 560, height: 529 });
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
     ready();
     expect(window.show).toHaveBeenCalledTimes(1);
@@ -186,15 +188,19 @@ describe('createAppWindow', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 5000, y: 5000 } });
     const window = created[created.length - 1]!;
     expect(window.options.x).toBeUndefined();
-    expect(window.options).toMatchObject({ width: 656, height: 605 });
+    expect(window.options).toMatchObject({ width: 560, height: 529 });
     expect(window.setBounds).not.toHaveBeenCalled();
   });
 
-  it('拒绝新窗口，并拦截跳转到应用以外的地址', () => {
+  it('只放行组件库的对话框窗口（底色随主题），其他新窗口一律拒绝，并拦截跳转到应用以外的地址', () => {
     createAppWindow(OPTIONS);
     const { webContents } = created[created.length - 1]!;
-    const handler = webContents.setWindowOpenHandler.mock.calls[0]![0] as () => { action: string };
-    expect(handler()).toEqual({ action: 'deny' });
+    const handler = webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string; frameName: string; features: string }) => { action: string; overrideBrowserWindowOptions?: Record<string, unknown> };
+    expect(handler({ url: 'https://example.com/', frameName: 'ui-dialog-1', features: '' })).toEqual({ action: 'deny' });
+    expect(handler({ url: 'about:blank', frameName: 'other', features: '' })).toEqual({ action: 'deny' });
+    const dialog = handler({ url: 'about:blank', frameName: 'ui-dialog-1', features: 'width=640,height=400' });
+    expect(dialog.action).toBe('allow');
+    expect(dialog.overrideBrowserWindowOptions).toMatchObject({ width: 640, height: 400, backgroundColor: '#191a1b', modal: false });
 
     const navigate = webContents.on.mock.calls.find(([name]) => name === 'will-navigate')![1] as (event: { preventDefault: () => void }, url: string) => void;
     const outside = { preventDefault: vi.fn() };

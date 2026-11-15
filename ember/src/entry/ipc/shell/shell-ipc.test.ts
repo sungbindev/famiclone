@@ -26,7 +26,7 @@ function setup(trusted = true) {
     handle: (channel: string, listener: Listener) => handlers.set(channel, listener),
     on: (channel: string, listener: Listener) => listeners.set(channel, listener)
   } as unknown as IpcMain;
-  const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220 } };
+  const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220, selectedMachine: null } };
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), flush: vi.fn() };
   const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false })) };
   registerShellIpc({ ipc, isTrustedSender: () => trusted, state, window });

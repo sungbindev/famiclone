@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：DebugStatusItem.test.tsx
- * 说明：调试服务状态栏项与控制器的测试：没读到时不显示，没开启时显示“调试已关闭”；监听中显示端口，有连接时显示连接数与绿色状态点；开启但没有监听时显示警告与原因；点击打开首选项；状态事件与核心重启后刷新；较早发出的读取结果晚到时丢弃。
+ * 说明：调试服务状态栏项与控制器的测试：没读到、没开启时不显示；开启后显示绿色文字“调试模式”，端口与连接数在悬停提示里；开启但没有监听时用警告色，原因在提示里；点击打开首选项；状态事件与核心重启后刷新；较早发出的读取结果晚到时丢弃。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -96,9 +96,14 @@ function renderItem(controller: DebugController, shell: ShellApi = fakeShell().a
   return render(element);
 }
 
-/** 状态项里状态点的含义。 */
-function dotOf(container: HTMLElement): string | null {
-  return container.querySelector('.ui-status-bar__dot')?.getAttribute('data-dot') ?? null;
+/** 状态项的等级（data-tone）。 */
+function toneOf(container: HTMLElement): string | null {
+  return container.querySelector('.ui-status-bar__item')?.getAttribute('data-tone') ?? null;
+}
+
+/** 状态项的悬停提示。 */
+function hintOf(container: HTMLElement): string | null {
+  return container.querySelector('.ui-status-bar__item')?.getAttribute('title') ?? null;
 }
 
 const CONNECTION = { id: 1, client: 'copilot', connectedAt: '2026-11-14T10:00:00Z' };
@@ -110,12 +115,11 @@ describe('调试服务状态栏项', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('没有开启时显示“调试已关闭”，灰色状态点', async () => {
+  it('没有开启时不显示', async () => {
     const fake = new FakeDebugBackend();
     const controller = await connect(fake);
     const { container } = renderItem(controller);
-    expect(screen.getByText('调试已关闭')).toBeTruthy();
-    expect(dotOf(container)).toBe('neutral');
+    expect(container.textContent).toBe('');
   });
 
   it('点击状态项打开首选项（命令 preferences.open）', async () => {
@@ -124,36 +128,38 @@ describe('调试服务状态栏项', () => {
     const controller = await connect(fake);
     const shell = fakeShell();
     renderItem(controller, shell.api);
-    fireEvent.click(screen.getByText('调试服务 5688'));
+    fireEvent.click(screen.getByText('调试模式'));
     expect(shell.commands).toEqual(['preferences.open']);
   });
 
-  it('监听中显示端口，没有连接是灰色状态点', async () => {
+  it('监听中显示绿色文字“调试模式”，没有状态点，地址在悬停提示里', async () => {
     const fake = new FakeDebugBackend();
     fake.status = { enabled: true, listening: true, port: 5688, connections: [] };
     const controller = await connect(fake);
     const { container } = renderItem(controller);
-    expect(screen.getByText('调试服务 5688')).toBeTruthy();
-    expect(dotOf(container)).toBe('neutral');
+    expect(screen.getByText('调试模式')).toBeTruthy();
+    expect(toneOf(container)).toBe('success');
+    expect(container.querySelector('.ui-status-bar__dot')).toBeNull();
+    expect(hintOf(container)).toBe('调试服务：ws://127.0.0.1:5688');
   });
 
-  it('有连接时显示连接数与绿色状态点', async () => {
+  it('有连接时连接数在悬停提示里，文字仍是“调试模式”', async () => {
     const fake = new FakeDebugBackend();
     fake.status = { enabled: true, listening: true, port: 5688, connections: [CONNECTION, { ...CONNECTION, id: 2 }] };
     const controller = await connect(fake);
     const { container } = renderItem(controller);
-    expect(screen.getByText('调试服务 5688（2 个连接）')).toBeTruthy();
-    expect(dotOf(container)).toBe('success');
+    expect(screen.getByText('调试模式')).toBeTruthy();
+    expect(hintOf(container)).toBe('调试服务：ws://127.0.0.1:5688，2 个连接');
   });
 
-  it('开启了但没有监听时显示警告，原因放在提示里', async () => {
+  it('开启了但没有监听时文字仍是“调试模式”，用警告色，原因放在提示里', async () => {
     const fake = new FakeDebugBackend();
     fake.status = { enabled: true, listening: false, port: 0, error: '端口 5688 已被占用', connections: [] };
     const controller = await connect(fake);
     const { container } = renderItem(controller);
-    expect(screen.getByText('调试服务未监听')).toBeTruthy();
-    expect(dotOf(container)).toBe('warning');
-    expect(container.querySelector('[title]')?.getAttribute('title')).toBe('调试服务没有监听：端口 5688 已被占用');
+    expect(screen.getByText('调试模式')).toBeTruthy();
+    expect(toneOf(container)).toBe('warning');
+    expect(hintOf(container)).toBe('调试服务没有监听：端口 5688 已被占用');
   });
 
   it('收到 debug.statusChanged 后重新读取：连接建立与服务停止', async () => {
@@ -164,11 +170,11 @@ describe('调试服务状态栏项', () => {
     fake.status = { enabled: true, listening: true, port: 5688, connections: [CONNECTION] };
     fake.emit('debug.statusChanged', { enabled: true, listening: true, port: 5688, connections: 1 });
     await act(async () => settle());
-    expect(screen.getByText('调试服务 5688（1 个连接）')).toBeTruthy();
+    expect(hintOf(container)).toBe('调试服务：ws://127.0.0.1:5688，1 个连接');
     fake.status = { enabled: false, listening: false, port: 0, connections: [] };
     fake.emit('debug.statusChanged', { enabled: false, listening: false, port: 0, connections: 0 });
     await act(async () => settle());
-    expect(container.textContent).toBe('调试已关闭');
+    expect(container.textContent).toBe('');
   });
 
   it('其他事件不触发读取', async () => {
@@ -179,7 +185,7 @@ describe('调试服务状态栏项', () => {
     fake.status = { enabled: false, listening: false, port: 0, connections: [] };
     fake.emit('runtime.stateChanged', {});
     await act(async () => settle());
-    expect(screen.getByText('调试服务 5688')).toBeTruthy();
+    expect(screen.getByText('调试模式')).toBeTruthy();
   });
 
   it('核心重启：先不显示，就绪后显示新状态', async () => {
@@ -192,7 +198,7 @@ describe('调试服务状态栏项', () => {
     fake.status = { enabled: true, listening: true, port: 5700, connections: [] };
     act(() => fake.changeCore('ready'));
     await act(async () => settle());
-    expect(screen.getByText('调试服务 5700')).toBeTruthy();
+    expect(hintOf(container)).toBe('调试服务：ws://127.0.0.1:5700');
   });
 
   it('读取失败时不显示', async () => {
@@ -220,7 +226,8 @@ describe('调试服务状态栏项', () => {
       fake.pending[0]?.({ enabled: true, listening: true, port: 5688, connections: [] });
       await settle();
     });
-    expect(container.textContent).toBe('调试服务 5700');
+    expect(container.textContent).toBe('调试模式');
+    expect(hintOf(container)).toBe('调试服务：ws://127.0.0.1:5700');
   });
 
   it('断开之后不再读取也不再更新', async () => {

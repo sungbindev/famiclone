@@ -21,7 +21,7 @@ inline constexpr std::string_view SETTING_GROUP = "sound";
 inline constexpr std::string_view SETTING_BUFFER = "sound.buffer";
 /** 启动时是否静音。 */
 inline constexpr std::string_view SETTING_START_MUTED = "sound.startMuted";
-/** 音量百分比，0 到 100；不在首选项页显示，边栏的音量滑块修改它并保存。 */
+/** 音量百分比，0 到 100；不在首选项页显示，底部面板的音量滑块修改它并保存。 */
 inline constexpr std::string_view SETTING_VOLUME = "sound.volume";
 
 }  // namespace ember::contracts::output

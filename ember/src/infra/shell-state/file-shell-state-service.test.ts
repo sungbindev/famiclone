@@ -35,7 +35,7 @@ describe('FileShellStateService', () => {
       createStorage({ window: { x: 1, y: 2, width: 1000, height: 700, maximized: false }, layout: { rightBarOpen: true, bottomPanelHeight: -5 } })
     );
     expect(service.get().window).toEqual({ x: 1, y: 2 });
-    expect(service.get().layout).toEqual({ bottomPanelHeight: null });
+    expect(service.get().layout).toEqual({ bottomPanelHeight: null, selectedMachine: null });
   });
 
   it('修改布局只改传入的字段，并把整个状态交给存储', () => {
@@ -43,7 +43,7 @@ describe('FileShellStateService', () => {
     const service = new FileShellStateService(storage);
     service.updateLayout({ bottomPanelHeight: 260 });
     service.updateLayout({ bottomPanelHeight: 300 });
-    expect(service.get().layout).toEqual({ bottomPanelHeight: 300 });
+    expect(service.get().layout).toEqual({ bottomPanelHeight: 300, selectedMachine: null });
     expect(storage.writes).toHaveLength(2);
     expect(storage.writes[1]).toEqual(service.get());
   });

@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimeStatusItems.test.tsx
- * 说明：状态栏项与画面提示的测试：电源状态点的颜色含义与文字、主机型号、卡带名、mapper 插件、音量（含静音）；画面提示的四种状态（还没读到、未开机、已断电、已暂停、运行中）。
+ * 说明：系统栏左侧状态项与画面提示的测试：卡带名与 mapper 插件（没有信息时不显示）；画面提示的几种状态（还没读到、未开机、已断电、已暂停、运行中）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-15
  * 备注：用假的核心接口与真实的控制器。
  * ------------------------------------------------------------------------
  */
@@ -13,131 +13,78 @@ import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { FakeRuntimeBackend, machineStatus, settle } from './runtime-fakes';
 import { RuntimeController } from './runtime-controller';
-import { CartridgeStatusItem, HostStatusItem, PluginStatusItem, PowerStatusItem, VolumeStatusItem } from './RuntimeStatusItems';
+import { CartridgeStatusItem, PluginStatusItem } from './RuntimeStatusItems';
 import { ScreenOverlay } from './ScreenOverlay';
 
 /** 接上假核心并等初始读取完成。 */
 async function connect(fake: FakeRuntimeBackend): Promise<RuntimeController> {
   const controller = new RuntimeController();
-  controller.attach(fake.backend, { addMessage: () => undefined, notify: () => undefined, refreshCommands: () => undefined });
+  controller.attach(fake.backend, { notify: () => undefined, refreshCommands: () => undefined });
   await act(async () => settle());
   return controller;
 }
 
-/** 电源状态项里状态点的含义。 */
-function powerDot(container: HTMLElement): string | null {
-  return container.querySelector('.ui-status-bar__dot')?.getAttribute('data-dot') ?? null;
-}
-
-describe('电源状态项', () => {
-  it('运行中是绿色状态点加“运行中”', async () => {
-    const fake = new FakeRuntimeBackend();
-    fake.status = machineStatus('on', 'running', 'D:\\roms\\a.nes');
-    const controller = await connect(fake);
-    const { container } = render(<PowerStatusItem controller={controller} />);
-    expect(screen.getByText('运行中')).toBeTruthy();
-    expect(powerDot(container)).toBe('success');
-  });
-
-  it('已暂停是黄色状态点加“已暂停”', async () => {
-    const fake = new FakeRuntimeBackend();
-    fake.status = machineStatus('on', 'paused', 'D:\\roms\\a.nes');
-    const controller = await connect(fake);
-    const { container } = render(<PowerStatusItem controller={controller} />);
-    expect(screen.getByText('已暂停')).toBeTruthy();
-    expect(powerDot(container)).toBe('warning');
-  });
-
-  it('已断电与未开机是灰色状态点加文字', async () => {
-    const fake = new FakeRuntimeBackend();
-    fake.status = machineStatus('off', 'paused', 'D:\\roms\\a.nes');
-    const controller = await connect(fake);
-    const { container } = render(<PowerStatusItem controller={controller} />);
-    expect(screen.getByText('已断电')).toBeTruthy();
-    expect(powerDot(container)).toBe('neutral');
-    fake.status = machineStatus('off', 'paused');
-    fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'eject' });
-    await act(async () => settle());
-    expect(screen.getByText('未开机')).toBeTruthy();
-    expect(powerDot(container)).toBe('neutral');
-  });
-
-  it('状态随事件刷新：暂停变为运行', async () => {
-    const fake = new FakeRuntimeBackend();
-    fake.status = machineStatus('on', 'paused', 'D:\\roms\\a.nes');
-    const controller = await connect(fake);
-    const { container } = render(<PowerStatusItem controller={controller} />);
-    fake.status = machineStatus('on', 'running', 'D:\\roms\\a.nes');
-    fake.emit('runtime.stateChanged', { power: 'on', mode: 'running', reason: 'resume' });
-    await act(async () => settle());
-    expect(screen.getByText('运行中')).toBeTruthy();
-    expect(powerDot(container)).toBe('success');
-  });
-
-  it('核心重启后先显示“—”，就绪后显示新状态（旧文字不残留）', async () => {
-    const fake = new FakeRuntimeBackend();
-    fake.status = machineStatus('on', 'running', 'D:\\roms\\a.nes');
-    const controller = await connect(fake);
-    render(<PowerStatusItem controller={controller} />);
-    expect(screen.getByText('运行中')).toBeTruthy();
-    act(() => fake.emitCoreStatus({ state: 'starting' }));
-    expect(screen.queryByText('运行中')).toBeNull();
-    expect(screen.getByText('—')).toBeTruthy();
-    fake.status = machineStatus('off', 'paused');
-    act(() => fake.emitCoreStatus({ state: 'ready', coreVersion: '0.1.0' }));
-    await act(async () => settle());
-    expect(screen.getByText('未开机')).toBeTruthy();
-  });
-});
-
-describe('其余状态栏项', () => {
-  it('主机型号、卡带名、mapper 插件', async () => {
+describe('卡带与 mapper 插件状态项', () => {
+  it('显示卡带名与 mapper 插件', async () => {
     const fake = new FakeRuntimeBackend();
     fake.status = machineStatus('on', 'running', 'D:\\roms\\nestest.nes');
     const controller = await connect(fake);
     render(
       <>
-        <HostStatusItem controller={controller} />
         <CartridgeStatusItem controller={controller} />
         <PluginStatusItem controller={controller} />
       </>
     );
-    expect(screen.getByText('经典 FC')).toBeTruthy();
     expect(screen.getByText('nestest.nes')).toBeTruthy();
     expect(screen.getByText('NROM')).toBeTruthy();
   });
 
-  it('没有开机时：主机型号“—”、卡带“无”、mapper 插件“—”', async () => {
+  it('没有开机时没有信息，两项都不显示（没有“—”与“无”）', async () => {
     const controller = await connect(new FakeRuntimeBackend());
-    render(
+    const { container } = render(
       <>
-        <HostStatusItem controller={controller} />
         <CartridgeStatusItem controller={controller} />
         <PluginStatusItem controller={controller} />
       </>
     );
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.getByText('无')).toBeTruthy();
+    expect(container.textContent).toBe('');
   });
 
-  it('音量项：显示音量百分比，静音时显示“已静音”', async () => {
+  it('整机机型用 BIOS 开机时没有卡带与 mapper，不显示', async () => {
     const fake = new FakeRuntimeBackend();
-    fake.volume = 70;
+    fake.status = { ...machineStatus('on', 'running'), machine: 'sb2000' };
     const controller = await connect(fake);
-    render(<VolumeStatusItem controller={controller} />);
-    expect(screen.getByText('音量 70%')).toBeTruthy();
-    controller.toggleMute();
+    const { container } = render(
+      <>
+        <CartridgeStatusItem controller={controller} />
+        <PluginStatusItem controller={controller} />
+      </>
+    );
+    expect(container.textContent).toBe('');
+  });
+
+  it('核心重启后先不显示，就绪后显示新状态（旧文字不残留）', async () => {
+    const fake = new FakeRuntimeBackend();
+    fake.status = machineStatus('on', 'running', 'D:\\roms\\a.nes');
+    const controller = await connect(fake);
+    render(<CartridgeStatusItem controller={controller} />);
+    expect(screen.getByText('a.nes')).toBeTruthy();
+    act(() => fake.emitCoreStatus({ state: 'starting' }));
+    expect(screen.queryByText('a.nes')).toBeNull();
+    fake.status = machineStatus('on', 'running', 'D:\\roms\\b.nes');
+    act(() => fake.emitCoreStatus({ state: 'ready', coreVersion: '0.1.0' }));
     await act(async () => settle());
-    expect(screen.getByText('已静音')).toBeTruthy();
+    expect(screen.getByText('b.nes')).toBeTruthy();
   });
 });
 
 describe('画面提示', () => {
-  it('没有开机：“未开机”，并指明去“文件”菜单的“开机…”或“打开卡带…”', async () => {
+  it('没有开机：“未开机”，并指明怎么开机', async () => {
     const controller = await connect(new FakeRuntimeBackend());
     render(<ScreenOverlay controller={controller} />);
     expect(screen.getByRole('status').textContent).toContain('未开机');
-    expect(screen.getByRole('status').textContent).toContain('“文件”菜单的“开机…”或“打开卡带…”');
+    expect(screen.getByRole('status').textContent).toContain('“文件”菜单里选择机型');
+    expect(screen.getByRole('status').textContent).toContain('“文件”菜单的“打开卡带”');
     expect(screen.getByRole('status').getAttribute('data-blank')).toBe('true');
   });
 

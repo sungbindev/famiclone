@@ -1,8 +1,8 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：app-window.ts
- * 说明：主窗口：隐藏系统标题栏并保留系统窗口按钮（按主题着色），开启沙箱与上下文隔离、关闭 Node 集成，锁定导航，拒绝新窗口，拒绝全部权限请求；
- *       恢复与读取窗口的位置，去掉 Electron 的默认菜单，系统主题变化时同步窗口底色与系统按钮区的颜色。
+ * 说明：主窗口：隐藏系统标题栏并保留系统窗口按钮（按主题着色），开启沙箱与上下文隔离、关闭 Node 集成，锁定导航，只放行组件库打开的对话框窗口、拒绝其他新窗口，拒绝全部权限请求；
+ *       恢复与读取窗口的位置，去掉 Electron 的默认菜单，系统主题变化时同步窗口底色与系统按钮区（以及对话框窗口）的颜色。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -14,6 +14,7 @@
 
 import { pathToFileURL } from 'node:url';
 import { BrowserWindow, Menu, nativeTheme, screen, session } from 'electron';
+import { allowDialogWindows, setDialogWindowsBackground } from './dialog-window';
 
 /** 实际使用的主题。 */
 export type ResolvedTheme = 'dark' | 'light';
@@ -21,12 +22,12 @@ export type ResolvedTheme = 'dark' | 'light';
 /** 标题栏高度（组件库 --title-bar-height），系统按钮区少 1 像素露出底边线。 */
 const TITLE_BAR_HEIGHT = 36;
 /**
- * 窗口的最小尺寸。宽度保证标题栏放得下图标、名称、四个菜单、至少 48 像素可拖动的空白、三个折叠按钮和系统窗口按钮（实测约 652）；
- * 高度让画面框在最小窗口下四周间距一致：页面区内容宽 656-40(活动栏)-2x10(页面内边距)=596，对应画面高约 489，
- * 再加页面内边距 20、标题栏 36、标签栏 36、状态栏 26，按令牌算共 607；缩放 1.5 倍的实测里页面区比算出来的高约 2.5 像素，所以取 605。
+ * 窗口的最小尺寸（也是每次启动的尺寸）。宽度保证标题栏放得下图标、名称、四个菜单、至少 48 像素可拖动的空白和系统窗口按钮，
+ * 以及状态栏的左右两组项；高度让画面框在最小窗口下四周间距一致：显示区内容宽 560-2x10(页面内边距)=540，对应画面高约 443，
+ * 再加页面内边距 20、标题栏 36、系统栏（大尺寸状态栏）32，按令牌算共 531；缩放 1.5 倍的实测里显示区比算出来的高约 2.5 像素，所以取 529。
  */
-const MIN_WIDTH = 656;
-const MIN_HEIGHT = 605;
+const MIN_WIDTH = 560;
+const MIN_HEIGHT = 529;
 /** 窗口至少要有这么大一块落在某个屏幕的工作区内，否则恢复为默认位置。 */
 const MIN_VISIBLE = 100;
 
@@ -183,7 +184,7 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
   window.webContents.on('will-navigate', (event, url) => {
     if (!isAppUrl(url, options)) event.preventDefault();
   });
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  allowDialogWindows(window, { background: () => WINDOW_COLORS[resolvedTheme()].background });
   // 屏幕缩放不是整数倍时，创建参数里的尺寸换算后会差几个像素，所以创建后再按边界精确设置一次。
   if (placement) setExactBounds(window, { x: placement.x, y: placement.y, width: MIN_WIDTH, height: MIN_HEIGHT });
   if (options.devTools) {
@@ -217,6 +218,7 @@ export function followSystemTheme(window: BrowserWindow): () => void {
     if (window.isDestroyed()) return;
     const theme = resolvedTheme();
     window.setBackgroundColor(WINDOW_COLORS[theme].background);
+    setDialogWindowsBackground(window, WINDOW_COLORS[theme].background);
     if (process.platform !== 'darwin') window.setTitleBarOverlay(titleBarOverlay(theme));
   };
   nativeTheme.on('updated', apply);

@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-registry.ts
- * 说明：汇总外壳自己与各模块的登记项并检查：模块名合格且不重复、标识（含子菜单）以“模块名.”开头且不重复、菜单项是命令或子菜单二选一、引用的命令与页面存在、
- *       默认快捷键写法合格且不与保留组合、其他命令冲突；为活动栏按钮生成“视图”菜单里的入口命令；收集启动时要打开的页面。
+ * 说明：汇总外壳自己与各模块的登记项并检查：模块名合格且不重复、标识（含子菜单）以“模块名.”开头且不重复、菜单项是命令或子菜单二选一、引用的命令存在、
+ *       显示区至多一个、默认快捷键写法合格且不与保留组合、其他命令冲突。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
- * 备注：登记有误属于程序错误，直接抛出异常并列出全部问题；快捷键允许 Ctrl 与 Alt 同时使用（右边栏的 Ctrl+Alt+B 是文档规定的默认值），
+ * 日期：2026-11-15
+ * 备注：登记有误属于程序错误，直接抛出异常并列出全部问题；
  *       快捷键写法与 @rujianjs/ui-kit 的 shortcutFromEvent 一致：修饰键按 Ctrl、Shift、Alt 排列。
  * ------------------------------------------------------------------------
  */
@@ -15,11 +15,10 @@ import { RESERVED_SHORTCUTS } from '@rujianjs/ui-kit';
 import type { ComponentType } from 'react';
 import {
   SHELL_MENUS,
-  type ShellActivityDefinition,
   type ShellCommandDefinition,
+  type ShellDialogDefinition,
   type ShellMenuItemDefinition,
   type ShellModule,
-  type ShellPageDefinition,
   type ShellPageProps,
   type ShellPanelDefinition,
   type ShellStatusItemDefinition
@@ -27,8 +26,6 @@ import {
 
 /** 外壳自己的登记项使用的名称。 */
 export const SHELL_NAMESPACE = 'shell';
-/** 活动栏按钮在“视图”菜单中的入口命令的标识前缀。 */
-const ACTIVITY_COMMAND_PREFIX = `${SHELL_NAMESPACE}.showActivity.`;
 /** 模块名格式。 */
 const MODULE_NAME_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 /** 快捷键的写法：修饰键按 Ctrl、Shift、Alt 排列，再接一个按键。 */
@@ -40,24 +37,18 @@ const MENU_MNEMONIC_SHORTCUTS = SHELL_MENUS.map((menu) => `Alt+${menu.mnemonic}`
 
 /** 汇总后的登记表。 */
 export interface ShellRegistry {
-  readonly pages: ReadonlyMap<string, ShellPageDefinition>;
+  /** 显示区的内容；没有模块登记时为 undefined。 */
+  readonly screen: ComponentType<ShellPageProps> | undefined;
+  readonly dialogs: ReadonlyMap<string, ShellDialogDefinition>;
   readonly commands: ReadonlyMap<string, ShellCommandDefinition>;
-  /** 全部菜单项：活动栏按钮生成的入口排在“视图”菜单的最前面。 */
+  /** 全部菜单项：外壳自己的排在各模块之后。 */
   readonly menuItems: readonly ShellMenuItemDefinition[];
-  readonly activityItems: readonly ShellActivityDefinition[];
   readonly bottomPanels: readonly ShellPanelDefinition[];
   readonly statusItems: readonly ShellStatusItemDefinition[];
   /** 默认快捷键到命令标识。 */
   readonly shortcuts: ReadonlyMap<string, string>;
   /** 常驻组件，按登记顺序。 */
   readonly hosts: readonly { readonly module: string; readonly Host: ComponentType<ShellPageProps> }[];
-  /** 启动时要打开的页面标识，按登记顺序。 */
-  readonly startPages: readonly string[];
-}
-
-/** 活动栏按钮对应的入口命令的标识。 */
-export function activityCommandId(activityId: string): string {
-  return `${ACTIVITY_COMMAND_PREFIX}${activityId}`;
 }
 
 /** 检查默认快捷键；可用时返回 null，不可用时返回原因。 */
@@ -94,16 +85,16 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
     return true;
   };
 
-  const pages = new Map<string, ShellPageDefinition>();
+  const dialogs = new Map<string, ShellDialogDefinition>();
   const commands = new Map<string, ShellCommandDefinition>();
   const menuItems: ShellMenuItemDefinition[] = [];
-  const activityItems: ShellActivityDefinition[] = [];
   const bottomPanels: ShellPanelDefinition[] = [];
   const statusItems: ShellStatusItemDefinition[] = [];
-  const startPages: string[] = [];
   const hosts: Array<{ module: string; Host: ComponentType<ShellPageProps> }> = [];
   /** 外壳自己的菜单项：排在各模块的菜单项之后（如“文件”菜单的“退出”在最后）。 */
   const shellMenuItems: ShellMenuItemDefinition[] = [];
+  let screen: ComponentType<ShellPageProps> | undefined;
+  let screenOwner: string | undefined;
 
   const names = new Set<string>();
   for (const module of modules) {
@@ -113,13 +104,15 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
       continue;
     }
     names.add(owner);
-    for (const page of module.pages ?? []) {
-      if (!claim('页面', page.id, owner)) continue;
-      pages.set(page.id, page);
-      if (page.openOnStart === true) startPages.push(page.id);
+    if (module.screen !== undefined) {
+      if (screenOwner !== undefined) errors.push(`显示区只能有一个，“${screenOwner}”与“${owner}”都登记了`);
+      else {
+        screen = module.screen;
+        screenOwner = owner;
+      }
     }
+    for (const dialog of module.dialogs ?? []) if (claim('对话框', dialog.id, owner)) dialogs.set(dialog.id, dialog);
     for (const command of module.commands ?? []) if (claim('命令', command.id, owner)) commands.set(command.id, command);
-    for (const item of module.activityItems ?? []) if (claim('活动栏按钮', item.id, owner)) activityItems.push(item);
     for (const item of module.bottomPanels ?? []) if (claim('底部面板页签', item.id, owner)) bottomPanels.push(item);
     for (const item of module.statusItems ?? []) if (claim('状态项', item.id, owner)) statusItems.push(item);
     const menuTarget = owner === SHELL_NAMESPACE ? shellMenuItems : menuItems;
@@ -139,19 +132,7 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
     if (module.Host !== undefined) hosts.push({ module: owner, Host: module.Host });
   }
 
-  // 活动栏按钮在“视图”菜单里的入口，排在“视图”菜单的最前面；外壳自己的菜单项排在各模块之后。
   menuItems.push(...shellMenuItems);
-  const activityMenuItems: ShellMenuItemDefinition[] = [];
-  for (const item of activityItems) {
-    if ((item.page === undefined) === (item.sideBar === undefined)) errors.push(`活动栏按钮“${item.id}”必须且只能有页面或边栏中的一个`);
-    else if (item.page !== undefined && !pages.has(item.page)) errors.push(`活动栏按钮“${item.id}”引用的页面不存在：${item.page}`);
-    const id = activityCommandId(item.id);
-    const page = item.page;
-    commands.set(id, { id, title: item.label, run: (shell) => (page === undefined ? shell.showActivity(item.id) : shell.openPage(page)) });
-    activityMenuItems.push({ menu: 'view', command: id });
-  }
-  menuItems.unshift(...activityMenuItems);
-
   for (const item of menuItems) if (item.command !== undefined && !commands.has(item.command)) errors.push(`菜单项引用的命令不存在：${item.command}`);
 
   const shortcuts = new Map<string, string>();
@@ -165,5 +146,5 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
   }
 
   if (errors.length > 0) throw new Error(`外壳登记有误：\n${errors.join('\n')}`);
-  return { pages, commands, menuItems, activityItems, bottomPanels, statusItems, shortcuts, hosts, startPages };
+  return { screen, dialogs, commands, menuItems, bottomPanels, statusItems, shortcuts, hosts };
 }

@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimeHost.tsx
- * 说明：运行模块的常驻组件：外壳启动后一直挂载，把预加载脚本的接口、外壳的消息与命令刷新能力、组件库的通知接到运行页的控制器上。
+ * 说明：运行模块的常驻组件：外壳启动后一直挂载，把预加载脚本的接口、外壳的命令刷新能力与组件库的通知接到运行模块的控制器上。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
- * 备注：没有界面；让边栏、状态栏与菜单在边栏没打开、页面没显示时也有最新的机器状态，并让“消息”持续收到运行事件。必须放在组件库根组件 UiProvider 之内（通知需要它）。
+ * 日期：2026-11-15
+ * 备注：没有界面；让状态栏与菜单在面板没展开、显示区没显示时也有最新的机器状态。必须放在组件库根组件 UiProvider 之内（通知需要它）。
  * ------------------------------------------------------------------------
  */
 
@@ -28,7 +28,7 @@ export function RuntimeHost({ bridge, controller }: RuntimeHostProps) {
   const shell = useShell();
   const notify = useNotify();
   useEffect(
-    () => controller.attach(bridge, { addMessage: shell.addMessage, notify, refreshCommands: shell.refreshCommands }),
+    () => controller.attach(bridge, { notify, refreshCommands: shell.refreshCommands }),
     [bridge, controller, shell, notify]
   );
   return null;

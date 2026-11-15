@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：PreferencesPage.tsx
- * 说明：“首选项”页面：左边是分组导航（只用来切换），右边是该分组的设置项（每项一行），改动立即保存，取值与出厂默认不同时可恢复默认；没有边栏。
+ * 说明：“首选项”对话框的内容：左边是分组导航（只用来切换），右边是该分组的设置项（每项一行），改动立即保存，取值与出厂默认不同时可恢复默认。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -10,10 +10,11 @@
  * ------------------------------------------------------------------------
  */
 
-import { List, Panel, ScrollArea, SplitView, Stack, State, Tree, useNotify, type TreeItem } from '@rujianjs/ui-kit';
+import { List, Panel, ScrollArea, SplitView, Stack, State, Tree, type TreeItem } from '@rujianjs/ui-kit';
 import { useState } from 'react';
 import type { PreferenceSetting } from '../../contracts/preferences/generated/preferences';
 import type { ShellPageProps } from '../shell/shell-registry';
+import { useShell } from '../shell/shell-context';
 import { BiosSettings } from './BiosSettings';
 import { errorText, MACHINES_GROUP_ID, visibleGroups, visibleSettings, withMachinesGroup } from './preferences-model';
 import { PreferenceRow } from './PreferenceRow';
@@ -33,7 +34,7 @@ const SIDE_WIDTH = { initial: 180, min: 140, max: 320 } as const;
  * @param props 外壳传入的属性。
  */
 export function PreferencesPage({ bridge }: ShellPageProps) {
-  const notify = useNotify();
+  const { notify } = useShell();
   const { state, set, reset } = usePreferences(bridge);
   const [selected, setSelected] = useState<string | undefined>(undefined);
 

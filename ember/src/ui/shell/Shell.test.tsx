@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：Shell.test.tsx
- * 说明：外壳的测试：只渲染登记表（页面、活动栏、菜单、快捷键、边栏、底部面板、状态项）、启动页面、边栏随页面更换与置灰、再点活动栏按钮折叠、
- *       全局快捷键与画面优先、右边栏置灰、退出与全屏经窗口接口、消息追加与清空、没有页面时的空工作区、全屏只显示页面、启动时各面板全部关闭且展开状态不保存、底部面板高度的读取与保存、登记错误。
+ * 说明：外壳的测试：显示区与菜单来自登记表（没有视图菜单、活动栏、标签栏、边栏、右边栏）、系统栏（大尺寸）里的面板按钮只有图标并按“展开、切换、收起”工作、按钮按下态随面板收起恢复、
+ *       面板没有页签条且收起时内容卸载、指示灯、全局快捷键与画面优先、退出与全屏经窗口接口、对话框同时只开一个、全屏只显示显示区、底部面板高度的读取与保存、命令状态刷新、子菜单、常驻组件、登记错误。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
- * 备注：用假的 window.ember；页面是测试里写的简单组件，不引用运行页。
+ * 日期：2026-11-15
+ * 备注：用假的 window.ember；显示区与面板是测试里写的简单组件，不引用运行模块。
  * ------------------------------------------------------------------------
  */
 
@@ -25,7 +25,7 @@ import { Shell } from './Shell';
 const ICON = ['M0 0'] as const;
 
 /** 没有保存过时的布局。 */
-const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null };
+const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null };
 
 /** 假的 window.ember：布局与窗口状态由测试决定，调用都记录下来。 */
 function createBridge(layout: Partial<ShellLayout> = {}) {
@@ -49,469 +49,39 @@ function createBridge(layout: Partial<ShellLayout> = {}) {
   };
 }
 
-/** 追加一条消息的页面，用来测试消息接口。 */
-function MessagePage() {
-  const shell = useShell();
-  return (
-    <button type="button" onClick={() => shell.addMessage({ level: 'error', text: '核心已停止', time: new Date(2026, 10, 14, 9, 5, 7) })}>
-      追加消息
-    </button>
-  );
-}
-
-/** 有边栏、启动时打开的甲模块；乙模块没有边栏；丙模块有一个按钮追加消息。 */
-const MODULES: readonly ShellModule[] = [
-  {
-    name: 'a',
-    pages: [{ id: 'a.page', title: '甲页', icon: ICON, Component: () => <p>甲页内容</p>, openOnStart: true, sideBar: { Component: () => <p>甲边栏内容</p> } }],
-    activityItems: [{ id: 'a.btn', label: '甲', icon: ICON, page: 'a.page' }],
-    commands: [{ id: 'a.hello', title: '问好', defaultShortcut: 'Ctrl+H', run: (shell) => shell.addMessage({ level: 'info', text: '你好' }) }],
-    menuItems: [{ menu: 'machine', command: 'a.hello' }]
-  },
-  {
-    name: 'b',
-    pages: [{ id: 'b.page', title: '乙页', icon: ICON, Component: () => <p>乙页内容</p> }],
-    activityItems: [{ id: 'b.btn', label: '乙', icon: ICON, page: 'b.page' }]
-  },
-  {
-    name: 'c',
-    pages: [{ id: 'c.messages', title: '消息页', icon: ICON, Component: MessagePage }],
-    activityItems: [{ id: 'c.btn', label: '丙', icon: ICON, page: 'c.messages' }]
-  }
-];
-
-function renderShell(options: { layout?: Partial<ShellLayout>; modules?: readonly ShellModule[] } = {}) {
-  const fake = createBridge(options.layout);
-  const result = render(
-    <UiProvider>
-      <Shell bridge={fake.bridge} modules={options.modules ?? MODULES} />
-    </UiProvider>
-  );
-  return { ...fake, ...result };
-}
-
-/** 标签栏（页面区上方已打开的页面）。 */
-const TABS_NAME = { name: '已打开的页面' };
-
-/** 等外壳读完布局、显示出来。 */
-async function shown(): Promise<void> {
-  await screen.findByRole('tablist', TABS_NAME);
-}
-
-/** 边栏区域元素。 */
-function sideArea(container: HTMLElement): HTMLElement {
-  return container.querySelector('.ui-app-frame__side') as HTMLElement;
-}
-
-function bottomArea(container: HTMLElement): HTMLElement {
-  return container.querySelector('.ui-app-frame__bottom') as HTMLElement;
-}
-
-function rightArea(container: HTMLElement): HTMLElement {
-  return container.querySelector('.ui-app-frame__right') as HTMLElement;
-}
-
-/** 打开的菜单里的全部菜单项（普通项是 menuitem，可勾选项是 menuitemcheckbox）。 */
-function popupItems(): HTMLElement[] {
-  return Array.from(document.querySelectorAll<HTMLElement>('.ui-menu__popup [role^="menuitem"]'));
-}
-
-/** 按下一个组合键（事件发在 body 上，冒泡到 window）。 */
-function press(init: KeyboardEventInit): void {
-  fireEvent.keyDown(document.body, init);
-}
-
-/** Ctrl+B：切换边栏。 */
-const TOGGLE_SIDE_BAR = { code: 'KeyB', ctrlKey: true } as const;
-/** Ctrl+J：切换底部面板。 */
-const TOGGLE_BOTTOM_PANEL = { code: 'KeyJ', ctrlKey: true } as const;
-
-describe('登记表驱动的界面', () => {
-  it('启动时打开登记了 openOnStart 的页面，活动栏、标签与页面内容都来自登记', async () => {
-    renderShell();
-    await shown();
-    expect(screen.getByRole('tab', { name: '甲页' })).toBeTruthy();
-    expect(screen.queryByRole('tab', { name: '乙页' })).toBeNull();
-    expect(screen.getByText('甲页内容')).toBeTruthy();
-    for (const label of ['甲', '乙', '丙']) expect(screen.getByRole('button', { name: label })).toBeTruthy();
-  });
-
-  it('菜单栏只显示有登记项的菜单：文件、机器、视图，没有设置与帮助', async () => {
-    renderShell();
-    await shown();
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['文件(F)', '机器(M)', '视图(V)']);
-  });
-
-  it('菜单项：视图里先是活动栏按钮的入口，再是边栏、底部面板、右边栏、全屏，并显示快捷键', async () => {
-    const user = userEvent.setup();
-    renderShell();
-    await shown();
-    await user.click(screen.getByRole('menuitem', { name: /视图/ }));
-    const labels = popupItems().map((item) => item.textContent ?? '');
-    expect(labels.filter((text) => /^(甲|乙|丙|边栏|底部面板|右边栏|全屏)/.test(text)).map((text) => text.replace(/(Ctrl\+(Alt\+)?[BJ]|F11)$/, ''))).toEqual(['甲', '乙', '丙', '边栏', '底部面板', '右边栏', '全屏']);
-    expect(labels.some((text) => text.endsWith('Ctrl+Alt+B'))).toBe(true);
-    expect(labels.some((text) => text.endsWith('F11'))).toBe(true);
-  });
-
-  it('右边栏现在不能打开：标题栏按钮置灰，菜单项置灰，快捷键不起作用，右边栏里是“没有盘片”', async () => {
-    const user = userEvent.setup();
-    const { container, shell } = renderShell();
-    await shown();
-    expect((screen.getByRole('button', { name: '切换右边栏' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(rightArea(container).hidden).toBe(true);
-    expect(within(rightArea(container)).getByText('没有盘片')).toBeTruthy();
-    press({ code: 'KeyB', ctrlKey: true, altKey: true });
-    expect(rightArea(container).hidden).toBe(true);
-    expect(shell.setLayout).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('menuitem', { name: /视图/ }));
-    const item = popupItems().find((entry) => entry.textContent?.startsWith('右边栏')) as HTMLElement;
-    expect(item.getAttribute('aria-disabled')).toBe('true');
-  });
-
-  it('启动时边栏、底部面板、右边栏全部关闭；打开底部面板后有“消息”页签和“清空”“关闭”', async () => {
-    const { container } = renderShell();
-    await shown();
-    expect(sideArea(container).hidden).toBe(true);
-    expect(bottomArea(container).hidden).toBe(true);
-    expect(rightArea(container).hidden).toBe(true);
-    press(TOGGLE_BOTTOM_PANEL);
-    expect(within(bottomArea(container)).getByRole('tab', { name: '消息' })).toBeTruthy();
-    expect(within(bottomArea(container)).getByRole('button', { name: '清空' })).toBeTruthy();
-    expect(within(bottomArea(container)).getByRole('button', { name: '关闭' })).toBeTruthy();
-    expect(within(bottomArea(container)).getByText('暂无消息')).toBeTruthy();
-  });
-
-  it('读出保存的底部面板高度，展开时用保存的高度；没有保存过时用默认高度', async () => {
-    const saved = renderShell({ layout: { bottomPanelHeight: 220 } });
-    await shown();
-    expect(bottomArea(saved.container).style.height).toBe('220px');
-    saved.unmount();
-    const fresh = renderShell();
-    await shown();
-    expect(bottomArea(fresh.container).style.height).toBe('160px');
-  });
-});
-
-describe('边栏', () => {
-  it('切换页面时边栏换成该页面的边栏，没有边栏的页面使边栏自动关闭、折叠按钮置灰', async () => {
-    const user = userEvent.setup();
-    const { container, shell } = renderShell();
-    await shown();
-    press(TOGGLE_SIDE_BAR);
-    expect(screen.getByText('甲边栏内容')).toBeTruthy();
-    const toggle = screen.getByRole('button', { name: '切换边栏' }) as HTMLButtonElement;
-    expect(toggle.disabled).toBe(false);
-
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    expect(screen.getByRole('tab', { name: '乙页' }).getAttribute('aria-selected')).toBe('true');
-    expect(sideArea(container).hidden).toBe(true);
-    expect(toggle.disabled).toBe(true);
-    // 展开状态不保存。
-    expect(shell.setLayout).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole('tab', { name: '甲页' }));
-    expect(sideArea(container).hidden).toBe(false);
-    expect(toggle.disabled).toBe(false);
-  });
-
-  it('没有边栏的页面上边栏的快捷键不起作用，切回有边栏的页面时边栏仍是原来的状态', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell();
-    await shown();
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    press(TOGGLE_SIDE_BAR);
-    await user.click(screen.getByRole('tab', { name: '甲页' }));
-    expect(sideArea(container).hidden).toBe(true);
-  });
-
-  it('再点选中的活动栏按钮展开，再点折叠，不保存', async () => {
-    const user = userEvent.setup();
-    const { container, shell } = renderShell();
-    await shown();
-    const button = screen.getByRole('button', { name: '甲' });
-    expect(button.getAttribute('aria-current')).toBe('page');
-    await user.click(button);
-    expect(sideArea(container).hidden).toBe(false);
-    await user.click(button);
-    expect(sideArea(container).hidden).toBe(true);
-    expect(shell.setLayout).not.toHaveBeenCalled();
-  });
-
-  it('边栏折叠时点另一个有边栏页面的按钮会展开边栏', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell();
-    await shown();
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    await user.click(screen.getByRole('button', { name: '甲' }));
-    expect(sideArea(container).hidden).toBe(false);
-  });
-
-  it('标题栏的边栏按钮与 Ctrl+B 切换边栏，不保存', async () => {
-    const user = userEvent.setup();
-    const { container, shell } = renderShell();
-    await shown();
-    await user.click(screen.getByRole('button', { name: '切换边栏' }));
-    expect(sideArea(container).hidden).toBe(false);
-    press(TOGGLE_SIDE_BAR);
-    expect(sideArea(container).hidden).toBe(true);
-    expect(shell.setLayout).not.toHaveBeenCalled();
-  });
-});
-
-describe('只有边栏的活动栏按钮', () => {
-  /** 在 MODULES 之外再登记一个“设备”：只有边栏，没有页面。 */
-  const WITH_DEVICES: readonly ShellModule[] = [
-    ...MODULES,
-    { name: 'd', activityItems: [{ id: 'd.btn', label: '设备', icon: ICON, sideBar: { title: '设备', Component: () => <p>设备边栏内容</p> } }] }
-  ];
-
-  it('点设备按钮：边栏换成设备边栏并展开，页面区与标签不变；再点折叠；点回页面的按钮恢复页面自己的边栏', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell({ modules: WITH_DEVICES });
-    await shown();
-    await user.click(screen.getByRole('button', { name: '设备' }));
-    expect(sideArea(container).hidden).toBe(false);
-    expect(within(sideArea(container)).getByText('设备边栏内容')).toBeTruthy();
-    expect((within(sideArea(container)).getByText('甲边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(true);
-    expect(screen.getByText('甲页内容')).toBeTruthy();
-    expect(screen.getAllByRole('tab')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: '设备' }).getAttribute('aria-current')).toBe('page');
-
-    await user.click(screen.getByRole('button', { name: '设备' }));
-    expect(sideArea(container).hidden).toBe(true);
-
-    await user.click(screen.getByRole('button', { name: '设备' }));
-    await user.click(screen.getByRole('button', { name: '甲' }));
-    expect((within(sideArea(container)).getByText('甲边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(false);
-    expect((within(sideArea(container)).getByText('设备边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(true);
-  });
-
-  it('活动栏按钮的指示灯：取值函数返回状态就显示亮灭，模块调用 refreshCommands 后更新', async () => {
-    const { demo, module } = createDemo();
-    const state = { lit: false };
-    const withLamp: ShellModule = { ...module, activityItems: [{ id: 'd.lamp', label: '灯', icon: ICON, sideBar: { Component: () => null }, lamp: () => ({ lit: state.lit, label: '读写灯' }) }] };
-    renderShell({ modules: [withLamp] });
-    await shown();
-    expect(screen.getByRole('img', { name: '读写灯' }).getAttribute('data-lit')).toBe('false');
-    state.lit = true;
-    act(() => demo.api?.refreshCommands());
-    expect(screen.getByRole('img', { name: '读写灯' }).getAttribute('data-lit')).toBe('true');
-  });
-
-  it('“视图”菜单里有设备入口，选中同样显示设备边栏', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell({ modules: WITH_DEVICES });
-    await shown();
-    await user.click(screen.getByRole('menuitem', { name: '视图(V)' }));
-    await user.click(within(document.body).getByRole('menuitem', { name: /^设备/ }));
-    expect((within(sideArea(container)).getByText('设备边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(false);
-  });
-
-  it('切到另一个标签后设备边栏不再生效，边栏回到该页面自己的边栏', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell({ modules: WITH_DEVICES });
-    await shown();
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    await user.click(screen.getByRole('button', { name: '设备' }));
-    expect(sideArea(container).hidden).toBe(false);
-    await user.click(screen.getByRole('tab', { name: '甲页' }));
-    expect((within(sideArea(container)).getByText('甲边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(false);
-    await user.click(screen.getByRole('tab', { name: '乙页' }));
-    expect(sideArea(container).hidden).toBe(true);
-  });
-});
-
-describe('底部面板与快捷键', () => {
-  it('Ctrl+J 与标题栏按钮切换底部面板，“关闭”收起，不保存', async () => {
-    const user = userEvent.setup();
-    const { container, shell } = renderShell();
-    await shown();
-    press(TOGGLE_BOTTOM_PANEL);
-    expect(bottomArea(container).hidden).toBe(false);
-    await user.click(screen.getByRole('button', { name: '切换底部面板' }));
-    expect(bottomArea(container).hidden).toBe(true);
-    await user.click(screen.getByRole('button', { name: '切换底部面板' }));
-    expect(bottomArea(container).hidden).toBe(false);
-    await user.click(within(bottomArea(container)).getByRole('button', { name: '关闭' }));
-    expect(bottomArea(container).hidden).toBe(true);
-    expect(shell.setLayout).not.toHaveBeenCalled();
-  });
-
-  it('F11 请求窗口切换全屏，菜单“文件→退出”请求退出应用', async () => {
-    const user = userEvent.setup();
-    const { shell } = renderShell();
-    await shown();
-    press({ code: 'F11' });
-    expect(shell.windowAction).toHaveBeenLastCalledWith('toggleFullScreen');
-    await user.click(screen.getByRole('menuitem', { name: /文件/ }));
-    await user.click(screen.getByRole('menuitem', { name: '退出' }));
-    expect(shell.windowAction).toHaveBeenLastCalledWith('quit');
-  });
-
-  it('模块登记的命令可以用默认快捷键和菜单项执行', async () => {
-    const user = userEvent.setup();
-    renderShell();
-    await shown();
-    press({ code: 'KeyH', ctrlKey: true });
-    press(TOGGLE_BOTTOM_PANEL);
-    await user.click(screen.getByRole('menuitem', { name: /机器/ }));
-    await user.click(screen.getByRole('menuitem', { name: /问好/ }));
-    expect(within(screen.getByRole('tabpanel', { name: '消息' })).getAllByText('你好')).toHaveLength(2);
-  });
-
-  it('Alt+助记字母打开对应的菜单；没有登记项的菜单不响应', async () => {
-    renderShell();
-    await shown();
-    press({ code: 'KeyV', altKey: true });
-    expect(await screen.findByRole('menu', { name: /视图/ })).toBeTruthy();
-    press({ code: 'KeyH', altKey: true });
-    expect(screen.queryByRole('menu', { name: /帮助/ })).toBeNull();
-  });
-
-  it('画面处理过的按键（defaultPrevented）外壳不再响应；没有处理的组合键照常响应', async () => {
-    const { container, shell } = renderShell();
-    await shown();
-    // 模拟画面区：自己处理按键并阻止默认行为，事件冒泡到 window 时已是 defaultPrevented。
-    const screenElement = document.createElement('div');
-    screenElement.tabIndex = 0;
-    screenElement.addEventListener('keydown', (event) => event.preventDefault());
-    document.body.append(screenElement);
-    screenElement.focus();
-    fireEvent.keyDown(screenElement, { code: 'KeyJ', ctrlKey: true });
-    expect(bottomArea(container).hidden).toBe(true);
-    expect(shell.setLayout).not.toHaveBeenCalled();
-    fireEvent.keyDown(document.body, { code: 'KeyJ', ctrlKey: true });
-    expect(bottomArea(container).hidden).toBe(false);
-    screenElement.remove();
-  });
-
-  it('按住不放产生的重复按键只响应一次', async () => {
-    const { container } = renderShell();
-    await shown();
-    press(TOGGLE_BOTTOM_PANEL);
-    press({ ...TOGGLE_BOTTOM_PANEL, repeat: true });
-    expect(bottomArea(container).hidden).toBe(false);
-  });
-});
-
-describe('消息', () => {
-  it('其他模块经外壳接口追加的消息显示时间、级别与文字，清空后回到提示', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell();
-    await shown();
-    press(TOGGLE_BOTTOM_PANEL);
-    await user.click(screen.getByRole('button', { name: '丙' }));
-    await user.click(screen.getByRole('button', { name: '追加消息' }));
-    const panel = bottomArea(container);
-    expect(within(panel).getByText('核心已停止')).toBeTruthy();
-    expect(within(panel).getByText('09:05:07')).toBeTruthy();
-    expect(within(panel).getByText('错误')).toBeTruthy();
-    expect(within(panel).queryByText('暂无消息')).toBeNull();
-    await user.click(within(panel).getByRole('button', { name: '清空' }));
-    expect(within(panel).getByText('暂无消息')).toBeTruthy();
-    expect((within(panel).getByRole('button', { name: '清空' }) as HTMLButtonElement).disabled).toBe(true);
-  });
-});
-
-describe('没有页面时与全屏', () => {
-  it('关闭最后一个标签后页面区显示淡色标志和一句提示，没有标签栏', async () => {
-    const user = userEvent.setup();
-    const { container } = renderShell();
-    await shown();
-    await user.click(screen.getByRole('button', { name: '关闭：甲页' }));
-    expect(screen.getByText(/没有打开的页面/)).toBeTruthy();
-    expect(container.querySelector('.ui-empty-workspace__logo svg')).not.toBeNull();
-    expect(screen.queryByRole('tablist', TABS_NAME)).toBeNull();
-    // 没有页面时没有边栏，折叠按钮置灰。
-    expect((screen.getByRole('button', { name: '切换边栏' }) as HTMLButtonElement).disabled).toBe(true);
-    // 再点活动栏按钮重新打开页面。
-    await user.click(screen.getByRole('button', { name: '甲' }));
-    expect(screen.getByRole('tab', { name: '甲页' })).toBeTruthy();
-  });
-
-  it('登记为不可关闭的页面（closable: false）标签上没有关闭按钮，其他页面仍有', async () => {
-    const user = userEvent.setup();
-    const fixed: ShellModule = {
-      name: 'e',
-      pages: [
-        { id: 'e.fixed', title: '固定页', icon: ICON, Component: () => <p>固定页内容</p>, openOnStart: true, closable: false },
-        { id: 'e.other', title: '普通页', icon: ICON, Component: () => <p>普通页内容</p> }
-      ],
-      activityItems: [{ id: 'e.btn', label: '戊', icon: ICON, page: 'e.other' }]
-    };
-    renderShell({ modules: [fixed] });
-    await shown();
-    expect(screen.getByRole('tab', { name: '固定页' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '关闭：固定页' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: '戊' }));
-    expect(screen.getByRole('button', { name: '关闭：普通页' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: '关闭：普通页' }));
-    expect(screen.queryByRole('tab', { name: '普通页' })).toBeNull();
-    expect(screen.getByRole('tab', { name: '固定页' })).toBeTruthy();
-  });
-
-  it('单例页面重复打开只聚焦已有标签', async () => {
-    const user = userEvent.setup();
-    renderShell();
-    await shown();
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    await user.click(screen.getByRole('button', { name: '甲' }));
-    await user.click(screen.getByRole('button', { name: '乙' }));
-    expect(within(screen.getByRole('tablist', TABS_NAME)).getAllByRole('tab')).toHaveLength(2);
-  });
-
-  it('全屏时只显示页面：标题栏、活动栏、标签栏、状态栏与各面板都隐藏，退出全屏后恢复，页面不重新挂载', async () => {
-    const { container, emitWindowState } = renderShell();
-    await shown();
-    press(TOGGLE_SIDE_BAR);
-    press(TOGGLE_BOTTOM_PANEL);
-    const page = screen.getByText('甲页内容');
-    emitWindowState({ maximized: false, fullScreen: true });
-    expect(screen.queryByRole('banner')).toBeNull();
-    expect(screen.queryByLabelText('活动栏')).toBeNull();
-    expect(screen.queryByRole('tablist', TABS_NAME)).toBeNull();
-    expect(screen.queryByLabelText('状态栏')).toBeNull();
-    expect(sideArea(container).hidden).toBe(true);
-    expect(bottomArea(container).hidden).toBe(true);
-    expect(screen.getByText('甲页内容')).toBe(page);
-    emitWindowState({ maximized: false, fullScreen: false });
-    expect(screen.getByRole('banner')).toBeTruthy();
-    expect(screen.getByRole('tablist', TABS_NAME)).toBeTruthy();
-    expect(sideArea(container).hidden).toBe(false);
-    expect(bottomArea(container).hidden).toBe(false);
-    expect(screen.getByText('甲页内容')).toBe(page);
-  });
-
-  it('状态栏：模块登记的状态项分别显示在左侧与右侧，右侧最后是通知按钮', async () => {
-    const modules: readonly ShellModule[] = [
-      {
-        name: 'a',
-        statusItems: [
-          { id: 'a.left', align: 'start', Component: () => <span>左项</span> },
-          { id: 'a.right', align: 'end', Component: () => <span>右项</span> }
-        ]
-      }
-    ];
-    renderShell({ modules });
-    await screen.findByLabelText('状态栏');
-    const status = screen.getByLabelText('状态栏');
-    expect(status.querySelector('.ui-status-bar__start')?.textContent).toBe('左项');
-    const end = status.querySelector('.ui-status-bar__end') as HTMLElement;
-    expect(end.textContent).toBe('右项');
-    expect(end.lastElementChild?.getAttribute('aria-label')).toBe('通知');
-  });
-});
-
 /** 模块自己的状态：命令的名称与可用状态读它，变化后经 refreshCommands 通知外壳。 */
 function createDemo() {
-  const demo = { on: false, enabled: true, entries: [{ id: 'x', label: '甲项' }] as Array<{ id: string; label: string; hint?: string; disabled?: boolean }>, ran: [] as string[], api: undefined as ShellApi | undefined, hostMounts: 0 };
+  const demo = {
+    on: false,
+    enabled: true,
+    lit: false,
+    entries: [{ id: 'x', label: '甲项' }] as Array<{ id: string; label: string; hint?: string; disabled?: boolean; checked?: boolean }>,
+    ran: [] as string[],
+    api: undefined as ShellApi | undefined,
+    hostMounts: 0,
+    panelMounts: 0
+  };
   const module: ShellModule = {
     name: 'd',
-    pages: [{ id: 'd.page', title: '丁页', icon: ICON, Component: () => <input aria-label="输入框" />, openOnStart: true }],
+    screen: () => <input aria-label="输入框" />,
     commands: [{ id: 'd.toggle', title: () => (demo.on ? '关闭' : '打开'), defaultShortcut: 'F5', enabled: () => demo.enabled, run: () => demo.ran.push('toggle') }],
     menuItems: [
       { menu: 'machine', command: 'd.toggle' },
       { menu: 'machine', submenu: { id: 'd.sub', title: '子菜单', entries: () => demo.entries.map((entry) => ({ ...entry, run: () => demo.ran.push(entry.id) })) } }
+    ],
+    bottomPanels: [
+      {
+        id: 'd.device',
+        title: '设备',
+        icon: ICON,
+        Component: function DevicePanel() {
+          useEffect(() => {
+            demo.panelMounts += 1;
+          }, []);
+          return <p>设备内容</p>;
+        },
+        lamp: () => ({ lit: demo.lit, label: '读写灯' })
+      }
     ],
     Host: function DemoHost() {
       const shell = useShell();
@@ -525,6 +95,331 @@ function createDemo() {
   return { demo, module };
 }
 
+/** 对话框内容：点按钮经外壳接口弹出通知。 */
+function NotifyingDialog() {
+  const { notify } = useShell();
+  return (
+    <button type="button" onClick={() => notify('来自对话框的通知', 'success')}>
+      发通知
+    </button>
+  );
+}
+
+/** 显示区、两个面板、一个对话框与两条命令的模块。 */
+const MODULES: readonly ShellModule[] = [
+  {
+    name: 'a',
+    screen: () => <p>显示区内容</p>,
+    commands: [
+      { id: 'a.hello', title: '问好', defaultShortcut: 'Ctrl+H', run: () => undefined },
+      { id: 'a.open', title: '打开设置', defaultShortcut: 'F6', run: (shell) => shell.openDialog('a.settings') }
+    ],
+    menuItems: [{ menu: 'machine', command: 'a.hello' }],
+    dialogs: [{ id: 'a.settings', title: '设置', Component: () => <p>设置内容</p>, width: 320 }],
+    bottomPanels: [
+      { id: 'a.run', title: '运行', icon: ICON, Component: () => <p>运行内容</p> },
+      { id: 'a.device', title: '设备', icon: ICON, Component: () => <p>设备内容</p> }
+    ]
+  }
+];
+
+function renderShell(options: { layout?: Partial<ShellLayout>; modules?: readonly ShellModule[] } = {}) {
+  const fake = createBridge(options.layout);
+  const result = render(
+    <UiProvider>
+      <Shell bridge={fake.bridge} modules={options.modules ?? MODULES} />
+    </UiProvider>
+  );
+  return { ...fake, ...result };
+}
+
+/** 等外壳读完布局、显示出来。 */
+async function shown(): Promise<void> {
+  await screen.findByLabelText('系统栏');
+}
+
+function bottomArea(container: HTMLElement): HTMLElement {
+  return container.querySelector('.ui-app-frame__bottom') as HTMLElement;
+}
+
+/** 打开的菜单里的全部菜单项（普通项是 menuitem，可勾选项是 menuitemcheckbox）。 */
+function popupItems(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('.ui-menu__popup [role^="menuitem"]'));
+}
+
+/** 按下一个组合键（事件发在 body 上，冒泡到 window）。 */
+function press(init: KeyboardEventInit): void {
+  fireEvent.keyDown(document.body, init);
+}
+
+describe('登记表驱动的界面', () => {
+  it('显示区、菜单都来自登记；没有活动栏、标签栏、边栏、右边栏与标题栏上的面板按钮', async () => {
+    const { container } = renderShell();
+    await shown();
+    expect(screen.getByText('显示区内容')).toBeTruthy();
+    expect(screen.queryByLabelText('活动栏')).toBeNull();
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(container.querySelector('.ui-app-frame__side, .ui-app-frame__right')).toBeNull();
+    for (const name of ['切换边栏', '切换底部面板', '切换右边栏']) expect(screen.queryByRole('button', { name })).toBeNull();
+  });
+
+  it('菜单栏只显示有登记项的菜单：文件、机器，没有视图、设置与帮助', async () => {
+    renderShell();
+    await shown();
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['文件(F)', '机器(M)']);
+  });
+
+  it('读出保存的底部面板高度，展开时用保存的高度；没有保存过时用默认高度', async () => {
+    const saved = renderShell({ layout: { bottomPanelHeight: 220 } });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    expect(bottomArea(saved.container).style.height).toBe('220px');
+    saved.unmount();
+    const fresh = renderShell();
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    expect(bottomArea(fresh.container).style.height).toBe('130px');
+  });
+});
+
+describe('系统栏里的面板按钮', () => {
+  it('每个面板一个按钮，在系统栏左侧，只有图标：没有文字，名称在可访问名称与悬停提示里；右侧只有通知按钮', async () => {
+    renderShell();
+    await shown();
+    const bar = screen.getByLabelText('系统栏');
+    const start = bar.querySelector('.ui-status-bar__start') as HTMLElement;
+    const buttons = within(start).getAllByRole('button');
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(['运行', '设备']);
+    for (const button of buttons) {
+      expect(button.textContent).toBe('');
+      expect(button.getAttribute('title')).toBe(button.getAttribute('aria-label'));
+      expect(button.querySelector('svg')).not.toBeNull();
+    }
+    const end = bar.querySelector('.ui-status-bar__end') as HTMLElement;
+    expect(within(end).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(['通知']);
+  });
+
+  it('面板按钮的外观可以随模块状态变化：图标、颜色与悬停提示取自 look，状态变化后调用 refreshCommands 更新', async () => {
+    const state = { running: true };
+    let api: ShellApi | undefined;
+    const module: ShellModule = {
+      name: 'a',
+      Host: function Host() {
+        const shell = useShell();
+        useEffect(() => {
+          api = shell;
+        }, [shell]);
+        return null;
+      },
+      bottomPanels: [
+        {
+          id: 'a.run',
+          title: '运行',
+          icon: ICON,
+          look: () => (state.running ? { icon: ['M1 1'], tone: 'success', hint: '运行：运行中' } : { icon: ['M2 2'], hint: '运行：已暂停' }),
+          Component: () => null
+        }
+      ]
+    };
+    renderShell({ modules: [module] });
+    await shown();
+    const button = screen.getByRole('button', { name: '运行' });
+    expect(button.getAttribute('title')).toBe('运行：运行中');
+    expect(button.getAttribute('data-tone')).toBe('success');
+    expect(button.querySelector('path')?.getAttribute('d')).toBe('M1 1');
+    state.running = false;
+    act(() => api?.refreshCommands());
+    expect(button.getAttribute('title')).toBe('运行：已暂停');
+    expect(button.getAttribute('data-tone')).toBe('normal');
+    expect(button.querySelector('path')?.getAttribute('d')).toBe('M2 2');
+  });
+
+  it('启动时面板关闭；点按钮展开并显示该面板的内容，没有页签条', async () => {
+    const { container } = renderShell();
+    await shown();
+    expect(bottomArea(container)).toBeFalsy();
+    expect(screen.queryByText('运行内容')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    expect(bottomArea(container).hidden).toBe(false);
+    expect(within(screen.getByRole('region', { name: '运行' })).getByText('运行内容')).toBeTruthy();
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByRole('tablist')).toBeNull();
+  });
+
+  it('面板开着时：点同一个按钮收起，点另一个按钮切换内容；收起后内容卸载', async () => {
+    const { container } = renderShell();
+    await shown();
+    const run = screen.getByRole('button', { name: '运行' });
+    const device = screen.getByRole('button', { name: '设备' });
+    await userEvent.click(run);
+    await userEvent.click(device);
+    expect(screen.getByText('设备内容')).toBeTruthy();
+    expect(screen.queryByText('运行内容')).toBeNull();
+    await userEvent.click(device);
+    expect(screen.queryByText('设备内容')).toBeNull();
+    expect(bottomArea(container)).toBeFalsy();
+  });
+
+  it('按钮的按下态只在面板开着并停在该面板时出现，收起后恢复常态；没有快捷键，也不保存', async () => {
+    const { shell } = renderShell();
+    await shown();
+    const run = screen.getByRole('button', { name: '运行' });
+    const device = screen.getByRole('button', { name: '设备' });
+    expect(run.getAttribute('aria-pressed')).toBe('false');
+    await userEvent.click(run);
+    expect(run.getAttribute('aria-pressed')).toBe('true');
+    expect(device.getAttribute('aria-pressed')).toBe('false');
+    await userEvent.click(device);
+    expect(run.getAttribute('aria-pressed')).toBe('false');
+    expect(device.getAttribute('aria-pressed')).toBe('true');
+    await userEvent.click(device);
+    expect(device.getAttribute('aria-pressed')).toBe('false');
+    press({ code: 'KeyJ', ctrlKey: true });
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(shell.setLayout).not.toHaveBeenCalled();
+  });
+
+  it('面板按钮的指示灯：取值函数返回状态就显示亮灭，模块调用 refreshCommands 后更新', async () => {
+    const { demo, module } = createDemo();
+    renderShell({ modules: [module] });
+    await shown();
+    expect(screen.getByRole('img', { name: '读写灯' }).getAttribute('data-lit')).toBe('false');
+    demo.lit = true;
+    act(() => demo.api?.refreshCommands());
+    expect(screen.getByRole('img', { name: '读写灯' }).getAttribute('data-lit')).toBe('true');
+  });
+
+  it('面板内容每次展开重新挂载，收起后不再挂载', async () => {
+    const { demo, module } = createDemo();
+    renderShell({ modules: [module] });
+    await shown();
+    expect(demo.panelMounts).toBe(0);
+    await userEvent.click(screen.getByRole('button', { name: '设备' }));
+    await userEvent.click(screen.getByRole('button', { name: '设备' }));
+    await userEvent.click(screen.getByRole('button', { name: '设备' }));
+    expect(demo.panelMounts).toBe(2);
+  });
+
+  it('系统栏：左侧先是面板按钮，再是模块登记的左侧状态项；右侧是模块登记的右侧状态项，最后是通知按钮', async () => {
+    const modules: readonly ShellModule[] = [
+      {
+        name: 'a',
+        statusItems: [
+          { id: 'a.left', align: 'start', Component: () => <span>左项</span> },
+          { id: 'a.right', align: 'end', Component: () => <span>右项</span> }
+        ],
+        bottomPanels: [{ id: 'a.run', title: '运行', icon: ICON, Component: () => null }]
+      }
+    ];
+    renderShell({ modules });
+    await shown();
+    const bar = screen.getByLabelText('系统栏');
+    const start = bar.querySelector('.ui-status-bar__start') as HTMLElement;
+    expect(start.children[0]?.getAttribute('aria-label')).toBe('运行');
+    expect(start.children[1]?.textContent).toBe('左项');
+    const end = bar.querySelector('.ui-status-bar__end') as HTMLElement;
+    expect(end.children[0]?.textContent).toBe('右项');
+    expect(end.lastElementChild?.getAttribute('aria-label')).toBe('通知');
+  });
+
+  it('系统栏用大尺寸', async () => {
+    renderShell();
+    await shown();
+    expect(document.documentElement.classList.contains('ui-status-bar-large')).toBe(true);
+  });
+});
+
+describe('快捷键与菜单', () => {
+  it('F11 请求窗口切换全屏，菜单“文件→退出”请求退出应用', async () => {
+    const user = userEvent.setup();
+    const { shell } = renderShell();
+    await shown();
+    press({ code: 'F11' });
+    expect(shell.windowAction).toHaveBeenLastCalledWith('toggleFullScreen');
+    await user.click(screen.getByRole('menuitem', { name: /文件/ }));
+    await user.click(screen.getByRole('menuitem', { name: '退出' }));
+    expect(shell.windowAction).toHaveBeenLastCalledWith('quit');
+  });
+
+  it('模块登记的命令可以用菜单项执行，菜单项显示默认快捷键', async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await shown();
+    await user.click(screen.getByRole('menuitem', { name: /机器/ }));
+    const item = popupItems().find((entry) => entry.textContent?.startsWith('问好'));
+    expect(item?.textContent).toContain('Ctrl+H');
+  });
+
+  it('Alt+助记字母打开对应的菜单；没有登记项的菜单不响应', async () => {
+    renderShell();
+    await shown();
+    press({ code: 'KeyM', altKey: true });
+    expect(await screen.findByRole('menu', { name: /机器/ })).toBeTruthy();
+    press({ code: 'KeyH', altKey: true });
+    expect(screen.queryByRole('menu', { name: /帮助/ })).toBeNull();
+  });
+
+  it('显示区处理过的按键（defaultPrevented）外壳不再响应；没有处理的组合键照常响应', async () => {
+    renderShell();
+    await shown();
+    const screenElement = document.createElement('div');
+    screenElement.tabIndex = 0;
+    screenElement.addEventListener('keydown', (event) => event.preventDefault());
+    document.body.append(screenElement);
+    screenElement.focus();
+    fireEvent.keyDown(screenElement, { code: 'F6' });
+    expect(screen.queryByText('设置内容')).toBeNull();
+    fireEvent.keyDown(document.body, { code: 'F6' });
+    expect(await screen.findByText('设置内容')).toBeTruthy();
+    screenElement.remove();
+  });
+});
+
+describe('对话框', () => {
+  it('命令打开对话框，标题与内容来自登记；同一个对话框再次打开时不会重复出现', async () => {
+    renderShell();
+    await shown();
+    press({ code: 'F6' });
+    expect(await screen.findByText('设置内容')).toBeTruthy();
+    press({ code: 'F6' });
+    expect(screen.getAllByText('设置内容')).toHaveLength(1);
+  });
+
+  it('对话框内容渲染在组件库的对话框层（取不到 useNotify），经外壳接口的 notify 仍能弹出通知', async () => {
+    renderShell({
+      modules: [
+        {
+          name: 'b',
+          screen: () => <p>显示区内容</p>,
+          commands: [{ id: 'b.open', title: '打开', defaultShortcut: 'F6', run: (shell) => shell.openDialog('b.dialog') }],
+          dialogs: [{ id: 'b.dialog', title: '通知', Component: NotifyingDialog, width: 320 }]
+        }
+      ]
+    });
+    await shown();
+    press({ code: 'F6' });
+    fireEvent.click(await screen.findByRole('button', { name: '发通知' }));
+    expect(await screen.findByText('来自对话框的通知')).toBeTruthy();
+  });
+});
+
+describe('全屏', () => {
+  it('全屏时只显示显示区：标题栏、系统栏与面板都隐藏，退出全屏后恢复，显示区不重新挂载', async () => {
+    const { emitWindowState } = renderShell();
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    const content = screen.getByText('显示区内容');
+    emitWindowState({ maximized: false, fullScreen: true });
+    expect(screen.queryByRole('banner')).toBeNull();
+    expect(screen.queryByLabelText('系统栏')).toBeNull();
+    expect(screen.getByText('显示区内容')).toBe(content);
+    emitWindowState({ maximized: false, fullScreen: false });
+    expect(screen.getByRole('banner')).toBeTruthy();
+    expect(screen.getByLabelText('系统栏')).toBeTruthy();
+    expect(screen.getByText('显示区内容')).toBe(content);
+  });
+});
+
 describe('命令状态刷新、子菜单与常驻组件', () => {
   it('模块状态变化后调用 refreshCommands，菜单里命令的名称与置灰随之更新', async () => {
     const { demo, module } = createDemo();
@@ -533,7 +428,6 @@ describe('命令状态刷新、子菜单与常驻组件', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: '机器(M)' }));
     expect(popupItems()[0]?.textContent).toContain('打开');
     expect(popupItems()[0]?.getAttribute('aria-disabled')).toBeNull();
-    // 菜单打开时模块状态变了：外壳重新计算后菜单项跟着变。
     demo.on = true;
     demo.enabled = false;
     act(() => demo.api?.refreshCommands());
@@ -599,14 +493,30 @@ describe('命令状态刷新、子菜单与常驻组件', () => {
     expect(within(screen.getByRole('menu', { name: '子菜单' })).getByRole('menuitem', { name: '新项' })).toBeTruthy();
   });
 
-  it('常驻组件在外壳启动后挂载，页面关闭、全屏时仍在，不重复挂载', async () => {
+  it('子菜单里带 checked 的项是单选项：选中的一项前面有对勾，选中只执行、不改别的', async () => {
+    const { demo, module } = createDemo();
+    demo.entries = [
+      { id: 'x', label: '甲项', checked: true },
+      { id: 'y', label: '乙项' }
+    ];
+    renderShell({ modules: [module] });
+    await shown();
+    await userEvent.click(screen.getByRole('menuitem', { name: '机器(M)' }));
+    await userEvent.hover(screen.getByRole('menuitem', { name: '子菜单' }));
+    const submenu = screen.getByRole('menu', { name: '子菜单' });
+    expect(within(submenu).getByRole('menuitemradio', { name: '甲项' }).getAttribute('aria-checked')).toBe('true');
+    expect(within(submenu).getByRole('menuitem', { name: '乙项' })).toBeTruthy();
+    await userEvent.click(within(submenu).getByRole('menuitem', { name: '乙项' }));
+    expect(demo.ran).toEqual(['y']);
+  });
+
+  it('常驻组件在外壳启动后挂载，全屏时仍在，不重复挂载', async () => {
     const { demo, module } = createDemo();
     const { emitWindowState } = renderShell({ modules: [module] });
     await shown();
     expect(demo.hostMounts).toBeGreaterThan(0);
     const mounts = demo.hostMounts;
     emitWindowState({ maximized: false, fullScreen: true });
-    await userEvent.keyboard('{F11}');
     expect(demo.hostMounts).toBe(mounts);
     expect(demo.api).toBeDefined();
   });
@@ -615,12 +525,12 @@ describe('命令状态刷新、子菜单与常驻组件', () => {
 describe('登记有误', () => {
   it('快捷键冲突时界面只显示错误说明，并在控制台报告全部问题', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const clash: ShellModule = { name: 'a', commands: [{ id: 'a.go', title: '执行', defaultShortcut: 'Ctrl+B', run: () => undefined }] };
+    const clash: ShellModule = { name: 'a', commands: [{ id: 'a.go', title: '执行', defaultShortcut: 'F11', run: () => undefined }] };
     renderShell({ modules: [clash] });
     expect(await screen.findByText(/外壳登记有误/)).toBeTruthy();
-    expect(screen.queryByRole('tablist', TABS_NAME)).toBeNull();
+    expect(screen.queryByLabelText('系统栏')).toBeNull();
     const reported = error.mock.calls[0]?.[0] as Error;
-    expect(reported.message).toMatch(/默认快捷键都是 Ctrl\+B/);
+    expect(reported.message).toMatch(/默认快捷键都是 F11/);
     error.mockRestore();
   });
 });

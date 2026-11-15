@@ -1,34 +1,31 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.ts
- * 说明：设备边栏的控制器：保存各软驱与打印机的状态，执行载入镜像、取出、保存镜像、写保护等操作，订阅核心事件，并把结果写进底部面板的“消息”。
+ * 说明：设备面板的控制器：保存各软驱与打印机的状态，执行载入镜像、取出、保存镜像、写保护等操作，订阅核心事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：不依赖 React，状态放在外部存储里（subscribe 与 snapshot，配合 useSyncExternalStore）；由常驻组件 MediaHost 在外壳启动后接上预加载脚本的接口与外壳的能力（attach）。
- *       软驱的读写状态与磁道、打印机的打印状态随机器运行不断变化，核心不推送，所以设备边栏显示期间由 startPolling 定时读取；边栏没有显示时不读取。
- *       失败时用通知提示并写一条错误消息；打印机每输出一页，用通知告知文件名并写一条消息（规则见 docs/05-界面.md 第 4.3 节）。
+ *       软驱的读写状态与磁道、打印机的打印状态随机器运行不断变化，核心不推送，所以设备面板显示期间由 startPolling 定时读取；面板没有显示时不读取。
+ *       失败时用通知提示；打印机每输出一页，用通知告知文件名（规则见 docs/05-界面.md 第 4.3 节）。
  * ------------------------------------------------------------------------
  */
 
 import type { FloppyStatus, PrinterStatus } from '../../contracts/media/generated/media';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
-import type { ShellMessageInput } from '../shell/shell-registry';
 
 /** 控制器用到的预加载脚本接口。 */
 export type MediaBackend = Pick<EmberBridge, 'core' | 'main' | 'onCoreEvent' | 'onCoreStatusChange' | 'getCoreStatus'>;
 
 /** 控制器需要外壳提供的能力。 */
 export interface MediaHostActions {
-  /** 往底部面板的“消息”页签追加一条消息。 */
-  addMessage(message: ShellMessageInput): void;
   /** 用通知提示。 */
   notify(text: string, kind: 'info' | 'error'): void;
-  /** 状态变化后让外壳重新渲染活动栏（软驱读写灯取自这里的状态）。 */
+  /** 状态变化后让外壳重新渲染状态栏（软驱读写灯取自这里的状态）。 */
   refresh(): void;
 }
 
-/** 设备边栏需要显示的全部状态。 */
+/** 设备面板需要显示的全部状态。 */
 export interface MediaViewState {
   /** 各软驱的状态，按编号排列；还没读到、没有开机或主机没有软驱时为空。 */
   readonly floppies: readonly FloppyStatus[];
@@ -49,14 +46,7 @@ const TEXT = {
     writeProtect: '设置写保护',
     printer: '打印机输出'
   },
-  messages: {
-    inserted: (drive: string, name: string) => `已把 ${name} 载入软驱 ${drive}`,
-    ejected: (drive: string) => `已取出软驱 ${drive} 的盘片`,
-    saved: (drive: string, name: string) => `已保存软驱 ${drive} 的镜像 ${name}`,
-    protectOn: (drive: string) => `软驱 ${drive} 的盘片已设为写保护`,
-    protectOff: (drive: string) => `软驱 ${drive} 的盘片已取消写保护`,
-    printed: (file: string, page: number) => `打印机输出了第 ${page} 页：${file}`
-  }
+  printed: (file: string, page: number) => `打印机输出了第 ${page} 页：${file}`
 } as const;
 
 /** 驱动器的显示名：0 为 A，1 为 B。 */
@@ -84,7 +74,7 @@ interface Attachment {
   readonly stop: () => void;
 }
 
-/** 设备边栏的控制器。 */
+/** 设备面板的控制器。 */
 export class MediaController {
   private state: MediaViewState = { floppies: [], printer: undefined };
   private readonly listeners = new Set<() => void>();
@@ -92,7 +82,7 @@ export class MediaController {
   /** 最近一次读取的编号：迟到的旧结果不覆盖新结果。 */
   private floppyRequest = 0;
   private printerRequest = 0;
-  /** 正在显示设备边栏的数量（读取状态的定时器只在大于 0 时运行）。 */
+  /** 正在显示设备面板的数量（读取状态的定时器只在大于 0 时运行）。 */
   private pollers = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
 
@@ -141,7 +131,7 @@ export class MediaController {
   }
 
   /**
-   * 设备边栏显示期间定时读取软驱与打印机的状态。
+   * 设备面板显示期间定时读取软驱与打印机的状态。
    * @returns 停止的函数。
    */
   startPolling(): () => void {
@@ -162,57 +152,44 @@ export class MediaController {
     const attachment = this.attachment;
     if (attachment === undefined) return;
     attachment.backend.main.media.openFloppy({ drive }).then(
-      (result) => {
-        if (!result.canceled && result.status !== undefined) {
-          attachment.host.addMessage({ level: 'info', text: TEXT.messages.inserted(driveLabel(drive), result.status.fileName ?? '') });
-        }
-      },
+      () => undefined,
       (error: unknown) => this.report(TEXT.actions.insert, error)
-    );
-  }
-
-  /** 取出软驱里的盘片；没有保存的修改随之丢失。 */
-  ejectFloppy(drive: number): void {
-    this.perform(TEXT.actions.eject, (backend) => backend.core.media.floppyEject({ drive }), () => TEXT.messages.ejected(driveLabel(drive)));
-  }
-
-  /** 把软驱里的镜像写回放入时的文件。 */
-  saveFloppy(drive: number): void {
-    const name = this.state.floppies.find((item) => item.drive === drive)?.fileName ?? '';
-    this.perform(TEXT.actions.save, (backend) => backend.core.media.floppySave({ drive }), () => TEXT.messages.saved(driveLabel(drive), name));
-  }
-
-  /** 设置或取消盘片的写保护。 */
-  setWriteProtected(drive: number, writeProtected: boolean): void {
-    this.perform(
-      TEXT.actions.writeProtect,
-      (backend) => backend.core.media.floppyWriteProtect({ drive, writeProtected }),
-      () => (writeProtected ? TEXT.messages.protectOn(driveLabel(drive)) : TEXT.messages.protectOff(driveLabel(drive)))
-    );
-  }
-
-  /**
-   * 执行一个操作：成功后写一条消息，失败时用通知提示并写一条错误消息；结束后重新读取状态。
-   * @param name 操作名，用在失败的说明里。
-   * @param action 发出请求。
-   * @param success 成功时写入消息的文字。
-   */
-  private perform(name: string, action: (backend: MediaBackend) => Promise<unknown>, success: () => string): void {
-    const attachment = this.attachment;
-    if (attachment === undefined) return;
-    action(attachment.backend).then(
-      () => attachment.host.addMessage({ level: 'info', text: success() }),
-      (error: unknown) => this.report(name, error)
     ).finally(() => {
       if (this.attachment === attachment) this.refreshAll();
     });
   }
 
-  /** 报告失败：通知加一条错误消息。 */
+  /** 取出软驱里的盘片；没有保存的修改随之丢失。 */
+  ejectFloppy(drive: number): void {
+    this.perform(TEXT.actions.eject, (backend) => backend.core.media.floppyEject({ drive }));
+  }
+
+  /** 把软驱里的镜像写回放入时的文件。 */
+  saveFloppy(drive: number): void {
+    this.perform(TEXT.actions.save, (backend) => backend.core.media.floppySave({ drive }));
+  }
+
+  /** 设置或取消盘片的写保护。 */
+  setWriteProtected(drive: number, writeProtected: boolean): void {
+    this.perform(TEXT.actions.writeProtect, (backend) => backend.core.media.floppyWriteProtect({ drive, writeProtected }));
+  }
+
+  /**
+   * 执行一个操作：失败时用通知提示；结束后重新读取状态。
+   * @param name 操作名，用在失败的说明里。
+   * @param action 发出请求。
+   */
+  private perform(name: string, action: (backend: MediaBackend) => Promise<unknown>): void {
+    const attachment = this.attachment;
+    if (attachment === undefined) return;
+    action(attachment.backend).catch((error: unknown) => this.report(name, error)).finally(() => {
+      if (this.attachment === attachment) this.refreshAll();
+    });
+  }
+
+  /** 报告失败：用通知提示。 */
   private report(name: string, error: unknown): void {
-    const text = TEXT.failed(name, errorText(error));
-    this.attachment?.host.notify(text, 'error');
-    this.attachment?.host.addMessage({ level: 'error', text });
+    this.attachment?.host.notify(TEXT.failed(name, errorText(error)), 'error');
   }
 
   private handleEvent(name: string, data: unknown): void {
@@ -222,11 +199,7 @@ export class MediaController {
       this.refreshPrinter();
       const file = field(data, 'fileName', 'string');
       const page = field(data, 'page', 'number');
-      if (typeof file === 'string' && typeof page === 'number') {
-        const text = TEXT.messages.printed(file, page);
-        this.attachment?.host.notify(text, 'info');
-        this.attachment?.host.addMessage({ level: 'info', text });
-      }
+      if (typeof file === 'string' && typeof page === 'number') this.attachment?.host.notify(TEXT.printed(file, page), 'info');
     } else if (name === 'media.printFailed') {
       const message = field(data, 'message', 'string');
       this.report(TEXT.actions.printer, { message: typeof message === 'string' ? message : '' });

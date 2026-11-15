@@ -2,11 +2,11 @@
  * ------------------------------------------------------------------------
  * 名称：runtime-module.test.tsx
  * 说明：运行模块在外壳里的登记项的测试：命令的可用状态与名称随机器状态变化（菜单置灰、勾选）、默认快捷键与它们的实际效果（F9、F8、F7、Ctrl+F7、Ctrl+O）、焦点在输入控件时不带 Ctrl 的快捷键不触发、
- *       “文件”菜单的“开机…”与“最近打开”子菜单、关闭卡带、消息接入（底部面板的“消息”）、失败时的通知、边栏没打开时状态仍是最新的、登记表无冲突。
+ *       “文件”菜单的“选择机型”（只打对勾，不开机）与“最近打开”子菜单、关闭卡带、系统栏左侧的运行按钮（图标实时显示运行状态）与卡带、mapper 状态项、失败时的通知、面板没打开时状态仍是最新的、登记表无冲突。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
- * 备注：外壳与运行模块都是真实的，核心接口是假的；运行页用一个简单的可聚焦区域代替（真实的画面需要 Worker 与 WebGL）。
+ * 日期：2026-11-15
+ * 备注：外壳与运行模块都是真实的，核心接口是假的；显示区用一个简单的可聚焦区域代替（真实的画面需要 Worker 与 WebGL）。
  * ------------------------------------------------------------------------
  */
 
@@ -24,28 +24,24 @@ import { RuntimeController } from './runtime-controller';
 import { FakeRuntimeBackend, machineStatus, settle } from './runtime-fakes';
 import { createRuntimeModule, RUNTIME_COMMANDS } from './runtime-module';
 
-const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null };
+const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null };
 const NES = 'D:\\roms\\nestest.nes';
 
-/** 渲染外壳与运行模块；运行页换成一个带输入框的简单页面；外壳启动时面板全部关闭，默认打开边栏与底部面板，panelsClosed 为 true 时保持关闭。 */
-async function setup(options: { status?: ReturnType<typeof machineStatus> | undefined; recent?: string[]; panelsClosed?: boolean; sb2000Bios?: boolean } = {}) {
+/** 渲染外壳与运行模块；显示区换成一个带输入框的简单区域；面板启动时是关闭的。 */
+async function setup(options: { status?: ReturnType<typeof machineStatus> | undefined; recent?: string[]; sb2000Bios?: boolean } = {}) {
   const fake = new FakeRuntimeBackend();
   if ('status' in options) fake.status = options.status;
   fake.recentPaths = options.recent ?? [];
   if (options.sb2000Bios === true) fake.machines = fake.machines.map((machine) => (machine.id === 'sb2000' ? { ...machine, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } } : machine));
   const controller = new RuntimeController();
-  const module = createRuntimeModule(controller);
   const modules: ShellModule[] = [
     {
-      ...module,
-      pages: (module.pages ?? []).map((page) => ({
-        ...page,
-        Component: () => (
-          <div role="application" tabIndex={0} aria-label="模拟器画面">
-            <input aria-label="测试输入框" />
-          </div>
-        )
-      }))
+      ...createRuntimeModule(controller),
+      screen: () => (
+        <div role="application" tabIndex={0} aria-label="模拟器画面">
+          <input aria-label="测试输入框" />
+        </div>
+      )
     }
   ];
   const shell = {
@@ -61,11 +57,7 @@ async function setup(options: { status?: ReturnType<typeof machineStatus> | unde
       <Shell bridge={bridge} modules={modules} />
     </UiProvider>
   );
-  await screen.findByRole('tablist', { name: '已打开的页面' });
-  if (options.panelsClosed !== true) {
-    fireEvent.keyDown(document.body, { code: 'KeyB', ctrlKey: true });
-    fireEvent.keyDown(document.body, { code: 'KeyJ', ctrlKey: true });
-  }
+  await screen.findByLabelText('系统栏');
   await act(async () => settle());
   return { fake, controller, shell, ...result };
 }
@@ -95,10 +87,9 @@ async function press(init: KeyboardEventInit, target: Element = document.body): 
   await act(async () => settle());
 }
 
-/** 底部面板里的消息文字。 */
-function messageTexts(container: HTMLElement): string[] {
-  const panel = container.querySelector('.ui-app-frame__bottom') as HTMLElement;
-  return Array.from(panel.querySelectorAll('.ember-messages__text')).map((element) => element.textContent ?? '');
+/** 系统栏左侧的全部项（按钮与状态项）。 */
+function startItems(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>('.ui-status-bar__start > *'));
 }
 
 describe('登记表', () => {
@@ -113,23 +104,32 @@ describe('登记表', () => {
     });
     expect(new Set(registry.shortcuts.values()).size).toBe(registry.shortcuts.size);
     expect(registry.hosts.map((host) => host.module)).toEqual(['runtime']);
+    expect(registry.bottomPanels.map((panel) => panel.id)).toEqual(['runtime.panel']);
+  });
+
+  it('状态项只有卡带与 mapper 插件，都在左侧', () => {
+    const registry = buildShellRegistry([SHELL_MODULE, createRuntimeModule(new RuntimeController())]);
+    expect(registry.statusItems.map((entry) => [entry.id, entry.align])).toEqual([
+      ['runtime.cartridge', 'start'],
+      ['runtime.plugin', 'start']
+    ]);
   });
 });
 
 describe('“机器”菜单', () => {
-  it('没有开机：上电、暂停、软复位、硬复位全部置灰，静音可用', async () => {
+  it('没有开机：开机、暂停、软复位、硬复位全部置灰，静音可用', async () => {
     await setup();
     await openMenu('机器(M)');
-    expect(popupItems().map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['上电', '继续', '软复位', '硬复位', '静音']);
-    expect(['上电', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([true, true, true, true]);
+    expect(popupItems().map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['开机', '继续', '软复位', '硬复位', '静音']);
+    expect(['开机', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([true, true, true, true]);
     expect(isDisabled(item('静音'))).toBe(false);
   });
 
-  it('断电：上电与硬复位可用，暂停（继续）与软复位置灰，快捷键显示在右侧', async () => {
+  it('断电：开机与硬复位可用，暂停（继续）与软复位置灰，快捷键显示在右侧', async () => {
     await setup({ status: machineStatus('off', 'paused', NES) });
     await openMenu('机器(M)');
-    expect(['上电', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([false, true, true, false]);
-    expect(item('上电').textContent).toContain('F9');
+    expect(['开机', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([false, true, true, false]);
+    expect(item('开机').textContent).toContain('F9');
     expect(item('继续').textContent).toContain('F8');
     expect(item('软复位').textContent).toContain('F7');
     expect(item('硬复位').textContent).toContain('Ctrl+F7');
@@ -146,89 +146,101 @@ describe('“机器”菜单', () => {
     expect(item('继续')).toBeTruthy();
   });
 
-  it('静音是勾选项，勾选状态与边栏一致', async () => {
+  it('静音是勾选项，勾选状态与运行面板里的静音按钮一致', async () => {
     const { fake } = await setup();
     await openMenu('机器(M)');
     expect(item('静音').getAttribute('aria-checked')).toBe('false');
     await userEvent.click(item('静音'));
     await act(async () => settle());
     expect(fake.muted).toBe(true);
-    expect(screen.getByRole('button', { name: '静音' }).getAttribute('aria-pressed')).toBe('true');
-    // 勾选项选中后菜单保持打开，勾选状态随之更新。
     expect(item('静音').getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('菜单没有“截图”', async () => {
-    await setup();
-    await openMenu('机器(M)');
-    expect(screen.queryByRole('menuitem', { name: /截图/ })).toBeNull();
   });
 });
 
 describe('“文件”菜单', () => {
-  it('依次是开机…、打开卡带…、最近打开、关闭卡带、退出；没有卡带时关闭卡带置灰，没有记录时最近打开置灰', async () => {
+  it('依次是选择机型、打开卡带、最近打开、关闭卡带、退出，都没有三个点；没有卡带时关闭卡带置灰，没有记录时最近打开置灰', async () => {
     await setup();
     await openMenu('文件(F)');
-    expect(popupItems().map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['开机…', '打开卡带…', '最近打开', '关闭卡带', '退出']);
-    expect(item('打开卡带…').textContent).toContain('Ctrl+O');
+    expect(popupItems().map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['选择机型', '打开卡带', '最近打开', '关闭卡带', '退出']);
+    expect(item('打开卡带').textContent).toContain('Ctrl+O');
     expect(isDisabled(item('关闭卡带'))).toBe(true);
     expect(isDisabled(item('最近打开'))).toBe(true);
-    expect(isDisabled(item('开机…'))).toBe(false);
+    expect(isDisabled(item('选择机型'))).toBe(false);
     expect(isDisabled(item('退出'))).toBe(false);
   });
 
-  it('开机…的子菜单：经典 FC 可用；没有 BIOS 的小霸王 2000 置灰并注明“未添加 BIOS”，其余机型置灰并注明“暂未支持”', async () => {
+  it('选择机型的子菜单：经典 FC 打对勾；没有 BIOS 的小霸王 2000 置灰并注明“未添加 BIOS”，其余机型置灰并注明“暂未支持”', async () => {
     await setup();
     await openMenu('文件(F)');
-    await userEvent.hover(item('开机…'));
-    const submenu = screen.getByRole('menu', { name: '开机…' });
+    await userEvent.hover(item('选择机型'));
+    const submenu = screen.getByRole('menu', { name: '选择机型' });
     const entries = Array.from(submenu.querySelectorAll<HTMLElement>('[role^="menuitem"]'));
     expect(entries.map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['经典 FC', '小霸王 97', '小霸王 2000', '步步高 1.0', '步步高 2.0']);
     expect(entries.map(isDisabled)).toEqual([false, true, true, true, true]);
+    expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false', 'false', 'false']);
     expect(entries[1]?.textContent).toContain('暂未支持');
     expect(entries[2]?.textContent).toContain('未添加 BIOS，请在设置里添加');
     expect(entries[3]?.textContent).toContain('暂未支持');
     expect(entries[4]?.textContent).toContain('暂未支持');
   });
 
-  it('已添加 BIOS 的小霸王 2000 可用', async () => {
+  it('已添加 BIOS 的小霸王 2000 可选', async () => {
     await setup({ sb2000Bios: true });
     await openMenu('文件(F)');
-    await userEvent.hover(item('开机…'));
-    const entries = Array.from(screen.getByRole('menu', { name: '开机…' }).querySelectorAll<HTMLElement>('[role^="menuitem"]'));
+    await userEvent.hover(item('选择机型'));
+    const entries = Array.from(screen.getByRole('menu', { name: '选择机型' }).querySelectorAll<HTMLElement>('[role^="menuitem"]'));
     expect(entries.map(isDisabled)).toEqual([false, true, false, true, true]);
   });
 
-  it('开机…→经典 FC 等同打开卡带：弹出文件选择（cartridges.open）', async () => {
-    const { fake } = await setup();
-    fake.pickedPath = NES;
+  it('选择机型只改已选机型（打对勾）并保存：不开机、不打开文件选择，不影响正在运行的机器', async () => {
+    const { fake, shell } = await setup({ status: machineStatus('on', 'running', NES), sb2000Bios: true });
+    fake.calls.length = 0;
     await openMenu('文件(F)');
-    await userEvent.hover(item('开机…'));
-    await userEvent.click(within(screen.getByRole('menu', { name: '开机…' })).getByRole('menuitem', { name: '经典 FC' }));
+    await userEvent.hover(item('选择机型'));
+    await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
     await act(async () => settle());
-    expect(fake.calls).toContain('cartridges.open {}');
-    expect(screen.getAllByText('运行中').length).toBeGreaterThan(0);
+    expect(fake.calls.filter((call) => call.startsWith('cartridges.open') || call.startsWith('machines.boot') || call.startsWith('runtime.'))).toEqual([]);
+    expect(shell.setLayout).toHaveBeenCalledWith({ selectedMachine: 'sb2000' });
+    await openMenu('文件(F)');
+    await userEvent.hover(item('选择机型'));
+    const entries = Array.from(screen.getByRole('menu', { name: '选择机型' }).querySelectorAll<HTMLElement>('[role^="menuitem"]'));
+    expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true', 'false', 'false']);
+    await userEvent.keyboard('{Escape}');
   });
 
   it('没有 BIOS 的整机机型点了也不会发请求', async () => {
-    const { fake } = await setup();
+    const { fake, shell } = await setup();
     await openMenu('文件(F)');
-    await userEvent.hover(item('开机…'));
-    await userEvent.click(within(screen.getByRole('menu', { name: '开机…' })).getByRole('menuitem', { name: /小霸王 2000/ }));
+    await userEvent.hover(item('选择机型'));
+    await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
     await act(async () => settle());
     expect(fake.calls.filter((call) => call.startsWith('cartridges.open') || call.startsWith('machines.boot'))).toEqual([]);
+    expect(shell.setLayout).not.toHaveBeenCalled();
   });
 
-  it('开机…→小霸王 2000：用已添加的 BIOS 开机（machines.boot），状态变为运行中，并写一条消息', async () => {
-    const { fake, container } = await setup({ sb2000Bios: true });
+  it('选了小霸王 2000 后，机器菜单的“开机”用已添加的 BIOS 开机，不需要卡带', async () => {
+    const { fake } = await setup({ sb2000Bios: true });
     await openMenu('文件(F)');
-    await userEvent.hover(item('开机…'));
-    await userEvent.click(within(screen.getByRole('menu', { name: '开机…' })).getByRole('menuitem', { name: /小霸王 2000/ }));
+    await userEvent.hover(item('选择机型'));
+    await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
+    await act(async () => settle());
+    await openMenu('机器(M)');
+    expect(isDisabled(item('开机'))).toBe(false);
+    await userEvent.click(item('开机'));
     await act(async () => settle());
     expect(fake.calls).toContain('machines.boot {"machine":"sb2000"}');
     expect(fake.calls.filter((call) => call.startsWith('cartridges.open'))).toEqual([]);
-    expect(screen.getAllByText('运行中').length).toBeGreaterThan(0);
-    expect(messageTexts(container)).toContain('已用 小霸王 2000 开机');
+  });
+
+  it('打开卡带：弹出文件选择（cartridges.open），选后直接运行，已选机型回到经典 FC', async () => {
+    const { fake } = await setup({ sb2000Bios: true });
+    fake.pickedPath = NES;
+    await openMenu('文件(F)');
+    await userEvent.click(item('打开卡带'));
+    await act(async () => settle());
+    expect(fake.calls).toContain('cartridges.open {}');
+    await openMenu('机器(M)');
+    expect(item('断电')).toBeTruthy();
   });
 
   it('最近打开的子菜单列出卡带名，选中即重新打开', async () => {
@@ -244,7 +256,7 @@ describe('“文件”菜单', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('关闭卡带：有卡带时可用，点击后取出卡带，状态变为未开机', async () => {
+  it('关闭卡带：有卡带时可用，点击后取出卡带', async () => {
     const { fake } = await setup({ status: machineStatus('on', 'running', NES) });
     await openMenu('文件(F)');
     expect(isDisabled(item('关闭卡带'))).toBe(false);
@@ -264,7 +276,7 @@ describe('“文件”菜单', () => {
 });
 
 describe('快捷键', () => {
-  it('F9 上电或断电', async () => {
+  it('F9 开机或断电', async () => {
     const { fake } = await setup({ status: machineStatus('off', 'paused', NES) });
     await press({ key: 'F9', code: 'F9' });
     expect(fake.calls).toContain('runtime.powerOn {"resume":true}');
@@ -325,62 +337,90 @@ describe('快捷键', () => {
   });
 });
 
-describe('消息接入与通知', () => {
-  it('上电、暂停、继续、软复位、硬复位、断电、卡带弹出都写进底部面板的“消息”', async () => {
-    const { container } = await setup({ status: machineStatus('off', 'paused', NES) });
-    for (const [key, ctrl] of [['F9', false], ['F8', false], ['F8', false], ['F7', false], ['F7', true], ['F9', false]] as const) await press({ key, code: key, ctrlKey: ctrl });
-    await openMenu('文件(F)');
-    await userEvent.click(item('关闭卡带'));
-    await act(async () => settle());
-    expect(messageTexts(container)).toEqual(['上电', '已暂停', '继续运行', '软复位', '硬复位', '断电', '已关闭卡带 nestest.nes']);
+describe('系统栏左侧', () => {
+  it('依次是运行按钮、设备以外的状态项：卡带名与 mapper 插件；没有电源状态、主机型号，右侧没有音量', async () => {
+    const { container } = await setup({ status: machineStatus('on', 'running', NES) });
+    const left = startItems(container);
+    expect(left.map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', 'nestest.nes', 'NROM']);
+    const bar = container.querySelector('.ui-status-bar') as HTMLElement;
+    const texts = Array.from(bar.querySelectorAll('.ui-status-bar__item')).map((element) => element.textContent);
+    expect(texts.some((text) => /运行中|已暂停|已断电|未开机|经典 FC|音量/.test(text ?? ''))).toBe(false);
+    expect(texts.some((text) => /fps|帧率/i.test(text ?? ''))).toBe(false);
   });
 
-  it('装入卡带成功写一条带卡带名、mapper 号与匹配插件的消息', async () => {
-    const { fake, container } = await setup();
-    fake.pickedPath = NES;
-    await press({ key: 'o', code: 'KeyO', ctrlKey: true });
-    expect(messageTexts(container)).toEqual(['已装入卡带 nestest.nes：mapper 0，匹配插件 NROM 1.0.0']);
+  it('没有开机时没有信息的状态项不显示', async () => {
+    const { container } = await setup();
+    expect(startItems(container).map((element) => element.getAttribute('aria-label'))).toEqual(['运行']);
   });
 
-  it('操作失败时弹出通知，同时写一条错误消息', async () => {
+  it('运行按钮的图标实时显示运行状态：运行中是绿色，暂停换成暂停图标，其余是常色', async () => {
     const { fake, container } = await setup({ status: machineStatus('on', 'running', NES) });
+    const button = () => within(container).getByRole('button', { name: '运行' });
+    const iconPath = () => button().querySelector('path')?.getAttribute('d') ?? '';
+    expect(button().getAttribute('title')).toBe('运行：运行中');
+    expect(button().getAttribute('data-tone')).toBe('success');
+    const playIcon = iconPath();
+
+    fake.status = machineStatus('on', 'paused', NES);
+    fake.emit('runtime.stateChanged', { power: 'on', mode: 'paused', reason: 'pause' });
+    await act(async () => settle());
+    expect(button().getAttribute('title')).toBe('运行：已暂停');
+    expect(button().getAttribute('data-tone')).toBe('normal');
+    expect(iconPath()).not.toBe(playIcon);
+
+    fake.status = machineStatus('off', 'paused', NES);
+    fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'powerOff' });
+    await act(async () => settle());
+    expect(button().getAttribute('title')).toBe('运行：已断电');
+    expect(button().getAttribute('data-tone')).toBe('normal');
+    expect(iconPath()).toBe(playIcon);
+
+    fake.status = machineStatus('off', 'paused');
+    fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'eject' });
+    await act(async () => settle());
+    expect(button().getAttribute('title')).toBe('运行：未开机');
+  });
+
+  it('点运行按钮展开运行面板，里面的开机按钮可用', async () => {
+    const { fake } = await setup({ status: machineStatus('off', 'paused', NES) });
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    const panel = screen.getByRole('region', { name: '运行' });
+    await userEvent.click(within(panel).getByRole('button', { name: '开机' }));
+    await act(async () => settle());
+    expect(fake.calls).toContain('runtime.powerOn {"resume":true}');
+  });
+});
+
+describe('通知', () => {
+  it('操作失败时弹出通知', async () => {
+    const { fake } = await setup({ status: machineStatus('on', 'running', NES) });
     fake.failures.set('runtime.pause', { code: 'runtime.notPowered', message: '机器没有通电' });
     await press({ key: 'F8', code: 'F8' });
-    expect(messageTexts(container)).toEqual(['暂停失败：机器没有通电']);
-    expect((await screen.findAllByText('暂停失败：机器没有通电')).length).toBeGreaterThan(1);
+    expect(await screen.findByText('暂停失败：机器没有通电')).toBeTruthy();
   });
 
-  it('核心被杀后重启：状态先清空再刷新，写“核心已重启”', async () => {
+  it('核心被杀后重启：状态先清空再刷新', async () => {
     const { fake, container } = await setup({ status: machineStatus('on', 'running', NES) });
-    expect(screen.getAllByText('运行中').length).toBeGreaterThan(0);
+    expect(within(container).getByText('nestest.nes')).toBeTruthy();
     act(() => fake.emitCoreStatus({ state: 'starting' }));
-    expect(screen.queryAllByText('运行中')).toHaveLength(0);
-    fake.status = machineStatus('off', 'paused');
+    expect(within(container).queryByText('nestest.nes')).toBeNull();
+    fake.status = machineStatus('on', 'running', 'D:\\roms\\other.nes');
     act(() => fake.emitCoreStatus({ state: 'ready', coreVersion: '0.1.0' }));
     await act(async () => settle());
-    expect(screen.getAllByText('未开机').length).toBeGreaterThan(0);
-    expect(messageTexts(container)).toEqual(['核心进程已重启，机器状态已重新读取']);
+    expect(within(container).getByText('other.nes')).toBeTruthy();
   });
 });
 
 describe('常驻组件', () => {
-  it('边栏折叠着、页面没有显示边栏时，菜单与状态栏的状态也是最新的', async () => {
-    const { fake } = await setup({ status: machineStatus('on', 'running', NES), panelsClosed: true });
-    expect(screen.getAllByText('运行中').length).toBeGreaterThan(0);
+  it('运行面板没有展开时，菜单与系统栏的状态也是最新的', async () => {
+    const { fake, container } = await setup({ status: machineStatus('on', 'running', NES) });
+    expect(screen.queryByRole('region')).toBeNull();
     fake.status = machineStatus('off', 'paused', NES);
     fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'powerOff' });
     await act(async () => settle());
-    expect(screen.getAllByText('已断电').length).toBeGreaterThan(0);
+    expect(within(container).getByRole('button', { name: '运行' }).getAttribute('title')).toBe('运行：已断电');
     await openMenu('机器(M)');
-    expect(item('上电')).toBeTruthy();
+    expect(item('开机')).toBeTruthy();
     expect(isDisabled(item('继续'))).toBe(true);
-  });
-
-  it('状态栏：左侧电源状态、主机型号、卡带名、mapper 插件，右侧音量；没有帧率项', async () => {
-    const { container } = await setup({ status: machineStatus('on', 'running', NES) });
-    const bar = container.querySelector('.ui-status-bar') as HTMLElement;
-    const texts = Array.from(bar.querySelectorAll('.ui-status-bar__item')).map((element) => element.textContent);
-    expect(texts).toEqual(expect.arrayContaining(['运行中', '经典 FC', 'nestest.nes', 'NROM', '音量 100%']));
-    expect(texts.some((text) => /fps|帧率/i.test(text ?? ''))).toBe(false);
   });
 });

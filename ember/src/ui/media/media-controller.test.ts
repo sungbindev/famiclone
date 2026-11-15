@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.test.ts
- * 说明：设备边栏控制器的测试：初始状态读取、载入镜像（选定、取消、失败）、取出、保存、写保护、事件刷新、打印机输出一页的通知与消息、打印失败、定时读取只在边栏显示期间运行、核心重启后清空并重新读取、断开后不再响应。
+ * 说明：设备面板控制器的测试：初始状态读取、载入镜像（选定、取消、失败）、取出、保存、写保护、事件刷新、打印机输出一页的通知、打印失败、定时读取只在面板显示期间运行、核心重启后清空并重新读取、断开后不再响应。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -23,11 +23,9 @@ async function settle(): Promise<void> {
 async function setup(floppies?: FloppyStatus[]) {
   const fake = new FakeMediaBackend();
   if (floppies !== undefined) fake.floppies = floppies;
-  const messages: Array<{ level: string; text: string }> = [];
   const notices: Array<{ text: string; kind: string }> = [];
   const refreshes = { count: 0 };
   const host: MediaHostActions = {
-    addMessage: (message) => messages.push({ level: message.level, text: message.text }),
     notify: (text, kind) => notices.push({ text, kind }),
     refresh: () => {
       refreshes.count += 1;
@@ -36,7 +34,7 @@ async function setup(floppies?: FloppyStatus[]) {
   const controller = new MediaController();
   const detach = controller.attach(fake.backend, host);
   await settle();
-  return { fake, controller, detach, messages, notices, refreshes };
+  return { fake, controller, detach, notices, refreshes };
 }
 
 describe('MediaController', () => {
@@ -54,34 +52,34 @@ describe('MediaController', () => {
     detach();
   });
 
-  it('载入镜像：选定后写一条消息并刷新状态；用户取消时什么都不发生', async () => {
-    const { fake, controller, detach, messages } = await setup();
+  it('载入镜像：选定后刷新状态，不弹通知；用户取消时什么都不发生', async () => {
+    const { fake, controller, detach, notices } = await setup();
     fake.pickedFile = 'sys.img';
     controller.insertFloppy(0);
     await settle();
     expect(fake.calls).toContain('media.openFloppy {"drive":0}');
-    expect(messages).toEqual([{ level: 'info', text: '已把 sys.img 载入软驱 A' }]);
+    expect(notices).toEqual([]);
     expect(controller.snapshot().floppies[0]?.fileName).toBe('sys.img');
 
     fake.pickedFile = undefined;
     controller.insertFloppy(1);
     await settle();
-    expect(messages).toHaveLength(1);
+    expect(notices).toEqual([]);
+    expect(controller.snapshot().floppies[1]?.inserted).toBe(false);
     detach();
   });
 
-  it('载入镜像失败：用通知提示核心的说明，并写一条错误消息', async () => {
-    const { fake, controller, detach, messages, notices } = await setup();
+  it('载入镜像失败：用通知提示核心的说明', async () => {
+    const { fake, controller, detach, notices } = await setup();
     fake.failures.set('media.openFloppy', { code: 'media.imageInvalid', message: '镜像文件是空的' });
     controller.insertFloppy(0);
     await settle();
     expect(notices).toEqual([{ text: '载入软盘镜像失败：镜像文件是空的', kind: 'error' }]);
-    expect(messages).toEqual([{ level: 'error', text: '载入软盘镜像失败：镜像文件是空的' }]);
     detach();
   });
 
-  it('取出、保存镜像、写保护：各发出对应的请求，写消息并刷新状态', async () => {
-    const { fake, controller, detach, messages } = await setup([floppyStatus(0, 'sys.img', { modified: true }), floppyStatus(1)]);
+  it('取出、保存镜像、写保护：各发出对应的请求并刷新状态', async () => {
+    const { fake, controller, detach } = await setup([floppyStatus(0, 'sys.img', { modified: true }), floppyStatus(1)]);
 
     controller.setWriteProtected(0, true);
     await settle();
@@ -92,7 +90,6 @@ describe('MediaController', () => {
     expect(fake.calls).toContain('media.floppyWriteProtect {"drive":0,"writeProtected":true}');
     expect(fake.calls).toContain('media.floppySave {"drive":0}');
     expect(fake.calls).toContain('media.floppyEject {"drive":0}');
-    expect(messages.map((message) => message.text)).toEqual(['软驱 A 的盘片已设为写保护', '已保存软驱 A 的镜像 sys.img', '已取出软驱 A 的盘片']);
     expect(controller.snapshot().floppies[0]?.inserted).toBe(false);
     detach();
   });
@@ -106,26 +103,24 @@ describe('MediaController', () => {
     detach();
   });
 
-  it('打印机输出一页：用通知告知文件名，写一条消息，并刷新状态', async () => {
-    const { fake, controller, detach, messages, notices } = await setup();
+  it('打印机输出一页：用通知告知文件名并刷新状态', async () => {
+    const { fake, controller, detach, notices } = await setup();
     fake.printer = { state: 'done', hasContent: false, pages: 1, lastFile: 'page-1.png' };
     fake.emit('media.printed', { fileName: 'page-1.png', page: 1 });
     await settle();
     expect(notices).toEqual([{ text: '打印机输出了第 1 页：page-1.png', kind: 'info' }]);
-    expect(messages).toEqual([{ level: 'info', text: '打印机输出了第 1 页：page-1.png' }]);
     expect(controller.snapshot().printer?.state).toBe('done');
     detach();
   });
 
-  it('打印机输出的一页保存失败：用通知提示原因并写一条错误消息', async () => {
-    const { fake, detach, messages, notices } = await setup();
+  it('打印机输出的一页保存失败：用通知提示原因', async () => {
+    const { fake, detach, notices } = await setup();
     fake.emit('media.printFailed', { message: '目录无法写入' });
     expect(notices).toEqual([{ text: '打印机输出失败：目录无法写入', kind: 'error' }]);
-    expect(messages).toEqual([{ level: 'error', text: '打印机输出失败：目录无法写入' }]);
     detach();
   });
 
-  it('定时读取只在边栏显示期间运行，隐藏后停止', async () => {
+  it('定时读取只在面板显示期间运行，隐藏后停止', async () => {
     const { fake, controller, detach } = await setup();
     const before = fake.count('media.floppyStatus');
     await vi.advanceTimersByTimeAsync(2000);
@@ -156,7 +151,7 @@ describe('MediaController', () => {
     detach();
   });
 
-  it('读取到的状态有变化时让外壳重新渲染（活动栏的读写灯），没有变化时不刷新', async () => {
+  it('读取到的状态有变化时让外壳重新渲染（状态栏的读写灯），没有变化时不刷新', async () => {
     const { fake, refreshes, detach } = await setup();
     const before = refreshes.count;
     fake.emit('media.changed', { device: 'floppy', drive: 0 });

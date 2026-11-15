@@ -1,12 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：runtime-status.ts
- * 说明：运行页用到的纯规则：从 runtime.status 的结果得出机器的状态（未开机、已断电、已暂停、运行中）、各控制是否可用，以及边栏与状态栏显示的文字。
+ * 说明：运行模块用到的纯规则：从 runtime.status 的结果得出机器的状态（未开机、已断电、已暂停、运行中）、各控制是否可用，以及运行面板与状态栏显示的文字。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
- * 备注：可用性规则见 docs/05-界面.md 第 4.1 节：没有开机时全部置灰；断电时暂停与软复位置灰；硬复位只要已开机就可用；
- *       “关闭卡带”只在装着卡带时可用。状态还没读到（核心启动中、重启中或不可用）时为 unknown，显示“—”，全部置灰。
+ * 日期：2026-11-15
+ * 备注：可用性规则见 docs/05-界面.md 第 4.1 节：没有开机时暂停、复位置灰；断电时暂停与软复位置灰；硬复位只要已开机就可用；
+ *       “开机”按已选机型判断（见 powerToggleAction）；“关闭卡带”只在装着卡带时可用。状态还没读到（核心启动中、重启中或不可用）时为 unknown，全部置灰。
+ *       主机型号、卡带、mapper 插件、电源状态没有信息时文字函数返回 undefined，界面不显示这一项，不用“—”或“无”占位。
  * ------------------------------------------------------------------------
  */
 
@@ -17,20 +18,14 @@ export type MachineState = 'unknown' | 'none' | 'off' | 'paused' | 'running';
 
 /** 用户可见的文字。 */
 const TEXT = {
-  unknown: '—',
   none: '未开机',
   off: '已断电',
   paused: '已暂停',
   running: '运行中',
-  noCartridge: '无',
-  noCartridgeBios: '无（整机 BIOS）',
-  noPlugin: '—',
-  powerOn: '上电',
+  powerOn: '开机',
   powerOff: '断电',
   pause: '暂停',
-  resume: '继续',
-  muted: '已静音',
-  volume: (value: number) => `音量 ${value}%`
+  resume: '继续'
 } as const;
 
 /** 主机型号的显示名；表里没有的型号显示型号标识本身。 */
@@ -38,7 +33,7 @@ const HOST_NAMES: Readonly<Record<string, string>> = { fc: '经典 FC', sb97: '�
 
 /** 各控制是否可用。 */
 export interface ControlAvailability {
-  /** 上电或断电。 */
+  /** 开机或断电。 */
   readonly powerToggle: boolean;
   /** 暂停或继续。 */
   readonly pauseToggle: boolean;
@@ -75,29 +70,29 @@ export function machineState(status: RuntimeStatusResult | undefined): MachineSt
   return status.mode === 'running' ? 'running' : 'paused';
 }
 
-/** 状态文字。 */
-export function stateText(status: RuntimeStatusResult | undefined): string {
-  return TEXT[machineState(status)];
+/** 状态文字；还没读到状态时没有信息，为 undefined。 */
+export function stateText(status: RuntimeStatusResult | undefined): string | undefined {
+  const state = machineState(status);
+  return state === 'unknown' ? undefined : TEXT[state];
 }
 
-/** 主机型号的显示文字；没有开机时为“—”。 */
-export function hostText(status: RuntimeStatusResult | undefined): string {
-  if (status?.machine === undefined) return TEXT.unknown;
+/** 主机型号的显示文字；没有开机时没有信息，为 undefined。 */
+export function hostText(status: RuntimeStatusResult | undefined): string | undefined {
+  if (status?.machine === undefined) return undefined;
   return HOST_NAMES[status.machine] ?? status.machine;
 }
 
-/** 卡带的显示文字：卡带文件名；没有卡带时为“无”，整机机型开机后（没有卡带、用 BIOS 开机）为“无（整机 BIOS）”。 */
-export function cartridgeText(status: RuntimeStatusResult | undefined): string {
-  if (status?.cartridge !== undefined) return fileNameOf(status.cartridge.path);
-  return status?.machine !== undefined && status.machine !== 'fc' ? TEXT.noCartridgeBios : TEXT.noCartridge;
+/** 卡带的显示文字：卡带文件名；没有卡带（含整机机型用 BIOS 开机）时没有信息，为 undefined。 */
+export function cartridgeText(status: RuntimeStatusResult | undefined): string | undefined {
+  return status?.cartridge === undefined ? undefined : fileNameOf(status.cartridge.path);
 }
 
-/** mapper 插件的显示文字：插件名；没有卡带时为“—”。 */
-export function pluginText(status: RuntimeStatusResult | undefined): string {
-  return status?.cartridge === undefined ? TEXT.noPlugin : status.cartridge.pluginName;
+/** mapper 插件的显示文字：插件名；没有卡带时没有信息，为 undefined。 */
+export function pluginText(status: RuntimeStatusResult | undefined): string | undefined {
+  return status?.cartridge?.pluginName;
 }
 
-/** 上电或断电按钮与菜单项的名称：通电时是“断电”，否则是“上电”。 */
+/** 开机或断电按钮与菜单项的名称：通电时是“断电”，否则是“开机”。 */
 export function powerToggleText(status: RuntimeStatusResult | undefined): string {
   return status?.power === 'on' ? TEXT.powerOff : TEXT.powerOn;
 }
@@ -107,18 +102,40 @@ export function pauseToggleText(status: RuntimeStatusResult | undefined): string
   return machineState(status) === 'running' ? TEXT.pause : TEXT.resume;
 }
 
-/** 音量的显示文字：静音时是“已静音”。 */
-export function volumeText(volume: number, muted: boolean): string {
-  return muted ? TEXT.muted : TEXT.volume(volume);
+/** 机型清单里开机规则用到的部分：标识、是否已支持、已添加的 BIOS。 */
+export interface BootableMachine {
+  readonly id: string;
+  readonly supported: boolean;
+  readonly bios?: unknown;
+}
+
+/** 开机或断电按钮这次要做的事：断电、上电（已装入的主机）、用已选机型的 BIOS 开机，或不能做。 */
+export type PowerToggleAction = 'powerOff' | 'powerOn' | 'boot' | 'none';
+
+/**
+ * 开机或断电按钮这次要做什么。通电时是断电；未通电时按已选机型：整机机型（学习机）已支持并已添加 BIOS 就开机（不需要卡带，当前装的是别的主机也用它重新开机），
+ * 经典 FC 要求已经装入 FC 卡带，有就上电。
+ * @param status runtime.status 的结果；还没读到时为 undefined，不能做。
+ * @param selectedMachine 已选机型的标识。
+ * @param machines 机型清单。
+ */
+export function powerToggleAction(status: RuntimeStatusResult | undefined, selectedMachine: string, machines: readonly BootableMachine[]): PowerToggleAction {
+  if (status === undefined) return 'none';
+  if (status.power === 'on') return 'powerOff';
+  if (selectedMachine === 'fc') return status.machine === 'fc' ? 'powerOn' : 'none';
+  const info = machines.find((item) => item.id === selectedMachine);
+  return info !== undefined && info.supported && info.bios !== undefined ? 'boot' : 'none';
 }
 
 /**
  * 各控制是否可用。
  * @param status runtime.status 的结果；还没读到时为 undefined，全部置灰。
+ * @param selectedMachine 已选机型的标识，决定“开机”是否可用。
+ * @param machines 机型清单。
  */
-export function controlAvailability(status: RuntimeStatusResult | undefined): ControlAvailability {
+export function controlAvailability(status: RuntimeStatusResult | undefined, selectedMachine: string, machines: readonly BootableMachine[]): ControlAvailability {
   const state = machineState(status);
   const opened = state === 'off' || state === 'paused' || state === 'running';
   const powered = state === 'paused' || state === 'running';
-  return { powerToggle: opened, pauseToggle: powered, softReset: powered, hardReset: opened, eject: status?.cartridge !== undefined };
+  return { powerToggle: powerToggleAction(status, selectedMachine, machines) !== 'none', pauseToggle: powered, softReset: powered, hardReset: opened, eject: status?.cartridge !== undefined };
 }

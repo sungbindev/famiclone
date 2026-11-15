@@ -1,13 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-state.ts
- * 说明：界面状态的类型、默认值与校验：窗口位置，以及底部面板高度。
+ * 说明：界面状态的类型、默认值与校验：窗口位置，底部面板高度，以及上次选择的机型。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-15
  * 备注：规则见 docs/05-界面.md 第 9 节；读到的内容逐项校验，不合格的项用默认值，不影响其他项；
  *       窗口大小与是否最大化不保存（每次启动都是最小尺寸），旧文件里的这几项读取时被忽略；
- *       边栏、底部面板、右边栏是否展开不保存（每次启动都是全部关闭）；旧文件里的这几项读取时被忽略；
+ *       底部面板是否展开与当前页签不保存（每次启动都是关闭）；旧文件里的边栏、右边栏等项读取时被忽略；
  *       渲染进程发来的布局修改同样经 parseLayoutPatch 校验，含未知字段或不合格的值时整条丢弃。
  * ------------------------------------------------------------------------
  */
@@ -18,10 +18,12 @@ export interface WindowPlacement {
   readonly y: number;
 }
 
-/** 外壳需要保存的版面：只有底部面板高度，各面板是否展开每次启动都是关闭。 */
+/** 外壳需要保存的版面与选择：底部面板高度、上次选的机型；底部面板是否展开与当前页签每次启动都是关闭，不保存。 */
 export interface ShellLayout {
   /** 底部面板的高度（像素）；null 表示用默认高度。 */
   readonly bottomPanelHeight: number | null;
+  /** “文件→选择机型”里上次选的机型标识；null 表示没选过，用经典 FC。 */
+  readonly selectedMachine: string | null;
 }
 
 /** 需要保存的全部界面状态。 */
@@ -34,13 +36,15 @@ export interface ShellState {
 /** 没有保存过时：窗口用默认位置，底部面板用默认高度。 */
 export const DEFAULT_SHELL_STATE: ShellState = {
   window: null,
-  layout: { bottomPanelHeight: null }
+  layout: { bottomPanelHeight: null, selectedMachine: null }
 };
 
 /** 窗口坐标的合理范围（多显示器时可以为负）。 */
 const MAX_COORDINATE = 100_000;
 /** 底部面板高度的合理范围。 */
 const MAX_PANEL_HEIGHT = 10_000;
+/** 机型标识的写法（小写字母开头，字母与数字，最长 32）；是否真的存在由机型清单决定。 */
+const MACHINE_ID_PATTERN = /^[a-z][a-z0-9]{0,31}$/;
 
 /** 对象形态的值。 */
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -63,7 +67,8 @@ function parseWindow(raw: unknown): WindowPlacement | null {
 
 /** 布局各字段的校验函数。 */
 const LAYOUT_VALIDATORS: { readonly [K in keyof ShellLayout]: (value: unknown) => value is ShellLayout[K] } = {
-  bottomPanelHeight: (value): value is number | null => value === null || isIntegerIn(value, 1, MAX_PANEL_HEIGHT)
+  bottomPanelHeight: (value): value is number | null => value === null || isIntegerIn(value, 1, MAX_PANEL_HEIGHT),
+  selectedMachine: (value): value is string | null => value === null || (typeof value === 'string' && MACHINE_ID_PATTERN.test(value))
 };
 
 /**

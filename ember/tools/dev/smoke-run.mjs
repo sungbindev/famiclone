@@ -2,10 +2,10 @@
  * ------------------------------------------------------------------------
  * 名称：smoke-run.mjs
  * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、
- *       运行页边栏与状态栏显示机器状态、边栏按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“开机…”子菜单、
- *       启动时面板全部关闭、展开与折叠面板时窗口大小不变而画面框等比缩放并留在页面区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白与到系统按钮的距离、
- *       首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、
- *       页面重载与核心进程重启后端口重新建立且边栏状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
+ *       系统栏左侧的运行按钮（只有图标）实时显示运行状态并展开运行面板、面板按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“选择机型”子菜单、
+ *       启动时底部面板关闭且没有活动栏、边栏、标签栏与右边栏、展开与收起面板时窗口大小不变而画面框等比缩放并留在显示区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白、
+ *       首选项对话框（独立的系统窗口，主题与主窗口一致）与首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、调试服务与系统栏右侧的“调试模式”、
+ *       页面重载与核心进程重启后端口重新建立且运行按钮状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -25,10 +25,8 @@ import { connectCdp, findDescendants, killTree, parseArguments, pressKey, projec
 const DEFAULT_ROM = 'nestest/nestest.nes';
 /** 关闭窗口后应用应在这个时间内自行退出（毫秒）：不超过网关等待核心停止的超时（5 秒）。 */
 const GRACEFUL_EXIT_LIMIT_MS = 4500;
-/** 标题栏菜单与右侧折叠按钮之间至少留的可拖动空白（像素）。 */
+/** 标题栏菜单与系统窗口按钮之间至少留的可拖动空白（像素）。 */
 const MIN_DRAG_GAP = 48;
-/** 折叠按钮右边缘到系统窗口按钮之间至少留的距离（像素）。 */
-const MIN_SYSTEM_BUTTON_GAP = 8;
 /** 画面框的显示宽高比：256×240 的整帧、像素宽高比 8:7。 */
 const FRAME_RATIO = 128 / 105;
 /** 预置的窗口位置：窗口大小每次启动都是最小尺寸，这里只固定位置。 */
@@ -84,15 +82,16 @@ const INSTALL_LISTENER = `(() => {
 /** 读渲染 Worker 的诊断；reset 为 true 时先清空统计。 */
 const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(${reset})`;
 
-/** 窗口大小、页面区与画面框的几何信息（CSS 像素）以及两个面板是否关闭。 */
+/** 窗口大小、页面区与画面框的几何信息（CSS 像素）以及底部面板是否关闭。 */
 const GEOMETRY = `(() => {
   const frame = document.querySelector('.ember-run-frame').getBoundingClientRect();
   const area = document.querySelector('.ui-app-frame__page').getBoundingClientRect();
+  const bottom = document.querySelector('.ui-app-frame__bottom');
   return {
     innerWidth: window.innerWidth, innerHeight: window.innerHeight,
     frameWidth: frame.width, frameHeight: frame.height,
     margins: { left: frame.left - area.left, right: area.right - frame.right, top: frame.top - area.top, bottom: area.bottom - frame.bottom },
-    sideHidden: document.querySelector('.ui-app-frame__side').hidden, bottomHidden: document.querySelector('.ui-app-frame__bottom').hidden
+    bottomHidden: bottom === null || bottom.hidden
   };
 })()`;
 
@@ -101,27 +100,26 @@ const TITLE_BAR_METRICS = `(() => {
   const rect = (selector) => { const box = document.querySelector(selector).getBoundingClientRect(); return { left: box.left, right: box.right, width: box.width }; };
   const bar = document.querySelector('.ui-title-bar');
   const barStyle = getComputedStyle(bar);
-  const tools = document.querySelector('.ui-title-bar__tools');
   const items = [...document.querySelectorAll('.ui-title-bar__menus [role="menuitem"]')];
   const tops = new Set(items.map((item) => Math.round(item.getBoundingClientRect().top)));
   return {
     innerWidth: window.innerWidth, innerHeight: window.innerHeight,
     paddingLeft: parseFloat(barStyle.paddingLeft), paddingRight: parseFloat(barStyle.paddingRight),
-    brand: rect('.ui-title-bar__brand'), menus: rect('.ui-title-bar__menus'), tools: rect('.ui-title-bar__tools'),
-    brandMargin: parseFloat(getComputedStyle(document.querySelector('.ui-title-bar__brand')).marginRight), toolsMargin: parseFloat(getComputedStyle(tools).marginRight),
+    brand: rect('.ui-title-bar__brand'), menus: rect('.ui-title-bar__menus'),
+    brandMargin: parseFloat(getComputedStyle(document.querySelector('.ui-title-bar__brand')).marginRight),
     menuCount: items.length, menuRows: tops.size, menuClipped: items.some((item) => item.scrollWidth > item.clientWidth + 1),
     overlay: navigator.windowControlsOverlay ? navigator.windowControlsOverlay.getTitlebarAreaRect().width : -1
   };
 })()`;
 
-/** 点标题栏里指定名称的折叠按钮。 */
-async function clickTool(label) {
-  return page.evaluate(`(() => { const button = document.querySelector('.ui-title-bar [aria-label=' + JSON.stringify(${JSON.stringify(label)}) + ']'); if (!button || button.disabled) return false; button.click(); return true; })()`);
+/** 点系统栏里指定名称的按钮（运行、设备）。 */
+async function clickBarButton(label) {
+  return page.evaluate(`(() => { const button = document.querySelector('.ui-status-bar [aria-label=' + JSON.stringify(${JSON.stringify(label)}) + ']'); if (!button || button.disabled) return false; button.click(); return true; })()`);
 }
 
-/** 点标题栏里指定名称的折叠按钮，等布局稳定后读几何信息。 */
+/** 点系统栏里指定名称的按钮，等布局稳定后读几何信息。 */
 async function toggleAndMeasure(label) {
-  await clickTool(label);
+  await clickBarButton(label);
   await sleep(500);
   return page.evaluate(GEOMETRY);
 }
@@ -142,9 +140,9 @@ async function textOf(selector) {
   return page.evaluate(`(document.querySelector(${JSON.stringify(selector)})?.textContent ?? '')`);
 }
 
-/** 点边栏里指定文字的按钮；按钮不存在或置灰时返回 false。 */
-async function clickSideButton(name) {
-  return page.evaluate(`(() => { const button = [...document.querySelectorAll('.ui-side-bar button')].find((item) => item.textContent.trim() === ${JSON.stringify(name)}); if (!button || button.disabled) return false; button.click(); return true; })()`);
+/** 点底部面板里指定文字的按钮；按钮不存在或置灰时返回 false。 */
+async function clickPanelButton(name) {
+  return page.evaluate(`(() => { const button = [...document.querySelectorAll('.ember-shell-panel button')].find((item) => item.textContent.trim() === ${JSON.stringify(name)}); if (!button || button.disabled) return false; button.click(); return true; })()`);
 }
 
 /** 点菜单栏里的一个菜单名（打开，再点一次关闭）。 */
@@ -152,9 +150,9 @@ async function menuButton(label) {
   return page.evaluate(`(() => { const button = [...document.querySelectorAll('[role="menubar"] [role="menuitem"]')].find((item) => item.textContent.startsWith(${JSON.stringify(label)})); button?.click(); return Boolean(button); })()`);
 }
 
-/** 某个菜单弹层里的全部菜单项：名称、是否置灰、完整文字。 */
+/** 某个菜单弹层里的全部菜单项：名称、是否置灰、是否选中（单选项）、完整文字。 */
 async function menuItems(popupSelector) {
-  return page.evaluate(`[...document.querySelectorAll(${JSON.stringify(`${popupSelector} [role^="menuitem"]`)})].map((item) => ({ label: item.querySelector('.ui-menu__label')?.textContent ?? '', disabled: item.getAttribute('aria-disabled') === 'true', text: item.textContent }))`);
+  return page.evaluate(`[...document.querySelectorAll(${JSON.stringify(`${popupSelector} [role^="menuitem"]`)})].map((item) => ({ label: item.querySelector('.ui-menu__label')?.textContent ?? '', disabled: item.getAttribute('aria-disabled') === 'true', checked: item.getAttribute('aria-checked'), text: item.textContent }))`);
 }
 
 /** 把指针移到菜单项上（有子菜单的项随之展开）。 */
@@ -315,66 +313,78 @@ async function main() {
   await sleep(500);
   check('非法输入被丢弃，画面继续', (await page.evaluate(readDiagnostics())).received > afterJunk);
 
-  // 运行页的边栏、状态栏、菜单与快捷键（原来画面下方的开发期操作条已迁到这里）。
-  const sideText = await textOf('.ui-side-bar');
-  check('运行页边栏显示机器信息（主机型号、卡带、mapper 插件、状态）', ['经典 FC', 'nestest.nes', 'NROM', '运行中'].every((word) => sideText.includes(word)), sideText.replace(/\s+/g, ' ').slice(0, 60));
+  // 系统栏与底部面板：运行按钮（系统栏左侧，只有图标）的图标与提示实时显示运行状态，点它展开运行面板（机器信息、控制按钮、声音），再经菜单与快捷键操作。
+  const runButtonInfo = () => page.evaluate(`(() => { const button = document.querySelector('.ui-status-bar [aria-label="运行"]'); return button ? { title: button.title, tone: button.getAttribute('data-tone'), text: button.textContent, path: button.querySelector('path')?.getAttribute('d') ?? '' } : null; })()`);
+  const runningButton = await runButtonInfo();
+  check('系统栏左侧的运行按钮只有图标，运行中时提示是“运行：运行中”、图标为绿色', runningButton?.title === '运行：运行中' && runningButton?.tone === 'success' && runningButton?.text === '', JSON.stringify(runningButton));
   const barText = await textOf('.ui-status-bar');
-  check('状态栏显示电源状态、主机型号、卡带名与音量', ['运行中', '经典 FC', 'nestest.nes', '音量'].every((word) => barText.includes(word)), barText.replace(/\s+/g, ' ').slice(0, 60));
-  check('边栏“暂停”按钮可点击', await clickSideButton('暂停'));
+  check('系统栏显示卡带名与 mapper 插件，不显示电源状态、主机型号与音量', ['nestest.nes', 'NROM'].every((word) => barText.includes(word)) && !['运行中', '经典 FC', '音量'].some((word) => barText.includes(word)), barText.replace(/\s+/g, ' ').slice(0, 60));
+  check('点系统栏的运行按钮', await clickBarButton('运行'));
+  const panelText = await waitFor(() => textOf('.ember-shell-panel'), (text) => text.includes('主机型号'), 5000, 100);
+  check('运行面板显示机器信息（主机型号、卡带、mapper 插件），没有“状态”与分组标题', ['经典 FC', 'nestest.nes', 'NROM'].every((word) => panelText.includes(word)) && !panelText.includes('状态') && !panelText.includes('机器') && !panelText.includes('控制'), panelText.replace(/\s+/g, ' ').slice(0, 60));
+  const panelHeader = await page.evaluate(`(() => { const title = document.querySelector('.ember-shell-panel__title'); return { title: title?.textContent, weight: Number(getComputedStyle(title).fontWeight), close: Boolean(document.querySelector('.ember-shell-panel__header button')) }; })()`);
+  check('面板标题行：左边是加粗的面板标题“运行”，右边有关闭按钮', panelHeader.title === '运行' && panelHeader.weight >= 600 && panelHeader.close, JSON.stringify(panelHeader));
+  check('运行面板的“暂停”按钮可点击', await clickPanelButton('暂停'));
   const paused = await waitFor(() => page.evaluate('window.ember.core.runtime.status({})'), (value) => value.mode === 'paused');
   const pausedHint = await waitFor(() => textOf('.ember-run-overlay'), (text) => text.includes('已暂停'));
   check('点“暂停”后核心暂停，画面上出现“已暂停”提示', paused.mode === 'paused' && pausedHint.includes('已暂停'));
+  const pausedButton = await runButtonInfo();
+  check('暂停后运行按钮的图标换成暂停图标、不再是绿色，提示是“运行：已暂停”', pausedButton?.title === '运行：已暂停' && pausedButton?.tone === 'normal' && pausedButton?.path !== runningButton?.path, JSON.stringify(pausedButton));
   await sleep(300);
-  check('边栏操作结束后焦点回到画面', await page.evaluate('document.activeElement?.getAttribute("role") === "application"'));
+  check('面板操作结束后焦点回到画面', await page.evaluate('document.activeElement?.getAttribute("role") === "application"'));
   await pressKey(page, { key: 'F8', code: 'F8', keyCode: 119 }, 50);
   const resumed = await waitFor(() => page.evaluate('window.ember.core.runtime.status({})'), (value) => value.mode === 'running');
   check('画面获得焦点时按 F8 继续运行（F 键不被画面占用），提示消失', resumed.mode === 'running' && (await waitFor(() => textOf('.ember-run-overlay'), (text) => text === '')) === '');
-  const messageText = await textOf('.ember-messages');
-  check('底部面板的“消息”里有“已暂停”与“继续运行”', messageText.includes('已暂停') && messageText.includes('继续运行'), messageText.slice(0, 60));
+  check('继续运行后运行按钮回到绿色三角形', (await waitFor(runButtonInfo, (info) => info?.title === '运行：运行中', 3000, 100))?.path === runningButton?.path);
+  check('再点运行按钮收起面板', (await clickBarButton('运行')) && (await waitFor(() => page.evaluate('document.querySelector(".ui-app-frame__bottom") === null'), (value) => value === true, 3000, 100)) === true);
   await menuButton('文件');
   const fileItems = await menuItems('.ui-menu__popup:not(.ui-menu__popup--sub)');
   check(
-    '“文件”菜单：开机…、打开卡带…、最近打开（启动参数加载的卡带已记入）、关闭卡带（有卡带可用）、退出',
-    fileItems.map((entry) => entry.label).join('|') === '开机…|打开卡带…|最近打开|关闭卡带|退出' && fileItems.every((entry) => !entry.disabled),
+    '“文件”菜单：选择机型、打开卡带、最近打开（启动参数加载的卡带已记入）、关闭卡带（有卡带可用）、退出，都没有三个点',
+    fileItems.map((entry) => entry.label).join('|') === '选择机型|打开卡带|最近打开|关闭卡带|退出' && fileItems.every((entry) => !entry.disabled),
     JSON.stringify(fileItems)
   );
-  await hoverMenuItem('开机…');
-  const bootItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0, 3000, 100);
-  check('“开机…”子菜单：经典 FC 可用，四个整机机型置灰并注明“暂未支持”', bootItems.length === 5 && !bootItems[0].disabled && bootItems.slice(1).every((entry) => entry.disabled && entry.text.includes('暂未支持')), JSON.stringify(bootItems.map((entry) => entry.label)));
+  await hoverMenuItem('选择机型');
+  const machineItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0, 3000, 100);
+  check(
+    '“选择机型”子菜单：经典 FC 可用并打对勾；小霸王 2000 没有 BIOS 置灰并注明“未添加 BIOS”，其余三个机型置灰并注明“暂未支持”',
+    machineItems.length === 5 &&
+      !machineItems[0].disabled &&
+      machineItems[0].checked === 'true' &&
+      machineItems[2].disabled &&
+      machineItems[2].text.includes('未添加 BIOS') &&
+      [1, 3, 4].every((index) => machineItems[index].disabled && machineItems[index].text.includes('暂未支持')),
+    JSON.stringify(machineItems.map((entry) => entry.label))
+  );
   await hoverMenuItem('最近打开');
   const recentItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0 && items[0].label === 'nestest.nes', 3000, 100);
   check('“最近打开”子菜单列出启动参数加载的卡带（只给显示名，不含路径）', recentItems.length === 1 && recentItems[0].label === 'nestest.nes' && !recentItems[0].text.includes('\\') && !recentItems[0].text.includes('/'), JSON.stringify(recentItems));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu-recent.png'));
   await menuButton('文件');
 
-  // 面板与窗口：启动时全部关闭，窗口是最小尺寸；先在最小窗口下核对标题栏与画面框，再展开面板核对窗口大小不变、画面框等比缩小并留在页面区内。
+  // 面板与窗口：启动时面板是关闭的，窗口是最小尺寸；先在最小窗口下核对标题栏与画面框，再展开面板核对窗口大小不变、画面框等比缩小并留在显示区内。
   const initial = await page.evaluate(GEOMETRY);
-  check('启动时边栏与底部面板都是关闭的', initial.sideHidden && initial.bottomHidden, JSON.stringify({ sideHidden: initial.sideHidden, bottomHidden: initial.bottomHidden }));
+  check('启动时底部面板是关闭的，没有活动栏、边栏、标签栏与右边栏', initial.bottomHidden && (await page.evaluate(`!document.querySelector('.ui-activity-bar, .ui-app-frame__side, .ui-app-frame__right, [role="tablist"]')`)), JSON.stringify({ bottomHidden: initial.bottomHidden }));
   const tiny = await page.evaluate(TITLE_BAR_METRICS);
-  const dragGap = tiny.tools.left - tiny.menus.right;
-  const systemGap = tiny.innerWidth - tiny.paddingRight - tiny.tools.right;
-  console.log(`最小窗口 ${tiny.innerWidth}×${tiny.innerHeight}：图标与名称 ${tiny.brand.width.toFixed(1)}，菜单 ${tiny.menus.left.toFixed(1)}–${tiny.menus.right.toFixed(1)}（宽 ${tiny.menus.width.toFixed(1)}），折叠按钮 ${tiny.tools.left.toFixed(1)}–${tiny.tools.right.toFixed(1)}，系统按钮从 ${(tiny.innerWidth - tiny.paddingRight).toFixed(1)} 起，拖动空白 ${dragGap.toFixed(1)}，到系统按钮的距离 ${systemGap.toFixed(1)}`);
+  const dragGap = tiny.innerWidth - tiny.paddingRight - tiny.menus.right;
+  console.log(`最小窗口 ${tiny.innerWidth}×${tiny.innerHeight}：图标与名称 ${tiny.brand.width.toFixed(1)}，菜单 ${tiny.menus.left.toFixed(1)}–${tiny.menus.right.toFixed(1)}（宽 ${tiny.menus.width.toFixed(1)}），系统按钮从 ${(tiny.innerWidth - tiny.paddingRight).toFixed(1)} 起，菜单到系统按钮的空白 ${dragGap.toFixed(1)}`);
   check('最小窗口下菜单都在同一行、文字没有被截断', tiny.menuCount > 0 && tiny.menuRows === 1 && !tiny.menuClipped, `${tiny.menuCount} 个菜单，${tiny.menuRows} 行`);
-  check(`最小窗口下菜单与折叠按钮之间至少有 ${MIN_DRAG_GAP} 像素可拖动的空白`, dragGap >= MIN_DRAG_GAP, `${dragGap.toFixed(1)}`);
-  check(`最小窗口下折叠按钮与系统窗口按钮至少相距 ${MIN_SYSTEM_BUTTON_GAP} 像素`, systemGap >= MIN_SYSTEM_BUTTON_GAP, `${systemGap.toFixed(1)}`);
+  check(`最小窗口下菜单与系统窗口按钮之间至少有 ${MIN_DRAG_GAP} 像素可拖动的空白`, dragGap >= MIN_DRAG_GAP, `${dragGap.toFixed(1)}`);
   check('画面框的宽高比是 128:105（8:7 的像素宽高比，不变形）', Math.abs(initial.frameWidth / initial.frameHeight - FRAME_RATIO) < 0.02, `${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)}`);
   check('最小窗口下画面框四周的间距一样（误差不超过 2 像素）', Math.max(...Object.values(initial.margins)) - Math.min(...Object.values(initial.margins)) <= 2, JSON.stringify(initial.margins));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-min-window.png'));
-  const bottomOpen = await toggleAndMeasure('切换底部面板');
-  check('展开底部面板：窗口大小不变，画面框等比缩小并留在页面区内', sameWindowSize(initial, bottomOpen) && frameFits(bottomOpen) && bottomOpen.frameHeight < initial.frameHeight, `窗口 ${bottomOpen.innerWidth}×${bottomOpen.innerHeight}，画面框 ${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)} → ${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
-  const sideOpen = await toggleAndMeasure('切换边栏');
-  check('再展开边栏：窗口大小不变，画面框继续等比缩小并留在页面区内', sameWindowSize(initial, sideOpen) && frameFits(sideOpen) && sideOpen.frameWidth < bottomOpen.frameWidth, `窗口 ${sideOpen.innerWidth}×${sideOpen.innerHeight}，画面框 ${sideOpen.frameWidth.toFixed(1)}×${sideOpen.frameHeight.toFixed(1)}`);
+  const bottomOpen = await toggleAndMeasure('运行');
+  check('展开运行面板：窗口大小不变，画面框等比缩小并留在显示区内', sameWindowSize(initial, bottomOpen) && frameFits(bottomOpen) && bottomOpen.frameHeight < initial.frameHeight, `窗口 ${bottomOpen.innerWidth}×${bottomOpen.innerHeight}，画面框 ${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)} → ${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-panels-open.png'));
-  await toggleAndMeasure('切换边栏');
-  const allClosed = await toggleAndMeasure('切换底部面板');
-  check('折叠面板后窗口大小不变，画面框回到原来的大小', sameWindowSize(initial, allClosed) && Math.abs(allClosed.frameWidth - initial.frameWidth) <= 2 && Math.abs(allClosed.frameHeight - initial.frameHeight) <= 2, `画面框 ${allClosed.frameWidth.toFixed(1)}×${allClosed.frameHeight.toFixed(1)}`);
+  const allClosed = await toggleAndMeasure('运行');
+  check('收起面板后窗口大小不变，画面框回到原来的大小', sameWindowSize(initial, allClosed) && Math.abs(allClosed.frameWidth - initial.frameWidth) <= 2 && Math.abs(allClosed.frameHeight - initial.frameHeight) <= 2, `画面框 ${allClosed.frameWidth.toFixed(1)}×${allClosed.frameHeight.toFixed(1)}`);
 
   // 首选项：核心登记的设置项与出厂默认值、非法取值被拒绝；改画面比例与“显示全部 240 行”后运行页的画面框立即跟着变；改主题后系统主题立即切换；调试服务改音量会保存到首选项；最后全部恢复默认。
   const listed = await page.evaluate('window.ember.core.preferences.list({})');
   const valueOf = (id) => listed.settings.find((setting) => setting.id === id)?.value;
-  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'debug.enabled', 'debug.port', 'debug.token', 'debug.outputDirectory'];
+  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'input.captureMouse', 'printer.outputDirectory', 'debug.enabled', 'debug.port', 'debug.token', 'debug.outputDirectory'];
   // 令牌的默认值是空，核心启动时自动生成并保存，所以不与默认值比较，单独检查。
-  check('首选项列出了登记的 11 个设置项，取值都是出厂默认值（令牌除外）', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && (!comparable(setting) || JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.id === 'debug.token' ? '…' : setting.value}`).join('，'));
+  check('首选项列出了登记的 13 个设置项，取值都是出厂默认值（令牌除外）', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && (!comparable(setting) || JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.id === 'debug.token' ? '…' : setting.value}`).join('，'));
   check('调试服务的令牌已经自动生成（32 个字母与数字），默认端口 5688、默认不开启（启动参数强制开启不改首选项）', /^[A-Za-z0-9]{32}$/.test(String(valueOf('debug.token'))) && valueOf('debug.port') === 5688 && valueOf('debug.enabled') === false);
   check('出厂默认值：主题跟随系统、画面比例 8:7、适应窗口、显示全部行、缓冲标准、启动时不静音、音量 100', valueOf('appearance.theme') === 'system' && valueOf('display.aspect') === '8:7' && valueOf('display.scaling') === 'fit' && valueOf('display.showAllLines') === true && valueOf('sound.buffer') === 'standard' && valueOf('sound.startMuted') === false && valueOf('sound.volume') === 100);
   const invalid = await page.evaluate(`window.ember.core.preferences.set({ id: 'display.aspect', value: '16:9' }).then(() => 'accepted', (error) => error?.code ?? 'failed')`);
@@ -450,9 +460,9 @@ async function main() {
   await page.evaluate(`window.ember.core.preferences.reset({ id: 'sound.startMuted' })`);
   const debugListed = (await debugClient.call('debug.status')).result;
   check('debug.status 里有这条连接', debugListed?.connections?.length === 1 && debugListed.connections[0].client === 'smoke', JSON.stringify(debugListed?.connections));
-  const debugBarWord = `调试服务 ${debugPort}（1 个连接）`;
-  const debugBar = await waitFor(() => textOf('.ui-status-bar'), (text) => text.includes(debugBarWord), 5000, 100);
-  check('状态栏右侧显示调试服务的端口与连接数', debugBar.includes(debugBarWord), debugBar.replace(/\s+/g, ' ').slice(0, 90));
+  const debugItem = () => page.evaluate(`(() => { const item = document.querySelector('.ui-status-bar__end .ui-status-bar__item[data-tone]'); return item && item.textContent === '调试模式' ? { tone: item.getAttribute('data-tone'), title: item.title } : null; })()`);
+  const debugInfo = await waitFor(debugItem, (value) => value !== null && value.title.includes('1 个连接'), 5000, 100);
+  check('系统栏右侧（通知按钮左边）显示绿色的“调试模式”，端口与连接数在悬停提示里', debugInfo?.tone === 'success' && debugInfo.title === `调试服务：ws://127.0.0.1:${debugPort}，1 个连接`, JSON.stringify(debugInfo));
   const wrongToken = await openDebugSocket(endpoint.url);
   const wrongReply = await wrongToken.call('debug.hello', { client: 'intruder', token: 'wrong' });
   await waitFor(() => Promise.resolve(wrongToken.closed), (closed) => closed === true, 3000, 50);
@@ -492,12 +502,10 @@ async function main() {
         200
       );
       check('重启后的核心可以响应请求（新核心里没有卡带，电源为 off）', status?.power === 'off');
-      const restartedSide = await waitFor(() => textOf('.ui-side-bar'), (text) => text.includes('未开机'), 30_000, 200);
-      check('核心重启后边栏状态重新读取（显示“未开机”，不再显示旧的“运行中”）', restartedSide.includes('未开机') && !restartedSide.includes('运行中'));
+      const restartedButton = await waitFor(runButtonInfo, (info) => info?.title === '运行：未开机', 30_000, 200);
+      check('核心重启后运行按钮重新读取（提示是“运行：未开机”，不再是旧的“运行：运行中”）', restartedButton?.title === '运行：未开机', JSON.stringify(restartedButton));
       const restartedBar = await textOf('.ui-status-bar');
-      check('核心重启后状态栏同样刷新', restartedBar.includes('未开机') && !restartedBar.includes('运行中'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
-      const restartMessage = await waitFor(() => textOf('.ember-messages'), (text) => text.includes('核心进程已重启'), 10_000, 200);
-      check('“消息”里有“核心进程已重启”', restartMessage.includes('核心进程已重启'));
+      check('核心重启后系统栏的卡带与 mapper 项同样刷新（不再显示旧的卡带名）', !restartedBar.includes('nestest.nes') && !restartedBar.includes('NROM'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
       // 调试服务在新核心里重新监听（启动参数会再次交给核心），令牌不变。
       const afterRestart = await waitFor(
         () => openDebugSocket(`ws://127.0.0.1:${debugPort}/`).catch(() => undefined),
@@ -511,15 +519,27 @@ async function main() {
     }
   }
 
-  // 首选项页：核心重启之后（页面要重新读取）经“设置”菜单的“首选项”打开，左侧是分组，右侧是设置行。
+  // 首选项对话框：核心重启之后（界面要重新读取）经“设置”菜单的“首选项”打开，是独立的系统窗口（第二个页面目标），左侧是分组，右侧是设置行。
   await menuButton('设置');
   await sleep(300);
   const settingsItems = await menuItems('.ui-menu__popup');
   check('“设置”菜单里有“首选项”（Ctrl+,）', settingsItems.some((entry) => entry.label === '首选项' && !entry.disabled && entry.text.includes('Ctrl+,')), settingsItems.map((entry) => entry.text).join('|'));
   await page.evaluate(`[...document.querySelectorAll('.ui-menu__popup [role^="menuitem"]')].find((item) => item.querySelector('.ui-menu__label')?.textContent === '首选项')?.click()`);
-  const pageText = await waitFor(() => textOf('.ui-app-frame__page'), (text) => text.includes('主题'), 5000, 100);
-  check('首选项页打开：左侧有外观、画面、声音、调试服务四个分组，默认显示“外观”的“主题”', pageText.includes('外观') && pageText.includes('画面') && pageText.includes('声音') && pageText.includes('调试服务') && pageText.includes('主题'), pageText.replace(/\s+/g, ' ').slice(0, 80));
-  if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-preferences.png'));
+  const dialogTarget = await waitFor(
+    async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((entry) => entry.type === 'page' && entry.id !== target.id),
+    (value) => value !== undefined,
+    10_000,
+    200
+  );
+  check('首选项在独立的系统窗口（对话框）里打开', dialogTarget !== undefined, dialogTarget?.title);
+  const dialogPage = dialogTarget === undefined ? undefined : await connectCdp(dialogTarget.webSocketDebuggerUrl);
+  const dialogText = dialogPage === undefined ? '' : await waitFor(() => dialogPage.evaluate('document.body.innerText').catch(() => ''), (text) => text.includes('主题'), 5000, 100);
+  check('首选项对话框：左侧有外观、画面、声音、调试服务四个分组，默认显示“外观”的“主题”', ['外观', '画面', '声音', '调试服务', '主题'].every((word) => dialogText.includes(word)), dialogText.replace(/\s+/g, ' ').slice(0, 80));
+  const dialogTheme = dialogPage === undefined ? '' : await dialogPage.evaluate('document.documentElement.className');
+  const mainTheme = await page.evaluate('document.documentElement.className');
+  check('对话框的主题类与主窗口一致（深浅主题都有）', dialogTheme.split(' ').filter((name) => name.startsWith('ui-theme') || name.includes('dark') || name.includes('light')).join(' ') === mainTheme.split(' ').filter((name) => name.startsWith('ui-theme') || name.includes('dark') || name.includes('light')).join(' '), `${dialogTheme} / ${mainTheme}`);
+  if (screenshotDirectory !== undefined && dialogPage !== undefined) await saveScreenshot(dialogPage, join(screenshotDirectory, 'smoke-preferences.png'));
+  dialogPage?.close();
 
   // 正常退出：经浏览器端点关闭全部窗口，应用走 will-quit → 停止核心的流程自行退出（核心进程的停止超时是 5 秒，快于它说明没有靠超时强杀）。
   page.close();

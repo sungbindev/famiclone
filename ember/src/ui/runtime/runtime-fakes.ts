@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：runtime-fakes.ts
- * 说明：运行页测试用的假核心接口：按预加载脚本的接口形状实现 runtime、cartridges、output 请求与主进程的打开卡带请求，保存机器状态，记录每次调用，可以发出核心事件与核心运行状态变化。
+ * 说明：运行模块测试用的假核心接口：按预加载脚本的接口形状实现 runtime、cartridges、output、machines 请求、主进程的打开卡带请求与界面状态（保存的已选机型），保存机器状态，记录每次调用，可以发出核心事件与核心运行状态变化。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-15
  * 备注：只供测试使用（不含真实的核心逻辑，只做运行页需要的最简单的状态转换）；不引用测试框架，所以放在 ui 层也满足依赖检查。
  * ------------------------------------------------------------------------
  */
@@ -68,6 +68,10 @@ export class FakeRuntimeBackend {
   readonly calls: string[] = [];
   /** 当前核心运行状态。 */
   coreStatus: CoreStatus = { state: 'ready', coreVersion: '0.1.0' };
+  /** 界面状态里保存的已选机型；null 表示没选过。 */
+  savedMachine: string | null = null;
+  /** 每次 setLayout 的参数。 */
+  readonly layoutPatches: unknown[] = [];
 
   private readonly eventListeners = new Set<(name: string, data: unknown) => void>();
   private readonly statusListeners = new Set<(status: CoreStatus) => void>();
@@ -152,7 +156,12 @@ export class FakeRuntimeBackend {
       this.statusListeners.add(listener);
       return () => this.statusListeners.delete(listener);
     },
-    getCoreStatus: () => Promise.resolve(this.coreStatus)
+    shell: {
+      getState: () => Promise.resolve({ window: null, layout: { bottomPanelHeight: null, selectedMachine: this.savedMachine } }),
+      setLayout: (patch: unknown) => {
+        this.layoutPatches.push(patch);
+      }
+    }
   } as unknown as RuntimeBackend;
 
   /** 发出一个核心事件。 */

@@ -120,7 +120,7 @@ TEST(LocalOutputServicePreferences, ChangesMadeInThePreferencesAreAppliedRightAw
   preferences->set("sound.volume", std::int64_t{10});
   EXPECT_EQ(service->volume().volume, 10);
   EXPECT_EQ(audio->volume(), 10U);
-  // 边栏改音量保存回去时不会形成环。
+  // 面板改音量保存回去时不会形成环。
   service->setVolume(77, std::nullopt);
   EXPECT_EQ(std::get<std::int64_t>(preferences->value("sound.volume")), 77);
   EXPECT_EQ(audio->volume(), 77U);

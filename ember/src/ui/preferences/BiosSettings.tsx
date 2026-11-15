@@ -9,9 +9,10 @@
  * ------------------------------------------------------------------------
  */
 
-import { Button, Callout, List, Panel, Row, SettingRow, Stack, State, useNotify } from '@rujianjs/ui-kit';
+import { Button, Callout, List, Panel, Row, SettingRow, Stack, State } from '@rujianjs/ui-kit';
 import type { MachineInfo } from '../../contracts/machines/generated/machines';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
+import { useShell } from '../shell/shell-context';
 import { biosStatusText } from './preferences-model';
 import { useBios } from './use-bios';
 
@@ -64,7 +65,7 @@ function MachineRow({ machine, onChoose, onRemove }: { readonly machine: Machine
  * @param props 属性。
  */
 export function BiosSettings({ bridge }: BiosSettingsProps) {
-  const notify = useNotify();
+  const { notify } = useShell();
   const { state, choose, remove } = useBios(bridge, notify);
   const machines = state.kind === 'ready' ? state.machines.filter((machine) => machine.needsBios) : [];
 

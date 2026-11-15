@@ -17,9 +17,11 @@ import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
 import type { PreferenceGroup, PreferenceSetting, PreferencesListResult } from '../../contracts/preferences/generated/preferences';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import { PreferencesPage } from './PreferencesPage';
+import { ShellApiContext } from '../shell/shell-context';
+import type { ShellApi } from '../shell/shell-registry';
 
 const notify = vi.fn();
-vi.mock('@rujianjs/ui-kit', async (importOriginal) => ({ ...(await importOriginal<typeof import('@rujianjs/ui-kit')>()), useNotify: () => notify }));
+const shell = { notify } as unknown as ShellApi;
 
 const GROUPS: PreferenceGroup[] = [
   { id: 'appearance', label: '外观' },
@@ -44,7 +46,7 @@ function initialSettings(): PreferenceSetting[] {
       defaultValue: 'system',
       value: 'system'
     },
-    { id: 'sound.startMuted', group: 'sound', label: '启动时静音', description: '音量在边栏调整。', kind: 'switch', hidden: false, defaultValue: false, value: false },
+    { id: 'sound.startMuted', group: 'sound', label: '启动时静音', description: '音量在运行面板调整。', kind: 'switch', hidden: false, defaultValue: false, value: false },
     { id: 'sound.fade', group: 'sound', label: '淡入毫秒', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: false, defaultValue: 10, value: 10 },
     { id: 'sound.note', group: 'sound', label: '备注', description: '', kind: 'text', maxLength: 8, hidden: false, defaultValue: '', value: 'abc' },
     { id: 'sound.volume', group: 'sound', label: '音量', description: '', kind: 'integer', minimum: 0, maximum: 100, hidden: true, defaultValue: 100, value: 100 },
@@ -74,7 +76,9 @@ function setup(listResult: () => Promise<PreferencesListResult> = () => Promise.
   } as unknown as EmberBridge;
   render(
     <UiProvider>
-      <PreferencesPage bridge={bridge} />
+      <ShellApiContext.Provider value={shell}>
+        <PreferencesPage bridge={bridge} />
+      </ShellApiContext.Provider>
     </UiProvider>
   );
   return {

@@ -1,94 +1,62 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：Shell.tsx
- * 说明：外壳：用组件库的外壳组件拼出窗口框架（标题栏与菜单、活动栏、边栏、标签栏与页面区、底部面板、右边栏、状态栏、通知），
- *       全部入口都来自登记表（页面、命令与快捷键、菜单项、活动栏按钮、底部面板页签、状态项），自己不写死业务入口；
- *       处理页面与标签、边栏随页面切换、命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、模块的常驻组件、命令状态的刷新、窗口状态与底部面板高度的保存；全屏时只显示页面区。
+ * 说明：外壳：用组件库的外壳组件拼出窗口框架（标题栏与菜单、中间固定的显示区、底部面板、状态栏、通知），
+ *       全部入口都来自登记表（显示区、对话框、命令与快捷键、菜单项、底部面板页签、状态项），自己不写死业务入口；
+ *       处理命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、对话框、模块的常驻组件、命令状态的刷新、窗口状态与底部面板高度的保存；全屏时只显示显示区。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
- * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；未激活的页面保持挂载、只隐藏，切回时状态不丢；
- *       页面区里每个页面在组件库的 DialogScope 里（页面内边距与以后的对话框范围）；
- *       画面获得焦点时键盘事件先交给画面（它处理过的按键 defaultPrevented，外壳不再响应）；
- *       各面板每次启动都是关闭的、展开状态不保存；面板向内展开，窗口大小不变，运行页的画面按页面区剩余空间自动缩放。
+ * 日期：2026-11-15
+ * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；没有活动栏、边栏、标签栏与右边栏；
+ *       底部面板只经系统栏左侧的面板按钮展开：面板关着时点按钮展开并切到该页签，开着时点同一个按钮收起，点另一个按钮切页签；没有快捷键，每次启动都是关闭，页签选择不保存；
+ *       面板按钮只在面板开着并停在该页签时是按下状态，面板收起后恢复常态；
+ *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
+ *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；面板向内展开，窗口大小不变，显示区里的画面按剩余空间自动缩放。
  * ------------------------------------------------------------------------
  */
 
 import {
-  ActivityBar,
   AppFrame,
-  DialogScope,
-  DockPanel,
-  EmptyWorkspace,
-  iconLayoutBottombar,
-  iconLayoutSidebar,
-  iconLayoutSidebarRight,
+  Button,
+  iconX,
   MenuBar,
   NotificationCenter,
   NotificationCenterButton,
+  ScrollArea,
   shortcutFromEvent,
-  SideBar,
   State,
   StatusBar,
-  TabBar,
+  StatusBarItem,
   TitleBar,
+  useDialog,
+  useNotify,
+  type DialogHandle,
   type MenuBarMenu,
-  type MenuItem,
-  type TitleBarTool
+  type MenuItem
 } from '@rujianjs/ui-kit';
-import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactElement } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import type { WindowState } from '../../contracts/shell/window-control';
 import { buildShellRegistry, type ShellRegistry } from './build-registry';
 import { isTextEditingTarget } from './editable-target';
 import { EmberLogo } from './EmberLogo';
-import { MessageLog } from './message-log';
-import { MessageLogContext, ShellApiContext } from './shell-context';
-import { MESSAGES_PANEL_ID, SHELL_COMMANDS, SHELL_MODULE } from './shell-module';
-import { commandTitle, SHELL_MENUS, type ShellApi, type ShellMessageInput, type ShellModule, type ShellViewState } from './shell-registry';
-import { activateTab, closeTab, EMPTY_TABS, openTab, type TabState } from './tab-state';
+import { ShellApiContext } from './shell-context';
+import { SHELL_MODULE } from './shell-module';
+import { commandTitle, SHELL_MENUS, type ShellApi, type ShellModule, type ShellPageProps, type ShellViewState } from './shell-registry';
 import './shell.css';
 
 /** 应用名。 */
 const APP_NAME = 'EMBER';
 
 /** 底部面板的默认高度（像素），保存过高度时用保存的。 */
-const BOTTOM_PANEL_HEIGHT = 160;
-/** 右边栏的默认宽度（像素），宽度不保存。 */
-const RIGHT_BAR_WIDTH = 340;
-/**
- * 右边栏现在能不能打开：右边栏只显示软驱里的文件，软驱与盘片由学习机阶段的 media 模块提供，
- * 在那之前没有盘片，右边栏不能打开（折叠按钮与菜单项置灰）。
- */
-const RIGHT_BAR_AVAILABLE = false;
-/** 右边栏里软盘文件的页签标识。 */
-const FLOPPY_PANEL_ID = 'shell.floppyFiles';
+const BOTTOM_PANEL_HEIGHT = 130;
 
 /** 用户可见的文字。 */
 const TEXT = {
-  sideBar: '切换边栏',
-  bottomPanel: '切换底部面板',
-  rightBar: '切换右边栏',
-  activityLabel: '活动栏',
-  tabsLabel: '已打开的页面',
-  statusLabel: '状态栏',
-  bottomPanelLabel: '底部面板',
-  rightBarLabel: '右边栏',
-  floppyFiles: '软盘文件',
-  noDisk: '没有盘片',
-  emptyHint: '没有打开的页面。点击活动栏的按钮，或在“视图”菜单里打开页面。',
-  pageMissing: (id: string) => `页面不存在：${id}`,
+  statusLabel: '系统栏',
+  closePanel: '关闭',
   registryFailed: '外壳登记有误，界面无法显示，详情见开发者工具的控制台'
 } as const;
-
-/** 标题栏折叠按钮的标识。 */
-const TOOLS = { side: 'side', bottom: 'bottom', right: 'right' } as const;
-/** 折叠按钮对应的命令。 */
-const TOOL_COMMANDS: Readonly<Record<string, string>> = {
-  [TOOLS.side]: SHELL_COMMANDS.toggleSideBar,
-  [TOOLS.bottom]: SHELL_COMMANDS.toggleBottomPanel,
-  [TOOLS.right]: SHELL_COMMANDS.toggleRightBar
-};
 
 /** 外壳的属性。 */
 export interface ShellProps {
@@ -98,19 +66,14 @@ export interface ShellProps {
   readonly modules: readonly ShellModule[];
 }
 
-/** 各面板是否展开：每次启动都是全部关闭。 */
-interface OpenPanels {
-  readonly side: boolean;
-  readonly bottom: boolean;
-  readonly right: boolean;
+/** 底部面板的状态：是否展开与当前页签；两项都不保存。 */
+interface PanelState {
+  readonly open: boolean;
+  readonly id: string;
 }
-
-/** 全部面板关闭。 */
-const ALL_CLOSED: OpenPanels = { side: false, bottom: false, right: false };
 
 /** 外壳实时读取的状态：事件处理函数用它取最新值，不必随渲染重新创建。 */
 interface LiveState {
-  readonly tabs: TabState;
   readonly view: ShellViewState;
 }
 
@@ -133,31 +96,27 @@ export function Shell({ bridge, modules }: ShellProps) {
   return <ShellFrame bridge={bridge} registry={built.registry} />;
 }
 
-/** 登记表有效之后的外壳。 */
-/** 标签对应的页面是否允许关闭。 */
-function isClosable(registry: ShellRegistry, state: TabState, id: string): boolean {
-  const tab = state.tabs.find((item) => item.id === id);
-  return tab === undefined || registry.pages.get(tab.pageId)?.closable !== false;
+/** 对话框的内容：补上外壳接口的上下文。 */
+function dialogContent(shell: ShellApi, Content: ComponentType<ShellPageProps>, bridge: EmberBridge): ReactElement {
+  return (
+    <ShellApiContext.Provider value={shell}>
+      <Content bridge={bridge} />
+    </ShellApiContext.Provider>
+  );
 }
 
+/** 登记表有效之后的外壳。 */
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
-  const [panels, setPanels] = useState<OpenPanels>(ALL_CLOSED);
+  const [panel, setPanel] = useState<PanelState>({ open: false, id: registry.bottomPanels[0]?.id ?? '' });
   // 底部面板的初始高度：读到保存的高度之前为 null，此时不显示界面。
   const [bottomHeight, setBottomHeight] = useState<number | null>(null);
-  const [tabs, setTabs] = useState<TabState>(() =>
-    registry.startPages.reduce((state, id) => {
-      const page = registry.pages.get(id);
-      return page === undefined ? state : openTab(state, page);
-    }, EMPTY_TABS)
-  );
   const [windowState, setWindowState] = useState<WindowState>({ maximized: false, fullScreen: false });
-  const [bottomTab, setBottomTab] = useState<string>(MESSAGES_PANEL_ID);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  // 模块通过 refreshCommands 通知命令状态变了：递增一次让菜单重新计算。
+  // 模块通过 refreshCommands 通知命令状态变了：递增一次让菜单与状态栏重新计算。
   const [, setCommandVersion] = useState(0);
-  const [log] = useState(() => new MessageLog());
-  // 当前选中的“只有边栏”的活动（如设备）与选中时的标签：切到另一个标签后就不再生效，边栏回到页面自己的边栏。
-  const [sideActivity, setSideActivity] = useState<{ readonly id: string; readonly tabId: string | null } | null>(null);
+  const dialogApi = useDialog();
+  const notify = useNotify();
+  const openDialogs = useRef(new Map<string, DialogHandle>());
 
   useEffect(() => {
     let active = true;
@@ -174,62 +133,55 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     };
   }, [bridge]);
 
-  const activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
-  // 切到另一个标签后，之前选中的设备等边栏作废（以后再切回这个标签也不恢复）；在渲染中直接重置，不用 Effect。
-  if (sideActivity !== null && sideActivity.tabId !== tabs.activeId) setSideActivity(null);
-  const activePage = activeTab === undefined ? undefined : registry.pages.get(activeTab.pageId);
-  const activeSideActivity = sideActivity !== null && sideActivity.tabId === tabs.activeId ? registry.activityItems.find((item) => item.id === sideActivity.id && item.sideBar !== undefined) : undefined;
-  const hasSideBar = activePage?.sideBar !== undefined || activeSideActivity !== undefined;
-  const sideBarOpen = hasSideBar && panels.side;
-  const bottomPanelOpen = panels.bottom;
-  const rightBarOpen = RIGHT_BAR_AVAILABLE && panels.right;
-  const view: ShellViewState = { sideBarOpen, hasSideBar, bottomPanelOpen, rightBarOpen, canOpenRightBar: RIGHT_BAR_AVAILABLE, fullScreen: windowState.fullScreen };
-  const live = useRef<LiveState>({ tabs, view });
+  const bottomPanelOpen = panel.open;
+  const view: ShellViewState = { bottomPanelOpen, activePanelId: panel.open ? panel.id : null, fullScreen: windowState.fullScreen };
+  const live = useRef<LiveState>({ view });
   useLayoutEffect(() => {
-    live.current = { tabs, view };
+    live.current = { view };
   });
 
   const api = useMemo<ShellApi>(() => {
     const shell: ShellApi = {
-      openPage: (pageId) => {
-        const page = registry.pages.get(pageId);
-        if (page === undefined) {
-          log.append({ level: 'error', text: TEXT.pageMissing(pageId) });
+      openDialog: (dialogId) => {
+        const definition = registry.dialogs.get(dialogId);
+        if (definition === undefined) {
+          console.error(`对话框不存在：${dialogId}`);
           return;
         }
-        setTabs((state) => openTab(state, page));
+        const existing = openDialogs.current.get(dialogId);
+        if (existing !== undefined) {
+          existing.focus();
+          return;
+        }
+        const handle = dialogApi.openDialog({
+          title: definition.title,
+          // 对话框内容在组件库的对话框层渲染，不在外壳的上下文里，所以这里再包一层。
+          content: dialogContent(shell, definition.Component, bridge),
+          width: definition.width,
+          ...(definition.height === undefined ? {} : { height: definition.height }),
+          ...(definition.minWidth === undefined ? {} : { minWidth: definition.minWidth }),
+          ...(definition.minHeight === undefined ? {} : { minHeight: definition.minHeight })
+        });
+        openDialogs.current.set(dialogId, handle);
+        void handle.closed.then(() => {
+          if (openDialogs.current.get(dialogId) === handle) openDialogs.current.delete(dialogId);
+        });
       },
-      showActivity: (activityId) => {
-        if (registry.activityItems.find((item) => item.id === activityId)?.sideBar === undefined) return;
-        setSideActivity({ id: activityId, tabId: live.current.tabs.activeId });
-        setPanels((current) => (current.side ? current : { ...current, side: true }));
-      },
-      closeActiveTab: () => setTabs((state) => (state.activeId === null || !isClosable(registry, state, state.activeId) ? state : closeTab(state, state.activeId))),
-      toggleSideBar: () => {
-        if (live.current.view.hasSideBar) setPanels((current) => ({ ...current, side: !current.side }));
-      },
-      toggleBottomPanel: () => setPanels((current) => ({ ...current, bottom: !current.bottom })),
-      toggleRightBar: () => {
-        if (RIGHT_BAR_AVAILABLE) setPanels((current) => ({ ...current, right: !current.right }));
-      },
+      togglePanel: (panelId) => setPanel((current) => (current.open && current.id === panelId ? { ...current, open: false } : { open: true, id: panelId })),
       toggleFullScreen: () => bridge.shell.windowAction('toggleFullScreen'),
       quit: () => bridge.shell.windowAction('quit'),
-      showBottomPanel: (panelId) => {
-        setBottomTab(panelId);
-        setPanels((current) => (current.bottom ? current : { ...current, bottom: true }));
-      },
-      addMessage: (message: ShellMessageInput) => log.append(message),
       runCommand: (commandId) => {
         const command = registry.commands.get(commandId);
         if (command === undefined || command.enabled?.(live.current.view) === false) return;
         command.run(shell);
       },
-      refreshCommands: () => setCommandVersion((version) => version + 1)
+      refreshCommands: () => setCommandVersion((version) => version + 1),
+      notify
     };
     return shell;
-  }, [bridge, registry, log]);
+  }, [bridge, registry, dialogApi, notify]);
 
-  // 全局快捷键与 Alt+助记字母；画面等已经处理过的按键（defaultPrevented）外壳不再响应。
+  // 全局快捷键与 Alt+助记字母；显示区等已经处理过的按键（defaultPrevented）外壳不再响应。
   useEffect(() => {
     const handleKey = (event: KeyboardEvent): void => {
       if (event.defaultPrevented || event.repeat || event.isComposing) return;
@@ -279,6 +231,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
                 label: entry.label,
                 ...(entry.hint ? { hint: entry.hint } : {}),
                 ...(entry.disabled ? { disabled: true } : {}),
+                ...(entry.checked === undefined ? {} : { checked: entry.checked, radio: true }),
                 ...(entry.separatorBefore ? { separatorBefore: true } : {})
               }))
             }
@@ -314,164 +267,83 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     api.runCommand(itemId);
   };
 
-  const shortcutOf = (commandId: string): string => registry.commands.get(commandId)?.defaultShortcut ?? '';
-  const toolTitle = (label: string, commandId: string): string => `${label} ${shortcutOf(commandId)}`.trim();
-  const tools: TitleBarTool[] = [
-    { id: TOOLS.side, label: TEXT.sideBar, title: toolTitle(TEXT.sideBar, SHELL_COMMANDS.toggleSideBar), icon: iconLayoutSidebar, expanded: sideBarOpen, ...(hasSideBar ? {} : { disabled: true }) },
-    { id: TOOLS.bottom, label: TEXT.bottomPanel, title: toolTitle(TEXT.bottomPanel, SHELL_COMMANDS.toggleBottomPanel), icon: iconLayoutBottombar, expanded: bottomPanelOpen },
-    {
-      id: TOOLS.right,
-      label: TEXT.rightBar,
-      title: toolTitle(TEXT.rightBar, SHELL_COMMANDS.toggleRightBar),
-      icon: iconLayoutSidebarRight,
-      expanded: rightBarOpen,
-      ...(RIGHT_BAR_AVAILABLE ? {} : { disabled: true })
-    }
-  ];
-
-  const handleActivitySelect = (activityId: string): void => {
-    const item = registry.activityItems.find((entry) => entry.id === activityId);
-    if (item === undefined) return;
-    if (item.sideBar !== undefined) {
-      // 只有边栏的活动：再点选中的按钮折叠或展开边栏，点别的按钮把边栏换成它的。
-      if (activeSideActivity?.id === item.id) api.toggleSideBar();
-      else api.showActivity(item.id);
-      return;
-    }
-    if (item.page === undefined) return;
-    // 再点选中的按钮折叠或展开边栏；点别的按钮切到它的页面，页面有边栏而边栏折叠着时展开。
-    if (item.page === activePage?.id && activeSideActivity === undefined) {
-      api.toggleSideBar();
-      return;
-    }
-    setSideActivity(null);
-    if (item.page !== activePage?.id) api.openPage(item.page);
-    if (registry.pages.get(item.page)?.sideBar !== undefined && !panels.side) setPanels((current) => ({ ...current, side: true }));
-  };
-
   const fullScreen = windowState.fullScreen;
+  // 面板收起时内容卸载（设备面板的定时读取随之停止）。
+  const activePanel = panel.open ? registry.bottomPanels.find((item) => item.id === panel.id) : undefined;
   const start = registry.statusItems.filter((item) => item.align === 'start');
   const end = registry.statusItems.filter((item) => item.align === 'end');
-  const activeActivityId = activeSideActivity?.id ?? registry.activityItems.find((item) => item.page !== undefined && item.page === activePage?.id)?.id;
 
   return (
     <ShellApiContext.Provider value={api}>
-      <MessageLogContext.Provider value={log}>
-        {registry.hosts.map(({ module, Host }) => createElement(Host, { key: module, bridge }))}
-        <AppFrame
-          titleBar={
-            fullScreen ? undefined : (
-              <TitleBar
-                logo={<EmberLogo brand />}
-                title={APP_NAME}
-                menuBar={<MenuBar menus={menus} openMenuId={openMenuId} onOpenMenuChange={setOpenMenuId} onSelect={(_menuId, itemId) => handleMenuSelect(itemId)} />}
-                tools={tools}
-                onToolClick={(id) => api.runCommand(TOOL_COMMANDS[id] ?? '')}
-              />
-            )
-          }
-          activityBar={
-            fullScreen ? undefined : (
-              <ActivityBar
-                aria-label={TEXT.activityLabel}
-                items={registry.activityItems.map((item) => {
-                  const lamp = item.lamp?.();
-                  return { id: item.id, label: item.label, icon: item.icon, ...(item.separatorBefore ? { separatorBefore: true } : {}), ...(lamp === undefined ? {} : { lamp }) };
-                })}
-                {...(activeActivityId === undefined ? {} : { activeId: activeActivityId })}
-                {...(hasSideBar ? { sideBarExpanded: sideBarOpen } : {})}
-                onSelect={handleActivitySelect}
-              />
-            )
-          }
-          sideBar={[
-            ...tabs.tabs.map((tab) => {
-              const sideBar = registry.pages.get(tab.pageId)?.sideBar;
-              if (sideBar === undefined) return null;
-              const title = sideBar.title ?? registry.pages.get(tab.pageId)?.title;
-              return (
-                <div key={tab.id} className="ember-shell-side" hidden={tab.id !== tabs.activeId || activeSideActivity !== undefined}>
-                  <SideBar {...(title === undefined ? {} : { title })}>{createElement(sideBar.Component, { bridge })}</SideBar>
-                </div>
-              );
-            }),
-            ...registry.activityItems.map((item) => {
-              if (item.sideBar === undefined) return null;
-              return (
-                <div key={`activity:${item.id}`} className="ember-shell-side" hidden={activeSideActivity?.id !== item.id}>
-                  <SideBar title={item.sideBar.title ?? item.label}>{createElement(item.sideBar.Component, { bridge })}</SideBar>
-                </div>
-              );
-            })
-          ]}
-          sideBarCollapsed={fullScreen || !sideBarOpen}
-          tabBar={
-            fullScreen ? undefined : (
-              <TabBar
-                aria-label={TEXT.tabsLabel}
-                tabs={tabs.tabs.map((tab) => {
-                  const page = registry.pages.get(tab.pageId);
-                  return { id: tab.id, title: page?.title ?? tab.pageId, ...(page ? { icon: page.icon } : {}), ...(page?.closable === false ? { closable: false } : {}) };
-                })}
-                {...(tabs.activeId === null ? {} : { activeId: tabs.activeId })}
-                onSelect={(id) => setTabs((state) => activateTab(state, id))}
-                onClose={(id) => setTabs((state) => (isClosable(registry, state, id) ? closeTab(state, id) : state))}
-              />
-            )
-          }
-          bottomPanel={
-            <DockPanel
-              aria-label={TEXT.bottomPanelLabel}
-              tabs={registry.bottomPanels.map((panel) => ({
-                id: panel.id,
-                label: panel.title,
-                ...(panel.Actions ? { actions: createElement(panel.Actions) } : {}),
-                content: createElement(panel.Component)
-              }))}
-              activeTabId={bottomTab}
-              onTabChange={setBottomTab}
-              onCollapse={() => setPanels((current) => ({ ...current, bottom: false }))}
+      {registry.hosts.map(({ module, Host }) => createElement(Host, { key: module, bridge }))}
+      <AppFrame
+        titleBar={
+          fullScreen ? undefined : (
+            <TitleBar
+              logo={<EmberLogo brand />}
+              title={APP_NAME}
+              menuBar={<MenuBar menus={menus} openMenuId={openMenuId} onOpenMenuChange={setOpenMenuId} onSelect={(_menuId, itemId) => handleMenuSelect(itemId)} />}
             />
-          }
-          bottomPanelOpen={!fullScreen && bottomPanelOpen}
-          defaultBottomPanelHeight={bottomHeight}
-          onBottomPanelHeightCommit={(height) => bridge.shell.setLayout({ bottomPanelHeight: Math.round(height) })}
-          rightBar={
-            <DockPanel
-              aria-label={TEXT.rightBarLabel}
-              tabs={[{ id: FLOPPY_PANEL_ID, label: TEXT.floppyFiles, content: <State text={TEXT.noDisk} /> }]}
-              onCollapse={() => setPanels((current) => ({ ...current, right: false }))}
+          )
+        }
+        bottomPanel={
+          activePanel === undefined ? undefined : (
+            <section className="ember-shell-panel" aria-label={activePanel.title}>
+              <div className="ember-shell-panel__header">
+                <h2 className="ember-shell-panel__title">{activePanel.title}</h2>
+                <Button variant="ghost" iconOnly compact icon={iconX} title={TEXT.closePanel} onClick={() => setPanel((current) => ({ ...current, open: false }))}>
+                  {TEXT.closePanel}
+                </Button>
+              </div>
+              <ScrollArea className="ember-shell-panel__body" viewportProps={{ className: 'ember-shell-panel__content' }}>
+                {createElement(activePanel.Component)}
+              </ScrollArea>
+            </section>
+          )
+        }
+        bottomPanelOpen={!fullScreen && bottomPanelOpen}
+        defaultBottomPanelHeight={bottomHeight}
+        onBottomPanelHeightCommit={(height) => bridge.shell.setLayout({ bottomPanelHeight: Math.round(height) })}
+        statusBarSize="large"
+        statusBar={
+          fullScreen ? undefined : (
+            <StatusBar
+              aria-label={TEXT.statusLabel}
+              start={
+                <>
+                  {registry.bottomPanels.map((item) => {
+                    const lamp = item.lamp?.();
+                    const look = item.look?.();
+                    return (
+                      <StatusBarItem
+                        key={item.id}
+                        text={item.title}
+                        icon={look?.icon ?? item.icon}
+                        iconOnly
+                        title={look?.hint ?? item.title}
+                        {...(look?.tone === undefined ? {} : { tone: look.tone })}
+                        pressed={panel.open && panel.id === item.id}
+                        {...(lamp === undefined ? {} : { lamp })}
+                        onClick={() => api.togglePanel(item.id)}
+                      />
+                    );
+                  })}
+                  {start.map((item) => createElement(item.Component, { key: item.id }))}
+                </>
+              }
+              end={
+                <>
+                  {end.map((item) => createElement(item.Component, { key: item.id }))}
+                  <NotificationCenterButton />
+                </>
+              }
             />
-          }
-          rightBarOpen={!fullScreen && rightBarOpen}
-          defaultRightBarWidth={RIGHT_BAR_WIDTH}
-          statusBar={
-            fullScreen ? undefined : (
-              <StatusBar
-                aria-label={TEXT.statusLabel}
-                start={start.map((item) => createElement(item.Component, { key: item.id }))}
-                end={
-                  <>
-                    {end.map((item) => createElement(item.Component, { key: item.id }))}
-                    <NotificationCenterButton />
-                  </>
-                }
-              />
-            )
-          }
-        >
-          {tabs.tabs.length === 0 ? <EmptyWorkspace logo={<EmberLogo />} subtitle={TEXT.emptyHint} /> : null}
-          {tabs.tabs.map((tab) => {
-            const page = registry.pages.get(tab.pageId);
-            return (
-              <DialogScope key={tab.id} hidden={tab.id !== tabs.activeId}>
-                <div className="ember-shell-page">{page === undefined ? null : createElement(page.Component, { bridge })}</div>
-              </DialogScope>
-            );
-          })}
-        </AppFrame>
-        <NotificationCenter />
-      </MessageLogContext.Provider>
+          )
+        }
+      >
+        {registry.screen === undefined ? null : <div className="ember-shell-page">{createElement(registry.screen, { bridge })}</div>}
+      </AppFrame>
+      <NotificationCenter />
     </ShellApiContext.Provider>
   );
 }

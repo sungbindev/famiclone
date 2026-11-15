@@ -131,7 +131,7 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   /** FC 兼容模式的标准 PPU、APU 与 MMC3 映射器（进入 FC 模式之前不运行）。 */
   [[nodiscard]] const logic::hardware::Ppu2c02& fcPpu() const { return fcPpu_; }
   [[nodiscard]] const logic::hardware::Apu2a03& fcApu() const { return fcApu_; }
-  [[nodiscard]] const Mmc3Mapper& mmc3() const { return mmc3_; }
+  [[nodiscard]] const Sb2000FcMapper& mmc3() const { return mmc3_; }
   /** 是否在 FC 兼容模式。 */
   [[nodiscard]] bool fcMode() const { return fcMode_; }
   [[nodiscard]] logic::hardware::PsgUm6576& psg() { return psg_; }
@@ -221,7 +221,7 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   logic::hardware::PagingUm6576 paging_;
   Sb2000ProgramMemory program_;
   logic::hardware::SysinitUm6576 sysinit_;
-  Mmc3Mapper mmc3_;
+  Sb2000FcMapper mmc3_;
   Sb2000WorkWindow workWindow_;
   Sb2000FcProgram fcProgram_;
   Sb2000FcVideo fcVideo_;

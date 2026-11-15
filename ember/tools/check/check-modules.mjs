@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：check-modules.mjs
- * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、渲染 Worker（ui 层里以 -worker.ts 结尾的入口）的依赖限制、C++ 各层的 #include 规则、硬件契约与硬件模块的规则（模块之间互不引用）；
+ * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、渲染 Worker（ui 层里以 -worker.ts 结尾的入口）的依赖限制、C++ 各层的 #include 规则、硬件契约与硬件模块、卡带上的 mapper 芯片的规则（模块之间互不引用）；
  *       从 TypeScript 的 import、C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
  *       检查模块目录都在模块清单中登记；检查官方插件目录 plugins/<id>/：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png。
  * 作者：sungbin
@@ -79,6 +79,12 @@ const HARDWARE_DIRECTORY = 'hardware';
 const HARDWARE_CONTRACTS_PREFIX = 'contracts/hardware/';
 /** 硬件模块的目录前缀。 */
 const HARDWARE_LOGIC_PREFIX = 'logic/hardware/';
+/**
+ * 卡带上的 mapper 芯片：logic/mapper-chips/<芯片> 一个芯片一个目录，和主板与主机上的 logic/hardware 分开；
+ * 规则同硬件模块：不要求登记在模块清单中，芯片之间互不引用，只经 contracts/hardware。
+ */
+const MAPPER_CHIP_DIRECTORY = 'mapper-chips';
+const MAPPER_CHIP_LOGIC_PREFIX = 'logic/mapper-chips/';
 /** 标准库头文件：没有扩展名与目录的名字（如 <cstdint>、<span>）。 */
 const STANDARD_HEADER = /^[a-z][a-z0-9_]*$/;
 
@@ -144,7 +150,7 @@ function cppLocation(path) {
   const parts = path.split('/');
   const layer = parts[0];
   if (CPP_MODULE_LAYERS.has(layer) && parts.length > 2) {
-    if (layer === 'logic' && parts[1] === HARDWARE_DIRECTORY && parts.length > 3) return { layer, module: `${HARDWARE_DIRECTORY}/${parts[2]}` };
+    if (layer === 'logic' && (parts[1] === HARDWARE_DIRECTORY || parts[1] === MAPPER_CHIP_DIRECTORY) && parts.length > 3) return { layer, module: `${parts[1]}/${parts[2]}` };
     return { layer, module: parts[1] };
   }
   if (layer === 'bootstrap' && parts[1] === 'modules' && parts.length === 3) return { layer, module: parts[2].replace(/\.(cpp|hpp)$/, '') };
@@ -173,8 +179,8 @@ function checkCpp(root, errors, edges) {
     const path = toPosix(relative(base, file));
     const from = cppLocation(path);
     const inHardwareContracts = path.startsWith(HARDWARE_CONTRACTS_PREFIX);
-    const inHardwareLogic = path.startsWith(HARDWARE_LOGIC_PREFIX);
-    if (inHardwareLogic && path.split('/').length < 4) errors.push(`core/src/${path}：硬件模块的文件必须放在 logic/hardware/<模块>/ 目录下`);
+    const inHardwareLogic = path.startsWith(HARDWARE_LOGIC_PREFIX) || path.startsWith(MAPPER_CHIP_LOGIC_PREFIX);
+    if (inHardwareLogic && path.split('/').length < 4) errors.push(`core/src/${path}：硬件模块与 mapper 芯片的文件必须放在 logic/hardware/<模块>/ 或 logic/mapper-chips/<芯片>/ 目录下`);
     const text = readFileSync(file, 'utf8');
     for (const match of text.matchAll(/^\s*#include\s+([<"])([^>"]+)[>"]/gm)) {
       const include = match[2];
@@ -356,7 +362,7 @@ function checkRegistration(root, errors, schemaModules) {
   }
   for (const layer of CPP_MODULE_LAYERS) {
     for (const module of listDirectories(join(root, 'core', 'src', layer))) {
-      if (module === HARDWARE_DIRECTORY) continue;
+      if (module === HARDWARE_DIRECTORY || module === MAPPER_CHIP_DIRECTORY) continue;
       requireIn(cppModules, module, 'core/src/bootstrap/module-list.cpp', ` 有 core/src/${layer} 目录`);
     }
   }

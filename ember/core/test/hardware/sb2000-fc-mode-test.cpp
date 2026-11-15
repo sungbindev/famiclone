@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：sb2000-fc-mode-test.cpp
- * 说明：sb2000 的 FC 兼容模式的测试：MMC3 映射器（程序与图案页、镜像、窗口选择、A12 边沿的 IRQ 计数），以及整机的模式切换（$4301、$5006、CPU 在指令结束后复位、PPU 与 APU 的切换、PAL 帧节拍、软复位与上电）。
+ * 说明：sb2000 的 FC 兼容模式的测试：MMC3 的主板接线（窗口选择、页号到扩展 RAM 与扩展显存的偏移、名称表偏移、选窗口时撤销 IRQ、上电复位），以及整机的模式切换（$4301、$5006、CPU 在指令结束后复位、PPU 与 APU 的切换、PAL 帧节拍、软复位与上电）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -28,7 +28,7 @@
 namespace {
 
 namespace hw = ember::contracts::hardware;
-using ember::bootstrap::Mmc3Mapper;
+using ember::bootstrap::Sb2000FcMapper;
 using ember::bootstrap::Sb2000Machine;
 using ember::logic::hardware::WiredOrIrqLine;
 
@@ -49,18 +49,18 @@ struct MapperRig {
 
   /** 一次 A12 上升沿：先有足够多的低电平访问，再变高。 */
   void clockEdge() {
-    for (unsigned i = 0; i < Mmc3Mapper::A12_LOW_ACCESSES; ++i) mapper.onVideoAddress(0x0000);
+    for (unsigned i = 0; i < Sb2000FcMapper::A12_LOW_ACCESSES; ++i) mapper.onVideoAddress(0x0000);
     mapper.onVideoAddress(0x1000);
   }
 
   WiredOrIrqLine irq;
-  Mmc3Mapper mapper;
+  Sb2000FcMapper mapper;
 };
 
 constexpr std::size_t PAGE = 8 * 1024;
 constexpr std::size_t KILOBYTE = 1024;
 
-TEST(Mmc3Mapper, ProgramWindowFollowsTheRegistersAndTheModeBit) {
+TEST(Sb2000FcMapper, ProgramWindowFollowsTheRegistersAndTheModeBit) {
   MapperRig rig;
   // 上电值：R6、R7 为 0，$C000 与 $E000 固定为窗口的最后两页。
   EXPECT_EQ(rig.mapper.programOffset(0x8000), 0U);
@@ -88,18 +88,18 @@ TEST(Mmc3Mapper, ProgramWindowFollowsTheRegistersAndTheModeBit) {
   EXPECT_EQ(rig.mapper.programOffset(0x8000), 3 * PAGE);
 }
 
-TEST(Mmc3Mapper, WindowSelectionUsesTheBitsOfTheWrittenValueAndMovesBothMaps) {
+TEST(Sb2000FcMapper, WindowSelectionUsesTheBitsOfTheWrittenValueAndMovesBothMaps) {
   MapperRig rig;
   const std::uint8_t values[] = {0x55, 0x77, 0xDD, 0xFF};
   for (unsigned window = 0; window < 4; ++window) {
     rig.mapper.selectWindow(values[window]);
     EXPECT_EQ(rig.mapper.window(), window) << "写入 $" << std::hex << static_cast<int>(values[window]);
-    EXPECT_EQ(rig.mapper.programOffset(0x8000), window * Mmc3Mapper::WINDOW_SIZE);
-    EXPECT_EQ(rig.mapper.characterOffset(0x0000), window * Mmc3Mapper::WINDOW_SIZE);
+    EXPECT_EQ(rig.mapper.programOffset(0x8000), window * Sb2000FcMapper::WINDOW_SIZE);
+    EXPECT_EQ(rig.mapper.characterOffset(0x0000), window * Sb2000FcMapper::WINDOW_SIZE);
   }
 }
 
-TEST(Mmc3Mapper, CharacterPagesFollowTheRegistersAndTheInversionBit) {
+TEST(Sb2000FcMapper, CharacterPagesFollowTheRegistersAndTheInversionBit) {
   MapperRig rig;
   rig.setRegister(0, 4);
   rig.setRegister(1, 10);
@@ -132,7 +132,7 @@ TEST(Mmc3Mapper, CharacterPagesFollowTheRegistersAndTheInversionBit) {
   EXPECT_EQ(rig.mapper.characterOffset(0x1000), 0x7F * KILOBYTE);
 }
 
-TEST(Mmc3Mapper, NametableMirroringFollowsTheMirrorRegister) {
+TEST(Sb2000FcMapper, NametableMirroringFollowsTheMirrorRegister) {
   MapperRig rig;
   // 上电后垂直镜像：$2000 与 $2800 同一页，$2400 与 $2C00 同一页。
   EXPECT_EQ(rig.mapper.nametableOffset(0x2000), 0x2000U);
@@ -151,59 +151,7 @@ TEST(Mmc3Mapper, NametableMirroringFollowsTheMirrorRegister) {
   EXPECT_FALSE(rig.mapper.horizontalMirroring());
 }
 
-TEST(Mmc3Mapper, IrqCountsA12RisesAndHoldsUntilAcknowledged) {
-  MapperRig rig;
-  rig.mapper.writeRegister(0xC000, 2);  // 锁存值
-  rig.mapper.writeRegister(0xC001, 0);  // 下一次计数时重载
-  rig.mapper.writeRegister(0xE001, 0);  // 允许
-  rig.clockEdge();                      // 装入 2
-  EXPECT_EQ(rig.mapper.irqCounter(), 2);
-  EXPECT_FALSE(rig.irq.active());
-  rig.clockEdge();  // 1
-  EXPECT_FALSE(rig.irq.active());
-  rig.clockEdge();  // 0：拉起 IRQ
-  EXPECT_EQ(rig.mapper.irqCounter(), 0);
-  EXPECT_TRUE(rig.irq.active());
-  rig.clockEdge();  // 计数器为 0 时重载，IRQ 仍然保持
-  EXPECT_EQ(rig.mapper.irqCounter(), 2);
-  EXPECT_TRUE(rig.irq.active());
-  rig.mapper.writeRegister(0xE000, 0);  // 关闭并撤销
-  EXPECT_FALSE(rig.irq.active());
-  EXPECT_FALSE(rig.mapper.irqEnabled());
-  rig.clockEdge();
-  rig.clockEdge();
-  EXPECT_FALSE(rig.irq.active()) << "关闭后计数到 0 也不产生 IRQ";
-}
-
-TEST(Mmc3Mapper, ALatchOfZeroRaisesTheIrqOnEveryEdge) {
-  MapperRig rig;
-  rig.mapper.writeRegister(0xC000, 0);
-  rig.mapper.writeRegister(0xE001, 0);
-  rig.clockEdge();
-  EXPECT_TRUE(rig.irq.active());
-}
-
-TEST(Mmc3Mapper, ShortLowPeriodsAndRepeatedHighAccessesDoNotClock) {
-  MapperRig rig;
-  rig.mapper.writeRegister(0xC000, 5);
-  rig.mapper.writeRegister(0xC001, 0);
-  rig.clockEdge();
-  ASSERT_EQ(rig.mapper.irqCounter(), 5);
-  // 低电平只有 2 次访问（图块取名称与属性）：不计数。
-  rig.mapper.onVideoAddress(0x2000);
-  rig.mapper.onVideoAddress(0x23C0);
-  rig.mapper.onVideoAddress(0x1000);
-  EXPECT_EQ(rig.mapper.irqCounter(), 5);
-  // 一直是高电平：不计数。
-  for (int i = 0; i < 10; ++i) rig.mapper.onVideoAddress(0x1FF0);
-  EXPECT_EQ(rig.mapper.irqCounter(), 5);
-  // 名称表镜像区 $3000-$3EFF 的 A12 也是 1。
-  for (unsigned i = 0; i < Mmc3Mapper::A12_LOW_ACCESSES; ++i) rig.mapper.onVideoAddress(0x2000);
-  rig.mapper.onVideoAddress(0x3000);
-  EXPECT_EQ(rig.mapper.irqCounter(), 4);
-}
-
-TEST(Mmc3Mapper, SelectingAWindowDisablesAndClearsTheIrq) {
+TEST(Sb2000FcMapper, SelectingAWindowDisablesAndClearsTheIrq) {
   MapperRig rig;
   rig.mapper.writeRegister(0xC000, 0);
   rig.mapper.writeRegister(0xE001, 0);
@@ -214,7 +162,7 @@ TEST(Mmc3Mapper, SelectingAWindowDisablesAndClearsTheIrq) {
   EXPECT_FALSE(rig.mapper.irqEnabled());
 }
 
-TEST(Mmc3Mapper, PowerResetClearsEverythingButAWriteDoesNot) {
+TEST(Sb2000FcMapper, PowerResetClearsEverythingButAWriteDoesNot) {
   MapperRig rig;
   rig.setRegister(6, 7);
   rig.mapper.selectWindow(0xFF);
@@ -353,7 +301,7 @@ TEST(Sb2000FcMode, TheProgramWindowIsMappedByMmc3AndWritesAreRegisterWrites) {
   EXPECT_EQ(byte, 0x5B);
   // 窗口 1 的同一页放另一个标记，$5006 选窗口后读到它。
   const std::uint8_t other[] = {0x6C};
-  machine.debugger()->writeMemory("board.extendedRam", Mmc3Mapper::WINDOW_SIZE + 5 * 8192, other);
+  machine.debugger()->writeMemory("board.extendedRam", Sb2000FcMapper::WINDOW_SIZE + 5 * 8192, other);
   pokeBus(machine, 0x5006, 0x77);
   EXPECT_EQ(machine.mmc3().window(), 1U);
   EXPECT_EQ(peekBus(machine, 0x8000), 0x6C);

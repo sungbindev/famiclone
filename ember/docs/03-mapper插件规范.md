@@ -34,7 +34,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | 文件 | 内容 | 是否必需 |
 | --- | --- | --- |
 | `manifest.json` | 清单，见第 4 节 | 必需 |
-| `main.js` | 脚本，单个 ES 模块，默认导出 `definePlugin(...)` 的结果；不能再引用其他文件；没有寄存器、也不处理键盘、鼠标、游戏手柄输入的 mapper 可以没有 | 有脚本逻辑时必需 |
+| `main.js` | 脚本，单个 ES 模块，默认导出 `definePlugin(...)` 的结果；不能再引用其他文件；没有寄存器、也不处理键盘、鼠标输入的 mapper 可以没有 | 有脚本逻辑时必需 |
 | `icon.png` | 图标，正方形，不小于 64 像素 | 可选 |
 
 - 包内不允许出现其他文件、目录与符号链接；`main.js` 不超过 1 MB，`manifest.json` 不超过 256 KB，整个包不超过 2 MB。
@@ -193,11 +193,10 @@ export default definePlugin({
   timer(ctx, name) { /* 定时事件到期 */ },
   onKey(ctx, event) { /* 键盘：event.code、event.down */ },
   onMouse(ctx, event) { /* 鼠标：event.kind、x、y、dx、dy、buttons、wheel */ },
-  onGamepad(ctx, event) { /* 游戏手柄：event.index、connected、buttons、axes */ },
 });
 ```
 
-- 七个函数都可选；声明了 `registers` 的读或写，就必须实现对应的函数（安装与创建卡带时检查，缺少报 `mappers.invalidPackage`）。
+- 六个函数都可选；声明了 `registers` 的读或写，就必须实现对应的函数（安装与创建卡带时检查，缺少报 `mappers.invalidPackage`）。
 - **本阶段没有 SDK**：脚本直接 `export default { reset, read, write }`，不写 `import`（沙箱里没有模块加载器，`import` 会报 `mappers.invalidPackage`）；上面示意代码里的 `definePlugin` 只是给类型检查用的恒等函数，等 SDK 做好后再用。`timer(ctx, name)` 目前不会被调用（后续阶段）。
 - `reset` 的 `kind` 是 `'power'` 或 `'soft'`；上电复位时宿主先把窗口回到 `initial`、状态清零、名称表回到初始连法、释放 IRQ，再调用脚本的 `reset`；软复位只调用 `reset`（寄存器与窗口的状态按真机保持或清除，由脚本自己决定）。
 - 函数是同步的，宿主在模拟线程中直接调用；没有 Promise、没有定时器。
@@ -245,29 +244,25 @@ export default definePlugin({
 
 需要逐周期或监视 PPU 地址线的电路（如按 PPU 地址线 A12 计数的中断计数器），不让脚本逐周期回调，而由宿主提供标准的“电路构件”，清单里声明并连线，脚本只配置参数。首批不做，接口版本 `1` 里没有；加入时提升接口版本。
 
-### 6.5 输入回调（键盘、鼠标、游戏手柄）
+### 6.5 输入回调（键盘、鼠标）
 
-程序里没有任何键位映射，也没有默认键位：界面只上报原始事件，核心把它交给当前卡带的脚本，由脚本决定怎么用。没有导出对应回调的卡带忽略这类事件，所以没有脚本的卡带，键盘、鼠标与手柄都没有反应。
+手柄的按键不由脚本产生：游戏手柄的事件与（主机的键盘不用作机器输入时的）键盘按键，由 `input` 模块的手柄绑定统一换算成手柄口的按键（见 04 第 4.4 节），所以没有 `onGamepad`，卡带脚本也不需要写通用的键位。界面只上报原始事件，核心先交给手柄绑定，没有被截下的键盘事件（没有绑定的键，或键盘属于机器时）与鼠标事件再交给当前卡带的脚本；脚本用这两个回调实现这张卡带自己的键盘、鼠标功能（如外设、热键）。没有导出对应回调的卡带忽略这类事件。
 
 | 回调 | 事件 | 说明 |
 | --- | --- | --- |
-| `onKey(ctx, event)` | `{ code, down }` | 键盘：`code` 是物理键位（`KeyboardEvent.code`，如 `KeyW`、`Space`、`Numpad1`），`down` 为按下或松开；按住不放的重复按下不上报 |
+| `onKey(ctx, event)` | `{ code, down }` | 键盘：`code` 是物理键位（`KeyboardEvent.code`，如 `KeyW`、`Space`、`Numpad1`），`down` 为按下或松开；按住不放的重复按下不上报；已被手柄绑定截下的按下事件不会到这里，松开事件总是同时交给脚本 |
 | `onMouse(ctx, event)` | `{ kind, x, y, dx, dy, buttons, wheel }` | 鼠标：`kind` 是 `move`、`down`、`up`、`wheel`、`leave`；`x`、`y` 是指针在标准帧（256x240）上的坐标，指针在画面之外时可以超出范围；`dx`、`dy` 是相对上一次事件的位移；`buttons` 是事件之后按住的按键位（1 左键、2 右键、4 中键）；`wheel` 向下为正，约一格为 1，只有 `wheel` 事件不为 0 |
-| `onGamepad(ctx, event)` | `{ index, connected, buttons, axes }` | 游戏手柄：整个手柄的当前状态，`buttons` 是布尔数组，`axes` 是 -1 到 1 的数组，顺序同浏览器的标准映射（`buttons[0]` 为下方主键，`buttons[12]` 到 `buttons[15]` 为十字键，`axes[0]`、`axes[1]` 为左摇杆）；手柄被拔掉时 `connected` 为 `false`，两个数组为空 |
 
 - `ctx.keys.isDown(code)` 读到的是这次事件之后的状态，所以组合键这样写：`if (event.code === 'KeyZ' && ctx.keys.isDown('ShiftLeft')) { ... }`。
 - `ctx.pad(port).set(button, down)` 由卡带记着每个口当前按下的键，宿主把整个口的按键交给主机的手柄口；`button` 不认识、`port` 不存在、`down` 不是布尔值，都按脚本错误处理（`RangeError`）。
 - 事件按到达的顺序在模拟线程里执行，最迟在下一帧开始之前生效；脚本出错的处理同第 6.3 节。
 - Windows 上画面区获得焦点期间界面独占键盘，所有物理按键（包括 Esc、Tab、F 键与 Ctrl、Alt 组合）都上报，见 05 第 7 节；没有键盘独占时（其他平台）界面不上报 F1 到 F24、Tab、Escape 与带 Ctrl、Alt、Meta 的组合键（留给应用的快捷键与焦点移动），Ctrl、Alt、Meta、Shift 这些修饰键本身照常上报。
-- 示意（`nrom` 的键位，手柄 1）：
+- 示意（只针对这张卡带的热键：按住右 Shift 时 F 键当手柄 2 的开始键）：
 
 ```js
-const KEYS = new Map([['KeyW', 'up'], ['KeyS', 'down'], ['KeyA', 'left'], ['KeyD', 'right'], ['Numpad1', 'b'], ['Numpad2', 'a'], ['Space', 'select'], ['Enter', 'start']]);
-
 export default {
   onKey(ctx, event) {
-    const button = KEYS.get(event.code);
-    if (button !== undefined) ctx.pad(0).set(button, event.down);
+    if (event.code === 'KeyF' && ctx.keys.isDown('ShiftRight')) ctx.pad(1).set('start', event.down);
   }
 };
 ```
@@ -299,7 +294,7 @@ export default {
 
 - 后续是学习卡等各种 mapper 插件：mapper 241、178、168、169、170、177、560 等，数量很多，都是卡带；声像磁带的 mapper 172 同样是插件。它们要用的主机与外设（插卡学习机主机、`ctx.device`）放在经典 FC 之后做，见 02 第 1 节“插卡学习机”与第 11 节待核对。学习机整机的 BIOS（mapper 171）不是插件，见 02。
 
-- `nrom`（`plugins/nrom/manifest.json`、`plugins/nrom/main.js`）：没有寄存器，脚本只负责键位（见第 6.5 节）；存储区 `prg`（文件 PRG）、`chr`（文件 CHR，没有时用 8K CHR RAM）、`prg-ram`（8K RAM）；窗口：`$8000-$BFFF` 与 `$C000-$FFFF` 各 16K，分别初始指向第一与最后一个 bank（NROM-128 两个窗口都是唯一的 16K，即镜像；NROM-256 各自一半），PPU `$0000-$1FFF` 映射 CHR，名称表连法按文件头；键位（手柄 1）：W、S、A、D 为上、下、左、右，小键盘 1 为 B，小键盘 2 为 A，空格为选择，回车为开始。
+- `nrom`（`plugins/nrom/manifest.json`、`plugins/nrom/main.js`）：没有寄存器，不设键位（脚本只导出空对象，手柄的按键由手柄绑定统一产生，见第 6.5 节）；存储区 `prg`（文件 PRG）、`chr`（文件 CHR，没有时用 8K CHR RAM）、`prg-ram`（8K RAM）；窗口：`$8000-$BFFF` 与 `$C000-$FFFF` 各 16K，分别初始指向第一与最后一个 bank（NROM-128 两个窗口都是唯一的 16K，即镜像；NROM-256 各自一半），PPU `$0000-$1FFF` 映射 CHR，名称表连法按文件头。
 - `nrom` 额外带 `$6000-$7FFF` 的 8K PRG RAM（`prg-ram`）：真机的 NROM 卡带没有（Family BASIC 等才有），这是和真机的一处出入；blargg 的 2010 年系列测试 ROM 把结果写在 `$6000`，没有它就无法用测试 ROM 验收经典机。
 - 测试用的 `test-cnrom`（mapper 3，有寄存器与脚本）在 `core/test/data/test-plugins/cnrom/`，不属于官方插件，不随程序发布。
 
@@ -351,7 +346,7 @@ export default definePlugin({
 | 插件包（第 3 节） | 已实现 | `core/src/infra/mappers/emap-package.*`；用 miniz 读取，拒绝路径穿越、目录、符号链接、加密、重复与其他文件，限制大小，检查图标 |
 | 清单（第 4 节） | 已实现 | `manifest.*`；全部字段解析与检查；`settings` 只解析与检查，运行时行为后续阶段 |
 | 卡带（第 4.3-4.5 节） | 已实现 | `mapper-chip.*`；存储区、窗口译码表、寄存器回调、名称表连法、IRQ 引脚、状态位宽 |
-| 沙箱（第 6 节） | 已实现 | `script-runtime.*`；每个卡带一个 QuickJS-ng 运行时；`ctx` 实现 `header`、`window`、`nametable`、`irq`、`storage`、`state`、`log`、`keys`、`pad`；输入回调 `onKey`、`onMouse`、`onGamepad` |
+| 沙箱（第 6 节） | 已实现 | `script-runtime.*`；每个卡带一个 QuickJS-ng 运行时；`ctx` 实现 `header`、`window`、`nametable`、`irq`、`storage`、`state`、`log`、`keys`、`pad`；输入回调 `onKey`、`onMouse` |
 | 匹配与加载（第 5 节） | 已实现 | `plugin-registry.*` 与 `logic/cartridges`；条件数优先、冲突与无匹配的错误码 |
 | 插件管理（第 7 节） | 已实现 | `list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 与事件 `mappers.changed` |
 | `ctx.timer`、`ctx.random`、`ctx.settings` | 后续阶段 | 需要定时器与设置页 |
@@ -363,6 +358,6 @@ export default definePlugin({
 - 窗口的 bank 号取模、越过存储区末尾回绕、`access` 为 `rw` 的窗口必须指向 RAM 或带 RAM 后备的 ROM、CPU 侧窗口只能在 `$4020-$FFFF`、PPU 侧只能在 `$0000-$1FFF`，同样是第 4.4 节补充的规则。
 - 脚本出错时卡带不抛异常，由运行模块在每一帧与每条命令之后轮询 `MapperCartridge::failure()`，发现错误就暂停并报告（第 6.3 节，阶段 2b-2 已实现）。
 - `MapperCartridge` 增加 `storageList()`（每块存储区的标识、种类、实际容量、是否带电池），运行模块在装入卡带时取它写进卡带描述里的存储区清单（`cartridges.info`、`runtime.status`）。
-- `nrom` 额外带 8K PRG RAM（第 9 节）；`main.js` 只处理键位。
+- `nrom` 额外带 8K PRG RAM（第 9 节）；`main.js` 不设键位（脚本只导出空对象）。
 - `mappers.install` 在 Schema 里标 `mainOnly`：参数带磁盘路径，界面不能直接发起，由主进程根据用户选择的文件或调试服务发起。
 - 新增错误码 `mappers.notFound`、`mappers.bundledReadonly`；`cartridges` 模块新增 `cartridges.notInes`、`cartridges.truncated`、`cartridges.unsupportedFormat`、`cartridges.invalidHeader`。

@@ -85,7 +85,7 @@ TEST(EmapPackage, ReadsTheOfficialNromPackage) {
   const auto package = readEmapPackage(ember::test::officialPluginPackage("nrom"));
   EXPECT_NE(package.manifestText.find("\"id\": \"nrom\""), std::string::npos);
   EXPECT_TRUE(package.hasScript);
-  EXPECT_NE(package.scriptText.find("onKey"), std::string::npos);
+  EXPECT_NE(package.scriptText.find("export default"), std::string::npos);
 }
 
 TEST(EmapPackageErrors, RejectsAFileThatIsNotAZip) {

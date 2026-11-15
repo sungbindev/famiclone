@@ -35,6 +35,8 @@ constexpr std::int64_t MAX_MOUSE_BUTTONS = 7;
 constexpr std::int64_t MAX_GAMEPAD_INDEX = 15;
 constexpr std::size_t MAX_GAMEPAD_BUTTONS = 32;
 constexpr std::size_t MAX_GAMEPAD_AXES = 16;
+/** 手柄设备标识的最大长度（字节）。 */
+constexpr std::size_t MAX_GAMEPAD_ID_LENGTH = 256;
 
 const nlohmann::json& required(const nlohmann::json& object, const char* name) {
   const nlohmann::json* value = fields::find(object, name);
@@ -72,9 +74,10 @@ hw::MouseInput readMouse(const nlohmann::json& message) {
 }
 
 hw::GamepadInput readGamepad(const nlohmann::json& message) {
-  fields::rejectUnknown(message, "输入消息", {"type", "index", "connected", "buttons", "axes"});
+  fields::rejectUnknown(message, "输入消息", {"type", "index", "id", "connected", "buttons", "axes"});
   hw::GamepadInput pad;
   pad.index = static_cast<std::uint8_t>(fields::readInteger(required(message, "index"), "index", 0, MAX_GAMEPAD_INDEX));
+  pad.id = fields::readString(required(message, "id"), "id", 0, MAX_GAMEPAD_ID_LENGTH, {});
   pad.connected = fields::readBoolean(required(message, "connected"), "connected");
   const auto buttons = fields::readArray<bool>(required(message, "buttons"), "buttons", std::nullopt, MAX_GAMEPAD_BUTTONS,
                                                [](const nlohmann::json& item, const std::string& path) { return fields::readBoolean(item, path); });

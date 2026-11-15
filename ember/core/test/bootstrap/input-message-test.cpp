@@ -50,10 +50,11 @@ TEST(InputMessage, ParsesEveryMouseKind) {
 }
 
 TEST(InputMessage, ParsesAGamepadEvent) {
-  const auto event = parseInputMessage(R"({"type":"gamepad","index":2,"connected":true,"buttons":[true,false,true],"axes":[0.5,-1]})");
+  const auto event = parseInputMessage(R"({"type":"gamepad","index":2,"id":"Demo Pad [STANDARD GAMEPAD]","connected":true,"buttons":[true,false,true],"axes":[0.5,-1]})");
   const auto* pad = std::get_if<hw::GamepadInput>(&event);
   ASSERT_NE(pad, nullptr);
   EXPECT_EQ(pad->index, 2);
+  EXPECT_EQ(pad->id, "Demo Pad [STANDARD GAMEPAD]");
   EXPECT_TRUE(pad->connected);
   EXPECT_EQ(pad->buttons, (std::vector<bool>{true, false, true}));
   EXPECT_EQ(pad->axes, (std::vector<double>{0.5, -1}));
@@ -77,11 +78,13 @@ TEST(InputMessage, RejectsMessagesThatAreNotWellFormed) {
       R"({"type":"mouse","kind":"move","x":0,"y":0,"dx":0,"dy":0,"buttons":8,"wheel":0})",
       R"({"type":"mouse","kind":"move","x":0,"y":0,"dx":0,"dy":0,"buttons":1.5,"wheel":0})",
       R"({"type":"mouse","kind":"move","x":0,"y":0,"dx":0,"dy":0,"buttons":0})",
-      R"({"type":"gamepad","index":16,"connected":true,"buttons":[],"axes":[]})",
-      R"({"type":"gamepad","index":0,"connected":1,"buttons":[],"axes":[]})",
-      R"({"type":"gamepad","index":0,"connected":true,"buttons":[1],"axes":[]})",
-      R"({"type":"gamepad","index":0,"connected":true,"buttons":[],"axes":[2]})",
-      R"({"type":"gamepad","index":0,"connected":true,"buttons":[],"axes":["0"]})",
+      R"({"type":"gamepad","index":16,"id":"","connected":true,"buttons":[],"axes":[]})",
+      R"({"type":"gamepad","index":0,"connected":true,"buttons":[],"axes":[]})",
+      R"({"type":"gamepad","index":0,"id":5,"connected":true,"buttons":[],"axes":[]})",
+      R"({"type":"gamepad","index":0,"id":"","connected":1,"buttons":[],"axes":[]})",
+      R"({"type":"gamepad","index":0,"id":"","connected":true,"buttons":[1],"axes":[]})",
+      R"({"type":"gamepad","index":0,"id":"","connected":true,"buttons":[],"axes":[2]})",
+      R"({"type":"gamepad","index":0,"id":"","connected":true,"buttons":[],"axes":["0"]})",
   };
   for (const char* text : bad) {
     try {
@@ -96,10 +99,11 @@ TEST(InputMessage, RejectsMessagesThatAreNotWellFormed) {
 TEST(InputMessage, RejectsTooManyGamepadButtonsAndAxes) {
   std::string buttons = "[";
   for (int index = 0; index < 33; ++index) buttons += index == 0 ? "true" : ",true";
-  EXPECT_THROW(parseInputMessage(R"({"type":"gamepad","index":0,"connected":true,"buttons":)" + buttons + R"(],"axes":[]})"), ember::shared::CoreError);
+  EXPECT_THROW(parseInputMessage(R"({"type":"gamepad","index":0,"id":"","connected":true,"buttons":)" + buttons + R"(],"axes":[]})"), ember::shared::CoreError);
   std::string axes = "[";
   for (int index = 0; index < 17; ++index) axes += index == 0 ? "0" : ",0";
-  EXPECT_THROW(parseInputMessage(R"({"type":"gamepad","index":0,"connected":true,"buttons":[],"axes":)" + axes + "]}"), ember::shared::CoreError);
+  EXPECT_THROW(parseInputMessage(R"({"type":"gamepad","index":0,"id":"","connected":true,"buttons":[],"axes":)" + axes + "]}"), ember::shared::CoreError);
+  EXPECT_THROW(parseInputMessage(R"({"type":"gamepad","index":0,"id":")" + std::string(257, 'x') + R"(","connected":true,"buttons":[],"axes":[]})"), ember::shared::CoreError);
 }
 
 }  // namespace

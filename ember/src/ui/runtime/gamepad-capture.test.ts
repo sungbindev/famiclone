@@ -12,8 +12,8 @@ import { describe, expect, it } from 'vitest';
 import type { GamepadInputMessage } from '../../contracts/stream-ports/stream-messages';
 import { GamepadCapture, type GamepadLike } from './gamepad-capture';
 
-function pad(index: number, pressed: boolean[], axes: number[], connected = true): GamepadLike {
-  return { index, connected, buttons: pressed.map((value) => ({ pressed: value })), axes };
+function pad(index: number, pressed: boolean[], axes: number[], connected = true, id = 'Test Pad'): GamepadLike {
+  return { index, id, connected, buttons: pressed.map((value) => ({ pressed: value })), axes };
 }
 
 function setup() {
@@ -32,7 +32,13 @@ describe('GamepadCapture', () => {
     const { sent, capture } = setup();
     capture.poll([pad(0, [true, false], [0.5, -1])]);
     capture.poll([pad(0, [true, false], [0.5, -1])]);
-    expect(sent).toEqual([{ type: 'gamepad', index: 0, connected: true, buttons: [true, false], axes: [0.5, -1] }]);
+    expect(sent).toEqual([{ type: 'gamepad', index: 0, id: 'Test Pad', connected: true, buttons: [true, false], axes: [0.5, -1] }]);
+  });
+
+  it('每条消息带设备标识，过长的标识截到 256 个字符', () => {
+    const { sent, capture } = setup();
+    capture.poll([pad(0, [true], [], true, 'x'.repeat(300))]);
+    expect(sent[0]?.id).toBe('x'.repeat(256));
   });
 
   it('按键或轴变了才再次上报', () => {
@@ -47,7 +53,7 @@ describe('GamepadCapture', () => {
     const { sent, capture } = setup();
     capture.poll([pad(0, [], [0.123456, 1.5, -3])]);
     capture.poll([pad(0, [], [0.1234, 1.5, -3])]);
-    expect(sent).toEqual([{ type: 'gamepad', index: 0, connected: true, buttons: [], axes: [0.12, 1, -1] }]);
+    expect(sent).toEqual([{ type: 'gamepad', index: 0, id: 'Test Pad', connected: true, buttons: [], axes: [0.12, 1, -1] }]);
   });
 
   it('按键与轴超出上限的部分不上报', () => {
@@ -69,8 +75,8 @@ describe('GamepadCapture', () => {
     capture.poll([null]);
     capture.poll([null]);
     expect(sent).toEqual([
-      { type: 'gamepad', index: 0, connected: true, buttons: [true], axes: [0] },
-      { type: 'gamepad', index: 0, connected: false, buttons: [], axes: [] }
+      { type: 'gamepad', index: 0, id: 'Test Pad', connected: true, buttons: [true], axes: [0] },
+      { type: 'gamepad', index: 0, id: 'Test Pad', connected: false, buttons: [], axes: [] }
     ]);
   });
 
@@ -80,7 +86,7 @@ describe('GamepadCapture', () => {
     capture.poll([pad(0, [], [], false)]);
     capture.poll([pad(0, [], [], false)]);
     expect(sent).toHaveLength(2);
-    expect(sent[1]).toEqual({ type: 'gamepad', index: 0, connected: false, buttons: [], axes: [] });
+    expect(sent[1]).toEqual({ type: 'gamepad', index: 0, id: 'Test Pad', connected: false, buttons: [], axes: [] });
   });
 
   it('全部断开：已知的手柄各上报一次断开', () => {

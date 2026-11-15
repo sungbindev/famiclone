@@ -282,8 +282,10 @@ TEST(Sb2000FcMode, WritingTheModeRegisterSwitchesAfterTheInstructionAndRestartsT
   machine.powerOn();
   loadFcProgram(machine);
   EXPECT_FALSE(machine.fcMode());
+  EXPECT_TRUE(machine.keyboardIsMachineInput());
   machine.runFrame();
   ASSERT_TRUE(machine.fcMode());
+  EXPECT_FALSE(machine.keyboardIsMachineInput()) << "进入 FC 兼容模式后键盘可以当手柄用";
   EXPECT_EQ(peekBus(machine, 0x0002), 0) << "写 $4301 的 STA 之后的 INC $02 没有执行：CPU 在指令结束后复位";
   machine.runFrame();
   EXPECT_NE(peekBus(machine, 0x0000), 0) << "窗口 0 里的 FC 程序在运行";

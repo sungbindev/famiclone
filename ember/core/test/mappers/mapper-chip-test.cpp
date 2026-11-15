@@ -445,11 +445,10 @@ TEST(MapperChipInput, ScriptsSeeWhichKeysAreHeldSoCombinationsWork) {
   EXPECT_EQ(rig.pads.masks[0], hw::pad_button::SELECT);  // 松开时 Shift 已经松开，组合不成立，选择键保持按下是脚本自己的选择
 }
 
-TEST(MapperChipInput, MouseAndGamepadEventsCarryTheirFieldsToTheScript) {
+TEST(MapperChipInput, MouseEventsCarryTheirFieldsToTheScript) {
   Rig rig(json::parse(ember::test::minimalManifest()),
           R"(export default {
-            onMouse(ctx, event) { ctx.log.warn(JSON.stringify(event)); },
-            onGamepad(ctx, event) { ctx.log.warn(JSON.stringify(event)); }
+            onMouse(ctx, event) { ctx.log.warn(JSON.stringify(event)); }
           };)",
           makeImage(16384, 8192));
   hw::MouseInput mouse;
@@ -461,15 +460,8 @@ TEST(MapperChipInput, MouseAndGamepadEventsCarryTheirFieldsToTheScript) {
   mouse.buttons = 5;
   mouse.wheel = 3;
   rig.chip.input(mouse);
-  hw::GamepadInput pad;
-  pad.index = 1;
-  pad.connected = true;
-  pad.buttons = {true, false};
-  pad.axes = {0.5, -1};
-  rig.chip.input(pad);
-  ASSERT_EQ(rig.chip.scriptLog().size(), 2U);
+  ASSERT_EQ(rig.chip.scriptLog().size(), 1U);
   EXPECT_EQ(json::parse(rig.chip.scriptLog()[0]), json::parse(R"({"kind":"wheel","x":10.5,"y":20,"dx":-1,"dy":2,"buttons":5,"wheel":3})"));
-  EXPECT_EQ(json::parse(rig.chip.scriptLog()[1]), json::parse(R"({"index":1,"connected":true,"buttons":[true,false],"axes":[0.5,-1]})"));
   EXPECT_FALSE(rig.chip.failure().has_value());
 }
 
@@ -477,12 +469,10 @@ TEST(MapperChipInput, EventsWithoutAHandlerAreIgnored) {
   Rig noScript(json::parse(ember::test::minimalManifest()), "", makeImage(16384, 8192));
   noScript.chip.input(hw::KeyInput{"KeyA", true});
   noScript.chip.input(hw::MouseInput{});
-  noScript.chip.input(hw::GamepadInput{});
   EXPECT_EQ(noScript.pads.calls, 0);
 
   Rig onlyKeys = inputRig("export default { onKey() {} };");
   onlyKeys.chip.input(hw::MouseInput{});
-  onlyKeys.chip.input(hw::GamepadInput{});
   EXPECT_FALSE(onlyKeys.chip.failure().has_value());
 }
 

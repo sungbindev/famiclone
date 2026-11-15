@@ -42,7 +42,7 @@ export interface FrameAckMessage {
   readonly frame: number;
 }
 
-/** 键盘：一个物理键按下或松开；界面不转发映射，也没有默认键位，由卡带的 mapper 脚本决定怎么用。 */
+/** 键盘：一个物理键按下或松开；界面不映射，由核心按机器与手柄绑定处理。 */
 export interface KeyInputMessage {
   readonly type: 'key';
   /** 物理键位，取 KeyboardEvent.code，如 KeyW、Space、Numpad1。 */
@@ -70,11 +70,13 @@ export interface MouseInputMessage {
   readonly wheel: number;
 }
 
-/** 游戏手柄：一个手柄当前的全部状态，顺序同浏览器 Gamepad API 的标准映射。 */
+/** 游戏手柄：一个手柄当前的全部状态，顺序同浏览器 Gamepad API 的标准映射；核心按手柄绑定把它变成手柄口的按键。 */
 export interface GamepadInputMessage {
   readonly type: 'gamepad';
   /** 手柄编号，同 Gamepad.index。 */
   readonly index: number;
+  /** 设备标识，同 Gamepad.id（含设备名）；手柄绑定按它认出是哪个手柄。 */
+  readonly id: string;
   /** 是否连着；拔掉时为 false，按键与轴为空数组。 */
   readonly connected: boolean;
   /** 各按键是否按下。 */

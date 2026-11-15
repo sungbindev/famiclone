@@ -184,8 +184,6 @@ void MapperChip::input(const hw::InputEvent& event) {
     if (script_->hasKey()) runScript([&] { script_->key(*key); });
   } else if (const auto* mouse = std::get_if<hw::MouseInput>(&event)) {
     if (script_->hasMouse()) runScript([&] { script_->mouse(*mouse); });
-  } else if (const auto* gamepad = std::get_if<hw::GamepadInput>(&event)) {
-    if (script_->hasGamepad()) runScript([&] { script_->gamepad(*gamepad); });
   }
 }
 

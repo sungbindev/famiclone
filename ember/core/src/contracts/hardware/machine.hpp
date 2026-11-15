@@ -67,10 +67,16 @@ class Machine : public PadSink {
   virtual void takeAudio(std::vector<float>& samples) = 0;
 
   /**
-   * 用户输入：键盘、鼠标、游戏手柄的原始事件。主机型号没有自己的键位，只转给卡带，由卡带的 mapper 脚本决定怎么用。
+   * 用户输入：键盘与鼠标的原始事件，由主机型号自己（或经典 FC 的卡带脚本）处理；游戏手柄的事件不会交给它，手柄口只经 setButtons 设置。
    * @param event 输入事件。
    */
   virtual void input(const InputEvent& event) = 0;
+
+  /**
+   * 键盘现在是否属于机器：true 时键盘按键全部交给 input，不能当手柄用；false 时没有被机器占用的键盘按键可以按手柄绑定变成手柄口的按键。
+   * 经典 FC 没有键盘，总是 false；学习机在 DOS 里为 true，进入 FC 兼容模式后为 false。
+   */
+  [[nodiscard]] virtual bool keyboardIsMachineInput() const { return false; }
 
   /** CPU 当前的寄存器，供测试与调试读取；只在指令之间读取有意义。 */
   [[nodiscard]] virtual CpuRegisters cpuRegisters() const = 0;

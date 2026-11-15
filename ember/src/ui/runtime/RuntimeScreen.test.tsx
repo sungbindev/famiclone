@@ -512,12 +512,12 @@ describe('RuntimeScreen：游戏手柄', () => {
 
     tick();
     expect(input.postMessage).not.toHaveBeenCalled();
-    pads = [{ index: 0, connected: true, buttons: [{ pressed: true }, { pressed: false }], axes: [0.5, -1] }];
+    pads = [{ index: 0, id: 'Test Pad', connected: true, buttons: [{ pressed: true }, { pressed: false }], axes: [0.5, -1] }];
     tick();
     tick();
-    expect(input.postMessage.mock.calls).toEqual([[{ type: 'gamepad', index: 0, connected: true, buttons: [true, false], axes: [0.5, -1] }]]);
+    expect(input.postMessage.mock.calls).toEqual([[{ type: 'gamepad', index: 0, id: 'Test Pad', connected: true, buttons: [true, false], axes: [0.5, -1] }]]);
     view.unmount();
-    expect(input.postMessage.mock.calls[1]).toEqual([{ type: 'gamepad', index: 0, connected: false, buttons: [], axes: [] }]);
+    expect(input.postMessage.mock.calls[1]).toEqual([{ type: 'gamepad', index: 0, id: 'Test Pad', connected: false, buttons: [], axes: [] }]);
     Reflect.deleteProperty(navigator, 'getGamepads');
   });
 });

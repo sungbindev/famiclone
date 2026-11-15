@@ -275,6 +275,7 @@ void SimulationRuntime::runFrame() {
     }
   }
   ++frame_;
+  if (inputHook_ != nullptr) inputHook_->frameCompleted(*machine_);
   const hw::FrameBuffer picture = machine_->frame();
   if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
   if (!run_.has_value()) pushAudio();
@@ -426,6 +427,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     cartridge_.reset();
     machine_ = std::move(machine);
     cartridge_ = std::move(cartridge);
+    if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_ = summary;
     host_ = insertion.match.host;
     running_ = false;
@@ -446,6 +448,7 @@ rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
     if (machine_ != nullptr) machine_->cartridgeSlot().eject();
     cartridge_.reset();
     machine_ = std::move(machine);
+    if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_.reset();
     host_ = boot.machine;
     running_ = false;
@@ -473,6 +476,7 @@ rt::RuntimeState SimulationRuntime::ejectCartridge() {
       machine_->cartridgeSlot().eject();
       cartridge_.reset();
       machine_.reset();
+      if (inputHook_ != nullptr) inputHook_->machineChanged();
       summary_.reset();
       host_.clear();
       running_ = false;
@@ -488,8 +492,14 @@ rt::RuntimeState SimulationRuntime::ejectCartridge() {
 void SimulationRuntime::sendInput(hw::InputEvent event) {
   post([this, event = std::move(event)](bool cancelled) {
     if (cancelled || machine_ == nullptr) return;
-    machine_->input(event);
+    if (inputHook_ != nullptr && inputHook_->handle(event, *machine_)) return;
+    // 游戏手柄只给手柄绑定，不交给主机。
+    if (!std::holds_alternative<hw::GamepadInput>(event)) machine_->input(event);
   });
+}
+
+void SimulationRuntime::setInputHook(std::shared_ptr<rt::InputHook> hook) {
+  submit([this, hook = std::move(hook)] { inputHook_ = hook; });
 }
 
 void SimulationRuntime::setFrameEventInterval(std::uint32_t frames) { frameEventInterval_.store(frames, std::memory_order_relaxed); }

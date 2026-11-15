@@ -47,7 +47,7 @@ struct ScriptRuntime::Impl {
       for (const JSValue value : windowObjects) JS_FreeValue(js, value);
       for (const JSValue value : storageObjects) JS_FreeValue(js, value);
       for (const JSValue value : padObjects) JS_FreeValue(js, value);
-      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, gamepadFn, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
+      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
       JS_FreeContext(js);
     }
     if (runtime != nullptr) JS_FreeRuntime(runtime);
@@ -70,7 +70,6 @@ struct ScriptRuntime::Impl {
   JSValue writeFn = JS_UNDEFINED;
   JSValue keyFn = JS_UNDEFINED;
   JSValue mouseFn = JS_UNDEFINED;
-  JSValue gamepadFn = JS_UNDEFINED;
   JSValue cpuName = JS_UNDEFINED;
   JSValue ppuName = JS_UNDEFINED;
   JSValue powerName = JS_UNDEFINED;
@@ -238,7 +237,6 @@ struct ScriptRuntime::Impl {
     writeFn = readHandler("write");
     keyFn = readHandler("onKey");
     mouseFn = readHandler("onMouse");
-    gamepadFn = readHandler("onGamepad");
   }
 
   JSValue readHandler(const char* name) {
@@ -384,19 +382,6 @@ struct ScriptRuntime::Impl {
     JS_SetPropertyStr(js, event, "dy", JS_NewFloat64(js, input.dy));
     JS_SetPropertyStr(js, event, "buttons", JS_NewInt32(js, input.buttons));
     JS_SetPropertyStr(js, event, "wheel", JS_NewFloat64(js, input.wheel));
-    return event;
-  }
-
-  JSValue gamepadEvent(const hw::GamepadInput& input) {
-    JSValue event = JS_NewObject(js);
-    JS_SetPropertyStr(js, event, "index", JS_NewInt32(js, input.index));
-    JS_SetPropertyStr(js, event, "connected", JS_NewBool(js, input.connected ? 1 : 0));
-    JSValue buttons = JS_NewArray(js);
-    for (std::size_t index = 0; index < input.buttons.size(); ++index) JS_SetPropertyUint32(js, buttons, static_cast<std::uint32_t>(index), JS_NewBool(js, input.buttons[index] ? 1 : 0));
-    JS_SetPropertyStr(js, event, "buttons", buttons);
-    JSValue axes = JS_NewArray(js);
-    for (std::size_t index = 0; index < input.axes.size(); ++index) JS_SetPropertyUint32(js, axes, static_cast<std::uint32_t>(index), JS_NewFloat64(js, input.axes[index]));
-    JS_SetPropertyStr(js, event, "axes", axes);
     return event;
   }
 
@@ -569,18 +554,12 @@ bool ScriptRuntime::hasKey() const noexcept { return !JS_IsUndefined(impl_->keyF
 
 bool ScriptRuntime::hasMouse() const noexcept { return !JS_IsUndefined(impl_->mouseFn); }
 
-bool ScriptRuntime::hasGamepad() const noexcept { return !JS_IsUndefined(impl_->gamepadFn); }
-
 void ScriptRuntime::key(const contracts::hardware::KeyInput& input) {
   if (hasKey()) impl_->invokeInput("onKey", impl_->keyFn, impl_->keyEvent(input));
 }
 
 void ScriptRuntime::mouse(const contracts::hardware::MouseInput& input) {
   if (hasMouse()) impl_->invokeInput("onMouse", impl_->mouseFn, impl_->mouseEvent(input));
-}
-
-void ScriptRuntime::gamepad(const contracts::hardware::GamepadInput& input) {
-  if (hasGamepad()) impl_->invokeInput("onGamepad", impl_->gamepadFn, impl_->gamepadEvent(input));
 }
 
 void ScriptRuntime::reset(bool power) {

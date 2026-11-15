@@ -109,6 +109,8 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   void setButtons(unsigned port, std::uint8_t buttons) override;
   [[nodiscard]] unsigned padPortCount() const override { return static_cast<unsigned>(joypads_.size()); }
   void input(const contracts::hardware::InputEvent& event) override;
+  /** 学习机的键盘在 6576 模式（DOS）下属于机器；进入 FC 兼容模式后按键可以当手柄用。 */
+  [[nodiscard]] bool keyboardIsMachineInput() const override { return !fcMode_; }
   [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
@@ -182,8 +184,6 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   [[nodiscard]] std::uint64_t completedFrames() const { return frameOffset_ + (fcMode_ ? fcPpu_.frameCount() : ppu_.frameCount()); }
   /** 当前 PPU 下一个要处理的扫描线。 */
   [[nodiscard]] int currentLine() const { return fcMode_ ? fcPpu_.scanline() : ppu_.nextLine(); }
-  /** 把游戏手柄的状态换算成手柄口的按键。 */
-  void applyGamepad(const contracts::hardware::GamepadInput& gamepad);
   /** 把鼠标事件换算成串口鼠标的位移与按键。 */
   void applyMouse(const contracts::hardware::MouseInput& mouse);
 

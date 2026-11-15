@@ -437,9 +437,134 @@
       "errors": []
     },
     {
+      "name": "input.getBindings",
+      "summary": "读取手柄绑定：两个玩家槽位（对应手柄口 1、2）",
+      "description": "读取手柄绑定：两个玩家槽位（对应手柄口 1、2）。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "slots": {
+              "type": "array",
+              "description": "玩家槽位，第 1 项是手柄口 1",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/components/schemas/input.PadSlot"
+              }
+            }
+          },
+          "required": [
+            "slots"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "input.setBindings",
+      "summary": "替换全部手柄绑定：核心校验后保存到文件，并发出 input.bindingsChanged",
+      "description": "替换全部手柄绑定：核心校验后保存到文件，并发出 input.bindingsChanged；内容没有变化时不发事件。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "slots",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "玩家槽位，第 1 项是手柄口 1",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/input.PadSlot"
+            }
+          },
+          "description": "玩家槽位，第 1 项是手柄口 1"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "slots": {
+              "type": "array",
+              "description": "保存之后的玩家槽位",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/components/schemas/input.PadSlot"
+              }
+            }
+          },
+          "required": [
+            "slots"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "input.invalidBindings",
+          "data": {
+            "code": "input.invalidBindings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "input.resetBindings",
+      "summary": "把手柄绑定恢复为出厂默认",
+      "description": "把手柄绑定恢复为出厂默认；内容没有变化时不发事件。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "slots": {
+              "type": "array",
+              "description": "恢复之后的玩家槽位",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/components/schemas/input.PadSlot"
+              }
+            }
+          },
+          "required": [
+            "slots"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
       "name": "input.key",
-      "summary": "按下或松开一个物理键，交给卡带的 mapper 脚本",
-      "description": "按下或松开一个物理键，交给卡带的 mapper 脚本；没有开机时被丢弃。",
+      "summary": "按下或松开一个物理键：键盘属于机器时交给机器，否则按手柄绑定变成手柄口的按键",
+      "description": "按下或松开一个物理键：键盘属于机器时交给机器，否则按手柄绑定变成手柄口的按键；没有开机时被丢弃。",
       "tags": [
         {
           "name": "input"
@@ -482,8 +607,8 @@
     },
     {
       "name": "input.mouse",
-      "summary": "鼠标事件，交给卡带的 mapper 脚本",
-      "description": "鼠标事件，交给卡带的 mapper 脚本；坐标单位是标准帧（256x240）的像素，省略的数值按 0 处理。",
+      "summary": "鼠标事件，交给机器",
+      "description": "鼠标事件，交给机器；坐标单位是标准帧（256x240）的像素，省略的数值按 0 处理。",
       "tags": [
         {
           "name": "input"
@@ -578,8 +703,8 @@
     },
     {
       "name": "input.gamepad",
-      "summary": "游戏手柄一个手柄的当前全部状态，交给卡带的 mapper 脚本",
-      "description": "游戏手柄一个手柄的当前全部状态，交给卡带的 mapper 脚本；拔掉时 connected 为 false，按键与轴省略。",
+      "summary": "游戏手柄一个手柄的当前全部状态，按手柄绑定变成手柄口的按键",
+      "description": "游戏手柄一个手柄的当前全部状态，按手柄绑定变成手柄口的按键；拔掉时 connected 为 false，按键与轴省略。",
       "tags": [
         {
           "name": "input"
@@ -597,6 +722,16 @@
             "maximum": 7
           },
           "description": "手柄编号，同浏览器 Gamepad API 的 index"
+        },
+        {
+          "name": "id",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "手柄的设备标识，取 Gamepad.id；省略时按空处理",
+            "maxLength": 256
+          },
+          "description": "手柄的设备标识，取 Gamepad.id；省略时按空处理"
         },
         {
           "name": "connected",
@@ -4552,6 +4687,142 @@
         ],
         "additionalProperties": false
       },
+      "input.PadKeyBinding": {
+        "type": "object",
+        "description": "手柄的一个键绑定到键盘的一个物理键。",
+        "properties": {
+          "button": {
+            "type": "string",
+            "description": "手柄的键：turboA、turboB 是连发 A、连发 B",
+            "enum": [
+              "a",
+              "b",
+              "select",
+              "start",
+              "up",
+              "down",
+              "left",
+              "right",
+              "turboA",
+              "turboB"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "description": "物理键位，取 KeyboardEvent.code，如 KeyZ、ArrowUp、Enter",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "button",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "input.PadGamepadBinding": {
+        "type": "object",
+        "description": "手柄的一个键绑定到实体手柄的一个按钮或一个轴的一个方向。",
+        "properties": {
+          "button": {
+            "type": "string",
+            "description": "手柄的键",
+            "enum": [
+              "a",
+              "b",
+              "select",
+              "start",
+              "up",
+              "down",
+              "left",
+              "right",
+              "turboA",
+              "turboB"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "description": "来源：button 是一个按钮，axis 是一个轴的一个方向",
+            "enum": [
+              "button",
+              "axis"
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "description": "按钮或轴的编号，同浏览器 Gamepad API 的数组下标",
+            "minimum": 0,
+            "maximum": 31
+          },
+          "direction": {
+            "type": "string",
+            "description": "轴的方向：negative 是小于 -0.5，positive 是大于 0.5；只有 axis 用",
+            "enum": [
+              "negative",
+              "positive"
+            ]
+          }
+        },
+        "required": [
+          "button",
+          "kind",
+          "index"
+        ],
+        "additionalProperties": false
+      },
+      "input.PadGamepadAssignment": {
+        "type": "object",
+        "description": "一个玩家槽位用的实体手柄，以及它的键绑定。",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "手柄的设备标识，取 Gamepad.id（含设备名）",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "occurrence": {
+            "type": "integer",
+            "description": "同一个设备标识连着多个手柄时，按编号从小到大排的第几个，从 0 开始",
+            "minimum": 0,
+            "maximum": 15
+          },
+          "bindings": {
+            "type": "array",
+            "description": "手柄的键的绑定；没有写的键没有绑定，同一个键只能写一次",
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/input.PadGamepadBinding"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "occurrence",
+          "bindings"
+        ],
+        "additionalProperties": false
+      },
+      "input.PadSlot": {
+        "type": "object",
+        "description": "一个玩家槽位：键盘的绑定，以及可选的一个实体手柄。",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "description": "键盘的绑定；没有写的键没有绑定，同一个键只能写一次",
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/input.PadKeyBinding"
+            }
+          },
+          "gamepad": {
+            "$ref": "#/components/schemas/input.PadGamepadAssignment"
+          }
+        },
+        "required": [
+          "keys"
+        ],
+        "additionalProperties": false
+      },
       "inspector.MemorySpaceInfo": {
         "type": "object",
         "description": "一个内存空间。",
@@ -5770,6 +6041,33 @@
         },
         "required": [
           "count"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "input.bindingsChanged",
+      "description": "手柄绑定变了（界面修改、恢复默认都会发出）。",
+      "tags": [
+        {
+          "name": "input"
+        }
+      ],
+      "data": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "description": "新的玩家槽位",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/input.PadSlot"
+            }
+          }
+        },
+        "required": [
+          "slots"
         ],
         "additionalProperties": false
       }

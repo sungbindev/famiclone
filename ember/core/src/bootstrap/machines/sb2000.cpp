@@ -48,18 +48,6 @@ constexpr int FC_SCANLINES_PER_FRAME = 312;
 /** FC 兼容模式下标准 PPU 的调色板项数。 */
 constexpr std::size_t FC_PALETTE_SIZE = 32;
 
-/** 游戏手柄标准映射里的按键下标（浏览器 Gamepad API）。 */
-constexpr std::size_t GAMEPAD_SOUTH = 0;
-constexpr std::size_t GAMEPAD_EAST = 1;
-constexpr std::size_t GAMEPAD_SELECT = 8;
-constexpr std::size_t GAMEPAD_START = 9;
-constexpr std::size_t GAMEPAD_UP = 12;
-constexpr std::size_t GAMEPAD_DOWN = 13;
-constexpr std::size_t GAMEPAD_LEFT = 14;
-constexpr std::size_t GAMEPAD_RIGHT = 15;
-/** 摇杆算作按下的偏移量。 */
-constexpr double AXIS_THRESHOLD = 0.5;
-
 void requireBios(const std::vector<std::uint8_t>& bios) {
   if (bios.size() != Sb2000Machine::BIOS_SIZE) {
     throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "sb2000 的 BIOS 必须是 " + std::to_string(Sb2000Machine::BIOS_SIZE) + " 字节，收到 " + std::to_string(bios.size()) + " 字节");
@@ -287,8 +275,6 @@ void Sb2000Machine::input(const hw::InputEvent& event) {
     if (const auto code = logic::hardware::KeyboardSb2000::scanCodeFor(key->code)) keyboardDevice_.setKey(*code, key->down);
   } else if (const auto* mouse = std::get_if<hw::MouseInput>(&event)) {
     applyMouse(*mouse);
-  } else if (const auto* gamepad = std::get_if<hw::GamepadInput>(&event)) {
-    applyGamepad(*gamepad);
   }
 }
 
@@ -310,25 +296,6 @@ void Sb2000Machine::applyMouse(const hw::MouseInput& mouse) {
   // 左键 1、右键 2；中键与串口鼠标无关。
   const std::uint8_t buttons = mouse.buttons & (logic::hardware::MouseSb2000::BUTTON_LEFT | logic::hardware::MouseSb2000::BUTTON_RIGHT);
   mouseDevice_.move(static_cast<int>(wholeX), static_cast<int>(wholeY), buttons);
-}
-
-void Sb2000Machine::applyGamepad(const hw::GamepadInput& gamepad) {
-  if (gamepad.index >= joypads_.size()) return;
-  std::uint8_t buttons = 0;
-  if (gamepad.connected) {
-    const auto pressed = [&](std::size_t index) { return index < gamepad.buttons.size() && gamepad.buttons[index]; };
-    const auto axis = [&](std::size_t index) { return index < gamepad.axes.size() ? gamepad.axes[index] : 0.0; };
-    // 浏览器标准映射：下方的键当作 B，右侧的键当作 A。
-    if (pressed(GAMEPAD_EAST)) buttons |= hw::pad_button::A;
-    if (pressed(GAMEPAD_SOUTH)) buttons |= hw::pad_button::B;
-    if (pressed(GAMEPAD_SELECT)) buttons |= hw::pad_button::SELECT;
-    if (pressed(GAMEPAD_START)) buttons |= hw::pad_button::START;
-    if (pressed(GAMEPAD_UP) || axis(1) < -AXIS_THRESHOLD) buttons |= hw::pad_button::UP;
-    if (pressed(GAMEPAD_DOWN) || axis(1) > AXIS_THRESHOLD) buttons |= hw::pad_button::DOWN;
-    if (pressed(GAMEPAD_LEFT) || axis(0) < -AXIS_THRESHOLD) buttons |= hw::pad_button::LEFT;
-    if (pressed(GAMEPAD_RIGHT) || axis(0) > AXIS_THRESHOLD) buttons |= hw::pad_button::RIGHT;
-  }
-  joypads_[gamepad.index].setButtons(buttons);
 }
 
 // ---------------------------------------------------------------- 通用 DMA 的存储

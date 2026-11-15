@@ -14,7 +14,7 @@
 
 namespace ember::bootstrap {
 
-/** 登记输入注入模块：创建服务（取用运行服务）并登记 input.* 请求；须排在 runtime 之后。 */
+/** 登记输入模块：创建手柄绑定服务与输入路由器（挂到运行服务上）、输入注入服务，并登记 input.* 请求；须排在 runtime 之后。 */
 void registerInput(ModuleRegistry& registry);
 
 }  // namespace ember::bootstrap

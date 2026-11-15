@@ -18,4 +18,7 @@ namespace ember::contracts::input {
 /** 没有开机，或主机没有这个手柄口。 */
 inline constexpr std::string_view ERROR_INVALID_PORT = "input.invalidPort";
 
+/** 手柄绑定不合格：槽位数不对、同一个键或同一个物理键绑定了多次等。 */
+inline constexpr std::string_view ERROR_INVALID_BINDINGS = "input.invalidBindings";
+
 }  // namespace ember::contracts::input

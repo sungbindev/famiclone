@@ -30,7 +30,25 @@ hw::MouseKind mouseKindOf(const std::string& name) {
 
 }  // namespace
 
-void addInputRequests(platform::RequestRouter& router, std::shared_ptr<contract::InputService> service) {
+void addInputRequests(platform::RequestRouter& router, std::shared_ptr<contract::InputService> service, std::shared_ptr<contract::InputBindingService> bindings) {
+  router.add("input", contract::INPUT_GET_BINDINGS_REQUEST, [bindings](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInputGetBindingsParams(params, "params"));
+    contract::InputGetBindingsResult result;
+    result.slots = *bindings->bindings();
+    return nlohmann::json(result);
+  });
+  router.add("input", contract::INPUT_SET_BINDINGS_REQUEST, [bindings](const nlohmann::json& params, const platform::CancellationToken&) {
+    auto parsed = contract::parseInputSetBindingsParams(params, "params");
+    contract::InputSetBindingsResult result;
+    result.slots = *bindings->set(std::move(parsed.slots));
+    return nlohmann::json(result);
+  });
+  router.add("input", contract::INPUT_RESET_BINDINGS_REQUEST, [bindings](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInputResetBindingsParams(params, "params"));
+    contract::InputResetBindingsResult result;
+    result.slots = *bindings->reset();
+    return nlohmann::json(result);
+  });
   router.add("input", contract::INPUT_KEY_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInputKeyParams(params, "params");
     service->key(parsed.code, parsed.down);
@@ -53,6 +71,7 @@ void addInputRequests(platform::RequestRouter& router, std::shared_ptr<contract:
     const auto parsed = contract::parseInputGamepadParams(params, "params");
     hw::GamepadInput event;
     event.index = static_cast<std::uint8_t>(parsed.index);
+    event.id = parsed.id.value_or(std::string());
     event.connected = parsed.connected;
     if (parsed.connected) {
       event.buttons = parsed.buttons.value_or(std::vector<bool>{});

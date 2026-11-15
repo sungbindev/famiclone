@@ -85,6 +85,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   contracts::runtime::RuntimeState bootMachine(contracts::runtime::MachineBoot boot) override;
   bool useMachine(const std::function<void(contracts::hardware::Machine&)>& action) override;
   void sendInput(contracts::hardware::InputEvent event) override;
+  void setInputHook(std::shared_ptr<contracts::runtime::InputHook> hook) override;
   void setFrameEventInterval(std::uint32_t frames) override;
   std::shared_future<contracts::runtime::RunOutcome> startRun(std::int64_t frames) override;
   void cancelRun() override;
@@ -152,6 +153,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
 
   // 以下只由模拟线程访问：硬件状态的唯一拥有者。卡带先于主机销毁。
   std::unique_ptr<contracts::hardware::Machine> machine_;
+  /** 输入钩子；只在模拟线程访问。 */
+  std::shared_ptr<contracts::runtime::InputHook> inputHook_;
   std::unique_ptr<contracts::mappers::MapperCartridge> cartridge_;
   std::optional<contracts::runtime::CartridgeSummary> summary_;
   std::string host_;

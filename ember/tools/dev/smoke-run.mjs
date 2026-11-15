@@ -288,7 +288,7 @@ async function main() {
   check('渲染 Worker 收到的画面非空（有非黑像素）', picture0.lastFrameNonBlackRatio > 0.001, `非黑像素 ${(picture0.lastFrameNonBlackRatio * 100).toFixed(1)}%`);
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu.png'));
 
-  // 输入：画面区获得焦点后按 Enter，nrom 的脚本把它设为手柄 1 的开始键；选单画面是静态的，按下后运行测试，画面改变。
+  // 输入：画面区获得焦点后按 Enter，核心按手柄绑定（默认回车为玩家 1 的开始键）把它变成手柄 1 的开始键；选单画面是静态的，按下后运行测试，画面改变。
   const stable0 = (await page.evaluate(readDiagnostics())).lastFrameHash;
   await sleep(400);
   const stable1 = (await page.evaluate(readDiagnostics())).lastFrameHash;

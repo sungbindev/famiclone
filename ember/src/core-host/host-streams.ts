@@ -23,6 +23,8 @@ const MAX_MOUSE_BUTTONS = 7;
 const MAX_GAMEPAD_INDEX = 15;
 const MAX_GAMEPAD_BUTTONS = 32;
 const MAX_GAMEPAD_AXES = 16;
+/** 手柄设备标识的最大长度。 */
+const MAX_GAMEPAD_ID_LENGTH = 256;
 
 /** 鼠标事件的全部种类。 */
 const MOUSE_KINDS: ReadonlySet<string> = new Set<MouseKind>(['move', 'down', 'up', 'wheel', 'leave']);
@@ -69,11 +71,12 @@ export function parseInputMessage(value: unknown): InputMessage | undefined {
       return { type: 'mouse', kind: kind as MouseKind, x, y, dx, dy, buttons, wheel };
     }
     case 'gamepad': {
-      const { index, connected, buttons, axes } = fields;
+      const { index, id, connected, buttons, axes } = fields;
       if (!isIntegerUpTo(index, MAX_GAMEPAD_INDEX) || typeof connected !== 'boolean') return undefined;
+      if (typeof id !== 'string' || id.length > MAX_GAMEPAD_ID_LENGTH) return undefined;
       if (!Array.isArray(buttons) || buttons.length > MAX_GAMEPAD_BUTTONS || !buttons.every((item) => typeof item === 'boolean')) return undefined;
       if (!Array.isArray(axes) || axes.length > MAX_GAMEPAD_AXES || !axes.every((item) => isBoundedNumber(item, 1))) return undefined;
-      return { type: 'gamepad', index, connected, buttons: buttons as boolean[], axes: axes as number[] };
+      return { type: 'gamepad', index, id, connected, buttons: buttons as boolean[], axes: axes as number[] };
     }
     default:
       return undefined;

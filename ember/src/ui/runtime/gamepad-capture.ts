@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：纯逻辑，不读取浏览器接口，由画面组件定时把 navigator.getGamepads() 的结果交进来。按键与轴的顺序同浏览器的标准映射；
- *       轴的值取两位小数，微小的抖动不产生消息。界面不解释这些事件，由卡带的 mapper 脚本决定怎么用。
+ *       轴的值取两位小数，微小的抖动不产生消息。每条消息带设备标识（Gamepad.id），界面不解释这些事件，由核心按手柄绑定变成手柄口的按键。
  * ------------------------------------------------------------------------
  */
 
@@ -19,9 +19,13 @@ const MAX_AXES = 16;
 /** 轴的值保留的小数位。 */
 const AXIS_SCALE = 100;
 
+/** 设备标识上报的长度上限，与核心宿主的校验一致；超出的部分截掉。 */
+const MAX_ID_LENGTH = 256;
+
 /** 采集所需的手柄信息（浏览器的 Gamepad 满足）。 */
 export interface GamepadLike {
   readonly index: number;
+  readonly id: string;
   readonly connected: boolean;
   readonly buttons: ReadonlyArray<{ readonly pressed: boolean }>;
   readonly axes: readonly number[];
@@ -31,6 +35,8 @@ export interface GamepadLike {
 export class GamepadCapture {
   /** 每个手柄上一次上报的内容（序列化成文字，便于比较）。 */
   private readonly reported = new Map<number, string>();
+  /** 每个手柄上一次上报的设备标识：断开时要带上。 */
+  private readonly ids = new Map<number, string>();
 
   /** @param send 手柄状态变化时调用。 */
   constructor(private readonly send: (message: GamepadInputMessage) => void) {}
@@ -48,6 +54,7 @@ export class GamepadCapture {
       this.report({
         type: 'gamepad',
         index: pad.index,
+        id: pad.id.slice(0, MAX_ID_LENGTH),
         connected: pad.connected,
         buttons: pad.buttons.slice(0, MAX_BUTTONS).map((button) => button.pressed),
         axes: pad.axes.slice(0, MAX_AXES).map((value) => Math.round(Math.max(-1, Math.min(1, value)) * AXIS_SCALE) / AXIS_SCALE)
@@ -64,8 +71,9 @@ export class GamepadCapture {
   }
 
   private disconnect(index: number): void {
-    this.report({ type: 'gamepad', index, connected: false, buttons: [], axes: [] });
+    this.report({ type: 'gamepad', index, id: this.ids.get(index) ?? '', connected: false, buttons: [], axes: [] });
     this.reported.delete(index);
+    this.ids.delete(index);
   }
 
   /** 与上一次不同才发送。 */
@@ -73,6 +81,7 @@ export class GamepadCapture {
     const text = JSON.stringify(message);
     if (this.reported.get(message.index) === text) return;
     this.reported.set(message.index, text);
+    this.ids.set(message.index, message.id);
     this.send(message);
   }
 }

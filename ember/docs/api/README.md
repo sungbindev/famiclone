@@ -42,11 +42,16 @@
 
 | 请求 | 简介 |
 | --- | --- |
-| `input.key` | 按下或松开一个物理键，交给卡带的 mapper 脚本 |
-| `input.mouse` | 鼠标事件，交给卡带的 mapper 脚本 |
-| `input.gamepad` | 游戏手柄一个手柄的当前全部状态，交给卡带的 mapper 脚本 |
+| `input.getBindings` | 读取手柄绑定：两个玩家槽位（对应手柄口 1、2） |
+| `input.setBindings` | 替换全部手柄绑定：核心校验后保存到文件，并发出 input.bindingsChanged |
+| `input.resetBindings` | 把手柄绑定恢复为出厂默认 |
+| `input.key` | 按下或松开一个物理键：键盘属于机器时交给机器，否则按手柄绑定变成手柄口的按键 |
+| `input.mouse` | 鼠标事件，交给机器 |
+| `input.gamepad` | 游戏手柄一个手柄的当前全部状态，按手柄绑定变成手柄口的按键 |
 | `input.pad` | 直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本 |
 | `input.releaseAll` | 松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开 |
+
+事件：`input.bindingsChanged`
 
 ### [inspector](inspector.md)
 

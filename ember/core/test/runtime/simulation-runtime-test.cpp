@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：simulation-runtime-test.cpp
- * 说明：运行服务的测试：模拟线程连续运行与帧输出、电源与复位、暂停与继续、运行中换卡带、失败时保持原状、脚本出错暂停、按键输入、帧节拍、声音输出、停止时线程干净退出。
+ * 说明：运行服务的测试：模拟线程连续运行与帧输出、电源与复位、暂停与继续、运行中换卡带、失败时保持原状、脚本出错暂停、按键输入（经输入钩子）、帧节拍、声音输出、停止时线程干净退出。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -16,9 +16,12 @@
 #include <future>
 #include <memory>
 #include <thread>
+#include <variant>
 
 #include "../support/runtime-test-support.hpp"
 #include "bootstrap/machines/machine-catalog.hpp"
+#include "contracts/hardware/button-input.hpp"
+#include "contracts/runtime/input-hook.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
 #include "platform/audio/null-audio-output.hpp"
@@ -106,6 +109,22 @@ std::string errorCodeOf(Function&& call) {
 
 /** 键盘输入事件。 */
 hw::KeyInput key(const char* code, bool down) { return hw::KeyInput{code, down}; }
+
+/** 把小键盘 2 当作手柄 1 的 A 键的输入钩子，代替 input 模块挂到运行服务上的真钩子；记录被通知的次数。 */
+class NumpadHook final : public rt::InputHook {
+ public:
+  bool handle(const hw::InputEvent& event, hw::Machine& machine) override {
+    const auto* keyEvent = std::get_if<hw::KeyInput>(&event);
+    if (keyEvent == nullptr || keyEvent->code != "Numpad2") return false;
+    machine.setButtons(0, keyEvent->down ? hw::pad_button::A : 0);
+    return true;
+  }
+  void frameCompleted(hw::Machine&) override { ++frames; }
+  void machineChanged() override { ++changes; }
+
+  std::atomic<int> frames{0};
+  std::atomic<int> changes{0};
+};
 
 TEST(SimulationRuntime, StartsPoweredOffWithoutACartridge) {
   Rig rig;
@@ -380,18 +399,22 @@ std::vector<std::uint8_t> padProbeProgram() {
   return program;
 }
 
-TEST(SimulationRuntime, InputReachesTheControllerThroughTheCartridgeScript) {
+TEST(SimulationRuntime, InputReachesTheControllerThroughTheInputHook) {
   Rig rig;
+  const auto hook = std::make_shared<NumpadHook>();
+  rig.runtime->setInputHook(hook);
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
   ASSERT_TRUE(rig.waitFrames(3));
   const auto released = rig.frames->dominantPixel();
+  EXPECT_GE(hook->changes.load(), 1) << "装入卡带时通知钩子换了主机";
+  EXPECT_GE(hook->frames.load(), 3) << "每完成一帧通知钩子";
 
-  rig.runtime->sendInput(key("Numpad2", true));  // nrom 的脚本把小键盘 2 设为手柄 1 的 A
+  rig.runtime->sendInput(key("Numpad2", true));  // 钩子把小键盘 2 设为手柄 1 的 A
   ASSERT_TRUE(rig.waitFrames(3));
   const auto pressed = rig.frames->dominantPixel();
   EXPECT_NE(pressed, released);
 
-  rig.runtime->sendInput(key("KeyQ", true));  // 脚本没有设置的键不影响手柄
+  rig.runtime->sendInput(key("KeyQ", true));  // 钩子不处理的键交给主机，不影响手柄
   ASSERT_TRUE(rig.waitFrames(3));
   EXPECT_EQ(rig.frames->dominantPixel(), pressed);
 
@@ -400,8 +423,19 @@ TEST(SimulationRuntime, InputReachesTheControllerThroughTheCartridgeScript) {
   EXPECT_EQ(rig.frames->dominantPixel(), released);
 }
 
+TEST(SimulationRuntime, KeysDoNotReachTheControllerWithoutAnInputHook) {
+  Rig rig;
+  rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
+  ASSERT_TRUE(rig.waitFrames(3));
+  const auto released = rig.frames->dominantPixel();
+  rig.runtime->sendInput(key("Numpad2", true));  // 手柄的按键全由输入钩子产生，卡带脚本不再设定键位
+  ASSERT_TRUE(rig.waitFrames(3));
+  EXPECT_EQ(rig.frames->dominantPixel(), released);
+}
+
 TEST(SimulationRuntime, InputSentBeforeTheMachineExistsIsDropped) {
   Rig rig;
+  rig.runtime->setInputHook(std::make_shared<NumpadHook>());
   rig.runtime->sendInput(key("Numpad2", true));
   rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(padProbeProgram())));
   ASSERT_TRUE(rig.waitFrames(3));

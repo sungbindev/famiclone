@@ -258,15 +258,11 @@ TEST(Sb2000Machine, DebuggerExposesTheBoardMemorySpaces) {
   EXPECT_EQ(target.offset, 0x4000U);
 }
 
-TEST(Sb2000Machine, GamepadEventsDriveThePadPorts) {
+TEST(Sb2000Machine, TheKeyboardBelongsToTheMachineAndThePadPortsAreSetDirectly) {
   Sb2000Machine machine(syntheticBios());
   EXPECT_EQ(machine.padPortCount(), 2U);
-  hw::GamepadInput gamepad;
-  gamepad.index = 1;
-  gamepad.connected = true;
-  gamepad.buttons.assign(16, false);
-  gamepad.buttons[9] = true;
-  EXPECT_NO_THROW(machine.input(gamepad));
+  EXPECT_TRUE(machine.keyboardIsMachineInput()) << "6576 模式下键盘属于机器";
+  EXPECT_NO_THROW(machine.setButtons(1, hw::pad_button::START));
   EXPECT_THROW(machine.setButtons(2, 0), ember::shared::CoreError);
 }
 

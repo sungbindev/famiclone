@@ -47,7 +47,7 @@ class FakePort implements HostPort {
 
 describe('parseInputMessage', () => {
   const mouse = { type: 'mouse', kind: 'move', x: 10.5, y: -3, dx: 1, dy: 0, buttons: 5, wheel: 0 };
-  const gamepad = { type: 'gamepad', index: 1, connected: true, buttons: [true, false], axes: [0.5, -1] };
+  const gamepad = { type: 'gamepad', index: 1, id: 'Test Pad', connected: true, buttons: [true, false], axes: [0.5, -1] };
 
   it('接受合格的键盘、鼠标、游戏手柄消息', () => {
     expect(parseInputMessage({ type: 'key', code: 'KeyW', down: true })).toEqual({ type: 'key', code: 'KeyW', down: true });
@@ -83,6 +83,9 @@ describe('parseInputMessage', () => {
       { ...mouse, wheel: undefined },
       { ...gamepad, index: 16 },
       { ...gamepad, index: -1 },
+      { ...gamepad, id: 1 },
+      { ...gamepad, id: 'x'.repeat(257) },
+      { type: 'gamepad', index: 1, connected: true, buttons: [], axes: [] },
       { ...gamepad, connected: 1 },
       { ...gamepad, buttons: 'x' },
       { ...gamepad, buttons: [1] },

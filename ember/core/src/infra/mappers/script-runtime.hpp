@@ -98,7 +98,7 @@ class ScriptBindings {
 class ScriptRuntime {
  public:
   /**
-   * 创建运行时并加载脚本（ES 模块，默认导出一个对象，对象上可以有 reset、read、write、onKey、onMouse、onGamepad 几个函数）。
+   * 创建运行时并加载脚本（ES 模块，默认导出一个对象，对象上可以有 reset、read、write、onKey、onMouse 几个函数）。
    * @param pluginId 插件标识，出现在错误说明里。
    * @param source main.js 的内容。
    * @param layout ctx 里可见的窗口、存储区与状态。
@@ -122,8 +122,6 @@ class ScriptRuntime {
   [[nodiscard]] bool hasKey() const noexcept;
   /** 脚本是否导出了 onMouse。 */
   [[nodiscard]] bool hasMouse() const noexcept;
-  /** 脚本是否导出了 onGamepad。 */
-  [[nodiscard]] bool hasGamepad() const noexcept;
 
   /** 调用 reset(ctx, 'power' 或 'soft')；脚本没有 reset 时什么也不做。 */
   void reset(bool power);
@@ -143,9 +141,6 @@ class ScriptRuntime {
 
   /** 调用 onMouse(ctx, {kind, x, y, dx, dy, buttons, wheel})；脚本没有 onMouse 时什么也不做。错误同 read。 */
   void mouse(const contracts::hardware::MouseInput& input);
-
-  /** 调用 onGamepad(ctx, {index, connected, buttons, axes})；脚本没有 onGamepad 时什么也不做。错误同 read。 */
-  void gamepad(const contracts::hardware::GamepadInput& input);
 
  private:
   struct Impl;

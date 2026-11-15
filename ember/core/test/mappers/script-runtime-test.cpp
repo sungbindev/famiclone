@@ -126,13 +126,12 @@ TEST(ScriptRuntime, FunctionsTheScriptDoesNotExportAreSkipped) {
   FakeBindings bindings;
   ScriptRuntime runtime("demo", "export default {};", layout(), bindings);
   EXPECT_FALSE(runtime.hasReset() || runtime.hasRead() || runtime.hasWrite());
-  EXPECT_FALSE(runtime.hasKey() || runtime.hasMouse() || runtime.hasGamepad());
+  EXPECT_FALSE(runtime.hasKey() || runtime.hasMouse());
   runtime.reset(true);
   EXPECT_FALSE(runtime.read(false, 0).has_value());
   runtime.write(false, 0, 0);
   runtime.key(ember::contracts::hardware::KeyInput{"KeyA", true});
   runtime.mouse(ember::contracts::hardware::MouseInput{});
-  runtime.gamepad(ember::contracts::hardware::GamepadInput{});
 }
 
 TEST(ScriptRuntime, InputCallbacksGetTheEventAndCanUseTheKeysAndPadObjects) {
@@ -144,11 +143,10 @@ TEST(ScriptRuntime, InputCallbacksGetTheEventAndCanUseTheKeysAndPadObjects) {
         else ctx.pad(0).set('a', event.down);
         if (event.code === 'KeyR') ctx.pad(0).release();
       },
-      onMouse(ctx, event) { ctx.log.warn(event.kind + ' ' + event.x + ' ' + event.buttons); },
-      onGamepad(ctx, event) { ctx.log.warn(event.index + ' ' + event.connected + ' ' + event.buttons.length + ' ' + event.axes[0]); }
+      onMouse(ctx, event) { ctx.log.warn(event.kind + ' ' + event.x + ' ' + event.buttons); }
     };)",
                        layout(), bindings);
-  EXPECT_TRUE(runtime.hasKey() && runtime.hasMouse() && runtime.hasGamepad());
+  EXPECT_TRUE(runtime.hasKey() && runtime.hasMouse());
   runtime.key(ember::contracts::hardware::KeyInput{"KeyA", true});
   bindings.held.insert("ShiftLeft");
   runtime.key(ember::contracts::hardware::KeyInput{"KeyA", false});
@@ -158,14 +156,8 @@ TEST(ScriptRuntime, InputCallbacksGetTheEventAndCanUseTheKeysAndPadObjects) {
   mouse.x = 12;
   mouse.buttons = 1;
   runtime.mouse(mouse);
-  ember::contracts::hardware::GamepadInput pad;
-  pad.index = 2;
-  pad.connected = true;
-  pad.buttons = {true, false, true};
-  pad.axes = {0.25};
-  runtime.gamepad(pad);
   EXPECT_EQ(bindings.calls, (std::vector<std::string>{"pad0 a down", "pad1 start up", "pad1 start down", "pad0 release"}));
-  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"down 12 1", "2 true 3 0.25"}));
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"down 12 1"}));
 }
 
 TEST(ScriptRuntime, PadAndKeyArgumentsAreChecked) {

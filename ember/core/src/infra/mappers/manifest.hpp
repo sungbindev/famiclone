@@ -6,6 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：字段与规则见 docs/03-mapper插件规范.md 第 4 节；不认识的字段、缺字段、越界、窗口重叠等都拒绝，错误码为 mappers.invalidPackage，说明指出出错的字段。
+ *       寄存器的读写可以是“回调脚本”（true），也可以是由宿主直接执行的声明（固定值、状态、窗口的 bank、查表）；磁带的比较器与边沿计时也可以声明。
  *       设置项本阶段只解析与检查，运行时的行为属于后续阶段。
  * ------------------------------------------------------------------------
  */
@@ -25,6 +26,9 @@ namespace ember::infra::mappers {
 
 /** 插件接口版本，当前为 1。 */
 inline constexpr std::uint32_t SUPPORTED_API_VERSION = 1;
+
+/** 一张查表的索引最多由几个来源拼成。 */
+inline constexpr std::size_t MAX_INDEX_SOURCES = 8;
 
 /** 版本号：主.次.修订。 */
 struct Version {
@@ -97,19 +101,93 @@ struct WindowDecl {
 /** 名称表的初始连法。 */
 enum class NametableMode { Header, Horizontal, Vertical, Single0, Single1, Four };
 
-/** 寄存器范围声明：落在范围内的读写回调脚本。 */
+/** 读寄存器的处理方式：回调脚本，或由宿主直接回答。 */
+enum class ReadKind { None, Script, Value, Open, State };
+
+/** 读寄存器的声明：Value 驱动固定值，Open 不驱动总线，State 驱动状态的低 8 位；releaseIrq 为真时读完撤销 IRQ。 */
+struct ReadAction {
+  ReadKind kind{ReadKind::None};
+  std::uint8_t value{0};
+  std::string state;
+  bool releaseIrq{false};
+};
+
+/** 把写入的数据取出若干位送给窗口当 bank 号：(数据 >> shift) & mask。 */
+struct BankSetter {
+  std::string window;
+  std::uint32_t shift{0};
+  std::uint32_t mask{0xFF};
+};
+
+/** 写寄存器的声明：回调脚本，或由宿主直接执行；宿主执行时依次做 state、banks、update。 */
+struct WriteAction {
+  bool script{false};
+  /** 非空时把写入的数据存进这个状态。 */
+  std::string state;
+  std::vector<BankSetter> banks;
+  /** 非空时按这张表的索引查表，结果存进 updateInto 状态。 */
+  std::string updateTable;
+  std::string updateInto;
+};
+
+/** 寄存器范围声明：落在范围内的读写由脚本或宿主处理。read、write 表示这个方向有处理（脚本或宿主）。 */
 struct RegisterDecl {
   bool ppu{false};
   AddressRange range;
   bool read{false};
   bool write{false};
+  ReadAction readAction;
+  WriteAction writeAction;
 };
 
-/** 脚本状态声明。 */
+/** 脚本状态声明。initial 写出时，每次复位（含软复位）回到这个值；没写的只在上电时清零。 */
 struct StateDecl {
   std::string name;
   std::uint32_t bits{0};
   std::string description;
+  std::optional<std::uint32_t> initial;
+};
+
+/** 查表索引的一个来源：状态、访问地址的若干位、写入数据的若干位、磁带数据线的电平。 */
+enum class IndexFrom { State, Address, Data, Tape };
+
+struct IndexSource {
+  IndexFrom from{IndexFrom::State};
+  std::string state;
+  std::uint32_t shift{0};
+  /** 占的位数；状态来源由清单检查时取状态的位宽。 */
+  std::uint32_t bits{0};
+};
+
+/** 查表声明：索引由各来源按顺序拼成（第一个来源在高位），表项由脚本导出的 tables.<id> 计算，宿主按索引缓存。 */
+struct TableDecl {
+  std::string id;
+  std::vector<IndexSource> index;
+  std::uint32_t indexBits{0};
+  /** 表项的位宽，结果按它截断。 */
+  std::uint32_t bits{0};
+};
+
+/** 磁带数据线的比较器。 */
+struct TapeComparatorDecl {
+  std::int32_t low{0};
+  std::int32_t high{0};
+  bool invert{false};
+};
+
+/** 磁带边沿计时：每次翻转把采样数累加进 samples，下降沿时把它按 分子/分母 折成计时加进 ticks、清零 samples，irq 为真时拉低 IRQ。 */
+struct TapeTimerDecl {
+  std::string samples;
+  std::string ticks;
+  std::uint32_t scaleNumerator{1};
+  std::uint32_t scaleDenominator{1};
+  bool irq{false};
+};
+
+/** 磁带声明。 */
+struct TapeDecl {
+  std::optional<TapeComparatorDecl> comparator;
+  std::optional<TapeTimerDecl> timer;
 };
 
 /** 设置项种类。 */
@@ -152,12 +230,16 @@ struct Manifest {
   NametableMode nametable{NametableMode::Header};
   std::vector<RegisterDecl> registers;
   std::vector<StateDecl> state;
+  std::vector<TableDecl> tables;
+  std::optional<TapeDecl> tape;
   std::vector<SettingDecl> settings;
 
-  /** 声明了读寄存器。 */
+  /** 有读寄存器要回调脚本。 */
   [[nodiscard]] bool needsReadHandler() const noexcept;
-  /** 声明了写寄存器。 */
+  /** 有写寄存器要回调脚本。 */
   [[nodiscard]] bool needsWriteHandler() const noexcept;
+  /** 声明了查表（表项由脚本计算）。 */
+  [[nodiscard]] bool needsTables() const noexcept { return !tables.empty(); }
 };
 
 /**

@@ -335,16 +335,134 @@ TEST(ManifestErrors, RejectsBadStorageDeclarations) {
   expectInvalid(manifest, "fallback.size 缺少");
 }
 
+TEST(Manifest, ParsesDeclaredRegistersTablesStateInitialsAndTape) {
+  json manifest = base();
+  manifest["registers"] = json::parse(R"([
+    { "bus": "cpu", "range": "$8000-$9FFF", "read": { "value": 7 }, "write": { "state": "pal", "bank": [{ "window": "prg-low", "shift": 2, "mask": 3 }], "update": { "table": "pal", "into": "pal" } } },
+    { "bus": "cpu", "range": "$A000-$A7FF", "read": { "state": "pal", "releaseIrq": true } },
+    { "bus": "cpu", "range": "$A800-$AFFF", "read": { "open": true } },
+    { "bus": "cpu", "range": "$B000-$B7FF", "read": true }
+  ])");
+  manifest["state"] = json::parse(R"([{ "name": "pal", "bits": 8, "initial": 255, "description": "x" }, { "name": "ticks", "bits": 8, "description": "y" }, { "name": "samples", "bits": 32, "description": "z" }])");
+  manifest["tables"] = json::parse(R"([{ "id": "pal", "index": [{ "from": "state", "name": "pal" }, { "from": "address", "shift": 1, "bits": 2 }, { "from": "data", "shift": 0, "bits": 4 }, { "from": "tape" }], "bits": 8 }])");
+  manifest["tape"] = json::parse(R"({ "comparator": { "low": -1000, "high": -999, "invert": true }, "timer": { "samples": "samples", "ticks": "ticks", "scale": [1764, 960], "irq": true } })");
+  const Manifest parsed = parseManifest(manifest.dump());
+  ASSERT_EQ(parsed.registers.size(), 4U);
+  EXPECT_EQ(parsed.registers[0].readAction.kind, ReadKind::Value);
+  EXPECT_EQ(parsed.registers[0].readAction.value, 7);
+  EXPECT_FALSE(parsed.registers[0].writeAction.script);
+  EXPECT_EQ(parsed.registers[0].writeAction.state, "pal");
+  ASSERT_EQ(parsed.registers[0].writeAction.banks.size(), 1U);
+  EXPECT_EQ(parsed.registers[0].writeAction.banks[0].shift, 2U);
+  EXPECT_EQ(parsed.registers[0].writeAction.banks[0].mask, 3U);
+  EXPECT_EQ(parsed.registers[0].writeAction.updateTable, "pal");
+  EXPECT_TRUE(parsed.registers[0].read && parsed.registers[0].write);
+  EXPECT_EQ(parsed.registers[1].readAction.kind, ReadKind::State);
+  EXPECT_TRUE(parsed.registers[1].readAction.releaseIrq);
+  EXPECT_FALSE(parsed.registers[1].write);
+  EXPECT_EQ(parsed.registers[2].readAction.kind, ReadKind::Open);
+  EXPECT_EQ(parsed.registers[3].readAction.kind, ReadKind::Script);
+  EXPECT_TRUE(parsed.needsReadHandler());
+  EXPECT_FALSE(parsed.needsWriteHandler());
+  EXPECT_EQ(parsed.state[0].initial, 255U);
+  EXPECT_FALSE(parsed.state[1].initial.has_value());
+  ASSERT_EQ(parsed.tables.size(), 1U);
+  EXPECT_TRUE(parsed.needsTables());
+  EXPECT_EQ(parsed.tables[0].indexBits, 15U);  // 状态 8 + 地址 2 + 数据 4 + 磁带 1
+  EXPECT_EQ(parsed.tables[0].bits, 8U);
+  EXPECT_EQ(parsed.tables[0].index[0].bits, 8U);
+  ASSERT_TRUE(parsed.tape.has_value());
+  EXPECT_EQ(parsed.tape->comparator->low, -1000);
+  EXPECT_TRUE(parsed.tape->comparator->invert);
+  EXPECT_EQ(parsed.tape->timer->samples, "samples");
+  EXPECT_EQ(parsed.tape->timer->scaleNumerator, 1764U);
+  EXPECT_EQ(parsed.tape->timer->scaleDenominator, 960U);
+  EXPECT_TRUE(parsed.tape->timer->irq);
+}
+
+TEST(Manifest, OnlyScriptRegistersNeedAScript) {
+  json manifest = base();
+  manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$8000-$FFFF", "write": { "bank": [{ "window": "prg-low" }] } }])");
+  const Manifest parsed = parseManifest(manifest.dump());
+  EXPECT_TRUE(parsed.registers[0].write);
+  EXPECT_FALSE(parsed.needsReadHandler());
+  EXPECT_FALSE(parsed.needsWriteHandler());
+  EXPECT_FALSE(parsed.needsTables());
+}
+
 TEST(ManifestErrors, RejectsBadRegisterDeclarations) {
   json manifest = base();
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$8000-$FFFF" }])");
-  expectInvalid(manifest, "read 与 write 至少要有一个为 true");
+  expectInvalid(manifest, "read 与 write 至少要有一个有处理");
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$8000-$8FFF", "write": true }, { "bus": "cpu", "range": "$8800-$9FFF", "read": true }])");
   expectInvalid(manifest, "registers 的第 0 项与第 1 项的地址范围重叠");
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$8000-$8FFF", "write": 1 }])");
   expectInvalid(manifest, "registers[0].write");
   // 寄存器范围可以与窗口重叠。
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$8000-$FFFF", "write": true }])");
+  EXPECT_NO_THROW(static_cast<void>(parseManifest(manifest.dump())));
+}
+
+TEST(ManifestErrors, RejectsBadDeclaredReadsAndWrites) {
+  json manifest = base();
+  manifest["state"] = json::parse(R"([{ "name": "a", "bits": 8, "description": "x" }])");
+  const auto registers = [&](const char* text) {
+    manifest["registers"] = json::parse(text);
+    return manifest;
+  };
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": {} }])"), "必须且只能写 value、open、state 之一");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": { "value": 1, "open": true } }])"), "必须且只能写 value、open、state 之一");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": { "value": 256 } }])"), "read.value");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": { "open": false } }])"), "read.open 只能写 true");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": { "state": "nothing" } }])"), "引用了不存在的状态：nothing");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": { "value": 1, "extra": 1 } }])"), "read.extra");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "read": 3 }])"), "registers[0].read 应为 true 或对象");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": {} }])"), "至少要写 state、bank、update 之一");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": { "state": "nothing" } }])"), "write.state 引用了不存在的状态：nothing");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": { "bank": [{ "window": "nothing" }] } }])"), "引用了不存在的窗口：nothing");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": { "bank": [] } }])"), "write.bank 至少 1 项");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": { "bank": [{ "window": "prg-low", "shift": 8 }] } }])"), "bank[0].shift");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": { "bank": [{ "window": "prg-low", "mask": 0 }] } }])"), "bank[0].mask");
+  expectInvalid(registers(R"([{ "bus": "cpu", "range": "$5000", "write": { "update": { "table": "nothing", "into": "a" } } }])"), "引用了不存在的查表：nothing");
+}
+
+TEST(ManifestErrors, RejectsBadTablesAndTape) {
+  json manifest = base();
+  manifest["state"] = json::parse(R"([{ "name": "a", "bits": 8, "description": "x" }, { "name": "b", "bits": 32, "description": "y" }])");
+  const auto tables = [&](const char* text) {
+    manifest["tables"] = json::parse(text);
+    return manifest;
+  };
+  expectInvalid(tables(R"([{ "id": "t", "index": [], "bits": 8 }])"), "tables[0].index 至少 1 项");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "state", "name": "nothing" }], "bits": 8 }])"), "引用了不存在的状态：nothing");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "state", "name": "b" }], "bits": 8 }])"), "最多 16 位");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "data", "shift": 4, "bits": 8 }], "bits": 8 }])"), "shift 加 bits 不能超过 8");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "address", "shift": 1, "bits": 16 }], "bits": 8 }])"), "shift 加 bits 不能超过 16");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "tape", "bits": 1 }], "bits": 8 }])"), "只用于 address 与 data");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "data", "name": "a", "shift": 0, "bits": 1 }], "bits": 8 }])"), "name 只用于 state");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "usb" }], "bits": 8 }])"), "index[0].from");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "tape" }], "bits": 33 }])"), "tables[0].bits");
+  expectInvalid(tables(R"([{ "id": "t", "index": [{ "from": "tape" }], "bits": 8 }, { "id": "t", "index": [{ "from": "tape" }], "bits": 8 }])"), "tables 里的标识重复：t");
+  manifest.erase("tables");
+  const auto tape = [&](const char* text) {
+    manifest["tape"] = json::parse(text);
+    return manifest;
+  };
+  expectInvalid(tape(R"({})"), "至少要写 comparator、timer 之一");
+  expectInvalid(tape(R"({ "comparator": { "low": 5, "high": 5 } })"), "low 必须小于 high");
+  expectInvalid(tape(R"({ "comparator": { "low": -40000, "high": 5 } })"), "comparator.low");
+  expectInvalid(tape(R"({ "timer": { "samples": "a", "ticks": "a", "scale": [1, 1] } })"), "samples 与 ticks 不能是同一个状态");
+  expectInvalid(tape(R"({ "timer": { "samples": "a", "ticks": "nothing", "scale": [1, 1] } })"), "引用了不存在的状态：nothing");
+  expectInvalid(tape(R"({ "timer": { "samples": "a", "ticks": "b", "scale": [1, 0] } })"), "scale[1]");
+  expectInvalid(tape(R"({ "timer": { "samples": "a", "ticks": "b", "scale": [1] } })"), "timer.scale");
+  expectInvalid(tape(R"({ "extra": 1 })"), "tape.extra");
+}
+
+TEST(ManifestErrors, RejectsAStateInitialOutsideItsWidth) {
+  json manifest = base();
+  manifest["state"] = json::parse(R"([{ "name": "a", "bits": 4, "initial": 16, "description": "x" }])");
+  expectInvalid(manifest, "state[0].initial 超出位宽");
+  manifest["state"] = json::parse(R"([{ "name": "a", "bits": 4, "initial": 15, "description": "x" }])");
   EXPECT_NO_THROW(static_cast<void>(parseManifest(manifest.dump())));
 }
 

@@ -47,7 +47,7 @@ struct ScriptRuntime::Impl {
       for (const JSValue value : windowObjects) JS_FreeValue(js, value);
       for (const JSValue value : storageObjects) JS_FreeValue(js, value);
       for (const JSValue value : padObjects) JS_FreeValue(js, value);
-      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
+      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, tablesObject, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
       JS_FreeContext(js);
     }
     if (runtime != nullptr) JS_FreeRuntime(runtime);
@@ -71,6 +71,8 @@ struct ScriptRuntime::Impl {
   JSValue keyFn = JS_UNDEFINED;
   JSValue mouseFn = JS_UNDEFINED;
   JSValue tapeEdgeFn = JS_UNDEFINED;
+  /** 脚本导出的 tables 对象（按查表标识放计算函数）；没有时为 undefined。 */
+  JSValue tablesObject = JS_UNDEFINED;
   /** ctx.device('tape') 返回的对象；主机没有磁带机时为 undefined。 */
   JSValue tapeObject = JS_UNDEFINED;
   JSValue cpuName = JS_UNDEFINED;
@@ -248,6 +250,9 @@ struct ScriptRuntime::Impl {
     keyFn = readHandler("onKey");
     mouseFn = readHandler("onMouse");
     tapeEdgeFn = readHandler("onTapeEdge");
+    tablesObject = JS_GetPropertyStr(js, plugin, "tables");
+    if (JS_IsException(tablesObject)) throw describeFailure("读取导出的 tables", true);
+    if (!JS_IsUndefined(tablesObject) && !JS_IsObject(tablesObject)) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + pluginId + " 导出的 tables 必须是对象");
   }
 
   JSValue readHandler(const char* name) {
@@ -587,6 +592,42 @@ bool ScriptRuntime::hasKey() const noexcept { return !JS_IsUndefined(impl_->keyF
 bool ScriptRuntime::hasMouse() const noexcept { return !JS_IsUndefined(impl_->mouseFn); }
 
 bool ScriptRuntime::hasTapeEdge() const noexcept { return !JS_IsUndefined(impl_->tapeEdgeFn); }
+
+bool ScriptRuntime::hasTable(std::string_view id) const {
+  if (!JS_IsObject(impl_->tablesObject)) return false;
+  const std::string name(id);
+  const JSValue function = JS_GetPropertyStr(impl_->js, impl_->tablesObject, name.c_str());
+  const bool found = JS_IsFunction(impl_->js, function);
+  JS_FreeValue(impl_->js, function);
+  return found;
+}
+
+std::uint32_t ScriptRuntime::table(std::string_view id, std::span<const std::uint32_t> values) {
+  const std::string name(id);
+  const std::string phase = "tables." + name;
+  JSContext* js = impl_->js;
+  const JSValue function = JS_IsObject(impl_->tablesObject) ? JS_GetPropertyStr(js, impl_->tablesObject, name.c_str()) : JS_UNDEFINED;
+  if (!JS_IsFunction(js, function)) {
+    JS_FreeValue(js, function);
+    throw shared::CoreError(mapper_error::ERROR_SCRIPT_ERROR, "插件 " + impl_->pluginId + " 没有导出 tables." + name);
+  }
+  std::vector<JSValue> arguments;
+  arguments.reserve(values.size() + 1);
+  arguments.push_back(impl_->hostObject);
+  for (const std::uint32_t value : values) arguments.push_back(JS_NewUint32(js, value));
+  JS_UpdateStackTop(impl_->runtime);
+  impl_->armDeadline();
+  const JSValue result = JS_Call(js, function, impl_->tablesObject, static_cast<int>(arguments.size()), arguments.data());
+  JS_FreeValue(js, function);
+  if (JS_IsException(result)) throw impl_->describeFailure(phase.c_str(), false);
+  double number = 0;
+  const bool isNumber = JS_IsNumber(result) && JS_ToFloat64(js, &number, result) == 0;
+  JS_FreeValue(js, result);
+  if (!isNumber || number < 0 || number > 4294967295.0 || std::trunc(number) != number) {
+    throw shared::CoreError(mapper_error::ERROR_SCRIPT_ERROR, "插件 " + impl_->pluginId + " 的 tables." + name + " 必须返回 0 到 4294967295 的整数");
+  }
+  return static_cast<std::uint32_t>(number);
+}
 
 void ScriptRuntime::tapeEdge(bool level, std::uint32_t samples) {
   if (!hasTapeEdge()) return;

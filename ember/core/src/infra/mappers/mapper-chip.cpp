@@ -11,6 +11,7 @@
 #include "infra/mappers/mapper-chip.hpp"
 
 #include <algorithm>
+#include <span>
 #include <utility>
 
 #include <nlohmann/json.hpp>
@@ -110,9 +111,11 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
     std::vector<Slot>& slots = decl.ppu ? ppuSlots_ : cpuSlots_;
     for (std::uint32_t address = decl.range.first; address <= decl.range.last; ++address) slots[address].window = static_cast<std::int16_t>(index);
   }
-  for (const RegisterDecl& decl : manifest.registers) {
+  for (std::size_t index = 0; index < manifest.registers.size(); ++index) {
+    const RegisterDecl& decl = manifest.registers[index];
     std::vector<Slot>& slots = decl.ppu ? ppuSlots_ : cpuSlots_;
     for (std::uint32_t address = decl.range.first; address <= decl.range.last; ++address) {
+      slots[address].reg = static_cast<std::int16_t>(index);
       slots[address].readRegister = decl.read;
       slots[address].writeRegister = decl.write;
     }
@@ -128,19 +131,61 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
   nametable_ = initialNametable_;
   for (Window& window : windows_) applyInitial(window);
 
-  // 脚本：清单声明了寄存器回调就必须有脚本并导出对应的函数。
-  const bool needsScript = !manifest.registers.empty();
+  // 清单声明的寄存器、查表与磁带计时：把状态名、窗口标识、表标识解析成下标，访问时不再查名字。
+  const auto stateIndex = [&](const std::string& name) {
+    return static_cast<std::size_t>(std::find_if(manifest.state.begin(), manifest.state.end(), [&](const StateDecl& item) { return item.name == name; }) - manifest.state.begin());
+  };
+  const auto windowIndex = [&](const std::string& id) {
+    return static_cast<std::size_t>(std::find_if(manifest.windows.begin(), manifest.windows.end(), [&](const WindowDecl& item) { return item.id == id; }) - manifest.windows.begin());
+  };
+  const auto tableIndex = [&](const std::string& id) {
+    return static_cast<std::size_t>(std::find_if(manifest.tables.begin(), manifest.tables.end(), [&](const TableDecl& item) { return item.id == id; }) - manifest.tables.begin());
+  };
+  for (const TableDecl& decl : manifest.tables) {
+    Table table;
+    table.id = decl.id;
+    for (const IndexSource& source : decl.index) table.sources.push_back(TableSource{source.from, source.from == IndexFrom::State ? stateIndex(source.state) : 0, source.shift, source.bits});
+    table.valueMask = decl.bits >= 32 ? 0xFFFFFFFFU : (std::uint32_t{1} << decl.bits) - 1U;
+    table.values.assign(std::size_t{1} << decl.indexBits, 0);
+    table.known.assign(std::size_t{1} << decl.indexBits, 0);
+    tables_.push_back(std::move(table));
+  }
+  for (const RegisterDecl& decl : manifest.registers) {
+    ResolvedRegister resolved;
+    resolved.readKind = decl.readAction.kind;
+    resolved.readValue = decl.readAction.value;
+    if (decl.readAction.kind == ReadKind::State) resolved.readState = stateIndex(decl.readAction.state);
+    resolved.releaseIrq = decl.readAction.releaseIrq;
+    resolved.writeScript = decl.writeAction.script;
+    if (!decl.writeAction.state.empty()) resolved.writeState = stateIndex(decl.writeAction.state);
+    for (const BankSetter& setter : decl.writeAction.banks) resolved.banks.push_back(ResolvedRegister::Bank{windowIndex(setter.window), setter.shift, setter.mask});
+    if (!decl.writeAction.updateTable.empty()) {
+      resolved.table = tableIndex(decl.writeAction.updateTable);
+      resolved.into = stateIndex(decl.writeAction.updateInto);
+    }
+    registers_.push_back(std::move(resolved));
+  }
+  if (manifest.tape && manifest.tape->timer) {
+    timerSamples_ = stateIndex(manifest.tape->timer->samples);
+    timerTicks_ = stateIndex(manifest.tape->timer->ticks);
+  }
+
+  // 脚本：清单里有要回调脚本的寄存器或要脚本计算的查表时必须有脚本并导出对应的函数；只有声明式寄存器的卡带可以没有脚本。
+  const bool needsScript = manifest.needsReadHandler() || manifest.needsWriteHandler() || manifest.needsTables();
   if (!plugin_->script.empty() || needsScript) {
-    if (plugin_->script.empty()) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了寄存器，但包里没有 main.js");
+    if (plugin_->script.empty()) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了要回调脚本的寄存器或查表，但包里没有 main.js");
     ScriptBindings& bindings = *this;
     script_ = std::make_unique<ScriptRuntime>(manifest.id, plugin_->script, std::move(layout), bindings, limits);
     if (manifest.needsReadHandler() && !script_->hasRead()) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了读寄存器，但 main.js 没有导出 read");
     if (manifest.needsWriteHandler() && !script_->hasWrite()) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了写寄存器，但 main.js 没有导出 write");
-    // 磁带数据线的翻转在翻转的时刻通知脚本；主机没有磁带机时不挂（脚本的 onTapeEdge 不会被调用）。
-    if (tape_ != nullptr && script_->hasTapeEdge()) {
-      tapeListening_ = true;
-      tape_->setEdgeListener([this](bool level, std::uint32_t samples) { runScript([&] { script_->tapeEdge(level, samples); }); });
+    for (const Table& table : tables_) {
+      if (!script_->hasTable(table.id)) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了查表 " + table.id + "，但 main.js 没有导出 tables." + table.id);
     }
+  }
+  // 磁带数据线的翻转在翻转的时刻通知卡带（清单声明的边沿计时与脚本的 onTapeEdge）；主机没有磁带机时不挂。
+  if (tape_ != nullptr && (timerSamples_.has_value() || (script_ != nullptr && script_->hasTapeEdge()))) {
+    tapeListening_ = true;
+    tape_->setEdgeListener([this](bool level, std::uint32_t samples) { onTapeEdge(level, samples); });
   }
 }
 
@@ -181,7 +226,21 @@ hw::CiramControl MapperChip::ciramControl(std::uint16_t ppuAddress) const {
 void MapperChip::reset(bool power) {
   failure_.reset();
   if (power) powerCycle();
+  applyDeclaredReset();
   if (script_ != nullptr && script_->hasReset()) runScript([&] { script_->reset(power); });
+}
+
+void MapperChip::applyDeclaredReset() {
+  const Manifest& manifest = plugin_->manifest;
+  for (std::size_t index = 0; index < manifest.state.size(); ++index) {
+    if (manifest.state[index].initial) stateValues_[index] = *manifest.state[index].initial;
+  }
+  if (!manifest.tape) return;
+  if (manifest.tape->timer && manifest.tape->timer->irq) irq_.set(false);
+  if (tape_ != nullptr && manifest.tape->comparator) {
+    const TapeComparatorDecl& comparator = *manifest.tape->comparator;
+    tape_->setComparator(hw::TapeComparator{static_cast<std::int16_t>(comparator.low), static_cast<std::int16_t>(comparator.high), comparator.invert});
+  }
 }
 
 void MapperChip::input(const hw::InputEvent& event) {
@@ -240,14 +299,15 @@ hw::BusRead MapperChip::Side::read(std::uint16_t address) { return owner_.readBu
 hw::BusRead MapperChip::Side::peek(std::uint16_t address) { return owner_.peekBus(ppu_, address); }
 
 hw::BusRead MapperChip::peekBus(bool ppu, std::uint16_t address) const {
-  if (ppu) {
-    if (address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
-    const Slot slot = ppuSlots_[address];
-    if (slot.readRegister) return hw::releaseBus();
-    return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
+  if (ppu && address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
+  const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
+  if (slot.readRegister) {
+    // 调试读不能有副作用：只有声明的固定值与状态可以直接给出，回调脚本的读不触发。
+    const ResolvedRegister& decl = registers_[static_cast<std::size_t>(slot.reg)];
+    if (decl.readKind == ReadKind::Value) return hw::driveBus(decl.readValue);
+    if (decl.readKind == ReadKind::State) return hw::driveBus(static_cast<std::uint8_t>(stateValues_[decl.readState]));
+    return hw::releaseBus();
   }
-  const Slot slot = cpuSlots_[address];
-  if (slot.readRegister) return hw::releaseBus();
   return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
 }
 
@@ -283,46 +343,106 @@ contracts::mappers::AddressInfo MapperChip::describeAddress(bool ppu, std::uint1
 void MapperChip::Side::write(std::uint16_t address, std::uint8_t value) { owner_.writeBus(ppu_, address, value); }
 
 hw::BusRead MapperChip::readBus(bool ppu, std::uint16_t address) {
-  if (ppu) {
-    // 名称表地址只在四屏时由卡带响应；图案表地址按窗口译码。
-    if (address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
-    const Slot slot = ppuSlots_[address];
-    if (slot.readRegister) {
-      std::optional<std::uint8_t> value;
-      if (!runScript([&] { value = script_->read(true, address); }) || !value) return hw::releaseBus();
-      return hw::driveBus(*value);
-    }
-    return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
-  }
-  const Slot slot = cpuSlots_[address];
-  if (slot.readRegister) {
-    std::optional<std::uint8_t> value;
-    if (!runScript([&] { value = script_->read(false, address); }) || !value) return hw::releaseBus();
-    return hw::driveBus(*value);
-  }
+  // 名称表地址只在四屏时由卡带响应；图案表地址按窗口译码。
+  if (ppu && address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
+  const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
+  if (slot.readRegister) return readRegister(ppu, address, slot.reg);
   return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
 }
 
+hw::BusRead MapperChip::readRegister(bool ppu, std::uint16_t address, std::int16_t index) {
+  const ResolvedRegister& decl = registers_[static_cast<std::size_t>(index)];
+  hw::BusRead result = hw::releaseBus();
+  switch (decl.readKind) {
+    case ReadKind::Script: {
+      std::optional<std::uint8_t> value;
+      if (runScript([&] { value = script_->read(ppu, address); }) && value) result = hw::driveBus(*value);
+      break;
+    }
+    case ReadKind::Value:
+      result = hw::driveBus(decl.readValue);
+      break;
+    case ReadKind::State:
+      result = hw::driveBus(static_cast<std::uint8_t>(stateValues_[decl.readState]));
+      break;
+    case ReadKind::Open:
+    case ReadKind::None:
+      break;
+  }
+  if (decl.releaseIrq) irq_.set(false);
+  return result;
+}
+
 void MapperChip::writeBus(bool ppu, std::uint16_t address, std::uint8_t value) {
-  if (ppu) {
-    if (address >= PPU_SLOT_COUNT) {
-      if (nametable_ == NametableMode::Four) ownNametable_[address & 0xFFFU] = value;
-      return;
-    }
-    const Slot slot = ppuSlots_[address];
-    if (slot.writeRegister) {
-      runScript([&] { script_->write(true, address, value); });
-    } else if (slot.window >= 0) {
-      writeWindow(windows_[static_cast<std::size_t>(slot.window)], address, value);
-    }
+  if (ppu && address >= PPU_SLOT_COUNT) {
+    if (nametable_ == NametableMode::Four) ownNametable_[address & 0xFFFU] = value;
     return;
   }
-  const Slot slot = cpuSlots_[address];
-  if (slot.writeRegister) {
-    runScript([&] { script_->write(false, address, value); });
-  } else if (slot.window >= 0) {
-    writeWindow(windows_[static_cast<std::size_t>(slot.window)], address, value);
+  const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
+  if (slot.writeRegister) writeRegister(ppu, address, value, slot.reg);
+  else if (slot.window >= 0) writeWindow(windows_[static_cast<std::size_t>(slot.window)], address, value);
+}
+
+void MapperChip::writeRegister(bool ppu, std::uint16_t address, std::uint8_t value, std::int16_t index) {
+  const ResolvedRegister& decl = registers_[static_cast<std::size_t>(index)];
+  if (decl.writeScript) {
+    runScript([&] { script_->write(ppu, address, value); });
+    return;
   }
+  if (decl.writeState) stateSet(*decl.writeState, value);
+  for (const ResolvedRegister::Bank& bank : decl.banks) windowSetBank(bank.window, (value >> bank.shift) & bank.mask);
+  if (decl.table) {
+    if (const auto result = lookup(*decl.table, address, value)) stateSet(decl.into, *result);
+  }
+}
+
+std::optional<std::uint32_t> MapperChip::lookup(std::size_t tableNumber, std::uint16_t address, std::uint8_t value) {
+  Table& table = tables_[tableNumber];
+  std::array<std::uint32_t, MAX_INDEX_SOURCES> parts{};
+  std::size_t index = 0;
+  for (std::size_t position = 0; position < table.sources.size(); ++position) {
+    const TableSource& source = table.sources[position];
+    std::uint32_t part = 0;
+    switch (source.from) {
+      case IndexFrom::State:
+        part = stateValues_[source.state];
+        break;
+      case IndexFrom::Address:
+        part = address >> source.shift;
+        break;
+      case IndexFrom::Data:
+        part = static_cast<std::uint32_t>(value) >> source.shift;
+        break;
+      case IndexFrom::Tape:
+        part = tape_ != nullptr && tape_->level() ? 1U : 0U;
+        break;
+    }
+    part &= (std::uint32_t{1} << source.bits) - 1U;
+    parts[position] = part;
+    index = (index << source.bits) | part;
+  }
+  if (table.known[index] != 0) return table.values[index];
+  // 第一次遇到这个索引：调脚本计算一次并缓存（脚本的 tables 函数必须是纯函数）。
+  std::optional<std::uint32_t> computed;
+  if (!runScript([&] { computed = script_->table(table.id, std::span<const std::uint32_t>(parts.data(), table.sources.size())); }) || !computed) return std::nullopt;
+  table.values[index] = *computed & table.valueMask;
+  table.known[index] = 1;
+  return table.values[index];
+}
+
+void MapperChip::onTapeEdge(bool level, std::uint32_t samples) {
+  if (timerSamples_) {
+    const TapeTimerDecl& timer = *plugin_->manifest.tape->timer;
+    stateSet(*timerSamples_, static_cast<std::uint32_t>(std::uint64_t{stateValues_[*timerSamples_]} + samples));
+    if (!level) {
+      // 下降沿：把累加的采样数折成计时加进 ticks，清零采样数。
+      const std::uint64_t ticks = std::uint64_t{stateValues_[*timerSamples_]} * timer.scaleNumerator / timer.scaleDenominator;
+      stateSet(timerTicks_, static_cast<std::uint32_t>(std::uint64_t{stateValues_[timerTicks_]} + ticks));
+      stateSet(*timerSamples_, 0);
+      if (timer.irq) irq_.set(true);
+    }
+  }
+  if (script_ != nullptr && script_->hasTapeEdge()) runScript([&] { script_->tapeEdge(level, samples); });
 }
 
 hw::BusRead MapperChip::readWindow(const Window& window, std::uint16_t address) const {

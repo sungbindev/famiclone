@@ -145,11 +145,11 @@ TEST(MapperChip, TheStorageAndStateAccessorsFindDeclaredItemsOnly) {
   EXPECT_EQ(rig.chip.pluginId(), "test-plugin");
 }
 
-TEST(MapperChip, RegisterWritesCallTheScriptWhichSwitchesAChrBank) {
+TEST(MapperChip, DeclaredRegisterWritesSwitchAChrBankAndStoreTheValueWithoutAScript) {
   const auto cnrom = ember::infra::mappers::readEmapPackage(ember::test::testPluginPackage("cnrom"));
+  EXPECT_FALSE(cnrom.hasScript);
   auto plugin = std::make_shared<LoadedPlugin>();
   plugin->manifest = parseManifest(cnrom.manifestText);
-  plugin->script = cnrom.scriptText;
   RecordingIrq irq;
   RecordingPads pads;
   MapperChip chip(plugin, makeImage(32768, 32768), irq, pads);
@@ -162,8 +162,10 @@ TEST(MapperChip, RegisterWritesCallTheScriptWhichSwitchesAChrBank) {
   // 超出 bank 数时按 bank 数取模（真机的地址线只连低位）。
   chip.cpuSide().write(0xFFFF, 6);
   EXPECT_EQ(chip.ppuSide().read(0x0000).value, chrByte(2 * 8192));
-  // 只读的 PRG 窗口读到的仍是 ROM；复位后回到第 0 页。
+  // 只读的 PRG 窗口读到的仍是 ROM；软复位保持寄存器，上电复位后回到第 0 页。
   EXPECT_EQ(chip.cpuSide().read(0x8000).value, prgByte(0));
+  chip.reset(false);
+  EXPECT_EQ(chip.ppuSide().read(0x0000).value, chrByte(2 * 8192));
   chip.reset(true);
   EXPECT_EQ(chip.ppuSide().read(0x0000).value, chrByte(0));
   EXPECT_EQ(chip.state("chrBank"), 0U);
@@ -399,6 +401,182 @@ TEST(MapperChipErrors, RegistersWithoutTheMatchingScriptFunctionAreRejected) {
     EXPECT_EQ(error.code(), mapper_error::ERROR_INVALID_PACKAGE);
     EXPECT_NE(std::string(error.what()).find("没有 main.js"), std::string::npos) << error.what();
   }
+}
+
+/** 带磁带数据线的卡带：磁带线由测试控制，主机的手柄口把它交给卡带。 */
+struct TapeRig {
+  TapeRig(const json& manifest, const std::string& script, const mapper_error::CartridgeImage& image) : pads(&tape), chip(makePlugin(manifest, script), image, irq, pads) {}
+
+  ember::test::FakeTapeLine tape;
+  RecordingIrq irq;
+  RecordingPads pads;
+  MapperChip chip;
+};
+
+TEST(MapperChipDeclared, ReadsAnswerWithAFixedValueAStateOrNothingWithoutAScript) {
+  json manifest = withRegisters(R"([
+    { "bus": "cpu", "range": "$5000-$5000", "read": { "value": 66 } },
+    { "bus": "cpu", "range": "$5001-$5001", "read": { "state": "latch" } },
+    { "bus": "cpu", "range": "$5002-$5002", "read": { "open": true } },
+    { "bus": "cpu", "range": "$5003-$5003", "write": { "state": "latch" } }
+  ])",
+                                R"([{ "name": "latch", "bits": 8, "description": "x" }])");
+  Rig rig(manifest, "", makeImage(16384, 8192));
+  const hw::BusRead fixed = rig.cpu(0x5000);
+  EXPECT_EQ(fixed.value, 66);
+  EXPECT_EQ(fixed.drivenMask, 0xFF);
+  rig.cpuWrite(0x5003, 0x5A);
+  EXPECT_EQ(rig.cpu(0x5001).value, 0x5A);
+  EXPECT_EQ(rig.cpu(0x5002).drivenMask, 0);
+  EXPECT_EQ(rig.cpu(0x5004).drivenMask, 0);
+  // 调试读取不触发回调，声明的固定值与状态可以直接给出。
+  EXPECT_EQ(rig.chip.cpuSide().peek(0x5000).value, 66);
+  EXPECT_EQ(rig.chip.cpuSide().peek(0x5001).value, 0x5A);
+  EXPECT_EQ(rig.chip.cpuSide().peek(0x5002).drivenMask, 0);
+  EXPECT_FALSE(rig.chip.failure().has_value());
+}
+
+TEST(MapperChipDeclared, WritesSwitchWindowsByShiftedAndMaskedDataAndStoreTheState) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "write": { "state": "last", "bank": [{ "window": "w", "mask": 3 }, { "window": "v", "shift": 2, "mask": 3 }] } }])",
+                                R"([{ "name": "last", "bits": 8, "description": "x" }])");
+  manifest["windows"] = json::parse(R"([
+    { "id": "w", "bus": "cpu", "range": "$8000-$9FFF", "storage": "prg", "size": 8192, "initial": 0, "access": "r" },
+    { "id": "v", "bus": "cpu", "range": "$A000-$BFFF", "storage": "prg", "size": 8192, "initial": 0, "access": "r" }
+  ])");
+  Rig rig(manifest, "", makeImage(32768, 0));
+  rig.cpuWrite(0x5000, 0b1110);  // w 取低 2 位 = 2，v 取右移 2 位后的低 2 位 = 3
+  EXPECT_EQ(rig.cpu(0x8000).value, prgByte(2 * 8192));
+  EXPECT_EQ(rig.cpu(0xA000).value, prgByte(3 * 8192));
+  EXPECT_EQ(rig.chip.state("last"), 0b1110U);
+}
+
+TEST(MapperChipDeclared, TablesAreComputedByTheScriptOnceThenServedFromTheCache) {
+  json manifest = withRegisters(R"([
+    { "bus": "cpu", "range": "$5000-$5001", "write": { "update": { "table": "sum", "into": "acc" } } },
+    { "bus": "cpu", "range": "$5002-$5002", "write": { "state": "acc" } }
+  ])",
+                                R"([{ "name": "acc", "bits": 8, "description": "x" }])");
+  manifest["tables"] = json::parse(R"([{ "id": "sum", "index": [{ "from": "state", "name": "acc" }, { "from": "data", "shift": 0, "bits": 4 }, { "from": "address", "shift": 0, "bits": 1 }], "bits": 8 }])");
+  Rig rig(manifest, "export default { tables: { sum(ctx, acc, data, odd) { ctx.log.warn('call'); return acc + data * 2 + odd; } } };", makeImage(16384, 8192));
+  rig.cpuWrite(0x5000, 3);
+  EXPECT_EQ(rig.chip.state("acc"), 6U);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 1U);
+  rig.cpuWrite(0x5002, 0);
+  rig.cpuWrite(0x5000, 3);  // 同一个索引：不再调用脚本
+  EXPECT_EQ(rig.chip.state("acc"), 6U);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 1U);
+  rig.cpuWrite(0x5002, 0);
+  rig.cpuWrite(0x5001, 3);  // 地址位 0 不同，是另一个索引
+  EXPECT_EQ(rig.chip.state("acc"), 7U);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 2U);
+  EXPECT_FALSE(rig.chip.failure().has_value());
+}
+
+TEST(MapperChipDeclared, ATableIndexCanUseTheTapeLevelAndTheResultIsTruncatedToTheTableWidth) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "write": { "update": { "table": "pick", "into": "acc" } } }])", R"([{ "name": "acc", "bits": 8, "description": "x" }])");
+  manifest["tables"] = json::parse(R"([{ "id": "pick", "index": [{ "from": "tape" }], "bits": 4 }])");
+  TapeRig rig(manifest, "export default { tables: { pick(ctx, tape) { return tape ? 0x1F : 0x22; } } };", makeImage(16384, 8192));
+  rig.chip.cpuSide().write(0x5000, 0);
+  EXPECT_EQ(rig.chip.state("acc"), 0x2U);  // 0x22 按 4 位截断
+  rig.tape.setLevel(true);
+  rig.chip.cpuSide().write(0x5000, 0);
+  EXPECT_EQ(rig.chip.state("acc"), 0xFU);
+}
+
+TEST(MapperChipDeclared, StatesWithAnInitialValueReturnToItOnEveryResetAndTheOthersOnlyOnPowerUp) {
+  json manifest = withRegisters(R"([
+    { "bus": "cpu", "range": "$5000-$5000", "write": { "state": "a" } },
+    { "bus": "cpu", "range": "$5001-$5001", "write": { "state": "b" } }
+  ])",
+                                R"([{ "name": "a", "bits": 8, "initial": 255, "description": "x" }, { "name": "b", "bits": 8, "description": "y" }])");
+  Rig rig(manifest, "", makeImage(16384, 8192));
+  rig.chip.reset(true);
+  EXPECT_EQ(rig.chip.state("a"), 255U);
+  rig.cpuWrite(0x5000, 1);
+  rig.cpuWrite(0x5001, 2);
+  rig.chip.reset(false);
+  EXPECT_EQ(rig.chip.state("a"), 255U);
+  EXPECT_EQ(rig.chip.state("b"), 2U);
+  rig.chip.reset(true);
+  EXPECT_EQ(rig.chip.state("a"), 255U);
+  EXPECT_EQ(rig.chip.state("b"), 0U);
+}
+
+TEST(MapperChipDeclared, TheHostExecutesTheTapeComparatorAndTheEdgeTimerAndRaisesTheIrq) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "read": { "state": "ticks", "releaseIrq": true } }])",
+                                R"([{ "name": "ticks", "bits": 8, "initial": 0, "description": "x" }, { "name": "samples", "bits": 32, "initial": 0, "description": "y" }])");
+  manifest["tape"] = json::parse(R"({ "comparator": { "low": -1000, "high": -999, "invert": true }, "timer": { "samples": "samples", "ticks": "ticks", "scale": [3, 2], "irq": true } })");
+  TapeRig rig(manifest, "", makeImage(16384, 8192));
+  rig.chip.reset(true);
+  EXPECT_EQ(rig.tape.comparator.low, -1000);
+  EXPECT_EQ(rig.tape.comparator.high, -999);
+  EXPECT_TRUE(rig.tape.comparator.invert);
+
+  rig.tape.edge(true, 100);  // 上升沿只累加采样数
+  EXPECT_EQ(rig.chip.state("samples"), 100U);
+  EXPECT_EQ(rig.chip.state("ticks"), 0U);
+  EXPECT_FALSE(rig.irq.active());
+  rig.tape.edge(false, 50);  // 下降沿：150 个采样折成 150 * 3 / 2 = 225 个计时，清零采样数，拉低 IRQ
+  EXPECT_EQ(rig.chip.state("ticks"), 225U);
+  EXPECT_EQ(rig.chip.state("samples"), 0U);
+  EXPECT_TRUE(rig.irq.active());
+  rig.tape.edge(true, 10);
+  rig.tape.edge(false, 30);  // 再加 60，按 8 位回绕
+  EXPECT_EQ(rig.chip.state("ticks"), (225U + 60U) & 0xFFU);
+  EXPECT_EQ(rig.chip.cpuSide().read(0x5000).value, (225 + 60) & 0xFF);
+  EXPECT_FALSE(rig.irq.active()) << "读完撤销 IRQ";
+
+  rig.tape.edge(true, 5);
+  rig.tape.edge(false, 5);
+  ASSERT_TRUE(rig.irq.active());
+  rig.chip.reset(false);  // 软复位：计时回到初值，IRQ 撤销
+  EXPECT_EQ(rig.chip.state("ticks"), 0U);
+  EXPECT_EQ(rig.chip.state("samples"), 0U);
+  EXPECT_FALSE(rig.irq.active());
+}
+
+TEST(MapperChipDeclared, ADeclaredTapeDoesNothingWhenTheHostHasNoTape) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "read": { "value": 1 } }])", R"([{ "name": "ticks", "bits": 8, "description": "x" }, { "name": "samples", "bits": 32, "description": "y" }])");
+  manifest["tape"] = json::parse(R"({ "comparator": { "low": -1, "high": 1 }, "timer": { "samples": "samples", "ticks": "ticks", "scale": [1, 1] } })");
+  Rig rig(manifest, "", makeImage(16384, 8192));
+  EXPECT_NO_THROW(rig.chip.reset(true));
+  EXPECT_EQ(rig.cpu(0x5000).value, 1);
+}
+
+TEST(MapperChipDeclaredErrors, ATableNeedsAScriptThatExportsItsFunction) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "write": { "update": { "table": "t", "into": "acc" } } }])", R"([{ "name": "acc", "bits": 8, "description": "x" }])");
+  manifest["tables"] = json::parse(R"([{ "id": "t", "index": [{ "from": "data", "shift": 0, "bits": 8 }], "bits": 8 }])");
+  try {
+    Rig rig(manifest, "", makeImage(16384, 0));
+    FAIL() << "应当抛出异常";
+  } catch (const ember::shared::CoreError& error) {
+    EXPECT_EQ(error.code(), mapper_error::ERROR_INVALID_PACKAGE);
+    EXPECT_NE(std::string(error.what()).find("没有 main.js"), std::string::npos) << error.what();
+  }
+  try {
+    Rig rig(manifest, "export default { tables: {} };", makeImage(16384, 0));
+    FAIL() << "应当抛出异常";
+  } catch (const ember::shared::CoreError& error) {
+    EXPECT_EQ(error.code(), mapper_error::ERROR_INVALID_PACKAGE);
+    EXPECT_NE(std::string(error.what()).find("没有导出 tables.t"), std::string::npos) << error.what();
+  }
+  EXPECT_THROW(Rig(manifest, "export default { tables: 5 };", makeImage(16384, 0)), ember::shared::CoreError);
+}
+
+TEST(MapperChipDeclaredErrors, ATableFunctionThatReturnsAnIllegalValueOrThrowsStopsTheScript) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "write": { "update": { "table": "t", "into": "acc" } } }])", R"([{ "name": "acc", "bits": 8, "description": "x" }])");
+  manifest["tables"] = json::parse(R"([{ "id": "t", "index": [{ "from": "data", "shift": 0, "bits": 8 }], "bits": 8 }])");
+  Rig negative(manifest, "export default { tables: { t() { return -1; } } };", makeImage(16384, 0));
+  negative.cpuWrite(0x5000, 1);
+  ASSERT_TRUE(negative.chip.failure().has_value());
+  EXPECT_EQ(negative.chip.failure()->code, mapper_error::ERROR_SCRIPT_ERROR);
+  EXPECT_EQ(negative.chip.state("acc"), 0U);
+
+  Rig thrown(manifest, "export default { tables: { t() { throw new Error('boom'); } } };", makeImage(16384, 0));
+  thrown.cpuWrite(0x5000, 1);
+  ASSERT_TRUE(thrown.chip.failure().has_value());
+  EXPECT_NE(thrown.chip.failure()->message.find("boom"), std::string::npos);
+  EXPECT_NE(thrown.chip.failure()->message.find("tables.t"), std::string::npos);
 }
 
 /** 没有寄存器的最小清单，脚本只处理输入。 */

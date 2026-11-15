@@ -11,9 +11,7 @@
 
 #include <gtest/gtest.h>
 
-#include <chrono>
 #include <cstdint>
-#include <cstdio>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -82,22 +80,6 @@ TEST(PlqCard, TheLogicRegisterLatchesWritesAndTheMemoryIsMappedLikeTheCard) {
   EXPECT_TRUE(bench.errors->entries.empty());
 }
 
-TEST(PlqCard, DbgTiming) {
-  RealRomBench bench({"plq"});
-  bench.boot(idleCard());
-  ASSERT_TRUE(bench.run(2));
-  bench.runtime->useMachine([&](hw::Machine& machine) {
-    auto& bus = machine.cartridgeSlot().cpuSide();
-    const auto t0 = std::chrono::steady_clock::now();
-    for (int i = 0; i < 100000; ++i) static_cast<void>(bus.read(0xA000));
-    const auto t1 = std::chrono::steady_clock::now();
-    for (int i = 0; i < 100000; ++i) bus.write(0x8000, 0x0A);
-    const auto t2 = std::chrono::steady_clock::now();
-    std::fprintf(stderr, "DBG read100k %lld ms write100k %lld ms\n", static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()),
-                 static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()));
-  });
-}
-
 TEST(PlqCard, BootsAndTheTapeDrivesTheScreen) {
   const auto rom = readReferenceFile("rom/plq.nes");
   const auto tape = firstTape();
@@ -106,8 +88,6 @@ TEST(PlqCard, BootsAndTheTapeDrivesTheScreen) {
   RealRomBench bench({"plq"});
   bench.boot(rom);
   const bool ran = bench.run(300);
-  for (const auto& entry : bench.errors->entries) std::fprintf(stderr, "DBG %s %s %s\n", entry.module.c_str(), entry.code.c_str(), entry.message.c_str());
-  std::fprintf(stderr, "DBG frames %llu\n", static_cast<unsigned long long>(bench.frames->count()));
   ASSERT_TRUE(ran);
   bench.dump("plq-0-boot");
   EXPECT_TRUE(bench.errors->entries.empty());

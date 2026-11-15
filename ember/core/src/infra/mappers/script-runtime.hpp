@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：script-runtime.hpp
- * 说明：mapper 脚本的沙箱：每个卡带一个独立的 QuickJS 运行时，只向脚本暴露宿主对象 ctx，并限制内存、栈与单次回调的时长。
+ * 说明：mapper 脚本的沙箱：每个卡带一个独立的 QuickJS 运行时，只向脚本暴露宿主对象 ctx，并限制内存、栈与单次回调的时长；还负责查表表项的计算（tables）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -130,6 +131,8 @@ class ScriptRuntime {
   [[nodiscard]] bool hasMouse() const noexcept;
   /** 脚本是否导出了 onTapeEdge。 */
   [[nodiscard]] bool hasTapeEdge() const noexcept;
+  /** 脚本是否在 tables 对象上导出了这个标识的函数。 */
+  [[nodiscard]] bool hasTable(std::string_view id) const;
 
   /** 调用 reset(ctx, 'power' 或 'soft')；脚本没有 reset 时什么也不做。 */
   void reset(bool power);
@@ -152,6 +155,13 @@ class ScriptRuntime {
 
   /** 调用 onTapeEdge(ctx, level, samples)：磁带数据线翻转时，level 是翻转后的电平（0 或 1），samples 是距上一次翻转的采样数（96 kHz）；脚本没有 onTapeEdge 时什么也不做。错误同 read。 */
   void tapeEdge(bool level, std::uint32_t samples);
+
+  /**
+   * 调用 tables.<id>(ctx, ...values)：计算查表的一个表项，values 是索引各来源的值，函数必须是纯函数（同样的输入得到同样的结果，不改变卡带状态）。
+   * @return 脚本返回的 0 到 2^32-1 的整数。
+   * @throws shared::CoreError mappers.scriptError：没有这个函数、脚本异常或返回值不合法；mappers.limitExceeded：超限。
+   */
+  [[nodiscard]] std::uint32_t table(std::string_view id, std::span<const std::uint32_t> values);
 
  private:
   struct Impl;

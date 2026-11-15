@@ -1,11 +1,12 @@
 // 声像教学卡 PLQ（mapper 172，PRG 16K）：磁带机的数据线接在卡上，卡上的 PAL 逻辑在 $8000-$9FFF 写入时锁存，在 $A000-$BFFF 读出。
+// 清单把写入声明成“按 (原输出, 地址位 2 与 1, 数据低 4 位, 磁带电平) 查表更新 pal”，宿主直接执行并按索引缓存；这里只算表项，必须是纯函数。
 // 逻辑方程按地址位 2、1 分成四种写法化简；磁带的电平（采样不大于 -1000 为 1）只在写入的那一刻进入逻辑。
 // 输出寄存器的位 4 至 7 依次是方程的 q7、q6、q5、q4，下一次写入时又按位号当作 Q4 至 Q7 读回。
 
 const bit = (value, index) => (value >> index) & 1;
 
-/** 写 $8000-$9FFF 时 PAL 的新输出：reg 是原来的输出，addr 取地址的位 1、2，data 取低 4 位，tape 是磁带数据线的电平。 */
-function nextPal(reg, addr, data, tape) {
+/** 写 $8000-$9FFF 时 PAL 的新输出：reg 是原来的输出，sel 是地址的位 2、1，data 是数据的低 4 位，tape 是磁带数据线的电平。 */
+function nextPal(reg, sel, data, tape) {
   const d = data & 0x0f;
   const old = reg & 0x0f;
   let low;
@@ -13,7 +14,7 @@ function nextPal(reg, addr, data, tape) {
   let n5;
   let n6;
   let n7;
-  switch ((addr >> 1) & 3) {
+  switch (sel) {
     case 0:
       // 低 4 位直接锁存，其余保持。
       low = d;
@@ -51,20 +52,9 @@ function nextPal(reg, addr, data, tape) {
 }
 
 export default {
-  reset(ctx) {
-    // 比较器：采样 > -1000 时状态为 1，取反后数据线为 0；静音时数据线为 0。
-    ctx.device('tape').setComparator(-1000, -999, true);
-    ctx.state.pal = 0xff;
-  },
-
-  read(ctx, bus, addr) {
-    // $8000-$9FFF 读出 0；$A000-$BFFF 读出 PAL 的输出。
-    return addr < 0xa000 ? 0 : ctx.state.pal;
-  },
-
-  write(ctx, bus, addr, value) {
-    // 只有“地址位 1、2 都为 1 且数据位 0 为 0”的写入用得到磁带电平，其余不去问磁带机，免得拖慢频繁的写入。
-    const usesTape = (addr & 6) === 6 && (value & 1) === 0;
-    ctx.state.pal = nextPal(ctx.state.pal, addr, value, usesTape ? ctx.device('tape').level() : 0);
+  tables: {
+    pal(ctx, reg, sel, data, tape) {
+      return nextPal(reg, sel, data, tape);
+    }
   }
 };

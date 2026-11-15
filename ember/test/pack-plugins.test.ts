@@ -144,13 +144,20 @@ describe('packPlugins', () => {
     expect(() => packPlugin(writePlugin(root, 'no-id', { 'manifest.json': JSON.stringify({ name: 'x' }) }), join(root, 'out'))).toThrow('id 必须是');
   });
 
-  it('仓库里的官方插件 nrom 能打包，包里有清单与脚本', () => {
+  it('仓库里的官方插件 nrom 能打包，包里只有清单', () => {
     const outDirectory = join(createRoot(), 'out');
     const result = packPlugin(join(REPO_ROOT, 'plugins', 'nrom'), outDirectory);
     expect(result.id).toBe('nrom');
     const entries = readZip(readFileSync(result.file));
+    expect(entries.map((entry) => entry.name)).toEqual(['manifest.json']);
+    expect(JSON.parse(entries[0]?.data.toString('utf8') ?? '{}')).toMatchObject({ id: 'nrom', apiVersion: 1, match: [{ mapper: 0 }] });
+  });
+
+  it('仓库里的官方插件 plq 有查表，包里有清单与脚本', () => {
+    const outDirectory = join(createRoot(), 'out');
+    const result = packPlugin(join(REPO_ROOT, 'plugins', 'plq'), outDirectory);
+    const entries = readZip(readFileSync(result.file));
     expect(entries.map((entry) => entry.name)).toEqual(['main.js', 'manifest.json']);
-    expect(entries[0]?.data.toString('utf8')).toContain('export default');
-    expect(JSON.parse(entries[1]?.data.toString('utf8') ?? '{}')).toMatchObject({ id: 'nrom', apiVersion: 1, match: [{ mapper: 0 }] });
+    expect(entries[0]?.data.toString('utf8')).toContain('tables');
   });
 });

@@ -8,7 +8,7 @@
 
 | 目录 | 内容 |
 | --- | --- |
-| `cnrom/` | `test-cnrom`：mapper 3（CNROM），写 `$8000-$FFFF` 选择 8K 的 CHR 页；有寄存器与脚本，用来测试寄存器回调、脚本改窗口与状态，并让 `ppu_read_buffer` 这个 mapper 3 的 ROM 能运行 |
+| `cnrom/` | `test-cnrom`：mapper 3（CNROM），用声明式寄存器写 `$8000-$FFFF` 选择 8K 的 CHR 页（没有脚本），用来测试声明式寄存器、没有 `main.js` 的包，并让 `ppu_read_buffer` 这个 mapper 3 的 ROM 能运行 |
 
 ## 用途
 

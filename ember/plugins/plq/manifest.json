@@ -18,9 +18,17 @@
     { "id": "chr", "bus": "ppu", "range": "$0000-$1FFF", "storage": "chr", "size": 8192, "initial": 0, "access": "rw" }
   ],
   "registers": [
-    { "bus": "cpu", "range": "$8000-$9FFF", "read": true, "write": true },
-    { "bus": "cpu", "range": "$A000-$BFFF", "read": true }
+    { "bus": "cpu", "range": "$8000-$9FFF", "read": { "value": 0 }, "write": { "update": { "table": "pal", "into": "pal" } } },
+    { "bus": "cpu", "range": "$A000-$BFFF", "read": { "state": "pal" } }
   ],
-  "state": [{ "name": "pal", "bits": 8, "description": "PAL 逻辑的输出锁存，在 $A000-$BFFF 读出" }],
+  "state": [{ "name": "pal", "bits": 8, "initial": 255, "description": "PAL 逻辑的输出锁存，在 $A000-$BFFF 读出" }],
+  "tables": [
+    {
+      "id": "pal",
+      "index": [{ "from": "state", "name": "pal" }, { "from": "address", "shift": 1, "bits": 2 }, { "from": "data", "shift": 0, "bits": 4 }, { "from": "tape" }],
+      "bits": 8
+    }
+  ],
+  "tape": { "comparator": { "low": -1000, "high": -999, "invert": true } },
   "nametable": "horizontal"
 }

@@ -18,10 +18,17 @@
     { "id": "prg-e", "bus": "cpu", "range": "$E000-$FFFF", "storage": "prg", "size": 8192, "initial": 3, "access": "r" },
     { "id": "chr", "bus": "ppu", "range": "$0000-$1FFF", "storage": "chr", "size": 8192, "initial": 0, "access": "rw" }
   ],
-  "registers": [{ "bus": "cpu", "range": "$9000-$BFFF", "read": true }],
-  "state": [
-    { "name": "tickCount", "bits": 8, "description": "累计的计时：每个下降沿加上与两次下降沿间隔成正比的数" },
-    { "name": "sampleCount", "bits": 32, "description": "距上一次下降沿经过的磁带采样数（96 kHz）" }
+  "registers": [
+    { "bus": "cpu", "range": "$9000-$9FFF", "read": { "state": "tickCount", "releaseIrq": true } },
+    { "bus": "cpu", "range": "$A000-$B7FF", "read": { "value": 0 } }
   ],
+  "state": [
+    { "name": "tickCount", "bits": 8, "initial": 0, "description": "累计的计时：每个下降沿加上与两次下降沿间隔成正比的数" },
+    { "name": "sampleCount", "bits": 32, "initial": 0, "description": "距上一次下降沿经过的磁带采样数（96 kHz）" }
+  ],
+  "tape": {
+    "comparator": { "low": -1000, "high": -999, "invert": true },
+    "timer": { "samples": "sampleCount", "ticks": "tickCount", "scale": [1764, 960], "irq": true }
+  },
   "nametable": "horizontal"
 }

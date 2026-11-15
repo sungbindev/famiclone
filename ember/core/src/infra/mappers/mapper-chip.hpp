@@ -1,12 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：mapper-chip.hpp
- * 说明：由插件创建的卡带（mapper 芯片加存储芯片）：按清单创建存储区、窗口与译码表，响应卡槽上的 CPU 侧与 PPU 侧访问，在寄存器访问时回调脚本。
+ * 说明：由插件创建的卡带（mapper 芯片加存储芯片）：按清单创建存储区、窗口与译码表，响应卡槽上的 CPU 侧与 PPU 侧访问，在寄存器访问时回调脚本，或按清单的声明由宿主直接处理。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：窗口译码在宿主侧完成：每个卡槽地址预先对应到窗口或寄存器，访问时只查表，不为每次访问调用脚本；
- *       寄存器优先于窗口（落在寄存器范围内的读写交给脚本，窗口不再处理）；窗口越过存储区末尾时按存储区容量回绕（镜像）；
+ *       寄存器优先于窗口（落在寄存器范围内的读写交给脚本或声明，窗口不再处理）；窗口越过存储区末尾时按存储区容量回绕（镜像）；
+ *       声明式的寄存器、查表与磁带计时在宿主里直接执行，不进脚本；查表的表项由脚本的 tables 函数计算一次后按索引缓存；
  *       脚本出错时记下错误并停止调用脚本，之后的访问按开放总线处理（见 mapper-cartridge.hpp）。
  * ------------------------------------------------------------------------
  */
@@ -85,11 +86,48 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
     std::uint32_t initialBank{0};
   };
 
-  /** 译码表的一项：这个地址由哪个窗口响应，是否回调脚本。 */
+  /** 译码表的一项：这个地址由哪个窗口响应，是否处理寄存器（脚本或宿主的声明）。 */
   struct Slot {
     std::int16_t window{-1};
+    /** 寄存器声明的下标，对应 registers_。 */
+    std::int16_t reg{-1};
     bool readRegister{false};
     bool writeRegister{false};
+  };
+
+  /** 查表索引的一个来源（已把状态名解析成下标）。 */
+  struct TableSource {
+    IndexFrom from{IndexFrom::State};
+    std::size_t state{0};
+    unsigned shift{0};
+    unsigned bits{0};
+  };
+
+  /** 查表：索引来源、表项位宽，以及按索引缓存的脚本计算结果。 */
+  struct Table {
+    std::string id;
+    std::vector<TableSource> sources;
+    std::uint32_t valueMask{0};
+    std::vector<std::uint32_t> values;
+    std::vector<std::uint8_t> known;
+  };
+
+  /** 寄存器声明里的状态名、窗口标识、表标识解析成下标后的样子。 */
+  struct ResolvedRegister {
+    struct Bank {
+      std::size_t window{0};
+      unsigned shift{0};
+      unsigned mask{0};
+    };
+    ReadKind readKind{ReadKind::None};
+    std::uint8_t readValue{0};
+    std::size_t readState{0};
+    bool releaseIrq{false};
+    bool writeScript{false};
+    std::optional<std::size_t> writeState;
+    std::vector<Bank> banks;
+    std::optional<std::size_t> table;
+    std::size_t into{0};
   };
 
   class Side final : public contracts::hardware::BusDevice {
@@ -126,6 +164,16 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   [[nodiscard]] contracts::hardware::BusRead readBus(bool ppu, std::uint16_t address);
   [[nodiscard]] contracts::hardware::BusRead peekBus(bool ppu, std::uint16_t address) const;
   void writeBus(bool ppu, std::uint16_t address, std::uint8_t value);
+  /** 读寄存器：脚本回调，或按声明由宿主直接回答。 */
+  [[nodiscard]] contracts::hardware::BusRead readRegister(bool ppu, std::uint16_t address, std::int16_t index);
+  /** 写寄存器：脚本回调，或按声明由宿主直接执行（存状态、切 bank、查表）。 */
+  void writeRegister(bool ppu, std::uint16_t address, std::uint8_t value, std::int16_t index);
+  /** 查表：按索引来源拼出索引，命中缓存直接返回，否则调脚本计算一次并缓存；脚本失败时返回空。 */
+  [[nodiscard]] std::optional<std::uint32_t> lookup(std::size_t table, std::uint16_t address, std::uint8_t value);
+  /** 磁带数据线翻转：先做清单声明的边沿计时，再通知脚本。 */
+  void onTapeEdge(bool level, std::uint32_t samples);
+  /** 复位时执行清单声明的部分：写了 initial 的状态回到初值、边沿计时撤销 IRQ、设置比较器。 */
+  void applyDeclaredReset();
   [[nodiscard]] contracts::hardware::BusRead readWindow(const Window& window, std::uint16_t address) const;
   void writeWindow(const Window& window, std::uint16_t address, std::uint8_t value) const;
   void applyInitial(Window& window) const;
@@ -151,6 +199,11 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   std::vector<Slot> ppuSlots_;
   std::vector<std::uint32_t> stateValues_;
   std::vector<std::uint32_t> stateMasks_;
+  std::vector<ResolvedRegister> registers_;
+  std::vector<Table> tables_;
+  /** 清单声明的磁带边沿计时的两个状态下标；没有声明时 timerSamples_ 为空。 */
+  std::optional<std::size_t> timerSamples_;
+  std::size_t timerTicks_{0};
   NametableMode nametable_{NametableMode::Horizontal};
   NametableMode initialNametable_{NametableMode::Horizontal};
   /** 四屏时卡带自带的名称表显存。 */

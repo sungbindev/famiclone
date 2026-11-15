@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <stdexcept>
 #include <string>
@@ -29,6 +30,7 @@
 
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
+#include "contracts/hardware/tape-deck.hpp"
 #include "infra/mappers/plugin-registry.hpp"
 #include "platform/events/event-sink.hpp"
 #include "platform/logging/error-log.hpp"
@@ -69,10 +71,12 @@ inline std::vector<std::uint8_t> makeEmap(const std::vector<PackageFile>& files)
 /** 官方插件包的内容：build/plugins/<id>.emap。 */
 inline std::vector<std::uint8_t> officialPluginPackage(const std::string& id) { return readBinaryFile(std::string(EMBER_PLUGIN_DIR) + "/" + id + ".emap"); }
 
-/** 测试插件：把 core/test/data/test-plugins/<名称>/ 下的 manifest.json 与 main.js 打成包。 */
+/** 测试插件：把 core/test/data/test-plugins/<名称>/ 下的 manifest.json 与（有的话）main.js 打成包。 */
 inline std::vector<std::uint8_t> testPluginPackage(const std::string& name) {
   const std::string directory = std::string(EMBER_TEST_DATA_DIR) + "/test-plugins/" + name + "/";
-  return makeEmap({{"manifest.json", readTextFile(directory + "manifest.json")}, {"main.js", readTextFile(directory + "main.js")}});
+  std::vector<PackageFile> files{{"manifest.json", readTextFile(directory + "manifest.json")}};
+  if (std::filesystem::exists(directory + "main.js")) files.emplace_back("main.js", readTextFile(directory + "main.js"));
+  return makeEmap(files);
 }
 
 /** 假的 IRQ 引脚：记录当前状态与被拉低的次数。 */
@@ -91,10 +95,36 @@ class RecordingIrq final : public contracts::hardware::IrqOutput {
   int assertions_{0};
 };
 
-/** 假的手柄口：两个口，记录每个口当前的按键掩码与被设置的次数。 */
+/** 假的磁带数据线：电平由测试设置，记录比较器，翻转经 edge() 通知监听者。 */
+class FakeTapeLine final : public contracts::hardware::TapeLine {
+ public:
+  [[nodiscard]] bool level() override { return level_; }
+  void drive(bool) override {}
+  void setComparator(const contracts::hardware::TapeComparator& value) override { comparator = value; }
+  void setEdgeListener(std::function<void(bool, std::uint32_t)> value) override { listener = std::move(value); }
+
+  /** 测试用：数据线翻转到 level，并在翻转的时刻通知监听者。 */
+  void edge(bool level, std::uint32_t samples) {
+    level_ = level;
+    if (listener) listener(level, samples);
+  }
+  /** 测试用：只改电平，不通知。 */
+  void setLevel(bool level) { level_ = level; }
+
+  contracts::hardware::TapeComparator comparator;
+  std::function<void(bool, std::uint32_t)> listener;
+
+ private:
+  bool level_{false};
+};
+
+/** 假的手柄口：两个口，记录每个口当前的按键掩码与被设置的次数；tape 不为空时主机上有磁带数据线。 */
 class RecordingPads final : public contracts::hardware::PadSink {
  public:
+  explicit RecordingPads(contracts::hardware::TapeLine* line = nullptr) : tape(line) {}
+
   [[nodiscard]] unsigned padPortCount() const override { return 2; }
+  [[nodiscard]] contracts::hardware::TapeLine* tapeLine() override { return tape; }
   void setButtons(unsigned port, std::uint8_t buttons) override {
     masks.at(port) = buttons;
     ++calls;
@@ -102,6 +132,7 @@ class RecordingPads final : public contracts::hardware::PadSink {
 
   std::array<std::uint8_t, 2> masks{};
   int calls{0};
+  contracts::hardware::TapeLine* tape{nullptr};
 };
 
 /** 临时目录：构造时创建，析构时连同里面的内容一起删除。 */

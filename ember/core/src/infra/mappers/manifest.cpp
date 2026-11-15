@@ -38,6 +38,10 @@ constexpr std::size_t MAX_STORAGE = 16;
 constexpr std::size_t MAX_WINDOWS = 64;
 constexpr std::size_t MAX_REGISTERS = 64;
 constexpr std::size_t MAX_STATE = 64;
+constexpr std::size_t MAX_TABLES = 16;
+constexpr std::size_t MAX_BANK_SETTERS = 8;
+/** 查表索引的总位数上限（表最多 65536 项）。 */
+constexpr std::uint32_t MAX_INDEX_BITS = 16;
 constexpr std::size_t MAX_SETTINGS = 32;
 constexpr std::size_t MAX_OPTIONS = 32;
 /** ram 存储区的容量上限（16 MiB）。 */
@@ -250,26 +254,166 @@ WindowDecl readWindow(const json& item, const std::string& path) {
   return decl;
 }
 
+/** 读寄存器：true 回调脚本，对象由宿主直接回答。 */
+ReadAction readReadAction(const json& value, const std::string& path) {
+  ReadAction action;
+  if (value.is_boolean()) {
+    action.kind = json_fields::readBoolean(value, path) ? ReadKind::Script : ReadKind::None;
+    return action;
+  }
+  if (!value.is_object()) fail(path + " 应为 true 或对象");
+  json_fields::rejectUnknown(value, path, {"value", "open", "state", "releaseIrq"});
+  const int count = (json_fields::find(value, "value") != nullptr ? 1 : 0) + (json_fields::find(value, "open") != nullptr ? 1 : 0) + (json_fields::find(value, "state") != nullptr ? 1 : 0);
+  if (count != 1) fail(path + " 必须且只能写 value、open、state 之一");
+  if (const auto fixed = readOptionalInt(value, "value", path, 0, 255)) {
+    action.kind = ReadKind::Value;
+    action.value = static_cast<std::uint8_t>(*fixed);
+  } else if (json_fields::find(value, "open") != nullptr) {
+    if (!readFlag(value, "open", path)) fail(path + ".open 只能写 true");
+    action.kind = ReadKind::Open;
+  } else {
+    action.kind = ReadKind::State;
+    action.state = readText(value, "state", path, 1, 32);
+  }
+  action.releaseIrq = readFlag(value, "releaseIrq", path);
+  return action;
+}
+
+BankSetter readBankSetter(const json& item, const std::string& path) {
+  json_fields::requireObject(item, path);
+  json_fields::rejectUnknown(item, path, {"window", "shift", "mask"});
+  BankSetter setter;
+  setter.window = readIdentifier(item, "window", path, 32);
+  setter.shift = static_cast<std::uint32_t>(readOptionalInt(item, "shift", path, 0, 7).value_or(0));
+  setter.mask = static_cast<std::uint32_t>(readOptionalInt(item, "mask", path, 1, 255).value_or(255));
+  return setter;
+}
+
+/** 写寄存器：true 回调脚本，对象由宿主直接执行。 */
+WriteAction readWriteAction(const json& value, const std::string& path) {
+  WriteAction action;
+  if (value.is_boolean()) {
+    action.script = json_fields::readBoolean(value, path);
+    return action;
+  }
+  if (!value.is_object()) fail(path + " 应为 true 或对象");
+  json_fields::rejectUnknown(value, path, {"state", "bank", "update"});
+  if (const auto state = readOptionalText(value, "state", path, 1, 32)) action.state = *state;
+  if (const json* banks = findList(value, "bank", path, MAX_BANK_SETTERS)) {
+    if (banks->empty()) fail(path + ".bank 至少 1 项");
+    for (std::size_t index = 0; index < banks->size(); ++index) action.banks.push_back(readBankSetter((*banks)[index], path + ".bank[" + std::to_string(index) + "]"));
+  }
+  if (const json* update = json_fields::find(value, "update")) {
+    const std::string updatePath = path + ".update";
+    json_fields::requireObject(*update, updatePath);
+    json_fields::rejectUnknown(*update, updatePath, {"table", "into"});
+    action.updateTable = readIdentifier(*update, "table", updatePath, 32);
+    action.updateInto = readText(*update, "into", updatePath, 1, 32);
+  }
+  if (action.state.empty() && action.banks.empty() && action.updateTable.empty()) fail(path + " 至少要写 state、bank、update 之一");
+  return action;
+}
+
 RegisterDecl readRegister(const json& item, const std::string& path) {
   json_fields::requireObject(item, path);
   json_fields::rejectUnknown(item, path, {"bus", "range", "read", "write"});
   RegisterDecl decl;
   decl.ppu = readBus(item, path);
   decl.range = readRange(item, "range", path, decl.ppu);
-  decl.read = readFlag(item, "read", path);
-  decl.write = readFlag(item, "write", path);
-  if (!decl.read && !decl.write) fail(path + " 的 read 与 write 至少要有一个为 true");
+  if (const json* read = json_fields::find(item, "read")) decl.readAction = readReadAction(*read, path + ".read");
+  if (const json* write = json_fields::find(item, "write")) decl.writeAction = readWriteAction(*write, path + ".write");
+  decl.read = decl.readAction.kind != ReadKind::None;
+  decl.write = decl.writeAction.script || !decl.writeAction.state.empty() || !decl.writeAction.banks.empty() || !decl.writeAction.updateTable.empty();
+  if (!decl.read && !decl.write) fail(path + " 的 read 与 write 至少要有一个有处理");
   return decl;
 }
 
 StateDecl readState(const json& item, const std::string& path) {
   json_fields::requireObject(item, path);
-  json_fields::rejectUnknown(item, path, {"name", "bits", "description"});
+  json_fields::rejectUnknown(item, path, {"name", "bits", "description", "initial"});
   StateDecl decl;
   decl.name = readText(item, "name", path, 1, 32);
   if (!isCamelName(decl.name)) fail(path + ".name 应为字母开头的 camelCase，只含字母与数字");
   decl.bits = static_cast<std::uint32_t>(readInt(item, "bits", path, 1, 32));
   decl.description = readText(item, "description", path, 1, 200);
+  if (const auto initial = readOptionalInt(item, "initial", path, 0, 0xFFFFFFFFLL)) {
+    if (decl.bits < 32 && static_cast<std::uint64_t>(*initial) >= (std::uint64_t{1} << decl.bits)) fail(path + ".initial 超出位宽");
+    decl.initial = static_cast<std::uint32_t>(*initial);
+  }
+  return decl;
+}
+
+IndexSource readIndexSource(const json& item, const std::string& path) {
+  json_fields::requireObject(item, path);
+  json_fields::rejectUnknown(item, path, {"from", "name", "shift", "bits"});
+  IndexSource source;
+  const std::string from = json_fields::readString(requireField(item, "from", path), path + ".from", 1, 8, {"state", "address", "data", "tape"});
+  if (from == "state") {
+    source.from = IndexFrom::State;
+    source.state = readText(item, "name", path, 1, 32);
+    for (const char* key : {"shift", "bits"}) {
+      if (json_fields::find(item, key) != nullptr) fail(path + "." + key + " 只用于 address 与 data");
+    }
+    return source;
+  }
+  if (json_fields::find(item, "name") != nullptr) fail(path + ".name 只用于 state");
+  if (from == "tape") {
+    source.from = IndexFrom::Tape;
+    source.bits = 1;
+    for (const char* key : {"shift", "bits"}) {
+      if (json_fields::find(item, key) != nullptr) fail(path + "." + key + " 只用于 address 与 data");
+    }
+    return source;
+  }
+  const bool address = from == "address";
+  source.from = address ? IndexFrom::Address : IndexFrom::Data;
+  const std::int64_t width = address ? 16 : 8;
+  source.shift = static_cast<std::uint32_t>(readInt(item, "shift", path, 0, width - 1));
+  source.bits = static_cast<std::uint32_t>(readInt(item, "bits", path, 1, width));
+  if (source.shift + source.bits > static_cast<std::uint32_t>(width)) fail(path + " 的 shift 加 bits 不能超过 " + std::to_string(width));
+  return source;
+}
+
+TableDecl readTable(const json& item, const std::string& path) {
+  json_fields::requireObject(item, path);
+  json_fields::rejectUnknown(item, path, {"id", "index", "bits"});
+  TableDecl decl;
+  decl.id = readIdentifier(item, "id", path, 32);
+  const json& index = readList(item, "index", path, 1, MAX_INDEX_SOURCES);
+  for (std::size_t position = 0; position < index.size(); ++position) decl.index.push_back(readIndexSource(index[position], path + ".index[" + std::to_string(position) + "]"));
+  decl.bits = static_cast<std::uint32_t>(readInt(item, "bits", path, 1, 32));
+  return decl;
+}
+
+TapeDecl readTape(const json& item, const std::string& path) {
+  json_fields::requireObject(item, path);
+  json_fields::rejectUnknown(item, path, {"comparator", "timer"});
+  TapeDecl decl;
+  if (const json* comparator = json_fields::find(item, "comparator")) {
+    const std::string comparatorPath = path + ".comparator";
+    json_fields::requireObject(*comparator, comparatorPath);
+    json_fields::rejectUnknown(*comparator, comparatorPath, {"low", "high", "invert"});
+    TapeComparatorDecl value;
+    value.low = static_cast<std::int32_t>(readInt(*comparator, "low", comparatorPath, -32768, 32767));
+    value.high = static_cast<std::int32_t>(readInt(*comparator, "high", comparatorPath, -32768, 32767));
+    if (value.low >= value.high) fail(comparatorPath + ".low 必须小于 high");
+    value.invert = readFlag(*comparator, "invert", comparatorPath);
+    decl.comparator = value;
+  }
+  if (const json* timer = json_fields::find(item, "timer")) {
+    const std::string timerPath = path + ".timer";
+    json_fields::requireObject(*timer, timerPath);
+    json_fields::rejectUnknown(*timer, timerPath, {"samples", "ticks", "scale", "irq"});
+    TapeTimerDecl value;
+    value.samples = readText(*timer, "samples", timerPath, 1, 32);
+    value.ticks = readText(*timer, "ticks", timerPath, 1, 32);
+    const json& scale = readList(*timer, "scale", timerPath, 2, 2);
+    value.scaleNumerator = static_cast<std::uint32_t>(json_fields::readInteger(scale[0], timerPath + ".scale[0]", 1, 65535));
+    value.scaleDenominator = static_cast<std::uint32_t>(json_fields::readInteger(scale[1], timerPath + ".scale[1]", 1, 65535));
+    value.irq = readFlag(*timer, "irq", timerPath);
+    decl.timer = value;
+  }
+  if (!decl.comparator && !decl.timer) fail(path + " 至少要写 comparator、timer 之一");
   return decl;
 }
 
@@ -320,6 +464,23 @@ NametableMode readNametable(const json& root, const std::string& path) {
   return NametableMode::Header;
 }
 
+/** 填入查表索引里状态来源的位宽，算出索引总位数并检查上限。 */
+void resolveTables(Manifest& manifest) {
+  for (TableDecl& table : manifest.tables) {
+    std::uint32_t total = 0;
+    for (IndexSource& source : table.index) {
+      if (source.from == IndexFrom::State) {
+        const auto state = std::find_if(manifest.state.begin(), manifest.state.end(), [&](const StateDecl& item) { return item.name == source.state; });
+        if (state == manifest.state.end()) fail("查表 " + table.id + " 的索引引用了不存在的状态：" + source.state);
+        source.bits = state->bits;
+      }
+      total += source.bits;
+    }
+    if (total > MAX_INDEX_BITS) fail("查表 " + table.id + " 的索引共 " + std::to_string(total) + " 位，最多 " + std::to_string(MAX_INDEX_BITS) + " 位");
+    table.indexBits = total;
+  }
+}
+
 /** 跨字段检查。 */
 void checkConsistency(const Manifest& manifest) {
   std::set<std::string> storageIds;
@@ -351,6 +512,32 @@ void checkConsistency(const Manifest& manifest) {
   for (const auto& state : manifest.state) {
     if (!stateNames.insert(state.name).second) fail("state 里的名称重复：" + state.name);
   }
+  std::set<std::string> tableIds;
+  for (const auto& table : manifest.tables) {
+    if (!tableIds.insert(table.id).second) fail("tables 里的标识重复：" + table.id);
+  }
+  const auto requireState = [&](const std::string& name, const std::string& where) {
+    if (!stateNames.contains(name)) fail(where + " 引用了不存在的状态：" + name);
+  };
+  for (std::size_t index = 0; index < manifest.registers.size(); ++index) {
+    const auto& decl = manifest.registers[index];
+    const std::string path = "registers[" + std::to_string(index) + "]";
+    if (decl.readAction.kind == ReadKind::State) requireState(decl.readAction.state, path + ".read");
+    if (!decl.writeAction.state.empty()) requireState(decl.writeAction.state, path + ".write.state");
+    for (const BankSetter& setter : decl.writeAction.banks) {
+      if (!windowIds.contains(setter.window)) fail(path + ".write.bank 引用了不存在的窗口：" + setter.window);
+    }
+    if (!decl.writeAction.updateTable.empty()) {
+      if (!tableIds.contains(decl.writeAction.updateTable)) fail(path + ".write.update 引用了不存在的查表：" + decl.writeAction.updateTable);
+      requireState(decl.writeAction.updateInto, path + ".write.update.into");
+    }
+  }
+  if (manifest.tape && manifest.tape->timer) {
+    const TapeTimerDecl& timer = *manifest.tape->timer;
+    requireState(timer.samples, "tape.timer.samples");
+    requireState(timer.ticks, "tape.timer.ticks");
+    if (timer.samples == timer.ticks) fail("tape.timer 的 samples 与 ticks 不能是同一个状态");
+  }
   std::set<std::string> settingKeys;
   for (const auto& setting : manifest.settings) {
     if (!settingKeys.insert(setting.key).second) fail("settings 里的键重复：" + setting.key);
@@ -365,7 +552,7 @@ Manifest build(const json& root) {
   const std::string path = "manifest";
   json_fields::requireObject(root, path);
   json_fields::rejectUnknown(root, path,
-                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "match", "storage", "windows", "nametable", "registers", "state", "settings"});
+                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "match", "storage", "windows", "nametable", "registers", "state", "tables", "tape", "settings"});
   Manifest manifest;
   manifest.id = readText(root, "id", path, 3, 40);
   if (!isLowerIdentifier(manifest.id, 3, 40)) fail(path + ".id 只能用小写字母、数字与 -，3 到 40 个字符，且不能以 - 开头");
@@ -408,9 +595,14 @@ Manifest build(const json& root) {
   if (const json* list = findList(root, "state", path, MAX_STATE)) {
     for (std::size_t index = 0; index < list->size(); ++index) manifest.state.push_back(readState((*list)[index], path + ".state[" + std::to_string(index) + "]"));
   }
+  if (const json* list = findList(root, "tables", path, MAX_TABLES)) {
+    for (std::size_t index = 0; index < list->size(); ++index) manifest.tables.push_back(readTable((*list)[index], path + ".tables[" + std::to_string(index) + "]"));
+  }
+  if (const json* tape = json_fields::find(root, "tape")) manifest.tape = readTape(*tape, path + ".tape");
   if (const json* list = findList(root, "settings", path, MAX_SETTINGS)) {
     for (std::size_t index = 0; index < list->size(); ++index) manifest.settings.push_back(readSetting((*list)[index], path + ".settings[" + std::to_string(index) + "]"));
   }
+  resolveTables(manifest);
   checkConsistency(manifest);
   return manifest;
 }
@@ -432,11 +624,11 @@ bool MatchRule::matches(const contracts::mappers::CartridgeDescription& descript
 }
 
 bool Manifest::needsReadHandler() const noexcept {
-  return std::any_of(registers.begin(), registers.end(), [](const RegisterDecl& item) { return item.read; });
+  return std::any_of(registers.begin(), registers.end(), [](const RegisterDecl& item) { return item.readAction.kind == ReadKind::Script; });
 }
 
 bool Manifest::needsWriteHandler() const noexcept {
-  return std::any_of(registers.begin(), registers.end(), [](const RegisterDecl& item) { return item.write; });
+  return std::any_of(registers.begin(), registers.end(), [](const RegisterDecl& item) { return item.writeAction.script; });
 }
 
 Manifest parseManifest(std::string_view text) {

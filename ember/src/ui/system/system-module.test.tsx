@@ -16,7 +16,7 @@ import type { ShellApi, ShellCommandDefinition } from '../shell/shell-registry';
 import { createSystemModule, SYSTEM_COMMANDS } from './system-module';
 
 function setup(openLogDirectory: () => Promise<unknown>) {
-  const module = createSystemModule([]);
+  const module = createSystemModule([], '2026-11-16 12:00:00');
   const bridge = { main: { system: { openLogDirectory: vi.fn(openLogDirectory) } } } as unknown as EmberBridge;
   const shell = { notify: vi.fn(), openDialog: vi.fn() } as unknown as ShellApi;
   const Host = module.Host as NonNullable<typeof module.Host>;

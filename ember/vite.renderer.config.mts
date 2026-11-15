@@ -13,6 +13,7 @@ import react from '@vitejs/plugin-react';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
+import { buildInfoPlugin } from './tools/build/build-info.mjs';
 import { thirdPartyPlugin } from './tools/third-party/third-party.mjs';
 import { DEDUPE, uiKitAlias, uiKitDirectory } from './ui-kit-source.mts';
 
@@ -25,6 +26,7 @@ export default defineConfig({
   plugins: [
     react(),
     thirdPartyPlugin(uiKitDirectory()),
+    buildInfoPlugin(),
     {
       name: 'ember-dev-csp',
       apply: 'serve',

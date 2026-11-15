@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：AboutDialog.tsx
- * 说明：“关于 Ember”对话框的内容：标志与名称、应用版本、核心版本、许可证，以及“第三方依赖”小节（一行说明和一张表：名称与版本、作者、许可）。
+ * 说明：“关于 Ember”对话框的内容：标志、名称与应用版本、核心版本（名称在上，两个版本在下面并排），编译时间、作者、邮箱、QQ 号、许可证（竖排），以及“第三方依赖”小节（一行说明和一张表：名称与版本、作者、许可）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -29,6 +29,8 @@ export interface ThirdPartyNotice {
 export interface AboutDialogProps extends ShellPageProps {
   /** 第三方依赖清单。 */
   readonly notices: readonly ThirdPartyNotice[];
+  /** 编译时间，由构建脚本生成。 */
+  readonly buildTime: string;
 }
 
 /** 用户可见的文字。 */
@@ -36,6 +38,13 @@ const TEXT = {
   appName: 'Ember',
   version: '版本',
   coreVersion: '核心版本',
+  buildTime: '编译时间',
+  author: '作者',
+  authorName: 'sungbin',
+  email: '邮箱',
+  emailAddress: 'sungbin@3578.cn',
+  qq: 'QQ',
+  qqNumber: '46427991',
   license: '许可证',
   licenseName: 'GNU 通用公共许可证第 3 版（GPL-3.0）',
   loading: '正在读取…',
@@ -68,7 +77,7 @@ function versionText(versions: Versions, pick: (ready: { app: string; core: stri
  * “关于 Ember”对话框的内容。
  * @param props 属性。
  */
-export function AboutDialog({ bridge, notices }: AboutDialogProps) {
+export function AboutDialog({ bridge, notices, buildTime }: AboutDialogProps) {
   const [versions, setVersions] = useState<Versions>({ kind: 'loading' });
 
   useEffect(() => {
@@ -93,12 +102,20 @@ export function AboutDialog({ bridge, notices }: AboutDialogProps) {
           <span className="ember-about__logo">
             <EmberLogo />
           </span>
-          <Heading>{TEXT.appName}</Heading>
+          <div className="ember-about__name">
+            <Heading>{TEXT.appName}</Heading>
+            <p className="ember-about__versions">
+              <span>{`${TEXT.version} ${versionText(versions, (ready) => ready.app)}`}</span>
+              <span>{`${TEXT.coreVersion} ${versionText(versions, (ready) => ready.core)}`}</span>
+            </p>
+          </div>
         </div>
         <Facts
           items={[
-            { label: TEXT.version, value: versionText(versions, (ready) => ready.app) },
-            { label: TEXT.coreVersion, value: versionText(versions, (ready) => ready.core) },
+            { label: TEXT.buildTime, value: buildTime },
+            { label: TEXT.author, value: TEXT.authorName },
+            { label: TEXT.email, value: TEXT.emailAddress },
+            { label: TEXT.qq, value: TEXT.qqNumber },
             { label: TEXT.license, value: TEXT.licenseName }
           ]}
         />

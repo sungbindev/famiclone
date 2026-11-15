@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：AboutDialog.test.tsx
- * 说明：“关于 Ember”对话框的测试：显示名称、应用版本、核心版本与许可证，第三方依赖表（名称与版本、作者、许可）来自传入的清单，读取版本失败时显示“读取失败”。
+ * 说明：“关于 Ember”对话框的测试：显示名称、应用版本、核心版本、编译时间、作者、邮箱、QQ 号与许可证，第三方依赖表（名称与版本、作者、许可）来自传入的清单，读取版本失败时显示“读取失败”。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -24,7 +24,7 @@ function setup(version: () => Promise<{ appVersion: string; coreVersion: string 
   const bridge = { core: { system: { version: vi.fn(version) } } } as unknown as EmberBridge;
   render(
     <UiProvider>
-      <AboutDialog bridge={bridge} notices={NOTICES} />
+      <AboutDialog bridge={bridge} notices={NOTICES} buildTime="2026-11-16 12:30:45" />
     </UiProvider>
   );
 }
@@ -33,9 +33,17 @@ describe('AboutDialog', () => {
   it('显示名称、应用版本、核心版本与许可证', async () => {
     setup(() => Promise.resolve({ appVersion: '0.1.0', coreVersion: '0.2.0' }));
     expect(screen.getByRole('heading', { name: 'Ember' })).toBeTruthy();
-    expect(await screen.findByText('0.1.0')).toBeTruthy();
-    expect(screen.getByText('0.2.0')).toBeTruthy();
+    expect(await screen.findByText('版本 0.1.0')).toBeTruthy();
+    expect(screen.getByText('核心版本 0.2.0')).toBeTruthy();
     expect(screen.getByText('GNU 通用公共许可证第 3 版（GPL-3.0）')).toBeTruthy();
+  });
+
+  it('显示编译时间、作者、邮箱与 QQ 号', () => {
+    setup(() => Promise.resolve({ appVersion: '0.1.0', coreVersion: '0.2.0' }));
+    expect(screen.getByText('2026-11-16 12:30:45')).toBeTruthy();
+    expect(screen.getByText('sungbin')).toBeTruthy();
+    expect(screen.getByText('sungbin@3578.cn')).toBeTruthy();
+    expect(screen.getByText('46427991')).toBeTruthy();
   });
 
   it('第三方依赖表列出清单里的每一项：名称与版本、作者（多个用顿号）、许可', async () => {
@@ -50,8 +58,9 @@ describe('AboutDialog', () => {
 
   it('读取版本时先显示“正在读取…”，失败后显示“读取失败”，第三方依赖仍然显示', async () => {
     setup(() => Promise.reject(new Error('核心未启动')));
-    expect(screen.getAllByText('正在读取…').length).toBeGreaterThan(0);
-    expect((await screen.findAllByText('读取失败')).length).toBe(2);
+    expect(screen.getAllByText(/正在读取…/).length).toBe(2);
+    expect(await screen.findByText('版本 读取失败')).toBeTruthy();
+    expect(screen.getByText('核心版本 读取失败')).toBeTruthy();
     expect(screen.getByText('react 19.0.0')).toBeTruthy();
   });
 });

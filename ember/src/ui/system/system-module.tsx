@@ -39,13 +39,14 @@ function errorText(error: unknown): string {
 /**
  * 创建系统模块的登记项。
  * @param notices 第三方依赖清单，由构建脚本生成。
+ * @param buildTime 编译时间，由构建脚本生成。
  */
-export function createSystemModule(notices: readonly ThirdPartyNotice[]): ShellModule {
+export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTime: string): ShellModule {
   /** 常驻组件交给模块的预加载接口；没有挂载时为空。 */
   const holder: { bridge?: EmberBridge } = {};
   return {
     name: 'system',
-    dialogs: [{ id: DIALOG_ID, title: TEXT.about, Component: (props: ShellPageProps) => <AboutDialog {...props} notices={notices} />, ...DIALOG_SIZE }],
+    dialogs: [{ id: DIALOG_ID, title: TEXT.about, Component: (props: ShellPageProps) => <AboutDialog {...props} notices={notices} buildTime={buildTime} />, ...DIALOG_SIZE }],
     commands: [
       {
         id: SYSTEM_COMMANDS.openLogDirectory,

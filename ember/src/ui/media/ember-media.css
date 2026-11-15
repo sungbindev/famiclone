@@ -9,6 +9,11 @@
  * ------------------------------------------------------------------------
  */
 
+/* 设备名称很短，名称列窄一些，把宽度让给盘片名等主要内容 */
+.ember-media-list {
+  --row-list-leading-width: 56px;
+}
+
 .ember-media-list .ui-row-list__leading {
   color: var(--facts-label-color);
   font-size: var(--facts-label-font-size);

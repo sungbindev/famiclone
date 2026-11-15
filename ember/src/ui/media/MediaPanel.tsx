@@ -31,7 +31,7 @@ const TEXT = {
 } as const;
 
 /** 状态列的宽度（像素），各行相同才能对齐。 */
-const STATE_WIDTH = 150;
+const STATE_WIDTH = 128;
 
 /** 设备面板的属性。 */
 export interface MediaPanelProps {

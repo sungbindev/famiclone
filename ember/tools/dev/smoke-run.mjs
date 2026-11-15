@@ -316,6 +316,7 @@ async function main() {
   // 指针锁定：“点击画面捕获鼠标”的前提。临时在画面区挂一个 pointerdown 去请求锁定，用真实的鼠标按下触发，确认主进程的权限策略放行 pointerLock。
   await page.evaluate(`(() => { window.__lock = 'pending'; const screen = document.querySelector('.ember-run-screen'); document.addEventListener('pointerlockchange', () => { window.__lock = document.pointerLockElement ? 'locked' : 'unlocked'; }); document.addEventListener('pointerlockerror', () => { window.__lock = 'error'; }); screen.addEventListener('pointerdown', () => screen.requestPointerLock(), { once: true }); })()`);
   const lockPoint = await page.evaluate(`(() => { const box = document.querySelector('.ember-run-screen').getBoundingClientRect(); return { x: box.left + box.width / 2, y: box.top + box.height / 2 }; })()`);
+  await page.send('Page.bringToFront');
   await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: lockPoint.x, y: lockPoint.y });
   await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: lockPoint.x, y: lockPoint.y, button: 'left', clickCount: 1 });
   await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: lockPoint.x, y: lockPoint.y, button: 'left', clickCount: 1 });
@@ -514,6 +515,7 @@ async function main() {
       check('重启后的核心可以响应请求（新核心里没有卡带，电源为 off）', status?.power === 'off');
       const restartedButton = await waitFor(runButtonInfo, (info) => info?.title === '运行：未开机', 30_000, 200);
       check('核心重启后运行按钮重新读取（提示是“运行：未开机”，不再是旧的“运行：运行中”）', restartedButton?.title === '运行：未开机', JSON.stringify(restartedButton));
+      if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-no-machine.png'));
       const restartedBar = await textOf('.ui-status-bar');
       check('核心重启后系统栏的卡带与 mapper 项同样刷新（不再显示旧的卡带名）', !restartedBar.includes('nestest.nes') && !restartedBar.includes('NROM'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
       // 调试服务在新核心里重新监听（启动参数会再次交给核心），令牌不变。

@@ -16,13 +16,21 @@ import { useRuntimeState } from './use-runtime-state';
 
 /** 用户可见的文字。 */
 const TEXT = {
-  none: { title: '未开机', text: '在“文件”菜单里选择机型，再点系统栏左侧“运行”里的“开机”；经典 FC 用“文件”菜单的“打开卡带”。' },
-  off: { title: '已断电', text: '点系统栏左侧“运行”里的“开机”，或按 F9。' },
-  paused: { title: '已暂停', text: '' }
+  none: {
+    title: '未开机',
+    steps: [
+      { label: '学习机', text: '在“文件→选择机型”选好机型，再点系统栏的“运行”，按“开机”' },
+      { label: '经典 FC', text: '在“文件→打开卡带”选择 NES 文件，选好后直接开机' }
+    ]
+  },
+  off: { title: '已断电', text: '点系统栏的“运行”，按“开机”，或按 F9' },
+  paused: { title: '已暂停' }
 } as const;
 
-/** 各状态的提示：图标、标题与说明；blank 为真时提示的底色是纯黑（没有开机与断电时机器没有画面，盖住画布里残留的上一帧），暂停时是半透明，透出暂停的画面。 */
-const HINTS: Partial<Record<MachineState, { icon: IconData; title: string; text: string; blank: boolean }>> = {
+/** 各状态的提示：图标、标题、一句说明或分行的步骤；blank 为真时提示的底色是纯黑（没有开机与断电时机器没有画面，盖住画布里残留的上一帧），暂停时是半透明，透出暂停的画面。 */
+const HINTS: Partial<
+  Record<MachineState, { icon: IconData; title: string; text?: string; steps?: ReadonlyArray<{ label: string; text: string }>; blank: boolean }>
+> = {
   none: { icon: iconPower, ...TEXT.none, blank: true },
   off: { icon: iconPower, ...TEXT.off, blank: true },
   paused: { icon: iconPlayerPause, ...TEXT.paused, blank: false }
@@ -46,6 +54,16 @@ export function ScreenOverlay({ controller }: ScreenOverlayProps) {
       <Icon icon={hint.icon} className="ember-run-overlay__icon" />
       <div className="ember-run-overlay__title">{hint.title}</div>
       {hint.text ? <div className="ember-run-overlay__text">{hint.text}</div> : null}
+      {hint.steps === undefined ? null : (
+        <dl className="ember-run-overlay__steps">
+          {hint.steps.map((step) => (
+            <div key={step.label} className="ember-run-overlay__step">
+              <dt>{step.label}</dt>
+              <dd>{step.text}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }

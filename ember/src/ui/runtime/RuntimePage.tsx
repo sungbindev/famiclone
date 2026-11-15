@@ -19,12 +19,16 @@ import { cropLinesFor, nominalScreenRatio } from './screen-layout';
 import { ScreenOverlay } from './ScreenOverlay';
 import { useDisplaySettings } from './use-display-settings';
 import { useRuntimeState } from './use-runtime-state';
+import { useTimedVisible } from './use-timed-visible';
 import './ember-run.css';
 
 /** 用户可见的文字。 */
 const TEXT = {
   captureHint: '点击画面捕获鼠标，双击右键或按 Esc 释放'
 } as const;
+
+/** 捕获鼠标的提示显示几秒后消失，不一直遮挡画面。 */
+const CAPTURE_HINT_MS = 4000;
 
 /** 运行页的属性。 */
 export interface RuntimePageProps extends ShellPageProps {
@@ -41,6 +45,7 @@ export function RuntimePage({ bridge, controller }: RuntimePageProps) {
   const { status } = useRuntimeState(controller);
   // 只有机器带鼠标（整机机型，经典 FC 没有）时才捕获鼠标。
   const capture = capturesMouse(captureMouse, status);
+  const showHint = useTimedVisible(capture && machineState(status) !== 'none' && machineState(status) !== 'off', CAPTURE_HINT_MS);
   // 画面框的样式：显示宽高比交给样式里的 aspect-ratio 与宽度计算；比例随画面比例与裁剪的行数变化。
   const frameStyle = useMemo(() => ({ '--ember-screen-ratio': nominalScreenRatio(aspect, cropLinesFor(showAllLines)) }) as CSSProperties, [aspect, showAllLines]);
   // 运行面板里的操作结束后，控制器经它把焦点还给画面，键盘才能继续控制游戏。
@@ -54,7 +59,7 @@ export function RuntimePage({ bridge, controller }: RuntimePageProps) {
         <div className="ember-run-frame" style={frameStyle}>
           <RuntimeScreen bridge={bridge} screenRef={screenRef} aspect={aspect} scaling={scaling} showAllLines={showAllLines} captureMouse={capture} />
           <ScreenOverlay controller={controller} />
-          {capture && machineState(status) !== 'none' && machineState(status) !== 'off' ? <div className="ember-run-hint">{TEXT.captureHint}</div> : null}
+          {showHint ? <div className="ember-run-hint">{TEXT.captureHint}</div> : null}
         </div>
       </div>
     </div>

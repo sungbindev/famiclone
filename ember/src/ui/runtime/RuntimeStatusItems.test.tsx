@@ -83,8 +83,9 @@ describe('画面提示', () => {
     const controller = await connect(new FakeRuntimeBackend());
     render(<ScreenOverlay controller={controller} />);
     expect(screen.getByRole('status').textContent).toContain('未开机');
-    expect(screen.getByRole('status').textContent).toContain('“文件”菜单里选择机型');
-    expect(screen.getByRole('status').textContent).toContain('“文件”菜单的“打开卡带”');
+    expect(screen.getByRole('status').textContent).toContain('文件→选择机型');
+    expect(screen.getByRole('status').textContent).toContain('文件→打开卡带');
+    expect(screen.getAllByRole('term').map((term) => term.textContent)).toEqual(['学习机', '经典 FC']);
     expect(screen.getByRole('status').getAttribute('data-blank')).toBe('true');
   });
 

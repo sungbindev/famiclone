@@ -84,7 +84,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 - 错误码：`cartridges.notInes`、`cartridges.truncated`、`cartridges.unsupportedFormat`、`cartridges.invalidHeader`。
 
 - 同一个 mapper 号可以对应多种卡带，用变体或校验值区分；可以写成一个插件的多项匹配，也可以每种卡带一个插件。
-- 多个插件同时匹配时，写出条件更多的优先（一个插件有多项匹配时取它满足的各项里条件最多的）；条件数相同时报冲突，`mappers.conflict` 的说明列出同样匹配的插件，用户停用其中不需要的即可。“用户在 mapper 插件页选择并记住”**后续阶段**再做（需要首选项存储与对应的请求）。
+- 多个插件同时匹配时，写出条件更多的优先（一个插件有多项匹配时取它满足的各项里条件最多的）；条件数相同时报冲突，`mappers.conflict` 的说明列出同样匹配的插件，用户停用其中不需要的即可。“用户在 mapper 插件对话框选择并记住”**后续阶段**再做（需要首选项存储与对应的请求）。
 - 没有任何已启用的插件匹配时不运行，`mappers.noMatch` 的说明写明“缺少 mapper 号 N、变体 V 的插件”（匹配的插件都被停用时改为提示去启用），界面据此给出打开“mapper 插件”页的入口。
 - 宿主只比较这些规范化字段，不理解它们对应哪张卡带。
 - mapper 171（BBK、SB2K 的 BIOS 文件）是学习机的 BIOS，不是卡带：没有匹配的插件时同样按 `mappers.noMatch` 报错，程序不会把它识别成学习机，也不允许改 mapper 号强行运行；学习机 BIOS 只能走“机型与 BIOS”开机，见 02、05。
@@ -274,7 +274,7 @@ export default {
 - 用户可以停用任何插件，卸载自己安装的插件；预装的插件只能停用，不能删除（`mappers.bundledReadonly`）。停用状态保存在用户插件目录的 `state.json`，重启后保持；插件被完全卸载后对应的停用记录一并清除。
 - 安装时检查：包结构与大小、清单符合规范、`apiVersion` 受支持、`host` 中至少有一个存在的主机型号（`mappers.hostUnknown`）、`main.js` 能加载并导出声明的函数（用空卡带试创建一次，脚本的顶层代码会真的执行，受第 6.3 节的限制）；不通过则拒绝并说明原因。用户目录与预装目录里不合格的包在重新读取时被跳过，写入系统错误日志。
 - 开发目录：首选项里可以指定“开发中的插件目录”，目录下每个子目录是一个未打包的插件；这些插件优先于同 `id` 的已安装插件，用 `mappers.reload` 重新加载，调试服务也提供同名请求。**后续阶段**实现；目前 `mappers.reload` 只重新读取预装目录与用户目录。
-- `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由主进程或调试服务发起），插件变化时发事件 `mappers.changed`；`match`（按文件头预览匹配结果）随 `cartridges.parseHeader` 在**后续阶段**实现。
+- `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由主进程或调试服务发起；界面经主进程自己处理的 `mappers.openPackage` 安装），插件变化时发事件 `mappers.changed`；`match`（按文件头预览匹配结果）随 `cartridges.parseHeader` 在**后续阶段**实现。
 
 错误码：`mappers.noMatch`、`mappers.conflict`、`mappers.invalidPackage`、`mappers.hostUnknown`、`mappers.scriptError`、`mappers.limitExceeded`，以及插件管理增加的 `mappers.notFound`（没有这个标识的插件）、`mappers.bundledReadonly`（预装插件不能卸载）。
 
@@ -359,5 +359,5 @@ export default definePlugin({
 - 脚本出错时卡带不抛异常，由运行模块在每一帧与每条命令之后轮询 `MapperCartridge::failure()`，发现错误就暂停并报告（第 6.3 节，阶段 2b-2 已实现）。
 - `MapperCartridge` 增加 `storageList()`（每块存储区的标识、种类、实际容量、是否带电池），运行模块在装入卡带时取它写进卡带描述里的存储区清单（`cartridges.info`、`runtime.status`）。
 - `nrom` 额外带 8K PRG RAM（第 9 节）；`main.js` 不设键位（脚本只导出空对象）。
-- `mappers.install` 在 Schema 里标 `mainOnly`：参数带磁盘路径，界面不能直接发起，由主进程根据用户选择的文件或调试服务发起。
+- `mappers.install` 在 Schema 里标 `mainOnly`：参数带磁盘路径，界面不能直接发起，由主进程根据用户选择的文件（`mappers.openPackage` 弹出文件选择窗口，只显示 `.emap`）或调试服务发起。
 - 新增错误码 `mappers.notFound`、`mappers.bundledReadonly`；`cartridges` 模块新增 `cartridges.notInes`、`cartridges.truncated`、`cartridges.unsupportedFormat`、`cartridges.invalidHeader`。

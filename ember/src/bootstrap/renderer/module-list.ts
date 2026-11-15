@@ -12,9 +12,11 @@
 import type { ShellModule } from '../../ui/shell/shell-registry';
 import { DEBUG_RENDERER_MODULE } from './modules/debug';
 import { INPUT_RENDERER_MODULE } from './modules/input';
+import { MAPPERS_RENDERER_MODULE } from './modules/mappers';
 import { MEDIA_RENDERER_MODULE } from './modules/media';
 import { PREFERENCES_RENDERER_MODULE } from './modules/preferences';
 import { RUNTIME_RENDERER_MODULE } from './modules/runtime';
+import { SYSTEM_RENDERER_MODULE } from './modules/system';
 
 /** 有界面的模块，按登记顺序排列（菜单项、底部面板页签与状态栏按钮、状态项按这个顺序显示）。 */
-export const RENDERER_MODULES: readonly ShellModule[] = [RUNTIME_RENDERER_MODULE, MEDIA_RENDERER_MODULE, DEBUG_RENDERER_MODULE, INPUT_RENDERER_MODULE, PREFERENCES_RENDERER_MODULE];
+export const RENDERER_MODULES: readonly ShellModule[] = [RUNTIME_RENDERER_MODULE, MEDIA_RENDERER_MODULE, DEBUG_RENDERER_MODULE, INPUT_RENDERER_MODULE, MAPPERS_RENDERER_MODULE, PREFERENCES_RENDERER_MODULE, SYSTEM_RENDERER_MODULE];

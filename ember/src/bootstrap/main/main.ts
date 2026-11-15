@@ -11,7 +11,7 @@
  */
 
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import handledSquirrelEvent from 'electron-squirrel-startup';
 import { CORE_SCHEMAS } from '../../contracts/core-gateway/generated/core-api';
 import { STREAM_PORTS_WINDOW_MESSAGE } from '../../contracts/stream-ports/stream-messages';
@@ -32,6 +32,7 @@ import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
 import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/launch/launch-args';
 import { loadNativeKeyboard, NativeKeyboardCapture } from '../../platform/keyboard-capture/native-keyboard-capture';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
+import { createLogDirectory } from '../../platform/logging/log-directory';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
 import { applyThemeSource, createAppWindow, followSystemTheme, isAppUrl, removeDefaultMenu, restrictPermissions } from '../../platform/window/app-window';
@@ -192,8 +193,9 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController, keyboard });
 
     const fileDialog = createOpenFileDialog(() => mainWindow);
+    const logDirectory = createLogDirectory(join(userDataPath, 'logs'), (target) => shell.openPath(target));
     const handlers: Record<string, MainRequestHandler> = {};
-    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, core: coreHandling, recentCartridges }));
+    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, logDirectory, core: coreHandling, recentCartridges }));
     registerMainRequestIpc({ ipc: ipcMain, handlers, modules, schemas: CORE_SCHEMAS, isTrustedSender, onError: (error, name) => logError(logger, error, { source: 'mainRequest', name }) });
     registerStreamsIpc({
       ipc: ipcMain,

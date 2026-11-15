@@ -16,5 +16,13 @@
       }
     }
   },
+  "mainRequests": {
+    "openLogDirectory": {
+      "description": "用系统的文件管理器打开日志目录（目录不存在时先创建）；路径由主进程决定，界面不能指定。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": ["system.logDirectoryUnavailable"]
+    }
+  },
   "events": {}
 }

@@ -1,0 +1,34 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：ember-about.css
+ * 说明：“关于 Ember”对话框的版面：标志与名称排成一行、标志的尺寸、说明文字用淡色。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-15
+ * 备注：只写版面，间距与颜色取组件库的令牌。
+ * ------------------------------------------------------------------------
+ */
+
+.ember-about__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* 标志是一张方图，放大到能看清卡带的轮廓 */
+.ember-about__logo {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+}
+
+.ember-about__logo img {
+  width: 100%;
+  height: 100%;
+}
+
+.ember-about__hint {
+  margin: 0;
+  color: var(--facts-label-color);
+  font-size: var(--facts-label-font-size);
+}

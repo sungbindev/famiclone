@@ -197,6 +197,21 @@
       }
     }
   },
+  "mainRequests": {
+    "openPackage": {
+      "description": "弹出系统文件选择窗口（.emap 插件包），把用户选定的文件交给 mappers.install；用户取消选择时 canceled 为 true，不是错误。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "canceled": { "type": "boolean", "description": "用户是否取消了选择" },
+          "plugin": { "$ref": "#/types/MapperSummary", "description": "安装后的插件摘要；取消时没有这一项" }
+        },
+        "required": ["canceled"]
+      },
+      "errors": ["mappers.invalidPackage", "mappers.hostUnknown", "mappers.limitExceeded"]
+    }
+  },
   "events": {
     "changed": {
       "description": "插件安装、卸载、启停或重新加载。",

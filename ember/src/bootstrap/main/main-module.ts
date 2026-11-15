@@ -11,6 +11,7 @@
 
 import type { RecentCartridgesService } from '../../contracts/cartridges/recent-cartridges-service';
 import type { FileDialog } from '../../contracts/shell/file-dialog';
+import type { LogDirectory } from '../../contracts/shell/log-directory';
 import type { CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
 import type { MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
 import type { ModuleSchema } from '../../shared/schema/schema-types';
@@ -19,6 +20,8 @@ import type { ModuleSchema } from '../../shared/schema/schema-types';
 export interface MainHandlerContext {
   /** 文件选择窗口。 */
   readonly fileDialog: FileDialog;
+  /** 日志目录。 */
+  readonly logDirectory: LogDirectory;
   /** 以主进程的身份向核心发起请求所需的依赖。 */
   readonly core: CoreRequestHandling;
   /** 最近打开的卡带。 */

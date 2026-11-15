@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimePanel.tsx
- * 说明：底部面板的“运行”内容，没有分组标题，分两行：第一行四个控制按钮（开机或断电、暂停或继续、软复位、硬复位），第二行左边机型选择（MachinePicker）、右边声音（静音按钮、音量滑块与数值）。主机型号、卡带、mapper 插件显示在系统栏。
+ * 说明：底部面板的“运行”内容，没有分组标题，只有一行：四个控制按钮（开机或断电、暂停或继续、软复位、硬复位）与声音（静音按钮、音量滑块与数值）。主机型号、卡带、mapper 插件显示在系统栏。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -12,7 +12,6 @@
 
 import { Button, iconPlayerPause, iconPlayerPlay, iconPower, iconRefresh, iconRotate, iconVolume, iconVolumeOff, Slider } from '@rujianjs/ui-kit';
 import type { RuntimeController } from './runtime-controller';
-import { MachinePicker } from './MachinePicker';
 import { pauseToggleText, powerToggleText } from './runtime-status';
 import { useRuntimeState } from './use-runtime-state';
 import './ember-run.css';
@@ -55,15 +54,12 @@ export function RuntimePanel({ controller }: RuntimePanelProps) {
           {TEXT.hardReset}
         </Button>
       </div>
-      <div className="ember-run-panel__second">
-        <MachinePicker controller={controller} />
-        <div className="ember-run-panel__volume">
-          <Button variant="ghost" iconOnly compact icon={muted ? iconVolumeOff : iconVolume} pressed={muted} title={TEXT.mute} onClick={() => controller.toggleMute()}>
-            {TEXT.mute}
-          </Button>
-          <Slider className="ember-run-panel__slider" aria-label={TEXT.volume} value={volume} onChange={(next) => controller.setVolume(next)} />
-          <span className="ember-run-panel__volume-value">{volume}%</span>
-        </div>
+      <div className="ember-run-panel__volume">
+        <Button variant="ghost" iconOnly compact icon={muted ? iconVolumeOff : iconVolume} pressed={muted} title={TEXT.mute} onClick={() => controller.toggleMute()}>
+          {TEXT.mute}
+        </Button>
+        <Slider className="ember-run-panel__slider" aria-label={TEXT.volume} value={volume} onChange={(next) => controller.setVolume(next)} />
+        <span className="ember-run-panel__volume-value">{volume}%</span>
       </div>
     </div>
   );

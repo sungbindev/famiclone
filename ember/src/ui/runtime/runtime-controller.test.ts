@@ -240,15 +240,13 @@ describe('控制', () => {
     expect(fake.calls).toEqual([]);
   });
 
-  it('软复位与硬复位：软复位只在通电时可用，硬复位已开机就可用', async () => {
+  it('软复位与硬复位：都只在通电时可用，断电时点了不发请求', async () => {
     fake.status = machineStatus('off', 'paused', 'D:\\roms\\a.nes');
     await attach();
     controller.softReset();
-    await settle();
-    expect(fake.calls.filter((call) => call.startsWith('runtime.reset'))).toEqual([]);
     controller.hardReset();
     await settle();
-    expect(fake.calls).toContain('runtime.reset {"kind":"hard"}');
+    expect(fake.calls.filter((call) => call.startsWith('runtime.reset'))).toEqual([]);
 
     fake.status = machineStatus('on', 'running', 'D:\\roms\\a.nes');
     controller.attach(fake.backend, context.host);
@@ -256,6 +254,9 @@ describe('控制', () => {
     controller.softReset();
     await settle();
     expect(fake.calls).toContain('runtime.reset {"kind":"soft"}');
+    controller.hardReset();
+    await settle();
+    expect(fake.calls).toContain('runtime.reset {"kind":"hard"}');
   });
 
   it('没有开机时暂停、复位、关闭卡带全部不可用，也不发请求', async () => {

@@ -82,8 +82,8 @@ describe('controlAvailability', () => {
     expect(controlAvailability(NONE, 'sb2000', machines(true))).toEqual({ powerToggle: true, pauseToggle: false, softReset: false, hardReset: false, eject: false });
   });
 
-  it('断电时：开机、硬复位、关闭卡带可用，暂停与软复位置灰', () => {
-    expect(controlAvailability(OFF, 'fc', machines(false))).toEqual({ powerToggle: true, pauseToggle: false, softReset: false, hardReset: true, eject: true });
+  it('断电时：开机、关闭卡带可用，暂停、软复位与硬复位置灰', () => {
+    expect(controlAvailability(OFF, 'fc', machines(false))).toEqual({ powerToggle: true, pauseToggle: false, softReset: false, hardReset: false, eject: true });
   });
 
   it('暂停与运行中时全部可用', () => {

@@ -53,12 +53,12 @@ describe('控制按钮', () => {
     for (const name of ['开机', '继续', '软复位', '硬复位']) expect((screen.getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('断电：开机与硬复位可用，继续与软复位置灰', async () => {
+  it('断电：只有开机可用，继续、软复位与硬复位置灰', async () => {
     await setup(machineStatus('off', 'paused', 'D:\\roms\\a.nes'));
     expect((screen.getByRole('button', { name: '开机' }) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole('button', { name: '继续' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: '软复位' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: '硬复位' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: '硬复位' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('运行中：按钮名称是“断电”“暂停”，四个都可用', async () => {

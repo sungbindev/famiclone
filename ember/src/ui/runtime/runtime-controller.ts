@@ -195,7 +195,7 @@ export class RuntimeController {
     this.perform(TEXT.actions.softReset, (backend) => backend.core.runtime.reset({ kind: 'soft' }));
   }
 
-  /** 硬复位：断电后再上电，已开机就可用。 */
+  /** 硬复位：断电后再上电，通电时才可用。 */
   hardReset(): void {
     if (!this.availability().hardReset) return;
     this.perform(TEXT.actions.hardReset, (backend) => backend.core.runtime.reset({ kind: 'hard' }));

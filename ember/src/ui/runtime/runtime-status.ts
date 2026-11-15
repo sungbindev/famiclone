@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：可用性规则见 docs/05-界面.md 第 4.1 节：没有开机时暂停、复位置灰；断电时暂停与软复位置灰；硬复位只要已开机就可用；
+ * 备注：可用性规则见 docs/05-界面.md 第 4.1 节：没有开机时暂停、复位置灰；断电时暂停与软复位置灰；硬复位只在通电时可用；
  *       “开机”按已选机型判断（见 powerToggleAction）；“关闭卡带”只在装着卡带时可用。状态还没读到（核心启动中、重启中或不可用）时为 unknown，全部置灰。
  *       卡带、mapper 插件、电源状态没有信息时文字函数返回 undefined，界面不显示这一项，不用“—”或“无”占位；主机型号总有值（未开机时是已选机型），只在状态还没读到时没有。
  * ------------------------------------------------------------------------
@@ -142,7 +142,6 @@ export function powerToggleAction(status: RuntimeStatusResult | undefined, selec
  */
 export function controlAvailability(status: RuntimeStatusResult | undefined, selectedMachine: string, machines: readonly BootableMachine[]): ControlAvailability {
   const state = machineState(status);
-  const opened = state === 'off' || state === 'paused' || state === 'running';
   const powered = state === 'paused' || state === 'running';
-  return { powerToggle: powerToggleAction(status, selectedMachine, machines) !== 'none', pauseToggle: powered, softReset: powered, hardReset: opened, eject: status?.cartridge !== undefined };
+  return { powerToggle: powerToggleAction(status, selectedMachine, machines) !== 'none', pauseToggle: powered, softReset: powered, hardReset: powered, eject: status?.cartridge !== undefined };
 }

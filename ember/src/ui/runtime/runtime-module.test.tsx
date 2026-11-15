@@ -127,10 +127,10 @@ describe('“机器”菜单', () => {
     expect(isDisabled(item('接入 Family BASIC 键盘'))).toBe(false);
   });
 
-  it('断电：开机与硬复位可用，暂停（继续）与软复位置灰，快捷键显示在右侧', async () => {
+  it('断电：只有开机可用，暂停（继续）、软复位与硬复位置灰，快捷键显示在右侧', async () => {
     await setup({ status: machineStatus('off', 'paused', NES) });
     await openMenu('机器(M)');
-    expect(['开机', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([false, true, true, false]);
+    expect(['开机', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([false, true, true, true]);
     expect(item('开机').textContent).toContain('F9');
     expect(item('继续').textContent).toContain('F8');
     expect(item('软复位').textContent).toContain('F7');

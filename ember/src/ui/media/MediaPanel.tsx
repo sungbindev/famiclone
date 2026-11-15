@@ -40,8 +40,8 @@ const MIN_FLOPPY_DRIVES = 1;
 
 /** 状态列的宽度（像素），能放下“读写中（磁道 79）”；软驱与磁带机用同一个宽度、同为行里最后一列，状态才能对齐。 */
 const STATE_WIDTH = 104;
-/** 磁带位置列的宽度（像素）；能放下“28:09 / 28:09”。 */
-const POSITION_WIDTH = 92;
+/** 磁带位置列的宽度（像素）；能放下“28:09 / 28:09”（约 68）。 */
+const POSITION_WIDTH = 72;
 
 /** 设备面板的属性。 */
 export interface MediaPanelProps {

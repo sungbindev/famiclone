@@ -12,20 +12,20 @@
 import { UiProvider } from '@rujianjs/ui-kit';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FakeRuntimeBackend, machineStatus, settle } from './runtime-fakes';
 import { RuntimeController } from './runtime-controller';
 import { RuntimePanel } from './RuntimePanel';
 
-/** 接上假核心并渲染面板。 */
-async function setup(status = machineStatus('off', 'paused')) {
+/** 接上假核心并渲染面板；onActionDone 是控制按钮点完后的回调。 */
+async function setup(status = machineStatus('off', 'paused'), onActionDone?: () => void) {
   const fake = new FakeRuntimeBackend();
   fake.status = status;
   const controller = new RuntimeController();
   controller.attach(fake.backend, { notify: () => undefined, refreshCommands: () => undefined });
   render(
     <UiProvider>
-      <RuntimePanel controller={controller} />
+      <RuntimePanel controller={controller} {...(onActionDone === undefined ? {} : { onActionDone })} />
     </UiProvider>
   );
   await act(async () => settle());
@@ -78,6 +78,27 @@ describe('控制按钮', () => {
     await act(async () => settle());
     expect(fake.calls).toEqual(expect.arrayContaining(['runtime.reset {"kind":"soft"}', 'runtime.reset {"kind":"hard"}', 'runtime.powerOff {}']));
     expect(screen.getByRole('button', { name: '开机' })).toBeTruthy();
+  });
+
+  it('四个控制按钮每点一次通知一次“操作完成”（外壳据此自动收缩）；静音与音量不通知', async () => {
+    const done = vi.fn();
+    await setup(machineStatus('on', 'running', 'D:\\roms\\a.nes'), done);
+    for (const [index, name] of ['暂停', '软复位', '硬复位', '断电'].entries()) {
+      await userEvent.click(screen.getByRole('button', { name }));
+      expect(done).toHaveBeenCalledTimes(index + 1);
+      await act(async () => settle());
+    }
+    done.mockClear();
+    await userEvent.click(screen.getByRole('button', { name: '静音' }));
+    fireEvent.change(screen.getByRole('slider', { name: '音量' }), { target: { value: '35' } });
+    expect(done).not.toHaveBeenCalled();
+  });
+
+  it('置灰的按钮点不了，不通知', async () => {
+    const done = vi.fn();
+    await setup(machineStatus('off', 'paused', 'D:\\roms\\a.nes'), done);
+    await userEvent.click(screen.getByRole('button', { name: '软复位' }));
+    expect(done).not.toHaveBeenCalled();
   });
 });
 

@@ -25,7 +25,7 @@ import { Shell } from './Shell';
 const ICON = ['M0 0'] as const;
 
 /** 没有保存过时的布局。 */
-const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null };
+const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] };
 
 /** 假的 window.ember：布局与窗口状态由测试决定，调用都记录下来。 */
 function createBridge(layout: Partial<ShellLayout> = {}) {
@@ -326,6 +326,116 @@ describe('系统栏里的面板按钮', () => {
     renderShell();
     await shown();
     expect(document.documentElement.classList.contains('ui-status-bar-large')).toBe(true);
+  });
+});
+
+/** 一个登记了“自动收缩”的面板（内容里有“完成一次操作”按钮）和一个没登记的面板。 */
+const AUTO_MODULES: readonly ShellModule[] = [
+  {
+    name: 'a',
+    screen: () => <p>显示区内容</p>,
+    bottomPanels: [
+      {
+        id: 'a.run',
+        title: '运行',
+        icon: ICON,
+        autoCollapse: true,
+        Component: ({ finishAction }) => (
+          <button type="button" onClick={finishAction}>
+            完成一次操作
+          </button>
+        )
+      },
+      { id: 'a.plain', title: '普通', icon: ICON, Component: () => <p>普通内容</p> }
+    ]
+  }
+];
+
+describe('面板的自动收缩开关', () => {
+  it('登记了自动收缩的面板，标题栏有只有图标的开关，在关闭按钮左边；没有登记的面板没有开关', async () => {
+    renderShell({ modules: AUTO_MODULES });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    const header = screen.getByRole('region', { name: '运行' }).querySelector('.ember-shell-panel__header') as HTMLElement;
+    const buttons = within(header).getAllByRole('button');
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(['自动收缩', '关闭']);
+    expect(buttons[0]?.textContent).toBe('');
+    expect(buttons[0]?.getAttribute('aria-pressed')).toBe('false');
+    await userEvent.click(screen.getByRole('button', { name: '普通' }));
+    expect(screen.queryByRole('button', { name: '自动收缩' })).toBeNull();
+  });
+
+  it('开关关着：面板里完成操作后面板保持展开', async () => {
+    renderShell({ modules: AUTO_MODULES });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    await userEvent.click(screen.getByRole('button', { name: '完成一次操作' }));
+    expect(screen.getByRole('region', { name: '运行' })).toBeTruthy();
+  });
+
+  it('开关开着：面板里完成操作后面板收起，系统栏按钮恢复常态；再展开开关仍然开着', async () => {
+    renderShell({ modules: AUTO_MODULES });
+    await shown();
+    const run = screen.getByRole('button', { name: '运行' });
+    await userEvent.click(run);
+    await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
+    expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('true');
+    await userEvent.click(screen.getByRole('button', { name: '完成一次操作' }));
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(run.getAttribute('aria-pressed')).toBe('false');
+    await userEvent.click(run);
+    expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('开关按面板各自保存：改动时把开着的面板清单交给 setLayout，再关掉时清单为空', async () => {
+    const { shell } = renderShell({ modules: AUTO_MODULES });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
+    expect(shell.setLayout).toHaveBeenLastCalledWith({ autoCollapsePanels: ['a.run'] });
+    await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
+    expect(shell.setLayout).toHaveBeenLastCalledWith({ autoCollapsePanels: [] });
+  });
+
+  it('读出保存的清单：启动后该面板的开关就是开着的', async () => {
+    renderShell({ modules: AUTO_MODULES, layout: { autoCollapsePanels: ['a.run'] } });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('true');
+    await userEvent.click(screen.getByRole('button', { name: '完成一次操作' }));
+    expect(screen.queryByRole('region')).toBeNull();
+  });
+
+  it('面板收起后已经切到别的面板时，迟到的“完成操作”不会收起别的面板', async () => {
+    let finish: (() => void) | undefined;
+    const modules: readonly ShellModule[] = [
+      {
+        name: 'a',
+        screen: () => <p>显示区内容</p>,
+        bottomPanels: [
+          {
+            id: 'a.run',
+            title: '运行',
+            icon: ICON,
+            autoCollapse: true,
+            Component: function Run({ finishAction }) {
+              useEffect(() => {
+                finish = finishAction;
+              });
+              return <p>运行内容</p>;
+            }
+          },
+          { id: 'a.plain', title: '普通', icon: ICON, Component: () => <p>普通内容</p> }
+        ]
+      }
+    ];
+    renderShell({ modules, layout: { autoCollapsePanels: ['a.run'] } });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    const staleFinish = finish;
+    await userEvent.click(screen.getByRole('button', { name: '普通' }));
+    act(() => staleFinish?.());
+    expect(screen.getByText('普通内容')).toBeTruthy();
   });
 });
 

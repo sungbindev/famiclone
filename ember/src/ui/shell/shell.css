@@ -17,7 +17,7 @@
   min-height: 0;
 }
 
-/* 底部面板：标题行（左边加粗的面板标题，右边关闭按钮）加内容区；内容区四周留边，同组件库的停靠面板 */
+/* 底部面板：标题行（左边加粗的面板标题，右边自动收缩开关与关闭按钮）加内容区；内容区四周留边，同组件库的停靠面板 */
 .ember-shell-panel {
   display: flex;
   flex-direction: column;
@@ -39,6 +39,13 @@
   margin: 0;
   font-size: var(--shell-panel-title-font-size);
   font-weight: 600;
+}
+
+/* 标题栏右侧的按钮（自动收缩开关、关闭）靠右并排 */
+.ember-shell-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .ember-shell-panel__body {

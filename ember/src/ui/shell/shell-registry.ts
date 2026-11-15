@@ -107,6 +107,12 @@ export interface ShellSubmenuDefinition {
   readonly entries: () => readonly ShellSubmenuEntry[];
 }
 
+/** 底部面板内容组件收到的属性。 */
+export interface ShellPanelProps {
+  /** 面板里的一次操作完成后调用：这个面板的“自动收缩”开着就收起面板，关着什么都不做。 */
+  readonly finishAction: () => void;
+}
+
 /** 底部面板：同时在系统栏左侧有一个只有图标的按钮，点击展开或收起面板并切到本面板的内容。 */
 export interface ShellPanelDefinition {
   /** 标识，如 runtime.panel。 */
@@ -118,7 +124,9 @@ export interface ShellPanelDefinition {
   /** 按钮当前的外观：图标、颜色与悬停提示随模块状态变化（如运行按钮显示运行或暂停）；每次渲染状态栏时调用，不给时用 icon 与 title；状态变化后模块调用 refreshCommands 让外壳重新渲染。 */
   readonly look?: () => { readonly icon: IconData; readonly tone?: 'normal' | 'success' | 'warning' | 'error'; readonly hint?: string };
   /** 面板内容；面板收起时卸载，展开时重新挂载。 */
-  readonly Component: ComponentType;
+  readonly Component: ComponentType<ShellPanelProps>;
+  /** 为 true 时面板标题栏有“自动收缩”开关（开关状态由外壳保存），面板内容在操作完成后调用 finishAction，开关开着就收起面板。 */
+  readonly autoCollapse?: boolean;
   /** 状态栏按钮上的指示灯（如软驱读写灯）：每次渲染状态栏时调用，返回 undefined 表示不显示；inIcon 给出时灯画在图标里（灯心在图标内的位置，百分比）；状态变化后模块调用 refreshCommands 让外壳重新渲染。 */
   readonly lamp?: () => { readonly lit: boolean; readonly label: string; readonly inIcon?: { readonly x: number; readonly y: number } } | undefined;
 }

@@ -24,7 +24,7 @@ import { RuntimeController } from './runtime-controller';
 import { FakeRuntimeBackend, machineStatus, settle } from './runtime-fakes';
 import { createRuntimeModule, RUNTIME_COMMANDS } from './runtime-module';
 
-const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null };
+const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] };
 const NES = 'D:\\roms\\nestest.nes';
 
 /** 渲染外壳与运行模块；显示区换成一个带输入框的简单区域；面板启动时是关闭的。 */

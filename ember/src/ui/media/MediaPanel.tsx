@@ -7,6 +7,7 @@
  * 日期：2026-11-15
  * 备注：规则见 docs/05-界面.md 第 4.3 节；显示期间由控制器定时读取软驱与打印机的状态，面板收起后停止。没有开机或主机没有软驱时不显示设备，只给一句提示。
  *       按钮只有图标，名称在悬停提示与可访问名称里；写保护是按下态的图标按钮（锁），不是开关；磁带机以后再做；软盘文件管理也不在本阶段。
+ *       载入镜像成功后调用 onLoaded（外壳的“自动收缩”开着就收起面板），取消选择与载入失败时不调用。
  * ------------------------------------------------------------------------
  */
 
@@ -36,10 +37,12 @@ const STATE_WIDTH = 128;
 /** 设备面板的属性。 */
 export interface MediaPanelProps {
   readonly controller: MediaController;
+  /** 镜像载入成功后调用。 */
+  readonly onLoaded?: () => void;
 }
 
 /** 一个软驱的行。 */
-function FloppyRow({ controller, floppy }: { readonly controller: MediaController; readonly floppy: FloppyStatus }) {
+function FloppyRow({ controller, floppy, onLoaded }: { readonly controller: MediaController; readonly floppy: FloppyStatus; readonly onLoaded: (() => void) | undefined }) {
   const available = floppyAvailability(floppy);
   return (
     <RowListItem
@@ -60,7 +63,7 @@ function FloppyRow({ controller, floppy }: { readonly controller: MediaControlle
           >
             {TEXT.writeProtect}
           </Button>
-          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.insert} disabled={!available.insert} onClick={() => controller.insertFloppy(floppy.drive)}>
+          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.insert} disabled={!available.insert} onClick={() => controller.insertFloppy(floppy.drive, onLoaded)}>
             {TEXT.insert}
           </Button>
           <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.eject} disabled={!available.eject} onClick={() => controller.ejectFloppy(floppy.drive)}>
@@ -79,7 +82,7 @@ function FloppyRow({ controller, floppy }: { readonly controller: MediaControlle
  * 底部面板的“设备”内容。
  * @param props 属性。
  */
-export function MediaPanel({ controller }: MediaPanelProps) {
+export function MediaPanel({ controller, onLoaded }: MediaPanelProps) {
   const { floppies, printer } = useMediaState(controller);
   useEffect(() => controller.startPolling(), [controller]);
 
@@ -87,7 +90,7 @@ export function MediaPanel({ controller }: MediaPanelProps) {
   return (
     <RowList className="ember-media-list" aria-label={TEXT.devices}>
       {floppies.map((floppy) => (
-        <FloppyRow key={floppy.drive} controller={controller} floppy={floppy} />
+        <FloppyRow key={floppy.drive} controller={controller} floppy={floppy} onLoaded={onLoaded} />
       ))}
       <RowListItem leading={TEXT.printer} title={printerStateText(printer)} />
     </RowList>

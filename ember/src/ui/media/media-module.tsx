@@ -40,7 +40,8 @@ export function createMediaModule(controller: MediaController): ShellModule {
         id: MEDIA_DEVICES_PANEL_ID,
         title: TEXT.devices,
         icon: iconDeviceFloppy,
-        Component: () => <MediaPanel controller={controller} />,
+        autoCollapse: true,
+        Component: ({ finishAction }) => <MediaPanel controller={controller} onLoaded={finishAction} />,
         // 亮着 = 任一软驱的马达在转（真机的读写灯跟马达一起亮灭），没有软驱时不显示。
         lamp: () => {
           const { floppies } = controller.snapshot();

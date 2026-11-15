@@ -147,12 +147,18 @@ export class MediaController {
     };
   }
 
-  /** 弹出系统文件选择窗口，把选定的镜像载入软驱；用户取消时什么都不发生。 */
-  insertFloppy(drive: number): void {
+  /**
+   * 弹出系统文件选择窗口，把选定的镜像载入软驱；用户取消时什么都不发生。
+   * @param drive 驱动器编号。
+   * @param onLoaded 镜像载入成功后调用；取消选择与载入失败时不调用。
+   */
+  insertFloppy(drive: number, onLoaded?: () => void): void {
     const attachment = this.attachment;
     if (attachment === undefined) return;
     attachment.backend.main.media.openFloppy({ drive }).then(
-      () => undefined,
+      (result) => {
+        if (!result.canceled) onLoaded?.();
+      },
       (error: unknown) => this.report(TEXT.actions.insert, error)
     ).finally(() => {
       if (this.attachment === attachment) this.refreshAll();

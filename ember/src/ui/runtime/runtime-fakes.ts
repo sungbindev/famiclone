@@ -158,7 +158,7 @@ export class FakeRuntimeBackend {
       return () => this.statusListeners.delete(listener);
     },
     shell: {
-      getState: () => Promise.resolve({ window: null, layout: { bottomPanelHeight: null, selectedMachine: this.savedMachine } }),
+      getState: () => Promise.resolve({ window: null, layout: { bottomPanelHeight: null, selectedMachine: this.savedMachine, autoCollapsePanels: [] } }),
       setLayout: (patch: unknown) => {
         this.layoutPatches.push(patch);
       }

@@ -10,6 +10,7 @@
  * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；没有活动栏、边栏、标签栏与右边栏；
  *       底部面板只经系统栏左侧的面板按钮展开：面板关着时点按钮展开并切到该页签，开着时点同一个按钮收起，点另一个按钮切页签；没有快捷键，每次启动都是关闭，页签选择不保存；
  *       面板按钮只在面板开着并停在该页签时是按下状态，面板收起后恢复常态；
+ *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，面板内容完成一次操作后（finishAction）收起面板；开关状态按面板保存在界面状态里，下次启动沿用；
  *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
  *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；面板向内展开，窗口大小不变，显示区里的画面按剩余空间自动缩放。
  * ------------------------------------------------------------------------
@@ -18,6 +19,7 @@
 import {
   AppFrame,
   Button,
+  iconLayoutBottombarCollapse,
   iconX,
   MenuBar,
   NotificationCenter,
@@ -34,7 +36,7 @@ import {
   type MenuBarMenu,
   type MenuItem
 } from '@rujianjs/ui-kit';
-import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactElement } from 'react';
+import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactElement } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import type { WindowState } from '../../contracts/shell/window-control';
 import { buildShellRegistry, type ShellRegistry } from './build-registry';
@@ -42,7 +44,7 @@ import { isTextEditingTarget } from './editable-target';
 import { EmberLogo } from './EmberLogo';
 import { ShellApiContext } from './shell-context';
 import { SHELL_MODULE } from './shell-module';
-import { commandTitle, SHELL_MENUS, type ShellApi, type ShellModule, type ShellPageProps, type ShellViewState } from './shell-registry';
+import { commandTitle, SHELL_MENUS, type ShellApi, type ShellModule, type ShellPageProps, type ShellPanelProps, type ShellViewState } from './shell-registry';
 import './shell.css';
 
 /** 应用名。 */
@@ -55,6 +57,7 @@ const BOTTOM_PANEL_HEIGHT = 130;
 const TEXT = {
   statusLabel: '系统栏',
   closePanel: '关闭',
+  autoCollapse: '自动收缩',
   registryFailed: '外壳登记有误，界面无法显示，详情见开发者工具的控制台'
 } as const;
 
@@ -75,6 +78,8 @@ interface PanelState {
 /** 外壳实时读取的状态：事件处理函数用它取最新值，不必随渲染重新创建。 */
 interface LiveState {
   readonly view: ShellViewState;
+  /** 开着“自动收缩”的面板标识。 */
+  readonly autoCollapse: readonly string[];
 }
 
 /**
@@ -105,12 +110,19 @@ function dialogContent(shell: ShellApi, Content: ComponentType<ShellPageProps>, 
   );
 }
 
+/** 底部面板的内容：补上 finishAction。 */
+function PanelBody({ Content, finishAction }: { Content: ComponentType<ShellPanelProps>; finishAction: () => void }) {
+  return <Content finishAction={finishAction} />;
+}
+
 /** 登记表有效之后的外壳。 */
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
   const [panel, setPanel] = useState<PanelState>({ open: false, id: registry.bottomPanels[0]?.id ?? '' });
   // 底部面板的初始高度：读到保存的高度之前为 null，此时不显示界面。
   const [bottomHeight, setBottomHeight] = useState<number | null>(null);
   const [windowState, setWindowState] = useState<WindowState>({ maximized: false, fullScreen: false });
+  // 开着“自动收缩”的面板标识：读到保存的清单之前都是关闭。
+  const [autoCollapse, setAutoCollapse] = useState<readonly string[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   // 模块通过 refreshCommands 通知命令状态变了：递增一次让菜单与状态栏重新计算。
   const [, setCommandVersion] = useState(0);
@@ -122,6 +134,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     let active = true;
     void bridge.shell.getState().then((state) => {
       if (active) setBottomHeight(state.layout.bottomPanelHeight ?? BOTTOM_PANEL_HEIGHT);
+      if (active) setAutoCollapse(state.layout.autoCollapsePanels);
     });
     void bridge.shell.getWindowState().then((state) => {
       if (active) setWindowState(state);
@@ -135,10 +148,16 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
 
   const bottomPanelOpen = panel.open;
   const view: ShellViewState = { bottomPanelOpen, activePanelId: panel.open ? panel.id : null, fullScreen: windowState.fullScreen };
-  const live = useRef<LiveState>({ view });
+  const live = useRef<LiveState>({ view, autoCollapse });
   useLayoutEffect(() => {
-    live.current = { view };
+    live.current = { view, autoCollapse };
   });
+
+  /** 面板里的一次操作完成：该面板的自动收缩开着就收起面板；读最新的开关状态，操作期间改了开关也按新的算。 */
+  const finishPanelAction = useCallback((panelId: string): void => {
+    if (!live.current.autoCollapse.includes(panelId)) return;
+    setPanel((current) => (current.open && current.id === panelId ? { ...current, open: false } : current));
+  }, []);
 
   const api = useMemo<ShellApi>(() => {
     const shell: ShellApi = {
@@ -273,6 +292,13 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   const start = registry.statusItems.filter((item) => item.align === 'start');
   const end = registry.statusItems.filter((item) => item.align === 'end');
 
+  /** 切换面板的自动收缩开关并保存。 */
+  const toggleAutoCollapse = (panelId: string): void => {
+    const next = autoCollapse.includes(panelId) ? autoCollapse.filter((id) => id !== panelId) : [...autoCollapse, panelId];
+    setAutoCollapse(next);
+    bridge.shell.setLayout({ autoCollapsePanels: next });
+  };
+
   return (
     <ShellApiContext.Provider value={api}>
       {registry.hosts.map(({ module, Host }) => createElement(Host, { key: module, bridge }))}
@@ -291,12 +317,27 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             <section className="ember-shell-panel" aria-label={activePanel.title}>
               <div className="ember-shell-panel__header">
                 <h2 className="ember-shell-panel__title">{activePanel.title}</h2>
-                <Button variant="ghost" iconOnly compact icon={iconX} title={TEXT.closePanel} onClick={() => setPanel((current) => ({ ...current, open: false }))}>
-                  {TEXT.closePanel}
-                </Button>
+                <div className="ember-shell-panel__actions">
+                  {activePanel.autoCollapse === true ? (
+                    <Button
+                      variant="ghost"
+                      iconOnly
+                      compact
+                      icon={iconLayoutBottombarCollapse}
+                      pressed={autoCollapse.includes(activePanel.id)}
+                      title={TEXT.autoCollapse}
+                      onClick={() => toggleAutoCollapse(activePanel.id)}
+                    >
+                      {TEXT.autoCollapse}
+                    </Button>
+                  ) : null}
+                  <Button variant="ghost" iconOnly compact icon={iconX} title={TEXT.closePanel} onClick={() => setPanel((current) => ({ ...current, open: false }))}>
+                    {TEXT.closePanel}
+                  </Button>
+                </div>
               </div>
               <ScrollArea className="ember-shell-panel__body" viewportProps={{ className: 'ember-shell-panel__content' }}>
-                {createElement(activePanel.Component)}
+                <PanelBody Content={activePanel.Component} finishAction={() => finishPanelAction(activePanel.id)} />
               </ScrollArea>
             </section>
           )

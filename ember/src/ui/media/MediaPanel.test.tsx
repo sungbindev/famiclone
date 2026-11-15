@@ -12,7 +12,7 @@
 import { UiProvider } from '@rujianjs/ui-kit';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { FloppyStatus } from '../../contracts/media/generated/media';
 import { FakeMediaBackend, floppyStatus } from './media-fakes';
 import { MediaController } from './media-controller';
@@ -23,15 +23,15 @@ async function settle(): Promise<void> {
   for (let index = 0; index < 8; index += 1) await Promise.resolve();
 }
 
-/** 接上假核心并渲染面板；floppies 是软驱的初始状态。 */
-async function setup(floppies?: FloppyStatus[]) {
+/** 接上假核心并渲染面板；floppies 是软驱的初始状态，onLoaded 是镜像载入成功后的回调。 */
+async function setup(floppies?: FloppyStatus[], onLoaded?: () => void) {
   const fake = new FakeMediaBackend();
   if (floppies !== undefined) fake.floppies = floppies;
   const controller = new MediaController();
   controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
   render(
     <UiProvider>
-      <MediaPanel controller={controller} />
+      <MediaPanel controller={controller} {...(onLoaded === undefined ? {} : { onLoaded })} />
     </UiProvider>
   );
   await act(async () => settle());
@@ -97,6 +97,25 @@ describe('设备面板', () => {
     await act(async () => settle());
     expect(fake.calls).toContain('media.openFloppy {"drive":1}');
     expect(fields(row('软驱 B')).disk).toBe('sys.img');
+  });
+
+  it('镜像载入成功后通知“载入完成”（外壳据此自动收缩）；取消选择、载入失败、取出与保存不通知', async () => {
+    const loaded = vi.fn();
+    const { fake } = await setup([floppyStatus(0, 'old.img'), floppyStatus(1)], loaded);
+    await userEvent.click(within(row('软驱 B')).getByRole('button', { name: '载入镜像' }));
+    await act(async () => settle());
+    expect(loaded).not.toHaveBeenCalled();
+    fake.pickedFile = 'sys.img';
+    fake.failures.set('media.openFloppy', { code: 'media.imageInvalid', message: '镜像文件是空的' });
+    await userEvent.click(within(row('软驱 B')).getByRole('button', { name: '载入镜像' }));
+    await act(async () => settle());
+    expect(loaded).not.toHaveBeenCalled();
+    await userEvent.click(within(row('软驱 A')).getByRole('button', { name: '取出' }));
+    await act(async () => settle());
+    expect(loaded).not.toHaveBeenCalled();
+    await userEvent.click(within(row('软驱 B')).getByRole('button', { name: '载入镜像' }));
+    await act(async () => settle());
+    expect(loaded).toHaveBeenCalledTimes(1);
   });
 
   it('点“取出”与“保存镜像”发出对应的请求', async () => {

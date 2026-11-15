@@ -113,7 +113,8 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
           if (state === 'paused') return { icon: iconPlayerPause, hint };
           return { icon: iconPlayerPlay, hint };
         },
-        Component: () => <RuntimePanel controller={controller} />
+        autoCollapse: true,
+        Component: ({ finishAction }) => <RuntimePanel controller={controller} onActionDone={finishAction} />
       }
     ],
     commands: [

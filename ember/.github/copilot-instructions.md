@@ -10,7 +10,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | [docs/02-硬件模块.md](../docs/02-硬件模块.md) | 主机、卡槽、卡带，总线与时钟，芯片与功能模块，存储区规则 |
 | [docs/03-mapper插件规范.md](../docs/03-mapper插件规范.md) | mapper 插件的包格式、清单、脚本接口、匹配与加载 |
 | [docs/04-调试服务.md](../docs/04-调试服务.md) | 调试服务的协议、运行控制、请求与事件 |
-| [docs/05-界面.md](../docs/05-界面.md) | 界面布局、页面、菜单、状态栏，界面原型 |
+| [docs/05-界面.md](../docs/05-界面.md) | 界面布局、页面、菜单、系统栏，界面原型 |
 | [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) | 构建与测试命令、由 Schema 生成的代码、模块的登记方式、依赖检查 |
 | [docs/待办备忘.md](../docs/待办备忘.md) | 已确定以后再做的事项；做完写进对应文档并从中删掉 |
 | [docs/07-调试客户端工具.md](../docs/07-调试客户端工具.md) | `packages/ember-debug-sdk/`：SDK、终端客户端 `ember-debug`、MCP 服务 `ember-debug-mcp` 的设计、目录与依赖规则 |

@@ -80,6 +80,21 @@ bool StandardFloppyDrive::suspendMedia() {
   return true;
 }
 
+void StandardFloppyDrive::attach(const void* owner, std::function<void(bool)> onMotor) {
+  // 先让马达停转（通知还是原来的），再换成新主机的。
+  setMotor(false);
+  cylinder_ = 0;
+  owner_ = owner;
+  onMotorChanged = std::move(onMotor);
+}
+
+void StandardFloppyDrive::detach(const void* owner) {
+  if (owner_ != owner) return;
+  setMotor(false);
+  owner_ = nullptr;
+  onMotorChanged = nullptr;
+}
+
 bool StandardFloppyDrive::restoreMedia() {
   if (!suspended_) return false;
   inserted_ = true;

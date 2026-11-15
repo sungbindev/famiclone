@@ -18,6 +18,7 @@
 
 #include "bootstrap/machines/floppy-activity-relay.hpp"
 #include "bootstrap/machines/printer-output-relay.hpp"
+#include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "contracts/media/media-service.hpp"
 #include "contracts/preferences/preference-service.hpp"
@@ -65,7 +66,8 @@ void registerMedia(ModuleRegistry& registry) {
 
   auto service = std::make_shared<logic::media::MediaManager>(std::make_shared<infra::media::DiskFloppyImageStore>(), std::make_shared<infra::media::DiskTapeStore>(registry.ffmpegPath, registry.errors),
                                                               registry.services.require<contracts::runtime::RuntimeService>(), registry.events, printer,
-                                                              registry.services.require<contracts::hardware::TapeControl>());
+                                                              registry.services.require<contracts::hardware::TapeControl>(),
+                                                              std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>>{registry.services.require<contracts::hardware::FloppyDrive>()});
   registry.services.provide<contracts::media::MediaService>(service);
   registry.services.require<FloppyActivityRelay>()->bind(service);
   requests::media::addMediaRequests(registry.requests, service);

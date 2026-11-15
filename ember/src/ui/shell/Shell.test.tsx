@@ -178,7 +178,12 @@ describe('登记表驱动的界面', () => {
     const fresh = renderShell();
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
-    expect(bottomArea(fresh.container).style.height).toBe('130px');
+    expect(bottomArea(fresh.container).style.height).toBe('126px');
+    fresh.unmount();
+    const small = renderShell({ layout: { bottomPanelHeight: 100 } });
+    await shown();
+    await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    expect(bottomArea(small.container).style.height).toBe('126px');
   });
 });
 

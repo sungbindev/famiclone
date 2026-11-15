@@ -3245,7 +3245,7 @@
     {
       "name": "media.floppyInsert",
       "summary": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片",
-      "description": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片；盘片与电源无关，断电时也可以插入。镜像的格式由大小推断（160、180、320、360、720、1200、1440、2880 KB，其他大小按 1.44MB 处理）。",
+      "description": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片；软驱是独立于主机的设备，没有主机、没有通电时也可以插入。镜像的格式由大小推断（160、180、320、360、720、1200、1440、2880 KB，其他大小按 1.44MB 处理）。",
       "tags": [
         {
           "name": "media"
@@ -3300,13 +3300,6 @@
         }
       },
       "errors": [
-        {
-          "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
         {
           "code": -32000,
           "message": "media.noDrive",
@@ -3379,13 +3372,6 @@
       "errors": [
         {
           "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
           "message": "media.noDrive",
           "data": {
             "code": "media.noDrive"
@@ -3432,13 +3418,6 @@
         }
       },
       "errors": [
-        {
-          "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
         {
           "code": -32000,
           "message": "media.noDrive",
@@ -3512,13 +3491,6 @@
       "errors": [
         {
           "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
           "message": "media.noDrive",
           "data": {
             "code": "media.noDrive"
@@ -3529,7 +3501,7 @@
     {
       "name": "media.floppyStatus",
       "summary": "全部软驱的状态",
-      "description": "全部软驱的状态；还没有主机或主机没有软驱时 drives 为空。",
+      "description": "全部软驱的状态；软驱是独立于主机的设备，一直存在（目前只有软驱 A）。",
       "tags": [
         {
           "name": "media"
@@ -3634,13 +3606,6 @@
         }
       },
       "errors": [
-        {
-          "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
         {
           "code": -32000,
           "message": "media.noDrive",

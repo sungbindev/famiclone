@@ -31,19 +31,19 @@ class MediaService {
    */
   virtual MediaFloppyInsertResult floppyInsert(const MediaFloppyInsertParams& params) = 0;
 
-  /** 取出盘片并丢弃镜像；没有盘片时没有效果。@throws shared::CoreError media.noMachine、media.noDrive。 */
+  /** 取出盘片并丢弃镜像；没有盘片时没有效果。@throws shared::CoreError media.noDrive。 */
   virtual MediaFloppyEjectResult floppyEject(const MediaFloppyEjectParams& params) = 0;
 
-  /** 把镜像写回放入时的文件。@throws shared::CoreError media.noMachine、media.noDrive、media.noDisk、media.saveFailed。 */
+  /** 把镜像写回放入时的文件。@throws shared::CoreError media.noDrive、media.noDisk、media.saveFailed。 */
   virtual MediaFloppySaveResult floppySave(const MediaFloppySaveParams& params) = 0;
 
-  /** 设置或取消盘片的写保护；成功后发 media.changed。@throws shared::CoreError media.noMachine、media.noDrive。 */
+  /** 设置或取消盘片的写保护；成功后发 media.changed。@throws shared::CoreError media.noDrive。 */
   virtual MediaFloppyWriteProtectResult floppyWriteProtect(const MediaFloppyWriteProtectParams& params) = 0;
 
-  /** 全部软驱的状态；没有主机或主机没有软驱时为空。 */
+  /** 全部软驱的状态；软驱是独立于主机的设备，一直存在。 */
   [[nodiscard]] virtual MediaFloppyStatusResult floppyStatus() = 0;
 
-  /** 故障注入。@throws shared::CoreError media.noMachine、media.noDrive、media.sectorRequired。 */
+  /** 故障注入。@throws shared::CoreError media.noDrive、media.sectorRequired。 */
   virtual MediaFloppyFaultResult floppyFault(const MediaFloppyFaultParams& params) = 0;
 
   /** 打印机的状态；没有主机或主机没有打印机时为空闲。 */

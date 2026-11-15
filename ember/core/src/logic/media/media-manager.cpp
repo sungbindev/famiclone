@@ -75,29 +75,25 @@ api::TapeStatus tapeStatusOf(hw::TapeControl& deck) {
 }  // namespace
 
 MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::shared_ptr<api::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
-                           std::shared_ptr<platform::EventSink> events, std::shared_ptr<api::PrinterRecord> printerRecord, std::shared_ptr<hw::TapeControl> deck)
+                           std::shared_ptr<platform::EventSink> events, std::shared_ptr<api::PrinterRecord> printerRecord, std::shared_ptr<hw::TapeControl> deck,
+                           std::vector<std::shared_ptr<hw::FloppyDrive>> floppyDrives)
     : store_(std::move(store)),
       tapeStore_(std::move(tapeStore)),
       runtime_(std::move(runtime)),
       events_(std::move(events)),
       printerRecord_(std::move(printerRecord)),
-      deck_(std::move(deck)) {}
+      deck_(std::move(deck)),
+      drives_(std::move(floppyDrives)) {}
 
 template <typename Action>
 api::FloppyStatus MediaManager::withDrive(std::int64_t drive, Action action) {
+  if (drive < 0 || drive >= static_cast<std::int64_t>(drives_.size())) throw shared::CoreError(api::ERROR_NO_DRIVE, "没有软驱 " + std::to_string(drive));
   std::optional<api::FloppyStatus> status;
-  bool missingDrive = false;
-  const bool hasMachine = runtime_->useMachine([&](hw::Machine& machine) {
-    hw::FloppyDrive* unit = drive >= 0 && drive < static_cast<std::int64_t>(machine.floppyDriveCount()) ? machine.floppyDrive(static_cast<unsigned>(drive)) : nullptr;
-    if (unit == nullptr) {
-      missingDrive = true;
-      return;
-    }
-    action(*unit);
-    status = statusOf(drive, *unit);
+  runtime_->runOnSimulation([&] {
+    hw::FloppyDrive& unit = *drives_[static_cast<std::size_t>(drive)];
+    action(unit);
+    status = statusOf(drive, unit);
   });
-  if (!hasMachine) throw shared::CoreError(api::ERROR_NO_MACHINE, "还没有主机，请先打开卡带或用整机机型开机");
-  if (missingDrive || !status) throw shared::CoreError(api::ERROR_NO_DRIVE, "这台主机没有软驱 " + std::to_string(drive));
   return *status;
 }
 
@@ -147,10 +143,8 @@ api::MediaFloppyWriteProtectResult MediaManager::floppyWriteProtect(const api::M
 
 api::MediaFloppyStatusResult MediaManager::floppyStatus() {
   api::MediaFloppyStatusResult result;
-  runtime_->useMachine([&](hw::Machine& machine) {
-    for (unsigned index = 0; index < machine.floppyDriveCount(); ++index) {
-      if (const hw::FloppyDrive* unit = machine.floppyDrive(index)) result.drives.push_back(statusOf(index, *unit));
-    }
+  runtime_->runOnSimulation([&] {
+    for (std::size_t index = 0; index < drives_.size(); ++index) result.drives.push_back(statusOf(static_cast<std::int64_t>(index), *drives_[index]));
   });
   return result;
 }

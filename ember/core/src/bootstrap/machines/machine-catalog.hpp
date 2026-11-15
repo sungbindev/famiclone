@@ -17,6 +17,7 @@
 #include "contracts/hardware/printer-output.hpp"
 #include "contracts/runtime/machine-factory.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
+#include "logic/hardware/floppy-drive/standard-floppy-drive.hpp"
 #include "logic/hardware/tape-deck/tape-deck.hpp"
 
 namespace ember::bootstrap {
@@ -36,6 +37,9 @@ class MachineCatalog final : public contracts::runtime::MachineFactory {
   /** 磁带机：独立于主机的设备，目录里所有有磁带接口的主机都接到这一台；介质服务用同一台载入与播放磁带。 */
   [[nodiscard]] std::shared_ptr<contracts::hardware::TapeControl> tapeControl() const { return tapeDeck_; }
 
+  /** 软驱 A：独立于主机的设备，盘片随时可以插入与取出（没有主机、没有通电也行）；学习机创建时接入它，盘片留在里面。 */
+  [[nodiscard]] std::shared_ptr<contracts::hardware::FloppyDrive> floppyDrive() const { return floppyDrive_; }
+
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> create(const std::string& host) const override;
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const override;
 
@@ -43,6 +47,7 @@ class MachineCatalog final : public contracts::runtime::MachineFactory {
   std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput_;
   std::shared_ptr<contracts::hardware::FloppyActivity> floppyActivity_;
   std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_ = std::make_shared<logic::hardware::TapeDeck>();
+  std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive_ = std::make_shared<logic::hardware::StandardFloppyDrive>();
 };
 
 }  // namespace ember::bootstrap

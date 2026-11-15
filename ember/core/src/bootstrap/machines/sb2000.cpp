@@ -56,7 +56,7 @@ void requireBios(const std::vector<std::uint8_t>& bios) {
 
 }  // namespace
 
-Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput, hw::FloppyActivity* floppyActivity)
+Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
     : cartridgeIrq_(irq_),
       bios_(std::move(bios)),
       ram_(INTERNAL_RAM_SIZE),
@@ -71,6 +71,7 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
       printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),
       parallel_(printer_ != nullptr ? static_cast<hw::ParallelPort&>(*printer_) : static_cast<hw::ParallelPort&>(nullParallel_)),
       irqController_(irq_),
+      floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
       fdc_(scheduler_, irqController_, logic::hardware::IrqUm6576::SOURCE_FLOPPY, FDC_STEP_TICKS, FDC_POLL_STEPS),
       speech_(scheduler_, MASTER_CLOCK_HZ),
       superIo_(video_, fdc_, speech_),
@@ -122,8 +123,8 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
   fcVideoBus_.mount(0x0000, 0x3EFF, fcVideo_);
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
-  fdc_.attachDrive(0, &floppy_);
-  if (floppyActivity != nullptr) floppy_.onMotorChanged = [floppyActivity](bool on) { floppyActivity->motorChanged(0, on); };
+  fdc_.attachDrive(0, floppy_.get());
+  floppy_->attach(this, floppyActivity == nullptr ? std::function<void(bool)>() : [floppyActivity](bool on) { floppyActivity->motorChanged(0, on); });
   dac_.onLevel = [this](std::uint8_t level) { psg_.setDacLevel(level); };
   dma_.timingControlOn = [this] { return (keyboardPort_.timingControl() & 0x80) != 0; };
   expio_.onMouseReset = [this] { mouseDevice_.pulseControl(); };
@@ -132,6 +133,11 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
   // $4301 写 $55 发生在 CPU 的总线访问里，只记下要求，等这条指令结束后再切换（见 runInstruction）。
   superIo_.onFcMode = [this] { fcSwitchPending_ = true; };
   workWindow_.onWindowSelect = [this](std::uint8_t value) { mmc3_.selectWindow(value); };
+}
+
+Sb2000Machine::~Sb2000Machine() {
+  // 软驱在主机之外继续存在：只解除自己的接入，盘片留在里面。
+  floppy_->detach(this);
 }
 
 void Sb2000Machine::resetDevices(bool power) {

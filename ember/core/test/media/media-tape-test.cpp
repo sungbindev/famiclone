@@ -108,7 +108,7 @@ struct TapeRig {
     options.errors = errors;
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
-    manager = std::make_unique<ember::logic::media::MediaManager>(nullptr, store, runtime, events, nullptr, deck);
+    manager = std::make_unique<ember::logic::media::MediaManager>(nullptr, store, runtime, events, nullptr, deck, std::vector<std::shared_ptr<hw::FloppyDrive>>{});
   }
 
   /** 装一台断电的 fc（空转卡带）。 */

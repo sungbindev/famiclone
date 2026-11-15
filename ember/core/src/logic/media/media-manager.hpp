@@ -5,8 +5,8 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：镜像文件的读取在请求线程完成，不碰硬件状态；对驱动器的操作经运行服务在模拟线程上执行（不要求通电，盘片与电源无关）；
- *       磁带机是独立的设备，不经主机找到，直接用共享的那一台（状态只在模拟线程上读写，所以也经 runOnSimulation）；
+ * 备注：镜像文件的读取在请求线程完成，不碰硬件状态；软驱与磁带机都是独立于主机的设备，不经主机找到，直接用共享的那一台；
+ *       它们的状态只在模拟线程上读写，所以都经 runOnSimulation（不要求有主机、不要求通电）；
  *       盘片镜像由驱动器持有，是唯一的数据；保存才写回文件，不自动落盘。
  * ------------------------------------------------------------------------
  */
@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/floppy-drive.hpp"
@@ -33,9 +34,11 @@ class MediaManager final : public contracts::media::MediaService, public contrac
  public:
   /**
    * @param deck 磁带机：独立于主机的设备，与主机型号目录共用同一台。
+   * @param floppyDrives 软驱（按编号排列）：同样是独立于主机的设备，与主机型号目录共用。
    */
   MediaManager(std::shared_ptr<contracts::media::FloppyImageStore> store, std::shared_ptr<contracts::media::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
-               std::shared_ptr<platform::EventSink> events, std::shared_ptr<contracts::media::PrinterRecord> printerRecord, std::shared_ptr<contracts::hardware::TapeControl> deck);
+               std::shared_ptr<platform::EventSink> events, std::shared_ptr<contracts::media::PrinterRecord> printerRecord, std::shared_ptr<contracts::hardware::TapeControl> deck,
+               std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> floppyDrives);
 
   contracts::media::MediaFloppyInsertResult floppyInsert(const contracts::media::MediaFloppyInsertParams& params) override;
   contracts::media::MediaFloppyEjectResult floppyEject(const contracts::media::MediaFloppyEjectParams& params) override;
@@ -55,8 +58,8 @@ class MediaManager final : public contracts::media::MediaService, public contrac
 
  private:
   /**
-   * 在模拟线程上取驱动器并执行动作，返回动作做完后的驱动器状态。
-   * @throws shared::CoreError media.noMachine、media.noDrive，以及动作里抛出的错误。
+   * 在模拟线程上取驱动器并执行动作，返回动作做完后的驱动器状态；不需要主机。
+   * @throws shared::CoreError media.noDrive，以及动作里抛出的错误。
    */
   template <typename Action>
   contracts::media::FloppyStatus withDrive(std::int64_t drive, Action action);
@@ -80,6 +83,7 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   std::shared_ptr<platform::EventSink> events_;
   std::shared_ptr<contracts::media::PrinterRecord> printerRecord_;
   std::shared_ptr<contracts::hardware::TapeControl> deck_;
+  std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> drives_;
 };
 
 }  // namespace ember::logic::media

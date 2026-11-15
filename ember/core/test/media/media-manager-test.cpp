@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-manager-test.cpp
- * 说明：介质服务的测试：没有主机时的错误、软盘镜像的插入（含文件错误）、取出、保存（写回文件并清除已修改标志）、状态、各种故障注入，以及 media.changed 事件。
+ * 说明：介质服务的测试：没有主机也能操作软驱、软盘镜像的插入（含文件错误）、取出、保存（写回文件并清除已修改标志）、状态、换主机不丢盘片、各种故障注入，以及 media.changed 事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
+ * 日期：2026-11-16
  * 备注：用真实的运行服务、sb2000 主机（合成的 BIOS，断电状态）与磁盘上的镜像文件；文件写在临时目录里。
  * ------------------------------------------------------------------------
  */
@@ -50,7 +50,8 @@ struct Rig {
         std::make_shared<ember::infra::media::PngPrinterPageStore>(), [this] { return printDirectory.empty() ? utf8(dir.path() / "printed") : printDirectory; }, events, errors,
         [] { return std::chrono::system_clock::time_point(std::chrono::seconds(1700000000)); });
     ember::logic::runtime::SimulationRuntimeOptions options;
-    options.machines = std::make_shared<ember::bootstrap::MachineCatalog>(printer);
+    auto catalog = std::make_shared<ember::bootstrap::MachineCatalog>(printer);
+    options.machines = catalog;
     options.mappers = registry;
     options.frames = frames;
     options.events = events;
@@ -58,7 +59,8 @@ struct Rig {
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
     manager = std::make_unique<ember::logic::media::MediaManager>(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), std::make_shared<ember::infra::media::DiskTapeStore>(std::filesystem::path(), errors),
-                                                                  runtime, events, printer, std::make_shared<ember::logic::hardware::TapeDeck>());
+                                                                  runtime, events, printer, catalog->tapeControl(),
+                                                                  std::vector<std::shared_ptr<ember::contracts::hardware::FloppyDrive>>{catalog->floppyDrive()});
   }
 
   static std::string utf8(const std::filesystem::path& path) {
@@ -127,14 +129,31 @@ std::string errorCodeOf(Function&& call) {
   return {};
 }
 
-TEST(MediaManager, WithoutAMachineStatusIsEmptyAndOperationsFail) {
+TEST(MediaManager, WithoutAMachineTheDriveStillTakesAndReleasesDisks) {
   Rig rig;
-  EXPECT_TRUE(rig.manager->floppyStatus().drives.empty());
+  ASSERT_EQ(rig.manager->floppyStatus().drives.size(), 1U) << "软驱 A 一直存在，与主机无关";
+  EXPECT_FALSE(rig.manager->floppyStatus().drives[0].inserted);
   const auto path = rig.write("a.img", makeImage());
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->floppyInsert(Rig::insertParams(path)); }), api::ERROR_NO_MACHINE);
+  const auto inserted = rig.manager->floppyInsert(Rig::insertParams(path));
+  EXPECT_TRUE(inserted.status.inserted);
   api::MediaFloppyEjectParams eject;
   eject.drive = 0;
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->floppyEject(eject); }), api::ERROR_NO_MACHINE);
+  EXPECT_FALSE(rig.manager->floppyEject(eject).status.inserted);
+}
+
+TEST(MediaManager, TheDiskStaysInTheDriveWhenTheMachineIsReplacedOrRemoved) {
+  Rig rig;
+  const auto path = rig.write("sys.img", makeImage());
+  rig.manager->floppyInsert(Rig::insertParams(path));
+  rig.bootMachine();
+  bool seenByMachine = false;
+  rig.runtime->useMachine([&](ember::contracts::hardware::Machine& machine) { seenByMachine = machine.floppyDrive(0)->inserted(); });
+  EXPECT_TRUE(seenByMachine) << "先插盘再开机，学习机看得到盘片";
+  rig.bootMachine();
+  EXPECT_TRUE(rig.manager->floppyStatus().drives[0].inserted) << "换主机不丢盘片";
+  rig.runtime->ejectCartridge();
+  EXPECT_TRUE(rig.manager->floppyStatus().drives[0].inserted) << "拆除主机也不丢";
+  EXPECT_FALSE(rig.manager->floppyStatus().drives[0].motor);
 }
 
 TEST(MediaManager, InsertsAnImageEvenWhilePoweredOff) {

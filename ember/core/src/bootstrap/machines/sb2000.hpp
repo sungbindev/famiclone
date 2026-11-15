@@ -90,9 +90,12 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
    * @param bios BIOS ROM 的内容，必须是 BIOS_SIZE 字节（不含 iNES 文件头）。
    * @param printerOutput 打印机输出的页交给它，必须活到主机销毁；为空时并口不接打印机。
    * @param floppyActivity 软驱马达开关变化时通知它，必须活到主机销毁；为空时不通知。
+   * @param floppyDrive 软驱 A：独立于主机的设备，由外面创建并在多台主机之间共用，主机创建时接入、销毁时解除，盘片留在里面；为空时主机自己带一个（测试用）。
    * @throws shared::CoreError hardware.invalidArgument：BIOS 大小不对。
    */
-  explicit Sb2000Machine(std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr);
+  explicit Sb2000Machine(std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr,
+                         std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr);
+  ~Sb2000Machine() override;
 
   Sb2000Machine(const Sb2000Machine&) = delete;
   Sb2000Machine& operator=(const Sb2000Machine&) = delete;
@@ -117,7 +120,7 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
   contracts::hardware::MachineDebugger* debugger() override { return this; }
   [[nodiscard]] unsigned floppyDriveCount() const override { return 1; }
-  contracts::hardware::FloppyDrive* floppyDrive(unsigned index) override { return index == 0 ? &floppy_ : nullptr; }
+  contracts::hardware::FloppyDrive* floppyDrive(unsigned index) override { return index == 0 ? floppy_.get() : nullptr; }
   contracts::hardware::PrinterControl* printer() override { return printer_.get(); }
 
   // 测试与调试用
@@ -228,7 +231,7 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   contracts::hardware::ParallelPort& parallel_;
 
   logic::hardware::IrqUm6576 irqController_;
-  logic::hardware::StandardFloppyDrive floppy_;
+  std::shared_ptr<logic::hardware::StandardFloppyDrive> floppy_;
   logic::hardware::FdcUpd765 fdc_;
   logic::hardware::SpeechLpc speech_;
   Sb2000SuperIo superIo_;

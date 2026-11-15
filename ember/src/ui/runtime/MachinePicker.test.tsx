@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MachinePicker.test.tsx
- * 说明：面板标题栏里机型选择的测试：下拉列表显示已选机型并列出五个机型、不可选的注明原因且选了不生效、选可用的机型只改已选机型不开机、只有选经典 FC 时才有只有图标的“打开卡带”按钮、按钮弹出文件选择并装入卡带。
+ * 说明：面板标题栏里机型选择的测试：下拉列表显示已选机型并列出五个机型、不可选的注明原因且选了不生效、选可用的机型只改已选机型不开机、机型旁没有按钮。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -65,25 +65,9 @@ describe('机型下拉列表', () => {
   });
 });
 
-describe('打开卡带按钮', () => {
-  it('只有选经典 FC 时才有；选学习机机型后消失', async () => {
-    const { fake, controller } = await setup();
-    expect(screen.getByRole('button', { name: '打开卡带' })).toBeTruthy();
-    fake.machines = fake.machines.map((machine) => (machine.id === 'sb2000' ? { ...machine, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } } : machine));
-    controller.attach(fake.backend, { notify: () => undefined, refreshCommands: () => undefined });
-    await act(async () => settle());
-    await userEvent.click(screen.getByRole('combobox', { name: '机型' }));
-    await userEvent.click(screen.getByRole('option', { name: /小霸王 2000/ }));
-    await act(async () => settle());
-    expect(screen.queryByRole('button', { name: '打开卡带' })).toBeNull();
-  });
-
-  it('弹出文件选择，选后装入卡带并开机', async () => {
-    const { fake, controller } = await setup();
-    fake.pickedPath = 'D:\\roms\\nestest.nes';
-    await userEvent.click(screen.getByRole('button', { name: '打开卡带' }));
-    await act(async () => settle());
-    expect(fake.calls).toContain('cartridges.open {}');
-    expect(controller.machineState()).toBe('running');
+describe('机型旁没有按钮', () => {
+  it('打开卡带只在“文件”菜单里，机型旁没有按钮', async () => {
+    await setup();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

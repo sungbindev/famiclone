@@ -17,7 +17,7 @@ namespace ember::contracts::media {
 
 /** 还没有主机：先打开卡带或用整机机型开机。 */
 inline constexpr std::string_view ERROR_NO_MACHINE = "media.noMachine";
-/** 主机没有这个驱动器。 */
+/** 没有这个驱动器（编号超出软驱的个数）。 */
 inline constexpr std::string_view ERROR_NO_DRIVE = "media.noDrive";
 /** 镜像文件不存在。 */
 inline constexpr std::string_view ERROR_FILE_NOT_FOUND = "media.fileNotFound";

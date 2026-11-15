@@ -58,7 +58,7 @@
   },
   "requests": {
     "floppyInsert": {
-      "description": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片；盘片与电源无关，断电时也可以插入。镜像的格式由大小推断（160、180、320、360、720、1200、1440、2880 KB，其他大小按 1.44MB 处理）。",
+      "description": "读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片；软驱是独立于主机的设备，没有主机、没有通电时也可以插入。镜像的格式由大小推断（160、180、320、360、720、1200、1440、2880 KB，其他大小按 1.44MB 处理）。",
       "mainOnly": true,
       "params": {
         "type": "object",
@@ -74,7 +74,7 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noMachine", "media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
+      "errors": ["media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
     },
     "floppyEject": {
       "description": "取出盘片并丢弃镜像（没有保存的修改随之丢失）；没有盘片时没有效果。",
@@ -88,7 +88,7 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noMachine", "media.noDrive"]
+      "errors": ["media.noDrive"]
     },
     "floppySave": {
       "description": "把驱动器里的镜像写回放入时的文件，并清除“已修改”标志；外部修改与学习机写盘都只改内存里的镜像，不自动落盘。",
@@ -102,7 +102,7 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noMachine", "media.noDrive", "media.noDisk", "media.saveFailed"]
+      "errors": ["media.noDrive", "media.noDisk", "media.saveFailed"]
     },
     "floppyWriteProtect": {
       "description": "设置或取消盘片的写保护；写保护的盘片拒绝学习机写入。",
@@ -119,10 +119,10 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noMachine", "media.noDrive"]
+      "errors": ["media.noDrive"]
     },
     "floppyStatus": {
-      "description": "全部软驱的状态；还没有主机或主机没有软驱时 drives 为空。",
+      "description": "全部软驱的状态；软驱是独立于主机的设备，一直存在（目前只有软驱 A）。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",
@@ -149,7 +149,7 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noMachine", "media.noDrive", "media.sectorRequired"]
+      "errors": ["media.noDrive", "media.sectorRequired"]
     },
     "printerStatus": {
       "description": "打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名；还没有主机或主机没有打印机时为空闲。",
@@ -258,7 +258,7 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["media.noMachine", "media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
+      "errors": ["media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
     },
     "openTape": {
       "description": "弹出系统文件选择窗口（声音文件），把用户选定的文件交给 media.tapeLoad；用户取消选择时 canceled 为 true，不是错误。",

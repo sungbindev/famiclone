@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：runtime.cpp
- * 说明：运行模块的登记：创建模拟线程与命令队列（运行服务）、主机型号目录与独立于主机的磁带机，登记 runtime.* 请求，把运行服务与磁带机提供给其他模块，核心停止时结束模拟线程。
+ * 说明：运行模块的登记：创建模拟线程与命令队列（运行服务）、主机型号目录与独立于主机的磁带机、软驱 A，登记 runtime.* 请求，把运行服务、磁带机与软驱 A 提供给其他模块，核心停止时结束模拟线程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -18,6 +18,7 @@
 #include "bootstrap/machines/floppy-activity-relay.hpp"
 #include "bootstrap/machines/printer-output-relay.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
+#include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
@@ -36,6 +37,7 @@ void registerRuntime(ModuleRegistry& registry) {
   // 磁带机是独立于主机的设备：由主机型号目录创建并交给需要的主机，media 模块（排在本模块之后）取用同一台来载入与播放磁带。
   auto catalog = std::make_shared<MachineCatalog>(printerRelay, floppyRelay);
   registry.services.provide<contracts::hardware::TapeControl>(catalog->tapeControl());
+  registry.services.provide<contracts::hardware::FloppyDrive>(catalog->floppyDrive());
   logic::runtime::SimulationRuntimeOptions options;
   options.machines = catalog;
   options.mappers = registry.services.require<contracts::mappers::MapperFactory>();

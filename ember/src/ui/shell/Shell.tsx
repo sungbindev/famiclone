@@ -52,8 +52,8 @@ import './shell.css';
 /** 应用名。 */
 const APP_NAME = 'EMBER';
 
-/** 底部面板的默认高度（像素），保存过高度时用保存的。 */
-const BOTTOM_PANEL_HEIGHT = 130;
+/** 底部面板的默认高度（像素），同时是最小高度：正好装下设备面板的三行设备（标题行 26、内容留边 18、三行 78、上边框 1，再留 3 像素余量），不出现滚动条；保存过更高的高度时用保存的。 */
+const BOTTOM_PANEL_HEIGHT = 126;
 
 /** 用户可见的文字。 */
 const TEXT = {
@@ -389,6 +389,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
         }
         bottomPanelOpen={!fullScreen && bottomPanelOpen}
         defaultBottomPanelHeight={bottomHeight}
+        bottomPanelMinHeight={BOTTOM_PANEL_HEIGHT}
         onBottomPanelHeightCommit={(height) => bridge.shell.setLayout({ bottomPanelHeight: Math.round(height) })}
         statusBarSize="large"
         statusBar={

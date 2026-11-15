@@ -4,9 +4,10 @@
  * 说明：软驱驱动器模块的实现：持有盘片镜像、磁头位置、马达、写保护与注入的故障。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
+ * 日期：2026-11-16
  * 备注：盘片的格式由镜像的大小推断（160、180、320、360、720、1200、1440、2880 KB），其他大小按 1.44MB 处理；
- *       “取出但保留镜像”用来模拟没有盘的故障，与真正取出（丢弃镜像）不同。
+ *       “取出但保留镜像”用来模拟没有盘的故障，与真正取出（丢弃镜像）不同；
+ *       驱动器是独立于主机的设备，由主机型号目录创建、多台主机先后接入（attach）；没有主机、没有通电时盘片也可以插入与取出，换主机不会丢盘片。
  * ------------------------------------------------------------------------
  */
 
@@ -57,14 +58,26 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   bool restoreMedia() override;
   [[nodiscard]] bool mediaSuspended() const override { return suspended_; }
 
-  /** 马达开关变化时调用（参数是马达是否在转）；由主机装配设置。 */
+  /** 马达开关变化时调用（参数是马达是否在转）；由接入的主机设置。 */
   std::function<void(bool)> onMotorChanged;
+
+  /**
+   * 接入一台主机：马达停转、磁头回到 0 道，并设置马达变化的通知；盘片不变。
+   * @param owner 接入者（主机自己），主机销毁时用 detach 只解除自己的接入。
+   * @param onMotor 马达开关变化时调用；为空时不通知。
+   */
+  void attach(const void* owner, std::function<void(bool)> onMotor);
+
+  /** 解除 owner 的接入：只在它是当前接入者时让马达停转并去掉通知（新主机已经接入时旧主机销毁不影响它）。 */
+  void detach(const void* owner);
 
   /** 镜像大小对应的格式。 */
   [[nodiscard]] static contracts::hardware::FloppyFormat formatFor(std::size_t imageSize);
 
  private:
   bool exists_;
+  /** 当前接入的主机。 */
+  const void* owner_{nullptr};
   bool inserted_{false};
   /** 盘片是否被 suspendMedia 暂时取出（镜像还在）。 */
   bool suspended_{false};

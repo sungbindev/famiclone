@@ -151,6 +151,28 @@ describe('MappersDialog：清单摘要与操作', () => {
     expect(screen.getByText('CPU $8000-$FFFF（写）')).toBeTruthy();
   });
 
+  it('展开详情时这一行是选中状态；再点同一行收起详情并取消选中；点另一行时详情换成另一项', async () => {
+    setup();
+    const table = await screen.findByRole('table', { name: 'mapper 插件' });
+    const row = (name: string): HTMLElement => within(table).getByText(name).closest('tr') as HTMLElement;
+    expect(row('NROM').getAttribute('aria-current')).toBeNull();
+
+    await userEvent.click(row('NROM'));
+    expect(await screen.findByText('prg：只读（来自 PRG）')).toBeTruthy();
+    expect(row('NROM').getAttribute('aria-current')).toBe('true');
+
+    await userEvent.click(row('NROM'));
+    expect(screen.queryByText('prg：只读（来自 PRG）')).toBeNull();
+    expect(screen.queryByRole('button', { name: '停用' })).toBeNull();
+    expect(row('NROM').getAttribute('aria-current')).toBeNull();
+
+    await userEvent.click(row('NROM'));
+    await userEvent.click(row('自制插件'));
+    expect(row('NROM').getAttribute('aria-current')).toBeNull();
+    expect(row('自制插件').getAttribute('aria-current')).toBe('true');
+    await waitFor(() => expect(screen.getByRole('button', { name: '卸载' }).hasAttribute('disabled')).toBe(false));
+  });
+
   it('预装插件的“卸载”置灰，只能停用；用户安装的可以卸载', async () => {
     setup();
     await userEvent.click(await screen.findByText('NROM'));

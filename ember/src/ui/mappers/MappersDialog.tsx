@@ -174,7 +174,7 @@ export function MappersDialog({ bridge }: ShellPageProps) {
             rows={shown}
             rowKey={(row) => row.id}
             isRowSelected={(row) => row.id === data.selectedId}
-            onRowSelect={(row) => data.select(row.id)}
+            onRowSelect={(row) => data.select(row.id === data.selectedId ? undefined : row.id)}
           />
         )}
         {detail}

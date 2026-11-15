@@ -39,7 +39,7 @@ export interface MappersData {
   /** 选中的插件标识；插件不在列表里时为 undefined。 */
   readonly selectedId: string | undefined;
   readonly detail: DetailState;
-  select(id: string): void;
+  select(id: string | undefined): void;
   /** 弹出文件选择窗口安装插件包；返回安装后的摘要，用户取消时返回 undefined；失败时抛出。 */
   install(): Promise<MapperSummary | undefined>;
   /** 卸载用户安装的插件；失败时抛出。 */

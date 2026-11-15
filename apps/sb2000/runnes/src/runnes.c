@@ -6,12 +6,12 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-11
  * 备注：流程：取命令行里的文件名 -> 读入扩展 RAM 页（超过 256K+16 字节的部分不读，文件末尾可能带说明文字）-> 检查 iNES 头
- *       -> 关 NMI 与中断 -> 用 DMA 把 PRG、CHR 复制到扩展 RAM、扩展显存的第 3 个 128K 窗口（$5006 写 $FF，页 $E0-$FF）
+ *       -> 关 NMI 与中断 -> PRG 先用 DMA 复制到 ERAM 缓冲，再用 CPU 复制到扩展 RAM 第 3 个 128K 窗口（$5006 写 $FF，页 $E0-$FF）；CHR 用 DMA 复制到扩展显存的同一窗口
  *       -> 把 PRG 的 RESET 向量改成 ERAM $6100 的启动桩 -> 在 ERAM $6000 的跳板里写 $5006、$4301 进入 FC 兼容模式。
  *       放置方式与汇编版 play（本仓库 apps/sb2000/examples/play）相同：MMC3 仿真下 $C000-$FFFF 固定为窗口末尾 16K，$8000-$BFFF 由 R6/R7 选 8K 页；
  *       mapper 0 的 PRG 放在窗口末尾，R6/R7 指向末尾前的两个 8K；mapper 4 的 PRG 放在窗口开头，PRG 不足 128K 时把最后 16K 再复制到窗口末尾；
  *       CHR 放在扩展显存同一窗口的开头，R0-R5 设为 0、2、4、5、6、7。
- *       DMA 往 CPU 地址写时要先把目的页映射到程序窗口，复制时借用窗口 2（$A000）；窗口 3 里有 C 软件栈，不能换页，
+ *       DMA 的目的在程序窗口（$8000 以上）时写不进去，所以 PRG 的每 4K 先 DMA 到 ERAM $6800-$77FF，再把目的页映射到窗口 2（$A000）后用 CPU 复制过去；窗口 3 里有 C 软件栈，不能换页，
  *       所以程序（含数据）必须在 $A000 以下，超出时拒绝运行。游戏中不再返回 DOS，要回 DOS 只能硬复位。
  * ------------------------------------------------------------------------
  */
@@ -32,9 +32,8 @@
 /* 映射器寄存器，含义见 MapperSB2K.cpp；其余寄存器用 sb2000.h 里的 SB_HW_ 符号 */
 #define REG_EXT_WINDOW 0x5006
 
-/* DMA 的目的：复制到 CPU 地址或扩展显存（真机上目的在程序窗口时 sb_dma_to_cpu 会拒绝，见待办备忘） */
-#define DMA_TO_CPU 0
-#define DMA_TO_VRAM 1
+/* ERAM 里接收 DMA 的 4K 缓冲 */
+#define DMA_BUFFER 0x6800
 
 /* 文件与窗口 */
 #define MAX_FILE_SIZE 0x040010UL /* 头 16 字节 + 128K PRG + 128K CHR */
@@ -197,21 +196,12 @@ static const char *load_game(void)
     return check_header(size);
 }
 
-/* 用 DMA 从扩展 RAM 的 source 处复制 4K 到 destination：mode 为 DMA_TO_CPU 或 DMA_TO_VRAM；源地址不要求对齐 */
-static void dma_block(unsigned long source, unsigned int destination, unsigned char mode)
-{
-    if (mode == DMA_TO_CPU) {
-        sb_dma_to_cpu(source, destination, BLOCK_SIZE);
-    } else {
-        sb_dma_to_vram(source, destination, BLOCK_SIZE);
-    }
-}
-
-/* 把 source 处的 4K 复制到扩展 RAM 页 page：先把该页映射到窗口 2，再让 DMA 写 CPU 地址 */
+/* 把 source 处的 4K 复制到扩展 RAM 页 page：先 DMA 到 ERAM 缓冲，再把该页映射到窗口 2，用 CPU 复制；源地址不要求对齐 */
 static void copy_to_page(unsigned char page, unsigned long source)
 {
+    sb_dma_to_cpu(source, DMA_BUFFER, BLOCK_SIZE);
     sb_window_map(COPY_WINDOW, page);
-    dma_block(source, COPY_ADDRESS, DMA_TO_CPU);
+    memcpy((void *)COPY_ADDRESS, (void *)DMA_BUFFER, BLOCK_SIZE);
 }
 
 /* 把游戏放进第 3 个窗口并进入 FC 兼容模式，不会返回 */
@@ -251,7 +241,7 @@ static void start_game(void)
     /* CHR 紧接在 PRG 之后，每 4K 一块，8 块（32K）占一个显存 bank */
     for (k = 0; k < chr_blocks; ++k) {
         SB_BYTE_AT(SB_HW_VRAM_BANK) = VRAM_BANK_FIRST + (k >> 3);
-        dma_block(base + HEADER_SIZE + ((unsigned long)(prg_blocks + k) << 12), VRAM_WINDOW_BIT | ((unsigned int)(k & 7) << 12), DMA_TO_VRAM);
+        sb_dma_to_vram(base + HEADER_SIZE + ((unsigned long)(prg_blocks + k) << 12), VRAM_WINDOW_BIT | ((unsigned int)(k & 7) << 12), BLOCK_SIZE);
     }
 
     /* mapper 0：32K 的 PRG 用 8K 页 12、13，16K 的用 14、15；mapper 4 从 0、1 开始，之后游戏自己设置 */

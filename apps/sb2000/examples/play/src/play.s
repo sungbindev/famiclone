@@ -6,19 +6,24 @@
 ; 日期：2026-11-11
 ; 备注：构建 fcdev build apps/sb2000/examples/play（程序入口是导出的 _main，由启动代码调用）；游戏文件名放在命令行，如 play mario.nes
 ;       流程：取参数里的文件名 -> 打开 -> 取大小（超过 256K+16 就按 256K+16 读，文件末尾可能带说明文字）-> 分配页 -> 读入 -> 关闭
-;       -> 检查 iNES 头 -> 关 NMI -> 用 DMA 把 PRG、CHR 复制到扩展 RAM、扩展显存的第 3 个 128K 窗口（$5006=$FF）
+;       -> 检查 iNES 头 -> 关 NMI -> PRG 先用 DMA 复制到 ERAM 缓冲 $6800-$77FF，再把目的页映射到 $B000 后用 CPU 复制过去，CHR 用 DMA 复制到扩展 RAM、扩展显存的第 3 个 128K 窗口（$5006=$FF）
 ;       -> 把 PRG 里的 RESET 向量改为 ERAM $6100 的启动桩 -> 在 ERAM $6000 写 $5006、$4301 进入 FC 兼容模式。
 ;       放置方式：MMC3 仿真下 $C000-$FFFF 固定为窗口末尾 16K，$8000-$BFFF 由 R6/R7 选 8K 页（R6/R7 只取低 4 位）。
 ;       mapper 0：PRG 放在窗口末尾，启动桩把 R6/R7 设为末尾前的两个 8K（32K 为 12、13，16K 为 14、15）；
 ;       mapper 4：PRG 放在窗口开头（银行号直接对应），PRG 不足 128K 时再把最后 16K 复制到窗口末尾，R6/R7 设为 0、1，之后游戏自己设置。
 ;       CHR 放在扩展显存同一窗口开头，R0-R5 设为 0、2、4、5、6、7（与 CHR 顺序一致）。
-;       DMA 寄存器（$4048-$404F，见 MapperSB2K.cpp）：$4049 低 4 位与 bit4 为源（bit4=1 表示扩展 RAM），$404A/$404B 为源偏移，
-;       $404C/$404D 为目的，$404E/$404F 为长度；$4048 写 $E0 为复制到 CPU 地址，$C0 为复制到显存（目的 bit15 置位表示扩展显存，再加 $4300 选的 32K bank）。
+;       DMA 寄存器（$4048-$404F）：$4049 低 4 位与 bit4 为源（bit4=1 表示扩展 RAM），$404A/$404B 为源偏移（$404B 位 7 必须为 1，否则 DMA 不传输），
+;       $404C/$404D 为目的，$404E/$404F 为长度（字节数减 1）；$4048 写 $E0 为复制到 CPU 地址（目的在 $8000 以上写不进去，所以只用来写 ERAM 缓冲），$C0 为复制到显存（目的 bit15 置位表示扩展显存，再加 $4300 选的 32K bank）。
 ;       运行变量（ERAM）：$6700 文件页数、$6701 文件首页、$6702 PRG 个数（16K）、$6703 CHR 个数（8K）、$6704 iNES 标志 6、
 ;       $6705 标志 7 高 4 位、$6706 PRG 页数（4K）、$6707 复制序号、$6709/$670A DMA 目的、$670B/$670C DMA 长度、
 ;       $670F 当前目的页、$6710/$6711 游戏原 RESET 入口、$6712 mapper、$6713 CHR 4K 块数、$6714 PRG 首个目的页、$6715-$6717 DMA 源偏移。
 ; ------------------------------------------------------------------------
     .export _main
+    .segment "ZEROPAGE"
+copy_src:
+    .res 2
+copy_dst:
+    .res 2
     .segment "CODE"
 
 _main:
@@ -365,18 +370,39 @@ copy_page_k:
     PLA
 copy_page_do:
     JSR set_source
-    LDA $670F
-    JSR map_b000
+    ; 先 DMA 到 ERAM $6800 的缓冲：目的在 $8000 以上（程序窗口）时 DMA 写不进去
     LDA #$00
     STA $6709
-    LDA #$B0
+    LDA #$68
     STA $670A
     LDA #$FF
     STA $670B
     LDA #$0F
     STA $670C
     LDA #$E0
-    JMP dma
+    JSR dma
+    ; 再把目的页映射到 $B000，用 CPU 从缓冲复制 16 个 256 字节
+    LDA $670F
+    JSR map_b000
+    LDA #$00
+    STA copy_src
+    STA copy_dst
+    LDA #$68
+    STA copy_src+1
+    LDA #$B0
+    STA copy_dst+1
+    LDX #$10
+    LDY #$00
+copy_loop:
+    LDA (copy_src),Y
+    STA (copy_dst),Y
+    INY
+    BNE copy_loop
+    INC copy_src+1
+    INC copy_dst+1
+    DEX
+    BNE copy_loop
+    RTS
 
 ; 取参数里的第一个词作为文件路径，放到 $6543；$6364 为 0 表示没有参数（$6365 起可能有上一条命令的残留）
 copy_name:
@@ -450,6 +476,7 @@ dma:
     STA $404A
     LDA $6716
     AND #$7F
+    ORA #$80
     STA $404B
     LDA $6709
     STA $404C

@@ -97,7 +97,7 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
       psg_(scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE)),
       ppu_(scheduler_, videoBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, 0),
       fcApu_(cpuBus_, scheduler_, irq_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE), true),
-      fcPpu_(scheduler_, fcVideoBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, 0, logic::hardware::Ppu2c02::Options{FC_SCANLINES_PER_FRAME, false, true}),
+      fcPpu_(scheduler_, fcVideoBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, 0, logic::hardware::Ppu2c02::Options{FC_SCANLINES_PER_FRAME, false}),
       padApuPort_(pad_, fcApu_),
       ppuSwitch_(fcMode_, ppu_, fcPpu_),
       apuSwitch_(fcMode_, psg_, fcApu_),

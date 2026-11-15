@@ -10,6 +10,6 @@
     "disk": "fcdev disk src"
   },
   "devDependencies": {
-    "fcdev": "0.5.0"
+    "fcdev": "0.7.0"
   }
 }

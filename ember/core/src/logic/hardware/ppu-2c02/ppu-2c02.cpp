@@ -46,7 +46,7 @@ constexpr std::array<std::uint8_t, 32> POWER_UP_PALETTE = {0x09, 0x01, 0x00, 0x0
 
 }  // namespace
 
-Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase) : Ppu2c02(scheduler, bus, nmi, domain, phase, Options{SCANLINES_PER_FRAME, true, false}) {}
+Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase) : Ppu2c02(scheduler, bus, nmi, domain, phase, Options{SCANLINES_PER_FRAME, true}) {}
 
 Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase, Options options)
     : scheduler_(scheduler),
@@ -349,8 +349,8 @@ void Ppu2c02::incrementVramAddress() {
 
 std::uint8_t Ppu2c02::paletteIndex(std::uint16_t address) const {
   std::uint8_t index = address & 0x1F;
-  // $3F10、$3F14、$3F18、$3F1C 是 $3F00、$3F04、$3F08、$3F0C 的镜像（单独的背景与精灵调色板方式没有镜像）。
-  if (!options_.separatePalettes && (index & 0x13) == 0x10) index &= 0x0F;
+  // $3F10、$3F14、$3F18、$3F1C 是 $3F00、$3F04、$3F08、$3F0C 的镜像。
+  if ((index & 0x13) == 0x10) index &= 0x0F;
   return index;
 }
 

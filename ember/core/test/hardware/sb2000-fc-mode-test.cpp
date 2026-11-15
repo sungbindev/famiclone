@@ -451,6 +451,18 @@ TEST(Sb2000FcMode, AnNromGameRunsFromTheMmc3Windows) {
   EXPECT_GT(*std::max_element(samples.begin(), samples.end()), 0.01F) << "背景音乐在 APU 上发声";
 }
 
+TEST(Sb2000FcMode, TheSpriteBackdropEntriesMirrorTheBackgroundOnes) {
+  Sb2000Machine machine(fcBios());
+  bootIntoFcMode(machine);
+  // 游戏（如马里奥）靠写 $3F10 改背景色：标准 PPU 的调色板方式。
+  pokeBus(machine, 0x2006, 0x3F);
+  pokeBus(machine, 0x2006, 0x10);
+  pokeBus(machine, 0x2007, 0x15);
+  std::uint8_t entry = 0;
+  machine.debugger()->readMemory("chip.palette", 0, std::span<std::uint8_t>(&entry, 1));
+  EXPECT_EQ(entry, 0x15);
+}
+
 TEST(Sb2000FcMode, DebuggerDescribesTheFcModeAddresses) {
   Sb2000Machine machine(fcBios());
   bootIntoFcMode(machine);

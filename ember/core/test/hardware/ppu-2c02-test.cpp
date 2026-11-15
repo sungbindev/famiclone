@@ -46,7 +46,7 @@ class FlatVram final : public hw::BusDevice {
 /** PPU 测试台。 */
 class PpuRig {
  public:
-  explicit PpuRig(Ppu2c02::Options options = {262, true, false}) : ppu(scheduler, bus, nmi, hw::ClockDomain{4}, 0, options) {
+  explicit PpuRig(Ppu2c02::Options options = {262, true}) : ppu(scheduler, bus, nmi, hw::ClockDomain{4}, 0, options) {
     bus.mount(0x0000, 0x3EFF, vram);
     ppu.reset(true);
   }
@@ -595,10 +595,10 @@ TEST(Ppu2c02FrameBuffer, SpritesAreDrawnInFrontOfOrBehindTheBackgroundAndFlipHor
   EXPECT_EQ(pixelBytes(frame, 105 * 256 + 140), white);  // 在背景后：背景不透明，看到背景
 }
 
-// ---------------------------------------------------------------- 变体：PAL 时序与单独的调色板（6576 的 FC 兼容模式用）
+// ---------------------------------------------------------------- 变体：PAL 时序
 
 TEST(Ppu2c02Variants, PalFramesHave312LinesAndNeverSkipADot) {
-  PpuRig rig(Ppu2c02::Options{312, false, false});
+  PpuRig rig(Ppu2c02::Options{312, false});
   rig.write(0x2001, 0x08);  // 背景开启：NTSC 的奇数帧会少一个点
   // 测试台的第一次推进会连续执行时刻 0 与 4 的两个点，第 0 帧的步数因此少 1，不计入。
   for (int frame = 0; frame < 4; ++frame) {
@@ -612,7 +612,7 @@ TEST(Ppu2c02Variants, PalFramesHave312LinesAndNeverSkipADot) {
 }
 
 TEST(Ppu2c02Variants, PalVblankStartsOnLine241AndEndsOnTheLastLine) {
-  PpuRig rig(Ppu2c02::Options{312, false, false});
+  PpuRig rig(Ppu2c02::Options{312, false});
   rig.write(0x2000, 0x80);
   rig.runTo(241, 2);
   EXPECT_TRUE(rig.ppu.vblankFlag());
@@ -628,24 +628,7 @@ TEST(Ppu2c02Variants, RejectsAFrameThatIsTooShort) {
   MasterScheduler scheduler;
   PpuAddressBus bus;
   WiredOrIrqLine nmi;
-  EXPECT_THROW(Ppu2c02(scheduler, bus, nmi, hw::ClockDomain{4}, 0, Ppu2c02::Options{241, true, false}), ember::shared::CoreError);
-}
-
-TEST(Ppu2c02Variants, SeparatePalettesKeepTheSpriteBackdropEntriesApart) {
-  const auto readEntry = [](PpuRig& rig, std::uint16_t address) {
-    rig.setAddress(address);
-    return static_cast<int>(rig.read(0x2007) & 0x3F);
-  };
-  PpuRig separate(Ppu2c02::Options{262, true, true});
-  separate.writeVram(0x3F00, 0x0F);
-  separate.writeVram(0x3F10, 0x15);
-  EXPECT_EQ(readEntry(separate, 0x3F00), 0x0F);
-  EXPECT_EQ(readEntry(separate, 0x3F10), 0x15);
-  // 标准方式：$3F10 是 $3F00 的镜像。
-  PpuRig standard;
-  standard.writeVram(0x3F00, 0x0F);
-  standard.writeVram(0x3F10, 0x15);
-  EXPECT_EQ(readEntry(standard, 0x3F00), 0x15);
+  EXPECT_THROW(Ppu2c02(scheduler, bus, nmi, hw::ClockDomain{4}, 0, Ppu2c02::Options{241, true}), ember::shared::CoreError);
 }
 
 }  // namespace

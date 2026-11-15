@@ -47,8 +47,6 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
     int scanlinesPerFrame;
     /** 奇数帧且背景开启时预渲染行少一个点（NTSC 有，PAL 没有）。 */
     bool oddFrameSkip;
-    /** 背景与精灵的调色板各 16 项、互相独立：$3F10、$3F14、$3F18、$3F1C 不镜像到背景色（6576 的 FC 兼容模式的方式）。 */
-    bool separatePalettes;
   };
 
   /**

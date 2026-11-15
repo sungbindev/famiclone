@@ -44,7 +44,7 @@ double tndLevel(unsigned triangle, unsigned noise, unsigned dmc) {
 
 }  // namespace
 
-Apu2a03::Apu2a03(hw::CpuBus& bus, hw::Scheduler& scheduler, hw::IrqLine& irq, hw::RdyLine& rdy, hw::ClockDomain cpuDomain, double cpuFrequency)
+Apu2a03::Apu2a03(hw::CpuBus& bus, hw::Scheduler& scheduler, hw::IrqLine& irq, hw::RdyLine& rdy, hw::ClockDomain cpuDomain, double cpuFrequency, bool pal)
     : bus_(bus),
       scheduler_(scheduler),
       irq_(irq),
@@ -53,12 +53,16 @@ Apu2a03::Apu2a03(hw::CpuBus& bus, hw::Scheduler& scheduler, hw::IrqLine& irq, hw
       dmcIrqSource_(irq.addSource()),
       rdySource_(rdy.addSource()),
       cpuDomain_(cpuDomain),
+      stepCycles_(pal ? &apu::FRAME_STEP_CYCLES_PAL : &apu::FRAME_STEP_CYCLES),
       sampler_(cpuFrequency, SAMPLE_RATE) {
   if (cpuDomain_.ticksPerCycle < 2) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "CPU 周期的主时钟周期数必须大于 1");
+  noise_.setPal(pal);
+  dmc_.setPal(pal);
   for (std::size_t count = 1; count < pulseTable_.size(); ++count) pulseTable_[count] = 95.88 / (8128.0 / static_cast<double>(count) + 100.0);
 }
 
-hw::MasterTime Apu2a03::cycleTime(std::int64_t cycle) const { return cpuDomain_.toMaster(cycle - 1) + cpuDomain_.ticksPerCycle / 2; }
+// 周期 c 的边界时刻：用“向上取整的半周期”，使 catchUp 里的“+ 半周期再取整”恰好得到 c（CPU 周期含奇数个主时钟周期时，向下取整会差 1，事件回调推不动进度而无限重登记）。
+hw::MasterTime Apu2a03::cycleTime(std::int64_t cycle) const { return cpuDomain_.toMaster(cycle - 1) + (cpuDomain_.ticksPerCycle + 1) / 2; }
 
 // ---------------------------------------------------------------- 总线
 
@@ -151,10 +155,11 @@ void Apu2a03::reset(bool power) {
   frameIrq_ = false;
   syncIrq();
   if (power) {
-    cycle_ = 0;
+    // 周期编号从当前的主时钟时间算起（主机上电时为 0；中途启动（如 sb2000 进入 FC 兼容模式）时不为 0）。
+    cycle_ = (scheduler_.now() + cpuDomain_.ticksPerCycle / 2) / cpuDomain_.ticksPerCycle;
     frameMode_ = 0;
     irqInhibit_ = false;
-    sampler_.reset();
+    sampler_.reset(cycle_);
     samples_.clear();
   }
   frameStep_ = 0;
@@ -179,6 +184,16 @@ void Apu2a03::catchUp(hw::MasterTime now) {
   const std::int64_t target = (now + cpuDomain_.ticksPerCycle / 2) / cpuDomain_.ticksPerCycle;
   while (cycle_ < target) stepCycle();
   trimPending();
+}
+
+void Apu2a03::halt() {
+  for (hw::EventId* event : {&wakeEvent_, &dmaReadEvent_, &dmaReleaseEvent_}) {
+    if (*event != hw::NO_EVENT) scheduler_.cancel(*event);
+    *event = hw::NO_EVENT;
+  }
+  irq_.set(frameIrqSource_, false);
+  irq_.set(dmcIrqSource_, false);
+  rdy_.set(rdySource_, false);
 }
 
 void Apu2a03::trimPending() {
@@ -225,7 +240,7 @@ void Apu2a03::clockFrame(apu::FrameClock clock) {
 
 void Apu2a03::stepFrameCounter() {
   ++frameCycles_;
-  if (frameCycles_ >= apu::FRAME_STEP_CYCLES[frameMode_][frameStep_]) {
+  if (frameCycles_ >= (*stepCycles_)[frameMode_][frameStep_]) {
     // 4 步模式的最后三个周期里每个周期都置位帧 IRQ 标志。
     if (!irqInhibit_ && frameMode_ == 0 && frameStep_ >= apu::FRAME_IRQ_FIRST_STEP && !frameIrq_) {
       frameIrq_ = true;
@@ -297,7 +312,7 @@ void Apu2a03::scheduleWake() {
   // 帧 IRQ 置位：4 步模式、未被禁止时，从第 3 步（含）起每一步都会置位。
   if (!irqInhibit_ && frameMode_ == 0) {
     const unsigned step = std::max(frameStep_, apu::FRAME_IRQ_FIRST_STEP);
-    next = std::min(next, cycle_ + static_cast<std::int64_t>(apu::FRAME_STEP_CYCLES[0][step]) - static_cast<std::int64_t>(frameCycles_));
+    next = std::min(next, cycle_ + static_cast<std::int64_t>((*stepCycles_)[0][step]) - static_cast<std::int64_t>(frameCycles_));
   }
   // 写 $4017 生效：此后帧计数器重新开始，原先的预测作废。
   if (pendingFrameDelay_ > 0) next = std::min(next, cycle_ + pendingFrameDelay_);

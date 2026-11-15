@@ -64,9 +64,9 @@ BandLimitedSampler::BandLimitedSampler(double inputRate, unsigned outputRate) {
   dcBlockFactor_ = std::exp(-2.0 * std::numbers::pi * DC_BLOCK_HZ / static_cast<double>(outputRate));
 }
 
-void BandLimitedSampler::reset() {
+void BandLimitedSampler::reset(std::int64_t startTick) {
   ring_.fill(0);
-  emitted_ = 0;
+  emitted_ = startTick == 0 ? 0 : quantize(startTick) / PHASES - HALF_WIDTH + 1;
   integral_ = 0;
   previousInput_ = 0;
   previousOutput_ = 0;

@@ -13,7 +13,10 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
+
+#include "logic/hardware/apu-2a03/apu-tables.hpp"
 
 namespace ember::logic::hardware::apu {
 
@@ -153,6 +156,9 @@ class NoiseChannel {
  public:
   void reset(bool power);
 
+  /** 选择周期表：PAL 用 PAL 表，默认 NTSC。 */
+  void setPal(bool pal) { table_ = pal ? &NOISE_PERIOD_TABLE_PAL : &NOISE_PERIOD_TABLE; }
+
   /** 写通道的寄存器 0、2、3（$400C、$400E、$400F）。 */
   void write(unsigned reg, std::uint8_t value);
 
@@ -169,6 +175,7 @@ class NoiseChannel {
   LengthCounter length_;
   Envelope envelope_;
   bool shortMode_{false};
+  const std::array<std::uint16_t, 16>* table_{&NOISE_PERIOD_TABLE};
   unsigned period_{4};
   int timer_{4};
   std::uint16_t shift_{1};
@@ -178,6 +185,9 @@ class NoiseChannel {
 class DmcChannel {
  public:
   void reset(bool power);
+
+  /** 选择速率表：PAL 用 PAL 表，默认 NTSC。 */
+  void setPal(bool pal) { table_ = pal ? &DMC_RATE_TABLE_PAL : &DMC_RATE_TABLE; }
 
   /** 写通道的寄存器 0-3（$4010-$4013）。 */
   void write(unsigned reg, std::uint8_t value);
@@ -219,6 +229,7 @@ class DmcChannel {
   bool irqEnabled_{false};
   bool loop_{false};
   bool irqFlag_{false};
+  const std::array<std::uint16_t, 16>* table_{&DMC_RATE_TABLE};
   unsigned period_{428};
   int timer_{428};
   std::uint16_t sampleAddress_{0xC000};

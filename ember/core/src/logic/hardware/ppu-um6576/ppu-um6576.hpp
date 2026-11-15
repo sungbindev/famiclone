@@ -65,6 +65,13 @@ class PpuUm6576 final : public contracts::hardware::Ppu, public contracts::hardw
   // Ppu
   void reset(bool power) override;
   void catchUp(contracts::hardware::MasterTime /*now*/) override {}
+
+  /** 停止：取消每行的调度事件并释放 NMI 线上的来源；主机型号切到 FC 兼容模式时调用，再 reset 就恢复运行。 */
+  void halt() {
+    if (eventId_ != contracts::hardware::NO_EVENT) scheduler_.cancel(eventId_);
+    eventId_ = contracts::hardware::NO_EVENT;
+    nmi_.set(nmiSource_, false);
+  }
   [[nodiscard]] contracts::hardware::FrameBuffer frame() const override;
   [[nodiscard]] std::uint64_t frameCount() const override { return frameCount_; }
 

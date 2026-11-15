@@ -235,7 +235,7 @@ void NoiseChannel::reset(bool power) {
   if (power) {
     envelope_.reset();
     shortMode_ = false;
-    period_ = NOISE_PERIOD_TABLE[0];
+    period_ = (*table_)[0];
     timer_ = static_cast<int>(period_);
     shift_ = 1;
   }
@@ -249,7 +249,7 @@ void NoiseChannel::write(unsigned reg, std::uint8_t value) {
       break;
     case 2:
       shortMode_ = (value & 0x80U) != 0;
-      period_ = NOISE_PERIOD_TABLE[value & 0x0FU];
+      period_ = (*table_)[value & 0x0FU];
       break;
     case 3:
       length_.load(static_cast<std::uint8_t>(value >> 3));
@@ -279,7 +279,7 @@ void DmcChannel::reset(bool power) {
   if (power) {
     irqEnabled_ = false;
     loop_ = false;
-    period_ = DMC_RATE_TABLE[0];
+    period_ = (*table_)[0];
     timer_ = static_cast<int>(period_);
     sampleAddress_ = 0xC000;
     sampleLength_ = 1;
@@ -307,7 +307,7 @@ void DmcChannel::write(unsigned reg, std::uint8_t value) {
     case 0:
       irqEnabled_ = (value & 0x80U) != 0;
       loop_ = (value & 0x40U) != 0;
-      period_ = DMC_RATE_TABLE[value & 0x0FU];
+      period_ = (*table_)[value & 0x0FU];
       if (!irqEnabled_) irqFlag_ = false;
       break;
     case 1:

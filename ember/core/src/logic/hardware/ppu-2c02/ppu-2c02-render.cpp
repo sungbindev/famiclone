@@ -116,7 +116,7 @@ void Ppu2c02::fetchBackground(int dot) {
   }
   if (dot == 256) incrementY();
   if (dot == 257) v_ = static_cast<std::uint16_t>((v_ & ~0x041F) | (t_ & 0x041F));
-  if (scanline_ == PRE_RENDER_LINE && dot >= 280 && dot <= 304) v_ = static_cast<std::uint16_t>((v_ & ~0x7BE0) | (t_ & 0x7BE0));
+  if (scanline_ == preRenderLine_ && dot >= 280 && dot <= 304) v_ = static_cast<std::uint16_t>((v_ & ~0x7BE0) | (t_ & 0x7BE0));
 }
 
 // ---------------------------------------------------------------- 精灵
@@ -207,8 +207,8 @@ void Ppu2c02::fetchSprites(int line, int dot) {
   const int phase = (dot - 257) & 7;
   if (phase == 0 && slot == 0) {
     // 预渲染行不评估精灵，所以第 0 行没有精灵。
-    spriteCount_ = line == PRE_RENDER_LINE ? 0 : nextSpriteCount_;
-    sprite0InLine_ = line != PRE_RENDER_LINE && nextSprite0_;
+spriteCount_ = line == preRenderLine_ ? 0 : nextSpriteCount_;
+  sprite0InLine_ = line != preRenderLine_ && nextSprite0_;
   }
   if (phase != 4 && phase != 6) return;
 

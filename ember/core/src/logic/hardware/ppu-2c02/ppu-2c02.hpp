@@ -41,6 +41,16 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   /** 预渲染行的行号。 */
   static constexpr int PRE_RENDER_LINE = 261;
 
+  /** 可选的变体；不指定时是经典 FC 的 NTSC 2C02。 */
+  struct Options {
+    /** 每帧的行数，最后一行是预渲染行（NTSC 为 262，PAL 为 312）。 */
+    int scanlinesPerFrame;
+    /** 奇数帧且背景开启时预渲染行少一个点（NTSC 有，PAL 没有）。 */
+    bool oddFrameSkip;
+    /** 背景与精灵的调色板各 16 项、互相独立：$3F10、$3F14、$3F18、$3F1C 不镜像到背景色（6576 的 FC 兼容模式的方式）。 */
+    bool separatePalettes;
+  };
+
   /**
    * @param scheduler 调度器，既是主时钟也登记 NMI 相关的事件，必须活到本对象销毁。
    * @param bus PPU 总线：图案表与名称表的访问经它完成。
@@ -50,6 +60,9 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
    */
   Ppu2c02(contracts::hardware::Scheduler& scheduler, contracts::hardware::PpuBus& bus, contracts::hardware::IrqLine& nmi, contracts::hardware::ClockDomain domain, contracts::hardware::MasterTime phase);
 
+  /** 同上，另指定变体；每帧的行数必须大于 241。 */
+  Ppu2c02(contracts::hardware::Scheduler& scheduler, contracts::hardware::PpuBus& bus, contracts::hardware::IrqLine& nmi, contracts::hardware::ClockDomain domain, contracts::hardware::MasterTime phase, Options options);
+
   // BusDevice：$2000-$3FFF，地址每 8 个字节镜像一次
   contracts::hardware::BusRead read(std::uint16_t address) override;
   void write(std::uint16_t address, std::uint8_t value) override;
@@ -57,6 +70,9 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   // Ppu
   void reset(bool power) override;
   void catchUp(contracts::hardware::MasterTime now) override;
+
+  /** 停止：取消调度事件并释放 NMI 线上的来源；主机型号把这颗 PPU 切走时调用，再 reset 就恢复运行。 */
+  void halt();
   [[nodiscard]] contracts::hardware::FrameBuffer frame() const override;
   [[nodiscard]] std::uint64_t frameCount() const override { return frameCount_; }
 
@@ -99,7 +115,7 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   void publishFrame();
 
   [[nodiscard]] bool renderingEnabled() const { return (mask_ & 0x18) != 0; }
-  [[nodiscard]] static std::uint8_t paletteIndex(std::uint16_t address);
+  [[nodiscard]] std::uint8_t paletteIndex(std::uint16_t address) const;
 
   // 渲染
   void shiftBackground();
@@ -118,6 +134,9 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   contracts::hardware::SignalSource nmiSource_;
   contracts::hardware::ClockDomain domain_;
   contracts::hardware::MasterTime phase_;
+  Options options_;
+  /** 预渲染行的行号（每帧行数减 1）。 */
+  int preRenderLine_;
   contracts::hardware::EventId eventId_{contracts::hardware::NO_EVENT};
 
   // 时间：下一个要执行的点与它开始的主时钟时间

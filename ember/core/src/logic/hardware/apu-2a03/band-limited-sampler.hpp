@@ -38,8 +38,11 @@ class BandLimitedSampler {
    */
   BandLimitedSampler(double inputRate, unsigned outputRate);
 
-  /** 清空状态，时间从 0 重新开始。 */
-  void reset();
+  /**
+   * 清空状态。
+   * @param startTick 时间的起点（输入时钟节拍数），默认 0；中途启动时传当前节拍，不会补出之前的样本。
+   */
+  void reset(std::int64_t startTick = 0);
 
   /**
    * 在某个周期上电平发生了变化。

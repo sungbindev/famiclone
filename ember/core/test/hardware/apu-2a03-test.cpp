@@ -297,11 +297,34 @@ TEST(ApuNoise, PeriodTableSetsTheShiftRate) {
   }
 }
 
+TEST(ApuNoise, PalPeriodTableSetsTheShiftRate) {
+  for (unsigned index = 0; index < 16; ++index) {
+    apu::NoiseChannel noise;
+    noise.setPal(true);
+    noise.reset(true);
+    enableWithLength(noise, 1, 3);
+    noise.write(0, 0x3F);
+    noise.write(2, static_cast<std::uint8_t>(index));
+    noise.write(3, 0x08);
+    noise.endCycle();
+    for (unsigned i = 0; i < 4; ++i) noise.clockTimer();
+    ReferenceNoise reference(false);
+    reference.step();
+    std::vector<unsigned> expectedBits;
+    for (int i = 0; i < 30; ++i) expectedBits.push_back(reference.step());
+    for (int step = 0; step < 30; ++step) {
+      for (unsigned i = 0; i < apu::NOISE_PERIOD_TABLE_PAL[index]; ++i) noise.clockTimer();
+      EXPECT_EQ(noise.output(), expectedBits[static_cast<std::size_t>(step)] == 0 ? 15 : 0) << "PAL 周期表第 " << index << " 项，第 " << step << " 步";
+    }
+  }
+}
+
 // ---------------------------------------------------------------- DMC 通道
 
-/** 测量 DMC 在速率 index 下，字节 0xFF 的各位使输出电平连续上升的间隔（CPU 周期）。 */
-std::vector<int> dmcRiseIntervals(unsigned index) {
+/** 测量 DMC 在速率 index 下，字节 0xFF 的各位使输出电平连续上升的间隔（CPU 周期）；pal 为 true 时用 PAL 的速率表。 */
+std::vector<int> dmcRiseIntervals(unsigned index, bool pal = false) {
   apu::DmcChannel dmc;
+  dmc.setPal(pal);
   dmc.reset(true);
   dmc.write(0, static_cast<std::uint8_t>(index));
   dmc.write(2, 0x00);
@@ -328,6 +351,14 @@ TEST(ApuDmcChannel, TheSixteenRatesSpaceTheOutputStepsByTheTable) {
     const auto intervals = dmcRiseIntervals(index);
     ASSERT_GE(intervals.size(), 5U) << "速率 " << index;
     for (const int interval : intervals) EXPECT_EQ(interval, apu::DMC_RATE_TABLE[index]) << "速率 " << index;
+  }
+}
+
+TEST(ApuDmcChannel, ThePalRatesSpaceTheOutputStepsByThePalTable) {
+  for (unsigned index = 0; index < 16; ++index) {
+    const auto intervals = dmcRiseIntervals(index, true);
+    ASSERT_GE(intervals.size(), 5U) << "PAL 速率 " << index;
+    for (const int interval : intervals) EXPECT_EQ(interval, apu::DMC_RATE_TABLE_PAL[index]) << "PAL 速率 " << index;
   }
 }
 
@@ -395,7 +426,7 @@ class SampleMemory final : public hw::BusDevice {
 
 /** APU 的最小测试台；时间按 CPU 周期推进（一个周期 12 个主时钟周期）。 */
 struct ApuRig {
-  ApuRig() : apu(bus, scheduler, irq, rdy, hw::ClockDomain{12}, CPU_HZ) {
+  explicit ApuRig(bool pal = false) : apu(bus, scheduler, irq, rdy, hw::ClockDomain{12}, CPU_HZ, pal) {
     bus.mount(0x4000, 0x4013, apu);
     bus.mount(0x4015, 0x4015, apu);
     bus.mount(0x4017, 0x4017, apu);
@@ -456,6 +487,15 @@ TEST(Apu2a03, PowerOnStartsTheFrameCounterInFourStepModeAndSetsTheFrameIrq) {
   // 上电如同在复位序列开始时写入 $00：第 2 个 APU 周期生效，之后 29828 个周期置位帧 IRQ。
   EXPECT_EQ(when, 2 + 29828);
   EXPECT_EQ(rig.read(0x4015) & 0x40, 0x40);
+}
+
+TEST(Apu2a03, PalFrameCounterSetsTheFrameIrqAtItsOwnStepAndFiveStepModeNeverDoes) {
+  ApuRig rig(true);
+  // 上电第 2 个 APU 周期生效，之后 PAL 的 4 步模式在 33252 个周期置位帧 IRQ。
+  EXPECT_EQ(rig.runUntilIrq(40000), 2 + 33252);
+  ApuRig five(true);
+  five.write(0x4017, 0x80);
+  EXPECT_EQ(five.runUntilIrq(60000), -1);
 }
 
 TEST(Apu2a03, FrameIrqAppearsThe29831stCycleAfterAWriteWhetherTheWriteIsOnAnEvenOrOddCycle) {
@@ -735,6 +775,26 @@ TEST(Apu2a03, PowerOnResetCancelsAnInFlightDmcDma) {
   EXPECT_FALSE(rig.rdy.active());
   rig.idle(100);
   EXPECT_FALSE(rig.rdy.active()) << "复位之后不再有遗留的事件";
+}
+
+TEST(Apu2a03, AnOddNumberOfTicksPerCpuCycleAndAStartAtANonZeroTimeStillMakeProgress) {
+  // sb2000 的 CPU 周期为 15 个主时钟周期（奇数），并在运行中途（进入 FC 兼容模式时）才上电 APU：
+  // 事件时刻与 catchUp 的取整必须一致，否则唤醒事件每次都落在上一个周期，回调推不动进度而无限重登记。
+  ember::logic::hardware::MasterScheduler scheduler;
+  ember::logic::hardware::CpuAddressBus bus;
+  ember::logic::hardware::WiredOrIrqLine irq;
+  ember::logic::hardware::WiredOrRdyLine rdy;
+  SampleMemory memory;
+  ember::logic::hardware::Apu2a03 apu(bus, scheduler, irq, rdy, hw::ClockDomain{15}, CPU_HZ, true);
+  bus.mount(0x4000, 0x4013, apu);
+  bus.mount(0x4015, 0x4015, apu);
+  bus.mount(0x4017, 0x4017, apu);
+  bus.mount(0x8000, 0xFFFF, memory);
+  scheduler.advance(487);
+  apu.reset(true);
+  // PAL 的 4 步模式在 33252 个周期置位帧 IRQ；推进到之后应当正常返回并看到 IRQ。
+  scheduler.advance(static_cast<hw::MasterTime>(15) * 34000);
+  EXPECT_TRUE(irq.active());
 }
 
 // ---------------------------------------------------------------- 带限采样器

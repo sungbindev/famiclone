@@ -9,6 +9,8 @@
  *       CPU 分频以真机 hwtest 实测为准：定时器选 CPU 时钟、预分频 16、预置 $FF 时 120 帧下溢约 1040 次（16 分频只有 975 次）；
  *       CPU 总线的译码见 sb2000.cpp；整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；
  *       并口接一台虚拟针式打印机（有输出方时），打印机 6 秒没有数据就输出当前页；
+ *       FC 兼容模式（向 $4301 写 $55 进入，只有硬复位才回到 6576 模式，见 docs/02 第 6.8 节）：PPU 换成标准 PPU（PAL 312 行、背景与精灵的调色板各 16 项），
+ *       声音换成标准 APU（PAL），程序窗口与显存换成 MMC3 映射（主板自己的逻辑，见 sb2000-fc-board.hpp），CPU 仍是同一个，在写 $4301 的指令结束后复位；
  *       具体实现只在这里创建并连线，模块之间不互相引用。
  * ------------------------------------------------------------------------
  */
@@ -25,12 +27,15 @@
 #include <vector>
 
 #include "bootstrap/machines/cpu-debug-kit.hpp"
+#include "bootstrap/machines/pad-apu-port.hpp"
 #include "bootstrap/machines/sb2000-board.hpp"
+#include "bootstrap/machines/sb2000-fc-board.hpp"
 #include "contracts/hardware/dma-memory.hpp"
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "contracts/hardware/parallel-port.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
+#include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
 #include "logic/hardware/dac-um6576/dac-um6576.hpp"
@@ -48,6 +53,7 @@
 #include "logic/hardware/mouse-um6576/mouse-um6576.hpp"
 #include "logic/hardware/pad-um6576/pad-um6576.hpp"
 #include "logic/hardware/paging-um6576/paging-um6576.hpp"
+#include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
 #include "logic/hardware/ppu-um6576/ppu-um6576.hpp"
 #include "logic/hardware/printer-um6576/printer-um6576.hpp"
 #include "logic/hardware/psg-um6576/psg-um6576.hpp"
@@ -97,8 +103,8 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   [[nodiscard]] bool isPoweredOn() const override { return poweredOn_; }
   void run(contracts::hardware::MasterTime ticks) override;
   void runFrame() override;
-  [[nodiscard]] contracts::hardware::FrameBuffer frame() const override { return ppu_.frame(); }
-  [[nodiscard]] unsigned audioSampleRate() const override { return logic::hardware::PsgUm6576::SAMPLE_RATE; }
+  [[nodiscard]] contracts::hardware::FrameBuffer frame() const override { return fcMode_ ? fcPpu_.frame() : ppu_.frame(); }
+  [[nodiscard]] unsigned audioSampleRate() const override { return fcMode_ ? logic::hardware::Apu2a03::SAMPLE_RATE : logic::hardware::PsgUm6576::SAMPLE_RATE; }
   void takeAudio(std::vector<float>& samples) override;
   void setButtons(unsigned port, std::uint8_t buttons) override;
   [[nodiscard]] unsigned padPortCount() const override { return static_cast<unsigned>(joypads_.size()); }
@@ -115,6 +121,12 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   // 测试与调试用
   [[nodiscard]] logic::hardware::PpuUm6576& ppu() { return ppu_; }
   [[nodiscard]] const logic::hardware::PpuUm6576& ppu() const { return ppu_; }
+  /** FC 兼容模式的标准 PPU、APU 与 MMC3 映射器（进入 FC 模式之前不运行）。 */
+  [[nodiscard]] const logic::hardware::Ppu2c02& fcPpu() const { return fcPpu_; }
+  [[nodiscard]] const logic::hardware::Apu2a03& fcApu() const { return fcApu_; }
+  [[nodiscard]] const Mmc3Mapper& mmc3() const { return mmc3_; }
+  /** 是否在 FC 兼容模式。 */
+  [[nodiscard]] bool fcMode() const { return fcMode_; }
   [[nodiscard]] logic::hardware::PsgUm6576& psg() { return psg_; }
   [[nodiscard]] logic::hardware::KeyboardSb2000& keyboard() { return keyboardDevice_; }
   [[nodiscard]] logic::hardware::MouseSb2000& mouse() { return mouseDevice_; }
@@ -158,6 +170,18 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
 
   /** 所有要在上电或复位时复位的功能模块。 */
   void resetDevices(bool power);
+  /** 进入 FC 兼容模式（在写 $4301 的指令结束后调用）。 */
+  void enterFcMode();
+  /** 执行一条指令，并在指令边界处理挂起的模式切换。 */
+  void runInstruction();
+  /** 当前在用的 PPU 追赶到现在（FC 模式的 PPU 不逐点被调用）。 */
+  void catchUpPpu();
+  /** 当前在用的声音芯片追赶到现在。 */
+  void catchUpAudio();
+  /** 从上电起已完成的帧数（切换 PPU 也不会回退）。 */
+  [[nodiscard]] std::uint64_t completedFrames() const { return frameOffset_ + (fcMode_ ? fcPpu_.frameCount() : ppu_.frameCount()); }
+  /** 当前 PPU 下一个要处理的扫描线。 */
+  [[nodiscard]] int currentLine() const { return fcMode_ ? fcPpu_.scanline() : ppu_.nextLine(); }
   /** 把游戏手柄的状态换算成手柄口的按键。 */
   void applyGamepad(const contracts::hardware::GamepadInput& gamepad);
   /** 把鼠标事件换算成串口鼠标的位移与按键。 */
@@ -173,6 +197,14 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   logic::hardware::StandardCartridgeSlot slot_;
   logic::hardware::CpuAddressBus cpuBus_;
   logic::hardware::MappedBus<contracts::hardware::PpuBus, 16> videoBus_;
+  /** FC 兼容模式的显存总线（14 位）。 */
+  logic::hardware::PpuAddressBus fcVideoBus_;
+  /** 是否在 FC 兼容模式；写 $4301 的指令结束后置位，只有上电清除。 */
+  bool fcMode_{false};
+  /** $4301 已写入 $55，等指令结束后切换。 */
+  bool fcSwitchPending_{false};
+  /** 切换 PPU 之前已完成的帧数，使帧计数在切换时不回退。 */
+  std::uint64_t frameOffset_{0};
 
   /** BIOS ROM。 */
   std::vector<std::uint8_t> bios_;
@@ -184,7 +216,10 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   logic::hardware::PagingUm6576 paging_;
   Sb2000ProgramMemory program_;
   logic::hardware::SysinitUm6576 sysinit_;
+  Mmc3Mapper mmc3_;
   Sb2000WorkWindow workWindow_;
+  Sb2000FcProgram fcProgram_;
+  Sb2000FcVideo fcVideo_;
   /** 没有接打印机的并口。 */
   contracts::hardware::NullParallelPort nullParallel_;
   /** 虚拟针式打印机；没有输出方时为空。 */
@@ -209,6 +244,14 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   logic::hardware::PadUm6576 pad_;
   logic::hardware::PsgUm6576 psg_;
   logic::hardware::PpuUm6576 ppu_;
+  /** FC 兼容模式的标准 PPU、APU（PAL）。 */
+  logic::hardware::Apu2a03 fcApu_;
+  logic::hardware::Ppu2c02 fcPpu_;
+  PadApuPort padApuPort_;
+  Sb2000ModeSwitch ppuSwitch_;
+  Sb2000ModeSwitch apuSwitch_;
+  Sb2000ModeSwitch padSwitch_;
+  Sb2000ModeSwitch programSwitch_;
   std::array<logic::hardware::Joypad, logic::hardware::PadUm6576::PORT_COUNT> joypads_;
   logic::hardware::Cpu6502 cpu_;
   /** 断点、记录、代码数据标记与反汇编。 */

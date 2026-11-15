@@ -36,12 +36,9 @@ constexpr std::uint8_t MASK_GRAYSCALE = 0x01;
 
 /** 第 241 行第 1 点：vblank 置位。 */
 constexpr int VBLANK_START_INDEX = 241 * Ppu2c02::DOTS_PER_SCANLINE + 1;
-/** 预渲染行第 1 点：vblank、精灵 0 命中与精灵溢出清除。 */
-constexpr int VBLANK_END_INDEX = Ppu2c02::PRE_RENDER_LINE * Ppu2c02::DOTS_PER_SCANLINE + 1;
-/** 预渲染行第 339 点：奇数帧在这里决定是否跳过最后一点，此后下一帧 vblank 的位置才确定。 */
-constexpr int SKIP_DECISION_INDEX = Ppu2c02::PRE_RENDER_LINE * Ppu2c02::DOTS_PER_SCANLINE + 339;
-/** 不跳点时一帧的点数。 */
-constexpr int DOTS_PER_FRAME = Ppu2c02::DOTS_PER_SCANLINE * Ppu2c02::SCANLINES_PER_FRAME;
+/** 预渲染行的第 1 点：vblank、精灵 0 命中与精灵溢出清除；第 339 点：奇数帧在这里决定是否跳过最后一点，此后下一帧 vblank 的位置才确定。 */
+constexpr int VBLANK_END_DOT = 1;
+constexpr int SKIP_DECISION_DOT = 339;
 
 /** 上电时调色板的内容：取自 blargg 的 power_up_palette 测试表（其作者的 NES 上的实测值），真机每次上电不同。 */
 constexpr std::array<std::uint8_t, 32> POWER_UP_PALETTE = {0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00, 0x04, 0x2C,
@@ -49,10 +46,21 @@ constexpr std::array<std::uint8_t, 32> POWER_UP_PALETTE = {0x09, 0x01, 0x00, 0x0
 
 }  // namespace
 
-Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase)
-    : scheduler_(scheduler), bus_(bus), nmi_(nmi), nmiSource_(nmi.addSource()), domain_(domain), phase_(phase), rgbaTable_(buildNtscPalette()) {
+Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase) : Ppu2c02(scheduler, bus, nmi, domain, phase, Options{SCANLINES_PER_FRAME, true, false}) {}
+
+Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase, Options options)
+    : scheduler_(scheduler),
+      bus_(bus),
+      nmi_(nmi),
+      nmiSource_(nmi.addSource()),
+      domain_(domain),
+      phase_(phase),
+      options_(options),
+      preRenderLine_(options.scanlinesPerFrame - 1),
+      rgbaTable_(buildNtscPalette()) {
   if (domain_.ticksPerCycle < 1) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 点时钟的主时钟周期数必须大于 0");
   if (phase_ < 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 的相位不能为负");
+  if (options_.scanlinesPerFrame <= 241) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 每帧的行数必须大于 241");
   for (auto& buffer : frameBuffers_) buffer.assign(static_cast<std::size_t>(FRAME_WIDTH) * FRAME_HEIGHT, 0xFF000000U);
 }
 
@@ -102,6 +110,12 @@ void Ppu2c02::catchUp(hw::MasterTime now) {
   while (nextDotTime_ <= now) runDot();
 }
 
+void Ppu2c02::halt() {
+  if (eventId_ != hw::NO_EVENT) scheduler_.cancel(eventId_);
+  eventId_ = hw::NO_EVENT;
+  nmi_.set(nmiSource_, false);
+}
+
 void Ppu2c02::onEvent(hw::MasterTime when, std::uint32_t /*tag*/) {
   eventId_ = hw::NO_EVENT;
   catchUp(when);
@@ -111,16 +125,19 @@ void Ppu2c02::onEvent(hw::MasterTime when, std::uint32_t /*tag*/) {
 void Ppu2c02::scheduleNextEvent() {
   if (eventId_ != hw::NO_EVENT) scheduler_.cancel(eventId_);
   const int current = scanline_ * DOTS_PER_SCANLINE + dot_;
+  const int vblankEnd = preRenderLine_ * DOTS_PER_SCANLINE + VBLANK_END_DOT;
+  const int skipDecision = preRenderLine_ * DOTS_PER_SCANLINE + SKIP_DECISION_DOT;
+  const int dotsPerFrame = DOTS_PER_SCANLINE * options_.scanlinesPerFrame;
   int target = 0;
   // 下一个会改变 NMI 线（或决定下一帧长度）的点；都已过去时取下一帧的 vblank 起点。
   if (current <= VBLANK_START_INDEX) {
     target = VBLANK_START_INDEX - current;
-  } else if (current <= VBLANK_END_INDEX) {
-    target = VBLANK_END_INDEX - current;
-  } else if (current <= SKIP_DECISION_INDEX) {
-    target = SKIP_DECISION_INDEX - current;
+  } else if (current <= vblankEnd) {
+    target = vblankEnd - current;
+  } else if (current <= skipDecision) {
+    target = skipDecision - current;
   } else {
-    target = VBLANK_START_INDEX + DOTS_PER_FRAME - current;
+    target = VBLANK_START_INDEX + dotsPerFrame - current;
   }
   eventId_ = scheduler_.scheduleAt(nextDotTime_ + static_cast<hw::MasterTime>(target) * domain_.ticksPerCycle, *this, 0);
 }
@@ -132,7 +149,7 @@ void Ppu2c02::runDot() {
   const int dot = dot_;
   // 背景开关写入后要过 1 个点才对跳点的判断生效。
   const bool backgroundEnabledBefore = backgroundWasEnabled_;
-  const bool renderLine = line < 240 || line == PRE_RENDER_LINE;
+  const bool renderLine = line < 240 || line == preRenderLine_;
   const bool rendering = renderingEnabled();
 
   if (renderLine) {
@@ -149,7 +166,7 @@ void Ppu2c02::runDot() {
     if (!suppressVbl_) vblank_ = true;
     suppressVbl_ = false;
     updateNmi();
-  } else if (line == PRE_RENDER_LINE && dot == 1) {
+  } else if (line == preRenderLine_ && dot == VBLANK_END_DOT) {
     vblank_ = false;
     sprite0Hit_ = false;
     spriteOverflow_ = false;
@@ -160,11 +177,11 @@ void Ppu2c02::runDot() {
 
   // 前进一个点；奇数帧且背景开启时，预渲染行跳过最后一点。
   nextDotTime_ += domain_.ticksPerCycle;
-  const bool skip = line == PRE_RENDER_LINE && dot == 339 && oddFrame_ && backgroundEnabledBefore;
+  const bool skip = options_.oddFrameSkip && line == preRenderLine_ && dot == SKIP_DECISION_DOT && oddFrame_ && backgroundEnabledBefore;
   backgroundWasEnabled_ = (mask_ & 0x08) != 0;
   if (skip || ++dot_ == DOTS_PER_SCANLINE) {
     dot_ = 0;
-    if (++scanline_ == SCANLINES_PER_FRAME) {
+    if (++scanline_ == options_.scanlinesPerFrame) {
       scanline_ = 0;
       oddFrame_ = !oddFrame_;
     }
@@ -330,10 +347,10 @@ void Ppu2c02::incrementVramAddress() {
   }
 }
 
-std::uint8_t Ppu2c02::paletteIndex(std::uint16_t address) {
+std::uint8_t Ppu2c02::paletteIndex(std::uint16_t address) const {
   std::uint8_t index = address & 0x1F;
-  // $3F10、$3F14、$3F18、$3F1C 是 $3F00、$3F04、$3F08、$3F0C 的镜像。
-  if ((index & 0x13) == 0x10) index &= 0x0F;
+  // $3F10、$3F14、$3F18、$3F1C 是 $3F00、$3F04、$3F08、$3F0C 的镜像（单独的背景与精灵调色板方式没有镜像）。
+  if (!options_.separatePalettes && (index & 0x13) == 0x10) index &= 0x0F;
   return index;
 }
 

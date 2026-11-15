@@ -309,6 +309,35 @@ TEST(Sb2000Machine, RealBiosBootsTheSystemDemoDiskFromTheFloppyDrive) {
   EXPECT_GT(colors.size(), 4U) << "演示画面有多种颜色";
 }
 
+TEST(Sb2000Machine, RealGameCollectionDiskStartsAGameInFcMode) {
+  std::vector<std::uint8_t> bios = realBios();
+  std::vector<std::uint8_t> disk = realFloppy(std::filesystem::path(u8"reference/floppy-images/sb2000/FLPPY18游戏集锦001热血格斗热血排球.img"));
+  const std::string dump = dumpPath();
+  if (bios.empty() || disk.empty()) GTEST_SKIP() << "没有找到 BIOS 或游戏集锦盘";
+  Sb2000Machine machine(std::move(bios));
+  machine.floppyDrive(0)->insertImage(std::move(disk), false, "collection.img");
+  machine.powerOn();
+  // 软盘里的启动程序（GAME.EXE 只是加载器，游戏代码在没有文件名的扇区里）把游戏集锦的菜单装进扩展 RAM 后写 $4301，约在第 1650 帧进入 FC 模式。
+  for (int frame = 0; frame < 3000 && !machine.fcMode(); ++frame) machine.runFrame();
+  ASSERT_TRUE(machine.fcMode()) << "启动后应该进入 FC 兼容模式";
+  for (int frame = 0; frame < 120; ++frame) machine.runFrame();
+  const hw::FrameBuffer menu = machine.frame();
+  if (!dump.empty()) dumpFrame(menu, dump + ".collection-menu.ppm");
+  const std::set<std::uint32_t> menuColors(menu.pixels.begin(), menu.pixels.end());
+  EXPECT_GT(menuColors.size(), 5U) << "游戏集锦的菜单是多色画面";
+  // 在菜单里按开始，运行选中的游戏（热血格斗：先出厂商标志，再进入剧情画面）。
+  machine.setButtons(0, hw::pad_button::START);
+  for (int frame = 0; frame < 10; ++frame) machine.runFrame();
+  machine.setButtons(0, 0);
+  for (int frame = 0; frame < 760; ++frame) machine.runFrame();
+  const hw::FrameBuffer game = machine.frame();
+  if (!dump.empty()) dumpFrame(game, dump + ".collection-game.ppm");
+  const std::set<std::uint32_t> gameColors(game.pixels.begin(), game.pixels.end());
+  EXPECT_GT(gameColors.size(), 8U) << "游戏画面是多色的（图案页经 MMC3 映射取自扩展显存）";
+  EXPECT_NE(menuColors, gameColors);
+  EXPECT_TRUE(machine.fcMode());
+}
+
 /** 按一下键：按下、跑几帧、松开、再跑几帧。 */
 void tapKey(Sb2000Machine& machine, const char* code) {
   machine.input(hw::KeyInput{code, true});

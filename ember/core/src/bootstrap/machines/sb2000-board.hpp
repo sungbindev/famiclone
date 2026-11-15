@@ -15,6 +15,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <span>
 #include <vector>
 
@@ -115,7 +116,7 @@ class Sb2000VideoMemory final : public contracts::hardware::BusDevice {
 };
 
 /**
- * 超级 I/O 窗口 $4100-$43FF：软驱控制器（$4100 写数据率、$4101 写 DOR、$4200-$4207）、显存页寄存器 $4300、FC 兼容模式开关 $4301（不支持，写入被忽略）、语音端口 $4302（存根）；
+ * 超级 I/O 窗口 $4100-$43FF：软驱控制器（$4100 写数据率、$4101 写 DOR、$4200-$4207）、显存页寄存器 $4300、FC 兼容模式开关 $4301（写 $55 时通知主机型号，主机型号在指令结束后切换）、语音端口 $4302（存根）；
  * 其余地址读出 0，写入被丢弃。
  * 软驱端口（$4200-$4207）：0 与 1 是 DMA 数据口（写 1 同时给出终止计数），2 读出位 6 是数据请求，3 读出位 6 是中断标志，
  * 4 读主状态、写位 6 是控制器复位脚，5 读写数据，7 读盘片更换位、写数据率，2 写 DOR，6 读出 0。
@@ -146,6 +147,8 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
       writeFloppy(address & 7U, value);
     } else if (address == ADDRESS_VIDEO_BANK) {
       video_.selectBank(value);
+    } else if (address == ADDRESS_FC_MODE) {
+      if (value == FC_MODE_KEY && onFcMode) onFcMode();
     } else if (address == ADDRESS_SPEECH) {
       if (value == 0) {
         if (++zeroRun_ > SPEECH_END_ZEROS) speechEnded_ = true;
@@ -162,12 +165,17 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
     speechEnded_ = true;
   }
 
+  /** $4301 写入 $55（进入 FC 兼容模式）时调用；在 CPU 总线访问里被调用，不能在里面直接复位 CPU。 */
+  std::function<void()> onFcMode;
+
  private:
   static constexpr std::uint16_t ADDRESS_DATA_RATE = 0x4100;
   static constexpr std::uint16_t ADDRESS_DOR = 0x4101;
   static constexpr std::uint16_t FIRST_FLOPPY_PORT = 0x4200;
   static constexpr std::uint16_t LAST_FLOPPY_PORT = 0x4207;
   static constexpr std::uint16_t ADDRESS_VIDEO_BANK = 0x4300;
+  static constexpr std::uint16_t ADDRESS_FC_MODE = 0x4301;
+  static constexpr std::uint8_t FC_MODE_KEY = 0x55;
   static constexpr std::uint16_t ADDRESS_SPEECH = 0x4302;
   static constexpr unsigned SPEECH_END_ZEROS = 32;
 
@@ -230,7 +238,7 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
 
 /**
  * 工作窗口 $4400-$5FFF：6576 模式（向 $4031 写过 $65、$76）下不是 RAM，读出 $68、写入无效（真机实测）；
- * 6576 模式之前：$4400-$4FFF 没有器件应答，$5000-$5FFF 是 2K 工作 RAM（与内部 RAM 同一块，镜像两次）。
+ * 6576 模式之前：$4400-$4FFF 没有器件应答，$5000-$5FFF 是 2K 工作 RAM（与内部 RAM 同一块，镜像两次）；$5006 是 128K 窗口选择（FC 兼容模式用），两种模式下写入都有效果。
  */
 class Sb2000WorkWindow final : public contracts::hardware::BusDevice {
  public:
@@ -249,12 +257,18 @@ class Sb2000WorkWindow final : public contracts::hardware::BusDevice {
   contracts::hardware::BusRead peek(std::uint16_t address) override { return read(address); }
 
   void write(std::uint16_t address, std::uint8_t value) override {
+    // $5006 选 128K 窗口，不论是否在 6576 模式都有效（真机实测：6576 模式下这一段写入无效，$5006 的写入仍有效果）。
+    if (address == ADDRESS_WINDOW_SELECT && onWindowSelect) onWindowSelect(value);
     if (mode_.enabled() || address < FIRST_RAM) return;
     ram_.write(address % ram_.size(), value);
   }
 
+  /** 写 $5006 时调用，参数是写入的值。 */
+  std::function<void(std::uint8_t)> onWindowSelect;
+
  private:
   static constexpr std::uint16_t FIRST_RAM = 0x5000;
+  static constexpr std::uint16_t ADDRESS_WINDOW_SELECT = 0x5006;
   static constexpr std::uint8_t FIXED_VALUE = 0x68;
 
   const logic::hardware::SysinitUm6576& mode_;

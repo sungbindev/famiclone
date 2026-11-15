@@ -47,8 +47,9 @@ class Apu2a03 final : public contracts::hardware::Device {
    * @param rdy CPU 的 RDY 线，本对象在其上登记一个来源，DMC 取样时暂停 CPU。
    * @param cpuDomain CPU 的时钟域。
    * @param cpuFrequency CPU 的时钟频率（赫兹），用于把周期换算成输出采样。
+   * @param pal 为 true 时噪声、DMC 的周期表与帧计数器的步进表用 PAL 的（默认 NTSC）。
    */
-  Apu2a03(contracts::hardware::CpuBus& bus, contracts::hardware::Scheduler& scheduler, contracts::hardware::IrqLine& irq, contracts::hardware::RdyLine& rdy, contracts::hardware::ClockDomain cpuDomain, double cpuFrequency);
+  Apu2a03(contracts::hardware::CpuBus& bus, contracts::hardware::Scheduler& scheduler, contracts::hardware::IrqLine& irq, contracts::hardware::RdyLine& rdy, contracts::hardware::ClockDomain cpuDomain, double cpuFrequency, bool pal = false);
 
   /** 读：只有 $4015 驱动数据线（位 5 保持总线上的值），其他地址不驱动。读 $4015 清除帧 IRQ 标志。 */
   contracts::hardware::BusRead read(std::uint16_t address) override;
@@ -66,6 +67,9 @@ class Apu2a03 final : public contracts::hardware::Device {
 
   /** 追赶到主时钟的 now：推进内部状态并生成这段时间的采样。 */
   void catchUp(contracts::hardware::MasterTime now);
+
+  /** 停止：取消调度事件，释放 IRQ 线与 RDY 线上的来源；主机型号不用这个 APU 时调用，再 reset 就恢复运行。 */
+  void halt();
 
   /** 取走自上次以来生成的采样（单声道，范围 -1 到 1，采样率 SAMPLE_RATE）；先清空 samples 再放入。 */
   void takeAudio(std::vector<float>& samples);
@@ -114,6 +118,7 @@ class Apu2a03 final : public contracts::hardware::Device {
   std::int64_t cycle_{0};
 
   // 帧计数器
+  const std::array<std::array<std::uint32_t, apu::FRAME_STEP_COUNT>, 2>* stepCycles_;
   unsigned frameMode_{0};
   unsigned frameStep_{0};
   std::uint32_t frameCycles_{0};

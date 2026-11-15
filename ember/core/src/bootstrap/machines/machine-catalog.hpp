@@ -17,6 +17,7 @@
 #include "contracts/hardware/printer-output.hpp"
 #include "contracts/runtime/machine-factory.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
+#include "logic/hardware/tape-deck/tape-deck.hpp"
 
 namespace ember::bootstrap {
 
@@ -26,9 +27,14 @@ class MachineCatalog final : public contracts::runtime::MachineFactory {
   /** 全部主机型号输出声音的采样率（赫兹）；声音输出按它打开设备。 */
   static constexpr unsigned AUDIO_SAMPLE_RATE = logic::hardware::Apu2a03::SAMPLE_RATE;
 
-  /** @param printerOutput 整机机型的打印机把输出的页交给它；为空时主机不接打印机。 */
+  /**
+   * @param printerOutput 整机机型的打印机把输出的页交给它；为空时主机不接打印机。
+   */
   explicit MachineCatalog(std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput = nullptr, std::shared_ptr<contracts::hardware::FloppyActivity> floppyActivity = nullptr)
       : printerOutput_(std::move(printerOutput)), floppyActivity_(std::move(floppyActivity)) {}
+
+  /** 磁带机：独立于主机的设备，目录里所有有磁带接口的主机都接到这一台；介质服务用同一台载入与播放磁带。 */
+  [[nodiscard]] std::shared_ptr<contracts::hardware::TapeControl> tapeControl() const { return tapeDeck_; }
 
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> create(const std::string& host) const override;
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const override;
@@ -36,6 +42,7 @@ class MachineCatalog final : public contracts::runtime::MachineFactory {
  private:
   std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput_;
   std::shared_ptr<contracts::hardware::FloppyActivity> floppyActivity_;
+  std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_ = std::make_shared<logic::hardware::TapeDeck>();
 };
 
 }  // namespace ember::bootstrap

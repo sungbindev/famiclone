@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：规则见 docs/05-界面.md 第 4.3 节：没有盘片时取出、保存镜像与写保护置灰；软驱的状态分无盘片、空闲、读写中（带磁道）；打印机的状态分空闲、打印中、打印完成；
- *       磁带机的状态分无磁带、已停止、播放中、录音中，没有磁带时取出与播放置灰，播放或录音时载入、取出、播放、录音置灰、只有停止可用。
+ *       磁带机的状态分无磁带、已停止、播放中、录音中；磁带机是独立设备，载入与取出随时可用：有磁带就能取出（播放或录音时先停止再取出），没有磁带时“播放”可点（用来选磁带），
+ *       有磁带时只有磁带机接在通电的主机上才能播放，录音也要接上主机，播放或录音时只有停止可用。
  * ------------------------------------------------------------------------
  */
 
@@ -54,11 +55,9 @@ export function printerStateText(printer: PrinterStatus | undefined): string {
 
 /** 磁带机各按钮是否可用。 */
 export interface TapeAvailability {
-  /** 载入磁带。 */
-  readonly load: boolean;
   /** 取出。 */
   readonly eject: boolean;
-  /** 播放。 */
+  /** 播放：没有磁带时点它选磁带。 */
   readonly play: boolean;
   /** 录音。 */
   readonly record: boolean;
@@ -98,9 +97,12 @@ export function tapePositionText(tape: TapeStatus | undefined): string {
   return tape.duration > 0 ? `${clockText(tape.position)} / ${clockText(tape.duration)}` : clockText(tape.position);
 }
 
-/** 磁带机各按钮是否可用：只有停止时可以载入、取出、播放与录音，播放或录音时只有“停止”可用；磁带机没有连接（undefined 或 available 为 false）时全部不可用。 */
+/**
+ * 磁带机各按钮是否可用：有磁带就能取出；没有磁带时“播放”始终可点（选磁带），有磁带时播放与录音要接在通电的主机上且已停止；播放或录音时只有停止与取出可用；
+ * 状态还没读到（undefined）时全部不可用。
+ */
 export function tapeAvailability(tape: TapeStatus | undefined): TapeAvailability {
-  if (tape === undefined || !tape.available) return { load: false, eject: false, play: false, record: false, stop: false };
+  if (tape === undefined) return { eject: false, play: false, record: false, stop: false };
   const stopped = tape.mode === 'stopped';
-  return { load: stopped, eject: stopped && tape.loaded, play: stopped && tape.loaded, record: stopped, stop: !stopped };
+  return { eject: tape.loaded, play: !tape.loaded || (tape.connected && stopped), record: tape.connected && stopped, stop: !stopped };
 }

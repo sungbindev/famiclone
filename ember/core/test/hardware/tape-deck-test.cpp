@@ -278,4 +278,53 @@ TEST(TapeDeck, LoadingATapeStopsAndReplacesTheCurrentOne) {
   EXPECT_FALSE(bench.deck.loaded());
 }
 
+TEST(TapeDeck, ADeckThatIsNotBoundTakesAndReleasesTapesButCannotPlayOrRecord) {
+  TapeDeck deck;
+  EXPECT_FALSE(deck.connected());
+  deck.load(std::make_unique<FakeSource>(squareWave({1000}), false), "tape");
+  EXPECT_TRUE(deck.loaded());
+  deck.play();
+  EXPECT_EQ(deck.mode(), hw::TapeMode::Stopped) << "没有接上主机不能播放";
+  std::vector<std::int16_t> samples;
+  bool finished = false;
+  deck.record(std::make_unique<FakeSink>(&samples, &finished), "rec");
+  EXPECT_EQ(deck.mode(), hw::TapeMode::Stopped) << "没有接上主机不能录音";
+  EXPECT_EQ(deck.name(), "tape") << "录音没有开始，原来的磁带还在";
+  deck.eject();
+  EXPECT_FALSE(deck.loaded());
+}
+
+TEST(TapeDeck, UnbindingStopsTheTapeAndKeepsItWithItsPosition) {
+  DeckBench bench;
+  bench.deck.load(std::make_unique<FakeSource>(squareWave({1000}), false), "tape");
+  bench.deck.play();
+  bench.advanceFrames(100);
+  bench.deck.unbind();
+  EXPECT_FALSE(bench.deck.connected());
+  EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Stopped);
+  EXPECT_TRUE(bench.deck.loaded());
+  EXPECT_NEAR(bench.deck.positionSeconds(), 101.0 / 96000.0, 2.0 / 96000.0);
+  const double unbound = bench.deck.positionSeconds();
+  MasterScheduler other;
+  bench.deck.bind(other, MASTER_HZ);
+  EXPECT_TRUE(bench.deck.connected());
+  bench.deck.play();
+  other.advance(50 * FRAME_TICKS);
+  EXPECT_NEAR(bench.deck.positionSeconds(), unbound + 50.0 / 96000.0, 2.0 / 96000.0) << "接上另一台主机后从原来的位置继续";
+}
+
+TEST(TapeDeck, UnbindingFinishesARecordingAndOnlyTheBoundSchedulerCanUnbind) {
+  DeckBench bench;
+  std::vector<std::int16_t> samples;
+  bool finished = false;
+  bench.deck.record(std::make_unique<FakeSink>(&samples, &finished), "rec");
+  MasterScheduler other;
+  bench.deck.unbind(other);
+  EXPECT_TRUE(bench.deck.connected()) << "不是绑定的调度器，没有效果";
+  bench.deck.unbind(bench.scheduler);
+  EXPECT_TRUE(finished);
+  EXPECT_FALSE(bench.deck.connected());
+  EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Stopped);
+}
+
 }  // namespace

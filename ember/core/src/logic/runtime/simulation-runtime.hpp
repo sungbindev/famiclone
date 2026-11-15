@@ -84,6 +84,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   contracts::runtime::RuntimeState ejectCartridge() override;
   contracts::runtime::RuntimeState bootMachine(contracts::runtime::MachineBoot boot) override;
   bool useMachine(const std::function<void(contracts::hardware::Machine&)>& action) override;
+  void runOnSimulation(const std::function<void()>& action) override;
   void sendInput(contracts::hardware::InputEvent event) override;
   void setInputHook(std::shared_ptr<contracts::runtime::InputHook> hook) override;
   void setFamilyKeyboard(bool connected) override;

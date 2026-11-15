@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.ts
- * 说明：设备面板的控制器：保存各软驱、磁带机与打印机的状态，执行载入镜像、取出、保存镜像、写保护、磁带的载入、取出、播放、录音与停止等操作，订阅核心事件。
+ * 说明：设备面板的控制器：保存各软驱、磁带机与打印机的状态，执行载入镜像、取出、保存镜像、写保护、磁带的取出、播放（没有磁带时先选磁带）、录音与停止等操作，订阅核心事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -47,7 +47,6 @@ const TEXT = {
     save: '保存软盘镜像',
     writeProtect: '设置写保护',
     printer: '打印机输出',
-    loadTape: '载入磁带',
     ejectTape: '取出磁带',
     playTape: '播放磁带',
     recordTape: '磁带录音',
@@ -186,19 +185,31 @@ export class MediaController {
     this.perform(TEXT.actions.writeProtect, (backend) => backend.core.media.floppyWriteProtect({ drive, writeProtected }));
   }
 
-  /** 弹出系统文件选择窗口，把选定的声音文件载入磁带机；用户取消时什么都不发生。 */
-  loadTape(): void {
-    this.pick(TEXT.actions.loadTape, (backend) => backend.main.media.openTape({}));
-  }
-
-  /** 取出磁带。 */
+  /** 取出磁带；播放或录音时先停止。 */
   ejectTape(): void {
     this.perform(TEXT.actions.ejectTape, (backend) => backend.core.media.tapeEject({}));
   }
 
-  /** 开始播放。 */
+  /**
+   * 播放：里面有磁带就直接播放；没有磁带时先弹出系统文件选择窗口选磁带，载入后磁带机已接在通电的主机上就立即开始播放，否则只载入；用户取消选择时什么都不发生。
+   */
   playTape(): void {
-    this.perform(TEXT.actions.playTape, (backend) => backend.core.media.tapePlay({}));
+    if (this.state.tape?.loaded === true) {
+      this.perform(TEXT.actions.playTape, (backend) => backend.core.media.tapePlay({}));
+      return;
+    }
+    const attachment = this.attachment;
+    if (attachment === undefined) return;
+    const { backend } = attachment;
+    backend.main.media
+      .openTape({})
+      .then(async (result) => {
+        if (!result.canceled && result.status?.connected === true) await backend.core.media.tapePlay({});
+      })
+      .catch((error: unknown) => this.report(TEXT.actions.playTape, error))
+      .finally(() => {
+        if (this.attachment === attachment) this.refreshAll();
+      });
   }
 
   /** 弹出系统的保存文件窗口，选定文件后开始录音；用户取消时什么都不发生。 */

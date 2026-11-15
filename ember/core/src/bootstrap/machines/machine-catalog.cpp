@@ -18,7 +18,7 @@
 namespace ember::bootstrap {
 
 std::unique_ptr<contracts::hardware::Machine> MachineCatalog::create(const std::string& host) const {
-  if (host == "fc") return std::make_unique<FcMachine>();
+  if (host == "fc") return std::make_unique<FcMachine>(tapeDeck_);
   throw shared::CoreError(contracts::runtime::ERROR_HOST_UNSUPPORTED, "程序里还没有实现主机型号：" + host);
 }
 

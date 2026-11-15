@@ -471,6 +471,13 @@ bool SimulationRuntime::useMachine(const std::function<void(hw::Machine&)>& acti
   });
 }
 
+void SimulationRuntime::runOnSimulation(const std::function<void()>& action) {
+  submit([&action] {
+    action();
+    return true;
+  });
+}
+
 rt::RuntimeState SimulationRuntime::ejectCartridge() {
   return submit([this] {
     if (machine_ != nullptr) {

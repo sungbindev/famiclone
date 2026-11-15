@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MediaPanel.tsx
- * 说明：底部面板的“设备”内容：用组件库的紧凑列表行，每个设备一行，没有边框与表格线，鼠标悬停时整行变底色。软驱一行依次是名称、盘片、状态、行尾的四个图标按钮（写保护开关、载入镜像、取出、保存镜像）；磁带机一行是名称、磁带、状态、位置与行尾的五个图标按钮（载入、取出、播放、录音、停止）；打印机一行是名称与状态。
+ * 说明：底部面板的“设备”内容：用组件库的紧凑列表行，每个设备一行，没有边框与表格线，鼠标悬停时整行变底色。软驱一行依次是名称、盘片、状态、行尾的四个图标按钮（写保护开关、载入镜像、取出、保存镜像）；磁带机一行是名称、磁带、状态、位置与行尾的四个图标按钮（取出、播放、录音、停止）；打印机一行是名称与状态。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -28,7 +28,6 @@ const TEXT = {
   eject: '取出',
   save: '保存镜像',
   tape: '磁带机',
-  loadTape: '载入磁带',
   ejectTape: '取出',
   play: '播放',
   record: '录音',
@@ -87,7 +86,7 @@ function FloppyRow({ controller, drive, floppy }: { readonly controller: MediaCo
   );
 }
 
-/** 磁带机的行；tape 为 undefined 或 available 为 false 表示当前主机没有磁带机（沉默设备）。 */
+/** 磁带机的行；没有接在通电的主机上时只能取出与选磁带（没有磁带时点“播放”），不能播放与录音。 */
 function TapeRow({ controller, tape }: { readonly controller: MediaController; readonly tape: TapeStatus | undefined }) {
   const available = tapeAvailability(tape);
   return (
@@ -100,9 +99,6 @@ function TapeRow({ controller, tape }: { readonly controller: MediaController; r
       ]}
       actions={
         <>
-          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.loadTape} disabled={!available.load} onClick={() => controller.loadTape()}>
-            {TEXT.loadTape}
-          </Button>
           <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.ejectTape} disabled={!available.eject} onClick={() => controller.ejectTape()}>
             {TEXT.ejectTape}
           </Button>

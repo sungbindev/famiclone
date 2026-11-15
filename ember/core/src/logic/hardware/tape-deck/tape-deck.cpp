@@ -34,9 +34,7 @@ constexpr std::size_t RECORD_FLUSH_SAMPLES = 16384;
 
 }  // namespace
 
-TapeDeck::TapeDeck(hw::Scheduler& scheduler, double masterHz) : scheduler_(scheduler), ticksPerFrame_(masterHz / hw::TapeSource::SAMPLE_RATE), masterHz_(masterHz) {
-  if (masterHz <= 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "磁带机的主时钟频率必须大于 0");
-}
+TapeDeck::TapeDeck(hw::Scheduler& scheduler, double masterHz) { bind(scheduler, masterHz); }
 
 TapeDeck::~TapeDeck() {
   cancelEvent();
@@ -45,6 +43,31 @@ TapeDeck::~TapeDeck() {
   } catch (...) {
     // 析构时无法再报告，录音文件保留已写入的部分。
   }
+}
+
+void TapeDeck::bind(hw::Scheduler& scheduler, double masterHz) {
+  if (masterHz <= 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "磁带机的主时钟频率必须大于 0");
+  unbind();
+  scheduler_ = &scheduler;
+  masterHz_ = masterHz;
+  ticksPerFrame_ = masterHz / hw::TapeSource::SAMPLE_RATE;
+}
+
+void TapeDeck::unbind() {
+  // 先在原来的调度器上停止；录音写完时出错也要解除绑定，异常照常抛出。
+  try {
+    stop();
+  } catch (...) {
+    cancelEvent();
+    scheduler_ = nullptr;
+    throw;
+  }
+  cancelEvent();
+  scheduler_ = nullptr;
+}
+
+void TapeDeck::unbind(const hw::Scheduler& scheduler) {
+  if (scheduler_ == &scheduler) unbind();
 }
 
 // ---------------------------------------------------------------- 时间换算
@@ -134,7 +157,7 @@ void TapeDeck::rewindSource() {
 // ---------------------------------------------------------------- 边沿事件
 
 void TapeDeck::cancelEvent() {
-  if (eventId_ != hw::NO_EVENT) scheduler_.cancel(eventId_);
+  if (eventId_ != hw::NO_EVENT && scheduler_ != nullptr) scheduler_->cancel(eventId_);
   eventId_ = hw::NO_EVENT;
 }
 
@@ -149,7 +172,7 @@ void TapeDeck::scheduleNextEdge() {
   const bool previousLevel = scanState_ != comparator_.invert;
   while (scanFrame_ < limit) {
     if (!ensureBuffered(scanFrame_)) {
-      eventId_ = scheduler_.scheduleAt(tickOf(endFrame_), *this, TagEnd);
+      eventId_ = scheduler_->scheduleAt(tickOf(endFrame_), *this, TagEnd);
       return;
     }
     const bool state = schmitt(scanState_, buffer_[static_cast<std::size_t>(scanFrame_ - bufferBase_)][1]);
@@ -159,12 +182,12 @@ void TapeDeck::scheduleNextEdge() {
       pendingEdgeFrame_ = scanFrame_;
       pendingEdgeLevel_ = levelNow;
       ++scanFrame_;
-      eventId_ = scheduler_.scheduleAt(tickOf(pendingEdgeFrame_), *this, TagEdge);
+      eventId_ = scheduler_->scheduleAt(tickOf(pendingEdgeFrame_), *this, TagEdge);
       return;
     }
     ++scanFrame_;
   }
-  eventId_ = scheduler_.scheduleAt(tickOf(scanFrame_), *this, TagRescan);
+  eventId_ = scheduler_->scheduleAt(tickOf(scanFrame_), *this, TagRescan);
 }
 
 void TapeDeck::onEvent(hw::MasterTime when, std::uint32_t tag) {
@@ -183,15 +206,15 @@ void TapeDeck::onEvent(hw::MasterTime when, std::uint32_t tag) {
 // ---------------------------------------------------------------- TapeControl
 
 hw::TapeMode TapeDeck::mode() {
-  advanceTo(scheduler_.now());
+  advanceTo(now());
   return mode_;
 }
 
 double TapeDeck::positionSeconds() {
-  const hw::MasterTime now = scheduler_.now();
-  if (mode_ == hw::TapeMode::Recording) return std::max(0.0, (static_cast<double>(now) - recordStartTick_) / masterHz_);
-  advanceTo(now);
-  const std::uint64_t frame = mode_ == hw::TapeMode::Playing ? frameAt(now) : processed_;
+  const hw::MasterTime current = now();
+  if (mode_ == hw::TapeMode::Recording) return std::max(0.0, (static_cast<double>(current) - recordStartTick_) / masterHz_);
+  advanceTo(current);
+  const std::uint64_t frame = mode_ == hw::TapeMode::Playing ? frameAt(current) : processed_;
   return static_cast<double>(frame) / hw::TapeSource::SAMPLE_RATE;
 }
 
@@ -202,10 +225,10 @@ void TapeDeck::load(std::unique_ptr<hw::TapeSource> source, std::string name) {
 }
 
 void TapeDeck::play() {
-  if (source_ == nullptr || mode_ != hw::TapeMode::Stopped) return;
+  if (scheduler_ == nullptr || source_ == nullptr || mode_ != hw::TapeMode::Stopped) return;
   if (endOfSource_ && processed_ >= endFrame_) rewindSource();
   mode_ = hw::TapeMode::Playing;
-  anchorTick_ = static_cast<double>(scheduler_.now());
+  anchorTick_ = static_cast<double>(now());
   anchorFrame_ = processed_;
   scanFrame_ = processed_;
   scanState_ = schmittState_;
@@ -214,11 +237,12 @@ void TapeDeck::play() {
 }
 
 void TapeDeck::record(std::unique_ptr<hw::TapeSink> sink, std::string name) {
+  if (scheduler_ == nullptr) return;
   eject();
   sink_ = std::move(sink);
   name_ = std::move(name);
   mode_ = hw::TapeMode::Recording;
-  recordStartTick_ = static_cast<double>(scheduler_.now());
+  recordStartTick_ = static_cast<double>(now());
   recordedSamples_ = 0;
   recordLevel_ = driven_;
   recordBuffer_.clear();
@@ -226,11 +250,11 @@ void TapeDeck::record(std::unique_ptr<hw::TapeSink> sink, std::string name) {
 
 void TapeDeck::stop() {
   if (mode_ == hw::TapeMode::Playing) {
-    advanceTo(scheduler_.now());
+    advanceTo(now());
     mode_ = hw::TapeMode::Stopped;
     cancelEvent();
   } else if (mode_ == hw::TapeMode::Recording) {
-    renderRecording(scheduler_.now());
+    renderRecording(now());
     flushRecording();
     // 先让磁带机回到空闲，再写完文件：写完时出错抛出异常，状态也是一致的。
     const std::unique_ptr<hw::TapeSink> sink = std::move(sink_);
@@ -260,7 +284,7 @@ void TapeDeck::eject() {
 // ---------------------------------------------------------------- TapeLine
 
 bool TapeDeck::level() {
-  advanceTo(scheduler_.now());
+  advanceTo(now());
   return schmittState_ != comparator_.invert;
 }
 
@@ -269,7 +293,7 @@ void TapeDeck::setComparator(const hw::TapeComparator& comparator) {
   // 没有在播放时，数据线停在“静音”对应的状态（取反的比较器静音时读 0），不留着上一个比较器的状态。
   if (mode_ != hw::TapeMode::Playing) schmittState_ = schmitt(schmittState_, 0);
   if (mode_ == hw::TapeMode::Playing) {
-    advanceTo(scheduler_.now());
+    advanceTo(now());
     scanFrame_ = processed_;
     scanState_ = schmittState_;
     scheduleNextEdge();
@@ -279,7 +303,7 @@ void TapeDeck::setComparator(const hw::TapeComparator& comparator) {
 void TapeDeck::setEdgeListener(std::function<void(bool, std::uint32_t)> listener) {
   listener_ = std::move(listener);
   if (mode_ == hw::TapeMode::Playing) {
-    advanceTo(scheduler_.now());
+    advanceTo(now());
     scanFrame_ = processed_;
     scanState_ = schmittState_;
     lastEdgeFrame_ = processed_;
@@ -289,7 +313,7 @@ void TapeDeck::setEdgeListener(std::function<void(bool, std::uint32_t)> listener
 
 void TapeDeck::drive(bool high) {
   if (mode_ == hw::TapeMode::Recording) {
-    renderRecording(scheduler_.now());
+    renderRecording(now());
     recordLevel_ = high;
   }
   driven_ = high;
@@ -325,7 +349,7 @@ void TapeDeck::setAudioRate(unsigned rate) {
 }
 
 void TapeDeck::mixAudio(std::vector<float>& samples) {
-  advanceTo(scheduler_.now());
+  advanceTo(now());
   const std::size_t count = std::min(samples.size(), audioPending_.size());
   for (std::size_t index = 0; index < count; ++index) samples[index] += audioPending_[index];
   audioPending_.erase(audioPending_.begin(), audioPending_.begin() + static_cast<std::ptrdiff_t>(count));

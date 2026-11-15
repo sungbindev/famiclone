@@ -52,7 +52,7 @@ api::FloppyStatus statusOf(std::int64_t index, const hw::FloppyDrive& drive) {
 /** 磁带机当前的状态。 */
 api::TapeStatus tapeStatusOf(hw::TapeControl& deck) {
   api::TapeStatus status;
-  status.available = true;
+  status.connected = deck.connected();
   status.loaded = deck.loaded();
   if (status.loaded) status.fileName = baseName(deck.name());
   switch (deck.mode()) {
@@ -75,8 +75,13 @@ api::TapeStatus tapeStatusOf(hw::TapeControl& deck) {
 }  // namespace
 
 MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::shared_ptr<api::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
-                           std::shared_ptr<platform::EventSink> events, std::shared_ptr<api::PrinterRecord> printerRecord)
-    : store_(std::move(store)), tapeStore_(std::move(tapeStore)), runtime_(std::move(runtime)), events_(std::move(events)), printerRecord_(std::move(printerRecord)) {}
+                           std::shared_ptr<platform::EventSink> events, std::shared_ptr<api::PrinterRecord> printerRecord, std::shared_ptr<hw::TapeControl> deck)
+    : store_(std::move(store)),
+      tapeStore_(std::move(tapeStore)),
+      runtime_(std::move(runtime)),
+      events_(std::move(events)),
+      printerRecord_(std::move(printerRecord)),
+      deck_(std::move(deck)) {}
 
 template <typename Action>
 api::FloppyStatus MediaManager::withDrive(std::int64_t drive, Action action) {
@@ -103,18 +108,10 @@ void MediaManager::publishTapeChanged() { events_->publish(api::MEDIA_CHANGED_EV
 template <typename Action>
 api::TapeStatus MediaManager::withDeck(Action action) {
   std::optional<api::TapeStatus> status;
-  bool missingDeck = false;
-  const bool hasMachine = runtime_->useMachine([&](hw::Machine& machine) {
-    hw::TapeControl* deck = machine.tape();
-    if (deck == nullptr) {
-      missingDeck = true;
-      return;
-    }
-    action(*deck);
-    status = tapeStatusOf(*deck);
+  runtime_->runOnSimulation([&] {
+    action(*deck_);
+    status = tapeStatusOf(*deck_);
   });
-  if (!hasMachine) throw shared::CoreError(api::ERROR_NO_MACHINE, "还没有主机，请先打开卡带或用整机机型开机");
-  if (missingDeck || !status) throw shared::CoreError(api::ERROR_NO_DECK, "这台主机没有磁带机");
   return *status;
 }
 
@@ -245,10 +242,7 @@ api::MediaTapeLoadResult MediaManager::tapeLoad(const api::MediaTapeLoadParams& 
 }
 
 api::MediaTapeEjectResult MediaManager::tapeEject() {
-  auto status = withDeck([](hw::TapeControl& deck) {
-    if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
-    deck.eject();
-  });
+  auto status = withDeck([](hw::TapeControl& deck) { deck.eject(); });
   publishTapeChanged();
   return api::MediaTapeEjectResult{std::move(status)};
 }
@@ -256,6 +250,7 @@ api::MediaTapeEjectResult MediaManager::tapeEject() {
 api::MediaTapePlayResult MediaManager::tapePlay() {
   auto status = withDeck([](hw::TapeControl& deck) {
     if (!deck.loaded()) throw shared::CoreError(api::ERROR_NO_TAPE, "磁带机里没有磁带");
+    if (!deck.connected()) throw shared::CoreError(api::ERROR_TAPE_NOT_CONNECTED, "主机没有通电，磁带机不能播放");
     deck.play();
   });
   publishTapeChanged();
@@ -265,6 +260,7 @@ api::MediaTapePlayResult MediaManager::tapePlay() {
 api::MediaTapeRecordResult MediaManager::tapeRecord(const api::MediaTapeRecordParams& params) {
   auto status = withDeck([&](hw::TapeControl& deck) {
     if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
+    if (!deck.connected()) throw shared::CoreError(api::ERROR_TAPE_NOT_CONNECTED, "主机没有通电，磁带机不能录音");
     deck.record(tapeStore_->create(params.path), params.path);
   });
   publishTapeChanged();
@@ -293,10 +289,7 @@ api::MediaTapeStopResult MediaManager::tapeStop() {
 
 api::MediaTapeStatusResult MediaManager::tapeStatus() {
   api::TapeStatus status;
-  status.mode = "stopped";
-  runtime_->useMachine([&](hw::Machine& machine) {
-    if (hw::TapeControl* deck = machine.tape()) status = tapeStatusOf(*deck);
-  });
+  runtime_->runOnSimulation([&] { status = tapeStatusOf(*deck_); });
   return api::MediaTapeStatusResult{std::move(status)};
 }
 

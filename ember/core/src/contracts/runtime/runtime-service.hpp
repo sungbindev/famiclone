@@ -160,6 +160,11 @@ class RuntimeService {
   virtual bool useMachine(const std::function<void(hardware::Machine&)>& action) = 0;
 
   /**
+   * 在模拟线程上做一件事，等它执行完；不要求有主机（用于磁带机这类独立于主机的设备，它的状态只在模拟线程上读写），回调里的异常原样抛给调用方。
+   */
+  virtual void runOnSimulation(const std::function<void()>& action) = 0;
+
+  /**
    * 把用户输入（键盘、鼠标、游戏手柄的原始事件）经命令队列交给模拟线程，不等待执行；没有主机时丢弃。
    * 事件先交给输入钩子（手柄绑定），钩子没有截下的交给主机。
    */

@@ -31,7 +31,7 @@ constexpr std::size_t INTERNAL_RAM_SIZE = 2048;
 
 }  // namespace
 
-FcMachine::FcMachine()
+FcMachine::FcMachine(std::shared_ptr<logic::hardware::TapeDeck> tapeDeck)
     : cartridgeIrq_(irq_),
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
@@ -39,9 +39,9 @@ FcMachine::FcMachine()
       apu_(cpuBus_, scheduler_, irq_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE)),
       ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, PPU_PHASE_TICKS),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
-      tape_(scheduler_, MASTER_CLOCK_HZ),
+      tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       padApuPort_(pad_, apu_),
-      expansionPort_(padApuPort_, tape_, keyboard_),
+      expansionPort_(padApuPort_, *tapeDeck_, keyboard_),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
@@ -56,12 +56,21 @@ FcMachine::FcMachine()
   ppuBus_.mount(0x2000, 0x3EFF, nametableRam_);
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
-  tape_.setAudioRate(logic::hardware::Apu2a03::SAMPLE_RATE);
+}
+
+FcMachine::~FcMachine() {
+  // 磁带机在主机之外继续存在：只解除绑定的是自己的调度器，不影响已经接上新主机的磁带机。
+  try {
+    tapeDeck_->unbind(scheduler_);
+  } catch (...) {
+    // 析构时无法再报告，录音文件保留已写入的部分。
+  }
 }
 
 void FcMachine::powerOn() {
-  // 重新上电让磁带机停止（录音在这里写完），它的时间基准随时钟一起归零。
-  tape_.stop();
+  // 磁带机重新接到本机的调度器（先停止，录音在这里写完），它的时间基准随时钟一起归零。
+  tapeDeck_->bind(scheduler_, MASTER_CLOCK_HZ);
+  tapeDeck_->setAudioRate(logic::hardware::Apu2a03::SAMPLE_RATE);
   keyboard_.reset();
   // 时钟先归零并丢弃旧事件，各设备复位时再登记自己的事件；CPU 最后复位，复位序列会推进时钟。
   scheduler_.reset();
@@ -78,7 +87,11 @@ void FcMachine::powerOn() {
   debug_.discardPendingHit();
 }
 
-void FcMachine::powerOff() { poweredOn_ = false; }
+void FcMachine::powerOff() {
+  poweredOn_ = false;
+  // 断电时磁带机停止并断开，磁带留在里面。
+  tapeDeck_->unbind(scheduler_);
+}
 
 void FcMachine::softReset() {
   if (!poweredOn_) return;
@@ -115,7 +128,7 @@ void FcMachine::runFrame() {
 void FcMachine::takeAudio(std::vector<float>& samples) {
   if (poweredOn_) apu_.catchUp(scheduler_.now());
   apu_.takeAudio(samples);
-  tape_.mixAudio(samples);
+  tapeDeck_->mixAudio(samples);
 }
 
 void FcMachine::connectFamilyKeyboard(bool connected) {

@@ -17,7 +17,7 @@ import type { FileDialog } from '../../../contracts/shell/file-dialog';
 import { handleMainRequest } from '../core/main-request-ipc';
 import { createOpenTapeHandler, createOpenTapeRecordingHandler } from './open-tape';
 
-const STATUS = { available: true, loaded: true, fileName: 'lesson.m4a', mode: 'stopped', position: 0, duration: 1689.5, stereo: true };
+const STATUS = { connected: true, loaded: true, fileName: 'lesson.m4a', mode: 'stopped', position: 0, duration: 1689.5, stereo: true };
 
 function setup(dialog: Partial<FileDialog>, request: CoreGateway['request'] = vi.fn().mockResolvedValue({ status: STATUS })) {
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };

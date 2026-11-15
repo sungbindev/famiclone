@@ -108,7 +108,7 @@ class Machine : public PadSink {
   /** 并口打印机的控制；主机型号没有打印机时为空指针。只在模拟线程使用。 */
   virtual PrinterControl* printer() { return nullptr; }
 
-  /** 磁带机的控制；主机型号没有磁带机时为空指针。磁带与电源无关，但属于主机：换卡带、重新上电都会让磁带机停止。只在模拟线程使用。 */
+  /** 主机上的磁带接口所接的磁带机；主机型号没有磁带接口时为空指针。磁带机是独立于主机的设备，主机只在通电时接上它：断电、换卡带都会让它停止，磁带留在里面。只在模拟线程使用。 */
   virtual TapeControl* tape() { return nullptr; }
 
   /**

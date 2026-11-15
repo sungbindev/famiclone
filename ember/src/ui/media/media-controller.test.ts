@@ -188,7 +188,7 @@ describe('MediaController', () => {
 
   it('接上后读取磁带机的状态；核心重启时清空', async () => {
     const { fake, controller, detach } = await setup();
-    fake.tape = tapeStatus({ available: true, loaded: true, fileName: 'a.m4a' });
+    fake.tape = tapeStatus({ connected: true, loaded: true, fileName: 'a.m4a' });
     fake.emit('media.changed', { device: 'tape', drive: 0 });
     await settle();
     expect(controller.snapshot().tape?.fileName).toBe('a.m4a');
@@ -197,31 +197,53 @@ describe('MediaController', () => {
     detach();
   });
 
-  it('载入磁带：选定后刷新状态；取消时什么都不发生；失败时用通知提示核心的说明', async () => {
+  it('里面没有磁带时播放：弹出选择，选定后已接上主机就立即播放；取消时什么都不发生', async () => {
     const { fake, controller, detach, notices } = await setup();
-    fake.tape = tapeStatus({ available: true });
-    controller.loadTape();
+    fake.tape = tapeStatus({ connected: true });
+    controller.playTape();
     await settle();
+    expect(fake.calls).toContain('media.openTape {}');
+    expect(fake.count('media.tapePlay')).toBe(0);
     expect(controller.snapshot().tape?.loaded).toBe(false);
 
     fake.pickedTape = 'lesson.m4a';
-    controller.loadTape();
+    controller.playTape();
     await settle();
     expect(controller.snapshot().tape?.fileName).toBe('lesson.m4a');
+    expect(controller.snapshot().tape?.mode).toBe('playing');
     expect(notices).toEqual([]);
+    detach();
+  });
 
-    fake.failures.set('media.openTape', { code: 'media.tapeUnsupported', message: '文件里没有声音' });
-    controller.loadTape();
+  it('里面没有磁带时播放，主机没有通电：只载入磁带，不播放，也不报错', async () => {
+    const { fake, controller, detach, notices } = await setup();
+    fake.tape = tapeStatus({ connected: false });
+    fake.pickedTape = 'lesson.m4a';
+    controller.playTape();
     await settle();
-    expect(notices).toEqual([{ text: '载入磁带失败：文件里没有声音', kind: 'error' }]);
+    expect(controller.snapshot().tape).toMatchObject({ loaded: true, fileName: 'lesson.m4a', mode: 'stopped' });
+    expect(fake.count('media.tapePlay')).toBe(0);
+    expect(notices).toEqual([]);
+    detach();
+  });
+
+  it('选磁带失败时用通知提示核心的说明', async () => {
+    const { fake, controller, detach, notices } = await setup();
+    fake.failures.set('media.openTape', { code: 'media.tapeUnsupported', message: '文件里没有声音' });
+    controller.playTape();
+    await settle();
+    expect(notices).toEqual([{ text: '播放磁带失败：文件里没有声音', kind: 'error' }]);
     detach();
   });
 
   it('播放、停止、取出、录音发出对应的请求，失败时用通知提示', async () => {
     const { fake, controller, detach, notices } = await setup();
-    fake.tape = tapeStatus({ available: true, loaded: true, fileName: 'a.m4a', duration: 10 });
+    fake.tape = tapeStatus({ connected: true, loaded: true, fileName: 'a.m4a', duration: 10 });
+    fake.emit('media.changed', { device: 'tape', drive: 0 });
+    await settle();
     controller.playTape();
     await settle();
+    expect(fake.count('media.openTape')).toBe(0);
     expect(controller.snapshot().tape?.mode).toBe('playing');
     controller.stopTape();
     await settle();

@@ -51,9 +51,9 @@ describe('软驱按钮的可用性', () => {
 
 describe('磁带机的显示文字', () => {
   it('磁带没有时显示“空”“无磁带”“—”，有磁带时显示文件名、状态与“当前 / 总时长”', () => {
-    const empty = tapeStatus({ available: true });
+    const empty = tapeStatus({ connected: true });
     expect([tapeNameText(empty), tapeStateText(empty), tapePositionText(empty)]).toEqual(['空', '无磁带', '—']);
-    const stopped = tapeStatus({ available: true, loaded: true, fileName: 'lesson.m4a', position: 75.9, duration: 1689.57 });
+    const stopped = tapeStatus({ connected: true, loaded: true, fileName: 'lesson.m4a', position: 75.9, duration: 1689.57 });
     expect([tapeNameText(stopped), tapeStateText(stopped), tapePositionText(stopped)]).toEqual(['lesson.m4a', '已停止', '1:15 / 28:09']);
     expect(tapeStateText({ ...stopped, mode: 'playing' })).toBe('播放中');
     expect(tapeStateText({ ...stopped, mode: 'recording' })).toBe('录音中');
@@ -66,21 +66,24 @@ describe('磁带机的显示文字', () => {
 });
 
 describe('磁带机按钮的可用性', () => {
-  it('停止时：没有磁带只能载入与录音，有磁带全部可用但不能停止', () => {
-    expect(tapeAvailability(tapeStatus({ available: true }))).toEqual({ load: true, eject: false, play: false, record: true, stop: false });
-    expect(tapeAvailability(tapeStatus({ available: true, loaded: true }))).toEqual({ load: true, eject: true, play: true, record: true, stop: false });
+  it('主机已通电、停止时：没有磁带只能播放（选磁带）与录音，有磁带取出、播放、录音可用但不能停止', () => {
+    expect(tapeAvailability(tapeStatus({ connected: true }))).toEqual({ eject: false, play: true, record: true, stop: false });
+    expect(tapeAvailability(tapeStatus({ connected: true, loaded: true }))).toEqual({ eject: true, play: true, record: true, stop: false });
   });
 
-  it('磁带机没有连接（还没读到或主机没有磁带机）时全部不可用，文字按无磁带', () => {
-    const none = { load: false, eject: false, play: false, record: false, stop: false };
-    expect(tapeAvailability(undefined)).toEqual(none);
-    expect(tapeAvailability(tapeStatus({ available: false }))).toEqual(none);
-    expect([tapeNameText(undefined), tapeStateText(undefined), tapePositionText(undefined)]).toEqual(['空', '无磁带', '—']);
+  it('主机没有通电：没有磁带时播放可点（载入磁带），有磁带时只能取出，播放与录音置灰', () => {
+    expect(tapeAvailability(tapeStatus({ connected: false }))).toEqual({ eject: false, play: true, record: false, stop: false });
+    expect(tapeAvailability(tapeStatus({ connected: false, loaded: true }))).toEqual({ eject: true, play: false, record: false, stop: false });
   });
 
-  it('播放或录音时只有停止可用', () => {
+  it('播放或录音时只有停止与取出可用', () => {
     for (const mode of ['playing', 'recording'] as const) {
-      expect(tapeAvailability(tapeStatus({ available: true, loaded: true, mode }))).toEqual({ load: false, eject: false, play: false, record: false, stop: true });
+      expect(tapeAvailability(tapeStatus({ connected: true, loaded: true, mode }))).toEqual({ eject: true, play: false, record: false, stop: true });
     }
+  });
+
+  it('状态还没读到时全部不可用，文字按无磁带', () => {
+    expect(tapeAvailability(undefined)).toEqual({ eject: false, play: false, record: false, stop: false });
+    expect([tapeNameText(undefined), tapeStateText(undefined), tapePositionText(undefined)]).toEqual(['空', '无磁带', '—']);
   });
 });

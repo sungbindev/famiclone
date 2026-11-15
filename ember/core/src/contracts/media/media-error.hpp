@@ -35,8 +35,8 @@ inline constexpr std::string_view ERROR_SECTOR_REQUIRED = "media.sectorRequired"
 inline constexpr std::string_view ERROR_NO_PRINTER = "media.noPrinter";
 /** 打印机当前页上没有内容，没有什么可输出的。 */
 inline constexpr std::string_view ERROR_PRINTER_EMPTY = "media.printerEmpty";
-/** 这台主机没有磁带机。 */
-inline constexpr std::string_view ERROR_NO_DECK = "media.noDeck";
+/** 磁带机没有接在通电的主机上（主机没有通电或没有磁带接口），不能播放与录音。 */
+inline constexpr std::string_view ERROR_TAPE_NOT_CONNECTED = "media.tapeNotConnected";
 /** 磁带机里没有磁带。 */
 inline constexpr std::string_view ERROR_NO_TAPE = "media.noTape";
 /** 磁带机正在播放或录音，要先停止。 */

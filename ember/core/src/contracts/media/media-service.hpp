@@ -53,24 +53,24 @@ class MediaService {
   virtual MediaPrinterFlushResult printerFlush() = 0;
 
   /**
-   * 把声音文件放进磁带机当磁带，替换已有的磁带；成功后发 media.changed。
-   * @throws shared::CoreError media.noMachine、media.noDeck、media.tapeBusy、media.fileNotFound、media.fileUnreadable、media.tapeUnsupported、media.decoderMissing。
+   * 把声音文件放进磁带机当磁带，替换已有的磁带；磁带机与主机无关，没有主机、没有通电也可以载入；成功后发 media.changed。
+   * @throws shared::CoreError media.tapeBusy、media.fileNotFound、media.fileUnreadable、media.tapeUnsupported、media.decoderMissing。
    */
   virtual MediaTapeLoadResult tapeLoad(const MediaTapeLoadParams& params) = 0;
 
-  /** 取出磁带。@throws shared::CoreError media.noMachine、media.noDeck、media.tapeBusy。 */
+  /** 取出磁带；播放或录音时先停止再取出。 */
   virtual MediaTapeEjectResult tapeEject() = 0;
 
-  /** 开始播放。@throws shared::CoreError media.noMachine、media.noDeck、media.noTape。 */
+  /** 开始播放。@throws shared::CoreError media.noTape、media.tapeNotConnected。 */
   virtual MediaTapePlayResult tapePlay() = 0;
 
-  /** 开始录音，文件被覆盖。@throws shared::CoreError media.noMachine、media.noDeck、media.tapeBusy、media.saveFailed。 */
+  /** 开始录音，文件被覆盖。@throws shared::CoreError media.tapeBusy、media.tapeNotConnected、media.saveFailed。 */
   virtual MediaTapeRecordResult tapeRecord(const MediaTapeRecordParams& params) = 0;
 
-  /** 停止播放或录音；录音停止后录到的文件成为磁带机里的磁带。@throws shared::CoreError media.noMachine、media.noDeck，以及重新载入录好的文件时的错误。 */
+  /** 停止播放或录音；录音停止后录到的文件成为磁带机里的磁带。@throws shared::CoreError 重新载入录好的文件时的错误。 */
   virtual MediaTapeStopResult tapeStop() = 0;
 
-  /** 磁带机的状态；没有主机或主机没有磁带机时 available 为 false。 */
+  /** 磁带机的状态；没有接在通电的主机上时 connected 为 false。 */
   [[nodiscard]] virtual MediaTapeStatusResult tapeStatus() = 0;
 };
 

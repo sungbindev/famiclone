@@ -13,9 +13,9 @@ import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
 import type { FloppyStatus, PrinterStatus, TapeStatus } from '../../contracts/media/generated/media';
 import type { MediaBackend } from './media-controller';
 
-/** 构造一个磁带机的状态；默认是主机没有磁带机（available 为 false）。 */
+/** 构造一个磁带机的状态；默认是没有接在通电的主机上（connected 为 false）。 */
 export function tapeStatus(patch: Partial<TapeStatus> = {}): TapeStatus {
-  return { available: false, loaded: false, mode: 'stopped', position: 0, duration: 0, stereo: false, ...patch };
+  return { connected: false, loaded: false, mode: 'stopped', position: 0, duration: 0, stereo: false, ...patch };
 }
 
 /** 构造一个软驱的状态；fileName 为 undefined 表示没有盘片。 */
@@ -72,6 +72,8 @@ export class FakeMediaBackend {
           }),
         tapePlay: () =>
           this.request('media.tapePlay', {}, () => {
+            if (!this.tape.loaded) throw { code: 'media.noTape', message: '磁带机里没有磁带' };
+            if (!this.tape.connected) throw { code: 'media.tapeNotConnected', message: '主机没有通电，磁带机不能播放' };
             this.tape = { ...this.tape, mode: 'playing' };
             this.emit('media.changed', { device: 'tape', drive: 0 });
             return { status: this.tape };

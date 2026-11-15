@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -53,7 +54,11 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   /** 上电后 PPU 第 0 点相对时间 0 的延迟（主时钟周期数），决定 CPU 与 PPU 的相位，按 blargg 的 PPU 时序测试调定。 */
   static constexpr contracts::hardware::MasterTime PPU_PHASE_TICKS = 1;
 
-  FcMachine();
+  /**
+   * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；为空时主机自己带一台（测试用）。
+   */
+  explicit FcMachine(std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr);
+  ~FcMachine() override;
 
   FcMachine(const FcMachine&) = delete;
   FcMachine& operator=(const FcMachine&) = delete;
@@ -75,8 +80,8 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
   contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
   contracts::hardware::MachineDebugger* debugger() override { return this; }
-  contracts::hardware::TapeControl* tape() override { return &tape_; }
-  contracts::hardware::TapeLine* tapeLine() override { return &tape_; }
+  contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
+  contracts::hardware::TapeLine* tapeLine() override { return tapeDeck_.get(); }
   void connectFamilyKeyboard(bool connected) override;
   /** 接上 Family BASIC 键盘时，键盘属于机器；否则经典 FC 没有键盘。 */
   [[nodiscard]] bool keyboardIsMachineInput() const override { return expansionPort_.keyboardConnected(); }
@@ -132,8 +137,8 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   logic::hardware::Ppu2c02 ppu_;
   logic::hardware::Dma2a03 dma_;
   logic::hardware::Pad2a03 pad_;
-  /** Family BASIC 数据录音机与声像磁带：磁带机，信号线接在 $4016。 */
-  logic::hardware::TapeDeck tape_;
+  /** Family BASIC 数据录音机与声像磁带：磁带机，信号线接在 $4016；主机通电时才绑定自己的调度器。 */
+  std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_;
   /** $4016-$4017：手柄口与 APU 帧计数器共用，写入同时转给两边。 */
   PadApuPort padApuPort_;
   /** Family BASIC 键盘（接在扩展口上，默认没接）。 */

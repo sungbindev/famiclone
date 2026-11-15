@@ -10,7 +10,8 @@
  *       数据线取立体声磁带的右声道（单声道磁带的唯一声道），经施密特比较器转成 1 位信号；左声道（立体声磁带）降采样后混进机器的声音；
  *       录音记录的是 drive 调用的时刻：每次翻转前，把上一个电平按经过的时间补成 32 kHz 的方波采样（±20000），交给录音去向；
  *       磁带放完后自动停止，再按播放时回到开头；
- *       磁带机属于主机：换卡带、重新开机（powerOn 调用 stop）都会停止它；来源可能阻塞（外部程序解码的管道），读取发生在模拟线程。
+ *       磁带机是独立的设备，不属于主机：主机通电时把自己的调度器绑定给它（bind），断电或被替换时解绑（unbind，先停止，录音在这里写完）；
+ *       没绑定时磁带仍然可以载入与取出，位置保持不变，只是不能播放与录音；来源可能阻塞（外部程序解码的管道），读取发生在模拟线程。
  * ------------------------------------------------------------------------
  */
 
@@ -40,7 +41,10 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   /** 向前扫描翻转的最大距离（帧，1 秒）；超过时在扫描终点再登记一次扫描。 */
   static constexpr std::uint64_t SCAN_FRAMES = contracts::hardware::TapeSource::SAMPLE_RATE;
 
+  /** 没有绑定调度器的磁带机：只能载入与取出磁带，等主机通电时绑定。 */
+  TapeDeck() = default;
   /**
+   * 创建后马上绑定的磁带机。
    * @param scheduler 调度器：取当前时间，登记边沿事件。
    * @param masterHz 主时钟频率（赫兹）。
    */
@@ -50,8 +54,20 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   TapeDeck(const TapeDeck&) = delete;
   TapeDeck& operator=(const TapeDeck&) = delete;
 
+  /**
+   * 接到通电的主机上：先在原来的调度器上停止，再换成新的；磁带与位置不变。
+   * @param scheduler 主机的调度器。
+   * @param masterHz 主时钟频率（赫兹）。
+   */
+  void bind(contracts::hardware::Scheduler& scheduler, double masterHz);
+  /** 断开：停止（录音在这里写完）并解除绑定；没绑定时没有效果。 */
+  void unbind();
+  /** 只在当前绑定的就是 scheduler 时断开：主机被替换时，旧主机不会把新主机的绑定解除。 */
+  void unbind(const contracts::hardware::Scheduler& scheduler);
+
   // TapeControl
   [[nodiscard]] bool loaded() const override { return source_ != nullptr || recording(); }
+  [[nodiscard]] bool connected() const override { return scheduler_ != nullptr; }
   [[nodiscard]] std::string name() const override { return name_; }
   [[nodiscard]] contracts::hardware::TapeMode mode() override;
   [[nodiscard]] double positionSeconds() override;
@@ -86,6 +102,9 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
 
   [[nodiscard]] bool recording() const { return mode_ == contracts::hardware::TapeMode::Recording; }
 
+  /** 当前时间；没有绑定调度器时为 0（此时不会在播放或录音，用不到它）。 */
+  [[nodiscard]] contracts::hardware::MasterTime now() const { return scheduler_ == nullptr ? 0 : scheduler_->now(); }
+
   /** 播放中当前时刻对应的帧号（正在放的那一帧）。 */
   [[nodiscard]] std::uint64_t frameAt(contracts::hardware::MasterTime now) const;
   /** 某一帧对应的主时钟时间（向上取整，保证到点时 frameAt 不小于它）。 */
@@ -109,10 +128,11 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   void renderRecording(contracts::hardware::MasterTime now);
   void flushRecording();
 
-  contracts::hardware::Scheduler& scheduler_;
+  /** 主机的调度器；没有接在通电的主机上时为空。 */
+  contracts::hardware::Scheduler* scheduler_{nullptr};
   /** 每帧（96 kHz）占的主时钟周期数。 */
-  double ticksPerFrame_;
-  double masterHz_;
+  double ticksPerFrame_{1};
+  double masterHz_{1};
 
   std::unique_ptr<contracts::hardware::TapeSource> source_;
   std::unique_ptr<contracts::hardware::TapeSink> sink_;

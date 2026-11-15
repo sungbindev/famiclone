@@ -54,16 +54,15 @@ function protectButton(): HTMLElement {
 }
 
 describe('设备面板', () => {
-  it('主机没有任何设备（没有开机或经典 FC 之外）时照样列出软驱 A、磁带机与打印机，按钮全部置灰', async () => {
+  it('没有开机或主机没有这些设备时照样列出软驱 A、磁带机与打印机：软驱 A 的按钮全部置灰，磁带机只有播放（选磁带）可用', async () => {
     await setup([]);
     const rows = within(screen.getByRole('list', { name: '设备' })).getAllByRole('listitem');
     expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['软驱 A', '磁带机', '打印机']);
     expect(fields(row('软驱 A'))).toEqual({ disk: '空', state: '无盘片' });
     expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('空');
     expect(row('打印机').querySelector('.ui-row-list__title')?.textContent).toBe('空闲');
-    for (const item of [row('软驱 A'), row('磁带机')]) {
-      for (const button of within(item).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
-    }
+    for (const button of within(row('软驱 A')).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(within(row('磁带机')).getAllByRole('button').filter((button) => !(button as HTMLButtonElement).disabled).map((button) => button.getAttribute('aria-label'))).toEqual(['播放']);
   });
 
   it('软驱 A、软驱 B、磁带机与打印机各一行，没有卡片与标题', async () => {
@@ -140,11 +139,11 @@ describe('设备面板', () => {
   });
 });
 
-/** 接上假核心并渲染面板；主机有磁带机（经典 FC），没有软驱与打印机。 */
+/** 接上假核心并渲染面板；没有软驱，磁带机默认接在通电的主机上（经典 FC 已开机）。 */
 async function setupTape(patch: Parameters<typeof tapeStatus>[0] = {}) {
   const fake = new FakeMediaBackend();
   fake.floppies = [];
-  fake.tape = tapeStatus({ available: true, ...patch });
+  fake.tape = tapeStatus({ connected: true, ...patch });
   const controller = new MediaController();
   controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
   render(
@@ -161,8 +160,13 @@ function tapeButton(name: string): HTMLButtonElement {
   return within(row('磁带机')).getByRole('button', { name }) as HTMLButtonElement;
 }
 
+/** 磁带机这一行的状态文字。 */
+function tapeState(): string | undefined {
+  return row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent ?? undefined;
+}
+
 describe('设备面板的磁带机', () => {
-  it('经典 FC 没有软驱：软驱 A 与打印机照样列出，软驱 A 的按钮置灰；没有磁带时磁带“空”、状态“无磁带”、位置“—”，只有载入与录音可用', async () => {
+  it('没有载入磁带、主机已通电：磁带“空”、状态“无磁带”、位置“—”，只有播放（用来选磁带）与录音可用；没有“载入磁带”按钮', async () => {
     await setupTape();
     const rows = within(screen.getByRole('list', { name: '设备' })).getAllByRole('listitem');
     expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['软驱 A', '磁带机', '打印机']);
@@ -170,54 +174,92 @@ describe('设备面板的磁带机', () => {
     const tape = row('磁带机');
     expect(tape.querySelector('.ui-row-list__title')?.textContent).toBe('空');
     expect([...tape.querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['无磁带', '—']);
-    expect(tapeButton('载入磁带').disabled).toBe(false);
+    expect(within(tape).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(['取出', '播放', '录音', '停止']);
+    expect(tapeButton('播放').disabled).toBe(false);
     expect(tapeButton('录音').disabled).toBe(false);
-    for (const name of ['取出', '播放', '停止']) expect(tapeButton(name).disabled).toBe(true);
+    for (const name of ['取出', '停止']) expect(tapeButton(name).disabled).toBe(true);
     for (const button of within(tape).getAllByRole('button')) expect(button.textContent).toBe('');
   });
 
-  it('主机没有磁带机时磁带机照样列出，按钮全部置灰', async () => {
-    await setup([]);
-    for (const button of within(row('磁带机')).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
+  it('没有载入磁带、主机没有通电：磁带机照样列出，只有播放（用来选磁带）可用，录音置灰', async () => {
+    await setupTape({ connected: false });
+    expect(tapeButton('播放').disabled).toBe(false);
+    for (const name of ['取出', '录音', '停止']) expect(tapeButton(name).disabled).toBe(true);
   });
 
-  it('载入磁带后显示文件名、“已停止”与位置，取出、播放可用', async () => {
+  it('有磁带、主机已通电：取出、播放、录音可用，停止置灰', async () => {
+    await setupTape({ loaded: true, fileName: 'lesson.m4a', duration: 60 });
+    for (const name of ['取出', '播放', '录音']) expect(tapeButton(name).disabled).toBe(false);
+    expect(tapeButton('停止').disabled).toBe(true);
+  });
+
+  it('有磁带、主机没有通电：取出可用，播放与录音置灰', async () => {
+    await setupTape({ connected: false, loaded: true, fileName: 'lesson.m4a', duration: 60 });
+    expect(tapeButton('取出').disabled).toBe(false);
+    for (const name of ['播放', '录音', '停止']) expect(tapeButton(name).disabled).toBe(true);
+  });
+
+  it('里面没有磁带时点播放：弹出选择，选定后载入并开始播放，显示文件名、“播放中”与位置', async () => {
     const { fake } = await setupTape();
     fake.pickedTape = 'lesson.m4a';
-    await userEvent.click(tapeButton('载入磁带'));
+    await userEvent.click(tapeButton('播放'));
     await act(async () => settle());
     expect(fake.calls).toContain('media.openTape {}');
-    const tape = row('磁带机');
-    expect(tape.querySelector('.ui-row-list__title')?.textContent).toBe('lesson.m4a');
-    expect([...tape.querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['已停止', '0:00 / 1:00']);
+    expect(fake.calls).toContain('media.tapePlay {}');
+    expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('lesson.m4a');
+    expect([...row('磁带机').querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['播放中', '0:00 / 1:00']);
+  });
+
+  it('用户在选择窗口里取消：什么都不发生', async () => {
+    const { fake } = await setupTape();
+    await userEvent.click(tapeButton('播放'));
+    await act(async () => settle());
+    expect(fake.calls).toContain('media.openTape {}');
+    expect(fake.count('media.tapePlay')).toBe(0);
+    expect(tapeState()).toBe('无磁带');
+  });
+
+  it('主机没有通电时点播放：载入磁带但不播放，播放马上置灰；点取出后播放又可以点', async () => {
+    const { fake } = await setupTape({ connected: false });
+    fake.pickedTape = 'lesson.m4a';
+    await userEvent.click(tapeButton('播放'));
+    await act(async () => settle());
+    expect(fake.count('media.tapePlay')).toBe(0);
+    expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('lesson.m4a');
+    expect(tapeState()).toBe('已停止');
+    expect(tapeButton('播放').disabled).toBe(true);
     expect(tapeButton('取出').disabled).toBe(false);
+    await userEvent.click(tapeButton('取出'));
+    await act(async () => settle());
+    expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('空');
     expect(tapeButton('播放').disabled).toBe(false);
   });
 
-  it('播放时只有“停止”可用，点“停止”后回到已停止', async () => {
+  it('播放时只有“停止”与“取出”可用，点“停止”后回到已停止', async () => {
     const { fake } = await setupTape({ loaded: true, fileName: 'lesson.m4a', duration: 60 });
     await userEvent.click(tapeButton('播放'));
     await act(async () => settle());
     expect(fake.calls).toContain('media.tapePlay {}');
-    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('播放中');
-    for (const name of ['载入磁带', '取出', '播放', '录音']) expect(tapeButton(name).disabled).toBe(true);
-    expect(tapeButton('停止').disabled).toBe(false);
+    expect(fake.count('media.openTape')).toBe(0);
+    expect(tapeState()).toBe('播放中');
+    for (const name of ['播放', '录音']) expect(tapeButton(name).disabled).toBe(true);
+    for (const name of ['停止', '取出']) expect(tapeButton(name).disabled).toBe(false);
     await userEvent.click(tapeButton('停止'));
     await act(async () => settle());
     expect(fake.calls).toContain('media.tapeStop {}');
-    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('已停止');
+    expect(tapeState()).toBe('已停止');
   });
 
-  it('点“录音”选定文件后显示录音中；用户取消选择时什么都不发生；点“取出”发出请求', async () => {
+  it('点“录音”选定文件后显示录音中；用户取消选择时什么都不发生', async () => {
     const { fake } = await setupTape();
     await userEvent.click(tapeButton('录音'));
     await act(async () => settle());
-    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('无磁带');
+    expect(tapeState()).toBe('无磁带');
     fake.pickedRecording = 'out.wav';
     await userEvent.click(tapeButton('录音'));
     await act(async () => settle());
     expect(fake.calls.filter((call) => call === 'media.openTapeRecording {}')).toHaveLength(2);
-    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('录音中');
+    expect(tapeState()).toBe('录音中');
     expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('out.wav');
   });
 

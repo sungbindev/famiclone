@@ -3739,7 +3739,7 @@
     {
       "name": "media.tapeLoad",
       "summary": "把声音文件放进磁带机当磁带（解码交给随应用附带的 ffmpeg，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带",
-      "description": "把声音文件放进磁带机当磁带（解码交给随应用附带的 ffmpeg，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带；磁带机播放或录音时不能载入。单声道文件整路是数据线，立体声文件左声道出声、右声道是数据线。",
+      "description": "把声音文件放进磁带机当磁带（解码交给随应用附带的 ffmpeg，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带；磁带机与主机无关，没有主机、没有通电时也可以载入；磁带机播放或录音时不能载入。单声道文件整路是数据线，立体声文件左声道出声、右声道是数据线。",
       "tags": [
         {
           "name": "media"
@@ -3774,20 +3774,6 @@
         }
       },
       "errors": [
-        {
-          "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
-          "message": "media.noDeck",
-          "data": {
-            "code": "media.noDeck"
-          }
-        },
         {
           "code": -32000,
           "message": "media.tapeBusy",
@@ -3829,7 +3815,7 @@
     {
       "name": "media.tapeEject",
       "summary": "取出磁带",
-      "description": "取出磁带；没有磁带时没有效果；磁带机播放或录音时不能取出。",
+      "description": "取出磁带；没有磁带时没有效果；播放或录音时先停止再取出（录音的文件先写完）。",
       "tags": [
         {
           "name": "media"
@@ -3852,34 +3838,12 @@
           "additionalProperties": false
         }
       },
-      "errors": [
-        {
-          "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
-          "message": "media.noDeck",
-          "data": {
-            "code": "media.noDeck"
-          }
-        },
-        {
-          "code": -32000,
-          "message": "media.tapeBusy",
-          "data": {
-            "code": "media.tapeBusy"
-          }
-        }
-      ]
+      "errors": []
     },
     {
       "name": "media.tapePlay",
       "summary": "开始播放",
-      "description": "开始播放；磁带放完后再播放从头开始；已经在播放或录音时没有效果。",
+      "description": "开始播放；磁带放完后再播放从头开始；已经在播放或录音时没有效果；主机没有通电或没有磁带接口时不能播放。",
       "tags": [
         {
           "name": "media"
@@ -3903,25 +3867,18 @@
         }
       },
       "errors": [
-        {
-          "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
-          "message": "media.noDeck",
-          "data": {
-            "code": "media.noDeck"
-          }
-        },
         {
           "code": -32000,
           "message": "media.noTape",
           "data": {
             "code": "media.noTape"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.tapeNotConnected",
+          "data": {
+            "code": "media.tapeNotConnected"
           }
         }
       ]
@@ -3929,7 +3886,7 @@
     {
       "name": "media.tapeRecord",
       "summary": "放入一盘空白磁带并开始录音：主机送给磁带的 1 位信号按时间记成 32 kHz、单声道、16 位的 WAV 文件（已有的文件被覆盖）",
-      "description": "放入一盘空白磁带并开始录音：主机送给磁带的 1 位信号按时间记成 32 kHz、单声道、16 位的 WAV 文件（已有的文件被覆盖）；停止后这个文件自动成为磁带机里的磁带，位置在开头，可以直接播放；磁带机播放或录音时不能开始录音。",
+      "description": "放入一盘空白磁带并开始录音：主机送给磁带的 1 位信号按时间记成 32 kHz、单声道、16 位的 WAV 文件（已有的文件被覆盖）；停止后这个文件自动成为磁带机里的磁带，位置在开头，可以直接播放；磁带机播放或录音时不能开始录音；主机没有通电或没有磁带接口时不能录音。",
       "tags": [
         {
           "name": "media"
@@ -3966,23 +3923,16 @@
       "errors": [
         {
           "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
-          "message": "media.noDeck",
-          "data": {
-            "code": "media.noDeck"
-          }
-        },
-        {
-          "code": -32000,
           "message": "media.tapeBusy",
           "data": {
             "code": "media.tapeBusy"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "media.tapeNotConnected",
+          "data": {
+            "code": "media.tapeNotConnected"
           }
         },
         {
@@ -4024,20 +3974,6 @@
       "errors": [
         {
           "code": -32000,
-          "message": "media.noMachine",
-          "data": {
-            "code": "media.noMachine"
-          }
-        },
-        {
-          "code": -32000,
-          "message": "media.noDeck",
-          "data": {
-            "code": "media.noDeck"
-          }
-        },
-        {
-          "code": -32000,
           "message": "media.fileUnreadable",
           "data": {
             "code": "media.fileUnreadable"
@@ -4062,7 +3998,7 @@
     {
       "name": "media.tapeStatus",
       "summary": "磁带机的状态",
-      "description": "磁带机的状态；还没有主机或主机没有磁带机时 available 为 false。",
+      "description": "磁带机的状态；磁带机一直存在，没有接在通电的主机上时 connected 为 false。",
       "tags": [
         {
           "name": "media"
@@ -6021,9 +5957,9 @@
         "type": "object",
         "description": "磁带机的状态。",
         "properties": {
-          "available": {
+          "connected": {
             "type": "boolean",
-            "description": "这台主机有没有磁带机；还没有主机或主机没有磁带机时为 false，其余字段是空闲值"
+            "description": "磁带机是否接在通电的主机上（主机通电且有磁带接口）；没接上时可以载入与取出磁带，但不能播放与录音"
           },
           "loaded": {
             "type": "boolean",
@@ -6058,7 +5994,7 @@
           }
         },
         "required": [
-          "available",
+          "connected",
           "loaded",
           "mode",
           "position",
@@ -6560,7 +6496,7 @@
     },
     {
       "name": "media.changed",
-      "description": "介质的状态变化：盘片插入、取出、保存、注入故障与马达开关，磁带的载入、取出、播放、录音与停止。",
+      "description": "介质的状态变化：盘片插入、取出、保存、注入故障与马达开关，磁带的载入、取出、播放、录音与停止，磁带机接上或断开主机（connected 变化时随运行状态事件刷新，不另发本事件）。",
       "tags": [
         {
           "name": "media"

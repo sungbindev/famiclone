@@ -58,7 +58,7 @@ struct Rig {
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
     manager = std::make_unique<ember::logic::media::MediaManager>(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), std::make_shared<ember::infra::media::DiskTapeStore>(std::filesystem::path(), errors),
-                                                                  runtime, events, printer);
+                                                                  runtime, events, printer, std::make_shared<ember::logic::hardware::TapeDeck>());
   }
 
   static std::string utf8(const std::filesystem::path& path) {

@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-tape-test.cpp
- * 说明：介质服务里磁带机的测试：没有主机与没有磁带机的错误、载入、播放、停止、取出的状态与错误码、播放时不能载入与取出、录音停止后文件自动成为磁带、media.changed 事件。
+ * 说明：介质服务里磁带机的测试：没有主机与没有磁带接口时磁带照样可以载入与取出、播放与录音需要通电的主机、载入、播放、停止、取出的状态与错误码、播放时不能载入但可以取出、录音停止后文件自动成为磁带、断电与换卡带后磁带留在里面、media.changed 事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
+ * 日期：2026-11-16
  * 备注：用真实的运行服务与 fc 主机（真实的 nrom 插件装配的空转卡带）、内存里的磁带存取替身；还有一个用真实 ffmpeg 解码的端到端用例（没有 ffmpeg 程序时跳过）。
  * ------------------------------------------------------------------------
  */
@@ -99,14 +99,16 @@ struct TapeRig {
     registry = std::make_shared<ember::infra::mappers::PluginRegistry>(ember::test::fcRegistryOptions());
     registry->installPackage(ember::test::officialPluginPackage("nrom"));
     ember::logic::runtime::SimulationRuntimeOptions options;
-    options.machines = std::make_shared<ember::bootstrap::MachineCatalog>();
+    auto catalog = std::make_shared<ember::bootstrap::MachineCatalog>();
+    deck = catalog->tapeControl();
+    options.machines = catalog;
     options.mappers = registry;
     options.frames = frames;
     options.events = events;
     options.errors = errors;
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
-    manager = std::make_unique<ember::logic::media::MediaManager>(nullptr, store, runtime, events, nullptr);
+    manager = std::make_unique<ember::logic::media::MediaManager>(nullptr, store, runtime, events, nullptr, deck);
   }
 
   /** 装一台断电的 fc（空转卡带）。 */
@@ -124,7 +126,7 @@ struct TapeRig {
     runtime->insertCartridge(std::move(insertion));
   }
 
-  /** 装一台断电的 sb2000（BIOS 是合成的），它没有磁带机。 */
+  /** 装一台断电的 sb2000（BIOS 是合成的），它没有磁带接口。 */
   void bootSb2000() {
     rt::MachineBoot boot;
     boot.machine = "sb2000";
@@ -133,6 +135,10 @@ struct TapeRig {
     runtime->bootMachine(std::move(boot));
   }
 
+  /** 给装好的主机通电（暂停状态，不走帧），磁带机随之接上主机。 */
+  void powerOn() { runtime->powerOn(false); }
+
+  std::shared_ptr<hw::TapeControl> deck;
   std::shared_ptr<api::TapeStore> store;
   std::shared_ptr<ember::infra::mappers::PluginRegistry> registry;
   std::shared_ptr<ember::test::FrameCapture> frames = std::make_shared<ember::test::FrameCapture>();
@@ -167,25 +173,44 @@ api::MediaTapeRecordParams recordParams(const std::string& path) {
   return params;
 }
 
-TEST(MediaTape, WithoutAMachineTheStatusIsUnavailableAndOperationsFail) {
+TEST(MediaTape, WithoutAMachineTheDeckStillTakesAndReleasesTapesButCannotPlayOrRecord) {
   TapeRig rig;
-  const auto status = rig.manager->tapeStatus().status;
-  EXPECT_FALSE(status.available);
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(100);
+  auto status = rig.manager->tapeStatus().status;
+  EXPECT_FALSE(status.connected);
   EXPECT_FALSE(status.loaded);
   EXPECT_EQ(status.mode, "stopped");
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.noMachine");
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeEject(); }), "media.noMachine");
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeStop(); }), "media.noMachine");
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.noTape");
+  status = rig.manager->tapeLoad(loadParams("a.wav")).status;
+  EXPECT_TRUE(status.loaded) << "没有主机也能载入磁带";
+  EXPECT_FALSE(status.connected);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.tapeNotConnected");
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordParams("r.wav")); }), "media.tapeNotConnected");
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeStop(); }), "");
+  status = rig.manager->tapeEject().status;
+  EXPECT_FALSE(status.loaded);
 }
 
-TEST(MediaTape, AMachineWithoutATapeDeckReportsNoDeck) {
+TEST(MediaTape, AMachineWithoutATapePortNeverConnectsTheDeckButTheTapeStaysLoadable) {
   TapeRig rig;
   dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(10);
   rig.bootSb2000();
-  EXPECT_FALSE(rig.manager->tapeStatus().status.available);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeLoad(loadParams("a.wav")); }), "media.noDeck");
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.noDeck");
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordParams("r.wav")); }), "media.noDeck");
+  EXPECT_FALSE(rig.manager->tapeStatus().status.connected);
+  EXPECT_TRUE(rig.manager->tapeLoad(loadParams("a.wav")).status.loaded);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.tapeNotConnected");
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordParams("r.wav")); }), "media.tapeNotConnected");
+}
+
+TEST(MediaTape, AnUnpoweredFcDoesNotConnectTheDeckUntilItIsPoweredOn) {
+  TapeRig rig;
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(100);
+  rig.insertFc();
+  EXPECT_FALSE(rig.manager->tapeStatus().status.connected);
+  rig.manager->tapeLoad(loadParams("a.wav"));
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.tapeNotConnected") << "没通电不能播放";
+  rig.powerOn();
+  EXPECT_TRUE(rig.manager->tapeStatus().status.connected);
+  EXPECT_EQ(rig.manager->tapePlay().status.mode, "playing");
 }
 
 TEST(MediaTape, LoadPlayStopAndEjectReportTheStatusAndPublishChanges) {
@@ -193,9 +218,10 @@ TEST(MediaTape, LoadPlayStopAndEjectReportTheStatusAndPublishChanges) {
   auto& store = dynamic_cast<FakeTapeStore&>(*rig.store);
   store.tapes["D:/tapes/lesson.m4a"] = silence(96000);
   rig.insertFc();
+  rig.powerOn();
 
   auto status = rig.manager->tapeStatus().status;
-  EXPECT_TRUE(status.available);
+  EXPECT_TRUE(status.connected);
   EXPECT_FALSE(status.loaded);
 
   status = rig.manager->tapeLoad(loadParams("D:/tapes/lesson.m4a")).status;
@@ -209,7 +235,6 @@ TEST(MediaTape, LoadPlayStopAndEjectReportTheStatusAndPublishChanges) {
   status = rig.manager->tapePlay().status;
   EXPECT_EQ(status.mode, "playing");
   EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeLoad(loadParams("D:/tapes/lesson.m4a")); }), "media.tapeBusy") << "播放时不能载入";
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeEject(); }), "media.tapeBusy") << "播放时不能取出";
   EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordParams("r.wav")); }), "media.tapeBusy") << "播放时不能录音";
 
   status = rig.manager->tapeStop().status;
@@ -228,9 +253,23 @@ TEST(MediaTape, LoadPlayStopAndEjectReportTheStatusAndPublishChanges) {
   }
 }
 
+TEST(MediaTape, EjectingWhilePlayingStopsTheTapeAndTakesItOut) {
+  TapeRig rig;
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(96000);
+  rig.insertFc();
+  rig.powerOn();
+  rig.manager->tapeLoad(loadParams("a.wav"));
+  ASSERT_EQ(rig.manager->tapePlay().status.mode, "playing");
+  const auto status = rig.manager->tapeEject().status;
+  EXPECT_FALSE(status.loaded);
+  EXPECT_EQ(status.mode, "stopped");
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.noTape");
+}
+
 TEST(MediaTape, LoadingAMissingFileOrPlayingAnEmptyDeckFails) {
   TapeRig rig;
   rig.insertFc();
+  rig.powerOn();
   EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeLoad(loadParams("nope.wav")); }), "media.fileNotFound");
   EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.noTape");
   EXPECT_FALSE(rig.manager->tapeStatus().status.loaded);
@@ -239,6 +278,7 @@ TEST(MediaTape, LoadingAMissingFileOrPlayingAnEmptyDeckFails) {
 TEST(MediaTape, StoppingARecordingMakesTheRecordedFileTheTape) {
   TapeRig rig;
   rig.insertFc();
+  rig.powerOn();
   auto status = rig.manager->tapeRecord(recordParams("D:/tapes/out.wav")).status;
   EXPECT_EQ(status.mode, "recording");
   EXPECT_TRUE(status.loaded);
@@ -256,19 +296,36 @@ TEST(MediaTape, StoppingARecordingMakesTheRecordedFileTheTape) {
 TEST(MediaTape, ARecordingFileThatCannotBeCreatedLeavesTheDeckAlone) {
   TapeRig rig;
   rig.insertFc();
+  rig.powerOn();
   EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordParams("D:/readonly/out.wav")); }), "media.saveFailed");
   EXPECT_EQ(rig.manager->tapeStatus().status.mode, "stopped");
   EXPECT_FALSE(rig.manager->tapeStatus().status.loaded);
 }
 
-TEST(MediaTape, ReplacingTheCartridgeTakesTheTapeAway) {
+TEST(MediaTape, ReplacingTheCartridgeKeepsTheTapeInTheDeck) {
   TapeRig rig;
   dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(100);
   rig.insertFc();
   rig.manager->tapeLoad(loadParams("a.wav"));
   ASSERT_TRUE(rig.manager->tapeStatus().status.loaded);
   rig.insertFc();
-  EXPECT_FALSE(rig.manager->tapeStatus().status.loaded) << "磁带机属于主机，换卡带会换主机";
+  EXPECT_TRUE(rig.manager->tapeStatus().status.loaded) << "磁带机不属于主机，换卡带不会把磁带带走";
+  rig.runtime->ejectCartridge();
+  EXPECT_TRUE(rig.manager->tapeStatus().status.loaded) << "取出卡带也一样";
+}
+
+TEST(MediaTape, PoweringOffStopsThePlaybackAndKeepsTheTape) {
+  TapeRig rig;
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(96000);
+  rig.insertFc();
+  rig.powerOn();
+  rig.manager->tapeLoad(loadParams("a.wav"));
+  ASSERT_EQ(rig.manager->tapePlay().status.mode, "playing");
+  rig.runtime->powerOff();
+  const auto status = rig.manager->tapeStatus().status;
+  EXPECT_EQ(status.mode, "stopped");
+  EXPECT_TRUE(status.loaded);
+  EXPECT_FALSE(status.connected);
 }
 
 // ---------------------------------------------------------------- 真实的 ffmpeg 端到端

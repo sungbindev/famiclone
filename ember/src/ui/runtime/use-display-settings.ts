@@ -23,7 +23,7 @@ export interface DisplaySettings {
 }
 
 /** 还没读到设置时用的默认值。 */
-export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = { aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING, showAllLines: true, captureMouse: false };
+export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = { aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING, showAllLines: true, captureMouse: true };
 
 /**
  * 把一个设置项的取值合并进显示设置；不是显示设置项或取值不认识时原样返回。

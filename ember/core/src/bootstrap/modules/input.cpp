@@ -35,7 +35,7 @@ void registerInputSettings(contracts::preferences::PreferenceService& service) {
                       .label = "点击画面捕获鼠标",
                       .description = "开启后点击画面会捕获鼠标：指针隐藏，鼠标移动以相对位移送给学习机，按 Esc 退出捕获；关闭时指针停在画面上。手柄的键位在“设置”菜单的“手柄设置”里设置。",
                       .kind = contracts::preferences::SettingKind::Switch,
-                      .defaultValue = false});
+                      .defaultValue = true});
 }
 
 }  // namespace

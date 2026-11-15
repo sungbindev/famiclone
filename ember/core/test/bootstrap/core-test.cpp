@@ -162,7 +162,7 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   for (const auto& setting : listed.payload["settings"]) byId[setting["id"]] = setting;
   EXPECT_EQ(byId.size(), 13U);
   EXPECT_EQ(byId["input.captureMouse"]["kind"], "switch");
-  EXPECT_EQ(byId["input.captureMouse"]["value"], false);
+  EXPECT_EQ(byId["input.captureMouse"]["value"], true);
   EXPECT_EQ(byId["appearance.theme"]["kind"], "choice");
   EXPECT_EQ(byId["appearance.theme"]["value"], "system");
   EXPECT_EQ(byId["appearance.theme"]["options"].size(), 3U);

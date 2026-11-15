@@ -63,6 +63,8 @@ export class FakeRuntimeBackend {
   familyKeyboard = false;
   /** 下一次打开卡带时用户选的路径；undefined 表示用户取消。 */
   pickedPath: string | undefined;
+  /** 拖入窗口的文件：编号到路径；请求里的 droppedId 取自这里，没有登记的编号以 cartridges.droppedNotFound 拒绝。 */
+  readonly droppedFiles = new Map<number, string>();
   /** 机型清单（测试可以改写，例如给小霸王 2000 加上 BIOS）。 */
   machines: MachineEntry[] = defaultMachines();
   /** 按请求名登记的下一次失败的原因。 */
@@ -146,10 +148,12 @@ export class FakeRuntimeBackend {
     },
     main: {
       cartridges: {
-        open: () =>
-          this.request('cartridges.open', {}, () => {
-            if (this.pickedPath === undefined) return { canceled: true };
-            return { canceled: false, loaded: this.load(this.pickedPath) };
+        open: (params: { droppedId?: number } = {}) =>
+          this.request('cartridges.open', params, () => {
+            const path = params.droppedId === undefined ? this.pickedPath : this.droppedFiles.get(params.droppedId);
+            if (params.droppedId !== undefined && path === undefined) throw { code: 'cartridges.droppedNotFound', message: '拖入的文件已失效，请重新拖入' };
+            if (path === undefined) return { canceled: true };
+            return { canceled: false, loaded: this.load(path) };
           }),
         recent: () => this.request('cartridges.recent', {}, () => ({ items: this.recentItems() })),
         openRecent: (params: { id: number }) =>

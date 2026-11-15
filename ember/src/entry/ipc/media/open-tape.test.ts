@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-tape.test.ts
- * 说明：media.openTape 与 media.openTapeRecording 的测试：文件选择显示声音文件与所有文件、保存窗口只显示 WAV，选定的路径交给核心的 media.tapeLoad 与 media.tapeRecord，取消时返回明确的结果而不是错误，核心的错误码原样返回，参数不合格时在入口被拒绝。
+ * 说明：media.openTape 与 media.openTapeRecording 的测试：文件选择显示声音文件与所有文件、保存窗口只显示 WAV，选定的路径交给核心的 media.tapeLoad 与 media.tapeRecord，取消时返回明确的结果而不是错误，核心的错误码原样返回，参数不合格时在入口被拒绝；media.openTape 给出 droppedId 时不弹窗口，用拖入窗口的声音文件，编号无效或扩展名不是声音时返回 media.droppedNotFound。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -13,18 +13,25 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CoreGateway } from '../../../contracts/core-gateway/core-gateway';
 import { CoreRequestError } from '../../../contracts/core-gateway/core-messages';
 import { MEDIA_SCHEMA } from '../../../contracts/media/generated/media';
+import type { DroppedFilesService } from '../../../contracts/shell/dropped-files';
 import type { FileDialog } from '../../../contracts/shell/file-dialog';
 import { handleMainRequest } from '../core/main-request-ipc';
 import { createOpenTapeHandler, createOpenTapeRecordingHandler } from './open-tape';
 
 const STATUS = { connected: true, loaded: true, fileName: 'lesson.m4a', mode: 'stopped', position: 0, duration: 1689.5, stereo: true };
 
+/** 拖入窗口的文件：1 是声音文件，2 不是。 */
+const DROPPED: DroppedFilesService = {
+  register: () => [],
+  resolve: (id) => (id === 1 ? 'D:/dropped/lesson.M4A' : id === 2 ? 'D:/dropped/notes.txt' : undefined)
+};
+
 function setup(dialog: Partial<FileDialog>, request: CoreGateway['request'] = vi.fn().mockResolvedValue({ status: STATUS })) {
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
   const schemas = [MEDIA_SCHEMA];
   const core = { gateway, modules: [MEDIA_SCHEMA], schemas };
   const fileDialog: FileDialog = { pickFile: vi.fn(), pickDirectory: vi.fn(), pickSaveFile: vi.fn(), ...dialog };
-  const handlers = { 'media.openTape': createOpenTapeHandler({ dialog: fileDialog, core }), 'media.openTapeRecording': createOpenTapeRecordingHandler({ dialog: fileDialog, core }) };
+  const handlers = { 'media.openTape': createOpenTapeHandler({ dialog: fileDialog, dropped: DROPPED, core }), 'media.openTapeRecording': createOpenTapeRecordingHandler({ dialog: fileDialog, core }) };
   return { request, call: (name: 'media.openTape' | 'media.openTapeRecording', params: unknown = {}) => handleMainRequest({ handlers, modules: [MEDIA_SCHEMA], schemas }, name, params) };
 }
 
@@ -60,6 +67,22 @@ describe('media.openTape', () => {
     const { request, call } = setup({ pickFile });
     await expect(call('media.openTape', { path: 'D:/x.wav' })).resolves.toMatchObject({ ok: false, error: { code: 'core.invalidParams' } });
     expect(pickFile).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('给出 droppedId 时不弹窗口，用拖入窗口的声音文件交给 media.tapeLoad', async () => {
+    const pickFile = vi.fn();
+    const { request, call } = setup({ pickFile });
+    await expect(call('media.openTape', { droppedId: 1 })).resolves.toEqual({ ok: true, result: { canceled: false, status: STATUS } });
+    expect(pickFile).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledWith('media.tapeLoad', { path: 'D:/dropped/lesson.M4A' });
+  });
+
+  it('拖入的文件不是声音文件或编号没有登记过时返回 media.droppedNotFound，不调用核心', async () => {
+    const { request, call } = setup({ pickFile: vi.fn() });
+    for (const droppedId of [2, 99]) {
+      await expect(call('media.openTape', { droppedId })).resolves.toMatchObject({ ok: false, error: { code: 'media.droppedNotFound' } });
+    }
     expect(request).not.toHaveBeenCalled();
   });
 });

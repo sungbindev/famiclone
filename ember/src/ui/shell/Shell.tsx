@@ -13,6 +13,7 @@
  *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，点在面板之外（包括显示区的画面）就收起面板，面板里的操作不收起；不算面板之外的有：标题栏、面板高度的拖动条、弹层（下拉选项、通知等）与系统栏里的面板按钮；开关状态按面板保存在界面状态里，下次启动沿用；
  *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
  *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；
+ *       文件可以直接拖进主窗口：外壳接住拖放，按扩展名交给模块登记的文件处理项（use-file-drop.ts）；
  *       主窗口里在任何地方点完鼠标（按钮、滑块、空白处等）后，把焦点还给显示区里的可聚焦元素（画面区），键盘才能继续输入到机器，Windows 的键盘独占也跟着焦点；
  *       菜单打开期间不抢焦点（菜单要用键盘操作），菜单关闭后还；点在文字输入控件上不还；面板向内展开，窗口大小不变，显示区里的画面按剩余空间自动缩放。
  * ------------------------------------------------------------------------
@@ -47,6 +48,7 @@ import { EmberLogo } from './EmberLogo';
 import { ShellApiContext } from './shell-context';
 import { SHELL_MODULE } from './shell-module';
 import { commandTitle, SHELL_MENUS, type ShellApi, type ShellModule, type ShellPageProps, type ShellViewState } from './shell-registry';
+import { useFileDrop } from './use-file-drop';
 import './shell.css';
 
 /** 应用名。 */
@@ -131,6 +133,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   const dialogApi = useDialog();
   const notify = useNotify();
   const openDialogs = useRef(new Map<string, DialogHandle>());
+  useFileDrop(bridge, registry.fileHandlers, notify);
 
   useEffect(() => {
     let active = true;

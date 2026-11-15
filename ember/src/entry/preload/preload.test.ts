@@ -18,11 +18,13 @@ const electron = vi.hoisted(() => ({
   exposed: new Map<string, unknown>(),
   listeners: new Map<string, (event: unknown, ...args: unknown[]) => void>(),
   invoke: vi.fn(),
-  send: vi.fn()
+  send: vi.fn(),
+  getPathForFile: vi.fn((file: { path: string }) => file.path)
 }));
 
 vi.mock('electron', () => ({
   contextBridge: { exposeInMainWorld: (name: string, value: unknown) => electron.exposed.set(name, value) },
+  webUtils: { getPathForFile: electron.getPathForFile },
   ipcRenderer: {
     on: (channel: string, listener: (event: unknown, ...args: unknown[]) => void) => electron.listeners.set(channel, listener),
     removeListener: vi.fn(),
@@ -48,7 +50,7 @@ describe('window.ember', () => {
   it('只暴露具名方法，不暴露 ipcRenderer 或通用的调用入口', () => {
     expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'onCoreStatusChange', 'shell', 'streams']);
     expect(JSON.stringify(Object.keys(bridge.streams))).toBe('["requestPorts"]');
-    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onKeyboardReleased', 'onNativeKey', 'onWindowStateChange', 'setKeyboardCapture', 'setLayout', 'windowAction']);
+    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onKeyboardReleased', 'onNativeKey', 'onWindowStateChange', 'registerDroppedFiles', 'setKeyboardCapture', 'setLayout', 'windowAction']);
     expect('ipcRenderer' in bridge).toBe(false);
     expect('invoke' in bridge).toBe(false);
   });
@@ -89,6 +91,18 @@ describe('window.ember', () => {
   it('streams.requestPorts 向主进程请求端口', () => {
     bridge.streams.requestPorts();
     expect(electron.send).toHaveBeenCalledWith(STREAM_CHANNELS.connect);
+  });
+
+  it('拖入的文件：路径由预加载脚本取自文件对象交给主进程，页面只拿到编号与显示名；没有路径的文件被略过', async () => {
+    electron.invoke.mockResolvedValue([{ id: 1, name: 'idle.nes' }]);
+    const files = [{ path: 'D:/roms/idle.nes' }, { path: '' }] as unknown as File[];
+    await expect(bridge.shell.registerDroppedFiles(files)).resolves.toEqual([{ id: 1, name: 'idle.nes' }]);
+    expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.registerDroppedFiles, ['D:/roms/idle.nes']);
+  });
+
+  it('拖入的文件都没有路径时不打扰主进程，直接返回空清单', async () => {
+    await expect(bridge.shell.registerDroppedFiles([{ path: '' }] as unknown as File[])).resolves.toEqual([]);
+    expect(electron.invoke).not.toHaveBeenCalled();
   });
 
   it('外壳能力走各自的通道：读取状态与窗口状态用 invoke，保存布局与窗口动作用 send', async () => {

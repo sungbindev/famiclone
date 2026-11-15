@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：build-registry.ts
  * 说明：汇总外壳自己与各模块的登记项并检查：模块名合格且不重复、标识（含子菜单）以“模块名.”开头且不重复、菜单项是命令或子菜单二选一、引用的命令存在、
- *       显示区至多一个、默认快捷键写法合格且不与保留组合、其他命令冲突。
+ *       显示区至多一个、文件处理项的扩展名合格且不重复、默认快捷键写法合格且不与保留组合、其他命令冲突。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -17,6 +17,7 @@ import {
   SHELL_MENUS,
   type ShellCommandDefinition,
   type ShellDialogDefinition,
+  type ShellFileHandlerDefinition,
   type ShellMenuItemDefinition,
   type ShellModule,
   type ShellPageProps,
@@ -32,6 +33,8 @@ const MODULE_NAME_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const SHORTCUT_PATTERN = /^(Ctrl\+)?(Shift\+)?(Alt\+)?([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Space|Enter|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right|[`\-=[\]\\;',./])$/;
 /** 不带 Ctrl 或 Alt 也可以用的功能键。 */
 const FUNCTION_KEY_PATTERN = /^F([1-9]|1[0-9]|2[0-4])$/;
+/** 扩展名的写法：小写字母与数字，不带点。 */
+const EXTENSION_PATTERN = /^[a-z0-9]+$/;
 /** 菜单的 Alt+助记字母，快捷键不能占用。 */
 const MENU_MNEMONIC_SHORTCUTS = SHELL_MENUS.map((menu) => `Alt+${menu.mnemonic}`);
 
@@ -45,6 +48,8 @@ export interface ShellRegistry {
   readonly menuItems: readonly ShellMenuItemDefinition[];
   readonly bottomPanels: readonly ShellPanelDefinition[];
   readonly statusItems: readonly ShellStatusItemDefinition[];
+  /** 拖入窗口的文件的处理项，按登记顺序。 */
+  readonly fileHandlers: readonly ShellFileHandlerDefinition[];
   /** 默认快捷键到命令标识。 */
   readonly shortcuts: ReadonlyMap<string, string>;
   /** 常驻组件，按登记顺序。 */
@@ -90,6 +95,9 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
   const menuItems: ShellMenuItemDefinition[] = [];
   const bottomPanels: ShellPanelDefinition[] = [];
   const statusItems: ShellStatusItemDefinition[] = [];
+  const fileHandlers: ShellFileHandlerDefinition[] = [];
+  /** 已被认领的扩展名到处理项标识。 */
+  const claimedExtensions = new Map<string, string>();
   const hosts: Array<{ module: string; Host: ComponentType<ShellPageProps> }> = [];
   /** 外壳自己的菜单项：排在各模块的菜单项之后（如“文件”菜单的“退出”在最后）。 */
   const shellMenuItems: ShellMenuItemDefinition[] = [];
@@ -115,6 +123,19 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
     for (const command of module.commands ?? []) if (claim('命令', command.id, owner)) commands.set(command.id, command);
     for (const item of module.bottomPanels ?? []) if (claim('底部面板页签', item.id, owner)) bottomPanels.push(item);
     for (const item of module.statusItems ?? []) if (claim('状态项', item.id, owner)) statusItems.push(item);
+    for (const item of module.fileHandlers ?? []) {
+      if (!claim('文件处理项', item.id, owner)) continue;
+      if (item.extensions.length === 0 || item.extensions.some((extension) => !EXTENSION_PATTERN.test(extension))) {
+        errors.push(`文件处理项“${item.id}”的扩展名必须是小写字母与数字、不带点，且至少有一个`);
+        continue;
+      }
+      for (const extension of item.extensions) {
+        const other = claimedExtensions.get(extension);
+        if (other !== undefined) errors.push(`文件处理项“${item.id}”与“${other}”都认领了扩展名 ${extension}`);
+        else claimedExtensions.set(extension, item.id);
+      }
+      fileHandlers.push(item);
+    }
     const menuTarget = owner === SHELL_NAMESPACE ? shellMenuItems : menuItems;
     for (const item of module.menuItems ?? []) {
       if (item.command !== undefined && item.submenu !== undefined) {
@@ -146,5 +167,5 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
   }
 
   if (errors.length > 0) throw new Error(`外壳登记有误：\n${errors.join('\n')}`);
-  return { screen, dialogs, commands, menuItems, bottomPanels, statusItems, shortcuts, hosts };
+  return { screen, dialogs, commands, menuItems, bottomPanels, statusItems, fileHandlers, shortcuts, hosts };
 }

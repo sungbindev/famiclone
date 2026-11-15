@@ -48,6 +48,7 @@ const TEXT = {
     writeProtect: '设置写保护',
     printer: '打印机输出',
     ejectTape: '取出磁带',
+    loadTape: '载入磁带',
     playTape: '播放磁带',
     recordTape: '磁带录音',
     stopTape: '停止磁带'
@@ -158,16 +159,10 @@ export class MediaController {
   /**
    * 弹出系统文件选择窗口，把选定的镜像载入软驱；用户取消时什么都不发生。
    * @param drive 驱动器编号。
+   * @param droppedId 拖入窗口的镜像文件的编号；给出时不弹窗口，直接载入这个文件。
    */
-  insertFloppy(drive: number): void {
-    const attachment = this.attachment;
-    if (attachment === undefined) return;
-    attachment.backend.main.media.openFloppy({ drive }).then(
-      () => undefined,
-      (error: unknown) => this.report(TEXT.actions.insert, error)
-    ).finally(() => {
-      if (this.attachment === attachment) this.refreshAll();
-    });
+  insertFloppy(drive: number, droppedId?: number): void {
+    this.pick(TEXT.actions.insert, (backend) => backend.main.media.openFloppy(droppedId === undefined ? { drive } : { drive, droppedId }));
   }
 
   /** 取出软驱里的盘片；没有保存的修改随之丢失。 */
@@ -210,6 +205,11 @@ export class MediaController {
       .finally(() => {
         if (this.attachment === attachment) this.refreshAll();
       });
+  }
+
+  /** 把拖入窗口的声音文件载入磁带机（只载入，不自动播放）。 */
+  loadDroppedTape(droppedId: number): void {
+    this.pick(TEXT.actions.loadTape, (backend) => backend.main.media.openTape({ droppedId }));
   }
 
   /** 弹出系统的保存文件窗口，选定文件后开始录音；用户取消时什么都不发生。 */

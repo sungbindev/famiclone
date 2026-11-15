@@ -17,8 +17,8 @@ import type { MainModule } from '../main-module';
 export const MEDIA_MAIN_MODULE: MainModule = {
   schema: MEDIA_SCHEMA,
   createMainHandlers: (context) => ({
-    [MEDIA_MAIN_REQUESTS.openFloppy]: createOpenFloppyHandler({ dialog: context.fileDialog, core: context.core }),
-    [MEDIA_MAIN_REQUESTS.openTape]: createOpenTapeHandler({ dialog: context.fileDialog, core: context.core }),
+    [MEDIA_MAIN_REQUESTS.openFloppy]: createOpenFloppyHandler({ dialog: context.fileDialog, dropped: context.droppedFiles, core: context.core }),
+    [MEDIA_MAIN_REQUESTS.openTape]: createOpenTapeHandler({ dialog: context.fileDialog, dropped: context.droppedFiles, core: context.core }),
     [MEDIA_MAIN_REQUESTS.openTapeRecording]: createOpenTapeRecordingHandler({ dialog: context.fileDialog, core: context.core })
   })
 };

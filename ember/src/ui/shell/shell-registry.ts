@@ -13,6 +13,7 @@
 
 import type { ComponentType } from 'react';
 import type { IconData, NotifyFunction } from '@rujianjs/ui-kit';
+import type { DroppedFile } from '../../contracts/shell/dropped-files';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 
 /** 显示区、对话框内容组件收到的属性。 */
@@ -133,6 +134,16 @@ export interface ShellStatusItemDefinition {
   readonly Component: ComponentType;
 }
 
+/** 拖入窗口的文件的处理：按扩展名认领文件，打开的办法由模块自己决定（经主进程请求的 droppedId）。 */
+export interface ShellFileHandlerDefinition {
+  /** 标识，如 runtime.cartridge。 */
+  readonly id: string;
+  /** 认领的扩展名，小写、不带点；全部处理项之间不能重复。 */
+  readonly extensions: readonly string[];
+  /** 打开拖入的文件；失败由模块自己用通知提示。 */
+  readonly open: (file: DroppedFile) => void;
+}
+
 /** 一个模块在外壳中的登记项。 */
 export interface ShellModule {
   /** 模块名，与 schema 与目录名一致。 */
@@ -144,6 +155,8 @@ export interface ShellModule {
   readonly menuItems?: readonly ShellMenuItemDefinition[];
   readonly bottomPanels?: readonly ShellPanelDefinition[];
   readonly statusItems?: readonly ShellStatusItemDefinition[];
+  /** 拖入窗口的文件的处理项：外壳接住窗口上的文件拖放，按扩展名交给认领它的处理项。 */
+  readonly fileHandlers?: readonly ShellFileHandlerDefinition[];
   /** 常驻组件：外壳启动后一直挂载（全屏时也在），没有界面，用来订阅事件、维护模块自己的状态；模块状态变化影响命令的可用状态时调用 refreshCommands。 */
   readonly Host?: ComponentType<ShellPageProps>;
 }

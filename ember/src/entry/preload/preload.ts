@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：preload.ts
- * 说明：预加载脚本：向界面暴露 window.ember，界面可发起的核心请求与主进程请求按 Schema 生成的请求名暴露为“模块.操作”的具名方法，另有接收画面与输入端口的方法，以及外壳自己的能力（界面状态的保存、窗口动作）。
+ * 说明：预加载脚本：向界面暴露 window.ember，界面可发起的核心请求与主进程请求按 Schema 生成的请求名暴露为“模块.操作”的具名方法，另有接收画面与输入端口的方法，以及外壳自己的能力（界面状态的保存、窗口动作、拖入文件的登记）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -11,8 +11,9 @@
  * ------------------------------------------------------------------------
  */
 
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { CORE_REQUEST_NAMES, MAIN_REQUEST_NAMES, type CoreApi, type MainApi } from '../../contracts/core-gateway/generated/core-api';
+import type { DroppedFile } from '../../contracts/shell/dropped-files';
 import { SHELL_CHANNELS, type CoreRequestReply, type EmberBridge, type ShellBridge } from '../../contracts/shell/shell-bridge';
 import { STREAM_PORTS_WINDOW_MESSAGE, type StreamPortsWindowMessage } from '../../contracts/stream-ports/stream-messages';
 import { STREAM_CHANNELS, type StreamPortsBridge } from '../../contracts/stream-ports/stream-ports';
@@ -71,7 +72,13 @@ const shell: ShellBridge = {
   onWindowStateChange: (listener) => subscribe(SHELL_CHANNELS.windowStateChanged, listener),
   setKeyboardCapture: (enabled) => ipcRenderer.invoke(SHELL_CHANNELS.setKeyboardCapture, enabled),
   onNativeKey: (listener) => subscribe(SHELL_CHANNELS.nativeKey, listener),
-  onKeyboardReleased: (listener) => subscribe(SHELL_CHANNELS.keyboardReleased, listener)
+  onKeyboardReleased: (listener) => subscribe(SHELL_CHANNELS.keyboardReleased, listener),
+  registerDroppedFiles: async (files) => {
+    // 路径只能由这里从真实的文件对象取得，页面不能自己填；不是磁盘文件（没有路径）的会被略过。
+    const paths = files.map((file) => webUtils.getPathForFile(file)).filter((path) => path !== '');
+    if (paths.length === 0) return [];
+    return (await ipcRenderer.invoke(SHELL_CHANNELS.registerDroppedFiles, paths)) as readonly DroppedFile[];
+  }
 };
 
 const bridge: EmberBridge = {

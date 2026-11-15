@@ -19,7 +19,7 @@ export const CARTRIDGES_MAIN_MODULE: MainModule = {
   createMainHandlers: (context) => {
     const loading = { core: context.core, recent: context.recentCartridges };
     return {
-      [CARTRIDGES_MAIN_REQUESTS.open]: createOpenCartridgeHandler({ dialog: context.fileDialog, ...loading }),
+      [CARTRIDGES_MAIN_REQUESTS.open]: createOpenCartridgeHandler({ dialog: context.fileDialog, dropped: context.droppedFiles, ...loading }),
       [CARTRIDGES_MAIN_REQUESTS.recent]: createRecentCartridgesHandler(loading),
       [CARTRIDGES_MAIN_REQUESTS.openRecent]: createOpenRecentCartridgeHandler(loading)
     };

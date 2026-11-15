@@ -50,6 +50,27 @@ inline std::vector<std::uint8_t> readReferenceFile(const std::string& relative) 
   return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
+/** 测试用的 ffmpeg 程序路径；没有时为空。 */
+inline std::filesystem::path ffmpegProgram() {
+#ifdef EMBER_FFMPEG_PROGRAM
+  const std::filesystem::path program = EMBER_FFMPEG_PROGRAM;
+  if (std::filesystem::exists(program)) return program;
+#endif
+  return {};
+}
+
+/** reference/tape 里按名字排第一的 m4a；没有时为空。 */
+inline std::filesystem::path firstTape() {
+  const auto directory = findReference("tape");
+  if (directory.empty()) return {};
+  std::vector<std::filesystem::path> files;
+  for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+    if (entry.path().extension() == ".m4a") files.push_back(entry.path());
+  }
+  std::sort(files.begin(), files.end());
+  return files.empty() ? std::filesystem::path() : files.front();
+}
+
 /** 存放画面的目录（环境变量 EMBER_REAL_ROM_DUMP）；没有设置时为空。 */
 inline std::string dumpDirectory() {
 #ifdef _WIN32

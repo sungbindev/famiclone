@@ -336,6 +336,26 @@ describe('打开卡带与最近打开', () => {
     expect(controller.snapshot().selectedMachine).toBe('sb2000');
   });
 
+  it('打开拖入的卡带：请求带上拖入文件的编号，成功后直接运行并刷新最近打开', async () => {
+    await attach();
+    fake.droppedFiles.set(4, 'D:\\roms\\dropped.nes');
+    controller.openDroppedCartridge(4);
+    await settle();
+    expect(fake.calls).toContain('cartridges.open {"droppedId":4}');
+    expect(controller.snapshot().recent).toEqual([{ id: 1, name: 'dropped.nes' }]);
+    expect(controller.machineState()).toBe('running');
+    expect(controller.snapshot().selectedMachine).toBe('fc');
+  });
+
+  it('拖入的文件编号失效：通知提示，机器状态不变', async () => {
+    await attach();
+    const before = controller.snapshot().status;
+    controller.openDroppedCartridge(9);
+    await settle();
+    expect(context.notices).toEqual(['打开卡带失败：拖入的文件已失效，请重新拖入']);
+    expect(controller.snapshot().status).toEqual(before);
+  });
+
   it('加载失败：通知提示，并重新读取最近打开的清单（主进程已把它移出）', async () => {
     fake.recentPaths = ['D:\\roms\\bad.nes'];
     await attach();

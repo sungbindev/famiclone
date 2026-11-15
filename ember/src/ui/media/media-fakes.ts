@@ -46,6 +46,8 @@ export class FakeMediaBackend {
   pickedRecording: string | undefined;
   /** 下一次载入镜像时用户选的文件名；undefined 表示用户取消。 */
   pickedFile: string | undefined;
+  /** 拖入窗口的文件：编号到文件名；请求里的 droppedId 取自这里，没有登记的编号以 media.droppedNotFound 拒绝。 */
+  readonly droppedFiles = new Map<number, string>();
   /** 按请求名登记的下一次失败的原因。 */
   readonly failures = new Map<string, unknown>();
   /** 每次请求的记录：请求名加参数。 */
@@ -106,18 +108,19 @@ export class FakeMediaBackend {
     },
     main: {
       media: {
-        openFloppy: (params: { drive: number }) =>
+        openFloppy: (params: { drive: number; droppedId?: number }) =>
           this.request('media.openFloppy', params, () => {
-            if (this.pickedFile === undefined) return { canceled: true };
-            const file = this.pickedFile;
+            const file = params.droppedId === undefined ? this.pickedFile : this.dropped(params.droppedId);
+            if (file === undefined) return { canceled: true };
             const status = this.change(params.drive, () => floppyStatus(params.drive, file));
             this.emit('media.changed', { device: 'floppy', drive: params.drive });
             return { canceled: false, status };
           }),
-        openTape: () =>
-          this.request('media.openTape', {}, () => {
-            if (this.pickedTape === undefined) return { canceled: true };
-            this.tape = { ...this.tape, loaded: true, fileName: this.pickedTape, mode: 'stopped', position: 0, duration: 60, stereo: true };
+        openTape: (params: { droppedId?: number } = {}) =>
+          this.request('media.openTape', params, () => {
+            const file = params.droppedId === undefined ? this.pickedTape : this.dropped(params.droppedId);
+            if (file === undefined) return { canceled: true };
+            this.tape = { ...this.tape, loaded: true, fileName: file, mode: 'stopped', position: 0, duration: 60, stereo: true };
             this.emit('media.changed', { device: 'tape', drive: 0 });
             return { canceled: false, status: this.tape };
           }),
@@ -160,6 +163,13 @@ export class FakeMediaBackend {
   /** 某个请求被调用了几次。 */
   count(name: string): number {
     return this.calls.filter((call) => call.startsWith(`${name} `)).length;
+  }
+
+  /** 取拖入窗口的文件名；没有登记的编号以 media.droppedNotFound 拒绝。 */
+  private dropped(id: number): string {
+    const name = this.droppedFiles.get(id);
+    if (name === undefined) throw { code: 'media.droppedNotFound', message: '拖入的文件已失效，请重新拖入' };
+    return name;
   }
 
   /** 改写一个软驱的状态并返回新状态。 */

@@ -43,6 +43,9 @@ export const RUNTIME_COMMANDS = {
 const MACHINE_SUBMENU_ID = 'runtime.machine';
 const RECENT_SUBMENU_ID = 'runtime.recent';
 
+/** 可以拖进窗口的卡带文件扩展名。 */
+const CARTRIDGE_EXTENSIONS = ['nes'];
+
 /** 用户可见的文字。 */
 const TEXT = {
   run: '运行',
@@ -146,6 +149,7 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
       { id: 'runtime.cartridge', align: 'start', Component: bind(CartridgeStatusItem, controller) },
       { id: 'runtime.plugin', align: 'start', Component: bind(PluginStatusItem, controller) }
     ],
+    fileHandlers: [{ id: 'runtime.cartridge', extensions: CARTRIDGE_EXTENSIONS, open: (file) => controller.openDroppedCartridge(file.id) }],
     Host: (props: ShellPageProps) => <RuntimeHost {...props} controller={controller} />
   };
 }

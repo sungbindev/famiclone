@@ -212,6 +212,11 @@ export class RuntimeController {
     this.perform(TEXT.actions.open, (backend) => backend.main.cartridges.open({}), true);
   }
 
+  /** 打开拖入窗口的卡带（编号来自外壳登记的拖入文件），和“打开卡带”一样选中后直接开机。 */
+  openDroppedCartridge(droppedId: number): void {
+    this.perform(TEXT.actions.open, (backend) => backend.main.cartridges.open({ droppedId }), true);
+  }
+
   /** 重新打开最近打开清单里的卡带。 */
   openRecent(id: number): void {
     this.perform(TEXT.actions.open, (backend) => backend.main.cartridges.openRecent({ id }), true);

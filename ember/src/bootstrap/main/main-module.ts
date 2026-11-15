@@ -10,6 +10,7 @@
  */
 
 import type { RecentCartridgesService } from '../../contracts/cartridges/recent-cartridges-service';
+import type { DroppedFilesService } from '../../contracts/shell/dropped-files';
 import type { FileDialog } from '../../contracts/shell/file-dialog';
 import type { LogDirectory } from '../../contracts/shell/log-directory';
 import type { CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
@@ -20,6 +21,8 @@ import type { ModuleSchema } from '../../shared/schema/schema-types';
 export interface MainHandlerContext {
   /** 文件选择窗口。 */
   readonly fileDialog: FileDialog;
+  /** 拖入窗口的文件。 */
+  readonly droppedFiles: DroppedFilesService;
   /** 日志目录。 */
   readonly logDirectory: LogDirectory;
   /** 以主进程的身份向核心发起请求所需的依赖。 */

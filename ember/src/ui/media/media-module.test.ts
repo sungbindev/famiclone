@@ -47,4 +47,23 @@ describe('介质模块的登记项', () => {
     expect(lamp?.()).toEqual({ lit: true, label: '软驱读写灯', inIcon: { x: 50, y: 60 } });
     detach();
   });
+
+  it('文件处理项：软盘镜像载入软驱 A，声音文件载入磁带机，扩展名不重叠', async () => {
+    const fake = new FakeMediaBackend();
+    fake.droppedFiles.set(5, 'sys.img');
+    fake.droppedFiles.set(6, 'lesson.m4a');
+    const controller = new MediaController();
+    const detach = controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
+    await settle();
+    const handlers = createMediaModule(controller).fileHandlers ?? [];
+    expect(handlers.map((item) => item.id)).toEqual(['media.floppyImage', 'media.tapeSound']);
+    expect(handlers[0]?.extensions).toEqual(['img', 'ima', 'vfd', 'dsk', 'flp']);
+    expect(handlers[1]?.extensions).toContain('m4a');
+    handlers[0]?.open({ id: 5, name: 'sys.img' });
+    handlers[1]?.open({ id: 6, name: 'lesson.m4a' });
+    await settle();
+    expect(fake.calls).toContain('media.openFloppy {"drive":0,"droppedId":5}');
+    expect(fake.calls).toContain('media.openTape {"droppedId":6}');
+    detach();
+  });
 });

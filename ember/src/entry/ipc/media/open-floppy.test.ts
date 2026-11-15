@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-floppy.test.ts
- * 说明：media.openFloppy 的测试：弹出的文件选择显示软盘镜像与所有文件、选定的路径与驱动器编号交给核心的 media.floppyInsert、取消时返回明确的结果而不是错误、核心的错误码原样返回、参数不合格时在入口被拒绝。
+ * 说明：media.openFloppy 的测试：弹出的文件选择显示软盘镜像与所有文件、选定的路径与驱动器编号交给核心的 media.floppyInsert、取消时返回明确的结果而不是错误、核心的错误码原样返回、参数不合格时在入口被拒绝；给出 droppedId 时不弹窗口，用拖入窗口的镜像，编号无效或扩展名不是镜像时返回 media.droppedNotFound。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -13,17 +13,24 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CoreGateway } from '../../../contracts/core-gateway/core-gateway';
 import { CoreRequestError } from '../../../contracts/core-gateway/core-messages';
 import { MEDIA_SCHEMA } from '../../../contracts/media/generated/media';
+import type { DroppedFilesService } from '../../../contracts/shell/dropped-files';
 import type { FileDialog } from '../../../contracts/shell/file-dialog';
 import { handleMainRequest } from '../core/main-request-ipc';
 import { createOpenFloppyHandler } from './open-floppy';
 
 const STATUS = { drive: 0, inserted: true, fileName: 'sys.img', writeProtected: false, modified: false, size: 1474560, cylinder: 0, motor: false, faults: { ejected: false, noIndex: false, seekFail: false, unresponsive: false, badSectors: [] } };
 
+/** 拖入窗口的文件：1 是镜像，2 不是。 */
+const DROPPED: DroppedFilesService = {
+  register: () => [],
+  resolve: (id) => (id === 1 ? 'D:/dropped/sys.IMG' : id === 2 ? 'D:/dropped/notes.txt' : undefined)
+};
+
 function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = vi.fn().mockResolvedValue({ status: STATUS })) {
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
   const schemas = [MEDIA_SCHEMA];
   const core = { gateway, modules: [MEDIA_SCHEMA], schemas };
-  const handler = createOpenFloppyHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, core });
+  const handler = createOpenFloppyHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, dropped: DROPPED, core });
   return { request, call: (params: unknown = { drive: 0 }) => handleMainRequest({ handlers: { 'media.openFloppy': handler }, modules: [MEDIA_SCHEMA], schemas }, 'media.openFloppy', params) };
 }
 
@@ -60,6 +67,22 @@ describe('media.openFloppy', () => {
     const { request, call } = setup(pick);
     await expect(call({})).resolves.toMatchObject({ ok: false, error: { code: 'core.invalidParams' } });
     expect(pick).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('给出 droppedId 时不弹窗口，用拖入窗口的镜像交给 media.floppyInsert', async () => {
+    const pick = vi.fn();
+    const { request, call } = setup(pick);
+    await expect(call({ drive: 0, droppedId: 1 })).resolves.toEqual({ ok: true, result: { canceled: false, status: STATUS } });
+    expect(pick).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledWith('media.floppyInsert', { drive: 0, path: 'D:/dropped/sys.IMG' });
+  });
+
+  it('拖入的文件不是镜像或编号没有登记过时返回 media.droppedNotFound，不调用核心', async () => {
+    const { request, call } = setup(vi.fn());
+    for (const droppedId of [2, 99]) {
+      await expect(call({ drive: 0, droppedId })).resolves.toMatchObject({ ok: false, error: { code: 'media.droppedNotFound' } });
+    }
     expect(request).not.toHaveBeenCalled();
   });
 });

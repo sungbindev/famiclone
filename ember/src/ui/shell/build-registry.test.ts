@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-registry.test.ts
- * 说明：登记表汇总与检查的测试：标识前缀与重复、引用的命令存在、显示区至多一个、默认快捷键的写法与保留组合、快捷键冲突；以及外壳自己登记项的完整性。
+ * 说明：登记表汇总与检查的测试：标识前缀与重复、引用的命令存在、显示区至多一个、文件处理项的扩展名、默认快捷键的写法与保留组合、快捷键冲突；以及外壳自己登记项的完整性。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -18,6 +18,7 @@ const Screen = () => null;
 const Dialog = () => null;
 const HostA = () => null;
 const HostB = () => null;
+const open = () => undefined;
 
 /** 一个有对话框与命令的测试模块。 */
 function moduleOf(name: string, overrides: Partial<ShellModule> = {}): ShellModule {
@@ -114,6 +115,36 @@ describe('buildShellRegistry', () => {
   it('菜单项只能引用本模块的命令，引用的命令必须存在', () => {
     expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { menuItems: [{ menu: 'file', command: SHELL_COMMANDS.quit }] })])).toThrowError(/只能使用本模块的命令/);
     expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { menuItems: [{ menu: 'file', command: 'a.none' }] })])).toThrowError(/菜单项引用的命令不存在：a\.none/);
+  });
+});
+
+describe('文件处理项', () => {
+  it('汇总各模块的文件处理项，按登记顺序', () => {
+    const registry = buildShellRegistry([
+      SHELL_MODULE,
+      moduleOf('a', { fileHandlers: [{ id: 'a.cartridge', extensions: ['nes'], open }] }),
+      moduleOf('b', { fileHandlers: [{ id: 'b.image', extensions: ['img', 'ima'], open }] })
+    ]);
+    expect(registry.fileHandlers.map((item) => item.id)).toEqual(['a.cartridge', 'b.image']);
+  });
+
+  it('标识必须以模块名开头且不重复；扩展名必须是小写字母与数字且至少一个', () => {
+    expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { fileHandlers: [{ id: 'b.cartridge', extensions: ['nes'], open }] })])).toThrowError(/文件处理项“b\.cartridge”的标识必须以“a\.”开头/);
+    expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { fileHandlers: [{ id: 'a.one', extensions: ['nes'], open }, { id: 'a.one', extensions: ['img'], open }] })])).toThrowError(
+      /文件处理项“a\.one”重复登记/
+    );
+    for (const extensions of [[], ['.nes'], ['NES'], ['n es'], ['']]) {
+      expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { fileHandlers: [{ id: 'a.one', extensions, open }] })]), extensions.join()).toThrowError(/扩展名必须是小写字母与数字/);
+    }
+  });
+
+  it('两个处理项认领同一个扩展名时报错', () => {
+    const modules = [
+      SHELL_MODULE,
+      moduleOf('a', { fileHandlers: [{ id: 'a.one', extensions: ['nes', 'img'], open }] }),
+      moduleOf('b', { fileHandlers: [{ id: 'b.two', extensions: ['img'], open }] })
+    ];
+    expect(() => buildShellRegistry(modules)).toThrowError(/“b\.two”与“a\.one”都认领了扩展名 img/);
   });
 });
 

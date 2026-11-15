@@ -115,6 +115,20 @@ describe('登记表', () => {
       ['runtime.plugin', 'start']
     ]);
   });
+
+  it('文件处理项：认领 .nes，拖入的卡带经控制器按编号打开并直接运行', async () => {
+    const fake = new FakeRuntimeBackend();
+    fake.droppedFiles.set(2, NES);
+    const controller = new RuntimeController();
+    controller.attach(fake.backend, { notify: () => undefined, refreshCommands: () => undefined });
+    await settle();
+    const registry = buildShellRegistry([SHELL_MODULE, createRuntimeModule(controller)]);
+    expect(registry.fileHandlers.map((handler) => [handler.id, handler.extensions])).toEqual([['runtime.cartridge', ['nes']]]);
+    registry.fileHandlers[0]?.open({ id: 2, name: 'nestest.nes' });
+    await settle();
+    expect(fake.calls).toContain('cartridges.open {"droppedId":2}');
+    expect(controller.machineState()).toBe('running');
+  });
 });
 
 describe('“机器”菜单', () => {

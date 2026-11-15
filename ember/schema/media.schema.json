@@ -244,10 +244,13 @@
   },
   "mainRequests": {
     "openFloppy": {
-      "description": "弹出系统文件选择窗口（软盘镜像），把用户选定的文件交给 media.floppyInsert；用户取消选择时 canceled 为 true，不是错误。",
+      "description": "弹出系统文件选择窗口（软盘镜像），把用户选定的文件交给 media.floppyInsert；用户取消选择时 canceled 为 true，不是错误。给出 droppedId 时不弹窗口，直接用拖入窗口的那个文件。",
       "params": {
         "type": "object",
-        "properties": { "drive": { "type": "integer", "minimum": 0, "maximum": 3, "description": "驱动器编号" } },
+        "properties": {
+          "drive": { "type": "integer", "minimum": 0, "maximum": 3, "description": "驱动器编号" },
+          "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由主进程登记，路径只在主进程里）；不给时弹出文件选择窗口" }
+        },
         "required": ["drive"]
       },
       "result": {
@@ -258,11 +261,15 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
+      "errors": ["media.droppedNotFound", "media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
     },
     "openTape": {
-      "description": "弹出系统文件选择窗口（声音文件），把用户选定的文件交给 media.tapeLoad；用户取消选择时 canceled 为 true，不是错误。",
-      "params": { "type": "object", "properties": {}, "required": [] },
+      "description": "弹出系统文件选择窗口（声音文件），把用户选定的文件交给 media.tapeLoad；用户取消选择时 canceled 为 true，不是错误。给出 droppedId 时不弹窗口，直接用拖入窗口的那个文件。",
+      "params": {
+        "type": "object",
+        "properties": { "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由主进程登记，路径只在主进程里）；不给时弹出文件选择窗口" } },
+        "required": []
+      },
       "result": {
         "type": "object",
         "properties": {
@@ -271,7 +278,7 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["media.tapeBusy", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported", "media.decoderMissing"]
+      "errors": ["media.droppedNotFound", "media.tapeBusy", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported", "media.decoderMissing"]
     },
     "openTapeRecording": {
       "description": "弹出系统的保存文件窗口（WAV 文件），把用户选定的文件交给 media.tapeRecord；用户取消选择时 canceled 为 true，不是错误。",

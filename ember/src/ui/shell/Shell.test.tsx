@@ -40,7 +40,8 @@ function createBridge(layout: Partial<ShellLayout> = {}) {
       return () => {
         windowListener = undefined;
       };
-    }
+    },
+    registerDroppedFiles: vi.fn((files: readonly File[]) => Promise.resolve(files.map((file, index) => ({ id: index + 1, name: file.name }))))
   };
   return {
     bridge: { shell } as unknown as EmberBridge,
@@ -595,6 +596,26 @@ describe('对话框', () => {
     press({ code: 'F6' });
     fireEvent.click(await screen.findByRole('button', { name: '发通知' }));
     expect(await screen.findByText('来自对话框的通知')).toBeTruthy();
+  });
+});
+
+describe('文件拖放', () => {
+  it('拖入主窗口的文件登记后交给认领它的模块处理项，没人认领的用通知说明', async () => {
+    const opened: string[] = [];
+    const module: ShellModule = {
+      name: 'f',
+      screen: () => <p>显示区内容</p>,
+      fileHandlers: [{ id: 'f.cartridge', extensions: ['nes'], open: (file) => opened.push(`${file.id} ${file.name}`) }]
+    };
+    const { shell } = renderShell({ modules: [module] });
+    await shown();
+    const files = [{ name: 'Mario.NES' }, { name: 'notes.txt' }] as unknown as File[];
+    await act(async () => {
+      fireEvent.drop(window, { dataTransfer: { types: ['Files'], files } });
+    });
+    expect(shell.registerDroppedFiles).toHaveBeenCalledWith(files);
+    expect(opened).toEqual(['1 Mario.NES']);
+    expect(await screen.findByText(/不支持拖入的文件：notes\.txt/)).toBeTruthy();
   });
 });
 

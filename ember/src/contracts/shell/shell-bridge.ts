@@ -14,6 +14,7 @@
 import type { CoreErrorInfo, CoreStatus } from '../core-gateway/core-messages';
 import type { CoreApi, MainApi } from '../core-gateway/generated/core-api';
 import type { StreamPortsBridge } from '../stream-ports/stream-ports';
+import type { DroppedFile } from './dropped-files';
 import type { NativeKeyEvent } from './keyboard-capture';
 import type { ShellLayout, ShellState } from './shell-state-service';
 import type { WindowAction, WindowState } from './window-control';
@@ -32,7 +33,8 @@ export const SHELL_CHANNELS = {
   windowStateChanged: 'shell:window-state-changed',
   setKeyboardCapture: 'shell:set-keyboard-capture',
   nativeKey: 'shell:native-key',
-  keyboardReleased: 'shell:keyboard-released'
+  keyboardReleased: 'shell:keyboard-released',
+  registerDroppedFiles: 'shell:register-dropped-files'
 } as const;
 
 /** 核心请求的 IPC 返回：成功时为结果，失败时为错误码与说明。 */
@@ -56,6 +58,11 @@ export interface ShellBridge {
   onNativeKey(listener: (event: NativeKeyEvent) => void): () => void;
   /** 订阅“独占被主进程自动关闭”（窗口失去焦点、隐藏、最小化或关闭）；返回取消订阅的函数。 */
   onKeyboardReleased(listener: () => void): () => void;
+  /**
+   * 登记拖入窗口的文件：预加载脚本从文件对象取得路径交给主进程，页面只拿到编号与显示名（路径不给页面）；
+   * 编号用来调用主进程请求的 droppedId 参数。不是磁盘上的文件（没有路径）会被忽略，返回的清单可能比传入的少。
+   */
+  registerDroppedFiles(files: readonly File[]): Promise<readonly DroppedFile[]>;
 }
 
 /** 预加载脚本暴露给界面的接口（window.ember）。 */

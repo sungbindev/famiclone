@@ -63,8 +63,12 @@
   },
   "mainRequests": {
     "open": {
-      "description": "弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给 cartridges.load；用户取消选择时 canceled 为 true，不是错误。",
-      "params": { "type": "object", "properties": {}, "required": [] },
+      "description": "弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给 cartridges.load；用户取消选择时 canceled 为 true，不是错误。给出 droppedId 时不弹窗口，直接用拖入窗口的那个文件。",
+      "params": {
+        "type": "object",
+        "properties": { "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由主进程登记，路径只在主进程里）；不给时弹出文件选择窗口" } },
+        "required": []
+      },
       "result": {
         "type": "object",
         "properties": {
@@ -73,7 +77,7 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
+      "errors": ["cartridges.droppedNotFound", "cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
     },
     "recent": {
       "description": "最近打开的卡带清单（最近的在前，最多 10 个）：只给显示名与本次运行内有效的编号，路径只保存在主进程；打开卡带成功之前就已记入清单，加载失败的会被移出。",

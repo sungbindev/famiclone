@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-module.tsx
- * 说明：介质模块在外壳里的登记项：底部面板的“设备”页签（系统栏左侧的“设备”按钮，图标里带软驱读写灯）、系统栏左侧的已载入软盘名与常驻组件。
+ * 说明：介质模块在外壳里的登记项：底部面板的“设备”页签（系统栏左侧的“设备”按钮，图标里带软驱读写灯）、系统栏左侧的已载入软盘名、拖入窗口的软盘镜像与声音文件的处理项和常驻组件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -21,6 +21,13 @@ export const MEDIA_DEVICES_PANEL_ID = 'media.devices';
 
 /** 软盘图标（iconDeviceFloppy）中间那个圆在图标里的位置：灯画在这个圆上。 */
 const FLOPPY_LAMP_IN_ICON = { x: 50, y: 60 } as const;
+
+/** 可以拖进窗口的文件扩展名：软盘镜像；磁带的声音文件（ffmpeg 能解码的常见格式）。 */
+const FLOPPY_EXTENSIONS = ['img', 'ima', 'vfd', 'dsk', 'flp'];
+const SOUND_EXTENSIONS = ['m4a', 'mp3', 'wav', 'aac', 'flac', 'ogg', 'opus', 'mp4', 'mka'];
+
+/** 拖入的镜像载入软驱 A。 */
+const DROP_FLOPPY_DRIVE = 0;
 
 /** 用户可见的文字。 */
 const TEXT = {
@@ -50,6 +57,10 @@ export function createMediaModule(controller: MediaController): ShellModule {
       }
     ],
     statusItems: [{ id: 'media.floppy', align: 'start', Component: () => <FloppyStatusItem controller={controller} /> }],
+    fileHandlers: [
+      { id: 'media.floppyImage', extensions: FLOPPY_EXTENSIONS, open: (file) => controller.insertFloppy(DROP_FLOPPY_DRIVE, file.id) },
+      { id: 'media.tapeSound', extensions: SOUND_EXTENSIONS, open: (file) => controller.loadDroppedTape(file.id) }
+    ],
     Host: (props: ShellPageProps) => <MediaHost {...props} controller={controller} />
   };
 }

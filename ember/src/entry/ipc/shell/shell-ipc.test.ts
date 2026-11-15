@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-ipc.test.ts
- * 说明：外壳 IPC 入口的测试：不可信的发送方一律不处理（读取状态只得到默认值）、窗口动作只接受白名单、布局修改整条校验后才保存、键盘独占只接受可信页面的布尔值、窗口状态与独占期间按键的推送。
+ * 说明：外壳 IPC 入口的测试：不可信的发送方一律不处理（读取状态只得到默认值）、窗口动作只接受白名单、布局修改整条校验后才保存、键盘独占只接受可信页面的布尔值、拖入的文件只登记合格的绝对路径、窗口状态与独占期间按键的推送。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -11,6 +11,7 @@
 import type { IpcMain, IpcMainEvent, IpcMainInvokeEvent, WebContents } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 import { SHELL_CHANNELS } from '../../../contracts/shell/shell-bridge';
+import type { DroppedFilesService } from '../../../contracts/shell/dropped-files';
 import type { ShellStateService } from '../../../contracts/shell/shell-state-service';
 import { WINDOW_ACTIONS } from '../../../contracts/shell/window-control';
 import { DEFAULT_SHELL_STATE } from '../../../shared/shell-state/shell-state';
@@ -31,12 +32,17 @@ function setup(trusted = true) {
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), flush: vi.fn() };
   const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false })) };
   const keyboard = { setCapture: vi.fn((enabled: boolean) => enabled), onKey: vi.fn(), onReleased: vi.fn() } satisfies KeyboardCaptureService;
-  registerShellIpc({ ipc, isTrustedSender: () => trusted, state, window, keyboard });
+  const droppedFiles = {
+    register: vi.fn((paths: readonly string[]) => paths.map((path, index) => ({ id: index + 1, name: path.slice(path.lastIndexOf('/') + 1) }))),
+    resolve: vi.fn()
+  } satisfies DroppedFilesService;
+  registerShellIpc({ ipc, isTrustedSender: () => trusted, state, window, keyboard, droppedFiles });
   const event = {} as IpcMainEvent;
   return {
     state,
     window,
     keyboard,
+    droppedFiles,
     savedState,
     invoke: (channel: string, ...args: unknown[]) => handlers.get(channel)!(event as unknown as IpcMainInvokeEvent, ...args),
     send: (channel: string, ...args: unknown[]) => listeners.get(channel)!(event, ...args)
@@ -119,6 +125,33 @@ describe('键盘独占', () => {
     const { invoke, keyboard } = setup(false);
     expect(invoke(SHELL_CHANNELS.setKeyboardCapture, true)).toBe(false);
     expect(keyboard.setCapture).not.toHaveBeenCalled();
+  });
+});
+
+describe('拖入的文件', () => {
+  it('合格的绝对路径交给服务登记，页面只得到编号与显示名', () => {
+    const { invoke, droppedFiles } = setup();
+    const paths = ['D:/roms/idle.nes', 'D:/disks/sys.img'];
+    expect(invoke(SHELL_CHANNELS.registerDroppedFiles, paths)).toEqual([
+      { id: 1, name: 'idle.nes' },
+      { id: 2, name: 'sys.img' }
+    ]);
+    expect(droppedFiles.register).toHaveBeenCalledWith(paths);
+  });
+
+  it('不是数组、超过上限、含非字符串、空字符串、相对路径的整批丢弃', () => {
+    const { invoke, droppedFiles } = setup();
+    const tooMany = Array.from({ length: 17 }, (_, index) => `D:/roms/${index}.nes`);
+    for (const paths of [undefined, null, 'D:/a.nes', {}, tooMany, ['D:/a.nes', 5], [''], ['roms/a.nes'], ['../a.nes'], ['D:/a.nes', 'b.nes']]) {
+      expect(invoke(SHELL_CHANNELS.registerDroppedFiles, paths)).toEqual([]);
+    }
+    expect(droppedFiles.register).not.toHaveBeenCalled();
+  });
+
+  it('不可信的发送方不登记', () => {
+    const { invoke, droppedFiles } = setup(false);
+    expect(invoke(SHELL_CHANNELS.registerDroppedFiles, ['D:/roms/idle.nes'])).toEqual([]);
+    expect(droppedFiles.register).not.toHaveBeenCalled();
   });
 });
 

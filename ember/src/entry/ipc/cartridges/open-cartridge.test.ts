@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-cartridge.test.ts
- * 说明：cartridges.open 的测试：弹出的文件选择只显示 .nes、选定的路径交给核心的 cartridges.load、取消时返回明确的结果而不是错误、加载失败的错误码原样返回。
+ * 说明：cartridges.open 的测试：弹出的文件选择只显示 .nes、选定的路径交给核心的 cartridges.load、取消时返回明确的结果而不是错误、加载失败的错误码原样返回；给出 droppedId 时不弹窗口，用拖入窗口的文件，编号无效或不是 .nes 时返回 cartridges.droppedNotFound。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -15,6 +15,7 @@ import type { RecentCartridgesService } from '../../../contracts/cartridges/rece
 import type { CoreGateway } from '../../../contracts/core-gateway/core-gateway';
 import { CoreRequestError } from '../../../contracts/core-gateway/core-messages';
 import { RUNTIME_SCHEMA } from '../../../contracts/runtime/generated/runtime';
+import type { DroppedFilesService } from '../../../contracts/shell/dropped-files';
 import type { FileDialog } from '../../../contracts/shell/file-dialog';
 import { handleMainRequest } from '../core/main-request-ipc';
 import { createOpenCartridgeHandler } from './open-cartridge';
@@ -56,9 +57,15 @@ function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = v
     resolve: () => undefined,
     flush: () => undefined
   };
-  const handler = createOpenCartridgeHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, core, recent });
-  return { gateway, request, calls, call: () => handleMainRequest({ handlers: { 'cartridges.open': handler }, modules: [CARTRIDGES_SCHEMA], schemas }, 'cartridges.open', {}) };
+  const handler = createOpenCartridgeHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, dropped: DROPPED, core, recent });
+  return { gateway, request, calls, call: (params: unknown = {}) => handleMainRequest({ handlers: { 'cartridges.open': handler }, modules: [CARTRIDGES_SCHEMA], schemas }, 'cartridges.open', params) };
 }
+
+/** 拖入窗口的文件：1 是卡带，2 不是。 */
+const DROPPED: DroppedFilesService = {
+  register: () => [],
+  resolve: (id) => (id === 1 ? 'D:/dropped/idle.NES' : id === 2 ? 'D:/dropped/notes.txt' : undefined)
+};
 
 describe('cartridges.open', () => {
   it('文件选择只显示 .nes，选定的路径交给核心的 cartridges.load', async () => {
@@ -93,6 +100,32 @@ describe('cartridges.open', () => {
   it('文件选择窗口本身出错时返回 core.internal', async () => {
     const { request, call } = setup(vi.fn().mockRejectedValue(new Error('窗口失败')));
     await expect(call()).resolves.toMatchObject({ ok: false, error: { code: 'core.internal' } });
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('给出 droppedId 时不弹窗口，用拖入窗口的文件加载并记入最近打开', async () => {
+    const pick = vi.fn();
+    const { request, calls, call } = setup(pick);
+    await expect(call({ droppedId: 1 })).resolves.toEqual({ ok: true, result: { canceled: false, loaded: LOADED } });
+    expect(pick).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledWith('cartridges.load', { path: 'D:/dropped/idle.NES' });
+    expect(calls).toEqual(['add D:/dropped/idle.NES', 'request cartridges.load']);
+  });
+
+  it('拖入的文件不是 .nes 或编号没有登记过时返回 cartridges.droppedNotFound，不调用核心', async () => {
+    const { request, calls, call } = setup(vi.fn());
+    for (const droppedId of [2, 99]) {
+      await expect(call({ droppedId })).resolves.toMatchObject({ ok: false, error: { code: 'cartridges.droppedNotFound' } });
+    }
+    expect(request).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+  });
+
+  it('droppedId 不合格时在入口被拒绝', async () => {
+    const { request, call } = setup(vi.fn());
+    for (const droppedId of [0, -1, 1.5, '1']) {
+      await expect(call({ droppedId })).resolves.toMatchObject({ ok: false, error: { code: 'core.invalidParams' } });
+    }
     expect(request).not.toHaveBeenCalled();
   });
 });

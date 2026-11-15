@@ -78,6 +78,37 @@ describe('MediaController', () => {
     detach();
   });
 
+  it('载入拖入的镜像：请求带上拖入文件的编号，不弹窗口，载入后刷新状态；编号失效时用通知提示', async () => {
+    const { fake, controller, detach, notices } = await setup();
+    fake.droppedFiles.set(7, 'dropped.img');
+    controller.insertFloppy(0, 7);
+    await settle();
+    expect(fake.calls).toContain('media.openFloppy {"drive":0,"droppedId":7}');
+    expect(controller.snapshot().floppies[0]?.fileName).toBe('dropped.img');
+    expect(notices).toEqual([]);
+
+    controller.insertFloppy(0, 8);
+    await settle();
+    expect(notices).toEqual([{ text: '载入软盘镜像失败：拖入的文件已失效，请重新拖入', kind: 'error' }]);
+    detach();
+  });
+
+  it('载入拖入的声音文件：只载入磁带，不自动播放；编号失效时用通知提示', async () => {
+    const { fake, controller, detach, notices } = await setup();
+    fake.tape = tapeStatus({ connected: true });
+    fake.droppedFiles.set(3, 'lesson.m4a');
+    controller.loadDroppedTape(3);
+    await settle();
+    expect(fake.calls).toContain('media.openTape {"droppedId":3}');
+    expect(fake.count('media.tapePlay')).toBe(0);
+    expect(controller.snapshot().tape).toMatchObject({ loaded: true, fileName: 'lesson.m4a', mode: 'stopped' });
+
+    controller.loadDroppedTape(4);
+    await settle();
+    expect(notices).toEqual([{ text: '载入磁带失败：拖入的文件已失效，请重新拖入', kind: 'error' }]);
+    detach();
+  });
+
   it('取出、保存镜像、写保护：各发出对应的请求并刷新状态', async () => {
     const { fake, controller, detach } = await setup([floppyStatus(0, 'sys.img', { modified: true }), floppyStatus(1)]);
 

@@ -165,7 +165,7 @@ describe('createAppWindow', () => {
   it('没有保存的位置时按最小尺寸创建，内容就绪后显示', () => {
     createAppWindow(OPTIONS);
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ width: 560, height: 529, minWidth: 560, minHeight: 529 });
+    expect(window.options).toMatchObject({ width: 480, height: 463, minWidth: 480, minHeight: 463 });
     expect(window.options.x).toBeUndefined();
     expect(window.setBounds).not.toHaveBeenCalled();
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
@@ -176,8 +176,8 @@ describe('createAppWindow', () => {
   it('有保存的位置时按位置创建，大小仍是最小尺寸，不恢复最大化', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 100, y: 80 } });
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ x: 100, y: 80, width: 560, height: 529 });
-    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 560, height: 529 });
+    expect(window.options).toMatchObject({ x: 100, y: 80, width: 480, height: 463 });
+    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 480, height: 463 });
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
     ready();
     expect(window.show).toHaveBeenCalledTimes(1);
@@ -188,7 +188,7 @@ describe('createAppWindow', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 5000, y: 5000 } });
     const window = created[created.length - 1]!;
     expect(window.options.x).toBeUndefined();
-    expect(window.options).toMatchObject({ width: 560, height: 529 });
+    expect(window.options).toMatchObject({ width: 480, height: 463 });
     expect(window.setBounds).not.toHaveBeenCalled();
   });
 

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isTextEditingTarget } from './editable-target';
+import { isSelectTrigger, isTextEditingTarget } from './editable-target';
 
 /** 造一个带指定标签与属性的元素。 */
 function element(tag: string, attributes: Record<string, string> = {}): HTMLElement {
@@ -37,5 +37,16 @@ describe('isTextEditingTarget', () => {
 
   it('普通元素、body、window 与空值不算', () => {
     for (const target of [element('div'), element('button'), document.body, window, null, undefined, 'x', 3]) expect(isTextEditingTarget(target)).toBe(false);
+  });
+});
+
+describe('isSelectTrigger', () => {
+  it('role=combobox 的元素及其内部元素算下拉列表的触发器，其他不算', () => {
+    const trigger = element('button', { role: 'combobox' });
+    const inner = document.createElement('span');
+    trigger.append(inner);
+    expect(isSelectTrigger(trigger)).toBe(true);
+    expect(isSelectTrigger(inner)).toBe(true);
+    for (const target of [element('button'), element('div'), window, null, undefined, 'x']) expect(isSelectTrigger(target)).toBe(false);
   });
 });

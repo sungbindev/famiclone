@@ -37,10 +37,12 @@ const TEXT = {
   noDevices: '没有设备：打开卡带或用整机机型开机后才有设备。'
 } as const;
 
-/** 状态列的宽度（像素），各行相同才能对齐。 */
-const STATE_WIDTH = 128;
-/** 磁带位置列的宽度（像素）。 */
-const POSITION_WIDTH = 128;
+/** 软驱状态列的宽度（像素），能放下“读写中（磁道 79）”；软驱的各行相同才能对齐。 */
+const STATE_WIDTH = 104;
+/** 磁带机状态列的宽度（像素），能放下“播放中”“录音中”；让磁带名在最小窗口下也能显示一部分。 */
+const TAPE_STATE_WIDTH = 56;
+/** 磁带位置列的宽度（像素）；能放下“28:09 / 28:09”。 */
+const POSITION_WIDTH = 92;
 
 /** 设备面板的属性。 */
 export interface MediaPanelProps {
@@ -94,7 +96,7 @@ function TapeRow({ controller, tape, onLoaded }: { readonly controller: MediaCon
       leading={TEXT.tape}
       title={tapeNameText(tape)}
       cells={[
-        { key: 'state', content: tapeStateText(tape), width: STATE_WIDTH, muted: true },
+        { key: 'state', content: tapeStateText(tape), width: TAPE_STATE_WIDTH, muted: true },
         { key: 'position', content: tapePositionText(tape), width: POSITION_WIDTH, muted: true }
       ]}
       actions={

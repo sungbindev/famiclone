@@ -4,7 +4,7 @@
  * 说明：底部面板“运行”内容的测试：没有分组标题，不显示机器信息（在系统栏）、四个控制按钮的名称与各状态下的可用性、点击发出的请求、声音（静音按钮、音量滑块与数值）、不显示速度。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
+ * 日期：2026-11-16
  * 备注：用假的核心接口与真实的控制器；按钮的请求经控制器发往假核心，结果取自假核心的记录。
  * ------------------------------------------------------------------------
  */
@@ -35,7 +35,7 @@ async function setup(status = machineStatus('off', 'paused'), onActionDone?: () 
 describe('面板内容', () => {
   it('不显示主机型号、卡带与 mapper 插件（都在系统栏），也没有分组标题与“状态”', async () => {
     await setup(machineStatus('on', 'running', 'D:\\roms\\nestest.nes'));
-    for (const text of ['主机型号', '经典 FC', '卡带', 'nestest.nes', 'mapper 插件', 'NROM', '状态']) expect(screen.queryByText(text)).toBeNull();
+    for (const text of ['主机型号', '卡带', 'nestest.nes', 'mapper 插件', 'NROM', '状态']) expect(screen.queryByText(text)).toBeNull();
     expect(screen.queryByRole('heading')).toBeNull();
   });
 });

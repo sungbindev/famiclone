@@ -16,7 +16,8 @@
 import { iconPlayerPause, iconPlayerPlay } from '@rujianjs/ui-kit';
 import type { ComponentType } from 'react';
 import type { ShellModule, ShellPageProps, ShellPanelDefinition, ShellSubmenuEntry } from '../shell/shell-registry';
-import { CLASSIC_MACHINE, type RuntimeController } from './runtime-controller';
+import { machineChoices } from './machine-choices';
+import type { RuntimeController } from './runtime-controller';
 import { machineState, pauseToggleText, powerToggleText, stateText } from './runtime-status';
 import { RuntimeHost } from './RuntimeHost';
 import { RuntimePage } from './RuntimePage';
@@ -52,19 +53,8 @@ const TEXT = {
   softReset: '软复位',
   hardReset: '硬复位',
   mute: '静音',
-  familyKeyboard: '接入 Family BASIC 键盘',
-  unsupported: '暂未支持',
-  noBios: '未添加 BIOS，请在设置里添加'
+  familyKeyboard: '接入 Family BASIC 键盘'
 } as const;
-
-/** “选择机型”里的机型，顺序固定：经典 FC 总是可选，整机机型要程序里有实现并已添加 BIOS。 */
-const MACHINES: ReadonlyArray<{ readonly id: string; readonly label: string }> = [
-  { id: CLASSIC_MACHINE, label: '经典 FC' },
-  { id: 'sb97', label: '小霸王 97' },
-  { id: 'sb2000', label: '小霸王 2000' },
-  { id: 'bbk10', label: '步步高 1.0' },
-  { id: 'bbk20', label: '步步高 2.0' }
-];
 
 /** 把只需要控制器的组件绑定成不带属性的组件。 */
 function bind(Component: ComponentType<RuntimeStatusItemProps>, controller: RuntimeController): ComponentType {
@@ -81,14 +71,12 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
   /** “选择机型”的子菜单项：已选的打对勾；整机机型程序里有实现且已添加 BIOS 才可选，否则置灰并在右侧注明原因。 */
   const machineEntries = (): readonly ShellSubmenuEntry[] => {
     const { machines, selectedMachine } = controller.snapshot();
-    return MACHINES.map((machine, index) => {
-      const info = machines.find((item) => item.id === machine.id);
-      const hint = machine.id === CLASSIC_MACHINE ? undefined : info === undefined || !info.supported ? TEXT.unsupported : info.bios === undefined ? TEXT.noBios : undefined;
+    return machineChoices(machines).map((machine, index) => {
       return {
         id: machine.id,
         label: machine.label,
         checked: machine.id === selectedMachine,
-        ...(hint === undefined ? {} : { hint, disabled: true }),
+        ...(machine.hint === undefined ? {} : { hint: machine.hint, disabled: true }),
         ...(index === 1 ? { separatorBefore: true } : {}),
         run: () => controller.selectMachine(machine.id)
       };

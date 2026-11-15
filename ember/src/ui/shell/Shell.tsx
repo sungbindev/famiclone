@@ -42,7 +42,7 @@ import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import type { WindowState } from '../../contracts/shell/window-control';
 import { buildShellRegistry, type ShellRegistry } from './build-registry';
-import { isTextEditingTarget } from './editable-target';
+import { isSelectTrigger, isTextEditingTarget } from './editable-target';
 import { EmberLogo } from './EmberLogo';
 import { ShellApiContext } from './shell-context';
 import { SHELL_MODULE } from './shell-module';
@@ -167,7 +167,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const handlePointerUp = (event: PointerEvent): void => {
-      if (isTextEditingTarget(event.target)) return;
+      if (isTextEditingTarget(event.target) || isSelectTrigger(event.target)) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
         if (!live.current.menuOpen) focusScreen();

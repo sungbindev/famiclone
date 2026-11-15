@@ -119,11 +119,28 @@
   margin: 0;
 }
 
-/* 运行面板：四个控制按钮与声音排在同一行 */
+/* 运行面板两行：第一行四个控制按钮，第二行左边机型选择、右边声音 */
 .ember-run-panel {
   display: flex;
+  flex-direction: column;
   gap: var(--space-md);
+}
+
+.ember-run-panel__second {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.ember-machine-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--action-gap);
+}
+
+.ember-machine-picker__select {
+  width: 120px;
 }
 
 .ember-run-panel__buttons {

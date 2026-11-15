@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：editable-target.ts
- * 说明：判断键盘事件的目标是不是在编辑文字的控件：文本输入框、多行文字框、下拉框与 contenteditable 的元素。
+ * 说明：判断事件的目标是不是在编辑文字的控件（文本输入框、多行文字框、下拉框与 contenteditable 的元素），以及是不是下拉列表的触发器。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -17,6 +17,16 @@ interface EditableLike {
   readonly tagName?: unknown;
   readonly isContentEditable?: unknown;
   readonly type?: unknown;
+}
+
+/**
+ * 事件的目标是不是下拉列表的触发器（role=combobox）。弹层打开期间触发器必须保持焦点，失焦弹层就关闭。
+ * @param target 事件目标。
+ */
+export function isSelectTrigger(target: unknown): boolean {
+  if (typeof target !== 'object' || target === null) return false;
+  const closest = (target as { closest?: unknown }).closest;
+  return typeof closest === 'function' && (target as Element).closest('[role="combobox"]') !== null;
 }
 
 /**

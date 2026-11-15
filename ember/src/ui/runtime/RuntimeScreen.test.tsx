@@ -47,7 +47,7 @@ function fakePort() {
 let resizeCallback: ((entries: unknown[]) => void) | undefined;
 
 /** 渲染组件，返回画面区与假接口。 */
-function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean } = {}) {
+function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean; captureMouse?: boolean } = {}) {
   const requestPorts = vi.fn();
   const bridge = { streams: { requestPorts }, core: {}, main: {}, onCoreEvent: () => () => undefined, getCoreStatus: () => Promise.reject(new Error('未使用')) } as unknown as EmberBridge;
   const screenRef: RefObject<HTMLDivElement | null> = createRef<HTMLDivElement>();
@@ -59,7 +59,7 @@ function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; sho
   const screenElement = view.getByRole('application', { name: '模拟器画面' });
   const worker = FakeWorker.instances[FakeWorker.instances.length - 1];
   if (worker === undefined) throw new Error('没有创建 Worker');
-  return { view, screenElement, worker, requestPorts, rerender: (next: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean }) => view.rerender(<UiProvider><RuntimeScreen bridge={bridge} screenRef={screenRef} {...next} /></UiProvider>) };
+  return { view, screenElement, worker, requestPorts, rerender: (next: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean; captureMouse?: boolean }) => view.rerender(<UiProvider><RuntimeScreen bridge={bridge} screenRef={screenRef} {...next} /></UiProvider>) };
 }
 
 /** 模拟预加载脚本交来端口。 */
@@ -278,6 +278,132 @@ describe('RuntimeScreen：鼠标', () => {
     fireEvent.pointerMove(screenElement, { clientX: 10, clientY: 10 });
     expect(input.postMessage).not.toHaveBeenCalled();
     expect(fireEvent.contextMenu(screenElement)).toBe(false);
+  });
+});
+
+/** 把画面区当作指针锁定的对象：requestPointerLock 锁定并触发 pointerlockchange，返回解锁函数。 */
+function stubPointerLock(screenElement: HTMLElement) {
+  let locked: Element | null = null;
+  Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => locked });
+  const request = vi.fn(() => {
+    locked = screenElement;
+    document.dispatchEvent(new Event('pointerlockchange'));
+  });
+  screenElement.requestPointerLock = request as unknown as typeof screenElement.requestPointerLock;
+  document.exitPointerLock = vi.fn(() => {
+    locked = null;
+    document.dispatchEvent(new Event('pointerlockchange'));
+  });
+  return {
+    request,
+    unlock: () => {
+      locked = null;
+      act(() => {
+        document.dispatchEvent(new Event('pointerlockchange'));
+      });
+    }
+  };
+}
+
+/** 带相对位移的指针移动（jsdom 的事件构造参数不认 movementX）。 */
+function moveBy(element: HTMLElement, movementX: number, movementY: number): void {
+  const event = new MouseEvent('pointermove', { bubbles: true, buttons: 0 });
+  Object.defineProperty(event, 'movementX', { value: movementX });
+  Object.defineProperty(event, 'movementY', { value: movementY });
+  act(() => {
+    element.dispatchEvent(event);
+  });
+}
+
+describe('RuntimeScreen：捕获鼠标（指针锁定）', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(document, 'pointerLockElement');
+  });
+
+  it('关闭时点击画面不请求指针锁定，按下照常送给机器', () => {
+    const { screenElement } = setup();
+    const lock = stubPointerLock(screenElement);
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    sizeScreen(screenElement);
+    fireEvent.pointerDown(screenElement, { clientX: 256, clientY: 240, buttons: 1 });
+    expect(lock.request).not.toHaveBeenCalled();
+    expect(input.postMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('开启时第一次点击只用来捕获，不把这次按下送给机器', () => {
+    const { screenElement } = setup({ captureMouse: true });
+    const lock = stubPointerLock(screenElement);
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    sizeScreen(screenElement);
+    fireEvent.pointerDown(screenElement, { clientX: 256, clientY: 240, buttons: 1 });
+    expect(lock.request).toHaveBeenCalledTimes(1);
+    expect(input.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('捕获期间：移动、按下、松开、滚轮都只有相对位移（CSS 像素换算成标准帧的像素），位置从画面中心累加并限制在整帧内', () => {
+    const { screenElement } = setup({ captureMouse: true });
+    const lock = stubPointerLock(screenElement);
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    sizeScreen(screenElement);
+    fireEvent.pointerDown(screenElement, { clientX: 256, clientY: 240, buttons: 1 });
+    expect(lock.request).toHaveBeenCalled();
+    moveBy(screenElement, 10, 14);
+    fireEvent.pointerDown(screenElement, { buttons: 1 });
+    fireEvent.pointerUp(screenElement, { buttons: 0 });
+    fireEvent.wheel(screenElement, { deltaY: 100 });
+    moveBy(screenElement, 100000, -100000);
+    const common = { type: 'mouse', buttons: 0 };
+    expect(input.postMessage.mock.calls).toEqual([
+      [{ ...common, kind: 'move', x: 133, y: 128, dx: 5, dy: 8, wheel: 0 }],
+      [{ ...common, kind: 'down', x: 133, y: 128, dx: 0, dy: 0, buttons: 1, wheel: 0 }],
+      [{ ...common, kind: 'up', x: 133, y: 128, dx: 0, dy: 0, wheel: 0 }],
+      [{ ...common, kind: 'wheel', x: 133, y: 128, dx: 0, dy: 0, wheel: 1 }],
+      [{ ...common, kind: 'move', x: 256, y: 0, dx: 50000, dy: -57142.86, wheel: 0 }]
+    ]);
+  });
+
+  it('退出捕获（按 Esc）时上报一次离开并松开按键，之后回到绝对位置', () => {
+    const { screenElement } = setup({ captureMouse: true });
+    const lock = stubPointerLock(screenElement);
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    sizeScreen(screenElement);
+    fireEvent.pointerDown(screenElement, { clientX: 256, clientY: 240, buttons: 1 });
+    moveBy(screenElement, 10, 14);
+    input.postMessage.mockClear();
+    lock.unlock();
+    expect(input.postMessage.mock.calls).toEqual([[{ type: 'mouse', kind: 'leave', x: 133, y: 128, dx: 0, dy: 0, buttons: 0, wheel: 0 }]]);
+    fireEvent.pointerMove(screenElement, { clientX: 256, clientY: 240, buttons: 0 });
+    expect(input.postMessage.mock.calls[1]?.[0]).toMatchObject({ kind: 'move', x: 128, y: 120, dx: 0, dy: 0 });
+  });
+
+  it('捕获期间双击右键释放捕获，第二次右键按下不送给机器；单击右键照常送出', () => {
+    const { screenElement } = setup({ captureMouse: true });
+    const lock = stubPointerLock(screenElement);
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    sizeScreen(screenElement);
+    fireEvent.pointerDown(screenElement, { clientX: 256, clientY: 240, buttons: 1 });
+    expect(lock.request).toHaveBeenCalled();
+    fireEvent.pointerDown(screenElement, { button: 2, buttons: 2 });
+    expect(input.postMessage).toHaveBeenCalledTimes(1);
+    expect(input.postMessage.mock.calls[0]?.[0]).toMatchObject({ kind: 'down', buttons: 2 });
+    fireEvent.pointerDown(screenElement, { button: 2, buttons: 2 });
+    expect(document.exitPointerLock).toHaveBeenCalledTimes(1);
+    expect(input.postMessage.mock.calls.at(-1)?.[0]).toMatchObject({ kind: 'leave', buttons: 0 });
+  });
+
+  it('关掉设置时把已有的捕获退掉', () => {
+    const { screenElement, rerender } = setup({ captureMouse: true });
+    stubPointerLock(screenElement);
+    deliverPorts(fakePort(), fakePort());
+    sizeScreen(screenElement);
+    fireEvent.pointerDown(screenElement, { clientX: 256, clientY: 240, buttons: 1 });
+    rerender({ captureMouse: false });
+    expect(document.exitPointerLock).toHaveBeenCalled();
   });
 });
 

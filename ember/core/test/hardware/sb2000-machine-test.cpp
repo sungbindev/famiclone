@@ -89,6 +89,12 @@ void dumpFrame(const hw::FrameBuffer& picture, const std::string& path) {
 
 std::uint8_t peek(Sb2000Machine& machine, std::uint16_t address) { return machine.peekCpuBus(address); }
 
+/** 记录软驱马达开关通知的接收方。 */
+struct MotorRecorder final : hw::FloppyActivity {
+  std::vector<std::pair<unsigned, bool>> changes;
+  void motorChanged(unsigned drive, bool on) override { changes.emplace_back(drive, on); }
+};
+
 /** 环境变量 EMBER_SB2000_DUMP 的值；没有设置时为空。 */
 std::string dumpPath() {
 #ifdef _MSC_VER
@@ -283,7 +289,8 @@ TEST(Sb2000Machine, RealBiosBootsTheSystemDemoDiskFromTheFloppyDrive) {
   std::vector<std::uint8_t> bios = realBios();
   std::vector<std::uint8_t> disk = realFloppy(std::filesystem::path(u8"reference/floppy-images/sb2000/FLPPY0系统演示.img"));
   if (bios.empty() || disk.empty()) GTEST_SKIP() << "没有找到 BIOS 或系统演示盘";
-  Sb2000Machine machine(std::move(bios));
+  MotorRecorder recorder;
+  Sb2000Machine machine(std::move(bios), nullptr, &recorder);
   ASSERT_EQ(machine.floppyDriveCount(), 1U);
   machine.floppyDrive(0)->insertImage(std::move(disk), false, "demo.img");
   machine.powerOn();
@@ -296,6 +303,8 @@ TEST(Sb2000Machine, RealBiosBootsTheSystemDemoDiskFromTheFloppyDrive) {
   const hw::FrameBuffer picture = machine.frame();
   if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(picture, dump + ".demo.ppm");
   EXPECT_GT(highestCylinder, 40U) << "BIOS 把磁头移到了盘的后部读系统";
+  ASSERT_FALSE(recorder.changes.empty()) << "读盘时马达开关要通知接收方";
+  EXPECT_EQ(recorder.changes.front(), (std::pair<unsigned, bool>{0, true})) << "第一次通知是驱动器 0 的马达开始转";
   const std::set<std::uint32_t> colors(picture.pixels.begin(), picture.pixels.end());
   EXPECT_GT(colors.size(), 4U) << "演示画面有多种颜色";
 }

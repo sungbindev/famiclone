@@ -374,7 +374,10 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
             fullScreen ? undefined : (
               <ActivityBar
                 aria-label={TEXT.activityLabel}
-                items={registry.activityItems.map((item) => ({ id: item.id, label: item.label, icon: item.icon, ...(item.separatorBefore ? { separatorBefore: true } : {}) }))}
+                items={registry.activityItems.map((item) => {
+                  const lamp = item.lamp?.();
+                  return { id: item.id, label: item.label, icon: item.icon, ...(item.separatorBefore ? { separatorBefore: true } : {}), ...(lamp === undefined ? {} : { lamp }) };
+                })}
                 {...(activeActivityId === undefined ? {} : { activeId: activeActivityId })}
                 {...(hasSideBar ? { sideBarExpanded: sideBarOpen } : {})}
                 onSelect={handleActivitySelect}

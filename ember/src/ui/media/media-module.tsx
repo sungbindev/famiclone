@@ -20,7 +20,8 @@ export const MEDIA_DEVICES_ACTIVITY_ID = 'media.devices';
 
 /** 用户可见的文字。 */
 const TEXT = {
-  devices: '设备'
+  devices: '设备',
+  floppyLamp: '软驱读写灯'
 } as const;
 
 /**
@@ -35,7 +36,12 @@ export function createMediaModule(controller: MediaController): ShellModule {
         id: MEDIA_DEVICES_ACTIVITY_ID,
         label: TEXT.devices,
         icon: iconDevices,
-        sideBar: { title: TEXT.devices, Component: () => <MediaSideBar controller={controller} /> }
+        sideBar: { title: TEXT.devices, Component: () => <MediaSideBar controller={controller} /> },
+        // 亮着 = 任一软驱的马达在转（真机的读写灯跟马达一起亮灭），没有软驱时不显示。
+        lamp: () => {
+          const { floppies } = controller.snapshot();
+          return floppies.length === 0 ? undefined : { lit: floppies.some((floppy) => floppy.motor), label: TEXT.floppyLamp };
+        }
       }
     ],
     Host: (props: ShellPageProps) => <MediaHost {...props} controller={controller} />

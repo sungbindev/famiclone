@@ -28,7 +28,7 @@ async function setup(floppies?: FloppyStatus[]) {
   const fake = new FakeMediaBackend();
   if (floppies !== undefined) fake.floppies = floppies;
   const controller = new MediaController();
-  controller.attach(fake.backend, { addMessage: () => undefined, notify: () => undefined });
+  controller.attach(fake.backend, { addMessage: () => undefined, notify: () => undefined, refresh: () => undefined });
   render(
     <UiProvider>
       <MediaSideBar controller={controller} />

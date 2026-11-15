@@ -24,6 +24,8 @@ export interface MediaHostActions {
   addMessage(message: ShellMessageInput): void;
   /** 用通知提示。 */
   notify(text: string, kind: 'info' | 'error'): void;
+  /** 状态变化后让外壳重新渲染活动栏（软驱读写灯取自这里的状态）。 */
+  refresh(): void;
 }
 
 /** 设备边栏需要显示的全部状态。 */
@@ -281,5 +283,6 @@ export class MediaController {
     if (JSON.stringify(next) === JSON.stringify(this.state)) return;
     this.state = next;
     for (const listener of this.listeners) listener();
+    this.attachment?.host.refresh();
   }
 }

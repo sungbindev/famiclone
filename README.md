@@ -73,7 +73,7 @@ npm run release:check  # 发布前检查
 npm run release:verify # 打包后在临时目录里创建、安装并构建四个模板
 ```
 
-构建 cc65 与模拟器的脚本、升级 cc65 的步骤见 [cc65 工具链](packages/fcdev/docs/04-cc65工具链.md) 与 [模拟器与调试](packages/fcdev/docs/05-模拟器与调试.md)。设置环境变量 `FCDEV_TEST_FIRMWARE` 指向 SB2000 的 BIOS 文件，测试会额外在模拟器里运行 SB2000 程序；设置 `FCDEV_TEST_NES_ROM` 指向一个 NROM 的 `.nes` 文件，测试会额外反汇编它。
+构建 cc65 与模拟器的脚本、升级 cc65 的步骤见 [cc65 工具链](packages/fcdev/docs/04-cc65工具链.md) 与 [模拟器与调试](packages/fcdev/docs/05-模拟器与调试.md)。设置环境变量 `FCDEV_EMULATOR` 指向 Ember 的可执行文件，测试会额外在 Ember 里运行 NES 与 SB2000 程序（BIOS 用仓库里的 `reference/rom/SB2K_BIOS.NES`，也可用 `FCDEV_TEST_FIRMWARE` 指向别的 BIOS 文件）；设置 `FCDEV_TEST_NES_ROM` 指向一个 NROM 的 `.nes` 文件，测试会额外反汇编它。
 
 ## 许可证
 

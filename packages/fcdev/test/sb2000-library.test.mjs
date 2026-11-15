@@ -4,13 +4,13 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
-// 备注：Ember 还没有支持学习机整机，整组暂时跳过（见 sb2000-runner.mjs）；用例保留，等 Ember 支持 SB2000 后改用调试服务重写会话类即可恢复；测试程序在 test/fixtures/sb2000/。
+// 备注：整机经 Ember 的调试服务启动（见 sb2000-runner.mjs）；环境不齐（Ember、cc65、调试 SDK、BIOS）时整组跳过；测试程序在 test/fixtures/sb2000/。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { listFat12, readFat12File } from '../src/packagers/index.mjs';
 import { createTempDir } from './helpers.mjs';
-import { imageFile, SCAN, SKIP_WITHOUT_SB2000_RUNTIME, startSb2000Program } from './sb2000-runner.mjs';
+import { imageFile, KEY, SKIP_WITHOUT_SB2000_RUNTIME, startSb2000Program } from './sb2000-runner.mjs';
 
 /** 磁盘操作比较慢，文件类测试程序最多运行的帧数 */
 const DISK_MAX_FRAMES = 80000;
@@ -82,17 +82,17 @@ describe('SB2000 运行库（在 Ember 里运行）', { skip: SKIP_WITHOUT_SB200
     try {
       /** 每个停靠点之后脚本要注入的动作，顺序与 input.c 里的 sb_test_sync 一一对应 */
       const actions = [
-        async () => { await session.tap(SCAN.a); await session.tap(SCAN.b); },
-        async () => { await session.tap(SCAN.c); },
-        async () => { await session.tap(SCAN.a); await session.tap(SCAN.b); await session.tap(SCAN.c); },
-        async () => { await session.tap(0x3b); },
-        async () => { await session.command('pad 0 01'); },
-        async () => { await session.command('pad 0 00'); },
-        async () => { await session.command('pad 0 02'); },
-        async () => { await session.command('mouse move 10 5'); },
-        async () => { await session.command('mouse btn 4'); },
-        async () => { await session.command('mouse btn 0'); },
-        async () => { await session.tap(0x01); },
+        async () => { await session.tap(KEY.a); await session.tap(KEY.b); },
+        async () => { await session.tap(KEY.c); },
+        async () => { await session.tap(KEY.a); await session.tap(KEY.b); await session.tap(KEY.c); },
+        async () => { await session.tap(KEY.f1); },
+        async () => { await session.pad(0x01); },
+        async () => { await session.pad(0x00); },
+        async () => { await session.pad(0x02); },
+        async () => { await session.mouse({ kind: 'move', dx: 10, dy: 5 }); },
+        async () => { await session.mouse({ kind: 'down', buttons: 1 }); },
+        async () => { await session.mouse({ kind: 'up', buttons: 0 }); },
+        async () => { await session.tap(KEY.escape); },
       ];
       for (const action of actions) {
         assert.equal(await session.runToStop(), 'sync');
@@ -160,8 +160,8 @@ describe('SB2000 运行库（在 Ember 里运行）', { skip: SKIP_WITHOUT_SB200
     const session = await startSb2000Program(temp, { sources: ['peripheral.c'] });
     try {
       assert.equal(await session.runToStop(DISK_MAX_FRAMES), 'sync');
-      await session.tap(SCAN.a);
-      await session.tap(SCAN[1]);
+      await session.tap(KEY.a);
+      await session.tap(KEY[1]);
       assert.equal(await session.runToStop(DISK_MAX_FRAMES), 'done');
       await session.assertAllPassed(26);
     } finally {

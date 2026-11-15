@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { MouseInputMessage } from '../../contracts/stream-ports/stream-messages';
-import { MouseCapture, toFramePoint, type PointerBounds, type PointerView } from './pointer-capture';
+import { frameUnitsPerPixel, MouseCapture, toFramePoint, type PointerBounds, type PointerView } from './pointer-capture';
 
 /** 画面区 512x480 CSS 像素，画布与它一一对应。 */
 const BOUNDS: PointerBounds = { left: 0, top: 0, width: 512, height: 480 };
@@ -76,6 +76,45 @@ describe('toFramePoint', () => {
   it('画面区或画布的尺寸无效时没有坐标', () => {
     expect(toFramePoint(1, 1, { left: 0, top: 0, width: 0, height: 480 }, VIEW)).toBeUndefined();
     expect(toFramePoint(1, 1, BOUNDS, { ...VIEW, canvasWidth: 0 })).toBeUndefined();
+  });
+});
+
+describe('frameUnitsPerPixel', () => {
+  it('512x480 里 8:7 的画面宽 512、高 420：横向 0.5、纵向 240/420 个帧单位每 CSS 像素', () => {
+    const scale = frameUnitsPerPixel(BOUNDS, VIEW);
+    expect(scale?.x).toBeCloseTo(0.5, 6);
+    expect(scale?.y).toBeCloseTo(240 / 420, 6);
+  });
+
+  it('画布的设备像素是 CSS 像素的两倍时，每个 CSS 像素对应的帧单位也是两倍', () => {
+    const scale = frameUnitsPerPixel({ left: 0, top: 0, width: 256, height: 240 }, VIEW);
+    expect(scale?.x).toBeCloseTo(1, 6);
+  });
+
+  it('画面区或画布的尺寸无效时没有比值', () => {
+    expect(frameUnitsPerPixel({ left: 0, top: 0, width: 0, height: 480 }, VIEW)).toBeUndefined();
+    expect(frameUnitsPerPixel(BOUNDS, { ...VIEW, canvasWidth: 0 })).toBeUndefined();
+  });
+});
+
+describe('MouseCapture.moveBy', () => {
+  it('从画面中心开始累加位移，位置限制在 0 到 256、0 到 240，位移保持原值', () => {
+    const sent: MouseInputMessage[] = [];
+    const capture = new MouseCapture((message) => sent.push(message));
+    capture.moveBy('move', 10, -20, 0);
+    capture.moveBy('move', 1000, 1000, 1);
+    expect(sent.map((message) => [message.x, message.y, message.dx, message.dy, message.buttons])).toEqual([
+      [138, 100, 10, -20, 0],
+      [256, 240, 1000, 1000, 1]
+    ]);
+  });
+
+  it('绝对位置上报之后的 moveBy 从那个位置开始', () => {
+    const sent: MouseInputMessage[] = [];
+    const capture = new MouseCapture((message) => sent.push(message));
+    capture.report('move', { x: 40, y: 50 }, 0);
+    capture.moveBy('down', 0, 0, 1);
+    expect(sent[1]).toMatchObject({ kind: 'down', x: 40, y: 50, dx: 0, dy: 0, buttons: 1 });
   });
 });
 

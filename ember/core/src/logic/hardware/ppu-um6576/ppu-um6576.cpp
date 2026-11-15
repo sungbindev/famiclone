@@ -136,6 +136,9 @@ hw::BusRead PpuUm6576::peek(std::uint16_t address) {
     case 0x2006:
     case 0x2009:
       return hw::driveBus(0);
+    case 0x3FFF:
+      // 真机实测读到 $68，原因不明
+      return hw::driveBus(0x68);
     default:
       if (address >= 0x2040 && address < 0x2080) return hw::driveBus(static_cast<std::uint8_t>(palette_[address & 0x3F] | 0x40));
       return hw::releaseBus();

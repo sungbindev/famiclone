@@ -220,6 +220,14 @@ TEST(MediaManager, WriteProtectCanBeSwitchedOnAndOff) {
   EXPECT_EQ(errorCodeOf([&] { rig.manager->floppyWriteProtect(params); }), api::ERROR_NO_DRIVE);
 }
 
+TEST(MediaManager, MotorChangesPublishAMediaChangedEvent) {
+  Rig rig;
+  rig.bootMachine();
+  const auto before = rig.events->count("media.changed");
+  rig.manager->motorChanged(0, true);
+  EXPECT_EQ(rig.events->count("media.changed"), before + 1);
+}
+
 TEST(MediaManager, SaveWithoutADiskFails) {
   Rig rig;
   rig.bootMachine();

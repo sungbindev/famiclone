@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 
+#include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/media/floppy-image-store.hpp"
 #include "contracts/media/media-service.hpp"
@@ -24,8 +25,8 @@
 
 namespace ember::logic::media {
 
-/** 介质服务。 */
-class MediaManager final : public contracts::media::MediaService {
+/** 介质服务；同时接收软驱马达的开关通知（变化时发 media.changed，软驱状态里的马达字段随之变化）。 */
+class MediaManager final : public contracts::media::MediaService, public contracts::hardware::FloppyActivity {
  public:
   MediaManager(std::shared_ptr<contracts::media::FloppyImageStore> store, std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events,
                std::shared_ptr<contracts::media::PrinterRecord> printerRecord);
@@ -38,6 +39,7 @@ class MediaManager final : public contracts::media::MediaService {
   contracts::media::MediaFloppyFaultResult floppyFault(const contracts::media::MediaFloppyFaultParams& params) override;
   [[nodiscard]] contracts::media::MediaPrinterStatusResult printerStatus() override;
   contracts::media::MediaPrinterFlushResult printerFlush() override;
+  void motorChanged(unsigned drive, bool on) override;
 
  private:
   /**

@@ -14,10 +14,17 @@ import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import type { ShellPageProps } from '../shell/shell-registry';
 import type { RuntimeController } from './runtime-controller';
 import { RuntimeScreen } from './RuntimeScreen';
+import { capturesMouse, machineState } from './runtime-status';
 import { cropLinesFor, nominalScreenRatio } from './screen-layout';
 import { ScreenOverlay } from './ScreenOverlay';
 import { useDisplaySettings } from './use-display-settings';
+import { useRuntimeState } from './use-runtime-state';
 import './ember-run.css';
+
+/** 用户可见的文字。 */
+const TEXT = {
+  captureHint: '点击画面捕获鼠标，双击右键或按 Esc 释放'
+} as const;
 
 /** 运行页的属性。 */
 export interface RuntimePageProps extends ShellPageProps {
@@ -30,7 +37,10 @@ export interface RuntimePageProps extends ShellPageProps {
  */
 export function RuntimePage({ bridge, controller }: RuntimePageProps) {
   const screenRef = useRef<HTMLDivElement>(null);
-  const { aspect, scaling, showAllLines } = useDisplaySettings(bridge);
+  const { aspect, scaling, showAllLines, captureMouse } = useDisplaySettings(bridge);
+  const { status } = useRuntimeState(controller);
+  // 只有机器带鼠标（整机机型，经典 FC 没有）时才捕获鼠标。
+  const capture = capturesMouse(captureMouse, status);
   // 画面框的样式：显示宽高比交给样式里的 aspect-ratio 与宽度计算；比例随画面比例与裁剪的行数变化。
   const frameStyle = useMemo(() => ({ '--ember-screen-ratio': nominalScreenRatio(aspect, cropLinesFor(showAllLines)) }) as CSSProperties, [aspect, showAllLines]);
   // 边栏上的操作结束后，控制器经它把焦点还给画面，键盘才能继续控制游戏。
@@ -42,8 +52,9 @@ export function RuntimePage({ bridge, controller }: RuntimePageProps) {
     <div className="ember-run">
       <div className="ember-run-stage">
         <div className="ember-run-frame" style={frameStyle}>
-          <RuntimeScreen bridge={bridge} screenRef={screenRef} aspect={aspect} scaling={scaling} showAllLines={showAllLines} />
+          <RuntimeScreen bridge={bridge} screenRef={screenRef} aspect={aspect} scaling={scaling} showAllLines={showAllLines} captureMouse={capture} />
           <ScreenOverlay controller={controller} />
+          {capture && machineState(status) !== 'none' && machineState(status) !== 'off' ? <div className="ember-run-hint">{TEXT.captureHint}</div> : null}
         </div>
       </div>
     </div>

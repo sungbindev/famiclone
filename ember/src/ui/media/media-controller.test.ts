@@ -25,14 +25,18 @@ async function setup(floppies?: FloppyStatus[]) {
   if (floppies !== undefined) fake.floppies = floppies;
   const messages: Array<{ level: string; text: string }> = [];
   const notices: Array<{ text: string; kind: string }> = [];
+  const refreshes = { count: 0 };
   const host: MediaHostActions = {
     addMessage: (message) => messages.push({ level: message.level, text: message.text }),
-    notify: (text, kind) => notices.push({ text, kind })
+    notify: (text, kind) => notices.push({ text, kind }),
+    refresh: () => {
+      refreshes.count += 1;
+    }
   };
   const controller = new MediaController();
   const detach = controller.attach(fake.backend, host);
   await settle();
-  return { fake, controller, detach, messages, notices };
+  return { fake, controller, detach, messages, notices, refreshes };
 }
 
 describe('MediaController', () => {
@@ -149,6 +153,19 @@ describe('MediaController', () => {
     fake.emit('media.changed', { device: 'floppy', drive: 0 });
     await settle();
     expect(changes).toBe(0);
+    detach();
+  });
+
+  it('读取到的状态有变化时让外壳重新渲染（活动栏的读写灯），没有变化时不刷新', async () => {
+    const { fake, refreshes, detach } = await setup();
+    const before = refreshes.count;
+    fake.emit('media.changed', { device: 'floppy', drive: 0 });
+    await settle();
+    expect(refreshes.count).toBe(before);
+    fake.floppies = [floppyStatus(0, 'a.img', { motor: true }), floppyStatus(1)];
+    fake.emit('media.changed', { device: 'floppy', drive: 0 });
+    await settle();
+    expect(refreshes.count).toBe(before + 1);
     detach();
   });
 

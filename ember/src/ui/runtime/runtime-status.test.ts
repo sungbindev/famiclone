@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { machineStatus } from './runtime-fakes';
-import { cartridgeText, controlAvailability, fileNameOf, hostText, machineState, pauseToggleText, pluginText, powerToggleText, stateText, volumeText } from './runtime-status';
+import { capturesMouse, cartridgeText, controlAvailability, fileNameOf, hostText, machineState, pauseToggleText, pluginText, powerToggleText, stateText, volumeText } from './runtime-status';
 
 const NONE = machineStatus('off', 'paused');
 const OFF = machineStatus('off', 'paused', 'D:\\roms\\nestest.nes');
@@ -55,6 +55,16 @@ describe('controlAvailability', () => {
 
   it('关闭卡带只在装着卡带时可用', () => {
     expect(controlAvailability({ ...RUNNING, cartridge: undefined }).eject).toBe(false);
+  });
+});
+
+describe('capturesMouse', () => {
+  it('设置打开且机器带鼠标（整机机型）才捕获；经典 FC、没有开机、还没读到状态、设置关闭都不捕获', () => {
+    expect(capturesMouse(true, { ...RUNNING, machine: 'sb2000' })).toBe(true);
+    expect(capturesMouse(true, RUNNING)).toBe(false);
+    expect(capturesMouse(true, NONE)).toBe(false);
+    expect(capturesMouse(true, undefined)).toBe(false);
+    expect(capturesMouse(false, { ...RUNNING, machine: 'sb2000' })).toBe(false);
   });
 });
 

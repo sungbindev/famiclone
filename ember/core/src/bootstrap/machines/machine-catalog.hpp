@@ -13,6 +13,7 @@
 
 #include <memory>
 
+#include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/printer-output.hpp"
 #include "contracts/runtime/machine-factory.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
@@ -26,13 +27,15 @@ class MachineCatalog final : public contracts::runtime::MachineFactory {
   static constexpr unsigned AUDIO_SAMPLE_RATE = logic::hardware::Apu2a03::SAMPLE_RATE;
 
   /** @param printerOutput 整机机型的打印机把输出的页交给它；为空时主机不接打印机。 */
-  explicit MachineCatalog(std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput = nullptr) : printerOutput_(std::move(printerOutput)) {}
+  explicit MachineCatalog(std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput = nullptr, std::shared_ptr<contracts::hardware::FloppyActivity> floppyActivity = nullptr)
+      : printerOutput_(std::move(printerOutput)), floppyActivity_(std::move(floppyActivity)) {}
 
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> create(const std::string& host) const override;
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const override;
 
  private:
   std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput_;
+  std::shared_ptr<contracts::hardware::FloppyActivity> floppyActivity_;
 };
 
 }  // namespace ember::bootstrap

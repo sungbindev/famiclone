@@ -23,14 +23,16 @@ const GROUPS: PreferenceGroup[] = [
 ];
 
 describe('withMachinesGroup', () => {
-  it('把“机型与 BIOS”放在声音分组之后，没有声音分组时放在最后', () => {
+  it('把“机型与 BIOS”放在输入分组之后，没有输入分组时放在声音分组之后，都没有时放在最后', () => {
     const groups: PreferenceGroup[] = [
       { id: 'sound', label: '声音' },
+      { id: 'input', label: '输入' },
       { id: 'printer', label: '打印机' },
       { id: 'debug', label: '调试服务' }
     ];
-    expect(withMachinesGroup(groups).map((group) => group.label)).toEqual(['声音', '机型与 BIOS', '打印机', '调试服务']);
-    expect(withMachinesGroup(groups.slice(1)).map((group) => group.id)).toEqual(['printer', 'debug', MACHINES_GROUP_ID]);
+    expect(withMachinesGroup(groups).map((group) => group.label)).toEqual(['声音', '输入', '机型与 BIOS', '打印机', '调试服务']);
+    expect(withMachinesGroup([groups[0] as PreferenceGroup, ...groups.slice(2)]).map((group) => group.id)).toEqual(['sound', MACHINES_GROUP_ID, 'printer', 'debug']);
+    expect(withMachinesGroup(groups.slice(2)).map((group) => group.id)).toEqual(['printer', 'debug', MACHINES_GROUP_ID]);
   });
 });
 

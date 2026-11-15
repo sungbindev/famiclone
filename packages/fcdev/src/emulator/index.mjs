@@ -9,3 +9,4 @@
 export { debugEnvironment, resolveDebugCli } from './debug-cli.mjs';
 export { DEFAULT_DEBUG_PORT, assertPortFree, debugUserDataDirectory, launchEmulator } from './emulator-launcher.mjs';
 export { EMULATOR_ENV_NAME, locateEmulator } from './emulator-locator.mjs';
+export { DOS_PROMPT_FRAMES, SB2000_MACHINE, bootSb2000, enterProgram, keyCodeOf, runFrames, tapKey } from './sb2000-session.mjs';

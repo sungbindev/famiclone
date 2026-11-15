@@ -19,7 +19,7 @@ import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import { DiagnosticsClient } from './diagnostics-client';
 import { GamepadCapture } from './gamepad-capture';
 import { KeyboardCapture } from './key-capture';
-import { MouseCapture, toFramePoint } from './pointer-capture';
+import { frameUnitsPerPixel, MouseCapture, toFramePoint } from './pointer-capture';
 import { cropLinesFor, DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING, type ScreenAspect, type ScreenScaling } from './screen-layout';
 import { useStreamPorts } from './use-stream-ports';
 import { parseWorkerReply, type WorkerDiagnostics, type WorkerRequest } from './worker-messages';
@@ -40,6 +40,9 @@ const TEXT = {
 /** 像素模式的滚轮：多少像素算一格。 */
 const WHEEL_PIXELS_PER_NOTCH = 100;
 
+/** 捕获鼠标期间，两次右键按下的间隔不超过这个毫秒数就算“双击右键”，释放捕获。 */
+const DOUBLE_RIGHT_CLICK_MS = 400;
+
 /** 画面组件的属性。 */
 export interface RuntimeScreenProps {
   /** 预加载脚本暴露的接口。 */
@@ -50,6 +53,8 @@ export interface RuntimeScreenProps {
   readonly scaling?: ScreenScaling;
   /** 显示全部 240 行，默认显示；关闭时上下各裁掉 8 行。 */
   readonly showAllLines?: boolean;
+  /** 点击画面时捕获鼠标（指针锁定），默认关闭；捕获期间鼠标事件只有相对位移，按 Esc 或双击右键退出。 */
+  readonly captureMouse?: boolean;
   /** 画面区元素的引用：页面用它在操作后把焦点还给画面。 */
   readonly screenRef: RefObject<HTMLDivElement | null>;
 }
@@ -67,11 +72,13 @@ function measureDevicePixels(container: HTMLElement, entry: ResizeObserverEntry 
  * 画面组件。
  * @param props 属性。
  */
-export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling = DEFAULT_SCREEN_SCALING, showAllLines = true, screenRef }: RuntimeScreenProps) {
+export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling = DEFAULT_SCREEN_SCALING, showAllLines = true, captureMouse = false, screenRef }: RuntimeScreenProps) {
   const notify = useNotify();
   const workerRef = useRef<Worker | undefined>(undefined);
   const sizeRef = useRef({ width: 0, height: 0 });
   const optionsRef = useRef({ aspect, scaling, cropLines: cropLinesFor(showAllLines) });
+  /** 捕获期间上一次右键按下的时刻（用来判断双击右键）。 */
+  const lastRightDownRef = useRef(Number.NEGATIVE_INFINITY);
 
   /** 把当前的画布尺寸与显示选项发给 Worker。 */
   const postView = useCallback(() => {
@@ -171,6 +178,22 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
     [screenRef]
   );
 
+  /** 鼠标现在是否被画面区捕获（指针锁定）。 */
+  const isCaptured = useCallback(() => screenRef.current !== null && document.pointerLockElement === screenRef.current, [screenRef]);
+
+  // 退出捕获（按 Esc、切换窗口）时松开鼠标按键；关掉“点击画面捕获鼠标”时把已有的捕获退掉。
+  useEffect(() => {
+    const onLockChange = (): void => {
+      if (!isCaptured()) mouse.leave(0);
+    };
+    document.addEventListener('pointerlockchange', onLockChange);
+    if (!captureMouse && isCaptured()) document.exitPointerLock?.();
+    return () => {
+      document.removeEventListener('pointerlockchange', onLockChange);
+      if (isCaptured()) document.exitPointerLock?.();
+    };
+  }, [captureMouse, isCaptured, mouse]);
+
   // 页面显示时自动聚焦；窗口失焦、页面隐藏与卸载时松开全部按键。
   // 用 useLayoutEffect：卸载时它的清理先于普通效果，松开的消息先发出，输入端口随后才关闭。
   useLayoutEffect(() => {
@@ -218,23 +241,57 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
       }}
       onBlur={() => keyboard.releaseAll()}
       onPointerMove={(event) => {
+        if (isCaptured()) {
+          const element = screenRef.current;
+          const scale = element === null ? undefined : frameUnitsPerPixel(element.getBoundingClientRect(), { canvasWidth: sizeRef.current.width, canvasHeight: sizeRef.current.height, ...optionsRef.current });
+          if (scale !== undefined) mouse.moveBy('move', event.movementX * scale.x, event.movementY * scale.y, event.buttons);
+          return;
+        }
         const point = framePointOf(event);
         if (point !== undefined) mouse.report('move', point, event.buttons);
       }}
       onPointerDown={(event) => {
+        if (isCaptured()) {
+          if (event.button === 2) {
+            const doubled = event.timeStamp - lastRightDownRef.current <= DOUBLE_RIGHT_CLICK_MS;
+            lastRightDownRef.current = doubled ? Number.NEGATIVE_INFINITY : event.timeStamp;
+            if (doubled) {
+              document.exitPointerLock?.();
+              return;
+            }
+          }
+          mouse.moveBy('down', 0, 0, event.buttons);
+          return;
+        }
+        if (captureMouse) {
+          // 第一次点击只用来捕获，不把这次按下送给机器。
+          screenRef.current?.requestPointerLock?.();
+          return;
+        }
         const point = framePointOf(event);
         // 按住拖到画面之外再松开，松开事件也要到这里。
         event.currentTarget.setPointerCapture?.(event.pointerId);
         if (point !== undefined) mouse.report('down', point, event.buttons);
       }}
       onPointerUp={(event) => {
+        if (isCaptured()) {
+          mouse.moveBy('up', 0, 0, event.buttons);
+          return;
+        }
         const point = framePointOf(event);
         if (point !== undefined) mouse.report('up', point, event.buttons);
       }}
-      onPointerLeave={(event) => mouse.leave(event.buttons)}
+      onPointerLeave={(event) => {
+        if (!isCaptured()) mouse.leave(event.buttons);
+      }}
       onWheel={(event) => {
+        const amount = event.deltaMode === 1 ? event.deltaY : event.deltaY / WHEEL_PIXELS_PER_NOTCH;
+        if (isCaptured()) {
+          mouse.moveBy('wheel', 0, 0, event.buttons, amount);
+          return;
+        }
         const point = framePointOf(event);
-        if (point !== undefined) mouse.report('wheel', point, event.buttons, event.deltaMode === 1 ? event.deltaY : event.deltaY / WHEEL_PIXELS_PER_NOTCH);
+        if (point !== undefined) mouse.report('wheel', point, event.buttons, amount);
       }}
       onContextMenu={(event) => event.preventDefault()}
     />

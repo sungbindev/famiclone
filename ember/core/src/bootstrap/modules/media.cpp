@@ -16,6 +16,7 @@
 #include <string>
 #include <variant>
 
+#include "bootstrap/machines/floppy-activity-relay.hpp"
 #include "bootstrap/machines/printer-output-relay.hpp"
 #include "contracts/media/media-service.hpp"
 #include "contracts/preferences/preference-service.hpp"
@@ -62,6 +63,7 @@ void registerMedia(ModuleRegistry& registry) {
 
   auto service = std::make_shared<logic::media::MediaManager>(std::make_shared<infra::media::DiskFloppyImageStore>(), registry.services.require<contracts::runtime::RuntimeService>(), registry.events, printer);
   registry.services.provide<contracts::media::MediaService>(service);
+  registry.services.require<FloppyActivityRelay>()->bind(service);
   requests::media::addMediaRequests(registry.requests, service);
 }
 

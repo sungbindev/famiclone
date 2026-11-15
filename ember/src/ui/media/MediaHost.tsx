@@ -27,6 +27,6 @@ export interface MediaHostProps extends ShellPageProps {
 export function MediaHost({ bridge, controller }: MediaHostProps) {
   const shell = useShell();
   const notify = useNotify();
-  useEffect(() => controller.attach(bridge, { addMessage: shell.addMessage, notify }), [bridge, controller, shell, notify]);
+  useEffect(() => controller.attach(bridge, { addMessage: shell.addMessage, notify, refresh: shell.refreshCommands }), [bridge, controller, shell, notify]);
   return null;
 }

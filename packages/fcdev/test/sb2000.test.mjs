@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：在模拟器里运行 SB2000 程序的用例已删除：Ember 还没有支持学习机整机，待支持后再用调试服务补写；fcdev run 对 sb2000 目标报“暂不支持”的用例在 emulator.test.mjs。
+// 备注：在模拟器里运行 SB2000 程序的用例在 sb2000-library.test.mjs；fcdev run 对学习机目标没有固件时报错的用例在 emulator.test.mjs。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

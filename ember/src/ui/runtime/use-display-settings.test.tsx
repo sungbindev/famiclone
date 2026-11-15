@@ -38,13 +38,15 @@ function fakeBridge(list: () => Promise<unknown>) {
   };
 }
 
-const LISTED = { groups: [], settings: [{ id: 'display.aspect', value: '4:3' }, { id: 'display.scaling', value: 'integer' }, { id: 'display.showAllLines', value: false }, { id: 'sound.volume', value: 30 }] };
+const LISTED = { groups: [], settings: [{ id: 'display.aspect', value: '4:3' }, { id: 'display.scaling', value: 'integer' }, { id: 'display.showAllLines', value: false }, { id: 'input.captureMouse', value: true }, { id: 'sound.volume', value: 30 }] };
 
 describe('applyDisplaySetting', () => {
-  it('合并三个显示设置项，其他设置项与不认识的取值原样返回', () => {
+  it('合并显示设置项与“点击画面捕获鼠标”，其他设置项与不认识的取值原样返回', () => {
     expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'display.aspect', '4:3').aspect).toBe('4:3');
     expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'display.scaling', 'integer').scaling).toBe('integer');
     expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'display.showAllLines', false).showAllLines).toBe(false);
+    expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'input.captureMouse', true).captureMouse).toBe(true);
+    expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'input.captureMouse', 'yes')).toBe(DEFAULT_DISPLAY_SETTINGS);
     expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'display.aspect', '16:9')).toBe(DEFAULT_DISPLAY_SETTINGS);
     expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'display.showAllLines', 'no')).toBe(DEFAULT_DISPLAY_SETTINGS);
     expect(applyDisplaySetting(DEFAULT_DISPLAY_SETTINGS, 'sound.volume', 5)).toBe(DEFAULT_DISPLAY_SETTINGS);
@@ -55,8 +57,8 @@ describe('useDisplaySettings', () => {
   it('读到之前用默认值（8:7、适应窗口、显示全部行），读到后用核心给出的取值', async () => {
     const { bridge } = fakeBridge(() => Promise.resolve(LISTED));
     const { result } = renderHook(() => useDisplaySettings(bridge));
-    expect(result.current).toEqual({ aspect: '8:7', scaling: 'fit', showAllLines: true });
-    await waitFor(() => expect(result.current).toEqual({ aspect: '4:3', scaling: 'integer', showAllLines: false }));
+    expect(result.current).toEqual({ aspect: '8:7', scaling: 'fit', showAllLines: true, captureMouse: false });
+    await waitFor(() => expect(result.current).toEqual({ aspect: '4:3', scaling: 'integer', showAllLines: false, captureMouse: true }));
   });
 
   it('在别处修改后立即更新，别的设置项与别的事件不影响', async () => {
@@ -68,7 +70,7 @@ describe('useDisplaySettings', () => {
     page.emit('preferences.changed', { id: 'sound.volume', value: 10 });
     page.emit('runtime.stateChanged', { id: 'display.aspect', value: '8:7' });
     page.emit('preferences.changed', null);
-    expect(result.current).toEqual({ aspect: '4:3', scaling: 'integer', showAllLines: true });
+    expect(result.current).toEqual({ aspect: '4:3', scaling: 'integer', showAllLines: true, captureMouse: true });
   });
 
   it('核心重启后重新读取', async () => {

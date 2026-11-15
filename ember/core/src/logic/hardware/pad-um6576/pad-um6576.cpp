@@ -31,7 +31,8 @@ hw::ControllerPort& PadUm6576::port(unsigned index) {
 }
 
 hw::BusRead PadUm6576::read(std::uint16_t address) {
-  if (address == ADDRESS_PAD1) return hw::driveBus(static_cast<std::uint8_t>(ports_[0].clockData() & 1U), 0x01);
+  // 真机实测 $4016 的位 2 总是 1。
+  if (address == ADDRESS_PAD1) return hw::driveBus(static_cast<std::uint8_t>((ports_[0].clockData() & 1U) | 0x04), 0x05);
   std::uint8_t value = static_cast<std::uint8_t>(ports_[1].clockData() & 1U);
   if (parallel_.error()) value = static_cast<std::uint8_t>(value | STATUS_ERROR);
   if (parallel_.busyN()) value = static_cast<std::uint8_t>(value | STATUS_BUSY_N);

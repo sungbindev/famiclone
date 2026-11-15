@@ -39,7 +39,7 @@ FCDEV_DEBUG_PORT=5688 npx fcdev debug call runtime.run frames=60 wait=true
 FCDEV_DEBUG_PORT=5688 npx fcdev debug screenshot screen.png
 ```
 
-`debug` 把参数原样交给 Ember 调试 SDK 的终端客户端 `ember-debug`，`npx fcdev debug --help` 查看命令，`npx fcdev debug methods` 列出全部请求。调试端口默认 5699。学习机目标暂时不能在 Ember 里运行。
+`debug` 把参数原样交给 Ember 调试 SDK 的终端客户端 `ember-debug`，`npx fcdev debug --help` 查看命令，`npx fcdev debug methods` 列出全部请求。调试端口默认 5699。学习机目标需要在 `fcdev.json` 里用 `firmware` 指定 BIOS 文件，`run` 会把程序放进软盘镜像、开机并在 SB-DOS 里输入程序名运行（加 `--debug` 停在开机状态）。
 
 ### 反汇编
 

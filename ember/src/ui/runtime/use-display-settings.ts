@@ -14,15 +14,16 @@ import { useEffect, useState } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import { DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING, type ScreenAspect, type ScreenScaling } from './screen-layout';
 
-/** 运行页用的显示设置。 */
+/** 运行页画面用的设置：显示（比例、缩放、行数）与点击画面是否捕获鼠标。 */
 export interface DisplaySettings {
   readonly aspect: ScreenAspect;
   readonly scaling: ScreenScaling;
   readonly showAllLines: boolean;
+  readonly captureMouse: boolean;
 }
 
 /** 还没读到设置时用的默认值。 */
-export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = { aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING, showAllLines: true };
+export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = { aspect: DEFAULT_SCREEN_ASPECT, scaling: DEFAULT_SCREEN_SCALING, showAllLines: true, captureMouse: false };
 
 /**
  * 把一个设置项的取值合并进显示设置；不是显示设置项或取值不认识时原样返回。
@@ -34,6 +35,7 @@ export function applyDisplaySetting(current: DisplaySettings, id: string, value:
   if (id === 'display.aspect' && (value === '4:3' || value === '8:7')) return { ...current, aspect: value };
   if (id === 'display.scaling' && (value === 'fit' || value === 'integer')) return { ...current, scaling: value };
   if (id === 'display.showAllLines' && typeof value === 'boolean') return { ...current, showAllLines: value };
+  if (id === 'input.captureMouse' && typeof value === 'boolean') return { ...current, captureMouse: value };
   return current;
 }
 

@@ -10,7 +10,7 @@
 - `fcdev debug` 的参数改为调试终端客户端 `ember-debug` 的命令，如 `debug call runtime.status`、`debug screenshot out.png`，不再支持旧模拟器的单行命令。
 - `fcdev run --debug` 用独立的用户数据目录启动 Ember，可以和平时在用的 Ember 同时运行，程序载入后停在开机状态，等待 `debug` 命令。
 - `fcdev` 依赖调试 SDK `ember-debug-sdk`，安装时自动带上。
-- 学习机目标（SB2000）的程序暂时不能在 Ember 里运行，`fcdev run` 会提示暂不支持；构建与生成磁盘镜像不受影响。
+- 学习机目标（SB2000）的程序可以用 `fcdev run` 在 Ember 里运行：在 `fcdev.json` 里用 `firmware` 指定 BIOS 文件，程序会放进软盘镜像、开机后自动在 SB-DOS 里输入程序名运行；加 `--debug` 则停在开机状态，由 `debug` 命令继续。
 
 ### 反汇编
 

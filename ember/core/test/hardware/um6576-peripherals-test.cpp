@@ -188,6 +188,17 @@ TEST(KeyboardUm6576, KeyboardByteIsLatchedAndRaisesTheInterrupt) {
   EXPECT_EQ(sink.raised, std::vector<std::uint8_t>({0x20}));
 }
 
+TEST(KeyboardUm6576, ControlPortReadsBitSixHighAndTheWrittenBits) {
+  MasterScheduler scheduler;
+  RecordingSink sink;
+  FakeSerialDevice device;
+  KeyboardUm6576 keyboardPort(device, sink, scheduler, MS);
+  keyboardPort.reset(true);
+  EXPECT_EQ(keyboardPort.read(0x4022).value, 0x40) << "键盘数据线空闲为高";
+  keyboardPort.write(0x4022, 0x80);
+  EXPECT_EQ(keyboardPort.read(0x4022).value, 0xC0);
+}
+
 TEST(KeyboardUm6576, RisingClockWithSystemToKeyboardDirectionSendsTheByte) {
   MasterScheduler scheduler;
   RecordingSink sink;
@@ -355,8 +366,8 @@ TEST(PadUm6576, ReadsTheDataBitsAndDrivesOnlyTheirLines) {
   pads.port(1).plug(&pad2);
   pad1.bit = 1;
   const hw::BusRead first = pads.read(0x4016);
-  EXPECT_EQ(first.value, 1);
-  EXPECT_EQ(first.drivenMask, 0x01);
+  EXPECT_EQ(first.value, 0x05) << "数据位 0 加真机实测总是 1 的位 2";
+  EXPECT_EQ(first.drivenMask, 0x05);
   pad2.bit = 1;
   const hw::BusRead second = pads.read(0x4017);
   EXPECT_EQ(second.value, 0x09) << "数据位 0 加 #Busy（位 3）";

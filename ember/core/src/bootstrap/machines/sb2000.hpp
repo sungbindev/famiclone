@@ -27,6 +27,7 @@
 #include "bootstrap/machines/cpu-debug-kit.hpp"
 #include "bootstrap/machines/sb2000-board.hpp"
 #include "contracts/hardware/dma-memory.hpp"
+#include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "contracts/hardware/parallel-port.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
@@ -82,9 +83,10 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   /**
    * @param bios BIOS ROM 的内容，必须是 BIOS_SIZE 字节（不含 iNES 文件头）。
    * @param printerOutput 打印机输出的页交给它，必须活到主机销毁；为空时并口不接打印机。
+   * @param floppyActivity 软驱马达开关变化时通知它，必须活到主机销毁；为空时不通知。
    * @throws shared::CoreError hardware.invalidArgument：BIOS 大小不对。
    */
-  explicit Sb2000Machine(std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr);
+  explicit Sb2000Machine(std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr);
 
   Sb2000Machine(const Sb2000Machine&) = delete;
   Sb2000Machine& operator=(const Sb2000Machine&) = delete;

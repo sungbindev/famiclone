@@ -135,6 +135,8 @@ export interface ShellActivityDefinition {
    */
   readonly sideBar?: ShellSideBarDefinition;
   readonly separatorBefore?: boolean;
+  /** 指示灯（如软驱读写灯）：每次渲染活动栏时调用，返回 undefined 表示不显示；状态变化后模块调用 refreshCommands 让外壳重新渲染。 */
+  readonly lamp?: () => { readonly lit: boolean; readonly label: string } | undefined;
 }
 
 /** 底部面板的页签。 */

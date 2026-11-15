@@ -14,7 +14,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { buildPath } from '../src/build/index.mjs';
 import { runCli } from '../src/cli/index.mjs';
-import { assertPortFree, debugEnvironment, debugUserDataDirectory, launchEmulator, locateEmulator, resolveDebugCli } from '../src/emulator/index.mjs';
+import { assertPortFree, debugEnvironment, debugUserDataDirectory, keyCodeOf, launchEmulator, locateEmulator, resolveDebugCli } from '../src/emulator/index.mjs';
 import { createTempDir, SKIP_WITHOUT_TOOLCHAIN, writeTestFile } from './helpers.mjs';
 
 /** 在随机空闲端口上监听，返回服务与端口 */
@@ -116,6 +116,18 @@ describe('调试会话的位置', () => {
   });
 });
 
+describe('学习机的按键', () => {
+  it('字母与数字对应物理键位，字母不分大小写', () => {
+    assert.equal(keyCodeOf('a'), 'KeyA');
+    assert.equal(keyCodeOf('Z'), 'KeyZ');
+    assert.equal(keyCodeOf('7'), 'Digit7');
+  });
+
+  it('其他字符无法输入，并提示改程序名', () => {
+    assert.throws(() => keyCodeOf('-'), (error) => error.code === 'DOS_KEY_UNSUPPORTED' && error.hint.includes('name'));
+  });
+});
+
 describe('run 命令', () => {
   let temp;
 
@@ -125,13 +137,13 @@ describe('run 命令', () => {
 
   afterEach(() => temp.cleanup());
 
-  it('学习机目标暂时不能在 Ember 里运行，并提示改用 build 与 disk，且不启动 Ember', async () => {
+  it('学习机目标没有配置固件时在构建与启动之前报错，并提示设置 firmware', async () => {
     writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'hello' }));
     writeTestFile(temp.dir, 'src/hello.c', '#include <sb2000.h>\nint main(void) { return 0; }\n');
     const { code, stderr } = await runFcdev(['run', 'src'], { cwd: temp.dir, env: { ...process.env, FCDEV_EMULATOR: process.execPath } });
     assert.equal(code, 1);
-    assert.match(stderr, /Ember 暂不支持运行 sb2000/);
-    assert.match(stderr, /fcdev disk/);
+    assert.match(stderr, /需要固件/);
+    assert.match(stderr, /firmware/);
   });
 
   it('找不到 Ember 时报错，在构建之前就报', async () => {

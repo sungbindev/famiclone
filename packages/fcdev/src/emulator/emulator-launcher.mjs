@@ -5,7 +5,9 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
 // 备注：Ember 进程与命令行脱离，命令行退出后窗口保持打开；调试模式不带 --cartridge，等连上调试服务后用 cartridges.load 载入并只上电不运行，由 debug 命令继续。
-//       调试服务的 SDK（ember-debug-sdk）只在调试模式下才加载，没有构建时只影响调试模式。
+//       学习机（sb2000 参数）没有命令行入口，两种模式都经调试服务：添加固件、放入磁盘镜像、整机开机；自由模式再在 SB-DOS 里输入程序名并继续运行后断开，
+//       调试模式停在开机状态（磁盘里的程序还没有被运行，由 debug 命令操作）。
+//       调试服务的 SDK（ember-debug-sdk）只在需要连接时才加载，没有构建时只影响调试模式与学习机。
 // ------------------------------------------------------------------------
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -15,6 +17,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { FcdevError } from '../shared/index.mjs';
+import { bootSb2000, enterProgram } from './sb2000-session.mjs';
 
 /** fcdev 的调试服务默认端口 */
 export const DEFAULT_DEBUG_PORT = 5699;
@@ -78,15 +81,21 @@ async function loadSdk() {
 
 /**
  * 启动 Ember。
- * @param {{executable: string, romFile: string, debug?: boolean, port?: number, readyTimeoutMs?: number}} input Ember 程序、要加载的 .nes 文件、是否调试模式与端口
+ * @param {object} input 启动参数
+ * @param {string} input.executable Ember 程序
+ * @param {string} [input.romFile] 要加载的 .nes 文件（经典 FC）；与 sb2000 二选一
+ * @param {{firmware: string, diskImage: string, programName?: string}} [input.sb2000] 学习机：固件（BIOS）、磁盘镜像，以及自由模式里要在 SB-DOS 运行的程序名
+ * @param {boolean} [input.debug] 是否调试模式
+ * @param {number} [input.port] 调试端口
+ * @param {number} [input.readyTimeoutMs] 等待调试服务就绪的上限
  * @returns {Promise<{pid: number|undefined, client: import('ember-debug-sdk').EmberDebugClient|null}>} 进程号；调试模式下还有已连接的客户端，调用者负责关闭
  * @throws {FcdevError} 文件不存在、无法启动、Ember 提前退出、拒绝载入，或调试服务没有在时限内就绪
  */
-export async function launchEmulator({ executable, romFile, debug = false, port = DEFAULT_DEBUG_PORT, readyTimeoutMs = READY_TIMEOUT_MS }) {
-  if (!existsSync(romFile)) throw new FcdevError(`找不到要加载的文件：${romFile}`, { code: 'EMULATOR_FILE_MISSING' });
+export async function launchEmulator({ executable, romFile, sb2000, debug = false, port = DEFAULT_DEBUG_PORT, readyTimeoutMs = READY_TIMEOUT_MS }) {
+  if (romFile !== undefined && !existsSync(romFile)) throw new FcdevError(`找不到要加载的文件：${romFile}`, { code: 'EMULATOR_FILE_MISSING' });
   const cwd = path.dirname(executable);
 
-  if (!debug) {
+  if (!debug && sb2000 === undefined) {
     const child = spawn(executable, [`--cartridge=${romFile}`], { cwd, stdio: 'ignore', detached: true });
     const failure = new Promise((_, reject) => {
       child.once('error', (error) => reject(new FcdevError(`无法启动 Ember ${executable}`, { code: 'EMULATOR_START_FAILED', cause: error })));
@@ -118,11 +127,24 @@ export async function launchEmulator({ executable, romFile, debug = false, port 
     try {
       const client = await Promise.race([connectToEmber({ userDataDirectory, clientName: CLIENT_NAME, connectTimeoutMs: 1000 }), failure]);
       try {
-        await client.request('cartridges.load', { path: romFile, powerOn: true, resume: false });
+        if (sb2000 === undefined) {
+          await client.request('cartridges.load', { path: romFile, powerOn: true, resume: false });
+        } else {
+          await bootSb2000(client, sb2000);
+          if (!debug && sb2000.programName !== undefined) {
+            await enterProgram(client, sb2000.programName);
+            await client.request('runtime.resume', {});
+          }
+        }
       } catch (error) {
         client.close();
         child.kill();
-        throw new FcdevError(`Ember 无法载入 ${romFile}：${error.message}`, { code: 'EMULATOR_LOAD_FAILED', cause: error });
+        if (error instanceof FcdevError) throw error;
+        throw new FcdevError(`Ember 无法载入 ${romFile ?? sb2000.diskImage}：${error.message}`, { code: 'EMULATOR_LOAD_FAILED', cause: error });
+      }
+      if (!debug) {
+        client.close();
+        return { pid: child.pid, client: null };
       }
       return { pid: child.pid, client };
     } catch (error) {

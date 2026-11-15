@@ -286,6 +286,18 @@ describe('只有边栏的活动栏按钮', () => {
     expect((within(sideArea(container)).getByText('设备边栏内容').closest('.ember-shell-side') as HTMLElement).hidden).toBe(true);
   });
 
+  it('活动栏按钮的指示灯：取值函数返回状态就显示亮灭，模块调用 refreshCommands 后更新', async () => {
+    const { demo, module } = createDemo();
+    const state = { lit: false };
+    const withLamp: ShellModule = { ...module, activityItems: [{ id: 'd.lamp', label: '灯', icon: ICON, sideBar: { Component: () => null }, lamp: () => ({ lit: state.lit, label: '读写灯' }) }] };
+    renderShell({ modules: [withLamp] });
+    await shown();
+    expect(screen.getByRole('img', { name: '读写灯' }).getAttribute('data-lit')).toBe('false');
+    state.lit = true;
+    act(() => demo.api?.refreshCommands());
+    expect(screen.getByRole('img', { name: '读写灯' }).getAttribute('data-lit')).toBe('true');
+  });
+
   it('“视图”菜单里有设备入口，选中同样显示设备边栏', async () => {
     const user = userEvent.setup();
     const { container } = renderShell({ modules: WITH_DEVICES });

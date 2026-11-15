@@ -50,6 +50,15 @@ export interface ControlAvailability {
   readonly eject: boolean;
 }
 
+/**
+ * 是否捕获鼠标：设置打开，并且机器带鼠标（整机机型有串口鼠标，经典 FC 没有）。
+ * @param enabled 首选项“点击画面捕获鼠标”的取值。
+ * @param status runtime.status 的结果；还没读到时为 undefined。
+ */
+export function capturesMouse(enabled: boolean, status: RuntimeStatusResult | undefined): boolean {
+  return enabled && status?.machine !== undefined && status.machine !== 'fc';
+}
+
 /** 路径里的文件名部分。 */
 export function fileNameOf(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;

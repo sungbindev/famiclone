@@ -29,8 +29,8 @@ node packages/fcdev/bin/fcdev.mjs disk apps/sb2000/examples/hello   # 另外生�
 
 ## 运行
 
-fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`；目前 Ember 还没有支持学习机整机，`npx fcdev run` 对这些示例报“暂不支持”，只能用 `npx fcdev build`、`npx fcdev disk` 构建并生成磁盘镜像，Ember 支持后再用 `npx fcdev run apps/sb2000/examples/<名>` 运行（DOS 启动后按两次回车跳过日期与时间提示，再输入程序名）。
+fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`（仓库里有一份：`reference/rom/SB2K_BIOS.NES`），用 `npx fcdev run apps/sb2000/examples/<名>` 在 Ember 里运行：程序会放进软盘镜像，开机后自动跳过 SB-DOS 的日期与时间提示并输入程序名。也可以只用 `npx fcdev build`、`npx fcdev disk` 构建并生成磁盘镜像。
 
 `show`、`copy`、`peek`、`poke` 需要磁盘里有数据文件，可以自己用 `npx fcdev disk` 生成的镜像加上文件，或在模拟器里挂载别的镜像；`play` 需要 `.nes` 文件，放进软盘镜像时文件名要符合 8.3（如 `mario.nes`）。
 
-模拟器的调试命令 `pad 0 01`（按下 1 号手柄 A）、`mouse move dx dy`（移动鼠标）、`mouse btn 掩码`（鼠标按键）可以给 `pad`、`mouse` 注入输入，命令表见 [virtuanes/README.md](../../../virtuanes/README.md)。
+用 `npx fcdev run --debug` 启动后，调试请求 `input.pad port=0 buttons=1`（按下 1 号手柄 A）、`input.mouse kind=move dx=10 dy=5`（移动鼠标）、`input.mouse kind=down buttons=1`（按下鼠标左键）可以给 `pad`、`mouse` 注入输入，用 `npx fcdev debug call <请求> <参数>` 发送，请求表见 [05-模拟器与调试](../../../packages/fcdev/docs/05-模拟器与调试.md)。

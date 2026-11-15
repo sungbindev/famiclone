@@ -63,7 +63,7 @@ void requireBios(const std::vector<std::uint8_t>& bios) {
 
 }  // namespace
 
-Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput)
+Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput, hw::FloppyActivity* floppyActivity)
     : cartridgeIrq_(irq_),
       bios_(std::move(bios)),
       ram_(INTERNAL_RAM_SIZE),
@@ -118,6 +118,7 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
   fdc_.attachDrive(0, &floppy_);
+  if (floppyActivity != nullptr) floppy_.onMotorChanged = [floppyActivity](bool on) { floppyActivity->motorChanged(0, on); };
   dac_.onLevel = [this](std::uint8_t level) { psg_.setDacLevel(level); };
   dma_.timingControlOn = [this] { return (keyboardPort_.timingControl() & 0x80) != 0; };
   expio_.onMouseReset = [this] { mouseDevice_.pulseControl(); };

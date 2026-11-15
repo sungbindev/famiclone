@@ -121,6 +121,22 @@ TEST(StandardFloppyDrive, InfersTheFormatFromTheImageSize) {
   EXPECT_EQ(StandardFloppyDrive::formatFor(12345).sectors, 18U) << "非标准大小按 1.44MB 处理";
 }
 
+TEST(StandardFloppyDrive, ReportsOnlyRealMotorChanges) {
+  StandardFloppyDrive drive;
+  std::vector<bool> changes;
+  drive.onMotorChanged = [&changes](bool on) { changes.push_back(on); };
+  drive.setMotor(false);
+  drive.setMotor(true);
+  drive.setMotor(true);
+  drive.setMotor(false);
+  EXPECT_EQ(changes, (std::vector<bool>{true, false}));
+  StandardFloppyDrive absent(false);
+  changes.clear();
+  absent.onMotorChanged = [&changes](bool on) { changes.push_back(on); };
+  absent.setMotor(true);
+  EXPECT_EQ(changes, (std::vector<bool>{false})) << "没装的驱动器马达不算在转";
+}
+
 TEST(StandardFloppyDrive, InsertEjectAndTheChangedFlag) {
   StandardFloppyDrive drive;
   EXPECT_FALSE(drive.inserted());

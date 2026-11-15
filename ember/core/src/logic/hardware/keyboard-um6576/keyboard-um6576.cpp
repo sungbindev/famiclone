@@ -36,7 +36,8 @@ KeyboardUm6576::~KeyboardUm6576() { keyboard_.connect(nullptr); }
 hw::BusRead KeyboardUm6576::read(std::uint16_t address) {
   if (address == ADDRESS_INPUT) return hw::driveBus(input_);
   if (address == ADDRESS_OUTPUT) return hw::releaseBus();
-  return hw::driveBus(control_);
+  // 位 6 是键盘数据线，空闲时为高（真机开机值 $C0）。
+  return hw::driveBus(static_cast<std::uint8_t>(control_ | 0x40));
 }
 
 void KeyboardUm6576::write(std::uint16_t address, std::uint8_t value) {

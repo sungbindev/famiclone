@@ -189,4 +189,6 @@ api::MediaPrinterFlushResult MediaManager::printerFlush() {
   return api::MediaPrinterFlushResult{printerStatus().status};
 }
 
+void MediaManager::motorChanged(unsigned drive, bool /*on*/) { publishChanged(static_cast<std::int64_t>(drive)); }
+
 }  // namespace ember::logic::media

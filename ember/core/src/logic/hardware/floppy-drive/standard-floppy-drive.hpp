@@ -13,6 +13,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -29,7 +30,11 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   [[nodiscard]] bool exists() const override { return exists_; }
   [[nodiscard]] bool inserted() const override { return inserted_; }
   [[nodiscard]] bool motorRunning() const override { return motor_ && exists_; }
-  void setMotor(bool on) override { motor_ = on; }
+  void setMotor(bool on) override {
+    if (motor_ == on) return;
+    motor_ = on;
+    if (onMotorChanged) onMotorChanged(on && exists_);
+  }
   [[nodiscard]] bool writeProtected() const override { return writeProtected_; }
   [[nodiscard]] bool diskChanged() const override { return changed_; }
   void clearDiskChanged() override { changed_ = false; }
@@ -51,6 +56,9 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   bool suspendMedia() override;
   bool restoreMedia() override;
   [[nodiscard]] bool mediaSuspended() const override { return suspended_; }
+
+  /** 马达开关变化时调用（参数是马达是否在转）；由主机装配设置。 */
+  std::function<void(bool)> onMotorChanged;
 
   /** 镜像大小对应的格式。 */
   [[nodiscard]] static contracts::hardware::FloppyFormat formatFor(std::size_t imageSize);

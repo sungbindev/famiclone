@@ -64,12 +64,41 @@ export function toFramePoint(clientX: number, clientY: number, bounds: PointerBo
   return { x: round(((deviceX - rect.x) / rect.width) * NOMINAL_FRAME.width), y: round(view.cropLines + ((deviceY - rectTop) / rect.height) * visibleHeight) };
 }
 
+/**
+ * 每个 CSS 像素对应标准帧的多少个单位：捕获鼠标时把浏览器给的相对位移（CSS 像素）换算成标准帧的位移。
+ * @param bounds 画面区元素的位置与大小。
+ * @param view 画布尺寸与显示选项。
+ * @returns 横向与纵向的比值；画面区或画面的尺寸无效时为 undefined。
+ */
+export function frameUnitsPerPixel(bounds: PointerBounds, view: PointerView): { readonly x: number; readonly y: number } | undefined {
+  if (!(bounds.width > 0 && bounds.height > 0)) return undefined;
+  const visibleHeight = NOMINAL_FRAME.height - view.cropLines * 2;
+  const rect = computeScreenRect(view.canvasWidth, view.canvasHeight, NOMINAL_FRAME.width, visibleHeight, view.aspect, view.scaling);
+  if (rect.width === 0 || rect.height === 0) return undefined;
+  return { x: ((view.canvasWidth / bounds.width) * NOMINAL_FRAME.width) / rect.width, y: ((view.canvasHeight / bounds.height) * visibleHeight) / rect.height };
+}
+
 /** 鼠标采集：记住上一次的位置，把每次事件转成带位移的消息。 */
 export class MouseCapture {
   private last: FramePoint | undefined;
 
   /** @param send 每个鼠标事件调用一次。 */
   constructor(private readonly send: (message: MouseInputMessage) => void) {}
+
+  /**
+   * 捕获鼠标（指针锁定）时上报一次事件：只有相对位移，位置是累加出来的虚拟位置（从画面中心开始，限制在整帧范围内）。
+   * @param kind 事件种类。
+   * @param dx 横向位移，单位是标准帧的像素。
+   * @param dy 纵向位移。
+   * @param buttons 事件之后按住的按键位。
+   * @param wheel 滚轮的滚动量。
+   */
+  moveBy(kind: MouseKind, dx: number, dy: number, buttons: number, wheel = 0): void {
+    const origin = this.last ?? { x: NOMINAL_FRAME.width / 2, y: NOMINAL_FRAME.height / 2 };
+    const point = { x: round(Math.min(NOMINAL_FRAME.width, Math.max(0, origin.x + dx))), y: round(Math.min(NOMINAL_FRAME.height, Math.max(0, origin.y + dy))) };
+    this.last = point;
+    this.send({ type: 'mouse', kind, x: point.x, y: point.y, dx: round(dx), dy: round(dy), buttons: buttons & 7, wheel });
+  }
 
   /**
    * 上报一次鼠标事件。

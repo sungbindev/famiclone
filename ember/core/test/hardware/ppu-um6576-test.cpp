@@ -181,6 +181,13 @@ TEST(PpuUm6576, UnusedAddressesDoNotDriveTheBus) {
   EXPECT_EQ(bench.ppu.read(0x2009).drivenMask, 0xFF);
 }
 
+TEST(PpuUm6576, Address3FFFReadsSixtyEightLikeTheRealMachine) {
+  PpuBench bench;
+  EXPECT_EQ(bench.ppu.read(0x3FFF).value, 0x68);
+  EXPECT_EQ(bench.ppu.read(0x3FFF).drivenMask, 0xFF);
+  EXPECT_EQ(bench.ppu.read(0x3FFE).drivenMask, 0) << "其他未用地址仍然不驱动总线";
+}
+
 /** 在名称表页 1（$0800）放一个图块，画面左上角显示它的第 0 行。 */
 void setUpFourColorTile(PpuBench& bench, std::uint8_t mask) {
   bench.vram.bytes[0x0800] = 0x01;  // 图块号 1，调色板组 0

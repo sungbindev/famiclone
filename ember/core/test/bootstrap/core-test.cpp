@@ -81,11 +81,11 @@ TEST_F(CoreTest, StartsAndAnswersSystemVersion) {
   const auto info = nlohmann::json::parse(core.start(options()));
   EXPECT_FALSE(info["coreVersion"].get<std::string>().empty());
   const auto& requests = info["requests"];
-  EXPECT_EQ(requests.size(), 69U);
+  EXPECT_EQ(requests.size(), 75U);
   for (const char* name : {"system.version", "preferences.list", "preferences.set", "preferences.reset", "input.getBindings", "input.setBindings", "input.resetBindings", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled",
                            "mappers.reload", "output.setVolume", "runtime.status", "runtime.powerOn", "runtime.powerOff", "runtime.reset", "runtime.pause", "runtime.resume", "cartridges.load",
                            "cartridges.eject", "cartridges.info", "debug.hello", "debug.subscribe", "debug.unsubscribe", "debug.status", "machines.list", "machines.boot", "media.floppyInsert",
-                           "media.floppyWriteProtect", "media.printerFlush"}) {
+                           "media.floppyWriteProtect", "media.printerFlush", "media.tapeLoad", "media.tapeEject", "media.tapePlay", "media.tapeRecord", "media.tapeStop", "media.tapeStatus"}) {
     EXPECT_NE(std::find(requests.begin(), requests.end(), nlohmann::json(name)), requests.end()) << name;
   }
 
@@ -160,9 +160,11 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "sound", "input", "printer", "debug"}));
   std::map<std::string, nlohmann::json> byId;
   for (const auto& setting : listed.payload["settings"]) byId[setting["id"]] = setting;
-  EXPECT_EQ(byId.size(), 13U);
+  EXPECT_EQ(byId.size(), 14U);
   EXPECT_EQ(byId["input.captureMouse"]["kind"], "switch");
   EXPECT_EQ(byId["input.captureMouse"]["value"], true);
+  EXPECT_EQ(byId["input.familyKeyboard"]["kind"], "switch");
+  EXPECT_EQ(byId["input.familyKeyboard"]["value"], false);
   EXPECT_EQ(byId["appearance.theme"]["kind"], "choice");
   EXPECT_EQ(byId["appearance.theme"]["value"], "system");
   EXPECT_EQ(byId["appearance.theme"]["options"].size(), 3U);

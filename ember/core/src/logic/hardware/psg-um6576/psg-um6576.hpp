@@ -5,11 +5,11 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：寄存器与 NES 的 APU 同样（芯片手册），没有 DMC 与 $4010-$4013；方波不做扫频，$4001、$4005 写入无效；
+ * 备注：寄存器与 NES 的 APU 同样，没有 DMC 与 $4010-$4013；方波不做扫频，$4001、$4005 写入无效；
  *       没有 $4017，内部固定走 4 步帧序列（四分之一帧时钟包络与三角波线性计数器，第 2、4 步再时钟长度计数器，不产生 IRQ）；
- *       $4015 写低 4 位使能通道（禁用时长度清零），读返回低 4 位各通道长度计数器是否大于 0（真机位 4 的读数与旧版互相颠倒，属已知差异，这里读 0）；
+ *       $4015 写低 4 位使能通道（禁用时长度清零），读返回低 4 位各通道长度计数器是否大于 0（真机位 4 的读数不固定，属已知差异，这里读 0）；
  *       PAL 时序：噪声周期取 PAL 表，帧序列间隔约 8314 个 CPU 周期（50 Hz 的 4 步）；
- *       混音用 NES 的非线性公式（方波、三角波与噪声）加 DAC，降采样用逐样本平均（箱式滤波）再接 20 Hz 一阶高通；
+ *       混音用 NES 的非线性公式（方波、三角波与噪声）加 DAC 与语音合成器的电平，降采样用逐样本平均（箱式滤波）再接 20 Hz 一阶高通；
  *       PSG 不逐周期被调用：寄存器读写与取走声音前追赶到当前时间（内部逐周期推进）。
  * ------------------------------------------------------------------------
  */
@@ -49,6 +49,9 @@ class PsgUm6576 final : public contracts::hardware::Device {
 
   /** DAC 的电平变化（追赶到现在之后设置）。 */
   void setDacLevel(std::uint8_t level);
+
+  /** 语音合成器的输出电平（-1 到 1，追赶到现在之后设置），与 PSG、DAC 混在同一路输出里。 */
+  void setVoiceLevel(double level);
 
   /** 取走自上次以来生成的采样（单声道，-1 到 1），先清空 samples。 */
   void takeAudio(std::vector<float>& samples);
@@ -104,6 +107,7 @@ class PsgUm6576 final : public contracts::hardware::Device {
   unsigned frameStepIndex_{0};
 
   std::uint8_t dacLevel_{0};
+  double voiceLevel_{0};
   // 降采样
   double accumulator_{0};
   double accumulatedCycles_{0};

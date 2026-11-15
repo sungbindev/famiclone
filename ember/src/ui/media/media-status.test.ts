@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-status.test.ts
- * 说明：设备面板纯规则的测试：盘片的显示文字、软驱的状态文字、打印机的状态文字、各按钮是否可用。
+ * 说明：设备面板纯规则的测试：盘片的显示文字、软驱的状态文字、打印机的状态文字、磁带机的磁带与状态与位置文字、各按钮是否可用。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -9,8 +9,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { floppyStatus } from './media-fakes';
-import { diskText, floppyAvailability, floppyStateText, printerStateText } from './media-status';
+import { floppyStatus, tapeStatus } from './media-fakes';
+import { diskText, floppyAvailability, floppyStateText, printerStateText, tapeAvailability, tapeNameText, tapePositionText, tapeStateText } from './media-status';
 
 describe('盘片的显示文字', () => {
   it('没有盘片显示“空”，有盘片显示镜像名，有未保存的修改时注明', () => {
@@ -41,5 +41,34 @@ describe('软驱按钮的可用性', () => {
   it('没有盘片时只能载入镜像；有盘片时全部可用', () => {
     expect(floppyAvailability(floppyStatus(0))).toEqual({ insert: true, eject: false, save: false, writeProtect: false });
     expect(floppyAvailability(floppyStatus(0, 'sys.img'))).toEqual({ insert: true, eject: true, save: true, writeProtect: true });
+  });
+});
+
+describe('磁带机的显示文字', () => {
+  it('磁带没有时显示“空”“无磁带”“—”，有磁带时显示文件名、状态与“当前 / 总时长”', () => {
+    const empty = tapeStatus({ available: true });
+    expect([tapeNameText(empty), tapeStateText(empty), tapePositionText(empty)]).toEqual(['空', '无磁带', '—']);
+    const stopped = tapeStatus({ available: true, loaded: true, fileName: 'lesson.m4a', position: 75.9, duration: 1689.57 });
+    expect([tapeNameText(stopped), tapeStateText(stopped), tapePositionText(stopped)]).toEqual(['lesson.m4a', '已停止', '1:15 / 28:09']);
+    expect(tapeStateText({ ...stopped, mode: 'playing' })).toBe('播放中');
+    expect(tapeStateText({ ...stopped, mode: 'recording' })).toBe('录音中');
+  });
+
+  it('超过一小时写成“时:分:秒”，总时长不知道时只写当前位置', () => {
+    expect(tapePositionText(tapeStatus({ loaded: true, position: 3725, duration: 7200 }))).toBe('1:02:05 / 2:00:00');
+    expect(tapePositionText(tapeStatus({ loaded: true, position: 5, duration: 0 }))).toBe('0:05');
+  });
+});
+
+describe('磁带机按钮的可用性', () => {
+  it('停止时：没有磁带只能载入与录音，有磁带全部可用但不能停止', () => {
+    expect(tapeAvailability(tapeStatus({ available: true }))).toEqual({ load: true, eject: false, play: false, record: true, stop: false });
+    expect(tapeAvailability(tapeStatus({ available: true, loaded: true }))).toEqual({ load: true, eject: true, play: true, record: true, stop: false });
+  });
+
+  it('播放或录音时只有停止可用', () => {
+    for (const mode of ['playing', 'recording'] as const) {
+      expect(tapeAvailability(tapeStatus({ available: true, loaded: true, mode }))).toEqual({ load: false, eject: false, play: false, record: false, stop: true });
+    }
   });
 });

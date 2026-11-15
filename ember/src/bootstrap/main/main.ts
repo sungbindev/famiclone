@@ -50,6 +50,10 @@ const NATIVE_FILE = 'ember_core.node';
 const KEYBOARD_NATIVE_FILE = 'ember_keyboard.node';
 /** 预装插件的目录名：开发时在 build 下，正式包在 resources 下。 */
 const PLUGINS_DIRECTORY = 'plugins';
+/** 平台与架构的名字（如 win32-x64），ffmpeg 程序放在以它命名的目录里：开发时在 core/third_party/ffmpeg/bin 下，正式包在 resources 下。 */
+const PLATFORM_DIRECTORY = `${process.platform}-${process.arch}`;
+/** ffmpeg 程序的文件名。 */
+const FFMPEG_FILE = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
 /** 主进程错误的错误码。 */
 const MAIN_ERROR_CODE = 'shell.mainError';
 /** 显示窗口前最多等保存的主题多久（毫秒），核心起不来时不能一直不显示。 */
@@ -84,6 +88,9 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', NATIVE_FILE);
   const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', KEYBOARD_NATIVE_FILE);
   const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(app.getAppPath(), 'build', PLUGINS_DIRECTORY);
+  const ffmpegPath = app.isPackaged
+    ? join(process.resourcesPath, PLATFORM_DIRECTORY, FFMPEG_FILE)
+    : join(app.getAppPath(), 'core', 'third_party', 'ffmpeg', 'bin', PLATFORM_DIRECTORY, FFMPEG_FILE);
   // 开发版用 resources/icon.ico 做窗口图标（打包后窗口用可执行文件里的图标；macOS 的 Dock 图标以后再定）。
   const windowIcon = app.isPackaged || process.platform === 'darwin' ? undefined : join(app.getAppPath(), 'resources', 'icon.ico');
   // --debug-port 指定时本次运行强制开启调试服务（不写入首选项），--debug-token 指定令牌。
@@ -95,6 +102,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     userDataPath,
     appVersion: app.getVersion(),
     bundledPluginsPath,
+    ffmpegPath,
     ...(debugLaunch.port === undefined ? {} : { debugPort: debugLaunch.port }),
     ...(debugLaunch.token === undefined ? {} : { debugToken: debugLaunch.token }),
     logger

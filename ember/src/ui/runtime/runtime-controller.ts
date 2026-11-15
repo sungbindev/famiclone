@@ -50,6 +50,8 @@ export interface RuntimeViewState {
   readonly volume: number;
   /** 是否静音；静音时音量保持原值。 */
   readonly muted: boolean;
+  /** 是否给经典 FC 接上了 Family BASIC 键盘（首选项 input.familyKeyboard）。 */
+  readonly familyKeyboard: boolean;
 }
 
 /** 经典 FC 的机型标识：选它时要求已经装入 FC 卡带。 */
@@ -68,12 +70,16 @@ const TEXT = {
     eject: '关闭卡带',
     open: '打开卡带',
     boot: '开机',
-    volume: '调整音量'
+    volume: '调整音量',
+    familyKeyboard: '设置 Family BASIC 键盘'
   }
 } as const;
 
 /** 没有读到任何状态时的初始值：音量与核心启动后的默认值一致。 */
-const INITIAL_STATE: RuntimeViewState = { status: undefined, recent: [], machines: [], selectedMachine: CLASSIC_MACHINE, volume: 100, muted: false };
+const INITIAL_STATE: RuntimeViewState = { status: undefined, recent: [], machines: [], selectedMachine: CLASSIC_MACHINE, volume: 100, muted: false, familyKeyboard: false };
+
+/** 接入 Family BASIC 键盘的首选项标识。 */
+const FAMILY_KEYBOARD_SETTING = 'input.familyKeyboard';
 
 /** 错误的说明文字：核心请求失败时以 {code, message} 拒绝。 */
 function errorText(error: unknown): string {
@@ -229,6 +235,18 @@ export class RuntimeController {
     this.adjustSound({ muted: !this.state.muted });
   }
 
+  /** 接入或拔下 Family BASIC 键盘：保存到首选项，核心据此接到经典 FC 的扩展口；状态以首选项变化事件为准。 */
+  toggleFamilyKeyboard(): void {
+    const backend = this.attachment?.backend;
+    if (backend === undefined) return;
+    backend.core.preferences.set({ id: FAMILY_KEYBOARD_SETTING, value: !this.state.familyKeyboard }).then(
+      (result) => {
+        if (this.attachment?.backend === backend) this.setState({ familyKeyboard: result.value === true });
+      },
+      (error: unknown) => this.report(TEXT.actions.familyKeyboard, error)
+    );
+  }
+
   /** 把声音设置交给核心，并以核心返回的值更新状态；连续调整时只采用最后一次的结果。 */
   private adjustSound(params: { volume?: number; muted?: boolean }): void {
     const backend = this.attachment?.backend;
@@ -265,8 +283,11 @@ export class RuntimeController {
     this.attachment?.host.notify(TEXT.failed(name, errorText(error)), 'error');
   }
 
-  private handleEvent(name: string, _data: unknown): void {
-    if (name === 'runtime.stateChanged') {
+  private handleEvent(name: string, data: unknown): void {
+    if (name === 'preferences.changed') {
+      const change = data as { id?: unknown; value?: unknown } | null;
+      if (change?.id === FAMILY_KEYBOARD_SETTING) this.setState({ familyKeyboard: change.value === true });
+    } else if (name === 'runtime.stateChanged') {
       this.refreshStatus();
     } else if (name === 'cartridges.loaded') {
       this.refreshStatus();
@@ -294,6 +315,20 @@ export class RuntimeController {
     this.refreshRecent();
     this.refreshMachines();
     this.refreshVolume();
+    this.refreshFamilyKeyboard();
+  }
+
+  /** 读取是否接入 Family BASIC 键盘。 */
+  private refreshFamilyKeyboard(): void {
+    const backend = this.attachment?.backend;
+    if (backend === undefined) return;
+    backend.core.preferences.list({}).then(
+      (result) => {
+        const setting = result.settings.find((item) => item.id === FAMILY_KEYBOARD_SETTING);
+        if (this.attachment?.backend === backend && setting !== undefined) this.setState({ familyKeyboard: setting.value === true });
+      },
+      () => undefined
+    );
   }
 
   /** 读取机型清单。 */

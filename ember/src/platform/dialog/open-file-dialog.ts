@@ -10,7 +10,7 @@
  * ------------------------------------------------------------------------
  */
 
-import { dialog, type BrowserWindow, type OpenDialogOptions } from 'electron';
+import { dialog, type BrowserWindow, type OpenDialogOptions, type SaveDialogOptions } from 'electron';
 
 /** 选择文件的参数。 */
 export interface OpenFileOptions {
@@ -27,6 +27,7 @@ export interface OpenDirectoryOptions {
 export interface OpenFileDialog {
   pickFile(options: OpenFileOptions): Promise<string | undefined>;
   pickDirectory(options: OpenDirectoryOptions): Promise<string | undefined>;
+  pickSaveFile(options: OpenFileOptions): Promise<string | undefined>;
 }
 
 /**
@@ -49,6 +50,15 @@ export function createOpenFileDialog(getParent: () => BrowserWindow | undefined)
         properties: ['openFile'],
         filters: options.filters.map((filter) => ({ name: filter.name, extensions: [...filter.extensions] }))
       }),
-    pickDirectory: (options) => show({ title: options.title, properties: ['openDirectory', 'createDirectory'] })
+    pickDirectory: (options) => show({ title: options.title, properties: ['openDirectory', 'createDirectory'] }),
+    pickSaveFile: async (options) => {
+      const saveOptions: SaveDialogOptions = {
+        title: options.title,
+        filters: options.filters.map((filter) => ({ name: filter.name, extensions: [...filter.extensions] }))
+      };
+      const parent = getParent();
+      const result = parent === undefined ? await dialog.showSaveDialog(saveOptions) : await dialog.showSaveDialog(parent, saveOptions);
+      return result.canceled || result.filePath === '' ? undefined : result.filePath;
+    }
   };
 }

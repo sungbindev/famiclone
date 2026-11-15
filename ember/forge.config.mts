@@ -28,6 +28,8 @@ const NATIVE_MODULE = './core/build/Release/ember_core.node';
 const KEYBOARD_MODULE = './core/build/Release/ember_keyboard.node';
 /** 打好的预装插件目录：目录名 plugins 保留，成为 resources/plugins。 */
 const BUNDLED_PLUGINS = './build/plugins';
+/** 当前平台的 ffmpeg 程序目录（解码磁带用）：目录名 <平台>-<架构> 保留，成为 resources/<平台>-<架构>；没有编译好的程序时打包失败。 */
+const FFMPEG_DIRECTORY = `./core/third_party/ffmpeg/bin/${process.platform}-${process.arch}`;
 /** 可执行文件名。 */
 const EXECUTABLE_NAME = 'ember';
 /** 应用图标，不写扩展名，打包时按平台取 .ico。 */
@@ -39,7 +41,13 @@ const config: ForgeConfig = {
     appBundleId: APP_ID,
     executableName: EXECUTABLE_NAME,
     icon: APP_ICON,
-    extraResource: [NATIVE_MODULE, ...(process.platform === 'win32' ? [KEYBOARD_MODULE] : []), BUNDLED_PLUGINS, `${NOTICES_DIRECTORY}/${NOTICES_FILE}`]
+    extraResource: [
+      NATIVE_MODULE,
+      ...(process.platform === 'win32' ? [KEYBOARD_MODULE] : []),
+      BUNDLED_PLUGINS,
+      FFMPEG_DIRECTORY,
+      `${NOTICES_DIRECTORY}/${NOTICES_FILE}`
+    ]
   },
   hooks: {
     // 第三方开源代码的许可全文在打包前生成，与关于对话框的清单同源。

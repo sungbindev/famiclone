@@ -20,6 +20,7 @@
 #include "contracts/media/floppy-image-store.hpp"
 #include "contracts/media/media-service.hpp"
 #include "contracts/media/printer-record.hpp"
+#include "contracts/media/tape-store.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "platform/events/event-sink.hpp"
 
@@ -28,8 +29,8 @@ namespace ember::logic::media {
 /** 介质服务；同时接收软驱马达的开关通知（变化时发 media.changed，软驱状态里的马达字段随之变化）。 */
 class MediaManager final : public contracts::media::MediaService, public contracts::hardware::FloppyActivity {
  public:
-  MediaManager(std::shared_ptr<contracts::media::FloppyImageStore> store, std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events,
-               std::shared_ptr<contracts::media::PrinterRecord> printerRecord);
+  MediaManager(std::shared_ptr<contracts::media::FloppyImageStore> store, std::shared_ptr<contracts::media::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
+               std::shared_ptr<platform::EventSink> events, std::shared_ptr<contracts::media::PrinterRecord> printerRecord);
 
   contracts::media::MediaFloppyInsertResult floppyInsert(const contracts::media::MediaFloppyInsertParams& params) override;
   contracts::media::MediaFloppyEjectResult floppyEject(const contracts::media::MediaFloppyEjectParams& params) override;
@@ -39,6 +40,12 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   contracts::media::MediaFloppyFaultResult floppyFault(const contracts::media::MediaFloppyFaultParams& params) override;
   [[nodiscard]] contracts::media::MediaPrinterStatusResult printerStatus() override;
   contracts::media::MediaPrinterFlushResult printerFlush() override;
+  contracts::media::MediaTapeLoadResult tapeLoad(const contracts::media::MediaTapeLoadParams& params) override;
+  contracts::media::MediaTapeEjectResult tapeEject() override;
+  contracts::media::MediaTapePlayResult tapePlay() override;
+  contracts::media::MediaTapeRecordResult tapeRecord(const contracts::media::MediaTapeRecordParams& params) override;
+  contracts::media::MediaTapeStopResult tapeStop() override;
+  [[nodiscard]] contracts::media::MediaTapeStatusResult tapeStatus() override;
   void motorChanged(unsigned drive, bool on) override;
 
  private:
@@ -52,7 +59,18 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   /** 发 media.changed。 */
   void publishChanged(std::int64_t drive);
 
+  /**
+   * 在模拟线程上取磁带机并执行动作，返回动作做完后的磁带机状态。
+   * @throws shared::CoreError media.noMachine、media.noDeck，以及动作里抛出的错误。
+   */
+  template <typename Action>
+  contracts::media::TapeStatus withDeck(Action action);
+
+  /** 发磁带机的 media.changed。 */
+  void publishTapeChanged();
+
   std::shared_ptr<contracts::media::FloppyImageStore> store_;
+  std::shared_ptr<contracts::media::TapeStore> tapeStore_;
   std::shared_ptr<contracts::runtime::RuntimeService> runtime_;
   std::shared_ptr<platform::EventSink> events_;
   std::shared_ptr<contracts::media::PrinterRecord> printerRecord_;

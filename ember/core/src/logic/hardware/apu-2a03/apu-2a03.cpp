@@ -36,7 +36,7 @@ constexpr int DMC_DMA_CYCLES = 4;
 /** 没有人取走采样时最多保留的采样数。 */
 constexpr std::size_t MAX_PENDING_SAMPLES = Apu2a03::SAMPLE_RATE;
 
-/** 混音公式（nesdev wiki 的“APU Mixer”）：三角波、噪声、DMC 共用的非线性项。 */
+/** 混音公式：三角波、噪声、DMC 共用的非线性项。 */
 double tndLevel(unsigned triangle, unsigned noise, unsigned dmc) {
   const double sum = triangle / 8227.0 + noise / 12241.0 + dmc / 22638.0;
   return sum <= 0 ? 0.0 : 159.79 / (1.0 / sum + 100.0);

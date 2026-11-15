@@ -405,7 +405,7 @@ async function main() {
   // 首选项：核心登记的设置项与出厂默认值、非法取值被拒绝；改画面比例与“显示全部 240 行”后运行页的画面框立即跟着变；改主题后系统主题立即切换；调试服务改音量会保存到首选项；最后全部恢复默认。
   const listed = await page.evaluate('window.ember.core.preferences.list({})');
   const valueOf = (id) => listed.settings.find((setting) => setting.id === id)?.value;
-  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'input.captureMouse', 'printer.outputDirectory', 'debug.enabled', 'debug.port', 'debug.token', 'debug.outputDirectory'];
+  const expectedIds = ['appearance.theme', 'display.aspect', 'display.scaling', 'display.showAllLines', 'sound.buffer', 'sound.startMuted', 'sound.volume', 'input.captureMouse', 'input.familyKeyboard', 'printer.outputDirectory', 'debug.enabled', 'debug.port', 'debug.token', 'debug.outputDirectory'];
   // 令牌的默认值是空，核心启动时自动生成并保存，所以不与默认值比较，单独检查。
   check('首选项列出了登记的 13 个设置项，取值都是出厂默认值（令牌除外）', expectedIds.every((id) => listed.settings.some((setting) => setting.id === id && (!comparable(setting) || JSON.stringify(setting.value) === JSON.stringify(setting.defaultValue)))) && listed.settings.length === expectedIds.length, listed.settings.map((setting) => `${setting.id}=${setting.id === 'debug.token' ? '…' : setting.value}`).join('，'));
   check('调试服务的令牌已经自动生成（32 个字母与数字），默认端口 5688、默认不开启（启动参数强制开启不改首选项）', /^[A-Za-z0-9]{32}$/.test(String(valueOf('debug.token'))) && valueOf('debug.port') === 5688 && valueOf('debug.enabled') === false);

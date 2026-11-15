@@ -27,6 +27,7 @@
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/cartridge.hpp"
 #include "contracts/hardware/irq-output.hpp"
+#include "contracts/hardware/tape-deck.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
 #include "contracts/mappers/mapper-cartridge.hpp"
 #include "infra/mappers/loaded-plugin.hpp"
@@ -119,6 +120,8 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   [[nodiscard]] bool keyDown(std::string_view code) const override { return heldKeys_.contains(std::string(code)); }
   void padSet(std::size_t port, std::string_view button, bool down) override;
   void padRelease(std::size_t port) override;
+  [[nodiscard]] bool tapeLevel() override;
+  void tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) override;
 
   [[nodiscard]] contracts::hardware::BusRead readBus(bool ppu, std::uint16_t address);
   [[nodiscard]] contracts::hardware::BusRead peekBus(bool ppu, std::uint16_t address) const;
@@ -135,6 +138,9 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   std::shared_ptr<const LoadedPlugin> plugin_;
   contracts::hardware::IrqOutput& irq_;
   contracts::hardware::PadSink& pads_;
+  /** 主机上的磁带机数据线；没有磁带机时为空。脚本导出 onTapeEdge 时卡带在它上面挂了边沿通知，销毁时摘掉。 */
+  contracts::hardware::TapeLine* tape_{nullptr};
+  bool tapeListening_{false};
   /** 各手柄口当前按下的按键掩码，由脚本设置。 */
   std::vector<std::uint8_t> padMasks_;
   /** 现在按着的物理键（KeyboardEvent.code）。 */

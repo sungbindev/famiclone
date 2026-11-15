@@ -63,7 +63,12 @@ class FakeBindings final : public ScriptBindings {
     calls.push_back("pad" + std::to_string(port) + " " + std::string(button) + (down ? " down" : " up"));
   }
   void padRelease(std::size_t port) override { calls.push_back("pad" + std::to_string(port) + " release"); }
+  [[nodiscard]] bool tapeLevel() override { return tapeHigh; }
+  void tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) override {
+    calls.push_back("tape.comparator " + std::to_string(low) + " " + std::to_string(high) + (invert ? " invert" : " plain"));
+  }
 
+  bool tapeHigh{false};
   static inline const std::vector<std::string> WINDOWS = {"chr", "prg"};
   std::set<std::string> held;
   std::vector<std::string> calls;
@@ -79,6 +84,7 @@ ScriptLayout layout() {
   result.storages = {"rom", "ram"};
   result.states = {"bank", "flags"};
   result.padPorts = 2;
+  result.hasTape = true;
   result.headerJson = R"({"mapper":7,"variant":1,"prgSize":16384,"chrSize":0,"mirroring":"vertical","battery":false,"trainer":false,"crc32Prg":1,"crc32All":2})";
   return result;
 }
@@ -120,6 +126,61 @@ TEST(ScriptRuntime, CallsResetReadAndWriteWithTheArguments) {
   runtime.write(false, 0x8000, 171);
   runtime.write(true, 0x1000, 0);
   EXPECT_EQ(bindings.logs, (std::vector<std::string>{"reset power", "reset soft", "cpu:32768:171", "ppu:4096:0"}));
+}
+
+TEST(ScriptRuntime, TheTapeDeviceReadsTheLevelAndSetsTheComparator) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      reset(ctx) { ctx.device('tape').setComparator(-1000, -999, true); },
+      read(ctx, bus, addr) { return ctx.device('tape').level(); }
+    };)",
+                       layout(), bindings);
+  runtime.reset(true);
+  EXPECT_EQ(bindings.calls, (std::vector<std::string>{"tape.comparator -1000 -999 invert"}));
+  EXPECT_EQ(runtime.read(false, 0), 0);
+  bindings.tapeHigh = true;
+  EXPECT_EQ(runtime.read(false, 0), 1);
+}
+
+TEST(ScriptRuntime, OnTapeEdgeReceivesTheLevelAndTheSamplesSinceThePreviousEdge) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", "export default { onTapeEdge(ctx, level, samples) { ctx.log.warn('edge ' + level + ' ' + samples); } };", layout(), bindings);
+  EXPECT_TRUE(runtime.hasTapeEdge());
+  runtime.tapeEdge(false, 96);
+  runtime.tapeEdge(true, 4000000000U);
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"edge 0 96", "edge 1 4000000000"}));
+
+  FakeBindings quiet;
+  ScriptRuntime without("demo", "export default {};", layout(), quiet);
+  EXPECT_FALSE(without.hasTapeEdge());
+  without.tapeEdge(true, 1);
+  EXPECT_TRUE(quiet.logs.empty());
+}
+
+TEST(ScriptRuntime, TheTapeDeviceRejectsBadArgumentsAndAMachineWithoutATape) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      read(ctx, bus, addr) {
+        switch (addr) {
+          case 1: ctx.device('radio'); break;
+          case 2: ctx.device('tape').setComparator(5, 5, false); break;
+          case 3: ctx.device('tape').setComparator(-40000, 0, false); break;
+          case 4: ctx.device('tape').setComparator(0, 10, 1); break;
+          case 5: ctx.device(7); break;
+        }
+        return 0;
+      }
+    };)",
+                       layout(), bindings);
+  for (const std::uint16_t address : std::initializer_list<std::uint16_t>{1, 2, 3, 4, 5}) expectError([&] { static_cast<void>(runtime.read(false, address)); }, mapper_error::ERROR_SCRIPT_ERROR, "");
+
+  ScriptLayout noTape = layout();
+  noTape.hasTape = false;
+  FakeBindings other;
+  ScriptRuntime withoutTape("demo", "export default { read(ctx) { ctx.device('tape'); return 0; } };", noTape, other);
+  expectError([&] { static_cast<void>(withoutTape.read(false, 0)); }, mapper_error::ERROR_SCRIPT_ERROR, "没有磁带机");
 }
 
 TEST(ScriptRuntime, FunctionsTheScriptDoesNotExportAreSkipped) {

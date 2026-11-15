@@ -168,6 +168,12 @@ class RuntimeService {
   /** 设置输入钩子（在核心启动时设置一次）；为空时输入直接交给主机。 */
   virtual void setInputHook(std::shared_ptr<InputHook> hook) = 0;
 
+  /**
+   * 设置是否给经典 FC 接上 Family BASIC 键盘：对当前主机立即生效，之后装配的每台主机也按它设置；没有扩展口的主机（学习机）不受影响。
+   * 开关改变时输入钩子收到 machineChanged，按着的键松开。
+   */
+  virtual void setFamilyKeyboard(bool connected) = 0;
+
   /** 设置 runtime.frame 事件的发布间隔，每 frames 帧一次；0 表示不发布（默认）。 */
   virtual void setFrameEventInterval(std::uint32_t frames) = 0;
 

@@ -433,6 +433,33 @@ TEST(SimulationRuntime, KeysDoNotReachTheControllerWithoutAnInputHook) {
   EXPECT_EQ(rig.frames->dominantPixel(), released);
 }
 
+/** 读当前主机的键盘是否归机器；没有主机时返回空。 */
+std::optional<bool> keyboardIsMachineInput(SimulationRuntime& runtime) {
+  std::optional<bool> result;
+  runtime.useMachine([&](hw::Machine& machine) { result = machine.keyboardIsMachineInput(); });
+  return result;
+}
+
+TEST(SimulationRuntime, TheFamilyKeyboardSettingAppliesToTheCurrentAndTheNextMachines) {
+  Rig rig;
+  const auto hook = std::make_shared<NumpadHook>();
+  rig.runtime->setInputHook(hook);
+  rig.runtime->insertCartridge(rig.insertion(idleRom(), "test.nes", false));
+  EXPECT_EQ(keyboardIsMachineInput(*rig.runtime), false) << "默认没有接键盘";
+
+  const int changes = hook->changes.load();
+  rig.runtime->setFamilyKeyboard(true);
+  EXPECT_EQ(keyboardIsMachineInput(*rig.runtime), true) << "对当前主机立即生效";
+  EXPECT_GT(hook->changes.load(), changes) << "归属变了，通知钩子松开按着的键";
+  rig.runtime->setFamilyKeyboard(true);
+  EXPECT_EQ(hook->changes.load(), changes + 1) << "取值没变不再通知";
+
+  rig.runtime->insertCartridge(rig.insertion(idleRom(), "other.nes", false));
+  EXPECT_EQ(keyboardIsMachineInput(*rig.runtime), true) << "换卡带后新主机仍按设置接着键盘";
+  rig.runtime->setFamilyKeyboard(false);
+  EXPECT_EQ(keyboardIsMachineInput(*rig.runtime), false);
+}
+
 TEST(SimulationRuntime, InputSentBeforeTheMachineExistsIsDropped) {
   Rig rig;
   rig.runtime->setInputHook(std::make_shared<NumpadHook>());

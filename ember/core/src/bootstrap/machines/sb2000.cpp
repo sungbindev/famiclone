@@ -8,7 +8,7 @@
  * 备注：CPU 总线：$0000-$1FFF 内部 RAM（2K 镜像）、$2000-$3FFF 图形端口（$2000-$2008、调色板 $2040-$207F）、
  *       $4000-$4013 与 $4015 PSG、$4014 精灵 DMA、$4016-$4017 手柄口、$4020-$4022 键盘、$4023-$4024 鼠标、$4025 并口数据、$4026 扩展 I/O、$4027 DAC、
  *       $4031 初始设置、$4032-$4033 中断、$4034-$4036 定时器、$4040-$4047 程序分页、$4048-$404F 通用 DMA、$4080-$4081 实时时钟、
- *       $4100-$43FF 超级 I/O（显存页、语音存根）、$4400-$5FFF 工作窗口、$6000-$7FFF 外部 RAM（8K）、$8000-$FFFF 程序窗口（分页到 BIOS ROM 或扩展 RAM）；
+ *       $4100-$43FF 超级 I/O（显存页、FC 模式开关、语音端口 $4302）、$4400-$5FFF 工作窗口、$6000-$7FFF 外部 RAM（8K）、$8000-$FFFF 程序窗口（分页到 BIOS ROM 或扩展 RAM）；
  *       没有器件的地址（如 $4018-$401F）读到总线上最近的值；
  *       显存总线（16 位）：$0000-$7FFF 字符 RAM，$8000-$FFFF 扩展显存的 32K 窗口；
  *       FC 兼容模式（$4301 写 $55）下 $2000-$3FFF 是标准 PPU、$4000-$4015 是标准 APU、$8000-$FFFF 是 MMC3 映射的程序窗口，显存总线是另一条 14 位的总线（见 sb2000-fc-board.hpp）。
@@ -72,7 +72,8 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
       parallel_(printer_ != nullptr ? static_cast<hw::ParallelPort&>(*printer_) : static_cast<hw::ParallelPort&>(nullParallel_)),
       irqController_(irq_),
       fdc_(scheduler_, irqController_, logic::hardware::IrqUm6576::SOURCE_FLOPPY, FDC_STEP_TICKS, FDC_POLL_STEPS),
-      superIo_(video_, fdc_),
+      speech_(scheduler_, MASTER_CLOCK_HZ),
+      superIo_(video_, fdc_, speech_),
       timer_(scheduler_, irqController_, CPU_TICKS_PER_CYCLE, LINE_TICKS),
       expio_(parallel_),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, *this),
@@ -126,7 +127,8 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
   dac_.onLevel = [this](std::uint8_t level) { psg_.setDacLevel(level); };
   dma_.timingControlOn = [this] { return (keyboardPort_.timingControl() & 0x80) != 0; };
   expio_.onMouseReset = [this] { mouseDevice_.pulseControl(); };
-  expio_.onSpeechReset = [this] { superIo_.resetSpeech(); };
+  expio_.onSpeechReset = [this] { speech_.reset(false); };
+  speech_.onLevel = [this](double level) { psg_.setVoiceLevel(level); };
   // $4301 写 $55 发生在 CPU 的总线访问里，只记下要求，等这条指令结束后再切换（见 runInstruction）。
   superIo_.onFcMode = [this] { fcSwitchPending_ = true; };
   workWindow_.onWindowSelect = [this](std::uint8_t value) { mmc3_.selectWindow(value); };
@@ -151,7 +153,7 @@ void Sb2000Machine::resetDevices(bool power) {
   psg_.reset(power);
   ppu_.reset(power);
   parallel_.reset();
-  superIo_.resetSpeech();
+  speech_.reset(power);
 }
 
 void Sb2000Machine::powerOn() {

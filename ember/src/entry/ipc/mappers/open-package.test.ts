@@ -23,7 +23,7 @@ function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = v
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
   const schemas = [MAPPERS_SCHEMA];
   const core = { gateway, modules: schemas, schemas };
-  const handler = createOpenPackageHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn() }, core });
+  const handler = createOpenPackageHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, core });
   return { request, call: (params: unknown = {}) => handleMainRequest({ handlers: { 'mappers.openPackage': handler }, modules: schemas, schemas }, 'mappers.openPackage', params) };
 }
 

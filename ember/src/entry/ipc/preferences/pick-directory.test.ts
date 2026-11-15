@@ -16,7 +16,7 @@ import { handleMainRequest } from '../core/main-request-ipc';
 import { createPickDirectoryHandler } from './pick-directory';
 
 function setup(pick: FileDialog['pickDirectory']) {
-  const handler = createPickDirectoryHandler({ dialog: { pickFile: vi.fn(), pickDirectory: pick } });
+  const handler = createPickDirectoryHandler({ dialog: { pickFile: vi.fn(), pickDirectory: pick, pickSaveFile: vi.fn() } });
   const schemas = [PREFERENCES_SCHEMA];
   return { call: (params: unknown = {}) => handleMainRequest({ handlers: { 'preferences.pickDirectory': handler }, modules: [PREFERENCES_SCHEMA], schemas }, 'preferences.pickDirectory', params) };
 }

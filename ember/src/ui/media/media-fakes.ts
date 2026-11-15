@@ -10,8 +10,13 @@
  */
 
 import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
-import type { FloppyStatus, PrinterStatus } from '../../contracts/media/generated/media';
+import type { FloppyStatus, PrinterStatus, TapeStatus } from '../../contracts/media/generated/media';
 import type { MediaBackend } from './media-controller';
+
+/** 构造一个磁带机的状态；默认是主机没有磁带机（available 为 false）。 */
+export function tapeStatus(patch: Partial<TapeStatus> = {}): TapeStatus {
+  return { available: false, loaded: false, mode: 'stopped', position: 0, duration: 0, stereo: false, ...patch };
+}
 
 /** 构造一个软驱的状态；fileName 为 undefined 表示没有盘片。 */
 export function floppyStatus(drive: number, fileName?: string, patch: Partial<FloppyStatus> = {}): FloppyStatus {
@@ -33,6 +38,12 @@ export class FakeMediaBackend {
   /** 各软驱的状态；为空表示没有开机或主机没有软驱。 */
   floppies: FloppyStatus[] = [floppyStatus(0), floppyStatus(1)];
   printer: PrinterStatus = { state: 'idle', hasContent: false, pages: 0 };
+  /** 磁带机的状态。 */
+  tape: TapeStatus = tapeStatus();
+  /** 下一次载入磁带时用户选的文件名；undefined 表示用户取消。 */
+  pickedTape: string | undefined;
+  /** 下一次录音时用户选的文件名；undefined 表示用户取消。 */
+  pickedRecording: string | undefined;
   /** 下一次载入镜像时用户选的文件名；undefined 表示用户取消。 */
   pickedFile: string | undefined;
   /** 按请求名登记的下一次失败的原因。 */
@@ -51,6 +62,26 @@ export class FakeMediaBackend {
       media: {
         floppyStatus: () => this.request('media.floppyStatus', {}, () => ({ drives: this.floppies })),
         printerStatus: () => this.request('media.printerStatus', {}, () => ({ status: this.printer })),
+        tapeStatus: () => this.request('media.tapeStatus', {}, () => ({ status: this.tape })),
+        tapeEject: () =>
+          this.request('media.tapeEject', {}, () => {
+            this.tape = { ...this.tape, loaded: false, mode: 'stopped', position: 0, duration: 0, stereo: false };
+            delete (this.tape as { fileName?: string }).fileName;
+            this.emit('media.changed', { device: 'tape', drive: 0 });
+            return { status: this.tape };
+          }),
+        tapePlay: () =>
+          this.request('media.tapePlay', {}, () => {
+            this.tape = { ...this.tape, mode: 'playing' };
+            this.emit('media.changed', { device: 'tape', drive: 0 });
+            return { status: this.tape };
+          }),
+        tapeStop: () =>
+          this.request('media.tapeStop', {}, () => {
+            this.tape = { ...this.tape, mode: 'stopped' };
+            this.emit('media.changed', { device: 'tape', drive: 0 });
+            return { status: this.tape };
+          }),
         floppyEject: (params: { drive: number }) =>
           this.request('media.floppyEject', params, () => {
             const status = this.change(params.drive, () => floppyStatus(params.drive));
@@ -80,6 +111,20 @@ export class FakeMediaBackend {
             const status = this.change(params.drive, () => floppyStatus(params.drive, file));
             this.emit('media.changed', { device: 'floppy', drive: params.drive });
             return { canceled: false, status };
+          }),
+        openTape: () =>
+          this.request('media.openTape', {}, () => {
+            if (this.pickedTape === undefined) return { canceled: true };
+            this.tape = { ...this.tape, loaded: true, fileName: this.pickedTape, mode: 'stopped', position: 0, duration: 60, stereo: true };
+            this.emit('media.changed', { device: 'tape', drive: 0 });
+            return { canceled: false, status: this.tape };
+          }),
+        openTapeRecording: () =>
+          this.request('media.openTapeRecording', {}, () => {
+            if (this.pickedRecording === undefined) return { canceled: true };
+            this.tape = { ...this.tape, loaded: true, fileName: this.pickedRecording, mode: 'recording', position: 0, duration: 0, stereo: false };
+            this.emit('media.changed', { device: 'tape', drive: 0 });
+            return { canceled: false, status: this.tape };
           })
       }
     },

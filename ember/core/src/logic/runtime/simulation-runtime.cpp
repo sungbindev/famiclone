@@ -427,6 +427,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     cartridge_.reset();
     machine_ = std::move(machine);
     cartridge_ = std::move(cartridge);
+    machine_->connectFamilyKeyboard(familyKeyboard_);
     if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_ = summary;
     host_ = insertion.match.host;
@@ -448,6 +449,7 @@ rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
     if (machine_ != nullptr) machine_->cartridgeSlot().eject();
     cartridge_.reset();
     machine_ = std::move(machine);
+    machine_->connectFamilyKeyboard(familyKeyboard_);
     if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_.reset();
     host_ = boot.machine;
@@ -500,6 +502,17 @@ void SimulationRuntime::sendInput(hw::InputEvent event) {
 
 void SimulationRuntime::setInputHook(std::shared_ptr<rt::InputHook> hook) {
   submit([this, hook = std::move(hook)] { inputHook_ = hook; });
+}
+
+void SimulationRuntime::setFamilyKeyboard(bool connected) {
+  submit([this, connected] {
+    if (familyKeyboard_ == connected) return;
+    familyKeyboard_ = connected;
+    if (machine_ == nullptr) return;
+    machine_->connectFamilyKeyboard(connected);
+    // 键盘归属变了：钩子里按着的键要松开。
+    if (inputHook_ != nullptr) inputHook_->machineChanged();
+  });
 }
 
 void SimulationRuntime::setFrameEventInterval(std::uint32_t frames) { frameEventInterval_.store(frames, std::memory_order_relaxed); }

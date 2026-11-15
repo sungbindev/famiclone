@@ -24,6 +24,7 @@
 #include "contracts/hardware/machine-debugger.hpp"
 #include "contracts/hardware/ppu.hpp"
 #include "contracts/hardware/printer-output.hpp"
+#include "contracts/hardware/tape-deck.hpp"
 
 namespace ember::contracts::hardware {
 
@@ -106,6 +107,15 @@ class Machine : public PadSink {
 
   /** 并口打印机的控制；主机型号没有打印机时为空指针。只在模拟线程使用。 */
   virtual PrinterControl* printer() { return nullptr; }
+
+  /** 磁带机的控制；主机型号没有磁带机时为空指针。磁带与电源无关，但属于主机：换卡带、重新上电都会让磁带机停止。只在模拟线程使用。 */
+  virtual TapeControl* tape() { return nullptr; }
+
+  /**
+   * 接上或拔下 Family BASIC 键盘（经典 FC 扩展口上的外设）；接上后键盘按键按它的键位送给机器，keyboardIsMachineInput 为 true。
+   * 主机型号没有扩展口时没有效果。只在模拟线程使用。
+   */
+  virtual void connectFamilyKeyboard(bool connected) { static_cast<void>(connected); }
 };
 
 }  // namespace ember::contracts::hardware

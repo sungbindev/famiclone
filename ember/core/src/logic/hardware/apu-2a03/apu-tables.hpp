@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：数值来自 nesdev wiki 的 APU 各页（NTSC）；周期的单位是 CPU 周期。
+ * 备注：数值是 NTSC 的；周期的单位是 CPU 周期。
  * ------------------------------------------------------------------------
  */
 
@@ -26,10 +26,10 @@ inline constexpr std::array<std::uint16_t, 16> NOISE_PERIOD_TABLE = {4, 8, 16, 3
 /** DMC 的速率表（NTSC，每个输出时钟的 CPU 周期数）：由 $4010 的低 4 位索引。 */
 inline constexpr std::array<std::uint16_t, 16> DMC_RATE_TABLE = {428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54};
 
-/** 噪声通道的周期表（PAL，CPU 周期），取自 NESdev 维基的 APU Noise。 */
+/** 噪声通道的周期表（PAL，CPU 周期）。 */
 inline constexpr std::array<std::uint16_t, 16> NOISE_PERIOD_TABLE_PAL = {4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708, 944, 1890, 3778};
 
-/** DMC 的速率表（PAL），取自 NESdev 维基的 APU DMC。 */
+/** DMC 的速率表（PAL）。 */
 inline constexpr std::array<std::uint16_t, 16> DMC_RATE_TABLE_PAL = {398, 354, 316, 298, 276, 236, 210, 198, 176, 148, 132, 118, 98, 78, 66, 50};
 
 /** 方波的四种占空比序列，8 步一圈。 */
@@ -55,7 +55,7 @@ inline constexpr std::array<std::array<std::uint32_t, FRAME_STEP_COUNT>, 2> FRAM
     {7457, 14913, 22371, 29829, 37281, 37282},
 }};
 
-/** PAL 的帧计数器步进表（NESdev 维基的 APU Frame Counter 的 APU 周期数乘 2）。 */
+/** PAL 的帧计数器步进表（周期数是 APU 周期数乘 2）。 */
 inline constexpr std::array<std::array<std::uint32_t, FRAME_STEP_COUNT>, 2> FRAME_STEP_CYCLES_PAL = {{
     {8313, 16627, 24939, 33252, 33253, 33254},
     {8313, 16627, 24939, 33253, 41565, 41566},

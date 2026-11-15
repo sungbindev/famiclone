@@ -118,12 +118,13 @@ describe('登记表', () => {
 });
 
 describe('“机器”菜单', () => {
-  it('没有开机：开机、暂停、软复位、硬复位全部置灰，静音可用', async () => {
+  it('没有开机：开机、暂停、软复位、硬复位全部置灰，静音与接入 Family BASIC 键盘可用', async () => {
     await setup();
     await openMenu('机器(M)');
-    expect(popupItems().map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['开机', '继续', '软复位', '硬复位', '静音']);
+    expect(popupItems().map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['开机', '继续', '软复位', '硬复位', '静音', '接入 Family BASIC 键盘']);
     expect(['开机', '继续', '软复位', '硬复位'].map((label) => isDisabled(item(label)))).toEqual([true, true, true, true]);
     expect(isDisabled(item('静音'))).toBe(false);
+    expect(isDisabled(item('接入 Family BASIC 键盘'))).toBe(false);
   });
 
   it('断电：开机与硬复位可用，暂停（继续）与软复位置灰，快捷键显示在右侧', async () => {
@@ -155,6 +156,16 @@ describe('“机器”菜单', () => {
     await act(async () => settle());
     expect(fake.muted).toBe(true);
     expect(item('静音').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('接入 Family BASIC 键盘是勾选项，点击保存到首选项并跟随勾选', async () => {
+    const { fake } = await setup();
+    await openMenu('机器(M)');
+    expect(item('接入 Family BASIC 键盘').getAttribute('aria-checked')).toBe('false');
+    await userEvent.click(item('接入 Family BASIC 键盘'));
+    await act(async () => settle());
+    expect(fake.familyKeyboard).toBe(true);
+    expect(item('接入 Family BASIC 键盘').getAttribute('aria-checked')).toBe('true');
   });
 });
 

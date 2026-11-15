@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "bootstrap/machines/cpu-debug-kit.hpp"
+#include "bootstrap/machines/fc-expansion-port.hpp"
 #include "bootstrap/machines/pad-apu-port.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
@@ -36,6 +37,7 @@
 #include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
 #include "logic/hardware/ram/ram-block.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
+#include "logic/hardware/tape-deck/tape-deck.hpp"
 
 namespace ember::bootstrap {
 
@@ -67,12 +69,17 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   void takeAudio(std::vector<float>& samples) override;
   void setButtons(unsigned port, std::uint8_t buttons) override;
   [[nodiscard]] unsigned padPortCount() const override { return static_cast<unsigned>(joypads_.size()); }
-  void input(const contracts::hardware::InputEvent& event) override { slot_.input(event); }
+  void input(const contracts::hardware::InputEvent& event) override;
   [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
   contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
   contracts::hardware::MachineDebugger* debugger() override { return this; }
+  contracts::hardware::TapeControl* tape() override { return &tape_; }
+  contracts::hardware::TapeLine* tapeLine() override { return &tape_; }
+  void connectFamilyKeyboard(bool connected) override;
+  /** 接上 Family BASIC 键盘时，键盘属于机器；否则经典 FC 没有键盘。 */
+  [[nodiscard]] bool keyboardIsMachineInput() const override { return expansionPort_.keyboardConnected(); }
 
   // 测试与调试用
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
@@ -125,8 +132,14 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   logic::hardware::Ppu2c02 ppu_;
   logic::hardware::Dma2a03 dma_;
   logic::hardware::Pad2a03 pad_;
+  /** Family BASIC 数据录音机与声像磁带：磁带机，信号线接在 $4016。 */
+  logic::hardware::TapeDeck tape_;
   /** $4016-$4017：手柄口与 APU 帧计数器共用，写入同时转给两边。 */
   PadApuPort padApuPort_;
+  /** Family BASIC 键盘（接在扩展口上，默认没接）。 */
+  logic::hardware::KeyboardFc keyboard_;
+  /** $4016-$4017 的外设接口：在上面叠加磁带机与键盘的信号线。 */
+  FcExpansionPort expansionPort_;
   std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
   logic::hardware::Cpu6502 cpu_;
   /** 断点、记录、代码数据标记与反汇编。 */

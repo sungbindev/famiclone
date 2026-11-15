@@ -230,6 +230,7 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   logic::hardware::IrqUm6576 irqController_;
   logic::hardware::StandardFloppyDrive floppy_;
   logic::hardware::FdcUpd765 fdc_;
+  logic::hardware::SpeechLpc speech_;
   Sb2000SuperIo superIo_;
   logic::hardware::TimerUm6576 timer_;
   logic::hardware::RtcUm6576 rtc_;

@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：这些是主机型号自己的胶合逻辑（不属于任何芯片模块），所以放在主机装配旁边，只由 sb2000.cpp 创建并挂到总线上；
- *       存储的容量与位置来自真机实测与旧版实现：BIOS ROM 512KB、扩展 RAM 512KB、字符 RAM 32KB、扩展显存 512KB（经 $4300 选 32KB 的页）。
+ *       存储的容量与位置按真机实测：BIOS ROM 512KB、扩展 RAM 512KB、字符 RAM 32KB、扩展显存 512KB（经 $4300 选 32KB 的页）。
  * ------------------------------------------------------------------------
  */
 
@@ -23,6 +23,7 @@
 #include "logic/hardware/fdc-upd765/fdc-upd765.hpp"
 #include "logic/hardware/paging-um6576/paging-um6576.hpp"
 #include "logic/hardware/ram/ram-block.hpp"
+#include "logic/hardware/speech-lpc/speech-lpc.hpp"
 #include "logic/hardware/sysinit-um6576/sysinit-um6576.hpp"
 
 namespace ember::bootstrap {
@@ -116,20 +117,18 @@ class Sb2000VideoMemory final : public contracts::hardware::BusDevice {
 };
 
 /**
- * 超级 I/O 窗口 $4100-$43FF：软驱控制器（$4100 写数据率、$4101 写 DOR、$4200-$4207）、显存页寄存器 $4300、FC 兼容模式开关 $4301（写 $55 时通知主机型号，主机型号在指令结束后切换）、语音端口 $4302（存根）；
+ * 超级 I/O 窗口 $4100-$43FF：软驱控制器（$4100 写数据率、$4101 写 DOR、$4200-$4207）、显存页寄存器 $4300、FC 兼容模式开关 $4301（写 $55 时通知主机型号，主机型号在指令结束后切换）、语音端口 $4302（转给语音芯片）；
  * 其余地址读出 0，写入被丢弃。
  * 软驱端口（$4200-$4207）：0 与 1 是 DMA 数据口（写 1 同时给出终止计数），2 读出位 6 是数据请求，3 读出位 6 是中断标志，
  * 4 读主状态、写位 6 是控制器复位脚，5 读写数据，7 读盘片更换位、写数据率，2 写 DOR，6 读出 0。
- * 语音端口只做“可以接收下一个字节”与“播放结束”两个状态位：不解码语音数据；
- * 写入非零字节表示正在播放，连续写入超过 32 个零字节表示播放结束；复位或上电后是“已结束”。
  */
 class Sb2000SuperIo final : public contracts::hardware::BusDevice {
  public:
-  Sb2000SuperIo(Sb2000VideoMemory& video, logic::hardware::FdcUpd765& floppy) : video_(video), floppy_(floppy) {}
+  Sb2000SuperIo(Sb2000VideoMemory& video, logic::hardware::FdcUpd765& floppy, logic::hardware::SpeechLpc& speech) : video_(video), floppy_(floppy), speech_(speech) {}
 
   contracts::hardware::BusRead read(std::uint16_t address) override {
     if (address >= FIRST_FLOPPY_PORT && address <= LAST_FLOPPY_PORT) return contracts::hardware::driveBus(readFloppy(address & 7U));
-    if (address == ADDRESS_SPEECH) return contracts::hardware::driveBus(static_cast<std::uint8_t>(0x80 | (speechEnded_ ? 0x0F : 0x00)));
+    if (address == ADDRESS_SPEECH) return speech_.read(address);
     return contracts::hardware::driveBus(0);
   }
 
@@ -150,19 +149,8 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
     } else if (address == ADDRESS_FC_MODE) {
       if (value == FC_MODE_KEY && onFcMode) onFcMode();
     } else if (address == ADDRESS_SPEECH) {
-      if (value == 0) {
-        if (++zeroRun_ > SPEECH_END_ZEROS) speechEnded_ = true;
-      } else {
-        zeroRun_ = 0;
-        speechEnded_ = false;
-      }
+      speech_.write(address, value);
     }
-  }
-
-  /** 复位语音（扩展 I/O 的位 6 上升沿）。 */
-  void resetSpeech() {
-    zeroRun_ = 0;
-    speechEnded_ = true;
   }
 
   /** $4301 写入 $55（进入 FC 兼容模式）时调用；在 CPU 总线访问里被调用，不能在里面直接复位 CPU。 */
@@ -177,7 +165,6 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
   static constexpr std::uint16_t ADDRESS_FC_MODE = 0x4301;
   static constexpr std::uint8_t FC_MODE_KEY = 0x55;
   static constexpr std::uint16_t ADDRESS_SPEECH = 0x4302;
-  static constexpr unsigned SPEECH_END_ZEROS = 32;
 
   std::uint8_t readFloppy(unsigned port) {
     switch (port) {
@@ -232,8 +219,7 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
 
   Sb2000VideoMemory& video_;
   logic::hardware::FdcUpd765& floppy_;
-  unsigned zeroRun_{0};
-  bool speechEnded_{true};
+  logic::hardware::SpeechLpc& speech_;
 };
 
 /**

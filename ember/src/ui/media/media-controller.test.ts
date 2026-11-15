@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.test.ts
- * 说明：设备面板控制器的测试：初始状态读取、载入镜像（选定、取消、失败）、取出、保存、写保护、事件刷新、打印机输出一页的通知、打印失败、定时读取只在面板显示期间运行、核心重启后清空并重新读取、断开后不再响应。
+ * 说明：设备面板控制器的测试：初始状态读取、载入镜像（选定、取消、失败）、取出、保存、写保护、磁带的载入、播放、停止、取出与录音、事件刷新、打印机输出一页的通知、打印失败、定时读取只在面板显示期间运行、核心重启后清空并重新读取、断开后不再响应。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -11,7 +11,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FloppyStatus } from '../../contracts/media/generated/media';
-import { FakeMediaBackend, floppyStatus } from './media-fakes';
+import { FakeMediaBackend, floppyStatus, tapeStatus } from './media-fakes';
 import { MediaController, type MediaHostActions } from './media-controller';
 
 /** 等已发出的请求与它们的后续处理完成（微任务队列清空）。 */
@@ -184,5 +184,64 @@ describe('MediaController', () => {
     controller.ejectFloppy(0);
     await settle();
     expect(fake.calls).toHaveLength(before);
+  });
+
+  it('接上后读取磁带机的状态；核心重启时清空', async () => {
+    const { fake, controller, detach } = await setup();
+    fake.tape = tapeStatus({ available: true, loaded: true, fileName: 'a.m4a' });
+    fake.emit('media.changed', { device: 'tape', drive: 0 });
+    await settle();
+    expect(controller.snapshot().tape?.fileName).toBe('a.m4a');
+    fake.emitCoreStatus({ state: 'starting' });
+    expect(controller.snapshot().tape).toBeUndefined();
+    detach();
+  });
+
+  it('载入磁带：选定后调用回调并刷新状态；取消时什么都不发生；失败时用通知提示核心的说明', async () => {
+    const { fake, controller, detach, notices } = await setup();
+    fake.tape = tapeStatus({ available: true });
+    const loaded = vi.fn();
+    controller.loadTape(loaded);
+    await settle();
+    expect(loaded).not.toHaveBeenCalled();
+
+    fake.pickedTape = 'lesson.m4a';
+    controller.loadTape(loaded);
+    await settle();
+    expect(loaded).toHaveBeenCalledTimes(1);
+    expect(controller.snapshot().tape?.fileName).toBe('lesson.m4a');
+    expect(notices).toEqual([]);
+
+    fake.failures.set('media.openTape', { code: 'media.tapeUnsupported', message: '文件里没有声音' });
+    controller.loadTape(loaded);
+    await settle();
+    expect(loaded).toHaveBeenCalledTimes(1);
+    expect(notices).toEqual([{ text: '载入磁带失败：文件里没有声音', kind: 'error' }]);
+    detach();
+  });
+
+  it('播放、停止、取出、录音发出对应的请求，失败时用通知提示', async () => {
+    const { fake, controller, detach, notices } = await setup();
+    fake.tape = tapeStatus({ available: true, loaded: true, fileName: 'a.m4a', duration: 10 });
+    controller.playTape();
+    await settle();
+    expect(controller.snapshot().tape?.mode).toBe('playing');
+    controller.stopTape();
+    await settle();
+    expect(controller.snapshot().tape?.mode).toBe('stopped');
+    fake.failures.set('media.tapeEject', { code: 'media.tapeBusy', message: '磁带机正在播放或录音，请先停止' });
+    controller.ejectTape();
+    await settle();
+    expect(notices).toEqual([{ text: '取出磁带失败：磁带机正在播放或录音，请先停止', kind: 'error' }]);
+    controller.ejectTape();
+    await settle();
+    expect(controller.snapshot().tape?.loaded).toBe(false);
+
+    fake.pickedRecording = 'out.wav';
+    controller.recordTape();
+    await settle();
+    expect(fake.calls).toContain('media.openTapeRecording {}');
+    expect(controller.snapshot().tape?.mode).toBe('recording');
+    detach();
   });
 });

@@ -34,7 +34,8 @@ export const RUNTIME_COMMANDS = {
   pauseToggle: 'runtime.pauseToggle',
   softReset: 'runtime.softReset',
   hardReset: 'runtime.hardReset',
-  muteToggle: 'runtime.muteToggle'
+  muteToggle: 'runtime.muteToggle',
+  familyKeyboardToggle: 'runtime.familyKeyboardToggle'
 } as const;
 
 /** 子菜单的标识。 */
@@ -51,6 +52,7 @@ const TEXT = {
   softReset: '软复位',
   hardReset: '硬复位',
   mute: '静音',
+  familyKeyboard: '接入 Family BASIC 键盘',
   unsupported: '暂未支持',
   noBios: '未添加 BIOS，请在设置里添加'
 } as const;
@@ -136,7 +138,8 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
       },
       { id: RUNTIME_COMMANDS.softReset, title: TEXT.softReset, defaultShortcut: 'F7', run: () => controller.softReset(), enabled: () => controller.availability().softReset },
       { id: RUNTIME_COMMANDS.hardReset, title: TEXT.hardReset, defaultShortcut: 'Ctrl+F7', run: () => controller.hardReset(), enabled: () => controller.availability().hardReset },
-      { id: RUNTIME_COMMANDS.muteToggle, title: TEXT.mute, run: () => controller.toggleMute(), checked: () => controller.snapshot().muted }
+      { id: RUNTIME_COMMANDS.muteToggle, title: TEXT.mute, run: () => controller.toggleMute(), checked: () => controller.snapshot().muted },
+      { id: RUNTIME_COMMANDS.familyKeyboardToggle, title: TEXT.familyKeyboard, run: () => controller.toggleFamilyKeyboard(), checked: () => controller.snapshot().familyKeyboard }
     ],
     menuItems: [
       { menu: 'file', submenu: { id: MACHINE_SUBMENU_ID, title: TEXT.selectMachine, entries: machineEntries } },
@@ -147,7 +150,8 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
       { menu: 'machine', command: RUNTIME_COMMANDS.pauseToggle },
       { menu: 'machine', command: RUNTIME_COMMANDS.softReset, separatorBefore: true },
       { menu: 'machine', command: RUNTIME_COMMANDS.hardReset },
-      { menu: 'machine', command: RUNTIME_COMMANDS.muteToggle, separatorBefore: true }
+      { menu: 'machine', command: RUNTIME_COMMANDS.muteToggle, separatorBefore: true },
+      { menu: 'machine', command: RUNTIME_COMMANDS.familyKeyboardToggle }
     ],
     statusItems: [
       { id: 'runtime.host', align: 'start', Component: bind(HostStatusItem, controller) },

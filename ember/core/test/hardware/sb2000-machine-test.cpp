@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -21,6 +22,7 @@
 #include <iterator>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "bootstrap/machines/sb2000.hpp"
@@ -264,6 +266,41 @@ TEST(Sb2000Machine, TheKeyboardBelongsToTheMachineAndThePadPortsAreSetDirectly) 
   EXPECT_TRUE(machine.keyboardIsMachineInput()) << "6576 模式下键盘属于机器";
   EXPECT_NO_THROW(machine.setButtons(1, hw::pad_button::START));
   EXPECT_THROW(machine.setButtons(2, 0), ember::shared::CoreError);
+}
+
+/** 一段 D6 码表的语音码流：命令字节、两个相同的浊音帧、结束帧（字段按位反序打包）。 */
+std::vector<std::uint8_t> voicedSpeechStream() {
+  const std::vector<std::pair<unsigned, unsigned>> frame = {{8, 4}, {0, 1}, {40, 7}, {30, 6}, {23, 6}, {20, 5}, {17, 5}, {8, 4}, {8, 4}, {8, 4}, {4, 3}, {4, 3}, {4, 3}};
+  std::vector<std::pair<unsigned, unsigned>> fields = frame;
+  fields.insert(fields.end(), frame.begin(), frame.end());
+  fields.insert(fields.end(), frame.begin(), frame.end());
+  fields.emplace_back(15U, 4U);
+  std::vector<unsigned> bits;
+  for (const auto& [value, count] : fields) {
+    for (unsigned index = 0; index < count; ++index) bits.push_back((value >> (count - 1 - index)) & 1U);
+  }
+  std::vector<std::uint8_t> bytes = {0x0A};
+  bytes.resize(1 + (bits.size() + 7) / 8, 0);
+  for (std::size_t index = 0; index < bits.size(); ++index) bytes[1 + index / 8] = static_cast<std::uint8_t>(bytes[1 + index / 8] | (bits[index] << (index % 8)));
+  return bytes;
+}
+
+TEST(Sb2000Machine, TheSpeechPortSynthesizesAStreamIntoTheMachineAudio) {
+  Sb2000Machine machine(syntheticBios());
+  machine.powerOn();
+  machine.runFrame();
+  std::vector<float> samples;
+  machine.takeAudio(samples);
+  EXPECT_EQ(peek(machine, 0x4302), 0x80) << "缓冲未满，没有播放结束";
+  for (const std::uint8_t byte : voicedSpeechStream()) poke(machine, 0x4302, byte);
+  for (unsigned frame = 0; frame < 4; ++frame) machine.runFrame();
+  machine.takeAudio(samples);
+  float peakLevel = 0;
+  for (const float sample : samples) peakLevel = std::max(peakLevel, std::fabs(sample));
+  EXPECT_GT(peakLevel, 0.01F) << "语音经 PSG 混进了机器的声音输出";
+  EXPECT_EQ(peek(machine, 0x4302) & 0x0F, 0x0F) << "两帧合成完，读到结束帧";
+  poke(machine, 0x4302, 0x0F);
+  EXPECT_EQ(peek(machine, 0x4302), 0x80);
 }
 
 TEST(Sb2000Machine, RealBiosBootsToAPicture) {

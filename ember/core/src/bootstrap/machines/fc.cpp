@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <variant>
 #include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -38,7 +39,9 @@ FcMachine::FcMachine()
       apu_(cpuBus_, scheduler_, irq_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE)),
       ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, PPU_PHASE_TICKS),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
+      tape_(scheduler_, MASTER_CLOCK_HZ),
       padApuPort_(pad_, apu_),
+      expansionPort_(padApuPort_, tape_, keyboard_),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
@@ -46,16 +49,20 @@ FcMachine::FcMachine()
   cpuBus_.mount(0x4000, 0x4013, apu_);
   cpuBus_.mount(0x4014, 0x4014, dma_);
   cpuBus_.mount(0x4015, 0x4015, apu_);
-  cpuBus_.mount(0x4016, 0x4017, padApuPort_);
+  cpuBus_.mount(0x4016, 0x4017, expansionPort_);
   cpuBus_.mount(0x4020, 0xFFFF, slot_.cpuSide());
 
   ppuBus_.mount(0x0000, 0x1FFF, slot_.ppuSide());
   ppuBus_.mount(0x2000, 0x3EFF, nametableRam_);
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
+  tape_.setAudioRate(logic::hardware::Apu2a03::SAMPLE_RATE);
 }
 
 void FcMachine::powerOn() {
+  // 重新上电让磁带机停止（录音在这里写完），它的时间基准随时钟一起归零。
+  tape_.stop();
+  keyboard_.reset();
   // 时钟先归零并丢弃旧事件，各设备复位时再登记自己的事件；CPU 最后复位，复位序列会推进时钟。
   scheduler_.reset();
   ram_.fill(0);
@@ -75,6 +82,7 @@ void FcMachine::powerOff() { poweredOn_ = false; }
 
 void FcMachine::softReset() {
   if (!poweredOn_) return;
+  keyboard_.reset();
   apu_.reset(false);
   dma_.reset(false);
   ppu_.reset(false);
@@ -107,6 +115,23 @@ void FcMachine::runFrame() {
 void FcMachine::takeAudio(std::vector<float>& samples) {
   if (poweredOn_) apu_.catchUp(scheduler_.now());
   apu_.takeAudio(samples);
+  tape_.mixAudio(samples);
+}
+
+void FcMachine::connectFamilyKeyboard(bool connected) {
+  keyboard_.releaseAll();
+  expansionPort_.connectKeyboard(connected);
+}
+
+void FcMachine::input(const hw::InputEvent& event) {
+  // 接上 Family BASIC 键盘后，键盘事件只给键盘（键位表里没有的键丢弃）；鼠标等其他事件仍交给卡带的脚本。
+  if (expansionPort_.keyboardConnected()) {
+    if (const auto* key = std::get_if<hw::KeyInput>(&event)) {
+      keyboard_.setKey(key->code, key->down);
+      return;
+    }
+  }
+  slot_.input(event);
 }
 
 void FcMachine::setButtons(unsigned port, std::uint8_t buttons) {

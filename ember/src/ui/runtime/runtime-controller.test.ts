@@ -76,7 +76,7 @@ describe('初始读取', () => {
   });
 
   it('没有接上时状态是“还没读到”，已选机型是经典 FC，音量为默认值', () => {
-    expect(controller.snapshot()).toEqual({ status: undefined, recent: [], machines: [], selectedMachine: 'fc', volume: 100, muted: false });
+    expect(controller.snapshot()).toEqual({ status: undefined, recent: [], machines: [], selectedMachine: 'fc', volume: 100, muted: false, familyKeyboard: false });
     expect(controller.machineState()).toBe('unknown');
   });
 
@@ -421,6 +421,38 @@ describe('音量与静音', () => {
     controller.toggleMute();
     await settle();
     expect(context.notices).toEqual(['调整音量失败：声音设备不可用']);
+  });
+});
+
+describe('Family BASIC 键盘', () => {
+  it('接上后读出首选项的取值；切换时保存到首选项，状态跟随返回值', async () => {
+    fake.familyKeyboard = true;
+    await attach();
+    expect(controller.snapshot().familyKeyboard).toBe(true);
+    controller.toggleFamilyKeyboard();
+    await settle();
+    expect(fake.calls).toContain('preferences.set {"id":"input.familyKeyboard","value":false}');
+    expect(controller.snapshot().familyKeyboard).toBe(false);
+    controller.toggleFamilyKeyboard();
+    await settle();
+    expect(controller.snapshot().familyKeyboard).toBe(true);
+  });
+
+  it('在其他地方（首选项页）改了取值同样跟随，别的设置项的变化不影响它', async () => {
+    await attach();
+    fake.emit('preferences.changed', { id: 'input.familyKeyboard', value: true });
+    expect(controller.snapshot().familyKeyboard).toBe(true);
+    fake.emit('preferences.changed', { id: 'input.captureMouse', value: false });
+    expect(controller.snapshot().familyKeyboard).toBe(true);
+  });
+
+  it('保存失败时通知提示，状态不变', async () => {
+    await attach();
+    fake.failures.set('preferences.set', { code: 'core.internal', message: '写不了配置' });
+    controller.toggleFamilyKeyboard();
+    await settle();
+    expect(context.notices).toEqual(['设置 Family BASIC 键盘失败：写不了配置']);
+    expect(controller.snapshot().familyKeyboard).toBe(false);
   });
 });
 

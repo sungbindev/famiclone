@@ -56,7 +56,7 @@ function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = v
     resolve: () => undefined,
     flush: () => undefined
   };
-  const handler = createOpenCartridgeHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn() }, core, recent });
+  const handler = createOpenCartridgeHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, core, recent });
   return { gateway, request, calls, call: () => handleMainRequest({ handlers: { 'cartridges.open': handler }, modules: [CARTRIDGES_SCHEMA], schemas }, 'cartridges.open', {}) };
 }
 

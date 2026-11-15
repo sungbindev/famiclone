@@ -29,7 +29,7 @@ namespace mapper_error = contracts::mappers;
 namespace hw = contracts::hardware;
 
 /** 宿主函数的编号，经 JS 函数的 magic 传入。 */
-enum Operation : int { WindowSetBank, WindowSetOffset, WindowUnmap, StorageRead, StorageWrite, StateGet, StateSet, IrqAssert, IrqRelease, PadSet, PadRelease };
+enum Operation : int { WindowSetBank, WindowSetOffset, WindowUnmap, StorageRead, StorageWrite, StateGet, StateSet, IrqAssert, IrqRelease, PadSet, PadRelease, TapeLevel, TapeSetComparator };
 
 /** JS 数字能精确表示的最大整数。 */
 constexpr double MAX_SAFE_INTEGER = 9007199254740991.0;
@@ -47,7 +47,7 @@ struct ScriptRuntime::Impl {
       for (const JSValue value : windowObjects) JS_FreeValue(js, value);
       for (const JSValue value : storageObjects) JS_FreeValue(js, value);
       for (const JSValue value : padObjects) JS_FreeValue(js, value);
-      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
+      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
       JS_FreeContext(js);
     }
     if (runtime != nullptr) JS_FreeRuntime(runtime);
@@ -70,6 +70,9 @@ struct ScriptRuntime::Impl {
   JSValue writeFn = JS_UNDEFINED;
   JSValue keyFn = JS_UNDEFINED;
   JSValue mouseFn = JS_UNDEFINED;
+  JSValue tapeEdgeFn = JS_UNDEFINED;
+  /** ctx.device('tape') 返回的对象；主机没有磁带机时为 undefined。 */
+  JSValue tapeObject = JS_UNDEFINED;
   JSValue cpuName = JS_UNDEFINED;
   JSValue ppuName = JS_UNDEFINED;
   JSValue powerName = JS_UNDEFINED;
@@ -160,6 +163,13 @@ struct ScriptRuntime::Impl {
     JS_SetPropertyStr(js, keys, "isDown", JS_NewCFunction(js, &Impl::keysIsDown, "isDown", 1));
     JS_SetPropertyStr(js, hostObject, "keys", keys);
     JS_SetPropertyStr(js, hostObject, "pad", JS_NewCFunction(js, &Impl::lookupPad, "pad", 1));
+    JS_SetPropertyStr(js, hostObject, "device", JS_NewCFunction(js, &Impl::lookupDevice, "device", 1));
+    if (layout.hasTape) {
+      tapeObject = JS_NewObject(js);
+      addFunction(tapeObject, "level", &Impl::hostCall, 0, TapeLevel, 0);
+      addFunction(tapeObject, "setComparator", &Impl::hostCall, 3, TapeSetComparator, 0);
+      JS_FreezeObject(js, tapeObject);
+    }
     for (std::size_t port = 0; port < layout.padPorts; ++port) {
       JSValue pad = JS_NewObject(js);
       addFunction(pad, "set", &Impl::hostCall, 2, PadSet, port);
@@ -237,6 +247,7 @@ struct ScriptRuntime::Impl {
     writeFn = readHandler("write");
     keyFn = readHandler("onKey");
     mouseFn = readHandler("onMouse");
+    tapeEdgeFn = readHandler("onTapeEdge");
   }
 
   JSValue readHandler(const char* name) {
@@ -472,6 +483,17 @@ struct ScriptRuntime::Impl {
         case PadRelease:
           host.padRelease(index);
           return JS_UNDEFINED;
+        case TapeLevel:
+          return JS_NewInt32(context, host.tapeLevel() ? 1 : 0);
+        case TapeSetComparator: {
+          const std::int64_t low = integerArgument(context, argument(argc, argv, 0), "low");
+          const std::int64_t high = integerArgument(context, argument(argc, argv, 1), "high");
+          if (low < -32768 || high > 32767 || low >= high) throw ScriptArgumentError("参数 low 和 high 必须在 -32768 到 32767 之间，且 low 小于 high");
+          const JSValue invert = argument(argc, argv, 2);
+          if (!JS_IsBool(invert)) throw ScriptArgumentError("参数 invert 必须是布尔值");
+          host.tapeSetComparator(static_cast<std::int16_t>(low), static_cast<std::int16_t>(high), JS_ToBool(context, invert) != 0);
+          return JS_UNDEFINED;
+        }
         default:
           throw std::logic_error("未知的宿主函数");
       }
@@ -506,6 +528,16 @@ struct ScriptRuntime::Impl {
       if (port < 0 || static_cast<std::uint64_t>(port) >= runtimeSelf->padObjects.size()) throw ScriptArgumentError("手柄口不存在：" + std::to_string(port));
       return JS_DupValue(context, runtimeSelf->padObjects[static_cast<std::size_t>(port)]);
     });
+  }
+
+  /** ctx.device(name)：取主机上的功能模块；目前只有 'tape'（磁带机），主机没有它时抓错。 */
+  static JSValue lookupDevice(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
+    const Impl* runtimeSelf = self(context);
+    std::string name;
+    if (!stringArgument(context, argument(argc, argv, 0), name)) return JS_ThrowTypeError(context, "功能模块的名称必须是字符串");
+    if (name != "tape") return JS_ThrowRangeError(context, "没有这种功能模块：%s", name.c_str());
+    if (!runtimeSelf->layout.hasTape) return JS_ThrowRangeError(context, "当前主机没有磁带机");
+    return JS_DupValue(context, runtimeSelf->tapeObject);
   }
 
   /** ctx.keys.isDown(code)：这个物理键现在是否按着。 */
@@ -553,6 +585,14 @@ bool ScriptRuntime::hasWrite() const noexcept { return !JS_IsUndefined(impl_->wr
 bool ScriptRuntime::hasKey() const noexcept { return !JS_IsUndefined(impl_->keyFn); }
 
 bool ScriptRuntime::hasMouse() const noexcept { return !JS_IsUndefined(impl_->mouseFn); }
+
+bool ScriptRuntime::hasTapeEdge() const noexcept { return !JS_IsUndefined(impl_->tapeEdgeFn); }
+
+void ScriptRuntime::tapeEdge(bool level, std::uint32_t samples) {
+  if (!hasTapeEdge()) return;
+  JSValue arguments[3] = {impl_->hostObject, JS_NewInt32(impl_->js, level ? 1 : 0), JS_NewUint32(impl_->js, samples)};
+  JS_FreeValue(impl_->js, impl_->invoke("onTapeEdge", impl_->tapeEdgeFn, 3, arguments));
+}
 
 void ScriptRuntime::key(const contracts::hardware::KeyInput& input) {
   if (hasKey()) impl_->invokeInput("onKey", impl_->keyFn, impl_->keyEvent(input));

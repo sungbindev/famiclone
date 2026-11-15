@@ -23,7 +23,7 @@ function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = v
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
   const schemas = [MEDIA_SCHEMA];
   const core = { gateway, modules: [MEDIA_SCHEMA], schemas };
-  const handler = createOpenFloppyHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn() }, core });
+  const handler = createOpenFloppyHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, core });
   return { request, call: (params: unknown = { drive: 0 }) => handleMainRequest({ handlers: { 'media.openFloppy': handler }, modules: [MEDIA_SCHEMA], schemas }, 'media.openFloppy', params) };
 }
 

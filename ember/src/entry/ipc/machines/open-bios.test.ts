@@ -23,7 +23,7 @@ function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = v
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
   const schemas = [MACHINES_SCHEMA];
   const core = { gateway, modules: [MACHINES_SCHEMA], schemas };
-  const handler = createOpenBiosHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn() }, core });
+  const handler = createOpenBiosHandler({ dialog: { pickFile: pick, pickDirectory: vi.fn(), pickSaveFile: vi.fn() }, core });
   return { request, call: (params: unknown = { machine: 'sb2000' }) => handleMainRequest({ handlers: { 'machines.openBios': handler }, modules: [MACHINES_SCHEMA], schemas }, 'machines.openBios', params) };
 }
 

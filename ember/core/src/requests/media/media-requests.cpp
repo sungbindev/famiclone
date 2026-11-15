@@ -42,6 +42,28 @@ void addMediaRequests(platform::RequestRouter& router, std::shared_ptr<contract:
     static_cast<void>(contract::parseMediaPrinterFlushParams(params, "params"));
     return nlohmann::json(service->printerFlush());
   });
+  router.add("media", contract::MEDIA_TAPE_LOAD_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->tapeLoad(contract::parseMediaTapeLoadParams(params, "params")));
+  });
+  router.add("media", contract::MEDIA_TAPE_EJECT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseMediaTapeEjectParams(params, "params"));
+    return nlohmann::json(service->tapeEject());
+  });
+  router.add("media", contract::MEDIA_TAPE_PLAY_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseMediaTapePlayParams(params, "params"));
+    return nlohmann::json(service->tapePlay());
+  });
+  router.add("media", contract::MEDIA_TAPE_RECORD_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->tapeRecord(contract::parseMediaTapeRecordParams(params, "params")));
+  });
+  router.add("media", contract::MEDIA_TAPE_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseMediaTapeStopParams(params, "params"));
+    return nlohmann::json(service->tapeStop());
+  });
+  router.add("media", contract::MEDIA_TAPE_STATUS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseMediaTapeStatusParams(params, "params"));
+    return nlohmann::json(service->tapeStatus());
+  });
 }
 
 }  // namespace ember::requests::media

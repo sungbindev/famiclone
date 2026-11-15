@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "contracts/input/input-binding-service.hpp"
 #include "contracts/input/input-service.hpp"
@@ -36,13 +37,26 @@ void registerInputSettings(contracts::preferences::PreferenceService& service) {
                       .description = "开启后点击画面会捕获鼠标：指针隐藏，鼠标移动以相对位移送给学习机，按 Esc 退出捕获；关闭时指针停在画面上。手柄的键位在“设置”菜单的“手柄设置”里设置。",
                       .kind = contracts::preferences::SettingKind::Switch,
                       .defaultValue = true});
+  service.addSetting({.id = std::string(setting::SETTING_FAMILY_KEYBOARD),
+                      .group = std::string(setting::SETTING_GROUP),
+                      .label = "接入 Family BASIC 键盘",
+                      .description = "给经典 FC 接上 Family BASIC 键盘：接上后电脑键盘的按键按它的键位送给机器，不再当作手柄按键；学习机用自己内置的键盘，不受影响。",
+                      .kind = contracts::preferences::SettingKind::Switch,
+                      .defaultValue = false});
 }
 
 }  // namespace
 
 void registerInput(ModuleRegistry& registry) {
-  registerInputSettings(*registry.services.require<contracts::preferences::PreferenceService>());
+  auto preferences = registry.services.require<contracts::preferences::PreferenceService>();
+  registerInputSettings(*preferences);
   auto runtime = registry.services.require<contracts::runtime::RuntimeService>();
+  // Family BASIC 键盘：启动时按已保存的取值设置，之后跟随首选项的变化。
+  const auto keyboardOf = [](const contracts::preferences::SettingValue& value) { return std::get_if<bool>(&value) != nullptr && std::get<bool>(value); };
+  runtime->setFamilyKeyboard(keyboardOf(preferences->value(std::string(contracts::input::setting::SETTING_FAMILY_KEYBOARD))));
+  preferences->subscribe([runtime, keyboardOf](const std::string& id, const contracts::preferences::SettingValue& value) {
+    if (id == contracts::input::setting::SETTING_FAMILY_KEYBOARD) runtime->setFamilyKeyboard(keyboardOf(value));
+  });
   // 手柄绑定：服务保存绑定，路由器作为运行服务的输入钩子，把手柄与键盘按键换成手柄口的按键。
   infra::input::InputBindingRegistryOptions bindingOptions;
   bindingOptions.file = registry.userDataPath / "config" / "input-bindings.json";

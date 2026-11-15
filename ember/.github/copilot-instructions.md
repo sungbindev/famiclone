@@ -23,6 +23,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 ## 约定
 
 - 硬件行为以真机资料与实测为准：依据 `../machines/`、`../reference/` 和实测，不以旧版 `../virtuanes/` 的代码为硬件事实；旧代码只参考逻辑，不复制。
+- 代码注释、文件头和文档不写出处：不写“参照”“参考”“取自”“出自”“照…整理”某个项目、网站、手册、旧版代码或测试 ROM；只写这段代码做什么、为什么这样做。第三方代码与数据的来源和许可只写在 `third-party.json`、随附的许可文件和测试数据目录的 `README.md` 里。
 - 每个硬件模块一个型号，模块之间只经契约层的抽象（总线、中断线、时钟、端口等）协作，实现之间不互相引用；具体实现只在组装根按主机型号创建并连线。硬件契约在 `core/src/contracts/hardware/`（只能包含标准库、自己与 `shared`），硬件模块在 `core/src/logic/hardware/<模块>/`（只能包含 `contracts/hardware`、`shared` 与 `platform` 的抽象）。
 - CPU 核用 nestest 日志逐行比对验证，测试数据在 `core/test/data/nestest/`，不改动数据文件。
 - 调试访问只经 `Machine::debugger()`（`MachineDebugger`）与 `BusDevice::peek`：无副作用读不得调用设备的 `read`（会清标志、回调脚本）；新增有寄存器的设备时，`peek` 保持默认（不驱动数据线），存储类设备才覆盖；检查请求由模拟线程执行（`RuntimeService::inspect`），不在别的线程直接碰主机；断点命中只经 `MachineDebugger::takeBreakpointHit` 交给运行时，总线的读写钩子在调试访问（检查、调试写内存、单步）期间必须暂停，不能触发读写断点；监视项只在模拟线程经 `RuntimeService::setObserver` 的回调里检查，回调里不得调用运行服务的方法；跟踪、调用记录的文件只经 `DebugFileWriter`（`output` 模块提供，只写调试输出目录，只收不含目录的文件名），记录与代码数据标记属于主机，不跨主机保留；代码数据标记里 CPU 地址到 PRG 偏移的换算只经卡带的 `describeAddress`，不在主机里写死地址范围。

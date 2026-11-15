@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：寄存器行为依据 NESdev 维基的 PPU registers、PPU scrolling、PPU frame timing 页，与 blargg 的 PPU 测试 ROM。
+ * 备注：寄存器行为与真机一致，用 blargg 的 PPU 测试 ROM 验证。
  * ------------------------------------------------------------------------
  */
 
@@ -40,7 +40,7 @@ constexpr int VBLANK_START_INDEX = 241 * Ppu2c02::DOTS_PER_SCANLINE + 1;
 constexpr int VBLANK_END_DOT = 1;
 constexpr int SKIP_DECISION_DOT = 339;
 
-/** 上电时调色板的内容：取自 blargg 的 power_up_palette 测试表（其作者的 NES 上的实测值），真机每次上电不同。 */
+/** 上电时调色板的内容（实测值），真机每次上电不同。 */
 constexpr std::array<std::uint8_t, 32> POWER_UP_PALETTE = {0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00, 0x04, 0x2C,
                                                            0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08};
 

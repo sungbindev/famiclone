@@ -193,10 +193,11 @@ export default definePlugin({
   timer(ctx, name) { /* 定时事件到期 */ },
   onKey(ctx, event) { /* 键盘：event.code、event.down */ },
   onMouse(ctx, event) { /* 鼠标：event.kind、x、y、dx、dy、buttons、wheel */ },
+  onTapeEdge(ctx, level, samples) { /* 磁带数据线翻转：level 为 0 或 1，samples 是距上一次翻转的采样数（96 kHz） */ },
 });
 ```
 
-- 六个函数都可选；声明了 `registers` 的读或写，就必须实现对应的函数（安装与创建卡带时检查，缺少报 `mappers.invalidPackage`）。
+- 七个函数都可选；声明了 `registers` 的读或写，就必须实现对应的函数（安装与创建卡带时检查，缺少报 `mappers.invalidPackage`）。
 - **本阶段没有 SDK**：脚本直接 `export default { reset, read, write }`，不写 `import`（沙箱里没有模块加载器，`import` 会报 `mappers.invalidPackage`）；上面示意代码里的 `definePlugin` 只是给类型检查用的恒等函数，等 SDK 做好后再用。`timer(ctx, name)` 目前不会被调用（后续阶段）。
 - `reset` 的 `kind` 是 `'power'` 或 `'soft'`；上电复位时宿主先把窗口回到 `initial`、状态清零、名称表回到初始连法、释放 IRQ，再调用脚本的 `reset`；软复位只调用 `reset`（寄存器与窗口的状态按真机保持或清除，由脚本自己决定）。
 - 函数是同步的，宿主在模拟线程中直接调用；没有 Promise、没有定时器。
@@ -210,7 +211,7 @@ export default definePlugin({
 | `ctx.window(id)` | 窗口：`setBank(n)` 切换 bank，`setOffset(bytes)` 按字节偏移，`unmap()` 取消映射（读按开放总线） |
 | `ctx.nametable.set(mode)` | 设置名称表连法：`horizontal`、`vertical`、`single0`、`single1`、`four` |
 | `ctx.irq` | 卡带的 IRQ 引脚：`assert()` 拉低，`release()` 释放 |
-| `ctx.device(name)` | **后续阶段（插卡学习机）**：主机上的功能模块（如 `fdc`）；`read(寄存器)`、`write(寄存器, 值)` 在脚本的读写回调里转发，寄存器编号由脚本从地址取；主机没有该功能模块时抛错，运行页提示“当前机型没有 xx”并暂停 |
+| `ctx.device(name)` | 主机上的功能模块；目前只有 `'tape'`（磁带机，见第 6.6 节）：`level()`、`setComparator(low, high, invert)`；主机没有该功能模块时抛出 `RangeError`（“当前主机没有磁带机”），按插件错误处理；**后续阶段（插卡学习机）**：其他功能模块（如 `fdc`），`read(寄存器)`、`write(寄存器, 值)` 在脚本的读写回调里转发，寄存器编号由脚本从地址取，运行页提示“当前机型没有 xx”并暂停 |
 | `ctx.storage(id)` | 存储区：`size`、`read(offset)`、`write(offset, value)`（ROM 拒绝写） |
 | `ctx.timer` | `after(cpuCycles, name)` 登记事件，`cancel(name)` 取消；时间单位是 CPU 周期 |
 | `ctx.state` | 已声明状态的读写，如 `ctx.state.prgBank = 5` |
@@ -221,7 +222,7 @@ export default definePlugin({
 | `ctx.pad(port)` | 手柄口 `port`（经典 FC 为 0 与 1）：`set(button, down)` 按下或松开一个键，`button` 是 `a`、`b`、`select`、`start`、`up`、`down`、`left`、`right`；`release()` 松开这个口的全部按键；见第 6.5 节 |
 
 - 脚本不能访问文件、网络、进程、系统时间和 `Math.random`；需要随机数时用 `ctx.random`。
-- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.nametable`、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.log.warn`、`ctx.keys`、`ctx.pad`；`ctx.timer`、`ctx.random`、`ctx.settings` **后续阶段实现**，目前在脚本里是 `undefined`。目前脚本不能访问主机上的功能模块，卡带与主机之间只有卡槽引脚；`ctx.device` 在插卡学习机阶段实现。
+- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.nametable`、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.log.warn`、`ctx.keys`、`ctx.pad`、`ctx.device('tape')`；`ctx.timer`、`ctx.random`、`ctx.settings` **后续阶段实现**，目前在脚本里是 `undefined`。目前脚本能访问的主机功能模块只有磁带机，卡带与主机之间另有卡槽引脚；其他 `ctx.device` 在插卡学习机阶段实现。
 - 沙箱里只加载确定性的内置对象：没有 `Date`、`console`、`performance`、`setTimeout`、`fetch`、`process`、`require` 与 quickjs-libc，`Math.random` 被删除，访问它们报 `ReferenceError` 或 `TypeError`（即 `mappers.scriptError`）。`Promise` 仅作为语言内置保留，宿主不执行异步任务，顶层 `await` 报 `mappers.invalidPackage`。
 - `ctx` 与其中的窗口、存储区对象都是冻结的，`ctx.state` 不能增加属性；参数不合法（bank 为负、不是整数、标识不存在、存储区偏移越界、写入值不在 0 到 255、名称表连法不认识）抛出 `RangeError` 或 `TypeError`，按插件错误处理。`ctx.log.warn` 只接受字符串，超过 2000 字节在 UTF-8 字符边界截断，卡带保留最近 200 条（`MapperCartridge::scriptLog`，运行消息日志模块做好后经它写入）。
 - 宿主对象是脚本与硬件之间的全部接口，所以插件的行为是确定的，同样的输入得到同样的结果，方便测试与调试。
@@ -238,7 +239,7 @@ export default definePlugin({
 - 超出限制或脚本抛出异常时，模拟器暂停并报告：超时、内存或栈超限为 `mappers.limitExceeded`，其他异常与不合法的返回值为 `mappers.scriptError`，说明里带插件标识与脚本位置；写入运行消息日志，调试服务推送 `runtime.error` 事件。
 - 实现：卡带在总线访问里不抛异常（异常会穿过 CPU 的指令执行），而是记下错误并停止调用脚本，之后对寄存器的读按开放总线、写被丢弃；`MapperCartridge::failure()` 返回这个错误，运行模块在每一帧与每条命令执行之后检查它，发现错误就暂停模拟器、写入系统错误日志并发事件 `runtime.error`（模块为 `mappers`）与 `runtime.stateChanged`（原因 `error`），同一个错误只报告一次；复位后清除错误。
 - 时长限制按真实时间判断（中断处理函数每执行一批字节码检查一次），超时的中止脚本捕获不了；脚本的加载（顶层代码）同样受时长与内存限制。“定时事件同时最多 16 个”随 `ctx.timer` 在后续阶段实现。
-- 回调只发生在寄存器访问、复位、定时事件和用户输入上，所以脚本不会拖慢普通的程序执行；寄存器访问特别频繁的 mapper（每个周期都访问）不适合用脚本实现，见第 6.4 节。
+- 回调只发生在寄存器访问、复位、定时事件、用户输入和磁带数据线翻转（第 6.6 节）上，所以脚本不会拖慢普通的程序执行；寄存器访问特别频繁的 mapper（每个周期都访问）不适合用脚本实现，见第 6.4 节。
 
 ### 6.4 宿主电路构件（预留）
 
@@ -267,6 +268,20 @@ export default {
 };
 ```
 
+### 6.6 磁带机
+
+声像磁带的卡带（如 mapper 172）把磁带机的数据线接在卡上，脚本经 `ctx.device('tape')` 读数据线，并用 `onTapeEdge` 在数据线翻转的时刻得到通知。磁带机属于主机（只有 `fc` 有，见 02 第 6.4 节），播放时按模拟时间推进，与真实时间无关。
+
+| 接口 | 说明 |
+| --- | --- |
+| `ctx.device('tape').level()` | 数据线现在的电平，0 或 1；没有播放时是“静音”对应的电平（取反的比较器静音时为 0） |
+| `ctx.device('tape').setComparator(low, high, invert)` | 设置比较器：数据线取磁带右声道（单声道磁带的唯一声道），采样不低于 `high` 为 1、不高于 `low` 为 0，之间保持原值；`invert` 为 `true` 时输出取反；`low`、`high` 是 -32768 到 32767 的整数且 `low` 小于 `high`，`invert` 必须是布尔值，否则抛出 `RangeError`；默认是 -3072、3072、不取反；通常在 `reset` 里设置 |
+| `onTapeEdge(ctx, level, samples)` | 数据线翻转时在翻转的时刻调用：`level` 是翻转后的电平（0 或 1），`samples` 是距上一次翻转的采样数（96 kHz；播放刚开始时是距开始播放的采样数）；只在播放时发生，脚本没有导出它时宿主不登记通知；脚本出错的处理同第 6.3 节 |
+
+- 数据线的比较器是整个磁带机共用的一份：卡带创建时磁带机保持默认，脚本在 `reset` 里设置；卡带被换掉时磁带机随主机一起重新装配。
+- 比较器与采样的约定：磁带送来的是 96 kHz、16 位、左右交错的采样（见 02 第 6.4 节），所以 `samples` 的单位是 1/96000 秒；需要换成别的时间单位时由脚本自己算（如 `qls` 把它按 1764/960 折成计时）。
+- 数据线读不到“某一时刻之前的电平”：`level()` 只给当前值；需要精确的边沿时刻用 `onTapeEdge`。
+
 ## 7. 安装与管理
 
 - 预装的官方插件随安装包放在应用的资源目录，只读；用户安装的插件放在用户数据目录的插件文件夹。实现：预装目录由启动核心时的可选参数 `bundledPluginsPath` 给出（开发版是 `build/plugins`，由 `npm run plugins:pack` 从 `plugins/` 打包；正式包里是应用资源目录下的 `plugins/`，打包配置把 `build/plugins` 作为额外资源复制过去；主进程在启动核心时传入这个路径，核心启动即自动加载其中的 `nrom` 等预装插件），用户插件目录是 `<用户数据目录>/plugins/`，安装后的文件名是 `<id>.emap`（id 只含小写字母、数字与 `-`，不会写到目录之外）。
@@ -291,12 +306,14 @@ export default {
 | 插件 | 匹配 | 主机 | 说明 | 状态 |
 | --- | --- | --- | --- | --- |
 | `nrom` | mapper 0 | `fc` | 没有寄存器，固定映射；第一个要做的插件，用来验证经典 FC 的路径与插件机制，先让超级玛丽运行 | 已完成（见下） |
+| `qls` | mapper 172，PRG 32K | `fc` | 声像教学卡（“动画普里奇声像系统”）：磁带机的数据线接在卡上，每个下降沿向 CPU 发一次中断 | 已完成（见下） |
 
-- 后续是学习卡等各种 mapper 插件：mapper 241、178、168、169、170、177、560 等，数量很多，都是卡带；声像磁带的 mapper 172 同样是插件。它们要用的主机与外设（插卡学习机主机、`ctx.device`）放在经典 FC 之后做，见 02 第 1 节“插卡学习机”与第 11 节待核对。学习机整机的 BIOS（mapper 171）不是插件，见 02。
+- 后续是学习卡等各种 mapper 插件：mapper 241、178、168、169、170、177、560 等，数量很多，都是卡带；声像磁带的 mapper 172 同样是插件（PRG 32K 的 `qls` 已完成，PRG 16K 的“普里奇”版见待办备忘）。它们要用的主机与外设（插卡学习机主机、其他 `ctx.device`）放在经典 FC 之后做，见 02 第 1 节“插卡学习机”与第 11 节待核对。学习机整机的 BIOS（mapper 171）不是插件，见 02。
 
 - `nrom`（`plugins/nrom/manifest.json`、`plugins/nrom/main.js`）：没有寄存器，不设键位（脚本只导出空对象，手柄的按键由手柄绑定统一产生，见第 6.5 节）；存储区 `prg`（文件 PRG）、`chr`（文件 CHR，没有时用 8K CHR RAM）、`prg-ram`（8K RAM）；窗口：`$8000-$BFFF` 与 `$C000-$FFFF` 各 16K，分别初始指向第一与最后一个 bank（NROM-128 两个窗口都是唯一的 16K，即镜像；NROM-256 各自一半），PPU `$0000-$1FFF` 映射 CHR，名称表连法按文件头。
 - `nrom` 额外带 `$6000-$7FFF` 的 8K PRG RAM（`prg-ram`）：真机的 NROM 卡带没有（Family BASIC 等才有），这是和真机的一处出入；blargg 的 2010 年系列测试 ROM 把结果写在 `$6000`，没有它就无法用测试 ROM 验收经典机。
 - 测试用的 `test-cnrom`（mapper 3，有寄存器与脚本）在 `core/test/data/test-plugins/cnrom/`，不属于官方插件，不随程序发布。
+- `qls`（`plugins/qls/manifest.json`、`plugins/qls/main.js`）：匹配 mapper 172 且 PRG 为 32K（`reference/rom/qls.nes` 就是这一种）。存储区 `prg`、`chr`（文件没有 CHR，用 8K CHR RAM）、`ram`（1K）；窗口：`$8000-$8FFF` 是 1K RAM 的镜像，`$C000-$DFFF`、`$E000-$FFFF` 分别初始指向 PRG 的第 2、3 个 8K（文件前 16K 卡上不可见）；PPU `$0000-$1FFF` 映射 CHR，名称表水平连法。寄存器：读 `$9000-$9FFF` 得到累计的计时 `tickCount` 并撤销中断，读 `$A000-$B7FF` 得到 0，`$B800` 以上卡上没有器件（不驱动总线）。磁带机：`reset` 里把比较器设为“采样不大于 -1000 为 1，否则为 0”（数据线取右声道，左声道经机器的扬声器播放）；`onTapeEdge` 里累加“距上一次下降沿的采样数”，下降沿（电平 0）时把它按 1764/960 折成计时加到 `tickCount`（8 位回绕）、清零并拉低中断。已用真实的 `qls.nes` 与 `reference/tape` 里的声像磁带验证：卡带启动显示标题画面，磁带播放后画面随磁带推进到课文（`core/test/runtime/qls-test.cpp`）。
 
 ## 10. 示意
 

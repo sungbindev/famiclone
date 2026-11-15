@@ -47,6 +47,8 @@ export interface ProcessCoreGatewayOptions {
   readonly appVersion: string;
   /** 预装的 mapper 插件目录；没有时省略。 */
   readonly bundledPluginsPath?: string;
+  /** 解码磁带用的 ffmpeg 程序的完整路径；没有时省略。 */
+  readonly ffmpegPath?: string;
   /** 启动参数 --debug-port 指定的调试服务端口；有值时本次运行强制开启调试服务。 */
   readonly debugPort?: number;
   /** 启动参数 --debug-token 指定的令牌；没有时用首选项里的令牌。 */
@@ -171,13 +173,14 @@ export class ProcessCoreGateway implements CoreGateway, CoreStreamSink {
     this.process = child;
     child.onMessage((message) => this.receive(message as CoreHostOutbound));
     child.onExit((code) => this.exited(child, code));
-    const { nativePath, userDataPath, appVersion, bundledPluginsPath, debugPort, debugToken } = this.options;
+    const { nativePath, userDataPath, appVersion, bundledPluginsPath, ffmpegPath, debugPort, debugToken } = this.options;
     this.post({
       type: 'start',
       nativePath,
       userDataPath,
       appVersion,
       ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }),
+      ...(ffmpegPath === undefined ? {} : { ffmpegPath }),
       ...(debugPort === undefined ? {} : { debugPort }),
       ...(debugToken === undefined ? {} : { debugToken })
     });

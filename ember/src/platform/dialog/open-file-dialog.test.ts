@@ -11,16 +11,19 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const electron = vi.hoisted(() => ({ showOpenDialog: vi.fn() }));
+const electron = vi.hoisted(() => ({ showOpenDialog: vi.fn(), showSaveDialog: vi.fn() }));
 
-vi.mock('electron', () => ({ dialog: { showOpenDialog: electron.showOpenDialog } }));
+vi.mock('electron', () => ({ dialog: { showOpenDialog: electron.showOpenDialog, showSaveDialog: electron.showSaveDialog } }));
 
 const { createOpenFileDialog } = await import('./open-file-dialog');
 
 const OPTIONS = { title: '打开卡带', filters: [{ name: 'NES 卡带', extensions: ['nes'] }] };
 
 describe('createOpenFileDialog', () => {
-  beforeEach(() => electron.showOpenDialog.mockReset());
+  beforeEach(() => {
+    electron.showOpenDialog.mockReset();
+    electron.showSaveDialog.mockReset();
+  });
 
   it('没有父窗口时单独弹出，只选一个文件并按选项过滤', async () => {
     electron.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['D:/roms/idle.nes'] });
@@ -52,5 +55,17 @@ describe('createOpenFileDialog', () => {
     expect(electron.showOpenDialog).toHaveBeenCalledWith({ title: '选择文件夹', properties: ['openDirectory', 'createDirectory'] });
     electron.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
     await expect(createOpenFileDialog(() => undefined).pickDirectory({ title: '选择文件夹' })).resolves.toBeUndefined();
+  });
+
+  it('保存文件：系统的保存窗口按选项过滤，有父窗口时以它为父窗口，取消时返回 undefined', async () => {
+    const options = { title: '保存录音', filters: [{ name: 'WAV', extensions: ['wav'] }] };
+    electron.showSaveDialog.mockResolvedValue({ canceled: false, filePath: 'D:/tapes/out.wav' });
+    await expect(createOpenFileDialog(() => undefined).pickSaveFile(options)).resolves.toBe('D:/tapes/out.wav');
+    expect(electron.showSaveDialog).toHaveBeenCalledWith({ title: '保存录音', filters: [{ name: 'WAV', extensions: ['wav'] }] });
+    const parent = { name: '主窗口' };
+    await createOpenFileDialog(() => parent as never).pickSaveFile(options);
+    expect(electron.showSaveDialog).toHaveBeenLastCalledWith(parent, expect.objectContaining({ title: '保存录音' }));
+    electron.showSaveDialog.mockResolvedValue({ canceled: true, filePath: '' });
+    await expect(createOpenFileDialog(() => undefined).pickSaveFile(options)).resolves.toBeUndefined();
   });
 });

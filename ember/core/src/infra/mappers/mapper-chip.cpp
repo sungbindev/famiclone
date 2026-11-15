@@ -65,6 +65,7 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
     : plugin_(std::move(plugin)),
       irq_(irq),
       pads_(pads),
+      tape_(pads.tapeLine()),
       padMasks_(pads.padPortCount(), 0),
       cpuSlots_(CPU_SLOT_COUNT),
       ppuSlots_(PPU_SLOT_COUNT),
@@ -76,6 +77,7 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
   ScriptLayout layout;
   layout.headerJson = headerJson(image.description);
   layout.padPorts = padMasks_.size();
+  layout.hasTape = tape_ != nullptr;
   for (const StorageDecl& decl : manifest.storage) {
     std::unique_ptr<StorageBlock> block;
     if (decl.ram) {
@@ -134,10 +136,17 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
     script_ = std::make_unique<ScriptRuntime>(manifest.id, plugin_->script, std::move(layout), bindings, limits);
     if (manifest.needsReadHandler() && !script_->hasRead()) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了读寄存器，但 main.js 没有导出 read");
     if (manifest.needsWriteHandler() && !script_->hasWrite()) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 声明了写寄存器，但 main.js 没有导出 write");
+    // 磁带数据线的翻转在翻转的时刻通知脚本；主机没有磁带机时不挂（脚本的 onTapeEdge 不会被调用）。
+    if (tape_ != nullptr && script_->hasTapeEdge()) {
+      tapeListening_ = true;
+      tape_->setEdgeListener([this](bool level, std::uint32_t samples) { runScript([&] { script_->tapeEdge(level, samples); }); });
+    }
   }
 }
 
-MapperChip::~MapperChip() = default;
+MapperChip::~MapperChip() {
+  if (tapeListening_) tape_->setEdgeListener({});
+}
 
 template <typename Call>
 bool MapperChip::runScript(Call&& call) {
@@ -421,6 +430,16 @@ void MapperChip::padSet(std::size_t port, std::string_view button, bool down) {
 void MapperChip::padRelease(std::size_t port) {
   padMasks_.at(port) = 0;
   pads_.setButtons(static_cast<unsigned>(port), 0);
+}
+
+bool MapperChip::tapeLevel() {
+  if (tape_ == nullptr) throw ScriptArgumentError("当前主机没有磁带机");
+  return tape_->level();
+}
+
+void MapperChip::tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) {
+  if (tape_ == nullptr) throw ScriptArgumentError("当前主机没有磁带机");
+  tape_->setComparator(hw::TapeComparator{low, high, invert});
 }
 
 }  // namespace ember::infra::mappers

@@ -15,6 +15,8 @@
 
 namespace ember::contracts::hardware {
 
+class TapeLine;
+
 /** 标准手柄的按键掩码位。 */
 namespace pad_button {
 inline constexpr std::uint8_t A = 0x01;
@@ -39,7 +41,7 @@ class ButtonInput {
   virtual void setButtons(std::uint8_t buttons) = 0;
 };
 
-/** 手柄口的输出：主机上所有手柄口的集合，mapper 脚本经它设置各口的按键。 */
+/** 主机给卡带脚本用的接口：手柄口的集合（mapper 脚本经 ctx.pad 设置各口的按键），以及磁带机的数据线（ctx.device('tape')）。 */
 class PadSink {
  public:
   virtual ~PadSink() = default;
@@ -53,6 +55,9 @@ class PadSink {
    * @param buttons 按键掩码，位见 pad_button。
    */
   virtual void setButtons(unsigned port, std::uint8_t buttons) = 0;
+
+  /** 主机上的磁带机数据线；没有磁带机时为空。 */
+  [[nodiscard]] virtual TapeLine* tapeLine() { return nullptr; }
 };
 
 }  // namespace ember::contracts::hardware

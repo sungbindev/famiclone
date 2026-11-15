@@ -67,7 +67,7 @@ describe('window.ember', () => {
     expect(Object.keys(bridge.main.cartridges).toSorted()).toEqual(['open', 'openRecent', 'recent']);
     expect(Object.keys(bridge.main.machines)).toEqual(['openBios']);
     expect(Object.keys(bridge.main.mappers)).toEqual(['openPackage']);
-    expect(Object.keys(bridge.main.media)).toEqual(['openFloppy']);
+    expect(Object.keys(bridge.main.media)).toEqual(['openFloppy', 'openTape', 'openTapeRecording']);
     expect(Object.keys(bridge.main.preferences)).toEqual(['pickDirectory']);
     expect(Object.keys(bridge.main.system)).toEqual(['openLogDirectory']);
     electron.invoke.mockResolvedValue({ ok: true, result: { canceled: true } });

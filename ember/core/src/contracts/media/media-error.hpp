@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-error.hpp
- * 说明：media 模块的错误码：没有主机或驱动器、盘片镜像文件读写失败、没有盘片、故障注入的参数不全，经 shared::CoreError 抛出，说明面向用户。
+ * 说明：media 模块的错误码：没有主机或驱动器、盘片镜像文件读写失败、没有盘片、故障注入的参数不全、磁带机的状态与声音文件，经 shared::CoreError 抛出，说明面向用户。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -35,5 +35,15 @@ inline constexpr std::string_view ERROR_SECTOR_REQUIRED = "media.sectorRequired"
 inline constexpr std::string_view ERROR_NO_PRINTER = "media.noPrinter";
 /** 打印机当前页上没有内容，没有什么可输出的。 */
 inline constexpr std::string_view ERROR_PRINTER_EMPTY = "media.printerEmpty";
+/** 这台主机没有磁带机。 */
+inline constexpr std::string_view ERROR_NO_DECK = "media.noDeck";
+/** 磁带机里没有磁带。 */
+inline constexpr std::string_view ERROR_NO_TAPE = "media.noTape";
+/** 磁带机正在播放或录音，要先停止。 */
+inline constexpr std::string_view ERROR_TAPE_BUSY = "media.tapeBusy";
+/** 声音文件里没有声音，或无法解码。 */
+inline constexpr std::string_view ERROR_TAPE_UNSUPPORTED = "media.tapeUnsupported";
+/** 没有找到解码用的程序（ffmpeg）。 */
+inline constexpr std::string_view ERROR_DECODER_MISSING = "media.decoderMissing";
 
 }  // namespace ember::contracts::media

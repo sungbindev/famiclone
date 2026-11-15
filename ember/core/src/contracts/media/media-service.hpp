@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-service.hpp
- * 说明：media 模块的服务接口：软驱盘片的插入、取出、保存、状态与故障注入。
+ * 说明：media 模块的服务接口：软驱盘片的插入、取出、保存、状态与故障注入，打印机的状态与输出，磁带机的载入、取出、播放、录音、停止与状态。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -51,6 +51,27 @@ class MediaService {
 
   /** 立即输出当前页。@throws shared::CoreError media.noMachine、media.noPrinter、media.printerEmpty。 */
   virtual MediaPrinterFlushResult printerFlush() = 0;
+
+  /**
+   * 把声音文件放进磁带机当磁带，替换已有的磁带；成功后发 media.changed。
+   * @throws shared::CoreError media.noMachine、media.noDeck、media.tapeBusy、media.fileNotFound、media.fileUnreadable、media.tapeUnsupported、media.decoderMissing。
+   */
+  virtual MediaTapeLoadResult tapeLoad(const MediaTapeLoadParams& params) = 0;
+
+  /** 取出磁带。@throws shared::CoreError media.noMachine、media.noDeck、media.tapeBusy。 */
+  virtual MediaTapeEjectResult tapeEject() = 0;
+
+  /** 开始播放。@throws shared::CoreError media.noMachine、media.noDeck、media.noTape。 */
+  virtual MediaTapePlayResult tapePlay() = 0;
+
+  /** 开始录音，文件被覆盖。@throws shared::CoreError media.noMachine、media.noDeck、media.tapeBusy、media.saveFailed。 */
+  virtual MediaTapeRecordResult tapeRecord(const MediaTapeRecordParams& params) = 0;
+
+  /** 停止播放或录音；录音停止后录到的文件成为磁带机里的磁带。@throws shared::CoreError media.noMachine、media.noDeck，以及重新载入录好的文件时的错误。 */
+  virtual MediaTapeStopResult tapeStop() = 0;
+
+  /** 磁带机的状态；没有主机或主机没有磁带机时 available 为 false。 */
+  [[nodiscard]] virtual MediaTapeStatusResult tapeStatus() = 0;
 };
 
 }  // namespace ember::contracts::media

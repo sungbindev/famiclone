@@ -37,4 +37,6 @@ export interface FileDialog {
   pickFile(options: FileDialogOptions): Promise<string | undefined>;
   /** 请用户选一个文件夹；用户取消时返回 undefined。 */
   pickDirectory(options: DirectoryDialogOptions): Promise<string | undefined>;
+  /** 请用户选一个要保存的文件（文件可以还不存在，已存在时系统窗口会询问是否覆盖）；用户取消时返回 undefined。 */
+  pickSaveFile(options: FileDialogOptions): Promise<string | undefined>;
 }

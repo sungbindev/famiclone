@@ -86,6 +86,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   bool useMachine(const std::function<void(contracts::hardware::Machine&)>& action) override;
   void sendInput(contracts::hardware::InputEvent event) override;
   void setInputHook(std::shared_ptr<contracts::runtime::InputHook> hook) override;
+  void setFamilyKeyboard(bool connected) override;
   void setFrameEventInterval(std::uint32_t frames) override;
   std::shared_future<contracts::runtime::RunOutcome> startRun(std::int64_t frames) override;
   void cancelRun() override;
@@ -155,6 +156,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   std::unique_ptr<contracts::hardware::Machine> machine_;
   /** 输入钩子；只在模拟线程访问。 */
   std::shared_ptr<contracts::runtime::InputHook> inputHook_;
+  /** 经典 FC 是否接着 Family BASIC 键盘；新装配的主机按它设置。 */
+  bool familyKeyboard_{false};
   std::unique_ptr<contracts::mappers::MapperCartridge> cartridge_;
   std::optional<contracts::runtime::CartridgeSummary> summary_;
   std::string host_;

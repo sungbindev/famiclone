@@ -59,6 +59,8 @@ export class FakeRuntimeBackend {
   recentPaths: string[] = [];
   volume = 100;
   muted = false;
+  /** 首选项 input.familyKeyboard 的取值。 */
+  familyKeyboard = false;
   /** 下一次打开卡带时用户选的路径；undefined 表示用户取消。 */
   pickedPath: string | undefined;
   /** 机型清单（测试可以改写，例如给小霸王 2000 加上 BIOS）。 */
@@ -118,6 +120,15 @@ export class FakeRuntimeBackend {
             if (params.volume !== undefined) this.volume = params.volume;
             if (params.muted !== undefined) this.muted = params.muted;
             return { volume: this.volume, muted: this.muted };
+          })
+      },
+      preferences: {
+        list: () => this.request('preferences.list', {}, () => ({ groups: [], settings: [{ id: 'input.familyKeyboard', value: this.familyKeyboard }] })),
+        set: (params: { id: string; value: unknown }) =>
+          this.request('preferences.set', params, () => {
+            this.familyKeyboard = params.value === true;
+            this.emit('preferences.changed', { id: params.id, value: this.familyKeyboard });
+            return { value: this.familyKeyboard };
           })
       },
       machines: {

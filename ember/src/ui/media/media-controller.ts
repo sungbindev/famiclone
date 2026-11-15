@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.ts
- * 说明：设备面板的控制器：保存各软驱与打印机的状态，执行载入镜像、取出、保存镜像、写保护等操作，订阅核心事件。
+ * 说明：设备面板的控制器：保存各软驱、磁带机与打印机的状态，执行载入镜像、取出、保存镜像、写保护、磁带的载入、取出、播放、录音与停止等操作，订阅核心事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -11,7 +11,7 @@
  * ------------------------------------------------------------------------
  */
 
-import type { FloppyStatus, PrinterStatus } from '../../contracts/media/generated/media';
+import type { FloppyStatus, PrinterStatus, TapeStatus } from '../../contracts/media/generated/media';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 
 /** 控制器用到的预加载脚本接口。 */
@@ -31,6 +31,8 @@ export interface MediaViewState {
   readonly floppies: readonly FloppyStatus[];
   /** 打印机的状态；还没读到时为 undefined。 */
   readonly printer: PrinterStatus | undefined;
+  /** 磁带机的状态（available 为 false 表示主机没有磁带机）；还没读到时为 undefined。 */
+  readonly tape: TapeStatus | undefined;
 }
 
 /** 定时读取状态的间隔（毫秒）。 */
@@ -44,7 +46,12 @@ const TEXT = {
     eject: '取出软盘',
     save: '保存软盘镜像',
     writeProtect: '设置写保护',
-    printer: '打印机输出'
+    printer: '打印机输出',
+    loadTape: '载入磁带',
+    ejectTape: '取出磁带',
+    playTape: '播放磁带',
+    recordTape: '磁带录音',
+    stopTape: '停止磁带'
   },
   printed: (file: string, page: number) => `打印机输出了第 ${page} 页：${file}`
 } as const;
@@ -76,12 +83,13 @@ interface Attachment {
 
 /** 设备面板的控制器。 */
 export class MediaController {
-  private state: MediaViewState = { floppies: [], printer: undefined };
+  private state: MediaViewState = { floppies: [], printer: undefined, tape: undefined };
   private readonly listeners = new Set<() => void>();
   private attachment: Attachment | undefined;
   /** 最近一次读取的编号：迟到的旧结果不覆盖新结果。 */
   private floppyRequest = 0;
   private printerRequest = 0;
+  private tapeRequest = 0;
   /** 正在显示设备面板的数量（读取状态的定时器只在大于 0 时运行）。 */
   private pollers = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -127,6 +135,7 @@ export class MediaController {
     this.attachment = undefined;
     this.floppyRequest += 1;
     this.printerRequest += 1;
+    this.tapeRequest += 1;
     this.stopTimer();
   }
 
@@ -180,6 +189,52 @@ export class MediaController {
     this.perform(TEXT.actions.writeProtect, (backend) => backend.core.media.floppyWriteProtect({ drive, writeProtected }));
   }
 
+  /** 弹出系统文件选择窗口，把选定的声音文件载入磁带机；用户取消时什么都不发生。 */
+  loadTape(onLoaded?: () => void): void {
+    this.pick(TEXT.actions.loadTape, (backend) => backend.main.media.openTape({}), onLoaded);
+  }
+
+  /** 取出磁带。 */
+  ejectTape(): void {
+    this.perform(TEXT.actions.ejectTape, (backend) => backend.core.media.tapeEject({}));
+  }
+
+  /** 开始播放。 */
+  playTape(): void {
+    this.perform(TEXT.actions.playTape, (backend) => backend.core.media.tapePlay({}));
+  }
+
+  /** 弹出系统的保存文件窗口，选定文件后开始录音；用户取消时什么都不发生。 */
+  recordTape(onStarted?: () => void): void {
+    this.pick(TEXT.actions.recordTape, (backend) => backend.main.media.openTapeRecording({}), onStarted);
+  }
+
+  /** 停止播放或录音。 */
+  stopTape(): void {
+    this.perform(TEXT.actions.stopTape, (backend) => backend.core.media.tapeStop({}));
+  }
+
+  /**
+   * 执行一个要先弹出系统文件窗口的主进程请求：失败时用通知提示；用户取消选择时不调用 onDone；结束后重新读取状态。
+   * @param name 操作名，用在失败的说明里。
+   * @param action 发出请求。
+   * @param onDone 成功后调用。
+   */
+  private pick(name: string, action: (backend: MediaBackend) => Promise<{ readonly canceled: boolean }>, onDone: (() => void) | undefined): void {
+    const attachment = this.attachment;
+    if (attachment === undefined) return;
+    action(attachment.backend)
+      .then(
+        (result) => {
+          if (!result.canceled) onDone?.();
+        },
+        (error: unknown) => this.report(name, error)
+      )
+      .finally(() => {
+        if (this.attachment === attachment) this.refreshAll();
+      });
+  }
+
   /**
    * 执行一个操作：失败时用通知提示；结束后重新读取状态。
    * @param name 操作名，用在失败的说明里。
@@ -216,6 +271,7 @@ export class MediaController {
   private refreshAll(): void {
     this.refreshFloppies();
     this.refreshPrinter();
+    this.refreshTape();
   }
 
   private refreshFloppies(): void {
@@ -244,11 +300,25 @@ export class MediaController {
     );
   }
 
+  private refreshTape(): void {
+    const backend = this.attachment?.backend;
+    if (backend === undefined) return;
+    this.tapeRequest += 1;
+    const current = this.tapeRequest;
+    backend.core.media.tapeStatus({}).then(
+      (result) => {
+        if (this.attachment?.backend === backend && this.tapeRequest === current) this.setState({ tape: result.status });
+      },
+      () => undefined
+    );
+  }
+
   /** 核心不可用或重启中：清掉旧状态。 */
   private clear(): void {
     this.floppyRequest += 1;
     this.printerRequest += 1;
-    this.setState({ floppies: [], printer: undefined });
+    this.tapeRequest += 1;
+    this.setState({ floppies: [], printer: undefined, tape: undefined });
   }
 
   private stopTimer(): void {

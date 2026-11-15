@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：规则见 docs/03-mapper插件规范.md 第 6 节。脚本里没有文件、网络、进程、定时器、系统时间与 Math.random，也没有 import；
- *       ctx 目前实现 header、window、nametable、irq、storage、state、log、keys、pad；timer、random、settings 属于后续阶段，脚本里是 undefined。
+ *       ctx 目前实现 header、window、nametable、irq、storage、state、log、keys、pad、device（磁带机）；timer、random、settings 属于后续阶段，脚本里是 undefined。
  *       宿主对象的实现由 ScriptBindings 提供，本类不认识卡带；quickjs.h 只在 script-runtime.cpp 里出现。
  * ------------------------------------------------------------------------
  */
@@ -53,8 +53,10 @@ struct ScriptLayout {
   std::vector<std::string> states;
   /** ctx.header 的内容，JSON 文本。 */
   std::string headerJson;
-  /** 主机上的手柄口个数，ctx.pad(port) 的有效范围是 0 到 padPorts - 1。 */
+  /** 主机的手柄口个数，ctx.pad(port) 的有效范围是 0 到 padPorts - 1。 */
   std::size_t padPorts{0};
+  /** 主机上有磁带机时 ctx.device('tape') 可用。 */
+  bool hasTape{false};
 };
 
 /** 宿主对象的实现：脚本经 ctx 调用时转到这里。参数不合法时抛出 ScriptArgumentError。 */
@@ -92,6 +94,10 @@ class ScriptBindings {
   virtual void padSet(std::size_t port, std::string_view button, bool down) = 0;
   /** ctx.pad(port).release()：松开这个口的全部按键。 */
   virtual void padRelease(std::size_t port) = 0;
+  /** ctx.device('tape').level()：磁带送给卡带的 1 位信号。 */
+  [[nodiscard]] virtual bool tapeLevel() = 0;
+  /** ctx.device('tape').setComparator(low, high, invert)：设置数据线的比较器。 */
+  virtual void tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) = 0;
 };
 
 /** 一个插件的脚本运行时。非线程安全：同一时刻只能由一个线程使用，换线程使用没有问题。 */
@@ -122,6 +128,8 @@ class ScriptRuntime {
   [[nodiscard]] bool hasKey() const noexcept;
   /** 脚本是否导出了 onMouse。 */
   [[nodiscard]] bool hasMouse() const noexcept;
+  /** 脚本是否导出了 onTapeEdge。 */
+  [[nodiscard]] bool hasTapeEdge() const noexcept;
 
   /** 调用 reset(ctx, 'power' 或 'soft')；脚本没有 reset 时什么也不做。 */
   void reset(bool power);
@@ -141,6 +149,9 @@ class ScriptRuntime {
 
   /** 调用 onMouse(ctx, {kind, x, y, dx, dy, buttons, wheel})；脚本没有 onMouse 时什么也不做。错误同 read。 */
   void mouse(const contracts::hardware::MouseInput& input);
+
+  /** 调用 onTapeEdge(ctx, level, samples)：磁带数据线翻转时，level 是翻转后的电平（0 或 1），samples 是距上一次翻转的采样数（96 kHz）；脚本没有 onTapeEdge 时什么也不做。错误同 read。 */
+  void tapeEdge(bool level, std::uint32_t samples);
 
  private:
   struct Impl;

@@ -22,6 +22,7 @@
 #include "bootstrap/machines/machine-catalog.hpp"
 #include "contracts/media/media-error.hpp"
 #include "infra/media/disk-floppy-image-store.hpp"
+#include "infra/media/disk-tape-store.hpp"
 #include "infra/media/png-printer-page-store.hpp"
 #include "logic/media/media-manager.hpp"
 #include "logic/media/printer-service.hpp"
@@ -56,7 +57,8 @@ struct Rig {
     options.errors = errors;
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
-    manager = std::make_unique<ember::logic::media::MediaManager>(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), runtime, events, printer);
+    manager = std::make_unique<ember::logic::media::MediaManager>(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), std::make_shared<ember::infra::media::DiskTapeStore>(std::filesystem::path(), errors),
+                                                                  runtime, events, printer);
   }
 
   static std::string utf8(const std::filesystem::path& path) {

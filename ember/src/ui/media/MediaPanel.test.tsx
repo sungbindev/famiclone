@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MediaPanel.test.tsx
- * 说明：设备面板的测试：没有设备时的提示、每个设备一行（软驱的名称、盘片、状态与四个图标按钮，打印机的名称与状态）、按钮的可用性与点击发出的请求、写保护是按下态的锁按钮、显示期间随状态变化。
+ * 说明：设备面板的测试：没有设备时的提示、每个设备一行（软驱的名称、盘片、状态与四个图标按钮，磁带机的名称、磁带、状态、位置与五个图标按钮，打印机的名称与状态）、按钮的可用性与点击发出的请求、写保护是按下态的锁按钮、显示期间随状态变化。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -14,7 +14,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { FloppyStatus } from '../../contracts/media/generated/media';
-import { FakeMediaBackend, floppyStatus } from './media-fakes';
+import { FakeMediaBackend, floppyStatus, tapeStatus } from './media-fakes';
 import { MediaController } from './media-controller';
 import { MediaPanel } from './MediaPanel';
 
@@ -56,7 +56,7 @@ function protectButton(): HTMLElement {
 describe('设备面板', () => {
   it('没有设备（没有开机或主机没有软驱）时只给一句提示', async () => {
     await setup([]);
-    expect(screen.getByText('没有设备：整机机型开机后才有软驱与打印机。')).toBeTruthy();
+    expect(screen.getByText('没有设备：打开卡带或用整机机型开机后才有设备。')).toBeTruthy();
     expect(screen.queryByText('软驱 A')).toBeNull();
   });
 
@@ -150,5 +150,105 @@ describe('设备面板', () => {
     fake.emit('media.printed', { fileName: 'p.png', page: 1 });
     await act(async () => settle());
     expect(row('打印机').querySelector('.ui-row-list__title')?.textContent).toBe('打印完成');
+  });
+});
+
+/** 接上假核心并渲染面板；主机有磁带机（经典 FC），没有软驱与打印机。 */
+async function setupTape(patch: Parameters<typeof tapeStatus>[0] = {}, onLoaded?: () => void) {
+  const fake = new FakeMediaBackend();
+  fake.floppies = [];
+  fake.tape = tapeStatus({ available: true, ...patch });
+  const controller = new MediaController();
+  controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
+  render(
+    <UiProvider>
+      <MediaPanel controller={controller} {...(onLoaded === undefined ? {} : { onLoaded })} />
+    </UiProvider>
+  );
+  await act(async () => settle());
+  return { fake, controller };
+}
+
+/** 磁带机这一行里的按钮。 */
+function tapeButton(name: string): HTMLButtonElement {
+  return within(row('磁带机')).getByRole('button', { name }) as HTMLButtonElement;
+}
+
+describe('设备面板的磁带机', () => {
+  it('经典 FC 只有磁带机一行：没有磁带时磁带“空”、状态“无磁带”、位置“—”，只有载入与录音可用', async () => {
+    await setupTape();
+    const rows = within(screen.getByRole('list', { name: '设备' })).getAllByRole('listitem');
+    expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['磁带机']);
+    const tape = row('磁带机');
+    expect(tape.querySelector('.ui-row-list__title')?.textContent).toBe('空');
+    expect([...tape.querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['无磁带', '—']);
+    expect(tapeButton('载入磁带').disabled).toBe(false);
+    expect(tapeButton('录音').disabled).toBe(false);
+    for (const name of ['取出', '播放', '停止']) expect(tapeButton(name).disabled).toBe(true);
+    for (const button of within(tape).getAllByRole('button')) expect(button.textContent).toBe('');
+  });
+
+  it('主机没有磁带机且没有软驱时只给提示', async () => {
+    const fake = new FakeMediaBackend();
+    fake.floppies = [];
+    const controller = new MediaController();
+    controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
+    render(
+      <UiProvider>
+        <MediaPanel controller={controller} />
+      </UiProvider>
+    );
+    await act(async () => settle());
+    expect(screen.queryByText('磁带机')).toBeNull();
+  });
+
+  it('载入磁带后显示文件名、“已停止”与位置，取出、播放可用；载入成功通知“载入完成”', async () => {
+    const loaded = vi.fn();
+    const { fake } = await setupTape({}, loaded);
+    fake.pickedTape = 'lesson.m4a';
+    await userEvent.click(tapeButton('载入磁带'));
+    await act(async () => settle());
+    expect(fake.calls).toContain('media.openTape {}');
+    expect(loaded).toHaveBeenCalledTimes(1);
+    const tape = row('磁带机');
+    expect(tape.querySelector('.ui-row-list__title')?.textContent).toBe('lesson.m4a');
+    expect([...tape.querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['已停止', '0:00 / 1:00']);
+    expect(tapeButton('取出').disabled).toBe(false);
+    expect(tapeButton('播放').disabled).toBe(false);
+  });
+
+  it('播放时只有“停止”可用，点“停止”后回到已停止', async () => {
+    const { fake } = await setupTape({ loaded: true, fileName: 'lesson.m4a', duration: 60 });
+    await userEvent.click(tapeButton('播放'));
+    await act(async () => settle());
+    expect(fake.calls).toContain('media.tapePlay {}');
+    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('播放中');
+    for (const name of ['载入磁带', '取出', '播放', '录音']) expect(tapeButton(name).disabled).toBe(true);
+    expect(tapeButton('停止').disabled).toBe(false);
+    await userEvent.click(tapeButton('停止'));
+    await act(async () => settle());
+    expect(fake.calls).toContain('media.tapeStop {}');
+    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('已停止');
+  });
+
+  it('点“录音”选定文件后显示录音中；用户取消选择时什么都不发生；点“取出”发出请求', async () => {
+    const { fake } = await setupTape();
+    await userEvent.click(tapeButton('录音'));
+    await act(async () => settle());
+    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('无磁带');
+    fake.pickedRecording = 'out.wav';
+    await userEvent.click(tapeButton('录音'));
+    await act(async () => settle());
+    expect(fake.calls.filter((call) => call === 'media.openTapeRecording {}')).toHaveLength(2);
+    expect(row('磁带机').querySelectorAll('.ui-row-list__cell')[0]?.textContent).toBe('录音中');
+    expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('out.wav');
+  });
+
+  it('取出磁带后回到“空”', async () => {
+    const { fake } = await setupTape({ loaded: true, fileName: 'lesson.m4a', duration: 60 });
+    await userEvent.click(tapeButton('取出'));
+    await act(async () => settle());
+    expect(fake.calls).toContain('media.tapeEject {}');
+    expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('空');
   });
 });

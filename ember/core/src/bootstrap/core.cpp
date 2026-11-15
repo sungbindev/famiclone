@@ -149,7 +149,7 @@ std::string Core::start(const std::string& optionsJson) {
   const auto options = nlohmann::json::parse(optionsJson, nullptr, false);
   if (options.is_discarded()) throw shared::SchemaError("启动参数不是合法的 JSON");
   json_fields::requireObject(options, "options");
-  json_fields::rejectUnknown(options, "options", {"userDataPath", "appVersion", "workerCount", "bundledPluginsPath", "debugPort", "debugToken"});
+  json_fields::rejectUnknown(options, "options", {"userDataPath", "appVersion", "workerCount", "bundledPluginsPath", "ffmpegPath", "debugPort", "debugToken"});
   const auto* userDataField = json_fields::find(options, "userDataPath");
   if (userDataField == nullptr) throw shared::SchemaError("options.userDataPath 缺少");
   const auto userDataText = json_fields::readString(*userDataField, "options.userDataPath", 1, std::nullopt, {});
@@ -160,6 +160,8 @@ std::string Core::start(const std::string& optionsJson) {
   const auto workerCount = workerField == nullptr ? 0 : json_fields::readInteger(*workerField, "options.workerCount", 1, 64);
   const auto* bundledField = json_fields::find(options, "bundledPluginsPath");
   const auto bundledText = bundledField == nullptr ? std::string() : json_fields::readString(*bundledField, "options.bundledPluginsPath", 1, std::nullopt, {});
+  const auto* ffmpegField = json_fields::find(options, "ffmpegPath");
+  const auto ffmpegText = ffmpegField == nullptr ? std::string() : json_fields::readString(*ffmpegField, "options.ffmpegPath", 1, std::nullopt, {});
   const auto* debugPortField = json_fields::find(options, "debugPort");
   std::optional<std::uint16_t> debugPort;
   if (debugPortField != nullptr) debugPort = static_cast<std::uint16_t>(json_fields::readInteger(*debugPortField, "options.debugPort", 1, 65535));
@@ -174,7 +176,7 @@ std::string Core::start(const std::string& optionsJson) {
   std::vector<std::function<void()>> stopHandlers;
   std::vector<std::function<void()>> startHandlers;
   ModuleServices services;
-  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), frames_, services, stopHandlers, startHandlers, events_, debugPort, debugToken};
+  ModuleRegistry registry{*router, events_, errors, clock, appVersion, EMBER_CORE_VERSION, userDataPath, std::filesystem::path(std::u8string(bundledText.begin(), bundledText.end())), std::filesystem::path(std::u8string(ffmpegText.begin(), ffmpegText.end())), frames_, services, stopHandlers, startHandlers, events_, debugPort, debugToken};
   try {
     for (const auto& module : moduleList()) module.registerModule(registry);
     runtime_ = services.require<contracts::runtime::RuntimeService>();

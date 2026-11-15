@@ -70,6 +70,7 @@ void PsgUm6576::reset(bool /*power*/) {
   frameCounter_ = 0;
   frameStepIndex_ = 0;
   dacLevel_ = 0;
+  voiceLevel_ = 0;
   accumulator_ = 0;
   accumulatedCycles_ = 0;
   nextSampleAt_ = static_cast<double>(cycle_) + cyclesPerSample_;
@@ -175,6 +176,11 @@ void PsgUm6576::setDacLevel(std::uint8_t level) {
   dacLevel_ = level;
 }
 
+void PsgUm6576::setVoiceLevel(double level) {
+  catchUp(clock_.now());
+  voiceLevel_ = level;
+}
+
 void PsgUm6576::clockQuarter() {
   for (unsigned index = 0; index < 3; ++index) {
     const bool loop = halt_[index == 2 ? 3 : index];
@@ -226,7 +232,7 @@ double PsgUm6576::mix() const {
   if (lengths_[3] > 0 && (noiseShift_ & 1U) == 0) noise = envelopeConstant_[2] ? envelopePeriod_[2] : envelopeDecay_[2];
   const double tnd = triangle / 8227.0 + noise / 12241.0;
   const double tndOut = tnd == 0 ? 0.0 : 159.79 / (1.0 / tnd + 100.0);
-  return pulseOut + tndOut + dacLevel_ / 255.0 * DAC_SCALE;
+  return pulseOut + tndOut + dacLevel_ / 255.0 * DAC_SCALE + voiceLevel_;
 }
 
 void PsgUm6576::stepCycle() {

@@ -49,11 +49,34 @@ api::FloppyStatus statusOf(std::int64_t index, const hw::FloppyDrive& drive) {
   return status;
 }
 
+/** 磁带机当前的状态。 */
+api::TapeStatus tapeStatusOf(hw::TapeControl& deck) {
+  api::TapeStatus status;
+  status.available = true;
+  status.loaded = deck.loaded();
+  if (status.loaded) status.fileName = baseName(deck.name());
+  switch (deck.mode()) {
+    case hw::TapeMode::Playing:
+      status.mode = "playing";
+      break;
+    case hw::TapeMode::Recording:
+      status.mode = "recording";
+      break;
+    case hw::TapeMode::Stopped:
+      status.mode = "stopped";
+      break;
+  }
+  status.position = deck.positionSeconds();
+  status.duration = deck.durationSeconds();
+  status.stereo = deck.stereo();
+  return status;
+}
+
 }  // namespace
 
-MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events,
-                           std::shared_ptr<api::PrinterRecord> printerRecord)
-    : store_(std::move(store)), runtime_(std::move(runtime)), events_(std::move(events)), printerRecord_(std::move(printerRecord)) {}
+MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::shared_ptr<api::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
+                           std::shared_ptr<platform::EventSink> events, std::shared_ptr<api::PrinterRecord> printerRecord)
+    : store_(std::move(store)), tapeStore_(std::move(tapeStore)), runtime_(std::move(runtime)), events_(std::move(events)), printerRecord_(std::move(printerRecord)) {}
 
 template <typename Action>
 api::FloppyStatus MediaManager::withDrive(std::int64_t drive, Action action) {
@@ -74,6 +97,26 @@ api::FloppyStatus MediaManager::withDrive(std::int64_t drive, Action action) {
 }
 
 void MediaManager::publishChanged(std::int64_t drive) { events_->publish(api::MEDIA_CHANGED_EVENT, nlohmann::json(api::MediaChangedData{"floppy", drive})); }
+
+void MediaManager::publishTapeChanged() { events_->publish(api::MEDIA_CHANGED_EVENT, nlohmann::json(api::MediaChangedData{"tape", 0})); }
+
+template <typename Action>
+api::TapeStatus MediaManager::withDeck(Action action) {
+  std::optional<api::TapeStatus> status;
+  bool missingDeck = false;
+  const bool hasMachine = runtime_->useMachine([&](hw::Machine& machine) {
+    hw::TapeControl* deck = machine.tape();
+    if (deck == nullptr) {
+      missingDeck = true;
+      return;
+    }
+    action(*deck);
+    status = tapeStatusOf(*deck);
+  });
+  if (!hasMachine) throw shared::CoreError(api::ERROR_NO_MACHINE, "还没有主机，请先打开卡带或用整机机型开机");
+  if (missingDeck || !status) throw shared::CoreError(api::ERROR_NO_DECK, "这台主机没有磁带机");
+  return *status;
+}
 
 api::MediaFloppyInsertResult MediaManager::floppyInsert(const api::MediaFloppyInsertParams& params) {
   std::vector<std::uint8_t> image = store_->read(params.path);
@@ -190,5 +233,71 @@ api::MediaPrinterFlushResult MediaManager::printerFlush() {
 }
 
 void MediaManager::motorChanged(unsigned drive, bool /*on*/) { publishChanged(static_cast<std::int64_t>(drive)); }
+
+api::MediaTapeLoadResult MediaManager::tapeLoad(const api::MediaTapeLoadParams& params) {
+  auto source = tapeStore_->open(params.path);
+  auto status = withDeck([&](hw::TapeControl& deck) {
+    if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
+    deck.load(std::move(source), params.path);
+  });
+  publishTapeChanged();
+  return api::MediaTapeLoadResult{std::move(status)};
+}
+
+api::MediaTapeEjectResult MediaManager::tapeEject() {
+  auto status = withDeck([](hw::TapeControl& deck) {
+    if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
+    deck.eject();
+  });
+  publishTapeChanged();
+  return api::MediaTapeEjectResult{std::move(status)};
+}
+
+api::MediaTapePlayResult MediaManager::tapePlay() {
+  auto status = withDeck([](hw::TapeControl& deck) {
+    if (!deck.loaded()) throw shared::CoreError(api::ERROR_NO_TAPE, "磁带机里没有磁带");
+    deck.play();
+  });
+  publishTapeChanged();
+  return api::MediaTapePlayResult{std::move(status)};
+}
+
+api::MediaTapeRecordResult MediaManager::tapeRecord(const api::MediaTapeRecordParams& params) {
+  auto status = withDeck([&](hw::TapeControl& deck) {
+    if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
+    deck.record(tapeStore_->create(params.path), params.path);
+  });
+  publishTapeChanged();
+  return api::MediaTapeRecordResult{std::move(status)};
+}
+
+api::MediaTapeStopResult MediaManager::tapeStop() {
+  std::string recordedPath;
+  auto status = withDeck([&](hw::TapeControl& deck) {
+    if (deck.mode() == hw::TapeMode::Recording) recordedPath = deck.name();
+    deck.stop();
+  });
+  if (!recordedPath.empty()) {
+    // 录好的文件自动成为磁带机里的磁带，位置在开头，可以直接播放。
+    try {
+      auto source = tapeStore_->open(recordedPath);
+      status = withDeck([&](hw::TapeControl& deck) { deck.load(std::move(source), recordedPath); });
+    } catch (...) {
+      publishTapeChanged();
+      throw;
+    }
+  }
+  publishTapeChanged();
+  return api::MediaTapeStopResult{std::move(status)};
+}
+
+api::MediaTapeStatusResult MediaManager::tapeStatus() {
+  api::TapeStatus status;
+  status.mode = "stopped";
+  runtime_->useMachine([&](hw::Machine& machine) {
+    if (hw::TapeControl* deck = machine.tape()) status = tapeStatusOf(*deck);
+  });
+  return api::MediaTapeStatusResult{std::move(status)};
+}
 
 }  // namespace ember::logic::media

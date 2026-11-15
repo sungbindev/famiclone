@@ -11,7 +11,7 @@
  */
 
 import { UiProvider } from '@rujianjs/ui-kit';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -436,6 +436,79 @@ describe('面板的自动收缩开关', () => {
     await userEvent.click(screen.getByRole('button', { name: '普通' }));
     act(() => staleFinish?.());
     expect(screen.getByText('普通内容')).toBeTruthy();
+  });
+});
+
+/** 显示区里有一个可聚焦的画面区，底部面板里有按钮与文字输入框。 */
+const FOCUS_MODULES: readonly ShellModule[] = [
+  {
+    name: 'a',
+    screen: () => <div tabIndex={0} aria-label="画面区" />,
+    commands: [{ id: 'a.hello', title: '问好', run: () => undefined }],
+    menuItems: [{ menu: 'machine', command: 'a.hello' }],
+    bottomPanels: [
+      {
+        id: 'a.run',
+        title: '运行',
+        icon: ICON,
+        Component: () => (
+          <>
+            <button type="button">面板按钮</button>
+            <input aria-label="面板输入框" />
+          </>
+        )
+      }
+    ]
+  }
+];
+
+describe('点击后焦点回到画面区', () => {
+  it('点系统栏的按钮、面板里的按钮、标题栏的空白处后，焦点都回到画面区', async () => {
+    const user = userEvent.setup();
+    const { container } = renderShell({ modules: FOCUS_MODULES });
+    await shown();
+    const area = screen.getByLabelText('画面区');
+    await user.click(screen.getByRole('button', { name: '运行' }));
+    await waitFor(() => expect(document.activeElement).toBe(area));
+    await user.click(screen.getByRole('button', { name: '面板按钮' }));
+    await waitFor(() => expect(document.activeElement).toBe(area));
+    await user.click(screen.getByRole('button', { name: '关闭' }));
+    await waitFor(() => expect(document.activeElement).toBe(area));
+    await user.click(container.querySelector('.ui-status-bar') as HTMLElement);
+    await waitFor(() => expect(document.activeElement).toBe(area));
+  });
+
+  it('点在文字输入框上不抢焦点', async () => {
+    const user = userEvent.setup();
+    renderShell({ modules: FOCUS_MODULES });
+    await shown();
+    await user.click(screen.getByRole('button', { name: '运行' }));
+    const field = screen.getByLabelText('面板输入框');
+    await user.click(field);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('菜单打开期间不抢焦点；选中菜单项后焦点回到画面区', async () => {
+    const user = userEvent.setup();
+    renderShell({ modules: FOCUS_MODULES });
+    await shown();
+    await user.click(screen.getByRole('menuitem', { name: /机器/ }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByRole('menu', { name: /机器/ })).toBeTruthy();
+    expect(document.activeElement).not.toBe(screen.getByLabelText('画面区'));
+    await user.click(popupItems()[0] as HTMLElement);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('画面区')));
+  });
+
+  it('按 Esc 关闭菜单后焦点回到画面区', async () => {
+    const user = userEvent.setup();
+    renderShell({ modules: FOCUS_MODULES });
+    await shown();
+    await user.click(screen.getByRole('menuitem', { name: /机器/ }));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('画面区')));
   });
 });
 

@@ -12,7 +12,9 @@
  *       面板按钮只在面板开着并停在该页签时是按下状态，面板收起后恢复常态；
  *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，面板内容完成一次操作后（finishAction）收起面板；开关状态按面板保存在界面状态里，下次启动沿用；
  *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
- *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；面板向内展开，窗口大小不变，显示区里的画面按剩余空间自动缩放。
+ *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；
+ *       主窗口里在任何地方点完鼠标（按钮、滑块、空白处等）后，把焦点还给显示区里的可聚焦元素（画面区），键盘才能继续输入到机器，Windows 的键盘独占也跟着焦点；
+ *       菜单打开期间不抢焦点（菜单要用键盘操作），菜单关闭后还；点在文字输入控件上不还；面板向内展开，窗口大小不变，显示区里的画面按剩余空间自动缩放。
  * ------------------------------------------------------------------------
  */
 
@@ -80,6 +82,8 @@ interface LiveState {
   readonly view: ShellViewState;
   /** 开着“自动收缩”的面板标识。 */
   readonly autoCollapse: readonly string[];
+  /** 菜单是否打开着。 */
+  readonly menuOpen: boolean;
 }
 
 /**
@@ -148,10 +152,46 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
 
   const bottomPanelOpen = panel.open;
   const view: ShellViewState = { bottomPanelOpen, activePanelId: panel.open ? panel.id : null, fullScreen: windowState.fullScreen };
-  const live = useRef<LiveState>({ view, autoCollapse });
+  const live = useRef<LiveState>({ view, autoCollapse, menuOpen: openMenuId !== null });
   useLayoutEffect(() => {
-    live.current = { view, autoCollapse };
+    live.current = { view, autoCollapse, menuOpen: openMenuId !== null };
   });
+
+  // 显示区里的画面区（显示区里第一个 tabindex=0 的元素）。
+  const pageRef = useRef<HTMLDivElement>(null);
+  const focusScreen = useCallback((): void => {
+    pageRef.current?.querySelector<HTMLElement>('[tabindex="0"]')?.focus({ preventScroll: true });
+  }, []);
+
+  // 主窗口里在任何地方点完鼠标后把焦点还给画面区；延到点击处理之后，不影响点击本身的效果。
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const handlePointerUp = (event: PointerEvent): void => {
+      if (isTextEditingTarget(event.target)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!live.current.menuOpen) focusScreen();
+      }, 0);
+    };
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handlePointerUp);
+      clearTimeout(timer);
+    };
+  }, [focusScreen]);
+
+  // 菜单关闭后（选中菜单项、Esc、点到菜单外）把焦点还给画面区；菜单组件关闭时会把焦点放回菜单按钮，所以延后一步。
+  const menuWasOpen = useRef(false);
+  useEffect(() => {
+    if (openMenuId !== null) {
+      menuWasOpen.current = true;
+      return undefined;
+    }
+    if (!menuWasOpen.current) return undefined;
+    menuWasOpen.current = false;
+    const timer = setTimeout(focusScreen, 0);
+    return () => clearTimeout(timer);
+  }, [openMenuId, focusScreen]);
 
   /** 面板里的一次操作完成：该面板的自动收缩开着就收起面板；读最新的开关状态，操作期间改了开关也按新的算。 */
   const finishPanelAction = useCallback((panelId: string): void => {
@@ -382,7 +422,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
           )
         }
       >
-        {registry.screen === undefined ? null : <div className="ember-shell-page">{createElement(registry.screen, { bridge })}</div>}
+        {registry.screen === undefined ? null : <div className="ember-shell-page" ref={pageRef}>{createElement(registry.screen, { bridge })}</div>}
       </AppFrame>
       <NotificationCenter />
     </ShellApiContext.Provider>

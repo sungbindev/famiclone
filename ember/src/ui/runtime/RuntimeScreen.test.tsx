@@ -453,7 +453,7 @@ describe('RuntimeScreen：捕获鼠标（指针锁定）', () => {
     ]);
   });
 
-  it('退出捕获（按 Esc）时上报一次离开并松开按键，之后回到绝对位置', () => {
+  it('退出捕获（按 Esc）时上报一次离开并松开按键，之后鼠标的移动、按下、松开、滚轮都不再送给机器（里面的鼠标不跟着动）', () => {
     const { screenElement } = setup({ captureMouse: true });
     const lock = stubPointerLock(screenElement);
     const input = fakePort();
@@ -465,7 +465,10 @@ describe('RuntimeScreen：捕获鼠标（指针锁定）', () => {
     lock.unlock();
     expect(input.postMessage.mock.calls).toEqual([[{ type: 'mouse', kind: 'leave', x: 133, y: 128, dx: 0, dy: 0, buttons: 0, wheel: 0 }]]);
     fireEvent.pointerMove(screenElement, { clientX: 256, clientY: 240, buttons: 0 });
-    expect(input.postMessage.mock.calls[1]?.[0]).toMatchObject({ kind: 'move', x: 128, y: 120, dx: 0, dy: 0 });
+    fireEvent.pointerUp(screenElement, { clientX: 256, clientY: 240, buttons: 0 });
+    fireEvent.wheel(screenElement, { clientX: 256, clientY: 240, deltaY: 100 });
+    fireEvent.pointerLeave(screenElement, { buttons: 0 });
+    expect(input.postMessage).toHaveBeenCalledTimes(1);
   });
 
   it('捕获期间双击右键释放捕获，第二次右键按下不送给机器；单击右键照常送出', () => {

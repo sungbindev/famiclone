@@ -250,6 +250,8 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
           if (scale !== undefined) mouse.moveBy('move', event.movementX * scale.x, event.movementY * scale.y, event.buttons);
           return;
         }
+        // 开启了鼠标捕获的机器，没捕获时鼠标不进画面，里面的鼠标不跟着动。
+        if (captureMouse) return;
         const point = framePointOf(event);
         if (point !== undefined) mouse.report('move', point, event.buttons);
       }}
@@ -281,11 +283,12 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
           mouse.moveBy('up', 0, 0, event.buttons);
           return;
         }
+        if (captureMouse) return;
         const point = framePointOf(event);
         if (point !== undefined) mouse.report('up', point, event.buttons);
       }}
       onPointerLeave={(event) => {
-        if (!isCaptured()) mouse.leave(event.buttons);
+        if (!isCaptured() && !captureMouse) mouse.leave(event.buttons);
       }}
       onWheel={(event) => {
         const amount = event.deltaMode === 1 ? event.deltaY : event.deltaY / WHEEL_PIXELS_PER_NOTCH;
@@ -293,6 +296,7 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
           mouse.moveBy('wheel', 0, 0, event.buttons, amount);
           return;
         }
+        if (captureMouse) return;
         const point = framePointOf(event);
         if (point !== undefined) mouse.report('wheel', point, event.buttons, amount);
       }}

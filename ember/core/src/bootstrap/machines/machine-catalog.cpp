@@ -10,8 +10,8 @@
 
 #include "bootstrap/machines/machine-catalog.hpp"
 
-#include "bootstrap/machines/fc.hpp"
-#include "bootstrap/machines/sb2000.hpp"
+#include "bootstrap/machines/fc/fc.hpp"
+#include "bootstrap/machines/sb2000/sb2000.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "shared/errors/core-error.hpp"
 

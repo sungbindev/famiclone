@@ -21,9 +21,9 @@
 #include <string_view>
 #include <vector>
 
-#include "bootstrap/machines/cpu-debug-kit.hpp"
-#include "bootstrap/machines/fc-expansion-port.hpp"
-#include "bootstrap/machines/pad-apu-port.hpp"
+#include "bootstrap/machines/common/cpu-debug-kit.hpp"
+#include "bootstrap/machines/common/pad-apu-port.hpp"
+#include "bootstrap/machines/fc/fc-expansion-port.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"

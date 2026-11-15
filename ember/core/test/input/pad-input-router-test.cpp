@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-#include "bootstrap/machines/fc.hpp"
+#include "bootstrap/machines/fc/fc.hpp"
 #include "contracts/hardware/button-input.hpp"
 #include "infra/input/input-binding-registry.hpp"
 #include "logic/input/pad-input-router.hpp"

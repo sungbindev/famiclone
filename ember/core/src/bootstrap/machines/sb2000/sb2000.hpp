@@ -26,10 +26,10 @@
 #include <string_view>
 #include <vector>
 
-#include "bootstrap/machines/cpu-debug-kit.hpp"
-#include "bootstrap/machines/pad-apu-port.hpp"
-#include "bootstrap/machines/sb2000-board.hpp"
-#include "bootstrap/machines/sb2000-fc-board.hpp"
+#include "bootstrap/machines/common/cpu-debug-kit.hpp"
+#include "bootstrap/machines/common/pad-apu-port.hpp"
+#include "bootstrap/machines/sb2000/sb2000-board.hpp"
+#include "bootstrap/machines/sb2000/sb2000-fc-board.hpp"
 #include "contracts/hardware/dma-memory.hpp"
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/machine.hpp"

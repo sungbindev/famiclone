@@ -19,7 +19,7 @@
 #include <string_view>
 #include <vector>
 
-#include "bootstrap/machines/sb2000-board.hpp"
+#include "bootstrap/machines/sb2000/sb2000-board.hpp"
 #include "contracts/hardware/bus-device.hpp"
 #include "contracts/hardware/mapper-circuit.hpp"
 

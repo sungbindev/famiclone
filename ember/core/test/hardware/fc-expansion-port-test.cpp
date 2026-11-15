@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-#include "bootstrap/machines/fc-expansion-port.hpp"
+#include "bootstrap/machines/fc/fc-expansion-port.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
 #include "logic/hardware/tape-deck/tape-deck.hpp"
 

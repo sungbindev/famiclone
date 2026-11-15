@@ -16,8 +16,8 @@
 #include <string>
 #include <variant>
 
-#include "bootstrap/machines/floppy-activity-relay.hpp"
-#include "bootstrap/machines/printer-output-relay.hpp"
+#include "bootstrap/machines/common/floppy-activity-relay.hpp"
+#include "bootstrap/machines/common/printer-output-relay.hpp"
 #include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "contracts/media/media-service.hpp"

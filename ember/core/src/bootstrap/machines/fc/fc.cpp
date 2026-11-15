@@ -11,7 +11,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "bootstrap/machines/fc.hpp"
+#include "bootstrap/machines/fc/fc.hpp"
 
 #include <algorithm>
 #include <string>

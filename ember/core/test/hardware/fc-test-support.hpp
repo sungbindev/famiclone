@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "../support/plugin-test-support.hpp"
-#include "bootstrap/machines/fc.hpp"
+#include "bootstrap/machines/fc/fc.hpp"
 #include "contracts/mappers/mapper-cartridge.hpp"
 #include "infra/mappers/plugin-registry.hpp"
 #include "logic/cartridges/ines-cartridge-loader.hpp"

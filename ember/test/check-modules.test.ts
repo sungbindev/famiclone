@@ -144,6 +144,49 @@ describe('checkProject', () => {
     expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/mapper-chips/loose.hpp：mapper 芯片的文件必须放在 logic/hardware/mapper-chips/<芯片>/ 目录下']);
   });
 
+  it('机型的装配按 bootstrap/machines/<机型>/ 分目录，只能包含硬件契约、硬件模块、shared 与自己目录和 common 里的文件', () => {
+    const root = createProject({
+      'core/src/contracts/hardware/irq-line.hpp': '#pragma once\n',
+      'core/src/logic/hardware/cpu-6502/cpu.hpp': '#pragma once\n',
+      'core/src/shared/errors/core-error.hpp': '#pragma once\n',
+      'core/src/bootstrap/machines/common/pad-port.hpp': '#include "contracts/hardware/irq-line.hpp"\n',
+      'core/src/bootstrap/machines/fc/fc.hpp': '#include "bootstrap/machines/common/pad-port.hpp"\n#include "bootstrap/machines/fc/fc-port.hpp"\n#include "logic/hardware/cpu-6502/cpu.hpp"\n#include "shared/errors/core-error.hpp"\n',
+      'core/src/bootstrap/machines/fc/fc-port.hpp': '#pragma once\n'
+    });
+    expect(checkProject(root).errors).toEqual([]);
+  });
+
+  it('机型不能包含其他机型、machine-catalog 与业务模块，common 不能包含任何机型', () => {
+    const root = createProject({
+      'core/src/contracts/runtime/runtime-service.hpp': '#pragma once\n',
+      'core/src/logic/runtime/runtime.hpp': '#pragma once\n',
+      'core/src/bootstrap/machines/machine-catalog.hpp': '#pragma once\n',
+      'core/src/bootstrap/machines/sb2000/sb2000.hpp': '#pragma once\n',
+      'core/src/bootstrap/machines/fc/fc.hpp': '#include "bootstrap/machines/sb2000/sb2000.hpp"\n#include "bootstrap/machines/machine-catalog.hpp"\n#include "logic/runtime/runtime.hpp"\n',
+      'core/src/bootstrap/machines/common/relay.hpp': '#include "bootstrap/machines/fc/fc.hpp"\n',
+      'core/src/bootstrap/module-list.cpp': '{"runtime", registerRuntime},\n',
+      'core/src/bootstrap/modules/runtime.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual([
+      'core/src/bootstrap/machines/common/relay.hpp：机型 common 只能包含自己目录与 common 里的文件，不能包含 bootstrap/machines/fc/fc.hpp',
+      'core/src/bootstrap/machines/fc/fc.hpp：机型 fc 只能包含自己目录与 common 里的文件，不能包含 bootstrap/machines/sb2000/sb2000.hpp',
+      'core/src/bootstrap/machines/fc/fc.hpp：机型 fc 只能包含自己目录与 common 里的文件，不能包含 bootstrap/machines/machine-catalog.hpp',
+      'core/src/bootstrap/machines/fc/fc.hpp：机型 fc 只能包含硬件契约、硬件模块、shared 与 platform 的抽象，不能包含 logic/runtime/runtime.hpp'
+    ]);
+  });
+
+  it('machine-catalog 可以包含各机型，其他机型文件不能直接放在 bootstrap/machines/ 下', () => {
+    const root = createProject({
+      'core/src/contracts/runtime/machine-factory.hpp': '#pragma once\n',
+      'core/src/bootstrap/machines/fc/fc.hpp': '#pragma once\n',
+      'core/src/bootstrap/machines/machine-catalog.cpp': '#include "bootstrap/machines/fc/fc.hpp"\n#include "contracts/runtime/machine-factory.hpp"\n',
+      'core/src/bootstrap/machines/loose.hpp': '#pragma once\n',
+      'core/src/bootstrap/module-list.cpp': '{"runtime", registerRuntime},\n',
+      'core/src/bootstrap/modules/runtime.cpp': '\n'
+    });
+    expect(checkProject(root).errors).toEqual(['core/src/bootstrap/machines/loose.hpp：机型的文件必须放在 bootstrap/machines/<机型>/ 或 bootstrap/machines/common/ 目录下']);
+  });
+
   it('contracts/hardware 不能引用 logic 与第三方库，只能包含自己、shared 与标准库', () => {
     const root = createProject({
       'core/src/contracts/hardware/ok.hpp': '#pragma once\n#include <cstdint>\n#include <span>\n#include "contracts/hardware/other.hpp"\n#include "shared/errors/core-error.hpp"\n',

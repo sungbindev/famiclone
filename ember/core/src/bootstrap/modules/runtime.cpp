@@ -14,9 +14,9 @@
 
 #include <memory>
 
+#include "bootstrap/machines/common/floppy-activity-relay.hpp"
+#include "bootstrap/machines/common/printer-output-relay.hpp"
 #include "bootstrap/machines/machine-catalog.hpp"
-#include "bootstrap/machines/floppy-activity-relay.hpp"
-#include "bootstrap/machines/printer-output-relay.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/hardware/tape-deck.hpp"

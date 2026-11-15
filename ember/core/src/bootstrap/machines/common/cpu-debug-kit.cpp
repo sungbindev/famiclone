@@ -8,7 +8,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "bootstrap/machines/cpu-debug-kit.hpp"
+#include "bootstrap/machines/common/cpu-debug-kit.hpp"
 
 #include <cstdio>
 #include <string>

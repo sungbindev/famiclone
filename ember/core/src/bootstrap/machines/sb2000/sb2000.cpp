@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "bootstrap/machines/sb2000.hpp"
+#include "bootstrap/machines/sb2000/sb2000.hpp"
 
 #include <algorithm>
 #include <cmath>

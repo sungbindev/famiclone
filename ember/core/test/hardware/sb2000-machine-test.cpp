@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-#include "bootstrap/machines/sb2000.hpp"
+#include "bootstrap/machines/sb2000/sb2000.hpp"
 #include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
 

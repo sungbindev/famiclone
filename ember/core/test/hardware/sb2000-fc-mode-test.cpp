@@ -21,8 +21,8 @@
 #include <span>
 #include <vector>
 
-#include "bootstrap/machines/sb2000-fc-board.hpp"
-#include "bootstrap/machines/sb2000.hpp"
+#include "bootstrap/machines/sb2000/sb2000-fc-board.hpp"
+#include "bootstrap/machines/sb2000/sb2000.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/mapper-chips/mmc3/mmc3.hpp"
 

@@ -86,6 +86,15 @@ const HARDWARE_LOGIC_PREFIX = 'logic/hardware/';
 const MAPPER_CHIP_DIRECTORY = 'mapper-chips';
 /** 标准库头文件：没有扩展名与目录的名字（如 <cstdint>、<span>）。 */
 const STANDARD_HEADER = /^[a-z][a-z0-9_]*$/;
+/**
+ * 主机型号的装配：bootstrap/machines/<机型>/ 一个机型一个目录，多个机型共用的放 bootstrap/machines/common/；
+ * machines 目录下直接放的只有按型号名创建主机的 machine-catalog。
+ */
+const MACHINES_PREFIX = 'bootstrap/machines/';
+const MACHINES_COMMON = 'common';
+const MACHINE_CATALOG = /^machine-catalog\.(cpp|hpp)$/;
+/** 机型文件可以包含的前缀：硬件契约、硬件模块与 shared。 */
+const MACHINE_ALLOWED_PREFIXES = [HARDWARE_CONTRACTS_PREFIX, HARDWARE_LOGIC_PREFIX, 'shared/'];
 
 /** 递归列出文件。 */
 function listFiles(directory, pattern) {
@@ -174,12 +183,34 @@ function thirdPartyAllowed(include, path, location) {
   return true;
 }
 
+/** 机型装配里的文件所属的机型目录（common 也算一个）；直接放在 machines 下的文件 name 为空，machine-catalog 不属于任何机型。 */
+function machineOf(path) {
+  if (!path.startsWith(MACHINES_PREFIX)) return undefined;
+  const parts = path.slice(MACHINES_PREFIX.length).split('/');
+  if (parts.length === 1) return MACHINE_CATALOG.test(parts[0]) ? undefined : { name: undefined };
+  return { name: parts[0] };
+}
+
+/** 检查一个机型文件的一条引用的包含路径，有问题时返回说明。 */
+function machineIncludeProblem(machine, include) {
+  if (include.startsWith(MACHINES_PREFIX)) {
+    const target = include.slice(MACHINES_PREFIX.length).split('/');
+    const targetName = target.length === 1 ? undefined : target[0];
+    if (targetName !== machine.name && targetName !== MACHINES_COMMON) return `机型 ${machine.name} 只能包含自己目录与 ${MACHINES_COMMON} 里的文件，不能包含 ${include}`;
+    return undefined;
+  }
+  if (HARDWARE_PLATFORM_ABSTRACTIONS.has(include) || MACHINE_ALLOWED_PREFIXES.some((prefix) => include.startsWith(prefix))) return undefined;
+  return `机型 ${machine.name} 只能包含硬件契约、硬件模块、shared 与 platform 的抽象，不能包含 ${include}`;
+}
+
 /** 检查 C++ 的 #include，并收集模块之间的依赖。 */
 function checkCpp(root, errors, edges) {
   const base = join(root, 'core', 'src');
   for (const file of listFiles(base, /\.(cpp|hpp)$/)) {
     const path = toPosix(relative(base, file));
     const from = cppLocation(path);
+    const machine = machineOf(path);
+    if (machine !== undefined && machine.name === undefined) errors.push(`core/src/${path}：机型的文件必须放在 bootstrap/machines/<机型>/ 或 bootstrap/machines/${MACHINES_COMMON}/ 目录下`);
     const inHardwareContracts = path.startsWith(HARDWARE_CONTRACTS_PREFIX);
     const inHardwareLogic = path.startsWith(HARDWARE_LOGIC_PREFIX);
     if (inHardwareLogic) {
@@ -203,6 +234,10 @@ function checkCpp(root, errors, edges) {
         continue;
       }
       const to = cppLocation(include);
+      if (machine !== undefined && machine.name !== undefined) {
+        const problem = machineIncludeProblem(machine, include);
+        if (problem !== undefined) errors.push(`core/src/${path}：${problem}`);
+      }
       const allowed = CPP_ALLOWED[from.layer];
       if (allowed !== undefined && !allowed.includes(to.layer)) errors.push(`core/src/${path}：${from.layer} 层不能包含 ${to.layer} 层的 ${include}`);
       if (from.layer === 'logic' && to.layer === 'platform' && !(inHardwareLogic ? HARDWARE_PLATFORM_ABSTRACTIONS : PLATFORM_ABSTRACTIONS).has(include)) {

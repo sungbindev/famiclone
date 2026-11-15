@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MediaPanel.test.tsx
- * 说明：设备面板的测试：没有设备时的提示、每个设备一行（软驱的名称、盘片、状态与四个图标按钮，磁带机的名称、磁带、状态、位置与五个图标按钮，打印机的名称与状态）、按钮的可用性与点击发出的请求、写保护是按下态的锁按钮、显示期间随状态变化。
+ * 说明：设备面板的测试：全部设备始终列出（没有连接的设备按钮置灰）、每个设备一行（软驱的名称、盘片、状态与四个图标按钮，磁带机的名称、磁带、状态、位置与五个图标按钮，打印机的名称与状态）、按钮的可用性与点击发出的请求、写保护是按下态的锁按钮、显示期间随状态变化。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -54,16 +54,22 @@ function protectButton(): HTMLElement {
 }
 
 describe('设备面板', () => {
-  it('没有设备（没有开机或主机没有软驱）时只给一句提示', async () => {
+  it('主机没有任何设备（没有开机或经典 FC 之外）时照样列出软驱 A、磁带机与打印机，按钮全部置灰', async () => {
     await setup([]);
-    expect(screen.getByText('没有设备：打开卡带或用整机机型开机后才有设备。')).toBeTruthy();
-    expect(screen.queryByText('软驱 A')).toBeNull();
+    const rows = within(screen.getByRole('list', { name: '设备' })).getAllByRole('listitem');
+    expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['软驱 A', '磁带机', '打印机']);
+    expect(fields(row('软驱 A'))).toEqual({ disk: '空', state: '无盘片' });
+    expect(row('磁带机').querySelector('.ui-row-list__title')?.textContent).toBe('空');
+    expect(row('打印机').querySelector('.ui-row-list__title')?.textContent).toBe('空闲');
+    for (const item of [row('软驱 A'), row('磁带机')]) {
+      for (const button of within(item).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
+    }
   });
 
-  it('软驱 A、软驱 B 与打印机各一行，没有卡片与标题', async () => {
+  it('软驱 A、软驱 B、磁带机与打印机各一行，没有卡片与标题', async () => {
     await setup();
     const rows = within(screen.getByRole('list', { name: '设备' })).getAllByRole('listitem');
-    expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['软驱 A', '软驱 B', '打印机']);
+    expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['软驱 A', '软驱 B', '磁带机', '打印机']);
     expect(screen.queryByRole('heading')).toBeNull();
   });
 
@@ -175,10 +181,11 @@ function tapeButton(name: string): HTMLButtonElement {
 }
 
 describe('设备面板的磁带机', () => {
-  it('经典 FC 只有磁带机一行：没有磁带时磁带“空”、状态“无磁带”、位置“—”，只有载入与录音可用', async () => {
+  it('经典 FC 没有软驱：软驱 A 与打印机照样列出，软驱 A 的按钮置灰；没有磁带时磁带“空”、状态“无磁带”、位置“—”，只有载入与录音可用', async () => {
     await setupTape();
     const rows = within(screen.getByRole('list', { name: '设备' })).getAllByRole('listitem');
-    expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['磁带机']);
+    expect(rows.map((item) => item.querySelector('.ui-row-list__leading')?.textContent)).toEqual(['软驱 A', '磁带机', '打印机']);
+    for (const button of within(row('软驱 A')).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
     const tape = row('磁带机');
     expect(tape.querySelector('.ui-row-list__title')?.textContent).toBe('空');
     expect([...tape.querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['无磁带', '—']);
@@ -188,18 +195,9 @@ describe('设备面板的磁带机', () => {
     for (const button of within(tape).getAllByRole('button')) expect(button.textContent).toBe('');
   });
 
-  it('主机没有磁带机且没有软驱时只给提示', async () => {
-    const fake = new FakeMediaBackend();
-    fake.floppies = [];
-    const controller = new MediaController();
-    controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
-    render(
-      <UiProvider>
-        <MediaPanel controller={controller} />
-      </UiProvider>
-    );
-    await act(async () => settle());
-    expect(screen.queryByText('磁带机')).toBeNull();
+  it('主机没有磁带机时磁带机照样列出，按钮全部置灰', async () => {
+    await setup([]);
+    for (const button of within(row('磁带机')).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('载入磁带后显示文件名、“已停止”与位置，取出、播放可用；载入成功通知“载入完成”', async () => {

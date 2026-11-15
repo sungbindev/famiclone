@@ -42,6 +42,11 @@ describe('软驱按钮的可用性', () => {
     expect(floppyAvailability(floppyStatus(0))).toEqual({ insert: true, eject: false, save: false, writeProtect: false });
     expect(floppyAvailability(floppyStatus(0, 'sys.img'))).toEqual({ insert: true, eject: true, save: true, writeProtect: true });
   });
+
+  it('软驱没有连接（主机没有这个软驱）时全部不可用，文字按空盘', () => {
+    expect(floppyAvailability(undefined)).toEqual({ insert: false, eject: false, save: false, writeProtect: false });
+    expect([diskText(undefined), floppyStateText(undefined)]).toEqual(['空', '无盘片']);
+  });
 });
 
 describe('磁带机的显示文字', () => {
@@ -64,6 +69,13 @@ describe('磁带机按钮的可用性', () => {
   it('停止时：没有磁带只能载入与录音，有磁带全部可用但不能停止', () => {
     expect(tapeAvailability(tapeStatus({ available: true }))).toEqual({ load: true, eject: false, play: false, record: true, stop: false });
     expect(tapeAvailability(tapeStatus({ available: true, loaded: true }))).toEqual({ load: true, eject: true, play: true, record: true, stop: false });
+  });
+
+  it('磁带机没有连接（还没读到或主机没有磁带机）时全部不可用，文字按无磁带', () => {
+    const none = { load: false, eject: false, play: false, record: false, stop: false };
+    expect(tapeAvailability(undefined)).toEqual(none);
+    expect(tapeAvailability(tapeStatus({ available: false }))).toEqual(none);
+    expect([tapeNameText(undefined), tapeStateText(undefined), tapePositionText(undefined)]).toEqual(['空', '无磁带', '—']);
   });
 
   it('播放或录音时只有停止可用', () => {

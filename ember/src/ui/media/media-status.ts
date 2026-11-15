@@ -35,15 +35,15 @@ export interface FloppyAvailability {
   readonly writeProtect: boolean;
 }
 
-/** 盘片的显示文字：镜像文件名，有未保存的修改时在后面注明；没有盘片时为“空”。 */
-export function diskText(floppy: FloppyStatus): string {
-  if (!floppy.inserted) return TEXT.empty;
+/** 盘片的显示文字：镜像文件名，有未保存的修改时在后面注明；没有盘片或软驱没有连接（undefined）时为“空”。 */
+export function diskText(floppy: FloppyStatus | undefined): string {
+  if (floppy === undefined || !floppy.inserted) return TEXT.empty;
   return `${floppy.fileName ?? ''}${floppy.modified ? TEXT.modified : ''}`;
 }
 
-/** 软驱的状态文字：无盘片、空闲、读写中（带磁道）。 */
-export function floppyStateText(floppy: FloppyStatus): string {
-  if (!floppy.inserted) return TEXT.noDisk;
+/** 软驱的状态文字：无盘片、空闲、读写中（带磁道）；软驱没有连接（undefined）时按无盘片。 */
+export function floppyStateText(floppy: FloppyStatus | undefined): string {
+  if (floppy === undefined || !floppy.inserted) return TEXT.noDisk;
   return floppy.motor ? TEXT.busy(floppy.cylinder) : TEXT.idle;
 }
 
@@ -66,19 +66,20 @@ export interface TapeAvailability {
   readonly stop: boolean;
 }
 
-/** 软驱各按钮是否可用。 */
-export function floppyAvailability(floppy: FloppyStatus): FloppyAvailability {
+/** 软驱各按钮是否可用；软驱没有连接（undefined，当前主机没有这个软驱）时全部不可用。 */
+export function floppyAvailability(floppy: FloppyStatus | undefined): FloppyAvailability {
+  if (floppy === undefined) return { insert: false, eject: false, save: false, writeProtect: false };
   return { insert: true, eject: floppy.inserted, save: floppy.inserted, writeProtect: floppy.inserted };
 }
 
-/** 磁带的显示文字：声音文件名；没有磁带时为“空”。 */
-export function tapeNameText(tape: TapeStatus): string {
-  return tape.loaded ? (tape.fileName ?? '') : TEXT.empty;
+/** 磁带的显示文字：声音文件名；没有磁带或磁带机没有连接（undefined）时为“空”。 */
+export function tapeNameText(tape: TapeStatus | undefined): string {
+  return tape?.loaded === true ? (tape.fileName ?? '') : TEXT.empty;
 }
 
-/** 磁带机的状态文字：无磁带、已停止、播放中、录音中。 */
-export function tapeStateText(tape: TapeStatus): string {
-  if (!tape.loaded) return TEXT.tape.noTape;
+/** 磁带机的状态文字：无磁带、已停止、播放中、录音中；磁带机没有连接（undefined）时按无磁带。 */
+export function tapeStateText(tape: TapeStatus | undefined): string {
+  if (tape === undefined || !tape.loaded) return TEXT.tape.noTape;
   return TEXT.tape[tape.mode];
 }
 
@@ -91,14 +92,15 @@ function clockText(seconds: number): string {
   return hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}:${rest}` : `${minutes}:${rest}`;
 }
 
-/** 磁带的位置文字：“当前 / 总时长”，总时长不知道时只写当前位置；没有磁带时为破折号。 */
-export function tapePositionText(tape: TapeStatus): string {
-  if (!tape.loaded) return TEXT.tape.noPosition;
+/** 磁带的位置文字：“当前 / 总时长”，总时长不知道时只写当前位置；没有磁带或磁带机没有连接（undefined）时为破折号。 */
+export function tapePositionText(tape: TapeStatus | undefined): string {
+  if (tape === undefined || !tape.loaded) return TEXT.tape.noPosition;
   return tape.duration > 0 ? `${clockText(tape.position)} / ${clockText(tape.duration)}` : clockText(tape.position);
 }
 
-/** 磁带机各按钮是否可用：只有停止时可以载入、取出、播放与录音，播放或录音时只有“停止”可用。 */
-export function tapeAvailability(tape: TapeStatus): TapeAvailability {
+/** 磁带机各按钮是否可用：只有停止时可以载入、取出、播放与录音，播放或录音时只有“停止”可用；磁带机没有连接（undefined 或 available 为 false）时全部不可用。 */
+export function tapeAvailability(tape: TapeStatus | undefined): TapeAvailability {
+  if (tape === undefined || !tape.available) return { load: false, eject: false, play: false, record: false, stop: false };
   const stopped = tape.mode === 'stopped';
   return { load: stopped, eject: stopped && tape.loaded, play: stopped && tape.loaded, record: stopped, stop: !stopped };
 }

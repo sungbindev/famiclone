@@ -5,13 +5,13 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：规则见 docs/05-界面.md 第 4.3 节；显示期间由控制器定时读取软驱、磁带机与打印机的状态，面板收起后停止。主机没有任何设备时不显示，只给一句提示。
+ * 备注：规则见 docs/05-界面.md 第 4.3 节；显示期间由控制器定时读取软驱、磁带机与打印机的状态，面板收起后停止。全部设备始终列出，与主机型号和卡带无关；当前主机没有的设备是沉默设备，内容为空、按钮置灰。
  *       按钮只有图标，名称在悬停提示与可访问名称里；写保护是按下态的图标按钮（锁），不是开关；软盘里的文件管理不在本阶段。
  *       载入镜像与载入磁带成功后调用 onLoaded（外壳的“自动收缩”开着就收起面板），取消选择与载入失败时不调用。
  * ------------------------------------------------------------------------
  */
 
-import { Button, iconDeviceFloppy, iconFolderOpen, iconLock, iconLockOpen, iconPlayerEject, iconPlayerPlay, iconPlayerRecord, iconPlayerStop, RowList, RowListItem, State } from '@rujianjs/ui-kit';
+import { Button, iconDeviceFloppy, iconFolderOpen, iconLock, iconLockOpen, iconPlayerEject, iconPlayerPlay, iconPlayerRecord, iconPlayerStop, RowList, RowListItem } from '@rujianjs/ui-kit';
 import { useEffect } from 'react';
 import type { FloppyStatus, TapeStatus } from '../../contracts/media/generated/media';
 import { driveLabel, type MediaController } from './media-controller';
@@ -33,9 +33,11 @@ const TEXT = {
   ejectTape: '取出',
   play: '播放',
   record: '录音',
-  stop: '停止',
-  noDevices: '没有设备：打开卡带或用整机机型开机后才有设备。'
+  stop: '停止'
 } as const;
+
+/** 面板里至少列出的软驱数；当前主机没有的软驱照样列出，按钮置灰。 */
+const MIN_FLOPPY_DRIVES = 1;
 
 /** 软驱状态列的宽度（像素），能放下“读写中（磁道 79）”；软驱的各行相同才能对齐。 */
 const STATE_WIDTH = 104;
@@ -51,12 +53,12 @@ export interface MediaPanelProps {
   readonly onLoaded?: () => void;
 }
 
-/** 一个软驱的行。 */
-function FloppyRow({ controller, floppy, onLoaded }: { readonly controller: MediaController; readonly floppy: FloppyStatus; readonly onLoaded: (() => void) | undefined }) {
+/** 一个软驱的行；floppy 为 undefined 表示当前主机没有这个软驱（沉默设备）。 */
+function FloppyRow({ controller, drive, floppy, onLoaded }: { readonly controller: MediaController; readonly drive: number; readonly floppy: FloppyStatus | undefined; readonly onLoaded: (() => void) | undefined }) {
   const available = floppyAvailability(floppy);
   return (
     <RowListItem
-      leading={TEXT.floppy(driveLabel(floppy.drive))}
+      leading={TEXT.floppy(driveLabel(drive))}
       title={diskText(floppy)}
       cells={[{ key: 'state', content: floppyStateText(floppy), width: STATE_WIDTH, muted: true }]}
       actions={
@@ -65,21 +67,21 @@ function FloppyRow({ controller, floppy, onLoaded }: { readonly controller: Medi
             variant="ghost"
             iconOnly
             compact
-            icon={floppy.writeProtected ? iconLock : iconLockOpen}
-            pressed={floppy.writeProtected}
+            icon={floppy?.writeProtected === true ? iconLock : iconLockOpen}
+            pressed={floppy?.writeProtected === true}
             title={TEXT.writeProtect}
             disabled={!available.writeProtect}
-            onClick={() => controller.setWriteProtected(floppy.drive, !floppy.writeProtected)}
+            onClick={() => controller.setWriteProtected(drive, floppy?.writeProtected !== true)}
           >
             {TEXT.writeProtect}
           </Button>
-          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.insert} disabled={!available.insert} onClick={() => controller.insertFloppy(floppy.drive, onLoaded)}>
+          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.insert} disabled={!available.insert} onClick={() => controller.insertFloppy(drive, onLoaded)}>
             {TEXT.insert}
           </Button>
-          <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.eject} disabled={!available.eject} onClick={() => controller.ejectFloppy(floppy.drive)}>
+          <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.eject} disabled={!available.eject} onClick={() => controller.ejectFloppy(drive)}>
             {TEXT.eject}
           </Button>
-          <Button variant="ghost" iconOnly compact icon={iconDeviceFloppy} title={TEXT.save} disabled={!available.save} onClick={() => controller.saveFloppy(floppy.drive)}>
+          <Button variant="ghost" iconOnly compact icon={iconDeviceFloppy} title={TEXT.save} disabled={!available.save} onClick={() => controller.saveFloppy(drive)}>
             {TEXT.save}
           </Button>
         </>
@@ -88,8 +90,8 @@ function FloppyRow({ controller, floppy, onLoaded }: { readonly controller: Medi
   );
 }
 
-/** 磁带机的行。 */
-function TapeRow({ controller, tape, onLoaded }: { readonly controller: MediaController; readonly tape: TapeStatus; readonly onLoaded: (() => void) | undefined }) {
+/** 磁带机的行；tape 为 undefined 或 available 为 false 表示当前主机没有磁带机（沉默设备）。 */
+function TapeRow({ controller, tape, onLoaded }: { readonly controller: MediaController; readonly tape: TapeStatus | undefined; readonly onLoaded: (() => void) | undefined }) {
   const available = tapeAvailability(tape);
   return (
     <RowListItem
@@ -130,15 +132,14 @@ export function MediaPanel({ controller, onLoaded }: MediaPanelProps) {
   const { floppies, printer, tape } = useMediaState(controller);
   useEffect(() => controller.startPolling(), [controller]);
 
-  const hasTape = tape?.available === true;
-  if (floppies.length === 0 && !hasTape) return <State text={TEXT.noDevices} />;
+  const driveCount = Math.max(MIN_FLOPPY_DRIVES, floppies.length);
   return (
     <RowList className="ember-media-list" aria-label={TEXT.devices}>
-      {floppies.map((floppy) => (
-        <FloppyRow key={floppy.drive} controller={controller} floppy={floppy} onLoaded={onLoaded} />
+      {Array.from({ length: driveCount }, (_, drive) => (
+        <FloppyRow key={drive} controller={controller} drive={drive} floppy={floppies.find((item) => item.drive === drive)} onLoaded={onLoaded} />
       ))}
-      {hasTape ? <TapeRow controller={controller} tape={tape} onLoaded={onLoaded} /> : null}
-      {floppies.length > 0 ? <RowListItem leading={TEXT.printer} title={printerStateText(printer)} /> : null}
+      <TapeRow controller={controller} tape={tape} onLoaded={onLoaded} />
+      <RowListItem leading={TEXT.printer} title={printerStateText(printer)} />
     </RowList>
   );
 }

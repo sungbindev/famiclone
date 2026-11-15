@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-module.tsx
- * 说明：介质模块在外壳里的登记项：底部面板的“设备”页签（系统栏左侧的“设备”按钮，图标里带软驱读写灯）与常驻组件。
+ * 说明：介质模块在外壳里的登记项：底部面板的“设备”页签（系统栏左侧的“设备”按钮，图标里带软驱读写灯）、系统栏左侧的已载入软盘名与常驻组件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -14,6 +14,7 @@ import type { ShellModule, ShellPageProps } from '../shell/shell-registry';
 import type { MediaController } from './media-controller';
 import { MediaHost } from './MediaHost';
 import { MediaPanel } from './MediaPanel';
+import { FloppyStatusItem } from './MediaStatusItems';
 
 /** 底部面板“设备”页签的标识。 */
 export const MEDIA_DEVICES_PANEL_ID = 'media.devices';
@@ -47,6 +48,7 @@ export function createMediaModule(controller: MediaController): ShellModule {
         }
       }
     ],
+    statusItems: [{ id: 'media.floppy', align: 'start', Component: () => <FloppyStatusItem controller={controller} /> }],
     Host: (props: ShellPageProps) => <MediaHost {...props} controller={controller} />
   };
 }

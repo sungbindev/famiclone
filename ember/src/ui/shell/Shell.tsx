@@ -280,7 +280,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
         titleBar={
           fullScreen ? undefined : (
             <TitleBar
-              logo={<EmberLogo brand />}
+              logo={<EmberLogo />}
               title={APP_NAME}
               menuBar={<MenuBar menus={menus} openMenuId={openMenuId} onOpenMenuChange={setOpenMenuId} onSelect={(_menuId, itemId) => handleMenuSelect(itemId)} />}
             />

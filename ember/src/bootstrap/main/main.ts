@@ -81,6 +81,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', NATIVE_FILE);
   const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', KEYBOARD_NATIVE_FILE);
   const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(app.getAppPath(), 'build', PLUGINS_DIRECTORY);
+  // 开发版用 resources/icon.ico 做窗口图标（打包后窗口用可执行文件里的图标；macOS 的 Dock 图标以后再定）。
+  const windowIcon = app.isPackaged || process.platform === 'darwin' ? undefined : join(app.getAppPath(), 'resources', 'icon.ico');
   // --debug-port 指定时本次运行强制开启调试服务（不写入首选项），--debug-token 指定令牌。
   const debugLaunch = debugOptionsFromArgv(process.argv);
 
@@ -123,6 +125,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
       preloadPath: join(__dirname, 'preload.cjs'),
       rendererFile,
       title: PRODUCT_NAME,
+      ...(windowIcon ? { icon: windowIcon } : {}),
       devTools: !app.isPackaged,
       placement: shellState.get().window,
       showAfter: themeReady,

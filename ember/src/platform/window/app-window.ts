@@ -53,6 +53,8 @@ export interface AppWindowOptions {
   readonly rendererFile: string;
   /** 窗口标题。 */
   readonly title: string;
+  /** 窗口图标；不传时用可执行文件的图标。 */
+  readonly icon?: string;
   /** 上次保存的位置。 */
   readonly placement?: WindowPlacement | null;
   /** 按 F12 切换开发者工具（只在开发时开启）。 */
@@ -175,6 +177,7 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
     title: options.title,
+    ...(options.icon ? { icon: options.icon } : {}),
     show: false,
     backgroundColor: WINDOW_COLORS[theme].background,
     titleBarStyle: 'hidden',
@@ -192,7 +195,7 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
   window.webContents.on('will-navigate', (event, url) => {
     if (!isAppUrl(url, options)) event.preventDefault();
   });
-  allowDialogWindows(window, { background: () => WINDOW_COLORS[resolvedTheme()].background });
+  allowDialogWindows(window, { background: () => WINDOW_COLORS[resolvedTheme()].background, ...(options.icon ? { icon: options.icon } : {}) });
   // 屏幕缩放不是整数倍时，创建参数里的尺寸换算后会差几个像素，所以创建后再按边界精确设置一次。
   if (placement) setExactBounds(window, { x: placement.x, y: placement.y, width: MIN_WIDTH, height: MIN_HEIGHT });
   if (options.devTools) {

@@ -97,34 +97,12 @@
   font-size: var(--font-size-caption);
 }
 
-/* 运行面板：机器信息、四个控制按钮、声音排成一行，放不下时换行；机器信息的每一项是淡色名称加值，字号同组件库的信息列表 */
+/* 运行面板：四个控制按钮、声音排成一行，放不下时换行 */
 .ember-run-panel {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md) calc(var(--space-page) * 2);
   align-items: center;
-}
-
-.ember-run-panel__facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs) calc(var(--space-page) * 2);
-  margin: 0;
-}
-
-.ember-run-panel__fact {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.ember-run-panel__fact dt {
-  color: var(--facts-label-color);
-  font-size: var(--facts-label-font-size);
-}
-
-.ember-run-panel__fact dd {
-  margin: 0;
-  font-size: var(--facts-value-font-size);
 }
 
 .ember-run-panel__buttons {

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimePanel.test.tsx
- * 说明：底部面板“运行”内容的测试：没有分组标题；机器信息（主机型号、卡带、mapper 插件，没有信息的不显示，没有“状态”）、四个控制按钮的名称与各状态下的可用性、点击发出的请求、声音（静音按钮、音量滑块与数值）、不显示速度。
+ * 说明：底部面板“运行”内容的测试：没有分组标题，不显示机器信息（在系统栏）、四个控制按钮的名称与各状态下的可用性、点击发出的请求、声音（静音按钮、音量滑块与数值）、不显示速度。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -32,40 +32,11 @@ async function setup(status = machineStatus('off', 'paused')) {
   return { fake, controller };
 }
 
-/** 机器信息里某一项的值。 */
-function fact(label: string): string {
-  const term = screen.getByText(label, { selector: 'dt' });
-  return term.nextElementSibling?.textContent ?? '';
-}
-
-describe('机器信息', () => {
-  it('没有开机：没有信息就不显示，没有分组标题', async () => {
-    await setup();
-    expect(screen.queryByText('主机型号')).toBeNull();
-    expect(screen.queryByText('卡带')).toBeNull();
-    expect(screen.queryByText('mapper 插件')).toBeNull();
-    expect(screen.queryByRole('heading')).toBeNull();
-  });
-
-  it('运行中：显示主机型号、卡带文件名与匹配的插件，没有“状态”', async () => {
+describe('面板内容', () => {
+  it('不显示主机型号、卡带与 mapper 插件（都在系统栏），也没有分组标题与“状态”', async () => {
     await setup(machineStatus('on', 'running', 'D:\\roms\\nestest.nes'));
-    expect([fact('主机型号'), fact('卡带'), fact('mapper 插件')]).toEqual(['经典 FC', 'nestest.nes', 'NROM']);
-    expect(screen.queryByText('状态')).toBeNull();
-  });
-
-  it('整机机型用 BIOS 开机：只有主机型号，没有卡带与 mapper', async () => {
-    await setup({ ...machineStatus('on', 'running'), machine: 'sb2000' });
-    expect(fact('主机型号')).toBe('小霸王 2000');
-    expect(screen.queryByText('卡带')).toBeNull();
-    expect(screen.queryByText('mapper 插件')).toBeNull();
-  });
-
-  it('核心状态变化后随之更新', async () => {
-    const { fake } = await setup(machineStatus('on', 'running', 'D:\\roms\\a.nes'));
-    fake.status = machineStatus('off', 'paused');
-    fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'eject' });
-    await act(async () => settle());
-    expect(screen.queryByText('主机型号')).toBeNull();
+    for (const text of ['主机型号', '经典 FC', '卡带', 'nestest.nes', 'mapper 插件', 'NROM', '状态']) expect(screen.queryByText(text)).toBeNull();
+    expect(screen.queryByRole('heading')).toBeNull();
   });
 });
 

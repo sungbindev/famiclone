@@ -107,9 +107,10 @@ describe('登记表', () => {
     expect(registry.bottomPanels.map((panel) => panel.id)).toEqual(['runtime.panel']);
   });
 
-  it('状态项只有卡带与 mapper 插件，都在左侧', () => {
+  it('状态项是主机型号、卡带与 mapper 插件，都在左侧', () => {
     const registry = buildShellRegistry([SHELL_MODULE, createRuntimeModule(new RuntimeController())]);
     expect(registry.statusItems.map((entry) => [entry.id, entry.align])).toEqual([
+      ['runtime.host', 'start'],
       ['runtime.cartridge', 'start'],
       ['runtime.plugin', 'start']
     ]);
@@ -338,14 +339,19 @@ describe('快捷键', () => {
 });
 
 describe('系统栏左侧', () => {
-  it('依次是运行按钮、设备以外的状态项：卡带名与 mapper 插件；没有电源状态、主机型号，右侧没有音量', async () => {
+  it('依次是运行按钮、设备以外的状态项：主机型号、卡带名与 mapper 插件；没有电源状态，右侧没有音量', async () => {
     const { container } = await setup({ status: machineStatus('on', 'running', NES) });
     const left = startItems(container);
-    expect(left.map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', 'nestest.nes', 'NROM']);
+    expect(left.map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '经典 FC', 'nestest.nes', 'NROM']);
     const bar = container.querySelector('.ui-status-bar') as HTMLElement;
     const texts = Array.from(bar.querySelectorAll('.ui-status-bar__item')).map((element) => element.textContent);
-    expect(texts.some((text) => /运行中|已暂停|已断电|未开机|经典 FC|音量/.test(text ?? ''))).toBe(false);
+    expect(texts.some((text) => /运行中|已暂停|已断电|未开机|音量/.test(text ?? ''))).toBe(false);
     expect(texts.some((text) => /fps|帧率/i.test(text ?? ''))).toBe(false);
+  });
+
+  it('整机机型用 BIOS 开机：只显示主机型号，没有卡带与 mapper 插件', async () => {
+    const { container } = await setup({ status: { ...machineStatus('on', 'running'), machine: 'sb2000' } });
+    expect(startItems(container).map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '小霸王 2000']);
   });
 
   it('没有开机时没有信息的状态项不显示', async () => {

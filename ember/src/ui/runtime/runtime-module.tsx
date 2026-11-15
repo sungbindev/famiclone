@@ -21,7 +21,7 @@ import { machineState, pauseToggleText, powerToggleText, stateText } from './run
 import { RuntimeHost } from './RuntimeHost';
 import { RuntimePage } from './RuntimePage';
 import { RuntimePanel } from './RuntimePanel';
-import { CartridgeStatusItem, PluginStatusItem, type RuntimeStatusItemProps } from './RuntimeStatusItems';
+import { CartridgeStatusItem, HostStatusItem, PluginStatusItem, type RuntimeStatusItemProps } from './RuntimeStatusItems';
 
 /** 底部面板“运行”页签的标识。 */
 const RUN_PANEL_ID = 'runtime.panel';
@@ -149,6 +149,7 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
       { menu: 'machine', command: RUNTIME_COMMANDS.muteToggle, separatorBefore: true }
     ],
     statusItems: [
+      { id: 'runtime.host', align: 'start', Component: bind(HostStatusItem, controller) },
       { id: 'runtime.cartridge', align: 'start', Component: bind(CartridgeStatusItem, controller) },
       { id: 'runtime.plugin', align: 'start', Component: bind(PluginStatusItem, controller) }
     ],

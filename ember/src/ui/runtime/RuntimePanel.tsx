@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimePanel.tsx
- * 说明：底部面板的“运行”内容，没有分组标题，排成一行：机器信息（主机型号、卡带、mapper 插件，只读，没有信息的不显示）、四个控制按钮（开机或断电、暂停或继续、软复位、硬复位）、声音（静音按钮、音量滑块与数值）；放不下时换行。
+ * 说明：底部面板的“运行”内容，没有分组标题，排成一行：四个控制按钮（开机或断电、暂停或继续、软复位、硬复位）、声音（静音按钮、音量滑块与数值）；放不下时换行。主机型号、卡带、mapper 插件显示在系统栏，不在面板里。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -12,16 +12,12 @@
 
 import { Button, iconPlayerPause, iconPlayerPlay, iconPower, iconRefresh, iconRotate, iconVolume, iconVolumeOff, Slider } from '@rujianjs/ui-kit';
 import type { RuntimeController } from './runtime-controller';
-import { cartridgeText, hostText, pauseToggleText, pluginText, powerToggleText } from './runtime-status';
+import { pauseToggleText, powerToggleText } from './runtime-status';
 import { useRuntimeState } from './use-runtime-state';
 import './ember-run.css';
 
 /** 用户可见的文字。 */
 const TEXT = {
-  machine: '机器',
-  host: '主机型号',
-  cartridge: '卡带',
-  plugin: 'mapper 插件',
   softReset: '软复位',
   hardReset: '硬复位',
   volume: '音量',
@@ -41,25 +37,9 @@ export function RuntimePanel({ controller }: RuntimePanelProps) {
   const { status, volume, muted } = useRuntimeState(controller);
   const available = controller.availability();
   const running = status?.power === 'on' && status.mode === 'running';
-  // 没有信息的不显示；一项都没有时整个机器信息不显示。
-  const facts = [
-    { label: TEXT.host, value: hostText(status) },
-    { label: TEXT.cartridge, value: cartridgeText(status) },
-    { label: TEXT.plugin, value: pluginText(status) }
-  ].flatMap((fact) => (fact.value === undefined ? [] : [{ label: fact.label, value: fact.value }]));
 
   return (
     <div className="ember-run-panel">
-      {facts.length === 0 ? null : (
-        <dl className="ember-run-panel__facts" aria-label={TEXT.machine}>
-          {facts.map((fact) => (
-            <div key={fact.label} className="ember-run-panel__fact">
-              <dt>{fact.label}</dt>
-              <dd>{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
       <div className="ember-run-panel__buttons">
         <Button variant="primary" icon={iconPower} disabled={!available.powerToggle} onClick={() => controller.togglePower()}>
           {powerToggleText(status)}

@@ -313,15 +313,15 @@ async function main() {
   await sleep(500);
   check('非法输入被丢弃，画面继续', (await page.evaluate(readDiagnostics())).received > afterJunk);
 
-  // 系统栏与底部面板：运行按钮（系统栏左侧，只有图标）的图标与提示实时显示运行状态，点它展开运行面板（机器信息、控制按钮、声音），再经菜单与快捷键操作。
+  // 系统栏与底部面板：运行按钮（系统栏左侧，只有图标）的图标与提示实时显示运行状态，点它展开运行面板（控制按钮、声音），再经菜单与快捷键操作。
   const runButtonInfo = () => page.evaluate(`(() => { const button = document.querySelector('.ui-status-bar [aria-label="运行"]'); return button ? { title: button.title, tone: button.getAttribute('data-tone'), text: button.textContent, path: button.querySelector('path')?.getAttribute('d') ?? '' } : null; })()`);
   const runningButton = await runButtonInfo();
   check('系统栏左侧的运行按钮只有图标，运行中时提示是“运行：运行中”、图标为绿色', runningButton?.title === '运行：运行中' && runningButton?.tone === 'success' && runningButton?.text === '', JSON.stringify(runningButton));
   const barText = await textOf('.ui-status-bar');
-  check('系统栏显示卡带名与 mapper 插件，不显示电源状态、主机型号与音量', ['nestest.nes', 'NROM'].every((word) => barText.includes(word)) && !['运行中', '经典 FC', '音量'].some((word) => barText.includes(word)), barText.replace(/\s+/g, ' ').slice(0, 60));
+  check('系统栏显示主机型号、卡带名与 mapper 插件，不显示电源状态与音量', ['经典 FC', 'nestest.nes', 'NROM'].every((word) => barText.includes(word)) && !['运行中', '音量'].some((word) => barText.includes(word)), barText.replace(/\s+/g, ' ').slice(0, 60));
   check('点系统栏的运行按钮', await clickBarButton('运行'));
-  const panelText = await waitFor(() => textOf('.ember-shell-panel'), (text) => text.includes('主机型号'), 5000, 100);
-  check('运行面板显示机器信息（主机型号、卡带、mapper 插件），没有“状态”与分组标题', ['经典 FC', 'nestest.nes', 'NROM'].every((word) => panelText.includes(word)) && !panelText.includes('状态') && !panelText.includes('机器') && !panelText.includes('控制'), panelText.replace(/\s+/g, ' ').slice(0, 60));
+  const panelText = await waitFor(() => textOf('.ember-shell-panel'), (text) => text.includes('软复位'), 5000, 100);
+  check('运行面板只有控制按钮与声音，不显示主机型号、卡带、mapper 插件与“状态”', ['断电', '暂停', '软复位', '硬复位'].every((word) => panelText.includes(word)) && !['主机型号', '经典 FC', 'nestest.nes', 'NROM', '状态'].some((word) => panelText.includes(word)), panelText.replace(/\s+/g, ' ').slice(0, 60));
   const panelHeader = await page.evaluate(`(() => { const title = document.querySelector('.ember-shell-panel__title'); return { title: title?.textContent, weight: Number(getComputedStyle(title).fontWeight), close: Boolean(document.querySelector('.ember-shell-panel__header button')) }; })()`);
   check('面板标题行：左边是加粗的面板标题“运行”，右边有关闭按钮', panelHeader.title === '运行' && panelHeader.weight >= 600 && panelHeader.close, JSON.stringify(panelHeader));
   check('运行面板的“暂停”按钮可点击', await clickPanelButton('暂停'));

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：mmc3.hpp
- * 说明：MMC3 芯片：卡带上的 mapper 芯片，$8000-$FFFF 的 8 个寄存器、程序页与图案页的页号、名称表镜像位，以及按图案地址线 A12 上升沿计数的扫描线 IRQ 计数器；不含存储。
+ * 说明：MMC3 芯片（实现 MapperCircuit 契约）：mapper 电路（可装在卡带上，也可在学习机主板上），$8000-$FFFF 的 8 个寄存器、程序页与图案页的页号、名称表镜像位，以及按图案地址线 A12 上升沿计数的扫描线 IRQ 计数器；不含存储。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -17,35 +17,57 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <vector>
 
 #include "contracts/hardware/irq-line.hpp"
+#include "contracts/hardware/mapper-circuit.hpp"
 
-namespace ember::logic::mapper_chips {
+namespace ember::logic::hardware::mapper_chips {
 
 /** MMC3 芯片（不含存储）。 */
-class Mmc3 {
+class Mmc3 final : public contracts::hardware::MapperCircuit {
  public:
   /** A12 要先低过这么多次显存访问，下一次上升沿才计数。 */
   static constexpr unsigned A12_LOW_ACCESSES = 4;
   /** $C000 与 $E000 固定的程序页的页号：倒数第 2 页、最后一页。 */
   static constexpr unsigned SECOND_LAST_PROGRAM_BANK = 0x3E;
   static constexpr unsigned LAST_PROGRAM_BANK = 0x3F;
+  /** 程序页与图案页的大小（字节）。 */
+  static constexpr std::size_t PROGRAM_BANK_SIZE = 8 * 1024;
+  static constexpr std::size_t CHARACTER_BANK_SIZE = 1024;
 
   /** @param irq IRQ 线，本芯片在其上登记一个来源。 */
   explicit Mmc3(contracts::hardware::IrqLine& irq);
 
   /** 上电：全部寄存器清零，垂直镜像，IRQ 关闭并撤销。 */
-  void reset();
+  void reset() override;
 
   /** 清 IRQ 计数器、锁存值与允许位，撤销 IRQ。 */
-  void resetIrq();
+  void resetIrq() override;
 
   /** 关闭 IRQ 并撤销（等同写 $E000 偶地址）。 */
-  void disableIrq();
+  void disableIrq() override;
 
   /** 对 $8000-$FFFF 的写入：按地址的位 14-13 与位 0 分到各寄存器。 */
-  void writeRegister(std::uint16_t address, std::uint8_t value);
+  void writeRegister(std::uint16_t address, std::uint8_t value) override;
+
+  /** 程序页 8K、图案页 1K。 */
+  [[nodiscard]] std::size_t bankSize(contracts::hardware::BankSpace space, std::uint16_t address) const override;
+
+  /** 按存储空间取 programBank 或 characterBank。 */
+  [[nodiscard]] unsigned bank(contracts::hardware::BankSpace space, std::uint16_t address) const override;
+
+  /** 名称表镜像：$A000 的位 0 为 1 水平，为 0 垂直。 */
+  [[nodiscard]] std::optional<contracts::hardware::CircuitMirroring> mirroring() const override;
+
+  /** PPU 对显存总线的一次访问：A12 先低够次数再变高算一次时钟。 */
+  void onVideoAddress(std::uint16_t address) override;
+
+  /** 内部状态：selector、r0-r7、horizontalMirroring、irqLatch、irqCounter、irqEnabled。 */
+  [[nodiscard]] std::vector<contracts::hardware::CircuitStateField> state() const override;
 
   /** CPU 地址（不小于 $8000）所在 8K 程序页的页号，0 到 $3F。 */
   [[nodiscard]] unsigned programBank(std::uint16_t address) const;
@@ -55,9 +77,6 @@ class Mmc3 {
 
   /** 名称表是否水平镜像（$A000 的位 0）。 */
   [[nodiscard]] bool horizontalMirroring() const { return horizontalMirroring_; }
-
-  /** PPU 对显存总线的一次访问：A12 先低够次数再变高算一次时钟。 */
-  void onVideoAddress(std::uint16_t address);
 
   // 测试与调试用
   [[nodiscard]] std::uint8_t selector() const { return selector_; }
@@ -83,4 +102,4 @@ class Mmc3 {
   unsigned lowAccesses_{0};
 };
 
-}  // namespace ember::logic::mapper_chips
+}  // namespace ember::logic::hardware::mapper_chips

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：mmc3-test.cpp
- * 说明：MMC3 芯片的测试：程序页与图案页的页号（含选择位的模式与反转）、名称表镜像位、A12 边沿的 IRQ 计数（滤波、重载、允许与撤销）、上电复位。
+ * 说明：MMC3 芯片的测试：程序页与图案页的页号（含选择位的模式与反转）、名称表镜像位、A12 边沿的 IRQ 计数（滤波、重载、允许与撤销）、上电复位，以及经 MapperCircuit 契约使用。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -14,12 +14,15 @@
 #include <cstdint>
 
 #include "logic/hardware/lines/wired-or-line.hpp"
-#include "logic/mapper-chips/mmc3/mmc3.hpp"
+#include "logic/hardware/mapper-chips/mmc3/mmc3.hpp"
 
 namespace {
 
+using ember::contracts::hardware::BankSpace;
+using ember::contracts::hardware::CircuitMirroring;
+using ember::contracts::hardware::MapperCircuit;
 using ember::logic::hardware::WiredOrIrqLine;
-using ember::logic::mapper_chips::Mmc3;
+using ember::logic::hardware::mapper_chips::Mmc3;
 
 /** 芯片测试台。 */
 struct Rig {
@@ -189,6 +192,40 @@ TEST(Mmc3, ResetClearsEverything) {
   EXPECT_FALSE(rig.chip.horizontalMirroring());
   EXPECT_EQ(rig.chip.irqLatch(), 0);
   EXPECT_FALSE(rig.chip.irqEnabled());
+}
+
+TEST(Mmc3, WorksThroughTheMapperCircuitContract) {
+  Rig rig;
+  MapperCircuit& circuit = rig.chip;
+  circuit.writeRegister(0x8000, 6);
+  circuit.writeRegister(0x8001, 5);
+  circuit.writeRegister(0x8000, 0);
+  circuit.writeRegister(0x8001, 0x42);
+  EXPECT_EQ(circuit.bankSize(BankSpace::Program, 0x8000), 8U * 1024);
+  EXPECT_EQ(circuit.bankSize(BankSpace::Character, 0x0000), 1024U);
+  EXPECT_EQ(circuit.bank(BankSpace::Program, 0x8000), 5U);
+  EXPECT_EQ(circuit.bank(BankSpace::Program, 0xE000), Mmc3::LAST_PROGRAM_BANK);
+  EXPECT_EQ(circuit.bank(BankSpace::Character, 0x0000), 0x42U);
+  EXPECT_EQ(circuit.bank(BankSpace::Character, 0x0400), 0x43U);
+  EXPECT_FALSE(circuit.readRegister(0x8000).has_value()) << "MMC3 的寄存器不驱动数据线";
+  EXPECT_EQ(circuit.mirroring(), CircuitMirroring::Vertical);
+  circuit.writeRegister(0xA000, 1);
+  EXPECT_EQ(circuit.mirroring(), CircuitMirroring::Horizontal);
+}
+
+TEST(Mmc3, StateListsTheRegistersInAStableOrder) {
+  Rig rig;
+  rig.setRegister(6, 7);
+  rig.chip.writeRegister(0xC000, 9);
+  const auto fields = static_cast<MapperCircuit&>(rig.chip).state();
+  ASSERT_EQ(fields.size(), 13U);
+  EXPECT_EQ(fields[0].name, "selector");
+  EXPECT_EQ(fields[7].name, "r6");
+  EXPECT_EQ(fields[7].value, 7U);
+  EXPECT_EQ(fields[10].name, "irqLatch");
+  EXPECT_EQ(fields[10].value, 9U);
+  EXPECT_EQ(fields[12].name, "irqEnabled");
+  for (const auto& field : fields) EXPECT_FALSE(field.description.empty()) << field.name;
 }
 
 }  // namespace

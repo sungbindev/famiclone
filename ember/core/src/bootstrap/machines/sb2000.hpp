@@ -63,6 +63,7 @@
 #include "logic/hardware/scheduler/master-scheduler.hpp"
 #include "logic/hardware/sysinit-um6576/sysinit-um6576.hpp"
 #include "logic/hardware/timer-um6576/timer-um6576.hpp"
+#include "logic/hardware/mapper-chips/mmc3/mmc3.hpp"
 
 namespace ember::bootstrap {
 
@@ -221,6 +222,8 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   logic::hardware::PagingUm6576 paging_;
   Sb2000ProgramMemory program_;
   logic::hardware::SysinitUm6576 sysinit_;
+  /** FC 模式用的 mapper 电路：MMC3（主板上的实现，由本机型号创建，经 MapperCircuit 契约交给 mmc3_）。 */
+  logic::hardware::mapper_chips::Mmc3 mmc3Chip_;
   Sb2000FcMapper mmc3_;
   Sb2000WorkWindow workWindow_;
   Sb2000FcProgram fcProgram_;

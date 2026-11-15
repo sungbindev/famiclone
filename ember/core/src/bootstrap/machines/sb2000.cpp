@@ -64,7 +64,8 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
       externalRam_(EXTERNAL_RAM_SIZE),
       externalRamDevice_(externalRam_),
       program_(paging_, bios_),
-      mmc3_(irq_),
+      mmc3Chip_(irq_),
+      mmc3_(mmc3Chip_),
       workWindow_(sysinit_, ram_),
       fcProgram_(program_.extendedRam(), mmc3_),
       fcVideo_(video_, mmc3_),
@@ -505,13 +506,7 @@ std::vector<hw::StateField> Sb2000Machine::readState(std::string_view module) co
   if (module == "mmc3") {
     std::vector<hw::StateField> fields;
     fields.push_back(field("window", mmc3_.window(), "128K 窗口号（$5006 选择）"));
-    fields.push_back(field("selector", mmc3_.selector(), "$8000 的选择寄存器（位 7 反转图案、位 6 程序模式、位 2-0 选 R0-R7）"));
-    static constexpr const char* NAMES[] = {"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7"};
-    for (unsigned index = 0; index < 8; ++index) fields.push_back(field(NAMES[index], mmc3_.registerValue(index), "MMC3 的页寄存器"));
-    fields.push_back(field("horizontalMirroring", mmc3_.horizontalMirroring() ? 1 : 0, "$A000 的镜像位（1 水平，0 垂直）"));
-    fields.push_back(field("irqLatch", mmc3_.irqLatch(), "$C000 的 IRQ 锁存值"));
-    fields.push_back(field("irqCounter", mmc3_.irqCounter(), "IRQ 计数器"));
-    fields.push_back(field("irqEnabled", mmc3_.irqEnabled() ? 1 : 0, "IRQ 是否允许"));
+    for (const auto& item : mmc3_.chipState()) fields.push_back(field(item.name.c_str(), item.value, item.description.c_str()));
     return fields;
   }
   throw shared::CoreError(hw::ERROR_INVALID_STATE, "没有这个状态模块：" + std::string(module));

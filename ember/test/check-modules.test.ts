@@ -116,32 +116,32 @@ describe('checkProject', () => {
     const root = createProject({
       'core/src/logic/hardware/loose.hpp': '#pragma once\n'
     });
-    expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/loose.hpp：硬件模块与 mapper 芯片的文件必须放在 logic/hardware/<模块>/ 或 logic/mapper-chips/<芯片>/ 目录下']);
+    expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/loose.hpp：硬件模块的文件必须放在 logic/hardware/<模块>/ 目录下']);
   });
 
-  it('mapper 芯片在单独的 logic/mapper-chips/<芯片>/ 目录，不要求登记，经 contracts/hardware 协作，芯片之间与对主板硬件模块都不能互相引用', () => {
+  it('mapper 芯片在 logic/hardware/mapper-chips/<芯片>/ 目录，不要求登记，经 contracts/hardware 协作，芯片之间与对其他硬件模块都不能互相引用', () => {
     const root = createProject({
       'core/src/contracts/hardware/irq-line.hpp': '#pragma once\n',
-      'core/src/logic/mapper-chips/mmc3/mmc3.hpp': '#include "contracts/hardware/irq-line.hpp"\n',
-      'core/src/logic/mapper-chips/vrc6/vrc6.hpp': '#include "contracts/hardware/irq-line.hpp"\n'
+      'core/src/logic/hardware/mapper-chips/mmc3/mmc3.hpp': '#include "contracts/hardware/irq-line.hpp"\n',
+      'core/src/logic/hardware/mapper-chips/vrc6/vrc6.hpp': '#include "contracts/hardware/irq-line.hpp"\n'
     });
     expect(checkProject(root).errors).toEqual([]);
     const crossing = createProject({
       'core/src/logic/hardware/cpu-6502/cpu.hpp': '#pragma once\n',
-      'core/src/logic/mapper-chips/mmc3/mmc3.hpp': '#include "logic/hardware/cpu-6502/cpu.hpp"\n#include "logic/mapper-chips/vrc6/vrc6.hpp"\n',
-      'core/src/logic/mapper-chips/vrc6/vrc6.hpp': '#pragma once\n'
+      'core/src/logic/hardware/mapper-chips/mmc3/mmc3.hpp': '#include "logic/hardware/cpu-6502/cpu.hpp"\n#include "logic/hardware/mapper-chips/vrc6/vrc6.hpp"\n',
+      'core/src/logic/hardware/mapper-chips/vrc6/vrc6.hpp': '#pragma once\n'
     });
     expect(checkProject(crossing).errors).toEqual([
-      'core/src/logic/mapper-chips/mmc3/mmc3.hpp：模块 mapper-chips/mmc3 只能引用模块 hardware/cpu-6502 的契约，不能包含 logic/hardware/cpu-6502/cpu.hpp',
-      'core/src/logic/mapper-chips/mmc3/mmc3.hpp：模块 mapper-chips/mmc3 只能引用模块 mapper-chips/vrc6 的契约，不能包含 logic/mapper-chips/vrc6/vrc6.hpp'
+      'core/src/logic/hardware/mapper-chips/mmc3/mmc3.hpp：模块 hardware/mapper-chips/mmc3 只能引用模块 hardware/cpu-6502 的契约，不能包含 logic/hardware/cpu-6502/cpu.hpp',
+      'core/src/logic/hardware/mapper-chips/mmc3/mmc3.hpp：模块 hardware/mapper-chips/mmc3 只能引用模块 hardware/mapper-chips/vrc6 的契约，不能包含 logic/hardware/mapper-chips/vrc6/vrc6.hpp'
     ]);
   });
 
-  it('mapper 芯片的文件不能直接放在 logic/mapper-chips/ 下', () => {
+  it('mapper 芯片的文件不能直接放在 logic/hardware/mapper-chips/ 下', () => {
     const root = createProject({
-      'core/src/logic/mapper-chips/loose.hpp': '#pragma once\n'
+      'core/src/logic/hardware/mapper-chips/loose.hpp': '#pragma once\n'
     });
-    expect(checkProject(root).errors).toEqual(['core/src/logic/mapper-chips/loose.hpp：硬件模块与 mapper 芯片的文件必须放在 logic/hardware/<模块>/ 或 logic/mapper-chips/<芯片>/ 目录下']);
+    expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/mapper-chips/loose.hpp：mapper 芯片的文件必须放在 logic/hardware/mapper-chips/<芯片>/ 目录下']);
   });
 
   it('contracts/hardware 不能引用 logic 与第三方库，只能包含自己、shared 与标准库', () => {

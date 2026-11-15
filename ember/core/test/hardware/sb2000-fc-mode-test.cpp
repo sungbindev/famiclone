@@ -24,6 +24,7 @@
 #include "bootstrap/machines/sb2000-fc-board.hpp"
 #include "bootstrap/machines/sb2000.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
+#include "logic/hardware/mapper-chips/mmc3/mmc3.hpp"
 
 namespace {
 
@@ -31,16 +32,17 @@ namespace hw = ember::contracts::hardware;
 using ember::bootstrap::Sb2000FcMapper;
 using ember::bootstrap::Sb2000Machine;
 using ember::logic::hardware::WiredOrIrqLine;
+using ember::logic::hardware::mapper_chips::Mmc3;
 
 // ---------------------------------------------------------------- MMC3 映射器
 
-/** 映射器测试台。 */
+/** 映射器测试台：MMC3 电路装在主板接线上。 */
 struct MapperRig {
-  MapperRig() : mapper(irq) {}
+  MapperRig() : chip(irq), mapper(chip) {}
 
   /** 写 MMC3 的页寄存器 R0-R7。 */
   void setRegister(unsigned index, std::uint8_t value) {
-    mapper.writeRegister(0x8000, static_cast<std::uint8_t>((mapper.selector() & 0xC0U) | index));
+    mapper.writeRegister(0x8000, static_cast<std::uint8_t>((chip.selector() & 0xC0U) | index));
     mapper.writeRegister(0x8001, value);
   }
 
@@ -49,11 +51,12 @@ struct MapperRig {
 
   /** 一次 A12 上升沿：先有足够多的低电平访问，再变高。 */
   void clockEdge() {
-    for (unsigned i = 0; i < Sb2000FcMapper::A12_LOW_ACCESSES; ++i) mapper.onVideoAddress(0x0000);
+    for (unsigned i = 0; i < Mmc3::A12_LOW_ACCESSES; ++i) mapper.onVideoAddress(0x0000);
     mapper.onVideoAddress(0x1000);
   }
 
   WiredOrIrqLine irq;
+  Mmc3 chip;
   Sb2000FcMapper mapper;
 };
 
@@ -146,9 +149,9 @@ TEST(Sb2000FcMapper, NametableMirroringFollowsTheMirrorRegister) {
   EXPECT_EQ(rig.mapper.nametableOffset(0x2800), 0x2400U);
   EXPECT_EQ(rig.mapper.nametableOffset(0x2C00), 0x2400U);
   rig.mapper.writeRegister(0xA001, 0);  // PRG RAM 保护，忽略
-  EXPECT_TRUE(rig.mapper.horizontalMirroring());
+  EXPECT_TRUE(rig.chip.horizontalMirroring());
   rig.mapper.writeRegister(0xBFFE, 0);  // 偶地址都是镜像寄存器
-  EXPECT_FALSE(rig.mapper.horizontalMirroring());
+  EXPECT_FALSE(rig.chip.horizontalMirroring());
 }
 
 TEST(Sb2000FcMapper, SelectingAWindowDisablesAndClearsTheIrq) {
@@ -159,7 +162,7 @@ TEST(Sb2000FcMapper, SelectingAWindowDisablesAndClearsTheIrq) {
   ASSERT_TRUE(rig.irq.active());
   rig.mapper.selectWindow(0x77);
   EXPECT_FALSE(rig.irq.active());
-  EXPECT_FALSE(rig.mapper.irqEnabled());
+  EXPECT_FALSE(rig.chip.irqEnabled());
 }
 
 TEST(Sb2000FcMapper, PowerResetClearsEverythingButAWriteDoesNot) {
@@ -168,9 +171,9 @@ TEST(Sb2000FcMapper, PowerResetClearsEverythingButAWriteDoesNot) {
   rig.mapper.selectWindow(0xFF);
   rig.mapper.writeRegister(0xA000, 1);
   rig.mapper.reset();
-  EXPECT_EQ(rig.mapper.registerValue(6), 0);
+  EXPECT_EQ(rig.chip.registerValue(6), 0);
   EXPECT_EQ(rig.mapper.window(), 0U);
-  EXPECT_FALSE(rig.mapper.horizontalMirroring());
+  EXPECT_FALSE(rig.chip.horizontalMirroring());
 }
 
 // ---------------------------------------------------------------- 整机的模式切换
@@ -294,7 +297,7 @@ TEST(Sb2000FcMode, TheProgramWindowIsMappedByMmc3AndWritesAreRegisterWrites) {
   pokeBus(machine, 0x8000, 6);
   pokeBus(machine, 0x8001, 5);
   EXPECT_EQ(peekBus(machine, 0x8000), 0x5B);
-  EXPECT_EQ(machine.mmc3().registerValue(6), 5);
+  EXPECT_EQ(machine.mmc3().chipValue("r6"), 5U);
   // 写 $8000 以上不会写进扩展 RAM。
   std::uint8_t byte = 0;
   machine.debugger()->readMemory("board.extendedRam", 5 * 8192, std::span<std::uint8_t>(&byte, 1));
@@ -449,7 +452,7 @@ TEST(Sb2000FcMode, SoftResetKeepsTheModeAndTheMappingAndHardResetGoesBackToTheNa
   pokeBus(machine, 0x0010, 0xAB);
   machine.softReset();
   EXPECT_TRUE(machine.fcMode());
-  EXPECT_EQ(machine.mmc3().registerValue(6), 4) << "映射器状态保持";
+  EXPECT_EQ(machine.mmc3().chipValue("r6"), 4U) << "映射器状态保持";
   EXPECT_EQ(peekBus(machine, 0x0010), 0xAB) << "内存保持";
   machine.runFrame();
   EXPECT_TRUE(machine.fcMode()) << "软复位不会回到 6576 模式";
@@ -459,7 +462,7 @@ TEST(Sb2000FcMode, SoftResetKeepsTheModeAndTheMappingAndHardResetGoesBackToTheNa
   machine.powerOff();
   machine.powerOn();
   EXPECT_FALSE(machine.fcMode());
-  EXPECT_EQ(machine.mmc3().registerValue(6), 0);
+  EXPECT_EQ(machine.mmc3().chipValue("r6"), 0U);
   EXPECT_EQ(peekBus(machine, 0x0010), 0x00);
   // 合成的 BIOS 会再次进入 FC 模式，所以只看“回到 6576 模式”的那一刻：FC 的 PPU 停在复位前的帧数，没有被重新启动。
   EXPECT_EQ(machine.fcPpu().frameCount(), fcFramesBefore);

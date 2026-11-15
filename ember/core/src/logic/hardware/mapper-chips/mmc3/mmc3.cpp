@@ -8,9 +8,9 @@
  * ------------------------------------------------------------------------
  */
 
-#include "logic/mapper-chips/mmc3/mmc3.hpp"
+#include "logic/hardware/mapper-chips/mmc3/mmc3.hpp"
 
-namespace ember::logic::mapper_chips {
+namespace ember::logic::hardware::mapper_chips {
 
 Mmc3::Mmc3(contracts::hardware::IrqLine& irq) : irq_(irq), source_(irq.addSource()) {}
 
@@ -84,6 +84,26 @@ unsigned Mmc3::characterBank(std::uint16_t address) const {
   return registers_[index - 2];
 }
 
+std::size_t Mmc3::bankSize(contracts::hardware::BankSpace space, std::uint16_t) const { return space == contracts::hardware::BankSpace::Program ? PROGRAM_BANK_SIZE : CHARACTER_BANK_SIZE; }
+
+unsigned Mmc3::bank(contracts::hardware::BankSpace space, std::uint16_t address) const { return space == contracts::hardware::BankSpace::Program ? programBank(address) : characterBank(address); }
+
+std::optional<contracts::hardware::CircuitMirroring> Mmc3::mirroring() const {
+  return horizontalMirroring_ ? contracts::hardware::CircuitMirroring::Horizontal : contracts::hardware::CircuitMirroring::Vertical;
+}
+
+std::vector<contracts::hardware::CircuitStateField> Mmc3::state() const {
+  static constexpr const char* NAMES[] = {"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7"};
+  std::vector<contracts::hardware::CircuitStateField> fields;
+  fields.push_back({"selector", selector_, "$8000 的选择寄存器（位 7 反转图案、位 6 程序模式、位 2-0 选 R0-R7）"});
+  for (unsigned index = 0; index < registers_.size(); ++index) fields.push_back({NAMES[index], registers_[index], "MMC3 的页寄存器"});
+  fields.push_back({"horizontalMirroring", horizontalMirroring_ ? 1U : 0U, "$A000 的镜像位（1 水平，0 垂直）"});
+  fields.push_back({"irqLatch", latch_, "$C000 的 IRQ 锁存值"});
+  fields.push_back({"irqCounter", counter_, "IRQ 计数器"});
+  fields.push_back({"irqEnabled", enabled_ ? 1U : 0U, "IRQ 是否允许"});
+  return fields;
+}
+
 void Mmc3::onVideoAddress(std::uint16_t address) {
   if ((address & 0x1000U) != 0) {
     if (!a12High_ && lowAccesses_ >= A12_LOW_ACCESSES) clockCounter();
@@ -105,4 +125,4 @@ void Mmc3::clockCounter() {
   if (counter_ == 0 && enabled_) irq_.set(source_, true);
 }
 
-}  // namespace ember::logic::mapper_chips
+}  // namespace ember::logic::hardware::mapper_chips

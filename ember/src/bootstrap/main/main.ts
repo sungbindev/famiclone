@@ -66,6 +66,8 @@ function logError(logger: FileErrorLogger, error: unknown, context: Record<strin
 }
 
 // 安装、更新、卸载时 Squirrel 会带参数启动应用，处理快捷方式后立即退出。
+// 对话框盖住整个主窗口时，Windows 上 Chromium 会把主窗口当作不可见而停掉渲染，主题等经主窗口同步给对话框的状态就停住；关掉遮挡检测让主窗口始终渲染。
+if (process.platform === 'win32') app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   app.quit();
 } else {

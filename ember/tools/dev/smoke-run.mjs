@@ -566,6 +566,13 @@ async function main() {
   const mainTheme = await page.evaluate('document.documentElement.className');
   check('对话框的主题类与主窗口一致（深浅主题都有）', dialogTheme.split(' ').filter((name) => name.startsWith('ui-theme') || name.includes('dark') || name.includes('light')).join(' ') === mainTheme.split(' ').filter((name) => name.startsWith('ui-theme') || name.includes('dark') || name.includes('light')).join(' '), `${dialogTheme} / ${mainTheme}`);
   if (screenshotDirectory !== undefined && dialogPage !== undefined) await saveScreenshot(dialogPage, join(screenshotDirectory, 'smoke-preferences.png'));
+  // 对话框盖住整个主窗口时主窗口也要继续渲染：改主题后对话框立即跟着变，不必再操作对话框。
+  if (dialogPage !== undefined) {
+    await page.evaluate(`window.ember.core.preferences.set({ id: 'appearance.theme', value: 'light' })`);
+    const dialogLight = await waitFor(() => dialogPage.evaluate(`document.documentElement.classList.contains('theme-light')`).catch(() => false), (value) => value === true, 3000, 100);
+    check('首选项对话框打开时改主题，对话框立即变成浅色（主窗口被盖住时也继续渲染）', dialogLight === true);
+    await page.evaluate(`window.ember.core.preferences.set({ id: 'appearance.theme', value: 'system' })`);
+  }
   dialogPage?.close();
 
   // 手柄设置对话框：经“设置”菜单的“手柄设置”打开（又一个独立窗口）；一张手柄图，10 个键各是图上的一个按钮；点键进入设置，Esc 取消后键保持选中；

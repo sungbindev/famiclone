@@ -13,6 +13,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | [docs/05-界面.md](../docs/05-界面.md) | 界面布局、页面、菜单、系统栏，界面原型 |
 | [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) | 构建与测试命令、由 Schema 生成的代码、模块的登记方式、依赖检查 |
 | [docs/待办备忘.md](../docs/待办备忘.md) | 已确定以后再做的事项；做完写进对应文档并从中删掉 |
+| [docs/待办-mapper移植任务书.md](../docs/待办-mapper移植任务书.md) | 把 MesenCE 的 FC mapper 做成插件的任务书：范围、Mesen 的设计摘要、宿主缺口、统一做法、阶段、台账；用户说开始后按它执行，做完删除 |
 | [docs/07-调试客户端工具.md](../docs/07-调试客户端工具.md) | `packages/ember-debug-sdk/`：SDK、终端客户端 `ember-debug`、MCP 服务 `ember-debug-mcp` 的设计、目录与依赖规则 |
 
 - 开始任何开发任务前，先阅读架构设计文档与硬件模块文档。

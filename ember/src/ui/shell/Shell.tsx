@@ -10,7 +10,7 @@
  * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；没有活动栏、边栏、标签栏与右边栏；
  *       底部面板只经系统栏左侧的面板按钮展开：面板关着时点按钮展开并切到该页签，开着时点同一个按钮收起，点另一个按钮切页签；没有快捷键，每次启动都是关闭，页签选择不保存；
  *       面板按钮只在面板开着并停在该页签时是按下状态，面板收起后恢复常态；
- *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，面板内容完成一次操作后（finishAction）收起面板；开关状态按面板保存在界面状态里，下次启动沿用；
+ *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，点在面板之外（包括显示区的画面）就收起面板，面板里的操作不收起；不算面板之外的有：标题栏、面板高度的拖动条、弹层（下拉选项、通知等）与系统栏里的面板按钮；开关状态按面板保存在界面状态里，下次启动沿用；
  *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
  *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；
  *       主窗口里在任何地方点完鼠标（按钮、滑块、空白处等）后，把焦点还给显示区里的可聚焦元素（画面区），键盘才能继续输入到机器，Windows 的键盘独占也跟着焦点；
@@ -46,7 +46,7 @@ import { isSelectTrigger, isTextEditingTarget } from './editable-target';
 import { EmberLogo } from './EmberLogo';
 import { ShellApiContext } from './shell-context';
 import { SHELL_MODULE } from './shell-module';
-import { commandTitle, SHELL_MENUS, type ShellApi, type ShellModule, type ShellPageProps, type ShellPanelProps, type ShellViewState } from './shell-registry';
+import { commandTitle, SHELL_MENUS, type ShellApi, type ShellModule, type ShellPageProps, type ShellViewState } from './shell-registry';
 import './shell.css';
 
 /** 应用名。 */
@@ -114,10 +114,8 @@ function dialogContent(shell: ShellApi, Content: ComponentType<ShellPageProps>, 
   );
 }
 
-/** 底部面板的内容：补上 finishAction。 */
-function PanelBody({ Content, finishAction }: { Content: ComponentType<ShellPanelProps>; finishAction: () => void }) {
-  return <Content finishAction={finishAction} />;
-}
+/** 点在这些元素上不触发自动收缩：面板本身、面板高度的拖动条、弹层、标题栏、系统栏里的面板按钮。 */
+const AUTO_COLLAPSE_IGNORED = '.ember-shell-panel, .ui-app-frame__resizer, .ui-layer, .ui-title-bar, [data-panel-button]';
 
 /** 登记表有效之后的外壳。 */
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
@@ -193,10 +191,17 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     return () => clearTimeout(timer);
   }, [openMenuId, focusScreen]);
 
-  /** 面板里的一次操作完成：该面板的自动收缩开着就收起面板；读最新的开关状态，操作期间改了开关也按新的算。 */
-  const finishPanelAction = useCallback((panelId: string): void => {
-    if (!live.current.autoCollapse.includes(panelId)) return;
-    setPanel((current) => (current.open && current.id === panelId ? { ...current, open: false } : current));
+  // 面板开着且它的“自动收缩”开着时，点在面板之外就收起面板；在捕获阶段处理，画面区等地方阻止了冒泡也照样收起。
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent): void => {
+      const { view: current, autoCollapse: enabled } = live.current;
+      const openId = current.activePanelId;
+      if (openId === null || !enabled.includes(openId)) return;
+      if (event.target instanceof Element && event.target.closest(AUTO_COLLAPSE_IGNORED) !== null) return;
+      setPanel((state) => (state.open && state.id === openId ? { ...state, open: false } : state));
+    };
+    window.addEventListener('pointerdown', handlePointerDown, true);
+    return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, []);
 
   const api = useMemo<ShellApi>(() => {
@@ -377,7 +382,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
                 </div>
               </div>
               <ScrollArea className="ember-shell-panel__body" viewportProps={{ className: 'ember-shell-panel__content' }}>
-                <PanelBody Content={activePanel.Component} finishAction={() => finishPanelAction(activePanel.id)} />
+                {createElement(activePanel.Component)}
               </ScrollArea>
             </section>
           )
@@ -404,6 +409,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
                         title={look?.hint ?? item.title}
                         {...(look?.tone === undefined ? {} : { tone: look.tone })}
                         pressed={panel.open && panel.id === item.id}
+                        data-panel-button=""
                         {...(lamp === undefined ? {} : { lamp })}
                         onClick={() => api.togglePanel(item.id)}
                       />

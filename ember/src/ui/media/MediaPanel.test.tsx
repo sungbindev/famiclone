@@ -12,7 +12,7 @@
 import { UiProvider } from '@rujianjs/ui-kit';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { FloppyStatus } from '../../contracts/media/generated/media';
 import { FakeMediaBackend, floppyStatus, tapeStatus } from './media-fakes';
 import { MediaController } from './media-controller';
@@ -23,15 +23,15 @@ async function settle(): Promise<void> {
   for (let index = 0; index < 8; index += 1) await Promise.resolve();
 }
 
-/** 接上假核心并渲染面板；floppies 是软驱的初始状态，onLoaded 是镜像载入成功后的回调。 */
-async function setup(floppies?: FloppyStatus[], onLoaded?: () => void) {
+/** 接上假核心并渲染面板；floppies 是软驱的初始状态。 */
+async function setup(floppies?: FloppyStatus[]) {
   const fake = new FakeMediaBackend();
   if (floppies !== undefined) fake.floppies = floppies;
   const controller = new MediaController();
   controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
   render(
     <UiProvider>
-      <MediaPanel controller={controller} {...(onLoaded === undefined ? {} : { onLoaded })} />
+      <MediaPanel controller={controller} />
     </UiProvider>
   );
   await act(async () => settle());
@@ -105,25 +105,6 @@ describe('设备面板', () => {
     expect(fields(row('软驱 B')).disk).toBe('sys.img');
   });
 
-  it('镜像载入成功后通知“载入完成”（外壳据此自动收缩）；取消选择、载入失败、取出与保存不通知', async () => {
-    const loaded = vi.fn();
-    const { fake } = await setup([floppyStatus(0, 'old.img'), floppyStatus(1)], loaded);
-    await userEvent.click(within(row('软驱 B')).getByRole('button', { name: '载入镜像' }));
-    await act(async () => settle());
-    expect(loaded).not.toHaveBeenCalled();
-    fake.pickedFile = 'sys.img';
-    fake.failures.set('media.openFloppy', { code: 'media.imageInvalid', message: '镜像文件是空的' });
-    await userEvent.click(within(row('软驱 B')).getByRole('button', { name: '载入镜像' }));
-    await act(async () => settle());
-    expect(loaded).not.toHaveBeenCalled();
-    await userEvent.click(within(row('软驱 A')).getByRole('button', { name: '取出' }));
-    await act(async () => settle());
-    expect(loaded).not.toHaveBeenCalled();
-    await userEvent.click(within(row('软驱 B')).getByRole('button', { name: '载入镜像' }));
-    await act(async () => settle());
-    expect(loaded).toHaveBeenCalledTimes(1);
-  });
-
   it('点“取出”与“保存镜像”发出对应的请求', async () => {
     const { fake } = await setup([floppyStatus(0, 'sys.img', { modified: true }), floppyStatus(1)]);
     await userEvent.click(within(row('软驱 A')).getByRole('button', { name: '保存镜像' }));
@@ -160,7 +141,7 @@ describe('设备面板', () => {
 });
 
 /** 接上假核心并渲染面板；主机有磁带机（经典 FC），没有软驱与打印机。 */
-async function setupTape(patch: Parameters<typeof tapeStatus>[0] = {}, onLoaded?: () => void) {
+async function setupTape(patch: Parameters<typeof tapeStatus>[0] = {}) {
   const fake = new FakeMediaBackend();
   fake.floppies = [];
   fake.tape = tapeStatus({ available: true, ...patch });
@@ -168,7 +149,7 @@ async function setupTape(patch: Parameters<typeof tapeStatus>[0] = {}, onLoaded?
   controller.attach(fake.backend, { notify: () => undefined, refresh: () => undefined });
   render(
     <UiProvider>
-      <MediaPanel controller={controller} {...(onLoaded === undefined ? {} : { onLoaded })} />
+      <MediaPanel controller={controller} />
     </UiProvider>
   );
   await act(async () => settle());
@@ -200,14 +181,12 @@ describe('设备面板的磁带机', () => {
     for (const button of within(row('磁带机')).getAllByRole('button')) expect((button as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('载入磁带后显示文件名、“已停止”与位置，取出、播放可用；载入成功通知“载入完成”', async () => {
-    const loaded = vi.fn();
-    const { fake } = await setupTape({}, loaded);
+  it('载入磁带后显示文件名、“已停止”与位置，取出、播放可用', async () => {
+    const { fake } = await setupTape();
     fake.pickedTape = 'lesson.m4a';
     await userEvent.click(tapeButton('载入磁带'));
     await act(async () => settle());
     expect(fake.calls).toContain('media.openTape {}');
-    expect(loaded).toHaveBeenCalledTimes(1);
     const tape = row('磁带机');
     expect(tape.querySelector('.ui-row-list__title')?.textContent).toBe('lesson.m4a');
     expect([...tape.querySelectorAll('.ui-row-list__cell')].map((cell) => cell.textContent)).toEqual(['已停止', '0:00 / 1:00']);

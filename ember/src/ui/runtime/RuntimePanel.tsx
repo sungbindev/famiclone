@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
  * 备注：规则见 docs/05-界面.md 第 4.1 节；速度下拉等核心支持速度请求后再做。按钮可用状态由控制器的 availability 决定，操作结束后焦点回到画面（控制器负责）；
- *       拖动音量滑块与点静音时不把焦点抢回画面；四个控制按钮点完后调用 onActionDone（外壳的“自动收缩”开着就收起面板），音量与静音不调用。
+ *       拖动音量滑块与点静音时不把焦点抢回画面。
  * ------------------------------------------------------------------------
  */
 
@@ -28,37 +28,30 @@ const TEXT = {
 /** 运行面板的属性。 */
 export interface RuntimePanelProps {
   readonly controller: RuntimeController;
-  /** 四个控制按钮之一点完后调用。 */
-  readonly onActionDone?: () => void;
 }
 
 /**
  * 底部面板的“运行”内容。
  * @param props 属性。
  */
-export function RuntimePanel({ controller, onActionDone }: RuntimePanelProps) {
+export function RuntimePanel({ controller }: RuntimePanelProps) {
   const { status, volume, muted } = useRuntimeState(controller);
   const available = controller.availability();
   const running = status?.power === 'on' && status.mode === 'running';
-  /** 执行一个控制操作，然后通知外壳操作完成。 */
-  const control = (action: () => void) => () => {
-    action();
-    onActionDone?.();
-  };
 
   return (
     <div className="ember-run-panel">
       <div className="ember-run-panel__buttons">
-        <Button variant="primary" icon={iconPower} disabled={!available.powerToggle} onClick={control(() => controller.togglePower())}>
+        <Button variant="primary" icon={iconPower} disabled={!available.powerToggle} onClick={() => controller.togglePower()}>
           {powerToggleText(status)}
         </Button>
-        <Button icon={running ? iconPlayerPause : iconPlayerPlay} disabled={!available.pauseToggle} onClick={control(() => controller.togglePause())}>
+        <Button icon={running ? iconPlayerPause : iconPlayerPlay} disabled={!available.pauseToggle} onClick={() => controller.togglePause()}>
           {pauseToggleText(status)}
         </Button>
-        <Button icon={iconRotate} disabled={!available.softReset} onClick={control(() => controller.softReset())}>
+        <Button icon={iconRotate} disabled={!available.softReset} onClick={() => controller.softReset()}>
           {TEXT.softReset}
         </Button>
-        <Button icon={iconRefresh} disabled={!available.hardReset} onClick={control(() => controller.hardReset())}>
+        <Button icon={iconRefresh} disabled={!available.hardReset} onClick={() => controller.hardReset()}>
           {TEXT.hardReset}
         </Button>
       </div>

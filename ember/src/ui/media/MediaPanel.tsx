@@ -7,7 +7,6 @@
  * 日期：2026-11-15
  * 备注：规则见 docs/05-界面.md 第 4.3 节；显示期间由控制器定时读取软驱、磁带机与打印机的状态，面板收起后停止。全部设备始终列出，与主机型号和卡带无关；当前主机没有的设备是沉默设备，内容为空、按钮置灰。
  *       按钮只有图标，名称在悬停提示与可访问名称里；写保护是按下态的图标按钮（锁），不是开关；软盘里的文件管理不在本阶段。
- *       载入镜像与载入磁带成功后调用 onLoaded（外壳的“自动收缩”开着就收起面板），取消选择与载入失败时不调用。
  * ------------------------------------------------------------------------
  */
 
@@ -49,12 +48,10 @@ const POSITION_WIDTH = 92;
 /** 设备面板的属性。 */
 export interface MediaPanelProps {
   readonly controller: MediaController;
-  /** 镜像载入成功后调用。 */
-  readonly onLoaded?: () => void;
 }
 
 /** 一个软驱的行；floppy 为 undefined 表示当前主机没有这个软驱（沉默设备）。 */
-function FloppyRow({ controller, drive, floppy, onLoaded }: { readonly controller: MediaController; readonly drive: number; readonly floppy: FloppyStatus | undefined; readonly onLoaded: (() => void) | undefined }) {
+function FloppyRow({ controller, drive, floppy }: { readonly controller: MediaController; readonly drive: number; readonly floppy: FloppyStatus | undefined }) {
   const available = floppyAvailability(floppy);
   return (
     <RowListItem
@@ -75,7 +72,7 @@ function FloppyRow({ controller, drive, floppy, onLoaded }: { readonly controlle
           >
             {TEXT.writeProtect}
           </Button>
-          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.insert} disabled={!available.insert} onClick={() => controller.insertFloppy(drive, onLoaded)}>
+          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.insert} disabled={!available.insert} onClick={() => controller.insertFloppy(drive)}>
             {TEXT.insert}
           </Button>
           <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.eject} disabled={!available.eject} onClick={() => controller.ejectFloppy(drive)}>
@@ -91,7 +88,7 @@ function FloppyRow({ controller, drive, floppy, onLoaded }: { readonly controlle
 }
 
 /** 磁带机的行；tape 为 undefined 或 available 为 false 表示当前主机没有磁带机（沉默设备）。 */
-function TapeRow({ controller, tape, onLoaded }: { readonly controller: MediaController; readonly tape: TapeStatus | undefined; readonly onLoaded: (() => void) | undefined }) {
+function TapeRow({ controller, tape }: { readonly controller: MediaController; readonly tape: TapeStatus | undefined }) {
   const available = tapeAvailability(tape);
   return (
     <RowListItem
@@ -103,7 +100,7 @@ function TapeRow({ controller, tape, onLoaded }: { readonly controller: MediaCon
       ]}
       actions={
         <>
-          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.loadTape} disabled={!available.load} onClick={() => controller.loadTape(onLoaded)}>
+          <Button variant="ghost" iconOnly compact icon={iconFolderOpen} title={TEXT.loadTape} disabled={!available.load} onClick={() => controller.loadTape()}>
             {TEXT.loadTape}
           </Button>
           <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.ejectTape} disabled={!available.eject} onClick={() => controller.ejectTape()}>
@@ -128,7 +125,7 @@ function TapeRow({ controller, tape, onLoaded }: { readonly controller: MediaCon
  * 底部面板的“设备”内容。
  * @param props 属性。
  */
-export function MediaPanel({ controller, onLoaded }: MediaPanelProps) {
+export function MediaPanel({ controller }: MediaPanelProps) {
   const { floppies, printer, tape } = useMediaState(controller);
   useEffect(() => controller.startPolling(), [controller]);
 
@@ -136,9 +133,9 @@ export function MediaPanel({ controller, onLoaded }: MediaPanelProps) {
   return (
     <RowList className="ember-media-list" aria-label={TEXT.devices}>
       {Array.from({ length: driveCount }, (_, drive) => (
-        <FloppyRow key={drive} controller={controller} drive={drive} floppy={floppies.find((item) => item.drive === drive)} onLoaded={onLoaded} />
+        <FloppyRow key={drive} controller={controller} drive={drive} floppy={floppies.find((item) => item.drive === drive)} />
       ))}
-      <TapeRow controller={controller} tape={tape} onLoaded={onLoaded} />
+      <TapeRow controller={controller} tape={tape} />
       <RowListItem leading={TEXT.printer} title={printerStateText(printer)} />
     </RowList>
   );

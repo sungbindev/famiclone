@@ -104,7 +104,7 @@ export function createRuntimeModule(controller: RuntimeController): ShellModule 
           return { icon: iconPlayerPlay, hint };
         },
         autoCollapse: true,
-        Component: ({ finishAction }) => <RuntimePanel controller={controller} onActionDone={finishAction} />
+        Component: () => <RuntimePanel controller={controller} />
       }
     ],
     commands: [

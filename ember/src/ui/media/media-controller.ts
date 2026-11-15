@@ -159,15 +159,12 @@ export class MediaController {
   /**
    * 弹出系统文件选择窗口，把选定的镜像载入软驱；用户取消时什么都不发生。
    * @param drive 驱动器编号。
-   * @param onLoaded 镜像载入成功后调用；取消选择与载入失败时不调用。
    */
-  insertFloppy(drive: number, onLoaded?: () => void): void {
+  insertFloppy(drive: number): void {
     const attachment = this.attachment;
     if (attachment === undefined) return;
     attachment.backend.main.media.openFloppy({ drive }).then(
-      (result) => {
-        if (!result.canceled) onLoaded?.();
-      },
+      () => undefined,
       (error: unknown) => this.report(TEXT.actions.insert, error)
     ).finally(() => {
       if (this.attachment === attachment) this.refreshAll();
@@ -190,8 +187,8 @@ export class MediaController {
   }
 
   /** 弹出系统文件选择窗口，把选定的声音文件载入磁带机；用户取消时什么都不发生。 */
-  loadTape(onLoaded?: () => void): void {
-    this.pick(TEXT.actions.loadTape, (backend) => backend.main.media.openTape({}), onLoaded);
+  loadTape(): void {
+    this.pick(TEXT.actions.loadTape, (backend) => backend.main.media.openTape({}));
   }
 
   /** 取出磁带。 */
@@ -205,8 +202,8 @@ export class MediaController {
   }
 
   /** 弹出系统的保存文件窗口，选定文件后开始录音；用户取消时什么都不发生。 */
-  recordTape(onStarted?: () => void): void {
-    this.pick(TEXT.actions.recordTape, (backend) => backend.main.media.openTapeRecording({}), onStarted);
+  recordTape(): void {
+    this.pick(TEXT.actions.recordTape, (backend) => backend.main.media.openTapeRecording({}));
   }
 
   /** 停止播放或录音。 */
@@ -215,19 +212,16 @@ export class MediaController {
   }
 
   /**
-   * 执行一个要先弹出系统文件窗口的主进程请求：失败时用通知提示；用户取消选择时不调用 onDone；结束后重新读取状态。
+   * 执行一个要先弹出系统文件窗口的主进程请求：失败时用通知提示；结束后重新读取状态。
    * @param name 操作名，用在失败的说明里。
    * @param action 发出请求。
-   * @param onDone 成功后调用。
    */
-  private pick(name: string, action: (backend: MediaBackend) => Promise<{ readonly canceled: boolean }>, onDone: (() => void) | undefined): void {
+  private pick(name: string, action: (backend: MediaBackend) => Promise<{ readonly canceled: boolean }>): void {
     const attachment = this.attachment;
     if (attachment === undefined) return;
     action(attachment.backend)
       .then(
-        (result) => {
-          if (!result.canceled) onDone?.();
-        },
+        () => undefined,
         (error: unknown) => this.report(name, error)
       )
       .finally(() => {

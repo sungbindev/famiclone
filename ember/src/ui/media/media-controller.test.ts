@@ -197,25 +197,22 @@ describe('MediaController', () => {
     detach();
   });
 
-  it('载入磁带：选定后调用回调并刷新状态；取消时什么都不发生；失败时用通知提示核心的说明', async () => {
+  it('载入磁带：选定后刷新状态；取消时什么都不发生；失败时用通知提示核心的说明', async () => {
     const { fake, controller, detach, notices } = await setup();
     fake.tape = tapeStatus({ available: true });
-    const loaded = vi.fn();
-    controller.loadTape(loaded);
+    controller.loadTape();
     await settle();
-    expect(loaded).not.toHaveBeenCalled();
+    expect(controller.snapshot().tape?.loaded).toBe(false);
 
     fake.pickedTape = 'lesson.m4a';
-    controller.loadTape(loaded);
+    controller.loadTape();
     await settle();
-    expect(loaded).toHaveBeenCalledTimes(1);
     expect(controller.snapshot().tape?.fileName).toBe('lesson.m4a');
     expect(notices).toEqual([]);
 
     fake.failures.set('media.openTape', { code: 'media.tapeUnsupported', message: '文件里没有声音' });
-    controller.loadTape(loaded);
+    controller.loadTape();
     await settle();
-    expect(loaded).toHaveBeenCalledTimes(1);
     expect(notices).toEqual([{ text: '载入磁带失败：文件里没有声音', kind: 'error' }]);
     detach();
   });

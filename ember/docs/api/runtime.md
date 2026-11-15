@@ -35,6 +35,7 @@
 | `frame` | `integer（0..）` | 是 | 自上电以来完成的帧数 |
 | `cycles` | `integer（0..）` | 是 | 自上电以来的 CPU 周期数 |
 | `speed` | `integer（1..）` | 是 | 速度百分比，目前固定为 100 |
+| `mouse` | `boolean` | 是 | 机器现在是否带鼠标：学习机在 6576 模式下带串口鼠标（进入 FC 兼容模式后没有），经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才有；没有主机时为 false |
 
 **错误码**：无专有错误码（参数不合格返回 `core.invalidParams`）
 
@@ -293,7 +294,7 @@ await client.api.runtime.setFrameEvents({ frames: … });
 | --- | --- | --- | --- |
 | `power` | `"off" \| "on"` | 是 | 新的电源状态 |
 | `mode` | `"paused" \| "running"` | 是 | 新的运行模式 |
-| `reason` | `"load" \| "eject" \| "powerOn" \| "powerOff" \| "reset" \| "pause" \| "resume" \| "run" \| "runEnded" \| "step" \| "breakpoint" \| "error"` | 是 | 原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停 |
+| `reason` | `"load" \| "eject" \| "powerOn" \| "powerOff" \| "reset" \| "pause" \| "resume" \| "run" \| "runEnded" \| "step" \| "breakpoint" \| "error" \| "inputChanged"` | 是 | 原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变 |
 
 ### runtime.frame
 

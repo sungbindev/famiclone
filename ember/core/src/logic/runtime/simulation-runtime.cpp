@@ -10,6 +10,7 @@
 
 #include "logic/runtime/simulation-runtime.hpp"
 
+#include <algorithm>
 #include <exception>
 #include <future>
 #include <string>
@@ -238,8 +239,18 @@ void SimulationRuntime::publishSnapshot() {
   snapshot.cartridge = summary_;
   snapshot.frame = static_cast<std::int64_t>(frame_);
   snapshot.speed = SPEED_PERCENT;
+  mouse_ = mouseAvailable();
+  snapshot.mouse = mouse_;
   std::lock_guard lock(snapshotMutex_);
   snapshot_ = std::move(snapshot);
+}
+
+bool SimulationRuntime::mouseAvailable() const {
+  if (machine_ == nullptr) return false;
+  if (machine_->hasMouse()) return true;
+  if (!summary_.has_value()) return false;
+  const auto& devices = summary_->devices;
+  return std::find(devices.begin(), devices.end(), "mouse") != devices.end();
 }
 
 void SimulationRuntime::reportFailure(const std::string& module, const std::string& code, const std::string& message) {
@@ -279,7 +290,10 @@ void SimulationRuntime::runFrame() {
   const hw::FrameBuffer picture = machine_->frame();
   if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
   if (!run_.has_value()) pushAudio();
+  const bool mouseBefore = mouse_;
   publishSnapshot();
+  // 运行中机器的输入设备变了（学习机进入 FC 兼容模式后没有鼠标）：通知界面重新读取状态。
+  if (mouse_ != mouseBefore) publishState("inputChanged");
   notifyObserver();
   const auto interval = frameEventInterval_.load(std::memory_order_relaxed);
   if (interval > 0 && frame_ % interval == 0) {

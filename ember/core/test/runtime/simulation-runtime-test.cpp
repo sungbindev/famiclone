@@ -11,9 +11,11 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <iterator>
 #include <memory>
 #include <thread>
 #include <variant>
@@ -135,6 +137,7 @@ TEST(SimulationRuntime, StartsPoweredOffWithoutACartridge) {
   EXPECT_FALSE(status.cartridge.has_value());
   EXPECT_EQ(status.frame, 0);
   EXPECT_EQ(status.speed, 100);
+  EXPECT_FALSE(status.mouse);
   EXPECT_FALSE(rig.runtime->cartridge().has_value());
 
   EXPECT_EQ(errorCodeOf([&] { rig.runtime->powerOn(true); }), rt::ERROR_NO_CARTRIDGE);
@@ -182,7 +185,40 @@ TEST(SimulationRuntime, InsertingACartridgeRunsFramesAndPublishesThem) {
   EXPECT_EQ(status.cartridge->pluginId, "nrom");
   EXPECT_GT(status.frame, 0);
   EXPECT_GT(status.cycles, 29000);
+  EXPECT_FALSE(status.mouse) << "nrom 插件没有声明鼠标，经典 FC 没有鼠标";
   EXPECT_EQ(rig.events->last("runtime.stateChanged")["reason"], "load");
+}
+
+/** 合成的 sb2000 BIOS：进入 6576 模式、选窗口 0，向 $4301 写 $55 进入 FC 兼容模式。 */
+std::vector<std::uint8_t> fcModeBios() {
+  std::vector<std::uint8_t> bios(512 * 1024, 0xEA);
+  const std::uint8_t vectors[] = {0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0};
+  std::copy(std::begin(vectors), std::end(vectors), bios.begin() + 0x7FFA);
+  const std::uint8_t program[] = {0x78, 0xA9, 0x65, 0x8D, 0x31, 0x40, 0xA9, 0x76, 0x8D, 0x31, 0x40, 0xA9, 0x55, 0x8D, 0x06, 0x50, 0x8D, 0x01, 0x43, 0x4C, 0x13, 0xC0};
+  std::copy(std::begin(program), std::end(program), bios.begin() + 0x4000);
+  return bios;
+}
+
+TEST(SimulationRuntime, AWholeMachineHasAMouseUntilItEntersFcModeAndTheChangeIsAnnounced) {
+  Rig rig;
+  rt::MachineBoot boot;
+  boot.machine = "sb2000";
+  boot.bios = fcModeBios();
+  boot.resume = false;
+  rig.runtime->bootMachine(std::move(boot));
+  // FC 兼容模式里窗口 0 的程序：空转，复位向量指向 $E000。
+  rig.runtime->useMachine([](hw::Machine& machine) {
+    const std::uint8_t program[] = {0x78, 0x4C, 0x01, 0xE0};
+    machine.debugger()->writeMemory("board.extendedRam", 0x1E000, program);
+    const std::uint8_t vector[] = {0x00, 0xE0};
+    machine.debugger()->writeMemory("board.extendedRam", 0x1FFFC, vector);
+  });
+  EXPECT_TRUE(rig.runtime->status().mouse) << "6576 模式下学习机带串口鼠标";
+
+  rig.runtime->resume();
+  ASSERT_TRUE(waitFor([&] { return rig.events->count("runtime.stateChanged") > 0 && rig.events->last("runtime.stateChanged")["reason"] == "inputChanged"; }));
+  EXPECT_FALSE(rig.runtime->status().mouse) << "进入 FC 兼容模式后没有鼠标";
+  EXPECT_EQ(rig.runtime->status().power, "on");
 }
 
 TEST(SimulationRuntime, PauseStopsTheFramesAndResumeContinuesThem) {

@@ -114,6 +114,8 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   void input(const contracts::hardware::InputEvent& event) override;
   /** 学习机的键盘在 6576 模式（DOS）下属于机器；进入 FC 兼容模式后按键可以当手柄用。 */
   [[nodiscard]] bool keyboardIsMachineInput() const override { return !fcMode_; }
+  /** 串口鼠标只在 6576 模式下有，进入 FC 兼容模式后没有。 */
+  [[nodiscard]] bool hasMouse() const override { return !fcMode_; }
   [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
   [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }

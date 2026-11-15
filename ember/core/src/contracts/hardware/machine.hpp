@@ -79,6 +79,11 @@ class Machine : public PadSink {
    */
   [[nodiscard]] virtual bool keyboardIsMachineInput() const { return false; }
 
+  /**
+   * 主机自己现在是否带鼠标：学习机在 6576 模式下有串口鼠标，进入 FC 兼容模式后没有；经典 FC 没有（卡带的 mapper 可以另外声明鼠标，由运行服务合并判断）。
+   */
+  [[nodiscard]] virtual bool hasMouse() const { return false; }
+
   /** CPU 当前的寄存器，供测试与调试读取；只在指令之间读取有意义。 */
   [[nodiscard]] virtual CpuRegisters cpuRegisters() const = 0;
 

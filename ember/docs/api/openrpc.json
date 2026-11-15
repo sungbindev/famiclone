@@ -4315,8 +4315,8 @@
     },
     {
       "name": "runtime.status",
-      "summary": "返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度",
-      "description": "返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度。",
+      "summary": "返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标",
+      "description": "返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标。",
       "tags": [
         {
           "name": "runtime"
@@ -4367,6 +4367,10 @@
               "type": "integer",
               "description": "速度百分比，目前固定为 100",
               "minimum": 1
+            },
+            "mouse": {
+              "type": "boolean",
+              "description": "机器现在是否带鼠标：学习机在 6576 模式下带串口鼠标（进入 FC 兼容模式后没有），经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才有；没有主机时为 false"
             }
           },
           "required": [
@@ -4374,7 +4378,8 @@
             "mode",
             "frame",
             "cycles",
-            "speed"
+            "speed",
+            "mouse"
           ],
           "additionalProperties": false
         }
@@ -6597,7 +6602,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停",
+            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变",
             "enum": [
               "load",
               "eject",
@@ -6610,7 +6615,8 @@
               "runEnded",
               "step",
               "breakpoint",
-              "error"
+              "error",
+              "inputChanged"
             ]
           }
         },

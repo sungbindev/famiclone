@@ -128,6 +128,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void stopMachine();
   void publishState(const char* reason);
   void publishSnapshot();
+  /** 机器现在是否带鼠标：主机自带，或卡带的 mapper 插件声明了 mouse 外设；没有主机时为 false。 */
+  [[nodiscard]] bool mouseAvailable() const;
   void reportFailure(const std::string& module, const std::string& code, const std::string& message);
   /** 结束正在进行的授权运行：把结果交给等待的调用方并发 runtime.runFinished；没有授权运行时没有效果；不改变电源与运行模式。 */
   void finishRun(const char* stopped);
@@ -162,6 +164,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   std::unique_ptr<contracts::mappers::MapperCartridge> cartridge_;
   std::optional<contracts::runtime::CartridgeSummary> summary_;
   std::string host_;
+  /** 最近一次发布的快照里机器是否带鼠标，用来发现运行中的变化（如学习机进入 FC 兼容模式）。 */
+  bool mouse_{false};
   bool running_{false};
   /** 正在进行的授权运行。 */
   std::optional<ActiveRun> run_;

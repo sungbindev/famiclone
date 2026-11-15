@@ -46,14 +46,12 @@ export interface ControlAvailability {
 }
 
 /**
- * 是否捕获鼠标：设置打开，并且机器带鼠标——整机机型（学习机）有串口鼠标，经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才有。
+ * 是否捕获鼠标：设置打开，并且机器现在带鼠标（由核心在状态里给出：学习机在 6576 模式下有串口鼠标，进入 FC 兼容模式后没有；经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才有）。
  * @param enabled 首选项“点击画面捕获鼠标”的取值。
  * @param status runtime.status 的结果；还没读到时为 undefined。
  */
 export function capturesMouse(enabled: boolean, status: RuntimeStatusResult | undefined): boolean {
-  if (!enabled || status?.machine === undefined) return false;
-  if (status.machine !== 'fc') return true;
-  return status.cartridge?.devices.includes('mouse') === true;
+  return enabled && status?.mouse === true;
 }
 
 /** 路径里的文件名部分。 */

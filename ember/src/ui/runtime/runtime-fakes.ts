@@ -26,7 +26,7 @@ export function defaultMachines(): MachineEntry[] {
 
 /** 构造机器状态；machine 为 undefined 表示没有开机。 */
 export function machineStatus(power: 'off' | 'on', mode: 'paused' | 'running', path?: string): RuntimeStatusResult {
-  const base: RuntimeStatusResult = { power, mode, frame: 0, cycles: 0, speed: 100 };
+  const base: RuntimeStatusResult = { power, mode, frame: 0, cycles: 0, speed: 100, mouse: false };
   if (path === undefined) return base;
   return {
     ...base,
@@ -138,7 +138,7 @@ export class FakeRuntimeBackend {
             const machine = this.machines.find((item) => item.id === params.machine);
             if (machine === undefined) throw { code: 'machines.notFound', message: '没有这个机型' };
             if (machine.bios === undefined) throw { code: 'machines.noBios', message: '这个机型还没有添加 BIOS' };
-            this.status = { power: 'on', mode: 'running', frame: 0, cycles: 0, speed: 100, machine: machine.id };
+            this.status = { power: 'on', mode: 'running', frame: 0, cycles: 0, speed: 100, mouse: true, machine: machine.id };
             this.emit('runtime.stateChanged', { power: 'on', mode: 'running', reason: 'load' });
             return { machine, state: { power: 'on', mode: 'running' } };
           })

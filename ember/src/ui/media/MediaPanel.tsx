@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
  * 备注：规则见 docs/05-界面.md 第 4.3 节；显示期间由控制器定时读取软驱、磁带机与打印机的状态，面板收起后停止。全部设备始终列出，与主机型号和卡带无关；软驱与磁带机是独立设备，盘片与磁带随时可以载入与取出，打印机属于主机（没有时是沉默设备）。
- *       磁带机与软驱的状态列宽度相同、都是行里最后一列，所以上下对齐。
+ *       状态列按内容定宽、是行里最后一列，紧挨行尾按钮，所以磁带机与软驱的状态右边缘上下对齐，盘片与磁带名得到剩余的全部宽度。
  *       按钮只有图标，名称在悬停提示与可访问名称里；写保护是按下态的图标按钮（锁），不是开关；软盘里的文件管理不在本阶段。
  * ------------------------------------------------------------------------
  */
@@ -38,8 +38,6 @@ const TEXT = {
 /** 面板里至少列出的软驱数；软驱 A 一直存在，还没读到状态时也先列出，按钮置灰。 */
 const MIN_FLOPPY_DRIVES = 1;
 
-/** 状态列的宽度（像素），能放下“读写中（磁道 79）”；软驱与磁带机用同一个宽度、同为行里最后一列，状态才能对齐。 */
-const STATE_WIDTH = 104;
 /** 磁带位置列的宽度（像素）；能放下“28:09 / 28:09”（约 68）。 */
 const POSITION_WIDTH = 72;
 
@@ -55,7 +53,7 @@ function FloppyRow({ controller, drive, floppy }: { readonly controller: MediaCo
     <RowListItem
       leading={TEXT.floppy(driveLabel(drive))}
       title={diskText(floppy)}
-      cells={[{ key: 'state', content: floppyStateText(floppy), width: STATE_WIDTH, muted: true }]}
+      cells={[{ key: 'state', content: floppyStateText(floppy), muted: true }]}
       actions={
         <>
           <Button
@@ -94,7 +92,7 @@ function TapeRow({ controller, tape }: { readonly controller: MediaController; r
       title={tapeNameText(tape)}
       cells={[
         { key: 'position', content: tapePositionText(tape), width: POSITION_WIDTH, muted: true },
-        { key: 'state', content: tapeStateText(tape), width: STATE_WIDTH, muted: true }
+        { key: 'state', content: tapeStateText(tape), muted: true }
       ]}
       actions={
         <>

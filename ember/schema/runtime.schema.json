@@ -47,7 +47,7 @@
   },
   "requests": {
     "status": {
-      "description": "返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度。",
+      "description": "返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",
@@ -58,9 +58,10 @@
           "cartridge": { "$ref": "#/types/CartridgeSummary", "description": "当前的卡带；没有时没有这一项" },
           "frame": { "type": "integer", "minimum": 0, "description": "自上电以来完成的帧数" },
           "cycles": { "type": "integer", "minimum": 0, "description": "自上电以来的 CPU 周期数" },
-          "speed": { "type": "integer", "minimum": 1, "description": "速度百分比，目前固定为 100" }
+          "speed": { "type": "integer", "minimum": 1, "description": "速度百分比，目前固定为 100" },
+          "mouse": { "type": "boolean", "description": "机器现在是否带鼠标：学习机在 6576 模式下带串口鼠标（进入 FC 兼容模式后没有），经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才有；没有主机时为 false" }
         },
-        "required": ["power", "mode", "frame", "cycles", "speed"]
+        "required": ["power", "mode", "frame", "cycles", "speed", "mouse"]
       }
     },
     "powerOn": {
@@ -168,7 +169,7 @@
         "properties": {
           "power": { "type": "string", "enum": ["off", "on"], "description": "新的电源状态" },
           "mode": { "type": "string", "enum": ["paused", "running"], "description": "新的运行模式" },
-          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "run", "runEnded", "step", "breakpoint", "error"], "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停" }
+          "reason": { "type": "string", "enum": ["load", "eject", "powerOn", "powerOff", "reset", "pause", "resume", "run", "runEnded", "step", "breakpoint", "error", "inputChanged"], "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变" }
         },
         "required": ["power", "mode", "reason"]
       }

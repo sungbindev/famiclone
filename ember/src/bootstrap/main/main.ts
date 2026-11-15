@@ -33,7 +33,7 @@ import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/laun
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
-import { applyThemeSource, createAppWindow, denyAllPermissions, followSystemTheme, isAppUrl, removeDefaultMenu } from '../../platform/window/app-window';
+import { applyThemeSource, createAppWindow, followSystemTheme, isAppUrl, removeDefaultMenu, restrictPermissions } from '../../platform/window/app-window';
 import { createWindowController } from '../../platform/window/window-controller';
 import { watchWindow } from '../../platform/window/window-events';
 import { MAIN_MODULES } from './module-list';
@@ -165,7 +165,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   });
 
   void app.whenReady().then(() => {
-    denyAllPermissions();
+    restrictPermissions({ rendererFile, ...(devServerUrl ? { devServerUrl } : {}) });
     removeDefaultMenu();
     streamHub.start();
     gateway.start();

@@ -47,7 +47,7 @@ vi.mock('electron', () => ({
   session: {}
 }));
 
-const { applyThemeSource, createAppWindow, isAppUrl, setExactBounds, visiblePlacement } = await import('./app-window');
+const { applyThemeSource, createAppWindow, isAppUrl, isPermissionAllowed, setExactBounds, visiblePlacement } = await import('./app-window');
 const { nativeTheme } = await import('electron');
 
 const RENDERER_FILE = resolve('app', 'renderer', 'index.html');
@@ -79,6 +79,21 @@ describe('isAppUrl', () => {
 });
 
 const SCREEN = { x: 0, y: 0, width: 1920, height: 1040 };
+
+describe('isPermissionAllowed', () => {
+  it('只放行应用自己页面的指针锁定，其余权限与其他地址一律拒绝', () => {
+    expect(isPermissionAllowed('pointerLock', RENDERER_URL, OPTIONS)).toBe(true);
+    expect(isPermissionAllowed('pointerLock', 'https://example.com/', OPTIONS)).toBe(false);
+    expect(isPermissionAllowed('pointerLock', '', OPTIONS)).toBe(false);
+    for (const permission of ['media', 'notifications', 'clipboard-read', 'geolocation', 'fullscreen']) expect(isPermissionAllowed(permission, RENDERER_URL, OPTIONS)).toBe(false);
+  });
+
+  it('开发服务器的页面同样放行指针锁定', () => {
+    const options = { ...OPTIONS, devServerUrl: 'http://localhost:5173/' };
+    expect(isPermissionAllowed('pointerLock', 'http://localhost:5173/index.html', options)).toBe(true);
+    expect(isPermissionAllowed('pointerLock', 'http://localhost:5174/', options)).toBe(false);
+  });
+});
 
 describe('visiblePlacement', () => {
   it('没有保存过位置时返回 undefined', () => {

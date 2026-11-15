@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：app-window.ts
- * 说明：主窗口：隐藏系统标题栏并保留系统窗口按钮（按主题着色），开启沙箱与上下文隔离、关闭 Node 集成，锁定导航，只放行组件库打开的对话框窗口、拒绝其他新窗口，拒绝全部权限请求；
+ * 说明：主窗口：隐藏系统标题栏并保留系统窗口按钮（按主题着色），开启沙箱与上下文隔离、关闭 Node 集成，锁定导航，只放行组件库打开的对话框窗口、拒绝其他新窗口，只放行应用自己页面的指针锁定权限、拒绝其余全部权限请求；
  *       恢复与读取窗口的位置，去掉 Electron 的默认菜单，系统主题变化时同步窗口底色与系统按钮区（以及对话框窗口）的颜色。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -143,10 +143,18 @@ export function isAppUrl(url: string, options: Pick<AppWindowOptions, 'devServer
   }
 }
 
-/** 拒绝全部权限请求（摄像头、通知等），以后需要时再逐项放行。 */
-export function denyAllPermissions(): void {
-  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  session.defaultSession.setPermissionCheckHandler(() => false);
+/** 默认拒绝权限请求（摄像头、通知等）；只放行应用自己的页面锁定指针（点击画面捕获鼠标要用），以后需要再逐项放行。 */
+export function isPermissionAllowed(permission: string, url: string, options: Pick<AppWindowOptions, 'devServerUrl' | 'rendererFile'>): boolean {
+  return permission === 'pointerLock' && isAppUrl(url, options);
+}
+
+/**
+ * 限制权限请求与权限检查：只有 isPermissionAllowed 放行的才通过。
+ * @param options 用来判断应用地址的界面地址与界面文件。
+ */
+export function restrictPermissions(options: Pick<AppWindowOptions, 'devServerUrl' | 'rendererFile'>): void {
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback, details) => callback(isPermissionAllowed(permission, details.requestingUrl, options)));
+  session.defaultSession.setPermissionCheckHandler((_contents, permission, requestingOrigin, details) => isPermissionAllowed(permission, details.requestingUrl || requestingOrigin, options));
 }
 
 /**

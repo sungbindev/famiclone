@@ -313,6 +313,16 @@ async function main() {
   await sleep(500);
   check('非法输入被丢弃，画面继续', (await page.evaluate(readDiagnostics())).received > afterJunk);
 
+  // 指针锁定：“点击画面捕获鼠标”的前提。临时在画面区挂一个 pointerdown 去请求锁定，用真实的鼠标按下触发，确认主进程的权限策略放行 pointerLock。
+  await page.evaluate(`(() => { window.__lock = 'pending'; const screen = document.querySelector('.ember-run-screen'); document.addEventListener('pointerlockchange', () => { window.__lock = document.pointerLockElement ? 'locked' : 'unlocked'; }); document.addEventListener('pointerlockerror', () => { window.__lock = 'error'; }); screen.addEventListener('pointerdown', () => screen.requestPointerLock(), { once: true }); })()`);
+  const lockPoint = await page.evaluate(`(() => { const box = document.querySelector('.ember-run-screen').getBoundingClientRect(); return { x: box.left + box.width / 2, y: box.top + box.height / 2 }; })()`);
+  await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: lockPoint.x, y: lockPoint.y });
+  await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: lockPoint.x, y: lockPoint.y, button: 'left', clickCount: 1 });
+  await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: lockPoint.x, y: lockPoint.y, button: 'left', clickCount: 1 });
+  const lockState = await waitFor(() => page.evaluate('window.__lock'), (value) => value !== 'pending', 3000, 100);
+  check('点画面可以锁定指针（权限策略只放行 pointerLock）', lockState === 'locked', String(lockState));
+  await page.evaluate('document.exitPointerLock()');
+
   // 系统栏与底部面板：运行按钮（系统栏左侧，只有图标）的图标与提示实时显示运行状态，点它展开运行面板（控制按钮、声音），再经菜单与快捷键操作。
   const runButtonInfo = () => page.evaluate(`(() => { const button = document.querySelector('.ui-status-bar [aria-label="运行"]'); return button ? { title: button.title, tone: button.getAttribute('data-tone'), text: button.textContent, path: button.querySelector('path')?.getAttribute('d') ?? '' } : null; })()`);
   const runningButton = await runButtonInfo();

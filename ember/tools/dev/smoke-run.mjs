@@ -82,7 +82,7 @@ const INSTALL_LISTENER = `(() => {
 /** 读渲染 Worker 的诊断；reset 为 true 时先清空统计。 */
 const readDiagnostics = (reset = false) => `window.emberRuntimeDiagnostics.read(${reset})`;
 
-/** 窗口大小、页面区与画面框的几何信息（CSS 像素）以及底部面板是否关闭。 */
+/** 窗口大小、显示区与画面框的几何信息（CSS 像素）以及底部面板是否关闭。 */
 const GEOMETRY = `(() => {
   const frame = document.querySelector('.ember-run-frame').getBoundingClientRect();
   const area = document.querySelector('.ui-app-frame__page').getBoundingClientRect();
@@ -124,7 +124,7 @@ async function toggleAndMeasure(label) {
   return page.evaluate(GEOMETRY);
 }
 
-/** 画面框是否完整地在页面区内（允许 1 像素的取整误差），且宽高比仍是 128:105。 */
+/** 画面框是否完整地在显示区内（允许 1 像素的取整误差），且宽高比仍是 128:105。 */
 function frameFits(geometry) {
   const inside = Object.values(geometry.margins).every((margin) => margin >= -1);
   return inside && Math.abs(geometry.frameWidth / geometry.frameHeight - FRAME_RATIO) < 0.02;

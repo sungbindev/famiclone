@@ -40,8 +40,8 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 - 新增模块时在各层建立同名模块目录，并在 C++、主进程、渲染进程三份模块清单中登记；分层与模块依赖由 `npm run boundaries` 检查，见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md)。
 - 业务逻辑、模拟与数据读写一律放 C++ 核心；TypeScript 部分只做外壳、界面、入口校验、进程间转接和系统能力。
 - 界面的全部组件与令牌都来自 rujian-ui-kit，客户端不重复实现组件、不自定义令牌；界面不做调试窗口。
-- 外壳（`src/ui/shell/`）只渲染登记表，不写死任何入口：页面（可声明边栏）、命令与默认快捷键、菜单项、活动栏按钮、底部面板页签、状态项都由模块在 `src/bootstrap/renderer/modules/<模块>.ts` 登记，外壳自己的登记项在 `ui/shell/shell-module.ts`；登记表由 `ui/shell/build-registry.ts` 检查（标识前缀、重复、引用、快捷键冲突），规则见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) 第 3 节“界面登记”；模块的页面、面板与状态项只经 `useShell()` 和外壳交互（打开页面、切换区域、追加消息等）。按键已被画面处理（`defaultPrevented`）时外壳不再响应快捷键。登记项还有子菜单（`menuItems[].submenu`，项随数据变化，如“最近打开”）、可以是函数的命令名称（如“上电”与“断电”的切换）、常驻组件 `Host`（外壳启动后一直挂载，用来订阅事件，模块状态变化后调用 `shell.refreshCommands()` 让外壳重算菜单的名称、勾选与置灰）；焦点在文本输入控件里时，不带 Ctrl 或 Alt 的快捷键不触发。运行模块的状态集中在 `ui/runtime/runtime-controller.ts`（不依赖 React），边栏、状态栏、画面提示与菜单都从它取数据，核心重启时经 `onCoreStatusChange` 清空并重新读取状态；界面层的模块之间不引用对方的契约（最近打开清单的类型取自 `EmberBridge` 的返回值）。
-- 主窗口隐藏系统标题栏（系统绘制窗口按钮）；界面只能发起白名单里的窗口动作（`shell.windowAction`，见 `contracts/shell/window-control.ts`），界面状态（窗口位置、区域展开状态、底部面板高度）由主进程保存到用户数据目录的 `config/shell-state.json`，收到的修改整条校验（`shared/shell-state`），文件不存在或损坏时用默认值、不报错，见 01 第 2、9 节。用保存的边界恢复窗口时要用 `setExactBounds`，否则非整数倍缩放下窗口每次启动大 1 像素。
+- 外壳（`src/ui/shell/`）只渲染登记表，不写死任何入口：显示区、对话框、命令与默认快捷键、菜单项、底部面板（系统栏左侧自动生成按钮）、状态项都由模块在 `src/bootstrap/renderer/modules/<模块>.ts` 登记，外壳自己的登记项在 `ui/shell/shell-module.ts`；登记表由 `ui/shell/build-registry.ts` 检查（标识前缀、重复、引用、快捷键冲突），规则见 [docs/06-构建与模块登记.md](../docs/06-构建与模块登记.md) 第 3 节“界面登记”；模块的显示区、对话框、面板与状态项只经 `useShell()` 和外壳交互（打开对话框、切换面板、发通知等）。按键已被画面处理（`defaultPrevented`）时外壳不再响应快捷键。登记项还有子菜单（`menuItems[].submenu`，项随数据变化，如“最近打开”）、可以是函数的命令名称（如“上电”与“断电”的切换）、常驻组件 `Host`（外壳启动后一直挂载，用来订阅事件，模块状态变化后调用 `shell.refreshCommands()` 让外壳重算菜单的名称、勾选与置灰）；焦点在文本输入控件里时，不带 Ctrl 或 Alt 的快捷键不触发。运行模块的状态集中在 `ui/runtime/runtime-controller.ts`（不依赖 React），运行面板、系统栏、画面提示与菜单都从它取数据，核心重启时经 `onCoreStatusChange` 清空并重新读取状态；界面层的模块之间不引用对方的契约（最近打开清单的类型取自 `EmberBridge` 的返回值）。
+- 主窗口隐藏系统标题栏（系统绘制窗口按钮）；界面只能发起白名单里的窗口动作（`shell.windowAction`，见 `contracts/shell/window-control.ts`），界面状态（窗口位置、底部面板高度、已选机型）由主进程保存到用户数据目录的 `config/shell-state.json`，收到的修改整条校验（`shared/shell-state`），文件不存在或损坏时用默认值、不报错，见 01 第 2、9 节。用保存的边界恢复窗口时要用 `setExactBounds`，否则非整数倍缩放下窗口每次启动大 1 像素。
 - 渲染进程开启 `contextIsolation`、`sandbox`，关闭 `nodeIntegration`；只有 `src/platform`、`src/entry`、`src/core-host`、`src/bootstrap` 可以引入 `electron`，C++ 中只有 `core/src/binding` 可以引用 Node-API。
 - 先在 Windows 上开发、调试与编译；macOS 的编译与打包脚本同时写齐，但不在 Windows 上运行或测试。
 - 测试分层，不每次都跑全量：开发中只跑与改动相关的用例（`npm run core:test -- -R <名称>`、`vitest run <文件>`）；小阶段做完跑 `npm run core:test -- -E ^Roms/` 加其他检查；只有改了 CPU、PPU、APU、总线、DMA、手柄、`fc` 主机型号、mapper 宿主等底层，或交付前，才跑含测试 ROM 的 `npm run check`。过滤命令的输出时只取需要的行（编译错误用区分大小写的 `error C`、`warning C`，测试结果取 `% tests passed` 与 `FAILED`），不要把用例名整批读进来。
@@ -74,7 +74,7 @@ Ember 是 FC 与学习机模拟器：外壳使用 Electron、TypeScript 和 Reac
 | `npm run boundaries` | 分层、模块依赖与模块登记检查 |
 | `npm run debug-sdk:check` | `packages/ember-debug-sdk/` 的生成、类型检查、lint、构建与测试（首次前在仓库根目录 `npm install`） |
 | `npm run check` | 以上全部检查与测试 |
-| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、运行页边栏与状态栏的机器状态、F8 快捷键、“文件”菜单的最近打开与开机子菜单、最小窗口下的标题栏与画面框四周间距、展开与折叠面板时窗口大小不变且画面框等比缩放、页面重载与核心重启（含重启后边栏状态刷新）（见 docs/06 第 8 节），只结束自己启动的进程 |
+| `node tools/dev/smoke-run.mjs` | Electron 冒烟：启动开发版加载测试 ROM，经 CDP 检查帧号、渲染 Worker 的画面帧与非空画面、键盘输入、系统栏的机器状态与运行面板、F8 快捷键、“文件”菜单的最近打开与选择机型子菜单、最小窗口下的标题栏与画面框四周间距、展开与收起面板时窗口大小不变且画面框等比缩放、点画面可以锁定指针、页面重载与核心重启（含重启后运行按钮状态刷新）（见 docs/06 第 8 节），只结束自己启动的进程 |
 | `node tools/dev/latency-run.mjs` | 画面延迟与丢帧测量：开发版运行 30 秒，打印核心、收到、渲染帧率与各类丢帧、两段延迟（见 docs/06 第 9 节、docs/01 第 7 节），只结束自己启动的进程 |
 | `npm run package:win` | 打包 Windows x64 版 |
 | `npm run make:win` | 生成 Windows x64 安装程序 |

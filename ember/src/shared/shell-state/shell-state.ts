@@ -6,8 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：规则见 docs/05-界面.md 第 9 节；读到的内容逐项校验，不合格的项用默认值，不影响其他项；
- *       窗口大小与是否最大化不保存（每次启动都是最小尺寸），旧文件里的这几项读取时被忽略；
- *       底部面板是否展开与当前页签不保存（每次启动都是关闭）；旧文件里的边栏、右边栏等项读取时被忽略；
+ *       窗口大小与是否最大化不保存（每次启动都是最小尺寸）；
+ *       底部面板是否展开与当前页签不保存（每次启动都是关闭）；
  *       渲染进程发来的布局修改同样经 parseLayoutPatch 校验，含未知字段或不合格的值时整条丢弃。
  * ------------------------------------------------------------------------
  */
@@ -56,7 +56,7 @@ function isIntegerIn(value: unknown, min: number, max: number): value is number 
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 }
 
-/** 读出窗口位置；任一项不合格时整个位置不用；旧文件里的宽高与是否最大化忽略。 */
+/** 读出窗口位置；任一项不合格时整个位置不用。 */
 function parseWindow(raw: unknown): WindowPlacement | null {
   const record = asRecord(raw);
   if (record === undefined) return null;

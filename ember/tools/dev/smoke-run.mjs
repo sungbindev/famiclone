@@ -343,6 +343,7 @@ async function main() {
   check('暂停后运行按钮的图标换成暂停图标、不再是绿色，提示是“运行：已暂停”', pausedButton?.title === '运行：已暂停' && pausedButton?.tone === 'normal' && pausedButton?.path !== runningButton?.path, JSON.stringify(pausedButton));
   await sleep(300);
   check('面板操作结束后焦点回到画面', await page.evaluate('document.activeElement?.getAttribute("role") === "application"'));
+  check('画面区持有焦点时不画焦点框', await page.evaluate('getComputedStyle(document.activeElement).outlineStyle === "none"'));
   await pressKey(page, { key: 'F8', code: 'F8', keyCode: 119 }, 50);
   const resumed = await waitFor(() => page.evaluate('window.ember.core.runtime.status({})'), (value) => value.mode === 'running');
   check('画面获得焦点时按 F8 继续运行（F 键不被画面占用），提示消失', resumed.mode === 'running' && (await waitFor(() => textOf('.ember-run-overlay'), (text) => text === '')) === '');

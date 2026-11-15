@@ -39,9 +39,9 @@
   inset: 0;
 }
 
+/* 画面区持有键盘焦点才能把按键转给机器，不画焦点框 */
 .ember-run-screen:focus-visible {
-  outline: 1px solid var(--focus-border);
-  outline-offset: -1px;
+  outline: none;
 }
 
 .ember-run-screen__canvas {

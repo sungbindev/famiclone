@@ -1,6 +1,6 @@
 {
   "name": "ember-debug-sdk",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Ember 调试服务的 SDK：类型完整的 WebSocket 客户端、终端客户端 ember-debug 与 MCP 服务 ember-debug-mcp。",
   "author": "sungbin <sungbin@3578.cn>",
   "license": "Apache-2.0",

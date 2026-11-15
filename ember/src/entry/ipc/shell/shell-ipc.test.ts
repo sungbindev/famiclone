@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-ipc.test.ts
- * 说明：外壳 IPC 入口的测试：不可信的发送方一律不处理（读取状态只得到默认值）、窗口动作只接受白名单、布局修改整条校验后才保存、窗口状态的推送。
+ * 说明：外壳 IPC 入口的测试：不可信的发送方一律不处理（读取状态只得到默认值）、窗口动作只接受白名单、布局修改整条校验后才保存、键盘独占只接受可信页面的布尔值、窗口状态与独占期间按键的推送。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -14,7 +14,8 @@ import { SHELL_CHANNELS } from '../../../contracts/shell/shell-bridge';
 import type { ShellStateService } from '../../../contracts/shell/shell-state-service';
 import { WINDOW_ACTIONS } from '../../../contracts/shell/window-control';
 import { DEFAULT_SHELL_STATE } from '../../../shared/shell-state/shell-state';
-import { forwardWindowState, registerShellIpc } from './shell-ipc';
+import type { KeyboardCaptureService, NativeKeyEvent } from '../../../contracts/shell/keyboard-capture';
+import { forwardKeyboardToWindow, forwardWindowState, registerShellIpc } from './shell-ipc';
 
 type Listener = (event: IpcMainEvent | IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 
@@ -29,13 +30,15 @@ function setup(trusted = true) {
   const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220, selectedMachine: null } };
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), flush: vi.fn() };
   const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false })) };
-  registerShellIpc({ ipc, isTrustedSender: () => trusted, state, window });
+  const keyboard = { setCapture: vi.fn((enabled: boolean) => enabled), onKey: vi.fn(), onReleased: vi.fn() } satisfies KeyboardCaptureService;
+  registerShellIpc({ ipc, isTrustedSender: () => trusted, state, window, keyboard });
   const event = {} as IpcMainEvent;
   return {
     state,
     window,
+    keyboard,
     savedState,
-    invoke: (channel: string) => handlers.get(channel)!(event as unknown as IpcMainInvokeEvent),
+    invoke: (channel: string, ...args: unknown[]) => handlers.get(channel)!(event as unknown as IpcMainInvokeEvent, ...args),
     send: (channel: string, ...args: unknown[]) => listeners.get(channel)!(event, ...args)
   };
 }
@@ -95,6 +98,72 @@ describe('布局修改', () => {
     const { send, state } = setup(false);
     send(SHELL_CHANNELS.setLayout, { bottomPanelHeight: 220 });
     expect(state.updateLayout).not.toHaveBeenCalled();
+  });
+});
+
+describe('键盘独占', () => {
+  it('可信的页面要求开启或关闭，结果是服务的返回值', () => {
+    const { invoke, keyboard } = setup();
+    expect(invoke(SHELL_CHANNELS.setKeyboardCapture, true)).toBe(true);
+    expect(invoke(SHELL_CHANNELS.setKeyboardCapture, false)).toBe(false);
+    expect(keyboard.setCapture.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('参数不是 true 的一律按关闭处理', () => {
+    const { invoke, keyboard } = setup();
+    for (const value of ['true', 1, {}, null, undefined]) invoke(SHELL_CHANNELS.setKeyboardCapture, value);
+    expect(keyboard.setCapture.mock.calls.every(([enabled]) => enabled === false)).toBe(true);
+  });
+
+  it('不可信的发送方不能开启独占', () => {
+    const { invoke, keyboard } = setup(false);
+    expect(invoke(SHELL_CHANNELS.setKeyboardCapture, true)).toBe(false);
+    expect(keyboard.setCapture).not.toHaveBeenCalled();
+  });
+});
+
+/** 可以手动触发的键盘独占服务。 */
+function fakeKeyboard() {
+  let onKey: ((event: NativeKeyEvent) => void) | undefined;
+  let onReleased: (() => void) | undefined;
+  const stopKey = vi.fn();
+  const stopReleased = vi.fn();
+  const service: KeyboardCaptureService = {
+    setCapture: () => true,
+    onKey: (listener) => {
+      onKey = listener;
+      return stopKey;
+    },
+    onReleased: (listener) => {
+      onReleased = listener;
+      return stopReleased;
+    }
+  };
+  return { service, key: (event: NativeKeyEvent) => onKey?.(event), released: () => onReleased?.(), stopKey, stopReleased };
+}
+
+describe('forwardKeyboardToWindow', () => {
+  it('把独占期间的按键与“已关闭”推送给页面，取消转发时两个订阅都取消', () => {
+    const send = vi.fn();
+    const contents = { isDestroyed: () => false, send } as unknown as WebContents;
+    const keyboard = fakeKeyboard();
+    const stop = forwardKeyboardToWindow(keyboard.service, contents);
+    keyboard.key({ code: 'Escape', down: true });
+    keyboard.released();
+    expect(send.mock.calls).toEqual([[SHELL_CHANNELS.nativeKey, { code: 'Escape', down: true }], [SHELL_CHANNELS.keyboardReleased]]);
+    stop();
+    expect(keyboard.stopKey).toHaveBeenCalledTimes(1);
+    expect(keyboard.stopReleased).toHaveBeenCalledTimes(1);
+  });
+
+  it('页面已销毁时不推送', () => {
+    const send = vi.fn();
+    const contents = { isDestroyed: () => true, send } as unknown as WebContents;
+    const keyboard = fakeKeyboard();
+    forwardKeyboardToWindow(keyboard.service, contents);
+    keyboard.key({ code: 'KeyA', down: true });
+    keyboard.released();
+    expect(send).not.toHaveBeenCalled();
   });
 });
 

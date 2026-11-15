@@ -4946,6 +4946,16 @@
               "type": "string"
             }
           },
+          "devices": {
+            "type": "array",
+            "description": "卡带用到的外设，目前只有 mouse（鼠标）；没有声明的外设，界面不会把它接到卡带上",
+            "items": {
+              "type": "string",
+              "enum": [
+                "mouse"
+              ]
+            }
+          },
           "match": {
             "type": "array",
             "description": "匹配条件，任一项满足即匹配",
@@ -4972,6 +4982,7 @@
           "version",
           "publisher",
           "host",
+          "devices",
           "match",
           "source",
           "enabled"
@@ -5612,6 +5623,16 @@
             "type": "string",
             "description": "装配的主机型号"
           },
+          "devices": {
+            "type": "array",
+            "description": "匹配到的插件声明的外设，目前只有 mouse（鼠标）",
+            "items": {
+              "type": "string",
+              "enum": [
+                "mouse"
+              ]
+            }
+          },
           "storage": {
             "type": "array",
             "description": "存储区清单",
@@ -5634,6 +5655,7 @@
           "pluginName",
           "pluginVersion",
           "host",
+          "devices",
           "storage"
         ],
         "additionalProperties": false

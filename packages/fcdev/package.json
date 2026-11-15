@@ -1,6 +1,6 @@
 {
   "name": "fcdev",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "6502 兼容机（NES、学习机等）的开发工具：用 cc65 构建 C 与汇编程序",
   "license": "Apache-2.0",
   "author": "sungbin <sungbin@3578.cn>",
@@ -31,9 +31,9 @@
     "targets"
   ],
   "dependencies": {
-    "ember-debug-sdk": "0.6.0"
+    "ember-debug-sdk": "0.7.0"
   },
   "optionalDependencies": {
-    "fcdev-cc65": "0.6.0"
+    "fcdev-cc65": "0.7.0"
   }
 }

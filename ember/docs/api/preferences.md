@@ -145,5 +145,6 @@ await client.api.preferences.reset({ id: … });
 | `maximum` | `integer` | 否 | integer 的最大值，其他种类没有这一项 |
 | `maxLength` | `integer（1..）` | 否 | text 的最大字节数（UTF-8），其他种类没有这一项 |
 | `hidden` | `boolean` | 是 | 为 true 时首选项页不显示，只保存取值（如音量） |
+| `picker` | `"directory"` | 否 | text 设置项的取值是文件夹路径时为 directory，页面在输入框旁显示“选择”按钮；其他设置项没有这一项 |
 | `defaultValue` | `任意 JSON` | 是 | 出厂默认值：choice 为字符串，switch 为布尔值，integer 为整数 |
 | `value` | `任意 JSON` | 是 | 当前取值，类型同 defaultValue |

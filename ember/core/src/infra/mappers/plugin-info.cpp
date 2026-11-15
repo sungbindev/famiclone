@@ -50,6 +50,7 @@ api::MapperSummary makeSummary(const LoadedPlugin& plugin, PluginSource source, 
   summary.publisher = manifest.publisher;
   if (!manifest.description.empty()) summary.description = manifest.description;
   summary.host = manifest.host;
+  summary.devices = manifest.devices;
   for (const MatchRule& rule : manifest.match) summary.match.push_back(makeRule(rule));
   summary.source = source == PluginSource::Bundled ? "bundled" : "user";
   summary.enabled = enabled;

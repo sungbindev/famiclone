@@ -31,6 +31,8 @@ using nlohmann::json;
 
 /** 各部分的数量上限，防止清单被用来耗尽资源。 */
 constexpr std::size_t MAX_HOSTS = 8;
+/** 外设目前只有 mouse，所以最多一项。 */
+constexpr std::size_t MAX_DEVICES = 1;
 constexpr std::size_t MAX_MATCH_RULES = 32;
 constexpr std::size_t MAX_STORAGE = 16;
 constexpr std::size_t MAX_WINDOWS = 64;
@@ -363,7 +365,7 @@ Manifest build(const json& root) {
   const std::string path = "manifest";
   json_fields::requireObject(root, path);
   json_fields::rejectUnknown(root, path,
-                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "match", "storage", "windows", "nametable", "registers", "state", "settings"});
+                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "match", "storage", "windows", "nametable", "registers", "state", "settings"});
   Manifest manifest;
   manifest.id = readText(root, "id", path, 3, 40);
   if (!isLowerIdentifier(manifest.id, 3, 40)) fail(path + ".id 只能用小写字母、数字与 -，3 到 40 个字符，且不能以 - 开头");
@@ -382,6 +384,13 @@ Manifest build(const json& root) {
     std::string host = json_fields::readString(hosts[index], hostPath, 1, 32, {});
     if (!isLowerIdentifier(host, 1, 32)) fail(hostPath + " 只能用小写字母、数字与 -");
     manifest.host.push_back(std::move(host));
+  }
+  if (const json* list = findList(root, "devices", path, MAX_DEVICES)) {
+    for (std::size_t index = 0; index < list->size(); ++index) {
+      std::string device = json_fields::readString((*list)[index], path + ".devices[" + std::to_string(index) + "]", 1, 16, {"mouse"});
+      if (std::find(manifest.devices.begin(), manifest.devices.end(), device) != manifest.devices.end()) fail("devices 里的外设重复：" + device);
+      manifest.devices.push_back(std::move(device));
+    }
   }
   const json& matches = readList(root, "match", path, 1, MAX_MATCH_RULES);
   for (std::size_t index = 0; index < matches.size(); ++index) manifest.match.push_back(readMatchRule(matches[index], path + ".match[" + std::to_string(index) + "]"));

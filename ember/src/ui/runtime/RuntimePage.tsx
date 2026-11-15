@@ -24,7 +24,7 @@ import './ember-run.css';
 
 /** 用户可见的文字。 */
 const TEXT = {
-  captureHint: '点击画面捕获鼠标，双击右键或按 Esc 释放'
+  captureHint: '点击画面捕获鼠标，双击右键释放'
 } as const;
 
 /** 捕获鼠标的提示显示几秒后消失，不一直遮挡画面。 */

@@ -7,7 +7,7 @@
  * 日期：2026-11-14
  * 备注：画布由本组件在效果里创建（transferControlToOffscreen 对同一个画布只能调用一次，严格模式会重复执行效果）；
  *       画面区跟随容器与设备像素比调整画布的设备像素尺寸，画面比例与缩放方式由属性决定，画面在 Worker 里按比例居中、周围黑底。
- *       键盘事件只在画面区获得焦点时采集；窗口失焦、页面隐藏与卸载时松开全部按键。鼠标事件发生在画面区上，坐标换算成标准帧的像素；游戏手柄每一帧读一次。
+ *       键盘事件只在画面区获得焦点时采集；窗口失焦、页面隐藏与卸载时松开全部按键。Windows 上画面区持有焦点时独占键盘（见 use-keyboard-exclusive.ts），按键由主进程以物理键位交来，页面收不到键盘事件；其他平台用页面内的键盘事件。鼠标事件发生在画面区上，坐标换算成标准帧的像素；游戏手柄每一帧读一次。
  *       界面不做任何键位映射，也没有默认键位，原始事件交给卡带的 mapper 脚本处理。
  *       开发期（import.meta.env.DEV）把诊断读取函数挂到 window.emberRuntimeDiagnostics，供 tools/dev 的脚本经 CDP 使用，正式包没有。
  * ------------------------------------------------------------------------
@@ -22,6 +22,7 @@ import { KeyboardCapture } from './key-capture';
 import { frameUnitsPerPixel, MouseCapture, toFramePoint } from './pointer-capture';
 import { cropLinesFor, DEFAULT_SCREEN_ASPECT, DEFAULT_SCREEN_SCALING, type ScreenAspect, type ScreenScaling } from './screen-layout';
 import { useStreamPorts } from './use-stream-ports';
+import { useKeyboardExclusive } from './use-keyboard-exclusive';
 import { parseWorkerReply, type WorkerDiagnostics, type WorkerRequest } from './worker-messages';
 import './ember-run.css';
 
@@ -53,7 +54,7 @@ export interface RuntimeScreenProps {
   readonly scaling?: ScreenScaling;
   /** 显示全部 240 行，默认显示；关闭时上下各裁掉 8 行。 */
   readonly showAllLines?: boolean;
-  /** 点击画面时捕获鼠标（指针锁定），默认关闭；捕获期间鼠标事件只有相对位移，按 Esc 或双击右键退出。 */
+  /** 点击画面时捕获鼠标（指针锁定），默认关闭；捕获期间鼠标事件只有相对位移，双击右键退出（没有键盘独占的平台上按 Esc 也会退出）。 */
   readonly captureMouse?: boolean;
   /** 画面区元素的引用：页面用它在操作后把焦点还给画面。 */
   readonly screenRef: RefObject<HTMLDivElement | null>;
@@ -167,6 +168,8 @@ export function RuntimeScreen({ bridge, aspect = DEFAULT_SCREEN_ASPECT, scaling 
   const keyboard = useMemo(() => new KeyboardCapture((message) => input.send(message)), [input]);
   const mouse = useMemo(() => new MouseCapture((message) => input.send(message)), [input]);
   const gamepads = useMemo(() => new GamepadCapture((message) => input.send(message)), [input]);
+  // 画面区持有焦点时独占键盘（Windows）：按键经主进程交来，不再经页面的键盘事件。
+  useKeyboardExclusive(bridge.shell, screenRef, keyboard);
 
   /** 指针在标准帧上的位置；还没有画布时为 undefined。 */
   const framePointOf = useCallback(

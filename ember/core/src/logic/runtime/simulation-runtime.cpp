@@ -56,6 +56,7 @@ rt::CartridgeSummary makeSummary(const rt::CartridgeInsertion& insertion, const 
   summary.pluginName = insertion.match.pluginName;
   summary.pluginVersion = insertion.match.version;
   summary.host = insertion.match.host;
+  summary.devices = insertion.match.devices;
   for (const auto& item : storage) {
     summary.storage.push_back({item.id, item.kind == hw::StorageKind::Rom ? "rom" : "ram", static_cast<std::int64_t>(item.size), item.battery});
   }

@@ -55,9 +55,11 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | `publisher` | 字符串 | 发布者名称 |
 | `description` | 字符串 | 一两句话的说明，可选 |
 | `host` | 字符串数组 | 要求的主机型号，目前只有 `fc`（`["fc"]`）；宿主按第一个存在的型号装配；插卡学习机的卡带写自己的主机型号（如裕兴系列），打开卡带时按它自动装配，用户不选机型（后续阶段） |
+| `devices` | 字符串数组 | 可选；卡带用到的外设，目前只有 `mouse`（鼠标），最多 1 项、不重复；不写等于没有外设，见下面的说明 |
 | `match` | 数组 | 匹配条件，见第 4.2 节 |
 
 - 清单里不认识的字段一律拒绝（`mappers.invalidPackage`），包括已取消的 `wires`、`uses`、`irq`：清单不声明连线，也不声明用了哪些功能模块，脚本在读写回调里译码并直接用 `ctx.device(名称)` 访问，主机没有该功能模块时运行时报错并暂停；卡带要向 CPU 发中断只能经 `ctx.irq`；这些字段以后也不恢复。
+- `devices` 声明卡带用到的外设，界面据此决定要不要把鼠标交给这张卡带：整机机型（学习机）自带串口鼠标，不看这个字段；经典 FC 只有声明了 `mouse` 的卡带，点击画面才会捕获鼠标，没有声明的卡带点不进去。不认识的外设名、重复的外设、不是数组的写法一律拒绝（`mappers.invalidPackage`）；`mappers.list`、`mappers.info` 的插件摘要与 `runtime.status`、`cartridges.info` 的卡带信息里都带 `devices`。声明了 `mouse` 的卡带用 `onMouse` 接收鼠标事件（见第 6.5 节）。
 
 ### 4.2 匹配
 
@@ -256,7 +258,7 @@ export default definePlugin({
 - `ctx.keys.isDown(code)` 读到的是这次事件之后的状态，所以组合键这样写：`if (event.code === 'KeyZ' && ctx.keys.isDown('ShiftLeft')) { ... }`。
 - `ctx.pad(port).set(button, down)` 由卡带记着每个口当前按下的键，宿主把整个口的按键交给主机的手柄口；`button` 不认识、`port` 不存在、`down` 不是布尔值，都按脚本错误处理（`RangeError`）。
 - 事件按到达的顺序在模拟线程里执行，最迟在下一帧开始之前生效；脚本出错的处理同第 6.3 节。
-- 界面不上报 F1 到 F24、Tab、Escape 与带 Ctrl、Alt、Meta 的组合键（留给应用的快捷键与焦点移动），Ctrl、Alt、Meta、Shift 这些修饰键本身照常上报。
+- Windows 上画面区获得焦点期间界面独占键盘，所有物理按键（包括 Esc、Tab、F 键与 Ctrl、Alt 组合）都上报，见 05 第 7 节；没有键盘独占时（其他平台）界面不上报 F1 到 F24、Tab、Escape 与带 Ctrl、Alt、Meta 的组合键（留给应用的快捷键与焦点移动），Ctrl、Alt、Meta、Shift 这些修饰键本身照常上报。
 - 示意（`nrom` 的键位，手柄 1）：
 
 ```js

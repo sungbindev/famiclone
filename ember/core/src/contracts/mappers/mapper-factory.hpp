@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
@@ -31,6 +32,8 @@ struct MapperMatch {
   std::string version;
   /** 要装配的主机型号：插件 host 里第一个已有的型号。 */
   std::string host;
+  /** 插件声明的外设（目前只有 mouse）。 */
+  std::vector<std::string> devices;
 };
 
 /** 卡带工厂。 */

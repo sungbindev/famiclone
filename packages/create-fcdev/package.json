@@ -1,6 +1,6 @@
 {
   "name": "create-fcdev",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "创建 fcdev 项目：npm create fcdev，在空目录生成 6502 兼容机程序的开发结构与示例",
   "license": "Apache-2.0",
   "author": "sungbin <sungbin@3578.cn>",

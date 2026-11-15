@@ -217,6 +217,7 @@ await client.api.mappers.reload();
 | `publisher` | `string（长度 1..40）` | 是 | 发布者 |
 | `description` | `string（长度 ..200）` | 否 | 说明 |
 | `host` | `string[]` | 是 | 要求的主机型号 |
+| `devices` | `"mouse"[]` | 是 | 卡带用到的外设，目前只有 mouse（鼠标）；没有声明的外设，界面不会把它接到卡带上 |
 | `match` | [mappers.MapperMatchRule](mappers.md#mappermatchrule)[] | 是 | 匹配条件，任一项满足即匹配 |
 | `source` | `"bundled" \| "user"` | 是 | 来源：bundled 预装，user 用户安装 |
 | `enabled` | `boolean` | 是 | 是否启用 |

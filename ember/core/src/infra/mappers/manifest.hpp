@@ -144,6 +144,8 @@ struct Manifest {
   std::string description;
   std::uint32_t apiVersion{0};
   std::vector<std::string> host;
+  /** 卡带用到的外设（目前只有 mouse）；不写等于没有。 */
+  std::vector<std::string> devices;
   std::vector<MatchRule> match;
   std::vector<StorageDecl> storage;
   std::vector<WindowDecl> windows;

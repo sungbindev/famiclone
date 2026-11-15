@@ -13,6 +13,7 @@ import { act, fireEvent, render } from '@testing-library/react';
 import { createRef, type RefObject } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
+import type { NativeKeyEvent } from '../../contracts/shell/keyboard-capture';
 import { RuntimeScreen } from './RuntimeScreen';
 
 /** 假 Worker：记录收到的消息与转移列表。 */
@@ -49,7 +50,21 @@ let resizeCallback: ((entries: unknown[]) => void) | undefined;
 /** 渲染组件，返回画面区与假接口。 */
 function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean; captureMouse?: boolean } = {}) {
   const requestPorts = vi.fn();
-  const bridge = { streams: { requestPorts }, core: {}, main: {}, onCoreEvent: () => () => undefined, getCoreStatus: () => Promise.reject(new Error('未使用')) } as unknown as EmberBridge;
+  const nativeKeyListeners = new Set<(event: NativeKeyEvent) => void>();
+  const releasedListeners = new Set<() => void>();
+  const setKeyboardCapture = vi.fn((_enabled: boolean) => Promise.resolve(true));
+  const shell = {
+    setKeyboardCapture,
+    onNativeKey: (listener: (event: NativeKeyEvent) => void) => {
+      nativeKeyListeners.add(listener);
+      return () => nativeKeyListeners.delete(listener);
+    },
+    onKeyboardReleased: (listener: () => void) => {
+      releasedListeners.add(listener);
+      return () => releasedListeners.delete(listener);
+    }
+  };
+  const bridge = { streams: { requestPorts }, shell, core: {}, main: {}, onCoreEvent: () => () => undefined, getCoreStatus: () => Promise.reject(new Error('未使用')) } as unknown as EmberBridge;
   const screenRef: RefObject<HTMLDivElement | null> = createRef<HTMLDivElement>();
   const view = render(
     <UiProvider>
@@ -59,7 +74,18 @@ function setup(props: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; sho
   const screenElement = view.getByRole('application', { name: '模拟器画面' });
   const worker = FakeWorker.instances[FakeWorker.instances.length - 1];
   if (worker === undefined) throw new Error('没有创建 Worker');
-  return { view, screenElement, worker, requestPorts, rerender: (next: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean; captureMouse?: boolean }) => view.rerender(<UiProvider><RuntimeScreen bridge={bridge} screenRef={screenRef} {...next} /></UiProvider>) };
+  return {
+    view,
+    screenElement,
+    worker,
+    requestPorts,
+    setKeyboardCapture,
+    /** 主进程交来一次独占期间的物理按键。 */
+    emitNativeKey: (code: string, down: boolean) => act(() => nativeKeyListeners.forEach((listener) => listener({ code, down }))),
+    /** 主进程通知独占已被自动关闭。 */
+    emitReleased: () => act(() => releasedListeners.forEach((listener) => listener())),
+    rerender: (next: { aspect?: '4:3' | '8:7'; scaling?: 'fit' | 'integer'; showAllLines?: boolean; captureMouse?: boolean }) => view.rerender(<UiProvider><RuntimeScreen bridge={bridge} screenRef={screenRef} {...next} /></UiProvider>)
+  };
 }
 
 /** 模拟预加载脚本交来端口。 */
@@ -239,6 +265,68 @@ describe('RuntimeScreen：键盘', () => {
     screenElement.append(field);
     fireEvent.keyDown(field, { code: 'KeyX' });
     expect(input.postMessage).not.toHaveBeenCalled();
+  });
+});
+
+/** 记录发往核心的按键消息。 */
+function keyMessages(input: ReturnType<typeof fakePort>): unknown[] {
+  return input.postMessage.mock.calls.map(([message]) => message).filter((message) => (message as { type: string }).type === 'key');
+}
+
+describe('RuntimeScreen：键盘独占', () => {
+  it('画面区持有焦点时请主进程独占键盘，失去焦点时关闭', () => {
+    const { screenElement, setKeyboardCapture } = setup();
+    expect(setKeyboardCapture.mock.calls).toEqual([[true]]);
+    act(() => screenElement.blur());
+    expect(setKeyboardCapture.mock.calls).toEqual([[true], [false]]);
+    act(() => screenElement.focus());
+    expect(setKeyboardCapture.mock.calls).toEqual([[true], [false], [true]]);
+  });
+
+  it('独占期间的物理按键全部上报，Esc、Tab、F 键与 Ctrl、Alt 组合也不例外，重复的按下不重复发送', () => {
+    const { emitNativeKey } = setup();
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    for (const code of ['Escape', 'Tab', 'F5', 'ControlLeft', 'KeyC']) emitNativeKey(code, true);
+    emitNativeKey('KeyC', true);
+    emitNativeKey('KeyC', false);
+    expect(keyMessages(input)).toEqual([
+      { type: 'key', code: 'Escape', down: true },
+      { type: 'key', code: 'Tab', down: true },
+      { type: 'key', code: 'F5', down: true },
+      { type: 'key', code: 'ControlLeft', down: true },
+      { type: 'key', code: 'KeyC', down: true },
+      { type: 'key', code: 'KeyC', down: false }
+    ]);
+  });
+
+  it('主进程自动关闭独占（窗口失焦等）时松开全部按键，窗口回到前台后再次开启', () => {
+    const { emitNativeKey, emitReleased, setKeyboardCapture } = setup();
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    emitNativeKey('AltLeft', true);
+    emitReleased();
+    expect(keyMessages(input)).toEqual([
+      { type: 'key', code: 'AltLeft', down: true },
+      { type: 'key', code: 'AltLeft', down: false }
+    ]);
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(setKeyboardCapture.mock.calls).toEqual([[true], [true]]);
+  });
+
+  it('卸载时关闭独占并松开全部按键', () => {
+    const { view, emitNativeKey, setKeyboardCapture } = setup();
+    const input = fakePort();
+    deliverPorts(fakePort(), input);
+    emitNativeKey('KeyZ', true);
+    view.unmount();
+    expect(setKeyboardCapture.mock.calls).toEqual([[true], [false]]);
+    expect(keyMessages(input)).toEqual([
+      { type: 'key', code: 'KeyZ', down: true },
+      { type: 'key', code: 'KeyZ', down: false }
+    ]);
   });
 });
 

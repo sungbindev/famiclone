@@ -1,8 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-run.mjs
- * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、
- *       系统栏左侧的运行按钮（只有图标）实时显示运行状态并展开运行面板、面板按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“选择机型”子菜单、
+ * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、 *       键盘独占的接口与原生模块能加载、开启、关闭（不注入系统按键）、 *       系统栏左侧的运行按钮（只有图标）实时显示运行状态并展开运行面板、面板按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“选择机型”子菜单、
  *       启动时底部面板关闭且没有活动栏、边栏、标签栏与右边栏、展开与收起面板时窗口大小不变而画面框等比缩放并留在显示区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白、
  *       首选项对话框（独立的系统窗口，主题与主窗口一致）与首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、调试服务与系统栏右侧的“调试模式”、
  *       页面重载与核心进程重启后端口重新建立且运行按钮状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
@@ -346,7 +345,17 @@ async function main() {
   check('画面区持有焦点时不画焦点框', await page.evaluate('getComputedStyle(document.activeElement).outlineStyle === "none"'));
   await pressKey(page, { key: 'F8', code: 'F8', keyCode: 119 }, 50);
   const resumed = await waitFor(() => page.evaluate('window.ember.core.runtime.status({})'), (value) => value.mode === 'running');
-  check('画面获得焦点时按 F8 继续运行（F 键不被画面占用），提示消失', resumed.mode === 'running' && (await waitFor(() => textOf('.ember-run-overlay'), (text) => text === '')) === '');
+  check('画面区收到页面内的 F8 键盘事件时继续运行（没有键盘独占的发送方式，F 键不被画面区占用），提示消失', resumed.mode === 'running' && (await waitFor(() => textOf('.ember-run-overlay'), (text) => text === '')) === '');
+  // 键盘独占：只调用接口核对原生模块能加载、能开启与关闭（脚本不注入系统按键，避免按键发到别的程序）；最后恢复开启，与界面记录的状态一致。
+  const exclusive = await page.evaluate(
+    `(async () => { const shell = window.ember.shell; const methods = ['setKeyboardCapture', 'onNativeKey', 'onKeyboardReleased'].every((name) => typeof shell[name] === 'function'); const off = await shell.setKeyboardCapture(false); const on = await shell.setKeyboardCapture(true); return { methods, off, on }; })()`
+  );
+  check('预加载脚本暴露了键盘独占的接口', exclusive.methods === true);
+  check(
+    process.platform === 'win32' ? '键盘独占的原生模块已加载：关闭返回 false、开启返回 true' : '不支持键盘独占的平台：开关都返回 false，继续用页面内的键盘事件',
+    exclusive.off === false && exclusive.on === (process.platform === 'win32'),
+    JSON.stringify(exclusive)
+  );
   check('继续运行后运行按钮回到绿色三角形', (await waitFor(runButtonInfo, (info) => info?.title === '运行：运行中', 3000, 100))?.path === runningButton?.path);
   check('再点运行按钮收起面板', (await clickBarButton('运行')) && (await waitFor(() => page.evaluate('document.querySelector(".ui-app-frame__bottom") === null'), (value) => value === true, 3000, 100)) === true);
   await menuButton('文件');

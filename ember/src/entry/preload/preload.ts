@@ -68,7 +68,10 @@ const shell: ShellBridge = {
   setLayout: (patch) => ipcRenderer.send(SHELL_CHANNELS.setLayout, patch),
   windowAction: (action) => ipcRenderer.send(SHELL_CHANNELS.windowAction, action),
   getWindowState: () => ipcRenderer.invoke(SHELL_CHANNELS.getWindowState),
-  onWindowStateChange: (listener) => subscribe(SHELL_CHANNELS.windowStateChanged, listener)
+  onWindowStateChange: (listener) => subscribe(SHELL_CHANNELS.windowStateChanged, listener),
+  setKeyboardCapture: (enabled) => ipcRenderer.invoke(SHELL_CHANNELS.setKeyboardCapture, enabled),
+  onNativeKey: (listener) => subscribe(SHELL_CHANNELS.nativeKey, listener),
+  onKeyboardReleased: (listener) => subscribe(SHELL_CHANNELS.keyboardReleased, listener)
 };
 
 const bridge: EmberBridge = {

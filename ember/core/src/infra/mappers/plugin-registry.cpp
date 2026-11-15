@@ -364,7 +364,7 @@ api::MapperMatch PluginRegistry::match(const api::CartridgeDescription& descript
   const Manifest& manifest = top.front()->entry.plugin->manifest;
   const auto host = std::find_if(manifest.host.begin(), manifest.host.end(), [&](const std::string& name) { return options_.hosts.hosts.contains(name); });
   if (host == manifest.host.end()) throw shared::CoreError(api::ERROR_HOST_UNKNOWN, "插件 " + manifest.id + " 要求的主机型号 " + join(manifest.host) + " 都不存在");
-  return api::MapperMatch{manifest.id, manifest.name, manifest.version, *host};
+  return api::MapperMatch{manifest.id, manifest.name, manifest.version, *host, manifest.devices};
 }
 
 std::unique_ptr<api::MapperCartridge> PluginRegistry::create(const api::MapperMatch& match, const api::CartridgeImage& image, contracts::hardware::IrqOutput& irq,

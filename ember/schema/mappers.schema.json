@@ -25,11 +25,12 @@
         "publisher": { "type": "string", "minLength": 1, "maxLength": 40, "description": "发布者" },
         "description": { "type": "string", "maxLength": 200, "description": "说明" },
         "host": { "type": "array", "items": { "type": "string" }, "description": "要求的主机型号" },
+        "devices": { "type": "array", "items": { "type": "string", "enum": ["mouse"] }, "description": "卡带用到的外设，目前只有 mouse（鼠标）；没有声明的外设，界面不会把它接到卡带上" },
         "match": { "type": "array", "items": { "$ref": "#/types/MapperMatchRule" }, "description": "匹配条件，任一项满足即匹配" },
         "source": { "type": "string", "enum": ["bundled", "user"], "description": "来源：bundled 预装，user 用户安装" },
         "enabled": { "type": "boolean", "description": "是否启用" }
       },
-      "required": ["id", "name", "version", "publisher", "host", "match", "source", "enabled"]
+      "required": ["id", "name", "version", "publisher", "host", "devices", "match", "source", "enabled"]
     },
     "MapperStorageInfo": {
       "type": "object",

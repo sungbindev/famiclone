@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：main.ts
- * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、外壳能力（界面状态的保存、窗口动作）、创建主窗口，退出时保存界面状态并停止核心。
+ * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、外壳能力（界面状态的保存、窗口动作、键盘独占）、创建主窗口，退出时保存界面状态并停止核心。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -19,7 +19,7 @@ import { STREAM_CHANNELS } from '../../contracts/stream-ports/stream-ports';
 import { forwardCoreToWindow, registerCoreIpc, type CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
 import { loadAndRemember } from '../../entry/ipc/cartridges/load-cartridge';
 import { registerMainRequestIpc, type MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
-import { forwardWindowState, registerShellIpc } from '../../entry/ipc/shell/shell-ipc';
+import { forwardKeyboardToWindow, forwardWindowState, registerShellIpc } from '../../entry/ipc/shell/shell-ipc';
 import { registerStreamsIpc } from '../../entry/ipc/streams/streams-ipc';
 import { startThemeSync } from '../../entry/preferences/theme-sync';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
@@ -30,6 +30,7 @@ import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
 import { startElectronCoreProcess } from '../../platform/core-process/core-process';
 import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
 import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/launch/launch-args';
+import { loadNativeKeyboard, NativeKeyboardCapture } from '../../platform/keyboard-capture/native-keyboard-capture';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
@@ -44,6 +45,8 @@ const APP_ID = 'cn.3578.ember';
 const PRODUCT_NAME = 'Ember';
 /** 原生模块文件名。 */
 const NATIVE_FILE = 'ember_core.node';
+/** 键盘独占模块（只有 Windows 有）的文件名。 */
+const KEYBOARD_NATIVE_FILE = 'ember_keyboard.node';
 /** 预装插件的目录名：开发时在 build 下，正式包在 resources 下。 */
 const PLUGINS_DIRECTORY = 'plugins';
 /** 主进程错误的错误码。 */
@@ -76,6 +79,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const devServerUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
   const rendererFile = join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', NATIVE_FILE);
+  const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', KEYBOARD_NATIVE_FILE);
   const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(app.getAppPath(), 'build', PLUGINS_DIRECTORY);
   // --debug-port 指定时本次运行强制开启调试服务（不写入首选项），--debug-token 指定令牌。
   const debugLaunch = debugOptionsFromArgv(process.argv);
@@ -104,6 +108,11 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const themeSync = startThemeSync({ gateway, applyThemeSource, onError: (error) => logError(logger, error, { source: 'themeSync' }) });
   const themeReady = Promise.race([themeSync.first, new Promise<void>((resolve) => setTimeout(resolve, THEME_WAIT_MS))]);
   const windowController = createWindowController(() => mainWindow, () => app.quit());
+  const keyboard = new NativeKeyboardCapture({
+    load: () => loadNativeKeyboard(keyboardNativePath, process.platform, (message) => logError(logger, new Error(message), { source: 'keyboardCapture' })),
+    getWindow: () => mainWindow,
+    onError: (message) => logError(logger, new Error(message), { source: 'keyboardCapture' })
+  });
   const isTrustedSender = createSenderCheck((url) => isAppUrl(url, { rendererFile, ...(devServerUrl ? { devServerUrl } : {}) }));
   const modules = MAIN_MODULES.map((module) => module.schema);
   /** 以主进程的身份向核心发起请求所需的依赖。 */
@@ -121,14 +130,18 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     });
     mainWindow = window;
     const stopForwarding = forwardCoreToWindow(gateway, window.webContents);
+    const stopKeyboardForwarding = forwardKeyboardToWindow(keyboard, window.webContents);
     const stopFollowingTheme = followSystemTheme(window);
     watchWindow(window, {
       onPlacement: (placement) => shellState.updateWindow(placement),
       onState: forwardWindowState(window.webContents, () => windowController.state())
     });
     window.webContents.on('render-process-gone', (_event, details) => logError(logger, new Error(`渲染进程退出：${details.reason}`), { exitCode: details.exitCode }));
+    // 页面重新加载（开发时刷新）后界面的状态丢失，独占必须随之关闭，否则页面没有焦点时也吞掉所有按键。
+    window.webContents.on('did-start-loading', () => keyboard.setCapture(false));
     window.on('closed', () => {
       stopForwarding();
+      stopKeyboardForwarding();
       stopFollowingTheme();
       if (mainWindow === window) mainWindow = undefined;
     });
@@ -155,6 +168,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     event.preventDefault();
     shellState.flush();
     recentCartridges.flush();
+    keyboard.dispose();
     themeSync.stop();
     streamHub.stop();
     void gateway
@@ -170,7 +184,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     streamHub.start();
     gateway.start();
     registerCoreIpc({ ipc: ipcMain, gateway, modules, schemas: CORE_SCHEMAS, isTrustedSender });
-    registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController });
+    registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController, keyboard });
 
     const fileDialog = createOpenFileDialog(() => mainWindow);
     const handlers: Record<string, MainRequestHandler> = {};

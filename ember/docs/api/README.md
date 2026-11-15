@@ -76,6 +76,17 @@
 
 事件：`inspector.stateChanged`
 
+### [machines](machines.md)
+
+| 请求 | 简介 |
+| --- | --- |
+| `machines.list` | 机型清单，顺序固定为 fc、sb97、sb2000、bbk10、bbk20 |
+| `machines.setBios` | 读取并检查 BIOS 文件，复制进 BIOS 目录（新文件写好之后才删旧文件，失败时原有的 BIOS 不变） |
+| `machines.removeBios` | 删除机型的 BIOS 文件 |
+| `machines.boot` | 整机机型开机：读入已设置的 BIOS，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的 |
+
+事件：`machines.changed`
+
 ### [mappers](mappers.md)
 
 | 请求 | 简介 |
@@ -88,6 +99,21 @@
 | `mappers.reload` | 重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效 |
 
 事件：`mappers.changed`
+
+### [media](media.md)
+
+| 请求 | 简介 |
+| --- | --- |
+| `media.floppyInsert` | 读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片 |
+| `media.floppyEject` | 取出盘片并丢弃镜像（没有保存的修改随之丢失） |
+| `media.floppySave` | 把驱动器里的镜像写回放入时的文件，并清除“已修改”标志 |
+| `media.floppyWriteProtect` | 设置或取消盘片的写保护 |
+| `media.floppyStatus` | 全部软驱的状态 |
+| `media.floppyFault` | 故障注入：取盘、写保护、无索引脉冲、磁头卡住、控制器无响应、指定扇区校验错、全部清除 |
+| `media.printerStatus` | 打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名 |
+| `media.printerFlush` | 立即输出当前页，等同打印机收到换页 |
+
+事件：`media.changed`、`media.printed`、`media.printFailed`
 
 ### [output](output.md)
 

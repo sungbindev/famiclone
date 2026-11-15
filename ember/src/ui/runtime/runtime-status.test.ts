@@ -98,12 +98,17 @@ describe('controlAvailability', () => {
 });
 
 describe('capturesMouse', () => {
-  it('设置打开且机器带鼠标（整机机型）才捕获；经典 FC、没有开机、还没读到状态、设置关闭都不捕获', () => {
+  it('设置打开且机器带鼠标（整机机型）才捕获；没有开机、还没读到状态、设置关闭都不捕获', () => {
     expect(capturesMouse(true, { ...RUNNING, machine: 'sb2000' })).toBe(true);
-    expect(capturesMouse(true, RUNNING)).toBe(false);
     expect(capturesMouse(true, NONE)).toBe(false);
     expect(capturesMouse(true, undefined)).toBe(false);
     expect(capturesMouse(false, { ...RUNNING, machine: 'sb2000' })).toBe(false);
+  });
+
+  it('经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才捕获，没有声明的点不进去', () => {
+    expect(capturesMouse(true, RUNNING)).toBe(false);
+    expect(capturesMouse(true, { ...RUNNING, cartridge: RUNNING.cartridge && { ...RUNNING.cartridge, devices: ['mouse'] } })).toBe(true);
+    expect(capturesMouse(false, { ...RUNNING, cartridge: RUNNING.cartridge && { ...RUNNING.cartridge, devices: ['mouse'] } })).toBe(false);
   });
 });
 

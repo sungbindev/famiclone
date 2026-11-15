@@ -30,9 +30,10 @@
         "pluginName": { "type": "string", "description": "匹配到的插件显示名称" },
         "pluginVersion": { "type": "string", "description": "匹配到的插件版本" },
         "host": { "type": "string", "description": "装配的主机型号" },
+        "devices": { "type": "array", "items": { "type": "string", "enum": ["mouse"] }, "description": "匹配到的插件声明的外设，目前只有 mouse（鼠标）" },
         "storage": { "type": "array", "items": { "$ref": "#/types/CartridgeStorage" }, "description": "存储区清单" }
       },
-      "required": ["path", "mapper", "variant", "prgSize", "chrSize", "mirroring", "battery", "crc32Prg", "crc32All", "pluginId", "pluginName", "pluginVersion", "host", "storage"]
+      "required": ["path", "mapper", "variant", "prgSize", "chrSize", "mirroring", "battery", "crc32Prg", "crc32All", "pluginId", "pluginName", "pluginVersion", "host", "devices", "storage"]
     },
     "RuntimeState": {
       "type": "object",

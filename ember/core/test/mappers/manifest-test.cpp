@@ -380,6 +380,27 @@ TEST(ManifestErrors, RejectsBadSettings) {
   expectInvalid(manifest, "settings 里的键重复：a");
 }
 
+TEST(Manifest, DevicesDefaultToNoneAndCanDeclareAMouse) {
+  EXPECT_TRUE(parseManifest(base().dump()).devices.empty());
+  json manifest = base();
+  manifest["devices"] = json::parse(R"(["mouse"])");
+  EXPECT_EQ(parseManifest(manifest.dump()).devices, std::vector<std::string>{"mouse"});
+  manifest["devices"] = json::array();
+  EXPECT_TRUE(parseManifest(manifest.dump()).devices.empty());
+}
+
+TEST(ManifestErrors, RejectsBadDevices) {
+  json manifest = base();
+  manifest["devices"] = "mouse";
+  expectInvalid(manifest, "manifest.devices 应为数组");
+  manifest["devices"] = json::parse(R"(["keyboard"])");
+  expectInvalid(manifest, "manifest.devices[0]");
+  manifest["devices"] = json::parse(R"([1])");
+  expectInvalid(manifest, "manifest.devices[0]");
+  manifest["devices"] = json::parse(R"(["mouse", "mouse"])");
+  expectInvalid(manifest, "manifest.devices 最多 1 项");
+}
+
 TEST(ManifestErrors, RejectsDeviceWiringFieldsAsUnknownFields) {
   json manifest = base();
   manifest["wires"] = json::parse(R"([{ "bus": "cpu", "address": "$4200", "device": "fdc", "register": 0, "read": true }])");

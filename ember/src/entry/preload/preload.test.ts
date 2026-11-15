@@ -48,7 +48,7 @@ describe('window.ember', () => {
   it('只暴露具名方法，不暴露 ipcRenderer 或通用的调用入口', () => {
     expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'onCoreStatusChange', 'shell', 'streams']);
     expect(JSON.stringify(Object.keys(bridge.streams))).toBe('["requestPorts"]');
-    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onWindowStateChange', 'setLayout', 'windowAction']);
+    expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onKeyboardReleased', 'onNativeKey', 'onWindowStateChange', 'setKeyboardCapture', 'setLayout', 'windowAction']);
     expect('ipcRenderer' in bridge).toBe(false);
     expect('invoke' in bridge).toBe(false);
   });
@@ -109,6 +109,20 @@ describe('window.ember', () => {
     expect(listener).toBeDefined();
     listener?.({ sender: '事件对象' }, { maximized: true, fullScreen: false });
     expect(received).toEqual([{ maximized: true, fullScreen: false }]);
+  });
+
+  it('键盘独占的开关用 invoke，独占期间的按键与“已关闭”只把数据交给回调，不交出 IPC 事件对象', async () => {
+    electron.invoke.mockResolvedValue(true);
+    await expect(bridge.shell.setKeyboardCapture(true)).resolves.toBe(true);
+    expect(electron.invoke).toHaveBeenLastCalledWith(SHELL_CHANNELS.setKeyboardCapture, true);
+    const keys: unknown[] = [];
+    let released = 0;
+    bridge.shell.onNativeKey((event) => keys.push(event));
+    bridge.shell.onKeyboardReleased(() => (released += 1));
+    electron.listeners.get(SHELL_CHANNELS.nativeKey)?.({ sender: '事件对象' }, { code: 'Escape', down: true });
+    electron.listeners.get(SHELL_CHANNELS.keyboardReleased)?.({ sender: '事件对象' });
+    expect(keys).toEqual([{ code: 'Escape', down: true }]);
+    expect(released).toBe(1);
   });
 
   it('核心运行状态的变化只把数据交给回调，不交出 IPC 事件对象', () => {

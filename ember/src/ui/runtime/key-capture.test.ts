@@ -107,6 +107,29 @@ describe('KeyboardCapture', () => {
   });
 });
 
+describe('KeyboardCapture.nativeKey（键盘独占交来的物理按键）', () => {
+  it('没有保留键：Esc、Tab、功能键、Ctrl、Alt、Win 键都上报，重复的按下不重复发送', () => {
+    const { sent, capture } = setup();
+    for (const code of ['Escape', 'Tab', 'F9', 'ControlLeft', 'AltRight', 'MetaLeft']) capture.nativeKey(code, true);
+    capture.nativeKey('Escape', true);
+    expect(sent.map((message) => message.code)).toEqual(['Escape', 'Tab', 'F9', 'ControlLeft', 'AltRight', 'MetaLeft']);
+    expect(sent.every((message) => message.down)).toBe(true);
+  });
+
+  it('松开只上报之前按下过的键，空键位被忽略，全部松开时按着的键都松开', () => {
+    const { sent, capture } = setup();
+    capture.nativeKey('KeyA', false);
+    capture.nativeKey('', true);
+    expect(sent).toEqual([]);
+    capture.nativeKey('KeyA', true);
+    capture.nativeKey('KeyB', true);
+    capture.nativeKey('KeyA', false);
+    sent.length = 0;
+    capture.releaseAll();
+    expect(sent).toEqual([{ type: 'key', code: 'KeyB', down: false }]);
+  });
+});
+
 describe('isEditableTarget 与采集', () => {
   it('文本输入框、多行文字框、下拉框与可编辑区域算可编辑元素', () => {
     for (const target of [{ tagName: 'INPUT', type: 'text' }, { tagName: 'input' }, { tagName: 'TEXTAREA' }, { tagName: 'SELECT' }, { tagName: 'DIV', isContentEditable: true }]) {

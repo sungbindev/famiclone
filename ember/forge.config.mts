@@ -6,7 +6,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：原生模块由 npm run core:build 编译到 core/build/Release，打包时作为额外资源复制到应用的 resources 目录；
+ * 备注：原生模块由 npm run core:build 编译到 core/build/Release，打包时作为额外资源复制到应用的 resources 目录（Windows 另有键盘独占模块 ember_keyboard.node）；
  *       预装的官方 mapper 插件包（build/plugins 下的 .emap，同样由 core:build 打包）以目录为单位复制成 resources/plugins，主进程把它交给核心作为预装目录；
  *       应用图标做好后在 packagerConfig 与安装程序里补上；macOS 安装包格式以后再定。
  * ------------------------------------------------------------------------
@@ -24,6 +24,8 @@ import { uiKitDirectory } from './ui-kit-source.mts';
 const APP_ID = 'cn.3578.ember';
 /** 编译好的原生模块。 */
 const NATIVE_MODULE = './core/build/Release/ember_core.node';
+/** Windows 键盘独占模块，只在 Windows 打包时分发。 */
+const KEYBOARD_MODULE = './core/build/Release/ember_keyboard.node';
 /** 打好的预装插件目录：目录名 plugins 保留，成为 resources/plugins。 */
 const BUNDLED_PLUGINS = './build/plugins';
 /** 可执行文件名。 */
@@ -34,7 +36,7 @@ const config: ForgeConfig = {
     asar: true,
     appBundleId: APP_ID,
     executableName: EXECUTABLE_NAME,
-    extraResource: [NATIVE_MODULE, BUNDLED_PLUGINS, `${NOTICES_DIRECTORY}/${NOTICES_FILE}`]
+    extraResource: [NATIVE_MODULE, ...(process.platform === 'win32' ? [KEYBOARD_MODULE] : []), BUNDLED_PLUGINS, `${NOTICES_DIRECTORY}/${NOTICES_FILE}`]
   },
   hooks: {
     // 第三方开源代码的许可全文在打包前生成，与关于对话框的清单同源。

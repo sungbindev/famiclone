@@ -374,6 +374,7 @@ await client.api.runtime.setFrameEvents({ frames: … });
 | `pluginName` | `string` | 是 | 匹配到的插件显示名称 |
 | `pluginVersion` | `string` | 是 | 匹配到的插件版本 |
 | `host` | `string` | 是 | 装配的主机型号 |
+| `devices` | `"mouse"[]` | 是 | 匹配到的插件声明的外设，目前只有 mouse（鼠标） |
 | `storage` | [runtime.CartridgeStorage](runtime.md#cartridgestorage)[] | 是 | 存储区清单 |
 
 ### RuntimeState

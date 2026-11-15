@@ -45,6 +45,7 @@ export function machineStatus(power: 'off' | 'on', mode: 'paused' | 'running', p
       pluginName: 'NROM',
       pluginVersion: '1.0.0',
       host: 'fc',
+      devices: [],
       storage: []
     }
   };

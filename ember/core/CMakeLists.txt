@@ -133,6 +133,16 @@ if(CMAKE_JS_INC)
   if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
     execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
   endif()
+
+  # Windows 键盘独占模块：独立的小模块，不依赖核心库，只由主进程加载。
+  if(WIN32)
+    add_library(ember_keyboard SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/binding/keyboard-capture-win.cpp ${CMAKE_JS_SRC})
+    set_target_properties(ember_keyboard PROPERTIES PREFIX "" SUFFIX ".node")
+    target_include_directories(ember_keyboard PRIVATE ${CMAKE_JS_INC} ${NODE_ADDON_API_DIR})
+    target_compile_definitions(ember_keyboard PRIVATE NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
+    target_compile_options(ember_keyboard PRIVATE /utf-8 /W4 /permissive- /EHsc)
+    target_link_libraries(ember_keyboard PRIVATE user32 comctl32 ${CMAKE_JS_LIB})
+  endif()
 endif()
 
 # ---------------------------------------------------------------- 测试

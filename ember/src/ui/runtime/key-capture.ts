@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
  * 备注：纯逻辑，不监听任何事件，由画面组件把键盘事件交进来。这里没有键位映射，也没有默认键位：键位由卡带的 mapper 脚本决定，
- *       界面只上报“哪个物理键（KeyboardEvent.code）按下或松开了”。F1 到 F24、Tab、Escape 与带 Ctrl、Alt、Meta 的组合键留给应用自己的快捷键与焦点移动，不上报。
+ *       界面只上报“哪个物理键（KeyboardEvent.code）按下或松开了”。页面内的键盘事件（没有键盘独占时）里，F1 到 F24、Tab、Escape 与带 Ctrl、Alt、Meta 的组合键留给应用自己的快捷键与焦点移动，不上报；
+ *       键盘独占开启时（Windows），主进程交来的物理按键经 nativeKey 全部上报，不做这些保留。
  * ------------------------------------------------------------------------
  */
 
@@ -92,6 +93,22 @@ export class KeyboardCapture {
     if (!this.held.delete(code)) return false;
     this.send({ type: 'key', code, down: false });
     return true;
+  }
+
+  /**
+   * 处理键盘独占交来的一次物理按键：按住不放的重复按下忽略，其余全部上报，没有保留键，也不看焦点在哪里。
+   * @param code 物理键位。
+   * @param down 按下为 true，松开为 false。
+   */
+  nativeKey(code: string, down: boolean): void {
+    if (code === '') return;
+    if (!down) {
+      this.keyUp(code);
+      return;
+    }
+    if (this.held.has(code)) return;
+    this.held.add(code);
+    this.send({ type: 'key', code, down: true });
   }
 
   /** 松开全部按着的键：窗口失焦、页面隐藏、卸载时调用。 */

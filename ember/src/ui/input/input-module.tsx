@@ -19,7 +19,7 @@ const DIALOG_ID = 'input.gamepadSettings';
 export const INPUT_COMMANDS = { open: 'input.openGamepadSettings' } as const;
 
 /** 对话框内容区的初始尺寸与最小尺寸（像素）。 */
-const DIALOG_SIZE = { width: 640, height: 600, minWidth: 520, minHeight: 360 } as const;
+const DIALOG_SIZE = { width: 640, height: 560, minWidth: 520, minHeight: 360 } as const;
 
 /** 用户可见的文字。 */
 const TEXT = { title: '手柄设置' } as const;

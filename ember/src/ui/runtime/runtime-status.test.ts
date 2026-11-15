@@ -113,12 +113,13 @@ describe('capturesMouse', () => {
 });
 
 describe('显示文字', () => {
-  it('主机型号：经典 FC 与整机机型的显示名；没有开机时没有文字；不认识的型号显示型号标识', () => {
-    expect(hostText(RUNNING)).toBe('经典 FC');
-    expect(hostText(NONE)).toBeUndefined();
-    expect(hostText(undefined)).toBeUndefined();
-    expect(hostText({ ...RUNNING, machine: 'sb2000' })).toBe('小霸王 2000');
-    expect(hostText({ ...RUNNING, machine: 'other' })).toBe('other');
+  it('主机型号：开机后是运行的主机，没有开机时是已选机型；状态还没读到时没有文字；不认识的型号显示型号标识', () => {
+    expect(hostText(RUNNING, 'sb2000')).toBe('经典 FC');
+    expect(hostText(NONE, 'fc')).toBe('经典 FC');
+    expect(hostText(NONE, 'sb2000')).toBe('小霸王 2000');
+    expect(hostText(undefined, 'sb2000')).toBeUndefined();
+    expect(hostText({ ...RUNNING, machine: 'sb2000' }, 'fc')).toBe('小霸王 2000');
+    expect(hostText({ ...RUNNING, machine: 'other' }, 'fc')).toBe('other');
   });
 
   it('卡带：文件名，没有卡带（含整机机型用 BIOS 开机）时没有文字；两种路径分隔符都认', () => {

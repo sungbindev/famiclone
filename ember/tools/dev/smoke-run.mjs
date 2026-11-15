@@ -3,7 +3,7 @@
  * 名称：smoke-run.mjs
  * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、 *       键盘独占的接口与原生模块能加载、开启、关闭（不注入系统按键）、 *       系统栏左侧的运行按钮（只有图标）实时显示运行状态并展开运行面板、面板按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“选择机型”子菜单、
  *       启动时底部面板关闭且没有活动栏、边栏、标签栏与右边栏、展开与收起面板时窗口大小不变而画面框等比缩放并留在显示区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白、
- *       首选项对话框（独立的系统窗口，主题与主窗口一致）与首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、调试服务与系统栏右侧的“调试模式”、
+ *       首选项对话框（独立的系统窗口，主题与主窗口一致）与首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、手柄设置对话框（手柄图上的 10 个键、点键设置与 Esc 取消、实体手柄来源）、调试服务与系统栏右侧的“调试模式”、
  *       页面重载与核心进程重启后端口重新建立且运行按钮状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -377,6 +377,8 @@ async function main() {
       [1, 3, 4].every((index) => machineItems[index].disabled && machineItems[index].text.includes('暂未支持')),
     JSON.stringify(machineItems.map((entry) => entry.label))
   );
+  const subRect = await page.evaluate(`(() => { const rect = document.querySelector('.ui-menu__popup--sub').getBoundingClientRect(); return { left: rect.left, right: rect.right, width: innerWidth }; })()`);
+  check('“选择机型”子菜单完整地在窗口内（两侧都放不下时右边缘贴窗口右侧）', subRect.left >= 7 && subRect.right <= subRect.width - 7, JSON.stringify(subRect));
   await hoverMenuItem('最近打开');
   const recentItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0 && items[0].label === 'nestest.nes', 3000, 100);
   check('“最近打开”子菜单列出启动参数加载的卡带（只给显示名，不含路径）', recentItems.length === 1 && recentItems[0].label === 'nestest.nes' && !recentItems[0].text.includes('\\') && !recentItems[0].text.includes('/'), JSON.stringify(recentItems));
@@ -528,6 +530,7 @@ async function main() {
       if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-no-machine.png'));
       const restartedBar = await textOf('.ui-status-bar');
       check('核心重启后系统栏的卡带与 mapper 项同样刷新（不再显示旧的卡带名）', !restartedBar.includes('nestest.nes') && !restartedBar.includes('NROM'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
+      check('没有开机时系统栏的主机型号显示已选机型（默认“经典 FC”），而不是只在开机后显示', restartedBar.includes('经典 FC'), restartedBar.replace(/\s+/g, ' ').slice(0, 60));
       // 调试服务在新核心里重新监听（启动参数会再次交给核心），令牌不变。
       const afterRestart = await waitFor(
         () => openDebugSocket(`ws://127.0.0.1:${debugPort}/`).catch(() => undefined),
@@ -546,6 +549,8 @@ async function main() {
   await sleep(300);
   const settingsItems = await menuItems('.ui-menu__popup');
   check('“设置”菜单里有“首选项”（Ctrl+,）', settingsItems.some((entry) => entry.label === '首选项' && !entry.disabled && entry.text.includes('Ctrl+,')), settingsItems.map((entry) => entry.text).join('|'));
+  const settingsPlace = await page.evaluate(`({ top: document.querySelector('.ui-menu__popup').getBoundingClientRect().top, controls: navigator.windowControlsOverlay?.getTitlebarAreaRect().bottom ?? 0 })`);
+  check('“设置”菜单的弹层不压在系统窗口按钮下面（顶边不小于按钮区底边）', settingsPlace.top >= settingsPlace.controls, JSON.stringify(settingsPlace));
   await page.evaluate(`[...document.querySelectorAll('.ui-menu__popup [role^="menuitem"]')].find((item) => item.querySelector('.ui-menu__label')?.textContent === '首选项')?.click()`);
   const dialogTarget = await waitFor(
     async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((entry) => entry.type === 'page' && entry.id !== target.id),
@@ -562,6 +567,41 @@ async function main() {
   check('对话框的主题类与主窗口一致（深浅主题都有）', dialogTheme.split(' ').filter((name) => name.startsWith('ui-theme') || name.includes('dark') || name.includes('light')).join(' ') === mainTheme.split(' ').filter((name) => name.startsWith('ui-theme') || name.includes('dark') || name.includes('light')).join(' '), `${dialogTheme} / ${mainTheme}`);
   if (screenshotDirectory !== undefined && dialogPage !== undefined) await saveScreenshot(dialogPage, join(screenshotDirectory, 'smoke-preferences.png'));
   dialogPage?.close();
+
+  // 手柄设置对话框：经“设置”菜单的“手柄设置”打开（又一个独立窗口）；一张手柄图，10 个键各是图上的一个按钮；点键进入设置，Esc 取消后键保持选中；
+  // 切到“实体手柄”来源但没有指定手柄时图上的键不可点。
+  await menuButton('设置');
+  await sleep(300);
+  await page.evaluate(`[...document.querySelectorAll('.ui-menu__popup [role^="menuitem"]')].find((item) => item.querySelector('.ui-menu__label')?.textContent === '手柄设置')?.click()`);
+  const padTarget = await waitFor(
+    async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((entry) => entry.type === 'page' && entry.title === '手柄设置'),
+    (value) => value !== undefined,
+    10_000,
+    200
+  );
+  check('手柄设置在独立的系统窗口（对话框）里打开', padTarget !== undefined, padTarget?.title);
+  const padPage = padTarget === undefined ? undefined : await connectCdp(padTarget.webSocketDebuggerUrl);
+  await padPage?.send('Runtime.enable');
+  const padKeys = `[...document.querySelectorAll('.ember-pad__key')].filter((key) => key.offsetParent !== null)`;
+  const padLabels = padPage === undefined ? [] : await waitFor(() => padPage.evaluate(`${padKeys}.map((key) => key.getAttribute('aria-label'))`).catch(() => []), (labels) => labels.length === 10, 8000, 100);
+  check('手柄设置：一张手柄图，10 个键各是图上的一个按钮，写着键盘的当前绑定（A 是 X，开始是回车）', padLabels.length === 10 && padLabels.includes('绑定键盘按键：A（当前：X）') && padLabels.includes('绑定键盘按键：开始（当前：回车）'), padLabels.join('|'));
+  const padInside = padPage === undefined ? false : await padPage.evaluate(`(() => { const box = [...document.querySelectorAll('.ember-pad')].find((item) => item.offsetParent !== null).getBoundingClientRect(); return ${padKeys}.every((key) => { const rect = key.getBoundingClientRect(); return rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1; }); })()`);
+  check('手柄图上的 10 个键都在图里', padInside === true);
+  const padState = () => padPage.evaluate(`(() => { const key = ${padKeys}.find((item) => item.getAttribute('aria-pressed') === 'true'); return { label: key?.getAttribute('aria-label') ?? '', learning: key?.dataset.learning ?? '', text: document.body.innerText }; })()`);
+  await padPage?.evaluate(`${padKeys}.find((key) => key.getAttribute('aria-label') === '绑定键盘按键：A（当前：X）')?.click()`);
+  await sleep(300);
+  const padLearning = padPage === undefined ? undefined : await padState();
+  check('点图上的 A 键后选中它并等待按键（强调色边框，说明行提示按键盘上的键）', padLearning?.label.includes('请按下键盘上的键') === true && padLearning.learning === 'true' && padLearning.text.includes('设置“A”'), JSON.stringify({ label: padLearning?.label, learning: padLearning?.learning }));
+  if (padPage !== undefined) await pressKey(padPage, { key: 'Escape', code: 'Escape', keyCode: 27 }, 30);
+  await sleep(300);
+  const padCancelled = padPage === undefined ? undefined : await padState();
+  check('按 Esc 取消后 A 键仍选中，说明行显示“A：X”，绑定没有变', padCancelled?.label === '绑定键盘按键：A（当前：X）' && padCancelled.learning === '' && padCancelled.text.includes('A：X'), JSON.stringify({ label: padCancelled?.label, learning: padCancelled?.learning }));
+  if (screenshotDirectory !== undefined && padPage !== undefined) await saveScreenshot(padPage, join(screenshotDirectory, 'smoke-gamepad.png'));
+  await padPage?.evaluate(`[...document.querySelectorAll('[role="radio"], input[type="radio"]')].find((item) => (item.closest('label') ?? item).textContent.includes('实体手柄'))?.click()`);
+  await sleep(400);
+  const padPadMode = padPage === undefined ? undefined : await padPage.evaluate(`({ disabled: ${padKeys}.every((key) => key.disabled), text: document.body.innerText })`);
+  check('切到“实体手柄”来源且没有指定手柄时，图上的键都不可点，说明行提示先选手柄', padPadMode?.disabled === true && padPadMode.text.includes('先在上面选择要使用的手柄'), JSON.stringify(padPadMode?.disabled));
+  padPage?.close();
 
   // 正常退出：经浏览器端点关闭全部窗口，应用走 will-quit → 停止核心的流程自行退出（核心进程的停止超时是 5 秒，快于它说明没有靠超时强杀）。
   page.close();

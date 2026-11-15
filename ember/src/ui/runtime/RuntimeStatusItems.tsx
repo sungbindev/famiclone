@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：RuntimeStatusItems.tsx
- * 说明：运行模块登记到系统栏左侧的项：主机型号、卡带名、mapper 插件；没有信息的项不显示（整机机型用 BIOS 开机时只有主机型号）。
+ * 说明：运行模块登记到系统栏左侧的项：主机型号（没有开机时是已选机型）、卡带名、mapper 插件；没有信息的项不显示（整机机型用 BIOS 开机时没有卡带与 mapper 插件）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -26,10 +26,10 @@ export interface RuntimeStatusItemProps {
   readonly controller: RuntimeController;
 }
 
-/** 主机型号；没有开机时不显示。 */
+/** 主机型号：开机后是运行的主机，没有开机时是已选机型。 */
 export function HostStatusItem({ controller }: RuntimeStatusItemProps) {
-  const { status } = useRuntimeState(controller);
-  const text = hostText(status);
+  const { status, selectedMachine } = useRuntimeState(controller);
+  const text = hostText(status, selectedMachine);
   return text === undefined ? null : <StatusBarItem text={text} title={TEXT.host} />;
 }
 

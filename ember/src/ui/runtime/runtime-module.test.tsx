@@ -354,8 +354,27 @@ describe('系统栏左侧', () => {
     expect(startItems(container).map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '小霸王 2000']);
   });
 
-  it('没有开机时没有信息的状态项不显示', async () => {
+  it('没有开机时只显示已选机型（默认经典 FC），没有卡带与 mapper 插件', async () => {
     const { container } = await setup();
+    expect(startItems(container).map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '经典 FC']);
+  });
+
+  it('没有开机时系统栏的主机型号跟随已选机型：选了小霸王 2000 就显示它，开机后显示运行的主机', async () => {
+    const { container, fake } = await setup({ sb2000Bios: true });
+    await openMenu('文件(F)');
+    await userEvent.hover(item('选择机型'));
+    await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
+    await act(async () => settle());
+    expect(startItems(container).map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '小霸王 2000']);
+
+    fake.status = { ...machineStatus('on', 'running'), machine: 'sb2000' };
+    fake.emit('runtime.stateChanged', { power: 'on', mode: 'running', reason: 'powerOn' });
+    await act(async () => settle());
+    expect(startItems(container).map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '小霸王 2000']);
+  });
+
+  it('状态还没读到时系统栏没有主机型号', async () => {
+    const { container } = await setup({ status: undefined });
     expect(startItems(container).map((element) => element.getAttribute('aria-label'))).toEqual(['运行']);
   });
 

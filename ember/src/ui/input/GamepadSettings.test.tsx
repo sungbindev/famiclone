@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：GamepadSettings.test.tsx
- * 说明：手柄设置页面的测试：按玩家显示键盘绑定、学习键盘键（物理键不重复、Esc 取消）、清除、选择实体手柄并学习按钮与轴、保存失败用通知提示、恢复默认、
+ * 说明：手柄设置页面的测试：手柄图上的 10 个键、按玩家显示键盘绑定、学习键盘键（物理键不重复、Esc 取消）、选中键的说明与清除、切换输入来源、选择实体手柄并学习按钮与轴、保存失败用通知提示、恢复默认、
  *       在别处修改（事件）后页面更新、读取失败的提示。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -93,6 +93,11 @@ function plugPads(pads: () => unknown[]): void {
   Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: pads });
 }
 
+/** 把输入来源切换到“实体手柄”。 */
+async function showPadSource(): Promise<void> {
+  await userEvent.click(await screen.findByRole('radio', { name: '实体手柄' }));
+}
+
 beforeEach(() => notify.mockClear());
 afterEach(() => {
   Reflect.deleteProperty(navigator, 'getGamepads');
@@ -165,7 +170,8 @@ describe('GamepadSettings：键盘', () => {
 
   it('清除一个键的键盘绑定；没有绑定的键“清除”不可点', async () => {
     const { setBindings, lastSaved } = setup();
-    await userEvent.click(await screen.findByRole('button', { name: '清除键盘按键：A' }));
+    await userEvent.click(await screen.findByRole('button', { name: '绑定键盘按键：A（当前：X）' }));
+    await userEvent.click(screen.getByRole('button', { name: '清除键盘按键：A' }));
     await waitFor(() => expect(setBindings).toHaveBeenCalledTimes(1));
     expect(lastSaved()[0]?.keys.find((item) => item.button === 'a')).toBeUndefined();
     await waitFor(() => expect((screen.getByRole('button', { name: '清除键盘按键：A' }) as HTMLButtonElement).disabled).toBe(true));
@@ -191,6 +197,7 @@ describe('GamepadSettings：实体手柄', () => {
   it('系统发现的手柄出现在“使用的手柄”里，选中后保存指定（按钮绑定为空）', async () => {
     plugPads(() => [fakePad(0, 'Demo Pad')]);
     const { setBindings, lastSaved } = setup();
+    await showPadSource();
     await userEvent.click(await screen.findByRole('combobox', { name: '使用的手柄' }));
     await userEvent.click(screen.getByRole('option', { name: 'Demo Pad' }));
     await waitFor(() => expect(setBindings).toHaveBeenCalledTimes(1));
@@ -203,6 +210,7 @@ describe('GamepadSettings：实体手柄', () => {
     const slots = defaultSlots();
     slots[0] = { ...slots[0]!, gamepad: { id: 'Gone Pad', occurrence: 0, bindings: [{ button: 'a', kind: 'button', index: 1 }] } };
     setup(() => Promise.resolve({ slots }));
+    await showPadSource();
     expect((await screen.findByRole('combobox', { name: '使用的手柄' })).textContent).toContain('Gone Pad（未连接）');
     expect((screen.getByRole('button', { name: '绑定手柄按钮：A（当前：按钮 1）' }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -218,6 +226,7 @@ describe('GamepadSettings：实体手柄', () => {
     const { setBindings, lastSaved } = setup(() => Promise.resolve({ slots }));
     const tick = () => act(() => callbacks.splice(0).forEach((callback) => callback(0)));
 
+    await showPadSource();
     await userEvent.click(await screen.findByRole('button', { name: '绑定手柄按钮：A（当前：未绑定）' }));
     expect(screen.getByRole('button', { name: /请按下手柄上的按钮/ })).toBeTruthy();
     tick();
@@ -240,6 +249,7 @@ describe('GamepadSettings：实体手柄', () => {
     const { setBindings, lastSaved } = setup(() => Promise.resolve({ slots }));
     const tick = () => act(() => callbacks.splice(0).forEach((callback) => callback(0)));
 
+    await showPadSource();
     await userEvent.click(await screen.findByRole('button', { name: '绑定手柄按钮：左（当前：未绑定）' }));
     tick();
     axes = [-1, 0];
@@ -254,7 +264,9 @@ describe('GamepadSettings：实体手柄', () => {
     const slots = defaultSlots();
     slots[0] = { ...slots[0]!, gamepad: { id: 'Demo Pad', occurrence: 0, bindings: [{ button: 'a', kind: 'button', index: 1 }] } };
     const { setBindings, lastSaved } = setup(() => Promise.resolve({ slots }));
-    await userEvent.click(await screen.findByRole('button', { name: '清除手柄按钮：A' }));
+    await showPadSource();
+    await userEvent.click(await screen.findByRole('button', { name: '绑定手柄按钮：A（当前：按钮 1）' }));
+    await userEvent.click(screen.getByRole('button', { name: '清除手柄按钮：A' }));
     await waitFor(() => expect(setBindings).toHaveBeenCalledTimes(1));
     expect(lastSaved()[0]?.gamepad?.bindings).toEqual([]);
   });
@@ -264,9 +276,66 @@ describe('GamepadSettings：实体手柄', () => {
     const slots = defaultSlots();
     slots[0] = { ...slots[0]!, gamepad: { id: 'Demo Pad', occurrence: 0, bindings: [] } };
     const { setBindings, lastSaved } = setup(() => Promise.resolve({ slots }));
+    await showPadSource();
     await userEvent.click(await screen.findByRole('combobox', { name: '使用的手柄' }));
     await userEvent.click(screen.getByRole('option', { name: '不使用' }));
     await waitFor(() => expect(setBindings).toHaveBeenCalledTimes(1));
     expect(lastSaved()[0]?.gamepad).toBeUndefined();
+  });
+});
+
+describe('GamepadSettings：手柄图', () => {
+  it('图上有手柄的 10 个键，各自写着键名与当前的键盘按键', async () => {
+    setup();
+    await screen.findByRole('button', { name: '绑定键盘按键：A（当前：X）' });
+    for (const name of ['上', '下', '左', '右', 'A', 'B', '连发 A', '连发 B', '选择', '开始']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^绑定键盘按键：${name}（`) }), name).toBeTruthy();
+    }
+    expect(screen.getAllByRole('button', { name: /^绑定键盘按键：/ })).toHaveLength(10);
+  });
+
+  it('点图上的键后选中它，下方说明行显示它的当前绑定；点另一个键就换成另一个', async () => {
+    setup();
+    await userEvent.click(await screen.findByRole('button', { name: '绑定键盘按键：B（当前：Z）' }));
+    fireEvent.keyDown(document.body, { code: 'Escape' });
+    expect(await screen.findByText('B：Z')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '绑定键盘按键：B（当前：Z）' }).getAttribute('aria-pressed')).toBe('true');
+    await userEvent.click(screen.getByRole('button', { name: '绑定键盘按键：开始（当前：回车）' }));
+    expect(screen.getByText(/设置“开始”/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: '绑定键盘按键：B（当前：Z）' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('学习中点另一个键，改为学习那个键，不保存前一个', async () => {
+    const { setBindings, lastSaved } = setup();
+    await userEvent.click(await screen.findByRole('button', { name: '绑定键盘按键：A（当前：X）' }));
+    await userEvent.click(screen.getByRole('button', { name: '绑定键盘按键：B（当前：Z）' }));
+    expect(setBindings).not.toHaveBeenCalled();
+    fireEvent.keyDown(document.body, { code: 'KeyJ' });
+    await waitFor(() => expect(setBindings).toHaveBeenCalledTimes(1));
+    const keys = lastSaved()[0]?.keys ?? [];
+    expect(keys.find((item) => item.button === 'b')?.code).toBe('KeyJ');
+    expect(keys.find((item) => item.button === 'a')?.code).toBe('KeyX');
+  });
+
+  it('切换到“实体手柄”只改显示：图上显示手柄的绑定，切回键盘时键盘的绑定不变', async () => {
+    plugPads(() => [fakePad(0, 'Demo Pad')]);
+    const slots = defaultSlots();
+    slots[0] = { ...slots[0]!, gamepad: { id: 'Demo Pad', occurrence: 0, bindings: [{ button: 'a', kind: 'button', index: 1 }] } };
+    setup(() => Promise.resolve({ slots }));
+    await screen.findByRole('button', { name: '绑定键盘按键：A（当前：X）' });
+    await showPadSource();
+    expect(await screen.findByRole('button', { name: '绑定手柄按钮：A（当前：按钮 1）' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^绑定键盘按键/ })).toBeNull();
+    await userEvent.click(screen.getByRole('radio', { name: '键盘' }));
+    expect(await screen.findByRole('button', { name: '绑定键盘按键：A（当前：X）' })).toBeTruthy();
+  });
+
+  it('实体手柄来源还没有指定手柄时，图上的键不可点，说明里提示先选手柄', async () => {
+    plugPads(() => [fakePad(0, 'Demo Pad')]);
+    setup();
+    await showPadSource();
+    const key = (await screen.findByRole('button', { name: '绑定手柄按钮：A（当前：未绑定）' })) as HTMLButtonElement;
+    expect(key.disabled).toBe(true);
+    expect(screen.getByText('先在上面选择要使用的手柄。')).toBeTruthy();
   });
 });

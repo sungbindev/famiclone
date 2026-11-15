@@ -7,7 +7,7 @@
  * 日期：2026-11-15
  * 备注：可用性规则见 docs/05-界面.md 第 4.1 节：没有开机时暂停、复位置灰；断电时暂停与软复位置灰；硬复位只要已开机就可用；
  *       “开机”按已选机型判断（见 powerToggleAction）；“关闭卡带”只在装着卡带时可用。状态还没读到（核心启动中、重启中或不可用）时为 unknown，全部置灰。
- *       主机型号、卡带、mapper 插件、电源状态没有信息时文字函数返回 undefined，界面不显示这一项，不用“—”或“无”占位。
+ *       卡带、mapper 插件、电源状态没有信息时文字函数返回 undefined，界面不显示这一项，不用“—”或“无”占位；主机型号总有值（未开机时是已选机型），只在状态还没读到时没有。
  * ------------------------------------------------------------------------
  */
 
@@ -78,10 +78,15 @@ export function stateText(status: RuntimeStatusResult | undefined): string | und
   return state === 'unknown' ? undefined : TEXT[state];
 }
 
-/** 主机型号的显示文字；没有开机时没有信息，为 undefined。 */
-export function hostText(status: RuntimeStatusResult | undefined): string | undefined {
-  if (status?.machine === undefined) return undefined;
-  return HOST_NAMES[status.machine] ?? status.machine;
+/**
+ * 主机型号的显示文字：开机后是正在运行的主机，没有开机时是已选机型；状态还没读到时没有信息，为 undefined。
+ * @param status runtime.status 的结果；还没读到时为 undefined。
+ * @param selectedMachine 已选机型的标识。
+ */
+export function hostText(status: RuntimeStatusResult | undefined, selectedMachine: string): string | undefined {
+  if (status === undefined) return undefined;
+  const machine = status.machine ?? selectedMachine;
+  return HOST_NAMES[machine] ?? machine;
 }
 
 /** 卡带的显示文字：卡带文件名；没有卡带（含整机机型用 BIOS 开机）时没有信息，为 undefined。 */

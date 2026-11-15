@@ -80,7 +80,6 @@ export function PreferencesPage({ bridge }: ShellPageProps) {
   return (
     <SplitView
       sideLabel={TEXT.groups}
-      sideTitle={TEXT.groups}
       defaultSideWidth={SIDE_WIDTH.initial}
       minSideWidth={SIDE_WIDTH.min}
       maxSideWidth={SIDE_WIDTH.max}

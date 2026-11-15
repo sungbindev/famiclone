@@ -26,8 +26,8 @@ const TEXT = {
   loading: '正在读取…'
 } as const;
 
-/** 左栏的默认宽度与可拖动范围（像素）。 */
-const SIDE_WIDTH = { initial: 180, min: 140, max: 320 } as const;
+/** 左栏的可拖动范围与默认宽度（像素）；默认宽度取最小宽度。 */
+const SIDE_WIDTH = { initial: 140, min: 140, max: 320 } as const;
 
 /**
  * 首选项页面。

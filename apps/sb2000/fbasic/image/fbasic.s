@@ -3559,19 +3559,13 @@ L9DAC:  lda     #<LB370
         sta     $53
         jsr     L895A
         beq     L9DC4
-L9DB9:  lda     #<LB379
-        sta     $52
-        lda     #>LB379
-        sta     $53
-        jsr     L895A
 L9DC4:  lda     #$01
         sta     $52
         lda     #$05
         sta     $53
         jsr     L895A
         jmp     LB56F
-L9DD2:  jsr     L9DB9
-        jmp     L9DF5
+L9DD2:  jmp     disk_error
 L9DD8:  jsr     L908C
         jsr     L9E52
         jmp     LC565
@@ -6176,8 +6170,6 @@ LB367:
         .byte   "WRITING ", $00
 LB370:
         .byte   "LOADING ", $00
-LB379:
-        .byte   "SKIP ", $00
 LB37F:
         .byte   "N"
 LB380:
@@ -7096,14 +7088,7 @@ LBE0E:  lda     $32
 LBE14:  lda     $32
         ora     #$80
         jmp     video_write_ctrl
-; 磁带例程已删除（SB2000 没有磁带接口）：读返回出错码 2 与进位，写什么也不做；磁带模块以后在这里接
-LBE1C:
-LBE24:
-LBE53:  lda     #$02
-        sec
-        rts
-LBF1F:
-LBF30:  rts
+        .include        "disk.inc"
 LBFCE:  jsr     LB4A7
 LBFD1:  jsr     LB436
         ldy     #$08
@@ -7726,7 +7711,7 @@ LC544:  lda     $2007
         cmp     #$28
         bne     LC535
 LC561:  rts
-LC562:  jsr     L9DB9
+LC562:  jmp     disk_error
 LC565:  lda     #$00
         sta     $5F
         lda     #$24

@@ -11,7 +11,7 @@
 | 1 | 把原版还原成可重定位的符号源码 | 完成（见下） |
 | 2 | 移植对照表 | 已按整机接管方案重写，仍有若干“待查”事项 |
 | 3 | 外壳：加载器、ERAM 小段、DOS 入口门、退出 | 完成：原版 PRG 原样放进窗口 0-7 能跑起来，入口门、退出回 DOS 已在 Ember 里验证 |
-| 4 | 原生改写：启动与退出、画面、键盘、图形与精灵、声音、手柄、存取 | 进行中：开机画面、文字输出、SB2000 键盘（码集 1，IRQ）已在 Ember 里跑通，能输入并执行 BASIC 语句，F12 退回 DOS；GAME 0-3 的数据已搬到扩展 RAM 页，DMA 搬运已验证；BG 画面、属性调色板、精灵、声音、手柄、存取还没改 |
+| 4 | 原生改写：启动与退出、画面、键盘、图形与精灵、声音、手柄、存取 | 进行中：开机画面、文字输出、SB2000 键盘（码集 1，IRQ）已在 Ember 里跑通，能输入并执行 BASIC 语句，F12 退回 DOS；GAME 0-3 的数据已搬到扩展 RAM 页，DMA 搬运已验证；SAVE、LOAD 已改成磁盘（文件名固定加 `.BS`，`SAVE "ABC"` 与 `SAVE "ABC.BS"` 都存成 `ABC.BS`），读写往返已验证；BG 画面、属性调色板、精灵、声音、手柄、BG 记录的磁盘存取还没改 |
 | 5 | 验证：同一份按键脚本分别在 FC 模式（原版）与学习机（新版）里运行 | 未开始 |
 
 ## 阶段 1 的结果
@@ -49,7 +49,7 @@ apps/sb2000/fbasic/
   analysis/    分析结果：CDL、代码入口、跳过前缀、数据布局、立即数地址、覆盖脚本（coverage/）
   reference/   生成的原版可重定位源码（fbasic-nes.s）与 CHR
   tools/       分析与 FC 模式验证工具，以及构建与运行学习机版的脚本（lib/ 是共用模块）
-  image/       映像与外壳的源码：fbasic.s（手工维护的移植源码）、platform.inc、platform-code.inc（画面初始化、PPU 写入、GAME 数据的 DMA）、keyboard.inc（SB2000 键盘）、game.s（GAME 0-3 的数据）、stub.s（ERAM 小段：进入、入口门、退出）、shell.inc（共用常量）
+  image/       映像与外壳的源码：fbasic.s（手工维护的移植源码）、platform.inc、platform-code.inc（画面初始化、PPU 写入、GAME 数据的 DMA）、keyboard.inc（SB2000 键盘）、disk.inc（SAVE、LOAD 的磁盘存取）、game.s（GAME 0-3 的数据）、stub.s（ERAM 小段：进入、入口门、退出）、shell.inc（共用常量）
   exe/         SB-DOS 程序外壳（fcdev 项目）：loader.s 把 32K 映像与小段放进程序文件并启动
   docs/        移植计划、移植对照表
   test/        分析的测试

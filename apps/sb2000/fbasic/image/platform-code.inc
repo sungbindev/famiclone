@@ -81,6 +81,7 @@ clear_names:
         sta     KB_EXT
         sta     KB_PREFIX
         sta     KB_MODS
+        sta     SHELL_DISK_PAGE
         lda     #$FF & ~HW_IRQ_KEYBOARD
         sta     SHELL_IRQ_MASK
         sta     HW_IRQ_MASK

@@ -262,3 +262,256 @@ retable_address:
         lda     V_TMP1
         sta     HW_PPU_ADDRESS
         rts
+
+; ------------------------------------------------------------------------
+; 背景图与调色板组：NES 的背景图是 1K（960 个图块号加 64 个属性字节，每 2x2 个图块共用一个调色板组），
+; 6576 的名称表 1 在 CRAM $0800 起，每个图块 2 字节（图案号，高 4 位调色板组加图案表位），共 32 行；两者之间要转换。
+; ------------------------------------------------------------------------
+BG_ROW          = $F1                           ; 当前行（0-29）
+BG_COL          = $F2                           ; 当前列（0-31）
+BG_ATTR_ROW     = $F4                           ; 当前行所在属性行的起点（每行属性 8 个字节）
+
+; 把 ($19) 起的 1K（NES 格式）写成名称表 1；第 30、31 行写空格。$EB/$EC 指向属性字节，$DE/$DF 是临时单元（NMI 不用）
+bg_write_page:
+        clc
+        lda     $19
+        adc     #$C0
+        sta     $EB
+        lda     $1A
+        adc     #$03
+        sta     $EC
+        lda     #$24
+        ldx     #$00
+        jsr     L81EC
+        lda     #$00
+        sta     BG_ROW
+bg_write_row:
+        lda     BG_ROW
+        lsr     a
+        lsr     a
+        asl     a
+        asl     a
+        asl     a
+        sta     BG_ATTR_ROW
+        lda     #$00
+        sta     BG_COL
+bg_write_col:
+        ldy     BG_COL
+        lda     ($19),y
+        pha
+        lda     BG_COL
+        lsr     a
+        lsr     a
+        clc
+        adc     BG_ATTR_ROW
+        tay
+        lda     ($EB),y
+        sta     $DF
+        lda     BG_COL                          ; 这个图块在 2x2 块里的位置决定属性字节里取哪两位
+        and     #$02
+        sta     $DE
+        lda     BG_ROW
+        and     #$02
+        asl     a
+        ora     $DE
+        tax
+        lda     $DF
+        cpx     #$00
+        beq     bg_write_group
+bg_write_shift:
+        lsr     a
+        lsr     a
+        dex
+        dex
+        bne     bg_write_shift
+bg_write_group:
+        and     #$03
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        ora     V_TILE_HIGH
+        sta     $DF
+        pla
+        sta     HW_PPU_DATA
+        lda     $DF
+        sta     HW_PPU_DATA
+        inc     BG_COL
+        lda     BG_COL
+        cmp     #$20
+        bne     bg_write_col
+        clc
+        lda     $19
+        adc     #$20
+        sta     $19
+        bcc     bg_write_next
+        inc     $1A
+bg_write_next:
+        inc     BG_ROW
+        lda     BG_ROW
+        cmp     #$1E
+        bne     bg_write_row
+        ldx     #$40
+bg_write_blank:
+        lda     #$20
+        sta     HW_PPU_DATA
+        lda     V_TILE_HIGH
+        sta     HW_PPU_DATA
+        dex
+        bne     bg_write_blank
+        rts
+
+; 把名称表 1 读成 ($19) 起的 1K（NES 格式）：每个 2x2 块取左上角图块的调色板组
+bg_read_page:
+        clc
+        lda     $19
+        adc     #$C0
+        sta     $EB
+        lda     $1A
+        adc     #$03
+        sta     $EC
+        ldy     #$3F
+        lda     #$00
+bg_read_clear:
+        sta     ($EB),y
+        dey
+        bpl     bg_read_clear
+        lda     #$24
+        ldx     #$00
+        jsr     L81EC
+        lda     HW_PPU_DATA                     ; 读缓冲
+        lda     #$00
+        sta     BG_ROW
+bg_read_row:
+        lda     BG_ROW
+        lsr     a
+        lsr     a
+        asl     a
+        asl     a
+        asl     a
+        sta     BG_ATTR_ROW
+        lda     #$00
+        sta     BG_COL
+bg_read_col:
+        lda     HW_PPU_DATA
+        ldy     BG_COL
+        sta     ($19),y
+        lda     HW_PPU_DATA
+        sta     $DF
+        lda     BG_ROW
+        ora     BG_COL
+        and     #$01
+        bne     bg_read_next
+        lda     $DF
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        and     #$03
+        sta     $DF
+        lda     BG_COL
+        and     #$02
+        sta     $DE
+        lda     BG_ROW
+        and     #$02
+        asl     a
+        ora     $DE
+        tax
+        lda     $DF
+        cpx     #$00
+        beq     bg_read_put
+bg_read_shift:
+        asl     a
+        asl     a
+        dex
+        dex
+        bne     bg_read_shift
+bg_read_put:
+        sta     $DF
+        lda     BG_COL
+        lsr     a
+        lsr     a
+        clc
+        adc     BG_ATTR_ROW
+        tay
+        lda     ($EB),y
+        ora     $DF
+        sta     ($EB),y
+bg_read_next:
+        inc     BG_COL
+        lda     BG_COL
+        cmp     #$20
+        bne     bg_read_col
+        clc
+        lda     $19
+        adc     #$20
+        sta     $19
+        bcc     bg_read_advance
+        inc     $1A
+bg_read_advance:
+        inc     BG_ROW
+        lda     BG_ROW
+        cmp     #$1E
+        bne     bg_read_row
+        rts
+
+; NMI 命令 16：读 $4A/$4B 处图块的调色板组（0-3）到 $73
+nmi_read_group:
+        jsr     LB52E
+        lda     HW_PPU_DATA
+        lda     HW_PPU_DATA
+        lda     HW_PPU_DATA
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        and     #$03
+        sta     $73
+        jmp     L89C9
+
+; NMI 命令 17：把 $73 的调色板组写给 $4A/$4B 所在的 2x2 个图块（原版一个属性位对应 2x2 个图块），只改高字节
+nmi_write_group:
+        lda     $73
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        ora     V_TILE_HIGH
+        pha
+        lda     $4A
+        and     #$DE
+        sta     $4A
+        ldy     #$00
+nmi_write_group_tile:
+        lda     $4B
+        ldx     $4A
+        jsr     L81EC
+        bit     HW_PPU_DATA
+        pla
+        pha
+        sta     HW_PPU_DATA
+        clc
+        lda     $4A
+        adc     nmi_write_group_step,y
+        sta     $4A
+        bcc     nmi_write_group_next
+        inc     $4B
+nmi_write_group_next:
+        iny
+        cpy     #$04
+        bne     nmi_write_group_tile
+        pla
+        jmp     L89C9
+nmi_write_group_step:
+        .byte   $01, $1F, $01, $00
+
+; 图形编辑器的颜色条：第 24、25 行的第 14-31 列的图块调色板组改成 $F4 里的高字节
+bar_row:
+        ldx     #$12
+bar_row_tile:
+        bit     HW_PPU_DATA
+        lda     $F4
+        sta     HW_PPU_DATA
+        dex
+        bne     bar_row_tile
+        rts

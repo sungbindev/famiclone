@@ -1111,7 +1111,7 @@ L8991:  tax
         jmp     ($001B)
 L89A3:
         .addr   L8A0C,L8A87,L8AC3,L89FA,L89D2,L8AF2,L8B30,L89E4
-        .addr   L89F2,LA091,L89C4,L89C1,L8B3E,L8B74,L8B8C
+        .addr   L89F2,LA091,L89C4,L89C1,L8B3E,L8B74,L8B8C,nmi_read_group,nmi_write_group
 L89C1:  lda     #$00
 L89C3:  ldx     $33A5
         sta     $2001
@@ -5492,19 +5492,7 @@ LADD1:  lda     #<LD000
         lda     #>LD000
         sta     $1A
         jsr     LB559
-        lda     #$24
-        sta     $2006
-        lda     #$00
-        sta     $2006
-        ldy     #$00
-LADE8:  lda     ($19),y
-        sta     $2007
-        iny
-        bne     LADE8
-        inc     $1A
-        lda     #>(LD000+1024)
-        cmp     $1A
-        bne     LADE8
+        jsr     bg_write_page
         jsr     LB53C
         jmp     LB562
 LADFE:  lda     #$01
@@ -5994,20 +5982,7 @@ LB1B8:  jsr     L97A6
         sta     $19
         lda     #$6C
         sta     $1A
-        lda     #$24
-        sta     $2006
-        lda     #$00
-        sta     $2006
-        lda     $2007
-        ldy     #$00
-        ldx     #$04
-LB1DF:  lda     $2007
-        sta     ($19),y
-        iny
-        bne     LB1DF
-        inc     $1A
-        dex
-        bne     LB1DF
+        jsr     bg_read_page
         lda     $E5
         sta     $6005
         lda     #$FF
@@ -6025,19 +6000,7 @@ LB206:  lda     #$0C
         sta     $1A
         lda     #$00
         sta     $19
-        ldy     #$00
-        ldx     #$04
-        lda     #$24
-        sta     $2006
-        lda     #$00
-        sta     $2006
-LB221:  lda     ($19),y
-        sta     $2007
-        iny
-        bne     LB221
-        inc     $1A
-        dex
-        bne     LB221
+        jsr     bg_write_page
         lda     $6005
         sta     $E5
         lda     #$00
@@ -6258,7 +6221,7 @@ LB44A:
         .byte   "RUN", $0D, $00
 ; 清屏：每个图块写成空格、调色板组 0（原版调色板组在属性表里，清屏时同时清属性表）
 LB485:  ldy     #$04
-        ldx     #$C0
+        ldx     #$00
 LB48B:  lda     #$20
         sta     $2007
         lda     V_TILE_HIGH
@@ -6334,9 +6297,9 @@ LB508:  lsr     a
         clc
         adc     $49
         adc     #$03
-        cmp     #$1E
+        cmp     #$20
         bcc     LB516
-        sbc     #$1E
+        sbc     #$20
 LB516:  sta     $2C
         jsr     L8F47
         clc
@@ -6440,9 +6403,6 @@ LB5D4:  lda     $32
         lda     $E5
 LB5E3:  clc
         adc     #$08
-        cmp     #$F0
-        bcc     LB5EC
-        lda     #$00
 LB5EC:  ldy     $4F
         cpy     #$20
         beq     LB5F7
@@ -7465,21 +7425,19 @@ LC353:  inc     $88
         beq     LC34D
 LC35B:  asl     a
         asl     a
-        ora     $88
-        pha
+        asl     a
+        asl     a
+        ora     V_TILE_HIGH
+        sta     $F4
         jsr     LB42B
         lda     #$27
-        ldx     #$F3
+        ldx     #$0E
         jsr     L81EC
-        pla
-        tax
-        and     #$FC
-        sta     $2007
-        txa
-        ldx     #$04
-LC374:  sta     $2007
-        dex
-        bne     LC374
+        jsr     bar_row
+        lda     #$27
+        ldx     #$2E
+        jsr     L81EC
+        jsr     bar_row
         jmp     LB53C
 LC37D:  lda     #$0C
         sta     $48
@@ -7567,10 +7525,10 @@ LC41E:  lda     $7E
         jsr     LB42B
         jsr     LB52E
 LC43C:  lda     $0510,x
-        sta     $2007
+        put_tile
         inx
         lda     #$20
-        sta     $2007
+        put_tile
         inx
         dey
         bne     LC43C
@@ -7589,58 +7547,32 @@ LC460:  lsr     a
         clc
         adc     $49
         adc     #$03
-        cmp     #$1E
+        cmp     #$20
         bcc     LC46E
-        sbc     #$1E
+        sbc     #$20
 LC46E:  sta     $49
-        and     #$FC
-        asl     a
-        sta     $4A
-        lda     $48
+        lsr     a
         lsr     a
         lsr     a
         clc
-        adc     $4A
-        adc     #$C0
-        sta     $4A
-        lda     $4F
-        adc     #$03
+        adc     $4F
         sta     $4B
-        lda     #$02
-        and     $49
-        sta     $19
-        lda     $48
-        and     #$03
-        lsr     a
+        lda     $49
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        asl     a
         clc
-        adc     $19
-        sta     $19
-        lda     #$FC
-        sta     $1A
-        asl     $19
-        ldx     $19
-        beq     LC4A8
-LC4A0:  asl     $9C
-        sec
-        rol     $1A
-        dex
-        bne     LC4A0
-LC4A8:  lda     #$05
-        jsr     L896A
-        lda     $73
+        adc     $48
+        sta     $4A
         rts
 LC4B0:  jsr     LC452
+        lda     #$10
+        jsr     L896A
+        lda     $73
         sta     $9C
-        lda     $1A
-        eor     #$FF
-        and     $9C
-        sta     $9C
-        ldy     $19
-        beq     LC4C6
-LC4C1:  lsr     $9C
-        dey
-        bne     LC4C1
-LC4C6:  rts
+        rts
 LC4C7:  jmp     L8494
 LC4CA:  lda     $48
         pha
@@ -7670,10 +7602,9 @@ LC4CA:  lda     $48
         sta     $48
         rts
 LC4FF:  jsr     LC452
-        and     $1A
-        ora     $9C
+        lda     $9C
         sta     $73
-        lda     #$09
+        lda     #$11
         jmp     L896A
 LC50D:  lda     #$03
         sta     $0500

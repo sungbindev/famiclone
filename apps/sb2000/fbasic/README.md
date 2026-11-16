@@ -10,8 +10,8 @@
 | --- | --- | --- |
 | 1 | 把原版还原成可重定位的符号源码 | 完成（见下） |
 | 2 | 移植对照表：每处依赖 FC 机器的例程与 SB2000 做法 | 完成，见 [docs/移植对照表.md](docs/移植对照表.md)，仍有 8 项“待查”要在阶段 3、4 里查清 |
-| 3 | EXE 骨架：多页、库页切换与跨页调用、程序文本页、启动与退出 | 完成（[exe/](exe)），在 Ember 的学习机里验证，见下 |
-| 4 | 原生改写：内存与系统、画面文字、键盘、图形与精灵、声音、手柄、存取 | 未开始 |
+| 3 | EXE 骨架：多页、库页切换与跨页调用、程序文本页、启动与退出 | 完成（在 Ember 的学习机里验证过；骨架已被 4.1 的外壳取代，见下） |
+| 4 | 原生改写：内存与系统、画面文字、键盘、图形与精灵、声音、手柄、存取 | 进行中：4.1 内存与系统完成（退出路径随 4.3 做），见下 |
 | 5 | 验证：同一份按键脚本分别在 FC 模式（原版）与学习机（新版）里运行 | 未开始 |
 
 阶段 1 的结果（`node tools/stats.mjs`）：
@@ -23,7 +23,13 @@
 - CHR 另存为 [reference/fbasic-chr.bin](reference/fbasic-chr.bin)（8192 字节）。
 - `$00ED` 是 NMI 在 RAM 里的入口：启动时往 `$ED-$EF` 写 `JMP $8971`；原版有 16 处“`$2C`/`$AE`/`$EC` 吞掉后一条指令”的写法，源码里写成 `.byte` 加后一条指令。
 
-阶段 3 的骨架（[exe/src/start.s](exe/src/start.s)，`fcdev.json` 里 `banks` 为 2，文件 5 页 20480 字节）：页 0、1 常驻，页 2 是库页 1（窗口 2），页 3 是窗口 3，作程序文本页，页 4 是库页 2。骨架进入时保存零页与 `$0200-$07FF`，内核 NMI 每帧调用钩子 5，键盘自己轮询，库页切换先写窗口影子再写硬件寄存器，跨页调用经 `bank_call`，调用 SB-DOS 服务经“DOS 入口门”换回 DOS 现场，按 `ESC` 还原现场并返回 DOS。在 Ember 的学习机里核对过（`node tools/exe-selftest.mjs`）：钩子每帧运行；自检循环里跨页调用、程序文本页读写、窗口影子都没有错误（NMI 随时打断也不出错）；入口门往返申请并释放 1 页；退出后 DOS 的 `dir` 正常；第二次运行申请到的页号与第一次相同，没有泄漏。
+阶段 3 的骨架验证过：钩子每帧运行、跨页调用与程序文本页读写无误（NMI 随时打断也不出错）、入口门往返申请并释放 1 页、退出后 DOS 正常、重复运行页号不变。
+
+阶段 4.1 的结果（分页方案与各项决定见 [docs/移植对照表.md](docs/移植对照表.md) 第 3.2、3.4 节）：
+
+- [tools/port.mjs](tools/port.mjs) 按 `analysis/banks.txt` 把原版源码拆成常驻页与各库页，生成 `exe/src/core.s`（解释器，不要手改）与 `exe/src/layout.inc`；转向库页的 `jsr`、`jmp` 与地址表都经 203 个跳板；NMI 例程改成由钩子调用、以 `rts` 返回；`$1E/$1F` 改用 `$38/$39`，`$0600-$06FF` 改到常驻页里的 `fb_page6`，程序文本区 `$6000-$6FFF` 搬到窗口 3 的页（`$B000-$BFFF`）。
+- [exe/src/platform.s](exe/src/platform.s) 是手写的外壳：入口、NMI 钩子 5（先保存跳板的临时变量）、库页切换（先写窗口影子再写硬件）、跳板进入例程 `far_enter`、DOS 入口门（DOS 现场与程序现场在一个缓冲库页里互换）。`fcdev.json` 里 `banks` 为 10，文件 13 页（53248 字节）。
+- 在 Ember 的学习机里（`node tools/exe-run.mjs`）：原版初始化经 NMI 命令握手走完，进入键盘扫描的空转循环；入口门往返申请并释放 1 页后初始化照常走完（临时加代码验证过一次，已移除，现在没有调用者；4.7 的磁盘存取会用到）。画面是灰的（画面文字是 4.2）、没有键盘（4.3）、没有退出路径，所以现在运行后要重启 Ember 才能回 DOS；程序文本区还没用 BASIC 程序核对。
 
 ## 命令
 
@@ -31,7 +37,7 @@
 
 | 命令 | 作用 |
 | --- | --- |
-| `npm test` | 分类覆盖、跳过前缀、立即数地址、CDL 一致、汇编回读与重排汇编的测试 |
+| `npm test` | 分类覆盖、跳过前缀、立即数地址、CDL 一致、汇编回读与重排汇编，以及移植生成器输出的测试 |
 | `node tools/record-coverage.mjs [脚本名片段...]` | 在 FC 模式里让原版按 `analysis/coverage/` 里的脚本运行，记录 CDL 并合并到 `analysis/prg.cdl`，截图在 `build/shots/` |
 | `node tools/record-coverage.mjs --rom <nes 文件> --shots <目录>` | 换一个 ROM 重跑同一批脚本，只留截图，用于重排 ROM 的行为比较 |
 | `node tools/compare-shots.mjs <目录甲> <目录乙>` | 比较两个目录里同名截图是否逐字节相同 |
@@ -46,9 +52,12 @@
 | `node tools/inventory.mjs [--callers]` | 按例程列出依赖 FC 硬件的访问点与调用者数 |
 | `node tools/extract-chr.mjs` | 把 CHR 另存为 `reference/fbasic-chr.bin` |
 | `node ../../../packages/fcdev/bin/fcdev.mjs build exe/src` | 构建 `exe/build/sb2000/FBASIC.EXE` |
-| `node tools/exe-selftest.mjs` | 在 Ember 的学习机里运行骨架并自检（截图在 `build/selftest/`） |
+| `node tools/exe-run.mjs [帧数]` | 在 Ember 的学习机里运行 `FBASIC.EXE`，采样 PC（带标签名）与几个调试变量，截图在 `build/run/` |
+| `node tools/exe-trace.mjs [帧数] [条数]` | 同上，并跟踪执行过的指令（每个地址只记第一次），列出第一次跑进 RAM 之前的指令，用来找跑偏的位置 |
+| `node tools/scan-text-area.mjs [--abs] [--imm]` | 列出可能与程序文本区 `$6000-$7FFF` 有关的指令（绝对地址与 `$5F-$71` 的立即数）及上下文 |
 | `node tools/callgraph.mjs [--list]` | 统计代码块、块间引用与 NMI 实际要用到的块 |
-| `node tools/plan-banks.mjs [--resident <字节>] [--write]` | 把代码块分配到常驻页与各库页，写入 `analysis/banks.txt` |
+| `node tools/plan-banks.mjs [--resident <字节>] [--bank <字节>] [--write]` | 把代码块分配到常驻页与各库页，写入 `analysis/banks.txt`（当前用 `--resident 3400 --bank 3500`） |
+| `node tools/port.mjs` | 按分配生成 `exe/src/core.s` 与 `exe/src/layout.inc`，并列出各页大小与需要的 `banks` 个数 |
 
 ## 目录
 
@@ -58,7 +67,7 @@ apps/sb2000/fbasic/
   reference/   生成的原版可重定位源码（fbasic-nes.s）与 CHR
   tools/       分析、生成与运行验证工具（lib/ 是共用模块）
   docs/        移植计划、移植对照表
-  exe/         SB-DOS 程序（fcdev 项目，阶段 3 的骨架，阶段 4 在此改写）
-  test/        阶段 1 的测试
+  exe/         SB-DOS 程序（fcdev 项目）：platform.s 手写外壳，core.s 由 tools/port.mjs 生成
+  test/        分析与生成器的测试
   build/       中间文件、截图与重排 ROM（不进 Git）
 ```

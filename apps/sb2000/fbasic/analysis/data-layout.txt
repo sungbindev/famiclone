@@ -30,5 +30,10 @@ CCAB-CEBE  bytes   关键字表：记号（$80 起）后接关键字文字，语
 CEBF-CF7A  addrs   语句与函数的处理例程地址表（94 项）
 CF7B-CFA3  bytes   “NS-HUBASIC V3.0”“NINTENDO/SHARP/HUDSON”两条开机文字，以 0 结尾
 CFA4-CFAD  addrs   调色板组地址表（5 项）
-CFAE-FFF9  bytes   调色板、内置程序的背景画面与记号化的 BASIC 程序
+CFAE-CFFF  bytes   调色板（5 组各 16 字节，由 $CFA4 的地址表指向）与两个填充字节
+D000-D3FF  bytes   BGTOOL 的默认背景画面（1K，拷进名称表 $2400）
+D400-DBFD  bytes   内置程序 GAME 0（记号化的 BASIC 程序）
+DBFE-E681  bytes   内置程序 GAME 1
+E682-F307  bytes   内置程序 GAME 2
+F308-FFF9  bytes   内置程序 GAME 3
 FFFA-FFFF  addrs   向量：NMI（$00ED，在 RAM 里）、RESET、IRQ

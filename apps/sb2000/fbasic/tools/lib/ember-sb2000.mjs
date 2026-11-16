@@ -41,7 +41,7 @@ export async function startSb2000({ projectDir, port = 5731 }) {
   const client = await connectToEmber({ userDataDirectory: join(tmpdir(), 'fcdev-ember', String(port)), clientName: 'fbasic-tools', connectTimeoutMs: 5000 });
   const dbg = readFileSync(join(projectDir, 'build', 'obj', 'sb2000', 'fbasic', 'fbasic.dbg'), 'latin1');
   const symbols = new Map();
-  for (const match of dbg.matchAll(/^sym\s+id=\d+,name="([^"]+)",addrsize=\w+,(?:size=\d+,)?scope=0,[^\n]*?val=0x([0-9A-Fa-f]+)/gm)) symbols.set(match[1], Number.parseInt(match[2], 16));
+  for (const match of dbg.matchAll(/^sym\s+id=\d+,name="([^"]+)",addrsize=\w+,(?:size=\d+,)?scope=\d+,[^\n]*?val=0x([0-9A-Fa-f]+)/gm)) symbols.set(match[1], Number.parseInt(match[2], 16));
   return {
     client,
     pid,

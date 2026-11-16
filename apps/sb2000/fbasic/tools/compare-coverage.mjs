@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：compare-coverage.mjs
-// 说明：阶段 5 的对照：同一批覆盖脚本（analysis/coverage/）分别在 FC 模式的原版（Family BASIC 键盘）与学习机的新版（SB2000 键盘）里运行，比较每次截图的亮点分布与程序文本区（$6000-$6BFF）的内容。
+// 说明：阶段 5 的对照：同一批覆盖脚本（analysis/coverage/）分别在 FC 模式的原版（Family BASIC 键盘）与学习机的新版（SB2000 键盘）里运行，比较每次截图的亮点分布与程序文本区（$6000-$65FF，$6600 起是 SB-DOS 自己的数据）的内容。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-17
-// 备注：用法 node tools/compare-coverage.mjs [脚本名片段...]；结果在 build/compare/{fc,sb}/，每个脚本的每张截图都比较，打印不同亮点的个数；
+// 备注：用法 node tools/compare-coverage.mjs [脚本名片段...] [--dir <脚本目录>]；结果在 build/compare/{fc,sb}/，每个脚本的每张截图都比较，打印不同亮点的个数；
 //       脚本格式同 record-coverage.mjs（一行一条要键入的文字，# 注释，@wait 帧数，@key 键位 [帧数]，@shot 名字）；
 //       学习机的画面是 50Hz、原版 60Hz，所以 @wait 的帧数按 5/6 换算，让真实时间一致；STOP 键在原版是 Pause，在学习机是 F9；
 //       SAVE、LOAD 这类磁盘命令键入后多等一会儿，DOS 读写期间键入的键会丢；每行键入后两边都等 60 帧，语句执行期间键入的键也会丢，两边丢的个数不同会让程序文本不同；颜色因两个模拟器的调色板表不同，所以只比较“亮不亮”（亮度大于 64）。
@@ -20,7 +20,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPTS = join(ROOT, 'analysis', 'coverage');
 const OUTPUT = join(ROOT, 'build', 'compare');
 const TEXT_START = 0x6000;
-const TEXT_LENGTH = 0x0C00;
+const TEXT_LENGTH = 0x0600;
 const LIT_LEVEL = 64;
 const DISK_WORDS = /^(SAVE|LOAD|FILE|BACKUP|GAME)\b/;
 const DISK_WAIT = 150;
@@ -212,8 +212,10 @@ function countLitDifferences(first, second) {
 }
 
 const args = process.argv.slice(2);
-const filters = args.filter((arg) => !arg.startsWith('--'));
-const names = readdirSync(SCRIPTS).filter((name) => name.endsWith('.txt') && (filters.length === 0 || filters.some((part) => name.includes(part)))).sort();
+const directoryIndex = args.indexOf('--dir');
+const scriptDirectory = directoryIndex >= 0 ? resolve(args[directoryIndex + 1]) : SCRIPTS;
+const filters = args.filter((arg, index) => !arg.startsWith('--') && index !== directoryIndex + 1);
+const names = readdirSync(scriptDirectory).filter((name) => name.endsWith('.txt') && (filters.length === 0 || filters.some((part) => name.includes(part)))).sort();
 const fcDirectory = join(OUTPUT, 'fc');
 const sbDirectory = join(OUTPUT, 'sb');
 mkdirSync(fcDirectory, { recursive: true });
@@ -221,7 +223,7 @@ mkdirSync(sbDirectory, { recursive: true });
 const failures = [];
 for (const file of names) {
   const name = file.replace(/\.txt$/, '');
-  const steps = parseScript(join(SCRIPTS, file));
+  const steps = parseScript(join(scriptDirectory, file));
   const originalText = await runOriginal(steps, name, fcDirectory);
   const portText = await runPort(steps, name, sbDirectory);
   writeFileSync(join(OUTPUT, `${name}.fc.bin`), originalText);

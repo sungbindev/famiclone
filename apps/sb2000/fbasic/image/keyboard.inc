@@ -40,6 +40,14 @@ irq_handler:
         pha
         txa
         pha
+        tsx
+        lda     $0103,x                         ; 栈里的状态寄存器：位 4 为 1 是 BRK，原版的 BRK 向量与 RESET 相同（热启动）
+        and     #$10
+        beq     irq_keyboard
+        ldx     #$FD
+        txs
+        jmp     L80BA
+irq_keyboard:
         tya
         pha
         lda     HW_IRQ_PENDING

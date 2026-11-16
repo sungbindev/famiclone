@@ -34,6 +34,7 @@
 | `node tools/record-coverage.mjs [脚本名片段...]` | 在 FC 模式里让原版按 `analysis/coverage/` 里的脚本运行，记录 CDL 并合并到 `analysis/prg.cdl`，截图在 `build/shots/`；`--rom <nes 文件> --shots <目录>` 换一个 ROM 重跑，只留截图 |
 | `node tools/fc-shot.mjs <png> [帧数] [--no-keyboard]` | 在 FC 模式里运行原版并截图，和学习机里新版的画面对照 |
 | `node tools/diff-png.mjs <甲> <乙>` | 逐像素比较两张 PNG（只在 Windows 上可用） |
+| `node tools/compare-coverage.mjs [脚本名片段...]` | 阶段 5 的对照：同一批覆盖脚本分别在 FC 模式的原版与学习机的新版里运行，比较每张截图的亮点分布与程序文本区（`$6000-$6BFF`），截图与文本区转储在 `build/compare/` |
 | `node tools/stats.mjs` | 统计分类结果、硬件访问点与 RAM 使用 |
 | `node tools/inventory.mjs [--callers]` | 按例程列出依赖 FC 硬件的访问点与调用者数 |
 | `node tools/show.mjs asm\|hex <地址> [数量]` | 查看 PRG 里的一段内容 |

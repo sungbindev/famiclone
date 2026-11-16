@@ -6,7 +6,7 @@
 ; 日期：2026-11-16
 ; 备注：与 gbasic.s 合并汇编：本文件用 gbasic.s 里的标签（L8000 等），gbasic.s 也调用这里导出的例程。
 ; ------------------------------------------------------------------------
-        .export         image_entry
+        .export         image_entry, irq_handler
         .import         stub_leave, stub_irq_mask
 
         .segment        "CODE"
@@ -18,6 +18,7 @@ image_entry:
         ldx     #$FF
         txs
         jsr     video_init
+        cli                                     ; 键盘由 IRQ 驱动
         jmp     L8000
 
 ; 退出到 DOS：由菜单项 3 进入
@@ -27,12 +28,41 @@ L7D04:  lda     #$00
         jmp     stub_leave
 
 ; 画面初始化：关显示与 NMI，4 色背景模式，把图案与字库放进扩展显存
+; 写 PPU 控制寄存器：A = 原版的 NES 控制值。NES 的位 3（精灵图案表）在 6576 上是 $2008 位 2，位 4（背景图案表）要写进图块条目的高字节（video_tile_high），
+; 文字引擎按 $4F 选名称表，显示的名称表跟着它（$20 对应名称表 0，$24 对应名称表 1）
+video_write_ctrl:
+        pha
+        and     #$10
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        ora     #$08
+        sta     video_tile_high
+        pla
+        pha
+        and     #$08                            ; 精灵图案表
+        lsr     a
+        sta     HW_PPU_EXT                      ; 位 7 = 0：4 色背景
+        pla
+        and     #$A7                            ; NMI、8x16、地址增量、名称表位 1-0
+        sta     $F6
+        lda     $4F
+        lsr     a
+        lsr     a
+        and     #$01
+        ora     $F6
+        sta     HW_PPU_CTRL
+        rts
+
 video_init:
         lda     #$00
         sta     HW_PPU_CTRL
         sta     HW_PPU_MASK
         sta     HW_PPU_EXT                      ; 4 色背景，精灵图案表 0，名称表在 CRAM
         sta     $4300                           ; 扩展显存 bank 0
+        lda     #VIDEO_TILE_HIGH
+        sta     video_tile_high
         lda     #$10
         sta     HW_PPU_CTRL                     ; 背景用图案表 1，NMI 仍关
         bit     HW_PPU_STATUS
@@ -91,30 +121,51 @@ L7B33:  sec
 L7EE0:  sec
         rts
 
-; ---- 键盘：读 $4020 的扫描码（码集 1，释放码 = 按下码 | $80，扩展键前导 $E0），维护修饰键与当前按着的键 ----; 直接方式执行完后“下一行”指针指向的空行（长度字节为 0 表示程序结束）；原版借用了键盘码表的第一个字节，码表删除后单独放一个
+; 直接方式执行完后“下一行”指针指向的空行（长度字节为 0 表示程序结束）；原版借用了键盘码表的第一个字节，码表删除后单独放一个
 LB144:  .byte   $00, $00, $00
-; 输出：A = 当前按着的键翻译出的内部码（原版的码域：ASCII、$08 退格、$0D 回车、$1C-$1F 光标、$F0-$F7 功能键），没有键时为 0（Z 置位）
-; 按键是电平的（按着就一直返回），按键重复、去抖由调用者 LB263 处理
-LAF9B:
-L_gk_drain:
+
+; ---- 键盘：AT 键盘的扫描码集 1（释放码 = 按下码 | $80，扩展键前导 $E0），维护修饰键与当前按着的键 ----
+; IRQ 只开键盘（IMAGE_IRQ_MASK）：每收到一个扫描码进一次，读走码、清除请求，交给 gk_scan_code；协议与内核的 KBD_HANDLER 相同
+irq_handler:
+        pha
+        txa
+        pha
+        tya
+        pha
         lda     HW_IRQ_PENDING
         and     #HW_IRQ_KEYBOARD
-        beq     L_gk_translate
+        beq     L_irq_done
         lda     #$00
         sta     HW_KEY_CONTROL
         lda     HW_KEY_DATA
         pha
-        lda     stub_irq_mask                   ; 清除键盘请求：先屏蔽它再恢复屏蔽影子
-        ora     #HW_IRQ_KEYBOARD
+        lda     #$FF                            ; 先全部屏蔽以清除请求，再恢复映像的屏蔽
         sta     HW_IRQ_MASK
-        lda     stub_irq_mask
+        lda     #IMAGE_IRQ_MASK
         sta     HW_IRQ_MASK
         lda     #$80
         sta     HW_KEY_CONTROL
         pla
         jsr     gk_scan_code
-        jmp     L_gk_drain
-L_gk_translate:
+L_irq_done:
+        pla
+        tay
+        pla
+        tax
+        pla
+        rti
+
+; 按键是电平的（按着就一直返回），按键重复、去抖由调用者 LB263 处理；按键状态由 IRQ 处理程序维护
+; 等到下一帧再取键：LB263 的重复、闪烁与去抖都以帧为单位计时
+gk_poll:
+        lda     gk_frame
+L_gk_wait:
+        cmp     gk_frame
+        beq     L_gk_wait
+        jmp     LAF88
+; 输出：A = 当前按着的键翻译出的内部码（原版的码域：ASCII、$08 退格、$0D 回车、$1C-$1F 光标、$F0-$F7 功能键），没有键时为 0（Z 置位）
+; 按键是电平的（按着就一直返回），按键重复、去抖由调用者 LB263 处理；按键状态由 IRQ 处理程序维护
+LAF9B:
         ldx     gk_held
         beq     L_gk_none
         bmi     L_gk_extended

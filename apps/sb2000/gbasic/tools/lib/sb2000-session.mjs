@@ -140,7 +140,7 @@ export class Session {
 }
 
 /**
- * 启动 Ember，放入只含 GBASIC.EXE 的软盘，进入 SB-DOS 并运行程序。
+ * 启动 Ember，放入只含 GBASIC.EXE 的软盘，经 fcdev 的 enterProgram 进入 SB-DOS 并运行程序。
  * @param {{name?: string, exe?: string}} [options] name 是 DOS 里输入的程序名，exe 是 EXE 路径
  * @returns {Promise<Session>} 会话；返回时程序已经开始运行
  */

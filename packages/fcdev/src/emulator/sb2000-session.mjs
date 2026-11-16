@@ -13,12 +13,15 @@ import { FcdevError } from '../shared/index.mjs';
 /** 整机机型的标识 */
 export const SB2000_MACHINE = 'sb2000';
 
-/** 开机到 SB-DOS 询问日期所需的帧数 */
-export const DOS_PROMPT_FRAMES = 2600;
+/** 开机到 SB-DOS 开始读键盘所需的帧数；日期提示约 850 帧才读键盘，更早按的回车会丢 */
+export const DOS_PROMPT_FRAMES = 900;
 
 /** 按键按下与松开之后各运行的帧数，让 BIOS 读到 */
 const KEY_DOWN_FRAMES = 5;
 const KEY_UP_FRAMES = 4;
+
+/** 在 SB-DOS 命令行里输入时，按下与松开之后各运行的帧数，更短会丢键 */
+const DOS_KEY_FRAMES = 8;
 
 /** 一次运行请求等待的上限，单位毫秒 */
 const RUN_TIMEOUT_MS = 120_000;
@@ -49,13 +52,15 @@ export function runFrames(client, frames) {
  * 按下并松开一个键，期间运行若干帧。
  * @param {import('ember-debug-sdk').EmberDebugClient} client 已连接的调试客户端
  * @param {string} code 物理键位（KeyboardEvent.code），如 KeyA、Enter、F1
+ * @param {number} [downFrames] 按下后运行的帧数
+ * @param {number} [upFrames] 松开后运行的帧数
  * @returns {Promise<void>}
  */
-export async function tapKey(client, code) {
+export async function tapKey(client, code, downFrames = KEY_DOWN_FRAMES, upFrames = KEY_UP_FRAMES) {
   await client.request('input.key', { code, down: true });
-  await runFrames(client, KEY_DOWN_FRAMES);
+  await runFrames(client, downFrames);
   await client.request('input.key', { code, down: false });
-  await runFrames(client, KEY_UP_FRAMES);
+  await runFrames(client, upFrames);
 }
 
 /**
@@ -83,7 +88,7 @@ export async function bootSb2000(client, { firmware, diskImage }) {
 }
 
 /**
- * 在 SB-DOS 里运行程序：等 DOS 起来，回车跳过日期与时间，输入程序名回车。返回时程序刚被启动，机器仍是暂停的。
+ * 在 SB-DOS 里运行程序：开机运行 900 帧，直接按两次回车跳过日期与时间，输入程序名回车。返回时程序刚被启动，机器仍是暂停的。
  * @param {import('ember-debug-sdk').EmberDebugClient} client 已连接的调试客户端
  * @param {string} programName 程序名（不含扩展名）
  * @returns {Promise<void>}
@@ -92,10 +97,8 @@ export async function bootSb2000(client, { firmware, diskImage }) {
 export async function enterProgram(client, programName) {
   const codes = [...programName].map(keyCodeOf);
   await runFrames(client, DOS_PROMPT_FRAMES);
-  await tapKey(client, 'Enter');
-  await runFrames(client, 60);
-  await tapKey(client, 'Enter');
-  await runFrames(client, 120);
-  for (const code of codes) await tapKey(client, code);
-  await tapKey(client, 'Enter');
+  await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+  await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+  for (const code of codes) await tapKey(client, code, DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+  await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
 }

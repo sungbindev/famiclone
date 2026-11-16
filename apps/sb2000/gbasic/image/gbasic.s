@@ -1273,6 +1273,7 @@ L880A:  lda     $63
         bne     L880A
 L880E:  rts
 L880F:  pha
+        inc     gk_frame
         lda     #$00
         sta     OAMADDR
         lda     #$02
@@ -1372,7 +1373,7 @@ L88EE:  inx
         jsr     LAD8B
         jsr     LABE6
         lda     $32
-        sta     PPUCTRL
+        jsr     video_write_ctrl
         jsr     LABA6
         jsr     LAAFE
         jsr     LABD8
@@ -5712,7 +5713,7 @@ LAC5D:  dec     $7E
         lda     #$04
         jsr     L8808
 LAC6A:  lda     $32
-        sta     PPUCTRL
+        jsr     video_write_ctrl
         lda     $69
         clc
         adc     #$08
@@ -6075,9 +6076,11 @@ LB254:  jsr     LABA6
 LB25B:  jsr     LABA6
         lda     #$09
 LB260:  jmp     L8808
+; 取一个键（带按键重复、光标闪烁与去抖）：计时以帧为单位，每次取键等一帧（gk_poll）
+; 首次重复前 30 帧（$77），之后每 4 帧（$79）重复一次，光标每 30 帧（$74）翻转一次
 LB263:  lda     #$00
         sta     $5E
-        jsr     LAF88
+        jsr     gk_poll
         beq     LB2B2
         ldx     $66
         bne     LB295
@@ -6086,7 +6089,7 @@ LB263:  lda     #$00
         lda     $7B
         bne     LB298
         jsr     LB254
-LB27B:  jsr     LAF88
+LB27B:  jsr     gk_poll
         beq     LB2AF
         cmp     $75
         bne     LB2AF
@@ -6100,37 +6103,38 @@ LB27B:  jsr     LAF88
 LB293:  lda     #$03
 LB295:  sta     $75
         rts
-LB298:  jsr     LAF88
+LB298:  jsr     gk_poll
         beq     LB2B2
         cmp     $75
         bne     LB2B2
         dec     $79
         bne     LB298
-        lda     #$20
+        lda     #$04
         sta     $79
         jsr     LB254
         jmp     LB306
 LB2AF:  jsr     LB25B
 LB2B2:  lda     #$00
         sta     $7B
+        lda     #$1E
         sta     $77
-        lda     #$20
+        lda     #$04
         sta     $79
         lda     #$01
         sta     $78
         jsr     LB254
-        lda     #$80
+        lda     #$1E
         sta     $74
-LB2C7:  jsr     LAF88
+LB2C7:  jsr     gk_poll
         bne     LB2F1
         dec     $74
         bne     LB2C7
         jsr     LB25B
         lda     $5E
         bne     LB293
-        lda     #$80
+        lda     #$1E
         sta     $74
-LB2DB:  jsr     LAF88
+LB2DB:  jsr     gk_poll
         bne     LB2F1
         dec     $74
         bne     LB2DB
@@ -6144,7 +6148,7 @@ LB2F1:  sta     $75
         bne     LB306
         lda     #$01
         sta     $74
-LB2FB:  jsr     LAF88
+LB2FB:  jsr     gk_poll
         cmp     $75
         bne     LB2EB
         dec     $74
@@ -6260,12 +6264,10 @@ LB3DA:  lda     #$00
         sta     $B0
         rts
 LB3EB:  lda     $32
-        sta     PPUCTRL
-        rts
+        jmp     video_write_ctrl
 LB3F1:  lda     $32
         ora     #$80
-        sta     PPUCTRL
-        rts
+        jmp     video_write_ctrl
         jsr     LB3EB
         lda     #$01
         jmp     LB406

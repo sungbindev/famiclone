@@ -20,6 +20,9 @@
 ; 缓冲在映像最后 2K（窗口 7 内），与 image.cfg 里的 BUFFER 区一致
 BUFFER_HIGH = $F7
 
+; 映像运行时的中断屏蔽（$4032，为 1 的位被屏蔽）：只留键盘，与 platform.inc 的 IMAGE_IRQ_MASK 一致
+IMAGE_IRQ_MASK = $DF
+
         .segment        "STUBVAR"
 
 stub_image_window:      .res 8          ; 映像运行时窗口 0-7 的页号，由加载器填写
@@ -30,6 +33,7 @@ stub_irq_mask:          .res 1          ; 进入时 DOS 的中断屏蔽影子，
 stub_saved_ppu_ctrl:    .res 1          ; 进入时 DOS 的 PPU 控制影子（返回 DOS 时由 DOS 现场自带，这里留给映像读取）
 dos_stack:              .res 1          ; DOS 现场的栈指针
 image_stack:            .res 1          ; 映像调用入口门时的栈指针
+image_flags:            .res 1          ; 映像调用入口门时的处理器状态
 exchange_byte:          .res 1          ; 交换时的暂存
 
 ; 交换 DOS 与映像的现场：系统页 0-7 与缓冲 BUFFER 的 8 页互换。只用 A、X、Y 与 exchange_byte，不动栈
@@ -87,12 +91,18 @@ stub_launch:
         sta     HW_PPU_CTRL                     ; 关 NMI，换窗口时不能有中断
         set_windows stub_image_window
         exchange_pages                          ; 此后系统页是映像的初始现场（缓冲原来的内容），DOS 现场在缓冲里
+        lda     #IMAGE_IRQ_MASK
+        sta     HW_IRQ_MASK
         ldx     #$FF
         txs
         jmp     image_entry
 
 ; 入口门：调用一个 SB-DOS 服务。输入 stub_request_function、stub_request_sub；结果由调用者在调用后读 ERAM 里的结果单元
 stub_dos_call:
+        php
+        pla
+        sta     image_flags
+        sei
         tsx
         stx     image_stack
         lda     #$00
@@ -118,6 +128,11 @@ stub_dos_call:
         exchange_pages                          ; DOS 现场（服务可能改过）回到缓冲，映像现场回到系统页
         ldx     image_stack
         txs
+        lda     #IMAGE_IRQ_MASK
+        sta     HW_IRQ_MASK
+        lda     image_flags
+        pha
+        plp
         rts
 
 ; 退出映像：还原 DOS 现场与窗口，回到加载器

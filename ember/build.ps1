@@ -16,7 +16,7 @@ C++ 测试与调试 SDK 的检查不在其中，需要时单独运行 npm run co
 .PARAMETER SkipCheck
 跳过全部检查，只编译并生成。
 .PARAMETER PackageOnly
-只打包成可直接运行的目录（out\Ember-win32-x64），不生成安装程序。
+只打包成可直接运行的目录（仓库根目录下的 build\ember\Ember-win32-x64），不生成安装程序。
 .EXAMPLE
 .\build.ps1
 .EXAMPLE
@@ -46,6 +46,8 @@ function Invoke-Step {
 }
 
 Push-Location $PSScriptRoot
+# Ember 的构建产物都在仓库根目录的 build\ember 下
+$buildRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\build\ember'))
 try {
     Invoke-Step '安装依赖' { npm install }
 
@@ -58,7 +60,7 @@ try {
 
     if ($PackageOnly) {
         Invoke-Step '编译并打包' { npm run package:win }
-        $output = Join-Path $PSScriptRoot 'out\Ember-win32-x64'
+        $output = Join-Path $buildRoot 'Ember-win32-x64'
         if (-not (Test-Path -LiteralPath $output)) {
             throw "打包完成但没有找到输出目录：$output"
         }
@@ -66,7 +68,7 @@ try {
     }
     else {
         # 旧的安装程序不保留，避免误装
-        $makeDirectory = Join-Path $PSScriptRoot 'out\make'
+        $makeDirectory = Join-Path $buildRoot 'make'
         if (Test-Path -LiteralPath $makeDirectory) {
             Remove-Item -LiteralPath $makeDirectory -Recurse -Force
         }

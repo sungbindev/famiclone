@@ -156,7 +156,7 @@ if(EMBER_BUILD_TESTS)
   file(GLOB_RECURSE EMBER_CORE_TESTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
   add_executable(ember_core_tests ${EMBER_CORE_TESTS})
   target_link_libraries(ember_core_tests PRIVATE ember_core_lib GTest::gtest_main)
-  target_compile_definitions(ember_core_tests PRIVATE EMBER_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data" EMBER_PLUGIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../build/plugins")
+  target_compile_definitions(ember_core_tests PRIVATE EMBER_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data" EMBER_PLUGIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../build/ember/plugins")
   # 磁带解码的端到端用例用随应用附带的 ffmpeg；当前平台没有编译好的程序时用例跳过。
   if(WIN32)
     target_compile_definitions(ember_core_tests PRIVATE EMBER_FFMPEG_PROGRAM="${CMAKE_CURRENT_SOURCE_DIR}/third_party/ffmpeg/bin/win32-x64/ffmpeg.exe")

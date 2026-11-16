@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-core.mjs
- * 说明：编译 C++ 原生模块：先生成 Schema 代码并打包官方插件，再用 cmake-js 按当前 Electron 版本编译，输出 core/build/Release/ember_core.node。
+ * 说明：编译 C++ 原生模块：先生成 Schema 代码并打包官方插件，再用 cmake-js 按当前 Electron 版本编译，输出 build/ember/core/Release/ember_core.node。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generate } from '../schema-gen/schema-gen.mjs';
 import { findCmake } from './find-cmake.mjs';
+import { CORE_BUILD_DIRECTORY } from './build-paths.mjs';
 import { packPlugins } from './pack-plugins.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -36,12 +37,12 @@ try {
   const cmakeJs = join(dirname(require.resolve('cmake-js/package.json')), 'bin', 'cmake-js');
 
   generate(root);
-  // 开发版预装的官方插件随核心一起打包，输出在 build/plugins。
+  // 开发版预装的官方插件随核心一起打包，输出在 build/ember/plugins。
   packPlugins(root);
   const { cmake } = findCmake();
   execFileSync(
     process.execPath,
-    [cmakeJs, 'compile', '--directory', 'core', '--cmake-path', cmake, '--runtime', 'electron', '--runtime-version', electronVersion, '--arch', arch, '--config', 'Release', `--CDEMBER_CORE_VERSION=${version}`],
+    [cmakeJs, 'compile', '--directory', 'core', '--out', CORE_BUILD_DIRECTORY, '--cmake-path', cmake, '--runtime', 'electron', '--runtime-version', electronVersion, '--arch', arch, '--config', 'Release', `--CDEMBER_CORE_VERSION=${version}`],
     { cwd: root, stdio: 'inherit' }
   );
 } catch (error) {

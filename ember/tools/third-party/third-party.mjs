@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { builtinModules } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { THIRD_PARTY_BUILD_DIRECTORY } from '../build/build-paths.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 /** 界面用的虚拟模块。 */
@@ -23,7 +24,7 @@ export const VIRTUAL_MODULE = 'virtual:ember-third-party';
 /** 许可全文文件名，打包时复制到 resources 目录。 */
 export const NOTICES_FILE = 'THIRD_PARTY_NOTICES.txt';
 /** 许可全文的输出目录。 */
-export const NOTICES_DIRECTORY = join(ROOT, 'build', 'third-party');
+export const NOTICES_DIRECTORY = THIRD_PARTY_BUILD_DIRECTORY;
 /** 自己的包，不算第三方。 */
 const OWN_PACKAGES = new Set(['@rujianjs/ui-kit']);
 /** 由安装包单独处理的包。 */

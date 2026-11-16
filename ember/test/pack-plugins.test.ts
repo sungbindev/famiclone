@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：打包在临时目录里进行，不改动仓库里的 build/plugins；zip 的解析在测试里用 node:zlib 手写，与核心里的 miniz 读取互相独立。
+ * 备注：打包在临时目录里进行，不改动 build/ember/plugins；zip 的解析在测试里用 node:zlib 手写，与核心里的 miniz 读取互相独立。
  * ------------------------------------------------------------------------
  */
 
@@ -106,23 +106,24 @@ describe('createZip', () => {
 });
 
 describe('packPlugins', () => {
-  it('把 plugins/<插件>/ 打成 build/plugins/<id>.emap，内容按文件名排序，输出可重现', () => {
+  it('把 plugins/<插件>/ 打成 <输出目录>/<id>.emap，内容按文件名排序，输出可重现', () => {
     const root = createRoot();
+    const outDirectory = join(root, 'build', 'plugins');
     writePlugin(root, 'demo-plugin', { 'manifest.json': JSON.stringify({ id: 'demo-plugin', name: '示例' }), 'main.js': 'export default {};' });
     writePlugin(root, 'only-manifest', { 'manifest.json': JSON.stringify({ id: 'only-manifest' }) });
-    const packed = packPlugins(root);
+    const packed = packPlugins(root, outDirectory);
     expect(packed.map((item) => item.id)).toEqual(['demo-plugin', 'only-manifest']);
-    expect(packed[0]?.file).toBe(join(root, 'build', 'plugins', 'demo-plugin.emap'));
+    expect(packed[0]?.file).toBe(join(outDirectory, 'demo-plugin.emap'));
 
-    const first = readFileSync(join(root, 'build', 'plugins', 'demo-plugin.emap'));
+    const first = readFileSync(join(outDirectory, 'demo-plugin.emap'));
     const entries = readZip(first);
     expect(entries.map((entry) => entry.name)).toEqual(['main.js', 'manifest.json']);
     expect(entries[0]?.data.toString('utf8')).toBe('export default {};');
     expect(JSON.parse(entries[1]?.data.toString('utf8') ?? '{}')).toEqual({ id: 'demo-plugin', name: '示例' });
-    expect(readZip(readFileSync(join(root, 'build', 'plugins', 'only-manifest.emap'))).map((entry) => entry.name)).toEqual(['manifest.json']);
+    expect(readZip(readFileSync(join(outDirectory, 'only-manifest.emap'))).map((entry) => entry.name)).toEqual(['manifest.json']);
 
-    packPlugins(root);
-    expect(readFileSync(join(root, 'build', 'plugins', 'demo-plugin.emap')).equals(first)).toBe(true);
+    packPlugins(root, outDirectory);
+    expect(readFileSync(join(outDirectory, 'demo-plugin.emap')).equals(first)).toBe(true);
   });
 
   it('没有 plugins 目录时什么也不打', () => {

@@ -20,5 +20,5 @@ export function createZip(entries: ReadonlyArray<{ name: string; data: Buffer }>
 /** 打包一个插件目录到输出目录。 */
 export function packPlugin(sourceDir: string, outDir: string): PackedPlugin;
 
-/** 打包 plugins/ 下的全部插件到 build/plugins/。 */
-export function packPlugins(root: string): PackedPlugin[];
+/** 打包 plugins/ 下的全部插件，默认输出到 build/ember/plugins/。 */
+export function packPlugins(root: string, outDir?: string): PackedPlugin[];

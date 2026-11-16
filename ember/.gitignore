@@ -1,9 +1,5 @@
 node_modules/
 .vite/
-out/
-core/build/
-core/build-test/
-/build/
 resources/icon.icns
 src/contracts/*/generated/
 core/src/contracts/*/generated/

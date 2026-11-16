@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：pack-plugins.mjs
- * 说明：把 plugins/<插件>/ 目录打成 build/plugins/<id>.emap（zip，根目录只含 manifest.json、main.js、icon.png），供开发版预装与 C++ 测试使用。
+ * 说明：把 plugins/<插件>/ 目录打成 build/ember/plugins/<id>.emap（zip，根目录只含 manifest.json、main.js、icon.png），供开发版预装与 C++ 测试使用。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
+import { PLUGINS_BUILD_DIRECTORY } from './build-paths.mjs';
 
 /** 包里允许的文件名，与核心的检查一致。 */
 const PACKAGE_FILES = ['manifest.json', 'main.js', 'icon.png'];
@@ -127,14 +128,14 @@ export function packPlugin(sourceDir, outDir) {
 }
 
 /**
- * 打包 plugins/ 下的全部插件到 build/plugins/。
+ * 打包 plugins/ 下的全部插件，默认输出到 build/ember/plugins/。
  * @param {string} root 项目根目录。
+ * @param {string} [outDir] 输出目录，测试里用临时目录。
  * @returns {Array<{ id: string, file: string }>} 打出的插件包。
  */
-export function packPlugins(root) {
+export function packPlugins(root, outDir = PLUGINS_BUILD_DIRECTORY) {
   const pluginsDir = join(root, 'plugins');
   if (!existsSync(pluginsDir)) return [];
-  const outDir = join(root, 'build', 'plugins');
   return readdirSync(pluginsDir)
     .toSorted()
     .filter((name) => statSync(join(pluginsDir, name)).isDirectory())
@@ -145,7 +146,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
   try {
     const packed = packPlugins(root);
-    console.log(`插件打包：${packed.length} 个（${packed.map((item) => item.id).join('、')}）→ build/plugins`);
+    console.log(`插件打包：${packed.length} 个（${packed.map((item) => item.id).join('、')}）→ build/ember/plugins`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

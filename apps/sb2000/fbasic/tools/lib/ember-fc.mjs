@@ -18,7 +18,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..', '..', '..', '..');
 const SDK = pathToFileURL(join(REPO, 'packages', 'ember-debug-sdk', 'dist', 'node.js')).href;
 export const ROM = join(REPO, 'reference', 'nes-games', 'Family BASIC (Japan) (v3.0).nes');
-const DEFAULT_EMBER = join(REPO, 'ember', 'out', 'Ember-win32-x64', 'ember.exe');
+const DEFAULT_EMBER = join(REPO, 'build', 'ember', 'Ember-win32-x64', 'ember.exe');
 
 /** 每个字符对应的物理键位与是否按住 Shift（Family BASIC 键盘按 JIS 键位）。 */
 const SHIFT = 'ShiftLeft';

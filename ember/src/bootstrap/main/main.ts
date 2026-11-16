@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：只创建实现并注入，不写业务判断；原生模块与预装插件在开发时取 core/build/Release 与 build/plugins，正式包取应用的 resources 目录；
+ * 备注：只创建实现并注入，不写业务判断；原生模块与预装插件在开发时取仓库根目录下的 build/ember/core/Release 与 build/ember/plugins，正式包取应用的 resources 目录；
  *       命令行带 --cartridge=路径（.nes）时，核心启动后由主进程加载这张卡带；界面状态保存在用户数据目录的 config/shell-state.json。
  * ------------------------------------------------------------------------
  */
@@ -50,7 +50,7 @@ const PRODUCT_NAME = 'Ember';
 const NATIVE_FILE = 'ember_core.node';
 /** 键盘独占模块（只有 Windows 有）的文件名。 */
 const KEYBOARD_NATIVE_FILE = 'ember_keyboard.node';
-/** 预装插件的目录名：开发时在 build 下，正式包在 resources 下。 */
+/** 预装插件的目录名：开发时在 build/ember 下，正式包在 resources 下。 */
 const PLUGINS_DIRECTORY = 'plugins';
 /** 平台与架构的名字（如 win32-x64），ffmpeg 程序放在以它命名的目录里：开发时在 core/third_party/ffmpeg/bin 下，正式包在 resources 下。 */
 const PLATFORM_DIRECTORY = `${process.platform}-${process.arch}`;
@@ -87,9 +87,10 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
 
   const devServerUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
   const rendererFile = join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
-  const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', NATIVE_FILE);
-  const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(app.getAppPath(), 'core', 'build', 'Release', KEYBOARD_NATIVE_FILE);
-  const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(app.getAppPath(), 'build', PLUGINS_DIRECTORY);
+  const buildRoot = join(app.getAppPath(), '..', 'build', 'ember');
+  const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(buildRoot, 'core', 'Release', NATIVE_FILE);
+  const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(buildRoot, 'core', 'Release', KEYBOARD_NATIVE_FILE);
+  const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(buildRoot, PLUGINS_DIRECTORY);
   const ffmpegPath = app.isPackaged
     ? join(process.resourcesPath, PLATFORM_DIRECTORY, FFMPEG_FILE)
     : join(app.getAppPath(), 'core', 'third_party', 'ffmpeg', 'bin', PLATFORM_DIRECTORY, FFMPEG_FILE);

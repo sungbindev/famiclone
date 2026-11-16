@@ -5,7 +5,7 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
 // 备注：用法 node tools/build-cc65.mjs；用 mingw32-make 与 gcc 构建，FCDEV_MAKE 可指定 make 程序。
-//       构建在 build/cc65-work 下进行，不污染 cc65/ 源码目录。
+//       构建在 build/cc65 下进行，不污染 cc65/ 源码目录。
 // ------------------------------------------------------------------------
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -101,7 +101,7 @@ function writePackageJson(packageDir) {
  */
 export async function buildCc65(options = {}) {
   const make = options.make ?? process.env.FCDEV_MAKE ?? 'mingw32-make';
-  const workDir = options.workDir ?? path.join(REPO_ROOT, 'build', 'cc65-work');
+  const workDir = options.workDir ?? path.join(REPO_ROOT, 'build', 'cc65');
   const sourceDir = path.join(REPO_ROOT, 'cc65');
   const packageDir = path.join(REPO_ROOT, 'packages', TOOLCHAIN_PACKAGE_DIR_NAME);
   const jobs = String(Math.max(1, cpus().length));

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：官方插件包由 npm run plugins:pack 打到 build/plugins（core:test 会先打包），路径经编译参数 EMBER_PLUGIN_DIR 传入；
+ * 备注：官方插件包由 npm run plugins:pack 打到 build/ember/plugins（core:test 会先打包），路径经编译参数 EMBER_PLUGIN_DIR 传入；
  *       测试插件的源文件在 core/test/data/test-plugins/<名称>/，测试时现场打包，只用于测试，不随程序发布。
  * ------------------------------------------------------------------------
  */
@@ -68,7 +68,7 @@ inline std::vector<std::uint8_t> makeEmap(const std::vector<PackageFile>& files)
   return bytes;
 }
 
-/** 官方插件包的内容：build/plugins/<id>.emap。 */
+/** 官方插件包的内容：build/ember/plugins/<id>.emap。 */
 inline std::vector<std::uint8_t> officialPluginPackage(const std::string& id) { return readBinaryFile(std::string(EMBER_PLUGIN_DIR) + "/" + id + ".emap"); }
 
 /** 测试插件：把 core/test/data/test-plugins/<名称>/ 下的 manifest.json 与（有的话）main.js 打成包。 */

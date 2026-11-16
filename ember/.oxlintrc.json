@@ -14,5 +14,5 @@
     "unicorn/no-array-for-each": "off",
     "unicorn/require-post-message-target-origin": "off"
   },
-  "ignorePatterns": ["**/generated/**", "node_modules/**", ".vite/**", "out/**", "core/build/**", "core/build-test/**"]
+  "ignorePatterns": ["**/generated/**", "node_modules/**", ".vite/**"]
 }

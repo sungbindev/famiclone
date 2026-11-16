@@ -58,7 +58,7 @@ fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考�
 | `vscode` | VS Code 扩展（独立的 npm 项目，说明见 [vscode/README.md](vscode/README.md)） |
 | `machines` | 各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)、[bbk](machines/bbk/README.md) |
 | `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`bbk-bios`、`bbk-loader`、`memtest`、`fcprobe`、`disk` 与 `examples` |
-| `cc65`、`virtuanes` | cc65 与模拟器的源码，在本仓库维护，各自带许可文件 |
+| `cc65`、`ember` | cc65 与模拟器 Ember 的源码，在本仓库维护；`cc65` 带许可文件 |
 | `tools` | 构建、检查与发布前验证脚本 |
 | `packages/fcdev/docs` | 各部分的开发文档与使用手册，随主包发布；清单见 [01-软件架构设计.md](packages/fcdev/docs/01-软件架构设计.md) 第 9 节，终端里运行 `npx fcdev docs` 查看 |
 
@@ -77,4 +77,4 @@ npm run release:verify # 打包后在临时目录里创建、安装并构建四�
 
 ## 许可证
 
-仓库与 `fcdev` 自己的代码为 Apache-2.0，见 [LICENSE](LICENSE)。`cc65/` 为 zlib 许可，`virtuanes/`（模拟器）为 GPLv3，各自的许可文件在对应目录。
+仓库与 `fcdev` 自己的代码为 Apache-2.0，见 [LICENSE](LICENSE)。`cc65/` 为 zlib 许可，许可文件在 `cc65/LICENSE`。

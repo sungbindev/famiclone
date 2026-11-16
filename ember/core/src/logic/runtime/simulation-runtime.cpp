@@ -146,6 +146,8 @@ void SimulationRuntime::runPending(std::unique_lock<std::mutex>& lock) {
 }
 
 void SimulationRuntime::threadMain() {
+  // 帧节拍晚了会让声音缓冲被抽空，所以模拟线程启动时调用选项里的钩子（提高优先级），返回值持有到线程结束。
+  const std::shared_ptr<void> threadScope = options_.threadScope ? options_.threadScope() : nullptr;
   std::unique_lock lock(mutex_);
   Clock::time_point next = Clock::now();
   for (;;) {

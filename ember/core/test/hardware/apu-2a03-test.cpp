@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：apu-2a03-test.cpp
  * 说明：APU 的单元测试：各通道的寄存器行为（长度计数器、包络、方波与扫频、三角波、噪声、DMC）、帧计数器与帧 IRQ 的时序、$4015 状态、
- *       DMC 的取样 DMA（暂停 CPU 的周期数、IRQ、速率）、混音输出范围与无输入时输出为 0、带限采样器的采样数、阶跃响应与对超奈奎斯特频率的抑制。
+ *       DMC 的取样 DMA（暂停 CPU 的周期数、IRQ、速率）、混音输出范围与无输入时输出为 0、输出的采样数。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -23,11 +23,10 @@
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/apu-2a03/apu-channels.hpp"
 #include "logic/hardware/apu-2a03/apu-tables.hpp"
-#include "logic/hardware/apu-2a03/band-limited-sampler.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
-#include "shared/errors/core-error.hpp"
+#include "shared/audio/band-limited-sampler.hpp"
 
 namespace {
 
@@ -716,7 +715,7 @@ TEST(Apu2a03, SilenceWithoutAnyInputAndSampleCountFollowsTheClockRatio) {
   std::vector<float> samples;
   rig.apu.takeAudio(samples);
   // 48000 / 1789772.67 的比例，带限滤波有 8 个采样的固定延迟。
-  EXPECT_NEAR(static_cast<double>(samples.size()), 48000.0 - apu::BandLimitedSampler::HALF_WIDTH, 2.0);
+  EXPECT_NEAR(static_cast<double>(samples.size()), 48000.0 - ember::shared::BandLimitedSampler::HALF_WIDTH, 2.0);
   for (const float sample : samples) ASSERT_EQ(sample, 0.0F);
 
   rig.apu.takeAudio(samples);
@@ -795,75 +794,6 @@ TEST(Apu2a03, AnOddNumberOfTicksPerCpuCycleAndAStartAtANonZeroTimeStillMakeProgr
   // PAL 的 4 步模式在 33252 个周期置位帧 IRQ；推进到之后应当正常返回并看到 IRQ。
   scheduler.advance(static_cast<hw::MasterTime>(15) * 34000);
   EXPECT_TRUE(irq.active());
-}
-
-// ---------------------------------------------------------------- 带限采样器
-
-TEST(BandLimitedSampler, OutputsNothingButSilenceWithoutDeltasAndCountsSamplesByTheRatio) {
-  apu::BandLimitedSampler sampler(CPU_HZ, 48000);
-  std::vector<float> out;
-  for (std::int64_t tick = 1; tick <= 178'977; ++tick) sampler.advance(tick, out);
-  // 0.1 秒：4800 个采样减去 8 个采样的延迟（+1，因为样本从第 0 个算起）。
-  EXPECT_NEAR(static_cast<double>(out.size()), 4800.0 - apu::BandLimitedSampler::HALF_WIDTH, 2.0);
-  EXPECT_EQ(sampler.emittedSamples(), static_cast<std::int64_t>(out.size()));
-  for (const float sample : out) ASSERT_EQ(sample, 0.0F);
-}
-
-TEST(BandLimitedSampler, AStepSettlesAtTheDeltaThenTheDcBlockerRemovesIt) {
-  apu::BandLimitedSampler sampler(CPU_HZ, 48000);
-  std::vector<float> out;
-  const std::int64_t stepTick = 5000;
-  for (std::int64_t tick = 1; tick <= 3'000'000; ++tick) {
-    if (tick == stepTick) sampler.addDelta(tick, 0.5);
-    sampler.advance(tick, out);
-  }
-  const std::size_t stepSample = static_cast<std::size_t>(std::floor(static_cast<double>(stepTick) * 48000.0 / CPU_HZ));
-  float peak = 0;
-  float settled = 0;
-  for (std::size_t i = stepSample; i < stepSample + 24; ++i) peak = std::max(peak, out[i]);
-  for (std::size_t i = stepSample + 24; i < stepSample + 44; ++i) settled = std::max(settled, out[i]);
-  // 带限滤波的阶跃响应有 10% 左右的过冲（振铃在 20 kHz 附近，听不到），脉冲响应结束后回到变化量，之后被直流阻断缓慢拉回 0。
-  EXPECT_LT(peak, 0.5F * 1.15F);
-  EXPECT_GT(peak, 0.5F);
-  EXPECT_NEAR(settled, 0.5F, 0.05F) << "阶跃之后到达变化量";
-  for (std::size_t i = 0; i + 1 < stepSample - apu::BandLimitedSampler::HALF_WIDTH - 2; ++i) ASSERT_EQ(out[i], 0.0F) << "脉冲响应之前没有输出";
-  EXPECT_LT(std::abs(out[stepSample + 4800]), 0.01F) << "100 毫秒后直流已被阻断";
-  EXPECT_LT(std::abs(out.back()), 1e-6F);
-}
-
-/** 用方波（每 halfPeriodTicks 个周期翻转一次，幅度 ±0.5）驱动采样器，返回稳定后的均方根。 */
-double squareWaveRms(std::int64_t halfPeriodTicks) {
-  apu::BandLimitedSampler sampler(CPU_HZ, 48000);
-  std::vector<float> out;
-  double level = 0;
-  const std::int64_t total = 900'000;
-  for (std::int64_t tick = 1; tick <= total; ++tick) {
-    if (tick % halfPeriodTicks == 0) {
-      const double target = level > 0 ? -0.5 : 0.5;
-      sampler.addDelta(tick, target - level);
-      level = target;
-    }
-    sampler.advance(tick, out);
-  }
-  double sum = 0;
-  std::size_t count = 0;
-  for (std::size_t i = out.size() / 2; i < out.size(); ++i, ++count) sum += static_cast<double>(out[i]) * out[i];
-  return std::sqrt(sum / static_cast<double>(count));
-}
-
-TEST(BandLimitedSampler, FrequenciesAboveNyquistAreRemovedInsteadOfFoldingBackAsHiss) {
-  // 每 298 个周期翻转：约 3.0 kHz；每 30 个周期翻转：约 29.8 kHz，高于奈奎斯特频率（24 kHz）。
-  const double audible = squareWaveRms(298);
-  const double ultrasonic = squareWaveRms(30);
-  EXPECT_GT(audible, 0.3);
-  // 不做带限（直接按采样点取值）时，29.8 kHz 会混叠成 18.2 kHz 的响亮音调；带限滤波把它压到可闻分量的 2% 以下（-34 dB）。
-  EXPECT_LT(ultrasonic, audible * 0.02);
-}
-
-TEST(BandLimitedSampler, RejectsInvalidRates) {
-  EXPECT_THROW(apu::BandLimitedSampler(0.0, 48000), ember::shared::CoreError);
-  EXPECT_THROW(apu::BandLimitedSampler(CPU_HZ, 0), ember::shared::CoreError);
-  EXPECT_THROW(apu::BandLimitedSampler(48000.0, 48000), ember::shared::CoreError);
 }
 
 }  // namespace

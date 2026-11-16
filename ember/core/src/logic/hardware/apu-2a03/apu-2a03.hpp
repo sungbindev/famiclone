@@ -30,7 +30,7 @@
 #include "contracts/hardware/scheduler.hpp"
 #include "logic/hardware/apu-2a03/apu-channels.hpp"
 #include "logic/hardware/apu-2a03/apu-tables.hpp"
-#include "logic/hardware/apu-2a03/band-limited-sampler.hpp"
+#include "shared/audio/band-limited-sampler.hpp"
 
 namespace ember::logic::hardware {
 
@@ -129,7 +129,7 @@ class Apu2a03 final : public contracts::hardware::Device {
   int blockFrameClock_{0};
 
   // 混音与采样
-  apu::BandLimitedSampler sampler_;
+  shared::BandLimitedSampler sampler_;
   std::vector<float> samples_;
   double level_{0};
   unsigned lastKey_{0};

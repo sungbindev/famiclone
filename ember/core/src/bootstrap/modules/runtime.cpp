@@ -23,6 +23,7 @@
 #include "contracts/runtime/runtime-service.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
 #include "platform/audio/audio-output.hpp"
+#include "platform/time/thread-priority.hpp"
 #include "platform/time/timer-resolution.hpp"
 #include "requests/runtime/runtime-requests.hpp"
 
@@ -45,6 +46,8 @@ void registerRuntime(ModuleRegistry& registry) {
   options.audio = registry.services.require<platform::AudioOutput>();
   options.events = registry.events;
   options.errors = registry.errors;
+  // 帧节拍晚了声音缓冲会被抽空，模拟线程要高于一般线程的优先级。
+  options.threadScope = [] { return std::shared_ptr<void>(std::make_shared<platform::ThreadPriorityBoost>()); };
   auto timer = std::make_shared<platform::TimerResolution>();
   auto runtime = std::make_shared<logic::runtime::SimulationRuntime>(std::move(options));
   registry.services.provide<contracts::runtime::RuntimeService>(runtime);

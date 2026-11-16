@@ -4,20 +4,19 @@
  * 说明：带限阶跃合成的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-16
  * ------------------------------------------------------------------------
  */
 
-#include "logic/hardware/apu-2a03/band-limited-sampler.hpp"
+#include "shared/audio/band-limited-sampler.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <numbers>
 
-#include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
 
-namespace ember::logic::hardware::apu {
+namespace ember::shared {
 
 namespace {
 
@@ -58,7 +57,7 @@ const Kernel& kernelTable() {
 
 BandLimitedSampler::BandLimitedSampler(double inputRate, unsigned outputRate) {
   if (!(inputRate > 0) || outputRate == 0 || static_cast<double>(outputRate) >= inputRate) {
-    throw shared::CoreError(contracts::hardware::ERROR_INVALID_ARGUMENT, "采样率必须大于 0，且输出采样率必须小于输入时钟频率");
+    throw CoreError(ERROR_INVALID_PARAMS, "采样率必须大于 0，且输出采样率必须小于输入时钟频率");
   }
   phasesPerTick_ = static_cast<double>(outputRate) / inputRate * PHASES;
   dcBlockFactor_ = std::exp(-2.0 * std::numbers::pi * DC_BLOCK_HZ / static_cast<double>(outputRate));
@@ -97,4 +96,4 @@ void BandLimitedSampler::advance(std::int64_t tick, std::vector<float>& out) {
   }
 }
 
-}  // namespace ember::logic::hardware::apu
+}  // namespace ember::shared

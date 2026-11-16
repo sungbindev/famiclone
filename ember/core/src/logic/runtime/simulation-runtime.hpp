@@ -60,6 +60,8 @@ struct SimulationRuntimeOptions {
   std::shared_ptr<platform::ErrorLog> errors;
   /** 连续运行时的帧率；MACHINE_FRAME_RATE 表示按主机自己的帧率，0 表示不限速、一直全速运行（测试用）。 */
   double framesPerSecond{MACHINE_FRAME_RATE};
+  /** 模拟线程启动时在该线程里调用，返回值持有到线程结束（用来提高线程优先级等）；为空时什么也不做。 */
+  std::function<std::shared_ptr<void>()> threadScope;
 };
 
 /** 模拟线程与命令队列。 */

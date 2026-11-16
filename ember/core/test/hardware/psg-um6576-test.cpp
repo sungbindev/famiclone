@@ -18,6 +18,7 @@
 
 #include "logic/hardware/psg-um6576/psg-um6576.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
+#include "shared/audio/band-limited-sampler.hpp"
 
 namespace {
 
@@ -58,7 +59,32 @@ float tailPeak(const std::vector<float>& samples) {
 TEST(PsgUm6576, ProducesAboutTheRightNumberOfSamples) {
   PsgBench bench;
   const auto samples = bench.run(16 * 1'662'607);
-  EXPECT_NEAR(static_cast<double>(samples.size()), 48000.0, 3.0);
+  EXPECT_NEAR(static_cast<double>(samples.size()), 48000.0 - ember::shared::BandLimitedSampler::HALF_WIDTH, 3.0) << "\u5e26\u9650\u91c7\u6837\u5668\u6709 16 \u4e2a\u91c7\u6837\u7684\u56fa\u5b9a\u5ef6\u8fdf";
+}
+
+/** \u7528 DAC \u7535\u5e73\u6bcf halfPeriodCycles \u4e2a CPU \u5468\u671f\u7ffb\u8f6c\u4e00\u6b21\u7684\u65b9\u6ce2\u9a71\u52a8 PSG 0.1 \u79d2\uff0c\u8fd4\u56de\u540e\u534a\u6bb5\u7684\u5747\u65b9\u6839\u3002 */
+double dacSquareWaveRms(std::int64_t halfPeriodCycles) {
+  PsgBench bench;
+  std::vector<float> samples;
+  std::uint8_t level = 0;
+  for (std::int64_t cycle = 0; cycle < TENTH_SECOND / 16; cycle += halfPeriodCycles) {
+    level = level == 0 ? 255 : 0;
+    bench.psg.setDacLevel(level);
+    bench.scheduler.advance(16 * halfPeriodCycles);
+  }
+  bench.psg.takeAudio(samples);
+  double sum = 0;
+  std::size_t count = 0;
+  for (std::size_t index = samples.size() / 2; index < samples.size(); ++index, ++count) sum += static_cast<double>(samples[index]) * samples[index];
+  return std::sqrt(sum / static_cast<double>(count));
+}
+
+TEST(PsgUm6576, FrequenciesAboveNyquistAreRemovedInsteadOfFoldingBackAsHiss) {
+  // \u6bcf 300 \u4e2a\u5468\u671f\u7ffb\u8f6c\uff1a\u7ea6 2.8 kHz\uff1b\u6bcf 30 \u4e2a\u5468\u671f\u7ffb\u8f6c\uff1a\u7ea6 27.7 kHz\uff0c\u9ad8\u4e8e\u5948\u594e\u65af\u7279\u9891\u7387\u3002
+  const double audible = dacSquareWaveRms(300);
+  const double ultrasonic = dacSquareWaveRms(30);
+  EXPECT_GT(audible, 0.1);
+  EXPECT_LT(ultrasonic, audible * 0.05);
 }
 
 TEST(PsgUm6576, SilentWhenNothingIsEnabled) {

@@ -30,14 +30,12 @@ constexpr std::uint16_t NOISE_PERIODS[16] = {4, 8, 14, 30, 60, 88, 118, 148, 188
 constexpr std::int64_t FRAME_STEP_CYCLES = 8314;
 /** DAC 满量程在混音里的幅度。 */
 constexpr double DAC_SCALE = 0.5;
-/** 高通滤波的截止频率（赫兹）。 */
-constexpr double HIGH_PASS_HZ = 20.0;
 /** 最多保留的采样数（约 1 秒）。 */
 constexpr std::size_t MAX_PENDING_SAMPLES = PsgUm6576::SAMPLE_RATE;
 
 }  // namespace
 
-PsgUm6576::PsgUm6576(const hw::Clock& clock, hw::ClockDomain cpuDomain, double cpuHz) : clock_(clock), cpuDomain_(cpuDomain), cyclesPerSample_(cpuHz / SAMPLE_RATE) {
+PsgUm6576::PsgUm6576(const hw::Clock& clock, hw::ClockDomain cpuDomain, double cpuHz) : clock_(clock), cpuDomain_(cpuDomain), sampler_(cpuHz, SAMPLE_RATE), voiceSampler_(cpuHz, SAMPLE_RATE), dacSampler_(cpuHz, SAMPLE_RATE), dacRetimer_(cpuHz) {
   if (cpuDomain_.ticksPerCycle < 1 || cpuHz <= 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PSG 的时钟参数必须大于 0");
   reset(true);
 }
@@ -71,12 +69,17 @@ void PsgUm6576::reset(bool /*power*/) {
   frameStepIndex_ = 0;
   dacLevel_ = 0;
   voiceLevel_ = 0;
-  accumulator_ = 0;
-  accumulatedCycles_ = 0;
-  nextSampleAt_ = static_cast<double>(cycle_) + cyclesPerSample_;
-  highPassPrevIn_ = 0;
-  highPassPrevOut_ = 0;
+  // 从当前时间重新开始，上电时的初始电平（三角波的静止电平）不产生阶跃。
+  sampler_.reset(cycle_);
+  level_ = mix();
   pending_.clear();
+  voiceSampler_.reset(cycle_);
+  voiceFilter_.reset();
+  voicePending_.clear();
+  dacSampler_.reset(cycle_);
+  dacFilter_.reset();
+  dacPending_.clear();
+  dacRetimer_.reset();
 }
 
 hw::BusRead PsgUm6576::peek(std::uint16_t address) {
@@ -173,11 +176,17 @@ void PsgUm6576::catchUp(hw::MasterTime now) {
 
 void PsgUm6576::setDacLevel(std::uint8_t level) {
   catchUp(clock_.now());
+  dacRetimer_.push(cycle_, level);
+}
+
+void PsgUm6576::applyDacLevel(std::uint8_t level) {
+  dacSampler_.addDelta(cycle_, (static_cast<double>(level) - static_cast<double>(dacLevel_)) / 255.0 * DAC_SCALE);
   dacLevel_ = level;
 }
 
 void PsgUm6576::setVoiceLevel(double level) {
   catchUp(clock_.now());
+  voiceSampler_.addDelta(cycle_, level - voiceLevel_);
   voiceLevel_ = level;
 }
 
@@ -232,10 +241,12 @@ double PsgUm6576::mix() const {
   if (lengths_[3] > 0 && (noiseShift_ & 1U) == 0) noise = envelopeConstant_[2] ? envelopePeriod_[2] : envelopeDecay_[2];
   const double tnd = triangle / 8227.0 + noise / 12241.0;
   const double tndOut = tnd == 0 ? 0.0 : 159.79 / (1.0 / tnd + 100.0);
-  return pulseOut + tndOut + dacLevel_ / 255.0 * DAC_SCALE + voiceLevel_;
+  return pulseOut + tndOut;
 }
 
 void PsgUm6576::stepCycle() {
+  std::uint8_t dacValue = 0;
+  if (dacRetimer_.poll(cycle_, dacValue)) applyDacLevel(dacValue);
   // 方波的定时器每两个 CPU 周期走一步。
   if ((cycle_ & 1) == 0) {
     for (unsigned index = 0; index < 2; ++index) {
@@ -265,20 +276,20 @@ void PsgUm6576::stepCycle() {
     frameStep();
   }
 
-  accumulator_ += mix();
-  accumulatedCycles_ += 1;
+  const double level = mix();
+  if (level != level_) {
+    sampler_.addDelta(cycle_, level - level_);
+    level_ = level;
+  }
   ++cycle_;
-  if (static_cast<double>(cycle_) >= nextSampleAt_) {
-    const double input = accumulator_ / accumulatedCycles_;
-    const double rate = 1.0 - 2.0 * 3.14159265358979 * HIGH_PASS_HZ / SAMPLE_RATE;
-    const double output = input - highPassPrevIn_ + rate * highPassPrevOut_;
-    highPassPrevIn_ = input;
-    highPassPrevOut_ = output;
-    pending_.push_back(static_cast<float>(std::clamp(output, -1.0, 1.0)));
-    if (pending_.size() > MAX_PENDING_SAMPLES) pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(MAX_PENDING_SAMPLES / 2));
-    accumulator_ = 0;
-    accumulatedCycles_ = 0;
-    nextSampleAt_ += cyclesPerSample_;
+  sampler_.advance(cycle_, pending_);
+  voiceSampler_.advance(cycle_, voicePending_);
+  dacSampler_.advance(cycle_, dacPending_);
+  if (pending_.size() > MAX_PENDING_SAMPLES) {
+    const auto dropped = static_cast<std::ptrdiff_t>(MAX_PENDING_SAMPLES / 2);
+    pending_.erase(pending_.begin(), pending_.begin() + dropped);
+    voicePending_.erase(voicePending_.begin(), voicePending_.begin() + dropped);
+    dacPending_.erase(dacPending_.begin(), dacPending_.begin() + dropped);
   }
 }
 
@@ -286,6 +297,12 @@ void PsgUm6576::takeAudio(std::vector<float>& samples) {
   catchUp(clock_.now());
   samples.swap(pending_);
   pending_.clear();
+  // 两个采样器按同样的节拍输出，个数相同。
+  for (std::size_t index = 0; index < samples.size() && index < voicePending_.size() && index < dacPending_.size(); ++index) {
+    samples[index] = std::clamp(samples[index] + voiceFilter_.process(voicePending_[index]) + dacFilter_.process(dacPending_[index]), -1.0F, 1.0F);
+  }
+  voicePending_.clear();
+  dacPending_.clear();
 }
 
 }  // namespace ember::logic::hardware

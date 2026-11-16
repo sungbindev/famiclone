@@ -585,6 +585,32 @@ TEST(SimulationRuntime, ContinuousInputDoesNotMakeTheFramesRunEarly) {
   EXPECT_GE(frames, 45U);
 }
 
+TEST(SimulationRuntime, TheThreadScopeIsCreatedOnTheSimulationThreadAndReleasedWhenItEnds) {
+  std::atomic<int> created{0};
+  std::atomic<int> released{0};
+  std::atomic<std::thread::id> createdOn{};
+  auto frames = std::make_shared<FrameCapture>();
+  SimulationRuntimeOptions options;
+  options.machines = std::make_shared<MachineCatalog>();
+  options.frames = frames;
+  options.audio = std::make_shared<ember::platform::NullAudioOutput>();
+  options.events = std::make_shared<SyncEventSink>();
+  options.errors = std::make_shared<ember::test::RecordingErrorLog>();
+  options.framesPerSecond = 0;
+  options.threadScope = [&] {
+    ++created;
+    createdOn = std::this_thread::get_id();
+    return std::shared_ptr<void>(&created, [&](void*) { ++released; });
+  };
+  auto runtime = std::make_unique<SimulationRuntime>(std::move(options));
+  ASSERT_TRUE(waitFor([&] { return created.load() == 1; }));
+  EXPECT_NE(createdOn.load(), std::this_thread::get_id()) << "在模拟线程里创建";
+  EXPECT_EQ(released.load(), 0) << "线程结束前一直持有";
+  runtime->stop();
+  EXPECT_EQ(released.load(), 1);
+  EXPECT_EQ(created.load(), 1);
+}
+
 TEST(SimulationRuntime, CommandsAreAnsweredPromptlyWhileTheFrameLoopSleeps) {
   Rig rig(ember::logic::runtime::NTSC_FRAMES_PER_SECOND);
   rig.runtime->insertCartridge(rig.insertion(idleRom()));

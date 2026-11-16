@@ -18,4 +18,4 @@ npm start        # 在模拟器里运行（只支持 Windows）
 
 ## 文档
 
-开发文档随 fcdev 安装在 `node_modules/fcdev/docs/`。运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs nes` 查 NES 目标的文档位置。
+使用文档随 fcdev 安装在 `node_modules/fcdev/docs/`。运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs nes` 查 NES 目标的文档位置。

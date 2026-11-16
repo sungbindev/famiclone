@@ -54,7 +54,7 @@ describe('fcdev docs 命令', () => {
   it('不带查询词列出全部主题，不需要 fcdev.json', async () => {
     assert.equal(await run(['docs']), 0);
     const text = stdout.join('');
-    assert.match(text, new RegExp(`fcdev 开发文档：${DOC_TOPICS.length} 份`));
+    assert.match(text, new RegExp(`fcdev 使用文档：${DOC_TOPICS.length} 份`));
     for (const { topic } of DOC_TOPICS) assert.match(text, new RegExp(`\\b${topic}\\b`));
     assert.match(text, /fcdev docs <主题>/);
   });
@@ -70,9 +70,9 @@ describe('fcdev docs 命令', () => {
   });
 
   it('--json 的结果不含在线地址', async () => {
-    assert.equal(await run(['docs', 'vscode', '--json']), 0);
+    assert.equal(await run(['docs', 'build', '--json']), 0);
     const [doc] = JSON.parse(stdout.join(''));
-    assert.equal(doc.file, '10-VS Code扩展.md');
+    assert.equal(doc.file, '01-命令行与构建.md');
     assert.equal('onlineUrl' in doc, false);
   });
 
@@ -93,23 +93,23 @@ describe('fcdev docs 命令', () => {
 
   it('按文件名与关键词查询：主题名先于文件名先于关键词', () => {
     assert.equal(queryDocs('build').kind, 'topic');
-    assert.deepEqual(queryDocs('02-命令行与构建').matches.map((doc) => doc.topic), ['build']);
+    assert.deepEqual(queryDocs('01-命令行与构建').matches.map((doc) => doc.topic), ['build']);
     assert.deepEqual(queryDocs('系统调用手册').matches.map((doc) => doc.topic), ['syscall']);
     const file = queryDocs('反汇编');
     assert.equal(file.kind, 'file');
     assert.deepEqual(file.matches.map((doc) => doc.topic), ['disasm']);
-    const text = queryDocs('目标');
+    const text = queryDocs('运行');
     assert.equal(text.kind, 'text');
-    assert.ok(['targets', 'nes'].every((topic) => text.matches.some((doc) => doc.topic === topic)));
+    assert.ok(['emulator', 'nes'].every((topic) => text.matches.some((doc) => doc.topic === topic)));
     assert.equal(queryDocs('zzzz_not_exist').kind, 'none');
   });
 
   it('关键词匹配到多份文档时列出摘要', async () => {
-    assert.equal(await run(['docs', '目标']), 0);
+    assert.equal(await run(['docs', '运行']), 0);
     const text = stdout.join('');
-    assert.match(text, /包含“目标”的文档：\d+ 份/);
+    assert.match(text, /包含“运行”的文档：\d+ 份/);
     assert.match(text, /nes/);
-    assert.match(text, /targets/);
+    assert.match(text, /emulator/);
   });
 
   it('找不到时报错并提示', async () => {
@@ -134,8 +134,8 @@ describe('文档主题登记', () => {
     assert.equal(new Set(topics).size, topics.length);
   });
 
-  it('架构文档的文档清单列出了每个主题与文件', () => {
-    const text = readFileSync(path.join(docsDirectory(), '01-软件架构设计.md'), 'utf8');
+  it('架构文档（仓库根目录的 docs）的使用文档清单列出了每个主题与文件', () => {
+    const text = readFileSync(path.join(docsDirectory(), '..', '..', '..', 'docs', '01-软件架构设计.md'), 'utf8');
     for (const { topic, file } of DOC_TOPICS) {
       assert.ok(text.includes(`| \`${topic}\` |`), `文档清单缺少主题 ${topic}`);
       const label = path.posix.basename(file, '.md');

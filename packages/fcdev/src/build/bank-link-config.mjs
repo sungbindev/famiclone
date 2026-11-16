@@ -5,7 +5,7 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
 // 备注：模板里写固定的部分与库页 generatedFrom 之前的库页，%BANK_MEMORY% 与 %BANK_SEGMENTS% 两行分别展开成
-//       库页 generatedFrom 到 N 的内存区与段；定义见 docs/03-目标规范.md 第 2 节的 banked。
+//       库页 generatedFrom 到 N 的内存区与段；定义见仓库根目录 docs/02-目标规范.md 第 2 节的 banked。
 // ------------------------------------------------------------------------
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';

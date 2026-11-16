@@ -48,7 +48,7 @@ npm run check      # 类型检查、oxlint、测试、构建
 npm run package    # 生成 .vsix
 ```
 
-按 F5 可以在扩展开发宿主里调试。设计与目录说明见 `packages/fcdev/docs/10-VS Code扩展.md`。
+按 F5 可以在扩展开发宿主里调试。设计与目录说明见 `docs/06-VS Code扩展.md`。
 
 ## 许可证
 

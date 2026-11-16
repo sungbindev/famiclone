@@ -39,7 +39,7 @@ SB2000 的运行需要自己提供 BIOS 文件，写进项目的 `fcdev.json`：
 }
 ```
 
-fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考文件不随 npm 包发布）。全部命令、配置项、调试与反汇编的用法见 [packages/fcdev/README.md](packages/fcdev/README.md)，创建项目的选项见 [packages/create-fcdev/README.md](packages/create-fcdev/README.md)。完整的使用手册与开发文档在 [packages/fcdev/docs](packages/fcdev/docs)，随 `fcdev` 包发布，在项目里运行 `npx fcdev docs` 可以列出全部主题。
+fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考文件不随 npm 包发布）。全部命令、配置项、调试与反汇编的用法见 [packages/fcdev/README.md](packages/fcdev/README.md)，创建项目的选项见 [packages/create-fcdev/README.md](packages/create-fcdev/README.md)。完整的使用文档在 [packages/fcdev/docs](packages/fcdev/docs)，随 `fcdev` 包发布，在项目里运行 `npx fcdev docs` 可以列出全部主题。
 
 ## 限制
 
@@ -60,7 +60,8 @@ fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考�
 | `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`bbk-bios`、`bbk-loader`、`memtest`、`fcprobe`、`disk` 与 `examples` |
 | `cc65`、`ember` | cc65 与模拟器 Ember 的源码，在本仓库维护；`cc65` 带许可文件 |
 | `tools` | 构建、检查与发布前验证脚本 |
-| `packages/fcdev/docs` | 各部分的开发文档与使用手册，随主包发布；清单见 [01-软件架构设计.md](packages/fcdev/docs/01-软件架构设计.md) 第 9 节，终端里运行 `npx fcdev docs` 查看 |
+| `packages/fcdev/docs` | 使用文档（使用手册），随主包发布；终端里运行 `npx fcdev docs` 查看 |
+| `docs` | 开发文档：架构设计、目标规范、工具链、测试、发布、扩展与反汇编设计、运行库维护、待办与缺陷记录，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节，不随包发布 |
 
 ## 开发
 
@@ -73,7 +74,7 @@ npm run release:check  # 发布前检查
 npm run release:verify # 打包后在临时目录里创建、安装并构建四个模板
 ```
 
-构建 cc65 与模拟器的脚本、升级 cc65 的步骤见 [cc65 工具链](packages/fcdev/docs/04-cc65工具链.md) 与 [模拟器与调试](packages/fcdev/docs/05-模拟器与调试.md)。设置环境变量 `FCDEV_EMULATOR` 指向 Ember 的可执行文件，测试会额外在 Ember 里运行 NES 与 SB2000 程序（BIOS 用仓库里的 `reference/rom/SB2K_BIOS.NES`，也可用 `FCDEV_TEST_FIRMWARE` 指向别的 BIOS 文件）；设置 `FCDEV_TEST_NES_ROM` 指向一个 NROM 的 `.nes` 文件，测试会额外反汇编它。
+构建 cc65 与模拟器的脚本、升级 cc65 的步骤见 [cc65 工具链](docs/03-cc65工具链.md) 与 [模拟器与调试](packages/fcdev/docs/02-模拟器与调试.md)。设置环境变量 `FCDEV_EMULATOR` 指向 Ember 的可执行文件，测试会额外在 Ember 里运行 NES 与 SB2000 程序（BIOS 用仓库里的 `reference/rom/SB2K_BIOS.NES`，也可用 `FCDEV_TEST_FIRMWARE` 指向别的 BIOS 文件）；设置 `FCDEV_TEST_NES_ROM` 指向一个 NROM 的 `.nes` 文件，测试会额外反汇编它。
 
 ## 许可证
 

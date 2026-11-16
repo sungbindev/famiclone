@@ -26,7 +26,7 @@ npx fcdev disasm game.nes  # 反汇编成 ca65 源码，并回读校验
 npx fcdev sync             # 生成 IDE 的 C/C++ 配置
 npx fcdev info --json      # 显示目标、工具链与头文件目录
 npx fcdev api sb_file_open # 查询目标的 C 接口文档（函数名、模块名、$功能号或关键词；不带词列出全部模块）
-npx fcdev docs syscall     # 查开发文档的本机路径（主题名或关键词；不带词列出全部主题）
+npx fcdev docs syscall     # 查使用文档的本机路径（主题名或关键词；不带词列出全部主题）
 ```
 
 入口是 `main`（汇编程序写 `.export _main`）。产物放在项目根的 `build/<目标>/`，中间文件在 `build/obj/`。
@@ -77,20 +77,19 @@ npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号�
 
 ## 文档
 
-完整的使用手册与开发文档随本包发布，装好后在 `node_modules/fcdev/docs/`。终端里运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs <主题>` 给出该文档的本机路径。更新记录在本包的 `CHANGELOG.md`。
+完整的使用文档随本包发布，装好后在 `node_modules/fcdev/docs/`。终端里运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs <主题>` 给出该文档的本机路径。更新记录在本包的 `CHANGELOG.md`。
 
 | 想做什么 | 主题 | 文档 |
 | --- | --- | --- |
-| 查命令、`fcdev.json` 配置与构建流程 | `build` | `docs/02-命令行与构建.md` |
-| 开发 NES 程序 | `nes` | `docs/nes/01-NES目标.md` |
+| 查命令、`fcdev.json` 配置与构建流程 | `build` | `docs/01-命令行与构建.md` |
+| 开发 NES 程序 | `nes` | `docs/nes/01-开发指南.md` |
 | 开发 SB2000（SB-DOS）程序 | `sb2000` | `docs/sb2000/01-开发指南.md` |
 | 查 SB-DOS 系统调用与出错码 | `syscall` | `docs/sb2000/02-系统调用手册.md` |
 | 查 SB2000 的硬件行为 | `hardware` | `docs/sb2000/03-硬件说明.md` |
 | 查 SB2000 运行库的 C 函数 | `api` | `targets/sb2000/api-reference.md`（也可以用 `npx fcdev api` 查询） |
-| 在模拟器里运行与调试，查调试命令 | `emulator` | `docs/05-模拟器与调试.md` |
-| 反汇编已有程序 | `disasm` | `docs/06-反汇编.md` |
-| 创建项目与模板 | `create` | `docs/07-创建包与模板.md` |
-| 新增机型的目标 | `targets` | `docs/03-目标规范.md` |
+| 在模拟器里运行与调试，查调试命令 | `emulator` | `docs/02-模拟器与调试.md` |
+| 反汇编已有程序 | `disasm` | `docs/03-反汇编.md` |
+| 创建项目与模板 | `create` | `docs/04-创建包与模板.md` |
 
 ## 限制
 

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：docs-command.mjs
-// 说明：docs 命令：列出开发文档的主题，查询某份文档的本机路径。
+// 说明：docs 命令：列出使用文档的主题，查询某份文档的本机路径。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
@@ -29,7 +29,7 @@ export async function runDocsCommand({ positionals, options, context }) {
       return 0;
     }
     const width = Math.max(...docs.map((doc) => doc.topic.length));
-    const lines = [`fcdev 开发文档：${docs.length} 份`, `本机目录：${directory}`, ''];
+    const lines = [`fcdev 使用文档：${docs.length} 份`, `本机目录：${directory}`, ''];
     for (const doc of docs) lines.push(`  ${doc.topic.padEnd(width)}  ${doc.title}：${doc.summary}`);
     lines.push('', '查询：npx fcdev docs <主题>（本机路径）、npx fcdev docs <词>（按主题、文件名、标题与说明搜索）');
     context.stdout.write(`${lines.join('\n')}\n`);

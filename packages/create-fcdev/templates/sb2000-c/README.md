@@ -49,4 +49,4 @@ npx fcdev api '$7B'         # 看用到某个系统调用的函数
 
 ## 文档
 
-开发文档随 fcdev 安装在 `node_modules/fcdev/docs/`。运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs sb2000` 查开发指南，`npx fcdev docs syscall` 查系统调用手册。
+使用文档随 fcdev 安装在 `node_modules/fcdev/docs/`。运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs sb2000` 查开发指南，`npx fcdev docs syscall` 查系统调用手册。

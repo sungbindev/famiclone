@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用法 node tools/check-structure.mjs；依赖表与 packages/fcdev/docs/01-软件架构设计.md 第 5 节一致，改表时同步改文档。
+// 备注：用法 node tools/check-structure.mjs；依赖表与 docs/01-软件架构设计.md 第 5 节一致，改表时同步改文档。
 // ------------------------------------------------------------------------
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';

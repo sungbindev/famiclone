@@ -10,7 +10,7 @@
     "  npm run disk     生成软盘镜像 build/sb2000/HELLO.img",
     "  npm start        在模拟器里运行（只支持 Windows）：先在 fcdev.json 里用 firmware 指定 SB2000 的 BIOS 文件，",
     "                   DOS 启动后按两次回车跳过日期与时间，再输入 hello",
-    "  npx fcdev docs   查开发文档",
+    "  npx fcdev docs   查使用文档",
     "  npx fcdev api    查 SB2000 的 C 函数接口"
   ]
 }

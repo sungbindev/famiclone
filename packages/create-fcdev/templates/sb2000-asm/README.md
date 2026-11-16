@@ -34,4 +34,4 @@ DOS 启动后按两次回车跳过日期与时间提示，在提示符下输入 
 
 ## 文档
 
-开发文档随 fcdev 安装在 `node_modules/fcdev/docs/`。运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs sb2000` 查开发指南，`npx fcdev docs syscall` 查系统调用手册。
+使用文档随 fcdev 安装在 `node_modules/fcdev/docs/`。运行 `npx fcdev docs` 列出全部主题，`npx fcdev docs sb2000` 查开发指南，`npx fcdev docs syscall` 查系统调用手册。

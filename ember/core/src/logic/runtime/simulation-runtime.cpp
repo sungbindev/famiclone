@@ -170,8 +170,12 @@ void SimulationRuntime::threadMain() {
     const auto now = Clock::now();
     if (now - next > framePeriod_ * MAX_LAG_FRAMES) {
       next = now;
-    } else if (next > now) {
-      wake_.wait_until(lock, next, [this] { return stopping_ || !commands_.empty(); });
+    } else {
+      // 休眠中收到命令就处理，处理完接着睡到帧节拍；命令不能让下一帧提前开始，否则连续的输入（如鼠标移动）会让机器与声音加速。
+      while (!stopping_ && !resync_ && !run_.has_value() && running() && Clock::now() < next) {
+        wake_.wait_until(lock, next, [this] { return stopping_ || !commands_.empty(); });
+        runPending(lock);
+      }
     }
   }
 }

@@ -567,6 +567,24 @@ TEST(SimulationRuntime, RunsAtTheFrameRateOfTheMachineSoThatAudioIsProducedAtThe
   EXPECT_LE(samples, 52000U);
 }
 
+TEST(SimulationRuntime, ContinuousInputDoesNotMakeTheFramesRunEarly) {
+  Rig rig(ember::logic::runtime::NTSC_FRAMES_PER_SECOND);
+  rig.runtime->insertCartridge(rig.insertion(idleRom()));
+  ASSERT_TRUE(rig.waitFrames(2));
+  const auto before = rig.frames->count();
+  const auto start = std::chrono::steady_clock::now();
+  // 像鼠标快速移动那样不停地发输入（约每 0.2 毫秒一条，用忙等；测试进程里系统定时器精度不够 sleep 这么短）；每条输入都会唤醒休眠中的帧循环。
+  while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(1000)) {
+    rig.runtime->sendInput(key("KeyQ", true));
+    const auto sent = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - sent < std::chrono::microseconds(200)) {
+    }
+  }
+  const auto frames = rig.frames->count() - before;
+  EXPECT_LE(frames, 66U) << "帧数不能因为输入而增多";
+  EXPECT_GE(frames, 45U);
+}
+
 TEST(SimulationRuntime, CommandsAreAnsweredPromptlyWhileTheFrameLoopSleeps) {
   Rig rig(ember::logic::runtime::NTSC_FRAMES_PER_SECOND);
   rig.runtime->insertCartridge(rig.insertion(idleRom()));

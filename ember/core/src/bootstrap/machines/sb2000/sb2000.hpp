@@ -108,6 +108,8 @@ class Sb2000Machine final : public contracts::hardware::Machine, private contrac
   void run(contracts::hardware::MasterTime ticks) override;
   void runFrame() override;
   [[nodiscard]] contracts::hardware::FrameBuffer frame() const override { return fcMode_ ? fcPpu_.frame() : ppu_.frame(); }
+  /** 6576 模式与 FC 兼容模式都是每帧 312 行、每行 341 点（PAL）。 */
+  [[nodiscard]] double framesPerSecond() const override { return MASTER_CLOCK_HZ / (static_cast<double>(PPU_TICKS_PER_DOT) * 341.0 * 312.0); }
   [[nodiscard]] unsigned audioSampleRate() const override { return fcMode_ ? logic::hardware::Apu2a03::SAMPLE_RATE : logic::hardware::PsgUm6576::SAMPLE_RATE; }
   void takeAudio(std::vector<float>& samples) override;
   void setButtons(unsigned port, std::uint8_t buttons) override;

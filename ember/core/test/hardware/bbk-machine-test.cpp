@@ -304,6 +304,11 @@ TEST(BbkMachine, VblankStartsAtLine291LikeADendyConsole) {
   EXPECT_FALSE(machine.ppu().vblankFlag());
 }
 
+TEST(BbkMachine, TheFrameRateIsFiftyHertz) {
+  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+  EXPECT_NEAR(machine.framesPerSecond(), 50.007, 0.001);
+}
+
 TEST(BbkMachine, TheScanlineCounterRaisesAnIrqWhenItWrapsAroundOnAVisibleLine) {
   BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
   machine.powerOn();

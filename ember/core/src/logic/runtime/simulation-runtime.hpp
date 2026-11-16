@@ -46,6 +46,8 @@ namespace ember::logic::runtime {
 
 /** NTSC 经典 FC 的帧率（每秒帧数）。 */
 inline constexpr double NTSC_FRAMES_PER_SECOND = 60.0988;
+/** framesPerSecond 取这个值时，按装入的主机自己的帧率限速。 */
+inline constexpr double MACHINE_FRAME_RATE = -1.0;
 
 /** 运行服务的依赖与参数。 */
 struct SimulationRuntimeOptions {
@@ -56,8 +58,8 @@ struct SimulationRuntimeOptions {
   std::shared_ptr<platform::AudioOutput> audio;
   std::shared_ptr<platform::EventSink> events;
   std::shared_ptr<platform::ErrorLog> errors;
-  /** 连续运行时的帧率；0 表示不限速，一直全速运行（测试用）。 */
-  double framesPerSecond{NTSC_FRAMES_PER_SECOND};
+  /** 连续运行时的帧率；MACHINE_FRAME_RATE 表示按主机自己的帧率，0 表示不限速、一直全速运行（测试用）。 */
+  double framesPerSecond{MACHINE_FRAME_RATE};
 };
 
 /** 模拟线程与命令队列。 */
@@ -140,6 +142,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void notifyObserver();
   void pushAudio();
   void syncAudio();
+  /** 换了主机之后，按设置与主机的帧率更新帧节拍。 */
+  void updateFramePeriod();
 
   SimulationRuntimeOptions options_;
   std::chrono::nanoseconds framePeriod_{0};

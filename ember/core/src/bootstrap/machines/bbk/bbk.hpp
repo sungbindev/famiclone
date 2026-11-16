@@ -95,6 +95,7 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
   void run(contracts::hardware::MasterTime ticks) override;
   void runFrame() override;
   [[nodiscard]] contracts::hardware::FrameBuffer frame() const override { return ppu_.frame(); }
+  [[nodiscard]] double framesPerSecond() const override { return MASTER_CLOCK_HZ / (static_cast<double>(PPU_TICKS_PER_DOT) * 341.0 * SCANLINES_PER_FRAME); }
   [[nodiscard]] unsigned audioSampleRate() const override { return logic::hardware::Apu2a03::SAMPLE_RATE; }
   void takeAudio(std::vector<float>& samples) override;
   void setButtons(unsigned port, std::uint8_t buttons) override;

@@ -181,6 +181,13 @@ TEST(FcMachine, RunFrameCompletesExactlyOneFrameEachTime) {
   EXPECT_NEAR(static_cast<double>(length), 89342.0 * 4.0, 8.0 * 12.0);
 }
 
+TEST(FcMachine, TheFrameRateIsTheNtscRate) {
+  Assembler main(0x8000);
+  main.jmpSelf();
+  FcRig rig(makeNromFile(main));
+  EXPECT_NEAR(rig.machine.framesPerSecond(), 60.0988, 0.0005);
+}
+
 TEST(FcMachine, RunAdvancesTheClockByAtLeastTheRequestedTicks) {
   Assembler main(0x8000);
   main.jmpSelf();

@@ -542,6 +542,31 @@ TEST(SimulationRuntime, RunsAtTheNtscFrameRateWithoutBusyWaiting) {
   EXPECT_LE(frames, 66U) << elapsed;
 }
 
+TEST(SimulationRuntime, RunsAtTheFrameRateOfTheMachineSoThatAudioIsProducedAtTheSpeedItIsPlayed) {
+  Rig rig(ember::logic::runtime::MACHINE_FRAME_RATE);
+  // 6576 模式的学习机每帧 20 毫秒（50 赫兹）；BIOS 复位后原地空转。
+  std::vector<std::uint8_t> bios(512 * 1024, 0xEA);
+  const std::uint8_t vectors[] = {0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0};
+  std::copy(std::begin(vectors), std::end(vectors), bios.begin() + 0x7FFA);
+  const std::uint8_t program[] = {0x78, 0x4C, 0x01, 0xC0};
+  std::copy(std::begin(program), std::end(program), bios.begin() + 0x4000);
+  rt::MachineBoot boot;
+  boot.machine = "sb2000";
+  boot.bios = std::move(bios);
+  rig.runtime->bootMachine(std::move(boot));
+  ASSERT_TRUE(rig.waitFrames(2));
+  const auto before = rig.frames->count();
+  const auto samplesBefore = rig.audio->stats().writtenSamples;
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  const auto frames = rig.frames->count() - before;
+  const auto samples = rig.audio->stats().writtenSamples - samplesBefore;
+  // 1 秒约 50 帧、约 48000 个采样；按 60 帧运行时会多出约 20%。
+  EXPECT_GE(frames, 42U);
+  EXPECT_LE(frames, 56U);
+  EXPECT_GE(samples, 44000U);
+  EXPECT_LE(samples, 52000U);
+}
+
 TEST(SimulationRuntime, CommandsAreAnsweredPromptlyWhileTheFrameLoopSleeps) {
   Rig rig(ember::logic::runtime::NTSC_FRAMES_PER_SECOND);
   rig.runtime->insertCartridge(rig.insertion(idleRom()));

@@ -231,6 +231,11 @@ TEST(Sb2000Machine, PowerOnRunsTheResetVectorAndEachFrameTakesFiftyHertzOfLines)
   EXPECT_NEAR(static_cast<double>(machine.cpuRegisters().cycles), expectedCycles, 100.0);
 }
 
+TEST(Sb2000Machine, TheFrameRateIsFiftyHertzSoThatAudioIsProducedAtTheSpeedItIsPlayed) {
+  Sb2000Machine machine(syntheticBios());
+  EXPECT_NEAR(machine.framesPerSecond(), 50.007, 0.001);
+}
+
 TEST(Sb2000Machine, SoftResetKeepsRamAndHardResetClearsIt) {
   Sb2000Machine machine(syntheticBios());
   machine.powerOn();

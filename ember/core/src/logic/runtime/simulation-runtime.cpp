@@ -67,7 +67,6 @@ rt::CartridgeSummary makeSummary(const rt::CartridgeInsertion& insertion, const 
 }  // namespace
 
 SimulationRuntime::SimulationRuntime(SimulationRuntimeOptions options) : options_(std::move(options)) {
-  if (options_.framesPerSecond > 0) framePeriod_ = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(1.0 / options_.framesPerSecond));
   snapshot_.power = "off";
   snapshot_.mode = "paused";
   snapshot_.speed = SPEED_PERCENT;
@@ -210,6 +209,11 @@ void SimulationRuntime::pushAudio() {
   machine_->takeAudio(audioBuffer_);
   // 采样率与声音输出不同时不输出（目前所有主机型号都是 48000 赫兹，不会发生）。
   if (!audioBuffer_.empty() && machine_->audioSampleRate() == options_.audio->sampleRate()) options_.audio->write(audioBuffer_);
+}
+
+void SimulationRuntime::updateFramePeriod() {
+  const double rate = options_.framesPerSecond < 0 && machine_ != nullptr ? machine_->framesPerSecond() : options_.framesPerSecond;
+  framePeriod_ = rate > 0 ? std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(1.0 / rate)) : std::chrono::nanoseconds{0};
 }
 
 void SimulationRuntime::syncAudio() {
@@ -441,6 +445,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     cartridge_.reset();
     machine_ = std::move(machine);
     cartridge_ = std::move(cartridge);
+    updateFramePeriod();
     machine_->connectFamilyKeyboard(familyKeyboard_);
     if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_ = summary;
@@ -463,6 +468,7 @@ rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
     if (machine_ != nullptr) machine_->cartridgeSlot().eject();
     cartridge_.reset();
     machine_ = std::move(machine);
+    updateFramePeriod();
     machine_->connectFamilyKeyboard(familyKeyboard_);
     if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_.reset();

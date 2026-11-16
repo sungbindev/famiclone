@@ -58,6 +58,9 @@ class Machine : public PadSink {
   /** 最近一次完成的画面；没有完成过画面时宽高为 0。 */
   [[nodiscard]] virtual FrameBuffer frame() const = 0;
 
+  /** 画面的帧率（每秒帧数），由主时钟与每帧的时间算出；运行服务按它限速，使声音的产出与播放速度一致。 */
+  [[nodiscard]] virtual double framesPerSecond() const = 0;
+
   /** 声音的采样率（赫兹），单声道。 */
   [[nodiscard]] virtual unsigned audioSampleRate() const = 0;
 

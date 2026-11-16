@@ -40,6 +40,7 @@ class TestMachine final : public hw::Machine {
   void run(hw::MasterTime ticks) override { inner.run(ticks); }
   void runFrame() override { inner.runFrame(); }
   [[nodiscard]] hw::FrameBuffer frame() const override { return inner.frame(); }
+  [[nodiscard]] double framesPerSecond() const override { return inner.framesPerSecond(); }
   [[nodiscard]] unsigned audioSampleRate() const override { return inner.audioSampleRate(); }
   void takeAudio(std::vector<float>& samples) override { inner.takeAudio(samples); }
   void input(const hw::InputEvent& event) override { inner.input(event); }

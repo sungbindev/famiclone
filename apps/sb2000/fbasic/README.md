@@ -47,6 +47,8 @@
 | `node tools/extract-chr.mjs` | 把 CHR 另存为 `reference/fbasic-chr.bin` |
 | `node ../../../packages/fcdev/bin/fcdev.mjs build exe/src` | 构建 `exe/build/sb2000/FBASIC.EXE` |
 | `node tools/exe-selftest.mjs` | 在 Ember 的学习机里运行骨架并自检（截图在 `build/selftest/`） |
+| `node tools/callgraph.mjs [--list]` | 统计代码块、块间引用与 NMI 实际要用到的块 |
+| `node tools/plan-banks.mjs [--resident <字节>] [--write]` | 把代码块分配到常驻页与各库页，写入 `analysis/banks.txt` |
 
 ## 目录
 

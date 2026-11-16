@@ -629,6 +629,22 @@ TEST(Ppu2c02Variants, RejectsAFrameThatIsTooShort) {
   PpuAddressBus bus;
   WiredOrIrqLine nmi;
   EXPECT_THROW(Ppu2c02(scheduler, bus, nmi, hw::ClockDomain{4}, 0, Ppu2c02::Options{241, true}), ember::shared::CoreError);
+  EXPECT_THROW(Ppu2c02(scheduler, bus, nmi, hw::ClockDomain{4}, 0, Ppu2c02::Options{312, false, 312}), ember::shared::CoreError) << "每帧的行数必须大于 vblank 起始行";
+  EXPECT_THROW(Ppu2c02(scheduler, bus, nmi, hw::ClockDomain{4}, 0, Ppu2c02::Options{312, false, 240}), ember::shared::CoreError) << "vblank 起始行不能小于 241";
+}
+
+TEST(Ppu2c02Variants, DendyVblankStartsOnLine291AndEndsOnTheLastLine) {
+  PpuRig rig(Ppu2c02::Options{312, false, 291});
+  rig.write(0x2000, 0x80);
+  rig.runTo(260, 0);
+  EXPECT_FALSE(rig.ppu.vblankFlag());
+  EXPECT_FALSE(rig.nmi.active());
+  rig.runTo(291, 2);
+  EXPECT_TRUE(rig.ppu.vblankFlag());
+  EXPECT_TRUE(rig.nmi.active());
+  rig.runTo(311, 2);
+  EXPECT_FALSE(rig.ppu.vblankFlag());
+  EXPECT_FALSE(rig.nmi.active());
 }
 
 }  // namespace

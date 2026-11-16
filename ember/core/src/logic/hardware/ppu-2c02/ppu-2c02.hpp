@@ -47,6 +47,8 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
     int scanlinesPerFrame;
     /** 奇数帧且背景开启时预渲染行少一个点（NTSC 有，PAL 没有）。 */
     bool oddFrameSkip;
+    /** vblank 置位的行（NTSC 与 PAL 为 241，Dendy 为 291，中间的行没有渲染）。 */
+    int vblankLine{241};
   };
 
   /**
@@ -58,7 +60,7 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
    */
   Ppu2c02(contracts::hardware::Scheduler& scheduler, contracts::hardware::PpuBus& bus, contracts::hardware::IrqLine& nmi, contracts::hardware::ClockDomain domain, contracts::hardware::MasterTime phase);
 
-  /** 同上，另指定变体；每帧的行数必须大于 241。 */
+  /** 同上，另指定变体；vblank 起始行不能小于 241，每帧的行数必须大于它。 */
   Ppu2c02(contracts::hardware::Scheduler& scheduler, contracts::hardware::PpuBus& bus, contracts::hardware::IrqLine& nmi, contracts::hardware::ClockDomain domain, contracts::hardware::MasterTime phase, Options options);
 
   // BusDevice：$2000-$3FFF，地址每 8 个字节镜像一次
@@ -85,6 +87,8 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   [[nodiscard]] std::uint8_t fineX() const { return fineX_; }
   [[nodiscard]] bool writeToggle() const { return w_; }
   [[nodiscard]] bool vblankFlag() const { return vblank_; }
+  /** 背景或精灵至少一个开启（主板按它决定是否计扫描线）。 */
+  [[nodiscard]] bool renderingEnabled() const { return (mask_ & 0x18) != 0; }
   [[nodiscard]] bool spriteZeroHit() const { return sprite0Hit_; }
   [[nodiscard]] bool spriteOverflow() const { return spriteOverflow_; }
   [[nodiscard]] std::span<const std::uint8_t> oam() const { return oam_; }
@@ -112,7 +116,6 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   void runDot();
   void publishFrame();
 
-  [[nodiscard]] bool renderingEnabled() const { return (mask_ & 0x18) != 0; }
   [[nodiscard]] std::uint8_t paletteIndex(std::uint16_t address) const;
 
   // 渲染
@@ -135,6 +138,8 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   Options options_;
   /** 预渲染行的行号（每帧行数减 1）。 */
   int preRenderLine_;
+  /** vblank 置位那一点在一帧里的序号。 */
+  int vblankStartIndex_;
   contracts::hardware::EventId eventId_{contracts::hardware::NO_EVENT};
 
   // 时间：下一个要执行的点与它开始的主时钟时间

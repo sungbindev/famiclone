@@ -34,8 +34,6 @@ constexpr std::uint8_t STATUS_SPRITE0_HIT = 0x40;
 constexpr std::uint8_t STATUS_SPRITE_OVERFLOW = 0x20;
 constexpr std::uint8_t MASK_GRAYSCALE = 0x01;
 
-/** 第 241 行第 1 点：vblank 置位。 */
-constexpr int VBLANK_START_INDEX = 241 * Ppu2c02::DOTS_PER_SCANLINE + 1;
 /** 预渲染行的第 1 点：vblank、精灵 0 命中与精灵溢出清除；第 339 点：奇数帧在这里决定是否跳过最后一点，此后下一帧 vblank 的位置才确定。 */
 constexpr int VBLANK_END_DOT = 1;
 constexpr int SKIP_DECISION_DOT = 339;
@@ -57,10 +55,12 @@ Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw
       phase_(phase),
       options_(options),
       preRenderLine_(options.scanlinesPerFrame - 1),
+      vblankStartIndex_(options.vblankLine * DOTS_PER_SCANLINE + 1),
       rgbaTable_(buildNtscPalette()) {
   if (domain_.ticksPerCycle < 1) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 点时钟的主时钟周期数必须大于 0");
   if (phase_ < 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 的相位不能为负");
-  if (options_.scanlinesPerFrame <= 241) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 每帧的行数必须大于 241");
+  if (options_.vblankLine < 241) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 的 vblank 起始行不能小于 241");
+  if (options_.scanlinesPerFrame <= options_.vblankLine) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 每帧的行数必须大于 vblank 起始行");
   for (auto& buffer : frameBuffers_) buffer.assign(static_cast<std::size_t>(FRAME_WIDTH) * FRAME_HEIGHT, 0xFF000000U);
 }
 
@@ -130,14 +130,14 @@ void Ppu2c02::scheduleNextEvent() {
   const int dotsPerFrame = DOTS_PER_SCANLINE * options_.scanlinesPerFrame;
   int target = 0;
   // 下一个会改变 NMI 线（或决定下一帧长度）的点；都已过去时取下一帧的 vblank 起点。
-  if (current <= VBLANK_START_INDEX) {
-    target = VBLANK_START_INDEX - current;
+  if (current <= vblankStartIndex_) {
+    target = vblankStartIndex_ - current;
   } else if (current <= vblankEnd) {
     target = vblankEnd - current;
   } else if (current <= skipDecision) {
     target = skipDecision - current;
   } else {
-    target = VBLANK_START_INDEX + dotsPerFrame - current;
+    target = vblankStartIndex_ + dotsPerFrame - current;
   }
   eventId_ = scheduler_.scheduleAt(nextDotTime_ + static_cast<hw::MasterTime>(target) * domain_.ticksPerCycle, *this, 0);
 }
@@ -162,7 +162,7 @@ void Ppu2c02::runDot() {
     if (line < 240 && dot >= 1 && dot <= 256) drawPixel(line, dot - 1);
   }
 
-  if (line == 241 && dot == 1) {
+  if (line == options_.vblankLine && dot == 1) {
     if (!suppressVbl_) vblank_ = true;
     suppressVbl_ = false;
     updateNmi();
@@ -260,7 +260,7 @@ std::uint8_t Ppu2c02::readStatus() {
   if (sprite0Hit_) value |= STATUS_SPRITE0_HIT;
   if (spriteOverflow_) value |= STATUS_SPRITE_OVERFLOW;
   // 在 vblank 置位前一个点读取：读到 0，且本帧不置位、不产生 NMI。
-  if (scanline_ == 241 && dot_ == 1) suppressVbl_ = true;
+  if (scanline_ == options_.vblankLine && dot_ == 1) suppressVbl_ = true;
   vblank_ = false;
   w_ = false;
   updateNmi();
@@ -282,7 +282,7 @@ std::uint8_t Ppu2c02::readOamData() {
 }
 
 void Ppu2c02::writeOamData(std::uint8_t value) {
-  if (renderingEnabled() && (scanline_ < 240 || scanline_ == PRE_RENDER_LINE)) {
+  if (renderingEnabled() && (scanline_ < 240 || scanline_ == preRenderLine_)) {
     // 渲染期间的写入不改变 OAM，只让地址的高 6 位加 1。
     oamAddr_ = static_cast<std::uint8_t>(oamAddr_ + 4);
     return;
@@ -338,7 +338,7 @@ void Ppu2c02::writeData(std::uint8_t value) {
 }
 
 void Ppu2c02::incrementVramAddress() {
-  if (renderingEnabled() && (scanline_ < 240 || scanline_ == PRE_RENDER_LINE)) {
+  if (renderingEnabled() && (scanline_ < 240 || scanline_ == preRenderLine_)) {
     // 渲染期间访问 $2007：同时递增粗 X 与 Y，而不是加 1 或 32。
     incrementCoarseX();
     incrementY();

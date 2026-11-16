@@ -22,8 +22,8 @@ const MACHINES: ReadonlyArray<{ readonly id: string; readonly label: string }> =
   { id: CLASSIC_MACHINE, label: '经典 FC' },
   { id: 'sb97', label: '小霸王 97' },
   { id: 'sb2000', label: '小霸王 2000' },
-  { id: 'bbk10', label: '步步高 1.0' },
-  { id: 'bbk20', label: '步步高 2.0' }
+  { id: 'bbk10', label: '步步高软驱一号' },
+  { id: 'bbk20', label: '步步高 98' }
 ];
 
 /** 一个机型选项。 */

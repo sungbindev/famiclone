@@ -228,4 +228,44 @@ TEST(SpeechLpc, TheSameStreamAlwaysGivesTheSameSamples) {
   EXPECT_EQ(first.levels, second.levels);
 }
 
+/** 步步高变体的测试台。 */
+struct BbkSpeechBench {
+  BbkSpeechBench() : speech(scheduler, MASTER_HZ, SpeechLpc::Variant::Bbk) {}
+  void send(const std::vector<std::uint8_t>& bytes) {
+    for (const std::uint8_t byte : bytes) speech.write(PORT, byte);
+  }
+  MasterScheduler scheduler;
+  SpeechLpc speech;
+};
+
+TEST(SpeechLpcBbk, StatusAlwaysHasTheLowNibbleSetAndBitSevenMeansNotFull) {
+  BbkSpeechBench bench;
+  EXPECT_EQ(bench.speech.read(PORT).value, 0x8F);
+  // 没有命令字节时写入的字节被丢弃，缓冲不会满。
+  for (unsigned index = 0; index < 20; ++index) bench.speech.write(PORT, 0x00);
+  EXPECT_EQ(bench.speech.read(PORT).value, 0x8F);
+}
+
+TEST(SpeechLpcBbk, OnlyTheD6CommandByteStartsPlayback) {
+  const auto frame = voicedFrameD6();
+  BbkSpeechBench rejected;
+  rejected.send(stream(0x0A, concat(frame, frame)));
+  EXPECT_FALSE(rejected.speech.playing()) << "$0A 是小霸王的命令字节";
+  BbkSpeechBench accepted;
+  accepted.send(stream(0xD6, concat(frame, concat(frame, frame))));
+  EXPECT_TRUE(accepted.speech.playing());
+}
+
+TEST(SpeechLpcBbk, AfterTheEndFrameEveryByteIsIgnoredUntilReset) {
+  BbkSpeechBench bench;
+  bench.send(stream(0xD6, {{0, 4}, {0, 4}}));
+  bench.scheduler.advance(milliseconds(200));
+  bench.send({0x0F});
+  EXPECT_EQ(bench.speech.pendingBytes(), 0U) << "没有确认字节，后续字节被丢弃";
+  EXPECT_FALSE(bench.speech.playing());
+  bench.speech.reset(false);
+  bench.send(stream(0xD6, concat(voicedFrameD6(), concat(voicedFrameD6(), voicedFrameD6()))));
+  EXPECT_TRUE(bench.speech.playing()) << "复位后可以重新开始";
+}
+
 }  // namespace

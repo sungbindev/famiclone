@@ -282,8 +282,8 @@
   const biosMachines = [
     { id: 'sb97', name: '小霸王 97', supported: false, file: null },
     { id: 'sb2000', name: '小霸王 2000', supported: true, file: SAMPLE_BIOS },
-    { id: 'bbk10', name: '步步高 1.0', supported: false, file: null },
-    { id: 'bbk20', name: '步步高 2.0', supported: false, file: null },
+    { id: 'bbk10', name: '步步高软驱一号', supported: true, file: null },
+    { id: 'bbk20', name: '步步高 98', supported: true, file: null },
   ];
 
   // “文件”菜单的“开机…”读取这份数据

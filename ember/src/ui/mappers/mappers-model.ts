@@ -23,7 +23,7 @@ export interface DetailFact {
 /** 用户可见的文字。 */
 const TEXT = {
   source: { bundled: '预装', user: '用户安装' },
-  machines: { fc: '经典 FC', sb97: '小霸王 97', sb2000: '小霸王 2000', bbk10: '步步高 1.0', bbk20: '步步高 2.0' } as Readonly<Record<string, string>>,
+  machines: { fc: '经典 FC', sb97: '小霸王 97', sb2000: '小霸王 2000', bbk10: '步步高软驱一号', bbk20: '步步高 98' } as Readonly<Record<string, string>>,
   devices: { mouse: '鼠标' } as Readonly<Record<string, string>>,
   rule: {
     mapper: (value: number) => `mapper ${value}`,

@@ -23,14 +23,14 @@ import type { ShellApi } from '../shell/shell-registry';
 const notify = vi.fn();
 const shell = { notify } as unknown as ShellApi;
 
-/** 默认的机型清单：经典 FC，小霸王 2000 已支持，其余暂未支持。 */
+/** 默认的机型清单：经典 FC，小霸王 2000、步步高软驱一号、步步高 98 已支持，小霸王 97 暂未支持。 */
 function machines(): MachineInfo[] {
   return [
     { id: 'fc', name: '经典 FC', needsBios: false, supported: true },
     { id: 'sb97', name: '小霸王 97', needsBios: true, supported: false },
     { id: 'sb2000', name: '小霸王 2000', needsBios: true, supported: true },
-    { id: 'bbk10', name: '步步高 1.0', needsBios: true, supported: false },
-    { id: 'bbk20', name: '步步高 2.0', needsBios: true, supported: false }
+    { id: 'bbk10', name: '步步高软驱一号', needsBios: true, supported: true },
+    { id: 'bbk20', name: '步步高 98', needsBios: true, supported: true }
   ];
 }
 
@@ -94,16 +94,16 @@ describe('“机型与 BIOS”分组', () => {
     setup();
     await openGroup();
     expect(screen.getByText('BIOS 文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。')).toBeTruthy();
-    for (const name of ['小霸王 97', '小霸王 2000', '步步高 1.0', '步步高 2.0']) expect(screen.getByText(name)).toBeTruthy();
+    for (const name of ['小霸王 97', '小霸王 2000', '步步高软驱一号', '步步高 98']) expect(screen.getByText(name)).toBeTruthy();
     expect(screen.queryByText('经典 FC')).toBeNull();
   });
 
   it('未添加显示“未添加”与“添加 BIOS 文件”；暂未支持的整行按钮置灰并注明“暂未支持”', async () => {
     setup();
     await openGroup();
-    expect(screen.getByText('未添加')).toBeTruthy();
+    expect(screen.getAllByText('未添加')).toHaveLength(3);
     expect((screen.getByRole('button', { name: '添加 BIOS 文件：小霸王 2000' }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.getAllByText('暂未支持')).toHaveLength(3);
+    expect(screen.getAllByText('暂未支持')).toHaveLength(1);
     expect((screen.getByRole('button', { name: '添加 BIOS 文件：小霸王 97' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -141,7 +141,7 @@ describe('“机型与 BIOS”分组', () => {
     await userEvent.click(screen.getByRole('button', { name: '添加 BIOS 文件：小霸王 2000' }));
     await waitFor(() => expect(page.openBios).toHaveBeenCalledTimes(1));
     expect(notify).not.toHaveBeenCalled();
-    expect(screen.getByText('未添加')).toBeTruthy();
+    expect(screen.getAllByText('未添加')).toHaveLength(3);
   });
 
   it('文件不符合机型：用通知提示核心给出的说明', async () => {
@@ -160,6 +160,6 @@ describe('“机型与 BIOS”分组', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledWith('已移除 小霸王 2000 的 BIOS', 'success'));
     expect(screen.queryByRole('dialog')).toBeNull();
     await page.emit('machines.changed', { machine: 'sb2000' });
-    expect(await screen.findByText('未添加')).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText('未添加')).toHaveLength(3));
   });
 });

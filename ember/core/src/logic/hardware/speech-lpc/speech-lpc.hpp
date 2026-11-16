@@ -31,6 +31,13 @@ namespace ember::logic::hardware {
 /** 学习机的语音芯片。 */
 class SpeechLpc final : public contracts::hardware::Device {
  public:
+  /**
+   * 芯片的接线变体：
+   * Subor：命令字节 $0A（D6 码表）或 $0B（PE 码表），低 4 位为 $F 表示播放结束，播放结束后收到 $0F 才重新开始；
+   * Bbk：命令字节 $D6（只有 D6 码表），状态低 4 位恒为 $F，读到结束帧后停止，只有复位才重新开始。
+   */
+  enum class Variant : std::uint8_t { Subor, Bbk };
+
   /** 输出采样率（赫兹）。 */
   static constexpr unsigned SAMPLE_RATE = 10000;
   /** 每帧的采样数。 */
@@ -43,8 +50,9 @@ class SpeechLpc final : public contracts::hardware::Device {
   /**
    * @param scheduler 调度器，每个采样登记一个事件。
    * @param masterHz 主时钟频率（赫兹），用来换算采样间隔。
+   * @param variant 接线变体，默认 Subor。
    */
-  SpeechLpc(contracts::hardware::Scheduler& scheduler, double masterHz);
+  SpeechLpc(contracts::hardware::Scheduler& scheduler, double masterHz, Variant variant = Variant::Subor);
 
   /** 读状态：位 7 缓冲未满，低 4 位为 $F 表示播放结束。 */
   contracts::hardware::BusRead read(std::uint16_t address) override;
@@ -115,6 +123,7 @@ class SpeechLpc final : public contracts::hardware::Device {
   void emitLevel(double level);
 
   contracts::hardware::Scheduler& scheduler_;
+  Variant variant_;
   /** 一个采样占的主时钟周期数（小数）。 */
   double ticksPerSample_;
   double nextTickAt_{0};

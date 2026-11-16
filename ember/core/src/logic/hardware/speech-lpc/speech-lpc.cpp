@@ -23,9 +23,10 @@ namespace {
 namespace hw = contracts::hardware;
 namespace tables = speech_tables;
 
-/** 命令字节：选 D6 码表、选 PE 码表。 */
+/** 命令字节：选 D6 码表、选 PE 码表；步步高只有一种命令字节（D6 码表）。 */
 constexpr std::uint8_t COMMAND_D6 = 0x0A;
 constexpr std::uint8_t COMMAND_PE = 0x0B;
+constexpr std::uint8_t COMMAND_BBK = 0xD6;
 /** 播放结束后，收到这个字节表示确认，重新开始。 */
 constexpr std::uint8_t ACKNOWLEDGE = 0x0F;
 /** 状态位：缓冲未满。 */
@@ -69,7 +70,7 @@ auto& component(FrameType& frame, std::size_t index) {
 
 }  // namespace
 
-SpeechLpc::SpeechLpc(hw::Scheduler& scheduler, double masterHz) : scheduler_(scheduler), ticksPerSample_(masterHz / SAMPLE_RATE) {
+SpeechLpc::SpeechLpc(hw::Scheduler& scheduler, double masterHz, Variant variant) : scheduler_(scheduler), variant_(variant), ticksPerSample_(masterHz / SAMPLE_RATE) {
   if (masterHz <= 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "语音芯片的主时钟频率必须大于 0");
   reset(true);
 }
@@ -77,7 +78,7 @@ SpeechLpc::SpeechLpc(hw::Scheduler& scheduler, double masterHz) : scheduler_(sch
 hw::BusRead SpeechLpc::read(std::uint16_t /*address*/) {
   std::uint8_t status = 0;
   if (count_ < FIFO_CAPACITY) status = static_cast<std::uint8_t>(status | STATUS_READY);
-  if (ended_) status = static_cast<std::uint8_t>(status | STATUS_ENDED);
+  if (ended_ || variant_ == Variant::Bbk) status = static_cast<std::uint8_t>(status | STATUS_ENDED);
   return hw::driveBus(status);
 }
 
@@ -172,7 +173,13 @@ void SpeechLpc::settle() {
         if (count_ == 0) return;
         const std::uint8_t command = fifoAt(0);
         fifoPop();
-        if (command == COMMAND_D6 || command == COMMAND_PE) {
+        if (variant_ == Variant::Bbk) {
+          if (command == COMMAND_BBK) {
+            useD6Tables_ = true;
+            preloaded_ = 0;
+            state_ = State::Preload;
+          }
+        } else if (command == COMMAND_D6 || command == COMMAND_PE) {
           useD6Tables_ = command == COMMAND_D6;
           preloaded_ = 0;
           state_ = State::Preload;
@@ -213,7 +220,7 @@ void SpeechLpc::settle() {
         if (count_ == 0) return;
         const std::uint8_t byte = fifoAt(0);
         fifoPop();
-        if (byte == ACKNOWLEDGE) {
+        if (byte == ACKNOWLEDGE && variant_ == Variant::Subor) {
           head_ = 0;
           count_ = 0;
           restartSynth();

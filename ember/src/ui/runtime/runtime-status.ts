@@ -29,7 +29,7 @@ const TEXT = {
 } as const;
 
 /** 主机型号的显示名；表里没有的型号显示型号标识本身。 */
-const HOST_NAMES: Readonly<Record<string, string>> = { fc: '经典 FC', sb97: '小霸王 97', sb2000: '小霸王 2000', bbk10: '步步高 1.0', bbk20: '步步高 2.0' };
+const HOST_NAMES: Readonly<Record<string, string>> = { fc: '经典 FC', sb97: '小霸王 97', sb2000: '小霸王 2000', bbk10: '步步高软驱一号', bbk20: '步步高 98' };
 
 /** 各控制是否可用。 */
 export interface ControlAvailability {

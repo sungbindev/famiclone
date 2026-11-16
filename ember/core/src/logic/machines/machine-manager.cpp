@@ -29,6 +29,9 @@ constexpr std::size_t TRAINER_SIZE = 512;
 constexpr std::size_t PRG_UNIT = 16 * 1024;
 /** sb2000 的 BIOS：512KB 的 PRG。 */
 constexpr std::size_t SB2000_PRG_SIZE = 512 * 1024;
+/** 步步高软驱一号与步步高 98 的 BIOS：128KB、2048KB 的 PRG。 */
+constexpr std::size_t BBK10_PRG_SIZE = 128 * 1024;
+constexpr std::size_t BBK20_PRG_SIZE = 2048 * 1024;
 
 /** 路径里最后一段（文件名）；两种分隔符都认。 */
 std::string baseName(const std::string& path) {
@@ -45,8 +48,8 @@ MachineManager::MachineManager(std::shared_ptr<api::BiosStorage> storage, std::s
       entries_{{"fc", "经典 FC", false, true, 0},
                {"sb97", "小霸王 97", true, false, 0},
                {"sb2000", "小霸王 2000", true, true, SB2000_PRG_SIZE},
-               {"bbk10", "步步高 1.0", true, false, 0},
-               {"bbk20", "步步高 2.0", true, false, 0}} {}
+               {"bbk10", "步步高软驱一号", true, true, BBK10_PRG_SIZE},
+               {"bbk20", "步步高 98", true, true, BBK20_PRG_SIZE}} {}
 
 const MachineManager::Entry& MachineManager::entry(const std::string& id) const {
   for (const Entry& candidate : entries_) {

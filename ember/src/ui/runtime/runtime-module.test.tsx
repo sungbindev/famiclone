@@ -195,19 +195,19 @@ describe('“文件”菜单', () => {
     expect(isDisabled(item('退出'))).toBe(false);
   });
 
-  it('选择机型的子菜单：经典 FC 打对勾；没有 BIOS 的小霸王 2000 置灰并注明“未添加 BIOS”，其余机型置灰并注明“暂未支持”', async () => {
+  it('选择机型的子菜单：经典 FC 打对勾；没有 BIOS 的整机机型置灰并注明“未添加 BIOS”，暂未支持的小霸王 97 置灰并注明“暂未支持”', async () => {
     await setup();
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     const submenu = screen.getByRole('menu', { name: '选择机型' });
     const entries = Array.from(submenu.querySelectorAll<HTMLElement>('[role^="menuitem"]'));
-    expect(entries.map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['经典 FC', '小霸王 97', '小霸王 2000', '步步高 1.0', '步步高 2.0']);
+    expect(entries.map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['经典 FC', '小霸王 97', '小霸王 2000', '步步高软驱一号', '步步高 98']);
     expect(entries.map(isDisabled)).toEqual([false, true, true, true, true]);
     expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false', 'false', 'false']);
     expect(entries[1]?.textContent).toContain('暂未支持');
     expect(entries[2]?.textContent).toContain('未添加 BIOS，请在设置里添加');
-    expect(entries[3]?.textContent).toContain('暂未支持');
-    expect(entries[4]?.textContent).toContain('暂未支持');
+    expect(entries[3]?.textContent).toContain('未添加 BIOS，请在设置里添加');
+    expect(entries[4]?.textContent).toContain('未添加 BIOS，请在设置里添加');
   });
 
   it('已添加 BIOS 的小霸王 2000 可选', async () => {

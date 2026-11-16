@@ -3887,10 +3887,15 @@ LA091:  txa
         pha
         tya
         pha
-        lda     #$C0
-        sta     $4017
         jsr     LA0A3
-        pla
+        inc     SHELL_SOUND_TICK
+        lda     SHELL_SOUND_TICK
+        cmp     #$05
+        bcc     LA09F
+        lda     #$00
+        sta     SHELL_SOUND_TICK
+        jsr     LA0A3
+LA09F:  pla
         tay
         pla
         tax
@@ -6159,15 +6164,12 @@ LB3AB:  lda     #$10
         sta     $72
         sta     $50
         sta     $18
-        sta     $4010
         sta     $4001
         sta     $4005
         sta     $4015
         sta     $4C
         sta     $66
         sta     $67
-        lda     #$4F
-        sta     $4017
         jsr     LB420
         jsr     LBE14
         lda     #$20
@@ -6901,8 +6903,6 @@ LBCD5:  lda     #$01
         sta     $19
         lda     #$01
         sta     $4015
-        lda     #$C0
-        sta     $4017
         lda     #$EF
         sta     $4000
         lda     #$00

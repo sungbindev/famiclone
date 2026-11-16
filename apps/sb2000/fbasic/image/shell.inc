@@ -26,6 +26,7 @@ SHELL_CHR_PAGE          = $7FB8         ; CHR 图案表 0 所在的扩展 RAM �
 SHELL_GAME_PAGE         = $7FB9         ; GAME 0-3 数据（3 页，game.s）起始的扩展 RAM 页号，由加载器填写；运行 GAME 命令时由映像用 DMA 搬进程序区
 SHELL_DISK_PAGE         = $7FBA         ; SAVE、LOAD 用的暂存页（扩展 RAM 页号，0 为没有），映像自己管理
 SHELL_DISK_SIZE         = $7FBB         ; 暂存页里文件的字节数（2 字节）
+SHELL_SOUND_TICK        = $7FBD         ; 音乐节拍的帧计数：画面是 50Hz，原版是 60Hz，每 5 帧多走一拍
 
 ; ---- 请求块：映像调用入口门前填写 ----
 ; 服务的参数与结果单元在 DOS 现场里（零页、$0200-$07FF 或 ERAM $6000-$65FF），入口门换入 DOS 现场后才能写、读，

@@ -5947,6 +5947,11 @@ LB162:  lda     $74
         inc     $74
         lda     $74
         cmp     #$24
+        bne     LB18A
+        lda     #$28
+        sta     $74
+        bne     LB162
+LB18A:  cmp     #$2C
         bne     LB162
         lda     $E5
         sta     $E4
@@ -6233,17 +6238,11 @@ LB48B:  lda     #$20
         rts
 ; 把当前名称表的所有图块调色板组清成 0（只写高字节），返回时 A = 0
 LB494:  lda     $4F
-        ldx     #$00
-        jsr     L81EC
-        bit     $2007
-        ldy     #$04
-LB4A0:  lda     V_TILE_HIGH
-        sta     $2007
-        bit     $2007
-        dex
-        bne     LB4A0
-        dey
-        bne     LB4A0
+        jsr     clear_groups_page
+        lda     $4F
+        clc
+        adc     #$08
+        jsr     clear_groups_page
         lda     #$00
         rts
 LB4A7:  lda     #$24
@@ -6253,6 +6252,12 @@ LB4AB:  lda     #$0C
         jsr     LBE0E
         jsr     LB559
         lda     $4F
+        ldx     #$00
+        jsr     L81EC
+        jsr     LB485
+        lda     $4F
+        clc
+        adc     #$08
         ldx     #$00
         jsr     L81EC
         jsr     LB485
@@ -6293,13 +6298,10 @@ LB4F4:  lda     #$20
         lda     $E5
 LB508:  lsr     a
         lsr     a
-        lsr     a
         clc
         adc     $49
         adc     #$03
-        cmp     #$20
-        bcc     LB516
-        sbc     #$20
+        and     #$3F
 LB516:  sta     $2C
         jsr     L8F47
         clc
@@ -6309,7 +6311,10 @@ LB516:  sta     $2C
         sta     $4A
         lda     #$00
         adc     $29
-        clc
+        cmp     #$04
+        bcc     LB521
+        adc     #$03
+LB521:  clc
         adc     $4F
         sta     $4B
         rts
@@ -6327,15 +6332,14 @@ LB539:  put_tile
 LB53C:  jsr     LBE14
         lda     $F0
         beq     LB54E
+        lda     $E5
+        jmp     LB551
+LB54E:  lda     $E4
+LB551:  asl     a
+        tay
         lda     #$00
         sta     $2005
-        lda     $E5
-        sta     $2005
-        rts
-LB54E:  lda     #$00
-        sta     $2005
-        lda     $E4
-        sta     $2005
+        sty     $2005
         rts
 LB559:  jsr     LB42B
         lda     #$00
@@ -6402,7 +6406,7 @@ LB5D4:  lda     $32
         beq     LB5E3
         lda     $E5
 LB5E3:  clc
-        adc     #$08
+        adc     #$04
 LB5EC:  ldy     $4F
         cpy     #$20
         beq     LB5F7
@@ -7543,18 +7547,18 @@ LC452:  inc     $48
         lda     $E5
 LC460:  lsr     a
         lsr     a
-        lsr     a
         clc
         adc     $49
         adc     #$03
-        cmp     #$20
+        and     #$3F
+        sta     $49
+        lsr     a
+        lsr     a
+        lsr     a
+        cmp     #$04
         bcc     LC46E
-        sbc     #$20
-LC46E:  sta     $49
-        lsr     a
-        lsr     a
-        lsr     a
-        clc
+        adc     #$03
+LC46E:  clc
         adc     $4F
         sta     $4B
         lda     $49

@@ -8,7 +8,7 @@
 ; ------------------------------------------------------------------------
 
 ; 画面初始化：关显示与 NMI，扩展显存用第 0 页，把 CHR 的两张 4K 图案表各 DMA 两份进显存
-; （背景用：扩展显存 $D000、$E000；精灵用：字符 RAM $2000、$3000），再清名称表 0、1
+; （背景用：扩展显存 $D000、$E000；精灵用：字符 RAM $2000、$3000），再清名称表 0-3（环形滚动用 64 行，每个屏幕占 2 页）
 platform_init:
         lda     #$00
         sta     HW_PPU_CTRL
@@ -61,11 +61,11 @@ dma_wait_inner:
         bne     dma_wait
         dex
         bpl     dma_loop
-        bit     HW_PPU_STATUS                   ; 清名称表 0、1：2048 个图块，空格、调色板组 0
+        bit     HW_PPU_STATUS                   ; 清名称表 0-3：4096 个图块，空格、调色板组 0
         lda     #$00
         sta     HW_PPU_ADDRESS
         sta     HW_PPU_ADDRESS
-        ldy     #$08
+        ldy     #$10
         ldx     #$00
 clear_names:
         lda     #$20
@@ -223,11 +223,30 @@ table_same:
         ora     #$08
         sta     HW_PPU_EXT
         pla
-        and     #$A7                            ; NMI、8x16、地址增量、名称表位 1-0
+        and     #$A5                            ; NMI、8x16、地址增量、名称表位 0；位 1 由滚动值决定
+        pha
+        txa
+        pha
+        lda     $F0
+        beq     ctrl_scroll_text
+        lda     $E5
+        jmp     ctrl_scroll_page
+ctrl_scroll_text:
+        lda     $E4
+ctrl_scroll_page:
+        asl     a                               ; 滚动值是行号乘 4（0-252），位 7 为 1 表示显示从名称表的下半页（页 +2）开始
+        lda     #$00
+        rol     a
+        asl     a
+        tsx
+        ora     $0102,x
         sta     HW_PPU_CTRL
+        pla
+        tax
+        pla
         rts
 
-; 把名称表 0、1（CRAM $0000-$0FFF，2048 个图块）每个图块条目高字节的图案表位改成 V_TILE_HIGH，调色板组不变；显示关闭期间做
+; 把名称表 0-3（CRAM $0000-$1FFF，4096 个图块）每个图块条目高字节的图案表位改成 V_TILE_HIGH，调色板组不变；显示关闭期间做
 video_retable:
         jsr     LB559
         lda     #$01                            ; V_TMP1、V_TMP2 = 第一个条目高字节的 CRAM 地址（低、高）
@@ -251,9 +270,25 @@ retable_loop:
         inc     V_TMP2
 retable_next:
         lda     V_TMP2
-        cmp     #$10
+        cmp     #$20
         bcc     retable_loop
         jmp     LB562
+
+; 把一页名称表（A = NES 地址高字节）所有图块的调色板组清成 0，只写高字节
+clear_groups_page:
+        ldx     #$00
+        jsr     L81EC
+        bit     HW_PPU_DATA
+        ldy     #$04
+clear_groups_loop:
+        lda     V_TILE_HIGH
+        sta     HW_PPU_DATA
+        bit     HW_PPU_DATA
+        dex
+        bne     clear_groups_loop
+        dey
+        bne     clear_groups_loop
+        rts
 
 retable_address:
         bit     HW_PPU_STATUS

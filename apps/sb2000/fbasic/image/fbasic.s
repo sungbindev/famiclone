@@ -7613,45 +7613,18 @@ LC4FF:  jsr     LC452
 LC50D:  lda     #$03
         sta     $0500
         lda     #$00
+        sta     $0512
         sta     $0514
-        lda     #$07
         sta     $0515
+        lda     #$04
+        sta     $0513
         lda     $E5
         sta     $0516
-        ldx     #$00
-        stx     $0512
-        inx
-        stx     $0513
-        lda     #$00
-        sta     $5F
-        lda     #$24
-        sta     $60
         jsr     L9D9F
-LC535:  jsr     LB559
-        lda     $60
-        ldx     $5F
-        jsr     L81EC
-        lda     $2007
-        ldx     #$00
-LC544:  lda     $2007
-        sta     $0700,x
-        inx
-        bne     LC544
-        jsr     LB53C
-        jsr     LB562
-        jsr     LBF1F
-        jsr     LBF30
-        inc     $60
-        lda     $60
-        cmp     #$28
-        bne     LC535
+        jmp     bg_save_file
 LC561:  rts
 LC562:  jmp     disk_error
-LC565:  lda     #$00
-        sta     $5F
-        lda     #$24
-        sta     $60
-LC56D:  jsr     LBE53
+LC565:  jsr     LBE53
         bcs     LC561
         lda     $0500
         cmp     #$03
@@ -7661,24 +7634,7 @@ LC56D:  jsr     LBE53
         jsr     L9DAC
         lda     $0516
         sta     $E5
-        jsr     LBE24
-        bcs     LC561
-        jsr     LB559
-        lda     $60
-        ldx     $5F
-        jsr     L81EC
-        ldx     #$00
-LC597:  lda     $0700,x
-        sta     $2007
-        inx
-        bne     LC597
-        jsr     LB53C
-        jsr     LB562
-        inc     $60
-        lda     $60
-        cmp     #$28
-        bne     LC56D
-        rts
+        jmp     bg_load_file
 LC5AF:  lda     #$00
         sta     $AE
         lda     #$F8

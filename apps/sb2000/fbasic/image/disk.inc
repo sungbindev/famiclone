@@ -8,7 +8,8 @@
 ;       文件名取第一个 “.” 或空格之前的部分（最多 10 个字符，含 A: 之类的盘符），再加 “.BS”，所以 SAVE ABC、SAVE ABC.BS 存的是同一个文件。
 ;       SB-DOS 的文件服务只能整个文件读写，数据要放在扩展 RAM 页里：存时先在 DOS 分配 1 页，临时把它映射到窗口 6（映像的 $E000-$EFFF 没有代码）复制进去；
 ;       读时整个文件读进这一页，头复制到 $0500，正文用 DMA 搬进程序区。每次 DOS 调用经入口门，请求块一次最多写 8 个单元，所以路径分段写入。
-;       出错一律显示原版的 “TP ERROR”（出错码 $11）。背景图（BG）的记录以后随背景图一起做，现在会报错。
+;       背景图（BG）存成一个文件：类型 $03 的头（$0516 是屏幕 1 的滚动值）加 1024 字节的 NES 格式背景图（960 个图块号、64 个属性字节），直接在暂存页里与名称表互相转换。
+;       出错一律显示原版的 “TP ERROR”（出错码 $11）。
 ; ------------------------------------------------------------------------
 
 DISK_HEADER_SIZE        = 22
@@ -243,7 +244,7 @@ LBF1F:  rts
 
 LBF30:  lda     $0500
         cmp     #$03
-        beq     @fail                      ; 背景图的记录还没做
+        beq     @fail                      ; 背景图不走这里
         lda     $0513
         cmp     #$0F
         bcs     @fail                      ; 程序区不会这么大，防备头里的长度不对
@@ -260,6 +261,11 @@ LBF30:  lda     $0500
         jsr     disk_set_data_pointers
         jsr     disk_copy
         jsr     disk_unmap_stage
+        jmp     disk_write_stage
+@fail:  jmp     disk_error
+
+; 把已填好头与正文的暂存页写成文件，长度是 $0512/$0513 加头
+disk_write_stage:
         clc
         lda     $0512
         adc     #DISK_HEADER_SIZE
@@ -295,6 +301,52 @@ LBF30:  lda     $0500
         jsr     disk_free
         plp
         bcs     @fail
+        rts
+@fail:  jmp     disk_error
+
+; BG 存盘：头已在 $0500，名字在 $0580；名称表 1 转成 NES 格式直接放进暂存页，再整个写成文件
+bg_save_file:
+        jsr     disk_make_path
+        bcs     @fail
+        jsr     disk_alloc
+        bcs     @fail
+        jsr     disk_map_stage
+        ldx     #DISK_HEADER_SIZE - 1
+@head:  lda     $0500,x
+        sta     DISK_STAGE_BASE,x
+        dex
+        bpl     @head
+        lda     #<(DISK_STAGE_BASE + DISK_HEADER_SIZE)
+        sta     $19
+        lda     #>(DISK_STAGE_BASE + DISK_HEADER_SIZE)
+        sta     $1A
+        jsr     LB559
+        jsr     bg_read_page
+        jsr     LB53C
+        jsr     LB562
+        jsr     disk_unmap_stage
+        jmp     disk_write_stage
+@fail:  jmp     disk_error
+
+; BG 读盘：整个文件已在暂存页里（LBE53 读好），按 NES 格式写进名称表 1，要求长度正好是 1024
+bg_load_file:
+        lda     $0512
+        bne     @fail
+        lda     $0513
+        cmp     #$04
+        bne     @fail
+        jsr     disk_map_stage
+        lda     #<(DISK_STAGE_BASE + DISK_HEADER_SIZE)
+        sta     $19
+        lda     #>(DISK_STAGE_BASE + DISK_HEADER_SIZE)
+        sta     $1A
+        jsr     LB559
+        jsr     bg_write_page
+        jsr     LB53C
+        jsr     LB562
+        jsr     disk_unmap_stage
+        jsr     disk_free
+        clc
         rts
 @fail:  jmp     disk_error
 

@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：盘片镜像是唯一的数据：学习机经控制器读写它，界面与调试服务经本接口读写它，两者看到的始终是同一份；
- *       写扇区只改内存里的镜像并置“已修改”标志与递增修改序号，由介质服务在写盘停下后自动写回文件，写回成功才清除标志；硬件模块里的驱动器对象由主机型号创建，只在模拟线程使用。
+ *       写扇区只改内存里的镜像，并记下“已修改”的字节区间（从最前面一个到最后面一个）；区间从空变为非空时通知监听者，介质服务收到通知就把这个区间写进文件，写成功才清除；镜像文件被外部改动时介质服务用 applyExternalChange 把改动同步进来（不计入已修改区间）；硬件模块里的驱动器对象由主机型号创建，只在模拟线程使用。
  * ------------------------------------------------------------------------
  */
 
@@ -14,10 +14,20 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <span>
 #include <string>
 #include <vector>
 
 namespace ember::contracts::hardware {
+
+/** 镜像里尚未写回文件的字节区间：[begin, end)，begin 不小于 end 时为空。 */
+struct FloppyDirtyRange {
+  std::size_t begin{0};
+  std::size_t end{0};
+
+  [[nodiscard]] bool empty() const { return begin >= end; }
+};
 
 /** 盘片的格式：由镜像的大小推断。 */
 struct FloppyFormat {
@@ -100,14 +110,26 @@ class FloppyDrive {
   /** 镜像的来源（放入时给出的文件路径）。 */
   [[nodiscard]] virtual const std::string& source() const = 0;
 
-  /** 镜像自放入或上次写回以来是否有尚未写回文件的修改。 */
+  /** 镜像自放入或上次写回以来是否有尚未写回文件的修改（即已修改区间非空）。 */
   [[nodiscard]] virtual bool modified() const = 0;
 
-  /** 修改序号：每次写镜像、放入或取出盘片都加 1，用来判断写回期间镜像有没有再被改动。 */
-  [[nodiscard]] virtual std::uint64_t revision() const = 0;
+  /** 尚未写回文件的字节区间；没有修改时为空。 */
+  [[nodiscard]] virtual FloppyDirtyRange dirtyRange() const = 0;
 
-  /** 写回之后清除已修改标志。 */
+  /** 写回之后清除已修改区间。 */
   virtual void markSaved() = 0;
+
+  /**
+   * 把镜像文件被外部改动的一段字节同步进内存里的镜像：不记为已修改（文件已经是这个内容，不需要再写回）。
+   * 没有镜像或超出镜像时丢弃。
+   */
+  virtual void applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) = 0;
+
+  /**
+   * 设置修改监听者：已修改区间从空变为非空时在模拟线程上调用一次（区间已经非空时继续写不再通知）。监听者必须很快返回，不能再调用驱动器。
+   * 只在驱动器还没有开始被使用时设置（组装阶段）；传空函数表示取消。
+   */
+  virtual void setModifiedListener(std::function<void()> listener) = 0;
 
   /** 设置写保护。 */
   virtual void setWriteProtected(bool protect) = 0;

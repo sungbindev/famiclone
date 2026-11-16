@@ -41,6 +41,7 @@ describe('media.openFloppy', () => {
     await expect(call({ drive: 0 })).resolves.toEqual({ ok: true, result: { canceled: false, status: STATUS } });
     expect(pick).toHaveBeenCalledWith({
       title: '载入软盘镜像',
+      purpose: 'floppy',
       filters: [
         { name: '软盘镜像', extensions: ['img', 'ima', 'vfd', 'dsk', 'flp'] },
         { name: '所有文件', extensions: ['*'] }

@@ -47,6 +47,7 @@ export function createOpenTapeHandler(options: OpenTapeOptions): MainRequestHand
       droppedId === undefined
         ? await options.dialog.pickFile({
             title: TEXT.loadTitle,
+            purpose: 'tape',
             filters: [
               { name: TEXT.soundFilter, extensions: SOUND_EXTENSIONS },
               { name: TEXT.allFilter, extensions: ['*'] }
@@ -62,7 +63,7 @@ export function createOpenTapeHandler(options: OpenTapeOptions): MainRequestHand
 /** 创建 media.openTapeRecording 的处理函数。 */
 export function createOpenTapeRecordingHandler(options: Omit<OpenTapeOptions, 'dropped'>): MainRequestHandler {
   return async (): Promise<MainResult<'media.openTapeRecording'>> => {
-    const path = await options.dialog.pickSaveFile({ title: TEXT.recordTitle, filters: [{ name: TEXT.wavFilter, extensions: ['wav'] }] });
+    const path = await options.dialog.pickSaveFile({ title: TEXT.recordTitle, purpose: 'tapeRecording', filters: [{ name: TEXT.wavFilter, extensions: ['wav'] }] });
     if (path === undefined) return { canceled: true };
     const result = await requestCoreAsMain(options.core, 'media.tapeRecord', { path });
     return { canceled: false, status: result.status };

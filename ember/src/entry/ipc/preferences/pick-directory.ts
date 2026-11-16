@@ -30,7 +30,7 @@ export interface PickDirectoryOptions {
  */
 export function createPickDirectoryHandler(options: PickDirectoryOptions): MainRequestHandler {
   return async (): Promise<MainResult<'preferences.pickDirectory'>> => {
-    const path = await options.dialog.pickDirectory({ title: TEXT.title });
+    const path = await options.dialog.pickDirectory({ title: TEXT.title, purpose: 'folder' });
     return path === undefined ? { canceled: true } : { canceled: false, path };
   };
 }

@@ -15,8 +15,12 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <regex>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
@@ -30,6 +34,7 @@
 #include "logic/media/media-manager.hpp"
 #include "logic/media/printer-service.hpp"
 #include "logic/runtime/simulation-runtime.hpp"
+#include "platform/files/file-watcher.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace {
@@ -45,9 +50,10 @@ std::vector<std::uint8_t> makeImage(std::size_t size = 1440 * 1024) {
   return image;
 }
 
-/** 真实的介质服务加运行服务；还没有装主机。打印页保存到临时目录里的 printed。镜像的自动写回默认关闭，专门的用例用 autoSave 打开。 */
+/** 真实的介质服务加运行服务；还没有装主机。打印页保存到临时目录里的 printed。镜像的自动写回与文件监视默认关闭，专门的用例用 autoSave 打开。 */
 struct Rig {
-  explicit Rig(std::shared_ptr<api::FloppyImageStore> floppyStore = std::make_shared<ember::infra::media::DiskFloppyImageStore>(), std::chrono::milliseconds autoSave = std::chrono::milliseconds(0)) {
+  explicit Rig(std::shared_ptr<api::FloppyImageStore> floppyStore = std::make_shared<ember::infra::media::DiskFloppyImageStore>(), bool autoSave = false,
+               std::shared_ptr<ember::platform::FileWatchFactory> watchFactory = nullptr, std::chrono::milliseconds retryInterval = std::chrono::seconds(5)) {
     registry = std::make_shared<ember::infra::mappers::PluginRegistry>(ember::test::fcRegistryOptions());
     printer = std::make_shared<ember::logic::media::PrinterService>(
         std::make_shared<ember::infra::media::PngPrinterPageStore>(), [this] { return printDirectory.empty() ? utf8(dir.path() / "printed") : printDirectory; }, events, errors,
@@ -63,7 +69,7 @@ struct Rig {
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
     manager = std::make_unique<ember::logic::media::MediaManager>(std::move(floppyStore), std::make_shared<ember::infra::media::DiskTapeStore>(std::filesystem::path(), errors),
                                                                   runtime, events, printer, catalog->tapeControl(),
-                                                                  std::vector<std::shared_ptr<ember::contracts::hardware::FloppyDrive>>{catalog->floppyDrive()}, errors, autoSave);
+                                                                  std::vector<std::shared_ptr<ember::contracts::hardware::FloppyDrive>>{catalog->floppyDrive()}, errors, std::move(watchFactory), autoSave, retryInterval);
   }
 
   static std::string utf8(const std::filesystem::path& path) {
@@ -140,11 +146,73 @@ class WriteFailingStore final : public api::FloppyImageStore {
     if (failing) throw ember::shared::CoreError(api::ERROR_SAVE_FAILED, "文件被占用");
     inner_.write(path, bytes);
   }
+  void writeAt(const std::string& path, std::size_t offset, std::span<const std::uint8_t> bytes) override {
+    if (failing) throw ember::shared::CoreError(api::ERROR_SAVE_FAILED, "文件被占用");
+    inner_.writeAt(path, offset, bytes);
+  }
   std::atomic<bool> failing{true};
 
  private:
   ember::infra::media::DiskFloppyImageStore inner_;
 };
+
+/** 假的文件监视工厂：不跟系统打交道，测试用 trigger 代替系统的“文件变了”通知。 */
+class FakeWatchFactory final : public ember::platform::FileWatchFactory {
+ public:
+  [[nodiscard]] std::unique_ptr<ember::platform::FileWatcher> watch(const std::string& path, std::function<void()> onChanged) override {
+    std::lock_guard lock(mutex_);
+    callbacks_[path] = std::move(onChanged);
+    return std::make_unique<Watch>(*this, path);
+  }
+
+  /** 模拟系统报告这个文件变了；没有监视时什么都不发生。 */
+  void trigger(const std::string& path) {
+    std::function<void()> callback;
+    {
+      std::lock_guard lock(mutex_);
+      const auto found = callbacks_.find(path);
+      if (found != callbacks_.end()) callback = found->second;
+    }
+    if (callback) callback();
+  }
+
+  /** 正在监视的文件数。 */
+  [[nodiscard]] std::size_t live() {
+    std::lock_guard lock(mutex_);
+    return callbacks_.size();
+  }
+
+ private:
+  class Watch final : public ember::platform::FileWatcher {
+   public:
+    Watch(FakeWatchFactory& owner, std::string path) : owner_(owner), path_(std::move(path)) {}
+    ~Watch() override {
+      std::lock_guard lock(owner_.mutex_);
+      owner_.callbacks_.erase(path_);
+    }
+
+   private:
+    FakeWatchFactory& owner_;
+    std::string path_;
+  };
+
+  std::mutex mutex_;
+  std::map<std::string, std::function<void()>> callbacks_;
+};
+
+/** 把文件里的一个字节改成别的值（模拟别的程序编辑镜像）。 */
+void patchFile(const std::string& path, std::size_t offset, std::uint8_t value) {
+  std::fstream stream(std::filesystem::path(std::u8string(path.begin(), path.end())), std::ios::binary | std::ios::in | std::ios::out);
+  stream.seekp(static_cast<std::streamoff>(offset));
+  stream.put(static_cast<char>(value));
+}
+
+/** 读镜像里的一个字节（经驱动器，需要先 bootMachine）。 */
+std::uint8_t readDisk(Rig& rig, std::size_t offset) {
+  std::uint8_t value = 0;
+  rig.runtime->useMachine([&](ember::contracts::hardware::Machine& machine) { value = machine.floppyDrive(0)->readByte(offset); });
+  return value;
+}
 
 /** 读全部字节。 */
 std::vector<std::uint8_t> readFile(const std::string& path) {
@@ -337,33 +405,109 @@ TEST(MediaManager, BadSectorFaultNeedsASectorNumber) {
   EXPECT_EQ(errorCodeOf([&] { rig.manager->floppyFault(Rig::faultParams("badSector")); }), api::ERROR_SECTOR_REQUIRED);
 }
 
-TEST(MediaManagerAutoSave, WritesTheImageBackByItselfOnceTheDiskWritesStop) {
-  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), std::chrono::milliseconds(20));
+TEST(MediaManagerAutoSave, GuestWritesGoIntoTheFileByThemselvesWithoutAnyone) {
+  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), true);
   rig.bootMachine();
   const auto path = rig.write("sys.img", makeImage());
   rig.manager->floppyInsert(Rig::insertParams(path));
   writeDisk(rig, 1000, 0xEE);
-  EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; })) << "不点保存，写盘停下后自动写回并清除“已修改”";
+  EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; })) << "不点保存，改动一出现就写进文件并清除“已修改”";
   const auto bytes = readFile(path);
   ASSERT_EQ(bytes.size(), 1440U * 1024U);
   EXPECT_EQ(bytes[1000], 0xEE);
-  EXPECT_EQ(bytes[1001], patternAt(1001));
+  EXPECT_EQ(bytes[1001], patternAt(1001)) << "只改写过的那一段，其余字节不变";
+  EXPECT_EQ(bytes[999], patternAt(999));
   EXPECT_EQ(rig.events->count("media.floppySaveFailed"), 0);
 }
 
-TEST(MediaManagerAutoSave, KeepsWaitingWhileTheDiskIsStillBeingWritten) {
-  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), std::chrono::milliseconds(300));
+TEST(MediaManagerAutoSave, EveryWriteIsEventuallyInTheFileEvenWhenTheyKeepComing) {
+  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), true);
   rig.bootMachine();
   const auto path = rig.write("sys.img", makeImage());
   rig.manager->floppyInsert(Rig::insertParams(path));
-  // 连续写盘超过一个检查间隔，期间不写回文件。
-  for (int index = 0; index < 20; ++index) {
-    writeDisk(rig, 2000 + static_cast<std::size_t>(index), 0xA7);
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
-  }
-  EXPECT_NE(readFile(path)[2000], 0xA7) << "还在写盘时不写回";
+  for (std::size_t index = 0; index < 50; ++index) writeDisk(rig, 3000 + index * 7000, 0xA7);
   EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; }));
-  EXPECT_EQ(readFile(path)[2019], 0xA7);
+  const auto bytes = readFile(path);
+  for (std::size_t index = 0; index < 50; ++index) EXPECT_EQ(bytes[3000 + index * 7000], 0xA7) << index;
+}
+
+TEST(MediaManagerAutoSync, ChangesMadeToTheFileByAnotherProgramAreMergedIntoTheImage) {
+  auto watch = std::make_shared<FakeWatchFactory>();
+  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), true, watch);
+  rig.bootMachine();
+  const auto path = rig.write("sys.img", makeImage());
+  rig.manager->floppyInsert(Rig::insertParams(path));
+  patchFile(path, 5000, 0x42);
+  watch->trigger(path);
+  EXPECT_TRUE(waitUntil([&] { return readDisk(rig, 5000) == 0x42; })) << "文件一变就同步进内存里的镜像";
+  EXPECT_FALSE(rig.manager->floppyStatus().drives[0].modified) << "外部改动不算“已修改”，不会再写回";
+  EXPECT_EQ(readDisk(rig, 5001), patternAt(5001));
+}
+
+TEST(MediaManagerAutoSync, OurOwnWritesComingBackAsFileChangesChangeNothing) {
+  auto watch = std::make_shared<FakeWatchFactory>();
+  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), true, watch);
+  rig.bootMachine();
+  const auto path = rig.write("sys.img", makeImage());
+  rig.manager->floppyInsert(Rig::insertParams(path));
+  writeDisk(rig, 1000, 0xEE);
+  ASSERT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; }));
+  watch->trigger(path);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  EXPECT_EQ(readDisk(rig, 1000), 0xEE);
+  EXPECT_FALSE(rig.manager->floppyStatus().drives[0].modified);
+  EXPECT_EQ(readFile(path)[1000], 0xEE);
+}
+
+TEST(MediaManagerAutoSync, BytesTheGuestJustWroteSurviveAnExternalChangeAndOthersAreTaken) {
+  auto store = std::make_shared<WriteFailingStore>();
+  auto watch = std::make_shared<FakeWatchFactory>();
+  Rig rig(store, true, watch, std::chrono::milliseconds(30));
+  rig.bootMachine();
+  const auto path = rig.write("sys.img", makeImage());
+  rig.manager->floppyInsert(Rig::insertParams(path));
+  writeDisk(rig, 1000, 0xEE);
+  ASSERT_TRUE(waitUntil([&] { return rig.events->count("media.floppySaveFailed") == 1; })) << "写不进文件，学习机的改动留在内存里";
+  patchFile(path, 1000, 0x11);
+  patchFile(path, 2000, 0x22);
+  watch->trigger(path);
+  EXPECT_TRUE(waitUntil([&] { return readDisk(rig, 2000) == 0x22; }));
+  EXPECT_EQ(readDisk(rig, 1000), 0xEE) << "已修改区间里的字节不被文件里的旧内容盖掉";
+  EXPECT_TRUE(rig.manager->floppyStatus().drives[0].modified);
+  store->failing = false;
+  EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; })) << "之后写回成功，学习机的字节落到文件里";
+  EXPECT_EQ(readFile(path)[1000], 0xEE);
+  EXPECT_EQ(readFile(path)[2000], 0x22);
+}
+
+TEST(MediaManagerAutoSync, AFileWhoseSizeDiffersFromTheDiskIsIgnored) {
+  auto watch = std::make_shared<FakeWatchFactory>();
+  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), true, watch);
+  rig.bootMachine();
+  const auto path = rig.write("sys.img", makeImage());
+  rig.manager->floppyInsert(Rig::insertParams(path));
+  static_cast<void>(rig.write("sys.img", makeImage(720 * 1024)));
+  patchFile(path, 100, 0x42);
+  watch->trigger(path);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  EXPECT_EQ(readDisk(rig, 100), patternAt(100));
+  EXPECT_EQ(rig.manager->floppyStatus().drives[0].size, 1440 * 1024);
+}
+
+TEST(MediaManagerAutoSync, TheFileIsWatchedOnlyWhileItsDiskIsInTheDrive) {
+  auto watch = std::make_shared<FakeWatchFactory>();
+  Rig rig(std::make_shared<ember::infra::media::DiskFloppyImageStore>(), true, watch);
+  EXPECT_EQ(watch->live(), 0U);
+  const auto first = rig.write("a.img", makeImage());
+  const auto second = rig.write("b.img", makeImage());
+  rig.manager->floppyInsert(Rig::insertParams(first));
+  EXPECT_EQ(watch->live(), 1U);
+  rig.manager->floppyInsert(Rig::insertParams(second));
+  EXPECT_EQ(watch->live(), 1U) << "换盘后只监视新的文件";
+  api::MediaFloppyEjectParams eject;
+  eject.drive = 0;
+  rig.manager->floppyEject(eject);
+  EXPECT_EQ(watch->live(), 0U);
 }
 
 TEST(MediaManagerAutoSave, EjectWritesPendingChangesBackFirst) {
@@ -405,7 +549,7 @@ TEST(MediaManagerAutoSave, ShutdownWritesPendingChangesBack) {
 
 TEST(MediaManagerAutoSave, AFailedWriteBackKeepsTheDiskAndTheChangesAndTellsTheUserOnce) {
   auto store = std::make_shared<WriteFailingStore>();
-  Rig rig(store, std::chrono::milliseconds(20));
+  Rig rig(store, true, nullptr, std::chrono::milliseconds(30));
   rig.bootMachine();
   const auto path = rig.write("sys.img", makeImage());
   rig.manager->floppyInsert(Rig::insertParams(path));
@@ -414,7 +558,7 @@ TEST(MediaManagerAutoSave, AFailedWriteBackKeepsTheDiskAndTheChangesAndTellsTheU
   EXPECT_EQ(rig.events->last("media.floppySaveFailed")["drive"], 0);
   EXPECT_FALSE(rig.events->last("media.floppySaveFailed")["message"].get<std::string>().empty());
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  EXPECT_EQ(rig.events->count("media.floppySaveFailed"), 1) << "成功之前只通知一次";
+  EXPECT_EQ(rig.events->count("media.floppySaveFailed"), 1) << "成功之前只通知一次，之后的重试不再通知";
   EXPECT_TRUE(rig.manager->floppyStatus().drives[0].modified);
   api::MediaFloppyEjectParams eject;
   eject.drive = 0;
@@ -422,8 +566,9 @@ TEST(MediaManagerAutoSave, AFailedWriteBackKeepsTheDiskAndTheChangesAndTellsTheU
   EXPECT_TRUE(rig.manager->floppyStatus().drives[0].inserted);
   EXPECT_TRUE(rig.manager->floppyStatus().drives[0].modified);
   store->failing = false;
-  EXPECT_FALSE(rig.manager->floppyEject(eject).status.inserted);
+  EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; })) << "文件可写之后自动重试成功";
   EXPECT_EQ(readFile(path)[1000], 0xEE);
+  EXPECT_FALSE(rig.manager->floppyEject(eject).status.inserted);
 }
 
 /** 经 CPU 总线的 $4025 给打印机发一段字节：ESC @、一列 9 针位图。 */

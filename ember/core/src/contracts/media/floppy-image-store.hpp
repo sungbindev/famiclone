@@ -11,7 +11,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -34,6 +36,13 @@ class FloppyImageStore {
    * @throws shared::CoreError media.saveFailed。
    */
   virtual void write(const std::string& path, const std::vector<std::uint8_t>& bytes) = 0;
+
+  /**
+   * 把一段字节写进镜像文件的指定位置，文件的其余部分与大小不变（盘片被写过的扇区直接落到文件里）。
+   * @param offset 文件内的起始位置。
+   * @throws shared::CoreError media.saveFailed：文件打不开、被改短或写入失败。
+   */
+  virtual void writeAt(const std::string& path, std::size_t offset, std::span<const std::uint8_t> bytes) = 0;
 };
 
 }  // namespace ember::contracts::media

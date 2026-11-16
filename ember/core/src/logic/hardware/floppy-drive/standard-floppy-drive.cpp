@@ -10,6 +10,7 @@
 
 #include "logic/hardware/floppy-drive/standard-floppy-drive.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace ember::logic::hardware {
@@ -49,8 +50,19 @@ hw::FloppyFormat StandardFloppyDrive::formatFor(std::size_t imageSize) {
 void StandardFloppyDrive::writeByte(std::size_t offset, std::uint8_t value) {
   if (!inserted_ || offset >= image_.size()) return;
   image_[offset] = value;
-  modified_ = true;
-  ++revision_;
+  const bool wasClean = dirty_.empty();
+  if (wasClean) {
+    dirty_ = {offset, offset + 1};
+  } else {
+    dirty_.begin = std::min(dirty_.begin, offset);
+    dirty_.end = std::max(dirty_.end, offset + 1);
+  }
+  if (wasClean && onModified_) onModified_();
+}
+
+void StandardFloppyDrive::applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) {
+  if ((!inserted_ && !suspended_) || offset > image_.size() || bytes.size() > image_.size() - offset) return;
+  std::copy(bytes.begin(), bytes.end(), image_.begin() + static_cast<std::ptrdiff_t>(offset));
 }
 
 void StandardFloppyDrive::insertImage(std::vector<std::uint8_t> image, bool writeProtected, std::string source) {
@@ -60,16 +72,14 @@ void StandardFloppyDrive::insertImage(std::vector<std::uint8_t> image, bool writ
   writeProtected_ = writeProtected;
   inserted_ = true;
   suspended_ = false;
-  modified_ = false;
-  ++revision_;
+  dirty_ = {};
 }
 
 void StandardFloppyDrive::ejectImage() {
   if (inserted_ || suspended_) changed_ = true;
   inserted_ = false;
   suspended_ = false;
-  modified_ = false;
-  ++revision_;
+  dirty_ = {};
   image_.clear();
   image_.shrink_to_fit();
   source_.clear();

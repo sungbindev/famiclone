@@ -45,7 +45,7 @@ export function createOpenCartridgeHandler(options: OpenCartridgeOptions): MainR
     const { droppedId } = params as MainParams<'cartridges.open'>;
     const path =
       droppedId === undefined
-        ? await options.dialog.pickFile({ title: TEXT.title, filters: [{ name: TEXT.filter, extensions: [CARTRIDGE_EXTENSION] }] })
+        ? await options.dialog.pickFile({ title: TEXT.title, purpose: 'cartridge', filters: [{ name: TEXT.filter, extensions: [CARTRIDGE_EXTENSION] }] })
         : resolveDroppedPath(options.dropped, droppedId, { extensions: [CARTRIDGE_EXTENSION], notFound: { code: DROPPED_NOT_FOUND, message: TEXT.droppedNotFound } });
     if (path === undefined) return { canceled: true };
     const loaded = await loadAndRemember(options, path);

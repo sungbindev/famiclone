@@ -72,7 +72,7 @@ describe('cartridges.open', () => {
     const pick = vi.fn().mockResolvedValue('D:/roms/idle.nes');
     const { request, call } = setup(pick);
     await expect(call()).resolves.toEqual({ ok: true, result: { canceled: false, loaded: LOADED } });
-    expect(pick).toHaveBeenCalledWith({ title: '打开卡带', filters: [{ name: 'NES 卡带', extensions: ['nes'] }] });
+    expect(pick).toHaveBeenCalledWith({ title: '打开卡带', purpose: 'cartridge', filters: [{ name: 'NES 卡带', extensions: ['nes'] }] });
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith('cartridges.load', { path: 'D:/roms/idle.nes' });
   });

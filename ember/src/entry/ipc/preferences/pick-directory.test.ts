@@ -26,7 +26,7 @@ describe('preferences.pickDirectory', () => {
     const pick = vi.fn().mockResolvedValue('D:/prints');
     const { call } = setup(pick);
     await expect(call()).resolves.toEqual({ ok: true, result: { canceled: false, path: 'D:/prints' } });
-    expect(pick).toHaveBeenCalledWith({ title: '选择文件夹' });
+    expect(pick).toHaveBeenCalledWith({ title: '选择文件夹', purpose: 'folder' });
   });
 
   it('用户取消选择时返回 canceled，不是错误', async () => {

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：路径只来自用户在系统窗口里的选择，渲染进程不能指定路径。
+ * 备注：路径只来自用户在系统窗口里的选择，渲染进程不能指定路径；每次调用用 purpose 标明用途，相同用途的窗口从上次选定的目录打开（记忆见 last-directories-service.ts）。
  * ------------------------------------------------------------------------
  */
 
@@ -23,12 +23,16 @@ export interface FileDialogOptions {
   readonly title: string;
   /** 文件类型过滤。 */
   readonly filters: readonly FileDialogFilter[];
+  /** 用途标识（字母开头的字母与数字），相同用途的窗口记住上次打开的目录。 */
+  readonly purpose: string;
 }
 
 /** 选择文件夹的参数。 */
 export interface DirectoryDialogOptions {
   /** 窗口标题。 */
   readonly title: string;
+  /** 用途标识，同上。 */
+  readonly purpose: string;
 }
 
 /** 文件选择窗口。 */

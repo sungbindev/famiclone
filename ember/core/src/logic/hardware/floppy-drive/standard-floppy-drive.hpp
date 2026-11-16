@@ -50,9 +50,11 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   void ejectImage() override;
   [[nodiscard]] const std::vector<std::uint8_t>& image() const override { return image_; }
   [[nodiscard]] const std::string& source() const override { return source_; }
-  [[nodiscard]] bool modified() const override { return modified_; }
-  [[nodiscard]] std::uint64_t revision() const override { return revision_; }
-  void markSaved() override { modified_ = false; }
+  [[nodiscard]] bool modified() const override { return !dirty_.empty(); }
+  [[nodiscard]] contracts::hardware::FloppyDirtyRange dirtyRange() const override { return dirty_; }
+  void markSaved() override { dirty_ = {}; }
+  void applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) override;
+  void setModifiedListener(std::function<void()> listener) override { onModified_ = std::move(listener); }
   void setWriteProtected(bool protect) override { writeProtected_ = protect; }
   contracts::hardware::FloppyFaults& mutableFaults() override { return faults_; }
   bool suspendMedia() override;
@@ -85,8 +87,9 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   bool motor_{false};
   bool writeProtected_{false};
   bool changed_{false};
-  bool modified_{false};
-  std::uint64_t revision_{0};
+  /** 尚未写回文件的字节区间。 */
+  contracts::hardware::FloppyDirtyRange dirty_;
+  std::function<void()> onModified_;
   unsigned cylinder_{0};
   contracts::hardware::FloppyFormat format_{};
   contracts::hardware::FloppyFaults faults_;

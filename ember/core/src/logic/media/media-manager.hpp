@@ -7,10 +7,14 @@
  * 日期：2026-11-16
  * 备注：镜像文件的读取在请求线程完成，不碰硬件状态；软驱与磁带机都是独立于主机的设备，不经主机找到，直接用共享的那一台；
  *       它们的状态只在模拟线程上读写，所以都经 runOnSimulation（不要求有主机、不要求通电）；
- *       盘片镜像由驱动器持有，是唯一的数据；学习机写盘只改内存里的镜像，由本服务的后台线程自动写回文件：
- *       每个间隔看一次驱动器的修改序号，有未写回的修改且序号与上一次相同（写盘已停下）时，在模拟线程上复制镜像，在后台线程写文件，
- *       写完再在模拟线程上确认序号没变才清除“已修改”（期间又被改过则留给下一轮）；写回失败时发 media.floppySaveFailed（成功前只发一次）并写错误日志，之后每 5 秒重试；
- *       取出与换盘前、核心停止（shutdown）时先把未写回的修改写回，保存文件的动作用一把锁串行。
+ *       盘片镜像由驱动器持有，是唯一的数据；学习机写盘只改内存里的镜像并记下已修改的字节区间，本服务订阅驱动器的修改通知（区间从空变为非空时来一次），
+ *       后台线程收到通知就立即在模拟线程上把这个区间直接写进镜像文件，写成功才清除“已修改”（没有定时检查）；
+ *       反过来，盘片放入后监视镜像文件（系统的文件变化通知，不轮询），文件被别的程序改动时，在模拟线程上读出文件、和内存里的镜像逐字节比较，
+ *       把不同的部分同步进镜像（已修改区间里尚未写回的字节保留，之后写回文件）；自己写文件引起的通知比较后没有差别，不会循环；
+ *       文件大小与盘片不同或读不出来（别的程序正在保存的中间状态）时忽略，等下一次变化；
+ *       所有读写镜像文件的动作都在模拟线程上进行，彼此按顺序执行，不会用旧内容覆盖新内容；
+ *       写回失败时区间保留，发 media.floppySaveFailed（成功前只发一次）并写错误日志，后台线程之后每隔重试间隔重试一次；
+ *       取出与换盘前、核心停止（shutdown）时也先把未写回的修改写回。
  * ------------------------------------------------------------------------
  */
 
@@ -33,6 +37,7 @@
 #include "contracts/media/tape-store.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "platform/events/event-sink.hpp"
+#include "platform/files/file-watcher.hpp"
 #include "platform/logging/error-log.hpp"
 
 namespace ember::logic::media {
@@ -44,12 +49,14 @@ class MediaManager final : public contracts::media::MediaService, public contrac
    * @param deck 磁带机：独立于主机的设备，与主机型号目录共用同一台。
    * @param floppyDrives 软驱（按编号排列）：同样是独立于主机的设备，与主机型号目录共用。
    * @param errors 写回失败时写错误日志；为空时不写。
-   * @param autoSaveInterval 自动写回的检查间隔；为 0 时不启动后台线程（取出、换盘与停止时的写回仍然有效）。
+   * @param watchFactory 监视镜像文件的工厂；为空时不监视（文件被外部改动不会同步）。
+   * @param autoSave 是否订阅驱动器的修改通知并自动写回、监视文件并同步外部改动；为 false 时不启动后台线程（取出、换盘与停止时的写回仍然有效）。
+   * @param retryInterval 自动写回失败后重试的间隔。
    */
   MediaManager(std::shared_ptr<contracts::media::FloppyImageStore> store, std::shared_ptr<contracts::media::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
                std::shared_ptr<platform::EventSink> events, std::shared_ptr<contracts::media::PrinterRecord> printerRecord, std::shared_ptr<contracts::hardware::TapeControl> deck,
                std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> floppyDrives, std::shared_ptr<platform::ErrorLog> errors = nullptr,
-               std::chrono::milliseconds autoSaveInterval = std::chrono::milliseconds(0));
+               std::shared_ptr<platform::FileWatchFactory> watchFactory = nullptr, bool autoSave = true, std::chrono::milliseconds retryInterval = std::chrono::seconds(5));
   ~MediaManager() override;
 
   MediaManager(const MediaManager&) = delete;
@@ -86,29 +93,52 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   void publishChanged(std::int64_t drive);
 
   /**
-   * 把驱动器里的镜像写回放入时的文件并清除标志。在模拟线程上调用。
-   * @throws shared::CoreError media.saveFailed。
+   * 把驱动器里已修改的区间写进镜像文件并清除；没有修改时什么都不做。在模拟线程上调用。
+   * @return 是否写了文件。
+   * @throws shared::CoreError media.saveFailed（区间保留）。
    */
-  void saveImage(std::size_t index);
+  bool writeBack(std::size_t index);
 
-  /** 驱动器里有未写回的修改时写回，否则什么都不做。在模拟线程上调用。 */
-  void writeBack(std::size_t index);
+  /**
+   * 把镜像文件被外部改动的部分同步进驱动器里的镜像（已修改区间里的字节保留）。在模拟线程上调用。
+   * @return 是否改动了镜像。
+   */
+  bool pullFromFile(std::size_t index);
 
-  /** 后台线程为每个驱动器记住的状态。 */
-  struct AutoSaveState {
-    /** 上一次检查时的修改序号。 */
-    std::uint64_t seenRevision{0};
-    /** 上一次写回是否失败（失败后只通知一次）。 */
-    bool failed{false};
-    /** 失败后最早的下一次重试时刻。 */
-    std::chrono::steady_clock::time_point retryAt{};
+  /** 重新监视一个驱动器的镜像文件；path 为空表示只停止监视。 */
+  void rewatch(std::size_t index, const std::string& path);
+
+  /** 订阅者与后台线程共用的信号；驱动器的监听者与文件监视各持有它的一份，所以服务销毁后再通知也不会访问已释放的对象。 */
+  struct ChangeSignal {
+    std::mutex mutex;
+    std::condition_variable wake;
+    /** 各驱动器的内存镜像有了新的修改。 */
+    std::vector<char> memoryChanged;
+    /** 各驱动器的镜像文件被改动。 */
+    std::vector<char> fileChanged;
+    bool stopping{false};
+
+    /** 标记一个驱动器的变化并唤醒后台线程；可在任意线程调用。 */
+    void raise(std::vector<char> ChangeSignal::* which, std::size_t index) {
+      {
+        std::lock_guard lock(mutex);
+        (this->*which)[index] = 1;
+      }
+      wake.notify_one();
+    }
   };
 
-  /** 后台线程的主循环。 */
+  /** 停止后台线程并等它结束。 */
+  void stopThread();
+
+  /** 后台线程的主循环：等通知（内存镜像有修改、镜像文件被改动），收到就处理对应的驱动器；有写回失败时每隔重试间隔再试。 */
   void autoSaveLoop();
 
-  /** 后台线程检查并写回一个驱动器。 */
-  void autoSaveDrive(std::size_t index, AutoSaveState& state);
+  /** 后台线程写回一个驱动器；failed 记录它上一次写回是否失败，完成后更新。 */
+  void autoSaveDrive(std::size_t index, bool& failed);
+
+  /** 后台线程把一个驱动器的镜像文件的外部改动同步进镜像。 */
+  void autoPullDrive(std::size_t index);
 
   /**
    * 在模拟线程上用磁带机执行动作，返回动作做完后的磁带机状态；不需要主机。
@@ -128,14 +158,13 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   std::shared_ptr<contracts::hardware::TapeControl> deck_;
   std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> drives_;
   std::shared_ptr<platform::ErrorLog> errors_;
-  std::chrono::milliseconds autoSaveInterval_;
-  /** 保存镜像文件的动作串行（后台线程、取出与换盘、立即保存）。 */
-  std::mutex saveMutex_;
-  /** 每个驱动器已经写回文件的最新修改序号（由 saveMutex_ 保护）。 */
-  std::vector<std::uint64_t> writtenRevisions_;
-  std::mutex wakeMutex_;
-  std::condition_variable wake_;
-  bool stopping_{false};
+  std::shared_ptr<platform::FileWatchFactory> watchFactory_;
+  bool autoSave_;
+  std::chrono::milliseconds retryInterval_;
+  std::shared_ptr<ChangeSignal> signal_ = std::make_shared<ChangeSignal>();
+  /** 各驱动器镜像文件的监视（由 watchMutex_ 保护）。 */
+  std::mutex watchMutex_;
+  std::vector<std::unique_ptr<platform::FileWatcher>> watchers_;
   std::thread autoSaveThread_;
 };
 

@@ -42,6 +42,7 @@ describe('media.openTape', () => {
     await expect(call('media.openTape')).resolves.toEqual({ ok: true, result: { canceled: false, status: STATUS } });
     expect(pickFile).toHaveBeenCalledWith({
       title: '载入磁带',
+      purpose: 'tape',
       filters: [
         { name: '声音文件', extensions: ['m4a', 'mp3', 'wav', 'aac', 'flac', 'ogg', 'opus', 'mp4', 'mka'] },
         { name: '所有文件', extensions: ['*'] }
@@ -92,7 +93,7 @@ describe('media.openTapeRecording', () => {
     const pickSaveFile = vi.fn().mockResolvedValue('D:/tapes/out.wav');
     const { request, call } = setup({ pickSaveFile });
     await expect(call('media.openTapeRecording')).resolves.toEqual({ ok: true, result: { canceled: false, status: STATUS } });
-    expect(pickSaveFile).toHaveBeenCalledWith({ title: '保存录音', filters: [{ name: 'WAV 声音文件', extensions: ['wav'] }] });
+    expect(pickSaveFile).toHaveBeenCalledWith({ title: '保存录音', purpose: 'tapeRecording', filters: [{ name: 'WAV 声音文件', extensions: ['wav'] }] });
     expect(request).toHaveBeenCalledWith('media.tapeRecord', { path: 'D:/tapes/out.wav' });
   });
 

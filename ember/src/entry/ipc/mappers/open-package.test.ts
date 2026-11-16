@@ -34,6 +34,7 @@ describe('mappers.openPackage', () => {
     await expect(call()).resolves.toEqual({ ok: true, result: { canceled: false, plugin: PLUGIN } });
     expect(pick).toHaveBeenCalledWith({
       title: '安装 mapper 插件',
+      purpose: 'mapperPackage',
       filters: [
         { name: 'mapper 插件包', extensions: ['emap'] },
         { name: '所有文件', extensions: ['*'] }

@@ -24,9 +24,6 @@ namespace hw = contracts::hardware;
 
 namespace {
 
-/** 自动写回失败后重试的间隔。 */
-constexpr std::chrono::seconds AUTO_SAVE_RETRY_INTERVAL{5};
-
 /** 路径里最后一段（文件名）；两种分隔符都认。 */
 std::string baseName(const std::string& path) {
   const auto position = path.find_last_of("/\\");
@@ -79,7 +76,8 @@ api::TapeStatus tapeStatusOf(hw::TapeControl& deck) {
 
 MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::shared_ptr<api::TapeStore> tapeStore, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
                            std::shared_ptr<platform::EventSink> events, std::shared_ptr<api::PrinterRecord> printerRecord, std::shared_ptr<hw::TapeControl> deck,
-                           std::vector<std::shared_ptr<hw::FloppyDrive>> floppyDrives, std::shared_ptr<platform::ErrorLog> errors, std::chrono::milliseconds autoSaveInterval)
+                           std::vector<std::shared_ptr<hw::FloppyDrive>> floppyDrives, std::shared_ptr<platform::ErrorLog> errors, std::shared_ptr<platform::FileWatchFactory> watchFactory, bool autoSave,
+                           std::chrono::milliseconds retryInterval)
     : store_(std::move(store)),
       tapeStore_(std::move(tapeStore)),
       runtime_(std::move(runtime)),
@@ -88,27 +86,37 @@ MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::sh
       deck_(std::move(deck)),
       drives_(std::move(floppyDrives)),
       errors_(std::move(errors)),
-      autoSaveInterval_(autoSaveInterval),
-      writtenRevisions_(drives_.size(), 0) {
-  if (autoSaveInterval_.count() > 0) autoSaveThread_ = std::thread([this] { autoSaveLoop(); });
+      watchFactory_(std::move(watchFactory)),
+      autoSave_(autoSave),
+      retryInterval_(retryInterval) {
+  watchers_.resize(drives_.size());
+  if (!autoSave_) return;
+  signal_->memoryChanged.assign(drives_.size(), 0);
+  signal_->fileChanged.assign(drives_.size(), 0);
+  for (std::size_t index = 0; index < drives_.size(); ++index) {
+    // 监听者只持有信号，不持有本服务。
+    drives_[index]->setModifiedListener([signal = signal_, index] { signal->raise(&ChangeSignal::memoryChanged, index); });
+  }
+  autoSaveThread_ = std::thread([this] { autoSaveLoop(); });
 }
 
-MediaManager::~MediaManager() {
+MediaManager::~MediaManager() { stopThread(); }
+
+void MediaManager::stopThread() {
   {
-    std::lock_guard lock(wakeMutex_);
-    stopping_ = true;
+    std::lock_guard lock(watchMutex_);
+    for (auto& watcher : watchers_) watcher.reset();
   }
-  wake_.notify_all();
+  {
+    std::lock_guard lock(signal_->mutex);
+    signal_->stopping = true;
+  }
+  signal_->wake.notify_all();
   if (autoSaveThread_.joinable()) autoSaveThread_.join();
 }
 
 void MediaManager::shutdown() {
-  {
-    std::lock_guard lock(wakeMutex_);
-    stopping_ = true;
-  }
-  wake_.notify_all();
-  if (autoSaveThread_.joinable()) autoSaveThread_.join();
+  stopThread();
   for (std::size_t index = 0; index < drives_.size(); ++index) {
     try {
       runtime_->runOnSimulation([&] { writeBack(index); });
@@ -153,6 +161,7 @@ api::MediaFloppyInsertResult MediaManager::floppyInsert(const api::MediaFloppyIn
     writeBack(static_cast<std::size_t>(params.drive));
     drive.insertImage(std::move(image), writeProtected, params.path);
   });
+  rewatch(static_cast<std::size_t>(params.drive), params.path);
   publishChanged(params.drive);
   return api::MediaFloppyInsertResult{std::move(status)};
 }
@@ -162,6 +171,7 @@ api::MediaFloppyEjectResult MediaManager::floppyEject(const api::MediaFloppyEjec
     writeBack(static_cast<std::size_t>(params.drive));
     drive.ejectImage();
   });
+  rewatch(static_cast<std::size_t>(params.drive), {});
   publishChanged(params.drive);
   return api::MediaFloppyEjectResult{std::move(status)};
 }
@@ -169,77 +179,118 @@ api::MediaFloppyEjectResult MediaManager::floppyEject(const api::MediaFloppyEjec
 api::MediaFloppySaveResult MediaManager::floppySave(const api::MediaFloppySaveParams& params) {
   auto status = withDrive(params.drive, [&](hw::FloppyDrive& drive) {
     if (!drive.inserted() && !drive.mediaSuspended()) throw shared::CoreError(api::ERROR_NO_DISK, "驱动器里没有盘片");
-    saveImage(static_cast<std::size_t>(params.drive));
+    store_->write(drive.source(), drive.image());
+    drive.markSaved();
   });
   publishChanged(params.drive);
   return api::MediaFloppySaveResult{std::move(status)};
 }
 
-void MediaManager::saveImage(std::size_t index) {
+bool MediaManager::writeBack(std::size_t index) {
   hw::FloppyDrive& drive = *drives_[index];
-  std::lock_guard lock(saveMutex_);
-  store_->write(drive.source(), drive.image());
-  writtenRevisions_[index] = drive.revision();
+  const hw::FloppyDirtyRange range = drive.dirtyRange();
+  if (range.empty()) return false;
+  store_->writeAt(drive.source(), range.begin, std::span<const std::uint8_t>(drive.image()).subspan(range.begin, range.end - range.begin));
   drive.markSaved();
-}
-
-void MediaManager::writeBack(std::size_t index) {
-  if (drives_[index]->modified()) saveImage(index);
+  return true;
 }
 
 void MediaManager::autoSaveLoop() {
-  std::vector<AutoSaveState> states(drives_.size());
-  std::unique_lock lock(wakeMutex_);
-  while (!stopping_) {
-    if (wake_.wait_for(lock, autoSaveInterval_, [this] { return stopping_; })) break;
+  std::vector<bool> failed(drives_.size(), false);
+  std::unique_lock lock(signal_->mutex);
+  while (true) {
+    const auto ready = [this] {
+      return signal_->stopping || std::find(signal_->memoryChanged.begin(), signal_->memoryChanged.end(), 1) != signal_->memoryChanged.end() ||
+             std::find(signal_->fileChanged.begin(), signal_->fileChanged.end(), 1) != signal_->fileChanged.end();
+    };
+    // 没有写回失败时只等通知；有失败时最多等一个重试间隔就再试。
+    if (std::find(failed.begin(), failed.end(), true) == failed.end()) {
+      signal_->wake.wait(lock, ready);
+    } else {
+      signal_->wake.wait_for(lock, retryInterval_, ready);
+    }
+    if (signal_->stopping) break;
+    const std::vector<char> filesChanged = std::exchange(signal_->fileChanged, std::vector<char>(drives_.size(), 0));
+    const std::vector<char> memoryChanged = std::exchange(signal_->memoryChanged, std::vector<char>(drives_.size(), 0));
     lock.unlock();
-    for (std::size_t index = 0; index < drives_.size(); ++index) autoSaveDrive(index, states[index]);
+    for (std::size_t index = 0; index < drives_.size(); ++index) {
+      // 先同步外部改动（已修改区间里的字节保留），再写回学习机的修改。
+      if (filesChanged[index] != 0) autoPullDrive(index);
+      if (memoryChanged[index] == 0 && !failed[index]) continue;
+      bool driveFailed = failed[index];
+      autoSaveDrive(index, driveFailed);
+      failed[index] = driveFailed;
+    }
     lock.lock();
   }
 }
 
-void MediaManager::autoSaveDrive(std::size_t index, AutoSaveState& state) {
-  const auto now = std::chrono::steady_clock::now();
-  bool copied = false;
-  std::uint64_t revision = 0;
-  std::string source;
-  std::vector<std::uint8_t> image;
+void MediaManager::autoPullDrive(std::size_t index) {
   try {
-    runtime_->runOnSimulation([&] {
-      const hw::FloppyDrive& drive = *drives_[index];
-      revision = drive.revision();
-      // 序号与上一次检查时相同，说明这一段时间里没有再写盘。
-      if (drive.modified() && revision == state.seenRevision && now >= state.retryAt) {
-        image = drive.image();
-        source = drive.source();
-        copied = true;
-      }
-    });
+    bool changed = false;
+    runtime_->runOnSimulation([&] { changed = pullFromFile(index); });
+    if (changed) publishChanged(static_cast<std::int64_t>(index));
   } catch (const shared::CoreError&) {
     // 运行服务已经停止。
+  }
+}
+
+bool MediaManager::pullFromFile(std::size_t index) {
+  hw::FloppyDrive& drive = *drives_[index];
+  if ((!drive.inserted() && !drive.mediaSuspended()) || drive.source().empty()) return false;
+  std::vector<std::uint8_t> file;
+  try {
+    file = store_->read(drive.source());
+  } catch (const shared::CoreError&) {
+    // 别的程序正在保存、文件被删除等中间状态；等下一次变化。
+    return false;
+  }
+  const std::vector<std::uint8_t>& image = drive.image();
+  if (file.size() != image.size()) return false;
+  const hw::FloppyDirtyRange dirty = drive.dirtyRange();
+  // 已修改区间里的字节是学习机刚写、还没写进文件的，不能被文件里的旧内容盖掉。
+  const auto differs = [&](std::size_t position) { return file[position] != image[position] && !(position >= dirty.begin && position < dirty.end); };
+  bool changed = false;
+  std::size_t position = 0;
+  while (position < file.size()) {
+    if (!differs(position)) {
+      ++position;
+      continue;
+    }
+    std::size_t end = position;
+    while (end < file.size() && differs(end)) ++end;
+    drive.applyExternalChange(position, std::span<const std::uint8_t>(file).subspan(position, end - position));
+    changed = true;
+    position = end;
+  }
+  return changed;
+}
+
+void MediaManager::rewatch(std::size_t index, const std::string& path) {
+  if (!autoSave_ || watchFactory_ == nullptr) return;
+  std::lock_guard lock(watchMutex_);
+  watchers_[index].reset();
+  if (path.empty()) return;
+  watchers_[index] = watchFactory_->watch(path, [signal = signal_, index] { signal->raise(&ChangeSignal::fileChanged, index); });
+  if (watchers_[index] == nullptr) {
+    if (errors_ != nullptr) errors_->write({"media", std::string(api::ERROR_FILE_UNREADABLE), "无法监视镜像文件，它被外部修改时不会自动同步", nlohmann::json{{"drive", index}, {"path", path}}});
     return;
   }
-  state.seenRevision = revision;
-  if (!copied) return;
+  // 读入到开始监视之间文件可能已经变了，先同步一次。
+  signal_->raise(&ChangeSignal::fileChanged, index);
+}
+
+void MediaManager::autoSaveDrive(std::size_t index, bool& failed) {
   try {
-    {
-      std::lock_guard lock(saveMutex_);
-      // 复制之后取出、换盘或立即保存已经写过更新的内容时，不能再用旧内容覆盖。
-      if (writtenRevisions_[index] >= revision) return;
-      store_->write(source, image);
-      writtenRevisions_[index] = revision;
-    }
-    runtime_->runOnSimulation([&] {
-      hw::FloppyDrive& drive = *drives_[index];
-      if (drive.revision() == revision) drive.markSaved();
-    });
-    state.failed = false;
-    publishChanged(static_cast<std::int64_t>(index));
+    bool wrote = false;
+    runtime_->runOnSimulation([&] { wrote = writeBack(index); });
+    failed = false;
+    if (wrote) publishChanged(static_cast<std::int64_t>(index));
   } catch (const shared::CoreError& error) {
+    // 运行服务已经停止；不算写回失败。
     if (error.code() == shared::ERROR_UNAVAILABLE) return;
-    state.retryAt = now + AUTO_SAVE_RETRY_INTERVAL;
-    if (state.failed) return;
-    state.failed = true;
+    if (failed) return;
+    failed = true;
     if (errors_ != nullptr) errors_->write({"media", error.code(), error.what(), nlohmann::json{{"drive", index}}});
     events_->publish(api::MEDIA_FLOPPY_SAVE_FAILED_EVENT, nlohmann::json(api::MediaFloppySaveFailedData{static_cast<std::int64_t>(index), error.what()}));
   }

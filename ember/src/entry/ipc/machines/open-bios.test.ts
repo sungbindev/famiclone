@@ -32,7 +32,7 @@ describe('machines.openBios', () => {
     const pick = vi.fn().mockResolvedValue('D:/bios/SB2K_BIOS.NES');
     const { request, call } = setup(pick);
     await expect(call()).resolves.toEqual({ ok: true, result: { canceled: false, machine: MACHINE } });
-    expect(pick).toHaveBeenCalledWith({ title: '添加 BIOS', filters: [{ name: 'NES 文件', extensions: ['nes'] }] });
+    expect(pick).toHaveBeenCalledWith({ title: '添加 BIOS', purpose: 'bios', filters: [{ name: 'NES 文件', extensions: ['nes'] }] });
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith('machines.setBios', { machine: 'sb2000', path: 'D:/bios/SB2K_BIOS.NES' });
   });

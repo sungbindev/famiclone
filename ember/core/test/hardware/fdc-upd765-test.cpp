@@ -157,19 +157,54 @@ TEST(StandardFloppyDrive, InsertEjectAndTheChangedFlag) {
   EXPECT_TRUE(drive.image().empty());
 }
 
-TEST(StandardFloppyDrive, TheRevisionGrowsOnEveryWriteInsertAndEjectButNotOnSaving) {
+TEST(StandardFloppyDrive, TheDirtyRangeCoversEveryWrittenByteAndIsClearedWhenSaved) {
   StandardFloppyDrive drive;
-  const auto start = drive.revision();
   drive.insertImage(makeImage(), false, "a.img");
-  const auto inserted = drive.revision();
-  EXPECT_GT(inserted, start);
-  drive.writeByte(10, 0x55);
-  const auto written = drive.revision();
-  EXPECT_GT(written, inserted);
+  EXPECT_TRUE(drive.dirtyRange().empty());
+  drive.writeByte(100, 0x55);
+  drive.writeByte(20, 0x66);
+  drive.writeByte(300, 0x77);
+  EXPECT_EQ(drive.dirtyRange().begin, 20U);
+  EXPECT_EQ(drive.dirtyRange().end, 301U);
+  EXPECT_TRUE(drive.modified());
   drive.markSaved();
-  EXPECT_EQ(drive.revision(), written);
+  EXPECT_TRUE(drive.dirtyRange().empty());
+  EXPECT_FALSE(drive.modified());
+  drive.writeByte(5, 0x11);
   drive.ejectImage();
-  EXPECT_GT(drive.revision(), written);
+  EXPECT_TRUE(drive.dirtyRange().empty()) << "取出盘片后区间清空";
+}
+
+TEST(StandardFloppyDrive, TheModifiedListenerIsCalledOnlyWhenTheRangeGoesFromEmptyToNonEmpty) {
+  StandardFloppyDrive drive;
+  int calls = 0;
+  drive.setModifiedListener([&calls] { ++calls; });
+  drive.insertImage(makeImage(), false, "a.img");
+  drive.writeByte(10, 1);
+  drive.writeByte(11, 2);
+  EXPECT_EQ(calls, 1) << "区间已经非空时继续写不再通知";
+  drive.markSaved();
+  drive.writeByte(12, 3);
+  EXPECT_EQ(calls, 2);
+  drive.markSaved();
+  drive.ejectImage();
+  drive.writeByte(13, 4);
+  EXPECT_EQ(calls, 2) << "没有盘片时写入被丢弃，不通知";
+}
+
+TEST(StandardFloppyDrive, ExternalChangesGoIntoTheImageWithoutMarkingItModified) {
+  StandardFloppyDrive drive;
+  int calls = 0;
+  drive.setModifiedListener([&calls] { ++calls; });
+  drive.insertImage(makeImage(), false, "a.img");
+  const std::vector<std::uint8_t> bytes{1, 2, 3};
+  drive.applyExternalChange(10, bytes);
+  EXPECT_EQ(drive.readByte(10), 1);
+  EXPECT_EQ(drive.readByte(12), 3);
+  EXPECT_FALSE(drive.modified());
+  EXPECT_EQ(calls, 0);
+  drive.applyExternalChange(drive.image().size() - 1, bytes);
+  EXPECT_NE(drive.readByte(drive.image().size() - 1), 1) << "超出镜像的丢弃";
 }
 
 TEST(StandardFloppyDrive, SuspendedMediaCanBeRestoredWithItsContents) {

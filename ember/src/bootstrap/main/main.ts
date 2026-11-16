@@ -25,6 +25,7 @@ import { startThemeSync } from '../../entry/preferences/theme-sync';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
 import { ProcessCoreGateway } from '../../infra/core-client/process-core-gateway';
 import { MemoryDroppedFilesService } from '../../infra/dropped-files/memory-dropped-files-service';
+import { FileLastDirectoriesService } from '../../infra/last-directories/file-last-directories-service';
 import { FileRecentCartridgesService } from '../../infra/recent-cartridges/file-recent-cartridges-service';
 import { FileShellStateService } from '../../infra/shell-state/file-shell-state-service';
 import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
@@ -116,6 +117,9 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     new JsonFileStore({ path: join(userDataPath, 'config', 'recent-cartridges.json'), onError: (error) => logError(logger, error, { source: 'recentCartridges' }) })
   );
   const droppedFiles = new MemoryDroppedFilesService();
+  const lastDirectories = new FileLastDirectoriesService(
+    new JsonFileStore({ path: join(userDataPath, 'config', 'last-directories.json'), onError: (error) => logError(logger, error, { source: 'lastDirectories' }) })
+  );
 
   let mainWindow: BrowserWindow | undefined;
   let quitting = false;
@@ -184,6 +188,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     event.preventDefault();
     shellState.flush();
     recentCartridges.flush();
+    lastDirectories.flush();
     keyboard.dispose();
     themeSync.stop();
     streamHub.stop();
@@ -202,7 +207,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     registerCoreIpc({ ipc: ipcMain, gateway, modules, schemas: CORE_SCHEMAS, isTrustedSender });
     registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController, keyboard, droppedFiles });
 
-    const fileDialog = createOpenFileDialog(() => mainWindow);
+    const fileDialog = createOpenFileDialog(() => mainWindow, lastDirectories);
     const logDirectory = createLogDirectory(join(userDataPath, 'logs'), (target) => shell.openPath(target));
     const handlers: Record<string, MainRequestHandler> = {};
     for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, core: coreHandling, recentCartridges }));

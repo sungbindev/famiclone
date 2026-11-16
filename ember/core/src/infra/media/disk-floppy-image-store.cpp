@@ -68,4 +68,17 @@ void DiskFloppyImageStore::write(const std::string& path, const std::vector<std:
   }
 }
 
+void DiskFloppyImageStore::writeAt(const std::string& path, std::size_t offset, std::span<const std::uint8_t> bytes) {
+  const fs::path target = toPath(path);
+  std::error_code error;
+  const auto size = fs::file_size(target, error);
+  // 文件被外部改短或删除时不在这里重建，直接报错让用户知道。
+  if (error || size < offset + bytes.size()) throw shared::CoreError(api::ERROR_SAVE_FAILED, "镜像文件不存在或大小不对：" + path);
+  std::fstream stream(target, std::ios::binary | std::ios::in | std::ios::out);
+  stream.seekp(static_cast<std::streamoff>(offset));
+  stream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  stream.flush();
+  if (!stream) throw shared::CoreError(api::ERROR_SAVE_FAILED, "无法写入镜像文件：" + path);
+}
+
 }  // namespace ember::infra::media

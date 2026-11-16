@@ -37,7 +37,7 @@ export interface OpenBiosOptions {
 export function createOpenBiosHandler(options: OpenBiosOptions): MainRequestHandler {
   return async (params): Promise<MainResult<'machines.openBios'>> => {
     const { machine } = params as MainParams<'machines.openBios'>;
-    const path = await options.dialog.pickFile({ title: TEXT.title, filters: [{ name: TEXT.filter, extensions: [BIOS_EXTENSION] }] });
+    const path = await options.dialog.pickFile({ title: TEXT.title, purpose: 'bios', filters: [{ name: TEXT.filter, extensions: [BIOS_EXTENSION] }] });
     if (path === undefined) return { canceled: true };
     const result = await requestCoreAsMain(options.core, 'machines.setBios', { machine, path });
     return { canceled: false, machine: result.machine };

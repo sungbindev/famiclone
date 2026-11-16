@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：platform-test.cpp
- * 说明：基础能力的测试：请求路由（含未登记请求被拒绝）、取消标记、任务池、时钟文本与错误日志文件。
+ * 说明：基础能力的测试：请求路由（含未登记请求被拒绝）、取消标记、任务池、时钟文本、错误日志文件与系统的文件变化监视。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -15,9 +15,11 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include <gtest/gtest.h>
 
+#include "platform/files/os-file-watch.hpp"
 #include "platform/logging/file-error-log.hpp"
 #include "platform/requests/request-router.hpp"
 #include "platform/threading/thread-pool.hpp"
@@ -122,5 +124,62 @@ TEST(Clock, RejectsBadText) {
   EXPECT_FALSE(platform::parseUtcIso("不是时间").has_value());
   EXPECT_FALSE(platform::parseUtcIso("2026-13-01T00:00:00").has_value());
 }
+
+/** 轮询条件，最多等 5 秒。 */
+template <typename Condition>
+bool waitUntil(Condition&& condition) {
+  for (int attempt = 0; attempt < 500; ++attempt) {
+    if (condition()) return true;
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  return condition();
+}
+
+/** 以下用例需要系统的文件变化通知（Windows 与 macOS）。 */
+#if defined(_WIN32) || defined(__APPLE__)
+TEST(OsFileWatch, CallsBackWhenTheWatchedFileIsWrittenButNotForOtherFiles) {
+  const TempDirectory directory;
+  const auto watched = directory.path() / "watched.img";
+  const auto other = directory.path() / "other.img";
+  std::ofstream(watched, std::ios::binary) << "0123456789";
+  std::ofstream(other, std::ios::binary) << "abc";
+  std::atomic<int> calls{0};
+  auto factory = platform::createOsFileWatchFactory();
+  const auto text = watched.u8string();
+  auto watcher = factory->watch(std::string(text.begin(), text.end()), [&calls] { ++calls; });
+  ASSERT_NE(watcher, nullptr);
+  {
+    std::ofstream(other, std::ios::binary | std::ios::app) << "def";
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  EXPECT_EQ(calls.load(), 0) << "别的文件变了不回调";
+  {
+    std::fstream stream(watched, std::ios::binary | std::ios::in | std::ios::out);
+    stream.seekp(3);
+    stream.put('X');
+  }
+  EXPECT_TRUE(waitUntil([&] { return calls.load() > 0; })) << "被监视的文件改了就回调";
+}
+
+TEST(OsFileWatch, CallsBackWhenAnotherProgramReplacesTheFileByRenaming) {
+  const TempDirectory directory;
+  const auto watched = directory.path() / "watched.img";
+  std::ofstream(watched, std::ios::binary) << "0123456789";
+  std::atomic<int> calls{0};
+  auto factory = platform::createOsFileWatchFactory();
+  const auto text = watched.u8string();
+  auto watcher = factory->watch(std::string(text.begin(), text.end()), [&calls] { ++calls; });
+  ASSERT_NE(watcher, nullptr);
+  const auto temporary = directory.path() / "watched.img.tmp";
+  std::ofstream(temporary, std::ios::binary) << "ABCDEFGHIJ";
+  std::filesystem::rename(temporary, watched);
+  EXPECT_TRUE(waitUntil([&] { return calls.load() > 0; })) << "先写临时文件再改名覆盖的保存方式也能收到";
+}
+
+TEST(OsFileWatch, ADirectoryThatDoesNotExistCannotBeWatched) {
+  auto factory = platform::createOsFileWatchFactory();
+  EXPECT_EQ(factory->watch((std::filesystem::temp_directory_path() / "ember-no-such-directory" / "x.img").string(), [] {}), nullptr);
+}
+#endif
 
 }  // namespace

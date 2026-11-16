@@ -6,13 +6,12 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：取用 preferences 与 runtime 模块的服务，须排在它们之后登记；打印页的保存目录读首选项 printer.outputDirectory，为空时用用户数据目录下的 printer-output；
- *       每输出一页读取一次，所以修改后立即生效；软盘镜像的自动写回由介质服务的后台线程完成，核心停止时先写回再停模拟线程。
+ *       每输出一页读取一次，所以修改后立即生效；盘片镜像的自动写回与镜像文件被外部修改的同步由介质服务订阅驱动器的修改通知与系统的文件变化通知（在这里注入）完成，核心停止时先写回再停模拟线程。
  * ------------------------------------------------------------------------
  */
 
 #include "bootstrap/modules/media.hpp"
 
-#include <chrono>
 #include <memory>
 #include <string>
 #include <variant>
@@ -29,14 +28,12 @@
 #include "infra/media/png-printer-page-store.hpp"
 #include "logic/media/media-manager.hpp"
 #include "logic/media/printer-service.hpp"
+#include "platform/files/os-file-watch.hpp"
 #include "requests/media/media-requests.hpp"
 
 namespace ember::bootstrap {
 
 namespace {
-
-/** 学习机写盘之后，盘片镜像自动写回文件的检查间隔：写盘停下一个间隔以上即写回。 */
-constexpr std::chrono::milliseconds FLOPPY_AUTO_SAVE_INTERVAL{500};
 
 void registerPrinterSettings(contracts::preferences::PreferenceService& service) {
   namespace api = contracts::preferences;
@@ -72,7 +69,7 @@ void registerMedia(ModuleRegistry& registry) {
                                                               registry.services.require<contracts::runtime::RuntimeService>(), registry.events, printer,
                                                               registry.services.require<contracts::hardware::TapeControl>(),
                                                               std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>>{registry.services.require<contracts::hardware::FloppyDrive>()},
-                                                              registry.errors, FLOPPY_AUTO_SAVE_INTERVAL);
+                                                              registry.errors, platform::createOsFileWatchFactory());
   registry.services.provide<contracts::media::MediaService>(service);
   registry.services.require<FloppyActivityRelay>()->bind(service);
   requests::media::addMediaRequests(registry.requests, service);

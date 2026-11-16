@@ -49,6 +49,7 @@ export function createOpenFloppyHandler(options: OpenFloppyOptions): MainRequest
       droppedId === undefined
         ? await options.dialog.pickFile({
             title: TEXT.title,
+            purpose: 'floppy',
             filters: [
               { name: TEXT.imageFilter, extensions: FLOPPY_EXTENSIONS },
               { name: TEXT.allFilter, extensions: ['*'] }

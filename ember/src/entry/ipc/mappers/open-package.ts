@@ -39,6 +39,7 @@ export function createOpenPackageHandler(options: OpenPackageOptions): MainReque
   return async (): Promise<MainResult<'mappers.openPackage'>> => {
     const path = await options.dialog.pickFile({
       title: TEXT.title,
+      purpose: 'mapperPackage',
       filters: [
         { name: TEXT.packageFilter, extensions: [PACKAGE_EXTENSION] },
         { name: TEXT.allFilter, extensions: ['*'] }

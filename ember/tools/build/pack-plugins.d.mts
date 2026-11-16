@@ -14,8 +14,8 @@ export interface PackedPlugin {
   readonly file: string;
 }
 
-/** 生成 zip：每个文件一个条目。 */
-export function createZip(entries: ReadonlyArray<{ name: string; data: Buffer }>): Buffer;
+/** 生成 zip：每个文件一个条目，可以带一段末尾注释。 */
+export function createZip(entries: ReadonlyArray<{ name: string; data: Buffer }>, comment?: Buffer): Buffer;
 
 /** 打包一个插件目录到输出目录。 */
 export function packPlugin(sourceDir: string, outDir: string): PackedPlugin;

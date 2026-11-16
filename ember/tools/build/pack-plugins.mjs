@@ -25,6 +25,11 @@ const DOS_TIME = 0;
 const DOS_DATE = (0 << 9) | (1 << 5) | 1;
 /** 通用标志位 11：文件名是 UTF-8。 */
 const FLAG_UTF8 = 0x0800;
+/**
+ * 附在包末尾的可压缩注释（256 个空格）。Windows 安装包的压缩工具对压不小的文件原样存放，而原样存放的 zip 嵌在安装包的 zip 里时，
+ * 安装程序（Squirrel）会在它之后停止解压，后面的文件全部丢失；有这段注释，整个包就总能压得更小，会被压缩存放。
+ */
+const COMPRESSIBLE_COMMENT = Buffer.alloc(256, 0x20);
 
 /** CRC-32 查表。 */
 const CRC_TABLE = (() => {
@@ -47,9 +52,10 @@ function crc32(data) {
 /**
  * 生成 zip：每个文件一个条目，能压小就用 deflate，否则存储。
  * @param {Array<{ name: string, data: Buffer }>} entries 文件，按给定顺序写入。
+ * @param {Buffer} [comment] 写在末尾的注释，默认没有。
  * @returns {Buffer} zip 文件内容。
  */
-export function createZip(entries) {
+export function createZip(entries, comment = Buffer.alloc(0)) {
   const locals = [];
   const centrals = [];
   let offset = 0;
@@ -96,7 +102,8 @@ export function createZip(entries) {
   end.writeUInt16LE(entries.length, 10);
   end.writeUInt32LE(directory.length, 12);
   end.writeUInt32LE(offset, 16);
-  return Buffer.concat([...locals, directory, end]);
+  end.writeUInt16LE(comment.length, 20);
+  return Buffer.concat([...locals, directory, end, comment]);
 }
 
 /**
@@ -123,7 +130,7 @@ export function packPlugin(sourceDir, outDir) {
   const entries = files.map((name) => ({ name, data: readFileSync(join(sourceDir, name)) }));
   mkdirSync(outDir, { recursive: true });
   const file = join(outDir, `${manifest.id}.emap`);
-  writeFileSync(file, createZip(entries));
+  writeFileSync(file, createZip(entries, COMPRESSIBLE_COMMENT));
   return { id: manifest.id, file };
 }
 

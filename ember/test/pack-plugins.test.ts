@@ -15,7 +15,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inflateRawSync } from 'node:zlib';
+import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createZip, packPlugin, packPlugins } from '../tools/build/pack-plugins.mjs';
 
@@ -45,10 +45,11 @@ interface ZipEntry {
   readonly data: Buffer;
 }
 
-/** 解析 zip：从结尾的目录记录读出全部条目，并还原内容。 */
+/** 解析 zip：从结尾的目录记录（可能后面带注释）读出全部条目，并还原内容。 */
 function readZip(zip: Buffer): ZipEntry[] {
-  const endOffset = zip.length - 22;
-  expect(zip.readUInt32LE(endOffset)).toBe(0x06054b50);
+  const endOffset = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  expect(endOffset).toBeGreaterThanOrEqual(0);
+  expect(endOffset + 22 + zip.readUInt16LE(endOffset + 20)).toBe(zip.length);
   const count = zip.readUInt16LE(endOffset + 10);
   let offset = zip.readUInt32LE(endOffset + 16);
   const entries: ZipEntry[] = [];
@@ -102,6 +103,12 @@ describe('createZip', () => {
 
   it('中文文件名按 UTF-8 写入', () => {
     expect(readZip(createZip([{ name: '说明.txt', data: Buffer.from('内容') }]))[0]?.name).toBe('说明.txt');
+  });
+
+  it('可以带末尾注释，条目仍能还原', () => {
+    const zip = createZip([{ name: 'a.txt', data: Buffer.from('hello') }], Buffer.from('note'));
+    expect(zip.subarray(zip.length - 4).toString()).toBe('note');
+    expect(readZip(zip)[0]?.data.toString()).toBe('hello');
   });
 });
 
@@ -160,5 +167,14 @@ describe('packPlugins', () => {
     const entries = readZip(readFileSync(result.file));
     expect(entries.map((entry) => entry.name)).toEqual(['main.js', 'manifest.json']);
     expect(entries[0]?.data.toString('utf8')).toContain('tables');
+  });
+
+  it('全部官方插件包整体都能压得更小（安装包不会把它们原样存放）', () => {
+    const packed = packPlugins(REPO_ROOT, join(createRoot(), 'out'));
+    expect(packed.length).toBeGreaterThan(0);
+    for (const { id, file } of packed) {
+      const bytes = readFileSync(file);
+      expect(deflateRawSync(bytes, { level: 9 }).length, id).toBeLessThan(bytes.length);
+    }
   });
 });

@@ -1301,7 +1301,7 @@ L882F:  tax
         jmp     ($001B)
 L8841:
         .addr   L88AA,L8925,L8961,L8898,L8870,L8990,L89BE,L8882
-        .addr   L8890,L9A90,L8862,L885F,L89CC,L8A02,L8A1A
+        .addr   L8890,L9A90,L8862,L885F,L89CC,L8A02,L8A1A,L_nmi_group_read,L_nmi_group_write,L_nmi_group_row
 L885F:  lda     #$00
         .byte   $AE
 L8862:  lda     $33
@@ -6809,24 +6809,13 @@ LB8ED:  inc     $88
         lda     $88
         cmp     #$04
         beq     LB8E7
-LB8F5:  asl     a
-        asl     a
-        ora     $88
-        pha
-        jsr     LAAFE
+LB8F5:  sta     $9C                             ; 选中的调色板组，写进图块选择行的 16 个图块
+        lda     #$2E
+        sta     $4A
         lda     #$27
-        ldx     #$F3
-        jsr     L81F8
-        pla
-        tax
-        and     #$FC
-        sta     PPUDATA
-        txa
-        ldx     #$04
-LB90E:  sta     PPUDATA
-        dex
-        bne     LB90E
-        jmp     LABE6
+        sta     $4B
+        lda     #$12
+        jmp     L8808
 LB917:  lda     #$0C
         sta     $48
         lda     #$16
@@ -6913,69 +6902,49 @@ LB9B8:  lda     $7E
         jsr     LAAFE
         jsr     LABD8
 LB9D6:  lda     $0510,x
-        sta     PPUDATA
+        put_tile
         inx
         lda     #$20
-        sta     PPUDATA
+        put_tile
         inx
         dey
         bne     LB9D6
         jsr     LABE6
         jmp     LACAA
+; 调色板组在 6576 的每个图块条目里；原版的“属性”是每 2x2 个图块一组，这里仍按 2x2 块读写
+; 求 $48、$49 所在 2x2 块左上角图块的名称表地址，放进 $4A/$4B；和原版一样把 $48 加 2、$49 加 3
 LB9EC:  inc     $48
         inc     $48
         lda     $49
         clc
         adc     #$03
         sta     $49
-        and     #$FC
+        lsr     a
+        lsr     a
+        lsr     a
+        clc
+        adc     $4F
+        sta     $4B
+        lda     $49
+        and     #$06
+        asl     a
+        asl     a
+        asl     a
+        asl     a
         asl     a
         sta     $4A
         lda     $48
-        lsr     a
-        lsr     a
-        clc
-        adc     $4A
-        adc     #$C0
+        and     #$1E
+        ora     $4A
         sta     $4A
-        lda     $4F
-        adc     #$03
-        sta     $4B
-        lda     #$02
-        and     $49
-        sta     $19
-        lda     $48
-        and     #$03
-        lsr     a
-        clc
-        adc     $19
-        sta     $19
-        lda     #$FC
-        sta     $1A
-        asl     $19
-        ldx     $19
-        beq     LBA2F
-LBA27:  asl     $9C
-        sec
-        rol     $1A
-        dex
-        bne     LBA27
-LBA2F:  lda     #$05
+        rts
+; 读 2x2 块的调色板组到 $9C（0-3）
+LBA37:  jsr     LB9EC
+        lda     #$10
         jsr     L8808
         lda     $73
+        sta     $9C
         rts
-LBA37:  jsr     LB9EC
-        sta     $9C
-        lda     $1A
-        eor     #$FF
-        and     $9C
-        sta     $9C
-        ldy     $19
-        beq     LBA4D
-LBA48:  lsr     $9C
-        dey
-        bne     LBA48
-LBA4D:  rts
 LBA4E:  jsr     L9C6D
         pha
         jsr     L9C6A
@@ -6987,11 +6956,9 @@ LBA4E:  jsr     L9C6D
         lda     $0400
         and     #$03
         sta     $9C
+; 把 $9C 的调色板组写进 2x2 块的 4 个图块
 LBA67:  jsr     LB9EC
-        and     $1A
-        ora     $9C
-        sta     $73
-        lda     #$09
+        lda     #$11
         jmp     L8808
 LBA75:  lda     #$03
         sta     $0500
@@ -7012,14 +6979,9 @@ LBA75:  lda     #$03
         jsr     L97C3
 LBA9E:  jsr     LABF1
         lda     $60
-        ldx     $5F
-        jsr     L81F8
-        lda     PPUDATA
-        ldx     #$00
-LBAAD:  lda     PPUDATA
-        sta     $0700,x
-        inx
-        bne     LBAAD
+        sec
+        sbc     #$24
+        jsr     video_read_nt_page
         jsr     LABE6
         jsr     LABFA
         jsr     LB4FC
@@ -7046,13 +7008,9 @@ LBAD6:  jsr     LB430
         bcs     LBACA
         jsr     LABF1
         lda     $60
-        ldx     $5F
-        jsr     L81F8
-        ldx     #$00
-LBAFB:  lda     $0700,x
-        sta     PPUDATA
-        inx
-        bne     LBAFB
+        sec
+        sbc     #$24
+        jsr     video_write_nt_page
         jsr     LABE6
         jsr     LABFA
         inc     $60

@@ -12,13 +12,14 @@
 ; 背景图案表号：原版 PPUCTRL 位 4 为 1，背景用图案表 1
 VIDEO_TILE_HIGH = $09                   ; 图块高字节的低 4 位：$8 | 图案表号 1
 VIDEO_PATTERN_VRAM_HIGH = $80           ; 扩展显存里图案区的 $2006 高字节（$8000 起）
+VIDEO_SPRITE_PATTERN_HIGH = $20         ; 精灵图案表在字符 RAM $2000 起（表 0 在 $2000，表 1 在 $3000）
 
-; 写一个图块条目到名称表当前地址（2 字节：图案号、高字节）；输入 A = 图案号，改 A；高字节在 video_tile_high（背景图案表选择）
-video_tile_high = $FC                   ; 图块条目高字节：$8 | 背景图案表号（调色板组在高 4 位，文字用 0 组）
+; 写一个图块的图案号到名称表当前地址，并把地址移到下一个图块；输入 A = 图案号，A 不变。图块条目的高字节（调色板组与背景图案表号）原样保留，
+; 所以改写文字不会改变这个位置的颜色（原版的调色板组放在属性表里，改文字也不改颜色）
+video_tile_high = $FC                   ; 新图块条目的高字节：$8 | 背景图案表号（调色板组在高 4 位，初始为 0 组）
 .macro  put_tile
         sta     HW_PPU_DATA
-        lda     video_tile_high
-        sta     HW_PPU_DATA
+        bit     HW_PPU_DATA
 .endmacro
 
 ; 键盘（AT 键盘，扫描码集 1）：状态放在零页原版没用的单元 $F8-$FD

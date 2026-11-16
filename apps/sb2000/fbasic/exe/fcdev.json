@@ -1,7 +1,0 @@
-{
-  "target": "sb2000",
-  "name": "fbasic",
-  "firmware": "../../../../reference/rom/SB2K_BIOS.NES",
-  "targetOptions": { "banks": 13 }
-}
-

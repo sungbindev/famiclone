@@ -1,0 +1,15 @@
+{
+  "name": "fbasic-sb2000",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Family BASIC v3 native port to the SB2000 SB-DOS: analysis, relocatable reference source and tools",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "coverage": "node tools/record-coverage.mjs",
+    "lift": "node tools/lift.mjs",
+    "test": "node --test \"test/**/*.test.mjs\""
+  }
+}

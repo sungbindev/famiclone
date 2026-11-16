@@ -1,0 +1,17 @@
+# 跳过前缀：一条 BIT、LDX 或 CPX 的操作码（$2C、$AE、$EC）放在另一条双字节指令前面，顺序执行时把它吞掉，直接跳到后一条指令时又能单独执行（每行：地址 说明）
+8493  $AE 吞掉后面的 LDA #$04
+8AB5  $AE 吞掉后面的 LDA #$00
+92B7  $AE 吞掉后面的 LDY #$22
+9639  $2C 吞掉后面的 LDA #$FF
+9642  $2C 吞掉后面的 STA $97
+A87C  $2C 吞掉后面的 LDX #$29
+A9AB  $2C 吞掉后面的 LDA #$FF
+AA0F  $AE 吞掉后面的 LDA #$03
+AD12  $AE 吞掉后面的 LDA #$16
+B6EF  $EC 吞掉后面的 LDA #$1C
+B6F2  $EC 吞掉后面的 LDA #$15
+B6F5  $EC 吞掉后面的 LDA #$0E
+BCD4  $2C 吞掉后面的 LDA #$01
+C107  $AE 吞掉后面的 LDA #$00
+C5BD  $AE 吞掉后面的 LDA #$01
+CBDB  $AE 吞掉后面的 LDA #$00

@@ -1,0 +1,55 @@
+# 内置程序、磁带与其他：GAME 0-3、SAVE、LOAD、BACKUP、FILE 等
+NEW
+GAME 0
+@wait 300
+@key Pause 8
+@wait 60
+NEW
+GAME 1
+@wait 300
+@key Pause 8
+@wait 60
+NEW
+GAME 2
+@wait 300
+@key Pause 8
+@wait 60
+NEW
+GAME 3
+@wait 300
+@key Pause 8
+@wait 60
+NEW
+10 PRINT "HELLO"
+20 PLAY "CDE"
+SAVE
+@wait 200
+@key Pause 8
+@wait 60
+LOAD
+@wait 200
+@key Pause 8
+@wait 60
+SAVE "TEST"
+@wait 200
+@key Pause 8
+@wait 60
+LOAD "TEST"
+@wait 200
+@key Pause 8
+@wait 60
+BACKUP
+@wait 60
+@key Pause 8
+@wait 60
+BACKUP ON
+BACKUP OFF
+FILE
+@wait 60
+@key Pause 8
+@wait 60
+FILTER 0
+CLICK 0
+SCREEN 0,0
+SCREEN 2
+NEW

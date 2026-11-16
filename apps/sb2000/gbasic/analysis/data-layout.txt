@@ -1,0 +1,44 @@
+# 数据区段布局：未被识别为代码的每一段字节的类型（起-止含止，类型，说明）
+# 类型：fill=整段同一个字节；bytes=普通字节；words=16 位数值（不是地址）；addrs=16 位地址（指向映像内，汇编时写成标签）；
+#       text=文字（可含控制码与 $80 以上的记号字节）；rec:模式=按记录重复，模式里 b=字节 w=16 位数值 a=地址，如 rec:bba=两个字节加一个地址
+7B03-7B32 fill 文件参数块与存根用的变量，初值 0
+7C2D-7C2F fill 填充 $77
+7C3E-7CFF fill 填充 $77
+7D03-7D03 fill 变量，初值 0
+7DC9-7DCF fill 填充 $FF
+7DD9-7DDF fill 填充 $FF
+7DEB-7DFF fill 填充 $FF
+7ED5-7EDF fill 填充 $FF
+7EEA-7F19 fill 填充 $00
+7FD0-7FFF fill 填充 $FF
+8006-8095 words PSG 音高周期表（从 $0EAE 递减）
+8096-80AC bytes 音长与音量等小表
+816E-819B text 开机菜单文字
+8841-885E addrs 地址表（15 项）
+A27D-A288 addrs 地址表（6 项）
+AA28-AA81 text 提示文字与错误码两字母缩写
+AB1D-AB4E text 自动输入的命令文字
+AF01-AF40 addrs 地址表（32 项）
+B0E5-B0EB fill 填充 $77
+B0EC-B253 bytes 键盘码表
+B6A3-B6AE addrs 地址表（6 项）
+B77C-B782 text 坐标提示文字
+B7C4-B7F4 text 图形编辑菜单文字
+B7F5-B800 addrs 图形编辑菜单文字的地址表（6 项）
+B847-B853 bytes 小表
+B8CF-B8D6 bytes 键码表
+B8D7-B8E6 addrs 地址表（8 项）
+BBDF-BBFA text 存取盘提示文字
+BC75-BC94 addrs 指针表（16 项，指向 $BCA5 起的记录）
+BC95-BCA4 bytes 小表
+BCA5-BCCE addrs 记录表（21 项）
+BCCF-BD28 bytes 精灵参数表
+BD29-BDA6 addrs 指针表（63 项）
+BDA7-BE32 bytes 图块编号表
+C128-C2C5 text BASIC 关键字表（记号字节加名字）
+C2C6-C357 addrs 语句与函数处理例程地址表（73 项）
+C358-C390 text 版权文字与开机标题文字
+C391-C3A4 rec:bba 开机菜单记录：列、行、文字地址
+C3A5-C3AE addrs 调色板地址表（5 项）
+C3AF-C3FF bytes 调色板（5 套，每套 16 字节）与结束字节
+C40F-E40F bytes 图案与字库数据

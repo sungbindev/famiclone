@@ -1,0 +1,16 @@
+{
+  "name": "gbasic-sb2000",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GBASIC (BBK BASIC) native port to the SB2000 SB-DOS: analysis, relocatable reference source and tools",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "seeds": "node tools/extract-seeds.mjs",
+    "discover": "node tools/discover.mjs --list",
+    "lift": "node tools/lift.mjs",
+    "test": "node --test \"test/**/*.test.mjs\""
+  }
+}

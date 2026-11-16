@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
-// 备注：用法 node tools/run-exe.mjs <步骤>...；步骤：w<帧数> 等待、m<地址十六进制>,<长度> 读内存并打印、k<键名> 按键（如 kEnter）、s<文件名> 截图存到 build/run/。
+// 备注：用法 node tools/run-exe.mjs <步骤>...；步骤：w<帧数> 等待、m<地址十六进制>,<长度> 读内存并打印、k<键名> 按键（如 kEnter）、d<键名> 按下不松（如 dShiftLeft）、u<键名> 松开、r 打印 CPU 与 PPU 状态、s<文件名> 截图存到 build/run/。
 //       例：node tools/run-exe.mjs w120 mED,3 sboot.png；先用 node tools/build-exe.mjs 构建。
 // ------------------------------------------------------------------------
 import { join } from 'node:path';
@@ -19,7 +19,14 @@ try {
     const rest = step.slice(1);
     if (kind === 'w') await session.frames(Number(rest));
     else if (kind === 'k') await session.tap(rest);
+    else if (kind === 'd') await session.key(rest, true);
+    else if (kind === 'u') await session.key(rest, false);
     else if (kind === 's') await session.shot(join(process.cwd(), 'build', 'run', rest));
+    else if (kind === 'r') {
+      const { states } = await session.state();
+      const field = (module, name) => states.find((state) => state.module === module)?.fields.find((item) => item.name === name)?.value ?? 0;
+      console.log(`PC=$${field('cpu', 'pc').toString(16)} A=${field('cpu', 'a').toString(16)} X=${field('cpu', 'x').toString(16)} Y=${field('cpu', 'y').toString(16)} SP=${field('cpu', 'sp').toString(16)} P=${field('cpu', 'status').toString(16)} 帧=${field('ppu', 'frame')} $2000=${field('ppu', 'control').toString(16)} $2001=${field('ppu', 'mask').toString(16)}`);
+    }
     else if (kind === 'm') {
       const [address, length] = rest.split(',');
       const data = await session.read(Number.parseInt(address, 16), Number(length));

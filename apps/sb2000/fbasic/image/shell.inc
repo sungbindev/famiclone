@@ -22,6 +22,8 @@ SHELL_BUFFER_PAGES      = 14            ; 零页到 $07FF 共 8 页，加 ERAM $
 SHELL_IMAGE_WINDOW      = $7FA0         ; 映像运行时窗口 0-7 的页号，由加载器填写
 SHELL_DOS_WINDOW        = $7FA8         ; 返回 DOS 时窗口 0-7 的页号，由加载器填写
 SHELL_IRQ_MASK          = $7FB0         ; 映像运行时的中断屏蔽（$4032），映像可以改，入口门返回时写回硬件
+SHELL_CHR_PAGE          = $7FB8         ; CHR 图案表 0 所在的扩展 RAM 页号（表 1 在下一页），由加载器填写；CHR 不在窗口里，由映像用 DMA 送进显存
+SHELL_GAME_PAGE         = $7FB9         ; GAME 0-3 数据（3 页，game.s）起始的扩展 RAM 页号，由加载器填写；运行 GAME 命令时由映像用 DMA 搬进程序区
 
 ; ---- 请求块：映像调用入口门前填写 ----
 ; 服务的参数与结果单元在 DOS 现场里（零页、$0200-$07FF 或 ERAM $6000-$65FF），入口门换入 DOS 现场后才能写、读，

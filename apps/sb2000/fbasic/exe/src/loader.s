@@ -4,7 +4,7 @@
 ; 作者：sungbin
 ; 邮箱：sungbin@3578.cn
 ; 日期：2026-11-16
-; 备注：映像（build/image.bin）按 4K 一页依次放进 BANK1-BANK8，小段（build/stub.bin）放在本程序的常驻页里。
+; 备注：映像（build/image.bin）按 4K 一页依次放进 BANK1-BANK8，CHR（reference/fbasic-chr.bin）放 BANK9、BANK10，GAME 0-3 的数据（build/game.bin）放 BANK11-BANK13，小段（build/stub.bin）放在本程序的常驻页里。
 ;       fcdev 的多页程序文件按页排列：0、1 常驻（本程序），2 是 BANK1，3 是栈页（不放内容），4 起是 BANK2...，
 ;       所以映像第 k 页在文件里的页序是 2、4、5、6、7、8、9、10，页号 = 起始页号（文件头偏移 5）加页序。
 ; ------------------------------------------------------------------------
@@ -44,6 +44,14 @@ _main:
 @store: sta     SHELL_DOS_WINDOW,x
         dex
         bpl     @tables
+        lda     PROGRAM_START_PAGE              ; CHR 的两页在文件的第 11、12 页（BANK9、BANK10）
+        clc
+        adc     #11
+        sta     SHELL_CHR_PAGE
+        lda     PROGRAM_START_PAGE              ; GAME 数据的三页在文件的第 13-15 页（BANK11-BANK13）
+        clc
+        adc     #13
+        sta     SHELL_GAME_PAGE
         jsr     SHELL_LAUNCH                    ; 映像退出时回到这里
         lda     saved_flags
         pha
@@ -91,3 +99,20 @@ saved_flags:    .res    1
 
         .segment        "BANK8"
         .incbin "../../build/image.bin", 7 * $1000, $1000
+
+; CHR 的两张图案表不在窗口里，映像启动时用 DMA 送进显存
+        .segment        "BANK9"
+        .incbin "../../reference/fbasic-chr.bin", 0, $1000
+
+        .segment        "BANK10"
+        .incbin "../../reference/fbasic-chr.bin", $1000, $1000
+
+; GAME 0-3 的数据（build/game.bin，三页），运行 GAME 命令时由映像用 DMA 搬进程序区
+        .segment        "BANK11"
+        .incbin "../../build/game.bin", 0, $1000
+
+        .segment        "BANK12"
+        .incbin "../../build/game.bin", $1000, $1000
+
+        .segment        "BANK13"
+        .incbin "../../build/game.bin", $2000, $1000

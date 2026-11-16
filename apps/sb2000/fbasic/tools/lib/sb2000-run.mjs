@@ -47,6 +47,11 @@ export class Session {
     await tapKey(this.client, code);
   }
 
+  /** 按下（down为 true）或松开（false）一个键，用来按住修饰键 */
+  async key(code, down) {
+    await this.client.request('input.key', { code, down });
+  }
+
   /** 读 CPU 地址空间的一段 */
   async read(address, length) {
     const result = await this.client.request('inspector.readMemory', { space: 'cpu', address, length });
@@ -56,6 +61,11 @@ export class Session {
   /** 写 CPU 地址空间的一段 */
   async write(address, bytes) {
     await this.client.request('inspector.writeMemory', { space: 'cpu', address, bytes: [...bytes] });
+  }
+
+  /** CPU 与 PPU 的状态 */
+  async state() {
+    return this.client.request('inspector.getState', {});
   }
 
   /** 截图存成 PNG */

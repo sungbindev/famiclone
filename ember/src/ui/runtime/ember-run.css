@@ -86,9 +86,9 @@
   right: var(--space-md);
   bottom: var(--space-md);
   padding: var(--space-xs) var(--space-md);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-display);
   color: rgb(235, 235, 235);
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.85);
   border-radius: var(--radius-sm);
   pointer-events: none;
 }

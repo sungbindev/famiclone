@@ -1,5 +1,0 @@
-{
-  "target": "sb2000",
-  "name": "start",
-  "firmware": "../../../reference/rom/SB2K_BIOS.NES"
-}

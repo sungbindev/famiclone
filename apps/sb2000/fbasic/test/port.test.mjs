@@ -26,12 +26,25 @@ test('NMI 例程用 rts 返回：没有 rti，入口的 pha 与出口的 pla 都
   assert.match(source[entry + 1], /lda\s+#\$00/);
 });
 
-test('原版的 $0600 页改到 fb_page6，$1E/$1F 改到 $38/$39', () => {
-  const absolute = instructions.filter((line) => /\$06[0-9A-F]{2}\b/.test(line));
+test('原版的 $0600 页改到 fb_page6，$1E/$1F 改到 $F1/$F2', () => {
+  const absolute = instructions.filter((line) => /\$0[67][0-9A-F]{2}\b/.test(line));
   assert.deepEqual(absolute, [], '指令里不应留下 $06xx 的绝对地址');
   assert.ok(instructions.some((line) => /fb_page6/.test(line)));
   const zeroPage = instructions.filter((line) => /\s\(?\$1[EF]\)?(,[xy])?\)?(,[xy])?\s*$/.test(line));
   assert.deepEqual(zeroPage, [], '指令里不应留下零页 $1E/$1F');
+});
+
+test('原版 $0300 页的行缓冲改到 fb_linebuf：三处高字节立即数同步替换', () => {
+  const sites = instructions.filter((line) => /#>\(fb_linebuf\+255\)/.test(line));
+  assert.equal(sites.length, 3, '词法分析起点、插入行取数起点、直接模式文本指针三处');
+});
+
+test('带栈数据的尾跳转两端放在同一库页，不经跳板', () => {
+  const pairs = [['8F9D', '8F77'], ['9882', '98DF']];
+  for (const [from, to] of pairs) {
+    const text = source.join('\n');
+    assert.ok(!new RegExp(`jmp\\s+L${to}_far`).test(text), `L${from} 到 L${to} 的 jmp 不应经跳板`);
+  }
 });
 
 test('程序文本区 $6000-$7FFF 搬到 $B000-$CFFF，文本区的高字节立即数同步加偏移', () => {

@@ -70,6 +70,47 @@ export async function typeDos(client, text) {
 }
 
 /**
+ * 从开机到在 SB-DOS 里敲下程序名并回车：DOS 的日期提示约 850 帧才开始读键盘，更早按的回车会丢，所以先运行 900 帧；
+ * 然后按两次回车跳过日期与时间，再敲程序名与回车（顺序不能乱）。不等程序起来，调用者按需再运行帧数。
+ */
+export async function bootAndRun(client, name = 'fbasic', beforeLaunch = undefined) {
+  await frames(client, 900);
+  await tap(client, 'Enter', 8, 8);
+  await tap(client, 'Enter', 8, 8);
+  for (const char of name) await tap(client, keyFor(char), 8, 8);
+  await beforeLaunch?.();
+  await tap(client, 'Enter', 8, 8);
+}
+
+const US_PLAIN = { ' ': 'Space', '\n': 'Enter', '-': 'Minus', '=': 'Equal', ';': 'Semicolon', "'": 'Quote', ',': 'Comma', '.': 'Period', '/': 'Slash', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight', '`': 'Backquote' };
+const US_SHIFTED = { '!': 'Digit1', '@': 'Digit2', '#': 'Digit3', $: 'Digit4', '%': 'Digit5', '^': 'Digit6', '&': 'Digit7', '*': 'Digit8', '(': 'Digit9', ')': 'Digit0', _: 'Minus', '+': 'Equal', ':': 'Semicolon', '"': 'Quote', '<': 'Comma', '>': 'Period', '?': 'Slash' };
+
+/**
+ * 字符转美式键盘的物理键位与是否按 Shift（学习机的键盘按美式键位）。
+ * @param {string} char 单个字符
+ * @returns {{code: string, shift: boolean}} 键位与 Shift
+ */
+export function pcKeyFor(char) {
+  if (/^[a-z]$/.test(char)) return { code: `Key${char.toUpperCase()}`, shift: false };
+  if (/^[A-Z]$/.test(char)) return { code: `Key${char}`, shift: true };
+  if (/^[0-9]$/.test(char)) return { code: `Digit${char}`, shift: false };
+  if (char in US_PLAIN) return { code: US_PLAIN[char], shift: false };
+  if (char in US_SHIFTED) return { code: US_SHIFTED[char], shift: true };
+  throw new Error(`不支持的字符：${JSON.stringify(char)}`);
+}
+
+/** 在学习机里按字符键入（美式键盘）；\n 是回车，每个键按下与松开各保持若干帧。 */
+export async function typePc(client, text, { hold = 6, gap = 6 } = {}) {
+  for (const char of text) {
+    const { code, shift } = pcKeyFor(char);
+    if (shift) { await client.api.input.key({ code: 'ShiftLeft', down: true }); await frames(client, 3); }
+    await tap(client, code, hold, gap);
+    if (shift) { await client.api.input.key({ code: 'ShiftLeft', down: false }); await frames(client, 3); }
+    if (char === '\n') await frames(client, 20);
+  }
+}
+
+/**
  * 读 CPU 地址空间里的字节。
  * @param {object} client 调试客户端
  * @param {number} address 地址

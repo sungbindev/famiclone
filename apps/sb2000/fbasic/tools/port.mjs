@@ -22,11 +22,11 @@ const SRC = join(ROOT, 'exe', 'src');
 const BANK_SIZE = 4096;
 const RESIDENT_DATA_LIMIT = 600;
 const NMI_ENTRY = 0x8971;
-// 内核的 NMI 钩子 5 经零页 $1E/$1F 跳转，原版用到这两个单元，改用原版没用过的 $38/$39（成对使用的指针保持相邻）
-const ZERO_PAGE_MAP = new Map([[0x1e, 0x38], [0x1f, 0x39]]);
+// 内核的 NMI 钩子 5 经零页 $1E/$1F 跳转，原版用到这两个单元，改用原版既没直接用过、也不在变址清零范围（$34,X、$3D,X 等）内的 $F1/$F2（成对使用的指针保持相邻）
+const ZERO_PAGE_MAP = new Map([[0x1e, 0xf1], [0x1f, 0xf2]]);
 // 原版把 $0600-$06FF 当自己的数组用（会清整页），这一页在学习机里放着内核的影子与窗口页号；改到常驻页里的 fb_page6
 const mapAddress = (address) => {
-  if (address >= 0x0600 && address <= 0x06ff) return address === 0x0600 ? 'fb_page6' : `fb_page6+${address - 0x0600}`;
+  if (address >= 0x0600 && address <= 0x07ff) return address === 0x0600 ? 'fb_page6' : `fb_page6+${address - 0x0600}`;
   if (address >= TEXT_AREA_START && address <= TEXT_AREA_END) return `$${(address + TEXT_AREA_SHIFT).toString(16).toUpperCase()}`;
   return ZERO_PAGE_MAP.get(address);
 };
@@ -36,6 +36,11 @@ const TEXT_AREA_START = 0x6000;
 const TEXT_AREA_END = 0x7fff;
 const TEXT_AREA_SHIFT = 0x5000;
 const TEXT_HIGH_BYTE_SITES = new Set([0x8148, 0x84d8, 0x86a3, 0x97d7, 0xadc8, 0xb1bd, 0xb1ca, 0xb20b]);
+// 原版的行缓冲（词法分析的输出、直接执行的文本）在 $0300 页，这一页的前几个单元被内核 NMI 每帧改写；
+// 这三处立即数 $03 是缓冲区地址的高字节（词法分析起点、插入行时的取数起点、直接模式的文本指针），改成 platform.s 里页对齐的 fb_linebuf
+const LINE_BUFFER_HIGH_SITES = new Set([0x925f, 0x8628, 0x8343]);
+// 字符串的临时存放区在原版 $0700 页，指针（$29/$2A、$0401/$0402 栈项、$0514/$0515）的高字节 $07 要对应 fb_page6 的第二页（platform.s 里页对齐）
+const PAGE7_HIGH_SITES = new Set([0x8ea3, 0x99fc, 0xa013, 0xa46f, 0xaaa1, 0xaacb, 0xac77, 0xacec, 0xc517]);
 // 原版直接访问 NES 的 PPU 寄存器：$2000/$2001/$2005/$2006/$2007/$2002 改调外壳（platform.s）里的转换层；$2003 与 $4014（精灵 DMA）6576 的写法相同，不动
 const PPU_CALLS = new Map([
   ['sta:2000', 'ppu_w_ctrl'], ['sta:2001', 'ppu_w_mask'], ['sta:2005', 'ppu_w_scroll'], ['sta:2006', 'ppu_w_addr'], ['stx:2006', 'ppu_w_addr_x'],
@@ -45,6 +50,9 @@ const PPU_CALLS = new Map([
 const CHR_FILE = join(ROOT, 'reference', 'fbasic-chr.bin');
 const CHR_BG_OFFSET = 0x1000;
 const CHR_BG_SIZE = 0x1000;
+// 键盘：原版按 Family BASIC 键盘矩阵扫描（$B958）与单独查 STOP 键（$883A），这两处改成调用外壳的键盘服务，其余原样保留
+const KEYBOARD_SCAN = 0xb958;
+const STOP_KEY_CHECK = 0x883a;
 
 const { model, chunks, chunkAt } = buildChunks();
 const { items, bytes } = model;
@@ -104,7 +112,6 @@ for (const chunk of chunks.filter((entry) => entry.kind === 'data')) {
 }
 const imageBank = dataBank + 1;
 const chrBgBank = imageBank + 1;
-const totalBanks = chrBgBank;
 
 // ---- 删除范围 ----
 const removeFile = join(ROOT, 'analysis', 'port-remove.txt');
@@ -115,6 +122,10 @@ const isRemoved = (address) => removed.some((range) => address >= range.start &&
 const platformFiles = readdirSync(SRC).filter((name) => name.endsWith('.s') && name !== 'core.s');
 const platformText = platformFiles.map((name) => readFileSync(join(SRC, name), 'utf8')).join('\n');
 const platformLabels = new Set([...platformText.matchAll(/\bL([0-9A-F]{4})(_far)?\b/g)].map((match) => `${match[1]}${match[2] ?? ''}`));
+// platform 自己的源文件用到的库页（键盘代码与表、显存备份等）必须排在字库页之后
+const platformBanks = [...platformText.matchAll(/\.segment\s+"BANK(\d+)"/g)].map((match) => Number(match[1]));
+if (platformBanks.some((bank) => bank <= chrBgBank)) throw new Error(`platform 源文件用的库页号必须大于 ${chrBgBank}（生成的库页到此为止）`);
+const totalBanks = Math.max(chrBgBank, ...platformBanks);
 
 // ---- 跳板 ----
 const stubs = new Map();
@@ -150,7 +161,13 @@ const emitter = createEmitter(model, {
     if (item.start === NMI_ENTRY) return '';
     if (mnemonic === 'pla' && OPCODES[items[model.itemIndexAt(item.start) + 1].opcode]?.[0] === 'rti') return '';
     if (mnemonic === 'rti') return 'rts';
+    // 原版主循环开 IRQ 是为了帧计数器中断；学习机上开了会让内核的 IRQ 处理（定时器、键盘）改写零页与 RAM，所以保持 I 标志置位
+    if (mnemonic === 'cli') return '';
     if (TEXT_HIGH_BYTE_SITES.has(item.start)) return `${mnemonic.padEnd(8)}#$${(bytes[item.start - BASE + 1] + (TEXT_AREA_SHIFT >> 8)).toString(16).toUpperCase().padStart(2, '0')}`;
+    if (LINE_BUFFER_HIGH_SITES.has(item.start)) return `${mnemonic.padEnd(8)}#>(fb_linebuf+255)`;
+    if (PAGE7_HIGH_SITES.has(item.start)) return `${mnemonic.padEnd(8)}#>(fb_page6)+1`;
+    if (item.start === KEYBOARD_SCAN) { ppuCallsUsed.add('kbd_matrix'); return 'jsr     kbd_matrix'; }
+    if (item.start === STOP_KEY_CHECK) { ppuCallsUsed.add('kbd_stop_key'); return 'jsr     kbd_stop_key'; }
     if (addressingMode(item.opcode) === 'abs') {
       const call = PPU_CALLS.get(`${mnemonic}:${bytes.readUInt16LE(item.start - BASE + 1).toString(16)}`);
       if (call !== undefined) { ppuCallsUsed.add(call); return `jsr     ${call}`; }
@@ -192,7 +209,7 @@ const header = [
   '; 备注：平台相关的部分（入口、NMI 钩子、跳板进入例程 far_enter、入口门、键盘与画面等）在 platform.s 等手写文件里；要改动请改分析文件或生成器后重新生成。',
   '; ------------------------------------------------------------------------',
   '        .setcpu "6502"',
-  `        .import far_enter, fb_page6, ${[...ppuCallsUsed].sort().join(', ')}`,
+  `        .import far_enter, fb_page6, fb_linebuf, ${[...ppuCallsUsed].sort().join(', ')}`,
   ...(exportsList.length > 0 ? [`        .export ${exportsList.join(', ')}`] : []),
   '',
 ];
@@ -223,6 +240,6 @@ writeFileSync(join(SRC, 'layout.inc'), layout.join('\n'));
 
 const residentCode = sizeOf('CODE');
 const residentData = sizeOf('RODATA');
-console.log(`常驻：代码 ${residentCode} 字节，数据 ${residentData} 字节，跳板 ${stubs.size} 个（${stubs.size * 6} 字节）；库页 ${totalBanks} 个（代码 ${codeBanks}，数据 ${totalBanks - 2 - codeBanks}，现场缓冲 1，背景字库 1）`);
+console.log(`常驻：代码 ${residentCode} 字节，数据 ${residentData} 字节，跳板 ${stubs.size} 个（${stubs.size * 6} 字节）；库页 ${totalBanks} 个（代码 ${codeBanks}，数据 ${dataBanks.length}，现场缓冲 1，背景字库 1，外壳用 ${totalBanks - chrBgBank}）`);
 for (const [name, list] of [...segments].filter(([key]) => key.startsWith('BANK'))) console.log(`${name}：${sizeOf(name)} 字节`);
 console.log(`写入 exe/src/core.s 与 exe/src/layout.inc；fcdev.json 的 banks 需要是 ${totalBanks}`);

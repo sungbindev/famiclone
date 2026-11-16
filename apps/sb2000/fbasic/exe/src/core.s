@@ -7,7 +7,7 @@
 ; 备注：平台相关的部分（入口、NMI 钩子、跳板进入例程 far_enter、入口门、键盘与画面等）在 platform.s 等手写文件里；要改动请改分析文件或生成器后重新生成。
 ; ------------------------------------------------------------------------
         .setcpu "6502"
-        .import far_enter, fb_page6, ppu_r_data, ppu_r_status, ppu_w_addr, ppu_w_addr_x, ppu_w_ctrl, ppu_w_data, ppu_w_mask, ppu_w_scroll
+        .import far_enter, fb_page6, fb_linebuf, kbd_matrix, kbd_stop_key, ppu_r_data, ppu_r_status, ppu_w_addr, ppu_w_addr_x, ppu_w_ctrl, ppu_w_data, ppu_w_mask, ppu_w_scroll
         .export L80BA_far, L8971_far
 
 
@@ -82,7 +82,7 @@ L8662:  lda     #$04
 ; ---- $894B-$8959（代码 15 字节）
 L894B:  lda     #$00
 L894D:  ldx     $62
-        sta     $0700,x
+        sta     fb_page6+256,x
         inc     $62
         beq     L8957
         rts
@@ -369,7 +369,7 @@ LA91F:  jsr     LA925
 ; ---- $A925-$A932（代码 14 字节）
 LA925:  sec
         lda     $03
-        sbc     $39
+        sbc     $F2
         sta     $28
         lda     $04
         sbc     $20
@@ -1312,18 +1312,10 @@ L8F47_far:
         jsr     far_enter
         .word   L8F47
         .byte   1
-L8F77_far:
-        jsr     far_enter
-        .word   L8F77
-        .byte   1
-L8F7D_far:
-        jsr     far_enter
-        .word   L8F7D
-        .byte   1
 L8F9D_far:
         jsr     far_enter
         .word   L8F9D
-        .byte   5
+        .byte   1
 L8FE2_far:
         jsr     far_enter
         .word   L8FE2
@@ -1392,10 +1384,6 @@ L9648_far:
         jsr     far_enter
         .word   L9648
         .byte   2
-L969C_far:
-        jsr     far_enter
-        .word   L969C
-        .byte   2
 L96A6_far:
         jsr     far_enter
         .word   L96A6
@@ -1443,11 +1431,7 @@ L97FC_far:
 L9887_far:
         jsr     far_enter
         .word   L9887
-        .byte   5
-L98DF_far:
-        jsr     far_enter
-        .word   L98DF
-        .byte   5
+        .byte   2
 L9904_far:
         jsr     far_enter
         .word   L9904
@@ -2303,7 +2287,7 @@ L8E5A:  ldx     $21
         sta     $1A
         ldy     #$00
 L8E79:  lda     ($19),y
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         iny
         dec     $28
@@ -2314,7 +2298,7 @@ L8E79:  lda     ($19),y
         sta     $1A
         ldy     #$00
 L8E8E:  lda     ($19),y
-        sta     $0700,x
+        sta     fb_page6+256,x
         iny
         inx
         dec     $2C
@@ -2324,7 +2308,7 @@ L8E8E:  lda     ($19),y
         sta     $28
         lda     $4A
         sta     $29
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $2A
         rts
 L8EA8:  lda     #$02
@@ -2449,6 +2433,35 @@ L8F8C:  lda     $2D
         sta     $34
 L8F9A:  lda     $34
 L8F9C:  rts
+; ---- $8F9D-$8FD3（代码 55 字节）
+L8F9D:  jsr     LAA0D
+        jsr     L8F7D
+        pha
+        lda     #$00
+        sta     $2A
+        sta     $2B
+        ldx     #$10
+L8FAC:  asl     $28
+        rol     $29
+        rol     $2A
+        rol     $2B
+        lda     $2A
+        sec
+        sbc     $2C
+        lda     $2B
+        sbc     $2D
+        bcc     L8FCE
+        lda     $2A
+        sec
+        sbc     $2C
+        sta     $2A
+        lda     $2B
+        sbc     $2D
+        sta     $2B
+        inc     $28
+L8FCE:  dex
+        bne     L8FAC
+        jmp     L8F77
 ; ---- $9078-$9087（代码 16 字节）
 L9078:  ldy     #$00
         sta     ($09),y
@@ -2573,7 +2586,7 @@ L9255:  and     #$FF
 L9258:  jmp     L8EF2
 L925B:  lda     #$00
         sta     $4D
-        lda     #$03
+        lda     #>(fb_linebuf+255)
         sta     $4E
 L9263:  jsr     L931E
         and     #$FF
@@ -2904,7 +2917,7 @@ L99DE:  lda     ($09),y
         beq     L99F2
         cmp     #$2C
         beq     L99F2
-        sta     $0700,x
+        sta     fb_page6+256,x
         inc     $1B
         inx
         jsr     L908C
@@ -2913,7 +2926,7 @@ L99F2:  lda     $1B
         sta     $0400
         lda     #$00
         sta     $0401
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $0402
         jsr     L83CB_far
         lda     $09
@@ -2996,7 +3009,7 @@ L9A7D:  jsr     LBD04_far
         dex
 L9AA3:  lda     $0500,x
         beq     L9AB0
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         iny
         jmp     L9AA3
@@ -3082,7 +3095,7 @@ L9CE1:  ldy     #$00
         lda     $7F
         sta     ($8C),y
 L9D04:  lda     $28
-        sta     $39
+        sta     $F2
         lda     $29
         sta     $20
         clc
@@ -3106,7 +3119,7 @@ L9D2B:  lda     $1A
         cmp     $20
         bne     L9D1F
         lda     $19
-        cmp     $39
+        cmp     $F2
         bne     L9D1F
         ldy     #$00
         lda     #$00
@@ -3221,11 +3234,11 @@ L9E13:  lda     $05
         lda     $AD
         sta     $1D
         lda     $AE
-        sta     $38
+        sta     $F1
         jsr     L9E46
         jsr     LBDCE
         lda     $AD
-        sta     $39
+        sta     $F2
         lda     $AE
         sta     $20
 L9E46:  ldy     #$00
@@ -3324,7 +3337,7 @@ LA5E2:  clc
         sta     $29
         jsr     L8BB6_far
         lda     $28
-        sta     $39
+        sta     $F2
         lda     $29
         sta     $20
 LA5FA:  clc
@@ -3472,7 +3485,7 @@ LA70E:  rts
 ; ---- $A70F-$A7B9（代码 171 字节）
 LA70F:  lda     $1D
         sta     $8E
-        lda     $38
+        lda     $F1
         sta     $8F
 LA717:  ldy     #$00
         lda     ($8E),y
@@ -3500,7 +3513,7 @@ LA731:  ldy     #$00
         lda     #$00
         adc     $8F
         sta     $8F
-LA747:  lda     $39
+LA747:  lda     $F2
         cmp     $8E
         bne     LA717
         lda     $20
@@ -3808,7 +3821,7 @@ LC50D:  lda     #$03
         sta     $0500
         lda     #$00
         sta     $0514
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $0515
         lda     $E5
         sta     $0516
@@ -3828,7 +3841,7 @@ LC535:  jsr     LB559
         jsr     ppu_r_data
         ldx     #$00
 LC544:  jsr     ppu_r_data
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         bne     LC544
         jsr     LB53C
@@ -3862,7 +3875,7 @@ LC56D:  jsr     LBE53
         ldx     $5F
         jsr     L81EC
         ldx     #$00
-LC597:  lda     $0700,x
+LC597:  lda     fb_page6+256,x
         jsr     ppu_w_data
         inx
         bne     LC597
@@ -3895,7 +3908,6 @@ L826F:  lda     #$00
         jsr     LB766_far
 L8280:  tsx
         stx     $17
-        cli
 L8284:  ldx     $17
         txs
         jsr     LB56B
@@ -3938,7 +3950,7 @@ L8334:  jsr     L925B_far
         sta     $0E
         lda     #$00
         sta     $09
-        lda     #$03
+        lda     #>(fb_linebuf+255)
         sta     $0A
         jsr     L832D
 L834A:  jsr     L8855_far
@@ -4132,13 +4144,13 @@ L84BC:  jsr     L84A6
         inx
         stx     $1D
         inx
-        stx     $39
+        stx     $F2
         inx
         stx     $21
         lda     #$B0
         sta     $06
         sta     $08
-        sta     $38
+        sta     $F1
         sta     $20
         sta     $22
         rts
@@ -4795,19 +4807,19 @@ L979A:  jsr     L8499
         rts
 L97A4:  bne     L97CB
 L97A6:  lda     $08
-        sta     $38
+        sta     $F1
         ldx     $07
         inx
         bne     L97B1
-        inc     $38
+        inc     $F1
 L97B1:  stx     $1D
-        lda     $38
+        lda     $F1
         sta     $20
         ldx     $1D
         inx
         bne     L97BE
         inc     $20
-L97BE:  stx     $39
+L97BE:  stx     $F2
         ldy     #$00
         tya
         sta     ($1D),y
@@ -4824,7 +4836,7 @@ L97CB:  jsr     L97A6
         bcc     L97F6
         bne     L97E8
         lda     $0400
-        cmp     $39
+        cmp     $F2
         bcc     L97F6
 L97E8:  lda     $0400
         sta     $03
@@ -4896,7 +4908,87 @@ L9861:  lda     $0400
         pha
         lda     $0C
         pha
-        jmp     L98DF_far
+        jmp     L98DF
+; ---- $9882-$9903（代码 130 字节）
+L9882:  lda     #$00
+        jmp     LB237
+L9887:  pla
+        sta     $5F
+        pla
+        sta     $60
+        pla
+        cmp     #$FD
+        bne     L9882
+        pla
+        bne     L9882
+        pla
+        sta     $89
+        pla
+        sta     $88
+        pla
+        sta     $83
+        pla
+        sta     $82
+        pla
+        sta     $81
+        pla
+        sta     $80
+        pla
+        sta     $7D
+        pla
+        sta     $7C
+        pla
+        sta     $87
+        pla
+        sta     $86
+        pla
+        sta     $85
+        pla
+        sta     $84
+        ldy     #$00
+        lda     ($7C),y
+        sta     $28
+        iny
+        lda     ($7C),y
+        sta     $29
+        jsr     L9904_far
+        beq     L98CB
+        bcc     L9901
+L98CB:  lda     $84
+        pha
+        sta     $0D
+        lda     $85
+        pha
+        sta     $0E
+        lda     $86
+        pha
+        sta     $0B
+        lda     $87
+        pha
+        sta     $0C
+L98DF:  lda     $7C
+        pha
+        lda     $7D
+        pha
+        lda     $80
+        pha
+        lda     $81
+        pha
+        lda     $82
+        pha
+        lda     $83
+        pha
+        lda     $88
+        pha
+        sta     $09
+        lda     $89
+        pha
+        sta     $0A
+        lda     #$00
+        pha
+        lda     #$FD
+        pha
+L9901:  jmp     L969C
 ; ---- $9AC0-$9B64（代码 165 字节）
 L9AC0:  jsr     L8499
         cmp     #$80
@@ -5086,7 +5178,7 @@ L9FDF:  lda     ($09),y
         beq     LA005
         cmp     $3C
         beq     L9FF3
-        sta     $0700,x
+        sta     fb_page6+256,x
         inc     $1B
         inx
         jsr     L908C
@@ -5104,7 +5196,7 @@ LA009:  lda     $1B
         sta     $0400
         lda     #$00
         sta     $0401
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $0402
         jsr     L83CB
         jmp     L9FA7
@@ -5256,7 +5348,7 @@ LA43C:  lda     ($09),y
         beq     LA453
         cmp     #$22
         beq     LA450
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         iny
         cpy     #$20
@@ -5277,7 +5369,7 @@ LA453:  stx     $19
         sta     $0400,x
         lda     $21
         sta     $0401,x
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $0402,x
         inx
         inx
@@ -5665,7 +5757,7 @@ L85E2:  ldy     #$00
         ldy     #$00
         lda     #$00
         sta     $4D
-        lda     #$03
+        lda     #>(fb_linebuf+255)
         sta     $4E
 L862C:  lda     ($4D),y
         sta     ($5B),y
@@ -5766,20 +5858,7 @@ L87E0:  lda     #$3D
         sta     $53
         jmp     L893C
 ; ---- $883A-$8854（代码 27 字节）
-L883A:  lda     #$05
-        sta     $4016
-        pha
-        pla
-        pha
-        pla
-        pha
-        pla
-        lda     #$04
-        sta     $4016
-        lda     #$06
-        sta     $4016
-        lda     $4017
-        and     #$10
+L883A:  jsr     kbd_stop_key
         rts
 ; ---- $8855-$887D（代码 41 字节）
 L8855:  jsr     L883A
@@ -6368,12 +6447,12 @@ LAA8A:  lda     #$03
         jmp     LA8F8
 ; ---- $AA94-$AAA5（代码 18 字节）
 LAA94:  ldx     $21
-        sta     $0700,x
+        sta     fb_page6+256,x
         inc     $21
         lda     #$01
         sta     $28
         stx     $29
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $2A
         rts
 ; ---- $AAA6-$AAD5（代码 48 字节）
@@ -6386,7 +6465,7 @@ LAAAC:  jsr     L90D6_far
         ldx     $46
 LAAB7:  lda     $3D,x
         beq     LAAC5
-        sta     $0700,y
+        sta     fb_page6+256,y
         inx
         iny
         inc     $90
@@ -6394,7 +6473,7 @@ LAAB7:  lda     $3D,x
 LAAC5:  lda     $21
         sty     $21
         sta     $29
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $2A
         lda     $90
         sta     $28
@@ -6492,7 +6571,7 @@ LAC41:  jsr     LAB8D
         ldx     $21
         ldy     #$00
 LAC66:  lda     ($19),y
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         iny
         dec     $90
@@ -6500,7 +6579,7 @@ LAC66:  lda     ($19),y
         lda     $21
         sta     $29
         stx     $21
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $2A
         jmp     LAA8A
 ; ---- $AC7E-$AD01（代码 132 字节）
@@ -6553,7 +6632,7 @@ LACC4:  lda     $1B
         ldx     $21
         ldy     #$00
 LACDB:  lda     ($19),y
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         iny
         dec     $90
@@ -6561,7 +6640,7 @@ LACDB:  lda     ($19),y
         lda     $21
         sta     $29
         stx     $21
-        lda     #$07
+        lda     #>(fb_page6)+1
         sta     $2A
         jmp     LAA8A
 LACF3:  sta     $1C
@@ -6643,15 +6722,15 @@ LAF13:  jsr     LA26B
         dec     $02
         bne     LAF13
         pla
-        sta     $0700
+        sta     fb_page6+256
         lda     $3D
-        sta     $0701
+        sta     fb_page6+257
         lda     $3E
-        sta     $0702
+        sta     fb_page6+258
         lda     $3F
-        sta     $0703
+        sta     fb_page6+259
         lda     $40
-        sta     $0704
+        sta     fb_page6+260
         ldy     #$06
         ldx     $65
         beq     LAF40
@@ -6697,14 +6776,14 @@ LAF78:  jsr     LA265
 LAF92:  rts
 ; ---- $AF93-$AFC8（代码 54 字节）
 LAF93:  lda     #$00
-        sta     $0700
+        sta     fb_page6+256
         sta     $75
 LAF9A:  lda     #$04
         ldx     #$01
         sta     $74
         ldy     $75
 LAFA2:  lda     ($52),y
-        sta     $0700,x
+        sta     fb_page6+256,x
         inx
         iny
         dec     $74
@@ -6717,8 +6796,8 @@ LAFA2:  lda     ($52),y
         inc     $73
 LAFB9:  lda     $73
         jsr     L896A
-        inc     $0700
-        lda     $0700
+        inc     fb_page6+256
+        lda     fb_page6+256
         cmp     #$04
         bne     LAF9A
         rts
@@ -7420,7 +7499,7 @@ L8207:  pla
 L8A0C:  jsr     LB4F4
         ldx     $64
         jsr     LB52E
-L8A14:  lda     $0700,x
+L8A14:  lda     fb_page6+256,x
         beq     L8A7F
         jsr     ppu_w_data
         inc     $48
@@ -7527,17 +7606,17 @@ L8AE4:  lda     $0500,x
         beq     L8ABA
 L8AF2:  lda     #$3F
         jsr     ppu_w_addr
-        lda     $0700
+        lda     fb_page6+256
         asl     a
         asl     a
 L8AFC:  jsr     ppu_w_addr
-        lda     $0701
+        lda     fb_page6+257
         jsr     ppu_w_data
-        lda     $0702
+        lda     fb_page6+258
         jsr     ppu_w_data
-        lda     $0703
+        lda     fb_page6+259
         jsr     ppu_w_data
-        lda     $0704
+        lda     fb_page6+260
         jsr     ppu_w_data
         lda     #$3F
         jsr     ppu_w_addr
@@ -7550,7 +7629,7 @@ L8AFC:  jsr     ppu_w_addr
         jmp     L89C9
 L8B30:  lda     #$3F
         jsr     ppu_w_addr
-        lda     $0700
+        lda     fb_page6+256
         asl     a
         asl     a
         ora     #$10
@@ -8120,48 +8199,11 @@ LB945:  lda     $66
 LB955:  sta     $68
         rts
 ; ---- $B958-$BAA8（代码 337 字节）
-LB958:  lda     #$05
-        sta     $4016
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        ldx     #$00
-LB965:  lda     #$04
-        sta     $4016
-        ldy     #$0A
-LB96C:  dey
-        bne     LB96C
-        nop
-        nop
-        lda     $4017
-        lsr     a
-        and     #$0F
-        sta     fb_page6+52,x
-        lda     #$06
-        sta     $4016
-        ldy     #$0A
-LB981:  dey
-        bne     LB981
-        nop
-        nop
-        lda     $4017
-        rol     a
-        rol     a
-        rol     a
-        and     #$F0
-        ora     fb_page6+52,x
-        eor     #$FF
-        ldy     #$08
-LB995:  asl     a
-        ror     fb_page6+52,x
-        dey
-        bne     LB995
-        inx
-        cpx     #$09
-        bne     LB965
+LB958:  jsr     kbd_matrix
+LB965:
+LB96C:
+LB981:
+LB995:
         lda     #$00
         sta     $6F
         sta     $70
@@ -9017,35 +9059,6 @@ L8DCC:  jsr     L90B2
         jmp     L8DCC
 L8DEE:  rts
 L8DEF:  jmp     L8494_far
-; ---- $8F9D-$8FD3（代码 55 字节）
-L8F9D:  jsr     LAA0D
-        jsr     L8F7D_far
-        pha
-        lda     #$00
-        sta     $2A
-        sta     $2B
-        ldx     #$10
-L8FAC:  asl     $28
-        rol     $29
-        rol     $2A
-        rol     $2B
-        lda     $2A
-        sec
-        sbc     $2C
-        lda     $2B
-        sbc     $2D
-        bcc     L8FCE
-        lda     $2A
-        sec
-        sbc     $2C
-        sta     $2A
-        lda     $2B
-        sbc     $2D
-        sta     $2B
-        inc     $28
-L8FCE:  dex
-        bne     L8FAC
-        jmp     L8F77_far
 ; ---- $90B7-$90BB（代码 5 字节）
         ldy     #$00
         sta     ($09),y
@@ -9197,86 +9210,6 @@ L9615:  pla
         dec     $19
         beq     L95E3
         jmp     L95F4
-; ---- $9882-$9903（代码 130 字节）
-L9882:  lda     #$00
-        jmp     LB237_far
-L9887:  pla
-        sta     $5F
-        pla
-        sta     $60
-        pla
-        cmp     #$FD
-        bne     L9882
-        pla
-        bne     L9882
-        pla
-        sta     $89
-        pla
-        sta     $88
-        pla
-        sta     $83
-        pla
-        sta     $82
-        pla
-        sta     $81
-        pla
-        sta     $80
-        pla
-        sta     $7D
-        pla
-        sta     $7C
-        pla
-        sta     $87
-        pla
-        sta     $86
-        pla
-        sta     $85
-        pla
-        sta     $84
-        ldy     #$00
-        lda     ($7C),y
-        sta     $28
-        iny
-        lda     ($7C),y
-        sta     $29
-        jsr     L9904_far
-        beq     L98CB
-        bcc     L9901
-L98CB:  lda     $84
-        pha
-        sta     $0D
-        lda     $85
-        pha
-        sta     $0E
-        lda     $86
-        pha
-        sta     $0B
-        lda     $87
-        pha
-        sta     $0C
-L98DF:  lda     $7C
-        pha
-        lda     $7D
-        pha
-        lda     $80
-        pha
-        lda     $81
-        pha
-        lda     $82
-        pha
-        lda     $83
-        pha
-        lda     $88
-        pha
-        sta     $09
-        lda     $89
-        pha
-        sta     $0A
-        lda     #$00
-        pha
-        lda     #$FD
-        pha
-L9901:  jmp     L969C_far
 ; ---- $9B65-$9C08（代码 164 字节）
 L9B65:  jmp     L8494_far
 L9B68:  cmp     #$86
@@ -9817,7 +9750,7 @@ LB6F6:  lda     #$0E
         sta     $62
         tax
         lda     #$20
-LB700:  sta     $0700,x
+LB700:  sta     fb_page6+256,x
         dex
         bpl     LB700
         jmp     L895D

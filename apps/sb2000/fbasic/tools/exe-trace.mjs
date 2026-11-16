@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { frames, startSb2000, tap, typeDos } from './lib/ember-sb2000.mjs';
+import { bootAndRun, frames, startSb2000 } from './lib/ember-sb2000.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const total = Number(process.argv[2] ?? 300);
@@ -24,22 +24,23 @@ const nameOf = (address) => {
   return best === null ? '' : `${best.name}+${address - best.address}`;
 };
 try {
-  await frames(client, 2700);
-  await tap(client, 'Enter');
-  await frames(client, 20);
-  await tap(client, 'Enter');
-  await frames(client, 20);
-  await typeDos(client, 'fbasic');
-  const { id } = await client.api.inspector.traceStart({ kind: 'instruction', unique: true, maxLines: 40000, file: 'fbasic-trace.txt' });
-  await tap(client, 'Enter');
+  let id;
+  await bootAndRun(client, 'fbasic', async () => {
+    ({ id } = await client.api.inspector.traceStart({ kind: 'instruction', unique: process.env.TRACE_ALL !== '1', maxLines: 400000, file: 'fbasic-trace.txt' }));
+  });
   await frames(client, total);
   const result = await client.api.inspector.traceStop({ id });
   const lines = readFileSync(result.file, 'utf8').split(/\r?\n/).filter((line) => line.trim() !== '');
   const parsed = lines.map((line) => ({ text: line.trim(), address: Number.parseInt(/^([0-9A-Fa-f]{4})/.exec(line.trim())?.[1] ?? '0', 16) }));
+  const around = process.env.AROUND ? parsed.findIndex((entry) => entry.address === Number.parseInt(process.env.AROUND, 16)) : -1;
+  if (around >= 0) {
+    for (const entry of parsed.slice(Math.max(0, around - 5), around + count)) console.log(entry.text.slice(0, 80));
+    process.exitCode = 0;
+  }
   const wild = parsed.findIndex((entry, index) => index > 0 && entry.address < 0x8000 && parsed[index - 1].address >= 0x8000 && parsed[index - 1].address < 0xc000);
-  const from = wild >= 0 ? Math.max(0, wild - count) : Math.max(0, parsed.length - count);
+  const from = wild >= 0 ? Math.max(0, wild - 12) : Math.max(0, parsed.length - count);
   console.log(`共 ${result.lines} 行；${wild >= 0 ? `第一次跑进 RAM 在第 ${wild} 行，` : ''}从第 ${from} 行起列 ${count} 行：`);
-  for (const entry of parsed.slice(from, from + count + 3)) {
+  for (const entry of parsed.slice(from, from + count + 12)) {
     console.log(`${entry.text.slice(0, 70).padEnd(72)}${entry.address >= 0x8000 && entry.address < 0xc000 ? nameOf(entry.address) : ''}`);
   }
 } finally {

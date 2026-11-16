@@ -12,9 +12,11 @@
 ;       NMI 里也会经跳板进入库页，所以钩子入口先把跳板的临时变量存到栈里，结束时还原。
 ;       DOS 现场（零页 + $0200-$07FF，共 7 页）保存在现场缓冲库页里，入口门用“交换”：缓冲与内存互换，再互换回来。
 ; ------------------------------------------------------------------------
-        .export         _main, far_enter, frame_count, bank_current, fb_page6
+         .export         _main, far_enter, frame_count, bank_current, fb_page6, fb_linebuf
         .export         ppu_w_ctrl, ppu_w_mask, ppu_w_scroll, ppu_w_addr, ppu_w_addr_x, ppu_w_data, ppu_r_data, ppu_r_status
+        .export         kbd_matrix, kbd_stop_key, kbd_ext, kbd_skip, kbd_mod, kbd_cur, kbd_id, kbd_need, kbd_exit, kbd_scan, kbd_brk, kbd_tmp
         .import         L80BA_far, L8971_far
+        .import         kbd_service, kbd_stop_service
         .include        "sb2000.inc"
         .include        "layout.inc"
 
@@ -27,8 +29,11 @@ NMI_HOOK5_VEC_HI = NMI_HOOK5_VEC_LO + 1
 IMAGE_PAGES     = 7
 IMAGE_WINDOW    = $A000
 
-; 跳板的临时变量个数（far_info 3 字节，far_a、far_x、far_y、far_p 各 1 字节）
-FAR_STATE_SIZE  = 7
+; 跳板的临时变量个数（far_info 3 字节，far_a、far_x、far_y、far_p、far_sp、soft_sp、soft_base 各 1 字节）
+FAR_STATE_SIZE  = 10
+
+; 软栈：主程序与 NMI 钩子各用一段，每项 4 字节（硬件栈位置、库页号、调用者返回地址）
+SOFT_NMI        = 128
 
 ; 内核 NMI 每帧写回 $2005 的两个影子
 PPU_SCROLL_X_SHADOW = $062C
@@ -37,14 +42,21 @@ PPU_SCROLL_Y_SHADOW = $062D
 ; $2008：背景 4 色、精灵图案表在显存 $2000、名称表从显存 $0000 起（4 页）
 PPU_EXT_VALUE   = $08
 
-; 背景图案放在扩展显存 $8000 起，名称表项高字节的低 4 位就是 $8
-BG_POINTER_HI   = $08
+; 背景图案放在扩展显存 $E000 起（DOS 没用的空区），名称表项高字节的低 4 位就是 $E
+BG_POINTER_HI   = $0E
+BG_FONT_HI      = $E0
+
+; 外壳自己用的库页（号码必须大于生成的库页，见 tools/port.mjs）：键盘代码与表、DOS 显存备份
+BANK_KEYS      = 12
+BANK_VRAM       = 13
 
         .segment        "CODE"
 
 ; 程序入口，由 crt0 调用。解释器的初始化不会返回
 _main:
-        php                                     ; 保存 I 标志（目前没有退出的路径）
+        tsx
+        stx     sp_saved                        ; 退出时把栈倒回这里
+        php                                     ; 保存 I 标志
         pla
         sta     saved_p
         sei                                     ; 之后不接受 IRQ
@@ -52,6 +64,8 @@ _main:
         jsr     save_image                      ; DOS 现场存进缓冲库页
         lda     #1                              ; 启动时窗口 2 里是库页 1
         sta     bank_current
+        lda     #$FF
+        sta     kbd_cur
         lda     #<nmi_hook                      ; 钩子 5：地址、页组、开关
         sta     NMI_HOOK5_VEC_LO
         lda     #>nmi_hook
@@ -80,6 +94,9 @@ nmi_hook:
         pha
         lda     #1                              ; 钩子里窗口 2 就是库页 1
         sta     bank_current
+        lda     #SOFT_NMI                       ; 钩子用自己的一段软栈
+        sta     soft_base
+        sta     soft_sp
         inc     frame_count
         jsr     L8971_far
         pla
@@ -113,7 +130,9 @@ bank_select:
 
 ; 跳板的进入例程：跳板是 jsr far_enter，后面跟 3 个字节：目标地址（低、高）与库页号。
 ; 进入时 A、X、Y 与标志都是调用者给目标例程的参数，返回时是目标例程的结果；调用前后窗口 2 里的库页不变。
-; 跳板的返回地址不回到跳板，所以目标例程 RTS 之后直接回到跳板的调用者
+; 原版有些例程靠硬件栈的布局工作（FOR/NEXT 的栈帧、成对的 pla、按固定字节数回退），所以目标运行时栈上必须和原来的 jsr 完全一样：
+; 只有一个 2 字节的返回地址。做法是把调用者的返回地址和库页号存进软栈，栈上换成 far_return 的地址，目标 RTS 后由 far_return 还原。
+; 软栈项里记着当时的硬件栈指针：原版绕过 RTS 回退栈（txs）后留下的失效项，在下一次进出跳板时按栈指针清掉。
 far_enter:
         sta     far_a
         stx     far_x
@@ -132,7 +151,45 @@ far_read:
         inx
         cpx     #4
         bne     far_read
+        lda     far_info + 2                    ; 目标就在当前窗口 2 的库页里：不必换页，保持调用者的返回地址原样（FOR/NEXT 靠它）
+        cmp     bank_current
+        bne     @cross
+        lda     far_p
+        pha
+        ldx     far_x
+        ldy     far_y
+        lda     far_a
+        plp
+        jmp     (far_info)
+@cross: tsx
+        stx     far_sp
+@drop:  ldx     soft_sp
+        cpx     soft_base
+        beq     @push
+        lda     soft_stack - 4,x
+        cmp     far_sp
+        bcs     @push
+        txa
+        sec
+        sbc     #4
+        sta     soft_sp
+        jmp     @drop
+@push:  ldx     soft_sp
+        lda     far_sp
+        sta     soft_stack,x
         lda     bank_current
+        sta     soft_stack + 1,x
+        pla
+        sta     soft_stack + 2,x
+        pla
+        sta     soft_stack + 3,x
+        txa
+        clc
+        adc     #4
+        sta     soft_sp
+        lda     #>(far_return - 1)
+        pha
+        lda     #<(far_return - 1)
         pha
         lda     far_info + 2
         jsr     bank_select
@@ -142,25 +199,48 @@ far_read:
         ldy     far_y
         lda     far_a
         plp
-        jsr     far_jump
-        php
+        jmp     (far_info)
+
+; 目标 RTS 之后到这里：还原调用者的库页，带着目标的结果回到调用者的返回地址
+far_return:
         sta     far_a
         stx     far_x
         sty     far_y
+        php
         pla
         sta     far_p
-        pla                                     ; 调用前的库页
+        tsx
+        txa
+        sec
+        sbc     #2
+        sta     far_sp
+@drop:  ldx     soft_sp
+        lda     soft_stack - 4,x
+        cmp     far_sp
+        bcs     @found
+        txa
+        sec
+        sbc     #4
+        sta     soft_sp
+        jmp     @drop
+@found: txa
+        sec
+        sbc     #4
+        sta     soft_sp
+        tax
+        lda     soft_stack + 3,x
+        pha
+        lda     soft_stack + 2,x
+        pha
+        lda     soft_stack + 1,x
         jsr     bank_select
         lda     far_p
         pha
-        lda     far_a
         ldx     far_x
         ldy     far_y
+        lda     far_a
         plp
         rts
-
-far_jump:
-        jmp     (far_info)
 
         .assert (far_info & $FF) <> $FF, error, "far_info 不能跨页，否则 jmp (far_info) 会取错高字节"
 
@@ -280,6 +360,153 @@ swap_image:
 image_pages:
         .byte   $00, $02, $03, $04, $05, $06, $07
 
+; ---- 键盘与退出 ----
+; 原版的键盘矩阵扫描改成调用这里：键盘代码在库页 BANK_KEYS 里，它把 SB2000 的按键填进原版的矩阵 $0634-$063C（现在在 fb_page6）。
+; 按下退出键（F12）后在下一次扫描时还原 DOS 现场并返回 DOS。
+kbd_matrix:
+        jsr     kbd_service_far
+        lda     kbd_exit
+        bne     exit_program
+        rts
+
+kbd_service_far:
+        jsr     far_enter
+        .word   kbd_service
+        .byte   BANK_KEYS
+
+; 原版 $883A 的替身：A = 0 表示 STOP 键按下，否则为 $10
+kbd_stop_key:
+        jsr     far_enter
+        .word   kbd_stop_service
+        .byte   BANK_KEYS
+
+; 退出：恢复 DOS 的显存与现场，把栈倒回 _main 刚进来的位置后返回（返回 DOS）
+exit_program:
+        sei
+        jsr     nmi_off
+        jsr     vram_restore
+        jsr     swap_image
+        jsr     restore_windows
+        lda     IRQ_MASK_SHADOW
+        sta     HW_IRQ_MASK
+        lda     PPU_EXT_CTRL_SHADOW
+        sta     HW_PPU_EXT
+        lda     PPU_SCROLL_X_SHADOW
+        sta     HW_PPU_SCROLL
+        lda     PPU_SCROLL_Y_SHADOW
+        sta     HW_PPU_SCROLL
+        lda     PPU_MASK_SHADOW
+        sta     HW_PPU_MASK
+        lda     PPU_CTRL_SHADOW
+        sta     HW_PPU_CTRL
+        ldx     sp_saved
+        txs
+        lda     saved_p
+        pha
+        plp
+        rts
+
+; 把 DOS 的显存存起来：名称表区 $0000-$0FFF 存进 BANK_VRAM，$2000-$20FF 与调色板存进现场缓冲库页的空余处
+; （扩展显存 $E000-$EFFF 在 DOS 里是空的，退出时清零即可）。要在 $2000 位 2 为 0、显示关着时调用
+vram_save:
+        lda     #BANK_VRAM
+        jsr     bank_select
+        lda     #0
+        sta     HW_PPU_ADDRESS
+        sta     HW_PPU_ADDRESS
+        lda     HW_PPU_DATA
+        lda     #>IMAGE_WINDOW
+        sta     @dst + 2
+        ldy     #16
+        ldx     #0
+@loop:  lda     HW_PPU_DATA
+@dst:   sta     IMAGE_WINDOW,x
+        inx
+        bne     @loop
+        inc     @dst + 2
+        dey
+        bne     @loop
+        lda     #BANK_IMAGE
+        jsr     bank_select
+        lda     #$20
+        sta     HW_PPU_ADDRESS
+        lda     #0
+        sta     HW_PPU_ADDRESS
+        lda     HW_PPU_DATA
+        ldx     #0
+@tiles: lda     HW_PPU_DATA
+        sta     IMAGE_WINDOW + $700,x
+        inx
+        bne     @tiles
+        ldx     #63
+@pal:   lda     HW_PALETTE,x
+        sta     IMAGE_WINDOW + $800,x
+        dex
+        bpl     @pal
+        lda     #1
+        jmp     bank_select
+
+vram_restore:
+        lda     #0
+        sta     HW_PPU_CTRL
+        sta     HW_PPU_MASK
+        lda     #BANK_VRAM
+        jsr     bank_select
+        lda     #0
+        sta     HW_PPU_ADDRESS
+        sta     HW_PPU_ADDRESS
+        lda     #>IMAGE_WINDOW
+        sta     @src + 2
+        ldy     #16
+        ldx     #0
+@src:   lda     IMAGE_WINDOW,x
+        sta     HW_PPU_DATA
+        inx
+        bne     @src
+        inc     @src + 2
+        dey
+        bne     @src
+        lda     #$10
+        ldy     #16
+        jsr     vram_zero
+        lda     #BANK_IMAGE
+        jsr     bank_select
+        lda     #$20
+        sta     HW_PPU_ADDRESS
+        lda     #0
+        sta     HW_PPU_ADDRESS
+        ldx     #0
+@tiles: lda     IMAGE_WINDOW + $700,x
+        sta     HW_PPU_DATA
+        inx
+        bne     @tiles
+        ldx     #63
+@pal:   lda     IMAGE_WINDOW + $800,x
+        sta     HW_PALETTE,x
+        dex
+        bpl     @pal
+        lda     #$21
+        ldy     #7
+        jsr     vram_zero
+        lda     #BG_FONT_HI
+        ldy     #16
+        jsr     vram_zero
+        lda     #1
+        jmp     bank_select
+
+; 把显存从高字节 A、低字节 0 起的 Y 页清零
+vram_zero:
+        sta     HW_PPU_ADDRESS
+        ldx     #0
+        stx     HW_PPU_ADDRESS
+        lda     #0
+@loop:  sta     HW_PPU_DATA
+        inx
+        bne     @loop
+        dey
+        bne     @loop
+        rts
+
 ; ---- PPU 转换层 ----
 ; 原版按 NES 的 PPU 写画面，这里把它的 $2000-$2007 访问换成 6576 的做法：
 ; NES 名称表 0、1 放在 6576 的页 0、1，行 r 同时写在行 r+30（NES 竖直滚动按 30 行回绕，6576 的页高 32 行），
@@ -293,6 +520,8 @@ ppu_init:
         sta     HW_PPU_CTRL
         sta     PPU_MASK_SHADOW
         sta     HW_PPU_MASK
+        jsr     vram_save
+        lda     #0
         sta     ppu_latch
         sta     ppu_ctrl
         sta     ppu_buf
@@ -303,7 +532,7 @@ ppu_init:
         sta     HW_PPU_EXT
         lda     #BANK_CHR_BG
         jsr     bank_select
-        lda     #$80
+        lda     #BG_FONT_HI
         sta     HW_PPU_ADDRESS
         lda     #0
         sta     HW_PPU_ADDRESS
@@ -720,6 +949,10 @@ far_a:          .res    1
 far_x:          .res    1
 far_y:          .res    1
 far_p:          .res    1
+far_sp:         .res    1                       ; 进入跳板时的硬件栈指针
+soft_sp:        .res    1                       ; 软栈栈顶下标（每项 4 字节）
+soft_base:      .res    1                       ; 当前这段软栈的起点：主程序 0，NMI 钩子 SOFT_NMI
+soft_stack:     .res    160
 saved_p:        .res    1                       ; 进入时的处理器状态
 frame_count:    .res    1                       ; 钩子 5 每帧加 1
 bank_current:   .res    1                       ; 窗口 2 里当前的库页号
@@ -728,7 +961,9 @@ req_subfunction: .res   1
 req_count:      .res    1
 gate_error:     .res    1                       ; 入口门的结果：出错码、ALLOC_START
 gate_value:     .res    1
-fb_page6:       .res    256                     ; 原版 $0600-$06FF 的替身（那一页在学习机里是内核的变量）
+fb_page6_raw:   .res    767                     ; 原版 $0600-$07FF 的替身：两页要连着（原版的变址数组会从 $06xx 跨进 $07xx）且按页对齐（字符串指针的高字节是页号）
+fb_page6        = (fb_page6_raw + 255) & $FF00
+fb_linebuf:     .res    511                     ; 原版 $0300 页行缓冲的替身：只保证里面含一个整页，页地址取 >(fb_linebuf+255)，低字节按 0 用
 
 ; PPU 转换层：原版的 NES 显存地址与状态、属性表影子（NT0、NT1 各 64 字节）与计算用的临时变量
 ppu_ctrl:       .res    1
@@ -752,3 +987,21 @@ ppu_col0:       .res    1
 ppu_cnt:        .res    1
 ppu_a:          .res    4
 ppu_attr:       .res    128
+
+; 键盘服务的状态（代码在 keyboard.s）：扩展码前缀、需跳过的字节数、修饰键位（位 0 左 Shift、1 右 Shift、2 Ctrl、3 Alt）、当前按着的原版键号（$FF 无）、
+; 它对应的 PC 键、是否要 SHIFT、退出请求、正在处理的码与临时变量
+kbd_ext:        .res    1
+kbd_skip:       .res    1
+kbd_mod:        .res    1
+kbd_cur:        .res    1
+kbd_id:         .res    1
+kbd_need:       .res    1
+kbd_exit:       .res    1
+kbd_scan:       .res    1
+kbd_brk:        .res    1
+kbd_tmp:        .res    1
+sp_saved:       .res    1
+
+        .segment        "BANK13"
+; DOS 显存 $0000-$0FFF 的备份
+vram_backup:    .res    4096

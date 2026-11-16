@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：规则见 docs/05-界面.md 第 4.3 节：没有盘片时取出、保存镜像与写保护置灰；软驱的状态分无盘片、空闲、读写中（带磁道）；打印机的状态分空闲、打印中、打印完成；
+ * 备注：规则见 docs/05-界面.md 第 4.3 节：没有盘片时取出与写保护置灰；软驱的状态分无盘片、空闲、读写中（带磁道）；打印机的状态分空闲、打印中、打印完成；
  *       磁带机的状态分无磁带、已停止、播放中、录音中；磁带机是独立设备，载入与取出随时可用：有磁带就能取出（播放或录音时先停止再取出），没有磁带时“播放”可点（用来选磁带），
  *       有磁带时只有磁带机接在通电的主机上才能播放，录音也要接上主机，播放或录音时只有停止可用。
  * ------------------------------------------------------------------------
@@ -30,8 +30,6 @@ export interface FloppyAvailability {
   readonly insert: boolean;
   /** 取出。 */
   readonly eject: boolean;
-  /** 保存镜像。 */
-  readonly save: boolean;
   /** 写保护开关。 */
   readonly writeProtect: boolean;
 }
@@ -67,8 +65,8 @@ export interface TapeAvailability {
 
 /** 软驱各按钮是否可用；软驱没有连接（undefined，当前主机没有这个软驱）时全部不可用。 */
 export function floppyAvailability(floppy: FloppyStatus | undefined): FloppyAvailability {
-  if (floppy === undefined) return { insert: false, eject: false, save: false, writeProtect: false };
-  return { insert: true, eject: floppy.inserted, save: floppy.inserted, writeProtect: floppy.inserted };
+  if (floppy === undefined) return { insert: false, eject: false, writeProtect: false };
+  return { insert: true, eject: floppy.inserted, writeProtect: floppy.inserted };
 }
 
 /** 磁带的显示文字：声音文件名；没有磁带或磁带机没有连接（undefined）时为“空”。 */

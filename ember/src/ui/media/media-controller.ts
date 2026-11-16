@@ -1,11 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.ts
- * 说明：设备面板的控制器：保存各软驱、磁带机与打印机的状态，执行载入镜像、取出、保存镜像、写保护、磁带的取出、播放（没有磁带时先选磁带）、录音与停止等操作，订阅核心事件。
+ * 说明：设备面板的控制器：保存各软驱、磁带机与打印机的状态，执行载入镜像、取出、写保护、磁带的取出、播放（没有磁带时先选磁带）、录音与停止等操作，订阅核心事件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：不依赖 React，状态放在外部存储里（subscribe 与 snapshot，配合 useSyncExternalStore）；由常驻组件 MediaHost 在外壳启动后接上预加载脚本的接口与外壳的能力（attach）。
+ *       学习机写盘后核心会自动把镜像写回文件，界面没有保存操作；自动写回失败（media.floppySaveFailed）时用通知给出原因。
  *       软驱的读写状态与磁道、打印机的打印状态随机器运行不断变化，核心不推送，所以设备面板显示期间由 startPolling 定时读取；面板没有显示时不读取。
  *       失败时用通知提示；打印机每输出一页，用通知告知文件名（规则见 docs/05-界面.md 第 4.3 节）。
  * ------------------------------------------------------------------------
@@ -44,9 +45,9 @@ const TEXT = {
   actions: {
     insert: '载入软盘镜像',
     eject: '取出软盘',
-    save: '保存软盘镜像',
     writeProtect: '设置写保护',
     printer: '打印机输出',
+    floppyAutoSave: '自动保存软盘镜像',
     ejectTape: '取出磁带',
     loadTape: '载入磁带',
     playTape: '播放磁带',
@@ -165,14 +166,9 @@ export class MediaController {
     this.pick(TEXT.actions.insert, (backend) => backend.main.media.openFloppy(droppedId === undefined ? { drive } : { drive, droppedId }));
   }
 
-  /** 取出软驱里的盘片；没有保存的修改随之丢失。 */
+  /** 取出软驱里的盘片；有尚未写回的修改时核心先写回镜像文件，写回失败则不取出。 */
   ejectFloppy(drive: number): void {
     this.perform(TEXT.actions.eject, (backend) => backend.core.media.floppyEject({ drive }));
-  }
-
-  /** 把软驱里的镜像写回放入时的文件。 */
-  saveFloppy(drive: number): void {
-    this.perform(TEXT.actions.save, (backend) => backend.core.media.floppySave({ drive }));
   }
 
   /** 设置或取消盘片的写保护。 */
@@ -269,6 +265,9 @@ export class MediaController {
     } else if (name === 'media.printFailed') {
       const message = field(data, 'message', 'string');
       this.report(TEXT.actions.printer, { message: typeof message === 'string' ? message : '' });
+    } else if (name === 'media.floppySaveFailed') {
+      const message = field(data, 'message', 'string');
+      this.report(TEXT.actions.floppyAutoSave, { message: typeof message === 'string' ? message : '' });
     }
   }
 

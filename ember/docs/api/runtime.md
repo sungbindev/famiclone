@@ -6,7 +6,7 @@
 
 | 请求 | 简介 |
 | --- | --- |
-| [`runtime.status`](#runtimestatus) | 返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度 |
+| [`runtime.status`](#runtimestatus) | 返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标 |
 | [`runtime.powerOn`](#runtimepoweron) | 上电：创建或重置全部芯片，卡带的存储区重新从文件载入 |
 | [`runtime.powerOff`](#runtimepoweroff) | 断电：停止运行，芯片状态丢弃 |
 | [`runtime.reset`](#runtimereset) | 复位：soft 只发 RESET 线，不改变电源与运行模式 |
@@ -18,7 +18,7 @@
 
 ### runtime.status
 
-返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度。
+返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标。
 
 **参数**
 

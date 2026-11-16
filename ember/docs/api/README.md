@@ -110,15 +110,21 @@
 | 请求 | 简介 |
 | --- | --- |
 | `media.floppyInsert` | 读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片 |
-| `media.floppyEject` | 取出盘片并丢弃镜像（没有保存的修改随之丢失） |
-| `media.floppySave` | 把驱动器里的镜像写回放入时的文件，并清除“已修改”标志 |
+| `media.floppyEject` | 取出盘片并丢弃镜像 |
+| `media.floppySave` | 立即把驱动器里的镜像写回放入时的文件，并清除“已修改”标志 |
 | `media.floppyWriteProtect` | 设置或取消盘片的写保护 |
 | `media.floppyStatus` | 全部软驱的状态 |
 | `media.floppyFault` | 故障注入：取盘、写保护、无索引脉冲、磁头卡住、控制器无响应、指定扇区校验错、全部清除 |
 | `media.printerStatus` | 打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名 |
 | `media.printerFlush` | 立即输出当前页，等同打印机收到换页 |
+| `media.tapeLoad` | 把声音文件放进磁带机当磁带（解码交给随应用附带的 ffmpeg，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带 |
+| `media.tapeEject` | 取出磁带 |
+| `media.tapePlay` | 开始播放 |
+| `media.tapeRecord` | 放入一盘空白磁带并开始录音：主机送给磁带的 1 位信号按时间记成 32 kHz、单声道、16 位的 WAV 文件（已有的文件被覆盖） |
+| `media.tapeStop` | 停止播放或录音 |
+| `media.tapeStatus` | 磁带机的状态 |
 
-事件：`media.changed`、`media.printed`、`media.printFailed`
+事件：`media.changed`、`media.printed`、`media.printFailed`、`media.floppySaveFailed`
 
 ### [output](output.md)
 
@@ -141,7 +147,7 @@
 
 | 请求 | 简介 |
 | --- | --- |
-| `runtime.status` | 返回电源、运行模式、主机型号、卡带、帧号、总周期数与速度 |
+| `runtime.status` | 返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标 |
 | `runtime.powerOn` | 上电：创建或重置全部芯片，卡带的存储区重新从文件载入 |
 | `runtime.powerOff` | 断电：停止运行，芯片状态丢弃 |
 | `runtime.reset` | 复位：soft 只发 RESET 线，不改变电源与运行模式 |

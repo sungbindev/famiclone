@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MediaPanel.tsx
- * 说明：底部面板的“设备”内容：用组件库的紧凑列表行，每个设备一行，没有边框与表格线，鼠标悬停时整行变底色。软驱一行依次是名称、盘片、状态、行尾的四个图标按钮（写保护开关、载入镜像、取出、保存镜像）；磁带机一行是名称、磁带、位置、状态与行尾的四个图标按钮（取出、播放、录音、停止）；打印机一行是名称与状态。
+ * 说明：底部面板的“设备”内容：用组件库的紧凑列表行，每个设备一行，没有边框与表格线，鼠标悬停时整行变底色。软驱一行依次是名称、盘片、状态、行尾的三个图标按钮（写保护开关、载入镜像、取出）；磁带机一行是名称、磁带、位置、状态与行尾的四个图标按钮（取出、播放、录音、停止）；打印机一行是名称与状态。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -11,7 +11,7 @@
  * ------------------------------------------------------------------------
  */
 
-import { Button, iconDeviceFloppy, iconFolderOpen, iconLock, iconLockOpen, iconPlayerEject, iconPlayerPlay, iconPlayerRecord, iconPlayerStop, RowList, RowListItem } from '@rujianjs/ui-kit';
+import { Button, iconFolderOpen, iconLock, iconLockOpen, iconPlayerEject, iconPlayerPlay, iconPlayerRecord, iconPlayerStop, RowList, RowListItem } from '@rujianjs/ui-kit';
 import { useEffect } from 'react';
 import type { FloppyStatus, TapeStatus } from '../../contracts/media/generated/media';
 import { driveLabel, type MediaController } from './media-controller';
@@ -27,7 +27,6 @@ const TEXT = {
   writeProtect: '写保护',
   insert: '载入镜像',
   eject: '取出',
-  save: '保存镜像',
   tape: '磁带机',
   ejectTape: '取出',
   play: '播放',
@@ -73,9 +72,6 @@ function FloppyRow({ controller, drive, floppy }: { readonly controller: MediaCo
           </Button>
           <Button variant="ghost" iconOnly compact icon={iconPlayerEject} title={TEXT.eject} disabled={!available.eject} onClick={() => controller.ejectFloppy(drive)}>
             {TEXT.eject}
-          </Button>
-          <Button variant="ghost" iconOnly compact icon={iconDeviceFloppy} title={TEXT.save} disabled={!available.save} onClick={() => controller.saveFloppy(drive)}>
-            {TEXT.save}
           </Button>
         </>
       }

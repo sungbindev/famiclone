@@ -22,7 +22,7 @@
         "inserted": { "type": "boolean", "description": "里面有没有盘片" },
         "fileName": { "type": "string", "description": "盘片来源的文件名，不含路径；没有盘片时没有这一项" },
         "writeProtected": { "type": "boolean", "description": "盘片是否写保护" },
-        "modified": { "type": "boolean", "description": "镜像自放入或上次保存以来是否被修改过（学习机写盘会改它）" },
+        "modified": { "type": "boolean", "description": "镜像是否有尚未写回文件的修改（学习机写盘后置位，核心自动写回后清除）" },
         "size": { "type": "integer", "minimum": 0, "description": "镜像的大小（字节）；没有盘片时为 0" },
         "cylinder": { "type": "integer", "minimum": 0, "description": "磁头所在的磁道" },
         "motor": { "type": "boolean", "description": "马达是否在转" },
@@ -74,10 +74,10 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
+      "errors": ["media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid", "media.saveFailed"]
     },
     "floppyEject": {
-      "description": "取出盘片并丢弃镜像（没有保存的修改随之丢失）；没有盘片时没有效果。",
+      "description": "取出盘片并丢弃镜像；有尚未写回的修改时先写回放入时的文件，写回失败则不取出；没有盘片时没有效果。",
       "params": {
         "type": "object",
         "properties": { "drive": { "type": "integer", "minimum": 0, "maximum": 3, "description": "驱动器编号" } },
@@ -88,10 +88,10 @@
         "properties": { "status": { "$ref": "#/types/FloppyStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.noDrive"]
+      "errors": ["media.noDrive", "media.saveFailed"]
     },
     "floppySave": {
-      "description": "把驱动器里的镜像写回放入时的文件，并清除“已修改”标志；外部修改与学习机写盘都只改内存里的镜像，不自动落盘。",
+      "description": "立即把驱动器里的镜像写回放入时的文件，并清除“已修改”标志；学习机写盘后核心会自动写回，通常不必调用。",
       "params": {
         "type": "object",
         "properties": { "drive": { "type": "integer", "minimum": 0, "maximum": 3, "description": "驱动器编号" } },
@@ -261,7 +261,7 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["media.droppedNotFound", "media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid"]
+      "errors": ["media.droppedNotFound", "media.noDrive", "media.fileNotFound", "media.fileUnreadable", "media.imageInvalid", "media.saveFailed"]
     },
     "openTape": {
       "description": "弹出系统文件选择窗口（声音文件），把用户选定的文件交给 media.tapeLoad；用户取消选择时 canceled 为 true，不是错误。给出 droppedId 时不弹窗口，直接用拖入窗口的那个文件。",
@@ -323,6 +323,17 @@
         "type": "object",
         "properties": { "message": { "type": "string", "description": "原因，面向用户" } },
         "required": ["message"]
+      }
+    },
+    "floppySaveFailed": {
+      "description": "盘片镜像无法自动写回文件（文件被占用、没有写权限等）；修改仍在内存里，核心之后每 5 秒重试一次，写回成功前只通知这一次。",
+      "data": {
+        "type": "object",
+        "properties": {
+          "drive": { "type": "integer", "minimum": 0, "description": "驱动器编号" },
+          "message": { "type": "string", "description": "原因，面向用户" }
+        },
+        "required": ["drive", "message"]
       }
     }
   }

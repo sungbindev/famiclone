@@ -50,6 +50,7 @@ void StandardFloppyDrive::writeByte(std::size_t offset, std::uint8_t value) {
   if (!inserted_ || offset >= image_.size()) return;
   image_[offset] = value;
   modified_ = true;
+  ++revision_;
 }
 
 void StandardFloppyDrive::insertImage(std::vector<std::uint8_t> image, bool writeProtected, std::string source) {
@@ -60,6 +61,7 @@ void StandardFloppyDrive::insertImage(std::vector<std::uint8_t> image, bool writ
   inserted_ = true;
   suspended_ = false;
   modified_ = false;
+  ++revision_;
 }
 
 void StandardFloppyDrive::ejectImage() {
@@ -67,6 +69,7 @@ void StandardFloppyDrive::ejectImage() {
   inserted_ = false;
   suspended_ = false;
   modified_ = false;
+  ++revision_;
   image_.clear();
   image_.shrink_to_fit();
   source_.clear();

@@ -145,7 +145,6 @@
     $('#floppy' + drive + 'Image').textContent = disk ? disk.image : '空';
     $('#floppy' + drive + 'State').textContent = state;
     $('#floppy' + drive + 'Eject').disabled = !disk;
-    $('#floppy' + drive + 'Save').disabled = !disk;
     $('#floppy' + drive + 'Wp').disabled = !disk;
   }
 
@@ -345,10 +344,6 @@
     Ember.floppyFiles.refresh();
     Ember.machine.refreshScreen();
     Ember.log('信息', '软驱 ' + drive + ' 已取出盘片');
-  });
-  commands.register('media.floppySave', (source) => {
-    Ember.floppyFiles.markSaved(source.dataset.drive);
-    Ember.notify('软驱 ' + source.dataset.drive + ' 的镜像已保存');
   });
   commands.register('media.tapeLoad', () => {
     tape.loaded = true;

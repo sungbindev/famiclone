@@ -230,7 +230,7 @@ TEST(MouseBbk, ReadDataAnswersWithAcknowledgeThenButtonsAndSignedMovement) {
   connect(mouse);
   sendCommand(mouse, 0xEB);
   EXPECT_EQ(readFrame(mouse), 0xFA);
-  EXPECT_EQ(readFrame(mouse), 0x31) << "左键，横向取反后为负、纵向为负";
+  EXPECT_EQ(readFrame(mouse), 0x34) << "左键（位 2），横向取反后为负、纵向为负";
   EXPECT_EQ(readFrame(mouse), 0xFD) << "纵向 -3";
   EXPECT_EQ(readFrame(mouse), 0xFB) << "横向取反后 -5";
   EXPECT_FALSE(mouse.active());
@@ -243,13 +243,13 @@ TEST(MouseBbk, MovementIsAccumulatedUntilReadAndThenCleared) {
   connect(mouse);
   sendCommand(mouse, 0xEB);
   static_cast<void>(readFrame(mouse));
-  EXPECT_EQ(readFrame(mouse), 0x02) << "右键，横向取反后为正、纵向为正";
+  EXPECT_EQ(readFrame(mouse), 0x01) << "右键（位 0），横向取反后为正、纵向为正";
   EXPECT_EQ(readFrame(mouse), 3);
   EXPECT_EQ(readFrame(mouse), 5);
   connect(mouse);
   sendCommand(mouse, 0xEB);
   static_cast<void>(readFrame(mouse));
-  EXPECT_EQ(readFrame(mouse), 0x02) << "按键保持";
+  EXPECT_EQ(readFrame(mouse), 0x01) << "按键保持";
   EXPECT_EQ(readFrame(mouse), 0);
   EXPECT_EQ(readFrame(mouse), 0);
 }

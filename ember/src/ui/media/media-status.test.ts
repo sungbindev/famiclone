@@ -39,12 +39,12 @@ describe('打印机的状态文字', () => {
 
 describe('软驱按钮的可用性', () => {
   it('没有盘片时只能载入镜像；有盘片时全部可用', () => {
-    expect(floppyAvailability(floppyStatus(0))).toEqual({ insert: true, eject: false, save: false, writeProtect: false });
-    expect(floppyAvailability(floppyStatus(0, 'sys.img'))).toEqual({ insert: true, eject: true, save: true, writeProtect: true });
+    expect(floppyAvailability(floppyStatus(0))).toEqual({ insert: true, eject: false, writeProtect: false });
+    expect(floppyAvailability(floppyStatus(0, 'sys.img'))).toEqual({ insert: true, eject: true, writeProtect: true });
   });
 
   it('软驱没有连接（主机没有这个软驱）时全部不可用，文字按空盘', () => {
-    expect(floppyAvailability(undefined)).toEqual({ insert: false, eject: false, save: false, writeProtect: false });
+    expect(floppyAvailability(undefined)).toEqual({ insert: false, eject: false, writeProtect: false });
     expect([diskText(undefined), floppyStateText(undefined)]).toEqual(['空', '无盘片']);
   });
 });

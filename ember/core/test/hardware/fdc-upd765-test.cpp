@@ -157,6 +157,21 @@ TEST(StandardFloppyDrive, InsertEjectAndTheChangedFlag) {
   EXPECT_TRUE(drive.image().empty());
 }
 
+TEST(StandardFloppyDrive, TheRevisionGrowsOnEveryWriteInsertAndEjectButNotOnSaving) {
+  StandardFloppyDrive drive;
+  const auto start = drive.revision();
+  drive.insertImage(makeImage(), false, "a.img");
+  const auto inserted = drive.revision();
+  EXPECT_GT(inserted, start);
+  drive.writeByte(10, 0x55);
+  const auto written = drive.revision();
+  EXPECT_GT(written, inserted);
+  drive.markSaved();
+  EXPECT_EQ(drive.revision(), written);
+  drive.ejectImage();
+  EXPECT_GT(drive.revision(), written);
+}
+
 TEST(StandardFloppyDrive, SuspendedMediaCanBeRestoredWithItsContents) {
   StandardFloppyDrive drive;
   drive.insertImage(makeImage(), false, "a.img");

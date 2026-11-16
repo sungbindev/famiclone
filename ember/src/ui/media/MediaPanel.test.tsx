@@ -77,14 +77,16 @@ describe('设备面板', () => {
     const drive = row('软驱 A');
     expect(fields(drive)).toEqual({ disk: '空', state: '无盘片' });
     expect((within(drive).getByRole('button', { name: '载入镜像' }) as HTMLButtonElement).disabled).toBe(false);
-    for (const name of ['取出', '保存镜像', '写保护']) expect((within(drive).getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true);
+    for (const name of ['取出', '写保护']) expect((within(drive).getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(drive).queryByRole('button', { name: '保存镜像' })).toBeNull();
   });
 
   it('有盘片：显示镜像名与状态，按钮全部可用；读写中带磁道，有未保存的修改时注明', async () => {
     await setup([floppyStatus(0, 'sys.img', { motor: true, cylinder: 7, modified: true }), floppyStatus(1)]);
     const drive = row('软驱 A');
     expect(fields(drive)).toEqual({ disk: 'sys.img（有未保存的修改）', state: '读写中（磁道 7）' });
-    for (const name of ['写保护', '载入镜像', '取出', '保存镜像']) expect((within(drive).getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(false);
+    for (const name of ['写保护', '载入镜像', '取出']) expect((within(drive).getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(false);
+    expect(within(drive).queryByRole('button', { name: '保存镜像' })).toBeNull();
   });
 
   it('按钮只有图标，没有文字', async () => {
@@ -104,15 +106,12 @@ describe('设备面板', () => {
     expect(fields(row('软驱 B')).disk).toBe('sys.img');
   });
 
-  it('点“取出”与“保存镜像”发出对应的请求', async () => {
+  it('点“取出”发出对应的请求', async () => {
     const { fake } = await setup([floppyStatus(0, 'sys.img', { modified: true }), floppyStatus(1)]);
-    await userEvent.click(within(row('软驱 A')).getByRole('button', { name: '保存镜像' }));
-    await act(async () => settle());
-    expect(fake.calls).toContain('media.floppySave {"drive":0}');
-    expect(fields(row('软驱 A')).disk).toBe('sys.img');
     await userEvent.click(within(row('软驱 A')).getByRole('button', { name: '取出' }));
     await act(async () => settle());
     expect(fake.calls).toContain('media.floppyEject {"drive":0}');
+    expect(fake.count('media.floppySave')).toBe(0);
     expect(fields(row('软驱 A')).disk).toBe('空');
   });
 

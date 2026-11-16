@@ -27,9 +27,9 @@ namespace ember::logic::hardware {
 class MouseBbk final {
  public:
   /** 按键位：左键、右键、中键（读数据命令的第 1 个字节里的位）。 */
-  static constexpr std::uint8_t BUTTON_LEFT = 0x01;
-  static constexpr std::uint8_t BUTTON_RIGHT = 0x02;
-  static constexpr std::uint8_t BUTTON_MIDDLE = 0x08;
+  static constexpr std::uint8_t BUTTON_RIGHT = 0x01;
+  static constexpr std::uint8_t BUTTON_MIDDLE = 0x02;
+  static constexpr std::uint8_t BUTTON_LEFT = 0x04;
 
   /** 回到未接通（上电与复位时）；位移与按键清零。 */
   void reset();

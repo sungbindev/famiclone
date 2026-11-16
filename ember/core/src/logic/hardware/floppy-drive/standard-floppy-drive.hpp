@@ -51,6 +51,7 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   [[nodiscard]] const std::vector<std::uint8_t>& image() const override { return image_; }
   [[nodiscard]] const std::string& source() const override { return source_; }
   [[nodiscard]] bool modified() const override { return modified_; }
+  [[nodiscard]] std::uint64_t revision() const override { return revision_; }
   void markSaved() override { modified_ = false; }
   void setWriteProtected(bool protect) override { writeProtected_ = protect; }
   contracts::hardware::FloppyFaults& mutableFaults() override { return faults_; }
@@ -85,6 +86,7 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   bool writeProtected_{false};
   bool changed_{false};
   bool modified_{false};
+  std::uint64_t revision_{0};
   unsigned cylinder_{0};
   contracts::hardware::FloppyFormat format_{};
   contracts::hardware::FloppyFaults faults_;

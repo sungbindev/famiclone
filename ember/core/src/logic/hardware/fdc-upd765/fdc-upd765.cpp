@@ -83,6 +83,7 @@ class AbsentDrive final : public hw::FloppyDrive {
   [[nodiscard]] const std::vector<std::uint8_t>& image() const override { return image_; }
   [[nodiscard]] const std::string& source() const override { return source_; }
   [[nodiscard]] bool modified() const override { return false; }
+  [[nodiscard]] std::uint64_t revision() const override { return 0; }
   void markSaved() override {}
   void setWriteProtected(bool) override {}
   hw::FloppyFaults& mutableFaults() override { return faults_; }

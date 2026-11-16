@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-controller.test.ts
- * 说明：设备面板控制器的测试：初始状态读取、载入镜像（选定、取消、失败）、取出、保存、写保护、磁带的载入、播放、停止、取出与录音、事件刷新、打印机输出一页的通知、打印失败、定时读取只在面板显示期间运行、核心重启后清空并重新读取、断开后不再响应。
+ * 说明：设备面板控制器的测试：初始状态读取、载入镜像（选定、取消、失败）、取出、写保护、磁带的载入、播放、停止、取出与录音、事件刷新、打印机输出一页的通知、打印失败、软盘镜像自动写回失败、定时读取只在面板显示期间运行、核心重启后清空并重新读取、断开后不再响应。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -109,18 +109,16 @@ describe('MediaController', () => {
     detach();
   });
 
-  it('取出、保存镜像、写保护：各发出对应的请求并刷新状态', async () => {
+  it('取出、写保护：各发出对应的请求并刷新状态', async () => {
     const { fake, controller, detach } = await setup([floppyStatus(0, 'sys.img', { modified: true }), floppyStatus(1)]);
 
     controller.setWriteProtected(0, true);
     await settle();
-    controller.saveFloppy(0);
-    await settle();
     controller.ejectFloppy(0);
     await settle();
     expect(fake.calls).toContain('media.floppyWriteProtect {"drive":0,"writeProtected":true}');
-    expect(fake.calls).toContain('media.floppySave {"drive":0}');
     expect(fake.calls).toContain('media.floppyEject {"drive":0}');
+    expect(fake.count('media.floppySave')).toBe(0);
     expect(controller.snapshot().floppies[0]?.inserted).toBe(false);
     detach();
   });
@@ -148,6 +146,13 @@ describe('MediaController', () => {
     const { fake, detach, notices } = await setup();
     fake.emit('media.printFailed', { message: '目录无法写入' });
     expect(notices).toEqual([{ text: '打印机输出失败：目录无法写入', kind: 'error' }]);
+    detach();
+  });
+
+  it('软盘镜像自动写回失败：用通知提示原因', async () => {
+    const { fake, detach, notices } = await setup();
+    fake.emit('media.floppySaveFailed', { drive: 0, message: '文件被占用' });
+    expect(notices).toEqual([{ text: '自动保存软盘镜像失败：文件被占用', kind: 'error' }]);
     detach();
   });
 

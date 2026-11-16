@@ -35,7 +35,6 @@
     ],
     'DATA01.IMG': [entry('NOTES.TXT', 1024, new Date(2026, 10, 5, 18, 12)), entry('SAVE01.DAT', 8192, new Date(2026, 10, 11, 22, 3))],
   };
-  const unsaved = new Set();
   const changed = new Set();
   const view = { drive: 'A', selected: null, renaming: null };
 
@@ -135,8 +134,7 @@
 
   function renderInfo() {
     if (!disk(view.drive)) return;
-    const image = disk(view.drive).image;
-    $('#ffImage').textContent = image + (unsaved.has(image) ? '（有未保存的修改）' : '');
+    $('#ffImage').textContent = disk(view.drive).image;
     $('#ffUsed').textContent = formatSize(usedBytes(filesOf(view.drive))) + ' / ' + formatSize(CAPACITY);
     let sync = '未运行，直接改镜像';
     if (Ember.devices.writeProtected(view.drive)) sync = '写保护，不能修改';
@@ -211,9 +209,8 @@
     renderRows();
   }
 
-  // 修改完成后：标记未保存、短暂高亮变化的行，并让运行画面跟着变
+  // 修改完成后：短暂高亮变化的行，并让运行画面跟着变
   function afterChange(drive, names) {
-    unsaved.add(disk(drive).image);
     names.forEach((name) => changed.add(name));
     setTimeout(() => {
       names.forEach((name) => changed.delete(name));
@@ -375,11 +372,6 @@
 
   // ---------- 学习机写盘（原型用定时模拟） ----------
 
-  function markSaved(drive) {
-    if (disk(drive)) unsaved.delete(disk(drive).image);
-    refresh();
-  }
-
   setInterval(renderInfo, 1000);
 
   const guestDemo = setInterval(() => {
@@ -392,6 +384,6 @@
     Ember.log('信息', '软驱 A：学习机写入 SAVE01.DAT');
   }, GUEST_DEMO_MILLISECONDS);
 
-  Ember.floppyFiles = { refresh, dirLines, markSaved };
+  Ember.floppyFiles = { refresh, dirLines };
   refresh();
 })();

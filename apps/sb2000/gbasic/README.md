@@ -9,7 +9,7 @@
 | 阶段 | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | 把原版还原成可重定位的符号源码 | 完成（见下），未执行过的路径的地址常量只做了静态复核 |
-| 2 | 移植对照表：每个平台例程的作用与 SB2000 做法、内存使用图 | 未开始 |
+| 2 | 移植对照表：每个平台例程的作用与 SB2000 做法、内存使用图 | 完成，见 [docs/移植对照表.md](docs/%E7%A7%BB%E6%A4%8D%E5%AF%B9%E7%85%A7%E8%A1%A8.md)，其中“待查”的事项在阶段 3 之前查清 |
 | 3 | SB-DOS 的多页 EXE 骨架 | 未开始 |
 | 4 | 原生改写：内存与系统、画面文字、键盘、图形与精灵、声音、文件、手柄 | 未开始 |
 | 5 | 验证：同一脚本跑原版与新版，比较截图与存取盘结果 | 未开始 |
@@ -41,6 +41,7 @@
 | `node tools/discover.mjs [--list] [--write-entries]` | 试探没执行过的代码，列出候选与剩余区段 |
 | `node tools/scan-pointer-pairs.mjs [--write]` | 找“立即数加零页指针”的地址对 |
 | `node tools/scan-immediates.mjs [--window N] [--context]` | 找立即数里拆开的地址候选，要逐条人工看 |
+| `node tools/inventory.mjs [--ram]` | 按例程列出全部平台依赖点（硬件访问与服务调用），`--ram` 另列 RAM 使用统计 |
 | `node tools/run-bbk.mjs --name <标签> [--bin <二进制> --load <地址>]` | 在步步高模拟器里按固定脚本运行并截图（需要调试版模拟器与 BIOS ROM） |
 | `node tools/compare-shots.mjs <标签甲> <标签乙>` | 比较两次运行的截图 |
 | `node tools/compare-dumps.mjs`、`node tools/compare-traces.mjs` | 比较两次运行的内存转存或指令轨迹 |
@@ -52,6 +53,7 @@ apps/sb2000/gbasic/
   analysis/    分析结果：轨迹种子、代码入口、跳过前缀、数据区段与布局、符号、立即数地址
   reference/   生成的原版可重定位源码（gbasic-bbk.s）
   tools/       分析、生成与运行验证工具（lib/ 是共用模块）
+  docs/        移植对照表
   test/        阶段 1 的测试
   build/       中间文件与截图（不进 Git）
 ```

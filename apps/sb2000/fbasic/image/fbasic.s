@@ -5414,11 +5414,11 @@ LAD13:  lda     #$16
         sta     $19
         lda     #$40
         sta     $1A
-        lda     #$05
+        lda     #$01
         sta     $4016
         nop
         nop
-        lda     #$04
+        lda     #$00
         sta     $4016
         nop
         nop

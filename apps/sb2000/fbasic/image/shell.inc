@@ -27,6 +27,7 @@ SHELL_GAME_PAGE         = $7FB9         ; GAME 0-3 数据（3 页，game.s）起
 SHELL_DISK_PAGE         = $7FBA         ; SAVE、LOAD 用的暂存页（扩展 RAM 页号，0 为没有），映像自己管理
 SHELL_DISK_SIZE         = $7FBB         ; 暂存页里文件的字节数（2 字节）
 SHELL_SOUND_TICK        = $7FBD         ; 音乐节拍的帧计数：画面是 50Hz，原版是 60Hz，每 5 帧多走一拍
+SHELL_BOOTING           = $7FBE         ; 不为 0 表示正在启动：显示一直开着（调色板全黑），启动期间的“关显示”与清屏都跳过，到主循环才清零，免得每次关显示都露出灰屏
 
 ; ---- 请求块：映像调用入口门前填写 ----
 ; 服务的参数与结果单元在 DOS 现场里（零页、$0200-$07FF 或 ERAM $6000-$65FF），入口门换入 DOS 现场后才能写、读，

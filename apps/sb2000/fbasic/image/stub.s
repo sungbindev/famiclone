@@ -53,7 +53,6 @@ launch:
         stx     DOS_STACK
         lda     #$00
         sta     HW_PPU_CTRL                     ; 关 NMI，换窗口时不能有中断
-        sta     HW_PPU_MASK
         ldx     #PAGE_COUNT - 1                 ; 缓冲清零：交换后映像看到的是干净的现场
 clear_page:
         txa
@@ -126,7 +125,6 @@ leave:
         sei
         lda     #$00
         sta     HW_PPU_CTRL
-        sta     HW_PPU_MASK
         exchange_then back_in_dos
 back_in_dos:
         set_windows SHELL_DOS_WINDOW

@@ -214,7 +214,7 @@ function countLitDifferences(first, second) {
 const args = process.argv.slice(2);
 const directoryIndex = args.indexOf('--dir');
 const scriptDirectory = directoryIndex >= 0 ? resolve(args[directoryIndex + 1]) : SCRIPTS;
-const filters = args.filter((arg, index) => !arg.startsWith('--') && index !== directoryIndex + 1);
+const filters = args.filter((arg, index) => !arg.startsWith('--') && (directoryIndex < 0 || index !== directoryIndex + 1));
 const names = readdirSync(scriptDirectory).filter((name) => name.endsWith('.txt') && (filters.length === 0 || filters.some((part) => name.includes(part)))).sort();
 const fcDirectory = join(OUTPUT, 'fc');
 const sbDirectory = join(OUTPUT, 'sb');

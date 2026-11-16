@@ -193,7 +193,7 @@ LB958:
         bne     @translate
         cmp     #KEY_F12
         bne     @translate
-        jmp     SHELL_LEAVE
+        jmp     exit_to_dos
 @translate:
         jsr     kbd_translate
         sta     KB_CODE

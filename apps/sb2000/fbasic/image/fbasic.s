@@ -16,7 +16,6 @@ L800C                   := L800B+1
 L8014                   := L8013+1
 L8251                   := L8250+1
 L89A4                   := L89A3+1
-L89C4                   := L89C3+1
 LA86F                   := LA86E+1
 LB8BF                   := LB8BE+1
 LC0F4                   := LC0F3+1
@@ -51,9 +50,12 @@ L80AD:
         .byte   $12,$16,$00,$04,$08,$0A,$0E
 L80B4:
         .byte   $00,$18,$30,$48,$60,$78
-L80BA:  lda     #$00
+L80BA:  jsr     palette_save
+        lda     #$01
+        sta     SHELL_BOOTING
+        lda     #$00
         sta     $2000
-        sta     $2001
+        jsr     black_palette
         jsr     platform_init
         jsr     LB42B
         jsr     LB42B
@@ -236,7 +238,8 @@ L825E:  ldx     #$FF
         jsr     L8662
         jsr     L84BC
         jsr     LB2F7
-L826A:  jsr     L88C0
+L826A:  jsr     boot_done
+        jsr     L88C0
         sta     $E7
 L826F:  lda     #$00
         sta     $E2
@@ -1113,8 +1116,9 @@ L89A3:
         .addr   L8A0C,L8A87,L8AC3,L89FA,L89D2,L8AF2,L8B30,L89E4
         .addr   L89F2,LA091,L89C4,L89C1,L8B3E,L8B74,L8B8C,nmi_read_group,nmi_write_group
 L89C1:  lda     #$00
-L89C3:  ldx     $33A5
-        sta     $2001
+        .byte   $2C
+L89C4:  lda     $33
+        jsr     video_write_mask
 L89C9:  lda     #$00
         sta     $63
         jsr     LB53C
@@ -6227,7 +6231,11 @@ LB44A:
         .byte   "LIST", $0D, $00
         .byte   "RUN", $0D, $00
 ; 清屏：每个图块写成空格、调色板组 0（原版调色板组在属性表里，清屏时同时清属性表）
-LB485:  ldy     #$04
+LB485:  lda     SHELL_BOOTING
+        beq     LB485_clear
+        rts
+LB485_clear:
+        ldy     #$04
         ldx     #$00
 LB48B:  lda     #$20
         sta     $2007
@@ -6239,7 +6247,12 @@ LB48B:  lda     #$20
         bne     LB48B
         rts
 ; 把当前名称表的所有图块调色板组清成 0（只写高字节），返回时 A = 0
-LB494:  lda     $4F
+LB494:  lda     SHELL_BOOTING
+        beq     LB494_clear
+        lda     #$00
+        rts
+LB494_clear:
+        lda     $4F
         jsr     clear_groups_page
         lda     $4F
         clc
@@ -6345,11 +6358,11 @@ LB551:  asl     a
         rts
 LB559:  jsr     LB42B
         lda     #$00
-        sta     $2001
+        jsr     video_write_mask
         rts
 LB562:  jsr     LB42B
         lda     $33
-        sta     $2001
+        jsr     video_write_mask
 LB56A:  rts
 LB56B:  lda     $48
         beq     LB56A
@@ -6479,7 +6492,7 @@ LB668:  jsr     LB559
         sta     $32
         jsr     LBE14
         lda     #$0E
-        sta     $2001
+        jsr     video_write_mask
         sta     $33
         jsr     LB436
         jsr     LB494
@@ -8417,7 +8430,7 @@ LCCAB:
         .byte   $52,$E3,$43,$52,$41,$53,$48,$E4,$45,$52,$52,$E5,$45,$52,$4C,$E6
         .byte   $56,$43,$54,$FF
 LCEBF:
-        .addr   L96C6,L9648,L86B0,L96A6,L9EC9,L8491,L8767,SHELL_LEAVE
+        .addr   L96C6,L9648,L86B0,L96A6,L9EC9,L8491,L8767,exit_to_dos
         .addr   L8491,L8491,LAFFC,L88C5,L97FC,L9887,L9716,L993C
         .addr   L9A6C,L8467,L9782,L9F36,L9C0C,L8467,L885B,L889C
         .addr   LAE0A,L97A4,L9AFD,L8491,LCBDC,L84B6,L975D,LAF4F

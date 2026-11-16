@@ -7,22 +7,52 @@
 ; 备注：被 fbasic.s 包含，和解释器在同一个翻译单元里，用它的标签（LB559、LB562 等）。
 ; ------------------------------------------------------------------------
 
-; 画面初始化：关显示与 NMI，扩展显存用第 0 页，把 CHR 的两张 4K 图案表各 DMA 两份进显存
-; （背景用：扩展显存 $D000、$E000；精灵用：字符 RAM $2000、$3000），再清名称表 0-3（环形滚动用 64 行，每个屏幕占 2 页）
+; 画面初始化：关 NMI，扩展显存用第 0 页，把 CHR 的两张 4K 图案表各 DMA 两份进显存
+; （背景用：扩展显存 $D000、$E000；精灵用：字符 RAM $2000、$3000），再用 DMA 把名称表 0-3 清成空白（环形滚动用 64 行，每个屏幕占 2 页）；
+; 显示一直开着，调色板已经全黑（black_palette），所以这期间显存里的变化看不见，也不会出现关显示时的灰屏
 platform_init:
         lda     #$00
         sta     HW_PPU_CTRL
-        sta     HW_PPU_MASK
         sta     HW_VRAM_BANK
         lda     #$08
         sta     HW_PPU_EXT                      ; 4 色背景，精灵图案表 0（在字符 RAM $2000）
         lda     #$0E
         sta     V_TILE_HIGH                     ; 背景图案表 1（原版开机用 CHR 的 $1000-$1FFF 作背景字库）
         ldx     #$03
-dma_loop:
+init_chr:
         lda     SHELL_CHR_PAGE
         clc
         adc     dma_page,x
+        ldy     dma_dest,x
+        jsr     dma_to_video
+        dex
+        bpl     init_chr
+        lda     #$10                            ; 映像在窗口 6 的页（没有代码）填成空格单元，DMA 两次盖住名称表 0-3：4096 个图块，空格、调色板组 0
+        sta     V_COPY_LEN
+        lda     #$20
+        ldx     V_TILE_HIGH
+        jsr     fill_window_page
+        lda     SHELL_IMAGE_WINDOW + 6
+        ldy     #$00
+        jsr     dma_to_video
+        lda     SHELL_IMAGE_WINDOW + 6
+        ldy     #$10
+        jsr     dma_to_video
+        lda     #$00                            ; 键盘状态清零，只开键盘中断
+        sta     KB_KEY
+        sta     KB_EXT
+        sta     KB_PREFIX
+        sta     KB_MODS
+        sta     SHELL_DISK_PAGE
+        lda     #$FF & ~HW_IRQ_KEYBOARD
+        sta     SHELL_IRQ_MASK
+        sta     HW_IRQ_MASK
+        cli
+        rts
+
+; 通用 DMA 送 4096 字节进显存：A = 源在扩展 RAM 的页号（$80 起），Y = 目的地址高字节（低字节 0）；
+; 显示开着时 DMA 只在垂直消隐里进行，所以启动后等两个垂直消隐再返回；不改 X
+dma_to_video:
         sec
         sbc     #$80                            ; 扩展 RAM 页号从 $80 起
         pha
@@ -42,50 +72,36 @@ dma_loop:
         lda     #$00
         sta     HW_DMA_SOURCE_LOW
         sta     HW_DMA_DEST_LOW
-        lda     dma_dest,x
-        sta     HW_DMA_DEST_HIGH
+        sty     HW_DMA_DEST_HIGH
         lda     #$FF
         sta     HW_DMA_LENGTH_LOW
         lda     #$0F
         sta     HW_DMA_LENGTH_HIGH              ; 4096 字节
         lda     #HW_DMA_START | HW_DMA_FAST
         sta     HW_DMA_MODE
-        lda     #$10                            ; 等 DMA 做完（890KB/s，4096 字节约 8000 个周期）
-        sta     V_TMP2
-dma_wait:
+        jsr     LB42B
+        jmp     LB42B
+
+; 把映像在窗口 6 的页（DISK_STAGE_BASE 起）填上重复的两字节 A、X，共 V_COPY_LEN 个 256 字节块；会改 V_COPY_LEN、V_COPY_DST、V_TMP1、V_TMP2
+fill_window_page:
+        sta     V_TMP1
+        stx     V_TMP2
+        lda     #<DISK_STAGE_BASE
+        sta     V_COPY_DST
+        lda     #>DISK_STAGE_BASE
+        sta     V_COPY_DST + 1
         ldy     #$00
-dma_wait_inner:
-        dey
-        bne     dma_wait_inner
-        dec     V_TMP2
-        bne     dma_wait
-        dex
-        bpl     dma_loop
-        bit     HW_PPU_STATUS                   ; 清名称表 0-3：4096 个图块，空格、调色板组 0
-        lda     #$00
-        sta     HW_PPU_ADDRESS
-        sta     HW_PPU_ADDRESS
-        ldy     #$10
-        ldx     #$00
-clear_names:
-        lda     #$20
-        sta     HW_PPU_DATA
-        lda     V_TILE_HIGH
-        sta     HW_PPU_DATA
-        dex
-        bne     clear_names
-        dey
-        bne     clear_names
-        lda     #$00                            ; 键盘状态清零，只开键盘中断
-        sta     KB_KEY
-        sta     KB_EXT
-        sta     KB_PREFIX
-        sta     KB_MODS
-        sta     SHELL_DISK_PAGE
-        lda     #$FF & ~HW_IRQ_KEYBOARD
-        sta     SHELL_IRQ_MASK
-        sta     HW_IRQ_MASK
-        cli
+fill_window_loop:
+        lda     V_TMP1
+        sta     (V_COPY_DST),y
+        iny
+        lda     V_TMP2
+        sta     (V_COPY_DST),y
+        iny
+        bne     fill_window_loop
+        inc     V_COPY_DST + 1
+        dec     V_COPY_LEN
+        bne     fill_window_loop
         rts
 
 ; DMA 的 4 次传输：CHR 页 0、1（各 4K）送到背景用与精灵用的位置
@@ -550,3 +566,117 @@ bar_row_tile:
         dex
         bne     bar_row_tile
         rts
+
+; ------------------------------------------------------------------------
+; 启动与退出时的画面处理：启动期间显示一直关着，退出前清屏，免得 DOS 重画之前露出 BASIC 的画面。
+; ------------------------------------------------------------------------
+
+; 写 $2001（A = 值，保持不变）：启动期间不关显示（显示关着时屏幕是灰色），免得启动时每次清屏都闪一下灰屏；启动时名称表已经是空白，清屏也跳过了
+video_write_mask:
+        pha
+        lda     SHELL_BOOTING
+        beq     video_mask_write
+        pla
+        pha
+        and     #HW_MASK_BG
+        beq     video_mask_skip
+video_mask_write:
+        pla
+        sta     HW_PPU_MASK
+        rts
+video_mask_skip:
+        pla
+        rts
+
+; 启动完成（进入主循环）：确保显示已打开；不改 A、X、Y
+boot_done:
+        pha
+        lda     SHELL_BOOTING
+        beq     boot_done_exit
+        lda     #$00
+        sta     SHELL_BOOTING
+        txa
+        pha
+        tya
+        pha
+        jsr     LB562
+        pla
+        tay
+        pla
+        tax
+boot_done_exit:
+        pla
+        rts
+
+; 退出回 DOS：先把调色板全写成黑色，再还原 DOS 的空白名称表（页 0 是 $0080，其余页是 $0000，实测 DOS 清屏后如此）、精灵藏起来、滚动归零，
+; 最后还原 DOS 的调色板再交给外壳；显示一直开着，所以没有关显示时的灰屏，DOS 重画之前也不会露出 BASIC 的画面
+exit_to_dos:
+        sei
+        lda     #$00
+        sta     HW_PPU_CTRL
+        jsr     black_palette
+        jsr     LAEEC
+        lda     #$00
+        sta     $2003
+        lda     #$02
+        sta     $4014
+        lda     #$10                            ; 先清零整页，盖住页 2、3
+        sta     V_COPY_LEN
+        lda     #$00
+        tax
+        jsr     fill_window_page
+        lda     SHELL_IMAGE_WINDOW + 6
+        ldy     #$10
+        jsr     dma_to_video
+        lda     #$08                            ; 前半页（页 0 的 1024 个单元）填成 $0080，后半页（页 1）仍是 0
+        sta     V_COPY_LEN
+        lda     #$80
+        ldx     #$00
+        jsr     fill_window_page
+        lda     SHELL_IMAGE_WINDOW + 6
+        ldy     #$00
+        jsr     dma_to_video
+        bit     HW_PPU_STATUS
+        lda     #$00
+        sta     HW_PPU_SCROLL
+        sta     HW_PPU_SCROLL
+        jsr     LB42B
+        ldx     #$3F
+exit_palette:
+        lda     dos_palette,x
+        sta     $2040,x
+        dex
+        bpl     exit_palette
+        jmp     SHELL_LEAVE
+
+; 调色板全写成黑色（$0F）并打开背景显示：等垂直消隐再写；之后显存里的变化都看不见
+black_palette:
+        jsr     LB42B
+        ldx     #$3F
+        lda     #$0F
+black_palette_loop:
+        sta     $2040,x
+        dex
+        bpl     black_palette_loop
+        lda     #$0E
+        sta     HW_PPU_MASK
+        rts
+
+; 进入时的 DOS 调色板（映像的页是运行时的内存，可以写）；只在第一次进入时保存，热启动不再保存
+palette_save:
+        lda     dos_palette_saved
+        bne     palette_save_exit
+        ldx     #$3F
+palette_save_loop:
+        lda     $2040,x
+        and     #$3F
+        sta     dos_palette,x
+        dex
+        bpl     palette_save_loop
+        inc     dos_palette_saved
+palette_save_exit:
+        rts
+dos_palette_saved:
+        .byte   $00
+dos_palette:
+        .res    64

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------------
 # 名称：package-mac.sh
-# 说明：在 macOS 上打包 arm64 版：生成 Schema 代码，编译原生模块，单独导出调试符号并去除原生模块中的符号，再用 Electron Forge 打包。
+# 说明：在 macOS 上打包 arm64 版：生成 Schema 代码，构建帮助文档，编译原生模块，单独导出调试符号并去除原生模块中的符号，再用 Electron Forge 打包。
 # 作者：sungbin
 # 邮箱：sungbin@3578.cn
 # 日期：2026-11-13
@@ -18,6 +18,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
 fi
 
 npm run schema
+npm run help:build
 node tools/build/build-core.mjs --arch arm64
 NATIVE=../build/ember/core/Release/ember_core.node
 dsymutil "$NATIVE" -o "$NATIVE.dSYM"

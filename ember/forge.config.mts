@@ -8,6 +8,7 @@
  * 日期：2026-11-13
  * 备注：原生模块由 npm run core:build 编译到仓库根目录的 build/ember/core/Release（所有 Ember 构建产物都在 build/ember 下，打包输出也在这里），打包时作为额外资源复制到应用的 resources 目录（Windows 另有键盘独占模块 ember_keyboard.node）；
  *       预装的官方 mapper 插件包（build/ember/plugins 下的 .emap，同样由 core:build 打包）以目录为单位复制成 resources/plugins，主进程把它交给核心作为预装目录；
+ *       帮助文档站点（build/ember/help，由 npm run help:build 生成）也整个目录复制成 resources/help，主进程经自定义协议 ember-help:// 提供给帮助窗口；
  *       应用图标是 resources/icon.ico（由 tools/build/make-icons.cjs 生成），打包器按平台取 .ico，安装程序也用它；macOS 的 .icns 与安装包格式以后再定。
  * ------------------------------------------------------------------------
  */
@@ -30,6 +31,8 @@ const NATIVE_MODULE = `${BUILD_ROOT}/core/Release/ember_core.node`;
 const KEYBOARD_MODULE = `${BUILD_ROOT}/core/Release/ember_keyboard.node`;
 /** 打好的预装插件目录：目录名 plugins 保留，成为 resources/plugins。 */
 const BUNDLED_PLUGINS = `${BUILD_ROOT}/plugins`;
+/** 构建好的帮助文档站点（npm run help:build）：目录名 help 保留，成为 resources/help。 */
+const HELP_SITE = `${BUILD_ROOT}/help`;
 /** 当前平台的 ffmpeg 程序目录（解码磁带用）：目录名 <平台>-<架构> 保留，成为 resources/<平台>-<架构>；没有编译好的程序时打包失败。 */
 const FFMPEG_DIRECTORY = `./core/third_party/ffmpeg/bin/${process.platform}-${process.arch}`;
 /** 可执行文件名。 */
@@ -48,6 +51,7 @@ const config: ForgeConfig = {
       NATIVE_MODULE,
       ...(process.platform === 'win32' ? [KEYBOARD_MODULE] : []),
       BUNDLED_PLUGINS,
+      HELP_SITE,
       FFMPEG_DIRECTORY,
       `${NOTICES_DIRECTORY}/${NOTICES_FILE}`
     ]

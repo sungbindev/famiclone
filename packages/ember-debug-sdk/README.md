@@ -2,7 +2,7 @@
 
 Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSocket 客户端，终端客户端 `ember-debug`，以及给 Copilot 等智能体用的 MCP 服务 `ember-debug-mcp`。
 
-调试服务是 Ember 核心里的一个可开关的 WebSocket 服务（JSON-RPC 2.0），模拟器的全部功能都有接口。本 SDK 是它的官方客户端；协议是开放的，也可以用任何语言直接连接，见 [协议参考](../../ember/docs/api/README.md)。
+调试服务是 Ember 核心里的一个可开关的 WebSocket 服务（JSON-RPC 2.0），模拟器的全部功能都有接口。本 SDK 是它的官方客户端；协议是开放的，也可以用任何语言直接连接，见 Ember 帮助文档里的“调试接口手册”（源码在 [ember/help/debug/](../../ember/help/debug/index.md)）。
 
 ## 开启调试服务
 
@@ -108,7 +108,7 @@ VS Code 的 `.vscode/mcp.json`：
 
 ## 接口文档
 
-- [协议参考](../../ember/docs/api/README.md)：每个请求的参数、结果、错误码与事件，由接口定义生成；也可以用终端客户端的 `describe` 查看。
+- 协议参考：Ember 帮助文档里的“调试接口手册”（“帮助”菜单→“帮助文档”），每个请求的参数、结果、错误码与事件，由接口定义生成（在 `ember` 目录运行 `npm run help:build` 构建，页面源码生成在 `ember/help/api/`，不提交）；也可以用终端客户端的 `describe` 查看。
 - SDK 的接口参考：`npm run docs` 生成到 `docs/api`（在 `packages/ember-debug-sdk` 目录里，不提交）。
 - 接口定义本身是 OpenRPC 1.3 文档（[openrpc.json](generated/openrpc.json)），连接后用 `rpc.discover` 也能取到，可以据此生成其他语言的客户端。
 

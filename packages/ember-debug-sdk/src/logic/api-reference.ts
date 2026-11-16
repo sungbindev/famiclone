@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：api-reference.ts
- * 说明：由 OpenRPC 文档生成协议的 Markdown 参考：总览页，加每个模块一页（请求、参数、结果、错误码、事件与数据类型）。
+ * 说明：由 OpenRPC 文档生成协议的 Markdown 参考：总览页（index.md），加每个模块一页（请求、参数、结果、错误码、事件与数据类型）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：npm run docs 调用；不属于 SDK 的公开接口。
+ * 备注：scripts/docs.mjs 调用，输出到 Ember 帮助文档的 help/api；页面里的“连接与报文”链接指向帮助文档里手写的 help/debug/protocol.md；不属于 SDK 的公开接口。
  * ------------------------------------------------------------------------
  */
 
@@ -65,7 +65,7 @@ function methodSection(method: OpenRpcMethod): string[] {
 
 /** 模块页。 */
 function modulePage(module: string, document: OpenRpcDocument): string {
-  const lines = [`# ${module} 模块`, '', '请求与事件的规则、连接与认证见 [README](README.md) 与 Ember 的《调试服务》文档。', ''];
+  const lines = [`# ${module} 模块`, '', '连接、认证与报文规则见[连接与报文](../debug/protocol.md)，全部请求见[请求与事件总览](index.md)。', ''];
   const methods = document.methods.filter((method) => moduleOf(method) === module);
   lines.push('## 请求', '', '| 请求 | 简介 |', '| --- | --- |', ...methods.map((method) => `| [\`${method.name}\`](#${method.name.replaceAll('.', '').toLowerCase()}) | ${cell(method.summary)} |`), '');
   for (const method of methods) lines.push(...methodSection(method));
@@ -85,18 +85,11 @@ function modulePage(module: string, document: OpenRpcDocument): string {
 /** 总览页。 */
 function overviewPage(modules: readonly string[], document: OpenRpcDocument): string {
   const lines = [
-    '# Ember 调试服务协议参考',
+    '<!-- 本文件由 npm run help:build 根据 OpenRPC 文档生成，不要手改 -->',
     '',
-    '本目录由 `npm run docs` 根据随 SDK 打包的 OpenRPC 文档（`packages/ember-debug-sdk/generated/openrpc.json`）生成，不要手改。',
+    '# 请求与事件总览',
     '',
-    '## 连接',
-    '',
-    '- 地址 `ws://127.0.0.1:<端口>/`（WebSocket），默认端口 5688；可选子协议 `ember-debug.v1`。',
-    '- 报文是 JSON-RPC 2.0，参数按名称传递；事件是没有 `id` 的通知。',
-    '- 每条连接的第一个请求必须是 `debug.hello`（带令牌），5 秒内不握手或令牌不对，连接以关闭码 4001 关闭。',
-    '- 结果或事件数据里顶层的 `data` 是二进制时，整条消息改发一个二进制帧：4 字节大端的 JSON 长度、JSON 报文（不含 `data`）、`data` 的原始字节。SDK 已处理，`data` 直接是 `Uint8Array`。',
-    '- 令牌与端口在 Ember 的首选项“调试服务”分组里；Ember 运行时用户数据目录的 `run/debug-endpoint.json` 里有当前的地址与令牌，SDK 与终端客户端用它自动连接。',
-    '- 完整的协议规则（关闭码、限制、保活、事件队列）见 Ember 的《调试服务》文档（docs/04-调试服务.md）。',
+    '调试服务的全部请求与事件，按模块分页。连接、认证、报文格式、二进制帧、限制与关闭码见[连接与报文](../debug/protocol.md)。',
     '',
     '## 错误',
     '',
@@ -120,5 +113,5 @@ function overviewPage(modules: readonly string[], document: OpenRpcDocument): st
  */
 export function generateApiReference(document: OpenRpcDocument): readonly ApiReferenceFile[] {
   const modules = [...new Set(document.methods.map(moduleOf))];
-  return [{ path: 'README.md', content: overviewPage(modules, document) }, ...modules.map((module) => ({ path: `${module}.md`, content: modulePage(module, document) }))];
+  return [{ path: 'index.md', content: overviewPage(modules, document) }, ...modules.map((module) => ({ path: `${module}.md`, content: modulePage(module, document) }))];
 }

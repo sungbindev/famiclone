@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：docs.mjs
- * 说明：生成协议的 Markdown 参考到 Ember 的 docs/api：先打包文档生成器（不属于公开接口），再按 OpenRPC 文档写出各页，并删除不再存在的模块页。
+ * 说明：生成协议的 Markdown 参考到 Ember 帮助文档的 help/api：先打包文档生成器（不属于公开接口），再按 OpenRPC 文档写出各页，并删除不再存在的模块页。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：TypeDoc 生成的 SDK 接口参考（packages/ember-debug-sdk/docs/api，不提交）由 package.json 的 docs 脚本接着生成。
+ * 备注：生成的页面不提交（ember/.gitignore），由 Ember 的 npm run help:build 调用 npm run docs:protocol 重新生成；TypeDoc 生成的 SDK 接口参考（packages/ember-debug-sdk/docs/api，不提交）由 package.json 的 docs 脚本接着生成。
  * ------------------------------------------------------------------------
  */
 
@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
 const sdk = join(dirname(fileURLToPath(import.meta.url)), '..');
-const output = join(sdk, '..', '..', 'ember', 'docs', 'api');
+const output = join(sdk, '..', '..', 'ember', 'help', 'api');
 const work = mkdtempSync(join(tmpdir(), 'ember-debug-docs-'));
 
 try {
@@ -37,7 +37,7 @@ try {
     writeFileSync(path, file.content, 'utf8');
     written += 1;
   }
-  console.log(`协议参考：${files.length} 页，写入 ${written} 页：ember/docs/api`);
+  console.log(`协议参考：${files.length} 页，写入 ${written} 页：ember/help/api`);
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

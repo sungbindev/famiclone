@@ -19,8 +19,8 @@ const page = (path: string): string => FILES.find((file) => file.path === path)?
 describe('generateApiReference', () => {
   it('有总览页和每个模块一页', () => {
     const modules = [...new Set(OPENRPC_DOCUMENT.methods.map((method) => method.name.split('.')[0]))];
-    expect(FILES.map((file) => file.path)).toEqual(['README.md', ...modules.map((module) => `${module}.md`)]);
-    expect(page('README.md')).toContain('debug.hello');
+    expect(FILES.map((file) => file.path)).toEqual(['index.md', ...modules.map((module) => `${module}.md`)]);
+    expect(page('index.md')).toContain('debug.hello');
   });
 
   it('每个请求与事件在所属模块页里都有小节', () => {

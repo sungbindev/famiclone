@@ -31,6 +31,7 @@
     "build": "node scripts/build.mjs",
     "prepack": "npm run build",
     "docs": "node scripts/docs.mjs && typedoc",
+    "docs:protocol": "node scripts/docs.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings src test scripts",
     "test": "vitest run",

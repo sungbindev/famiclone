@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：system-module.tsx
- * 说明：系统模块在外壳里的登记项：“帮助”菜单的“打开日志目录”“关于 Ember”、“关于 Ember”对话框，以及取得预加载接口的常驻组件。
+ * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“打开日志目录”“关于 Ember”、“关于 Ember”对话框，以及取得预加载接口的常驻组件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -18,7 +18,7 @@ import { AboutDialog, type ThirdPartyNotice } from './AboutDialog';
 const DIALOG_ID = 'system.about';
 
 /** 命令的标识。 */
-export const SYSTEM_COMMANDS = { openLogDirectory: 'system.openLogDirectory', openAbout: 'system.openAbout' } as const;
+export const SYSTEM_COMMANDS = { openHelp: 'system.openHelp', openLogDirectory: 'system.openLogDirectory', openAbout: 'system.openAbout' } as const;
 
 /** 对话框内容区的初始尺寸与最小尺寸（像素）。 */
 const DIALOG_SIZE = { width: 520, height: 560, minWidth: 400, minHeight: 320 } as const;
@@ -26,14 +26,16 @@ const DIALOG_SIZE = { width: 520, height: 560, minWidth: 400, minHeight: 320 } a
 /** 用户可见的文字。 */
 const TEXT = {
   about: '关于 Ember',
+  openHelp: '帮助文档',
+  helpFailed: '无法打开帮助文档',
   openLogDirectory: '打开日志目录',
   failed: '无法打开日志目录'
 } as const;
 
-/** 错误里给用户看的说明。 */
-function errorText(error: unknown): string {
+/** 错误里给用户看的说明；错误没有说明时用 fallback。 */
+function errorText(error: unknown, fallback: string): string {
   if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string' && error.message !== '') return error.message;
-  return TEXT.failed;
+  return fallback;
 }
 
 /**
@@ -49,15 +51,23 @@ export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTi
     dialogs: [{ id: DIALOG_ID, title: TEXT.about, Component: (props: ShellPageProps) => <AboutDialog {...props} notices={notices} buildTime={buildTime} />, ...DIALOG_SIZE }],
     commands: [
       {
+        id: SYSTEM_COMMANDS.openHelp,
+        title: TEXT.openHelp,
+        run: (shell) => {
+          holder.bridge?.main.system.openHelp({}).catch((error: unknown) => shell.notify(errorText(error, TEXT.helpFailed), 'error'));
+        }
+      },
+      {
         id: SYSTEM_COMMANDS.openLogDirectory,
         title: TEXT.openLogDirectory,
         run: (shell) => {
-          holder.bridge?.main.system.openLogDirectory({}).catch((error: unknown) => shell.notify(errorText(error), 'error'));
+          holder.bridge?.main.system.openLogDirectory({}).catch((error: unknown) => shell.notify(errorText(error, TEXT.failed), 'error'));
         }
       },
       { id: SYSTEM_COMMANDS.openAbout, title: TEXT.about, run: (shell) => shell.openDialog(DIALOG_ID) }
     ],
     menuItems: [
+      { menu: 'help', command: SYSTEM_COMMANDS.openHelp },
       { menu: 'help', command: SYSTEM_COMMANDS.openLogDirectory },
       { menu: 'help', command: SYSTEM_COMMANDS.openAbout, separatorBefore: true }
     ],

@@ -22,6 +22,12 @@
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": { "type": "object", "properties": {}, "required": [] },
       "errors": ["system.logDirectoryUnavailable"]
+    },
+    "openHelp": {
+      "description": "在应用内弹出帮助文档窗口（已经打开时提到最前）；文档是随应用带的静态页面，位置由主进程决定，界面不能指定。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": ["system.helpUnavailable"]
     }
   },
   "events": {}

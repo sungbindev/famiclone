@@ -31,6 +31,8 @@ import { FileShellStateService } from '../../infra/shell-state/file-shell-state-
 import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
 import { startElectronCoreProcess } from '../../platform/core-process/core-process';
 import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
+import { registerHelpProtocol, registerHelpScheme } from '../../platform/help/help-protocol';
+import { createHelpWindow } from '../../platform/help/help-window';
 import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/launch/launch-args';
 import { loadNativeKeyboard, NativeKeyboardCapture } from '../../platform/keyboard-capture/native-keyboard-capture';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
@@ -52,6 +54,8 @@ const NATIVE_FILE = 'ember_core.node';
 const KEYBOARD_NATIVE_FILE = 'ember_keyboard.node';
 /** 预装插件的目录名：开发时在 build/ember 下，正式包在 resources 下。 */
 const PLUGINS_DIRECTORY = 'plugins';
+/** 帮助文档站点的目录名：开发时在 build/ember 下，正式包在 resources 下。 */
+const HELP_DIRECTORY = 'help';
 /** 平台与架构的名字（如 win32-x64），ffmpeg 程序放在以它命名的目录里：开发时在 core/third_party/ffmpeg/bin 下，正式包在 resources 下。 */
 const PLATFORM_DIRECTORY = `${process.platform}-${process.arch}`;
 /** ffmpeg 程序的文件名。 */
@@ -79,6 +83,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   if (process.platform === 'win32') app.setAppUserModelId(APP_ID);
+  // 帮助文档的自定义协议要在应用就绪之前声明特权。
+  registerHelpScheme();
 
   const userDataPath = app.getPath('userData');
   const logger = new FileErrorLogger(join(userDataPath, 'logs'));
@@ -91,11 +97,13 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(buildRoot, 'core', 'Release', NATIVE_FILE);
   const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(buildRoot, 'core', 'Release', KEYBOARD_NATIVE_FILE);
   const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(buildRoot, PLUGINS_DIRECTORY);
+  const helpRoot = app.isPackaged ? join(process.resourcesPath, HELP_DIRECTORY) : join(buildRoot, HELP_DIRECTORY);
   const ffmpegPath = app.isPackaged
     ? join(process.resourcesPath, PLATFORM_DIRECTORY, FFMPEG_FILE)
     : join(app.getAppPath(), 'core', 'third_party', 'ffmpeg', 'bin', PLATFORM_DIRECTORY, FFMPEG_FILE);
   // 开发版用 resources/icon.ico 做窗口图标（打包后窗口用可执行文件里的图标；macOS 的 Dock 图标以后再定）。
   const windowIcon = app.isPackaged || process.platform === 'darwin' ? undefined : join(app.getAppPath(), 'resources', 'icon.ico');
+  const helpWindow = createHelpWindow({ root: helpRoot, ...(windowIcon ? { icon: windowIcon } : {}) });
   // --debug-port 指定时本次运行强制开启调试服务（不写入首选项），--debug-token 指定令牌。
   const debugLaunch = debugOptionsFromArgv(process.argv);
 
@@ -164,6 +172,8 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
       stopForwarding();
       stopKeyboardForwarding();
       stopFollowingTheme();
+      // 帮助文档窗口随主窗口一起关闭，否则它一个窗口留着时应用退出不了。
+      helpWindow.close();
       if (mainWindow === window) mainWindow = undefined;
     });
   };
@@ -202,6 +212,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     restrictPermissions({ rendererFile, ...(devServerUrl ? { devServerUrl } : {}) });
+    registerHelpProtocol(helpRoot);
     removeDefaultMenu();
     streamHub.start();
     gateway.start();
@@ -211,7 +222,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     const fileDialog = createOpenFileDialog(() => mainWindow, lastDirectories);
     const logDirectory = createLogDirectory(join(userDataPath, 'logs'), (target) => shell.openPath(target));
     const handlers: Record<string, MainRequestHandler> = {};
-    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, core: coreHandling, recentCartridges }));
+    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, helpWindow, core: coreHandling, recentCartridges }));
     registerMainRequestIpc({ ipc: ipcMain, handlers, modules, schemas: CORE_SCHEMAS, isTrustedSender, onError: (error, name) => logError(logger, error, { source: 'mainRequest', name }) });
     registerStreamsIpc({
       ipc: ipcMain,

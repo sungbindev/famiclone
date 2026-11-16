@@ -596,10 +596,9 @@ export function generate(root, options = {}) {
     writeIfChanged(join(root, 'core', 'src', 'contracts', module.name, 'generated', `${module.name}.cpp`), cpp.source, written);
   }
   writeIfChanged(join(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts'), generateTsIndex(modules), written);
-  // 调试服务的接口描述文档（OpenRPC）：写到 docs/api，并生成核心 debug 模块里的 C++ 常量。
+  // 调试服务的接口描述文档（OpenRPC）：生成核心 debug 模块里的 C++ 常量，并写到调试 SDK 的 generated（帮助文档里的协议参考由 SDK 这份文档生成）。
   if (modules.some((module) => module.name === 'debug')) {
     const document = generateOpenRpc(modules);
-    writeIfChanged(join(root, 'docs', 'api', 'openrpc.json'), `${JSON.stringify(document, null, 2)}\n`, written);
     const cpp = generateOpenRpcCpp(document, CPP_HEADER('schema/*.schema.json'));
     writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.hpp'), cpp.header, written);
     writeIfChanged(join(root, 'core', 'src', 'contracts', 'debug', 'generated', 'openrpc.cpp'), cpp.source, written);

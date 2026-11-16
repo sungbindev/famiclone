@@ -71,7 +71,7 @@ describe('window.ember', () => {
     expect(Object.keys(bridge.main.mappers)).toEqual(['openPackage']);
     expect(Object.keys(bridge.main.media)).toEqual(['openFloppy', 'openTape', 'openTapeRecording']);
     expect(Object.keys(bridge.main.preferences)).toEqual(['pickDirectory']);
-    expect(Object.keys(bridge.main.system)).toEqual(['openLogDirectory']);
+    expect(Object.keys(bridge.main.system)).toEqual(['openLogDirectory', 'openHelp']);
     electron.invoke.mockResolvedValue({ ok: true, result: { canceled: true } });
     await expect(bridge.main.cartridges.open({})).resolves.toEqual({ canceled: true });
     expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.open', {});

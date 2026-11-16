@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：system-module.test.tsx
- * 说明：系统模块登记项的测试：“帮助”菜单有“打开日志目录”“关于 Ember”、打开日志目录经常驻组件交来的接口发出请求、失败时用通知给出说明、关于命令打开对话框、对话框已登记。
+ * 说明：系统模块登记项的测试：“帮助”菜单有“帮助文档”“打开日志目录”“关于 Ember”、打开帮助文档与打开日志目录都经常驻组件交来的接口发出请求、失败时用通知给出说明、关于命令打开对话框、对话框已登记。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -15,9 +15,9 @@ import type { EmberBridge } from '../../contracts/shell/shell-bridge';
 import type { ShellApi, ShellCommandDefinition } from '../shell/shell-registry';
 import { createSystemModule, SYSTEM_COMMANDS } from './system-module';
 
-function setup(openLogDirectory: () => Promise<unknown>) {
+function setup(openLogDirectory: () => Promise<unknown>, openHelp: () => Promise<unknown> = () => Promise.resolve({})) {
   const module = createSystemModule([], '2026-11-16 12:00:00');
-  const bridge = { main: { system: { openLogDirectory: vi.fn(openLogDirectory) } } } as unknown as EmberBridge;
+  const bridge = { main: { system: { openLogDirectory: vi.fn(openLogDirectory), openHelp: vi.fn(openHelp) } } } as unknown as EmberBridge;
   const shell = { notify: vi.fn(), openDialog: vi.fn() } as unknown as ShellApi;
   const Host = module.Host as NonNullable<typeof module.Host>;
   const view = render(<Host bridge={bridge} />);
@@ -26,15 +26,33 @@ function setup(openLogDirectory: () => Promise<unknown>) {
 }
 
 describe('系统模块的登记', () => {
-  it('“帮助”菜单有“打开日志目录”与“关于 Ember”，后者前面有分隔线；对话框已登记', () => {
+  it('“帮助”菜单有“帮助文档”“打开日志目录”与“关于 Ember”，后者前面有分隔线；对话框已登记', () => {
     const { module, command } = setup(() => Promise.resolve({}));
     expect(module.menuItems).toEqual([
+      { menu: 'help', command: SYSTEM_COMMANDS.openHelp },
       { menu: 'help', command: SYSTEM_COMMANDS.openLogDirectory },
       { menu: 'help', command: SYSTEM_COMMANDS.openAbout, separatorBefore: true }
     ]);
+    expect(command(SYSTEM_COMMANDS.openHelp).title).toBe('帮助文档');
     expect(command(SYSTEM_COMMANDS.openLogDirectory).title).toBe('打开日志目录');
     expect(command(SYSTEM_COMMANDS.openAbout).title).toBe('关于 Ember');
     expect(module.dialogs?.map((dialog) => dialog.id)).toEqual(['system.about']);
+  });
+
+  it('打开帮助文档：经预加载接口发出请求，成功时没有通知', async () => {
+    const { bridge, shell, command } = setup(() => Promise.resolve({}));
+    command(SYSTEM_COMMANDS.openHelp).run(shell);
+    await waitFor(() => expect(bridge.main.system.openHelp).toHaveBeenCalledWith({}));
+    expect(shell.notify).not.toHaveBeenCalled();
+  });
+
+  it('打开帮助文档失败时用通知给出说明，没有说明时用默认文字', async () => {
+    const failing = setup(() => Promise.resolve({}), () => Promise.reject({ code: 'system.helpUnavailable', message: '无法打开帮助文档：找不到帮助文档' }));
+    failing.command(SYSTEM_COMMANDS.openHelp).run(failing.shell);
+    await waitFor(() => expect(failing.shell.notify).toHaveBeenCalledWith('无法打开帮助文档：找不到帮助文档', 'error'));
+    const silent = setup(() => Promise.resolve({}), () => Promise.reject(new Error('')));
+    silent.command(SYSTEM_COMMANDS.openHelp).run(silent.shell);
+    await waitFor(() => expect(silent.shell.notify).toHaveBeenCalledWith('无法打开帮助文档', 'error'));
   });
 
   it('打开日志目录：经预加载接口发出请求，成功时没有通知', async () => {
@@ -55,6 +73,8 @@ describe('系统模块的登记', () => {
     view.unmount();
     command(SYSTEM_COMMANDS.openLogDirectory).run(shell);
     expect(bridge.main.system.openLogDirectory).not.toHaveBeenCalled();
+    command(SYSTEM_COMMANDS.openHelp).run(shell);
+    expect(bridge.main.system.openHelp).not.toHaveBeenCalled();
   });
 
   it('“关于 Ember”命令打开对话框', () => {

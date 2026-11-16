@@ -11,7 +11,7 @@
 .SYNOPSIS
 构建 Ember 的 Windows x64 版。
 .DESCRIPTION
-依次安装依赖、类型检查、oxlint 检查、依赖边界检查、TypeScript 测试，再生成 Schema 代码、编译 C++ 原生模块并生成安装程序。
+依次安装依赖、类型检查、oxlint 检查、依赖边界检查、TypeScript 测试，再生成 Schema 代码、构建帮助文档、编译 C++ 原生模块并生成安装程序。
 C++ 测试与调试 SDK 的检查不在其中，需要时单独运行 npm run core:test、npm run debug-sdk:check，或用 npm run check 全部运行。
 .PARAMETER SkipCheck
 跳过全部检查，只编译并生成。
@@ -50,6 +50,8 @@ Push-Location $PSScriptRoot
 $buildRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\build\ember'))
 try {
     Invoke-Step '安装依赖' { npm install }
+    # 帮助文档的调试接口手册由调试 SDK 生成，它依赖仓库根目录（npm 工作区）安装的 esbuild
+    Invoke-Step '安装依赖（仓库根目录）' { npm install --prefix .. }
 
     if (-not $SkipCheck) {
         Invoke-Step '类型检查' { npm run typecheck }

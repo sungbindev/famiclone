@@ -12,16 +12,17 @@
     "core:build": "node tools/build/build-core.mjs",
     "core:test": "node tools/build/test-core.mjs",
     "plugins:pack": "node tools/build/pack-plugins.mjs",
-    "start": "npm run schema && npm run core:build && electron-forge start",
+    "help:build": "node tools/build/build-help.mjs",
+    "start": "npm run schema && npm run help:build && npm run core:build && electron-forge start",
     "typecheck": "npm run schema && tsc --noEmit",
     "lint": "oxlint --deny-warnings src tools test",
     "boundaries": "npm run schema && node tools/check/check-modules.mjs",
     "debug-sdk:check": "npm --prefix ../packages/ember-debug-sdk run check",
     "test": "npm run schema && vitest run",
-    "check": "npm run typecheck && npm run lint && npm run boundaries && vitest run && npm run core:test && npm run debug-sdk:check",
-    "package": "npm run schema && npm run core:build && electron-forge package",
-    "package:win": "npm run schema && node tools/build/build-core.mjs --arch x64 && electron-forge package --platform win32 --arch x64",
-    "make:win": "npm run schema && node tools/build/build-core.mjs --arch x64 && electron-forge make --platform win32 --arch x64",
+    "check": "npm run typecheck && npm run lint && npm run boundaries && npm run help:build && vitest run && npm run core:test && npm run debug-sdk:check",
+    "package": "npm run schema && npm run help:build && npm run core:build && electron-forge package",
+    "package:win": "npm run schema && npm run help:build && node tools/build/build-core.mjs --arch x64 && electron-forge package --platform win32 --arch x64",
+    "make:win": "npm run schema && npm run help:build && node tools/build/build-core.mjs --arch x64 && electron-forge make --platform win32 --arch x64",
     "package:mac": "bash tools/build/package-mac.sh"
   },
   "devDependencies": {
@@ -47,6 +48,7 @@
     "react-dom": "^19.3.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
+    "vitepress": "^1.6.4",
     "vitest": "^5.1.0"
   },
   "dependencies": {

@@ -6,3 +6,5 @@ core/src/contracts/*/generated/
 coverage/
 *.log
 !core/test/data/**/*.log
+help/api/
+help/.vitepress/cache/

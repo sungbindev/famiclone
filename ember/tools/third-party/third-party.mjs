@@ -32,6 +32,38 @@ const ELECTRON = 'electron';
 /** 原生模块包含的头文件与提供它的 npm 包。 */
 const NATIVE_HEADERS = { 'napi.h': 'node-addon-api' };
 const ELECTRON_USAGE = '桌面程序框架；其中 Chromium 等组件的许可见程序目录中的 LICENSES.chromium.html';
+/** 帮助文档站点（help/，由 VitePress 构建）随安装包分发的页面框架：只取这些包本身，构建工具（VitePress 自己的依赖、代码高亮等）不进安装包。 */
+const HELP_SITE_PACKAGES = ['vitepress', 'vue', '@vue/runtime-dom', '@vue/runtime-core', '@vue/reactivity', '@vue/shared', '@vue/devtools-api', '@vueuse/core', '@vueuse/shared', '@vueuse/integrations', 'focus-trap', 'tabbable', 'minisearch', 'mark.js'];
+const HELP_SITE_USAGE = '帮助文档站点的页面框架（随安装包分发的帮助文档里用到）';
+
+/** 只读取一个已安装的 npm 包本身的信息（不遍历它的依赖），用于随安装包分发的部分。 */
+function readInstalledPackage(name, usage) {
+  let folder = null;
+  for (let dir = ROOT; folder === null; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'node_modules', name, 'package.json'))) folder = join(dir, 'node_modules', name);
+    else if (dirname(dir) === dir) throw new Error(`找不到 npm 包 ${name}，请先安装依赖`);
+  }
+  const data = JSON.parse(readFileSync(join(folder, 'package.json'), 'utf8'));
+  const licenseFile = readdirSync(folder).find((file) => /^(licen[sc]e|copying)/i.test(file) && statSync(join(folder, file)).isFile());
+  if (licenseFile === undefined) throw new Error(`npm 包 ${name} 没有许可文件`);
+  const licenseText = readFileSync(join(folder, licenseFile), 'utf8').trim();
+  const author = typeof data.author === 'string' ? data.author.replace(/\s*[<(].*$/, '') : (data.author?.name ?? '');
+  const holder = /^copyright\s*(?:\(c\)|©)?\s*(?:\d{4}(?:\s*-\s*\d{4})?,?)?\s*(.+)$/im.exec(licenseText)?.[1]?.trim() ?? '';
+  const authors = [author !== '' ? author : holder].filter((value) => value !== '');
+  const license = typeof data.license === 'string' ? data.license : (data.license?.type ?? '');
+  if (authors.length === 0 || license === '') throw new Error(`npm 包 ${name} 找不到作者或许可`);
+  const repository = typeof data.repository === 'string' ? data.repository : data.repository?.url;
+  return {
+    name,
+    version: data.version ?? '',
+    authors,
+    license,
+    homepage: data.homepage ?? (repository ? repository.replace(/^git\+/, '').replace(/\.git$/, '') : ''),
+    usage,
+    bundled: true,
+    licenseText
+  };
+}
 
 /** 递归列出文件。 */
 function listFiles(directory, accept) {
@@ -103,8 +135,10 @@ export async function collectClient(uiKitDirectory) {
   const entries = [
     ...tool.readDeclarations(join(uiKitDirectory, 'src', 'third_party')),
     ...tool.readDeclarations(join(ROOT, 'core', 'third_party')),
+    ...tool.readDeclarations(join(ROOT, 'help', 'third_party')),
     ...packages,
     ...own([...nativePackages()]),
+    ...HELP_SITE_PACKAGES.map((name) => readInstalledPackage(name, HELP_SITE_USAGE)),
     ...own([ELECTRON], ELECTRON_USAGE)
   ].filter((entry) => entry.bundled);
   const unique = new Map(entries.map((entry) => [entry.name, entry]));

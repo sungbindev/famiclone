@@ -12,6 +12,7 @@
 import type { RecentCartridgesService } from '../../contracts/cartridges/recent-cartridges-service';
 import type { DroppedFilesService } from '../../contracts/shell/dropped-files';
 import type { FileDialog } from '../../contracts/shell/file-dialog';
+import type { HelpWindow } from '../../contracts/shell/help-window';
 import type { LogDirectory } from '../../contracts/shell/log-directory';
 import type { CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
 import type { MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
@@ -25,6 +26,8 @@ export interface MainHandlerContext {
   readonly droppedFiles: DroppedFilesService;
   /** 日志目录。 */
   readonly logDirectory: LogDirectory;
+  /** 帮助文档窗口。 */
+  readonly helpWindow: HelpWindow;
   /** 以主进程的身份向核心发起请求所需的依赖。 */
   readonly core: CoreRequestHandling;
   /** 最近打开的卡带。 */

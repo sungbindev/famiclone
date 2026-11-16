@@ -31,8 +31,8 @@ const MIN_HEIGHT = 463;
 /** 窗口至少要有这么大一块落在某个屏幕的工作区内，否则恢复为默认位置。 */
 const MIN_VISIBLE = 100;
 
-/** 各主题的窗口颜色：background 是标题栏与窗口底色，symbol 是系统按钮上的符号色，与组件库深浅主题一致。 */
-const WINDOW_COLORS: Readonly<Record<ResolvedTheme, { background: string; symbol: string }>> = {
+/** 各主题的窗口颜色：background 是标题栏与窗口底色，symbol 是系统按钮上的符号色，与组件库深浅主题一致；帮助文档窗口共用。 */
+export const WINDOW_COLORS: Readonly<Record<ResolvedTheme, { background: string; symbol: string }>> = {
   dark: { background: '#191a1b', symbol: '#8c8c8c' },
   light: { background: '#fafafd', symbol: '#606060' }
 };
@@ -102,8 +102,8 @@ export function applyThemeSource(source: ThemeSource): void {
   nativeTheme.themeSource = source;
 }
 
-/** 系统标题栏按钮区的样式。 */
-function titleBarOverlay(theme: ResolvedTheme): Electron.TitleBarOverlayOptions {
+/** 系统标题栏按钮区的样式；帮助文档窗口共用。 */
+export function titleBarOverlay(theme: ResolvedTheme): Electron.TitleBarOverlayOptions {
   const colors = WINDOW_COLORS[theme];
   return { color: colors.background, symbolColor: colors.symbol, height: TITLE_BAR_HEIGHT - 1 };
 }

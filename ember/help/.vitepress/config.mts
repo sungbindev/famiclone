@@ -11,12 +11,18 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { HELP_BUILD_DIRECTORY } from '../../tools/build/build-paths.mjs';
+import { uiKitDirectory } from '../../ui-kit-source.mts';
 
 /** 站点源码目录（ember/help）。 */
 const HELP_ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+/** 给 html 写组件库的主题类（与主窗口一样跟随系统深浅色），同时同步 VitePress 的 dark 类，在页面绘制前执行，避免先显示错误的颜色。 */
+const THEME_CLASS_SCRIPT =
+  "(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()";
 
 /** 用户可见的文字。 */
 const TEXT = {
@@ -76,8 +82,12 @@ export default defineConfig({
   description: TEXT.description,
   outDir: HELP_BUILD_DIRECTORY,
   appearance: 'force-auto',
+  head: [['script', {}, THEME_CLASS_SCRIPT]],
+  // 主题里直接引用组件库源码的令牌、主题与标题栏样式，位置与界面打包用的一致（见 ui-kit-source.mts）
+  vite: { resolve: { alias: [{ find: /^@ember-ui-kit\//, replacement: `${resolve(uiKitDirectory(), 'src').replaceAll('\\', '/')}/` }] } },
   markdown: { theme: { light: 'github-light', dark: 'github-dark' } },
   themeConfig: {
+    siteTitle: false,
     nav: [
       { text: TEXT.manual, link: '/manual/', activeMatch: '^/manual/' },
       { text: TEXT.debug, link: '/debug/', activeMatch: '^/(debug|api)/' }

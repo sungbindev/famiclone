@@ -1,0 +1,54 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：style.css
+ * 说明：帮助文档站点的样式覆盖：把 VitePress 默认主题的颜色与字体变量指到组件库的令牌上，让页面配色与主窗口一致，并让出顶部的标题栏。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-17
+ * 备注：这里不写任何颜色数值，颜色只引用组件库令牌（它们随 html 上的 theme-dark、theme-light 变化）；
+ *       选择器写成 :root.dark 是为了压过 VitePress 自己的深色变量。
+ * ------------------------------------------------------------------------
+ */
+
+:root,
+:root.dark {
+  --vp-font-family-base: var(--host-font-family);
+
+  /* 页面底色同主窗口的内容区，导航、侧边栏、代码块等区域同标题栏与外壳 */
+  --vp-c-bg: var(--content-bg);
+  --vp-c-bg-alt: var(--chrome-bg);
+  --vp-c-bg-elv: var(--host-widget-background);
+  --vp-c-bg-soft: var(--host-widget-background);
+  --vp-sidebar-bg-color: var(--chrome-bg);
+
+  --vp-c-text-1: var(--chrome-text-strong);
+  --vp-c-text-2: var(--text-muted);
+  --vp-c-text-3: color-mix(in srgb, var(--text-muted) 70%, transparent);
+
+  --vp-c-divider: var(--chrome-border);
+  --vp-c-border: var(--host-widget-border);
+  --vp-c-gutter: var(--chrome-border);
+
+  --vp-c-brand-1: var(--link);
+  --vp-c-brand-2: var(--link);
+  --vp-c-brand-3: var(--accent);
+  --vp-c-brand-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --vp-button-brand-bg: var(--accent);
+  --vp-button-brand-hover-bg: var(--accent);
+  --vp-button-brand-active-bg: var(--accent);
+  --vp-button-brand-text: var(--accent-foreground);
+  --vp-button-brand-hover-text: var(--accent-foreground);
+  --vp-button-brand-active-text: var(--accent-foreground);
+
+  /* 顶部让出标题栏的高度，导航、侧边栏与锚点偏移都按它下移 */
+  --vp-layout-top-height: var(--title-bar-height);
+}
+
+/* 标题栏固定在窗口顶部，位于 VitePress 的导航之上 */
+.ui-title-bar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--vp-z-index-layout-top);
+}

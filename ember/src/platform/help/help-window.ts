@@ -6,19 +6,19 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
  * 备注：窗口没有预加载脚本、开启沙箱与上下文隔离、关闭 Node 集成，导航锁定在站点内；站点里的外部链接（http、https）交给系统浏览器，其余的丢弃；
- *       站点来自 ember-help:// 协议（见 help-protocol.ts），窗口只显示页面，不能调用主进程的任何请求；底色跟随系统主题，与站点的深浅主题底色一致。
+ *       站点来自 ember-help:// 协议（见 help-protocol.ts），窗口只显示页面，不能调用主进程的任何请求；
+ *       与主窗口一样隐藏系统标题栏、保留系统窗口按钮（macOS 是红绿灯），标题栏由站点页面自绘，窗口底色与按钮区颜色随主题变化（取值与主窗口共用）。
  * ------------------------------------------------------------------------
  */
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
+import { followSystemTheme, resolvedTheme, titleBarOverlay, WINDOW_COLORS } from '../window/app-window';
 import { HELP_START_URL, isHelpUrl, isOpenableExternalUrl } from './help-site';
 
 /** 窗口的初始尺寸与最小尺寸。 */
 const WINDOW_SIZE = { width: 1100, height: 760, minWidth: 640, minHeight: 420 } as const;
-/** 站点深浅主题的页面底色，窗口底色与它一致，避免加载时闪一下。 */
-const BACKGROUNDS = { dark: '#1b1b1f', light: '#ffffff' } as const;
 
 /** 用户可见的文字。 */
 const TEXT = {
@@ -48,13 +48,16 @@ export function createHelpWindow(options: HelpWindowOptions): HelpWindowHandle {
   let window: BrowserWindow | undefined;
 
   const create = (): BrowserWindow => {
+    const theme = resolvedTheme();
     const created = new BrowserWindow({
       ...WINDOW_SIZE,
       title: TEXT.title,
       ...(options.icon ? { icon: options.icon } : {}),
       show: false,
       autoHideMenuBar: true,
-      backgroundColor: nativeTheme.shouldUseDarkColors ? BACKGROUNDS.dark : BACKGROUNDS.light,
+      backgroundColor: WINDOW_COLORS[theme].background,
+      titleBarStyle: 'hidden',
+      ...(process.platform === 'darwin' ? {} : { titleBarOverlay: titleBarOverlay(theme) }),
       webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, spellcheck: false, devTools: !app.isPackaged }
     });
     created.removeMenu();
@@ -68,7 +71,9 @@ export function createHelpWindow(options: HelpWindowOptions): HelpWindowHandle {
       if (isOpenableExternalUrl(url)) void shell.openExternal(url);
     });
     created.once('ready-to-show', () => created.show());
+    const stopFollowingTheme = followSystemTheme(created);
     created.on('closed', () => {
+      stopFollowingTheme();
       if (window === created) window = undefined;
     });
     void created.loadURL(HELP_START_URL);

@@ -9,7 +9,8 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bootAndRun, frames, startSb2000 } from './lib/ember-sb2000.mjs';
+import { enterProgram, runFrames } from '../../../../packages/fcdev/src/emulator/index.mjs';
+import { startSb2000 } from './lib/ember-sb2000.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const total = Number(process.argv[2] ?? 300);
@@ -25,10 +26,9 @@ const nameOf = (address) => {
 };
 try {
   let id;
-  await bootAndRun(client, 'fbasic', async () => {
-    ({ id } = await client.api.inspector.traceStart({ kind: 'instruction', unique: process.env.TRACE_ALL !== '1', maxLines: 400000, file: 'fbasic-trace.txt' }));
-  });
-  await frames(client, total);
+  await enterProgram(client, 'fbasic');
+  ({ id } = await client.api.inspector.traceStart({ kind: 'instruction', unique: process.env.TRACE_ALL !== '1', maxLines: 400000, file: 'fbasic-trace.txt' }));
+  await runFrames(client, total);
   const result = await client.api.inspector.traceStop({ id });
   const lines = readFileSync(result.file, 'utf8').split(/\r?\n/).filter((line) => line.trim() !== '');
   const parsed = lines.map((line) => ({ text: line.trim(), address: Number.parseInt(/^([0-9A-Fa-f]{4})/.exec(line.trim())?.[1] ?? '0', 16) }));

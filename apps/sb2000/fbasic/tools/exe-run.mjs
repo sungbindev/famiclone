@@ -9,7 +9,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bootAndRun, frames, peek, startSb2000 } from './lib/ember-sb2000.mjs';
+import { enterProgram, runFrames } from '../../../../packages/fcdev/src/emulator/index.mjs';
+import { peek, startSb2000 } from './lib/ember-sb2000.mjs';
 import { createLookup } from './lib/lookup.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,11 +24,11 @@ const lookup = createLookup(join(ROOT, 'exe', 'build', 'obj', 'sb2000', 'fbasic'
 const read = async (name) => (await peek(client, symbols.get(name), 1))[0];
 const pc = async () => (await client.api.inspector.getState({ module: 'cpu' })).states[0];
 try {
-  await bootAndRun(client);
-  await frames(client, total);
+  await enterProgram(client, 'fbasic');
+  await runFrames(client, total);
   const samples = [];
   for (let step = 0; step < 4; step += 1) {
-    await frames(client, 7);
+    await runFrames(client, 7);
     const state = await pc();
     samples.push(`${state.fields.find((field) => field.name === 'pc').value.toString(16)} ${lookup(state.fields.find((field) => field.name === 'pc').value, await read('bank_current'))}`);
   }

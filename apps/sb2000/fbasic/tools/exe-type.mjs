@@ -9,7 +9,8 @@
 import { writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bootAndRun, frames, startSb2000, tap, typePc } from './lib/ember-sb2000.mjs';
+import { enterProgram, runFrames, tapKey } from '../../../../packages/fcdev/src/emulator/index.mjs';
+import { startSb2000, typePc } from './lib/ember-sb2000.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.argv[2];
@@ -19,15 +20,15 @@ const session = await startSb2000({ projectDir: join(ROOT, 'exe') });
 const { client } = session;
 const shot = async (path) => writeFileSync(path, (await client.api.output.screenshot()).data);
 try {
-  await bootAndRun(client);
-  await frames(client, 400);
+  await enterProgram(client, 'fbasic');
+  await runFrames(client, 400);
   await typePc(client, text, { hold: Number(process.env.HOLD ?? 6), gap: Number(process.env.GAP ?? 6) });
-  await frames(client, Number(process.env.AFTER ?? 120));
+  await runFrames(client, Number(process.env.AFTER ?? 120));
   await shot(output);
   console.log('已保存', output);
   if (exitAfter) {
-    await tap(client, 'F12');
-    await frames(client, 300);
+    await tapKey(client, 'F12');
+    await runFrames(client, 300);
     await shot(output.replace(/\.png$/, '-exit.png'));
     console.log('已保存退出后的画面');
   }

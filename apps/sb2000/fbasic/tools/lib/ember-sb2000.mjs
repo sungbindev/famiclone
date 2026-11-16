@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：ember-sb2000.mjs
-// 说明：用 fcdev 在 Ember 的学习机里启动 FBASIC.EXE（调试模式，不自动运行），连上调试服务，并提供 DOS 里键入、读内存、读调试符号的辅助函数。
+// 说明：用 fcdev 在 Ember 的学习机里启动 FBASIC.EXE（调试模式，不自动运行），连上调试服务，并提供学习机里键入、读内存、读调试符号的辅助函数；开机进 DOS 并运行程序用 fcdev 的 enterProgram，按键与运行帧数用 fcdev 的 tapKey、runFrames。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
@@ -11,21 +11,13 @@ import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { runFrames, tapKey } from '../../../../../packages/fcdev/src/emulator/index.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..', '..', '..', '..');
 const FCDEV = join(REPO, 'packages', 'fcdev', 'bin', 'fcdev.mjs');
 const SDK = pathToFileURL(join(REPO, 'packages', 'ember-debug-sdk', 'dist', 'node.js')).href;
 const DEFAULT_EMBER = join(REPO, 'ember', 'out', 'Ember-win32-x64', 'ember.exe');
-
-/** DOS 里键入用的物理键位：字母、数字与回车、空格。 */
-export const keyFor = (char) => {
-  if (/^[a-z]$/i.test(char)) return `Key${char.toUpperCase()}`;
-  if (/^[0-9]$/.test(char)) return `Digit${char}`;
-  const table = { ' ': 'Space', '\n': 'Enter', '.': 'Period', ':': 'Semicolon' };
-  if (char in table) return table[char];
-  throw new Error(`不支持的字符：${JSON.stringify(char)}`);
-};
 
 /**
  * 构建并启动 Ember（学习机），装入项目的程序，停在 SB-DOS 开机状态。
@@ -53,35 +45,6 @@ export async function startSb2000({ projectDir, port = 5731 }) {
   };
 }
 
-/** 运行指定帧数并等待结束。 */
-export const frames = (client, count) => client.api.runtime.run({ frames: count, wait: true });
-
-/** 按一下键：按下保持 hold 帧，松开后再等 gap 帧。 */
-export async function tap(client, code, hold = 8, gap = 12) {
-  await client.api.input.key({ code, down: true });
-  await frames(client, hold);
-  await client.api.input.key({ code, down: false });
-  await frames(client, gap);
-}
-
-/** 在 DOS 里键入一串字符（\n 是回车）。 */
-export async function typeDos(client, text) {
-  for (const char of text) await tap(client, keyFor(char));
-}
-
-/**
- * 从开机到在 SB-DOS 里敲下程序名并回车：DOS 的日期提示约 850 帧才开始读键盘，更早按的回车会丢，所以先运行 900 帧；
- * 然后按两次回车跳过日期与时间，再敲程序名与回车（顺序不能乱）。不等程序起来，调用者按需再运行帧数。
- */
-export async function bootAndRun(client, name = 'fbasic', beforeLaunch = undefined) {
-  await frames(client, 900);
-  await tap(client, 'Enter', 8, 8);
-  await tap(client, 'Enter', 8, 8);
-  for (const char of name) await tap(client, keyFor(char), 8, 8);
-  await beforeLaunch?.();
-  await tap(client, 'Enter', 8, 8);
-}
-
 const US_PLAIN = { ' ': 'Space', '\n': 'Enter', '-': 'Minus', '=': 'Equal', ';': 'Semicolon', "'": 'Quote', ',': 'Comma', '.': 'Period', '/': 'Slash', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight', '`': 'Backquote' };
 const US_SHIFTED = { '!': 'Digit1', '@': 'Digit2', '#': 'Digit3', $: 'Digit4', '%': 'Digit5', '^': 'Digit6', '&': 'Digit7', '*': 'Digit8', '(': 'Digit9', ')': 'Digit0', _: 'Minus', '+': 'Equal', ':': 'Semicolon', '"': 'Quote', '<': 'Comma', '>': 'Period', '?': 'Slash' };
 
@@ -103,10 +66,10 @@ export function pcKeyFor(char) {
 export async function typePc(client, text, { hold = 6, gap = 6 } = {}) {
   for (const char of text) {
     const { code, shift } = pcKeyFor(char);
-    if (shift) { await client.api.input.key({ code: 'ShiftLeft', down: true }); await frames(client, 3); }
-    await tap(client, code, hold, gap);
-    if (shift) { await client.api.input.key({ code: 'ShiftLeft', down: false }); await frames(client, 3); }
-    if (char === '\n') await frames(client, 20);
+    if (shift) { await client.api.input.key({ code: 'ShiftLeft', down: true }); await runFrames(client, 3); }
+    await tapKey(client, code, hold, gap);
+    if (shift) { await client.api.input.key({ code: 'ShiftLeft', down: false }); await runFrames(client, 3); }
+    if (char === '\n') await runFrames(client, 20);
   }
 }
 

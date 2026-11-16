@@ -40,6 +40,28 @@ export function readLayout(file) {
 }
 
 /**
+ * 把 addrs、words、rec 区段拆成元素。
+ * @param {{start: number, end: number, kind: string, pattern: string}} range 区段
+ * @returns {{start: number, size: number, kind: 'b'|'w'|'a'}[]} 元素
+ */
+export function dataElements(range) {
+  const elements = [];
+  if (range.kind === 'addrs' || range.kind === 'words') {
+    for (let address = range.start; address <= range.end; address += 2) elements.push({ start: address, size: 2, kind: range.kind === 'addrs' ? 'a' : 'w' });
+    return elements;
+  }
+  let address = range.start;
+  while (address <= range.end) {
+    for (const letter of range.pattern) {
+      const size = letter === 'b' ? 1 : 2;
+      elements.push({ start: address, size, kind: letter });
+      address += size;
+    }
+  }
+  return elements;
+}
+
+/**
  * 读取符号名。
  * @param {string} file 文件路径
  * @returns {Map<number, {name: string, note: string, external: boolean}>} 地址到名字的映射

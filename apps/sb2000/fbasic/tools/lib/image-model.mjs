@@ -7,29 +7,15 @@
 // 备注：lift.mjs（生成源码）、scan-immediates.mjs（找立即数里拆开的地址）共用；分类有问题时抛出错误并列出前 30 条。
 // ------------------------------------------------------------------------
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { OPCODES } from '../../../../../packages/fcdev/src/disasm/opcode-table.mjs';
-import { readAddressList, readRangeList } from './analysis-files.mjs';
-import { CodeMap, OPCODE, SKIP_PREFIX, UNKNOWN } from './code-discovery.mjs';
-import { readLayout, readSymbols } from './layout.mjs';
+import { OPCODE, SKIP_PREFIX, UNKNOWN } from './code-discovery.mjs';
+import { dataElements, readSymbols } from './layout.mjs';
 import { addressingMode } from './opcode-modes.mjs';
+import { BASE, CHR_SIZE, PRG_SIZE, ROM_FILE, ROOT, readRom } from './rom.mjs';
+import { buildSeedMap } from './seed-map.mjs';
 
-export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const BASE = 0x8000;
-export const ROM_FILE = join(ROOT, '..', '..', '..', 'reference', 'nes-games', 'Family BASIC (Japan) (v3.0).nes');
-const INES_HEADER = 16;
-export const PRG_SIZE = 32768;
-export const CHR_SIZE = 8192;
-
-/**
- * 读取 ROM 里的 PRG 与 CHR。
- * @returns {{prg: Buffer, chr: Buffer}} 两段数据
- */
-export function readRom() {
-  const rom = readFileSync(ROM_FILE);
-  return { prg: rom.subarray(INES_HEADER, INES_HEADER + PRG_SIZE), chr: rom.subarray(INES_HEADER + PRG_SIZE, INES_HEADER + PRG_SIZE + CHR_SIZE) };
-}
+export { BASE, CHR_SIZE, PRG_SIZE, ROM_FILE, ROOT, dataElements, readRom };
 
 /**
  * 四位、两位十六进制。
@@ -38,28 +24,6 @@ export function readRom() {
  */
 export const hex4 = (value) => value.toString(16).toUpperCase().padStart(4, '0');
 export const hex2 = (value) => value.toString(16).toUpperCase().padStart(2, '0');
-
-/**
- * 把 addrs、words、rec 区段拆成元素。
- * @param {{start: number, end: number, kind: string, pattern: string}} range 区段
- * @returns {{start: number, size: number, kind: 'b'|'w'|'a'}[]} 元素
- */
-export function dataElements(range) {
-  const elements = [];
-  if (range.kind === 'addrs' || range.kind === 'words') {
-    for (let address = range.start; address <= range.end; address += 2) elements.push({ start: address, size: 2, kind: range.kind === 'addrs' ? 'a' : 'w' });
-    return elements;
-  }
-  let address = range.start;
-  while (address <= range.end) {
-    for (const letter of range.pattern) {
-      const size = letter === 'b' ? 1 : 2;
-      elements.push({ start: address, size, kind: letter });
-      address += size;
-    }
-  }
-  return elements;
-}
 
 /**
  * 读取立即数地址文件。
@@ -91,14 +55,8 @@ export function loadImageModel() {
   const analysis = (name) => join(ROOT, 'analysis', name);
   const symbols = existsSync(analysis('symbols.txt')) ? readSymbols(analysis('symbols.txt')) : new Map();
   const inImage = (address) => address >= BASE && address < end && !symbols.get(address)?.external;
-  const dataRanges = readRangeList(analysis('data-ranges.txt'));
-  const inDataRange = (address) => dataRanges.some((range) => address >= range.start && address <= range.end);
-  const layout = readLayout(analysis('data-layout.txt'));
   const immediates = readImmediates(analysis('immediates.txt'));
-
-  const map = new CodeMap(bytes, BASE, new Set(readAddressList(analysis('skip-prefixes.txt'))));
-  for (const entry of readAddressList(analysis('trace-entries.txt'))) if (!inDataRange(entry)) map.trace([entry], { strict: false, commit: true });
-  for (const entry of readAddressList(analysis('code-entries.txt'))) map.trace([entry], { strict: false, commit: true });
+  const { map, layout } = buildSeedMap();
 
   const owner = new Array(bytes.length).fill(null);
   const problems = [];
@@ -111,8 +69,15 @@ export function loadImageModel() {
       owner[offset] = range;
     }
   }
-  for (let offset = 0; offset < bytes.length; offset += 1) {
-    if (map.kinds[offset] === UNKNOWN && owner[offset] === null) problems.push(`$${hex4(BASE + offset)} 没有分类`);
+  // 没有写进布局的未知字节按“未细分的数据”处理（逐字节原样输出）；它们里的地址只有写进布局或立即数文件才会成为标签
+  for (let offset = 0; offset < bytes.length;) {
+    if (map.kinds[offset] !== UNKNOWN || owner[offset] !== null) { offset += 1; continue; }
+    let last = offset;
+    while (last + 1 < bytes.length && map.kinds[last + 1] === UNKNOWN && owner[last + 1] === null) last += 1;
+    const range = { start: BASE + offset, end: BASE + last, kind: 'bytes', pattern: '', note: '未细分的数据', implicit: true };
+    layout.push(range);
+    for (let index = offset; index <= last; index += 1) owner[index] = range;
+    offset = last + 1;
   }
   if (problems.length > 0) {
     const shown = [...new Set(problems)];

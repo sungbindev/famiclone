@@ -48,7 +48,7 @@ items.forEach((item, index) => {
 
 // 低字节与高字节互为最近的一对才算（避免把相邻两处写法里的低、高字节交叉配对）；
 // 目标低于 $8800 的不自动采用：$8000-$87FF 一带在步步高机器上也是分页窗口里的数据地址，要人工看是映像标签还是分页内存地址
-const AUTO_MINIMUM = 0x8800;
+const AUTO_MINIMUM = BASE;
 const nearest = (from, candidates) => candidates.reduce((best, candidate) => (best === null || Math.abs(candidate.index - from.index) < Math.abs(best.index - from.index) ? candidate : best), null);
 const pairs = [];
 const skipped = [];

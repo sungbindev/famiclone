@@ -1,0 +1,34 @@
+# 数据区段布局：每行“起-止 类型[:模式] 说明”（起止含止）；没有写进这里、又不是代码的字节按“未细分的数据”逐字节输出
+# 类型：fill 同值填充；bytes 字节；words 16 位数值；addrs 地址表（每个字是映像内地址，输出成标签）；text 文字；rec:模式 记录（b 字节、w 数值、a 地址）
+8003-800A  bytes   未查明用途的 8 字节
+800B-8012  addrs   内置程序 GAME 0-3 的起点（指向 $CC8D 之后的记号化程序）
+8013-80A2  words   音阶的发声周期表（72 项，由高到低）
+80A3-80B9  bytes   音长、音量等小表
+817B-817F  text    “[BG]”
+821C-824F  text    BGTOOL 菜单文字（以 0 结尾的几条）
+8250-825D  addrs   上面几条文字的地址
+89A3-89C0  addrs   跳转表（15 项）
+A86E-A879  addrs   跳转表（6 项）
+B338-B3AA  text    开机与提示文字：BASIC HOT START、BYTES FREE、IN、BREAK、ERROR、WRITING、LOADING、SKIP 与一串两字母错误码
+B44A-B484  text    GAME 0-3、SPRITE、LOAD、LIST、RUN 等自动键入的命令文字
+B8BE-B8FD  addrs   处理例程地址表（32 项）
+BAA9-BC10  bytes   Family BASIC 键盘的键码转换表（正常、SHIFT、KANA 等各一张）
+C0F3-C0FE  addrs   跳转表（6 项）
+C21F-C24F  text    BGTOOL 菜单文字：MODE、SELECT、MOVE、COPY、CHAR、CLEAR、FILE（各以 0 结尾）
+C250-C25B  addrs   上面几条文字的地址
+C2A2-C2AE  bytes   小表
+C335-C33C  bytes   键码表
+C33D-C34C  addrs   跳转表（8 项）
+C67B-C696  text    “SAVE(S),LOAD(L)?”与“FILE NAME"”两条提示文字（各以 0 结尾）
+C709-C728  addrs   BGTOOL 的小表地址表（16 项）
+C729-C738  bytes   小表
+C739-C762  addrs   上表指向的地址表（21 项，指向 $C763 起的数据）
+C763-C798  bytes   数据
+C799-C816  addrs   地址表（63 项，指向 $C817 起的数据）
+C817-C8A2  bytes   数据
+CCAB-CEBE  bytes   关键字表：记号（$80 起）后接关键字文字，语句、运算符与函数各一段
+CEBF-CF7A  addrs   语句与函数的处理例程地址表（94 项）
+CF7B-CFA3  bytes   “NS-HUBASIC V3.0”“NINTENDO/SHARP/HUDSON”两条开机文字，以 0 结尾
+CFA4-CFAD  addrs   调色板组地址表（5 项）
+CFAE-FFF9  bytes   调色板、内置程序的背景画面与记号化的 BASIC 程序
+FFFA-FFFF  addrs   向量：NMI（$00ED，在 RAM 里）、RESET、IRQ

@@ -1,11 +1,11 @@
 // ------------------------------------------------------------------------
 // 名称：discover.mjs
-// 说明：对 GBASIC 映像做代码发现并打印报告：轨迹种子与人工确认的入口先追踪，再在剩下的未知区段里试探，列出试探通过的候选供人工复核。
+// 说明：对 Family BASIC 的 PRG 做代码发现并打印报告：CDL 种子与人工确认的入口先追踪，再在剩下的未知区段里试探，列出试探通过的候选供人工复核。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
 // 备注：用法 node tools/discover.mjs [--min <指令条数>] [--list]；--list 额外列出剩余的未知区段。
-//       输入：analysis/trace-entries.txt（轨迹）、analysis/code-entries.txt（人工确认的入口，可含 # 注释）、analysis/data-ranges.txt（人工确认的数据区段，起止地址），
+//       输入：analysis/cdl-entries.txt（CDL 种子）、analysis/code-entries.txt（人工确认的入口，可含 # 注释）、analysis/data-ranges.txt（人工确认的数据区段，起止 地址），
 //       试探不会跨进人工确认的数据区段。
 // ------------------------------------------------------------------------
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -13,29 +13,19 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
 import { CodeMap, hex } from './lib/code-discovery.mjs';
-import { readAddressList, readRangeList } from './lib/analysis-files.mjs';
-
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const IMAGE = join(ROOT, '..', '..', 'bbk', 'gbasic', 'disasm', 'gbasic.bin');
-const BASE = 0x7b00;
+import { readAddressList } from './lib/analysis-files.mjs';
+import { BASE, ROOT } from './lib/image-model.mjs';
+import { buildSeedMap } from './lib/seed-map.mjs';
 
 const args = process.argv.slice(2);
 const minIndex = args.indexOf('--min');
 const MIN_INSTRUCTIONS = minIndex >= 0 ? Number(args[minIndex + 1]) : 6;
 
-const bytes = readFileSync(IMAGE);
-const skipPrefixes = new Set(readAddressList(join(ROOT, 'analysis', 'skip-prefixes.txt')));
-const map = new CodeMap(bytes, BASE, skipPrefixes);
-const traceEntries = readAddressList(join(ROOT, 'analysis', 'trace-entries.txt'));
+const { bytes, map, inLayout: inData, tableTargets } = buildSeedMap();
+const skipFile = join(ROOT, 'analysis', 'skip-prefixes.txt');
+const skipPrefixes = new Set(existsSync(skipFile) ? readAddressList(skipFile) : []);
 const manualEntries = existsSync(join(ROOT, 'analysis', 'code-entries.txt')) ? readAddressList(join(ROOT, 'analysis', 'code-entries.txt')) : [];
-const dataRanges = existsSync(join(ROOT, 'analysis', 'data-ranges.txt')) ? readRangeList(join(ROOT, 'analysis', 'data-ranges.txt')) : [];
-const inData = (address) => dataRanges.some((range) => address >= range.start && address <= range.end);
-
-const usableEntries = traceEntries.filter((entry) => !inData(entry));
-for (const entry of usableEntries) map.trace([entry], { strict: false, commit: true });
-const traced = map.codeBytes();
-for (const entry of manualEntries) map.trace([entry], { strict: false, commit: true });
-console.log(`映像 ${bytes.length} 字节；轨迹种子 ${traceEntries.length} 个，追踪后代码 ${traced} 字节；加人工入口 ${manualEntries.length} 个后 ${map.codeBytes()} 字节`);
+console.log(`映像 ${bytes.length} 字节；人工入口 ${manualEntries.length} 个，地址表追到 ${tableTargets.length} 个入口，代码 ${map.codeBytes()} 字节`);
 
 /**
  * 找出指向某个地址的证据：代码里的 JSR/JMP/分支、数据里的字（目标或目标减 1），以及它紧跟在 RTS、JMP 之后。

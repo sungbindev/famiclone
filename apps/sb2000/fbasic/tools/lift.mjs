@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：lift.mjs
-// 说明：把 GBASIC 原版映像还原成可重定位的 ca65 源码 reference/gbasic-bbk.s：代码、数据、地址表都用标签，汇编后与原映像逐字节一致。
+// 说明：把 Family BASIC v3 的 PRG 还原成可重定位的 ca65 源码 reference/fbasic-nes.s：代码、数据、地址表都用标签，汇编后与原 PRG 逐字节一致。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
@@ -16,18 +16,20 @@ import { dirname, join } from 'node:path';
 import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
 import { renderRoundtripConfig } from '../../../../packages/fcdev/src/disasm/index.mjs';
 import { locateToolchain, runTool } from '../../../../packages/fcdev/src/toolchain/index.mjs';
-import { BASE, ROOT, collectTargets, dataElements, hex2, hex4, loadImageModel } from './lib/image-model.mjs';
+import { BASE, PRG_SIZE, ROM_FILE, ROOT, collectTargets, dataElements, hex2, hex4, loadImageModel } from './lib/image-model.mjs';
 import { addressingMode, formatInstruction } from './lib/opcode-modes.mjs';
 
 const BUILD = join(ROOT, 'build');
 const args = process.argv.slice(2);
+const permuteIndex = args.indexOf('--permute');
+const PERMUTE = permuteIndex >= 0 ? Number(args[permuteIndex + 1]) : null;
 const baseIndex = args.indexOf('--base');
 const LINK_BASE = baseIndex >= 0 ? Number.parseInt(args[baseIndex + 1], 16) : BASE;
 const shiftIndex = args.indexOf('--shift');
 const SHIFT = shiftIndex >= 0 ? Number.parseInt(args[shiftIndex + 1], 16) : 0;
 const splitIndex = args.indexOf('--split');
 const SPLIT_REQUEST = splitIndex >= 0 ? Number.parseInt(args[splitIndex + 1], 16) : 0x8000;
-const SOURCE = SHIFT > 0 ? join(BUILD, 'gbasic-bbk-shift.s') : join(ROOT, 'reference', 'gbasic-bbk.s');
+const SOURCE = PERMUTE !== null ? join(BUILD, 'fbasic-nes-permuted.s') : SHIFT > 0 ? join(BUILD, 'fbasic-nes-shift.s') : join(ROOT, 'reference', 'fbasic-nes.s');
 
 let model;
 try {
@@ -196,7 +198,14 @@ function emitData(range, start, end) {
 }
 
 let highStarted = false;
+/** 可以切开重排的位置（lines 的下标）：前一个条目是无条件跳转、返回的代码，或者是数据 */
+const cutPoints = [];
 items.forEach((item, index) => {
+  if (index > 0) {
+    const previous = items[index - 1];
+    const ends = previous.type === 'data' || (previous.type === 'code' && ['jump', 'jump-indirect', 'return', 'stop'].includes(OPCODES[previous.opcode][2]));
+    if (ends) cutPoints.push({ index, line: lines.length });
+  }
   if (SHIFT > 0 && !highStarted && item.start >= RESIDENT_END) {
     highStarted = true;
     out('        .segment "HIGH"');
@@ -218,12 +227,12 @@ items.forEach((item, index) => {
 // ---- 文件头、外部符号与等式 ----
 const header = [
   '; ------------------------------------------------------------------------',
-  '; 名称：gbasic-bbk.s',
-  '; 说明：步步高 GBASIC.CMD 的可重定位符号源码（原版，未改动）：汇编后与原映像逐字节一致，所有地址都用标签。',
+  '; 名称：fbasic-nes.s',
+  '; 说明：Family BASIC v3.0（NES，mapper 0）PRG 的可重定位符号源码（原版，未改动）：汇编后与原 PRG 逐字节一致，所有地址都用标签。',
   '; 作者：sungbin',
   '; 邮箱：sungbin@3578.cn',
   '; 日期：2026-11-16',
-  '; 备注：由 tools/lift.mjs 根据 analysis/ 里的分析结果生成，不要手改；要改动请改分析文件后重新生成，移植版的源码在 src/。',
+  '; 备注：由 tools/lift.mjs 根据 analysis/ 里的分析结果生成，不要手改；要改动请改分析文件后重新生成，原生版的源码在 exe/。',
   '; ------------------------------------------------------------------------',
   '        .setcpu "6502"',
   '',
@@ -238,7 +247,29 @@ if (equates.length > 0) {
     prelude.push(`${labelName(equate.address).padEnd(24)}:= ${labelName(equate.head)}+${equate.address - equate.head}`);
   }
 }
-const source = `${[...header, ...prelude, '', ...lines].join('\n')}\n`;
+/**
+ * 把源码按可切开的位置切成块，除第一块（复位入口）和最后一块（向量）外用种子打乱顺序。
+ * @param {number} seed 种子
+ * @returns {string[]} 重排后的源码行
+ */
+function permutedLines(seed) {
+  // 相对分支的范围有限，被分支跨过的位置不能切
+  const blocked = new Set();
+  items.forEach((item, index) => {
+    if (item.type !== 'code' || addressingMode(item.opcode) !== 'rel') return;
+    const target = itemIndexAt((item.start + 2 + bytes.readInt8(item.start - BASE + 1)) & 0xffff);
+    for (let position = Math.min(index, target) + 1; position <= Math.max(index, target); position += 1) blocked.add(position);
+  });
+  const starts = [0, ...cutPoints.filter((cut) => !blocked.has(cut.index)).map((cut) => cut.line)];
+  const chunks = starts.map((start, index) => lines.slice(start, starts[index + 1] ?? lines.length));
+  const middle = chunks.slice(1, -1);
+  let state = seed >>> 0;
+  const random = () => { state = (state + 0x6d2b79f5) >>> 0; let value = state; value = Math.imul(value ^ (value >>> 15), value | 1); value ^= value + Math.imul(value ^ (value >>> 7), value | 61); return ((value ^ (value >>> 14)) >>> 0) / 4294967296; };
+  for (let index = middle.length - 1; index > 0; index -= 1) { const other = Math.floor(random() * (index + 1)); [middle[index], middle[other]] = [middle[other], middle[index]]; }
+  console.log(`重排 ${middle.length} 块（共 ${chunks.length} 块，首尾两块不动）`);
+  return [...chunks[0], ...middle.flat(), ...chunks.at(-1)];
+}
+const source = `${[...header, ...prelude, '', ...(PERMUTE !== null ? permutedLines(PERMUTE) : lines)].join('\n')}\n`;
 mkdirSync(dirname(SOURCE), { recursive: true });
 writeFileSync(SOURCE, source);
 console.log(`写入 ${SOURCE}：${items.length} 个条目，${targets.size} 个被引用的地址，${equates.length} 个中间地址等式`);
@@ -261,16 +292,24 @@ SEGMENTS { CODE: load = LOW, type = ro; HIGH: load = HIGH, type = ro; }
 if (!args.includes('--no-verify')) {
   mkdirSync(BUILD, { recursive: true });
   const toolchain = locateToolchain({});
-  const suffix = SHIFT > 0 ? '-shift' : '';
-  const objectFile = join(BUILD, `gbasic-bbk${suffix}.o`);
-  const configFile = join(BUILD, `gbasic-bbk${suffix}.cfg`);
-  const binaryFile = join(BUILD, `gbasic-bbk${suffix}.bin`);
+  const suffix = PERMUTE !== null ? '-permuted' : SHIFT > 0 ? '-shift' : '';
+  const objectFile = join(BUILD, `fbasic-nes${suffix}.o`);
+  const configFile = join(BUILD, `fbasic-nes${suffix}.cfg`);
+  const binaryFile = join(BUILD, `fbasic-nes${suffix}.bin`);
   writeFileSync(configFile, SHIFT > 0 ? shiftedConfig() : renderRoundtripConfig(LINK_BASE, bytes.length));
   for (const [tool, toolArgs] of [['ca65', [SOURCE, '-o', objectFile]], ['ld65', ['-C', configFile, '-o', binaryFile, objectFile]]]) {
     const result = await runTool(toolchain, tool, toolArgs);
     if (result.code !== 0) { console.error(`${tool} 失败：\n${result.stdout}${result.stderr}`.trim()); process.exit(1); }
   }
   const built = readFileSync(binaryFile);
+  if (PERMUTE !== null) {
+    const rom = readFileSync(ROM_FILE);
+    if (built.length !== PRG_SIZE) { console.error(`重排后的 PRG 大小不对：${built.length}`); process.exit(1); }
+    const nesFile = join(BUILD, 'fbasic-permuted.nes');
+    writeFileSync(nesFile, Buffer.concat([rom.subarray(0, 16), built, rom.subarray(16 + PRG_SIZE)]));
+    console.log(`已生成重排的 ROM：${nesFile}`);
+    process.exit(0);
+  }
   if (LINK_BASE !== BASE || SHIFT > 0) {
     console.log(`已汇编：${built.length} 字节（平移或后移时不与原映像比较），输出 ${binaryFile}`);
   } else {

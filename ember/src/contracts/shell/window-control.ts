@@ -11,9 +11,9 @@
  */
 
 /** 界面可以发起的窗口动作。 */
-export const WINDOW_ACTIONS = ['minimize', 'toggleMaximize', 'toggleFullScreen', 'close', 'quit'] as const;
+export const WINDOW_ACTIONS = ['minimize', 'toggleMaximize', 'toggleFullScreen', 'toggleAlwaysOnTop', 'close', 'quit'] as const;
 
-/** 窗口动作：最小化、最大化与还原、全屏与退出全屏、关闭窗口（全部窗口关闭后应用退出）、退出应用。 */
+/** 窗口动作：最小化、最大化与还原、全屏与退出全屏、置顶与取消置顶、关闭窗口（全部窗口关闭后应用退出）、退出应用。 */
 export type WindowAction = (typeof WINDOW_ACTIONS)[number];
 
 /** 判断收到的值是不是白名单里的窗口动作。 */
@@ -25,6 +25,8 @@ export function isWindowAction(value: unknown): value is WindowAction {
 export interface WindowState {
   readonly maximized: boolean;
   readonly fullScreen: boolean;
+  /** 是否始终显示在其他窗口之上。 */
+  readonly alwaysOnTop: boolean;
 }
 
 /** 窗口动作的执行者，由主进程的窗口实现。 */

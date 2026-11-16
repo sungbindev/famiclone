@@ -34,7 +34,7 @@ function createBridge(layout: Partial<ShellLayout> = {}) {
     getState: vi.fn(() => Promise.resolve({ window: null, layout: { ...DEFAULT_LAYOUT, ...layout } })),
     setLayout: vi.fn(),
     windowAction: vi.fn(),
-    getWindowState: vi.fn(() => Promise.resolve({ maximized: false, fullScreen: false })),
+    getWindowState: vi.fn(() => Promise.resolve({ maximized: false, fullScreen: false, alwaysOnTop: false })),
     onWindowStateChange: (listener: (state: WindowState) => void) => {
       windowListener = listener;
       return () => {
@@ -164,10 +164,10 @@ describe('登记表驱动的界面', () => {
     for (const name of ['切换边栏', '切换底部面板', '切换右边栏']) expect(screen.queryByRole('button', { name })).toBeNull();
   });
 
-  it('菜单栏只显示有登记项的菜单：文件、机器，没有视图、设置与帮助', async () => {
+  it('菜单栏只显示有登记项的菜单：文件、机器、设置，没有视图与帮助', async () => {
     renderShell();
     await shown();
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['文件(F)', '机器(M)']);
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['文件(F)', '机器(M)', '设置(S)']);
   });
 
   it('读出保存的底部面板高度，展开时用保存的高度；没有保存过时用默认高度', async () => {
@@ -625,14 +625,29 @@ describe('全屏', () => {
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
     const content = screen.getByText('显示区内容');
-    emitWindowState({ maximized: false, fullScreen: true });
+    emitWindowState({ maximized: false, fullScreen: true, alwaysOnTop: false });
     expect(screen.queryByRole('banner')).toBeNull();
     expect(screen.queryByLabelText('系统栏')).toBeNull();
     expect(screen.getByText('显示区内容')).toBe(content);
-    emitWindowState({ maximized: false, fullScreen: false });
+    emitWindowState({ maximized: false, fullScreen: false, alwaysOnTop: false });
     expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByLabelText('系统栏')).toBeTruthy();
     expect(screen.getByText('显示区内容')).toBe(content);
+  });
+});
+
+describe('窗口置顶', () => {
+  it('“设置”菜单里有“窗口始终置顶”，勾选状态跟随窗口，点击请求切换置顶', async () => {
+    const user = userEvent.setup();
+    const { shell, emitWindowState } = renderShell();
+    await shown();
+    await user.click(screen.getByRole('menuitem', { name: /设置/ }));
+    const item = screen.getByRole('menuitemcheckbox', { name: '窗口始终置顶' });
+    expect(item.getAttribute('aria-checked')).toBe('false');
+    await user.click(item);
+    expect(shell.windowAction).toHaveBeenLastCalledWith('toggleAlwaysOnTop');
+    emitWindowState({ maximized: false, fullScreen: false, alwaysOnTop: true });
+    expect((await screen.findByRole('menuitemcheckbox', { name: '窗口始终置顶' })).getAttribute('aria-checked')).toBe('true');
   });
 });
 
@@ -732,7 +747,7 @@ describe('命令状态刷新、子菜单与常驻组件', () => {
     await shown();
     expect(demo.hostMounts).toBeGreaterThan(0);
     const mounts = demo.hostMounts;
-    emitWindowState({ maximized: false, fullScreen: true });
+    emitWindowState({ maximized: false, fullScreen: true, alwaysOnTop: false });
     expect(demo.hostMounts).toBe(mounts);
     expect(demo.api).toBeDefined();
   });

@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：window-events.ts
  * 说明：窗口事件的监听：窗口移动、改变大小、最大化、还原时报告窗口的位置（非最大化时的左上角坐标），窗口关闭前再报告一次；
- *       最大化、还原、进入与退出全屏时通知窗口状态变了。
+ *       最大化、还原、进入与退出全屏、置顶与取消置顶时通知窗口状态变了。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -28,14 +28,14 @@ export interface ReportedPlacement {
 export interface WindowEventHandlers {
   /** 位置变了。 */
   readonly onPlacement: (placement: ReportedPlacement) => void;
-  /** 最大化或全屏的状态变了。 */
+  /** 最大化、全屏或置顶的状态变了。 */
   readonly onState: () => void;
 }
 
 /** 会改变位置的窗口事件。 */
 const PLACEMENT_EVENTS = ['move', 'resize', 'maximize', 'unmaximize', 'leave-full-screen', 'close'] as const;
-/** 会改变最大化或全屏状态的窗口事件。 */
-const STATE_EVENTS = ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen'] as const;
+/** 会改变最大化、全屏或置顶状态的窗口事件。 */
+const STATE_EVENTS = ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'always-on-top-changed'] as const;
 
 /**
  * 开始监听窗口事件。

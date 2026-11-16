@@ -22,7 +22,7 @@ import { DEFAULT_SHELL_STATE, parseLayoutPatch } from '../../../shared/shell-sta
 import type { SenderCheck } from '../sender-check';
 
 /** 窗口状态在不可信发送方面前的样子。 */
-const HIDDEN_WINDOW_STATE: WindowState = { maximized: false, fullScreen: false };
+const HIDDEN_WINDOW_STATE: WindowState = { maximized: false, fullScreen: false, alwaysOnTop: false };
 
 /** 一次拖放最多登记的文件个数。 */
 const MAX_DROPPED_FILES = 16;

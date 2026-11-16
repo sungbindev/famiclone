@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-module.ts
- * 说明：外壳自己的登记项：命令与菜单项（文件→退出）、全屏命令（F11，没有菜单项）。
+ * 说明：外壳自己的登记项：命令与菜单项（文件→退出、设置→窗口始终置顶）、全屏命令（F11，没有菜单项）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -15,12 +15,14 @@ import type { ShellCommandDefinition, ShellModule } from './shell-registry';
 /** 外壳命令的标识。 */
 export const SHELL_COMMANDS = {
   quit: `${SHELL_NAMESPACE}.quit`,
-  toggleFullScreen: `${SHELL_NAMESPACE}.toggleFullScreen`
+  toggleFullScreen: `${SHELL_NAMESPACE}.toggleFullScreen`,
+  toggleAlwaysOnTop: `${SHELL_NAMESPACE}.toggleAlwaysOnTop`
 } as const;
 
 const TEXT = {
   quit: '退出',
-  fullScreen: '全屏'
+  fullScreen: '全屏',
+  alwaysOnTop: '窗口始终置顶'
 } as const;
 
 /** 外壳的命令。 */
@@ -32,6 +34,12 @@ const COMMANDS: readonly ShellCommandDefinition[] = [
     defaultShortcut: 'F11',
     run: (shell) => shell.toggleFullScreen(),
     checked: (view) => view.fullScreen
+  },
+  {
+    id: SHELL_COMMANDS.toggleAlwaysOnTop,
+    title: TEXT.alwaysOnTop,
+    run: (shell) => shell.toggleAlwaysOnTop(),
+    checked: (view) => view.alwaysOnTop
   }
 ];
 
@@ -39,5 +47,8 @@ const COMMANDS: readonly ShellCommandDefinition[] = [
 export const SHELL_MODULE: ShellModule = {
   name: SHELL_NAMESPACE,
   commands: COMMANDS,
-  menuItems: [{ menu: 'file', command: SHELL_COMMANDS.quit, separatorBefore: true }]
+  menuItems: [
+    { menu: 'settings', command: SHELL_COMMANDS.toggleAlwaysOnTop, separatorBefore: true },
+    { menu: 'file', command: SHELL_COMMANDS.quit, separatorBefore: true }
+  ]
 };

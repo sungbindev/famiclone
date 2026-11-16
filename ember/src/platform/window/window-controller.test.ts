@@ -14,8 +14,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createWindowController, type ControlledWindow } from './window-controller';
 
 /** 假窗口：最大化与全屏状态可调。 */
-function createWindow(initial: { maximized?: boolean; fullScreen?: boolean; destroyed?: boolean } = {}) {
-  const state = { maximized: initial.maximized ?? false, fullScreen: initial.fullScreen ?? false };
+function createWindow(initial: { maximized?: boolean; fullScreen?: boolean; alwaysOnTop?: boolean; destroyed?: boolean } = {}) {
+  const state = { maximized: initial.maximized ?? false, fullScreen: initial.fullScreen ?? false, alwaysOnTop: initial.alwaysOnTop ?? false };
   const window = {
     isDestroyed: () => initial.destroyed ?? false,
     minimize: vi.fn(),
@@ -29,6 +29,10 @@ function createWindow(initial: { maximized?: boolean; fullScreen?: boolean; dest
     isFullScreen: () => state.fullScreen,
     setFullScreen: vi.fn((flag: boolean) => {
       state.fullScreen = flag;
+    }),
+    isAlwaysOnTop: () => state.alwaysOnTop,
+    setAlwaysOnTop: vi.fn((flag: boolean) => {
+      state.alwaysOnTop = flag;
     }),
     close: vi.fn()
   };
@@ -73,6 +77,17 @@ describe('createWindowController', () => {
     expect(window.setFullScreen).toHaveBeenLastCalledWith(false);
   });
 
+  it('置顶与取消置顶交替，全屏时也可以切换', () => {
+    const window = createWindow({ fullScreen: true });
+    const controller = createWindowController(() => window, vi.fn());
+    controller.perform('toggleAlwaysOnTop');
+    expect(window.setAlwaysOnTop).toHaveBeenLastCalledWith(true);
+    expect(controller.state().alwaysOnTop).toBe(true);
+    controller.perform('toggleAlwaysOnTop');
+    expect(window.setAlwaysOnTop).toHaveBeenLastCalledWith(false);
+    expect(controller.state().alwaysOnTop).toBe(false);
+  });
+
   it('退出应用不需要窗口', () => {
     const quit = vi.fn();
     createWindowController(() => undefined, quit).perform('quit');
@@ -85,18 +100,21 @@ describe('createWindowController', () => {
       controller.perform('minimize');
       controller.perform('toggleMaximize');
       controller.perform('toggleFullScreen');
+      controller.perform('toggleAlwaysOnTop');
       controller.perform('close');
     }).not.toThrow();
-    expect(controller.state()).toEqual({ maximized: false, fullScreen: false });
+    expect(controller.state()).toEqual({ maximized: false, fullScreen: false, alwaysOnTop: false });
   });
 
   it('窗口已销毁时不动作', () => {
-    const window = createWindow({ destroyed: true, maximized: true });
+    const window = createWindow({ destroyed: true, maximized: true, alwaysOnTop: true });
     const controller = createWindowController(() => window, vi.fn());
     controller.perform('minimize');
+    controller.perform('toggleAlwaysOnTop');
     controller.perform('close');
     expect(window.minimize).not.toHaveBeenCalled();
+    expect(window.setAlwaysOnTop).not.toHaveBeenCalled();
     expect(window.close).not.toHaveBeenCalled();
-    expect(controller.state()).toEqual({ maximized: false, fullScreen: false });
+    expect(controller.state()).toEqual({ maximized: false, fullScreen: false, alwaysOnTop: false });
   });
 });

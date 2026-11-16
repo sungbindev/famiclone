@@ -56,6 +56,8 @@ export interface ShellViewState {
   /** 底部面板里当前的页签；面板关闭时为 null。 */
   readonly activePanelId: string | null;
   readonly fullScreen: boolean;
+  /** 窗口是否始终置顶。 */
+  readonly alwaysOnTop: boolean;
 }
 
 /** 命令：菜单项与快捷键都经命令执行动作。 */
@@ -169,6 +171,8 @@ export interface ShellApi {
   togglePanel(panelId: string): void;
   /** 进入或退出全屏。 */
   toggleFullScreen(): void;
+  /** 窗口置顶或取消置顶。 */
+  toggleAlwaysOnTop(): void;
   /** 退出应用。 */
   quit(): void;
   /** 执行命令；命令不存在或当前不可用时什么都不做。 */

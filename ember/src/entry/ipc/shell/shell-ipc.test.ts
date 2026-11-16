@@ -30,7 +30,7 @@ function setup(trusted = true) {
   } as unknown as IpcMain;
   const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220, selectedMachine: null, autoCollapsePanels: [] } };
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), flush: vi.fn() };
-  const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false })) };
+  const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false, alwaysOnTop: true })) };
   const keyboard = { setCapture: vi.fn((enabled: boolean) => enabled), onKey: vi.fn(), onReleased: vi.fn() } satisfies KeyboardCaptureService;
   const droppedFiles = {
     register: vi.fn((paths: readonly string[]) => paths.map((path, index) => ({ id: index + 1, name: path.slice(path.lastIndexOf('/') + 1) }))),
@@ -53,13 +53,13 @@ describe('读取', () => {
   it('可信的页面读到保存的状态与窗口状态', () => {
     const { invoke, savedState } = setup();
     expect(invoke(SHELL_CHANNELS.getState)).toBe(savedState);
-    expect(invoke(SHELL_CHANNELS.getWindowState)).toEqual({ maximized: true, fullScreen: false });
+    expect(invoke(SHELL_CHANNELS.getWindowState)).toEqual({ maximized: true, fullScreen: false, alwaysOnTop: true });
   });
 
   it('不可信的发送方只得到默认值', () => {
     const { invoke } = setup(false);
     expect(invoke(SHELL_CHANNELS.getState)).toEqual(DEFAULT_SHELL_STATE);
-    expect(invoke(SHELL_CHANNELS.getWindowState)).toEqual({ maximized: false, fullScreen: false });
+    expect(invoke(SHELL_CHANNELS.getWindowState)).toEqual({ maximized: false, fullScreen: false, alwaysOnTop: false });
   });
 });
 
@@ -204,14 +204,14 @@ describe('forwardWindowState', () => {
   it('把窗口当前的状态推送给页面', () => {
     const send = vi.fn();
     const contents = { isDestroyed: () => false, send } as unknown as WebContents;
-    forwardWindowState(contents, () => ({ maximized: false, fullScreen: true }))();
-    expect(send).toHaveBeenCalledWith(SHELL_CHANNELS.windowStateChanged, { maximized: false, fullScreen: true });
+    forwardWindowState(contents, () => ({ maximized: false, fullScreen: true, alwaysOnTop: true }))();
+    expect(send).toHaveBeenCalledWith(SHELL_CHANNELS.windowStateChanged, { maximized: false, fullScreen: true, alwaysOnTop: true });
   });
 
   it('页面已销毁时不推送', () => {
     const send = vi.fn();
     const contents = { isDestroyed: () => true, send } as unknown as WebContents;
-    forwardWindowState(contents, () => ({ maximized: false, fullScreen: false }))();
+    forwardWindowState(contents, () => ({ maximized: false, fullScreen: false, alwaysOnTop: false }))();
     expect(send).not.toHaveBeenCalled();
   });
 });

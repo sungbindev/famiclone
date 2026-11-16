@@ -37,10 +37,12 @@ describe('外壳自己的登记项', () => {
     expect(registry.bottomPanels).toEqual([]);
   });
 
-  it('菜单项：文件里只有退出，没有视图菜单项', () => {
+  it('菜单项：文件里只有退出，设置里只有窗口始终置顶，没有视图菜单项', () => {
     const registry = buildShellRegistry([SHELL_MODULE]);
-    expect(registry.menuItems.filter((item) => item.menu === 'file').map((item) => registry.commands.get(item.command ?? '')?.title)).toEqual(['退出']);
-    expect(registry.menuItems.some((item) => item.menu !== 'file')).toBe(false);
+    const titles = (menu: string) => registry.menuItems.filter((item) => item.menu === menu).map((item) => registry.commands.get(item.command ?? '')?.title);
+    expect(titles('file')).toEqual(['退出']);
+    expect(titles('settings')).toEqual(['窗口始终置顶']);
+    expect(registry.menuItems.some((item) => item.menu !== 'file' && item.menu !== 'settings')).toBe(false);
   });
 });
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：window-controller.ts
- * 说明：窗口动作的执行：最小化、最大化与还原、全屏与退出全屏、关闭窗口、退出应用，并读出窗口的最大化与全屏状态。
+ * 说明：窗口动作的执行：最小化、最大化与还原、全屏与退出全屏、置顶与取消置顶、关闭窗口、退出应用，并读出窗口的最大化、全屏与置顶状态。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -19,16 +19,18 @@ export interface ControlledWindow {
   unmaximize(): void;
   isFullScreen(): boolean;
   setFullScreen(flag: boolean): void;
+  isAlwaysOnTop(): boolean;
+  setAlwaysOnTop(flag: boolean): void;
   close(): void;
 }
 
 /** 窗口动作，与契约里的白名单一致。 */
-type Action = 'minimize' | 'toggleMaximize' | 'toggleFullScreen' | 'close' | 'quit';
+type Action = 'minimize' | 'toggleMaximize' | 'toggleFullScreen' | 'toggleAlwaysOnTop' | 'close' | 'quit';
 
 /** 窗口控制器。 */
 export interface WindowControllerImpl {
   perform(action: Action): void;
-  state(): { readonly maximized: boolean; readonly fullScreen: boolean };
+  state(): { readonly maximized: boolean; readonly fullScreen: boolean; readonly alwaysOnTop: boolean };
 }
 
 /**
@@ -62,6 +64,9 @@ export function createWindowController(getWindow: () => ControlledWindow | undef
         case 'toggleFullScreen':
           window.setFullScreen(!window.isFullScreen());
           break;
+        case 'toggleAlwaysOnTop':
+          window.setAlwaysOnTop(!window.isAlwaysOnTop());
+          break;
         case 'close':
           window.close();
           break;
@@ -69,7 +74,7 @@ export function createWindowController(getWindow: () => ControlledWindow | undef
     },
     state: () => {
       const window = alive();
-      return { maximized: window?.isMaximized() ?? false, fullScreen: window?.isFullScreen() ?? false };
+      return { maximized: window?.isMaximized() ?? false, fullScreen: window?.isFullScreen() ?? false, alwaysOnTop: window?.isAlwaysOnTop() ?? false };
     }
   };
 }

@@ -124,7 +124,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   const [panel, setPanel] = useState<PanelState>({ open: false, id: registry.bottomPanels[0]?.id ?? '' });
   // 底部面板的初始高度：读到保存的高度之前为 null，此时不显示界面。
   const [bottomHeight, setBottomHeight] = useState<number | null>(null);
-  const [windowState, setWindowState] = useState<WindowState>({ maximized: false, fullScreen: false });
+  const [windowState, setWindowState] = useState<WindowState>({ maximized: false, fullScreen: false, alwaysOnTop: false });
   // 开着“自动收缩”的面板标识：读到保存的清单之前都是关闭。
   const [autoCollapse, setAutoCollapse] = useState<readonly string[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -152,7 +152,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   }, [bridge]);
 
   const bottomPanelOpen = panel.open;
-  const view: ShellViewState = { bottomPanelOpen, activePanelId: panel.open ? panel.id : null, fullScreen: windowState.fullScreen };
+  const view: ShellViewState = { bottomPanelOpen, activePanelId: panel.open ? panel.id : null, fullScreen: windowState.fullScreen, alwaysOnTop: windowState.alwaysOnTop };
   const live = useRef<LiveState>({ view, autoCollapse, menuOpen: openMenuId !== null });
   useLayoutEffect(() => {
     live.current = { view, autoCollapse, menuOpen: openMenuId !== null };
@@ -236,6 +236,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
       },
       togglePanel: (panelId) => setPanel((current) => (current.open && current.id === panelId ? { ...current, open: false } : { open: true, id: panelId })),
       toggleFullScreen: () => bridge.shell.windowAction('toggleFullScreen'),
+      toggleAlwaysOnTop: () => bridge.shell.windowAction('toggleAlwaysOnTop'),
       quit: () => bridge.shell.windowAction('quit'),
       runCommand: (commandId) => {
         const command = registry.commands.get(commandId);

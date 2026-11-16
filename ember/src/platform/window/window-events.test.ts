@@ -57,14 +57,14 @@ describe('watchWindow', () => {
     expect(onPlacement).not.toHaveBeenCalled();
   });
 
-  it('最大化、还原、进入与退出全屏时通知状态变了，移动与改变大小不通知', () => {
+  it('最大化、还原、进入与退出全屏、置顶状态变化时通知状态变了，移动与改变大小不通知', () => {
     const { window, emit } = createWindow();
     const onState = vi.fn();
     watchWindow(window, { onPlacement: vi.fn(), onState });
     emit('move');
     emit('resize');
     expect(onState).not.toHaveBeenCalled();
-    for (const event of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) emit(event);
-    expect(onState).toHaveBeenCalledTimes(4);
+    for (const event of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'always-on-top-changed']) emit(event);
+    expect(onState).toHaveBeenCalledTimes(5);
   });
 });

@@ -36,6 +36,15 @@ const TEXT_AREA_START = 0x6000;
 const TEXT_AREA_END = 0x7fff;
 const TEXT_AREA_SHIFT = 0x5000;
 const TEXT_HIGH_BYTE_SITES = new Set([0x8148, 0x84d8, 0x86a3, 0x97d7, 0xadc8, 0xb1bd, 0xb1ca, 0xb20b]);
+// 原版直接访问 NES 的 PPU 寄存器：$2000/$2001/$2005/$2006/$2007/$2002 改调外壳（platform.s）里的转换层；$2003 与 $4014（精灵 DMA）6576 的写法相同，不动
+const PPU_CALLS = new Map([
+  ['sta:2000', 'ppu_w_ctrl'], ['sta:2001', 'ppu_w_mask'], ['sta:2005', 'ppu_w_scroll'], ['sta:2006', 'ppu_w_addr'], ['stx:2006', 'ppu_w_addr_x'],
+  ['sta:2007', 'ppu_w_data'], ['lda:2007', 'ppu_r_data'], ['lda:2002', 'ppu_r_status'],
+]);
+// 背景字库：原版 CHR 的 $1000-$1FFF（背景图案表）
+const CHR_FILE = join(ROOT, 'reference', 'fbasic-chr.bin');
+const CHR_BG_OFFSET = 0x1000;
+const CHR_BG_SIZE = 0x1000;
 
 const { model, chunks, chunkAt } = buildChunks();
 const { items, bytes } = model;
@@ -94,7 +103,8 @@ for (const chunk of chunks.filter((entry) => entry.kind === 'data')) {
   } else location.set(chunk.id, 'R');
 }
 const imageBank = dataBank + 1;
-const totalBanks = imageBank;
+const chrBgBank = imageBank + 1;
+const totalBanks = chrBgBank;
 
 // ---- 删除范围 ----
 const removeFile = join(ROOT, 'analysis', 'port-remove.txt');
@@ -118,6 +128,7 @@ const stubFor = (target) => {
 for (const name of platformLabels) if (name.endsWith('_far')) stubFor(Number.parseInt(name.slice(0, 4), 16));
 const farAliases = [...platformLabels].filter((name) => name.endsWith('_far') && !stubs.has(Number.parseInt(name.slice(0, 4), 16))).map((name) => `L${name}`);
 
+const ppuCallsUsed = new Set();
 const emitter = createEmitter(model, {
   mapAddress,
   codeOperand(item, target) {
@@ -140,6 +151,10 @@ const emitter = createEmitter(model, {
     if (mnemonic === 'pla' && OPCODES[items[model.itemIndexAt(item.start) + 1].opcode]?.[0] === 'rti') return '';
     if (mnemonic === 'rti') return 'rts';
     if (TEXT_HIGH_BYTE_SITES.has(item.start)) return `${mnemonic.padEnd(8)}#$${(bytes[item.start - BASE + 1] + (TEXT_AREA_SHIFT >> 8)).toString(16).toUpperCase().padStart(2, '0')}`;
+    if (addressingMode(item.opcode) === 'abs') {
+      const call = PPU_CALLS.get(`${mnemonic}:${bytes.readUInt16LE(item.start - BASE + 1).toString(16)}`);
+      if (call !== undefined) { ppuCallsUsed.add(call); return `jsr     ${call}`; }
+    }
     return undefined;
   },
 });
@@ -177,7 +192,7 @@ const header = [
   '; 备注：平台相关的部分（入口、NMI 钩子、跳板进入例程 far_enter、入口门、键盘与画面等）在 platform.s 等手写文件里；要改动请改分析文件或生成器后重新生成。',
   '; ------------------------------------------------------------------------',
   '        .setcpu "6502"',
-  '        .import far_enter, fb_page6',
+  `        .import far_enter, fb_page6, ${[...ppuCallsUsed].sort().join(', ')}`,
   ...(exportsList.length > 0 ? [`        .export ${exportsList.join(', ')}`] : []),
   '',
 ];
@@ -188,6 +203,10 @@ for (const name of ['CODE', 'RODATA', ...[...segments.keys()].filter((key) => ke
   if (name === 'CODE') body.push('; ---- 跳板', ...stubLines, '');
 }
 body.push(`        .segment "BANK${imageBank}"`, '; ---- 现场缓冲：7 页（零页与 $0200-$07FF），由 platform.s 里的现场换入换出使用', '        .res    1792, $00', '');
+const chrBytes = readFileSync(CHR_FILE).subarray(CHR_BG_OFFSET, CHR_BG_OFFSET + CHR_BG_SIZE);
+body.push(`        .segment "BANK${chrBgBank}"`, '; ---- 背景字库：原版 CHR 的 $1000-$1FFF（256 个 4 色图案，每个 16 字节），由 platform.s 的 ppu_init 送进扩展显存');
+for (let at = 0; at < chrBytes.length; at += 16) body.push(`        .byte   ${[...chrBytes.subarray(at, at + 16)].map((value) => `$${value.toString(16).toUpperCase().padStart(2, '0')}`).join(',')}`);
+body.push('');
 if (farAliases.length > 0) body.push('; ---- 平台用的别名：目标在常驻页里，不需要跳板', ...farAliases.map((name) => `${name} = ${name.replace('_far', '')}`), '');
 writeFileSync(join(SRC, 'core.s'), `${[...header, ...emitter.preludeLines(), '', ...body].join('\n')}\n`);
 
@@ -195,7 +214,8 @@ const layout = [
   '; 由 tools/port.mjs 生成：页号常量（库页号从 1 起，对应 start.s 里的 bank_select）',
   `CODE_BANKS       = ${codeBanks}`,
   `TOTAL_BANKS      = ${totalBanks}`,
-  `BANK_IMAGE       = ${imageBank}                  ; 两份现场缓冲`,
+  `BANK_IMAGE       = ${imageBank}                  ; 现场缓冲`,
+  `BANK_CHR_BG      = ${chrBgBank}                 ; 背景字库`,
   ...dataBanks.map((entry) => `BANK_DATA_${entry.bank}     = ${entry.bank}                  ; ${entry.chunks.map((chunk) => `$${hex4(chunk.start)}-$${hex4(chunk.end)}`).join('、')}`),
   '',
 ];
@@ -203,6 +223,6 @@ writeFileSync(join(SRC, 'layout.inc'), layout.join('\n'));
 
 const residentCode = sizeOf('CODE');
 const residentData = sizeOf('RODATA');
-console.log(`常驻：代码 ${residentCode} 字节，数据 ${residentData} 字节，跳板 ${stubs.size} 个（${stubs.size * 6} 字节）；库页 ${totalBanks} 个（代码 ${codeBanks}，数据 ${totalBanks - 1 - codeBanks}，现场缓冲 1）`);
+console.log(`常驻：代码 ${residentCode} 字节，数据 ${residentData} 字节，跳板 ${stubs.size} 个（${stubs.size * 6} 字节）；库页 ${totalBanks} 个（代码 ${codeBanks}，数据 ${totalBanks - 2 - codeBanks}，现场缓冲 1，背景字库 1）`);
 for (const [name, list] of [...segments].filter(([key]) => key.startsWith('BANK'))) console.log(`${name}：${sizeOf(name)} 字节`);
 console.log(`写入 exe/src/core.s 与 exe/src/layout.inc；fcdev.json 的 banks 需要是 ${totalBanks}`);

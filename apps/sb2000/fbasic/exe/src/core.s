@@ -7,7 +7,7 @@
 ; 备注：平台相关的部分（入口、NMI 钩子、跳板进入例程 far_enter、入口门、键盘与画面等）在 platform.s 等手写文件里；要改动请改分析文件或生成器后重新生成。
 ; ------------------------------------------------------------------------
         .setcpu "6502"
-        .import far_enter, fb_page6
+        .import far_enter, fb_page6, ppu_r_data, ppu_r_status, ppu_w_addr, ppu_w_addr_x, ppu_w_ctrl, ppu_w_data, ppu_w_mask, ppu_w_scroll
         .export L80BA_far, L8971_far
 
 
@@ -30,8 +30,8 @@ LCFA9                   := LCFA4+5
 
         .segment "CODE"
 ; ---- $81EC-$81F2（代码 7 字节）
-L81EC:  sta     $2006
-        stx     $2006
+L81EC:  jsr     ppu_w_addr
+        jsr     ppu_w_addr_x
         rts
 ; ---- $820D-$821B（代码 15 字节）
 L820D:  asl     a
@@ -103,7 +103,7 @@ L8970:  rts
 ; ---- $89C1-$89D1（代码 17 字节）
 L89C1:  lda     #$00
 L89C3:  ldx     $33A5
-        sta     $2001
+        jsr     ppu_w_mask
 L89C9:  lda     #$00
         sta     $63
         jsr     LB53C
@@ -113,15 +113,15 @@ L89D2:  jsr     L89D8
         jmp     L89C9
 ; ---- $89D8-$89E3（代码 12 字节）
 L89D8:  jsr     LB52E
-        lda     $2007
-        lda     $2007
+        jsr     ppu_r_data
+        jsr     ppu_r_data
         sta     $73
         rts
 ; ---- $89E4-$89F1（代码 14 字节）
 L89E4:  jsr     L89D8
         jsr     LB52E
         lda     $61
-L89EC:  sta     $2007
+L89EC:  jsr     ppu_w_data
         jmp     L89C9
 ; ---- $89F2-$89F9（代码 8 字节）
 L89F2:  jsr     LB52E
@@ -131,7 +131,7 @@ L89F2:  jsr     LB52E
 L89FA:  jsr     LB52E
         ldx     $48
         lda     #$20
-L8A01:  sta     $2007
+L8A01:  jsr     ppu_w_data
         inx
         cpx     #$1C
         bne     L8A01
@@ -139,8 +139,8 @@ L8A01:  sta     $2007
 ; ---- $8B74-$8B8B（代码 24 字节）
 L8B74:  jsr     LB52E
         ldx     #$00
-        lda     $2007
-L8B7C:  lda     $2007
+        jsr     ppu_r_data
+L8B7C:  jsr     ppu_r_data
         sta     $0500,x
         inx
         cpx     #$1C
@@ -153,7 +153,7 @@ L8B8C:  inc     $49
         jsr     LB52E
         ldx     #$00
 L8B96:  lda     $0500,x
-        sta     $2007
+        jsr     ppu_w_data
         inx
         cpx     #$1C
         bne     L8B96
@@ -168,39 +168,6 @@ L8BA4:  lda     #$00
 L8C20:  ldy     #$00
         sta     ($09),y
         jmp     L908C
-; ---- $8DB1-$8DF1（代码 65 字节）
-L8DB1:  lda     $7C
-        sta     $84
-        lda     $7D
-        sta     $85
-        lda     $7E
-        sta     $44
-        lda     $7F
-        sta     $45
-        jsr     L8540_far
-        lda     $5B
-        sta     $09
-        lda     $5C
-        sta     $0A
-L8DCC:  jsr     L90B2
-        beq     L8DEE
-        clc
-        adc     $09
-        sta     $09
-        lda     #$00
-        adc     $0A
-        sta     $0A
-        clc
-        lda     $80
-        adc     $84
-        sta     $84
-        lda     $81
-        adc     $85
-        sta     $85
-        bcs     L8DEF
-        jmp     L8DCC
-L8DEE:  rts
-L8DEF:  jmp     L8494_far
 ; ---- $8DF2-$8DFC（代码 11 字节）
 L8DF2:  lda     $29
         cmp     #$80
@@ -209,35 +176,6 @@ L8DF2:  lda     $29
 L8DF9:  lda     $28
         sec
         rts
-; ---- $8F9D-$8FD3（代码 55 字节）
-L8F9D:  jsr     LAA0D
-        jsr     L8F7D_far
-        pha
-        lda     #$00
-        sta     $2A
-        sta     $2B
-        ldx     #$10
-L8FAC:  asl     $28
-        rol     $29
-        rol     $2A
-        rol     $2B
-        lda     $2A
-        sec
-        sbc     $2C
-        lda     $2B
-        sbc     $2D
-        bcc     L8FCE
-        lda     $2A
-        sec
-        sbc     $2C
-        sta     $2A
-        lda     $2B
-        sbc     $2D
-        sta     $2B
-        inc     $28
-L8FCE:  dex
-        bne     L8FAC
-        jmp     L8F77_far
 ; ---- $9088-$9097（代码 16 字节）
 L9088:  ldy     #$00
         lda     ($09),y
@@ -324,40 +262,6 @@ L93DF:  inc     $54
         bne     L93DE
         inc     $55
         rts
-; ---- $93E6-$942F（代码 74 字节）
-L93E6:  lda     #<LCCAB
-        sta     $54
-        lda     #>LCCAB
-        sta     $55
-L93EE:  jsr     L93DA
-        tax
-        inx
-        beq     L942B
-        sta     $99
-        jsr     L93DF
-        jsr     L9430
-L93FD:  jsr     L90B2
-        sta     $98
-        jsr     L93DA
-        cmp     $98
-        bne     L9416
-        jsr     L908C
-        jsr     L93DF
-        jsr     L93DA
-        bpl     L93FD
-L9414:  clc
-        rts
-L9416:  jsr     L9088
-        cmp     #$2E
-        beq     L9414
-        jsr     L9439
-L9420:  jsr     L93DA
-        bmi     L93EE
-        jsr     L93DF
-        jmp     L9420
-L942B:  jsr     L90B2
-        sec
-        rts
 ; ---- $9430-$9438（代码 9 字节）
 L9430:  lda     $09
         sta     $9A
@@ -370,285 +274,9 @@ L9439:  lda     $9A
         lda     $9B
         sta     $0A
         rts
-; ---- $94DE-$950F（代码 50 字节）
-L94DE:  sta     $99
-        lda     #<LCCAB
-        sta     $54
-        lda     #>LCCAB
-        sta     $55
-        jsr     L93DA
-L94EB:  cmp     #$FF
-        beq     L950F
-        cmp     $99
-        beq     L94FE
-L94F3:  jsr     L93DF
-        jsr     L93DA
-        bpl     L94F3
-        jmp     L94EB
-L94FE:  jsr     L93DF
-L9501:  jsr     L93DA
-        bmi     L950F
-        jsr     L9078_far
-        jsr     L93DF
-        jmp     L9501
-L950F:  rts
 ; ---- $9510-$9515（代码 6 字节）
 L9510:  jsr     LA26E
         jmp     LB237_far
-; ---- $9570-$95E2（代码 115 字节）
-L9570:  jmp     L9439
-L9573:  jsr     LA27D
-        jsr     L9430
-        lda     $05
-        sta     $09
-        lda     $06
-        sta     $0A
-L9581:  jsr     L90B2
-        beq     L9570
-        clc
-        lda     $09
-        adc     #$03
-        sta     $4D
-        lda     #$00
-        adc     $0A
-        sta     $4E
-        lda     $09
-        pha
-        lda     $0A
-        pha
-        jsr     L9442_far
-        pla
-        sta     $0A
-        pla
-        sta     $09
-        lda     $0400
-        sta     $2C
-        lda     $0401
-        sta     $2D
-        lda     $0402
-        sta     $2E
-        lda     #$00
-        sta     $29
-        lda     #$05
-        sta     $2A
-        ldy     #$00
-L95BB:  lda     ($29),y
-        beq     L95C2
-        iny
-        bne     L95BB
-L95C2:  sty     $28
-        jsr     L95E6
-        beq     L95D2
-        jsr     L87EE_far
-        jsr     L87C4_far
-        jmp     L9581
-L95D2:  jsr     L90B2
-        clc
-        adc     $09
-        sta     $09
-        lda     #$00
-        adc     $0A
-        sta     $0A
-        jmp     L9581
-; ---- $95E3-$9624（代码 66 字节）
-L95E3:  lda     #$00
-        rts
-L95E6:  lda     #$00
-        sta     $6B
-        sta     $6C
-        lda     $28
-        sta     $19
-        cmp     $2C
-        bcc     L95E3
-L95F4:  lda     $2C
-        sta     $1B
-        lda     $6B
-        pha
-L95FB:  ldy     $6B
-        lda     ($29),y
-        ldy     $6C
-        cmp     ($2D),y
-        bne     L9615
-        dec     $1B
-        beq     L9610
-        inc     $6B
-        inc     $6C
-        jmp     L95FB
-L9610:  pla
-        clc
-        adc     #$01
-        rts
-L9615:  pla
-        sta     $6B
-        inc     $6B
-        lda     #$00
-        sta     $6C
-        dec     $19
-        beq     L95E3
-        jmp     L95F4
-; ---- $9882-$9903（代码 130 字节）
-L9882:  lda     #$00
-        jmp     LB237_far
-L9887:  pla
-        sta     $5F
-        pla
-        sta     $60
-        pla
-        cmp     #$FD
-        bne     L9882
-        pla
-        bne     L9882
-        pla
-        sta     $89
-        pla
-        sta     $88
-        pla
-        sta     $83
-        pla
-        sta     $82
-        pla
-        sta     $81
-        pla
-        sta     $80
-        pla
-        sta     $7D
-        pla
-        sta     $7C
-        pla
-        sta     $87
-        pla
-        sta     $86
-        pla
-        sta     $85
-        pla
-        sta     $84
-        ldy     #$00
-        lda     ($7C),y
-        sta     $28
-        iny
-        lda     ($7C),y
-        sta     $29
-        jsr     L9904_far
-        beq     L98CB
-        bcc     L9901
-L98CB:  lda     $84
-        pha
-        sta     $0D
-        lda     $85
-        pha
-        sta     $0E
-        lda     $86
-        pha
-        sta     $0B
-        lda     $87
-        pha
-        sta     $0C
-L98DF:  lda     $7C
-        pha
-        lda     $7D
-        pha
-        lda     $80
-        pha
-        lda     $81
-        pha
-        lda     $82
-        pha
-        lda     $83
-        pha
-        lda     $88
-        pha
-        sta     $09
-        lda     $89
-        pha
-        sta     $0A
-        lda     #$00
-        pha
-        lda     #$FD
-        pha
-L9901:  jmp     L969C_far
-; ---- $9B65-$9C08（代码 164 字节）
-L9B65:  jmp     L8494_far
-L9B68:  cmp     #$86
-        beq     L9BB1
-        jsr     LA26E
-        beq     L9B65
-        cmp     #$09
-        bcs     L9B65
-        pha
-        jsr     LAC14_far
-        jsr     LA27D
-        pla
-        sec
-        sbc     #$01
-        asl     a
-        asl     a
-        asl     a
-        asl     a
-        tax
-        lda     $0400
-        beq     L9BAB
-        ldy     #$00
-        lda     $0401
-        sta     $19
-        lda     $0402
-        sta     $1A
-        lda     #$0F
-        sta     $90
-L9B9A:  lda     ($19),y
-        sta     $0480,x
-        inx
-        iny
-        dec     $0400
-        beq     L9BAB
-        dec     $90
-        bne     L9B9A
-        rts
-L9BAB:  lda     #$00
-        sta     $0480,x
-        rts
-L9BB1:  jsr     L908C
-        lda     #$30
-        sta     $90
-        lda     #$00
-        sta     $74
-L9BBC:  lda     #$46
-        jsr     L894D
-        inc     $90
-        lda     $90
-        jsr     L894D
-        lda     #$20
-        jsr     L894D
-        lda     $74
-        asl     a
-        asl     a
-        asl     a
-        asl     a
-        tay
-L9BD4:  lda     $0480,y
-        beq     L9BFA
-        cmp     #$20
-        bcc     L9BE4
-        jsr     L894D
-        iny
-        jmp     L9BD4
-L9BE4:  pha
-        lda     #$28
-        jsr     L894D
-        pla
-        clc
-        adc     #$40
-        jsr     L894D
-        lda     #$29
-        jsr     L894D
-        iny
-        jmp     L9BD4
-L9BFA:  jsr     L895D
-        jsr     LB56F
-        inc     $74
-        lda     $74
-        cmp     #$08
-        bcc     L9BBC
-        rts
 ; ---- $9E8A-$9E9C（代码 19 字节）
 L9E8A:  ldx     #$00
         ldy     #$10
@@ -707,75 +335,6 @@ L9EE3:  lda     $05
         lda     #$00
         adc     $06
         jmp     L9EDC
-; ---- $A01E-$A090（代码 115 字节）
-LA01E:  jsr     LA27D
-        lda     $0400
-        beq     LA086
-        lda     $09
-        pha
-        lda     $0A
-        pha
-        lda     $0401
-        sta     $09
-        lda     $0402
-        sta     $0A
-        lda     #$07
-        sta     $92
-        lda     #$00
-        sta     $91
-        sta     $C6
-        jsr     LA241
-        lda     #$21
-        sta     $91
-        sta     $C7
-        jsr     LA241
-        lda     #$42
-        sta     $91
-        sta     $C8
-        jsr     LA241
-        lda     #$01
-        sta     $CB
-        sta     $CC
-        sta     $CD
-        lda     #$7F
-        sta     $4001
-        sta     $4005
-        lda     #$07
-        sta     $C9
-        sta     $4015
-        lda     #$0A
-        sta     $63
-LA070:  jsr     L8855_far
-        lda     $C9
-        bmi     LA087
-        bne     LA070
-        lda     #$00
-        sta     $63
-        sta     $4015
-        pla
-        sta     $0A
-        pla
-        sta     $09
-LA086:  rts
-LA087:  lda     #$00
-        sta     $63
-        sta     $4015
-        jmp     L8491_far
-; ---- $A241-$A25E（代码 30 字节）
-LA241:  lda     $0400
-        beq     LA258
-        dec     $0400
-        jsr     L9088
-        cmp     #$3A
-        beq     LA258
-        ldy     #$00
-        sta     ($91),y
-        inc     $91
-        bne     LA241
-LA258:  ldy     #$00
-        lda     #$00
-        sta     ($91),y
-        rts
 ; ---- $A25F-$A294（代码 54 字节）
 LA25F:  jmp     L8491_far
 LA262:  jmp     L8494_far
@@ -853,56 +412,6 @@ LA984:  jsr     LAA0A
 LA993:  jsr     L8E32_far
         jmp     LA97E
 LA999:  jmp     L8EF2_far
-; ---- $A99C-$A9FE（代码 99 字节）
-LA99C:  jsr     LAA0A
-        lda     $29
-        bmi     LA9AC
-        bne     LA9B5
-        lda     $28
-        bne     LA9B5
-        lda     #$00
-        .byte   $2C
-LA9AC:  lda     #$FF
-        sta     $28
-LA9B0:  sta     $29
-        jmp     LA97E
-LA9B5:  lda     #$01
-        sta     $28
-        lda     #$00
-        beq     LA9B0
-LA9BD:  jsr     LAA0A
-        lda     $28
-        pha
-        lda     $29
-        pha
-        lda     $56
-        sta     $28
-        lda     $57
-        sta     $29
-        lda     #$83
-        sta     $2C
-        lda     #$03
-        sta     $2D
-        jsr     L8F44_far
-        lda     #$7F
-        and     $29
-        sta     $29
-        sta     $57
-        lda     $28
-        sta     $56
-        pla
-        sta     $2D
-        pla
-        sta     $2C
-        jsr     L8F44_far
-        asl     $29
-        rol     $36
-        rol     $37
-        lda     $36
-        sta     $28
-        lda     $37
-        sta     $29
-        jmp     LA97E
 ; ---- $A9FF-$AA16（代码 24 字节）
 LA9FF:  lda     #$0B
         jmp     LB237_far
@@ -965,37 +474,6 @@ LAB85:  cmp     #$20
         bcs     LAB8A
         rts
 LAB8A:  jmp     L8494_far
-; ---- $ABAF-$ABEC（代码 62 字节）
-LABAF:  jsr     LAA17
-        ldx     $28
-        ldy     #$00
-LABB6:  lda     ($29),y
-        sta     $0500,y
-        iny
-        dex
-        bne     LABB6
-        lda     $28
-        pha
-        jsr     LAC1E_far
-        jsr     LAA10
-        lda     $28
-        sta     $2C
-        lda     $29
-        sta     $2D
-        lda     $2A
-        sta     $2E
-        pla
-        sta     $28
-        lda     #$00
-        sta     $29
-        lda     #$05
-        sta     $2A
-        jsr     L95E6
-        sta     $28
-        lda     #$00
-        sta     $29
-        sta     $2A
-        jmp     LA97E
 ; ---- $AD02-$AD37（代码 54 字节）
 LAD02:  jmp     L8494_far
 LAD05:  jsr     LAA04
@@ -1048,35 +526,6 @@ LAD53:  asl     a
         asl     a
         asl     a
         rts
-; ---- $AD96-$ADD0（代码 59 字节）
-LAD96:  lda     $05
-        sta     $19
-        lda     $06
-        sta     $1A
-        lda     $F3
-        asl     a
-        tax
-        lda     L8003,x
-        sta     $07
-        lda     L8004,x
-        sta     $08
-        lda     L800B,x
-        sta     $1B
-        lda     L800C,x
-        sta     $1C
-        ldy     #$00
-LADB8:  lda     ($1B),y
-        sta     ($19),y
-        inc     $1B
-        bne     LADC2
-        inc     $1C
-LADC2:  inc     $19
-        bne     LADC8
-        inc     $1A
-LADC8:  lda     #$C0
-        cmp     $1A
-        bne     LADB8
-        jmp     L97A6_far
 ; ---- $ADFE-$AE04（代码 7 字节）
 LADFE:  lda     #$01
         sta     $28
@@ -1109,7 +558,7 @@ LAEB8:  jsr     LA26E
         and     #$1F
         ora     $75
         sta     $33
-        sta     $2001
+        jsr     ppu_w_mask
         rts
 LAED1:  jsr     LA26E
         cmp     #$04
@@ -1174,7 +623,7 @@ LB327:  lda     #<LB338
 LB485:  ldy     #$04
         ldx     #$C0
         lda     #$20
-LB48B:  sta     $2007
+LB48B:  jsr     ppu_w_data
         dex
         bne     LB48B
         dey
@@ -1185,40 +634,40 @@ LB494:  ldx     #$C0
         adc     #$03
         jsr     L81EC
         lda     #$00
-LB4A0:  sta     $2007
+LB4A0:  jsr     ppu_w_data
         inx
         bne     LB4A0
         rts
 ; ---- $B52E-$B538（代码 11 字节）
 LB52E:  lda     $4B
-        sta     $2006
+        jsr     ppu_w_addr
         lda     $4A
-        sta     $2006
+        jsr     ppu_w_addr
         rts
 ; ---- $B539-$B558（代码 32 字节）
-LB539:  sta     $2007
+LB539:  jsr     ppu_w_data
 LB53C:  jsr     LBE14
         lda     $F0
         beq     LB54E
         lda     #$00
-        sta     $2005
+        jsr     ppu_w_scroll
         lda     $E5
-        sta     $2005
+        jsr     ppu_w_scroll
         rts
 LB54E:  lda     #$00
-        sta     $2005
+        jsr     ppu_w_scroll
         lda     $E4
-        sta     $2005
+        jsr     ppu_w_scroll
         rts
 ; ---- $B559-$B561（代码 9 字节）
 LB559:  jsr     LB42B_far
         lda     #$00
-        sta     $2001
+        jsr     ppu_w_mask
         rts
 ; ---- $B562-$B5AC（代码 75 字节）
 LB562:  jsr     LB42B_far
         lda     $33
-        sta     $2001
+        jsr     ppu_w_mask
 LB56A:  rts
 LB56B:  lda     $48
         beq     LB56A
@@ -1282,37 +731,13 @@ LB668:  jsr     LB559
         sta     $32
         jsr     LBE14
         lda     #$0E
-        sta     $2001
+        jsr     ppu_w_mask
         sta     $33
         jsr     LB436_far
         jsr     LB494
         sta     $4C
         jsr     LB53C
         jmp     LB562
-; ---- $B6DF-$B708（代码 42 字节）
-LB6DF:  lda     $48
-        cmp     #$15
-        bcs     LB6F0
-        cmp     #$0E
-        bcs     LB6F3
-        cmp     #$07
-        bcs     LB6F6
-        lda     #$07
-        .byte   $EC
-LB6F0:  lda     #$1C
-        .byte   $EC
-LB6F3:  lda     #$15
-        .byte   $EC
-LB6F6:  lda     #$0E
-        sec
-        sbc     $48
-        sta     $62
-        tax
-        lda     #$20
-LB700:  sta     $0700,x
-        dex
-        bpl     LB700
-        jmp     L895D
 ; ---- $B709-$B70F（代码 7 字节）
 LB709:  lda     #$FF
         eor     $4C
@@ -1415,12 +840,12 @@ LBDFD:  lda     #$00
         rts
 ; ---- $BE0E-$BE13（代码 6 字节）
 LBE0E:  lda     $32
-        sta     $2000
+        jsr     ppu_w_ctrl
         rts
 ; ---- $BE14-$BE1B（代码 8 字节）
 LBE14:  lda     $32
         ora     #$80
-        sta     $2000
+        jsr     ppu_w_ctrl
         rts
 ; ---- $BE1C-$BE23（代码 8 字节）
 LBE1C:  jsr     LBE0E
@@ -1505,27 +930,6 @@ LC293:  asl     a
         lda     LC251,x
         sta     $53
         jmp     L895A
-; ---- $C2AF-$C2B4（代码 6 字节）
-LC2AF:  jsr     LC2B5
-        jmp     LC303_far
-; ---- $C2B5-$C2D3（代码 31 字节）
-LC2B5:  jsr     LC353
-        lda     $48
-        pha
-        lda     $49
-        pha
-        lda     #$0A
-        sta     $48
-        lda     #$16
-        sta     $49
-        lda     $88
-        ora     #$30
-        jsr     LB575
-        pla
-        sta     $49
-        pla
-        sta     $48
-        rts
 ; ---- $C2D4-$C2E4（代码 17 字节）
 LC2D4:  jsr     LB656
         jsr     LC01A_far
@@ -1533,32 +937,6 @@ LC2D4:  jsr     LB656
         jsr     LB575
         jsr     LB65F
         jmp     LC303_far
-; ---- $C34D-$C37C（代码 48 字节）
-LC34D:  lda     #$00
-        sta     $88
-        beq     LC35B
-LC353:  inc     $88
-        lda     $88
-        cmp     #$04
-        beq     LC34D
-LC35B:  asl     a
-        asl     a
-        ora     $88
-        pha
-        jsr     LB42B_far
-        lda     #$27
-        ldx     #$F3
-        jsr     L81EC
-        pla
-        tax
-        and     #$FC
-        sta     $2007
-        txa
-        ldx     #$04
-LC374:  sta     $2007
-        dex
-        bne     LC374
-        jmp     LB53C
 ; ---- $C37D-$C393（代码 23 字节）
 LC37D:  lda     #$0C
         sta     $48
@@ -1673,33 +1051,6 @@ LC4FF:  jsr     LC452
         sta     $73
         lda     #$09
         jmp     L896A
-; ---- $C649-$C67A（代码 50 字节）
-LC649:  lda     $AE
-        beq     LC675
-        lda     $91
-        sta     $0211
-        lda     $88
-        and     #$0F
-        sta     $0212
-        lda     $0505
-        clc
-        adc     #$02
-        asl     a
-        asl     a
-        asl     a
-        sta     $0213
-        lda     $0506
-        clc
-        adc     #$03
-        asl     a
-        asl     a
-        asl     a
-        sta     $0210
-        dec     $0210
-        rts
-LC675:  lda     #$F8
-        sta     $0210
-        rts
 ; ---- $C6DF-$C708（代码 42 字节）
 LC6DF:  jsr     LB56F
         lda     #<LC68C
@@ -1921,6 +1272,10 @@ L8C30_far:
         jsr     far_enter
         .word   L8C30
         .byte   2
+L8DB1_far:
+        jsr     far_enter
+        .word   L8DB1
+        .byte   5
 L8E0F_far:
         jsr     far_enter
         .word   L8E0F
@@ -1965,6 +1320,10 @@ L8F7D_far:
         jsr     far_enter
         .word   L8F7D
         .byte   1
+L8F9D_far:
+        jsr     far_enter
+        .word   L8F9D
+        .byte   5
 L8FE2_far:
         jsr     far_enter
         .word   L8FE2
@@ -2001,14 +1360,26 @@ L925B_far:
         jsr     far_enter
         .word   L925B
         .byte   1
+L93E6_far:
+        jsr     far_enter
+        .word   L93E6
+        .byte   5
 L9442_far:
         jsr     far_enter
         .word   L9442
         .byte   1
+L94DE_far:
+        jsr     far_enter
+        .word   L94DE
+        .byte   5
 L9527_far:
         jsr     far_enter
         .word   L9527
         .byte   2
+L9573_far:
+        jsr     far_enter
+        .word   L9573
+        .byte   5
 L9625_far:
         jsr     far_enter
         .word   L9625
@@ -2069,6 +1440,14 @@ L97FC_far:
         jsr     far_enter
         .word   L97FC
         .byte   2
+L9887_far:
+        jsr     far_enter
+        .word   L9887
+        .byte   5
+L98DF_far:
+        jsr     far_enter
+        .word   L98DF
+        .byte   5
 L9904_far:
         jsr     far_enter
         .word   L9904
@@ -2097,6 +1476,10 @@ L9B56_far:
         jsr     far_enter
         .word   L9B56
         .byte   2
+L9B68_far:
+        jsr     far_enter
+        .word   L9B68
+        .byte   5
 L9C0C_far:
         jsr     far_enter
         .word   L9C0C
@@ -2121,6 +1504,10 @@ L9F36_far:
         jsr     far_enter
         .word   L9F36
         .byte   2
+LA01E_far:
+        jsr     far_enter
+        .word   LA01E
+        .byte   5
 LA091_far:
         jsr     far_enter
         .word   LA091
@@ -2241,6 +1628,14 @@ LA941_far:
         jsr     far_enter
         .word   LA941
         .byte   3
+LA99C_far:
+        jsr     far_enter
+        .word   LA99C
+        .byte   5
+LA9BD_far:
+        jsr     far_enter
+        .word   LA9BD
+        .byte   5
 LAA3B_far:
         jsr     far_enter
         .word   LAA3B
@@ -2265,6 +1660,10 @@ LAB58_far:
         jsr     far_enter
         .word   LAB58
         .byte   3
+LABAF_far:
+        jsr     far_enter
+        .word   LABAF
+        .byte   5
 LABED_far:
         jsr     far_enter
         .word   LABED
@@ -2289,6 +1688,10 @@ LAD5B_far:
         jsr     far_enter
         .word   LAD5B
         .byte   3
+LAD96_far:
+        jsr     far_enter
+        .word   LAD96
+        .byte   5
 LAE0A_far:
         jsr     far_enter
         .word   LAE0A
@@ -2401,6 +1804,10 @@ LB6B1_far:
         jsr     far_enter
         .word   LB6B1
         .byte   4
+LB6DF_far:
+        jsr     far_enter
+        .word   LB6DF
+        .byte   5
 LB75E_far:
         jsr     far_enter
         .word   LB75E
@@ -2457,6 +1864,14 @@ LC17D_far:
         jsr     far_enter
         .word   LC17D
         .byte   4
+LC2AF_far:
+        jsr     far_enter
+        .word   LC2AF
+        .byte   5
+LC2B5_far:
+        jsr     far_enter
+        .word   LC2B5
+        .byte   5
 LC2E5_far:
         jsr     far_enter
         .word   LC2E5
@@ -2501,6 +1916,10 @@ LC5BE_far:
         jsr     far_enter
         .word   LC5BE
         .byte   4
+LC649_far:
+        jsr     far_enter
+        .word   LC649
+        .byte   5
 LC697_far:
         jsr     far_enter
         .word   LC697
@@ -2535,14 +1954,6 @@ LCC6C_far:
         .byte   3
 
         .segment "RODATA"
-; ---- $8003-$800A（数据 8 字节）
-L8003:
-        .byte   $41
-L8004:
-        .byte   $65,$8A,$6A,$8C,$6C,$F8,$6C
-; ---- $800B-$8012（数据 8 字节）
-L800B:
-        .addr   LD400,LDBFE,LE682,LF308
 ; ---- $821C-$824F（数据 52 字节）
 L821C:
         .byte   " ON", $00
@@ -2585,7 +1996,7 @@ LB380:
 ; ---- $B8BE-$B8FD（数据 64 字节）
 LB8BE:
         .addr   LB5B5_far,LB709,LB5B5_far,LB5B8_far,LB668,LB68F_far,LB5B5_far,LBCD0
-        .addr   LB76F_far,LB6DF,LB751,LB748,LB4AB_far,LB74C,LB5B5_far,LB5B5_far
+        .addr   LB76F_far,LB6DF_far,LB751,LB748,LB4AB_far,LB74C,LB5B5_far,LB5B5_far
         .addr   LB5B5_far,LB5B5_far,LB805_far,LB5B5_far,LB5B5_far,LB5B5_far,LB75E_far,LB766_far
         .addr   LB5B5_far,LB5B5_far,LB6B1_far,LB5B5_far,LB733,LB721,LB710,LB717
 ; ---- $BAA9-$BC10（数据 360 字节）
@@ -2769,42 +2180,6 @@ LC89B:
         .byte   $6D,$6C,$6F,$6E
 LC89F:
         .byte   $69,$68,$6B,$6A
-; ---- $CCAB-$CEBE（数据 532 字节）
-LCCAB:
-        .byte   $80,$47,$4F,$54,$4F,$81,$47,$4F,$53,$55,$42,$82,$52,$55,$4E,$83
-        .byte   $52,$45,$54,$55,$52,$4E,$84,$52,$45,$53,$54,$4F,$52,$45,$85,$54
-        .byte   $48,$45,$4E,$86,$4C,$49,$53,$54,$87,$53,$59,$53,$54,$45,$4D,$88
-        .byte   $54,$4F,$89,$53,$54,$45,$50,$8A,$53,$50,$52,$49,$54,$45,$8B,$50
-        .byte   $52,$49,$4E,$54,$8C,$46,$4F,$52,$8D,$4E,$45,$58,$54,$8E,$50,$41
-        .byte   $55,$53,$45,$8F,$49,$4E,$50,$55,$54,$90,$4C,$49,$4E,$50,$55,$54
-        .byte   $91,$44,$41,$54,$41,$92,$49,$46,$93,$52,$45,$41,$44,$94,$44,$49
-        .byte   $4D,$95,$52,$45,$4D,$96,$53,$54,$4F,$50,$97,$43,$4F,$4E,$54,$98
-        .byte   $43,$4C,$53,$99,$43,$4C,$45,$41,$52,$9A,$4F,$4E,$9B,$4F,$46,$46
-        .byte   $9C,$43,$55,$54,$9D,$4E,$45,$57,$9E,$50,$4F,$4B,$45,$9F,$43,$47
-        .byte   $53,$45,$54,$A0,$56,$49,$45,$57,$A1,$4D,$4F,$56,$45,$A2,$45,$4E
-        .byte   $44,$A3,$50,$4C,$41,$59,$A4,$42,$45,$45,$50,$A5,$4C,$4F,$41,$44
-        .byte   $A6,$53,$41,$56,$45,$A7,$50,$4F,$53,$49,$54,$49,$4F,$4E,$A8,$4B
-        .byte   $45,$59,$A9,$43,$4F,$4C,$4F,$52,$AA,$44,$45,$46,$AB,$43,$47,$45
-        .byte   $4E,$AC,$53,$57,$41,$50,$AD,$43,$41,$4C,$4C,$AE,$4C,$4F,$43,$41
-        .byte   $54,$45,$AF,$50,$41,$4C,$45,$54,$B0,$45,$52,$41,$B1,$54,$52,$B2
-        .byte   $46,$49,$4E,$44,$B3,$47,$41,$4D,$45,$B4,$42,$47,$54,$4F,$4F,$4C
-        .byte   $B5,$41,$55,$54,$4F,$B6,$44,$45,$4C,$45,$54,$45,$B7,$52,$45,$4E
-        .byte   $55,$4D,$B8,$46,$49,$4C,$54,$45,$52,$B9,$43,$4C,$49,$43,$4B,$BA
-        .byte   $53,$43,$52,$45,$45,$4E,$BB,$42,$41,$43,$4B,$55,$50,$BC,$45,$52
-        .byte   $52,$4F,$52,$BD,$52,$45,$53,$55,$4D,$45,$BE,$42,$47,$50,$55,$54
-        .byte   $BF,$42,$47,$47,$45,$54,$C0,$43,$41,$4E,$EF,$58,$4F,$52,$F0,$4F
-        .byte   $52,$F1,$41,$4E,$44,$F2,$4E,$4F,$54,$F3,$3C,$3E,$F4,$3E,$3D,$F5
-        .byte   $3C,$3D,$F6,$3D,$F7,$3E,$F8,$3C,$F9,$2B,$FA,$2D,$FB,$4D,$4F,$44
-        .byte   $FC,$2F,$FD,$2A,$CA,$41,$42,$53,$CB,$41,$53,$43,$CC,$53,$54,$52
-        .byte   $24,$CD,$46,$52,$45,$CE,$4C,$45,$4E,$CF,$50,$45,$45,$4B,$D0,$52
-        .byte   $4E,$44,$D1,$53,$47,$4E,$D2,$53,$50,$43,$D3,$54,$41,$42,$D4,$4D
-        .byte   $49,$44,$24,$D5,$53,$54,$49,$43,$4B,$D6,$53,$54,$52,$49,$47,$D7
-        .byte   $58,$50,$4F,$53,$D8,$59,$50,$4F,$53,$D9,$56,$41,$4C,$DA,$50,$4F
-        .byte   $53,$DB,$43,$53,$52,$4C,$49,$4E,$DC,$43,$48,$52,$24,$DD,$48,$45
-        .byte   $58,$24,$DE,$49,$4E,$4B,$45,$59,$24,$DF,$52,$49,$47,$48,$54,$24
-        .byte   $E0,$4C,$45,$46,$54,$24,$E1,$53,$43,$52,$24,$E2,$49,$4E,$53,$54
-        .byte   $52,$E3,$43,$52,$41,$53,$48,$E4,$45,$52,$52,$E5,$45,$52,$4C,$E6
-        .byte   $56,$43,$54,$FF
 ; ---- $CF7B-$CFA3（数据 41 字节）
 LCF7B:
         .byte   $4E,$53,$2D,$48,$55,$42,$41,$53,$49,$43,$20,$56,$33,$2E,$30,$20
@@ -3215,7 +2590,7 @@ L9268:  beq     L9248
         beq     L92F9
         jsr     L90C8
         bcc     L92CE
-        jsr     L93E6
+        jsr     L93E6_far
         bcc     L92B2
 L9288:  jsr     L908C
         cmp     #$80
@@ -3373,7 +2748,7 @@ L9445:  jsr     L9237
         cmp     #$80
         bcc     L94AE
         pha
-        jsr     L94DE
+        jsr     L94DE_far
         jsr     L9240
         pla
         cmp     #$95
@@ -4450,9 +3825,9 @@ LC535:  jsr     LB559
         lda     $60
         ldx     $5F
         jsr     L81EC
-        lda     $2007
+        jsr     ppu_r_data
         ldx     #$00
-LC544:  lda     $2007
+LC544:  jsr     ppu_r_data
         sta     $0700,x
         inx
         bne     LC544
@@ -4488,7 +3863,7 @@ LC56D:  jsr     LBE53
         jsr     L81EC
         ldx     #$00
 LC597:  lda     $0700,x
-        sta     $2007
+        jsr     ppu_w_data
         inx
         bne     LC597
         jsr     LB53C
@@ -5058,7 +4433,7 @@ L8CA5:  lda     $7C
         jmp     L8494
 L8CAE:  jmp     L8C2A
 L8CB1:  jsr     L9430
-        jsr     L8DB1
+        jsr     L8DB1_far
         lda     $05
         sta     $09
         lda     $06
@@ -5521,7 +4896,7 @@ L9861:  lda     $0400
         pha
         lda     $0C
         pha
-        jmp     L98DF
+        jmp     L98DF_far
 ; ---- $9AC0-$9B64（代码 165 字节）
 L9AC0:  jsr     L8499
         cmp     #$80
@@ -6052,13 +5427,13 @@ LB1B8:  jsr     L97A6
         lda     #$BC
         sta     $1A
         lda     #$24
-        sta     $2006
+        jsr     ppu_w_addr
         lda     #$00
-        sta     $2006
-        lda     $2007
+        jsr     ppu_w_addr
+        jsr     ppu_r_data
         ldy     #$00
         ldx     #$04
-LB1DF:  lda     $2007
+LB1DF:  jsr     ppu_r_data
         sta     ($19),y
         iny
         bne     LB1DF
@@ -6085,11 +5460,11 @@ LB206:  lda     #$0C
         ldy     #$00
         ldx     #$04
         lda     #$24
-        sta     $2006
+        jsr     ppu_w_addr
         lda     #$00
-        sta     $2006
+        jsr     ppu_w_addr
 LB221:  lda     ($19),y
-        sta     $2007
+        jsr     ppu_w_data
         iny
         bne     LB221
         inc     $1A
@@ -6172,19 +5547,19 @@ LB2ED:  lda     #$4F
 ; ---- $CEBF-$CF7A（数据 188 字节）
 LCEBF:
         .addr   L96C6_far,L9648_far,L86B0_far,L96A6_far,L9EC9,L8491_far,L8767_far,L818F_far
-        .addr   L8491_far,L8491_far,LAFFC_far,L88C5_far,L97FC_far,L9887,L9716_far,L993C_far
+        .addr   L8491_far,L8491_far,LAFFC_far,L88C5_far,L97FC_far,L9887_far,L9716_far,L993C_far
         .addr   L9A6C_far,L8467_far,L9782_far,L9F36_far,L9C0C_far,L8467_far,L885B_far,L889C_far
         .addr   LAE0A_far,L97A4_far,L9AFD_far,L8491_far,LCBDC_far,L84B6_far,L975D_far,LAF4F_far
-        .addr   LB153_far,LCBB3_far,L826A_far,LA01E,LBCD0,L9DE1_far,L9D64_far,LCB9B_far
-        .addr   L9B68,LC4CA,LB098_far,LAED1,L9A0E_far,L970A_far,L9748_far,LAEF3_far
-        .addr   LCBD9_far,L962B_far,L9573,LAD5B_far,LBFD1_far,L8BDA_far,L8758_far,L8C30_far
+        .addr   LB153_far,LCBB3_far,L826A_far,LA01E_far,LBCD0,L9DE1_far,L9D64_far,LCB9B_far
+        .addr   L9B68_far,LC4CA,LB098_far,LAED1,L9A0E_far,L970A_far,L9748_far,LAEF3_far
+        .addr   LCBD9_far,L962B_far,L9573_far,LAD5B_far,LBFD1_far,L8BDA_far,L8758_far,L8C30_far
         .addr   LAEB8,L9625_far,LAE48_far,L818F_far,L9510,L9527_far,LB201_far,LB1B8_far
         .addr   LCC6C_far
 LCF41:
-        .addr   LA984,LAA28,LAAA6_far,LA91F,LAA1D,LA973,LA9BD,LA99C
+        .addr   LA984,LAA28,LAAA6_far,LA91F,LAA1D,LA973,LA9BD_far,LA99C_far
         .addr   L8491_far,L8491_far,LAC81_far,LAD38,LAD47,LA958,LA961,LAADF
         .addr   LA933,LA8E6_far,LAA82_far,LAAD6,LAB58_far,LAC41_far,LABED_far,LAA3B_far
-        .addr   LABAF,LCC04_far,LA90D_far,LA914_far,LA96A
+        .addr   LABAF_far,LCC04_far,LA90D_far,LA914_far,LA96A
 
         .segment "BANK3"
 ; ---- $82CC-$832C（代码 97 字节）
@@ -6818,7 +6193,7 @@ LA7FB:  lda     $2C
         bne     LA803
         lda     $2D
         beq     LA809
-LA803:  jsr     L8F9D
+LA803:  jsr     L8F9D_far
         jmp     LA7D8
 LA809:  lda     #$0A
         jmp     LB237_far
@@ -7215,7 +6590,7 @@ LAD5B:  cmp     #$2C
         bne     LAD58
         jsr     LADD1
 LAD7F:  jsr     L8662
-        jsr     LAD96
+        jsr     LAD96_far
         lda     #$00
         jmp     L86B0_far
 LAD8A:  jsr     LAC14
@@ -7230,12 +6605,12 @@ LADD1:  lda     #<LD000
         sta     $1A
         jsr     LB559
         lda     #$24
-        sta     $2006
+        jsr     ppu_w_addr
         lda     #$00
-        sta     $2006
+        jsr     ppu_w_addr
         ldy     #$00
 LADE8:  lda     ($19),y
-        sta     $2007
+        jsr     ppu_w_data
         iny
         bne     LADE8
         inc     $1A
@@ -7351,7 +6726,7 @@ LAFB9:  lda     $73
 LAFC9:  lda     $33
         ora     #$10
 LAFCD:  sta     $33
-        sta     $2001
+        jsr     ppu_w_mask
         jmp     L908C
 LAFD5:  lda     $33
         and     #$EF
@@ -7564,13 +6939,13 @@ LB162:  lda     $74
         clc
         adc     #$04
         jsr     L81EC
-        lda     $2007
-        lda     $2007
+        jsr     ppu_r_data
+        jsr     ppu_r_data
         pha
         lda     $74
         jsr     L81EC
         pla
-        sta     $2007
+        jsr     ppu_w_data
         inx
         bne     LB162
         inc     $74
@@ -7897,8 +7272,8 @@ LCFA8:
         jmp     L80BA
 ; ---- $80BA-$81EB（代码 306 字节）
 L80BA:  lda     #$00
-        sta     $2000
-        sta     $2001
+        jsr     ppu_w_ctrl
+        jsr     ppu_w_mask
         jsr     LB42B
         jsr     LB42B
         lda     #$4C
@@ -7990,7 +7365,7 @@ L8180:  jsr     LB4A7
 L818F:  lda     $33
         and     #$EF
         sta     $33
-        sta     $2001
+        jsr     ppu_w_mask
         lda     #$4C
         sta     $B001
         lda     $07
@@ -8047,7 +7422,7 @@ L8A0C:  jsr     LB4F4
         jsr     LB52E
 L8A14:  lda     $0700,x
         beq     L8A7F
-        sta     $2007
+        jsr     ppu_w_data
         inc     $48
         lda     #$1C
         cmp     $48
@@ -8081,13 +7456,13 @@ L8A50:  inx
         jsr     LB748
         jsr     LB53C
         lda     $32
-        sta     $2000
+        jsr     ppu_w_ctrl
         jsr     LB4F4
         jsr     LB42B
         jsr     LB52E
         ldx     #$1C
         lda     #$20
-L8A6B:  sta     $2007
+L8A6B:  jsr     ppu_w_data
         dex
         bne     L8A6B
         stx     $63
@@ -8105,9 +7480,9 @@ L8A87:  lda     #$00
         jsr     LB4F4
         jsr     LB52E
         ldy     #$1C
-        lda     $2007
+        jsr     ppu_r_data
         ldx     $76
-L8A98:  lda     $2007
+L8A98:  jsr     ppu_r_data
         sta     $0500,x
         inx
         cpx     #$FF
@@ -8129,10 +7504,10 @@ L8ABC:  sta     $63
 L8ABE:  jsr     LB53C
         rts
 L8AC3:  jsr     LB52E
-        lda     $2007
+        jsr     ppu_r_data
         ldx     #$00
         ldy     $48
-L8ACD:  lda     $2007
+L8ACD:  jsr     ppu_r_data
         sta     $0500,x
         inx
         iny
@@ -8144,37 +7519,37 @@ L8ACD:  lda     $2007
         ldx     #$00
         ldy     $48
 L8AE4:  lda     $0500,x
-        sta     $2007
+        jsr     ppu_w_data
         inx
         iny
         cpy     #$1C
         bne     L8AE4
         beq     L8ABA
 L8AF2:  lda     #$3F
-        sta     $2006
+        jsr     ppu_w_addr
         lda     $0700
         asl     a
         asl     a
-L8AFC:  sta     $2006
+L8AFC:  jsr     ppu_w_addr
         lda     $0701
-        sta     $2007
+        jsr     ppu_w_data
         lda     $0702
-        sta     $2007
+        jsr     ppu_w_data
         lda     $0703
-        sta     $2007
+        jsr     ppu_w_data
         lda     $0704
-        sta     $2007
+        jsr     ppu_w_data
         lda     #$3F
-        sta     $2006
+        jsr     ppu_w_addr
         lda     #$00
-        sta     $2006
-        sta     $2006
-        sta     $2006
+        jsr     ppu_w_addr
+        jsr     ppu_w_addr
+        jsr     ppu_w_addr
         jsr     LB53C
         jsr     LBE14
         jmp     L89C9
 L8B30:  lda     #$3F
-        sta     $2006
+        jsr     ppu_w_addr
         lda     $0700
         asl     a
         asl     a
@@ -8185,8 +7560,8 @@ L8B3E:  jsr     LB52E
         ldx     #$01
         lda     $B0
         sta     $0500
-        lda     $2007
-L8B4D:  lda     $2007
+        jsr     ppu_r_data
+L8B4D:  jsr     ppu_r_data
         sta     $0500,x
         inx
         iny
@@ -8197,7 +7572,7 @@ L8B4D:  lda     $2007
         ldx     #$00
         ldy     $48
 L8B62:  lda     $0500,x
-        sta     $2007
+        jsr     ppu_w_data
         inx
         iny
         cpy     #$1C
@@ -8341,9 +7716,9 @@ LB420:  lda     #$FD
         lda     #$5F
         sta     $E1
         jmp     LB766
-LB42B:  lda     $2002
+LB42B:  jsr     ppu_r_status
         bmi     LB42B
-LB430:  lda     $2002
+LB430:  jsr     ppu_r_status
         bpl     LB430
 LB435:  rts
 ; ---- $B44A-$B484（数据 59 字节）
@@ -8444,7 +7819,7 @@ LB5C7:  dec     $7E
         lda     #$04
         jsr     L896A
 LB5D4:  lda     $32
-        sta     $2000
+        jsr     ppu_w_ctrl
         lda     $E4
         ldy     $4F
         cpy     #$20
@@ -8588,8 +7963,8 @@ LB7D5:  inc     $48
         jsr     LB4F4
         jsr     LB42B
         jsr     LB52E
-        lda     $2007
-        lda     $2007
+        jsr     ppu_r_data
+        jsr     ppu_r_data
         pha
         jsr     LB53C
         dec     $48
@@ -9257,16 +8632,16 @@ LC11B:  jsr     LB4F4
         jsr     LB52E
         lda     $0500
         beq     LC129
-        lda     $2007
+        jsr     ppu_r_data
 LC129:  ldy     #$0A
         ldx     $3D
 LC12D:  lda     $0500
         beq     LC13B
-        lda     $2007
+        jsr     ppu_r_data
         sta     $0520,x
         jmp     LC141
 LC13B:  lda     $0520,x
-        sta     $2007
+        jsr     ppu_w_data
 LC141:  inx
         dey
         bne     LC12D
@@ -9335,7 +8710,7 @@ LC2E8:  jsr     LAFC9_far
         jsr     LC276
         lda     #$03
         sta     $88
-        jsr     LC2B5
+        jsr     LC2B5_far
         lda     #$0C
         sta     $48
         lda     #$17
@@ -9367,7 +8742,7 @@ LC335:
         .byte   $1B,$0D,$0C,$0B,$08,$12,$20,$44
 ; ---- $C33D-$C34C（数据 16 字节）
 LC33D:
-        .addr   LC37D,LC2AF,LC394_far,LC39D_far,LC3A7_far,LC3B5_far,LC3C3_far,LC2D4
+        .addr   LC37D,LC2AF_far,LC394_far,LC39D_far,LC3A7_far,LC3B5_far,LC3C3_far,LC2D4
 ; ---- $C394-$C451（代码 190 字节）
 LC394:  lda     $7D
         beq     LC39A
@@ -9445,10 +8820,10 @@ LC41E:  lda     $7E
         jsr     LB42B
         jsr     LB52E
 LC43C:  lda     $0510,x
-        sta     $2007
+        jsr     ppu_w_data
         inx
         lda     #$20
-        sta     $2007
+        jsr     ppu_w_data
         inx
         dey
         bne     LC43C
@@ -9473,7 +8848,7 @@ LC5BE:  lda     #$01
         sta     $AE
         jsr     LC278
 LC5D3:  jsr     LC14F
-        jsr     LC649
+        jsr     LC649_far
         lda     #$20
         jsr     LC025
         jsr     LC02F
@@ -9553,6 +8928,14 @@ LC6D3:  jsr     LB575
         jmp     LC6D0
 
         .segment "BANK5"
+; ---- $8003-$800A（数据 8 字节）
+L8003:
+        .byte   $41
+L8004:
+        .byte   $65,$8A,$6A,$8C,$6C,$F8,$6C
+; ---- $800B-$8012（数据 8 字节）
+L800B:
+        .addr   LD400,LDBFE,LE682,LF308
 ; ---- $8013-$80A2（数据 144 字节）
 L8013:
         .word   $0EAE,$0E4E,$0DF3,$0D9E,$0D4D,$0D01,$0CB9,$0C75
@@ -9601,10 +8984,436 @@ L8991:  tax
 L89A3:
         .addr   L8A0C_far,L8A87_far,L8AC3_far,L89FA,L89D2,L8AF2_far,L8B30_far,L89E4
         .addr   L89F2,LA091_far,L89C4,L89C1,L8B3E_far,L8B74,L8B8C
+; ---- $8DB1-$8DF1（代码 65 字节）
+L8DB1:  lda     $7C
+        sta     $84
+        lda     $7D
+        sta     $85
+        lda     $7E
+        sta     $44
+        lda     $7F
+        sta     $45
+        jsr     L8540_far
+        lda     $5B
+        sta     $09
+        lda     $5C
+        sta     $0A
+L8DCC:  jsr     L90B2
+        beq     L8DEE
+        clc
+        adc     $09
+        sta     $09
+        lda     #$00
+        adc     $0A
+        sta     $0A
+        clc
+        lda     $80
+        adc     $84
+        sta     $84
+        lda     $81
+        adc     $85
+        sta     $85
+        bcs     L8DEF
+        jmp     L8DCC
+L8DEE:  rts
+L8DEF:  jmp     L8494_far
+; ---- $8F9D-$8FD3（代码 55 字节）
+L8F9D:  jsr     LAA0D
+        jsr     L8F7D_far
+        pha
+        lda     #$00
+        sta     $2A
+        sta     $2B
+        ldx     #$10
+L8FAC:  asl     $28
+        rol     $29
+        rol     $2A
+        rol     $2B
+        lda     $2A
+        sec
+        sbc     $2C
+        lda     $2B
+        sbc     $2D
+        bcc     L8FCE
+        lda     $2A
+        sec
+        sbc     $2C
+        sta     $2A
+        lda     $2B
+        sbc     $2D
+        sta     $2B
+        inc     $28
+L8FCE:  dex
+        bne     L8FAC
+        jmp     L8F77_far
 ; ---- $90B7-$90BB（代码 5 字节）
         ldy     #$00
         sta     ($09),y
         rts
+; ---- $93E6-$942F（代码 74 字节）
+L93E6:  lda     #<LCCAB
+        sta     $54
+        lda     #>LCCAB
+        sta     $55
+L93EE:  jsr     L93DA
+        tax
+        inx
+        beq     L942B
+        sta     $99
+        jsr     L93DF
+        jsr     L9430
+L93FD:  jsr     L90B2
+        sta     $98
+        jsr     L93DA
+        cmp     $98
+        bne     L9416
+        jsr     L908C
+        jsr     L93DF
+        jsr     L93DA
+        bpl     L93FD
+L9414:  clc
+        rts
+L9416:  jsr     L9088
+        cmp     #$2E
+        beq     L9414
+        jsr     L9439
+L9420:  jsr     L93DA
+        bmi     L93EE
+        jsr     L93DF
+        jmp     L9420
+L942B:  jsr     L90B2
+        sec
+        rts
+; ---- $94DE-$950F（代码 50 字节）
+L94DE:  sta     $99
+        lda     #<LCCAB
+        sta     $54
+        lda     #>LCCAB
+        sta     $55
+        jsr     L93DA
+L94EB:  cmp     #$FF
+        beq     L950F
+        cmp     $99
+        beq     L94FE
+L94F3:  jsr     L93DF
+        jsr     L93DA
+        bpl     L94F3
+        jmp     L94EB
+L94FE:  jsr     L93DF
+L9501:  jsr     L93DA
+        bmi     L950F
+        jsr     L9078_far
+        jsr     L93DF
+        jmp     L9501
+L950F:  rts
+; ---- $9570-$95E2（代码 115 字节）
+L9570:  jmp     L9439
+L9573:  jsr     LA27D
+        jsr     L9430
+        lda     $05
+        sta     $09
+        lda     $06
+        sta     $0A
+L9581:  jsr     L90B2
+        beq     L9570
+        clc
+        lda     $09
+        adc     #$03
+        sta     $4D
+        lda     #$00
+        adc     $0A
+        sta     $4E
+        lda     $09
+        pha
+        lda     $0A
+        pha
+        jsr     L9442_far
+        pla
+        sta     $0A
+        pla
+        sta     $09
+        lda     $0400
+        sta     $2C
+        lda     $0401
+        sta     $2D
+        lda     $0402
+        sta     $2E
+        lda     #$00
+        sta     $29
+        lda     #$05
+        sta     $2A
+        ldy     #$00
+L95BB:  lda     ($29),y
+        beq     L95C2
+        iny
+        bne     L95BB
+L95C2:  sty     $28
+        jsr     L95E6
+        beq     L95D2
+        jsr     L87EE_far
+        jsr     L87C4_far
+        jmp     L9581
+L95D2:  jsr     L90B2
+        clc
+        adc     $09
+        sta     $09
+        lda     #$00
+        adc     $0A
+        sta     $0A
+        jmp     L9581
+; ---- $95E3-$9624（代码 66 字节）
+L95E3:  lda     #$00
+        rts
+L95E6:  lda     #$00
+        sta     $6B
+        sta     $6C
+        lda     $28
+        sta     $19
+        cmp     $2C
+        bcc     L95E3
+L95F4:  lda     $2C
+        sta     $1B
+        lda     $6B
+        pha
+L95FB:  ldy     $6B
+        lda     ($29),y
+        ldy     $6C
+        cmp     ($2D),y
+        bne     L9615
+        dec     $1B
+        beq     L9610
+        inc     $6B
+        inc     $6C
+        jmp     L95FB
+L9610:  pla
+        clc
+        adc     #$01
+        rts
+L9615:  pla
+        sta     $6B
+        inc     $6B
+        lda     #$00
+        sta     $6C
+        dec     $19
+        beq     L95E3
+        jmp     L95F4
+; ---- $9882-$9903（代码 130 字节）
+L9882:  lda     #$00
+        jmp     LB237_far
+L9887:  pla
+        sta     $5F
+        pla
+        sta     $60
+        pla
+        cmp     #$FD
+        bne     L9882
+        pla
+        bne     L9882
+        pla
+        sta     $89
+        pla
+        sta     $88
+        pla
+        sta     $83
+        pla
+        sta     $82
+        pla
+        sta     $81
+        pla
+        sta     $80
+        pla
+        sta     $7D
+        pla
+        sta     $7C
+        pla
+        sta     $87
+        pla
+        sta     $86
+        pla
+        sta     $85
+        pla
+        sta     $84
+        ldy     #$00
+        lda     ($7C),y
+        sta     $28
+        iny
+        lda     ($7C),y
+        sta     $29
+        jsr     L9904_far
+        beq     L98CB
+        bcc     L9901
+L98CB:  lda     $84
+        pha
+        sta     $0D
+        lda     $85
+        pha
+        sta     $0E
+        lda     $86
+        pha
+        sta     $0B
+        lda     $87
+        pha
+        sta     $0C
+L98DF:  lda     $7C
+        pha
+        lda     $7D
+        pha
+        lda     $80
+        pha
+        lda     $81
+        pha
+        lda     $82
+        pha
+        lda     $83
+        pha
+        lda     $88
+        pha
+        sta     $09
+        lda     $89
+        pha
+        sta     $0A
+        lda     #$00
+        pha
+        lda     #$FD
+        pha
+L9901:  jmp     L969C_far
+; ---- $9B65-$9C08（代码 164 字节）
+L9B65:  jmp     L8494_far
+L9B68:  cmp     #$86
+        beq     L9BB1
+        jsr     LA26E
+        beq     L9B65
+        cmp     #$09
+        bcs     L9B65
+        pha
+        jsr     LAC14_far
+        jsr     LA27D
+        pla
+        sec
+        sbc     #$01
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        tax
+        lda     $0400
+        beq     L9BAB
+        ldy     #$00
+        lda     $0401
+        sta     $19
+        lda     $0402
+        sta     $1A
+        lda     #$0F
+        sta     $90
+L9B9A:  lda     ($19),y
+        sta     $0480,x
+        inx
+        iny
+        dec     $0400
+        beq     L9BAB
+        dec     $90
+        bne     L9B9A
+        rts
+L9BAB:  lda     #$00
+        sta     $0480,x
+        rts
+L9BB1:  jsr     L908C
+        lda     #$30
+        sta     $90
+        lda     #$00
+        sta     $74
+L9BBC:  lda     #$46
+        jsr     L894D
+        inc     $90
+        lda     $90
+        jsr     L894D
+        lda     #$20
+        jsr     L894D
+        lda     $74
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        tay
+L9BD4:  lda     $0480,y
+        beq     L9BFA
+        cmp     #$20
+        bcc     L9BE4
+        jsr     L894D
+        iny
+        jmp     L9BD4
+L9BE4:  pha
+        lda     #$28
+        jsr     L894D
+        pla
+        clc
+        adc     #$40
+        jsr     L894D
+        lda     #$29
+        jsr     L894D
+        iny
+        jmp     L9BD4
+L9BFA:  jsr     L895D
+        jsr     LB56F
+        inc     $74
+        lda     $74
+        cmp     #$08
+        bcc     L9BBC
+        rts
+; ---- $A01E-$A090（代码 115 字节）
+LA01E:  jsr     LA27D
+        lda     $0400
+        beq     LA086
+        lda     $09
+        pha
+        lda     $0A
+        pha
+        lda     $0401
+        sta     $09
+        lda     $0402
+        sta     $0A
+        lda     #$07
+        sta     $92
+        lda     #$00
+        sta     $91
+        sta     $C6
+        jsr     LA241
+        lda     #$21
+        sta     $91
+        sta     $C7
+        jsr     LA241
+        lda     #$42
+        sta     $91
+        sta     $C8
+        jsr     LA241
+        lda     #$01
+        sta     $CB
+        sta     $CC
+        sta     $CD
+        lda     #$7F
+        sta     $4001
+        sta     $4005
+        lda     #$07
+        sta     $C9
+        sta     $4015
+        lda     #$0A
+        sta     $63
+LA070:  jsr     L8855_far
+        lda     $C9
+        bmi     LA087
+        bne     LA070
+        lda     #$00
+        sta     $63
+        sta     $4015
+        pla
+        sta     $0A
+        pla
+        sta     $09
+LA086:  rts
+LA087:  lda     #$00
+        sta     $63
+        sta     $4015
+        jmp     L8491_far
 ; ---- $A091-$A0A2（代码 18 字节）
 LA091:  txa
         pha
@@ -9840,6 +9649,21 @@ LA226:  jsr     LA7CE
         lda     $91
         sta     $C6,x
         rts
+; ---- $A241-$A25E（代码 30 字节）
+LA241:  lda     $0400
+        beq     LA258
+        dec     $0400
+        jsr     L9088
+        cmp     #$3A
+        beq     LA258
+        ldy     #$00
+        sta     ($91),y
+        inc     $91
+        bne     LA241
+LA258:  ldy     #$00
+        lda     #$00
+        sta     ($91),y
+        rts
 ; ---- $A8D4-$A8E5（代码 18 字节）
         ldx     $30
         lda     $28
@@ -9851,8 +9675,118 @@ LA226:  jsr     LA7CE
         inx
         stx     $30
         rts
+; ---- $A99C-$A9FE（代码 99 字节）
+LA99C:  jsr     LAA0A
+        lda     $29
+        bmi     LA9AC
+        bne     LA9B5
+        lda     $28
+        bne     LA9B5
+        lda     #$00
+        .byte   $2C
+LA9AC:  lda     #$FF
+        sta     $28
+LA9B0:  sta     $29
+        jmp     LA97E
+LA9B5:  lda     #$01
+        sta     $28
+        lda     #$00
+        beq     LA9B0
+LA9BD:  jsr     LAA0A
+        lda     $28
+        pha
+        lda     $29
+        pha
+        lda     $56
+        sta     $28
+        lda     $57
+        sta     $29
+        lda     #$83
+        sta     $2C
+        lda     #$03
+        sta     $2D
+        jsr     L8F44_far
+        lda     #$7F
+        and     $29
+        sta     $29
+        sta     $57
+        lda     $28
+        sta     $56
+        pla
+        sta     $2D
+        pla
+        sta     $2C
+        jsr     L8F44_far
+        asl     $29
+        rol     $36
+        rol     $37
+        lda     $36
+        sta     $28
+        lda     $37
+        sta     $29
+        jmp     LA97E
 ; ---- $ABAC-$ABAE（代码 3 字节）
         jmp     L8491_far
+; ---- $ABAF-$ABEC（代码 62 字节）
+LABAF:  jsr     LAA17
+        ldx     $28
+        ldy     #$00
+LABB6:  lda     ($29),y
+        sta     $0500,y
+        iny
+        dex
+        bne     LABB6
+        lda     $28
+        pha
+        jsr     LAC1E_far
+        jsr     LAA10
+        lda     $28
+        sta     $2C
+        lda     $29
+        sta     $2D
+        lda     $2A
+        sta     $2E
+        pla
+        sta     $28
+        lda     #$00
+        sta     $29
+        lda     #$05
+        sta     $2A
+        jsr     L95E6
+        sta     $28
+        lda     #$00
+        sta     $29
+        sta     $2A
+        jmp     LA97E
+; ---- $AD96-$ADD0（代码 59 字节）
+LAD96:  lda     $05
+        sta     $19
+        lda     $06
+        sta     $1A
+        lda     $F3
+        asl     a
+        tax
+        lda     L8003,x
+        sta     $07
+        lda     L8004,x
+        sta     $08
+        lda     L800B,x
+        sta     $1B
+        lda     L800C,x
+        sta     $1C
+        ldy     #$00
+LADB8:  lda     ($1B),y
+        sta     ($19),y
+        inc     $1B
+        bne     LADC2
+        inc     $1C
+LADC2:  inc     $19
+        bne     LADC8
+        inc     $1A
+LADC8:  lda     #$C0
+        cmp     $1A
+        bne     LADB8
+        jmp     L97A6_far
 ; ---- $B6D2-$B6DB（代码 10 字节）
         ldx     $49
         dex
@@ -9863,6 +9797,104 @@ LA226:  jsr     LA7CE
         rts
 ; ---- $B6DC-$B6DE（代码 3 字节）
         jmp     LB56F
+; ---- $B6DF-$B708（代码 42 字节）
+LB6DF:  lda     $48
+        cmp     #$15
+        bcs     LB6F0
+        cmp     #$0E
+        bcs     LB6F3
+        cmp     #$07
+        bcs     LB6F6
+        lda     #$07
+        .byte   $EC
+LB6F0:  lda     #$1C
+        .byte   $EC
+LB6F3:  lda     #$15
+        .byte   $EC
+LB6F6:  lda     #$0E
+        sec
+        sbc     $48
+        sta     $62
+        tax
+        lda     #$20
+LB700:  sta     $0700,x
+        dex
+        bpl     LB700
+        jmp     L895D
+; ---- $C2AF-$C2B4（代码 6 字节）
+LC2AF:  jsr     LC2B5
+        jmp     LC303_far
+; ---- $C2B5-$C2D3（代码 31 字节）
+LC2B5:  jsr     LC353
+        lda     $48
+        pha
+        lda     $49
+        pha
+        lda     #$0A
+        sta     $48
+        lda     #$16
+        sta     $49
+        lda     $88
+        ora     #$30
+        jsr     LB575
+        pla
+        sta     $49
+        pla
+        sta     $48
+        rts
+; ---- $C34D-$C37C（代码 48 字节）
+LC34D:  lda     #$00
+        sta     $88
+        beq     LC35B
+LC353:  inc     $88
+        lda     $88
+        cmp     #$04
+        beq     LC34D
+LC35B:  asl     a
+        asl     a
+        ora     $88
+        pha
+        jsr     LB42B_far
+        lda     #$27
+        ldx     #$F3
+        jsr     L81EC
+        pla
+        tax
+        and     #$FC
+        jsr     ppu_w_data
+        txa
+        ldx     #$04
+LC374:  jsr     ppu_w_data
+        dex
+        bne     LC374
+        jmp     LB53C
+; ---- $C649-$C67A（代码 50 字节）
+LC649:  lda     $AE
+        beq     LC675
+        lda     $91
+        sta     $0211
+        lda     $88
+        and     #$0F
+        sta     $0212
+        lda     $0505
+        clc
+        adc     #$02
+        asl     a
+        asl     a
+        asl     a
+        sta     $0213
+        lda     $0506
+        clc
+        adc     #$03
+        asl     a
+        asl     a
+        asl     a
+        sta     $0210
+        dec     $0210
+        rts
+LC675:  lda     #$F8
+        sta     $0210
+        rts
 ; ---- $C729-$C738（数据 16 字节）
 LC729:
         .byte   $00,$1C,$00,$00,$00,$00,$38,$58,$00,$0C,$78,$20,$00,$48,$88,$58
@@ -10079,6 +10111,42 @@ LC9E8:  lda     $A9
         sta     $0288,x
         sta     $028C,x
         jmp     LC8CA
+; ---- $CCAB-$CEBE（数据 532 字节）
+LCCAB:
+        .byte   $80,$47,$4F,$54,$4F,$81,$47,$4F,$53,$55,$42,$82,$52,$55,$4E,$83
+        .byte   $52,$45,$54,$55,$52,$4E,$84,$52,$45,$53,$54,$4F,$52,$45,$85,$54
+        .byte   $48,$45,$4E,$86,$4C,$49,$53,$54,$87,$53,$59,$53,$54,$45,$4D,$88
+        .byte   $54,$4F,$89,$53,$54,$45,$50,$8A,$53,$50,$52,$49,$54,$45,$8B,$50
+        .byte   $52,$49,$4E,$54,$8C,$46,$4F,$52,$8D,$4E,$45,$58,$54,$8E,$50,$41
+        .byte   $55,$53,$45,$8F,$49,$4E,$50,$55,$54,$90,$4C,$49,$4E,$50,$55,$54
+        .byte   $91,$44,$41,$54,$41,$92,$49,$46,$93,$52,$45,$41,$44,$94,$44,$49
+        .byte   $4D,$95,$52,$45,$4D,$96,$53,$54,$4F,$50,$97,$43,$4F,$4E,$54,$98
+        .byte   $43,$4C,$53,$99,$43,$4C,$45,$41,$52,$9A,$4F,$4E,$9B,$4F,$46,$46
+        .byte   $9C,$43,$55,$54,$9D,$4E,$45,$57,$9E,$50,$4F,$4B,$45,$9F,$43,$47
+        .byte   $53,$45,$54,$A0,$56,$49,$45,$57,$A1,$4D,$4F,$56,$45,$A2,$45,$4E
+        .byte   $44,$A3,$50,$4C,$41,$59,$A4,$42,$45,$45,$50,$A5,$4C,$4F,$41,$44
+        .byte   $A6,$53,$41,$56,$45,$A7,$50,$4F,$53,$49,$54,$49,$4F,$4E,$A8,$4B
+        .byte   $45,$59,$A9,$43,$4F,$4C,$4F,$52,$AA,$44,$45,$46,$AB,$43,$47,$45
+        .byte   $4E,$AC,$53,$57,$41,$50,$AD,$43,$41,$4C,$4C,$AE,$4C,$4F,$43,$41
+        .byte   $54,$45,$AF,$50,$41,$4C,$45,$54,$B0,$45,$52,$41,$B1,$54,$52,$B2
+        .byte   $46,$49,$4E,$44,$B3,$47,$41,$4D,$45,$B4,$42,$47,$54,$4F,$4F,$4C
+        .byte   $B5,$41,$55,$54,$4F,$B6,$44,$45,$4C,$45,$54,$45,$B7,$52,$45,$4E
+        .byte   $55,$4D,$B8,$46,$49,$4C,$54,$45,$52,$B9,$43,$4C,$49,$43,$4B,$BA
+        .byte   $53,$43,$52,$45,$45,$4E,$BB,$42,$41,$43,$4B,$55,$50,$BC,$45,$52
+        .byte   $52,$4F,$52,$BD,$52,$45,$53,$55,$4D,$45,$BE,$42,$47,$50,$55,$54
+        .byte   $BF,$42,$47,$47,$45,$54,$C0,$43,$41,$4E,$EF,$58,$4F,$52,$F0,$4F
+        .byte   $52,$F1,$41,$4E,$44,$F2,$4E,$4F,$54,$F3,$3C,$3E,$F4,$3E,$3D,$F5
+        .byte   $3C,$3D,$F6,$3D,$F7,$3E,$F8,$3C,$F9,$2B,$FA,$2D,$FB,$4D,$4F,$44
+        .byte   $FC,$2F,$FD,$2A,$CA,$41,$42,$53,$CB,$41,$53,$43,$CC,$53,$54,$52
+        .byte   $24,$CD,$46,$52,$45,$CE,$4C,$45,$4E,$CF,$50,$45,$45,$4B,$D0,$52
+        .byte   $4E,$44,$D1,$53,$47,$4E,$D2,$53,$50,$43,$D3,$54,$41,$42,$D4,$4D
+        .byte   $49,$44,$24,$D5,$53,$54,$49,$43,$4B,$D6,$53,$54,$52,$49,$47,$D7
+        .byte   $58,$50,$4F,$53,$D8,$59,$50,$4F,$53,$D9,$56,$41,$4C,$DA,$50,$4F
+        .byte   $53,$DB,$43,$53,$52,$4C,$49,$4E,$DC,$43,$48,$52,$24,$DD,$48,$45
+        .byte   $58,$24,$DE,$49,$4E,$4B,$45,$59,$24,$DF,$52,$49,$47,$48,$54,$24
+        .byte   $E0,$4C,$45,$46,$54,$24,$E1,$53,$43,$52,$24,$E2,$49,$4E,$53,$54
+        .byte   $52,$E3,$43,$52,$41,$53,$48,$E4,$45,$52,$52,$E5,$45,$52,$4C,$E6
+        .byte   $56,$43,$54,$FF
 
         .segment "BANK6"
 ; ---- $D000-$D3FF（数据 1024 字节）
@@ -10871,4 +10939,263 @@ LF308:
         .segment "BANK10"
 ; ---- 现场缓冲：7 页（零页与 $0200-$07FF），由 platform.s 里的现场换入换出使用
         .res    1792, $00
+
+        .segment "BANK11"
+; ---- 背景字库：原版 CHR 的 $1000-$1FFF（256 个 4 色图案，每个 16 字节），由 platform.s 的 ppu_init 送进扩展显存
+        .byte   $FE,$FC,$00,$F8,$F8,$00,$00,$00,$00,$01,$03,$FB,$FB,$03,$FD,$FE
+        .byte   $7F,$BF,$C0,$DF,$DF,$C0,$80,$00,$00,$00,$00,$1F,$1F,$00,$3F,$7F
+        .byte   $01,$01,$01,$01,$01,$01,$01,$01,$FC,$FC,$FC,$FC,$FC,$FC,$FC,$FC
+        .byte   $40,$C0,$40,$C0,$40,$C0,$40,$E0,$80,$20,$A0,$00,$80,$20,$B0,$18
+        .byte   $70,$DC,$47,$C4,$44,$C4,$44,$C0,$8B,$27,$BC,$3F,$BF,$3F,$BF,$3B
+        .byte   $40,$C0,$40,$C0,$40,$C0,$40,$C0,$B8,$30,$A0,$00,$80,$20,$A0,$00
+        .byte   $00,$92,$FF,$92,$92,$92,$92,$00,$6D,$FF,$92,$FF,$FF,$FF,$FF,$6D
+        .byte   $11,$11,$11,$11,$11,$11,$11,$11,$0C,$0C,$0C,$0C,$0C,$0C,$0C,$0C
+        .byte   $11,$51,$F1,$51,$51,$51,$51,$11,$AC,$EC,$4C,$EC,$EC,$EC,$EC,$AC
+        .byte   $00,$00,$00,$01,$07,$0C,$08,$18,$00,$00,$00,$00,$00,$03,$07,$07
+        .byte   $10,$10,$10,$10,$10,$10,$10,$11,$0F,$0F,$0F,$0F,$0F,$0F,$0C,$0C
+        .byte   $11,$10,$10,$10,$10,$10,$10,$10,$0C,$0C,$0F,$0F,$0F,$0F,$0F,$0F
+        .byte   $18,$08,$0C,$07,$01,$00,$00,$00,$07,$07,$03,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$FF,$00,$00,$00,$00,$00,$00,$00,$00,$FF,$FF,$FF,$FF
+        .byte   $00,$00,$00,$00,$00,$00,$00,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$00,$00
+        .byte   $FF,$00,$00,$00,$00,$00,$00,$00,$00,$00,$FF,$FF,$FF,$FF,$FF,$FF
+        .byte   $00,$00,$00,$00,$FF,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$00,$00
+        .byte   $00,$00,$00,$80,$E0,$30,$10,$18,$00,$00,$00,$00,$00,$C0,$E0,$E0
+        .byte   $08,$08,$08,$08,$08,$08,$08,$88,$F0,$F0,$F0,$F0,$F0,$F0,$30,$30
+        .byte   $88,$88,$88,$88,$88,$88,$88,$88,$30,$30,$30,$30,$30,$30,$30,$30
+        .byte   $88,$8A,$8F,$8A,$8A,$8A,$8A,$88,$35,$37,$32,$37,$37,$37,$37,$35
+        .byte   $88,$08,$08,$08,$08,$08,$08,$08,$30,$30,$F0,$F0,$F0,$F0,$F0,$F0
+        .byte   $80,$80,$80,$80,$80,$80,$80,$80,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F
+        .byte   $00,$49,$FF,$49,$49,$49,$49,$00,$B6,$FF,$49,$FF,$FF,$FF,$FF,$B6
+        .byte   $18,$10,$30,$E0,$80,$00,$00,$00,$E0,$E0,$C0,$00,$00,$00,$00,$00
+        .byte   $02,$03,$02,$03,$02,$03,$02,$07,$01,$04,$05,$00,$01,$04,$0D,$18
+        .byte   $0E,$3B,$E2,$23,$22,$23,$22,$03,$D1,$E4,$3D,$FC,$FD,$FC,$FD,$DC
+        .byte   $02,$03,$02,$03,$02,$03,$02,$03,$1D,$0C,$05,$00,$01,$04,$05,$00
+        .byte   $00,$00,$18,$3C,$3C,$18,$00,$00,$FF,$C3,$99,$AD,$BD,$99,$C3,$FF
+        .byte   $80,$80,$80,$80,$80,$80,$80,$80,$00,$3F,$3F,$3F,$3F,$3F,$3F,$3F
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$7F,$7F,$7F,$7F,$7F,$7F,$7F,$7F
+        .byte   $01,$01,$01,$01,$01,$01,$01,$01,$00,$FC,$FC,$FC,$FC,$FC,$FC,$FC
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0C,$0C,$18,$10,$00,$60,$60,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $28,$28,$28,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $08,$2E,$F8,$28,$3E,$E8,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$7C,$90,$FE,$12,$FC,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $42,$A4,$A8,$54,$2A,$4A,$84,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $18,$28,$28,$10,$6A,$44,$3A,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $30,$10,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0C,$10,$20,$20,$20,$10,$0C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $30,$08,$04,$04,$04,$08,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$54,$38,$10,$38,$54,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$10,$10,$7C,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$30,$10,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$00,$30,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $02,$04,$08,$10,$20,$40,$80,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C6,$8A,$92,$A2,$C6,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$30,$10,$10,$10,$10,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C6,$02,$1C,$70,$C0,$FE,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FE,$04,$18,$0C,$02,$C6,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $1C,$34,$64,$C4,$84,$FE,$04,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$80,$FC,$06,$02,$C6,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C0,$80,$FC,$86,$C2,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FE,$86,$0C,$18,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$86,$C2,$7C,$86,$C2,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$86,$C2,$7E,$02,$06,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$30,$30,$00,$30,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$30,$30,$00,$30,$10,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $08,$10,$20,$40,$20,$10,$08,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$7C,$00,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $20,$10,$08,$04,$08,$10,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $3C,$66,$46,$0C,$08,$00,$18,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$82,$9A,$AA,$BC,$80,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $38,$6C,$C6,$82,$FE,$82,$82,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$86,$82,$FC,$86,$82,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C6,$80,$80,$80,$C6,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $F8,$8C,$86,$82,$86,$8C,$F8,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FE,$80,$80,$FC,$80,$80,$FE,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FE,$80,$80,$FC,$80,$80,$80,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C6,$82,$80,$8E,$C2,$7E,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$82,$82,$FE,$82,$82,$82,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$10,$10,$10,$10,$10,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $1E,$04,$04,$04,$04,$CC,$78,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $86,$8C,$98,$F0,$98,$8C,$86,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $40,$40,$40,$40,$40,$40,$7E,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$C6,$EE,$BA,$92,$82,$82,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$C2,$E2,$B2,$9A,$8E,$86,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C6,$82,$82,$82,$C6,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$86,$82,$86,$FC,$80,$80,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C6,$82,$92,$8E,$C4,$7A,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$86,$82,$86,$F8,$8C,$86,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$C0,$80,$7C,$06,$02,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FE,$10,$10,$10,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$82,$82,$82,$82,$C6,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$82,$82,$C6,$6C,$38,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$82,$82,$92,$BA,$EE,$C6,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$C6,$6C,$38,$6C,$C6,$82,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$C6,$6C,$38,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FE,$0C,$18,$30,$60,$C0,$FE,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $1E,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $6C,$28,$7C,$10,$7C,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$10,$10,$10,$F0,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$28,$44,$82,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$FE,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$24,$2C,$38,$20,$60,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$0C,$18,$30,$D0,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$FC,$84,$84,$04,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$10,$10,$10,$10,$10,$FE,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $08,$FE,$18,$28,$48,$88,$18,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $40,$FC,$44,$44,$44,$44,$CC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$FC,$10,$FC,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$44,$44,$C4,$04,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $40,$7E,$48,$C8,$08,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$04,$04,$04,$04,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $44,$FE,$44,$44,$04,$04,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $C0,$04,$C4,$0C,$08,$18,$F0,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$0C,$18,$30,$6C,$C6,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $40,$FE,$42,$44,$40,$40,$3E,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $82,$82,$86,$44,$0C,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$44,$44,$A4,$14,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $1C,$F0,$10,$FE,$10,$10,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $A4,$A4,$A4,$04,$0C,$18,$70,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$00,$FE,$10,$10,$30,$60,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $40,$40,$40,$78,$4C,$40,$40,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $08,$08,$FE,$08,$08,$18,$70,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $78,$00,$00,$00,$00,$00,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$04,$0C,$58,$30,$68,$C4,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$FE,$0C,$18,$3C,$D6,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$04,$0C,$08,$18,$30,$60,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$18,$88,$8C,$84,$84,$84,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $80,$80,$FC,$80,$80,$80,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$04,$04,$0C,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$20,$70,$D8,$8C,$06,$02,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$FE,$10,$10,$92,$92,$92,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$04,$0C,$58,$20,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $7C,$00,$70,$1C,$00,$E0,$3C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$30,$60,$40,$C8,$84,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$04,$4C,$28,$18,$3C,$E4,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$20,$FC,$20,$20,$20,$1C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $20,$FC,$24,$24,$28,$20,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $78,$08,$08,$08,$08,$08,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$04,$FC,$04,$04,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$00,$FC,$04,$0C,$18,$70,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $44,$44,$44,$44,$0C,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$50,$50,$50,$52,$D6,$9C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $80,$80,$80,$84,$8C,$98,$F0,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$84,$84,$84,$84,$84,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$84,$84,$04,$04,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $C0,$00,$04,$0C,$08,$18,$F0,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FC,$04,$FC,$04,$0C,$18,$70,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$7C,$04,$18,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$0C,$18,$70,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$10,$7C,$44,$04,$08,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$38,$10,$10,$10,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$08,$7C,$18,$28,$48,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$20,$7C,$24,$28,$20,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$38,$08,$08,$08,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$78,$08,$78,$08,$78,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$54,$54,$04,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $4A,$40,$FC,$44,$44,$44,$CC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $14,$FA,$10,$FC,$10,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$7A,$44,$C4,$04,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $4A,$40,$7E,$C8,$08,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$FA,$04,$04,$04,$04,$FC,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$44,$FE,$44,$04,$04,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $CA,$04,$C4,$0C,$08,$18,$F0,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$FA,$08,$18,$30,$6C,$C6,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $4A,$40,$FE,$42,$44,$40,$3C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$84,$84,$4C,$08,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$7A,$44,$A4,$14,$0C,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$7A,$10,$FE,$10,$10,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$A4,$A4,$04,$0C,$18,$70,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $04,$7A,$00,$FE,$10,$10,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $4A,$40,$40,$78,$4C,$40,$40,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$10,$98,$88,$8C,$84,$84,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $8A,$80,$FC,$80,$80,$80,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$F0,$0C,$04,$0C,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$20,$70,$D8,$8C,$06,$02,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $0A,$10,$FE,$10,$92,$92,$92,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $16,$1A,$8E,$8C,$84,$84,$84,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $86,$8A,$FC,$80,$80,$80,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $06,$FA,$06,$04,$0C,$18,$30,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $06,$2A,$76,$D8,$8C,$06,$02,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $16,$1A,$FE,$10,$92,$92,$92,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $FF,$81,$81,$81,$81,$81,$81,$FF,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$70,$50,$70,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $38,$20,$20,$20,$20,$20,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $38,$08,$08,$08,$08,$08,$38,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $3C,$42,$99,$A1,$A1,$99,$42,$3C,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$44,$28,$10,$28,$44,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$10,$00,$7C,$00,$10,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $F8,$08,$08,$0B,$19,$32,$62,$00,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$FE,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$E7,$3C,$99,$5A,$00,$00,$00,$00,$00,$C3,$66,$24
+        .byte   $5A,$5A,$5A,$5A,$5A,$5A,$5A,$5A,$24,$24,$24,$24,$24,$24,$24,$24
+        .byte   $99,$3C,$E7,$00,$00,$00,$00,$00,$66,$C3,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$FF,$00,$FF,$FF,$00,$00,$00,$00,$00,$FF,$00,$FF
+        .byte   $FF,$00,$FF,$00,$00,$00,$00,$00,$00,$FF,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$1F,$18,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $1E,$18,$18,$00,$FF,$00,$FF,$FF,$00,$00,$00,$00,$00,$FF,$00,$FF
+        .byte   $00,$7E,$3E,$1E,$0E,$06,$02,$00,$FE,$82,$C6,$EE,$EE,$C6,$82,$FE
+        .byte   $00,$FF,$FF,$C3,$C3,$C3,$81,$00,$FF,$81,$C3,$FF,$FF,$C3,$81,$FF
+        .byte   $F7,$BB,$FE,$ED,$DD,$DD,$FF,$FF,$08,$44,$01,$13,$B3,$BB,$BB,$FB
+        .byte   $F8,$F9,$FB,$00,$C7,$CF,$DF,$00,$FB,$FB,$FB,$00,$DF,$DF,$DF,$00
+        .byte   $00,$0F,$6F,$00,$00,$3F,$1F,$00,$3F,$70,$90,$FF,$80,$FF,$7F,$3F
+        .byte   $00,$FF,$FF,$00,$00,$FF,$FF,$00,$FF,$00,$00,$FF,$00,$FF,$FF,$FF
+        .byte   $00,$F0,$F6,$00,$00,$FC,$F8,$00,$FC,$0E,$09,$FF,$01,$FF,$FE,$FC
+        .byte   $70,$7C,$7E,$7F,$7C,$40,$40,$00,$40,$40,$40,$40,$40,$40,$40,$E0
+        .byte   $00,$00,$01,$01,$02,$15,$2B,$57,$01,$01,$03,$17,$3E,$3D,$6F,$DF
+        .byte   $80,$C0,$E0,$B0,$90,$EC,$F6,$D7,$80,$C0,$E0,$F0,$B0,$EC,$F6,$F7
+        .byte   $DD,$B9,$F7,$FD,$D9,$19,$33,$FF,$DD,$B9,$F7,$FF,$FD,$D9,$B3,$FF
+        .byte   $B9,$DC,$F6,$F3,$F1,$F9,$DF,$EF,$B9,$DC,$FE,$F7,$F7,$FB,$FF,$FF
+        .byte   $FF,$F1,$B9,$FF,$9F,$F0,$E0,$FF,$FF,$FF,$F9,$FF,$9F,$FF,$F8,$FF
+        .byte   $00,$00,$00,$20,$00,$00,$00,$00,$00,$00,$00,$20,$02,$00,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$80,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $3C,$4E,$AF,$9F,$FF,$FF,$7E,$3C,$3C,$7E,$DF,$FF,$FF,$FF,$7E,$3C
+        .byte   $00,$FF,$00,$00,$00,$00,$00,$FF,$FF,$FF,$38,$6C,$C6,$83,$FF,$FF
+        .byte   $00,$FF,$00,$00,$00,$00,$00,$FF,$FF,$FF,$C3,$81,$81,$C3,$FF,$FF
+        .byte   $81,$FF,$81,$81,$81,$FF,$81,$81,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $10,$28,$28,$10,$10,$28,$28,$10,$10,$28,$28,$10,$10,$28,$28,$10
+        .byte   $08,$08,$08,$08,$28,$6C,$6E,$CA,$18,$18,$18,$18,$18,$18,$18,$18
+        .byte   $7F,$6F,$4F,$4D,$65,$7D,$7B,$5F,$FF,$FF,$EF,$ED,$F5,$FD,$FB,$FF
+        .byte   $00,$FF,$E3,$C1,$DF,$FD,$E3,$00,$FF,$FF,$FF,$E3,$DF,$FD,$E3,$FF
+        .byte   $00,$6C,$FE,$FE,$FE,$FE,$7C,$38,$10,$7C,$FE,$9E,$BE,$FE,$7C,$38
+        .byte   $0F,$3B,$77,$EF,$FF,$FF,$FB,$71,$00,$04,$08,$10,$00,$00,$00,$00
+        .byte   $FF,$FF,$DD,$F3,$FF,$EF,$D6,$B9,$00,$00,$22,$0C,$00,$00,$10,$39
+        .byte   $F0,$CC,$F6,$FF,$FF,$FF,$FE,$74,$00,$30,$08,$00,$00,$00,$00,$00
+        .byte   $3C,$7E,$5A,$BD,$FD,$FF,$FF,$6D,$00,$00,$24,$42,$02,$00,$00,$00
+        .byte   $FF,$FF,$FF,$FF,$BF,$DB,$E7,$FF,$FF,$FF,$FF,$FF,$BF,$DB,$E7,$FF
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$24,$24,$C3,$00,$00,$C3,$24,$24
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0F,$10,$20,$23,$24,$24
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$F0,$08,$04,$C4,$24,$24
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$24,$24,$23,$20,$10,$0F,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$24,$24,$C4,$04,$08,$F0,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$24,$24,$24,$24,$24,$24,$24,$24
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$FF,$00,$00,$FF,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$18,$24,$24,$24,$24,$24
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$24,$24,$24,$24,$24,$18,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$1F,$20,$20,$1F,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$F8,$04,$04,$F8,$00,$00
+        .byte   $18,$18,$3C,$FF,$FF,$3C,$18,$18,$18,$18,$3C,$FF,$FF,$3C,$18,$18
+        .byte   $18,$18,$3C,$FF,$FF,$00,$00,$00,$18,$18,$3C,$FF,$FF,$00,$00,$00
+        .byte   $00,$00,$00,$FF,$FF,$3C,$18,$18,$00,$00,$00,$FF,$FF,$3C,$18,$18
+        .byte   $18,$18,$38,$F8,$F8,$38,$18,$18,$18,$18,$38,$F8,$F8,$38,$18,$18
+        .byte   $18,$18,$1C,$1F,$1F,$1C,$18,$18,$18,$18,$1C,$1F,$1F,$1C,$18,$18
+        .byte   $00,$00,$00,$FF,$FF,$00,$00,$00,$00,$00,$00,$FF,$FF,$00,$00,$00
+        .byte   $18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18
+        .byte   $00,$00,$00,$07,$0F,$1C,$18,$18,$00,$00,$00,$07,$0F,$1C,$18,$18
+        .byte   $00,$00,$00,$E0,$F0,$38,$18,$18,$00,$00,$00,$E0,$F0,$38,$18,$18
+        .byte   $18,$18,$1C,$0F,$07,$00,$00,$00,$18,$18,$1C,$0F,$07,$00,$00,$00
+        .byte   $18,$18,$38,$F0,$E0,$00,$00,$00,$18,$18,$38,$F0,$E0,$00,$00,$00
+        .byte   $FF,$C0,$A0,$90,$88,$84,$82,$81,$00,$3F,$5F,$6F,$77,$7B,$7D,$7E
+        .byte   $81,$81,$81,$81,$81,$81,$81,$81,$7E,$7E,$7E,$7E,$7E,$7E,$7E,$7E
+        .byte   $81,$82,$84,$88,$90,$A0,$C0,$FF,$7E,$7D,$7B,$77,$6F,$5F,$3F,$00
+        .byte   $FF,$00,$00,$00,$00,$00,$00,$FF,$00,$FF,$FF,$FF,$FF,$FF,$FF,$00
+        .byte   $FF,$03,$05,$09,$11,$21,$41,$81,$00,$FC,$FA,$F6,$EE,$DE,$BE,$7E
+        .byte   $81,$41,$21,$11,$09,$05,$03,$FF,$7E,$BE,$DE,$EE,$F6,$FA,$FC,$00
+        .byte   $00,$00,$00,$07,$00,$07,$00,$00,$00,$00,$0F,$07,$0F,$07,$3F,$7F
+        .byte   $3F,$3F,$3F,$3F,$3F,$3F,$3F,$00,$40,$54,$D6,$D5,$D4,$D4,$C0,$FF
+        .byte   $00,$00,$30,$E0,$30,$E0,$1C,$0E,$00,$00,$F0,$E0,$F0,$E0,$FC,$FE
+        .byte   $FE,$FE,$FF,$FF,$FF,$FF,$FF,$07,$02,$AA,$AB,$B3,$AB,$AB,$03,$FF
+        .byte   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$00,$00,$00,$00,$00,$00,$00,$00
+        .byte   $00,$00,$00,$00,$00,$00,$00,$00,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+        .byte   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
 

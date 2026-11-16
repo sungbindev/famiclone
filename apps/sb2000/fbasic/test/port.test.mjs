@@ -46,6 +46,20 @@ test('程序文本区 $6000-$7FFF 搬到 $B000-$CFFF，文本区的高字节立�
   assert.ok(count(/\blda\s+#\$BC\b/) >= 2, '$B1CA、$B20B');
 });
 
+test('PPU 寄存器访问都改调转换层，只剩 $2003（精灵地址）', () => {
+  const direct = instructions.filter((line) => /\$20(0[0-2]|0[4-9])\b/.test(line));
+  assert.deepEqual(direct, [], '指令里不应直接访问 $2000-$2002、$2004-$2008');
+  const calls = (name) => instructions.filter((line) => new RegExp(`\\bjsr\\s+${name}\\b`).test(line)).length;
+  assert.equal(calls('ppu_w_ctrl'), 5);
+  assert.equal(calls('ppu_w_mask'), 8);
+  assert.equal(calls('ppu_w_scroll'), 4);
+  assert.equal(calls('ppu_w_addr'), 16);
+  assert.equal(calls('ppu_w_addr_x'), 1);
+  assert.equal(calls('ppu_w_data'), 23);
+  assert.equal(calls('ppu_r_data'), 20);
+  assert.equal(calls('ppu_r_status'), 2);
+});
+
 test('每个跳板的目标都在生成的源码里有标签，跳板与库页号成对', () => {
   const stubs = [...source.join('\n').matchAll(/^(L[0-9A-F]{4})_far:\n\s+jsr\s+far_enter\n\s+\.word\s+(L[0-9A-F]{4})\n\s+\.byte\s+(\d+)$/gm)];
   assert.ok(stubs.length > 100);

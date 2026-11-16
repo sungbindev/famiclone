@@ -13,6 +13,7 @@
 ;       DOS 现场（零页 + $0200-$07FF，共 7 页）保存在现场缓冲库页里，入口门用“交换”：缓冲与内存互换，再互换回来。
 ; ------------------------------------------------------------------------
         .export         _main, far_enter, frame_count, bank_current, fb_page6
+        .export         ppu_w_ctrl, ppu_w_mask, ppu_w_scroll, ppu_w_addr, ppu_w_addr_x, ppu_w_data, ppu_r_data, ppu_r_status
         .import         L80BA_far, L8971_far
         .include        "sb2000.inc"
         .include        "layout.inc"
@@ -28,6 +29,16 @@ IMAGE_WINDOW    = $A000
 
 ; 跳板的临时变量个数（far_info 3 字节，far_a、far_x、far_y、far_p 各 1 字节）
 FAR_STATE_SIZE  = 7
+
+; 内核 NMI 每帧写回 $2005 的两个影子
+PPU_SCROLL_X_SHADOW = $062C
+PPU_SCROLL_Y_SHADOW = $062D
+
+; $2008：背景 4 色、精灵图案表在显存 $2000、名称表从显存 $0000 起（4 页）
+PPU_EXT_VALUE   = $08
+
+; 背景图案放在扩展显存 $8000 起，名称表项高字节的低 4 位就是 $8
+BG_POINTER_HI   = $08
 
         .segment        "CODE"
 
@@ -49,6 +60,7 @@ _main:
         sta     NMI_HOOK5_PAGE
         lda     #FBASIC_NMI_FLAGS
         sta     NMI_FLAGS
+        jsr     ppu_init
         jsr     L80BA_far                       ; 原版的复位入口：初始化后进入主循环
         rts
 
@@ -268,6 +280,437 @@ swap_image:
 image_pages:
         .byte   $00, $02, $03, $04, $05, $06, $07
 
+; ---- PPU 转换层 ----
+; 原版按 NES 的 PPU 写画面，这里把它的 $2000-$2007 访问换成 6576 的做法：
+; NES 名称表 0、1 放在 6576 的页 0、1，行 r 同时写在行 r+30（NES 竖直滚动按 30 行回绕，6576 的页高 32 行），
+; 属性表只存影子，改成每个单元名称表项高 4 位的调色板组；调色板 NES 与 6576 的编码相同，直接写 $2040 起。
+; 本层的子程序都保留 X、Y 与标志（读操作只改 A 与 N、Z）。
+
+; 初始化显示：关画面与 NMI，设 $2008，把背景字库送进扩展显存 $8000 起
+ppu_init:
+        lda     #0
+        sta     PPU_CTRL_SHADOW
+        sta     HW_PPU_CTRL
+        sta     PPU_MASK_SHADOW
+        sta     HW_PPU_MASK
+        sta     ppu_latch
+        sta     ppu_ctrl
+        sta     ppu_buf
+        lda     NMI_COUNTER_UP
+        sta     ppu_nmi_seen
+        lda     #PPU_EXT_VALUE
+        sta     PPU_EXT_CTRL_SHADOW
+        sta     HW_PPU_EXT
+        lda     #BANK_CHR_BG
+        jsr     bank_select
+        lda     #$80
+        sta     HW_PPU_ADDRESS
+        lda     #0
+        sta     HW_PPU_ADDRESS
+        lda     #>IMAGE_WINDOW
+        sta     @src + 2
+        ldy     #16
+        ldx     #0
+@src:   lda     IMAGE_WINDOW,x
+        sta     HW_PPU_DATA
+        inx
+        bne     @src
+        inc     @src + 2
+        dey
+        bne     @src
+        lda     #1
+        jmp     bank_select
+
+; $2000 写：位 2（地址增量）留给本层，其余送硬件与内核的影子
+ppu_w_ctrl:
+        php
+        sta     ppu_ctrl
+        pha
+        and     #$A3
+        sta     PPU_CTRL_SHADOW
+        sta     HW_PPU_CTRL
+        pla
+        plp
+        rts
+
+; $2001 写：位 0-4 的含义相同（原版没用颜色增强位）
+ppu_w_mask:
+        php
+        sta     PPU_MASK_SHADOW
+        sta     HW_PPU_MASK
+        plp
+        rts
+
+; $2005 写：第一次是 X，第二次是 Y；与 $2006 共用一个“第几次”标志
+ppu_w_scroll:
+        php
+        pha
+        lda     ppu_latch
+        bne     @y
+        inc     ppu_latch
+        pla
+        pha
+        sta     PPU_SCROLL_X_SHADOW
+        jmp     @write
+@y:     lda     #0
+        sta     ppu_latch
+        pla
+        pha
+        sta     PPU_SCROLL_Y_SHADOW
+@write: sta     HW_PPU_SCROLL
+        pla
+        plp
+        rts
+
+; $2006 写：第一次高字节，第二次低字节
+ppu_w_addr:
+        php
+        pha
+        lda     ppu_latch
+        bne     @low
+        inc     ppu_latch
+        pla
+        pha
+        and     #$3F
+        sta     ppu_ahi
+        pla
+        plp
+        rts
+@low:   lda     #0
+        sta     ppu_latch
+        pla
+        pha
+        sta     ppu_addr
+        lda     ppu_ahi
+        sta     ppu_addr + 1
+        pla
+        plp
+        rts
+
+ppu_w_addr_x:
+        php
+        pha
+        txa
+        jsr     ppu_w_addr
+        pla
+        plp
+        rts
+
+; $2002 读：垂直消隐位也在内核 NMI 读走标志之后补上（按 NMI 计数的变化）；读后“第几次”标志清零
+ppu_r_status:
+        php
+        lda     #0
+        sta     ppu_latch
+        lda     HW_PPU_STATUS
+        sta     ppu_val
+        lda     NMI_COUNTER_UP
+        cmp     ppu_nmi_seen
+        beq     @same
+        sta     ppu_nmi_seen
+        lda     ppu_val
+        ora     #$80
+        sta     ppu_val
+@same:  plp
+        lda     ppu_val
+        rts
+
+; $2007 写：按 NES 显存地址分三类：图案区（ROM，忽略）、名称表与属性表、调色板
+ppu_w_data:
+        php
+        sta     ppu_val
+        txa
+        pha
+        tya
+        pha
+        lda     ppu_addr + 1
+        cmp     #$20
+        bcc     @done
+        cmp     #$3F
+        beq     @palette
+        jsr     nt_split
+        bcs     @attr
+        lda     #0
+        sta     ppu_only
+        jsr     cell_put
+        jmp     @done
+@attr:  lda     ppu_idx
+        ora     ppu_ntoff
+        tax
+        lda     ppu_val
+        sta     ppu_attr,x
+        jsr     attr_apply
+        jmp     @done
+@palette:
+        jsr     palette_index
+        lda     ppu_val
+        and     #$3F
+        sta     HW_PALETTE,x
+@done:  jsr     ppu_step
+        pla
+        tay
+        pla
+        tax
+        lda     ppu_val
+        plp
+        rts
+
+; $2007 读：名称表与图案区带一个字节的缓冲（返回上一次读到的），调色板立即返回
+ppu_r_data:
+        php
+        txa
+        pha
+        tya
+        pha
+        lda     ppu_addr + 1
+        cmp     #$3F
+        bne     @memory
+        jsr     palette_index
+        lda     HW_PALETTE,x
+        and     #$3F
+        sta     ppu_val
+        jmp     @done
+@memory:
+        lda     ppu_buf
+        sta     ppu_val
+        lda     ppu_addr + 1
+        cmp     #$20
+        bcs     @names
+        lda     #0
+        sta     ppu_buf
+        jmp     @done
+@names: jsr     nt_split
+        bcs     @attr
+        jsr     cell_locate
+        lda     ppu_a + 1
+        sta     HW_PPU_ADDRESS
+        lda     ppu_a
+        sta     HW_PPU_ADDRESS
+        lda     HW_PPU_DATA
+        lda     HW_PPU_DATA
+        sta     ppu_buf
+        jmp     @done
+@attr:  lda     ppu_idx
+        ora     ppu_ntoff
+        tax
+        lda     ppu_attr,x
+        sta     ppu_buf
+@done:  jsr     ppu_step
+        pla
+        tay
+        pla
+        tax
+        plp
+        lda     ppu_val
+        rts
+
+; 调色板地址 $3F00-$3FFF 换成 $2040 起的下标（X）；$3F10/14/18/1C 是 $3F00/04/08/0C 的镜像
+palette_index:
+        lda     ppu_addr
+        and     #$1F
+        tax
+        and     #$13
+        cmp     #$10
+        bne     @done
+        txa
+        and     #$0F
+        tax
+@done:  rts
+
+; 地址加 1 或 32（按原版最后写的 $2000 位 2）
+ppu_step:
+        lda     ppu_ctrl
+        and     #$04
+        bne     @row
+        lda     #1
+        bne     @add
+@row:   lda     #32
+@add:   clc
+        adc     ppu_addr
+        sta     ppu_addr
+        bcc     @done
+        inc     ppu_addr + 1
+@done:  rts
+
+; 拆名称表地址：ppu_nt（0/1，竖直镜像只看位 10）、ppu_ntoff（属性影子里的偏移）；
+; 单元返回 C=0 并给出 ppu_row、ppu_col，属性返回 C=1 并给出 ppu_idx
+nt_split:
+        lda     ppu_addr + 1
+        lsr     a
+        lsr     a
+        and     #1
+        sta     ppu_nt
+        beq     @zero
+        lda     #64
+@zero:  sta     ppu_ntoff
+        lda     ppu_addr + 1
+        and     #3
+        cmp     #3
+        bne     @cell
+        lda     ppu_addr
+        cmp     #$C0
+        bcs     @attr
+@cell:  lda     ppu_addr
+        and     #$1F
+        sta     ppu_col
+        lda     ppu_addr + 1
+        and     #3
+        asl     a
+        asl     a
+        asl     a
+        sta     ppu_row
+        lda     ppu_addr
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        ora     ppu_row
+        sta     ppu_row
+        clc
+        rts
+@attr:  sbc     #$C0
+        sta     ppu_idx
+        sec
+        rts
+
+; 单元（ppu_nt、ppu_row、ppu_col）在 6576 名称表里的地址 ppu_a（图案号字节），以及名称表项的高字节 ppu_high
+cell_locate:
+        lda     ppu_row
+        lsr     a
+        lsr     a
+        asl     a
+        asl     a
+        asl     a
+        sta     ppu_tmp
+        lda     ppu_col
+        lsr     a
+        lsr     a
+        ora     ppu_tmp
+        ora     ppu_ntoff
+        tax
+        lda     ppu_attr,x
+        sta     ppu_tmp
+        lda     ppu_row
+        and     #2
+        asl     a
+        sta     ppu_sh
+        lda     ppu_col
+        and     #2
+        ora     ppu_sh
+        tax
+        lda     ppu_tmp
+        cpx     #0
+        beq     @got
+@shift: lsr     a
+        dex
+        bne     @shift
+@got:   and     #3
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        ora     #BG_POINTER_HI
+        sta     ppu_high
+        lda     ppu_row
+        lsr     a
+        lsr     a
+        lsr     a
+        sta     ppu_a + 1
+        lda     ppu_row
+        and     #7
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        ora     ppu_col
+        asl     a
+        rol     ppu_a + 1
+        sta     ppu_a
+        lda     ppu_nt
+        asl     a
+        asl     a
+        asl     a
+        ora     ppu_a + 1
+        sta     ppu_a + 1
+        rts
+
+; 写一个单元的两处（行 r 与行 r+30）：图案号 ppu_val；ppu_only 非 0 时只写高字节
+cell_put:
+        jsr     cell_locate
+        lda     ppu_only
+        beq     @second
+        inc     ppu_a
+@second:
+        lda     ppu_a
+        clc
+        adc     #$80
+        sta     ppu_a + 2
+        lda     ppu_a + 1
+        adc     #7
+        sta     ppu_a + 3
+        lda     ppu_row
+        cmp     #2
+        bcc     @put
+        lda     ppu_a + 3
+        clc
+        adc     #8
+        sta     ppu_a + 3
+@put:   ldx     #0
+@loop:  lda     ppu_a + 1,x
+        sta     HW_PPU_ADDRESS
+        lda     ppu_a,x
+        sta     HW_PPU_ADDRESS
+        lda     ppu_only
+        bne     @high
+        lda     ppu_val
+        sta     HW_PPU_DATA
+@high:  lda     ppu_high
+        sta     HW_PPU_DATA
+        inx
+        inx
+        cpx     #4
+        bne     @loop
+        rts
+
+; 属性字节 ppu_idx 覆盖 4x4 个单元，把它们的高字节按新的调色板组重写
+attr_apply:
+        lda     ppu_idx
+        lsr     a
+        lsr     a
+        lsr     a
+        asl     a
+        asl     a
+        sta     ppu_row0
+        lda     ppu_idx
+        and     #7
+        asl     a
+        asl     a
+        sta     ppu_col0
+        lda     #1
+        sta     ppu_only
+        ldy     #0
+@row:   tya
+        clc
+        adc     ppu_row0
+        cmp     #30
+        bcs     @next
+        sta     ppu_row
+        lda     ppu_col0
+        sta     ppu_col
+        lda     #4
+        sta     ppu_cnt
+@cell:  jsr     cell_put
+        inc     ppu_col
+        dec     ppu_cnt
+        bne     @cell
+@next:  iny
+        cpy     #4
+        bne     @row
+        lda     #0
+        sta     ppu_only
+        rts
+
         .segment        "BSS"
 
 ; 以下变量都在常驻页里，不属于被换入换出的现场
@@ -286,3 +729,26 @@ req_count:      .res    1
 gate_error:     .res    1                       ; 入口门的结果：出错码、ALLOC_START
 gate_value:     .res    1
 fb_page6:       .res    256                     ; 原版 $0600-$06FF 的替身（那一页在学习机里是内核的变量）
+
+; PPU 转换层：原版的 NES 显存地址与状态、属性表影子（NT0、NT1 各 64 字节）与计算用的临时变量
+ppu_ctrl:       .res    1
+ppu_latch:      .res    1
+ppu_ahi:        .res    1
+ppu_addr:       .res    2
+ppu_buf:        .res    1
+ppu_nmi_seen:   .res    1
+ppu_val:        .res    1
+ppu_only:       .res    1
+ppu_nt:         .res    1
+ppu_ntoff:      .res    1
+ppu_row:        .res    1
+ppu_col:        .res    1
+ppu_idx:        .res    1
+ppu_high:       .res    1
+ppu_tmp:        .res    1
+ppu_sh:         .res    1
+ppu_row0:       .res    1
+ppu_col0:       .res    1
+ppu_cnt:        .res    1
+ppu_a:          .res    4
+ppu_attr:       .res    128

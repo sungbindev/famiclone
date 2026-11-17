@@ -80,7 +80,7 @@ struct ScriptRuntime::Impl {
       for (const JSValue value : padObjects) JS_FreeValue(js, value);
       for (const JSValue value : circuitObjects) JS_FreeValue(js, value);
       JS_FreeValue(js, settingValues);
-      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, timerFn, circuitFn, tablesObject, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
+      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, timerFn, circuitFn, a12Fn, tablesObject, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
       JS_FreeContext(js);
     }
     if (runtime != nullptr) JS_FreeRuntime(runtime);
@@ -106,6 +106,7 @@ struct ScriptRuntime::Impl {
   JSValue tapeEdgeFn = JS_UNDEFINED;
   JSValue timerFn = JS_UNDEFINED;
   JSValue circuitFn = JS_UNDEFINED;
+  JSValue a12Fn = JS_UNDEFINED;
   /** 脚本导出的 tables 对象（按查表标识放计算函数）；没有时为 undefined。 */
   JSValue tablesObject = JS_UNDEFINED;
   /** ctx.device('tape') 返回的对象；主机没有磁带机时为 undefined。 */
@@ -325,6 +326,7 @@ struct ScriptRuntime::Impl {
     tapeEdgeFn = readHandler("onTapeEdge");
     timerFn = readHandler("onTimer");
     circuitFn = readHandler("onCircuit");
+    a12Fn = readHandler("onA12");
     tablesObject = JS_GetPropertyStr(js, plugin, "tables");
     if (JS_IsException(tablesObject)) throw describeFailure("读取导出的 tables", true);
     if (!JS_IsUndefined(tablesObject) && !JS_IsObject(tablesObject)) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + pluginId + " 导出的 tables 必须是对象");
@@ -767,6 +769,7 @@ bool ScriptRuntime::hasTapeEdge() const noexcept { return !JS_IsUndefined(impl_-
 bool ScriptRuntime::hasTimer() const noexcept { return !JS_IsUndefined(impl_->timerFn); }
 
 bool ScriptRuntime::hasCircuit() const noexcept { return !JS_IsUndefined(impl_->circuitFn); }
+bool ScriptRuntime::hasA12() const noexcept { return !JS_IsUndefined(impl_->a12Fn); }
 
 bool ScriptRuntime::hasTable(std::string_view id) const {
   if (!JS_IsObject(impl_->tablesObject)) return false;
@@ -813,6 +816,12 @@ void ScriptRuntime::tapeEdge(bool level, std::uint32_t samples) {
 void ScriptRuntime::timer(std::string_view name) {
   if (!hasTimer()) return;
   impl_->invokeInput("onTimer", impl_->timerFn, JS_NewStringLen(impl_->js, name.data(), name.size()));
+}
+
+void ScriptRuntime::a12() {
+  if (!hasA12()) return;
+  JSValue arguments[1] = {impl_->hostObject};
+  JS_FreeValue(impl_->js, impl_->invoke("onA12", impl_->a12Fn, 1, arguments));
 }
 
 void ScriptRuntime::circuit(std::string_view id) {

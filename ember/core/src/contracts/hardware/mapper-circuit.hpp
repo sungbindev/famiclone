@@ -58,6 +58,9 @@ class MapperCircuit {
   /** PPU 对显存总线的一次访问：监视地址线（如 A12）的电路据此计数；不关心的电路忽略。 */
   virtual void onVideoAddress(std::uint16_t) {}
 
+  /** 上一次取走之后，电路因显存访问（如 MMC2 的锁存器）改变过页号时返回 true 并清除标志，板子据此重新设置窗口；页号只随寄存器写入变化的电路始终返回 false。 */
+  virtual bool takeBankChange() { return false; }
+
   /** 这个地址所在的页的大小（字节）。 */
   [[nodiscard]] virtual std::size_t bankSize(BankSpace space, std::uint16_t address) const = 0;
 

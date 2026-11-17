@@ -1,0 +1,73 @@
+{
+  "plugin": "waixing252",
+  "image": {
+    "mapper": 252,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "write": "$A000",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 32768
+        }
+      ]
+    },
+    {
+      "write": "$F000",
+      "value": 0
+    },
+    {
+      "write": "$F004",
+      "value": 15
+    },
+    {
+      "write": "$F008",
+      "value": 6
+    },
+    {
+      "cycles": 11,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$F00C",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "plugin": "vrc2-4",
+  "image": {
+    "mapper": 22,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$B000",
+      "value": 4
+    },
+    {
+      "write": "$B002",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 2048,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    }
+  ]
+}

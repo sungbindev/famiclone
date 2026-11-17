@@ -26,6 +26,9 @@ namespace {
 namespace hw = contracts::hardware;
 namespace mapper_error = contracts::mappers;
 
+/** 脚本的 onA12：A12 要先连续低过这么多次显存访问，下一次变高才算一次上升沿。 */
+constexpr unsigned A12_LOW_ACCESSES = 4;
+
 /** 一条脚本日志的最大字节数，保留的最大条数。 */
 constexpr std::size_t MAX_LOG_BYTES = 2000;
 constexpr std::size_t MAX_LOG_ENTRIES = 200;
@@ -598,6 +601,8 @@ void MapperChip::powerCycle() {
   customSlots_.fill(NametableSlot{});
   randomState_ = RANDOM_SEED;
   mixer_.clear();
+  a12High_ = false;
+  a12LowAccesses_ = 0;
   for (CircuitSlot& slot : circuits_) {
     slot.circuit->reset();
     applyCircuitWire(slot);
@@ -778,7 +783,21 @@ void MapperChip::onEvent(hw::MasterTime, std::uint32_t tag) {
 }
 
 void MapperChip::onVideoAddress(std::uint16_t ppuAddress) {
-  for (CircuitSlot& slot : circuits_) slot.circuit->onVideoAddress(ppuAddress);
+  if (script_ != nullptr && script_->hasA12()) {
+    if ((ppuAddress & 0x1000U) != 0) {
+      const bool rising = !a12High_ && a12LowAccesses_ >= A12_LOW_ACCESSES;
+      a12High_ = true;
+      a12LowAccesses_ = 0;
+      if (rising) runScript([&] { script_->a12(); });
+    } else {
+      a12High_ = false;
+      if (a12LowAccesses_ < A12_LOW_ACCESSES) ++a12LowAccesses_;
+    }
+  }
+  for (CircuitSlot& slot : circuits_) {
+    slot.circuit->onVideoAddress(ppuAddress);
+    if (slot.circuit->takeBankChange()) applyCircuitWire(slot);
+  }
 }
 
 std::optional<std::uint32_t> MapperChip::circuitValue(const CircuitSlot& slot, std::string_view name) {

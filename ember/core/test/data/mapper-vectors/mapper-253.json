@@ -1,0 +1,78 @@
+{
+  "plugin": "mapper-253",
+  "image": {
+    "mapper": 253,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8010",
+      "value": 3
+    },
+    {
+      "write": "$A010",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 32768
+        }
+      ]
+    },
+    {
+      "write": "$9400",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$F000",
+      "value": 15
+    },
+    {
+      "write": "$F004",
+      "value": 15
+    },
+    {
+      "write": "$F008",
+      "value": 2
+    },
+    {
+      "cycles": 109,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    }
+  ]
+}

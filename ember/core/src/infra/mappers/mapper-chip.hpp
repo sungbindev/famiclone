@@ -69,7 +69,7 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   [[nodiscard]] contracts::hardware::CiramControl ciramControl(std::uint16_t ppuAddress) const override;
   void reset(bool power) override;
   void input(const contracts::hardware::InputEvent& event) override;
-  [[nodiscard]] bool watchesVideoAddress() const override { return !circuits_.empty(); }
+  [[nodiscard]] bool watchesVideoAddress() const override { return !circuits_.empty() || (script_ != nullptr && script_->hasA12()); }
   void onVideoAddress(std::uint16_t ppuAddress) override;
 
   // MapperCartridge
@@ -279,6 +279,9 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   IrqMixer mixer_;
   contracts::hardware::SignalSource scriptIrq_{0};
   std::vector<CircuitSlot> circuits_;
+  /** 给脚本的 A12 上升沿滤波：A12 的当前电平与先前连续为低的显存访问次数。 */
+  bool a12High_{false};
+  unsigned a12LowAccesses_{0};
   /** 各手柄口当前按下的按键掩码，由脚本设置。 */
   std::vector<std::uint8_t> padMasks_;
   /** 现在按着的物理键（KeyboardEvent.code）。 */

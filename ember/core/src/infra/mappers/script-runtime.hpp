@@ -173,6 +173,8 @@ class ScriptRuntime {
   [[nodiscard]] bool hasTimer() const noexcept;
   /** 脚本是否导出了 onCircuit。 */
   [[nodiscard]] bool hasCircuit() const noexcept;
+  /** 脚本是否导出了 onA12。 */
+  [[nodiscard]] bool hasA12() const noexcept;
   /** 脚本是否在 tables 对象上导出了这个标识的函数。 */
   [[nodiscard]] bool hasTable(std::string_view id) const;
 
@@ -203,6 +205,9 @@ class ScriptRuntime {
 
   /** 调用 onCircuit(ctx, id)：清单声明的写寄存器把写入交给电路之后，脚本按电路的新状态重新设置窗口；脚本没有 onCircuit 时什么也不做。错误同 read。 */
   void circuit(std::string_view id);
+
+  /** 调用 onA12(ctx)：PPU 地址线 A12 出现一次上升沿（先低过若干次显存访问，滤掉取图块时的短暂低电平）；脚本没有 onA12 时什么也不做。错误同 read。 */
+  void a12();
 
   /**
    * 调用 tables.<id>(ctx, ...values)：计算查表的一个表项，values 是索引各来源的值，函数必须是纯函数（同样的输入得到同样的结果，不改变卡带状态）。

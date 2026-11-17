@@ -1,0 +1,75 @@
+{
+  "plugin": "kaiser7017",
+  "image": {
+    "mapper": 303,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "write": "$4A0C",
+      "value": 0
+    },
+    {
+      "write": "$5100",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 32768
+        }
+      ]
+    },
+    {
+      "write": "$4025",
+      "value": 8
+    },
+    {
+      "write": "$5100",
+      "value": 0
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$4020",
+      "value": 16
+    },
+    {
+      "write": "$4021",
+      "value": 0
+    },
+    {
+      "cycles": 11,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "read": "$4030",
+      "expect": 1
+    },
+    {
+      "expectIrq": false
+    },
+    {
+      "read": "$4030",
+      "expect": 0
+    }
+  ]
+}

@@ -1,0 +1,233 @@
+{
+  "plugin": "mmc2",
+  "image": {
+    "mapper": 9,
+    "prgKiB": 128,
+    "chrKiB": 128,
+    "mirroring": "vertical"
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 106496
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$A000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$B000",
+      "value": 5
+    },
+    {
+      "write": "$C000",
+      "value": 6
+    },
+    {
+      "write": "$D000",
+      "value": 7
+    },
+    {
+      "write": "$E000",
+      "value": 8
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 24576,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 32768,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$0FD8"
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 24576,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$0000"
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 20480,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 32768,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$0FE9",
+        "$0000"
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 20480,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$0FE8",
+        "$0000"
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 24576,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$1FDB",
+        "$0000"
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 28672,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$1FEF",
+        "$0000"
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 32768,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "video": [
+        "$1FD8",
+        "$0000"
+      ]
+    },
+    {
+      "write": "$D000",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 36864,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$F000",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

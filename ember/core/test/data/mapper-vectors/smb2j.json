@@ -1,0 +1,71 @@
+{
+  "plugin": "smb2j",
+  "image": {
+    "mapper": 304,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$F000",
+          "storage": "prg",
+          "offset": 28672
+        },
+        {
+          "address": "$5000",
+          "storage": "prg",
+          "offset": 118784
+        },
+        {
+          "address": "$7000",
+          "storage": "prg",
+          "offset": 126976
+        }
+      ]
+    },
+    {
+      "write": "$4022",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 16384
+        },
+        {
+          "address": "$F000",
+          "storage": "prg",
+          "offset": 45056
+        }
+      ]
+    },
+    {
+      "write": "$4122",
+      "value": 1
+    },
+    {
+      "cycles": 4091,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$4122",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

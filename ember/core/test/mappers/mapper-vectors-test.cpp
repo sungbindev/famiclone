@@ -8,7 +8,7 @@
  * 备注：向量文件是 { plugin, image, steps }：plugin 等于文件名（同一插件的多个向量用 <标识>.<后缀>.json）；image 给 mapper、variant、prgKiB（或 prgSize）、prgFill（PRG 的填充字节，默认 0）、chrKiB（或 chrSize）、mirroring、battery；
  *       steps 的每一步可含 cycles（先让时间走过这么多个 CPU 周期，卡带的计时事件在其中触发）、reset（power、soft）、write 加 value（bus 默认 cpu；after 是写入后让时间走过的 CPU 周期数，默认 4，相当于一条指令，所以连续两次写入的间隔默认不会小于 2 个周期）、read 加可选的 expect（不写表示没有驱动总线）、
  *       expectMap（地址落到哪块存储区的哪个偏移，或 unmapped）、expectState、expectNametable（地址、a10、enable）、expectIrq。
- *       steps 还可以含 a12（让 PPU 地址线 A12 出现这么多次上升沿，每次先有几次 A12 为低的访问再有一次为高的访问，只对观察 PPU 地址的卡带有效）。\n *       image 还可以给 nes20、prgRamKiB、prgNvramKiB、chrRamKiB、chrNvramKiB（文件头里的 RAM 大小，写了 nes20 才按 NES 2.0 解释）。
+ *       steps 还可以含 a12（让 PPU 地址线 A12 出现这么多次上升沿，每次先有几次 A12 为低的访问再有一次为高的访问，只对观察 PPU 地址的卡带有效）；video（地址数组，让 PPU 依次访问这些显存地址，同样只对观察 PPU 地址的卡带有效）。\n *       image 还可以给 nes20、prgRamKiB、prgNvramKiB、chrRamKiB、chrNvramKiB（文件头里的 RAM 大小，写了 nes20 才按 NES 2.0 解释）。
  *       地址与值可以写整数、"$8000" 或 "0x80"。断言地址落点用 describeAddress（不回调脚本、不依赖 ROM 内容），所以映像的 PRG、CHR 内容全为 0，只有大小有意义。
  * ------------------------------------------------------------------------
  */
@@ -115,6 +115,10 @@ TEST_P(MapperVectors, FollowTheirSteps) {
         for (int low = 0; low < 5; ++low) cartridge->onVideoAddress(0x0000);
         cartridge->onVideoAddress(0x1000);
       }
+    }
+    if (step.contains("video")) {
+      // 依次让 PPU 访问这些显存地址（观察地址线的卡带据此切页）。
+      for (const json& address : step["video"]) cartridge->onVideoAddress(static_cast<std::uint16_t>(number(address)));
     }
     if (step.contains("reset")) cartridge->reset(step["reset"].get<std::string>() == "power");
     if (step.contains("write")) {

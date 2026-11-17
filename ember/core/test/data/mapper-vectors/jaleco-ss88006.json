@@ -1,0 +1,119 @@
+{
+  "plugin": "jaleco-ss88006",
+  "image": {
+    "mapper": 18,
+    "prgKiB": 256,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 253952
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "write": "$8001",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 40960
+        }
+      ]
+    },
+    {
+      "write": "$8002",
+      "value": 1
+    },
+    {
+      "write": "$8003",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 139264
+        }
+      ]
+    },
+    {
+      "write": "$A000",
+      "value": 3
+    },
+    {
+      "write": "$A001",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 19456,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$F002",
+      "value": 0
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$E000",
+      "value": 0
+    },
+    {
+      "write": "$E001",
+      "value": 1
+    },
+    {
+      "write": "$E002",
+      "value": 0
+    },
+    {
+      "write": "$E003",
+      "value": 0
+    },
+    {
+      "write": "$F000",
+      "value": 0
+    },
+    {
+      "write": "$F001",
+      "value": 1
+    },
+    {
+      "cycles": 11,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    }
+  ]
+}

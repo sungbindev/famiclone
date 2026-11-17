@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-17
-// 备注：用法见 package.json 的脚本或不带参数运行本文件；清单写到 out/ 目录（该目录不提交）。
+// 备注：用法见 package.json 的脚本或不带参数运行本文件；清单写到 listing/ 目录（提交进仓库，BIOS 或分析规则变了要重新生成）。
 // ------------------------------------------------------------------------
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -100,7 +100,7 @@ function main(argv) {
   if (command === 'pages') return printPages(result);
   if (command === 'io') return printAccesses(result);
   if (command === 'banks') return printBanks(result);
-  if (command === 'listing') return writeListings(result, resolve(argument ?? resolve(dirname(fileURLToPath(import.meta.url)), '../out')));
+  if (command === 'listing') return writeListings(result, resolve(argument ?? resolve(dirname(fileURLToPath(import.meta.url)), '../listing')));
   console.log('用法：node tools/sb97-report.mjs info | pages | io | banks | listing [目录]');
   return undefined;
 }

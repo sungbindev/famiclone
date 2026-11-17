@@ -17,7 +17,7 @@ npm run info                  # 文件头、程序区大小与校验和
 npm run pages                 # 每页的用法与代码字节数
 npm run io                    # 对 $2000-$5FFF 的访问统计与写入的立即数
 npm run banks                 # 写 $5000 的立即数
-npm run listing               # 生成各页清单到 out/（不提交）
+npm run listing               # 重新生成各页清单到 listing/
 ```
 
 ## 限制
@@ -33,4 +33,4 @@ npm run listing               # 生成各页清单到 out/（不提交）
 | `tools/` | 文件读取与校验、地址视图、控制流分析、各页分类、清单生成、命令行 |
 | `test/` | 单元测试，含用真实 BIOS 核对的结论 |
 | `docs/` | 分析结论 |
-| `out/` | 生成的清单，已被忽略 |
+| `listing/` | 各页的汇编清单（`page-00.asm` 到 `page-63.asm`），已提交，分析规则或工具变了要重新生成 |

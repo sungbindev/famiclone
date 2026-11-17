@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：真实 BIOS 在仓库的 reference/rom/bbk_bios10.nes（128KB）与 bbk_bios20.nes（2048KB），iNES 文件，16 字节文件头之后是 PRG，文件不存在时跳过冒烟测试；
+ * 备注：真实 BIOS 在仓库的 reference/rom/步步高/bbk_bios10.nes（128KB）与 bbk_bios20.nes（2048KB），iNES 文件，16 字节文件头之后是 PRG，文件不存在时跳过冒烟测试；
  *       设置环境变量 EMBER_BBK_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成以它为前缀的 PPM 文件，供人工查看。
  * ------------------------------------------------------------------------
  */
@@ -67,7 +67,7 @@ std::vector<std::uint8_t> syntheticBios(const BbkVariant& variant) {
 
 /** 读真实的 BIOS：跳过 iNES 文件头；文件不存在或大小不对时返回空。 */
 std::vector<std::uint8_t> realBios(const char* name, const BbkVariant& variant) {
-  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / ".." / "reference" / "rom" / name;
+  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / ".." / "reference" / "rom" / u8"步步高" / name;
   std::ifstream stream(path, std::ios::binary);
   if (!stream) return {};
   std::vector<std::uint8_t> file((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
@@ -447,7 +447,7 @@ TEST(BbkMachine, PowerOnRunsTheProgramFromTheResetVector) {
 
 void bootRealBios(const char* file, const BbkVariant& variant, const char* label, int frames, const char8_t* disk) {
   std::vector<std::uint8_t> bios = realBios(file, variant);
-  if (bios.empty()) GTEST_SKIP() << std::string("没有找到 reference/rom/") + file;
+  if (bios.empty()) GTEST_SKIP() << std::string("没有找到 reference/rom/步步高/") + file;
   BbkMachine machine(variant, std::move(bios));
   if (disk != nullptr) {
     std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(disk));

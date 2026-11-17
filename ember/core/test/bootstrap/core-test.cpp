@@ -268,14 +268,14 @@ TEST_F(CoreTest, InstallsTheBundledDefaultBiosForSupportedMachinesWithoutOne) {
   const auto bundled = userData_ / "bundled-bios";
   writeBios(bundled / "sb2000" / "default-sb2000.bin", 32, false);
   writeBios(bundled / "bbk10" / "too-small.bin", 4, false);  // bbk10 需要 128KB，这个不合格
-  writeBios(bundled / "sb97" / "not-supported.nes", 64);  // 暂未支持的机型不装
+  writeBios(bundled / "sb97" / "default-sb97.bin", 64, false);
   writeBios(bundled / "fc" / "not-needed.nes", 1);  // 不需要 BIOS 的机型不装
   Core core;
   static_cast<void>(core.start(optionsWithBios(bundled)));
   EXPECT_EQ(biosFileNameOf(core, "sb2000"), "default-sb2000.bin");
   EXPECT_EQ(biosFileNameOf(core, "bbk10"), "") << "不合格的默认 BIOS 跳过，不影响启动";
   EXPECT_EQ(biosFileNameOf(core, "bbk20"), "");
-  EXPECT_EQ(biosFileNameOf(core, "sb97"), "");
+  EXPECT_EQ(biosFileNameOf(core, "sb97"), "default-sb97.bin");
   EXPECT_EQ(biosFileNameOf(core, "fc"), "");
   EXPECT_TRUE(std::filesystem::exists(userData_ / "bios" / "sb2000" / "default-sb2000.bin"));
   core.stop();

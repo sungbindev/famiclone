@@ -13,6 +13,7 @@
 #include "bootstrap/machines/bbk/bbk.hpp"
 #include "bootstrap/machines/fc/fc.hpp"
 #include "bootstrap/machines/sb2000/sb2000.hpp"
+#include "bootstrap/machines/sb97/sb97.hpp"
 #include "contracts/runtime/runtime-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -25,6 +26,7 @@ std::unique_ptr<contracts::hardware::Machine> MachineCatalog::create(const std::
 
 std::unique_ptr<contracts::hardware::Machine> MachineCatalog::createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const {
   if (machine == "sb2000") return std::make_unique<Sb2000Machine>(std::move(bios), printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
+  if (machine == "sb97") return std::make_unique<Sb97Machine>(std::move(bios), floppyActivity_.get(), floppyDrive_);
   if (machine == "bbk10") return std::make_unique<BbkMachine>(BbkVariant::floppyOne(), std::move(bios), printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
   if (machine == "bbk20") return std::make_unique<BbkMachine>(BbkVariant::model98(), std::move(bios), printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
   throw shared::CoreError(contracts::runtime::ERROR_HOST_UNSUPPORTED, "程序里还没有实现整机机型：" + machine);

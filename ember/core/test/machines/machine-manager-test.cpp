@@ -46,6 +46,14 @@ std::vector<std::uint8_t> biosFile(std::size_t prgUnits = 32) {
     file[prg + 0x4000] = 0x4C;  // JMP $C000
     file[prg + 0x4001] = 0x00;
     file[prg + 0x4002] = 0xC0;
+  } else if (prgUnits == 64) {
+    // sb97：第 0 页固定在 $C000，复位向量和原地跳转都在这一页。
+    const std::size_t prg = 16;
+    file[prg + 0x3FFC] = 0x00;
+    file[prg + 0x3FFD] = 0xC0;
+    file[prg + 0x0000] = 0x4C;  // JMP $C000
+    file[prg + 0x0001] = 0x00;
+    file[prg + 0x0002] = 0xC0;
   }
   return file;
 }
@@ -122,7 +130,8 @@ TEST(MachineManager, ListsTheFiveMachinesInFixedOrder) {
   EXPECT_TRUE(machines[0].supported);
   EXPECT_TRUE(machines[2].needsBios);
   EXPECT_TRUE(machines[2].supported);
-  EXPECT_FALSE(machines[1].supported);
+  EXPECT_TRUE(machines[1].needsBios);
+  EXPECT_TRUE(machines[1].supported);
   EXPECT_FALSE(machines[2].bios.has_value());
 }
 
@@ -153,7 +162,7 @@ TEST(MachineManager, SettingABiosRejectsBadInputAndKeepsTheOldOne) {
   rig.manager->setBios(rig.setParams("sb2000", rig.write("good.nes", biosFile())));
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("nope", rig.write("a.nes", biosFile()))); }), api::ERROR_NOT_FOUND);
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("fc", rig.write("b.nes", biosFile()))); }), api::ERROR_BIOS_NOT_NEEDED);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb97", rig.write("c.nes", biosFile()))); }), api::ERROR_UNSUPPORTED);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb97", rig.write("c.nes", biosFile()))); }), api::ERROR_BIOS_INVALID) << "sb97 要 1024KB 的 PRG，512KB 的不行";
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb2000", (rig.dir.path() / "missing.nes").string())); }), api::ERROR_FILE_NOT_FOUND);
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb2000", rig.write("small.nes", biosFile(16)))); }), api::ERROR_BIOS_INVALID);
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb2000", rig.write("text.nes", std::vector<std::uint8_t>(100, 'x')))); }), api::ERROR_BIOS_INVALID);
@@ -212,10 +221,23 @@ TEST(MachineManager, BootNeedsAMachineWithABios) {
   params.machine = "fc";
   EXPECT_EQ(errorCodeOf([&] { rig.manager->boot(params); }), api::ERROR_CARTRIDGE_REQUIRED);
   params.machine = "sb97";
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->boot(params); }), api::ERROR_UNSUPPORTED);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->boot(params); }), api::ERROR_NO_BIOS);
   params.machine = "sb2000";
   EXPECT_EQ(errorCodeOf([&] { rig.manager->boot(params); }), api::ERROR_NO_BIOS);
   EXPECT_EQ(rig.runtime->status().machine, std::nullopt) << "失败时没有装配主机";
+}
+
+TEST(MachineManager, ASb97BiosOfOneMegabyteIsAcceptedAndBoots) {
+  Rig rig;
+  const auto result = rig.manager->setBios(rig.setParams("sb97", rig.write("SB97.nes", biosFile(64))));
+  ASSERT_TRUE(result.machine.bios.has_value());
+  EXPECT_EQ(result.machine.bios->size, static_cast<std::int64_t>(16 + 1024 * 1024));
+  api::MachinesBootParams params;
+  params.machine = "sb97";
+  const auto booted = rig.manager->boot(params);
+  EXPECT_EQ(booted.machine.id, "sb97");
+  ASSERT_TRUE(waitFor([&] { return rig.frames->count() >= 5; }));
+  EXPECT_EQ(rig.runtime->status().machine, "sb97");
 }
 
 TEST(MachineManager, BootRunsTheMachineWithoutACartridge) {

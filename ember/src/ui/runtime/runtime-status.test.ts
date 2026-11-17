@@ -18,11 +18,11 @@ const PAUSED = machineStatus('on', 'paused', 'D:\\roms\\nestest.nes');
 const RUNNING = machineStatus('on', 'running', 'D:\\roms\\nestest.nes');
 const WHOLE_OFF = { ...NONE, machine: 'sb2000' };
 
-/** 机型清单：小霸王 2000 已支持，是否有 BIOS 由参数决定。 */
+/** 机型清单：小霸王 2000 已支持，是否有 BIOS 由参数决定；future 是核心标为暂未支持的机型。 */
 function machines(withBios: boolean) {
   return [
     { id: 'fc', supported: true },
-    { id: 'sb97', supported: false },
+    { id: 'future', supported: false },
     { id: 'sb2000', supported: true, ...(withBios ? { bios: { fileName: 'SB2K_BIOS.NES' } } : {}) }
   ];
 }
@@ -62,7 +62,7 @@ describe('powerToggleAction', () => {
     expect(powerToggleAction(NONE, 'sb2000', machines(true))).toBe('boot');
     expect(powerToggleAction(OFF, 'sb2000', machines(true))).toBe('boot');
     expect(powerToggleAction(NONE, 'sb2000', machines(false))).toBe('none');
-    expect(powerToggleAction(NONE, 'sb97', machines(true))).toBe('none');
+    expect(powerToggleAction(NONE, 'future', machines(true))).toBe('none');
     expect(powerToggleAction(NONE, 'nope', machines(true))).toBe('none');
   });
 

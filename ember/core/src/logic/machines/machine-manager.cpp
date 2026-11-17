@@ -27,6 +27,8 @@ constexpr std::size_t HEADER_SIZE = 16;
 constexpr std::size_t TRAINER_SIZE = 512;
 /** PRG 的单位（字节）。 */
 constexpr std::size_t PRG_UNIT = 16 * 1024;
+/** sb97 的 BIOS：1024KB 的 PRG。 */
+constexpr std::size_t SB97_PRG_SIZE = 1024 * 1024;
 /** sb2000 的 BIOS：512KB 的 PRG。 */
 constexpr std::size_t SB2000_PRG_SIZE = 512 * 1024;
 /** 步步高软驱一号与步步高 98 的 BIOS：128KB、2048KB 的 PRG。 */
@@ -46,7 +48,7 @@ MachineManager::MachineManager(std::shared_ptr<api::BiosStorage> storage, std::s
       runtime_(std::move(runtime)),
       events_(std::move(events)),
       entries_{{"fc", "经典 FC", false, true, 0},
-               {"sb97", "小霸王 97", true, false, 0},
+               {"sb97", "小霸王 97", true, true, SB97_PRG_SIZE},
                {"sb2000", "小霸王 2000", true, true, SB2000_PRG_SIZE},
                {"bbk10", "步步高软驱一号", true, true, BBK10_PRG_SIZE},
                {"bbk20", "步步高 98", true, true, BBK20_PRG_SIZE}} {}

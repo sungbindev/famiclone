@@ -82,7 +82,7 @@ BbkMachine::BbkMachine(const BbkVariant& variant, std::vector<std::uint8_t> bios
       apu_(cpuBus_, scheduler_, irq_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE), false),
       ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, 0, logic::hardware::Ppu2c02::Options{SCANLINES_PER_FRAME, false, VBLANK_LINE}),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
-      inputPort_(pad_.port(0), apu_, keyboard_, mouse_),
+      inputPort_(pad_.port(0), apu_, keyboard_, &mouse_),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
       fdc_(scheduler_, ignoredInterrupts_, FDC_INTERRUPT_SOURCE, FDC_STEP_TICKS, FDC_POLL_STEPS),
       speech_(scheduler_, MASTER_CLOCK_HZ, logic::hardware::SpeechLpc::Variant::Bbk),

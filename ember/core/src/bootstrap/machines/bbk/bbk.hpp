@@ -26,8 +26,8 @@
 #include <vector>
 
 #include "bootstrap/machines/bbk/bbk-board.hpp"
-#include "bootstrap/machines/bbk/bbk-input-port.hpp"
 #include "bootstrap/machines/common/cpu-debug-kit.hpp"
+#include "bootstrap/machines/common/keyboard-pad-input-port.hpp"
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/interrupt-sink.hpp"
 #include "contracts/hardware/machine.hpp"
@@ -195,7 +195,7 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
   logic::hardware::Joypad joypad_;
   logic::hardware::KeyboardBbk keyboard_;
   logic::hardware::MouseBbk mouse_;
-  BbkInputPort inputPort_;
+  KeyboardPadInputPort inputPort_;
   IgnoredInterrupts ignoredInterrupts_;
   std::shared_ptr<logic::hardware::StandardFloppyDrive> floppy_;
   logic::hardware::FdcUpd765 fdc_;

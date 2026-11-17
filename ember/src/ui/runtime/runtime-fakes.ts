@@ -13,11 +13,11 @@ import type { CoreStatus } from '../../contracts/core-gateway/core-messages';
 import type { RuntimeStatusResult } from '../../contracts/runtime/generated/runtime';
 import type { RecentCartridge, RuntimeBackend, MachineEntry } from './runtime-controller';
 
-/** 默认的机型清单：经典 FC、小霸王 2000、步步高软驱一号、步步高 98 已支持（三个整机机型都还没有 BIOS），小霸王 97 暂未支持。 */
+/** 默认的机型清单：经典 FC 与四个整机机型都已支持（四个整机机型都还没有 BIOS）。 */
 export function defaultMachines(): MachineEntry[] {
   return [
     { id: 'fc', name: '经典 FC', needsBios: false, supported: true },
-    { id: 'sb97', name: '小霸王 97', needsBios: true, supported: false },
+    { id: 'sb97', name: '小霸王 97', needsBios: true, supported: true },
     { id: 'sb2000', name: '小霸王 2000', needsBios: true, supported: true },
     { id: 'bbk10', name: '步步高软驱一号', needsBios: true, supported: true },
     { id: 'bbk20', name: '步步高 98', needsBios: true, supported: true }

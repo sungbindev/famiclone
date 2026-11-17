@@ -28,11 +28,12 @@ const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: 
 const NES = 'D:\\roms\\nestest.nes';
 
 /** 渲染外壳与运行模块；显示区换成一个带输入框的简单区域；面板启动时是关闭的。 */
-async function setup(options: { status?: ReturnType<typeof machineStatus> | undefined; recent?: string[]; sb2000Bios?: boolean } = {}) {
+async function setup(options: { status?: ReturnType<typeof machineStatus> | undefined; recent?: string[]; sb2000Bios?: boolean; unsupported?: string } = {}) {
   const fake = new FakeRuntimeBackend();
   if ('status' in options) fake.status = options.status;
   fake.recentPaths = options.recent ?? [];
   if (options.sb2000Bios === true) fake.machines = fake.machines.map((machine) => (machine.id === 'sb2000' ? { ...machine, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } } : machine));
+  if (options.unsupported !== undefined) fake.machines = fake.machines.map((machine) => (machine.id === options.unsupported ? { ...machine, supported: false } : machine));
   const controller = new RuntimeController();
   const modules: ShellModule[] = [
     {
@@ -195,8 +196,8 @@ describe('“文件”菜单', () => {
     expect(isDisabled(item('退出'))).toBe(false);
   });
 
-  it('选择机型的子菜单：经典 FC 打对勾；没有 BIOS 的整机机型置灰并注明“未添加 BIOS”，暂未支持的小霸王 97 置灰并注明“暂未支持”', async () => {
-    await setup();
+  it('选择机型的子菜单：经典 FC 打对勾；没有 BIOS 的整机机型置灰并注明“未添加 BIOS”，核心标为暂未支持的机型置灰并注明“暂未支持”', async () => {
+    await setup({ unsupported: 'sb97' });
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     const submenu = screen.getByRole('menu', { name: '选择机型' });

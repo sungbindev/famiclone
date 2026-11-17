@@ -1,0 +1,16 @@
+{
+  "name": "sb97-bios-reverse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "小霸王 97 BIOS 反汇编与分析工具",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "pages": "node tools/sb97-scan.mjs pages",
+    "io": "node tools/sb97-scan.mjs io",
+    "bank": "node tools/sb97-scan.mjs bank"
+  }
+}

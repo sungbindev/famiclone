@@ -80,7 +80,7 @@
   background: transparent;
 }
 
-/* 页面本身的滚动条从标题栏下面开始，不穿过标题栏与系统窗口按钮 */
+/* 页面本身的滚动条从标题栏与导航栏下面开始（窄窗口时导航栏不固定，但它下面的局部导航固定，也不超过这个高度） */
 html::-webkit-scrollbar-track {
-  margin-top: var(--title-bar-height);
+  margin-top: calc(var(--vp-layout-top-height) + var(--vp-nav-height));
 }

@@ -29,5 +29,5 @@ export const INPUT_MODULE: ShellModule = {
   name: 'input',
   dialogs: [{ id: DIALOG_ID, title: TEXT.title, Component: GamepadSettings, ...DIALOG_SIZE }],
   commands: [{ id: INPUT_COMMANDS.open, title: TEXT.title, run: (shell) => shell.openDialog(DIALOG_ID) }],
-  menuItems: [{ menu: 'settings', command: INPUT_COMMANDS.open }]
+  menuItems: [{ menu: 'settings', command: INPUT_COMMANDS.open, separatorBefore: true }]
 };

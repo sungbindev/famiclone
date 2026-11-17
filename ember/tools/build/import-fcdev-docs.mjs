@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
  * 备注：文档只在 packages/fcdev 里维护，help/fcdev 不提交（ember/.gitignore），每次 npm run help:build 都会重新导入，并删除不再登记的页面。
- *       指向文档目录之外的链接（头文件、链接配置、目录）在帮助里打不开，改成普通文字；正文里的尖括号与双花括号要转义，否则 VitePress 会当成 Vue 模板编译。
+ *       指向文档目录之外的链接（头文件、链接配置、目录）在帮助里打不开，改成普通文字；正文里的尖括号与双花括号要转义，否则 VitePress 会当成 Vue 模板编译；
+ *       文档里单独成节的“## 目录”（长文档为单独阅读写的）去掉，帮助页右边有自动生成的页内大纲；
  *       站点的侧边栏分组与导入用同一份分组规则（sidebarGroups），保证两边一致。
  * ------------------------------------------------------------------------
  */
@@ -43,6 +44,8 @@ const TEXT = {
 
 /** 单独成行的锚点标签，导入时原样保留。 */
 const ANCHOR_LINE = /^<a id="[^"]+"><\/a>$/;
+/** 导入时去掉的“目录”一节的标题行。 */
+const CONTENTS_HEADING = '## 目录';
 /** 行内链接：[文字](目标)。 */
 const LINK = /\[([^\]]*)\]\(([^)\s]+)\)/g;
 /** 带协议的外部链接。 */
@@ -126,7 +129,7 @@ function escapeMarkup(line) {
 }
 
 /**
- * 把一份文档转成帮助站点的页面：统一换行，代码块原样保留，其余行先改写链接再转义，开头加“由导入生成”的标记。
+ * 把一份文档转成帮助站点的页面：统一换行，去掉单独成节的“## 目录”，代码块原样保留，其余行先改写链接再转义，开头加“由导入生成”的标记。
  * @param {object} input 参数
  * @param {string} input.text 文档全文
  * @param {string} input.sourceFile 文档的绝对路径
@@ -136,13 +139,28 @@ function escapeMarkup(line) {
  */
 export function convertDocument({ text, sourceFile, relativeFile, pageByFile }) {
   let inFence = false;
-  const lines = text.replace(/\r\n/g, '\n').split('\n').map((line) => {
+  let inContents = false;
+  const lines = [];
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
     if (/^\s*(```|~~~)/.test(line)) {
+      inContents = false;
       inFence = !inFence;
-      return line;
+      lines.push(line);
+      continue;
     }
-    return inFence ? line : escapeMarkup(rewriteLinks(line, sourceFile, pageByFile));
-  });
+    if (inFence) {
+      lines.push(line);
+      continue;
+    }
+    // 目录一节只有列表项与空行，遇到别的行（下一节的锚点或标题）就结束，该行要保留
+    if (line === CONTENTS_HEADING) {
+      inContents = true;
+      continue;
+    }
+    if (inContents && (line === '' || line.startsWith('- '))) continue;
+    inContents = false;
+    lines.push(escapeMarkup(rewriteLinks(line, sourceFile, pageByFile)));
+  }
   return `${TEXT.marker(relativeFile)}\n\n${lines.join('\n').replace(/\n+$/, '')}\n`;
 }
 

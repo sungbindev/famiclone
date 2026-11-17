@@ -60,6 +60,14 @@ describe('convertDocument', () => {
     expect(page).toContain('```c\n<a> {{b}}\n```');
   });
 
+  it('去掉单独成节的“## 目录”，保留它后面的锚点与标题；代码块里的同名行与正文里的列表不动', () => {
+    const page = convert('# 标题\n\n简介\n\n## 目录\n\n- [甲](#a)\n- [乙](#b)\n\n<a id="a"></a>\n## 甲\n\n- 正文列表\n\n```text\n## 目录\n- 代码里的\n```\n');
+    expect(page).toContain('简介\n\n<a id="a"></a>\n## 甲\n\n- 正文列表');
+    expect(page).not.toContain('[甲](#a)');
+    expect(page).toContain('```text\n## 目录\n- 代码里的\n```');
+    expect(page.match(/## 目录/g)).toHaveLength(1);
+  });
+
   it('开头有“由导入生成”的标记，换行统一为 LF，结尾只有一个换行', () => {
     const page = convert('# 标题\r\n\r\n正文\r\n\r\n');
     expect(page.startsWith('<!-- 本文件由 npm run help:build 从 packages/fcdev/docs/a.md 导入，不要手改 -->\n\n# 标题\n')).toBe(true);
@@ -131,6 +139,7 @@ describe('真实的 fcdev 手册', () => {
     expect(readdirSync(output).toSorted()).toEqual(['index.md', ...DOC_TOPICS.map((topic) => `${topic.topic}.md`)].toSorted());
     for (const name of readdirSync(output)) {
       const text = readFileSync(join(output, name), 'utf8');
+      expect(text, `${name} 里不应留下“## 目录”`).not.toContain('\n## 目录\n');
       for (const match of text.matchAll(/\]\(([^)\s#]+)(?:#[^)\s]*)?\)/g)) {
         const target = match[1] ?? '';
         if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;

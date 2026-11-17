@@ -94,6 +94,8 @@ function logError(logger: FileErrorLogger, error: unknown, context: Record<strin
 // 安装、更新、卸载时 Squirrel 会带参数启动应用，处理快捷方式后立即退出。
 // 对话框盖住整个主窗口时，Windows 上 Chromium 会把主窗口当作不可见而停掉渲染，主题等经主窗口同步给对话框的状态就停住；关掉遮挡检测让主窗口始终渲染。
 if (process.platform === 'win32') app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+// 虚拟机、远程桌面或没有显卡驱动的电脑上，新版 Chromium 默认不再退到软件渲染，画面用的 WebGL 就创建不出来；开启后显卡不可用时退到软件渲染，有显卡加速时仍用显卡。
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   app.quit();
 } else {

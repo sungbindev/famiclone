@@ -39,6 +39,7 @@ import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
 import { registerHelpProtocol, registerHelpScheme } from '../../platform/help/help-protocol';
 import { createHelpWindow } from '../../platform/help/help-window';
 import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/launch/launch-args';
+import { readAllowMultipleInstances } from '../../platform/launch/allow-multiple-instances';
 import { loadNativeKeyboard, NativeKeyboardCapture } from '../../platform/keyboard-capture/native-keyboard-capture';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { createDirectoryOpener } from '../../platform/logging/log-directory';
@@ -96,7 +97,9 @@ function logError(logger: FileErrorLogger, error: unknown, context: Record<strin
 if (process.platform === 'win32') app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 // 虚拟机、远程桌面或没有显卡驱动的电脑上，新版 Chromium 默认不再退到软件渲染，画面用的 WebGL 就创建不出来；开启后显卡不可用时退到软件渲染，有显卡加速时仍用显卡。
 app.commandLine.appendSwitch('enable-unsafe-swiftshader');
-if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
+// 首选项里开启“允许同时运行多个实例”时不取单实例锁；设置在核心里保存，这时核心还没启动，所以直接读首选项文件。
+const allowMultipleInstances = !handledSquirrelEvent && readAllowMultipleInstances(join(app.getPath('userData'), 'config', 'preferences.json'));
+if (handledSquirrelEvent || (!allowMultipleInstances && !app.requestSingleInstanceLock())) {
   app.quit();
 } else {
   if (process.platform === 'win32') app.setAppUserModelId(APP_ID);

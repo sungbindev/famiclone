@@ -179,12 +179,14 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   ASSERT_TRUE(listed.ok);
   std::vector<std::string> groups;
   for (const auto& group : listed.payload["groups"]) groups.push_back(group["id"]);
-  EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "update", "sound", "input", "printer", "debug"}));
+  EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "update", "app", "sound", "input", "printer", "debug"}));
   std::map<std::string, nlohmann::json> byId;
   for (const auto& setting : listed.payload["settings"]) byId[setting["id"]] = setting;
-  EXPECT_EQ(byId.size(), 15U);
+  EXPECT_EQ(byId.size(), 16U);
   EXPECT_EQ(byId["update.autoCheck"]["kind"], "switch");
   EXPECT_EQ(byId["update.autoCheck"]["value"], true);
+  EXPECT_EQ(byId["app.allowMultipleInstances"]["kind"], "switch");
+  EXPECT_EQ(byId["app.allowMultipleInstances"]["value"], false);
   EXPECT_EQ(byId["input.captureMouse"]["kind"], "switch");
   EXPECT_EQ(byId["input.captureMouse"]["value"], true);
   EXPECT_EQ(byId["input.familyKeyboard"]["kind"], "switch");

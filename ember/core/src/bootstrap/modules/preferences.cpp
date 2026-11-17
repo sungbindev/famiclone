@@ -59,6 +59,14 @@ void registerInterfaceSettings(api::PreferenceService& service) {
                       .description = "有新版本时自动下载，下载好后在“帮助”菜单里选择“重启并安装更新”；也可以随时在“帮助”菜单里手动检查。",
                       .kind = api::SettingKind::Switch,
                       .defaultValue = true});
+
+  service.addGroup({"app", "应用"});
+  service.addSetting({.id = "app.allowMultipleInstances",
+                      .group = "app",
+                      .label = "允许同时运行多个实例",
+                      .description = "开启后可以再打开新的 Ember 窗口，各实例共用同一份设置，后保存的会覆盖先保存的；调试服务同一时间只有一个实例能使用端口。下次启动时生效。",
+                      .kind = api::SettingKind::Switch,
+                      .defaultValue = false});
 }
 
 void registerPreferences(ModuleRegistry& registry) {

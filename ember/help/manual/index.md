@@ -20,6 +20,7 @@ Ember 是 FC（红白机）与小霸王、步步高等学习机的模拟器，�
 - 键盘、手柄与鼠标怎么用：[键盘、手柄与鼠标](input.md)
 - 遇到问题：[常见问题](faq.md)
 - 想自己写 mapper 插件：[插件开发手册](../plugin/index.md)
+- 想用 fcdev 为 NES 或学习机开发程序：[fcdev 开发手册](../fcdev/index.md)
 
 ## 调试功能
 

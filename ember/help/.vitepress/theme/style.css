@@ -44,6 +44,12 @@
   --vp-layout-top-height: var(--title-bar-height);
 }
 
+/* 表格第一列的行内代码（命令、函数名、寄存器等）不折行，否则会被后面的长文字挤成一字一行 */
+.vp-doc td:first-child code,
+.vp-doc th:first-child code {
+  white-space: nowrap;
+}
+
 /* 标题栏固定在窗口顶部，位于 VitePress 的导航之上 */
 .ui-title-bar {
   position: fixed;

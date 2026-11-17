@@ -7,5 +7,6 @@ coverage/
 *.log
 !core/test/data/**/*.log
 help/api/
+help/fcdev/
 help/.vitepress/cache/
 help/.vitepress/.temp/

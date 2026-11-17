@@ -16,6 +16,9 @@ hero:
     - theme: alt
       text: 调试接口手册
       link: /debug/
+    - theme: alt
+      text: fcdev 开发手册
+      link: /fcdev/
 
 features:
   - title: 使用说明
@@ -27,4 +30,7 @@ features:
   - title: 调试接口手册
     details: 调试服务的连接方式、报文规则、官方客户端工具，以及全部请求与事件的参数和结果。
     link: /debug/
+  - title: fcdev 开发手册
+    details: 用 fcdev 为 NES 和小霸王学习机 SB2000 开发程序：命令、构建与调试，SB-DOS 的系统调用、硬件行为、C 接口与汇编符号。
+    link: /fcdev/
 ---

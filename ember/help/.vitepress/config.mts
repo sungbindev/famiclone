@@ -1,11 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：config.mts
- * 说明：Ember 帮助文档站点的 VitePress 配置：中文界面、三个分类（使用说明、插件开发手册、调试接口手册）的导航与侧边栏、离线搜索，构建输出到仓库根目录的 build/ember/help。
+ * 说明：Ember 帮助文档站点的 VitePress 配置：中文界面、四个分类（使用说明、插件开发手册、调试接口手册、fcdev 开发手册）的导航与侧边栏、离线搜索，构建输出到仓库根目录的 build/ember/help。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-17
+ * 日期：2026-11-18
  * 备注：help/api 由 npm run help:build 先生成（调试接口的各模块页，不提交），侧边栏里的模块按 help/api/index.md 里的顺序列出；
+ *       help/fcdev 同样由 help:build 从 packages/fcdev 导入（不提交），侧边栏取自 tools/build/import-fcdev-docs.mjs，与导入用同一份分组规则；
  *       站点由主进程经自定义协议 ember-help:// 提供，只能用 .html 结尾的链接（cleanUrls 保持关闭）；外观跟随系统，不提供切换按钮。
  * ------------------------------------------------------------------------
  */
@@ -15,6 +16,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import { HELP_BUILD_DIRECTORY } from '../../tools/build/build-paths.mjs';
+import { sidebarGroups as fcdevSidebarGroups } from '../../tools/build/import-fcdev-docs.mjs';
 import { uiKitDirectory } from '../../ui-kit-source.mts';
 
 /** 站点源码目录（ember/help）。 */
@@ -27,10 +29,11 @@ const THEME_CLASS_SCRIPT =
 /** 用户可见的文字。 */
 const TEXT = {
   title: 'Ember 帮助文档',
-  description: 'Ember（FC 与学习机模拟器）的使用说明、插件开发手册与调试接口手册',
+  description: 'Ember（FC 与学习机模拟器）的使用说明、插件开发手册、调试接口手册与 fcdev 开发手册',
   manual: '使用说明',
   plugin: '插件开发手册',
   debug: '调试接口手册',
+  fcdev: 'fcdev 开发手册',
   missingApi: '找不到 help/api：先运行 npm run help:build 生成调试接口的各模块页'
 } as const;
 
@@ -104,16 +107,21 @@ export default defineConfig({
   appearance: 'force-auto',
   head: [['script', {}, THEME_CLASS_SCRIPT]],
   // 主题里直接引用组件库源码的令牌、主题与标题栏样式，位置与界面打包用的一致（见 ui-kit-source.mts）
-  vite: { resolve: { alias: [{ find: /^@ember-ui-kit\//, replacement: `${resolve(uiKitDirectory(), 'src').replaceAll('\\', '/')}/` }] } },
+  vite: {
+    resolve: { alias: [{ find: /^@ember-ui-kit\//, replacement: `${resolve(uiKitDirectory(), 'src').replaceAll('\\', '/')}/` }] },
+    // 站点从本地读取，不走网络，体积提示没有意义；fcdev 手册与搜索索引让打包文件超过默认的 500 kB
+    build: { chunkSizeWarningLimit: 2000 }
+  },
   markdown: { theme: { light: 'github-light', dark: 'github-dark' } },
   themeConfig: {
     siteTitle: false,
     nav: [
       { text: TEXT.manual, link: '/manual/', activeMatch: '^/manual/' },
       { text: TEXT.plugin, link: '/plugin/', activeMatch: '^/plugin/' },
-      { text: TEXT.debug, link: '/debug/', activeMatch: '^/(debug|api)/' }
+      { text: TEXT.debug, link: '/debug/', activeMatch: '^/(debug|api)/' },
+      { text: TEXT.fcdev, link: '/fcdev/', activeMatch: '^/fcdev/' }
     ],
-    sidebar: { '/manual/': MANUAL_SIDEBAR, '/plugin/': PLUGIN_SIDEBAR, '/debug/': debugSidebar(), '/api/': debugSidebar() },
+    sidebar: { '/manual/': MANUAL_SIDEBAR, '/plugin/': PLUGIN_SIDEBAR, '/debug/': debugSidebar(), '/api/': debugSidebar(), '/fcdev/': fcdevSidebarGroups() },
     outline: { level: [2, 3], label: '本页内容' },
     docFooter: { prev: '上一页', next: '下一页' },
     returnToTopLabel: '回到顶部',

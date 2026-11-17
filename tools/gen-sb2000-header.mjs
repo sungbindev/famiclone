@@ -33,6 +33,28 @@ function toCommentText(text) {
 }
 
 /**
+ * 把 sb2000.inc 按分节注释拆成符号清单，没有符号的分节不收。
+ * @param {string} incText sb2000.inc 的内容
+ * @returns {{title: string, symbols: {name: string, value: string, comment: string}[]}[]} 分节清单，符号的值是不带 $ 的十六进制原文
+ */
+export function parseSymbolSections(incText) {
+  const sections = [];
+  let current = null;
+  for (const rawLine of incText.split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+    const section = SECTION_LINE.exec(line);
+    const symbol = SYMBOL_LINE.exec(line);
+    if (section) {
+      current = { title: section[1], symbols: [] };
+      sections.push(current);
+    } else if (symbol && current) {
+      current.symbols.push({ name: symbol[1], value: symbol[2], comment: symbol[3] ?? '' });
+    }
+  }
+  return sections.filter((item) => item.symbols.length > 0);
+}
+
+/**
  * 由 sb2000.inc 的内容生成头文件内容。
  * @param {string} incText sb2000.inc 的内容
  * @returns {string} sb2000-symbols.h 的内容

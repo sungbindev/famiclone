@@ -48,8 +48,14 @@ export function renderListing(analysis, { title, first, last }) {
       address += ins.length;
       continue;
     }
+    const tableTarget = analysis.tableWords.get(address);
+    if (tableTarget !== undefined) {
+      lines.push(`${hex4(address)}  .word ${labelOf(analysis, tableTarget) ?? `$${hex4(tableTarget)}`}`);
+      address += 2;
+      continue;
+    }
     let end = address + 1;
-    while (end <= last && end - address < BYTES_PER_ROW && kind[end - WINDOW_START] !== KIND_OPCODE && !analysis.references.has(end)) end += 1;
+    while (end <= last && end - address < BYTES_PER_ROW && kind[end - WINDOW_START] !== KIND_OPCODE && !analysis.references.has(end) && !analysis.tableWords.has(end)) end += 1;
     const bytes = [];
     for (let i = address; i < end; i += 1) bytes.push(`$${hex2(view.read(i))}`);
     lines.push(`${hex4(address)}  .byte ${bytes.join(',')}`);

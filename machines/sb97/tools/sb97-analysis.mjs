@@ -36,8 +36,48 @@ export const KIND_OPERAND = 2;
  * @property {Map<number, string>} names 入口的名字
  * @property {{pc: number, reason: string}[]} rejected 停下来的位置与原因
  * @property {Set<number>} externalTargets 跳到视图之外的目标地址
+ * @property {Map<number, number>} tableWords JSR 后面内嵌的跳转表：字所在的地址与它指向的目标
  * @property {number} codeBytes 被当作代码的字节数
  */
+
+/** 内嵌跳转表最多读几个字 */
+const MAX_TABLE_WORDS = 64;
+/** 内嵌字符串最多找多少字节的结尾 $00 */
+const MAX_INLINE_STRING = 256;
+
+/**
+ * 地址上是不是一条能当入口的官方指令。
+ * @param {import('./sb97-memory.mjs').MemoryView} view 视图
+ * @param {number} address 地址
+ * @returns {boolean}
+ */
+export function isPlausibleEntry(view, address) {
+  if (!view.has(address)) return false;
+  const ins = decodeInstruction(view.read, address);
+  return ins.info.official && ins.info.mnemonic !== 'BRK' && view.has(address + ins.length - 1);
+}
+
+/**
+ * 一个子程序是不是“按 JSR 后面内嵌的字表跳转”：开头几条指令里连着弹两次返回地址再存进零页（PLA、STA、PLA、STA）。
+ * @param {import('./sb97-memory.mjs').MemoryView} view 视图
+ * @param {number} address 子程序的地址
+ * @returns {boolean}
+ */
+export function isInlineTableDispatcher(view, address) {
+  if (!view.has(address)) return false;
+  const mnemonics = [];
+  let pc = address;
+  for (let i = 0; i < 12 && view.has(pc + 2); i += 1) {
+    const ins = decodeInstruction(view.read, pc);
+    mnemonics.push(ins.info.mnemonic);
+    if (endsFlow(ins)) break;
+    pc += ins.length;
+  }
+  for (let i = 0; i + 3 < mnemonics.length; i += 1) {
+    if (mnemonics[i] === 'PLA' && mnemonics[i + 1] === 'STA' && mnemonics[i + 2] === 'PLA' && mnemonics[i + 3] === 'STA') return true;
+  }
+  return false;
+}
 
 /**
  * 从入口出发找出代码。
@@ -52,6 +92,7 @@ export function analyzeView(view, seeds) {
   const names = new Map();
   const rejected = [];
   const externalTargets = new Set();
+  const tableWords = new Map();
   const queue = [];
 
   const addReference = (address, how) => {
@@ -103,8 +144,31 @@ export function analyzeView(view, seeds) {
       instructions.set(pc, ins);
 
       const mnemonic = ins.info.mnemonic;
-      if (mnemonic === 'JSR') follow(ins.target, 'jsr');
-      else if (mnemonic === 'JMP' && ins.target !== null) follow(ins.target, 'jmp');
+      if (mnemonic === 'JSR') {
+        follow(ins.target, 'jsr');
+        if (isInlineTableDispatcher(view, ins.target)) {
+          // 调用之后紧跟一张字表，子程序按下标取其中一项当跳转目标，表之后才是接着执行的代码
+          let address = pc + ins.length;
+          for (let count = 0; count < MAX_TABLE_WORDS && view.has(address + 1); count += 1) {
+            const target = view.read(address) | (view.read(address + 1) << 8);
+            if (!isPlausibleEntry(view, target)) break;
+            tableWords.set(address, target);
+            follow(target, 'table');
+            address += 2;
+          }
+          if (address === pc + ins.length) {
+            // 一项都不是代码地址：多半是内嵌的字符串，以 $00 结尾
+            for (let i = 0; i < MAX_INLINE_STRING && view.has(address + i); i += 1) {
+              if (view.read(address + i) === 0) {
+                address += i + 1;
+                break;
+              }
+            }
+          }
+          pc = address;
+          continue;
+        }
+      } else if (mnemonic === 'JMP' && ins.target !== null) follow(ins.target, 'jmp');
       else if (isBranch(ins)) follow(ins.target, 'branch');
       if (endsFlow(ins)) break;
       pc += ins.length;
@@ -113,7 +177,7 @@ export function analyzeView(view, seeds) {
 
   let codeBytes = 0;
   for (const value of kind) if (value !== KIND_UNKNOWN) codeBytes += 1;
-  return { view, kind, instructions, references, names, rejected, externalTargets, codeBytes };
+  return { view, kind, instructions, references, names, rejected, externalTargets, tableWords, codeBytes };
 }
 
 /**

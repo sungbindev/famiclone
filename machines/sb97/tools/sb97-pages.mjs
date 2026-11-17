@@ -5,11 +5,11 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-17
 // 备注：入口的来源：向量（$FFFA/$FFFC/$FFFE）、页首的三个跳转桩（$8000、$8003、$8006 的 JMP）、
-//       第 0 页 $C000 起的功能表（功能号 $10-$6F，每项 2 字节）与 $FFE0 起的跳转桩；
+//       第 0 页 $C000 起的功能表（功能号 $10-$6F，每项 2 字节）与 $FFE0 起的跳转桩、功能分派器用到的各页功能表（见 PAGE_FUNCTION_TABLES）；
+//       另外 JSR 后面内嵌的跳转表由分析模块识别；
 //       页的用法是静态推断：能干净地跑通（没有被拒绝的位置）又有足够多的代码才算“像”，是否真是那样要靠运行时的采集核对。
 // ------------------------------------------------------------------------
-import { decodeInstruction } from '../../sb2000/disassembly/tools/disasm.mjs';
-import { analyzeView } from './sb97-analysis.mjs';
+import { analyzeView, isPlausibleEntry } from './sb97-analysis.mjs';
 import { bankView, fixedView, windowView } from './sb97-memory.mjs';
 import { PAGE_COUNT } from './sb97-rom.mjs';
 
@@ -23,24 +23,26 @@ export const DEFAULT_FUNCTION_ENTRY = 0xc0c0;
 export const ENTRY_STUBS = [0x8000, 0x8003, 0x8006];
 /** 第 0 页末尾的跳转桩 */
 export const FIXED_STUBS = [0xffe0, 0xffe3, 0xffe6, 0xffe9];
+/**
+ * 功能分派器（第 0 页 $C0C2）按功能号切换窗口页后跳转：
+ * $10-$6F 查第 0 页的功能表；$70-$7E 切到第 63 页跳 $8000；$7F 切到第 47 页跳 $E0BE（落在第 0 页里）；
+ * $80-$9F 切到第 64 页（按 64 取模就是第 0 页）查 $8000 起的表；$A0-$BF 切到 RAM 模式的 PRAM 页（运行时才有，静态看不到）；
+ * $C0-$EF 切到第 1 页查 $8000 起的表；$F0-$FF 切到第 5 页查 $B380 起的表；$00-$0F 查 RAM 里 $013D 起的三字节表（运行时填，静态看不到）。
+ */
+export const PAGE_FUNCTION_TABLES = [
+  { page: 1, start: 0x8000, firstNumber: 0xc0, count: 0x30 },
+  { page: 5, start: 0xb380, firstNumber: 0xf0, count: 0x10 },
+];
+/** 窗口页里直接跳进去的入口 */
+export const PAGE_ENTRIES = [{ page: 63, address: 0x8000, name: 'fn_70' }];
+/** 落在第 0 页里的功能入口 */
+export const FIXED_FUNCTION_ENTRIES = [{ address: 0xe0be, name: 'fn_7F' }];
 /** 判断“像一个程序”的最少代码字节数 */
 export const MIN_CODE_BYTES = 64;
 /** 每个被拒绝的位置至少要对应这么多代码字节 */
 export const REJECT_RATIO = 400;
 
 const word = (view, address) => view.read(address) | (view.read(address + 1) << 8);
-
-/**
- * 地址上是不是一条能当入口的官方指令。
- * @param {import('./sb97-memory.mjs').MemoryView} view 视图
- * @param {number} address 地址
- * @returns {boolean}
- */
-export function isPlausibleEntry(view, address) {
-  if (!view.has(address)) return false;
-  const ins = decodeInstruction(view.read, address);
-  return ins.info.official && ins.info.mnemonic !== 'BRK' && view.has(address + ins.length - 1);
-}
 
 /**
  * 三个向量指向的、像入口的地址。
@@ -89,6 +91,25 @@ export function functionTableSeeds(view) {
 }
 
 /**
+ * 一个窗口页的入口：页首的跳转桩、页里的功能表、直接跳进去的入口。
+ * @param {import('./sb97-memory.mjs').MemoryView} view 视图
+ * @param {number} page 窗口页号
+ * @returns {import('./sb97-analysis.mjs').Seed[]}
+ */
+export function windowPageSeeds(view, page) {
+  const seeds = stubSeeds(view, ENTRY_STUBS, 'entry');
+  for (const table of PAGE_FUNCTION_TABLES) {
+    if (table.page !== page) continue;
+    for (let index = 0; index < table.count; index += 1) {
+      const target = word(view, table.start + index * 2);
+      if (isPlausibleEntry(view, target)) seeds.push({ address: target, name: `fn_${(table.firstNumber + index).toString(16).toUpperCase()}` });
+    }
+  }
+  for (const entry of PAGE_ENTRIES) if (entry.page === page && isPlausibleEntry(view, entry.address)) seeds.push({ address: entry.address, name: entry.name });
+  return seeds;
+}
+
+/**
  * @typedef {object} PageReport
  * @property {number} page 页号
  * @property {'fixed'|'window'|'bank-upper'|'data'} role 推断的用法：window 是 16K 模式下 $8000 的程序页，bank-upper 是 32K 模式的高半页
@@ -114,12 +135,17 @@ const looksLikeProgram = (analysis) => analysis.codeBytes >= MIN_CODE_BYTES && a
  */
 export function analyzeRom(rom) {
   const fixedMemory = fixedView(rom);
-  const fixed = analyzeView(fixedMemory, [...vectorSeeds(fixedMemory), ...stubSeeds(fixedMemory, FIXED_STUBS, 'api'), ...functionTableSeeds(fixedMemory)]);
+  const fixed = analyzeView(fixedMemory, [
+    ...vectorSeeds(fixedMemory),
+    ...stubSeeds(fixedMemory, FIXED_STUBS, 'api'),
+    ...functionTableSeeds(fixedMemory),
+    ...FIXED_FUNCTION_ENTRIES.filter((entry) => isPlausibleEntry(fixedMemory, entry.address)),
+  ]);
 
   const windows = new Map();
   for (let page = 1; page < PAGE_COUNT; page += 1) {
     const view = windowView(rom, page);
-    windows.set(page, analyzeView(view, stubSeeds(view, ENTRY_STUBS, 'entry')));
+    windows.set(page, analyzeView(view, windowPageSeeds(view, page)));
   }
   const banks = new Map();
   for (let bank = 0; bank < PAGE_COUNT / 2; bank += 1) {

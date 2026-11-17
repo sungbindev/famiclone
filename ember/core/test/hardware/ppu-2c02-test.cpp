@@ -647,4 +647,47 @@ TEST(Ppu2c02Variants, DendyVblankStartsOnLine291AndEndsOnTheLastLine) {
   EXPECT_FALSE(rig.nmi.active());
 }
 
+// ---------------------------------------------------------------- 变体：背景图案表的附加选择
+
+/** 图案表 0 的第 1 块是实心图块（颜色 1），图案表 1 的第 1 块是空图块；名称表 0 与 2 全用第 1 块；背景色黑，颜色 1 白。 */
+void prepareTwoTables(PpuRig& rig) {
+  for (int i = 0; i < 8; ++i) rig.vram.bytes[16 + static_cast<std::size_t>(i)] = 0xFF;
+  for (int i = 0; i < 960; ++i) {
+    rig.vram.bytes[0x2000 + static_cast<std::size_t>(i)] = 1;
+    rig.vram.bytes[0x2800 + static_cast<std::size_t>(i)] = 1;
+  }
+  rig.writeVram(0x3F00, 0x0F);
+  rig.writeVram(0x3F01, 0x30);
+  rig.setAddress(0x0000);
+}
+
+/** 渲染一整帧（背景开启、不遮罩左边），返回画面中央的像素。 */
+std::array<std::uint8_t, 4> centerPixelOfNametable(PpuRig& rig, std::uint8_t control) {
+  prepareTwoTables(rig);
+  rig.write(0x2000, control);
+  rig.write(0x2001, 0x0A);
+  runOneFrame(rig);
+  runOneFrame(rig);
+  return pixelBytes(rig.ppu.frame(), 120 * 256 + 128);
+}
+
+TEST(Ppu2c02Variants, BackgroundTableOverrideSendsTheChosenNametablesToPatternTableOne) {
+  const std::array<std::uint8_t, 4> white{255, 255, 255, 255};
+  const std::array<std::uint8_t, 4> black{0, 0, 0, 255};
+
+  PpuRig plain(Ppu2c02::Options{312, false, 291});
+  EXPECT_EQ(centerPixelOfNametable(plain, 0x00), white);
+  PpuRig plainTwo(Ppu2c02::Options{312, false, 291});
+  EXPECT_EQ(centerPixelOfNametable(plainTwo, 0x02), white) << "没有回调时名称表 2 与名称表 0 一样用 $2000 位 4 选的图案表 0";
+
+  Ppu2c02::Options options{312, false, 291};
+  options.backgroundTableOverride = [](unsigned nametable) { return nametable == 2; };
+  PpuRig forced(options);
+  EXPECT_EQ(centerPixelOfNametable(forced, 0x00), white) << "名称表 0 不受影响";
+  PpuRig forcedTwo(options);
+  EXPECT_EQ(centerPixelOfNametable(forcedTwo, 0x02), black) << "名称表 2 的图块改取图案表 1（空图块）";
+  PpuRig forcedTable(options);
+  EXPECT_EQ(centerPixelOfNametable(forcedTable, 0x12), black) << "$2000 位 4 为 1 时本来就取图案表 1";
+}
+
 }  // namespace

@@ -84,6 +84,12 @@ void Ppu2c02::incrementY() {
   v_ = static_cast<std::uint16_t>((v_ & ~0x03E0) | (coarseY << 5));
 }
 
+std::uint16_t Ppu2c02::backgroundTableBase() const {
+  bool high = (ctrl_ & CTRL_BACKGROUND_TABLE) != 0;
+  if (!high && options_.backgroundTableOverride) high = options_.backgroundTableOverride(static_cast<unsigned>((v_ >> 10) & 3U));
+  return high ? 0x1000 : 0x0000;
+}
+
 void Ppu2c02::fetchBackground(int dot) {
   const bool fetching = (dot >= 1 && dot <= 257) || (dot >= 321 && dot <= 337);
   if (fetching) {
@@ -101,10 +107,10 @@ void Ppu2c02::fetchBackground(int dot) {
         break;
       }
       case 4:
-        nextPatternLow_ = readVram(static_cast<std::uint16_t>(((ctrl_ & CTRL_BACKGROUND_TABLE) != 0 ? 0x1000 : 0) + (nextTileId_ << 4) + ((v_ >> 12) & 7)));
+        nextPatternLow_ = readVram(static_cast<std::uint16_t>(backgroundTableBase() + (nextTileId_ << 4) + ((v_ >> 12) & 7)));
         break;
       case 6:
-        nextPatternHigh_ = readVram(static_cast<std::uint16_t>(((ctrl_ & CTRL_BACKGROUND_TABLE) != 0 ? 0x1000 : 0) + (nextTileId_ << 4) + ((v_ >> 12) & 7) + 8));
+        nextPatternHigh_ = readVram(static_cast<std::uint16_t>(backgroundTableBase() + (nextTileId_ << 4) + ((v_ >> 12) & 7) + 8));
         break;
       case 7:
         incrementCoarseX();

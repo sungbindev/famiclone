@@ -16,6 +16,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <span>
 #include <vector>
 
@@ -49,6 +50,12 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
     bool oddFrameSkip;
     /** vblank 置位的行（NTSC 与 PAL 为 241，Dendy 为 291，中间的行没有渲染）。 */
     int vblankLine{241};
+    /**
+     * 背景图案表的附加选择：参数是取这块背景图块时 v 的名称表序号（位 10-11，0 到 3，镜像之前的逻辑序号），
+     * 返回 true 时这块背景图块用图案表 1（$1000 起），即使 $2000 位 4 为 0；返回 false 时按 $2000 位 4；
+     * 不影响精灵；为空（默认）表示不启用，经典 FC 与其他机型都不设。
+     */
+    std::function<bool(unsigned)> backgroundTableOverride{};
   };
 
   /**
@@ -128,6 +135,8 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   void fetchSprites(int line, int dot);
   void drawPixel(int line, int x);
   [[nodiscard]] std::uint8_t readVram(std::uint16_t address);
+  /** 当前这块背景图块用的图案表基址（$0000 或 $1000）。 */
+  [[nodiscard]] std::uint16_t backgroundTableBase() const;
 
   contracts::hardware::Scheduler& scheduler_;
   contracts::hardware::PpuBus& bus_;

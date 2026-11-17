@@ -48,12 +48,13 @@ function setup(initial: MachineInfo[] = machines()) {
     current = current.map((item) => (item.id === params.machine ? { ...item, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } } : item));
     return Promise.resolve({ canceled: false, machine: current.find((item) => item.id === params.machine) as MachineInfo });
   });
+  const openBiosDirectory = vi.fn((_params: Record<string, never>): Promise<Record<string, never>> => Promise.resolve({}));
   const bridge = {
     core: {
       preferences: { list: () => Promise.resolve({ groups: [{ id: 'display', label: '画面' }], settings: [] }), set: vi.fn(), reset: vi.fn() },
       machines: { list, removeBios }
     },
-    main: { machines: { openBios } },
+    main: { machines: { openBios, openBiosDirectory } },
     onCoreEvent: (listener: (name: string, data: unknown) => void) => {
       eventListeners.add(listener);
       return () => eventListeners.delete(listener);
@@ -73,6 +74,7 @@ function setup(initial: MachineInfo[] = machines()) {
   return {
     list,
     openBios,
+    openBiosDirectory,
     removeBios,
     change: (next: MachineInfo[]) => {
       current = next;
@@ -132,6 +134,22 @@ describe('“机型与 BIOS”分组', () => {
     await userEvent.click(screen.getByRole('button', { name: '替换：小霸王 2000' }));
     expect(page.openBios).toHaveBeenCalledWith({ machine: 'sb2000' });
     await waitFor(() => expect(notify).toHaveBeenCalledWith('已替换 小霸王 2000 的 BIOS：SB2K_BIOS.NES', 'success'));
+  });
+
+  it('说明文字下面有“打开 BIOS 目录”链接，点击经主进程打开目录，成功时没有通知', async () => {
+    const page = setup();
+    await openGroup();
+    await userEvent.click(screen.getByRole('button', { name: '打开 BIOS 目录' }));
+    expect(page.openBiosDirectory).toHaveBeenCalledWith({});
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('打不开 BIOS 目录时用通知给出原因', async () => {
+    const page = setup();
+    page.openBiosDirectory.mockRejectedValueOnce({ code: 'machines.biosDirectoryUnavailable', message: '无法打开 BIOS 目录：没有权限' });
+    await openGroup();
+    await userEvent.click(screen.getByRole('button', { name: '打开 BIOS 目录' }));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('无法打开 BIOS 目录：没有权限', 'error'));
   });
 
   it('用户取消选择：没有通知，清单不变', async () => {

@@ -1,5 +1,5 @@
 {
-  "$comment": "machines 模块：整机机型（学习机）的清单、BIOS 的添加与移除、整机机型开机；openBios 由主进程弹出文件选择窗口后调用 setBios。规则见 docs/04-调试服务.md 第 4.7 节。",
+  "$comment": "machines 模块：整机机型（学习机）的清单、BIOS 的添加与移除、整机机型开机；openBios 由主进程弹出文件选择窗口后调用 setBios；openBiosDirectory 由主进程用文件管理器打开 BIOS 目录。规则见 docs/04-调试服务.md 第 4.7 节。",
   "module": "machines",
   "types": {
     "BiosFile": {
@@ -106,6 +106,12 @@
         "required": ["canceled"]
       },
       "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.biosInvalid", "machines.biosAccessFailed"]
+    },
+    "openBiosDirectory": {
+      "description": "用系统的文件管理器打开 BIOS 目录（目录不存在时先创建）；路径由主进程决定，界面不能指定。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": ["machines.biosDirectoryUnavailable"]
     }
   },
   "events": {

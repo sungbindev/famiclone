@@ -41,7 +41,7 @@ import { createHelpWindow } from '../../platform/help/help-window';
 import { cartridgePathFromArgv, debugOptionsFromArgv } from '../../platform/launch/launch-args';
 import { loadNativeKeyboard, NativeKeyboardCapture } from '../../platform/keyboard-capture/native-keyboard-capture';
 import { FileErrorLogger } from '../../platform/logging/file-error-logger';
-import { createLogDirectory } from '../../platform/logging/log-directory';
+import { createDirectoryOpener } from '../../platform/logging/log-directory';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
 import { findSquirrelLauncher } from '../../platform/updates/squirrel-install';
@@ -258,9 +258,10 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController, keyboard, droppedFiles });
 
     const fileDialog = createOpenFileDialog(() => mainWindow, lastDirectories);
-    const logDirectory = createLogDirectory(join(userDataPath, 'logs'), (target) => shell.openPath(target));
+    const logDirectory = createDirectoryOpener(join(userDataPath, 'logs'), (target) => shell.openPath(target));
+    const biosDirectory = createDirectoryOpener(join(userDataPath, 'bios'), (target) => shell.openPath(target));
     const handlers: Record<string, MainRequestHandler> = {};
-    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, helpWindow, core: coreHandling, recentCartridges, updater }));
+    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, biosDirectory, helpWindow, core: coreHandling, recentCartridges, updater }));
     registerMainRequestIpc({ ipc: ipcMain, handlers, modules, schemas: CORE_SCHEMAS, isTrustedSender, onError: (error, name) => logError(logger, error, { source: 'mainRequest', name }) });
     registerStreamsIpc({
       ipc: ipcMain,

@@ -67,7 +67,7 @@ describe('window.ember', () => {
   it('主进程请求暴露为 main.cartridges.open，走主进程请求通道', async () => {
     expect(Object.keys(bridge.main)).toEqual(['cartridges', 'machines', 'mappers', 'media', 'preferences', 'system']);
     expect(Object.keys(bridge.main.cartridges).toSorted()).toEqual(['open', 'openRecent', 'recent']);
-    expect(Object.keys(bridge.main.machines)).toEqual(['openBios']);
+    expect(Object.keys(bridge.main.machines)).toEqual(['openBios', 'openBiosDirectory']);
     expect(Object.keys(bridge.main.mappers)).toEqual(['openPackage']);
     expect(Object.keys(bridge.main.media)).toEqual(['openFloppy', 'openTape', 'openTapeRecording']);
     expect(Object.keys(bridge.main.preferences)).toEqual(['pickDirectory']);

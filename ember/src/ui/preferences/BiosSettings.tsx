@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：BiosSettings.tsx
- * 说明：“机型与 BIOS”分组的内容：说明文字，加上每个整机机型一行（名称、BIOS 状态、按钮）；没有添加时按钮是“添加 BIOS 文件”，已添加时是“替换”和“移除”，暂未支持的机型整行置灰。
+ * 说明：“机型与 BIOS”分组的内容：说明文字和“打开 BIOS 目录”链接，加上每个整机机型一行（名称、BIOS 状态、按钮）；没有添加时按钮是“添加 BIOS 文件”，已添加时是“替换”和“移除”，暂未支持的机型整行置灰。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -23,6 +23,7 @@ const TEXT = {
   add: '添加 BIOS 文件',
   replace: '替换',
   remove: '移除',
+  openDirectory: '打开 BIOS 目录',
   of: (action: string, name: string) => `${action}：${name}`
 } as const;
 
@@ -66,7 +67,7 @@ function MachineRow({ machine, onChoose, onRemove }: { readonly machine: Machine
  */
 export function BiosSettings({ bridge }: BiosSettingsProps) {
   const { notify } = useShell();
-  const { state, choose, remove } = useBios(bridge, notify);
+  const { state, choose, remove, openDirectory } = useBios(bridge, notify);
   const machines = state.kind === 'ready' ? state.machines.filter((machine) => machine.needsBios) : [];
 
   let status = null;
@@ -75,7 +76,11 @@ export function BiosSettings({ bridge }: BiosSettingsProps) {
 
   return (
     <Stack>
-      <Callout text={TEXT.intro} />
+      <Callout text={TEXT.intro}>
+        <Button variant="link" onClick={() => void openDirectory()}>
+          {TEXT.openDirectory}
+        </Button>
+      </Callout>
       {status}
       {machines.length === 0 ? null : (
         <Panel fixed>

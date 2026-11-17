@@ -53,6 +53,11 @@
   z-index: var(--vp-z-index-layout-top);
 }
 
+/* 导航右侧的“更多”按钮：外观固定、没有语言与社交链接，弹层里没有内容，整个隐藏 */
+.VPNavBarExtra {
+  display: none !important;
+}
+
 /* 滚动条与主窗口一致：轨道 10px、滑块 6px，颜色取组件库令牌 */
 ::-webkit-scrollbar {
   width: 10px;

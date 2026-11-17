@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-state.ts
- * 说明：界面状态的类型、默认值与校验：窗口位置，底部面板高度，上次选择的机型，开着“自动收缩”的底部面板，以及上次显示更新记录时的应用版本。
+ * 说明：界面状态的类型、默认值与校验：窗口位置，上次选择的机型，开着“自动收缩”的底部面板，以及上次显示更新记录时的应用版本。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -19,11 +19,9 @@ export interface WindowPlacement {
   readonly y: number;
 }
 
-/** 外壳需要保存的版面与选择：底部面板高度、上次选的机型、开着“自动收缩”的面板；底部面板是否展开与当前页签每次启动都是关闭，不保存。 */
+/** 外壳需要保存的选择：上次选的机型、开着“自动收缩”的面板；底部面板是否展开与当前页签每次启动都是关闭，不保存；底部面板的高度由内容决定，不保存。 */
 export interface ShellLayout {
-  /** 底部面板的高度（像素）；null 表示用默认高度。 */
-  readonly bottomPanelHeight: number | null;
-  /** “文件→选择机型”里上次选的机型标识；null 表示没选过，用经典 FC。 */
+  /** “文件→选择机型”里上次选的机型标识；null 表示没选过。 */
   readonly selectedMachine: string | null;
   /** 开着“自动收缩”的底部面板标识（如 runtime.panel），没有重复；不在清单里的面板为关闭。 */
   readonly autoCollapsePanels: readonly string[];
@@ -38,10 +36,10 @@ export interface ShellState {
   readonly releaseNotesVersion: string | null;
 }
 
-/** 没有保存过时：窗口用默认位置，底部面板用默认高度，没有显示过更新记录。 */
+/** 没有保存过时：窗口用默认位置，没有选过机型，没有显示过更新记录。 */
 export const DEFAULT_SHELL_STATE: ShellState = {
   window: null,
-  layout: { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] },
+  layout: { selectedMachine: null, autoCollapsePanels: [] },
   releaseNotesVersion: null
 };
 
@@ -50,8 +48,6 @@ const VERSION_PATTERN = /^[0-9][0-9A-Za-z.+-]{0,63}$/;
 
 /** 窗口坐标的合理范围（多显示器时可以为负）。 */
 const MAX_COORDINATE = 100_000;
-/** 底部面板高度的合理范围。 */
-const MAX_PANEL_HEIGHT = 10_000;
 /** 机型标识的写法（小写字母开头，字母与数字，最长 32）；是否真的存在由机型清单决定。 */
 const MACHINE_ID_PATTERN = /^[a-z][a-z0-9]{0,31}$/;
 /** 底部面板标识的写法（模块名加点加面板名，最长 64）；是否真的存在由登记表决定。 */
@@ -90,7 +86,6 @@ function parseWindow(raw: unknown): WindowPlacement | null {
 
 /** 布局各字段的校验函数。 */
 const LAYOUT_VALIDATORS: { readonly [K in keyof ShellLayout]: (value: unknown) => value is ShellLayout[K] } = {
-  bottomPanelHeight: (value): value is number | null => value === null || isIntegerIn(value, 1, MAX_PANEL_HEIGHT),
   selectedMachine: (value): value is string | null => value === null || (typeof value === 'string' && MACHINE_ID_PATTERN.test(value)),
   autoCollapsePanels: isPanelIdList
 };

@@ -1,81 +1,153 @@
 # famiclone
 
-FC 兼容机（NES、小霸王学习机等 6502 兼容机）的开发工具与机型资料：
+FC 兼容机（NES、小霸王学习机等 6502 兼容机）的开发工具、模拟器与机型资料。
 
-- **fcdev**：开发工具集。用 C 或 ca65 汇编写程序，用 cc65 构建成各机型能运行的程序，可在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。首批支持 NES 与小霸王学习机 SB2000，以后按“目标”扩展到步步高、裕兴等机型。
-- **machines/**：各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)（小霸王学生电脑：BIOS 反汇编与源码）、[bbk](machines/bbk/README.md)（步步高学生电脑：BIOS 与 DOS 原厂源码、汇编器与分析工具；移植到 SB2000 的 BIOS 在 apps/sb2000/bbk-bios）。
-- **apps/**：用 fcdev 开发的应用程序与示例，按机型分目录，目前有 [sb2000](apps/sb2000/)（SB-DOS 的汇编器、编辑器、NES 游戏运行器、步步高 BIOS 移植版与加载器、软盘镜像脚本，以及 [示例](apps/sb2000/examples/README.md)）。
-
-下面是 fcdev 的安装与使用。
-
-## 安装
-
-要求 Node.js 22 及以上。也可以自备 cc65，见 [fcdev 的说明](packages/fcdev/README.md)。
-
-不用单独安装，创建项目时会自动装好：
-
-```bash
-npm create fcdev@latest my-game
-```
-
-按提示选择目标（`nes` 或 `sb2000`）与语言（`c` 或 `asm`），会在目录里生成示例程序、配置文件并安装依赖。
-
-## 使用
-
-```bash
-cd my-game
-npm run build     # 构建，产物在 build/<目标>/
-npm start         # 在模拟器里运行
-npm run disk      # 把程序放进磁盘镜像（只有 SB2000 等带磁盘的目标）
-```
-
-SB2000 的运行需要自己提供 BIOS 文件，写进项目的 `fcdev.json`：
-
-```json
-{
-  "target": "sb2000",
-  "name": "hello",
-  "firmware": "D:/roms/SB2K_BIOS.NES"
-}
-```
-
-fcdev 不提供任何 BIOS 或 ROM（`machines/sb2000/reference/` 里的参考文件不随 npm 包发布）。全部命令、配置项、调试与反汇编的用法见 [packages/fcdev/README.md](packages/fcdev/README.md)，创建项目的选项见 [packages/create-fcdev/README.md](packages/create-fcdev/README.md)。完整的使用文档在 [packages/fcdev/docs](packages/fcdev/docs)，随 `fcdev` 包发布，在项目里运行 `npx fcdev docs` 可以列出全部主题。
-
-## 限制
-
-- SB2000 程序默认最大 16K，设置 `targetOptions.banks` 后可做换页的大程序（最大约 468K）；`main` 的返回值被忽略。
-- 反汇编目前只支持 NROM 的 NES 与平铺二进制。
-- VS Code 扩展目前有智能感知（ca65 汇编的悬停、补全、转到定义、文档符号，以及 C 配置的自动同步）与 ca65 语法高亮，任务与调试还没有做。
-
-## 目录结构
+## 目录说明
 
 | 目录 | 内容 |
 | --- | --- |
-| `packages/fcdev` | 命令行与各机型目标 |
-| `packages/create-fcdev` | `npm create fcdev` 的创建包与项目模板 |
-| `packages/fcdev-cc65` | cc65 的包（构建生成，不入库） |
-| `packages/ember-debug-sdk` | Ember 调试服务的 SDK、终端客户端与 MCP 服务（`ember-debug-sdk`），说明见 [README](packages/ember-debug-sdk/README.md) |
-| `vscode` | VS Code 扩展（独立的 npm 项目，说明见 [vscode/README.md](vscode/README.md)） |
-| `machines` | 各机型的资料与工程，一个机型一个目录，目前有 [sb2000](machines/sb2000/README.md)、[bbk](machines/bbk/README.md) |
-| `apps` | 用 fcdev 开发的应用程序与示例，按机型分目录；`apps/sb2000` 下有 `asm`、`edit`、`runnes`、`bbk-bios`、`bbk-loader`、`memtest`、`fcprobe`、`disk` 与 `examples` |
-| `cc65`、`ember` | cc65 与模拟器 Ember 的源码，在本仓库维护；`cc65` 带许可文件 |
-| `tools` | 构建、检查与发布前验证脚本 |
-| `packages/fcdev/docs` | 使用文档（使用手册），随主包发布；终端里运行 `npx fcdev docs` 查看 |
-| `docs` | 开发文档：架构设计、目标规范、工具链、测试、发布、扩展与反汇编设计、运行库维护、待办与缺陷记录，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节，不随包发布 |
+| `packages/fcdev` | 命令行 `fcdev` 与各机型目标（npm 包） |
+| `packages/create-fcdev` | `npm create fcdev` 的创建包与项目模板（npm 包） |
+| `packages/fcdev-cc65` | cc65 工具链包，由 `tools/build-cc65.mjs` 生成，不入库（npm 包） |
+| `packages/ember-debug-sdk` | Ember 调试服务的 SDK、终端客户端与 MCP 服务（npm 包） |
+| `ember` | 模拟器 Ember：Electron 外壳加 C++ 核心，独立的 npm 项目，不发布到 npm |
+| `vscode` | VS Code 扩展 fcdev（独立的 npm 项目，生成 `.vsix`） |
+| `cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `cc65/LICENSE` |
+| `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`runnes`、`memtest`、`fcprobe`、`hwprobe`、`hwtest`、`fbasic`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是独立的 npm 项目 |
+| `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`disassembly`（反汇编与调试工具） |
+| `machines/bbk` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
+| `machines/sb97` | SB97 的 BIOS 静态分析 |
+| `reference` | 真机参考资料：ROM、软盘镜像、磁带、游戏；`machines` 与测试会用到，不随 npm 包发布 |
+| `tools` | 构建、检查与发布脚本 |
+| `test` | 仓库级测试（工具链、SB2000 接口生成物、软盘构建、结构检查） |
+| `docs` | 开发文档，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节 |
+| `build` | 构建产物（cc65、Ember），不入库 |
 
-## 开发
+`apps/bbk` 目前是空目录。仓库根的 npm 工作区只包含 `packages/*`；`ember`、`vscode`、`apps`、`machines` 各自安装依赖。
+
+## 构建命令
+
+### 仓库根（packages）
 
 ```bash
 npm install
-npm run build:libs     # 构建各目标的运行库
-npm test               # 全部测试
-npm run check          # 依赖边界检查加测试
-npm run release:check  # 发布前检查
-npm run release:verify # 打包后在临时目录里创建、安装并构建四个模板
+node tools/build-cc65.mjs   # 用 cc65/ 构建工具链包 packages/fcdev-cc65（需要 mingw32-make 与 gcc）
+npm run build:libs          # 构建各目标的运行库
+npm test                    # 全部测试（会先运行 build:libs）
+npm run check               # 依赖边界检查加测试
+npm run release:check       # 发布前检查（只检查）
+npm run release:verify      # 打包后在临时目录里创建、安装并构建四个模板
 ```
 
-构建 cc65 与模拟器的脚本、升级 cc65 的步骤见 [cc65 工具链](docs/03-cc65工具链.md) 与 [模拟器与调试](packages/fcdev/docs/02-模拟器与调试.md)。设置环境变量 `FCDEV_EMULATOR` 指向 Ember 的可执行文件，测试会额外在 Ember 里运行 NES 与 SB2000 程序（BIOS 用仓库里的 `reference/rom/SB2K_BIOS.NES`，也可用 `FCDEV_TEST_FIRMWARE` 指向别的 BIOS 文件）；设置 `FCDEV_TEST_NES_ROM` 指向一个 NROM 的 `.nes` 文件，测试会额外反汇编它。
+### packages/ember-debug-sdk
+
+```bash
+npm run check -w packages/ember-debug-sdk   # 生成接口类型、类型检查、oxlint、构建、测试
+npm run build -w packages/ember-debug-sdk   # 只构建 dist
+```
+
+### ember（在 `ember/` 目录下）
+
+```powershell
+.\build.ps1                  # 安装依赖、检查（不含 C++ 测试与调试 SDK 检查）、生成安装程序
+.\build.ps1 -SkipCheck       # 跳过检查
+.\build.ps1 -PackageOnly     # 只打包成目录 build\ember\Ember-win32-x64
+npm run make:win             # 只生成安装程序和升级文件
+npm run core:test            # C++ 测试；-- -R <名称> 只跑匹配的用例
+npm run check                # 全部检查与测试
+.\debug.ps1                  # 启动开发版
+```
+
+安装程序与升级文件输出到 `build/ember/make/squirrel.windows/x64/`。
+
+### vscode（在 `vscode/` 目录下）
+
+```bash
+npm install
+npm run check      # 类型检查、oxlint、测试、构建
+npm run package    # 生成 .vsix
+```
+
+### apps/sb2000（每个程序在自己的目录下）
+
+```bash
+npm install
+npm run build      # fcdev build src，产物在 build/
+npm run disk       # 放进磁盘镜像
+```
+
+软盘镜像：先在 `edit`、`asm`、`runnes` 下运行 `npm run build`，再运行 `node apps/sb2000/disk/build-disk.mjs`。
+
+### machines
+
+```bash
+# machines/sb2000/bios
+npm run build          # 构建 BIOS
+npm run build:fast     # 构建 fastboot 变体
+npm test
+
+# machines/sb2000/disassembly、machines/bbk、machines/sb97
+npm test
+```
+
+## npm 包发布
+
+四个包用同一个版本号，发布顺序固定：`fcdev-cc65`、`ember-debug-sdk`、`fcdev`、`create-fcdev`。命令都在仓库根目录运行，说明见 [docs/05-发布.md](docs/05-发布.md)。
+
+1. 在 `packages/fcdev/CHANGELOG.md` 写好新版本一节，标题为 `## <版本号>（日期）`。
+2. 升版本号（改三个包的 `version`、`fcdev` 的精确依赖，重新构建工具链包，刷新锁文件），然后自己提交：
+
+   ```bash
+   npm run release:prepare -- <版本号>
+   ```
+
+3. 演练：跑全部测试、SDK 检查、`release:check`、`release:verify` 与各包的 `npm publish --dry-run`，不登录、不发布：
+
+   ```bash
+   npm run release:publish -- --dry-run
+   ```
+
+4. 登录并正式发布（工作区必须已提交，输入 `yes` 确认，验证码在终端里输入）：
+
+   ```bash
+   npm login
+   npm run release:publish
+   ```
+
+不用脚本时，按顺序手动发布：
+
+```bash
+npm publish -w packages/fcdev-cc65
+npm publish -w packages/ember-debug-sdk
+npm publish -w packages/fcdev
+npm publish -w packages/create-fcdev
+```
+
+## 模拟器构建与上传
+
+升级文件放在阿里云 OSS 的 `famiclone` Bucket 下的 `updates/ember/windows/`，地址写在 `ember/src/bootstrap/main/main.ts` 的 `UPDATE_FEED_URL`。命令在 `ember/` 目录下运行，上传需要先安装 `ossutil` 并运行 `ossutil config`（密钥只放本机配置）。
+
+1. 把 `ember/package.json` 的 `version` 升到新版本，在 `ember/help/manual/changelog.md` 写好该版本一节。
+2. 生成安装程序与升级文件：
+
+   ```powershell
+   .\build.ps1
+   ```
+
+3. 检查 `RELEASES`、`.nupkg` 的大小与校验值，并打印要上传的文件，不上传：
+
+   ```powershell
+   npm run update:publish -- --dry-run
+   ```
+
+4. 上传，顺序是 `.nupkg`、`Ember-Setup-<版本号>.zip`、`RELEASES`：
+
+   ```powershell
+   npm run update:publish
+   ```
+
+安装包下载地址：`https://famiclone.oss-cn-beijing.aliyuncs.com/updates/ember/windows/Ember-Setup-<版本号>.zip`。
 
 ## 许可证
 
-仓库与 `fcdev` 自己的代码为 Apache-2.0，见 [LICENSE](LICENSE)。`cc65/` 为 zlib 许可，许可文件在 `cc65/LICENSE`。
+仓库与 `fcdev` 自己的代码为 Apache-2.0，见 [LICENSE](LICENSE)；`ember` 为 GPL-3.0-only；`cc65/` 为 zlib 许可。

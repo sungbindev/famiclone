@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：keyboard-pad-input-port.hpp
- * 说明：学习机的 $4016-$4017：手柄口 1 的数据线、键盘矩阵与鼠标（可选）的信号线，以及 APU 的帧计数器写入。
+ * 名称：bbk-input-port.hpp
+ * 说明：主机型号 bbk（步步高学习机）的 $4016-$4017：手柄口 1 的数据线、键盘矩阵与鼠标（可选）的信号线，以及 APU 的帧计数器写入。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -23,16 +23,16 @@
 
 namespace ember::bootstrap {
 
-/** 学习机的 $4016-$4017（步步高的键盘矩阵协议）。 */
-class KeyboardPadInputPort final : public contracts::hardware::BusDevice {
+/** 步步高的 $4016-$4017。 */
+class BbkInputPort final : public contracts::hardware::BusDevice {
  public:
   /**
    * @param pad 手柄口 1。
    * @param apu APU 设备，只接收 $4017 的写入（帧计数器）。
    * @param keyboard 键盘。
-   * @param mouse 鼠标；机型没有鼠标时为空。
+   * @param mouse 鼠标；没有鼠标时为空。
    */
-  KeyboardPadInputPort(contracts::hardware::ControllerPort& pad, contracts::hardware::BusDevice& apu, logic::hardware::KeyboardBbk& keyboard, logic::hardware::MouseBbk* mouse)
+  BbkInputPort(contracts::hardware::ControllerPort& pad, contracts::hardware::BusDevice& apu, logic::hardware::KeyboardBbk& keyboard, logic::hardware::MouseBbk* mouse)
       : pad_(pad), apu_(apu), keyboard_(keyboard), mouse_(mouse) {}
 
   contracts::hardware::BusRead read(std::uint16_t address) override {

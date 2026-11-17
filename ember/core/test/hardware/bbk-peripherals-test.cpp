@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "bootstrap/machines/common/keyboard-pad-input-port.hpp"
+#include "bootstrap/machines/bbk/bbk-input-port.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
 #include "logic/hardware/keyboard-bbk/keyboard-bbk.hpp"
 #include "logic/hardware/mouse-bbk/mouse-bbk.hpp"
@@ -24,7 +24,7 @@
 namespace {
 
 namespace hw = ember::contracts::hardware;
-using ember::bootstrap::KeyboardPadInputPort;
+using ember::bootstrap::BbkInputPort;
 using ember::logic::hardware::ControllerSocket;
 using ember::logic::hardware::Joypad;
 using ember::logic::hardware::KeyboardBbk;
@@ -289,11 +289,11 @@ struct Rig {
   RecordingDevice apu;
   KeyboardBbk keyboard;
   MouseBbk mouse;
-  KeyboardPadInputPort port{socket, apu, keyboard, &mouse};
+  BbkInputPort port{socket, apu, keyboard, &mouse};
   Rig() { socket.plug(&joypad); }
 };
 
-TEST(KeyboardPadInputPort, Reads4016AsTheJoypadDataLineOnly) {
+TEST(BbkInputPort, Reads4016AsTheJoypadDataLineOnly) {
   Rig rig;
   rig.joypad.setButtons(0x01);
   rig.port.write(0x4016, 0x01);
@@ -304,7 +304,7 @@ TEST(KeyboardPadInputPort, Reads4016AsTheJoypadDataLineOnly) {
   EXPECT_EQ(rig.port.read(0x4016).value, 0x00) << "B 键没按";
 }
 
-TEST(KeyboardPadInputPort, Reads4017AsKeyboardAndMouseLinesWithHighBitsSet) {
+TEST(BbkInputPort, Reads4017AsKeyboardAndMouseLinesWithHighBitsSet) {
   Rig rig;
   EXPECT_EQ(rig.port.read(0x4017).value, 0xFE | 0x00) << "没有扫描位置时 4 个键位都是 1，鼠标没接通";
   rig.keyboard.setKey("Digit4", true);
@@ -315,13 +315,13 @@ TEST(KeyboardPadInputPort, Reads4017AsKeyboardAndMouseLinesWithHighBitsSet) {
   EXPECT_EQ(rig.port.read(0x4017).value, 0xFE) << "后半边没有键按下";
 }
 
-TEST(KeyboardPadInputPort, NineReadsOf4016ConnectTheMouseAndTheLineShowsIt) {
+TEST(BbkInputPort, NineReadsOf4016ConnectTheMouseAndTheLineShowsIt) {
   Rig rig;
   for (unsigned index = 0; index < 9; ++index) static_cast<void>(rig.port.read(0x4016));
   EXPECT_EQ(rig.port.read(0x4017).value & 0x01, 0x01);
 }
 
-TEST(KeyboardPadInputPort, Writes4016GoToTheJoypadLatchKeyboardAndMouseAndWrites4017GoToTheApu) {
+TEST(BbkInputPort, Writes4016GoToTheJoypadLatchKeyboardAndMouseAndWrites4017GoToTheApu) {
   Rig rig;
   rig.port.write(0x4016, 0x05);
   EXPECT_FALSE(rig.keyboard.firstHalf());
@@ -333,12 +333,12 @@ TEST(KeyboardPadInputPort, Writes4016GoToTheJoypadLatchKeyboardAndMouseAndWrites
   EXPECT_EQ(rig.apu.writes[0].second, 0x40);
 }
 
-TEST(KeyboardPadInputPort, WithoutAMouseTheMouseLineStaysZeroAndWritesStillReachTheKeyboard) {
+TEST(BbkInputPort, WithoutAMouseTheMouseLineStaysZeroAndWritesStillReachTheKeyboard) {
   ControllerSocket socket;
   Joypad joypad;
   RecordingDevice apu;
   KeyboardBbk keyboard;
-  KeyboardPadInputPort port{socket, apu, keyboard, nullptr};
+  BbkInputPort port{socket, apu, keyboard, nullptr};
   socket.plug(&joypad);
   for (unsigned index = 0; index < 9; ++index) static_cast<void>(port.read(0x4016));
   EXPECT_EQ(port.read(0x4017).value & 0x01, 0x00) << "没有鼠标，位 0 总是 0";

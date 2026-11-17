@@ -171,6 +171,11 @@ describe('ProcessCoreGateway', () => {
     expect(current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0', bundledPluginsPath: 'D:/build/ember/plugins' });
   });
 
+  it('给了默认 BIOS 目录时随启动消息交给核心', () => {
+    const { current } = setup(() => 0, { bundledBiosPath: 'D:/build/ember/bios' });
+    expect(current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0', bundledBiosPath: 'D:/build/ember/bios' });
+  });
+
   it('给了调试端口与令牌时随启动消息交给核心，没有时不带这两项', () => {
     const { current } = setup(() => 0, { debugPort: 5688, debugToken: 'secret' });
     expect(current().sent[0]).toEqual({ type: 'start', nativePath: 'core.node', userDataPath: 'data', appVersion: '0.1.0', debugPort: 5688, debugToken: 'secret' });

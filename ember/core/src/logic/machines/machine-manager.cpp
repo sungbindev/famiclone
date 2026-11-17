@@ -71,8 +71,12 @@ api::MachineInfo MachineManager::info(const Entry& item) const {
 }
 
 std::vector<std::uint8_t> MachineManager::extractBios(const Entry& item, const std::vector<std::uint8_t>& file) {
-  if (file.size() < HEADER_SIZE || file[0] != 'N' || file[1] != 'E' || file[2] != 'S' || file[3] != 0x1A) {
-    throw shared::CoreError(api::ERROR_BIOS_INVALID, item.name + " 的 BIOS 必须是 NES 格式（iNES）的文件");
+  const bool hasHeader = file.size() >= HEADER_SIZE && file[0] == 'N' && file[1] == 'E' && file[2] == 'S' && file[3] == 0x1A;
+  if (!hasHeader) {
+    if (file.size() != item.prgSize) {
+      throw shared::CoreError(api::ERROR_BIOS_INVALID, item.name + " 的 BIOS 必须是 " + std::to_string(item.prgSize / 1024) + "KB 的 BIOS 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
+    }
+    return file;
   }
   const std::size_t prgSize = static_cast<std::size_t>(file[4]) * PRG_UNIT;
   if (prgSize != item.prgSize) {

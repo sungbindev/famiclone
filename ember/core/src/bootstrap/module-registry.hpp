@@ -41,6 +41,8 @@ struct ModuleRegistry {
   std::filesystem::path userDataPath;
   /** 预装的 mapper 插件目录；没有时为空。 */
   std::filesystem::path bundledPluginsPath;
+  /** 随安装包带的默认 BIOS 目录（<机型>/<文件>）；没有时为空。 */
+  std::filesystem::path bundledBiosPath;
   /** 解码磁带声音文件的 ffmpeg 程序的完整路径；没有时为空，载入磁带时报“没有找到解码程序”。 */
   std::filesystem::path ffmpegPath;
   /** 帧输出：运行模块每完成一帧就把画面交给它，由核心入口转给帧处理函数。 */

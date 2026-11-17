@@ -93,7 +93,7 @@ describe('“机型与 BIOS”分组', () => {
   it('分组出现在左侧导航里；列出四个整机机型，不含经典 FC，并有说明文字', async () => {
     setup();
     await openGroup();
-    expect(screen.getByText('BIOS 文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。')).toBeTruthy();
+    expect(screen.getByText('已支持的机型自带默认 BIOS，启动时会自动装好，一般不用添加。想换成别的 BIOS，点“替换”；添加的文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。')).toBeTruthy();
     for (const name of ['小霸王 97', '小霸王 2000', '步步高软驱一号', '步步高 98']) expect(screen.getByText(name)).toBeTruthy();
     expect(screen.queryByText('经典 FC')).toBeNull();
   });

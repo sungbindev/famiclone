@@ -18,7 +18,7 @@ import { useBios } from './use-bios';
 
 /** 用户可见的文字。 */
 const TEXT = {
-  intro: 'BIOS 文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。',
+  intro: '已支持的机型自带默认 BIOS，启动时会自动装好，一般不用添加。想换成别的 BIOS，点“替换”；添加的文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。',
   loading: '正在读取…',
   add: '添加 BIOS 文件',
   replace: '替换',

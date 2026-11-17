@@ -78,12 +78,13 @@ function start(message: Extract<CoreHostInbound, { type: 'start' }>): void {
         // 无法解析的事件丢弃。
       }
     });
-    const { userDataPath, appVersion, bundledPluginsPath, ffmpegPath, debugPort, debugToken } = message;
+    const { userDataPath, appVersion, bundledPluginsPath, bundledBiosPath, ffmpegPath, debugPort, debugToken } = message;
     loaded.onFrame((pixels, width, height, frame) => streams.sendFrame(pixels, width, height, frame, Date.now()));
     const startOptions = {
       userDataPath,
       appVersion,
       ...(bundledPluginsPath === undefined ? {} : { bundledPluginsPath }),
+      ...(bundledBiosPath === undefined ? {} : { bundledBiosPath }),
       ...(ffmpegPath === undefined ? {} : { ffmpegPath }),
       ...(debugPort === undefined ? {} : { debugPort }),
       ...(debugToken === undefined ? {} : { debugToken })

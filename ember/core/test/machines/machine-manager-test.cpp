@@ -50,6 +50,12 @@ std::vector<std::uint8_t> biosFile(std::size_t prgUnits = 32) {
   return file;
 }
 
+/** 纯 BIOS 文件：与 biosFile 的 PRG 相同，没有 iNES 文件头。 */
+std::vector<std::uint8_t> cleanBiosFile() {
+  const auto file = biosFile();
+  return std::vector<std::uint8_t>(file.begin() + 16, file.end());
+}
+
 /** 真实的机型服务加运行服务，BIOS 保存在临时目录。 */
 struct Rig {
   Rig() {
@@ -156,6 +162,31 @@ TEST(MachineManager, SettingABiosRejectsBadInputAndKeepsTheOldOne) {
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb2000", rig.write("cut.nes", truncated))); }), api::ERROR_BIOS_INVALID);
   EXPECT_EQ(rig.find("sb2000").bios->fileName, "good.nes") << "失败时原有的 BIOS 不变";
   EXPECT_EQ(rig.events->count("machines.changed"), 1);
+}
+
+TEST(MachineManager, ACleanBiosFileWithoutAHeaderIsAcceptedAndBoots) {
+  Rig rig;
+  const auto result = rig.manager->setBios(rig.setParams("sb2000", rig.write("SB2K_BIOS.bin", cleanBiosFile())));
+  ASSERT_TRUE(result.machine.bios.has_value());
+  EXPECT_EQ(result.machine.bios->fileName, "SB2K_BIOS.bin");
+  EXPECT_EQ(result.machine.bios->size, static_cast<std::int64_t>(512 * 1024));
+  api::MachinesBootParams params;
+  params.machine = "sb2000";
+  rig.manager->boot(params);
+  ASSERT_TRUE(waitFor([&] { return rig.frames->count() >= 5; }));
+  EXPECT_EQ(rig.runtime->status().machine, "sb2000");
+}
+
+TEST(MachineManager, ACleanBiosFileMustBeExactlyTheMachinesPrgSize) {
+  Rig rig;
+  auto shortFile = cleanBiosFile();
+  shortFile.pop_back();
+  auto longFile = cleanBiosFile();
+  longFile.push_back(0);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb2000", rig.write("short.bin", shortFile))); }), api::ERROR_BIOS_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("sb2000", rig.write("long.bin", longFile))); }), api::ERROR_BIOS_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setBios(rig.setParams("bbk10", rig.write("wrong-machine.bin", cleanBiosFile()))); }), api::ERROR_BIOS_INVALID);
+  EXPECT_FALSE(rig.find("sb2000").bios.has_value());
 }
 
 TEST(MachineManager, RemovingABiosIsIdempotent) {

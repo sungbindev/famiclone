@@ -60,6 +60,8 @@ const NATIVE_FILE = 'ember_core.node';
 const KEYBOARD_NATIVE_FILE = 'ember_keyboard.node';
 /** 预装插件的目录名：开发时在 build/ember 下，正式包在 resources 下。 */
 const PLUGINS_DIRECTORY = 'plugins';
+/** 默认 BIOS 的目录名（<机型>/<文件>，纯 BIOS 文件）：开发时在项目目录下，正式包在 resources 下。 */
+const BIOS_DIRECTORY = 'bios';
 /** 帮助文档站点的目录名：开发时在 build/ember 下，正式包在 resources 下。 */
 const HELP_DIRECTORY = 'help';
 /** 平台与架构的名字（如 win32-x64），ffmpeg 程序放在以它命名的目录里：开发时在 core/third_party/ffmpeg/bin 下，正式包在 resources 下。 */
@@ -109,6 +111,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const nativePath = app.isPackaged ? join(process.resourcesPath, NATIVE_FILE) : join(buildRoot, 'core', 'Release', NATIVE_FILE);
   const keyboardNativePath = app.isPackaged ? join(process.resourcesPath, KEYBOARD_NATIVE_FILE) : join(buildRoot, 'core', 'Release', KEYBOARD_NATIVE_FILE);
   const bundledPluginsPath = app.isPackaged ? join(process.resourcesPath, PLUGINS_DIRECTORY) : join(buildRoot, PLUGINS_DIRECTORY);
+  const bundledBiosPath = app.isPackaged ? join(process.resourcesPath, BIOS_DIRECTORY) : join(app.getAppPath(), BIOS_DIRECTORY);
   const helpRoot = app.isPackaged ? join(process.resourcesPath, HELP_DIRECTORY) : join(buildRoot, HELP_DIRECTORY);
   const ffmpegPath = app.isPackaged
     ? join(process.resourcesPath, PLATFORM_DIRECTORY, FFMPEG_FILE)
@@ -125,6 +128,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     userDataPath,
     appVersion: app.getVersion(),
     bundledPluginsPath,
+    bundledBiosPath,
     ffmpegPath,
     ...(debugLaunch.port === undefined ? {} : { debugPort: debugLaunch.port }),
     ...(debugLaunch.token === undefined ? {} : { debugToken: debugLaunch.token }),

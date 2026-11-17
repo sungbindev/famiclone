@@ -47,6 +47,21 @@ Reply call(Core& core, const std::string& id, const std::string& name, const std
   return future.get();
 }
 
+/** 写一个合成的 BIOS 文件：prgUnits 个 16KB 的 PRG，withHeader 为真时前面加 iNES 头，否则是纯 BIOS 文件；目录不存在时先创建。 */
+void writeBios(const std::filesystem::path& file, std::size_t prgUnits, bool withHeader = true) {
+  std::filesystem::create_directories(file.parent_path());
+  const std::size_t headerSize = withHeader ? 16 : 0;
+  std::vector<char> bytes(headerSize + prgUnits * 16 * 1024, 0);
+  if (withHeader) {
+    bytes[0] = 'N';
+    bytes[1] = 'E';
+    bytes[2] = 'S';
+    bytes[3] = 0x1A;
+    bytes[4] = static_cast<char>(prgUnits);
+  }
+  std::ofstream(file, std::ios::binary).write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+}
+
 /** 临时用户数据目录。 */
 class CoreTest : public testing::Test {
  protected:
@@ -71,6 +86,13 @@ class CoreTest : public testing::Test {
                           {"workerCount", 2},
                           {"bundledPluginsPath", std::string(bundledText.begin(), bundledText.end())}}
         .dump();
+  }
+
+  /** 带默认 BIOS 目录的启动参数。 */
+  [[nodiscard]] std::string optionsWithBios(const std::filesystem::path& bios) const {
+    const auto text = userData_.u8string();
+    const auto biosText = bios.u8string();
+    return nlohmann::json{{"userDataPath", std::string(text.begin(), text.end())}, {"appVersion", "9.8.7"}, {"workerCount", 2}, {"bundledBiosPath", std::string(biosText.begin(), biosText.end())}}.dump();
   }
 
   std::filesystem::path userData_;
@@ -230,6 +252,59 @@ TEST_F(CoreTest, RejectsBadStartOptions) {
   EXPECT_THROW(core.start(R"({"appVersion":"1.0.0"})"), ember::shared::SchemaError);
   EXPECT_THROW(core.start(R"({"userDataPath":"x","appVersion":"1.0.0","other":1})"), ember::shared::SchemaError);
   EXPECT_THROW(core.start(R"({"userDataPath":"x","appVersion":"1.0.0","bundledPluginsPath":1})"), ember::shared::SchemaError);
+  EXPECT_THROW(core.start(R"({"userDataPath":"x","appVersion":"1.0.0","bundledBiosPath":1})"), ember::shared::SchemaError);
+}
+
+/** 某个机型当前的 BIOS 文件名；没有 BIOS 时为空串。 */
+std::string biosFileNameOf(Core& core, const std::string& machine) {
+  const auto listed = call(core, "list", "machines.list", "{}");
+  for (const auto& item : listed.payload["machines"]) {
+    if (item["id"] == machine) return item.contains("bios") ? item["bios"]["fileName"].get<std::string>() : std::string();
+  }
+  return {};
+}
+
+TEST_F(CoreTest, InstallsTheBundledDefaultBiosForSupportedMachinesWithoutOne) {
+  const auto bundled = userData_ / "bundled-bios";
+  writeBios(bundled / "sb2000" / "default-sb2000.bin", 32, false);
+  writeBios(bundled / "bbk10" / "too-small.bin", 4, false);  // bbk10 需要 128KB，这个不合格
+  writeBios(bundled / "sb97" / "not-supported.nes", 64);  // 暂未支持的机型不装
+  writeBios(bundled / "fc" / "not-needed.nes", 1);  // 不需要 BIOS 的机型不装
+  Core core;
+  static_cast<void>(core.start(optionsWithBios(bundled)));
+  EXPECT_EQ(biosFileNameOf(core, "sb2000"), "default-sb2000.bin");
+  EXPECT_EQ(biosFileNameOf(core, "bbk10"), "") << "不合格的默认 BIOS 跳过，不影响启动";
+  EXPECT_EQ(biosFileNameOf(core, "bbk20"), "");
+  EXPECT_EQ(biosFileNameOf(core, "sb97"), "");
+  EXPECT_EQ(biosFileNameOf(core, "fc"), "");
+  EXPECT_TRUE(std::filesystem::exists(userData_ / "bios" / "sb2000" / "default-sb2000.bin"));
+  core.stop();
+}
+
+TEST_F(CoreTest, TheBundledDefaultBiosNeverReplacesOneTheUserAdded) {
+  const auto mine = userData_ / "mine.nes";
+  writeBios(mine, 32);
+  {
+    Core core;
+    static_cast<void>(core.start(options()));
+    ASSERT_TRUE(call(core, "1", "machines.setBios", nlohmann::json{{"machine", "sb2000"}, {"path", mine.string()}}.dump()).ok);
+    core.stop();
+  }
+  const auto bundled = userData_ / "bundled-bios";
+  writeBios(bundled / "sb2000" / "default-sb2000.bin", 32, false);
+  {
+    Core core;
+    static_cast<void>(core.start(optionsWithBios(bundled)));
+    EXPECT_EQ(biosFileNameOf(core, "sb2000"), "mine.nes");
+    // 用户移除之后，下次启动恢复默认。
+    ASSERT_TRUE(call(core, "2", "machines.removeBios", R"({"machine":"sb2000"})").ok);
+    EXPECT_EQ(biosFileNameOf(core, "sb2000"), "");
+    core.stop();
+  }
+  Core again;
+  static_cast<void>(again.start(optionsWithBios(bundled)));
+  EXPECT_EQ(biosFileNameOf(again, "sb2000"), "default-sb2000.bin");
+  again.stop();
 }
 
 TEST_F(CoreTest, MappersRequestsManageTheBundledAndUserPlugins) {

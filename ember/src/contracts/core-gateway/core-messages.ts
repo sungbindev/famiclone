@@ -39,6 +39,8 @@ export type CoreHostInbound =
       readonly appVersion: string;
       /** 预装的 mapper 插件目录；没有时省略。 */
       readonly bundledPluginsPath?: string;
+      /** 随安装包带的默认 BIOS 目录（<机型>/<文件>）；没有时省略。 */
+      readonly bundledBiosPath?: string;
       /** 解码磁带用的 ffmpeg 程序的完整路径；没有时省略。 */
       readonly ffmpegPath?: string;
       /** 启动参数 --debug-port 指定的调试服务端口；有值时本次运行强制开启调试服务。 */

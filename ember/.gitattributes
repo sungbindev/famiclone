@@ -3,4 +3,5 @@
 *.ico binary
 *.icns binary
 *.nes binary
+*.bin binary
 core/test/data/**/*.log -text

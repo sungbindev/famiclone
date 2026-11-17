@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-bios.test.ts
- * 说明：machines.openBios 的测试：弹出的文件选择只显示 .nes、选定的路径与机型交给核心的 machines.setBios、取消时返回明确的结果而不是错误、核心的错误码原样返回、参数不合格时在入口被拒绝。
+ * 说明：machines.openBios 的测试：弹出的文件选择显示 .bin 与 .nes、选定的路径与机型交给核心的 machines.setBios、取消时返回明确的结果而不是错误、核心的错误码原样返回、参数不合格时在入口被拒绝。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -17,7 +17,7 @@ import type { FileDialog } from '../../../contracts/shell/file-dialog';
 import { handleMainRequest } from '../core/main-request-ipc';
 import { createOpenBiosHandler } from './open-bios';
 
-const MACHINE = { id: 'sb2000', name: '小霸王 2000', needsBios: true, supported: true, bios: { fileName: 'SB2K_BIOS.NES', size: 524304 } };
+const MACHINE = { id: 'sb2000', name: '小霸王 2000', needsBios: true, supported: true, bios: { fileName: 'SB2K_BIOS.bin', size: 524288 } };
 
 function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = vi.fn().mockResolvedValue({ machine: MACHINE })) {
   const gateway: CoreGateway = { request, onEvent: () => () => undefined, onStatusChange: () => () => undefined, status: () => ({ state: 'starting' }) };
@@ -28,13 +28,13 @@ function setup(pick: FileDialog['pickFile'], request: CoreGateway['request'] = v
 }
 
 describe('machines.openBios', () => {
-  it('文件选择只显示 .nes，选定的路径与机型交给核心的 machines.setBios', async () => {
-    const pick = vi.fn().mockResolvedValue('D:/bios/SB2K_BIOS.NES');
+  it('文件选择显示 .bin 与 .nes，选定的路径与机型交给核心的 machines.setBios', async () => {
+    const pick = vi.fn().mockResolvedValue('D:/bios/SB2K_BIOS.bin');
     const { request, call } = setup(pick);
     await expect(call()).resolves.toEqual({ ok: true, result: { canceled: false, machine: MACHINE } });
-    expect(pick).toHaveBeenCalledWith({ title: '添加 BIOS', purpose: 'bios', filters: [{ name: 'NES 文件', extensions: ['nes'] }] });
+    expect(pick).toHaveBeenCalledWith({ title: '添加 BIOS', purpose: 'bios', filters: [{ name: 'BIOS 文件', extensions: ['bin', 'nes'] }] });
     expect(request).toHaveBeenCalledTimes(1);
-    expect(request).toHaveBeenCalledWith('machines.setBios', { machine: 'sb2000', path: 'D:/bios/SB2K_BIOS.NES' });
+    expect(request).toHaveBeenCalledWith('machines.setBios', { machine: 'sb2000', path: 'D:/bios/SB2K_BIOS.bin' });
   });
 
   it('用户取消选择时返回 canceled，不是错误，也不调用核心', async () => {

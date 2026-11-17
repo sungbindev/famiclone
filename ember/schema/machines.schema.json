@@ -7,7 +7,7 @@
       "description": "已添加的 BIOS 文件：文件名与大小。",
       "properties": {
         "fileName": { "type": "string", "description": "文件名，不含路径" },
-        "size": { "type": "integer", "minimum": 0, "description": "文件大小（字节），含 iNES 文件头" }
+        "size": { "type": "integer", "minimum": 0, "description": "文件大小（字节），纯 BIOS 文件等于机型的 PRG 容量，带 iNES 文件头的文件含文件头" }
       },
       "required": ["fileName", "size"]
     },
@@ -91,7 +91,7 @@
   },
   "mainRequests": {
     "openBios": {
-      "description": "弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给 machines.setBios；用户取消选择时 canceled 为 true，不是错误。",
+      "description": "弹出系统文件选择窗口（显示 .bin 与 .nes），把用户选定的文件交给 machines.setBios；用户取消选择时 canceled 为 true，不是错误。",
       "params": {
         "type": "object",
         "properties": { "machine": { "type": "string", "minLength": 1, "description": "机型标识" } },

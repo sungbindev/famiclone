@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-bios.ts
- * 说明：machines.openBios 的处理：弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给核心的 machines.setBios；用户取消时返回明确的结果，不是错误。
+ * 说明：machines.openBios 的处理：弹出系统文件选择窗口（显示 .bin 与 .nes），把用户选定的文件交给核心的 machines.setBios；用户取消时返回明确的结果，不是错误。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -17,11 +17,11 @@ import type { MainRequestHandler } from '../core/main-request-ipc';
 /** 用户可见的文字。 */
 const TEXT = {
   title: '添加 BIOS',
-  filter: 'NES 文件'
+  filter: 'BIOS 文件'
 } as const;
 
-/** BIOS 文件的扩展名。 */
-const BIOS_EXTENSION = 'nes';
+/** BIOS 文件的扩展名：纯 BIOS 文件与带 iNES 文件头的文件。 */
+const BIOS_EXTENSIONS = ['bin', 'nes'];
 
 /** 添加 BIOS 处理所需的依赖。 */
 export interface OpenBiosOptions {
@@ -37,7 +37,7 @@ export interface OpenBiosOptions {
 export function createOpenBiosHandler(options: OpenBiosOptions): MainRequestHandler {
   return async (params): Promise<MainResult<'machines.openBios'>> => {
     const { machine } = params as MainParams<'machines.openBios'>;
-    const path = await options.dialog.pickFile({ title: TEXT.title, purpose: 'bios', filters: [{ name: TEXT.filter, extensions: [BIOS_EXTENSION] }] });
+    const path = await options.dialog.pickFile({ title: TEXT.title, purpose: 'bios', filters: [{ name: TEXT.filter, extensions: BIOS_EXTENSIONS }] });
     if (path === undefined) return { canceled: true };
     const result = await requestCoreAsMain(options.core, 'machines.setBios', { machine, path });
     return { canceled: false, machine: result.machine };

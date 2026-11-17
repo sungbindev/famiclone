@@ -1,0 +1,48 @@
+{
+  "plugin": "jaleco-jf16",
+  "image": {
+    "mapper": 78,
+    "variant": 3,
+    "prgKiB": 128,
+    "prgFill": 255,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 27
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

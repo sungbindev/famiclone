@@ -1,0 +1,85 @@
+{
+  "plugin": "sachen74-ls374-n",
+  "image": {
+    "mapper": 243,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$4100",
+      "value": 5
+    },
+    {
+      "write": "$4101",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        }
+      ]
+    },
+    {
+      "read": "$4101",
+      "expect": 3
+    },
+    {
+      "write": "$4100",
+      "value": 2
+    },
+    {
+      "write": "$4101",
+      "value": 1
+    },
+    {
+      "write": "$4100",
+      "value": 4
+    },
+    {
+      "write": "$4101",
+      "value": 1
+    },
+    {
+      "write": "$4100",
+      "value": 6
+    },
+    {
+      "write": "$4101",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 90112,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 7
+    },
+    {
+      "write": "$4101",
+      "value": 4
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "plugin": "bmc-k3046",
+  "image": {
+    "mapper": 336,
+    "prgKiB": 512,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 27
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 442368
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 507904
+        }
+      ]
+    }
+  ]
+}

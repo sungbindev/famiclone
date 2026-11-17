@@ -1,0 +1,46 @@
+{
+  "plugin": "mapper-200",
+  "image": {
+    "mapper": 200,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 81920
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 81920
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 40960,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    }
+  ]
+}

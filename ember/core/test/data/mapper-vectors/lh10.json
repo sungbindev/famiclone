@@ -1,0 +1,71 @@
+{
+  "plugin": "lh10",
+  "image": {
+    "mapper": 522,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$C000",
+          "storage": "wram",
+          "offset": 0
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 6
+    },
+    {
+      "write": "$8001",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 7
+    },
+    {
+      "write": "$8001",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 40960
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 119
+    },
+    {
+      "read": "$C000",
+      "expect": 119
+    }
+  ]
+}

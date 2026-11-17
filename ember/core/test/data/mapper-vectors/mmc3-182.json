@@ -1,0 +1,46 @@
+{
+  "plugin": "mmc3-182",
+  "image": {
+    "mapper": 182,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "write": "$A000",
+      "value": 1
+    },
+    {
+      "write": "$C000",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1400",
+          "storage": "chr",
+          "offset": 9216,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "write": "$C000",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 4096,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

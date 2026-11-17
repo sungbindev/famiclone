@@ -1,0 +1,89 @@
+{
+  "plugin": "kaiser202",
+  "image": {
+    "mapper": 142,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$E000",
+      "value": 2
+    },
+    {
+      "write": "$F000",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 40960
+        }
+      ]
+    },
+    {
+      "write": "$E000",
+      "value": 5
+    },
+    {
+      "write": "$F000",
+      "value": 4
+    },
+    {
+      "write": "$E000",
+      "value": 4
+    },
+    {
+      "write": "$F000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$9000",
+      "value": 15
+    },
+    {
+      "write": "$A000",
+      "value": 15
+    },
+    {
+      "write": "$B000",
+      "value": 15
+    },
+    {
+      "write": "$C000",
+      "value": 2
+    },
+    {
+      "cycles": 10,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：mappers-model.ts
- * 说明：mapper 插件对话框的纯规则：来源与主机型号的显示名、匹配条件的文字、按搜索词与来源筛选、清单摘要的各项文字。
+ * 说明：mapper 插件对话框的纯规则：来源与主机型号的显示名、匹配条件的文字、按搜索词与来源筛选（忽略空白）、插件与 mapper 数量的统计、清单摘要的各项文字。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -73,18 +73,39 @@ export function hostsText(hosts: readonly string[]): string {
 }
 
 /**
- * 按来源与搜索词筛选插件；搜索词不分大小写，匹配名称、标识、发布者与说明。
+ * 按来源与搜索词筛选插件；搜索词不分大小写、忽略全部空白（“mmc 3”与“MMC3”、“mapper4”与“mapper 4”互相匹配），匹配名称、标识、发布者与说明。
  * @param plugins 全部插件。
  * @param source 来源筛选。
  * @param search 搜索词，空白不筛选。
  */
 export function filterPlugins(plugins: readonly MapperSummary[], source: SourceFilter, search: string): readonly MapperSummary[] {
-  const needle = search.trim().toLowerCase();
+  const needle = squash(search);
   return plugins.filter((plugin) => {
     if (source !== 'all' && plugin.source !== source) return false;
     if (needle === '') return true;
-    return [plugin.name, plugin.id, plugin.publisher, plugin.description ?? ''].some((text) => text.toLowerCase().includes(needle));
+    return [plugin.name, plugin.id, plugin.publisher, plugin.description ?? ''].some((text) => squash(text).includes(needle));
   });
+}
+
+/** 去掉全部空白并转小写，用于搜索比较。 */
+function squash(text: string): string {
+  return text.replace(/\s+/g, '').toLowerCase();
+}
+
+/**
+ * 统计全部已安装的插件：插件数、已启用数、支持的 mapper 种数（所有插件的匹配条件里不重复的 mapper 号，不看是否启用）。
+ * @param plugins 全部插件，不受搜索与来源筛选影响。
+ */
+export function pluginStats(plugins: readonly MapperSummary[]): { readonly total: number; readonly enabled: number; readonly mappers: number } {
+  const numbers = new Set<number>();
+  for (const plugin of plugins) for (const rule of plugin.match) numbers.add(rule.mapper);
+  return { total: plugins.length, enabled: plugins.filter((plugin) => plugin.enabled).length, mappers: numbers.size };
+}
+
+/** 统计在工具栏里显示的一行文字。 */
+export function statsText(plugins: readonly MapperSummary[]): string {
+  const { total, enabled, mappers } = pluginStats(plugins);
+  return `共 ${total} 个插件（已启用 ${enabled} 个），支持 ${mappers} 种 mapper`;
 }
 
 /** 清单摘要的各项，没有内容的项不列出。 */

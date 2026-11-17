@@ -1,0 +1,42 @@
+{
+  "plugin": "dream-tech01",
+  "image": {
+    "mapper": 521,
+    "prgKiB": 512,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 131072
+        }
+      ]
+    },
+    {
+      "write": "$5020",
+      "value": 11
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 131072
+        }
+      ]
+    }
+  ]
+}

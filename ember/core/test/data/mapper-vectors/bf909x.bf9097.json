@@ -1,0 +1,32 @@
+{
+  "plugin": "bf909x",
+  "image": {
+    "mapper": 71,
+    "variant": 1,
+    "prgKiB": 128,
+    "chrKiB": 0
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

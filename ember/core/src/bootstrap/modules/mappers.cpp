@@ -13,6 +13,8 @@
 
 #include <memory>
 
+#include "bootstrap/modules/mapper-circuits.hpp"
+
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/mappers/mapper-service.hpp"
 #include "infra/mappers/plugin-registry.hpp"
@@ -25,6 +27,7 @@ void registerMappers(ModuleRegistry& registry) {
   options.bundledDirectory = registry.bundledPluginsPath;
   options.userDirectory = registry.userDataPath / "plugins";
   options.hosts.hosts = {"fc"};
+  options.circuits = std::make_shared<StandardCircuitCatalog>();
   options.errors = registry.errors;
   options.events = registry.events;
   auto plugins = std::make_shared<infra::mappers::PluginRegistry>(std::move(options));

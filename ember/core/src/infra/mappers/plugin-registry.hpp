@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "contracts/mappers/circuit-catalog.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/mappers/mapper-service.hpp"
 #include "infra/mappers/loaded-plugin.hpp"
@@ -52,6 +53,8 @@ struct PluginRegistryOptions {
   std::shared_ptr<platform::EventSink> events;
   /** 创建卡带时脚本的执行限制。 */
   ScriptLimits limits;
+  /** 电路目录：插件清单里的 circuits 按它创建主机里已有的 mapper 电路；为空时引用电路的插件无法安装。 */
+  std::shared_ptr<const contracts::mappers::CircuitCatalog> circuits;
 };
 
 /** 插件登记。 */

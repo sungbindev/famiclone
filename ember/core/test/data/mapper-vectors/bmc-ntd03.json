@@ -1,0 +1,64 @@
+{
+  "plugin": "bmc-ntd03",
+  "image": {
+    "mapper": 290,
+    "prgKiB": 512,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "write": "$B6A5",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 196608
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 196608
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 172032,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$B625",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 196608
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 212992
+        }
+      ]
+    }
+  ]
+}

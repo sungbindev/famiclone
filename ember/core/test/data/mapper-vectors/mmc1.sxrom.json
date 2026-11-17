@@ -1,0 +1,81 @@
+{
+  "plugin": "mmc1",
+  "image": {
+    "mapper": 1,
+    "prgKiB": 256,
+    "chrKiB": 0,
+    "battery": true,
+    "nes20": true,
+    "prgNvramKiB": 32,
+    "chrRamKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "save",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "write": "$A000",
+      "value": 1
+    },
+    {
+      "write": "$A000",
+      "value": 1
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "save",
+          "offset": 24576
+        }
+      ]
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "write": "$A000",
+      "value": 1
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "write": "$A000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "save",
+          "offset": 8192
+        }
+      ]
+    }
+  ]
+}

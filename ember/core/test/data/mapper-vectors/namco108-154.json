@@ -1,0 +1,38 @@
+{
+  "plugin": "namco108-154",
+  "image": {
+    "mapper": 154,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 64
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2000",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "a10": false
+        }
+      ]
+    }
+  ]
+}

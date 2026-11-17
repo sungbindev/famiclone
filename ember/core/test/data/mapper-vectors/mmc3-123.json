@@ -1,0 +1,55 @@
+{
+  "plugin": "mmc3-123",
+  "image": {
+    "mapper": 123,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 4
+    },
+    {
+      "write": "$8001",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    },
+    {
+      "write": "$5800",
+      "value": 69
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 81920
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 90112
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 81920
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 90112
+        }
+      ]
+    }
+  ]
+}

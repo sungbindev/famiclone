@@ -1,0 +1,125 @@
+{
+  "plugin": "mapper-103",
+  "image": {
+    "mapper": 103,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "wram",
+          "offset": 0
+        },
+        {
+          "address": "$B800",
+          "storage": "wram",
+          "offset": 8192
+        },
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 106496
+        },
+        {
+          "address": "$D800",
+          "storage": "prg",
+          "offset": 120832
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "wram",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "write": "$7000",
+      "value": 90
+    },
+    {
+      "read": "$7000",
+      "expect": 90
+    },
+    {
+      "write": "$F000",
+      "value": 16
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 24576
+        },
+        {
+          "address": "$B800",
+          "storage": "prg",
+          "offset": 112640
+        },
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        }
+      ]
+    },
+    {
+      "write": "$7000",
+      "value": 119
+    },
+    {
+      "write": "$F000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "wram",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "read": "$7000",
+      "expect": 119
+    },
+    {
+      "write": "$E000",
+      "value": 8
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

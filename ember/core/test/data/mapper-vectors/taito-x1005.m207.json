@@ -1,0 +1,78 @@
+{
+  "plugin": "taito-x1005",
+  "image": {
+    "mapper": 207,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$7EF0",
+      "value": 132
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 4096,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 5120,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "a10": true
+        },
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$7EF1",
+      "value": 2
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": false
+        },
+        {
+          "address": "$2C00",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$7EF1",
+      "value": 130
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        },
+        {
+          "address": "$2C00",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

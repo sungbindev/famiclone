@@ -1,0 +1,52 @@
+{
+  "plugin": "sachen-145",
+  "image": {
+    "mapper": 145,
+    "prgKiB": 32,
+    "chrKiB": 16
+  },
+  "steps": [
+    {
+      "write": "$4100",
+      "value": 128
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4200",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

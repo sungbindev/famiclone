@@ -1,0 +1,42 @@
+{
+  "plugin": "edu2000",
+  "image": {
+    "mapper": 329,
+    "prgKiB": 1024,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$6000",
+          "storage": "wram",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 197
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 163840
+        },
+        {
+          "address": "$6000",
+          "storage": "wram",
+          "offset": 24576
+        }
+      ]
+    }
+  ]
+}

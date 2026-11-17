@@ -1,0 +1,24 @@
+{
+  "plugin": "taito-x1017",
+  "image": {
+    "mapper": 552,
+    "battery": true,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$7EFA",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        }
+      ]
+    }
+  ]
+}

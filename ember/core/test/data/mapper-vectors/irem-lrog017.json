@@ -1,0 +1,71 @@
+{
+  "plugin": "irem-lrog017",
+  "image": {
+    "mapper": 77,
+    "prgKiB": 128,
+    "prgFill": 255,
+    "chrKiB": 32
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0800",
+          "storage": "chr-ram",
+          "offset": 0,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1000",
+          "storage": "chr-ram",
+          "offset": 2048,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1800",
+          "storage": "chr-ram",
+          "offset": 4096,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "enable": false
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 50
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 6144,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

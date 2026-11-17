@@ -12,12 +12,13 @@
 
 namespace ember::logic::hardware::mapper_chips {
 
-Mmc3::Mmc3(contracts::hardware::IrqLine& irq) : irq_(irq), source_(irq.addSource()) {}
+Mmc3::Mmc3(contracts::hardware::IrqLine& irq, bool revA) : irq_(irq), source_(irq.addSource()), revA_(revA) {}
 
 void Mmc3::reset() {
   selector_ = 0;
   registers_.fill(0);
   horizontalMirroring_ = false;
+  ramProtect_ = RAM_ENABLED;
   resetIrq();
 }
 
@@ -45,6 +46,7 @@ void Mmc3::writeRegister(std::uint16_t address, std::uint8_t value) {
       break;
     case 1:
       if (!odd) horizontalMirroring_ = (value & 1U) != 0;
+      else ramProtect_ = value;
       break;
     case 2:
       if (odd) {
@@ -101,6 +103,7 @@ std::vector<contracts::hardware::CircuitStateField> Mmc3::state() const {
   fields.push_back({"irqLatch", latch_, "$C000 的 IRQ 锁存值"});
   fields.push_back({"irqCounter", counter_, "IRQ 计数器"});
   fields.push_back({"irqEnabled", enabled_ ? 1U : 0U, "IRQ 是否允许"});
+  fields.push_back({"ramProtect", ramProtect_, "$A001 的 PRG RAM 保护（位 7 允许、位 6 写保护）"});
   return fields;
 }
 
@@ -116,13 +119,14 @@ void Mmc3::onVideoAddress(std::uint16_t address) {
 }
 
 void Mmc3::clockCounter() {
+  const bool wasActive = counter_ != 0 || reload_;
   if (counter_ == 0 || reload_) {
     counter_ = latch_;
     reload_ = false;
   } else {
     --counter_;
   }
-  if (counter_ == 0 && enabled_) irq_.set(source_, true);
+  if (counter_ == 0 && enabled_ && (!revA_ || wasActive)) irq_.set(source_, true);
 }
 
 }  // namespace ember::logic::hardware::mapper_chips

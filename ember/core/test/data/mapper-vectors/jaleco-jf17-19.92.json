@@ -1,0 +1,29 @@
+{
+  "plugin": "jaleco-jf17-19",
+  "image": {
+    "mapper": 92,
+    "prgKiB": 128,
+    "prgFill": 255,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 133
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 81920
+        }
+      ]
+    }
+  ]
+}

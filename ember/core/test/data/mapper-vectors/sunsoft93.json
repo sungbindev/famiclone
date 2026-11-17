@@ -1,0 +1,56 @@
+{
+  "plugin": "sunsoft93",
+  "image": {
+    "mapper": 93,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 49
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 48
+    },
+    {
+      "expectMap": [
+        {
+          "bus": "ppu",
+          "address": "$0000",
+          "unmapped": true
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

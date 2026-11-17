@@ -46,9 +46,14 @@ class FakeBindings final : public ScriptBindings {
     if (address == 0xFFFF) return std::nullopt;
     return static_cast<std::uint8_t>(address & 0xFF);
   }
+  std::uint32_t randomBelow(std::uint32_t max) override { return max - 1; }
   void nametableSet(std::string_view mode) override {
     if (mode != "four" && mode != "horizontal") throw ScriptArgumentError("名称表连法不对");
     calls.push_back("nametable " + std::string(mode));
+  }
+  void nametableMap(std::size_t slot, std::string_view source, std::int64_t bank) override {
+    if (source == "nothing") throw ScriptArgumentError("来源不对");
+    calls.push_back("nametable.map " + std::to_string(slot) + " " + std::string(source) + " " + std::to_string(bank));
   }
   void irqAssert() override { calls.emplace_back("irq assert"); }
   void irqRelease() override { calls.emplace_back("irq release"); }
@@ -77,6 +82,20 @@ class FakeBindings final : public ScriptBindings {
   void tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) override {
     calls.push_back("tape.comparator " + std::to_string(low) + " " + std::to_string(high) + (invert ? " invert" : " plain"));
   }
+  [[nodiscard]] std::uint64_t cycle() override { return 1234; }
+  void timerAfter(std::string_view name, std::int64_t cycles) override {
+    if (name == "bad") throw ScriptArgumentError("没有调度器");
+    calls.push_back("timer.after " + std::string(name) + " " + std::to_string(cycles));
+  }
+  void timerCancel(std::string_view name) override { calls.push_back("timer.cancel " + std::string(name)); }
+  void circuitWrite(std::size_t circuit, std::uint16_t address, std::uint8_t value) override {
+    calls.push_back("circuit" + std::to_string(circuit) + ".write " + std::to_string(address) + " " + std::to_string(value));
+  }
+  [[nodiscard]] std::uint32_t circuitGet(std::size_t, std::string_view name) override {
+    if (name == "bad") throw ScriptArgumentError("没有这一项状态");
+    return 7;
+  }
+  [[nodiscard]] std::uint32_t circuitBank(std::size_t, bool character, std::uint16_t address) override { return (character ? 100U : 0U) + address; }
 
   bool tapeHigh{false};
   static inline const std::vector<std::string> WINDOWS = {"chr", "prg"};
@@ -93,6 +112,7 @@ ScriptLayout layout() {
   result.windows = {"chr", "prg"};
   result.storages = {"rom", "ram"};
   result.states = {"bank", "flags"};
+  result.circuits = {"mmc3"};
   result.padPorts = 2;
   result.hasTape = true;
   result.headerJson = R"({"mapper":7,"variant":1,"prgSize":16384,"chrSize":0,"mirroring":"vertical","battery":false,"trainer":false,"crc32Prg":1,"crc32All":2})";
@@ -404,7 +424,7 @@ TEST(ScriptRuntime, HasNoAccessToFilesNetworkProcessTimersOrNondeterminism) {
           typeof std === 'undefined' && typeof os === 'undefined' && typeof console === 'undefined' && typeof WebSocket === 'undefined' &&
           typeof Math.random === 'undefined';
         // 后续阶段才实现的成员在脚本里是 undefined。
-        const later = typeof ctx.timer === 'undefined' && typeof ctx.random === 'undefined' && typeof ctx.settings === 'undefined';
+        const later = typeof ctx.nothingYet === 'undefined';
         return absent && later ? 1 : 0;
       },
       write(ctx, bus, addr, value) {
@@ -525,6 +545,91 @@ TEST(ScriptRuntime, WindowsCanSelectAStorageSetTheirAccessAndReportTheirBankCoun
   runtime.reset(true);
   EXPECT_EQ(bindings.logs, (std::vector<std::string>{"2", "RangeError", "RangeError", "RangeError", "RangeError"}));
   EXPECT_EQ(bindings.calls, (std::vector<std::string>{"prg.select 1 1", "prg.select 0 0", "prg.access rw", "busConflict on"}));
+}
+
+TEST(ScriptRuntime, SettingsAreReadByKey) {
+  FakeBindings bindings;
+  ScriptLayout withSettings = layout();
+  withSettings.settings = {ScriptSetting{"dip", true, true, ""}, ScriptSetting{"region", false, false, "ntsc"}};
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      read(ctx) {
+        ctx.log.warn(String(ctx.settings.get('dip')) + ' ' + ctx.settings.get('region'));
+        try { ctx.settings.get('nothing'); } catch (error) { ctx.log.warn(error.name); }
+        return 0;
+      }
+    };)",
+                       withSettings, bindings);
+  static_cast<void>(runtime.read(false, 0));
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"true ntsc", "RangeError"}));
+}
+
+TEST(ScriptRuntime, NametableMapSelectsASourceForOneSlot) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      reset(ctx) {
+        ctx.nametable.map(1, 'ciram1');
+        ctx.nametable.map(2, 'rom', 3);
+        for (const bad of [() => ctx.nametable.map(4, 'ciram0'), () => ctx.nametable.map(0, 5), () => ctx.nametable.map(0, 'nothing'), () => ctx.nametable.map(0, 'rom', 1.5)]) {
+          try { bad(); } catch (error) { ctx.log.warn(error.name); }
+        }
+      }
+    };)",
+                       layout(), bindings);
+  runtime.reset(true);
+  EXPECT_EQ(bindings.calls, (std::vector<std::string>{"nametable.map 1 ciram1 0", "nametable.map 2 rom 3"}));
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"RangeError", "RangeError", "RangeError", "RangeError"}));
+}
+
+TEST(ScriptRuntime, CircuitsCanBeWrittenReadAndAskedForBanksAndOnCircuitReceivesTheId) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      reset(ctx) {
+        const circuit = ctx.circuit('mmc3');
+        circuit.write(0x8000, 6);
+        ctx.log.warn(circuit.get('r6') + ' ' + circuit.bank('program', 0x8000) + ' ' + circuit.bank('character', 0x10));
+        for (const bad of [() => ctx.circuit('nothing'), () => circuit.get('bad'), () => circuit.bank('x', 0), () => circuit.write(0x10000, 0), () => circuit.write(0, 256)]) {
+          try { bad(); } catch (error) { ctx.log.warn(error.name); }
+        }
+      },
+      onCircuit(ctx, id) { ctx.log.warn('circuit ' + id); }
+    };)",
+                       layout(), bindings);
+  EXPECT_TRUE(runtime.hasCircuit());
+  runtime.reset(true);
+  runtime.circuit("mmc3");
+  EXPECT_EQ(bindings.calls, (std::vector<std::string>{"circuit0.write 32768 6"}));
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"7 32768 116", "RangeError", "RangeError", "RangeError", "RangeError", "RangeError", "circuit mmc3"}));
+}
+
+TEST(ScriptRuntime, CycleAndTimerAreForwardedAndOnTimerReceivesTheName) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      reset(ctx) {
+        ctx.log.warn('cycle ' + ctx.cycle());
+        ctx.timer.after('irq', 4096);
+        ctx.timer.cancel('irq');
+        for (const bad of [() => ctx.timer.after('x', -1), () => ctx.timer.after('x', 1099511627777), () => ctx.timer.after(5, 1), () => ctx.timer.after('x', 1.5), () => ctx.timer.cancel(7), () => ctx.timer.after('bad', 1)]) {
+          try { bad(); } catch (error) { ctx.log.warn(error.name); }
+        }
+      },
+      onTimer(ctx, name) { ctx.log.warn('timer ' + name); }
+    };)",
+                       layout(), bindings);
+  EXPECT_TRUE(runtime.hasTimer());
+  runtime.reset(true);
+  runtime.timer("irq");
+  EXPECT_EQ(bindings.calls, (std::vector<std::string>{"timer.after irq 4096", "timer.cancel irq"}));
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"cycle 1234", "RangeError", "RangeError", "RangeError", "RangeError", "RangeError", "RangeError", "timer irq"}));
+
+  FakeBindings quiet;
+  ScriptRuntime without("demo", "export default {};", layout(), quiet);
+  EXPECT_FALSE(without.hasTimer());
+  without.timer("irq");
+  EXPECT_TRUE(quiet.logs.empty());
 }
 
 }  // namespace

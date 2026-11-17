@@ -10,7 +10,8 @@
  *       寄存器：$8000 偶地址写选择寄存器（位 7 反转图案、位 6 程序模式、位 2-0 选 R0-R7），奇地址写所选寄存器；$A000 偶地址写镜像（位 0 为 1 水平，为 0 垂直），奇地址（PRG RAM 保护）忽略；
  *       $C000 偶地址写 IRQ 锁存值，奇地址使计数器在下一次计数时重载；$E000 偶地址关闭 IRQ 并撤销，奇地址允许 IRQ；
  *       IRQ：A12 先连续低过 A12_LOW_ACCESSES 次显存访问，下一次变高才算一次上升沿，用来滤掉每个图块取名称与属性时的短暂低电平；
- *       每次上升沿：计数器为 0 或有重载请求时装入锁存值，否则减 1；减到 0 且允许 IRQ 时拉低 IRQ 线（线上新增一个来源）。
+ *       每次上升沿：计数器为 0 或有重载请求时装入锁存值，否则减 1；减到 0 且允许 IRQ 时拉低 IRQ 线（线上新增一个来源）；A 版（revA）只有计数器原来不为 0 或有重载请求、且减到 0 时才发 IRQ；
+ *       $A001 偶地址以外的奇地址写入（PRG RAM 保护）保存下来，位 7 为 RAM 允许、位 6 为写保护，由使用电路的板子决定怎么用。
  * ------------------------------------------------------------------------
  */
 
@@ -38,9 +39,11 @@ class Mmc3 final : public contracts::hardware::MapperCircuit {
   /** 程序页与图案页的大小（字节）。 */
   static constexpr std::size_t PROGRAM_BANK_SIZE = 8 * 1024;
   static constexpr std::size_t CHARACTER_BANK_SIZE = 1024;
+  /** $A001 上电值：PRG RAM 允许、可写（真机上电值不确定，不写 $A001 的游戏也能用 RAM）。 */
+  static constexpr std::uint8_t RAM_ENABLED = 0x80;
 
   /** @param irq IRQ 线，本芯片在其上登记一个来源。 */
-  explicit Mmc3(contracts::hardware::IrqLine& irq);
+  explicit Mmc3(contracts::hardware::IrqLine& irq, bool revA = false);
 
   /** 上电：全部寄存器清零，垂直镜像，IRQ 关闭并撤销。 */
   void reset() override;
@@ -66,7 +69,7 @@ class Mmc3 final : public contracts::hardware::MapperCircuit {
   /** PPU 对显存总线的一次访问：A12 先低够次数再变高算一次时钟。 */
   void onVideoAddress(std::uint16_t address) override;
 
-  /** 内部状态：selector、r0-r7、horizontalMirroring、irqLatch、irqCounter、irqEnabled。 */
+  /** 内部状态：selector、r0-r7、horizontalMirroring、irqLatch、irqCounter、irqEnabled、ramProtect。 */
   [[nodiscard]] std::vector<contracts::hardware::CircuitStateField> state() const override;
 
   /** CPU 地址（不小于 $8000）所在 8K 程序页的页号，0 到 $3F。 */
@@ -91,9 +94,11 @@ class Mmc3 final : public contracts::hardware::MapperCircuit {
 
   contracts::hardware::IrqLine& irq_;
   contracts::hardware::SignalSource source_;
+  bool revA_{false};
   std::uint8_t selector_{0};
   std::array<std::uint8_t, 8> registers_{};
   bool horizontalMirroring_{false};
+  std::uint8_t ramProtect_{RAM_ENABLED};
   std::uint8_t latch_{0};
   std::uint8_t counter_{0};
   bool reload_{false};

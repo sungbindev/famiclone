@@ -1,0 +1,47 @@
+{
+  "plugin": "kaiser7031",
+  "image": {
+    "mapper": 305,
+    "prgKiB": 32,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 30720
+        },
+        {
+          "address": "$F800",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "write": "$8800",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6800",
+          "storage": "prg",
+          "offset": 10240
+        },
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

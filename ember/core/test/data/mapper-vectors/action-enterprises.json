@@ -1,0 +1,65 @@
+{
+  "plugin": "action-enterprises",
+  "image": {
+    "mapper": 228,
+    "prgKiB": 1024,
+    "chrKiB": 512
+  },
+  "steps": [
+    {
+      "write": "$8A45",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 655360
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 671744
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 180224,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "reset": "soft"
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 16384
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "plugin": "cnrom-protect",
+  "image": {
+    "mapper": 185,
+    "prgKiB": 32,
+    "prgFill": 255,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 16
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "stub",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$0123",
+      "bus": "ppu",
+      "expect": 1
+    },
+    {
+      "write": "$8000",
+      "value": 19
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "stub",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "plugin": "sunsoft184",
+  "image": {
+    "mapper": 184,
+    "prgKiB": 32,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$6000",
+      "value": 53
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 20480,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 28672,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

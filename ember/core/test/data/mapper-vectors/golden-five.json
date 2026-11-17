@@ -1,0 +1,63 @@
+{
+  "plugin": "golden-five",
+  "image": {
+    "mapper": 104,
+    "prgKiB": 1024,
+    "chrKiB": 0
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 10
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 573440
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 770048
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 573440
+        }
+      ]
+    }
+  ]
+}

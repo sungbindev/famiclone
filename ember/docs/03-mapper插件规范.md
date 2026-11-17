@@ -270,7 +270,7 @@ export default definePlugin({
 | `ctx.header` | 只读的规范化卡带描述，见第 4.2 节 |
 | `ctx.window(id)` | 窗口：`setBank(n)` 切换 bank，`setOffset(bytes)` 按字节偏移，`unmap()` 取消映射（读按开放总线），`bankCount`（只读）当前绑定的存储区里有几个窗口大小的 bank（至少 1，用来写“倒数第 n 个 bank”），`select(存储区标识, bank)` 切到清单里该窗口列出的另一个存储区并选 bank（`bank` 默认 0，不在列表里抛 `RangeError`），`setAccess('r' 或 'rw')` 写保护或允许写入（上电复位回到清单的 `access`） |
 | `ctx.busConflict.set(enabled)` | 设置寄存器写入是否发生总线冲突，见第 4.1 节的 `busConflict` |
-| `ctx.peek(address)` | 按卡带自己的 CPU 侧译码读一个字节（窗口、声明的固定值与状态），没有副作用，不回调脚本的 `read`；卡带不驱动数据线时返回 `undefined`；地址不在 0 到 65535 之间抛 `RangeError` |
+| `ctx.peek(address)` | 按卡带自己的 CPU 侧窗口读一个字节，不经过寄存器（读寄存器的脚本用它读到寄存器下面的 ROM 或 RAM），没有副作用；窗口没有映射或不驱动数据线时返回 `undefined`；地址不在 0 到 65535 之间抛 `RangeError` |
 | `ctx.nametable.set(mode)` | 设置名称表连法：`horizontal`、`vertical`、`single0`、`single1`、`four` |
 | `ctx.irq` | 卡带的 IRQ 引脚：`assert()` 拉低，`release()` 释放 |
 | `ctx.device(name)` | 主机上的功能模块；目前只有 `'tape'`（磁带机，见第 6.6 节）：`level()`、`setComparator(low, high, invert)`；主机没有该功能模块时抛出 `RangeError`（“当前主机没有磁带机”），按插件错误处理；**后续阶段（插卡学习机）**：其他功能模块（如 `fdc`），`read(寄存器)`、`write(寄存器, 值)` 在脚本的读写回调里转发，寄存器编号由脚本从地址取，运行页提示“当前机型没有 xx”并暂停 |
@@ -278,13 +278,13 @@ export default definePlugin({
 | `ctx.timer` | `after(cpuCycles, name)` 登记事件，`cancel(name)` 取消；时间单位是 CPU 周期 |
 | `ctx.state` | 已声明状态的读写，如 `ctx.state.prgBank = 5` |
 | `ctx.settings.get(key)` | 读取设置项 |
-| `ctx.random(max)` | 返回 0 到 `max - 1` 的整数；种子由宿主决定，同一次运行内可重现 |
+| `ctx.random(max)` | 返回 0 到 `max - 1` 的整数（`max` 为 1 到 2147483648）；序列由卡带固定的种子决定，每次上电复位后从头开始，所以同样的操作得到同样的结果；`max` 不合法抛 `RangeError` |
 | `ctx.log.warn(message)` | 写入运行消息日志，一条最长 2000 字节 |
 | `ctx.keys` | `isDown(code)`：这个物理键（`KeyboardEvent.code`）现在是否按着，用来写组合键；见第 6.5 节 |
 | `ctx.pad(port)` | 手柄口 `port`（经典 FC 为 0 与 1）：`set(button, down)` 按下或松开一个键，`button` 是 `a`、`b`、`select`、`start`、`up`、`down`、`left`、`right`；`release()` 松开这个口的全部按键；见第 6.5 节 |
 
 - 脚本不能访问文件、网络、进程、系统时间和 `Math.random`；需要随机数时用 `ctx.random`。
-- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.nametable`、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.log.warn`、`ctx.keys`、`ctx.pad`、`ctx.device('tape')`；`ctx.timer`、`ctx.random`、`ctx.settings` **后续阶段实现**，目前在脚本里是 `undefined`。目前脚本能访问的主机功能模块只有磁带机，卡带与主机之间另有卡槽引脚；其他 `ctx.device` 在插卡学习机阶段实现。
+- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.busConflict`、`ctx.peek`、`ctx.nametable`、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.random`、`ctx.log.warn`、`ctx.keys`、`ctx.pad`、`ctx.device('tape')`；`ctx.timer`、`ctx.settings` **后续阶段实现**，目前在脚本里是 `undefined`。目前脚本能访问的主机功能模块只有磁带机，卡带与主机之间另有卡槽引脚；其他 `ctx.device` 在插卡学习机阶段实现。
 - 沙箱里只加载确定性的内置对象：没有 `Date`、`console`、`performance`、`setTimeout`、`fetch`、`process`、`require` 与 quickjs-libc，`Math.random` 被删除，访问它们报 `ReferenceError` 或 `TypeError`（即 `mappers.scriptError`）。`Promise` 仅作为语言内置保留，宿主不执行异步任务，顶层 `await` 报 `mappers.invalidPackage`。
 - `ctx` 与其中的窗口、存储区对象都是冻结的，`ctx.state` 不能增加属性；参数不合法（bank 为负、不是整数、标识不存在、存储区偏移越界、写入值不在 0 到 255、名称表连法不认识）抛出 `RangeError` 或 `TypeError`，按插件错误处理。`ctx.log.warn` 只接受字符串，超过 2000 字节在 UTF-8 字符边界截断，卡带保留最近 200 条（`MapperCartridge::scriptLog`，运行消息日志模块做好后经它写入）。
 - 宿主对象是脚本与硬件之间的全部接口，所以插件的行为是确定的，同样的输入得到同样的结果，方便测试与调试。
@@ -440,7 +440,7 @@ export default definePlugin({
 | 沙箱（第 6 节） | 已实现 | `script-runtime.*`；每个卡带一个 QuickJS-ng 运行时；`ctx` 实现 `header`、`window`、`nametable`、`irq`、`storage`、`state`、`log`、`keys`、`pad`；输入回调 `onKey`、`onMouse` |
 | 匹配与加载（第 5 节） | 已实现 | `plugin-registry.*` 与 `logic/cartridges`；条件数优先、冲突与无匹配的错误码 |
 | 插件管理（第 7 节） | 已实现 | `list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 与事件 `mappers.changed` |
-| `ctx.timer`、`ctx.random`、`ctx.settings` | 后续阶段 | 需要定时器与设置页 |
+| `ctx.timer`、`ctx.settings` | 后续阶段 | 需要定时器与设置页 |
 | SDK、假宿主、命令行工具、开发目录、冲突时用户选择并记住、`mappers.match`、训练器载入、存档文件 | 后续阶段 | 见各节标注 |
 
 与前文设计的出入：

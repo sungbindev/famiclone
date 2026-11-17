@@ -1,0 +1,60 @@
+{
+  "plugin": "bmc830425-c4391-t",
+  "image": {
+    "mapper": 320,
+    "prgKiB": 1024,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        }
+      ]
+    },
+    {
+      "write": "$F0E5",
+      "value": 19
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 704512
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 770048
+        }
+      ]
+    },
+    {
+      "write": "$F0F5",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 688128
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 770048
+        }
+      ]
+    }
+  ]
+}

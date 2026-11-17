@@ -1,0 +1,52 @@
+{
+  "plugin": "lh32",
+  "image": {
+    "mapper": 125,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 106496
+        },
+        {
+          "address": "$C000",
+          "storage": "wram",
+          "offset": 0
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$6000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    }
+  ]
+}

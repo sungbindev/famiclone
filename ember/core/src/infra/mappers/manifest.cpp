@@ -41,6 +41,10 @@ constexpr std::size_t MAX_WINDOW_STORAGES = 4;
 constexpr std::size_t MAX_REGISTERS = 64;
 constexpr std::size_t MAX_STATE = 64;
 constexpr std::size_t MAX_TABLES = 16;
+constexpr std::size_t MAX_CIRCUITS = 4;
+/** 电路接线里程序页槽与图案页槽的个数上限。 */
+constexpr std::size_t MAX_WIRE_PRG = 8;
+constexpr std::size_t MAX_WIRE_CHR = 8;
 constexpr std::size_t MAX_BANK_SETTERS = 8;
 /** 查表索引的总位数上限（表最多 65536 项）。 */
 constexpr std::uint32_t MAX_INDEX_BITS = 16;
@@ -338,7 +342,12 @@ WriteAction readWriteAction(const json& value, const std::string& path) {
     return action;
   }
   if (!value.is_object()) fail(path + " 应为 true 或对象");
-  json_fields::rejectUnknown(value, path, {"state", "bank", "update"});
+  json_fields::rejectUnknown(value, path, {"state", "bank", "update", "circuit"});
+  if (const auto circuit = readOptionalText(value, "circuit", path, 1, 32)) {
+    if (json_fields::find(value, "state") != nullptr || json_fields::find(value, "bank") != nullptr || json_fields::find(value, "update") != nullptr) fail(path + ".circuit 不能与 state、bank、update 同时写");
+    action.circuit = *circuit;
+    return action;
+  }
   if (const auto state = readOptionalText(value, "state", path, 1, 32)) action.state = *state;
   if (const json* banks = findList(value, "bank", path, MAX_BANK_SETTERS)) {
     if (banks->empty()) fail(path + ".bank 至少 1 项");
@@ -364,7 +373,7 @@ RegisterDecl readRegister(const json& item, const std::string& path) {
   if (const json* read = json_fields::find(item, "read")) decl.readAction = readReadAction(*read, path + ".read");
   if (const json* write = json_fields::find(item, "write")) decl.writeAction = readWriteAction(*write, path + ".write");
   decl.read = decl.readAction.kind != ReadKind::None;
-  decl.write = decl.writeAction.script || !decl.writeAction.state.empty() || !decl.writeAction.banks.empty() || !decl.writeAction.updateTable.empty();
+  decl.write = decl.writeAction.script || !decl.writeAction.circuit.empty() || !decl.writeAction.state.empty() || !decl.writeAction.banks.empty() || !decl.writeAction.updateTable.empty();
   if (!decl.read && !decl.write) fail(path + " 的 read 与 write 至少要有一个有处理");
   return decl;
 }
@@ -493,15 +502,47 @@ SettingDecl readSetting(const json& item, const std::string& path) {
   return decl;
 }
 
+/** 电路的接线：窗口标识列表、镜像、RAM 窗口。 */
+CircuitWire readCircuitWire(const json& item, const std::string& path) {
+  json_fields::requireObject(item, path);
+  json_fields::rejectUnknown(item, path, {"prg", "chr", "mirroring", "ram"});
+  CircuitWire wire;
+  const auto readWindows = [&](const char* key, std::size_t maxItems, std::vector<std::string>& into) {
+    const json* list = findList(item, key, path, maxItems);
+    if (list == nullptr) return;
+    for (std::size_t index = 0; index < list->size(); ++index) {
+      into.push_back(json_fields::readString((*list)[index], path + "." + key + "[" + std::to_string(index) + "]", 1, 32, {}));
+    }
+  };
+  readWindows("prg", MAX_WIRE_PRG, wire.prg);
+  readWindows("chr", MAX_WIRE_CHR, wire.chr);
+  wire.mirroring = readFlag(item, "mirroring", path);
+  if (const auto ram = readOptionalText(item, "ram", path, 1, 32)) wire.ram = *ram;
+  if (wire.prg.empty() && wire.chr.empty() && !wire.mirroring && wire.ram.empty()) fail(path + " 至少要写 prg、chr、mirroring、ram 之一");
+  return wire;
+}
+
+CircuitDecl readCircuit(const json& item, const std::string& path) {
+  json_fields::requireObject(item, path);
+  json_fields::rejectUnknown(item, path, {"id", "type", "revA", "wire"});
+  CircuitDecl decl;
+  decl.id = readIdentifier(item, "id", path, 32);
+  decl.type = readIdentifier(item, "type", path, 32);
+  decl.revA = readFlag(item, "revA", path);
+  if (const json* wire = json_fields::find(item, "wire")) decl.wire = readCircuitWire(*wire, path + ".wire");
+  return decl;
+}
+
 NametableMode readNametable(const json& root, const std::string& path) {
   const json* field = json_fields::find(root, "nametable");
   if (field == nullptr) return NametableMode::Header;
-  const std::string value = json_fields::readString(*field, path + ".nametable", 1, 16, {"header", "horizontal", "vertical", "single0", "single1", "four"});
+  const std::string value = json_fields::readString(*field, path + ".nametable", 1, 16, {"header", "horizontal", "vertical", "single0", "single1", "four", "custom"});
   if (value == "horizontal") return NametableMode::Horizontal;
   if (value == "vertical") return NametableMode::Vertical;
   if (value == "single0") return NametableMode::Single0;
   if (value == "single1") return NametableMode::Single1;
   if (value == "four") return NametableMode::Four;
+  if (value == "custom") return NametableMode::Custom;
   return NametableMode::Header;
 }
 
@@ -577,6 +618,27 @@ void checkConsistency(const Manifest& manifest) {
       requireState(decl.writeAction.updateInto, path + ".write.update.into");
     }
   }
+  std::set<std::string> circuitIds;
+  for (std::size_t index = 0; index < manifest.circuits.size(); ++index) {
+    const CircuitDecl& circuit = manifest.circuits[index];
+    const std::string path = "circuits[" + std::to_string(index) + "]";
+    if (!circuitIds.insert(circuit.id).second) fail("circuits 里的标识重复：" + circuit.id);
+    if (!circuit.wire) continue;
+    const auto checkWindows = [&](const std::vector<std::string>& ids, bool ppu, const char* key) {
+      for (const std::string& id : ids) {
+        const auto window = std::find_if(manifest.windows.begin(), manifest.windows.end(), [&](const WindowDecl& item) { return item.id == id; });
+        if (window == manifest.windows.end()) fail(path + ".wire." + key + " 引用了不存在的窗口：" + id);
+        if (window->ppu != ppu) fail(path + ".wire." + key + " 引用的窗口 " + id + " 不在" + (ppu ? "PPU" : "CPU") + "总线上");
+      }
+    };
+    checkWindows(circuit.wire->prg, false, "prg");
+    checkWindows(circuit.wire->chr, true, "chr");
+    if (!circuit.wire->ram.empty()) checkWindows({circuit.wire->ram}, false, "ram");
+  }
+  for (std::size_t index = 0; index < manifest.registers.size(); ++index) {
+    const std::string& circuit = manifest.registers[index].writeAction.circuit;
+    if (!circuit.empty() && !circuitIds.contains(circuit)) fail("registers[" + std::to_string(index) + "].write.circuit 引用了不存在的电路：" + circuit);
+  }
   if (manifest.tape && manifest.tape->timer) {
     const TapeTimerDecl& timer = *manifest.tape->timer;
     requireState(timer.samples, "tape.timer.samples");
@@ -597,7 +659,7 @@ Manifest build(const json& root) {
   const std::string path = "manifest";
   json_fields::requireObject(root, path);
   json_fields::rejectUnknown(root, path,
-                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "busConflict", "match", "storage", "windows", "nametable", "registers", "state", "tables", "tape", "settings"});
+                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "busConflict", "match", "storage", "windows", "nametable", "registers", "state", "tables", "tape", "circuits", "settings"});
   Manifest manifest;
   manifest.id = readText(root, "id", path, 3, 40);
   if (!isLowerIdentifier(manifest.id, 3, 40)) fail(path + ".id 只能用小写字母、数字与 -，3 到 40 个字符，且不能以 - 开头");
@@ -645,6 +707,9 @@ Manifest build(const json& root) {
     for (std::size_t index = 0; index < list->size(); ++index) manifest.tables.push_back(readTable((*list)[index], path + ".tables[" + std::to_string(index) + "]"));
   }
   if (const json* tape = json_fields::find(root, "tape")) manifest.tape = readTape(*tape, path + ".tape");
+  if (const json* list = findList(root, "circuits", path, MAX_CIRCUITS)) {
+    for (std::size_t index = 0; index < list->size(); ++index) manifest.circuits.push_back(readCircuit((*list)[index], path + ".circuits[" + std::to_string(index) + "]"));
+  }
   if (const json* list = findList(root, "settings", path, MAX_SETTINGS)) {
     for (std::size_t index = 0; index < list->size(); ++index) manifest.settings.push_back(readSetting((*list)[index], path + ".settings[" + std::to_string(index) + "]"));
   }
@@ -710,6 +775,8 @@ std::string_view nametableName(NametableMode mode) noexcept {
       return "single1";
     case NametableMode::Four:
       return "four";
+    case NametableMode::Custom:
+      return "custom";
     case NametableMode::Header:
       break;
   }

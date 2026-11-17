@@ -1,0 +1,36 @@
+{
+  "plugin": "sachen-143",
+  "image": {
+    "mapper": 143,
+    "prgKiB": 32,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 16384
+        }
+      ]
+    },
+    {
+      "read": "$4100",
+      "expect": 127
+    },
+    {
+      "read": "$413F",
+      "expect": 64
+    },
+    {
+      "read": "$5ABC",
+      "expect": 67
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "plugin": "bmc64in1-no-repeat",
+  "image": {
+    "mapper": 314,
+    "prgKiB": 1024,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$5001",
+      "value": 133
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 163840
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 180224
+        }
+      ]
+    },
+    {
+      "write": "$5002",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 98304,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$5000",
+      "value": 32
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 163840
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 163840
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "reset": "soft"
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    }
+  ]
+}

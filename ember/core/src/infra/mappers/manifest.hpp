@@ -121,8 +121,8 @@ struct WindowDecl {
   bool writable{false};
 };
 
-/** 名称表的初始连法。 */
-enum class NametableMode { Header, Horizontal, Vertical, Single0, Single1, Four };
+/** 名称表的初始连法：custom 表示四个 1K 槽由脚本逐个映射到主板显存的两页或卡带存储区的某个 1K 页。 */
+enum class NametableMode { Header, Horizontal, Vertical, Single0, Single1, Four, Custom };
 
 /** 读寄存器的处理方式：回调脚本，或由宿主直接回答。 */
 enum class ReadKind { None, Script, Value, Open, State };
@@ -142,9 +142,11 @@ struct BankSetter {
   std::uint32_t mask{0xFF};
 };
 
-/** 写寄存器的声明：回调脚本，或由宿主直接执行；宿主执行时依次做 state、banks、update。 */
+/** 写寄存器的声明：回调脚本，或由宿主直接执行；宿主执行时依次做 state、banks、update，或者把写入转给电路（circuit，与前面几项互斥）。 */
 struct WriteAction {
   bool script{false};
+  /** 非空时把写入转给这个标识的电路；电路写完后按它的 wire 自动设置窗口，脚本导出了 onCircuit 就再回调它。 */
+  std::string circuit;
   /** 非空时把写入的数据存进这个状态。 */
   std::string state;
   std::vector<BankSetter> banks;
@@ -213,6 +215,26 @@ struct TapeDecl {
   std::optional<TapeTimerDecl> timer;
 };
 
+/** 电路写完后由宿主自动设置的窗口：程序页、图案页按电路给出的页号逐槽设置，镜像位设置名称表，PRG RAM 保护位设置 RAM 窗口的访问。 */
+struct CircuitWire {
+  /** 从 $8000 起每个程序页槽对应的窗口（按电路的页大小连续排列）。 */
+  std::vector<std::string> prg;
+  /** 从 $0000 起每个图案页槽对应的窗口。 */
+  std::vector<std::string> chr;
+  /** 把电路的镜像式设给名称表。 */
+  bool mirroring{false};
+  /** 非空时按电路的 PRG RAM 保护位（位 7 允许、位 6 写保护）设置这个 CPU 窗口：不允许时取消映射，写保护时只读。 */
+  std::string ram;
+};
+
+/** 电路声明：引用主机里已有的 mapper 电路（如 mmc3），电路的内部不能改，插件只决定接线。 */
+struct CircuitDecl {
+  std::string id;
+  std::string type;
+  bool revA{false};
+  std::optional<CircuitWire> wire;
+};
+
 /** 设置项种类。 */
 enum class SettingKind { Text, Choice, Switch };
 
@@ -257,6 +279,7 @@ struct Manifest {
   std::vector<StateDecl> state;
   std::vector<TableDecl> tables;
   std::optional<TapeDecl> tape;
+  std::vector<CircuitDecl> circuits;
   std::vector<SettingDecl> settings;
 
   /** 有读寄存器要回调脚本。 */

@@ -1,0 +1,94 @@
+{
+  "plugin": "mmc3-14",
+  "image": {
+    "mapper": 14,
+    "prgKiB": 512,
+    "chrKiB": 512
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "write": "$A000",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 40960
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 73728
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 507904
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 516096
+        }
+      ]
+    },
+    {
+      "write": "$B000",
+      "value": 3
+    },
+    {
+      "write": "$B001",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 19456,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$9000",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$A131",
+      "value": 10
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$8001",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 266240,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

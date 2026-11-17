@@ -1,0 +1,90 @@
+{
+  "plugin": "magic-kid-goo-goo",
+  "image": {
+    "mapper": 190,
+    "prgKiB": 256,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 2048,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1800",
+          "storage": "chr",
+          "offset": 6144,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 180224
+        }
+      ]
+    },
+    {
+      "write": "$A001",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$E003",
+      "value": 7
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1800",
+          "storage": "chr",
+          "offset": 14336,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

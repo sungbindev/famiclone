@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -28,8 +29,11 @@
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/cartridge.hpp"
 #include "contracts/hardware/irq-output.hpp"
+#include "contracts/hardware/irq-line.hpp"
+#include "contracts/hardware/mapper-circuit.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
+#include "contracts/mappers/circuit-catalog.hpp"
 #include "contracts/mappers/mapper-cartridge.hpp"
 #include "infra/mappers/loaded-plugin.hpp"
 #include "infra/mappers/script-runtime.hpp"
@@ -37,8 +41,11 @@
 
 namespace ember::infra::mappers {
 
+/** ctx.random 的固定种子。 */
+inline constexpr std::uint32_t RANDOM_SEED = 0x2545F491U;
+
 /** 一个插件创建的卡带。 */
-class MapperChip final : public contracts::mappers::MapperCartridge, private ScriptBindings {
+class MapperChip final : public contracts::mappers::MapperCartridge, private ScriptBindings, private contracts::hardware::EventListener {
  public:
   /**
    * @param plugin 插件，卡带持有它的引用计数。
@@ -46,10 +53,11 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
    * @param irq 主机卡槽上的 IRQ 引脚，必须活到卡带销毁。
    * @param pads 主机上的手柄口，脚本经 ctx.pad 设置按键，必须活到卡带销毁。
    * @param limits 脚本的执行限制。
-   * @throws shared::CoreError mappers.invalidPackage：脚本无法加载或没有导出清单声明的函数；mappers.limitExceeded：加载脚本时超限。
+   * @param circuits 电路目录，清单引用了电路时必须给出，必须活到创建完成（创建出的电路归卡带所有）。
+   * @throws shared::CoreError mappers.invalidPackage：脚本无法加载或没有导出清单声明的函数、引用了主机里没有的电路；mappers.limitExceeded：加载脚本时超限。
    */
   MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, contracts::hardware::IrqOutput& irq, contracts::hardware::PadSink& pads,
-             ScriptLimits limits = {});
+             ScriptLimits limits = {}, const contracts::mappers::CircuitCatalog* circuits = nullptr);
   ~MapperChip() override;
 
   MapperChip(const MapperChip&) = delete;
@@ -61,6 +69,8 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   [[nodiscard]] contracts::hardware::CiramControl ciramControl(std::uint16_t ppuAddress) const override;
   void reset(bool power) override;
   void input(const contracts::hardware::InputEvent& event) override;
+  [[nodiscard]] bool watchesVideoAddress() const override { return !circuits_.empty(); }
+  void onVideoAddress(std::uint16_t ppuAddress) override;
 
   // MapperCartridge
   [[nodiscard]] const std::string& pluginId() const override { return plugin_->manifest.id; }
@@ -130,6 +140,8 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
     std::size_t readState{0};
     bool releaseIrq{false};
     bool writeScript{false};
+    /** 写入转给的电路下标。 */
+    std::optional<std::size_t> circuit;
     std::optional<std::size_t> writeState;
     std::vector<Bank> banks;
     std::optional<std::size_t> table;
@@ -157,9 +169,11 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   void windowSetAccess(std::size_t window, bool writable) override { windows_.at(window).writable = writable; }
   void busConflictSet(bool enabled) override { busConflict_ = enabled; }
   [[nodiscard]] std::optional<std::uint8_t> cpuPeek(std::uint16_t address) override;
+  std::uint32_t randomBelow(std::uint32_t max) override;
   void nametableSet(std::string_view mode) override;
-  void irqAssert() override { irq_.set(true); }
-  void irqRelease() override { irq_.set(false); }
+  void nametableMap(std::size_t slot, std::string_view source, std::int64_t bank) override;
+  void irqAssert() override { mixer_.set(scriptIrq_, true); }
+  void irqRelease() override { mixer_.set(scriptIrq_, false); }
   [[nodiscard]] std::size_t storageSize(std::size_t storage) const override { return storages_.at(storage)->size(); }
   std::uint8_t storageRead(std::size_t storage, std::int64_t offset) override;
   bool storageWrite(std::size_t storage, std::int64_t offset, std::uint8_t value) override;
@@ -171,6 +185,18 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   void padRelease(std::size_t port) override;
   [[nodiscard]] bool tapeLevel() override;
   void tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) override;
+  [[nodiscard]] std::uint64_t cycle() override;
+  void timerAfter(std::string_view name, std::int64_t cycles) override;
+  void timerCancel(std::string_view name) override;
+  void circuitWrite(std::size_t circuit, std::uint16_t address, std::uint8_t value) override;
+  [[nodiscard]] std::uint32_t circuitGet(std::size_t circuit, std::string_view name) override;
+  [[nodiscard]] std::uint32_t circuitBank(std::size_t circuit, bool character, std::uint16_t address) override;
+
+  // EventListener
+  void onEvent(contracts::hardware::MasterTime when, std::uint32_t tag) override;
+
+  /** 取消全部还在等待的计时（复位与销毁时）。 */
+  void cancelTimers();
 
   [[nodiscard]] contracts::hardware::BusRead readBus(bool ppu, std::uint16_t address);
   [[nodiscard]] contracts::hardware::BusRead peekBus(bool ppu, std::uint16_t address) const;
@@ -195,11 +221,64 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   bool runScript(Call&& call);
 
   std::shared_ptr<const LoadedPlugin> plugin_;
-  contracts::hardware::IrqOutput& irq_;
   contracts::hardware::PadSink& pads_;
   /** 主机上的磁带机数据线；没有磁带机时为空。脚本导出 onTapeEdge 时卡带在它上面挂了边沿通知，销毁时摘掉。 */
   contracts::hardware::TapeLine* tape_{nullptr};
   bool tapeListening_{false};
+  /** 主机的调度器与 CPU 时钟域；主机没有调度器时为空，ctx.cycle 与 ctx.timer 报错。 */
+  contracts::hardware::Scheduler* scheduler_{nullptr};
+  contracts::hardware::ClockDomain cpuClock_{};
+  /** ctx.timer 的计时：按名字各占一项，事件的标记是下标。 */
+  struct TimerSlot {
+    std::string name;
+    contracts::hardware::EventId event{contracts::hardware::NO_EVENT};
+  };
+  std::vector<TimerSlot> timers_;
+
+  /** 卡带上的 IRQ 线混合：脚本与各电路各自是一个来源，任一来源有效就拉低主机卡槽上的 IRQ 引脚。 */
+  class IrqMixer final : public contracts::hardware::IrqLine {
+   public:
+    explicit IrqMixer(contracts::hardware::IrqOutput& output) : output_(output) {}
+    contracts::hardware::SignalSource addSource() override {
+      sources_.push_back(false);
+      return static_cast<contracts::hardware::SignalSource>(sources_.size() - 1);
+    }
+    void set(contracts::hardware::SignalSource source, bool active) override {
+      if (sources_.at(source) == active) return;
+      sources_[source] = active;
+      output_.set(this->active());
+    }
+    [[nodiscard]] bool active() const override { return std::find(sources_.begin(), sources_.end(), true) != sources_.end(); }
+    /** 全部来源回到无效，并把引脚拉高。 */
+    void clear() {
+      sources_.assign(sources_.size(), false);
+      output_.set(false);
+    }
+
+   private:
+    contracts::hardware::IrqOutput& output_;
+    std::vector<bool> sources_;
+  };
+
+  /** 一个电路及清单里的接线（窗口标识已解析成下标）。 */
+  struct CircuitSlot {
+    std::string id;
+    std::unique_ptr<contracts::hardware::MapperCircuit> circuit;
+    std::vector<std::size_t> prgWindows;
+    std::vector<std::size_t> chrWindows;
+    bool mirroring{false};
+    std::optional<std::size_t> ramWindow;
+  };
+
+  /** 把写入交给电路并按接线设置窗口。 */
+  void writeCircuit(std::size_t index, std::uint16_t address, std::uint8_t value);
+  /** 按电路当前的页号、镜像与 RAM 保护位设置已接线的窗口与名称表。 */
+  void applyCircuitWire(const CircuitSlot& slot);
+  [[nodiscard]] static std::optional<std::uint32_t> circuitValue(const CircuitSlot& slot, std::string_view name);
+
+  IrqMixer mixer_;
+  contracts::hardware::SignalSource scriptIrq_{0};
+  std::vector<CircuitSlot> circuits_;
   /** 各手柄口当前按下的按键掩码，由脚本设置。 */
   std::vector<std::uint8_t> padMasks_;
   /** 现在按着的物理键（KeyboardEvent.code）。 */
@@ -217,8 +296,20 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   std::size_t timerTicks_{0};
   NametableMode nametable_{NametableMode::Horizontal};
   NametableMode initialNametable_{NametableMode::Horizontal};
+  /** custom 名称表的四个 1K 槽：映射到主板显存的某一页，或卡带存储区的某个 1K 页。 */
+  struct NametableSlot {
+    StorageBlock* storage{nullptr};
+    std::size_t bank{0};
+    bool ciramPage1{false};
+  };
+  std::array<NametableSlot, 4> customSlots_{};
+  /** 卡带自己响应的名称表地址（四屏或 custom 映射到存储区的槽）：读出或开放总线。 */
+  [[nodiscard]] contracts::hardware::BusRead readOwnNametable(std::uint16_t address) const;
+  void writeOwnNametable(std::uint16_t address, std::uint8_t value);
   /** 寄存器写入是否做总线冲突；每次复位回到清单的初始值，脚本可以改。 */
   bool busConflict_{false};
+  /** ctx.random 的状态（xorshift32），上电复位回到固定种子。 */
+  std::uint32_t randomState_{RANDOM_SEED};
   /** 四屏时卡带自带的名称表显存。 */
   std::array<std::uint8_t, 4096> ownNametable_{};
   std::optional<contracts::mappers::ScriptFailure> failure_;

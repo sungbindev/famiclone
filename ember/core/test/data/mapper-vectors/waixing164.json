@@ -1,0 +1,58 @@
+{
+  "plugin": "waixing164",
+  "image": {
+    "mapper": 164,
+    "prgKiB": 1024,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 491520
+        }
+      ]
+    },
+    {
+      "write": "$5000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        }
+      ]
+    },
+    {
+      "write": "$5100",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 622592
+        }
+      ]
+    },
+    {
+      "write": "$5200",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 622592
+        }
+      ]
+    }
+  ]
+}

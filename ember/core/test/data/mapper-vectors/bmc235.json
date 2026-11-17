@@ -1,0 +1,122 @@
+{
+  "plugin": "bmc235",
+  "image": {
+    "mapper": 235,
+    "prgKiB": 1024,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 16384
+        }
+      ]
+    },
+    {
+      "write": "$8007",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 229376
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$8C07",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 229376
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 229376
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$8107",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "unmapped": true
+        },
+        {
+          "address": "$C000",
+          "unmapped": true
+        }
+      ]
+    },
+    {
+      "write": "$8007",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 229376
+        }
+      ]
+    },
+    {
+      "reset": "soft"
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 16384
+        }
+      ]
+    }
+  ]
+}

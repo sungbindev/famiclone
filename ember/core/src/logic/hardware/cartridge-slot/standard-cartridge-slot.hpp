@@ -26,9 +26,15 @@ class StandardCartridgeSlot final : public contracts::hardware::CartridgeSlot {
   StandardCartridgeSlot(const StandardCartridgeSlot&) = delete;
   StandardCartridgeSlot& operator=(const StandardCartridgeSlot&) = delete;
 
-  void insert(contracts::hardware::Cartridge& cartridge) override { cartridge_ = &cartridge; }
+  void insert(contracts::hardware::Cartridge& cartridge) override {
+    cartridge_ = &cartridge;
+    watching_ = cartridge.watchesVideoAddress();
+  }
 
-  void eject() override { cartridge_ = nullptr; }
+  void eject() override {
+    cartridge_ = nullptr;
+    watching_ = false;
+  }
 
   [[nodiscard]] bool occupied() const override { return cartridge_ != nullptr; }
 
@@ -48,6 +54,10 @@ class StandardCartridgeSlot final : public contracts::hardware::CartridgeSlot {
     if (cartridge_ != nullptr) cartridge_->input(event);
   }
 
+  void videoAddress(std::uint16_t ppuAddress) override {
+    if (watching_) cartridge_->onVideoAddress(ppuAddress);
+  }
+
  private:
   /** 一侧的总线设备：转给卡带对应的一侧，空槽时什么也不驱动。 */
   class Side final : public contracts::hardware::BusDevice {
@@ -56,11 +66,14 @@ class StandardCartridgeSlot final : public contracts::hardware::CartridgeSlot {
 
     contracts::hardware::BusRead read(std::uint16_t address) override {
       if (slot_.cartridge_ == nullptr) return contracts::hardware::releaseBus();
+      if (ppu_) slot_.videoAddress(address);
       return target().read(address);
     }
 
     void write(std::uint16_t address, std::uint8_t value) override {
-      if (slot_.cartridge_ != nullptr) target().write(address, value);
+      if (slot_.cartridge_ == nullptr) return;
+      if (ppu_) slot_.videoAddress(address);
+      target().write(address, value);
     }
 
     contracts::hardware::BusRead peek(std::uint16_t address) override {
@@ -76,6 +89,8 @@ class StandardCartridgeSlot final : public contracts::hardware::CartridgeSlot {
   };
 
   contracts::hardware::Cartridge* cartridge_{nullptr};
+  /** 插着的卡带是否要观察 PPU 地址线。 */
+  bool watching_{false};
   Side cpuSide_;
   Side ppuSide_;
 };

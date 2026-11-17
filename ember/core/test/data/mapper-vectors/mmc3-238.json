@@ -1,0 +1,43 @@
+{
+  "plugin": "mmc3-238",
+  "image": {
+    "mapper": 238,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "write": "$4020",
+      "value": 3
+    },
+    {
+      "read": "$4020",
+      "expect": 3
+    },
+    {
+      "write": "$5000",
+      "value": 1
+    },
+    {
+      "read": "$7FFF",
+      "expect": 2
+    },
+    {
+      "write": "$8000",
+      "value": 6
+    },
+    {
+      "write": "$8001",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 40960
+        }
+      ]
+    }
+  ]
+}

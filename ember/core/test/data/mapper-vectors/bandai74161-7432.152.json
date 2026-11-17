@@ -1,0 +1,22 @@
+{
+  "plugin": "bandai74161-7432",
+  "image": {
+    "mapper": 152,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 133
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

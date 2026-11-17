@@ -1,0 +1,52 @@
+{
+  "plugin": "mapper-216",
+  "image": {
+    "mapper": 216,
+    "prgKiB": 64,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$800B",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 40960,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$5000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$5000",
+      "expect": 0
+    }
+  ]
+}

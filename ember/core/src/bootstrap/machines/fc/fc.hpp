@@ -84,6 +84,8 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   contracts::hardware::MachineDebugger* debugger() override { return this; }
   contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
   contracts::hardware::TapeLine* tapeLine() override { return tapeDeck_.get(); }
+  contracts::hardware::Scheduler* cartridgeScheduler() override { return &scheduler_; }
+  [[nodiscard]] contracts::hardware::ClockDomain cartridgeCpuClock() const override { return contracts::hardware::ClockDomain{CPU_TICKS_PER_CYCLE}; }
   void connectFamilyKeyboard(bool connected) override;
   /** 接上 Family BASIC 键盘时，键盘属于机器；否则经典 FC 没有键盘。 */
   [[nodiscard]] bool keyboardIsMachineInput() const override { return expansionPort_.keyboardConnected(); }

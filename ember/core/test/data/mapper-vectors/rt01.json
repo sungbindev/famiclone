@@ -1,0 +1,35 @@
+{
+  "plugin": "rt01",
+  "image": {
+    "mapper": 328,
+    "prgKiB": 32,
+    "prgFill": 90,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$CD00",
+      "expect": 90
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MappersDialog.tsx
- * 说明：“mapper 插件”对话框的内容：顶部是搜索框、来源筛选与“安装插件”按钮，下面是插件表格（名称、版本、匹配、主机型号、来源、状态），选中一行后在这一行正下方展开清单摘要与“停用/启用”“卸载”按钮。
+ * 说明：“mapper 插件”对话框的内容：顶部是搜索框（右边显示插件与 mapper 数量的统计）、来源筛选与“安装插件”按钮，下面是插件表格（名称、版本、匹配、主机型号、来源、状态），选中一行后在这一行正下方展开清单摘要与“停用/启用”“卸载”按钮。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -14,7 +14,7 @@ import { useState, type ReactNode } from 'react';
 import type { MapperSummary } from '../../contracts/mappers/generated/mappers';
 import { useShell } from '../shell/shell-context';
 import type { ShellPageProps } from '../shell/shell-registry';
-import { detailFacts, errorText, filterPlugins, hostsText, matchesText, sourceLabel, type SourceFilter } from './mappers-model';
+import { detailFacts, errorText, filterPlugins, hostsText, matchesText, sourceLabel, statsText, type SourceFilter } from './mappers-model';
 import { useMappers } from './use-mappers';
 import './ember-mappers.css';
 
@@ -151,6 +151,7 @@ export function MappersDialog({ bridge }: ShellPageProps) {
     <ScrollArea bleed horizontal="hidden">
       <Stack>
         <Toolbar
+          description={data.state.kind === 'ready' ? statsText(plugins) : undefined}
           leading={
             <span className="ember-mappers__search">
               <TextInput type="search" aria-label={TEXT.search} placeholder={TEXT.searchPlaceholder} value={search} onChange={setSearch} />

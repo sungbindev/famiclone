@@ -111,6 +111,14 @@ describe('MappersDialog：列表', () => {
     expect(screen.getByText('没有符合条件的插件')).toBeTruthy();
   });
 
+  it('搜索框右边显示插件总数、已启用数与支持的 mapper 种数，不随搜索变化', async () => {
+    setup();
+    await screen.findByText('NROM');
+    expect(screen.getByText('共 2 个插件（已启用 2 个），支持 2 种 mapper')).toBeTruthy();
+    await userEvent.type(screen.getByRole('searchbox', { name: '搜索插件' }), '自制');
+    expect(screen.getByText('共 2 个插件（已启用 2 个），支持 2 种 mapper')).toBeTruthy();
+  });
+
   it('来源筛选只显示选中的来源', async () => {
     setup();
     await screen.findByText('NROM');

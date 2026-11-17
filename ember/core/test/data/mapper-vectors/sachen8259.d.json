@@ -1,0 +1,52 @@
+{
+  "plugin": "sachen8259",
+  "image": {
+    "mapper": 137,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$4100",
+      "value": 0
+    },
+    {
+      "write": "$4101",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 3072,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1C00",
+          "storage": "chr",
+          "offset": 64512,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 4
+    },
+    {
+      "write": "$4101",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 16384,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

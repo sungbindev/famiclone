@@ -1,0 +1,90 @@
+{
+  "plugin": "ntdec-tc112",
+  "image": {
+    "mapper": 193,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 106496
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$6000",
+      "value": 6
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 6144,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$6001",
+      "value": 8
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$6002",
+      "value": 10
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1800",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$6003",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 16384
+        }
+      ]
+    }
+  ]
+}

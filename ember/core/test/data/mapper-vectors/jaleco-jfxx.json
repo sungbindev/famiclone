@@ -1,0 +1,38 @@
+{
+  "plugin": "jaleco-jfxx",
+  "image": {
+    "mapper": 87,
+    "prgKiB": 32,
+    "chrKiB": 32
+  },
+  "steps": [
+    {
+      "write": "$6000",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 16384,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$7FFF",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

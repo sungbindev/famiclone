@@ -30,6 +30,7 @@ class NametableRam final : public contracts::hardware::BusDevice {
   contracts::hardware::BusRead read(std::uint16_t address) override {
     const contracts::hardware::CiramControl control = slot_.ciramControl(address);
     if (!control.enable) return slot_.ppuSide().read(address);
+    slot_.videoAddress(address);
     return contracts::hardware::driveBus(ram_[offset(control, address)]);
   }
 
@@ -39,6 +40,7 @@ class NametableRam final : public contracts::hardware::BusDevice {
       slot_.ppuSide().write(address, value);
       return;
     }
+    slot_.videoAddress(address);
     ram_[offset(control, address)] = value;
   }
 

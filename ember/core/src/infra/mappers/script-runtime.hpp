@@ -44,6 +44,14 @@ class ScriptArgumentError : public std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
+/** 脚本经 ctx.settings.get(key) 可以读到的一个设置项的值：switch 为布尔值，text、choice 为字符串。 */
+struct ScriptSetting {
+  std::string key;
+  bool isSwitch{false};
+  bool flag{false};
+  std::string text;
+};
+
 /** 脚本可见的名称：宿主按下标识别窗口、存储区与状态。 */
 struct ScriptLayout {
   /** 窗口标识，下标即 ScriptBindings 里的窗口号。 */
@@ -52,6 +60,10 @@ struct ScriptLayout {
   std::vector<std::string> storages;
   /** 状态名，下标即状态号。 */
   std::vector<std::string> states;
+  /** 电路标识，下标即电路号。 */
+  std::vector<std::string> circuits;
+  /** 清单声明的设置项及当前值（目前就是清单给的默认值）。 */
+  std::vector<ScriptSetting> settings;
   /** ctx.header 的内容，JSON 文本。 */
   std::string headerJson;
   /** 主机的手柄口个数，ctx.pad(port) 的有效范围是 0 到 padPorts - 1。 */
@@ -79,10 +91,14 @@ class ScriptBindings {
   virtual void windowSetAccess(std::size_t window, bool writable) = 0;
   /** ctx.busConflict.set(enabled)：是否对寄存器写入做总线冲突。 */
   virtual void busConflictSet(bool enabled) = 0;
-  /** ctx.peek(address)：按卡带自己的 CPU 侧译码读一个字节，没有副作用（不回调脚本的 read）；卡带不驱动数据线时返回空。 */
+  /** ctx.peek(address)：按卡带自己的 CPU 侧窗口读一个字节（不经过寄存器，没有副作用）；窗口没有映射或不驱动数据线时返回空。 */
   [[nodiscard]] virtual std::optional<std::uint8_t> cpuPeek(std::uint16_t address) = 0;
+  /** ctx.random(max)：0 到 max - 1 的整数，max 为 1 到 2^31；序列由卡带的种子决定，上电复位后可重现。 */
+  virtual std::uint32_t randomBelow(std::uint32_t max) = 0;
   /** ctx.nametable.set(mode)：mode 是 horizontal、vertical、single0、single1、four 之一，否则报错。 */
   virtual void nametableSet(std::string_view mode) = 0;
+  /** ctx.nametable.map(slot, source, bank)：名称表的第 slot 个 1K 槽（$2000、$2400、$2800、$2C00）映射到 'ciram0'、'ciram1'（主板显存的两页）或存储区 source 的第 bank 个 1K 页；清单的 nametable 不是 custom 时抛出 ScriptArgumentError。 */
+  virtual void nametableMap(std::size_t slot, std::string_view source, std::int64_t bank) = 0;
   /** ctx.irq.assert()。 */
   virtual void irqAssert() = 0;
   /** ctx.irq.release()。 */
@@ -109,6 +125,18 @@ class ScriptBindings {
   [[nodiscard]] virtual bool tapeLevel() = 0;
   /** ctx.device('tape').setComparator(low, high, invert)：设置数据线的比较器。 */
   virtual void tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) = 0;
+  /** ctx.cycle()：自上电起的 CPU 周期数；主机没有调度器时抛出 ScriptArgumentError。 */
+  [[nodiscard]] virtual std::uint64_t cycle() = 0;
+  /** ctx.timer.after(name, cycles)：cycles 个 CPU 周期之后调用 onTimer(ctx, name)；同名的计时已在等待时先取消；没有调度器时抛出 ScriptArgumentError。 */
+  virtual void timerAfter(std::string_view name, std::int64_t cycles) = 0;
+  /** ctx.timer.cancel(name)：取消还没有到期的同名计时，没有时什么也不做。 */
+  virtual void timerCancel(std::string_view name) = 0;
+  /** ctx.circuit(id).write(address, value)：把一次写入交给电路，电路按清单的 wire 自动设置窗口（不再回调 onCircuit）。 */
+  virtual void circuitWrite(std::size_t circuit, std::uint16_t address, std::uint8_t value) = 0;
+  /** ctx.circuit(id).get(name)：电路公开的一项内部状态（如 MMC3 的 r0-r7、selector）；没有这一项时抛出 ScriptArgumentError。 */
+  [[nodiscard]] virtual std::uint32_t circuitGet(std::size_t circuit, std::string_view name) = 0;
+  /** ctx.circuit(id).bank(space, address)：电路给出的页号，space 是 'program' 或 'character'。 */
+  [[nodiscard]] virtual std::uint32_t circuitBank(std::size_t circuit, bool character, std::uint16_t address) = 0;
 };
 
 /** 一个插件的脚本运行时。非线程安全：同一时刻只能由一个线程使用，换线程使用没有问题。 */
@@ -141,6 +169,10 @@ class ScriptRuntime {
   [[nodiscard]] bool hasMouse() const noexcept;
   /** 脚本是否导出了 onTapeEdge。 */
   [[nodiscard]] bool hasTapeEdge() const noexcept;
+  /** 脚本是否导出了 onTimer。 */
+  [[nodiscard]] bool hasTimer() const noexcept;
+  /** 脚本是否导出了 onCircuit。 */
+  [[nodiscard]] bool hasCircuit() const noexcept;
   /** 脚本是否在 tables 对象上导出了这个标识的函数。 */
   [[nodiscard]] bool hasTable(std::string_view id) const;
 
@@ -165,6 +197,12 @@ class ScriptRuntime {
 
   /** 调用 onTapeEdge(ctx, level, samples)：磁带数据线翻转时，level 是翻转后的电平（0 或 1），samples 是距上一次翻转的采样数（96 kHz）；脚本没有 onTapeEdge 时什么也不做。错误同 read。 */
   void tapeEdge(bool level, std::uint32_t samples);
+
+  /** 调用 onTimer(ctx, name)：ctx.timer.after 登记的计时到期；脚本没有 onTimer 时什么也不做。错误同 read。 */
+  void timer(std::string_view name);
+
+  /** 调用 onCircuit(ctx, id)：清单声明的写寄存器把写入交给电路之后，脚本按电路的新状态重新设置窗口；脚本没有 onCircuit 时什么也不做。错误同 read。 */
+  void circuit(std::string_view id);
 
   /**
    * 调用 tables.<id>(ctx, ...values)：计算查表的一个表项，values 是索引各来源的值，函数必须是纯函数（同样的输入得到同样的结果，不改变卡带状态）。

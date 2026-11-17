@@ -262,7 +262,7 @@ TEST(ManifestErrors, RejectsWindowsThatDoNotFitTheirRangeOrStorage) {
   manifest["windows"][0]["initial"] = "middle";
   expectInvalid(manifest, "windows[0].initial");
   manifest = base();
-  manifest["windows"][0]["initial"] = -1;
+  manifest["windows"][0]["initial"] = -100000;
   expectInvalid(manifest, "windows[0].initial");
   manifest = base();
   manifest["windows"][0]["bus"] = "usb";

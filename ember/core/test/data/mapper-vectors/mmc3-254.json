@@ -1,0 +1,18 @@
+{
+  "plugin": "mmc3-254",
+  "image": {
+    "mapper": 254,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "write": "$6000",
+      "value": 18
+    },
+    {
+      "read": "$6000",
+      "expect": 18
+    }
+  ]
+}

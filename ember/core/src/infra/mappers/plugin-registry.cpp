@@ -134,7 +134,7 @@ std::shared_ptr<const LoadedPlugin> PluginRegistry::checkPackage(std::span<const
   // 用空卡带试创建一次：检查脚本能加载并导出了清单声明的函数。
   NullIrqOutput irq;
   NullPadSink pads;
-  const MapperChip probe(plugin, api::CartridgeImage{}, irq, pads, options_.limits);
+  const MapperChip probe(plugin, api::CartridgeImage{}, irq, pads, options_.limits, options_.circuits.get());
   return plugin;
 }
 
@@ -376,7 +376,7 @@ std::unique_ptr<api::MapperCartridge> PluginRegistry::create(const api::MapperMa
     if (!entry || disabled_.contains(match.pluginId)) throw shared::CoreError(api::ERROR_NOT_FOUND, "插件 " + match.pluginId + " 已被卸载或停用");
     plugin = entry->plugin;
   }
-  return std::make_unique<MapperChip>(std::move(plugin), image, irq, pads, options_.limits);
+  return std::make_unique<MapperChip>(std::move(plugin), image, irq, pads, options_.limits, options_.circuits.get());
 }
 
 }  // namespace ember::infra::mappers

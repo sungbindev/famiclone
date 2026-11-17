@@ -28,10 +28,12 @@
 #include <miniz.h>
 #include <nlohmann/json.hpp>
 
+#include "bootstrap/modules/mapper-circuits.hpp"
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "infra/mappers/plugin-registry.hpp"
+#include "logic/hardware/scheduler/master-scheduler.hpp"
 #include "platform/events/event-sink.hpp"
 #include "platform/logging/error-log.hpp"
 
@@ -118,18 +120,25 @@ class FakeTapeLine final : public contracts::hardware::TapeLine {
   bool level_{false};
 };
 
-/** 假的手柄口：两个口，记录每个口当前的按键掩码与被设置的次数；tape 不为空时主机上有磁带数据线。 */
+/** 假的手柄口：两个口，记录每个口当前的按键掩码与被设置的次数；tape 不为空时主机上有磁带数据线；带一个调度器，CPU 周期等于 12 个主时钟（与 fc 一致）。 */
 class RecordingPads final : public contracts::hardware::PadSink {
  public:
   explicit RecordingPads(contracts::hardware::TapeLine* line = nullptr) : tape(line) {}
 
   [[nodiscard]] unsigned padPortCount() const override { return 2; }
   [[nodiscard]] contracts::hardware::TapeLine* tapeLine() override { return tape; }
+  [[nodiscard]] contracts::hardware::Scheduler* cartridgeScheduler() override { return &scheduler; }
+  [[nodiscard]] contracts::hardware::ClockDomain cartridgeCpuClock() const override { return contracts::hardware::ClockDomain{CPU_TICKS}; }
   void setButtons(unsigned port, std::uint8_t buttons) override {
     masks.at(port) = buttons;
     ++calls;
   }
 
+  /** 让时间走过若干个 CPU 周期（到期的卡带事件在其中触发）。 */
+  void runCycles(std::int64_t cycles) { scheduler.advance(cycles * CPU_TICKS); }
+
+  static constexpr contracts::hardware::MasterTime CPU_TICKS = 12;
+  logic::hardware::MasterScheduler scheduler;
   std::array<std::uint8_t, 2> masks{};
   int calls{0};
   contracts::hardware::TapeLine* tape{nullptr};
@@ -184,6 +193,7 @@ class RecordingEventSink final : public platform::EventSink {
 inline infra::mappers::PluginRegistryOptions fcRegistryOptions() {
   infra::mappers::PluginRegistryOptions options;
   options.hosts.hosts = {"fc"};
+  options.circuits = std::make_shared<bootstrap::StandardCircuitCatalog>();
   return options;
 }
 

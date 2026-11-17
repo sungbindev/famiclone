@@ -1,0 +1,106 @@
+{
+  "plugin": "irem-h3001",
+  "image": {
+    "mapper": 65,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 8192
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "write": "$C000",
+      "value": 6
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 40960
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$B003",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0C00",
+          "storage": "chr",
+          "offset": 9216,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$9001",
+      "value": 128
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$9005",
+      "value": 0
+    },
+    {
+      "write": "$9006",
+      "value": 16
+    },
+    {
+      "write": "$9004",
+      "value": 0
+    },
+    {
+      "write": "$9003",
+      "value": 128
+    },
+    {
+      "cycles": 11,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    }
+  ]
+}

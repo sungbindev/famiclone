@@ -6,8 +6,9 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
  * 备注：向量文件是 { plugin, image, steps }：plugin 等于文件名（同一插件的多个向量用 <标识>.<后缀>.json）；image 给 mapper、variant、prgKiB（或 prgSize）、prgFill（PRG 的填充字节，默认 0）、chrKiB（或 chrSize）、mirroring、battery；
- *       steps 的每一步可含 reset（power、soft）、write 加 value（bus 默认 cpu）、read 加可选的 expect（不写表示没有驱动总线）、
+ *       steps 的每一步可含 cycles（先让时间走过这么多个 CPU 周期，卡带的计时事件在其中触发）、reset（power、soft）、write 加 value（bus 默认 cpu；after 是写入后让时间走过的 CPU 周期数，默认 4，相当于一条指令，所以连续两次写入的间隔默认不会小于 2 个周期）、read 加可选的 expect（不写表示没有驱动总线）、
  *       expectMap（地址落到哪块存储区的哪个偏移，或 unmapped）、expectState、expectNametable（地址、a10、enable）、expectIrq。
+ *       steps 还可以含 a12（让 PPU 地址线 A12 出现这么多次上升沿，每次先有几次 A12 为低的访问再有一次为高的访问，只对观察 PPU 地址的卡带有效）。\n *       image 还可以给 nes20、prgRamKiB、prgNvramKiB、chrRamKiB、chrNvramKiB（文件头里的 RAM 大小，写了 nes20 才按 NES 2.0 解释）。
  *       地址与值可以写整数、"$8000" 或 "0x80"。断言地址落点用 describeAddress（不回调脚本、不依赖 ROM 内容），所以映像的 PRG、CHR 内容全为 0，只有大小有意义。
  * ------------------------------------------------------------------------
  */
@@ -74,6 +75,13 @@ mappers::CartridgeImage makeImage(const json& spec) {
   image.description.chrSize = chr;
   image.description.mirroring = mirroringOf(spec.value("mirroring", "horizontal"));
   image.description.battery = spec.value("battery", false);
+  if (spec.value("nes20", false)) {
+    image.description.nes20 = true;
+    image.description.prgRamSize = static_cast<std::uint32_t>(number(spec.value("prgRamKiB", 0)) * 1024);
+    image.description.prgNvramSize = static_cast<std::uint32_t>(number(spec.value("prgNvramKiB", 0)) * 1024);
+    image.description.chrRamSize = static_cast<std::uint32_t>(number(spec.value("chrRamKiB", 0)) * 1024);
+    image.description.chrNvramSize = static_cast<std::uint32_t>(number(spec.value("chrNvramKiB", 0)) * 1024);
+  }
   return image;
 }
 
@@ -100,10 +108,19 @@ TEST_P(MapperVectors, FollowTheirSteps) {
   for (const json& step : vector.at("steps")) {
     ++stepNumber;
     SCOPED_TRACE("第 " + std::to_string(stepNumber) + " 步：" + step.dump());
+    if (step.contains("cycles")) pads.runCycles(static_cast<std::int64_t>(number(step["cycles"])));
+    if (step.contains("a12")) {
+      // 每个边沿：先有足够多次 A12 为低的显存访问，再有一次 A12 为高。
+      for (std::uint64_t edge = 0; edge < number(step["a12"]); ++edge) {
+        for (int low = 0; low < 5; ++low) cartridge->onVideoAddress(0x0000);
+        cartridge->onVideoAddress(0x1000);
+      }
+    }
     if (step.contains("reset")) cartridge->reset(step["reset"].get<std::string>() == "power");
     if (step.contains("write")) {
       const bool ppu = step.value("bus", "cpu") == "ppu";
       (ppu ? cartridge->ppuSide() : cartridge->cpuSide()).write(static_cast<std::uint16_t>(number(step["write"])), static_cast<std::uint8_t>(number(step.at("value"))));
+      pads.runCycles(static_cast<std::int64_t>(number(step.value("after", 4))));
     }
     if (step.contains("read")) {
       const bool ppu = step.value("bus", "cpu") == "ppu";

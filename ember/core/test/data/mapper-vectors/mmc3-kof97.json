@@ -1,0 +1,27 @@
+{
+  "plugin": "mmc3-kof97",
+  "image": {
+    "mapper": 263,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 33
+    },
+    {
+      "write": "$9000",
+      "value": 34
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    }
+  ]
+}

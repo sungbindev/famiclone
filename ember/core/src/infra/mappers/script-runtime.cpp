@@ -39,6 +39,7 @@ enum Operation : int {
   WindowSetAccess,
   BusConflictSet,
   CpuPeek,
+  Random,
   StorageRead,
   StorageWrite,
   StateGet,
@@ -48,11 +49,21 @@ enum Operation : int {
   PadSet,
   PadRelease,
   TapeLevel,
-  TapeSetComparator
+  TapeSetComparator,
+  Cycle,
+  TimerAfter,
+  TimerCancel,
+  CircuitWrite,
+  CircuitGet,
+  CircuitBank,
+  NametableMap
 };
 
 /** JS 数字能精确表示的最大整数。 */
 constexpr double MAX_SAFE_INTEGER = 9007199254740991.0;
+
+/** ctx.timer.after 的周期数上限（2^40）。 */
+constexpr std::int64_t MAX_TIMER_CYCLES = std::int64_t{1} << 40;
 
 bool contains(const std::string& text, const char* part) { return text.find(part) != std::string::npos; }
 
@@ -67,7 +78,9 @@ struct ScriptRuntime::Impl {
       for (const JSValue value : windowObjects) JS_FreeValue(js, value);
       for (const JSValue value : storageObjects) JS_FreeValue(js, value);
       for (const JSValue value : padObjects) JS_FreeValue(js, value);
-      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, tablesObject, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
+      for (const JSValue value : circuitObjects) JS_FreeValue(js, value);
+      JS_FreeValue(js, settingValues);
+      for (const JSValue value : {hostObject, plugin, resetFn, readFn, writeFn, keyFn, mouseFn, tapeEdgeFn, timerFn, circuitFn, tablesObject, tapeObject, cpuName, ppuName, powerName, softName}) JS_FreeValue(js, value);
       JS_FreeContext(js);
     }
     if (runtime != nullptr) JS_FreeRuntime(runtime);
@@ -91,6 +104,8 @@ struct ScriptRuntime::Impl {
   JSValue keyFn = JS_UNDEFINED;
   JSValue mouseFn = JS_UNDEFINED;
   JSValue tapeEdgeFn = JS_UNDEFINED;
+  JSValue timerFn = JS_UNDEFINED;
+  JSValue circuitFn = JS_UNDEFINED;
   /** 脚本导出的 tables 对象（按查表标识放计算函数）；没有时为 undefined。 */
   JSValue tablesObject = JS_UNDEFINED;
   /** ctx.device('tape') 返回的对象；主机没有磁带机时为 undefined。 */
@@ -102,6 +117,9 @@ struct ScriptRuntime::Impl {
   std::vector<JSValue> windowObjects;
   std::vector<JSValue> storageObjects;
   std::vector<JSValue> padObjects;
+  std::vector<JSValue> circuitObjects;
+  /** 设置项的当前值（key 到值），ctx.settings.get 从这里取。 */
+  JSValue settingValues = JS_UNDEFINED;
   std::chrono::steady_clock::time_point deadline;
   bool timedOut{false};
 
@@ -170,6 +188,7 @@ struct ScriptRuntime::Impl {
 
     JSValue nametable = JS_NewObject(js);
     JS_SetPropertyStr(js, nametable, "set", JS_NewCFunction(js, &Impl::nametableSet, "set", 1));
+    addFunction(nametable, "map", &Impl::hostCall, 3, NametableMap, 0);
     JS_SetPropertyStr(js, hostObject, "nametable", nametable);
 
     JSValue irq = JS_NewObject(js);
@@ -181,6 +200,12 @@ struct ScriptRuntime::Impl {
     addFunction(busConflict, "set", &Impl::hostCall, 1, BusConflictSet, 0);
     JS_SetPropertyStr(js, hostObject, "busConflict", busConflict);
     addFunction(hostObject, "peek", &Impl::hostCall, 1, CpuPeek, 0);
+    addFunction(hostObject, "random", &Impl::hostCall, 1, Random, 0);
+    addFunction(hostObject, "cycle", &Impl::hostCall, 0, Cycle, 0);
+    JSValue timer = JS_NewObject(js);
+    addFunction(timer, "after", &Impl::hostCall, 2, TimerAfter, 0);
+    addFunction(timer, "cancel", &Impl::hostCall, 1, TimerCancel, 0);
+    JS_SetPropertyStr(js, hostObject, "timer", timer);
 
     JSValue log = JS_NewObject(js);
     JS_SetPropertyStr(js, log, "warn", JS_NewCFunction(js, &Impl::logWarn, "warn", 1));
@@ -191,6 +216,22 @@ struct ScriptRuntime::Impl {
     JS_SetPropertyStr(js, hostObject, "keys", keys);
     JS_SetPropertyStr(js, hostObject, "pad", JS_NewCFunction(js, &Impl::lookupPad, "pad", 1));
     JS_SetPropertyStr(js, hostObject, "device", JS_NewCFunction(js, &Impl::lookupDevice, "device", 1));
+    JS_SetPropertyStr(js, hostObject, "circuit", JS_NewCFunction(js, &Impl::lookupCircuit, "circuit", 1));
+    settingValues = JS_NewObject(js);
+    for (const ScriptSetting& setting : layout.settings) {
+      JS_SetPropertyStr(js, settingValues, setting.key.c_str(), setting.isSwitch ? JS_NewBool(js, setting.flag) : JS_NewStringLen(js, setting.text.data(), setting.text.size()));
+    }
+    JSValue settings = JS_NewObject(js);
+    JS_SetPropertyStr(js, settings, "get", JS_NewCFunction(js, &Impl::settingsGet, "get", 1));
+    JS_SetPropertyStr(js, hostObject, "settings", settings);
+    for (std::size_t index = 0; index < layout.circuits.size(); ++index) {
+      JSValue circuit = JS_NewObject(js);
+      addFunction(circuit, "write", &Impl::hostCall, 2, CircuitWrite, index);
+      addFunction(circuit, "get", &Impl::hostCall, 1, CircuitGet, index);
+      addFunction(circuit, "bank", &Impl::hostCall, 2, CircuitBank, index);
+      JS_FreezeObject(js, circuit);
+      circuitObjects.push_back(circuit);
+    }
     if (layout.hasTape) {
       tapeObject = JS_NewObject(js);
       addFunction(tapeObject, "level", &Impl::hostCall, 0, TapeLevel, 0);
@@ -282,6 +323,8 @@ struct ScriptRuntime::Impl {
     keyFn = readHandler("onKey");
     mouseFn = readHandler("onMouse");
     tapeEdgeFn = readHandler("onTapeEdge");
+    timerFn = readHandler("onTimer");
+    circuitFn = readHandler("onCircuit");
     tablesObject = JS_GetPropertyStr(js, plugin, "tables");
     if (JS_IsException(tablesObject)) throw describeFailure("读取导出的 tables", true);
     if (!JS_IsUndefined(tablesObject) && !JS_IsObject(tablesObject)) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + pluginId + " 导出的 tables 必须是对象");
@@ -513,6 +556,11 @@ struct ScriptRuntime::Impl {
           host.busConflictSet(JS_ToBool(context, enabled) != 0);
           return JS_UNDEFINED;
         }
+        case Random: {
+          const std::int64_t max = integerArgument(context, argument(argc, argv, 0), "max");
+          if (max < 1 || max > 0x80000000LL) throw ScriptArgumentError("参数 max 必须在 1 到 2147483648 之间");
+          return JS_NewUint32(context, host.randomBelow(static_cast<std::uint32_t>(max)));
+        }
         case CpuPeek: {
           const std::int64_t address = integerArgument(context, argument(argc, argv, 0), "address");
           if (address < 0 || address > 0xFFFF) throw ScriptArgumentError("参数 address 必须在 0 到 65535 之间");
@@ -561,6 +609,51 @@ struct ScriptRuntime::Impl {
           host.tapeSetComparator(static_cast<std::int16_t>(low), static_cast<std::int16_t>(high), JS_ToBool(context, invert) != 0);
           return JS_UNDEFINED;
         }
+        case Cycle:
+          return JS_NewInt64(context, static_cast<std::int64_t>(host.cycle()));
+        case TimerAfter: {
+          std::string name;
+          if (!stringArgument(context, argument(argc, argv, 0), name)) throw ScriptArgumentError("参数 name 必须是字符串");
+          const std::int64_t cycles = integerArgument(context, argument(argc, argv, 1), "cycles");
+          if (cycles < 0 || cycles > MAX_TIMER_CYCLES) throw ScriptArgumentError("参数 cycles 必须在 0 到 1099511627776 之间");
+          host.timerAfter(name, cycles);
+          return JS_UNDEFINED;
+        }
+        case TimerCancel: {
+          std::string name;
+          if (!stringArgument(context, argument(argc, argv, 0), name)) throw ScriptArgumentError("参数 name 必须是字符串");
+          host.timerCancel(name);
+          return JS_UNDEFINED;
+        }
+        case CircuitWrite: {
+          const std::int64_t address = integerArgument(context, argument(argc, argv, 0), "address");
+          const std::int64_t value = integerArgument(context, argument(argc, argv, 1), "value");
+          if (address < 0 || address > 0xFFFF) throw ScriptArgumentError("参数 address 必须在 0 到 65535 之间");
+          if (value < 0 || value > 255) throw ScriptArgumentError("参数 value 必须在 0 到 255 之间");
+          host.circuitWrite(index, static_cast<std::uint16_t>(address), static_cast<std::uint8_t>(value));
+          return JS_UNDEFINED;
+        }
+        case CircuitGet: {
+          std::string name;
+          if (!stringArgument(context, argument(argc, argv, 0), name)) throw ScriptArgumentError("参数 name 必须是字符串");
+          return JS_NewUint32(context, host.circuitGet(index, name));
+        }
+        case CircuitBank: {
+          std::string space;
+          if (!stringArgument(context, argument(argc, argv, 0), space) || (space != "program" && space != "character")) throw ScriptArgumentError("参数 space 必须是 'program' 或 'character'");
+          const std::int64_t address = integerArgument(context, argument(argc, argv, 1), "address");
+          if (address < 0 || address > 0xFFFF) throw ScriptArgumentError("参数 address 必须在 0 到 65535 之间");
+          return JS_NewUint32(context, host.circuitBank(index, space == "character", static_cast<std::uint16_t>(address)));
+        }
+        case NametableMap: {
+          const std::int64_t slot = integerArgument(context, argument(argc, argv, 0), "slot");
+          if (slot < 0 || slot > 3) throw ScriptArgumentError("参数 slot 必须在 0 到 3 之间");
+          std::string source;
+          if (!stringArgument(context, argument(argc, argv, 1), source)) throw ScriptArgumentError("参数 source 必须是字符串");
+          const std::int64_t bank = argc > 2 ? integerArgument(context, argv[2], "bank") : 0;
+          host.nametableMap(static_cast<std::size_t>(slot), source, bank);
+          return JS_UNDEFINED;
+        }
         default:
           throw std::logic_error("未知的宿主函数");
       }
@@ -595,6 +688,22 @@ struct ScriptRuntime::Impl {
       if (port < 0 || static_cast<std::uint64_t>(port) >= runtimeSelf->padObjects.size()) throw ScriptArgumentError("手柄口不存在：" + std::to_string(port));
       return JS_DupValue(context, runtimeSelf->padObjects[static_cast<std::size_t>(port)]);
     });
+  }
+
+  /** ctx.settings.get(key)：设置项的当前值；没有这个键时抛 RangeError。 */
+  static JSValue settingsGet(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
+    const Impl* runtimeSelf = self(context);
+    std::string key;
+    if (!stringArgument(context, argument(argc, argv, 0), key)) return JS_ThrowTypeError(context, "设置项的键必须是字符串");
+    const JSValue value = JS_GetPropertyStr(context, runtimeSelf->settingValues, key.c_str());
+    if (JS_IsUndefined(value)) return JS_ThrowRangeError(context, "设置项不存在：%s", key.c_str());
+    return value;
+  }
+
+  /** ctx.circuit(id)：按标识找电路对象。 */
+  static JSValue lookupCircuit(JSContext* context, JSValueConst, int argc, JSValueConst* argv) {
+    const Impl* runtimeSelf = self(context);
+    return lookup(context, argc, argv, runtimeSelf->layout.circuits, runtimeSelf->circuitObjects, "电路");
   }
 
   /** ctx.device(name)：取主机上的功能模块；目前只有 'tape'（磁带机），主机没有它时抓错。 */
@@ -655,6 +764,10 @@ bool ScriptRuntime::hasMouse() const noexcept { return !JS_IsUndefined(impl_->mo
 
 bool ScriptRuntime::hasTapeEdge() const noexcept { return !JS_IsUndefined(impl_->tapeEdgeFn); }
 
+bool ScriptRuntime::hasTimer() const noexcept { return !JS_IsUndefined(impl_->timerFn); }
+
+bool ScriptRuntime::hasCircuit() const noexcept { return !JS_IsUndefined(impl_->circuitFn); }
+
 bool ScriptRuntime::hasTable(std::string_view id) const {
   if (!JS_IsObject(impl_->tablesObject)) return false;
   const std::string name(id);
@@ -695,6 +808,16 @@ void ScriptRuntime::tapeEdge(bool level, std::uint32_t samples) {
   if (!hasTapeEdge()) return;
   JSValue arguments[3] = {impl_->hostObject, JS_NewInt32(impl_->js, level ? 1 : 0), JS_NewUint32(impl_->js, samples)};
   JS_FreeValue(impl_->js, impl_->invoke("onTapeEdge", impl_->tapeEdgeFn, 3, arguments));
+}
+
+void ScriptRuntime::timer(std::string_view name) {
+  if (!hasTimer()) return;
+  impl_->invokeInput("onTimer", impl_->timerFn, JS_NewStringLen(impl_->js, name.data(), name.size()));
+}
+
+void ScriptRuntime::circuit(std::string_view id) {
+  if (!hasCircuit()) return;
+  impl_->invokeInput("onCircuit", impl_->circuitFn, JS_NewStringLen(impl_->js, id.data(), id.size()));
 }
 
 void ScriptRuntime::key(const contracts::hardware::KeyInput& input) {

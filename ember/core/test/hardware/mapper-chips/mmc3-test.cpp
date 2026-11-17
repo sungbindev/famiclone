@@ -170,6 +170,32 @@ TEST(Mmc3, ShortLowPeriodsAndRepeatedHighAccessesDoNotClock) {
   EXPECT_EQ(rig.chip.irqCounter(), 4);
 }
 
+TEST(Mmc3, RevAOnlyRaisesTheIrqWhenTheCounterWasRunningOrReloadedAndReachesZero) {
+  WiredOrIrqLine irq;
+  Mmc3 chip(irq, true);
+  const auto clock = [&] {
+    for (unsigned i = 0; i < Mmc3::A12_LOW_ACCESSES; ++i) chip.onVideoAddress(0x0000);
+    chip.onVideoAddress(0x1000);
+  };
+  chip.writeRegister(0xC000, 0);
+  chip.writeRegister(0xE001, 0);
+  clock();  // 计数器为 0 且没有重载请求：装入 0，A 版不发 IRQ
+  EXPECT_FALSE(irq.active());
+  chip.writeRegister(0xC001, 0);
+  clock();  // 有重载请求：装入 0 并发 IRQ
+  EXPECT_TRUE(irq.active());
+}
+
+TEST(Mmc3, TheRamProtectRegisterIsKeptForTheBoardToUse) {
+  Rig rig;
+  rig.chip.writeRegister(0xA001, 0xC0);
+  const auto fields = static_cast<MapperCircuit&>(rig.chip).state();
+  EXPECT_EQ(fields.back().name, "ramProtect");
+  EXPECT_EQ(fields.back().value, 0xC0U);
+  rig.chip.reset();
+  EXPECT_EQ(static_cast<MapperCircuit&>(rig.chip).state().back().value, 0x80U) << "上电时 PRG RAM 允许、可写";
+}
+
 TEST(Mmc3, DisablingTheIrqFromTheBoardClearsTheRequest) {
   Rig rig;
   rig.chip.writeRegister(0xC000, 0);
@@ -218,13 +244,14 @@ TEST(Mmc3, StateListsTheRegistersInAStableOrder) {
   rig.setRegister(6, 7);
   rig.chip.writeRegister(0xC000, 9);
   const auto fields = static_cast<MapperCircuit&>(rig.chip).state();
-  ASSERT_EQ(fields.size(), 13U);
+  ASSERT_EQ(fields.size(), 14U);
   EXPECT_EQ(fields[0].name, "selector");
   EXPECT_EQ(fields[7].name, "r6");
   EXPECT_EQ(fields[7].value, 7U);
   EXPECT_EQ(fields[10].name, "irqLatch");
   EXPECT_EQ(fields[10].value, 9U);
   EXPECT_EQ(fields[12].name, "irqEnabled");
+  EXPECT_EQ(fields[13].name, "ramProtect");
   for (const auto& field : fields) EXPECT_FALSE(field.description.empty()) << field.name;
 }
 

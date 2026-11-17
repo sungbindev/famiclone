@@ -1,0 +1,64 @@
+{
+  "plugin": "gs2004",
+  "image": {
+    "mapper": 283,
+    "prgKiB": 512,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 262144
+        },
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 229376
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 253952
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        },
+        {
+          "address": "$6000",
+          "storage": "prg",
+          "offset": 262144
+        }
+      ]
+    },
+    {
+      "reset": "soft"
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 229376
+        }
+      ]
+    }
+  ]
+}

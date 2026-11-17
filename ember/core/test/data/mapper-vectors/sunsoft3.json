@@ -1,0 +1,90 @@
+{
+  "plugin": "sunsoft3",
+  "image": {
+    "mapper": 67,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$F800",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$9800",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$E800",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$C800",
+      "value": 0
+    },
+    {
+      "write": "$C800",
+      "value": 16
+    },
+    {
+      "write": "$D800",
+      "value": 16
+    },
+    {
+      "cycles": 12,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$D800",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

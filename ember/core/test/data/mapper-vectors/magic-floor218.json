@@ -1,0 +1,41 @@
+{
+  "plugin": "magic-floor218",
+  "image": {
+    "mapper": 218,
+    "prgKiB": 32,
+    "chrKiB": 0,
+    "mirroring": "horizontal"
+  },
+  "steps": [
+    {
+      "write": "$0000",
+      "bus": "ppu",
+      "value": 90
+    },
+    {
+      "read": "$2400",
+      "bus": "ppu",
+      "expect": 90
+    },
+    {
+      "read": "$2800",
+      "bus": "ppu",
+      "expect": 0
+    },
+    {
+      "write": "$0800",
+      "bus": "ppu",
+      "value": 107
+    },
+    {
+      "read": "$2800",
+      "bus": "ppu",
+      "expect": 107
+    },
+    {
+      "read": "$2C00",
+      "bus": "ppu",
+      "expect": 107
+    }
+  ]
+}

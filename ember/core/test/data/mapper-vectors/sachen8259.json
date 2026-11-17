@@ -1,0 +1,87 @@
+{
+  "plugin": "sachen8259",
+  "image": {
+    "mapper": 141,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$4100",
+      "value": 5
+    },
+    {
+      "write": "$4101",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 0
+    },
+    {
+      "write": "$4101",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 12288,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 13312,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 2048,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0C00",
+          "storage": "chr",
+          "offset": 3072,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 7
+    },
+    {
+      "write": "$4101",
+      "value": 4
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "a10": false
+        },
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

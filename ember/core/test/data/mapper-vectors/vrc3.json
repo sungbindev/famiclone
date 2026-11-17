@@ -1,0 +1,72 @@
+{
+  "plugin": "vrc3",
+  "image": {
+    "mapper": 73,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$F000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$9000",
+      "value": 15
+    },
+    {
+      "write": "$A000",
+      "value": 15
+    },
+    {
+      "write": "$B000",
+      "value": 15
+    },
+    {
+      "write": "$C000",
+      "value": 2
+    },
+    {
+      "cycles": 11,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$D000",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "plugin": "sachen-148",
+  "image": {
+    "mapper": 148,
+    "prgKiB": 64,
+    "prgFill": 0,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 13
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

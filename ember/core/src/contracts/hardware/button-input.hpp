@@ -13,6 +13,8 @@
 
 #include <cstdint>
 
+#include "contracts/hardware/scheduler.hpp"
+
 namespace ember::contracts::hardware {
 
 class TapeLine;
@@ -41,7 +43,7 @@ class ButtonInput {
   virtual void setButtons(std::uint8_t buttons) = 0;
 };
 
-/** 主机给卡带脚本用的接口：手柄口的集合（mapper 脚本经 ctx.pad 设置各口的按键），以及磁带机的数据线（ctx.device('tape')）。 */
+/** 主机给卡带脚本用的接口：手柄口的集合（mapper 脚本经 ctx.pad 设置各口的按键）、磁带机的数据线（ctx.device('tape')），以及调度器与 CPU 时钟域（ctx.cycle、ctx.timer）。 */
 class PadSink {
  public:
   virtual ~PadSink() = default;
@@ -58,6 +60,12 @@ class PadSink {
 
   /** 主机上的磁带机数据线；没有磁带机时为空。 */
   [[nodiscard]] virtual TapeLine* tapeLine() { return nullptr; }
+
+  /** 主机的调度器，卡带的计时（ctx.timer）与周期计数（ctx.cycle）用；主机没有时为空。 */
+  [[nodiscard]] virtual Scheduler* cartridgeScheduler() { return nullptr; }
+
+  /** CPU 的时钟域：卡带按 CPU 周期计时；没有调度器时不使用。 */
+  [[nodiscard]] virtual ClockDomain cartridgeCpuClock() const { return ClockDomain{1}; }
 };
 
 }  // namespace ember::contracts::hardware

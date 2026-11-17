@@ -1,0 +1,36 @@
+{
+  "plugin": "bandai-karaoke",
+  "image": {
+    "mapper": 188,
+    "prgKiB": 128,
+    "prgFill": 255,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "unmapped": true
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 20
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        }
+      ]
+    }
+  ]
+}

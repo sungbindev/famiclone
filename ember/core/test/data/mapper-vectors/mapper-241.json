@@ -1,0 +1,23 @@
+{
+  "plugin": "mapper-241",
+  "image": {
+    "mapper": 241,
+    "prgKiB": 128,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        }
+      ]
+    }
+  ]
+}

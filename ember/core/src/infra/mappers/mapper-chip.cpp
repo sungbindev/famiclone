@@ -29,6 +29,8 @@ namespace mapper_error = contracts::mappers;
 /** 一条脚本日志的最大字节数，保留的最大条数。 */
 constexpr std::size_t MAX_LOG_BYTES = 2000;
 constexpr std::size_t MAX_LOG_ENTRIES = 200;
+/** ctx.timer 同时可用的计时名字个数上限。 */
+constexpr std::size_t MAX_TIMER_NAMES = 32;
 /** CPU 总线 64K，PPU 侧只有图案表 8K。 */
 constexpr std::size_t CPU_SLOT_COUNT = 0x10000;
 constexpr std::size_t PPU_SLOT_COUNT = 0x2000;
@@ -88,17 +90,21 @@ std::uint32_t resolveRamSize(const std::optional<HeaderSize>& header, std::uint3
 
 }  // namespace
 
-MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, hw::IrqOutput& irq, hw::PadSink& pads, ScriptLimits limits)
+MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, hw::IrqOutput& irq, hw::PadSink& pads, ScriptLimits limits,
+                       const contracts::mappers::CircuitCatalog* circuitCatalog)
     : plugin_(std::move(plugin)),
-      irq_(irq),
       pads_(pads),
       tape_(pads.tapeLine()),
+      scheduler_(pads.cartridgeScheduler()),
+      cpuClock_(pads.cartridgeCpuClock()),
+      mixer_(irq),
       padMasks_(pads.padPortCount(), 0),
       cpuSlots_(CPU_SLOT_COUNT),
       ppuSlots_(PPU_SLOT_COUNT),
       cpuSide_(*this, false),
       ppuSide_(*this, true) {
   const Manifest& manifest = plugin_->manifest;
+  scriptIrq_ = mixer_.addSource();
 
   // 存储区：rom 从文件复制，来源为空且有后备时改用后备的 RAM；ram 清零。
   ScriptLayout layout;
@@ -191,6 +197,9 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
     if (decl.readAction.kind == ReadKind::State) resolved.readState = stateIndex(decl.readAction.state);
     resolved.releaseIrq = decl.readAction.releaseIrq;
     resolved.writeScript = decl.writeAction.script;
+    if (!decl.writeAction.circuit.empty()) {
+      resolved.circuit = static_cast<std::size_t>(std::find_if(manifest.circuits.begin(), manifest.circuits.end(), [&](const CircuitDecl& item) { return item.id == decl.writeAction.circuit; }) - manifest.circuits.begin());
+    }
     if (!decl.writeAction.state.empty()) resolved.writeState = stateIndex(decl.writeAction.state);
     for (const BankSetter& setter : decl.writeAction.banks) resolved.banks.push_back(ResolvedRegister::Bank{windowIndex(setter.window), setter.shift, setter.mask});
     if (!decl.writeAction.updateTable.empty()) {
@@ -202,6 +211,25 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
   if (manifest.tape && manifest.tape->timer) {
     timerSamples_ = stateIndex(manifest.tape->timer->samples);
     timerTicks_ = stateIndex(manifest.tape->timer->ticks);
+  }
+
+  // 电路：按类型在目录里创建，接线里的窗口标识解析成下标。
+  for (const CircuitDecl& decl : manifest.circuits) {
+    if (circuitCatalog == nullptr || !circuitCatalog->knows(decl.type)) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 引用了主机里没有的电路：" + decl.type);
+    CircuitSlot slot;
+    slot.id = decl.id;
+    slot.circuit = circuitCatalog->create(decl.type, mixer_, contracts::mappers::CircuitOptions{decl.revA});
+    if (decl.wire) {
+      for (const std::string& id : decl.wire->prg) slot.prgWindows.push_back(windowIndex(id));
+      for (const std::string& id : decl.wire->chr) slot.chrWindows.push_back(windowIndex(id));
+      slot.mirroring = decl.wire->mirroring;
+      if (!decl.wire->ram.empty()) slot.ramWindow = windowIndex(decl.wire->ram);
+    }
+    layout.circuits.push_back(decl.id);
+    circuits_.push_back(std::move(slot));
+  }
+  for (const SettingDecl& setting : manifest.settings) {
+    layout.settings.push_back(ScriptSetting{setting.key, setting.kind == SettingKind::Switch, setting.switchDefault, setting.textDefault});
   }
 
   // 脚本：清单里有要回调脚本的寄存器或要脚本计算的查表时必须有脚本并导出对应的函数；只有声明式寄存器的卡带可以没有脚本。
@@ -224,6 +252,7 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
 }
 
 MapperChip::~MapperChip() {
+  cancelTimers();
   if (tapeListening_) tape_->setEdgeListener({});
 }
 
@@ -251,6 +280,10 @@ hw::CiramControl MapperChip::ciramControl(std::uint16_t ppuAddress) const {
       return hw::CiramControl{true, true};
     case NametableMode::Four:
       return hw::CiramControl{false, false};
+    case NametableMode::Custom: {
+      const NametableSlot& slot = customSlots_[(ppuAddress >> 10) & 3U];
+      return slot.storage != nullptr ? hw::CiramControl{false, false} : hw::CiramControl{true, slot.ciramPage1};
+    }
     case NametableMode::Header:
       break;
   }
@@ -259,6 +292,7 @@ hw::CiramControl MapperChip::ciramControl(std::uint16_t ppuAddress) const {
 
 void MapperChip::reset(bool power) {
   failure_.reset();
+  cancelTimers();
   busConflict_ = plugin_->manifest.busConflict;
   if (power) powerCycle();
   applyDeclaredReset();
@@ -271,7 +305,7 @@ void MapperChip::applyDeclaredReset() {
     if (manifest.state[index].initial) stateValues_[index] = *manifest.state[index].initial;
   }
   if (!manifest.tape) return;
-  if (manifest.tape->timer && manifest.tape->timer->irq) irq_.set(false);
+  if (manifest.tape->timer && manifest.tape->timer->irq) mixer_.set(scriptIrq_, false);
   if (tape_ != nullptr && manifest.tape->comparator) {
     const TapeComparatorDecl& comparator = *manifest.tape->comparator;
     tape_->setComparator(hw::TapeComparator{static_cast<std::int16_t>(comparator.low), static_cast<std::int16_t>(comparator.high), comparator.invert});
@@ -333,14 +367,25 @@ hw::BusRead MapperChip::Side::read(std::uint16_t address) { return owner_.readBu
 
 hw::BusRead MapperChip::Side::peek(std::uint16_t address) { return owner_.peekBus(ppu_, address); }
 
+std::uint32_t MapperChip::randomBelow(std::uint32_t max) {
+  // xorshift32：同样的上电得到同样的序列。
+  randomState_ ^= randomState_ << 13;
+  randomState_ ^= randomState_ >> 17;
+  randomState_ ^= randomState_ << 5;
+  return randomState_ % max;
+}
+
 std::optional<std::uint8_t> MapperChip::cpuPeek(std::uint16_t address) {
-  const hw::BusRead result = peekBus(false, address);
+  // 只看窗口，不经过寄存器：读寄存器的脚本需要读到寄存器下面的 ROM 或 RAM。
+  const Slot slot = cpuSlots_[address];
+  if (slot.window < 0) return std::nullopt;
+  const hw::BusRead result = readWindow(windows_[static_cast<std::size_t>(slot.window)], address);
   if (result.drivenMask == 0) return std::nullopt;
   return result.value;
 }
 
 hw::BusRead MapperChip::peekBus(bool ppu, std::uint16_t address) const {
-  if (ppu && address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
+  if (ppu && address >= PPU_SLOT_COUNT) return readOwnNametable(address);
   const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
   if (slot.readRegister) {
     // 调试读不能有副作用：只有声明的固定值与状态可以直接给出，回调脚本的读不触发。
@@ -356,12 +401,26 @@ contracts::mappers::AddressInfo MapperChip::describeAddress(bool ppu, std::uint1
   using Info = contracts::mappers::AddressInfo;
   Info info;
   if (ppu && address >= PPU_SLOT_COUNT) {
+    if (nametable_ == NametableMode::Custom) {
+      const NametableSlot& custom = customSlots_[(address >> 10) & 3U];
+      if (custom.storage != nullptr && custom.storage->size() != 0) {
+        info.kind = Info::Kind::Storage;
+        info.offset = (custom.bank * 1024 + (address & 0x3FFU)) % custom.storage->size();
+        const auto& decls = plugin_->manifest.storage;
+        for (std::size_t index = 0; index < decls.size(); ++index) {
+          if (storages_[index].get() == custom.storage) info.storage = decls[index].id;
+        }
+        info.mapped = true;
+        return info;
+      }
+    }
     info.kind = nametable_ == NametableMode::Four ? Info::Kind::Nametable : Info::Kind::None;
     info.offset = address & 0xFFFU;
     return info;
   }
   const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
-  if (slot.readRegister || slot.writeRegister) {
+  // 读寄存器会回调脚本；只写的寄存器不影响读，所以它下面有窗口时仍给出窗口的译码。
+  if (slot.readRegister || (slot.writeRegister && slot.window < 0)) {
     info.kind = Info::Kind::Register;
     return info;
   }
@@ -384,8 +443,8 @@ contracts::mappers::AddressInfo MapperChip::describeAddress(bool ppu, std::uint1
 void MapperChip::Side::write(std::uint16_t address, std::uint8_t value) { owner_.writeBus(ppu_, address, value); }
 
 hw::BusRead MapperChip::readBus(bool ppu, std::uint16_t address) {
-  // 名称表地址只在四屏时由卡带响应；图案表地址按窗口译码。
-  if (ppu && address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
+  // 名称表地址只在四屏或 custom 映射到存储区时由卡带响应；图案表地址按窗口译码。
+  if (ppu && address >= PPU_SLOT_COUNT) return readOwnNametable(address);
   const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
   if (slot.readRegister) return readRegister(ppu, address, slot.reg);
   return slot.window >= 0 ? readWindow(windows_[static_cast<std::size_t>(slot.window)], address) : hw::releaseBus();
@@ -410,13 +469,13 @@ hw::BusRead MapperChip::readRegister(bool ppu, std::uint16_t address, std::int16
     case ReadKind::None:
       break;
   }
-  if (decl.releaseIrq) irq_.set(false);
+  if (decl.releaseIrq) mixer_.set(scriptIrq_, false);
   return result;
 }
 
 void MapperChip::writeBus(bool ppu, std::uint16_t address, std::uint8_t value) {
   if (ppu && address >= PPU_SLOT_COUNT) {
-    if (nametable_ == NametableMode::Four) ownNametable_[address & 0xFFFU] = value;
+    writeOwnNametable(address, value);
     return;
   }
   const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
@@ -434,6 +493,11 @@ void MapperChip::writeBus(bool ppu, std::uint16_t address, std::uint8_t value) {
 
 void MapperChip::writeRegister(bool ppu, std::uint16_t address, std::uint8_t value, std::int16_t index) {
   const ResolvedRegister& decl = registers_[static_cast<std::size_t>(index)];
+  if (decl.circuit) {
+    writeCircuit(*decl.circuit, address, value);
+    if (script_ != nullptr && script_->hasCircuit()) runScript([&] { script_->circuit(circuits_[*decl.circuit].id); });
+    return;
+  }
   if (decl.writeScript) {
     runScript([&] { script_->write(ppu, address, value); });
     return;
@@ -488,7 +552,7 @@ void MapperChip::onTapeEdge(bool level, std::uint32_t samples) {
       const std::uint64_t ticks = std::uint64_t{stateValues_[*timerSamples_]} * timer.scaleNumerator / timer.scaleDenominator;
       stateSet(timerTicks_, static_cast<std::uint32_t>(std::uint64_t{stateValues_[timerTicks_]} + ticks));
       stateSet(*timerSamples_, 0);
-      if (timer.irq) irq_.set(true);
+      if (timer.irq) mixer_.set(scriptIrq_, true);
     }
   }
   if (script_ != nullptr && script_->hasTapeEdge()) runScript([&] { script_->tapeEdge(level, samples); });
@@ -531,7 +595,13 @@ void MapperChip::powerCycle() {
   for (Window& window : windows_) applyInitial(window);
   std::fill(stateValues_.begin(), stateValues_.end(), 0U);
   nametable_ = initialNametable_;
-  irq_.set(false);
+  customSlots_.fill(NametableSlot{});
+  randomState_ = RANDOM_SEED;
+  mixer_.clear();
+  for (CircuitSlot& slot : circuits_) {
+    slot.circuit->reset();
+    applyCircuitWire(slot);
+  }
 }
 
 // ---------------------------------------------------------------- 宿主对象
@@ -565,6 +635,43 @@ void MapperChip::windowSelect(std::size_t window, std::size_t storage, std::int6
   if (std::find(target.choices.begin(), target.choices.end(), chosen) == target.choices.end()) throw ScriptArgumentError("这个窗口不能切到该存储区，清单里没有列出");
   target.storage = chosen;
   windowSetBank(window, bank);
+}
+
+hw::BusRead MapperChip::readOwnNametable(std::uint16_t address) const {
+  if (nametable_ == NametableMode::Four) return hw::driveBus(ownNametable_[address & 0xFFFU]);
+  if (nametable_ == NametableMode::Custom) {
+    const NametableSlot& slot = customSlots_[(address >> 10) & 3U];
+    if (slot.storage != nullptr && slot.storage->size() != 0) return hw::driveBus(slot.storage->byteAt((slot.bank * 1024 + (address & 0x3FFU)) % slot.storage->size()));
+  }
+  return hw::releaseBus();
+}
+
+void MapperChip::writeOwnNametable(std::uint16_t address, std::uint8_t value) {
+  if (nametable_ == NametableMode::Four) {
+    ownNametable_[address & 0xFFFU] = value;
+  } else if (nametable_ == NametableMode::Custom) {
+    const NametableSlot& slot = customSlots_[(address >> 10) & 3U];
+    if (slot.storage != nullptr && slot.storage->size() != 0) slot.storage->writeAt((slot.bank * 1024 + (address & 0x3FFU)) % slot.storage->size(), value);
+  }
+}
+
+void MapperChip::nametableMap(std::size_t slot, std::string_view source, std::int64_t bank) {
+  if (plugin_->manifest.nametable != NametableMode::Custom) throw ScriptArgumentError("清单的 nametable 不是 custom，不能逐个映射名称表");
+  if (bank < 0) throw ScriptArgumentError("bank 不能为负数");
+  NametableSlot& target = customSlots_.at(slot);
+  nametable_ = NametableMode::Custom;
+  if (source == "ciram0" || source == "ciram1") {
+    target = NametableSlot{nullptr, 0, source == "ciram1"};
+    return;
+  }
+  const auto& decls = plugin_->manifest.storage;
+  for (std::size_t index = 0; index < decls.size(); ++index) {
+    if (decls[index].id == source) {
+      target = NametableSlot{storages_[index].get(), static_cast<std::size_t>(bank), false};
+      return;
+    }
+  }
+  throw ScriptArgumentError("名称表的来源必须是 'ciram0'、'ciram1' 或清单里的存储区：" + std::string(source));
 }
 
 void MapperChip::nametableSet(std::string_view mode) {
@@ -628,6 +735,116 @@ bool MapperChip::tapeLevel() {
 void MapperChip::tapeSetComparator(std::int16_t low, std::int16_t high, bool invert) {
   if (tape_ == nullptr) throw ScriptArgumentError("当前主机没有磁带机");
   tape_->setComparator(hw::TapeComparator{low, high, invert});
+}
+
+std::uint64_t MapperChip::cycle() {
+  if (scheduler_ == nullptr) throw ScriptArgumentError("当前主机没有调度器");
+  return static_cast<std::uint64_t>(cpuClock_.toCycles(scheduler_->now()));
+}
+
+void MapperChip::timerAfter(std::string_view name, std::int64_t cycles) {
+  if (scheduler_ == nullptr) throw ScriptArgumentError("当前主机没有调度器");
+  auto found = std::find_if(timers_.begin(), timers_.end(), [&](const TimerSlot& slot) { return slot.name == name; });
+  if (found == timers_.end()) {
+    if (timers_.size() >= MAX_TIMER_NAMES) throw ScriptArgumentError("计时的名字太多，最多 " + std::to_string(MAX_TIMER_NAMES) + " 个");
+    timers_.push_back(TimerSlot{std::string(name), hw::NO_EVENT});
+    found = timers_.end() - 1;
+  }
+  if (found->event != hw::NO_EVENT) scheduler_->cancel(found->event);
+  found->event = scheduler_->scheduleAt(scheduler_->now() + cpuClock_.toMaster(cycles), *this, static_cast<std::uint32_t>(found - timers_.begin()));
+}
+
+void MapperChip::timerCancel(std::string_view name) {
+  if (scheduler_ == nullptr) throw ScriptArgumentError("当前主机没有调度器");
+  const auto found = std::find_if(timers_.begin(), timers_.end(), [&](const TimerSlot& slot) { return slot.name == name; });
+  if (found == timers_.end() || found->event == hw::NO_EVENT) return;
+  scheduler_->cancel(found->event);
+  found->event = hw::NO_EVENT;
+}
+
+void MapperChip::cancelTimers() {
+  for (TimerSlot& slot : timers_) {
+    if (slot.event != hw::NO_EVENT && scheduler_ != nullptr) scheduler_->cancel(slot.event);
+    slot.event = hw::NO_EVENT;
+  }
+}
+
+void MapperChip::onEvent(hw::MasterTime, std::uint32_t tag) {
+  if (tag >= timers_.size()) return;
+  timers_[tag].event = hw::NO_EVENT;
+  // 名字先复制：脚本回调里可能登记新的计时，使 timers_ 变长而移动元素。
+  const std::string name = timers_[tag].name;
+  if (script_ != nullptr && script_->hasTimer()) runScript([&] { script_->timer(name); });
+}
+
+void MapperChip::onVideoAddress(std::uint16_t ppuAddress) {
+  for (CircuitSlot& slot : circuits_) slot.circuit->onVideoAddress(ppuAddress);
+}
+
+std::optional<std::uint32_t> MapperChip::circuitValue(const CircuitSlot& slot, std::string_view name) {
+  for (const hw::CircuitStateField& field : slot.circuit->state()) {
+    if (field.name == name) return field.value;
+  }
+  return std::nullopt;
+}
+
+void MapperChip::writeCircuit(std::size_t index, std::uint16_t address, std::uint8_t value) {
+  CircuitSlot& slot = circuits_.at(index);
+  slot.circuit->writeRegister(address, value);
+  applyCircuitWire(slot);
+}
+
+void MapperChip::applyCircuitWire(const CircuitSlot& slot) {
+  const hw::MapperCircuit& circuit = *slot.circuit;
+  if (!slot.prgWindows.empty()) {
+    const std::uint32_t step = static_cast<std::uint32_t>(circuit.bankSize(hw::BankSpace::Program, 0x8000));
+    for (std::size_t index = 0; index < slot.prgWindows.size(); ++index) {
+      windowSetBank(slot.prgWindows[index], circuit.bank(hw::BankSpace::Program, static_cast<std::uint16_t>(0x8000U + index * step)));
+    }
+  }
+  if (!slot.chrWindows.empty()) {
+    const std::uint32_t step = static_cast<std::uint32_t>(circuit.bankSize(hw::BankSpace::Character, 0));
+    for (std::size_t index = 0; index < slot.chrWindows.size(); ++index) {
+      windowSetBank(slot.chrWindows[index], circuit.bank(hw::BankSpace::Character, static_cast<std::uint16_t>(index * step)));
+    }
+  }
+  if (slot.mirroring && nametable_ != NametableMode::Four && nametable_ != NametableMode::Custom) {
+    if (const auto mirroring = circuit.mirroring()) {
+      switch (*mirroring) {
+        case hw::CircuitMirroring::Vertical:
+          nametable_ = NametableMode::Vertical;
+          break;
+        case hw::CircuitMirroring::Horizontal:
+          nametable_ = NametableMode::Horizontal;
+          break;
+        case hw::CircuitMirroring::Single0:
+          nametable_ = NametableMode::Single0;
+          break;
+        case hw::CircuitMirroring::Single1:
+          nametable_ = NametableMode::Single1;
+          break;
+      }
+    }
+  }
+  if (slot.ramWindow) {
+    // PRG RAM 保护位：位 7 为 0 时不响应，位 6 为 1 时只读。
+    if (const auto protect = circuitValue(slot, "ramProtect")) {
+      Window& window = windows_.at(*slot.ramWindow);
+      window.mapped = (*protect & 0x80U) != 0;
+      window.writable = window.mapped && (*protect & 0x40U) == 0 && window.initialWritable;
+    }
+  }
+}
+
+void MapperChip::circuitWrite(std::size_t circuit, std::uint16_t address, std::uint8_t value) { writeCircuit(circuit, address, value); }
+
+std::uint32_t MapperChip::circuitGet(std::size_t circuit, std::string_view name) {
+  if (const auto value = circuitValue(circuits_.at(circuit), name)) return *value;
+  throw ScriptArgumentError("电路没有这一项状态：" + std::string(name));
+}
+
+std::uint32_t MapperChip::circuitBank(std::size_t circuit, bool character, std::uint16_t address) {
+  return circuits_.at(circuit).circuit->bank(character ? hw::BankSpace::Character : hw::BankSpace::Program, address);
 }
 
 }  // namespace ember::infra::mappers

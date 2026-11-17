@@ -52,6 +52,15 @@ class Cartridge {
 
   /** 用户输入：键盘、鼠标、游戏手柄的原始事件，卡带按自己的程序决定怎么用；不用输入的卡带忽略。 */
   virtual void input(const InputEvent& event) = 0;
+
+  /** 卡带是否要观察 PPU 地址线（如 MMC3 数 A12 的上升沿）；不观察的卡带返回 false，卡槽就不会逐次通知。 */
+  [[nodiscard]] virtual bool watchesVideoAddress() const { return false; }
+
+  /**
+   * PPU 对显存总线的一次访问（图案表与名称表的每次读写）；只有 watchesVideoAddress 为真时才会被调用。
+   * @param ppuAddress PPU 总线地址（0 到 $3EFF）。
+   */
+  virtual void onVideoAddress(std::uint16_t ppuAddress) { static_cast<void>(ppuAddress); }
 };
 
 }  // namespace ember::contracts::hardware

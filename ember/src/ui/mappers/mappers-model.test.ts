@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：mappers-model.test.ts
- * 说明：mapper 插件对话框纯规则的测试：匹配条件与主机型号的文字、按来源与搜索词筛选（不分大小写、匹配名称标识发布者说明）、清单摘要各项的内容与“无”的写法。
+ * 说明：mapper 插件对话框纯规则的测试：匹配条件与主机型号的文字、按来源与搜索词筛选（不分大小写、忽略空白、匹配名称标识发布者说明）、插件与 mapper 数量的统计、清单摘要各项的内容与“无”的写法。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { MapperDetail, MapperSummary } from '../../contracts/mappers/generated/mappers';
-import { detailFacts, errorText, filterPlugins, hostsText, matchesText, ruleText, sourceLabel } from './mappers-model';
+import { detailFacts, errorText, filterPlugins, hostsText, matchesText, pluginStats, ruleText, sourceLabel, statsText } from './mappers-model';
 
 function summary(patch: Partial<MapperSummary> = {}): MapperSummary {
   return { id: 'nrom', name: 'NROM', version: '1.0.0', publisher: 'Ember', description: '最简单的卡带', host: ['fc'], devices: [], match: [{ mapper: 0 }], source: 'bundled', enabled: true, ...patch };
@@ -52,8 +52,33 @@ describe('filterPlugins', () => {
     expect(filterPlugins(plugins, 'all', '不存在')).toEqual([]);
   });
 
+  it('搜索词与被搜内容都忽略空白：mmc 3 能搜到 MMC3，mapper4 能搜到 mapper 4', () => {
+    const withText = [summary({ id: 'mmc3', name: 'MMC3', description: '支持 mapper 4 的卡带' })];
+    expect(filterPlugins(withText, 'all', 'mmc 3')).toHaveLength(1);
+    expect(filterPlugins(withText, 'all', 'mapper4')).toHaveLength(1);
+    expect(filterPlugins(withText, 'all', ' m m c3 ')).toHaveLength(1);
+    expect(filterPlugins(plugins, 'all', 'mmc 3 增强').map((plugin) => plugin.id)).toEqual(['mmc3-plus']);
+  });
+
   it('来源与搜索词同时生效', () => {
     expect(filterPlugins(plugins, 'bundled', 'someone')).toEqual([]);
+  });
+});
+
+describe('pluginStats 与 statsText', () => {
+  const list = [
+    summary({ match: [{ mapper: 0 }] }),
+    summary({ id: 'a', match: [{ mapper: 3 }, { mapper: 3, variant: 1 }], enabled: false }),
+    summary({ id: 'b', match: [{ mapper: 0 }, { mapper: 4 }], source: 'user' })
+  ];
+
+  it('插件数是全部个数，已启用数不含停用的，mapper 种数按号去重且不看是否启用', () => {
+    expect(pluginStats(list)).toEqual({ total: 3, enabled: 2, mappers: 3 });
+    expect(pluginStats([])).toEqual({ total: 0, enabled: 0, mappers: 0 });
+  });
+
+  it('显示成一行文字', () => {
+    expect(statsText(list)).toBe('共 3 个插件（已启用 2 个），支持 3 种 mapper');
   });
 });
 

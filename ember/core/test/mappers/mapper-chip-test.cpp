@@ -267,6 +267,42 @@ TEST(MapperChip, NametableFollowsTheHeaderTheManifestAndTheScript) {
   EXPECT_TRUE(overridden.chip.ciramControl(0x2800).a10);
 }
 
+TEST(MapperChip, CustomNametablesMapEachSlotToTheBoardRamOrACartridgeStorage) {
+  json manifest = json::parse(ember::test::minimalManifest());
+  manifest["nametable"] = "custom";
+  const std::string script = R"(export default {
+    reset(ctx) { ctx.nametable.map(1, 'ciram1'); ctx.nametable.map(2, 'chr', 3); ctx.nametable.map(3, 'chr', 1); }
+  };)";
+  Rig rig(manifest, script, makeImage(16384, 8192));
+  rig.chip.reset(true);
+  // 未映射的槽默认是主板显存的第 0 页。
+  EXPECT_TRUE(rig.chip.ciramControl(0x2000).enable);
+  EXPECT_FALSE(rig.chip.ciramControl(0x2000).a10);
+  EXPECT_TRUE(rig.chip.ciramControl(0x2400).a10);
+  EXPECT_TRUE(rig.chip.ciramControl(0x3400).a10) << "$3000-$3EFF 是 $2000-$2EFF 的镜像";
+  // 映射到 CHR ROM 的槽由卡带响应，读出对应的 1K 页，写入被丢弃。
+  EXPECT_FALSE(rig.chip.ciramControl(0x2800).enable);
+  EXPECT_EQ(rig.ppu(0x2800).value, chrByte(3 * 1024));
+  EXPECT_EQ(rig.ppu(0x2C05).value, chrByte(1024 + 5));
+  rig.ppuWrite(0x2800, 0x55);
+  EXPECT_EQ(rig.ppu(0x2800).value, chrByte(3 * 1024));
+  const auto info = rig.chip.describeAddress(true, 0x2C05);
+  EXPECT_EQ(info.kind, mapper_error::AddressInfo::Kind::Storage);
+  EXPECT_EQ(info.storage, "chr");
+  EXPECT_EQ(info.offset, 1029U);
+
+  // 没有 CHR ROM 时名称表可以映射到 CHR RAM，写入能保存。
+  Rig ram(manifest, script, makeImage(16384, 0));
+  ram.chip.reset(true);
+  ram.ppuWrite(0x2800, 0x66);
+  EXPECT_EQ(ram.ppu(0x2800).value, 0x66);
+
+  // 清单没声明 custom 时不能映射。
+  Rig plain(json::parse(ember::test::minimalManifest()), script, makeImage(16384, 8192));
+  plain.chip.reset(true);
+  EXPECT_TRUE(plain.chip.failure().has_value());
+}
+
 TEST(MapperChip, FourScreenGivesTheCartridgeItsOwnNametableMemory) {
   Rig rig(json::parse(ember::test::minimalManifest()), "", makeImage(16384, 8192, mapper_error::Mirroring::FourScreen));
   EXPECT_FALSE(rig.chip.ciramControl(0x2000).enable);
@@ -784,6 +820,24 @@ TEST(MapperChip, PrgAnyUsesTheSavedRamWhenThereIsOneAndTheWorkRamOtherwise) {
   EXPECT_FALSE(workOnly.chip.storageList()[2].battery);
 }
 
+TEST(MapperChip, TheScriptRandomIsDeterministicPerPowerOnAndWithinRange) {
+  json manifest = json::parse(ember::test::minimalManifest());
+  manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$5000-$5000", "read": true }])");
+  Rig first(manifest, "export default { read(ctx) { return ctx.random(256); } };", makeImage(16384, 0));
+  Rig second(manifest, "export default { read(ctx) { return ctx.random(256); } };", makeImage(16384, 0));
+  std::vector<int> firstValues;
+  for (int index = 0; index < 8; ++index) {
+    firstValues.push_back(first.cpu(0x5000).value);
+    EXPECT_EQ(second.cpu(0x5000).value, firstValues.back());
+  }
+  first.chip.reset(true);
+  EXPECT_EQ(first.cpu(0x5000).value, firstValues.front());
+  EXPECT_GT(std::set<int>(firstValues.begin(), firstValues.end()).size(), 3U);
+  Rig bad(manifest, "export default { read(ctx) { return ctx.random(0); } };", makeImage(16384, 0));
+  static_cast<void>(bad.cpu(0x5000));
+  EXPECT_TRUE(bad.chip.failure().has_value());
+}
+
 TEST(MapperChip, NegativeInitialBanksCountFromTheEndAndTheScriptCanPeekTheCpuSide) {
   json manifest = json::parse(ember::test::minimalManifest());
   manifest["windows"] = json::parse(R"([
@@ -792,11 +846,53 @@ TEST(MapperChip, NegativeInitialBanksCountFromTheEndAndTheScriptCanPeekTheCpuSid
   ])");
   manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$5000-$5001", "read": true }])");
   const std::string script = "export default { read(ctx, bus, addr) { return ctx.peek(addr === 0x5000 ? 0x8000 : 0x6000); } };";
-  Rig rig(manifest, script, makeImage(24576, 0));  // 24K\uff1a3 \u4e2a 8K bank\uff0c\u4e0d\u662f 2 \u7684\u5e42
+  Rig rig(manifest, script, makeImage(24576, 0));  // 24K：3 个 8K bank，不是 2 的幂
   EXPECT_EQ(rig.chip.describeAddress(false, 0x8000).offset, 8192U);
   EXPECT_EQ(rig.chip.describeAddress(false, 0xA000).offset, 16384U);
   EXPECT_EQ(rig.cpu(0x5000).value, prgByte(8192));
-  EXPECT_EQ(rig.cpu(0x5001).drivenMask, 0);  // peek \u672a\u6620\u5c04\u7684\u5730\u5740\u5f97\u5230 undefined
+  EXPECT_EQ(rig.cpu(0x5001).drivenMask, 0);  // peek 未映射的地址得到 undefined
+}
+
+TEST(MapperChipTimer, ACounterWrittenAsATimerRaisesTheIrqAtTheRightCycleAndCanBeCancelledOrRestarted) {
+  json manifest = withRegisters(WRITE_ALL);
+  const std::string script = R"(export default {
+    write(ctx, bus, addr, value) {
+      if (value === 0) { ctx.timer.cancel('irq'); ctx.irq.release(); }
+      else if (value === 1) ctx.timer.after('irq', 4096);
+      else ctx.timer.after('irq', 10);
+    },
+    onTimer(ctx, name) { ctx.irq.assert(); ctx.log.warn(name + '@' + ctx.cycle()); }
+  };)";
+  Rig rig(manifest, script, makeImage(16384, 0));
+  rig.chip.reset(true);
+  rig.pads.runCycles(100);
+  rig.cpuWrite(0x8000, 1);
+  rig.pads.runCycles(4095);
+  EXPECT_FALSE(rig.irq.active());
+  rig.pads.runCycles(1);
+  EXPECT_TRUE(rig.irq.active());
+  EXPECT_EQ(rig.chip.scriptLog(), (std::vector<std::string>{"irq@4196"}));
+
+  // 重新登记同名的计时会取消上一个；取消后不再触发。
+  rig.cpuWrite(0x8000, 0);
+  EXPECT_FALSE(rig.irq.active());
+  rig.cpuWrite(0x8000, 1);
+  rig.pads.runCycles(100);
+  rig.cpuWrite(0x8000, 2);
+  rig.pads.runCycles(10);
+  EXPECT_TRUE(rig.irq.active());
+  rig.cpuWrite(0x8000, 0);
+  rig.cpuWrite(0x8000, 1);
+  rig.cpuWrite(0x8000, 0);
+  rig.pads.runCycles(10000);
+  EXPECT_FALSE(rig.irq.active());
+  EXPECT_EQ(rig.chip.scriptLog().size(), 2U);
+
+  // 复位会取消全部计时。
+  rig.cpuWrite(0x8000, 1);
+  rig.chip.reset(false);
+  rig.pads.runCycles(10000);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 2U);
 }
 
 TEST(MapperChip, ChrRamFallbackSizeCanComeFromTheFileHeaderAndTheHeaderIsVisibleToTheScript) {

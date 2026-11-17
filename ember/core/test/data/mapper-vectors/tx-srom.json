@@ -1,0 +1,108 @@
+{
+  "plugin": "tx-srom",
+  "image": {
+    "mapper": 118,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$8001",
+      "value": 132
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "a10": true
+        },
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        },
+        {
+          "address": "$2C00",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 4096,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 1
+    },
+    {
+      "write": "$8001",
+      "value": 5
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": false
+        },
+        {
+          "address": "$2C00",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 1
+    },
+    {
+      "write": "$8001",
+      "value": 133
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2800",
+          "a10": true
+        },
+        {
+          "address": "$2C00",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 131
+    },
+    {
+      "write": "$8001",
+      "value": 0
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2000",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

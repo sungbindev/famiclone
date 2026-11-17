@@ -49,6 +49,12 @@ class CartridgeSlot {
 
   /** 用户输入：转给插着的卡带，没有卡带时什么也不做。 */
   virtual void input(const InputEvent& event) = 0;
+
+  /**
+   * PPU 对名称表由主板显存响应的一次访问：卡带要观察 PPU 地址线时转给它。图案表与由卡带自己响应的名称表走 ppuSide，不经过这里。
+   * @param ppuAddress PPU 总线地址。
+   */
+  virtual void videoAddress(std::uint16_t ppuAddress) { static_cast<void>(ppuAddress); }
 };
 
 }  // namespace ember::contracts::hardware

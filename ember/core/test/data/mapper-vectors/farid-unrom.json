@@ -1,0 +1,78 @@
+{
+  "plugin": "farid-unrom",
+  "image": {
+    "mapper": 324,
+    "prgKiB": 1024,
+    "prgFill": 255,
+    "chrKiB": 8
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 241
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 933888
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 1032192
+        }
+      ]
+    },
+    {
+      "reset": "soft"
+    },
+    {
+      "expectState": {
+        "reg": 129
+      }
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 933888
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    }
+  ]
+}

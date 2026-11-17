@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：config.mts
- * 说明：Ember 帮助文档站点的 VitePress 配置：中文界面、两个分类（使用说明、调试接口手册）的导航与侧边栏、离线搜索，构建输出到仓库根目录的 build/ember/help。
+ * 说明：Ember 帮助文档站点的 VitePress 配置：中文界面、三个分类（使用说明、插件开发手册、调试接口手册）的导航与侧边栏、离线搜索，构建输出到仓库根目录的 build/ember/help。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -27,8 +27,9 @@ const THEME_CLASS_SCRIPT =
 /** 用户可见的文字。 */
 const TEXT = {
   title: 'Ember 帮助文档',
-  description: 'Ember（FC 与学习机模拟器）的使用说明与调试接口手册',
+  description: 'Ember（FC 与学习机模拟器）的使用说明、插件开发手册与调试接口手册',
   manual: '使用说明',
+  plugin: '插件开发手册',
   debug: '调试接口手册',
   missingApi: '找不到 help/api：先运行 npm run help:build 生成调试接口的各模块页'
 } as const;
@@ -57,6 +58,24 @@ const MANUAL_SIDEBAR = [
       { text: '首选项', link: '/manual/preferences' },
       { text: '常见问题', link: '/manual/faq' },
       { text: '更新记录', link: '/manual/changelog' }
+    ]
+  }
+];
+
+/** 插件开发手册的侧边栏。 */
+const PLUGIN_SIDEBAR = [
+  {
+    text: TEXT.plugin,
+    items: [
+      { text: '概述', link: '/plugin/' },
+      { text: '第一个插件', link: '/plugin/quickstart' },
+      { text: '插件包与安装', link: '/plugin/package' },
+      { text: '清单：基本字段与匹配', link: '/plugin/manifest' },
+      { text: '清单：存储区、窗口与名称表', link: '/plugin/memory' },
+      { text: '清单：寄存器与状态', link: '/plugin/registers' },
+      { text: '脚本接口', link: '/plugin/script' },
+      { text: '常见写法', link: '/plugin/recipes' },
+      { text: '测试与排错', link: '/plugin/debugging' }
     ]
   }
 ];
@@ -91,9 +110,10 @@ export default defineConfig({
     siteTitle: false,
     nav: [
       { text: TEXT.manual, link: '/manual/', activeMatch: '^/manual/' },
+      { text: TEXT.plugin, link: '/plugin/', activeMatch: '^/plugin/' },
       { text: TEXT.debug, link: '/debug/', activeMatch: '^/(debug|api)/' }
     ],
-    sidebar: { '/manual/': MANUAL_SIDEBAR, '/debug/': debugSidebar(), '/api/': debugSidebar() },
+    sidebar: { '/manual/': MANUAL_SIDEBAR, '/plugin/': PLUGIN_SIDEBAR, '/debug/': debugSidebar(), '/api/': debugSidebar() },
     outline: { level: [2, 3], label: '本页内容' },
     docFooter: { prev: '上一页', next: '下一页' },
     returnToTopLabel: '回到顶部',

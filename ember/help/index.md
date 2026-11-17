@@ -11,6 +11,9 @@ hero:
       text: 使用说明
       link: /manual/
     - theme: alt
+      text: 插件开发手册
+      link: /plugin/
+    - theme: alt
       text: 调试接口手册
       link: /debug/
 
@@ -18,6 +21,9 @@ features:
   - title: 使用说明
     details: 打开卡带、添加学习机的 BIOS、设置键盘与手柄、调整画面与声音，以及日常使用中的常见问题。
     link: /manual/
+  - title: 插件开发手册
+    details: 怎样给新的卡带 mapper 写插件：插件包、清单与脚本的写法、常见写法，以及用调试服务测试与排错。
+    link: /plugin/
   - title: 调试接口手册
     details: 调试服务的连接方式、报文规则、官方客户端工具，以及全部请求与事件的参数和结果。
     link: /debug/

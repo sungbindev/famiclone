@@ -25,6 +25,7 @@ import { forwardUpdateStatus } from '../../entry/ipc/system/forward-update-statu
 import { registerStreamsIpc } from '../../entry/ipc/streams/streams-ipc';
 import { startThemeSync } from '../../entry/preferences/theme-sync';
 import { startAutoUpdateCheck, type AutoUpdateCheck } from '../../entry/updates/auto-update-check';
+import { showReleaseNotesOnce } from '../../entry/updates/release-notes-prompt';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
 import { ProcessCoreGateway } from '../../infra/core-client/process-core-gateway';
 import { MemoryDroppedFilesService } from '../../infra/dropped-files/memory-dropped-files-service';
@@ -269,6 +270,18 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
       createTarget: (contents) => createWebContentsStreamTarget(contents, STREAM_CHANNELS.ports, STREAM_PORTS_WINDOW_MESSAGE)
     });
     createMainWindow();
+    // 更新记录页在主窗口显示之后再打开，否则会被随后显示的主窗口盖住。
+    const promptReleaseNotes = (): void =>
+      showReleaseNotesOnce({
+        updater,
+        currentVersion: app.getVersion(),
+        firstRun: process.argv.includes(SQUIRREL_FIRST_RUN_ARGUMENT),
+        state: shellState,
+        helpWindow,
+        onError: (error) => logError(logger, error, { source: 'releaseNotes' })
+      });
+    if (mainWindow?.isVisible() === true) promptReleaseNotes();
+    else mainWindow?.once('show', promptReleaseNotes);
 
     const cartridgePath = cartridgePathFromArgv(process.argv);
     if (cartridgePath !== undefined) {

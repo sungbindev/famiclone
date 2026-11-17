@@ -15,7 +15,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, shell } from 'electron';
 import { followSystemTheme, resolvedTheme, titleBarOverlay, WINDOW_COLORS } from '../window/app-window';
-import { HELP_START_URL, isHelpUrl, isOpenableExternalUrl } from './help-site';
+import { HELP_PAGE_URLS, HELP_START_URL, isHelpUrl, isOpenableExternalUrl, type HelpPageName } from './help-site';
 
 /** 窗口的初始尺寸与最小尺寸。 */
 const WINDOW_SIZE = { width: 1100, height: 760, minWidth: 640, minHeight: 420 } as const;
@@ -36,7 +36,8 @@ export interface HelpWindowOptions {
 
 /** 帮助文档窗口。 */
 export interface HelpWindowHandle {
-  open(): Promise<void>;
+  /** 打开窗口；给了 page 时显示该页（已经打开的窗口也跳到该页），没给时新窗口显示首页、已打开的窗口保持当前页。 */
+  open(page?: HelpPageName): Promise<void>;
   close(): void;
 }
 
@@ -47,7 +48,7 @@ export interface HelpWindowHandle {
 export function createHelpWindow(options: HelpWindowOptions): HelpWindowHandle {
   let window: BrowserWindow | undefined;
 
-  const create = (): BrowserWindow => {
+  const create = (startUrl: string): BrowserWindow => {
     const theme = resolvedTheme();
     const created = new BrowserWindow({
       ...WINDOW_SIZE,
@@ -76,19 +77,21 @@ export function createHelpWindow(options: HelpWindowOptions): HelpWindowHandle {
       stopFollowingTheme();
       if (window === created) window = undefined;
     });
-    void created.loadURL(HELP_START_URL);
+    void created.loadURL(startUrl);
     return created;
   };
 
   return {
-    open: async () => {
+    open: async (page) => {
       if (!existsSync(join(options.root, 'index.html'))) throw new Error(TEXT.missing);
+      const pageUrl = page === undefined ? undefined : HELP_PAGE_URLS[page];
       if (window !== undefined && !window.isDestroyed()) {
         if (window.isMinimized()) window.restore();
+        if (pageUrl !== undefined) void window.loadURL(pageUrl);
         window.focus();
         return;
       }
-      window = create();
+      window = create(pageUrl ?? HELP_START_URL);
     },
     close: () => {
       if (window !== undefined && !window.isDestroyed()) window.close();

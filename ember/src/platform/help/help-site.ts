@@ -20,6 +20,14 @@ export const HELP_HOST = 'app';
 /** 站点的首页。 */
 export const HELP_START_URL = `${HELP_SCHEME}://${HELP_HOST}/`;
 
+/** 可以直接打开的页面名；页面地址只在这里，请求方不能指定。 */
+export type HelpPageName = 'changelog';
+
+/** 各页面的地址：站点只能用 .html 结尾的链接。 */
+export const HELP_PAGE_URLS: Readonly<Record<HelpPageName, string>> = {
+  changelog: `${HELP_START_URL}manual/changelog.html`
+};
+
 /** 文件类型：站点里用到的扩展名。 */
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',

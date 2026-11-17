@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：help-window.test.ts
- * 说明：帮助文档窗口的测试：与主窗口一样隐藏系统标题栏并按主题着色系统窗口按钮，安全设置不放宽，站点不存在时报错，已打开时只聚焦、窗口关闭后停止跟随系统主题。
+ * 说明：帮助文档窗口的测试：与主窗口一样隐藏系统标题栏并按主题着色系统窗口按钮，安全设置不放宽，站点不存在时报错，已打开时只聚焦，可以指定要打开的页面、窗口关闭后停止跟随系统主题。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -63,6 +63,11 @@ afterAll(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
 });
 
+/** 窗口加载过的地址，按加载顺序。 */
+function urlsOf(window: unknown): unknown[] {
+  return (window as { loadURL: ReturnType<typeof vi.fn> }).loadURL.mock.calls.map((call) => call[0]);
+}
+
 describe('createHelpWindow', () => {
   it('隐藏系统标题栏，Windows 与 Linux 保留按主题着色的系统窗口按钮，底色与主窗口一致', async () => {
     await createHelpWindow({ root: siteDirectory() }).open();
@@ -93,6 +98,24 @@ describe('createHelpWindow', () => {
     await help.open();
     expect(created).toHaveLength(before);
     expect(window.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('指定页面时：新窗口直接加载该页，没指定时加载首页，已打开的窗口跳到该页且没指定时保持当前页', async () => {
+    const home = createHelpWindow({ root: siteDirectory() });
+    await home.open();
+    expect(urlsOf(created[created.length - 1])).toEqual(['ember-help://app/']);
+
+    const help = createHelpWindow({ root: siteDirectory() });
+    await help.open('changelog');
+    const window = created[created.length - 1];
+    expect(urlsOf(window)).toEqual(['ember-help://app/manual/changelog.html']);
+    await help.open();
+    expect(urlsOf(window)).toEqual(['ember-help://app/manual/changelog.html']);
+
+    const other = createHelpWindow({ root: siteDirectory() });
+    await other.open();
+    await other.open('changelog');
+    expect(urlsOf(created[created.length - 1])).toEqual(['ember-help://app/', 'ember-help://app/manual/changelog.html']);
   });
 
   it('跟随系统主题，窗口关闭后取消监听', async () => {

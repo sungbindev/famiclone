@@ -56,6 +56,14 @@ describe('FileShellStateService', () => {
     expect(service.get().layout).toEqual(DEFAULT_SHELL_STATE.layout);
   });
 
+  it('记下显示过更新记录的版本，不影响窗口和布局，并把整个状态交给存储', () => {
+    const storage = createStorage(undefined);
+    const service = new FileShellStateService(storage);
+    service.updateReleaseNotesVersion('0.2.0');
+    expect(service.get()).toEqual({ ...DEFAULT_SHELL_STATE, releaseNotesVersion: '0.2.0' });
+    expect(storage.writes).toEqual([service.get()]);
+  });
+
   it('读出的状态不会被后续修改改变', () => {
     const service = new FileShellStateService(createStorage(undefined));
     const before = service.get();
@@ -79,6 +87,7 @@ describe('配合真实的文件存储', () => {
       const first = new FileShellStateService(new JsonFileStore({ path }));
       first.updateLayout({ bottomPanelHeight: 300 });
       first.updateWindow({ x: 5, y: 6 });
+      first.updateReleaseNotesVersion('0.2.0');
       first.flush();
 
       const second = new FileShellStateService(new JsonFileStore({ path }));

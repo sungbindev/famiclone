@@ -21,6 +21,8 @@ export interface ShellStateService {
   updateLayout(patch: Partial<ShellLayout>): void;
   /** 记下窗口的位置与大小。 */
   updateWindow(placement: WindowPlacement): void;
+  /** 记下已经显示过更新记录的应用版本。 */
+  updateReleaseNotesVersion(version: string): void;
   /** 立即写盘（应用退出前调用）。 */
   flush(): void;
 }

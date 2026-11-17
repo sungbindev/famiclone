@@ -39,6 +39,10 @@ export class FileShellStateService implements ShellStateService {
     this.replace({ ...this.state, window: placement });
   }
 
+  updateReleaseNotesVersion(version: string): void {
+    this.replace({ ...this.state, releaseNotesVersion: version });
+  }
+
   flush(): void {
     this.storage.flush();
   }

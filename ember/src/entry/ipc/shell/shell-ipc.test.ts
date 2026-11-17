@@ -29,7 +29,7 @@ function setup(trusted = true) {
     on: (channel: string, listener: Listener) => listeners.set(channel, listener)
   } as unknown as IpcMain;
   const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220, selectedMachine: null, autoCollapsePanels: [] } };
-  const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), flush: vi.fn() };
+  const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), updateReleaseNotesVersion: vi.fn(), flush: vi.fn() };
   const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false, alwaysOnTop: true })) };
   const keyboard = { setCapture: vi.fn((enabled: boolean) => enabled), onKey: vi.fn(), onReleased: vi.fn() } satisfies KeyboardCaptureService;
   const droppedFiles = {

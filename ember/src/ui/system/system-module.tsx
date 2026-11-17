@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：system-module.tsx
- * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“打开日志目录”“检查更新”“关于 Ember”、“关于 Ember”对话框、标题栏右侧的“更新”按钮，以及取得预加载接口的常驻组件。
+ * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“更新记录”“打开日志目录”“检查更新”“关于 Ember”、“关于 Ember”对话框、标题栏右侧的“更新”按钮，以及取得预加载接口的常驻组件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -21,7 +21,7 @@ import { UpdateTitleBarItem } from './UpdateTitleBarItem';
 const DIALOG_ID = 'system.about';
 
 /** 命令的标识。 */
-export const SYSTEM_COMMANDS = { openHelp: 'system.openHelp', openLogDirectory: 'system.openLogDirectory', checkUpdate: 'system.checkUpdate', openAbout: 'system.openAbout' } as const;
+export const SYSTEM_COMMANDS = { openHelp: 'system.openHelp', openChangelog: 'system.openChangelog', openLogDirectory: 'system.openLogDirectory', checkUpdate: 'system.checkUpdate', openAbout: 'system.openAbout' } as const;
 
 /** 对话框内容区的初始尺寸与最小尺寸（像素）。 */
 const DIALOG_SIZE = { width: 520, height: 560, minWidth: 400, minHeight: 320 } as const;
@@ -30,6 +30,7 @@ const DIALOG_SIZE = { width: 520, height: 560, minWidth: 400, minHeight: 320 } a
 const TEXT = {
   about: '关于 Ember',
   openHelp: '帮助文档',
+  openChangelog: '更新记录',
   helpFailed: '无法打开帮助文档',
   openLogDirectory: '打开日志目录',
   failed: '无法打开日志目录'
@@ -63,6 +64,13 @@ export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTi
         }
       },
       {
+        id: SYSTEM_COMMANDS.openChangelog,
+        title: TEXT.openChangelog,
+        run: (shell) => {
+          holder.bridge?.main.system.openHelp({ page: 'changelog' }).catch((error: unknown) => shell.notify(errorText(error, TEXT.helpFailed), 'error'));
+        }
+      },
+      {
         id: SYSTEM_COMMANDS.openLogDirectory,
         title: TEXT.openLogDirectory,
         run: (shell) => {
@@ -74,6 +82,7 @@ export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTi
     ],
     menuItems: [
       { menu: 'help', command: SYSTEM_COMMANDS.openHelp },
+      { menu: 'help', command: SYSTEM_COMMANDS.openChangelog },
       { menu: 'help', command: SYSTEM_COMMANDS.openLogDirectory },
       { menu: 'help', command: SYSTEM_COMMANDS.checkUpdate, separatorBefore: true },
       { menu: 'help', command: SYSTEM_COMMANDS.openAbout, separatorBefore: true }

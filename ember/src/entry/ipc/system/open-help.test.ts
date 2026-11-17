@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：open-help.test.ts
- * 说明：system.openHelp 的测试：成功时打开帮助文档窗口并返回空结果、打不开时返回 system.helpUnavailable 与原因、带多余参数的请求在入口被拒绝。
+ * 说明：system.openHelp 的测试：成功时打开帮助文档窗口并返回空结果、可以指定固定清单里的页面、清单之外的页面名在入口被拒绝、打不开时返回 system.helpUnavailable 与原因、带多余参数的请求在入口被拒绝。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -22,10 +22,23 @@ function setup(open: HelpWindow['open']) {
 }
 
 describe('system.openHelp', () => {
-  it('打开帮助文档窗口并返回空结果', async () => {
+  it('打开帮助文档窗口并返回空结果，没有指定页面', async () => {
     const open = vi.fn().mockResolvedValue(undefined);
     await expect(setup(open)()).resolves.toEqual({ ok: true, result: {} });
     expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(undefined);
+  });
+
+  it('指定页面时把页面名交给帮助文档窗口', async () => {
+    const open = vi.fn().mockResolvedValue(undefined);
+    await expect(setup(open)({ page: 'changelog' })).resolves.toEqual({ ok: true, result: {} });
+    expect(open).toHaveBeenCalledWith('changelog');
+  });
+
+  it('页面名不在固定的清单里时在入口被拒绝，不打开窗口', async () => {
+    const open = vi.fn();
+    for (const page of ['../manual/faq', 'C:/Windows', 5]) expect((await setup(open)({ page })).ok).toBe(false);
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('打不开时返回错误码与原因', async () => {

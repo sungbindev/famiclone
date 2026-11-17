@@ -55,7 +55,8 @@ const MANUAL_SIDEBAR = [
       { text: '画面与声音', link: '/manual/display-sound' },
       { text: 'mapper 插件', link: '/manual/plugins' },
       { text: '首选项', link: '/manual/preferences' },
-      { text: '常见问题', link: '/manual/faq' }
+      { text: '常见问题', link: '/manual/faq' },
+      { text: '更新记录', link: '/manual/changelog' }
     ]
   }
 ];

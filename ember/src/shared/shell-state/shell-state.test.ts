@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-state.test.ts
- * 说明：界面状态校验的测试：没有保存或损坏时用默认值、单项不合格只替换那一项、窗口位置要么整体合格要么不用、底部面板高度与已选机型、布局修改的严格校验。
+ * 说明：界面状态校验的测试：没有保存或损坏时用默认值、单项不合格只替换那一项、窗口位置要么整体合格要么不用、底部面板高度与已选机型、上次显示更新记录时的版本、布局修改的严格校验。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -14,14 +14,22 @@ import { DEFAULT_SHELL_STATE, parseLayoutPatch, parseShellState } from './shell-
 describe('parseShellState', () => {
   it('没有保存过时：窗口用默认位置，底部面板用默认高度', () => {
     for (const raw of [undefined, null, 5, 'x', [], {}]) {
-      expect(parseShellState(raw)).toEqual({ window: null, layout: { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] } });
+      expect(parseShellState(raw)).toEqual({ window: null, layout: { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] }, releaseNotesVersion: null });
+    }
+  });
+
+  it('上次显示更新记录时的版本：写法合格才读出，其他用默认（没有记录）', () => {
+    expect(parseShellState({ releaseNotesVersion: '0.2.0' }).releaseNotesVersion).toBe('0.2.0');
+    for (const bad of ['', 'v0.2.0', '0.2.0 ', '0'.repeat(65), 2, null, ['0.2.0']]) {
+      expect(parseShellState({ releaseNotesVersion: bad }).releaseNotesVersion).toBeNull();
     }
   });
 
   it('完整合格的内容原样读出', () => {
     const state = {
       window: { x: -20, y: 30 },
-      layout: { bottomPanelHeight: 240, selectedMachine: 'sb2000', autoCollapsePanels: ['runtime.panel', 'media.devices'] }
+      layout: { bottomPanelHeight: 240, selectedMachine: 'sb2000', autoCollapsePanels: ['runtime.panel', 'media.devices'] },
+      releaseNotesVersion: '0.1.0'
     };
     expect(parseShellState(state)).toEqual(state);
   });

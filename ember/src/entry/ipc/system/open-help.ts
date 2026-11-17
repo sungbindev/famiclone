@@ -5,11 +5,11 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
- * 备注：文档的位置由主进程决定，请求没有参数；实际的原因写进说明，界面用通知显示。
+ * 备注：文档的位置由主进程决定，请求只能从固定的页面名里选一页（参数由入口按 Schema 校验）；实际的原因写进说明，界面用通知显示。
  * ------------------------------------------------------------------------
  */
 
-import type { MainResult } from '../../../contracts/core-gateway/generated/core-api';
+import type { MainParams, MainResult } from '../../../contracts/core-gateway/generated/core-api';
 import { CoreRequestError } from '../../../contracts/core-gateway/core-messages';
 import type { HelpWindow } from '../../../contracts/shell/help-window';
 import type { MainRequestHandler } from '../core/main-request-ipc';
@@ -33,9 +33,9 @@ export interface OpenHelpOptions {
  * @returns 处理函数。
  */
 export function createOpenHelpHandler(options: OpenHelpOptions): MainRequestHandler {
-  return async (): Promise<MainResult<'system.openHelp'>> => {
+  return async (params): Promise<MainResult<'system.openHelp'>> => {
     try {
-      await options.helpWindow.open();
+      await options.helpWindow.open((params as MainParams<'system.openHelp'>).page);
     } catch (error) {
       throw new CoreRequestError({ code: HELP_UNAVAILABLE, message: TEXT.unavailable(error instanceof Error ? error.message : String(error)) });
     }

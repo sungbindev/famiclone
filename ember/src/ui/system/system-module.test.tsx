@@ -38,15 +38,17 @@ function setup(openLogDirectory: () => Promise<unknown>, openHelp: () => Promise
 }
 
 describe('系统模块的登记', () => {
-  it('“帮助”菜单有“帮助文档”“打开日志目录”“检查更新”与“关于 Ember”，后两者前面有分隔线；对话框已登记', () => {
+  it('“帮助”菜单有“帮助文档”“更新记录”“打开日志目录”“检查更新”与“关于 Ember”，后两者前面有分隔线；对话框已登记', () => {
     const { module, command } = setup(() => Promise.resolve({}));
     expect(module.menuItems).toEqual([
       { menu: 'help', command: SYSTEM_COMMANDS.openHelp },
+      { menu: 'help', command: SYSTEM_COMMANDS.openChangelog },
       { menu: 'help', command: SYSTEM_COMMANDS.openLogDirectory },
       { menu: 'help', command: SYSTEM_COMMANDS.checkUpdate, separatorBefore: true },
       { menu: 'help', command: SYSTEM_COMMANDS.openAbout, separatorBefore: true }
     ]);
     expect(command(SYSTEM_COMMANDS.openHelp).title).toBe('帮助文档');
+    expect(command(SYSTEM_COMMANDS.openChangelog).title).toBe('更新记录');
     expect(command(SYSTEM_COMMANDS.openLogDirectory).title).toBe('打开日志目录');
     expect(command(SYSTEM_COMMANDS.openAbout).title).toBe('关于 Ember');
     expect(module.dialogs?.map((dialog) => dialog.id)).toEqual(['system.about']);
@@ -68,6 +70,17 @@ describe('系统模块的登记', () => {
     command(SYSTEM_COMMANDS.openHelp).run(shell);
     await waitFor(() => expect(bridge.main.system.openHelp).toHaveBeenCalledWith({}));
     expect(shell.notify).not.toHaveBeenCalled();
+  });
+
+  it('打开更新记录：经预加载接口请求打开更新记录页，失败时用通知给出说明', async () => {
+    const { bridge, shell, command } = setup(() => Promise.resolve({}));
+    command(SYSTEM_COMMANDS.openChangelog).run(shell);
+    await waitFor(() => expect(bridge.main.system.openHelp).toHaveBeenCalledWith({ page: 'changelog' }));
+    expect(shell.notify).not.toHaveBeenCalled();
+
+    const failing = setup(() => Promise.resolve({}), () => Promise.reject({ code: 'system.helpUnavailable', message: '无法打开帮助文档：找不到帮助文档' }));
+    failing.command(SYSTEM_COMMANDS.openChangelog).run(failing.shell);
+    await waitFor(() => expect(failing.shell.notify).toHaveBeenCalledWith('无法打开帮助文档：找不到帮助文档', 'error'));
   });
 
   it('打开帮助文档失败时用通知给出说明，没有说明时用默认文字', async () => {

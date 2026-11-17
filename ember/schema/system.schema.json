@@ -39,8 +39,14 @@
       "errors": ["system.logDirectoryUnavailable"]
     },
     "openHelp": {
-      "description": "在应用内弹出帮助文档窗口（已经打开时提到最前）；文档是随应用带的静态页面，位置由主进程决定，界面不能指定。",
-      "params": { "type": "object", "properties": {}, "required": [] },
+      "description": "在应用内弹出帮助文档窗口（已经打开时提到最前）；文档是随应用带的静态页面，位置由主进程决定，界面不能指定，只能从固定的几页里选。",
+      "params": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "string", "enum": ["changelog"], "description": "要打开的页面：changelog 更新记录；不传时打开首页，已经打开的窗口不传时不改变当前页" }
+        },
+        "required": []
+      },
       "result": { "type": "object", "properties": {}, "required": [] },
       "errors": ["system.helpUnavailable"]
     },

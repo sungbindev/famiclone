@@ -23,6 +23,7 @@
     "package": "npm run schema && npm run help:build && npm run core:build && electron-forge package",
     "package:win": "npm run schema && npm run help:build && node tools/build/build-core.mjs --arch x64 && electron-forge package --platform win32 --arch x64",
     "make:win": "npm run schema && npm run help:build && node tools/build/build-core.mjs --arch x64 && electron-forge make --platform win32 --arch x64",
+    "update:publish": "node tools/build/publish-update.mjs",
     "package:mac": "bash tools/build/package-mac.sh"
   },
   "devDependencies": {

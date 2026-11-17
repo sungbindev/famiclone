@@ -14,6 +14,7 @@
 import type { CoreErrorInfo, CoreStatus } from '../core-gateway/core-messages';
 import type { CoreApi, MainApi } from '../core-gateway/generated/core-api';
 import type { StreamPortsBridge } from '../stream-ports/stream-ports';
+import type { UpdateStatus } from '../system/generated/system';
 import type { DroppedFile } from './dropped-files';
 import type { NativeKeyEvent } from './keyboard-capture';
 import type { ShellLayout, ShellState } from './shell-state-service';
@@ -31,6 +32,7 @@ export const SHELL_CHANNELS = {
   windowAction: 'shell:window-action',
   getWindowState: 'shell:get-window-state',
   windowStateChanged: 'shell:window-state-changed',
+  updateStatusChanged: 'system:update-status-changed',
   setKeyboardCapture: 'shell:set-keyboard-capture',
   nativeKey: 'shell:native-key',
   keyboardReleased: 'shell:keyboard-released',
@@ -81,4 +83,6 @@ export interface EmberBridge {
   getCoreStatus(): Promise<CoreStatus>;
   /** 订阅核心运行状态的变化（核心进程重启时依次为启动中、就绪）；返回取消订阅的函数。 */
   onCoreStatusChange(listener: (status: CoreStatus) => void): () => void;
+  /** 订阅应用升级状态的变化（当前状态用 main.system.updateStatus 读取）；返回取消订阅的函数。 */
+  onUpdateStatusChange(listener: (status: UpdateStatus) => void): () => void;
 }

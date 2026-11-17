@@ -88,7 +88,8 @@ const bridge: EmberBridge = {
   shell,
   onCoreEvent: (listener) => subscribe(SHELL_CHANNELS.coreEvent, listener),
   getCoreStatus: () => ipcRenderer.invoke(SHELL_CHANNELS.coreStatus),
-  onCoreStatusChange: (listener) => subscribe(SHELL_CHANNELS.coreStatusChanged, listener)
+  onCoreStatusChange: (listener) => subscribe(SHELL_CHANNELS.coreStatusChanged, listener),
+  onUpdateStatusChange: (listener) => subscribe(SHELL_CHANNELS.updateStatusChanged, listener)
 };
 
 contextBridge.exposeInMainWorld('ember', bridge);

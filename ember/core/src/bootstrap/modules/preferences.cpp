@@ -51,6 +51,14 @@ void registerInterfaceSettings(api::PreferenceService& service) {
                       .description = "关闭时裁掉上下各 8 行。",
                       .kind = api::SettingKind::Switch,
                       .defaultValue = true});
+
+  service.addGroup({"update", "更新"});
+  service.addSetting({.id = "update.autoCheck",
+                      .group = "update",
+                      .label = "启动时检查更新",
+                      .description = "有新版本时自动下载，下载好后在“帮助”菜单里选择“重启并安装更新”；也可以随时在“帮助”菜单里手动检查。",
+                      .kind = api::SettingKind::Switch,
+                      .defaultValue = true});
 }
 
 void registerPreferences(ModuleRegistry& registry) {

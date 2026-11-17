@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：main.ts
- * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、外壳能力（界面状态的保存、窗口动作、键盘独占）、创建主窗口，退出时保存界面状态并停止核心。
+ * 说明：主进程组装根：Windows 安装事件、单实例、错误日志、启动核心进程、登记核心请求与主进程请求的 IPC、画面与输入端口、外壳能力（界面状态的保存、窗口动作、键盘独占）、应用升级（Squirrel 引擎、启动时自动检查、状态推送）、创建主窗口，退出时保存界面状态并停止核心。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -11,6 +11,7 @@
  */
 
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import handledSquirrelEvent from 'electron-squirrel-startup';
 import { CORE_SCHEMAS } from '../../contracts/core-gateway/generated/core-api';
@@ -20,8 +21,10 @@ import { forwardCoreToWindow, registerCoreIpc, type CoreRequestHandling } from '
 import { loadAndRemember } from '../../entry/ipc/cartridges/load-cartridge';
 import { registerMainRequestIpc, type MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
 import { forwardKeyboardToWindow, forwardWindowState, registerShellIpc } from '../../entry/ipc/shell/shell-ipc';
+import { forwardUpdateStatus } from '../../entry/ipc/system/forward-update-status';
 import { registerStreamsIpc } from '../../entry/ipc/streams/streams-ipc';
 import { startThemeSync } from '../../entry/preferences/theme-sync';
+import { startAutoUpdateCheck, type AutoUpdateCheck } from '../../entry/updates/auto-update-check';
 import { createSenderCheck } from '../../entry/ipc/sender-check';
 import { ProcessCoreGateway } from '../../infra/core-client/process-core-gateway';
 import { MemoryDroppedFilesService } from '../../infra/dropped-files/memory-dropped-files-service';
@@ -29,6 +32,7 @@ import { FileLastDirectoriesService } from '../../infra/last-directories/file-la
 import { FileRecentCartridgesService } from '../../infra/recent-cartridges/file-recent-cartridges-service';
 import { FileShellStateService } from '../../infra/shell-state/file-shell-state-service';
 import { StreamPortHub } from '../../infra/stream-ports/stream-port-hub';
+import { EngineAppUpdater } from '../../infra/updates/engine-app-updater';
 import { startElectronCoreProcess } from '../../platform/core-process/core-process';
 import { createOpenFileDialog } from '../../platform/dialog/open-file-dialog';
 import { registerHelpProtocol, registerHelpScheme } from '../../platform/help/help-protocol';
@@ -39,6 +43,8 @@ import { FileErrorLogger } from '../../platform/logging/file-error-logger';
 import { createLogDirectory } from '../../platform/logging/log-directory';
 import { JsonFileStore } from '../../platform/shell-state/json-file-store';
 import { createElectronChannelFactory, createWebContentsStreamTarget } from '../../platform/stream-ports/electron-stream-ports';
+import { findSquirrelLauncher } from '../../platform/updates/squirrel-install';
+import { createSquirrelUpdateEngine } from '../../platform/updates/squirrel-update-engine';
 import { applyThemeSource, createAppWindow, followSystemTheme, isAppUrl, removeDefaultMenu, restrictPermissions } from '../../platform/window/app-window';
 import { createWindowController } from '../../platform/window/window-controller';
 import { watchWindow } from '../../platform/window/window-events';
@@ -64,6 +70,12 @@ const FFMPEG_FILE = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
 const MAIN_ERROR_CODE = 'shell.mainError';
 /** 显示窗口前最多等保存的主题多久（毫秒），核心起不来时不能一直不显示。 */
 const THEME_WAIT_MS = 2000;
+/** 升级地址：存放 Squirrel 的 RELEASES 与 .nupkg 的静态目录（阿里云 OSS 的 famiclone Bucket），只写在这里，界面不能指定。 */
+const UPDATE_FEED_URL = 'https://famiclone.oss-cn-beijing.aliyuncs.com/updates/ember/windows';
+/** 启动后等多久再自动检查更新（毫秒），避开启动时的资源争抢。 */
+const AUTO_UPDATE_CHECK_DELAY_MS = 10_000;
+/** Squirrel 安装后第一次启动带的参数：这几秒 Squirrel 锁着应用文件，升级请求会失败，所以不自动检查。 */
+const SQUIRREL_FIRST_RUN_ARGUMENT = '--squirrel-firstrun';
 
 /** 把异常写入日志。 */
 function logError(logger: FileErrorLogger, error: unknown, context: Record<string, unknown>): void {
@@ -129,6 +141,17 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
   const lastDirectories = new FileLastDirectoriesService(
     new JsonFileStore({ path: join(userDataPath, 'config', 'last-directories.json'), onError: (error) => logError(logger, error, { source: 'lastDirectories' }) })
   );
+  // 只有 Squirrel 安装的正式版支持升级，开发版、免安装目录和其他系统的状态是 unsupported。
+  const updater = new EngineAppUpdater({
+    engine: createSquirrelUpdateEngine({
+      feedUrl: UPDATE_FEED_URL,
+      launcher: findSquirrelLauncher({ platform: process.platform, isPackaged: app.isPackaged, execPath: process.execPath, exists: existsSync })
+    })
+  });
+  updater.onStatusChange((status) => {
+    if (status.state === 'error') logError(logger, new Error(status.message ?? '升级失败'), { source: 'update' });
+  });
+  let autoUpdateCheck: AutoUpdateCheck | undefined;
 
   let mainWindow: BrowserWindow | undefined;
   let quitting = false;
@@ -161,6 +184,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     const stopForwarding = forwardCoreToWindow(gateway, window.webContents);
     const stopKeyboardForwarding = forwardKeyboardToWindow(keyboard, window.webContents);
     const stopFollowingTheme = followSystemTheme(window);
+    const stopUpdateForwarding = forwardUpdateStatus(updater, window.webContents);
     watchWindow(window, {
       onPlacement: (placement) => shellState.updateWindow(placement),
       onState: forwardWindowState(window.webContents, () => windowController.state())
@@ -172,6 +196,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
       stopForwarding();
       stopKeyboardForwarding();
       stopFollowingTheme();
+      stopUpdateForwarding();
       // 帮助文档窗口随主窗口一起关闭，否则它一个窗口留着时应用退出不了。
       helpWindow.close();
       if (mainWindow === window) mainWindow = undefined;
@@ -202,6 +227,7 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     lastDirectories.flush();
     keyboard.dispose();
     themeSync.stop();
+    autoUpdateCheck?.stop();
     streamHub.stop();
     void gateway
       .stop()
@@ -216,13 +242,16 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     removeDefaultMenu();
     streamHub.start();
     gateway.start();
+    if (!process.argv.includes(SQUIRREL_FIRST_RUN_ARGUMENT)) {
+      autoUpdateCheck = startAutoUpdateCheck({ gateway, updater, delayMs: AUTO_UPDATE_CHECK_DELAY_MS, onError: (error) => logError(logger, error, { source: 'autoUpdateCheck' }) });
+    }
     registerCoreIpc({ ipc: ipcMain, gateway, modules, schemas: CORE_SCHEMAS, isTrustedSender });
     registerShellIpc({ ipc: ipcMain, isTrustedSender, state: shellState, window: windowController, keyboard, droppedFiles });
 
     const fileDialog = createOpenFileDialog(() => mainWindow, lastDirectories);
     const logDirectory = createLogDirectory(join(userDataPath, 'logs'), (target) => shell.openPath(target));
     const handlers: Record<string, MainRequestHandler> = {};
-    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, helpWindow, core: coreHandling, recentCartridges }));
+    for (const module of MAIN_MODULES) Object.assign(handlers, module.createMainHandlers?.({ fileDialog, droppedFiles, logDirectory, helpWindow, core: coreHandling, recentCartridges, updater }));
     registerMainRequestIpc({ ipc: ipcMain, handlers, modules, schemas: CORE_SCHEMAS, isTrustedSender, onError: (error, name) => logError(logger, error, { source: 'mainRequest', name }) });
     registerStreamsIpc({
       ipc: ipcMain,

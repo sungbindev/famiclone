@@ -48,7 +48,7 @@ afterEach(() => {
 
 describe('window.ember', () => {
   it('只暴露具名方法，不暴露 ipcRenderer 或通用的调用入口', () => {
-    expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'onCoreStatusChange', 'shell', 'streams']);
+    expect(Object.keys(bridge).toSorted()).toEqual(['core', 'getCoreStatus', 'main', 'onCoreEvent', 'onCoreStatusChange', 'onUpdateStatusChange', 'shell', 'streams']);
     expect(JSON.stringify(Object.keys(bridge.streams))).toBe('["requestPorts"]');
     expect(Object.keys(bridge.shell).toSorted()).toEqual(['getState', 'getWindowState', 'onKeyboardReleased', 'onNativeKey', 'onWindowStateChange', 'registerDroppedFiles', 'setKeyboardCapture', 'setLayout', 'windowAction']);
     expect('ipcRenderer' in bridge).toBe(false);
@@ -71,7 +71,7 @@ describe('window.ember', () => {
     expect(Object.keys(bridge.main.mappers)).toEqual(['openPackage']);
     expect(Object.keys(bridge.main.media)).toEqual(['openFloppy', 'openTape', 'openTapeRecording']);
     expect(Object.keys(bridge.main.preferences)).toEqual(['pickDirectory']);
-    expect(Object.keys(bridge.main.system)).toEqual(['openLogDirectory', 'openHelp']);
+    expect(Object.keys(bridge.main.system)).toEqual(['openLogDirectory', 'openHelp', 'updateStatus', 'checkUpdate', 'installUpdate']);
     electron.invoke.mockResolvedValue({ ok: true, result: { canceled: true } });
     await expect(bridge.main.cartridges.open({})).resolves.toEqual({ canceled: true });
     expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.open', {});
@@ -156,6 +156,21 @@ describe('window.ember', () => {
     expect(electron.invoke).toHaveBeenCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.recent', {});
     await bridge.main.cartridges.openRecent({ id: 3 });
     expect(electron.invoke).toHaveBeenLastCalledWith(SHELL_CHANNELS.mainRequest, 'cartridges.openRecent', { id: 3 });
+  });
+
+  it('升级状态的变化只把数据交给回调，不交出 IPC 事件对象', () => {
+    const received: unknown[] = [];
+    bridge.onUpdateStatusChange((status) => received.push(status));
+    const listener = electron.listeners.get(SHELL_CHANNELS.updateStatusChanged);
+    expect(listener).toBeDefined();
+    listener?.({ sender: '事件对象' }, { state: 'ready', version: '0.2.0' });
+    expect(received).toEqual([{ state: 'ready', version: '0.2.0' }]);
+  });
+
+  it('升级请求走主进程请求通道', async () => {
+    electron.invoke.mockResolvedValue({ ok: true, result: { status: { state: 'checking' } } });
+    await expect(bridge.main.system.checkUpdate({})).resolves.toEqual({ status: { state: 'checking' } });
+    expect(electron.invoke).toHaveBeenLastCalledWith(SHELL_CHANNELS.mainRequest, 'system.checkUpdate', {});
   });
 });
 

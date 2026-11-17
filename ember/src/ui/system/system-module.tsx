@@ -1,24 +1,26 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：system-module.tsx
- * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“打开日志目录”“关于 Ember”、“关于 Ember”对话框，以及取得预加载接口的常驻组件。
+ * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“打开日志目录”“检查更新”“关于 Ember”、“关于 Ember”对话框，以及取得预加载接口的常驻组件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
- * 备注：命令只拿到外壳接口，拿不到预加载脚本的接口，所以由常驻组件把接口交给模块；对话框是独立的系统窗口，同一时间只开一个；规则见 docs/05-界面.md 第 3、5、8 节。
+ * 日期：2026-11-17
+ * 备注：命令只拿到外壳接口，拿不到预加载脚本的接口，所以由常驻组件把接口交给模块；对话框是独立的系统窗口，同一时间只开一个；升级状态与通知由 UpdateController 管；规则见 docs/05-界面.md 第 3、5、8 节。
  * ------------------------------------------------------------------------
  */
 
 import { useEffect } from 'react';
 import type { EmberBridge } from '../../contracts/shell/shell-bridge';
+import { useShell } from '../shell/shell-context';
 import type { ShellModule, ShellPageProps } from '../shell/shell-registry';
 import { AboutDialog, type ThirdPartyNotice } from './AboutDialog';
+import { UpdateController } from './update-controller';
 
 /** “关于 Ember”对话框的标识。 */
 const DIALOG_ID = 'system.about';
 
 /** 命令的标识。 */
-export const SYSTEM_COMMANDS = { openHelp: 'system.openHelp', openLogDirectory: 'system.openLogDirectory', openAbout: 'system.openAbout' } as const;
+export const SYSTEM_COMMANDS = { openHelp: 'system.openHelp', openLogDirectory: 'system.openLogDirectory', checkUpdate: 'system.checkUpdate', openAbout: 'system.openAbout' } as const;
 
 /** 对话框内容区的初始尺寸与最小尺寸（像素）。 */
 const DIALOG_SIZE = { width: 520, height: 560, minWidth: 400, minHeight: 320 } as const;
@@ -46,6 +48,7 @@ function errorText(error: unknown, fallback: string): string {
 export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTime: string): ShellModule {
   /** 常驻组件交给模块的预加载接口；没有挂载时为空。 */
   const holder: { bridge?: EmberBridge } = {};
+  const update = new UpdateController();
   return {
     name: 'system',
     dialogs: [{ id: DIALOG_ID, title: TEXT.about, Component: (props: ShellPageProps) => <AboutDialog {...props} notices={notices} buildTime={buildTime} />, ...DIALOG_SIZE }],
@@ -64,20 +67,25 @@ export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTi
           holder.bridge?.main.system.openLogDirectory({}).catch((error: unknown) => shell.notify(errorText(error, TEXT.failed), 'error'));
         }
       },
+      { id: SYSTEM_COMMANDS.checkUpdate, title: () => update.title(), enabled: () => update.canRun(), run: (shell) => update.run(shell) },
       { id: SYSTEM_COMMANDS.openAbout, title: TEXT.about, run: (shell) => shell.openDialog(DIALOG_ID) }
     ],
     menuItems: [
       { menu: 'help', command: SYSTEM_COMMANDS.openHelp },
       { menu: 'help', command: SYSTEM_COMMANDS.openLogDirectory },
+      { menu: 'help', command: SYSTEM_COMMANDS.checkUpdate, separatorBefore: true },
       { menu: 'help', command: SYSTEM_COMMANDS.openAbout, separatorBefore: true }
     ],
     Host: function SystemHost({ bridge }: ShellPageProps) {
+      const shell = useShell();
       useEffect(() => {
         holder.bridge = bridge;
+        const detach = update.attach(bridge, { notify: shell.notify, refresh: shell.refreshCommands });
         return () => {
+          detach();
           if (holder.bridge === bridge) delete holder.bridge;
         };
-      }, [bridge]);
+      }, [bridge, shell]);
       return null;
     }
   };

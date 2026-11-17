@@ -14,6 +14,7 @@ import type { DroppedFilesService } from '../../contracts/shell/dropped-files';
 import type { FileDialog } from '../../contracts/shell/file-dialog';
 import type { HelpWindow } from '../../contracts/shell/help-window';
 import type { LogDirectory } from '../../contracts/shell/log-directory';
+import type { AppUpdater } from '../../contracts/system/app-updater';
 import type { CoreRequestHandling } from '../../entry/ipc/core/core-ipc';
 import type { MainRequestHandler } from '../../entry/ipc/core/main-request-ipc';
 import type { ModuleSchema } from '../../shared/schema/schema-types';
@@ -32,6 +33,8 @@ export interface MainHandlerContext {
   readonly core: CoreRequestHandling;
   /** 最近打开的卡带。 */
   readonly recentCartridges: RecentCartridgesService;
+  /** 应用升级。 */
+  readonly updater: AppUpdater;
 }
 
 /** 一个模块在主进程中的登记项。 */

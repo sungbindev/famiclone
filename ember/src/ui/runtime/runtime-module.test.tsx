@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：runtime-module.test.tsx
  * 说明：运行模块在外壳里的登记项的测试：命令的可用状态与名称随机器状态变化（菜单置灰、勾选）、默认快捷键与它们的实际效果（F9、F8、F7、Ctrl+F7、Ctrl+O）、焦点在输入控件时不带 Ctrl 的快捷键不触发、
- *       “文件”菜单的“选择机型”（只打对勾，不开机）与“最近打开”子菜单、关闭卡带、系统栏左侧的运行按钮（图标实时显示运行状态）与卡带、mapper 状态项、失败时的通知、面板没打开时状态仍是最新的、登记表无冲突。
+ *       “文件”菜单的“选择机型”（只有整机机型，点一项就记住并直接开机）与“最近打开”子菜单、关闭卡带、系统栏左侧的运行按钮（图标实时显示运行状态）与卡带、mapper 状态项、失败时的通知、面板没打开时状态仍是最新的、登记表无冲突。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -24,7 +24,7 @@ import { RuntimeController } from './runtime-controller';
 import { FakeRuntimeBackend, machineStatus, settle } from './runtime-fakes';
 import { createRuntimeModule, RUNTIME_COMMANDS } from './runtime-module';
 
-const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] };
+const DEFAULT_LAYOUT: ShellLayout = { selectedMachine: null, autoCollapsePanels: [] };
 const NES = 'D:\\roms\\nestest.nes';
 
 /** 渲染外壳与运行模块；显示区换成一个带输入框的简单区域；面板启动时是关闭的。 */
@@ -196,19 +196,19 @@ describe('“文件”菜单', () => {
     expect(isDisabled(item('退出'))).toBe(false);
   });
 
-  it('选择机型的子菜单：经典 FC 打对勾；没有 BIOS 的整机机型置灰并注明“未添加 BIOS”，核心标为暂未支持的机型置灰并注明“暂未支持”', async () => {
+  it('选择机型的子菜单只有四个整机机型（没有经典 FC），没选过时都没有对勾；没有 BIOS 的置灰并注明“未添加 BIOS”，核心标为暂未支持的置灰并注明“暂未支持”', async () => {
     await setup({ unsupported: 'sb97' });
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     const submenu = screen.getByRole('menu', { name: '选择机型' });
     const entries = Array.from(submenu.querySelectorAll<HTMLElement>('[role^="menuitem"]'));
-    expect(entries.map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['经典 FC', '小霸王 97', '小霸王 2000', '步步高软驱一号', '步步高 98']);
-    expect(entries.map(isDisabled)).toEqual([false, true, true, true, true]);
-    expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false', 'false', 'false']);
-    expect(entries[1]?.textContent).toContain('暂未支持');
+    expect(entries.map((element) => element.querySelector('.ui-menu__label')?.textContent)).toEqual(['小霸王 97', '小霸王 2000', '步步高软驱一号', '步步高 98']);
+    expect(entries.map(isDisabled)).toEqual([true, true, true, true]);
+    expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'false']);
+    expect(entries[0]?.textContent).toContain('暂未支持');
+    expect(entries[1]?.textContent).toContain('未添加 BIOS，请在设置里添加');
     expect(entries[2]?.textContent).toContain('未添加 BIOS，请在设置里添加');
     expect(entries[3]?.textContent).toContain('未添加 BIOS，请在设置里添加');
-    expect(entries[4]?.textContent).toContain('未添加 BIOS，请在设置里添加');
   });
 
   it('已添加 BIOS 的小霸王 2000 可选', async () => {
@@ -216,23 +216,33 @@ describe('“文件”菜单', () => {
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     const entries = Array.from(screen.getByRole('menu', { name: '选择机型' }).querySelectorAll<HTMLElement>('[role^="menuitem"]'));
-    expect(entries.map(isDisabled)).toEqual([false, true, false, true, true]);
+    expect(entries.map(isDisabled)).toEqual([true, false, true, true]);
   });
 
-  it('选择机型只改已选机型（打对勾）并保存：不开机、不打开文件选择，不影响正在运行的机器', async () => {
-    const { fake, shell } = await setup({ status: machineStatus('on', 'running', NES), sb2000Bios: true });
+  it('点一个整机机型：记住它（打对勾并保存）、直接用它的 BIOS 开机，不打开文件选择', async () => {
+    const { fake, shell } = await setup({ sb2000Bios: true });
     fake.calls.length = 0;
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
     await act(async () => settle());
-    expect(fake.calls.filter((call) => call.startsWith('cartridges.open') || call.startsWith('machines.boot') || call.startsWith('runtime.'))).toEqual([]);
+    expect(fake.calls).toContain('machines.boot {"machine":"sb2000"}');
+    expect(fake.calls.filter((call) => call.startsWith('cartridges.open'))).toEqual([]);
     expect(shell.setLayout).toHaveBeenCalledWith({ selectedMachine: 'sb2000' });
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     const entries = Array.from(screen.getByRole('menu', { name: '选择机型' }).querySelectorAll<HTMLElement>('[role^="menuitem"]'));
-    expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true', 'false', 'false']);
+    expect(entries.map((element) => element.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false', 'false']);
     await userEvent.keyboard('{Escape}');
+  });
+
+  it('正在运行的就是这个机型时，再点它也重新开机', async () => {
+    const { fake } = await setup({ status: { ...machineStatus('on', 'running'), machine: 'sb2000' }, sb2000Bios: true });
+    await openMenu('文件(F)');
+    await userEvent.hover(item('选择机型'));
+    await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
+    await act(async () => settle());
+    expect(fake.calls).toContain('machines.boot {"machine":"sb2000"}');
   });
 
   it('没有 BIOS 的整机机型点了也不会发请求', async () => {
@@ -245,12 +255,16 @@ describe('“文件”菜单', () => {
     expect(shell.setLayout).not.toHaveBeenCalled();
   });
 
-  it('选了小霸王 2000 后，机器菜单的“开机”用已添加的 BIOS 开机，不需要卡带', async () => {
+  it('选了小霸王 2000 后断电，机器菜单的“开机”直接用它的 BIOS 开机，不需要卡带', async () => {
     const { fake } = await setup({ sb2000Bios: true });
     await openMenu('文件(F)');
     await userEvent.hover(item('选择机型'));
     await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
     await act(async () => settle());
+    fake.status = machineStatus('off', 'paused');
+    fake.emit('runtime.stateChanged', { power: 'off', mode: 'paused', reason: 'powerOff' });
+    await act(async () => settle());
+    fake.calls.length = 0;
     await openMenu('机器(M)');
     expect(isDisabled(item('开机'))).toBe(false);
     await userEvent.click(item('开机'));
@@ -386,10 +400,8 @@ describe('系统栏左侧', () => {
   });
 
   it('没有开机时系统栏的主机型号跟随已选机型：选了小霸王 2000 就显示它，开机后显示运行的主机', async () => {
-    const { container, fake } = await setup({ sb2000Bios: true });
-    await openMenu('文件(F)');
-    await userEvent.hover(item('选择机型'));
-    await userEvent.click(within(screen.getByRole('menu', { name: '选择机型' })).getByRole('menuitemradio', { name: /小霸王 2000/ }));
+    const { container, fake, controller } = await setup({ sb2000Bios: true });
+    act(() => controller.selectMachine('sb2000'));
     await act(async () => settle());
     expect(startItems(container).map((element) => element.getAttribute('aria-label') ?? element.textContent)).toEqual(['运行', '小霸王 2000']);
 

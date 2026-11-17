@@ -32,18 +32,18 @@ describe('FileShellStateService', () => {
 
   it('读出保存的状态，不合格的项用默认值', () => {
     const service = new FileShellStateService(
-      createStorage({ window: { x: 1, y: 2, width: 1000, height: 700, maximized: false }, layout: { rightBarOpen: true, bottomPanelHeight: -5 } })
+      createStorage({ window: { x: 1, y: 2, width: 1000, height: 700, maximized: false }, layout: { rightBarOpen: true, bottomPanelHeight: 260, selectedMachine: 5 } })
     );
     expect(service.get().window).toEqual({ x: 1, y: 2 });
-    expect(service.get().layout).toEqual({ bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] });
+    expect(service.get().layout).toEqual({ selectedMachine: null, autoCollapsePanels: [] });
   });
 
   it('修改布局只改传入的字段，并把整个状态交给存储', () => {
     const storage = createStorage(undefined);
     const service = new FileShellStateService(storage);
-    service.updateLayout({ bottomPanelHeight: 260 });
-    service.updateLayout({ bottomPanelHeight: 300 });
-    expect(service.get().layout).toEqual({ bottomPanelHeight: 300, selectedMachine: null, autoCollapsePanels: [] });
+    service.updateLayout({ selectedMachine: 'sb97' });
+    service.updateLayout({ autoCollapsePanels: ['runtime.panel'] });
+    expect(service.get().layout).toEqual({ selectedMachine: 'sb97', autoCollapsePanels: ['runtime.panel'] });
     expect(storage.writes).toHaveLength(2);
     expect(storage.writes[1]).toEqual(service.get());
   });
@@ -67,9 +67,9 @@ describe('FileShellStateService', () => {
   it('读出的状态不会被后续修改改变', () => {
     const service = new FileShellStateService(createStorage(undefined));
     const before = service.get();
-    service.updateLayout({ bottomPanelHeight: 400 });
-    expect(before.layout.bottomPanelHeight).toBeNull();
-    expect(DEFAULT_SHELL_STATE.layout.bottomPanelHeight).toBeNull();
+    service.updateLayout({ selectedMachine: 'sb2000' });
+    expect(before.layout.selectedMachine).toBeNull();
+    expect(DEFAULT_SHELL_STATE.layout.selectedMachine).toBeNull();
   });
 
   it('flush 转给存储', () => {
@@ -85,7 +85,7 @@ describe('配合真实的文件存储', () => {
     try {
       const path = join(directory, 'config', 'shell-state.json');
       const first = new FileShellStateService(new JsonFileStore({ path }));
-      first.updateLayout({ bottomPanelHeight: 300 });
+      first.updateLayout({ selectedMachine: 'bbk10' });
       first.updateWindow({ x: 5, y: 6 });
       first.updateReleaseNotesVersion('0.2.0');
       first.flush();

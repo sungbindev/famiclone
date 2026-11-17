@@ -28,7 +28,7 @@ function setup(trusted = true) {
     handle: (channel: string, listener: Listener) => handlers.set(channel, listener),
     on: (channel: string, listener: Listener) => listeners.set(channel, listener)
   } as unknown as IpcMain;
-  const savedState = { ...DEFAULT_SHELL_STATE, layout: { bottomPanelHeight: 220, selectedMachine: null, autoCollapsePanels: [] } };
+  const savedState = { ...DEFAULT_SHELL_STATE, layout: { selectedMachine: 'sb2000', autoCollapsePanels: [] } };
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), updateReleaseNotesVersion: vi.fn(), flush: vi.fn() };
   const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false, alwaysOnTop: true })) };
   const keyboard = { setCapture: vi.fn((enabled: boolean) => enabled), onKey: vi.fn(), onReleased: vi.fn() } satisfies KeyboardCaptureService;
@@ -88,13 +88,13 @@ describe('窗口动作', () => {
 describe('布局修改', () => {
   it('合格的修改交给状态服务', () => {
     const { send, state } = setup();
-    send(SHELL_CHANNELS.setLayout, { bottomPanelHeight: 220 });
-    expect(state.updateLayout).toHaveBeenCalledWith({ bottomPanelHeight: 220 });
+    send(SHELL_CHANNELS.setLayout, { selectedMachine: 'sb2000' });
+    expect(state.updateLayout).toHaveBeenCalledWith({ selectedMachine: 'sb2000' });
   });
 
   it('含未知字段、值不合格、不是对象的修改整条丢弃', () => {
     const { send, state } = setup();
-    for (const patch of [{ rightBarOpen: true }, { bottomPanelHeight: 200, window: {} }, { bottomPanelHeight: -3 }, {}, undefined, null, 'x', []]) {
+    for (const patch of [{ rightBarOpen: true }, { selectedMachine: 'sb2000', window: {} }, { bottomPanelHeight: 200 }, { selectedMachine: 'Bad Id' }, {}, undefined, null, 'x', []]) {
       send(SHELL_CHANNELS.setLayout, patch);
     }
     expect(state.updateLayout).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe('布局修改', () => {
 
   it('不可信的发送方发来的修改不保存', () => {
     const { send, state } = setup(false);
-    send(SHELL_CHANNELS.setLayout, { bottomPanelHeight: 220 });
+    send(SHELL_CHANNELS.setLayout, { selectedMachine: 'sb2000' });
     expect(state.updateLayout).not.toHaveBeenCalled();
   });
 });

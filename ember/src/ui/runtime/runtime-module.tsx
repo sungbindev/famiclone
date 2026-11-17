@@ -6,8 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：登记项都绑定同一个控制器（RuntimeController），由 bootstrap/renderer/modules/runtime.ts 创建并传入；规则见 docs/05-界面.md 第 3、4.1、5、6 节与 docs/06 第 3 节。
- *       文件菜单的“选择机型”列出经典 FC 与四个整机机型，选中的一项前面打对勾，选择只改已选机型、不开机；
- *       经典 FC 总是可选，整机机型程序里有实现且已添加 BIOS 才可选，没有 BIOS 的置灰并注明“未添加 BIOS，请在设置里添加”，暂未支持的置灰并注明“暂未支持”；
+ *       文件菜单的“选择机型”列出四个整机机型，已选的一项前面打对勾，点一项就记住它并直接开机，下次启动沿用，之后点“开机”直接开这个机型；没有经典 FC（经典 FC 按卡带开机，打开卡带即选中）；
+ *       整机机型程序里有实现且已添加 BIOS 才可选，没有 BIOS 的置灰并注明“未添加 BIOS，请在设置里添加”，暂未支持的置灰并注明“暂未支持”；
  *       “最近打开”随最近打开的清单变化，没有记录时置灰。
  *       快捷键：打开卡带 Ctrl+O，开机或断电 F9，暂停或继续 F8，软复位 F7，硬复位 Ctrl+F7。
  * ------------------------------------------------------------------------
@@ -71,17 +71,16 @@ function bind(Component: ComponentType<RuntimeStatusItemProps>, controller: Runt
  * @param controller 运行模块的控制器，面板、状态栏、菜单与常驻组件共用。
  */
 export function createRuntimeModule(controller: RuntimeController): ShellModule {
-  /** “选择机型”的子菜单项：已选的打对勾；整机机型程序里有实现且已添加 BIOS 才可选，否则置灰并在右侧注明原因。 */
+  /** “选择机型”的子菜单项：已选的打对勾，点一项记住并开机；程序里有实现且已添加 BIOS 才可选，否则置灰并在右侧注明原因。 */
   const machineEntries = (): readonly ShellSubmenuEntry[] => {
     const { machines, selectedMachine } = controller.snapshot();
-    return machineChoices(machines).map((machine, index) => {
+    return machineChoices(machines).map((machine) => {
       return {
         id: machine.id,
         label: machine.label,
         checked: machine.id === selectedMachine,
         ...(machine.hint === undefined ? {} : { hint: machine.hint, disabled: true }),
-        ...(index === 1 ? { separatorBefore: true } : {}),
-        run: () => controller.selectMachine(machine.id)
+        run: () => controller.selectAndBootMachine(machine.id)
       };
     });
   };

@@ -109,11 +109,11 @@ describe('window.ember', () => {
     electron.invoke.mockResolvedValue('状态');
     await expect(bridge.shell.getState()).resolves.toBe('状态');
     await bridge.shell.getWindowState();
-    bridge.shell.setLayout({ bottomPanelHeight: 200 });
+    bridge.shell.setLayout({ selectedMachine: 'sb2000' });
     bridge.shell.windowAction('toggleFullScreen');
     expect(electron.invoke.mock.calls).toEqual([[SHELL_CHANNELS.getState], [SHELL_CHANNELS.getWindowState]]);
     expect(electron.send.mock.calls).toEqual([
-      [SHELL_CHANNELS.setLayout, { bottomPanelHeight: 200 }],
+      [SHELL_CHANNELS.setLayout, { selectedMachine: 'sb2000' }],
       [SHELL_CHANNELS.windowAction, 'toggleFullScreen']
     ]);
   });

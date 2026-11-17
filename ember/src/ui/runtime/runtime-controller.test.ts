@@ -127,6 +127,31 @@ describe('选择机型', () => {
     expect(fake.layoutPatches).toEqual([]);
   });
 
+  it('选中并开机：记住机型并用它的 BIOS 开机；已经是这个机型也重新开机，机型不重复保存', async () => {
+    addBios();
+    await attach();
+    controller.selectAndBootMachine('sb2000');
+    await settle();
+    expect(controller.snapshot().selectedMachine).toBe('sb2000');
+    expect(fake.layoutPatches).toEqual([{ selectedMachine: 'sb2000' }]);
+    expect(fake.calls.filter((call) => call.startsWith('machines.boot'))).toEqual(['machines.boot {"machine":"sb2000"}']);
+    expect(controller.snapshot().status?.machine).toBe('sb2000');
+    controller.selectAndBootMachine('sb2000');
+    await settle();
+    expect(fake.layoutPatches).toEqual([{ selectedMachine: 'sb2000' }]);
+    expect(fake.calls.filter((call) => call.startsWith('machines.boot'))).toHaveLength(2);
+  });
+
+  it('选中并开机失败时用通知提示，已选机型仍记住', async () => {
+    addBios();
+    await attach();
+    fake.failures.set('machines.boot', { code: 'machines.biosInvalid', message: 'BIOS 文件无效' });
+    controller.selectAndBootMachine('sb2000');
+    await settle();
+    expect(context.notices).toEqual(['开机失败：BIOS 文件无效']);
+    expect(controller.snapshot().selectedMachine).toBe('sb2000');
+  });
+
   it('启动时沿用上次保存的已选机型；没保存过是经典 FC', async () => {
     fake.savedMachine = 'sb2000';
     await attach();

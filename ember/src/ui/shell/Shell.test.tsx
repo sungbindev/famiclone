@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：Shell.test.tsx
  * 说明：外壳的测试：显示区与菜单来自登记表（没有视图菜单、活动栏、标签栏、边栏、右边栏）、系统栏（大尺寸）里的面板按钮只有图标并按“展开、切换、收起”工作、按钮按下态随面板收起恢复、
- *       面板没有页签条且收起时内容卸载、指示灯、全局快捷键与画面优先、退出与全屏经窗口接口、对话框同时只开一个、全屏只显示显示区、底部面板高度的读取与保存、命令状态刷新、子菜单、常驻组件、登记错误。
+ *       面板没有页签条且收起时内容卸载、指示灯、全局快捷键与画面优先、退出与全屏经窗口接口、对话框同时只开一个、全屏只显示显示区、底部面板的高度按内容测量（不能拖动、不保存）、命令状态刷新、子菜单、常驻组件、登记错误。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -25,7 +25,7 @@ import { Shell } from './Shell';
 const ICON = ['M0 0'] as const;
 
 /** 没有保存过时的布局。 */
-const DEFAULT_LAYOUT: ShellLayout = { bottomPanelHeight: null, selectedMachine: null, autoCollapsePanels: [] };
+const DEFAULT_LAYOUT: ShellLayout = { selectedMachine: null, autoCollapsePanels: [] };
 
 /** 假的 window.ember：布局与窗口状态由测试决定，调用都记录下来。 */
 function createBridge(layout: Partial<ShellLayout> = {}) {
@@ -143,6 +143,23 @@ function bottomArea(container: HTMLElement): HTMLElement {
   return container.querySelector('.ui-app-frame__bottom') as HTMLElement;
 }
 
+/** 模拟排版的面板标题行高度（像素）。 */
+const HEADER_HEIGHT = 26;
+
+/** 模拟排版的各面板内容高度（像素，按面板里的文字查）。 */
+const contentHeights: Record<string, number> = { 运行内容: 20, 设备内容: 78 };
+
+/** jsdom 没有排版：让面板标题行与内容包裹层的 getBoundingClientRect 给出模拟的高度，返回恢复函数。 */
+function mockPanelSizes(): () => void {
+  const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    let height = 0;
+    if (this.classList.contains('ember-shell-panel__header')) height = HEADER_HEIGHT;
+    else if (this.classList.contains('ember-shell-panel__natural')) height = contentHeights[this.textContent ?? ''] ?? 0;
+    return { height, width: 0, top: 0, left: 0, right: 0, bottom: height, x: 0, y: 0, toJSON: () => ({}) };
+  });
+  return () => spy.mockRestore();
+}
+
 /** 打开的菜单里的全部菜单项（普通项是 menuitem，可勾选项是 menuitemcheckbox）。 */
 function popupItems(): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>('.ui-menu__popup [role^="menuitem"]'));
@@ -170,21 +187,49 @@ describe('登记表驱动的界面', () => {
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['文件(F)', '机器(M)', '设置(S)']);
   });
 
-  it('读出保存的底部面板高度，展开时用保存的高度；没有保存过时用默认高度', async () => {
-    const saved = renderShell({ layout: { bottomPanelHeight: 220 } });
-    await shown();
-    await userEvent.click(screen.getByRole('button', { name: '运行' }));
-    expect(bottomArea(saved.container).style.height).toBe('220px');
-    saved.unmount();
-    const fresh = renderShell();
-    await shown();
-    await userEvent.click(screen.getByRole('button', { name: '运行' }));
-    expect(bottomArea(fresh.container).style.height).toBe('126px');
-    fresh.unmount();
-    const small = renderShell({ layout: { bottomPanelHeight: 100 } });
-    await shown();
-    await userEvent.click(screen.getByRole('button', { name: '运行' }));
-    expect(bottomArea(small.container).style.height).toBe('126px');
+  it('底部面板的高度是标题行加内容的高度，每个面板各自一个，不能拖动也不保存', async () => {
+    const restore = mockPanelSizes();
+    try {
+      const { container, shell } = renderShell();
+      await shown();
+      await userEvent.click(screen.getByRole('button', { name: '运行' }));
+      expect(bottomArea(container).style.height).toBe(`${HEADER_HEIGHT + 20}px`);
+      await userEvent.click(screen.getByRole('button', { name: '设备' }));
+      expect(bottomArea(container).style.height).toBe(`${HEADER_HEIGHT + 78}px`);
+      expect(screen.queryByRole('separator', { name: '调整底部面板高度' })).toBeNull();
+      expect(shell.setLayout).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  it('面板展开期间内容的大小变了，高度跟着重新量', async () => {
+    const restore = mockPanelSizes();
+    const observers: Array<() => void> = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          observers.push(callback);
+        }
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      }
+    );
+    try {
+      const { container } = renderShell();
+      await shown();
+      await userEvent.click(screen.getByRole('button', { name: '运行' }));
+      expect(bottomArea(container).style.height).toBe(`${HEADER_HEIGHT + 20}px`);
+      contentHeights['运行内容'] = 50;
+      act(() => observers.forEach((callback) => callback()));
+      expect(bottomArea(container).style.height).toBe(`${HEADER_HEIGHT + 50}px`);
+    } finally {
+      contentHeights['运行内容'] = 20;
+      vi.unstubAllGlobals();
+      restore();
+    }
   });
 });
 
@@ -406,15 +451,11 @@ describe('面板的自动收缩开关', () => {
     expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('开关开着：点标题栏、面板高度的拖动条与系统栏的面板按钮不触发自动收缩，面板按钮照常切换与收起', async () => {
+  it('开关开着：点标题栏与系统栏的面板按钮不触发自动收缩，面板按钮照常切换与收起', async () => {
     const { container } = renderShell({ modules: AUTO_MODULES, layout: { autoCollapsePanels: ['a.run'] } });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
     await userEvent.click(container.querySelector('.ui-title-bar__title') as HTMLElement);
-    const resizer = container.querySelector('.ui-app-frame__resizer') as HTMLElement;
-    // jsdom 没有指针捕获，拖动条按下时要用到。
-    resizer.setPointerCapture = () => undefined;
-    fireEvent.pointerDown(resizer);
     expect(screen.getByRole('region', { name: '运行' })).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: '普通' }));
     expect(screen.getByText('普通内容')).toBeTruthy();

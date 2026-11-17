@@ -3,14 +3,15 @@
  * 名称：Shell.tsx
  * 说明：外壳：用组件库的外壳组件拼出窗口框架（标题栏与菜单、中间固定的显示区、底部面板、状态栏、通知），
  *       全部入口都来自登记表（显示区、对话框、命令与快捷键、菜单项、底部面板页签、状态项、标题栏项），自己不写死业务入口；
- *       处理命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、对话框、模块的常驻组件、命令状态的刷新、窗口状态与底部面板高度的保存；全屏时只显示显示区。
+ *       处理命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、对话框、模块的常驻组件、命令状态的刷新、窗口状态的保存；全屏时只显示显示区。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：规则见 docs/05-界面.md 第 2、3、5、6、9 节；没有活动栏、边栏、标签栏与右边栏；
  *       底部面板只经系统栏左侧的面板按钮展开：面板关着时点按钮展开并切到该页签，开着时点同一个按钮收起，点另一个按钮切页签；没有快捷键，每次启动都是关闭，页签选择不保存；
  *       面板按钮只在面板开着并停在该页签时是按下状态，面板收起后恢复常态；
- *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，点在面板之外（包括显示区的画面）就收起面板，面板里的操作不收起；不算面板之外的有：标题栏、面板高度的拖动条、弹层（下拉选项、通知等）与系统栏里的面板按钮；开关状态按面板保存在界面状态里，下次启动沿用；
+ *       底部面板的高度由内容决定：外壳量出标题行、内容与留边加起来的高度，刚好装下内容，不能拖动、不保存，内容变高或变矮时跟着变（超过窗口可用高度的上限时内容区出现滚动条），每个面板各自一个高度；
+ *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，点在面板之外（包括显示区的画面）就收起面板，面板里的操作不收起；不算面板之外的有：标题栏、弹层（下拉选项、通知等）与系统栏里的面板按钮；开关状态按面板保存在界面状态里，下次启动沿用；
  *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
  *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；
  *       文件可以直接拖进主窗口：外壳接住拖放，按扩展名交给模块登记的文件处理项（use-file-drop.ts）；
@@ -53,9 +54,6 @@ import './shell.css';
 
 /** 应用名。 */
 const APP_NAME = 'EMBER';
-
-/** 底部面板的默认高度（像素），同时是最小高度：正好装下设备面板的三行设备（标题行 26、内容留边 18、三行 78、上边框 1，再留 3 像素余量），不出现滚动条；保存过更高的高度时用保存的。 */
-const BOTTOM_PANEL_HEIGHT = 126;
 
 /** 用户可见的文字。 */
 const TEXT = {
@@ -116,14 +114,38 @@ function dialogContent(shell: ShellApi, Content: ComponentType<ShellPageProps>, 
   );
 }
 
-/** 点在这些元素上不触发自动收缩：面板本身、面板高度的拖动条、弹层、标题栏、系统栏里的面板按钮。 */
-const AUTO_COLLAPSE_IGNORED = '.ember-shell-panel, .ui-app-frame__resizer, .ui-layer, .ui-title-bar, [data-panel-button]';
+/** 点在这些元素上不触发自动收缩：面板本身、弹层、标题栏、系统栏里的面板按钮。 */
+const AUTO_COLLAPSE_IGNORED = '.ember-shell-panel, .ui-layer, .ui-title-bar, [data-panel-button]';
+
+/**
+ * 量出底部面板刚好装下内容的高度：标题行、内容区的上下留边、内容本身，再加面板容器的上边框；
+ * 面板被隐藏（全屏时）量不到，返回 null。
+ * @param section 面板的根元素。
+ * @returns 高度（像素，向上取整）；量不到时为 null。
+ */
+function measurePanelHeight(section: HTMLElement): number | null {
+  const header = section.querySelector<HTMLElement>('.ember-shell-panel__header');
+  const natural = section.querySelector<HTMLElement>('.ember-shell-panel__natural');
+  const viewport = natural?.parentElement;
+  const frame = section.parentElement;
+  if (header === null || natural === null || natural === undefined || viewport === null || viewport === undefined || frame === null) return null;
+  const headerHeight = header.getBoundingClientRect().height;
+  const contentHeight = natural.getBoundingClientRect().height;
+  if (headerHeight === 0 && contentHeight === 0) return null;
+  const viewportStyle = getComputedStyle(viewport);
+  const padding = (Number.parseFloat(viewportStyle.paddingTop) || 0) + (Number.parseFloat(viewportStyle.paddingBottom) || 0);
+  const border = Number.parseFloat(getComputedStyle(frame).borderTopWidth) || 0;
+  return Math.ceil(headerHeight + padding + contentHeight + border);
+}
 
 /** 登记表有效之后的外壳。 */
 function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: ShellRegistry }) {
   const [panel, setPanel] = useState<PanelState>({ open: false, id: registry.bottomPanels[0]?.id ?? '' });
-  // 底部面板的初始高度：读到保存的高度之前为 null，此时不显示界面。
-  const [bottomHeight, setBottomHeight] = useState<number | null>(null);
+  // 界面状态是否已读到：读到之前不显示界面。
+  const [stateLoaded, setStateLoaded] = useState(false);
+  // 底部面板刚好装下内容的高度，由 measurePanelHeight 量出；每个面板各自一个高度。
+  const [panelHeight, setPanelHeight] = useState(0);
+  const panelRef = useRef<HTMLElement>(null);
   const [windowState, setWindowState] = useState<WindowState>({ maximized: false, fullScreen: false, alwaysOnTop: false });
   // 开着“自动收缩”的面板标识：读到保存的清单之前都是关闭。
   const [autoCollapse, setAutoCollapse] = useState<readonly string[]>([]);
@@ -138,7 +160,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   useEffect(() => {
     let active = true;
     void bridge.shell.getState().then((state) => {
-      if (active) setBottomHeight(state.layout.bottomPanelHeight ?? BOTTOM_PANEL_HEIGHT);
+      if (active) setStateLoaded(true);
       if (active) setAutoCollapse(state.layout.autoCollapsePanels);
     });
     void bridge.shell.getWindowState().then((state) => {
@@ -157,6 +179,21 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   useLayoutEffect(() => {
     live.current = { view, autoCollapse, menuOpen: openMenuId !== null };
   });
+
+  // 面板展开或切换页签后量出内容高度，之后标题行或内容的大小变了再量；面板被隐藏（全屏）时量不到，保持上一次的高度。
+  const shownPanelId = panel.open ? panel.id : null;
+  useLayoutEffect(() => {
+    const section = panelRef.current;
+    if (shownPanelId === null || section === null) return undefined;
+    const measure = (): void => {
+      const height = measurePanelHeight(section);
+      if (height !== null) setPanelHeight(height);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    for (const element of section.querySelectorAll('.ember-shell-panel__header, .ember-shell-panel__natural')) observer.observe(element);
+    return () => observer.disconnect();
+  }, [shownPanelId]);
 
   // 显示区里的画面区（显示区里第一个 tabindex=0 的元素）。
   const pageRef = useRef<HTMLDivElement>(null);
@@ -275,7 +312,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     return () => window.removeEventListener('keydown', handleKey);
   }, [registry, api]);
 
-  if (bottomHeight === null) return null;
+  if (!stateLoaded) return null;
 
   const menus: MenuBarMenu[] = SHELL_MENUS.flatMap((menu): MenuBarMenu[] => {
     const items = registry.menuItems
@@ -364,7 +401,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
         }
         bottomPanel={
           activePanel === undefined ? undefined : (
-            <section className="ember-shell-panel" aria-label={activePanel.title}>
+            <section className="ember-shell-panel" aria-label={activePanel.title} ref={panelRef}>
               <div className="ember-shell-panel__header">
                 <h2 className="ember-shell-panel__title">{activePanel.title}</h2>
                 <div className="ember-shell-panel__actions">
@@ -387,15 +424,15 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
                 </div>
               </div>
               <ScrollArea className="ember-shell-panel__body" viewportProps={{ className: 'ember-shell-panel__content' }}>
-                {createElement(activePanel.Component)}
+                <div className="ember-shell-panel__natural">{createElement(activePanel.Component)}</div>
               </ScrollArea>
             </section>
           )
         }
         bottomPanelOpen={!fullScreen && bottomPanelOpen}
-        defaultBottomPanelHeight={bottomHeight}
-        bottomPanelMinHeight={BOTTOM_PANEL_HEIGHT}
-        onBottomPanelHeightCommit={(height) => bridge.shell.setLayout({ bottomPanelHeight: Math.round(height) })}
+        bottomPanelHeight={panelHeight}
+        bottomPanelMinHeight={0}
+        bottomPanelResizable={false}
         statusBarSize="large"
         statusBar={
           fullScreen ? undefined : (

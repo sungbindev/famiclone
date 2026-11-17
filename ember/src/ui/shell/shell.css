@@ -57,3 +57,8 @@
   --scroll-bleed: var(--content-padding);
   padding: var(--space-md) var(--content-padding) var(--content-padding);
 }
+
+/* 量内容高度用的包裹层：块级自适应高度，并包住内容的外边距，量出来的高度才是内容占的全部高度 */
+.ember-shell-panel__natural {
+  display: flow-root;
+}

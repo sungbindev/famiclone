@@ -7,7 +7,7 @@
  * 日期：2026-11-15
  * 备注：不依赖 React，状态放在外部存储里（subscribe 与 snapshot，配合 useSyncExternalStore），运行面板、状态栏、画面提示与菜单都从这里取数据；
  *       由常驻组件 RuntimeHost 在外壳启动后接上预加载脚本的接口与外壳的能力（attach），所以面板没有展开、显示区没有显示时状态也是最新的。
- *       “选择机型”只改已选机型（保存在界面状态里，下次启动沿用），不开机、不装入、不影响正在运行的机器；打开卡带成功（cartridges.loaded）后已选机型自动变成经典 FC。
+ *       “选择机型”选中整机机型后直接用它的 BIOS 开机（selectAndBootMachine，选中的机型保存在界面状态里，下次启动沿用，之后点“开机”直接开这个机型），不影响装入的卡带；打开卡带成功（cartridges.loaded）后已选机型自动变成经典 FC（菜单里没有它，表示“按卡带开机”）。
  *       开机与断电是同一个操作（togglePower）：通电时断电；未通电时，已选机型是整机机型（学习机）就用它的 BIOS 开机（不需要卡带，当前装的是别的主机也用它重新开机），
  *       已选机型是经典 FC 就要求已经装入 FC 卡带（从“文件→打开卡带”选 nes，选后直接开机），断电后再开机直接上电。
  *       操作失败时用通知提示；核心进程重启时状态先清成“未读到”，核心就绪后重新读取状态、音量与最近打开的清单。
@@ -174,11 +174,17 @@ export class RuntimeController {
     else if (action === 'boot') this.bootMachine(this.state.selectedMachine);
   }
 
-  /** 选择机型：只改已选机型并保存，不开机、不装入、不影响正在运行的机器。 */
+  /** 选择机型：只改已选机型并保存，不开机；已选机型已经是它时什么都不做。 */
   selectMachine(id: string): void {
     if (this.state.selectedMachine === id) return;
     this.setState({ selectedMachine: id });
     this.attachment?.backend.shell.setLayout({ selectedMachine: id });
+  }
+
+  /** “选择机型”菜单里选中一个整机机型：记住它并直接开机（已经在运行的同一机型也重新开机）。 */
+  selectAndBootMachine(id: string): void {
+    this.selectMachine(id);
+    this.bootMachine(id);
   }
 
   /** 暂停或继续：连续运行时暂停，否则继续；断电时不可用。 */

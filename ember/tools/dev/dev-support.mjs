@@ -141,7 +141,7 @@ export function startDevApp({ port, romPath, windowPlacement, extraArguments = [
   const userDataDirectory = mkdtempSync(join(tmpdir(), 'ember-dev-'));
   if (windowPlacement !== undefined) {
     mkdirSync(join(userDataDirectory, 'config'), { recursive: true });
-    writeFileSync(join(userDataDirectory, 'config', 'shell-state.json'), JSON.stringify({ window: windowPlacement, layout: { bottomPanelHeight: null } }));
+    writeFileSync(join(userDataDirectory, 'config', 'shell-state.json'), JSON.stringify({ window: windowPlacement }));
   }
   const forgeBin = join(dirname(createRequire(import.meta.url).resolve('@electron-forge/cli/package.json')), 'dist', 'electron-forge.js');
   const forge = spawn(process.execPath, [forgeBin, 'start', '--', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDirectory}`, `--cartridge=${romPath}`, ...extraArguments], {

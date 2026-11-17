@@ -368,14 +368,9 @@ async function main() {
   await hoverMenuItem('选择机型');
   const machineItems = await waitFor(() => menuItems('.ui-menu__popup--sub'), (items) => items.length > 0, 3000, 100);
   check(
-    '“选择机型”子菜单：经典 FC 可用并打对勾；小霸王 2000 没有 BIOS 置灰并注明“未添加 BIOS”，其余三个机型置灰并注明“暂未支持”',
-    machineItems.length === 5 &&
-      !machineItems[0].disabled &&
-      machineItems[0].checked === 'true' &&
-      machineItems[2].disabled &&
-      machineItems[2].text.includes('未添加 BIOS') &&
-      [1, 3, 4].every((index) => machineItems[index].disabled && machineItems[index].text.includes('暂未支持')),
-    JSON.stringify(machineItems.map((entry) => entry.label))
+    '“选择机型”子菜单：只有四个整机机型（没有经典 FC，都没有对勾），随安装包自带 BIOS 的机型都可选，没有置灰与原因说明',
+    machineItems.length === 4 && machineItems.every((entry) => !entry.disabled && entry.checked !== 'true'),
+    JSON.stringify(machineItems.map((entry) => ({ label: entry.label, disabled: entry.disabled, checked: entry.checked, text: entry.text })))
   );
   const subRect = await page.evaluate(`(() => { const rect = document.querySelector('.ui-menu__popup--sub').getBoundingClientRect(); return { left: rect.left, right: rect.right, width: innerWidth }; })()`);
   check('“选择机型”子菜单完整地在窗口内（两侧都放不下时右边缘贴窗口右侧）', subRect.left >= 7 && subRect.right <= subRect.width - 7, JSON.stringify(subRect));

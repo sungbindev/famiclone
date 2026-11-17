@@ -16,8 +16,9 @@ import '@ember-ui-kit/styles/index.css';
 import '@ember-ui-kit/components/title-bar/ui-title-bar.css';
 import './style.css';
 import { HelpTitleBar } from './HelpTitleBar';
+import { PageScrollbar } from './PageScrollbar';
 
 export default {
   extends: DefaultTheme,
-  Layout: () => h(DefaultTheme.Layout, null, { 'layout-top': () => h(HelpTitleBar) })
+  Layout: () => h(DefaultTheme.Layout, null, { 'layout-top': () => h(HelpTitleBar), 'layout-bottom': () => h(PageScrollbar) })
 } satisfies Theme;

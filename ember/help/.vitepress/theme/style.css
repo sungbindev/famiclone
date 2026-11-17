@@ -80,7 +80,45 @@
   background: transparent;
 }
 
-/* 页面本身的滚动条从标题栏与导航栏下面开始（窄窗口时导航栏不固定，但它下面的局部导航固定，也不超过这个高度） */
-html::-webkit-scrollbar-track {
-  margin-top: calc(var(--vp-layout-top-height) + var(--vp-nav-height));
+/* 页面本身的系统滚动条隐藏，改用 PageScrollbar 画在标题栏与导航栏下面的覆盖式滚动条 */
+html {
+  scrollbar-width: none;
+}
+
+.page-scrollbar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: var(--vp-z-index-footer);
+  width: 10px;
+  opacity: 0;
+  transition: opacity 800ms linear;
+}
+
+.page-scrollbar--visible {
+  opacity: 1;
+  transition: opacity 100ms linear;
+}
+
+.page-scrollbar__thumb {
+  position: absolute;
+  right: 2px;
+  width: 6px;
+  background: var(--scrollbar-slider-bg);
+  border-radius: var(--scrollbar-slider-radius);
+}
+
+.page-scrollbar__thumb:hover {
+  background: var(--scrollbar-slider-hover-bg);
+}
+
+.page-scrollbar__thumb:active {
+  background: var(--scrollbar-slider-active-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-scrollbar,
+  .page-scrollbar--visible {
+    transition: none;
+  }
 }

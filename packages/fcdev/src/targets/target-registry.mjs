@@ -23,6 +23,9 @@ const RUN_MODES = new Set(['rom', 'firmware-disk']);
 /** 目标专用选项允许的类型 */
 const OPTION_TYPES = new Set(['boolean', 'string', 'number']);
 
+/** 源文件转码支持的目标编码 */
+const SOURCE_CHARSETS = new Set(['gb2312']);
+
 /**
  * @typedef {object} BankedSpec 多页（换页）程序的定义
  * @property {string} option 目标专用选项名，值为库页个数
@@ -55,6 +58,7 @@ const OPTION_TYPES = new Set(['boolean', 'string', 'number']);
  * @property {object|null} run 运行方案
  * @property {Record<string, {type: string, default: unknown, links: string[]}>} options 目标专用选项；布尔选项为 true 时额外链接 links 里的文件（路径值）
  * @property {BankedSpec|null} banked 多页（换页）程序的定义；不支持时为 null
+ * @property {string|null} sourceCharset 机器用的文字编码；不为 null 时，构建前把 UTF-8 的源文件转成这个编码（目前只有 gb2312）
  */
 
 /**
@@ -129,6 +133,9 @@ export function parseTarget(raw, dir) {
     options[key] = { type: spec.type, default: spec.default, links: spec.links ?? [] };
   }
   const banked = parseBanked(raw.banked, raw.name, options);
+  if (raw.sourceCharset !== undefined && !SOURCE_CHARSETS.has(raw.sourceCharset)) {
+    throw new FcdevError(`目标 ${raw.name} 的 sourceCharset 只能是 ${[...SOURCE_CHARSETS].join(' 或 ')}`, { code: 'TARGET_INVALID' });
+  }
   return {
     name: raw.name,
     title: raw.title,
@@ -150,6 +157,7 @@ export function parseTarget(raw, dir) {
     run: raw.run ?? null,
     options,
     banked,
+    sourceCharset: raw.sourceCharset ?? null,
   };
 }
 

@@ -16,6 +16,7 @@ import { resolveTargetPath } from '../targets/index.mjs';
 import { getToolchainVersion, runTool } from '../toolchain/index.mjs';
 import { resolveLinkSetup } from './bank-link-config.mjs';
 import { parseDependencyFile } from './dependency-file.mjs';
+import { prepareGb2312Source } from './source-charset.mjs';
 import { getSourceLanguage } from './source-collector.mjs';
 import { buildAssemblerArguments, buildCompilerArguments, buildLinkerArguments } from './tool-arguments.mjs';
 
@@ -130,14 +131,18 @@ function describeToolFailure(output) {
  * @returns {Promise<void>}
  */
 async function compileSource(context, source, objectFile) {
-  const { toolchain, settings, reporter } = context;
+  const { toolchain, settings, sourceCharset } = context;
   const base = objectFile.slice(0, -'.o'.length);
-  if (getSourceLanguage(source) === 'c') {
+  const language = getSourceLanguage(source);
+  // 目标声明了源文件编码时，编译的是转码后的副本，工具输出里的副本路径要换回原文件
+  const prepared = sourceCharset ? prepareGb2312Source({ source, base, language }) : { file: source, restoreText: (text) => text };
+  const reporter = { ...context.reporter, write: (text) => context.reporter.write(prepared.restoreText(text)) };
+  if (language === 'c') {
     const asmFile = `${base}.s`;
-    await runChecked(toolchain, 'cc65', buildCompilerArguments(settings, { source, output: asmFile, dependencyFile: `${base}.d` }), reporter, `编译失败：${source}`);
+    await runChecked(toolchain, 'cc65', buildCompilerArguments(settings, { source: prepared.file, output: asmFile, dependencyFile: `${base}.d` }), reporter, `编译失败：${source}`);
     await runChecked(toolchain, 'ca65', buildAssemblerArguments(settings, { source: asmFile, output: objectFile, dependencyFile: `${base}.asm.d` }), reporter, `汇编失败：${asmFile}`);
   } else {
-    await runChecked(toolchain, 'ca65', buildAssemblerArguments(settings, { source, output: objectFile, dependencyFile: `${base}.d` }), reporter, `汇编失败：${source}`);
+    await runChecked(toolchain, 'ca65', buildAssemblerArguments(settings, { source: prepared.file, output: objectFile, dependencyFile: `${base}.d` }), reporter, `汇编失败：${source}`);
   }
 }
 
@@ -172,7 +177,7 @@ export async function buildProgram(plan, toolchain, reporter = SILENT_REPORTER) 
     ensureDirectory(plan.objectDir);
   }
 
-  const context = { toolchain, settings, reporter };
+  const context = { toolchain, settings, reporter, sourceCharset: target.sourceCharset };
   const objects = [];
   let compiled = 0;
   let reused = 0;

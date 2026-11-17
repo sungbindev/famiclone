@@ -1,0 +1,59 @@
+{
+  "plugin": "cheapocabra",
+  "image": {
+    "mapper": 111,
+    "prgKiB": 512
+  },
+  "steps": [
+    {
+      "write": "$5000",
+      "value": 51
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 98304
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "enable": false
+        },
+        {
+          "address": "$2C00",
+          "enable": false
+        }
+      ]
+    },
+    {
+      "write": "$7000",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

@@ -895,6 +895,37 @@ TEST(MapperChipTimer, ACounterWrittenAsATimerRaisesTheIrqAtTheRightCycleAndCanBe
   EXPECT_EQ(rig.chip.scriptLog().size(), 2U);
 }
 
+TEST(MapperChipA12, TheScriptSeesOneCallPerRisingEdgeAfterEnoughLowAccesses) {
+  json manifest = withRegisters(WRITE_ALL);
+  const std::string script = R"(export default { write() {}, onA12(ctx) { ctx.log.warn('a12@' + ctx.cycle()); } };)";
+  Rig rig(manifest, script, makeImage(16384, 0));
+  rig.chip.reset(true);
+  EXPECT_TRUE(rig.chip.watchesVideoAddress());
+
+  const auto edge = [&](unsigned lowAccesses) {
+    for (unsigned index = 0; index < lowAccesses; ++index) rig.chip.onVideoAddress(0x0000);
+    rig.chip.onVideoAddress(0x1000);
+  };
+  edge(4);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 1U);
+  // A12 一直为高、低电平太短都不算上升沿。
+  rig.chip.onVideoAddress(0x1000);
+  edge(3);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 1U);
+  edge(5);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 2U);
+  // 复位后重新计低电平的次数。
+  rig.chip.reset(false);
+  rig.chip.reset(true);
+  edge(3);
+  EXPECT_EQ(rig.chip.scriptLog().size(), 2U);
+}
+
+TEST(MapperChipA12, ACartridgeWithoutOnA12AndCircuitsDoesNotAskForVideoAddresses) {
+  Rig rig(withRegisters(WRITE_ALL), "export default { write() {} };", makeImage(16384, 0));
+  EXPECT_FALSE(rig.chip.watchesVideoAddress());
+}
+
 TEST(MapperChip, ChrRamFallbackSizeCanComeFromTheFileHeaderAndTheHeaderIsVisibleToTheScript) {
   json manifest = json::parse(ember::test::minimalManifest());
   manifest["storage"][1]["fallback"]["size"] = json::parse(R"({ "header": "chrRam", "default": 8192 })");

@@ -1,0 +1,48 @@
+{
+  "plugin": "un-rom512",
+  "image": {
+    "mapper": 30,
+    "prgKiB": 512,
+    "prgFill": 255
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 507904
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 37
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 81920
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 507904
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

@@ -13,7 +13,7 @@
 
 #include <memory>
 
-#include "bootstrap/modules/mapper-circuits.hpp"
+#include "bootstrap/machines/common/mapper-circuit-catalog.hpp"
 
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/mappers/mapper-service.hpp"

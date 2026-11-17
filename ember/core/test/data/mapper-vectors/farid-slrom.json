@@ -1,0 +1,66 @@
+{
+  "plugin": "farid-slrom",
+  "image": {
+    "mapper": 323,
+    "prgKiB": 1024,
+    "chrKiB": 512
+  },
+  "steps": [
+    {
+      "write": "$6000",
+      "value": 32
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 262144
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 376832
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 262144,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 266240,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$6000",
+      "value": 120
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 917504
+        }
+      ]
+    },
+    {
+      "write": "$6000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 917504
+        }
+      ]
+    }
+  ]
+}

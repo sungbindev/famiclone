@@ -1,0 +1,186 @@
+{
+  "plugin": "yoko",
+  "image": {
+    "mapper": 264,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 8192
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 253952
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 57344
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        }
+      ]
+    },
+    {
+      "write": "$8400",
+      "value": 8
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 40960
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 57344
+        }
+      ]
+    },
+    {
+      "write": "$8400",
+      "value": 16
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8C00",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 24576
+        }
+      ]
+    },
+    {
+      "write": "$8C10",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$5000",
+      "expect": 0
+    },
+    {
+      "write": "$5401",
+      "value": 119
+    },
+    {
+      "read": "$5401",
+      "expect": 119
+    },
+    {
+      "write": "$8400",
+      "value": 129
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$8800",
+      "value": 16
+    },
+    {
+      "write": "$8801",
+      "value": 0
+    },
+    {
+      "cycles": 11,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$8800",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "plugin": "unl-d1038",
+  "image": {
+    "mapper": 59,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$80A3",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 24576,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$8020",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$8148",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "dip",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "dip",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

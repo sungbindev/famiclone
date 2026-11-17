@@ -28,7 +28,7 @@
 #include <miniz.h>
 #include <nlohmann/json.hpp>
 
-#include "bootstrap/modules/mapper-circuits.hpp"
+#include "bootstrap/machines/common/mapper-circuit-catalog.hpp"
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/irq-output.hpp"
 #include "contracts/hardware/tape-deck.hpp"

@@ -1,0 +1,136 @@
+{
+  "plugin": "taito-tc0690",
+  "image": {
+    "mapper": 48,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 40960
+        }
+      ]
+    },
+    {
+      "write": "$8001",
+      "value": 6
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$8002",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 6144,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 7168,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$A001",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1400",
+          "storage": "chr",
+          "offset": 9216,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$E000",
+      "value": 64
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 253
+    },
+    {
+      "write": "$C001",
+      "value": 0
+    },
+    {
+      "write": "$C002",
+      "value": 0
+    },
+    {
+      "a12": 3,
+      "expectIrq": false
+    },
+    {
+      "cycles": 21,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$C003",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

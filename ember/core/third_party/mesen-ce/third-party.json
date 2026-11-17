@@ -1,0 +1,12 @@
+{
+  "name": "Mesen Community Edition",
+  "version": "2.2.1-102-ga8e5d023",
+  "authors": [
+    "Sour",
+    "Mesen Community Edition 的贡献者"
+  ],
+  "license": "GPL-3.0",
+  "licenseFile": "LICENSE",
+  "homepage": "https://github.com/nesdev-org/MesenCE",
+  "usage": "官方 mapper 插件（plugins/）与 MMC2、MMC3 电路的寄存器逻辑、扩展声音与时序，是对照该项目的 FC mapper 实现重新编写的；本目录只放许可全文，不含该项目的源码"
+}

@@ -94,7 +94,7 @@ std::uint32_t resolveRamSize(const std::optional<HeaderSize>& header, std::uint3
 }  // namespace
 
 MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, hw::IrqOutput& irq, hw::PadSink& pads, ScriptLimits limits,
-                       const contracts::mappers::CircuitCatalog* circuitCatalog)
+                       const contracts::hardware::CircuitCatalog* circuitCatalog)
     : plugin_(std::move(plugin)),
       pads_(pads),
       tape_(pads.tapeLine()),
@@ -221,7 +221,7 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
     if (circuitCatalog == nullptr || !circuitCatalog->knows(decl.type)) throw shared::CoreError(mapper_error::ERROR_INVALID_PACKAGE, "插件 " + manifest.id + " 引用了主机里没有的电路：" + decl.type);
     CircuitSlot slot;
     slot.id = decl.id;
-    slot.circuit = circuitCatalog->create(decl.type, mixer_, contracts::mappers::CircuitOptions{decl.revA});
+    slot.circuit = circuitCatalog->create(decl.type, mixer_, contracts::hardware::CircuitOptions{decl.revA});
     if (decl.wire) {
       for (const std::string& id : decl.wire->prg) slot.prgWindows.push_back(windowIndex(id));
       for (const std::string& id : decl.wire->chr) slot.chrWindows.push_back(windowIndex(id));

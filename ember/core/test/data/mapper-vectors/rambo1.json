@@ -1,0 +1,233 @@
+{
+  "plugin": "rambo1",
+  "image": {
+    "mapper": 64,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 8192
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 16384
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 1024,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 2048,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 4096,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 6
+    },
+    {
+      "write": "$8001",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 40960
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 15
+    },
+    {
+      "write": "$8001",
+      "value": 7
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 57344
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 64
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 57344
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 8192
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 40960
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$8001",
+      "value": 10
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 11264,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 40
+    },
+    {
+      "write": "$8001",
+      "value": 33
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 33792,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 128
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1400",
+          "storage": "chr",
+          "offset": 11264,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 3
+    },
+    {
+      "write": "$C001",
+      "value": 0
+    },
+    {
+      "write": "$E001",
+      "value": 0
+    },
+    {
+      "a12": 4,
+      "expectIrq": false
+    },
+    {
+      "a12": 1,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$E000",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    },
+    {
+      "write": "$A000",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    }
+  ]
+}

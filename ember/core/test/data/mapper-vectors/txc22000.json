@@ -1,0 +1,64 @@
+{
+  "plugin": "txc22000",
+  "image": {
+    "mapper": 36,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4102",
+      "value": 32
+    },
+    {
+      "write": "$4100",
+      "value": 0
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        }
+      ]
+    },
+    {
+      "write": "$4200",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 24576,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$4100",
+      "expect": 32
+    }
+  ]
+}

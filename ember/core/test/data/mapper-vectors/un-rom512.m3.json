@@ -1,0 +1,39 @@
+{
+  "plugin": "un-rom512",
+  "image": {
+    "mapper": 30,
+    "variant": 3,
+    "prgKiB": 512,
+    "prgFill": 255
+  },
+  "steps": [
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 255
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    }
+  ]
+}

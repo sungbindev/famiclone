@@ -1,0 +1,132 @@
+{
+  "plugin": "bmc-hpxx",
+  "image": {
+    "mapper": 260,
+    "prgKiB": 512,
+    "chrKiB": 512
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 253952
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$5000",
+      "expect": 0
+    },
+    {
+      "write": "$5000",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 8192
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 8192
+        }
+      ]
+    },
+    {
+      "write": "$5001",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 57344
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$5002",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 16384,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 17408,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$5003",
+      "value": 128
+    },
+    {
+      "write": "$5001",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    }
+  ]
+}

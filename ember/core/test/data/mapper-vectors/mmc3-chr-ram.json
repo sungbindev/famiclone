@@ -1,0 +1,58 @@
+{
+  "plugin": "mmc3-chr-ram",
+  "image": {
+    "mapper": 74,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$8001",
+      "value": 8
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr-ram",
+          "offset": 0,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr-ram",
+          "offset": 1024,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$8001",
+      "value": 10
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 11264,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

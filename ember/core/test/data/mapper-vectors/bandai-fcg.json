@@ -1,0 +1,846 @@
+{
+  "plugin": "bandai-fcg",
+  "image": {
+    "mapper": 16,
+    "prgKiB": 256,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 245760
+        }
+      ]
+    },
+    {
+      "write": "$6008",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 5120,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8009",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$800B",
+      "value": 16
+    },
+    {
+      "write": "$800C",
+      "value": 0
+    },
+    {
+      "write": "$800A",
+      "value": 1
+    },
+    {
+      "cycles": 12,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$800A",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 32
+    },
+    {
+      "write": "$800D",
+      "value": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 16
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 16
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 16
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 16
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 0
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    },
+    {
+      "write": "$800D",
+      "value": 96
+    },
+    {
+      "read": "$6000",
+      "expect": 16
+    },
+    {
+      "write": "$800D",
+      "value": 64
+    }
+  ]
+}

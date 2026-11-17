@@ -1,0 +1,30 @@
+{
+  "plugin": "rambo1",
+  "image": {
+    "mapper": 64,
+    "prgKiB": 128,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$E001",
+      "value": 0
+    },
+    {
+      "write": "$C000",
+      "value": 2
+    },
+    {
+      "write": "$C001",
+      "value": 1
+    },
+    {
+      "cycles": 12,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    }
+  ]
+}

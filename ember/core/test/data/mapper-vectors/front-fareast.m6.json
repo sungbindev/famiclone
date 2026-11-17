@@ -1,0 +1,58 @@
+{
+  "plugin": "front-fareast",
+  "image": {
+    "mapper": 6,
+    "prgKiB": 128,
+    "chrKiB": 0
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 8192
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        },
+        {
+          "address": "$E000",
+          "storage": "prg",
+          "offset": 122880
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$A000",
+          "storage": "prg",
+          "offset": 40960
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 8192,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

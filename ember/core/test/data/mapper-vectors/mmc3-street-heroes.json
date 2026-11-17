@@ -1,0 +1,78 @@
+{
+  "plugin": "mmc3-street-heroes",
+  "image": {
+    "mapper": 262,
+    "prgKiB": 256,
+    "chrKiB": 512
+  },
+  "steps": [
+    {
+      "read": "$4100",
+      "expect": 0
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "write": "$8001",
+      "value": 4
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 4096,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 8
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 266240,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0400",
+          "storage": "chr",
+          "offset": 267264,
+          "bus": "ppu"
+        },
+        {
+          "address": "$0800",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$4100",
+      "value": 64
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr-ram",
+          "offset": 0,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1C00",
+          "storage": "chr-ram",
+          "offset": 7168,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

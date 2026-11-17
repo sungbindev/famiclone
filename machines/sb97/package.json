@@ -1,0 +1,18 @@
+{
+  "name": "sb97",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SB97 learning computer BIOS static analysis",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "info": "node tools/sb97-report.mjs info",
+    "pages": "node tools/sb97-report.mjs pages",
+    "io": "node tools/sb97-report.mjs io",
+    "banks": "node tools/sb97-report.mjs banks",
+    "listing": "node tools/sb97-report.mjs listing",
+    "test": "node --test \"test/**/*.test.mjs\""
+  }
+}

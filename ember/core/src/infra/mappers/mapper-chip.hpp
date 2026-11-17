@@ -33,7 +33,7 @@
 #include "contracts/hardware/mapper-circuit.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "contracts/mappers/cartridge-image.hpp"
-#include "contracts/mappers/circuit-catalog.hpp"
+#include "contracts/hardware/mapper-circuit-catalog.hpp"
 #include "contracts/mappers/mapper-cartridge.hpp"
 #include "infra/mappers/loaded-plugin.hpp"
 #include "infra/mappers/script-runtime.hpp"
@@ -57,7 +57,7 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
    * @throws shared::CoreError mappers.invalidPackage：脚本无法加载或没有导出清单声明的函数、引用了主机里没有的电路；mappers.limitExceeded：加载脚本时超限。
    */
   MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contracts::mappers::CartridgeImage& image, contracts::hardware::IrqOutput& irq, contracts::hardware::PadSink& pads,
-             ScriptLimits limits = {}, const contracts::mappers::CircuitCatalog* circuits = nullptr);
+             ScriptLimits limits = {}, const contracts::hardware::CircuitCatalog* circuits = nullptr);
   ~MapperChip() override;
 
   MapperChip(const MapperChip&) = delete;

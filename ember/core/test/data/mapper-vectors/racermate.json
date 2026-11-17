@@ -1,0 +1,67 @@
+{
+  "plugin": "racermate",
+  "image": {
+    "mapper": 168,
+    "prgKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 197
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 49152
+        },
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 20480,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 0
+    },
+    {
+      "cycles": 1019,
+      "expectIrq": false
+    },
+    {
+      "cycles": 1,
+      "expectIrq": true
+    },
+    {
+      "write": "$C000",
+      "value": 0
+    },
+    {
+      "expectIrq": false
+    }
+  ]
+}

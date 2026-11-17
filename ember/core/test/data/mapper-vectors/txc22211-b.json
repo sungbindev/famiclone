@@ -1,0 +1,44 @@
+{
+  "plugin": "txc22211-b",
+  "image": {
+    "mapper": 172,
+    "prgKiB": 64,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$4102",
+      "value": 48
+    },
+    {
+      "write": "$4100",
+      "value": 0
+    },
+    {
+      "write": "$8000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 98304,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": true
+        },
+        {
+          "address": "$2800",
+          "a10": false
+        }
+      ]
+    }
+  ]
+}

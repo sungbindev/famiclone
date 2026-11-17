@@ -1,0 +1,136 @@
+{
+  "plugin": "sunsoft4",
+  "image": {
+    "mapper": 68,
+    "prgKiB": 256,
+    "chrKiB": 256
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 114688
+        }
+      ]
+    },
+    {
+      "write": "$6000",
+      "value": 1
+    },
+    {
+      "write": "$F000",
+      "value": 0
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 131072
+        }
+      ]
+    },
+    {
+      "cycles": 107000
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 131072
+        }
+      ]
+    },
+    {
+      "cycles": 600
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "unmapped": true
+        }
+      ]
+    },
+    {
+      "write": "$F000",
+      "value": 26
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$6000",
+          "storage": "prg-ram",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 10240,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$E000",
+      "value": 1
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2400",
+          "a10": false
+        },
+        {
+          "address": "$2800",
+          "a10": true
+        }
+      ]
+    },
+    {
+      "write": "$C000",
+      "value": 3
+    },
+    {
+      "write": "$D000",
+      "value": 4
+    },
+    {
+      "write": "$E000",
+      "value": 16
+    },
+    {
+      "expectNametable": [
+        {
+          "address": "$2000",
+          "enable": false
+        },
+        {
+          "address": "$2400",
+          "enable": false
+        }
+      ]
+    }
+  ]
+}

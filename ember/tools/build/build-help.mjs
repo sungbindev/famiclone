@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
  * 备注：要先运行过 npm run schema（调试 SDK 的 generated/openrpc.json 由它生成）；调试 SDK 的生成脚本依赖仓库根目录 npm install 装好的 esbuild；
- *       fcdev 的 C 接口参考与符号参考由仓库根目录 tools 下的生成脚本先重新生成（没有变化时文件不变），再随手册一起导入，help/fcdev 不提交；
+ *       fcdev 的 C 接口参考、符号参考与示例程序源码由仓库根目录 tools 下的生成脚本先重新生成（没有变化时文件不变），再随手册一起导入，help/fcdev 不提交；
  *       npm start、npm run package* 与 npm run make:win 会先运行本脚本；站点随安装包分发，开发版从 build/ember/help 读取。
  * ------------------------------------------------------------------------
  */
@@ -24,8 +24,8 @@ const repoRoot = join(root, '..');
 const sdk = join(root, '..', 'packages', 'ember-debug-sdk');
 const helpRoot = join(root, 'help');
 
-/** 先重新生成的 fcdev 文档：C 接口参考与符号参考。 */
-const FCDEV_GENERATORS = ['gen-sb2000-api-doc.mjs', 'gen-sb2000-symbols-doc.mjs'];
+/** 先重新生成的 fcdev 文档：C 接口参考、符号参考与示例程序源码。 */
+const FCDEV_GENERATORS = ['gen-sb2000-api-doc.mjs', 'gen-sb2000-symbols-doc.mjs', 'gen-sb2000-examples-doc.mjs'];
 
 /** 用户可见的文字。 */
 const TEXT = {

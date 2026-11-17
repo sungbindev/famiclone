@@ -88,6 +88,7 @@ npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号�
 | 查 SB2000 的硬件行为 | `hardware` | `docs/sb2000/03-硬件说明.md` |
 | 查 SB2000 运行库的 C 函数 | `api` | `targets/sb2000/api-reference.md`（也可以用 `npx fcdev api` 查询） |
 | 查 SB2000 的功能号、地址、出错码与寄存器符号（汇编名与 C 名） | `symbols` | `targets/sb2000/symbols-reference.md` |
+| 看 SB2000 示例程序的完整源码 | `examples` | `targets/sb2000/examples-source.md` |
 | 在模拟器里运行与调试，查调试命令 | `emulator` | `docs/02-模拟器与调试.md` |
 | 反汇编已有程序 | `disasm` | `docs/03-反汇编.md` |
 | 创建项目与模板 | `create` | `docs/04-创建包与模板.md` |

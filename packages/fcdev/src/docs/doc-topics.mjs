@@ -24,6 +24,7 @@ export const DOC_TOPICS = [
   { topic: 'create', file: '04-创建包与模板.md', title: '创建包与模板', summary: 'npm create fcdev 的命令、模板与生成内容' },
   { topic: 'nes', file: 'nes/01-开发指南.md', title: 'NES 开发指南', summary: 'NES 目标的内存与映射器、fcnes 函数、字库、运行' },
   { topic: 'sb2000', file: 'sb2000/01-开发指南.md', title: 'SB2000 开发指南', summary: '程序格式、内存布局、运行库、大程序换页、常用做法、易错点与示例' },
+  { topic: 'examples', file: 'targets/sb2000/examples-source.md', inPackage: true, title: 'SB2000 示例程序源码', summary: '手册里提到的示例程序（hello、show、copy、pad、mouse、play 等）的完整源码，由示例项目生成' },
   { topic: 'syscall', file: 'sb2000/02-系统调用手册.md', title: 'SB-DOS 系统调用手册', summary: '系统调用的参数、结果、出错码与可靠程度' },
   { topic: 'hardware', file: 'sb2000/03-硬件说明.md', title: 'SB2000 硬件说明', summary: 'SB2000 的硬件行为与寄存器' },
   { topic: 'api', file: 'targets/sb2000/api-reference.md', inPackage: true, title: 'SB2000 C 接口参考', summary: '运行库全部函数的签名、参数、返回值与系统调用，由头文件文档注释生成，查询用 npx fcdev api' },

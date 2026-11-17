@@ -52,3 +52,35 @@
   left: 0;
   z-index: var(--vp-z-index-layout-top);
 }
+
+/* 滚动条与主窗口一致：轨道 10px、滑块 6px，颜色取组件库令牌 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-slider-bg);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: var(--scrollbar-slider-radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-slider-hover-bg);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-slider-active-bg);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 页面本身的滚动条从标题栏下面开始，不穿过标题栏与系统窗口按钮 */
+html::-webkit-scrollbar-track {
+  margin-top: var(--title-bar-height);
+}

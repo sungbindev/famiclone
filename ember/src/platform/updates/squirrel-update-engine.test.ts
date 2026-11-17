@@ -68,16 +68,27 @@ describe('createSquirrelUpdateEngine', () => {
     expect(events.available).toHaveBeenCalledTimes(1);
     expect(events.notAvailable).toHaveBeenCalledTimes(1);
     expect(events.downloaded).toHaveBeenCalledWith('0.2.0');
-    expect(events.failed).toHaveBeenCalledWith('网络不通');
+    expect(events.failed).toHaveBeenCalledTimes(1);
   });
 
-  it('发布名不是合格的版本号时 downloaded 没有版本号；错误没有说明时用默认文字', () => {
+  it('失败时界面只收到一句固定说明（不含 Squirrel 的原始报错），原始报错交给 onDiagnostic 写日志，没有给回调也不出错', () => {
+    const onDiagnostic = vi.fn();
+    const events = subscribe(createSquirrelUpdateEngine({ feedUrl: FEED_URL, launcher: LAUNCHER, onDiagnostic }));
+    const raw = new Error('Command failed: 4294967295 System.AggregateException');
+    electron.autoUpdater.emit('error', raw);
+    expect(onDiagnostic).toHaveBeenCalledWith(raw);
+    expect(events.failed).toHaveBeenCalledWith('无法从升级服务器取得更新，详细原因已写入日志（“帮助→打开日志目录”）。');
+
+    const quiet = subscribe(createSquirrelUpdateEngine({ feedUrl: FEED_URL, launcher: LAUNCHER }));
+    expect(() => electron.autoUpdater.emit('error', new Error(''))).not.toThrow();
+    expect(quiet.failed).toHaveBeenCalledTimes(1);
+  });
+
+  it('发布名不是合格的版本号时 downloaded 没有版本号', () => {
     const events = subscribe(createSquirrelUpdateEngine({ feedUrl: FEED_URL, launcher: LAUNCHER }));
     electron.autoUpdater.emit('update-downloaded', {}, '', '<script>', new Date(), FEED_URL);
     electron.autoUpdater.emit('update-downloaded', {}, '', '', new Date(), FEED_URL);
-    electron.autoUpdater.emit('error', new Error(''));
     expect(events.downloaded.mock.calls).toEqual([[undefined], [undefined]]);
-    expect(events.failed).toHaveBeenCalledWith('检查更新失败');
   });
 
   it('取消订阅后不再收到事件', () => {

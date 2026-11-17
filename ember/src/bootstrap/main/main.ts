@@ -10,7 +10,7 @@
  * ------------------------------------------------------------------------
  */
 
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import handledSquirrelEvent from 'electron-squirrel-startup';
@@ -142,10 +142,14 @@ if (handledSquirrelEvent || !app.requestSingleInstanceLock()) {
     new JsonFileStore({ path: join(userDataPath, 'config', 'last-directories.json'), onError: (error) => logError(logger, error, { source: 'lastDirectories' }) })
   );
   // 只有 Squirrel 安装的正式版支持升级，开发版、免安装目录和其他系统的状态是 unsupported。
+  const squirrelLauncher = findSquirrelLauncher({ platform: process.platform, isPackaged: app.isPackaged, execPath: process.execPath, exists: existsSync });
   const updater = new EngineAppUpdater({
     engine: createSquirrelUpdateEngine({
       feedUrl: UPDATE_FEED_URL,
-      launcher: findSquirrelLauncher({ platform: process.platform, isPackaged: app.isPackaged, execPath: process.execPath, exists: existsSync })
+      launcher: squirrelLauncher,
+      // Squirrel 的报错是系统代码页的文字，界面只给固定说明，原始报错与它自己的日志位置写进错误日志。
+      onDiagnostic: (error) =>
+        logError(logger, error, { source: 'updateEngine', ...(squirrelLauncher === undefined ? {} : { squirrelLog: join(dirname(squirrelLauncher), 'Squirrel-CheckForUpdate.log') }) })
     })
   });
   updater.onStatusChange((status) => {

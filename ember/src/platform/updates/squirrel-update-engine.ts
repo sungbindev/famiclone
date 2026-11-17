@@ -8,6 +8,7 @@
  * 备注：升级地址是一个静态目录，里面放 RELEASES 与 .nupkg；有新版本时 Squirrel 在下载时就把它安装到新的 app-<版本> 目录，下次从启动器启动就是新版本，所以重启只是用启动器重新启动，不调用 quitAndInstall：
  *       应用要先走自己的退出流程（保存界面状态、停止核心进程），重启交给 Electron 在进程退出时执行，不会与旧进程抢单实例锁。
  *       启动器为 undefined（不是 Squirrel 安装的应用）时引擎不支持升级，不碰 autoUpdater。
+ *       Squirrel 的报错是系统代码页的文字（中文系统上按 UTF-8 显示是乱码），不能直接给用户看：界面只收到一句固定说明，原始报错交给 onDiagnostic 写日志。
  * ------------------------------------------------------------------------
  */
 
@@ -35,6 +36,8 @@ export interface SquirrelEngineOptions {
   readonly feedUrl: string;
   /** 安装根目录里的启动器；不是 Squirrel 安装的应用时为 undefined。 */
   readonly launcher: string | undefined;
+  /** Squirrel 报告失败时收到它的原始报错，用来写日志；不给时丢弃。 */
+  readonly onDiagnostic?: (error: Error) => void;
 }
 
 /** 版本号的合格写法：数字开头，只含字母、数字与 . + -。 */
@@ -42,7 +45,7 @@ const VERSION_PATTERN = /^[0-9][0-9A-Za-z.+-]{0,63}$/;
 
 /** 用户可见的文字。 */
 const TEXT = {
-  unknownError: '检查更新失败',
+  failed: '无法从升级服务器取得更新，详细原因已写入日志（“帮助→打开日志目录”）。',
   notSupported: '当前运行方式不支持升级'
 } as const;
 
@@ -69,7 +72,10 @@ export function createSquirrelUpdateEngine(options: SquirrelEngineOptions): Squi
     autoUpdater.on('update-available', () => emit((events) => events.available()));
     autoUpdater.on('update-not-available', () => emit((events) => events.notAvailable()));
     autoUpdater.on('update-downloaded', (_event, _releaseNotes, releaseName) => emit((events) => events.downloaded(versionOf(releaseName))));
-    autoUpdater.on('error', (error) => emit((events) => events.failed(error.message === '' ? TEXT.unknownError : error.message)));
+    autoUpdater.on('error', (error) => {
+      options.onDiagnostic?.(error);
+      emit((events) => events.failed(TEXT.failed));
+    });
   }
 
   return {

@@ -25,7 +25,7 @@ export interface UpdateHost {
 
 /** 用户可见的文字。 */
 const TEXT = {
-  check: '检查更新…',
+  check: '检查更新',
   checking: '正在检查更新…',
   downloading: '正在下载更新…',
   install: '重启并安装更新',

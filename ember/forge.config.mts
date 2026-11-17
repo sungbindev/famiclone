@@ -68,7 +68,7 @@ const config: ForgeConfig = {
       {
         name: EXECUTABLE_NAME,
         exe: `${EXECUTABLE_NAME}.exe`,
-        setupExe: 'ember-setup.exe',
+        setupExe: 'Ember-学习机模拟器.exe',
         setupIcon: './resources/icon.ico',
         authors: 'sungbin',
         description: 'Ember'

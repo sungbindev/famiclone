@@ -77,9 +77,9 @@ try {
 
         Invoke-Step '编译并生成安装程序' { npm run make:win }
 
-        $installer = Get-ChildItem -Path $makeDirectory -Filter 'ember-setup.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        $installer = Get-ChildItem -Path $makeDirectory -Filter 'Ember-学习机模拟器.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($null -eq $installer) {
-            throw '生成完成但没有找到 ember-setup.exe。'
+            throw '生成完成但没有找到 Ember-学习机模拟器.exe。'
         }
         Write-Host "已生成：$($installer.FullName)"
     }

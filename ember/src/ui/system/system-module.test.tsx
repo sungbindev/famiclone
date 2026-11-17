@@ -55,7 +55,7 @@ describe('系统模块的登记', () => {
   it('检查更新：名称随升级状态变化，执行时经常驻组件交来的接口发出检查请求', async () => {
     const { bridge, shell, command, system } = setup(() => Promise.resolve({}));
     const check = command(SYSTEM_COMMANDS.checkUpdate);
-    expect(typeof check.title === 'function' ? check.title() : check.title).toBe('检查更新…');
+    expect(typeof check.title === 'function' ? check.title() : check.title).toBe('检查更新');
     expect(check.enabled?.({ bottomPanelOpen: false, activePanelId: null, fullScreen: false, alwaysOnTop: false })).toBe(true);
     await waitFor(() => expect(bridge.onUpdateStatusChange).toHaveBeenCalledTimes(1));
     check.run(shell);

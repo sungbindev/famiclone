@@ -52,7 +52,7 @@ describe('UpdateController', () => {
 
   it('各状态下菜单项的名称与可用状态', () => {
     const { controller, push } = setup();
-    expect([controller.title(), controller.canRun()]).toEqual(['检查更新…', true]);
+    expect([controller.title(), controller.canRun()]).toEqual(['检查更新', true]);
     push({ state: 'checking' });
     expect([controller.title(), controller.canRun()]).toEqual(['正在检查更新…', false]);
     push({ state: 'downloading' });
@@ -60,9 +60,9 @@ describe('UpdateController', () => {
     push({ state: 'ready' });
     expect([controller.title(), controller.canRun()]).toEqual(['重启并安装更新', true]);
     push({ state: 'error', message: '网络不通' });
-    expect([controller.title(), controller.canRun()]).toEqual(['检查更新…', true]);
+    expect([controller.title(), controller.canRun()]).toEqual(['检查更新', true]);
     push({ state: 'unsupported' });
-    expect([controller.title(), controller.canRun()]).toEqual(['检查更新…', true]);
+    expect([controller.title(), controller.canRun()]).toEqual(['检查更新', true]);
   });
 
   it('手动检查：提示正在检查，已是最新版本时通知', async () => {

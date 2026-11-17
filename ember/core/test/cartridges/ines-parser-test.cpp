@@ -160,6 +160,24 @@ TEST(InesParser, ANes20MarkerWhoseSizesExceedTheFileFallsBackToInes1) {
   EXPECT_EQ(image.description.variant, 0U);
 }
 
+TEST(InesParser, Nes20GivesTheRamSizesAndInes1LeavesThemUnspecified) {
+  auto file = makeFile(1, 1, 0x00, 0x08);
+  file[10] = 0x71;  // PRG RAM 为 64<<1，PRG NVRAM 为 64<<7
+  file[11] = 0x03;  // CHR RAM 为 64<<3，CHR NVRAM 为 0
+  const auto& description = parseInes(file).description;
+  EXPECT_TRUE(description.nes20);
+  EXPECT_EQ(description.prgRamSize, 128U);
+  EXPECT_EQ(description.prgNvramSize, 8192U);
+  EXPECT_EQ(description.chrRamSize, 512U);
+  EXPECT_EQ(description.chrNvramSize, 0U);
+  const auto old = parseInes(makeFile(1, 1)).description;
+  EXPECT_FALSE(old.nes20);
+  EXPECT_FALSE(old.prgRamSize.has_value());
+  EXPECT_FALSE(old.prgNvramSize.has_value());
+  EXPECT_FALSE(old.chrRamSize.has_value());
+  EXPECT_FALSE(old.chrNvramSize.has_value());
+}
+
 TEST(InesParserErrors, ReportsAWrongMagicNumber) {
   auto file = makeFile(1, 0);
   file[0] = 'X';

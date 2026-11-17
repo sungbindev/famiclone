@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：smoke-run.mjs
  * 说明：Electron 冒烟脚本：启动开发版，让主进程直接加载一个测试 ROM，经 CDP 确认帧号在增长、运行页的渲染 Worker 收到并画出画面帧（读 Worker 的诊断）、画面非空、画面区按键能送达核心并改变画面、 *       键盘独占的接口与原生模块能加载、开启、关闭（不注入系统按键）、 *       系统栏左侧的运行按钮（只有图标）实时显示运行状态并展开运行面板、面板按钮与快捷键（F8）能暂停和继续、“文件”菜单的“最近打开”与“选择机型”子菜单、
- *       启动时底部面板关闭且没有活动栏、边栏、标签栏与右边栏、展开与收起面板时窗口大小不变而画面框等比缩放并留在显示区内、画面框的宽高比、最小窗口下标题栏不挤压不换行并留出拖动空白、
+ *       启动时底部面板关闭且没有活动栏、边栏、标签栏与右边栏、展开与收起面板时窗口大小不变而画面框等比缩放并留在显示区内、画面框的宽高比、启动时的窗口下标题栏不挤压不换行并留出拖动空白、
  *       首选项对话框（独立的系统窗口，主题与主窗口一致）与首选项（出厂默认值、非法取值被拒绝、画面比例与“显示全部 240 行”改后画面框跟着变、主题切换、音量保存、恢复默认）、手柄设置对话框（手柄图上的 10 个键、点键设置与 Esc 取消、实体手柄来源）、调试服务与系统栏右侧的“调试模式”、
  *       页面重载与核心进程重启后端口重新建立且运行按钮状态重新读取、关闭窗口后应用干净退出，最后只结束自己启动的进程。
  * 作者：sungbin
@@ -28,7 +28,7 @@ const GRACEFUL_EXIT_LIMIT_MS = 4500;
 const MIN_DRAG_GAP = 48;
 /** 画面框的显示宽高比：256×240 的整帧、像素宽高比 8:7。 */
 const FRAME_RATIO = 128 / 105;
-/** 预置的窗口位置：窗口大小每次启动都是最小尺寸，这里只固定位置。 */
+/** 预置的窗口位置：窗口大小每次启动都是默认尺寸，这里只固定位置。 */
 const START_PLACEMENT = { x: 400, y: 60 };
 /** 调试服务的令牌（启动参数 --debug-token）。 */
 const DEBUG_TOKEN = 'smoke-token';
@@ -385,16 +385,16 @@ async function main() {
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-menu-recent.png'));
   await menuButton('文件');
 
-  // 面板与窗口：启动时面板是关闭的，窗口是最小尺寸；先在最小窗口下核对标题栏与画面框，再展开面板核对窗口大小不变、画面框等比缩小并留在显示区内。
+  // 面板与窗口：启动时面板是关闭的，窗口是默认尺寸；先在启动时的窗口下核对标题栏与画面框，再展开面板核对窗口大小不变、画面框等比缩小并留在显示区内。
   const initial = await page.evaluate(GEOMETRY);
   check('启动时底部面板是关闭的，没有活动栏、边栏、标签栏与右边栏', initial.bottomHidden && (await page.evaluate(`!document.querySelector('.ui-activity-bar, .ui-app-frame__side, .ui-app-frame__right, [role="tablist"]')`)), JSON.stringify({ bottomHidden: initial.bottomHidden }));
   const tiny = await page.evaluate(TITLE_BAR_METRICS);
   const dragGap = tiny.innerWidth - tiny.paddingRight - tiny.menus.right;
-  console.log(`最小窗口 ${tiny.innerWidth}×${tiny.innerHeight}：图标与名称 ${tiny.brand.width.toFixed(1)}，菜单 ${tiny.menus.left.toFixed(1)}–${tiny.menus.right.toFixed(1)}（宽 ${tiny.menus.width.toFixed(1)}），系统按钮从 ${(tiny.innerWidth - tiny.paddingRight).toFixed(1)} 起，菜单到系统按钮的空白 ${dragGap.toFixed(1)}`);
-  check('最小窗口下菜单都在同一行、文字没有被截断', tiny.menuCount > 0 && tiny.menuRows === 1 && !tiny.menuClipped, `${tiny.menuCount} 个菜单，${tiny.menuRows} 行`);
-  check(`最小窗口下菜单与系统窗口按钮之间至少有 ${MIN_DRAG_GAP} 像素可拖动的空白`, dragGap >= MIN_DRAG_GAP, `${dragGap.toFixed(1)}`);
+  console.log(`启动时的窗口 ${tiny.innerWidth}×${tiny.innerHeight}：图标与名称 ${tiny.brand.width.toFixed(1)}，菜单 ${tiny.menus.left.toFixed(1)}–${tiny.menus.right.toFixed(1)}（宽 ${tiny.menus.width.toFixed(1)}），系统按钮从 ${(tiny.innerWidth - tiny.paddingRight).toFixed(1)} 起，菜单到系统按钮的空白 ${dragGap.toFixed(1)}`);
+  check('启动时的窗口下菜单都在同一行、文字没有被截断', tiny.menuCount > 0 && tiny.menuRows === 1 && !tiny.menuClipped, `${tiny.menuCount} 个菜单，${tiny.menuRows} 行`);
+  check(`启动时的窗口下菜单与系统窗口按钮之间至少有 ${MIN_DRAG_GAP} 像素可拖动的空白`, dragGap >= MIN_DRAG_GAP, `${dragGap.toFixed(1)}`);
   check('画面框的宽高比是 128:105（8:7 的像素宽高比，不变形）', Math.abs(initial.frameWidth / initial.frameHeight - FRAME_RATIO) < 0.02, `${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)}`);
-  check('最小窗口下画面框四周的间距一样（误差不超过 2 像素）', Math.max(...Object.values(initial.margins)) - Math.min(...Object.values(initial.margins)) <= 2, JSON.stringify(initial.margins));
+  check('启动时的窗口下画面框四周的间距一样（误差不超过 2 像素）', Math.max(...Object.values(initial.margins)) - Math.min(...Object.values(initial.margins)) <= 2, JSON.stringify(initial.margins));
   if (screenshotDirectory !== undefined) await saveScreenshot(page, join(screenshotDirectory, 'smoke-min-window.png'));
   const bottomOpen = await toggleAndMeasure('运行');
   check('展开运行面板：窗口大小不变，画面框等比缩小并留在显示区内', sameWindowSize(initial, bottomOpen) && frameFits(bottomOpen) && bottomOpen.frameHeight < initial.frameHeight, `窗口 ${bottomOpen.innerWidth}×${bottomOpen.innerHeight}，画面框 ${initial.frameWidth.toFixed(1)}×${initial.frameHeight.toFixed(1)} → ${bottomOpen.frameWidth.toFixed(1)}×${bottomOpen.frameHeight.toFixed(1)}`);

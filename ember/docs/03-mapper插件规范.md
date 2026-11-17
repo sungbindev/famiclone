@@ -57,6 +57,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | `description` | 字符串 | 一两句话的说明，可选 |
 | `host` | 字符串数组 | 要求的主机型号，目前只有 `fc`（`["fc"]`）；宿主按第一个存在的型号装配；插卡学习机的卡带写自己的主机型号（如裕兴系列），打开卡带时按它自动装配，用户不选机型（后续阶段） |
 | `devices` | 字符串数组 | 可选；卡带用到的外设，目前只有 `mouse`（鼠标），最多 1 项、不重复；不写等于没有外设，见下面的说明 |
+| `busConflict` | 布尔 | 可选，默认 `false`；写寄存器时是否发生总线冲突：CPU 写入的数据与该地址当前读到的 ROM 字节相与，再交给寄存器的处理；该地址没有映射 ROM 时不相与；每次复位回到这个值，脚本可以用 `ctx.busConflict.set(true 或 false)` 按变体改 |
 | `match` | 数组 | 匹配条件，见第 4.2 节 |
 
 - 清单里不认识的字段一律拒绝（`mappers.invalidPackage`），包括已取消的 `wires`、`uses`、`irq`：清单不声明连线，也不声明用了哪些功能模块，脚本在读写回调里译码并直接用 `ctx.device(名称)` 访问，主机没有该功能模块时运行时报错并暂停；卡带要向 CPU 发中断只能经 `ctx.irq`；这些字段以后也不恢复。
@@ -72,9 +73,11 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | `variant` | 变体：NES 2.0 头取 submapper；旧 iNES 头取头部第 9 字节（从 0 数起）右移 1 位，已用仓库里的 `SB2K_BIOS.NES` 核对：第 9 字节为 `02`，变体为 1 |
 | `prgSize`、`chrSize` | PRG、CHR 的字节数 |
 | `mirroring`、`battery`、`trainer` | 头里的镜像方式、电池标志、训练器标志 |
+| `nes20` | 是否是 NES 2.0 头 |
+| `prgRamSize`、`prgNvramSize`、`chrRamSize`、`chrNvramSize` | 头里写明的 PRG RAM、PRG NVRAM（带电池）、CHR RAM、CHR NVRAM 字节数；只有 NES 2.0 头写明（字节 10、11 的每个半字节，0 表示没有，否则是 `64 << n`），旧 iNES 头没有写明，在 `ctx.header` 里为 `null` |
 | `crc32Prg`、`crc32All` | PRG 的校验值、PRG 加 CHR 的校验值 |
 
-`match` 的每一项是一组条件，必须写 `mapper`，其余可选：`variant`、`prgSize`、`chrSize`、`crc32Prg`、`crc32All`；写出的条件必须全部满足，任一项满足即匹配。`crc32Prg`、`crc32All` 在清单里写成 8 位十六进制字符串（如 `"A1B2C3D4"`，大小写均可）。
+`match` 的每一项是一组条件，必须写 `mapper`，其余可选：`variant`、`prgSize`、`chrSize`、`chr`（`"present"` 表示文件里有 CHR ROM，`"none"` 表示没有）、`crc32Prg`、`crc32All`；写出的条件必须全部满足，任一项满足即匹配。`crc32Prg`、`crc32All` 在清单里写成 8 位十六进制字符串（如 `"A1B2C3D4"`，大小写均可）。
 
 文件头的解析规则（`core/src/logic/cartridges/ines-parser.cpp`）：
 
@@ -99,12 +102,13 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | `id` | 存储区标识，同一插件内不重复 |
 | `kind` | `rom` 或 `ram` |
 | `from` | `rom` 的数据来源：`file.prg` 或 `file.chr`（NES 文件里的数据） |
-| `size` | `ram` 的字节数 |
+| `size` | `ram` 的字节数，整数；或 `{ "header": 头里的哪一项, "default": 默认字节数 }`，大小取自文件头，见下面的说明 |
 | `battery` | `ram` 是否带电池；带电池时存档文件按卡带保存 |
-| `fallback` | 仅 `rom` 可写：来源为空时改用的存储区，写成内联的存储区声明，目前只支持 `{ "kind": "ram", "size": 字节数, "battery": 可选 }`（如文件没有 CHR 时用 8K 的 CHR RAM）；来源为空又没有 `fallback` 时存储区容量为 0，窗口读到开放总线 |
+| `fallback` | 仅 `rom` 可写：来源为空时改用的存储区，写成内联的存储区声明，目前只支持 `{ "kind": "ram", "size": 字节数或 { header, default }, "battery": 可选 }`（如文件没有 CHR 时用 8K 的 CHR RAM）；来源为空又没有 `fallback` 时存储区容量为 0，窗口读到开放总线 |
 
 - 只声明卡带上的存储区；芯片内与主板上的存储不能在这里声明或修改，见 02 第 5 节。
-- `id` 用小写字母、数字与 `-`，不超过 32 个字符；最多 16 个存储区；`ram` 的 `size` 为 1 到 16 MiB。
+- `id` 用小写字母、数字与 `-`，不超过 32 个字符；最多 16 个存储区；`ram` 的整数 `size` 为 1 到 16 MiB。
+- 大小取自文件头：`header` 是 `prgRam`、`prgNvram`、`prgAny`、`chrRam`、`chrNvram` 之一，`default` 为 0 到 16 MiB。头里写明了（NES 2.0）就用头里的，写明为 0 的存储区容量为 0；没写明（旧 iNES 头）时：`prgRam` 在文件带电池时为 0、否则取 `default`，`prgNvram` 在文件带电池时取 `default`、否则为 0，`chrRam` 取 `default`，`chrNvram` 为 0。`prgAny` 是卡带默认挂在 `$6000` 的那块 RAM：`prgNvram` 的结果不为 0 时用它（并带电池），否则用 `prgRam` 的结果（不带电池），所以这种存储区是否带电池由文件头决定，不写 `battery`。容量为 0 的窗口读到开放总线、写入被丢弃。
 - ROM 拒绝写入（经窗口写入被丢弃，经 `ctx.storage(id).write` 写入返回 `false`）。上电复位时不带电池的 RAM 清零，带电池的保持；软复位时所有 RAM 保持。存档文件的载入与保存是**后续阶段**（目前带电池的 RAM 只在内存里保持）。
 - 训练器的内容目前不载入存储区（**后续阶段**按需要加入），只在 `ctx.header.trainer` 里给出标志。
 
@@ -117,15 +121,15 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | `id` | 窗口标识 |
 | `bus` | `cpu` 或 `ppu` |
 | `range` | 窗口覆盖的地址范围，如 `$8000-$9FFF` |
-| `storage` | 窗口访问的存储区 |
+| `storage` | 窗口访问的存储区；可以写成存储区标识的数组（最多 4 个），第一个是复位后绑定的，脚本用 `select` 在其中切换（如同一地址范围在 ROM 与 RAM 之间切换） |
 | `size` | 一个 bank 的字节数，必须等于窗口大小 |
-| `initial` | 复位后指向的 bank，可以是整数，或 `last`、`first` |
+| `initial` | 复位后指向的 bank，可以是整数，或 `last`、`first`；负整数从末尾数（`-1` 是最后一个，`-2` 是倒数第二个，不用取模，所以 bank 数不是 2 的幂也成立） |
 | `access` | `r` 或 `rw`；指向 ROM 时只能是 `r` |
 
 - 窗口之间的地址范围不能重叠；没有被窗口或寄存器覆盖的卡槽地址按开放总线处理。
 - CPU 侧的窗口只能在卡带的地址 `$4020-$FFFF`；PPU 侧的窗口只能在图案表地址 `$0000-$1FFF`（名称表地址的连法见下面的 `nametable`）；`initial` 不写时为 `first`。
 - bank 号按存储区的 bank 数取模（bank 数为存储区容量除以 `size` 向下取整，至少为 1，真机的地址线只连低位）；`setOffset` 的字节偏移按存储区容量取模；窗口访问越过存储区末尾时从头回绕（镜像），所以 16K 的 PRG 放进两个 16K 的窗口就是镜像。`unmap()` 之后读按开放总线、写被丢弃，再调用 `setBank`、`setOffset` 重新映射。
-- `access` 为 `rw` 的窗口必须指向 `ram`，或指向带 `fallback` 的 `rom`（文件没有这部分数据时它是 RAM，有数据时是 ROM，写入被 ROM 拒绝）。
+- `access` 为 `rw` 的窗口必须指向 `ram`，或指向带 `fallback` 的 `rom`（文件没有这部分数据时它是 RAM，有数据时是 ROM，写入被 ROM 拒绝）；`storage` 是数组时，其中有一项满足即可，窗口当前绑定的是 ROM 时写入被拒绝，`access` 只是上限，脚本可以用 `setAccess('r')` 临时写保护。
 - `nametable` 声明名称表的初始连法：`header`（按文件头）、`horizontal`、`vertical`、`single0`、`single1`、`four`；脚本可以在运行中改。上电复位回到初始连法。`four` 由卡带自带 4K 的名称表显存响应（`$3000-$3EFF` 是 `$2000-$2EFF` 的镜像），其他连法经显存控制线用主板的 2K 显存，见 02 第 4 节。
 
 ### 4.5 寄存器与处理方式
@@ -264,7 +268,9 @@ export default definePlugin({
 | 成员 | 说明 |
 | --- | --- |
 | `ctx.header` | 只读的规范化卡带描述，见第 4.2 节 |
-| `ctx.window(id)` | 窗口：`setBank(n)` 切换 bank，`setOffset(bytes)` 按字节偏移，`unmap()` 取消映射（读按开放总线） |
+| `ctx.window(id)` | 窗口：`setBank(n)` 切换 bank，`setOffset(bytes)` 按字节偏移，`unmap()` 取消映射（读按开放总线），`bankCount`（只读）当前绑定的存储区里有几个窗口大小的 bank（至少 1，用来写“倒数第 n 个 bank”），`select(存储区标识, bank)` 切到清单里该窗口列出的另一个存储区并选 bank（`bank` 默认 0，不在列表里抛 `RangeError`），`setAccess('r' 或 'rw')` 写保护或允许写入（上电复位回到清单的 `access`） |
+| `ctx.busConflict.set(enabled)` | 设置寄存器写入是否发生总线冲突，见第 4.1 节的 `busConflict` |
+| `ctx.peek(address)` | 按卡带自己的 CPU 侧译码读一个字节（窗口、声明的固定值与状态），没有副作用，不回调脚本的 `read`；卡带不驱动数据线时返回 `undefined`；地址不在 0 到 65535 之间抛 `RangeError` |
 | `ctx.nametable.set(mode)` | 设置名称表连法：`horizontal`、`vertical`、`single0`、`single1`、`four` |
 | `ctx.irq` | 卡带的 IRQ 引脚：`assert()` 拉低，`release()` 释放 |
 | `ctx.device(name)` | 主机上的功能模块；目前只有 `'tape'`（磁带机，见第 6.6 节）：`level()`、`setComparator(low, high, invert)`；主机没有该功能模块时抛出 `RangeError`（“当前主机没有磁带机”），按插件错误处理；**后续阶段（插卡学习机）**：其他功能模块（如 `fdc`），`read(寄存器)`、`write(寄存器, 值)` 在脚本的读写回调里转发，寄存器编号由脚本从地址取，运行页提示“当前机型没有 xx”并暂停 |

@@ -77,6 +77,7 @@ api::MapperDetail makeDetail(const LoadedPlugin& plugin, PluginSource source, bo
     info.bus = busName(decl.ppu);
     info.range = formatRange(decl.range);
     info.storage = decl.storage;
+    for (std::size_t index = 1; index < decl.storageChoices.size(); ++index) info.storage += "," + decl.storageChoices[index];
     info.size = decl.size;
     info.initial = decl.initialKind == InitialKind::Bank ? std::to_string(decl.initialBank) : (decl.initialKind == InitialKind::Last ? "last" : "first");
     info.access = decl.writable ? "rw" : "r";

@@ -1,0 +1,23 @@
+{
+  "plugin": "nina01",
+  "image": {
+    "mapper": 34,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "write": "$7FFD",
+      "value": 1
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        }
+      ]
+    }
+  ]
+}

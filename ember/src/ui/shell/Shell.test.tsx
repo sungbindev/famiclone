@@ -333,6 +333,19 @@ describe('系统栏里的面板按钮', () => {
     await shown();
     expect(document.documentElement.classList.contains('ui-status-bar-large')).toBe(true);
   });
+
+  it('标题栏项：渲染在标题栏的操作区里，按登记顺序', async () => {
+    renderShell({ modules: [{ name: 'a', titleBarItems: [{ id: 'a.update', Component: () => <span>甲项</span> }, { id: 'a.other', Component: () => <span>乙项</span> }] }] });
+    await shown();
+    const actions = document.querySelector('.ui-title-bar__actions') as HTMLElement;
+    expect([...actions.children].map((item) => item.textContent)).toEqual(['甲项', '乙项']);
+  });
+
+  it('没有登记标题栏项时标题栏没有操作区', async () => {
+    renderShell();
+    await shown();
+    expect(document.querySelector('.ui-title-bar__actions')).toBeNull();
+  });
 });
 
 /** 一个登记了“自动收缩”的面板（内容里有一个按钮）和一个没登记的面板；显示区里有一段可点的文字。 */

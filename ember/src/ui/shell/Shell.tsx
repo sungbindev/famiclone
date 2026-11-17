@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：Shell.tsx
  * 说明：外壳：用组件库的外壳组件拼出窗口框架（标题栏与菜单、中间固定的显示区、底部面板、状态栏、通知），
- *       全部入口都来自登记表（显示区、对话框、命令与快捷键、菜单项、底部面板页签、状态项），自己不写死业务入口；
+ *       全部入口都来自登记表（显示区、对话框、命令与快捷键、菜单项、底部面板页签、状态项、标题栏项），自己不写死业务入口；
  *       处理命令与全局快捷键（焦点在文本输入控件里时不带 Ctrl 或 Alt 的快捷键不触发）、子菜单、对话框、模块的常驻组件、命令状态的刷新、窗口状态与底部面板高度的保存；全屏时只显示显示区。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -358,6 +358,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
               logo={<EmberLogo />}
               title={APP_NAME}
               menuBar={<MenuBar menus={menus} openMenuId={openMenuId} onOpenMenuChange={setOpenMenuId} onSelect={(_menuId, itemId) => handleMenuSelect(itemId)} />}
+              actions={registry.titleBarItems.length === 0 ? undefined : registry.titleBarItems.map((item) => createElement(item.Component, { key: item.id }))}
             />
           )
         }

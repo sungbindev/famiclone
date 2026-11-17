@@ -677,4 +677,142 @@ TEST(MapperChipInput, BadPadCallsAreScriptErrorsAndStopTheScript) {
   EXPECT_FALSE(badButton.chip.failure().has_value());
 }
 
+TEST(MapperChip, BusConflictsAndTheirScriptSwitch) {
+  json manifest = withRegisters(WRITE_ALL, R"([{ "name": "bank", "bits": 8, "description": "x" }])");
+  manifest["busConflict"] = true;
+  const std::string script = "export default { reset(ctx) { if (ctx.header.variant === 1) ctx.busConflict.set(false); }, write(ctx, bus, addr, value) { ctx.state.bank = value; } };";
+  Rig conflicting(manifest, script, makeImage(16384, 8192));
+  conflicting.cpuWrite(0x8001, 0xFF);  // PRG 第 1 字节是 7，写入值与它相与
+  EXPECT_EQ(conflicting.chip.state("bank"), 7U);
+  conflicting.cpuWrite(0x8000, 0xFF);  // PRG 第 0 字节是 0
+  EXPECT_EQ(conflicting.chip.state("bank"), 0U);
+  conflicting.chip.reset(true);  // 复位回到清单的初始值
+  conflicting.cpuWrite(0x8001, 0xFF);
+  EXPECT_EQ(conflicting.chip.state("bank"), 7U);
+
+  mapper_error::CartridgeImage image = makeImage(16384, 8192);
+  image.description.variant = 1;
+  Rig switchedOff(manifest, script, image);
+  switchedOff.chip.reset(true);
+  switchedOff.cpuWrite(0x8001, 0xFF);
+  EXPECT_EQ(switchedOff.chip.state("bank"), 0xFFU);
+
+  // 清单没写 busConflict 时不相与。
+  Rig plain(withRegisters(WRITE_ALL, R"([{ "name": "bank", "bits": 8, "description": "x" }])"), script, makeImage(16384, 8192));
+  plain.cpuWrite(0x8001, 0xFF);
+  EXPECT_EQ(plain.chip.state("bank"), 0xFFU);
+}
+
+TEST(MapperChip, AWindowCanSelectBetweenStoragesChangeItsAccessAndReportItsBankCount) {
+  json manifest = withRegisters(R"([{ "bus": "cpu", "range": "$5000-$5000", "write": true }])");
+  manifest["storage"].push_back(json::parse(R"({ "id": "ram", "kind": "ram", "size": 16384 })"));
+  manifest["windows"].push_back(json::parse(R"({ "id": "w", "bus": "cpu", "range": "$6000-$7FFF", "storage": ["prg", "ram"], "size": 8192, "initial": 1, "access": "rw" })"));
+  const std::string script = R"(export default { write(ctx, bus, addr, value) {
+    const w = ctx.window('w');
+    if (value === 0) w.select('prg', 3);
+    else if (value === 1) w.select('ram', 1);
+    else if (value === 2) w.setAccess('r');
+    else if (value === 3) ctx.state.count = w.bankCount;
+    else w.select('chr', 0);
+  } };)";
+  manifest["state"] = json::parse(R"([{ "name": "count", "bits": 8, "description": "x" }])");
+  Rig rig(manifest, script, makeImage(32768, 8192));
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).storage, "prg");
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).offset, 8192U);  // initial 为 prg 的 bank 1
+  rig.cpuWrite(0x6000, 0x99);  // 窗口指向 ROM，写入被拒绝
+  EXPECT_EQ(rig.cpu(0x6000).value, prgByte(8192));
+
+  rig.cpuWrite(0x5000, 1);
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).storage, "ram");
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).offset, 8192U);
+  rig.cpuWrite(0x6000, 0x99);
+  EXPECT_EQ(rig.cpu(0x6000).value, 0x99);
+  rig.cpuWrite(0x5000, 2);  // 写保护
+  rig.cpuWrite(0x6000, 0x11);
+  EXPECT_EQ(rig.cpu(0x6000).value, 0x99);
+  rig.cpuWrite(0x5000, 3);
+  EXPECT_EQ(rig.chip.state("count"), 2U);  // 16K 的 RAM 分成 2 个 8K bank
+  rig.cpuWrite(0x5000, 0);
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).storage, "prg");
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).offset, 3U * 8192U);
+  rig.cpuWrite(0x5000, 9);  // 清单里没有的存储区是脚本错误
+  EXPECT_TRUE(rig.chip.failure().has_value());
+  rig.chip.reset(true);  // 复位回到初始的存储区
+  EXPECT_FALSE(rig.chip.failure().has_value());
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).storage, "prg");
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x6000).offset, 8192U);
+}
+
+TEST(MapperChip, RamSizesCanComeFromTheFileHeader) {
+  json manifest = json::parse(ember::test::minimalManifest());
+  manifest["storage"].push_back(json::parse(R"({ "id": "wram", "kind": "ram", "size": { "header": "prgRam", "default": 8192 } })"));
+  manifest["storage"].push_back(json::parse(R"({ "id": "sram", "kind": "ram", "battery": true, "size": { "header": "prgNvram", "default": 8192 } })"));
+  const auto sizes = [&](const mapper_error::CartridgeImage& image) {
+    Rig rig(manifest, "", image);
+    return std::make_pair(rig.chip.storage("wram")->size(), rig.chip.storage("sram")->size());
+  };
+  using Sizes = std::pair<std::size_t, std::size_t>;
+  mapper_error::CartridgeImage image = makeImage(16384, 8192);
+  EXPECT_EQ(sizes(image), (Sizes{8192, 0}));  // 旧头、没有电池：工作 RAM 取默认
+  image.description.battery = true;
+  EXPECT_EQ(sizes(image), (Sizes{0, 8192}));  // 旧头、带电池：存档 RAM 取默认
+  image.description.nes20 = true;
+  image.description.prgRamSize = 2048;
+  image.description.prgNvramSize = 0;
+  EXPECT_EQ(sizes(image), (Sizes{2048, 0}));  // NES 2.0 写明的大小优先
+  image.description.prgNvramSize = 32768;
+  image.description.prgRamSize = 0;
+  EXPECT_EQ(sizes(image), (Sizes{0, 32768}));
+}
+
+TEST(MapperChip, PrgAnyUsesTheSavedRamWhenThereIsOneAndTheWorkRamOtherwise) {
+  json manifest = json::parse(ember::test::minimalManifest());
+  manifest["storage"].push_back(json::parse(R"({ "id": "any", "kind": "ram", "size": { "header": "prgAny", "default": 8192 } })"));
+  mapper_error::CartridgeImage image = makeImage(16384, 8192);
+  Rig plain(manifest, "", image);
+  EXPECT_EQ(plain.chip.storage("any")->size(), 8192U);
+  EXPECT_FALSE(plain.chip.storageList()[2].battery);
+  image.description.battery = true;
+  Rig battery(manifest, "", image);
+  EXPECT_EQ(battery.chip.storage("any")->size(), 8192U);
+  EXPECT_TRUE(battery.chip.storageList()[2].battery);
+  image.description.nes20 = true;
+  image.description.prgNvramSize = 0;
+  image.description.prgRamSize = 2048;
+  Rig workOnly(manifest, "", image);
+  EXPECT_EQ(workOnly.chip.storage("any")->size(), 2048U);
+  EXPECT_FALSE(workOnly.chip.storageList()[2].battery);
+}
+
+TEST(MapperChip, NegativeInitialBanksCountFromTheEndAndTheScriptCanPeekTheCpuSide) {
+  json manifest = json::parse(ember::test::minimalManifest());
+  manifest["windows"] = json::parse(R"([
+    { "id": "w0", "bus": "cpu", "range": "$8000-$9FFF", "storage": "prg", "size": 8192, "initial": -2, "access": "r" },
+    { "id": "w1", "bus": "cpu", "range": "$A000-$BFFF", "storage": "prg", "size": 8192, "initial": -1, "access": "r" }
+  ])");
+  manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$5000-$5001", "read": true }])");
+  const std::string script = "export default { read(ctx, bus, addr) { return ctx.peek(addr === 0x5000 ? 0x8000 : 0x6000); } };";
+  Rig rig(manifest, script, makeImage(24576, 0));  // 24K\uff1a3 \u4e2a 8K bank\uff0c\u4e0d\u662f 2 \u7684\u5e42
+  EXPECT_EQ(rig.chip.describeAddress(false, 0x8000).offset, 8192U);
+  EXPECT_EQ(rig.chip.describeAddress(false, 0xA000).offset, 16384U);
+  EXPECT_EQ(rig.cpu(0x5000).value, prgByte(8192));
+  EXPECT_EQ(rig.cpu(0x5001).drivenMask, 0);  // peek \u672a\u6620\u5c04\u7684\u5730\u5740\u5f97\u5230 undefined
+}
+
+TEST(MapperChip, ChrRamFallbackSizeCanComeFromTheFileHeaderAndTheHeaderIsVisibleToTheScript) {
+  json manifest = json::parse(ember::test::minimalManifest());
+  manifest["storage"][1]["fallback"]["size"] = json::parse(R"({ "header": "chrRam", "default": 8192 })");
+  manifest["registers"] = json::parse(R"([{ "bus": "cpu", "range": "$5000-$5000", "read": true }])");
+  const std::string script = "export default { read(ctx) { const h = ctx.header; return h.nes20 && h.prgRamSize === null && h.chrRamSize === 32768 ? 1 : 0; } };";
+  mapper_error::CartridgeImage image = makeImage(16384, 0);
+  Rig defaults(manifest, script, image);
+  EXPECT_EQ(defaults.chip.storage("chr")->size(), 8192U);
+  image.description.nes20 = true;
+  image.description.chrRamSize = 32768;
+  Rig sized(manifest, script, image);
+  EXPECT_EQ(sized.chip.storage("chr")->size(), 32768U);
+  EXPECT_EQ(sized.cpu(0x5000).value, 1);
+  EXPECT_EQ(defaults.cpu(0x5000).value, 0);
+}
+
 }  // namespace

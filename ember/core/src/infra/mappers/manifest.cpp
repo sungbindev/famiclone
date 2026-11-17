@@ -36,6 +36,8 @@ constexpr std::size_t MAX_DEVICES = 1;
 constexpr std::size_t MAX_MATCH_RULES = 32;
 constexpr std::size_t MAX_STORAGE = 16;
 constexpr std::size_t MAX_WINDOWS = 64;
+/** 一个窗口最多可切换到几个存储区。 */
+constexpr std::size_t MAX_WINDOW_STORAGES = 4;
 constexpr std::size_t MAX_REGISTERS = 64;
 constexpr std::size_t MAX_STATE = 64;
 constexpr std::size_t MAX_TABLES = 16;
@@ -191,15 +193,39 @@ std::uint32_t parseCrc(const std::string& text, const std::string& path) {
 
 MatchRule readMatchRule(const json& item, const std::string& path) {
   json_fields::requireObject(item, path);
-  json_fields::rejectUnknown(item, path, {"mapper", "variant", "prgSize", "chrSize", "crc32Prg", "crc32All"});
+  json_fields::rejectUnknown(item, path, {"mapper", "variant", "prgSize", "chrSize", "chr", "crc32Prg", "crc32All"});
   MatchRule rule;
   rule.mapper = static_cast<std::uint32_t>(readInt(item, "mapper", path, 0, 4095));
   if (const auto value = readOptionalInt(item, "variant", path, 0, 255)) rule.variant = static_cast<std::uint32_t>(*value);
   if (const auto value = readOptionalInt(item, "prgSize", path, 0, MAX_RAM_SIZE * 256)) rule.prgSize = static_cast<std::uint64_t>(*value);
   if (const auto value = readOptionalInt(item, "chrSize", path, 0, MAX_RAM_SIZE * 256)) rule.chrSize = static_cast<std::uint64_t>(*value);
+  if (const auto value = readOptionalText(item, "chr", path, 1, 8)) {
+    if (*value != "none" && *value != "present") fail(path + ".chr 只能是 none 或 present");
+    rule.chrPresent = *value == "present";
+  }
   if (const auto value = readOptionalText(item, "crc32Prg", path, 8, 8)) rule.crc32Prg = parseCrc(*value, path + ".crc32Prg");
   if (const auto value = readOptionalText(item, "crc32All", path, 8, 8)) rule.crc32All = parseCrc(*value, path + ".crc32All");
   return rule;
+}
+
+/** 大小的写法：整数，或 { header, default }（取自文件头）。fixedMinimum 是整数写法的最小值。 */
+void readSize(const json& object, const std::string& path, std::int64_t fixedMinimum, std::uint32_t& size, std::optional<HeaderSize>& header) {
+  const json& field = requireField(object, "size", path);
+  const std::string sizePath = path + ".size";
+  if (!field.is_object()) {
+    size = static_cast<std::uint32_t>(json_fields::readInteger(field, sizePath, fixedMinimum, MAX_RAM_SIZE));
+    return;
+  }
+  json_fields::rejectUnknown(field, sizePath, {"header", "default"});
+  const std::string name = json_fields::readString(requireField(field, "header", sizePath), sizePath + ".header", 1, 16, {"prgRam", "prgNvram", "prgAny", "chrRam", "chrNvram"});
+  HeaderSize value;
+  if (name == "prgNvram") value.field = HeaderRam::PrgNvram;
+  else if (name == "prgAny") value.field = HeaderRam::PrgAny;
+  else if (name == "chrRam") value.field = HeaderRam::ChrRam;
+  else if (name == "chrNvram") value.field = HeaderRam::ChrNvram;
+  value.defaultSize = static_cast<std::uint32_t>(readInt(field, "default", sizePath, 0, MAX_RAM_SIZE));
+  header = value;
+  size = value.defaultSize;
 }
 
 StorageDecl readStorage(const json& item, const std::string& path) {
@@ -213,7 +239,7 @@ StorageDecl readStorage(const json& item, const std::string& path) {
   if (decl.ram) {
     if (json_fields::find(item, "from") != nullptr) fail(path + ".from 只用于 rom");
     if (json_fields::find(item, "fallback") != nullptr) fail(path + ".fallback 只用于 rom");
-    decl.size = static_cast<std::uint32_t>(readInt(item, "size", path, 1, MAX_RAM_SIZE));
+    readSize(item, path, 1, decl.size, decl.header);
     return decl;
   }
   if (json_fields::find(item, "size") != nullptr) fail(path + ".size 只用于 ram");
@@ -225,7 +251,10 @@ StorageDecl readStorage(const json& item, const std::string& path) {
     json_fields::requireObject(*fallback, fallbackPath);
     json_fields::rejectUnknown(*fallback, fallbackPath, {"kind", "size", "battery"});
     json_fields::readString(requireField(*fallback, "kind", fallbackPath), fallbackPath + ".kind", 1, 8, {"ram"});
-    decl.fallback = FallbackRam{static_cast<std::uint32_t>(readInt(*fallback, "size", fallbackPath, 1, MAX_RAM_SIZE)), readFlag(*fallback, "battery", fallbackPath)};
+    FallbackRam ram;
+    readSize(*fallback, fallbackPath, 1, ram.size, ram.header);
+    ram.battery = readFlag(*fallback, "battery", fallbackPath);
+    decl.fallback = ram;
   }
   return decl;
 }
@@ -237,7 +266,19 @@ WindowDecl readWindow(const json& item, const std::string& path) {
   decl.id = readIdentifier(item, "id", path, 32);
   decl.ppu = readBus(item, path);
   decl.range = readRange(item, "range", path, decl.ppu);
-  decl.storage = readIdentifier(item, "storage", path, 32);
+  const json& storage = requireField(item, "storage", path);
+  if (storage.is_array()) {
+    if (storage.empty() || storage.size() > MAX_WINDOW_STORAGES) fail(path + ".storage 应有 1 到 " + std::to_string(MAX_WINDOW_STORAGES) + " 项");
+    for (std::size_t index = 0; index < storage.size(); ++index) {
+      const std::string choice = json_fields::readString(storage[index], path + ".storage[" + std::to_string(index) + "]", 1, 32, {});
+      if (!isLowerIdentifier(choice, 1, 32)) fail(path + ".storage[" + std::to_string(index) + "] 只能用小写字母、数字与 -，且不能以 - 开头");
+      if (std::find(decl.storageChoices.begin(), decl.storageChoices.end(), choice) != decl.storageChoices.end()) fail(path + ".storage 里的存储区重复：" + choice);
+      decl.storageChoices.push_back(choice);
+    }
+  } else {
+    decl.storageChoices.push_back(readIdentifier(item, "storage", path, 32));
+  }
+  decl.storage = decl.storageChoices.front();
   decl.size = static_cast<std::uint32_t>(readInt(item, "size", path, 1, 65536));
   if (decl.size != decl.range.length()) fail(path + ".size 必须等于地址范围的大小 " + std::to_string(decl.range.length()));
   if (const json* initial = json_fields::find(item, "initial")) {
@@ -246,7 +287,7 @@ WindowDecl readWindow(const json& item, const std::string& path) {
       decl.initialKind = text == "last" ? InitialKind::Last : InitialKind::First;
     } else {
       decl.initialKind = InitialKind::Bank;
-      decl.initialBank = static_cast<std::uint32_t>(json_fields::readInteger(*initial, path + ".initial", 0, 0xFFFFFF));
+      decl.initialBank = json_fields::readInteger(*initial, path + ".initial", -65536, 0xFFFFFF);
     }
   }
   const std::string access = json_fields::readString(requireField(item, "access", path), path + ".access", 1, 2, {"r", "rw"});
@@ -490,9 +531,13 @@ void checkConsistency(const Manifest& manifest) {
   std::set<std::string> windowIds;
   for (const auto& window : manifest.windows) {
     if (!windowIds.insert(window.id).second) fail("windows 里的标识重复：" + window.id);
-    const auto storage = std::find_if(manifest.storage.begin(), manifest.storage.end(), [&](const StorageDecl& item) { return item.id == window.storage; });
-    if (storage == manifest.storage.end()) fail("窗口 " + window.id + " 引用了不存在的存储区：" + window.storage);
-    if (window.writable && !storage->ram && !storage->fallback) fail("窗口 " + window.id + " 指向 ROM，access 只能是 r");
+    bool anyRam = false;
+    for (const std::string& choice : window.storageChoices) {
+      const auto storage = std::find_if(manifest.storage.begin(), manifest.storage.end(), [&](const StorageDecl& item) { return item.id == choice; });
+      if (storage == manifest.storage.end()) fail("窗口 " + window.id + " 引用了不存在的存储区：" + choice);
+      anyRam = anyRam || storage->ram || storage->fallback.has_value();
+    }
+    if (window.writable && !anyRam) fail("窗口 " + window.id + " 指向 ROM，access 只能是 r");
   }
   for (std::size_t first = 0; first < manifest.windows.size(); ++first) {
     for (std::size_t second = first + 1; second < manifest.windows.size(); ++second) {
@@ -552,7 +597,7 @@ Manifest build(const json& root) {
   const std::string path = "manifest";
   json_fields::requireObject(root, path);
   json_fields::rejectUnknown(root, path,
-                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "match", "storage", "windows", "nametable", "registers", "state", "tables", "tape", "settings"});
+                             {"id", "name", "version", "apiVersion", "publisher", "description", "host", "devices", "busConflict", "match", "storage", "windows", "nametable", "registers", "state", "tables", "tape", "settings"});
   Manifest manifest;
   manifest.id = readText(root, "id", path, 3, 40);
   if (!isLowerIdentifier(manifest.id, 3, 40)) fail(path + ".id 只能用小写字母、数字与 -，3 到 40 个字符，且不能以 - 开头");
@@ -580,6 +625,7 @@ Manifest build(const json& root) {
     }
   }
   const json& matches = readList(root, "match", path, 1, MAX_MATCH_RULES);
+  manifest.busConflict = readFlag(root, "busConflict", path);
   for (std::size_t index = 0; index < matches.size(); ++index) manifest.match.push_back(readMatchRule(matches[index], path + ".match[" + std::to_string(index) + "]"));
 
   if (const json* list = findList(root, "storage", path, MAX_STORAGE)) {
@@ -610,7 +656,7 @@ Manifest build(const json& root) {
 }  // namespace
 
 int MatchRule::conditionCount() const noexcept {
-  return 1 + (variant ? 1 : 0) + (prgSize ? 1 : 0) + (chrSize ? 1 : 0) + (crc32Prg ? 1 : 0) + (crc32All ? 1 : 0);
+  return 1 + (variant ? 1 : 0) + (prgSize ? 1 : 0) + (chrSize ? 1 : 0) + (crc32Prg ? 1 : 0) + (crc32All ? 1 : 0) + (chrPresent ? 1 : 0);
 }
 
 bool MatchRule::matches(const contracts::mappers::CartridgeDescription& description) const noexcept {
@@ -618,6 +664,7 @@ bool MatchRule::matches(const contracts::mappers::CartridgeDescription& descript
   if (variant && *variant != description.variant) return false;
   if (prgSize && *prgSize != description.prgSize) return false;
   if (chrSize && *chrSize != description.chrSize) return false;
+  if (chrPresent && *chrPresent != (description.chrSize != 0)) return false;
   if (crc32Prg && *crc32Prg != description.crc32Prg) return false;
   if (crc32All && *crc32All != description.crc32All) return false;
   return true;

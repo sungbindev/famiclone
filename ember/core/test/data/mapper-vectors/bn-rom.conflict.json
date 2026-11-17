@@ -1,0 +1,24 @@
+{
+  "plugin": "bn-rom",
+  "image": {
+    "mapper": 34,
+    "prgKiB": 128,
+    "prgFill": 1,
+    "chrKiB": 0
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

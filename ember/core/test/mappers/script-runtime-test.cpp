@@ -36,6 +36,16 @@ class FakeBindings final : public ScriptBindings {
   }
   void windowSetOffset(std::size_t window, std::int64_t offset) override { calls.push_back(WINDOWS.at(window) + ".setOffset " + std::to_string(offset)); }
   void windowUnmap(std::size_t window) override { calls.push_back(WINDOWS.at(window) + ".unmap"); }
+  [[nodiscard]] std::size_t windowBankCount(std::size_t window) const override { return window == 0 ? 4 : 2; }
+  void windowSelect(std::size_t window, std::size_t storage, std::int64_t bank) override {
+    calls.push_back(WINDOWS.at(window) + ".select " + std::to_string(storage) + " " + std::to_string(bank));
+  }
+  void windowSetAccess(std::size_t window, bool writable) override { calls.push_back(WINDOWS.at(window) + (writable ? ".access rw" : ".access r")); }
+  void busConflictSet(bool enabled) override { calls.push_back(enabled ? "busConflict on" : "busConflict off"); }
+  [[nodiscard]] std::optional<std::uint8_t> cpuPeek(std::uint16_t address) override {
+    if (address == 0xFFFF) return std::nullopt;
+    return static_cast<std::uint8_t>(address & 0xFF);
+  }
   void nametableSet(std::string_view mode) override {
     if (mode != "four" && mode != "horizontal") throw ScriptArgumentError("名称表连法不对");
     calls.push_back("nametable " + std::string(mode));
@@ -493,6 +503,28 @@ TEST(ScriptRuntime, ARuntimeCreatedOnOneThreadCanBeUsedFromAnother) {
   ScriptRuntime runtime("demo", "export default { read(ctx, bus, addr) { return addr & 0xFF; } };", layout(), bindings);
   const auto result = std::async(std::launch::async, [&] { return runtime.read(false, 0x1234); }).get();
   EXPECT_EQ(result, 0x34);
+}
+
+TEST(ScriptRuntime, WindowsCanSelectAStorageSetTheirAccessAndReportTheirBankCountAndTheScriptSwitchesBusConflicts) {
+  FakeBindings bindings;
+  ScriptRuntime runtime("demo", R"(
+    export default {
+      reset(ctx) {
+        const w = ctx.window('prg');
+        ctx.log.warn(String(w.bankCount));
+        w.select('ram', 1);
+        w.select('rom');
+        w.setAccess('rw');
+        ctx.busConflict.set(true);
+        for (const bad of [() => w.select('nothing'), () => w.select(1), () => w.setAccess('x'), () => ctx.busConflict.set(1)]) {
+          try { bad(); } catch (error) { ctx.log.warn(error.name); }
+        }
+      }
+    };)",
+                       layout(), bindings);
+  runtime.reset(true);
+  EXPECT_EQ(bindings.logs, (std::vector<std::string>{"2", "RangeError", "RangeError", "RangeError", "RangeError"}));
+  EXPECT_EQ(bindings.calls, (std::vector<std::string>{"prg.select 1 1", "prg.select 0 0", "prg.access rw", "busConflict on"}));
 }
 
 }  // namespace

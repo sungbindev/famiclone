@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -62,6 +63,16 @@ struct CartridgeDescription {
   std::uint32_t crc32Prg{0};
   /** PRG 加 CHR 的 CRC-32。 */
   std::uint32_t crc32All{0};
+  /** 是否是 NES 2.0 头；只有 NES 2.0 头才写明下面四项 RAM 的大小。 */
+  bool nes20{false};
+  /** 文件头写明的 PRG RAM（不带电池）字节数；旧 iNES 头没写明时为空。 */
+  std::optional<std::uint32_t> prgRamSize;
+  /** 文件头写明的 PRG NVRAM（带电池）字节数；没写明时为空。 */
+  std::optional<std::uint32_t> prgNvramSize;
+  /** 文件头写明的 CHR RAM 字节数；没写明时为空。 */
+  std::optional<std::uint32_t> chrRamSize;
+  /** 文件头写明的 CHR NVRAM 字节数；没写明时为空。 */
+  std::optional<std::uint32_t> chrNvramSize;
 };
 
 /** 卡带映像：描述加数据。 */

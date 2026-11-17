@@ -71,6 +71,16 @@ class ScriptBindings {
   virtual void windowSetOffset(std::size_t window, std::int64_t offset) = 0;
   /** ctx.window(id).unmap()。 */
   virtual void windowUnmap(std::size_t window) = 0;
+  /** ctx.window(id).bankCount：窗口当前绑定的存储区里有几个窗口大小的 bank（至少 1）。 */
+  [[nodiscard]] virtual std::size_t windowBankCount(std::size_t window) const = 0;
+  /** ctx.window(id).select(storage, bank)：把窗口切到清单里该窗口列出的另一个存储区并选 bank；不在列表里报错。 */
+  virtual void windowSelect(std::size_t window, std::size_t storage, std::int64_t bank) = 0;
+  /** ctx.window(id).setAccess('r' 或 'rw')：窗口是否允许写入（指向 ROM 时写入仍被拒绝）。 */
+  virtual void windowSetAccess(std::size_t window, bool writable) = 0;
+  /** ctx.busConflict.set(enabled)：是否对寄存器写入做总线冲突。 */
+  virtual void busConflictSet(bool enabled) = 0;
+  /** ctx.peek(address)：按卡带自己的 CPU 侧译码读一个字节，没有副作用（不回调脚本的 read）；卡带不驱动数据线时返回空。 */
+  [[nodiscard]] virtual std::optional<std::uint8_t> cpuPeek(std::uint16_t address) = 0;
   /** ctx.nametable.set(mode)：mode 是 horizontal、vertical、single0、single1、four 之一，否则报错。 */
   virtual void nametableSet(std::string_view mode) = 0;
   /** ctx.irq.assert()。 */

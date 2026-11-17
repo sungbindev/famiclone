@@ -1,0 +1,25 @@
+{
+  "plugin": "cnrom",
+  "image": {
+    "mapper": 3,
+    "variant": 2,
+    "prgKiB": 32,
+    "chrKiB": 32
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

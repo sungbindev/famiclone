@@ -1,0 +1,75 @@
+{
+  "plugin": "nina01",
+  "image": {
+    "mapper": 34,
+    "variant": 1,
+    "prgKiB": 128,
+    "chrKiB": 64
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$7FFD",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 65536
+        }
+      ]
+    },
+    {
+      "read": "$7FFD",
+      "expect": 2
+    },
+    {
+      "write": "$7FFE",
+      "value": 3
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 12288,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$7FFF",
+      "value": 5
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$1000",
+          "storage": "chr",
+          "offset": 20480,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "read": "$7FFF",
+      "expect": 5
+    }
+  ]
+}

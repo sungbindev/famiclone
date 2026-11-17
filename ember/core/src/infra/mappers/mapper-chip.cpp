@@ -46,8 +46,9 @@ NametableMode fromHeader(mapper_error::Mirroring mirroring) {
   return NametableMode::Horizontal;
 }
 
-/** ctx.header 的 JSON：规范化的卡带描述。 */
+/** ctx.header 的 JSON：规范化的卡带描述；文件头没写明的 RAM 大小为 null。 */
 std::string headerJson(const mapper_error::CartridgeDescription& description) {
+  const auto sizeOrNull = [](const std::optional<std::uint32_t>& size) { return size ? nlohmann::json(*size) : nlohmann::json(nullptr); };
   return nlohmann::json{{"mapper", description.mapper},
                         {"variant", description.variant},
                         {"prgSize", description.prgSize},
@@ -56,8 +57,33 @@ std::string headerJson(const mapper_error::CartridgeDescription& description) {
                         {"battery", description.battery},
                         {"trainer", description.trainer},
                         {"crc32Prg", description.crc32Prg},
-                        {"crc32All", description.crc32All}}
+                        {"crc32All", description.crc32All},
+                        {"nes20", description.nes20},
+                        {"prgRamSize", sizeOrNull(description.prgRamSize)},
+                        {"prgNvramSize", sizeOrNull(description.prgNvramSize)},
+                        {"chrRamSize", sizeOrNull(description.chrRamSize)},
+                        {"chrNvramSize", sizeOrNull(description.chrNvramSize)}}
       .dump();
+}
+
+/** RAM 存储区的实际大小：取自文件头的按 HeaderSize 的规则算，否则是清单里写的固定大小。 */
+std::uint32_t resolveRamSize(const std::optional<HeaderSize>& header, std::uint32_t fixedSize, const mapper_error::CartridgeDescription& description) {
+  if (!header) return fixedSize;
+  switch (header->field) {
+    case HeaderRam::PrgRam:
+      return description.prgRamSize ? *description.prgRamSize : (description.battery ? 0U : header->defaultSize);
+    case HeaderRam::PrgNvram:
+      return description.prgNvramSize ? *description.prgNvramSize : (description.battery ? header->defaultSize : 0U);
+    case HeaderRam::PrgAny: {
+      const std::uint32_t saved = resolveRamSize(HeaderSize{HeaderRam::PrgNvram, header->defaultSize}, 0, description);
+      return saved != 0 ? saved : resolveRamSize(HeaderSize{HeaderRam::PrgRam, header->defaultSize}, 0, description);
+    }
+    case HeaderRam::ChrRam:
+      return description.chrRamSize ? *description.chrRamSize : header->defaultSize;
+    case HeaderRam::ChrNvram:
+      return description.chrNvramSize ? *description.chrNvramSize : 0U;
+  }
+  return fixedSize;
 }
 
 }  // namespace
@@ -82,11 +108,13 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
   for (const StorageDecl& decl : manifest.storage) {
     std::unique_ptr<StorageBlock> block;
     if (decl.ram) {
-      block = std::make_unique<StorageBlock>(hw::StorageKind::Ram, std::vector<std::uint8_t>(decl.size, 0), decl.battery);
+      // prgAny 优先用存档 RAM（带电池），所以这种存储区是否带电池由头里的存档 RAM 决定。
+      const bool battery = decl.header && decl.header->field == HeaderRam::PrgAny ? resolveRamSize(HeaderSize{HeaderRam::PrgNvram, decl.header->defaultSize}, 0, image.description) != 0 : decl.battery;
+      block = std::make_unique<StorageBlock>(hw::StorageKind::Ram, std::vector<std::uint8_t>(resolveRamSize(decl.header, decl.size, image.description), 0), battery);
     } else {
       const std::vector<std::uint8_t>& source = decl.from == StorageSource::FilePrg ? image.prg : image.chr;
       if (source.empty() && decl.fallback) {
-        block = std::make_unique<StorageBlock>(hw::StorageKind::Ram, std::vector<std::uint8_t>(decl.fallback->size, 0), decl.fallback->battery);
+        block = std::make_unique<StorageBlock>(hw::StorageKind::Ram, std::vector<std::uint8_t>(resolveRamSize(decl.fallback->header, decl.fallback->size, image.description), 0), decl.fallback->battery);
       } else {
         block = std::make_unique<StorageBlock>(hw::StorageKind::Rom, source, false);
       }
@@ -98,12 +126,17 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
   // 窗口与译码表。
   for (std::size_t index = 0; index < manifest.windows.size(); ++index) {
     const WindowDecl& decl = manifest.windows[index];
-    const auto storage = std::find_if(manifest.storage.begin(), manifest.storage.end(), [&](const StorageDecl& item) { return item.id == decl.storage; });
+    const auto storageIndex = [&](const std::string& id) {
+      return static_cast<std::size_t>(std::find_if(manifest.storage.begin(), manifest.storage.end(), [&](const StorageDecl& item) { return item.id == id; }) - manifest.storage.begin());
+    };
     Window window;
     window.first = static_cast<std::uint16_t>(decl.range.first);
     window.size = decl.size;
-    window.storage = storages_[static_cast<std::size_t>(storage - manifest.storage.begin())].get();
+    window.storage = storages_[storageIndex(decl.storage)].get();
+    window.initialStorage = window.storage;
+    for (const std::string& choice : decl.storageChoices) window.choices.push_back(storages_[storageIndex(choice)].get());
     window.writable = decl.writable;
+    window.initialWritable = decl.writable;
     window.initialKind = decl.initialKind;
     window.initialBank = decl.initialBank;
     windows_.push_back(window);
@@ -129,6 +162,7 @@ MapperChip::MapperChip(std::shared_ptr<const LoadedPlugin> plugin, const contrac
   }
   initialNametable_ = manifest.nametable == NametableMode::Header ? fromHeader(image.description.mirroring) : manifest.nametable;
   nametable_ = initialNametable_;
+  busConflict_ = manifest.busConflict;
   for (Window& window : windows_) applyInitial(window);
 
   // 清单声明的寄存器、查表与磁带计时：把状态名、窗口标识、表标识解析成下标，访问时不再查名字。
@@ -225,6 +259,7 @@ hw::CiramControl MapperChip::ciramControl(std::uint16_t ppuAddress) const {
 
 void MapperChip::reset(bool power) {
   failure_.reset();
+  busConflict_ = plugin_->manifest.busConflict;
   if (power) powerCycle();
   applyDeclaredReset();
   if (script_ != nullptr && script_->hasReset()) runScript([&] { script_->reset(power); });
@@ -297,6 +332,12 @@ std::optional<std::uint32_t> MapperChip::state(std::string_view name) const {
 hw::BusRead MapperChip::Side::read(std::uint16_t address) { return owner_.readBus(ppu_, address); }
 
 hw::BusRead MapperChip::Side::peek(std::uint16_t address) { return owner_.peekBus(ppu_, address); }
+
+std::optional<std::uint8_t> MapperChip::cpuPeek(std::uint16_t address) {
+  const hw::BusRead result = peekBus(false, address);
+  if (result.drivenMask == 0) return std::nullopt;
+  return result.value;
+}
 
 hw::BusRead MapperChip::peekBus(bool ppu, std::uint16_t address) const {
   if (ppu && address >= PPU_SLOT_COUNT) return nametable_ == NametableMode::Four ? hw::driveBus(ownNametable_[address & 0xFFFU]) : hw::releaseBus();
@@ -379,8 +420,16 @@ void MapperChip::writeBus(bool ppu, std::uint16_t address, std::uint8_t value) {
     return;
   }
   const Slot slot = ppu ? ppuSlots_[address] : cpuSlots_[address];
-  if (slot.writeRegister) writeRegister(ppu, address, value, slot.reg);
-  else if (slot.window >= 0) writeWindow(windows_[static_cast<std::size_t>(slot.window)], address, value);
+  if (slot.writeRegister) {
+    // 总线冲突：CPU 写入的数据与 ROM 同时驱动数据线，结果是两者相与；该地址没有映射 ROM 时不相与。
+    if (busConflict_ && !ppu && slot.window >= 0) {
+      const Window& window = windows_[static_cast<std::size_t>(slot.window)];
+      if (window.mapped && window.storage->kind() == hw::StorageKind::Rom && window.storage->size() != 0) value &= readWindow(window, address).value;
+    }
+    writeRegister(ppu, address, value, slot.reg);
+  } else if (slot.window >= 0) {
+    writeWindow(windows_[static_cast<std::size_t>(slot.window)], address, value);
+  }
 }
 
 void MapperChip::writeRegister(bool ppu, std::uint16_t address, std::uint8_t value, std::int16_t index) {
@@ -462,11 +511,17 @@ void MapperChip::writeWindow(const Window& window, std::uint16_t address, std::u
 }
 
 void MapperChip::applyInitial(Window& window) const {
+  window.storage = window.initialStorage;
+  window.writable = window.initialWritable;
   const std::size_t capacity = window.storage->size();
   const std::size_t banks = std::max<std::size_t>(1, capacity / window.size);
   std::size_t bank = 0;
   if (window.initialKind == InitialKind::Last) bank = banks - 1;
-  else if (window.initialKind == InitialKind::Bank) bank = window.initialBank % banks;
+  else if (window.initialKind == InitialKind::Bank) {
+    // 负数从末尾数（-1 是最后一个），不用取模，因为 bank 数不一定是 2 的幂。
+    const auto count = static_cast<std::int64_t>(banks);
+    bank = static_cast<std::size_t>(window.initialBank < 0 ? ((count + window.initialBank) % count + count) % count : window.initialBank % count);
+  }
   window.offset = bank * window.size;
   window.mapped = true;
 }
@@ -498,6 +553,19 @@ void MapperChip::windowSetOffset(std::size_t window, std::int64_t offset) {
 }
 
 void MapperChip::windowUnmap(std::size_t window) { windows_.at(window).mapped = false; }
+
+std::size_t MapperChip::windowBankCount(std::size_t window) const {
+  const Window& target = windows_.at(window);
+  return std::max<std::size_t>(1, target.storage->size() / target.size);
+}
+
+void MapperChip::windowSelect(std::size_t window, std::size_t storage, std::int64_t bank) {
+  Window& target = windows_.at(window);
+  StorageBlock* chosen = storages_.at(storage).get();
+  if (std::find(target.choices.begin(), target.choices.end(), chosen) == target.choices.end()) throw ScriptArgumentError("这个窗口不能切到该存储区，清单里没有列出");
+  target.storage = chosen;
+  windowSetBank(window, bank);
+}
 
 void MapperChip::nametableSet(std::string_view mode) {
   if (mode == "horizontal") nametable_ = NametableMode::Horizontal;

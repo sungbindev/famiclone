@@ -12,7 +12,6 @@
 
 #include "bootstrap/machines/sb97/sb97.hpp"
 
-namespace ember::bootstrap { extern std::map<unsigned, unsigned> g_unmapped; }
 namespace {
 namespace hw = ember::contracts::hardware;
 using ember::bootstrap::Sb97Machine;
@@ -65,9 +64,6 @@ TEST(Sb97Diag, Script) {
       for (int i = 0; i < 8; ++i) machine.runFrame();
     } else if (verb == "shot") {
       shot(machine, arg);
-    } else if (verb == "unmapped") {
-      for (const auto& [key, count] : ember::bootstrap::g_unmapped) std::printf("UNMAPPED %s $%04X x%u\n", (key & 1) ? "W" : "R", key / 2, count);
-      ember::bootstrap::g_unmapped.clear();
     }
   }
 }

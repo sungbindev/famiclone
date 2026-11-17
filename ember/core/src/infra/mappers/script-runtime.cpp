@@ -13,6 +13,7 @@
 
 #include "infra/mappers/script-runtime.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -29,7 +30,26 @@ namespace mapper_error = contracts::mappers;
 namespace hw = contracts::hardware;
 
 /** 宿主函数的编号，经 JS 函数的 magic 传入。 */
-enum Operation : int { WindowSetBank, WindowSetOffset, WindowUnmap, StorageRead, StorageWrite, StateGet, StateSet, IrqAssert, IrqRelease, PadSet, PadRelease, TapeLevel, TapeSetComparator };
+enum Operation : int {
+  WindowSetBank,
+  WindowSetOffset,
+  WindowUnmap,
+  WindowBankCount,
+  WindowSelect,
+  WindowSetAccess,
+  BusConflictSet,
+  CpuPeek,
+  StorageRead,
+  StorageWrite,
+  StateGet,
+  StateSet,
+  IrqAssert,
+  IrqRelease,
+  PadSet,
+  PadRelease,
+  TapeLevel,
+  TapeSetComparator
+};
 
 /** JS 数字能精确表示的最大整数。 */
 constexpr double MAX_SAFE_INTEGER = 9007199254740991.0;
@@ -157,6 +177,11 @@ struct ScriptRuntime::Impl {
     addFunction(irq, "release", &Impl::hostCall, 0, IrqRelease, 0);
     JS_SetPropertyStr(js, hostObject, "irq", irq);
 
+    JSValue busConflict = JS_NewObject(js);
+    addFunction(busConflict, "set", &Impl::hostCall, 1, BusConflictSet, 0);
+    JS_SetPropertyStr(js, hostObject, "busConflict", busConflict);
+    addFunction(hostObject, "peek", &Impl::hostCall, 1, CpuPeek, 0);
+
     JSValue log = JS_NewObject(js);
     JS_SetPropertyStr(js, log, "warn", JS_NewCFunction(js, &Impl::logWarn, "warn", 1));
     JS_SetPropertyStr(js, hostObject, "log", log);
@@ -197,6 +222,13 @@ struct ScriptRuntime::Impl {
       addFunction(window, "setBank", &Impl::hostCall, 1, WindowSetBank, index);
       addFunction(window, "setOffset", &Impl::hostCall, 1, WindowSetOffset, index);
       addFunction(window, "unmap", &Impl::hostCall, 0, WindowUnmap, index);
+      addFunction(window, "select", &Impl::hostCall, 2, WindowSelect, index);
+      addFunction(window, "setAccess", &Impl::hostCall, 1, WindowSetAccess, index);
+      JSValue countData = JS_NewInt32(js, static_cast<int32_t>(index));
+      JSValue countGetter = JS_NewCFunctionData2(js, &Impl::hostCall, "bankCount", 0, WindowBankCount, 1, &countData);
+      const JSAtom countAtom = JS_NewAtom(js, "bankCount");
+      JS_DefinePropertyGetSet(js, window, countAtom, countGetter, JS_UNDEFINED, JS_PROP_ENUMERABLE);
+      JS_FreeAtom(js, countAtom);
       JS_FreezeObject(js, window);
       windowObjects.push_back(window);
     }
@@ -457,6 +489,36 @@ struct ScriptRuntime::Impl {
         case WindowUnmap:
           host.windowUnmap(index);
           return JS_UNDEFINED;
+        case WindowBankCount:
+          return JS_NewUint32(context, static_cast<std::uint32_t>(host.windowBankCount(index)));
+        case WindowSelect: {
+          std::string storageId;
+          if (!stringArgument(context, argument(argc, argv, 0), storageId)) throw ScriptArgumentError("参数 storage 必须是字符串");
+          const auto& names = runtimeSelf->layout.storages;
+          const auto found = std::find(names.begin(), names.end(), storageId);
+          if (found == names.end()) throw ScriptArgumentError("存储区不存在：" + storageId);
+          const std::int64_t bank = argc > 1 ? integerArgument(context, argv[1], "bank") : 0;
+          host.windowSelect(index, static_cast<std::size_t>(found - names.begin()), bank);
+          return JS_UNDEFINED;
+        }
+        case WindowSetAccess: {
+          std::string mode;
+          if (!stringArgument(context, argument(argc, argv, 0), mode) || (mode != "r" && mode != "rw")) throw ScriptArgumentError("参数 access 必须是 'r' 或 'rw'");
+          host.windowSetAccess(index, mode == "rw");
+          return JS_UNDEFINED;
+        }
+        case BusConflictSet: {
+          const JSValue enabled = argument(argc, argv, 0);
+          if (!JS_IsBool(enabled)) throw ScriptArgumentError("参数 enabled 必须是布尔值");
+          host.busConflictSet(JS_ToBool(context, enabled) != 0);
+          return JS_UNDEFINED;
+        }
+        case CpuPeek: {
+          const std::int64_t address = integerArgument(context, argument(argc, argv, 0), "address");
+          if (address < 0 || address > 0xFFFF) throw ScriptArgumentError("参数 address 必须在 0 到 65535 之间");
+          const std::optional<std::uint8_t> value = host.cpuPeek(static_cast<std::uint16_t>(address));
+          return value ? JS_NewInt32(context, *value) : JS_UNDEFINED;
+        }
         case StorageRead:
           return JS_NewInt32(context, host.storageRead(index, integerArgument(context, argument(argc, argv, 0), "offset")));
         case StorageWrite: {

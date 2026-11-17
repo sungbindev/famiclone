@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-registry.ts
- * 说明：汇总外壳自己与各模块的登记项并检查：模块名合格且不重复、标识（含子菜单）以“模块名.”开头且不重复、菜单项是命令或子菜单二选一、引用的命令存在、
+ * 说明：汇总外壳自己与各模块的登记项并检查：模块名合格且不重复、标识（含子菜单、标题栏项）以“模块名.”开头且不重复、菜单项是命令或子菜单二选一、引用的命令存在、
  *       显示区至多一个、文件处理项的扩展名合格且不重复、默认快捷键写法合格且不与保留组合、其他命令冲突。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -22,7 +22,8 @@ import {
   type ShellModule,
   type ShellPageProps,
   type ShellPanelDefinition,
-  type ShellStatusItemDefinition
+  type ShellStatusItemDefinition,
+  type ShellTitleBarItemDefinition
 } from './shell-registry';
 
 /** 外壳自己的登记项使用的名称。 */
@@ -48,6 +49,8 @@ export interface ShellRegistry {
   readonly menuItems: readonly ShellMenuItemDefinition[];
   readonly bottomPanels: readonly ShellPanelDefinition[];
   readonly statusItems: readonly ShellStatusItemDefinition[];
+  /** 标题栏项，按登记顺序。 */
+  readonly titleBarItems: readonly ShellTitleBarItemDefinition[];
   /** 拖入窗口的文件的处理项，按登记顺序。 */
   readonly fileHandlers: readonly ShellFileHandlerDefinition[];
   /** 默认快捷键到命令标识。 */
@@ -95,6 +98,7 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
   const menuItems: ShellMenuItemDefinition[] = [];
   const bottomPanels: ShellPanelDefinition[] = [];
   const statusItems: ShellStatusItemDefinition[] = [];
+  const titleBarItems: ShellTitleBarItemDefinition[] = [];
   const fileHandlers: ShellFileHandlerDefinition[] = [];
   /** 已被认领的扩展名到处理项标识。 */
   const claimedExtensions = new Map<string, string>();
@@ -123,6 +127,7 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
     for (const command of module.commands ?? []) if (claim('命令', command.id, owner)) commands.set(command.id, command);
     for (const item of module.bottomPanels ?? []) if (claim('底部面板页签', item.id, owner)) bottomPanels.push(item);
     for (const item of module.statusItems ?? []) if (claim('状态项', item.id, owner)) statusItems.push(item);
+    for (const item of module.titleBarItems ?? []) if (claim('标题栏项', item.id, owner)) titleBarItems.push(item);
     for (const item of module.fileHandlers ?? []) {
       if (!claim('文件处理项', item.id, owner)) continue;
       if (item.extensions.length === 0 || item.extensions.some((extension) => !EXTENSION_PATTERN.test(extension))) {
@@ -167,5 +172,5 @@ export function buildShellRegistry(modules: readonly ShellModule[]): ShellRegist
   }
 
   if (errors.length > 0) throw new Error(`外壳登记有误：\n${errors.join('\n')}`);
-  return { screen, dialogs, commands, menuItems, bottomPanels, statusItems, fileHandlers, shortcuts, hosts };
+  return { screen, dialogs, commands, menuItems, bottomPanels, statusItems, titleBarItems, fileHandlers, shortcuts, hosts };
 }

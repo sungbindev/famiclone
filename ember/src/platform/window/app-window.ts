@@ -8,7 +8,7 @@
  * 日期：2026-11-14
  * 备注：标题栏高度与颜色取自组件库的 --title-bar-height 与深浅主题的背景色，修改时须同步；渲染进程的安全设置不得放宽。
  *       平台层不引用契约与 shared，窗口位置的类型按结构与 shared/shell-state 里的 WindowPlacement 一致；
- *       窗口大小不记忆，每次启动都是最小尺寸（也不恢复最大化），只记位置。
+ *       窗口大小不记忆，每次启动都是默认尺寸（也不恢复最大化），只记位置。
  * ------------------------------------------------------------------------
  */
 
@@ -22,12 +22,15 @@ export type ResolvedTheme = 'dark' | 'light';
 /** 标题栏高度（组件库 --title-bar-height），系统按钮区少 1 像素露出底边线。 */
 const TITLE_BAR_HEIGHT = 36;
 /**
- * 窗口的最小尺寸（也是每次启动的尺寸）。宽度保证标题栏放得下图标、名称、四个菜单、至少 48 像素可拖动的空白和系统窗口按钮，
- * 以及系统栏的左右两组项（实测 560 时菜单与系统按钮之间有 162 像素，480 时约 82 像素）；高度让画面框在最小窗口下四周间距一致：
- * 画面框宽 480、高约 394（128:105），加标题栏 36、系统栏（大尺寸状态栏）32，再加实测的取整余量，取 463。
+ * 窗口的最小尺寸。宽度保证标题栏放得下图标、名称、四个菜单、“更新”按钮、至少 48 像素可拖动的空白和系统窗口按钮，
+ * 以及系统栏的左右两组项（实测 560 时菜单与系统按钮之间有 162 像素，“更新”按钮连同间距约占 76 像素）；高度让画面框在最小窗口下四周间距一致：
+ * 画面框宽 560、高约 459（128:105），加标题栏 36、系统栏（大尺寸状态栏）32，再加实测的取整余量，取 529。
  */
-const MIN_WIDTH = 480;
-const MIN_HEIGHT = 463;
+const MIN_WIDTH = 560;
+const MIN_HEIGHT = 529;
+/** 每次启动的窗口尺寸：宽高比与最小尺寸一致（画面框四周的间距同样一致），高度按画面框宽 720 算出，取 660。 */
+const DEFAULT_WIDTH = 720;
+const DEFAULT_HEIGHT = 660;
 /** 窗口至少要有这么大一块落在某个屏幕的工作区内，否则恢复为默认位置。 */
 const MIN_VISIBLE = 100;
 
@@ -72,13 +75,13 @@ function overlap(a: Electron.Rectangle, b: Electron.Rectangle): { width: number;
 }
 
 /**
- * 保存的位置上以最小尺寸的窗口仍有足够部分在某个屏幕内时沿用，否则返回 undefined（用默认位置）。
+ * 保存的位置上以默认尺寸的窗口仍有足够部分在某个屏幕内时沿用，否则返回 undefined（用默认位置）。
  * @param placement 保存的位置。
  * @param workAreas 各屏幕的工作区。
  */
 export function visiblePlacement(placement: WindowPlacement | null | undefined, workAreas: readonly Electron.Rectangle[]): WindowPlacement | undefined {
   if (placement === undefined || placement === null) return undefined;
-  const bounds = { x: placement.x, y: placement.y, width: MIN_WIDTH, height: MIN_HEIGHT };
+  const bounds = { x: placement.x, y: placement.y, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
   const visible = workAreas.some((area) => {
     const size = overlap(bounds, area);
     return size.width >= MIN_VISIBLE && size.height >= MIN_VISIBLE;
@@ -171,8 +174,8 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
   );
   const theme = resolvedTheme();
   const window = new BrowserWindow({
-    width: MIN_WIDTH,
-    height: MIN_HEIGHT,
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
     ...(placement ? { x: placement.x, y: placement.y } : {}),
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
@@ -197,7 +200,7 @@ export function createAppWindow(options: AppWindowOptions): BrowserWindow {
   });
   allowDialogWindows(window, { background: () => WINDOW_COLORS[resolvedTheme()].background, ...(options.icon ? { icon: options.icon } : {}) });
   // 屏幕缩放不是整数倍时，创建参数里的尺寸换算后会差几个像素，所以创建后再按边界精确设置一次。
-  if (placement) setExactBounds(window, { x: placement.x, y: placement.y, width: MIN_WIDTH, height: MIN_HEIGHT });
+  if (placement) setExactBounds(window, { x: placement.x, y: placement.y, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   if (options.devTools) {
     window.webContents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown' && input.key === 'F12') {

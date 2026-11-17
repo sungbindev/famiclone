@@ -82,8 +82,14 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
     std::size_t offset{0};
     bool mapped{true};
     bool writable{false};
+    /** 清单声明的访问权限，上电复位时恢复。 */
+    bool initialWritable{false};
+    /** 这个窗口可以切换到的全部存储区（含当前绑定的）。 */
+    std::vector<StorageBlock*> choices;
+    /** 清单声明的初始存储区。 */
+    StorageBlock* initialStorage{nullptr};
     InitialKind initialKind{InitialKind::First};
-    std::uint32_t initialBank{0};
+    std::int64_t initialBank{0};
   };
 
   /** 译码表的一项：这个地址由哪个窗口响应，是否处理寄存器（脚本或宿主的声明）。 */
@@ -146,6 +152,11 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   void windowSetBank(std::size_t window, std::int64_t bank) override;
   void windowSetOffset(std::size_t window, std::int64_t offset) override;
   void windowUnmap(std::size_t window) override;
+  [[nodiscard]] std::size_t windowBankCount(std::size_t window) const override;
+  void windowSelect(std::size_t window, std::size_t storage, std::int64_t bank) override;
+  void windowSetAccess(std::size_t window, bool writable) override { windows_.at(window).writable = writable; }
+  void busConflictSet(bool enabled) override { busConflict_ = enabled; }
+  [[nodiscard]] std::optional<std::uint8_t> cpuPeek(std::uint16_t address) override;
   void nametableSet(std::string_view mode) override;
   void irqAssert() override { irq_.set(true); }
   void irqRelease() override { irq_.set(false); }
@@ -206,6 +217,8 @@ class MapperChip final : public contracts::mappers::MapperCartridge, private Scr
   std::size_t timerTicks_{0};
   NametableMode nametable_{NametableMode::Horizontal};
   NametableMode initialNametable_{NametableMode::Horizontal};
+  /** 寄存器写入是否做总线冲突；每次复位回到清单的初始值，脚本可以改。 */
+  bool busConflict_{false};
   /** 四屏时卡带自带的名称表显存。 */
   std::array<std::uint8_t, 4096> ownNametable_{};
   std::optional<contracts::mappers::ScriptFailure> failure_;

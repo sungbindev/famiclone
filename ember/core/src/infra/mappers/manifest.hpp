@@ -56,6 +56,8 @@ struct MatchRule {
   std::optional<std::uint64_t> chrSize;
   std::optional<std::uint32_t> crc32Prg;
   std::optional<std::uint32_t> crc32All;
+  /** 有无 CHR ROM：true 表示文件里有 CHR，false 表示没有。 */
+  std::optional<bool> chrPresent;
 
   /** 写出的条件数，mapper 号也算一项。 */
   [[nodiscard]] int conditionCount() const noexcept;
@@ -67,10 +69,25 @@ struct MatchRule {
 /** rom 的数据来源。 */
 enum class StorageSource { None, FilePrg, FileChr };
 
+/** RAM 的大小取自文件头的哪一项。 */
+enum class HeaderRam { PrgRam, PrgNvram, PrgAny, ChrRam, ChrNvram };
+
+/**
+ * RAM 的大小取自文件头：头里写明了就用头里的；没写明（旧 iNES 头）时，PrgRam 在文件带电池时为 0、否则取 defaultSize，
+ * PrgNvram 在文件带电池时取 defaultSize、否则为 0，ChrRam 取 defaultSize，ChrNvram 为 0。
+ * PrgAny 是卡带默认挂在 $6000 的那块 RAM：PrgNvram 的结果不为 0 时用它（带电池），否则用 PrgRam 的结果。
+ */
+struct HeaderSize {
+  HeaderRam field{HeaderRam::PrgRam};
+  std::uint32_t defaultSize{0};
+};
+
 /** 来源为空时改用的 RAM。 */
 struct FallbackRam {
+  /** 固定大小；size 取自文件头时是 header 里的默认大小。 */
   std::uint32_t size{0};
   bool battery{false};
+  std::optional<HeaderSize> header;
 };
 
 /** 存储区声明。 */
@@ -78,9 +95,12 @@ struct StorageDecl {
   std::string id;
   bool ram{false};
   StorageSource from{StorageSource::None};
+  /** 固定大小；size 取自文件头时是 header 里的默认大小。 */
   std::uint32_t size{0};
   bool battery{false};
   std::optional<FallbackRam> fallback;
+  /** 只用于 ram：大小取自文件头。 */
+  std::optional<HeaderSize> header;
 };
 
 /** 窗口复位后指向的 bank 的写法。 */
@@ -91,10 +111,13 @@ struct WindowDecl {
   std::string id;
   bool ppu{false};
   AddressRange range;
+  /** 复位后绑定的存储区（storageChoices 的第一项）。 */
   std::string storage;
+  /** 窗口可以切换到的全部存储区，第一项是 storage；只写一个存储区时只有它。 */
+  std::vector<std::string> storageChoices;
   std::uint32_t size{0};
   InitialKind initialKind{InitialKind::First};
-  std::uint32_t initialBank{0};
+  std::int64_t initialBank{0};
   bool writable{false};
 };
 
@@ -224,6 +247,8 @@ struct Manifest {
   std::vector<std::string> host;
   /** 卡带用到的外设（目前只有 mouse）；不写等于没有。 */
   std::vector<std::string> devices;
+  /** 寄存器写入的数据是否与该地址当前读到的 ROM 字节相与（总线冲突）的初始值，脚本可以用 ctx.busConflict.set 改。 */
+  bool busConflict{false};
   std::vector<MatchRule> match;
   std::vector<StorageDecl> storage;
   std::vector<WindowDecl> windows;

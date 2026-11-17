@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：system-module.tsx
- * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“打开日志目录”“检查更新”“关于 Ember”、“关于 Ember”对话框，以及取得预加载接口的常驻组件。
+ * 说明：系统模块在外壳里的登记项：“帮助”菜单的“帮助文档”“打开日志目录”“检查更新”“关于 Ember”、“关于 Ember”对话框、标题栏右侧的“更新”按钮，以及取得预加载接口的常驻组件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -15,6 +15,7 @@ import { useShell } from '../shell/shell-context';
 import type { ShellModule, ShellPageProps } from '../shell/shell-registry';
 import { AboutDialog, type ThirdPartyNotice } from './AboutDialog';
 import { UpdateController } from './update-controller';
+import { UpdateTitleBarItem } from './UpdateTitleBarItem';
 
 /** “关于 Ember”对话框的标识。 */
 const DIALOG_ID = 'system.about';
@@ -52,6 +53,7 @@ export function createSystemModule(notices: readonly ThirdPartyNotice[], buildTi
   return {
     name: 'system',
     dialogs: [{ id: DIALOG_ID, title: TEXT.about, Component: (props: ShellPageProps) => <AboutDialog {...props} notices={notices} buildTime={buildTime} />, ...DIALOG_SIZE }],
+    titleBarItems: [{ id: 'system.update', Component: () => <UpdateTitleBarItem controller={update} /> }],
     commands: [
       {
         id: SYSTEM_COMMANDS.openHelp,

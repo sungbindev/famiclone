@@ -93,6 +93,11 @@ export class UpdateController {
     return this.status.state !== 'checking' && this.status.state !== 'downloading';
   }
 
+  /** 新版本是否已经下载好，可以重启安装（标题栏的“更新”按钮据此显示）。 */
+  isReady(): boolean {
+    return this.status.state === 'ready';
+  }
+
   /**
    * 执行菜单项：新版本已下载好时重启安装，否则手动检查更新。
    * @param shell 外壳接口，失败与结果用它的通知提示。

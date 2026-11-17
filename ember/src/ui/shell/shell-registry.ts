@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-registry.ts
- * 说明：外壳的登记项类型与外壳接口：各模块在渲染进程的模块清单中登记显示区、对话框、命令（含默认快捷键）、菜单项（命令或子菜单）、底部面板页签、状态项与常驻组件，
+ * 说明：外壳的登记项类型与外壳接口：各模块在渲染进程的模块清单中登记显示区、对话框、命令（含默认快捷键）、菜单项（命令或子菜单）、底部面板页签、状态项、标题栏项与常驻组件，
  *       外壳只渲染登记表；对话框、面板与命令经外壳接口打开对话框、展开面板、通知外壳重算命令状态。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：登记项的标识以“模块名.”开头（对话框、命令、面板、状态项）；外壳自己的登记项以 shell. 开头；规则见 docs/06-构建与模块登记.md 第 3.1 节与 docs/05-界面.md。
+ * 备注：登记项的标识以“模块名.”开头（对话框、命令、面板、状态项、标题栏项）；外壳自己的登记项以 shell. 开头；规则见 docs/06-构建与模块登记.md 第 3.1 节与 docs/05-界面.md。
  *       显示区只有一个（中间固定显示，没有标签页），其他界面都是对话框；每个底部面板页签在系统栏左侧有一个按钮。
  * ------------------------------------------------------------------------
  */
@@ -136,6 +136,13 @@ export interface ShellStatusItemDefinition {
   readonly Component: ComponentType;
 }
 
+/** 标题栏项：放在标题栏右侧、系统窗口按钮左边，组件自己用组件库的按钮渲染；没有内容要显示时返回 null，模块状态变化后调用 refreshCommands 让外壳重新渲染。 */
+export interface ShellTitleBarItemDefinition {
+  /** 标识，如 system.update。 */
+  readonly id: string;
+  readonly Component: ComponentType;
+}
+
 /** 拖入窗口的文件的处理：按扩展名认领文件，打开的办法由模块自己决定（经主进程请求的 droppedId）。 */
 export interface ShellFileHandlerDefinition {
   /** 标识，如 runtime.cartridge。 */
@@ -157,6 +164,8 @@ export interface ShellModule {
   readonly menuItems?: readonly ShellMenuItemDefinition[];
   readonly bottomPanels?: readonly ShellPanelDefinition[];
   readonly statusItems?: readonly ShellStatusItemDefinition[];
+  /** 标题栏项：按登记顺序排在标题栏右侧。 */
+  readonly titleBarItems?: readonly ShellTitleBarItemDefinition[];
   /** 拖入窗口的文件的处理项：外壳接住窗口上的文件拖放，按扩展名交给认领它的处理项。 */
   readonly fileHandlers?: readonly ShellFileHandlerDefinition[];
   /** 常驻组件：外壳启动后一直挂载（全屏时也在），没有界面，用来订阅事件、维护模块自己的状态；模块状态变化影响命令的可用状态时调用 refreshCommands。 */

@@ -130,7 +130,7 @@ export async function pressKey(page, { key, code, keyCode }, holdMs) {
 
 /**
  * 启动开发版（electron-forge start）：临时用户数据目录，主进程直接加载一张卡带，开 CDP 调试端口。
- * @param {{ port: number, romPath: string, windowPlacement?: { x: number, y: number }, extraArguments?: string[] }} settings CDP 端口、卡带路径，以及可选的预置窗口位置（写进临时数据目录的界面状态；窗口大小每次启动都是最小尺寸）与附加的启动参数（如 --debug-port）。
+ * @param {{ port: number, romPath: string, windowPlacement?: { x: number, y: number }, extraArguments?: string[] }} settings CDP 端口、卡带路径，以及可选的预置窗口位置（写进临时数据目录的界面状态；窗口大小每次启动都是默认尺寸）与附加的启动参数（如 --debug-port）。
  * @returns 句柄：pid、是否已退出、最近的输出、临时数据目录、等页面出现的函数、停止并清理的函数。
  */
 export function startDevApp({ port, romPath, windowPlacement, extraArguments = [] }) {

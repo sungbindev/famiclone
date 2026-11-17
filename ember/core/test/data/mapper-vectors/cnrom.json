@@ -1,0 +1,73 @@
+{
+  "plugin": "cnrom",
+  "image": {
+    "mapper": 3,
+    "prgKiB": 32,
+    "chrKiB": 32
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 0
+        },
+        {
+          "address": "$C000",
+          "storage": "prg",
+          "offset": 16384
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 16384,
+          "bus": "ppu"
+        },
+        {
+          "address": "$1FFF",
+          "storage": "chr",
+          "offset": 24575,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$FFFF",
+      "value": 6
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 16384,
+          "bus": "ppu"
+        }
+      ]
+    },
+    {
+      "write": "$8000",
+      "value": 3
+    },
+    {
+      "expectState": {
+        "chrBank": 3
+      }
+    }
+  ]
+}

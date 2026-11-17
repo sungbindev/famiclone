@@ -94,6 +94,17 @@ describe('buildShellRegistry', () => {
     expect(registry.commands.has('a.go')).toBe(true);
   });
 
+  it('汇总各模块的标题栏项，按登记顺序；标识必须以模块名开头且不重复', () => {
+    const registry = buildShellRegistry([
+      SHELL_MODULE,
+      moduleOf('a', { titleBarItems: [{ id: 'a.first', Component: () => null }] }),
+      moduleOf('b', { titleBarItems: [{ id: 'b.second', Component: () => null }] })
+    ]);
+    expect(registry.titleBarItems.map((item) => item.id)).toEqual(['a.first', 'b.second']);
+    expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { titleBarItems: [{ id: 'b.item', Component: () => null }] })])).toThrowError(/标题栏项“b\.item”的标识必须以“a\.”开头/);
+    expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { titleBarItems: [{ id: 'a.item', Component: () => null }, { id: 'a.item', Component: () => null }] })])).toThrowError(/标题栏项“a\.item”重复登记/);
+  });
+
   it('显示区只能有一个模块登记', () => {
     expect(() => buildShellRegistry([SHELL_MODULE, moduleOf('a', { screen: Screen }), moduleOf('b', { screen: Screen })])).toThrowError(/显示区只能有一个，“a”与“b”都登记了/);
   });

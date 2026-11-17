@@ -96,7 +96,7 @@ TEST(Manifest, ParsesAManifestWithEveryOptionalPart) {
   EXPECT_EQ(manifest.match[1].crc32All, 1U);
   EXPECT_TRUE(manifest.storage[2].ram);
   EXPECT_TRUE(manifest.storage[2].battery);
-  EXPECT_EQ(manifest.windows[3].initialBank, 3U);
+  EXPECT_EQ(manifest.windows[3].initialBank, 3);
   EXPECT_EQ(manifest.nametable, NametableMode::Vertical);
   ASSERT_EQ(manifest.registers.size(), 2U);
   EXPECT_TRUE(manifest.registers[0].read && manifest.registers[0].write);
@@ -538,6 +538,57 @@ TEST(ManifestErrors, RejectsABadNametableAndTooManyItems) {
   manifest = base();
   for (int index = 0; index < 100; ++index) manifest["windows"].push_back(manifest["windows"][0]);
   expectInvalid(manifest, "manifest.windows 最多 64 项");
+}
+
+TEST(Manifest, ParsesChrMatchWindowStorageListsHeaderSizesAndBusConflict) {
+  json manifest = base();
+  manifest["busConflict"] = true;
+  manifest["match"] = json::parse(R"([{ "mapper": 34, "chr": "present" }, { "mapper": 34, "chr": "none" }])");
+  manifest["storage"].push_back(json::parse(R"({ "id": "wram", "kind": "ram", "battery": true, "size": { "header": "prgNvram", "default": 8192 } })"));
+  manifest["storage"][1]["fallback"]["size"] = json::parse(R"({ "header": "chrRam", "default": 8192 })");
+  manifest["windows"].push_back(json::parse(R"({ "id": "mixed", "bus": "cpu", "range": "$6000-$7FFF", "storage": ["prg", "wram"], "size": 8192, "access": "rw" })"));
+  const Manifest parsed = parseManifest(manifest.dump());
+  EXPECT_TRUE(parsed.busConflict);
+  EXPECT_EQ(parsed.match[0].chrPresent, true);
+  EXPECT_EQ(parsed.match[1].chrPresent, false);
+  EXPECT_EQ(parsed.match[0].conditionCount(), 2);
+  ember::contracts::mappers::CartridgeDescription description;
+  description.mapper = 34;
+  description.chrSize = 8192;
+  EXPECT_TRUE(parsed.match[0].matches(description));
+  EXPECT_FALSE(parsed.match[1].matches(description));
+  ASSERT_TRUE(parsed.storage[2].header.has_value());
+  EXPECT_EQ(parsed.storage[2].header->field, HeaderRam::PrgNvram);
+  EXPECT_EQ(parsed.storage[2].header->defaultSize, 8192U);
+  ASSERT_TRUE(parsed.storage[1].fallback->header.has_value());
+  EXPECT_EQ(parsed.storage[1].fallback->header->field, HeaderRam::ChrRam);
+  ASSERT_EQ(parsed.windows[3].storageChoices.size(), 2U);
+  EXPECT_EQ(parsed.windows[3].storage, "prg");
+  EXPECT_EQ(parsed.windows[3].storageChoices[1], "wram");
+}
+
+TEST(ManifestErrors, RejectsBadNewFields) {
+  json manifest = base();
+  manifest["match"] = json::parse(R"([{ "mapper": 1, "chr": "maybe" }])");
+  expectInvalid(manifest, "match[0].chr");
+  manifest = base();
+  manifest["storage"].push_back(json::parse(R"({ "id": "wram", "kind": "ram", "size": { "header": "prgFlash", "default": 8192 } })"));
+  expectInvalid(manifest, "size.header");
+  manifest = base();
+  manifest["storage"].push_back(json::parse(R"({ "id": "wram", "kind": "ram", "size": { "header": "prgRam" } })"));
+  expectInvalid(manifest, "size.default 缺少");
+  manifest = base();
+  manifest["windows"][0]["storage"] = json::parse(R"(["prg", "prg"])");
+  expectInvalid(manifest, "存储区重复");
+  manifest = base();
+  manifest["windows"][0]["storage"] = json::parse(R"(["prg", "nothing"])");
+  expectInvalid(manifest, "引用了不存在的存储区：nothing");
+  manifest = base();
+  manifest["windows"][0]["storage"] = json::array();
+  expectInvalid(manifest, "windows[0].storage");
+  manifest = base();
+  manifest["busConflict"] = "yes";
+  expectInvalid(manifest, "busConflict");
 }
 
 }  // namespace

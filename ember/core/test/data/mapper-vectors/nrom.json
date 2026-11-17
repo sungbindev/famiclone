@@ -1,0 +1,26 @@
+{
+  "plugin": "nrom",
+  "image": { "mapper": 0, "prgKiB": 32, "chrKiB": 8, "mirroring": "horizontal" },
+  "steps": [
+    {
+      "expectMap": [
+        { "address": "$6000", "storage": "prg-ram", "offset": 0 },
+        { "address": "$8000", "storage": "prg", "offset": 0 },
+        { "address": "$BFFF", "storage": "prg", "offset": "0x3FFF" },
+        { "address": "$C000", "storage": "prg", "offset": "0x4000" },
+        { "address": "$FFFF", "storage": "prg", "offset": "0x7FFF" },
+        { "bus": "ppu", "address": "$0000", "storage": "chr", "offset": 0 },
+        { "bus": "ppu", "address": "$1FFF", "storage": "chr", "offset": "0x1FFF" },
+        { "address": "$5000", "unmapped": true }
+      ],
+      "expectNametable": [
+        { "address": "$2000", "a10": false },
+        { "address": "$2400", "a10": false },
+        { "address": "$2800", "a10": true },
+        { "address": "$2C00", "a10": true }
+      ]
+    },
+    { "write": "$6000", "value": 85 },
+    { "read": "$6000", "expect": 85 }
+  ]
+}

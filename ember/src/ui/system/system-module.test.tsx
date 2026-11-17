@@ -50,6 +50,7 @@ describe('系统模块的登记', () => {
     expect(command(SYSTEM_COMMANDS.openLogDirectory).title).toBe('打开日志目录');
     expect(command(SYSTEM_COMMANDS.openAbout).title).toBe('关于 Ember');
     expect(module.dialogs?.map((dialog) => dialog.id)).toEqual(['system.about']);
+    expect(module.titleBarItems?.map((item) => item.id)).toEqual(['system.update']);
   });
 
   it('检查更新：名称随升级状态变化，执行时经常驻组件交来的接口发出检查请求', async () => {

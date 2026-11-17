@@ -1,0 +1,62 @@
+{
+  "plugin": "nsf-cart31",
+  "image": {
+    "mapper": 31,
+    "prgKiB": 32,
+    "chrKiB": 0
+  },
+  "steps": [
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "unmapped": true
+        },
+        {
+          "address": "$E000",
+          "unmapped": true
+        }
+      ]
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$F000",
+          "storage": "prg",
+          "offset": 28672
+        },
+        {
+          "address": "$FFFF",
+          "storage": "prg",
+          "offset": 32767
+        }
+      ]
+    },
+    {
+      "write": "$5000",
+      "value": 2
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 8192
+        }
+      ]
+    },
+    {
+      "write": "$5FFB",
+      "value": 9
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$B000",
+          "storage": "prg",
+          "offset": 4096
+        }
+      ]
+    }
+  ]
+}

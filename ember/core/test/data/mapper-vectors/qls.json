@@ -1,0 +1,18 @@
+{
+  "plugin": "qls",
+  "image": { "mapper": 172, "prgKiB": 32, "chrKiB": 0, "mirroring": "horizontal" },
+  "steps": [
+    {
+      "expectMap": [
+        { "address": "$8000", "storage": "ram", "offset": 0 },
+        { "address": "$8FFF", "storage": "ram", "offset": "0x3FF" },
+        { "address": "$C000", "storage": "prg", "offset": "0x4000" },
+        { "address": "$FFFF", "storage": "prg", "offset": "0x7FFF" },
+        { "bus": "ppu", "address": "$0000", "storage": "chr", "offset": 0 }
+      ],
+      "expectState": { "tickCount": 0 },
+      "expectIrq": false
+    },
+    { "read": "$A000", "expect": 0 }
+  ]
+}

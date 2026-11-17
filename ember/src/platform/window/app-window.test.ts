@@ -110,7 +110,7 @@ describe('visiblePlacement', () => {
     expect(visiblePlacement({ x: 1880, y: 100 }, [SCREEN])).toBeUndefined();
   });
 
-  it('按最小尺寸的窗口判断是否在屏幕内：右下角还露出足够一块时有效', () => {
+  it('按默认尺寸的窗口判断是否在屏幕内：右下角还露出足够一块时有效', () => {
     expect(visiblePlacement({ x: 1830, y: 950 }, [SCREEN])).toBeUndefined();
     expect(visiblePlacement({ x: 1700, y: 900 }, [SCREEN])).toEqual({ x: 1700, y: 900 });
   });
@@ -177,10 +177,10 @@ describe('createAppWindow', () => {
     if (process.platform !== 'darwin') expect(options.titleBarOverlay).toMatchObject({ color: '#191a1b', height: 35 });
   });
 
-  it('没有保存的位置时按最小尺寸创建，内容就绪后显示', () => {
+  it('没有保存的位置时按默认尺寸创建（最小尺寸另设），内容就绪后显示', () => {
     createAppWindow(OPTIONS);
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ width: 480, height: 463, minWidth: 480, minHeight: 463 });
+    expect(window.options).toMatchObject({ width: 720, height: 660, minWidth: 560, minHeight: 529 });
     expect(window.options.x).toBeUndefined();
     expect(window.setBounds).not.toHaveBeenCalled();
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
@@ -188,22 +188,22 @@ describe('createAppWindow', () => {
     expect(window.show).toHaveBeenCalledTimes(1);
   });
 
-  it('有保存的位置时按位置创建，大小仍是最小尺寸，不恢复最大化', () => {
+  it('有保存的位置时按位置创建，大小仍是默认尺寸，不恢复最大化', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 100, y: 80 } });
     const window = created[created.length - 1]!;
-    expect(window.options).toMatchObject({ x: 100, y: 80, width: 480, height: 463 });
-    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 480, height: 463 });
+    expect(window.options).toMatchObject({ x: 100, y: 80, width: 720, height: 660 });
+    expect(window.setBounds).toHaveBeenCalledWith({ x: 100, y: 80, width: 720, height: 660 });
     const ready = window.once.mock.calls.find(([name]) => name === 'ready-to-show')![1] as () => void;
     ready();
     expect(window.show).toHaveBeenCalledTimes(1);
     expect(window.maximize).not.toHaveBeenCalled();
   });
 
-  it('保存的位置不在屏幕内时用默认位置，大小是最小尺寸', () => {
+  it('保存的位置不在屏幕内时用默认位置，大小是默认尺寸', () => {
     createAppWindow({ ...OPTIONS, placement: { x: 5000, y: 5000 } });
     const window = created[created.length - 1]!;
     expect(window.options.x).toBeUndefined();
-    expect(window.options).toMatchObject({ width: 480, height: 463 });
+    expect(window.options).toMatchObject({ width: 720, height: 660 });
     expect(window.setBounds).not.toHaveBeenCalled();
   });
 

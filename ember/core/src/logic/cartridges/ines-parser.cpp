@@ -100,6 +100,15 @@ CartridgeImage parseInes(std::span<const std::uint8_t> file) {
   description.mirroring = (flags6 & 0x08U) != 0 ? Mirroring::FourScreen : ((flags6 & 0x01U) != 0 ? Mirroring::Vertical : Mirroring::Horizontal);
   description.battery = (flags6 & 0x02U) != 0;
   description.trainer = trainerSize != 0;
+  description.nes20 = nes2;
+  if (nes2) {
+    // 字节 10、11 的每个半字节是 64 << n 字节，0 表示没有。
+    const auto ramSize = [](unsigned nibble) { return nibble == 0 ? 0U : 64U << nibble; };
+    description.prgRamSize = ramSize(file[10] & 0x0FU);
+    description.prgNvramSize = ramSize(file[10] >> 4);
+    description.chrRamSize = ramSize(file[11] & 0x0FU);
+    description.chrNvramSize = ramSize(file[11] >> 4);
+  }
 
   const auto prgBegin = file.begin() + static_cast<std::ptrdiff_t>(HEADER_SIZE + trainerSize);
   const auto chrBegin = prgBegin + static_cast<std::ptrdiff_t>(sizes.prg);

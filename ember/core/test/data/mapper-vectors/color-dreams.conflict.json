@@ -1,0 +1,30 @@
+{
+  "plugin": "color-dreams",
+  "image": {
+    "mapper": 11,
+    "prgKiB": 128,
+    "prgFill": 1,
+    "chrKiB": 128
+  },
+  "steps": [
+    {
+      "write": "$8000",
+      "value": 83
+    },
+    {
+      "expectMap": [
+        {
+          "address": "$8000",
+          "storage": "prg",
+          "offset": 32768
+        },
+        {
+          "address": "$0000",
+          "storage": "chr",
+          "offset": 0,
+          "bus": "ppu"
+        }
+      ]
+    }
+  ]
+}

@@ -59,8 +59,10 @@ describe('UpdateController', () => {
     expect([controller.title(), controller.canRun()]).toEqual(['正在下载更新…', false]);
     push({ state: 'ready' });
     expect([controller.title(), controller.canRun()]).toEqual(['重启并安装更新', true]);
+    expect(controller.isReady()).toBe(true);
     push({ state: 'error', message: '网络不通' });
     expect([controller.title(), controller.canRun()]).toEqual(['检查更新', true]);
+    expect(controller.isReady()).toBe(false);
     push({ state: 'unsupported' });
     expect([controller.title(), controller.canRun()]).toEqual(['检查更新', true]);
   });

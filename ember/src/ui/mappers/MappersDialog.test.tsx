@@ -154,12 +154,16 @@ describe('MappersDialog：清单摘要与操作', () => {
   it('展开详情时这一行是选中状态；再点同一行收起详情并取消选中；点另一行时详情换成另一项', async () => {
     setup();
     const table = await screen.findByRole('table', { name: 'mapper 插件' });
-    const row = (name: string): HTMLElement => within(table).getByText(name).closest('tr') as HTMLElement;
+    const row = (name: string): HTMLElement => within(table).getAllByText(name)[0]!.closest('tr') as HTMLElement;
     expect(row('NROM').getAttribute('aria-current')).toBeNull();
 
     await userEvent.click(row('NROM'));
     expect(await screen.findByText('prg：只读（来自 PRG）')).toBeTruthy();
     expect(row('NROM').getAttribute('aria-current')).toBe('true');
+    // 详情在这一行的正下方，不在所有行的最后
+    const detailRow = row('NROM').nextElementSibling as HTMLElement;
+    expect(within(detailRow).getByText('prg：只读（来自 PRG）')).toBeTruthy();
+    expect(within(table).getAllByRole('row').indexOf(detailRow)).toBeLessThan(within(table).getAllByRole('row').length - 1);
 
     await userEvent.click(row('NROM'));
     expect(screen.queryByText('prg：只读（来自 PRG）')).toBeNull();
@@ -224,7 +228,9 @@ describe('MappersDialog：安装', () => {
     const page = setup({ install: () => Promise.resolve({ canceled: false, plugin: added }) });
     await screen.findByText('NROM');
     await userEvent.click(screen.getByRole('button', { name: '安装插件' }));
-    expect(await within(screen.getByRole('table', { name: 'mapper 插件' })).findByText('新装插件')).toBeTruthy();
+    const table = screen.getByRole('table', { name: 'mapper 插件' });
+    await waitFor(() => expect(within(table).getAllByText('新装插件').length).toBeGreaterThan(0));
+    expect(within(table).getAllByText('新装插件')[0]!.closest('tr')?.getAttribute('aria-current')).toBe('true');
     expect(notify).toHaveBeenCalledWith('已安装插件：新装插件 0.9.0', 'success');
     await waitFor(() => expect(page.info).toHaveBeenCalledWith({ id: 'fresh' }));
   });

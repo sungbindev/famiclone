@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：MappersDialog.tsx
- * 说明：“mapper 插件”对话框的内容：顶部是搜索框、来源筛选与“安装插件”按钮，下面是插件表格（名称、版本、匹配、主机型号、来源、状态），选中一行后在表格下方显示清单摘要与“停用/启用”“卸载”按钮。
+ * 说明：“mapper 插件”对话框的内容：顶部是搜索框、来源筛选与“安装插件”按钮，下面是插件表格（名称、版本、匹配、主机型号、来源、状态），选中一行后在这一行正下方展开清单摘要与“停用/启用”“卸载”按钮。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -10,7 +10,7 @@
  */
 
 import { Actions, Button, Facts, iconPlus, iconTrash, Panel, ScrollArea, Select, Stack, State, StatusLabel, Table, TableMainCell, TextInput, Toolbar, useDialog, type TableColumn } from '@rujianjs/ui-kit';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { MapperSummary } from '../../contracts/mappers/generated/mappers';
 import { useShell } from '../shell/shell-context';
 import type { ShellPageProps } from '../shell/shell-registry';
@@ -110,7 +110,7 @@ export function MappersDialog({ bridge }: ShellPageProps) {
   else if (data.state.kind === 'loading') status = <State kind="busy" text={TEXT.loading} />;
   else if (shown.length === 0) status = <State text={TEXT.empty} />;
 
-  let detail = null;
+  let detail: ReactNode = null;
   if (selected !== undefined) {
     let facts = <State kind="busy" text={TEXT.detailLoading} />;
     if (data.detail.kind === 'failed') facts = <State kind="error" text={data.detail.message} />;
@@ -128,6 +128,7 @@ export function MappersDialog({ bridge }: ShellPageProps) {
     detail = (
       <Panel
         fixed
+        plain
         compactHead
         title={selected.name}
         aside={
@@ -175,9 +176,9 @@ export function MappersDialog({ bridge }: ShellPageProps) {
             rowKey={(row) => row.id}
             isRowSelected={(row) => row.id === data.selectedId}
             onRowSelect={(row) => data.select(row.id === data.selectedId ? undefined : row.id)}
+            renderRowDetail={(row) => (row.id === selected?.id ? detail : null)}
           />
         )}
-        {detail}
       </Stack>
     </ScrollArea>
   );

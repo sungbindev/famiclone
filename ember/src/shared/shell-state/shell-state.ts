@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-state.ts
- * 说明：界面状态的类型、默认值与校验：窗口位置，上次选择的机型，开着“自动收缩”的底部面板，以及上次显示更新记录时的应用版本。
+ * 说明：界面状态的类型、默认值与校验：窗口位置，上次选择的机型，手动关掉“自动收缩”的底部面板，以及上次显示更新记录时的应用版本。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -19,12 +19,12 @@ export interface WindowPlacement {
   readonly y: number;
 }
 
-/** 外壳需要保存的选择：上次选的机型、开着“自动收缩”的面板；底部面板是否展开与当前页签每次启动都是关闭，不保存；底部面板的高度由内容决定，不保存。 */
+/** 外壳需要保存的选择：上次选的机型、手动关掉“自动收缩”的面板；底部面板是否展开与当前页签每次启动都是关闭，不保存；底部面板的高度由内容决定，不保存。 */
 export interface ShellLayout {
   /** “文件→选择机型”里上次选的机型标识；null 表示没选过。 */
   readonly selectedMachine: string | null;
-  /** 开着“自动收缩”的底部面板标识（如 runtime.panel），没有重复；不在清单里的面板为关闭。 */
-  readonly autoCollapsePanels: readonly string[];
+  /** 用户手动关掉“自动收缩”的底部面板标识（如 runtime.panel），没有重复；不在清单里的面板，自动收缩是开着的（默认）。 */
+  readonly autoCollapseOffPanels: readonly string[];
 }
 
 /** 需要保存的全部界面状态。 */
@@ -39,7 +39,7 @@ export interface ShellState {
 /** 没有保存过时：窗口用默认位置，没有选过机型，没有显示过更新记录。 */
 export const DEFAULT_SHELL_STATE: ShellState = {
   window: null,
-  layout: { selectedMachine: null, autoCollapsePanels: [] },
+  layout: { selectedMachine: null, autoCollapseOffPanels: [] },
   releaseNotesVersion: null
 };
 
@@ -52,7 +52,7 @@ const MAX_COORDINATE = 100_000;
 const MACHINE_ID_PATTERN = /^[a-z][a-z0-9]{0,31}$/;
 /** 底部面板标识的写法（模块名加点加面板名，最长 64）；是否真的存在由登记表决定。 */
 const PANEL_ID_PATTERN = /^[a-z][a-z0-9-]*\.[A-Za-z][A-Za-z0-9-]*$/;
-/** 自动收缩清单的最大长度。 */
+/** 自动收缩关闭清单的最大长度。 */
 const MAX_AUTO_COLLAPSE_PANELS = 16;
 
 /** 合格的面板标识清单：长度有限、每项写法合格、没有重复。 */
@@ -87,7 +87,7 @@ function parseWindow(raw: unknown): WindowPlacement | null {
 /** 布局各字段的校验函数。 */
 const LAYOUT_VALIDATORS: { readonly [K in keyof ShellLayout]: (value: unknown) => value is ShellLayout[K] } = {
   selectedMachine: (value): value is string | null => value === null || (typeof value === 'string' && MACHINE_ID_PATTERN.test(value)),
-  autoCollapsePanels: isPanelIdList
+  autoCollapseOffPanels: isPanelIdList
 };
 
 /**

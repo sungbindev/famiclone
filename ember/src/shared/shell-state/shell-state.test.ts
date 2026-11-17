@@ -14,7 +14,7 @@ import { DEFAULT_SHELL_STATE, parseLayoutPatch, parseShellState } from './shell-
 describe('parseShellState', () => {
   it('没有保存过时：窗口用默认位置，没有选过机型', () => {
     for (const raw of [undefined, null, 5, 'x', [], {}]) {
-      expect(parseShellState(raw)).toEqual({ window: null, layout: { selectedMachine: null, autoCollapsePanels: [] }, releaseNotesVersion: null });
+      expect(parseShellState(raw)).toEqual({ window: null, layout: { selectedMachine: null, autoCollapseOffPanels: [] }, releaseNotesVersion: null });
     }
   });
 
@@ -28,7 +28,7 @@ describe('parseShellState', () => {
   it('完整合格的内容原样读出', () => {
     const state = {
       window: { x: -20, y: 30 },
-      layout: { selectedMachine: 'sb2000', autoCollapsePanels: ['runtime.panel', 'media.devices'] },
+      layout: { selectedMachine: 'sb2000', autoCollapseOffPanels: ['runtime.panel', 'media.devices'] },
       releaseNotesVersion: '0.1.0'
     };
     expect(parseShellState(state)).toEqual(state);
@@ -40,7 +40,7 @@ describe('parseShellState', () => {
 
   it('旧文件里的面板展开状态与面板高度被忽略', () => {
     const state = parseShellState({ layout: { sideBarOpen: false, bottomPanelOpen: true, rightBarOpen: true, bottomPanelHeight: 200 } });
-    expect(state.layout).toEqual({ selectedMachine: null, autoCollapsePanels: [] });
+    expect(state.layout).toEqual({ selectedMachine: null, autoCollapseOffPanels: [] });
   });
 
   it('已选机型：小写字母开头的标识才读出，其他用默认（没选过）', () => {
@@ -53,16 +53,16 @@ describe('parseShellState', () => {
   it('单项不合格时只替换那一项，其他项照常读出', () => {
     const state = parseShellState({
       window: { x: 1, y: 2 },
-      layout: { selectedMachine: 'Bad Id', autoCollapsePanels: ['runtime.panel'] }
+      layout: { selectedMachine: 'Bad Id', autoCollapseOffPanels: ['runtime.panel'] }
     });
-    expect(state.layout).toEqual({ selectedMachine: null, autoCollapsePanels: ['runtime.panel'] });
+    expect(state.layout).toEqual({ selectedMachine: null, autoCollapseOffPanels: ['runtime.panel'] });
     expect(state.window).toEqual({ x: 1, y: 2 });
   });
 
-  it('自动收缩的面板清单：写法合格、没有重复才读出，否则用默认（都关闭）', () => {
-    expect(parseShellState({ layout: { autoCollapsePanels: ['runtime.panel'] } }).layout.autoCollapsePanels).toEqual(['runtime.panel']);
+  it('关闭自动收缩的面板清单：写法合格、没有重复才读出，否则用默认（空，即都开启）', () => {
+    expect(parseShellState({ layout: { autoCollapseOffPanels: ['runtime.panel'] } }).layout.autoCollapseOffPanels).toEqual(['runtime.panel']);
     for (const bad of ['runtime.panel', [5], ['Runtime.panel'], ['panel'], ['a.b', 'a.b'], Array.from({ length: 17 }, (_, index) => `m.p${index}`), null]) {
-      expect(parseShellState({ layout: { autoCollapsePanels: bad } }).layout.autoCollapsePanels).toEqual([]);
+      expect(parseShellState({ layout: { autoCollapseOffPanels: bad } }).layout.autoCollapseOffPanels).toEqual([]);
     }
   });
 
@@ -84,8 +84,8 @@ describe('parseLayoutPatch', () => {
   it('合格的修改原样通过', () => {
     expect(parseLayoutPatch({ selectedMachine: 'sb2000' })).toEqual({ selectedMachine: 'sb2000' });
     expect(parseLayoutPatch({ selectedMachine: null })).toEqual({ selectedMachine: null });
-    expect(parseLayoutPatch({ autoCollapsePanels: ['runtime.panel'] })).toEqual({ autoCollapsePanels: ['runtime.panel'] });
-    expect(parseLayoutPatch({ autoCollapsePanels: [] })).toEqual({ autoCollapsePanels: [] });
+    expect(parseLayoutPatch({ autoCollapseOffPanels: ['runtime.panel'] })).toEqual({ autoCollapseOffPanels: ['runtime.panel'] });
+    expect(parseLayoutPatch({ autoCollapseOffPanels: [] })).toEqual({ autoCollapseOffPanels: [] });
   });
 
   it('不是对象、空对象、含未知字段、值不合格时整条丢弃', () => {
@@ -98,8 +98,8 @@ describe('parseLayoutPatch', () => {
     expect(parseLayoutPatch({ bottomPanelHeight: 200 })).toBeNull();
     expect(parseLayoutPatch({ selectedMachine: 5 })).toBeNull();
     expect(parseLayoutPatch({ selectedMachine: 'Bad Id' })).toBeNull();
-    expect(parseLayoutPatch({ autoCollapsePanels: ['runtime.panel', 'runtime.panel'] })).toBeNull();
-    expect(parseLayoutPatch({ autoCollapsePanels: 'runtime.panel' })).toBeNull();
+    expect(parseLayoutPatch({ autoCollapseOffPanels: ['runtime.panel', 'runtime.panel'] })).toBeNull();
+    expect(parseLayoutPatch({ autoCollapseOffPanels: 'runtime.panel' })).toBeNull();
   });
 
   it('原型链上的名字不算字段', () => {

@@ -25,7 +25,7 @@ import { Shell } from './Shell';
 const ICON = ['M0 0'] as const;
 
 /** 没有保存过时的布局。 */
-const DEFAULT_LAYOUT: ShellLayout = { selectedMachine: null, autoCollapsePanels: [] };
+const DEFAULT_LAYOUT: ShellLayout = { selectedMachine: null, autoCollapseOffPanels: [] };
 
 /** 假的 window.ember：布局与窗口状态由测试决定，调用都记录下来。 */
 function createBridge(layout: Partial<ShellLayout> = {}) {
@@ -420,26 +420,27 @@ describe('面板的自动收缩开关', () => {
     const buttons = within(header).getAllByRole('button');
     expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(['自动收缩', '关闭']);
     expect(buttons[0]?.textContent).toBe('');
-    expect(buttons[0]?.getAttribute('aria-pressed')).toBe('false');
+    expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true');
     await userEvent.click(screen.getByRole('button', { name: '普通' }));
     expect(screen.queryByRole('button', { name: '自动收缩' })).toBeNull();
   });
 
-  it('开关关着：点面板里的按钮与面板外（显示区）面板都保持展开', async () => {
+  it('开关手动关着：点面板里的按钮与面板外（显示区）面板都保持展开', async () => {
     renderShell({ modules: AUTO_MODULES });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
+    await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
+    expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('false');
     await userEvent.click(screen.getByRole('button', { name: '面板里的按钮' }));
     await userEvent.click(screen.getByText('显示区内容'));
     expect(screen.getByRole('region', { name: '运行' })).toBeTruthy();
   });
 
-  it('开关开着：点面板里的任何地方不收起；点面板外（包括显示区）就收起，系统栏按钮恢复常态；再展开开关仍然开着', async () => {
+  it('默认开着：点面板里的任何地方不收起；点面板外（包括显示区）就收起，系统栏按钮恢复常态；再展开开关仍然开着', async () => {
     renderShell({ modules: AUTO_MODULES });
     await shown();
     const run = screen.getByRole('button', { name: '运行' });
     await userEvent.click(run);
-    await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
     expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('true');
     await userEvent.click(screen.getByRole('button', { name: '面板里的按钮' }));
     await userEvent.click(screen.getByRole('heading', { name: '运行' }));
@@ -452,7 +453,7 @@ describe('面板的自动收缩开关', () => {
   });
 
   it('开关开着：点标题栏与系统栏的面板按钮不触发自动收缩，面板按钮照常切换与收起', async () => {
-    const { container } = renderShell({ modules: AUTO_MODULES, layout: { autoCollapsePanels: ['a.run'] } });
+    const { container } = renderShell({ modules: AUTO_MODULES });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
     await userEvent.click(container.querySelector('.ui-title-bar__title') as HTMLElement);
@@ -466,7 +467,7 @@ describe('面板的自动收缩开关', () => {
   });
 
   it('点在弹层（下拉选项、通知等）里不触发自动收缩', async () => {
-    renderShell({ modules: AUTO_MODULES, layout: { autoCollapsePanels: ['a.run'] } });
+    renderShell({ modules: AUTO_MODULES });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
     const layer = document.createElement('div');
@@ -478,27 +479,27 @@ describe('面板的自动收缩开关', () => {
     layer.remove();
   });
 
-  it('开关按面板各自保存：改动时把开着的面板清单交给 setLayout，再关掉时清单为空', async () => {
+  it('开关按面板各自保存：关掉时把已关闭的面板清单交给 setLayout，再打开时清单为空', async () => {
     const { shell } = renderShell({ modules: AUTO_MODULES });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
     await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
-    expect(shell.setLayout).toHaveBeenLastCalledWith({ autoCollapsePanels: ['a.run'] });
+    expect(shell.setLayout).toHaveBeenLastCalledWith({ autoCollapseOffPanels: ['a.run'] });
     await userEvent.click(screen.getByRole('button', { name: '自动收缩' }));
-    expect(shell.setLayout).toHaveBeenLastCalledWith({ autoCollapsePanels: [] });
+    expect(shell.setLayout).toHaveBeenLastCalledWith({ autoCollapseOffPanels: [] });
   });
 
-  it('读出保存的清单：启动后该面板的开关就是开着的', async () => {
-    renderShell({ modules: AUTO_MODULES, layout: { autoCollapsePanels: ['a.run'] } });
+  it('读出保存的清单：启动后该面板的开关是关着的，点面板外不收起', async () => {
+    renderShell({ modules: AUTO_MODULES, layout: { autoCollapseOffPanels: ['a.run'] } });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '运行' }));
-    expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '自动收缩' }).getAttribute('aria-pressed')).toBe('false');
     await userEvent.click(screen.getByText('显示区内容'));
-    expect(screen.queryByRole('region')).toBeNull();
+    expect(screen.getByRole('region', { name: '运行' })).toBeTruthy();
   });
 
-  it('没有登记自动收缩的面板：点面板外不收起，即使别的面板的开关开着', async () => {
-    renderShell({ modules: AUTO_MODULES, layout: { autoCollapsePanels: ['a.run'] } });
+  it('没有登记自动收缩的面板：点面板外不收起，即使其他面板的开关开着', async () => {
+    renderShell({ modules: AUTO_MODULES });
     await shown();
     await userEvent.click(screen.getByRole('button', { name: '普通' }));
     await userEvent.click(screen.getByText('显示区内容'));

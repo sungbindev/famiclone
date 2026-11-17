@@ -28,7 +28,7 @@ function setup(trusted = true) {
     handle: (channel: string, listener: Listener) => handlers.set(channel, listener),
     on: (channel: string, listener: Listener) => listeners.set(channel, listener)
   } as unknown as IpcMain;
-  const savedState = { ...DEFAULT_SHELL_STATE, layout: { selectedMachine: 'sb2000', autoCollapsePanels: [] } };
+  const savedState = { ...DEFAULT_SHELL_STATE, layout: { selectedMachine: 'sb2000', autoCollapseOffPanels: [] } };
   const state: ShellStateService = { get: vi.fn(() => savedState), updateLayout: vi.fn(), updateWindow: vi.fn(), updateReleaseNotesVersion: vi.fn(), flush: vi.fn() };
   const window = { perform: vi.fn(), state: vi.fn(() => ({ maximized: true, fullScreen: false, alwaysOnTop: true })) };
   const keyboard = { setCapture: vi.fn((enabled: boolean) => enabled), onKey: vi.fn(), onReleased: vi.fn() } satisfies KeyboardCaptureService;

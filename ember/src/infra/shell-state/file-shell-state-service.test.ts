@@ -35,15 +35,15 @@ describe('FileShellStateService', () => {
       createStorage({ window: { x: 1, y: 2, width: 1000, height: 700, maximized: false }, layout: { rightBarOpen: true, bottomPanelHeight: 260, selectedMachine: 5 } })
     );
     expect(service.get().window).toEqual({ x: 1, y: 2 });
-    expect(service.get().layout).toEqual({ selectedMachine: null, autoCollapsePanels: [] });
+    expect(service.get().layout).toEqual({ selectedMachine: null, autoCollapseOffPanels: [] });
   });
 
   it('修改布局只改传入的字段，并把整个状态交给存储', () => {
     const storage = createStorage(undefined);
     const service = new FileShellStateService(storage);
     service.updateLayout({ selectedMachine: 'sb97' });
-    service.updateLayout({ autoCollapsePanels: ['runtime.panel'] });
-    expect(service.get().layout).toEqual({ selectedMachine: 'sb97', autoCollapsePanels: ['runtime.panel'] });
+    service.updateLayout({ autoCollapseOffPanels: ['runtime.panel'] });
+    expect(service.get().layout).toEqual({ selectedMachine: 'sb97', autoCollapseOffPanels: ['runtime.panel'] });
     expect(storage.writes).toHaveLength(2);
     expect(storage.writes[1]).toEqual(service.get());
   });

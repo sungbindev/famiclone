@@ -11,7 +11,7 @@
  *       底部面板只经系统栏左侧的面板按钮展开：面板关着时点按钮展开并切到该页签，开着时点同一个按钮收起，点另一个按钮切页签；没有快捷键，每次启动都是关闭，页签选择不保存；
  *       面板按钮只在面板开着并停在该页签时是按下状态，面板收起后恢复常态；
  *       底部面板的高度由内容决定：外壳量出标题行、内容与留边加起来的高度，刚好装下内容，不能拖动、不保存，内容变高或变矮时跟着变（超过窗口可用高度的上限时内容区出现滚动条），每个面板各自一个高度；
- *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关开着时，点在面板之外（包括显示区的画面）就收起面板，面板里的操作不收起；不算面板之外的有：标题栏、弹层（下拉选项、通知等）与系统栏里的面板按钮；开关状态按面板保存在界面状态里，下次启动沿用；
+ *       面板的标题栏有“自动收缩”开关的（面板登记 autoCollapse），开关默认开着，开着时点在面板之外（包括显示区的画面）就收起面板，面板里的操作不收起；不算面板之外的有：标题栏、弹层（下拉选项、通知等）与系统栏里的面板按钮；用户手动关掉的面板按面板保存在界面状态里，下次启动沿用；
  *       其他界面（如首选项）都是对话框：组件库的独立窗口对话框，同一个对话框同时只开一个；
  *       显示区获得焦点时键盘事件先交给显示区（它处理过的按键 defaultPrevented，外壳不再响应）；
  *       文件可以直接拖进主窗口：外壳接住拖放，按扩展名交给模块登记的文件处理项（use-file-drop.ts）；
@@ -80,8 +80,8 @@ interface PanelState {
 /** 外壳实时读取的状态：事件处理函数用它取最新值，不必随渲染重新创建。 */
 interface LiveState {
   readonly view: ShellViewState;
-  /** 开着“自动收缩”的面板标识。 */
-  readonly autoCollapse: readonly string[];
+  /** 用户手动关掉“自动收缩”的面板标识。 */
+  readonly autoCollapseOff: readonly string[];
   /** 菜单是否打开着。 */
   readonly menuOpen: boolean;
 }
@@ -147,8 +147,8 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   const [panelHeight, setPanelHeight] = useState(0);
   const panelRef = useRef<HTMLElement>(null);
   const [windowState, setWindowState] = useState<WindowState>({ maximized: false, fullScreen: false, alwaysOnTop: false });
-  // 开着“自动收缩”的面板标识：读到保存的清单之前都是关闭。
-  const [autoCollapse, setAutoCollapse] = useState<readonly string[]>([]);
+  // 用户手动关掉“自动收缩”的面板标识：没有保存过时为空，即登记了自动收缩的面板都开着。
+  const [autoCollapseOff, setAutoCollapseOff] = useState<readonly string[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   // 模块通过 refreshCommands 通知命令状态变了：递增一次让菜单与状态栏重新计算。
   const [, setCommandVersion] = useState(0);
@@ -161,7 +161,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
     let active = true;
     void bridge.shell.getState().then((state) => {
       if (active) setStateLoaded(true);
-      if (active) setAutoCollapse(state.layout.autoCollapsePanels);
+      if (active) setAutoCollapseOff(state.layout.autoCollapseOffPanels);
     });
     void bridge.shell.getWindowState().then((state) => {
       if (active) setWindowState(state);
@@ -175,9 +175,9 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
 
   const bottomPanelOpen = panel.open;
   const view: ShellViewState = { bottomPanelOpen, activePanelId: panel.open ? panel.id : null, fullScreen: windowState.fullScreen, alwaysOnTop: windowState.alwaysOnTop };
-  const live = useRef<LiveState>({ view, autoCollapse, menuOpen: openMenuId !== null });
+  const live = useRef<LiveState>({ view, autoCollapseOff, menuOpen: openMenuId !== null });
   useLayoutEffect(() => {
-    live.current = { view, autoCollapse, menuOpen: openMenuId !== null };
+    live.current = { view, autoCollapseOff, menuOpen: openMenuId !== null };
   });
 
   // 面板展开或切换页签后量出内容高度，之后标题行或内容的大小变了再量；面板被隐藏（全屏）时量不到，保持上一次的高度。
@@ -234,15 +234,16 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
   // 面板开着且它的“自动收缩”开着时，点在面板之外就收起面板；在捕获阶段处理，画面区等地方阻止了冒泡也照样收起。
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent): void => {
-      const { view: current, autoCollapse: enabled } = live.current;
+      const { view: current, autoCollapseOff: disabled } = live.current;
       const openId = current.activePanelId;
-      if (openId === null || !enabled.includes(openId)) return;
+      if (openId === null || disabled.includes(openId)) return;
+      if (registry.bottomPanels.find((item) => item.id === openId)?.autoCollapse !== true) return;
       if (event.target instanceof Element && event.target.closest(AUTO_COLLAPSE_IGNORED) !== null) return;
       setPanel((state) => (state.open && state.id === openId ? { ...state, open: false } : state));
     };
     window.addEventListener('pointerdown', handlePointerDown, true);
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
-  }, []);
+  }, [registry]);
 
   const api = useMemo<ShellApi>(() => {
     const shell: ShellApi = {
@@ -380,9 +381,9 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
 
   /** 切换面板的自动收缩开关并保存。 */
   const toggleAutoCollapse = (panelId: string): void => {
-    const next = autoCollapse.includes(panelId) ? autoCollapse.filter((id) => id !== panelId) : [...autoCollapse, panelId];
-    setAutoCollapse(next);
-    bridge.shell.setLayout({ autoCollapsePanels: next });
+    const next = autoCollapseOff.includes(panelId) ? autoCollapseOff.filter((id) => id !== panelId) : [...autoCollapseOff, panelId];
+    setAutoCollapseOff(next);
+    bridge.shell.setLayout({ autoCollapseOffPanels: next });
   };
 
   return (
@@ -411,7 +412,7 @@ function ShellFrame({ bridge, registry }: { bridge: EmberBridge; registry: Shell
                       iconOnly
                       compact
                       icon={iconLayoutBottombarCollapse}
-                      pressed={autoCollapse.includes(activePanel.id)}
+                      pressed={!autoCollapseOff.includes(activePanel.id)}
                       title={TEXT.autoCollapse}
                       onClick={() => toggleAutoCollapse(activePanel.id)}
                     >

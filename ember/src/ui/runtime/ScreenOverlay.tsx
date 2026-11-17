@@ -19,7 +19,7 @@ const TEXT = {
   none: {
     title: '未开机',
     steps: [
-      { label: '学习机', text: '文件→选择机型，再点“运行”→“开机”' },
+      { label: '学习机', text: '文件→选择机型，选好即开机' },
       { label: '经典 FC', text: '文件→打开卡带，选好即开机' }
     ]
   },

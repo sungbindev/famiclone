@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-core.mjs
- * 说明：编译 C++ 原生模块：先生成 Schema 代码并打包官方插件，再用 cmake-js 按当前 Electron 版本编译，输出 build/ember/core/Release/ember_core.node。
+ * 说明：编译 C++ 原生模块：先生成 Schema 代码并打包官方插件，再用 cmake-js 按当前 Electron 版本编译，输出 build/ember/core/Release/ember_binding.node。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13

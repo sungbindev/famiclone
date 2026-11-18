@@ -57,7 +57,7 @@ const APP_ID = 'cn.3578.ember';
 /** 产品名。 */
 const PRODUCT_NAME = 'Ember';
 /** 原生模块文件名。 */
-const NATIVE_FILE = 'ember_core.node';
+const NATIVE_FILE = 'ember_binding.node';
 /** 键盘独占模块（只有 Windows 有）的文件名。 */
 const KEYBOARD_NATIVE_FILE = 'ember_keyboard.node';
 /** 预装插件的目录名：开发时在 build/ember 下，正式包在 resources 下。 */

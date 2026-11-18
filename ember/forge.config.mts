@@ -27,7 +27,7 @@ const APP_ID = 'cn.3578.ember';
 /** Ember 构建产物的根目录（仓库根目录下的 build/ember），与 tools/build/build-paths.mjs 一致。 */
 const BUILD_ROOT = '../build/ember';
 /** 编译好的原生模块。 */
-const NATIVE_MODULE = `${BUILD_ROOT}/core/Release/ember_core.node`;
+const NATIVE_MODULE = `${BUILD_ROOT}/core/Release/ember_binding.node`;
 /** Windows 键盘独占模块，只在 Windows 打包时分发。 */
 const KEYBOARD_MODULE = `${BUILD_ROOT}/core/Release/ember_keyboard.node`;
 /** 打好的预装插件目录：目录名 plugins 保留，成为 resources/plugins。 */

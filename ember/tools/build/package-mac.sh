@@ -5,7 +5,7 @@
 # 作者：sungbin
 # 邮箱：sungbin@3578.cn
 # 日期：2026-11-13
-# 备注：只能在苹果电脑上运行；调试符号保存在 build/ember/core/Release/ember_core.node.dSYM（仓库根目录下），不随安装包分发。
+# 备注：只能在苹果电脑上运行；调试符号保存在 build/ember/core/Release/ember_binding.node.dSYM（仓库根目录下），不随安装包分发。
 # ------------------------------------------------------------------------
 
 set -euo pipefail
@@ -20,7 +20,7 @@ fi
 npm run schema
 npm run help:build
 node tools/build/build-core.mjs --arch arm64
-NATIVE=../build/ember/core/Release/ember_core.node
+NATIVE=../build/ember/core/Release/ember_binding.node
 dsymutil "$NATIVE" -o "$NATIVE.dSYM"
 strip -x "$NATIVE"
 

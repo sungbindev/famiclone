@@ -360,4 +360,4 @@ Napi::Object init(Napi::Env env, Napi::Object exports) {
 
 }  // namespace
 
-NODE_API_MODULE(ember_core, init)
+NODE_API_MODULE(ember_binding, init)

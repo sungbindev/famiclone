@@ -89,21 +89,21 @@ if(NOT APPLE)
   list(FILTER EMBER_CORE_SOURCES EXCLUDE REGEX "-mac\\.cpp$")
 endif()
 
-add_library(ember_core_lib STATIC ${EMBER_CORE_SOURCES})
-target_include_directories(ember_core_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_library(ember_core STATIC ${EMBER_CORE_SOURCES})
+target_include_directories(ember_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # miniz 的头文件对使用者可见（测试要写插件包）；QuickJS 与 miniaudio 只在核心库内部使用，头文件不外露。
-target_link_libraries(ember_core_lib PUBLIC ember_json ember_miniz PRIVATE ember_quickjs ember_miniaudio)
-target_compile_definitions(ember_core_lib PUBLIC EMBER_CORE_VERSION="${EMBER_CORE_VERSION}")
+target_link_libraries(ember_core PUBLIC ember_json ember_miniz PRIVATE ember_quickjs ember_miniaudio)
+target_compile_definitions(ember_core PUBLIC EMBER_CORE_VERSION="${EMBER_CORE_VERSION}")
 
 # 调试服务的 TCP 监听（platform/network）：Windows 用 Winsock。
 if(WIN32)
-  target_link_libraries(ember_core_lib PUBLIC ws2_32)
+  target_link_libraries(ember_core PUBLIC ws2_32)
 endif()
 
 if(MSVC)
-  target_compile_options(ember_core_lib PUBLIC /utf-8 /W4 /permissive- /EHsc)
+  target_compile_options(ember_core PUBLIC /utf-8 /W4 /permissive- /EHsc)
 else()
-  target_compile_options(ember_core_lib PUBLIC -Wall -Wextra -Wpedantic)
+  target_compile_options(ember_core PUBLIC -Wall -Wextra -Wpedantic)
 endif()
 
 # ---------------------------------------------------------------- 原生模块（cmake-js）
@@ -117,17 +117,17 @@ if(CMAKE_JS_INC)
   )
   string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 
-  add_library(ember_core SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/binding/binding.cpp ${CMAKE_JS_SRC})
-  set_target_properties(ember_core PROPERTIES PREFIX "" SUFFIX ".node")
-  target_include_directories(ember_core PRIVATE ${CMAKE_JS_INC} ${NODE_ADDON_API_DIR})
-  target_compile_definitions(ember_core PRIVATE NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
-  target_link_libraries(ember_core PRIVATE ember_core_lib ${CMAKE_JS_LIB})
+  add_library(ember_binding SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/binding/binding.cpp ${CMAKE_JS_SRC})
+  set_target_properties(ember_binding PROPERTIES PREFIX "" SUFFIX ".node")
+  target_include_directories(ember_binding PRIVATE ${CMAKE_JS_INC} ${NODE_ADDON_API_DIR})
+  target_compile_definitions(ember_binding PRIVATE NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
+  target_link_libraries(ember_binding PRIVATE ember_core ${CMAKE_JS_LIB})
 
-  # 发布构建的调试符号单独保存为 ember_core.pdb，不进入 .node 文件。
+  # 发布构建的调试符号单独保存为 ember_binding.pdb，不进入 .node 文件。
   if(MSVC)
+    target_compile_options(ember_binding PRIVATE $<$<CONFIG:Release>:/Zi>)
     target_compile_options(ember_core PRIVATE $<$<CONFIG:Release>:/Zi>)
-    target_compile_options(ember_core_lib PRIVATE $<$<CONFIG:Release>:/Zi>)
-    target_link_options(ember_core PRIVATE "$<$<CONFIG:Release>:/DEBUG;/OPT:REF;/OPT:ICF>")
+    target_link_options(ember_binding PRIVATE "$<$<CONFIG:Release>:/DEBUG;/OPT:REF;/OPT:ICF>")
   endif()
 
   if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
@@ -155,7 +155,7 @@ if(EMBER_BUILD_TESTS)
   enable_testing()
   file(GLOB_RECURSE EMBER_CORE_TESTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
   add_executable(ember_core_tests ${EMBER_CORE_TESTS})
-  target_link_libraries(ember_core_tests PRIVATE ember_core_lib GTest::gtest_main)
+  target_link_libraries(ember_core_tests PRIVATE ember_core GTest::gtest_main)
   target_compile_definitions(ember_core_tests PRIVATE EMBER_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data" EMBER_PLUGIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../build/ember/plugins")
   # 磁带解码的端到端用例用随应用附带的 ffmpeg；当前平台没有编译好的程序时用例跳过。
   if(WIN32)

@@ -29,7 +29,7 @@ const THEME_CLASS_SCRIPT =
 /** 用户可见的文字。 */
 const TEXT = {
   title: 'Ember 帮助文档',
-  description: 'Ember（FC 与学习机模拟器）的使用说明、插件开发手册、调试接口手册与 fcdev 开发手册',
+  description: '面向 NES 与学习机应用开发者的 Ember 模拟器：调试接口、fcdev 开发工具、插件开发与完整使用手册',
   manual: '使用说明',
   plugin: '插件开发手册',
   debug: '调试接口手册',

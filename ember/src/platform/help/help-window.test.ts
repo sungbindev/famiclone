@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：help-window.test.ts
- * 说明：帮助文档窗口的测试：与主窗口一样隐藏系统标题栏并按主题着色系统窗口按钮，安全设置不放宽，站点不存在时报错，已打开时只聚焦，可以指定要打开的页面、窗口关闭后停止跟随系统主题。
+ * 说明：帮助文档窗口的测试：与主窗口一样隐藏系统标题栏并按主题着色系统窗口按钮，安全设置不放宽，外部链接交给系统浏览器，站点不存在时报错，已打开时只聚焦，可以指定要打开的页面、窗口关闭后停止跟随系统主题。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-17
+ * 日期：2026-11-18
  * ------------------------------------------------------------------------
  */
 
@@ -15,7 +15,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
-const created: Array<{ options: Record<string, unknown>; focus: ReturnType<typeof vi.fn>; handlers: Map<string, () => void> }> = [];
+const created: Array<{
+  options: Record<string, unknown>;
+  focus: ReturnType<typeof vi.fn>;
+  handlers: Map<string, () => void>;
+  webContents: { on: ReturnType<typeof vi.fn>; setWindowOpenHandler: ReturnType<typeof vi.fn> };
+}> = [];
+const openExternal = vi.hoisted(() => vi.fn());
 
 vi.mock('electron', () => ({
   app: { isPackaged: false },
@@ -43,7 +49,7 @@ vi.mock('electron', () => ({
   nativeTheme: { shouldUseDarkColors: true, themeSource: 'system', on: vi.fn(), removeListener: vi.fn() },
   screen: { getAllDisplays: () => [] },
   session: {},
-  shell: { openExternal: vi.fn() }
+  shell: { openExternal }
 }));
 
 const { createHelpWindow } = await import('./help-window');
@@ -82,6 +88,14 @@ describe('createHelpWindow', () => {
     const preferences = created[created.length - 1]!.options.webPreferences as Record<string, unknown>;
     expect(preferences).toMatchObject({ contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true });
     expect(preferences.preload).toBeUndefined();
+  });
+
+  it('点击 GitHub 仓库地址时交给系统浏览器，不在帮助窗口新建页面', async () => {
+    openExternal.mockClear();
+    await createHelpWindow({ root: siteDirectory() }).open();
+    const handler = created[created.length - 1]!.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
+    expect(handler({ url: 'https://github.com/sungbindev/famiclone' })).toEqual({ action: 'deny' });
+    expect(openExternal).toHaveBeenCalledWith('https://github.com/sungbindev/famiclone');
   });
 
   it('站点目录里没有首页时报错且不创建窗口', async () => {

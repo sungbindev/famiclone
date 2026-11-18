@@ -5,32 +5,35 @@ title: 首页
 hero:
   name: Ember
   text: 帮助文档
-  tagline: FC 与学习机模拟器
+  tagline: 面向 NES 和学习机应用开发者，提供运行控制、内存与状态检查、断点、单步、跟踪和自动化调试能力，并附带 fcdev 工具链、硬件资料与开发手册。
   actions:
     - theme: brand
+      text: 开始开发
+      link: /fcdev/
+    - theme: alt
+      text: 调试接口
+      link: /debug/
+    - theme: alt
       text: 使用说明
       link: /manual/
     - theme: alt
-      text: 插件开发手册
+      text: 插件开发
       link: /plugin/
     - theme: alt
-      text: 调试接口手册
-      link: /debug/
-    - theme: alt
-      text: fcdev 开发手册
-      link: /fcdev/
+      text: GitHub 仓库
+      link: https://github.com/sungbindev/famiclone
 
 features:
-  - title: 使用说明
-    details: 打开卡带、添加学习机的 BIOS、设置键盘与手柄、调整画面与声音，以及日常使用中的常见问题。
-    link: /manual/
-  - title: 插件开发手册
-    details: 怎样给新的卡带 mapper 写插件：插件包、清单与脚本的写法、常见写法，以及用调试服务测试与排错。
-    link: /plugin/
-  - title: 调试接口手册
-    details: 调试服务的连接方式、报文规则、官方客户端工具，以及全部请求与事件的参数和结果。
-    link: /debug/
   - title: fcdev 开发手册
-    details: 用 fcdev 为 NES 和小霸王学习机 SB2000 开发程序：命令、构建与调试，SB-DOS 的系统调用、硬件行为、C 接口与汇编符号。
+    details: 用 C 或汇编开发 NES 与 SB2000 程序，完成构建、打包、运行和调试；手册包含命令、系统调用、硬件行为、接口、符号与示例源码。
     link: /fcdev/
+  - title: 调试接口手册
+    details: 通过 WebSocket JSON-RPC 控制运行，读写内存与寄存器，设置断点和监视项，记录指令轨迹、生成截图，并用 SDK、终端客户端或 MCP 自动化调试。
+    link: /debug/
+  - title: 插件开发手册
+    details: 为 NES 卡带编写 mapper 插件，用调试服务验证存储区映射、寄存器、状态与脚本行为，快速完成测试和排错。
+    link: /plugin/
+  - title: 使用说明
+    details: 打开 NES 卡带，添加学习机 BIOS，载入软盘与磁带，设置键盘与手柄，调整画面和声音，并解决日常使用问题。
+    link: /manual/
 ---

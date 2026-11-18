@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：AboutDialog.tsx
- * 说明：“关于 Ember”对话框的内容：标志、名称与应用版本、核心版本（名称在上，两个版本在下面并排），编译时间、作者、邮箱、QQ 号、许可证（竖排），以及“第三方依赖”小节（一行说明和一张表：名称与版本、作者、许可）。
+ * 说明：“关于 Ember”对话框的内容：标志、名称与应用版本、核心版本（名称在上，两个版本在下面并排），编译时间、作者、邮箱、QQ 号、项目地址、许可证（竖排），以及“第三方依赖”小节（一行说明和一张表：名称与版本、作者、许可）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
+ * 日期：2026-11-18
  * 备注：第三方依赖的清单由构建脚本从各项目的声明生成，由组装根传入，这里不手写；版本经 system.version 读取，读不到时显示“读取失败”，不用通知。规则见 docs/05-界面.md 第 8 节。
  * ------------------------------------------------------------------------
  */
@@ -45,6 +45,8 @@ const TEXT = {
   emailAddress: 'sungbin@3578.cn',
   qq: 'QQ',
   qqNumber: '46427991',
+  project: '项目地址',
+  projectUrl: 'https://github.com/sungbindev/famiclone/tree/master/ember',
   license: '许可证',
   licenseName: 'GNU 通用公共许可证第 3 版（GPL-3.0）',
   loading: '正在读取…',
@@ -116,6 +118,14 @@ export function AboutDialog({ bridge, notices, buildTime }: AboutDialogProps) {
             { label: TEXT.author, value: TEXT.authorName },
             { label: TEXT.email, value: TEXT.emailAddress },
             { label: TEXT.qq, value: TEXT.qqNumber },
+            {
+              label: TEXT.project,
+              value: (
+                <a href={TEXT.projectUrl} target="_blank" rel="noreferrer">
+                  {TEXT.projectUrl}
+                </a>
+              )
+            },
             { label: TEXT.license, value: TEXT.licenseName }
           ]}
         />

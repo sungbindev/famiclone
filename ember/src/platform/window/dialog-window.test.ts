@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：dialog-window.test.ts
- * 说明：对话框窗口的测试：请求解析（只接受组件库的空白对话框窗口，窗口特性的取值、缺省值与限幅）与关闭后还回焦点的目标。
+ * 说明：对话框窗口的测试：请求解析、外链协议白名单，以及关闭后还回焦点的目标。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-04
+ * 日期：2026-11-18
  * ------------------------------------------------------------------------
  */
 
@@ -12,12 +12,22 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('electron', () => ({ BrowserWindow: {}, screen: {} }));
+const openExternal = vi.hoisted(() => vi.fn());
+vi.mock('electron', () => ({ BrowserWindow: {}, screen: {}, shell: { openExternal } }));
 
-const { parseDialogWindowRequest, returnFocusTarget } = await import('./dialog-window');
+const { openDialogExternalUrl, parseDialogWindowRequest, returnFocusTarget } = await import('./dialog-window');
 
 /** 假窗口。 */
 const fakeWindow = (destroyed: boolean) => ({ isDestroyed: () => destroyed });
+
+describe('openDialogExternalUrl', () => {
+  it('HTTP 与 HTTPS 交给系统浏览器，其他协议不打开', () => {
+    expect(openDialogExternalUrl('https://github.com/sungbindev/famiclone/tree/master/ember')).toBe(true);
+    expect(openDialogExternalUrl('file:///C:/secret.txt')).toBe(false);
+    expect(openExternal).toHaveBeenCalledOnce();
+    expect(openExternal).toHaveBeenCalledWith('https://github.com/sungbindev/famiclone/tree/master/ember');
+  });
+});
 
 describe('returnFocusTarget', () => {
   it('焦点还给打开对话框的窗口，它已销毁时还给主窗口，都已销毁时不处理', () => {

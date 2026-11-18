@@ -6,14 +6,15 @@
  *       上边不动、向下增长，超出屏幕可用区域才整体上移；修改全部对话框窗口的底色；有焦点的对话框关闭后把焦点还给打开它的窗口。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-15
+ * 日期：2026-11-18
  * 备注：对话框窗口没有系统标题栏，标题栏由组件库绘制（拖动用 app-region）；不能最小化，不在任务栏单独显示；
- *       非模态的属于主窗口，模态的属于打开时拥有焦点的主窗口或对话框窗口；对话框窗口禁止跳转与再打开新窗口。
+ *       非模态的属于主窗口，模态的属于打开时拥有焦点的主窗口或对话框窗口；对话框窗口禁止跳转与再打开页面窗口，HTTP 与 HTTPS 外链交给系统浏览器。
  *       窗口特性的写法见组件库的 dialog-popup.ts。
  * ------------------------------------------------------------------------
  */
 
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, screen, shell } from 'electron';
+import { isOpenableExternalUrl } from '../help/help-site';
 
 /** 对话框窗口的名称：组件库按序号命名。 */
 const DIALOG_NAME_PATTERN = /^ui-dialog-\d{1,9}$/;
@@ -66,6 +67,17 @@ export interface DialogWindowOptions {
 
 /** 各主窗口的对话框窗口（按名称）。 */
 const dialogsByParent = new WeakMap<BrowserWindow, Map<string, BrowserWindow>>();
+
+/**
+ * 把允许的 HTTP 或 HTTPS 地址交给系统浏览器。
+ * @param url 对话框请求打开的地址。
+ * @returns 是否是允许的外链。
+ */
+export function openDialogExternalUrl(url: string): boolean {
+  if (!isOpenableExternalUrl(url)) return false;
+  void shell.openExternal(url);
+  return true;
+}
 
 /** 限定范围内的整数；不是有限数字时为 undefined。 */
 function readSize(value: string | undefined): number | undefined {
@@ -137,8 +149,14 @@ function setupDialogWindow(child: BrowserWindow, name: string, relations: Dialog
   const [outerWidth = 0, outerHeight = 0] = child.getSize();
   const [contentWidth = 0, contentHeight = 0] = child.getContentSize();
   child.setMinimumSize(request.minWidth + outerWidth - contentWidth, request.minHeight + outerHeight - contentHeight);
-  child.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  child.webContents.on('will-navigate', (event) => event.preventDefault());
+  child.webContents.setWindowOpenHandler(({ url }) => {
+    openDialogExternalUrl(url);
+    return { action: 'deny' };
+  });
+  child.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault();
+    openDialogExternalUrl(url);
+  });
 
   let shown = false;
   const show = () => {

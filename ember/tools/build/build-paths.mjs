@@ -19,6 +19,10 @@ export const BUILD_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..',
 export const CORE_BUILD_DIRECTORY = join(BUILD_ROOT, 'core');
 /** C++ 测试的构建目录。 */
 export const CORE_TEST_BUILD_DIRECTORY = join(BUILD_ROOT, 'core-test');
+/** Win32 原生外壳的构建目录（与 win32/CMakePresets.json 的 binaryDir 一致）。 */
+export const WIN32_BUILD_DIRECTORY = join(BUILD_ROOT, 'win32');
+/** 用 Win32 原生外壳的工具链构建核心测试的目录。 */
+export const WIN32_TEST_BUILD_DIRECTORY = join(BUILD_ROOT, 'win32-test');
 /** 打好的预装插件包目录。 */
 export const PLUGINS_BUILD_DIRECTORY = join(BUILD_ROOT, 'plugins');
 /** 第三方开源代码许可全文的输出目录。 */

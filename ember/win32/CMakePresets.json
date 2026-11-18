@@ -1,0 +1,14 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "win7-x64",
+      "displayName": "Windows 7 SP1 及以后的 64 位系统（MSVC v143）",
+      "generator": "Visual Studio 18 2026",
+      "architecture": { "value": "x64", "strategy": "set" },
+      "toolset": { "value": "v143,version=14.44", "strategy": "set" },
+      "binaryDir": "${sourceDir}/../../build/ember/win32"
+    }
+  ]
+}

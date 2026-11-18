@@ -27,6 +27,9 @@ add_compile_definitions(_WIN32_WINNT=0x0601 WINVER=0x0601 NTDDI_VERSION=0x060100
 
 set(EMBER_CORE_VERSION "0.0.0-dev" CACHE STRING "核心版本，构建脚本取自 package.json")
 
+# 核心的测试登记在子目录里，顶层也要开启，ctest 才能从构建目录的顶层找到它们。
+enable_testing()
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../core ${CMAKE_CURRENT_BINARY_DIR}/core)
 
 add_subdirectory(probe)

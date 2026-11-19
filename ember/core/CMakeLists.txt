@@ -113,10 +113,11 @@ if(WIN32)
 endif()
 
 if(MSVC)
-  target_compile_options(ember_core PUBLIC /utf-8 /W4 /permissive- /EHsc)
+  target_compile_options(ember_core PUBLIC /utf-8 /W4 /permissive- /EHsc /MP)
 else()
   target_compile_options(ember_core PUBLIC -Wall -Wextra -Wpedantic)
 endif()
+target_precompile_headers(ember_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch/ember-core-pch.hpp)
 
 # ---------------------------------------------------------------- 测试
 

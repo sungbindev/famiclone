@@ -175,11 +175,21 @@ export function formatNoticeSource(entries) {
 export function writeThirdPartyFiles() {
   const entries = collectNotices();
   mkdirSync(dirname(NOTICES_SOURCE), { recursive: true });
-  writeFileSync(NOTICES_SOURCE, formatNoticeSource(entries));
+  writeIfChanged(NOTICES_SOURCE, formatNoticeSource(entries));
   mkdirSync(NOTICES_DIRECTORY, { recursive: true });
   const notices = join(NOTICES_DIRECTORY, NOTICES_FILE);
-  writeFileSync(notices, formatNotices(entries));
+  writeIfChanged(notices, formatNotices(entries));
   return { source: NOTICES_SOURCE, notices, count: entries.length };
+}
+
+/**
+ * 内容没有变化时不写文件，避免改动文件时间引起依赖它的目标重新编译。
+ * @param {string} file 文件路径。
+ * @param {string} text 要写入的文本。
+ */
+function writeIfChanged(file, text) {
+  if (existsSync(file) && readFileSync(file, 'utf8') === text) return;
+  writeFileSync(file, text);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

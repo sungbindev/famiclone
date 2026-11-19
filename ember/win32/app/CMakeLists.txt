@@ -11,7 +11,8 @@
 # 与核心库、GoogleTest 保持一致：Debug 版关闭标准库的迭代器检查，否则链接时报不匹配。
 add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
 
-# “关于”对话框里的编译时间：取配置工程的时刻（本机时间），每次重新配置会更新。
+# “关于”对话框里的编译时间：取配置工程的时刻（本机时间），每次重新配置会更新；
+# 只加在用到它的 application.cpp 上，加在整个目标上会让每次配置后全部文件重新编译。
 string(TIMESTAMP EMBER_BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP EMBER_BUILD_CLOCK "%H:%M:%S")
 
@@ -140,8 +141,13 @@ if(EMBER_ENABLE_UPDATES)
 endif()
 # 应用自己的头文件目录放在前面：核心里也有 platform、shared 等同名目录，应用的文件不能与它们重名。
 target_include_directories(ember_app PUBLIC src)
-target_compile_definitions(ember_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX PRIVATE EMBER_APP_VERSION="${EMBER_CORE_VERSION}" EMBER_APP_BUILD_DATE="${EMBER_BUILD_DATE}" EMBER_APP_BUILD_CLOCK="${EMBER_BUILD_CLOCK}")
-target_compile_options(ember_app PUBLIC /utf-8 /W4 /permissive- /EHsc)
+target_compile_definitions(ember_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX PRIVATE EMBER_APP_VERSION="${EMBER_CORE_VERSION}")
+# 单独的宏定义与预编译头的编译参数不一致，这个文件不使用预编译头。
+set_source_files_properties(src/bootstrap/application.cpp PROPERTIES
+  COMPILE_DEFINITIONS "EMBER_APP_BUILD_DATE=\"${EMBER_BUILD_DATE}\";EMBER_APP_BUILD_CLOCK=\"${EMBER_BUILD_CLOCK}\""
+  SKIP_PRECOMPILE_HEADERS ON)
+target_compile_options(ember_app PUBLIC /utf-8 /W4 /permissive- /EHsc /MP)
+target_precompile_headers(ember_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch/ember-app-pch.hpp)
 target_link_libraries(ember_app PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 gdi32 shlwapi ws2_32 winhttp bcrypt)
 
 # 可执行文件：资源（图标、清单、版本信息）里的版本号取自 package.json

@@ -11,7 +11,7 @@
 # 与核心库、GoogleTest 保持一致：Debug 版关闭标准库的迭代器检查，否则链接时报不匹配。
 add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
 
-add_library(ember_app_lib STATIC
+add_library(ember_app STATIC
   src/bootstrap/application.cpp
   src/bootstrap/resource-locations.cpp
   src/entry/cartridges/cartridge-handlers.cpp
@@ -74,10 +74,10 @@ add_library(ember_app_lib STATIC
   src/ui/shell/main-window-view.cpp
   src/ui/shell/shell-view.cpp)
 # 应用自己的头文件目录放在前面：核心里也有 platform、shared 等同名目录，应用的文件不能与它们重名。
-target_include_directories(ember_app_lib PUBLIC src)
-target_compile_definitions(ember_app_lib PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX PRIVATE EMBER_APP_VERSION="${EMBER_CORE_VERSION}")
-target_compile_options(ember_app_lib PUBLIC /utf-8 /W4 /permissive- /EHsc)
-target_link_libraries(ember_app_lib PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 shlwapi)
+target_include_directories(ember_app PUBLIC src)
+target_compile_definitions(ember_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX PRIVATE EMBER_APP_VERSION="${EMBER_CORE_VERSION}")
+target_compile_options(ember_app PUBLIC /utf-8 /W4 /permissive- /EHsc)
+target_link_libraries(ember_app PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 shlwapi)
 
 # 可执行文件：资源（图标、清单、版本信息）里的版本号取自 package.json
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" EMBER_VERSION_MATCH "${EMBER_CORE_VERSION}")
@@ -88,7 +88,7 @@ set(EMBER_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../../resources/icon.ico")
 configure_file(resources/ember-win.rc.in ${CMAKE_CURRENT_BINARY_DIR}/ember-win.rc @ONLY)
 add_executable(ember_win WIN32 src/bootstrap/main.cpp ${CMAKE_CURRENT_BINARY_DIR}/ember-win.rc resources/ember-win.manifest)
 set_target_properties(ember_win PROPERTIES OUTPUT_NAME "ember-win")
-target_link_libraries(ember_win PRIVATE ember_app_lib)
+target_link_libraries(ember_win PRIVATE ember_app)
 
 if(EMBER_BUILD_TESTS)
   add_executable(ember_app_tests
@@ -103,7 +103,7 @@ if(EMBER_BUILD_TESTS)
     test/shell-logic-test.cpp
     test/shell-test.cpp)
   target_include_directories(ember_app_tests PRIVATE test)
-  target_link_libraries(ember_app_tests PRIVATE ember_app_lib GTest::gtest_main)
+  target_link_libraries(ember_app_tests PRIVATE ember_app GTest::gtest_main)
   include(GoogleTest)
   gtest_discover_tests(ember_app_tests DISCOVERY_MODE PRE_TEST)
 endif()

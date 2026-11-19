@@ -22,7 +22,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 /** Windows 7 SP1 导出基线的位置。 */
 const BASELINE_FILE = join(root, 'win32', 'baseline', 'win7-sp1-exports.json');
 /** 默认检查的可执行文件。 */
-const DEFAULT_TARGETS = [join(WIN32_BUILD_DIRECTORY, 'probe', 'Release', 'ember-probe.exe'), join(WIN32_BUILD_DIRECTORY, 'tools', 'export-dump', 'Release', 'ember-export-dump.exe')];
+const DEFAULT_TARGETS = [
+  join(WIN32_BUILD_DIRECTORY, 'probe', 'Release', 'ember-probe.exe'),
+  join(WIN32_BUILD_DIRECTORY, 'tools', 'export-dump', 'Release', 'ember-export-dump.exe'),
+  join(WIN32_BUILD_DIRECTORY, 'ui-kit', 'Release', 'rujian-ui-gallery.exe')
+];
 
 /**
  * 找到 v143 工具集自带的 dumpbin。

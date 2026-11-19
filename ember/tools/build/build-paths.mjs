@@ -23,6 +23,8 @@ export const CORE_TEST_BUILD_DIRECTORY = join(BUILD_ROOT, 'core-test');
 export const WIN32_BUILD_DIRECTORY = join(BUILD_ROOT, 'win32');
 /** 用 Win32 原生外壳的工具链构建核心测试的目录。 */
 export const WIN32_TEST_BUILD_DIRECTORY = join(BUILD_ROOT, 'win32-test');
+/** Win32 控件库与网页版对照的输出目录：网页版参考页、两边的截图与对照报告。 */
+export const WIN32_REFERENCE_DIRECTORY = join(BUILD_ROOT, 'win32-reference');
 /** 打好的预装插件包目录。 */
 export const PLUGINS_BUILD_DIRECTORY = join(BUILD_ROOT, 'plugins');
 /** 第三方开源代码许可全文的输出目录。 */

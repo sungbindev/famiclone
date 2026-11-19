@@ -1,0 +1,40 @@
+{
+  "components": [
+    "icons",
+    "button",
+    "layout",
+    "typography",
+    "scroll-area",
+    "input-controls",
+    "choice-controls",
+    "select",
+    "menu",
+    "slider",
+    "field",
+    "tabs",
+    "list",
+    "tree",
+    "table",
+    "row-list",
+    "panel",
+    "facts",
+    "feedback",
+    "tooltip",
+    "dialog",
+    "notification",
+    "notification-center",
+    "split-view",
+    "splitter",
+    "app-frame",
+    "title-bar",
+    "status-bar"
+  ],
+  "iconSources": [
+    "../../src/ui",
+    "../../src/bootstrap"
+  ],
+  "extraStyles": [
+    "third_party/vscode/base/browser/ui/scrollbar/media/scrollbars.css",
+    "third_party/vscode/base/browser/ui/list/list.css"
+  ]
+}

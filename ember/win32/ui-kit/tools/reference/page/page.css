@@ -1,0 +1,31 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：page.css
+ * 说明：网页版参考页的页面样式：窗口背景与一排按钮的间距，对应 gallery 示例页的内边距与按钮间距。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-19
+ * 备注：页面背景取窗口内容区的颜色令牌，与原生窗口清屏的颜色一致。
+ * ------------------------------------------------------------------------
+ */
+
+html,
+body {
+  margin: 0;
+  background: var(--content-bg);
+  font-family: var(--host-font-family);
+}
+
+/* 截图对照只比较稳定后的状态：隐藏窗口里过渡动画不会走完，这里直接去掉过渡（原生版的过渡单独验证） */
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+.reference-row {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Tabler Icons",
+  "version": "3.48.0",
+  "authors": ["Paweł Kuna"],
+  "license": "MIT",
+  "licenseFile": "LICENSE",
+  "homepage": "https://tabler.io/icons",
+  "usage": "界面用到的图标的图形（路径数据），由生成器从 rujian-ui-kit 的图标数据转成 C++ 数据（src/generated/icons.generated.cpp）"
+}

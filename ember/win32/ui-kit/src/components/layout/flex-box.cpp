@@ -28,6 +28,11 @@ void FlexBox::setPadding(const Insets& padding) {
   invalidate();
 }
 
+void FlexBox::setGap(double gap) {
+  gap_ = gap;
+  invalidate();
+}
+
 double FlexBox::growOf(const Widget* child) const {
   const auto found = grow_.find(child);
   return found == grow_.end() ? 0.0 : found->second;

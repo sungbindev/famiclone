@@ -15,12 +15,21 @@
 
 #include "base/theme-tokens.hpp"
 #include "rujian/ui/button.hpp"
+#include "rujian/ui/callout.hpp"
 #include "rujian/ui/checkbox.hpp"
+#include "rujian/ui/facts.hpp"
+#include "rujian/ui/field.hpp"
 #include "rujian/ui/layout.hpp"
+#include "rujian/ui/panel.hpp"
 #include "rujian/ui/radio-group.hpp"
 #include "rujian/ui/scroll-area.hpp"
 #include "rujian/ui/select.hpp"
+#include "rujian/ui/setting-row.hpp"
 #include "rujian/ui/slider.hpp"
+#include "rujian/ui/split-view.hpp"
+#include "rujian/ui/state.hpp"
+#include "rujian/ui/status-label.hpp"
+#include "rujian/ui/tabs.hpp"
 #include "rujian/ui/text-input.hpp"
 
 namespace gallery {
@@ -281,6 +290,264 @@ Page buildScrollPage() {
   return page;
 }
 
+/** 面板页的页面大小：五个面板纵向排列，高度取 4 的倍数。 */
+constexpr ui::Size kPanelPageSize{320, 492};
+
+/** 内容块：高 24、底色取强调色，没有文字。 */
+class Block final : public ui::Widget {
+ public:
+  static constexpr double kBlockHeight = 24.0;
+
+  ui::Size measure(ui::Size available) override { return ui::Size{available.width, kBlockHeight}; }
+
+  void paint(ui::Canvas& canvas) override { canvas.fillRect(bounds(), ui::themeTokens(host()->theme()).accent); }
+};
+
+/** 面板的宽度：页宽减去两侧内边距。 */
+constexpr double kPanelWidth = 288.0;
+/** 标题文字所在的区域：对照像素时它不参与（水平从内边距之外起，垂直带上下各留 2 像素余量）。 */
+constexpr double kTitleLeft = 8.0;
+
+/** 标题区域的不参与边距：宽度为 titleRight 之前，垂直范围 [top, bottom]，面板总高 height。 */
+ui::Insets titleInset(double top, double bottom, double titleRight, double height) { return ui::Insets{top, kPanelWidth - titleRight, height - bottom, kTitleLeft}; }
+
+/** 往面板里加一个内容块。 */
+void addBlock(ui::Panel& panel) { panel.addContent(std::make_unique<Block>()); }
+
+/** 往容器里加一个面板并登记为样本。 */
+ui::Panel* addPanel(Page& page, ui::Widget& parent, const char* title) {
+  auto panel = std::make_unique<ui::Panel>();
+  ui::Panel* raw = panel.get();
+  raw->setTitle(title);
+  parent.addChild(std::move(panel));
+  page.samples.push_back(raw);
+  return raw;
+}
+
+/** 面板页：标题加 aside 加两块内容、紧凑标题栏、平面、只有 aside、只有标题（内容区为空）。 */
+Page buildPanelPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  ui::Panel* full = addPanel(page, *stack, "面板");
+  auto progress = std::make_unique<ui::Slider>();
+  progress->setValue(35);
+  full->setAside(std::move(progress));
+  addBlock(*full);
+  addBlock(*full);
+  ui::Panel* compact = addPanel(page, *stack, "紧凑标题");
+  compact->setCompactHead(true);
+  addBlock(*compact);
+  ui::Panel* plain = addPanel(page, *stack, "平面");
+  plain->setPlain(true);
+  addBlock(*plain);
+  ui::Panel* asideOnly = addPanel(page, *stack, "");
+  auto asideSlider = std::make_unique<ui::Slider>();
+  asideSlider->setValue(60);
+  asideOnly->setAside(std::move(asideSlider));
+  addBlock(*asideOnly);
+  addPanel(page, *stack, "仅标题");
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 键值清单页的页面大小：宽窗口（大于 420）两列，窄窗口上下排列；高度取 4 的倍数。 */
+constexpr ui::Size kFactsPageSize{440, 108};
+constexpr ui::Size kFactsNarrowPageSize{320, 160};
+
+/** 键值清单页：三条，最后一条的内容有两行；全部是文字，对照文字外框与样本位置。 */
+Page buildFactsPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto facts = std::make_unique<ui::Facts>();
+  facts->addFact("构建时间", "2026-11-19 10:00");
+  facts->addFact("作者", "某某");
+  facts->addFact("授权", "第一行\n第二行");
+  page.samples.push_back(facts.get());
+  stack->addChild(std::move(facts));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 字段页的页面大小：两个字段（有标签与没有标签）纵向排列，高度取 4 的倍数。 */
+constexpr ui::Size kFieldPageSize{320, 160};
+
+/** 往容器里加一个字段并登记为样本；控件是没有文字的滑块。 */
+ui::Field* addField(Page& page, ui::Widget& parent, const char* label, const char* description) {
+  auto field = std::make_unique<ui::Field>();
+  ui::Field* raw = field.get();
+  raw->setLabel(label);
+  raw->setDescription(description);
+  auto slider = std::make_unique<ui::Slider>();
+  slider->setValue(35);
+  raw->setControl(std::move(slider));
+  parent.addChild(std::move(field));
+  page.samples.push_back(raw);
+  return raw;
+}
+
+/** 字段页：标签加说明加控件、没有标签时控件加说明。 */
+Page buildFieldPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  addField(page, *stack, "名称", "说明文字");
+  addField(page, *stack, "", "说明文字");
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 设置行页的页面大小：宽窗口（大于 720）左右两列，窄窗口上下排列；高度取 4 的倍数。 */
+constexpr ui::Size kSettingRowPageSize{760, 200};
+constexpr ui::Size kSettingRowNarrowPageSize{600, 276};
+
+/** 往容器里加一个设置行并登记为样本；控件是没有文字的滑块。 */
+ui::SettingRow* addSettingRow(Page& page, ui::Widget& parent, const char* description, const char* error) {
+  auto row = std::make_unique<ui::SettingRow>();
+  ui::SettingRow* raw = row.get();
+  raw->setLabel("名称");
+  raw->setDescription(description);
+  raw->setError(error);
+  auto slider = std::make_unique<ui::Slider>();
+  slider->setValue(60);
+  raw->setControl(std::move(slider));
+  parent.addChild(std::move(row));
+  page.samples.push_back(raw);
+  return raw;
+}
+
+/** 设置行页：名称加说明、只有名称、控件下方带错误文字。 */
+Page buildSettingRowPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  addSettingRow(page, *stack, "说明文字", "");
+  addSettingRow(page, *stack, "", "");
+  addSettingRow(page, *stack, "", "错误文字");
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 反馈控件页的页面大小：两个提示块、两个说明块、一行状态标签，高度取 4 的倍数。 */
+constexpr ui::Size kFeedbackPageSize{360, 240};
+
+/** 提示块样本的内边距：边框 1 加内边距 6（上下）之内、边框 1 加内边距 10（左右，少留 1 像素给链接按钮下划线的半像素边缘）之内是文字与链接按钮，不参与像素对照。 */
+constexpr ui::Insets kCalloutInset{7, 10, 7, 10};
+
+/** 反馈控件页：提示块（带链接按钮、错误样式）、说明块（普通、出错）、状态标签（成功、已停止）。 */
+Page buildFeedbackPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+
+  auto info = std::make_unique<ui::Callout>();
+  info->setText("这是一段提示说明文字");
+  auto link = std::make_unique<ui::Button>("选择目录");
+  link->setVariant(ui::ButtonVariant::Link);
+  info->addContent(std::move(link));
+  page.samples.push_back(info.get());
+  stack->addChild(std::move(info));
+
+  auto error = std::make_unique<ui::Callout>();
+  error->setText("这是一段错误提示文字");
+  error->setError(true);
+  page.samples.push_back(error.get());
+  stack->addChild(std::move(error));
+
+  auto empty = std::make_unique<ui::State>();
+  empty->setText("没有符合条件的插件");
+  page.samples.push_back(empty.get());
+  stack->addChild(std::move(empty));
+
+  auto failed = std::make_unique<ui::State>();
+  failed->setText("读取数据失败");
+  failed->setError(true);
+  page.samples.push_back(failed.get());
+  stack->addChild(std::move(failed));
+
+  auto labels = std::make_unique<ui::Row>();
+  for (const bool enabled : {true, false}) {
+    auto label = std::make_unique<ui::StatusLabel>();
+    label->setTone(enabled ? ui::StatusTone::Success : ui::StatusTone::Stopped);
+    label->setText(enabled ? "已启用" : "已停用");
+    page.samples.push_back(label.get());
+    labels->addChild(std::move(label));
+  }
+  stack->addChild(std::move(labels));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 分栏页的页面大小：高 160 的分栏视图加内边距，高度取 4 的倍数。 */
+constexpr ui::Size kSplitPageSize{440, 192};
+
+/** 高度固定的外框：分栏视图的高度取摩登所在区域，这里用它给出固定的 160。 */
+class FixedHeight final : public ui::Widget {
+ public:
+  static constexpr double kFrameHeight = 160.0;
+
+  ui::Size measure(ui::Size available) override { return ui::Size{available.width, kFrameHeight}; }
+};
+
+/** 铺满所在区域的底色块，没有文字。 */
+class Solid final : public ui::Widget {
+ public:
+  ui::Size measure(ui::Size available) override { return ui::Size{available.width, 0}; }
+
+  void paint(ui::Canvas& canvas) override { canvas.fillRect(bounds(), ui::themeTokens(host()->theme()).input_bg); }
+};
+
+/** 分栏页：左栏是会滚动的色带，主区是铺满的底色块；样本是分栏视图与它的分隔条。 */
+Page buildSplitPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto frame = std::make_unique<FixedHeight>();
+  auto view = std::make_unique<ui::SplitView>();
+  view->setSideWidthRange(100, 200);
+  view->setSideWidth(140);
+  view->setSide(std::make_unique<Bands>());
+  view->setMain(std::make_unique<Solid>());
+  page.samples.push_back(view.get());
+  page.samples.push_back(view->splitter());
+  frame->addChild(std::move(view));
+  stack->addChild(std::move(frame));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 页签页的页面大小：一行里的一条页签栏，下面是带内容的一组页签，高度取 4 的倍数。 */
+constexpr ui::Size kTabsPageSize{360, 160};
+
+/** 页签栏样本里除了顶部 6 像素（悬停底色）与底部 1 像素（分割线）之外都不参与像素对照：中间有文字，下划线两端在各缩放比例下两种光栅器的圆角抗锯齿不同（只对照它的外框）。 */
+constexpr ui::Insets kTabBarInset{6, 0, 1, 0};
+
+/** 页签页：一条只有页签的页签栏（在一行里，宽度是内容宽），以及纵向堆叠里带内容的页签（栏铺满宽度，下面留 10 像素再接内容）。 */
+Page buildTabsPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+
+  auto row = std::make_unique<ui::Row>();
+  auto plain = std::make_unique<ui::Tabs>();
+  plain->addTab("a", "第一页");
+  plain->addTab("b", "第二页");
+  plain->addTab("c", "第三页");
+  page.samples.push_back(plain->tabBar());
+  row->addChild(std::move(plain));
+  stack->addChild(std::move(row));
+
+  auto withContent = std::make_unique<ui::Tabs>();
+  page.samples.push_back(withContent->tabBar());
+  withContent->addTab("a", "第一页", std::make_unique<Block>());
+  withContent->addTab("b", "第二页");
+  page.samples.push_back(withContent->children()[1].get());
+  stack->addChild(std::move(withContent));
+  page.content = std::move(stack);
+  return page;
+}
+
 }  // namespace
 
 const std::vector<PageInfo>& pageInfos() {
@@ -291,6 +558,22 @@ const std::vector<PageInfo>& pageInfos() {
       {"select", kSelectPageSize, kSelectInset, {}, kOptionInset, {0, 1, 2}, {"hover", "pressed", "focus", "open", "openkey", "openhover"}},
       {"slider", kSliderPageSize, ui::Insets::all(kCompareAll), {}, {}, {0, 1, 2, 3}, {"hover", "pressed", "focus"}},
       {"scroll", kScrollPageSize, ui::Insets::all(kCompareAll), {}, {}, {0}, {"hover", "wheel", "drag"}},
+      // 面板样本高度：122、74、88、90、46（边框、标题行、44 或 28、内容区内边距与内容块）
+      {"panel", kPanelPageSize, titleInset(12, 34, 64, 122), {{1, titleInset(4, 25, 72, 74)}, {2, titleInset(11, 33, 50, 88)}, {3, ui::Insets::all(kCompareAll)}, {4, titleInset(12, 34, 72, 46)}}, {}, {}, {}},
+      // 键值清单全是文字，样本内部整个不参与像素对照
+      {"facts", kFactsPageSize, ui::Insets::all(0), {}, {}, {}, {}},
+      {"facts-narrow", kFactsNarrowPageSize, ui::Insets::all(0), {}, {}, {}, {}},
+      // 字段：有标签的上半部分是文字（底部 22 像素是滑块），没有标签的底部是文字（顶部 22 像素是滑块）
+      {"field", kFieldPageSize, ui::Insets{0, 0, ui::tokens::slider_height, 0}, {{1, ui::Insets{ui::tokens::slider_height, 0, 0, 0}}}, {}, {}, {}},
+      // 设置行：宽窗口左边 420 像素是名称与说明；带错误文字的行整个不参与
+      {"setting-row", kSettingRowPageSize, ui::Insets{0, 728 - ui::tokens::setting_row_text_width, 0, 0}, {{2, ui::Insets::all(0)}}, {}, {}, {}},
+      {"setting-row-narrow", kSettingRowNarrowPageSize, ui::Insets{6, 0, 37, 0}, {{2, ui::Insets::all(0)}}, {}, {}, {}},
+      // 反馈：提示块文字与按钮在内边距之内；说明块与状态标签整个只对照文字与图标的外框
+      {"feedback", kFeedbackPageSize, ui::Insets::all(0), {{0, kCalloutInset}, {1, kCalloutInset}}, {}, {}, {}},
+      // 分栏：整个视图与分隔条都参与对照；悬停、按下、焦点的目标是分隔条（样本 1）
+      {"split", kSplitPageSize, ui::Insets::all(kCompareAll), {}, {}, {1}, {"hover", "pressed", "focus"}},
+      // 页签：两条页签栏（文字带不参与）与第二条下面的内容块（全部参与）；悬停、按下、焦点的目标是第一条
+      {"tabs", kTabsPageSize, kTabBarInset, {{2, ui::Insets::all(kCompareAll)}}, {}, {0}, {"hover", "pressed", "focus"}},
   };
   return infos;
 }
@@ -302,6 +585,13 @@ Page buildPage(const std::string& name) {
   if (name == "select") return buildSelectPage();
   if (name == "slider") return buildSliderPage();
   if (name == "scroll") return buildScrollPage();
+  if (name == "panel") return buildPanelPage();
+  if (name == "facts" || name == "facts-narrow") return buildFactsPage();
+  if (name == "field") return buildFieldPage();
+  if (name == "setting-row" || name == "setting-row-narrow") return buildSettingRowPage();
+  if (name == "feedback") return buildFeedbackPage();
+  if (name == "split") return buildSplitPage();
+  if (name == "tabs") return buildTabsPage();
   throw std::runtime_error("未知的示例页：" + name);
 }
 

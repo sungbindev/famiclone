@@ -32,7 +32,7 @@ enum Modifier : unsigned { kModifierShift = 1, kModifierCtrl = 2, kModifierAlt =
 enum class MouseButton { None, Left, Right, Middle };
 
 /** 鼠标光标样式。 */
-enum class CursorKind { Arrow, IBeam, Hand };
+enum class CursorKind { Arrow, IBeam, Hand, SizeWE };
 
 /** 鼠标事件。 */
 struct MouseEvent {

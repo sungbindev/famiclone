@@ -32,10 +32,11 @@ constexpr wchar_t kWindowClass[] = L"RujianUiHostWindow";
 constexpr double kBaseDpi = 96.0;
 /** 光标闪烁定时器的编号。 */
 constexpr UINT_PTR kCaretTimer = 1;
-/** IDC_ARROW、IDC_IBEAM、IDC_HAND（字符串形式的宏在没有 UNICODE 时是窄字符，这里直接用编号）。 */
+/** IDC_ARROW、IDC_IBEAM、IDC_HAND、IDC_SIZEWE（字符串形式的宏在没有 UNICODE 时是窄字符，这里直接用编号）。 */
 constexpr int kCursorArrow = 32512;
 constexpr int kCursorIBeam = 32513;
 constexpr int kCursorHand = 32649;
+constexpr int kCursorSizeWE = 32644;
 
 /** 取窗口的 DPI：优先用 GetDpiForWindow（Windows 10 1607 起），否则用系统 DPI。 */
 UINT windowDpi(HWND hwnd) {
@@ -249,7 +250,11 @@ struct HostWindow::Impl {
       case WM_SETCURSOR:
         if (LOWORD(lParam) == HTCLIENT) {
           const CursorKind kind = root.cursor();
-          SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(kind == CursorKind::IBeam ? kCursorIBeam : (kind == CursorKind::Hand ? kCursorHand : kCursorArrow))));
+          int cursorId = kCursorArrow;
+          if (kind == CursorKind::IBeam) cursorId = kCursorIBeam;
+          else if (kind == CursorKind::Hand) cursorId = kCursorHand;
+          else if (kind == CursorKind::SizeWE) cursorId = kCursorSizeWE;
+          SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(cursorId)));
           return TRUE;
         }
         break;

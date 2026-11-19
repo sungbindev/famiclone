@@ -15,18 +15,34 @@ import { createRoot } from 'react-dom/client';
 import './page.css';
 import { ButtonPage } from './pages/button-page';
 import { ChoicePage } from './pages/choice-page';
+import { FactsPage } from './pages/facts-page';
+import { FeedbackPage } from './pages/feedback-page';
+import { FieldPage } from './pages/field-page';
 import { InputPage } from './pages/input-page';
+import { PanelPage } from './pages/panel-page';
 import { ScrollPage } from './pages/scroll-page';
 import { SelectPage } from './pages/select-page';
+import { SettingRowPage } from './pages/setting-row-page';
 import { SliderPage } from './pages/slider-page';
+import { SplitPage } from './pages/split-page';
+import { TabsPage } from './pages/tabs-page';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
   button: ButtonPage,
   choice: ChoicePage,
+  facts: FactsPage,
+  'facts-narrow': FactsPage,
+  feedback: FeedbackPage,
+  field: FieldPage,
   input: InputPage,
+  panel: PanelPage,
   scroll: ScrollPage,
   select: SelectPage,
-  slider: SliderPage
+  'setting-row': SettingRowPage,
+  'setting-row-narrow': SettingRowPage,
+  slider: SliderPage,
+  split: SplitPage,
+  tabs: TabsPage
 };
 
 const parameters = new URLSearchParams(location.search);

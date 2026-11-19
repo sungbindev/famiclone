@@ -39,6 +39,8 @@ class FlexBox : public Widget {
   void setGrow(const Widget* child, double grow);
   /** 设置容器的内边距。 */
   void setPadding(const Insets& padding);
+  /** 设置子控件之间的间距，覆盖各容器的默认值。 */
+  void setGap(double gap);
 
   [[nodiscard]] Size measure(Size available) override;
   void arrange(const Rect& bounds) override;

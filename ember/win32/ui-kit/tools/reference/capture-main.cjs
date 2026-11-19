@@ -61,15 +61,16 @@ function delay(milliseconds) {
 /** 样本的外层盒子的类名：样本属性加在控件内部的元素上时（如输入框里的 input），位置取外层盒子的。 */
 const BOX_SELECTOR = '.ui-input';
 
-/** 样本元素：带 data-sample 属性的，以及组件库里不接收 data 属性的选择类控件（复选框、单选组、下拉框）；下拉框展开时弹层里的各个选项排在所有样本之后。 */
-const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider, .ui-scroll-area:not(.ui-select__popup)';
+/** 样本元素：带 data-sample 属性的，以及组件库里不接收 data 属性的选择类控件（复选框、单选组、下拉框）；下拉框展开时弹层里的各个选项排在所有样本之后；面板里嵌的控件（滑块、面板自己的滚动区域）不算样本。 */
+const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider:not(:is(.ui-panel, .ui-field, .ui-setting-row) .ui-slider), .ui-scroll-area:not(.ui-select__popup):not(.ui-panel__scroll):not(.ui-split-view__side-body), .ui-panel, .ui-facts, .ui-field, .ui-setting-row, .ui-callout, .ui-state, .ui-status-label, .ui-split-view, .ui-splitter, .ui-tabs';
 
 /** 取页面里全部样本的位置。 */
 const SAMPLE_RECTS = `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].map((element) => { const r = (element.closest("${BOX_SELECTOR}") || element).getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })`;
 
 /** 目标样本之前（含）有多少个 Tab 停靠点：样本自己可获得焦点算一个；单选组、下拉框自己不能，里面当前可 Tab 到的元素算一个。 */
 function tabCount(target) {
-  return `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].slice(0, ${target + 1}).reduce((sum, element) => sum + (!element.disabled && element.tabIndex >= 0 ? 1 : 0) + element.querySelectorAll('[tabindex="0"], button:not(:disabled), input:not(:disabled)').length, 0)`;
+  // 样本里嵌着的另一个样本（如分栏视图里的分隔条）只在它自己那一项算一次
+  return `(() => { const all = [...document.querySelectorAll('${SAMPLE_SELECTOR}')]; return all.slice(0, ${target + 1}).reduce((sum, element) => sum + (!element.disabled && element.tabIndex >= 0 ? 1 : 0) + [...element.querySelectorAll('[tabindex="0"], button:not(:disabled), input:not(:disabled)')].filter((inner) => !all.includes(inner)).length, 0); })()`;
 }
 
 async function capture() {

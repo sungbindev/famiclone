@@ -15,6 +15,7 @@
 #include "shared/preferences/allow-multiple-instances.hpp"
 #include "shared/recent-cartridges/recent-cartridges.hpp"
 #include "shared/shell-state/shell-state.hpp"
+#include "shared/window/window-shadow-image.hpp"
 
 namespace {
 
@@ -141,6 +142,56 @@ TEST(LastDirectories, ParseSkipsBadItemsAndChecksTheVersion) {
   EXPECT_TRUE(parseLastDirectories({{"version", 2}, {"directories", {{"a", "b"}}}}).empty());
   EXPECT_TRUE(parseLastDirectories(json(nullptr)).empty());
   EXPECT_EQ(parseLastDirectories(toLastDirectoriesFile({{"bios", "C:\\b"}})), (std::map<std::string, std::string>{{"bios", "C:\\b"}}));
+}
+
+/** 阴影图像在 (x, y) 处的透明度。 */
+unsigned shadowAlpha(const WindowShadowImage& image, int x, int y) {
+  return image.pixels[static_cast<std::size_t>(y) * static_cast<std::size_t>(image.width) + static_cast<std::size_t>(x)] >> 24;
+}
+
+TEST(WindowShadowImage, IsTheWindowPlusAMarginOnEverySide) {
+  const auto image = renderWindowShadow(520, 480, 1.0, true);
+  EXPECT_EQ(image.margin, shadowMargin(1.0));
+  EXPECT_EQ(image.width, 520 + 2 * image.margin);
+  EXPECT_EQ(image.height, 480 + 2 * image.margin);
+  EXPECT_EQ(image.pixels.size(), static_cast<std::size_t>(image.width) * static_cast<std::size_t>(image.height));
+  EXPECT_EQ(shadowMargin(1.5), 54);
+}
+
+TEST(WindowShadowImage, IsEmptyForANonPositiveSize) {
+  EXPECT_TRUE(renderWindowShadow(0, 480, 1.0, true).pixels.empty());
+  EXPECT_TRUE(renderWindowShadow(520, -1, 1.0, true).pixels.empty());
+  EXPECT_TRUE(renderWindowShadow(520, 480, 0, true).pixels.empty());
+}
+
+TEST(WindowShadowImage, FadesFromTheWindowEdgeToNothingAtTheFarEdge) {
+  const auto image = renderWindowShadow(520, 480, 1.0, true);
+  const int middleY = image.height / 2;
+  const int edge = image.margin - 1;
+  // 紧贴窗口的一圈有明显的阴影，越远越淡，最外一圈几乎透明
+  EXPECT_GT(shadowAlpha(image, edge, middleY), 40u);
+  EXPECT_LT(shadowAlpha(image, edge - 10, middleY), shadowAlpha(image, edge, middleY));
+  EXPECT_LE(shadowAlpha(image, 0, middleY), 2u);
+  EXPECT_LE(shadowAlpha(image, image.width / 2, image.height - 1), 2u);
+  // 窗口里面（被窗口盖住）最深
+  EXPECT_GE(shadowAlpha(image, image.width / 2, image.height / 2), shadowAlpha(image, edge, middleY));
+}
+
+TEST(WindowShadowImage, ShadowIsShiftedDownAndLeftRightSymmetric) {
+  const auto image = renderWindowShadow(520, 480, 1.0, true);
+  const int middleX = image.width / 2;
+  const int middleY = image.height / 2;
+  EXPECT_GT(shadowAlpha(image, middleX, image.height - image.margin + 2), shadowAlpha(image, middleX, image.margin - 3));
+  for (int offset = 1; offset < image.margin; ++offset) EXPECT_EQ(shadowAlpha(image, offset, middleY), shadowAlpha(image, image.width - 1 - offset, middleY));
+}
+
+TEST(WindowShadowImage, InactiveWindowsHaveALighterShadow) {
+  const auto active = renderWindowShadow(520, 480, 1.0, true);
+  const auto inactive = renderWindowShadow(520, 480, 1.0, false);
+  const int x = active.margin - 1;
+  const int y = active.height / 2;
+  EXPECT_LT(shadowAlpha(inactive, x, y), shadowAlpha(active, x, y));
+  EXPECT_GT(shadowAlpha(inactive, x, y), 0u);
 }
 
 }  // namespace

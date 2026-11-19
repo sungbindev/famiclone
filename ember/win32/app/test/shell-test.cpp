@@ -174,11 +174,12 @@ struct FrameFixture {
   std::vector<bool> maximizedStates;
   std::vector<std::pair<int, int>> moves;
   int themeChanges{0};
+  int nonClientPresses{0};
   std::unique_ptr<platform::FramelessFrame> frame;
   HWND hwnd{nullptr};
   double scale{1.0};
 
-  FrameFixture() {
+  explicit FrameFixture(bool customFrame = false) {
     hwnd = static_cast<HWND>(window.nativeHandle());
     auto content = std::make_unique<ui::MainWindowView>("EMBER");
     view = content.get();
@@ -206,7 +207,8 @@ struct FrameFixture {
     callbacks.maximizedChanged = [this](bool maximized) { maximizedStates.push_back(maximized); };
     callbacks.moved = [this](int x, int y) { moves.emplace_back(x, y); };
     callbacks.systemThemeChanged = [this] { ++themeChanges; };
-    frame = std::make_unique<platform::FramelessFrame>(hwnd, platform::FramelessOptions{kWidth, kHeight, [this] { return window.root().scale(); }}, std::move(callbacks));
+    callbacks.nonClientPressed = [this] { ++nonClientPresses; };
+    frame = std::make_unique<platform::FramelessFrame>(hwnd, platform::FramelessOptions{kWidth, kHeight, [this] { return window.root().scale(); }, customFrame}, std::move(callbacks));
     window.setMessageHook([this](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) { return frame->handle(message, wParam, lParam, result); });
     frame->attach();
     SetWindowPos(hwnd, nullptr, 200, 150, static_cast<int>(std::lround(kWidth * scale)), static_cast<int>(std::lround(kHeight * scale)), SWP_NOZORDER | SWP_NOACTIVATE);
@@ -289,6 +291,111 @@ TEST(FramelessFrame, MovesAreReportedWithTheWindowPosition) {
   EXPECT_EQ(f.moves.back(), std::make_pair(321, 123));
 }
 
+TEST(FramelessFrame, MaximizedClientAreaIsTheMonitorWorkArea) {
+  FrameFixture f;
+  // 窗口带上最大化样式位（不显示、不真的最大化），系统给的候选矩形比工作区大
+  SetWindowLongPtrW(f.hwnd, GWL_STYLE, GetWindowLongPtrW(f.hwnd, GWL_STYLE) | WS_MAXIMIZE);
+  MONITORINFO monitor{sizeof(monitor)};
+  ASSERT_TRUE(GetMonitorInfoW(MonitorFromWindow(f.hwnd, MONITOR_DEFAULTTONEAREST), &monitor));
+  NCCALCSIZE_PARAMS params{};
+  params.rgrc[0] = RECT{monitor.rcWork.left - 11, monitor.rcWork.top - 11, monitor.rcWork.right + 11, monitor.rcWork.bottom + 11};
+  EXPECT_EQ(SendMessageW(f.hwnd, WM_NCCALCSIZE, TRUE, reinterpret_cast<LPARAM>(&params)), 0);
+  EXPECT_EQ(params.rgrc[0].left, monitor.rcWork.left);
+  EXPECT_EQ(params.rgrc[0].top, monitor.rcWork.top);
+  EXPECT_EQ(params.rgrc[0].right, monitor.rcWork.right);
+  EXPECT_EQ(params.rgrc[0].bottom, monitor.rcWork.bottom);
+  SetWindowLongPtrW(f.hwnd, GWL_STYLE, GetWindowLongPtrW(f.hwnd, GWL_STYLE) & ~static_cast<LONG_PTR>(WS_MAXIMIZE));
+}
+
+TEST(FramelessFrame, AttachingRemovesTheCaptionStyleButKeepsTheResizeBorder) {
+  FrameFixture f;
+  const LONG_PTR style = GetWindowLongPtrW(f.hwnd, GWL_STYLE);
+  EXPECT_EQ(style & WS_CAPTION, static_cast<LONG_PTR>(0));
+  EXPECT_NE(style & WS_THICKFRAME, static_cast<LONG_PTR>(0));
+  EXPECT_NE(style & WS_SYSMENU, static_cast<LONG_PTR>(0));
+}
+
 TEST(FramelessFrame, CompositionStateCanBeQueried) { static_cast<void>(platform::FramelessFrame::compositionEnabled()); }
+
+TEST(FramelessFrame, PreferredFrameFollowsTheSystemVersion) { static_cast<void>(platform::FramelessFrame::prefersCustomFrame()); }
+
+TEST(FramelessFrame, PressesInTheNonClientAreaAreReportedSoMenusCanClose) {
+  FrameFixture f;
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+  SendMessageW(f.hwnd, WM_NCRBUTTONDOWN, HTCAPTION, 0);
+  SendMessageW(f.hwnd, WM_NCMBUTTONDOWN, HTLEFT, 0);
+  EXPECT_EQ(f.nonClientPresses, 3);
+}
+
+/** 自绘模式下在客户区坐标（逻辑像素）发一个鼠标消息。 */
+void sendMouse(const FrameFixture& f, unsigned message, double x, double y) {
+  SendMessageW(f.hwnd, message, 0, MAKELPARAM(static_cast<int>(std::lround(x * f.scale)), static_cast<int>(std::lround(y * f.scale))));
+}
+
+/** 取走窗口队列里的系统命令（不分发，所以窗口不会真的最小化或关闭）；没有时返回 0。 */
+WPARAM takePostedSystemCommand(const FrameFixture& f) {
+  MSG message{};
+  return PeekMessageW(&message, f.hwnd, WM_SYSCOMMAND, WM_SYSCOMMAND, PM_REMOVE) != FALSE ? message.wParam : 0;
+}
+
+TEST(FramelessFrameCustom, ButtonPressIsTrackedByTheFrameItself) {
+  FrameFixture f(true);
+  f.buttonStates.clear();
+  const double x = kWidth - 115;
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTMINBUTTON, 0);
+  ASSERT_FALSE(f.buttonStates.empty());
+  EXPECT_EQ(f.buttonStates.back(), std::make_pair(platform::FrameHit::Minimize, platform::FrameHit::Minimize));
+  EXPECT_EQ(f.nonClientPresses, 1);
+  EXPECT_EQ(GetCapture(), f.hwnd);
+
+  // 移出按钮：不再悬停，但仍然是“按下这个按钮”的跟踪
+  sendMouse(f, WM_MOUSEMOVE, 260, 250);
+  EXPECT_EQ(f.buttonStates.back(), std::make_pair(platform::FrameHit::Client, platform::FrameHit::Minimize));
+  sendMouse(f, WM_MOUSEMOVE, x, 18);
+  EXPECT_EQ(f.buttonStates.back(), std::make_pair(platform::FrameHit::Minimize, platform::FrameHit::Minimize));
+
+  // 在同一个按钮上松开：发出最小化命令，状态清空，释放捕获
+  sendMouse(f, WM_LBUTTONUP, x, 18);
+  EXPECT_EQ(f.buttonStates.back(), std::make_pair(platform::FrameHit::Client, platform::FrameHit::Client));
+  EXPECT_EQ(takePostedSystemCommand(f), static_cast<WPARAM>(SC_MINIMIZE));
+  EXPECT_NE(GetCapture(), f.hwnd);
+}
+
+TEST(FramelessFrameCustom, ReleasingOutsideTheButtonOrLosingTheCaptureCancelsTheClick) {
+  FrameFixture f(true);
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTCLOSE, 0);
+  sendMouse(f, WM_LBUTTONUP, 260, 250);
+  EXPECT_EQ(f.buttonStates.back(), std::make_pair(platform::FrameHit::Client, platform::FrameHit::Client));
+  EXPECT_EQ(takePostedSystemCommand(f), 0u);
+
+  // 松开在另一个按钮上也不算点击
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTCLOSE, 0);
+  sendMouse(f, WM_LBUTTONUP, kWidth - 69, 18);
+  EXPECT_EQ(takePostedSystemCommand(f), 0u);
+
+  // 捕获被别的窗口抢走：放弃这次点击
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTCLOSE, 0);
+  SendMessageW(f.hwnd, WM_CAPTURECHANGED, 0, reinterpret_cast<LPARAM>(GetDesktopWindow()));
+  EXPECT_EQ(f.buttonStates.back(), std::make_pair(platform::FrameHit::Client, platform::FrameHit::Client));
+  EXPECT_EQ(takePostedSystemCommand(f), 0u);
+}
+
+TEST(FramelessFrameCustom, MaximizeAndCloseSendTheirSystemCommands) {
+  FrameFixture f(true);
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTMAXBUTTON, 0);
+  sendMouse(f, WM_LBUTTONUP, kWidth - 69, 18);
+  EXPECT_EQ(takePostedSystemCommand(f), static_cast<WPARAM>(SC_MAXIMIZE));
+  SendMessageW(f.hwnd, WM_NCLBUTTONDOWN, HTCLOSE, 0);
+  sendMouse(f, WM_LBUTTONUP, kWidth - 23, 18);
+  EXPECT_EQ(takePostedSystemCommand(f), static_cast<WPARAM>(SC_CLOSE));
+}
+
+TEST(FramelessFrameCustom, MouseMessagesOutsideATrackedPressStayWithTheControls) {
+  FrameFixture f(true);
+  sendMouse(f, WM_MOUSEMOVE, 260, 250);
+  sendMouse(f, WM_LBUTTONUP, 260, 250);
+  EXPECT_TRUE(f.buttonStates.empty());
+  EXPECT_EQ(takePostedSystemCommand(f), 0u);
+}
 
 }  // namespace

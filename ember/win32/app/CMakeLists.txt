@@ -65,6 +65,7 @@ add_library(ember_app STATIC
   src/platform/window/frameless-frame.cpp
   src/platform/window/window-modes.cpp
   src/platform/window/window-placement.cpp
+  src/platform/window/window-shadow.cpp
   src/shared/input/scan-code-table.cpp
   src/shared/last-directories/last-directories.cpp
   src/shared/launch/launch-args.cpp
@@ -74,6 +75,7 @@ add_library(ember_app STATIC
   src/shared/screen/screen-layout.cpp
   src/shared/shell-state/shell-state.cpp
   src/shared/shortcut/shortcut.cpp
+  src/shared/window/window-shadow-image.cpp
   src/ui/media/media-panel-content.cpp
   src/ui/runtime/runtime-panel-content.cpp
   src/ui/runtime/screen-overlay-view.cpp
@@ -84,7 +86,7 @@ add_library(ember_app STATIC
 target_include_directories(ember_app PUBLIC src)
 target_compile_definitions(ember_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX PRIVATE EMBER_APP_VERSION="${EMBER_CORE_VERSION}")
 target_compile_options(ember_app PUBLIC /utf-8 /W4 /permissive- /EHsc)
-target_link_libraries(ember_app PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 shlwapi)
+target_link_libraries(ember_app PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 gdi32 shlwapi)
 
 # 可执行文件：资源（图标、清单、版本信息）里的版本号取自 package.json
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" EMBER_VERSION_MATCH "${EMBER_CORE_VERSION}")

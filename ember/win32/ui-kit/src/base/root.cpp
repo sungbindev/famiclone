@@ -98,6 +98,11 @@ void Root::layout(Size size) {
   invalidate();
 }
 
+void Root::dismissLayers() {
+  const std::vector<Layer> layers = layers_;
+  for (const Layer& layer : layers) layer.onOutsidePress(nullptr);
+}
+
 void Root::paint(Canvas& canvas) {
   if (content_) content_->paintTree(canvas);
   for (const Layer& layer : layers_) layer.widget->paintTree(canvas);

@@ -98,6 +98,9 @@ class Root final : public Host {
   void layout(Size size);
   [[nodiscard]] Size size() const { return size_; }
 
+  /** 按“在弹层之外点了一下”通知全部弹层（菜单等会据此关闭）；窗口的非客户区被点击、窗口失去激活时调用，这些情况不会有客户区的鼠标消息。 */
+  void dismissLayers();
+
   /** 绘制整棵控件树。 */
   void paint(Canvas& canvas);
 

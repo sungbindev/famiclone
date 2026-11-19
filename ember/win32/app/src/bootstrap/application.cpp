@@ -272,18 +272,32 @@ int runApplication(const shared::LaunchArguments& launch) {
     auto content = std::make_unique<ui::MainWindowView>(kAppName);
     ui::MainWindowView* view = content.get();
     window.root().setContent(std::move(content));
-    view->setBorderVisible(!platform::FramelessFrame::compositionEnabled());
+    // 边框与阴影：Windows 11 用系统的（圆角、阴影、边框色由 DWM 画），其余系统自绘；环境变量 EMBER_WIN_FRAME=custom 或 system 可以强制选择（开发期验证用）
+    const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
+    const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
+    view->setBorderVisible(customFrame || !platform::FramelessFrame::compositionEnabled());
 
-    const auto applyTheme = [&] { window.root().setTheme(resolveTheme(themeSource)); };
+    platform::FramelessFrame* framePointer = nullptr;
+    const auto applyBorderColor = [&] {
+      if (framePointer == nullptr) return;
+      const rujian::ui::Color border = rujian::ui::windowBorderColor(resolveTheme(themeSource));
+      framePointer->setBorderColor(static_cast<unsigned>(border.r()) | (static_cast<unsigned>(border.g()) << 8) | (static_cast<unsigned>(border.b()) << 16));
+    };
+    const auto applyTheme = [&] {
+      window.root().setTheme(resolveTheme(themeSource));
+      applyBorderColor();
+    };
 
     bool trackMoves = false;
     platform::FramelessCallbacks callbacks;
     callbacks.hitTest = [view](double x, double y) { return toFrameHit(view->hitTestWindow(rujian::ui::Point{x, y})); };
     callbacks.systemButtonState = [view](platform::FrameHit hover, platform::FrameHit pressed) { view->setSystemButtonState(toTitleBarHit(hover), toTitleBarHit(pressed)); };
     callbacks.maximizedChanged = [view](bool maximized) { view->setMaximized(maximized); };
-    callbacks.activeChanged = [view, &screenWidget](bool active) {
+    callbacks.activeChanged = [view, &screenWidget, &window](bool active) {
       view->setWindowActive(active);
       if (screenWidget != nullptr) screenWidget->setWindowActive(active);
+      // 失去激活时菜单等弹层跟着关闭
+      if (!active) window.root().dismissLayers();
     };
     // 开始的摆放不算用户移动窗口，显示之后的位置变化才保存
     callbacks.moved = [&shellState, &trackMoves](int x, int y) {
@@ -292,8 +306,12 @@ int runApplication(const shared::LaunchArguments& launch) {
     callbacks.systemThemeChanged = [&] {
       if (themeSource == entry::ThemeSource::System) applyTheme();
     };
-    callbacks.compositionChanged = [view](bool enabled) { view->setBorderVisible(!enabled); };
-    platform::FramelessFrame frame(mainWindow, platform::FramelessOptions{kWindowWidth, kWindowHeight, [&window] { return window.root().scale(); }}, std::move(callbacks));
+    callbacks.compositionChanged = [view, customFrame](bool enabled) { view->setBorderVisible(customFrame || !enabled); };
+    // 点标题栏、系统按钮、缩放边框不会作为客户区的鼠标消息到达控件，打开着的菜单要在这里关掉
+    callbacks.nonClientPressed = [&window] { window.root().dismissLayers(); };
+    platform::FramelessFrame frame(mainWindow, platform::FramelessOptions{kWindowWidth, kWindowHeight, [&window] { return window.root().scale(); }, customFrame}, std::move(callbacks));
+    framePointer = &frame;
+    applyBorderColor();
     window.setMessageHook([&](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
       if (frame.handle(message, wParam, lParam, result)) return true;
       if (modes != nullptr && modes->handle(message, wParam, lParam, result)) return true;

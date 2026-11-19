@@ -77,6 +77,25 @@ TEST(LayerRects, AnOrdinaryLayerReportsItsWholeArea) {
   EXPECT_TRUE(s.reports[1].empty());
 }
 
+TEST(LayerRects, DismissLayersTellsEveryLayerNothingWasHit) {
+  Scene s;
+  BoxLayer first(Rect{10, 20, 100, 50});
+  BoxLayer second(Rect{200, 20, 100, 50});
+  std::vector<Widget*> hits;
+  s.root.showLayer(&first, [&hits](Widget* hit) { hits.push_back(hit); });
+  // 回调里把自己关掉：遍历不受影响
+  s.root.showLayer(&second, [&](Widget* hit) {
+    hits.push_back(hit);
+    s.root.hideLayer(&second);
+  });
+  s.root.dismissLayers();
+  EXPECT_EQ(hits, (std::vector<Widget*>{nullptr, nullptr}));
+  // 第二个已关闭，再通知时只剩第一个
+  hits.clear();
+  s.root.dismissLayers();
+  EXPECT_EQ(hits, (std::vector<Widget*>{nullptr}));
+}
+
 TEST(LayerRects, TheNotificationCenterOnlyReportsToastsAndAnOpenPanel) {
   Scene s;
   NotificationCenter center(s.root);

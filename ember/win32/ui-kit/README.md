@@ -47,7 +47,7 @@ return rujian::ui::HostWindow::runMessageLoop();
 - 所有长度都是逻辑像素（与 CSS 像素相同），绘制时由画布乘以窗口的缩放比例并对齐到设备像素。
 - 颜色在绘制时按当前主题从生成的令牌里现取，不缓存；`Root::setTheme` 切换主题。
 - 离屏绘制：`OffscreenSurface` 把控件树画到内存位图，可取像素或存成 PNG，用于自动测试与对照。
-- 弹层（下拉选项等）经 `Host::showLayer` 显示在内容之上，由打开它的控件拥有；在弹层之外按下鼠标或窗口大小变化时，宿主通知它自己关闭。
+- 弹层（下拉选项等）经 `Host::showLayer` 显示在内容之上，由打开它的控件拥有；在弹层之外按下鼠标或窗口大小变化时，宿主通知它自己关闭；窗口的非客户区被点击、窗口失去激活这类没有客户区鼠标消息的情况，由应用调用 `Root::dismissLayers` 做同样的通知。
 - 定时器与动画：`Host::startTimer` 是一次性定时器，到时间调用控件的 `onTimer`；`Host::animationsEnabled` 为假时（离屏对照）控件不播放渐变。测试里用 `Root::fireTimer` 手动触发。
 - 悬停提示：控件用 `Widget::setTooltip`（纯文字）或 `setRichTooltip`（标题行加分条说明）设置提示；应用在每个 `Root` 上创建一个 `Tooltip`（先于 `Root` 销毁），延迟与收起的时机由 `Root` 处理。
 - 通知：应用在每个 `Root` 上创建一个 `NotificationCenter`（铺满窗口的弹层），用 `notify` 发通知，`NotificationButton` 放在状态栏右侧（`StatusBar::addEndWidget`），“通知详情”经 `setOnShowDetail` 由应用用对话框显示。

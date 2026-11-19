@@ -176,6 +176,7 @@ struct ButtonScene {
   ButtonScene(ThemeName theme, double scale) : root(theme, scale), button(nullptr) {
     auto page = std::make_unique<Page>();
     auto created = std::make_unique<Button>("确定");
+    created->setAutoIcon(false);
     button = created.get();
     page->addChild(std::move(created));
     root.setContent(std::move(page));
@@ -223,15 +224,14 @@ TEST(ButtonRendering, DisabledUsesDisabledTokens) {
   expectColor(pixelAt(scene.render(1.0, ThemeName::Dark), 120, kSampleX, kSampleY), compose(colors.disabled_bg, colors.content_bg));
 }
 
-TEST(ButtonRendering, KeyboardFocusDrawsRingCenteredOnEdgeMinusOffset) {
+TEST(ButtonRendering, KeyboardFocusDrawsRingOffsetByOutlineOffset) {
   ButtonScene scene(ThemeName::Dark, 1.0);
   scene.root.keyDown(0x09, 0, false);
   const auto data = scene.render(1.0, ThemeName::Dark);
   const auto& colors = themeTokens(ThemeName::Dark);
-  // 按钮左边缘 x=10，焦点环的中线在 x=9，线宽 2/3 个像素：x=8 与 x=9 各被覆盖 1/3
-  const Color third = compose(colors.focus_border.withOpacity(1.0 / 3.0), colors.content_bg);
-  expectColor(pixelAt(data, 120, 8, 21), third, 8);
-  expectColor(pixelAt(data, 120, 9, 21), third, 8);
+  // 按钮左边缘 x=10，outline-offset: 1px、宽 1px：环正好占满 x=8 这一列
+  expectColor(pixelAt(data, 120, 8, 21), colors.focus_border, 1);
+  expectColor(pixelAt(data, 120, 9, 21), colors.content_bg);
   expectColor(pixelAt(data, 120, 7, 21), colors.content_bg);
 }
 
@@ -240,7 +240,7 @@ TEST(ButtonRendering, FocusRingCoversExactlyOneDevicePixelAtScaleOnePointFive) {
   scene.root.keyDown(0x09, 0, false);
   const auto data = scene.render(1.5, ThemeName::Dark);
   const auto& colors = themeTokens(ThemeName::Dark);
-  // 按钮左边缘在设备像素 15，中线在 15 - 1.5 = 13.5，线宽 1 个设备像素：整个像素 13 被覆盖
+  // 按钮左边缘在设备像素 15，偏移 1.5 向零取整为 1 个设备像素，线宽 1 个设备像素：整个像素 13 被覆盖
   expectColor(pixelAt(data, 180, 13, 32), colors.focus_border, 1);
   expectColor(pixelAt(data, 180, 12, 32), colors.content_bg);
   expectColor(pixelAt(data, 180, 14, 32), colors.content_bg);

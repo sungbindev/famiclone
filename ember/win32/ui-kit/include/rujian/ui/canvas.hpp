@@ -13,6 +13,7 @@
 #pragma once
 
 #include <string_view>
+#include <vector>
 
 #include "rujian/ui/color.hpp"
 #include "rujian/ui/geometry.hpp"
@@ -57,18 +58,55 @@ class Canvas {
   /** 填充矩形，边缘对齐到设备像素。 */
   virtual void fillRect(const Rect& rect, Color color) = 0;
 
-  /** 画盒子：背景、圆角与内侧边框。无圆角时边缘对齐到设备像素；有圆角时不对齐（网页版的圆角背景在分数缩放下也不对齐，边缘是抗锯齿的渐变）。 */
+  /** 填充矩形，边缘不对齐设备像素（按覆盖率抗锯齿），用于网页版里也不对齐的填充，如文字选区。 */
+  virtual void fillRectSmooth(const Rect& rect, Color color) = 0;
+
+  /** 画盒子：背景、圆角与内侧边框。和网页版一样，盒子的边缘对齐到设备像素（有圆角时也对齐）。 */
   virtual void drawBox(const Rect& rect, const BoxStyle& style) = 0;
 
   /**
-   * 沿圆角矩形的中线描边，位置与线宽都不做像素对齐（按设备像素的小数覆盖率抗锯齿）。
-   * 用于焦点环：网页版的 outline 就是沿“边框框向外偏移后的位置”描一条线，线宽 1px 实测只有 2/3 个逻辑像素。
-   * @param centerLine 中线所在的矩形。
-   * @param radius 中线处的圆角半径。
-   * @param width 线宽（逻辑像素）。
+   * 画 CSS 的 outline：沿边框框向外偏移 offset 的位置描一圈 width 宽的线。
+   * 和网页版一样，线宽取设备像素的整数倍且至少 1 个设备像素，偏移向零取整到设备像素；
+   * 位置不再对齐像素，圆角随偏移与线宽一起外扩（offset 为负时向内）。
+   * @param borderBox 元素的边框框。
+   * @param radius 元素的圆角半径。
+   * @param offset outline-offset（逻辑像素）。
+   * @param width outline-width（逻辑像素）。
    * @param color 颜色。
    */
-  virtual void strokeRoundedRect(const Rect& centerLine, double radius, double width, Color color) = 0;
+  virtual void strokeOutline(const Rect& borderBox, double radius, double offset, double width, Color color) = 0;
+
+  /** 沿中线描一条直线，平头线帽，不对齐像素。 */
+  virtual void strokeLine(Point from, Point to, double width, Color color) = 0;
+
+  /** 填充多边形（按顶点顺序连接并闭合），不对齐像素；用于旋转后的箭头与对勾。 */
+  virtual void fillPolygon(const std::vector<Point>& points, Color color) = 0;
+
+  /**
+   * 画“右边与下边各有一段边框的方块”顺时针旋转后的样子（网页版里用 CSS 边框加 transform: rotate 画箭头与对勾的写法）。
+   * 方块自己的位置与尺寸、边框宽度都按网页版的规则取整到设备像素，调用方只给逻辑像素的 CSS 数值。
+   * @param left 方块左边（未取整）。
+   * @param top 方块上边（未取整，不含 translate）。
+   * @param width 方块宽（含边框）。
+   * @param height 方块高（含边框）。
+   * @param stroke 右边与下边的边框宽度。
+   * @param angleDegrees 顺时针旋转的角度。
+   * @param shiftY 旋转前的竖直平移（向下为正）。
+   * @param color 颜色。
+   */
+  virtual void fillRotatedCorner(double left, double top, double width, double height, double stroke, double angleDegrees, double shiftY, Color color) = 0;
+
+  /**
+   * 画没有模糊的内阴影（inset box-shadow）：填充“内边距框”减去“同样的框平移 offset”后剩下的部分。
+   * 内边距框的圆角按 CSS 规则算：水平、垂直分别是外圆角半径减去相邻两边的边框宽度，不小于 0。
+   * 坐标不对齐像素，框应先由调用方对齐到设备像素（网页版是这样算的）。
+   * @param paddingBox 阴影所在的内边距框。
+   * @param radius 元素的外圆角半径，0 表示直角。
+   * @param border 元素四边的边框宽度。
+   * @param offset 阴影的偏移（即 box-shadow 的 x、y）。
+   * @param color 颜色。
+   */
+  virtual void fillInsetShadow(const Rect& paddingBox, double radius, const Insets& border, Point offset, Color color) = 0;
 
   /** 画盒子的阴影（box-shadow）；rect 与 radius 是盒子本身的外框。 */
   virtual void drawShadow(const Rect& rect, double radius, const ShadowList& shadows) = 0;
@@ -78,6 +116,9 @@ class Canvas {
 
   /** 画文字；颜色为 kCurrentColor 时无效，使用方必须先换成具体颜色。 */
   virtual void drawText(std::string_view text, const Rect& box, const TextStyle& style, VerticalAlign vertical) = 0;
+
+  /** 同 drawText，文字是 UTF-16。 */
+  virtual void drawText16(std::u16string_view text, const Rect& box, const TextStyle& style, VerticalAlign vertical) = 0;
 
   /** 度量文字；maxWidth 为 0 表示不限宽度。 */
   [[nodiscard]] virtual TextMetrics measureText(std::string_view text, const TextStyle& style, double maxWidth) = 0;

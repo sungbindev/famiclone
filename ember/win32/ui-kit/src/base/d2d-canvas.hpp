@@ -38,11 +38,17 @@ class D2DCanvas final : public Canvas {
   void pushClip(const Rect& rect, double radius) override;
   void popClip() override;
   void fillRect(const Rect& rect, Color color) override;
+  void fillRectSmooth(const Rect& rect, Color color) override;
+  void strokeLine(Point from, Point to, double width, Color color) override;
+  void fillPolygon(const std::vector<Point>& points, Color color) override;
+  void fillRotatedCorner(double left, double top, double width, double height, double stroke, double angleDegrees, double shiftY, Color color) override;
+  void fillInsetShadow(const Rect& paddingBox, double radius, const Insets& border, Point offset, Color color) override;
   void drawBox(const Rect& rect, const BoxStyle& style) override;
-  void strokeRoundedRect(const Rect& centerLine, double radius, double width, Color color) override;
+  void strokeOutline(const Rect& borderBox, double radius, double offset, double width, Color color) override;
   void drawShadow(const Rect& rect, double radius, const ShadowList& shadows) override;
   void drawLine(const Rect& rect, Color color) override;
   void drawText(std::string_view text, const Rect& box, const TextStyle& style, VerticalAlign vertical) override;
+  void drawText16(std::u16string_view text, const Rect& box, const TextStyle& style, VerticalAlign vertical) override;
   [[nodiscard]] TextMetrics measureText(std::string_view text, const TextStyle& style, double maxWidth) override;
   void drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth) override;
 

@@ -32,6 +32,12 @@ class TextEngine {
   explicit TextEngine(IDWriteFactory* factory);
 
   /**
+   * 设置排版用的缩放比例：行高为 normal（TextStyle::lineHeight 为 0）时，网页版把字体的上升、下降、行距各自四舍五入到设备像素，
+   * 引擎需要知道设备像素有多大。多个窗口缩放比例不同时，每次度量或绘制前由调用方设置。
+   */
+  void setScale(double scale) { scale_ = scale > 0 ? scale : 1.0; }
+
+  /**
    * 创建排版对象。
    * @param utf8 UTF-8 文字。
    * @param style 样式。
@@ -41,8 +47,18 @@ class TextEngine {
    */
   [[nodiscard]] Microsoft::WRL::ComPtr<IDWriteTextLayout> createLayout(std::string_view utf8, const TextStyle& style, double maxWidth, double maxHeight);
 
+  /** 同上，文字是 UTF-16。 */
+  [[nodiscard]] Microsoft::WRL::ComPtr<IDWriteTextLayout> createLayout(std::u16string_view utf16, const TextStyle& style, double maxWidth, double maxHeight);
+
   /** 度量文字；maxWidth 为 0 表示不限宽度。 */
   [[nodiscard]] TextMetrics measure(std::string_view utf8, const TextStyle& style, double maxWidth);
+  [[nodiscard]] TextMetrics measure(std::u16string_view utf16, const TextStyle& style, double maxWidth);
+
+  /** 第 index 个 UTF-16 单元之前的插入点距文字起点的水平距离（不换行）。 */
+  [[nodiscard]] double caretOffset(std::u16string_view text, const TextStyle& style, std::size_t index);
+
+  /** 距文字起点水平距离 x 处最近的插入点（UTF-16 单元序号，不换行）。 */
+  [[nodiscard]] std::size_t caretIndexAt(std::u16string_view text, const TextStyle& style, double x);
 
  private:
   /** 字体的纵向度量，都是占字号的比例。 */
@@ -59,6 +75,7 @@ class TextEngine {
   [[nodiscard]] bool hasFamily(const wchar_t* name) const;
 
   IDWriteFactory* factory_;
+  double scale_{1.0};
   Microsoft::WRL::ComPtr<IDWriteFontCollection> collection_;
   std::wstring families_[3];
   std::map<std::pair<std::wstring, int>, VerticalMetrics> metricsCache_;

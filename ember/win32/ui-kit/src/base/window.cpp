@@ -13,9 +13,12 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <imm.h>
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
 
 #include "base/d2d-canvas.hpp"
 #include "base/graphics.hpp"
@@ -27,6 +30,12 @@ namespace {
 
 constexpr wchar_t kWindowClass[] = L"RujianUiHostWindow";
 constexpr double kBaseDpi = 96.0;
+/** 光标闪烁定时器的编号。 */
+constexpr UINT_PTR kCaretTimer = 1;
+/** IDC_ARROW、IDC_IBEAM、IDC_HAND（字符串形式的宏在没有 UNICODE 时是窄字符，这里直接用编号）。 */
+constexpr int kCursorArrow = 32512;
+constexpr int kCursorIBeam = 32513;
+constexpr int kCursorHand = 32649;
 
 /** 取窗口的 DPI：优先用 GetDpiForWindow（Windows 10 1607 起），否则用系统 DPI。 */
 UINT windowDpi(HWND hwnd) {
@@ -54,6 +63,7 @@ struct HostWindow::Impl {
   Root root;
   Microsoft::WRL::ComPtr<ID2D1HwndRenderTarget> target;
   bool trackingLeave{false};
+  bool imeEnabled{true};
   wchar_t highSurrogate{0};
 
   explicit Impl(ThemeName theme) : root(theme, 1.0) {}
@@ -71,8 +81,72 @@ struct HostWindow::Impl {
   /** 按当前 DPI 更新缩放比例并重新布局。 */
   void applyDpi() {
     root.setScale(windowDpi(hwnd) / kBaseDpi);
+    root.setDoubleClick(GetDoubleClickTime(), GetSystemMetrics(SM_CXDOUBLECLK) / 2.0 / scale());
     target.Reset();
     root.layout(clientLogicalSize());
+  }
+
+  /** 输入法：焦点控件需要文字输入时开启，候选窗和组合窗贴着文字光标。 */
+  void syncIme() {
+    const bool wants = root.focusAcceptsText();
+    if (wants != imeEnabled) {
+      ImmAssociateContextEx(hwnd, nullptr, wants ? IACE_DEFAULT : 0);
+      imeEnabled = wants;
+    }
+    if (!wants) return;
+    const auto caret = root.imeCaretRect();
+    HIMC context = ImmGetContext(hwnd);
+    if (!caret || context == nullptr) {
+      if (context != nullptr) ImmReleaseContext(hwnd, context);
+      return;
+    }
+    const POINT origin{static_cast<LONG>(std::lround(caret->x * scale())), static_cast<LONG>(std::lround(caret->y * scale()))};
+    COMPOSITIONFORM composition{CFS_POINT, origin, RECT{}};
+    ImmSetCompositionWindow(context, &composition);
+    CANDIDATEFORM candidate{0, CFS_CANDIDATEPOS, POINT{origin.x, static_cast<LONG>(std::lround(caret->bottom() * scale()))}, RECT{}};
+    ImmSetCandidateWindow(context, &candidate);
+    ImmReleaseContext(hwnd, context);
+  }
+
+  /** 读输入法里的一段文字（GCS_COMPSTR 或 GCS_RESULTSTR）。 */
+  static std::u16string imeString(HIMC context, DWORD kind) {
+    const LONG bytes = ImmGetCompositionStringW(context, kind, nullptr, 0);
+    if (bytes <= 0) return {};
+    std::u16string text(static_cast<std::size_t>(bytes) / sizeof(char16_t), u'\0');
+    ImmGetCompositionStringW(context, kind, text.data(), static_cast<DWORD>(bytes));
+    return text;
+  }
+
+  /** 处理 WM_IME_COMPOSITION：先把确认的文字交出去，再更新还在组合的文字。 */
+  void handleImeComposition(LPARAM flags) {
+    HIMC context = ImmGetContext(hwnd);
+    if (context == nullptr) return;
+    if ((flags & GCS_RESULTSTR) != 0) root.imeCommit(imeString(context, GCS_RESULTSTR));
+    if ((flags & GCS_COMPSTR) != 0 || flags == 0) {
+      ImeComposition composition;
+      composition.text = imeString(context, GCS_COMPSTR);
+      composition.cursor = composition.text.empty() ? 0 : static_cast<std::size_t>(ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0) & 0xFFFF);
+      if (!composition.text.empty() && (flags & GCS_COMPATTR) != 0) {
+        const LONG count = ImmGetCompositionStringW(context, GCS_COMPATTR, nullptr, 0);
+        std::string attributes(static_cast<std::size_t>(std::max<LONG>(count, 0)), '\0');
+        if (count > 0) ImmGetCompositionStringW(context, GCS_COMPATTR, attributes.data(), static_cast<DWORD>(count));
+        // “正在转换”的分句：ATTR_TARGET_CONVERTED(1) 与 ATTR_TARGET_NOTCONVERTED(3)
+        std::size_t first = attributes.size();
+        std::size_t last = 0;
+        for (std::size_t i = 0; i < attributes.size(); ++i) {
+          if (attributes[i] == 1 || attributes[i] == 3) {
+            first = std::min(first, i);
+            last = i + 1;
+          }
+        }
+        if (first < last) {
+          composition.targetStart = first;
+          composition.targetEnd = last;
+        }
+      }
+      root.imeComposition(composition);
+    }
+    ImmReleaseContext(hwnd, context);
   }
 
   void ensureTarget() {
@@ -136,7 +210,8 @@ struct HostWindow::Impl {
       case WM_RBUTTONDOWN:
       case WM_MBUTTONDOWN:
         SetCapture(hwnd);
-        root.mouseDown(toLogical(lParam), message == WM_LBUTTONDOWN ? MouseButton::Left : (message == WM_RBUTTONDOWN ? MouseButton::Right : MouseButton::Middle), currentModifiers());
+        root.mouseDown(toLogical(lParam), message == WM_LBUTTONDOWN ? MouseButton::Left : (message == WM_RBUTTONDOWN ? MouseButton::Right : MouseButton::Middle), currentModifiers(), static_cast<unsigned>(GetMessageTime()));
+        syncIme();
         return 0;
       case WM_LBUTTONUP:
       case WM_RBUTTONUP:
@@ -152,6 +227,7 @@ struct HostWindow::Impl {
       }
       case WM_KEYDOWN:
         root.keyDown(static_cast<int>(wParam), currentModifiers(), (lParam & 0x40000000) != 0);
+        syncIme();
         break;
       case WM_KEYUP:
         root.keyUp(static_cast<int>(wParam), currentModifiers());
@@ -167,9 +243,41 @@ struct HostWindow::Impl {
           highSurrogate = 0;
           root.character(unit);
         }
+        syncIme();
         return 0;
       }
+      case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT) {
+          const CursorKind kind = root.cursor();
+          SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(kind == CursorKind::IBeam ? kCursorIBeam : (kind == CursorKind::Hand ? kCursorHand : kCursorArrow))));
+          return TRUE;
+        }
+        break;
+      case WM_TIMER:
+        if (wParam == kCaretTimer) {
+          root.toggleCaret();
+          return 0;
+        }
+        break;
+      case WM_SETFOCUS:
+        syncIme();
+        return 0;
+      case WM_IME_SETCONTEXT:
+        // 隐藏系统自己的组合窗，组合串画在输入框里；候选窗仍由系统显示
+        return DefWindowProcW(hwnd, message, wParam, lParam & ~static_cast<LPARAM>(ISC_SHOWUICOMPOSITIONWINDOW));
+      case WM_IME_STARTCOMPOSITION:
+        syncIme();
+        return 0;
+      case WM_IME_COMPOSITION:
+        if (!root.focusAcceptsText()) break;
+        handleImeComposition(lParam);
+        syncIme();
+        return 0;
+      case WM_IME_ENDCOMPOSITION:
+        root.imeEnd();
+        return 0;
       case WM_DESTROY:
+        KillTimer(hwnd, kCaretTimer);
         PostQuitMessage(0);
         return 0;
       default:
@@ -213,6 +321,12 @@ HostWindow::HostWindow(const Options& options) : impl_(std::make_unique<Impl>(op
                                 GetModuleHandleW(nullptr), impl_.get());
   if (impl_->hwnd == nullptr) throw std::runtime_error("创建窗口失败");
   impl_->root.setInvalidateHandler([hwnd = impl_->hwnd] { InvalidateRect(hwnd, nullptr, FALSE); });
+  // 光标闪烁的间隔取系统设置；系统设为不闪烁（INFINITE）时只显示不闪
+  impl_->root.setCaretTimerHandler([hwnd = impl_->hwnd](unsigned interval) {
+    const UINT blink = GetCaretBlinkTime();
+    if (interval == 0 || blink == 0 || blink == INFINITE) KillTimer(hwnd, kCaretTimer);
+    else SetTimer(hwnd, kCaretTimer, blink, nullptr);
+  });
   impl_->applyDpi();
 }
 

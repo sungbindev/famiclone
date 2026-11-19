@@ -19,7 +19,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { compareLayout, comparePixels, contentBox, cropTo } from '../win32/ui-kit/tools/reference/compare-images.mjs';
 import { decodePng } from '../win32/ui-kit/tools/reference/png.mjs';
 import { CssValueError, Evaluator, parseRules, parseValue, splitTopLevel, stripComments } from '../win32/ui-kit/tools/lib/css.mjs';
-import { DATA_FILE, generate as generateIcons, ID_FILE } from '../win32/ui-kit/tools/gen-icons.mjs';
+import { DATA_FILE, generate as generateIcons, ID_FILE, RULES_FILE } from '../win32/ui-kit/tools/gen-icons.mjs';
 import { generate as generateTokens, OUTPUT_FILE } from '../win32/ui-kit/tools/gen-tokens.mjs';
 
 const directories: string[] = [];
@@ -149,10 +149,18 @@ describe('生成结果与已提交文件', () => {
   });
 
   it('图标编号与路径数据与生成结果一致', () => {
-    const { id, data, count } = generateIcons();
+    const { id, data, rules, count } = generateIcons();
     expect(readFileSync(ID_FILE, 'utf8')).toBe(id);
     expect(readFileSync(DATA_FILE, 'utf8')).toBe(data);
+    expect(readFileSync(RULES_FILE, 'utf8')).toBe(rules);
     expect(count).toBeGreaterThan(0);
+  });
+
+  it('按文字匹配图标的规则按书写顺序生成，且带位置标记', () => {
+    const { rules } = generateIcons();
+    expect(rules).toContain('{"^保存", IconId::DeviceFloppy, false},');
+    expect(rules).toContain('{"^下一步", IconId::ArrowRight, true},');
+    expect(rules.indexOf('"^取消生成"')).toBeLessThan(rules.indexOf('"^(取消|关闭)"'));
   });
 
   it('生成的令牌含按钮用到的尺寸与两个主题', () => {

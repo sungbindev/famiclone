@@ -14,6 +14,9 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "rujian/ui/host.hpp"
@@ -40,6 +43,30 @@ class Root final : public Host {
   /** 设置重绘请求的回调，窗口借此调用 InvalidateRect。 */
   void setInvalidateHandler(std::function<void()> handler) { invalidateHandler_ = std::move(handler); }
 
+  /**
+   * 设置剪贴板的读写函数（UTF-8）；不设置时用系统剪贴板，测试里用内存里的剪贴板代替。
+   * @param read 读；没有文字时返回空值。
+   * @param write 写。
+   */
+  void setClipboardHandlers(std::function<std::optional<std::string>()> read, std::function<void(std::string_view)> write);
+
+  /**
+   * 设置光标闪烁定时器的回调：参数是间隔毫秒，0 表示停止。窗口据此设置系统定时器，到时间后调用 toggleCaret。
+   */
+  void setCaretTimerHandler(std::function<void(unsigned)> handler) { caretTimerHandler_ = std::move(handler); }
+
+  /** 光标闪烁定时器到时间：切换光标的显示相位并重绘。 */
+  void toggleCaret();
+
+  /** 把文字光标一直隐藏（离屏截图对照时用，让截图不随闪烁相位变化）。 */
+  void setCaretHidden(bool hidden) { caretHidden_ = hidden; }
+
+  /** 设置连续点击的判定：两次点击的间隔不超过 timeMs、位置相距不超过 slop（逻辑像素）。 */
+  void setDoubleClick(unsigned timeMs, double slop) {
+    doubleClickMs_ = timeMs;
+    doubleClickSlop_ = slop;
+  }
+
   void setTheme(ThemeName theme);
   void setScale(double scale);
 
@@ -53,7 +80,8 @@ class Root final : public Host {
   // ---- 输入事件，坐标是窗口坐标 ----
 
   void mouseMove(Point position, unsigned modifiers);
-  void mouseDown(Point position, MouseButton button, unsigned modifiers);
+  /** @param timeMs 事件时间（毫秒），用来判断连续点击；不关心连续点击时传 0。 */
+  void mouseDown(Point position, MouseButton button, unsigned modifiers, unsigned timeMs = 0);
   void mouseUp(Point position, MouseButton button, unsigned modifiers);
   void mouseWheel(Point position, double delta, unsigned modifiers);
   /** 鼠标离开窗口：清除悬停。 */
@@ -62,12 +90,34 @@ class Root final : public Host {
   void keyUp(int virtualKey, unsigned modifiers);
   void character(char32_t codePoint);
 
+  // ---- 输入法（只发给有键盘焦点且需要文字输入的控件）----
+
+  /** 输入法组合串变化。 */
+  void imeComposition(const ImeComposition& composition);
+  /** 输入法确认了一段文字。 */
+  void imeCommit(std::u16string_view text);
+  /** 输入法组合结束。 */
+  void imeEnd();
+  /** 输入法候选窗应贴着显示的光标矩形（窗口坐标）；焦点控件不支持文字输入时为空。 */
+  [[nodiscard]] std::optional<Rect> imeCaretRect() const;
+  /** 当前焦点控件是否需要输入法。 */
+  [[nodiscard]] bool focusAcceptsText() const;
+  /** 鼠标此刻应显示的光标样式。 */
+  [[nodiscard]] CursorKind cursor() const;
+
   // ---- Host ----
 
   [[nodiscard]] ThemeName theme() const override { return theme_; }
   [[nodiscard]] double scale() const override { return scale_; }
   void invalidate() override;
   [[nodiscard]] TextMetrics measureText(std::string_view text, const TextStyle& style, double maxWidth) override;
+  [[nodiscard]] TextMetrics measureText16(std::u16string_view text, const TextStyle& style, double maxWidth) override;
+  [[nodiscard]] double caretOffset(std::u16string_view text, const TextStyle& style, std::size_t index) override;
+  [[nodiscard]] std::size_t caretIndexAt(std::u16string_view text, const TextStyle& style, double x) override;
+  [[nodiscard]] std::optional<std::string> clipboardText() override;
+  void setClipboardText(std::string_view text) override;
+  [[nodiscard]] bool caretOn() const override { return !caretHidden_ && caretPhase_; }
+  void restartCaretBlink() override;
   [[nodiscard]] Widget* focusedWidget() const override { return focus_; }
   void setFocus(Widget* widget, bool visible) override;
   void captureMouse(Widget* widget) override { capture_ = widget; }
@@ -75,8 +125,21 @@ class Root final : public Host {
     if (capture_ == widget) capture_ = nullptr;
   }
   void widgetLeft(Widget* widget) override;
+  [[nodiscard]] Size viewportSize() const override { return size_; }
+  void showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) override;
+  void hideLayer(Widget* layer) override;
 
  private:
+  /** 显示中的一个弹层。 */
+  struct Layer {
+    Widget* widget;
+    std::function<void(Widget* hit)> onOutsidePress;
+  };
+
+  /** 点所在的最深控件：先找弹层（从上到下），再找内容。 */
+  Widget* hitTarget(Point point);
+  /** 控件是否属于某个弹层。 */
+  [[nodiscard]] bool inLayer(const Widget* widget) const;
   void updateHover(Widget* target);
   void moveFocus(bool backward);
   static void collectFocusable(Widget* widget, std::vector<Widget*>& out);
@@ -89,6 +152,18 @@ class Root final : public Host {
   Widget* hover_{nullptr};
   Widget* pressedWidget_{nullptr};
   Widget* capture_{nullptr};
+  std::function<std::optional<std::string>()> clipboardRead_;
+  std::function<void(std::string_view)> clipboardWrite_;
+  std::function<void(unsigned)> caretTimerHandler_;
+  bool caretHidden_{false};
+  bool caretPhase_{true};
+  unsigned doubleClickMs_{500};
+  double doubleClickSlop_{4.0};
+  unsigned lastClickTime_{0};
+  Point lastClickPosition_{};
+  MouseButton lastClickButton_{MouseButton::None};
+  int clickCount_{0};
+  std::vector<Layer> layers_;
   // 内容放最后声明，保证它最先销毁，销毁时上面的指针还有效
   std::unique_ptr<Widget> content_;
 };

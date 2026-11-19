@@ -13,5 +13,7 @@
 export const ID_FILE: string;
 /** 路径数据文件的路径。 */
 export const DATA_FILE: string;
-/** 生成两个文件的文本与图标个数。 */
-export function generate(): { id: string; data: string; count: number };
+/** 按文字匹配图标的规则表文件的路径。 */
+export const RULES_FILE: string;
+/** 生成三个文件的文本与图标个数。 */
+export function generate(): { id: string; data: string; rules: string; count: number };

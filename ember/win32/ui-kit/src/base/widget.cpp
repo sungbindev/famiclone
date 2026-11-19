@@ -105,6 +105,9 @@ bool Widget::onMouseWheel(const MouseEvent& /*event*/) { return false; }
 bool Widget::onKeyDown(const KeyEvent& /*event*/) { return false; }
 bool Widget::onKeyUp(const KeyEvent& /*event*/) { return false; }
 bool Widget::onChar(char32_t /*codePoint*/) { return false; }
+void Widget::onImeComposition(const ImeComposition& /*composition*/) {}
+void Widget::onImeCommit(std::u16string_view /*text*/) {}
+void Widget::onImeEnd() {}
 
 void Widget::onStateChanged() { invalidate(); }
 

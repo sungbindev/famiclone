@@ -13,7 +13,9 @@
 #include "rujian/ui/root.hpp"
 
 #include <algorithm>
+#include <cmath>
 
+#include "base/clipboard.hpp"
 #include "base/graphics.hpp"
 
 namespace rujian::ui {
@@ -21,6 +23,8 @@ namespace rujian::ui {
 namespace {
 
 constexpr int kVirtualKeyTab = 0x09;
+/** 文字光标闪烁的半周期（毫秒），与系统默认的 500 毫秒一致。 */
+constexpr unsigned kCaretBlinkMilliseconds = 500;
 
 /** 从目标开始向上冒泡，返回第一个处理了事件的控件，没有则为空。 */
 template <typename Handler>
@@ -43,7 +47,12 @@ bool chainVisible(const Widget* widget) {
 
 Root::Root(ThemeName theme, double scale) : theme_(theme), scale_(scale) {}
 
-Root::~Root() = default;
+Root::~Root() {
+  // 弹层由调用方拥有，它们销毁时不能再访问已经开始销毁的 Root
+  const std::vector<Layer> layers = layers_;
+  layers_.clear();
+  for (const Layer& layer : layers) layer.widget->detach();
+}
 
 void Root::setContent(std::unique_ptr<Widget> content) {
   if (content_) content_->detach();
@@ -63,26 +72,103 @@ void Root::setScale(double scale) {
 }
 
 void Root::layout(Size size) {
+  const bool changed = !(size == size_);
   size_ = size;
   if (content_) content_->arrange(Rect{0, 0, size.width, size.height});
+  // 窗口大小变化时弹层的位置作废，通知它们自己关闭
+  if (changed) {
+    const std::vector<Layer> layers = layers_;
+    for (const Layer& layer : layers) layer.onOutsidePress(nullptr);
+  }
   invalidate();
 }
 
 void Root::paint(Canvas& canvas) {
   if (content_) content_->paintTree(canvas);
+  for (const Layer& layer : layers_) layer.widget->paintTree(canvas);
+}
+
+void Root::showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) {
+  if (layer == nullptr || std::ranges::any_of(layers_, [layer](const Layer& item) { return item.widget == layer; })) return;
+  layer->attach(this);
+  layers_.push_back(Layer{layer, std::move(onOutsidePress)});
+  invalidate();
+}
+
+void Root::hideLayer(Widget* layer) {
+  const auto found = std::ranges::find_if(layers_, [layer](const Layer& item) { return item.widget == layer; });
+  if (found == layers_.end()) return;
+  layers_.erase(found);
+  layer->detach();
+  invalidate();
+}
+
+Widget* Root::hitTarget(Point point) {
+  for (auto it = layers_.rbegin(); it != layers_.rend(); ++it) {
+    if (Widget* hit = it->widget->hitTest(point)) return hit;
+  }
+  return content_ ? content_->hitTest(point) : nullptr;
+}
+
+bool Root::inLayer(const Widget* widget) const {
+  const Widget* top = widget;
+  while (top != nullptr && top->parent() != nullptr) top = top->parent();
+  return top != nullptr && std::ranges::any_of(layers_, [top](const Layer& item) { return item.widget == top; });
 }
 
 void Root::invalidate() {
   if (invalidateHandler_) invalidateHandler_();
 }
 
-TextMetrics Root::measureText(std::string_view text, const TextStyle& style, double maxWidth) { return Graphics::shared().text().measure(text, style, maxWidth); }
+TextMetrics Root::measureText(std::string_view text, const TextStyle& style, double maxWidth) {
+  Graphics::shared().text().setScale(scale_);
+  return Graphics::shared().text().measure(text, style, maxWidth);
+}
+
+TextMetrics Root::measureText16(std::u16string_view text, const TextStyle& style, double maxWidth) {
+  Graphics::shared().text().setScale(scale_);
+  return Graphics::shared().text().measure(text, style, maxWidth);
+}
+
+double Root::caretOffset(std::u16string_view text, const TextStyle& style, std::size_t index) {
+  Graphics::shared().text().setScale(scale_);
+  return Graphics::shared().text().caretOffset(text, style, index);
+}
+
+std::size_t Root::caretIndexAt(std::u16string_view text, const TextStyle& style, double x) {
+  Graphics::shared().text().setScale(scale_);
+  return Graphics::shared().text().caretIndexAt(text, style, x);
+}
+
+void Root::setClipboardHandlers(std::function<std::optional<std::string>()> read, std::function<void(std::string_view)> write) {
+  clipboardRead_ = std::move(read);
+  clipboardWrite_ = std::move(write);
+}
+
+std::optional<std::string> Root::clipboardText() { return clipboardRead_ ? clipboardRead_() : readClipboardText(); }
+
+void Root::setClipboardText(std::string_view text) {
+  if (clipboardWrite_) clipboardWrite_(text);
+  else writeClipboardText(text);
+}
+
+void Root::restartCaretBlink() {
+  caretPhase_ = true;
+  invalidate();
+  if (caretTimerHandler_) caretTimerHandler_(kCaretBlinkMilliseconds);
+}
+
+void Root::toggleCaret() {
+  caretPhase_ = !caretPhase_;
+  invalidate();
+}
 
 void Root::widgetLeft(Widget* widget) {
   if (focus_ == widget) focus_ = nullptr;
   if (hover_ == widget) hover_ = nullptr;
   if (pressedWidget_ == widget) pressedWidget_ = nullptr;
   if (capture_ == widget) capture_ = nullptr;
+  std::erase_if(layers_, [widget](const Layer& item) { return item.widget == widget; });
 }
 
 void Root::updateHover(Widget* target) {
@@ -111,22 +197,34 @@ void Root::updateHover(Widget* target) {
 
 void Root::mouseMove(Point position, unsigned modifiers) {
   if (!content_) return;
-  Widget* hit = content_->hitTest(position);
+  Widget* hit = hitTarget(position);
   updateHover(hit);
   const MouseEvent event{position, MouseButton::None, modifiers, 0};
   bubble(capture_ != nullptr ? capture_ : hit, [&](Widget& widget) { return widget.onMouseMove(event); });
 }
 
-void Root::mouseDown(Point position, MouseButton button, unsigned modifiers) {
+void Root::mouseDown(Point position, MouseButton button, unsigned modifiers, unsigned timeMs) {
   if (!content_) return;
-  Widget* hit = capture_ != nullptr ? capture_ : content_->hitTest(position);
-  updateHover(content_->hitTest(position));
-  if (button == MouseButton::Left) {
+  // 连续点击：同一个按键在规定时间和范围内再次按下，次数 +1，三连击之后重新从 1 开始
+  const bool repeated = timeMs != 0 && button == lastClickButton_ && timeMs - lastClickTime_ <= doubleClickMs_ && std::hypot(position.x - lastClickPosition_.x, position.y - lastClickPosition_.y) <= doubleClickSlop_;
+  clickCount_ = repeated ? clickCount_ % 3 + 1 : 1;
+  lastClickTime_ = timeMs;
+  lastClickPosition_ = position;
+  lastClickButton_ = button;
+  Widget* hit = capture_ != nullptr ? capture_ : hitTarget(position);
+  updateHover(hitTarget(position));
+  // 在弹层之外按下：先让弹层决定是否关闭；在弹层上按下不改变键盘焦点
+  const bool onLayer = inLayer(hit);
+  if (!layers_.empty() && !onLayer) {
+    const std::vector<Layer> layers = layers_;
+    for (auto it = layers.rbegin(); it != layers.rend(); ++it) it->onOutsidePress(hit);
+  }
+  if (button == MouseButton::Left && !onLayer) {
     Widget* focusTarget = hit;
     while (focusTarget != nullptr && !(focusTarget->enabled() && focusTarget->focusable())) focusTarget = focusTarget->parent();
     setFocus(focusTarget, false);
   }
-  const MouseEvent event{position, button, modifiers, 0};
+  const MouseEvent event{position, button, modifiers, 0, clickCount_};
   Widget* handled = bubble(hit, [&](Widget& widget) { return widget.onMouseDown(event); });
   if (handled != nullptr && button == MouseButton::Left) {
     pressedWidget_ = handled;
@@ -149,13 +247,13 @@ void Root::mouseUp(Point position, MouseButton button, unsigned modifiers) {
     }
     return;
   }
-  Widget* hit = capture_ != nullptr ? capture_ : content_->hitTest(position);
+  Widget* hit = capture_ != nullptr ? capture_ : hitTarget(position);
   bubble(hit, [&](Widget& widget) { return widget.onMouseUp(event); });
 }
 
 void Root::mouseWheel(Point position, double delta, unsigned modifiers) {
   if (!content_) return;
-  Widget* hit = capture_ != nullptr ? capture_ : content_->hitTest(position);
+  Widget* hit = capture_ != nullptr ? capture_ : hitTarget(position);
   const MouseEvent event{position, MouseButton::None, modifiers, delta};
   bubble(hit, [&](Widget& widget) { return widget.onMouseWheel(event); });
 }
@@ -183,6 +281,9 @@ void Root::setFocus(Widget* widget, bool visible) {
     widget->focusVisible_ = visible;
     widget->onStateChanged();
   }
+  // 文字输入控件获得焦点时光标立刻显示并开始闪烁，其他情况停止定时器
+  if (widget != nullptr && widget->acceptsText()) restartCaretBlink();
+  else if (caretTimerHandler_) caretTimerHandler_(0);
 }
 
 void Root::collectFocusable(Widget* widget, std::vector<Widget*>& out) {
@@ -220,6 +321,29 @@ void Root::keyUp(int virtualKey, unsigned modifiers) {
 
 void Root::character(char32_t codePoint) {
   if (focus_ != nullptr) bubble(focus_, [&](Widget& widget) { return widget.onChar(codePoint); });
+}
+
+void Root::imeComposition(const ImeComposition& composition) {
+  if (focus_ != nullptr && focus_->acceptsText()) focus_->onImeComposition(composition);
+}
+
+void Root::imeCommit(std::u16string_view text) {
+  if (focus_ != nullptr && focus_->acceptsText()) focus_->onImeCommit(text);
+}
+
+void Root::imeEnd() {
+  if (focus_ != nullptr && focus_->acceptsText()) focus_->onImeEnd();
+}
+
+std::optional<Rect> Root::imeCaretRect() const { return focus_ != nullptr ? focus_->caretRect() : std::nullopt; }
+
+bool Root::focusAcceptsText() const { return focus_ != nullptr && focus_->acceptsText(); }
+
+CursorKind Root::cursor() const {
+  for (const Widget* widget = capture_ != nullptr ? capture_ : hover_; widget != nullptr; widget = widget->parent()) {
+    if (widget->cursor() != CursorKind::Arrow) return widget->cursor();
+  }
+  return CursorKind::Arrow;
 }
 
 }  // namespace rujian::ui

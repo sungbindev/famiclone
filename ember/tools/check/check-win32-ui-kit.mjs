@@ -22,6 +22,9 @@ import { fileURLToPath } from 'node:url';
 /** 系统图形与窗口头文件：只有 src/base 可以引用。 */
 const SYSTEM_GRAPHICS_HEADERS = /^(windows\.h|windowsx\.h|d2d1(_\d)?\.h|dwrite(_\d)?\.h|wincodec\.h|dxgi\w*\.h|d3d\w+\.h|wrl\/.*)$/;
 
+/** 控件可以引用的 base 里的文件：令牌入口、按文字匹配图标的规则、UTF-8 与 UTF-16 转换。 */
+const ALLOWED_BASE_HEADERS = new Set(['base/theme-tokens.hpp', 'base/icon-rules.hpp', 'base/unicode.hpp']);
+
 /**
  * 递归列出目录里的文件。
  * @param {string} directory 目录。
@@ -80,8 +83,8 @@ export function checkUiKit(root) {
         if (SYSTEM_GRAPHICS_HEADERS.test(name)) problems.push(`${path}：控件不能直接引用系统头文件 <${name}>，只经 Canvas 绘制`);
         continue;
       }
-      const allowed = name.startsWith('rujian/ui/') || name === 'base/theme-tokens.hpp' || (name.startsWith('components/') && posix.dirname(name).split('/')[1] === own);
-      if (!allowed) problems.push(`${path}：控件只能引用公共头文件、base/theme-tokens.hpp 和自己目录里的文件，不能引用 ${name}`);
+      const allowed = name.startsWith('rujian/ui/') || ALLOWED_BASE_HEADERS.has(name) || (name.startsWith('components/') && posix.dirname(name).split('/')[1] === own);
+      if (!allowed) problems.push(`${path}：控件只能引用公共头文件、base/theme-tokens.hpp、base/icon-rules.hpp、base/unicode.hpp 和自己目录里的文件，不能引用 ${name}`);
     }
   }
 
@@ -102,8 +105,9 @@ async function checkGenerated() {
   const tokens = await import('../../win32/ui-kit/tools/gen-tokens.mjs');
   const icons = await import('../../win32/ui-kit/tools/gen-icons.mjs');
   if (!existsSync(tokens.OUTPUT_FILE) || readFileSync(tokens.OUTPUT_FILE, 'utf8') !== tokens.generate()) problems.push('tokens.generated.hpp 与生成结果不一致，运行 node win32/ui-kit/tools/gen-tokens.mjs');
-  const { id, data } = icons.generate();
-  if (!existsSync(icons.ID_FILE) || readFileSync(icons.ID_FILE, 'utf8') !== id || !existsSync(icons.DATA_FILE) || readFileSync(icons.DATA_FILE, 'utf8') !== data) problems.push('图标文件与生成结果不一致，运行 node win32/ui-kit/tools/gen-icons.mjs');
+  const { id, data, rules } = icons.generate();
+  const iconFiles = [[icons.ID_FILE, id], [icons.DATA_FILE, data], [icons.RULES_FILE, rules]];
+  if (iconFiles.some(([file, text]) => !existsSync(file) || readFileSync(file, 'utf8') !== text)) problems.push('图标文件与生成结果不一致，运行 node win32/ui-kit/tools/gen-icons.mjs');
   return problems;
 }
 

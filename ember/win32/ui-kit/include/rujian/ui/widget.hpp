@@ -13,6 +13,8 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "rujian/ui/canvas.hpp"
@@ -29,6 +31,9 @@ enum Modifier : unsigned { kModifierShift = 1, kModifierCtrl = 2, kModifierAlt =
 /** 鼠标按键。 */
 enum class MouseButton { None, Left, Right, Middle };
 
+/** 鼠标光标样式。 */
+enum class CursorKind { Arrow, IBeam, Hand };
+
 /** 鼠标事件。 */
 struct MouseEvent {
   /** 位置，窗口坐标。 */
@@ -39,6 +44,19 @@ struct MouseEvent {
   unsigned modifiers{0};
   /** 滚轮滚动量，一格为 1，向上为正。 */
   double wheelDelta{0};
+  /** 连续点击的次数（按下事件有效），1 为单击，2 为双击，3 为三连击。 */
+  int clickCount{1};
+};
+
+/** 输入法的组合串。 */
+struct ImeComposition {
+  /** 正在组合的文字。 */
+  std::u16string text;
+  /** 组合串里的光标位置（UTF-16 单元）。 */
+  std::size_t cursor{0};
+  /** 输入法当前正在转换的分句（起始与结束，结束不含），没有时两个值相等。 */
+  std::size_t targetStart{0};
+  std::size_t targetEnd{0};
 };
 
 /** 键盘事件。 */
@@ -96,8 +114,18 @@ class Widget {
   [[nodiscard]] bool focused() const { return focused_; }
   /** 是否要显示焦点环（键盘切换到的焦点，对应 CSS 的 :focus-visible）。 */
   [[nodiscard]] bool focusVisible() const { return focused_ && focusVisible_; }
+  /** 悬停在控件上时的鼠标光标样式。 */
+  [[nodiscard]] virtual CursorKind cursor() const { return CursorKind::Arrow; }
+  /** 是否需要输入法（有文字输入能力）；获得焦点时窗口据此开关输入法。 */
+  [[nodiscard]] virtual bool acceptsText() const { return false; }
+  /** 文字光标所在的矩形（窗口坐标），输入法的候选窗贴着它显示；不支持文字输入时为空。 */
+  [[nodiscard]] virtual std::optional<Rect> caretRect() const { return std::nullopt; }
   /** 能否获得键盘焦点（Tab 键遍历与鼠标点击）。 */
   [[nodiscard]] virtual bool focusable() const { return false; }
+  /** 在弹性布局的交叉轴上是否接受容器给的宽度（有固定宽度的控件返回 false）。 */
+  [[nodiscard]] virtual bool stretchesWidth() const { return true; }
+  /** 在弹性布局的交叉轴上是否接受容器给的高度（有固定高度的控件返回 false）。 */
+  [[nodiscard]] virtual bool stretchesHeight() const { return true; }
   /** 请求重绘。 */
   void invalidate();
 
@@ -124,6 +152,12 @@ class Widget {
   virtual bool onKeyDown(const KeyEvent& event);
   virtual bool onKeyUp(const KeyEvent& event);
   virtual bool onChar(char32_t codePoint);
+  /** 输入法组合串变化（仅 acceptsText 的控件收到）。 */
+  virtual void onImeComposition(const ImeComposition& composition);
+  /** 输入法确认了一段文字（仅 acceptsText 的控件收到）。 */
+  virtual void onImeCommit(std::u16string_view text);
+  /** 输入法组合结束（确认或取消后都会收到）。 */
+  virtual void onImeEnd();
   /** 悬停、按下、焦点等状态变化后调用，默认重绘。 */
   virtual void onStateChanged();
 

@@ -61,6 +61,7 @@ struct Fixture {
     page = content.get();
     const auto add = [&](const char* label, double x) {
       auto button = std::make_unique<Button>(label);
+      button->setAutoIcon(false);
       Button* raw = button.get();
       page->addChild(std::move(button));
       page->place(raw, Rect{x, 0, 50, 22});
@@ -280,6 +281,9 @@ TEST(Button, MeasureGrowsWithLabelAndIcon) {
   auto first = std::make_unique<Button>("确定");
   auto second = std::make_unique<Button>("确定确定确定");
   auto third = std::make_unique<Button>("确定");
+  first->setAutoIcon(false);
+  second->setAutoIcon(false);
+  third->setAutoIcon(false);
   third->setIcon(rujian::ui::IconId::Check);
   Button* p1 = first.get();
   Button* p2 = second.get();

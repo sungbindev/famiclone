@@ -42,6 +42,8 @@ struct TextStyle {
   TextOverflow overflow{TextOverflow::Clip};
   /** 是否在宽度不够时自动换行。 */
   bool wrap{false};
+  /** 是否加下划线。 */
+  bool underline{false};
 };
 
 /** 文字度量结果。 */

@@ -1,15 +1,19 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：capture-main.cjs
- * 说明：网页版截图程序（Electron 主进程脚本）：打开参考页，用真实的输入事件把按钮带到指定状态，保存页面截图与各按钮的位置。
+ * 说明：网页版截图程序（Electron 主进程脚本）：打开参考页，对一组“场景:样本序号”依次用真实的输入事件把样本带到指定状态，保存页面截图与各样本的位置。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：参数用 --key=value 形式（Electron 不接受不带 -- 前缀的 key=value，会直接静默退出）：
- *       page（参考页 html 路径）、theme、scale、scene、width、height、out（PNG）、rects（JSON）。
- *       场景与 gallery 的 --scene 一致：normal；hover（鼠标移到第一个按钮）；pressed（再按下左键）；focus（按 Tab 键）。
+ *       page（参考页 html 路径）、name（示例页名）、theme、scale、width、height、cases（逗号分隔，如 normal,hover:0,focus:3）、prefix（输出文件的路径前缀）。
+ *       每个场景输出 <prefix>-<场景>[<序号>].png 与同名 .json；场景与 gallery 的 --scene 一致：normal；hover（鼠标移到样本）；pressed（再按下左键）；focus（按 Tab 键直到焦点落在样本上）；
+ *       open（在下拉框样本上点一下展开弹层）；openkey（Tab 到下拉框后按“向下”键展开）；openhover（先展开，再把鼠标移到弹层里的第三个选项）。
+ *       样本是页面里带 data-sample 属性的元素，按文档顺序。
  *       缩放比例与页面大小用调试协议的设备指标覆盖指定，截图的像素大小严格等于 逻辑大小 × 缩放比例；
- *       不用窗口大小与 force-device-scale-factor，因为窗口尺寸会被系统取整，截图会被重采样而出现边缘振铃。
+ *       同时用 force-device-scale-factor 让页面排版用的设备缩放比例也等于目标缩放比例：
+ *       不这样做的话，边框、轮廓线的宽度（1px 取整到设备像素）会按本机系统的缩放比例算，截图的线宽因机器而异。
+ *       窗口大小会被系统取整，所以截图尺寸只由设备指标覆盖决定。
  * ------------------------------------------------------------------------
  */
 
@@ -31,15 +35,35 @@ function readArguments() {
 
 const options = readArguments();
 const scale = Number(options.scale ?? '1');
+app.commandLine.appendSwitch('force-device-scale-factor', String(scale));
 const width = Number(options.width ?? '440');
 const height = Number(options.height ?? '60');
 // 悬停与颜色过渡的时间由页面决定（参考页已关闭过渡），这里只等一帧渲染
-const SETTLE_MILLISECONDS = 300;
+const SETTLE_MILLISECONDS = 200;
 const KEY_TAB = 9;
+const KEY_ARROW_DOWN = 40;
+/** openhover 场景：弹层里第三个选项的中心（与 gallery 的 kHoverOption 一致）。 */
+const HOVER_OPTION_CENTER = `(() => { const r = document.querySelectorAll('.ui-select__option')[2]?.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; })()`;
+/** 鼠标移到页面外时用的坐标。 */
+const OUTSIDE = { x: -10, y: -10 };
 
 /** 等待指定毫秒。 */
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+/** 样本的外层盒子的类名：样本属性加在控件内部的元素上时（如输入框里的 input），位置取外层盒子的。 */
+const BOX_SELECTOR = '.ui-input';
+
+/** 样本元素：带 data-sample 属性的，以及组件库里不接收 data 属性的选择类控件（复选框、单选组、下拉框）；下拉框展开时弹层里的各个选项排在所有样本之后。 */
+const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider';
+
+/** 取页面里全部样本的位置。 */
+const SAMPLE_RECTS = `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].map((element) => { const r = (element.closest("${BOX_SELECTOR}") || element).getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })`;
+
+/** 目标样本之前（含）有多少个 Tab 停靠点：样本自己可获得焦点算一个；单选组、下拉框自己不能，里面当前可 Tab 到的元素算一个。 */
+function tabCount(target) {
+  return `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].slice(0, ${target + 1}).reduce((sum, element) => sum + (!element.disabled && element.tabIndex >= 0 ? 1 : 0) + element.querySelectorAll('[tabindex="0"], button:not(:disabled), input:not(:disabled)').length, 0)`;
 }
 
 async function capture() {
@@ -59,6 +83,7 @@ async function capture() {
   window.showInactive();
   const url = new URL(pathToFileURL(options.page).href);
   url.searchParams.set('theme', options.theme ?? 'dark');
+  url.searchParams.set('page', options.name ?? 'button');
   const contents = window.webContents;
   await window.loadURL(url.href);
   contents.debugger.attach('1.3');
@@ -66,25 +91,66 @@ async function capture() {
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: false });
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
 
-  const rects = await contents.executeJavaScript('[...document.querySelectorAll("button")].map((button) => { const r = button.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })');
-  const first = rects[0];
-  const center = { x: first.x + first.width / 2, y: first.y + first.height / 2 };
-  const scene = options.scene ?? 'normal';
-  if (scene === 'hover' || scene === 'pressed') {
-    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: center.x, y: center.y, button: 'none' });
-  }
-  if (scene === 'pressed') {
-    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: center.x, y: center.y, button: 'left', clickCount: 1 });
-  }
-  if (scene === 'focus') {
-    await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: KEY_TAB });
-    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: KEY_TAB });
-  }
-  await delay(SETTLE_MILLISECONDS);
+  let mouse = OUTSIDE;
+  let mouseDown = false;
+  for (const item of (options.cases ?? 'normal').split(',')) {
+    const [scene, targetText] = item.split(':');
+    const target = Number(targetText ?? '0');
+    // 回到干净状态：松开鼠标、移到页面外、重新载入页面
+    if (mouseDown) await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: mouse.x, y: mouse.y, button: 'left', clickCount: 1 });
+    mouseDown = false;
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: OUTSIDE.x, y: OUTSIDE.y, button: 'none' });
+    mouse = OUTSIDE;
+    await window.loadURL(url.href);
 
-  const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true, clip: { x: 0, y: 0, width, height, scale: 1 } });
-  writeFileSync(options.out, Buffer.from(shot.data, 'base64'));
-  writeFileSync(options.rects, JSON.stringify(rects.map((rect, index) => ({ index, ...rect })), null, 2) + '\n');
+    const rects = await contents.executeJavaScript(SAMPLE_RECTS);
+    const box = rects[target];
+    if (scene !== 'normal' && !box) throw new Error(`样本 ${target} 不存在`);
+    if (scene === 'hover' || scene === 'pressed') {
+      mouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'none' });
+    }
+    if (scene === 'pressed') {
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: mouse.x, y: mouse.y, button: 'left', clickCount: 1 });
+      mouseDown = true;
+    }
+    if (scene === 'focus' || scene === 'openkey') {
+      const presses = await contents.executeJavaScript(tabCount(target));
+      for (let i = 0; i < presses; i += 1) {
+        await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: KEY_TAB });
+        await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: KEY_TAB });
+      }
+    }
+    if (scene === 'openkey') {
+      // 焦点在下拉框上时按“向下”键展开弹层（键盘展开，高亮落在已选项上）
+      await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: KEY_ARROW_DOWN });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: KEY_ARROW_DOWN });
+    }
+    if (scene === 'open' || scene === 'openhover') {
+      // 在样本中心点一下展开弹层（鼠标展开，指针移到选项上才有高亮）
+      mouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'none' });
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: mouse.x, y: mouse.y, button: 'left', clickCount: 1 });
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: mouse.x, y: mouse.y, button: 'left', clickCount: 1 });
+      if (scene === 'openhover') {
+        await delay(SETTLE_MILLISECONDS);
+        const row = await contents.executeJavaScript(HOVER_OPTION_CENTER);
+        // 禁用的下拉框展开不了，没有选项可悬停
+        if (row) {
+          mouse = row;
+          await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'none' });
+        }
+      }
+    }
+    await delay(SETTLE_MILLISECONDS);
+
+    // 展开弹层之后才有选项元素，所以截图前重新取一次位置
+    const finalRects = await contents.executeJavaScript(SAMPLE_RECTS);
+    const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true, clip: { x: 0, y: 0, width, height, scale: 1 } });
+    const name = scene === 'normal' ? 'normal' : `${scene}${target}`;
+    writeFileSync(`${options.prefix}-${name}.png`, Buffer.from(shot.data, 'base64'));
+    writeFileSync(`${options.prefix}-${name}.json`, JSON.stringify(finalRects.map((rect, index) => ({ index, ...rect })), null, 2) + '\n');
+  }
 }
 
 app.whenReady().then(async () => {

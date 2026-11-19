@@ -11,7 +11,22 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+
 namespace rujian::ui {
+
+/**
+ * CSS 边框宽度的取整规则：取设备像素的整数倍（向下）且至少 1 个设备像素；宽度为 0 时还是 0。
+ * 网页版的布局也用取整后的宽度（比如 1.25 倍下 1px 的边框占 0.8 个逻辑像素），有边框的控件要用它算尺寸。
+ * @param width CSS 里的宽度（逻辑像素）。
+ * @param scale 窗口的缩放比例。
+ * @return 取整后的宽度（逻辑像素）。
+ */
+[[nodiscard]] inline double snapBorderWidth(double width, double scale) {
+  if (width <= 0) return 0;
+  return std::max(1.0, std::floor(width * scale)) / scale;
+}
 
 /** 点。 */
 struct Point {
@@ -23,6 +38,8 @@ struct Point {
 struct Size {
   double width{0};
   double height{0};
+
+  [[nodiscard]] constexpr bool operator==(const Size&) const = default;
 };
 
 /** 四边的距离，用于内边距、外边距与边框宽度。 */

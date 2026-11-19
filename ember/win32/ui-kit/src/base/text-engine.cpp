@@ -14,7 +14,10 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
+
+#include "base/unicode.hpp"
 
 namespace rujian::ui {
 
@@ -25,15 +28,6 @@ constexpr double kBaselineShift = 0.0;
 
 /** 不限宽度时使用的排版宽度。 */
 constexpr double kUnlimitedWidth = 100000.0;
-
-/** UTF-8 转 UTF-16；无效序列按替换字符处理。 */
-std::wstring widen(std::string_view utf8) {
-  if (utf8.empty()) return {};
-  const int length = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), nullptr, 0);
-  std::wstring result(static_cast<std::size_t>(length), L'\0');
-  MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), result.data(), length);
-  return result;
-}
 
 }  // namespace
 
@@ -79,7 +73,11 @@ TextEngine::VerticalMetrics TextEngine::verticalMetrics(const std::wstring& fami
 }
 
 Microsoft::WRL::ComPtr<IDWriteTextLayout> TextEngine::createLayout(std::string_view utf8, const TextStyle& style, double maxWidth, double maxHeight) {
-  const std::wstring text = widen(utf8);
+  return createLayout(std::u16string_view(toUtf16(utf8)), style, maxWidth, maxHeight);
+}
+
+Microsoft::WRL::ComPtr<IDWriteTextLayout> TextEngine::createLayout(std::u16string_view utf16, const TextStyle& style, double maxWidth, double maxHeight) {
+  const std::wstring text(reinterpret_cast<const wchar_t*>(utf16.data()), utf16.size());
   const std::wstring& latin = familyFor(FontRole::Latin);
   const auto weight = static_cast<DWRITE_FONT_WEIGHT>(style.fontWeight);
 
@@ -90,10 +88,16 @@ Microsoft::WRL::ComPtr<IDWriteTextLayout> TextEngine::createLayout(std::string_v
   format->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
   format->SetTextAlignment(style.align == TextAlign::Center ? DWRITE_TEXT_ALIGNMENT_CENTER : (style.align == TextAlign::End ? DWRITE_TEXT_ALIGNMENT_TRAILING : DWRITE_TEXT_ALIGNMENT_LEADING));
 
-  // 行高固定为“字号 × 倍数”，字体内容区（上升 + 下降）在行高里上下居中
+  // 行高固定为“字号 × 倍数”，字体内容区（上升 + 下降）在行高里上下居中；
+  // 行高为 normal 时，网页版把上升、下降、行距各自四舍五入到设备像素再相加
   const VerticalMetrics vertical = verticalMetrics(latin, style.fontWeight);
-  const double lineHeight = style.lineHeight > 0 ? style.fontSize * style.lineHeight : (vertical.ascent + vertical.descent + vertical.lineGap) * style.fontSize;
-  const double baseline = (lineHeight - (vertical.ascent + vertical.descent) * style.fontSize) / 2.0 + vertical.ascent * style.fontSize + kBaselineShift;
+  const auto toDevice = [this](double value) { return std::round(value * scale_) / scale_; };
+  const bool normal = style.lineHeight <= 0;
+  const double ascent = normal ? toDevice(vertical.ascent * style.fontSize) : vertical.ascent * style.fontSize;
+  const double descent = normal ? toDevice(vertical.descent * style.fontSize) : vertical.descent * style.fontSize;
+  const double lineGap = normal ? toDevice(vertical.lineGap * style.fontSize) : vertical.lineGap * style.fontSize;
+  const double lineHeight = style.lineHeight > 0 ? style.fontSize * style.lineHeight : ascent + descent + lineGap;
+  const double baseline = (lineHeight - (ascent + descent)) / 2.0 + ascent + kBaselineShift;
   format->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, static_cast<FLOAT>(lineHeight), static_cast<FLOAT>(baseline));
 
   Microsoft::WRL::ComPtr<IDWriteTextLayout> layout;
@@ -126,6 +130,8 @@ Microsoft::WRL::ComPtr<IDWriteTextLayout> TextEngine::createLayout(std::string_v
     layout->SetFontFamilyName(familyFor(role).c_str(), DWRITE_TEXT_RANGE{static_cast<UINT32>(begin), static_cast<UINT32>(index - begin)});
   }
 
+  if (style.underline && !text.empty()) layout->SetUnderline(TRUE, DWRITE_TEXT_RANGE{0, static_cast<UINT32>(text.size())});
+
   if (style.overflow == TextOverflow::Ellipsis && !style.wrap) {
     Microsoft::WRL::ComPtr<IDWriteInlineObject> sign;
     if (SUCCEEDED(factory_->CreateEllipsisTrimmingSign(layout.Get(), &sign))) {
@@ -136,12 +142,35 @@ Microsoft::WRL::ComPtr<IDWriteTextLayout> TextEngine::createLayout(std::string_v
   return layout;
 }
 
-TextMetrics TextEngine::measure(std::string_view utf8, const TextStyle& style, double maxWidth) {
-  const auto layout = createLayout(utf8, style, maxWidth, 0);
+TextMetrics TextEngine::measure(std::string_view utf8, const TextStyle& style, double maxWidth) { return measure(std::u16string_view(toUtf16(utf8)), style, maxWidth); }
+
+TextMetrics TextEngine::measure(std::u16string_view utf16, const TextStyle& style, double maxWidth) {
+  const auto layout = createLayout(utf16, style, maxWidth, 0);
   if (!layout) return {};
   DWRITE_TEXT_METRICS metrics{};
   if (FAILED(layout->GetMetrics(&metrics))) return {};
   return TextMetrics{static_cast<double>(metrics.width), static_cast<double>(metrics.height)};
+}
+
+double TextEngine::caretOffset(std::u16string_view text, const TextStyle& style, std::size_t index) {
+  const auto layout = createLayout(text, style, 0, 0);
+  if (!layout) return 0;
+  FLOAT x = 0;
+  FLOAT y = 0;
+  DWRITE_HIT_TEST_METRICS metrics{};
+  if (FAILED(layout->HitTestTextPosition(static_cast<UINT32>(std::min(index, text.size())), FALSE, &x, &y, &metrics))) return 0;
+  return static_cast<double>(x);
+}
+
+std::size_t TextEngine::caretIndexAt(std::u16string_view text, const TextStyle& style, double x) {
+  if (text.empty()) return 0;
+  const auto layout = createLayout(text, style, 0, 0);
+  if (!layout) return 0;
+  BOOL trailing = FALSE;
+  BOOL inside = FALSE;
+  DWRITE_HIT_TEST_METRICS metrics{};
+  if (FAILED(layout->HitTestPoint(static_cast<FLOAT>(x), 0.0f, &trailing, &inside, &metrics))) return 0;
+  return static_cast<std::size_t>(metrics.textPosition) + (trailing != FALSE ? metrics.length : 0);
 }
 
 }  // namespace rujian::ui

@@ -130,7 +130,6 @@ inline constexpr double menu_shortcut_gap = 52.0;
 inline constexpr double menubar_button_height = 24.0;
 inline constexpr double menubar_button_padding = 8.0;
 inline constexpr double menubar_button_radius = 6.0;
-inline constexpr double menubar_popup_min_width = 260.0;
 inline constexpr double motion_duration_ms = 180.0;
 inline constexpr double notice_offset_bottom = 10.0;
 inline constexpr double notice_toast_lines = 3.0;

@@ -261,8 +261,17 @@ int runWindow(const Options& options) {
     return 2;
   }
   ui::HostWindow window(ui::HostWindow::Options{.title = L"如见控件库预览", .clientSize = info->size, .theme = options.theme});
-  window.root().setContent(gallery::buildPage(options.page).content);
+  // 悬停提示与通知中心要和窗口里的 Root 同生共死，页面的 setup 才能发通知
+  ui::Tooltip tooltip(window.root());
+  ui::NotificationCenter notices(window.root());
+  gallery::Page page = gallery::buildPage(options.page);
+  std::vector<ui::Widget*> samples = page.samples;
+  window.root().setContent(std::move(page.content));
   window.root().layout(window.root().size());
+  if (page.setup) {
+    page.setup(notices, samples);
+    window.root().layout(window.root().size());
+  }
   window.show();
   return ui::HostWindow::runMessageLoop();
 }

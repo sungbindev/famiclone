@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-win32.mjs
- * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起一个实例经菜单选学习机用随包的 BIOS 开机。
+ * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例经菜单选学习机用随包的 BIOS 开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -12,9 +12,11 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 
-import { drive, parseArguments, projectRoot, removeUserData, sleep, startApp } from './win32-dev-support.mjs';
+import { debugCall, drive, dropFiles, parseArguments, projectRoot, removeUserData, sleep, startApp } from './win32-dev-support.mjs';
 
 /** 默认卡带：1-len_ctr（blargg 的 APU 测试，通过后在画面左下角显示文字）。 */
 const DEFAULT_ROM = 'apu-test/1-len_ctr.nes';
@@ -31,6 +33,16 @@ const MACHINE_MENU = [125, 45, 300, 190];
 const PANEL_ROW = [10, 425, 290, 462];
 /** 显示区里画面所在的大块区域。 */
 const PICTURE_AREA = [20, 40, 500, 440];
+/** 系统栏右侧“调试模式”所在的位置。 */
+const DEBUG_ITEM = [400, 472, 485, 498];
+/** 展开的设备面板里软驱 A 一行的盘片名，以及行尾的写保护、取出按钮。 */
+const FLOPPY_NAME = [120, 383, 235, 403];
+const WRITE_PROTECT_BUTTON = 'click:437:393';
+const EJECT_BUTTON = 'click:493:393';
+/** 系统栏左侧的设备按钮。 */
+const DEVICE_BUTTON = 'click:56:485';
+/** 1.44 MB 软盘镜像的大小（字节）。 */
+const FLOPPY_BYTES = 1_474_560;
 
 const options = parseArguments(process.argv.slice(2));
 const romOption = options.get('rom') ?? DEFAULT_ROM;
@@ -78,6 +90,7 @@ async function scenarioInteractions() {
     let r = drive(app.pid, [count('textRunning', TEXT_AREA), count('centerRunning', CENTER)]);
     check('卡带的画面显示出来', number(r, 'textRunning') > 100, `左下角亮像素 ${number(r, 'textRunning')}`);
     const centerRunning = number(r, 'centerRunning');
+    check('没有开启调试服务时系统栏没有“调试模式”', number(drive(app.pid, [count('noDebug', DEBUG_ITEM)]), 'noDebug') === 0);
     r = drive(app.pid, ['key:F8', 'wait:600', count('centerPaused', CENTER)]);
     check('F8 暂停并显示“已暂停”提示', number(r, 'centerPaused') > centerRunning + 40, `${centerRunning} → ${number(r, 'centerPaused')}`);
 
@@ -150,6 +163,44 @@ async function scenarioBios() {
   }
 }
 
+/**
+ * 场景四：调试服务与设备面板。带 --debug-port 启动，系统栏出现“调试模式”；用调试 SDK 的终端客户端让学习机开机，把软盘镜像真实拖进窗口载入软驱，
+ * 展开设备面板，点写保护与取出按钮，再用终端客户端核对软驱状态。
+ */
+async function scenarioDevices() {
+  console.log('场景四：调试服务与设备面板');
+  const app = startApp({ args: ['--debug-port=5798', '--debug-token=smoke-token'] });
+  try {
+    check('启动后出现窗口', await waitForWindow(app.pid));
+    await sleep(2500);
+    check('开启调试服务后系统栏出现“调试模式”', number(drive(app.pid, [count('debugItem', DEBUG_ITEM)]), 'debugItem') > 20);
+    const status = debugCall(app, 'debug.status');
+    check('调试服务在监听', status.enabled === true && status.listening === true && status.port === 5798, JSON.stringify(status));
+    const boot = debugCall(app, 'machines.boot', 'machine=sb2000');
+    check('经调试服务让小霸王 2000 开机', boot.state.power === 'on');
+
+    const image = join(tmpdir(), `ember-smoke-${process.pid}.img`);
+    writeFileSync(image, Buffer.alloc(FLOPPY_BYTES));
+    check('拖放完成', dropFiles(app.pid, [image], { x: 262, y: 200 }));
+    await sleep(1000);
+    const inserted = debugCall(app, 'media.floppyStatus').drives[0];
+    check('把软盘镜像拖进窗口后载入了软驱 A', inserted?.inserted === true && inserted.fileName.endsWith('.img'), inserted?.fileName);
+
+    let r = drive(app.pid, [DEVICE_BUTTON, 'wait:900', count('floppyName', FLOPPY_NAME)]);
+    check('点设备按钮展开设备面板，软驱 A 一行显示盘片名', number(r, 'floppyName') > 50, `亮像素 ${number(r, 'floppyName')}`);
+    drive(app.pid, [WRITE_PROTECT_BUTTON, 'wait:800']);
+    check('点写保护按钮后盘片写保护', debugCall(app, 'media.floppyStatus').drives[0].writeProtected === true);
+    drive(app.pid, [EJECT_BUTTON, 'wait:800']);
+    check('点取出按钮后软驱里没有盘片', debugCall(app, 'media.floppyStatus').drives[0].inserted === false);
+    r = drive(app.pid, [count('afterEject', FLOPPY_NAME)]);
+    check('取出后盘片名换成“空”（盘片名那一列的亮像素从 500 以上降到 200 以下）', number(r, 'afterEject') < 200, `亮像素 ${number(r, 'afterEject')}`);
+    await closeAndExpectExit(app, '场景四');
+  } finally {
+    app.stop();
+    removeUserData(app);
+  }
+}
+
 if (!options.has('no-build')) {
   const run = spawnSync('npm.cmd', ['run', 'win32:build'], { cwd: projectRoot, stdio: 'inherit', shell: true });
   if (run.status !== 0) throw new Error('npm run win32:build 失败');
@@ -157,6 +208,7 @@ if (!options.has('no-build')) {
 await scenarioInteractions();
 await scenarioFullScreen();
 await scenarioBios();
+await scenarioDevices();
 const failed = results.filter((item) => !item.ok);
 console.log(failed.length === 0 ? `全部 ${results.length} 项通过` : `${failed.length} 项失败：${failed.map((item) => item.name).join('；')}`);
 process.exit(failed.length === 0 ? 0 : 1);

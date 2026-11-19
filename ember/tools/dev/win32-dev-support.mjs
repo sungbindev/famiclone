@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { WIN32_BUILD_DIRECTORY } from '../build/build-paths.mjs';
+import { projectRoot } from './dev-support.mjs';
 
 export { parseArguments, projectRoot, sleep } from './dev-support.mjs';
 
@@ -31,7 +32,7 @@ export function executablePath() {
 
 /**
  * 启动一个原生外壳实例。
- * @param {{ romPath?: string, diagnostics?: boolean }} options romPath 为启动后加载的卡带；diagnostics 为 true 时退出时写出帧计数与延迟。
+ * @param {{ romPath?: string, diagnostics?: boolean, args?: string[] }} options romPath 为启动后加载的卡带；diagnostics 为 true 时退出时写出帧计数与延迟；args 为额外的命令行参数。
  * @returns {{ pid: number, userData: string, diagnosticsFile: string | undefined, exited: Promise<number | null>, stop: () => void }}
  */
 export function startApp(options = {}) {
@@ -41,6 +42,7 @@ export function startApp(options = {}) {
   const diagnosticsFile = options.diagnostics ? join(userData, 'diagnostics.json') : undefined;
   const args = [`--user-data-dir=${userData}`];
   if (options.romPath) args.push(`--cartridge=${options.romPath}`);
+  if (options.args) args.push(...options.args);
   const env = { ...process.env };
   if (diagnosticsFile) env.EMBER_WIN_DIAGNOSTICS = diagnosticsFile;
   const child = spawn(exe, args, { env, stdio: 'ignore' });
@@ -64,6 +66,21 @@ export function startApp(options = {}) {
 export function readDiagnostics(app) {
   if (!app.diagnosticsFile || !existsSync(app.diagnosticsFile)) return undefined;
   return JSON.parse(readFileSync(app.diagnosticsFile, 'utf8'));
+}
+
+/**
+ * 经调试 SDK 的终端客户端对实例发一个调试请求（实例要带 --debug-port 与 --debug-token 启动）。
+ * @param {{ userData: string }} app 实例。
+ * @param {string} method 请求名，如 runtime.status。
+ * @param {...string} params key=value 形式的参数。
+ * @returns {unknown} 请求的结果。
+ * @throws {Error} 客户端没有构建（先运行 npm run debug-sdk:check）、连不上或请求失败。
+ */
+export function debugCall(app, method, ...params) {
+  const cli = join(projectRoot, '..', 'packages', 'ember-debug-sdk', 'dist', 'cli.js');
+  if (!existsSync(cli)) throw new Error('找不到调试 SDK 的终端客户端，先运行 npm run debug-sdk:check');
+  const output = execFileSync(process.execPath, [cli, '--user-data-dir', app.userData, '--compact', 'call', method, ...params], { encoding: 'utf8', timeout: 60_000 });
+  return JSON.parse(output);
 }
 
 /** 删除实例的临时用户数据目录。 */
@@ -183,4 +200,91 @@ foreach ($step in $steps) {
     if (match) results.set(match[1], match[2]);
   }
   return results;
+}
+
+/** 拖放脚本的 PowerShell 部分（只含 ASCII）：用一个带文件数据的窗口发起真实的拖放，再用鼠标事件把它拖到目标窗口上松开。 */
+const DROP_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class W32 {
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+}
+"@
+[void][W32]::SetProcessDPIAware()
+$proc = Get-Process -Id $ProcessIdValue
+$r = New-Object W32+RECT
+[void][W32]::GetWindowRect($proc.MainWindowHandle, [ref]$r)
+$scale = ($r.Right - $r.Left) / 524
+$tx = $r.Left + [int]($TargetX * $scale)
+$ty = $r.Top + [int]($TargetY * $scale)
+$files = [string[]]@($FileList)
+$script:done = $false
+$form = New-Object System.Windows.Forms.Form
+$form.FormBorderStyle = 'None'
+$form.StartPosition = 'Manual'
+$form.Location = New-Object System.Drawing.Point(20, 20)
+$form.Size = New-Object System.Drawing.Size(200, 120)
+$form.TopMost = $true
+$form.BackColor = [System.Drawing.Color]::Red
+$form.Add_MouseDown({
+  $data = New-Object System.Windows.Forms.DataObject
+  $data.SetData([System.Windows.Forms.DataFormats]::FileDrop, $files)
+  [void]$form.DoDragDrop($data, [System.Windows.Forms.DragDropEffects]::Copy)
+  $script:done = $true
+})
+$form.Show()
+$job = Start-Job -ArgumentList $tx, $ty -ScriptBlock {
+  param($tx, $ty)
+  Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class M {
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, UIntPtr e);
+}
+"@
+  [void][M]::SetProcessDPIAware()
+  Start-Sleep -Milliseconds 500
+  [void][M]::SetCursorPos(80, 80)
+  Start-Sleep -Milliseconds 300
+  [M]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+  Start-Sleep -Milliseconds 300
+  for ($i = 1; $i -le 25; $i++) {
+    [void][M]::SetCursorPos([int](80 + ($tx - 80) * $i / 25), [int](80 + ($ty - 80) * $i / 25))
+    Start-Sleep -Milliseconds 40
+  }
+  Start-Sleep -Milliseconds 500
+  [M]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+}
+$watch = [System.Diagnostics.Stopwatch]::StartNew()
+while (-not $script:done -and $watch.Elapsed.TotalSeconds -lt 25) {
+  [System.Windows.Forms.Application]::DoEvents()
+  Start-Sleep -Milliseconds 30
+}
+$form.Close()
+Wait-Job $job -Timeout 5 | Out-Null
+Remove-Job $job -Force
+Write-Output ('RESULT dropped ' + $script:done)
+`;
+
+/**
+ * 把文件拖到窗口上松开（真实的 OLE 拖放：先显示一个带文件数据的小窗口，再用鼠标事件拖过去），用来检查拖放载入。
+ * @param {number} pid 进程号。
+ * @param {string[]} files 文件的绝对路径。
+ * @param {{ x: number, y: number }} target 松开的位置（窗口的逻辑像素）。
+ * @returns {boolean} 拖放是否完成。
+ */
+export function dropFiles(pid, files, target) {
+  const list = files.map((file) => `'${file.replaceAll("'", "''")}'`).join(', ');
+  const script = `$ProcessIdValue = ${pid}\n$TargetX = ${target.x}\n$TargetY = ${target.y}\n${DROP_SCRIPT.replace('@($FileList)', `@(${list})`)}`;
+  const encoded = Buffer.from(script, 'utf16le').toString('base64');
+  const output = execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], { encoding: 'utf8', timeout: 120_000, stdio: ['ignore', 'pipe', 'ignore'] });
+  return /RESULT dropped True/.test(output);
 }

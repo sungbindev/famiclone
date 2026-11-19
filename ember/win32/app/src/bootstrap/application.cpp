@@ -45,7 +45,11 @@
 #include "infra/recent-cartridges/file-recent-cartridges-service.hpp"
 #include "infra/shell-state/file-shell-state-service.hpp"
 #include "infra/updates/unsupported-app-updater.hpp"
+#include "logic/debug/debug-controller.hpp"
+#include "logic/debug/debug-module.hpp"
 #include "logic/input/input-controller.hpp"
+#include "logic/media/media-controller.hpp"
+#include "logic/media/media-module.hpp"
 #include "logic/runtime/runtime-controller.hpp"
 #include "logic/runtime/runtime-module.hpp"
 #include "logic/shell/shell-controller.hpp"
@@ -67,6 +71,7 @@
 #include "rujian/ui/window.hpp"
 #include "shared/preferences/allow-multiple-instances.hpp"
 #include "shared/shortcut/shortcut.hpp"
+#include "ui/media/media-panel-content.hpp"
 #include "ui/runtime/runtime-panel-content.hpp"
 #include "ui/runtime/screen-widget.hpp"
 #include "ui/shell/main-window-view.hpp"
@@ -248,10 +253,12 @@ int runApplication(const shared::LaunchArguments& launch) {
     // 运行与外壳模块：先于主窗口创建，主窗口里的控件销毁时它们还在；画面宿主需要窗口句柄，窗口创建后再创建
     logic::InputController input(core);
     logic::RuntimeController runtime(router, core, shellState);
+    logic::MediaController media(router, core);
+    logic::DebugController debug(router, core);
     ForwardingWindowControl windowControl;
     ForwardingNotifier notifier;
     NoDialogs dialogs;
-    logic::ShellController shell(logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime)}), windowControl, dialogs, notifier, shellState, droppedFiles);
+    logic::ShellController shell(logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug)}), windowControl, dialogs, notifier, shellState, droppedFiles);
     std::optional<infra::ScreenHostAdapter> screenHost;
     platform::WindowModes* modes = nullptr;
     ui::ShellView* shellView = nullptr;
@@ -352,6 +359,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     screenWidget = screen.get();
     shellView->setScreen(std::move(screen));
     shellView->setPanelContent(logic::kRuntimePanelId, [&runtime] { return std::make_unique<ui::RuntimePanelContent>(runtime); });
+    shellView->setPanelContent(logic::kMediaPanelId, [&media] { return std::make_unique<ui::MediaPanelContent>(media); });
     shellView->setFocusScreen([screenWidget] { screenWidget->focusScreen(); });
     // 弹层（菜单、通知、提示）盖到画面上时把画面子窗口对应的区域挖掉
     window.root().setLayerRectsHandler([&](const std::vector<rujian::ui::Rect>& rects) {

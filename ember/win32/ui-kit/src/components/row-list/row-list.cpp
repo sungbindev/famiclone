@@ -60,6 +60,14 @@ void RowListItem::addCell(RowCell cell) {
   invalidate();
 }
 
+void RowListItem::setCellText(std::size_t index, std::string text) {
+  if (index >= cells_.size() || cellSpecs_[index].text == text) return;
+  cellSpecs_[index].text = text;
+  cells_[index]->setText(std::move(text));
+  // 取文字宽度的列变了宽度，行内各列要重新摆放；还没有摆放过（没有宿主或没有尺寸）时等第一次摆放
+  if (cellSpecs_[index].width <= 0 && host() != nullptr && bounds().width > 0) arrange(bounds());
+}
+
 void RowListItem::setActions(std::unique_ptr<Widget> actions) {
   if (actions_ != nullptr) removeChild(actions_);
   actions_ = actions ? addChild(std::move(actions)) : nullptr;

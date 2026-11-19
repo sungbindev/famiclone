@@ -50,6 +50,8 @@ class RowListItem : public Widget {
   void setTitle(std::string title);
   /** 在主文字右边加一列。 */
   void addCell(RowCell cell);
+  /** 修改第 index 列的文字；列宽取文字宽度时同时重排这一行。 */
+  void setCellText(std::size_t index, std::string text);
   /** 行尾的操作（一般是 Actions 里放按钮）。 */
   void setActions(std::unique_ptr<Widget> actions);
 

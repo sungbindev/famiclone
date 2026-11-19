@@ -33,7 +33,13 @@ add_library(ember_app STATIC
   src/infra/last-directories/file-last-directories-service.cpp
   src/infra/recent-cartridges/file-recent-cartridges-service.cpp
   src/infra/shell-state/file-shell-state-service.cpp
+  src/logic/debug/debug-controller.cpp
+  src/logic/debug/debug-module.cpp
+  src/logic/debug/debug-rules.cpp
   src/logic/input/input-controller.cpp
+  src/logic/media/media-controller.cpp
+  src/logic/media/media-module.cpp
+  src/logic/media/media-rules.cpp
   src/logic/runtime/runtime-controller.cpp
   src/logic/runtime/runtime-module.cpp
   src/logic/runtime/runtime-rules.cpp
@@ -68,6 +74,7 @@ add_library(ember_app STATIC
   src/shared/screen/screen-layout.cpp
   src/shared/shell-state/shell-state.cpp
   src/shared/shortcut/shortcut.cpp
+  src/ui/media/media-panel-content.cpp
   src/ui/runtime/runtime-panel-content.cpp
   src/ui/runtime/screen-overlay-view.cpp
   src/ui/runtime/screen-widget.cpp
@@ -92,10 +99,13 @@ target_link_libraries(ember_win PRIVATE ember_app)
 
 if(EMBER_BUILD_TESTS)
   add_executable(ember_app_tests
+    test/debug-logic-test.cpp
     test/display-test.cpp
     test/infra-test.cpp
     test/launch-args-test.cpp
     test/main-request-test.cpp
+    test/media-logic-test.cpp
+    test/media-panel-test.cpp
     test/platform-test.cpp
     test/runtime-logic-test.cpp
     test/screen-test.cpp

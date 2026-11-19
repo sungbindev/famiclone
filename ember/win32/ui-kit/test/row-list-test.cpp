@@ -81,6 +81,20 @@ TEST(RowListItem, TallContentGrowsTheRow) {
   EXPECT_DOUBLE_EQ(s.widget->bounds().height, 40 + 4);
 }
 
+TEST(RowListItem, ChangingAnAutoWidthCellRearrangesTheRow) {
+  Scene<RowListItem> s;
+  s.widget->setTitle("标题");
+  s.widget->addCell({"短", 0, false});
+  s.widget->setActions(std::make_unique<Block>(60, 22));
+  s.layout(400);
+  const double before = s.at(1).width;
+  s.widget->setCellText(0, "读写中（磁道 12）");
+  EXPECT_LT(s.at(1).width, before);
+  EXPECT_GT(s.at(2).width, 40);
+  // 行尾操作的位置不变
+  EXPECT_DOUBLE_EQ(s.at(3).x, 400 - 10 - 60);
+}
+
 TEST(RowList, RowsHaveNoGap) {
   Scene<RowList> s;
   auto first = std::make_unique<RowListItem>();

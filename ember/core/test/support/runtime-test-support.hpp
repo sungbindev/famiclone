@@ -79,7 +79,15 @@ class FrameCapture final : public platform::FrameOutput {
     height_ = frame.height;
     lastNumber_ = frame.number;
     pixels_.assign(frame.pixels.begin(), frame.pixels.end());
+    if (frame.number == 1) centers_.clear();
+    if (!pixels_.empty()) centers_.push_back(pixels_[pixels_.size() / 2]);
     ++count_;
+  }
+
+  /** 自最近一次上电以来每一帧中心位置的像素（帧号从 1 重新开始时清空）。 */
+  [[nodiscard]] std::vector<std::uint32_t> centerPixels() const {
+    std::lock_guard lock(mutex_);
+    return centers_;
   }
 
   [[nodiscard]] std::uint64_t count() const {
@@ -128,6 +136,7 @@ class FrameCapture final : public platform::FrameOutput {
   std::uint64_t count_{0};
   std::uint32_t width_{0};
   std::uint32_t height_{0};
+  std::vector<std::uint32_t> centers_;
   std::uint64_t lastNumber_{0};
   std::vector<std::uint32_t> pixels_;
   bool sizeMismatch_{false};

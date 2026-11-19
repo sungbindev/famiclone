@@ -182,7 +182,7 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "update", "app", "sound", "input", "printer", "debug"}));
   std::map<std::string, nlohmann::json> byId;
   for (const auto& setting : listed.payload["settings"]) byId[setting["id"]] = setting;
-  EXPECT_EQ(byId.size(), 16U);
+  EXPECT_EQ(byId.size(), 17U);
   EXPECT_EQ(byId["update.autoCheck"]["kind"], "switch");
   EXPECT_EQ(byId["update.autoCheck"]["value"], true);
   EXPECT_EQ(byId["app.allowMultipleInstances"]["kind"], "switch");
@@ -196,6 +196,8 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   EXPECT_EQ(byId["appearance.theme"]["options"].size(), 3U);
   EXPECT_EQ(byId["display.aspect"]["defaultValue"], "8:7");
   EXPECT_EQ(byId["display.showAllLines"]["value"], true);
+  EXPECT_EQ(byId["display.hideStartupFrames"]["kind"], "switch");
+  EXPECT_EQ(byId["display.hideStartupFrames"]["value"], false);
   EXPECT_EQ(byId["sound.buffer"]["value"], "standard");
   EXPECT_EQ(byId["sound.startMuted"]["kind"], "switch");
   EXPECT_EQ(byId["sound.volume"]["hidden"], true);

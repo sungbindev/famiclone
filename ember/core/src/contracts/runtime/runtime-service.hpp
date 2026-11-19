@@ -179,6 +179,12 @@ class RuntimeService {
    */
   virtual void setFamilyKeyboard(bool connected) = 0;
 
+  /**
+   * 设置开机与复位后是否把最初的几帧显示为黑色：只影响交给帧输出（界面显示）的帧，机器的帧缓冲、截图与调试事件仍是真实内容；
+   * 在下一次上电或复位时起作用。
+   */
+  virtual void setHideStartupFrames(bool hide) = 0;
+
   /** 设置 runtime.frame 事件的发布间隔，每 frames 帧一次；0 表示不发布（默认）。 */
   virtual void setFrameEventInterval(std::uint32_t frames) = 0;
 

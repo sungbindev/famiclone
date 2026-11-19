@@ -92,6 +92,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void sendInput(contracts::hardware::InputEvent event) override;
   void setInputHook(std::shared_ptr<contracts::runtime::InputHook> hook) override;
   void setFamilyKeyboard(bool connected) override;
+  void setHideStartupFrames(bool hide) override;
   void setFrameEventInterval(std::uint32_t frames) override;
   std::shared_future<contracts::runtime::RunOutcome> startRun(std::int64_t frames) override;
   void cancelRun() override;
@@ -143,6 +144,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   /** 主机通电时调用观察者；回调抛出的异常写日志。 */
   void notifyObserver();
   void pushAudio();
+  /** 把一帧交给帧输出；开机与复位后的最初几帧在开启遮黑时换成黑色。 */
+  void publishPicture(const contracts::hardware::FrameBuffer& picture);
   void syncAudio();
   /** 换了主机之后，按设置与主机的帧率更新帧节拍。 */
   void updateFramePeriod();
@@ -167,6 +170,12 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   std::shared_ptr<contracts::runtime::InputHook> inputHook_;
   /** 经典 FC 是否接着 Family BASIC 键盘；新装配的主机按它设置。 */
   bool familyKeyboard_{false};
+  /** 开机与复位后是否遮黑最初的几帧（任意线程设置，模拟线程在上电与复位时读取）。 */
+  std::atomic<bool> hideStartupFrames_{false};
+  /** 还要遮黑的帧数，只由模拟线程访问。 */
+  int maskFramesLeft_{0};
+  /** 遮黑用的整帧黑色像素（不透明），按需要的尺寸重新填充。 */
+  std::vector<std::uint32_t> blackFrame_;
   std::unique_ptr<contracts::mappers::MapperCartridge> cartridge_;
   std::optional<contracts::runtime::CartridgeSummary> summary_;
   std::string host_;

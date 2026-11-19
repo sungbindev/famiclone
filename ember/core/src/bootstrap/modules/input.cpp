@@ -19,6 +19,7 @@
 #include "contracts/input/input-settings.hpp"
 #include "contracts/preferences/preference-service.hpp"
 #include "contracts/runtime/runtime-service.hpp"
+#include "contracts/runtime/runtime-settings.hpp"
 #include "infra/input/input-binding-registry.hpp"
 #include "logic/input/local-input-service.hpp"
 #include "logic/input/pad-input-router.hpp"
@@ -52,10 +53,21 @@ void registerInput(ModuleRegistry& registry) {
   registerInputSettings(*preferences);
   auto runtime = registry.services.require<contracts::runtime::RuntimeService>();
   // Family BASIC 键盘：启动时按已保存的取值设置，之后跟随首选项的变化。
-  const auto keyboardOf = [](const contracts::preferences::SettingValue& value) { return std::get_if<bool>(&value) != nullptr && std::get<bool>(value); };
-  runtime->setFamilyKeyboard(keyboardOf(preferences->value(std::string(contracts::input::setting::SETTING_FAMILY_KEYBOARD))));
-  preferences->subscribe([runtime, keyboardOf](const std::string& id, const contracts::preferences::SettingValue& value) {
-    if (id == contracts::input::setting::SETTING_FAMILY_KEYBOARD) runtime->setFamilyKeyboard(keyboardOf(value));
+  const auto isOn = [](const contracts::preferences::SettingValue& value) { return std::get_if<bool>(&value) != nullptr && std::get<bool>(value); };
+  runtime->setFamilyKeyboard(isOn(preferences->value(std::string(contracts::input::setting::SETTING_FAMILY_KEYBOARD))));
+  preferences->subscribe([runtime, isOn](const std::string& id, const contracts::preferences::SettingValue& value) {
+    if (id == contracts::input::setting::SETTING_FAMILY_KEYBOARD) runtime->setFamilyKeyboard(isOn(value));
+  });
+  // 开机与复位后遮黑最初的几帧：这里同时取用首选项与运行服务，运行模块不能反过来依赖首选项（会形成模块循环）。
+  preferences->addSetting({.id = std::string(contracts::runtime::setting::SETTING_HIDE_STARTUP_FRAMES),
+                           .group = "display",
+                           .label = "开机与复位后隐藏最初的画面",
+                           .description = "开启后，开机和复位后最初约 0.1 秒显示为黑色，避免闪过灰色、绿色或花屏；只影响显示，不影响模拟和调试截图。",
+                           .kind = contracts::preferences::SettingKind::Switch,
+                           .defaultValue = false});
+  runtime->setHideStartupFrames(isOn(preferences->value(std::string(contracts::runtime::setting::SETTING_HIDE_STARTUP_FRAMES))));
+  preferences->subscribe([runtime, isOn](const std::string& id, const contracts::preferences::SettingValue& value) {
+    if (id == contracts::runtime::setting::SETTING_HIDE_STARTUP_FRAMES) runtime->setHideStartupFrames(isOn(value));
   });
   // 手柄绑定：服务保存绑定，路由器作为运行服务的输入钩子，把手柄与键盘按键换成手柄口的按键。
   infra::input::InputBindingRegistryOptions bindingOptions;

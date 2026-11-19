@@ -29,6 +29,10 @@ namespace {
 
 /** 落后于帧节拍超过这么多帧时放弃追赶，重新对齐（如机器休眠之后）。 */
 constexpr int MAX_LAG_FRAMES = 5;
+/** 开机与复位后遮黑的帧数（约 0.1 秒）。 */
+constexpr int kStartupMaskFrames = 6;
+/** 不透明的黑色像素（内存顺序 R、G、B、A）。 */
+constexpr std::uint32_t kOpaqueBlack = 0xFF000000U;
 /** 状态里的速度百分比；速度调节以后再做。 */
 constexpr std::int64_t SPEED_PERCENT = 100;
 
@@ -203,6 +207,7 @@ void SimulationRuntime::startMachine(bool resume) {
   failureReported_ = false;
   running_ = resume;
   resync_ = true;
+  maskFramesLeft_ = hideStartupFrames_.load(std::memory_order_relaxed) ? kStartupMaskFrames : 0;
 }
 
 void SimulationRuntime::stopMachine() {
@@ -298,7 +303,7 @@ void SimulationRuntime::runFrame() {
   ++frame_;
   if (inputHook_ != nullptr) inputHook_->frameCompleted(*machine_);
   const hw::FrameBuffer picture = machine_->frame();
-  if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
+  if (picture.width > 0 && picture.height > 0) publishPicture(picture);
   if (!run_.has_value()) pushAudio();
   const bool mouseBefore = mouse_;
   publishSnapshot();
@@ -395,6 +400,7 @@ rt::RuntimeState SimulationRuntime::reset(rt::ResetKind kind) {
       machine_->softReset();
       if (options_.audio != nullptr) options_.audio->flush();
       failureReported_ = false;
+      maskFramesLeft_ = hideStartupFrames_.load(std::memory_order_relaxed) ? kStartupMaskFrames : 0;
     } else {
       const bool keepRunning = running();
       stopMachine();
@@ -548,6 +554,18 @@ void SimulationRuntime::setFamilyKeyboard(bool connected) {
   });
 }
 
+void SimulationRuntime::setHideStartupFrames(bool hide) { hideStartupFrames_.store(hide, std::memory_order_relaxed); }
+
+void SimulationRuntime::publishPicture(const hw::FrameBuffer& picture) {
+  if (maskFramesLeft_ <= 0) {
+    options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
+    return;
+  }
+  --maskFramesLeft_;
+  blackFrame_.assign(static_cast<std::size_t>(picture.width) * picture.height, kOpaqueBlack);
+  options_.frames->publish({picture.width, picture.height, frame_, blackFrame_});
+}
+
 void SimulationRuntime::setFrameEventInterval(std::uint32_t frames) { frameEventInterval_.store(frames, std::memory_order_relaxed); }
 
 std::shared_future<rt::RunOutcome> SimulationRuntime::startRun(std::int64_t frames) {
@@ -625,7 +643,7 @@ rt::StepOutcome SimulationRuntime::step(hw::StepUnit unit, std::int64_t count) {
     frame_ += done.frames;
     if (done.frames > 0) {
       const hw::FrameBuffer picture = machine_->frame();
-      if (picture.width > 0 && picture.height > 0) options_.frames->publish({picture.width, picture.height, frame_, picture.pixels});
+      if (picture.width > 0 && picture.height > 0) publishPicture(picture);
     }
     publishState("step");
     publishSnapshot();

@@ -19,13 +19,18 @@ import { FactsPage } from './pages/facts-page';
 import { FeedbackPage } from './pages/feedback-page';
 import { FieldPage } from './pages/field-page';
 import { InputPage } from './pages/input-page';
+import { ListPage } from './pages/list-page';
 import { PanelPage } from './pages/panel-page';
+import { RowListPage } from './pages/row-list-page';
 import { ScrollPage } from './pages/scroll-page';
 import { SelectPage } from './pages/select-page';
 import { SettingRowPage } from './pages/setting-row-page';
 import { SliderPage } from './pages/slider-page';
 import { SplitPage } from './pages/split-page';
 import { TabsPage } from './pages/tabs-page';
+import { TablePage } from './pages/table-page';
+import { ToolbarPage } from './pages/toolbar-page';
+import { TreePage } from './pages/tree-page';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
   button: ButtonPage,
@@ -35,14 +40,20 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   feedback: FeedbackPage,
   field: FieldPage,
   input: InputPage,
+  list: ListPage,
   panel: PanelPage,
+  'row-list': RowListPage,
   scroll: ScrollPage,
   select: SelectPage,
   'setting-row': SettingRowPage,
   'setting-row-narrow': SettingRowPage,
   slider: SliderPage,
   split: SplitPage,
-  tabs: TabsPage
+  tabs: TabsPage,
+  table: TablePage,
+  toolbar: ToolbarPage,
+  'toolbar-narrow': ToolbarPage,
+  tree: TreePage
 };
 
 const parameters = new URLSearchParams(location.search);

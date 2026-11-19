@@ -64,6 +64,10 @@ void SettingRow::setError(std::string error) {
   invalidate();
 }
 
+double SettingRow::paddingTop() const { return trimTop() ? 0.0 : tokens::setting_row_padding_y; }
+
+double SettingRow::paddingBottom() const { return trimBottom() ? 0.0 : tokens::setting_row_padding_y; }
+
 SettingRow::Layout SettingRow::layout(double width) {
   Layout result;
   result.stacked = host() != nullptr && host()->viewportSize().width <= kStackedViewportWidth;
@@ -83,7 +87,7 @@ SettingRow::Layout SettingRow::layout(double width) {
   result.errorHeight = error_->measure(Size{result.controlWidth, 0}).height;
   result.controlColumnHeight = result.controlHeight + (result.errorHeight > 0 ? tokens::space_xs + result.errorHeight : 0.0);
   const double content = result.stacked ? result.textHeight + tokens::space_md + result.controlColumnHeight : std::max(result.textHeight, result.controlColumnHeight);
-  result.height = content + 2 * tokens::setting_row_padding_y;
+  result.height = content + paddingTop() + paddingBottom();
   return result;
 }
 
@@ -95,8 +99,8 @@ Size SettingRow::measure(Size available) {
 void SettingRow::arrange(const Rect& bounds) {
   Widget::arrange(bounds);
   const Layout laid = layout(bounds.width);
-  const double top = bounds.y + tokens::setting_row_padding_y;
-  const double contentHeight = laid.height - 2 * tokens::setting_row_padding_y;
+  const double top = bounds.y + paddingTop();
+  const double contentHeight = laid.height - paddingTop() - paddingBottom();
   const double textTop = laid.stacked ? top : top + (contentHeight - laid.textHeight) / 2.0;
   label_->arrange(Rect{bounds.x, textTop, laid.textWidth, laid.labelHeight});
   description_->arrange(Rect{bounds.x, textTop + laid.labelHeight + tokens::space_xxs, laid.textWidth, laid.descriptionHeight});

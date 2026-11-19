@@ -18,6 +18,7 @@
 #include "rujian/ui/geometry.hpp"
 #include "rujian/ui/label.hpp"
 #include "rujian/ui/layout.hpp"
+#include "rujian/ui/list.hpp"
 #include "rujian/ui/scroll-area.hpp"
 
 namespace rujian::ui {
@@ -66,6 +67,11 @@ void Panel::setPlain(bool plain) {
 
 Widget* Panel::addContent(std::unique_ptr<Widget> content) {
   Widget* added = body_->addChild(std::move(content));
+  // 列表贴着面板边的第一行去掉上内边距、最后一行去掉下内边距
+  const auto& items = body_->children();
+  for (std::size_t i = 0; i < items.size(); ++i) {
+    if (auto* list = dynamic_cast<List*>(items[i].get())) list->setTrimEnds(i == 0, i + 1 == items.size());
+  }
   invalidate();
   return added;
 }

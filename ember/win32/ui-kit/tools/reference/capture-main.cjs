@@ -62,7 +62,7 @@ function delay(milliseconds) {
 const BOX_SELECTOR = '.ui-input';
 
 /** 样本元素：带 data-sample 属性的，以及组件库里不接收 data 属性的选择类控件（复选框、单选组、下拉框）；下拉框展开时弹层里的各个选项排在所有样本之后；面板里嵌的控件（滑块、面板自己的滚动区域）不算样本。 */
-const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider:not(:is(.ui-panel, .ui-field, .ui-setting-row) .ui-slider), .ui-scroll-area:not(.ui-select__popup):not(.ui-panel__scroll):not(.ui-split-view__side-body), .ui-panel, .ui-facts, .ui-field, .ui-setting-row, .ui-callout, .ui-state, .ui-status-label, .ui-split-view, .ui-splitter, .ui-tabs';
+const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider:not(:is(.ui-panel, .ui-field, .ui-setting-row, .ui-toolbar) .ui-slider), .ui-scroll-area:not(.ui-select__popup):not(.ui-panel__scroll):not(.ui-split-view__side-body):not(.ui-table-container), .ui-panel, .ui-facts, .ui-field, .ui-setting-row:not(.ui-list .ui-setting-row), .ui-list, .ui-row-list__item, .ui-toolbar, .ui-tree, .ui-callout, .ui-state, .ui-status-label:not(.ui-table .ui-status-label), .ui-split-view, .ui-splitter, .ui-tabs, .ui-table';
 
 /** 取页面里全部样本的位置。 */
 const SAMPLE_RECTS = `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].map((element) => { const r = (element.closest("${BOX_SELECTOR}") || element).getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })`;

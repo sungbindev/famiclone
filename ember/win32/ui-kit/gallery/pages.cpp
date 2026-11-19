@@ -11,7 +11,10 @@
 
 #include "pages.hpp"
 
+#include <initializer_list>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 #include "base/theme-tokens.hpp"
 #include "rujian/ui/button.hpp"
@@ -19,9 +22,12 @@
 #include "rujian/ui/checkbox.hpp"
 #include "rujian/ui/facts.hpp"
 #include "rujian/ui/field.hpp"
+#include "rujian/ui/label.hpp"
 #include "rujian/ui/layout.hpp"
+#include "rujian/ui/list.hpp"
 #include "rujian/ui/panel.hpp"
 #include "rujian/ui/radio-group.hpp"
+#include "rujian/ui/row-list.hpp"
 #include "rujian/ui/scroll-area.hpp"
 #include "rujian/ui/select.hpp"
 #include "rujian/ui/setting-row.hpp"
@@ -29,8 +35,11 @@
 #include "rujian/ui/split-view.hpp"
 #include "rujian/ui/state.hpp"
 #include "rujian/ui/status-label.hpp"
+#include "rujian/ui/table.hpp"
 #include "rujian/ui/tabs.hpp"
 #include "rujian/ui/text-input.hpp"
+#include "rujian/ui/toolbar.hpp"
+#include "rujian/ui/tree.hpp"
 
 namespace gallery {
 
@@ -547,6 +556,181 @@ Page buildTabsPage() {
   page.content = std::move(stack);
   return page;
 }
+/** 列表页的页面大小：一个面板，里面是三个设置行的分隔线列表，高度取 4 的倍数。 */
+constexpr ui::Size kListPageSize{760, 160};
+/** 列表样本：设置行左边 420 像素是名称，面板内边距 10 加边框 1 之内的列表宽 706。 */
+constexpr double kListWidth = 706.0;
+
+/** 列表页：面板内容区里的分隔线列表（第一行与最后一行贴着面板边、去掉内边距）。 */
+Page buildListPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto panel = std::make_unique<ui::Panel>();
+  page.samples.push_back(panel.get());
+  auto list = std::make_unique<ui::List>();
+  for (int i = 0; i < 3; ++i) {
+    auto row = std::make_unique<ui::SettingRow>();
+    row->setLabel("名称");
+    auto slider = std::make_unique<ui::Slider>();
+    slider->setValue(20 + 30 * i);
+    row->setControl(std::move(slider));
+    list->addRow(std::move(row));
+  }
+  page.samples.push_back(list.get());
+  panel->addContent(std::move(list));
+  stack->addChild(std::move(panel));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 无底色、紧凑、纯图标的按钮（行尾操作、工具栏操作用）。 */
+std::unique_ptr<ui::Button> makeGhostIcon(const char* label, ui::IconId icon) {
+  auto button = std::make_unique<ui::Button>(label);
+  button->setVariant(ui::ButtonVariant::Ghost);
+  button->setIconOnly(true);
+  button->setCompact(true);
+  button->setIcon(icon);
+  return button;
+}
+
+/** 一组操作按钮。 */
+std::unique_ptr<ui::Actions> makeActions(std::initializer_list<std::pair<const char*, ui::IconId>> buttons) {
+  auto actions = std::make_unique<ui::Actions>();
+  for (const auto& [label, icon] : buttons) actions->addChild(makeGhostIcon(label, icon));
+  return actions;
+}
+
+/** 信息行页的页面大小：三行信息行加内边距，高度取 4 的倍数。 */
+constexpr ui::Size kRowListPageSize{480, 112};
+/** 信息行样本右边 92 像素（行尾操作加右内边距）参与像素对照，左边的文字不参与。 */
+constexpr ui::Insets kRowListInset{0, 92, 0, 0};
+
+/** 信息行页：带前导、信息列与三个操作的行，带两列（定宽与自然宽）与两个操作的行，仅前导与标题的行。 */
+Page buildRowListPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto list = std::make_unique<ui::RowList>();
+
+  auto floppy = std::make_unique<ui::RowListItem>();
+  floppy->setLeading("软驱 A");
+  floppy->setTitle("无软盘");
+  floppy->addCell({"未就绪", 0, true});
+  floppy->setActions(makeActions({{"写保护", ui::IconId::Lock}, {"插入", ui::IconId::FolderOpen}, {"弹出", ui::IconId::PlayerEject}}));
+  page.samples.push_back(floppy.get());
+  list->addChild(std::move(floppy));
+
+  auto tape = std::make_unique<ui::RowListItem>();
+  tape->setLeading("磁带");
+  tape->setTitle("无磁带");
+  tape->addCell({"00:00", 64, true});
+  tape->addCell({"已停止", 0, true});
+  tape->setActions(makeActions({{"播放", ui::IconId::PlayerPlay}, {"停止", ui::IconId::PlayerStop}}));
+  page.samples.push_back(tape.get());
+  list->addChild(std::move(tape));
+
+  auto printer = std::make_unique<ui::RowListItem>();
+  printer->setLeading("打印机");
+  printer->setTitle("空闲");
+  page.samples.push_back(printer.get());
+  list->addChild(std::move(printer));
+
+  stack->addChild(std::move(list));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 工具栏页的页面大小：宽页（操作在右边）与窄页（操作换到下一行）。 */
+constexpr ui::Size kToolbarPageSize{560, 64};
+constexpr ui::Size kToolbarNarrowPageSize{200, 92};
+
+/** 工具栏页：前导是滑块，说明文字跟在后面，右边三个操作；宽、窄两个页面共用。 */
+Page buildToolbarPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto toolbar = std::make_unique<ui::Toolbar>();
+  auto slider = std::make_unique<ui::Slider>();
+  slider->setValue(40);
+  toolbar->setLeading(std::move(slider));
+  toolbar->setDescription("共 3 项");
+  toolbar->setActions(makeActions({{"播放", ui::IconId::PlayerPlay}, {"停止", ui::IconId::PlayerStop}, {"弹出", ui::IconId::PlayerEject}}));
+  page.samples.push_back(toolbar.get());
+  stack->addChild(std::move(toolbar));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 树页的页面大小：五行的树加内边距，高度取 4 的倍数。 */
+constexpr ui::Size kTreePageSize{232, 144};
+/** 树样本里名称所在的区域：左边 22 像素（内边距、展开箭头位置与间距）、右边 4 像素参与像素对照，中间不参与。 */
+constexpr ui::Insets kTreeInset{0, 4, 0, 22};
+
+/** 树页：五个扁平条目，选中第二项。 */
+Page buildTreePage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto tree = std::make_unique<ui::Tree>();
+  tree->setItems({{"general", "通用"}, {"appearance", "外观"}, {"machines", "机型与 BIOS"}, {"input", "输入"}, {"paths", "路径"}});
+  tree->setSelectedId("appearance");
+  page.samples.push_back(tree.get());
+  stack->addChild(std::move(tree));
+  page.content = std::move(stack);
+  return page;
+}
+
+/** 表格页的页面大小：表头加三行（第二行选中并带详情），高度取 4 的倍数。 */
+constexpr ui::Size kTablePageSize{560, 232};
+/** 表格样本里左右各 9 像素（单元格左右内边距 10 少留 1，给文字边缘的半像素）参与像素对照（表头底色、分割线、悬停与选中底色），中间的文字不参与。 */
+constexpr ui::Insets kTableInset{0, 9, 0, 9};
+
+/** 表格页的详情块：高 24、底色取强调色，没有文字。 */
+class DetailBlock final : public ui::Widget {
+ public:
+  ui::Size measure(ui::Size available) override { return ui::Size{available.width, 24.0}; }
+
+  void paint(ui::Canvas& canvas) override { canvas.fillRect(bounds(), ui::themeTokens(host()->theme()).accent); }
+};
+
+/** 往表格里加一行：名称（可带说明）、版本、匹配、状态。 */
+std::size_t addPluginRow(ui::Table& table, const char* name, const char* description, const char* version, const char* match, bool enabled) {
+  std::vector<std::unique_ptr<ui::Widget>> cells;
+  auto main = std::make_unique<ui::TableMainCell>();
+  main->setText(name);
+  main->setDescription(description);
+  cells.push_back(std::move(main));
+  cells.push_back(ui::Table::makeText(version));
+  cells.push_back(ui::Table::makeText(match));
+  auto state = std::make_unique<ui::StatusLabel>();
+  state->setTone(enabled ? ui::StatusTone::Success : ui::StatusTone::Stopped);
+  state->setText(enabled ? "已启用" : "已停用");
+  cells.push_back(std::move(state));
+  return table.addRow(std::move(cells));
+}
+
+/** 表格页：四列（主副文字、版本、匹配、状态）三行，第二行选中并带详情。 */
+Page buildTablePage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto table = std::make_unique<ui::Table>();
+  table->addColumn({"名称", 140, false, false});
+  table->addColumn({"版本", 0, true, true});
+  table->addColumn({"匹配", 120, false, true});
+  table->addColumn({"状态", 0, true, false});
+  addPluginRow(*table, "插件甲", "第一段说明", "1.0", "NES 卡带", true);
+  const std::size_t selected = addPluginRow(*table, "插件乙", "说明乙", "2.1.3", "SB2000 软盘", false);
+  addPluginRow(*table, "插件丙", "", "0.9", "全部", true);
+  table->setRowDetail(selected, std::make_unique<DetailBlock>());
+  table->setOnRowSelect([](std::size_t) {});
+  table->setSelectedRow(static_cast<int>(selected));
+  page.samples.push_back(table.get());
+  stack->addChild(std::move(table));
+  page.content = std::move(stack);
+  return page;
+}
 
 }  // namespace
 
@@ -572,6 +756,17 @@ const std::vector<PageInfo>& pageInfos() {
       {"feedback", kFeedbackPageSize, ui::Insets::all(0), {{0, kCalloutInset}, {1, kCalloutInset}}, {}, {}, {}},
       // 分栏：整个视图与分隔条都参与对照；悬停、按下、焦点的目标是分隔条（样本 1）
       {"split", kSplitPageSize, ui::Insets::all(kCompareAll), {}, {}, {1}, {"hover", "pressed", "focus"}},
+      // 列表：面板样本只对照外框位置；列表样本左边 420 像素（名称列）不参与像素对照
+      {"list", kListPageSize, ui::Insets{0, kListWidth - ui::tokens::setting_row_text_width, 0, 0}, {{0, ui::Insets::all(0)}}, {}, {}, {}},
+      // 信息行：前两行右边的操作参与对照，第三行只有文字；悬停与按下的目标是第一行
+      {"row-list", kRowListPageSize, kRowListInset, {{1, ui::Insets{0, 60, 0, 0}}, {2, ui::Insets::all(0)}}, {}, {0}, {"hover", "pressed"}},
+      // 工具栏：中间的说明文字（约 100 到 170）不参与，左边的滑块与右边的操作参与
+      {"toolbar", kToolbarPageSize, ui::Insets{0, 528 - 170, 0, 100}, {}, {}, {}, {}},
+      {"toolbar-narrow", kToolbarNarrowPageSize, ui::Insets{0, 8, 0, 100}, {}, {}, {}, {}},
+      // 树：悬停、按下的目标是整棵树的中心（第三行）；焦点落在选中行上
+      {"tree", kTreePageSize, kTreeInset, {}, {}, {0}, {"hover", "pressed", "focus"}},
+      // 表格：悬停与按下的目标是整张表的中心所在的行
+      {"table", kTablePageSize, kTableInset, {}, {}, {0}, {"hover", "pressed"}},
       // 页签：两条页签栏（文字带不参与）与第二条下面的内容块（全部参与）；悬停、按下、焦点的目标是第一条
       {"tabs", kTabsPageSize, kTabBarInset, {{2, ui::Insets::all(kCompareAll)}}, {}, {0}, {"hover", "pressed", "focus"}},
   };
@@ -591,6 +786,11 @@ Page buildPage(const std::string& name) {
   if (name == "setting-row" || name == "setting-row-narrow") return buildSettingRowPage();
   if (name == "feedback") return buildFeedbackPage();
   if (name == "split") return buildSplitPage();
+  if (name == "list") return buildListPage();
+  if (name == "row-list") return buildRowListPage();
+  if (name == "toolbar" || name == "toolbar-narrow") return buildToolbarPage();
+  if (name == "tree") return buildTreePage();
+  if (name == "table") return buildTablePage();
   if (name == "tabs") return buildTabsPage();
   throw std::runtime_error("未知的示例页：" + name);
 }

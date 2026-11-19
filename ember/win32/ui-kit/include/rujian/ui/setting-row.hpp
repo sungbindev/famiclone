@@ -15,14 +15,14 @@
 #include <memory>
 #include <string>
 
-#include "rujian/ui/widget.hpp"
+#include "rujian/ui/list.hpp"
 
 namespace rujian::ui {
 
 class Label;
 
 /** 设置行。 */
-class SettingRow : public Widget {
+class SettingRow : public ListRow {
  public:
   SettingRow();
 
@@ -54,6 +54,9 @@ class SettingRow : public Widget {
   };
 
   [[nodiscard]] Layout layout(double width);
+  /** 行的上、下内边距（列表贴着面板边时去掉）。 */
+  [[nodiscard]] double paddingTop() const;
+  [[nodiscard]] double paddingBottom() const;
 
   Label* label_{nullptr};
   Label* description_{nullptr};

@@ -34,13 +34,19 @@ add_library(rujian_ui STATIC
   src/components/field/field.cpp
   src/components/label/label.cpp
   src/components/layout/flex-box.cpp
+  src/components/list/list.cpp
   src/components/panel/panel.cpp
+  src/components/row-list/row-list.cpp
   src/components/scroll-area/scroll-area.cpp
   src/components/select/select.cpp
   src/components/setting-row/setting-row.cpp
   src/components/slider/slider.cpp
   src/components/split-view/split-view.cpp
+  src/components/table/table-main-cell.cpp
+  src/components/table/table.cpp
   src/components/tabs/tabs.cpp
+  src/components/toolbar/toolbar.cpp
+  src/components/tree/tree.cpp
   src/components/text-input/line-editor.cpp
   src/components/text-input/text-input.cpp
   src/generated/icon-data.generated.cpp
@@ -68,19 +74,23 @@ if(EMBER_BUILD_TESTS)
     test/label-test.cpp
     test/layout-test.cpp
     test/line-editor-test.cpp
+    test/list-test.cpp
     test/offscreen-test.cpp
     test/panel-test.cpp
     test/radio-group-test.cpp
     test/root-test.cpp
+    test/row-list-test.cpp
     test/scroll-area-test.cpp
     test/select-test.cpp
     test/setting-row-test.cpp
     test/slider-test.cpp
     test/split-view-test.cpp
+    test/table-test.cpp
     test/tabs-test.cpp
     test/svg-path-test.cpp
     test/text-input-test.cpp
-    test/text-test.cpp)
+    test/text-test.cpp
+    test/tree-test.cpp)
   target_include_directories(rujian_ui_tests PRIVATE src)
   target_compile_definitions(rujian_ui_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
   target_compile_options(rujian_ui_tests PRIVATE /utf-8 /W4 /permissive- /EHsc)

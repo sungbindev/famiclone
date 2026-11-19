@@ -213,7 +213,7 @@ bool ScrollArea::onKeyDown(const KeyEvent& event) {
 }
 
 void ScrollArea::onDescendantFocused(Widget* descendant) {
-  if (descendant != nullptr) scrollIntoView(descendant->bounds());
+  if (descendant != nullptr) scrollIntoView(descendant->focusRect());
 }
 
 void ScrollArea::onStateChanged() {

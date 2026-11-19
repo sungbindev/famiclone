@@ -106,7 +106,7 @@ unsigned long FramelessFrame::hitTest(int screenX, int screenY) const {
   HWND hwnd = static_cast<HWND>(window_);
   RECT rect{};
   GetWindowRect(hwnd, &rect);
-  if (IsZoomed(hwnd) == FALSE) {
+  if (IsZoomed(hwnd) == FALSE && !fullScreen_) {
     const int horizontal = frameThickness(hwnd, true);
     // 顶边只留系统的缩放边框厚度，不加补充边框，免得压住右上角的关闭按钮
     const int top = metric(hwnd, SM_CYSIZEFRAME);
@@ -123,7 +123,7 @@ unsigned long FramelessFrame::hitTest(int screenX, int screenY) const {
     if (above) return HTTOP;
     if (below) return HTBOTTOM;
   }
-  if (!callbacks_.hitTest) return HTCLIENT;
+  if (!callbacks_.hitTest || fullScreen_) return HTCLIENT;
   const double scale = options_.scale ? options_.scale() : 1.0;
   switch (callbacks_.hitTest((screenX - rect.left) / scale, (screenY - rect.top) / scale)) {
     case FrameHit::Caption:

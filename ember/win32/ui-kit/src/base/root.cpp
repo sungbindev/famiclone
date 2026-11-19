@@ -101,6 +101,12 @@ void Root::layout(Size size) {
 void Root::paint(Canvas& canvas) {
   if (content_) content_->paintTree(canvas);
   for (const Layer& layer : layers_) layer.widget->paintTree(canvas);
+  if (!layerRectsHandler_) return;
+  std::vector<Rect> rects;
+  for (const Layer& layer : layers_) layer.widget->layerRects(rects);
+  if (rects == lastLayerRects_) return;
+  lastLayerRects_ = rects;
+  layerRectsHandler_(rects);
 }
 
 void Root::showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) {

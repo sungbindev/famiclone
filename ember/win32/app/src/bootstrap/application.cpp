@@ -13,11 +13,16 @@
 #include "bootstrap/application.hpp"
 
 #include <windows.h>
+#include <windowsx.h>
 
+#include <chrono>
 #include <cmath>
+#include <fstream>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "bootstrap/resource-locations.hpp"
 #include "entry/cartridges/cartridge-handlers.hpp"
@@ -32,6 +37,7 @@
 #include "infra/core-client/latest-frame-slot.hpp"
 #include "infra/dialogs/remembering-file-dialog.hpp"
 #include "infra/directories/explorer-directory.hpp"
+#include "infra/display/screen-host-adapter.hpp"
 #include "infra/dropped-files/memory-dropped-files-service.hpp"
 #include "infra/help/unavailable-help-viewer.hpp"
 #include "infra/last-directories/file-last-directories-service.hpp"
@@ -39,21 +45,32 @@
 #include "infra/recent-cartridges/file-recent-cartridges-service.hpp"
 #include "infra/shell-state/file-shell-state-service.hpp"
 #include "infra/updates/unsupported-app-updater.hpp"
+#include "logic/input/input-controller.hpp"
+#include "logic/runtime/runtime-controller.hpp"
+#include "logic/runtime/runtime-module.hpp"
+#include "logic/shell/shell-controller.hpp"
+#include "logic/shell/shell-module.hpp"
 #include "platform/dialogs/message-box.hpp"
 #include "platform/dialogs/system-dialogs.hpp"
 #include "platform/files/json-file-reader.hpp"
 #include "platform/files/json-file-store.hpp"
 #include "platform/files/known-folders.hpp"
 #include "platform/logging/file-error-logger.hpp"
+#include "platform/process/environment.hpp"
 #include "platform/process/single-instance.hpp"
 #include "platform/text/wide-text.hpp"
 #include "platform/theme/system-theme.hpp"
 #include "platform/threading/ui-thread.hpp"
 #include "platform/window/frameless-frame.hpp"
+#include "platform/window/window-modes.hpp"
 #include "platform/window/window-placement.hpp"
 #include "rujian/ui/window.hpp"
 #include "shared/preferences/allow-multiple-instances.hpp"
+#include "shared/shortcut/shortcut.hpp"
+#include "ui/runtime/runtime-panel-content.hpp"
+#include "ui/runtime/screen-widget.hpp"
 #include "ui/shell/main-window-view.hpp"
+#include "ui/shell/shell-view.hpp"
 
 namespace ember::win32::bootstrap {
 
@@ -123,6 +140,45 @@ void activateWindow(HWND window) {
   SetForegroundWindow(window);
 }
 
+/** 外壳的三个端口先于主窗口创建，它们的实现（窗口模式、通知）要等窗口与界面创建之后才有，所以用转发器先占位。 */
+class ForwardingWindowControl final : public contracts::ShellWindowControl {
+ public:
+  platform::WindowModes* target{nullptr};
+  std::function<void()> onQuit;
+  void toggleFullScreen() override {
+    if (target != nullptr) target->toggleFullScreen();
+  }
+  void toggleAlwaysOnTop() override {
+    if (target != nullptr) target->toggleAlwaysOnTop();
+  }
+  void quit() override {
+    if (onQuit) onQuit();
+  }
+};
+
+class ForwardingNotifier final : public contracts::ShellNotifier {
+ public:
+  contracts::ShellNotifier* target{nullptr};
+  void notify(const std::string& text, contracts::NotificationLevel level) override {
+    if (target != nullptr) target->notify(text, level);
+  }
+};
+
+/** 对话框：阶段 7 没有登记任何对话框，对话框窗口随后续阶段加入。 */
+class NoDialogs final : public contracts::ShellDialogOpener {
+ public:
+  void openDialog(const std::string& /*dialogId*/) override {}
+};
+
+/** 当前的修饰键（Ctrl、Shift、Alt）。 */
+unsigned currentModifiers() {
+  unsigned modifiers = 0;
+  if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) modifiers |= shared::kShortcutShift;
+  if ((GetKeyState(VK_CONTROL) & 0x8000) != 0) modifiers |= shared::kShortcutCtrl;
+  if ((GetKeyState(VK_MENU) & 0x8000) != 0) modifiers |= shared::kShortcutAlt;
+  return modifiers;
+}
+
 }  // namespace
 
 int runApplication(const shared::LaunchArguments& launch) {
@@ -189,6 +245,18 @@ int runApplication(const shared::LaunchArguments& launch) {
   router.add(entry::createSystemHandlers({logDirectory, help, updater}));
 
   try {
+    // 运行与外壳模块：先于主窗口创建，主窗口里的控件销毁时它们还在；画面宿主需要窗口句柄，窗口创建后再创建
+    logic::InputController input(core);
+    logic::RuntimeController runtime(router, core, shellState);
+    ForwardingWindowControl windowControl;
+    ForwardingNotifier notifier;
+    NoDialogs dialogs;
+    logic::ShellController shell(logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime)}), windowControl, dialogs, notifier, shellState, droppedFiles);
+    std::optional<infra::ScreenHostAdapter> screenHost;
+    platform::WindowModes* modes = nullptr;
+    ui::ShellView* shellView = nullptr;
+    ui::ScreenWidget* screenWidget = nullptr;
+
     // 主窗口：按系统主题创建，读到首选项里的主题后再切换
     entry::ThemeSource themeSource = entry::ThemeSource::System;
     rujian::ui::HostWindow window(rujian::ui::HostWindow::Options{kWindowTitle, rujian::ui::Size{kWindowWidth, kWindowHeight}, resolveTheme(themeSource)});
@@ -206,7 +274,10 @@ int runApplication(const shared::LaunchArguments& launch) {
     callbacks.hitTest = [view](double x, double y) { return toFrameHit(view->hitTestWindow(rujian::ui::Point{x, y})); };
     callbacks.systemButtonState = [view](platform::FrameHit hover, platform::FrameHit pressed) { view->setSystemButtonState(toTitleBarHit(hover), toTitleBarHit(pressed)); };
     callbacks.maximizedChanged = [view](bool maximized) { view->setMaximized(maximized); };
-    callbacks.activeChanged = [view](bool active) { view->setWindowActive(active); };
+    callbacks.activeChanged = [view, &screenWidget](bool active) {
+      view->setWindowActive(active);
+      if (screenWidget != nullptr) screenWidget->setWindowActive(active);
+    };
     // 开始的摆放不算用户移动窗口，显示之后的位置变化才保存
     callbacks.moved = [&shellState, &trackMoves](int x, int y) {
       if (trackMoves) shellState.updateWindow(shared::WindowPlacement{x, y});
@@ -216,11 +287,87 @@ int runApplication(const shared::LaunchArguments& launch) {
     };
     callbacks.compositionChanged = [view](bool enabled) { view->setBorderVisible(!enabled); };
     platform::FramelessFrame frame(mainWindow, platform::FramelessOptions{kWindowWidth, kWindowHeight, [&window] { return window.root().scale(); }}, std::move(callbacks));
-    window.setMessageHook([&frame](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) { return frame.handle(message, wParam, lParam, result); });
+    window.setMessageHook([&](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
+      if (frame.handle(message, wParam, lParam, result)) return true;
+      if (modes != nullptr && modes->handle(message, wParam, lParam, result)) return true;
+      if (screenHost && screenHost->handleMessage(message, wParam, lParam, result)) return true;
+      if (shellView == nullptr) return false;
+      switch (message) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+          // 快捷键与 Alt+助记字母；已处理的按键不再交给控件
+          if (shellView->handleKeyDown(static_cast<int>(wParam), currentModifiers(), (lParam & 0x40000000) != 0)) {
+            result = 0;
+            return true;
+          }
+          return false;
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN: {
+          const double pointScale = window.root().scale();
+          shellView->handleMouseDown(rujian::ui::Point{GET_X_LPARAM(lParam) / pointScale, GET_Y_LPARAM(lParam) / pointScale});
+          return false;
+        }
+        case WM_LBUTTONUP:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONUP:
+          shellView->handleMouseUp();
+          return false;
+        default:
+          return false;
+      }
+    });
     frame.attach();
 
     const double scale = window.root().scale();
     platform::placeWindow(mainWindow, static_cast<int>(std::lround(kWindowWidth * scale)), static_cast<int>(std::lround(kWindowHeight * scale)), shellState.get().window);
+
+    // 窗口模式（全屏、置顶、拖放）与运行画面宿主
+    windowControl.onQuit = [window = mainWindow] { PostMessageW(window, WM_CLOSE, 0, 0); };
+    std::optional<platform::WindowModes> windowModes;
+    windowModes.emplace(
+        mainWindow, frame,
+        [&] {
+          shell.setWindowState(windowModes->fullScreen(), windowModes->alwaysOnTop());
+          if (shellView != nullptr) shellView->setFullScreen(windowModes->fullScreen());
+        },
+        [&shell](std::vector<std::string> paths) { shell.dropFiles(paths); });
+    modes = &*windowModes;
+    windowControl.target = modes;
+    try {
+      screenHost.emplace(mainWindow, frames, input, ui, [&logger](const std::string& message) { logger.write({std::nullopt, kMainErrorCode, message, nlohmann::json{{"source", "screenHost"}}}); });
+    } catch (const std::runtime_error& error) {
+      logger.write({std::nullopt, kMainErrorCode, error.what(), nlohmann::json{{"source", "screenHost"}}});
+      platform::showErrorMessage("Ember", "无法初始化画面渲染，当前电脑不支持。\n需要支持 Direct3D 11 的显卡与驱动；没有显卡、没有驱动或没有 3D 加速的虚拟机不在支持范围内。");
+      core.stop();
+      return 1;
+    }
+
+    // 外壳界面：菜单、系统栏、底部面板与通知，显示区是运行画面，面板内容由这里按标识注入
+    std::optional<ui::ShellView> shellViewStorage;
+    shellViewStorage.emplace(window.root(), *view, shell, [&ui](std::function<void()> task) { ui.post(std::move(task)); });
+    shellView = &*shellViewStorage;
+    notifier.target = shellView;
+    auto screen = std::make_unique<ui::ScreenWidget>(runtime, *screenHost, input);
+    screenWidget = screen.get();
+    shellView->setScreen(std::move(screen));
+    shellView->setPanelContent(logic::kRuntimePanelId, [&runtime] { return std::make_unique<ui::RuntimePanelContent>(runtime); });
+    shellView->setFocusScreen([screenWidget] { screenWidget->focusScreen(); });
+    // 弹层（菜单、通知、提示）盖到画面上时把画面子窗口对应的区域挖掉
+    window.root().setLayerRectsHandler([&](const std::vector<rujian::ui::Rect>& rects) {
+      const double layerScale = window.root().scale();
+      std::vector<shared::ScreenRect> holes;
+      for (const auto& rect : rects) {
+        const int left = static_cast<int>(std::floor(rect.x * layerScale));
+        const int top = static_cast<int>(std::floor(rect.y * layerScale));
+        holes.push_back(shared::ScreenRect{left, top, static_cast<int>(std::ceil(rect.right() * layerScale)) - left, static_cast<int>(std::ceil(rect.bottom() * layerScale)) - top});
+      }
+      screenHost->setHoles(holes);
+      shellView->setLayerRects(rects);
+    });
+    shell.setWindowState(false, windowModes->alwaysOnTop());
+    shell.attachModules();
+    shellView->refresh();
 
     bool shown = false;
     unsigned showTimer = 0;
@@ -245,6 +392,9 @@ int runApplication(const shared::LaunchArguments& launch) {
         [&logger](const std::string& message) { logger.write({std::nullopt, kMainErrorCode, message, nlohmann::json{{"source", "themeSync"}}}); }, showWindow);
 
     core.start();
+    const auto diagnosticsPath = platform::environmentVariable("EMBER_WIN_DIAGNOSTICS");
+    const auto diagnosticsStart = std::chrono::steady_clock::now();
+    if (diagnosticsPath) screenHost->enableLatencyRecording();
     // 命令行带 --cartridge=路径（.nes）时，核心就绪后加载这张卡带；就绪之前发的请求排队
     if (launch.cartridgePath) {
       entry::loadAndRememberCartridge(core, recentCartridges, *launch.cartridgePath, [&logger](contracts::CoreReply reply) {
@@ -254,7 +404,16 @@ int runApplication(const shared::LaunchArguments& launch) {
 
     rujian::ui::HostWindow::runMessageLoop();
 
-    // 退出：保存界面状态，再停止核心
+    // 开发期诊断：环境变量 EMBER_WIN_DIAGNOSTICS 给出文件路径时，退出时写出帧计数与画面延迟
+    if (diagnosticsPath) {
+      const auto stats = frames.stats();
+      const auto latency = screenHost->latency();
+      const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - diagnosticsStart).count();
+      const nlohmann::json report{{"seconds", seconds}, {"published", stats.published}, {"consumed", stats.consumed}, {"dropped", stats.dropped}, {"latency", {{"count", latency.count}, {"averageMs", latency.average}, {"p95Ms", latency.p95}, {"maxMs", latency.max}}}};
+      std::ofstream(platform::pathFromUtf8(*diagnosticsPath), std::ios::binary | std::ios::trunc) << report.dump(2);
+    }
+    // 退出：先断开各模块的常驻部分，再保存界面状态、停止核心
+    shell.detachModules();
     shellState.flush();
     recentCartridges.flush();
     lastDirectories.flush();

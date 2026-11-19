@@ -40,6 +40,7 @@ void LatestFrameSlot::publish(std::uint32_t width, std::uint32_t height, std::ui
       state_->slot.width = width;
       state_->slot.height = height;
       state_->slot.number = number;
+      state_->slot.publishedAt = std::chrono::steady_clock::now();
       state_->slot.pixels.assign(pixels, pixels + count);
       state_->hasFrame = true;
       if (!state_->notifyPending) {

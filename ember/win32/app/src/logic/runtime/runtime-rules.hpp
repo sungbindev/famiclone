@@ -1,0 +1,114 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：runtime-rules.hpp
+ * 说明：运行模块用到的纯规则：从 runtime.status 的结果得出机器的状态（未开机、已断电、已暂停、运行中）、各控制是否可用，运行面板与系统栏显示的文字，以及“选择机型”的选项。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-19
+ * 备注：规则同 Electron 外壳的 runtime-status.ts 与 machine-choices.ts（见 docs/05-界面.md 第 4.1 节）：没有开机时暂停、复位置灰；断电时暂停与软复位置灰；硬复位只在通电时可用；
+ *       “开机”按已选机型判断（见 powerToggleAction）；“关闭卡带”只在装着卡带时可用；状态还没读到时全部置灰。
+ *       卡带、mapper 插件没有信息时文字函数返回空值，界面不显示这一项，不用“—”或“无”占位；主机型号总有值（未开机时是已选机型），只在状态还没读到时没有。
+ * ------------------------------------------------------------------------
+ */
+
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include <nlohmann/json.hpp>
+
+#include "contracts/runtime/runtime-model.hpp"
+
+namespace ember::win32::logic {
+
+/** 经典 FC 的机型标识：选它时要求已经装入 FC 卡带。 */
+inline constexpr const char* kClassicMachine = "fc";
+
+/** 当前装入的卡带。 */
+struct RuntimeCartridge {
+  std::string path;
+  std::string pluginName;
+};
+
+/** runtime.status 的结果。 */
+struct RuntimeStatus {
+  bool powerOn{false};
+  bool running{false};
+  /** 主机型号；没有装入卡带也没有开机时没有。 */
+  std::optional<std::string> machine;
+  std::optional<RuntimeCartridge> cartridge;
+  /** 机器现在是否带鼠标。 */
+  bool mouse{false};
+};
+
+/** 机型清单里的一项。 */
+struct MachineEntry {
+  std::string id;
+  std::string name;
+  bool needsBios{false};
+  bool supported{false};
+  /** 是否已添加 BIOS。 */
+  bool hasBios{false};
+};
+
+/** 最近打开的清单里的一项：编号与显示名，没有路径。 */
+struct RecentCartridge {
+  std::int64_t id{0};
+  std::string name;
+};
+
+/** 从 runtime.status 的结果读出状态；格式不对时没有值。 */
+[[nodiscard]] std::optional<RuntimeStatus> parseRuntimeStatus(const nlohmann::json& result);
+/** 从 machines.list 的结果读出机型清单；格式不对时为空。 */
+[[nodiscard]] std::vector<MachineEntry> parseMachines(const nlohmann::json& result);
+/** 从 cartridges.recent 的结果读出清单；格式不对时为空。 */
+[[nodiscard]] std::vector<RecentCartridge> parseRecent(const nlohmann::json& result);
+
+/** 路径里的文件名部分。 */
+[[nodiscard]] std::string fileNameOf(const std::string& path);
+
+/** 机器的状态；status 没有值（还没读到）时为 Unknown。 */
+[[nodiscard]] contracts::MachineState machineState(const std::optional<RuntimeStatus>& status);
+/** 状态文字（未开机、已断电、已暂停、运行中）；还没读到状态时没有信息。 */
+[[nodiscard]] std::optional<std::string> stateText(const std::optional<RuntimeStatus>& status);
+/** 主机型号的显示文字：开机后是正在运行的主机，没有开机时是已选机型；状态还没读到时没有信息。 */
+[[nodiscard]] std::optional<std::string> hostText(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine);
+/** 卡带的显示文字：卡带文件名；没有卡带（含整机机型用 BIOS 开机）时没有信息。 */
+[[nodiscard]] std::optional<std::string> cartridgeText(const std::optional<RuntimeStatus>& status);
+/** mapper 插件的显示文字：插件名；没有卡带时没有信息。 */
+[[nodiscard]] std::optional<std::string> pluginText(const std::optional<RuntimeStatus>& status);
+/** 开机或断电按钮与菜单项的名称：通电时是“断电”，否则是“开机”。 */
+[[nodiscard]] std::string powerToggleText(const std::optional<RuntimeStatus>& status);
+/** 暂停或继续按钮与菜单项的名称：连续运行时是“暂停”，否则是“继续”。 */
+[[nodiscard]] std::string pauseToggleText(const std::optional<RuntimeStatus>& status);
+
+/** 开机或断电按钮这次要做的事：断电、上电（已装入的主机）、用已选机型的 BIOS 开机，或不能做。 */
+enum class PowerToggleAction { PowerOff, PowerOn, Boot, None };
+
+/**
+ * 开机或断电按钮这次要做什么。通电时是断电；未通电时按已选机型：整机机型（学习机）已支持并已添加 BIOS 就开机（不需要卡带，当前装的是别的主机也用它重新开机），
+ * 经典 FC 要求已经装入 FC 卡带，有就上电。状态还没读到时不能做。
+ */
+[[nodiscard]] PowerToggleAction powerToggleAction(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine, const std::vector<MachineEntry>& machines);
+
+/** 各控制是否可用；状态还没读到时全部置灰。 */
+[[nodiscard]] contracts::RuntimeControls controlAvailability(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine, const std::vector<MachineEntry>& machines);
+
+/** 是否捕获鼠标：首选项“点击画面捕获鼠标”打开，并且机器现在带鼠标。 */
+[[nodiscard]] bool capturesMouse(bool enabled, const std::optional<RuntimeStatus>& status);
+
+/** “选择机型”里的一个选项。 */
+struct MachineChoice {
+  std::string id;
+  std::string label;
+  /** 不可选的原因；可选时为空。 */
+  std::string hint;
+};
+
+/** “选择机型”的选项：四个整机机型，顺序固定；要程序里有实现并已添加 BIOS 才可选，不可选的注明原因；经典 FC 不在里面。 */
+[[nodiscard]] std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machines);
+
+}  // namespace ember::win32::logic

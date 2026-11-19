@@ -80,6 +80,9 @@ class FramelessFrame {
   /** 系统的窗口合成现在是否开启（Windows 7 的基本主题没有）。 */
   [[nodiscard]] static bool compositionEnabled();
 
+  /** 全屏时没有缩放边框，整个窗口都是客户区。 */
+  void setFullScreen(bool fullScreen) { fullScreen_ = fullScreen; }
+
  private:
   void setSystemButtonState(FrameHit hover, FrameHit pressed);
   [[nodiscard]] unsigned long hitTest(int screenX, int screenY) const;
@@ -91,6 +94,7 @@ class FramelessFrame {
   FrameHit pressed_{FrameHit::Client};
   bool trackingLeave_{false};
   bool lastMaximized_{false};
+  bool fullScreen_{false};
 };
 
 }  // namespace ember::win32::platform

@@ -27,6 +27,8 @@ class Slider : public Widget {
   void setRange(double min, double max);
   /** 设置步长，默认 1。 */
   void setStep(double step);
+  /** 设置宽度（逻辑像素）；0 表示用令牌里的默认宽度（对应页面样式给滑块指定 width 或 flex-basis）。 */
+  void setPreferredWidth(double width);
   /** 设置当前值（按量程与步长取整），不触发 onChange。 */
   void setValue(double value);
   [[nodiscard]] double value() const { return value_; }
@@ -60,6 +62,7 @@ class Slider : public Widget {
   double min_{0};
   double max_{100};
   double step_{1};
+  double preferredWidth_{0};
   double value_{0};
   bool dragging_{false};
   /** 鼠标是否在“输入框”区域上（悬停色只在这里生效）。 */

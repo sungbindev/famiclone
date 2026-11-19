@@ -55,6 +55,12 @@ class Root final : public Host {
   void setInvalidateHandler(std::function<void()> handler) { invalidateHandler_ = std::move(handler); }
 
   /**
+   * 设置弹层盖住的区域变化时的回调（每次绘制后比较）：参数是全部弹层此刻盖住的区域（窗口坐标）；
+   * 窗口借此把压在控件之上的原生子窗口挖掉对应的区域。
+   */
+  void setLayerRectsHandler(std::function<void(const std::vector<Rect>&)> handler) { layerRectsHandler_ = std::move(handler); }
+
+  /**
    * 设置剪贴板的读写函数（UTF-8）；不设置时用系统剪贴板，测试里用内存里的剪贴板代替。
    * @param read 读；没有文字时返回空值。
    * @param write 写。
@@ -183,6 +189,8 @@ class Root final : public Host {
   double scale_;
   Size size_{};
   std::function<void()> invalidateHandler_;
+  std::function<void(const std::vector<Rect>&)> layerRectsHandler_;
+  std::vector<Rect> lastLayerRects_;
   Widget* focus_{nullptr};
   Widget* hover_{nullptr};
   Widget* pressedWidget_{nullptr};

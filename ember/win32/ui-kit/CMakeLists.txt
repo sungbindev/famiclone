@@ -86,6 +86,7 @@ if(EMBER_BUILD_TESTS)
     test/feedback-test.cpp
     test/field-test.cpp
     test/label-test.cpp
+  test/layer-rects-test.cpp
     test/layout-test.cpp
     test/line-editor-test.cpp
     test/list-test.cpp

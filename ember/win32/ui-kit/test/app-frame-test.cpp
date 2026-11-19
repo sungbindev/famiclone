@@ -67,6 +67,20 @@ TEST(AppFrame, LargeStatusBarIsTallerAndTheRegionsFollow) {
   EXPECT_DOUBLE_EQ(s.frame->pageRegion()->bounds().bottom(), 400.0 - 32.0);
 }
 
+TEST(AppFrame, HiddenTitleBarAndStatusBarGiveTheirSpaceToThePage) {
+  Scene s;
+  s.frame->titleBar()->setVisible(false);
+  s.frame->statusBar()->setVisible(false);
+  s.root.layout(kWindow);
+  EXPECT_DOUBLE_EQ(s.frame->pageRegion()->bounds().y, 0.0);
+  EXPECT_DOUBLE_EQ(s.frame->pageRegion()->bounds().bottom(), 400.0);
+  s.frame->titleBar()->setVisible(true);
+  s.frame->statusBar()->setVisible(true);
+  s.root.layout(kWindow);
+  EXPECT_DOUBLE_EQ(s.frame->pageRegion()->bounds().y, 36.0);
+  EXPECT_DOUBLE_EQ(s.frame->pageRegion()->bounds().bottom(), 400.0 - 26.0);
+}
+
 TEST(AppFrame, BottomPanelTakesItsHeightFromThePageAreaWhenOpen) {
   Scene s;
   EXPECT_FALSE(s.frame->bottomRegion()->visible());

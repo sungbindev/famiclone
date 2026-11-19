@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <vector>
@@ -24,6 +25,8 @@ struct FrameImage {
   std::uint32_t height{0};
   /** 帧号：自上电以来完成的帧数。 */
   std::uint64_t number{0};
+  /** 核心送出这一帧的时刻（单调时钟），用来测量画面延迟。 */
+  std::chrono::steady_clock::time_point publishedAt{};
   /** 像素，共 width × height 个。 */
   std::vector<std::uint32_t> pixels;
 };

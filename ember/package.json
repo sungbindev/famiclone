@@ -14,6 +14,7 @@
     "win32:build": "node tools/build/build-win32.mjs",
     "win32:test": "node tools/build/test-win32.mjs",
     "win32:start": "node tools/build/start-win32.mjs",
+    "win32:shaders": "node tools/build/gen-screen-shaders.mjs",
     "win32:check": "node tools/check/check-win32-ui-kit.mjs && node tools/check/check-win32-imports.mjs",
     "win32:reference": "node win32/ui-kit/tools/reference/run-compare.mjs",
     "win32:probe-package": "node tools/build/pack-win32-probe.mjs",

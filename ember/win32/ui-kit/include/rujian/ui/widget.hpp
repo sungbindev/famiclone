@@ -156,6 +156,11 @@ class Widget {
 
   /** 找出点所在的最深处的可见控件，没有则为空。 */
   [[nodiscard]] virtual Widget* hitTest(Point point);
+  /**
+   * 作为弹层显示时实际盖住的区域（窗口坐标，追加到 out）：默认是控件自己；铺满窗口但只有一部分可见的弹层（通知、提示）重写它。
+   * 应用据此把压在窗口上的原生子窗口（如运行画面）挖掉对应区域，弹层才能显示在它之上。
+   */
+  virtual void layerRects(std::vector<Rect>& out) const;
 
   // ---- 事件处理，返回 true 表示已处理 ----
 

@@ -23,6 +23,9 @@
 #include "contracts/logging/error-logger.hpp"
 #include "contracts/shell/file-dialog.hpp"
 #include "contracts/shell/openable-directory.hpp"
+#include "contracts/shell/request-broker.hpp"
+#include "contracts/shell/shell-model.hpp"
+#include "contracts/shell/shell-state-service.hpp"
 #include "contracts/system/app-updater.hpp"
 #include "contracts/system/help-viewer.hpp"
 
@@ -178,6 +181,99 @@ class FakeHelp : public contracts::HelpViewer {
     pages.push_back(page);
     return error;
   }
+};
+
+/** 假的界面状态服务：只在内存里，记下保存次数。 */
+class FakeShellState : public contracts::ShellStateService {
+ public:
+  shared::ShellState state;
+  int layoutUpdates{0};
+
+  [[nodiscard]] const shared::ShellState& get() const override { return state; }
+  void updateLayout(const shared::ShellLayout& layout) override {
+    state.layout = layout;
+    ++layoutUpdates;
+  }
+  void updateWindow(const shared::WindowPlacement& placement) override { state.window = placement; }
+  void updateReleaseNotesVersion(const std::string& version) override { state.releaseNotesVersion = version; }
+  void flush() override {}
+};
+
+/** 假的拖入文件服务：按路径的文件名登记，编号从一开始；路径含 unreadable 的不登记。 */
+class FakeDroppedFiles : public contracts::DroppedFilesService {
+ public:
+  std::map<std::int64_t, std::string> paths;
+
+  [[nodiscard]] std::vector<contracts::DroppedFile> registerFiles(const std::vector<std::string>& files) override {
+    std::vector<contracts::DroppedFile> result;
+    for (const auto& path : files) {
+      if (path.find("unreadable") != std::string::npos) continue;
+      const std::int64_t id = static_cast<std::int64_t>(paths.size()) + 1;
+      paths[id] = path;
+      const std::size_t slash = path.find_last_of("\\/");
+      result.push_back({id, slash == std::string::npos ? path : path.substr(slash + 1)});
+    }
+    return result;
+  }
+  [[nodiscard]] std::optional<std::string> resolve(std::int64_t id) const override {
+    const auto found = paths.find(id);
+    return found == paths.end() ? std::nullopt : std::optional<std::string>(found->second);
+  }
+};
+
+/** 假的窗口控制：记下调用。 */
+class FakeShellWindow : public contracts::ShellWindowControl {
+ public:
+  int fullScreenToggles{0};
+  int topmostToggles{0};
+  int quits{0};
+
+  void toggleFullScreen() override { ++fullScreenToggles; }
+  void toggleAlwaysOnTop() override { ++topmostToggles; }
+  void quit() override { ++quits; }
+};
+
+/** 假的对话框打开者与通知发出者：记下调用。 */
+class FakeShellDialogs : public contracts::ShellDialogOpener {
+ public:
+  std::vector<std::string> opened;
+
+  void openDialog(const std::string& dialogId) override { opened.push_back(dialogId); }
+};
+
+class FakeNotifier : public contracts::ShellNotifier {
+ public:
+  std::vector<std::pair<std::string, contracts::NotificationLevel>> notices;
+
+  void notify(const std::string& text, contracts::NotificationLevel level) override { notices.emplace_back(text, level); }
+};
+
+/** 假的请求中转：请求都交给假核心网关（主进程处理的请求也在它的 replies 里设回复）。 */
+class FakeBroker : public contracts::RequestBroker {
+ public:
+  explicit FakeBroker(FakeCoreGateway& gateway) : gateway_(gateway) {}
+
+  void request(const std::string& name, nlohmann::json params, contracts::CoreReplyHandler done) override { gateway_.request(name, std::move(params), std::move(done)); }
+
+ private:
+  FakeCoreGateway& gateway_;
+};
+
+/** 假的外壳接口：记下通知与刷新次数，其余调用只计数。 */
+class FakeShellApi : public contracts::ShellApi {
+ public:
+  std::vector<std::pair<std::string, contracts::NotificationLevel>> notices;
+  int refreshes{0};
+  std::vector<std::string> commands;
+
+  void openDialog(const std::string&) override {}
+  void togglePanel(const std::string&) override {}
+  void toggleFullScreen() override {}
+  void toggleAlwaysOnTop() override {}
+  void quit() override {}
+  void runCommand(const std::string& commandId) override { commands.push_back(commandId); }
+  void refreshCommands() override { ++refreshes; }
+  void notify(const std::string& text, contracts::NotificationLevel level) override { notices.emplace_back(text, level); }
 };
 
 }  // namespace ember::win32::test

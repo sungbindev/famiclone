@@ -119,12 +119,13 @@ void AppFrame::arrange(const Rect& bounds) {
   Widget::arrange(bounds);
   double top = bounds.y;
   double bottom = bounds.bottom();
-  if (titleBar_ != nullptr) {
+  // 标题栏与状态栏隐藏时（全屏）不占位
+  if (titleBar_ != nullptr && titleBar_->visible()) {
     const double height = titleBar_->measure(Size{bounds.width, 0}).height;
     titleBar_->arrange(Rect{bounds.x, top, bounds.width, height});
     top += height;
   }
-  if (statusBar_ != nullptr) {
+  if (statusBar_ != nullptr && statusBar_->visible()) {
     const double height = statusBar_->measure(Size{bounds.width, 0}).height;
     bottom -= height;
     statusBar_->arrange(Rect{bounds.x, bottom, bounds.width, height});

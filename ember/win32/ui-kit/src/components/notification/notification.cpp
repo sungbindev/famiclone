@@ -516,6 +516,14 @@ Rect NotificationCenter::panelRect() const { return open_ && panel_ != nullptr ?
 
 Rect NotificationCenter::toastRect(std::size_t index) const { return index < toastWidgets_.size() ? toastWidgets_[index]->bounds() : Rect{}; }
 
+void NotificationCenter::layerRects(std::vector<Rect>& out) const {
+  for (const Widget* toast : toastWidgets_) {
+    if (toast->visible() && toast->bounds().width > 0 && toast->bounds().height > 0) out.push_back(toast->bounds());
+  }
+  const Rect panel = panelRect();
+  if (panel.width > 0 && panel.height > 0) out.push_back(panel);
+}
+
 std::size_t NotificationCenter::rowCount() const {
   const auto* panel = dynamic_cast<const NoticePanel*>(panel_);
   return panel != nullptr ? panel->rowTotal() : 0;

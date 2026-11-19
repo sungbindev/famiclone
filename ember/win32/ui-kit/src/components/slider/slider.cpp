@@ -64,7 +64,13 @@ double Slider::normalize(double value) const {
 
 double Slider::ratio() const { return max_ > min_ ? std::clamp((value_ - min_) / (max_ - min_), 0.0, 1.0) : 0.0; }
 
-Size Slider::measure(Size /*available*/) { return Size{tokens::slider_width, tokens::slider_height}; }
+Size Slider::measure(Size /*available*/) { return Size{preferredWidth_ > 0 ? preferredWidth_ : tokens::slider_width, tokens::slider_height}; }
+
+void Slider::setPreferredWidth(double width) {
+  if (preferredWidth_ == width) return;
+  preferredWidth_ = width;
+  invalidate();
+}
 
 Rect Slider::fieldRect() const {
   const Rect box = bounds();

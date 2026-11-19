@@ -134,6 +134,14 @@ void Tooltip::hideTooltip() {
   if (host() != nullptr) root_.hideLayer(this);
 }
 
+void Tooltip::layerRects(std::vector<Rect>& out) const {
+  if (!shown_) return;
+  // 角标伸出提示框的左右两侧，一并算上
+  constexpr double kArrowReach = 10;
+  const Rect box = bounds();
+  out.push_back(Rect{box.x - kArrowReach, box.y, box.width + 2 * kArrowReach, box.height});
+}
+
 void Tooltip::paintArrow(Canvas& canvas) const {
   const auto& colors = themeTokens(host()->theme());
   const Rect box = bounds();

@@ -39,6 +39,8 @@ class Tooltip final : public Widget, public TooltipPresenter {
   [[nodiscard]] double arrowY() const { return arrowY_; }
 
   [[nodiscard]] Widget* hitTest(Point /*point*/) override { return nullptr; }
+  /** 提示盖住的区域是提示框加上两侧角标伸出的一点；没显示时没有。 */
+  void layerRects(std::vector<Rect>& out) const override;
   void paint(Canvas& canvas) override;
 
  private:

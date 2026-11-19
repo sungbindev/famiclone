@@ -475,6 +475,8 @@ const APP_SYSTEM_HEADERS = new Set([
   'uxtheme.h',
   'imm.h',
   'd2d1.h',
+  'd3d11.h',
+  'dxgi.h',
   'dwrite.h',
   'wrl/client.h'
 ]);

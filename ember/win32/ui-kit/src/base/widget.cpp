@@ -105,6 +105,10 @@ Widget* Widget::hitTest(Point point) {
   return this;
 }
 
+void Widget::layerRects(std::vector<Rect>& out) const {
+  if (visible_ && bounds_.width > 0 && bounds_.height > 0) out.push_back(bounds_);
+}
+
 bool Widget::onMouseDown(const MouseEvent& /*event*/) { return false; }
 bool Widget::onMouseUp(const MouseEvent& /*event*/) { return false; }
 bool Widget::onMouseMove(const MouseEvent& /*event*/) { return false; }

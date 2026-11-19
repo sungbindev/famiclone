@@ -93,6 +93,8 @@ class NotificationCenter final : public Widget {
   [[nodiscard]] Rect rowRect(std::size_t index) const;
 
   [[nodiscard]] Widget* hitTest(Point point) override;
+  /** 只有弹出的通知与打开的面板盖住窗口，其余位置是透明的。 */
+  void layerRects(std::vector<Rect>& out) const override;
   [[nodiscard]] Size measure(Size available) override;
   void arrange(const Rect& bounds) override;
   void onTimer(unsigned id) override;

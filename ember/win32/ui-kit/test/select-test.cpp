@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "base/theme-tokens.hpp"
 #include "rujian/ui/root.hpp"
 #include "rujian/ui/select.hpp"
 
@@ -231,6 +232,22 @@ TEST(Select, PopupOpensBelowWhenThereIsRoomAndAboveWhenThereIsNot) {
   above.click(above.triggerCenter());
   ASSERT_TRUE(above.select->open());
   EXPECT_LT(above.select->optionRect(2)->bottom(), above.select->bounds().y);
+}
+
+TEST(Select, PopupGrowsToFitTheWidestOptionSoItsTextIsNotTruncated) {
+  Scene s;
+  const std::string wide = "一个相当长的选项文字";
+  s.select->setOptions({{"a", wide}, {"b", "短"}});
+  s.select->setValue("b");
+  s.click(s.triggerCenter());
+  const Rect row = *s.select->optionRect(0);
+  TextStyle style;
+  style.fontSize = tokens::select_font_size;
+  style.lineHeight = 0;
+  const double textWidth = s.root.measureText(wide, style, 0).width;
+  // 选项行里文字可用的宽度 = 行宽 - 左右内边距 - 对勾列
+  const double available = row.width - 2 * tokens::select_option_padding_x - (tokens::select_option_mark_size + tokens::select_option_mark_gap);
+  EXPECT_GE(available, textWidth - 0.01);
 }
 
 TEST(Select, PopupIsAtLeastAsWideAsTheTrigger) {

@@ -173,7 +173,7 @@ Size SplitView::measure(Size available) {
 }
 
 void SplitView::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   const double border = snapBorderWidth(kBorderWidth, host()->scale());
   sideScroll_->arrange(Rect{bounds.x, bounds.y, sideWidth_ - border, bounds.height});
   // 分隔条宽 4，两侧各 -2 的外边距，所以中心正好在左栏的右边缘

@@ -53,7 +53,7 @@ Size State::measure(Size available) {
 }
 
 void State::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   const double width = std::max(0.0, bounds.width - textOffset());
   text_->arrange(Rect{bounds.x + textOffset(), bounds.y, width, text_->measure(Size{width, 0}).height});
 }

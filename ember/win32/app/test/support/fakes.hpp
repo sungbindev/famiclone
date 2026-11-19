@@ -265,8 +265,9 @@ class FakeShellApi : public contracts::ShellApi {
   std::vector<std::pair<std::string, contracts::NotificationLevel>> notices;
   int refreshes{0};
   std::vector<std::string> commands;
+  std::vector<std::string> dialogs;
 
-  void openDialog(const std::string&) override {}
+  void openDialog(const std::string& dialogId) override { dialogs.push_back(dialogId); }
   void togglePanel(const std::string&) override {}
   void toggleFullScreen() override {}
   void toggleAlwaysOnTop() override {}

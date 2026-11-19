@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "rujian/ui/button.hpp"
+#include "rujian/ui/layout.hpp"
 #include "rujian/ui/root.hpp"
 
 using rujian::ui::Button;
@@ -78,6 +79,27 @@ struct Fixture {
 };
 
 }  // namespace
+
+TEST(Root, RequestLayoutArrangesTheWholeTreeAgainAndIsHarmlessBeforeAttaching) {
+  Root root{ThemeName::Dark, 1.0};
+  auto row = std::make_unique<rujian::ui::Row>();
+  auto first = std::make_unique<Button>("甲");
+  auto second = std::make_unique<Button>("乙");
+  Button* firstPointer = first.get();
+  Button* secondPointer = second.get();
+  row->addChild(std::move(first));
+  row->addChild(std::move(second));
+  root.setContent(std::move(row));
+  root.layout(Size{200, 22});
+  const double before = secondPointer->bounds().x;
+  firstPointer->setVisible(false);
+  // 只改可见性不会自己重新布局
+  EXPECT_DOUBLE_EQ(secondPointer->bounds().x, before);
+  secondPointer->requestLayout();
+  EXPECT_LT(secondPointer->bounds().x, before);
+  Button detached("丙");
+  detached.requestLayout();
+}
 
 TEST(Root, HoverMarksTargetAndAncestorsAndClearsOnLeave) {
   Fixture f;

@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "bootstrap/dialog-host.hpp"
 #include "bootstrap/resource-locations.hpp"
 #include "entry/cartridges/cartridge-handlers.hpp"
 #include "entry/machines/machine-handlers.hpp"
@@ -36,6 +37,7 @@
 #include "infra/core-client/in-process-core-gateway.hpp"
 #include "infra/core-client/latest-frame-slot.hpp"
 #include "infra/dialogs/remembering-file-dialog.hpp"
+#include "infra/input/xinput-gamepad-reader.hpp"
 #include "infra/directories/explorer-directory.hpp"
 #include "infra/display/screen-host-adapter.hpp"
 #include "infra/dropped-files/memory-dropped-files-service.hpp"
@@ -50,6 +52,11 @@
 #include "logic/input/input-controller.hpp"
 #include "logic/media/media-controller.hpp"
 #include "logic/media/media-module.hpp"
+#include "logic/input/gamepad-settings-controller.hpp"
+#include "logic/input/input-module.hpp"
+#include "logic/preferences/bios-controller.hpp"
+#include "logic/preferences/preferences-controller.hpp"
+#include "logic/preferences/preferences-module.hpp"
 #include "logic/runtime/runtime-controller.hpp"
 #include "logic/runtime/runtime-module.hpp"
 #include "logic/shell/shell-controller.hpp"
@@ -73,6 +80,8 @@
 #include "shared/preferences/allow-multiple-instances.hpp"
 #include "shared/shortcut/shortcut.hpp"
 #include "ui/media/media-panel-content.hpp"
+#include "ui/input/gamepad-settings-content.hpp"
+#include "ui/preferences/preferences-content.hpp"
 #include "ui/runtime/runtime-panel-content.hpp"
 #include "ui/runtime/screen-widget.hpp"
 #include "ui/shell/app-logo.hpp"
@@ -171,12 +180,6 @@ class ForwardingNotifier final : public contracts::ShellNotifier {
   }
 };
 
-/** 对话框：阶段 7 没有登记任何对话框，对话框窗口随后续阶段加入。 */
-class NoDialogs final : public contracts::ShellDialogOpener {
- public:
-  void openDialog(const std::string& /*dialogId*/) override {}
-};
-
 /** 当前的修饰键（Ctrl、Shift、Alt）。 */
 unsigned currentModifiers() {
   unsigned modifiers = 0;
@@ -256,11 +259,23 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::InputController input(core);
     logic::RuntimeController runtime(router, core, shellState);
     logic::MediaController media(router, core);
+    logic::PreferencesController preferencesController(router, core);
+    logic::BiosController biosController(router, core);
+    infra::XInputGamepadReader gamepadReader;
+    logic::GamepadSettingsController gamepadSettings(router, core, gamepadReader);
     logic::DebugController debug(router, core);
     ForwardingWindowControl windowControl;
     ForwardingNotifier notifier;
-    NoDialogs dialogs;
-    logic::ShellController shell(logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug)}), windowControl, dialogs, notifier, shellState, droppedFiles);
+    // 边框与阴影：Windows 11 用系统的（圆角、阴影、边框色由 DWM 画），其余系统自绘；环境变量 EMBER_WIN_FRAME=custom 或 system 可以强制选择（开发期验证用）；主窗口与对话框窗口用同一种
+    const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
+    const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
+    DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
+    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, biosController), logic::createInputModule(gamepadSettings)});
+    dialogs.setDefinitions(registry.dialogs);
+    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &biosController] { return std::make_unique<ui::PreferencesContent>(preferencesController, biosController); }, true);
+    dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
+    dialogs.setKeyCapture(logic::kGamepadSettingsDialogId, [&gamepadSettings](const std::string& code) { return gamepadSettings.keyPressed(code); });
+    logic::ShellController shell(std::move(registry), windowControl, dialogs, notifier, shellState, droppedFiles);
     std::optional<infra::ScreenHostAdapter> screenHost;
     platform::WindowModes* modes = nullptr;
     ui::ShellView* shellView = nullptr;
@@ -276,9 +291,6 @@ int runApplication(const shared::LaunchArguments& launch) {
     window.root().setContent(std::move(content));
     // 标题栏左边的应用标志：可执行文件自带的图标，与 Electron 外壳是同一张图
     view->titleBar().setLogo(std::make_unique<ui::AppLogo>(platform::renderAppIcon));
-    // 边框与阴影：Windows 11 用系统的（圆角、阴影、边框色由 DWM 画），其余系统自绘；环境变量 EMBER_WIN_FRAME=custom 或 system 可以强制选择（开发期验证用）
-    const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
-    const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
     view->setBorderVisible(customFrame || !platform::FramelessFrame::compositionEnabled());
 
     platform::FramelessFrame* framePointer = nullptr;
@@ -289,6 +301,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     };
     const auto applyTheme = [&] {
       window.root().setTheme(resolveTheme(themeSource));
+      dialogs.setTheme(resolveTheme(themeSource));
       applyBorderColor();
     };
 

@@ -83,9 +83,9 @@ export function debugCall(app, method, ...params) {
   return JSON.parse(output);
 }
 
-/** 删除实例的临时用户数据目录。 */
+/** 删除实例的临时用户数据目录；进程刚结束时文件句柄可能还没释放，所以失败后重试。 */
 export function removeUserData(app) {
-  rmSync(app.userData, { recursive: true, force: true });
+  rmSync(app.userData, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
 }
 
 /** 驱动脚本的 PowerShell 部分（只含 ASCII，经 -EncodedCommand 传入，避开脚本文件的编码问题）。 */
@@ -99,7 +99,18 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 public class W32 {
+  public delegate bool EnumProc(IntPtr h, IntPtr p);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr p);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern int GetWindowTextLengthW(IntPtr h);
+  [DllImport("user32.dll")] public static extern uint MapVirtualKeyW(uint code, uint type);
+  public static IntPtr Dialog(uint pid, IntPtr main) {
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((h, p) => { uint id; GetWindowThreadProcessId(h, out id); if (id == pid && h != main && IsWindowVisible(h) && GetWindowTextLengthW(h) > 0) { found = h; return false; } return true; }, IntPtr.Zero);
+    return found;
+  }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
@@ -131,24 +142,36 @@ public class W32 {
 $proc = Get-Process -Id $ProcessIdValue
 $h = $proc.MainWindowHandle
 if ($h -eq [IntPtr]::Zero) { Write-Output 'RESULT error no-window'; exit 0 }
-# 先直接把窗口提到前台；失败时按一下 Alt 取得权限再试（Alt 会被应用当成菜单键，所以不要每次都按）
-[void][W32]::SetForegroundWindow($h)
+# 先直接把窗口提到前台；有对话框时提的是对话框（主窗口被它禁用）；失败时按一下 Alt 取得权限再试（Alt 会被应用当成菜单键，所以不要每次都按）
+$target = [W32]::Dialog([uint32]$proc.Id, $h)
+if ($target -eq [IntPtr]::Zero) { $target = $h }
+[void][W32]::SetForegroundWindow($target)
 Start-Sleep -Milliseconds 300
-if ([W32]::GetForegroundWindow() -ne $h) {
+if ([W32]::GetForegroundWindow() -ne $target) {
   [W32]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [W32]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
-  [void][W32]::SetForegroundWindow($h)
+  [void][W32]::SetForegroundWindow($target)
   Start-Sleep -Milliseconds 300
 }
-Write-Output ('RESULT foreground ' + ([W32]::GetForegroundWindow() -eq $h))
-$vk = @{ F7=0x76; F8=0x77; F9=0x78; F11=0x7A; ESC=0x1B; ENTER=0x0D }
+Write-Output ('RESULT foreground ' + ([W32]::GetForegroundWindow() -eq $target))
+$vk = @{ F7=0x76; F8=0x77; F9=0x78; F11=0x7A; ESC=0x1B; ENTER=0x0D; DOWN=0x28; UP=0x26; COMMA=0xBC; CTRL=0x11; ALT=0x12; SHIFT=0x10 }
+function Press($code, $mods) {
+  foreach ($m in $mods) { [W32]::keybd_event([byte]$vk[$m], 0, 0, [UIntPtr]::Zero) }
+  $scan = [byte][W32]::MapVirtualKeyW([uint32]$code, 0)
+  [W32]::keybd_event([byte]$code, $scan, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 60
+  [W32]::keybd_event([byte]$code, $scan, 2, [UIntPtr]::Zero)
+  foreach ($m in $mods) { [W32]::keybd_event([byte]$vk[$m], 0, 2, [UIntPtr]::Zero) }
+}
+$dlg = [IntPtr]::Zero
+$dlgWidth = 720.0
 function Get-Rect { $r = New-Object W32+RECT; [void][W32]::GetWindowRect($h, [ref]$r); $r }
 function Get-Scale { $r = Get-Rect; ($r.Right - $r.Left) / ${WINDOW_LOGICAL.width} }
 `;
 
 /**
  * 在窗口上依次执行步骤，返回每个 RESULT 行解析成的对象。
- * 步骤写法（坐标是窗口的逻辑像素）：click:x:y、move:x:y、key:名称（F7、F8、F9、F11、ESC、ENTER）、wait:毫秒、
- * count:名称:x1:y1:x2:y2（统计区域里的亮像素数）、style:名称（读窗口的置顶状态、宽高与位置）、close（正常关闭窗口）。
+ * 步骤写法（坐标是窗口的逻辑像素）：click:x:y、move:x:y、key:名称（F7、F8、F9、F11、ESC、ENTER、UP、DOWN）、chord:修饰键:名称（如 chord:CTRL:COMMA）、type:文字（逐个字母按键）、wait:毫秒、
+ * count:名称:x1:y1:x2:y2（统计区域里的亮像素数）、style:名称（读窗口的置顶状态、宽高与位置）、close（正常关闭窗口）；
+ * 对话框：dlgfind:名称（找本进程的对话框并返回是否找到）、dlgwidth:逻辑宽度（告诉脚本对话框的逻辑宽度，用来换算缩放）、dclick:x:y（点对话框里的位置，逻辑像素）、dlgvisible:名称。
  * @param {number} pid 进程号。
  * @param {string[]} steps 步骤。
  * @returns {Map<string, string>} 名称对应的结果文字。
@@ -181,6 +204,16 @@ foreach ($step in $steps) {
       Write-Output ('RESULT ' + $p[1] + ' ' + $top + ' ' + ($r.Right - $r.Left) + ' ' + ($r.Bottom - $r.Top) + ' ' + $r.Left + ' ' + $r.Top)
     }
     'close' { [void]$proc.CloseMainWindow() }
+    'chord' { Press $vk[$p[2].ToUpper()] @($p[1].ToUpper().Split('+')) }
+    'type' { foreach ($c in $p[1].ToCharArray()) { Press ([int][char]::ToUpper($c)) @(); Start-Sleep -Milliseconds 40 } }
+    'dlgwidth' { $dlgWidth = [double]$p[1] }
+    'dlgfind' { $dlg = [W32]::Dialog([uint32]$proc.Id, $h); Write-Output ('RESULT ' + $p[1] + ' ' + ($dlg -ne [IntPtr]::Zero)) }
+    'dlgvisible' { Write-Output ('RESULT ' + $p[1] + ' ' + (($dlg -ne [IntPtr]::Zero) -and [W32]::IsWindowVisible($dlg))) }
+    'dclick' {
+      $dr = New-Object W32+RECT; [void][W32]::GetWindowRect($dlg, [ref]$dr)
+      $ds = ($dr.Right - $dr.Left) / $dlgWidth
+      [void][W32]::SetCursorPos($dr.Left + [int]([double]$p[1] * $ds), $dr.Top + [int]([double]$p[2] * $ds)); Start-Sleep -Milliseconds 80; [W32]::mouse_event(2,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 60; [W32]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+    }
     'shot' {
       $r = Get-Rect; $w = $r.Right - $r.Left; $hgt = $r.Bottom - $r.Top
       $bmp = New-Object System.Drawing.Bitmap $w, $hgt

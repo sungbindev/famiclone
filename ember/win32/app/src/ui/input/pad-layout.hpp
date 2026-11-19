@@ -1,0 +1,22 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：pad-layout.hpp
+ * 说明：手柄图的版面：画布尺寸，手柄外形与十字键中心的位置，以及 10 个键各自在图上的位置与大小。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-20
+ * 备注：对应 Electron 外壳 src/ui/input 的 pad-layout.ts，数值相同；坐标与尺寸用设计单位（画布 560x220），控件按宽度等比缩放；
+ *       十字键的四个方向是四个相邻的矩形，中间那块只是装饰；方向键、选择与开始键是矩形，A、B 与连发键是圆形。
+ * ------------------------------------------------------------------------
+ */
+
+#pragma once
+
+#include "rujian/ui/pad-diagram.hpp"
+
+namespace ember::win32::ui {
+
+/** 手柄图的版面。 */
+[[nodiscard]] rujian::ui::PadDiagramLayout padLayout();
+
+}  // namespace ember::win32::ui

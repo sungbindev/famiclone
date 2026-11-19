@@ -159,6 +159,17 @@ Microsoft::WRL::ComPtr<IDWriteTextLayout> TextEngine::createLayout(std::u16strin
 TextMetrics TextEngine::measure(std::string_view utf8, const TextStyle& style, double maxWidth) { return measure(std::u16string_view(toUtf16(utf8)), style, maxWidth); }
 
 TextMetrics TextEngine::measure(std::u16string_view utf16, const TextStyle& style, double maxWidth) {
+  // 缓存条目很少超过几百个（界面上的文字不多）；输入框里的文字每敲一个字都是新的键，超过上限就整个清空
+  constexpr std::size_t kMaxCachedMeasures = 4096;
+  const MeasureKey key{std::u16string(utf16), style.fontSize, style.fontWeight, style.lineHeight, static_cast<int>(style.align), static_cast<int>(style.overflow), style.wrap, style.underline, static_cast<int>(style.face), style.letterSpacing, maxWidth, scale_};
+  if (const auto found = measureCache_.find(key); found != measureCache_.end()) return found->second;
+  const TextMetrics result = measureUncached(utf16, style, maxWidth);
+  if (measureCache_.size() >= kMaxCachedMeasures) measureCache_.clear();
+  measureCache_.emplace(key, result);
+  return result;
+}
+
+TextMetrics TextEngine::measureUncached(std::u16string_view utf16, const TextStyle& style, double maxWidth) {
   const auto layout = createLayout(utf16, style, maxWidth, 0);
   if (!layout) return {};
   DWRITE_TEXT_METRICS metrics{};

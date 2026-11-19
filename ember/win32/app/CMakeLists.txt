@@ -13,6 +13,7 @@ add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
 
 add_library(ember_app STATIC
   src/bootstrap/application.cpp
+  src/bootstrap/dialog-host.cpp
   src/bootstrap/resource-locations.cpp
   src/entry/cartridges/cartridge-handlers.cpp
   src/entry/machines/machine-handlers.cpp
@@ -33,13 +34,21 @@ add_library(ember_app STATIC
   src/infra/last-directories/file-last-directories-service.cpp
   src/infra/recent-cartridges/file-recent-cartridges-service.cpp
   src/infra/shell-state/file-shell-state-service.cpp
+  src/infra/input/xinput-gamepad-reader.cpp
   src/logic/debug/debug-controller.cpp
   src/logic/debug/debug-module.cpp
   src/logic/debug/debug-rules.cpp
+  src/logic/input/gamepad-settings-controller.cpp
   src/logic/input/input-controller.cpp
+  src/logic/input/input-module.cpp
+  src/logic/input/pad-rules.cpp
   src/logic/media/media-controller.cpp
   src/logic/media/media-module.cpp
   src/logic/media/media-rules.cpp
+  src/logic/preferences/bios-controller.cpp
+  src/logic/preferences/preferences-controller.cpp
+  src/logic/preferences/preferences-module.cpp
+  src/logic/preferences/preferences-rules.cpp
   src/logic/runtime/runtime-controller.cpp
   src/logic/runtime/runtime-module.cpp
   src/logic/runtime/runtime-rules.cpp
@@ -63,6 +72,7 @@ add_library(ember_app STATIC
   src/platform/theme/system-theme.cpp
   src/platform/threading/ui-thread.cpp
   src/platform/window/app-icon.cpp
+  src/platform/window/dialog-window.cpp
   src/platform/window/frameless-frame.cpp
   src/platform/window/window-modes.cpp
   src/platform/window/window-placement.cpp
@@ -78,6 +88,9 @@ add_library(ember_app STATIC
   src/shared/shortcut/shortcut.cpp
   src/shared/window/window-shadow-image.cpp
   src/ui/media/media-panel-content.cpp
+  src/ui/input/gamepad-settings-content.cpp
+  src/ui/input/pad-layout.cpp
+  src/ui/preferences/preferences-content.cpp
   src/ui/runtime/runtime-panel-content.cpp
   src/ui/runtime/screen-overlay-view.cpp
   src/ui/runtime/screen-widget.cpp
@@ -104,13 +117,18 @@ target_link_libraries(ember_win PRIVATE ember_app)
 if(EMBER_BUILD_TESTS)
   add_executable(ember_app_tests
     test/debug-logic-test.cpp
+    test/dialog-test.cpp
     test/display-test.cpp
+    test/gamepad-settings-content-test.cpp
+    test/gamepad-settings-logic-test.cpp
     test/infra-test.cpp
     test/launch-args-test.cpp
     test/main-request-test.cpp
     test/media-logic-test.cpp
     test/media-panel-test.cpp
     test/platform-test.cpp
+    test/preferences-logic-test.cpp
+    test/preferences-content-test.cpp
     test/runtime-logic-test.cpp
     test/screen-test.cpp
     test/shared-rules-test.cpp

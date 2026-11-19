@@ -40,6 +40,9 @@ class Host {
   /** 请求重绘。 */
   virtual void invalidate() = 0;
 
+  /** 请求重新布局：控件的内容、结构或可见性变化后，按当前窗口大小重新度量与摆放整棵控件树。 */
+  virtual void requestLayout() = 0;
+
   /** 度量文字（UTF-8）；maxWidth 为 0 表示不限宽度。 */
   [[nodiscard]] virtual TextMetrics measureText(std::string_view text, const TextStyle& style, double maxWidth) = 0;
 

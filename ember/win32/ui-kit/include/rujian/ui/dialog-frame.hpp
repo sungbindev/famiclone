@@ -60,6 +60,8 @@ class DialogFrame : public Widget {
   void setTitle(std::string title);
   /** 设置正文（放在滚动区域里，四周留 10 像素的内边距）；空表示没有正文。 */
   void setContent(std::unique_ptr<Widget> content);
+  /** 正文是否铺满正文区（减去四周的内边距），默认否：铺满时正文自己负责滚动，对话框不滚动；在 setContent 之前调用。 */
+  void setContentFill(bool fill) { contentFill_ = fill; }
   [[nodiscard]] Widget* content() const { return content_; }
   /** 设置按钮区的按钮；空表示没有按钮区。 */
   void setButtons(std::vector<DialogButton> buttons);
@@ -114,6 +116,7 @@ class DialogFrame : public Widget {
   Widget* close_{nullptr};
   bool maximizable_{false};
   bool closable_{true};
+  bool contentFill_{false};
   bool maximized_{false};
   bool windowActive_{true};
   std::function<void(const std::string&)> onButton_;

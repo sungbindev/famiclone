@@ -72,7 +72,7 @@ Size Callout::measure(Size available) {
 }
 
 void Callout::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   const double border = borderWidth();
   const double left = bounds.x + border + tokens::callout_padding_x;
   const double innerWidth = std::max(0.0, bounds.width - 2 * border - 2 * tokens::callout_padding_x);

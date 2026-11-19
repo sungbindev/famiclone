@@ -75,7 +75,7 @@ Size List::measure(Size available) {
 }
 
 void List::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   double y = bounds.y;
   bool first = true;
   for (ListRow* row : rows()) {

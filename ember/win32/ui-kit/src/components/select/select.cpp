@@ -90,11 +90,11 @@ class SelectRows final : public Widget {
 
   [[nodiscard]] double rowHeight() const { return 2 * tokens::select_option_padding_y + host()->measureText("A", rowStyle(kTransparent), 0).height; }
 
-  /** 内容宽度：最宽的选项文字加上内边距。 */
+  /** 内容宽度：最宽的选项文字加上内边距（选项左右各一份）。 */
   [[nodiscard]] double naturalWidth() const {
     double widest = 0;
     for (const Select::Entry& entry : entries_) widest = std::max(widest, host()->measureText(entry.label, rowStyle(kTransparent), 0).width);
-    return widest + textInset() + tokens::select_option_padding_x + 2 * tokens::select_popup_padding;
+    return widest + textInset() + 2 * tokens::select_option_padding_x + 2 * tokens::select_popup_padding;
   }
 
   [[nodiscard]] Size measure(Size available) override {

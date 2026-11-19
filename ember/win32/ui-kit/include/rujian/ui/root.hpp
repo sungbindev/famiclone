@@ -137,6 +137,7 @@ class Root final : public Host {
   [[nodiscard]] ThemeName theme() const override { return theme_; }
   [[nodiscard]] double scale() const override { return scale_; }
   void invalidate() override;
+  void requestLayout() override { layout(size_); }
   [[nodiscard]] TextMetrics measureText(std::string_view text, const TextStyle& style, double maxWidth) override;
   [[nodiscard]] TextMetrics measureText16(std::u16string_view text, const TextStyle& style, double maxWidth) override;
   [[nodiscard]] double caretOffset(std::u16string_view text, const TextStyle& style, std::size_t index) override;

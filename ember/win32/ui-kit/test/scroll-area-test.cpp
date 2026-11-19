@@ -99,6 +99,18 @@ TEST(ScrollArea, ContentThatFitsDoesNotScrollAndLeavesTheWheelToParents) {
   EXPECT_DOUBLE_EQ(s.area->sliderRect().height, 0);
 }
 
+TEST(ScrollArea, FitContentMakesTheContentExactlyAsHighAsTheViewportAndNeverScrolls) {
+  Scene s;
+  s.area->setFitContent(true);
+  s.root.layout(Size{200, 201});
+  EXPECT_DOUBLE_EQ(s.area->content()->bounds().height, 100);
+  EXPECT_DOUBLE_EQ(s.area->maxScrollTop(), 0);
+  s.root.mouseWheel(Point{50, 50}, -1.0, 0);
+  EXPECT_DOUBLE_EQ(s.area->scrollTop(), 0);
+  // 自然高度不变
+  EXPECT_DOUBLE_EQ(s.area->measure(Size{100, 0}).height, 100);
+}
+
 TEST(ScrollArea, SliderLengthAndPositionFollowTheScrollPosition) {
   Scene s;
   Rect slider = s.area->sliderRect();

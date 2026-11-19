@@ -25,6 +25,27 @@ constexpr int kVirtualKeyReturn = 0x0D;
 constexpr int kVirtualKeyEscape = 0x1B;
 constexpr int kVirtualKeySpace = 0x20;
 
+/** 铺满正文区的正文包装：四周留正文内边距，正文自己占满剩下的区域（对应网页版正文元素的 height: 100%）。 */
+class FillBody final : public Widget {
+ public:
+  explicit FillBody(std::unique_ptr<Widget> content) { content_ = addChild(std::move(content)); }
+
+  [[nodiscard]] Widget* content() const { return content_; }
+
+  [[nodiscard]] Size measure(Size available) override {
+    const double inner = std::max(0.0, available.width - 2 * tokens::space_page);
+    return Size{available.width, content_->measure(Size{inner, 0}).height + 2 * tokens::space_page};
+  }
+
+  void arrange(const Rect& bounds) override {
+    setBounds(bounds);
+    content_->arrange(Rect{bounds.x + tokens::space_page, bounds.y + tokens::space_page, std::max(0.0, bounds.width - 2 * tokens::space_page), std::max(0.0, bounds.height - 2 * tokens::space_page)});
+  }
+
+ private:
+  Widget* content_{nullptr};
+};
+
 /** 标题栏里最大化与关闭的小方块按钮。 */
 class DialogControl final : public Widget {
  public:
@@ -121,6 +142,15 @@ void DialogFrame::setContent(std::unique_ptr<Widget> content) {
   wrapper_ = nullptr;
   if (!content) {
     scroll_->setContent(nullptr);
+    return;
+  }
+  scroll_->setFitContent(contentFill_);
+  if (contentFill_) {
+    auto body = std::make_unique<FillBody>(std::move(content));
+    content_ = body->content();
+    wrapper_ = body.get();
+    scroll_->setContent(std::move(body));
+    invalidate();
     return;
   }
   auto wrapper = std::make_unique<Stack>();

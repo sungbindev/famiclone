@@ -78,6 +78,10 @@ void Widget::invalidate() {
   if (host_ != nullptr) host_->invalidate();
 }
 
+void Widget::requestLayout() {
+  if (host_ != nullptr) host_->requestLayout();
+}
+
 void Widget::setTooltip(std::string text) { tooltip_ = TooltipContent{.text = std::move(text)}; }
 
 void Widget::setRichTooltip(TooltipContent content) {

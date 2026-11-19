@@ -1,0 +1,164 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：dialog-window.cpp
+ * 说明：对话框窗口的实现。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-20
+ * 备注：无。
+ * ------------------------------------------------------------------------
+ */
+
+#include "platform/window/dialog-window.hpp"
+
+#include <windows.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <string>
+
+#include "shared/input/scan-code-table.hpp"
+
+namespace ember::win32::platform {
+
+namespace {
+
+/** 内容高度按正文时，正文最高占工作区高度的这个比例。 */
+constexpr double kMaximumBodyShare = 0.7;
+
+rujian::ui::HostWindow::Options hostOptions(const DialogWindowOptions& options) {
+  rujian::ui::HostWindow::Options host;
+  host.title = options.title;
+  host.clientSize = rujian::ui::Size{options.width, options.height > 0 ? options.height : 200.0};
+  host.theme = options.theme;
+  host.owner = options.owner;
+  return host;
+}
+
+}  // namespace
+
+DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::ui::DialogFrame> frame) : options_(std::move(options)), window_(hostOptions(options_)) {
+  frame_ = frame.get();
+  frame_->setMaximizable(options_.maximizable);
+  frame_->setOnClose([this](rujian::ui::DialogCloseReason) {
+    if (options_.onCloseRequested) options_.onCloseRequested();
+  });
+  frame_->setOnToggleMaximize([this] {
+    HWND hwnd = static_cast<HWND>(window_.nativeHandle());
+    ShowWindow(hwnd, IsZoomed(hwnd) != FALSE ? SW_RESTORE : SW_MAXIMIZE);
+  });
+  window_.root().setContent(std::move(frame));
+
+  FramelessCallbacks callbacks;
+  callbacks.hitTest = [this](double x, double y) { return frame_->hitTestWindow(rujian::ui::Point{x, y}) == rujian::ui::DialogHit::Caption ? FrameHit::Caption : FrameHit::Client; };
+  callbacks.maximizedChanged = [this](bool maximized) { frame_->setMaximized(maximized); };
+  callbacks.activeChanged = [this](bool active) {
+    frame_->setWindowActive(active);
+    if (!active) window_.root().dismissLayers();
+  };
+  callbacks.nonClientPressed = [this] { window_.root().dismissLayers(); };
+  frameless_ = std::make_unique<FramelessFrame>(window_.nativeHandle(), FramelessOptions{options_.minimumWidth, options_.minimumHeight, [this] { return window_.root().scale(); }, options_.customFrame}, std::move(callbacks));
+  window_.setMessageHook([this](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
+    if (message == WM_CLOSE) {
+      // 不让系统销毁窗口（销毁会让消息循环退出），只请求关闭
+      if (options_.onCloseRequested) options_.onCloseRequested();
+      result = 0;
+      return true;
+    }
+    if (options_.onPhysicalKey || swallowedKey_ >= 0) {
+      // 键的标识：扫描码加扩展位（lParam 的 16 到 24 位），按下、字符与抬起消息里都一样
+      const int keyId = static_cast<int>((lParam >> 16) & 0x1FF);
+      switch (message) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN: {
+          // 按住不放的重复按下不再上报，但学习期间同样吞掉
+          const bool repeat = (lParam & 0x40000000) != 0;
+          const auto scan = static_cast<std::uint16_t>(keyId & 0xFF);
+          const bool extended = (keyId & 0x100) != 0;
+          const auto code = shared::scanCodeToKeyCode(scan, extended, false);
+          if (!repeat && code && options_.onPhysicalKey && options_.onPhysicalKey(std::string(*code))) swallowedKey_ = keyId;
+          if (swallowedKey_ == keyId) {
+            result = 0;
+            return true;
+          }
+          break;
+        }
+        case WM_CHAR:
+        case WM_SYSCHAR:
+        case WM_DEADCHAR:
+        case WM_SYSDEADCHAR:
+          if (swallowedKey_ == keyId) {
+            result = 0;
+            return true;
+          }
+          break;
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+          if (swallowedKey_ == keyId) {
+            swallowedKey_ = -1;
+            result = 0;
+            return true;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    return frameless_->handle(message, wParam, lParam, result);
+  });
+  frameless_->attach();
+  place();
+}
+
+DialogWindow::~DialogWindow() {
+  // 先恢复归属窗口可用再销毁窗口，系统才会把焦点还给它
+  if (ownerLocked_ && options_.owner != nullptr && IsWindow(static_cast<HWND>(options_.owner)) != FALSE) EnableWindow(static_cast<HWND>(options_.owner), TRUE);
+  frameless_.reset();
+}
+
+void DialogWindow::place() {
+  HWND hwnd = static_cast<HWND>(window_.nativeHandle());
+  HWND owner = static_cast<HWND>(options_.owner);
+  RECT ownerRect{};
+  if (owner == nullptr || GetWindowRect(owner, &ownerRect) == FALSE) {
+    const int width = GetSystemMetrics(SM_CXSCREEN);
+    const int height = GetSystemMetrics(SM_CYSCREEN);
+    ownerRect = RECT{0, 0, width, height};
+  }
+  // 先移到归属窗口的显示器上，窗口的缩放比例才是那台显示器的
+  SetWindowPos(hwnd, nullptr, ownerRect.left, ownerRect.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+  const double scale = window_.root().scale();
+  MONITORINFO monitor{sizeof(monitor)};
+  RECT work = ownerRect;
+  if (GetMonitorInfoW(MonitorFromRect(&ownerRect, MONITOR_DEFAULTTONEAREST), &monitor) != FALSE) work = monitor.rcWork;
+  const int width = static_cast<int>(std::lround(options_.width * scale));
+  const double height = options_.height > 0 ? options_.height : frame_->naturalHeight(options_.width, (work.bottom - work.top) / scale * kMaximumBodyShare);
+  const int pixelHeight = static_cast<int>(std::lround(height * scale));
+  const int ownerCenterX = (ownerRect.left + ownerRect.right) / 2;
+  const int ownerCenterY = (ownerRect.top + ownerRect.bottom) / 2;
+  const int left = std::clamp(ownerCenterX - width / 2, static_cast<int>(work.left), std::max(static_cast<int>(work.left), static_cast<int>(work.right) - width));
+  const int top = std::clamp(ownerCenterY - pixelHeight / 2, static_cast<int>(work.top), std::max(static_cast<int>(work.top), static_cast<int>(work.bottom) - pixelHeight));
+  SetWindowPos(hwnd, nullptr, left, top, width, pixelHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+void DialogWindow::show() {
+  if (options_.owner != nullptr) {
+    EnableWindow(static_cast<HWND>(options_.owner), FALSE);
+    ownerLocked_ = true;
+  }
+  window_.show();
+  frame_->focusInitial();
+}
+
+void DialogWindow::activate() {
+  HWND hwnd = static_cast<HWND>(window_.nativeHandle());
+  if (IsIconic(hwnd) != FALSE) ShowWindow(hwnd, SW_RESTORE);
+  SetForegroundWindow(hwnd);
+}
+
+void DialogWindow::setTheme(rujian::ui::ThemeName theme) { window_.root().setTheme(theme); }
+
+void* DialogWindow::handle() const { return window_.nativeHandle(); }
+
+}  // namespace ember::win32::platform

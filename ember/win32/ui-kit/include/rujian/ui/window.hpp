@@ -39,6 +39,8 @@ class HostWindow {
     Size clientSize{800, 600};
     /** 初始主题。 */
     ThemeName theme{ThemeName::Dark};
+    /** 归属窗口（HWND）：非空时创建的是它名下的窗口（不在任务栏出现，始终显示在它前面，随它最小化与关闭）。 */
+    void* owner{nullptr};
   };
 
   /**

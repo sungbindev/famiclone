@@ -84,7 +84,7 @@ Size FlexBox::measure(Size available) {
 }
 
 void FlexBox::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   const Rect inner = bounds.inset(padding_);
   const bool row = direction_ == FlexDirection::Row;
   const auto lines = breakLines(inner.width);

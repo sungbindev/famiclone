@@ -31,6 +31,7 @@ add_library(rujian_ui STATIC
   src/components/choice/checkbox.cpp
   src/components/choice/radio-group.cpp
   src/components/dialog/dialog-frame.cpp
+  src/components/description-row/description-row.cpp
   src/components/facts/facts.cpp
   src/components/feedback/callout.cpp
   src/components/feedback/state.cpp
@@ -42,6 +43,7 @@ add_library(rujian_ui STATIC
   src/components/menu/menu-bar.cpp
   src/components/menu/menu-popup.cpp
   src/components/notification/notification.cpp
+  src/components/pad-diagram/pad-diagram.cpp
   src/components/panel/panel.cpp
   src/components/row-list/row-list.cpp
   src/components/scroll-area/scroll-area.cpp
@@ -82,6 +84,7 @@ if(EMBER_BUILD_TESTS)
     test/checkbox-test.cpp
     test/color-test.cpp
     test/dialog-frame-test.cpp
+    test/description-row-test.cpp
     test/facts-test.cpp
     test/feedback-test.cpp
     test/field-test.cpp
@@ -93,6 +96,7 @@ if(EMBER_BUILD_TESTS)
     test/menu-test.cpp
     test/notification-test.cpp
     test/offscreen-test.cpp
+    test/pad-diagram-test.cpp
     test/panel-test.cpp
     test/radio-group-test.cpp
     test/root-test.cpp

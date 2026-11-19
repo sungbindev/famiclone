@@ -81,6 +81,33 @@ TEST(TextEngine, WrapProducesMoreLinesWhenNarrow) {
   EXPECT_LE(narrow.width, 60.5);
 }
 
+TEST(TextEngine, RepeatedMeasuresAgreeAndTheCacheKeepsStylesWidthsAndScalesApart) {
+  auto& text = Graphics::shared().text();
+  TextStyle style;
+  style.wrap = true;
+  const auto first = text.measure("one two three four five six", style, 60);
+  const auto again = text.measure("one two three four five six", style, 60);
+  EXPECT_DOUBLE_EQ(first.width, again.width);
+  EXPECT_DOUBLE_EQ(first.height, again.height);
+  // 宽度、字号、换行、缩放比例不同，结果不能串
+  EXPECT_NE(text.measure("one two three four five six", style, 1000).height, first.height);
+  TextStyle large = style;
+  large.fontSize = 24;
+  EXPECT_GT(text.measure("one two three four five six", large, 60).height, first.height);
+  TextStyle single = style;
+  single.wrap = false;
+  EXPECT_LT(text.measure("one two three four five six", single, 60).height, first.height);
+  TextStyle normal;
+  normal.lineHeight = 0;
+  text.setScale(1.0);
+  const double atOne = text.measure("确定", normal, 0).height;
+  text.setScale(1.5);
+  const double atOneAndHalf = text.measure("确定", normal, 0).height;
+  text.setScale(1.0);
+  EXPECT_DOUBLE_EQ(text.measure("确定", normal, 0).height, atOne);
+  EXPECT_GT(atOneAndHalf, 0);
+}
+
 TEST(TextEngine, EllipsisKeepsSingleLineAndFitsWidth) {
   TextStyle style;
   style.overflow = TextOverflow::Ellipsis;

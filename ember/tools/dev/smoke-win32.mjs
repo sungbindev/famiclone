@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-win32.mjs
- * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例经菜单选学习机用随包的 BIOS 开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮。
+ * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例经菜单选学习机用随包的 BIOS 开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮；最后再起一个实例，经快捷键与菜单打开首选项与手柄设置对话框，检查设置保存与手柄按键学习。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -117,9 +117,9 @@ async function scenarioInteractions() {
     check('画面持有焦点时键盘被独占，F8 不触发外壳的暂停', number(r, 'exclusive') <= centerRunning + 10, `${number(r, 'exclusive')}`);
 
     // 窗口始终置顶：勾选项切换后菜单保持打开，所以连点两次菜单项再按 Esc 关闭
-    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:49', 'wait:700', 'style:on']);
+    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:119', 'wait:700', 'style:on']);
     check('“窗口始终置顶”勾选后窗口置顶', (r.get('before') ?? '').startsWith('False') && (r.get('on') ?? '').startsWith('True'), `${r.get('before')} → ${r.get('on')}`);
-    r = drive(app.pid, ['click:253:49', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
+    r = drive(app.pid, ['click:253:119', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
     check('再点一次取消置顶', (r.get('off') ?? '').startsWith('False'), `${r.get('off')}`);
 
     await closeAndExpectExit(app, '场景一');
@@ -201,6 +201,38 @@ async function scenarioDevices() {
   }
 }
 
+/**
+ * 场景五：首选项与手柄设置对话框。Ctrl+, 打开首选项，在“外观”里把主题选成“浅色”，经调试服务核对设置已保存，Esc 关闭；
+ * 再经“设置”菜单打开手柄设置，点手柄图上的一个键、再按 Q 键，经调试服务核对玩家 1 的绑定里有了 Q。
+ * 对话框里的坐标是对话框窗口的逻辑像素（首选项宽 720，手柄设置宽 640）。
+ */
+async function scenarioDialogs() {
+  console.log('场景五：首选项与手柄设置');
+  const app = startApp({ args: ['--debug-port=5799', '--debug-token=smoke-token'] });
+  try {
+    check('启动后出现窗口', await waitForWindow(app.pid));
+    await sleep(2500);
+    let r = drive(app.pid, ['chord:CTRL:COMMA', 'wait:1500', 'dlgfind:prefsOpen']);
+    check('Ctrl+, 打开首选项对话框', r.get('prefsOpen') === 'True');
+    drive(app.pid, ['dlgfind:found', 'dlgwidth:720', 'dclick:214:105', 'wait:600', 'dclick:214:181', 'wait:1200']);
+    const theme = debugCall(app, 'preferences.list').settings.find((item) => item.id === 'appearance.theme');
+    check('在首选项里把主题选成“浅色”后设置项保存为 light', theme?.value === 'light', String(theme?.value));
+    r = drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800', 'dlgvisible:prefsClosed']);
+    check('Esc 关闭首选项对话框', r.get('prefsClosed') === 'False');
+
+    r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1500', 'dlgfind:padOpen']);
+    check('“设置”菜单里打开手柄设置对话框', r.get('padOpen') === 'True');
+    drive(app.pid, ['dlgfind:found', 'dlgwidth:640', 'dclick:540:324', 'wait:400', 'type:Q', 'wait:900']);
+    const bindings = debugCall(app, 'input.getBindings');
+    check('点手柄图上的键、再按 Q 键后，玩家 1 的绑定里有 Q', bindings.slots[0].keys.some((key) => key.code === 'KeyQ'), JSON.stringify(bindings.slots[0].keys.map((key) => key.code)));
+    drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800']);
+    await closeAndExpectExit(app, '场景五');
+  } finally {
+    app.stop();
+    removeUserData(app);
+  }
+}
+
 if (!options.has('no-build')) {
   const run = spawnSync('npm.cmd', ['run', 'win32:build'], { cwd: projectRoot, stdio: 'inherit', shell: true });
   if (run.status !== 0) throw new Error('npm run win32:build 失败');
@@ -209,6 +241,7 @@ await scenarioInteractions();
 await scenarioFullScreen();
 await scenarioBios();
 await scenarioDevices();
+await scenarioDialogs();
 const failed = results.filter((item) => !item.ok);
 console.log(failed.length === 0 ? `全部 ${results.length} 项通过` : `${failed.length} 项失败：${failed.map((item) => item.name).join('；')}`);
 process.exit(failed.length === 0 ? 0 : 1);

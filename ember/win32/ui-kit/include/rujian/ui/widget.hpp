@@ -131,6 +131,8 @@ class Widget {
   [[nodiscard]] virtual bool stretchesHeight() const { return true; }
   /** 请求重绘。 */
   void invalidate();
+  /** 请求重新布局（控件还没有挂到窗口上时什么都不做）。 */
+  void requestLayout();
 
   // ---- 悬停提示 ----
 

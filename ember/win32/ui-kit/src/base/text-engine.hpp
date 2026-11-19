@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -79,6 +80,8 @@ class TextEngine {
   /** 主字体的纵向度量；collection 为空表示系统字体集。 */
   [[nodiscard]] VerticalMetrics verticalMetrics(const std::wstring& family, int weight, IDWriteFontCollection* collection);
   [[nodiscard]] bool hasFamily(const wchar_t* name) const;
+  /** 不走缓存的度量。 */
+  [[nodiscard]] TextMetrics measureUncached(std::u16string_view utf16, const TextStyle& style, double maxWidth);
 
   IDWriteFactory* factory_;
   double scale_{1.0};
@@ -87,6 +90,9 @@ class TextEngine {
   std::unique_ptr<MemoryFontCollection> brand_;
   std::wstring families_[3];
   std::map<std::pair<std::wstring, int>, VerticalMetrics> metricsCache_;
+  /** 度量结果的缓存：布局会在度量、摆放的各层反复度量同一段文字；键是文字与影响排版的样式、宽度、缩放比例（颜色不影响）。 */
+  using MeasureKey = std::tuple<std::u16string, double, int, double, int, int, bool, bool, int, double, double, double>;
+  std::map<MeasureKey, TextMetrics> measureCache_;
 };
 
 }  // namespace rujian::ui

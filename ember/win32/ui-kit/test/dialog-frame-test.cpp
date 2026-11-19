@@ -116,6 +116,25 @@ TEST(DialogFrame, BodyFillsTheSpaceBetweenTheTitleBarAndTheButtons) {
   EXPECT_LT(body.bottom(), s.frame->button("ok")->bounds().y);
 }
 
+TEST(DialogFrame, FilledContentTakesAllOfTheBodyAreaInsideThePaddingAndTheFrameDoesNotScroll) {
+  Root root{ThemeName::Dark, 1.0};
+  auto dialog = std::make_unique<DialogFrame>();
+  DialogFrame* frame = dialog.get();
+  root.setContent(std::move(dialog));
+  frame->setContentFill(true);
+  frame->setContent(std::make_unique<Label>("正文内容"));
+  frame->setButtons({DialogButton{.id = "ok", .text = "确定", .isDefault = true}});
+  root.layout(kWindow);
+  const Rect body = frame->content()->bounds();
+  EXPECT_DOUBLE_EQ(body.x, 10.0);
+  EXPECT_DOUBLE_EQ(body.y, 32.0 + 10.0);
+  EXPECT_DOUBLE_EQ(body.width, 420.0 - 20.0);
+  // 正文底边离按钮区上边的距离 = 按钮区上方的留白 6 加正文内边距 10
+  EXPECT_DOUBLE_EQ(body.bottom(), frame->button("ok")->bounds().y - 6.0 - 10.0);
+  root.mouseWheel(Point{100, 100}, -5.0, 0);
+  EXPECT_DOUBLE_EQ(frame->content()->bounds().y, 32.0 + 10.0);
+}
+
 TEST(DialogFrame, HitTestSeparatesCaptionFromControls) {
   Scene s;
   EXPECT_EQ(s.frame->hitTestWindow(Point{150, 10}), DialogHit::Caption);

@@ -112,7 +112,7 @@ Size Panel::measure(Size available) {
 }
 
 void Panel::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   const double border = borderWidth();
   const Rect inner = bounds.inset(Insets::all(border));
   const double head = headHeight(inner.width);

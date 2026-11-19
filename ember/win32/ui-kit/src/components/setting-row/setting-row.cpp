@@ -97,7 +97,7 @@ Size SettingRow::measure(Size available) {
 }
 
 void SettingRow::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   const Layout laid = layout(bounds.width);
   const double top = bounds.y + paddingTop();
   const double contentHeight = laid.height - paddingTop() - paddingBottom();

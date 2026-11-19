@@ -52,6 +52,11 @@ void ScrollArea::setMaxHeight(double maxHeight) {
   invalidate();
 }
 
+void ScrollArea::setFitContent(bool fit) {
+  fitContent_ = fit;
+  invalidate();
+}
+
 double ScrollArea::maxScrollTop() const { return std::max(0.0, contentHeight_ - bounds().height); }
 
 Rect ScrollArea::trackRect() const {
@@ -85,9 +90,9 @@ Size ScrollArea::measure(Size available) {
 }
 
 void ScrollArea::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   if (content_ == nullptr) return;
-  contentHeight_ = content_->measure(Size{bounds.width, 0}).height;
+  contentHeight_ = fitContent_ ? bounds.height : content_->measure(Size{bounds.width, 0}).height;
   scrollTop_ = std::clamp(scrollTop_, 0.0, maxScrollTop());
   content_->arrange(Rect{bounds.x, bounds.y - scrollTop_, bounds.width, contentHeight_});
   updateVisibility();

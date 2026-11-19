@@ -334,7 +334,7 @@ HostWindow::HostWindow(const Options& options) : impl_(std::make_unique<Impl>(op
   RECT frame{0, 0, static_cast<LONG>(std::lround(options.clientSize.width * systemScale)), static_cast<LONG>(std::lround(options.clientSize.height * systemScale))};
   AdjustWindowRectEx(&frame, WS_OVERLAPPEDWINDOW, FALSE, 0);
   // WS_CLIPCHILDREN：应用在窗口里放原生子窗口（如运行画面）时，窗口自己的绘制不盖到子窗口上
-  impl_->hwnd = CreateWindowExW(0, kWindowClass, options.title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT, frame.right - frame.left, frame.bottom - frame.top, nullptr, nullptr,
+  impl_->hwnd = CreateWindowExW(0, kWindowClass, options.title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT, frame.right - frame.left, frame.bottom - frame.top, static_cast<HWND>(options.owner), nullptr,
                                 GetModuleHandleW(nullptr), impl_.get());
   if (impl_->hwnd == nullptr) throw std::runtime_error("创建窗口失败");
   impl_->root.setInvalidateHandler([hwnd = impl_->hwnd] { InvalidateRect(hwnd, nullptr, FALSE); });

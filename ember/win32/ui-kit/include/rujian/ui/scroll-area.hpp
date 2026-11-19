@@ -29,6 +29,8 @@ class ScrollArea : public Widget {
   [[nodiscard]] Widget* content() const { return content_; }
   /** 自然高度的上限（0 表示不限）：内容比它高时，度量出的高度停在上限，超出的部分滚动。 */
   void setMaxHeight(double maxHeight);
+  /** 内容高度恰好等于可见区域的高度（不滚动）：内容自己按这个高度铺满（如左右分栏的对话框正文），度量出的自然高度不变。 */
+  void setFitContent(bool fit);
 
   /** 当前滚动位置（内容顶部被卷上去的距离）。 */
   [[nodiscard]] double scrollTop() const { return scrollTop_; }
@@ -76,6 +78,7 @@ class ScrollArea : public Widget {
 
   Widget* content_{nullptr};
   double maxHeight_{0};
+  bool fitContent_{false};
   double contentHeight_{0};
   double scrollTop_{0};
   double opacity_{0};

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：check-win32-ui-kit.mjs
- * 说明：Win32 控件库的结构检查：#include 的依赖方向、公共头文件不暴露系统图形头、控件不直接引用系统图形接口、控件之间不互相引用、源文件都登记到 CMake，并检查生成的令牌与图标文件与生成结果一致。
+ * 说明：Win32 控件库的结构检查：#include 的依赖方向、公共头文件不暴露系统图形头、控件不直接引用系统图形接口、控件之间不互相引用、源文件都登记到 CMake，并检查生成的令牌、图标与字体文件与生成结果一致。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -10,7 +10,7 @@
  *       2. src/base 不引用 src/components；
  *       3. src/components/<控件> 只能引用公共头文件、base/theme-tokens.hpp 与自己目录里的文件，不引用别的控件，也不引用系统图形头文件（控件只经 Canvas 绘制）；
  *       4. src 下的每个 .cpp 都在 ui-kit/CMakeLists.txt 的库目标里登记；
- *       5. 令牌与图标的生成文件与生成结果一致。
+ *       5. 令牌、图标与字体的生成文件与生成结果一致。
  *       checkUiKit(root) 可被测试引用，对任意目录做规则 1 到 4 的检查。
  * ------------------------------------------------------------------------
  */
@@ -104,10 +104,12 @@ async function checkGenerated() {
   const problems = [];
   const tokens = await import('../../win32/ui-kit/tools/gen-tokens.mjs');
   const icons = await import('../../win32/ui-kit/tools/gen-icons.mjs');
+  const fonts = await import('../../win32/ui-kit/tools/gen-fonts.mjs');
   if (!existsSync(tokens.OUTPUT_FILE) || readFileSync(tokens.OUTPUT_FILE, 'utf8') !== tokens.generate()) problems.push('tokens.generated.hpp 与生成结果不一致，运行 node win32/ui-kit/tools/gen-tokens.mjs');
   const { id, data, rules } = icons.generate();
   const iconFiles = [[icons.ID_FILE, id], [icons.DATA_FILE, data], [icons.RULES_FILE, rules]];
   if (iconFiles.some(([file, text]) => !existsSync(file) || readFileSync(file, 'utf8') !== text)) problems.push('图标文件与生成结果不一致，运行 node win32/ui-kit/tools/gen-icons.mjs');
+  if (!existsSync(fonts.FONT_DATA_FILE) || readFileSync(fonts.FONT_DATA_FILE, 'utf8') !== fonts.generate()) problems.push('字体文件与生成结果不一致，运行 node win32/ui-kit/tools/gen-fonts.mjs');
   return problems;
 }
 

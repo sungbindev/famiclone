@@ -16,11 +16,14 @@
 #include <wrl/client.h>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "base/font-roles.hpp"
+#include "base/memory-font-collection.hpp"
 #include "rujian/ui/text.hpp"
 
 namespace rujian::ui {
@@ -60,6 +63,9 @@ class TextEngine {
   /** 距文字起点水平距离 x 处最近的插入点（UTF-16 单元序号，不换行）。 */
   [[nodiscard]] std::size_t caretIndexAt(std::u16string_view text, const TextStyle& style, double x);
 
+  /** 排版对象里各个字符簇的度量（宽度已含字距调整，不含额外字间距）。 */
+  [[nodiscard]] static std::vector<DWRITE_CLUSTER_METRICS> clusterMetrics(IDWriteTextLayout* layout);
+
  private:
   /** 字体的纵向度量，都是占字号的比例。 */
   struct VerticalMetrics {
@@ -70,13 +76,15 @@ class TextEngine {
 
   /** 字体类别对应的实际字体族名。 */
   [[nodiscard]] const std::wstring& familyFor(FontRole role);
-  /** 主字体的纵向度量。 */
-  [[nodiscard]] VerticalMetrics verticalMetrics(const std::wstring& family, int weight);
+  /** 主字体的纵向度量；collection 为空表示系统字体集。 */
+  [[nodiscard]] VerticalMetrics verticalMetrics(const std::wstring& family, int weight, IDWriteFontCollection* collection);
   [[nodiscard]] bool hasFamily(const wchar_t* name) const;
 
   IDWriteFactory* factory_;
   double scale_{1.0};
   Microsoft::WRL::ComPtr<IDWriteFontCollection> collection_;
+  /** 嵌入的品牌字体（Quicksand）；建失败时为空，品牌字体改用正文字体。 */
+  std::unique_ptr<MemoryFontCollection> brand_;
   std::wstring families_[3];
   std::map<std::pair<std::wstring, int>, VerticalMetrics> metricsCache_;
 };

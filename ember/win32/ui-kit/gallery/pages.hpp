@@ -13,12 +13,14 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "rujian/ui/geometry.hpp"
+#include "rujian/ui/notification.hpp"
 #include "rujian/ui/widget.hpp"
 
 namespace gallery {
@@ -39,6 +41,8 @@ struct PageInfo {
   std::vector<int> targets;
   /** 这页要对照的交互场景（hover、pressed、focus），对 targets 里的每个样本各做一遍；另有不带交互的 normal 场景。 */
   std::vector<std::string> scenes;
+  /** setup 回调里才登记的样本个数（对照工具据此区分样本与之后的额外矩形）。 */
+  int lateSamples{0};
 };
 
 /** 建好的示例页。 */
@@ -47,6 +51,8 @@ struct Page {
   std::unique_ptr<rujian::ui::Widget> content;
   /** 参与对照的控件，按页里的先后顺序。 */
   std::vector<rujian::ui::Widget*> samples;
+  /** 布局之后执行：用窗口的通知中心发通知、打开面板，并把通知等之后才有的控件登记为样本；没有时为空。 */
+  std::function<void(rujian::ui::NotificationCenter&, std::vector<rujian::ui::Widget*>&)> setup;
 };
 
 /** 全部示例页的说明。 */

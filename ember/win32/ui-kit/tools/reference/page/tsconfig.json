@@ -1,0 +1,11 @@
+{
+  "extends": "../../../../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@rujianjs/ui-kit": ["../../../../../../../rujian-ui-kit/src/index.ts"],
+      "@rujianjs/ui-kit/styles.css": ["../../../../../../../rujian-ui-kit/src/styles/index.css"],
+      "@kit-source/*": ["../../../../../../../rujian-ui-kit/src/*"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx"]
+}

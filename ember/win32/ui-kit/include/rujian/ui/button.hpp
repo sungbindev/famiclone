@@ -45,6 +45,10 @@ class Button : public Widget {
   void setCompact(bool compact);
   /** 切换按钮的按下状态；空值表示不是切换按钮。点击不会自己改变它，由使用方在回调里设置。 */
   void setToggled(std::optional<bool> toggled);
+  /** 窗口框架里的按钮（标题栏的折叠按钮）：没有圆角，不画键盘焦点框；尺寸由所在的容器指定。 */
+  void setFrameStyle(bool frame);
+  /** 最小宽度（对话框按钮区的按钮用），默认 0；与紧凑按钮的最小宽度取大者。 */
+  void setMinWidth(double minWidth);
   /** 设置点击回调：鼠标在按钮上按下并抬起，或按 Enter、Space 键时触发。 */
   void setOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
 
@@ -77,6 +81,8 @@ class Button : public Widget {
   std::optional<bool> iconAtEnd_;
   bool iconOnly_{false};
   bool compact_{false};
+  bool frame_{false};
+  double minWidth_{0};
   std::optional<bool> toggled_;
   std::function<void()> onClick_;
   /** Space 键是否按在按钮上（抬起时才触发点击）。 */

@@ -40,6 +40,8 @@ const width = Number(options.width ?? '440');
 const height = Number(options.height ?? '60');
 // 悬停与颜色过渡的时间由页面决定（参考页已关闭过渡），这里只等一帧渲染
 const SETTLE_MILLISECONDS = 200;
+/** tip 场景：等悬停提示弹出的时间（提示延迟 400 毫秒）。 */
+const TOOLTIP_MILLISECONDS = 700;
 const KEY_TAB = 9;
 const KEY_ARROW_DOWN = 40;
 /** drag 场景：滑块向下拖的距离（与 gallery 的 kDragDistance 一致）。 */
@@ -48,8 +50,8 @@ const DRAG_DISTANCE = 30;
 const WHEEL_DELTA = 100;
 /** 样本里滑块的中心。 */
 const SLIDER_CENTER = `(() => { const r = document.querySelector('.ui-scroll-area .scrollbar.vertical .slider')?.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; })()`;
-/** openhover 场景：弹层里第三个选项的中心（与 gallery 的 kHoverOption 一致）。 */
-const HOVER_OPTION_CENTER = `(() => { const r = document.querySelectorAll('.ui-select__option')[2]?.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; })()`;
+/** openhover 场景：弹层里第三个选项（下拉选项或菜单项）的中心（与 gallery 的 kHoverOption 一致）。 */
+const HOVER_OPTION_CENTER = `(() => { const r = document.querySelectorAll('.ui-select__option, .ui-menu__item')[2]?.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; })()`;
 /** 鼠标移到页面外时用的坐标。 */
 const OUTSIDE = { x: -10, y: -10 };
 
@@ -62,7 +64,7 @@ function delay(milliseconds) {
 const BOX_SELECTOR = '.ui-input';
 
 /** 样本元素：带 data-sample 属性的，以及组件库里不接收 data 属性的选择类控件（复选框、单选组、下拉框）；下拉框展开时弹层里的各个选项排在所有样本之后；面板里嵌的控件（滑块、面板自己的滚动区域）不算样本。 */
-const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider:not(:is(.ui-panel, .ui-field, .ui-setting-row, .ui-toolbar) .ui-slider), .ui-scroll-area:not(.ui-select__popup):not(.ui-panel__scroll):not(.ui-split-view__side-body):not(.ui-table-container), .ui-panel, .ui-facts, .ui-field, .ui-setting-row:not(.ui-list .ui-setting-row), .ui-list, .ui-row-list__item, .ui-toolbar, .ui-tree, .ui-callout, .ui-state, .ui-status-label:not(.ui-table .ui-status-label), .ui-split-view, .ui-splitter, .ui-tabs, .ui-table';
+const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider:not(:is(.ui-panel, .ui-field, .ui-setting-row, .ui-toolbar) .ui-slider), .ui-scroll-area:not(.ui-select__popup):not(.ui-panel__scroll):not(.ui-split-view__side-body):not(.ui-table-container):not(.ui-notification-center__scroll):not(.ui-dialog__scroll), .ui-panel, .ui-facts, .ui-field, .ui-setting-row:not(.ui-list .ui-setting-row), .ui-list, .ui-row-list__item, .ui-toolbar, .ui-tree, .ui-callout, .ui-state, .ui-status-label:not(.ui-table .ui-status-label), .ui-split-view, .ui-splitter, .ui-tabs, .ui-table, .ui-menubar, .ui-menu__popup, .ui-menu__item, .ui-title-bar, .ui-title-bar__actions > *, .ui-title-bar__tool, .ui-status-bar, .ui-status-bar__item, .ui-tooltip, .ui-notice-toast, .ui-notification-button, .ui-notification-center, .ui-notification-center__item, .ui-dialog-window__control, .ui-dialog__footer .ui-button, .ui-app-frame, .ui-app-frame__page, .ui-app-frame__bottom';
 
 /** 取页面里全部样本的位置。 */
 const SAMPLE_RECTS = `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].map((element) => { const r = (element.closest("${BOX_SELECTOR}") || element).getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })`;
@@ -132,6 +134,12 @@ async function capture() {
       // 焦点在下拉框上时按“向下”键展开弹层（键盘展开，高亮落在已选项上）
       await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: KEY_ARROW_DOWN });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: KEY_ARROW_DOWN });
+    }
+    if (scene === 'tip') {
+      // 鼠标移到样本中心，等到悬停提示弹出
+      mouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'none' });
+      await delay(TOOLTIP_MILLISECONDS);
     }
     if (scene === 'wheel') {
       // 先把鼠标移到样本中心，再向下滚一格

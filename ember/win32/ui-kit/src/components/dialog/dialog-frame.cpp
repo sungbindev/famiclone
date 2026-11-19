@@ -1,0 +1,316 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：dialog-frame.cpp
+ * 说明：对话框框架的实现：标题栏（标题、最大化与关闭按钮）、正文滚动区域、右对齐的按钮区、键盘处理与命中测试。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-19
+ * 备注：标题栏高 32（含底部 1 像素分割线），左边留 6、右边留 4，标题与按钮之间留 4，按钮是 24×24 的小方块、相互间隔 2；
+ *       正文四周留 10；按钮区上方留 6、下方与左右各留 10，按钮之间留 6、最小宽度 72。
+ * ------------------------------------------------------------------------
+ */
+
+#include <algorithm>
+
+#include "base/theme-tokens.hpp"
+#include "rujian/ui/dialog-frame.hpp"
+#include "rujian/ui/geometry.hpp"
+#include "rujian/ui/layout.hpp"
+
+namespace rujian::ui {
+
+namespace {
+
+constexpr int kVirtualKeyReturn = 0x0D;
+constexpr int kVirtualKeyEscape = 0x1B;
+constexpr int kVirtualKeySpace = 0x20;
+
+/** 标题栏里最大化与关闭的小方块按钮。 */
+class DialogControl final : public Widget {
+ public:
+  DialogControl(IconId icon, bool closeStyle, std::function<void()> onClick) : icon_(icon), closeStyle_(closeStyle), onClick_(std::move(onClick)) {}
+
+  void setIcon(IconId icon) {
+    icon_ = icon;
+    invalidate();
+  }
+
+  [[nodiscard]] Size measure(Size /*available*/) override { return Size{tokens::dialog_control_size, tokens::dialog_control_size}; }
+  [[nodiscard]] bool focusable() const override { return true; }
+  [[nodiscard]] bool stretchesHeight() const override { return false; }
+  [[nodiscard]] CursorKind cursor() const override { return CursorKind::Hand; }
+
+  void paint(Canvas& canvas) override {
+    const auto& colors = themeTokens(host()->theme());
+    Color background = kTransparent;
+    Color foreground = colors.ghost_foreground;
+    if (closeStyle_ && (pressed() || hovered())) {
+      background = pressed() ? colors.dialog_close_active_bg : colors.dialog_close_hover_bg;
+      foreground = colors.dialog_close_hover_text;
+    } else if (pressed()) {
+      background = colors.ghost_active_background;
+      foreground = colors.ghost_active_foreground;
+    } else if (hovered()) {
+      background = colors.ghost_hover_background;
+      foreground = colors.ghost_hover_foreground;
+    }
+    if (background.a() != 0) canvas.drawBox(bounds(), BoxStyle{.fill = background, .radius = tokens::radius_md});
+    const double size = tokens::btn_icon_size;
+    canvas.drawIcon(icon_, Rect{bounds().x + (bounds().width - size) / 2.0, bounds().y + (bounds().height - size) / 2.0, size, size}, foreground, tokens::icon_stroke_width);
+    if (focusVisible()) canvas.strokeOutline(bounds(), tokens::radius_md, tokens::space_hairline, tokens::space_hairline, colors.focus_border);
+  }
+
+  bool onMouseDown(const MouseEvent& event) override { return event.button == MouseButton::Left; }
+  bool onMouseUp(const MouseEvent& event) override {
+    if (event.button != MouseButton::Left) return false;
+    if (pressed() && bounds().contains(event.position)) fire();
+    return true;
+  }
+  bool onKeyDown(const KeyEvent& event) override {
+    if (event.virtualKey == kVirtualKeyReturn) {
+      if (!event.repeat) fire();
+      return true;
+    }
+    if (event.virtualKey == kVirtualKeySpace) {
+      spaceDown_ = true;
+      return true;
+    }
+    return false;
+  }
+  bool onKeyUp(const KeyEvent& event) override {
+    if (event.virtualKey != kVirtualKeySpace) return false;
+    if (spaceDown_) {
+      spaceDown_ = false;
+      fire();
+    }
+    return true;
+  }
+  void onStateChanged() override {
+    if (!focused()) spaceDown_ = false;
+    Widget::onStateChanged();
+  }
+
+ private:
+  void fire() {
+    if (onClick_) onClick_();
+  }
+
+  IconId icon_;
+  bool closeStyle_;
+  std::function<void()> onClick_;
+  bool spaceDown_{false};
+};
+
+}  // namespace
+
+DialogFrame::DialogFrame() {
+  scroll_ = static_cast<ScrollArea*>(addChild(std::make_unique<ScrollArea>()));
+}
+
+double DialogFrame::borderWidth() const { return snapBorderWidth(tokens::space_hairline, host() != nullptr ? host()->scale() : 1.0); }
+
+double DialogFrame::footerHeight() const { return buttons_.empty() ? 0.0 : tokens::space_sm + tokens::btn_height + tokens::space_page; }
+
+void DialogFrame::setTitle(std::string title) {
+  title_ = std::move(title);
+  invalidate();
+}
+
+void DialogFrame::setContent(std::unique_ptr<Widget> content) {
+  content_ = nullptr;
+  wrapper_ = nullptr;
+  if (!content) {
+    scroll_->setContent(nullptr);
+    return;
+  }
+  auto wrapper = std::make_unique<Stack>();
+  wrapper->setPadding(Insets::all(tokens::space_page));
+  content_ = wrapper->addChild(std::move(content));
+  wrapper_ = wrapper.get();
+  scroll_->setContent(std::move(wrapper));
+  invalidate();
+}
+
+void DialogFrame::setButtons(std::vector<DialogButton> buttons) {
+  for (Button* button : buttons_) removeChild(button);
+  buttons_.clear();
+  specs_ = std::move(buttons);
+  for (const DialogButton& spec : specs_) {
+    auto button = std::make_unique<Button>(spec.text);
+    button->setVariant(spec.variant);
+    if (spec.icon) button->setIcon(spec.icon);
+    button->setMinWidth(tokens::dialog_button_min_width);
+    button->setEnabled(!spec.disabled);
+    button->setOnClick([this, id = spec.id] { activate(id); });
+    buttons_.push_back(static_cast<Button*>(addChild(std::move(button))));
+  }
+  invalidate();
+}
+
+Button* DialogFrame::button(const std::string& id) const {
+  for (std::size_t i = 0; i < specs_.size(); ++i) {
+    if (specs_[i].id == id) return buttons_[i];
+  }
+  return nullptr;
+}
+
+void DialogFrame::setButtonDisabled(const std::string& id, bool disabled) {
+  if (Button* target = button(id)) target->setEnabled(!disabled);
+}
+
+std::string DialogFrame::defaultButtonId() const {
+  for (const DialogButton& spec : specs_) {
+    if (spec.isDefault) return spec.id;
+  }
+  return {};
+}
+
+void DialogFrame::activate(const std::string& id) {
+  if (onButton_) onButton_(id);
+}
+
+void DialogFrame::rebuildControls() {
+  if (maximize_ != nullptr) removeChild(maximize_);
+  if (close_ != nullptr) removeChild(close_);
+  maximize_ = nullptr;
+  close_ = nullptr;
+  if (maximizable_) {
+    maximize_ = addChild(std::make_unique<DialogControl>(maximized_ ? IconId::AppWindow : IconId::Square, false, [this] {
+      if (onToggleMaximize_) onToggleMaximize_();
+    }));
+  }
+  if (closable_) {
+    close_ = addChild(std::make_unique<DialogControl>(IconId::X, true, [this] {
+      if (onClose_) onClose_(DialogCloseReason::CloseButton);
+    }));
+  }
+  if (host() != nullptr && bounds().width > 0) arrange(bounds());
+  invalidate();
+}
+
+void DialogFrame::setMaximizable(bool maximizable) {
+  maximizable_ = maximizable;
+  rebuildControls();
+}
+
+void DialogFrame::setClosable(bool closable) {
+  closable_ = closable;
+  rebuildControls();
+}
+
+void DialogFrame::setMaximized(bool maximized) {
+  maximized_ = maximized;
+  if (maximize_ != nullptr) static_cast<DialogControl*>(maximize_)->setIcon(maximized ? IconId::AppWindow : IconId::Square);
+}
+
+void DialogFrame::setWindowActive(bool active) {
+  windowActive_ = active;
+  invalidate();
+}
+
+void DialogFrame::focusInitial() {
+  if (host() == nullptr) return;
+  if (Button* target = button(defaultButtonId()); target != nullptr && target->enabled()) {
+    host()->setFocus(target, true);
+    return;
+  }
+  // 正文里第一个可获得焦点的控件
+  std::vector<Widget*> stack;
+  if (content_ != nullptr) stack.push_back(content_);
+  while (!stack.empty()) {
+    Widget* widget = stack.back();
+    stack.pop_back();
+    if (widget->visible() && widget->enabled() && widget->focusable()) {
+      host()->setFocus(widget, true);
+      return;
+    }
+    for (auto it = widget->children().rbegin(); it != widget->children().rend(); ++it) stack.push_back(it->get());
+  }
+}
+
+Rect DialogFrame::titleBarRect() const { return Rect{bounds().x, bounds().y, bounds().width, tokens::dialog_titlebar_height}; }
+
+DialogHit DialogFrame::hitTestWindow(Point point) const {
+  if (!titleBarRect().contains(point)) return DialogHit::Client;
+  for (const Widget* control : {maximize_, close_}) {
+    if (control != nullptr && control->bounds().contains(point)) return DialogHit::Client;
+  }
+  return DialogHit::Caption;
+}
+
+double DialogFrame::naturalHeight(double width, double maxBodyHeight) {
+  scroll_->setMaxHeight(maxBodyHeight);
+  return tokens::dialog_titlebar_height + scroll_->measure(Size{width, 0}).height + footerHeight();
+}
+
+void DialogFrame::arrange(const Rect& bounds) {
+  Widget::arrange(bounds);
+  const double titleHeight = tokens::dialog_titlebar_height;
+  const double contentHeight = titleHeight - borderWidth();
+  const double controlY = bounds.y + (contentHeight - tokens::dialog_control_size) / 2.0;
+  double right = bounds.right() - tokens::space_xs;
+  for (Widget* control : {close_, maximize_}) {
+    if (control == nullptr) continue;
+    control->arrange(Rect{right - tokens::dialog_control_size, controlY, tokens::dialog_control_size, tokens::dialog_control_size});
+    right -= tokens::dialog_control_size + tokens::space_xxs;
+  }
+  const double footer = footerHeight();
+  scroll_->setMaxHeight(0);
+  scroll_->arrange(Rect{bounds.x, bounds.y + titleHeight, bounds.width, std::max(0.0, bounds.height - titleHeight - footer)});
+  double x = bounds.right() - tokens::space_page;
+  const double y = bounds.bottom() - tokens::space_page - tokens::btn_height;
+  for (auto it = buttons_.rbegin(); it != buttons_.rend(); ++it) {
+    const double width = (*it)->measure(Size{}).width;
+    x -= width;
+    (*it)->arrange(Rect{x, y, width, tokens::btn_height});
+    x -= tokens::space_sm;
+  }
+}
+
+void DialogFrame::paint(Canvas& canvas) {
+  const auto& colors = themeTokens(host()->theme());
+  const Rect box = bounds();
+  const double border = borderWidth();
+  canvas.fillRect(box, colors.bg);
+  const Rect titleBar = titleBarRect();
+  canvas.fillRect(titleBar, windowActive_ ? colors.dialog_titlebar_bg : colors.dialog_titlebar_inactive_bg);
+  canvas.drawLine(Rect{titleBar.x, titleBar.bottom() - border, titleBar.width, border}, colors.dialog_titlebar_border);
+  TextStyle style;
+  style.fontSize = tokens::dialog_title_font_size;
+  style.fontWeight = static_cast<int>(tokens::dialog_title_font_weight);
+  style.lineHeight = 0;
+  style.color = colors.text;
+  style.overflow = TextOverflow::Ellipsis;
+  // 标题占满控件之左的空间，与控件之间留 4
+  double textRight = box.right() - tokens::space_xs;
+  bool hasControl = false;
+  for (const Widget* control : {maximize_, close_}) {
+    if (control == nullptr) continue;
+    textRight = hasControl ? std::min(textRight, control->bounds().x) : control->bounds().x;
+    hasControl = true;
+  }
+  if (hasControl) textRight -= tokens::space_xs;
+  const double textX = box.x + tokens::space_sm;
+  canvas.drawText(title_, Rect{textX, titleBar.y, std::max(0.0, textRight - textX), titleBar.height - border}, style, VerticalAlign::Center);
+}
+
+bool DialogFrame::onKeyDown(const KeyEvent& event) {
+  if (event.virtualKey == kVirtualKeyEscape && closable_) {
+    if (onClose_) onClose_(DialogCloseReason::Escape);
+    return true;
+  }
+  if (event.virtualKey == kVirtualKeyReturn) {
+    // 在输入框或没有焦点时触发默认按钮；焦点在按钮、多行文本等控件上时回车保留原有含义
+    const Widget* focused = host() != nullptr ? host()->focusedWidget() : nullptr;
+    const std::string id = defaultButtonId();
+    if (!id.empty() && (focused == nullptr || focused == this || focused->acceptsText())) {
+      if (const Button* target = button(id); target != nullptr && target->enabled()) {
+        activate(id);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+}  // namespace rujian::ui

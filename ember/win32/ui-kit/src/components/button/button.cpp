@@ -78,6 +78,16 @@ void Button::setToggled(std::optional<bool> toggled) {
   invalidate();
 }
 
+void Button::setFrameStyle(bool frame) {
+  frame_ = frame;
+  invalidate();
+}
+
+void Button::setMinWidth(double minWidth) {
+  minWidth_ = minWidth;
+  invalidate();
+}
+
 std::optional<Button::ResolvedIcon> Button::resolveIcon() const {
   if (variant_ == ButtonVariant::Link) return std::nullopt;
   if (icon_) return ResolvedIcon{*icon_, iconAtEnd_.value_or(false)};
@@ -113,7 +123,7 @@ Size Button::measure(Size available) {
     if (icon) content += tokens::icon_text_gap;
     content += host()->measureText(label_, textStyle(kTransparent), 0).width;
   }
-  const double minimum = compact_ ? tokens::btn_compact_min_width : 0.0;
+  const double minimum = std::max(compact_ ? tokens::btn_compact_min_width : 0.0, minWidth_);
   return Size{std::max(minimum, content + 2 * tokens::btn_padding_x), tokens::btn_height};
 }
 
@@ -154,7 +164,7 @@ void Button::paint(Canvas& canvas) {
   if (variant_ == ButtonVariant::Link) {
     canvas.drawText(label_, box, style, VerticalAlign::Top);
   } else {
-    canvas.drawBox(box, BoxStyle{.fill = look.background, .radius = tokens::btn_radius});
+    canvas.drawBox(box, BoxStyle{.fill = look.background, .radius = frame_ ? 0.0 : tokens::btn_radius});
     focusRadius = tokens::btn_radius;
     // 内容（图标加文字）作为一个整体在按钮里水平垂直居中
     const auto icon = resolveIcon();
@@ -172,7 +182,7 @@ void Button::paint(Canvas& canvas) {
     if (icon && icon->atEnd) canvas.drawIcon(icon->icon, Rect{x + textWidth + tokens::icon_text_gap, iconRect.y, iconRect.width, iconRect.height}, look.foreground, tokens::icon_stroke_width);
   }
 
-  if (focusVisible()) {
+  if (focusVisible() && !frame_) {
     // outline: 1px solid; outline-offset: 1px
     canvas.strokeOutline(box, focusRadius, kFocusOffset, kFocusWidth, colors.focus_border);
   }

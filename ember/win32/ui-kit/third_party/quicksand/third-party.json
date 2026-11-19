@@ -1,0 +1,8 @@
+{
+  "name": "Quicksand",
+  "authors": ["The Quicksand Project Authors"],
+  "license": "OFL-1.1",
+  "licenseFile": "OFL.txt",
+  "homepage": "https://github.com/andrew-paglinawan/QuicksandFamily",
+  "usage": "标题栏应用名的字体（拉丁子集，500 与 700 两个字重）；由生成器从 rujian-ui-kit 的 WOFF2 文件解码成 TrueType，嵌入 src/generated/font-data.generated.cpp"
+}

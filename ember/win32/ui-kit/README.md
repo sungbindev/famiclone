@@ -22,6 +22,7 @@
 | --- | --- |
 | `node win32/ui-kit/tools/gen-tokens.mjs` | 从 rujian-ui-kit 的令牌与主题生成 `src/generated/tokens.generated.hpp`；`--check` 只检查一致 |
 | `node win32/ui-kit/tools/gen-icons.mjs` | 生成 `include/rujian/ui/icon-id.hpp` 与 `src/generated/icon-data.generated.cpp`；`--check` 只检查一致 |
+| `node win32/ui-kit/tools/gen-fonts.mjs` | 把 rujian-ui-kit 的 Quicksand（WOFF2）解码成 TrueType，生成 `src/generated/font-data.generated.cpp`；`--check` 只检查一致 |
 | `npm run win32:test` | 构建并运行测试；用 `-- -R ^Root\.` 只运行名称匹配的用例 |
 | `npm run win32:check` | 结构检查与 Windows 7 导入表审计 |
 | `npm run win32:reference` | 与网页版逐像素对照（需先 `win32:test` 构建画廊） |
@@ -48,6 +49,9 @@ return rujian::ui::HostWindow::runMessageLoop();
 - 离屏绘制：`OffscreenSurface` 把控件树画到内存位图，可取像素或存成 PNG，用于自动测试与对照。
 - 弹层（下拉选项等）经 `Host::showLayer` 显示在内容之上，由打开它的控件拥有；在弹层之外按下鼠标或窗口大小变化时，宿主通知它自己关闭。
 - 定时器与动画：`Host::startTimer` 是一次性定时器，到时间调用控件的 `onTimer`；`Host::animationsEnabled` 为假时（离屏对照）控件不播放渐变。测试里用 `Root::fireTimer` 手动触发。
+- 悬停提示：控件用 `Widget::setTooltip`（纯文字）或 `setRichTooltip`（标题行加分条说明）设置提示；应用在每个 `Root` 上创建一个 `Tooltip`（先于 `Root` 销毁），延迟与收起的时机由 `Root` 处理。
+- 通知：应用在每个 `Root` 上创建一个 `NotificationCenter`（铺满窗口的弹层），用 `notify` 发通知，`NotificationButton` 放在状态栏右侧（`StatusBar::addEndWidget`），“通知详情”经 `setOnShowDetail` 由应用用对话框显示。
+- 标题栏自绘系统按钮：窗口的 `WM_NCHITTEST` 调用 `TitleBar::hitTestWindow`，把结果转成 `HTMINBUTTON`、`HTMAXBUTTON`、`HTCLOSE`、`HTCAPTION` 或客户区。
 
 ## 已有控件
 
@@ -76,6 +80,13 @@ return rujian::ui::HostWindow::runMessageLoop();
 | 工具栏 | `toolbar.hpp` | 前导控件、说明、右侧操作，放不下时操作换行 |
 | 树 | `tree.hpp` | 扁平条目，鼠标与键盘（上下、Home、End 移焦点，回车与空格选中），焦点行滚入可见范围 |
 | 表格 | `table.hpp` | `Table`（紧凑、平铺：列宽自动分配、行选中、行详情）与 `TableMainCell`（主副文字） |
+| 菜单 | `menu.hpp` | `MenuBar`（菜单名按钮、点击打开、悬停切换、左右方向键切换）与 `MenuPopup`（勾选、单选、图标、快捷键、提示文字、分隔线、子菜单、助记符、键盘导航） |
+| 标题栏 | `title-bar.hpp` | 图标、应用名与副名（Quicksand、字间距）、菜单栏、操作区、折叠按钮、自绘的系统按钮与命中测试 |
+| 状态栏 | `status-bar.hpp` | `StatusBar`（普通与大尺寸）与 `StatusBarItem`（状态点、图标、等级、指示灯、按钮状态项、放不下时按权重收缩） |
+| 悬停提示 | `tooltip.hpp` | `Tooltip`（纯文字与版式提示、角标、定位），延迟等时机在 `Root`；内容类型在 `tooltip-content.hpp` |
+| 通知 | `notification.hpp` | `NotificationCenter`（弹出的通知、通知面板、历史、未读）与 `NotificationButton` |
+| 对话框框架 | `dialog-frame.hpp` | 独立窗口对话框的内容：标题栏（最大化、关闭）、正文、按钮区，Esc 与回车处理、初始焦点、标题栏空白处的命中测试 |
+| 窗口框架 | `app-frame.hpp` | 标题栏、页面区、底部面板、状态栏自上而下排布，失焦状态与通知让出状态栏 |
 
 ## 与网页版对照
 
@@ -83,4 +94,4 @@ return rujian::ui::HostWindow::runMessageLoop();
 
 ## 许可
 
-Apache-2.0，见 [LICENSE](LICENSE)；图标图形来自 Tabler Icons（MIT），许可与清单见 `third_party/tabler-icons`。
+Apache-2.0，见 [LICENSE](LICENSE)；图标图形来自 Tabler Icons（MIT），标题栏应用名的字体是 Quicksand（SIL OFL 1.1），许可与清单见 `third_party/tabler-icons`、`third_party/quicksand`。

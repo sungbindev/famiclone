@@ -20,6 +20,8 @@ import { compareLayout, comparePixels, contentBox, cropTo } from '../win32/ui-ki
 import { decodePng } from '../win32/ui-kit/tools/reference/png.mjs';
 import { CssValueError, Evaluator, parseRules, parseValue, splitTopLevel, stripComments } from '../win32/ui-kit/tools/lib/css.mjs';
 import { DATA_FILE, generate as generateIcons, ID_FILE, RULES_FILE } from '../win32/ui-kit/tools/gen-icons.mjs';
+import { FONT_DATA_FILE, generate as generateFonts } from '../win32/ui-kit/tools/gen-fonts.mjs';
+import { decodeWoff2 } from '../win32/ui-kit/tools/lib/woff2.mjs';
 import { generate as generateTokens, OUTPUT_FILE } from '../win32/ui-kit/tools/gen-tokens.mjs';
 
 const directories: string[] = [];
@@ -240,6 +242,41 @@ function writeTemp(name: string, content: Buffer | string): string {
   writeFileSync(file, content);
   return file;
 }
+
+/** 读出 TrueType 字体的表目录。 */
+function tablesOf(font: Buffer): Map<string, { offset: number; length: number }> {
+  const tables = new Map<string, { offset: number; length: number }>();
+  for (let index = 0; index < font.readUInt16BE(4); index += 1) {
+    const at = 12 + index * 16;
+    tables.set(font.toString('latin1', at, at + 4), { offset: font.readUInt32BE(at + 8), length: font.readUInt32BE(at + 12) });
+  }
+  return tables;
+}
+
+describe('WOFF2 字体解码与嵌入字体', () => {
+  it('嵌入字体数据与生成结果一致', () => {
+    expect(readFileSync(FONT_DATA_FILE, 'utf8')).toBe(generateFonts());
+  });
+
+  it('解码 Quicksand：表齐全，字形数、度量表与 loca 互相吻合', () => {
+    const source = readFileSync(join(__dirname, '..', '..', '..', 'rujian-ui-kit', 'src', 'third_party', 'quicksand', 'quicksand-latin-700.woff2'));
+    const font = decodeWoff2(source);
+    const tables = tablesOf(font);
+    for (const tag of ['cmap', 'glyf', 'head', 'hhea', 'hmtx', 'loca', 'maxp']) expect(tables.has(tag)).toBe(true);
+    const glyphs = font.readUInt16BE((tables.get('maxp')?.offset ?? 0) + 4);
+    const metrics = font.readUInt16BE((tables.get('hhea')?.offset ?? 0) + 34);
+    expect(glyphs).toBeGreaterThan(100);
+    expect(tables.get('hmtx')?.length).toBe(metrics * 4 + (glyphs - metrics) * 2);
+    expect(font.readUInt32BE((tables.get('loca')?.offset ?? 0) + glyphs * 4)).toBe(tables.get('glyf')?.length);
+    expect(font.readInt16BE((tables.get('head')?.offset ?? 0) + 50)).toBe(1);
+  });
+
+  it('不是 WOFF2 或数据被截断时抛出异常', () => {
+    expect(() => decodeWoff2(new Uint8Array(64))).toThrow('不是 WOFF2');
+    const source = readFileSync(join(__dirname, '..', '..', '..', 'rujian-ui-kit', 'src', 'third_party', 'quicksand', 'quicksand-latin-500.woff2'));
+    expect(() => decodeWoff2(source.subarray(0, 100))).toThrow();
+  });
+});
 
 describe('PNG 解码', () => {
   it.each([0, 1, 2, 3, 4])('滤波类型 %i 解码后与原像素一致', (filter) => {

@@ -20,6 +20,7 @@
 #include "rujian/ui/canvas.hpp"
 #include "rujian/ui/geometry.hpp"
 #include "rujian/ui/host.hpp"
+#include "rujian/ui/tooltip-content.hpp"
 
 namespace rujian::ui {
 
@@ -131,6 +132,17 @@ class Widget {
   /** 请求重绘。 */
   void invalidate();
 
+  // ---- 悬停提示 ----
+
+  /** 设置纯文字的悬停提示；空文字表示这里没有提示，并盖住外层控件的提示。 */
+  void setTooltip(std::string text);
+  /** 设置版式的悬停提示。 */
+  void setRichTooltip(TooltipContent content);
+  /** 去掉自己的悬停提示（外层控件的提示重新生效）。 */
+  void clearTooltip() { tooltip_.reset(); }
+  /** 自己的悬停提示；没有设置时为空。 */
+  [[nodiscard]] const std::optional<TooltipContent>& tooltip() const { return tooltip_; }
+
   // ---- 绘制 ----
 
   /** 绘制控件自己与后代：先 paint，再 paintChildren。 */
@@ -183,6 +195,7 @@ class Widget {
   bool pressed_{false};
   bool focused_{false};
   bool focusVisible_{false};
+  std::optional<TooltipContent> tooltip_;
 };
 
 }  // namespace rujian::ui

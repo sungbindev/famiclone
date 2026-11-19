@@ -23,6 +23,11 @@ body {
   font-size: var(--font-size-body);
 }
 
+/* 菜单栏之类放在外壳里的控件，字号继承自外壳的标题栏，取外壳字号 */
+.reference-page.reference-chrome {
+  font-size: var(--font-size-chrome);
+}
+
 /* 截图对照只比较稳定后的状态：隐藏窗口里过渡动画不会走完，这里直接去掉过渡（原生版的过渡单独验证）；光标闪烁会让截图不稳定，改为透明 */
 *,
 *::before,

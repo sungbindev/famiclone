@@ -43,9 +43,24 @@ bool chainVisible(const Widget* widget) {
   return true;
 }
 
+/** 悬停提示的延迟定时器的持有者：定时器到时间后调用给定的函数。 */
+class TooltipTimerOwner final : public Widget {
+ public:
+  explicit TooltipTimerOwner(std::function<void()> fire) : fire_(std::move(fire)) {}
+  void onTimer(unsigned /*id*/) override { fire_(); }
+
+ private:
+  std::function<void()> fire_;
+};
+
 }  // namespace
 
-Root::Root(ThemeName theme, double scale) : theme_(theme), scale_(scale) {}
+Root::Root(ThemeName theme, double scale) : theme_(theme), scale_(scale) {
+  tooltipTimerOwner_ = std::make_unique<TooltipTimerOwner>([this] {
+    tooltipTimer_ = 0;
+    showTooltipNow();
+  });
+}
 
 Root::~Root() {
   // 弹层由调用方拥有，它们销毁时不能再访问已经开始销毁的 Root
@@ -195,6 +210,8 @@ void Root::toggleCaret() {
 }
 
 void Root::widgetLeft(Widget* widget) {
+  if (tooltipTarget_ == widget) hideTooltip();
+  if (tooltipBlocked_ == widget) tooltipBlocked_ = nullptr;
   if (focus_ == widget) focus_ = nullptr;
   if (hover_ == widget) hover_ = nullptr;
   if (pressedWidget_ == widget) pressedWidget_ = nullptr;
@@ -238,12 +255,14 @@ void Root::mouseMove(Point position, unsigned modifiers) {
   if (!content_) return;
   Widget* hit = hitTarget(position);
   updateHover(hit);
+  updateTooltip(hit, position);
   const MouseEvent event{position, MouseButton::None, modifiers, 0};
   bubble(capture_ != nullptr ? capture_ : hit, [&](Widget& widget) { return widget.onMouseMove(event); });
 }
 
 void Root::mouseDown(Point position, MouseButton button, unsigned modifiers, unsigned timeMs) {
   if (!content_) return;
+  dismissTooltip();
   // 连续点击：同一个按键在规定时间和范围内再次按下，次数 +1，三连击之后重新从 1 开始
   const bool repeated = timeMs != 0 && button == lastClickButton_ && timeMs - lastClickTime_ <= doubleClickMs_ && std::hypot(position.x - lastClickPosition_.x, position.y - lastClickPosition_.y) <= doubleClickSlop_;
   clickCount_ = repeated ? clickCount_ % 3 + 1 : 1;
@@ -292,12 +311,69 @@ void Root::mouseUp(Point position, MouseButton button, unsigned modifiers) {
 
 void Root::mouseWheel(Point position, double delta, unsigned modifiers) {
   if (!content_) return;
+  dismissTooltip();
   Widget* hit = capture_ != nullptr ? capture_ : hitTarget(position);
   const MouseEvent event{position, MouseButton::None, modifiers, delta};
   bubble(hit, [&](Widget& widget) { return widget.onMouseWheel(event); });
 }
 
-void Root::mouseLeave() { updateHover(nullptr); }
+void Root::mouseLeave() {
+  updateHover(nullptr);
+  hideTooltip();
+}
+
+void Root::setTooltipPresenter(TooltipPresenter* presenter) {
+  if (tooltipPresenter_ != nullptr && tooltipPresenter_ != presenter) hideTooltip();
+  tooltipPresenter_ = presenter;
+}
+
+void Root::hideTooltip() {
+  if (tooltipTimer_ != 0) stopTimer(tooltipTimer_);
+  tooltipTimer_ = 0;
+  if (tooltipVisible_ && tooltipPresenter_ != nullptr) tooltipPresenter_->hideTooltip();
+  tooltipVisible_ = false;
+  tooltipTarget_ = nullptr;
+  tooltipBlocked_ = nullptr;
+}
+
+void Root::dismissTooltip() {
+  Widget* target = tooltipTarget_;
+  hideTooltip();
+  tooltipBlocked_ = target;
+}
+
+void Root::showTooltipNow() {
+  if (tooltipTarget_ == nullptr || tooltipPresenter_ == nullptr || !tooltipTarget_->tooltip()) return;
+  tooltipPresenter_->showTooltip(*tooltipTarget_, *tooltipTarget_->tooltip(), tooltipPointer_);
+  tooltipVisible_ = true;
+}
+
+void Root::updateTooltip(Widget* hit, Point position) {
+  // 找鼠标所在控件起最近的带提示的控件；空文字的纯文字提示表示这里没有提示，盖住外层的
+  Widget* element = nullptr;
+  for (Widget* widget = hit; widget != nullptr; widget = widget->parent()) {
+    if (widget->tooltip()) {
+      element = widget;
+      break;
+    }
+  }
+  const bool blank = element != nullptr && !element->tooltip()->rich && element->tooltip()->text.find_first_not_of(" \t\r\n") == std::string::npos;
+  if (element == nullptr || blank) {
+    hideTooltip();
+    return;
+  }
+  if (element == tooltipBlocked_) return;
+  tooltipBlocked_ = nullptr;
+  tooltipPointer_ = position;
+  if (element == tooltipTarget_) return;
+  // 已有提示显示时，移到下一个控件立即弹出
+  const bool warm = tooltipVisible_;
+  hideTooltip();
+  tooltipTarget_ = element;
+  if (tooltipPresenter_ == nullptr) return;
+  if (warm) showTooltipNow();
+  else tooltipTimer_ = startTimer(tooltipTimerOwner_.get(), kTooltipDelayMilliseconds);
+}
 
 void Root::setFocus(Widget* widget, bool visible) {
   if (widget != nullptr && !(widget->host_ == this && widget->enabled())) return;
@@ -349,6 +425,7 @@ void Root::moveFocus(bool backward) {
 }
 
 void Root::keyDown(int virtualKey, unsigned modifiers, bool repeat) {
+  dismissTooltip();
   const KeyEvent event{virtualKey, modifiers, repeat};
   if (focus_ != nullptr && chainVisible(focus_) && bubble(focus_, [&](Widget& widget) { return widget.onKeyDown(event); }) != nullptr) return;
   if (virtualKey == kVirtualKeyTab && (modifiers & (kModifierCtrl | kModifierAlt)) == 0) moveFocus((modifiers & kModifierShift) != 0);

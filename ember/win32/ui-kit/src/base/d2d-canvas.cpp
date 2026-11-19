@@ -294,6 +294,24 @@ void D2DCanvas::drawText16(std::u16string_view text, const Rect& box, const Text
   layout->GetMetrics(&metrics);
   const double top = vertical == VerticalAlign::Center ? box.y + (box.height - metrics.height) / 2.0 : box.y;
   setBrush(style.color);
+  if (style.letterSpacing != 0 && !style.wrap) {
+    // DirectWrite 1.0（Windows 7）没有字间距：按整段排版得到的各簇位置，把每个字符簇单独画出来，簇之间再加字间距
+    TextStyle plain = style;
+    plain.letterSpacing = 0;
+    const double spacing = style.letterSpacing * style.fontSize;
+    double x = snap(box.x);
+    std::size_t at = 0;
+    for (const DWRITE_CLUSTER_METRICS& cluster : TextEngine::clusterMetrics(layout.Get())) {
+      if (cluster.isWhitespace == FALSE) {
+        if (const auto piece = graphics_.text().createLayout(text.substr(at, cluster.length), plain, 0, 0)) {
+          target_->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(x), static_cast<FLOAT>(snap(top))), piece.Get(), brush_.Get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+        }
+      }
+      at += cluster.length;
+      x += cluster.width + spacing;
+    }
+    return;
+  }
   target_->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(snap(box.x)), static_cast<FLOAT>(snap(top))), layout.Get(), brush_.Get(), D2D1_DRAW_TEXT_OPTIONS_CLIP);
 }
 

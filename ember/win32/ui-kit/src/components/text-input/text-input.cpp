@@ -310,7 +310,9 @@ bool TextInput::onKeyDown(const KeyEvent& event) {
       } else return false;
       break;
     case kVirtualKeyReturn:
-      if (onEnter_) onEnter_();
+      // 没有设置回车回调时不处理，让所在的对话框把它当作“触发默认按钮”
+      if (!onEnter_) return false;
+      onEnter_();
       return true;
     case 'A':
       if (!ctrl) return false;

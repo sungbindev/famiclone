@@ -78,6 +78,13 @@ void Widget::invalidate() {
   if (host_ != nullptr) host_->invalidate();
 }
 
+void Widget::setTooltip(std::string text) { tooltip_ = TooltipContent{.text = std::move(text)}; }
+
+void Widget::setRichTooltip(TooltipContent content) {
+  content.rich = true;
+  tooltip_ = std::move(content);
+}
+
 void Widget::paintTree(Canvas& canvas) {
   if (!visible_) return;
   paint(canvas);

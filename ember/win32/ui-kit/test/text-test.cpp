@@ -94,3 +94,44 @@ TEST(TextEngine, PunctuationRangeStillMeasures) {
   const auto metrics = Graphics::shared().text().measure("“好”—…", style, 0);
   EXPECT_GT(metrics.width, 0);
 }
+
+TEST(TextEngine, BrandFaceUsesTheEmbeddedFontInsteadOfTheBodyFont) {
+  auto& text = Graphics::shared().text();
+  TextStyle body;
+  body.fontSize = 13;
+  body.fontWeight = 700;
+  TextStyle brand = body;
+  brand.face = rujian::ui::TextFace::Brand;
+  const auto bodyWidth = text.measure("Ember", body, 0).width;
+  const auto brandWidth = text.measure("Ember", brand, 0).width;
+  EXPECT_GT(brandWidth, 0);
+  EXPECT_NE(brandWidth, bodyWidth);
+}
+
+TEST(TextEngine, BrandFaceWeightsDiffer) {
+  auto& text = Graphics::shared().text();
+  TextStyle medium;
+  medium.face = rujian::ui::TextFace::Brand;
+  medium.fontWeight = 500;
+  TextStyle bold = medium;
+  bold.fontWeight = 700;
+  EXPECT_NE(text.measure("Ember", medium, 0).width, text.measure("Ember", bold, 0).width);
+}
+
+TEST(TextEngine, BrandFaceKeepsNonLatinCharactersInTheBodyFont) {
+  auto& text = Graphics::shared().text();
+  TextStyle brand;
+  brand.face = rujian::ui::TextFace::Brand;
+  TextStyle body;
+  EXPECT_NEAR(text.measure("模拟器", brand, 0).width, text.measure("模拟器", body, 0).width, 0.01);
+}
+
+TEST(TextEngine, LetterSpacingAddsOneShareAfterEveryCluster) {
+  auto& text = Graphics::shared().text();
+  TextStyle plain;
+  plain.fontSize = 13;
+  TextStyle spaced = plain;
+  spaced.letterSpacing = 0.08;
+  const auto base = text.measure("Ember 模拟", plain, 0).width;
+  EXPECT_NEAR(text.measure("Ember 模拟", spaced, 0).width, base + 8 * 0.08 * 13, 0.01);
+}

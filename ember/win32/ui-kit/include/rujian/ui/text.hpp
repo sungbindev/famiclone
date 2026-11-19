@@ -26,6 +26,9 @@ enum class TextOverflow {
   Ellipsis
 };
 
+/** 字体：正文字体，或标题栏应用名用的品牌字体（Quicksand，只含拉丁字母，其余字符仍按正文字体）。 */
+enum class TextFace { Body, Brand };
+
 /** 文字样式。 */
 struct TextStyle {
   /** 字号。 */
@@ -44,6 +47,10 @@ struct TextStyle {
   bool wrap{false};
   /** 是否加下划线。 */
   bool underline{false};
+  /** 字体。 */
+  TextFace face{TextFace::Body};
+  /** 字间距，占字号的倍数（CSS 的 letter-spacing，单位 em）；每个字符后面加一份，包括最后一个；只用于不换行、靠左的文字。 */
+  double letterSpacing{0};
 };
 
 /** 文字度量结果。 */

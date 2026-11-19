@@ -25,6 +25,16 @@
 
 namespace rujian::ui {
 
+/** 悬停提示的显示者（由 Tooltip 控件实现）：接收 Root 决定显示或收起提示的请求。 */
+class TooltipPresenter {
+ public:
+  virtual ~TooltipPresenter() = default;
+  /** 显示 target 的提示；pointer 是鼠标位置（窗口坐标）。 */
+  virtual void showTooltip(const Widget& target, const TooltipContent& content, Point pointer) = 0;
+  /** 收起提示。 */
+  virtual void hideTooltip() = 0;
+};
+
 /** 根容器。 */
 class Root final : public Host {
  public:
@@ -50,6 +60,13 @@ class Root final : public Host {
    * @param write 写。
    */
   void setClipboardHandlers(std::function<std::optional<std::string>()> read, std::function<void(std::string_view)> write);
+
+  /** 设置悬停提示的显示者；空表示不显示提示。不负责显示者的生命周期。 */
+  void setTooltipPresenter(TooltipPresenter* presenter);
+  /** 收起悬停提示并取消等待中的提示（窗口失去焦点、窗口大小变化时调用）。 */
+  void hideTooltip();
+  /** 鼠标停在控件上多久后弹出提示（毫秒）。 */
+  static constexpr unsigned kTooltipDelayMilliseconds = 400;
 
   /**
    * 设置光标闪烁定时器的回调：参数是间隔毫秒，0 表示停止。窗口据此设置系统定时器，到时间后调用 toggleCaret。
@@ -156,6 +173,9 @@ class Root final : public Host {
   /** 控件是否属于某个弹层。 */
   [[nodiscard]] bool inLayer(const Widget* widget) const;
   void updateHover(Widget* target);
+  void updateTooltip(Widget* hit, Point position);
+  void showTooltipNow();
+  void dismissTooltip();
   void moveFocus(bool backward);
   static void collectFocusable(Widget* widget, std::vector<Widget*>& out);
 
@@ -182,6 +202,16 @@ class Root final : public Host {
   std::map<unsigned, Widget*> timers_;
   unsigned nextTimer_{100};
   bool animations_{true};
+  TooltipPresenter* tooltipPresenter_{nullptr};
+  /** 等待显示或正在显示提示的控件。 */
+  Widget* tooltipTarget_{nullptr};
+  /** 提示被点击、按键、滚轮收起后，鼠标离开它之前不再弹出。 */
+  Widget* tooltipBlocked_{nullptr};
+  bool tooltipVisible_{false};
+  unsigned tooltipTimer_{0};
+  Point tooltipPointer_{};
+  /** 提示延迟定时器的持有者。 */
+  std::unique_ptr<Widget> tooltipTimerOwner_;
   std::function<void(unsigned, unsigned)> timerStart_;
   std::function<void(unsigned)> timerStop_;
   // 内容放最后声明，保证它最先销毁，销毁时上面的指针还有效

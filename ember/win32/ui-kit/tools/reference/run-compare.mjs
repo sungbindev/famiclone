@@ -42,7 +42,7 @@ const CONTENT_THRESHOLD = 40;
 /** 单个子进程（截图或绘制）的超时时间，超时即视为卡住。 */
 const TOOL_TIMEOUT_MILLISECONDS = 120000;
 /** 默认要跑的场景（每页实际跑哪些由 gallery --info 的 scenes 决定）。 */
-const DEFAULT_SCENES = ['normal', 'hover', 'pressed', 'focus', 'open', 'openkey', 'openhover', 'wheel', 'drag'];
+const DEFAULT_SCENES = ['normal', 'hover', 'pressed', 'focus', 'open', 'openkey', 'openhover', 'wheel', 'drag', 'tip'];
 
 /** 解析命令行。 */
 function parseArguments(argv) {

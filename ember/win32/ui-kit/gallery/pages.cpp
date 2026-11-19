@@ -22,9 +22,12 @@
 #include "rujian/ui/checkbox.hpp"
 #include "rujian/ui/facts.hpp"
 #include "rujian/ui/field.hpp"
+#include "rujian/ui/app-frame.hpp"
+#include "rujian/ui/dialog-frame.hpp"
 #include "rujian/ui/label.hpp"
 #include "rujian/ui/layout.hpp"
 #include "rujian/ui/list.hpp"
+#include "rujian/ui/menu.hpp"
 #include "rujian/ui/panel.hpp"
 #include "rujian/ui/radio-group.hpp"
 #include "rujian/ui/row-list.hpp"
@@ -34,9 +37,11 @@
 #include "rujian/ui/slider.hpp"
 #include "rujian/ui/split-view.hpp"
 #include "rujian/ui/state.hpp"
+#include "rujian/ui/status-bar.hpp"
 #include "rujian/ui/status-label.hpp"
 #include "rujian/ui/table.hpp"
 #include "rujian/ui/tabs.hpp"
+#include "rujian/ui/title-bar.hpp"
 #include "rujian/ui/text-input.hpp"
 #include "rujian/ui/toolbar.hpp"
 #include "rujian/ui/tree.hpp"
@@ -236,6 +241,162 @@ Page buildSelectPage() {
   addSelect(page, *row, "");
   addSelect(page, *row, "c")->setEnabled(false);
   page.content = std::move(row);
+  return page;
+}
+
+/** 菜单页的页面大小：一行三个菜单栏，弹层向下展开，高度取 4 的倍数。 */
+constexpr ui::Size kMenuPageSize{480, 224};
+
+/** 菜单栏里菜单名按钮的文字在左右各 8 像素的内边距之内、上下各 4 像素之内；这之外的底色与圆角才参与像素对照。 */
+constexpr ui::Insets kMenuInset{4, 7, 4, 7};
+/** 弹层与弹层里每一项：文字、勾选标记、快捷键都在四周 4 像素之内，只对照外圈。 */
+constexpr ui::Insets kMenuPopupInset{4, 4, 4, 4};
+
+ui::MenuItem makeMenuItem(const char* id, const char* label) {
+  ui::MenuItem item;
+  item.id = id;
+  item.label = label;
+  return item;
+}
+
+/** 往容器里加一个只有一个菜单的菜单栏并登记为样本。 */
+void addMenuBar(Page& page, ui::Widget& parent, ui::MenuBarMenu menu) {
+  auto bar = std::make_unique<ui::MenuBar>();
+  ui::MenuBar* raw = bar.get();
+  raw->setMenus({std::move(menu)});
+  parent.addChild(std::move(bar));
+  page.samples.push_back(raw);
+}
+
+/** 菜单页：普通项带图标与快捷键、禁用项、分隔线、助记符；勾选项与单选项、子菜单、提示文字。 */
+Page buildMenuPage() {
+  Page page;
+  auto row = std::make_unique<ui::Row>();
+  row->setPadding(ui::Insets::all(kPagePadding));
+
+  ui::MenuItem create = makeMenuItem("new", "新建");
+  create.icon = ui::IconId::Plus;
+  create.shortcut = "Ctrl+N";
+  ui::MenuItem open = makeMenuItem("open", "打开");
+  open.icon = ui::IconId::FolderOpen;
+  open.shortcut = "Ctrl+O";
+  open.disabled = true;
+  ui::MenuItem save = makeMenuItem("save", "保存");
+  save.icon = ui::IconId::DeviceFloppy;
+  save.shortcut = "Ctrl+S";
+  ui::MenuItem exit = makeMenuItem("exit", "退出");
+  exit.icon = ui::IconId::Power;
+  exit.mnemonic = "x";
+  exit.separatorBefore = true;
+  addMenuBar(page, *row, ui::MenuBarMenu{.id = "file", .label = "文件", .mnemonic = "F", .items = {create, open, save, exit}});
+
+  ui::MenuItem full = makeMenuItem("full", "全屏");
+  full.checked = true;
+  full.shortcut = "F11";
+  ui::MenuItem dark = makeMenuItem("dark", "深色");
+  dark.checked = true;
+  dark.radio = true;
+  ui::MenuItem light = makeMenuItem("light", "浅色");
+  light.checked = false;
+  light.radio = true;
+  ui::MenuItem zoom = makeMenuItem("zoom", "缩放");
+  zoom.separatorBefore = true;
+  zoom.items = {makeMenuItem("zoom-in", "放大"), makeMenuItem("zoom-out", "缩小")};
+  ui::MenuItem replay = makeMenuItem("replay", "回放");
+  replay.hint = "暂未支持";
+  replay.disabled = true;
+  addMenuBar(page, *row, ui::MenuBarMenu{.id = "view", .label = "视图", .mnemonic = "V", .items = {full, dark, light, zoom, replay}});
+
+  ui::MenuItem update = makeMenuItem("update", "检查更新");
+  update.hint = "暂未支持";
+  ui::MenuItem about = makeMenuItem("about", "关于");
+  about.separatorBefore = true;
+  addMenuBar(page, *row, ui::MenuBarMenu{.id = "help", .label = "帮助", .mnemonic = "H", .items = {makeMenuItem("manual", "手册"), update, about}});
+  page.content = std::move(row);
+  return page;
+}
+
+/** 标题栏页的页面大小：标题栏高 36，宽 480。 */
+constexpr ui::Size kTitleBarPageSize{480, 36};
+
+/** 标题栏（样本 0）里不参与像素对照的内部：图标与文字都在左右 6 像素、上下 4 像素之内，只对照底色与底部分割线。 */
+constexpr ui::Insets kTitleBarInset{4, 4, 4, 6};
+/** 折叠按钮里的图标（居中的 14 像素）在左右 14 像素、上下 8 像素之内。 */
+constexpr ui::Insets kTitleBarToolInset{8, 14, 8, 14};
+
+/** 应用图标的占位：主题色的圆角方块。 */
+class LogoSquare final : public ui::Widget {
+ public:
+  void paint(ui::Canvas& canvas) override {
+    canvas.drawBox(bounds(), ui::BoxStyle{.fill = ui::themeTokens(host()->theme()).accent, .radius = 4.0});
+  }
+};
+
+/** 标题栏页：图标、应用名与副名、菜单栏、操作区的按钮、三个折叠按钮（展开、收起、禁用），不显示系统按钮。 */
+Page buildTitleBarPage() {
+  Page page;
+  auto bar = std::make_unique<ui::TitleBar>();
+  ui::TitleBar* raw = bar.get();
+  raw->setLogo(std::make_unique<LogoSquare>());
+  raw->setTitle("Ember");
+  raw->setSubtitle("模拟器");
+  auto menus = std::make_unique<ui::MenuBar>();
+  ui::MenuBar* menuRaw = menus.get();
+  menuRaw->setMenus({ui::MenuBarMenu{.id = "file", .label = "文件", .mnemonic = "F", .items = {makeMenuItem("open", "打开"), makeMenuItem("exit", "退出"), makeMenuItem("about", "关于")}}});
+  raw->setMenuBar(std::move(menus));
+  ui::Widget* update = raw->addAction(std::make_unique<ui::Button>("更新"));
+  raw->setTools({ui::TitleBarTool{.id = "side", .label = "边栏", .icon = ui::IconId::Settings, .expanded = true},
+                 ui::TitleBarTool{.id = "bottom", .label = "底部面板", .icon = ui::IconId::Eye},
+                 ui::TitleBarTool{.id = "right", .label = "右边栏", .icon = ui::IconId::Bell, .disabled = true}});
+  page.samples = {raw, menuRaw, update, raw->toolButton(0), raw->toolButton(1), raw->toolButton(2)};
+  page.content = std::move(bar);
+  return page;
+}
+
+/** 状态栏页的页面大小：普通 26 高，大尺寸 32 高。 */
+constexpr ui::Size kStatusBarPageSize{480, 26};
+constexpr ui::Size kStatusBarLargePageSize{480, 32};
+/** 状态栏与状态项里不参与像素对照的内部：文字与图标都在 3 像素之内。 */
+constexpr ui::Insets kStatusBarInset = ui::Insets::all(3);
+
+/** 往状态栏加一个状态项并登记为样本。 */
+ui::StatusBarItem* addStatusItem(Page& page, ui::StatusBar& bar, bool atEnd, const char* text) {
+  auto item = std::make_unique<ui::StatusBarItem>(text);
+  ui::StatusBarItem* raw = atEnd ? bar.addEnd(std::move(item)) : bar.addStart(std::move(item));
+  page.samples.push_back(raw);
+  return raw;
+}
+
+/**
+ * 状态栏页：左侧依次是状态点、警告等级、成功等级的按钮、放不下时收缩的长文字；
+ * 右侧依次是文字后的指示灯、画在图标里的指示灯、选中的纯图标按钮、未选中的纯图标按钮。
+ */
+Page buildStatusBarPage(bool large) {
+  Page page;
+  auto bar = std::make_unique<ui::StatusBar>();
+  ui::StatusBar* raw = bar.get();
+  raw->setLarge(large);
+  page.samples.push_back(raw);
+  addStatusItem(page, *raw, false, "运行中")->setDot(ui::StatusDot::Success);
+  addStatusItem(page, *raw, false, "已暂停")->setTone(ui::StatusItemTone::Warning);
+  ui::StatusBarItem* debug = addStatusItem(page, *raw, false, "调试模式");
+  debug->setTone(ui::StatusItemTone::Success);
+  debug->setOnClick([] {});
+  addStatusItem(page, *raw, false, "这是一个很长很长很长很长很长很长的文件名称.nes");
+  addStatusItem(page, *raw, true, "软驱")->setLamp(ui::StatusLamp{.lit = true, .label = "灯"});
+  ui::StatusBarItem* disk = addStatusItem(page, *raw, true, "磁盘");
+  disk->setIcon(ui::IconId::DeviceFloppy);
+  disk->setLamp(ui::StatusLamp{.lit = true, .label = "读写灯", .inIcon = ui::Point{50, 60}});
+  ui::StatusBarItem* selected = addStatusItem(page, *raw, true, "通知");
+  selected->setIcon(ui::IconId::Bell);
+  selected->setIconOnly(true);
+  selected->setOnClick([] {});
+  selected->setPressed(true);
+  ui::StatusBarItem* plain = addStatusItem(page, *raw, true, "提示");
+  plain->setIcon(ui::IconId::InfoCircle);
+  plain->setIconOnly(true);
+  plain->setOnClick([] {});
+  page.content = std::move(bar);
   return page;
 }
 
@@ -732,6 +893,117 @@ Page buildTablePage() {
   return page;
 }
 
+/** 悬停提示页的页面大小：三个按钮一排，提示在按钮右侧或左侧。 */
+constexpr ui::Size kTooltipPageSize{480, 160};
+/** 提示里文字与图标都在四周 4 像素之内，只对照外圈。 */
+constexpr ui::Insets kTooltipInset{4, 4, 4, 4};
+
+/** 悬停提示页：三个按钮依次带短文字提示、会换行的长文字提示、版式提示。 */
+Page buildTooltipPage() {
+  Page page;
+  auto row = std::make_unique<ui::Row>();
+  row->setPadding(ui::Insets::all(kPagePadding));
+  const auto add = [&](const char* label) {
+    auto button = std::make_unique<ui::Button>(label);
+    button->setAutoIcon(false);
+    ui::Button* raw = button.get();
+    row->addChild(std::move(button));
+    page.samples.push_back(raw);
+    return raw;
+  };
+  add("提示一")->setTooltip("这是一条短提示");
+  add("提示二")->setTooltip("这是一段比较长的提示文字，用来验证提示在最大宽度处换行并保持角标位置。这是一段比较长的提示文字，用来验证提示在最大宽度处换行并保持角标位置。");
+  add("提示三")->setRichTooltip(ui::TooltipContent{.title = "标题", .icon = ui::IconId::InfoCircle, .items = {ui::TooltipItem{.icon = ui::IconId::Eye, .title = "小标题", .text = "正文说明文字，稍微长一点用来换行验证宽度"}, ui::TooltipItem{.text = "第二条说明"}}});
+  page.content = std::move(row);
+  return page;
+}
+
+/** 通知页的页面大小：三条弹出的通知堆叠在右下角。 */
+constexpr ui::Size kNotificationPageSize{480, 240};
+/** 通知面板页的页面大小：顶部一条状态栏（带通知按钮），右下角展开的通知面板。 */
+constexpr ui::Size kNotificationCenterPageSize{480, 360};
+/** 通知与面板里的图标、文字都在四周 4 像素之内，只对照外圈。 */
+constexpr ui::Insets kNoticeInset{4, 4, 4, 4};
+
+/** 发三条通知：短消息、会换行的警告、超过三行被截断的错误。 */
+void sendSampleNotices(ui::NotificationCenter& center) {
+  center.notify("已保存设置。", ui::NoticeLevel::Info);
+  center.notify("这是一条较长的警告消息，需要换行显示：卡带的存档目录无法写入，请检查目录权限后重试。", ui::NoticeLevel::Warning);
+  center.notify("保存失败\n原因：磁盘已满。请释放空间后重试。详情详情详情详情详情详情详情详情详情详情详情详情详情详情详情详情详情详情详情详情", ui::NoticeLevel::Error);
+}
+
+/** 通知页：页面是空的，通知在布局后发出，弹出的通知就是样本。 */
+Page buildNotificationPage() {
+  Page page;
+  page.content = std::make_unique<ui::Row>();
+  page.setup = [](ui::NotificationCenter& center, std::vector<ui::Widget*>& samples) {
+    sendSampleNotices(center);
+    samples = center.toastWidgets();
+  };
+  return page;
+}
+
+/** 通知面板页：状态栏右侧是通知按钮；发三条通知后打开面板，面板自己与各条历史是额外的矩形。 */
+Page buildNotificationCenterPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  auto bar = std::make_unique<ui::StatusBar>();
+  ui::StatusBar* raw = bar.get();
+  stack->addChild(std::move(bar));
+  page.samples.push_back(raw);
+  page.content = std::move(stack);
+  page.setup = [raw](ui::NotificationCenter& center, std::vector<ui::Widget*>& samples) {
+    samples.push_back(raw->addEndWidget(std::make_unique<ui::NotificationButton>(center)));
+    sendSampleNotices(center);
+    center.setOpen(true);
+  };
+  return page;
+}
+
+/** 对话框页的页面大小：对话框的内容铺满窗口。 */
+constexpr ui::Size kDialogPageSize{420, 160};
+/** 标题栏里 24×24 的小方块按钮：图标在四周 4 像素之内。 */
+constexpr ui::Insets kDialogControlInset{4, 4, 4, 4};
+
+/** 对话框页：标题栏带最大化与关闭按钮，一段正文，按钮区有“取消”与默认的“确定”。 */
+Page buildDialogPage() {
+  Page page;
+  auto dialog = std::make_unique<ui::DialogFrame>();
+  ui::DialogFrame* raw = dialog.get();
+  raw->setTitle("对话框标题");
+  raw->setMaximizable(true);
+  raw->setContent(std::make_unique<ui::Label>("这是对话框的正文内容。"));
+  raw->setButtons({ui::DialogButton{.id = "cancel", .text = "取消", .isCancel = true}, ui::DialogButton{.id = "ok", .text = "确定", .variant = ui::ButtonVariant::Primary, .isDefault = true}});
+  page.samples = {raw->maximizeControl(), raw->closeControl(), raw->button("cancel"), raw->button("ok")};
+  page.content = std::move(dialog);
+  return page;
+}
+
+/** 窗口框架页的页面大小：框架铺满窗口。 */
+constexpr ui::Size kAppFramePageSize{480, 240};
+
+/** 窗口框架页：标题栏、空的页面区、高 60 的底部面板、大尺寸状态栏（左右各一个状态项）。 */
+Page buildAppFramePage() {
+  Page page;
+  auto frame = std::make_unique<ui::AppFrame>();
+  ui::AppFrame* raw = frame.get();
+  ui::TitleBar* titleBar = raw->setTitleBar(std::make_unique<ui::TitleBar>());
+  titleBar->setTitle("Ember");
+  titleBar->setSubtitle("模拟器");
+  raw->setStatusBarLarge(true);
+  ui::StatusBar* statusBar = raw->setStatusBar(std::make_unique<ui::StatusBar>());
+  ui::StatusBarItem* start = statusBar->addStart(std::make_unique<ui::StatusBarItem>("就绪"));
+  ui::StatusBarItem* end = statusBar->addEnd(std::make_unique<ui::StatusBarItem>("60 fps"));
+  raw->setPage(std::make_unique<ui::Widget>());
+  raw->setBottomPanel(std::make_unique<ui::Widget>());
+  raw->setBottomPanelMinHeight(60);
+  raw->setBottomPanelHeight(60);
+  raw->setBottomPanelOpen(true);
+  page.samples = {raw, titleBar, raw->pageRegion(), raw->bottomRegion(), statusBar, start, end};
+  page.content = std::move(frame);
+  return page;
+}
+
 }  // namespace
 
 const std::vector<PageInfo>& pageInfos() {
@@ -740,6 +1012,15 @@ const std::vector<PageInfo>& pageInfos() {
       {"input", kInputPageSize, ui::Insets::symmetric(4, 3), {}, {}, {0, 1, 2, 3, 6, 7}, {"hover", "pressed", "focus"}},
       {"choice", kChoicePageSize, ui::Insets{0, 0, 0, kCheckboxMarkWidth}, {{4, kGroupInset}, {5, kGroupInset}, {6, kGroupInset}, {7, kGroupInset}}, {}, {0, 1, 2, 3, 4, 5, 6, 7}, {"hover", "pressed", "focus"}},
       {"select", kSelectPageSize, kSelectInset, {}, kOptionInset, {0, 1, 2}, {"hover", "pressed", "focus", "open", "openkey", "openhover"}},
+      {"menu", kMenuPageSize, kMenuInset, {}, kMenuPopupInset, {0, 1, 2}, {"hover", "pressed", "focus", "open", "openkey", "openhover"}},
+      {"title-bar", kTitleBarPageSize, kTitleBarInset, {{1, kMenuInset}, {2, ui::Insets::all(3)}, {3, kTitleBarToolInset}, {4, kTitleBarToolInset}, {5, kTitleBarToolInset}}, {}, {2, 3, 4, 5}, {"hover", "pressed"}},
+      {"status-bar", kStatusBarPageSize, kStatusBarInset, {}, {}, {3, 7, 8}, {"hover", "pressed"}},
+      {"tooltip", kTooltipPageSize, ui::Insets::all(3), {}, kTooltipInset, {0, 1, 2}, {"tip"}},
+      {"notification", kNotificationPageSize, kNoticeInset, {}, {}, {}, {}, 3},
+      {"dialog", kDialogPageSize, kDialogControlInset, {{2, ui::Insets::all(3)}, {3, ui::Insets::all(3)}}, {}, {0, 1, 2, 3}, {"hover", "pressed"}},
+      {"app-frame", kAppFramePageSize, ui::Insets::all(4), {{1, kTitleBarInset}, {4, kStatusBarInset}, {5, ui::Insets::all(3)}, {6, ui::Insets::all(3)}}, {}, {}, {}},
+      {"notification-center", kNotificationCenterPageSize, ui::Insets::all(3), {}, kNoticeInset, {}, {}, 1},
+      {"status-bar-large", kStatusBarLargePageSize, kStatusBarInset, {}, {}, {3, 7, 8}, {"hover", "pressed"}},
       {"slider", kSliderPageSize, ui::Insets::all(kCompareAll), {}, {}, {0, 1, 2, 3}, {"hover", "pressed", "focus"}},
       {"scroll", kScrollPageSize, ui::Insets::all(kCompareAll), {}, {}, {0}, {"hover", "wheel", "drag"}},
       // 面板样本高度：122、74、88、90、46（边框、标题行、44 或 28、内容区内边距与内容块）
@@ -778,6 +1059,15 @@ Page buildPage(const std::string& name) {
   if (name == "input") return buildInputPage();
   if (name == "choice") return buildChoicePage();
   if (name == "select") return buildSelectPage();
+  if (name == "menu") return buildMenuPage();
+  if (name == "title-bar") return buildTitleBarPage();
+  if (name == "status-bar") return buildStatusBarPage(false);
+  if (name == "tooltip") return buildTooltipPage();
+  if (name == "notification") return buildNotificationPage();
+  if (name == "dialog") return buildDialogPage();
+  if (name == "app-frame") return buildAppFramePage();
+  if (name == "notification-center") return buildNotificationCenterPage();
+  if (name == "status-bar-large") return buildStatusBarPage(true);
   if (name == "slider") return buildSliderPage();
   if (name == "scroll") return buildScrollPage();
   if (name == "panel") return buildPanelPage();

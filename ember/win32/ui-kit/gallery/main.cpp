@@ -33,6 +33,8 @@
 #include "rujian/ui/root.hpp"
 #include "rujian/ui/scroll-area.hpp"
 #include "rujian/ui/select.hpp"
+#include "rujian/ui/tooltip.hpp"
+#include "rujian/ui/menu.hpp"
 #include "rujian/ui/window.hpp"
 
 namespace ui = rujian::ui;
@@ -113,7 +115,7 @@ int printInfo() {
     for (std::size_t t = 0; t < info.targets.size(); ++t) std::printf("%s%d", t > 0 ? ", " : "", info.targets[t]);
     std::printf("], \"scenes\": [");
     for (std::size_t s = 0; s < info.scenes.size(); ++s) std::printf("%s\"%s\"", s > 0 ? ", " : "", info.scenes[s].c_str());
-    std::printf("], \"sampleCount\": %zu, \"extraInset\": %s}%s\n", gallery::buildPage(info.name).samples.size(), insetJson(info.extraInset).c_str(), i + 1 < infos.size() ? "," : "");
+    std::printf("], \"sampleCount\": %zu, \"extraInset\": %s}%s\n", gallery::buildPage(info.name).samples.size() + static_cast<std::size_t>(info.lateSamples), insetJson(info.extraInset).c_str(), i + 1 < infos.size() ? "," : "");
   }
   std::printf("]\n");
   return 0;
@@ -151,7 +153,17 @@ bool applyScene(ui::Root& root, const std::vector<ui::Widget*>& samples, const s
       const auto row = select != nullptr ? select->optionRect(kHoverOption) : std::nullopt;
       // 禁用的下拉框展开不了，没有选项可悬停
       if (row) root.mouseMove(ui::Point{row->x + row->width / 2, row->y + row->height / 2}, 0);
+      // 菜单栏：悬停在弹层里的第三项上
+      const auto* bar = dynamic_cast<const ui::MenuBar*>(samples[static_cast<std::size_t>(target)]);
+      if (bar != nullptr && bar->popup() != nullptr && bar->popup()->itemCount() > kHoverOption) {
+        const ui::Rect item = bar->popup()->itemRect(kHoverOption);
+        root.mouseMove(ui::Point{item.x + item.width / 2, item.y + item.height / 2}, 0);
+      }
     }
+  } else if (scene == "tip") {
+    // 鼠标移到样本上，等待的提示定时器立即到时间，弹出悬停提示
+    root.mouseMove(center, 0);
+    for (const unsigned id : root.pendingTimers()) root.fireTimer(id);
   } else if (scene == "wheel") {
     // 鼠标移到样本上再向下滚动一格
     root.mouseMove(center, 0);
@@ -188,12 +200,18 @@ int renderOffscreen(const Options& options) {
     return 2;
   }
   ui::Root root(options.theme, options.scale);
+  ui::Tooltip tooltip(root);
+  ui::NotificationCenter notices(root);
   gallery::Page page = gallery::buildPage(options.page);
-  const std::vector<ui::Widget*> samples = page.samples;
+  std::vector<ui::Widget*> samples = page.samples;
   root.setContent(std::move(page.content));
   root.setCaretHidden(true);
   root.setAnimationsEnabled(false);
   root.layout(info->size);
+  if (page.setup) {
+    page.setup(notices, samples);
+    root.layout(info->size);
+  }
   if (!applyScene(root, samples, options.scene, options.target)) return 2;
 
   ui::OffscreenSurface surface(info->size, options.scale);
@@ -209,6 +227,20 @@ int renderOffscreen(const Options& options) {
       const auto* select = dynamic_cast<const ui::Select*>(sample);
       if (select == nullptr) continue;
       for (std::size_t row = 0; const auto rect = select->optionRect(row); ++row) rects.push_back(*rect);
+    }
+    // 展开的菜单弹层：弹层自己，再是各个菜单项（与参考页里 .ui-menu__popup、.ui-menu__item 的顺序一致）
+    for (const ui::Widget* sample : samples) {
+      const auto* bar = dynamic_cast<const ui::MenuBar*>(sample);
+      if (bar == nullptr || bar->popup() == nullptr) continue;
+      rects.push_back(bar->popup()->bounds());
+      for (std::size_t item = 0; item < bar->popup()->itemCount(); ++item) rects.push_back(bar->popup()->itemRect(item));
+    }
+    // 悬停提示（与参考页里 .ui-tooltip 一致）
+    if (tooltip.shown()) rects.push_back(tooltip.bounds());
+    // 通知面板：面板自己，再是各条历史（与参考页里 .ui-notification-center、.ui-notification-center__item 的顺序一致）
+    if (notices.open()) {
+      rects.push_back(notices.panelRect());
+      for (std::size_t row = 0; row < notices.rowCount(); ++row) rects.push_back(notices.rowRect(row));
     }
     std::ofstream out(options.rects, std::ios::binary);
     out << "[\n";

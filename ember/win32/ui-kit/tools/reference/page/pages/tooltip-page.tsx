@@ -25,7 +25,7 @@ export function TooltipPage() {
     });
   }, []);
   return (
-    <Row className="reference-page">
+    <Row className="reference-page" style={{ gap: 320 }}>
       <Button data-sample icon={false} title="这是一条短提示">
         提示一
       </Button>

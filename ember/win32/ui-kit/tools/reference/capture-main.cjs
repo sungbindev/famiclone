@@ -36,6 +36,8 @@ function readArguments() {
 const options = readArguments();
 const scale = Number(options.scale ?? '1');
 app.commandLine.appendSwitch('force-device-scale-factor', String(scale));
+// 原生版文字是灰度抗锯齿；网页版的 ClearType 彩边会让样本之外的文字出现与实现无关的像素差
+app.commandLine.appendSwitch('disable-lcd-text');
 const width = Number(options.width ?? '440');
 const height = Number(options.height ?? '60');
 // 悬停与颜色过渡的时间由页面决定（参考页已关闭过渡），这里只等一帧渲染

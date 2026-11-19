@@ -893,8 +893,10 @@ Page buildTablePage() {
   return page;
 }
 
-/** 悬停提示页的页面大小：三个按钮一排，提示在按钮右侧或左侧。 */
-constexpr ui::Size kTooltipPageSize{480, 160};
+/** 悬停提示页的页面大小：三个按钮拉开一排，提示在按钮右侧或左侧，且不盖住其他按钮（网页版提示背后有背景虚化，原生版没有，盖住时透出的轮廓会造成无关的差异）。 */
+constexpr ui::Size kTooltipPageSize{840, 160};
+/** 悬停提示页三个按钮之间的间距：比最宽的提示还宽。 */
+constexpr double kTooltipPageGap = 320;
 /** 提示里文字与图标都在四周 4 像素之内，只对照外圈。 */
 constexpr ui::Insets kTooltipInset{4, 4, 4, 4};
 
@@ -903,6 +905,7 @@ Page buildTooltipPage() {
   Page page;
   auto row = std::make_unique<ui::Row>();
   row->setPadding(ui::Insets::all(kPagePadding));
+  row->setGap(kTooltipPageGap);
   const auto add = [&](const char* label) {
     auto button = std::make_unique<ui::Button>(label);
     button->setAutoIcon(false);
@@ -964,6 +967,8 @@ Page buildNotificationCenterPage() {
 constexpr ui::Size kDialogPageSize{420, 160};
 /** 标题栏里 24×24 的小方块按钮：图标在四周 4 像素之内。 */
 constexpr ui::Insets kDialogControlInset{4, 4, 4, 4};
+/** 对话框整体作样本时，只对照标题文字所在的条形区域（标题栏左侧）：上 4、左 8、右到 112、下到 30。 */
+constexpr ui::Insets kDialogTitleInset{4, 420 - 112, 160 - 30, 8};
 
 /** 对话框页：标题栏带最大化与关闭按钮，一段正文，按钮区有“取消”与默认的“确定”。 */
 Page buildDialogPage() {
@@ -972,9 +977,12 @@ Page buildDialogPage() {
   ui::DialogFrame* raw = dialog.get();
   raw->setTitle("对话框标题");
   raw->setMaximizable(true);
-  raw->setContent(std::make_unique<ui::Label>("这是对话框的正文内容。"));
+  auto body = std::make_unique<ui::Label>("这是对话框的正文内容。");
+  // 对话框正文区按正文行高排版
+  body->setLineHeight(ui::tokens::line_height_body);
+  raw->setContent(std::move(body));
   raw->setButtons({ui::DialogButton{.id = "cancel", .text = "取消", .isCancel = true}, ui::DialogButton{.id = "ok", .text = "确定", .variant = ui::ButtonVariant::Primary, .isDefault = true}});
-  page.samples = {raw->maximizeControl(), raw->closeControl(), raw->button("cancel"), raw->button("ok")};
+  page.samples = {raw, raw->maximizeControl(), raw->closeControl(), raw->content(), raw->button("cancel"), raw->button("ok")};
   page.content = std::move(dialog);
   return page;
 }
@@ -1017,7 +1025,7 @@ const std::vector<PageInfo>& pageInfos() {
       {"status-bar", kStatusBarPageSize, kStatusBarInset, {}, {}, {3, 7, 8}, {"hover", "pressed"}},
       {"tooltip", kTooltipPageSize, ui::Insets::all(3), {}, kTooltipInset, {0, 1, 2}, {"tip"}},
       {"notification", kNotificationPageSize, kNoticeInset, {}, {}, {}, {}, 3},
-      {"dialog", kDialogPageSize, kDialogControlInset, {{2, ui::Insets::all(3)}, {3, ui::Insets::all(3)}}, {}, {0, 1, 2, 3}, {"hover", "pressed"}},
+      {"dialog", kDialogPageSize, kDialogControlInset, {{0, kDialogTitleInset}, {3, ui::Insets::all(0)}, {4, ui::Insets::all(3)}, {5, ui::Insets::all(3)}}, {}, {1, 2, 4, 5}, {"hover", "pressed"}},
       {"app-frame", kAppFramePageSize, ui::Insets::all(4), {{1, kTitleBarInset}, {4, kStatusBarInset}, {5, ui::Insets::all(3)}, {6, ui::Insets::all(3)}}, {}, {}, {}},
       {"notification-center", kNotificationCenterPageSize, ui::Insets::all(3), {}, kNoticeInset, {}, {}, 1},
       {"status-bar-large", kStatusBarLargePageSize, kStatusBarInset, {}, {}, {3, 7, 8}, {"hover", "pressed"}},

@@ -58,7 +58,8 @@ npm run win32:test           # 原生外壳的 C++ 测试（核心、控件库�
 npm run make:win             # 只生成安装程序和升级文件
 npm run core:test            # C++ 测试；-- -R <名称> 只跑匹配的用例
 npm run check                # 全部检查与测试
-.\debug.ps1                  # 启动开发版
+.\debug-electron.ps1          # 启动 Electron 外壳的开发版
+.\debug-win32.ps1             # 启动 Win32 原生外壳的开发版
 ```
 
 安装程序与升级文件输出到 `build/ember/make/squirrel.windows/x64/`。

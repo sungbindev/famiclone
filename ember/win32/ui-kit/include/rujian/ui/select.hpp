@@ -68,6 +68,7 @@ class Select : public Widget {
 
  private:
   friend class SelectPopup;
+  friend class SelectRows;
 
   /** 弹层里的一项：占位项或选项。 */
   struct Entry {

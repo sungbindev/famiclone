@@ -111,4 +111,8 @@ void Widget::onImeEnd() {}
 
 void Widget::onStateChanged() { invalidate(); }
 
+void Widget::onTimer(unsigned /*id*/) {}
+
+void Widget::onDescendantFocused(Widget* /*descendant*/) {}
+
 }  // namespace rujian::ui

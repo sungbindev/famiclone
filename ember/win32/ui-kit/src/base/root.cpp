@@ -110,6 +110,37 @@ Widget* Root::hitTarget(Point point) {
   return content_ ? content_->hitTest(point) : nullptr;
 }
 
+unsigned Root::startTimer(Widget* owner, unsigned milliseconds) {
+  const unsigned id = nextTimer_++;
+  timers_[id] = owner;
+  if (timerStart_) timerStart_(id, milliseconds);
+  return id;
+}
+
+void Root::stopTimer(unsigned id) {
+  if (timers_.erase(id) > 0 && timerStop_) timerStop_(id);
+}
+
+void Root::setTimerHandlers(std::function<void(unsigned id, unsigned milliseconds)> start, std::function<void(unsigned id)> stop) {
+  timerStart_ = std::move(start);
+  timerStop_ = std::move(stop);
+}
+
+void Root::fireTimer(unsigned id) {
+  const auto found = timers_.find(id);
+  if (found == timers_.end()) return;
+  Widget* owner = found->second;
+  timers_.erase(found);
+  if (timerStop_) timerStop_(id);
+  owner->onTimer(id);
+}
+
+std::vector<unsigned> Root::pendingTimers() const {
+  std::vector<unsigned> ids;
+  for (const auto& [id, owner] : timers_) ids.push_back(id);
+  return ids;
+}
+
 bool Root::inLayer(const Widget* widget) const {
   const Widget* top = widget;
   while (top != nullptr && top->parent() != nullptr) top = top->parent();
@@ -169,6 +200,14 @@ void Root::widgetLeft(Widget* widget) {
   if (pressedWidget_ == widget) pressedWidget_ = nullptr;
   if (capture_ == widget) capture_ = nullptr;
   std::erase_if(layers_, [widget](const Layer& item) { return item.widget == widget; });
+  for (auto it = timers_.begin(); it != timers_.end();) {
+    if (it->second != widget) {
+      ++it;
+      continue;
+    }
+    if (timerStop_) timerStop_(it->first);
+    it = timers_.erase(it);
+  }
 }
 
 void Root::updateHover(Widget* target) {
@@ -280,6 +319,7 @@ void Root::setFocus(Widget* widget, bool visible) {
     widget->focused_ = true;
     widget->focusVisible_ = visible;
     widget->onStateChanged();
+    for (Widget* ancestor = widget->parent(); ancestor != nullptr; ancestor = ancestor->parent()) ancestor->onDescendantFocused(widget);
   }
   // 文字输入控件获得焦点时光标立刻显示并开始闪烁，其他情况停止定时器
   if (widget != nullptr && widget->acceptsText()) restartCaretBlink();

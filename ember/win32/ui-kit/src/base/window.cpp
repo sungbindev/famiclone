@@ -258,7 +258,8 @@ struct HostWindow::Impl {
           root.toggleCaret();
           return 0;
         }
-        break;
+        root.fireTimer(static_cast<unsigned>(wParam));
+        return 0;
       case WM_SETFOCUS:
         syncIme();
         return 0;
@@ -327,6 +328,7 @@ HostWindow::HostWindow(const Options& options) : impl_(std::make_unique<Impl>(op
     if (interval == 0 || blink == 0 || blink == INFINITE) KillTimer(hwnd, kCaretTimer);
     else SetTimer(hwnd, kCaretTimer, blink, nullptr);
   });
+  impl_->root.setTimerHandlers([hwnd = impl_->hwnd](unsigned id, unsigned milliseconds) { SetTimer(hwnd, id, milliseconds, nullptr); }, [hwnd = impl_->hwnd](unsigned id) { KillTimer(hwnd, id); });
   impl_->applyDpi();
 }
 

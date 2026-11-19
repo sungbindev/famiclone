@@ -42,6 +42,12 @@ const height = Number(options.height ?? '60');
 const SETTLE_MILLISECONDS = 200;
 const KEY_TAB = 9;
 const KEY_ARROW_DOWN = 40;
+/** drag 场景：滑块向下拖的距离（与 gallery 的 kDragDistance 一致）。 */
+const DRAG_DISTANCE = 30;
+/** wheel 场景里发送的滚轮量（浏览器一格）。 */
+const WHEEL_DELTA = 100;
+/** 样本里滑块的中心。 */
+const SLIDER_CENTER = `(() => { const r = document.querySelector('.ui-scroll-area .scrollbar.vertical .slider')?.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; })()`;
 /** openhover 场景：弹层里第三个选项的中心（与 gallery 的 kHoverOption 一致）。 */
 const HOVER_OPTION_CENTER = `(() => { const r = document.querySelectorAll('.ui-select__option')[2]?.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; })()`;
 /** 鼠标移到页面外时用的坐标。 */
@@ -56,7 +62,7 @@ function delay(milliseconds) {
 const BOX_SELECTOR = '.ui-input';
 
 /** 样本元素：带 data-sample 属性的，以及组件库里不接收 data 属性的选择类控件（复选框、单选组、下拉框）；下拉框展开时弹层里的各个选项排在所有样本之后。 */
-const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider';
+const SAMPLE_SELECTOR = '[data-sample], .ui-choice[role="checkbox"], .ui-choice-group, .ui-select, .ui-select__option, .ui-slider, .ui-scroll-area:not(.ui-select__popup)';
 
 /** 取页面里全部样本的位置。 */
 const SAMPLE_RECTS = `[...document.querySelectorAll('${SAMPLE_SELECTOR}')].map((element) => { const r = (element.closest("${BOX_SELECTOR}") || element).getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })`;
@@ -125,6 +131,25 @@ async function capture() {
       // 焦点在下拉框上时按“向下”键展开弹层（键盘展开，高亮落在已选项上）
       await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: KEY_ARROW_DOWN });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: KEY_ARROW_DOWN });
+    }
+    if (scene === 'wheel') {
+      // 先把鼠标移到样本中心，再向下滚一格
+      mouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'none' });
+      await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: mouse.x, y: mouse.y, deltaX: 0, deltaY: WHEEL_DELTA });
+    }
+    if (scene === 'drag') {
+      // 鼠标移到样本上让滚动条显示，再在滑块上按下并向下拖
+      mouse = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'none' });
+      await delay(SETTLE_MILLISECONDS);
+      const grab = await contents.executeJavaScript(SLIDER_CENTER);
+      if (!grab) throw new Error('样本里没有滚动条');
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: grab.x, y: grab.y, button: 'none' });
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: grab.x, y: grab.y, button: 'left', buttons: 1, clickCount: 1 });
+      mouseDown = true;
+      mouse = { x: grab.x, y: grab.y + DRAG_DISTANCE };
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y, button: 'left', buttons: 1 });
     }
     if (scene === 'open' || scene === 'openhover') {
       // 在样本中心点一下展开弹层（鼠标展开，指针移到选项上才有高亮）

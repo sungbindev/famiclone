@@ -28,6 +28,7 @@ add_library(rujian_ui STATIC
   src/components/choice/checkbox.cpp
   src/components/choice/radio-group.cpp
   src/components/layout/flex-box.cpp
+  src/components/scroll-area/scroll-area.cpp
   src/components/select/select.cpp
   src/components/slider/slider.cpp
   src/components/text-input/line-editor.cpp
@@ -56,6 +57,7 @@ if(EMBER_BUILD_TESTS)
     test/offscreen-test.cpp
     test/radio-group-test.cpp
     test/root-test.cpp
+    test/scroll-area-test.cpp
     test/select-test.cpp
     test/slider-test.cpp
     test/svg-path-test.cpp

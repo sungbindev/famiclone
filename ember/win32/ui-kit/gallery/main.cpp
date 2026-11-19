@@ -31,6 +31,7 @@
 #include "pages.hpp"
 #include "rujian/ui/offscreen.hpp"
 #include "rujian/ui/root.hpp"
+#include "rujian/ui/scroll-area.hpp"
 #include "rujian/ui/select.hpp"
 #include "rujian/ui/window.hpp"
 
@@ -42,6 +43,8 @@ constexpr int kVirtualKeyTab = 0x09;
 constexpr int kVirtualKeyDown = 0x28;
 /** openhover 场景里鼠标悬停的选项序号。 */
 constexpr std::size_t kHoverOption = 2;
+/** drag 场景里滑块向下拖的距离。 */
+constexpr double kDragDistance = 30.0;
 
 /** 命令行选项。 */
 struct Options {
@@ -149,6 +152,20 @@ bool applyScene(ui::Root& root, const std::vector<ui::Widget*>& samples, const s
       // 禁用的下拉框展开不了，没有选项可悬停
       if (row) root.mouseMove(ui::Point{row->x + row->width / 2, row->y + row->height / 2}, 0);
     }
+  } else if (scene == "wheel") {
+    // 鼠标移到样本上再向下滚动一格
+    root.mouseMove(center, 0);
+    root.mouseWheel(center, -1.0, 0);
+  } else if (scene == "drag") {
+    // 鼠标移到样本上，在滚动条滑块上按下并向下拖 30 像素
+    root.mouseMove(center, 0);
+    const auto* area = dynamic_cast<const ui::ScrollArea*>(samples[static_cast<std::size_t>(target)]);
+    if (area == nullptr) return false;
+    const ui::Rect slider = area->sliderRect();
+    const ui::Point grab{slider.x + slider.width / 2, slider.y + slider.height / 2};
+    root.mouseMove(grab, 0);
+    root.mouseDown(grab, ui::MouseButton::Left, 0);
+    root.mouseMove(ui::Point{grab.x, grab.y + kDragDistance}, 0);
   } else if (scene == "openkey") {
     // 用 Tab 把焦点带到下拉框上，再按“向下”键展开弹层
     for (int i = 0; i <= target; ++i) {
@@ -175,6 +192,7 @@ int renderOffscreen(const Options& options) {
   const std::vector<ui::Widget*> samples = page.samples;
   root.setContent(std::move(page.content));
   root.setCaretHidden(true);
+  root.setAnimationsEnabled(false);
   root.layout(info->size);
   if (!applyScene(root, samples, options.scene, options.target)) return 2;
 

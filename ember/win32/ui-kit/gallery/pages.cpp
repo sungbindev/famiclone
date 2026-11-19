@@ -13,10 +13,12 @@
 
 #include <stdexcept>
 
+#include "base/theme-tokens.hpp"
 #include "rujian/ui/button.hpp"
 #include "rujian/ui/checkbox.hpp"
 #include "rujian/ui/layout.hpp"
 #include "rujian/ui/radio-group.hpp"
+#include "rujian/ui/scroll-area.hpp"
 #include "rujian/ui/select.hpp"
 #include "rujian/ui/slider.hpp"
 #include "rujian/ui/text-input.hpp"
@@ -245,6 +247,40 @@ Page buildSliderPage() {
   return page;
 }
 
+/** 滚动页的页面大小：一个 200×120 的滚动区域加内边距，高度取 4 的倍数。 */
+constexpr ui::Size kScrollPageSize{232, 152};
+
+/** 一摞交替颜色的色带，没有文字，用来看滚动位置：十二条，每条 24 像素高。 */
+class Bands final : public ui::Widget {
+ public:
+  static constexpr double kBandHeight = 24.0;
+  static constexpr int kBandCount = 12;
+
+  ui::Size measure(ui::Size available) override { return ui::Size{available.width, kBandHeight * kBandCount}; }
+
+  void paint(ui::Canvas& canvas) override {
+    const auto& colors = ui::themeTokens(host()->theme());
+    for (int i = 0; i < kBandCount; ++i) {
+      canvas.fillRect(ui::Rect{bounds().x, bounds().y + i * kBandHeight, bounds().width, kBandHeight}, i % 2 == 0 ? colors.accent : colors.input_bg);
+    }
+  }
+};
+
+/** 滚动页：高度受限的滚动区域里放比它高的内容。 */
+Page buildScrollPage() {
+  Page page;
+  auto stack = std::make_unique<ui::Stack>();
+  stack->setPadding(ui::Insets::all(kPagePadding));
+  auto area = std::make_unique<ui::ScrollArea>();
+  ui::ScrollArea* raw = area.get();
+  raw->setMaxHeight(120);
+  raw->setContent(std::make_unique<Bands>());
+  stack->addChild(std::move(area));
+  page.samples.push_back(raw);
+  page.content = std::move(stack);
+  return page;
+}
+
 }  // namespace
 
 const std::vector<PageInfo>& pageInfos() {
@@ -254,6 +290,7 @@ const std::vector<PageInfo>& pageInfos() {
       {"choice", kChoicePageSize, ui::Insets{0, 0, 0, kCheckboxMarkWidth}, {{4, kGroupInset}, {5, kGroupInset}, {6, kGroupInset}, {7, kGroupInset}}, {}, {0, 1, 2, 3, 4, 5, 6, 7}, {"hover", "pressed", "focus"}},
       {"select", kSelectPageSize, kSelectInset, {}, kOptionInset, {0, 1, 2}, {"hover", "pressed", "focus", "open", "openkey", "openhover"}},
       {"slider", kSliderPageSize, ui::Insets::all(kCompareAll), {}, {}, {0, 1, 2, 3}, {"hover", "pressed", "focus"}},
+      {"scroll", kScrollPageSize, ui::Insets::all(kCompareAll), {}, {}, {0}, {"hover", "wheel", "drag"}},
   };
   return infos;
 }
@@ -264,6 +301,7 @@ Page buildPage(const std::string& name) {
   if (name == "choice") return buildChoicePage();
   if (name == "select") return buildSelectPage();
   if (name == "slider") return buildSliderPage();
+  if (name == "scroll") return buildScrollPage();
   throw std::runtime_error("未知的示例页：" + name);
 }
 

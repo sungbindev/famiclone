@@ -16,6 +16,7 @@ import './page.css';
 import { ButtonPage } from './pages/button-page';
 import { ChoicePage } from './pages/choice-page';
 import { InputPage } from './pages/input-page';
+import { ScrollPage } from './pages/scroll-page';
 import { SelectPage } from './pages/select-page';
 import { SliderPage } from './pages/slider-page';
 
@@ -23,6 +24,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   button: ButtonPage,
   choice: ChoicePage,
   input: InputPage,
+  scroll: ScrollPage,
   select: SelectPage,
   slider: SliderPage
 };

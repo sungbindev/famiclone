@@ -13,6 +13,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -128,6 +129,20 @@ class Root final : public Host {
   [[nodiscard]] Size viewportSize() const override { return size_; }
   void showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) override;
   void hideLayer(Widget* layer) override;
+  unsigned startTimer(Widget* owner, unsigned milliseconds) override;
+  void stopTimer(unsigned id) override;
+  [[nodiscard]] bool animationsEnabled() const override { return animations_; }
+  /** 开关动画，默认开。 */
+  void setAnimationsEnabled(bool enabled) { animations_ = enabled; }
+
+  /**
+   * 设置系统定时器的启动与取消函数（窗口用 SetTimer、KillTimer）；不设置时定时器不会自己触发，测试用 fireTimer 手动触发。
+   */
+  void setTimerHandlers(std::function<void(unsigned id, unsigned milliseconds)> start, std::function<void(unsigned id)> stop);
+  /** 系统定时器到时间：取消它并调用持有者的 onTimer。 */
+  void fireTimer(unsigned id);
+  /** 还没触发的定时器编号（测试用）。 */
+  [[nodiscard]] std::vector<unsigned> pendingTimers() const;
 
  private:
   /** 显示中的一个弹层。 */
@@ -164,6 +179,11 @@ class Root final : public Host {
   MouseButton lastClickButton_{MouseButton::None};
   int clickCount_{0};
   std::vector<Layer> layers_;
+  std::map<unsigned, Widget*> timers_;
+  unsigned nextTimer_{100};
+  bool animations_{true};
+  std::function<void(unsigned, unsigned)> timerStart_;
+  std::function<void(unsigned)> timerStop_;
   // 内容放最后声明，保证它最先销毁，销毁时上面的指针还有效
   std::unique_ptr<Widget> content_;
 };

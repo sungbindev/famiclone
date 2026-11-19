@@ -47,6 +47,7 @@ return rujian::ui::HostWindow::runMessageLoop();
 - 颜色在绘制时按当前主题从生成的令牌里现取，不缓存；`Root::setTheme` 切换主题。
 - 离屏绘制：`OffscreenSurface` 把控件树画到内存位图，可取像素或存成 PNG，用于自动测试与对照。
 - 弹层（下拉选项等）经 `Host::showLayer` 显示在内容之上，由打开它的控件拥有；在弹层之外按下鼠标或窗口大小变化时，宿主通知它自己关闭。
+- 定时器与动画：`Host::startTimer` 是一次性定时器，到时间调用控件的 `onTimer`；`Host::animationsEnabled` 为假时（离屏对照）控件不播放渐变。测试里用 `Root::fireTimer` 手动触发。
 
 ## 已有控件
 
@@ -59,6 +60,7 @@ return rujian::ui::HostWindow::runMessageLoop();
 | 分段单选 | `radio-group.hpp` | 选项等宽排成一行，方向键在可用选项间移动并选中 |
 | 下拉框 | `select.hpp` | 触发器加弹层选项列表，键盘与鼠标操作，下方放不下时翻到上方 |
 | 滑块 | `slider.hpp` | 轨道加圆形滑块，拖动、点击轨道跳转、键盘增减 |
+| 滚动区域 | `scroll-area.hpp` | 纵向滚动，滚动条盖在内容上，鼠标移入或滚动时显示、停下后渐隐，点击轨道、拖动、滚轮、键盘、焦点控件滚到可见 |
 
 ## 与网页版对照
 

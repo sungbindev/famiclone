@@ -85,6 +85,15 @@ class Host {
   /** 关闭弹层；弹层不在显示时无效。 */
   virtual void hideLayer(Widget* layer) = 0;
 
+  /** 请求 milliseconds 毫秒后调用 owner 的 onTimer（一次性）；返回定时器编号。控件离开控件树时它的定时器自动取消。 */
+  virtual unsigned startTimer(Widget* owner, unsigned milliseconds) = 0;
+
+  /** 取消还没触发的定时器；编号不存在时无效。 */
+  virtual void stopTimer(unsigned id) = 0;
+
+  /** 是否播放渐显渐隐之类的动画；关闭时（离屏截图对照）控件直接切到目标状态。 */
+  [[nodiscard]] virtual bool animationsEnabled() const = 0;
+
   /** 读剪贴板里的文字（UTF-8）；没有文字时为空。 */
   [[nodiscard]] virtual std::optional<std::string> clipboardText() = 0;
 

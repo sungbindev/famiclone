@@ -17,6 +17,7 @@
 #include <cmath>
 
 #include "base/theme-tokens.hpp"
+#include "rujian/ui/scroll-area.hpp"
 
 namespace rujian::ui {
 
@@ -61,81 +62,72 @@ constexpr double kMarkShift = 0.65;
 // 弹层：选项列表
 // ---------------------------------------------------------------------------
 
-/** 显示在窗口弹层上的选项列表；状态（高亮、滚动）都在这里，键盘操作由触发器转发进来。 */
-class SelectPopup final : public Widget {
+class SelectPopup;
+
+/** 弹层里的选项列表：只负责画选项与处理鼠标，放在滚动区域里；高亮、选中状态由弹层给。 */
+class SelectRows final : public Widget {
  public:
-  SelectPopup(Select& owner, std::vector<Select::Entry> entries, int selected, int active, bool highlight)
-      : owner_(owner), entries_(std::move(entries)), selected_(selected), active_(active), highlight_(highlight) {}
+  SelectRows(SelectPopup& popup, std::vector<Select::Entry> entries, int selected, int active, bool highlight)
+      : popup_(popup), entries_(std::move(entries)), selected_(selected), active_(active), highlight_(highlight) {}
 
   [[nodiscard]] const Select::Entry& entry(std::size_t index) const { return entries_[index]; }
+  [[nodiscard]] std::size_t count() const { return entries_.size(); }
   [[nodiscard]] int active() const { return active_; }
+  [[nodiscard]] bool marked() const { return selected_ >= 0 && !entries_[static_cast<std::size_t>(selected_)].placeholder; }
 
-  /** 按触发器的位置与窗口大小算出弹层的位置与大小并摆放。 */
-  void place(const Rect& trigger) {
-    const double border = snapBorderWidth(kBorderWidth, host()->scale());
-    rowHeight_ = 2 * tokens::select_option_padding_y + host()->measureText("A", rowStyle(kTransparent), 0).height;
-    const double listHeight = 2 * tokens::select_popup_padding + rowHeight_ * static_cast<double>(entries_.size());
-    const double natural = listHeight + 2 * border;
-    const Size viewport = host()->viewportSize();
-    const double below = viewport.height - trigger.bottom() - kViewportMargin;
-    const double above = trigger.y - kViewportMargin;
-    const double wanted = std::min(natural, kMaxPopupHeight);
-    const bool placeBelow = below >= wanted || below >= above;
-    const double maxHeight = std::max(std::min(kMaxPopupHeight, placeBelow ? below : above), 0.0);
-    const double height = std::min(natural, maxHeight);
-    // 宽度：最窄与触发器同宽，按最长的选项撑宽，不超出窗口
-    marked_ = selected_ >= 0 && !entries_[static_cast<std::size_t>(selected_)].placeholder;
+  /** 选项文字左边为对勾列让出的宽度：有已选项时所有选项都让出。 */
+  [[nodiscard]] double textInset() const { return marked() ? tokens::select_option_mark_size + tokens::select_option_mark_gap : 0.0; }
+
+  [[nodiscard]] TextStyle rowStyle(Color color) const {
+    TextStyle style;
+    style.fontSize = tokens::select_font_size;
+    style.fontWeight = 400;
+    style.lineHeight = 0;
+    style.color = color;
+    style.overflow = TextOverflow::Ellipsis;
+    return style;
+  }
+
+  [[nodiscard]] double rowHeight() const { return 2 * tokens::select_option_padding_y + host()->measureText("A", rowStyle(kTransparent), 0).height; }
+
+  /** 内容宽度：最宽的选项文字加上内边距。 */
+  [[nodiscard]] double naturalWidth() const {
     double widest = 0;
     for (const Select::Entry& entry : entries_) widest = std::max(widest, host()->measureText(entry.label, rowStyle(kTransparent), 0).width);
-    const double content = widest + textInset() + tokens::select_option_padding_x + 2 * tokens::select_popup_padding + 2 * border;
-    const double width = std::min(std::max(content, trigger.width), std::max(viewport.width - 2 * kViewportMargin, 0.0));
-    const double left = std::max(std::min(trigger.x, viewport.width - kViewportMargin - width), kViewportMargin);
-    const double top = placeBelow ? trigger.bottom() + kPopupGap : trigger.y - kPopupGap - height;
-    arrange(Rect{left, top, width, height});
-    scroll_ = std::clamp(scroll_, 0.0, maxScroll());
-    ensureVisible(active_);
+    return widest + textInset() + tokens::select_option_padding_x + 2 * tokens::select_popup_padding;
+  }
+
+  [[nodiscard]] Size measure(Size available) override {
+    return Size{available.width, 2 * tokens::select_popup_padding + rowHeight() * static_cast<double>(entries_.size())};
   }
 
   /** 第 index 项的区域（窗口坐标，含滚动偏移）。 */
   [[nodiscard]] Rect rowRect(std::size_t index) const {
-    const Rect inner = innerRect();
-    return Rect{inner.x + tokens::select_popup_padding, inner.y + tokens::select_popup_padding + rowHeight_ * static_cast<double>(index) - scroll_, inner.width - 2 * tokens::select_popup_padding, rowHeight_};
+    return Rect{bounds().x + tokens::select_popup_padding, bounds().y + tokens::select_popup_padding + rowHeight() * static_cast<double>(index), bounds().width - 2 * tokens::select_popup_padding, rowHeight()};
   }
 
   void setActive(int index, bool highlight) {
     active_ = index;
     highlight_ = highlight;
-    ensureVisible(active_);
     invalidate();
-  }
-
-  void moveActive(int delta) {
-    const int count = static_cast<int>(entries_.size());
-    setActive(((active_ + delta) % count + count) % count, true);
   }
 
   [[nodiscard]] CursorKind cursor() const override { return CursorKind::Hand; }
 
   void paint(Canvas& canvas) override {
     const auto& colors = themeTokens(host()->theme());
-    const Rect box = bounds();
-    const double border = snapBorderWidth(kBorderWidth, host()->scale());
-    canvas.drawShadow(box, tokens::menu_popup_radius, colors.menu_shadow);
-    canvas.drawBox(box, BoxStyle{.fill = colors.menu_background, .radius = tokens::menu_popup_radius, .borderWidth = kBorderWidth, .borderColor = colors.menu_border});
-    canvas.pushClip(box.inset(Insets::all(border)), std::max(0.0, tokens::menu_popup_radius - border));
+    const Rect clip = parent() != nullptr ? parent()->bounds() : bounds();
     for (std::size_t i = 0; i < entries_.size(); ++i) {
       const Rect row = rowRect(i);
-      if (row.bottom() < box.y || row.y > box.bottom()) continue;
+      if (row.bottom() < clip.y || row.y > clip.bottom()) continue;
       const bool active = highlight_ && static_cast<int>(i) == active_;
       if (active) canvas.drawBox(row, BoxStyle{.fill = colors.menu_selection_background, .radius = tokens::menu_item_radius});
       Color color = colors.menu_foreground;
       if (entries_[i].placeholder) color = colors.placeholder_color;
       if (active) color = colors.menu_selection_foreground;
-      const TextStyle style = rowStyle(color);
-      canvas.drawText(entries_[i].label, Rect{row.x + tokens::select_option_padding_x + textInset(), row.y + tokens::select_option_padding_y, std::max(0.0, row.width - tokens::select_option_padding_x * 2 - textInset()), row.height - 2 * tokens::select_option_padding_y}, style, VerticalAlign::Top);
-      if (marked_ && static_cast<int>(i) == selected_) drawMark(canvas, row, color);
+      canvas.drawText(entries_[i].label, Rect{row.x + tokens::select_option_padding_x + textInset(), row.y + tokens::select_option_padding_y, std::max(0.0, row.width - tokens::select_option_padding_x * 2 - textInset()), row.height - 2 * tokens::select_option_padding_y}, rowStyle(color), VerticalAlign::Top);
+      if (marked() && static_cast<int>(i) == selected_) drawMark(canvas, row);
     }
-    canvas.popClip();
   }
 
   bool onMouseDown(const MouseEvent& event) override {
@@ -144,25 +136,13 @@ class SelectPopup final : public Widget {
     return true;
   }
 
-  bool onMouseUp(const MouseEvent& event) override {
-    if (event.button != MouseButton::Left) return false;
-    const int down = downIndex_;
-    downIndex_ = -1;
-    // choose 会关闭并销毁弹层（也就是自己），之后不能再访问成员
-    if (down >= 0 && down == indexAt(event.position)) owner_.choose(static_cast<std::size_t>(down));
-    return true;
-  }
+  bool onMouseUp(const MouseEvent& event) override;
 
   bool onMouseMove(const MouseEvent& event) override {
     const int index = indexAt(event.position);
-    if (index >= 0 && (index != active_ || !highlight_)) setActive(index, true);
-    return true;
-  }
-
-  bool onMouseWheel(const MouseEvent& event) override {
-    const double before = scroll_;
-    scroll_ = std::clamp(scroll_ - event.wheelDelta * kWheelStep, 0.0, maxScroll());
-    if (scroll_ != before) invalidate();
+    if (index >= 0 && (index != active_ || !highlight_)) {
+      setActive(index, true);
+    }
     return true;
   }
 
@@ -174,27 +154,7 @@ class SelectPopup final : public Widget {
   }
 
  private:
-  [[nodiscard]] TextStyle rowStyle(Color color) const {
-    TextStyle style;
-    style.fontSize = tokens::select_font_size;
-    style.fontWeight = 400;
-    style.lineHeight = 0;
-    style.color = color;
-    style.overflow = TextOverflow::Ellipsis;
-    return style;
-  }
-
-  /** 选项文字左边为对勾列让出的宽度：有已选项时所有选项都让出。 */
-  [[nodiscard]] double textInset() const { return marked_ ? tokens::select_option_mark_size + tokens::select_option_mark_gap : 0.0; }
-
-  [[nodiscard]] Rect innerRect() const { return bounds().inset(Insets::all(snapBorderWidth(kBorderWidth, host()->scale()))); }
-
-  [[nodiscard]] double contentHeight() const { return 2 * tokens::select_popup_padding + rowHeight_ * static_cast<double>(entries_.size()); }
-
-  [[nodiscard]] double maxScroll() const { return std::max(0.0, contentHeight() - innerRect().height); }
-
   [[nodiscard]] int indexAt(Point point) const {
-    if (!innerRect().contains(point)) return -1;
     for (std::size_t i = 0; i < entries_.size(); ++i) {
       const Rect row = rowRect(i);
       if (point.y >= row.y && point.y < row.bottom()) return static_cast<int>(i);
@@ -202,35 +162,113 @@ class SelectPopup final : public Widget {
     return -1;
   }
 
-  /** 让第 index 项完全可见（scrollIntoView 的 nearest）。 */
-  void ensureVisible(int index) {
-    if (index < 0 || static_cast<std::size_t>(index) >= entries_.size()) return;
-    const double top = tokens::select_popup_padding + rowHeight_ * index;
-    const double bottom = top + rowHeight_;
-    const double visible = innerRect().height;
-    if (top < scroll_) scroll_ = top;
-    else if (bottom > scroll_ + visible) scroll_ = bottom - visible;
-    scroll_ = std::clamp(scroll_, 0.0, maxScroll());
-  }
-
   /** 已选项的对勾：left 在选项内边距之内，竖直居中后上移自身高度的 65%，再旋转 45 度。 */
-  void drawMark(Canvas& canvas, const Rect& row, Color color) const {
+  void drawMark(Canvas& canvas, const Rect& row) const {
+    const auto& colors = themeTokens(host()->theme());
+    const bool active = highlight_ && selected_ == active_;
+    const Color color = active ? colors.menu_selection_foreground : colors.menu_foreground;
     const double size = tokens::select_option_mark_size;
     const double markHeight = size * kMarkHeightFactor;
     canvas.fillRotatedCorner(row.x + tokens::select_option_padding_x + size * kMarkLeftFactor, row.y + row.height / 2.0, size * kMarkWidthFactor, markHeight, kMarkStroke, 45.0, -kMarkShift * markHeight, color);
   }
 
-  Select& owner_;
+  SelectPopup& popup_;
   std::vector<Select::Entry> entries_;
   int selected_;
   int active_;
   bool highlight_;
-  bool marked_{false};
   bool mouseSeen_{false};
-  double rowHeight_{0};
-  double scroll_{0};
   int downIndex_{-1};
 };
+
+/** 显示在窗口弹层上的下拉弹层：外框（阴影、底色、边框）加一个滚动区域，滚动区域里是选项列表；键盘操作由触发器转发进来。 */
+class SelectPopup final : public Widget {
+ public:
+  SelectPopup(Select& owner, std::vector<Select::Entry> entries, int selected, int active, bool highlight) : owner_(owner) {
+    auto rows = std::make_unique<SelectRows>(*this, std::move(entries), selected, active, highlight);
+    rows_ = rows.get();
+    auto area = std::make_unique<ScrollArea>();
+    scroll_ = area.get();
+    area->setContent(std::move(rows));
+    addChild(std::move(area));
+  }
+
+  [[nodiscard]] const Select::Entry& entry(std::size_t index) const { return rows_->entry(index); }
+  [[nodiscard]] int active() const { return rows_->active(); }
+
+  /** 按触发器的位置与窗口大小算出弹层的位置与大小并摆放。 */
+  void place(const Rect& trigger) {
+    const double border = snapBorderWidth(kBorderWidth, host()->scale());
+    const double natural = rows_->measure(Size{0, 0}).height + 2 * border;
+    const Size viewport = host()->viewportSize();
+    const double below = viewport.height - trigger.bottom() - kViewportMargin;
+    const double above = trigger.y - kViewportMargin;
+    const double wanted = std::min(natural, kMaxPopupHeight);
+    const bool placeBelow = below >= wanted || below >= above;
+    const double maxHeight = std::max(std::min(kMaxPopupHeight, placeBelow ? below : above), 0.0);
+    const double height = std::min(natural, maxHeight);
+    // 宽度：最窄与触发器同宽，按最长的选项撑宽，不超出窗口
+    const double content = rows_->naturalWidth() + 2 * border;
+    const double width = std::min(std::max(content, trigger.width), std::max(viewport.width - 2 * kViewportMargin, 0.0));
+    const double left = std::max(std::min(trigger.x, viewport.width - kViewportMargin - width), kViewportMargin);
+    const double top = placeBelow ? trigger.bottom() + kPopupGap : trigger.y - kPopupGap - height;
+    arrange(Rect{left, top, width, height});
+    scrollToActive();
+  }
+
+  /** 第 index 项的区域（窗口坐标，含滚动偏移）。 */
+  [[nodiscard]] Rect rowRect(std::size_t index) const { return rows_->rowRect(index); }
+
+  void setActive(int index, bool highlight) {
+    rows_->setActive(index, highlight);
+    scrollToActive();
+  }
+
+  void moveActive(int delta) {
+    const int count = static_cast<int>(rows_->count());
+    setActive(((rows_->active() + delta) % count + count) % count, true);
+  }
+
+  void choose(std::size_t index) { owner_.choose(index); }
+
+  void arrange(const Rect& bounds) override {
+    Widget::arrange(bounds);
+    const double border = snapBorderWidth(kBorderWidth, host()->scale());
+    scroll_->arrange(bounds.inset(Insets::all(border)));
+  }
+
+  void paint(Canvas& canvas) override {
+    const auto& colors = themeTokens(host()->theme());
+    canvas.drawShadow(bounds(), tokens::menu_popup_radius, colors.menu_shadow);
+    canvas.drawBox(bounds(), BoxStyle{.fill = colors.menu_background, .radius = tokens::menu_popup_radius, .borderWidth = kBorderWidth, .borderColor = colors.menu_border});
+  }
+
+  void paintChildren(Canvas& canvas) override {
+    const double border = snapBorderWidth(kBorderWidth, host()->scale());
+    canvas.pushClip(bounds().inset(Insets::all(border)), std::max(0.0, tokens::menu_popup_radius - border));
+    Widget::paintChildren(canvas);
+    canvas.popClip();
+  }
+
+ private:
+  void scrollToActive() {
+    const int active = rows_->active();
+    if (active >= 0) scroll_->scrollIntoView(rows_->rowRect(static_cast<std::size_t>(active)));
+  }
+
+  Select& owner_;
+  ScrollArea* scroll_{nullptr};
+  SelectRows* rows_{nullptr};
+};
+
+bool SelectRows::onMouseUp(const MouseEvent& event) {
+  if (event.button != MouseButton::Left) return false;
+  const int down = downIndex_;
+  downIndex_ = -1;
+  // choose 会关闭并销毁弹层（也包括自己），之后不能再访问成员
+  if (down >= 0 && down == indexAt(event.position)) popup_.choose(static_cast<std::size_t>(down));
+  return true;
+}
 
 // ---------------------------------------------------------------------------
 // 触发器

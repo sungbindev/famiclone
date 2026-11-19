@@ -141,7 +141,7 @@ class Widget {
   // ---- 命中 ----
 
   /** 找出点所在的最深处的可见控件，没有则为空。 */
-  [[nodiscard]] Widget* hitTest(Point point);
+  [[nodiscard]] virtual Widget* hitTest(Point point);
 
   // ---- 事件处理，返回 true 表示已处理 ----
 
@@ -160,6 +160,10 @@ class Widget {
   virtual void onImeEnd();
   /** 悬停、按下、焦点等状态变化后调用，默认重绘。 */
   virtual void onStateChanged();
+  /** Host::startTimer 的定时器到时间（一次性）。 */
+  virtual void onTimer(unsigned id);
+  /** 某个后代控件获得了键盘焦点（滚动区域据此把它滚到可见处）。 */
+  virtual void onDescendantFocused(Widget* descendant);
 
  private:
   friend class Root;

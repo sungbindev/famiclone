@@ -289,6 +289,25 @@ TEST(Select, MeasureNeverGoesBelowTheMinimumWidthAndTakesTheGivenWidth) {
   EXPECT_DOUBLE_EQ(natural.height, 24.0);
 }
 
+TEST(Select, LongListIsCappedAndScrollsWithTheWheelAndKeepsTheActiveRowVisible) {
+  Scene s;
+  std::vector<SelectOption> options;
+  for (int i = 0; i < 30; ++i) options.push_back({std::to_string(i), "选项" + std::to_string(i)});
+  s.select->setOptions(options);
+  s.click(s.triggerCenter());
+  ASSERT_TRUE(s.select->open());
+  const Rect first = *s.select->optionRect(0);
+  // 弹层最高 240，放不下的选项在滚动区域里
+  EXPECT_LT(s.select->optionRect(29)->y, 10000);
+  s.root.mouseWheel(Point{first.x + 10, first.y + 10}, -1.0, 0);
+  EXPECT_LT(s.select->optionRect(0)->y, first.y);
+  // 键盘移到最后一项时它滚进可见范围
+  s.root.keyDown(kVkEnd, 0, false);
+  const Rect last = *s.select->optionRect(29);
+  EXPECT_LT(last.bottom(), s.select->bounds().bottom() + 240.0 + 1.0);
+  EXPECT_GE(last.y, first.y);
+}
+
 TEST(Select, DestroyingTheRootWhileOpenIsSafe) {
   auto scene = std::make_unique<Scene>();
   scene->click(scene->triggerCenter());

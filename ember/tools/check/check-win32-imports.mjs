@@ -45,6 +45,8 @@ function findDumpbin() {
 function parseImports(text, imports) {
   let current = null;
   for (const line of text.split(/\r?\n/)) {
+    // 输出末尾的“Summary”是各节的大小，不是导入。
+    if (/^\s*Summary\s*$/.test(line)) break;
     const dll = /^ {4}(\S+\.dll)\s*$/i.exec(line);
     if (dll) {
       current = dll[1].toLowerCase();

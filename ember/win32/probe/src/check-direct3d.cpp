@@ -52,6 +52,36 @@ bool readAdapter(ID3D11Device& device, DXGI_ADAPTER_DESC& description) {
   return SUCCEEDED(adapter->GetDesc(&description));
 }
 
+/** 创建失败时的诊断：列出系统里的显卡，再逐个功能级别单独试一次硬件设备，WARP 只用来判断运行库本身是否正常。 */
+std::string describeFailure() {
+  std::string text;
+  ComPtr<IDXGIFactory> factory;
+  if (SUCCEEDED(CreateDXGIFactory(__uuidof(IDXGIFactory), reinterpret_cast<void**>(factory.GetAddressOf())))) {
+    ComPtr<IDXGIAdapter> adapter;
+    for (UINT index = 0; factory->EnumAdapters(index, adapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++index) {
+      DXGI_ADAPTER_DESC description{};
+      if (FAILED(adapter->GetDesc(&description))) continue;
+      LARGE_INTEGER driver{};
+      const bool hasDriver11 = SUCCEEDED(adapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &driver));
+      char line[200]{};
+      std::snprintf(line, sizeof(line), "；显卡 %u：%s，厂商 0x%04X，驱动接口%s", index, toUtf8(description.Description).c_str(), description.VendorId, hasDriver11 ? "可用" : "不可用");
+      text += line;
+    }
+  } else {
+    text += "；读不到显卡列表";
+  }
+  const D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_9_3, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_1};
+  for (const auto level : levels) {
+    ComPtr<ID3D11Device> device;
+    const HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, &level, 1, D3D11_SDK_VERSION, device.GetAddressOf(), nullptr, nullptr);
+    text += std::string("；硬件 ") + featureLevelName(level) + (SUCCEEDED(hr) ? " 可用" : " " + formatHresult(hr));
+  }
+  ComPtr<ID3D11Device> warp;
+  const HRESULT warpResult = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, warp.GetAddressOf(), nullptr, nullptr);
+  text += std::string("；软件设备（仅用于诊断，不会使用）") + (SUCCEEDED(warpResult) ? "可用" : formatHresult(warpResult));
+  return text;
+}
+
 }  // namespace
 
 void checkDirect3D(CheckResults& results, HWND window) {
@@ -75,7 +105,7 @@ void checkDirect3D(CheckResults& results, HWND window) {
   D3D_FEATURE_LEVEL achieved{};
   HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, static_cast<UINT>(sizeof(levels) / sizeof(levels[0])), D3D11_SDK_VERSION, &swapChainDesc, swapChain.GetAddressOf(), device.GetAddressOf(), &achieved, context.GetAddressOf());
   if (FAILED(hr)) {
-    results.push_back({"Direct3D 11 硬件设备", CheckLevel::Fail, "创建失败 " + formatHresult(hr) + "，没有显卡、没有驱动或虚拟机没有 3D 加速"});
+    results.push_back({"Direct3D 11 硬件设备", CheckLevel::Fail, "创建失败 " + formatHresult(hr) + "，没有显卡、没有驱动或虚拟机没有 3D 加速" + describeFailure()});
     return;
   }
 

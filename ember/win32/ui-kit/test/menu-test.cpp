@@ -110,12 +110,12 @@ struct Scene {
 
 }  // namespace
 
-TEST(Menu, ClickOpensTheMenuAndHighlightsTheFirstItem) {
+TEST(Menu, ClickOpensTheMenuWithoutHighlightingAnyItem) {
   Scene s;
   s.click(s.buttonCenter(0));
   ASSERT_NE(s.bar->popup(), nullptr);
   EXPECT_EQ(s.bar->openMenuId(), "file");
-  EXPECT_EQ(s.bar->popup()->active(), 0);
+  EXPECT_EQ(s.bar->popup()->active(), -1);
   EXPECT_EQ(s.opened, (std::vector<std::string>{"file"}));
   EXPECT_TRUE(s.bar->focused());
 }
@@ -241,6 +241,8 @@ TEST(Menu, ClickingASubmenuItemOpensTheSubmenuInsteadOfSelecting) {
 TEST(Menu, ArrowKeysMoveAndWrap) {
   Scene s;
   s.click(s.buttonCenter(1));
+  EXPECT_EQ(s.bar->popup()->active(), -1);
+  s.key(kVkDown);
   EXPECT_EQ(s.bar->popup()->active(), 0);
   s.key(kVkDown);
   EXPECT_EQ(s.bar->popup()->active(), 1);
@@ -259,6 +261,9 @@ TEST(Menu, EnterSelectsTheActiveItem) {
   Scene s;
   s.click(s.buttonCenter(0));
   s.key(kVkReturn);
+  EXPECT_TRUE(s.selections.empty());
+  s.key(kVkDown);
+  s.key(kVkReturn);
   ASSERT_EQ(s.selections.size(), 1u);
   EXPECT_EQ(s.selections[0].item, "new");
   EXPECT_EQ(s.bar->popup(), nullptr);
@@ -275,6 +280,7 @@ TEST(Menu, EscapeClosesAndReturnsTheFocusToTheBar) {
 TEST(Menu, RightOnASubmenuItemOpensItAndLeftOrEscapeClosesOnlyTheSubmenu) {
   Scene s;
   s.click(s.buttonCenter(1));
+  s.key(kVkDown);
   s.key(kVkDown);
   s.key(kVkRight);
   ASSERT_NE(s.bar->popup()->sub(), nullptr);
@@ -294,6 +300,7 @@ TEST(Menu, RightOnASubmenuItemOpensItAndLeftOrEscapeClosesOnlyTheSubmenu) {
 TEST(Menu, EnterInASubmenuSelectsItsItem) {
   Scene s;
   s.click(s.buttonCenter(1));
+  s.key(kVkDown);
   s.key(kVkDown);
   s.key(kVkRight);
   s.key(kVkReturn);

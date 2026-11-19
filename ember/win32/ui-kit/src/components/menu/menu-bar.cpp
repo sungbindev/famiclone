@@ -170,7 +170,8 @@ bool MenuBar::onMouseUp(const MouseEvent& event) {
   invalidate();
   if (down < 0 || down != indexAt(event.position)) return down >= 0;
   if (popup_ != nullptr && menus_[static_cast<std::size_t>(down)].id == openId_) closeMenu(true);
-  else openAt(static_cast<std::size_t>(down), 0);
+  // 鼠标点击打开时不高亮任何项（键盘打开时才高亮第一项）
+  else openAt(static_cast<std::size_t>(down), -1);
   return true;
 }
 

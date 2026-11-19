@@ -340,4 +340,14 @@ void D2DCanvas::drawIcon(IconId id, const Rect& rect, Color color, double stroke
   target_->SetTransform(previous);
 }
 
+void D2DCanvas::drawBitmap(const std::uint32_t* pixels, int width, int height, const Rect& rect) {
+  if (pixels == nullptr || width <= 0 || height <= 0 || rect.width <= 0 || rect.height <= 0) return;
+  // 位图的 DPI 与渲染目标一致，对齐后尺寸相同时一个像素对应一个设备像素
+  const auto dpi = static_cast<FLOAT>(96.0 * scale_);
+  const D2D1_BITMAP_PROPERTIES properties = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi, dpi);
+  Microsoft::WRL::ComPtr<ID2D1Bitmap> bitmap;
+  if (FAILED(target_->CreateBitmap(D2D1::SizeU(static_cast<UINT>(width), static_cast<UINT>(height)), pixels, static_cast<UINT>(width) * 4, properties, &bitmap))) return;
+  target_->DrawBitmap(bitmap.Get(), toD2D(snapRect(rect)), 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+}
+
 }  // namespace rujian::ui

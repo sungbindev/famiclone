@@ -208,8 +208,11 @@ TEST(TitleBar, PaintsTheBackgroundAndTheCloseButtonRedWhenHovered) {
   s.bar->setSystemButtonState(TitleBarHit::Close, TitleBarHit::Client);
   pixels = render(s);
   expectColor(pixelAt(pixels, static_cast<int>(close.x) + 2, 2), Color::rgba(0xC4, 0x2B, 0x1C));
-  // 关闭按钮盖住底部分割线所在的那一行
-  expectColor(pixelAt(pixels, static_cast<int>(close.x) + 2, 35), Color::rgba(0xC4, 0x2B, 0x1C));
+  // 关闭按钮的底色不盖住底部分割线所在的那一行，分割线在系统按钮下面也是连续的
+  expectColor(pixelAt(pixels, static_cast<int>(close.x) + 2, 34), Color::rgba(0xC4, 0x2B, 0x1C));
+  const Color line = compose(themeTokens(ThemeName::Dark).chrome_border, background);
+  expectColor(pixelAt(pixels, static_cast<int>(close.x) + 2, 35), line);
+  expectColor(pixelAt(pixels, 300, 35), line);
 }
 
 TEST(TitleBar, InactiveWindowUsesTheInactiveBackground) {

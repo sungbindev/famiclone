@@ -17,10 +17,13 @@
 #include <cmath>
 
 #include "entry/preferences/theme-sync.hpp"
+#include "platform/window/app-icon.hpp"
 #include "platform/window/frameless-frame.hpp"
+#include "rujian/ui/offscreen.hpp"
 #include "rujian/ui/root.hpp"
 #include "rujian/ui/window.hpp"
 #include "support/fakes.hpp"
+#include "ui/shell/app-logo.hpp"
 #include "ui/shell/main-window-view.hpp"
 
 namespace {
@@ -396,6 +399,62 @@ TEST(FramelessFrameCustom, MouseMessagesOutsideATrackedPressStayWithTheControls)
   sendMouse(f, WM_LBUTTONUP, 260, 250);
   EXPECT_TRUE(f.buttonStates.empty());
   EXPECT_EQ(takePostedSystemCommand(f), 0u);
+}
+
+/** 在 (4,4) 放一个 16×16 的应用标志。 */
+class LogoPage final : public rujian::ui::Widget {
+ public:
+  explicit LogoPage(ui::AppLogo::BitmapProvider provider) {
+    auto logo = std::make_unique<ui::AppLogo>(std::move(provider));
+    logo_ = logo.get();
+    addChild(std::move(logo));
+  }
+  void arrange(const rujian::ui::Rect& bounds) override {
+    rujian::ui::Widget::arrange(bounds);
+    logo_->arrange(rujian::ui::Rect{4, 4, 16, 16});
+  }
+
+ private:
+  ui::AppLogo* logo_{nullptr};
+};
+
+/** 渲染一个标志页，返回 (x, y) 处的像素 0xAARRGGBB。 */
+std::uint32_t logoPixel(const ui::AppLogo::BitmapProvider& provider, double scale, int x, int y) {
+  rujian::ui::Root root(rujian::ui::ThemeName::Dark, scale);
+  root.setContent(std::make_unique<LogoPage>(provider));
+  root.layout(rujian::ui::Size{24, 24});
+  rujian::ui::OffscreenSurface surface(rujian::ui::Size{24, 24}, scale);
+  EXPECT_TRUE(surface.render(root, rujian::ui::Color::rgba(0, 0, 0)));
+  const auto data = surface.pixels();
+  const std::size_t i = (static_cast<std::size_t>(y) * static_cast<std::size_t>(surface.pixelWidth()) + static_cast<std::size_t>(x)) * 4;
+  return (static_cast<std::uint32_t>(data[i + 3]) << 24) | (static_cast<std::uint32_t>(data[i + 2]) << 16) | (static_cast<std::uint32_t>(data[i + 1]) << 8) | data[i];
+}
+
+TEST(AppLogo, DrawsTheProvidedBitmapAtTheDevicePixelSize) {
+  std::vector<int> sizes;
+  const ui::AppLogo::BitmapProvider provider = [&sizes](int size) {
+    sizes.push_back(size);
+    return std::vector<std::uint32_t>(static_cast<std::size_t>(size) * static_cast<std::size_t>(size), 0xFF3070A0u);
+  };
+  EXPECT_EQ(logoPixel(provider, 1.0, 10, 10) & 0xFFFFFF, 0x3070A0u);
+  EXPECT_EQ(logoPixel(provider, 1.0, 22, 22) & 0xFFFFFF, 0x000000u);
+  EXPECT_EQ(logoPixel(provider, 1.5, 15, 15) & 0xFFFFFF, 0x3070A0u);
+  // 缩放 1 时取 16，缩放 1.5 时取 24：按设备像素取
+  ASSERT_EQ(sizes.size(), 3u);
+  EXPECT_EQ(sizes[0], 16);
+  EXPECT_EQ(sizes[2], 24);
+}
+
+TEST(AppLogo, DrawsNothingWhenTheBitmapIsMissingOrTheWrongSize) {
+  EXPECT_EQ(logoPixel([](int) { return std::vector<std::uint32_t>{}; }, 1.0, 10, 10) & 0xFFFFFF, 0x000000u);
+  EXPECT_EQ(logoPixel([](int) { return std::vector<std::uint32_t>(10, 0xFFFFFFFFu); }, 1.0, 10, 10) & 0xFFFFFF, 0x000000u);
+}
+
+TEST(AppIcon, IsEmptyWithoutTheIconResourceOrASize) {
+  // 测试程序里没有应用图标资源；真正的图标在 ember-win.exe 里，由冒烟脚本的截图核对
+  EXPECT_TRUE(platform::renderAppIcon(16).empty());
+  EXPECT_TRUE(platform::renderAppIcon(0).empty());
+  EXPECT_TRUE(platform::renderAppIcon(-4).empty());
 }
 
 }  // namespace

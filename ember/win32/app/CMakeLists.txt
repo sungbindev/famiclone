@@ -62,6 +62,7 @@ add_library(ember_app STATIC
   src/platform/text/wide-text.cpp
   src/platform/theme/system-theme.cpp
   src/platform/threading/ui-thread.cpp
+  src/platform/window/app-icon.cpp
   src/platform/window/frameless-frame.cpp
   src/platform/window/window-modes.cpp
   src/platform/window/window-placement.cpp
@@ -80,6 +81,7 @@ add_library(ember_app STATIC
   src/ui/runtime/runtime-panel-content.cpp
   src/ui/runtime/screen-overlay-view.cpp
   src/ui/runtime/screen-widget.cpp
+  src/ui/shell/app-logo.cpp
   src/ui/shell/main-window-view.cpp
   src/ui/shell/shell-view.cpp)
 # 应用自己的头文件目录放在前面：核心里也有 platform、shared 等同名目录，应用的文件不能与它们重名。

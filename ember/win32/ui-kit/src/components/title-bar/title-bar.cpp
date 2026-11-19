@@ -248,7 +248,7 @@ void TitleBar::paintSystemButtons(Canvas& canvas) {
     } else if (isHover) {
       fill = compose(colors.ghost_hover_background, background);
     }
-    canvas.fillRect(box, fill);
+    canvas.fillRect(Rect{box.x, box.y, box.width, box.height - borderWidth()}, fill);
     const double left = box.x + (box.width - kGlyphSize) / 2.0;
     const double top = box.y + (box.height - kGlyphSize) / 2.0;
     const double edge = kGlyphStroke;

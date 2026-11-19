@@ -156,6 +156,32 @@ TEST(Canvas, LineIsAtLeastOneDevicePixelThick) {
   expectColor(pixelAt(data, 20, 10, 6), kBackground, 0);
 }
 
+TEST(Canvas, BitmapIsDrawnPixelForPixelWhenTheSizesMatchAndKeepsItsAlpha) {
+  // 4×4：左半红色不透明，右半全透明
+  static std::vector<std::uint32_t> pixels(16);
+  for (int y = 0; y < 4; ++y) {
+    for (int x = 0; x < 4; ++x) pixels[static_cast<std::size_t>(y * 4 + x)] = x < 2 ? 0xFFFF0000u : 0x00000000u;
+  }
+  class BitmapWidget final : public Widget {
+   public:
+    void paint(Canvas& canvas) override { canvas.drawBitmap(pixels.data(), 4, 4, Rect{2, 2, 4, 4}); }
+  };
+  Root root(ThemeName::Dark, 1.0);
+  root.setContent(std::make_unique<BitmapWidget>());
+  root.layout(Size{10, 10});
+  OffscreenSurface surface(Size{10, 10}, 1.0);
+  ASSERT_TRUE(surface.render(root, kBlue));
+  const auto data = surface.pixels();
+  expectColor(pixelAt(data, 10, 2, 2), kRed, 0);
+  expectColor(pixelAt(data, 10, 3, 5), kRed, 0);
+  // 透明的一半露出底色
+  expectColor(pixelAt(data, 10, 4, 2), kBlue, 0);
+  expectColor(pixelAt(data, 10, 5, 5), kBlue, 0);
+  // 位图之外不受影响
+  expectColor(pixelAt(data, 10, 1, 2), kBlue, 0);
+  expectColor(pixelAt(data, 10, 6, 2), kBlue, 0);
+}
+
 namespace {
 
 /** 页面：把一个按钮摆在 (10,10)。 */

@@ -65,6 +65,7 @@
 #include "platform/text/wide-text.hpp"
 #include "platform/theme/system-theme.hpp"
 #include "platform/threading/ui-thread.hpp"
+#include "platform/window/app-icon.hpp"
 #include "platform/window/frameless-frame.hpp"
 #include "platform/window/window-modes.hpp"
 #include "platform/window/window-placement.hpp"
@@ -74,6 +75,7 @@
 #include "ui/media/media-panel-content.hpp"
 #include "ui/runtime/runtime-panel-content.hpp"
 #include "ui/runtime/screen-widget.hpp"
+#include "ui/shell/app-logo.hpp"
 #include "ui/shell/main-window-view.hpp"
 #include "ui/shell/shell-view.hpp"
 
@@ -272,6 +274,8 @@ int runApplication(const shared::LaunchArguments& launch) {
     auto content = std::make_unique<ui::MainWindowView>(kAppName);
     ui::MainWindowView* view = content.get();
     window.root().setContent(std::move(content));
+    // 标题栏左边的应用标志：可执行文件自带的图标，与 Electron 外壳是同一张图
+    view->titleBar().setLogo(std::make_unique<ui::AppLogo>(platform::renderAppIcon));
     // 边框与阴影：Windows 11 用系统的（圆角、阴影、边框色由 DWM 画），其余系统自绘；环境变量 EMBER_WIN_FRAME=custom 或 system 可以强制选择（开发期验证用）
     const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
     const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();

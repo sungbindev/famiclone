@@ -83,7 +83,7 @@ return rujian::ui::HostWindow::runMessageLoop();
 | 树 | `tree.hpp` | 扁平条目，鼠标与键盘（上下、Home、End 移焦点，回车与空格选中），焦点行滚入可见范围 |
 | 表格 | `table.hpp` | `Table`（紧凑、平铺：列宽自动分配、行选中、行详情）与 `TableMainCell`（主副文字） |
 | 菜单 | `menu.hpp` | `MenuBar`（菜单名按钮、点击打开、悬停切换、左右方向键切换）与 `MenuPopup`（勾选、单选、图标、快捷键、提示文字、分隔线、子菜单、助记符、键盘导航） |
-| 标题栏 | `title-bar.hpp` | 图标、应用名与副名（Quicksand、字间距）、菜单栏、操作区、折叠按钮、自绘的系统按钮与命中测试 |
+| 标题栏 | `title-bar.hpp` | 图标（由使用方给控件，位图经 `Canvas::drawBitmap` 画）、应用名与副名（Quicksand、字间距）、菜单栏、操作区、折叠按钮、自绘的系统按钮（底色不盖住底部分割线）与命中测试 |
 | 状态栏 | `status-bar.hpp` | `StatusBar`（普通与大尺寸）与 `StatusBarItem`（状态点、图标、等级、指示灯、按钮状态项、放不下时按权重收缩） |
 | 悬停提示 | `tooltip.hpp` | `Tooltip`（纯文字与版式提示、角标、定位），延迟等时机在 `Root`；内容类型在 `tooltip-content.hpp` |
 | 通知 | `notification.hpp` | `NotificationCenter`（弹出的通知、通知面板、历史、未读）与 `NotificationButton` |

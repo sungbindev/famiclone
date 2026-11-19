@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 #include <vector>
 
@@ -131,6 +132,15 @@ class Canvas {
    * @param strokeWidth 描边宽度（逻辑像素）。
    */
   virtual void drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth) = 0;
+
+  /**
+   * 画位图，边缘对齐到设备像素；位图尺寸与对齐后的区域一样大时一个像素对应一个设备像素，不模糊。
+   * @param pixels 像素，每个 32 位按 0xAARRGGBB 排列，颜色已预乘透明度，行优先、没有行间空隙。
+   * @param width 位图宽（像素）。
+   * @param height 位图高（像素）。
+   * @param rect 显示区域。
+   */
+  virtual void drawBitmap(const std::uint32_t* pixels, int width, int height, const Rect& rect) = 0;
 };
 
 }  // namespace rujian::ui

@@ -52,7 +52,8 @@ return rujian::ui::HostWindow::runMessageLoop();
 - 悬停提示：控件用 `Widget::setTooltip`（纯文字）或 `setRichTooltip`（标题行加分条说明）设置提示；应用在每个 `Root` 上创建一个 `Tooltip`（先于 `Root` 销毁），延迟与收起的时机由 `Root` 处理。
 - 通知：应用在每个 `Root` 上创建一个 `NotificationCenter`（铺满窗口的弹层），用 `notify` 发通知，`NotificationButton` 放在状态栏右侧（`StatusBar::addEndWidget`），“通知详情”经 `setOnShowDetail` 由应用用对话框显示。
 - 标题栏自绘系统按钮：窗口的 `WM_NCHITTEST` 调用 `TitleBar::hitTestWindow`，把结果转成 `HTMINBUTTON`、`HTMAXBUTTON`、`HTCLOSE`、`HTCAPTION` 或客户区。
-- 应用的主窗口在 `HostWindow` 上扩展：`nativeHandle()` 取窗口句柄，`setMessageHook` 在窗口宿主之前处理窗口消息（自绘标题栏、窗口大小限制等）；`windowBorderColor(主题)` 给出系统边框的着色，由应用经系统接口设置。
+- 应用的主窗口在 `HostWindow` 上扩展：`nativeHandle()` 取窗口句柄，`setMessageHook` 在窗口宿主之前处理窗口消息（自绘标题栏、窗口大小限制等）；`windowBorderColor(主题)` 给出系统边框的着色，由应用经系统接口设置。`show()` 先在窗口隐藏时把整棵控件树画一遍（创建渲染目标、第一次排字都在这里），再显示并连子窗口一起立即重绘，显示后不会露出只画了一部分的窗口。
+- 自己逐个摆放子控件的容器（如 `AppFrame`）在 `arrange` 里用受保护的 `Widget::setBounds` 只设置自己的区域，不调用基类的 `arrange`（它会先把所有子控件按整个容器的区域摆放一次），否则有副作用的子控件（运行画面的原生子窗口）每次布局都会先盖到别的控件上再缩回去。
 
 ## 已有控件
 

@@ -162,19 +162,23 @@ struct HostWindow::Impl {
     Graphics::shared().d2d()->CreateHwndRenderTarget(properties, hwndProperties, &target);
   }
 
+  /** 把整棵控件树画到窗口的渲染目标上。 */
+  void draw() {
+    ensureTarget();
+    if (!target) return;
+    target->BeginDraw();
+    {
+      D2DCanvas canvas(target.Get(), scale(), Graphics::shared());
+      canvas.clear(themeTokens(root.theme()).content_bg);
+      root.paint(canvas);
+    }
+    if (target->EndDraw() == D2DERR_RECREATE_TARGET) target.Reset();
+  }
+
   void paint() {
     PAINTSTRUCT ps;
     BeginPaint(hwnd, &ps);
-    ensureTarget();
-    if (target) {
-      target->BeginDraw();
-      {
-        D2DCanvas canvas(target.Get(), scale(), Graphics::shared());
-        canvas.clear(themeTokens(root.theme()).content_bg);
-        root.paint(canvas);
-      }
-      if (target->EndDraw() == D2DERR_RECREATE_TARGET) target.Reset();
-    }
+    draw();
     EndPaint(hwnd, &ps);
   }
 
@@ -358,8 +362,11 @@ void* HostWindow::nativeHandle() const { return impl_->hwnd; }
 void HostWindow::setMessageHook(MessageHook hook) { impl_->hook = std::move(hook); }
 
 void HostWindow::show() {
+  // 第一次绘制要创建渲染目标并第一次排字，较慢；先在窗口还隐藏时画一遍，显示后的绘制就快，不会露出只画了一部分的窗口
+  impl_->draw();
   ShowWindow(impl_->hwnd, SW_SHOW);
-  UpdateWindow(impl_->hwnd);
+  // 连子窗口（运行画面）一起立即重绘，不等消息循环
+  RedrawWindow(impl_->hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 int HostWindow::runMessageLoop() {

@@ -184,6 +184,10 @@ class Widget {
   /** 某个后代控件获得了键盘焦点（滚动区域据此把它滚到可见处）。 */
   virtual void onDescendantFocused(Widget* descendant);
 
+ protected:
+  /** 只设置 bounds，不摆放子控件：自己逐个摆放子控件的容器用它，子控件就不会先被按整个容器的区域摆放一次（有副作用的子控件，如运行画面，会因此闪一下）。 */
+  void setBounds(const Rect& bounds) { bounds_ = bounds; }
+
  private:
   friend class Root;
 

@@ -129,6 +129,43 @@ TEST(AppFrame, ContentsFillTheirRegionsAndThePanelContentSitsBelowTheBorder) {
   EXPECT_DOUBLE_EQ(s.panelContent->bounds().height, 99.0);
 }
 
+namespace {
+
+/** 记下每次收到的摆放区域。 */
+class RecordingWidget final : public Widget {
+ public:
+  void arrange(const Rect& bounds) override {
+    Widget::arrange(bounds);
+    arranged.push_back(bounds);
+  }
+  std::vector<Rect> arranged;
+};
+
+}  // namespace
+
+TEST(AppFrame, PageContentIsArrangedOnceAndStraightIntoItsFinalArea) {
+  Root root(ThemeName::Dark, 1.0);
+  auto appFrame = std::make_unique<AppFrame>();
+  AppFrame* frame = appFrame.get();
+  root.setContent(std::move(appFrame));
+  frame->setTitleBar(std::make_unique<TitleBar>());
+  frame->setStatusBar(std::make_unique<StatusBar>());
+  auto page = std::make_unique<RecordingWidget>();
+  RecordingWidget* recorder = page.get();
+  frame->setPage(std::move(page));
+  frame->setBottomPanel(std::make_unique<Widget>());
+  frame->setBottomPanelMinHeight(60);
+  frame->setBottomPanelHeight(100);
+  frame->setBottomPanelOpen(true);
+  root.layout(kWindow);
+  // 页面不能先被摆成整个窗口：有副作用的页面（运行画面）会先盖到面板上再缩回去
+  recorder->arranged.clear();
+  root.layout(kWindow);
+  ASSERT_EQ(recorder->arranged.size(), 1u);
+  EXPECT_EQ(recorder->arranged[0], frame->pageRegion()->bounds());
+  EXPECT_DOUBLE_EQ(recorder->arranged[0].bottom(), frame->bottomRegion()->bounds().y);
+}
+
 TEST(AppFrame, NotificationsMakeRoomForTheStatusBar) {
   Scene s;
   NotificationCenter center(s.root);

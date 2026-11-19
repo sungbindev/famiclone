@@ -34,7 +34,7 @@ class Region final : public Widget {
   }
 
   void arrange(const Rect& bounds) override {
-    Widget::arrange(bounds);
+    setBounds(bounds);
     if (content_ != nullptr) content_->arrange(innerRect());
   }
 
@@ -116,7 +116,7 @@ void AppFrame::setWindowInactive(bool inactive) {
 void AppFrame::setNotificationCenter(NotificationCenter* center) { notifications_ = center; }
 
 void AppFrame::arrange(const Rect& bounds) {
-  Widget::arrange(bounds);
+  setBounds(bounds);
   double top = bounds.y;
   double bottom = bounds.bottom();
   // 标题栏与状态栏隐藏时（全屏）不占位

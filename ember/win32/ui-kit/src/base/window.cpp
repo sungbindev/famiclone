@@ -66,6 +66,8 @@ struct HostWindow::Impl {
   bool trackingLeave{false};
   bool imeEnabled{true};
   wchar_t highSurrogate{0};
+  /** 应用的消息钩子，空表示没有。 */
+  HostWindow::MessageHook hook;
 
   explicit Impl(ThemeName theme) : root(theme, 1.0) {}
 
@@ -177,6 +179,10 @@ struct HostWindow::Impl {
   }
 
   LRESULT handle(UINT message, WPARAM wParam, LPARAM lParam) {
+    if (hook) {
+      std::intptr_t result = 0;
+      if (hook(message, wParam, lParam, result)) return static_cast<LRESULT>(result);
+    }
     switch (message) {
       case WM_ERASEBKGND:
         return 1;
@@ -345,6 +351,10 @@ HostWindow::~HostWindow() {
 }
 
 Root& HostWindow::root() { return impl_->root; }
+
+void* HostWindow::nativeHandle() const { return impl_->hwnd; }
+
+void HostWindow::setMessageHook(MessageHook hook) { impl_->hook = std::move(hook); }
 
 void HostWindow::show() {
   ShowWindow(impl_->hwnd, SW_SHOW);

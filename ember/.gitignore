@@ -3,6 +3,7 @@ node_modules/
 resources/icon.icns
 src/contracts/*/generated/
 core/src/contracts/*/generated/
+win32/app/src/contracts/*/generated/
 coverage/
 *.log
 !core/test/data/**/*.log

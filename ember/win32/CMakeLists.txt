@@ -35,3 +35,4 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../core ${CMAKE_CURRENT_BINARY_DIR}
 add_subdirectory(probe)
 add_subdirectory(tools/export-dump)
 add_subdirectory(ui-kit)
+add_subdirectory(app)

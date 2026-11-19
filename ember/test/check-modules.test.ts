@@ -218,6 +218,58 @@ describe('checkProject', () => {
     expect(errors).toContain('core/src/shared/c.hpp：shared 层不能包含 platform 层的 platform/requests/cancellation.hpp');
   });
 
+  it('原生应用（win32/app）符合分层时通过检查', () => {
+    const root = createProject({
+      'win32/app/src/contracts/shell/dialog.hpp': '#include <string>\n',
+      'win32/app/src/shared/text/rules.hpp': '#include <nlohmann/json.hpp>\n',
+      'win32/app/src/platform/window/frame.hpp': '#include <windows.h>\n#include "shared/text/rules.hpp"\n',
+      'win32/app/src/infra/core-client/gateway.cpp': '#include "bootstrap/core.hpp"\n#include "platform/streams/frame-output.hpp"\n#include "contracts/shell/dialog.hpp"\n#include "platform/window/frame.hpp"\n',
+      'win32/app/src/entry/main-requests/router.hpp': '#include "contracts/shell/dialog.hpp"\n',
+      'win32/app/src/entry/cartridges/handlers.cpp': '#include "entry/main-requests/router.hpp"\n#include "contracts/shell/dialog.hpp"\n',
+      'win32/app/src/ui/shell/view.cpp': '#include "rujian/ui/widget.hpp"\n#include "contracts/shell/dialog.hpp"\n',
+      'win32/app/src/bootstrap/application.cpp': '#include <windows.h>\n#include "infra/core-client/gateway.cpp"\n#include "ui/shell/view.cpp"\n'
+    });
+    expect(checkProject(root).errors).toEqual([]);
+  });
+
+  it('原生应用的层间依赖、系统头文件、核心头文件与控件库头文件受限', () => {
+    const root = createProject({
+      'win32/app/src/shared/a.hpp': '#include "platform/window/frame.hpp"\n',
+      'win32/app/src/platform/window/frame.hpp': '#include "contracts/shell/dialog.hpp"\n',
+      'win32/app/src/contracts/shell/dialog.hpp': '#include <windows.h>\n#include "bootstrap/core.hpp"\n',
+      'win32/app/src/entry/cartridges/handlers.cpp': '#include "infra/core-client/gateway.hpp"\n#include "rujian/ui/widget.hpp"\n',
+      'win32/app/src/infra/core-client/gateway.hpp': '#include "platform/other.hpp"\n#include "somewhere/not-there.hpp"\n',
+      'win32/app/src/ui/shell/view.cpp': '#include "entry/main-requests/router.hpp"\n',
+      'win32/app/src/entry/main-requests/router.hpp': '\n'
+    });
+    const { errors } = checkProject(root);
+    expect(errors).toContain('win32/app/src/shared/a.hpp：shared 层不能包含 platform 层的 platform/window/frame.hpp');
+    expect(errors).toContain('win32/app/src/platform/window/frame.hpp：platform 层不能包含 contracts 层的 contracts/shell/dialog.hpp');
+    expect(errors).toContain('win32/app/src/contracts/shell/dialog.hpp：contracts 层不能包含系统头文件 <windows.h>');
+    expect(errors).toContain('win32/app/src/contracts/shell/dialog.hpp：contracts 层不能包含核心的 bootstrap/core.hpp');
+    expect(errors).toContain('win32/app/src/entry/cartridges/handlers.cpp：entry 层不能包含 infra 层的 infra/core-client/gateway.hpp');
+    expect(errors).toContain('win32/app/src/entry/cartridges/handlers.cpp：entry 层不能包含控件库的 rujian/ui/widget.hpp');
+    expect(errors).toContain('win32/app/src/infra/core-client/gateway.hpp：找不到 somewhere/not-there.hpp，核心的头文件只能包含 bootstrap/core.hpp、platform/streams/frame-output.hpp');
+    expect(errors).toContain('win32/app/src/ui/shell/view.cpp：ui 层不能包含 entry 层的 entry/main-requests/router.hpp');
+  });
+
+  it('原生应用的模块之间只能引用对方的契约，且不能循环依赖', () => {
+    const root = createProject({
+      'win32/app/src/infra/dialogs/a.hpp': '#include "infra/directories/b.hpp"\n',
+      'win32/app/src/infra/directories/b.hpp': '#include "infra/dialogs/a.hpp"\n',
+      'win32/app/src/infra/dialogs/own.hpp': '#include "infra/dialogs/a.hpp"\n',
+      'win32/app/src/loose.hpp': '\n',
+      'win32/app/src/infra/direct.hpp': '\n',
+      'win32/app/src/other/x.hpp': '\n'
+    });
+    const { errors } = checkProject(root);
+    expect(errors).toContain('win32/app/src/infra/dialogs/a.hpp：模块 dialogs 只能引用模块 directories 的契约，不能包含 infra/directories/b.hpp');
+    expect(errors).toContain('win32/app/src/infra/directories/b.hpp：模块 directories 只能引用模块 dialogs 的契约，不能包含 infra/dialogs/a.hpp');
+    expect(errors.some((error) => error.startsWith('win32/app：模块之间有循环依赖'))).toBe(true);
+    expect(errors).toContain('win32/app/src/infra/direct.hpp：infra 层的文件必须放在 infra/<模块>/ 目录下');
+    expect(errors.some((error) => error.startsWith('win32/app/src/other：不是八层之一'))).toBe(true);
+  });
+
   it('TypeScript 的层间依赖、electron 与第三方包受限', () => {
     const root = createProject({
       'src/ui/shell/Shell.tsx': "import { app } from 'electron';\nimport { run } from '../../infra/core-client/run';\nimport { readFileSync } from 'node:fs';\nimport lodash from 'lodash';\n",

@@ -1,0 +1,41 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：shell-state-service.hpp
+ * 说明：界面状态服务的抽象：读出与修改要保存的界面状态（窗口位置、选择的机型、面板自动收缩的开关、上次显示更新记录的版本）。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-19
+ * 备注：对应 Electron 外壳的 src/contracts/shell/shell-state-service.ts；规则与格式见 shared/shell-state 与 docs/05-界面.md 第 9 节。
+ * ------------------------------------------------------------------------
+ */
+
+#pragma once
+
+#include <string>
+
+#include "shared/shell-state/shell-state.hpp"
+
+namespace ember::win32::contracts {
+
+/** 界面状态服务。 */
+class ShellStateService {
+ public:
+  virtual ~ShellStateService() = default;
+
+  /** 当前的界面状态。 */
+  [[nodiscard]] virtual const shared::ShellState& get() const = 0;
+
+  /** 替换布局里保存的选择。 */
+  virtual void updateLayout(const shared::ShellLayout& layout) = 0;
+
+  /** 记下窗口位置。 */
+  virtual void updateWindow(const shared::WindowPlacement& placement) = 0;
+
+  /** 记下上次显示更新记录时的应用版本。 */
+  virtual void updateReleaseNotesVersion(const std::string& version) = 0;
+
+  /** 立即写盘。 */
+  virtual void flush() = 0;
+};
+
+}  // namespace ember::win32::contracts

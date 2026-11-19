@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：test-win32.mjs
- * 说明：用 Win32 原生外壳的工具链（v143、目标 Windows 7）构建 Debug 版核心测试与控件库测试并运行。
+ * 说明：用 Win32 原生外壳的工具链（v143、目标 Windows 7）构建 Debug 版核心测试、控件库测试与原生应用测试并运行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -17,7 +17,7 @@ try {
   // ROM 测试用真实的 nrom 插件包装配卡带，所以先打包插件。
   packPlugins(EMBER_ROOT);
   configure(['-DEMBER_BUILD_TESTS=ON', `-B${WIN32_TEST_BUILD_DIRECTORY}`]);
-  build(WIN32_TEST_BUILD_DIRECTORY, 'Debug', ['ember_core_tests', 'rujian_ui_tests', 'rujian_ui_gallery']);
+  build(WIN32_TEST_BUILD_DIRECTORY, 'Debug', ['ember_core_tests', 'rujian_ui_tests', 'rujian_ui_gallery', 'ember_app_tests', 'ember_win']);
   test(WIN32_TEST_BUILD_DIRECTORY, 'Debug', process.argv.slice(2));
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

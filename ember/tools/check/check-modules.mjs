@@ -3,7 +3,8 @@
  * 名称：check-modules.mjs
  * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、渲染 Worker（ui 层里以 -worker.ts 结尾的入口）的依赖限制、C++ 各层的 #include 规则、硬件契约与硬件模块、mapper 电路的规则（模块之间互不引用）；
  *       从 TypeScript 的 import、C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
- *       检查模块目录都在模块清单中登记；检查官方插件目录 plugins/<id>/：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png。
+ *       检查模块目录都在模块清单中登记；检查官方插件目录 plugins/<id>/：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png；
+ *       检查 Win32 原生应用 win32/app/src 的 C++ 分层（八层、模块只经对方契约协作、Windows 系统头文件只能在 platform 与 bootstrap）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -439,6 +440,100 @@ function checkRegistration(root, errors, schemaModules) {
   }
 }
 
+// ---------------------------------------------------------------- Win32 原生应用
+
+/** 原生应用的八层，按模块分目录的层。 */
+const APP_LAYERS = new Set(['contracts', 'logic', 'infra', 'entry', 'ui', 'platform', 'shared', 'bootstrap']);
+const APP_MODULE_LAYERS = new Set(['contracts', 'logic', 'infra', 'entry', 'ui']);
+/** 原生应用各层可以包含的层。 */
+const APP_ALLOWED = {
+  contracts: ['contracts', 'shared'],
+  logic: ['logic', 'contracts', 'shared'],
+  infra: ['infra', 'contracts', 'shared', 'platform'],
+  entry: ['entry', 'contracts', 'shared'],
+  ui: ['ui', 'contracts'],
+  platform: ['platform', 'shared'],
+  shared: ['shared'],
+  bootstrap: [...APP_LAYERS]
+};
+/** 不属于任何业务模块的目录（请求路由与参数校验），其他模块可以包含。 */
+const APP_FRAMEWORK_ENTRY = new Set(['main-requests']);
+/** 核心头文件（经 ember_core 的包含目录）只能出现在这些层：基础设施里的核心网关与组装根；允许的核心头文件只有下面两个。 */
+const APP_CORE_HEADERS = new Set(['bootstrap/core.hpp', 'platform/streams/frame-output.hpp']);
+const APP_CORE_HEADER_LAYERS = new Set(['infra', 'bootstrap']);
+/** 控件库的头文件前缀，只有界面层、平台层与组装根可以包含。 */
+const APP_UI_KIT_PREFIX = 'rujian/';
+const APP_UI_KIT_LAYERS = new Set(['ui', 'platform', 'bootstrap']);
+/** Windows 系统头文件：只有平台层与组装根可以包含。 */
+const APP_SYSTEM_HEADERS = new Set([
+  'windows.h',
+  'windowsx.h',
+  'shellapi.h',
+  'shlobj.h',
+  'shobjidl.h',
+  'knownfolders.h',
+  'uxtheme.h',
+  'imm.h',
+  'd2d1.h',
+  'dwrite.h',
+  'wrl/client.h'
+]);
+const APP_SYSTEM_HEADER_LAYERS = new Set(['platform', 'bootstrap']);
+
+/** 原生应用的文件所在的层与模块；请求路由等框架目录没有模块。 */
+function appLocation(path) {
+  const parts = path.split('/');
+  const layer = parts[0];
+  if (APP_MODULE_LAYERS.has(layer) && parts.length > 2) {
+    if (layer === 'entry' && APP_FRAMEWORK_ENTRY.has(parts[1])) return { layer, module: undefined };
+    return { layer, module: parts[1] };
+  }
+  return { layer, module: undefined };
+}
+
+/** 检查 Win32 原生应用的 C++ 分层与模块之间的引用。 */
+function checkWin32App(root, errors) {
+  const base = join(root, 'win32', 'app', 'src');
+  if (!existsSync(base)) return;
+  const edges = [];
+  for (const directory of listDirectories(base)) {
+    if (!APP_LAYERS.has(directory)) errors.push(`win32/app/src/${directory}：不是八层之一（${[...APP_LAYERS].join('、')}）`);
+  }
+  for (const file of listFiles(base, /\.(cpp|hpp)$/)) {
+    const path = toPosix(relative(base, file));
+    const from = appLocation(path);
+    if (!APP_LAYERS.has(from.layer)) continue;
+    if (APP_MODULE_LAYERS.has(from.layer) && path.split('/').length < 3) errors.push(`win32/app/src/${path}：${from.layer} 层的文件必须放在 ${from.layer}/<模块>/ 目录下`);
+    const text = readFileSync(file, 'utf8');
+    for (const match of text.matchAll(/^\s*#include\s+([<"])([^>"]+)[>"]/gm)) {
+      const include = match[2];
+      if (match[1] === '<') {
+        if (APP_SYSTEM_HEADERS.has(include) && !APP_SYSTEM_HEADER_LAYERS.has(from.layer)) errors.push(`win32/app/src/${path}：${from.layer} 层不能包含系统头文件 <${include}>`);
+        continue;
+      }
+      if (include.startsWith(APP_UI_KIT_PREFIX)) {
+        if (!APP_UI_KIT_LAYERS.has(from.layer)) errors.push(`win32/app/src/${path}：${from.layer} 层不能包含控件库的 ${include}`);
+        continue;
+      }
+      // 应用自己的文件优先；不在应用里的只能是登记过的核心头文件
+      if (!existsSync(join(base, include)) && !include.startsWith('contracts/core-gateway/generated/')) {
+        if (!APP_CORE_HEADERS.has(include)) errors.push(`win32/app/src/${path}：找不到 ${include}，核心的头文件只能包含 ${[...APP_CORE_HEADERS].join('、')}`);
+        else if (!APP_CORE_HEADER_LAYERS.has(from.layer)) errors.push(`win32/app/src/${path}：${from.layer} 层不能包含核心的 ${include}`);
+        continue;
+      }
+      const to = appLocation(include);
+      if (!APP_LAYERS.has(to.layer)) continue;
+      const allowed = APP_ALLOWED[from.layer];
+      if (allowed !== undefined && !allowed.includes(to.layer)) errors.push(`win32/app/src/${path}：${from.layer} 层不能包含 ${to.layer} 层的 ${include}`);
+      if (from.module !== undefined && to.module !== undefined && from.module !== to.module) {
+        if (to.layer !== 'contracts') errors.push(`win32/app/src/${path}：模块 ${from.module} 只能引用模块 ${to.module} 的契约，不能包含 ${include}`);
+        edges.push({ from: from.module, to: to.module });
+      }
+    }
+  }
+  for (const cycle of findCycles(toGraph(edges))) errors.push(`win32/app：模块之间有循环依赖：${cycle}`);
+}
+
 // ---------------------------------------------------------------- 官方插件
 
 /** 插件目录里允许的文件，与插件包的格式一致（docs/03-mapper插件规范.md 第 3 节）。 */
@@ -481,6 +576,7 @@ export function checkProject(root) {
   const edges = schemas.flatMap((schema) => schema.refs.filter((ref) => ref.module !== schema.name).map((ref) => ({ from: schema.name, to: ref.module })));
   checkCpp(root, errors, edges);
   checkTs(root, errors, edges);
+  checkWin32App(root, errors);
   checkPlugins(root, errors);
   for (const cycle of findCycles(toGraph(edges))) errors.push(`模块之间有循环依赖：${cycle}`);
   checkRegistration(

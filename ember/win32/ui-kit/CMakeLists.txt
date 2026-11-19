@@ -22,6 +22,7 @@ add_library(rujian_ui STATIC
   src/base/root.cpp
   src/base/svg-path.cpp
   src/base/text-engine.cpp
+  src/base/theme.cpp
   src/base/unicode.cpp
   src/base/widget.cpp
   src/base/window.cpp

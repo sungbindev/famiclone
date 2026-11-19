@@ -49,9 +49,12 @@ npm run build -w packages/ember-debug-sdk   # 只构建 dist
 ### ember（在 `ember/` 目录下）
 
 ```powershell
-.\build.ps1                  # 安装依赖、检查（不含 C++ 测试与调试 SDK 检查）、生成安装程序
-.\build.ps1 -SkipCheck       # 跳过检查
-.\build.ps1 -PackageOnly     # 只打包成目录 build\ember\Ember-win32-x64
+.\build-electron.ps1          # Electron 外壳：安装依赖、检查（不含 C++ 测试与调试 SDK 检查）、生成安装程序
+.\build-electron.ps1 -SkipCheck       # 跳过检查
+.\build-electron.ps1 -PackageOnly     # 只打包成目录 build\ember\Ember-win32-x64
+.\build-win32.ps1            # Win32 原生外壳：安装依赖、编译 Release 版、边界与导入表检查，输出 build\ember\win32\app\Release\ember-win.exe
+npm run win32:start          # 以开发方式启动原生外壳
+npm run win32:test           # 原生外壳的 C++ 测试（核心、控件库、应用）
 npm run make:win             # 只生成安装程序和升级文件
 npm run core:test            # C++ 测试；-- -R <名称> 只跑匹配的用例
 npm run check                # 全部检查与测试
@@ -131,7 +134,7 @@ npm publish -w packages/create-fcdev
 2. 生成安装程序与升级文件：
 
    ```powershell
-   .\build.ps1
+   .\build-electron.ps1
    ```
 
 3. 检查 `RELEASES`、`.nupkg` 的大小与校验值，并打印要上传的文件，不上传：

@@ -7,7 +7,7 @@
  * 日期：2026-11-19
  * 备注：可执行文件已经链接了核心与第三方库，所以导入表就是整个程序对系统的全部依赖；用 v143 工具集自带的 dumpbin 读取。
  *       基线 win32/baseline/win7-sp1-exports.json 由 win32/tools/export-dump 在干净的 Windows 7 SP1 上生成；还没有基线时只输出导入清单并以失败退出。
- *       参数：`--list-only` 只写导入清单与 DLL 清单；其余参数是要检查的可执行文件，默认检查 probe 与 export-dump。
+ *       参数：`--list-only` 只写导入清单与 DLL 清单；其余参数是要检查的可执行文件，默认检查原生应用、probe、export-dump 与控件库画廊。
  * ------------------------------------------------------------------------
  */
 
@@ -23,6 +23,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BASELINE_FILE = join(root, 'win32', 'baseline', 'win7-sp1-exports.json');
 /** 默认检查的可执行文件。 */
 const DEFAULT_TARGETS = [
+  join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win.exe'),
   join(WIN32_BUILD_DIRECTORY, 'probe', 'Release', 'ember-probe.exe'),
   join(WIN32_BUILD_DIRECTORY, 'tools', 'export-dump', 'Release', 'ember-export-dump.exe'),
   join(WIN32_BUILD_DIRECTORY, 'ui-kit', 'Release', 'rujian-ui-gallery.exe')

@@ -362,6 +362,50 @@ function generateTsIndex(modules) {
 
 // ---------------------------------------------------------------- C++
 
+/** 原生外壳（win32/app）的请求目录：核心请求按“界面可发起、只能由外壳发起、只经调试服务开放”分类，再列出外壳自己处理的请求。 */
+function generateAppRequestCatalog(modules) {
+  const coreEntries = modules.flatMap((module) =>
+    Object.entries(module.schema.requests ?? {}).map(([operation, request]) => {
+      const kind = request.mainOnly === true ? 'MainOnly' : request.debugOnly === true ? 'DebugOnly' : 'Ui';
+      return `    CatalogEntry{${cppString(`${module.name}.${operation}`)}, RequestKind::${kind}}`;
+    })
+  );
+  const mainNames = modules.flatMap((module) => Object.keys(module.schema.mainRequests ?? {}).map((operation) => `    ${cppString(`${module.name}.${operation}`)}`));
+  return [
+    CPP_HEADER('schema/*.schema.json'),
+    '#pragma once',
+    '',
+    '#include <string_view>',
+    '',
+    'namespace ember::win32::contracts {',
+    '',
+    '/** 核心请求的类别。 */',
+    'enum class RequestKind {',
+    '  /** 界面可以发起。 */',
+    '  Ui,',
+    '  /** 只能由外壳自己发起（如 cartridges.load）。 */',
+    '  MainOnly,',
+    '  /** 只经调试服务开放。 */',
+    '  DebugOnly',
+    '};',
+    '',
+    '/** 核心的一个请求。 */',
+    'struct CatalogEntry {',
+    '  std::string_view name;',
+    '  RequestKind kind;',
+    '};',
+    '',
+    '/** 核心的全部请求。 */',
+    `inline constexpr CatalogEntry kCoreRequests[] = {\n${coreEntries.join(',\n')}};`,
+    '',
+    '/** 由外壳自己处理的请求。 */',
+    `inline constexpr std::string_view kShellRequests[] = {\n${mainNames.join(',\n')}};`,
+    '',
+    '}  // namespace ember::win32::contracts',
+    ''
+  ].join('\n');
+}
+
 /** 取值节点的 C++ 类型（不含可选包装）。 */
 function cppBaseType(node, currentModule, includes) {
   if (node.$ref !== undefined) {
@@ -596,6 +640,10 @@ export function generate(root, options = {}) {
     writeIfChanged(join(root, 'core', 'src', 'contracts', module.name, 'generated', `${module.name}.cpp`), cpp.source, written);
   }
   writeIfChanged(join(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts'), generateTsIndex(modules), written);
+  // 原生外壳的请求目录：目录存在时才写入（win32/app 不在时跳过）。
+  if (existsSync(join(root, 'win32', 'app'))) {
+    writeIfChanged(join(root, 'win32', 'app', 'src', 'contracts', 'core-gateway', 'generated', 'request-catalog.hpp'), generateAppRequestCatalog(modules), written);
+  }
   // 调试服务的接口描述文档（OpenRPC）：生成核心 debug 模块里的 C++ 常量，并写到调试 SDK 的 generated（帮助文档里的协议参考由 SDK 这份文档生成）。
   if (modules.some((module) => module.name === 'debug')) {
     const document = generateOpenRpc(modules);

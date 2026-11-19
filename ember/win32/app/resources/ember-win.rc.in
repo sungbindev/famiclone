@@ -1,0 +1,37 @@
+// 由 CMake 根据 ember-win.rc.in 生成，版本号取自 package.json；不要手改生成的文件。
+
+#include <windows.h>
+
+// 应用图标，与 Electron 外壳是同一张
+1 ICON "@EMBER_ICON_FILE@"
+
+// 清单（DPI 感知、支持的 Windows 版本）不在这里嵌入：它作为源文件交给链接器合并
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION @EMBER_VERSION_MAJOR@,@EMBER_VERSION_MINOR@,@EMBER_VERSION_PATCH@,0
+ PRODUCTVERSION @EMBER_VERSION_MAJOR@,@EMBER_VERSION_MINOR@,@EMBER_VERSION_PATCH@,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "sungbin"
+            VALUE "FileDescription", "Ember"
+            VALUE "FileVersion", "@EMBER_CORE_VERSION@"
+            VALUE "InternalName", "ember-win"
+            VALUE "LegalCopyright", "Copyright (C) sungbin"
+            VALUE "OriginalFilename", "ember-win.exe"
+            VALUE "ProductName", "Ember"
+            VALUE "ProductVersion", "@EMBER_CORE_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

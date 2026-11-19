@@ -52,6 +52,7 @@ return rujian::ui::HostWindow::runMessageLoop();
 - 悬停提示：控件用 `Widget::setTooltip`（纯文字）或 `setRichTooltip`（标题行加分条说明）设置提示；应用在每个 `Root` 上创建一个 `Tooltip`（先于 `Root` 销毁），延迟与收起的时机由 `Root` 处理。
 - 通知：应用在每个 `Root` 上创建一个 `NotificationCenter`（铺满窗口的弹层），用 `notify` 发通知，`NotificationButton` 放在状态栏右侧（`StatusBar::addEndWidget`），“通知详情”经 `setOnShowDetail` 由应用用对话框显示。
 - 标题栏自绘系统按钮：窗口的 `WM_NCHITTEST` 调用 `TitleBar::hitTestWindow`，把结果转成 `HTMINBUTTON`、`HTMAXBUTTON`、`HTCLOSE`、`HTCAPTION` 或客户区。
+- 应用的主窗口在 `HostWindow` 上扩展：`nativeHandle()` 取窗口句柄，`setMessageHook` 在窗口宿主之前处理窗口消息（自绘标题栏、窗口大小限制等）；`windowBorderColor(主题)` 给出系统边框的着色，由应用经系统接口设置。
 
 ## 已有控件
 

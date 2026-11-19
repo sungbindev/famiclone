@@ -1,10 +1,11 @@
 ﻿# ------------------------------------------------------------------------
-# 名称：build.ps1
-# 说明：构建 Ember 的 Windows x64 版：安装依赖、运行检查，再编译 C++ 原生模块并生成安装程序（或只打包）。
+# 名称：build-electron.ps1
+# 说明：构建 Ember 的 Windows x64 版（Electron 外壳）：安装依赖、运行检查，再编译 C++ 原生模块并生成安装程序（或只打包）。
 # 作者：sungbin
 # 邮箱：sungbin@3578.cn
 # 日期：2026-11-17
 # 备注：文件需保存为带 BOM 的 UTF-8，否则 Windows PowerShell 5.1 会按 ANSI 读取而使中文乱码。
+#       原生外壳（Win32）的构建用 build-win32.ps1，两个脚本各自只检查、构建、打包自己的外壳。
 # ------------------------------------------------------------------------
 
 <#
@@ -18,11 +19,11 @@ C++ 测试与调试 SDK 的检查不在其中，需要时单独运行 npm run co
 .PARAMETER PackageOnly
 只打包成可直接运行的目录（仓库根目录下的 build\ember\Ember-win32-x64），不生成安装程序。
 .EXAMPLE
-.\build.ps1
+.\build-electron.ps1
 .EXAMPLE
-.\build.ps1 -SkipCheck
+.\build-electron.ps1 -SkipCheck
 .EXAMPLE
-.\build.ps1 -PackageOnly
+.\build-electron.ps1 -PackageOnly
 #>
 param(
     [switch]$SkipCheck,

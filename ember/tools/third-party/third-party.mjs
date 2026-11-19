@@ -1,42 +1,72 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：third-party.mjs
- * 说明：Ember 使用的第三方开源代码清单：组件库与 core/third_party 下各项目的声明、Ember 与组件库源码引入的 npm 包
- *       （及其依赖）、原生模块用到的 npm 包与 Electron；提供界面用的虚拟模块 virtual:ember-third-party，
- *       并写出随安装包分发的许可全文。
+ * 说明：Ember 使用的第三方开源代码清单：读取 core/third_party、win32/ui-kit/third_party 与 help/third_party 下各项目目录的 third-party.json 与许可文件，
+ *       加上帮助文档站点随程序分发的页面框架（npm 包本身）；生成“关于”对话框用的 C++ 清单源文件，并写出随程序分发的许可全文。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-13
- * 备注：读取、校验与格式化复用组件库 tools/third-party.mjs；声明或许可缺失时直接报错，构建、测试与打包随之失败。
- *       清单见 docs/01-软件架构设计.md 第 10 节。
+ * 日期：2026-11-21
+ * 备注：不依赖别的仓库；声明或许可缺失时直接报错，构建随之失败；直接运行（node tools/third-party/third-party.mjs）时写出两个生成物，
+ *       win32-cmake.mjs 在配置工程前调用 writeThirdPartyFiles；清单见 docs/01-软件架构设计.md 第 10 节。
  * ------------------------------------------------------------------------
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { builtinModules } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { THIRD_PARTY_BUILD_DIRECTORY } from '../build/build-paths.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-/** 界面用的虚拟模块。 */
-export const VIRTUAL_MODULE = 'virtual:ember-third-party';
-/** 许可全文文件名，打包时复制到 resources 目录。 */
+/** 每个第三方目录里的声明文件名。 */
+export const DECLARATION_FILE = 'third-party.json';
+/** 许可全文文件名，随程序分发。 */
 export const NOTICES_FILE = 'THIRD_PARTY_NOTICES.txt';
 /** 许可全文的输出目录。 */
 export const NOTICES_DIRECTORY = THIRD_PARTY_BUILD_DIRECTORY;
-/** 自己的包，不算第三方。 */
-const OWN_PACKAGES = new Set(['@rujianjs/ui-kit']);
-/** 由安装包单独处理的包。 */
-const ELECTRON = 'electron';
-/** 原生模块包含的头文件与提供它的 npm 包。 */
-const NATIVE_HEADERS = { 'napi.h': 'node-addon-api' };
-const ELECTRON_USAGE = '桌面程序框架；其中 Chromium 等组件的许可见程序目录中的 LICENSES.chromium.html';
-/** 帮助文档站点（help/，由 VitePress 构建）随安装包分发的页面框架：只取这些包本身，构建工具（VitePress 自己的依赖、代码高亮等）不进安装包。 */
+/** 清单 C++ 源文件的位置（生成物，不提交）。 */
+export const NOTICES_SOURCE = join(ROOT, 'win32', 'app', 'src', 'bootstrap', 'generated', 'third-party-notices.generated.cpp');
+/** 第三方目录。 */
+const THIRD_PARTY_DIRECTORIES = [join(ROOT, 'core', 'third_party'), join(ROOT, 'win32', 'ui-kit', 'third_party'), join(ROOT, 'help', 'third_party')];
+/** 帮助文档站点（help/，由 VitePress 构建）随程序分发的页面框架：只取这些包本身，构建工具（VitePress 自己的依赖、代码高亮等）不进程序。 */
 const HELP_SITE_PACKAGES = ['vitepress', 'vue', '@vue/runtime-dom', '@vue/runtime-core', '@vue/reactivity', '@vue/shared', '@vue/devtools-api', '@vueuse/core', '@vueuse/shared', '@vueuse/integrations', 'focus-trap', 'tabbable', 'minisearch', 'mark.js'];
-const HELP_SITE_USAGE = '帮助文档站点的页面框架（随安装包分发的帮助文档里用到）';
+const HELP_SITE_USAGE = '帮助文档站点的页面框架（随程序分发的帮助文档里用到）';
+/** 包目录里可能的许可文件名（不区分大小写，按前缀匹配）。 */
+const LICENSE_FILE_PATTERN = /^(licen[cs]e|copying)(\.|$|-)/i;
 
-/** 只读取一个已安装的 npm 包本身的信息（不遍历它的依赖），用于随安装包分发的部分。 */
+/**
+ * 读取第三方目录下各项目的声明。
+ * @param {string} directory third_party 目录。
+ * @returns {object[]} 清单条目（含许可全文）。
+ */
+export function readDeclarations(directory) {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory)
+    .filter((name) => statSync(join(directory, name)).isDirectory())
+    .map((name) => {
+      const folder = join(directory, name);
+      const file = join(folder, DECLARATION_FILE);
+      if (!existsSync(file)) throw new Error(`第三方目录 ${folder} 缺少 ${DECLARATION_FILE}`);
+      const data = JSON.parse(readFileSync(file, 'utf8'));
+      for (const key of ['name', 'license', 'licenseFile', 'homepage', 'usage']) {
+        if (typeof data[key] !== 'string' || data[key].trim() === '') throw new Error(`${file} 缺少 ${key}`);
+      }
+      if (!Array.isArray(data.authors) || data.authors.length === 0) throw new Error(`${file} 缺少 authors`);
+      const licensePath = join(folder, data.licenseFile);
+      if (!existsSync(licensePath)) throw new Error(`${file} 声明的许可文件 ${data.licenseFile} 不存在`);
+      return {
+        name: data.name,
+        version: data.version ?? '',
+        authors: data.authors,
+        license: data.license,
+        homepage: data.homepage,
+        usage: data.usage,
+        bundled: data.bundled !== false,
+        licenseText: readFileSync(licensePath, 'utf8').trim()
+      };
+    });
+}
+
+/** 只读取一个已安装的 npm 包本身的信息（不遍历它的依赖），用于随程序分发的页面框架。 */
 function readInstalledPackage(name, usage) {
   let folder = null;
   for (let dir = ROOT; folder === null; dir = dirname(dir)) {
@@ -44,7 +74,7 @@ function readInstalledPackage(name, usage) {
     else if (dirname(dir) === dir) throw new Error(`找不到 npm 包 ${name}，请先安装依赖`);
   }
   const data = JSON.parse(readFileSync(join(folder, 'package.json'), 'utf8'));
-  const licenseFile = readdirSync(folder).find((file) => /^(licen[sc]e|copying)/i.test(file) && statSync(join(folder, file)).isFile());
+  const licenseFile = readdirSync(folder).find((file) => LICENSE_FILE_PATTERN.test(file) && statSync(join(folder, file)).isFile());
   if (licenseFile === undefined) throw new Error(`npm 包 ${name} 没有许可文件`);
   const licenseText = readFileSync(join(folder, licenseFile), 'utf8').trim();
   const author = typeof data.author === 'string' ? data.author.replace(/\s*[<(].*$/, '') : (data.author?.name ?? '');
@@ -65,114 +95,94 @@ function readInstalledPackage(name, usage) {
   };
 }
 
-/** 递归列出文件。 */
-function listFiles(directory, accept) {
-  if (!existsSync(directory)) return [];
-  return readdirSync(directory).flatMap((name) => {
-    const path = join(directory, name);
-    if (statSync(path).isDirectory()) return name === 'node_modules' ? [] : listFiles(path, accept);
-    return accept(path) ? [path] : [];
-  });
-}
-
-/** 包名（去掉子路径）。 */
-function packageName(specifier) {
-  const parts = specifier.split('/');
-  return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
-}
-
-/** 源码中引入的 npm 包：不含只引入类型的语句、相对路径、Node 内置模块与自己的包。 */
-function importedPackages(files) {
-  const names = new Set();
-  for (const file of files) {
-    const text = readFileSync(file, 'utf8');
-    const specifiers = [
-      ...[...text.matchAll(/(?:^|[\n;])\s*(?:import|export)\s+(?!type\s)[^'";]*?\bfrom\s+['"]([^'"]+)['"]/g)].map((match) => match[1]),
-      ...[...text.matchAll(/(?:^|[\n;])\s*import\s+['"]([^'"]+)['"]/g)].map((match) => match[1]),
-      ...[...text.matchAll(/\bimport\(\s*['"]([^'"]+)['"]\s*\)/g)].map((match) => match[1])
-    ];
-    for (const specifier of specifiers) {
-      if (specifier.startsWith('.') || specifier.startsWith('node:') || specifier.startsWith('virtual:')) continue;
-      const name = packageName(specifier);
-      if (builtinModules.includes(name) || OWN_PACKAGES.has(name)) continue;
-      names.add(name);
-    }
-  }
-  return names;
-}
-
-/** 原生模块源码包含的头文件对应的 npm 包。 */
-function nativePackages() {
-  const names = new Set();
-  for (const file of listFiles(join(ROOT, 'core', 'src'), (path) => /\.(cpp|hpp)$/.test(path))) {
-    for (const match of readFileSync(file, 'utf8').matchAll(/^\s*#include\s+<([^>]+)>/gm)) {
-      const name = NATIVE_HEADERS[match[1]];
-      if (name !== undefined) names.add(name);
-    }
-  }
-  return names;
-}
-
-/** 程序代码（不含测试、示例与类型声明）。 */
-function isProgramSource(path) {
-  return /\.(ts|tsx|mts|js|mjs)$/.test(path) && !/\.(test|stories)\.tsx?$/.test(path) && !path.endsWith('.d.ts') && !/[\\/](test|stories)[\\/]/.test(path);
-}
-
 /**
- * Ember 的第三方清单（含许可全文），按名称排序；不含不随安装包分发的项。
- * @param {string} uiKitDirectory 组件库源码目录。
+ * Ember 的第三方清单（含许可全文），按名称排序；不含不随程序分发的项。
+ * @returns {object[]} 清单条目。
  */
-export async function collectClient(uiKitDirectory) {
-  const tool = await import(pathToFileURL(join(uiKitDirectory, 'tools', 'third-party.mjs')).href);
-  const sources = [...listFiles(join(ROOT, 'src'), isProgramSource), ...listFiles(join(uiKitDirectory, 'src'), isProgramSource)];
-  const imported = importedPackages(sources);
-  imported.delete(ELECTRON);
-  const roots = [ROOT, uiKitDirectory];
-  const packages = tool.collectPackages([...imported], roots);
-  // 原生模块与 Electron 只取包本身：它们的依赖是编译与下载工具，不进安装包。
-  const own = (names, usage) =>
-    names.map((name) => ({ ...tool.collectPackages([name], roots).find((entry) => entry.name === name), ...(usage ? { usage } : {}) }));
-  const entries = [
-    ...tool.readDeclarations(join(uiKitDirectory, 'src', 'third_party')),
-    ...tool.readDeclarations(join(ROOT, 'core', 'third_party')),
-    ...tool.readDeclarations(join(ROOT, 'help', 'third_party')),
-    ...packages,
-    ...own([...nativePackages()]),
-    ...HELP_SITE_PACKAGES.map((name) => readInstalledPackage(name, HELP_SITE_USAGE)),
-    ...own([ELECTRON], ELECTRON_USAGE)
-  ].filter((entry) => entry.bundled);
+export function collectNotices() {
+  const entries = [...THIRD_PARTY_DIRECTORIES.flatMap(readDeclarations), ...HELP_SITE_PACKAGES.map((name) => readInstalledPackage(name, HELP_SITE_USAGE))].filter((entry) => entry.bundled);
   const unique = new Map(entries.map((entry) => [entry.name, entry]));
-  return { tool, entries: [...unique.values()].toSorted((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })) };
+  return [...unique.values()].toSorted((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
 
 /**
- * 写出许可全文。
- * @param {string} uiKitDirectory 组件库源码目录。
- * @returns {Promise<string>} 文件路径。
+ * 许可全文：每项一节，写名称、版本、作者、许可、主页、用途与许可全文。
+ * @param {object[]} entries 清单条目。
  */
-export async function writeNotices(uiKitDirectory) {
-  const { tool, entries } = await collectClient(uiKitDirectory);
+export function formatNotices(entries) {
+  const line = '-'.repeat(72);
+  const sections = entries.map((entry) =>
+    [
+      line,
+      `${entry.name}${entry.version ? ` ${entry.version}` : ''}`,
+      `作者：${entry.authors.join('、')}`,
+      `许可：${entry.license}`,
+      ...(entry.homepage ? [`主页：${entry.homepage}`] : []),
+      ...(entry.usage ? [`用途：${entry.usage}`] : []),
+      '',
+      entry.licenseText
+    ].join('\n')
+  );
+  return `Ember 使用的第三方开源代码\n\n${sections.join('\n\n')}\n`;
+}
+
+/** 写成 C++ 窄字符串字面量（源文件按 UTF-8 编译）：反斜杠、引号与控制字符转义，三字符序列里的问号拆开避免被当作三字符组。 */
+function cppString(text) {
+  let result = '"';
+  for (const char of text) {
+    const code = char.codePointAt(0);
+    if (char === '\\') result += '\\\\';
+    else if (char === '"') result += '\\"';
+    else if (char === '\n') result += '\\n';
+    else if (char === '\r') result += '\\r';
+    else if (char === '\t') result += '\\t';
+    else if (char === '?') result += '\\?';
+    else if (code < 0x20 || code === 0x7f) result += `\\${code.toString(8).padStart(3, '0')}`;
+    else result += char;
+  }
+  return `${result}"`;
+}
+
+/**
+ * 清单的 C++ 源文件内容。
+ * @param {object[]} entries 清单条目。
+ */
+export function formatNoticeSource(entries) {
+  const rows = entries.map((entry) => `    {${[entry.name, entry.version, entry.authors.join('、'), entry.license, entry.homepage, entry.usage].map(cppString).join(', ')}},`);
+  return [
+    '// 由 tools/third-party/third-party.mjs 生成，不要手改，也不提交。',
+    '',
+    '#include "bootstrap/third-party-notices.hpp"',
+    '',
+    'namespace ember::win32::bootstrap {',
+    '',
+    'const std::vector<contracts::ThirdPartyNotice>& thirdPartyNotices() {',
+    '  static const std::vector<contracts::ThirdPartyNotice> kNotices{',
+    ...rows,
+    '  };',
+    '  return kNotices;',
+    '}',
+    '',
+    '}  // namespace ember::win32::bootstrap',
+    ''
+  ].join('\n');
+}
+
+/**
+ * 写出两个生成物：关于对话框用的 C++ 清单源文件与随程序分发的许可全文。
+ * @returns {{ source: string, notices: string, count: number }} 两个文件的路径与清单项数。
+ */
+export function writeThirdPartyFiles() {
+  const entries = collectNotices();
+  mkdirSync(dirname(NOTICES_SOURCE), { recursive: true });
+  writeFileSync(NOTICES_SOURCE, formatNoticeSource(entries));
   mkdirSync(NOTICES_DIRECTORY, { recursive: true });
-  const file = join(NOTICES_DIRECTORY, NOTICES_FILE);
-  writeFileSync(file, tool.formatNotices('Ember 使用的第三方开源代码', entries));
-  return file;
+  const notices = join(NOTICES_DIRECTORY, NOTICES_FILE);
+  writeFileSync(notices, formatNotices(entries));
+  return { source: NOTICES_SOURCE, notices, count: entries.length };
 }
 
-/**
- * Vite 插件：提供虚拟模块，默认导出不含许可全文的清单。
- * @param {string} uiKitDirectory 组件库源码目录。
- */
-export function thirdPartyPlugin(uiKitDirectory) {
-  const resolved = `\0${VIRTUAL_MODULE}`;
-  return {
-    name: 'ember-third-party',
-    resolveId(id) {
-      return id === VIRTUAL_MODULE ? resolved : undefined;
-    },
-    async load(id) {
-      if (id !== resolved) return undefined;
-      const { tool, entries } = await collectClient(uiKitDirectory);
-      return `export default ${JSON.stringify(tool.summarize(entries))};`;
-    }
-  };
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const { count, notices } = writeThirdPartyFiles();
+  console.log(`第三方清单：${count} 项，许可全文 ${notices}`);
 }

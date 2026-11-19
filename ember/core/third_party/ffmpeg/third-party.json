@@ -7,5 +7,5 @@
   "license": "LGPL-2.1-or-later",
   "licenseFile": "COPYING.LGPLv2.1",
   "homepage": "https://ffmpeg.org",
-  "usage": "把磁带的声音文件（m4a、mp3、wav 等）解码成原始采样（随应用附带的 ffmpeg 程序，从源码精简编译，只启用解码与重采样，不联网；与如见客户端用的是同一份编译产物，编译配置在如见仓库的 tools/ffmpeg）；源码未修改，取自 https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz"
+  "usage": "把磁带的声音文件（m4a、mp3、wav 等）解码成原始采样：核心静态链接它的音频解码部分（解封装、解码、重采样），不含程序、滤镜、编码器、视频与网络；源码未修改，随仓库放在 source 目录，编译配置在 tools/ffmpeg，编译好的库在 lib 与 include；用户可以用 npm run ffmpeg:build 自行重新编译并替换"
 }

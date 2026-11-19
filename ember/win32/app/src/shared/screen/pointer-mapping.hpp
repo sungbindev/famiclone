@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：规则与 Electron 外壳的 src/ui/runtime/pointer-capture.ts 的 toFramePoint、frameUnitsPerPixel 相同；坐标按画面在画布里的实际矩形换算（见 screen-layout.hpp），
+ * 备注：坐标按画面在画布里的实际矩形换算（见 screen-layout.hpp），
  *       所以不受画面比例、缩放方式与窗口大小的影响；指针在画面之外时坐标可以超出 0 到 256、0 到 240。
  * ------------------------------------------------------------------------
  */

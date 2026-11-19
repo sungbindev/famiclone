@@ -29,9 +29,13 @@
     "title-bar",
     "status-bar"
   ],
-  "iconSources": [
-    "../../src/ui",
-    "../../src/bootstrap"
+  "extraIcons": [
+    "iconAdjustments", "iconAlertCircle", "iconAlertTriangle", "iconAppWindow", "iconArrowBackUp", "iconArrowDown", "iconArrowLeft", "iconArrowRight", "iconArrowUp", "iconArrowsDiff",
+    "iconBell", "iconCategory", "iconCheck", "iconChevronDown", "iconChevronRight", "iconChevronUp", "iconCircleCheck", "iconCircleX", "iconClock", "iconDeviceFloppy",
+    "iconEraser", "iconEye", "iconEyeOff", "iconFileExport", "iconFileUpload", "iconFilter", "iconFolderOpen", "iconHandClick", "iconInfoCircle", "iconLayoutBottombarCollapse",
+    "iconLock", "iconLockOpen", "iconPencil", "iconPlayerEject", "iconPlayerPause", "iconPlayerPlay", "iconPlayerRecord", "iconPlayerStop", "iconPlus", "iconPower",
+    "iconRefresh", "iconReload", "iconReplace", "iconRotate", "iconSelectAll", "iconSend", "iconSettings", "iconSparkles", "iconSquare", "iconTrash",
+    "iconUnlink", "iconUpload", "iconVolume", "iconVolumeOff"
   ],
   "extraStyles": [
     "third_party/vscode/base/browser/ui/scrollbar/media/scrollbars.css",

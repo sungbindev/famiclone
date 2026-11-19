@@ -54,7 +54,7 @@ class MediaService {
 
   /**
    * 把声音文件放进磁带机当磁带，替换已有的磁带；磁带机与主机无关，没有主机、没有通电也可以载入；成功后发 media.changed。
-   * @throws shared::CoreError media.tapeBusy、media.fileNotFound、media.fileUnreadable、media.tapeUnsupported、media.decoderMissing。
+   * @throws shared::CoreError media.tapeBusy、media.fileNotFound、media.fileUnreadable、media.tapeUnsupported。
    */
   virtual MediaTapeLoadResult tapeLoad(const MediaTapeLoadParams& params) = 0;
 

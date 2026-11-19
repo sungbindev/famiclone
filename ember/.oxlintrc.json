@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react", "import", "unicorn", "oxc"],
+  "plugins": ["typescript", "import", "unicorn", "oxc"],
   "categories": {
     "correctness": "error",
     "suspicious": "error"
@@ -9,10 +9,9 @@
     "no-console": ["error", { "allow": ["error", "log"] }],
     "eqeqeq": "error",
     "no-throw-literal": "off",
-    "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": "off",
     "unicorn/no-array-for-each": "off",
     "unicorn/require-post-message-target-origin": "off"
   },
-  "ignorePatterns": ["**/generated/**", "node_modules/**", ".vite/**"]
+  "ignorePatterns": ["**/generated/**", "node_modules/**"]
 }

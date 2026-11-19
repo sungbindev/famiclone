@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：disk-tape-store.cpp
- * 说明：磁带文件存取的磁盘实现：ffmpeg 解码的声音来源与 WAV 录音文件。
+ * 说明：磁带文件存取的磁盘实现：用静态链接的 FFmpeg 库解码出声音来源，以及 WAV 录音文件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -12,16 +12,30 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <string_view>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
 #include "contracts/media/media-error.hpp"
-#include "platform/process/stream-process.hpp"
 #include "shared/errors/core-error.hpp"
+
+// FFmpeg 是 C 库；它的头文件在 /W4 下有警告，这里只在包含时压住。
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/error.h>
+#include <libavutil/log.h>
+#include <libswresample/swresample.h>
+}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace ember::infra::media {
 
@@ -39,34 +53,153 @@ std::string toUtf8(const fs::path& path) {
   return std::string(text.begin(), text.end());
 }
 
-std::uint32_t readLe32(const std::uint8_t* data) { return static_cast<std::uint32_t>(data[0]) | (static_cast<std::uint32_t>(data[1]) << 8) | (static_cast<std::uint32_t>(data[2]) << 16) | (static_cast<std::uint32_t>(data[3]) << 24); }
-std::uint16_t readLe16(const std::uint8_t* data) { return static_cast<std::uint16_t>(data[0] | (data[1] << 8)); }
-
 void writeLe32(std::uint8_t* target, std::uint32_t value) {
   for (unsigned index = 0; index < 4; ++index) target[index] = static_cast<std::uint8_t>(value >> (index * 8));
 }
 
-/** 从文本里读 "Duration: 时:分:秒.百分秒" 的秒数；没有或写着 N/A 时为 0。 */
-double parseDuration(const std::string& text) {
-  const auto position = text.find("Duration:");
-  if (position == std::string::npos) return 0.0;
-  const char* cursor = text.c_str() + position + 9;
-  char* end = nullptr;
-  double total = 0.0;
-  // 时:分:秒.小数，三段都要有。
-  for (unsigned part = 0; part < 3; ++part) {
-    while (*cursor == ' ') ++cursor;
-    const double value = std::strtod(cursor, &end);
-    if (end == cursor) return 0.0;
-    total = total * 60.0 + value;
-    cursor = end;
-    if (part < 2) {
-      if (*cursor != ':') return 0.0;
-      ++cursor;
+/** 解码失败的原因。 */
+class DecodeFailure : public std::runtime_error {
+ public:
+  using std::runtime_error::runtime_error;
+};
+
+/** FFmpeg 错误码对应的说明。 */
+std::string describe(int code) {
+  char buffer[AV_ERROR_MAX_STRING_SIZE] = {};
+  av_strerror(code, buffer, sizeof(buffer));
+  return buffer;
+}
+
+/** 已打开的声音文件：解封装、解码与重采样成 96 kHz、16 位、立体声；成员按创建顺序的反序释放。 */
+class AudioInput {
+ public:
+  /** @throws DecodeFailure 打不开、没有声音轨或无法解码。 */
+  explicit AudioInput(const std::string& path) {
+    try {
+      open(path);
+    } catch (...) {
+      release();
+      throw;
     }
   }
-  return total;
-}
+  ~AudioInput() { release(); }
+  AudioInput(const AudioInput&) = delete;
+  AudioInput& operator=(const AudioInput&) = delete;
+
+  /** 文件的时长（秒）；文件里没有写时为 0。 */
+  [[nodiscard]] double duration() const { return format_->duration == AV_NOPTS_VALUE ? 0.0 : static_cast<double>(format_->duration) / AV_TIME_BASE; }
+  /** 不是单声道。 */
+  [[nodiscard]] bool stereo() const { return codec_->ch_layout.nb_channels != 1; }
+
+  /**
+   * 追加解码出的采样（左右交错）到 samples。
+   * @returns 文件还有数据时为 true；已经解完为 false。
+   * @throws DecodeFailure 解码中途出错。
+   */
+  bool decodeMore(std::vector<std::int16_t>& samples) {
+    while (!finished_) {
+      int code = avcodec_receive_frame(codec_, frame_);
+      if (code == 0) {
+        convert(frame_, samples);
+        av_frame_unref(frame_);
+        return true;
+      }
+      if (code == AVERROR_EOF) {
+        // 解码器已吐完，把重采样器里剩下的取出来。
+        convert(nullptr, samples);
+        finished_ = true;
+        return !samples.empty();
+      }
+      if (code != AVERROR(EAGAIN)) throw DecodeFailure(describe(code));
+      feed();
+    }
+    return false;
+  }
+
+ private:
+  void open(const std::string& path) {
+    int code = avformat_open_input(&format_, path.c_str(), nullptr, nullptr);
+    if (code < 0) throw DecodeFailure(describe(code));
+    format_->flags |= AVFMT_FLAG_BITEXACT;
+    code = avformat_find_stream_info(format_, nullptr);
+    if (code < 0) throw DecodeFailure(describe(code));
+    const AVCodec* decoder = nullptr;
+    streamIndex_ = av_find_best_stream(format_, AVMEDIA_TYPE_AUDIO, -1, -1, &decoder, 0);
+    if (streamIndex_ < 0 || decoder == nullptr) throw DecodeFailure("没有声音轨");
+    codec_ = avcodec_alloc_context3(decoder);
+    if (codec_ == nullptr) throw DecodeFailure("无法创建解码器");
+    code = avcodec_parameters_to_context(codec_, format_->streams[streamIndex_]->codecpar);
+    if (code < 0) throw DecodeFailure(describe(code));
+    codec_->flags |= AV_CODEC_FLAG_BITEXACT;
+    code = avcodec_open2(codec_, decoder, nullptr);
+    if (code < 0) throw DecodeFailure(describe(code));
+    if (codec_->ch_layout.nb_channels < 1 || codec_->sample_rate < 1) throw DecodeFailure("声音的声道或采样率无效");
+
+    AVChannelLayout input{};
+    if (codec_->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) av_channel_layout_default(&input, codec_->ch_layout.nb_channels);
+    else av_channel_layout_copy(&input, &codec_->ch_layout);
+    AVChannelLayout output{};
+    av_channel_layout_default(&output, 2);
+    code = swr_alloc_set_opts2(&resampler_, &output, AV_SAMPLE_FMT_S16, static_cast<int>(hw::TapeSource::SAMPLE_RATE), &input, codec_->sample_fmt, codec_->sample_rate, 0, nullptr);
+    av_channel_layout_uninit(&input);
+    av_channel_layout_uninit(&output);
+    if (code < 0) throw DecodeFailure(describe(code));
+    code = swr_init(resampler_);
+    if (code < 0) throw DecodeFailure(describe(code));
+    packet_ = av_packet_alloc();
+    frame_ = av_frame_alloc();
+    if (packet_ == nullptr || frame_ == nullptr) throw DecodeFailure("内存不足");
+  }
+
+  void release() {
+    av_frame_free(&frame_);
+    av_packet_free(&packet_);
+    swr_free(&resampler_);
+    avcodec_free_context(&codec_);
+    avformat_close_input(&format_);
+  }
+
+  /** 读下一个包交给解码器；文件读完时通知解码器结束。 */
+  void feed() {
+    for (;;) {
+      const int code = av_read_frame(format_, packet_);
+      if (code == AVERROR_EOF) {
+        avcodec_send_packet(codec_, nullptr);
+        return;
+      }
+      if (code < 0) throw DecodeFailure(describe(code));
+      const bool mine = packet_->stream_index == streamIndex_;
+      const int sent = mine ? avcodec_send_packet(codec_, packet_) : 0;
+      av_packet_unref(packet_);
+      if (mine && sent < 0 && sent != AVERROR(EAGAIN) && sent != AVERROR_INVALIDDATA) throw DecodeFailure(describe(sent));
+      if (mine) return;
+    }
+  }
+
+  /** 把一帧（为空表示取出重采样器里剩下的）重采样后追加到 samples。 */
+  void convert(const AVFrame* input, std::vector<std::int16_t>& samples) {
+    const int inputCount = input == nullptr ? 0 : input->nb_samples;
+    const int capacity = swr_get_out_samples(resampler_, inputCount);
+    if (capacity <= 0) return;
+    const std::size_t before = samples.size();
+    samples.resize(before + static_cast<std::size_t>(capacity) * 2);
+    std::uint8_t* output[1] = {reinterpret_cast<std::uint8_t*>(samples.data() + before)};
+    const int produced = swr_convert(resampler_, output, capacity, input == nullptr ? nullptr : const_cast<const std::uint8_t**>(input->extended_data), inputCount);
+    if (produced < 0) {
+      samples.resize(before);
+      throw DecodeFailure(describe(produced));
+    }
+    samples.resize(before + static_cast<std::size_t>(produced) * 2);
+  }
+
+  AVFormatContext* format_{nullptr};
+  AVCodecContext* codec_{nullptr};
+  SwrContext* resampler_{nullptr};
+  AVPacket* packet_{nullptr};
+  AVFrame* frame_{nullptr};
+  int streamIndex_{-1};
+  bool finished_{false};
+};
 
 /** 探测结果。 */
 struct Probe {
@@ -74,50 +207,44 @@ struct Probe {
   bool stereo{true};
 };
 
-/** 运行一次 ffmpeg（不解码）读出时长与声道；没有声音轨时抛 media.tapeUnsupported。 */
-Probe probe(const fs::path& ffmpeg, const std::string& path) {
-  std::string errorText;
+/** 打开一次读出时长与声道（不解码）；没有声音轨或无法解码时抛 media.tapeUnsupported。 */
+Probe probe(const std::string& path) {
   try {
-    auto process = platform::startStreamProcess(ffmpeg, {"-hide_banner", "-nostdin", "-i", path});
-    std::uint8_t buffer[256];
-    while (process->read(buffer, sizeof(buffer)) > 0) {
-    }
-    errorText = process->errorOutput();
-  } catch (const platform::ProcessError&) {
-    throw shared::CoreError(api::ERROR_DECODER_MISSING, "无法启动解码程序 ffmpeg");
+    const AudioInput input(path);
+    return {input.duration(), input.stereo()};
+  } catch (const DecodeFailure&) {
+    throw shared::CoreError(api::ERROR_TAPE_UNSUPPORTED, "文件里没有声音，或格式无法解码：" + path);
   }
-  const auto audio = errorText.find("Audio:");
-  if (audio == std::string::npos) throw shared::CoreError(api::ERROR_TAPE_UNSUPPORTED, "文件里没有声音，或格式无法解码：" + path);
-  const auto lineEnd = errorText.find('\n', audio);
-  const std::string line = errorText.substr(audio, lineEnd == std::string::npos ? std::string::npos : lineEnd - audio);
-  Probe result;
-  result.duration = parseDuration(errorText);
-  result.stereo = line.find(", mono") == std::string::npos;
-  return result;
 }
 
-/** ffmpeg 解码出来的声音来源。 */
-class FfmpegTapeSource final : public hw::TapeSource {
+/** 解码出来的声音来源：96 kHz、16 位、立体声；第一次读取时才打开文件，倒带后重新打开，所以长磁带不占内存。 */
+class LibavTapeSource final : public hw::TapeSource {
  public:
-  FfmpegTapeSource(fs::path ffmpeg, std::string file, Probe info, std::shared_ptr<platform::ErrorLog> errors)
-      : ffmpeg_(std::move(ffmpeg)), file_(std::move(file)), info_(info), errors_(std::move(errors)) {}
+  LibavTapeSource(std::string file, Probe info, std::shared_ptr<platform::ErrorLog> errors) : file_(std::move(file)), info_(info), errors_(std::move(errors)) {}
 
   std::size_t read(std::int16_t* interleaved, std::size_t frames) override {
     if (failed_) return 0;
-    if (process_ == nullptr && !start()) return 0;
-    auto* bytes = reinterpret_cast<std::uint8_t*>(interleaved);
-    const std::size_t wanted = frames * BYTES_PER_FRAME;
-    std::size_t got = 0;
-    while (got < wanted) {
-      const std::size_t count = process_->read(bytes + got, wanted - got);
-      if (count == 0) break;
-      got += count;
+    std::size_t produced = 0;
+    while (produced < frames) {
+      const std::size_t available = pending_.size() / 2 - position_;
+      if (available > 0) {
+        const std::size_t count = std::min(available, frames - produced);
+        std::memcpy(interleaved + produced * 2, pending_.data() + position_ * 2, count * 2 * sizeof(std::int16_t));
+        position_ += count;
+        produced += count;
+        continue;
+      }
+      pending_.clear();
+      position_ = 0;
+      if (!refill()) break;
     }
-    return got / BYTES_PER_FRAME;
+    return produced;
   }
 
   void rewind() override {
-    process_.reset();
+    input_.reset();
+    pending_.clear();
+    position_ = 0;
     failed_ = false;
   }
 
@@ -125,76 +252,28 @@ class FfmpegTapeSource final : public hw::TapeSource {
   [[nodiscard]] bool stereo() const override { return info_.stereo; }
 
  private:
-  /** 每帧的字节数：左右各 16 位。 */
-  static constexpr std::size_t BYTES_PER_FRAME = 4;
-
-  bool start() {
+  /** 解码出更多采样；解完或出错（当作磁带放完并写日志）时为 false。 */
+  bool refill() {
     try {
-      process_ = platform::startStreamProcess(ffmpeg_, {"-v", "error", "-nostdin", "-i", file_, "-vn", "-map", "0:a:0", "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact", "-acodec",
-                                                         "pcm_s16le", "-ac", "2", "-ar", "96000", "-f", "wav", "pipe:1"});
-      if (readHeader()) return true;
-      fail("解码输出的头部不是 96 kHz、16 位、立体声的 WAV");
-    } catch (const platform::ProcessError& error) {
-      fail(error.what());
-    }
-    return false;
-  }
-
-  /** 读满 count 字节；中途结束返回 false。 */
-  bool readExact(std::uint8_t* target, std::size_t count) {
-    std::size_t got = 0;
-    while (got < count) {
-      const std::size_t part = process_->read(target + got, count - got);
-      if (part == 0) return false;
-      got += part;
-    }
-    return true;
-  }
-
-  bool skip(std::uint64_t count) {
-    std::uint8_t scratch[4096];
-    while (count > 0) {
-      const std::size_t part = static_cast<std::size_t>(std::min<std::uint64_t>(count, sizeof(scratch)));
-      if (!readExact(scratch, part)) return false;
-      count -= part;
-    }
-    return true;
-  }
-
-  /** 解析 WAV 头部，停在 data 块的第一个采样前。 */
-  bool readHeader() {
-    std::uint8_t riff[12];
-    if (!readExact(riff, sizeof(riff)) || std::memcmp(riff, "RIFF", 4) != 0 || std::memcmp(riff + 8, "WAVE", 4) != 0) return false;
-    bool formatOk = false;
-    for (;;) {
-      std::uint8_t chunk[8];
-      if (!readExact(chunk, sizeof(chunk))) return false;
-      const std::uint32_t size = readLe32(chunk + 4);
-      if (std::memcmp(chunk, "fmt ", 4) == 0) {
-        std::vector<std::uint8_t> format(std::min<std::uint32_t>(size, 64));
-        if (format.size() < 16 || !readExact(format.data(), format.size())) return false;
-        const std::uint16_t tag = readLe16(format.data());
-        formatOk = (tag == 1 || tag == 0xFFFE) && readLe16(format.data() + 2) == 2 && readLe32(format.data() + 4) == hw::TapeSource::SAMPLE_RATE && readLe16(format.data() + 14) == 16;
-        if (!skip(static_cast<std::uint64_t>(size - format.size()) + (size & 1U))) return false;
-      } else if (std::memcmp(chunk, "data", 4) == 0) {
-        return formatOk;
-      } else if (!skip(static_cast<std::uint64_t>(size) + (size & 1U))) {
-        return false;
-      }
+      if (input_ == nullptr) input_ = std::make_unique<AudioInput>(file_);
+      return input_->decodeMore(pending_);
+    } catch (const DecodeFailure& error) {
+      failed_ = true;
+      input_.reset();
+      pending_.clear();
+      position_ = 0;
+      if (errors_ != nullptr) errors_->write({"media", "media.tapeDecodeFailed", std::string("磁带解码失败：") + error.what(), nlohmann::json{{"file", file_}}});
+      return false;
     }
   }
 
-  void fail(const std::string& reason) {
-    failed_ = true;
-    process_.reset();
-    if (errors_ != nullptr) errors_->write({"media", "media.tapeDecodeFailed", "磁带解码失败：" + reason, nlohmann::json{{"file", file_}}});
-  }
-
-  fs::path ffmpeg_;
   std::string file_;
   Probe info_;
   std::shared_ptr<platform::ErrorLog> errors_;
-  std::unique_ptr<platform::StreamProcess> process_;
+  std::unique_ptr<AudioInput> input_;
+  /** 已解码、还没交出去的采样（左右交错）与已交出的帧数。 */
+  std::vector<std::int16_t> pending_;
+  std::size_t position_{0};
   bool failed_{false};
 };
 
@@ -265,7 +344,10 @@ class WavTapeSink final : public hw::TapeSink {
 
 }  // namespace
 
-DiskTapeStore::DiskTapeStore(fs::path ffmpegPath, std::shared_ptr<platform::ErrorLog> errors) : ffmpegPath_(std::move(ffmpegPath)), errors_(std::move(errors)) {}
+DiskTapeStore::DiskTapeStore(std::shared_ptr<platform::ErrorLog> errors) : errors_(std::move(errors)) {
+  // 库默认把警告写到标准错误，核心只在解码失败时写自己的日志。
+  av_log_set_level(AV_LOG_QUIET);
+}
 
 std::unique_ptr<hw::TapeSource> DiskTapeStore::open(const std::string& path) const {
   const fs::path file = toPath(path);
@@ -273,9 +355,8 @@ std::unique_ptr<hw::TapeSource> DiskTapeStore::open(const std::string& path) con
   const auto status = fs::status(file, error);
   if (error || !fs::exists(status)) throw shared::CoreError(api::ERROR_FILE_NOT_FOUND, "找不到文件：" + path);
   if (!fs::is_regular_file(status)) throw shared::CoreError(api::ERROR_FILE_UNREADABLE, "不是普通文件：" + path);
-  if (ffmpegPath_.empty() || !fs::exists(ffmpegPath_, error)) throw shared::CoreError(api::ERROR_DECODER_MISSING, "没有找到解码用的 ffmpeg 程序，无法载入磁带");
-  const Probe info = probe(ffmpegPath_, toUtf8(file));
-  return std::make_unique<FfmpegTapeSource>(ffmpegPath_, toUtf8(file), info, errors_);
+  const Probe info = probe(toUtf8(file));
+  return std::make_unique<LibavTapeSource>(toUtf8(file), info, errors_);
 }
 
 std::unique_ptr<hw::TapeSink> DiskTapeStore::create(const std::string& path) const { return std::make_unique<WavTapeSink>(toPath(path), path); }

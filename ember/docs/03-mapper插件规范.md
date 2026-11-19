@@ -12,7 +12,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | --- | --- | --- |
 | 插件的含义 | 插件就是卡带上的 mapper 芯片：清单描述卡带的存储区、窗口与寄存器，脚本实现芯片行为 | 已定 |
 | 范围 | 只描述卡带（含学习卡）；整机机型的译码与胶合逻辑在主机型号里，插件不访问整机机型的功能模块；插卡学习机的卡带 mapper 译码并经 `ctx.device` 读写主机上的功能模块（后续阶段，见 02 第 1 节“插卡学习机”） | 已定 |
-| 不内置 | 程序里没有任何内置 mapper，包括 NROM；官方 mapper 以插件形式随安装包预装 | 已定 |
+| 不内置 | 程序里没有任何内置 mapper，包括 NROM；官方 mapper 以插件形式预装（内置在程序里） | 已定 |
 | 主机的选择 | 清单只能按名字选择主机型号（`host` 字段，目前只有 `fc`，以后有别的卡带主机时再用），不能修改芯片内部、主板上的功能模块与存储 | 已定 |
 | 匹配 | 按 NES 文件头的 mapper 号和变体匹配，规则写在清单里；程序只做通用查询，不认识任何具体卡带；mapper 171（BBK、SB2K 的 BIOS 文件）没有匹配的插件时按 `mappers.noMatch` 报错，不自动识别成学习机，学习机 BIOS 只能走“机型与 BIOS”开机 | 已定 |
 | 脚本语言 | JavaScript（ES2023 模块），推荐用 TypeScript 编写后打包为单个文件 | 拟定 |
@@ -379,12 +379,12 @@ export default {
 
 ## 7. 安装与管理
 
-- 预装的官方插件随安装包放在应用的资源目录，只读；用户安装的插件放在用户数据目录的插件文件夹。实现：预装目录由启动核心时的可选参数 `bundledPluginsPath` 给出（开发版是仓库根目录下的 `build/ember/plugins`，由 `npm run plugins:pack` 从 `plugins/` 打包；正式包里是应用资源目录下的 `plugins/`，打包配置把 `build/ember/plugins` 作为额外资源复制过去；主进程在启动核心时传入这个路径，核心启动即自动加载其中的 `nrom` 等预装插件），用户插件目录是 `<用户数据目录>/plugins/`，安装后的文件名是 `<id>.emap`（id 只含小写字母、数字与 `-`，不会写到目录之外）。
+- 预装的官方插件内置在程序里（打进资源包嵌在可执行文件中，见 01 第 9 节），首次启动或程序版本变化时由外壳解压到 `<用户数据目录>/bundled-plugins/`，只读；用户安装的插件放在用户数据目录的插件文件夹。实现：预装目录由启动核心时的可选参数 `bundledPluginsPath` 给出（外壳传入解压出来的 `bundled-plugins/`，核心启动即自动加载其中的 `nrom` 等预装插件；插件包由 `npm run plugins:pack` 从 `plugins/` 打成 `build/ember/plugins/<id>.emap`），用户插件目录是 `<用户数据目录>/plugins/`，安装后的文件名是 `<id>.emap`（id 只含小写字母、数字与 `-`，不会写到目录之外）。
 - 同一个 `id` 同时存在时，版本高的生效（按三段数字比较，`10.0.0` 高于 `9.0.0`）；版本相同时用户安装的优先。`mappers.list` 只列生效的那一个。安装的插件与用户目录里已有的同标识插件直接替换，不比较版本。
 - 用户可以停用任何插件，卸载自己安装的插件；预装的插件只能停用，不能删除（`mappers.bundledReadonly`）。停用状态保存在用户插件目录的 `state.json`，重启后保持；插件被完全卸载后对应的停用记录一并清除。
 - 安装时检查：包结构与大小、清单符合规范、`apiVersion` 受支持、`host` 中至少有一个存在的主机型号（`mappers.hostUnknown`）、`main.js` 能加载并导出声明的函数（有 `main.js` 时用空卡带试创建一次，脚本的顶层代码会真的执行，受第 6.3 节的限制）；不通过则拒绝并说明原因。用户目录与预装目录里不合格的包在重新读取时被跳过，写入系统错误日志。
 - 开发目录：首选项里可以指定“开发中的插件目录”，目录下每个子目录是一个未打包的插件；这些插件优先于同 `id` 的已安装插件，用 `mappers.reload` 重新加载，调试服务也提供同名请求。**后续阶段**实现；目前 `mappers.reload` 只重新读取预装目录与用户目录。
-- `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由主进程或调试服务发起；界面经主进程自己处理的 `mappers.openPackage` 安装），插件变化时发事件 `mappers.changed`；`match`（按文件头预览匹配结果）随 `cartridges.parseHeader` 在**后续阶段**实现。
+- `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由外壳或调试服务发起；界面经外壳自己处理的 `mappers.openPackage` 安装），插件变化时发事件 `mappers.changed`；`match`（按文件头预览匹配结果）随 `cartridges.parseHeader` 在**后续阶段**实现。
 
 错误码：`mappers.noMatch`、`mappers.conflict`、`mappers.invalidPackage`、`mappers.hostUnknown`、`mappers.scriptError`、`mappers.limitExceeded`，以及插件管理增加的 `mappers.notFound`（没有这个标识的插件）、`mappers.bundledReadonly`（预装插件不能卸载）。
 
@@ -398,7 +398,7 @@ export default {
 
 ## 9. 官方插件
 
-官方插件放在 `plugins/<id>/`（只含 `manifest.json`、`main.js`（没有脚本逻辑时可以没有）、`icon.png`），随安装包预装，覆盖 FC 卡带的 mapper：一块硬件一个插件，同一块硬件用在多个 mapper 号上时用多项 `match`（脚本按 `ctx.header.mapper` 分支）；不含 99 与 171（街机 VS 系统、学习机 BIOS 不是卡带）、UNIF 板名的 mapper、FDS、NSF、StudyBox、FNS，也不含各种外设（Datach 条码读取器、麦克风、手写板、自行车等）。每个插件在 `core/test/data/mapper-vectors/<id>.json` 有测试向量，由 `core/test/mappers/mapper-vectors-test.cpp` 用真实打好的包逐步验证；没有商业游戏 ROM 可用，所以这些插件**只有向量验证**，没有用真实游戏验证过。
+官方插件放在 `plugins/<id>/`（只含 `manifest.json`、`main.js`（没有脚本逻辑时可以没有）、`icon.png`），预装，覆盖 FC 卡带的 mapper：一块硬件一个插件，同一块硬件用在多个 mapper 号上时用多项 `match`（脚本按 `ctx.header.mapper` 分支）；不含 99 与 171（街机 VS 系统、学习机 BIOS 不是卡带）、UNIF 板名的 mapper、FDS、NSF、StudyBox、FNS，也不含各种外设（Datach 条码读取器、麦克风、手写板、自行车等）。每个插件在 `core/test/data/mapper-vectors/<id>.json` 有测试向量，由 `core/test/mappers/mapper-vectors-test.cpp` 用真实打好的包逐步验证；没有商业游戏 ROM 可用，所以这些插件**只有向量验证**，没有用真实游戏验证过。
 
 做法：寄存器写入每帧才几次的用回调脚本；每帧要观察很多次的（MMC3 家族的 A12 计数、MMC2/MMC4 的图案页锁存）经 `circuits` 引用宿主里的电路（第 4.10 节）；CPU 周期计数器用 `ctx.timer` 由调度器预测溢出时刻（第 6.2 节）；需要观察 A12 上升沿的小计数器用 `onA12`。MMC3 的变体（`mmc3-*`）都是“电路加外部寄存器”的写法：脚本把写入交给电路，再按外部寄存器重新算窗口。
 
@@ -743,7 +743,7 @@ export default definePlugin({
 - `MapperCartridge` 增加 `storageList()`（每块存储区的标识、种类、实际容量、是否带电池），运行模块在装入卡带时取它写进卡带描述里的存储区清单（`cartridges.info`、`runtime.status`）。
 - `nrom` 额外带 8K PRG RAM（第 9 节）；包里没有 `main.js`。
 - 查表的表项不在复位时一次填满，而是第一次遇到某个索引时调用脚本算一次并缓存：`plq` 的表有 15 位索引，一次填满 32768 项会超过单次回调 50 毫秒的限制，而真实游戏用到的索引很少（第 4.8 节）。
-- `mappers.install` 在 Schema 里标 `mainOnly`：参数带磁盘路径，界面不能直接发起，由主进程根据用户选择的文件（`mappers.openPackage` 弹出文件选择窗口，只显示 `.emap`）或调试服务发起。
+- `mappers.install` 在 Schema 里标 `mainOnly`：参数带磁盘路径，界面不能直接发起，由外壳根据用户选择的文件（`mappers.openPackage` 弹出文件选择窗口，只显示 `.emap`）或调试服务发起。
 - 新增错误码 `mappers.notFound`、`mappers.bundledReadonly`；`cartridges` 模块新增 `cartridges.notInes`、`cartridges.truncated`、`cartridges.unsupportedFormat`、`cartridges.invalidHeader`。
 - 计数器不做声明式 `counters`，用 `ctx.timer` 与 `onTimer`（第 6.4 节），与最初的拟定不同。
 - `ctx.timer.after` 的参数顺序是 `(name, cpuCycles)`，导出的回调叫 `onTimer`（不是 `timer`）。

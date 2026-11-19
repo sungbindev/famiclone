@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 src/contracts/shell/bios-directory.ts 与 platform/logging/log-directory.ts 的接口；目录不存在时先创建再打开。
+ * 备注：目录不存在时先创建再打开。
  * ------------------------------------------------------------------------
  */
 

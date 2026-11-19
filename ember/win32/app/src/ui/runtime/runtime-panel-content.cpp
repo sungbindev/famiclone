@@ -20,7 +20,7 @@ namespace ember::win32::ui {
 
 namespace {
 
-/** 运行面板里音量滑块的宽度（逻辑像素），同 Electron 外壳。 */
+/** 运行面板里音量滑块的宽度（逻辑像素）。 */
 constexpr double kVolumeSliderWidth = 80;
 
 /** 创建一个按钮并加进容器。 */

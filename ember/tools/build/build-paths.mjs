@@ -5,8 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
- * 备注：打包输出（Ember-win32-x64、make）由 forge.config.mts 的 outDir 指到同一个目录；Vite 的 .vite 目录由 Forge 固定在 ember/ 下，不在这里；帮助文档的 VitePress 配置（help/.vitepress/config.mts）直接引用这里的 HELP_BUILD_DIRECTORY。
- *       主进程（src/bootstrap/main/main.ts）、forge.config.mts、core/CMakeLists.txt、build-electron.ps1 与 package-mac.sh 各自写了同样的路径，改这里时一并修改。
+ * 备注：帮助文档的 VitePress 配置（help/.vitepress/config.mts）直接引用这里的 HELP_BUILD_DIRECTORY。
  * ------------------------------------------------------------------------
  */
 
@@ -15,8 +14,6 @@ import { fileURLToPath } from 'node:url';
 
 /** 构建产物的根目录：<仓库根>/build/ember。 */
 export const BUILD_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'build', 'ember');
-/** 原生模块的构建目录，模块在其下的 Release 里。 */
-export const CORE_BUILD_DIRECTORY = join(BUILD_ROOT, 'core');
 /** C++ 测试的构建目录。 */
 export const CORE_TEST_BUILD_DIRECTORY = join(BUILD_ROOT, 'core-test');
 /** Win32 原生外壳的构建目录（与 win32/CMakePresets.json 的 binaryDir 一致）。 */
@@ -31,3 +28,7 @@ export const PLUGINS_BUILD_DIRECTORY = join(BUILD_ROOT, 'plugins');
 export const THIRD_PARTY_BUILD_DIRECTORY = join(BUILD_ROOT, 'third-party');
 /** 帮助文档站点（help/ 由 VitePress 构建）的输出目录。 */
 export const HELP_BUILD_DIRECTORY = join(BUILD_ROOT, 'help');
+/** 随程序分发的资源包（预装插件、帮助文档、许可全文）的输出目录，CMake 把它嵌进 ember-win.exe。 */
+export const RESOURCES_BUILD_DIRECTORY = join(BUILD_ROOT, 'resources');
+/** 发布包（可执行文件与压缩包）的输出目录。 */
+export const RELEASE_BUILD_DIRECTORY = join(BUILD_ROOT, 'release');

@@ -50,15 +50,6 @@ inline std::vector<std::uint8_t> readReferenceFile(const std::string& relative) 
   return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
-/** 测试用的 ffmpeg 程序路径；没有时为空。 */
-inline std::filesystem::path ffmpegProgram() {
-#ifdef EMBER_FFMPEG_PROGRAM
-  const std::filesystem::path program = EMBER_FFMPEG_PROGRAM;
-  if (std::filesystem::exists(program)) return program;
-#endif
-  return {};
-}
-
 /** reference/tape 里按名字排第一的 m4a；没有时为空。 */
 inline std::filesystem::path firstTape() {
   const auto directory = findReference("tape");

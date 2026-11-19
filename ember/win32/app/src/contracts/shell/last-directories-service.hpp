@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 src/contracts/shell/last-directories-service.ts；保存在 config/last-directories.json，下次同一用途的窗口从那里打开。
+ * 备注：保存在 config/last-directories.json，下次同一用途的窗口从那里打开。
  * ------------------------------------------------------------------------
  */
 

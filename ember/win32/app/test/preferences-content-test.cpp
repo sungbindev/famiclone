@@ -6,7 +6,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：用控件库的离屏根容器测试，模型是假的；点击与按键用根容器的事件，缩放 1.0；用例取自 Electron 外壳的 PreferencesPage.test.tsx 与 BiosSettings.test.tsx。
+ * 备注：用控件库的离屏根容器测试，模型是假的；点击与按键用根容器的事件，缩放 1.0。
  * ------------------------------------------------------------------------
  */
 
@@ -73,6 +73,17 @@ class FakeBios final : public contracts::BiosModel {
   }
 };
 
+/** 假的用户数据目录模型：记下操作。 */
+class FakeUserData final : public contracts::UserDataModel {
+ public:
+  contracts::UserDataView current{"C:\\Users\\me\\AppData\\Roaming\\Ember", "改用软件所在目录", ""};
+  std::vector<std::string> calls;
+
+  [[nodiscard]] contracts::UserDataView view() const override { return current; }
+  void openDirectory() override { calls.push_back("open"); }
+  void switchPlace() override { calls.push_back("switch"); }
+};
+
 contracts::PreferenceRow choiceRow() {
   contracts::PreferenceRow row;
   row.id = "appearance.theme";
@@ -124,6 +135,7 @@ struct Scene {
   // 模型要比根容器活得久：控件销毁时还要取消订阅
   FakePreferences preferences;
   FakeBios bios;
+  FakeUserData userData;
   rujian::ui::Root root{rujian::ui::ThemeName::Dark, 1.0};
   ui::PreferencesContent* content{nullptr};
 
@@ -132,14 +144,15 @@ struct Scene {
     contracts::PreferenceGroupView sound{"sound", "声音", false, {switchRow(), integerRow(), textRow()}};
     contracts::PreferenceGroupView machines{"machines", "机型与 BIOS", true, {}};
     contracts::PreferenceGroupView printer{"printer", "打印机", false, {folderRow()}};
+    contracts::PreferenceGroupView app{"app", "应用", false, {switchRow()}};
     preferences.current.load = contracts::PreferencesLoad::Ready;
-    preferences.current.groups = {appearance, sound, machines, printer};
+    preferences.current.groups = {appearance, sound, machines, printer, app};
     bios.current.load = contracts::PreferencesLoad::Ready;
     bios.current.rows = {{"sb97", "小霸王 97", "未添加", false, true}, {"sb2000", "小霸王 2000", "SB2K_BIOS.NES（512 KB）", true, true}, {"bbk10", "步步高软驱一号", "暂未支持", false, false}};
   }
 
   void open() {
-    auto created = std::make_unique<ui::PreferencesContent>(preferences, bios);
+    auto created = std::make_unique<ui::PreferencesContent>(preferences, bios, userData);
     content = created.get();
     root.setContent(std::move(created));
     root.layout({700, 480});
@@ -355,6 +368,37 @@ TEST(PreferencesContent, BiosRowsFollowTheModel) {
   EXPECT_NE(s.content->biosRows()[0].replace, nullptr);
 }
 
+TEST(PreferencesContent, AppGroupEndsWithTheUserDataRowAndOtherGroupsHaveNone) {
+  Scene s;
+  s.open();
+  EXPECT_EQ(s.content->userDataLink(), nullptr);
+  s.selectGroup(4);
+  EXPECT_EQ(s.content->selectedGroupId(), "app");
+  ASSERT_EQ(s.content->rows().size(), 1U);
+  ASSERT_NE(s.content->userDataLink(), nullptr);
+  ASSERT_NE(s.content->userDataSwitch(), nullptr);
+  EXPECT_TRUE(s.content->userDataSwitch()->enabled());
+  s.selectGroup(0);
+  EXPECT_EQ(s.content->userDataLink(), nullptr);
+}
+
+TEST(PreferencesContent, UserDataLinkOpensTheDirectoryAndTheButtonSwitches) {
+  Scene s;
+  s.open();
+  s.selectGroup(4);
+  s.click(*s.content->userDataLink());
+  s.click(*s.content->userDataSwitch());
+  EXPECT_EQ(s.userData.calls, (std::vector<std::string>{"open", "switch"}));
+}
+
+TEST(PreferencesContent, UserDataSwitchIsDisabledWhenTheModelGivesAReason) {
+  Scene s;
+  s.userData.current.unavailableReason = "软件所在的目录不能写入";
+  s.open();
+  s.selectGroup(4);
+  EXPECT_FALSE(s.content->userDataSwitch()->enabled());
+}
+
 TEST(PreferencesContent, NothingToShowWhileLoading) {
   Scene s;
   s.preferences.current = contracts::PreferencesView{};
@@ -374,7 +418,7 @@ TEST(PreferencesContent, SelectedGroupFallsBackToTheFirstWhenItDisappears) {
   s.open();
   s.selectGroup(3);
   ASSERT_EQ(s.content->selectedGroupId(), "printer");
-  s.preferences.current.groups.pop_back();
+  s.preferences.current.groups.erase(s.preferences.current.groups.begin() + 3);
   s.preferences.notify();
   EXPECT_EQ(s.content->selectedGroupId(), "appearance");
 }

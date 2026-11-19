@@ -262,6 +262,18 @@ TEST(FramelessFrame, MinimumTrackSizeIsTheDefaultSize) {
   EXPECT_EQ(info.ptMinTrackSize.y, std::lround(kHeight * f.scale));
 }
 
+TEST(FramelessFrame, MaximizedWindowRectIsTheWorkAreaSoTheTaskbarStaysVisible) {
+  FrameFixture f;
+  MONITORINFO monitor{sizeof(monitor)};
+  ASSERT_TRUE(GetMonitorInfoW(MonitorFromWindow(f.hwnd, MONITOR_DEFAULTTONEAREST), &monitor));
+  MINMAXINFO info{};
+  SendMessageW(f.hwnd, WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&info));
+  EXPECT_EQ(info.ptMaxPosition.x, monitor.rcWork.left - monitor.rcMonitor.left);
+  EXPECT_EQ(info.ptMaxPosition.y, monitor.rcWork.top - monitor.rcMonitor.top);
+  EXPECT_EQ(info.ptMaxSize.x, monitor.rcWork.right - monitor.rcWork.left);
+  EXPECT_EQ(info.ptMaxSize.y, monitor.rcWork.bottom - monitor.rcWork.top);
+}
+
 TEST(FramelessFrame, SystemButtonHoverIsReportedAndClearedOnLeave) {
   FrameFixture f;
   SendMessageW(f.hwnd, WM_NCMOUSEMOVE, HTCLOSE, 0);

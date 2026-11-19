@@ -94,8 +94,6 @@ void InProcessCoreGateway::start() {
 
   nlohmann::json options{{"userDataPath", options_.userDataPath}, {"appVersion", options_.appVersion}};
   if (options_.bundledPluginsPath) options["bundledPluginsPath"] = *options_.bundledPluginsPath;
-  if (options_.bundledBiosPath) options["bundledBiosPath"] = *options_.bundledBiosPath;
-  if (options_.ffmpegPath) options["ffmpegPath"] = *options_.ffmpegPath;
   if (options_.debugPort) options["debugPort"] = *options_.debugPort;
   if (options_.debugToken) options["debugToken"] = *options_.debugToken;
 

@@ -10,7 +10,7 @@
 | `packages/create-fcdev` | `npm create fcdev` 的创建包与项目模板（npm 包） |
 | `packages/fcdev-cc65` | cc65 工具链包，由 `tools/build-cc65.mjs` 生成，不入库（npm 包） |
 | `packages/ember-debug-sdk` | Ember 调试服务的 SDK、终端客户端与 MCP 服务（npm 包） |
-| `ember` | 模拟器 Ember：Electron 外壳加 C++ 核心，独立的 npm 项目，不发布到 npm |
+| `ember` | 模拟器 Ember：Win32 原生外壳加 C++ 核心，独立的 npm 项目，不发布到 npm |
 | `vscode` | VS Code 扩展 fcdev（独立的 npm 项目，生成 `.vsix`） |
 | `cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `cc65/LICENSE` |
 | `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`runnes`、`memtest`、`fcprobe`、`hwprobe`、`hwtest`、`fbasic`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是独立的 npm 项目 |
@@ -49,20 +49,16 @@ npm run build -w packages/ember-debug-sdk   # 只构建 dist
 ### ember（在 `ember/` 目录下）
 
 ```powershell
-.\build-electron.ps1          # Electron 外壳：安装依赖、检查（不含 C++ 测试与调试 SDK 检查）、生成安装程序
-.\build-electron.ps1 -SkipCheck       # 跳过检查
-.\build-electron.ps1 -PackageOnly     # 只打包成目录 build\ember\Ember-win32-x64
 .\build-win32.ps1            # Win32 原生外壳：安装依赖、编译 Release 版、边界与导入表检查，输出 build\ember\win32\app\Release\ember-win.exe
 npm run win32:start          # 以开发方式启动原生外壳
 npm run win32:test           # 原生外壳的 C++ 测试（核心、控件库、应用）
-npm run make:win             # 只生成安装程序和升级文件
+npm run package:win          # 发布打包：生成 build\ember\release\Ember-<版本>.exe（升级用）与 Ember-<版本>.zip（发给用户）
 npm run core:test            # C++ 测试；-- -R <名称> 只跑匹配的用例
 npm run check                # 全部检查与测试
-.\debug-electron.ps1          # 启动 Electron 外壳的开发版
 .\debug-win32.ps1             # 启动 Win32 原生外壳的开发版
 ```
 
-安装程序与升级文件输出到 `build/ember/make/squirrel.windows/x64/`。
+发布包输出到 `build/ember/release/`。
 
 ### vscode（在 `vscode/` 目录下）
 
@@ -129,28 +125,28 @@ npm publish -w packages/create-fcdev
 
 ## 模拟器构建与上传
 
-升级文件放在阿里云 OSS 的 `famiclone` Bucket 下的 `updates/ember/windows/`，地址写在 `ember/src/bootstrap/main/main.ts` 的 `UPDATE_FEED_URL`。命令在 `ember/` 目录下运行，上传需要先安装 `ossutil` 并运行 `ossutil config`（密钥只放本机配置）。
+升级文件放在阿里云 OSS 的 `famiclone` Bucket 下的 `updates/ember/windows/`，地址写在 `ember/win32/app/src/bootstrap/application.cpp` 的 `kUpdateFeedUrl`。命令在 `ember/` 目录下运行，上传需要先安装 `ossutil` 并运行 `ossutil config`（密钥只放本机配置）。升级清单要用签名私钥（文档仓库 `01-文档/密钥/ember-update-signing-key.pem`，与本仓库并列，不入本仓库）签名，第一次发布前运行 `npm run update:keygen` 生成。
 
 1. 把 `ember/package.json` 的 `version` 升到新版本，在 `ember/help/manual/changelog.md` 写好该版本一节。
-2. 生成安装程序与升级文件：
+2. 生成发布包（单个 `Ember.exe`，帮助文档、预装插件与许可全文都嵌在里面）：
 
    ```powershell
-   .\build-electron.ps1
+   npm run package:win
    ```
 
-3. 检查 `RELEASES`、`.nupkg` 的大小与校验值，并打印要上传的文件，不上传：
+3. 核对程序里的公钥与私钥一致，生成并校验签名清单 `latest.json`，打印要上传的文件，不上传：
 
    ```powershell
    npm run update:publish -- --dry-run
    ```
 
-4. 上传，顺序是 `.nupkg`、`Ember-Setup-<版本号>.zip`、`RELEASES`：
+4. 上传，顺序是 `Ember-<版本号>.exe`、`latest.json`：
 
    ```powershell
    npm run update:publish
    ```
 
-安装包下载地址：`https://famiclone.oss-cn-beijing.aliyuncs.com/updates/ember/windows/Ember-Setup-<版本号>.zip`。
+发给用户的是 `build/ember/release/Ember-<版本号>.zip`（里面是 `Ember.exe`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt`），解压即用，不需要安装。
 
 ## 许可证
 

@@ -24,6 +24,9 @@ constexpr std::string_view kCartridgeExtension = ".nes";
 constexpr std::string_view kDebugPortName = "--debug-port";
 constexpr std::string_view kDebugTokenName = "--debug-token";
 constexpr std::string_view kUserDataName = "--user-data-dir";
+constexpr std::string_view kMoveUserDataName = "--move-user-data";
+constexpr std::string_view kWaitPidName = "--wait-pid";
+constexpr std::string_view kApplyUpdateName = "--apply-update";
 constexpr std::size_t kMaxTokenLength = 128;
 constexpr std::size_t kMaxPathLength = 4096;
 
@@ -52,6 +55,13 @@ std::optional<int> parsePort(const std::string& text) {
   return port >= 1 && port <= 65535 ? std::optional<int>(port) : std::nullopt;
 }
 
+/** 合格的进程号：1 到 10 位数字，值在 1 到 4294967295 之间。 */
+std::optional<std::uint32_t> parseProcessId(const std::string& text) {
+  if (text.empty() || text.size() > 10 || !std::all_of(text.begin(), text.end(), [](char c) { return c >= '0' && c <= '9'; })) return std::nullopt;
+  const unsigned long long value = std::stoull(text);
+  return value >= 1 && value <= 0xFFFFFFFFull ? std::optional<std::uint32_t>(static_cast<std::uint32_t>(value)) : std::nullopt;
+}
+
 /** 合格的令牌：1 到 128 个可见的 ASCII 字符。 */
 bool isValidToken(const std::string& text) {
   return !text.empty() && text.size() <= kMaxTokenLength && std::all_of(text.begin(), text.end(), [](char c) { return c >= 0x21 && c <= 0x7e; });
@@ -70,6 +80,9 @@ LaunchArguments parseLaunchArguments(const std::vector<std::string>& arguments) 
   if (const auto text = argumentValue(arguments, kDebugPortName)) result.debugPort = parsePort(*text);
   if (const auto text = argumentValue(arguments, kDebugTokenName); text && isValidToken(*text)) result.debugToken = *text;
   if (const auto text = argumentValue(arguments, kUserDataName); text && !text->empty() && text->size() <= kMaxPathLength) result.userDataDirectory = *text;
+  if (const auto text = argumentValue(arguments, kMoveUserDataName)) result.moveUserData = parseUserDataPlace(*text);
+  if (const auto text = argumentValue(arguments, kWaitPidName)) result.waitProcessId = parseProcessId(*text);
+  if (const auto text = argumentValue(arguments, kApplyUpdateName); text && !text->empty() && text->size() <= kMaxPathLength) result.applyUpdateTarget = *text;
   return result;
 }
 

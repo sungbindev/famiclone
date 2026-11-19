@@ -1,15 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：third-party.d.mts
- * 说明：third-party.mjs 的类型声明，供 Vite 配置、打包配置与测试引用。
+ * 说明：third-party.mjs 的类型声明，供测试引用。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-13
- * 备注：条目字段与组件库 tools/third-party.d.mts 一致。
+ * 日期：2026-11-21
+ * 备注：条目字段与各项目的 third-party.json 一致。
  * ------------------------------------------------------------------------
  */
-
-import type { Plugin } from 'vite';
 
 /** 清单条目。 */
 export interface ThirdPartyEntry {
@@ -23,9 +21,12 @@ export interface ThirdPartyEntry {
   licenseText: string;
 }
 
-export declare const VIRTUAL_MODULE: string;
+export declare const DECLARATION_FILE: string;
 export declare const NOTICES_FILE: string;
 export declare const NOTICES_DIRECTORY: string;
-export declare function collectClient(uiKitDirectory: string): Promise<{ entries: ThirdPartyEntry[] }>;
-export declare function writeNotices(uiKitDirectory: string): Promise<string>;
-export declare function thirdPartyPlugin(uiKitDirectory: string): Plugin;
+export declare const NOTICES_SOURCE: string;
+export declare function readDeclarations(directory: string): ThirdPartyEntry[];
+export declare function collectNotices(): ThirdPartyEntry[];
+export declare function formatNotices(entries: readonly ThirdPartyEntry[]): string;
+export declare function formatNoticeSource(entries: readonly ThirdPartyEntry[]): string;
+export declare function writeThirdPartyFiles(): { source: string; notices: string; count: number };

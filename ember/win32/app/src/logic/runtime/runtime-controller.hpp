@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 runtime-controller.ts 与 use-display-settings.ts；状态变化时调用 setOnChanged 设置的回调与外壳的 refreshCommands，所以面板没有展开、显示区没有显示时状态也是最新的。
+ * 备注：状态变化时调用 setOnChanged 设置的回调与外壳的 refreshCommands，所以面板没有展开、显示区没有显示时状态也是最新的。
  *       “选择机型”选中整机机型后直接用它的 BIOS 开机（selectAndBootMachine，选中的机型保存在界面状态里，下次启动沿用，之后点“开机”直接开这个机型），不影响装入的卡带；打开卡带成功（cartridges.loaded）后已选机型自动变成经典 FC。
  *       开机与断电是同一个操作（togglePower）：通电时断电；未通电时，已选机型是整机机型（学习机）就用它的 BIOS 开机（不需要卡带，当前装的是别的主机也用它重新开机），
  *       已选机型是经典 FC 就要求已经装入 FC 卡带（从“文件→打开卡带”选 nes，选后直接开机），断电后再开机直接上电。

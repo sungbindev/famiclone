@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 src/contracts/shell/shell-state-service.ts；规则与格式见 shared/shell-state 与 docs/05-界面.md 第 9 节。
+ * 备注：规则与格式见 shared/shell-state 与 docs/05-界面.md 第 9 节。
  * ------------------------------------------------------------------------
  */
 

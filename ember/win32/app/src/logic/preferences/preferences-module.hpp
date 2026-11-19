@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：对应 Electron 外壳的 preferences-module.tsx；对话框是独立的系统窗口，同一时间只开一个；控制器由组装根创建并传入，对话框内容控件与登记项共用；规则见 docs/05-界面.md 第 4.5 节。
+ * 备注：对话框是独立的系统窗口，同一时间只开一个；控制器由组装根创建并传入，对话框内容控件与登记项共用；规则见 docs/05-界面.md 第 4.5 节。
  * ------------------------------------------------------------------------
  */
 
@@ -14,6 +14,7 @@
 #include "contracts/shell/shell-registry.hpp"
 #include "logic/preferences/bios-controller.hpp"
 #include "logic/preferences/preferences-controller.hpp"
+#include "logic/preferences/user-data-controller.hpp"
 
 namespace ember::win32::logic {
 
@@ -23,6 +24,6 @@ inline constexpr const char* kPreferencesDialogId = "preferences.preferences";
 inline constexpr const char* kPreferencesOpenCommand = "preferences.open";
 
 /** 创建首选项模块的登记项；控制器必须比登记表活得久。 */
-[[nodiscard]] contracts::ShellModule createPreferencesModule(PreferencesController& preferences, BiosController& bios);
+[[nodiscard]] contracts::ShellModule createPreferencesModule(PreferencesController& preferences, BiosController& bios, UserDataController& userData);
 
 }  // namespace ember::win32::logic

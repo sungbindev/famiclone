@@ -33,8 +33,7 @@ function findFxc() {
   if (!existsSync(SDK_BIN)) throw new Error(`找不到 Windows SDK：${SDK_BIN}`);
   const versions = readdirSync(SDK_BIN)
     .filter((name) => /^10\.\d+\.\d+\.\d+$/.test(name))
-    .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }))
-    .reverse();
+    .toSorted((left, right) => right.localeCompare(left, undefined, { numeric: true }));
   for (const version of versions) {
     const path = join(SDK_BIN, version, 'x64', 'fxc.exe');
     if (existsSync(path)) return path;

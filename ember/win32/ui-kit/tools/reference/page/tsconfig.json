@@ -1,6 +1,17 @@
 {
-  "extends": "../../../../../tsconfig.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node", "vite/client"],
     "paths": {
       "@rujianjs/ui-kit": ["../../../../../../../rujian-ui-kit/src/index.ts"],
       "@rujianjs/ui-kit/styles.css": ["../../../../../../../rujian-ui-kit/src/styles/index.css"],

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-win32.mjs
- * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例经菜单选学习机用随包的 BIOS 开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮；最后再起一个实例，经快捷键与菜单打开首选项与手柄设置对话框，检查设置保存与手柄按键学习。
+ * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例先添加测试用的 BIOS，再经菜单选学习机开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮；最后再起一个实例，经快捷键与菜单打开首选项与手柄设置对话框，检查设置保存与手柄按键学习。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -12,11 +12,21 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 
 import { debugCall, drive, dropFiles, parseArguments, projectRoot, removeUserData, sleep, startApp } from './win32-dev-support.mjs';
+
+/** 测试用的学习机 BIOS（仓库里的文件）：程序不自带 BIOS，冒烟时复制进实例的 BIOS 目录。 */
+const TEST_BIOS = join(projectRoot, 'bios', 'sb2000', 'SB2K_BIOS.bin');
+
+/** 把测试用的 BIOS 放进实例的用户数据目录，等于用户在首选项里添加了它。 */
+function addTestBios(app) {
+  const target = join(app.userData, 'bios', 'sb2000', 'SB2K_BIOS.bin');
+  mkdirSync(dirname(target), { recursive: true });
+  copyFileSync(TEST_BIOS, target);
+}
 
 /** 默认卡带：1-len_ctr（blargg 的 APU 测试，通过后在画面左下角显示文字）。 */
 const DEFAULT_ROM = 'apu-test/1-len_ctr.nes';
@@ -117,9 +127,9 @@ async function scenarioInteractions() {
     check('画面持有焦点时键盘被独占，F8 不触发外壳的暂停', number(r, 'exclusive') <= centerRunning + 10, `${number(r, 'exclusive')}`);
 
     // 窗口始终置顶：勾选项切换后菜单保持打开，所以连点两次菜单项再按 Esc 关闭
-    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:119', 'wait:700', 'style:on']);
+    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:142', 'wait:700', 'style:on']);
     check('“窗口始终置顶”勾选后窗口置顶', (r.get('before') ?? '').startsWith('False') && (r.get('on') ?? '').startsWith('True'), `${r.get('before')} → ${r.get('on')}`);
-    r = drive(app.pid, ['click:253:119', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
+    r = drive(app.pid, ['click:253:142', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
     check('再点一次取消置顶', (r.get('off') ?? '').startsWith('False'), `${r.get('off')}`);
 
     await closeAndExpectExit(app, '场景一');
@@ -147,11 +157,12 @@ async function scenarioFullScreen() {
   }
 }
 
-/** 场景三：经“文件 → 选择机型”选小霸王 2000，用随包的 BIOS 开机，画面是满屏的 BIOS 硬件检测页。 */
+/** 场景三：先添加测试用的 BIOS，再经“文件 → 选择机型”选小霸王 2000 开机，画面是满屏的 BIOS 硬件检测页。 */
 async function scenarioBios() {
   console.log('场景三：学习机 BIOS 开机');
   const app = startApp({});
   try {
+    addTestBios(app);
     check('启动后出现窗口', await waitForWindow(app.pid));
     await sleep(2000);
     const r = drive(app.pid, ['click:92:19', 'wait:600', 'click:120:49', 'wait:800', 'click:330:78', 'wait:12000', count('biosPicture', PICTURE_AREA)]);
@@ -171,6 +182,7 @@ async function scenarioDevices() {
   console.log('场景四：调试服务与设备面板');
   const app = startApp({ args: ['--debug-port=5798', '--debug-token=smoke-token'] });
   try {
+    addTestBios(app);
     check('启动后出现窗口', await waitForWindow(app.pid));
     await sleep(2500);
     check('开启调试服务后系统栏出现“调试模式”', number(drive(app.pid, [count('debugItem', DEBUG_ITEM)]), 'debugItem') > 20);
@@ -233,6 +245,34 @@ async function scenarioDialogs() {
   }
 }
 
+/**
+ * 场景六：“帮助”菜单与 mapper 插件对话框。“设置”菜单里打开 mapper 插件对话框（经调试服务核对插件列表不为空），Esc 关闭；“帮助”菜单里打开“关于 Ember”，Esc 关闭。
+ * “帮助文档”“更新记录”会打开用户的默认浏览器，不在冲烟里点。
+ */
+async function scenarioSystem() {
+  console.log('场景六：mapper 插件与关于对话框');
+  const app = startApp({ args: ['--debug-port=5800', '--debug-token=smoke-token'] });
+  try {
+    check('启动后出现窗口', await waitForWindow(app.pid));
+    await sleep(2500);
+    const plugins = debugCall(app, 'mappers.list').plugins;
+    check('核心里有 mapper 插件', Array.isArray(plugins) && plugins.length > 0, String(plugins?.length));
+    let r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1800', 'dlgfind:mappersOpen']);
+    check('“设置”菜单里打开 mapper 插件对话框', r.get('mappersOpen') === 'True');
+    r = drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800', 'dlgvisible:mappersClosed']);
+    check('Esc 关闭 mapper 插件对话框', r.get('mappersClosed') === 'False');
+
+    r = drive(app.pid, ['click:270:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1800', 'dlgfind:aboutOpen']);
+    check('“帮助”菜单里打开“关于 Ember”', r.get('aboutOpen') === 'True');
+    r = drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800', 'dlgvisible:aboutClosed']);
+    check('Esc 关闭“关于 Ember”', r.get('aboutClosed') === 'False');
+    await closeAndExpectExit(app, '场景六');
+  } finally {
+    app.stop();
+    removeUserData(app);
+  }
+}
+
 if (!options.has('no-build')) {
   const run = spawnSync('npm.cmd', ['run', 'win32:build'], { cwd: projectRoot, stdio: 'inherit', shell: true });
   if (run.status !== 0) throw new Error('npm run win32:build 失败');
@@ -242,6 +282,7 @@ await scenarioFullScreen();
 await scenarioBios();
 await scenarioDevices();
 await scenarioDialogs();
+await scenarioSystem();
 const failed = results.filter((item) => !item.ok);
 console.log(failed.length === 0 ? `全部 ${results.length} 项通过` : `${failed.length} 项失败：${failed.map((item) => item.name).join('；')}`);
 process.exit(failed.length === 0 ? 0 : 1);

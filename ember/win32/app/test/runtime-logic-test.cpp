@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：用例取自 Electron 外壳的 runtime-controller.test.ts、runtime-status.test.ts、machine-choices.test.ts 与输入采集的测试。
+ * 备注：无。
  * ------------------------------------------------------------------------
  */
 

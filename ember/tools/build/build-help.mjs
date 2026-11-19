@@ -7,7 +7,7 @@
  * 日期：2026-11-18
  * 备注：要先运行过 npm run schema（调试 SDK 的 generated/openrpc.json 由它生成）；调试 SDK 的生成脚本依赖仓库根目录 npm install 装好的 esbuild；
  *       fcdev 的 C 接口参考、符号参考与示例程序源码由仓库根目录 tools 下的生成脚本先重新生成（没有变化时文件不变），再随手册一起导入，help/fcdev 不提交；
- *       npm start、npm run package* 与 npm run make:win 会先运行本脚本；站点随安装包分发，开发版从 build/ember/help 读取。
+ *       npm run package:win 与 npm run check 会先运行本脚本；站点由 resources:pack 打进资源包，嵌进可执行文件。
  * ------------------------------------------------------------------------
  */
 

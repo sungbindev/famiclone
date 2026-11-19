@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：文件格式（config/last-directories.json）与规则同 Electron 外壳的 src/infra/last-directories/file-last-directories-service.ts：{ "version": 1, "directories": { 用途: 目录 } }；
+ * 备注：文件格式（config/last-directories.json）：{ "version": 1, "directories": { 用途: 目录 } }；
  *       用途不合格或目录为空、过长的项读出时跳过。
  * ------------------------------------------------------------------------
  */

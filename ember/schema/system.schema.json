@@ -1,10 +1,10 @@
 {
-  "$comment": "系统模块：应用版本与核心版本（用于验证从界面到 C++ 核心的整条请求链路），以及主进程自己处理的系统能力：日志目录、帮助文档、应用升级。",
+  "$comment": "系统模块：应用版本与核心版本（用于验证从界面到 C++ 核心的整条请求链路），以及外壳自己处理的系统能力：日志目录、帮助文档、应用升级。",
   "module": "system",
   "types": {
     "UpdateStatus": {
       "type": "object",
-      "description": "应用升级的状态；只由主进程维护。",
+      "description": "应用升级的状态；只由外壳维护。",
       "properties": {
         "state": {
           "type": "string",
@@ -24,7 +24,7 @@
       "result": {
         "type": "object",
         "properties": {
-          "appVersion": { "type": "string", "minLength": 1, "description": "应用版本，取自安装包的版本号" },
+          "appVersion": { "type": "string", "minLength": 1, "description": "应用版本，取自程序的版本号" },
           "coreVersion": { "type": "string", "minLength": 1, "description": "核心版本，取自核心的构建参数" }
         },
         "required": ["appVersion", "coreVersion"]
@@ -33,13 +33,13 @@
   },
   "mainRequests": {
     "openLogDirectory": {
-      "description": "用系统的文件管理器打开日志目录（目录不存在时先创建）；路径由主进程决定，界面不能指定。",
+      "description": "用系统的文件管理器打开日志目录（目录不存在时先创建）；路径由外壳决定，界面不能指定。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": { "type": "object", "properties": {}, "required": [] },
       "errors": ["system.logDirectoryUnavailable"]
     },
     "openHelp": {
-      "description": "在应用内弹出帮助文档窗口（已经打开时提到最前）；文档是随应用带的静态页面，位置由主进程决定，界面不能指定，只能从固定的几页里选。",
+      "description": "在应用内弹出帮助文档窗口（已经打开时提到最前）；文档是随应用带的静态页面，位置由外壳决定，界面不能指定，只能从固定的几页里选。",
       "params": {
         "type": "object",
         "properties": {
@@ -51,7 +51,7 @@
       "errors": ["system.helpUnavailable"]
     },
     "updateStatus": {
-      "description": "读取应用升级的当前状态；状态变化时主进程另外推送给界面。",
+      "description": "读取应用升级的当前状态；状态变化时外壳另外推送给界面。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",
@@ -61,7 +61,7 @@
       "errors": []
     },
     "checkUpdate": {
-      "description": "开始检查更新；有新版本时自动下载。请求在开始检查后立即返回当前状态，检查与下载的进展经状态推送给界面；正在检查、正在下载、已经下载好或不支持升级时不重复检查，直接返回当前状态。升级服务器的地址写在主进程里，界面不能指定。",
+      "description": "开始检查更新；有新版本时自动下载。请求在开始检查后立即返回当前状态，检查与下载的进展经状态推送给界面；正在检查、正在下载、已经下载好或不支持升级时不重复检查，直接返回当前状态。升级服务器的地址写在外壳里，界面不能指定。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",

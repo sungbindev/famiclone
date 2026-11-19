@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：用例取自 Electron 外壳的 input-model.test.ts 与 GamepadSettings.test.tsx。
+ * 备注：无。
  * ------------------------------------------------------------------------
  */
 

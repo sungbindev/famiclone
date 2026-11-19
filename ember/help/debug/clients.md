@@ -4,7 +4,7 @@
 
 | 工具 | 说明 |
 | --- | --- |
-| SDK | 类型完整的 WebSocket 客户端：给定地址与令牌连接（浏览器与 Electron 页面也能用），或在 Node 里自动找到正在运行的 Ember；`client.api.runtime.run(...)` 这样按模块分组的类型化请求；`subscribe`、`on`、`waitFor` 处理事件；二进制结果是 `Uint8Array` |
+| SDK | 类型完整的 WebSocket 客户端：给定地址与令牌连接（浏览器页面也能用），或在 Node 里自动找到正在运行的 Ember；`client.api.runtime.run(...)` 这样按模块分组的类型化请求；`subscribe`、`on`、`waitFor` 处理事件；二进制结果是 `Uint8Array` |
 | 终端客户端 `ember-debug` | `endpoint`、`methods`、`describe`、`call`、`screenshot`、`watch` |
 | MCP 服务 `ember-debug-mcp` | 给 Copilot 等智能体用：每个请求一个工具（`ember_<模块>_<操作>`），`ember_events` 读事件，PNG 截图作为图像返回 |
 

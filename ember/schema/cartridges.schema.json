@@ -1,5 +1,5 @@
 {
-  "$comment": "cartridges 模块：加载 NES 文件（解析、匹配插件、装配主机、插入卡槽）、取出卡带与卡带信息；open 由主进程弹出文件选择窗口后调用 load。规则见 docs/04-调试服务.md 第 4.2 节。",
+  "$comment": "cartridges 模块：加载 NES 文件（解析、匹配插件、装配主机、插入卡槽）、取出卡带与卡带信息；open 由外壳弹出文件选择窗口后调用 load。规则见 docs/04-调试服务.md 第 4.2 节。",
   "module": "cartridges",
   "types": {
     "RecentCartridge": {
@@ -28,7 +28,7 @@
       "params": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "minLength": 1, "description": "NES 文件的路径，由主进程根据用户选择的文件给出" },
+          "path": { "type": "string", "minLength": 1, "description": "NES 文件的路径，由外壳根据用户选择的文件给出" },
           "powerOn": { "type": "boolean", "description": "装入后是否上电，默认 true" },
           "resume": { "type": "boolean", "description": "上电后是否直接运行，默认 true；powerOn 为 false 时无效" }
         },
@@ -66,7 +66,7 @@
       "description": "弹出系统文件选择窗口（只显示 .nes），把用户选定的文件交给 cartridges.load；用户取消选择时 canceled 为 true，不是错误。给出 droppedId 时不弹窗口，直接用拖入窗口的那个文件。",
       "params": {
         "type": "object",
-        "properties": { "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由主进程登记，路径只在主进程里）；不给时弹出文件选择窗口" } },
+        "properties": { "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由外壳登记，路径只在外壳里）；不给时弹出文件选择窗口" } },
         "required": []
       },
       "result": {
@@ -80,7 +80,7 @@
       "errors": ["cartridges.droppedNotFound", "cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
     },
     "recent": {
-      "description": "最近打开的卡带清单（最近的在前，最多 10 个）：只给显示名与本次运行内有效的编号，路径只保存在主进程；打开卡带成功之前就已记入清单，加载失败的会被移出。",
+      "description": "最近打开的卡带清单（最近的在前，最多 10 个）：只给显示名与本次运行内有效的编号，路径只保存在外壳；打开卡带成功之前就已记入清单，加载失败的会被移出。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",

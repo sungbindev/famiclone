@@ -43,7 +43,4 @@ inline constexpr std::string_view ERROR_NO_TAPE = "media.noTape";
 inline constexpr std::string_view ERROR_TAPE_BUSY = "media.tapeBusy";
 /** 声音文件里没有声音，或无法解码。 */
 inline constexpr std::string_view ERROR_TAPE_UNSUPPORTED = "media.tapeUnsupported";
-/** 没有找到解码用的程序（ffmpeg）。 */
-inline constexpr std::string_view ERROR_DECODER_MISSING = "media.decoderMissing";
-
 }  // namespace ember::contracts::media

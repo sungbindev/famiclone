@@ -21,7 +21,7 @@
 #include "infra/last-directories/file-last-directories-service.hpp"
 #include "infra/recent-cartridges/file-recent-cartridges-service.hpp"
 #include "infra/shell-state/file-shell-state-service.hpp"
-#include "infra/updates/unsupported-app-updater.hpp"
+#include "infra/updates/engine-app-updater.hpp"
 #include "platform/text/wide-text.hpp"
 #include "support/fakes.hpp"
 #include "support/temp-directory.hpp"
@@ -64,7 +64,7 @@ TEST(FileShellStateService, StartsFromDefaultsAndPersistsEveryKindOfChange) {
   EXPECT_EQ(service.get().releaseNotesVersion, "0.3.0");
 }
 
-TEST(FileShellStateService, ReadsTheFileFormatOfTheElectronShell) {
+TEST(FileShellStateService, ReadsTheSavedFileFormat) {
   test::TempDirectory directory;
   platform::UiThread ui;
   const auto file = directory.path() / "shell-state.json";
@@ -142,13 +142,6 @@ TEST(MemoryDroppedFilesService, NumbersFromOneAndForgetsTheOldestBeyondSixtyFour
   EXPECT_TRUE(service.resolve(66));
 }
 
-TEST(UnsupportedAppUpdater, IsUnsupportedAndNeverInstalls) {
-  infra::UnsupportedAppUpdater updater;
-  EXPECT_EQ(updater.status().state, "unsupported");
-  EXPECT_EQ(updater.check().state, "unsupported");
-  EXPECT_FALSE(updater.install());
-}
-
 TEST(LatestFrameSlot, DeliversTheNewestFrameAndCountsEachFrameOnce) {
   platform::UiThread ui;
   infra::LatestFrameSlot slot(ui);
@@ -212,7 +205,7 @@ struct CoreFixture {
   platform::UiThread ui;
   infra::LatestFrameSlot frames{ui};
   test::FakeErrorLogger logger;
-  infra::InProcessCoreGateway gateway{infra::InProcessCoreOptions{platform::pathToUtf8(directory.path()), "9.9.9-test", std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt}, ui, frames, logger};
+  infra::InProcessCoreGateway gateway{infra::InProcessCoreOptions{platform::pathToUtf8(directory.path()), "9.9.9-test", std::nullopt, std::nullopt, std::nullopt}, ui, frames, logger};
 
   /** 启动并等到就绪。 */
   bool startAndWait() {
@@ -320,7 +313,7 @@ TEST(InProcessCoreGateway, CoreThatCannotStartEndsInFailedAndIsLogged) {
   platform::UiThread ui;
   infra::LatestFrameSlot frames(ui);
   test::FakeErrorLogger logger;
-  infra::InProcessCoreGateway gateway(infra::InProcessCoreOptions{"", "1.0.0", std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt}, ui, frames, logger);
+  infra::InProcessCoreGateway gateway(infra::InProcessCoreOptions{"", "1.0.0", std::nullopt, std::nullopt, std::nullopt}, ui, frames, logger);
   std::optional<contracts::CoreReply> queued;
   gateway.start();
   gateway.request("system.version", json::object(), [&](contracts::CoreReply value) { queued = std::move(value); });

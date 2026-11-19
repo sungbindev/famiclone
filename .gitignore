@@ -29,5 +29,3 @@ apps/sb2000/disk/content/
 # 由 fcdev sync 生成，含本机路径
 compile_flags.txt
 **/.vscode/c_cpp_properties.json
-
-/reference/emulator-bbk-sb2k/

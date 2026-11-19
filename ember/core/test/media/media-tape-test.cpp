@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：用真实的运行服务与 fc 主机（真实的 nrom 插件装配的空转卡带）、内存里的磁带存取替身；还有一个用真实 ffmpeg 解码的端到端用例（没有 ffmpeg 程序时跳过）。
+ * 备注：用真实的运行服务与 fc 主机（真实的 nrom 插件装配的空转卡带）、内存里的磁带存取替身；还有用真实的 FFmpeg 库解码的端到端用例。
  * ------------------------------------------------------------------------
  */
 
@@ -328,16 +328,7 @@ TEST(MediaTape, PoweringOffStopsThePlaybackAndKeepsTheTape) {
   EXPECT_FALSE(status.connected);
 }
 
-// ---------------------------------------------------------------- 真实的 ffmpeg 端到端
-
-/** 测试用的 ffmpeg 程序路径；没有时为空。 */
-std::filesystem::path ffmpegProgram() {
-#ifdef EMBER_FFMPEG_PROGRAM
-  const std::filesystem::path program = EMBER_FFMPEG_PROGRAM;
-  if (std::filesystem::exists(program)) return program;
-#endif
-  return {};
-}
+// ---------------------------------------------------------------- 真实的 FFmpeg 库端到端
 
 /** 在临时目录里写一个 8 kHz 单声道 16 位的 WAV：前半秒低电平，后半秒高电平。 */
 std::string writeSquareWav(const ember::test::TempDir& dir) {
@@ -368,12 +359,10 @@ std::string writeSquareWav(const ember::test::TempDir& dir) {
   return std::string(text.begin(), text.end());
 }
 
-TEST(MediaTape, RealFfmpegDecodesAWavIntoThe96KilohertzStreamTheDeckPlays) {
-  const auto program = ffmpegProgram();
-  if (program.empty()) GTEST_SKIP() << "没有 ffmpeg 程序";
+TEST(MediaTape, RealDecoderDecodesAWavIntoThe96KilohertzStreamTheDeckPlays) {
   ember::test::TempDir dir;
   const std::string file = writeSquareWav(dir);
-  ember::infra::media::DiskTapeStore store(program, nullptr);
+  ember::infra::media::DiskTapeStore store(nullptr);
   const auto source = store.open(file);
   EXPECT_NEAR(source->durationSeconds(), 1.0, 0.05);
   EXPECT_FALSE(source->stereo()) << "单声道磁带整路是数据";
@@ -394,11 +383,12 @@ TEST(MediaTape, RealFfmpegDecodesAWavIntoThe96KilohertzStreamTheDeckPlays) {
   EXPECT_GT(source->read(frames.data(), 100), 0U) << "倒带后重新从头读";
 }
 
-TEST(MediaTape, RealStoreReportsAMissingFileAndAMissingDecoder) {
+TEST(MediaTape, RealStoreReportsAMissingFileAndAFileWithoutSound) {
   ember::test::TempDir dir;
-  const std::string file = writeSquareWav(dir);
-  EXPECT_EQ(errorCodeOf([&] { static_cast<void>(ember::infra::media::DiskTapeStore(ffmpegProgram(), nullptr).open((dir.path() / "none.wav").string())); }), "media.fileNotFound");
-  EXPECT_EQ(errorCodeOf([&] { static_cast<void>(ember::infra::media::DiskTapeStore(std::filesystem::path(), nullptr).open(file)); }), "media.decoderMissing");
+  const ember::infra::media::DiskTapeStore store(nullptr);
+  EXPECT_EQ(errorCodeOf([&] { static_cast<void>(store.open((dir.path() / "none.wav").string())); }), "media.fileNotFound");
+  const auto notSound = dir.write("notes.txt", std::vector<std::uint8_t>{'h', 'e', 'l', 'l', 'o'}).u8string();
+  EXPECT_EQ(errorCodeOf([&] { static_cast<void>(store.open(std::string(notSound.begin(), notSound.end()))); }), "media.tapeUnsupported");
 }
 
 TEST(MediaTape, RealWavSinkWritesAValidWavFile) {
@@ -407,7 +397,7 @@ TEST(MediaTape, RealWavSinkWritesAValidWavFile) {
   const auto text = path.u8string();
   const std::string utf8(text.begin(), text.end());
   {
-    ember::infra::media::DiskTapeStore store(std::filesystem::path(), nullptr);
+    ember::infra::media::DiskTapeStore store(nullptr);
     auto sink = store.create(utf8);
     const std::vector<std::int16_t> samples = {1, -2, 300};
     sink->write(samples.data(), samples.size());

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 key-capture.ts、pointer-capture.ts 与 gamepad-capture.ts；消息的格式（type、code、down、kind、x、y、dx、dy、buttons、wheel、index、id、connected、buttons、axes）与上限同核心宿主的校验。
+ * 备注：消息的格式（type、code、down、kind、x、y、dx、dy、buttons、wheel、index、id、connected、buttons、axes）与上限同核心宿主的校验。
  * ------------------------------------------------------------------------
  */
 

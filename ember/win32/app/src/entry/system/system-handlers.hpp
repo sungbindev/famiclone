@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 entry/ipc/system；目录与帮助文档的位置由外壳决定，界面不能指定；installUpdate 没有下载好的新版本时回复 system.updateNotReady。
+ * 备注：目录与帮助文档的位置由外壳决定，界面不能指定；installUpdate 没有下载好的新版本时回复 system.updateNotReady。
  * ------------------------------------------------------------------------
  */
 

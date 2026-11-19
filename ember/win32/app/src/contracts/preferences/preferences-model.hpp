@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：对应 Electron 外壳 src/ui/preferences 的 use-preferences.ts 与 use-bios.ts 面向界面的部分；设置项来自核心（preferences.list），由各模块登记，界面不认识具体的设置项；
+ * 备注：设置项来自核心（preferences.list），由各模块登记，界面不认识具体的设置项；
  *       文字与可用状态由逻辑层算好，界面只显示；操作的结果与错误用外壳通知给出，模型不显示结果；规则见 docs/05-界面.md 第 4.5 节。
  * ------------------------------------------------------------------------
  */
@@ -153,6 +153,30 @@ class BiosModel {
 
   /** 订阅内容变化；返回取消订阅的函数。 */
   [[nodiscard]] virtual std::function<void()> subscribe(std::function<void()> handler) = 0;
+};
+
+/** “应用”分组里“用户数据目录”一行要显示的内容。 */
+struct UserDataView {
+  /** 当前使用的用户数据目录。 */
+  std::string directory;
+  /** 切换按钮上的文字：改用软件所在目录，或改用用户数据目录。 */
+  std::string switchLabel;
+  /** 不能切换的原因；空表示能切换。 */
+  std::string unavailableReason;
+  bool operator==(const UserDataView&) const = default;
+};
+
+/** “应用”分组里“用户数据目录”一行的模型。 */
+class UserDataModel {
+ public:
+  virtual ~UserDataModel() = default;
+
+  [[nodiscard]] virtual UserDataView view() const = 0;
+
+  /** 用系统的文件管理器打开当前的用户数据目录，打不开时用通知给出原因。 */
+  virtual void openDirectory() = 0;
+  /** 切换到另一处：先询问，同意后软件关闭，把数据复制到另一处并核对，再自动重新启动；失败时用通知给出原因。 */
+  virtual void switchPlace() = 0;
 };
 
 }  // namespace ember::win32::contracts

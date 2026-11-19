@@ -10,7 +10,7 @@
  */
 
 import { h } from 'vue';
-import logoUrl from '../../../src/ui/shell/ember-logo.png';
+import logoUrl from '../../../resources/ember-logo.png';
 
 /** 用户可见的文字。 */
 const TEXT = {

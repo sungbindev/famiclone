@@ -2,8 +2,11 @@
 
 #include <windows.h>
 
-// 应用图标，与 Electron 外壳是同一张
+// 应用图标
 1 ICON "@EMBER_ICON_FILE@"
+
+// 随程序分发的资源包（zip：预装插件、帮助文档、许可全文），没有时不嵌。资源包的 SHA-256：@EMBER_RESOURCE_ARCHIVE_HASH@
+@EMBER_RESOURCE_ARCHIVE_LINE@
 
 // 清单（DPI 感知、支持的 Windows 版本）不在这里嵌入：它作为源文件交给链接器合并
 

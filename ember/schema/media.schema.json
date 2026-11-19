@@ -172,7 +172,7 @@
       "errors": ["media.noMachine", "media.noPrinter", "media.printerEmpty"]
     },
     "tapeLoad": {
-      "description": "把声音文件放进磁带机当磁带（解码交给随应用附带的 ffmpeg，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带；磁带机与主机无关，没有主机、没有通电时也可以载入；磁带机播放或录音时不能载入。单声道文件整路是数据线，立体声文件左声道出声、右声道是数据线。",
+      "description": "把声音文件放进磁带机当磁带（解码由核心内置的 FFmpeg 库完成，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带；磁带机与主机无关，没有主机、没有通电时也可以载入；磁带机播放或录音时不能载入。单声道文件整路是数据线，立体声文件左声道出声、右声道是数据线。",
       "mainOnly": true,
       "params": {
         "type": "object",
@@ -184,7 +184,7 @@
         "properties": { "status": { "$ref": "#/types/TapeStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.tapeBusy", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported", "media.decoderMissing"]
+      "errors": ["media.tapeBusy", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported"]
     },
     "tapeEject": {
       "description": "取出磁带；没有磁带时没有效果；播放或录音时先停止再取出（录音的文件先写完）。",
@@ -229,7 +229,7 @@
         "properties": { "status": { "$ref": "#/types/TapeStatus" } },
         "required": ["status"]
       },
-      "errors": ["media.fileUnreadable", "media.tapeUnsupported", "media.decoderMissing"]
+      "errors": ["media.fileUnreadable", "media.tapeUnsupported"]
     },
     "tapeStatus": {
       "description": "磁带机的状态；磁带机一直存在，没有接在通电的主机上时 connected 为 false。",
@@ -249,7 +249,7 @@
         "type": "object",
         "properties": {
           "drive": { "type": "integer", "minimum": 0, "maximum": 3, "description": "驱动器编号" },
-          "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由主进程登记，路径只在主进程里）；不给时弹出文件选择窗口" }
+          "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由外壳登记，路径只在外壳里）；不给时弹出文件选择窗口" }
         },
         "required": ["drive"]
       },
@@ -267,7 +267,7 @@
       "description": "弹出系统文件选择窗口（声音文件），把用户选定的文件交给 media.tapeLoad；用户取消选择时 canceled 为 true，不是错误。给出 droppedId 时不弹窗口，直接用拖入窗口的那个文件。",
       "params": {
         "type": "object",
-        "properties": { "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由主进程登记，路径只在主进程里）；不给时弹出文件选择窗口" } },
+        "properties": { "droppedId": { "type": "integer", "minimum": 1, "description": "拖入窗口的文件的编号（拖放时由外壳登记，路径只在外壳里）；不给时弹出文件选择窗口" } },
         "required": []
       },
       "result": {
@@ -278,7 +278,7 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["media.droppedNotFound", "media.tapeBusy", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported", "media.decoderMissing"]
+      "errors": ["media.droppedNotFound", "media.tapeBusy", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported"]
     },
     "openTapeRecording": {
       "description": "弹出系统的保存文件窗口（WAV 文件），把用户选定的文件交给 media.tapeRecord；用户取消选择时 canceled 为 true，不是错误。",

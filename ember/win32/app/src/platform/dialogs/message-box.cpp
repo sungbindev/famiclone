@@ -19,4 +19,8 @@ namespace ember::win32::platform {
 
 void showErrorMessage(std::string_view title, std::string_view text) { MessageBoxW(nullptr, widen(text).c_str(), widen(title).c_str(), MB_OK | MB_ICONERROR); }
 
+bool askYesNo(std::string_view title, std::string_view text) {
+  return MessageBoxW(GetActiveWindow(), widen(text).c_str(), widen(title).c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
+}
+
 }  // namespace ember::win32::platform

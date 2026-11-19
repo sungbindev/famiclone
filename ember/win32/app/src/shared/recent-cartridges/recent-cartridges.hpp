@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：规则与 Electron 外壳的 src/shared/recent-cartridges/recent-cartridges.ts 相同，文件格式也相同（config/recent-cartridges.json）；
+ * 备注：文件格式见 config/recent-cartridges.json；
  *       清单只存卡带文件的路径（UTF-8），由外壳自己使用，界面只能拿到显示名。
  * ------------------------------------------------------------------------
  */

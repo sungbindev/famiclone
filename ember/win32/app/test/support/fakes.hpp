@@ -22,12 +22,15 @@
 #include "contracts/core-gateway/core-gateway.hpp"
 #include "contracts/logging/error-logger.hpp"
 #include "contracts/shell/file-dialog.hpp"
+#include "contracts/shell/confirmation.hpp"
 #include "contracts/shell/openable-directory.hpp"
 #include "contracts/shell/request-broker.hpp"
 #include "contracts/shell/shell-model.hpp"
 #include "contracts/shell/shell-state-service.hpp"
 #include "contracts/system/app-updater.hpp"
+#include "contracts/system/external-links.hpp"
 #include "contracts/system/help-viewer.hpp"
+#include "contracts/system/user-data-location.hpp"
 
 namespace ember::win32::test {
 
@@ -147,6 +150,48 @@ class FakeRecentCartridges : public contracts::RecentCartridgesService {
   void flush() override {}
 };
 
+/** 假的外部链接：记下打开过的网址，结果可设。 */
+class FakeExternalLinks : public contracts::ExternalLinks {
+ public:
+  std::string error;
+  std::vector<std::string> opened;
+
+  [[nodiscard]] std::string open(const std::string& url) override {
+    opened.push_back(url);
+    return error;
+  }
+};
+
+/** 假的用户数据位置：状态与各项结果可设，记下启动移动的目标。 */
+class FakeUserDataLocation : public contracts::UserDataLocation {
+ public:
+  contracts::UserDataState current{"C:\\Users\\me\\AppData\\Roaming\\Ember", shared::UserDataPlace::UserProfile, false};
+  std::string executableUnavailable;
+  std::string profileUnavailable;
+  std::string moveError;
+  std::vector<shared::UserDataPlace> moves;
+
+  [[nodiscard]] contracts::UserDataState state() const override { return current; }
+  [[nodiscard]] std::string directoryOf(shared::UserDataPlace place) const override { return place == shared::UserDataPlace::ExecutableDirectory ? "D:\\Ember\\ember-data" : "C:\\Users\\me\\AppData\\Roaming\\Ember"; }
+  [[nodiscard]] std::string unavailableReason(shared::UserDataPlace target) const override { return target == shared::UserDataPlace::ExecutableDirectory ? executableUnavailable : profileUnavailable; }
+  [[nodiscard]] std::string startMove(shared::UserDataPlace target) override {
+    moves.push_back(target);
+    return moveError;
+  }
+};
+
+/** 假的确认询问：回答可设，记下问过的内容。 */
+class FakeConfirmation : public contracts::Confirmation {
+ public:
+  bool answer{true};
+  std::vector<std::string> asked;
+
+  [[nodiscard]] bool ask(const std::string&, const std::string& text) override {
+    asked.push_back(text);
+    return answer;
+  }
+};
+
 /** 记下写入内容的错误日志。 */
 class FakeErrorLogger : public contracts::ErrorLogger {
  public:
@@ -161,6 +206,7 @@ class FakeUpdater : public contracts::AppUpdater {
   contracts::UpdateStatus current{"idle", std::nullopt, std::nullopt};
   bool installResult{false};
   int checks{0};
+  std::map<int, std::function<void(const contracts::UpdateStatus&)>> handlers;
 
   [[nodiscard]] contracts::UpdateStatus status() const override { return current; }
   contracts::UpdateStatus check() override {
@@ -168,7 +214,22 @@ class FakeUpdater : public contracts::AppUpdater {
     current.state = "checking";
     return current;
   }
-  bool install() override { return installResult; }
+  bool install() override { ++installs; return installResult; }
+  [[nodiscard]] std::function<void()> subscribe(std::function<void(const contracts::UpdateStatus&)> handler) override {
+    const int id = nextHandler_++;
+    handlers[id] = std::move(handler);
+    return [this, id] { handlers.erase(id); };
+  }
+  /** 改变状态并通知订阅者。 */
+  void push(const contracts::UpdateStatus& status) {
+    current = status;
+    const auto copy = handlers;
+    for (const auto& [id, handler] : copy) handler(current);
+  }
+  int installs{0};
+
+ private:
+  int nextHandler_{1};
 };
 
 /** 假的帮助文档。 */
@@ -266,12 +327,13 @@ class FakeShellApi : public contracts::ShellApi {
   int refreshes{0};
   std::vector<std::string> commands;
   std::vector<std::string> dialogs;
+  int quits{0};
 
   void openDialog(const std::string& dialogId) override { dialogs.push_back(dialogId); }
   void togglePanel(const std::string&) override {}
   void toggleFullScreen() override {}
   void toggleAlwaysOnTop() override {}
-  void quit() override {}
+  void quit() override { ++quits; }
   void runCommand(const std::string& commandId) override { commands.push_back(commandId); }
   void refreshCommands() override { ++refreshes; }
   void notify(const std::string& text, contracts::NotificationLevel level) override { notices.emplace_back(text, level); }

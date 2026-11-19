@@ -26,7 +26,7 @@ class TapeStore {
   /**
    * 打开声音文件作为磁带；文件内容的解码在返回的来源被读取时才进行。
    * @param path 声音文件的路径。
-   * @throws shared::CoreError media.fileNotFound、media.fileUnreadable、media.tapeUnsupported（没有声音或无法解码）、media.decoderMissing（没有找到解码程序）。
+   * @throws shared::CoreError media.fileNotFound、media.fileUnreadable、media.tapeUnsupported（没有声音或无法解码）。
    */
   virtual std::unique_ptr<hardware::TapeSource> open(const std::string& path) const = 0;
 

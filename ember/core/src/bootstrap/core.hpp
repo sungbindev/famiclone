@@ -55,7 +55,7 @@ class Core {
 
   /**
    * 启动核心。
-   * @param optionsJson {"userDataPath": 用户数据目录, "appVersion": 应用版本, "workerCount"?: 工作线程数, "bundledPluginsPath"?: 预装的 mapper 插件目录, "bundledBiosPath"?: 随安装包带的默认 BIOS 目录（<机型>/<文件>，启动时装进还没有 BIOS 的机型）, "ffmpegPath"?: 解码磁带用的 ffmpeg 程序的完整路径}。
+   * @param optionsJson {"userDataPath": 用户数据目录, "appVersion": 应用版本, "workerCount"?: 工作线程数, "bundledPluginsPath"?: 预装的 mapper 插件目录}。
    * @returns {"coreVersion", "requests": [全部请求名]} 的 JSON 文本。
    * @throws shared::CoreError 参数不合格或已启动；std::exception 创建日志等失败。
    */

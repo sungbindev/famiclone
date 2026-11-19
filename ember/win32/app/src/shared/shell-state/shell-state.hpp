@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：规则与文件格式（config/shell-state.json）和 Electron 外壳的 src/shared/shell-state/shell-state.ts 相同，见 docs/05-界面.md 第 9 节；
+ * 备注：规则与文件格式（config/shell-state.json）见 docs/05-界面.md 第 9 节；
  *       读到的内容逐项校验，不合格的项用默认值，不影响其他项；窗口大小与是否最大化不保存，底部面板是否展开与当前页签也不保存。
  * ------------------------------------------------------------------------
  */

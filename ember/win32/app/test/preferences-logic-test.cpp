@@ -6,7 +6,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：用例取自 Electron 外壳的 preferences-model.test.ts、PreferencesPage.test.tsx 与 BiosSettings.test.tsx。
+ * 备注：无。
  * ------------------------------------------------------------------------
  */
 
@@ -431,7 +431,11 @@ TEST(PreferencesModule, RegistersTheDialogTheCommandAndTheSettingsMenuItem) {
   test::FakeBroker broker{core};
   logic::PreferencesController preferences(broker, core);
   logic::BiosController bios(broker, core);
-  const auto module = logic::createPreferencesModule(preferences, bios);
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  logic::UserDataController userData(location, directory, confirmation);
+  const auto module = logic::createPreferencesModule(preferences, bios, userData);
   EXPECT_EQ(module.name, "preferences");
   ASSERT_EQ(module.dialogs.size(), 1U);
   EXPECT_EQ(module.dialogs[0].id, "preferences.preferences");
@@ -457,11 +461,107 @@ TEST(PreferencesModule, AttachConnectsBothControllersAndDetachDisconnectsThem) {
   test::FakeShellApi shell;
   logic::PreferencesController preferences(broker, core);
   logic::BiosController bios(broker, core);
-  const auto module = logic::createPreferencesModule(preferences, bios);
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  logic::UserDataController userData(location, directory, confirmation);
+  const auto module = logic::createPreferencesModule(preferences, bios, userData);
   const auto detach = module.attach(shell);
   EXPECT_EQ(core.subscriberCount(), 4U);
   detach();
   EXPECT_EQ(core.subscriberCount(), 0U);
+}
+
+TEST(UserDataController, ShowsTheDirectoryAndTheSwitchButtonForTheOtherPlace) {
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  logic::UserDataController controller(location, directory, confirmation);
+  auto view = controller.view();
+  EXPECT_EQ(view.directory, location.current.directory);
+  EXPECT_EQ(view.switchLabel, "改用软件所在目录");
+  EXPECT_TRUE(view.unavailableReason.empty());
+  location.current.place = shared::UserDataPlace::ExecutableDirectory;
+  location.current.directory = "D:\\Ember\\ember-data";
+  view = controller.view();
+  EXPECT_EQ(view.switchLabel, "改用用户数据目录");
+}
+
+TEST(UserDataController, SwitchIsDisabledWhenTheTargetIsUnavailableOrTheDirectoryIsOverridden) {
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  logic::UserDataController controller(location, directory, confirmation);
+  location.executableUnavailable = "软件所在的目录不能写入";
+  EXPECT_EQ(controller.view().unavailableReason, "软件所在的目录不能写入");
+  location.executableUnavailable.clear();
+  location.current.overridden = true;
+  EXPECT_FALSE(controller.view().unavailableReason.empty());
+
+  test::FakeShellApi shell;
+  const auto detach = controller.attach(shell);
+  controller.switchPlace();
+  ASSERT_EQ(shell.notices.size(), 1U);
+  EXPECT_EQ(shell.notices[0].second, contracts::NotificationLevel::Error);
+  EXPECT_TRUE(confirmation.asked.empty());
+  EXPECT_TRUE(location.moves.empty());
+  EXPECT_EQ(shell.quits, 0);
+  detach();
+}
+
+TEST(UserDataController, SwitchAsksThenStartsTheMoveAndQuits) {
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  test::FakeShellApi shell;
+  logic::UserDataController controller(location, directory, confirmation);
+  const auto detach = controller.attach(shell);
+
+  confirmation.answer = false;
+  controller.switchPlace();
+  ASSERT_EQ(confirmation.asked.size(), 1U);
+  EXPECT_NE(confirmation.asked[0].find("D:\\Ember\\ember-data"), std::string::npos);
+  EXPECT_TRUE(location.moves.empty());
+  EXPECT_EQ(shell.quits, 0);
+
+  confirmation.answer = true;
+  controller.switchPlace();
+  EXPECT_EQ(location.moves, (std::vector<shared::UserDataPlace>{shared::UserDataPlace::ExecutableDirectory}));
+  EXPECT_EQ(shell.quits, 1);
+  EXPECT_TRUE(shell.notices.empty());
+  detach();
+}
+
+TEST(UserDataController, FailedStartIsReportedAndTheAppKeepsRunning) {
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  test::FakeShellApi shell;
+  logic::UserDataController controller(location, directory, confirmation);
+  const auto detach = controller.attach(shell);
+  location.moveError = "无法启动新的进程";
+  controller.switchPlace();
+  EXPECT_EQ(shell.quits, 0);
+  ASSERT_EQ(shell.notices.size(), 1U);
+  EXPECT_EQ(shell.notices[0].first, "无法启动新的进程");
+  detach();
+}
+
+TEST(UserDataController, OpenDirectoryReportsTheErrorWithANotice) {
+  test::FakeUserDataLocation location;
+  test::FakeDirectory directory;
+  test::FakeConfirmation confirmation;
+  test::FakeShellApi shell;
+  logic::UserDataController controller(location, directory, confirmation);
+  const auto detach = controller.attach(shell);
+  controller.openDirectory();
+  EXPECT_EQ(directory.opened, 1);
+  EXPECT_TRUE(shell.notices.empty());
+  directory.error = "打不开";
+  controller.openDirectory();
+  ASSERT_EQ(shell.notices.size(), 1U);
+  EXPECT_EQ(shell.notices[0].first, "打不开");
+  detach();
 }
 
 }  // namespace

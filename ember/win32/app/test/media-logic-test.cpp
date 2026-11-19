@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：用例取自 Electron 外壳的 media-controller.test.ts、media-status.test.ts 与 media-module.test.tsx。
+ * 备注：无。
  * ------------------------------------------------------------------------
  */
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：platform-test.cpp
- * 说明：平台层的测试：文字转换、界面线程的任务投递、JSON 文件存储、错误日志、单实例。
+ * 说明：平台层的测试：文字转换、用户数据目录的位置与移动、进程等待、界面线程的任务投递、JSON 文件存储、错误日志、单实例。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -18,12 +18,13 @@
 #include "platform/files/json-file-reader.hpp"
 #include "platform/files/json-file-store.hpp"
 #include "platform/files/known-folders.hpp"
+#include "platform/files/user-data-location.hpp"
 #include "platform/logging/file-error-logger.hpp"
+#include "platform/process/process-control.hpp"
 #include "platform/process/single-instance.hpp"
 #include "platform/text/wide-text.hpp"
 #include "platform/theme/system-theme.hpp"
 #include "platform/threading/ui-thread.hpp"
-#include "bootstrap/resource-locations.hpp"
 #include "support/temp-directory.hpp"
 
 namespace {
@@ -66,6 +67,118 @@ TEST(KnownFolders, DefaultUserDataDirectoryIsEmberUnderAppData) {
 }
 
 TEST(SystemTheme, ReturnsAValueWithoutThrowing) { static_cast<void>(platform::systemUsesLightTheme()); }
+
+void writeText(const std::filesystem::path& path, const std::string& text) {
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path, std::ios::binary) << text;
+}
+
+TEST(UserDataLocation, PortableDirectoryBesideTheExecutableWinsOtherwiseTheProfileDirectoryIsUsed) {
+  test::TempDirectory directory;
+  const auto exe = directory.path() / "app";
+  const auto profile = directory.path() / "profile" / "Ember";
+  std::filesystem::create_directories(exe);
+  auto resolved = platform::resolveUserDataDirectory(exe, profile);
+  EXPECT_EQ(resolved.directory, profile);
+  EXPECT_EQ(resolved.place, shared::UserDataPlace::UserProfile);
+  // 同名的文件不算目录
+  writeText(exe / "ember-data", "x");
+  EXPECT_EQ(platform::resolveUserDataDirectory(exe, profile).place, shared::UserDataPlace::UserProfile);
+  std::filesystem::remove(exe / "ember-data");
+  std::filesystem::create_directories(exe / "ember-data");
+  resolved = platform::resolveUserDataDirectory(exe, profile);
+  EXPECT_EQ(resolved.directory, exe / "ember-data");
+  EXPECT_EQ(resolved.place, shared::UserDataPlace::ExecutableDirectory);
+}
+
+TEST(UserDataLocation, WritableDirectoryCanHoldPortableDataAndMissingOneCannot) {
+  test::TempDirectory directory;
+  EXPECT_TRUE(platform::portableDataUnavailableReason(directory.path()).empty());
+  EXPECT_FALSE(platform::portableDataUnavailableReason(directory.path() / "missing").empty());
+  EXPECT_FALSE(platform::portableDataUnavailableReason({}).empty());
+}
+
+TEST(UserDataLocation, MovingToTheExecutableDirectoryCopiesVerifiesAndRemovesTheOldOne) {
+  test::TempDirectory directory;
+  const auto exe = directory.path() / "app";
+  const auto profile = directory.path() / "profile" / "Ember";
+  std::filesystem::create_directories(exe);
+  writeText(profile / "config" / "preferences.json", "{\"a\":1}");
+  writeText(profile / "bios" / "sb97.bin", "BIOS");
+  writeText(profile / "lockfile", "lock");
+  writeText(profile / "run" / "debug-endpoint.json", "{}");
+
+  const auto result = platform::moveUserData(exe, profile, shared::UserDataPlace::ExecutableDirectory);
+  ASSERT_TRUE(result.ok) << result.message;
+  EXPECT_EQ(readAll(exe / "ember-data" / "config" / "preferences.json"), "{\"a\":1}");
+  EXPECT_EQ(readAll(exe / "ember-data" / "bios" / "sb97.bin"), "BIOS");
+  // 运行时才有的东西不复制
+  EXPECT_FALSE(std::filesystem::exists(exe / "ember-data" / "lockfile"));
+  EXPECT_FALSE(std::filesystem::exists(exe / "ember-data" / "run"));
+  EXPECT_FALSE(std::filesystem::exists(profile));
+  EXPECT_FALSE(std::filesystem::exists(exe / "ember-data.tmp"));
+  EXPECT_EQ(platform::resolveUserDataDirectory(exe, profile).place, shared::UserDataPlace::ExecutableDirectory);
+}
+
+TEST(UserDataLocation, MovingBackToTheProfileDirectoryCopiesAndRemovesThePortableOne) {
+  test::TempDirectory directory;
+  const auto exe = directory.path() / "app";
+  const auto profile = directory.path() / "profile" / "Ember";
+  writeText(exe / "ember-data" / "config" / "shell-state.json", "{}");
+  writeText(exe / "ember-data" / "lockfile", "lock");
+
+  const auto result = platform::moveUserData(exe, profile, shared::UserDataPlace::UserProfile);
+  ASSERT_TRUE(result.ok) << result.message;
+  EXPECT_EQ(readAll(profile / "config" / "shell-state.json"), "{}");
+  EXPECT_FALSE(std::filesystem::exists(profile / "lockfile"));
+  EXPECT_FALSE(std::filesystem::exists(exe / "ember-data"));
+  EXPECT_FALSE(std::filesystem::exists(exe / "ember-data.old"));
+  EXPECT_EQ(platform::resolveUserDataDirectory(exe, profile).place, shared::UserDataPlace::UserProfile);
+}
+
+TEST(UserDataLocation, MovingToAnEmptyExistingProfileDirectoryIsAllowedButANonEmptyOneIsRefused) {
+  test::TempDirectory directory;
+  const auto exe = directory.path() / "app";
+  const auto profile = directory.path() / "profile" / "Ember";
+  writeText(exe / "ember-data" / "a.txt", "A");
+  std::filesystem::create_directories(profile);
+  ASSERT_TRUE(platform::moveUserData(exe, profile, shared::UserDataPlace::UserProfile).ok);
+  EXPECT_EQ(readAll(profile / "a.txt"), "A");
+
+  // 再放回软件所在目录，应用数据目录里留一个不是空的 Ember，再移回时被拒绝，原数据原样保留
+  ASSERT_TRUE(platform::moveUserData(exe, profile, shared::UserDataPlace::ExecutableDirectory).ok);
+  writeText(profile / "stale.txt", "S");
+  const auto refused = platform::moveUserData(exe, profile, shared::UserDataPlace::UserProfile);
+  EXPECT_FALSE(refused.ok);
+  EXPECT_FALSE(refused.message.empty());
+  EXPECT_EQ(readAll(exe / "ember-data" / "a.txt"), "A");
+  EXPECT_EQ(readAll(profile / "stale.txt"), "S");
+}
+
+TEST(UserDataLocation, MovingToTheExecutableDirectoryIsRefusedWhenPortableDataAlreadyExists) {
+  test::TempDirectory directory;
+  const auto exe = directory.path() / "app";
+  const auto profile = directory.path() / "profile" / "Ember";
+  writeText(exe / "ember-data" / "a.txt", "A");
+  writeText(profile / "b.txt", "B");
+  EXPECT_FALSE(platform::moveUserData(exe, profile, shared::UserDataPlace::ExecutableDirectory).ok);
+  EXPECT_EQ(readAll(profile / "b.txt"), "B");
+}
+
+TEST(UserDataLocation, MissingSourceMovesAsEmptyData) {
+  test::TempDirectory directory;
+  const auto exe = directory.path() / "app";
+  const auto profile = directory.path() / "profile" / "Ember";
+  std::filesystem::create_directories(exe);
+  ASSERT_TRUE(platform::moveUserData(exe, profile, shared::UserDataPlace::ExecutableDirectory).ok);
+  EXPECT_TRUE(std::filesystem::is_directory(exe / "ember-data"));
+}
+
+TEST(ProcessControl, WaitingForAProcessThatDoesNotExistReturnsAtOnceAndOwnProcessTimesOut) {
+  // 进程号 4294967295 不会是真实的进程
+  EXPECT_TRUE(platform::waitForProcessExit(0xFFFFFFFFu, 1000));
+  EXPECT_FALSE(platform::waitForProcessExit(platform::currentProcessId(), 30));
+}
 
 TEST(UiThread, PostFromAnotherThreadRunsOnTheUiThread) {
   platform::UiThread ui;
@@ -225,42 +338,6 @@ TEST(JsonFileReader, ReadsValidFilesAndGivesEmptyForMissingOrBrokenOnes) {
   ASSERT_TRUE(value);
   EXPECT_EQ((*value)["name"], "卡带");
   EXPECT_EQ((*value)["n"].size(), 2u);
-}
-
-TEST(ResourceLocations, PackagedLayoutUsesTheResourcesDirectoryNextToTheExecutable) {
-  test::TempDirectory directory;
-  const auto exe = directory.path() / "app";
-  std::filesystem::create_directories(exe / "resources" / "plugins");
-  std::filesystem::create_directories(exe / "resources" / "bios");
-  std::filesystem::create_directories(exe / "resources" / "win32-x64");
-  { std::ofstream(exe / "resources" / "win32-x64" / "ffmpeg.exe") << "x"; }
-  const auto found = bootstrap::locateResources(exe);
-  ASSERT_TRUE(found.plugins && found.bios && found.ffmpeg);
-  EXPECT_EQ(platform::pathFromUtf8(*found.plugins), (exe / "resources" / "plugins").lexically_normal());
-  EXPECT_EQ(platform::pathFromUtf8(*found.ffmpeg).filename().wstring(), L"ffmpeg.exe");
-}
-
-TEST(ResourceLocations, DevelopmentLayoutFindsBuildAndRepositoryDirectories) {
-  test::TempDirectory directory;
-  // 仓库根目录\build\ember\win32\app\Debug 是可执行文件所在的目录
-  const auto exe = directory.path() / "build" / "ember" / "win32" / "app" / "Debug";
-  std::filesystem::create_directories(exe);
-  std::filesystem::create_directories(directory.path() / "build" / "ember" / "plugins");
-  std::filesystem::create_directories(directory.path() / "ember" / "bios");
-  std::filesystem::create_directories(directory.path() / "ember" / "core" / "third_party" / "ffmpeg" / "bin" / "win32-x64");
-  { std::ofstream(directory.path() / "ember" / "core" / "third_party" / "ffmpeg" / "bin" / "win32-x64" / "ffmpeg.exe") << "x"; }
-  const auto found = bootstrap::locateResources(exe);
-  ASSERT_TRUE(found.plugins && found.bios && found.ffmpeg);
-  EXPECT_EQ(platform::pathFromUtf8(*found.plugins), (directory.path() / "build" / "ember" / "plugins").lexically_normal());
-  EXPECT_EQ(platform::pathFromUtf8(*found.bios), (directory.path() / "ember" / "bios").lexically_normal());
-}
-
-TEST(ResourceLocations, MissingResourcesAreEmpty) {
-  test::TempDirectory directory;
-  const auto found = bootstrap::locateResources(directory.path() / "a" / "b" / "c" / "d" / "e");
-  EXPECT_FALSE(found.plugins);
-  EXPECT_FALSE(found.bios);
-  EXPECT_FALSE(found.ffmpeg);
 }
 
 }  // namespace

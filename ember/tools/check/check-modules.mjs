@@ -1,56 +1,23 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：check-modules.mjs
- * 说明：分层与模块检查：TypeScript 各层的 import 规则与文件循环引用、渲染 Worker（ui 层里以 -worker.ts 结尾的入口）的依赖限制、C++ 各层的 #include 规则、硬件契约与硬件模块、mapper 电路的规则（模块之间互不引用）；
- *       从 TypeScript 的 import、C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
+ * 说明：分层与模块检查：C++ 各层的 #include 规则、硬件契约与硬件模块、mapper 电路的规则（模块之间互不引用）；
+ *       从 C++ 的 #include 与 Schema 的 $ref 分析模块之间的依赖，发现引用其他模块契约以外的目录与模块循环依赖；
  *       检查模块目录都在模块清单中登记；检查官方插件目录 plugins/<id>/：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png；
  *       检查 Win32 原生应用 win32/app/src 的 C++ 分层（八层、模块只经对方契约协作、Windows 系统头文件只能在 platform 与 bootstrap）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
- * 备注：规则来自 docs/01-软件架构设计.md 第 4、5 节与 docs/06-构建与模块登记.md；测试文件不参与检查。
+ * 备注：规则来自 docs/01-软件架构设计.md 与 docs/06-构建与模块登记.md；测试文件不参与检查。
  *       用法：node tools/check/check-modules.mjs [--dependents <模块>]，后者列出直接与间接依赖该模块的全部模块；
  *       checkProject(root) 可被测试引用，对任意目录做同样的检查。
  * ------------------------------------------------------------------------
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { builtinModules } from 'node:module';
-import { dirname, join, posix, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadSchemas } from '../schema-gen/schema-gen.mjs';
-
-/** 不属于任何业务模块的契约目录（核心网关、外壳、日志、画面与输入的消息端口）。 */
-const FRAMEWORK_CONTRACTS = new Set(['core-gateway', 'shell', 'logging', 'stream-ports']);
-/** 不属于任何业务模块的入口目录（通用的核心请求转发、外壳能力、消息端口）。 */
-const FRAMEWORK_ENTRY = new Set(['core', 'shell', 'streams']);
-/** 不属于任何业务模块的界面目录（外壳）。 */
-const FRAMEWORK_UI = new Set(['shell']);
-
-/** TypeScript 各层可以引用的层。 */
-const TS_ALLOWED = {
-  contracts: ['contracts', 'shared'],
-  entry: ['entry', 'contracts', 'shared'],
-  infra: ['infra', 'contracts', 'shared', 'platform'],
-  ui: ['ui', 'contracts'],
-  platform: ['platform'],
-  shared: ['shared'],
-  'core-host': ['core-host', 'contracts', 'shared'],
-  bootstrap: ['bootstrap', 'contracts', 'entry', 'infra', 'ui', 'platform', 'shared', 'core-host']
-};
-/** 可以引入 electron 的层。 */
-const ELECTRON_LAYERS = new Set(['platform', 'entry', 'core-host', 'bootstrap']);
-/** 不能使用 Node 内置模块的层。 */
-const NO_NODE_LAYERS = new Set(['ui', 'shared', 'contracts']);
-/** 界面库与可以使用它们的层。 */
-const UI_PACKAGES = new Set(['react', 'react-dom', '@rujianjs/ui-kit']);
-const UI_PACKAGE_LAYERS = new Set(['ui', 'bootstrap']);
-/** 渲染 Worker 的入口文件名：以 -worker.ts 结尾，只能放在 ui 层。 */
-const WORKER_ENTRY = /-worker\.ts$/;
-/** 可以使用其他第三方包的层。 */
-const PACKAGE_LAYERS = new Set(['platform', 'bootstrap']);
-/** Node 内置模块名。 */
-const NODE_BUILTINS = new Set(builtinModules);
 
 /** C++ 按模块分目录的层。 */
 const CPP_MODULE_LAYERS = new Set(['contracts', 'logic', 'infra', 'requests']);
@@ -62,7 +29,6 @@ const CPP_ALLOWED = {
   requests: ['requests', 'contracts', 'shared', 'platform'],
   platform: ['platform', 'shared'],
   shared: ['shared'],
-  binding: ['bootstrap', 'shared'],
   bootstrap: ['contracts', 'logic', 'infra', 'requests', 'platform', 'shared', 'bootstrap']
 };
 /** logic 层只能包含的 platform 抽象：事件、取消、错误日志、帧输出、声音输出、文件监视。 */
@@ -76,8 +42,6 @@ const PLATFORM_ABSTRACTIONS = new Set([
 ]);
 /** 硬件模块只能包含的 platform 抽象：日志、画面输出与声音输出不属于硬件（声音经主机的契约取走）。 */
 const HARDWARE_PLATFORM_ABSTRACTIONS = new Set(['platform/events/event-sink.hpp', 'platform/requests/cancellation.hpp']);
-/** binding 只能包含的核心入口。 */
-const BINDING_ENTRY = 'bootstrap/core.hpp';
 /**
  * 硬件目录：contracts/hardware 是硬件契约，logic/hardware/<模块> 是硬件模块（一个型号一个目录）。
  * 硬件不是业务模块，没有请求，所以不要求登记在模块清单中；硬件模块之间互不引用，只经 contracts/hardware。
@@ -181,13 +145,12 @@ function thirdPartyAllowed(include, path, location) {
   if (include.startsWith('nlohmann/')) {
     if (location.layer === 'contracts') return path.includes('/generated/');
     if (location.layer === 'shared') return path.startsWith('shared/json/');
-    return ['platform', 'infra', 'requests', 'binding', 'bootstrap'].includes(location.layer);
+    return ['platform', 'infra', 'requests', 'bootstrap'].includes(location.layer);
   }
-  if (include === 'napi.h' || include === 'node_api.h') return location.layer === 'binding';
-  if (include === 'sqlite3.h') return path.startsWith('platform/database/');
   if (include === 'quickjs.h') return path.startsWith('infra/mappers/');
   if (include === 'miniz.h') return location.layer === 'infra';
   if (include === 'miniaudio.h') return path.startsWith('platform/audio/');
+  if (include.startsWith('libavcodec/') || include.startsWith('libavformat/') || include.startsWith('libavutil/') || include.startsWith('libswresample/')) return path.startsWith('infra/media/');
   return true;
 }
 
@@ -251,121 +214,11 @@ function checkCpp(root, errors, edges) {
       if (from.layer === 'logic' && to.layer === 'platform' && !(inHardwareLogic ? HARDWARE_PLATFORM_ABSTRACTIONS : PLATFORM_ABSTRACTIONS).has(include)) {
         errors.push(`core/src/${path}：logic 层只能包含 platform 的抽象，不能包含 ${include}`);
       }
-      if (from.layer === 'binding' && to.layer === 'bootstrap' && include !== BINDING_ENTRY) errors.push(`core/src/${path}：binding 只能经 ${BINDING_ENTRY} 使用核心`);
       if (inHardwareLogic && to.layer === 'contracts' && !include.startsWith(HARDWARE_CONTRACTS_PREFIX)) errors.push(`core/src/${path}：硬件模块只能包含 contracts/hardware 的契约，不能包含 ${include}`);
       if (from.module !== undefined && to.module !== undefined && from.module !== to.module) {
         if (to.layer !== 'contracts') errors.push(`core/src/${path}：模块 ${from.module} 只能引用模块 ${to.module} 的契约，不能包含 ${include}`);
         edges.push({ from: from.module, to: to.module });
       }
-    }
-  }
-}
-
-// ---------------------------------------------------------------- TypeScript
-
-/** TypeScript 文件所在的层与模块。 */
-function tsLocation(path) {
-  const parts = path.split('/');
-  const layer = parts[0];
-  if (layer === 'contracts' && parts.length > 2 && !FRAMEWORK_CONTRACTS.has(parts[1])) return { layer, module: parts[1] };
-  if (layer === 'ui' && parts.length > 2 && !FRAMEWORK_UI.has(parts[1])) return { layer, module: parts[1] };
-  if (layer === 'entry' && parts[1] === 'ipc' && parts.length > 3 && !FRAMEWORK_ENTRY.has(parts[2])) return { layer, module: parts[2] };
-  if (layer === 'bootstrap' && parts[2] === 'modules' && parts.length === 4) return { layer, module: parts[3].replace(/\.tsx?$/, ''), registration: true };
-  return { layer, module: undefined };
-}
-
-/** 读出文件中的引用：说明符与是否只引用类型。 */
-function readImports(text) {
-  const imports = [];
-  for (const match of text.matchAll(/(?:^|[\n;])\s*(import|export)\s+(type\s+)?([^'";]*?\bfrom\s+)?['"]([^'"]+)['"]/g)) {
-    const clause = match[3] ?? '';
-    if (match[1] === 'export' && clause === '') continue;
-    const braces = /^\{([^}]*)\}\s*from\s+$/.exec(clause.trim() + ' ');
-    const allTypes = braces !== null && braces[1].split(',').map((item) => item.trim()).filter(Boolean).every((item) => item.startsWith('type '));
-    imports.push({ specifier: match[4], typeOnly: match[2] !== undefined || allTypes });
-  }
-  for (const match of text.matchAll(/\bimport\(\s*['"]([^'"]+)['"]\s*\)/g)) imports.push({ specifier: match[1], typeOnly: false });
-  return imports;
-}
-
-/** 把相对引用解析为 src 下的文件。 */
-function resolveTsFile(fromPath, specifier, files) {
-  const target = posix.normalize(posix.join(posix.dirname(fromPath), specifier));
-  for (const candidate of [target, `${target}.ts`, `${target}.tsx`, `${target}/index.ts`, `${target}/index.tsx`]) if (files.has(candidate)) return candidate;
-  return target;
-}
-
-/** 包名（去掉子路径）。 */
-function packageName(specifier) {
-  const parts = specifier.split('/');
-  return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
-}
-
-/** 检查 TypeScript 的 import，收集模块之间的依赖。 */
-function checkTs(root, errors, edges) {
-  const base = join(root, 'src');
-  const all = listFiles(base, /\.(ts|tsx)$/).map((file) => toPosix(relative(base, file)));
-  const sources = all.filter((path) => !/\.test\.tsx?$/.test(path) && !path.endsWith('.d.ts'));
-  const files = new Set(all);
-  const fileEdges = [];
-  /** 每个文件引用的界面库（react、组件库），用来检查渲染 Worker 的依赖。 */
-  const uiPackageUses = new Map();
-  for (const path of sources) {
-    const from = tsLocation(path);
-    const text = readFileSync(join(base, path), 'utf8');
-    for (const { specifier, typeOnly } of readImports(text)) {
-      if (specifier.startsWith('.')) {
-        const target = resolveTsFile(path, specifier, files);
-        const to = tsLocation(target);
-        const allowed = TS_ALLOWED[from.layer];
-        if (allowed !== undefined && !allowed.includes(to.layer)) errors.push(`src/${path}：${from.layer} 层不能引用 ${to.layer} 层的 ${specifier}`);
-        if (from.layer === 'ui' && to.layer === 'contracts' && !typeOnly) errors.push(`src/${path}：ui 层只能引用 contracts 中的类型，${specifier} 应使用 import type`);
-        if (!typeOnly) fileEdges.push({ from: path, to: target });
-        if (from.module !== undefined && !from.registration && to.module !== undefined && to.module !== from.module) {
-          if (to.layer !== 'contracts') errors.push(`src/${path}：模块 ${from.module} 只能引用模块 ${to.module} 的契约，不能引用 ${specifier}`);
-          edges.push({ from: from.module, to: to.module });
-        }
-        continue;
-      }
-      const name = packageName(specifier);
-      if (name === 'electron') {
-        if (!ELECTRON_LAYERS.has(from.layer)) errors.push(`src/${path}：${from.layer} 层不能引入 electron`);
-      } else if (specifier.startsWith('node:') || NODE_BUILTINS.has(name)) {
-        if (NO_NODE_LAYERS.has(from.layer)) errors.push(`src/${path}：${from.layer} 层不能使用 Node 内置模块 ${specifier}`);
-      } else if (UI_PACKAGES.has(name)) {
-        if (!UI_PACKAGE_LAYERS.has(from.layer)) errors.push(`src/${path}：${from.layer} 层不能引用 ${name}`);
-        uiPackageUses.set(path, [...(uiPackageUses.get(path) ?? []), name]);
-      } else if (!PACKAGE_LAYERS.has(from.layer)) {
-        errors.push(`src/${path}：${from.layer} 层不能引用第三方包 ${name}`);
-      }
-    }
-  }
-  for (const cycle of findCycles(toGraph(fileEdges))) errors.push(`文件之间有循环引用：${cycle}`);
-  checkWorkers(sources, fileEdges, uiPackageUses, errors);
-}
-
-/**
- * 渲染 Worker 的依赖限制：入口（-worker.ts）必须在 ui 层；入口与它经 import 依赖的全部文件
- * 不能引用 react、react-dom、组件库，也不能引用 .tsx 与样式文件（Worker 里没有 DOM，界面代码进不了 Worker）；
- * electron 与 Node 内置模块已由 ui 层的规则禁止。
- */
-function checkWorkers(sources, fileEdges, uiPackageUses, errors) {
-  const graph = toGraph(fileEdges);
-  for (const entry of sources.filter((path) => WORKER_ENTRY.test(path))) {
-    if (!entry.startsWith('ui/')) errors.push(`src/${entry}：渲染 Worker 的入口只能放在 ui 层`);
-    const reached = new Set([entry]);
-    const queue = [entry];
-    while (queue.length > 0) {
-      for (const next of graph.get(queue.shift()) ?? []) {
-        if (!reached.has(next)) {
-          reached.add(next);
-          queue.push(next);
-        }
-      }
-    }
-    for (const file of reached) {
-      for (const name of uiPackageUses.get(file) ?? []) errors.push(`src/${file}：渲染 Worker（${entry}）依赖的文件不能引用 ${name}`);
-      if (file !== entry && /\.(tsx|css)$/.test(file)) errors.push(`src/${entry}：渲染 Worker 不能依赖界面文件 ${file}`);
     }
   }
 }
@@ -388,55 +241,23 @@ function dependentsOf(target, edges) {
 
 // ---------------------------------------------------------------- 登记
 
-/** 模块清单文件引用的 ./modules/<模块>。 */
-function importsOf(file) {
-  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
-  return new Set([...text.matchAll(/from\s+['"]\.\/modules\/([a-z0-9-]+)['"]/g)].map((match) => match[1]));
-}
-
-/** 检查模块目录都在模块清单中登记。 */
+/** 检查模块目录都在 C++ 模块清单中登记。 */
 function checkRegistration(root, errors, schemaModules) {
   const cppList = join(root, 'core', 'src', 'bootstrap', 'module-list.cpp');
   const cppText = existsSync(cppList) ? readFileSync(cppList, 'utf8') : '';
   const cppModules = new Set([...cppText.matchAll(/\{\s*"([a-z0-9-]+)"\s*,/g)].map((match) => match[1]));
-  const mainModules = importsOf(join(root, 'src', 'bootstrap', 'main', 'module-list.ts'));
-  const rendererModules = importsOf(join(root, 'src', 'bootstrap', 'renderer', 'module-list.ts'));
-
-  const requireIn = (set, module, listName, reason) => {
-    if (!set.has(module)) errors.push(`模块 ${module}${reason}，但没有登记在 ${listName}`);
+  const requireIn = (module, reason) => {
+    if (!cppModules.has(module)) errors.push(`模块 ${module}${reason}，但没有登记在 core/src/bootstrap/module-list.cpp`);
   };
-  for (const module of schemaModules) {
-    requireIn(cppModules, module, 'core/src/bootstrap/module-list.cpp', ' 有 Schema');
-    requireIn(mainModules, module, 'src/bootstrap/main/module-list.ts', ' 有 Schema');
-  }
+  for (const module of schemaModules) requireIn(module, ' 有 Schema');
   for (const layer of CPP_MODULE_LAYERS) {
     for (const module of listDirectories(join(root, 'core', 'src', layer))) {
       if (module === HARDWARE_DIRECTORY) continue;
-      requireIn(cppModules, module, 'core/src/bootstrap/module-list.cpp', ` 有 core/src/${layer} 目录`);
+      requireIn(module, ` 有 core/src/${layer} 目录`);
     }
   }
   for (const module of cppModules) {
     if (!existsSync(join(root, 'core', 'src', 'bootstrap', 'modules', `${module}.cpp`))) errors.push(`模块 ${module} 登记在 C++ 模块清单中，但没有 core/src/bootstrap/modules/${module}.cpp`);
-  }
-  for (const module of listDirectories(join(root, 'src', 'entry', 'ipc'))) {
-    if (!FRAMEWORK_ENTRY.has(module)) requireIn(mainModules, module, 'src/bootstrap/main/module-list.ts', ' 有 src/entry/ipc 目录');
-  }
-  for (const module of listDirectories(join(root, 'src', 'ui'))) {
-    if (!FRAMEWORK_UI.has(module)) requireIn(rendererModules, module, 'src/bootstrap/renderer/module-list.ts', ' 有 src/ui 目录');
-  }
-  for (const module of listDirectories(join(root, 'src', 'contracts'))) {
-    if (!FRAMEWORK_CONTRACTS.has(module) && !schemaModules.includes(module) && !rendererModules.has(module)) {
-      errors.push(`src/contracts/${module} 既没有 Schema，也没有登记在渲染进程的模块清单中`);
-    }
-  }
-  for (const [list, directory] of [
-    [mainModules, join(root, 'src', 'bootstrap', 'main', 'modules')],
-    [rendererModules, join(root, 'src', 'bootstrap', 'renderer', 'modules')]
-  ]) {
-    for (const file of listFiles(directory, /\.tsx?$/)) {
-      const module = file.replace(/^.*[\\/]/, '').replace(/\.tsx?$/, '');
-      if (!list.has(module)) errors.push(`${toPosix(relative(root, file))} 没有登记在上一级目录的 module-list.ts`);
-    }
   }
 }
 
@@ -577,7 +398,6 @@ export function checkProject(root) {
   const errors = [];
   const edges = schemas.flatMap((schema) => schema.refs.filter((ref) => ref.module !== schema.name).map((ref) => ({ from: schema.name, to: ref.module })));
   checkCpp(root, errors, edges);
-  checkTs(root, errors, edges);
   checkWin32App(root, errors);
   checkPlugins(root, errors);
   for (const cycle of findCycles(toGraph(edges))) errors.push(`模块之间有循环依赖：${cycle}`);

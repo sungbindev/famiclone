@@ -1,5 +1,5 @@
 {
-  "$comment": "machines 模块：整机机型（学习机）的清单、BIOS 的添加与移除、整机机型开机；openBios 由主进程弹出文件选择窗口后调用 setBios；openBiosDirectory 由主进程用文件管理器打开 BIOS 目录。规则见 docs/04-调试服务.md 第 4.7 节。",
+  "$comment": "machines 模块：整机机型（学习机）的清单、BIOS 的添加与移除、整机机型开机；openBios 由外壳弹出文件选择窗口后调用 setBios；openBiosDirectory 由外壳用文件管理器打开 BIOS 目录。规则见 docs/04-调试服务.md 第 4.7 节。",
   "module": "machines",
   "types": {
     "BiosFile": {
@@ -42,7 +42,7 @@
         "type": "object",
         "properties": {
           "machine": { "type": "string", "minLength": 1, "description": "机型标识" },
-          "path": { "type": "string", "minLength": 1, "description": "BIOS 文件的路径，由主进程根据用户选择的文件给出，调试服务直接给出" }
+          "path": { "type": "string", "minLength": 1, "description": "BIOS 文件的路径，由外壳根据用户选择的文件给出，调试服务直接给出" }
         },
         "required": ["machine", "path"]
       },
@@ -108,7 +108,7 @@
       "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.biosInvalid", "machines.biosAccessFailed"]
     },
     "openBiosDirectory": {
-      "description": "用系统的文件管理器打开 BIOS 目录（目录不存在时先创建）；路径由主进程决定，界面不能指定。",
+      "description": "用系统的文件管理器打开 BIOS 目录（目录不存在时先创建）；路径由外壳决定，界面不能指定。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": { "type": "object", "properties": {}, "required": [] },
       "errors": ["machines.biosDirectoryUnavailable"]

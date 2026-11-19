@@ -91,14 +91,6 @@ describe('checkProject', () => {
     expect(checkProject(root).errors).toEqual(['core/src/logic/hardware/ppu-2c02/ppu.hpp：logic 层只能包含 platform 的抽象，不能包含 platform/streams/frame-output.hpp']);
   });
 
-  it('画面与输入端口的契约目录与入口目录不是业务模块，不要求登记', () => {
-    const root = createProject({
-      'src/contracts/stream-ports/stream-ports.ts': 'export type StreamPort = object;\n',
-      'src/entry/ipc/streams/streams-ipc.ts': "import type { StreamPort } from '../../../contracts/stream-ports/stream-ports';\nexport type Port = StreamPort;\n"
-    });
-    expect(checkProject(root).errors).toEqual([]);
-  });
-
   it('硬件模块只能包含 contracts/hardware 的契约，不能包含其他模块的契约', () => {
     const root = createProject({
       'core/src/contracts/system/system-service.hpp': '#pragma once\n',
@@ -207,14 +199,14 @@ describe('checkProject', () => {
 
   it('C++ 各层与第三方头文件的位置受限', () => {
     const root = createProject({
-      'core/src/logic/system/a.hpp': '#include "infra/mappers/b.hpp"\n#include <sqlite3.h>\n',
+      'core/src/logic/system/a.hpp': '#include "infra/mappers/b.hpp"\n#include <quickjs.h>\n',
       'core/src/shared/c.hpp': '#include "platform/requests/cancellation.hpp"\n',
       'core/src/bootstrap/module-list.cpp': '{"system", registerSystem},\n',
       'core/src/bootstrap/modules/system.cpp': '\n'
     });
     const { errors } = checkProject(root);
     expect(errors).toContain('core/src/logic/system/a.hpp：logic 层不能包含 infra 层的 infra/mappers/b.hpp');
-    expect(errors).toContain('core/src/logic/system/a.hpp：不能包含 <sqlite3.h>');
+    expect(errors).toContain('core/src/logic/system/a.hpp：不能包含 <quickjs.h>');
     expect(errors).toContain('core/src/shared/c.hpp：shared 层不能包含 platform 层的 platform/requests/cancellation.hpp');
   });
 
@@ -270,72 +262,18 @@ describe('checkProject', () => {
     expect(errors.some((error) => error.startsWith('win32/app/src/other：不是八层之一'))).toBe(true);
   });
 
-  it('TypeScript 的层间依赖、electron 与第三方包受限', () => {
-    const root = createProject({
-      'src/ui/shell/Shell.tsx': "import { app } from 'electron';\nimport { run } from '../../infra/core-client/run';\nimport { readFileSync } from 'node:fs';\nimport lodash from 'lodash';\n",
-      'src/infra/core-client/run.ts': 'export const run = 1;\n'
-    });
-    expect(checkProject(root).errors).toEqual([
-      'src/ui/shell/Shell.tsx：ui 层不能引入 electron',
-      'src/ui/shell/Shell.tsx：ui 层不能引用 infra 层的 ../../infra/core-client/run',
-      'src/ui/shell/Shell.tsx：ui 层不能使用 Node 内置模块 node:fs',
-      'src/ui/shell/Shell.tsx：ui 层不能引用第三方包 lodash'
-    ]);
-  });
-
-  it('渲染 Worker 与它依赖的文件可以引用 ui 层的其他文件与 contracts 的类型', () => {
-    const root = createProject({
-      'src/contracts/stream-ports/stream-messages.ts': 'export interface FrameMessage { frame: number }\n',
-      'src/ui/runtime/render-worker.ts': "import { parse } from './frame-receiver';\nimport type { FrameMessage } from '../../contracts/stream-ports/stream-messages';\nexport const run = (m: FrameMessage) => parse(m);\n",
-      'src/ui/runtime/frame-receiver.ts': 'export const parse = (value: unknown) => value;\n',
-      'src/ui/runtime/RuntimePage.tsx': "import { useState } from 'react';\nimport './ember-run.css';\nexport const Page = useState;\n",
-      'src/bootstrap/renderer/modules/runtime.ts': "import { Page } from '../../../ui/runtime/RuntimePage';\nexport const m = Page;\n",
-      'src/bootstrap/renderer/module-list.ts': "import { m } from './modules/runtime';\nexport const list = [m];\n"
-    });
-    expect(checkProject(root).errors).toEqual([]);
-  });
-
-  it('渲染 Worker 及其依赖的文件不能引用 react、组件库、界面文件与样式', () => {
-    const root = createProject({
-      'src/ui/runtime/render-worker.ts': "import { helper } from './helper';\nimport { Page } from './RuntimePage';\nimport './worker.css';\nexport const run = [helper, Page];\n",
-      'src/ui/runtime/helper.ts': "import { useState } from 'react';\nimport { Button } from '@rujianjs/ui-kit';\nexport const helper = [useState, Button];\n",
-      'src/ui/runtime/RuntimePage.tsx': 'export const Page = 1;\n',
-      'src/bootstrap/renderer/modules/runtime.ts': "import { run } from '../../../ui/runtime/render-worker';\nexport const m = run;\n",
-      'src/bootstrap/renderer/module-list.ts': "import { m } from './modules/runtime';\nexport const list = [m];\n"
-    });
-    const { errors } = checkProject(root);
-    expect(errors).toContain('src/ui/runtime/helper.ts：渲染 Worker（ui/runtime/render-worker.ts）依赖的文件不能引用 react');
-    expect(errors).toContain('src/ui/runtime/helper.ts：渲染 Worker（ui/runtime/render-worker.ts）依赖的文件不能引用 @rujianjs/ui-kit');
-    expect(errors).toContain('src/ui/runtime/render-worker.ts：渲染 Worker 不能依赖界面文件 ui/runtime/RuntimePage.tsx');
-    expect(errors).toContain('src/ui/runtime/render-worker.ts：渲染 Worker 不能依赖界面文件 ui/runtime/worker.css');
-  });
-
-  it('渲染 Worker 不能引用 electron 与 Node 内置模块，入口只能放在 ui 层', () => {
-    const root = createProject({
-      'src/ui/runtime/render-worker.ts': "import { app } from 'electron';\nimport { readFileSync } from 'node:fs';\nexport const run = [app, readFileSync];\n",
-      'src/shared/bad-worker.ts': 'export const run = 1;\n'
-    });
-    const { errors } = checkProject(root);
-    expect(errors).toContain('src/ui/runtime/render-worker.ts：ui 层不能引入 electron');
-    expect(errors).toContain('src/ui/runtime/render-worker.ts：ui 层不能使用 Node 内置模块 node:fs');
-    expect(errors).toContain('src/shared/bad-worker.ts：渲染 Worker 的入口只能放在 ui 层');
-  });
-
   it('发现没有登记的模块', () => {
     const root = createProject({
       'schema/demo.schema.json': JSON.stringify({ module: 'demo', types: {}, requests: {}, events: {} }),
-      'src/ui/demo/Page.tsx': 'export const Page = 1;\n',
-      'src/bootstrap/renderer/modules/demo.ts': 'export const x = 1;\n',
-      'src/bootstrap/renderer/module-list.ts': 'export const list = [];\n'
+      'core/src/logic/other/service.hpp': '#pragma once\n',
+      'core/src/bootstrap/module-list.cpp': '{"stale", registerStale},\n'
     });
     expect(checkProject(root).errors).toEqual([
       '模块 demo 有 Schema，但没有登记在 core/src/bootstrap/module-list.cpp',
-      '模块 demo 有 Schema，但没有登记在 src/bootstrap/main/module-list.ts',
-      '模块 demo 有 src/ui 目录，但没有登记在 src/bootstrap/renderer/module-list.ts',
-      'src/bootstrap/renderer/modules/demo.ts 没有登记在上一级目录的 module-list.ts'
+      '模块 other 有 core/src/logic 目录，但没有登记在 core/src/bootstrap/module-list.cpp',
+      '模块 stale 登记在 C++ 模块清单中，但没有 core/src/bootstrap/modules/stale.cpp'
     ]);
   });
-
   it('官方插件目录：目录名等于清单里的 id，只含 manifest.json、main.js、icon.png', () => {
     const root = createProject({
       'plugins/good/manifest.json': JSON.stringify({ id: 'good' }),

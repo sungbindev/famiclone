@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：做法与 Chromium 的 ProcessSingleton（Windows）完全相同，所以与 Electron 外壳互通，两个外壳不能同时运行：
+ * 备注：做法同 Chromium 的 ProcessSingleton（Windows）：
  *       全局互斥量 Local\ChromeProcessSingletonStartup! 保护创建过程；用户数据目录下的 lockfile（独占打开、关闭时删除）保证同一份数据只有一个进程；
  *       只接收消息的窗口（类名 Chrome_MessageWindow，标题是用户数据目录的路径）接收后启动进程用 WM_COPYDATA 发来的 START 命令并回复 TRUE；
  *       必须在界面线程创建与使用，并且要有消息循环。
@@ -33,7 +33,7 @@ enum class SingleInstanceResult {
 class SingleInstance {
  public:
   /**
-   * @param userDataDirectory 用户数据目录（与 Electron 外壳使用的路径写法相同）。
+   * @param userDataDirectory 用户数据目录。
    * @param onSecondInstance 别的进程启动并通知本进程时调用（在界面线程）：把窗口提到前面。
    */
   SingleInstance(std::filesystem::path userDataDirectory, std::function<void()> onSecondInstance);

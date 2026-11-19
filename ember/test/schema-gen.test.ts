@@ -42,18 +42,11 @@ afterEach(() => {
 });
 
 describe('generate：system 模块', () => {
-  it('生成 TypeScript、C++ 与汇总文件', () => {
+  it('生成 C++ 契约', () => {
     const root = createProject({});
     cpSync(join(REPO_ROOT, 'schema', 'system.schema.json'), join(root, 'schema', 'system.schema.json'));
     const result = generate(root);
     expect(result.modules).toEqual(['system']);
-
-    const ts = read(root, 'src', 'contracts', 'system', 'generated', 'system.ts');
-    expect(ts).toContain("version: 'system.version'");
-    expect(ts).toContain('export interface SystemVersionResult');
-    expect(ts).toContain('appVersion: string;');
-    expect(ts).toContain('coreVersion: string;');
-    expect(ts).toContain('export const SYSTEM_SCHEMA: ModuleSchema');
 
     const header = read(root, 'core', 'src', 'contracts', 'system', 'generated', 'system.hpp');
     expect(header).toContain('namespace ember::contracts::system {');
@@ -64,10 +57,6 @@ describe('generate：system 模块', () => {
     expect(source).toContain('namespace json_fields = ::ember::shared::json_fields;');
     expect(source).toContain('::ember::shared::SchemaError');
 
-    const api = read(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts');
-    expect(api).toMatch(/CORE_REQUEST_NAMES: readonly string\[\] = \[\s*'system\.version'\s*\]/);
-    expect(api).toContain('version: (params: CoreParams<\'system.version\'>) => Promise<CoreResult<\'system.version\'>>;');
-    expect(api).toContain('CORE_SCHEMAS: readonly ModuleSchema[] = [SYSTEM_SCHEMA]');
   });
 
   it('不含插件 SDK 的输出，内容没变时不改写，模块删除后清理生成目录', () => {
@@ -77,20 +66,16 @@ describe('generate：system 模块', () => {
     expect(existsSync(join(root, 'sdk'))).toBe(false);
     rmSync(join(root, 'schema', 'system.schema.json'));
     const removed = generate(root).removed;
-    expect(removed.length).toBe(2);
-    expect(existsSync(join(root, 'src', 'contracts', 'system', 'generated'))).toBe(false);
+    expect(removed.length).toBe(1);
+    expect(existsSync(join(root, 'core', 'src', 'contracts', 'system', 'generated'))).toBe(false);
   });
 });
 
 describe('generate：mappers 模块', () => {
-  it('install 只能由主进程发起，其他请求进入界面请求名单，事件与类型照常生成', () => {
+  it('install 只能由外壳发起，请求与类型照常生成', () => {
     const root = createProject({});
     cpSync(join(REPO_ROOT, 'schema', 'mappers.schema.json'), join(root, 'schema', 'mappers.schema.json'));
     expect(generate(root).modules).toEqual(['mappers']);
-    const api = read(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts');
-    expect(api).toMatch(/CORE_REQUEST_NAMES: readonly string\[\] = \[\s*'mappers\.list',\s*'mappers\.info',\s*'mappers\.uninstall',\s*'mappers\.setEnabled',\s*'mappers\.reload'\s*\]/);
-    expect(api).not.toMatch(/\n\s+install: \(params/);
-    expect(api).toContain("'mappers.changed'");
     const header = read(root, 'core', 'src', 'contracts', 'mappers', 'generated', 'mappers.hpp');
     expect(header).toContain('MAPPERS_INSTALL_REQUEST = "mappers.install"');
     expect(header).toContain('struct MappersInstallParams');
@@ -172,23 +157,19 @@ describe('generate：请求使用范围', () => {
     events: {}
   };
 
-  it('debugOnly 与 mainOnly 的请求不进入界面请求名单与 CoreApi', () => {
+  it('原生外壳的请求目录按界面可发起、只能由外壳发起、只经调试服务开放分类', () => {
     const root = createProject({ demo });
+    mkdirSync(join(root, 'win32', 'app'), { recursive: true });
     generate(root);
-    const api = read(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts');
-    expect(api).toMatch(/CORE_REQUEST_NAMES: readonly string\[\] = \[\s*'demo\.open'\s*\]/);
-    expect(api).not.toContain('peek: (params');
-    expect(api).not.toContain('openPath: (params');
-    expect(api).toContain('open: (params');
+    const catalog = read(root, 'win32', 'app', 'src', 'contracts', 'core-gateway', 'generated', 'request-catalog.hpp');
+    expect(catalog).toContain('CatalogEntry{"demo.open", RequestKind::Ui}');
+    expect(catalog).toContain('CatalogEntry{"demo.peek", RequestKind::DebugOnly}');
+    expect(catalog).toContain('CatalogEntry{"demo.openPath", RequestKind::MainOnly}');
   });
 
-  it('它们仍生成请求名与类型，核心的请求名常量也照常生成', () => {
+  it('它们仍生成请求名常量', () => {
     const root = createProject({ demo });
     generate(root);
-    const ts = read(root, 'src', 'contracts', 'demo', 'generated', 'demo.ts');
-    expect(ts).toContain("peek: 'demo.peek'");
-    expect(ts).toContain("'demo.peek': { params: DemoPeekParams; result: DemoPeekResult };");
-    expect(ts).toContain('"debugOnly": true');
     expect(read(root, 'core', 'src', 'contracts', 'demo', 'generated', 'demo.hpp')).toContain('DEMO_PEEK_REQUEST = "demo.peek"');
   });
 

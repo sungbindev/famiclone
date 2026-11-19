@@ -25,7 +25,7 @@ constexpr const char* kTitle = "首选项";
 
 }  // namespace
 
-contracts::ShellModule createPreferencesModule(PreferencesController& preferences, BiosController& bios) {
+contracts::ShellModule createPreferencesModule(PreferencesController& preferences, BiosController& bios, UserDataController& userData) {
   contracts::ShellModule module;
   module.name = "preferences";
 
@@ -50,12 +50,14 @@ contracts::ShellModule createPreferencesModule(PreferencesController& preference
   item.command = kPreferencesOpenCommand;
   module.menuItems.push_back(std::move(item));
 
-  module.attach = [&preferences, &bios](contracts::ShellApi& shell) -> std::function<void()> {
+  module.attach = [&preferences, &bios, &userData](contracts::ShellApi& shell) -> std::function<void()> {
     auto stopPreferences = preferences.attach(shell);
     auto stopBios = bios.attach(shell);
-    return [stopPreferences = std::move(stopPreferences), stopBios = std::move(stopBios)] {
+    auto stopUserData = userData.attach(shell);
+    return [stopPreferences = std::move(stopPreferences), stopBios = std::move(stopBios), stopUserData = std::move(stopUserData)] {
       stopPreferences();
       stopBios();
+      stopUserData();
     };
   };
   return module;

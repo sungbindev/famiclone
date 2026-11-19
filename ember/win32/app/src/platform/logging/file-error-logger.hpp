@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：字段与 Electron 外壳的 src/platform/logging/file-error-logger.ts、核心的 file-error-log.cpp 一致（time、process、module、code、message、stack、context）；
+ * 备注：字段与核心的 file-error-log.cpp 一致（time、process、module、code、message、stack、context）；
  *       任意线程可调用，按调用顺序写入；写入失败时丢弃该条，不再写日志，不抛异常；外壳的 process 字段固定为 main。
  * ------------------------------------------------------------------------
  */

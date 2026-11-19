@@ -5,14 +5,14 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：用到的图标 = Ember 界面代码（tools/kit-components.json 的 iconSources）与已登记组件目录的源码里出现的 icon<名称> 标识符中，在图标数据里存在的那些；
+ * 备注：用到的图标 = 已登记组件目录的源码里出现的 icon<名称> 标识符中在图标数据里存在的那些，加上 tools/kit-components.json 的 extraIcons（应用自己用到的图标，需要新图标时在这里加）；
  *       图标数据的路径是 24×24 画布内的 SVG 路径，字符串是描边路径，对象还可带 fill、stroke、opacity。
  *       用法：node tools/gen-icons.mjs 写文件，node tools/gen-icons.mjs --check 只检查已提交的文件与生成结果一致。
  * ------------------------------------------------------------------------
  */
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { findWebKit, KIT_ROOT, readManifest } from './lib/kit-source.mjs';
@@ -61,11 +61,12 @@ function readIconData(file) {
  */
 function findUsedIcons(webKit, known) {
   const manifest = readManifest();
-  const directories = [
-    ...manifest.iconSources.map((relative) => resolve(KIT_ROOT, relative)),
-    ...manifest.components.map((component) => join(webKit, 'src', 'components', component))
-  ];
+  const directories = manifest.components.map((component) => join(webKit, 'src', 'components', component));
   const used = new Set();
+  for (const name of manifest.extraIcons) {
+    if (!known.has(name)) throw new Error(`kit-components.json 的 extraIcons 里的 ${name} 不在图标数据里`);
+    used.add(name);
+  }
   for (const directory of directories) {
     for (const file of listSources(directory)) {
       for (const match of readFileSync(file, 'utf8').matchAll(/\bicon[A-Z][A-Za-z0-9]*\b/g)) if (known.has(match[0])) used.add(match[0]);

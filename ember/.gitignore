@@ -1,9 +1,7 @@
 node_modules/
-.vite/
-resources/icon.icns
-src/contracts/*/generated/
 core/src/contracts/*/generated/
 win32/app/src/contracts/*/generated/
+win32/app/src/bootstrap/generated/
 coverage/
 *.log
 !core/test/data/**/*.log

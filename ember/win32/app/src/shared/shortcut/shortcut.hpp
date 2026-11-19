@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：写法与组件库的 shortcutFromEvent 一致：修饰键按 Ctrl、Shift、Alt 排列，再接一个按键；检查规则同 Electron 外壳的 build-registry.ts：
+ * 备注：写法与组件库的 shortcutFromEvent 一致：修饰键按 Ctrl、Shift、Alt 排列，再接一个按键；检查规则：
  *       写法合格、不与保留组合（Esc、Alt+F4、Ctrl+A 等）和菜单的 Alt+助记字母冲突、必须含 Ctrl 或 Alt（F1 至 F24 除外）。
  * ------------------------------------------------------------------------
  */

@@ -25,7 +25,9 @@
 #include <vector>
 
 #include "bootstrap/dialog-host.hpp"
-#include "bootstrap/resource-locations.hpp"
+#include "bootstrap/third-party-notices.hpp"
+#include "bootstrap/update-apply.hpp"
+#include "bootstrap/user-data-move.hpp"
 #include "entry/cartridges/cartridge-handlers.hpp"
 #include "entry/machines/machine-handlers.hpp"
 #include "entry/main-requests/main-request-router.hpp"
@@ -36,17 +38,27 @@
 #include "entry/system/system-handlers.hpp"
 #include "infra/core-client/in-process-core-gateway.hpp"
 #include "infra/core-client/latest-frame-slot.hpp"
+#include "infra/dialogs/message-box-confirmation.hpp"
 #include "infra/dialogs/remembering-file-dialog.hpp"
 #include "infra/input/xinput-gamepad-reader.hpp"
 #include "infra/directories/explorer-directory.hpp"
 #include "infra/display/screen-host-adapter.hpp"
 #include "infra/dropped-files/memory-dropped-files-service.hpp"
+#include "infra/help/archive-help-site.hpp"
+#include "infra/help/local-help-viewer.hpp"
 #include "infra/help/unavailable-help-viewer.hpp"
 #include "infra/last-directories/file-last-directories-service.hpp"
+#include "infra/links/shell-external-links.hpp"
 #include "infra/logging/file-error-logger-adapter.hpp"
+#include "infra/plugins/bundled-plugins.hpp"
 #include "infra/recent-cartridges/file-recent-cartridges-service.hpp"
+#include "infra/resources/zip-archive.hpp"
 #include "infra/shell-state/file-shell-state-service.hpp"
-#include "infra/updates/unsupported-app-updater.hpp"
+#include "infra/updates/engine-app-updater.hpp"
+#include "infra/updates/signed-exe-update-engine.hpp"
+#include "infra/updates/winhttp-update-transport.hpp"
+#include "platform/network/https-client.hpp"
+#include "infra/user-data/user-data-location-adapter.hpp"
 #include "logic/debug/debug-controller.hpp"
 #include "logic/debug/debug-module.hpp"
 #include "logic/input/input-controller.hpp"
@@ -54,21 +66,33 @@
 #include "logic/media/media-module.hpp"
 #include "logic/input/gamepad-settings-controller.hpp"
 #include "logic/input/input-module.hpp"
+#include "logic/mappers/mappers-controller.hpp"
+#include "logic/mappers/mappers-module.hpp"
 #include "logic/preferences/bios-controller.hpp"
 #include "logic/preferences/preferences-controller.hpp"
 #include "logic/preferences/preferences-module.hpp"
+#include "logic/preferences/user-data-controller.hpp"
 #include "logic/runtime/runtime-controller.hpp"
 #include "logic/runtime/runtime-module.hpp"
 #include "logic/shell/shell-controller.hpp"
 #include "logic/shell/shell-module.hpp"
+#include "logic/system/about-controller.hpp"
+#include "logic/system/auto-update-check.hpp"
+#include "logic/system/release-notes-prompt.hpp"
+#include "logic/system/system-module.hpp"
+#include "logic/system/update-controller.hpp"
 #include "platform/dialogs/message-box.hpp"
 #include "platform/dialogs/system-dialogs.hpp"
+#include "platform/files/directory-access.hpp"
 #include "platform/files/json-file-reader.hpp"
 #include "platform/files/json-file-store.hpp"
 #include "platform/files/known-folders.hpp"
+#include "platform/files/user-data-location.hpp"
 #include "platform/logging/file-error-logger.hpp"
 #include "platform/process/environment.hpp"
 #include "platform/process/single-instance.hpp"
+#include "platform/resources/embedded-archive.hpp"
+#include "platform/shell/url-opener.hpp"
 #include "platform/text/wide-text.hpp"
 #include "platform/theme/system-theme.hpp"
 #include "platform/threading/ui-thread.hpp"
@@ -79,14 +103,17 @@
 #include "rujian/ui/window.hpp"
 #include "shared/preferences/allow-multiple-instances.hpp"
 #include "shared/shortcut/shortcut.hpp"
+#include "shared/update/update-public-key.hpp"
 #include "ui/media/media-panel-content.hpp"
 #include "ui/input/gamepad-settings-content.hpp"
+#include "ui/mappers/mappers-content.hpp"
 #include "ui/preferences/preferences-content.hpp"
 #include "ui/runtime/runtime-panel-content.hpp"
 #include "ui/runtime/screen-widget.hpp"
 #include "ui/shell/app-logo.hpp"
 #include "ui/shell/main-window-view.hpp"
 #include "ui/shell/shell-view.hpp"
+#include "ui/system/about-content.hpp"
 
 namespace ember::win32::bootstrap {
 
@@ -101,8 +128,20 @@ constexpr double kWindowWidth = 524;
 constexpr double kWindowHeight = 500;
 /** 显示窗口前最多等保存的主题多久（毫秒），核心起不来时不能一直不显示。 */
 constexpr unsigned kThemeWaitMilliseconds = 2000;
-/** 主进程错误的错误码，同 Electron 外壳。 */
+/** 主进程错误的错误码。 */
 constexpr const char* kMainErrorCode = "shell.mainError";
+/** 升级地址：阿里云 OSS 的 famiclone Bucket 下的 updates/ember/windows/（里面有 latest.json 与 Ember-<版本号>.exe）；只写在这里，界面与首选项都不能指定。 */
+constexpr const char* kUpdateFeedUrl = "https://famiclone.oss-cn-beijing.aliyuncs.com/updates/ember/windows";
+/** 环境变量 EMBER_UPDATE_FEED_URL 可以改用别的升级地址（只接受 https 或指向 127.0.0.1 的 http，本地演练升级流程用；签名照常校验，换了地址也无法让程序接受没签名的文件）。 */
+constexpr const char* kUpdateFeedOverrideVariable = "EMBER_UPDATE_FEED_URL";
+/** 自动检查更新与启动的间隔（毫秒）。 */
+constexpr unsigned kAutoUpdateDelayMilliseconds = 5000;
+/** 是否开启升级：只有发布配置（npm run package:win）才开启，开发与测试的构建不升级。 */
+#ifdef EMBER_APP_UPDATES
+constexpr bool kUpdatesEnabled = true;
+#else
+constexpr bool kUpdatesEnabled = false;
+#endif
 
 /** 主题来源转成要显示的主题；跟随系统时读系统设置。 */
 rujian::ui::ThemeName resolveTheme(entry::ThemeSource source) {
@@ -192,13 +231,24 @@ unsigned currentModifiers() {
 }  // namespace
 
 int runApplication(const shared::LaunchArguments& launch) {
-  std::filesystem::path userData = launch.userDataDirectory ? platform::pathFromUtf8(*launch.userDataDirectory) : platform::defaultUserDataDirectory();
+  // 移动用户数据的运行方式：只做移动并重新启动，不打开窗口
+  if (launch.moveUserData) return runUserDataMove(launch);
+  // 应用升级的运行方式：暂存的新程序覆盖旧程序并启动它，不打开窗口
+  if (launch.applyUpdateTarget) return runUpdateApply(launch);
+
+  // 用户数据目录：启动参数指定的优先；否则软件所在目录旁有 ember-data 目录时用它，没有就用应用数据目录
+  const std::filesystem::path profileDirectory = platform::defaultUserDataDirectory();
+  const std::filesystem::path executable = platform::executablePath();
+  platform::UserDataResolution resolution = platform::resolveUserDataDirectory(executable.parent_path(), profileDirectory);
+  if (launch.userDataDirectory) resolution.directory = platform::pathFromUtf8(*launch.userDataDirectory);
+  std::filesystem::path userData = resolution.directory;
   if (userData.empty()) {
     platform::showErrorMessage("Ember", "无法启动：找不到用户数据目录。");
     return 1;
   }
   std::error_code ignored;
   if (const auto absolute = std::filesystem::absolute(userData, ignored); !ignored) userData = absolute;
+  resolution.directory = userData;
 
   platform::UiThread ui;
   /** 主窗口句柄：单实例的通知与文件选择窗口的父窗口都用它，窗口创建后才有值。 */
@@ -239,12 +289,57 @@ int runApplication(const shared::LaunchArguments& launch) {
   infra::RememberingFileDialog fileDialog(systemDialogs, lastDirectories);
   infra::ExplorerDirectory logDirectory(userData / "logs");
   infra::ExplorerDirectory biosDirectory(userData / "bios");
-  infra::UnsupportedAppUpdater updater;
-  infra::UnavailableHelpViewer help;
+  // 升级：发布配置里、且软件所在目录能写（新程序要覆盖当前程序）时才支持，否则状态固定是不支持
+  infra::WinHttpUpdateTransport updateTransport;
+  infra::SignedExeUpdateEngine::Options updateOptions;
+  updateOptions.supported = kUpdatesEnabled && platform::canCreateFilesIn(executable.parent_path());
+  updateOptions.feedUrl = kUpdateFeedUrl;
+  if (const auto override = platform::environmentVariable(kUpdateFeedOverrideVariable); override && platform::isAllowedHttpUrl(*override)) updateOptions.feedUrl = *override;
+  while (!updateOptions.feedUrl.empty() && updateOptions.feedUrl.back() == '/') updateOptions.feedUrl.pop_back();
+  updateOptions.currentVersion = EMBER_APP_VERSION;
+  updateOptions.stagingDirectory = userData / "updates";
+  updateOptions.executable = executable;
+  updateOptions.publicModulus.assign(std::begin(shared::kUpdatePublicModulus), std::end(shared::kUpdatePublicModulus));
+  updateOptions.publicExponent.assign(std::begin(shared::kUpdatePublicExponent), std::end(shared::kUpdatePublicExponent));
+  updateOptions.quit = [&mainWindow] {
+    if (mainWindow != nullptr) PostMessageW(mainWindow, WM_CLOSE, 0, 0);
+  };
+  infra::SignedExeUpdateEngine updateEngine(std::move(updateOptions), ui, updateTransport);
+  infra::EngineAppUpdater updater(updateEngine, ui);
+  infra::UserDataLocationAdapter userDataLocation(resolution, launch.userDataDirectory.has_value(), executable, profileDirectory);
+  infra::ExplorerDirectory userDataDirectory(userData);
+  infra::MessageBoxConfirmation confirmation;
 
-  const ResourceLocations resources = locateResources(platform::executableDirectory());
+  // 随程序嵌进可执行文件的资源包：预装插件释放到用户数据目录下的 bundled-plugins，帮助文档站点由本机服务直接从包里读
+  std::unique_ptr<infra::ZipArchive> resources;
+  if (const auto embedded = platform::embeddedResourceArchive()) {
+    try {
+      resources = std::make_unique<infra::ZipArchive>(embedded->data, embedded->size);
+    } catch (const std::runtime_error& error) {
+      logger.write({std::nullopt, kMainErrorCode, error.what(), nlohmann::json{{"source", "resources"}}});
+    }
+  }
+  std::optional<std::string> bundledPlugins;
+  if (resources) {
+    const std::filesystem::path bundledDirectory = userData / "bundled-plugins";
+    const std::string error = infra::extractBundledPlugins(*resources, bundledDirectory);
+    if (!error.empty()) logger.write({std::nullopt, kMainErrorCode, error, nlohmann::json{{"source", "bundledPlugins"}}});
+    std::error_code existsError;
+    if (std::filesystem::is_directory(bundledDirectory, existsError)) bundledPlugins = platform::pathToUtf8(bundledDirectory);
+  }
+  // 帮助文档：有资源包时用本机服务加默认浏览器打开，没有时提示不可用
+  infra::ShellExternalLinks externalLinks;
+  std::unique_ptr<infra::ArchiveHelpSite> helpSite;
+  std::unique_ptr<infra::LocalHelpViewer> localHelp;
+  if (resources) {
+    helpSite = std::make_unique<infra::ArchiveHelpSite>(*resources);
+    localHelp = std::make_unique<infra::LocalHelpViewer>(*helpSite, externalLinks, confirmation, platform::defaultBrowserIsInternetExplorer);
+  }
+  infra::UnavailableHelpViewer noHelp;
+  contracts::HelpViewer& help = localHelp ? static_cast<contracts::HelpViewer&>(*localHelp) : noHelp;
+
   infra::LatestFrameSlot frames(ui);
-  infra::InProcessCoreGateway core(infra::InProcessCoreOptions{platform::pathToUtf8(userData), EMBER_APP_VERSION, resources.plugins, resources.bios, resources.ffmpeg, launch.debugPort, launch.debugToken}, ui, frames, logger);
+  infra::InProcessCoreGateway core(infra::InProcessCoreOptions{platform::pathToUtf8(userData), EMBER_APP_VERSION, bundledPlugins, launch.debugPort, launch.debugToken}, ui, frames, logger);
 
   entry::MainRequestRouter router(core, logger);
   router.add(entry::createCartridgeHandlers({core, fileDialog, droppedFiles, recentCartridges}));
@@ -261,6 +356,10 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::MediaController media(router, core);
     logic::PreferencesController preferencesController(router, core);
     logic::BiosController biosController(router, core);
+    logic::UserDataController userDataController(userDataLocation, userDataDirectory, confirmation);
+    logic::MappersController mappersController(router, core, confirmation);
+    logic::UpdateController updateController(router, updater);
+    logic::AboutController aboutController(router, core, externalLinks, bootstrap::thirdPartyNotices(), std::string(EMBER_APP_BUILD_DATE) + " " + EMBER_APP_BUILD_CLOCK);
     infra::XInputGamepadReader gamepadReader;
     logic::GamepadSettingsController gamepadSettings(router, core, gamepadReader);
     logic::DebugController debug(router, core);
@@ -270,10 +369,13 @@ int runApplication(const shared::LaunchArguments& launch) {
     const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
     const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
-    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, biosController), logic::createInputModule(gamepadSettings)});
+    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, biosController, userDataController), logic::createInputModule(gamepadSettings), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
-    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &biosController] { return std::make_unique<ui::PreferencesContent>(preferencesController, biosController); }, true);
+    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &biosController, &userDataController] { return std::make_unique<ui::PreferencesContent>(preferencesController, biosController, userDataController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
+    dialogs.setBody(logic::kMappersDialogId, [&mappersController] { return std::make_unique<ui::MappersContent>(mappersController); }, true);
+    dialogs.setBody(
+        logic::kAboutDialogId, [&aboutController] { return std::make_unique<ui::AboutContent>(aboutController, std::make_unique<ui::AppLogo>(platform::renderAppIcon)); }, true);
     dialogs.setKeyCapture(logic::kGamepadSettingsDialogId, [&gamepadSettings](const std::string& code) { return gamepadSettings.keyPressed(code); });
     logic::ShellController shell(std::move(registry), windowControl, dialogs, notifier, shellState, droppedFiles);
     std::optional<infra::ScreenHostAdapter> screenHost;
@@ -289,7 +391,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     auto content = std::make_unique<ui::MainWindowView>(kAppName);
     ui::MainWindowView* view = content.get();
     window.root().setContent(std::move(content));
-    // 标题栏左边的应用标志：可执行文件自带的图标，与 Electron 外壳是同一张图
+    // 标题栏左边的应用标志：可执行文件自带的图标
     view->titleBar().setLogo(std::make_unique<ui::AppLogo>(platform::renderAppIcon));
     view->setBorderVisible(customFrame || !platform::FramelessFrame::compositionEnabled());
 
@@ -435,6 +537,16 @@ int runApplication(const shared::LaunchArguments& launch) {
         [&logger](const std::string& message) { logger.write({std::nullopt, kMainErrorCode, message, nlohmann::json{{"source", "themeSync"}}}); }, showWindow);
 
     core.start();
+    // 自动检查更新：核心就绪后读首选项 update.autoCheck，开启时等几秒再检查一次；升级后第一次启动新版本时打开更新记录
+    logic::AutoUpdateCheck autoUpdateCheck(
+        router, core, updater,
+        [&ui](unsigned delay, std::function<void()> task) {
+          const unsigned timer = ui.postDelayed(delay, std::move(task));
+          return std::function<void()>([&ui, timer] { ui.cancelDelayed(timer); });
+        },
+        kAutoUpdateDelayMilliseconds);
+    autoUpdateCheck.start();
+    logic::showReleaseNotesOnce(updater, EMBER_APP_VERSION, shellState, help, logger);
     const auto diagnosticsPath = platform::environmentVariable("EMBER_WIN_DIAGNOSTICS");
     const auto diagnosticsStart = std::chrono::steady_clock::now();
     if (diagnosticsPath) screenHost->enableLatencyRecording();

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：默认的用户数据目录与 Electron 外壳相同，是“<漫游应用数据>\Ember”（Electron 用产品名 Ember 作目录名），两个外壳共用同一份数据。
+ * 备注：没有 ember-data 目录时，默认的用户数据目录是“<漫游应用数据>\Ember”。
  * ------------------------------------------------------------------------
  */
 
@@ -20,6 +20,9 @@ namespace ember::win32::platform {
 
 /** 默认的用户数据目录：<漫游应用数据>\Ember；取不到漫游应用数据目录时为空路径。 */
 [[nodiscard]] std::filesystem::path defaultUserDataDirectory();
+
+/** 当前可执行文件的完整路径。 */
+[[nodiscard]] std::filesystem::path executablePath();
 
 /** 当前可执行文件所在的目录。 */
 [[nodiscard]] std::filesystem::path executableDirectory();

@@ -15,12 +15,28 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { WIN32_BUILD_DIRECTORY } from '../build/build-paths.mjs';
-import { projectRoot } from './dev-support.mjs';
 
-export { parseArguments, projectRoot, sleep } from './dev-support.mjs';
+/** Ember 项目根目录。 */
+export const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+/** 解析命令行：--名称=值 或 --名称。 */
+export function parseArguments(argv) {
+  const options = new Map();
+  for (const argument of argv) {
+    const match = /^--([^=]+)(?:=(.*))?$/.exec(argument);
+    if (match) options.set(match[1], match[2] ?? 'true');
+  }
+  return options;
+}
+
+/** 等待指定毫秒。 */
+export function sleep(milliseconds) {
+  return new Promise((done) => setTimeout(done, milliseconds));
+}
 
 /** 默认窗口的逻辑尺寸（与 bootstrap/application.cpp 的 kWindowWidth、kWindowHeight 一致）。 */
 export const WINDOW_LOGICAL = { width: 524, height: 500 };
@@ -171,7 +187,7 @@ function Get-Scale { $r = Get-Rect; ($r.Right - $r.Left) / ${WINDOW_LOGICAL.widt
  * 在窗口上依次执行步骤，返回每个 RESULT 行解析成的对象。
  * 步骤写法（坐标是窗口的逻辑像素）：click:x:y、move:x:y、key:名称（F7、F8、F9、F11、ESC、ENTER、UP、DOWN）、chord:修饰键:名称（如 chord:CTRL:COMMA）、type:文字（逐个字母按键）、wait:毫秒、
  * count:名称:x1:y1:x2:y2（统计区域里的亮像素数）、style:名称（读窗口的置顶状态、宽高与位置）、close（正常关闭窗口）；
- * 对话框：dlgfind:名称（找本进程的对话框并返回是否找到）、dlgwidth:逻辑宽度（告诉脚本对话框的逻辑宽度，用来换算缩放）、dclick:x:y（点对话框里的位置，逻辑像素）、dlgvisible:名称。
+ * 对话框：dlgfind:名称（找本进程的对话框并返回是否找到）、dlgwidth:逻辑宽度（告诉脚本对话框的逻辑宽度，用来换算缩放）、dclick:x:y（点对话框里的位置，逻辑像素）、dlgvisible:名称、dshot:路径（把找到的对话框截成 PNG，路径里的盘符冒号照常写）。
  * @param {number} pid 进程号。
  * @param {string[]} steps 步骤。
  * @returns {Map<string, string>} 名称对应的结果文字。
@@ -219,6 +235,13 @@ foreach ($step in $steps) {
       $bmp = New-Object System.Drawing.Bitmap $w, $hgt
       $g = [System.Drawing.Graphics]::FromImage($bmp)
       $g.CopyFromScreen($r.Left, $r.Top, 0, 0, (New-Object System.Drawing.Size $w, $hgt))
+      $g.Dispose(); $bmp.Save(($p[1] + ':' + $p[2]), [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+    }
+    'dshot' {
+      $dr = New-Object W32+RECT; [void][W32]::GetWindowRect($dlg, [ref]$dr); $w = $dr.Right - $dr.Left; $hgt = $dr.Bottom - $dr.Top
+      $bmp = New-Object System.Drawing.Bitmap $w, $hgt
+      $g = [System.Drawing.Graphics]::FromImage($bmp)
+      $g.CopyFromScreen($dr.Left, $dr.Top, 0, 0, (New-Object System.Drawing.Size $w, $hgt))
       $g.Dispose(); $bmp.Save(($p[1] + ':' + $p[2]), [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
     }
   }

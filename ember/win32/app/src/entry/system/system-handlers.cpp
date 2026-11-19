@@ -55,7 +55,7 @@ MainRequestHandlers createSystemHandlers(SystemDependencies dependencies) {
 
   handlers["system.installUpdate"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
     const ParamReader reader(params, {});
-    done(dependencies.updater.install() ? contracts::CoreReply::success(nlohmann::json::object()) : contracts::CoreReply::failure("system.updateNotReady", "还没有下载好的新版本"));
+    done(dependencies.updater.install() ? contracts::CoreReply::success(nlohmann::json::object()) : contracts::CoreReply::failure("system.updateNotReady", "没有可安装的新版本，或新版本无法启动"));
   };
 
   return handlers;

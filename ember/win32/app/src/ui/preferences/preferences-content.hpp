@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：对应 Electron 外壳的 PreferencesPage.tsx、PreferenceRow.tsx 与 BiosSettings.tsx；文字与可用状态取自模型，设置项由核心登记，界面不认识具体的设置项；
+ * 备注：文字与可用状态取自模型，设置项由核心登记，界面不认识具体的设置项；
  *       页面不显示操作结果：保存失败用通知（由控制器发出），控件恢复成模型里的值；输入框在回车或失焦时提交，整数不合格时只把输入框标红并在行内给出说明；
  *       模型变化时：分组或行的结构变了才重建右边的内容，只有取值变了就原地更新（输入中的内容不被无关的变化冲掉）；规则见 docs/05-界面.md 第 4.5 节。
  * ------------------------------------------------------------------------
@@ -67,8 +67,9 @@ class PreferencesContent final : public rujian::ui::Widget {
   /**
    * @param preferences 首选项模型。
    * @param bios “机型与 BIOS”分组的模型。
+   * @param userData “应用”分组里“用户数据目录”一行的模型。
    */
-  PreferencesContent(contracts::PreferencesModel& preferences, contracts::BiosModel& bios);
+  PreferencesContent(contracts::PreferencesModel& preferences, contracts::BiosModel& bios, contracts::UserDataModel& userData);
   ~PreferencesContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
@@ -84,17 +85,23 @@ class PreferencesContent final : public rujian::ui::Widget {
   [[nodiscard]] const std::vector<BiosWidgets>& biosRows() const { return biosRows_; }
   /** “打开 BIOS 目录”链接；当前不是“机型与 BIOS”分组时为空。 */
   [[nodiscard]] rujian::ui::Button* openDirectoryLink() const { return openDirectory_; }
+  /** “应用”分组里的“用户数据目录”链接与切换按钮；当前不是“应用”分组时为空。 */
+  [[nodiscard]] rujian::ui::Button* userDataLink() const { return userDataLink_; }
+  [[nodiscard]] rujian::ui::Button* userDataSwitch() const { return userDataSwitch_; }
 
  private:
   void refresh();
-  void rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios);
+  void rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios, const contracts::UserDataView& userData);
   void updateRows(const contracts::PreferenceGroupView& group);
   std::unique_ptr<RowWidgets> makeRow(const contracts::PreferenceRow& row, rujian::ui::List& list);
+  /** 在列表末尾加“用户数据目录”一行（“应用”分组）。 */
+  void addUserDataRow(rujian::ui::List& list, const contracts::UserDataView& userData);
   void submit(RowWidgets& state);
-  [[nodiscard]] static std::string signatureOf(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios);
+  [[nodiscard]] static std::string signatureOf(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios, const contracts::UserDataView& userData);
 
   contracts::PreferencesModel& preferences_;
   contracts::BiosModel& bios_;
+  contracts::UserDataModel& userData_;
   std::function<void()> unsubscribePreferences_;
   std::function<void()> unsubscribeBios_;
   rujian::ui::SplitView* split_{nullptr};
@@ -106,6 +113,8 @@ class PreferencesContent final : public rujian::ui::Widget {
   std::vector<std::unique_ptr<RowWidgets>> rows_;
   std::vector<BiosWidgets> biosRows_;
   rujian::ui::Button* openDirectory_{nullptr};
+  rujian::ui::Button* userDataLink_{nullptr};
+  rujian::ui::Button* userDataSwitch_{nullptr};
 };
 
 }  // namespace ember::win32::ui

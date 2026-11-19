@@ -1,0 +1,25 @@
+{
+  "version": "9.0.2",
+  "configure": [
+    "--toolchain=msvc",
+    "--arch=x86_64",
+    "--disable-everything",
+    "--disable-autodetect",
+    "--disable-doc",
+    "--disable-debug",
+    "--disable-programs",
+    "--disable-network",
+    "--disable-avdevice",
+    "--disable-avfilter",
+    "--disable-swscale",
+    "--disable-x86asm",
+    "--disable-shared",
+    "--enable-static",
+    "--enable-w32threads",
+    "--enable-protocol=file",
+    "--enable-demuxer=mov,matroska,mp3,wav,aac,flac,ogg",
+    "--enable-decoder=aac,mp3float,mp3,flac,opus,vorbis,alac,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_u8",
+    "--enable-parser=aac,mpegaudio,flac,opus,vorbis",
+    "--extra-cflags=-MT -D_WIN32_WINNT=0x0601 -DWINVER=0x0601"
+  ]
+}

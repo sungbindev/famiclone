@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：ROM 在 reference/rom，磁带在 reference/tape（m4a，由 ffmpeg 解码）；缺任何一个或没有 ffmpeg 时用例跳过；设置环境变量 EMBER_REAL_ROM_DUMP 为目录时，把关键时刻的画面存成 PPM 供人工查看。
+ * 备注：ROM 在 reference/rom，磁带在 reference/tape（m4a，由 FFmpeg 库解码）；缺任何一个时用例跳过；设置环境变量 EMBER_REAL_ROM_DUMP 为目录时，把关键时刻的画面存成 PPM 供人工查看。
  * ------------------------------------------------------------------------
  */
 
@@ -24,7 +24,6 @@
 namespace {
 
 namespace hw = ember::contracts::hardware;
-using ember::test::ffmpegProgram;
 using ember::test::firstTape;
 using ember::test::readReferenceFile;
 using ember::test::RealRomBench;
@@ -32,15 +31,14 @@ using ember::test::RealRomBench;
 TEST(QlsCard, BootsAndTheTapeDrivesTheScreen) {
   const auto rom = readReferenceFile("rom/qls.nes");
   const auto tape = firstTape();
-  const auto program = ffmpegProgram();
-  if (rom.empty() || tape.empty() || program.empty()) GTEST_SKIP() << "没有找到 qls.nes、声像磁带或 ffmpeg";
+  if (rom.empty() || tape.empty()) GTEST_SKIP() << "没有找到 qls.nes 或声像磁带";
   RealRomBench bench({"qls"});
   bench.boot(rom);
   ASSERT_TRUE(bench.run(300));
   bench.dump("qls-0-boot");
   EXPECT_TRUE(bench.errors->entries.empty());
 
-  ember::infra::media::DiskTapeStore store(program, nullptr);
+  ember::infra::media::DiskTapeStore store(nullptr);
   const auto tapePath = tape.u8string();
   auto source = store.open(std::string(tapePath.begin(), tapePath.end()));
   EXPECT_TRUE(source->stereo());

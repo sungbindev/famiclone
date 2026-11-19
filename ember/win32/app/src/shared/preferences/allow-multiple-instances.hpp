@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：规则与 Electron 外壳的 src/platform/launch/allow-multiple-instances.ts 相同：设置项 app.allowMultipleInstances，文件格式版本 1；
+ * 备注：规则：设置项 app.allowMultipleInstances，文件格式版本 1；
  *       文件不存在、格式不对或取值不是布尔值时都按默认（不允许）处理。
  * ------------------------------------------------------------------------
  */

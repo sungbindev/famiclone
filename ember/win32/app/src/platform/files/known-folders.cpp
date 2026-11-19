@@ -33,7 +33,7 @@ std::filesystem::path defaultUserDataDirectory() {
   return roaming.empty() ? std::filesystem::path{} : roaming / L"Ember";
 }
 
-std::filesystem::path executableDirectory() {
+std::filesystem::path executablePath() {
   std::wstring buffer(MAX_PATH, L'\0');
   for (;;) {
     const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
@@ -44,7 +44,9 @@ std::filesystem::path executableDirectory() {
     }
     buffer.resize(buffer.size() * 2);
   }
-  return std::filesystem::path(buffer).parent_path();
+  return std::filesystem::path(buffer);
 }
+
+std::filesystem::path executableDirectory() { return executablePath().parent_path(); }
 
 }  // namespace ember::win32::platform

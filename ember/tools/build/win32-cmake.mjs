@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：win32-cmake.mjs
- * 说明：Win32 原生外壳构建脚本共用的函数：用 CMake 预设配置、构建与运行测试。
+ * 说明：Win32 原生外壳构建脚本共用的函数：用 CMake 预设配置、构建与运行测试；配置前先生成 Schema 代码与第三方依赖清单。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -14,7 +14,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generate } from '../schema-gen/schema-gen.mjs';
+import { writeThirdPartyFiles } from '../third-party/third-party.mjs';
 import { findCmake } from './find-cmake.mjs';
+import { packResources } from './pack-resources.mjs';
 
 /** ember 目录。 */
 export const EMBER_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -39,8 +41,12 @@ export function configure(extraArguments = []) {
   if (process.platform !== 'win32') throw new Error('Win32 原生外壳只能在 Windows 上构建');
   const version = JSON.parse(readFileSync(join(EMBER_ROOT, 'package.json'), 'utf8')).version;
   generate(EMBER_ROOT);
+  writeThirdPartyFiles();
+  // 随程序分发的资源（预装插件、帮助文档、许可全文）打成一个 zip，由 CMake 嵌进 ember-win.exe；还没有构建出来的部分跳过
+  const resources = packResources();
+  if (resources.skipped.length > 0) console.log(`资源包里没有：${resources.skipped.join('、')}（先运行 npm run plugins:pack 与 npm run help:build）`);
   const { cmake } = findCmake();
-  run(cmake, ['--preset', PRESET, `-DEMBER_CORE_VERSION=${version}`, ...extraArguments], join(EMBER_ROOT, 'win32'));
+  run(cmake, ['--preset', PRESET, `-DEMBER_CORE_VERSION=${version}`, `-DEMBER_RESOURCE_ARCHIVE=${resources.file}`, ...extraArguments], join(EMBER_ROOT, 'win32'));
 }
 
 /**

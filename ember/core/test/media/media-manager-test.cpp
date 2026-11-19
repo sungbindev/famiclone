@@ -67,7 +67,7 @@ struct Rig {
     options.errors = errors;
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
-    manager = std::make_unique<ember::logic::media::MediaManager>(std::move(floppyStore), std::make_shared<ember::infra::media::DiskTapeStore>(std::filesystem::path(), errors),
+    manager = std::make_unique<ember::logic::media::MediaManager>(std::move(floppyStore), std::make_shared<ember::infra::media::DiskTapeStore>(errors),
                                                                   runtime, events, printer, catalog->tapeControl(),
                                                                   std::vector<std::shared_ptr<ember::contracts::hardware::FloppyDrive>>{catalog->floppyDrive()}, errors, std::move(watchFactory), autoSave, retryInterval);
   }

@@ -5,13 +5,14 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 src/contracts/system/app-updater.ts；状态的取值见 schema/system.schema.json 的 UpdateStatus；
+ * 备注：状态的取值见 schema/system.schema.json 的 UpdateStatus；
  *       原生外壳的升级引擎在阶段 11 加入，在此之前由“不支持升级”的实现提供，状态固定是 unsupported。
  * ------------------------------------------------------------------------
  */
 
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
 
@@ -40,6 +41,9 @@ class AppUpdater {
 
   /** 重启并使用已下载好的新版本；没有下载好的新版本时返回 false。 */
   virtual bool install() = 0;
+
+  /** 订阅状态变化（在界面线程调用）；返回取消订阅的函数。 */
+  [[nodiscard]] virtual std::function<void()> subscribe(std::function<void(const UpdateStatus&)> handler) = 0;
 };
 
 }  // namespace ember::win32::contracts

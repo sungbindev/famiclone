@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：左栏宽度与 Electron 外壳一致：默认就是最小宽度 140，可拖到 320。
+ * 备注：左栏宽度：默认就是最小宽度 140，可拖到 320。
  * ------------------------------------------------------------------------
  */
 
@@ -28,11 +28,15 @@ using namespace rujian::ui;
 constexpr const char* kSwitchOn = "开启";
 constexpr const char* kReset = "恢复默认";
 constexpr const char* kPick = "选择";
-constexpr const char* kBiosIntro = "已支持的机型自带默认 BIOS，启动时会自动装好，一般不用添加。想换成别的 BIOS，点“替换”；添加的文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动。";
+constexpr const char* kBiosIntro = "软件不自带 BIOS，也不会在电脑里自己查找：需要 BIOS 的机型要在这里手动添加 BIOS 文件。添加的文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动；想换成别的 BIOS，点“替换”。";
 constexpr const char* kBiosAdd = "添加 BIOS 文件";
 constexpr const char* kBiosReplace = "替换";
 constexpr const char* kBiosRemove = "移除";
 constexpr const char* kBiosOpenDirectory = "打开 BIOS 目录";
+/** “应用”分组的标识（核心登记）与其中“用户数据目录”一行的文字。 */
+constexpr const char* kAppGroupId = "app";
+constexpr const char* kUserDataLabel = "用户数据目录";
+constexpr const char* kUserDataDescription = "设置、BIOS、日志等都保存在这里；点路径用文件管理器打开。软件所在目录旁有 ember-data 目录时使用它，否则使用当前用户的应用数据目录。";
 
 /** 左栏的默认、最小与最大宽度（逻辑像素）。 */
 constexpr double kSideWidthInitial = 140;
@@ -54,7 +58,7 @@ std::unique_ptr<State> errorState(const std::string& message) {
 
 }  // namespace
 
-PreferencesContent::PreferencesContent(contracts::PreferencesModel& preferences, contracts::BiosModel& bios) : preferences_(preferences), bios_(bios) {
+PreferencesContent::PreferencesContent(contracts::PreferencesModel& preferences, contracts::BiosModel& bios, contracts::UserDataModel& userData) : preferences_(preferences), bios_(bios), userData_(userData) {
   auto split = std::make_unique<SplitView>();
   split->setSideWidthRange(kSideWidthMinimum, kSideWidthMaximum);
   split->setSideWidth(kSideWidthInitial);
@@ -87,7 +91,7 @@ void PreferencesContent::arrange(const Rect& bounds) {
   split_->arrange(bounds);
 }
 
-std::string PreferencesContent::signatureOf(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios) {
+std::string PreferencesContent::signatureOf(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios, const contracts::UserDataView& userData) {
   std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message + '\x1f' + (group != nullptr ? group->id : std::string()) + '\x1d';
   if (group == nullptr) return signature;
   if (group->machines) {
@@ -100,12 +104,14 @@ std::string PreferencesContent::signatureOf(const contracts::PreferencesView& vi
     for (const contracts::PreferenceChoice& option : row.options) signature += '\x1f' + option.value + '\x1f' + option.label;
     signature += '\x1e';
   }
+  if (group->id == kAppGroupId) signature += userData.directory + '\x1f' + userData.switchLabel + '\x1f' + userData.unavailableReason + '\x1e';
   return signature;
 }
 
 void PreferencesContent::refresh() {
   const contracts::PreferencesView view = preferences_.view();
   const contracts::BiosView biosView = bios_.view();
+  const contracts::UserDataView userDataView = userData_.view();
 
   std::string treeSignature;
   for (const contracts::PreferenceGroupView& group : view.groups) treeSignature += group.id + '\x1f' + group.label + '\x1e';
@@ -122,19 +128,21 @@ void PreferencesContent::refresh() {
   selected_ = current != nullptr ? current->id : std::string();
   tree_->setSelectedId(selected_);
 
-  const std::string signature = signatureOf(view, current, biosView);
+  const std::string signature = signatureOf(view, current, biosView, userDataView);
   if (signature != paneSignature_) {
     paneSignature_ = signature;
-    rebuildPane(view, current, biosView);
+    rebuildPane(view, current, biosView, userDataView);
   } else if (current != nullptr && !current->machines) {
     updateRows(*current);
   }
 }
 
-void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios) {
+void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios, const contracts::UserDataView& userData) {
   rows_.clear();
   biosRows_.clear();
   openDirectory_ = nullptr;
+  userDataLink_ = nullptr;
+  userDataSwitch_ = nullptr;
 
   auto stack = std::make_unique<Stack>();
   if (view.load == contracts::PreferencesLoad::Failed) stack->addChild(errorState(view.message));
@@ -181,9 +189,10 @@ void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, con
       panel->addContent(std::move(list));
       stack->addChild(std::move(panel));
     }
-  } else if (group != nullptr && !group->rows.empty()) {
+  } else if (group != nullptr && (!group->rows.empty() || group->id == kAppGroupId)) {
     auto list = std::make_unique<List>();
     for (const contracts::PreferenceRow& spec : group->rows) rows_.push_back(makeRow(spec, *list));
+    if (group->id == kAppGroupId) addUserDataRow(*list, userData);
     auto panel = std::make_unique<Panel>();
     panel->addContent(std::move(list));
     stack->addChild(std::move(panel));
@@ -191,6 +200,23 @@ void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, con
 
   pane_->setContent(std::move(stack));
   requestLayout();
+}
+
+void PreferencesContent::addUserDataRow(List& list, const contracts::UserDataView& userData) {
+  auto row = std::make_unique<SettingRow>();
+  row->setLabel(kUserDataLabel);
+  row->setDescription(userData.unavailableReason.empty() ? std::string(kUserDataDescription) : std::string(kUserDataDescription) + "\n" + userData.unavailableReason);
+  auto controls = std::make_unique<rujian::ui::Row>();
+  auto link = std::make_unique<Button>(userData.directory);
+  link->setVariant(ButtonVariant::Link);
+  link->setOnClick([this] { userData_.openDirectory(); });
+  userDataLink_ = static_cast<Button*>(controls->addChild(std::move(link)));
+  auto change = compactButton(userData.switchLabel.c_str());
+  change->setEnabled(userData.unavailableReason.empty());
+  change->setOnClick([this] { userData_.switchPlace(); });
+  userDataSwitch_ = static_cast<Button*>(controls->addChild(std::move(change)));
+  row->setControl(std::move(controls));
+  list.addRow(std::move(row));
 }
 
 std::unique_ptr<PreferencesContent::RowWidgets> PreferencesContent::makeRow(const contracts::PreferenceRow& spec, List& list) {

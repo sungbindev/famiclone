@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：规则与 Electron 外壳的 src/platform/launch/launch-args.test.ts 一致。
+ * 备注：无。
  * ------------------------------------------------------------------------
  */
 
@@ -16,6 +16,7 @@
 namespace {
 
 using ember::win32::shared::parseLaunchArguments;
+using ember::win32::shared::UserDataPlace;
 
 TEST(LaunchArguments, ReadsCartridgePathCaseInsensitively) {
   EXPECT_EQ(parseLaunchArguments({"--cartridge=D:\\roms\\game.nes"}).cartridgePath, "D:\\roms\\game.nes");
@@ -64,12 +65,32 @@ TEST(LaunchArguments, ReadsUserDataDirectory) {
   EXPECT_FALSE(parseLaunchArguments({"--user-data-dir="}).userDataDirectory);
 }
 
+TEST(LaunchArguments, ReadsMoveUserDataAndWaitProcessId) {
+  const auto both = parseLaunchArguments({"--move-user-data=executable", "--wait-pid=1234"});
+  EXPECT_EQ(both.moveUserData, UserDataPlace::ExecutableDirectory);
+  EXPECT_EQ(both.waitProcessId, 1234u);
+  EXPECT_EQ(parseLaunchArguments({"--move-user-data", "profile"}).moveUserData, UserDataPlace::UserProfile);
+  EXPECT_FALSE(parseLaunchArguments({"--move-user-data=elsewhere"}).moveUserData);
+  EXPECT_FALSE(parseLaunchArguments({"--wait-pid=0"}).waitProcessId);
+  EXPECT_FALSE(parseLaunchArguments({"--wait-pid=12x"}).waitProcessId);
+  EXPECT_FALSE(parseLaunchArguments({"--wait-pid=99999999999"}).waitProcessId);
+}
+
+TEST(LaunchArguments, ReadsApplyUpdateTarget) {
+  EXPECT_EQ(parseLaunchArguments({"--apply-update=D:\\Apps\\Ember.exe"}).applyUpdateTarget, "D:\\Apps\\Ember.exe");
+  EXPECT_EQ(parseLaunchArguments({"--apply-update", "D:\\Apps\\Ember.exe"}).applyUpdateTarget, "D:\\Apps\\Ember.exe");
+  EXPECT_FALSE(parseLaunchArguments({"--apply-update="}).applyUpdateTarget);
+}
+
 TEST(LaunchArguments, EmptyArgumentsGiveNothing) {
   const auto result = parseLaunchArguments({});
   EXPECT_FALSE(result.cartridgePath);
   EXPECT_FALSE(result.debugPort);
   EXPECT_FALSE(result.debugToken);
   EXPECT_FALSE(result.userDataDirectory);
+  EXPECT_FALSE(result.moveUserData);
+  EXPECT_FALSE(result.waitProcessId);
+  EXPECT_FALSE(result.applyUpdateTarget);
 }
 
 }  // namespace

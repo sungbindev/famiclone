@@ -37,10 +37,6 @@ struct InProcessCoreOptions {
   std::string appVersion;
   /** 预装的 mapper 插件目录；没有时为空。 */
   std::optional<std::string> bundledPluginsPath;
-  /** 随安装包带的默认 BIOS 目录；没有时为空。 */
-  std::optional<std::string> bundledBiosPath;
-  /** 解码磁带用的 ffmpeg 程序的完整路径；没有时为空。 */
-  std::optional<std::string> ffmpegPath;
   /** 启动参数指定的调试服务端口与令牌。 */
   std::optional<int> debugPort;
   std::optional<std::string> debugToken;

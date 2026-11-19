@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：对应 Electron 外壳的 src/entry/preferences/theme-sync.ts；主题设置项是 appearance.theme，取值 system（跟随系统）、dark、light，取值不认识时不改动；
+ * 备注：主题设置项是 appearance.theme，取值 system（跟随系统）、dark、light，取值不认识时不改动；
  *       onFirst 在第一次读到并应用主题（或读取失败）时调用一次，主窗口显示前等它（带超时），启动时就不会先闪一下错误的颜色；核心重启后重新读取。
  * ------------------------------------------------------------------------
  */

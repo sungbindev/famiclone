@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：schema-gen.mjs
- * 说明：Schema 代码生成：读取 schema/<模块>.schema.json，生成 TypeScript 的请求名、事件名、数据类型与校验用的 Schema，
- *       以及 C++ 的数据结构、请求名常量、JSON 转换与结构校验；另生成汇总全部模块的 TypeScript 文件。
- *       主进程处理的请求（mainRequests）只生成 TypeScript，不生成 C++；
- *       请求可标记 mainOnly（只能由主进程发起）或 debugOnly（只经调试服务开放），两者都不进入界面可发起的请求名单与 CoreApi 的方法。
+ * 说明：Schema 代码生成：读取 schema/<模块>.schema.json，生成 C++ 的数据结构、请求名常量、JSON 转换与结构校验，
+ *       以及原生外壳的请求目录、调试服务的接口描述。
+ *       外壳自己处理的请求（mainRequests）不生成 C++ 数据结构，只进入原生外壳的请求目录；
+ *       请求可标记 mainOnly（只能由外壳发起）或 debugOnly（只经调试服务开放），两者都不属于界面可发起的请求。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-13
@@ -30,8 +30,6 @@ const PRIMITIVES = new Set(['string', 'integer', 'number', 'boolean']);
 const CPP_KEYWORDS = new Set(
   'alignas alignof and asm auto bitand bitor bool break case catch char char8_t char16_t char32_t class compl concept const consteval constexpr constinit const_cast continue co_await co_return co_yield decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not nullptr operator or private protected public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor'.split(' ')
 );
-const TS_HEADER = (source) =>
-  `// 由 tools/schema-gen/schema-gen.mjs 根据 ${source} 生成，不要手改。\n/* eslint-disable */\n\n`;
 const CPP_HEADER = (source) => `// 由 tools/schema-gen/schema-gen.mjs 根据 ${source} 生成，不要手改。\n\n`;
 
 /** kebab-case 转 PascalCase。 */
@@ -169,195 +167,6 @@ export function loadSchemas(root) {
     }
   }
   return modules;
-}
-
-// ---------------------------------------------------------------- TypeScript
-
-/** 取值节点的 TypeScript 类型。 */
-function tsValueType(node, currentModule, imports) {
-  if (node.$ref !== undefined) {
-    const ref = parseRef(node.$ref, currentModule, '', '');
-    if (ref.module !== currentModule) imports.add(`${ref.module}:${ref.name}`);
-    return ref.name;
-  }
-  const { type, nullable } = typeOf(node);
-  let base;
-  if (type === 'any') return 'unknown';
-  if (type === 'array') base = `${tsValueType(node.items, currentModule, imports)}[]`;
-  else if (type === 'string') base = node.enum ? node.enum.map((item) => JSON.stringify(item)).join(' | ') : 'string';
-  else if (type === 'integer' || type === 'number') base = 'number';
-  else base = 'boolean';
-  if (type === 'array' && node.items.enum) base = `Array<${tsValueType(node.items, currentModule, imports)}>`;
-  return nullable ? `${base} | null` : base;
-}
-
-/** 对象节点的 TypeScript 接口。 */
-function tsInterface(name, node, currentModule, imports) {
-  const lines = [];
-  if (node.description) lines.push(`/** ${node.description} */`);
-  const properties = Object.entries(node.properties ?? {});
-  if (properties.length === 0) {
-    lines.push(`export type ${name} = Record<string, never>;`);
-    return lines.join('\n');
-  }
-  lines.push(`export interface ${name} {`);
-  const required = new Set(node.required ?? []);
-  for (const [property, child] of properties) {
-    if (child.description) lines.push(`  /** ${child.description} */`);
-    lines.push(`  ${property}${required.has(property) ? '' : '?'}: ${tsValueType(child, currentModule, imports)};`);
-  }
-  lines.push('}');
-  return lines.join('\n');
-}
-
-/** 生成一个模块的 TypeScript 文件。 */
-function generateTs(module) {
-  const { name, schema, file } = module;
-  const prefix = pascal(name);
-  const constant = snake(name).toUpperCase();
-  const imports = new Set();
-  const blocks = [];
-  for (const [typeName, node] of Object.entries(schema.types ?? {})) blocks.push(tsInterface(typeName, node, name, imports));
-  const requestEntries = Object.entries(schema.requests ?? {});
-  const mainRequestEntries = Object.entries(schema.mainRequests ?? {});
-  const eventEntries = Object.entries(schema.events ?? {});
-  for (const [operation, request] of [...requestEntries, ...mainRequestEntries]) {
-    blocks.push(tsInterface(`${prefix}${pascal(operation)}Params`, request.params, name, imports));
-    blocks.push(tsInterface(`${prefix}${pascal(operation)}Result`, request.result, name, imports));
-  }
-  for (const [event, definition] of eventEntries) blocks.push(tsInterface(`${prefix}${pascal(event)}Data`, definition.data, name, imports));
-  const types = schema.types ?? {};
-
-  const requestNames = requestEntries.map(([operation]) => `  ${operation}: '${name}.${operation}'`).join(',\n');
-  const mainRequestNames = mainRequestEntries.map(([operation]) => `  ${operation}: '${name}.${operation}'`).join(',\n');
-  const eventNames = eventEntries.map(([event]) => `  ${event}: '${name}.${event}'`).join(',\n');
-  const toMap = (entries) =>
-    entries.map(([operation]) => `  '${name}.${operation}': { params: ${prefix}${pascal(operation)}Params; result: ${prefix}${pascal(operation)}Result };`).join('\n');
-  const requestMap = toMap(requestEntries);
-  const mainRequestMap = toMap(mainRequestEntries);
-  const eventMap = eventEntries.map(([event]) => `  '${name}.${event}': ${prefix}${pascal(event)}Data;`).join('\n');
-  const importLines = [...imports]
-    .toSorted()
-    .map((entry) => {
-      const [target, type] = entry.split(':');
-      return `import type { ${type} } from '../../${target}/generated/${target}';`;
-    });
-
-  return [
-    TS_HEADER(file),
-    `import type { ModuleSchema } from '../../../shared/schema/schema-types';`,
-    ...importLines,
-    '',
-    blocks.join('\n\n'),
-    '',
-    `/** 本模块的请求名。 */`,
-    `export const ${constant}_REQUESTS = {\n${requestNames}\n} as const;`,
-    '',
-    `/** 本模块由主进程处理的请求名。 */`,
-    `export const ${constant}_MAIN_REQUESTS = {\n${mainRequestNames}\n} as const;`,
-    '',
-    `/** 本模块的事件名。 */`,
-    `export const ${constant}_EVENTS = {\n${eventNames}\n} as const;`,
-    '',
-    `/** 请求名到参数与结果类型的对照。 */`,
-    requestMap ? `export interface ${prefix}RequestMap {\n${requestMap}\n}` : `export type ${prefix}RequestMap = Record<never, never>;`,
-    '',
-    `/** 主进程处理的请求名到参数与结果类型的对照。 */`,
-    mainRequestMap ? `export interface ${prefix}MainRequestMap {\n${mainRequestMap}\n}` : `export type ${prefix}MainRequestMap = Record<never, never>;`,
-    '',
-    `/** 事件名到数据类型的对照。 */`,
-    eventMap ? `export interface ${prefix}EventMap {\n${eventMap}\n}` : `export type ${prefix}EventMap = Record<never, never>;`,
-    '',
-    `/** 本模块的 Schema，供入口校验使用。 */`,
-    `export const ${constant}_SCHEMA: ModuleSchema = ${JSON.stringify({ module: name, types, requests: schema.requests ?? {}, mainRequests: schema.mainRequests ?? {}, events: schema.events ?? {} }, null, 2)};`,
-    ''
-  ].join('\n');
-}
-
-/** 界面可以发起的请求：只能由主进程发起（mainOnly）与只经调试服务开放（debugOnly）的请求不进入预加载脚本暴露的名单与方法。 */
-function rendererRequests(module) {
-  return Object.entries(module.schema.requests ?? {})
-    .filter(([, request]) => request.mainOnly !== true && request.debugOnly !== true)
-    .map(([operation]) => operation);
-}
-
-/** 生成汇总全部模块的 TypeScript 文件。 */
-function generateTsIndex(modules) {
-  const imports = modules.map((module) => {
-    const prefix = pascal(module.name);
-    const constant = snake(module.name).toUpperCase();
-    return `import { ${constant}_SCHEMA, type ${prefix}EventMap, type ${prefix}MainRequestMap, type ${prefix}RequestMap } from '../../${module.name}/generated/${module.name}';`;
-  });
-  const requestMaps = modules.map((module) => `${pascal(module.name)}RequestMap`);
-  const mainRequestMaps = modules.map((module) => `${pascal(module.name)}MainRequestMap`);
-  const eventMaps = modules.map((module) => `${pascal(module.name)}EventMap`);
-  const requestNames = modules.flatMap((module) => rendererRequests(module).map((operation) => `  '${module.name}.${operation}'`));
-  const mainRequestNames = modules.flatMap((module) => Object.keys(module.schema.mainRequests ?? {}).map((operation) => `  '${module.name}.${operation}'`));
-  const eventNames = modules.flatMap((module) => Object.keys(module.schema.events ?? {}).map((event) => `  '${module.name}.${event}'`));
-  const api = modules.map((module) => {
-    const operations = rendererRequests(module).map(
-      (operation) => `    ${operation}: (params: CoreParams<'${module.name}.${operation}'>) => Promise<CoreResult<'${module.name}.${operation}'>>;`
-    );
-    return `  ${JSON.stringify(module.name)}: {\n${operations.join('\n')}\n  };`;
-  });
-  const mainApi = modules
-    .filter((module) => Object.keys(module.schema.mainRequests ?? {}).length > 0)
-    .map((module) => {
-      const operations = Object.keys(module.schema.mainRequests).map(
-        (operation) => `    ${operation}: (params: MainParams<'${module.name}.${operation}'>) => Promise<MainResult<'${module.name}.${operation}'>>;`
-      );
-      return `  ${JSON.stringify(module.name)}: {\n${operations.join('\n')}\n  };`;
-    });
-  return [
-    TS_HEADER('schema/ 下全部模块'),
-    `import type { ModuleSchema } from '../../../shared/schema/schema-types';`,
-    ...imports,
-    '',
-    `/** 全部请求名到参数与结果类型的对照。 */`,
-    requestMaps.length > 0 ? `export type CoreRequestMap = ${requestMaps.join(' & ')};` : 'export type CoreRequestMap = Record<never, never>;',
-    '',
-    `/** 全部主进程处理的请求名到参数与结果类型的对照。 */`,
-    mainRequestMaps.length > 0 ? `export type MainRequestMap = ${mainRequestMaps.join(' & ')};` : 'export type MainRequestMap = Record<never, never>;',
-    '',
-    `/** 全部事件名到数据类型的对照。 */`,
-    eventMaps.length > 0 ? `export type CoreEventMap = ${eventMaps.join(' & ')};` : 'export type CoreEventMap = Record<never, never>;',
-    '',
-    `/** 请求名。 */`,
-    'export type CoreRequestName = keyof CoreRequestMap & string;',
-    `/** 事件名。 */`,
-    'export type CoreEventName = keyof CoreEventMap & string;',
-    `/** 请求的参数类型。 */`,
-    `export type CoreParams<N extends CoreRequestName> = CoreRequestMap[N] extends { params: infer P } ? P : never;`,
-    `/** 请求的结果类型。 */`,
-    `export type CoreResult<N extends CoreRequestName> = CoreRequestMap[N] extends { result: infer R } ? R : never;`,
-    `/** 事件的数据类型。 */`,
-    `export type CoreEventData<N extends CoreEventName> = CoreEventMap[N];`,
-    `/** 主进程处理的请求名。 */`,
-    'export type MainRequestName = keyof MainRequestMap & string;',
-    `/** 主进程处理的请求的参数类型。 */`,
-    `export type MainParams<N extends MainRequestName> = MainRequestMap[N] extends { params: infer P } ? P : never;`,
-    `/** 主进程处理的请求的结果类型。 */`,
-    `export type MainResult<N extends MainRequestName> = MainRequestMap[N] extends { result: infer R } ? R : never;`,
-    '',
-    `/** 界面可以发起的请求名；只能由主进程发起与只经调试服务开放的请求不在其中。 */`,
-    `export const CORE_REQUEST_NAMES: readonly string[] = [\n${requestNames.join(',\n')}\n];`,
-    '',
-    `/** 由主进程处理的请求名。 */`,
-    `export const MAIN_REQUEST_NAMES: readonly string[] = [\n${mainRequestNames.join(',\n')}\n];`,
-    '',
-    `/** 全部事件名。 */`,
-    `export const CORE_EVENT_NAMES: readonly string[] = [\n${eventNames.join(',\n')}\n];`,
-    '',
-    `/** 全部模块的 Schema。 */`,
-    `export const CORE_SCHEMAS: readonly ModuleSchema[] = [${modules.map((module) => `${snake(module.name).toUpperCase()}_SCHEMA`).join(', ')}];`,
-    '',
-    `/** 按模块分组的请求方法：预加载脚本按它向界面暴露具名方法。 */`,
-    `export interface CoreApi {\n${api.join('\n')}\n}`,
-    '',
-    `/** 按模块分组的主进程请求方法：预加载脚本按它向界面暴露具名方法。 */`,
-    mainApi.length > 0 ? `export interface MainApi {\n${mainApi.join('\n')}\n}` : 'export type MainApi = Record<never, never>;',
-    ''
-  ].join('\n');
 }
 
 // ---------------------------------------------------------------- C++
@@ -634,12 +443,10 @@ export function generate(root, options = {}) {
   const written = [];
   const removed = [];
   for (const module of modules) {
-    writeIfChanged(join(root, 'src', 'contracts', module.name, 'generated', `${module.name}.ts`), generateTs(module), written);
     const cpp = generateCpp(module);
     writeIfChanged(join(root, 'core', 'src', 'contracts', module.name, 'generated', `${module.name}.hpp`), cpp.header, written);
     writeIfChanged(join(root, 'core', 'src', 'contracts', module.name, 'generated', `${module.name}.cpp`), cpp.source, written);
   }
-  writeIfChanged(join(root, 'src', 'contracts', 'core-gateway', 'generated', 'core-api.ts'), generateTsIndex(modules), written);
   // 原生外壳的请求目录：目录存在时才写入（win32/app 不在时跳过）。
   if (existsSync(join(root, 'win32', 'app'))) {
     writeIfChanged(join(root, 'win32', 'app', 'src', 'contracts', 'core-gateway', 'generated', 'request-catalog.hpp'), generateAppRequestCatalog(modules), written);
@@ -658,7 +465,6 @@ export function generate(root, options = {}) {
     }
   }
   const names = new Set(modules.map((module) => module.name));
-  removeStale(join(root, 'src', 'contracts'), names, removed);
   removeStale(join(root, 'core', 'src', 'contracts'), names, removed);
   return { written, removed, modules: [...names] };
 }

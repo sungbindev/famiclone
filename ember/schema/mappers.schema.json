@@ -148,7 +148,7 @@
       "mainOnly": true,
       "params": {
         "type": "object",
-        "properties": { "path": { "type": "string", "minLength": 1, "description": "插件包的文件路径，由主进程根据用户选择的文件给出" } },
+        "properties": { "path": { "type": "string", "minLength": 1, "description": "插件包的文件路径，由外壳根据用户选择的文件给出" } },
         "required": ["path"]
       },
       "result": {

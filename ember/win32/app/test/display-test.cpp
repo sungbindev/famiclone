@@ -18,6 +18,7 @@
 
 #include "platform/display/screen-window.hpp"
 #include "platform/input/raw-input.hpp"
+#include "platform/input/joystick-gamepads.hpp"
 #include "platform/input/xinput-gamepads.hpp"
 
 namespace ember::win32 {
@@ -95,6 +96,18 @@ TEST(XInputGamepads, ReadsNothingWhenNoPadIsConnectedAndNeverFails) {
       EXPECT_EQ(pad.axes.size(), 4U);
       EXPECT_GE(pad.index, 0);
       EXPECT_LT(pad.index, 4);
+    }
+  }
+}
+
+TEST(JoystickGamepads, ReadsNothingOrWellFormedReadingsAndNeverOverlapsTheXInputIndexes) {
+  platform::JoystickGamepads pads;
+  for (int i = 0; i < 3; ++i) {
+    for (const auto& pad : pads.read()) {
+      EXPECT_LE(pad.buttons.size(), 32U);
+      EXPECT_EQ(pad.axes.size(), 8U);
+      EXPECT_GE(pad.index, 4);
+      EXPECT_LT(pad.index, 16);
     }
   }
 }

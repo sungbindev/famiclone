@@ -49,7 +49,7 @@ add_library(ember_app STATIC
   src/infra/updates/engine-app-updater.cpp
   src/infra/updates/signed-exe-update-engine.cpp
   src/infra/updates/winhttp-update-transport.cpp
-  src/infra/input/xinput-gamepad-reader.cpp
+  src/infra/input/system-gamepad-reader.cpp
   src/infra/user-data/user-data-location-adapter.cpp
   src/logic/debug/debug-controller.cpp
   src/logic/debug/debug-module.cpp
@@ -92,6 +92,8 @@ add_library(ember_app STATIC
   src/platform/files/json-file-store.cpp
   src/platform/files/known-folders.cpp
   src/platform/files/user-data-location.cpp
+  src/platform/input/gamepads.cpp
+  src/platform/input/joystick-gamepads.cpp
   src/platform/input/raw-input.cpp
   src/platform/input/xinput-gamepads.cpp
   src/platform/logging/file-error-logger.cpp
@@ -152,7 +154,7 @@ set_source_files_properties(src/bootstrap/application.cpp PROPERTIES
   SKIP_PRECOMPILE_HEADERS ON)
 target_compile_options(ember_app PUBLIC /utf-8 /W4 /permissive- /EHsc /MP)
 target_precompile_headers(ember_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch/ember-app-pch.hpp)
-target_link_libraries(ember_app PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 gdi32 shlwapi ws2_32 winhttp bcrypt)
+target_link_libraries(ember_app PUBLIC ember_core rujian_ui d3d11 dxgi ole32 shell32 uuid advapi32 user32 gdi32 shlwapi ws2_32 winhttp bcrypt winmm)
 
 # 可执行文件：资源（图标、清单、版本信息）里的版本号取自 package.json
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" EMBER_VERSION_MATCH "${EMBER_CORE_VERSION}")

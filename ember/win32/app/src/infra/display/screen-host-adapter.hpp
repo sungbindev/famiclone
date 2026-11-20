@@ -30,7 +30,7 @@ namespace ember::win32::platform {
 class RawInputCapture;
 class ScreenWindow;
 class UiThread;
-class XInputGamepads;
+class Gamepads;
 }  // namespace ember::win32::platform
 
 namespace ember::win32::infra {
@@ -98,7 +98,7 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
   std::function<void(const std::string&)> onError_;
   std::unique_ptr<platform::ScreenWindow> window_;
   std::unique_ptr<platform::RawInputCapture> rawInput_;
-  std::unique_ptr<platform::XInputGamepads> gamepads_;
+  std::unique_ptr<platform::Gamepads> gamepads_;
   contracts::FrameImage frame_;
   shared::ScreenAspect aspect_{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling_{shared::kDefaultScreenScaling};

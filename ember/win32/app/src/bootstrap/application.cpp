@@ -40,7 +40,7 @@
 #include "infra/core-client/latest-frame-slot.hpp"
 #include "infra/dialogs/message-box-confirmation.hpp"
 #include "infra/dialogs/remembering-file-dialog.hpp"
-#include "infra/input/xinput-gamepad-reader.hpp"
+#include "infra/input/system-gamepad-reader.hpp"
 #include "infra/directories/explorer-directory.hpp"
 #include "infra/display/screen-host-adapter.hpp"
 #include "infra/dropped-files/memory-dropped-files-service.hpp"
@@ -362,7 +362,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::MappersController mappersController(router, core, confirmation);
     logic::UpdateController updateController(router, updater);
     logic::AboutController aboutController(router, core, externalLinks, bootstrap::thirdPartyNotices(), std::string(EMBER_APP_BUILD_DATE) + " " + EMBER_APP_BUILD_CLOCK);
-    infra::XInputGamepadReader gamepadReader;
+    infra::SystemGamepadReader gamepadReader;
     logic::GamepadSettingsController gamepadSettings(router, core, gamepadReader);
     logic::DebugController debug(router, core);
     ForwardingWindowControl windowControl;

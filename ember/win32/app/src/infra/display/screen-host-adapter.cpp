@@ -16,7 +16,7 @@
 
 #include "platform/display/screen-window.hpp"
 #include "platform/input/raw-input.hpp"
-#include "platform/input/xinput-gamepads.hpp"
+#include "platform/input/gamepads.hpp"
 #include "platform/threading/ui-thread.hpp"
 #include "shared/input/scan-code-table.hpp"
 
@@ -37,7 +37,7 @@ ScreenHostAdapter::ScreenHostAdapter(void* parentWindow, contracts::FrameSource&
   rawInput_ = std::make_unique<platform::RawInputCapture>(
       parentWindow, [this](const platform::RawKeyEvent& event) { handleRawKey(event.make, event.extended, event.prefixE1, event.up); },
       [this](const platform::RawMouseEvent& event) { handleRawMouse(event.dx, event.dy, event.buttons, event.pressed, event.released, event.wheel); });
-  gamepads_ = std::make_unique<platform::XInputGamepads>();
+  gamepads_ = std::make_unique<platform::Gamepads>();
   frames_.setOnFrame([this] { showLatestFrame(); });
   schedulePoll();
 }

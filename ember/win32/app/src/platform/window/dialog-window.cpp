@@ -117,6 +117,7 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
     return frameless_->handle(message, wParam, lParam, result);
   });
   frameless_->attach();
+  applyBorderColor();
   place();
 }
 
@@ -171,7 +172,15 @@ void DialogWindow::activate() {
   SetForegroundWindow(hwnd);
 }
 
-void DialogWindow::setTheme(rujian::ui::ThemeName theme) { window_.root().setTheme(theme); }
+void DialogWindow::setTheme(rujian::ui::ThemeName theme) {
+  window_.root().setTheme(theme);
+  applyBorderColor();
+}
+
+void DialogWindow::applyBorderColor() {
+  const rujian::ui::Color border = rujian::ui::windowBorderColor(window_.root().theme());
+  frameless_->setBorderColor(static_cast<unsigned>(border.r()) | (static_cast<unsigned>(border.g()) << 8) | (static_cast<unsigned>(border.b()) << 16));
+}
 
 void* DialogWindow::handle() const { return window_.nativeHandle(); }
 

@@ -83,6 +83,7 @@ class DialogWindow {
  private:
   void place();
   void minimize();
+  void applyBorderColor();
 
   DialogWindowOptions options_;
   rujian::ui::HostWindow window_;

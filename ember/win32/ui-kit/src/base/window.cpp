@@ -241,6 +241,17 @@ struct HostWindow::Impl {
     SetWindowLongPtrW(hwnd, GWL_STYLE, style);
   }
 
+  /** 渲染目标的大小与窗口客户区不一致时，改成一致并先用上一帧画满。 */
+  void resizeTarget() {
+    RECT rect{};
+    if (!target || IsIconic(hwnd) != FALSE || GetClientRect(hwnd, &rect) == FALSE) return;
+    const D2D1_SIZE_U size = D2D1::SizeU(static_cast<UINT>(rect.right - rect.left), static_cast<UINT>(rect.bottom - rect.top));
+    const D2D1_SIZE_U current = target->GetPixelSize();
+    if (size.width == 0 || size.height == 0 || (size.width == current.width && size.height == current.height)) return;
+    target->Resize(size);
+    if (IsWindowVisible(hwnd) != FALSE) drawStale();
+  }
+
   void paint() {
     PAINTSTRUCT ps;
     BeginPaint(hwnd, &ps);
@@ -249,6 +260,8 @@ struct HostWindow::Impl {
   }
 
   LRESULT handle(UINT message, WPARAM wParam, LPARAM lParam) {
+    // 尺寸改变后要最先把新大小画满，在应用的钩子（边框、阴影的同步较慢）之前
+    if (message == WM_WINDOWPOSCHANGED && (reinterpret_cast<const WINDOWPOS*>(lParam)->flags & SWP_NOSIZE) == 0) resizeTarget();
     if (hook) {
       std::intptr_t result = 0;
       if (hook(message, wParam, lParam, result)) return static_cast<LRESULT>(result);
@@ -261,10 +274,7 @@ struct HostWindow::Impl {
         return 0;
       case WM_SIZE:
         if (wParam != SIZE_MINIMIZED) {
-          if (target) {
-            target->Resize(D2D1::SizeU(LOWORD(lParam), HIWORD(lParam)));
-            if (IsWindowVisible(hwnd) != FALSE) drawStale();
-          }
+          resizeTarget();
           root.layout(clientLogicalSize());
           if (IsWindowVisible(hwnd) != FALSE) {
             draw();

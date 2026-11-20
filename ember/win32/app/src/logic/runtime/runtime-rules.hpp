@@ -7,7 +7,7 @@
  * 日期：2026-11-19
  * 备注：规则见 docs/05-界面.md 第 4.1 节：没有开机时暂停、复位置灰；断电时暂停与软复位置灰；硬复位只在通电时可用；
  *       “开机”按已选机型判断（见 powerToggleAction）；“关闭卡带”只在装着卡带时可用；状态还没读到时全部置灰。
- *       卡带、mapper 插件没有信息时文字函数返回空值，界面不显示这一项，不用“—”或“无”占位；主机型号总有值（未开机时是已选机型），只在状态还没读到时没有。
+ *       卡带、mapper 插件没有信息时文字函数返回空值，界面不显示这一项，不用“—”或“无”占位；主机型号在整机机型时有值（未开机时是已选机型），经典 FC 与状态还没读到时没有。
  * ------------------------------------------------------------------------
  */
 
@@ -74,7 +74,7 @@ struct RecentCartridge {
 [[nodiscard]] contracts::MachineState machineState(const std::optional<RuntimeStatus>& status);
 /** 状态文字（未开机、已断电、已暂停、运行中）；还没读到状态时没有信息。 */
 [[nodiscard]] std::optional<std::string> stateText(const std::optional<RuntimeStatus>& status);
-/** 主机型号的显示文字：开机后是正在运行的主机，没有开机时是已选机型；状态还没读到时没有信息。 */
+/** 主机型号的显示文字：开机后是正在运行的主机，没有开机时是已选机型；经典 FC（有卡带名就够了）与状态还没读到时没有信息。 */
 [[nodiscard]] std::optional<std::string> hostText(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine);
 /** 卡带的显示文字：卡带文件名；没有卡带（含整机机型用 BIOS 开机）时没有信息。 */
 [[nodiscard]] std::optional<std::string> cartridgeText(const std::optional<RuntimeStatus>& status);

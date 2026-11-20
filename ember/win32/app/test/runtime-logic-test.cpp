@@ -65,7 +65,8 @@ TEST(RuntimeRules, StatusItemsOnlyHaveTextWhenThereIsInformation) {
   EXPECT_FALSE(logic::pluginText(none).has_value());
   EXPECT_FALSE(logic::hostText(std::nullopt, "fc").has_value());
   const auto loaded = logic::parseRuntimeStatus(statusJson("on", "running", "fc", false, "D:\\roms\\Super Game.nes"));
-  EXPECT_EQ(logic::hostText(loaded, "sb2000"), "经典 FC");
+  EXPECT_FALSE(logic::hostText(loaded, "sb2000").has_value());
+  EXPECT_FALSE(logic::hostText(none, "fc").has_value());
   EXPECT_EQ(logic::cartridgeText(loaded), "Super Game.nes");
   EXPECT_EQ(logic::pluginText(loaded), "NROM");
   EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "unknown1")), "fc"), "unknown1");
@@ -576,10 +577,9 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   ASSERT_EQ(menus[2].items.size(), 2U);
   for (const auto& item : menus[2].items) EXPECT_NE(item.label, "画面效果");
   const auto host = shell.statusItems(false);
-  ASSERT_EQ(host.size(), 3U);
-  EXPECT_EQ(host[0].text, "经典 FC");
-  EXPECT_EQ(host[1].text, "game.nes");
-  EXPECT_EQ(host[2].text, "NROM");
+  ASSERT_EQ(host.size(), 2U);
+  EXPECT_EQ(host[0].text, "game.nes");
+  EXPECT_EQ(host[1].text, "NROM");
   const auto buttons = shell.panelButtons();
   ASSERT_EQ(buttons.size(), 1U);
   EXPECT_EQ(buttons[0].icon, contracts::ShellIcon::PlayerPlay);

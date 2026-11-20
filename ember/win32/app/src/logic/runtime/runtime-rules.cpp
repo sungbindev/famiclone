@@ -105,6 +105,7 @@ std::optional<std::string> stateText(const std::optional<RuntimeStatus>& status)
 std::optional<std::string> hostText(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine) {
   if (!status) return std::nullopt;
   const std::string machine = status->machine.value_or(selectedMachine);
+  if (machine == kClassicMachine) return std::nullopt;
   for (const auto& host : kHostNames) {
     if (machine == host.id) return std::string(host.name);
   }

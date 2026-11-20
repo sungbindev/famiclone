@@ -7,14 +7,20 @@
 // 备注：平铺在本目录里的文件是基于 da65 的旧实现，阶段 4 用新核心重写后删除；cpu、model、formats、analysis、view 是新核心。
 // ------------------------------------------------------------------------
 export { analyzeCode } from './analysis.mjs';
-export { BYTE_KIND, buildRegions, buildXrefs, createAddressSpace, createAnalysis, detectCandidates, entriesFromVectors, entryAtAddress, findAddressTables, findXrefs, traceCode } from './analysis/index.mjs';
+export { BYTE_KIND, buildRegions, buildXrefs, createAddressSpace, createAnalysis, detectCandidates, ensureAutoSymbols, entriesFromVectors, entryAtAddress, findAddressTables, findXrefs, scanCode, traceCode, traceProject } from './analysis/index.mjs';
 export { parseCdl } from './cdl.mjs';
 export { ADDRESSING_MODES, OPCODE_TABLE, decode, findOpcode, formatHex, formatInstruction, formatOperand, isAssemblable, memoryAccess } from './cpu/index.mjs';
 export { disassemble } from './disassembler.mjs';
 export { FORMAT_NAMES, parseFlat, parseImage, parseInes, parseInesHeader } from './formats/index.mjs';
+export { generateProject } from './generate/index.mjs';
 export { buildRanges, renderInfo } from './info-writer.mjs';
 export { loadBinary, loadInes } from './loaders.mjs';
-export { ENTRY_SOURCES, REGION_TYPES, addressToOffset, createEntry, createLayout, createRegionMap, findSegmentsAt, findUncovered, getSegment, listRegions, locateOffset, regionAt, regionStats, setRegion } from './model/index.mjs';
+export {
+  COMMENT_KINDS, EDIT_OPERATIONS, ENTRY_SOURCES, HINT_FORMS, PROJECT_VERSION, REGION_TYPES, SYMBOL_KINDS, addressToOffset, applyEdits, cloneProject, createEntry, createLayout, createProject, createRegionMap,
+  findSegmentsAt, findUncovered, getSegment, isImageStale, isVerificationStale, listRegions, locateOffset, parseProject, projectDigest, regionAt, regionStats, serializeProject, setRegion, sha256,
+} from './model/index.mjs';
+export { indexByValue, parseSymbolSet } from './profile/index.mjs';
+export { recordVerification, buildStatus, verifyRoundtrip, writeGeneratedFiles } from './verify/index.mjs';
 export { findFirstDifference, renderRoundtripConfig } from './roundtrip.mjs';
 export { parseSymbols } from './symbols.mjs';
 export { parseTrace } from './trace.mjs';

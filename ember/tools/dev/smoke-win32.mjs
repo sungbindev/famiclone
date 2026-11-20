@@ -127,9 +127,9 @@ async function scenarioInteractions() {
     check('经典 FC 不独占键盘：画面持有焦点时 F8 仍触发外壳的暂停', number(r, 'sharedKeyboard') > centerRunning + 40, `${number(r, 'sharedKeyboard')}`);
 
     // 窗口始终置顶：勾选项切换后菜单保持打开，所以连点两次菜单项再按 Esc 关闭
-    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:191', 'wait:700', 'style:on']);
+    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:215', 'wait:700', 'style:on']);
     check('“窗口始终置顶”勾选后窗口置顶', (r.get('before') ?? '').startsWith('False') && (r.get('on') ?? '').startsWith('True'), `${r.get('before')} → ${r.get('on')}`);
-    r = drive(app.pid, ['click:253:191', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
+    r = drive(app.pid, ['click:253:215', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
     check('再点一次取消置顶', (r.get('off') ?? '').startsWith('False'), `${r.get('off')}`);
 
     await closeAndExpectExit(app, '场景一');
@@ -235,7 +235,7 @@ async function scenarioDialogs() {
     r = drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800', 'dlgvisible:prefsClosed']);
     check('Esc 关闭首选项对话框', r.get('prefsClosed') === 'False');
 
-    r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1500', 'dlgfind:padOpen']);
+    r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1500', 'dlgfind:padOpen']);
     check('“设置”菜单里打开手柄设置对话框', r.get('padOpen') === 'True');
     drive(app.pid, ['dlgfind:found', 'dlgwidth:640', 'dclick:540:324', 'wait:400', 'type:Q', 'wait:900']);
     const bindings = debugCall(app, 'input.getBindings');
@@ -260,7 +260,7 @@ async function scenarioSystem() {
     await sleep(2500);
     const plugins = debugCall(app, 'mappers.list').plugins;
     check('核心里有 mapper 插件', Array.isArray(plugins) && plugins.length > 0, String(plugins?.length));
-    let r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1800', 'dlgfind:mappersOpen']);
+    let r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1800', 'dlgfind:mappersOpen']);
     check('“设置”菜单里打开 mapper 插件对话框', r.get('mappersOpen') === 'True');
     r = drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800', 'dlgvisible:mappersClosed']);
     check('Esc 关闭 mapper 插件对话框', r.get('mappersClosed') === 'False');

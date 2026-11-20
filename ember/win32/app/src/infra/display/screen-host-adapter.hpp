@@ -73,7 +73,7 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
 
   // ---- ScreenHost ----
   void setBounds(const shared::ScreenRect& rect) override;
-  void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, bool showAllLines) override;
+  void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, shared::ScreenFilter filter, bool showAllLines) override;
   [[nodiscard]] double nominalRatio() const override;
   void setFrameVisible(bool visible) override;
   void setOverlay(const std::uint8_t* pixels, int width, int height, const std::vector<shared::ScreenRect>& glass, int glassRadius) override;

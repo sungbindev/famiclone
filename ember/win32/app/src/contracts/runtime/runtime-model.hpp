@@ -33,10 +33,11 @@ struct RuntimeControls {
   bool eject{false};
 };
 
-/** 画面区用的设置：显示（比例、缩放、行数）与点击画面是否捕获鼠标。 */
+/** 画面区用的设置：显示（比例、缩放、画面效果、行数）与点击画面是否捕获鼠标。 */
 struct ScreenSettings {
   shared::ScreenAspect aspect{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling{shared::kDefaultScreenScaling};
+  shared::ScreenFilter filter{shared::kDefaultScreenFilter};
   bool showAllLines{true};
   bool captureMouse{true};
 };

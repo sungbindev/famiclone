@@ -45,8 +45,8 @@ class ScreenWindow {
   /** 子窗口在屏幕上的矩形（屏幕坐标，设备像素）；还没有显示时宽高为 0。 */
   [[nodiscard]] shared::ScreenRect screenBounds() const;
 
-  /** 显示方式：画面比例、缩放方式与上下各裁掉的行数。 */
-  void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, int cropLines);
+  /** 显示方式：画面比例、缩放方式、画面效果与上下各裁掉的行数。 */
+  void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, shared::ScreenFilter filter, int cropLines);
 
   /** 把这些矩形（父窗口客户区坐标，设备像素）从子窗口里挖掉，弹层才能显示在画面之上。 */
   void setHoles(const std::vector<shared::ScreenRect>& holes);

@@ -439,6 +439,23 @@ TEST(RuntimeController, FamilyKeyboardAndDisplaySettingsFollowThePreferences) {
   EXPECT_TRUE(f.controller.familyKeyboard());
 }
 
+TEST(RuntimeController, ScreenFilterFollowsThePreferenceAndIsSetThroughThePreferences) {
+  RuntimeFixture f;
+  f.reply("preferences.list", {{"settings", json::array({{{"id", "display.filter"}, {"value", "pixel"}}})}});
+  f.attach();
+  EXPECT_EQ(f.controller.view().screen.filter, shared::ScreenFilter::Pixel);
+  f.core.emitEvent("preferences.changed", {{"id", "display.filter"}, {"value", "smooth"}});
+  EXPECT_EQ(f.controller.screenFilter(), shared::ScreenFilter::Smooth);
+  // 菜单选“像素”只发请求，状态以首选项变化事件为准
+  f.reply("preferences.set", {{"id", "display.filter"}, {"value", "pixel"}});
+  f.controller.setScreenFilter(shared::ScreenFilter::Pixel);
+  EXPECT_EQ(f.last("preferences.set")->params, json({{"id", "display.filter"}, {"value", "pixel"}}));
+  EXPECT_EQ(f.controller.screenFilter(), shared::ScreenFilter::Smooth);
+  f.fail("preferences.set", "写不进去");
+  f.controller.setScreenFilter(shared::ScreenFilter::Pixel);
+  EXPECT_EQ(f.shell.notices.back().first, "设置画面效果失败：写不进去");
+}
+
 TEST(RuntimeController, KeyboardIsExclusiveOnlyForHandheldMachinesOrTheFamilyKeyboard) {
   RuntimeFixture f;
   f.reply("runtime.status", statusJson("on", "running", "fc", false, "a.nes"));
@@ -548,6 +565,17 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   EXPECT_EQ(menus[1].items[2].label, "暂停");
   EXPECT_TRUE(menus[1].items[3].separatorBefore);
   EXPECT_FALSE(menus[1].items[5].checked.value());
+  // “设置”菜单的“画面效果”子菜单：平滑与像素二选一，当前的打对勾，选“像素”经首选项保存
+  ASSERT_EQ(menus[2].items.size(), 3U);
+  EXPECT_EQ(menus[2].items[0].label, "画面效果");
+  ASSERT_EQ(menus[2].items[0].items.size(), 2U);
+  EXPECT_EQ(menus[2].items[0].items[0].label, "平滑");
+  EXPECT_TRUE(menus[2].items[0].items[0].checked.value());
+  EXPECT_EQ(menus[2].items[0].items[1].label, "像素");
+  EXPECT_FALSE(menus[2].items[0].items[1].checked.value());
+  f.reply("preferences.set", {{"id", "display.filter"}, {"value", "pixel"}});
+  shell.selectMenuItem(menus[2].items[0].items[1].id);
+  EXPECT_EQ(f.last("preferences.set")->params, json({{"id", "display.filter"}, {"value", "pixel"}}));
   const auto host = shell.statusItems(false);
   ASSERT_EQ(host.size(), 3U);
   EXPECT_EQ(host[0].text, "经典 FC");

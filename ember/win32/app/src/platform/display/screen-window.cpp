@@ -76,6 +76,7 @@ struct ScreenWindow::Impl {
   bool frameVisible{false};
   shared::ScreenAspect aspect{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling{shared::kDefaultScreenScaling};
+  shared::ScreenFilter filter{shared::kDefaultScreenFilter};
   int cropLines{0};
   shared::ScreenRect rect;
   std::vector<shared::ScreenRect> holes;
@@ -322,7 +323,8 @@ struct ScreenWindow::Impl {
       if (video.width > 0 && video.height > 0) {
         const float top = static_cast<float>(cropLines) / static_cast<float>(frameHeight);
         const float bottom = static_cast<float>(static_cast<int>(frameHeight) - cropLines) / static_cast<float>(frameHeight);
-        draw(frameView.Get(), scaling == shared::ScreenScaling::Integer ? pointSampler.Get() : linearSampler.Get(), opaqueBlend.Get(), video, 0.0f, 1.0f, top, bottom);
+        const bool pixelated = scaling == shared::ScreenScaling::Integer || filter == shared::ScreenFilter::Pixel;
+        draw(frameView.Get(), pixelated ? pointSampler.Get() : linearSampler.Get(), opaqueBlend.Get(), video, 0.0f, 1.0f, top, bottom);
         if (overlayView) {
           for (const auto& box : glass) drawGlass(box, video, top, bottom);
         }
@@ -383,10 +385,11 @@ shared::ScreenRect ScreenWindow::screenBounds() const {
   return shared::ScreenRect{area.left, area.top, area.right - area.left, area.bottom - area.top};
 }
 
-void ScreenWindow::setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, int cropLines) {
-  if (impl_->aspect == aspect && impl_->scaling == scaling && impl_->cropLines == cropLines) return;
+void ScreenWindow::setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, shared::ScreenFilter filter, int cropLines) {
+  if (impl_->aspect == aspect && impl_->scaling == scaling && impl_->filter == filter && impl_->cropLines == cropLines) return;
   impl_->aspect = aspect;
   impl_->scaling = scaling;
+  impl_->filter = filter;
   impl_->cropLines = cropLines;
   impl_->render();
 }

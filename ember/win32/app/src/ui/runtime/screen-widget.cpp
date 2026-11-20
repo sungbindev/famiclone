@@ -45,7 +45,7 @@ ScreenWidget::ScreenWidget(contracts::RuntimeModel& model, contracts::ScreenHost
     mouseCaptured_ = false;
     buttons_ = 0;
   });
-  host_.setView(view_.screen.aspect, view_.screen.scaling, view_.screen.showAllLines);
+  host_.setView(view_.screen.aspect, view_.screen.scaling, view_.screen.filter, view_.screen.showAllLines);
   host_.setFrameVisible(false);
 }
 
@@ -102,7 +102,7 @@ void ScreenWidget::updateBox() {
 void ScreenWidget::refresh() {
   const contracts::RuntimeView previous = view_;
   view_ = model_.view();
-  host_.setView(view_.screen.aspect, view_.screen.scaling, view_.screen.showAllLines);
+  host_.setView(view_.screen.aspect, view_.screen.scaling, view_.screen.filter, view_.screen.showAllLines);
   host_.setFrameVisible(view_.state == contracts::MachineState::Paused || view_.state == contracts::MachineState::Running);
   // 不再带鼠标（或关掉了“点击画面捕获鼠标”）时，已有的捕获立即释放
   if (!view_.capturesMouse && mouseCaptured_) releaseMouse();

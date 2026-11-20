@@ -32,8 +32,8 @@ class ScreenHost {
 
   /** 画面子窗口放到这个矩形（设备像素，相对主窗口客户区）；宽或高为 0 时隐藏。 */
   virtual void setBounds(const shared::ScreenRect& rect) = 0;
-  /** 显示方式：画面比例、缩放方式与是否显示全部扫描线（否则上下各裁掉一部分）。 */
-  virtual void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, bool showAllLines) = 0;
+  /** 显示方式：画面比例、缩放方式、画面效果与是否显示全部扫描线（否则上下各裁掉一部分）。 */
+  virtual void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, shared::ScreenFilter filter, bool showAllLines) = 0;
   /** 按当前显示方式，画面（含像素宽高比）的标称宽高比。 */
   [[nodiscard]] virtual double nominalRatio() const = 0;
   /** 画面是否显示：没有开机与断电时机器没有画面，不显示纹理里残留的上一帧。 */

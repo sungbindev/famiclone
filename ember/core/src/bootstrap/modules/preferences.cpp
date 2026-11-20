@@ -45,6 +45,13 @@ void registerInterfaceSettings(api::PreferenceService& service) {
                       .kind = api::SettingKind::Choice,
                       .options = {{"fit", "适应窗口"}, {"integer", "整数倍"}},
                       .defaultValue = std::string("fit")});
+  service.addSetting({.id = "display.filter",
+                      .group = "display",
+                      .label = "画面效果",
+                      .description = "平滑让放大后的画面边缘柔和，像素让每个像素都清晰分明；整数倍缩放时两者相同。",
+                      .kind = api::SettingKind::Choice,
+                      .options = {{"smooth", "平滑"}, {"pixel", "像素"}},
+                      .defaultValue = std::string("smooth")});
   service.addSetting({.id = "display.showAllLines",
                       .group = "display",
                       .label = "显示全部 240 行",

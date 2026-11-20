@@ -20,6 +20,7 @@ namespace {
 
 /** 接入 Family BASIC 键盘的首选项标识。 */
 constexpr const char* kFamilyKeyboardSetting = "input.familyKeyboard";
+constexpr const char* kScreenFilterSetting = "display.filter";
 
 std::string failedText(const std::string& action, const std::string& reason) { return action + "失败：" + reason; }
 
@@ -201,6 +202,13 @@ void RuntimeController::toggleFamilyKeyboard() {
   });
 }
 
+void RuntimeController::setScreenFilter(shared::ScreenFilter filter) {
+  if (shell_ == nullptr || screen_.filter == filter) return;
+  ask("preferences.set", {{"id", kScreenFilterSetting}, {"value", filter == shared::ScreenFilter::Pixel ? "pixel" : "smooth"}}, [this](const contracts::CoreReply& reply) {
+    if (!reply.ok) report("设置画面效果", reply);
+  });
+}
+
 void RuntimeController::handleEvent(const std::string& name, const nlohmann::json& data) {
   if (name == "preferences.changed") {
     if (data.is_object() && data.contains("id") && data["id"].is_string() && data.contains("value")) applySetting(data["id"].get<std::string>(), data["value"]);
@@ -299,6 +307,9 @@ void RuntimeController::applySetting(const std::string& id, const nlohmann::json
   } else if (id == "display.scaling" && value.is_string()) {
     if (value == "fit") screen_.scaling = shared::ScreenScaling::Fit;
     else if (value == "integer") screen_.scaling = shared::ScreenScaling::Integer;
+  } else if (id == kScreenFilterSetting && value.is_string()) {
+    if (value == "smooth") screen_.filter = shared::ScreenFilter::Smooth;
+    else if (value == "pixel") screen_.filter = shared::ScreenFilter::Pixel;
   } else if (id == "display.showAllLines" && value.is_boolean()) {
     screen_.showAllLines = value.get<bool>();
   } else if (id == "input.captureMouse" && value.is_boolean()) {
@@ -306,7 +317,7 @@ void RuntimeController::applySetting(const std::string& id, const nlohmann::json
   } else if (id == kFamilyKeyboardSetting) {
     familyKeyboard_ = value == true;
   }
-  const bool same = before.aspect == screen_.aspect && before.scaling == screen_.scaling && before.showAllLines == screen_.showAllLines && before.captureMouse == screen_.captureMouse && keyboardBefore == familyKeyboard_;
+  const bool same = before.aspect == screen_.aspect && before.scaling == screen_.scaling && before.filter == screen_.filter && before.showAllLines == screen_.showAllLines && before.captureMouse == screen_.captureMouse && keyboardBefore == familyKeyboard_;
   if (!same) changed();
 }
 

@@ -21,11 +21,17 @@ enum class ScreenAspect { Ratio4x3, Ratio8x7 };
 /** 缩放方式：适应窗口（尽量放大）或整数倍（放不下时取最大的整数倍）。 */
 enum class ScreenScaling { Fit, Integer };
 
+/** 画面效果：平滑（适应窗口时用双线性插值，边缘柔和）或像素（始终最近邻采样，保持像素颗粒分明）；整数倍缩放时两者都是像素。 */
+enum class ScreenFilter { Smooth, Pixel };
+
 /** 默认的画面比例：像素宽高比 8:7，画面不变形。 */
 inline constexpr ScreenAspect kDefaultScreenAspect = ScreenAspect::Ratio8x7;
 
 /** 默认的缩放方式。 */
 inline constexpr ScreenScaling kDefaultScreenScaling = ScreenScaling::Fit;
+
+/** 默认的画面效果。 */
+inline constexpr ScreenFilter kDefaultScreenFilter = ScreenFilter::Smooth;
 
 /** 标准帧（FC 的整帧）的尺寸：画面框的显示比例按它算，不随当前这一帧的实际尺寸变化。 */
 inline constexpr int kNominalFrameWidth = 256;

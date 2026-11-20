@@ -51,11 +51,11 @@ ScreenHostAdapter::~ScreenHostAdapter() {
 
 void ScreenHostAdapter::setBounds(const shared::ScreenRect& rect) { window_->setBounds(rect); }
 
-void ScreenHostAdapter::setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, bool showAllLines) {
+void ScreenHostAdapter::setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, shared::ScreenFilter filter, bool showAllLines) {
   aspect_ = aspect;
   scaling_ = scaling;
   cropLines_ = shared::cropLinesFor(showAllLines);
-  window_->setView(aspect, scaling, cropLines_);
+  window_->setView(aspect, scaling, filter, cropLines_);
 }
 
 double ScreenHostAdapter::nominalRatio() const { return shared::nominalScreenRatio(aspect_, cropLines_); }

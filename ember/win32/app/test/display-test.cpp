@@ -62,7 +62,9 @@ TEST(ScreenWindow, CreatesShowsFramesAndOverlaysWithoutErrors) {
   std::vector<std::uint32_t> frame(256 * 240, 0xff0000ffU);
   screen->setFrame(frame.data(), 256, 240);
   screen->setFrameVisible(true);
-  screen->setView(shared::ScreenAspect::Ratio4x3, shared::ScreenScaling::Integer, 8);
+  screen->setView(shared::ScreenAspect::Ratio4x3, shared::ScreenScaling::Integer, shared::ScreenFilter::Smooth, 8);
+  screen->render();
+  screen->setView(shared::ScreenAspect::Ratio8x7, shared::ScreenScaling::Fit, shared::ScreenFilter::Pixel, 0);
   screen->render();
   // 帧的大小变化（学习机的画面比 FC 大）
   std::vector<std::uint32_t> large(640 * 480, 0xff00ff00U);

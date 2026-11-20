@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：release.mjs
-// 说明：发布脚本：prepare 升版本号并重新生成工具链包的 package.json；publish 做检查、试发布，确认后按顺序发布四个 npm 包。
+// 说明：发布脚本：prepare 升版本号，组装最新的模拟器包并重新生成工具链包的 package.json；publish 做检查、试发布，确认后按顺序发布四个 npm 包。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
@@ -68,7 +68,7 @@ function writeManifest(file, document) {
 }
 
 /**
- * 升版本号：主包、创建包与模拟器包的 version，以及主包对工具链包与模拟器包的精确依赖；再重新生成工具链包的 package.json 与 npm 的锁文件。
+ * 升版本号：主包、创建包与模拟器包的 version，以及主包对工具链包与模拟器包的精确依赖；再把最新的模拟器组装进模拟器包，重新生成工具链包的 package.json 与 npm 的锁文件。
  * @param {string} version 新版本号
  * @throws {Error} 版本号格式不对或与当前相同
  */
@@ -87,6 +87,7 @@ function prepare(version) {
   ember.document.version = version;
   writeManifest(ember.file, ember.document);
 
+  run(process.execPath, ['tools/build-ember.mjs']);
   run(process.execPath, ['tools/build-cc65.mjs']);
   run('npm', ['install', '--no-audit', '--no-fund']);
   console.log(`\n版本号已升到 ${version}。请检查并提交改动，然后运行：node tools/release.mjs publish`);

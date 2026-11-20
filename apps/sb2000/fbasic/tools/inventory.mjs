@@ -6,7 +6,7 @@
 // 日期：2026-11-16
 // 备注：用法 node tools/inventory.mjs [--callers]；例程的起点取被 JSR 调用的地址、地址表指向的地址与代码入口；--callers 另列每个例程的调用者数。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './lib/opcodes.mjs';
 import { BASE, hex4, loadImageModel } from './lib/image-model.mjs';
 import { addressingMode } from './lib/opcode-modes.mjs';
 

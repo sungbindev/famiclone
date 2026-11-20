@@ -8,7 +8,7 @@
 // ------------------------------------------------------------------------
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { OPCODES } from '../../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './opcodes.mjs';
 import { OPCODE, SKIP_PREFIX, UNKNOWN } from './code-discovery.mjs';
 import { dataElements, readSymbols } from './layout.mjs';
 import { addressingMode } from './opcode-modes.mjs';

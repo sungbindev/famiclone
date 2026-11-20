@@ -8,7 +8,7 @@
 //       种子（轨迹或人工确认的入口）的路径出错只放弃那一路；试探用严格模式：遇到非法操作码、重叠、分支目标越界或访问非法目标就整体放弃，
 //       只有通过严格检查、指令数不少于下限的区段才算代码。试探的结果要人工复核后写进 analysis/code-entries.txt，不自动当作结论。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './opcodes.mjs';
 
 /** 字节分类：0 未知，1 指令的操作码，2 指令的操作数，3 跳过前缀（见 CodeMap 构造函数） */
 export const UNKNOWN = 0;

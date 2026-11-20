@@ -1,10 +1,10 @@
 // ------------------------------------------------------------------------
 // 名称：disasm-command.mjs
-// 说明：disasm 命令：把 NES 程序或平铺二进制反汇编成 ca65 源码，并回读校验。
+// 说明：disasm 命令：把 NES 程序或平铺二进制反汇编成 ca65 源码工程，并回读校验。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：iNES 文件读取 PRG 与中断向量，自动加入 NES 的 PPU 寄存器符号；平铺二进制必须指定加载地址与入口。
+// 备注：iNES 文件读取 PRG 与中断向量，自动加入 NES 的 PPU 寄存器符号；平铺二进制必须指定加载地址与入口；输出是一个反汇编工程目录。
 // ------------------------------------------------------------------------
 import path from 'node:path';
 import { disassemble } from '../../disasm/index.mjs';
@@ -37,7 +37,7 @@ export function parseAddress(text, option) {
  */
 export async function runDisasmCommand({ positionals, options, context }) {
   if (positionals.length !== 1) {
-    throw new FcdevError('disasm 需要一个输入文件', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev disasm <文件> [--format ines|binary] [--base 地址] [--entry 地址] [--cdl 文件] [--symbols 文件] [--out 目录]' });
+    throw new FcdevError('disasm 需要一个输入文件', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev disasm <文件> [--format ines|flat] [--base 地址] [--entry 地址] [--cdl 文件] [--trace 文件] [--symbols 文件] [--out 目录]' });
   }
   const inputFile = path.resolve(context.cwd, positionals[0]);
   const config = loadProjectConfig(context.cwd, context.cwd);
@@ -54,12 +54,14 @@ export async function runDisasmCommand({ positionals, options, context }) {
     symbolsFile: options.symbols === undefined ? undefined : path.resolve(context.cwd, options.symbols),
     outDir: path.resolve(context.cwd, options.out ?? path.join('build', 'disasm', path.basename(inputFile, path.extname(inputFile)))),
     toolchain,
-    includes: [nesRegisters],
+    symbolSetFiles: [nesRegisters],
   });
 
   for (const warning of report.warnings.slice(0, 10)) context.stderr.write(`警告：${warning}\n`);
   if (report.warnings.length > 10) context.stderr.write(`警告：还有 ${report.warnings.length - 10} 条，省略\n`);
-  context.stdout.write(`${report.description}：${report.size} 字节，指令 ${report.instructions} 条（${report.codeBytes} 字节），其余 ${report.size - report.codeBytes} 字节按数据处理\n`);
-  context.stdout.write(`回读校验通过：重新汇编的结果与原映像逐字节一致\n已生成 ${path.relative(context.cwd, report.sourceFile) || report.sourceFile}\n`);
+  const { status } = report;
+  context.stdout.write(`${report.description}：映像 ${report.size} 字节，其中 ${report.mappedBytes} 字节在 CPU 地址空间里；追踪出指令 ${report.instructions} 条，代码区域 ${report.codeBytes} 字节\n`);
+  context.stdout.write(`回读校验通过：重新汇编的结果与原映像逐字节一致\n已生成工程 ${path.relative(context.cwd, report.projectDir) || report.projectDir}\n`);
+  context.stdout.write(`符号 ${status.symbols.total} 个（自动命名 ${status.symbols.auto} 个），没有说明的过程 ${status.proceduresWithoutComment} 个，未解析的间接跳转 ${status.unresolved.indirectJumps} 处、跨 bank 转移 ${status.unresolved.crossBank} 处\n`);
   return 0;
 }

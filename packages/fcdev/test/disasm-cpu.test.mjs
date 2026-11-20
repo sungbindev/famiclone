@@ -11,7 +11,6 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { ADDRESSING_MODES, OPCODE_TABLE, decode, findOpcode, formatInstruction, isAssemblable } from '../src/disasm/index.mjs';
-import { OPCODES as LEGACY_OPCODES } from '../src/disasm/opcode-table.mjs';
 import { runTool } from '../src/toolchain/index.mjs';
 import { createTempDir, findTestToolchain, SKIP_WITHOUT_TOOLCHAIN } from './helpers.mjs';
 
@@ -31,15 +30,9 @@ describe('指令表', () => {
     });
   });
 
-  it('助记符、长度与流程类别和 da65 的指令表一致', () => {
-    OPCODE_TABLE.forEach((entry, opcode) => {
-      const legacy = LEGACY_OPCODES[opcode];
-      if (entry === null) {
-        assert.equal(legacy, null, `$${opcode.toString(16)}`);
-      } else {
-        assert.deepEqual([entry.mnemonic, entry.size, entry.flow], legacy, `$${opcode.toString(16)}`);
-      }
-    });
+  it('流程类别：顺序、分支、调用、跳转、间接跳转、返回、停止', () => {
+    const flowOf = (opcode) => OPCODE_TABLE[opcode].flow;
+    assert.deepEqual([0xa9, 0x8d, 0xd0, 0x20, 0x4c, 0x6c, 0x60, 0x40, 0x00].map(flowOf), ['next', 'next', 'branch', 'call', 'jump', 'jump-indirect', 'return', 'return', 'stop']);
   });
 
   it('按助记符与寻址方式查操作码，组合不存在时返回 undefined', () => {

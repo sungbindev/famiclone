@@ -1,17 +1,17 @@
 // ------------------------------------------------------------------------
 // 名称：disasm-trace.test.mjs
-// 说明：测试静态追踪：与旧实现在同一批夹具上结果一致，换页窗口、跨 bank 转移、间接跳转与地址表的登记，以及分多次追踪。
+// 说明：测试静态追踪：逐字节的分类、换页窗口、跨 bank 转移、间接跳转与地址表的登记，以及分多次追踪。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：与旧实现对照的夹具取自 disasm.test.mjs 的“静态追踪”（地址表、PHA 加 RTS 表等写法）；旧实现在阶段 4 删除后，对照用例一并删除。
+// 备注：地址表、PHA 加 RTS 表等写法的夹具集中在 FIXTURES；真实程序的用例需要 cc65 工具链。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { buildPath } from '../src/build/index.mjs';
 import {
-  BYTE_KIND, analyzeCode, createAddressSpace, createAnalysis, createLayout, entriesFromVectors, entryAtAddress, loadInes, parseFlat, parseInes, traceCode,
+  BYTE_KIND, createAddressSpace, createAnalysis, createLayout, entriesFromVectors, entryAtAddress, parseFlat, parseInes, traceCode,
 } from '../src/disasm/index.mjs';
 import { createTempDir, SKIP_WITHOUT_TOOLCHAIN, writeTestFile } from './helpers.mjs';
 
@@ -30,7 +30,7 @@ function traceFlat(bytes, entryAddresses, address = 0x8000) {
   return { ...image, summary };
 }
 
-/** 与旧实现对照的夹具：映像、加载地址、入口 */
+/** 地址表、间接跳转等写法的夹具：映像、加载地址、入口 */
 const FIXTURES = {
   '顺序、条件分支与子程序调用': { bytes: [0xa9, 0x05, 0xf0, 0x03, 0xea, 0x60, 0xff, 0x20, 0x0b, 0xc0, 0x60, 0xe8, 0x60], base: 0xc000, entries: [0xc000] },
   'JMP 只追目标': { bytes: [0x4c, 0x05, 0x80, 0xff, 0xff, 0x60], base: 0x8000, entries: [0x8000] },
@@ -43,18 +43,29 @@ const FIXTURES = {
   'JMP (地址) 指向映像内的字表': { bytes: [0x6c, 0x05, 0x80, 0xff, 0xff, 0x07, 0x80, 0x60], base: 0x8000, entries: [0x8000] },
 };
 
-describe('与旧实现对照', () => {
-  for (const [name, { bytes, base, entries }] of Object.entries(FIXTURES)) {
-    it(`${name}：每个字节的分类与指令条数一致`, () => {
-      const legacy = analyzeCode({ bytes: Buffer.from(bytes), base, entries });
-      const { analysis, summary } = traceFlat(bytes, entries, base);
-      assert.deepEqual([...analysis.kinds], [...legacy.kinds]);
-      assert.equal(summary.instructions, legacy.instructions);
-    });
-  }
-});
+/** 每个夹具追踪后每个字节的分类（0 未知、1 操作码、2 操作数、3 地址表）与指令条数 */
+const EXPECTED_KINDS = {
+  '顺序、条件分支与子程序调用': { kinds: [1, 2, 1, 2, 1, 1, 0, 1, 2, 2, 1, 1, 1], instructions: 8 },
+  'JMP 只追目标': { kinds: [1, 2, 2, 0, 0, 1], instructions: 2 },
+  '间接 JMP、RTI 与 BRK 结束这一路': { kinds: [1, 2, 2, 0, 1, 0, 1, 0], instructions: 3 },
+  '跳到映像之外': { kinds: [1, 2, 2, 1], instructions: 2 },
+  '字表加间接 JMP': { kinds: [1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 0, 3, 3, 3, 3, 1, 1], instructions: 9 },
+  '表里的目标不是官方操作码': { kinds: [1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0], instructions: 7 },
+  'PHA、PHA、RTS 的字表': { kinds: [1, 2, 2, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 3, 1, 1], instructions: 7 },
+  'PHA、PHA、RTS 的分开的两张表': { kinds: [1, 2, 2, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], instructions: 7 },
+  'JMP (地址) 指向映像内的字表': { kinds: [1, 2, 2, 0, 0, 3, 3, 1], instructions: 2 },
+};
 
 describe('静态追踪', () => {
+  for (const [name, expected] of Object.entries(EXPECTED_KINDS)) {
+    it(`${name}：每个字节的分类与指令条数`, () => {
+      const { bytes, base, entries } = FIXTURES[name];
+      const { analysis, summary } = traceFlat(bytes, entries, base);
+      assert.deepEqual([...analysis.kinds], expected.kinds);
+      assert.equal(summary.instructions, expected.instructions);
+    });
+  }
+
   it('顺序、分支、调用都被追到，不可达的字节保持未知，指令记录有地址与长度', () => {
     const { analysis, summary } = traceFlat(FIXTURES['顺序、条件分支与子程序调用'].bytes, [0xc000], 0xc000);
     assert.deepEqual([...analysis.kinds], [1, 2, 1, 2, 1, 1, 0, 1, 2, 2, 1, 1, 1]);
@@ -213,7 +224,7 @@ describe('换页窗口', () => {
   });
 });
 
-describe('与旧实现在 fcdev 构建的程序上对照（需要 cc65）', { skip: SKIP_WITHOUT_TOOLCHAIN }, () => {
+describe('fcdev 构建的真实程序（需要 cc65）', { skip: SKIP_WITHOUT_TOOLCHAIN }, () => {
   let temp;
   beforeEach(() => { temp = createTempDir(); });
   afterEach(() => temp.cleanup());
@@ -226,7 +237,7 @@ describe('与旧实现在 fcdev 构建的程序上对照（需要 cc65）', { sk
     return result.outputFile;
   }
 
-  it('NES 程序：入口取自向量，每个字节的分类与指令条数和旧实现一致', async () => {
+  it('NES 程序：入口取自向量，指令条数与操作码字节数一致', async () => {
     const file = readFileSync(await buildProject('nes', 'hello.c', '#include <fcnes.h>\nint main(void) { nes_screen_off(); nes_print(1, 1, "HI"); nes_screen_on(); for (;;) { } }\n'));
     const parsed = parseInes(file);
     const { entries, skipped } = entriesFromVectors(createAddressSpace(parsed.layout), parsed.vectors);
@@ -234,23 +245,20 @@ describe('与旧实现在 fcdev 构建的程序上对照（需要 cc65）', { sk
     const analysis = createAnalysis(parsed.layout);
     const summary = traceCode(analysis, { bytes: file, layout: parsed.layout }, entries);
 
-    const legacyImage = loadInes(file);
-    const legacy = analyzeCode({ bytes: legacyImage.bytes, base: legacyImage.base, entries: [legacyImage.vectors.reset, legacyImage.vectors.nmi, legacyImage.vectors.irq] });
     const segment = parsed.layout.segments[0];
-    assert.deepEqual([...analysis.kinds.subarray(segment.fileOffset, segment.fileOffset + segment.length)], [...legacy.kinds]);
-    assert.equal(summary.instructions, legacy.instructions);
+    const kinds = analysis.kinds.subarray(segment.fileOffset, segment.fileOffset + segment.length);
+    assert.ok(kinds.some((kind) => kind === BYTE_KIND.OPCODE));
+    assert.equal(kinds.filter((kind) => kind === BYTE_KIND.OPCODE).length, summary.instructions);
     assert.ok(summary.instructions > 50);
   });
 
-  it('SB2000 程序：平铺在 $8000，入口取自文件头的 JMP，结果与旧实现一致', async () => {
+  it('SB2000 程序：平铺在 $8000，入口取自文件头的 JMP', async () => {
     const file = readFileSync(await buildProject('sb2000', 'hello.c', '#include <sb2000.h>\nint main(void) { sb_puts("Hi"); return 0; }\n'));
     const entry = file.readUInt16LE(1);
     const { layout } = parseFlat(file, { address: 0x8000 });
     const analysis = createAnalysis(layout);
     const summary = traceCode(analysis, { bytes: file, layout }, [entryAtAddress(createAddressSpace(layout), entry, { source: 'manual' })]);
-    const legacy = analyzeCode({ bytes: file, base: 0x8000, entries: [entry] });
-    assert.deepEqual([...analysis.kinds], [...legacy.kinds]);
-    assert.equal(summary.instructions, legacy.instructions);
+    assert.equal([...analysis.kinds].filter((kind) => kind === BYTE_KIND.OPCODE).length, summary.instructions);
     assert.ok(summary.instructions > 20);
   });
 });

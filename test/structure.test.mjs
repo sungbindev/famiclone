@@ -11,7 +11,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { checkImports } from '../tools/check-structure.mjs';
+import { checkDisasmNames, checkImports } from '../tools/check-structure.mjs';
 
 describe('分层依赖检查', () => {
   let root;
@@ -63,5 +63,39 @@ describe('分层依赖检查', () => {
     write('unknown/index.mjs', 'export const a = 1;\n');
     const violations = checkImports(root);
     assert.deepEqual(violations, ['unknown：目录没有在依赖表中登记']);
+  });
+});
+
+describe('反汇编核心不写死机型', () => {
+  let root;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'fcdev-structure-'));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  /** 写一个文件，自动创建目录 */
+  function write(relativePath, content) {
+    const full = path.join(root, relativePath);
+    mkdirSync(path.dirname(full), { recursive: true });
+    writeFileSync(full, content);
+  }
+
+  it('formats 目录里可以出现机型名与格式名，其他目录里的要报违规（含注释、不区分大小写）', () => {
+    write('disasm/formats/ines.mjs', '// iNES（NES 卡带）\nexport const a = 1;\n');
+    write('disasm/model/layout.mjs', 'export const b = 1;\n// 给 SB2000 用\nexport const c = \'nes\';\n');
+    write('disasm/cpu/decode.mjs', 'export const d = "synesthesia";\n');
+    assert.deepEqual(checkDisasmNames(root), [
+      'disasm/model/layout.mjs：第 2 行出现机型或格式名 SB2000（只允许在 formats/ 里）',
+      'disasm/model/layout.mjs：第 3 行出现机型或格式名 nes（只允许在 formats/ 里）',
+    ]);
+  });
+
+  it('没有 disasm 目录时没有违规', () => {
+    write('shared/index.mjs', 'export const a = \'nes\';\n');
+    assert.deepEqual(checkDisasmNames(root), []);
   });
 });

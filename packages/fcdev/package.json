@@ -30,7 +30,8 @@
     "fcdev": "bin/fcdev.mjs"
   },
   "scripts": {
-    "prepack": "node ../../tools/build-libs.mjs && node debug-sdk/scripts/build.mjs",
+    "prepack": "node ../../tools/build-libs.mjs && node debug-sdk/scripts/build.mjs && tsc -p tsconfig.types.json",
+    "types:build": "tsc -p tsconfig.types.json",
     "debug-sdk:schema": "npm --prefix ../../ember run schema",
     "debug-sdk:typecheck": "tsc -p debug-sdk/tsconfig.json",
     "debug-sdk:lint": "oxlint -c debug-sdk/.oxlintrc.json --deny-warnings debug-sdk/src debug-sdk/test debug-sdk/scripts",

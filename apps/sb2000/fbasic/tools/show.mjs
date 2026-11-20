@@ -6,7 +6,7 @@
 // 日期：2026-11-16
 // 备注：用法 node tools/show.mjs asm <起始地址> [指令条数，默认 30]；node tools/show.mjs hex <起始地址> [字节数，默认 128]
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './lib/opcodes.mjs';
 import { BASE, hex4, readRom } from './lib/image-model.mjs';
 import { addressingMode, formatInstruction } from './lib/opcode-modes.mjs';
 

@@ -13,12 +13,23 @@
 // ------------------------------------------------------------------------
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
-import { renderRoundtripConfig } from '../../../../packages/fcdev/src/disasm/index.mjs';
 import { locateToolchain, runTool } from '../../../../packages/fcdev/src/toolchain/index.mjs';
 import { BASE, PRG_SIZE, ROM_FILE, ROOT, hex4, loadImageModel } from './lib/image-model.mjs';
 import { createEmitter } from './lib/emit.mjs';
+import { OPCODES } from './lib/opcodes.mjs';
 import { addressingMode } from './lib/opcode-modes.mjs';
+
+/**
+ * 回读用的链接配置：一个从起始地址开始、大小恰好等于映像的内存区与一个 CODE 段。
+ * @param {number} base 起始地址
+ * @param {number} size 映像大小
+ * @returns {string} ld65 配置内容
+ */
+function renderRoundtripConfig(base, size) {
+  return `MEMORY { ROM: file = %O, start = $${base.toString(16).toUpperCase()}, size = $${size.toString(16).toUpperCase()}; }
+SEGMENTS { CODE: load = ROM, type = ro; }
+`;
+}
 
 const BUILD = join(ROOT, 'build');
 const args = process.argv.slice(2);

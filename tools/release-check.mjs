@@ -142,6 +142,11 @@ function checkFcdev() {
   } else {
     errors.push('调试 SDK 还没有构建（fcdev 的 dist/debug），先在 packages/fcdev 里运行 npm run debug-sdk:build');
   }
+  if (existsSync(path.join(packageDir, 'dist', 'types', 'disasm', 'index.d.mts'))) {
+    required.push('dist/types/disasm/index.d.mts');
+  } else {
+    errors.push('反汇编核心的类型声明还没有生成（fcdev 的 dist/types），先在 packages/fcdev 里运行 npm run types:build');
+  }
   const changelogFile = path.join(packageDir, 'CHANGELOG.md');
   if (existsSync(changelogFile)) {
     const { version } = readJson(path.join(packageDir, 'package.json'));

@@ -7,7 +7,7 @@
 // 备注：钩子 hooks.codeOperand(item, target) 可以改写 jsr/jmp 的操作数，hooks.tableWord(address, value) 可以改写地址表里的字，
 //       hooks.instruction(item) 可以整条替换一条指令的文字（返回空串表示删掉这条指令，只留标签），hooks.mapAddress(address, item) 可以改写指令里的非代码地址（零页与 RAM），返回 undefined 表示不改。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './opcodes.mjs';
 import { BASE, collectTargets, dataElements, hex2, hex4 } from './image-model.mjs';
 import { addressingMode, formatInstruction } from './opcode-modes.mjs';
 

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：check-structure.mjs
-// 说明：检查主包 src 下的分层依赖：每个功能目录只能引用允许的目录，并且只经对方的 index.mjs 引用。
+// 说明：检查主包 src 下的分层依赖：每个功能目录只能引用允许的目录，并且只经对方的 index.mjs 引用；反汇编核心里除 formats/ 外不出现机型名与文件格式名。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
@@ -79,9 +79,36 @@ export function checkImports(srcRoot) {
   return violations;
 }
 
+/** 反汇编核心里不允许出现的机型名与映像格式名 */
+const MACHINE_NAMES = /\b(?:i?nes|famicom|sb-?2000|sb-?dos)\b/i;
+
+/**
+ * 检查反汇编核心没有写死机型：除 formats/ 外，源码（含注释）里不出现机型名与文件格式名。
+ * @param {string} srcRoot 主包的 src 目录
+ * @returns {string[]} 违规说明，没有违规或没有 disasm 目录时为空数组
+ */
+export function checkDisasmNames(srcRoot) {
+  const disasmDir = path.join(srcRoot, 'disasm');
+  try {
+    if (!statSync(disasmDir).isDirectory()) return [];
+  } catch {
+    return [];
+  }
+  const violations = [];
+  for (const file of listModuleFiles(disasmDir)) {
+    const relative = path.relative(disasmDir, file).split(path.sep);
+    if (relative[0] === 'formats') continue;
+    readFileSync(file, 'utf8').split('\n').forEach((line, index) => {
+      const match = MACHINE_NAMES.exec(line);
+      if (match) violations.push(`disasm/${relative.join('/')}：第 ${index + 1} 行出现机型或格式名 ${match[0]}（只允许在 formats/ 里）`);
+    });
+  }
+  return violations;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'fcdev', 'src');
-  const violations = checkImports(root);
+  const violations = [...checkImports(root), ...checkDisasmNames(root)];
   if (violations.length > 0) {
     console.error(violations.join('\n'));
     process.exit(1);

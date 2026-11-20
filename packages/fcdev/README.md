@@ -22,7 +22,7 @@ npx fcdev build src        # 构建目录 src
 npx fcdev build src/a.c    # 只构建这个文件，它自己是一个程序
 npx fcdev run src          # 构建后在 Ember 里运行
 npx fcdev disk src         # 构建后把程序放进磁盘镜像（只有声明了磁盘能力的目标）
-npx fcdev disasm game.nes  # 反汇编成 ca65 源码，并回读校验
+npx fcdev disasm game.nes  # 反汇编成 ca65 工程，并回读校验
 npx fcdev sync             # 生成 IDE 的 C/C++ 配置
 npx fcdev info --json      # 显示目标、工具链与头文件目录
 npx fcdev api sb_file_open # 查询目标的 C 接口文档（函数名、模块名、$功能号或关键词；不带词列出全部模块）
@@ -49,7 +49,7 @@ npx fcdev disasm prog.bin --base 8000 --entry 8008          # 平铺二进制：
 npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文件
 ```
 
-用 `da65` 生成源码，再用 `ca65`、`ld65` 重新汇编，与原映像逐字节比较，不一致就报错。只追得到的代码才会按指令输出，其余按数据输出；用 `--cdl`（FCEUX、Mesen 格式）或 `--trace`（Ember 记录的指令轨迹）补充运行时才执行到的代码。
+用 `ca65`、`ld65` 把生成的源码重新汇编链接，与原映像逐字节比较，不一致就报错。输出目录是一个工程：`disasm.json`、`src/main.s`、`include/`、`link.cfg`。只追得到的代码才会按指令输出，其余按数据输出；用 `--cdl`（FCEUX、Mesen 格式）或 `--trace`（Ember 记录的指令轨迹）补充运行时才执行到的代码。
 
 ## 配置
 

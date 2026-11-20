@@ -49,7 +49,7 @@ const HELP_TEXT = `fcdev：6502 兼容机的开发工具
   build [目录或文件]   构建：无参数为当前目录；目录整体构成一个程序；文件单独构成一个程序
   run [目录或文件]     构建后在 Ember 里运行（--debug 启动调试模式）
   disk [目录或文件]    构建后把程序放进磁盘镜像（只有支持磁盘的目标可用）
-  disasm <文件>       反汇编 NES 程序或平铺二进制为 ca65 源码，并回读校验
+  disasm <文件>       反汇编 NES 程序或平铺二进制，生成 ca65 源码工程并回读校验
   debug <参数>        交给 Ember 调试 SDK 的终端客户端，如 debug call runtime.status、debug screenshot out.png
   sync                 生成 IDE 的 C/C++ 配置
   info [--json]        显示目标、工具链与头文件目录
@@ -63,13 +63,13 @@ const HELP_TEXT = `fcdev：6502 兼容机的开发工具
   --json               info 输出机器可读格式
 
 disasm 的选项：
-  --format ines|binary 输入格式，缺省时按文件头判断
+  --format ines|flat   输入格式，缺省时按文件头判断
   --base <地址>       平铺二进制的加载地址（十六进制）
   --entry <地址>      追踪代码的入口，可重复；iNES 会自动使用中断向量
   --cdl <文件>        CDL（FCEUX、Mesen 格式），代码段的起点也当作入口
   --trace <文件>      Ember 的 inspector.traceStart（instruction）记录的指令轨迹，执行过的指令地址都当作入口
   --symbols <文件>    符号文件，每行“名字 = $地址”
-  --out <目录>        输出目录，默认 build/disasm/<文件名>
+  --out <目录>        工程目录，默认 build/disasm/<文件名>
   -h, --help           显示帮助
   -v, --version        显示版本
 `;

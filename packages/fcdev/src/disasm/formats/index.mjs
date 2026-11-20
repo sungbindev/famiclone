@@ -25,6 +25,19 @@ const PARSERS = { flat: parseFlat, ines: parseInes };
 /** 支持的格式名 */
 export const FORMAT_NAMES = Object.freeze(Object.keys(PARSERS));
 
+/** 映像文件开头的魔数到格式名；都不符合的当平铺二进制 */
+const SIGNATURES = [{ format: 'ines', magic: Buffer.from([0x4e, 0x45, 0x53, 0x1a]) }];
+
+/**
+ * 按文件开头判断格式。
+ * @param {Buffer} buffer 文件内容
+ * @returns {string} 格式名；认不出时为 flat
+ */
+export function detectFormat(buffer) {
+  const found = SIGNATURES.find(({ magic }) => buffer.subarray(0, magic.length).equals(magic));
+  return found === undefined ? 'flat' : found.format;
+}
+
 /**
  * 按格式名解析映像文件。
  * @param {string} format 格式名，见 FORMAT_NAMES
@@ -41,4 +54,6 @@ export function parseImage(format, buffer, options = {}) {
   return parser(buffer, options);
 }
 
+export { CDL_CODE, CDL_DATA, parseCdl } from './cdl.mjs';
 export { parseFlat, parseInes, parseInesHeader };
+export { parseTrace } from './trace-log.mjs';

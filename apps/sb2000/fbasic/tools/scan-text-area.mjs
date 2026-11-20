@@ -6,7 +6,7 @@
 // 日期：2026-11-16
 // 备注：用法 node tools/scan-text-area.mjs [--abs] [--imm]；结果人工判断后写进 analysis/text-area.txt。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './lib/opcodes.mjs';
 import { BASE, loadImageModel } from './lib/image-model.mjs';
 import { addressingMode, formatInstruction } from './lib/opcode-modes.mjs';
 

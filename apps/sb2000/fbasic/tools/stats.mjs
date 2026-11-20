@@ -6,7 +6,7 @@
 // 日期：2026-11-16
 // 备注：用法 node tools/stats.mjs；阶段 1 结束时的总量与阶段 2 的依赖清单以它为准。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './lib/opcodes.mjs';
 import { BASE, hex4, loadImageModel } from './lib/image-model.mjs';
 import { addressingMode } from './lib/opcode-modes.mjs';
 

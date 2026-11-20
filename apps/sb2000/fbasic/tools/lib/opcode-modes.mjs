@@ -6,7 +6,7 @@
 // 日期：2026-11-16
 // 备注：寻址方式按操作码的 aaabbbcc 规律推出，只覆盖官方指令；助记符与长度来自 fcdev 的指令表。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './opcodes.mjs';
 
 /**
  * 取出操作码的寻址方式。

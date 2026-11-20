@@ -6,7 +6,7 @@
 // 日期：2026-11-16
 // 备注：重排测试（lift.mjs --permute）已经证明这样切出来的块可以任意重排；阶段 4 用同样的块分配到常驻页与各库页。
 // ------------------------------------------------------------------------
-import { OPCODES } from '../../../../../packages/fcdev/src/disasm/opcode-table.mjs';
+import { OPCODES } from './opcodes.mjs';
 import { BASE, dataElements, loadImageModel } from './image-model.mjs';
 import { addressingMode } from './opcode-modes.mjs';
 

@@ -1,6 +1,6 @@
 # 更新记录
 
-## 未发布
+## 0.3.0
 
 - Ember 改为 Windows 原生程序，支持 Windows 7 SP1 到 Windows 11 的 64 位系统；发布为单个 `Ember.exe`，解压即用，不需要安装。
 - 升级只替换 `Ember.exe`，检查更新、下载、重启安装的用法不变。

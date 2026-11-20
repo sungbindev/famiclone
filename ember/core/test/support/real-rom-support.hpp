@@ -34,7 +34,7 @@ namespace ember::test {
 inline std::filesystem::path findReference(const std::string& relative) {
   std::filesystem::path directory = std::filesystem::current_path();
   for (int level = 0; level < 8; ++level) {
-    const auto path = directory / "reference" / std::filesystem::path(relative);
+    const auto path = directory / "reference" / std::filesystem::path(std::u8string(relative.begin(), relative.end()));
     if (std::filesystem::exists(path)) return path;
     if (!directory.has_parent_path() || directory.parent_path() == directory) break;
     directory = directory.parent_path();
@@ -50,9 +50,9 @@ inline std::vector<std::uint8_t> readReferenceFile(const std::string& relative) 
   return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
-/** reference/tape 里按名字排第一的 m4a；没有时为空。 */
+/** reference/tapes 里按名字排第一的 m4a；没有时为空。 */
 inline std::filesystem::path firstTape() {
-  const auto directory = findReference("tape");
+  const auto directory = findReference("tapes");
   if (directory.empty()) return {};
   std::vector<std::filesystem::path> files;
   for (const auto& entry : std::filesystem::directory_iterator(directory)) {

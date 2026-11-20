@@ -300,6 +300,28 @@ TEST(PreferencesContent, DirectoryPickerButtonOnlyOnRowsThatDeclareIt) {
   EXPECT_EQ(s.preferences.calls, (std::vector<std::string>{"pick printer.outputDirectory"}));
 }
 
+TEST(PreferencesContent, RegenerateRowHasAReplaceButtonAndNeverShowsReset) {
+  Scene s;
+  contracts::PreferenceRow token;
+  token.id = "debug.token";
+  token.label = "令牌";
+  token.control = contracts::PreferenceControl::Text;
+  token.text = "abc123";
+  token.regenerates = true;
+  s.preferences.current.groups[1].rows.push_back(token);
+  s.open();
+  s.selectGroup(1);
+  EXPECT_EQ(s.row("sound.note")->regenerate, nullptr);
+  ASSERT_NE(s.row("debug.token")->regenerate, nullptr);
+  EXPECT_FALSE(s.row("debug.token")->reset->visible());
+  s.click(*s.row("debug.token")->regenerate);
+  EXPECT_EQ(s.preferences.calls, (std::vector<std::string>{"reset debug.token"}));
+  // 取值与默认值不同（令牌总是有值）也不显示“恢复默认”
+  s.preferences.current.groups[1].rows.back().text = "def456";
+  s.preferences.notify();
+  EXPECT_FALSE(s.row("debug.token")->reset->visible());
+}
+
 TEST(PreferencesContent, AppGroupEndsWithTheUserDataRowAndOtherGroupsHaveNone) {
   Scene s;
   s.open();

@@ -64,9 +64,10 @@ void registerDebugSettings(api::PreferenceService& service) {
   service.addSetting({.id = SETTING_DEBUG_TOKEN,
                       .group = "debug",
                       .label = "令牌",
-                      .description = "连接时必须提供；清空或恢复默认会重新生成。更换后已连接的工具会被断开。",
+                      .description = "连接时必须提供；点“更换”重新生成，也可以直接改写，清空同样会重新生成。更换后已连接的工具会被断开。",
                       .kind = api::SettingKind::Text,
                       .maxLength = 128,
+                      .picker = "regenerate",
                       .defaultValue = std::string()});
   service.addSetting({.id = contracts::output::SETTING_DEBUG_OUTPUT_DIRECTORY,
                       .group = "debug",
@@ -74,6 +75,7 @@ void registerDebugSettings(api::PreferenceService& service) {
                       .description = "调试工具保存截图等文件的位置；留空使用数据目录下的 debug-output。",
                       .kind = api::SettingKind::Text,
                       .maxLength = 260,
+                      .picker = "directory",
                       .defaultValue = std::string()});
 }
 

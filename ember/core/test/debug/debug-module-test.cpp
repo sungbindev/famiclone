@@ -107,9 +107,10 @@ TEST_F(DebugModuleTest, IsOffByDefaultButAlreadyHasAToken) {
   EXPECT_EQ(token["value"].get<std::string>().size(), 32u);
   EXPECT_EQ(setting(core, "debug.enabled")["value"], false);
   EXPECT_EQ(setting(core, "debug.port")["value"], 5688);
-  // 打印机的图片保存位置是文件夹路径：页面据此显示“选择”按钮；其他文字设置项没有 picker。
+  // 打印机的图片保存位置与调试输出目录是文件夹路径：页面据此显示“选择”按钮；令牌由核心生成：显示“更换”按钮；其他文字设置项没有 picker。
   EXPECT_EQ(setting(core, "printer.outputDirectory")["picker"], "directory");
-  EXPECT_FALSE(token.contains("picker"));
+  EXPECT_EQ(setting(core, "debug.outputDirectory")["picker"], "directory");
+  EXPECT_EQ(token["picker"], "regenerate");
   core.stop();
 
   // 令牌保存在首选项里，重启后不变。
@@ -182,9 +183,11 @@ TEST_F(DebugModuleTest, StartsAndStopsFromThePreferencesAndServesCoreRequests) {
   EXPECT_EQ(endpointJson["port"], port);
   EXPECT_EQ(endpointJson["token"], token);
 
-  // 重新生成令牌（恢复默认）：旧令牌的连接被关闭，新令牌才能连。
-  ASSERT_TRUE(call(core, "preferences.reset", {{"id", "debug.token"}}).ok);
+  // 重新生成令牌（恢复默认）：旧令牌的连接被关闭，新令牌才能连；回复里的取值是重新生成之后的新令牌，不是空串。
+  const auto resetReply = call(core, "preferences.reset", {{"id", "debug.token"}});
+  ASSERT_TRUE(resetReply.ok);
   const auto newToken = setting(core, "debug.token")["value"].get<std::string>();
+  EXPECT_EQ(resetReply.payload["value"], newToken);
   EXPECT_EQ(newToken.size(), 32u);
   EXPECT_NE(newToken, token);
   bool closedWithTokenChange = false;

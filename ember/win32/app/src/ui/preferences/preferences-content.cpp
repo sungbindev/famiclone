@@ -27,6 +27,7 @@ using namespace rujian::ui;
 constexpr const char* kSwitchOn = "开启";
 constexpr const char* kReset = "恢复默认";
 constexpr const char* kPick = "选择";
+constexpr const char* kRegenerate = "更换";
 /** “应用”分组的标识（核心登记）与其中“用户数据目录”一行的文字。 */
 constexpr const char* kAppGroupId = "app";
 constexpr const char* kUserDataLabel = "用户数据目录";
@@ -148,7 +149,7 @@ std::string PreferencesContent::signatureOf(const contracts::PreferencesView& vi
   std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message + '\x1f' + (group != nullptr ? group->id : std::string()) + '\x1d';
   if (group == nullptr) return signature;
   for (const contracts::PreferenceRow& row : group->rows) {
-    signature += row.id + '\x1f' + std::to_string(static_cast<int>(row.control)) + '\x1f' + row.label + '\x1f' + row.description + '\x1f' + (row.directoryPicker ? 'p' : '-');
+    signature += row.id + '\x1f' + std::to_string(static_cast<int>(row.control)) + '\x1f' + row.label + '\x1f' + row.description + '\x1f' + (row.directoryPicker ? 'p' : '-') + std::string(row.regenerates ? "r" : "-");
     for (const contracts::PreferenceChoice& option : row.options) signature += '\x1f' + option.value + '\x1f' + option.label;
     signature += '\x1e';
   }
@@ -205,7 +206,7 @@ std::unique_ptr<Stack> PreferencesContent::buildPane(const contracts::Preference
     for (const contracts::PreferenceRow& spec : group->rows) rows.push_back(makeRow(spec, *list));
     if (group->id == kAppGroupId) userDataButtons = addUserDataRow(*list, userData);
     if (measuring) {
-      for (const auto& state : rows) state->reset->setVisible(true);
+      for (const auto& state : rows) state->reset->setVisible(state->regenerate == nullptr);
     }
     auto panel = std::make_unique<Panel>();
     panel->addContent(std::move(list));
@@ -292,6 +293,11 @@ std::unique_ptr<PreferencesContent::RowWidgets> PreferencesContent::makeRow(cons
     auto pick = compactButton(kPick);
     pick->setOnClick([this, id] { preferences_.pickDirectory(id); });
     raw->pick = static_cast<Button*>(controls->addChild(std::move(pick)));
+  }
+  if (spec.regenerates) {
+    auto regenerate = compactButton(kRegenerate);
+    regenerate->setOnClick([this, id] { preferences_.reset(id); });
+    raw->regenerate = static_cast<Button*>(controls->addChild(std::move(regenerate)));
   }
   auto reset = compactButton(kReset);
   reset->setVisible(spec.changed);

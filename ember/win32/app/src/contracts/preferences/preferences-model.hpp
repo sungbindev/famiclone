@@ -64,6 +64,8 @@ struct PreferenceRow {
   bool changed{false};
   /** 是否有“选择”文件夹的按钮（取值是文件夹路径的文字设置项）。 */
   bool directoryPicker{false};
+  /** 取值由核心生成：显示“更换”按钮（请求恢复默认，核心重新生成），不显示“恢复默认”。 */
+  bool regenerates{false};
   bool operator==(const PreferenceRow&) const = default;
 };
 

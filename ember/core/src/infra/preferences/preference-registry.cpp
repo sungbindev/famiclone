@@ -179,7 +179,7 @@ api::SettingValue PreferenceRegistry::set(const std::string& id, const api::Sett
     listeners = listeners_;
   }
   announce(id, result, listeners);
-  return result;
+  return this->value(id);
 }
 
 api::SettingValue PreferenceRegistry::reset(const std::string& id) {
@@ -193,7 +193,7 @@ api::SettingValue PreferenceRegistry::reset(const std::string& id) {
     listeners = listeners_;
   }
   announce(id, result, listeners);
-  return result;
+  return this->value(id);
 }
 
 void PreferenceRegistry::announce(const std::string& id, const api::SettingValue& value, const std::vector<Listener>& listeners) const {

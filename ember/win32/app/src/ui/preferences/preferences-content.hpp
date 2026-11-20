@@ -46,6 +46,8 @@ class PreferencesContent final : public rujian::ui::Widget {
     rujian::ui::Checkbox* checkbox{nullptr};
     rujian::ui::TextInput* input{nullptr};
     rujian::ui::Button* pick{nullptr};
+    /** “更换”按钮（取值由核心生成的设置项），没有时为空。 */
+    rujian::ui::Button* regenerate{nullptr};
     rujian::ui::Button* reset{nullptr};
     /** 输入框里的内容是用户改过、还没有提交的。 */
     bool dirty{false};

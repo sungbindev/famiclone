@@ -73,6 +73,7 @@ std::optional<Setting> parseSetting(const nlohmann::json& item) {
   setting.minimum = integerField(item, "minimum");
   setting.maximum = integerField(item, "maximum");
   setting.directoryPicker = stringField(item, "picker") == "directory";
+  setting.regenerates = stringField(item, "picker") == "regenerate";
   setting.hidden = boolField(item, "hidden");
   setting.defaultValue = item["defaultValue"];
   setting.value = item["value"];
@@ -94,8 +95,9 @@ contracts::PreferenceRow rowOf(const Setting& setting) {
   row.options = setting.options;
   row.text = valueText(setting.value);
   row.checked = setting.value.is_boolean() && setting.value.get<bool>();
-  row.changed = isChanged(setting);
+  row.changed = isChanged(setting) && !setting.regenerates;
   row.directoryPicker = setting.kind == SettingKind::Text && setting.directoryPicker;
+  row.regenerates = setting.kind == SettingKind::Text && setting.regenerates;
   return row;
 }
 

@@ -38,6 +38,8 @@ struct Setting {
   std::optional<std::int64_t> maximum;
   /** 选择文件夹的按钮：取值 directory 时有。 */
   bool directoryPicker{false};
+  /** 取值由核心生成的“更换”按钮：取值 regenerate 时有。 */
+  bool regenerates{false};
   /** 隐藏的设置项只保存取值，不在页面里显示（如音量）。 */
   bool hidden{false};
   nlohmann::json defaultValue;

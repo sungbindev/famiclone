@@ -61,7 +61,7 @@ struct SettingDefinition {
   std::int64_t maxLength{256};
   /** 首选项页不显示，只保存取值。 */
   bool hidden{false};
-  /** text 的取值是文件夹路径时填 directory，页面在输入框旁显示“选择”按钮；空表示没有。 */
+  /** text 输入框旁的按钮：取值是文件夹路径时填 directory（“选择”）；取值由核心生成、默认值为空时填 regenerate（“更换”，页面请求恢复默认，核心随后重新生成）；空表示没有。 */
   std::string picker;
   /** 出厂默认值，必须符合种类与范围。 */
   SettingValue defaultValue{false};
@@ -110,7 +110,7 @@ class PreferenceService {
 
   /**
    * 修改取值：校验、保存、发出 preferences.changed 事件并通知订阅者；取值没有变化时什么也不做。
-   * @return 修改之后的取值。
+   * @return 通知订阅者之后的取值（订阅者可能又改了它，如令牌置空后重新生成）。
    * @throws shared::CoreError preferences.unknown、preferences.invalidValue。
    */
   virtual SettingValue set(const std::string& id, const SettingValue& value) = 0;

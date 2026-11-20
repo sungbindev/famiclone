@@ -79,6 +79,19 @@ TEST(PreferencesRules, ParsesChoiceOptionsAndDirectoryPicker) {
   EXPECT_EQ(theme.text, "system");
   EXPECT_TRUE(groups[2].rows[0].directoryPicker);
   EXPECT_FALSE(groups[1].rows[2].directoryPicker);
+  EXPECT_FALSE(groups[2].rows[0].regenerates);
+}
+
+TEST(PreferencesRules, RegenerateSettingHasNoResetButNeverShowsAsChanged) {
+  auto source = listing();
+  json token = setting("debug.token", "printer", "text", "abc123", "");
+  token["picker"] = "regenerate";
+  source["settings"].push_back(token);
+  const auto groups = logic::buildGroupViews(*logic::parseSettingListing(source));
+  const auto& row = groups[2].rows.back();
+  EXPECT_TRUE(row.regenerates);
+  EXPECT_FALSE(row.directoryPicker);
+  EXPECT_FALSE(row.changed);
 }
 
 TEST(PreferencesRules, BadShapesAreRejectedOrSkipped) {

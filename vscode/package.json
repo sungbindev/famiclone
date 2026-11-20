@@ -1,7 +1,8 @@
 {
   "name": "fcdev",
-  "displayName": "fcdev 6502 开发",
-  "description": "6502 兼容机（NES、小霸王学习机等）开发：ca65 汇编的语法高亮、悬停、补全、转到定义与符号，cc65 的 C 头文件配置，以及给 Copilot 用的 6502 反汇编工具。",
+  "displayName": "6502 开发（fcdev）",
+  "description": "NES、学习机等 6502 机型的汇编与 C 开发支持，附带 Copilot 反汇编工具。",
+  "icon": "resources/icon.png",
   "version": "0.2.0",
   "publisher": "sungbin",
   "license": "Apache-2.0",

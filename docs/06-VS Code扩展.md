@@ -1,6 +1,6 @@
 # VS Code 扩展
 
-扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“fcdev 6502 开发”。首版做 ca65 汇编的语法高亮，以及 ca65 汇编与 cc65 的 C 的智能感知。扩展不内置编译器，只经 `node_modules` 里的 `fcdev` 命令行读取项目信息。
+扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“6502 开发（fcdev）”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。首版做 ca65 汇编的语法高亮，以及 ca65 汇编与 cc65 的 C 的智能感知。扩展不内置编译器，只经 `node_modules` 里的 `fcdev` 命令行读取项目信息。
 
 ## 1. 范围
 

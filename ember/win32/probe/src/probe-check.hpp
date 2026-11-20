@@ -47,7 +47,7 @@ void checkSystem(CheckResults& results);
 /** 检查 Direct2D 1.0 的窗口渲染目标与 DirectWrite 1.0 及界面用到的字体。 */
 void checkDirect2D(CheckResults& results, HWND window);
 
-/** 检查 Direct3D 11 的硬件设备、DXGI 1.0 交换链与动态纹理上传。 */
+/** 检查 Direct3D 11 的硬件设备与软件设备（WARP，探测回退用）、DXGI 1.0 交换链与动态纹理上传。 */
 void checkDirect3D(CheckResults& results, HWND window);
 
 /** 检查 XInput 9.1.0 能否动态加载并读取手柄状态。 */

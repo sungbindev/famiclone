@@ -15,6 +15,7 @@
 #include <windowsx.h>
 #include <uxtheme.h>
 
+#include "platform/window/resize-border.hpp"
 #include "platform/window/window-shadow.hpp"
 
 namespace ember::win32::platform {
@@ -113,6 +114,8 @@ void FramelessFrame::attach() {
   } else {
     extendFrame(hwnd);
   }
+  // 缩放区在窗口边框线的外面，由单独的窗口接鼠标；窗口里面（含贴边的滚动条）都是客户区
+  border_ = std::make_unique<ResizeBorder>(window_, callbacks_.nonClientPressed);
   // 窗口创建时系统已经算过一次非客户区，让它按现在的处理重算
   SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
@@ -120,6 +123,7 @@ void FramelessFrame::attach() {
 void FramelessFrame::setFullScreen(bool fullScreen) {
   fullScreen_ = fullScreen;
   if (shadow_) shadow_->setSuppressed(fullScreen);
+  if (border_) border_->setSuppressed(fullScreen);
 }
 
 void FramelessFrame::setBorderColor(unsigned colorRef) {
@@ -187,23 +191,6 @@ unsigned long FramelessFrame::hitTest(int screenX, int screenY) const {
   HWND hwnd = static_cast<HWND>(window_);
   RECT rect{};
   GetWindowRect(hwnd, &rect);
-  if (IsZoomed(hwnd) == FALSE && !fullScreen_) {
-    const int horizontal = frameThickness(hwnd, true);
-    // 顶边只留系统的缩放边框厚度，不加补充边框，免得压住右上角的关闭按钮
-    const int top = metric(hwnd, SM_CYSIZEFRAME);
-    const bool left = screenX < rect.left + horizontal;
-    const bool right = screenX >= rect.right - horizontal;
-    const bool above = screenY < rect.top + top;
-    const bool below = screenY >= rect.bottom - horizontal;
-    if (above && left) return HTTOPLEFT;
-    if (above && right) return HTTOPRIGHT;
-    if (below && left) return HTBOTTOMLEFT;
-    if (below && right) return HTBOTTOMRIGHT;
-    if (left) return HTLEFT;
-    if (right) return HTRIGHT;
-    if (above) return HTTOP;
-    if (below) return HTBOTTOM;
-  }
   if (!callbacks_.hitTest || fullScreen_) return HTCLIENT;
   const double scale = options_.scale ? options_.scale() : 1.0;
   switch (callbacks_.hitTest((screenX - rect.left) / scale, (screenY - rect.top) / scale)) {
@@ -290,10 +277,12 @@ bool FramelessFrame::handle(unsigned message, std::uintptr_t wParam, std::intptr
         shadow_->setScale(options_.scale ? options_.scale() : 1.0);
         shadow_->sync();
       }
+      if (border_) border_->sync(frameThickness(hwnd, true));
       return false;
     }
     case WM_NCDESTROY:
       shadow_.reset();
+      border_.reset();
       return false;
     case WM_NCMOUSEMOVE:
       if (!trackingLeave_) {

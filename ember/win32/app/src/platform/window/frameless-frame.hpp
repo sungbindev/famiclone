@@ -1,13 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：frameless-frame.hpp
- * 说明：自绘标题栏窗口的非客户区行为：用 WM_NCCALCSIZE 把标题栏并入客户区，用 WM_NCHITTEST 把缩放边框、标题栏空白与三个系统按钮的点击交还给系统。
+ * 说明：自绘标题栏窗口的非客户区行为：用 WM_NCCALCSIZE 把标题栏并入客户区，用 WM_NCHITTEST 把标题栏空白与三个系统按钮的点击交还给系统，缩放边框放在窗口外面（ResizeBorder）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：接管窗口时去掉标题栏样式（WS_CAPTION），保留缩放边框、系统菜单、最小化与最大化按钮样式，所以缩放、最大化、停靠、贴边、系统菜单与 Windows 11 的贴靠布局仍由系统处理；
  *       不去掉标题栏样式的话，系统会把缩放边框的经典样式（浅蓝底、白线）画在窗口内容之上，运行画面子窗口盖住的地方就会露出这一圈；
- *       命中测试对系统按钮返回 HTMINBUTTON、HTMAXBUTTON、HTCLOSE，对标题栏空白返回 HTCAPTION，控件上返回 HTCLIENT；
+ *       命中测试对系统按钮返回 HTMINBUTTON、HTMAXBUTTON、HTCLOSE，对标题栏空白返回 HTCAPTION，其余（含贴着窗口边的位置）返回 HTCLIENT；缩放区在窗口边框线的外面，由 ResizeBorder 的分层窗口接住鼠标，窗口里面不再有缩放区；
  *       阴影有两种做法：Windows 11 用系统的（DWM 阴影与圆角，边框色经 setBorderColor 设成界面的边框色）；其余系统（Windows 7、8、10）用自绘模式 customFrame：
  *       关掉系统的非客户区绘制（系统不再画标题栏、按钮与玻璃边框，窗口按下、移动、切换激活时也不会冒出系统的框架），阴影由 WindowShadow 画在主窗口后面的分层窗口里，1 像素边框由调用方画；
  *       三个系统按钮由本类自己跟踪鼠标（去掉标题栏样式后系统不再跟踪它们，Windows 7 上系统的跟踪还会画出系统样式的按钮），松开时在按钮上才发出最小化、最大化（还原）与关闭的系统命令；
@@ -24,6 +24,7 @@
 
 namespace ember::win32::platform {
 
+class ResizeBorder;
 class WindowShadow;
 
 /** 窗口客户区里一个位置的命中结果。 */
@@ -117,6 +118,7 @@ class FramelessFrame {
   FramelessOptions options_;
   FramelessCallbacks callbacks_;
   std::unique_ptr<WindowShadow> shadow_;
+  std::unique_ptr<ResizeBorder> border_;
   FrameHit hover_{FrameHit::Client};
   FrameHit pressed_{FrameHit::Client};
   /** 自绘模式下正在跟踪的系统按钮；没有时为 Client。 */

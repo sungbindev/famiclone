@@ -19,6 +19,7 @@
 #include "entry/preferences/theme-sync.hpp"
 #include "platform/window/app-icon.hpp"
 #include "platform/window/frameless-frame.hpp"
+#include "platform/window/resize-border.hpp"
 #include "rujian/ui/offscreen.hpp"
 #include "rujian/ui/root.hpp"
 #include "rujian/ui/window.hpp"
@@ -236,21 +237,100 @@ TEST(FramelessFrame, WholeWindowBecomesTheClientArea) {
   EXPECT_EQ(f.window.root().size().width * f.scale, window.right - window.left);
 }
 
-TEST(FramelessFrame, HitTestGivesResizeBordersCaptionSystemButtonsAndClient) {
+TEST(FramelessFrame, HitTestGivesCaptionSystemButtonsAndClientButNoResizeBorderInsideTheWindow) {
   FrameFixture f;
   EXPECT_EQ(f.hit(300, 18), HTCAPTION);
   EXPECT_EQ(f.hit(kWidth - 23, 18), HTCLOSE);
   EXPECT_EQ(f.hit(kWidth - 69, 18), HTMAXBUTTON);
   EXPECT_EQ(f.hit(kWidth - 115, 18), HTMINBUTTON);
   EXPECT_EQ(f.hit(260, 250), HTCLIENT);
-  EXPECT_EQ(f.hit(0.2, 250), HTLEFT);
-  EXPECT_EQ(f.hit(kWidth - 0.2, 250), HTRIGHT);
-  EXPECT_EQ(f.hit(260, kHeight - 0.2), HTBOTTOM);
-  EXPECT_EQ(f.hit(0.2, kHeight - 0.2), HTBOTTOMLEFT);
-  EXPECT_EQ(f.hit(kWidth - 0.2, kHeight - 0.2), HTBOTTOMRIGHT);
-  EXPECT_EQ(f.hit(300, 0.2), HTTOP);
-  EXPECT_EQ(f.hit(0.2, 0.2), HTTOPLEFT);
-  EXPECT_EQ(f.hit(kWidth - 0.2, 0.2), HTTOPRIGHT);
+  // 贴着窗口边的位置（滚动条所在）都是客户区，缩放区在窗口外面
+  EXPECT_EQ(f.hit(0.2, 250), HTCLIENT);
+  EXPECT_EQ(f.hit(kWidth - 0.2, 250), HTCLIENT);
+  EXPECT_EQ(f.hit(260, kHeight - 0.2), HTCLIENT);
+  EXPECT_EQ(f.hit(0.2, kHeight - 0.2), HTCLIENT);
+  EXPECT_EQ(f.hit(kWidth - 0.2, kHeight - 0.2), HTCLIENT);
+  EXPECT_EQ(f.hit(300, 0.2), HTCAPTION);
+}
+
+/** 缩放边框的夹具：一个已显示的普通窗口，窗口矩形是 (100, 100) 到 (600, 500)。 */
+struct BorderFixture {
+  HWND main{nullptr};
+  int pressed{0};
+  std::unique_ptr<platform::ResizeBorder> border;
+
+  BorderFixture() {
+    main = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"STATIC", L"", WS_POPUP, 100, 100, 500, 400, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+    border = std::make_unique<platform::ResizeBorder>(main, [this] { ++pressed; });
+    ShowWindow(main, SW_SHOWNA);
+    border->sync(8);
+  }
+  ~BorderFixture() {
+    border.reset();
+    DestroyWindow(main);
+  }
+  BorderFixture(const BorderFixture&) = delete;
+  BorderFixture& operator=(const BorderFixture&) = delete;
+
+  [[nodiscard]] long hit(int x, int y) const { return border->hitTest(x, y); }
+};
+
+TEST(ResizeBorder, ResizeZoneIsOutsideTheWindowEdgeOnly) {
+  BorderFixture f;
+  EXPECT_EQ(f.hit(96, 300), HTLEFT);
+  EXPECT_EQ(f.hit(603, 300), HTRIGHT);
+  EXPECT_EQ(f.hit(300, 96), HTTOP);
+  EXPECT_EQ(f.hit(300, 503), HTBOTTOM);
+  // 窗口矩形里面一律不是缩放区，包括贴着边的一圈
+  EXPECT_EQ(f.hit(100, 300), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(599, 300), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(300, 100), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(300, 499), HTTRANSPARENT);
+  // 超过厚度的地方也不是
+  EXPECT_EQ(f.hit(91, 300), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(300, 509), HTTRANSPARENT);
+}
+
+TEST(ResizeBorder, CornersReachAlongTheEdges) {
+  BorderFixture f;
+  EXPECT_EQ(f.hit(96, 96), HTTOPLEFT);
+  EXPECT_EQ(f.hit(603, 96), HTTOPRIGHT);
+  EXPECT_EQ(f.hit(96, 503), HTBOTTOMLEFT);
+  EXPECT_EQ(f.hit(603, 503), HTBOTTOMRIGHT);
+  EXPECT_EQ(f.hit(96, 110), HTTOPLEFT);
+  EXPECT_EQ(f.hit(110, 96), HTTOPLEFT);
+  EXPECT_EQ(f.hit(96, 130), HTLEFT);
+  EXPECT_EQ(f.hit(130, 96), HTTOP);
+}
+
+TEST(ResizeBorder, DoesNotTakeTheMouseWhileTheWindowIsDisabledOrSuppressed) {
+  BorderFixture f;
+  EnableWindow(f.main, FALSE);
+  EXPECT_EQ(f.hit(96, 300), HTTRANSPARENT);
+  EnableWindow(f.main, TRUE);
+  EXPECT_EQ(f.hit(96, 300), HTLEFT);
+  f.border->setSuppressed(true);
+  EXPECT_EQ(f.hit(96, 300), HTTRANSPARENT);
+  EXPECT_EQ(IsWindowVisible(static_cast<HWND>(f.border->handle())), FALSE);
+}
+
+TEST(ResizeBorder, WindowSurroundsTheMainWindowBehindIt) {
+  BorderFixture f;
+  ASSERT_NE(f.border->handle(), nullptr);
+  HWND border = static_cast<HWND>(f.border->handle());
+  RECT rect{};
+  GetWindowRect(border, &rect);
+  EXPECT_EQ(rect.left, 92);
+  EXPECT_EQ(rect.top, 92);
+  EXPECT_EQ(rect.right, 608);
+  EXPECT_EQ(rect.bottom, 508);
+  EXPECT_EQ(GetWindow(f.main, GW_HWNDNEXT), border);
+}
+
+TEST(ResizeBorder, OnlyResizeZonePressesStartAResize) {
+  BorderFixture f;
+  f.border->press(HTCAPTION, 300, 300);
+  EXPECT_EQ(f.pressed, 0);
 }
 
 TEST(FramelessFrame, MinimumTrackSizeIsTheDefaultSize) {

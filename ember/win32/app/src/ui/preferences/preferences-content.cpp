@@ -13,7 +13,6 @@
 
 #include <algorithm>
 
-#include "rujian/ui/callout.hpp"
 #include "rujian/ui/list.hpp"
 #include "rujian/ui/panel.hpp"
 #include "rujian/ui/state.hpp"
@@ -28,11 +27,6 @@ using namespace rujian::ui;
 constexpr const char* kSwitchOn = "开启";
 constexpr const char* kReset = "恢复默认";
 constexpr const char* kPick = "选择";
-constexpr const char* kBiosIntro = "软件不自带 BIOS，也不会在电脑里自己查找：需要 BIOS 的机型要在这里手动添加 BIOS 文件。添加的文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动；想换成别的 BIOS，点“替换”。";
-constexpr const char* kBiosAdd = "添加 BIOS 文件";
-constexpr const char* kBiosReplace = "替换";
-constexpr const char* kBiosRemove = "移除";
-constexpr const char* kBiosOpenDirectory = "打开 BIOS 目录";
 /** “应用”分组的标识（核心登记）与其中“用户数据目录”一行的文字。 */
 constexpr const char* kAppGroupId = "app";
 constexpr const char* kUserDataLabel = "用户数据目录";
@@ -60,7 +54,7 @@ std::unique_ptr<State> errorState(const std::string& message) {
 
 }  // namespace
 
-PreferencesContent::PreferencesContent(contracts::PreferencesModel& preferences, contracts::BiosModel& bios, contracts::UserDataModel& userData) : preferences_(preferences), bios_(bios), userData_(userData) {
+PreferencesContent::PreferencesContent(contracts::PreferencesModel& preferences, contracts::UserDataModel& userData) : preferences_(preferences), userData_(userData) {
   auto split = std::make_unique<SplitView>();
   split->setSideWidthRange(kSideWidthMinimum, kSideWidthMaximum);
   split->setSideWidth(kSideWidthInitial);
@@ -78,12 +72,10 @@ PreferencesContent::PreferencesContent(contracts::PreferencesModel& preferences,
 
   refresh();
   unsubscribePreferences_ = preferences_.subscribe([this] { refresh(); });
-  unsubscribeBios_ = bios_.subscribe([this] { refresh(); });
 }
 
 PreferencesContent::~PreferencesContent() {
   if (unsubscribePreferences_) unsubscribePreferences_();
-  if (unsubscribeBios_) unsubscribeBios_();
 }
 
 Size PreferencesContent::measure(Size available) { return split_->measure(available); }
@@ -93,14 +85,9 @@ void PreferencesContent::arrange(const Rect& bounds) {
   split_->arrange(bounds);
 }
 
-std::string PreferencesContent::signatureOf(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios, const contracts::UserDataView& userData) {
+std::string PreferencesContent::signatureOf(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::UserDataView& userData) {
   std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message + '\x1f' + (group != nullptr ? group->id : std::string()) + '\x1d';
   if (group == nullptr) return signature;
-  if (group->machines) {
-    signature += std::to_string(static_cast<int>(bios.load)) + '\x1f' + bios.message + '\x1e';
-    for (const contracts::BiosRow& row : bios.rows) signature += row.machine + '\x1f' + row.name + '\x1f' + row.status + '\x1f' + (row.hasBios ? 'b' : '-') + (row.supported ? 's' : '-') + '\x1e';
-    return signature;
-  }
   for (const contracts::PreferenceRow& row : group->rows) {
     signature += row.id + '\x1f' + std::to_string(static_cast<int>(row.control)) + '\x1f' + row.label + '\x1f' + row.description + '\x1f' + (row.directoryPicker ? 'p' : '-');
     for (const contracts::PreferenceChoice& option : row.options) signature += '\x1f' + option.value + '\x1f' + option.label;
@@ -112,7 +99,6 @@ std::string PreferencesContent::signatureOf(const contracts::PreferencesView& vi
 
 void PreferencesContent::refresh() {
   const contracts::PreferencesView view = preferences_.view();
-  const contracts::BiosView biosView = bios_.view();
   const contracts::UserDataView userDataView = userData_.view();
 
   std::string treeSignature;
@@ -130,19 +116,17 @@ void PreferencesContent::refresh() {
   selected_ = current != nullptr ? current->id : std::string();
   tree_->setSelectedId(selected_);
 
-  const std::string signature = signatureOf(view, current, biosView, userDataView);
+  const std::string signature = signatureOf(view, current, userDataView);
   if (signature != paneSignature_) {
     paneSignature_ = signature;
-    rebuildPane(view, current, biosView, userDataView);
-  } else if (current != nullptr && !current->machines) {
+    rebuildPane(view, current, userDataView);
+  } else if (current != nullptr) {
     updateRows(*current);
   }
 }
 
-void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::BiosView& bios, const contracts::UserDataView& userData) {
+void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::UserDataView& userData) {
   rows_.clear();
-  biosRows_.clear();
-  openDirectory_ = nullptr;
   userDataLink_ = nullptr;
   userDataSwitch_ = nullptr;
 
@@ -150,49 +134,7 @@ void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, con
   stack->setPadding(Insets{0, kPaneRightPadding, 0, 0});
   if (view.load == contracts::PreferencesLoad::Failed) stack->addChild(errorState(view.message));
 
-  if (group != nullptr && group->machines) {
-    auto callout = std::make_unique<Callout>();
-    callout->setText(kBiosIntro);
-    auto link = std::make_unique<Button>(kBiosOpenDirectory);
-    link->setVariant(ButtonVariant::Link);
-    link->setOnClick([this] { bios_.openDirectory(); });
-    openDirectory_ = static_cast<Button*>(callout->addContent(std::move(link)));
-    stack->addChild(std::move(callout));
-    if (bios.load == contracts::PreferencesLoad::Failed) stack->addChild(errorState(bios.message));
-    if (!bios.rows.empty()) {
-      auto list = std::make_unique<List>();
-      for (const contracts::BiosRow& spec : bios.rows) {
-        auto row = std::make_unique<SettingRow>();
-        row->setLabel(spec.name);
-        row->setDescription(spec.status);
-        auto controls = std::make_unique<rujian::ui::Row>();
-        BiosWidgets widgets;
-        widgets.machine = spec.machine;
-        const std::string machine = spec.machine;
-        if (!spec.hasBios) {
-          auto add = compactButton(kBiosAdd);
-          add->setEnabled(spec.supported);
-          add->setOnClick([this, machine] { bios_.choose(machine); });
-          widgets.add = static_cast<Button*>(controls->addChild(std::move(add)));
-        } else {
-          auto replace = compactButton(kBiosReplace);
-          replace->setEnabled(spec.supported);
-          replace->setOnClick([this, machine] { bios_.choose(machine); });
-          widgets.replace = static_cast<Button*>(controls->addChild(std::move(replace)));
-          auto remove = compactButton(kBiosRemove);
-          remove->setEnabled(spec.supported);
-          remove->setOnClick([this, machine] { bios_.remove(machine); });
-          widgets.remove = static_cast<Button*>(controls->addChild(std::move(remove)));
-        }
-        row->setControl(std::move(controls));
-        list->addRow(std::move(row));
-        biosRows_.push_back(widgets);
-      }
-      auto panel = std::make_unique<Panel>();
-      panel->addContent(std::move(list));
-      stack->addChild(std::move(panel));
-    }
-  } else if (group != nullptr && (!group->rows.empty() || group->id == kAppGroupId)) {
+  if (group != nullptr && (!group->rows.empty() || group->id == kAppGroupId)) {
     auto list = std::make_unique<List>();
     for (const contracts::PreferenceRow& spec : group->rows) rows_.push_back(makeRow(spec, *list));
     if (group->id == kAppGroupId) addUserDataRow(*list, userData);

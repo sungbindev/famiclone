@@ -25,7 +25,7 @@ struct HostName {
 constexpr HostName kHostNames[] = {{"fc", "经典 FC"}, {"sb97", "小霸王 97"}, {"sb2000", "小霸王 2000"}, {"bbk10", "步步高软驱一号"}, {"bbk20", "步步高 98"}};
 
 constexpr const char* kUnsupported = "暂未支持";
-constexpr const char* kNoBios = "未添加 BIOS，请在设置里添加";
+constexpr const char* kNoBios = "未添加 BIOS，请到设置→机型与 BIOS 添加";
 
 std::string stringOf(const nlohmann::json& object, const char* key) {
   const auto found = object.find(key);

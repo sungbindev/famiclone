@@ -19,7 +19,7 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { debugCall, drive, dropFiles, parseArguments, projectRoot, removeUserData, sleep, startApp } from './win32-dev-support.mjs';
 
 /** 测试用的学习机 BIOS（仓库里的文件）：程序不自带 BIOS，冒烟时复制进实例的 BIOS 目录。 */
-const TEST_BIOS = join(projectRoot, 'bios', 'sb2000', 'SB2K_BIOS.bin');
+const TEST_BIOS = join(projectRoot, 'bios', 'sb2000_bios.bin');
 
 /** 把测试用的 BIOS 放进实例的用户数据目录，等于用户在首选项里添加了它。 */
 function addTestBios(app) {
@@ -111,11 +111,11 @@ async function scenarioInteractions() {
     check('Esc 关闭菜单，画面露出来', number(r, 'menuClosed') < 20, `亮像素 ${number(r, 'menuClosed')}`);
 
     // 菜单项：继续与暂停（经典 FC 不独占键盘，快捷键一直有效，这里仍用鼠标操作）
-    r = drive(app.pid, ['click:151:19', 'wait:500', 'click:165:73', 'wait:700', count('menuResumed', CENTER)]);
+    r = drive(app.pid, ['click:151:19', 'wait:500', 'click:165:108', 'wait:700', count('menuResumed', CENTER)]);
     check('菜单里选“继续”后撤掉提示', number(r, 'menuResumed') <= centerRunning + 10, `${number(r, 'menuResumed')}`);
-    r = drive(app.pid, ['click:151:19', 'wait:500', 'click:165:73', 'wait:700', count('menuPaused', CENTER)]);
+    r = drive(app.pid, ['click:151:19', 'wait:500', 'click:165:108', 'wait:700', count('menuPaused', CENTER)]);
     check('菜单里选“暂停”后显示提示', number(r, 'menuPaused') > centerRunning + 40, `${number(r, 'menuPaused')}`);
-    drive(app.pid, ['click:151:19', 'wait:500', 'click:165:73', 'wait:700']);
+    drive(app.pid, ['click:151:19', 'wait:500', 'click:165:108', 'wait:700']);
 
     // 运行面板：点系统栏左侧的运行按钮展开，点画面收起；点过之后焦点回到画面
     r = drive(app.pid, [count('panelClosed', PANEL_ROW), 'click:24:485', 'wait:800', count('panelOpen', PANEL_ROW)]);
@@ -127,9 +127,9 @@ async function scenarioInteractions() {
     check('经典 FC 不独占键盘：画面持有焦点时 F8 仍触发外壳的暂停', number(r, 'sharedKeyboard') > centerRunning + 40, `${number(r, 'sharedKeyboard')}`);
 
     // 窗口始终置顶：勾选项切换后菜单保持打开，所以连点两次菜单项再按 Esc 关闭
-    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:142', 'wait:700', 'style:on']);
+    r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:191', 'wait:700', 'style:on']);
     check('“窗口始终置顶”勾选后窗口置顶', (r.get('before') ?? '').startsWith('False') && (r.get('on') ?? '').startsWith('True'), `${r.get('before')} → ${r.get('on')}`);
-    r = drive(app.pid, ['click:253:142', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
+    r = drive(app.pid, ['click:253:191', 'wait:700', 'style:off', 'key:ESC', 'wait:400']);
     check('再点一次取消置顶', (r.get('off') ?? '').startsWith('False'), `${r.get('off')}`);
 
     await closeAndExpectExit(app, '场景一');
@@ -157,7 +157,7 @@ async function scenarioFullScreen() {
   }
 }
 
-/** 场景三：先添加测试用的 BIOS，再经“文件 → 选择机型”选小霸王 2000 开机，画面是满屏的 BIOS 硬件检测页。 */
+/** 场景三：先添加测试用的 BIOS，再经“机器 → 选择机型”选小霸王 2000 开机，画面是满屏的 BIOS 硬件检测页。 */
 async function scenarioBios() {
   console.log('场景三：学习机 BIOS 开机');
   const app = startApp({});
@@ -165,7 +165,7 @@ async function scenarioBios() {
     addTestBios(app);
     check('启动后出现窗口', await waitForWindow(app.pid));
     await sleep(2000);
-    const r = drive(app.pid, ['click:92:19', 'wait:600', 'click:120:49', 'wait:800', 'click:330:78', 'wait:12000', count('biosPicture', PICTURE_AREA)]);
+    const r = drive(app.pid, ['click:173:19', 'wait:600', 'click:215:49', 'wait:800', 'click:393:78', 'wait:12000', count('biosPicture', PICTURE_AREA)]);
     check('选择小霸王 2000 后 BIOS 开机，画面铺满显示区', number(r, 'biosPicture') > 20000, `亮像素 ${number(r, 'biosPicture')}`);
     await closeAndExpectExit(app, '场景三');
   } finally {
@@ -260,7 +260,7 @@ async function scenarioSystem() {
     await sleep(2500);
     const plugins = debugCall(app, 'mappers.list').plugins;
     check('核心里有 mapper 插件', Array.isArray(plugins) && plugins.length > 0, String(plugins?.length));
-    let r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1800', 'dlgfind:mappersOpen']);
+    let r = drive(app.pid, ['click:211:19', 'wait:500', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:DOWN', 'key:ENTER', 'wait:1800', 'dlgfind:mappersOpen']);
     check('“设置”菜单里打开 mapper 插件对话框', r.get('mappersOpen') === 'True');
     r = drive(app.pid, ['dlgfind:found', 'key:ESC', 'wait:800', 'dlgvisible:mappersClosed']);
     check('Esc 关闭 mapper 插件对话框', r.get('mappersClosed') === 'False');

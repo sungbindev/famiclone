@@ -1,15 +1,15 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：bios-controller.cpp
- * 说明：“机型与 BIOS”分组控制器的实现。
+ * 说明：“机型与 BIOS”对话框控制器的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-20
+ * 日期：2026-11-21
  * 备注：无。
  * ------------------------------------------------------------------------
  */
 
-#include "logic/preferences/bios-controller.hpp"
+#include "logic/machines/bios-controller.hpp"
 
 namespace ember::win32::logic {
 
@@ -40,7 +40,7 @@ contracts::BiosView BiosController::view() const {
   contracts::BiosView result;
   result.load = load_;
   result.message = message_;
-  if (load_ == contracts::PreferencesLoad::Ready) result.rows = buildBiosRows(machines_);
+  if (load_ == contracts::MachinesLoad::Ready) result.rows = buildBiosRows(machines_);
   return result;
 }
 
@@ -91,11 +91,11 @@ void BiosController::load() {
     if (loadRequest_ != current) return;
     auto machines = reply.ok ? parseBiosMachines(reply.result) : std::nullopt;
     if (!machines) {
-      load_ = contracts::PreferencesLoad::Failed;
-      message_ = errorText(reply.ok ? contracts::CoreError{} : reply.error);
+      load_ = contracts::MachinesLoad::Failed;
+      message_ = machineErrorText(reply.ok ? contracts::CoreError{} : reply.error);
       machines_.clear();
     } else {
-      load_ = contracts::PreferencesLoad::Ready;
+      load_ = contracts::MachinesLoad::Ready;
       message_.clear();
       machines_ = std::move(*machines);
     }
@@ -113,7 +113,7 @@ void BiosController::handleCoreStatus(const contracts::CoreStatus& status) {
     return;
   }
   ++loadRequest_;
-  load_ = contracts::PreferencesLoad::Loading;
+  load_ = contracts::MachinesLoad::Loading;
   message_.clear();
   machines_.clear();
   changed();
@@ -126,7 +126,7 @@ void BiosController::choose(const std::string& machine) {
   const bool hadBios = known != nullptr && known->hasBios;
   ask("machines.openBios", {{"machine", machine}}, [this, name, hadBios](const contracts::CoreReply& reply) {
     if (!reply.ok) {
-      report(errorText(reply.error));
+      report(machineErrorText(reply.error));
       return;
     }
     if (!reply.result.is_object() || reply.result.value("canceled", false) || !reply.result.contains("machine")) return;
@@ -142,7 +142,7 @@ void BiosController::remove(const std::string& machine) {
   const std::string name = known != nullptr ? known->name : machine;
   ask("machines.removeBios", {{"machine", machine}}, [this, name](const contracts::CoreReply& reply) {
     if (!reply.ok) {
-      report(errorText(reply.error));
+      report(machineErrorText(reply.error));
       return;
     }
     notifySuccess("已移除 " + name + " 的 BIOS");
@@ -152,7 +152,7 @@ void BiosController::remove(const std::string& machine) {
 void BiosController::openDirectory() {
   if (shell_ == nullptr) return;
   ask("machines.openBiosDirectory", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
-    if (!reply.ok) report(errorText(reply.error));
+    if (!reply.ok) report(machineErrorText(reply.error));
   });
 }
 

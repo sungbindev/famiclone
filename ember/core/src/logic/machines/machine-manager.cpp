@@ -119,7 +119,7 @@ api::MachinesBootResult MachineManager::boot(const api::MachinesBootParams& para
   const Entry& target = entry(params.machine);
   if (!target.needsBios) throw shared::CoreError(api::ERROR_CARTRIDGE_REQUIRED, target.name + " 开机必须有 NES 文件，请改用打开卡带");
   if (!target.supported) throw shared::CoreError(api::ERROR_UNSUPPORTED, target.name + " 暂未支持");
-  if (!storage_->find(target.id)) throw shared::CoreError(api::ERROR_NO_BIOS, target.name + " 还没有添加 BIOS，请先在首选项的“机型与 BIOS”里添加");
+  if (!storage_->find(target.id)) throw shared::CoreError(api::ERROR_NO_BIOS, target.name + " 还没有添加 BIOS，请先在“设置→机型与 BIOS”里添加");
   contracts::runtime::MachineBoot request;
   request.machine = target.id;
   request.bios = extractBios(target, storage_->load(target.id));

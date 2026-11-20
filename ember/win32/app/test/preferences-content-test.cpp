@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：preferences-content-test.cpp
  * 说明：首选项对话框内容的测试：左边的分组导航与右边的设置行（默认选中第一个分组）、选择与开关立即提交、输入框回车或失焦时提交并显示校验说明、恢复默认按钮随取值是否与默认不同出现、选择文件夹按钮、
- *       模型变化时原地更新且不冲掉别的输入框里正在输入的内容、“机型与 BIOS”分组的说明与按钮、销毁后取消订阅。
+ *       模型变化时原地更新且不冲掉别的输入框里正在输入的内容、“应用”分组里的用户数据目录、销毁后取消订阅。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
@@ -41,27 +41,6 @@ class FakePreferences final : public contracts::PreferencesModel {
   }
   void reset(const std::string& id) override { calls.push_back("reset " + id); }
   void pickDirectory(const std::string& id) override { calls.push_back("pick " + id); }
-  [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override {
-    const int id = static_cast<int>(handlers.size()) + 1;
-    handlers[id] = std::move(handler);
-    return [this, id] { handlers.erase(id); };
-  }
-  void notify() {
-    const auto copy = handlers;
-    for (const auto& [id, handler] : copy) handler();
-  }
-};
-
-class FakeBios final : public contracts::BiosModel {
- public:
-  contracts::BiosView current;
-  std::vector<std::string> calls;
-  std::map<int, std::function<void()>> handlers;
-
-  [[nodiscard]] contracts::BiosView view() const override { return current; }
-  void choose(const std::string& machine) override { calls.push_back("choose " + machine); }
-  void remove(const std::string& machine) override { calls.push_back("remove " + machine); }
-  void openDirectory() override { calls.push_back("openDirectory"); }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override {
     const int id = static_cast<int>(handlers.size()) + 1;
     handlers[id] = std::move(handler);
@@ -134,25 +113,21 @@ contracts::PreferenceRow folderRow() {
 struct Scene {
   // 模型要比根容器活得久：控件销毁时还要取消订阅
   FakePreferences preferences;
-  FakeBios bios;
   FakeUserData userData;
   rujian::ui::Root root{rujian::ui::ThemeName::Dark, 1.0};
   ui::PreferencesContent* content{nullptr};
 
   Scene() {
-    contracts::PreferenceGroupView appearance{"appearance", "外观", false, {choiceRow()}};
-    contracts::PreferenceGroupView sound{"sound", "声音", false, {switchRow(), integerRow(), textRow()}};
-    contracts::PreferenceGroupView machines{"machines", "机型与 BIOS", true, {}};
-    contracts::PreferenceGroupView printer{"printer", "打印机", false, {folderRow()}};
-    contracts::PreferenceGroupView app{"app", "应用", false, {switchRow()}};
+    contracts::PreferenceGroupView appearance{"appearance", "外观", {choiceRow()}};
+    contracts::PreferenceGroupView sound{"sound", "声音", {switchRow(), integerRow(), textRow()}};
+    contracts::PreferenceGroupView printer{"printer", "打印机", {folderRow()}};
+    contracts::PreferenceGroupView app{"app", "应用", {switchRow()}};
     preferences.current.load = contracts::PreferencesLoad::Ready;
-    preferences.current.groups = {appearance, sound, machines, printer, app};
-    bios.current.load = contracts::PreferencesLoad::Ready;
-    bios.current.rows = {{"sb97", "小霸王 97", "未添加", false, true}, {"sb2000", "小霸王 2000", "SB2K_BIOS.NES（512 KB）", true, true}, {"bbk10", "步步高软驱一号", "暂未支持", false, false}};
+    preferences.current.groups = {appearance, sound, printer, app};
   }
 
   void open() {
-    auto created = std::make_unique<ui::PreferencesContent>(preferences, bios, userData);
+    auto created = std::make_unique<ui::PreferencesContent>(preferences, userData);
     content = created.get();
     root.setContent(std::move(created));
     root.layout({700, 480});
@@ -319,60 +294,17 @@ TEST(PreferencesContent, DirectoryPickerButtonOnlyOnRowsThatDeclareIt) {
   s.open();
   s.selectGroup(1);
   EXPECT_EQ(s.row("sound.note")->pick, nullptr);
-  s.selectGroup(3);
+  s.selectGroup(2);
   ASSERT_NE(s.row("printer.outputDirectory")->pick, nullptr);
   s.click(*s.row("printer.outputDirectory")->pick);
   EXPECT_EQ(s.preferences.calls, (std::vector<std::string>{"pick printer.outputDirectory"}));
-}
-
-TEST(PreferencesContent, MachinesGroupShowsTheIntroTheLinkAndOneRowPerMachine) {
-  Scene s;
-  s.open();
-  s.selectGroup(2);
-  EXPECT_EQ(s.content->selectedGroupId(), "machines");
-  EXPECT_TRUE(s.content->rows().empty());
-  ASSERT_NE(s.content->openDirectoryLink(), nullptr);
-  ASSERT_EQ(s.content->biosRows().size(), 3U);
-  // 未添加：只有“添加 BIOS 文件”；已添加：“替换”和“移除”；暂未支持：按钮置灰
-  const auto& first = s.content->biosRows()[0];
-  EXPECT_NE(first.add, nullptr);
-  EXPECT_EQ(first.replace, nullptr);
-  EXPECT_TRUE(first.add->enabled());
-  const auto& second = s.content->biosRows()[1];
-  EXPECT_EQ(second.add, nullptr);
-  ASSERT_NE(second.replace, nullptr);
-  ASSERT_NE(second.remove, nullptr);
-  const auto& third = s.content->biosRows()[2];
-  ASSERT_NE(third.add, nullptr);
-  EXPECT_FALSE(third.add->enabled());
-}
-
-TEST(PreferencesContent, BiosButtonsAndTheLinkCallTheModel) {
-  Scene s;
-  s.open();
-  s.selectGroup(2);
-  s.click(*s.content->openDirectoryLink());
-  s.click(*s.content->biosRows()[0].add);
-  s.click(*s.content->biosRows()[1].replace);
-  s.click(*s.content->biosRows()[1].remove);
-  EXPECT_EQ(s.bios.calls, (std::vector<std::string>{"openDirectory", "choose sb97", "choose sb2000", "remove sb2000"}));
-}
-
-TEST(PreferencesContent, BiosRowsFollowTheModel) {
-  Scene s;
-  s.open();
-  s.selectGroup(2);
-  s.bios.current.rows = {{"sb97", "小霸王 97", "A.BIN（512 KB）", true, true}};
-  s.bios.notify();
-  ASSERT_EQ(s.content->biosRows().size(), 1U);
-  EXPECT_NE(s.content->biosRows()[0].replace, nullptr);
 }
 
 TEST(PreferencesContent, AppGroupEndsWithTheUserDataRowAndOtherGroupsHaveNone) {
   Scene s;
   s.open();
   EXPECT_EQ(s.content->userDataLink(), nullptr);
-  s.selectGroup(4);
+  s.selectGroup(3);
   EXPECT_EQ(s.content->selectedGroupId(), "app");
   ASSERT_EQ(s.content->rows().size(), 1U);
   ASSERT_NE(s.content->userDataLink(), nullptr);
@@ -385,7 +317,7 @@ TEST(PreferencesContent, AppGroupEndsWithTheUserDataRowAndOtherGroupsHaveNone) {
 TEST(PreferencesContent, UserDataLinkOpensTheDirectoryAndTheButtonSwitches) {
   Scene s;
   s.open();
-  s.selectGroup(4);
+  s.selectGroup(3);
   s.click(*s.content->userDataLink());
   s.click(*s.content->userDataSwitch());
   EXPECT_EQ(s.userData.calls, (std::vector<std::string>{"open", "switch"}));
@@ -395,7 +327,7 @@ TEST(PreferencesContent, UserDataSwitchIsDisabledWhenTheModelGivesAReason) {
   Scene s;
   s.userData.current.unavailableReason = "软件所在的目录不能写入";
   s.open();
-  s.selectGroup(4);
+  s.selectGroup(3);
   EXPECT_FALSE(s.content->userDataSwitch()->enabled());
 }
 
@@ -407,7 +339,7 @@ TEST(PreferencesContent, NothingToShowWhileLoading) {
   EXPECT_TRUE(s.content->rows().empty());
   // 读到之后出现分组，默认选中第一个
   s.preferences.current.load = contracts::PreferencesLoad::Ready;
-  s.preferences.current.groups = {{"appearance", "外观", false, {choiceRow()}}};
+  s.preferences.current.groups = {{"appearance", "外观", {choiceRow()}}};
   s.preferences.notify();
   EXPECT_EQ(s.content->selectedGroupId(), "appearance");
   EXPECT_EQ(s.content->rows().size(), 1U);
@@ -416,21 +348,19 @@ TEST(PreferencesContent, NothingToShowWhileLoading) {
 TEST(PreferencesContent, SelectedGroupFallsBackToTheFirstWhenItDisappears) {
   Scene s;
   s.open();
-  s.selectGroup(3);
+  s.selectGroup(2);
   ASSERT_EQ(s.content->selectedGroupId(), "printer");
-  s.preferences.current.groups.erase(s.preferences.current.groups.begin() + 3);
+  s.preferences.current.groups.erase(s.preferences.current.groups.begin() + 2);
   s.preferences.notify();
   EXPECT_EQ(s.content->selectedGroupId(), "appearance");
 }
 
-TEST(PreferencesContent, DestroyingUnsubscribesFromBothModels) {
+TEST(PreferencesContent, DestroyingUnsubscribesFromTheModel) {
   Scene s;
   s.open();
   EXPECT_EQ(s.preferences.handlers.size(), 1U);
-  EXPECT_EQ(s.bios.handlers.size(), 1U);
   s.root.setContent(nullptr);
   EXPECT_TRUE(s.preferences.handlers.empty());
-  EXPECT_TRUE(s.bios.handlers.empty());
 }
 
 }  // namespace

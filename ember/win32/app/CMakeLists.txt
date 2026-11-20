@@ -58,13 +58,15 @@ add_library(ember_app STATIC
   src/logic/input/input-controller.cpp
   src/logic/input/input-module.cpp
   src/logic/input/pad-rules.cpp
+  src/logic/machines/bios-controller.cpp
+  src/logic/machines/machines-module.cpp
+  src/logic/machines/machines-rules.cpp
   src/logic/mappers/mappers-controller.cpp
   src/logic/mappers/mappers-module.cpp
   src/logic/mappers/mappers-rules.cpp
   src/logic/media/media-controller.cpp
   src/logic/media/media-module.cpp
   src/logic/media/media-rules.cpp
-  src/logic/preferences/bios-controller.cpp
   src/logic/preferences/preferences-controller.cpp
   src/logic/preferences/preferences-module.cpp
   src/logic/preferences/preferences-rules.cpp
@@ -125,6 +127,7 @@ add_library(ember_app STATIC
   src/ui/media/media-panel-content.cpp
   src/ui/input/gamepad-settings-content.cpp
   src/ui/input/pad-layout.cpp
+  src/ui/machines/machines-content.cpp
   src/ui/mappers/mappers-content.cpp
   src/ui/preferences/preferences-content.cpp
   src/ui/runtime/runtime-panel-content.cpp
@@ -182,6 +185,8 @@ if(EMBER_BUILD_TESTS)
     test/help-test.cpp
     test/infra-test.cpp
     test/launch-args-test.cpp
+    test/machines-content-test.cpp
+    test/machines-logic-test.cpp
     test/main-request-test.cpp
     test/mappers-content-test.cpp
     test/mappers-logic-test.cpp

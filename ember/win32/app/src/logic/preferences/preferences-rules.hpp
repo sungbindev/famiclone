@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：preferences-rules.hpp
- * 说明：首选项模块用到的纯规则：从核心回复读出分组、设置项与机型，得出对话框要显示的分组与设置行（隐藏项与没有显示项的分组不显示，插入“机型与 BIOS”分组），整数输入的解析与范围校验，机型的 BIOS 状态文字，错误说明的读取。
+ * 说明：首选项模块用到的纯规则：从核心回复读出分组与设置项，得出对话框要显示的分组与设置行（隐藏项与没有显示项的分组不显示），整数输入的解析与范围校验，错误说明的读取。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
@@ -64,27 +64,8 @@ struct IntegerParse {
   std::string message;
 };
 
-/** 核心登记的一个机型（machines.list 的一项）。 */
-struct Machine {
-  std::string id;
-  std::string name;
-  bool needsBios{false};
-  bool supported{false};
-  bool hasBios{false};
-  std::string biosFileName;
-  std::int64_t biosSize{0};
-  bool operator==(const Machine&) const = default;
-};
-
-/** “机型与 BIOS”分组的标识。 */
-inline constexpr const char* kMachinesGroupId = "machines";
-
 /** 从 preferences.list 的结果读出分组与设置项；格式不对时没有值，格式不对的单项跳过。 */
 [[nodiscard]] std::optional<SettingListing> parseSettingListing(const nlohmann::json& result);
-/** 从 machines.list 的结果读出机型清单，保持核心给出的顺序；格式不对时没有值。 */
-[[nodiscard]] std::optional<std::vector<Machine>> parseBiosMachines(const nlohmann::json& result);
-/** 从 machines.openBios 等结果里的 machine 读出一个机型；格式不对时没有值。 */
-[[nodiscard]] std::optional<Machine> parseBiosMachine(const nlohmann::json& machine);
 
 /** 取值变化之后的设置项列表；不认识的标识原样返回。 */
 void applyValue(std::vector<Setting>& settings, const std::string& id, const nlohmann::json& value);
@@ -97,14 +78,9 @@ void applyValue(std::vector<Setting>& settings, const std::string& id, const nlo
 [[nodiscard]] IntegerParse parseInteger(const std::string& text, std::optional<std::int64_t> minimum, std::optional<std::int64_t> maximum);
 
 /**
- * 对话框此刻要显示的分组与设置行：只有显示的设置项，没有显示项的分组不出现；在“输入”分组之后（没有输入分组时在“声音”之后，都没有时放在最后）插入“机型与 BIOS”分组。
+ * 对话框此刻要显示的分组与设置行：只有显示的设置项，没有显示项的分组不出现。
  */
 [[nodiscard]] std::vector<contracts::PreferenceGroupView> buildGroupViews(const SettingListing& listing);
-
-/** 一个机型的 BIOS 状态文字：暂未支持、未添加，或文件名与大小（KB，四舍五入）。 */
-[[nodiscard]] std::string biosStatusText(const Machine& machine);
-/** “机型与 BIOS”分组的行：只有需要 BIOS 的机型。 */
-[[nodiscard]] std::vector<contracts::BiosRow> buildBiosRows(const std::vector<Machine>& machines);
 
 /** 从请求失败的原因里取出给用户看的说明；没有说明时为“操作失败。”。 */
 [[nodiscard]] std::string errorText(const contracts::CoreError& error);

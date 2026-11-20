@@ -62,7 +62,7 @@ struct Step {
   const char* label;
   const char* text;
 };
-constexpr Step kSteps[] = {{"学习机", "文件→选择机型，选好即开机"}, {"经典 FC", "文件→打开卡带，选好即开机"}};
+constexpr Step kSteps[] = {{"学习机", "机器→选择机型，选好即开机"}, {"经典 FC", "文件→打开卡带，选好即开机"}};
 
 }  // namespace
 

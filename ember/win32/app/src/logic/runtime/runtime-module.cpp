@@ -102,7 +102,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
 
   // “选择机型”的子菜单项：已选的打对勾，点一项记住并开机；程序里有实现且已添加 BIOS 才可选，否则置灰并在右侧注明原因
   ShellMenuItemDefinition machineMenu;
-  machineMenu.menu = "file";
+  machineMenu.menu = "machine";
   machineMenu.submenu = contracts::ShellSubmenuDefinition{kMachineSubmenuId, "选择机型", [&controller] {
     std::vector<contracts::ShellSubmenuEntry> entries;
     for (const auto& choice : machineChoices(controller.machines())) {
@@ -135,7 +135,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   }};
   module.menuItems.push_back(std::move(recentMenu));
   module.menuItems.push_back(commandItem("file", "runtime.ejectCartridge"));
-  module.menuItems.push_back(commandItem("machine", "runtime.powerToggle"));
+  module.menuItems.push_back(commandItem("machine", "runtime.powerToggle", true));
   module.menuItems.push_back(commandItem("machine", "runtime.pauseToggle"));
   module.menuItems.push_back(commandItem("machine", "runtime.softReset", true));
   module.menuItems.push_back(commandItem("machine", "runtime.hardReset"));

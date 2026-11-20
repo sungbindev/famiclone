@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：bios-controller.hpp
- * 说明：“机型与 BIOS”分组的控制器：核心就绪后读取机型清单，订阅 machines.changed 保持最新，核心重启后重新读取；执行 BIOS 的添加或替换（弹出系统文件选择窗口）、移除，以及用文件管理器打开 BIOS 目录。
+ * 说明：“机型与 BIOS”对话框的控制器：核心就绪后读取机型清单，订阅 machines.changed 保持最新，核心重启后重新读取；执行 BIOS 的添加或替换（弹出系统文件选择窗口）、移除，以及用文件管理器打开 BIOS 目录。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-20
- * 备注：添加、替换、移除的结果与错误都用外壳通知给出，对话框里不显示结果；规则见 docs/05-界面.md 第 4.5 节。
+ * 日期：2026-11-21
+ * 备注：添加、替换、移除的结果与错误都用外壳通知给出，对话框里不显示结果；规则见 docs/05-界面.md 第 4.7 节。
  * ------------------------------------------------------------------------
  */
 
@@ -20,14 +20,14 @@
 #include <vector>
 
 #include "contracts/core-gateway/core-gateway.hpp"
-#include "contracts/preferences/preferences-model.hpp"
+#include "contracts/machines/machines-model.hpp"
 #include "contracts/shell/request-broker.hpp"
 #include "contracts/shell/shell-registry.hpp"
-#include "logic/preferences/preferences-rules.hpp"
+#include "logic/machines/machines-rules.hpp"
 
 namespace ember::win32::logic {
 
-/** “机型与 BIOS”分组的控制器。 */
+/** “机型与 BIOS”对话框的控制器。 */
 class BiosController final : public contracts::BiosModel {
  public:
   /**
@@ -71,7 +71,7 @@ class BiosController final : public contracts::BiosModel {
   std::uint64_t generation_{0};
   std::uint64_t loadRequest_{0};
 
-  contracts::PreferencesLoad load_{contracts::PreferencesLoad::Loading};
+  contracts::MachinesLoad load_{contracts::MachinesLoad::Loading};
   std::string message_;
   std::vector<Machine> machines_;
   std::map<int, std::function<void()>> listeners_;

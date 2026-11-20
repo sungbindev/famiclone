@@ -12,7 +12,6 @@
 #include "logic/preferences/preferences-rules.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <stdexcept>
 
 namespace ember::win32::logic {
@@ -22,9 +21,6 @@ namespace {
 /** 用户可见的文字。 */
 constexpr const char* kNotInteger = "请输入整数。";
 constexpr const char* kFailed = "操作失败。";
-constexpr const char* kMachinesLabel = "机型与 BIOS";
-constexpr const char* kNoBios = "未添加";
-constexpr const char* kUnsupported = "暂未支持";
 
 /** JavaScript 的安全整数范围：设置项没有登记上下限时，范围说明用它们。 */
 constexpr std::int64_t kSafeMinimum = -9007199254740991;
@@ -120,32 +116,6 @@ std::optional<SettingListing> parseSettingListing(const nlohmann::json& result) 
   return listing;
 }
 
-std::optional<Machine> parseBiosMachine(const nlohmann::json& machine) {
-  if (!machine.is_object() || stringField(machine, "id").empty()) return std::nullopt;
-  Machine result;
-  result.id = stringField(machine, "id");
-  result.name = stringField(machine, "name");
-  result.needsBios = boolField(machine, "needsBios");
-  result.supported = boolField(machine, "supported");
-  const auto bios = machine.find("bios");
-  if (bios != machine.end() && bios->is_object()) {
-    result.hasBios = true;
-    result.biosFileName = stringField(*bios, "fileName");
-    result.biosSize = integerField(*bios, "size").value_or(0);
-  }
-  return result;
-}
-
-std::optional<std::vector<Machine>> parseBiosMachines(const nlohmann::json& result) {
-  const auto machines = result.is_object() ? result.find("machines") : result.end();
-  if (machines == result.end() || !machines->is_array()) return std::nullopt;
-  std::vector<Machine> list;
-  for (const auto& item : *machines) {
-    if (auto machine = parseBiosMachine(item)) list.push_back(std::move(*machine));
-  }
-  return list;
-}
-
 void applyValue(std::vector<Setting>& settings, const std::string& id, const nlohmann::json& value) {
   for (Setting& setting : settings) {
     if (setting.id == id) setting.value = value;
@@ -190,33 +160,7 @@ std::vector<contracts::PreferenceGroupView> buildGroupViews(const SettingListing
     }
     if (!view.rows.empty()) groups.push_back(std::move(view));
   }
-  contracts::PreferenceGroupView machines;
-  machines.id = kMachinesGroupId;
-  machines.label = kMachinesLabel;
-  machines.machines = true;
-  const auto indexOf = [&groups](const char* id) {
-    const auto found = std::find_if(groups.begin(), groups.end(), [id](const contracts::PreferenceGroupView& group) { return group.id == id; });
-    return found == groups.end() ? -1 : static_cast<int>(found - groups.begin());
-  };
-  int anchor = indexOf("input");
-  if (anchor < 0) anchor = indexOf("sound");
-  groups.insert(groups.begin() + (anchor < 0 ? static_cast<std::ptrdiff_t>(groups.size()) : anchor + 1), std::move(machines));
   return groups;
-}
-
-std::string biosStatusText(const Machine& machine) {
-  if (!machine.supported) return kUnsupported;
-  if (!machine.hasBios) return kNoBios;
-  const auto kilobytes = static_cast<std::int64_t>(std::floor(static_cast<double>(machine.biosSize) / 1024.0 + 0.5));
-  return machine.biosFileName + "（" + std::to_string(kilobytes) + " KB）";
-}
-
-std::vector<contracts::BiosRow> buildBiosRows(const std::vector<Machine>& machines) {
-  std::vector<contracts::BiosRow> rows;
-  for (const Machine& machine : machines) {
-    if (machine.needsBios) rows.push_back({machine.id, machine.name, biosStatusText(machine), machine.hasBios, machine.supported});
-  }
-  return rows;
 }
 
 std::string errorText(const contracts::CoreError& error) { return error.message.empty() ? std::string(kFailed) : error.message; }

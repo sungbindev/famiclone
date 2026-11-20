@@ -30,7 +30,7 @@ struct WindowPlacement {
 
 /** 外壳需要保存的选择。 */
 struct ShellLayout {
-  /** “文件→选择机型”里上次选的机型标识；为空表示没选过。 */
+  /** “机器→选择机型”里上次选的机型标识；为空表示没选过。 */
   std::optional<std::string> selectedMachine;
   /** 用户手动关掉“自动收缩”的底部面板标识，没有重复。 */
   std::vector<std::string> autoCollapseOffPanels;

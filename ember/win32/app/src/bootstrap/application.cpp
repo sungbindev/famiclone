@@ -66,9 +66,10 @@
 #include "logic/media/media-module.hpp"
 #include "logic/input/gamepad-settings-controller.hpp"
 #include "logic/input/input-module.hpp"
+#include "logic/machines/bios-controller.hpp"
+#include "logic/machines/machines-module.hpp"
 #include "logic/mappers/mappers-controller.hpp"
 #include "logic/mappers/mappers-module.hpp"
-#include "logic/preferences/bios-controller.hpp"
 #include "logic/preferences/preferences-controller.hpp"
 #include "logic/preferences/preferences-module.hpp"
 #include "logic/preferences/user-data-controller.hpp"
@@ -106,6 +107,7 @@
 #include "shared/update/update-public-key.hpp"
 #include "ui/media/media-panel-content.hpp"
 #include "ui/input/gamepad-settings-content.hpp"
+#include "ui/machines/machines-content.hpp"
 #include "ui/mappers/mappers-content.hpp"
 #include "ui/preferences/preferences-content.hpp"
 #include "ui/runtime/runtime-panel-content.hpp"
@@ -369,9 +371,10 @@ int runApplication(const shared::LaunchArguments& launch) {
     const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
     const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
-    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, biosController, userDataController), logic::createInputModule(gamepadSettings), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
+    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(biosController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
-    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &biosController, &userDataController] { return std::make_unique<ui::PreferencesContent>(preferencesController, biosController, userDataController); }, true);
+    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &userDataController] { return std::make_unique<ui::PreferencesContent>(preferencesController, userDataController); }, true);
+    dialogs.setBody(logic::kMachinesDialogId, [&biosController] { return std::make_unique<ui::MachinesContent>(biosController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
     dialogs.setBody(logic::kMappersDialogId, [&mappersController] { return std::make_unique<ui::MappersContent>(mappersController); }, true);
     dialogs.setBody(

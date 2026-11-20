@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：preferences-model.hpp
- * 说明：首选项模块给界面层的模型：对话框左边的分组与右边每一行设置项要显示的内容、各控件的取值，以及用户的操作（修改、恢复默认、选择文件夹）；“机型与 BIOS”分组的机型清单与操作（添加或替换、移除、打开 BIOS 目录）。
+ * 说明：首选项模块给界面层的模型：对话框左边的分组与右边每一行设置项要显示的内容、各控件的取值，以及用户的操作（修改、恢复默认、选择文件夹）；“应用”分组里“用户数据目录”一行的内容与操作。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
@@ -71,9 +71,7 @@ struct PreferenceRow {
 struct PreferenceGroupView {
   std::string id;
   std::string label;
-  /** 是不是“机型与 BIOS”分组：它的内容不是设置项，由界面经 BiosModel 提供。 */
-  bool machines{false};
-  /** 分组里显示的设置项（“机型与 BIOS”分组没有）。 */
+  /** 分组里显示的设置项。 */
   std::vector<PreferenceRow> rows;
   bool operator==(const PreferenceGroupView&) const = default;
 };
@@ -83,7 +81,7 @@ struct PreferencesView {
   PreferencesLoad load{PreferencesLoad::Loading};
   /** 读取失败的说明。 */
   std::string message;
-  /** 至少有一个显示的设置项的分组，加上“机型与 BIOS”分组，按显示顺序排列；读取完成前为空。 */
+  /** 至少有一个显示的设置项的分组，按显示顺序排列；读取完成前为空。 */
   std::vector<PreferenceGroupView> groups;
   bool operator==(const PreferencesView&) const = default;
 };
@@ -110,48 +108,6 @@ class PreferencesModel {
   virtual void pickDirectory(const std::string& id) = 0;
 
   /** 订阅内容变化（包括保存失败后取值没变的情况，界面据此把控件恢复成模型里的值）；返回取消订阅的函数。 */
-  [[nodiscard]] virtual std::function<void()> subscribe(std::function<void()> handler) = 0;
-};
-
-/** “机型与 BIOS”分组里的一个机型。 */
-struct BiosRow {
-  /** 机型标识。 */
-  std::string machine;
-  /** 机型名称。 */
-  std::string name;
-  /** BIOS 状态：暂未支持、未添加，或文件名与大小（KB）。 */
-  std::string status;
-  /** 是否已添加 BIOS：已添加时按钮是“替换”和“移除”，否则是“添加 BIOS 文件”。 */
-  bool hasBios{false};
-  /** 暂未支持的机型整行置灰，按钮不可用。 */
-  bool supported{true};
-  bool operator==(const BiosRow&) const = default;
-};
-
-/** “机型与 BIOS”分组此刻要显示的内容。 */
-struct BiosView {
-  PreferencesLoad load{PreferencesLoad::Loading};
-  std::string message;
-  /** 需要 BIOS 的机型（经典 FC 不需要，不在其中）。 */
-  std::vector<BiosRow> rows;
-  bool operator==(const BiosView&) const = default;
-};
-
-/** “机型与 BIOS”分组的模型。 */
-class BiosModel {
- public:
-  virtual ~BiosModel() = default;
-
-  [[nodiscard]] virtual BiosView view() const = 0;
-
-  /** 添加或替换机型的 BIOS：弹出系统文件选择窗口，用户取消时什么都不发生；结果与错误用通知给出。 */
-  virtual void choose(const std::string& machine) = 0;
-  /** 移除机型的 BIOS，不弹确认框。 */
-  virtual void remove(const std::string& machine) = 0;
-  /** 用系统的文件管理器打开 BIOS 目录。 */
-  virtual void openDirectory() = 0;
-
-  /** 订阅内容变化；返回取消订阅的函数。 */
   [[nodiscard]] virtual std::function<void()> subscribe(std::function<void()> handler) = 0;
 };
 

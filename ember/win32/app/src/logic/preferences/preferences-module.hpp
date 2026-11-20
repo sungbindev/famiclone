@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：preferences-module.hpp
- * 说明：首选项模块在外壳里的登记项：“首选项”对话框、打开它的命令（Ctrl+,）与“设置”菜单里的菜单项，加上常驻部分（读取首选项与机型清单并保持最新）。
+ * 说明：首选项模块在外壳里的登记项：“首选项”对话框、打开它的命令（Ctrl+,）与“设置”菜单里的菜单项，加上常驻部分（读取首选项并保持最新）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
@@ -12,7 +12,6 @@
 #pragma once
 
 #include "contracts/shell/shell-registry.hpp"
-#include "logic/preferences/bios-controller.hpp"
 #include "logic/preferences/preferences-controller.hpp"
 #include "logic/preferences/user-data-controller.hpp"
 
@@ -24,6 +23,6 @@ inline constexpr const char* kPreferencesDialogId = "preferences.preferences";
 inline constexpr const char* kPreferencesOpenCommand = "preferences.open";
 
 /** 创建首选项模块的登记项；控制器必须比登记表活得久。 */
-[[nodiscard]] contracts::ShellModule createPreferencesModule(PreferencesController& preferences, BiosController& bios, UserDataController& userData);
+[[nodiscard]] contracts::ShellModule createPreferencesModule(PreferencesController& preferences, UserDataController& userData);
 
 }  // namespace ember::win32::logic

@@ -33,6 +33,9 @@ using Microsoft::WRL::ComPtr;
 
 constexpr wchar_t kWindowClass[] = L"EmberScreenWindow";
 
+/** 毛玻璃模糊的内圈半径（设备像素），外圈是它的两倍。 */
+constexpr float kGlassBlurRadius = 5.0f;
+
 /** 顶点：位置（标准化设备坐标）与纹理坐标。 */
 struct Vertex {
   float x;
@@ -52,6 +55,8 @@ struct ScreenWindow::Impl {
   ComPtr<ID3D11RenderTargetView> renderTarget;
   ComPtr<ID3D11VertexShader> vertexShader;
   ComPtr<ID3D11PixelShader> pixelShader;
+  ComPtr<ID3D11PixelShader> glassShader;
+  ComPtr<ID3D11Buffer> glassConstants;
   ComPtr<ID3D11InputLayout> inputLayout;
   ComPtr<ID3D11Buffer> vertexBuffer;
   ComPtr<ID3D11SamplerState> pointSampler;
@@ -64,6 +69,8 @@ struct ScreenWindow::Impl {
   std::uint32_t frameWidth{0};
   std::uint32_t frameHeight{0};
   ComPtr<ID3D11ShaderResourceView> overlayView;
+  /** 提示框的矩形（设备像素，相对子窗口）：这块区域里的画面先模糊再叠上提示位图。 */
+  shared::ScreenRect glass;
   bool frameVisible{false};
   shared::ScreenAspect aspect{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling{shared::kDefaultScreenScaling};
@@ -126,6 +133,13 @@ struct ScreenWindow::Impl {
   void createResources() {
     check(device->CreateVertexShader(kScreenVertexShader, kScreenVertexShaderSize, nullptr, &vertexShader), "顶点着色器");
     check(device->CreatePixelShader(kScreenPixelShader, kScreenPixelShaderSize, nullptr, &pixelShader), "像素着色器");
+    check(device->CreatePixelShader(kScreenGlassShader, kScreenGlassShaderSize, nullptr, &glassShader), "毛玻璃着色器");
+    D3D11_BUFFER_DESC constantDescription{};
+    constantDescription.ByteWidth = sizeof(float) * 4;
+    constantDescription.Usage = D3D11_USAGE_DYNAMIC;
+    constantDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    constantDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    check(device->CreateBuffer(&constantDescription, nullptr, &glassConstants), "毛玻璃常量缓冲");
     const D3D11_INPUT_ELEMENT_DESC elements[] = {{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}, {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0}};
     check(device->CreateInputLayout(elements, static_cast<UINT>(std::size(elements)), kScreenVertexShader, kScreenVertexShaderSize, &inputLayout), "输入布局");
     D3D11_BUFFER_DESC bufferDescription{};
@@ -212,20 +226,21 @@ struct ScreenWindow::Impl {
     SetWindowRgn(hwnd, region, TRUE);
   }
 
-  void writeQuad(float left, float top, float right, float bottom, float v0, float v1) {
+  void writeQuad(float left, float top, float right, float bottom, float u0, float u1, float v0, float v1) {
     D3D11_MAPPED_SUBRESOURCE mapped{};
     if (FAILED(context->Map(vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) return;
     auto* vertices = static_cast<Vertex*>(mapped.pData);
     // 三角形带：左上、右上、左下、右下
-    vertices[0] = Vertex{left, top, 0.0f, v0};
-    vertices[1] = Vertex{right, top, 1.0f, v0};
-    vertices[2] = Vertex{left, bottom, 0.0f, v1};
-    vertices[3] = Vertex{right, bottom, 1.0f, v1};
+    vertices[0] = Vertex{left, top, u0, v0};
+    vertices[1] = Vertex{right, top, u1, v0};
+    vertices[2] = Vertex{left, bottom, u0, v1};
+    vertices[3] = Vertex{right, bottom, u1, v1};
     context->Unmap(vertexBuffer.Get(), 0);
   }
 
-  void draw(ID3D11ShaderResourceView* view, ID3D11SamplerState* sampler, ID3D11BlendState* blend, const shared::ScreenRect& viewport, float v0, float v1) {
-    writeQuad(-1.0f, 1.0f, 1.0f, -1.0f, v0, v1);
+  /** 把纹理的 [u0, u1] x [v0, v1] 这一块画满 viewport。 */
+  void draw(ID3D11ShaderResourceView* view, ID3D11SamplerState* sampler, ID3D11BlendState* blend, const shared::ScreenRect& viewport, float u0, float u1, float v0, float v1) {
+    writeQuad(-1.0f, 1.0f, 1.0f, -1.0f, u0, u1, v0, v1);
     const D3D11_VIEWPORT area{static_cast<float>(viewport.x), static_cast<float>(viewport.y), static_cast<float>(viewport.width), static_cast<float>(viewport.height), 0.0f, 1.0f};
     context->RSSetViewports(1, &area);
     context->OMSetBlendState(blend, nullptr, 0xffffffff);
@@ -233,6 +248,38 @@ struct ScreenWindow::Impl {
     ID3D11SamplerState* samplers[] = {sampler};
     context->PSSetSamplers(0, 1, samplers);
     context->Draw(4, 0);
+  }
+
+  /**
+   * 毛玻璃：把提示框与画面相交的区域里的画面换成模糊后的，再由提示位图叠上底色、边框与文字；画面之外是黑底，不需要模糊。
+   * video 是画面在子窗口里的矩形，v0、v1 是它对应的纹理纵坐标范围。
+   */
+  void drawGlass(const shared::ScreenRect& video, float v0, float v1) {
+    if (glass.width <= 0 || glass.height <= 0 || video.width <= 0 || video.height <= 0) return;
+    const int left = std::max(glass.x, video.x);
+    const int top = std::max(glass.y, video.y);
+    const int right = std::min(glass.x + glass.width, video.x + video.width);
+    const int bottom = std::min(glass.y + glass.height, video.y + video.height);
+    if (right <= left || bottom <= top) return;
+    const float width = static_cast<float>(video.width);
+    const float height = static_cast<float>(video.height);
+    const float u0 = static_cast<float>(left - video.x) / width;
+    const float u1 = static_cast<float>(right - video.x) / width;
+    const float t0 = v0 + static_cast<float>(top - video.y) / height * (v1 - v0);
+    const float t1 = v0 + static_cast<float>(bottom - video.y) / height * (v1 - v0);
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(context->Map(glassConstants.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) return;
+    auto* step = static_cast<float*>(mapped.pData);
+    step[0] = kGlassBlurRadius / width;
+    step[1] = kGlassBlurRadius / height * (v1 - v0);
+    step[2] = 0.0f;
+    step[3] = 0.0f;
+    context->Unmap(glassConstants.Get(), 0);
+    ID3D11Buffer* constants[] = {glassConstants.Get()};
+    context->PSSetConstantBuffers(0, 1, constants);
+    context->PSSetShader(glassShader.Get(), nullptr, 0);
+    draw(frameView.Get(), linearSampler.Get(), opaqueBlend.Get(), shared::ScreenRect{left, top, right - left, bottom - top}, u0, u1, t0, t1);
+    context->PSSetShader(pixelShader.Get(), nullptr, 0);
   }
 
   void render() {
@@ -259,10 +306,11 @@ struct ScreenWindow::Impl {
       if (video.width > 0 && video.height > 0) {
         const float top = static_cast<float>(cropLines) / static_cast<float>(frameHeight);
         const float bottom = static_cast<float>(static_cast<int>(frameHeight) - cropLines) / static_cast<float>(frameHeight);
-        draw(frameView.Get(), scaling == shared::ScreenScaling::Integer ? pointSampler.Get() : linearSampler.Get(), opaqueBlend.Get(), video, top, bottom);
+        draw(frameView.Get(), scaling == shared::ScreenScaling::Integer ? pointSampler.Get() : linearSampler.Get(), opaqueBlend.Get(), video, 0.0f, 1.0f, top, bottom);
+        if (overlayView) drawGlass(video, top, bottom);
       }
     }
-    if (overlayView) draw(overlayView.Get(), linearSampler.Get(), premultipliedBlend.Get(), shared::ScreenRect{0, 0, rect.width, rect.height}, 0.0f, 1.0f);
+    if (overlayView) draw(overlayView.Get(), linearSampler.Get(), premultipliedBlend.Get(), shared::ScreenRect{0, 0, rect.width, rect.height}, 0.0f, 1.0f, 0.0f, 1.0f);
     // 不等垂直同步：界面线程不能被显示器的刷新卡住，窗口合成由系统负责，不会撕裂
     const HRESULT presented = swapChain->Present(0, 0);
     if (presented == DXGI_ERROR_DEVICE_REMOVED || presented == DXGI_ERROR_DEVICE_RESET) {
@@ -373,9 +421,10 @@ void ScreenWindow::setFrameVisible(bool visible) {
   impl_->render();
 }
 
-void ScreenWindow::setOverlay(const std::uint8_t* pixels, int width, int height) {
+void ScreenWindow::setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) {
   Impl& self = *impl_;
   self.overlayView.Reset();
+  self.glass = pixels != nullptr ? glass : shared::ScreenRect{};
   if (pixels != nullptr && width > 0 && height > 0 && self.device) {
     D3D11_TEXTURE2D_DESC description{};
     description.Width = static_cast<UINT>(width);

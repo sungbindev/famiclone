@@ -19,5 +19,7 @@ extern const unsigned char kScreenVertexShader[];
 extern const std::size_t kScreenVertexShaderSize;
 extern const unsigned char kScreenPixelShader[];
 extern const std::size_t kScreenPixelShaderSize;
+extern const unsigned char kScreenGlassShader[];
+extern const std::size_t kScreenGlassShaderSize;
 
 }  // namespace ember::win32::platform

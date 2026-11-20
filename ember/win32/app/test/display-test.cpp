@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：display-test.cpp
  * 说明：运行画面子窗口与输入来源的冒烟测试：能在一个隐藏的父窗口里创建画面子窗口、设置位置、上传帧与提示位图、挖洞并显示而不出错（没有硬件 Direct3D 11 设备的电脑上跳过）；
- *       XInput 手柄读取在没有手柄时给出空清单；原始输入采集开启与关闭键盘独占不出错。
+ *       XInput 手柄读取在没有手柄时给出空清单；原始输入采集在共享、独占与关闭之间切换键盘采集不出错。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -68,8 +68,14 @@ TEST(ScreenWindow, CreatesShowsFramesAndOverlaysWithoutErrors) {
   screen->setFrame(large.data(), 640, 480);
   screen->render();
   std::vector<std::uint8_t> overlay(320 * 300 * 4, 0x80);
-  screen->setOverlay(overlay.data(), 320, 300);
-  screen->setOverlay(nullptr, 0, 0);
+  screen->setOverlay(overlay.data(), 320, 300, shared::ScreenRect{100, 200, 200, 80});
+  screen->render();
+  // 提示框超出画面、与画面不相交时不出错
+  screen->setOverlay(overlay.data(), 320, 300, shared::ScreenRect{300, 280, 100, 100});
+  screen->render();
+  screen->setOverlay(overlay.data(), 320, 300, shared::ScreenRect{0, 0, 5, 5});
+  screen->render();
+  screen->setOverlay(nullptr, 0, 0, shared::ScreenRect{});
   // 弹层盖到画面上时挖洞，再还原
   screen->setHoles({shared::ScreenRect{50, 30, 100, 80}});
   screen->setHoles({});
@@ -93,17 +99,25 @@ TEST(XInputGamepads, ReadsNothingWhenNoPadIsConnectedAndNeverFails) {
   }
 }
 
-TEST(RawInputCapture, KeyboardCaptureCanBeSwitchedOnAndOffWithoutLeavingTheKeyboardDead) {
+TEST(RawInputCapture, KeyboardCaptureCanBeSwitchedBetweenSharedExclusiveAndOffWithoutLeavingTheKeyboardDead) {
   HiddenParent parent;
   ASSERT_NE(parent.handle(), nullptr);
   platform::RawInputCapture capture(parent.handle(), [](const platform::RawKeyEvent&) {}, [](const platform::RawMouseEvent&) {});
   EXPECT_FALSE(capture.keyboardCaptured());
-  // 开启后关闭，状态与调用一致；重复调用无副作用
-  EXPECT_TRUE(capture.setKeyboardCapture(true));
-  EXPECT_TRUE(capture.setKeyboardCapture(true));
+  EXPECT_FALSE(capture.keyboardExclusive());
+  // 共享、独占、关闭之间来回切换，状态与调用一致；重复调用无副作用
+  EXPECT_TRUE(capture.setKeyboardCapture(true, false));
   EXPECT_TRUE(capture.keyboardCaptured());
-  EXPECT_FALSE(capture.setKeyboardCapture(false));
+  EXPECT_FALSE(capture.keyboardExclusive());
+  EXPECT_TRUE(capture.setKeyboardCapture(true, true));
+  EXPECT_TRUE(capture.setKeyboardCapture(true, true));
+  EXPECT_TRUE(capture.keyboardExclusive());
+  EXPECT_TRUE(capture.setKeyboardCapture(true, false));
+  EXPECT_TRUE(capture.keyboardCaptured());
+  EXPECT_FALSE(capture.keyboardExclusive());
+  EXPECT_FALSE(capture.setKeyboardCapture(false, false));
   EXPECT_FALSE(capture.keyboardCaptured());
+  EXPECT_FALSE(capture.keyboardExclusive());
   EXPECT_FALSE(capture.setMouseCapture(false, 0, 0));
 }
 

@@ -146,6 +146,10 @@ contracts::RuntimeControls controlAvailability(const std::optional<RuntimeStatus
 
 bool capturesMouse(bool enabled, const std::optional<RuntimeStatus>& status) { return enabled && status && status->mouse; }
 
+bool exclusiveKeyboard(bool familyKeyboard, const std::optional<RuntimeStatus>& status) {
+  return familyKeyboard || (status && status->machine && *status->machine != kClassicMachine);
+}
+
 std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machines) {
   struct Choice {
     const char* id;

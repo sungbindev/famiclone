@@ -30,16 +30,19 @@ RawInputCapture::RawInputCapture(void* window, std::function<void(const RawKeyEv
     : window_(window), onKey_(std::move(onKey)), onMouse_(std::move(onMouse)) {}
 
 RawInputCapture::~RawInputCapture() {
-  setKeyboardCapture(false);
+  setKeyboardCapture(false, false);
   setMouseCapture(false, 0, 0);
 }
 
-bool RawInputCapture::setKeyboardCapture(bool enabled) {
-  if (enabled == keyboard_) return keyboard_;
-  // 关闭时目标必须是空，系统才认
-  const RAWINPUTDEVICE device{kUsagePageGeneric, kUsageKeyboard, enabled ? static_cast<DWORD>(RIDEV_NOLEGACY) : static_cast<DWORD>(RIDEV_REMOVE), enabled ? static_cast<HWND>(window_) : nullptr};
+bool RawInputCapture::setKeyboardCapture(bool enabled, bool exclusive) {
+  exclusive = enabled && exclusive;
+  if (enabled == keyboard_ && exclusive == keyboardExclusive_) return keyboard_;
+  // 关闭时目标必须是空，系统才认；不独占时不带 RIDEV_NOLEGACY，传统键盘消息照常产生
+  const DWORD flags = !enabled ? static_cast<DWORD>(RIDEV_REMOVE) : (exclusive ? static_cast<DWORD>(RIDEV_NOLEGACY) : 0);
+  const RAWINPUTDEVICE device{kUsagePageGeneric, kUsageKeyboard, flags, enabled ? static_cast<HWND>(window_) : nullptr};
   if (RegisterRawInputDevices(&device, 1, sizeof(device)) == FALSE) return keyboard_;
   keyboard_ = enabled;
+  keyboardExclusive_ = exclusive;
   return keyboard_;
 }
 

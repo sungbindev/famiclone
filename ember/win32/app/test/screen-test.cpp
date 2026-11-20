@@ -155,5 +155,29 @@ TEST(ScanCodeTable, EveryLetterAndDigitKeyHasItsOwnName) {
   EXPECT_EQ(scanCodeToKeyCode(0x0b, false, false), "Digit0");
 }
 
+TEST(ScanCodeTable, SharedKeyboardLeavesFunctionKeysTabEscapeAndModifiedKeysToTheShell) {
+  // 不独占时：F 键、Tab、Escape 留给外壳
+  for (const char* key : {"F1", "F7", "F8", "F9", "F11", "F12", "F24", "Tab", "Escape"}) EXPECT_TRUE(isShellKey(key, 0)) << key;
+  // 普通键、方向键、Shift 照常上报
+  for (const char* key : {"KeyA", "Space", "Enter", "ArrowUp", "Digit1", "ShiftLeft", "ShiftRight", "Fn", "F"}) EXPECT_FALSE(isShellKey(key, 0)) << key;
+  // 按着 Ctrl、Alt、Meta 时的其他键留给外壳，修饰键本身照常上报
+  const unsigned held = commandModifierBit("ControlLeft") | commandModifierBit("AltRight");
+  EXPECT_TRUE(isShellKey("KeyO", held));
+  EXPECT_TRUE(isShellKey("Comma", held));
+  for (const char* key : {"ControlLeft", "ControlRight", "AltLeft", "AltRight", "MetaLeft", "MetaRight", "ShiftLeft"}) EXPECT_FALSE(isShellKey(key, held)) << key;
+}
+
+TEST(ScanCodeTable, EachCommandModifierHasItsOwnBit) {
+  unsigned all = 0;
+  for (const char* key : {"ControlLeft", "ControlRight", "AltLeft", "AltRight", "MetaLeft", "MetaRight"}) {
+    const unsigned bit = commandModifierBit(key);
+    EXPECT_NE(bit, 0U) << key;
+    EXPECT_EQ(all & bit, 0U) << key;
+    all |= bit;
+  }
+  EXPECT_EQ(commandModifierBit("ShiftLeft"), 0U);
+  EXPECT_EQ(commandModifierBit("KeyA"), 0U);
+}
+
 }  // namespace
 }  // namespace ember::win32::shared

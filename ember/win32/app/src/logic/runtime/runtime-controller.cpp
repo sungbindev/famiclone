@@ -60,6 +60,7 @@ contracts::RuntimeView RuntimeController::view() const {
   result.volume = volume_;
   result.muted = muted_;
   result.capturesMouse = capturesMouse(screen_.captureMouse, status_);
+  result.exclusiveKeyboard = exclusiveKeyboard(familyKeyboard_, status_);
   result.screen = screen_;
   return result;
 }

@@ -114,6 +114,20 @@ TEST(RuntimeRules, MouseIsCapturedOnlyWhenEnabledAndTheMachineHasOne) {
   EXPECT_FALSE(logic::capturesMouse(true, std::nullopt));
 }
 
+TEST(RuntimeRules, KeyboardIsExclusiveForHandheldMachinesAndWithTheFamilyKeyboard) {
+  const auto status = [](const char* machine) { return logic::parseRuntimeStatus(statusJson("on", "running", machine, false)); };
+  // 学习机整机机型独占，经典 FC 的普通游戏不独占
+  EXPECT_TRUE(logic::exclusiveKeyboard(false, status("sb2000")));
+  EXPECT_TRUE(logic::exclusiveKeyboard(false, status("sb97")));
+  EXPECT_TRUE(logic::exclusiveKeyboard(false, status("bbk10")));
+  EXPECT_FALSE(logic::exclusiveKeyboard(false, status("fc")));
+  // 接入 Family BASIC 键盘后独占
+  EXPECT_TRUE(logic::exclusiveKeyboard(true, status("fc")));
+  // 还没开机或还没读到状态时只看 Family BASIC 键盘
+  EXPECT_FALSE(logic::exclusiveKeyboard(false, std::nullopt));
+  EXPECT_TRUE(logic::exclusiveKeyboard(true, std::nullopt));
+}
+
 /** 带假核心的运行模块控制器。 */
 struct RuntimeFixture {
   test::FakeCoreGateway core;
@@ -390,6 +404,20 @@ TEST(RuntimeController, FamilyKeyboardAndDisplaySettingsFollowThePreferences) {
   f.controller.toggleFamilyKeyboard();
   EXPECT_EQ(f.shell.notices.back().first, "设置 Family BASIC 键盘失败：写不进去");
   EXPECT_TRUE(f.controller.familyKeyboard());
+}
+
+TEST(RuntimeController, KeyboardIsExclusiveOnlyForHandheldMachinesOrTheFamilyKeyboard) {
+  RuntimeFixture f;
+  f.reply("runtime.status", statusJson("on", "running", "fc", false, "a.nes"));
+  f.attach();
+  EXPECT_FALSE(f.controller.view().exclusiveKeyboard);
+  f.core.emitEvent("preferences.changed", {{"id", "input.familyKeyboard"}, {"value", true}});
+  EXPECT_TRUE(f.controller.view().exclusiveKeyboard);
+  f.core.emitEvent("preferences.changed", {{"id", "input.familyKeyboard"}, {"value", false}});
+  EXPECT_FALSE(f.controller.view().exclusiveKeyboard);
+  f.reply("runtime.status", statusJson("on", "running", "sb2000", true));
+  f.core.emitEvent("runtime.stateChanged", json::object());
+  EXPECT_TRUE(f.controller.view().exclusiveKeyboard);
 }
 
 TEST(RuntimeController, MouseCaptureNeedsTheSettingAndAMachineWithAMouse) {

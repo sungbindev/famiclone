@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：raw-input.hpp
- * 说明：原始输入采集：键盘独占与鼠标捕获。键盘独占时向系统登记原始输入的键盘设备（RIDEV_NOLEGACY，目标是主窗口），进程内不再产生传统键盘消息，所有物理按键都只以“扫描码加标志”交给回调；
+ * 说明：原始输入采集：键盘采集（可选独占）与鼠标捕获。键盘采集时向系统登记原始输入的键盘设备（目标是主窗口），按键以“扫描码加标志”交给回调；独占时加 RIDEV_NOLEGACY，进程内不再产生传统键盘消息；
  *       鼠标捕获时登记原始输入的鼠标设备，指针隐藏并限制在一个点上，只给相对位移、按键与滚轮。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -58,9 +58,13 @@ class RawInputCapture {
   RawInputCapture(const RawInputCapture&) = delete;
   RawInputCapture& operator=(const RawInputCapture&) = delete;
 
-  /** 开启或关闭键盘独占；返回之后是否生效（登记失败时为 false，调用方记日志）。 */
-  bool setKeyboardCapture(bool enabled);
+  /**
+   * 开启或关闭键盘采集：开启后每次按键都经回调交出；exclusive 为真时同时不再产生传统键盘消息（独占），否则传统键盘消息照常产生（外壳的快捷键与菜单助记符照常工作）。
+   * 返回之后是否开启（登记失败时保持原状，调用方记日志）。
+   */
+  bool setKeyboardCapture(bool enabled, bool exclusive);
   [[nodiscard]] bool keyboardCaptured() const { return keyboard_; }
+  [[nodiscard]] bool keyboardExclusive() const { return keyboardExclusive_; }
 
   /**
    * 开启或关闭鼠标捕获：开启时隐藏指针并把它限制在 anchorX、anchorY 这一点（屏幕坐标）上；关闭时恢复。返回之后是否生效。
@@ -76,6 +80,7 @@ class RawInputCapture {
   std::function<void(const RawKeyEvent&)> onKey_;
   std::function<void(const RawMouseEvent&)> onMouse_;
   bool keyboard_{false};
+  bool keyboardExclusive_{false};
   bool mouse_{false};
   int buttons_{0};
 };

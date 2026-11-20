@@ -22,8 +22,8 @@ namespace ember::win32::ui {
 
 namespace {
 
-/** 捕获鼠标的提示显示几秒后消失，不一直遮挡画面。 */
-constexpr unsigned kCaptureHintMilliseconds = 4000;
+/** 提示框里的提示显示几秒后消失，不一直遮挡画面。 */
+constexpr unsigned kHintMilliseconds = 4000;
 
 OverlayState overlayStateOf(contracts::MachineState state) {
   switch (state) {
@@ -54,9 +54,9 @@ ScreenWidget::~ScreenWidget() {
   model_.setScreenFocus({});
   host_.setOnMouseReleased({});
   if (hintTimer_ != 0 && host() != nullptr) host()->stopTimer(hintTimer_);
-  host_.setKeyboardExclusive(false);
+  host_.setKeyboardMode(contracts::KeyboardMode::Off);
   host_.setMouseCaptured(false);
-  host_.setOverlay(nullptr, 0, 0);
+  host_.setOverlay(nullptr, 0, 0, shared::ScreenRect{});
   host_.setBounds(shared::ScreenRect{});
 }
 
@@ -106,25 +106,39 @@ void ScreenWidget::refresh() {
   host_.setFrameVisible(view_.state == contracts::MachineState::Paused || view_.state == contracts::MachineState::Running);
   // 不再带鼠标（或关掉了“点击画面捕获鼠标”）时，已有的捕获立即释放
   if (!view_.capturesMouse && mouseCaptured_) releaseMouse();
-  showCaptureHint();
+  updateHints();
+  updateKeyboard();
   if (previous.screen.aspect != view_.screen.aspect || previous.screen.showAllLines != view_.screen.showAllLines) updateBox();
   else updateOverlay();
 }
 
-void ScreenWidget::showCaptureHint() {
-  const bool eligible = view_.capturesMouse && view_.state != contracts::MachineState::None && view_.state != contracts::MachineState::Off;
-  if (eligible == hintEligible_) return;
-  hintEligible_ = eligible;
+void ScreenWidget::updateHints() {
+  const bool active = view_.state == contracts::MachineState::Running || view_.state == contracts::MachineState::Paused;
+  const bool mouse = view_.capturesMouse && active;
+  const bool keyboard = view_.exclusiveKeyboard && active;
+  bool restart = false;
+  if (mouse != mouseHintEligible_) {
+    mouseHintEligible_ = mouse;
+    mouseHintShown_ = mouse;
+    restart = restart || mouse;
+  }
+  if (keyboard != keyboardHintEligible_) {
+    keyboardHintEligible_ = keyboard;
+    keyboardHintShown_ = keyboard;
+    restart = restart || keyboard;
+  }
+  // 还有提示在计时且没有新的提示出现时，保持原来的计时
+  if (!restart && (mouseHintShown_ || keyboardHintShown_)) return;
   if (hintTimer_ != 0 && host() != nullptr) host()->stopTimer(hintTimer_);
   hintTimer_ = 0;
-  captureHintShown_ = eligible;
-  if (eligible && host() != nullptr) hintTimer_ = host()->startTimer(this, kCaptureHintMilliseconds);
+  if (restart && host() != nullptr) hintTimer_ = host()->startTimer(this, kHintMilliseconds);
 }
 
 void ScreenWidget::onTimer(unsigned id) {
   if (id != hintTimer_) return;
   hintTimer_ = 0;
-  captureHintShown_ = false;
+  mouseHintShown_ = false;
+  keyboardHintShown_ = false;
   updateOverlay();
 }
 
@@ -132,37 +146,50 @@ void ScreenWidget::updateOverlay() {
   if (host() == nullptr) return;
   OverlayKey key;
   key.state = overlayStateOf(view_.state);
-  key.hint = captureHintShown_;
+  key.mouseHint = mouseHintShown_;
+  key.keyboardHint = keyboardHintShown_;
   key.width = deviceRect_.width;
   key.height = deviceRect_.height;
   key.scale = host()->scale();
   if (overlayDrawn_ && key == overlayKey_) return;
   overlayKey_ = key;
   overlayDrawn_ = true;
-  if ((key.state == OverlayState::Hidden && !key.hint) || key.width <= 0 || key.height <= 0) {
-    host_.setOverlay(nullptr, 0, 0);
+  if ((key.state == OverlayState::Hidden && !key.mouseHint && !key.keyboardHint) || key.width <= 0 || key.height <= 0) {
+    host_.setOverlay(nullptr, 0, 0, shared::ScreenRect{});
     return;
   }
   const double scale = key.scale;
   const rujian::ui::Size logical{key.width / scale, key.height / scale};
   rujian::ui::Root root(rujian::ui::ThemeName::Dark, scale);
-  root.setContent(std::make_unique<ScreenOverlayView>(key.state, key.hint));
+  auto view = std::make_unique<ScreenOverlayView>(key.state, key.mouseHint, key.keyboardHint);
+  const ScreenOverlayView* viewPointer = view.get();
+  root.setContent(std::move(view));
   root.layout(logical);
   rujian::ui::OffscreenSurface surface(logical, scale);
   if (!surface.render(root, rujian::ui::Color::rgba(0, 0, 0, 0))) {
-    host_.setOverlay(nullptr, 0, 0);
+    host_.setOverlay(nullptr, 0, 0, shared::ScreenRect{});
     return;
   }
+  // 提示框的设备像素矩形与画的时候一样，边缘四舍五入到设备像素
+  shared::ScreenRect glass;
+  if (const auto box = viewPointer->glassRect()) {
+    const int left = static_cast<int>(std::lround(box->x * scale));
+    const int top = static_cast<int>(std::lround(box->y * scale));
+    const int right = static_cast<int>(std::lround(box->right() * scale));
+    const int bottom = static_cast<int>(std::lround(box->bottom() * scale));
+    if (right > left && bottom > top) glass = shared::ScreenRect{left, top, right - left, bottom - top};
+  }
   const auto pixels = surface.pixels();
-  host_.setOverlay(pixels.data(), surface.pixelWidth(), surface.pixelHeight());
+  host_.setOverlay(pixels.data(), surface.pixelWidth(), surface.pixelHeight(), glass);
 }
 
 void ScreenWidget::updateKeyboard() {
-  // 持有焦点且窗口在前台时才独占键盘：独占期间应用里所有窗口都收不到键盘消息
+  // 持有焦点且窗口在前台时才采集键盘；学习机与 Family BASIC 键盘独占（独占期间应用里所有窗口都收不到键盘消息），经典 FC 共享，快捷键照常生效
   const bool want = focused() && windowActive_;
-  if (want != keyboardExclusive_) {
-    keyboardExclusive_ = want;
-    host_.setKeyboardExclusive(want);
+  const contracts::KeyboardMode mode = !want ? contracts::KeyboardMode::Off : (view_.exclusiveKeyboard ? contracts::KeyboardMode::Exclusive : contracts::KeyboardMode::Shared);
+  if (mode != keyboardMode_) {
+    keyboardMode_ = mode;
+    host_.setKeyboardMode(mode);
   }
   if (!want && mouseCaptured_) releaseMouse();
 }

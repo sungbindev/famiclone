@@ -25,7 +25,8 @@ const SDK_BIN = 'C:\\Program Files (x86)\\Windows Kits\\10\\bin';
 /** 着色器的入口、档次与变量名。 */
 const SHADERS = [
   { entry: 'vertexMain', profile: 'vs_4_0_level_9_1', name: 'kScreenVertexShader' },
-  { entry: 'pixelMain', profile: 'ps_4_0_level_9_1', name: 'kScreenPixelShader' }
+  { entry: 'pixelMain', profile: 'ps_4_0_level_9_1', name: 'kScreenPixelShader' },
+  { entry: 'glassMain', profile: 'ps_4_0_level_9_1', name: 'kScreenGlassShader' }
 ];
 
 /** 找到本机 Windows SDK 里最新的 fxc.exe。 */

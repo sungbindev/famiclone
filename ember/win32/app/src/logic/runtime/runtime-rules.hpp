@@ -100,6 +100,9 @@ enum class PowerToggleAction { PowerOff, PowerOn, Boot, None };
 /** 是否捕获鼠标：首选项“点击画面捕获鼠标”打开，并且机器现在带鼠标。 */
 [[nodiscard]] bool capturesMouse(bool enabled, const std::optional<RuntimeStatus>& status);
 
+/** 键盘是否独占：接入了 Family BASIC 键盘，或已开机的是学习机整机机型（不是经典 FC）。 */
+[[nodiscard]] bool exclusiveKeyboard(bool familyKeyboard, const std::optional<RuntimeStatus>& status);
+
 /** “选择机型”里的一个选项。 */
 struct MachineChoice {
   std::string id;

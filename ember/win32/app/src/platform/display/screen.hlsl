@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：screen.hlsl
-// 说明：运行画面的着色器：顶点着色器把已经算好的位置与纹理坐标原样交给光栅化，像素着色器按采样器取纹理的颜色。
+// 说明：运行画面的着色器：顶点着色器把已经算好的位置与纹理坐标原样交给光栅化，像素着色器按采样器取纹理的颜色；毛玻璃的像素着色器对画面纹理做模糊。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-19
@@ -31,4 +31,27 @@ PixelInput vertexMain(VertexInput input) {
 
 float4 pixelMain(PixelInput input) : SV_Target {
   return screenTexture.Sample(screenSampler, input.uv);
+}
+
+// 毛玻璃：对画面纹理做 17 点采样的模糊（中心、内圈 8 点、外圈 8 点，权重 4:2:1）。
+// blurStep.xy 是内圈半径对应的纹理坐标增量，外圈是它的两倍；共 17 次采样，在 level_9_1 的纹理指令上限之内。
+cbuffer GlassConstants : register(b0) {
+  float4 blurStep;
+}
+
+float4 glassMain(PixelInput input) : SV_Target {
+  const float2 inner = blurStep.xy;
+  const float2 outer = blurStep.xy * 2.0;
+  const float2 diagonalInner = inner * 0.7071;
+  const float2 diagonalOuter = outer * 0.7071;
+  float4 sum = screenTexture.Sample(screenSampler, input.uv) * 4.0;
+  sum += (screenTexture.Sample(screenSampler, input.uv + float2(inner.x, 0.0)) + screenTexture.Sample(screenSampler, input.uv - float2(inner.x, 0.0)) +
+          screenTexture.Sample(screenSampler, input.uv + float2(0.0, inner.y)) + screenTexture.Sample(screenSampler, input.uv - float2(0.0, inner.y)) +
+          screenTexture.Sample(screenSampler, input.uv + diagonalInner) + screenTexture.Sample(screenSampler, input.uv - diagonalInner) +
+          screenTexture.Sample(screenSampler, input.uv + float2(diagonalInner.x, -diagonalInner.y)) + screenTexture.Sample(screenSampler, input.uv + float2(-diagonalInner.x, diagonalInner.y))) * 2.0;
+  sum += screenTexture.Sample(screenSampler, input.uv + float2(outer.x, 0.0)) + screenTexture.Sample(screenSampler, input.uv - float2(outer.x, 0.0)) +
+         screenTexture.Sample(screenSampler, input.uv + float2(0.0, outer.y)) + screenTexture.Sample(screenSampler, input.uv - float2(0.0, outer.y)) +
+         screenTexture.Sample(screenSampler, input.uv + diagonalOuter) + screenTexture.Sample(screenSampler, input.uv - diagonalOuter) +
+         screenTexture.Sample(screenSampler, input.uv + float2(diagonalOuter.x, -diagonalOuter.y)) + screenTexture.Sample(screenSampler, input.uv + float2(-diagonalOuter.x, diagonalOuter.y));
+  return float4((sum / 28.0).rgb, 1.0);
 }

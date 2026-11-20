@@ -7,7 +7,7 @@
  * 日期：2026-11-19
  * 备注：用法：node tools/dev/smoke-win32.mjs [--rom=相对 core/test/data 或绝对路径] [--no-build]；默认卡带是 apu-test/1-len_ctr.nes（只在画面左下角写字，中间是空的，便于判断提示与菜单）；
  *       判断方法与坐标见 win32-dev-support.mjs；每个场景都是一个独立的实例，只结束本脚本启动的进程（按 PID）；退出码 0 表示全部检查通过。
- *       快捷键的检查要在没有点过鼠标时做：点过之后焦点回到画面，键盘被独占，F8 这类外壳快捷键属于机器（见 docs/05 第 6 节）；全屏的实例退出不了全屏，只能关闭窗口，所以单独一个实例。
+ *       快捷键的检查：经典 FC 不独占键盘，点过鼠标之后快捷键仍有效；学习机（与接入 Family BASIC 键盘）独占键盘，快捷键属于机器（见 docs/05 第 5、7 节）；全屏的实例退出不了全屏，只能关闭窗口，所以单独一个实例。
  * ------------------------------------------------------------------------
  */
 
@@ -110,21 +110,21 @@ async function scenarioInteractions() {
     r = drive(app.pid, ['key:ESC', 'wait:500', count('menuClosed', MACHINE_MENU)]);
     check('Esc 关闭菜单，画面露出来', number(r, 'menuClosed') < 20, `亮像素 ${number(r, 'menuClosed')}`);
 
-    // 菜单项：继续与暂停（F8 之后焦点回到画面、键盘被独占，所以后面的操作都用鼠标）
+    // 菜单项：继续与暂停（经典 FC 不独占键盘，快捷键一直有效，这里仍用鼠标操作）
     r = drive(app.pid, ['click:151:19', 'wait:500', 'click:165:73', 'wait:700', count('menuResumed', CENTER)]);
     check('菜单里选“继续”后撤掉提示', number(r, 'menuResumed') <= centerRunning + 10, `${number(r, 'menuResumed')}`);
     r = drive(app.pid, ['click:151:19', 'wait:500', 'click:165:73', 'wait:700', count('menuPaused', CENTER)]);
     check('菜单里选“暂停”后显示提示', number(r, 'menuPaused') > centerRunning + 40, `${number(r, 'menuPaused')}`);
     drive(app.pid, ['click:151:19', 'wait:500', 'click:165:73', 'wait:700']);
 
-    // 运行面板：点系统栏左侧的运行按钮展开，点画面收起；点过之后焦点回到画面，键盘被独占
+    // 运行面板：点系统栏左侧的运行按钮展开，点画面收起；点过之后焦点回到画面
     r = drive(app.pid, [count('panelClosed', PANEL_ROW), 'click:24:485', 'wait:800', count('panelOpen', PANEL_ROW)]);
     const panelClosed = number(r, 'panelClosed');
     check('点系统栏的运行按钮展开运行面板', number(r, 'panelOpen') > panelClosed + 50, `${panelClosed} → ${number(r, 'panelOpen')}`);
     r = drive(app.pid, ['click:260:150', 'wait:800', count('panelCollapsed', PANEL_ROW)]);
     check('点画面后运行面板自动收起', number(r, 'panelCollapsed') <= panelClosed + 20, `${number(r, 'panelCollapsed')}`);
-    r = drive(app.pid, ['key:F8', 'wait:600', count('exclusive', CENTER)]);
-    check('画面持有焦点时键盘被独占，F8 不触发外壳的暂停', number(r, 'exclusive') <= centerRunning + 10, `${number(r, 'exclusive')}`);
+    r = drive(app.pid, ['key:F8', 'wait:600', count('sharedKeyboard', CENTER)]);
+    check('经典 FC 不独占键盘：画面持有焦点时 F8 仍触发外壳的暂停', number(r, 'sharedKeyboard') > centerRunning + 40, `${number(r, 'sharedKeyboard')}`);
 
     // 窗口始终置顶：勾选项切换后菜单保持打开，所以连点两次菜单项再按 Esc 关闭
     r = drive(app.pid, ['style:before', 'click:211:19', 'wait:500', 'click:253:142', 'wait:700', 'style:on']);
@@ -190,6 +190,9 @@ async function scenarioDevices() {
     check('调试服务在监听', status.enabled === true && status.listening === true && status.port === 5798, JSON.stringify(status));
     const boot = debugCall(app, 'machines.boot', 'machine=sb2000');
     check('经调试服务让小霸王 2000 开机', boot.state.power === 'on');
+    // 学习机独占键盘：开关菜单后焦点回到画面，F8 属于机器，不触发外壳的暂停
+    drive(app.pid, ['click:151:19', 'wait:500', 'key:ESC', 'wait:500', 'key:F8', 'wait:600']);
+    check('学习机独占键盘：画面持有焦点时 F8 不触发外壳的暂停', debugCall(app, 'runtime.status').mode === 'running');
 
     const image = join(tmpdir(), `ember-smoke-${process.pid}.img`);
     writeFileSync(image, Buffer.alloc(FLOPPY_BYTES));

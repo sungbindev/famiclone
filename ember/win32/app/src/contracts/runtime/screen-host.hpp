@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：位置与大小都是设备像素，相对主窗口的客户区；键盘独占的开关只表达“画面控件现在要不要独占”，窗口不在前台、失去激活时由使用方先关；
+ * 备注：位置与大小都是设备像素，相对主窗口的客户区；键盘模式只表达“画面控件现在要怎么采集”，窗口不在前台、失去激活时由使用方先关掉；
  *       鼠标捕获由宿主在双击右键（400 毫秒内两次右键按下）时自动释放，并经 setOnMouseReleased 告诉画面控件。
  * ------------------------------------------------------------------------
  */
@@ -21,6 +21,9 @@
 
 namespace ember::win32::contracts {
 
+/** 键盘怎么交给机器：Off 不采集；Shared 采集按键并上报（F 键、Tab、Esc 与带 Ctrl、Alt、Meta 的组合留给外壳，快捷键照常生效）；Exclusive 独占，所有物理按键都只交给机器。 */
+enum class KeyboardMode { Off, Shared, Exclusive };
+
 /** 运行画面的宿主。 */
 class ScreenHost {
  public:
@@ -34,14 +37,17 @@ class ScreenHost {
   [[nodiscard]] virtual double nominalRatio() const = 0;
   /** 画面是否显示：没有开机与断电时机器没有画面，不显示纹理里残留的上一帧。 */
   virtual void setFrameVisible(bool visible) = 0;
-  /** 设置叠在画面上的提示位图（预乘透明度的 BGRA，铺满画面子窗口）；空指针清除。 */
-  virtual void setOverlay(const std::uint8_t* pixels, int width, int height) = 0;
+  /**
+   * 设置叠在画面上的提示位图（预乘透明度的 BGRA，铺满画面子窗口）；空指针清除。
+   * @param glass 提示框的矩形（设备像素，相对画面子窗口）：画面子窗口先把这块区域里的画面模糊（毛玻璃），再叠上位图；宽或高为 0 表示没有。
+   */
+  virtual void setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) = 0;
 
   /** 指针（相对画面子窗口左上角，设备像素）在标准帧上的位置；还没有画面时没有值。 */
   [[nodiscard]] virtual std::optional<shared::FramePoint> toFramePoint(double x, double y) const = 0;
 
-  /** 开启或关闭键盘独占：开启后所有物理按键都只交给机器。 */
-  virtual void setKeyboardExclusive(bool exclusive) = 0;
+  /** 设置键盘怎么交给机器；窗口不在前台、失去激活时由使用方先设为 Off。 */
+  virtual void setKeyboardMode(KeyboardMode mode) = 0;
   /** 开启或关闭鼠标捕获：开启时指针隐藏并只给相对位移；返回之后是否捕获着。 */
   virtual bool setMouseCaptured(bool captured) = 0;
   /** 设置鼠标捕获被自动释放（双击右键）时的回调。 */

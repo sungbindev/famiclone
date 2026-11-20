@@ -62,7 +62,7 @@ double ScreenHostAdapter::nominalRatio() const { return shared::nominalScreenRat
 
 void ScreenHostAdapter::setFrameVisible(bool visible) { window_->setFrameVisible(visible); }
 
-void ScreenHostAdapter::setOverlay(const std::uint8_t* pixels, int width, int height) { window_->setOverlay(pixels, width, height); }
+void ScreenHostAdapter::setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) { window_->setOverlay(pixels, width, height, glass); }
 
 void ScreenHostAdapter::setHoles(const std::vector<shared::ScreenRect>& holes) { window_->setHoles(holes); }
 
@@ -79,10 +79,15 @@ std::optional<shared::FramePoint> ScreenHostAdapter::toFramePoint(double x, doub
   return shared::toFramePoint(x, y, view);
 }
 
-void ScreenHostAdapter::setKeyboardExclusive(bool exclusive) {
-  if (exclusive == rawInput_->keyboardCaptured()) return;
-  if (!exclusive) input_.releaseAllKeys();
-  if (!rawInput_->setKeyboardCapture(exclusive) && exclusive) onError_("开启键盘独占失败");
+void ScreenHostAdapter::setKeyboardMode(contracts::KeyboardMode mode) {
+  const bool captured = mode != contracts::KeyboardMode::Off;
+  const bool exclusive = mode == contracts::KeyboardMode::Exclusive;
+  if (captured == rawInput_->keyboardCaptured() && exclusive == rawInput_->keyboardExclusive()) return;
+  if (!captured) input_.releaseAllKeys();
+  // 重新开始采集时不知道此刻哪些修饰键按着，从“都没按”算起
+  else if (!rawInput_->keyboardCaptured()) commandModifiers_ = 0;
+  rawInput_->setKeyboardCapture(captured, exclusive);
+  if (rawInput_->keyboardCaptured() != captured || rawInput_->keyboardExclusive() != exclusive) onError_("设置键盘采集方式失败");
 }
 
 bool ScreenHostAdapter::setMouseCaptured(bool captured) {
@@ -121,7 +126,12 @@ DisplayLatency ScreenHostAdapter::latency() const {
 
 void ScreenHostAdapter::handleRawKey(std::uint16_t make, bool extended, bool prefixE1, bool up) {
   const auto code = shared::scanCodeToKeyCode(make, extended, prefixE1);
-  if (code) input_.nativeKey(std::string(*code), !up);
+  if (!code) return;
+  const unsigned modifier = shared::commandModifierBit(*code);
+  if (modifier != 0) commandModifiers_ = up ? (commandModifiers_ & ~modifier) : (commandModifiers_ | modifier);
+  // 不独占时留给外壳的键不上报；松开照常上报（没按下过的键输入端口会忽略），避免按下后再按修饰键导致卡键
+  if (!up && !rawInput_->keyboardExclusive() && shared::isShellKey(*code, commandModifiers_)) return;
+  input_.nativeKey(std::string(*code), !up);
 }
 
 void ScreenHostAdapter::handleRawMouse(int dx, int dy, int buttons, int pressed, int released, double wheel) {

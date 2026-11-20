@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：规则见 docs/08-Win32原生外壳.md 第 5.5 节与 docs/05-界面.md 第 7 节：帧到界面线程后只取最新一帧上传并显示，旧帧丢弃；
- *       键盘独占期间的物理按键经扫描码对照表转成键位名；捕获鼠标期间指针的相对位移按画面的显示比例换算成标准帧的位移，双击右键（400 毫秒内两次右键按下，第二次不送给机器）释放；
+ *       键盘独占期间的物理按键经扫描码对照表转成键位名（不独占的“共享”采集时 F 键、Tab、Esc 与带 Ctrl、Alt、Meta 的组合留给外壳，不上报）；捕获鼠标期间指针的相对位移按画面的显示比例换算成标准帧的位移，双击右键（400 毫秒内两次右键按下，第二次不送给机器）释放；
  *       手柄每个画面帧（约 16 毫秒）读一次，状态变化时上报；窗口消息经 handleMessage 交给原始输入采集（WM_INPUT）。
  * ------------------------------------------------------------------------
  */
@@ -75,9 +75,9 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
   void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, bool showAllLines) override;
   [[nodiscard]] double nominalRatio() const override;
   void setFrameVisible(bool visible) override;
-  void setOverlay(const std::uint8_t* pixels, int width, int height) override;
+  void setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) override;
   [[nodiscard]] std::optional<shared::FramePoint> toFramePoint(double x, double y) const override;
-  void setKeyboardExclusive(bool exclusive) override;
+  void setKeyboardMode(contracts::KeyboardMode mode) override;
   bool setMouseCaptured(bool captured) override;
   void setOnMouseReleased(std::function<void()> handler) override { onMouseReleased_ = std::move(handler); }
 
@@ -99,6 +99,8 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
   shared::ScreenAspect aspect_{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling_{shared::kDefaultScreenScaling};
   int cropLines_{0};
+  /** 不独占键盘时跟踪的 Ctrl、Alt、Meta 按键状态（commandModifierBit 的位或）。 */
+  unsigned commandModifiers_{0};
   std::function<void()> onMouseReleased_;
   /** 捕获期间上一次右键按下的时刻，用来判断双击右键。 */
   std::chrono::steady_clock::time_point lastRightDown_{};

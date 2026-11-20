@@ -28,4 +28,14 @@ namespace ember::win32::shared {
  */
 [[nodiscard]] std::optional<std::string_view> scanCodeToKeyCode(std::uint16_t make, bool extended, bool prefixE1);
 
+/** Ctrl、Alt、Meta 键对应的位（左右各一位，共 6 位）；不是这几个键时为 0。 */
+[[nodiscard]] unsigned commandModifierBit(std::string_view code);
+
+/**
+ * 键盘没有被独占时，一次按下的键是否留给外壳（不上报给机器）：F1 到 F24、Tab、Escape，以及按着 Ctrl、Alt、Meta 时的其他键；Ctrl、Alt、Meta、Shift 本身照常上报。
+ * @param code 键位名。
+ * @param commandModifiers 此刻按着的 Ctrl、Alt、Meta 键（commandModifierBit 的位或）。
+ */
+[[nodiscard]] bool isShellKey(std::string_view code, unsigned commandModifiers);
+
 }  // namespace ember::win32::shared

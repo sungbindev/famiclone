@@ -54,6 +54,8 @@ struct RuntimeView {
   bool muted{false};
   /** 是否捕获鼠标：设置打开并且机器现在带鼠标。 */
   bool capturesMouse{false};
+  /** 键盘是否整个交给机器（独占）：学习机整机机型，或接入了 Family BASIC 键盘；经典 FC 的普通游戏不独占，快捷键照常生效。 */
+  bool exclusiveKeyboard{false};
   ScreenSettings screen;
 };
 

@@ -62,8 +62,9 @@ class ScreenWindow {
   /**
    * 设置叠在画面上的提示位图，铺满子窗口；空指针清除。
    * @param pixels 预乘透明度的 BGRA 像素，每行紧密排列，共 width × height 个。
+   * @param glass 提示框的矩形（设备像素，相对子窗口）：画面在这块区域里先模糊（毛玻璃）再叠上位图；宽或高为 0 表示没有。
    */
-  void setOverlay(const std::uint8_t* pixels, int width, int height);
+  void setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass);
 
   /** 把当前内容画出来并显示。 */
   void render();

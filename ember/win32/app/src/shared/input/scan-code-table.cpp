@@ -67,4 +67,22 @@ std::optional<std::string_view> scanCodeToKeyCode(std::uint16_t make, bool exten
   }
 }
 
+unsigned commandModifierBit(std::string_view code) {
+  if (code == "ControlLeft") return 1u << 0;
+  if (code == "ControlRight") return 1u << 1;
+  if (code == "AltLeft") return 1u << 2;
+  if (code == "AltRight") return 1u << 3;
+  if (code == "MetaLeft") return 1u << 4;
+  if (code == "MetaRight") return 1u << 5;
+  return 0;
+}
+
+bool isShellKey(std::string_view code, unsigned commandModifiers) {
+  if (commandModifierBit(code) != 0 || code == "ShiftLeft" || code == "ShiftRight") return false;
+  if (code == "Tab" || code == "Escape") return true;
+  // F1 到 F24：F 加数字
+  const bool functionKey = code.size() >= 2 && code.front() == 'F' && code.find_first_not_of("0123456789", 1) == std::string_view::npos;
+  return functionKey || commandModifiers != 0;
+}
+
 }  // namespace ember::win32::shared

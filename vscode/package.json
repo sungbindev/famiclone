@@ -1740,6 +1740,21 @@
           "additionalProperties": false
         }
       }
+    ],
+    "chatInstructions": [
+      {
+        "path": "./chat/instructions/6502-disassembly.instructions.md"
+      }
+    ],
+    "chatSkills": [
+      {
+        "path": "./chat/skills/disassemble-6502/SKILL.md"
+      }
+    ],
+    "chatAgents": [
+      {
+        "path": "./chat/agents/6502-disassembler.agent.md"
+      }
     ]
   },
   "scripts": {

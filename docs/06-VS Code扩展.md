@@ -185,3 +185,15 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 ### 6.5 激活
 
 激活事件在原来的 `workspaceContains:fcdev.json` 之外增加 `workspaceContains:**/disasm.json` 与 `onStartupFinished`：只有一个映像文件的反汇编工作区没有 `fcdev.json`，工具也要能用。真实 VS Code 里 Copilot 是否发现并调用工具，要手动核对。
+
+### 6.6 指令、skill 与 agent
+
+| 文件 | 声明 | 内容 |
+| --- | --- | --- |
+| `chat/instructions/6502-disassembly.instructions.md` | `chatInstructions`，`applyTo: '**/disasm.json'` | 只经工具改工程、命名与注释要有依据、每批编辑后看 `disasm_status`、编辑后重新校验、关闭模拟器会话、不把有版权的映像放进仓库 |
+| `chat/skills/disassemble-6502/SKILL.md` 与 `references/` | `chatSkills` | 八步与每步的完成标准、各种输入的打开方式、区域类型与参数、运行记录的闭环、符号与提示的形式 |
+| `chat/agents/6502-disassembler.agent.md` | `chatAgents` | “6502 反汇编工程师”：内置的 `read`、`search`、`todo` 加本扩展的全部 30 个工具（写成 `sungbin.fcdev/工具引用名`），按 skill 多轮完成并在结束时汇报 |
+
+- 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。
+- `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整；agent 的工具恰好是内置三项加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*` 都存在。
+- 这三类贡献点要较新的 VS Code，低版本会忽略；agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。

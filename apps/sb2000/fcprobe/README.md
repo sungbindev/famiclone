@@ -25,4 +25,4 @@ node tools/probe-fc.mjs
 | --- | --- |
 | `src/fcprobe.c` | 在 DOS 下运行：关中断，把第 3 个 128K 窗口预置成 `$AA`，改向量，复制探测桩与跳板到 ERAM，写 `$5006`、`$4301` 进入 FC 模式 |
 | `src/probe-stub.s` | 探测桩，复制到 ERAM `$6100` 运行，结果写到 `$7F00` 起，各项的含义见文件头 |
-| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 fcprobe，固件指向 `reference/rom/小霸王/SB2K_BIOS.NES` |
+| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 fcprobe，固件指向 `ember/bios/sb2000_bios.bin` |

@@ -72,7 +72,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | 字段 | 含义 |
 | --- | --- |
 | `mapper` | mapper 号 |
-| `variant` | 变体：NES 2.0 头取 submapper；旧 iNES 头取头部第 9 字节（从 0 数起）右移 1 位，已用仓库里的 `SB2K_BIOS.NES` 核对：第 9 字节为 `02`，变体为 1 |
+| `variant` | 变体：NES 2.0 头取 submapper；旧 iNES 头取头部第 9 字节（从 0 数起）右移 1 位，已用原版 `SB2K_BIOS.NES` 核对：第 9 字节为 `02`，变体为 1 |
 | `prgSize`、`chrSize` | PRG、CHR 的字节数 |
 | `mirroring`、`battery`、`trainer` | 头里的镜像方式、电池标志、训练器标志 |
 | `nes20` | 是否是 NES 2.0 头 |

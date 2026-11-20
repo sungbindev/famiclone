@@ -2,8 +2,8 @@
 
 ## 文件
 
-- `SB97.nes`：iNES 文件头加 1MB 程序区（64 页，每页 16K），没有 CHR。文件头是 NES 2.0，按头解析得到的 mapper 号是 366，不对；这台机器按 mapper 168 处理，程序区的 CRC32 是 `40a4c574`，用它认定 BIOS。
-- Ember 使用的 BIOS 是去掉 16 字节文件头的纯文件 `ember/bios/sb97/SB97.bin`（只供开发与测试，Ember 不随发布包分发 BIOS）。
+- `ember/bios/sb97_bios.bin`：1MB 的纯程序区（64 页，每页 16K），没有 CHR，也没有文件头。这台机器按 mapper 168 处理，程序区的 CRC32 是 `40a4c574`，用它认定 BIOS。
+- 这个文件只供开发与测试使用，Ember 不随发布包分发 BIOS。
 
 ## 内存映射
 

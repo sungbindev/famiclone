@@ -82,6 +82,9 @@ struct HostWindow::Impl {
   HWND hwnd{nullptr};
   Root root;
   Microsoft::WRL::ComPtr<ID2D1HwndRenderTarget> target;
+  /** 上一帧的完整画面（与窗口等大）：缩放时先用它把新大小的窗口画满，再重新布局绘制。 */
+  Microsoft::WRL::ComPtr<ID2D1BitmapRenderTarget> back;
+  D2D1_SIZE_U backPixels{};
   bool trackingLeave{false};
   bool imeEnabled{true};
   wchar_t highSurrogate{0};
@@ -105,6 +108,7 @@ struct HostWindow::Impl {
     root.setScale(windowDpi(hwnd) / kBaseDpi);
     root.setDoubleClick(GetDoubleClickTime(), GetSystemMetrics(SM_CXDOUBLECLK) / 2.0 / scale());
     target.Reset();
+    back.Reset();
     root.layout(clientLogicalSize());
   }
 
@@ -181,17 +185,60 @@ struct HostWindow::Impl {
     Graphics::shared().d2d()->CreateHwndRenderTarget(properties, hwndProperties, &target);
   }
 
-  /** 把整棵控件树画到窗口的渲染目标上。 */
+  /** 渲染目标出错需要重建时，连同上一帧一起丢掉。 */
+  void resetTargets() {
+    back.Reset();
+    target.Reset();
+  }
+
+  /** 把整棵控件树画到上一帧的位图里，再整幅呈现到窗口的渲染目标上。 */
   void draw() {
     ensureTarget();
     if (!target) return;
+    const D2D1_SIZE_U pixels = target->GetPixelSize();
+    if (!back || backPixels.width != pixels.width || backPixels.height != pixels.height) {
+      back.Reset();
+      const D2D1_SIZE_F size = D2D1::SizeF(static_cast<FLOAT>(pixels.width / scale()), static_cast<FLOAT>(pixels.height / scale()));
+      if (SUCCEEDED(target->CreateCompatibleRenderTarget(&size, &pixels, nullptr, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, &back))) backPixels = pixels;
+    }
+    ID2D1RenderTarget* surface = back ? static_cast<ID2D1RenderTarget*>(back.Get()) : static_cast<ID2D1RenderTarget*>(target.Get());
+    surface->BeginDraw();
+    {
+      D2DCanvas canvas(surface, scale(), Graphics::shared());
+      canvas.clear(themeTokens(root.theme()).content_bg);
+      root.paint(canvas);
+    }
+    if (surface->EndDraw() == D2DERR_RECREATE_TARGET) {
+      resetTargets();
+      return;
+    }
+    if (!back) return;
+    Microsoft::WRL::ComPtr<ID2D1Bitmap> frame;
+    if (FAILED(back->GetBitmap(&frame))) return;
+    target->BeginDraw();
+    target->DrawBitmap(frame.Get());
+    if (target->EndDraw() == D2DERR_RECREATE_TARGET) resetTargets();
+  }
+
+  /**
+   * 窗口刚改了大小、还没重新布局时，先用上一帧把新大小的窗口画满（多出的部分是底色）。
+   * 改了大小后系统把整个窗口当作没画过：到下一次呈现之间合成，会闪出边框色；这一步把这段时间缩到最短。
+   * 呈现时要连子窗口（运行画面）所在的地方一起画，不然那里要等子窗口自己呈现，同样会闪，所以这一步暂时去掉 WS_CLIPCHILDREN。
+   */
+  void drawStale() {
+    if (!target || !back) return;
+    Microsoft::WRL::ComPtr<ID2D1Bitmap> frame;
+    if (FAILED(back->GetBitmap(&frame))) return;
+    const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+    SetWindowLongPtrW(hwnd, GWL_STYLE, style & ~static_cast<LONG_PTR>(WS_CLIPCHILDREN));
     target->BeginDraw();
     {
       D2DCanvas canvas(target.Get(), scale(), Graphics::shared());
       canvas.clear(themeTokens(root.theme()).content_bg);
-      root.paint(canvas);
     }
-    if (target->EndDraw() == D2DERR_RECREATE_TARGET) target.Reset();
+    target->DrawBitmap(frame.Get());
+    if (target->EndDraw() == D2DERR_RECREATE_TARGET) resetTargets();
+    SetWindowLongPtrW(hwnd, GWL_STYLE, style);
   }
 
   void paint() {
@@ -214,8 +261,15 @@ struct HostWindow::Impl {
         return 0;
       case WM_SIZE:
         if (wParam != SIZE_MINIMIZED) {
-          if (target) target->Resize(D2D1::SizeU(LOWORD(lParam), HIWORD(lParam)));
+          if (target) {
+            target->Resize(D2D1::SizeU(LOWORD(lParam), HIWORD(lParam)));
+            if (IsWindowVisible(hwnd) != FALSE) drawStale();
+          }
           root.layout(clientLogicalSize());
+          if (IsWindowVisible(hwnd) != FALSE) {
+            draw();
+            ValidateRect(hwnd, nullptr);
+          }
         }
         return 0;
       case WM_DPICHANGED: {

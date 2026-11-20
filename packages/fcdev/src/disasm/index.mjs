@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：类型声明见 index.d.ts；其他目录只经这个文件引用 disasm。
+// 备注：类型声明由 tsc 从 JSDoc 生成到 dist/types（npm run types:build）；其他目录只经这个文件引用 disasm。
 // ------------------------------------------------------------------------
 export {
   BYTE_KIND, buildRegions, buildXrefs, createAddressSpace, createAnalysis, detectCandidates, ensureAutoSymbols, entriesFromAddresses, entriesFromCodeFlags, entriesFromVectors, entryAtAddress, findAddressTables, findXrefs,
@@ -20,4 +20,8 @@ export {
 export { indexByValue, parseSymbolSet, parseSymbols } from './profile/index.mjs';
 export { recordVerification, buildStatus, verifyRoundtrip, writeGeneratedFiles } from './verify/index.mjs';
 export { buildHexRows, renderHexView } from './view/index.mjs';
+export { API_VERSION, OPERATIONS, OPERATION_NAMES, runOperation } from './operations/index.mjs';
+export {
+  LIST_CATEGORIES, buildCallGraph, createSymbolIndex, describeRoutine, enclosingRoutine, findBytes, findInstructions, findRoutine, listItems, listRoutines, parseBytePattern, registerUsage, renderListing, replaceLayout, textToPattern,
+} from './query/index.mjs';
 export { PROJECT_FILE, disassemble, fromProjectPath, readProject, readProjectImage, readProjectSymbolSets, toProjectPath, writeProject } from './workspace/index.mjs';

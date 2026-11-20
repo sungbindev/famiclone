@@ -10,6 +10,7 @@
 - C 代码的智能感知：自动运行 `fcdev sync`，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。
 - 头文件里符号与函数的文档注释（`/** */`），悬停时显示。
 - ca65 汇编的语法高亮（TextMate 语法）。C 用 VS Code 内置的 C 语法，不另提供。
+- 给 Copilot 用的 6502 反汇编工具（18 个语言模型工具），见第 6 节。
 
 首版不含，登记在 [待办备忘](待办备忘.md)：任务与问题匹配器、构建与运行命令、新建项目、调试。
 
@@ -107,11 +108,11 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 | 目录 | 职责 |
 | --- | --- |
-| `src/contracts` | 接口：汇编智能感知服务、汇编源文件存取、C 配置同步服务、C/C++ 配置检查器、命令行执行器、项目信息提供者 |
-| `src/shared` | 纯函数与数据：ca65 解析、行内词法、数字格式、指令与伪指令参考、悬停文字、项目信息与 c_cpp_properties.json 的解析 |
+| `src/contracts` | 接口：汇编智能感知服务、汇编源文件存取、C 配置同步服务、C/C++ 配置检查器、命令行执行器、项目信息提供者、反汇编操作运行器、构建比较器、工具描述 |
+| `src/shared` | 纯函数与数据：ca65 解析、行内词法、数字格式、指令与伪指令参考、悬停文字、项目信息与 c_cpp_properties.json 的解析、反汇编工具的输入结构检查、结果文字的整理与截断 |
 | `src/logic` | 业务：符号解析（含 `.include` 展开）、汇编智能感知服务、C 配置同步服务 |
-| `src/infra` | 与外部交互：读工作区文件、调用命令行、查找项目、读取 c_cpp_properties.json |
-| `src/entry` | VS Code 入口：四个汇编提供者、命令与文件监视器 |
+| `src/infra` | 与外部交互：读工作区文件、调用命令行、查找项目、读取 c_cpp_properties.json、动态加载工作区里 fcdev 的反汇编模块、用 fcdev build 构建并比较 |
+| `src/entry` | VS Code 入口：四个汇编提供者、命令与文件监视器、反汇编工具的注册（四组工具各一个文件）与路径规则 |
 | `src/platform` | 日志（输出通道） |
 | `src/bootstrap` | 组装根 `extension.ts` |
 | `syntaxes` | ca65 的 TextMate 语法文件（静态资源，不经分层） |
@@ -129,3 +130,49 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | `npm run package` | 生成 `.vsix`（不入库）；发布到应用市场需要发布者账号，由用户操作 |
 
 测试在 Node 环境里运行，`vscode` 模块用 `test/support/vscode-mock.ts` 替代；入口层的测试验证提供者与命令的行为，真实 VS Code 里的显示效果要手动打开项目核对。语法文件的测试用开发依赖 `vscode-textmate` 与 `vscode-oniguruma` 真实加载语法并分词，不依赖 VS Code；颜色由用户的主题决定，只检查作用域名。
+
+## 6. 反汇编工具
+
+扩展用 VS Code 的语言模型工具接口（`contributes.languageModelTools` 声明，`vscode.lm.registerTool` 实现，不使用 MCP）给 Copilot 提供 18 个 6502 反汇编工具。工作流、工具的用途与计划见 [09-AI 反汇编工具](09-AI反汇编工具.md)，核心在 `fcdev` 里，见 [07-反汇编设计](07-反汇编设计.md)。
+
+### 6.1 工具
+
+| 组 | 工具 |
+| --- | --- |
+| 工程与映像 | `disasm_open`、`disasm_status`、`disasm_layout`、`disasm_hex`、`disasm_find` |
+| 分析 | `disasm_trace`、`disasm_list`、`disasm_view`、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference` |
+| 编辑 | `disasm_apply`、`disasm_symbols` |
+| 生成与校验 | `disasm_generate`、`disasm_verify`、`disasm_build` |
+
+- 工具的名字、给模型的说明与参数结构只写在 `package.json` 的 `languageModelTools` 里；代码（`src/entry/disassembly`，每组一个文件）只写“对应的 fcdev 操作、要不要确认、显示的文字、要检查的路径参数”，运行时按名字读 `package.json` 里的参数结构检查输入（`shared/disassembly/schema-validator.ts` 支持 JSON Schema 的一个子集）。`test/entry/disassembly-tools.test.ts` 核对两边的工具一一对应，并核对每个操作都是 `fcdev` 提供的。
+- 除 `disasm_build` 外，每个工具对应 `fcdev` 的一个操作（`disasm_open` 对应 `open`，依此类推）；`disasm_reference` 不给 `projectDir` 时只查指令。
+
+### 6.2 加载 fcdev
+
+扩展不把 `fcdev` 打进包，也不经命令行：`infra/disassembly/workspace-disasm-runner.ts` 从工程目录向上找 `node_modules/fcdev`，用动态 `import()` 加载它的 `src/disasm/index.mjs`，按操作名调用 `runOperation`。加载后按路径缓存，所以升级 `fcdev` 后要重新加载窗口。
+
+| 情况 | 行为 |
+| --- | --- |
+| 没有安装 `fcdev` | 返回“项目里没有安装 fcdev”的说明 |
+| 没有 `API_VERSION`、模块缺失 | 提示升级 `fcdev` |
+| `API_VERSION` 小于扩展支持的版本（1） | 提示升级 `fcdev` |
+| `API_VERSION` 大于扩展支持的版本 | 提示升级扩展 |
+| `fcdev` 抛出的可预期错误（`FcdevError`） | 转成带“建议”的说明返回给模型，模型据此改参数 |
+
+`disasm_build` 经命令行 `fcdev build`（`infra/disassembly/fcdev-build-comparer.ts`）构建，取输出里“已生成 …”那一行的路径，与工程记录的原映像逐字节比较。
+
+### 6.3 路径与确认
+
+- 相对路径按第一个工作区文件夹解析；`projectDir`、`buildPath` 必须在工作区里，否则拒绝。要反汇编的映像（`image`）、符号集（`symbolSets`、`file`）可以在工作区外，但调用前的确认里会写出这些路径。
+- 会修改工程文件、写生成文件或运行外部程序的调用，在调用前弹出确认：`disasm_trace`、`disasm_apply`、`disasm_generate`、`disasm_verify`、`disasm_build`，以及带 `image` 的 `disasm_open`、带 `segments` 的 `disasm_layout`、`action` 为 `import` 的 `disasm_symbols`。其他调用只显示一行说明。
+- 不向模型开放工具链路径等会改变被运行程序的参数；工具链由 `fcdev` 按环境变量与随包的工具链定位。
+
+### 6.4 结果与出错
+
+- 结果是缩进的 JSON；清单、十六进制视图、调用图这类多行文字（结果里的 `text` 与 `listing`）单独成块原样输出。
+- 一次结果最多 20000 个字符，超出时截断并说明怎么缩小范围；列表类工具带 `limit`（默认 50，最多 500）与 `cursor`，下一页的游标是结果里的 `nextCursor`。
+- 出错时不抛异常，把原因作为结果文字（以“错误：”开头）返回，模型据此改参数；非预期的错误写进“fcdev”输出通道，并返回通用说明。
+
+### 6.5 激活
+
+激活事件在原来的 `workspaceContains:fcdev.json` 之外增加 `workspaceContains:**/disasm.json` 与 `onStartupFinished`：只有一个映像文件的反汇编工作区没有 `fcdev.json`，工具也要能用。真实 VS Code 里 Copilot 是否发现并调用工具，要手动核对。

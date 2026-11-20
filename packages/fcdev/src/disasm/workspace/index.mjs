@@ -6,5 +6,6 @@
 // 日期：2026-11-21
 // 备注：无
 // ------------------------------------------------------------------------
+export { openImageProject } from './open-project.mjs';
 export { disassemble } from './pipeline.mjs';
 export { PROJECT_FILE, fromProjectPath, readProject, readProjectImage, readProjectSymbolSets, toProjectPath, writeProject } from './project-store.mjs';

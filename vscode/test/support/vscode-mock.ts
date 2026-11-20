@@ -113,6 +113,18 @@ export class Location {
   ) {}
 }
 
+/** 语言模型工具结果里的文字。 */
+export class LanguageModelTextPart {
+  /** @param value 文字。 */
+  constructor(readonly value: string) {}
+}
+
+/** 语言模型工具的结果。 */
+export class LanguageModelToolResult {
+  /** @param content 内容。 */
+  constructor(readonly content: LanguageModelTextPart[]) {}
+}
+
 export const CompletionItemKind = { Constant: 20, Reference: 17, Function: 2, Snippet: 14, Module: 8, Struct: 21, Enum: 12, Keyword: 13 };
 export const SymbolKind = { Constant: 13, Key: 19, Function: 11, Event: 23, Namespace: 2, Struct: 22, Enum: 9 };
 export const ProgressLocation = { Notification: 15 };
@@ -152,6 +164,8 @@ export const mockState = {
   watchers: new Map<string, FakeWatcher>(),
   providers: [] as Array<{ kind: string; selector: unknown; provider: unknown; triggers: string[] }>,
   workspaceFolderListeners: [] as Array<() => void>,
+  workspaceFolders: [] as Array<{ uri: { fsPath: string } }>,
+  tools: new Map<string, unknown>(),
   installedExtensions: new Set<string>()
 };
 
@@ -162,6 +176,8 @@ export function resetMock(): void {
   mockState.watchers.clear();
   mockState.providers = [];
   mockState.workspaceFolderListeners = [];
+  mockState.workspaceFolders = [];
+  mockState.tools.clear();
   mockState.installedExtensions.clear();
   window.showInformationMessage.mockReset();
   window.showInformationMessage.mockResolvedValue(undefined);
@@ -205,7 +221,17 @@ export const languages = {
   registerDocumentSymbolProvider: registerProvider('symbols')
 };
 
+export const lm = {
+  registerTool: (name: string, tool: unknown): Disposable => {
+    mockState.tools.set(name, tool);
+    return new Disposable();
+  }
+};
+
 export const workspace = {
+  get workspaceFolders(): Array<{ uri: { fsPath: string } }> | undefined {
+    return mockState.workspaceFolders.length === 0 ? undefined : mockState.workspaceFolders;
+  },
   getConfiguration: (section: string) => ({
     get: <T>(key: string, defaultValue: T): T => (mockState.settings[`${section}.${key}`] as T | undefined) ?? defaultValue
   }),

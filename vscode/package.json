@@ -1,8 +1,8 @@
 {
   "name": "fcdev",
   "displayName": "fcdev 6502 开发",
-  "description": "6502 兼容机（NES、小霸王学习机等）开发：ca65 汇编的语法高亮、悬停、补全、转到定义与符号，以及 cc65 的 C 头文件配置。",
-  "version": "0.1.1",
+  "description": "6502 兼容机（NES、小霸王学习机等）开发：ca65 汇编的语法高亮、悬停、补全、转到定义与符号，cc65 的 C 头文件配置，以及给 Copilot 用的 6502 反汇编工具。",
+  "version": "0.2.0",
   "publisher": "sungbin",
   "license": "Apache-2.0",
   "author": "sungbin <sungbin@3578.cn>",
@@ -19,14 +19,18 @@
     "ca65",
     "nes",
     "famicom",
-    "fcdev"
+    "fcdev",
+    "disassembler",
+    "copilot"
   ],
   "extensionPack": [
     "ms-vscode.cpptools"
   ],
   "main": "./out/bootstrap/extension.js",
   "activationEvents": [
-    "workspaceContains:fcdev.json"
+    "workspaceContains:fcdev.json",
+    "workspaceContains:**/disasm.json",
+    "onStartupFinished"
   ],
   "contributes": {
     "languages": [
@@ -73,7 +77,988 @@
           "markdownDescription": "同步后，如果 `.vscode/c_cpp_properties.json` 里除 `fcdev` 外还有其他配置，提示你在 C/C++ 扩展里选择 `fcdev` 配置，每个项目每次会话只提示一次。"
         }
       }
-    }
+    },
+    "languageModelTools": [
+      {
+        "name": "disasm_open",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_open",
+        "displayName": "打开或新建反汇编工程",
+        "modelDescription": "打开已有的反汇编工程，或由映像文件新建工程。只给 projectDir 就是打开（返回布局、入口数与进度）；再给 image 就是新建，工程文件 disasm.json 写在 projectDir 里。映像格式缺省按文件头判断：以 NES 加 0x1A 开头的是 iNES（只支持 NROM，入口自动取中断向量），其他是平铺二进制，必须给加载地址 address，有换页（bank）时改给 segments（每段：id、fileOffset、length、address，可选 bank、writable）。entries 是手工入口，symbolSets 是符号集（.inc）文件路径，登记后源码里用它们的名字代替硬件寄存器地址。新建后用 disasm_trace 追踪。",
+        "userDescription": "打开或新建 6502 反汇编工程。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "image": {
+              "type": "string",
+              "minLength": 1,
+              "description": "要反汇编的映像文件（.nes、.bin、.exe 等）；不给则打开已有工程"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "ines",
+                "flat"
+              ],
+              "description": "映像格式：ines 或 flat（平铺二进制）；缺省按文件头判断"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "平铺二进制的加载地址，如 \"$8000\""
+            },
+            "segments": {
+              "type": "array",
+              "description": "平铺二进制的段列表（有换页时用）；每段：id、fileOffset、length、address，可选 bank、writable",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "fileOffset",
+                  "length",
+                  "address"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "fileOffset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "length": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "address": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65535
+                  },
+                  "bank": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "entries": {
+              "type": "array",
+              "description": "手工入口：地址，或 { address, segmentId }",
+              "items": {
+                "type": [
+                  "string",
+                  "integer",
+                  "object"
+                ]
+              }
+            },
+            "symbolSets": {
+              "type": "array",
+              "description": "符号集文件（.inc）路径",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "vectors": {
+              "type": "boolean",
+              "description": "是否把中断向量当作入口，默认 true"
+            },
+            "overwrite": {
+              "type": "boolean",
+              "description": "工程已存在时是否覆盖，默认 false"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_status",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_status",
+        "displayName": "反汇编工程进度",
+        "modelDescription": "查看反汇编工程的进度：映像与布局、各类区域占的字节、自动命名的符号数（要替换成有意义的名字）、没有说明的例程数、未解析的间接跳转与跨 bank 转移，以及最近一次回读校验的结果（一致、不一致、已过期、没做过）。每做完一批编辑后看一次。",
+        "userDescription": "查看反汇编工程的进度。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_layout",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_layout",
+        "displayName": "查看或替换布局",
+        "modelDescription": "查看工程的布局（每段的文件偏移、长度、CPU 地址、bank）、没有划入任何段的字节范围和各类区域的字节数。给 segments 就是用新的段列表替换布局：手工标注的区域会被丢弃，仍然有效的入口、符号、注释、提示保留，其余丢弃并报告个数；替换后要重新 disasm_trace。",
+        "userDescription": "查看或替换反汇编工程的布局。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "segments": {
+              "type": "array",
+              "description": "新的段列表；每段：id、fileOffset、length、address，可选 bank、writable",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "fileOffset",
+                  "length",
+                  "address"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "fileOffset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "length": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "address": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65535
+                  },
+                  "bank": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_hex",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_hex",
+        "displayName": "十六进制视图",
+        "modelDescription": "以十六进制与字符形式查看一段字节：按 CPU 地址对齐，行尾标出符号，另外返回这段范围里的区域（类型与来源）。用于看数据、字符串、图形、地址表。默认从段首看 256 字节，最多 4096。",
+        "userDescription": "查看一段字节的十六进制与字符视图。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "CPU 地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "segmentId": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "段号；同一个 CPU 地址在多个 bank 里都有映射（换页窗口）时必须给"
+            },
+            "length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096,
+              "description": "字节数，默认 256"
+            },
+            "bytesPerRow": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64,
+              "description": "每行字节数，默认 16"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_find",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_find",
+        "displayName": "搜索字节、文本、指令",
+        "modelDescription": "在映像里搜索。kind 为 bytes：pattern 写十六进制字节，?? 匹配任意字节，如 \"A9 ?? 8D 00 20\"；kind 为 text：text 写 ASCII 文本，encoding 为 ascii-high 时每个字符的最高位为 1；kind 为 instructions：pattern 写连续的指令，分号分隔，* 匹配任意文字，如 \"lda #*; sta $2000\"（零页写 $10，绝对寻址的小地址写成 a:$0010）。结果分页，cursor 取自上一页的 nextCursor。",
+        "userDescription": "在映像里搜索字节、文本或指令。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "text",
+                "instructions"
+              ],
+              "description": "搜索种类，默认 bytes"
+            },
+            "pattern": {
+              "type": "string",
+              "minLength": 1,
+              "description": "bytes 与 instructions 的模式"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "text 要找的文字"
+            },
+            "encoding": {
+              "type": "string",
+              "enum": [
+                "ascii",
+                "ascii-high"
+              ],
+              "description": "text 的编码，默认 ascii"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "每页最多返回几项，默认 50"
+            },
+            "cursor": {
+              "type": "string",
+              "description": "上一页返回的 nextCursor，取下一页"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_trace",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_trace",
+        "displayName": "静态追踪",
+        "modelDescription": "从入口静态追踪代码：沿控制流标出指令，识别经地址表分发的跳转，更新区域，并给新发现的调用目标、跳转目标、数据与变量自动命名（sub_、loc_、data_、var_ 加地址，中断向量入口叫 reset、nmi、irq）。entries 可以同时加入新入口（地址，或 { address, segmentId }）。返回指令总数与本次新增、例程数、新符号数、警告与未解析项；间接跳转与跨 bank 转移追不出去，需要用运行记录或 disasm_apply 加入口补上。",
+        "userDescription": "从入口追踪代码并自动命名。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "entries": {
+              "type": "array",
+              "description": "要新加的手工入口：地址，或 { address, segmentId }",
+              "items": {
+                "type": [
+                  "string",
+                  "integer",
+                  "object"
+                ]
+              }
+            },
+            "autoName": {
+              "type": "boolean",
+              "description": "是否给新发现的地址自动命名，默认 true"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_list",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_list",
+        "displayName": "按类别列出",
+        "modelDescription": "按类别列出工程里的项（分页）。category：entries 入口；routines 例程（含大小与是否有说明）；unresolved 未解析的间接跳转与跨 bank 转移；unknown 没有识别的字节范围；auto-symbols 还没有换成有意义名字的自动符号；uncommented-routines 没有块注释的例程。",
+        "userDescription": "按类别列出入口、例程、未解析项、未识别字节等。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "entries",
+                "routines",
+                "unresolved",
+                "unknown",
+                "auto-symbols",
+                "uncommented-routines"
+              ],
+              "description": "类别"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "每页最多返回几项，默认 50"
+            },
+            "cursor": {
+              "type": "string",
+              "description": "上一页返回的 nextCursor，取下一页"
+            }
+          },
+          "required": [
+            "projectDir",
+            "category"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_view",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_view",
+        "displayName": "带符号与注释的反汇编",
+        "modelDescription": "查看反汇编清单：指令、符号标签、注释，操作数在有符号时写符号名；没有追到的字节按每行 8 个字节写成 .byte 并标出区域类型。用 routine 看整个例程，或用 address 加 length 看一段范围。清单有行数上限，被截断时 nextAddress 是下一行的地址。",
+        "userDescription": "查看带符号与注释的反汇编清单。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "routine": {
+              "type": "string",
+              "minLength": 1,
+              "description": "例程名（种类为 procedure 的符号）"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "CPU 地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "segmentId": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "段号；同一个 CPU 地址在多个 bank 里都有映射（换页窗口）时必须给"
+            },
+            "length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096,
+              "description": "字节数，默认 256"
+            },
+            "maxLines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000,
+              "description": "清单最多几行，默认 200"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_xrefs",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_xrefs",
+        "displayName": "交叉引用",
+        "modelDescription": "查某个符号或地址被谁引用：调用 call、跳转 jump、分支 branch、读 read、写 write、先读后写 readWrite、取地址 address（推测，标 likely）、地址表 table。每条引用带它所在的例程名。用 symbol（符号名）或 address 指定目标，kind 可只看一种。",
+        "userDescription": "查看符号或地址的交叉引用。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "symbol": {
+              "type": "string",
+              "minLength": 1,
+              "description": "符号名"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "CPU 地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "call",
+                "jump",
+                "branch",
+                "read",
+                "write",
+                "readWrite",
+                "address",
+                "table"
+              ],
+              "description": "只看这一种引用"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "每页最多返回几项，默认 50"
+            },
+            "cursor": {
+              "type": "string",
+              "description": "上一页返回的 nextCursor，取下一页"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_routine",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_routine",
+        "displayName": "例程上下文",
+        "modelDescription": "一次看清一个例程：范围、清单、调用者、被调用者、直接读写的地址（带符号名与次数）、以及可能的入口与出口寄存器（按指令顺序线性推测，不跟踪分支，只作参考）。用 routine（例程名）或 address 指定；给符号命名与写注释前先看它。",
+        "userDescription": "查看一个例程的代码、调用关系与读写的地址。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "routine": {
+              "type": "string",
+              "minLength": 1,
+              "description": "例程名（种类为 procedure 的符号）"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "CPU 地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "segmentId": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "段号；同一个 CPU 地址在多个 bank 里都有映射（换页窗口）时必须给"
+            },
+            "maxLines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000,
+              "description": "清单最多几行，默认 200"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_callgraph",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_callgraph",
+        "displayName": "调用图",
+        "modelDescription": "以树的形式显示例程之间的调用：direction 为 callees 看它调用了谁，callers 看谁调用了它；depth 限制深度（1 到 8，默认 2）。用于理清功能分层，决定怎么划分模块。",
+        "userDescription": "查看例程的调用图。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "routine": {
+              "type": "string",
+              "minLength": 1,
+              "description": "例程名（种类为 procedure 的符号）"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "CPU 地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "segmentId": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "段号；同一个 CPU 地址在多个 bank 里都有映射（换页窗口）时必须给"
+            },
+            "depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8,
+              "description": "深度，默认 2"
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "callees",
+                "callers"
+              ],
+              "description": "方向，默认 callees"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_detect",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_detect",
+        "displayName": "识别候选区域",
+        "modelDescription": "在还没有标注的字节里识别候选：padding 填充、tables 地址表（连续的 16 位值指向指令开头）、strings 字符串、graphics 图形数据（要给出 graphicsPorts，即把数据写进显存的寄存器地址）。只返回候选与依据，不修改工程；确认后用 disasm_apply 的 setRegion 标注。",
+        "userDescription": "识别地址表、字符串、图形数据与填充的候选。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "padding",
+                  "words",
+                  "string",
+                  "graphics"
+                ]
+              },
+              "description": "只看这些类型"
+            },
+            "minPadding": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "填充至少几个字节，默认 16"
+            },
+            "minString": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "字符串至少几个字符，默认 4"
+            },
+            "minTableEntries": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "地址表至少几项，默认 3"
+            },
+            "graphicsPorts": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "description": "图形数据端口的地址"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "每页最多返回几项，默认 50"
+            },
+            "cursor": {
+              "type": "string",
+              "description": "上一页返回的 nextCursor，取下一页"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_reference",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_reference",
+        "displayName": "查询指令与符号",
+        "modelDescription": "查询：query 是 6502 助记符（如 lda）时返回每种寻址方式的操作码、长度、流程类别与写法；同时在符号里搜索（名字片段，或 \"$2002\" 这样的地址）：给了 projectDir 就搜工程的符号与符号集里的常量（硬件寄存器等）。",
+        "userDescription": "查询 6502 指令与符号集里的符号。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "助记符、符号名片段或地址"
+            },
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "每页最多返回几项，默认 50"
+            },
+            "cursor": {
+              "type": "string",
+              "description": "上一页返回的 nextCursor，取下一页"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_apply",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_apply",
+        "displayName": "批量编辑工程",
+        "modelDescription": "批量编辑工程，一次调用可含多项，任何一项出错整批都不生效。edits 的每项有 op 与它的参数（address 可写整数或 \"$C000\"，换页窗口里加 segmentId）：defineSymbol {name,address,kind?,description?,module?}，kind 为 procedure、label、variable、constant、data；renameSymbol {from,to}（会清除自动命名标记）；updateSymbol {name,kind?,description?,module?}；removeSymbol {name}；setRegion {address,length,type,params?}，type 为 code、bytes、words、string、graphics、padding，params 例如 bytes 的 perLine、words 的 perLine 与 adjust（0 或 1，RTS 表为 1）、string 的 encoding 与 terminator（null、0、\"high-bit\"）、padding 的 value；setComment {address,kind,text}，kind 为 block（写在该地址上方）或 inline（行尾）；removeComment {address,kind}；setHint {address,form,symbol?,offset?}，操作数写法，form 为 symbol、low、high、decimal、binary、char；removeHint {address}；assignModule {name,address,length,description?}（把一段地址归入模块，每个模块生成一个 .s 文件）；removeModule {name}；addEntry {address,description?}；removeEntry {address}。命名与注释要依据代码行为、硬件资料与运行观察，没有依据时写“未确认”。",
+        "userDescription": "批量编辑符号、区域、注释、提示、模块与入口。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "edits": {
+              "type": "array",
+              "description": "编辑项",
+              "items": {
+                "type": "object",
+                "required": [
+                  "op"
+                ],
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "defineSymbol",
+                      "renameSymbol",
+                      "updateSymbol",
+                      "removeSymbol",
+                      "setRegion",
+                      "setComment",
+                      "removeComment",
+                      "setHint",
+                      "removeHint",
+                      "assignModule",
+                      "removeModule",
+                      "addEntry",
+                      "removeEntry"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "projectDir",
+            "edits"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_symbols",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_symbols",
+        "displayName": "符号集与符号",
+        "modelDescription": "导入符号集、列出与搜索符号。action 为 import：file 是 ca65 的 .inc 文件（“名字 = 数值”形式的常量，如硬件寄存器），登记进工程，重新生成源码后源码里用这些名字；list 或 search 列出或搜索（query 是名字片段，scope 为 project、sets、all，kind 可过滤工程符号的种类）。",
+        "userDescription": "导入符号集，列出与搜索符号。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "import",
+                "list",
+                "search"
+              ],
+              "description": "操作，默认 list"
+            },
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "import 的符号集文件（.inc）"
+            },
+            "query": {
+              "type": "string",
+              "description": "名字片段（不分大小写）"
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "project",
+                "sets",
+                "all"
+              ],
+              "description": "范围，默认 all"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "procedure",
+                "label",
+                "variable",
+                "constant",
+                "data"
+              ],
+              "description": "只看这种工程符号"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "每页最多返回几项，默认 50"
+            },
+            "cursor": {
+              "type": "string",
+              "description": "上一页返回的 nextCursor，取下一页"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_generate",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_generate",
+        "displayName": "生成源码工程",
+        "modelDescription": "由工程与映像生成 ca65 源码工程并写进工程目录：src/<模块>.s、include/globals.inc、include/constants.inc、符号集副本与 link.cfg。结果确定，可以重复生成；生成后用 disasm_verify 回读校验。返回写出的文件与警告（写不进源码的注释、没采用的提示）。",
+        "userDescription": "生成 ca65 源码工程。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_verify",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_verify",
+        "displayName": "回读校验",
+        "modelDescription": "重新生成源码，用 ca65 与 ld65 汇编链接，逐段与原映像逐字节比较，并把结果记进工程。不一致时返回第一处差异的段、地址、文件偏移、两边的字节、所在的符号、区域类型与例程，据此修正标注。任何编辑之后回读结果都会过期，要重新校验。",
+        "userDescription": "回读校验：重新汇编后与原映像逐字节比较。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            }
+          },
+          "required": [
+            "projectDir"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_build",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_build",
+        "displayName": "用 fcdev 构建并比较",
+        "modelDescription": "用 fcdev build 构建一个 fcdev 项目（buildPath 是项目目录，或其中的一个源文件；项目里要有 fcdev.json），并把产物与 projectDir 工程的原映像逐字节比较。只适用于 fcdev 支持的目标（NES 的 NROM，SB2000 的 .EXE）；项目需要由你按生成的源码整理（段名要改成目标的链接配置用的名字）。",
+        "userDescription": "用 fcdev build 构建并与原映像比较。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "buildPath": {
+              "type": "string",
+              "minLength": 1,
+              "description": "fcdev 项目目录，或其中的源文件"
+            }
+          },
+          "required": [
+            "projectDir",
+            "buildPath"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

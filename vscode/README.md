@@ -1,6 +1,6 @@
 # fcdev 6502 开发
 
-6502 兼容机（NES、小霸王学习机等）开发的 VS Code 扩展，配合 `fcdev` 命令行使用。目前提供 ca65 汇编的语法高亮与智能感知。
+6502 兼容机（NES、小霸王学习机等）开发的 VS Code 扩展，配合 `fcdev` 命令行使用。目前提供 ca65 汇编的语法高亮与智能感知，以及给 Copilot 用的 6502 反汇编工具。
 
 ## 功能
 
@@ -29,9 +29,20 @@
 
 C/C++ 扩展用哪个配置要在状态栏里选。`.vscode/c_cpp_properties.json` 里除 `fcdev` 外还有其他配置时，同步后会提示你选择 `fcdev`，点“选择配置”即可打开选择列表。
 
+### 6502 反汇编工具（Copilot）
+
+扩展给 Copilot 提供 18 个反汇编工具，在聊天里用 `#disasm_open` 这样的名字引用，模型也会自己选用。模型用它们多轮完成“映像到可汇编源码工程”的全过程：
+
+- 工程与映像：`disasm_open`（新建或打开工程）、`disasm_status`（进度）、`disasm_layout`、`disasm_hex`、`disasm_find`。
+- 分析：`disasm_trace`（从入口追踪并自动命名）、`disasm_list`、`disasm_view`（带符号与注释的反汇编）、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference`。
+- 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`。
+- 生成与校验：`disasm_generate`、`disasm_verify`（重新汇编后与原映像逐字节比较）、`disasm_build`。
+
+会修改工程文件、写生成文件或运行汇编链接的调用，执行前会请你确认。工程目录必须在工作区里；要反汇编的映像可以在工作区外，确认里会写出路径。
+
 ## 使用前提
 
-项目里已安装 `fcdev`（`npm install`），扩展经项目里的 `node_modules/fcdev` 运行命令，不依赖全局安装。没有安装时，汇编智能感知只用当前文件与工作区里的源码，原因写在“输出”面板的 fcdev 通道。
+项目里已安装 `fcdev`（`npm install`），扩展经项目里的 `node_modules/fcdev` 运行命令，不依赖全局安装。反汇编工具需要支持工具接口的 `fcdev` 版本，过旧时工具会提示升级。没有安装时，汇编智能感知只用当前文件与工作区里的源码，原因写在“输出”面板的 fcdev 通道。
 
 ## 设置
 

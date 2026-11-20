@@ -3,6 +3,15 @@
   "version": "0.8.0",
   "description": "fcdev 使用的 cc65 工具链：cc65、ca65、ld65、ar65、da65，以及 none、nes 两个目标的运行库",
   "license": "Zlib",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sungbindev/famiclone.git",
+    "directory": "packages/fcdev-cc65"
+  },
+  "homepage": "https://github.com/sungbindev/famiclone#readme",
+  "bugs": {
+    "url": "https://github.com/sungbindev/famiclone/issues"
+  },
   "os": [
     "win32"
   ],

@@ -4,6 +4,15 @@
   "description": "6502 兼容机（NES、学习机等）的开发工具：用 cc65 构建 C 与汇编程序",
   "license": "Apache-2.0",
   "author": "sungbin <sungbin@3578.cn>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sungbindev/famiclone.git",
+    "directory": "packages/fcdev"
+  },
+  "homepage": "https://github.com/sungbindev/famiclone#readme",
+  "bugs": {
+    "url": "https://github.com/sungbindev/famiclone/issues"
+  },
   "keywords": [
     "6502",
     "nes",

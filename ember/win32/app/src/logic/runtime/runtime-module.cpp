@@ -117,6 +117,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
     }
     return entries;
   }};
+  machineMenu.submenu->titleText = [&controller] { return machineMenuTitle(controller.machines(), controller.selectedMachine()); };
   module.menuItems.push_back(std::move(machineMenu));
   module.menuItems.push_back(commandItem("file", "runtime.openCartridge"));
   // “最近打开”的子菜单项：最近打开的卡带，选中即重新打开

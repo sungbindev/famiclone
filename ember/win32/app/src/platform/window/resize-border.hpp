@@ -5,8 +5,8 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
- * 备注：缩放区只在窗口边框线的外面，边框线以内（含贴着边的滚动条）都是客户区；
- *       窗口的命中测试返回值只在窗口矩形内有效，矩形外的缩放区只能由另一个窗口接住鼠标，按下后向主窗口发带方向的 SC_SIZE，由系统接着做缩放；
+ * 备注：缩放区在窗口边框线的外面和边框线本身（窗口里面最外一圈），边框线以内（含贴着边的滚动条）都是客户区；
+ *       窗口的命中测试返回值只在窗口矩形内有效，矩形外的缩放区只能由另一个窗口接住鼠标，按下后向主窗口发带方向的 SC_SIZE，由系统接着做缩放；边框线那一圈由主窗口自己的 WM_NCHITTEST 调用 hitTest 得到结果；
  *       窗口以 1/255 的透明度显示（几乎看不见，但能接住鼠标）；主窗口最大化、最小化、全屏、不可见或被禁用（模态对话框打开期间）时，缩放区不接鼠标；必须在主窗口所在的线程使用。
  * ------------------------------------------------------------------------
  */
@@ -29,8 +29,8 @@ class ResizeBorder {
   ResizeBorder(const ResizeBorder&) = delete;
   ResizeBorder& operator=(const ResizeBorder&) = delete;
 
-  /** 让缩放区与主窗口一致：位置、大小、前后顺序与显示状态。 @param thickness 缩放区的厚度（设备像素）。 */
-  void sync(int thickness);
+  /** 让缩放区与主窗口一致：位置、大小、前后顺序与显示状态。 @param thickness 窗口外缩放区的厚度（设备像素）。 @param inner 窗口里面最外一圈（边框线）也算缩放区的宽度（设备像素）。 */
+  void sync(int thickness, int inner);
 
   /** 缩放区是否应该隐藏（全屏时）；其余的隐藏条件由 sync 自己判断。 */
   void setSuppressed(bool suppressed);
@@ -51,6 +51,7 @@ class ResizeBorder {
   void* border_{nullptr};
   std::function<void()> onPressed_;
   int thickness_{0};
+  int inner_{0};
   bool suppressed_{false};
 };
 

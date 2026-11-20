@@ -107,6 +107,15 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   for (const auto& choice : logic::machineChoices({})) EXPECT_EQ(choice.hint, "暂未支持");
 }
 
+TEST(RuntimeRules, MachineMenuTitleIsTheSelectedMachineNameOrTheDefault) {
+  const auto machines = logic::parseMachines(machinesJson());
+  EXPECT_EQ(logic::machineMenuTitle(machines, "sb2000"), "小霸王 2000");
+  EXPECT_EQ(logic::machineMenuTitle(machines, "bbk20"), "步步高 98");
+  // 没选过或已选的是经典 FC（不在选项里）时是默认的名称
+  EXPECT_EQ(logic::machineMenuTitle(machines, "fc"), "选择机型");
+  EXPECT_EQ(logic::machineMenuTitle(machines, ""), "选择机型");
+}
+
 TEST(RuntimeRules, MouseIsCapturedOnlyWhenEnabledAndTheMachineHasOne) {
   EXPECT_TRUE(logic::capturesMouse(true, logic::parseRuntimeStatus(statusJson("on", "running", "sb2000", true))));
   EXPECT_FALSE(logic::capturesMouse(false, logic::parseRuntimeStatus(statusJson("on", "running", "sb2000", true))));
@@ -552,6 +561,9 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   // 拖入 .nes 交给运行模块，要经请求带上编号
   shell.dropFiles({"C:\\roms\\drop.nes"});
   EXPECT_EQ(f.last("cartridges.open")->params, json({{"droppedId", 1}}));
+  // 选了整机机型后，“机器”菜单的第一项显示已选机型的名字
+  f.controller.selectMachine("sb2000");
+  EXPECT_EQ(shell.menus()[1].items[0].label, "小霸王 2000");
   shell.detachModules();
 }
 

@@ -114,4 +114,7 @@ struct MachineChoice {
 /** “选择机型”的选项：四个整机机型，顺序固定；要程序里有实现并已添加 BIOS 才可选，不可选的注明原因；经典 FC 不在里面。 */
 [[nodiscard]] std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machines);
 
+/** “机器”菜单第一项的名称：已选了整机机型时是它的名字，没选过（或已选的是经典 FC）时是“选择机型”。 */
+[[nodiscard]] std::string machineMenuTitle(const std::vector<MachineEntry>& machines, const std::string& selectedMachine);
+
 }  // namespace ember::win32::logic

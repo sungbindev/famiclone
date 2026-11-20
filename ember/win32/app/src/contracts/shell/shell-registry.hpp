@@ -126,6 +126,8 @@ struct ShellSubmenuDefinition {
   std::string title;
   /** 当前的子菜单项；每次渲染菜单时调用，没有项时这一项置灰。 */
   std::function<std::vector<ShellSubmenuEntry>()> entries;
+  /** 有值时每次渲染菜单都用它的结果作为名称（如“选择机型”显示已选的机型名），没有时用 title。 */
+  std::function<std::string()> titleText;
 };
 
 /** 菜单项：放在某个菜单里的一条命令，或一个子菜单（二选一）。 */

@@ -126,7 +126,7 @@ std::vector<contracts::ShellMenuModel> ShellController::menus() {
       if (item.submenu.has_value()) {
         const auto& submenu = *item.submenu;
         entry.id = submenu.id;
-        entry.label = submenu.title;
+        entry.label = submenu.titleText ? submenu.titleText() : submenu.title;
         const auto shown = submenu.entries ? submenu.entries() : std::vector<contracts::ShellSubmenuEntry>{};
         // 没有子菜单项时这一项置灰
         if (shown.empty()) {

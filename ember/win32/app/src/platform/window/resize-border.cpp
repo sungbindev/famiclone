@@ -70,8 +70,9 @@ bool ResizeBorder::ensureWindow() {
   return true;
 }
 
-void ResizeBorder::sync(int thickness) {
+void ResizeBorder::sync(int thickness, int inner) {
   thickness_ = thickness;
+  inner_ = inner;
   HWND main = static_cast<HWND>(main_);
   const bool wanted = !suppressed_ && thickness > 0 && IsWindowVisible(main) != FALSE && IsIconic(main) == FALSE && IsZoomed(main) == FALSE;
   if (!wanted) {
@@ -87,19 +88,20 @@ void ResizeBorder::sync(int thickness) {
 void ResizeBorder::setSuppressed(bool suppressed) {
   if (suppressed_ == suppressed) return;
   suppressed_ = suppressed;
-  sync(thickness_);
+  sync(thickness_, inner_);
 }
 
 long ResizeBorder::hitTest(int screenX, int screenY) const {
   HWND main = static_cast<HWND>(main_);
-  // 主窗口被禁用（模态对话框打开期间）时缩放不起作用，鼠标交给下面的窗口
-  if (suppressed_ || IsWindowEnabled(main) == FALSE) return HTTRANSPARENT;
+  // 主窗口被禁用（模态对话框打开期间）、最大化或最小化时缩放不起作用，鼠标交给下面的窗口
+  if (suppressed_ || IsWindowEnabled(main) == FALSE || IsZoomed(main) != FALSE || IsIconic(main) != FALSE) return HTTRANSPARENT;
   RECT rect{};
   GetWindowRect(main, &rect);
-  const bool left = screenX < rect.left;
-  const bool right = screenX >= rect.right;
-  const bool above = screenY < rect.top;
-  const bool below = screenY >= rect.bottom;
+  // 窗口里面最外的 inner_ 个像素（边框线）也在缩放区内
+  const bool left = screenX < rect.left + inner_;
+  const bool right = screenX >= rect.right - inner_;
+  const bool above = screenY < rect.top + inner_;
+  const bool below = screenY >= rect.bottom - inner_;
   if (!left && !right && !above && !below) return HTTRANSPARENT;
   if (screenX < rect.left - thickness_ || screenX >= rect.right + thickness_ || screenY < rect.top - thickness_ || screenY >= rect.bottom + thickness_) return HTTRANSPARENT;
   // 四角的抓取范围沿着边再延伸一段，比只有厚度见方的小角容易点中

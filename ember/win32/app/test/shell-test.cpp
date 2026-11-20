@@ -237,20 +237,26 @@ TEST(FramelessFrame, WholeWindowBecomesTheClientArea) {
   EXPECT_EQ(f.window.root().size().width * f.scale, window.right - window.left);
 }
 
-TEST(FramelessFrame, HitTestGivesCaptionSystemButtonsAndClientButNoResizeBorderInsideTheWindow) {
+TEST(FramelessFrame, HitTestGivesCaptionSystemButtonsClientAndTheBorderLineAsResizeZone) {
   FrameFixture f;
   EXPECT_EQ(f.hit(300, 18), HTCAPTION);
   EXPECT_EQ(f.hit(kWidth - 23, 18), HTCLOSE);
   EXPECT_EQ(f.hit(kWidth - 69, 18), HTMAXBUTTON);
   EXPECT_EQ(f.hit(kWidth - 115, 18), HTMINBUTTON);
   EXPECT_EQ(f.hit(260, 250), HTCLIENT);
-  // 贴着窗口边的位置（滚动条所在）都是客户区，缩放区在窗口外面
-  EXPECT_EQ(f.hit(0.2, 250), HTCLIENT);
-  EXPECT_EQ(f.hit(kWidth - 0.2, 250), HTCLIENT);
-  EXPECT_EQ(f.hit(260, kHeight - 0.2), HTCLIENT);
-  EXPECT_EQ(f.hit(0.2, kHeight - 0.2), HTCLIENT);
-  EXPECT_EQ(f.hit(kWidth - 0.2, kHeight - 0.2), HTCLIENT);
-  EXPECT_EQ(f.hit(300, 0.2), HTCAPTION);
+  // 边框线本身（窗口里面最外一圈）是缩放区，再往里（滚动条所在）是客户区
+  EXPECT_EQ(f.hit(0.2, 250), HTLEFT);
+  EXPECT_EQ(f.hit(kWidth - 0.2, 250), HTRIGHT);
+  EXPECT_EQ(f.hit(260, kHeight - 0.2), HTBOTTOM);
+  EXPECT_EQ(f.hit(0.2, kHeight - 0.2), HTBOTTOMLEFT);
+  EXPECT_EQ(f.hit(kWidth - 0.2, kHeight - 0.2), HTBOTTOMRIGHT);
+  EXPECT_EQ(f.hit(300, 0.2), HTTOP);
+  EXPECT_EQ(f.hit(0.2, 0.2), HTTOPLEFT);
+  EXPECT_EQ(f.hit(kWidth - 0.2, 0.2), HTTOPRIGHT);
+  EXPECT_EQ(f.hit(5, 250), HTCLIENT);
+  EXPECT_EQ(f.hit(kWidth - 5, 250), HTCLIENT);
+  EXPECT_EQ(f.hit(260, kHeight - 5), HTCLIENT);
+  EXPECT_EQ(f.hit(300, 5), HTCAPTION);
 }
 
 /** 缩放边框的夹具：一个已显示的普通窗口，窗口矩形是 (100, 100) 到 (600, 500)。 */
@@ -263,7 +269,7 @@ struct BorderFixture {
     main = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"STATIC", L"", WS_POPUP, 100, 100, 500, 400, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
     border = std::make_unique<platform::ResizeBorder>(main, [this] { ++pressed; });
     ShowWindow(main, SW_SHOWNA);
-    border->sync(8);
+    border->sync(8, 1);
   }
   ~BorderFixture() {
     border.reset();
@@ -275,17 +281,21 @@ struct BorderFixture {
   [[nodiscard]] long hit(int x, int y) const { return border->hitTest(x, y); }
 };
 
-TEST(ResizeBorder, ResizeZoneIsOutsideTheWindowEdgeOnly) {
+TEST(ResizeBorder, ResizeZoneIsOutsideTheWindowEdgeAndTheBorderLine) {
   BorderFixture f;
   EXPECT_EQ(f.hit(96, 300), HTLEFT);
   EXPECT_EQ(f.hit(603, 300), HTRIGHT);
   EXPECT_EQ(f.hit(300, 96), HTTOP);
   EXPECT_EQ(f.hit(300, 503), HTBOTTOM);
-  // 窗口矩形里面一律不是缩放区，包括贴着边的一圈
-  EXPECT_EQ(f.hit(100, 300), HTTRANSPARENT);
-  EXPECT_EQ(f.hit(599, 300), HTTRANSPARENT);
-  EXPECT_EQ(f.hit(300, 100), HTTRANSPARENT);
-  EXPECT_EQ(f.hit(300, 499), HTTRANSPARENT);
+  // 窗口里面最外一圈（边框线）也是缩放区，再往里不是
+  EXPECT_EQ(f.hit(100, 300), HTLEFT);
+  EXPECT_EQ(f.hit(599, 300), HTRIGHT);
+  EXPECT_EQ(f.hit(300, 100), HTTOP);
+  EXPECT_EQ(f.hit(300, 499), HTBOTTOM);
+  EXPECT_EQ(f.hit(101, 300), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(598, 300), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(300, 101), HTTRANSPARENT);
+  EXPECT_EQ(f.hit(300, 498), HTTRANSPARENT);
   // 超过厚度的地方也不是
   EXPECT_EQ(f.hit(91, 300), HTTRANSPARENT);
   EXPECT_EQ(f.hit(300, 509), HTTRANSPARENT);

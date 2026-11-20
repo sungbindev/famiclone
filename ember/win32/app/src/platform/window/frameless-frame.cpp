@@ -15,6 +15,9 @@
 #include <windowsx.h>
 #include <uxtheme.h>
 
+#include <algorithm>
+#include <cmath>
+
 #include "platform/window/resize-border.hpp"
 #include "platform/window/window-shadow.hpp"
 
@@ -58,6 +61,9 @@ int metric(HWND hwnd, int index) {
 int frameThickness(HWND hwnd, bool horizontal) { return metric(hwnd, horizontal ? SM_CXSIZEFRAME : SM_CYSIZEFRAME) + metric(hwnd, SM_CXPADDEDBORDER); }
 
 bool isSystemButton(WPARAM hit) { return hit == HTMINBUTTON || hit == HTMAXBUTTON || hit == HTCLOSE; }
+
+/** 窗口边框线的宽度（设备像素）：1 个逻辑像素向下取整，至少 1。 */
+int borderPixels(double scale) { return std::max(1, static_cast<int>(std::floor(scale))); }
 
 FrameHit toFrameHit(WPARAM hit) {
   switch (hit) {
@@ -191,6 +197,11 @@ unsigned long FramelessFrame::hitTest(int screenX, int screenY) const {
   HWND hwnd = static_cast<HWND>(window_);
   RECT rect{};
   GetWindowRect(hwnd, &rect);
+  // 边框线本身（窗口里面最外一圈）也是缩放区，和窗口外面的缩放区连在一起
+  if (border_ && !fullScreen_) {
+    const long resize = border_->hitTest(screenX, screenY);
+    if (resize != HTTRANSPARENT) return static_cast<unsigned long>(resize);
+  }
   if (!callbacks_.hitTest || fullScreen_) return HTCLIENT;
   const double scale = options_.scale ? options_.scale() : 1.0;
   switch (callbacks_.hitTest((screenX - rect.left) / scale, (screenY - rect.top) / scale)) {
@@ -277,7 +288,7 @@ bool FramelessFrame::handle(unsigned message, std::uintptr_t wParam, std::intptr
         shadow_->setScale(options_.scale ? options_.scale() : 1.0);
         shadow_->sync();
       }
-      if (border_) border_->sync(frameThickness(hwnd, true));
+      if (border_) border_->sync(frameThickness(hwnd, true), borderPixels(options_.scale ? options_.scale() : 1.0));
       return false;
     }
     case WM_NCDESTROY:

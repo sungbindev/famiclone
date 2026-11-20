@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：package-win32.mjs
  * 说明：打发布包（npm run package:win）：先打预装插件包、构建帮助文档并写出第三方许可全文，再用开启升级的 Release 配置构建 ember-win.exe（资源嵌进去，是单个文件），检查导入表在 Windows 7 SP1 的基线内，
- *       最后在 build/ember/release 下生成 Ember-<版本号>.exe（升级用，原样上传）与 Ember-<版本号>-开发调试模拟器.zip（发给用户：Ember.exe、LICENSE.txt、THIRD_PARTY_NOTICES.txt）。
+ *       最后在 build/ember/release 下生成 Ember-<版本号>.exe（升级用，原样上传）与 Ember-<版本号>-学习机开发模拟器.zip（发给用户：Ember.exe、LICENSE.txt、THIRD_PARTY_NOTICES.txt）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -22,7 +22,7 @@ import { createZip } from '../build/pack-plugins.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 /** 发给用户的 zip 文件名里的说明，让人一看就知道它是用于开发调试的模拟器。 */
-const ZIP_LABEL = '开发调试模拟器';
+const ZIP_LABEL = '学习机开发模拟器';
 
 /** 运行 npm 脚本。 */
 function runScript(name) {

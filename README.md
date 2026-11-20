@@ -53,7 +53,7 @@ npm run debug-sdk:build -w packages/fcdev   # 只构建 dist/debug
 .\build-win32.ps1            # Win32 原生外壳：安装依赖、编译 Release 版、边界与导入表检查，输出 build\ember\win32\app\Release\ember-win.exe
 npm run win32:start          # 以开发方式启动原生外壳
 npm run win32:test           # 原生外壳的 C++ 测试（核心、控件库、应用）
-npm run package:win          # 发布打包：生成 build\ember\release\Ember-<版本>.exe（升级用）与 Ember-<版本>-开发调试模拟器.zip（发给用户）
+npm run package:win          # 发布打包：生成 build\ember\release\Ember-<版本>.exe（升级用）与 Ember-<版本>-学习机开发模拟器.zip（发给用户）
 npm run core:test            # C++ 测试；-- -R <名称> 只跑匹配的用例
 npm run check                # 全部检查与测试
 .\debug-win32.ps1             # 启动 Win32 原生外壳的开发版
@@ -147,7 +147,7 @@ npm publish -w packages/create-fcdev
    npm run update:publish
    ```
 
-发给用户的是 `build/ember/release/Ember-<版本号>-开发调试模拟器.zip`（里面是 `Ember.exe`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt`），解压即用，不需要安装。
+发给用户的是 `build/ember/release/Ember-<版本号>-学习机开发模拟器.zip`（里面是 `Ember.exe`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt`），解压即用，不需要安装。
 
 ## 许可证
 

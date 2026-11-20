@@ -166,7 +166,11 @@ export function traceCode(analysis, { bytes, layout }, entries) {
     return tables.length > 0;
   };
 
-  while (pending.length > 0 || discoverTables()) walk(pending.pop());
+  for (;;) {
+    if (pending.length === 0 && !discoverTables()) break;
+    const next = pending.pop();
+    if (next !== undefined) walk(next);
+  }
   return {
     instructions: analysis.instructions.size - before.instructions,
     tables: analysis.tables.length - before.tables,

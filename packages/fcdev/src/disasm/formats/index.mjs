@@ -1,0 +1,44 @@
+// ------------------------------------------------------------------------
+// 名称：index.mjs
+// 说明：formats 目录的出口：映像格式解析器的登记表与统一入口。
+// 作者：sungbin
+// 邮箱：sungbin@3578.cn
+// 日期：2026-11-21
+// 备注：新增格式只需新增一个解析器并登记在 PARSERS 里；解析器把文件解析成布局，核心逻辑不认识具体格式。
+// ------------------------------------------------------------------------
+import { FcdevError } from '../../shared/index.mjs';
+import { parseFlat } from './flat.mjs';
+import { parseInes, parseInesHeader } from './ines.mjs';
+
+/**
+ * @typedef {object} ParsedImage
+ * @property {string} format 格式名
+ * @property {import('../model/layout.mjs').Layout} layout 布局
+ * @property {{nmi: number, reset: number, irq: number}|null} vectors 文件里带的中断向量（CPU 地址）；没有时为 null
+ * @property {Array<{offset: number, length: number, description: string}>} unmapped 文件里不属于 CPU 地址空间或没有划入段的字节范围
+ * @property {string} description 来源说明，写进报告
+ */
+
+/** 格式名到解析器 */
+const PARSERS = { flat: parseFlat, ines: parseInes };
+
+/** 支持的格式名 */
+export const FORMAT_NAMES = Object.freeze(Object.keys(PARSERS));
+
+/**
+ * 按格式名解析映像文件。
+ * @param {string} format 格式名，见 FORMAT_NAMES
+ * @param {Buffer} buffer 文件内容
+ * @param {object} [options] 传给解析器的选项（flat 的 address、segments）
+ * @returns {ParsedImage} 解析结果
+ * @throws {FcdevError} 格式名未知，或解析器拒绝这个文件
+ */
+export function parseImage(format, buffer, options = {}) {
+  const parser = Object.hasOwn(PARSERS, format) ? PARSERS[format] : undefined;
+  if (parser === undefined) {
+    throw new FcdevError(`不支持的映像格式：${format}`, { code: 'DISASM_FORMAT_UNKNOWN', hint: `可用的格式：${FORMAT_NAMES.join('、')}` });
+  }
+  return parser(buffer, options);
+}
+
+export { parseFlat, parseInes, parseInesHeader };

@@ -42,6 +42,8 @@ constexpr const char* kUserDataDescription = "设置、BIOS、日志等都保存
 constexpr double kSideWidthInitial = 140;
 constexpr double kSideWidthMinimum = 140;
 constexpr double kSideWidthMaximum = 320;
+/** 右侧滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
+constexpr double kPaneRightPadding = 10;
 
 std::unique_ptr<Button> compactButton(const char* label) {
   auto button = std::make_unique<Button>(label);
@@ -145,6 +147,7 @@ void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, con
   userDataSwitch_ = nullptr;
 
   auto stack = std::make_unique<Stack>();
+  stack->setPadding(Insets{0, kPaneRightPadding, 0, 0});
   if (view.load == contracts::PreferencesLoad::Failed) stack->addChild(errorState(view.message));
 
   if (group != nullptr && group->machines) {

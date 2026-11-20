@@ -370,3 +370,34 @@ TEST(Menu, MenuItemTextAppendsTheMnemonicInUpperCase) {
   EXPECT_EQ(menuItemText(MenuItem{.label = "文件", .mnemonic = "f"}), "文件(F)");
   EXPECT_EQ(menuItemText(MenuItem{.label = "文件"}), "文件");
 }
+
+TEST(Menu, ASubmenuThatFitsNeitherSideIsNarrowedBesideTheParentInsteadOfCoveringIt) {
+  Root root{ThemeName::Dark, 1.0};
+  auto holder = std::make_unique<Holder>();
+  auto menuBar = std::make_unique<MenuBar>();
+  MenuBar* bar = menuBar.get();
+  holder->addChild(std::move(menuBar));
+  root.setContent(std::move(holder));
+  MenuItem machine = item("machine", "选择机型");
+  MenuItem first = item("a", "小霸王 2000");
+  first.hint = "未添加 BIOS，请在设置里添加";
+  MenuItem second = item("b", "步步高软驱一号");
+  second.hint = "未添加 BIOS，请在设置里添加";
+  machine.items = {first, second};
+  bar->setMenus({MenuBarMenu{.id = "file", .label = "文件", .items = {machine}}});
+  // 窗口只有 400 宽：子菜单（约 400 宽）在父菜单两侧都放不下
+  root.layout(Size{400, 300});
+  const Rect button = bar->buttonRect(0);
+  root.mouseMove(Point{button.x + button.width / 2, button.y + button.height / 2}, 0);
+  root.mouseDown(Point{button.x + button.width / 2, button.y + button.height / 2}, MouseButton::Left, 0);
+  root.mouseUp(Point{button.x + button.width / 2, button.y + button.height / 2}, MouseButton::Left, 0);
+  ASSERT_NE(bar->popup(), nullptr);
+  const Rect parentItem = bar->popup()->itemRect(0);
+  root.mouseMove(Point{parentItem.x + parentItem.width / 2, parentItem.y + parentItem.height / 2}, 0);
+  MenuPopup* sub = bar->popup()->sub();
+  ASSERT_NE(sub, nullptr);
+  // 子菜单紧挨着父菜单的右边，不盖在它上面，也不超出窗口
+  EXPECT_GE(sub->bounds().x, bar->popup()->bounds().right() - 5.0);
+  EXPECT_LE(sub->bounds().right(), 400.0 - 8.0 + 0.001);
+  EXPECT_GE(sub->bounds().width, 120.0);
+}

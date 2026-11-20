@@ -24,6 +24,10 @@ namespace {
 constexpr double kBorderWidth = 1.0;
 constexpr double kPopupGap = 2.0;
 constexpr double kViewportMargin = 8.0;
+/** 子菜单两侧都放不下、要缩窄时的最小宽度。 */
+constexpr double kMinimumSubmenuWidth = 120.0;
+/** 提示或快捷键文字与名称之间至少留的距离。 */
+constexpr double kMinimumTrailingGap = tokens::space_md;
 constexpr double kIconTextGap = tokens::icon_text_gap;
 constexpr double kPaddingY = tokens::menu_popup_padding[0];
 constexpr double kShortcutOpacity = 0.7;
@@ -121,13 +125,22 @@ void MenuPopup::placeBeside(const Rect& parentItem) {
   const Size viewport = host()->viewportSize();
   const Size size = measure(Size{});
   const double height = std::min(size.height, std::max(viewport.height - 2 * kViewportMargin, 0.0));
-  const bool fitsRight = parentItem.right() + size.width <= viewport.width - kViewportMargin;
-  const bool fitsLeft = parentItem.x - size.width >= kViewportMargin;
-  double left = viewport.width - kViewportMargin - size.width;
-  if (fitsRight) left = parentItem.right();
-  else if (fitsLeft) left = parentItem.x - size.width;
+  const double roomRight = viewport.width - kViewportMargin - parentItem.right();
+  const double roomLeft = parentItem.x - kViewportMargin;
+  double width = size.width;
+  double left = parentItem.right();
+  if (size.width <= roomRight) {
+    left = parentItem.right();
+  } else if (size.width <= roomLeft) {
+    left = parentItem.x - size.width;
+  } else {
+    // 两侧都放不下：选空间大的一侧并把宽度缩到这一侧的空间，不盖在父菜单上（文字放不下的部分用省略号）
+    const bool useRight = roomRight >= roomLeft;
+    width = std::max(std::min(size.width, useRight ? roomRight : roomLeft), kMinimumSubmenuWidth);
+    left = useRight ? parentItem.right() : parentItem.x - width;
+  }
   const double top = std::max(kViewportMargin, std::min(parentItem.y, viewport.height - kViewportMargin - height));
-  arrange(Rect{std::max(kViewportMargin, left), top, size.width, height});
+  arrange(Rect{std::max(kViewportMargin, left), top, width, height});
 }
 
 Rect MenuPopup::itemRect(std::size_t index) const {
@@ -317,12 +330,18 @@ void MenuPopup::paint(Canvas& canvas) {
     }
     const double rightEdge = row.right() - tokens::menu_item_padding_right;
     const std::string label = menuItemText(item);
+    const double labelWidth = host()->measureText(label, textStyle(kTransparent), 0).width;
     canvas.drawText(label, Rect{labelX, row.y, std::max(0.0, rightEdge - labelX), row.height}, textStyle(color), VerticalAlign::Center);
     if (!item.items.empty()) {
       canvas.drawIcon(IconId::ChevronRight, Rect{rightEdge - tokens::icon_size, row.y + (row.height - tokens::icon_size) / 2.0, tokens::icon_size, tokens::icon_size}, color, tokens::icon_stroke_width);
     } else if (const std::string& trailing = !item.shortcut.empty() ? item.shortcut : item.hint; !trailing.empty()) {
-      const double width = host()->measureText(trailing, textStyle(kTransparent), 0).width;
-      canvas.drawText(trailing, Rect{rightEdge - width, row.y, width + 1, row.height}, textStyle(color.withOpacity(kShortcutOpacity)), VerticalAlign::Center);
+      // 弹层被缩窄时，提示文字只占名称之后剩下的地方，放不下的部分用省略号
+      const double natural = host()->measureText(trailing, textStyle(kTransparent), 0).width;
+      const double room = std::max(0.0, rightEdge - (labelX + labelWidth + kMinimumTrailingGap));
+      const double width = std::min(natural, room);
+      TextStyle trailingStyle = textStyle(color.withOpacity(kShortcutOpacity));
+      trailingStyle.overflow = TextOverflow::Ellipsis;
+      canvas.drawText(trailing, Rect{rightEdge - width, row.y, width + (width < natural ? 0.0 : 1.0), row.height}, trailingStyle, VerticalAlign::Center);
     }
   }
   canvas.popClip();

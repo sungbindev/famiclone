@@ -38,6 +38,8 @@ class Label : public Widget {
   void setLineHeight(double lineHeight);
   /** 放不下时是否换行，默认是；不换行时超出的部分用省略号。 */
   void setWrap(bool wrap);
+  /** 水平对齐，默认靠左；控件比文字宽时才看得出来。 */
+  void setAlign(TextAlign align);
   /** 文字颜色，默认是正文文字色。 */
   void setColorProvider(ColorProvider provider);
 
@@ -52,6 +54,7 @@ class Label : public Widget {
   int fontWeight_{400};
   double lineHeight_{0};
   bool wrap_{true};
+  TextAlign align_{TextAlign::Start};
   ColorProvider color_;
 };
 

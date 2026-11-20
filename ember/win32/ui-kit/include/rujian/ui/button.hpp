@@ -55,6 +55,8 @@ class Button : public Widget {
   [[nodiscard]] Size measure(Size available) override;
   [[nodiscard]] bool focusable() const override { return true; }
   [[nodiscard]] bool stretchesHeight() const override { return variant_ == ButtonVariant::Link; }
+  /** 链接按钮只占文字的宽度（焦点框与点击区域贴着文字），其他样式接受容器给的宽度。 */
+  [[nodiscard]] bool stretchesWidth() const override { return variant_ != ButtonVariant::Link; }
   [[nodiscard]] CursorKind cursor() const override { return enabled() ? CursorKind::Hand : CursorKind::Arrow; }
   void paint(Canvas& canvas) override;
   bool onMouseDown(const MouseEvent& event) override;

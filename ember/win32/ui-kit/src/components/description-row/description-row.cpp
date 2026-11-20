@@ -33,6 +33,8 @@ void DescriptionRow::setText(std::string text) {
 
 const std::string& DescriptionRow::text() const { return text_->text(); }
 
+void DescriptionRow::setTextAlign(TextAlign align) { text_->setAlign(align); }
+
 void DescriptionRow::setAction(std::unique_ptr<Widget> action) {
   if (action_ != nullptr) removeChild(action_);
   action_ = action ? addChild(std::move(action)) : nullptr;

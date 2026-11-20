@@ -123,6 +123,8 @@ class Widget {
   [[nodiscard]] virtual std::optional<Rect> caretRect() const { return std::nullopt; }
   /** 能否获得键盘焦点（Tab 键遍历与鼠标点击）。 */
   [[nodiscard]] virtual bool focusable() const { return false; }
+  /** 可聚焦的控件是否排在 Tab 键遍历的顺序里；返回 false 的只能被点击或由程序设为焦点（如对话框框架自己）。 */
+  [[nodiscard]] virtual bool tabStop() const { return true; }
   /** 焦点所在的区域（窗口坐标），滚动区域据此把它滚进可见范围；默认是控件自己，整个控件里自己管理焦点项的（如树）返回焦点项。 */
   [[nodiscard]] virtual Rect focusRect() const { return bounds(); }
   /** 在弹性布局的交叉轴上是否接受容器给的宽度（有固定宽度的控件返回 false）。 */

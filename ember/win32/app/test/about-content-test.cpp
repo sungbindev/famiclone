@@ -83,10 +83,24 @@ TEST(AboutContent, VersionsShowLoadingFailedAndReadStates) {
   EXPECT_EQ(s.content->versionsText(), "版本 0.3.0　核心版本 0.3.1");
 }
 
+TEST(AboutContent, BuildTimeSitsUnderTheVersionsAtTheTopRight) {
+  Scene s;
+  EXPECT_EQ(s.content->buildTimeText(), "编译时间 2026-11-21 10:00:00");
+}
+
 TEST(AboutContent, ProjectLinkOpensTheProjectThroughTheModel) {
   Scene s;
   s.click(s.content->projectLink());
   EXPECT_EQ(s.model.projectOpens, 1);
+}
+
+TEST(AboutContent, ProjectLinkIsAsWideAsItsTextAndNothingIsFocusedAtFirst) {
+  Scene s;
+  const auto& link = s.content->projectLink();
+  // 链接的焦点框与点击区域贴着文字，不拉到一行的右边
+  EXPECT_LT(link.bounds().right(), 500.0);
+  EXPECT_FALSE(link.focused());
+  EXPECT_EQ(s.root.focusedWidget(), nullptr);
 }
 
 TEST(AboutContent, WorksWithoutALogoAndUnsubscribesWhenDestroyed) {

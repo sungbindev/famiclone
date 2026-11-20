@@ -23,6 +23,12 @@ namespace {
 /** 窗口宽度不超过它时名称与内容上下排列（与组件库样式里的媒体查询一致）。 */
 constexpr double kNarrowViewportWidth = 420.0;
 
+/** 内容控件的宽度：接受容器宽度的填满列宽，其他（如链接按钮）取自己的宽度，不超过列宽。 */
+double valueWidthOf(Widget& value, double columnWidth) {
+  if (value.stretchesWidth()) return columnWidth;
+  return std::min(columnWidth, value.measure(Size{columnWidth, 0}).width);
+}
+
 }  // namespace
 
 void Facts::addFact(std::string label, std::string value) {
@@ -82,12 +88,12 @@ void Facts::arrange(const Rect& bounds) {
     if (laid.narrow) {
       fact.label->arrange(Rect{bounds.x, y, bounds.width, laid.labelHeights[i]});
       y += laid.labelHeights[i];
-      fact.value->arrange(Rect{bounds.x, y, bounds.width, laid.valueHeights[i]});
+      fact.value->arrange(Rect{bounds.x, y, valueWidthOf(*fact.value, bounds.width), laid.valueHeights[i]});
       y += laid.valueHeights[i] + tokens::space_sm;
     } else {
       if (i > 0) y += tokens::facts_row_gap;
       fact.label->arrange(Rect{bounds.x, y, tokens::facts_label_width, laid.labelHeights[i]});
-      fact.value->arrange(Rect{bounds.x + tokens::facts_label_width + tokens::space_page, y, laid.valueWidth, laid.valueHeights[i]});
+      fact.value->arrange(Rect{bounds.x + tokens::facts_label_width + tokens::space_page, y, valueWidthOf(*fact.value, laid.valueWidth), laid.valueHeights[i]});
       y += std::max(laid.labelHeights[i], laid.valueHeights[i]);
     }
   }

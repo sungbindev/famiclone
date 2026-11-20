@@ -30,6 +30,8 @@ class DialogHost final : public contracts::ShellDialogOpener {
  public:
   /** 对话框正文的工厂：每次打开时创建一个新的正文。 */
   using BodyFactory = std::function<std::unique_ptr<rujian::ui::Widget>()>;
+  /** 标题栏图标的工厂：每次打开时创建一个 16×16 的图标控件。 */
+  using LogoFactory = std::function<std::unique_ptr<rujian::ui::Widget>()>;
 
   /**
    * @param owner 取归属窗口（主窗口句柄）。
@@ -49,6 +51,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
    * @param fills 正文是否铺满对话框的正文区（正文自己负责滚动，如左右分栏的对话框）；否则正文按内容高度排列，放不下时由对话框滚动。
    */
   void setBody(const std::string& dialogId, BodyFactory factory, bool fills = false);
+
+  /** 设置对话框标题栏的图标（应用图标）；没有设置时不显示。 */
+  void setLogo(LogoFactory factory) { logo_ = std::move(factory); }
 
   /** 切换全部对话框（已打开的与以后打开的）的主题。 */
   void setTheme(rujian::ui::ThemeName theme);
@@ -72,6 +77,7 @@ class DialogHost final : public contracts::ShellDialogOpener {
   rujian::ui::ThemeName theme_{rujian::ui::ThemeName::Dark};
   std::map<std::string, contracts::ShellDialogDefinition> definitions_;
   std::map<std::string, BodyFactory> bodies_;
+  LogoFactory logo_;
   std::set<std::string> fillingBodies_;
   std::map<std::string, std::function<bool(const std::string&)>> keyCaptures_;
   std::map<std::string, std::unique_ptr<platform::DialogWindow>> open_;

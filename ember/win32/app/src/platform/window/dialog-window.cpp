@@ -40,10 +40,13 @@ rujian::ui::HostWindow::Options hostOptions(const DialogWindowOptions& options) 
 
 DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::ui::DialogFrame> frame) : options_(std::move(options)), window_(hostOptions(options_)) {
   frame_ = frame.get();
+  frame_->setSystemButtons(true);
   frame_->setMaximizable(options_.maximizable);
+  frame_->setMinimizable(options_.minimizable);
   frame_->setOnClose([this](rujian::ui::DialogCloseReason) {
     if (options_.onCloseRequested) options_.onCloseRequested();
   });
+  frame_->setOnMinimize([this] { minimize(); });
   frame_->setOnToggleMaximize([this] {
     HWND hwnd = static_cast<HWND>(window_.nativeHandle());
     ShowWindow(hwnd, IsZoomed(hwnd) != FALSE ? SW_RESTORE : SW_MAXIMIZE);
@@ -63,6 +66,12 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
     if (message == WM_CLOSE) {
       // 不让系统销毁窗口（销毁会让消息循环退出），只请求关闭
       if (options_.onCloseRequested) options_.onCloseRequested();
+      result = 0;
+      return true;
+    }
+    // 系统菜单、任务栏等处发来的最小化也走同一条路：对话框自己不单独最小化
+    if (message == WM_SYSCOMMAND && (wParam & 0xFFF0) == SC_MINIMIZE) {
+      minimize();
       result = 0;
       return true;
     }
@@ -140,6 +149,11 @@ void DialogWindow::place() {
   const int left = std::clamp(ownerCenterX - width / 2, static_cast<int>(work.left), std::max(static_cast<int>(work.left), static_cast<int>(work.right) - width));
   const int top = std::clamp(ownerCenterY - pixelHeight / 2, static_cast<int>(work.top), std::max(static_cast<int>(work.top), static_cast<int>(work.bottom) - pixelHeight));
   SetWindowPos(hwnd, nullptr, left, top, width, pixelHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+void DialogWindow::minimize() {
+  HWND owner = static_cast<HWND>(options_.owner);
+  if (owner != nullptr && IsWindow(owner) != FALSE) ShowWindow(owner, SW_MINIMIZE);
 }
 
 void DialogWindow::show() {

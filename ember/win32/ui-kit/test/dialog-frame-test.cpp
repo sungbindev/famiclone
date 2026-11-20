@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：dialog-frame-test.cpp
- * 说明：对话框框架的测试：标题栏与按钮区的位置、标题栏空白处的命中、关闭与最大化按钮、按钮点击、Esc 与回车、初始焦点、按内容的高度、标题栏底色。
+ * 说明：对话框框架的测试：标题栏与按钮区的位置、标题栏空白处的命中、最小化、最大化与关闭按钮（小方块与系统按钮两种样式）、标题栏图标、按钮点击、Esc 与回车、初始焦点在框架自己、正文右边不留内边距、按内容的高度、标题栏底色。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -197,15 +197,100 @@ TEST(DialogFrame, EnterOnAnotherButtonKeepsItsOwnMeaning) {
   EXPECT_EQ(s.pressed, (std::vector<std::string>{"cancel"}));
 }
 
-TEST(DialogFrame, InitialFocusGoesToTheDefaultButtonThenToTheFirstFocusableInTheBody) {
+TEST(DialogFrame, InitialFocusGoesToTheFrameItselfNotToAButtonOrAnInput) {
   Scene s;
   s.frame->focusInitial();
-  EXPECT_TRUE(s.frame->button("ok")->focused());
-  Scene noDefault;
-  noDefault.frame->setButtons({DialogButton{.id = "cancel", .text = "取消", .isCancel = true}});
-  noDefault.root.layout(kWindow);
-  noDefault.frame->focusInitial();
-  EXPECT_TRUE(noDefault.input->focused());
+  EXPECT_EQ(s.root.focusedWidget(), s.frame);
+  EXPECT_FALSE(s.frame->button("ok")->focused());
+  EXPECT_FALSE(s.frame->button("cancel")->focused());
+  EXPECT_FALSE(s.input->focused());
+  // 焦点在框架上时 Esc 与回车照常生效
+  s.root.keyDown(kVkReturn, 0, false);
+  EXPECT_EQ(s.pressed, (std::vector<std::string>{"ok"}));
+  s.root.keyDown(kVkEscape, 0, false);
+  EXPECT_EQ(s.closes, (std::vector<DialogCloseReason>{DialogCloseReason::Escape}));
+}
+
+TEST(DialogFrame, TheFrameIsNotATabStopAndClickingABlankSpotFocusesIt) {
+  Scene s;
+  s.frame->focusInitial();
+  s.root.keyDown(kVkTab, 0, false);
+  EXPECT_NE(s.root.focusedWidget(), s.frame);
+  // 一直 Tab 下去不会再回到框架
+  for (int i = 0; i < 8; ++i) {
+    s.root.keyDown(kVkTab, 0, false);
+    EXPECT_NE(s.root.focusedWidget(), s.frame);
+  }
+  // 点在标题栏空白之外的空白处，焦点回到框架
+  s.click(Point{210, 150});
+  EXPECT_EQ(s.root.focusedWidget(), s.frame);
+}
+
+TEST(DialogFrame, SystemButtonsAre46WideFillTheTitleBarHeightAndSitFlushAtTheRightEdge) {
+  Scene s;
+  int minimizes = 0;
+  s.frame->setSystemButtons(true);
+  s.frame->setMinimizable(true);
+  s.frame->setOnMinimize([&minimizes] { ++minimizes; });
+  s.root.layout(kWindow);
+  const Rect close = s.frame->closeControl()->bounds();
+  const Rect maximize = s.frame->maximizeControl()->bounds();
+  const Rect minimize = s.frame->minimizeControl()->bounds();
+  for (const Rect& box : {close, maximize, minimize}) {
+    EXPECT_DOUBLE_EQ(box.width, 46.0);
+    EXPECT_DOUBLE_EQ(box.y, 0.0);
+    EXPECT_DOUBLE_EQ(box.height, 32.0);
+  }
+  EXPECT_DOUBLE_EQ(close.right(), 420.0);
+  EXPECT_DOUBLE_EQ(maximize.right(), close.x);
+  EXPECT_DOUBLE_EQ(minimize.right(), maximize.x);
+  // 系统按钮不参与焦点，按钮上的点击照常报告
+  EXPECT_FALSE(s.frame->closeControl()->focusable());
+  s.click(Scene::center(minimize));
+  s.click(Scene::center(maximize));
+  s.click(Scene::center(close));
+  EXPECT_EQ(minimizes, 1);
+  EXPECT_EQ(s.maximizes, 1);
+  EXPECT_EQ(s.closes, (std::vector<DialogCloseReason>{DialogCloseReason::CloseButton}));
+  EXPECT_EQ(s.frame->hitTestWindow(Scene::center(minimize)), DialogHit::Client);
+  EXPECT_EQ(s.frame->hitTestWindow(Point{100, 10}), DialogHit::Caption);
+}
+
+TEST(DialogFrame, MinimizeButtonIsAbsentUnlessMinimizable) {
+  Scene s;
+  s.frame->setSystemButtons(true);
+  EXPECT_EQ(s.frame->minimizeControl(), nullptr);
+  s.frame->setMinimizable(true);
+  EXPECT_NE(s.frame->minimizeControl(), nullptr);
+  // 网页版的小方块样式没有最小化按钮
+  s.frame->setSystemButtons(false);
+  EXPECT_EQ(s.frame->minimizeControl(), nullptr);
+}
+
+TEST(DialogFrame, LogoSitsAtTheLeftOfTheTitleBarAndIsVerticallyCentered) {
+  Scene s;
+  auto logo = std::make_unique<Widget>();
+  Widget* raw = logo.get();
+  s.frame->setLogo(std::move(logo));
+  s.root.layout(kWindow);
+  EXPECT_DOUBLE_EQ(raw->bounds().x, 6.0);
+  EXPECT_DOUBLE_EQ(raw->bounds().width, 16.0);
+  EXPECT_DOUBLE_EQ(raw->bounds().height, 16.0);
+  EXPECT_DOUBLE_EQ(raw->bounds().y, (31.0 - 16.0) / 2.0);
+}
+
+TEST(DialogFrame, FlushRightFilledContentReachesTheRightEdgeOfTheDialog) {
+  Root root{ThemeName::Dark, 1.0};
+  auto dialog = std::make_unique<DialogFrame>();
+  DialogFrame* frame = dialog.get();
+  root.setContent(std::move(dialog));
+  frame->setContentFill(true);
+  frame->setContentFlushRight(true);
+  frame->setContent(std::make_unique<Label>("正文内容"));
+  root.layout(kWindow);
+  const Rect body = frame->content()->bounds();
+  EXPECT_DOUBLE_EQ(body.x, 10.0);
+  EXPECT_DOUBLE_EQ(body.right(), 420.0);
 }
 
 TEST(DialogFrame, NaturalHeightAddsTheTitleBarBodyAndFooter) {

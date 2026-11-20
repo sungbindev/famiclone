@@ -38,6 +38,8 @@ struct DialogWindowOptions {
   double minimumHeight{0};
   /** 是否有最大化按钮。 */
   bool maximizable{false};
+  /** 是否有最小化按钮：对话框有归属窗口且归属窗口不可用，所以“最小化”是把归属窗口最小化（对话框跟着隐藏，还原归属窗口时一起回来）。 */
+  bool minimizable{false};
   rujian::ui::ThemeName theme{rujian::ui::ThemeName::Dark};
   /** 自绘阴影与边框的模式，见 FramelessFrame。 */
   bool customFrame{false};
@@ -80,6 +82,7 @@ class DialogWindow {
 
  private:
   void place();
+  void minimize();
 
   DialogWindowOptions options_;
   rujian::ui::HostWindow window_;

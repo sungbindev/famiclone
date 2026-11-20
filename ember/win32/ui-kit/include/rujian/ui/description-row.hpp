@@ -28,6 +28,8 @@ class DescriptionRow : public Widget {
   /** 说明文字。 */
   void setText(std::string text);
   [[nodiscard]] const std::string& text() const;
+  /** 说明文字的水平对齐，默认靠左。 */
+  void setTextAlign(TextAlign align);
   /** 右边的操作控件。 */
   void setAction(std::unique_ptr<Widget> action);
 

@@ -39,6 +39,16 @@ constexpr const char* kColumnLicense = "许可";
 
 /** 标志的边长（逻辑像素）。 */
 constexpr double kLogoSize = 48;
+/** 应用名的字号与字重。 */
+constexpr double kNameFontSize = 28;
+constexpr int kNameFontWeight = 600;
+/** 标志、应用名、右侧信息之间的间距，以及头部右边的留白（不贴着右边）。 */
+constexpr double kHeaderGap = 16;
+constexpr double kHeaderRightPadding = 14;
+/** 右侧两行（版本、编译时间）之间的间距。 */
+constexpr double kInfoGap = 4;
+/** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
+constexpr double kContentRightPadding = 10;
 /** 表格列的最小宽度。 */
 constexpr double kNameMinWidth = 160;
 constexpr double kAuthorsMinWidth = 120;
@@ -79,20 +89,34 @@ std::string versionsOf(const contracts::AboutView& view) {
 AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget> logo) : model_(model) {
   const contracts::AboutView view = model_.view();
   auto stack = std::make_unique<Stack>();
+  stack->setPadding(Insets{0, kContentRightPadding, 0, 0});
 
+  // 头部：标志、应用名（大字，和标志垂直居中），右边靠右对齐两行：版本与核心版本、编译时间
   auto title = std::make_unique<Row>();
+  title->setGap(kHeaderGap);
+  title->setPadding(Insets{0, kHeaderRightPadding, 0, 0});
   if (logo) title->addChild(std::make_unique<FixedSize>(std::move(logo), kLogoSize));
-  auto name = std::make_unique<Stack>();
-  name->addChild(std::make_unique<Heading>(view.appName));
+  auto name = std::make_unique<Label>(view.appName);
+  name->setFontSize(kNameFontSize);
+  name->setFontWeight(kNameFontWeight);
+  name->setWrap(false);
+  title->addChild(std::move(name));
+  auto info = std::make_unique<Stack>();
+  info->setGap(kInfoGap);
   auto versions = std::make_unique<DescriptionRow>();
   versions->setText(versionsOf(view));
+  versions->setTextAlign(TextAlign::End);
   shownVersions_ = versions->text();
-  versions_ = static_cast<DescriptionRow*>(name->addChild(std::move(versions)));
-  title->addChild(std::move(name));
+  versions_ = static_cast<DescriptionRow*>(info->addChild(std::move(versions)));
+  auto buildTime = std::make_unique<DescriptionRow>();
+  buildTime->setText(std::string(kBuildTime) + " " + view.buildTime);
+  buildTime->setTextAlign(TextAlign::End);
+  buildTime_ = static_cast<DescriptionRow*>(info->addChild(std::move(buildTime)));
+  Widget* infoRaw = title->addChild(std::move(info));
+  title->setGrow(infoRaw, 1);
   stack->addChild(std::move(title));
 
   auto facts = std::make_unique<Facts>();
-  facts->addFact(kBuildTime, view.buildTime);
   facts->addFact(kAuthor, view.author);
   facts->addFact(kEmail, view.email);
   facts->addFact(kQq, view.qq);

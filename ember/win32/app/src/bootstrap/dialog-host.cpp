@@ -49,6 +49,9 @@ void DialogHost::openDialog(const std::string& dialogId) {
   frame->setTitle(definition->second.title);
   frame->setMaximizable(true);
   frame->setContentFill(fillingBodies_.count(dialogId) > 0);
+  // 铺满的正文自己负责滚动，滚动条要贴到对话框的右边
+  frame->setContentFlushRight(true);
+  if (logo_) frame->setLogo(logo_());
   frame->setContent(body->second());
 
   platform::DialogWindowOptions options;
@@ -59,6 +62,7 @@ void DialogHost::openDialog(const std::string& dialogId) {
   options.minimumWidth = definition->second.minWidth;
   options.minimumHeight = definition->second.minHeight;
   options.maximizable = true;
+  options.minimizable = true;
   options.theme = theme_;
   options.customFrame = customFrame_;
   options.onCloseRequested = [this, dialogId] { closeDialog(dialogId); };

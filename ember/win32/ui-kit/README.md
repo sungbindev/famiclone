@@ -87,7 +87,8 @@ return rujian::ui::HostWindow::runMessageLoop();
 | 状态栏 | `status-bar.hpp` | `StatusBar`（普通与大尺寸）与 `StatusBarItem`（状态点、图标、等级、指示灯、按钮状态项、放不下时按权重收缩） |
 | 悬停提示 | `tooltip.hpp` | `Tooltip`（纯文字与版式提示、角标、定位），延迟等时机在 `Root`；内容类型在 `tooltip-content.hpp` |
 | 通知 | `notification.hpp` | `NotificationCenter`（弹出的通知、通知面板、历史、未读）与 `NotificationButton` |
-| 对话框框架 | `dialog-frame.hpp` | 独立窗口对话框的内容：标题栏（最大化、关闭）、正文、按钮区，Esc 与回车处理、初始焦点、标题栏空白处的命中测试 |
+| 对话框框架 | `dialog-frame.hpp` | 独立窗口对话框的内容：标题栏（图标、最小化、最大化、关闭，可选网页版小方块或与主窗口一致的系统按钮）、正文、按钮区，Esc 与回车处理、初始焦点在框架自己、标题栏空白处的命中测试 |
+| 系统按钮图形 | `system-glyph.hpp` | 最小化、最大化、还原、关闭的线条图形与关闭按钮的红色，标题栏与对话框框架共用 |
 | 窗口框架 | `app-frame.hpp` | 标题栏、页面区、底部面板、状态栏自上而下排布，失焦状态与通知让出状态栏 |
 
 ## 与网页版对照

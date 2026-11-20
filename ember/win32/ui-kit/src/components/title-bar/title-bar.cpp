@@ -15,6 +15,7 @@
 
 #include "base/theme-tokens.hpp"
 #include "rujian/ui/geometry.hpp"
+#include "rujian/ui/system-glyph.hpp"
 #include "rujian/ui/title-bar.hpp"
 
 namespace rujian::ui {
@@ -23,14 +24,6 @@ namespace {
 
 /** 系统按钮的数量：最小化、最大化或还原、关闭。 */
 constexpr int kSystemButtonCount = 3;
-/** 系统按钮里图形的边长。 */
-constexpr double kGlyphSize = 10.0;
-/** 系统按钮图形的线宽。 */
-constexpr double kGlyphStroke = 1.0;
-/** 关闭按钮悬停与按下的底色（系统的红色）。 */
-constexpr Color kCloseHoverBackground = Color::rgba(0xC4, 0x2B, 0x1C);
-constexpr Color kClosePressedBackground = Color::rgba(0xB3, 0x28, 0x1A);
-constexpr Color kCloseGlyph = Color::rgba(0xFF, 0xFF, 0xFF);
 
 }  // namespace
 
@@ -241,39 +234,18 @@ void TitleBar::paintSystemButtons(Canvas& canvas) {
     Color fill = background;
     Color glyph = glyphColor;
     if (button == TitleBarHit::Close && (isPressed || isHover)) {
-      fill = isPressed ? kClosePressedBackground : kCloseHoverBackground;
-      glyph = kCloseGlyph;
+      fill = isPressed ? kSystemClosePressedBackground : kSystemCloseHoverBackground;
+      glyph = kSystemCloseGlyph;
     } else if (isPressed) {
       fill = compose(colors.ghost_active_background, background);
     } else if (isHover) {
       fill = compose(colors.ghost_hover_background, background);
     }
     canvas.fillRect(Rect{box.x, box.y, box.width, box.height - borderWidth()}, fill);
-    const double left = box.x + (box.width - kGlyphSize) / 2.0;
-    const double top = box.y + (box.height - kGlyphSize) / 2.0;
-    const double edge = kGlyphStroke;
-    if (button == TitleBarHit::Minimize) {
-      canvas.drawLine(Rect{left, top + kGlyphSize / 2.0, kGlyphSize, edge}, glyph);
-    } else if (button == TitleBarHit::Maximize && !maximized_) {
-      canvas.drawLine(Rect{left, top, kGlyphSize, edge}, glyph);
-      canvas.drawLine(Rect{left, top + kGlyphSize - edge, kGlyphSize, edge}, glyph);
-      canvas.drawLine(Rect{left, top, edge, kGlyphSize}, glyph);
-      canvas.drawLine(Rect{left + kGlyphSize - edge, top, edge, kGlyphSize}, glyph);
-    } else if (button == TitleBarHit::Maximize) {
-      // 还原：前面一个 8×8 的方框，后面一个只露出上边与右边的方框
-      const double side = kGlyphSize - 2.0;
-      canvas.drawLine(Rect{left, top + 2.0, side, edge}, glyph);
-      canvas.drawLine(Rect{left, top + 2.0 + side - edge, side, edge}, glyph);
-      canvas.drawLine(Rect{left, top + 2.0, edge, side}, glyph);
-      canvas.drawLine(Rect{left + side - edge, top + 2.0, edge, side}, glyph);
-      canvas.drawLine(Rect{left + 2.0, top, kGlyphSize - 2.0, edge}, glyph);
-      canvas.drawLine(Rect{left + 2.0, top, edge, 2.0}, glyph);
-      canvas.drawLine(Rect{left + kGlyphSize - edge, top, edge, side}, glyph);
-      canvas.drawLine(Rect{left + side, top + side - edge, 2.0, edge}, glyph);
-    } else {
-      canvas.strokeLine(Point{left, top}, Point{left + kGlyphSize, top + kGlyphSize}, kGlyphStroke, glyph);
-      canvas.strokeLine(Point{left + kGlyphSize, top}, Point{left, top + kGlyphSize}, kGlyphStroke, glyph);
-    }
+    SystemGlyph shape = SystemGlyph::Close;
+    if (button == TitleBarHit::Minimize) shape = SystemGlyph::Minimize;
+    else if (button == TitleBarHit::Maximize) shape = maximized_ ? SystemGlyph::Restore : SystemGlyph::Maximize;
+    paintSystemGlyph(canvas, shape, box, glyph);
   }
 }
 

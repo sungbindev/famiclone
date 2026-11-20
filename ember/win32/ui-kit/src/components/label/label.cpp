@@ -42,6 +42,11 @@ void Label::setWrap(bool wrap) {
   invalidate();
 }
 
+void Label::setAlign(TextAlign align) {
+  align_ = align;
+  invalidate();
+}
+
 void Label::setColorProvider(ColorProvider provider) {
   color_ = std::move(provider);
   invalidate();
@@ -54,6 +59,7 @@ TextStyle Label::style(Color color) const {
   result.lineHeight = lineHeight_;
   result.color = color;
   result.wrap = wrap_;
+  result.align = align_;
   result.overflow = wrap_ ? TextOverflow::Clip : TextOverflow::Ellipsis;
   return result;
 }

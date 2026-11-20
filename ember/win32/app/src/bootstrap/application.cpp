@@ -377,6 +377,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     dialogs.setBody(
         logic::kAboutDialogId, [&aboutController] { return std::make_unique<ui::AboutContent>(aboutController, std::make_unique<ui::AppLogo>(platform::renderAppIcon)); }, true);
     dialogs.setKeyCapture(logic::kGamepadSettingsDialogId, [&gamepadSettings](const std::string& code) { return gamepadSettings.keyPressed(code); });
+    dialogs.setLogo([] { return std::make_unique<ui::AppLogo>(platform::renderAppIcon); });
     logic::ShellController shell(std::move(registry), windowControl, dialogs, notifier, shellState, droppedFiles);
     std::optional<infra::ScreenHostAdapter> screenHost;
     platform::WindowModes* modes = nullptr;

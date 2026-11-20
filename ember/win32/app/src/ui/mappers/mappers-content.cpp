@@ -51,6 +51,8 @@ constexpr double kSearchWidth = 220;
 /** 匹配列的最小宽度。 */
 constexpr double kNameMinWidth = 140;
 constexpr double kMatchMinWidth = 120;
+/** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
+constexpr double kContentRightPadding = 10;
 
 /** 固定宽度的容器：子控件的宽度固定，高度取自己的。 */
 class FixedWidth final : public Widget {
@@ -83,6 +85,7 @@ std::unique_ptr<State> stateOf(const std::string& text, bool error) {
 
 MappersContent::MappersContent(contracts::MappersModel& model) : model_(model) {
   auto stack = std::make_unique<Stack>();
+  stack->setPadding(Insets{0, kContentRightPadding, 0, 0});
 
   auto toolbar = std::make_unique<Toolbar>();
   auto search = std::make_unique<TextInput>();

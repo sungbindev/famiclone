@@ -423,6 +423,7 @@ void Root::moveFocus(bool backward) {
   if (!content_) return;
   std::vector<Widget*> candidates;
   collectFocusable(content_.get(), candidates);
+  std::erase_if(candidates, [this](const Widget* widget) { return !widget->tabStop() && widget != focus_; });
   if (candidates.empty()) return;
   const auto current = std::ranges::find(candidates, focus_);
   std::size_t index = 0;

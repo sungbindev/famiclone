@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：about-content.hpp
- * 说明：“关于 Ember”对话框的内容：标志、名称与应用版本、核心版本（名称在上，两个版本在下并排），编译时间、作者、邮箱、QQ 号、项目地址（链接）、许可证（竖排），以及“第三方依赖”小节（一行说明和一张表：名称与版本、作者、许可）。
+ * 说明：“关于 Ember”对话框的内容：头部是标志、应用名（大字，与标志垂直居中），右边靠右对齐两行：应用版本与核心版本、下一行是编译时间；作者、邮箱、QQ 号、项目地址（链接）、许可证（竖排），以及“第三方依赖”小节（一行说明和一张表：名称与版本、作者、许可）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -38,8 +38,10 @@ class AboutContent final : public rujian::ui::Widget {
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
   void arrange(const rujian::ui::Rect& bounds) override;
 
-  /** 名称下面的版本一行文字。 */
+  /** 右上角的版本一行文字。 */
   [[nodiscard]] std::string versionsText() const { return versions_->text(); }
+  /** 版本下面的编译时间一行文字。 */
+  [[nodiscard]] std::string buildTimeText() const { return buildTime_->text(); }
   /** 项目地址的链接按钮。 */
   [[nodiscard]] rujian::ui::Button& projectLink() const { return *projectLink_; }
   /** 第三方依赖表格。 */
@@ -52,6 +54,7 @@ class AboutContent final : public rujian::ui::Widget {
   std::function<void()> unsubscribe_;
   rujian::ui::ScrollArea* scroll_{nullptr};
   rujian::ui::DescriptionRow* versions_{nullptr};
+  rujian::ui::DescriptionRow* buildTime_{nullptr};
   rujian::ui::Button* projectLink_{nullptr};
   rujian::ui::Table* table_{nullptr};
   std::string shownVersions_;

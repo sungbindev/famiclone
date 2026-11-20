@@ -57,6 +57,25 @@ unsigned currentModifiers() {
   return modifiers;
 }
 
+/** DwmSetWindowAttribute 的“隐形”属性编号（Windows 8 起有）。 */
+constexpr DWORD kDwmCloak = 13;
+
+/** 让 DWM 不合成窗口（窗口仍然可见、正常收消息与绘制）；系统不支持时返回 false。 */
+bool setCloaked(HWND hwnd, bool cloaked) {
+  using SetAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+  static const auto setAttribute = reinterpret_cast<SetAttributeFn>(reinterpret_cast<void*>(GetProcAddress(LoadLibraryW(L"dwmapi.dll"), "DwmSetWindowAttribute")));
+  if (setAttribute == nullptr) return false;
+  const BOOL value = cloaked ? TRUE : FALSE;
+  return SUCCEEDED(setAttribute(hwnd, kDwmCloak, &value, sizeof(value)));
+}
+
+/** 等 DWM 合成完当前的内容（dwmapi 不进入导入表，找不到就什么也不做）。 */
+void flushComposition() {
+  using FlushFn = HRESULT(WINAPI*)();
+  static const auto flush = reinterpret_cast<FlushFn>(reinterpret_cast<void*>(GetProcAddress(LoadLibraryW(L"dwmapi.dll"), "DwmFlush")));
+  if (flush != nullptr) flush();
+}
+
 }  // namespace
 
 struct HostWindow::Impl {
@@ -362,11 +381,17 @@ void* HostWindow::nativeHandle() const { return impl_->hwnd; }
 void HostWindow::setMessageHook(MessageHook hook) { impl_->hook = std::move(hook); }
 
 void HostWindow::show() {
-  // 第一次绘制要创建渲染目标并第一次排字，较慢；先在窗口还隐藏时画一遍，显示后的绘制就快，不会露出只画了一部分的窗口
+  // 第一次绘制要创建渲染目标并第一次排字，较慢；先在窗口还隐藏时画一遍，显示后的绘制就快
   impl_->draw();
+  // 窗口刚显示时，DWM 先合成一块白底，内容画好之前会闪一下白；先让 DWM 不合成这个窗口，画好并合成后再亮出来（Windows 7 没有这个属性，只能照常显示）
+  const bool cloaked = setCloaked(impl_->hwnd, true);
   ShowWindow(impl_->hwnd, SW_SHOW);
   // 连子窗口（运行画面）一起立即重绘，不等消息循环
   RedrawWindow(impl_->hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+  if (cloaked) {
+    flushComposition();
+    setCloaked(impl_->hwnd, false);
+  }
 }
 
 int HostWindow::runMessageLoop() {

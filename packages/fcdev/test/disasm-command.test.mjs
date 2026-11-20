@@ -100,6 +100,14 @@ describe('fcdev disasm（需要 cc65）', { skip: SKIP_WITHOUT_TOOLCHAIN }, () =
     assert.ok(readFileSync(path.join(report.projectDir, 'src', 'main.s'), 'utf8').includes('jsr'));
   });
 
+  it('SB2000 程序按 sbdos 格式：不用给加载地址与入口，文件头的 JMP 就是入口，回读一致', async () => {
+    const exe = await buildProject('sb2000', 'hello.c', '#include <sb2000.h>\nint main(void) { sb_puts("Hi"); return 0; }\n');
+    const report = await run({ inputFile: exe, format: 'sbdos' });
+    assert.equal(report.verified, true);
+    assert.match(report.description, /SB-DOS 程序/);
+    assert.deepEqual(readProject(report.projectDir).entries.map((item) => [item.address, item.source]), [[0x8000, 'vector']]);
+  });
+
   it('只给 CDL 或只给指令轨迹也能做（没有向量表的平铺二进制），轨迹里不在映像里的地址被忽略并给出警告', async () => {
     const exe = await buildProject('sb2000', 'hello.c', '#include <sb2000.h>\nint main(void) { return 0; }\n');
     const image = readFileSync(exe);
@@ -127,7 +135,7 @@ describe('fcdev disasm（需要 cc65）', { skip: SKIP_WITHOUT_TOOLCHAIN }, () =
     await assert.rejects(run({ inputFile: exe, base: 0x8000 }), (error) => error.code === 'ARGUMENT_MISSING' && error.hint.includes('--entry'));
     await assert.rejects(run({ inputFile: exe, base: 0x8000, entries: [0x1234] }), (error) => error.code === 'DISASM_ENTRY_INVALID');
     const mapper4 = path.join(temp.dir, 'm4.nes');
-    writeFileSync(mapper4, makeInes({ mapper: 4 }));
+    writeFileSync(mapper4, makeInes({ mapper: 5 }));
     await assert.rejects(run({ inputFile: mapper4 }), (error) => error.code === 'DISASM_MAPPER_UNSUPPORTED');
     await assert.rejects(run({ inputFile: exe, format: 'binary', base: 0x8000, entries: [0x8000] }), (error) => error.code === 'DISASM_FORMAT_UNKNOWN');
   });

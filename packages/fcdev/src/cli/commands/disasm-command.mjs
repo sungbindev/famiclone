@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：iNES 文件读取 PRG 与中断向量，自动加入 NES 的 PPU 寄存器符号；平铺二进制必须指定加载地址与入口；输出是一个反汇编工程目录。
+// 备注：iNES 文件读取 PRG 与中断向量，自动加入 NES 的 PPU 寄存器符号；SB-DOS 程序（--format sbdos）用文件头的 JMP 做入口、加入学习机的符号集；平铺二进制必须指定加载地址与入口；输出是一个反汇编工程目录。
 // ------------------------------------------------------------------------
 import path from 'node:path';
 import { disassemble } from '../../disasm/index.mjs';
@@ -37,12 +37,12 @@ export function parseAddress(text, option) {
  */
 export async function runDisasmCommand({ positionals, options, context }) {
   if (positionals.length !== 1) {
-    throw new FcdevError('disasm 需要一个输入文件', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev disasm <文件> [--format ines|flat] [--base 地址] [--entry 地址] [--cdl 文件] [--trace 文件] [--symbols 文件] [--out 目录]' });
+    throw new FcdevError('disasm 需要一个输入文件', { code: 'ARGUMENT_INVALID', hint: '用法：npx fcdev disasm <文件> [--format ines|flat|sbdos] [--base 地址] [--entry 地址] [--cdl 文件] [--trace 文件] [--symbols 文件] [--out 目录]' });
   }
   const inputFile = path.resolve(context.cwd, positionals[0]);
   const config = loadProjectConfig(context.cwd, context.cwd);
   const toolchain = locateToolchain({ configured: config.toolchain, env: context.env });
-  const nesRegisters = path.join(BUILTIN_TARGETS_DIR, 'nes', 'asminc', 'fcnes.inc');
+  const registers = path.join(BUILTIN_TARGETS_DIR, options.format === 'sbdos' ? 'sb2000' : 'nes', 'asminc', options.format === 'sbdos' ? 'sb2000.inc' : 'fcnes.inc');
 
   const report = await disassemble({
     inputFile,
@@ -54,7 +54,7 @@ export async function runDisasmCommand({ positionals, options, context }) {
     symbolsFile: options.symbols === undefined ? undefined : path.resolve(context.cwd, options.symbols),
     outDir: path.resolve(context.cwd, options.out ?? path.join('build', 'disasm', path.basename(inputFile, path.extname(inputFile)))),
     toolchain,
-    symbolSetFiles: [nesRegisters],
+    symbolSetFiles: [registers],
   });
 
   for (const warning of report.warnings.slice(0, 10)) context.stderr.write(`警告：${warning}\n`);

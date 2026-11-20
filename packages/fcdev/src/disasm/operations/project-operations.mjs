@@ -8,7 +8,7 @@
 // ------------------------------------------------------------------------
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { FcdevError } from '../../shared/index.mjs';
+import { FcdevError, readTargetProfile, selectProfileInput } from '../../shared/index.mjs';
 import { scanCode } from '../analysis/index.mjs';
 import { FORMAT_NAMES } from '../formats/index.mjs';
 import { findUncovered, listRegions, regionStats, resolveSegmentId } from '../model/index.mjs';
@@ -33,6 +33,7 @@ export function summarize(context) {
     projectDir: context.dir,
     image: { path: project.image.path, size: project.image.size },
     format: project.format.name,
+    profile: project.profile,
     segments: project.layout.segments.map((segment) => ({ id: segment.id, fileOffset: segment.fileOffset, length: segment.length, address: segment.address, bank: segment.bank, writable: segment.writable })),
     counts: {
       entries: project.entries.length, symbols: project.symbols.length, comments: project.comments.length, hints: project.hints.length, modules: project.modules.length, symbolSets: project.symbolSets.length,
@@ -44,7 +45,7 @@ export function summarize(context) {
 
 /**
  * 新建或打开工程。
- * @param {Record<string, unknown>} params projectDir；新建时再给 image，以及 format、address 或 segments、entries、symbolSets、vectors、overwrite
+ * @param {Record<string, unknown>} params projectDir；新建时再给 image，以及 target（内置目标描述的名字，或相对工程目录的 profile.json 路径）与 input、format、address 或 segments、entries、symbolSets、vectors、overwrite
  * @returns {object} 工程概况；新建时带 created 与警告
  */
 export function open(params) {
@@ -63,14 +64,34 @@ export function open(params) {
     if (typeof file !== 'string' || file === '') invalidParam('symbolSets 里必须是文件路径');
     return path.resolve(file);
   });
+  const explicitFormat = optionalEnum(params, 'format', [...FORMAT_NAMES]);
+  const explicitLayout = optionalAddress(params, 'address') !== undefined || optionalArray(params, 'segments') !== undefined;
+  let format = explicitFormat;
+  let formatOptions;
+  let profile;
+  const target = optionalString(params, 'target');
+  if (target !== undefined) {
+    const { profile: description } = readTargetProfile(target, { cwd: dir });
+    const chosen = selectProfileInput(description, optionalString(params, 'input'));
+    if (!explicitLayout && (explicitFormat === undefined || explicitFormat === chosen.format)) {
+      format = chosen.format;
+      formatOptions = { ...chosen.formatOptions };
+    }
+    symbolSetFiles.unshift(...description.symbolSets.filter((file) => !symbolSetFiles.includes(file)));
+    profile = { name: description.name, input: chosen.name, graphicsPorts: [...description.graphicsPorts] };
+  } else if (optionalString(params, 'input') !== undefined) {
+    invalidParam('给了 input 就要同时给 target');
+  }
   const opened = openImageProject({
     inputFile: path.resolve(image),
     projectDir: dir,
-    format: optionalEnum(params, 'format', [...FORMAT_NAMES]),
+    format,
+    formatOptions,
     base: optionalAddress(params, 'address'),
     segments: optionalArray(params, 'segments'),
     entries,
     symbolSetFiles,
+    profile,
     useVectors: optionalBoolean(params, 'vectors', true),
   });
   writeProject(dir, opened.project);

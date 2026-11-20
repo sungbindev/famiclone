@@ -42,8 +42,9 @@ export const EMULATOR_TOOLS: readonly ToolSpec[] = [
     target: 'emulator',
     writes: false,
     paths: ['file', 'firmware', 'diskImage'],
-    outsideAllowed: ['file', 'firmware', 'diskImage'],
-    describe: (input) => (input.file === undefined ? `载入 ${String(input.machine)} 整机` : `载入 ${String(input.file)}`)
+    outsideAllowed: ['file', 'firmware', 'diskImage', 'target'],
+    references: ['target'],
+    describe: (input) => (input.target === undefined ? (input.file === undefined ? `载入 ${String(input.machine)} 整机` : `载入 ${String(input.file)}`) : `按目标 ${String(input.target)} 载入`)
   },
   simple('emu_run', 'run', (input) => `运行 ${String(input.frames ?? 60)} 帧`),
   simple('emu_break', 'breakpoint', (input) => `断点：${String(input.action ?? 'list')}`),

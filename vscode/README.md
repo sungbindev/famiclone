@@ -33,7 +33,7 @@ C/C++ 扩展用哪个配置要在状态栏里选。`.vscode/c_cpp_properties.jso
 
 扩展给 Copilot 提供 30 个 6502 工具（反汇编 19 个、模拟器 11 个），在聊天里用 `#disasm_open` 这样的名字引用，模型也会自己选用。模型用它们多轮完成“映像到可汇编源码工程”的全过程：
 
-- 工程与映像：`disasm_open`（新建或打开工程）、`disasm_status`（进度）、`disasm_layout`、`disasm_hex`、`disasm_find`。
+- 工程与映像：`disasm_open`（新建或打开工程；给 `target` 为 `nes` 或 `sb2000` 时自动选映像格式、符号集与图形数据端口）、`disasm_status`（进度）、`disasm_layout`、`disasm_hex`、`disasm_find`。
 - 分析：`disasm_trace`（从入口追踪并自动命名）、`disasm_list`、`disasm_view`（带符号与注释的反汇编）、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference`。
 - 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`、`disasm_import_record`（把模拟器记录的指令轨迹、调用记录或 CDL 导入工程）。
 - 生成与校验：`disasm_generate`、`disasm_verify`（重新汇编后与原映像逐字节比较）、`disasm_build`。

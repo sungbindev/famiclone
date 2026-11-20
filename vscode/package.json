@@ -88,7 +88,7 @@
         ],
         "toolReferenceName": "disasm_open",
         "displayName": "打开或新建反汇编工程",
-        "modelDescription": "打开已有的反汇编工程，或由映像文件新建工程。只给 projectDir 就是打开（返回布局、入口数与进度）；再给 image 就是新建，工程文件 disasm.json 写在 projectDir 里。映像格式缺省按文件头判断：以 NES 加 0x1A 开头的是 iNES（只支持 NROM，入口自动取中断向量），其他是平铺二进制，必须给加载地址 address，有换页（bank）时改给 segments（每段：id、fileOffset、length、address，可选 bank、writable）。entries 是手工入口，symbolSets 是符号集（.inc）文件路径，登记后源码里用它们的名字代替硬件寄存器地址。新建后用 disasm_trace 追踪。",
+        "modelDescription": "打开已有的反汇编工程，或由映像文件新建工程。只给 projectDir 就是打开（返回布局、入口数与进度）；再给 image 就是新建，工程文件 disasm.json 写在 projectDir 里。映像格式缺省按文件头判断：以 NES 加 0x1A 开头的是 iNES（按映射器划分 PRG，入口自动取中断向量），SB-DOS 程序是 sbdos，分页 ROM 是 paged，其他是平铺二进制，必须给加载地址 address，有换页（bank）时改给 segments（每段：id、fileOffset、length、address，可选 bank、writable）。entries 是手工入口，symbolSets 是符号集（.inc）文件路径，登记后源码里用它们的名字代替硬件寄存器地址。新建后用 disasm_trace 追踪。 给 target（nes 或 sb2000）时按目标描述选映像格式、符号集（自动登记）与图形数据端口，不用再给 format、address、symbolSets；NES 内置支持映射器 0、1、2、3、4、7，其他映射器用 emu_inspect 的 resolve 查出各窗口对应的 PRG 偏移，再用 format 为 flat 的 segments 给出布局；学习机的 BIOS 用 input 为 bios，布局只是初始猜测，要用 resolve 核实后再用 disasm_layout 调整。",
         "userDescription": "打开或新建 6502 反汇编工程。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -107,10 +107,12 @@
             "format": {
               "type": "string",
               "enum": [
+                "flat",
                 "ines",
-                "flat"
+                "sbdos",
+                "paged"
               ],
-              "description": "映像格式：ines 或 flat（平铺二进制）；缺省按文件头判断"
+              "description": "映像格式：flat 平铺（要给 address 或 segments）、ines（NES 卡带）、sbdos（SB-DOS 程序）、paged（分页 ROM，选项在目标描述里）；用 target 时不用给"
             },
             "address": {
               "type": [
@@ -185,6 +187,16 @@
             "overwrite": {
               "type": "boolean",
               "description": "工程已存在时是否覆盖，默认 false"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1,
+              "description": "目标描述：内置的名字（nes、sb2000），或 profile.json 的路径；它决定映像格式、符号集、图形数据端口与启动步骤"
+            },
+            "input": {
+              "type": "string",
+              "minLength": 1,
+              "description": "目标描述里的输入名：nes 有 cartridge、family-basic；sb2000 有 program（SB-DOS 的 .EXE，默认）、bios（BIOS 文件）。只给了 target 时用它的默认输入"
             }
           },
           "required": [
@@ -1207,7 +1219,7 @@
         ],
         "toolReferenceName": "emu_load",
         "displayName": "载入程序",
-        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（SB-DOS 里要运行的程序名，开机后自动输入并回车）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。",
+        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（SB-DOS 里要运行的程序名，开机后自动输入并回车）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。",
         "userDescription": "把 NES 文件或整机（BIOS、软盘）装入 Ember。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1245,6 +1257,16 @@
             "powerOn": {
               "type": "boolean",
               "description": "卡带载入后是否通电，默认 true"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1,
+              "description": "目标描述：内置的名字（nes、sb2000），或 profile.json 的路径；它决定映像格式、符号集、图形数据端口与启动步骤"
+            },
+            "input": {
+              "type": "string",
+              "minLength": 1,
+              "description": "目标描述里的输入名，与 disasm_open 的 input 相同；只给了 target 时用默认输入"
             }
           },
           "additionalProperties": false

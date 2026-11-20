@@ -44,6 +44,7 @@ export function sha256(bytes) {
  * @property {number} version 工程文件版本
  * @property {{path: string, size: number, sha256: string}} image 映像文件的路径、大小与摘要
  * @property {{name: string, options: Record<string, unknown>}} format 映像格式与解析选项
+ * @property {{name: string, input: string, graphicsPorts: number[]}|null} profile 创建工程时用的目标描述：名字、输入名与图形数据端口；没有时为 null
  * @property {import('./layout.mjs').Layout} layout 布局
  * @property {Array<Readonly<import('./entries.mjs').Entry>>} entries 入口
  * @property {import('./regions.mjs').RegionMap} regions 区域表
@@ -68,16 +69,31 @@ function normalizeSymbolSet(set) {
 }
 
 /**
+ * 检查目标描述的记录。
+ * @param {unknown} profile 目标描述的记录；没有时为 null 或 undefined
+ * @returns {{name: string, input: string, graphicsPorts: number[]}|null} 规范化的记录
+ */
+function normalizeProfileRecord(profile) {
+  if (profile === null || profile === undefined) return null;
+  const ports = profile.graphicsPorts;
+  if (typeof profile.name !== 'string' || typeof profile.input !== 'string' || !Array.isArray(ports) || !ports.every((port) => Number.isInteger(port) && port >= 0 && port <= 0xffff)) {
+    invalid('工程文件的 profile 不完整');
+  }
+  return { name: profile.name, input: profile.input, graphicsPorts: [...ports] };
+}
+
+/**
  * 创建工程。
- * @param {{imagePath: string, bytes: Uint8Array, format: string, formatOptions?: Record<string, unknown>, layout: import('./layout.mjs').Layout, entries?: Array<Readonly<import('./entries.mjs').Entry>>, symbolSets?: Array<{name: string, path: string}>}} input 映像路径与字节、格式、布局、入口、符号集
+ * @param {{imagePath: string, bytes: Uint8Array, format: string, formatOptions?: Record<string, unknown>, layout: import('./layout.mjs').Layout, entries?: Array<Readonly<import('./entries.mjs').Entry>>, symbolSets?: Array<{name: string, path: string}>, profile?: {name: string, input: string, graphicsPorts: number[]}}} input 映像路径与字节、格式、布局、入口、符号集、目标描述的记录
  * @returns {Project} 工程
  */
-export function createProject({ imagePath, bytes, format, formatOptions = {}, layout, entries = [], symbolSets = [] }) {
+export function createProject({ imagePath, bytes, format, formatOptions = {}, layout, entries = [], symbolSets = [], profile }) {
   if (layout.imageSize !== bytes.length) invalid(`布局的映像大小（${layout.imageSize}）与映像字节数（${bytes.length}）不一致`);
   return {
     version: PROJECT_VERSION,
     image: { path: imagePath, size: bytes.length, sha256: sha256(bytes) },
     format: { name: format, options: { ...formatOptions } },
+    profile: normalizeProfileRecord(profile),
     layout,
     entries: [...entries],
     regions: createRegionMap(layout),
@@ -101,6 +117,7 @@ export function serializeProject(project) {
     version: project.version,
     image: project.image,
     format: project.format,
+    profile: project.profile,
     layout: { imageSize: project.layout.imageSize, segments: project.layout.segments },
     entries: project.entries,
     regions: project.regions.regions,
@@ -148,6 +165,7 @@ export function parseProject(text) {
     version: PROJECT_VERSION,
     image: { path: data.image.path, size: data.image.size, sha256: data.image.sha256 },
     format: { name: data.format.name, options: { ...data.format.options } },
+    profile: normalizeProfileRecord(data.profile),
     layout,
     entries: data.entries.map((entry) => createEntry(layout, entry)),
     regions,

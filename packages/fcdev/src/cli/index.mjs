@@ -63,7 +63,7 @@ const HELP_TEXT = `fcdev：6502 兼容机的开发工具
   --json               info 输出机器可读格式
 
 disasm 的选项：
-  --format ines|flat   输入格式，缺省时按文件头判断
+  --format ines|flat|sbdos   输入格式，缺省时按文件头判断
   --base <地址>       平铺二进制的加载地址（十六进制）
   --entry <地址>      追踪代码的入口，可重复；iNES 会自动使用中断向量
   --cdl <文件>        CDL（FCEUX、Mesen 格式），代码段的起点也当作入口

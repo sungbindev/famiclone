@@ -259,6 +259,17 @@ describe('模拟器工具', () => {
     expect(emulator.run).toHaveBeenCalledWith(WORKSPACE, 'load', { file: path.join(WORKSPACE, 'game.nes') });
   });
 
+  it('目标描述：内置名字原样传给 fcdev，路径换成绝对路径，在工作区之外时要确认', async () => {
+    const { runner, emulator, tool } = setup();
+    await tool('emu_load').invoke({ input: { target: 'nes', file: 'game.nes' } });
+    expect(emulator.run).toHaveBeenLastCalledWith(WORKSPACE, 'load', { target: 'nes', file: path.join(WORKSPACE, 'game.nes') });
+    await tool('disasm_open').invoke({ input: { projectDir: 'proj', image: 'game.nes', target: 'profiles/my.json', input: 'rom' } });
+    expect(runner.run).toHaveBeenLastCalledWith(PROJECT, 'open', { projectDir: PROJECT, image: path.join(WORKSPACE, 'game.nes'), target: path.join(WORKSPACE, 'profiles', 'my.json'), input: 'rom' });
+    expect(tool('emu_load').prepareInvocation({ input: { target: 'sb2000', firmware: 'bios.bin' } }).confirmationMessages).toBeUndefined();
+    const outside = path.resolve(WORKSPACE, '..', 'shared', 'profile.json');
+    expect(tool('emu_load').prepareInvocation({ input: { target: outside, file: 'a.nes' } }).confirmationMessages?.message.value).toContain(outside);
+  });
+
   it('截图保存路径必须在工作区里', async () => {
     const { emulator, tool } = setup();
     const outside = path.resolve(WORKSPACE, '..', 'a.png');

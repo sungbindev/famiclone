@@ -11,7 +11,7 @@ export {
   mappedSize, scanCode, traceCode, traceProject,
 } from './analysis/index.mjs';
 export { ADDRESSING_MODES, OPCODE_TABLE, decode, findOpcode, formatHex, formatInstruction, formatOperand, isAssemblable, memoryAccess } from './cpu/index.mjs';
-export { CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, FORMAT_NAMES, detectFormat, parseCallLog, parseCdl, parseFlat, parseImage, parseInes, parseInesHeader, parseTrace } from './formats/index.mjs';
+export { CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, FORMAT_NAMES, SUPPORTED_MAPPERS, detectFormat, parseCallLog, parseCdl, parseFlat, parseImage, parseInes, parseInesHeader, parsePaged, parseSbdos, parseTrace } from './formats/index.mjs';
 export { generateProject } from './generate/index.mjs';
 export {
   COMMENT_KINDS, EDIT_OPERATIONS, ENTRY_SOURCES, HINT_FORMS, PROJECT_VERSION, REGION_TYPES, SYMBOL_KINDS, addressToOffset, applyEdits, cloneProject, createEntry, createLayout, createProject, createRegionMap,

@@ -25,16 +25,16 @@ function hex(address) {
  * 由 CPU 地址创建入口。
  * @param {import('./address-space.mjs').AddressSpace} space 地址空间
  * @param {number} address CPU 地址
- * @param {{source: string, description?: string, segmentId?: number}} options 来源、说明；换页窗口里的地址要给段号
+ * @param {{source: string, description?: string, segmentId?: number, fromSegmentId?: number}} options 来源、说明；换页窗口里的地址要给段号，或给 fromSegmentId（地址在其中某个段里读到，窗口里不换 bank）
  * @returns {Readonly<import('../model/entries.mjs').Entry>} 入口
  * @throws {FcdevError} 地址没有映射、无法确定 bank（DISASM_ENTRY_AMBIGUOUS），或给出的段号不覆盖这个地址
  */
-export function entryAtAddress(space, address, { source, description, segmentId }) {
+export function entryAtAddress(space, address, { source, description, segmentId, fromSegmentId }) {
   if (segmentId !== undefined) {
     if (getSegment(space.layout, segmentId) === undefined) throw new FcdevError(`入口的段 ${segmentId} 不存在`, { code: 'DISASM_ENTRY_INVALID' });
     return createEntry(space.layout, { segmentId, address, source, description });
   }
-  const resolved = space.resolve(address);
+  const resolved = space.resolve(address, fromSegmentId);
   if (resolved.status === 'unmapped') throw new FcdevError(`入口地址 ${hex(address)} 没有映射到任何段`, { code: 'DISASM_ENTRY_INVALID' });
   if (resolved.status === 'ambiguous') {
     throw new FcdevError(`入口地址 ${hex(address)} 在多个 bank 里都有映射（段 ${resolved.candidates.map((segment) => segment.id).join('、')}）`, {
@@ -49,16 +49,17 @@ export function entryAtAddress(space, address, { source, description, segmentId 
  * 由中断向量创建入口。
  * @param {import('./address-space.mjs').AddressSpace} space 地址空间
  * @param {{nmi: number, reset: number, irq: number}|null} vectors 向量；没有时返回空
+ * @param {number} [fromSegmentId] 向量是在哪个段里读到的；指向换页窗口的向量用它确定 bank
  * @returns {{entries: Array<Readonly<import('../model/entries.mjs').Entry>>, skipped: Array<{name: string, address: number, reason: string}>}} 入口与没能生成入口的向量
  */
-export function entriesFromVectors(space, vectors) {
+export function entriesFromVectors(space, vectors, fromSegmentId) {
   const entries = [];
   const skipped = [];
   if (vectors === null) return { entries, skipped };
   for (const name of ['reset', 'nmi', 'irq']) {
     const address = vectors[name];
     try {
-      entries.push(entryAtAddress(space, address, { source: 'vector', description: VECTOR_DESCRIPTIONS[name] }));
+      entries.push(entryAtAddress(space, address, { source: 'vector', description: VECTOR_DESCRIPTIONS[name], fromSegmentId }));
     } catch (error) {
       if (!(error instanceof FcdevError)) throw error;
       skipped.push({ name, address, reason: error.message });

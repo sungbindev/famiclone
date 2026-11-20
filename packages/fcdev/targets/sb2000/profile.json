@@ -1,0 +1,35 @@
+{
+  "name": "sb2000",
+  "title": "小霸王学习机 SB2000（SB-DOS）",
+  "symbolSets": ["asminc/sb2000.inc"],
+  "graphicsPorts": ["$2007"],
+  "defaultInput": "program",
+  "inputs": {
+    "program": {
+      "title": "SB-DOS 程序（.EXE）",
+      "format": "sbdos",
+      "boot": [
+        { "step": "machine", "machine": "sb2000" },
+        { "step": "run", "frames": 900 },
+        { "step": "key", "code": "Enter", "downFrames": 8, "upFrames": 8 },
+        { "step": "key", "code": "Enter", "downFrames": 8, "upFrames": 8 },
+        { "step": "type", "text": "{program}", "downFrames": 8, "upFrames": 8 },
+        { "step": "key", "code": "Enter", "downFrames": 8, "upFrames": 8 }
+      ]
+    },
+    "bios": {
+      "title": "BIOS（512K，4K 一页，$C000 起固定为第 4 至 7 页）",
+      "format": "paged",
+      "formatOptions": {
+        "pageSize": 4096,
+        "fixed": [
+          { "firstPage": 4, "pageCount": 4, "address": 49152 }
+        ],
+        "window": { "address": 32768, "pageCount": 4 }
+      },
+      "boot": [
+        { "step": "machine", "machine": "sb2000" }
+      ]
+    }
+  }
+}

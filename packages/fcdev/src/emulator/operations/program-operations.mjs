@@ -8,8 +8,9 @@
 // ------------------------------------------------------------------------
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { FcdevError } from '../../shared/index.mjs';
+import { FcdevError, readTargetProfile, selectProfileInput } from '../../shared/index.mjs';
 import { bootMachine, enterProgram } from '../sb2000-session.mjs';
+import { runBootSteps } from './boot-steps.mjs';
 import { invalidParam, optionalAddress, optionalBoolean, optionalEnum, optionalInteger, optionalString } from './params.mjs';
 import { currentSession } from './session.mjs';
 
@@ -29,13 +30,24 @@ export async function cpuState(client) {
 }
 
 /**
- * 装入程序并执行启动步骤：卡带用 file，整机用 machine（加固件、磁盘与要在 DOS 里运行的程序名）。
- * @param {Record<string, unknown>} params file，或 machine 加可选的 firmware、diskImage、program；可选 familyKeyboard、powerOn
+ * 装入程序并执行启动步骤：给 target（内置目标描述的名字或 profile.json 的路径）时按它的输入里写的步骤执行；
+ * 不给时，卡带用 file，整机用 machine（加固件、磁盘与要在 DOS 里运行的程序名）。
+ * @param {Record<string, unknown>} params target 与可选的 input，或 file，或 machine；可选 firmware、diskImage、program、familyKeyboard、powerOn
  * @returns {Promise<object>} 运行状态
  * @throws {FcdevError} 参数组合不对、文件不存在，或 Ember 拒绝
  */
 export async function load(params) {
   const { client } = currentSession();
+  const target = optionalString(params, 'target');
+  if (target !== undefined) {
+    if (params.machine !== undefined) invalidParam('给了 target 就不要再给 machine，机型由目标描述的启动步骤决定');
+    const { profile } = readTargetProfile(target);
+    const chosen = selectProfileInput(profile, optionalString(params, 'input'));
+    if (params.familyKeyboard !== undefined) await client.request('input.setFamilyKeyboard', { connected: optionalBoolean(params, 'familyKeyboard', false) });
+    await runBootSteps(client, chosen.boot, params);
+    return { target: profile.name, input: chosen.name, ...(await client.request('runtime.status', {})) };
+  }
+  if (params.input !== undefined) invalidParam('给了 input 就要同时给 target');
   const file = optionalString(params, 'file');
   const machine = optionalString(params, 'machine');
   if ((file === undefined) === (machine === undefined)) invalidParam('要给 file（卡带文件）或 machine（整机机型）二者之一', '整机还可以给 firmware、diskImage、program');

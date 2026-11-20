@@ -31,4 +31,7 @@ export interface ToolSpec {
   readonly paths?: readonly string[];
   /** 路径参数里，允许指向工作区之外、但要在确认时说明的参数名（如要反汇编的映像）。 */
   readonly outsideAllowed?: readonly string[];
+  /** 取值可能是内置名字也可能是文件路径的参数名（如目标描述）；
+   *  带路径分隔符或以 .json 结尾时按路径检查，否则原样保留。 */
+  readonly references?: readonly string[];
 }

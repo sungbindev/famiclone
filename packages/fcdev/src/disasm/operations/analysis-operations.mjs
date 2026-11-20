@@ -208,6 +208,7 @@ export function detect(params) {
   }
   const ports = optionalArray(params, 'graphicsPorts');
   if (ports !== undefined) options.graphicsPorts = ports.map((port) => toAddress(port, 'graphicsPorts'));
+  else if (project.profile !== null && project.profile.graphicsPorts.length > 0) options.graphicsPorts = project.profile.graphicsPorts;
   const result = detectCandidates({ bytes, layout: project.layout, analysis: analyze(context), regions: project.regions, options });
   const types = optionalArray(params, 'types');
   const all = [...result.padding, ...result.tables, ...result.strings, ...result.graphics]

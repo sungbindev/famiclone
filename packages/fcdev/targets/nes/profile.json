@@ -1,0 +1,24 @@
+{
+  "name": "nes",
+  "title": "任天堂红白机（NES）",
+  "symbolSets": ["asminc/fcnes.inc"],
+  "graphicsPorts": ["$2007"],
+  "defaultInput": "cartridge",
+  "inputs": {
+    "cartridge": {
+      "title": "iNES 卡带",
+      "format": "ines",
+      "boot": [
+        { "step": "cartridge" }
+      ]
+    },
+    "family-basic": {
+      "title": "需要 Family BASIC 键盘的卡带（如 Family BASIC）",
+      "format": "ines",
+      "boot": [
+        { "step": "familyKeyboard", "connected": true },
+        { "step": "cartridge" }
+      ]
+    }
+  }
+}

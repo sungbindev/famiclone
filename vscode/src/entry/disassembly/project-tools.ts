@@ -23,7 +23,8 @@ export const PROJECT_TOOLS: readonly ToolSpec[] = [
     operation: 'open',
     writes: (input) => input.image !== undefined,
     paths: ['projectDir', 'image', 'symbolSets'],
-    outsideAllowed: ['image', 'symbolSets'],
+    outsideAllowed: ['image', 'symbolSets', 'target'],
+    references: ['target'],
     describe: (input) => (input.image === undefined ? `打开反汇编工程 ${projectLabel(input)}` : `新建反汇编工程 ${projectLabel(input)}`),
     confirm: (input) => `将在 ${String(input.projectDir)} 创建反汇编工程文件 disasm.json，映像为 ${String(input.image)}。${input.overwrite === true ? '已有的工程会被覆盖。' : ''}`
   },

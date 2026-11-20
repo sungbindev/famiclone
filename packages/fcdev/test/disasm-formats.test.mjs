@@ -8,7 +8,7 @@
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { FORMAT_NAMES, addressToOffset, parseFlat, parseImage, parseInes, parseInesHeader } from '../src/disasm/index.mjs';
+import { FORMAT_NAMES, SUPPORTED_MAPPERS, addressToOffset, parseFlat, parseImage, parseInes, parseInesHeader, parsePaged, parseSbdos } from '../src/disasm/index.mjs';
 
 /** 构造 iNES 文件：向量三个字放在 PRG 末尾，CHR 填 0xcc */
 function makeInes({ prgUnits = 1, chrUnits = 1, mapper = 0, vectors = [0xc000, 0xc000, 0xc000], trainer = false, code = [], nes2 = false } = {}) {
@@ -95,9 +95,10 @@ describe('iNES', () => {
     assert.deepEqual([modern.nes2, modern.mapper, modern.battery, modern.verticalMirroring], [true, 0x123, true, true]);
   });
 
-  it('映射器不是 0、PRG 大小不是 16K 与 32K、文件头不对、文件被截断、指数写法都报错', () => {
-    assert.throws(() => parseInes(makeInes({ mapper: 4 })), (error) => error.code === 'DISASM_MAPPER_UNSUPPORTED' && error.message.includes('4') && error.hint.includes('平铺'));
+  it('映射器不支持、PRG 大小与映射器不符、文件头不对、文件被截断、指数写法都报错', () => {
+    assert.throws(() => parseInes(makeInes({ mapper: 5 })), (error) => error.code === 'DISASM_MAPPER_UNSUPPORTED' && error.message.includes('5') && error.hint.includes('平铺') && error.hint.includes('resolve'));
     assert.throws(() => parseInes(makeInes({ prgUnits: 4 })), (error) => error.code === 'DISASM_INPUT_INVALID' && error.message.includes('16K 或 32K'));
+    assert.throws(() => parseInes(makeInes({ prgUnits: 3, mapper: 7 })), (error) => error.code === 'DISASM_INPUT_INVALID' && error.message.includes('32K'));
     assert.throws(() => parseInes(Buffer.from('MZ not nes file....')), (error) => error.code === 'DISASM_INPUT_INVALID');
     assert.throws(() => parseInes(makeInes({ chrUnits: 0 }).subarray(0, 8000)), (error) => error.code === 'DISASM_INPUT_INVALID' && error.message.includes('短'));
     const exponent = makeInes({ nes2: true });
@@ -106,9 +107,114 @@ describe('iNES', () => {
   });
 });
 
+/** 段的简要写法：[段号, 文件偏移, 长度, 地址, bank] */
+function brief(layout) {
+  return layout.segments.map((segment) => [segment.id, segment.fileOffset, segment.length, segment.address, segment.bank]);
+}
+
+describe('iNES 的其他映射器', () => {
+  it('内置支持的映射器号', () => {
+    assert.deepEqual([...SUPPORTED_MAPPERS], [0, 1, 2, 3, 4, 7]);
+  });
+
+  it('UxROM、MMC1：最后 16K 固定在 $C000，其余每 16K 一个 bank 轮流占 $8000；向量从固定的那段读', () => {
+    for (const mapper of [1, 2]) {
+      const parsed = parseInes(makeInes({ prgUnits: 4, mapper, vectors: [0xc100, 0xc000, 0xc200] }));
+      assert.deepEqual(brief(parsed.layout), [[0, 16, 0x4000, 0x8000, 0], [1, 16 + 0x4000, 0x4000, 0x8000, 1], [2, 16 + 0x8000, 0x4000, 0x8000, 2], [3, 16 + 0xc000, 0x4000, 0xc000, null]]);
+      assert.deepEqual([parsed.vectors, parsed.vectorSegmentId], [{ nmi: 0xc100, reset: 0xc000, irq: 0xc200 }, 3]);
+    }
+    assert.deepEqual(brief(parseInes(makeInes({ prgUnits: 1, mapper: 2 })).layout), [[0, 16, 0x4000, 0xc000, null]]);
+  });
+
+  it('CNROM 的 PRG 同 NROM；说明里写映射器名', () => {
+    const parsed = parseInes(makeInes({ prgUnits: 2, mapper: 3 }));
+    assert.deepEqual(brief(parsed.layout), [[0, 16, 0x8000, 0x8000, null]]);
+    assert.match(parsed.description, /CNROM.*映射器 3/);
+  });
+
+  it('AxROM：32K 一个 bank，都在 $8000；向量从最后一个 bank 读', () => {
+    const parsed = parseInes(makeInes({ prgUnits: 4, mapper: 7 }));
+    assert.deepEqual(brief(parsed.layout), [[0, 16, 0x8000, 0x8000, 0], [1, 16 + 0x8000, 0x8000, 0x8000, 1]]);
+    assert.equal(parsed.vectorSegmentId, 1);
+  });
+
+  it('MMC3：可换的 8K bank 都放 $8000，最后两个固定在 $C000 与 $E000', () => {
+    const parsed = parseInes(makeInes({ prgUnits: 2, mapper: 4 }));
+    assert.deepEqual(brief(parsed.layout), [[0, 16, 0x2000, 0x8000, 0], [1, 16 + 0x2000, 0x2000, 0x8000, 1], [2, 16 + 0x4000, 0x2000, 0xc000, null], [3, 16 + 0x6000, 0x2000, 0xe000, null]]);
+    assert.equal(parsed.vectorSegmentId, 3);
+  });
+});
+
+describe('SB-DOS 程序', () => {
+  /** 构造程序文件：文件头加填充 */
+  function makeProgram(size, entry = 0x8010) {
+    const bytes = Buffer.alloc(size, 0xea);
+    Buffer.from([0x4c, entry & 0xff, entry >> 8, 0xaa, 0x55, 0, 0, 0]).copy(bytes, 0);
+    return bytes;
+  }
+
+  it('不超过 16K：一个段从 $8000 起，入口是 $8000', () => {
+    const parsed = parseSbdos(makeProgram(300));
+    assert.deepEqual(brief(parsed.layout), [[0, 0, 300, 0x8000, null]]);
+    assert.deepEqual(parsed.entries, [{ address: 0x8000, description: '程序入口（文件头的 JMP）' }]);
+    assert.equal(parsed.vectors, null);
+    assert.equal(parseSbdos(makeProgram(0x4000)).layout.segments.length, 1);
+  });
+
+  it('多页程序：常驻 8K、库页 1、栈页、库页 2 起各 4K 换进 $A000，bank 号是库页号', () => {
+    const parsed = parseSbdos(makeProgram(6 * 0x1000 + 100));
+    assert.deepEqual(brief(parsed.layout), [
+      [0, 0, 0x2000, 0x8000, null], [1, 0x2000, 0x1000, 0xa000, 1], [2, 0x3000, 0x1000, 0xb000, null],
+      [3, 0x4000, 0x1000, 0xa000, 2], [4, 0x5000, 0x1000, 0xa000, 3], [5, 0x6000, 100, 0xa000, 4],
+    ]);
+    assert.match(parsed.description, /4 个库页/);
+  });
+
+  it('文件头不对或太短时报错并提示其他格式', () => {
+    const wrong = makeProgram(100);
+    wrong[4] = 0;
+    assert.throws(() => parseSbdos(wrong), (error) => error.code === 'DISASM_INPUT_INVALID' && error.hint.includes('paged'));
+    assert.throws(() => parseSbdos(Buffer.from([0x4c, 0, 0x80])), (error) => error.code === 'DISASM_INPUT_INVALID');
+  });
+});
+
+describe('分页 ROM', () => {
+  /** 每页用页号填充，最后一个固定页的末尾写向量 */
+  function makeRom(pages, { header = false, vectorPage = 7 } = {}) {
+    const rom = Buffer.concat(Array.from({ length: pages }, (_, page) => Buffer.alloc(0x1000, page)));
+    rom.writeUInt16LE(0xe100, (vectorPage + 1) * 0x1000 - 6);
+    rom.writeUInt16LE(0xe000, (vectorPage + 1) * 0x1000 - 4);
+    rom.writeUInt16LE(0xe200, (vectorPage + 1) * 0x1000 - 2);
+    return header ? Buffer.concat([Buffer.from('NES\x1a', 'latin1'), Buffer.alloc(12), rom]) : rom;
+  }
+
+  const OPTIONS = { fixed: [{ firstPage: 4, pageCount: 4, address: 0xc000 }] };
+
+  it('固定页映在 $C000，其余的页按窗口分组，bank 号是组里第一页的页号；向量从固定段末尾读', () => {
+    const parsed = parsePaged(makeRom(12), OPTIONS);
+    assert.deepEqual(brief(parsed.layout), [[0, 0, 0x4000, 0x8000, 0], [1, 0x4000, 0x4000, 0xc000, null], [2, 0x8000, 0x4000, 0x8000, 8]]);
+    assert.deepEqual([parsed.vectors, parsed.vectorSegmentId], [{ nmi: 0xe100, reset: 0xe000, irq: 0xe200 }, 1]);
+    assert.deepEqual(parsed.unmapped, []);
+  });
+
+  it('NES 文件头自动跳过，记入 unmapped；固定页把窗口里的组切开时，剩下的页按位置单独成段', () => {
+    const parsed = parsePaged(makeRom(8, { header: true, vectorPage: 2 }), { fixed: [{ firstPage: 1, pageCount: 2, address: 0xe000 }] });
+    assert.deepEqual(brief(parsed.layout), [[0, 16, 0x1000, 0x8000, 0], [1, 16 + 0x1000, 0x2000, 0xe000, null], [2, 16 + 0x3000, 0x1000, 0xb000, 3], [3, 16 + 0x4000, 0x4000, 0x8000, 4]]);
+    assert.deepEqual(parsed.unmapped, [{ offset: 0, length: 16, description: '文件头' }]);
+    assert.equal(parsed.vectors.reset, 0xe000);
+  });
+
+  it('没有固定页时没有向量；选项不合法、固定页超出文件时报错', () => {
+    assert.equal(parsePaged(makeRom(8)).vectors, null);
+    assert.throws(() => parsePaged(makeRom(8), { pageSize: 100 }), (error) => error.code === 'DISASM_INPUT_INVALID' && error.message.includes('pageSize'));
+    assert.throws(() => parsePaged(makeRom(8), { fixed: [{ firstPage: 6, pageCount: 4, address: 0xc000 }] }), (error) => error.code === 'DISASM_INPUT_INVALID' && error.message.includes('超出'));
+    assert.throws(() => parsePaged(makeRom(8), { fixed: 5 }), (error) => error.code === 'DISASM_INPUT_INVALID');
+  });
+});
+
 describe('统一入口', () => {
   it('按格式名选择解析器', () => {
-    assert.deepEqual(FORMAT_NAMES, ['flat', 'ines']);
+    assert.deepEqual(FORMAT_NAMES, ['flat', 'ines', 'sbdos', 'paged']);
     assert.equal(parseImage('flat', Buffer.alloc(4), { address: 0xf000 }).layout.segments[0].address, 0xf000);
     assert.equal(parseImage('ines', makeInes()).format, 'ines');
   });

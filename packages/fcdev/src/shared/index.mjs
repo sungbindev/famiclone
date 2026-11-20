@@ -8,5 +8,6 @@
 // ------------------------------------------------------------------------
 export { FcdevError } from './errors.mjs';
 export { createParamChecks } from './param-checks.mjs';
+export { BOOT_STEP_NAMES, PROFILE_FILE, listBuiltinProfiles, normalizeProfile, readTargetProfile, selectProfileInput } from './target-profile.mjs';
 export { DEFAULT_TOOL_TIMEOUT_MS, runProcess } from './process.mjs';
 export { ensureDirectory, getModifiedTime, isDirectory, readJsonFile } from './fs-utils.mjs';

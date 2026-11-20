@@ -49,7 +49,7 @@ describe('工程文件', () => {
       { op: 'assignModule', name: 'core', address: 0xc000, length: 4 },
     ]).project;
     const text = serializeProject(edited);
-    assert.deepEqual(Object.keys(JSON.parse(text)), ['version', 'image', 'format', 'layout', 'entries', 'regions', 'symbols', 'comments', 'hints', 'modules', 'symbolSets', 'unresolved', 'verification']);
+    assert.deepEqual(Object.keys(JSON.parse(text)), ['version', 'image', 'format', 'profile', 'layout', 'entries', 'regions', 'symbols', 'comments', 'hints', 'modules', 'symbolSets', 'unresolved', 'verification']);
     assert.equal(serializeProject(parseProject(text)), text);
     assert.ok(text.endsWith('\n'));
   });

@@ -22,6 +22,11 @@ export interface ResolvedToolInput {
   readonly startDirectory: string;
 }
 
+/** 值是文件路径而不是内置名字：带路径分隔符，或以 .json 结尾。 */
+function looksLikePath(value: string): boolean {
+  return /[\\/]/.test(value) || value.toLowerCase().endsWith('.json');
+}
+
 /** 路径在目录里面（含目录本身）。 */
 export function isInside(root: string, target: string): boolean {
   const relative = path.relative(root, target);
@@ -56,6 +61,10 @@ export function resolveToolInput(spec: ToolSpec, input: ToolInput, roots: readon
     const value = params[name];
     if (value === undefined) continue;
     params[name] = Array.isArray(value) ? value.map((item) => resolveOne(name, item)) : resolveOne(name, value);
+  }
+  for (const name of spec.references ?? []) {
+    const value = params[name];
+    if (typeof value === 'string' && looksLikePath(value)) params[name] = resolveOne(name, value);
   }
   const projectDir = params.projectDir;
   return { params, outside, startDirectory: typeof projectDir === 'string' ? projectDir : base };

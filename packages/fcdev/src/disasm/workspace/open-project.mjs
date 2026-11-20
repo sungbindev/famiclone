@@ -85,31 +85,32 @@ function skippedWarnings(label, skipped) {
 
 /**
  * 由映像文件创建工程。
- * @param {{inputFile: string, projectDir: string, format?: string, base?: number, segments?: Array<object>, entries?: Array<number|{address: number, segmentId?: number}>, cdlFile?: string, traceFile?: string, symbolsFile?: string, symbolSetFiles?: string[], useVectors?: boolean, requireEntries?: boolean}} input
- *   映像文件、工程目录、格式、平铺格式的加载地址或段列表、手工入口、CDL、指令轨迹、符号文件、符号集文件、是否取中断向量作入口、没有入口时是否报错
+ * @param {{inputFile: string, projectDir: string, format?: string, formatOptions?: Record<string, unknown>, base?: number, segments?: Array<object>, entries?: Array<number|{address: number, segmentId?: number}>, cdlFile?: string, traceFile?: string, symbolsFile?: string, symbolSetFiles?: string[], profile?: {name: string, input: string, graphicsPorts: number[]}, useVectors?: boolean, requireEntries?: boolean}} input
+ *   映像文件、工程目录、格式、格式选项（分页格式的页布局等）、平铺格式的加载地址或段列表、手工入口、CDL、指令轨迹、符号文件、符号集文件、目标描述的记录、是否取中断向量与格式声明的入口、没有入口时是否报错
  * @returns {OpenedImage} 新工程与相关数据
  * @throws {FcdevError} 输入不合法，或要求有入口而没有
  */
-export function openImageProject({ inputFile, projectDir, format, base, segments, entries = [], cdlFile, traceFile, symbolsFile, symbolSetFiles = [], useVectors = true, requireEntries = false }) {
+export function openImageProject({ inputFile, projectDir, format, formatOptions: givenOptions, base, segments, entries = [], cdlFile, traceFile, symbolsFile, symbolSetFiles = [], profile, useVectors = true, requireEntries = false }) {
   const bytes = readFileSync(inputFile);
   const kind = format ?? detectFormat(bytes);
-  if (kind === 'flat' && base === undefined && segments === undefined) {
+  if (kind === 'flat' && base === undefined && segments === undefined && givenOptions === undefined) {
     throw new FcdevError('平铺二进制需要指定加载地址或段列表', { code: 'ARGUMENT_MISSING', hint: '用 --base <十六进制地址> 指定，如 --base 8000；有换页时给出段列表' });
   }
-  const formatOptions = kind === 'flat' ? (segments === undefined ? { address: base } : { segments }) : {};
+  const formatOptions = kind === 'flat' && (base !== undefined || segments !== undefined) ? (segments === undefined ? { address: base } : { segments }) : { ...givenOptions };
   const parsed = parseImage(kind, bytes, formatOptions);
   const space = createAddressSpace(parsed.layout);
   const warnings = [];
 
-  const vectors = useVectors ? entriesFromVectors(space, parsed.vectors) : { entries: [], skipped: [] };
+  const vectors = useVectors ? entriesFromVectors(space, parsed.vectors, parsed.vectorSegmentId) : { entries: [], skipped: [] };
   warnings.push(...vectors.skipped.map((item) => `${item.name} 向量指向 ${hex(item.address)}：${item.reason}`));
+  const declared = useVectors ? (parsed.entries ?? []).map((item) => entryAtAddress(space, item.address, { source: 'vector', description: item.description })) : [];
   const manual = entries.map((item) => (typeof item === 'number'
     ? entryAtAddress(space, item, { source: 'manual', description: '手工指定' })
     : entryAtAddress(space, item.address, { source: 'manual', description: '手工指定', segmentId: item.segmentId })));
   const traced = traceFile === undefined ? { entries: [], skipped: [] } : entriesFromAddresses(space, parseTrace(readFileSync(traceFile, 'utf8')), { source: 'trace', description: '指令轨迹' });
   warnings.push(...skippedWarnings('指令轨迹', traced.skipped));
   const recorded = cdlFile === undefined ? [] : entriesFromCodeFlags(parsed.layout, parseCdl(readFileSync(cdlFile), mappedSize(parsed.layout)), { source: 'cdl', description: '代码数据日志' });
-  const allEntries = uniqueEntries([...vectors.entries, ...manual, ...traced.entries, ...recorded]);
+  const allEntries = uniqueEntries([...vectors.entries, ...declared, ...manual, ...traced.entries, ...recorded]);
   if (requireEntries && allEntries.length === 0) {
     throw new FcdevError('没有入口可供追踪代码', { code: 'ARGUMENT_MISSING', hint: '用 --entry <十六进制地址> 指定入口，或用 --cdl、--trace 提供运行记录' });
   }
@@ -123,6 +124,7 @@ export function openImageProject({ inputFile, projectDir, format, base, segments
     layout: parsed.layout,
     entries: allEntries,
     symbolSets: sets.map(({ name, path: stored }) => ({ name, path: stored })),
+    profile,
   });
   if (symbolsFile !== undefined) {
     // 同一地址有多个名字时只用第一个

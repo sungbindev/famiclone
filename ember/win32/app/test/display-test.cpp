@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：display-test.cpp
- * 说明：运行画面子窗口与输入来源的冒烟测试：能在一个隐藏的父窗口里创建画面子窗口、设置位置、上传帧与提示位图、挖洞并显示而不出错（没有硬件 Direct3D 11 设备的电脑上跳过）；
+ * 说明：运行画面子窗口与输入来源的冒烟测试：能在一个隐藏的父窗口里创建画面子窗口、设置位置、上传帧与提示位图、挖洞并显示而不出错（连软件设备也创建不出的电脑上跳过）；
  *       XInput 手柄读取在没有手柄时给出空清单；原始输入采集在共享、独占与关闭之间切换键盘采集不出错。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -53,7 +53,7 @@ TEST(ScreenWindow, CreatesShowsFramesAndOverlaysWithoutErrors) {
   try {
     screen = std::make_unique<platform::ScreenWindow>(parent.handle());
   } catch (const std::runtime_error& error) {
-    GTEST_SKIP() << "没有硬件的 Direct3D 11 设备：" << error.what();
+    GTEST_SKIP() << "没有 Direct3D 11 设备：" << error.what();
   }
   EXPECT_NE(screen->handle(), nullptr);
   screen->setBounds(shared::ScreenRect{10, 20, 320, 300});

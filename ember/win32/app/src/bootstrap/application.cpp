@@ -483,7 +483,7 @@ int runApplication(const shared::LaunchArguments& launch) {
       screenHost.emplace(mainWindow, frames, input, ui, [&logger](const std::string& message) { logger.write({std::nullopt, kMainErrorCode, message, nlohmann::json{{"source", "screenHost"}}}); });
     } catch (const std::runtime_error& error) {
       logger.write({std::nullopt, kMainErrorCode, error.what(), nlohmann::json{{"source", "screenHost"}}});
-      platform::showErrorMessage("Ember", "无法初始化画面渲染，当前电脑不支持。\n需要支持 Direct3D 11 的显卡与驱动；没有显卡、没有驱动或没有 3D 加速的虚拟机不在支持范围内。");
+      platform::showErrorMessage("Ember", "无法初始化画面渲染，当前电脑不支持。\n需要支持 Direct3D 11 的显卡与驱动，或系统自带的软件渲染（Windows 7 SP1 起都带有）。");
       core.stop();
       return 1;
     }

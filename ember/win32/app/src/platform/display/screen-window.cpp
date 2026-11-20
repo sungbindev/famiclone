@@ -119,10 +119,13 @@ struct ScreenWindow::Impl {
     description.Windowed = TRUE;
     description.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     D3D_FEATURE_LEVEL achieved{};
-    // 只用硬件设备：不用 WARP 等软件设备
-    const HRESULT result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, static_cast<UINT>(std::size(levels)), D3D11_SDK_VERSION, &description, &swapChain, &device,
-                                                          &achieved, &context);
-    if (FAILED(result)) throw std::runtime_error("无法初始化画面渲染：创建不出硬件的 Direct3D 11 设备");
+    // 先用硬件设备；没有显卡或驱动（如虚拟机没有 3D 加速）时回退到 WARP 软件设备
+    HRESULT result = E_FAIL;
+    for (const D3D_DRIVER_TYPE driverType : {D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP}) {
+      result = D3D11CreateDeviceAndSwapChain(nullptr, driverType, nullptr, 0, levels, static_cast<UINT>(std::size(levels)), D3D11_SDK_VERSION, &description, &swapChain, &device, &achieved, &context);
+      if (SUCCEEDED(result)) break;
+    }
+    if (FAILED(result)) throw std::runtime_error("无法初始化画面渲染：创建不出 Direct3D 11 设备");
     swapWidth = description.BufferDesc.Width;
     swapHeight = description.BufferDesc.Height;
     // 不让系统用 Alt+Enter 把画面切成独占全屏

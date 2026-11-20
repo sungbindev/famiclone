@@ -52,7 +52,7 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
    * @param input 输入端口，独占键盘、捕获鼠标与手柄的事件都交给它。
    * @param ui 界面线程，手柄的定时读取用它。
    * @param onError 出错的记录（开启键盘独占失败等）。
-   * @throws std::runtime_error 创建不出硬件的 Direct3D 11 设备时。
+   * @throws std::runtime_error 创建不出 Direct3D 11 设备（硬件与 WARP 都不行）时。
    */
   ScreenHostAdapter(void* parentWindow, contracts::FrameSource& frames, contracts::ScreenInput& input, platform::UiThread& ui, std::function<void(const std::string&)> onError);
   ~ScreenHostAdapter() override;

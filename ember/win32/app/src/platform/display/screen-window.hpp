@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：规则见 docs/08-Win32原生外壳.md 第 5.5 节：每帧把像素上传到动态纹理，适应窗口用双线性采样，整数倍用最近邻采样；交换链用 DXGI 1.0 的位块传送模式（Windows 7 没有翻转模型），
- *       设备功能级别最低取 9_1，只用硬件设备，创建不出时构造函数抛出异常，由组装根弹出提示并退出，不做 GDI 降级、不用 WARP；着色器是预先编译好的字节码（screen-shaders.hpp）。
+ *       设备功能级别最低取 9_1，优先用硬件设备，创建不出时（没有显卡或驱动、虚拟机没有 3D 加速）回退到 WARP 软件设备，两者都创建不出时构造函数抛出异常，由组装根弹出提示并退出，不做 GDI 降级；着色器是预先编译好的字节码（screen-shaders.hpp）。
  *       子窗口对鼠标透明（WM_NCHITTEST 返回 HTTRANSPARENT），鼠标与键盘都由主窗口的控件处理；主窗口的弹层（菜单、通知、悬停提示）盖到画面上时，由 setHoles 把子窗口对应的区域挖掉；
  *       必须在窗口所在的线程使用；本头文件不含任何 Direct3D 与 Windows 类型。
  * ------------------------------------------------------------------------
@@ -28,7 +28,7 @@ class ScreenWindow {
   /**
    * 在父窗口里创建画面子窗口（先不显示，设置位置后显示）。
    * @param parentWindow 父窗口句柄（HWND）。
-   * @throws std::runtime_error 创建窗口失败，或创建不出硬件的 Direct3D 11 设备（没有显卡、没有驱动、虚拟机没有 3D 加速）。
+   * @throws std::runtime_error 创建窗口失败，或硬件与 WARP 的 Direct3D 11 设备都创建不出。
    */
   explicit ScreenWindow(void* parentWindow);
   ~ScreenWindow();

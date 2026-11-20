@@ -283,9 +283,9 @@ TEST(SystemModule, AboutDialogHasTheAgreedSize) {
   const auto& dialog = f.module.dialogs[0];
   EXPECT_EQ(dialog.id, "system.about");
   EXPECT_EQ(dialog.title, "关于 Ember");
-  EXPECT_EQ(dialog.width, 520);
+  EXPECT_EQ(dialog.width, 0);
   EXPECT_EQ(dialog.height, 560);
-  EXPECT_EQ(dialog.minWidth, 400);
+  EXPECT_TRUE(dialog.fitMinWidth);
   EXPECT_EQ(dialog.minHeight, 320);
   f.command("system.openAbout")->run(f.shell);
   EXPECT_EQ(f.shell.dialogs, (std::vector<std::string>{"system.about"}));

@@ -56,6 +56,8 @@ void Widget::detach() {
 
 Size Widget::measure(Size /*available*/) { return Size{}; }
 
+Size Widget::minimumSize() { return Size{}; }
+
 void Widget::arrange(const Rect& bounds) {
   bounds_ = bounds;
   for (const auto& child : children_) child->arrange(bounds);

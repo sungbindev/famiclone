@@ -523,8 +523,10 @@ TEST(InputModule, RegistersTheDialogTheCommandWithoutShortcutAndTheMenuItemWithA
   ASSERT_EQ(module.dialogs.size(), 1U);
   EXPECT_EQ(module.dialogs[0].id, "input.gamepadSettings");
   EXPECT_EQ(module.dialogs[0].title, "手柄设置");
-  EXPECT_EQ(module.dialogs[0].width, 640);
-  EXPECT_EQ(module.dialogs[0].height, 560);
+  EXPECT_EQ(module.dialogs[0].width, 0);
+  EXPECT_EQ(module.dialogs[0].height, 0);
+  EXPECT_TRUE(module.dialogs[0].fitMinWidth);
+  EXPECT_TRUE(module.dialogs[0].fitMinHeight);
   ASSERT_EQ(module.commands.size(), 1U);
   EXPECT_EQ(module.commands[0].id, "input.openGamepadSettings");
   EXPECT_TRUE(module.commands[0].defaultShortcut.empty());

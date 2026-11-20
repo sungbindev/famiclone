@@ -49,6 +49,8 @@ class GamepadSettingsContent final : public rujian::ui::Widget {
   ~GamepadSettingsContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
+  /** 手柄图、输入来源、页签与按钮不换行所需的宽度，与在这个宽度下装下全部内容（“使用的手柄”一项按显示算）所需的高度。 */
+  [[nodiscard]] rujian::ui::Size minimumSize() override;
   void arrange(const rujian::ui::Rect& bounds) override;
   void onTimer(unsigned id) override;
 

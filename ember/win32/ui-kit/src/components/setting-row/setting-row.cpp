@@ -5,7 +5,8 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：行的上下内边距取令牌；名称与说明之间留 2，控件与错误文字之间留 4，上下排列时两部分之间留中间距。
+ * 备注：行的上下内边距取令牌；名称与说明之间留 2，控件与错误文字之间留 4，上下排列时两部分之间留中间距；
+ *       并排模式下控件列靠行的右边，列宽取同一列表里各行控件的最大自然宽度，控件在列里左对齐；名称说明列占满余下的宽度，说明可以折行，不随窗口变窄上下排列。
  * ------------------------------------------------------------------------
  */
 
@@ -22,6 +23,8 @@ namespace {
 
 /** 窗口宽度不超过它时两部分上下排列（与组件库样式里的媒体查询一致）。 */
 constexpr double kStackedViewportWidth = 720.0;
+/** 并排模式下名称说明列的最小宽度（名称更宽时取名称的宽度）：说明在这个宽度内折行。 */
+constexpr double kSideBySideTextMinimumWidth = 160.0;
 
 }  // namespace
 
@@ -64,16 +67,29 @@ void SettingRow::setError(std::string error) {
   invalidate();
 }
 
+void SettingRow::setSideBySide(bool sideBySide) {
+  sideBySide_ = sideBySide;
+  invalidate();
+}
+
 double SettingRow::paddingTop() const { return trimTop() ? 0.0 : tokens::setting_row_padding_y; }
 
 double SettingRow::paddingBottom() const { return trimBottom() ? 0.0 : tokens::setting_row_padding_y; }
 
+double SettingRow::controlColumnNaturalWidth() { return sideBySide_ && control_ != nullptr ? control_->measure(Size{}).width : 0.0; }
+
+void SettingRow::setSharedControlColumnWidth(double width) { sharedControlWidth_ = width; }
+
 SettingRow::Layout SettingRow::layout(double width) {
   Layout result;
-  result.stacked = host() != nullptr && host()->viewportSize().width <= kStackedViewportWidth;
+  result.stacked = !sideBySide_ && host() != nullptr && host()->viewportSize().width <= kStackedViewportWidth;
   if (result.stacked) {
     result.textWidth = width;
     result.controlWidth = width;
+  } else if (sideBySide_) {
+    // 控件列取列表里最宽的控件，名称与说明占满余下的宽度
+    result.controlWidth = control_ != nullptr ? std::max(sharedControlWidth_, controlColumnNaturalWidth()) : 0.0;
+    result.textWidth = std::max(0.0, width - result.controlWidth - (control_ != nullptr ? tokens::space_page : 0.0));
   } else {
     // 两列的宽度范围是 0 到最大值：空间不够时从 0 起平分，控件列先到上限
     const double available = std::max(0.0, width - tokens::space_page);
@@ -92,9 +108,20 @@ SettingRow::Layout SettingRow::layout(double width) {
 }
 
 Size SettingRow::measure(Size available) {
-  const double width = available.width > 0 ? available.width : tokens::setting_row_text_width + tokens::space_page + tokens::setting_row_control_width;
+  double width = available.width;
+  if (width <= 0) width = sideBySide_ ? sideBySideMinimumWidth() : tokens::setting_row_text_width + tokens::space_page + tokens::setting_row_control_width;
   return Size{width, layout(width).height};
 }
+
+double SettingRow::sideBySideMinimumWidth() {
+  const double label = label_->measure(Size{}).width;
+  const double description = description_->measure(Size{}).width;
+  const double text = std::min(std::max(label, std::min(description, kSideBySideTextMinimumWidth)), tokens::setting_row_text_width);
+  const double control = control_ != nullptr ? std::max(sharedControlWidth_, controlColumnNaturalWidth()) + tokens::space_page : 0.0;
+  return text + control;
+}
+
+Size SettingRow::minimumSize() { return sideBySide_ ? Size{sideBySideMinimumWidth(), 0.0} : Size{}; }
 
 void SettingRow::arrange(const Rect& bounds) {
   setBounds(bounds);
@@ -105,7 +132,7 @@ void SettingRow::arrange(const Rect& bounds) {
   label_->arrange(Rect{bounds.x, textTop, laid.textWidth, laid.labelHeight});
   description_->arrange(Rect{bounds.x, textTop + laid.labelHeight + tokens::space_xxs, laid.textWidth, laid.descriptionHeight});
 
-  const double controlLeft = laid.stacked ? bounds.x : bounds.x + laid.textWidth + tokens::space_page;
+  const double controlLeft = laid.stacked ? bounds.x : (sideBySide_ ? bounds.right() - laid.controlWidth : bounds.x + laid.textWidth + tokens::space_page);
   const double controlTop = laid.stacked ? top + laid.textHeight + tokens::space_md : top + (contentHeight - laid.controlColumnHeight) / 2.0;
   if (control_ != nullptr) {
     const Size size = control_->measure(Size{laid.controlWidth, 0});

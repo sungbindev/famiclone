@@ -47,6 +47,8 @@ class Toolbar : public Widget {
     double actionsWidth{0};
     double actionsHeight{0};
     double startHeight{0};
+    /** 一行放下全部内容需要的宽度。 */
+    double naturalWidth{0};
     double height{0};
   };
 

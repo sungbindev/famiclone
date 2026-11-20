@@ -38,6 +38,8 @@ class MachinesContent final : public rujian::ui::Widget {
   ~MachinesContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
+  /** 机型列表不折行所需的宽度；高度没有要求（列表可以滚动）。 */
+  [[nodiscard]] rujian::ui::Size minimumSize() override;
   void arrange(const rujian::ui::Rect& bounds) override;
 
   [[nodiscard]] rujian::ui::ScrollArea& pane() const { return *pane_; }
@@ -53,6 +55,7 @@ class MachinesContent final : public rujian::ui::Widget {
   contracts::BiosModel& bios_;
   std::function<void()> unsubscribe_;
   rujian::ui::ScrollArea* pane_{nullptr};
+  rujian::ui::Widget* listPanel_{nullptr};
   std::string signature_;
   std::vector<BiosWidgets> biosRows_;
   rujian::ui::Button* openDirectory_{nullptr};

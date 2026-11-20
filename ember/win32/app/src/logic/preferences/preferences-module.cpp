@@ -15,12 +15,6 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 对话框内容区的初始尺寸与最小尺寸（逻辑像素）。 */
-constexpr int kDialogWidth = 720;
-constexpr int kDialogHeight = 520;
-constexpr int kDialogMinWidth = 560;
-constexpr int kDialogMinHeight = 360;
-
 constexpr const char* kTitle = "首选项";
 
 }  // namespace
@@ -32,10 +26,8 @@ contracts::ShellModule createPreferencesModule(PreferencesController& preference
   contracts::ShellDialogDefinition dialog;
   dialog.id = kPreferencesDialogId;
   dialog.title = kTitle;
-  dialog.width = kDialogWidth;
-  dialog.height = kDialogHeight;
-  dialog.minWidth = kDialogMinWidth;
-  dialog.minHeight = kDialogMinHeight;
+  dialog.fitMinWidth = true;
+  dialog.fitMinHeight = true;
   module.dialogs.push_back(std::move(dialog));
 
   contracts::ShellCommandDefinition open;

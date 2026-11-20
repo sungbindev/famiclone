@@ -61,6 +61,8 @@ void DialogHost::openDialog(const std::string& dialogId) {
   options.height = definition->second.height;
   options.minimumWidth = definition->second.minWidth;
   options.minimumHeight = definition->second.minHeight;
+  options.fitMinimumWidth = definition->second.fitMinWidth;
+  options.fitMinimumHeight = definition->second.fitMinHeight;
   options.maximizable = true;
   options.minimizable = true;
   options.theme = theme_;

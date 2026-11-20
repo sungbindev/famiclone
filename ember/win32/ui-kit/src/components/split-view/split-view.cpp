@@ -146,6 +146,8 @@ void SplitView::setMain(std::unique_ptr<Widget> main) {
 
 double SplitView::clampWidth(double width) const { return std::clamp(std::round(width), minimum_, maximum_); }
 
+double SplitView::sideExtent() const { return sideWidth_ + tokens::space_page; }
+
 Widget* SplitView::splitter() const { return splitter_; }
 
 void SplitView::setSideWidth(double width) { changeSideWidth(width); }

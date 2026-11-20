@@ -85,11 +85,10 @@ void Table::setOnRowSelect(SelectHandler handler) { onSelect_ = std::move(handle
 
 double Table::borderWidth() const { return snapBorderWidth(kBorderWidth, host() != nullptr ? host()->scale() : 1.0); }
 
-Table::Layout Table::layout(double width) {
-  Layout result;
+void Table::columnLimits(std::vector<double>& minimum, std::vector<double>& maximum) {
   const std::size_t count = columns_.size();
-  std::vector<double> minimum(count, 0.0);
-  std::vector<double> maximum(count, 0.0);
+  minimum.assign(count, 0.0);
+  maximum.assign(count, 0.0);
   for (std::size_t c = 0; c < count; ++c) {
     const double header = headers_[c]->measure(Size{}).width + 2 * kCellPaddingX;
     minimum[c] = std::max(columns_[c].minWidth, header);
@@ -101,6 +100,14 @@ Table::Layout Table::layout(double width) {
     }
     maximum[c] = std::max(maximum[c], minimum[c]);
   }
+}
+
+Table::Layout Table::layout(double width) {
+  Layout result;
+  const std::size_t count = columns_.size();
+  std::vector<double> minimum;
+  std::vector<double> maximum;
+  columnLimits(minimum, maximum);
 
   const double sumMin = std::accumulate(minimum.begin(), minimum.end(), 0.0);
   const double sumMax = std::accumulate(maximum.begin(), maximum.end(), 0.0);
@@ -158,6 +165,13 @@ Size Table::measure(Size available) {
     }
   }
   return Size{width, layout(width).height};
+}
+
+Size Table::minimumSize() {
+  std::vector<double> minimum;
+  std::vector<double> maximum;
+  columnLimits(minimum, maximum);
+  return Size{std::accumulate(minimum.begin(), minimum.end(), 0.0), 0.0};
 }
 
 void Table::arrange(const Rect& bounds) {

@@ -16,6 +16,13 @@
 
 namespace rujian::ui {
 
+namespace {
+
+/** 换行判断的容差（逻辑像素）：刚好放下时不因浮点误差换行。 */
+constexpr double kWrapTolerance = 0.01;
+
+}  // namespace
+
 FlexBox::FlexBox(FlexDirection direction, bool wrap, double gap, FlexAlign align) : direction_(direction), wrap_(wrap), gap_(gap), align_(align) {}
 
 void FlexBox::setGrow(const Widget* child, double grow) {
@@ -53,7 +60,7 @@ std::vector<FlexBox::Line> FlexBox::breakLines(double mainLimit) {
     const double main = row ? size.width : size.height;
     const double cross = row ? size.height : size.width;
     const double extra = current.items.empty() ? 0.0 : gap_;
-    if (row && wrap_ && mainLimit > 0 && !current.items.empty() && current.main + extra + main > mainLimit) flush();
+    if (row && wrap_ && mainLimit > 0 && !current.items.empty() && current.main + extra + main > mainLimit + kWrapTolerance) flush();
     current.main += (current.items.empty() ? 0.0 : gap_) + main;
     current.cross = std::max(current.cross, cross);
     current.items.push_back(child.get());

@@ -61,7 +61,15 @@ std::vector<ListRow*> List::rows() const {
   return result;
 }
 
+void List::shareControlColumnWidth() {
+  const std::vector<ListRow*> visible = rows();
+  double widest = 0.0;
+  for (ListRow* row : visible) widest = std::max(widest, row->controlColumnNaturalWidth());
+  for (ListRow* row : visible) row->setSharedControlColumnWidth(widest);
+}
+
 Size List::measure(Size available) {
+  shareControlColumnWidth();
   double height = 0.0;
   double widest = 0.0;
   bool first = true;
@@ -76,6 +84,7 @@ Size List::measure(Size available) {
 
 void List::arrange(const Rect& bounds) {
   setBounds(bounds);
+  shareControlColumnWidth();
   double y = bounds.y;
   bool first = true;
   for (ListRow* row : rows()) {

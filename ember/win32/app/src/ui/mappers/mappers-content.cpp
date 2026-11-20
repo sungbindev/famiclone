@@ -11,6 +11,8 @@
 
 #include "ui/mappers/mappers-content.hpp"
 
+#include <algorithm>
+
 #include "rujian/ui/facts.hpp"
 #include "rujian/ui/icon-id.hpp"
 #include "rujian/ui/label.hpp"
@@ -142,6 +144,12 @@ void MappersContent::onTimer(unsigned id) {
 }
 
 Size MappersContent::measure(Size available) { return scroll_->measure(available); }
+
+Size MappersContent::minimumSize() {
+  if (host() == nullptr) return Size{};
+  const double table = table_ != nullptr ? table_->minimumSize().width : 0.0;
+  return Size{std::max(toolbar_->measure(Size{}).width, table) + kContentRightPadding, 0.0};
+}
 
 void MappersContent::arrange(const Rect& bounds) {
   setBounds(bounds);

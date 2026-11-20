@@ -106,6 +106,8 @@ class DialogFrame : public Widget {
   [[nodiscard]] Widget* closeControl() const { return close_; }
   /** 内容高度按正文时窗口需要的高度：标题栏加正文（不超过 maxBodyHeight）加按钮区。 */
   [[nodiscard]] double naturalHeight(double width, double maxBodyHeight);
+  /** 窗口刚好装下标题栏上的按钮、正文的最小尺寸（见 Widget::minimumSize）与按钮区所需的最小尺寸；正文没有要求的方向上只算标题栏与按钮区。 */
+  [[nodiscard]] Size minimumWindowSize();
 
   [[nodiscard]] Size measure(Size available) override { return available; }
   void arrange(const Rect& bounds) override;

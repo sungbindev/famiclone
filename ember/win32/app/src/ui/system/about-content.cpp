@@ -11,6 +11,8 @@
 
 #include "ui/system/about-content.hpp"
 
+#include <algorithm>
+
 #include "rujian/ui/facts.hpp"
 #include "rujian/ui/label.hpp"
 
@@ -114,7 +116,7 @@ AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget>
   buildTime_ = static_cast<DescriptionRow*>(info->addChild(std::move(buildTime)));
   Widget* infoRaw = title->addChild(std::move(info));
   title->setGrow(infoRaw, 1);
-  stack->addChild(std::move(title));
+  header_ = stack->addChild(std::move(title));
 
   auto facts = std::make_unique<Facts>();
   facts->addFact(kAuthor, view.author);
@@ -126,7 +128,7 @@ AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget>
   projectLink_ = link.get();
   facts->addFact(kProject, std::move(link));
   facts->addFact(kLicense, view.license);
-  stack->addChild(std::move(facts));
+  facts_ = stack->addChild(std::move(facts));
 
   stack->addChild(std::make_unique<Heading>(kThirdParty));
   auto hint = std::make_unique<DescriptionRow>();
@@ -160,6 +162,12 @@ AboutContent::~AboutContent() {
 }
 
 Size AboutContent::measure(Size available) { return scroll_->measure(available); }
+
+Size AboutContent::minimumSize() {
+  if (host() == nullptr) return Size{};
+  const double widest = std::max({header_->measure(Size{}).width, facts_->measure(Size{}).width, table_->minimumSize().width});
+  return Size{widest + kContentRightPadding, 0.0};
+}
 
 void AboutContent::arrange(const Rect& bounds) {
   setBounds(bounds);

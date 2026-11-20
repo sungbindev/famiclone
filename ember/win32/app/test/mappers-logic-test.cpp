@@ -346,9 +346,10 @@ TEST(MappersModule, RegistersTheDialogTheCommandAndTheSettingsMenuItemAndAttache
   ASSERT_EQ(module.dialogs.size(), 1U);
   EXPECT_EQ(module.dialogs[0].id, "mappers.plugins");
   EXPECT_EQ(module.dialogs[0].title, "mapper 插件");
-  EXPECT_EQ(module.dialogs[0].width, 760);
+  EXPECT_EQ(module.dialogs[0].width, 0);
   EXPECT_EQ(module.dialogs[0].height, 560);
-  EXPECT_EQ(module.dialogs[0].minWidth, 560);
+  EXPECT_TRUE(module.dialogs[0].fitMinWidth);
+  EXPECT_FALSE(module.dialogs[0].fitMinHeight);
   EXPECT_EQ(module.dialogs[0].minHeight, 360);
   ASSERT_EQ(module.commands.size(), 1U);
   EXPECT_EQ(module.commands[0].id, "mappers.open");

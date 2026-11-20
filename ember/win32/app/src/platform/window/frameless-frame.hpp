@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <utility>
 
 namespace ember::win32::platform {
 
@@ -67,6 +68,8 @@ struct FramelessOptions {
   std::function<double()> scale;
   /** 自绘模式：不用系统的框架与阴影，阴影与按钮跟踪都由本类负责，边框由调用方画。 */
   bool customFrame{false};
+  /** 每次系统查询最小尺寸时调用并取代上面的最小尺寸（逻辑像素的宽、高）；用于最小尺寸随内容变化的窗口。 */
+  std::function<std::pair<double, double>()> minimumProvider;
 };
 
 /** 自绘标题栏窗口的非客户区行为。 */

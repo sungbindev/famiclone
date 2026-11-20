@@ -15,10 +15,6 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 对话框内容区的初始尺寸（逻辑像素）；没有最小尺寸。 */
-constexpr int kDialogWidth = 640;
-constexpr int kDialogHeight = 560;
-
 constexpr const char* kTitle = "手柄设置";
 
 }  // namespace
@@ -30,8 +26,8 @@ contracts::ShellModule createInputModule(GamepadSettingsController& controller) 
   contracts::ShellDialogDefinition dialog;
   dialog.id = kGamepadSettingsDialogId;
   dialog.title = kTitle;
-  dialog.width = kDialogWidth;
-  dialog.height = kDialogHeight;
+  dialog.fitMinWidth = true;
+  dialog.fitMinHeight = true;
   module.dialogs.push_back(std::move(dialog));
 
   contracts::ShellCommandDefinition open;

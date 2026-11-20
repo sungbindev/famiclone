@@ -22,6 +22,8 @@ namespace rujian::ui {
 namespace {
 
 constexpr double kBorderWidth = 1.0;
+/** 换行判断的容差（逻辑像素）：刚好放下时不因浮点误差换行。 */
+constexpr double kWrapTolerance = 0.01;
 
 }  // namespace
 
@@ -71,8 +73,10 @@ Toolbar::Layout Toolbar::layout(double width) {
   if (leading_ != nullptr && result.descriptionWidth > 0) startWidth += tokens::toolbar_gap;
   result.startHeight = std::max(result.leadingHeight, result.descriptionHeight);
   const bool hasStart = leading_ != nullptr || result.descriptionWidth > 0;
+  // 一行放下全部内容需要的宽度
+  result.naturalWidth = startWidth + (hasStart && actions_ != nullptr ? tokens::toolbar_gap : 0.0) + result.actionsWidth;
   // 放不下时操作换到第二行
-  result.wrapped = hasStart && actions_ != nullptr && startWidth + tokens::toolbar_gap + result.actionsWidth > width;
+  result.wrapped = hasStart && actions_ != nullptr && result.naturalWidth > width + kWrapTolerance;
   double content = 0.0;
   if (result.wrapped) content = result.startHeight + tokens::toolbar_gap + result.actionsHeight;
   else content = std::max(result.startHeight, result.actionsHeight);
@@ -82,7 +86,7 @@ Toolbar::Layout Toolbar::layout(double width) {
 
 Size Toolbar::measure(Size available) {
   const Layout laid = layout(available.width > 0 ? available.width : 1e9);
-  return Size{available.width > 0 ? available.width : laid.leadingWidth + laid.descriptionWidth + laid.actionsWidth, laid.height};
+  return Size{available.width > 0 ? available.width : laid.naturalWidth, laid.height};
 }
 
 void Toolbar::arrange(const Rect& bounds) {

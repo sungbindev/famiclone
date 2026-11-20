@@ -271,5 +271,29 @@ TEST(GamepadSettingsContent, DestroyingUnsubscribesFromTheModel) {
   EXPECT_TRUE(s.model.handlers.empty());
 }
 
+TEST(GamepadSettingsContent, MinimumSizeFitsThePadDiagramAndEveryStateOfThePage) {
+  Scene s;
+  s.open();
+  const rujian::ui::Size minimum = s.content->minimumSize();
+  // 手柄图用它的设计宽度，不被压小
+  EXPECT_GE(minimum.width, s.content->players()[0].diagram->measure(rujian::ui::Size{}).width);
+  s.root.layout({minimum.width, minimum.height});
+  EXPECT_NEAR(s.content->players()[0].diagram->bounds().width, minimum.width, 0.01);
+  // 切到实体手柄、“使用的手柄”出现后，内容也不超出最小高度
+  s.model.current.players[0].source = contracts::PadInputSource::Gamepad;
+  s.model.current.players[0].showDevice = true;
+  s.model.notify();
+  s.root.layout({minimum.width, minimum.height});
+  EXPECT_LE(s.content->measure(rujian::ui::Size{minimum.width, 0}).height, minimum.height + 0.01);
+}
+
+TEST(GamepadSettingsContent, MinimumSizeIsEmptyBeforeItIsOnAWindow) {
+  Scene s;
+  auto created = std::make_unique<ui::GamepadSettingsContent>(s.model);
+  const rujian::ui::Size minimum = created->minimumSize();
+  EXPECT_DOUBLE_EQ(minimum.width, 0);
+  EXPECT_DOUBLE_EQ(minimum.height, 0);
+}
+
 }  // namespace
 }  // namespace ember::win32

@@ -16,6 +16,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "platform/window/frameless-frame.hpp"
 #include "rujian/ui/dialog-frame.hpp"
@@ -36,6 +37,9 @@ struct DialogWindowOptions {
   /** 最小大小（逻辑像素），0 表示不限。 */
   double minimumWidth{0};
   double minimumHeight{0};
+  /** 最小宽度、最小高度按内容算：取正文的最小尺寸（Widget::minimumSize）加标题栏与按钮区，不低于上面的最小大小；初始大小也不小于它。 */
+  bool fitMinimumWidth{false};
+  bool fitMinimumHeight{false};
   /** 是否有最大化按钮。 */
   bool maximizable{false};
   /** 是否有最小化按钮：对话框有归属窗口且归属窗口不可用，所以“最小化”是把归属窗口最小化（对话框跟着隐藏，还原归属窗口时一起回来）。 */
@@ -82,6 +86,8 @@ class DialogWindow {
 
  private:
   void place();
+  /** 当前的最小尺寸（逻辑像素的宽、高）：按内容算的方向取内容所需与固定最小值中较大的。 */
+  std::pair<double, double> minimumSize();
   void minimize();
   void applyBorderColor();
 

@@ -123,6 +123,21 @@ GamepadSettingsContent::PlayerWidgets GamepadSettingsContent::makePlayer(int pla
 
 Size GamepadSettingsContent::measure(Size available) { return stack_->measure(available); }
 
+Size GamepadSettingsContent::minimumSize() {
+  if (host() == nullptr) return Size{};
+  double width = std::max(tabs_->tabBar()->measure(Size{}).width, reset_->measure(Size{}).width);
+  for (const PlayerWidgets& player : players_) width = std::max({width, player.source->measure(Size{}).width, player.diagram->measure(Size{}).width});
+  // “使用的手柄”一项切到实体手柄时才出现，高度按它显示的情况算
+  std::vector<bool> shown;
+  for (const PlayerWidgets& player : players_) {
+    shown.push_back(player.deviceField->visible());
+    player.deviceField->setVisible(true);
+  }
+  const double height = stack_->measure(Size{width, 0}).height;
+  for (std::size_t i = 0; i < players_.size(); ++i) players_[i].deviceField->setVisible(shown[i]);
+  return Size{width, height};
+}
+
 void GamepadSettingsContent::arrange(const Rect& bounds) {
   setBounds(bounds);
   stack_->arrange(bounds);

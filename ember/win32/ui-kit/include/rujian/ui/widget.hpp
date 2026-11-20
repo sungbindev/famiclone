@@ -96,6 +96,8 @@ class Widget {
    * @param available 可用空间的上限，宽或高为 0 表示不限制。
    */
   [[nodiscard]] virtual Size measure(Size available);
+  /** 控件要正常显示至少需要的尺寸：文字不被换行或挤压、控件不换行；段落文字允许换行，不计入。默认没有要求（0）；对话框据此算窗口的最小尺寸。 */
+  [[nodiscard]] virtual Size minimumSize();
   /** 摆放：设置 bounds 并摆放子控件；默认让每个子控件铺满自己。 */
   virtual void arrange(const Rect& bounds);
   /** 控件占据的区域，窗口坐标。 */

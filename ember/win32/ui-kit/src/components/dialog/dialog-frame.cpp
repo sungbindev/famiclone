@@ -26,6 +26,8 @@ namespace {
 constexpr int kVirtualKeyReturn = 0x0D;
 constexpr int kVirtualKeyEscape = 0x1B;
 constexpr int kVirtualKeySpace = 0x20;
+/** 最小尺寸的余量（逻辑像素）：文字宽度刚好放下时不因浮点误差换行。 */
+constexpr double kFitSlack = 0.5;
 
 /** 铺满正文区的正文包装：四周留正文内边距（flushRight 时右边不留），正文自己占满剩下的区域（对应网页版正文元素的 height: 100%）。 */
 class FillBody final : public Widget {
@@ -332,6 +334,18 @@ DialogHit DialogFrame::hitTestWindow(Point point) const {
 double DialogFrame::naturalHeight(double width, double maxBodyHeight) {
   scroll_->setMaxHeight(maxBodyHeight);
   return tokens::dialog_titlebar_height + scroll_->measure(Size{width, 0}).height + footerHeight();
+}
+
+Size DialogFrame::minimumWindowSize() {
+  const Size body = content_ != nullptr ? content_->minimumSize() : Size{};
+  const double rightPadding = contentFill_ && contentFlushRight_ ? 0.0 : tokens::space_page;
+  double controls = tokens::space_sm + tokens::space_xs + (logo_ != nullptr ? tokens::title_bar_logo_size + tokens::space_sm : 0.0);
+  for (const Widget* control : {minimize_, maximize_, close_}) {
+    if (control != nullptr) controls += systemButtons_ ? tokens::title_bar_tool_width : tokens::dialog_control_size + tokens::space_xxs;
+  }
+  const double bodyWidth = body.width > 0 ? body.width + tokens::space_page + rightPadding + kFitSlack : 0.0;
+  const double bodyHeight = body.height > 0 ? body.height + 2 * tokens::space_page + kFitSlack : 0.0;
+  return Size{std::max(controls, bodyWidth), tokens::dialog_titlebar_height + bodyHeight + footerHeight()};
 }
 
 void DialogFrame::arrange(const Rect& bounds) {

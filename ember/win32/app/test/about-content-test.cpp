@@ -111,5 +111,14 @@ TEST(AboutContent, WorksWithoutALogoAndUnsubscribesWhenDestroyed) {
   EXPECT_TRUE(s.model.handlers.empty());
 }
 
+TEST(AboutContent, MinimumWidthFitsTheHeaderAndTheFactsAndHasNoHeightRequirement) {
+  Scene s;
+  const rujian::ui::Size minimum = s.content->minimumSize();
+  EXPECT_GT(minimum.width, 200);
+  EXPECT_DOUBLE_EQ(minimum.height, 0);
+  s.root.layout({minimum.width, 560});
+  EXPECT_LE(s.content->projectLink().bounds().right(), minimum.width);
+}
+
 }  // namespace
 }  // namespace ember::win32

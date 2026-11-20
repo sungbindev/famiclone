@@ -228,5 +228,20 @@ TEST(MappersContent, RowsFollowTheModelAndUnsubscribesWhenDestroyed) {
   EXPECT_TRUE(s.model.handlers.empty());
 }
 
+TEST(MappersContent, MinimumWidthKeepsTheToolbarOnOneLine) {
+  Scene s;
+  const rujian::ui::Size minimum = s.content->minimumSize();
+  EXPECT_GT(minimum.width, 0);
+  EXPECT_DOUBLE_EQ(minimum.height, 0);
+  s.root.layout({minimum.width, 560});
+  // 搜索框、来源下拉框与安装按钮在同一行
+  const auto center = [](const rujian::ui::Widget& widget) { return widget.bounds().y + widget.bounds().height / 2.0; };
+  EXPECT_NEAR(center(s.content->search()), center(s.content->install()), 0.5);
+  EXPECT_NEAR(center(s.content->source()), center(s.content->install()), 0.5);
+  // 再窄一点，工具栏就放不下了：安装按钮换到第二行
+  s.root.layout({minimum.width - 20, 560});
+  EXPECT_GT(s.content->install().bounds().y, s.content->search().bounds().bottom());
+}
+
 }  // namespace
 }  // namespace ember::win32

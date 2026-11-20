@@ -30,7 +30,7 @@ constexpr double kMaximumBodyShare = 0.7;
 rujian::ui::HostWindow::Options hostOptions(const DialogWindowOptions& options) {
   rujian::ui::HostWindow::Options host;
   host.title = options.title;
-  host.clientSize = rujian::ui::Size{options.width, options.height > 0 ? options.height : 200.0};
+  host.clientSize = rujian::ui::Size{options.width > 0 ? options.width : 200.0, options.height > 0 ? options.height : 200.0};
   host.theme = options.theme;
   host.owner = options.owner;
   return host;
@@ -61,7 +61,9 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
     if (!active) window_.root().dismissLayers();
   };
   callbacks.nonClientPressed = [this] { window_.root().dismissLayers(); };
-  frameless_ = std::make_unique<FramelessFrame>(window_.nativeHandle(), FramelessOptions{options_.minimumWidth, options_.minimumHeight, [this] { return window_.root().scale(); }, options_.customFrame}, std::move(callbacks));
+  FramelessOptions frameOptions{options_.minimumWidth, options_.minimumHeight, [this] { return window_.root().scale(); }, options_.customFrame};
+  if (options_.fitMinimumWidth || options_.fitMinimumHeight) frameOptions.minimumProvider = [this] { return minimumSize(); };
+  frameless_ = std::make_unique<FramelessFrame>(window_.nativeHandle(), std::move(frameOptions), std::move(callbacks));
   window_.setMessageHook([this](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
     if (message == WM_CLOSE) {
       // 不让系统销毁窗口（销毁会让消息循环退出），只请求关闭
@@ -127,6 +129,17 @@ DialogWindow::~DialogWindow() {
   frameless_.reset();
 }
 
+std::pair<double, double> DialogWindow::minimumSize() {
+  double width = options_.minimumWidth;
+  double height = options_.minimumHeight;
+  if (options_.fitMinimumWidth || options_.fitMinimumHeight) {
+    const rujian::ui::Size fit = frame_->minimumWindowSize();
+    if (options_.fitMinimumWidth) width = std::max(width, fit.width);
+    if (options_.fitMinimumHeight) height = std::max(height, fit.height);
+  }
+  return {width, height};
+}
+
 void DialogWindow::place() {
   HWND hwnd = static_cast<HWND>(window_.nativeHandle());
   HWND owner = static_cast<HWND>(options_.owner);
@@ -142,9 +155,12 @@ void DialogWindow::place() {
   MONITORINFO monitor{sizeof(monitor)};
   RECT work = ownerRect;
   if (GetMonitorInfoW(MonitorFromRect(&ownerRect, MONITOR_DEFAULTTONEAREST), &monitor) != FALSE) work = monitor.rcWork;
-  const int width = static_cast<int>(std::lround(options_.width * scale));
-  const double height = options_.height > 0 ? options_.height : frame_->naturalHeight(options_.width, (work.bottom - work.top) / scale * kMaximumBodyShare);
-  const int pixelHeight = static_cast<int>(std::lround(height * scale));
+  const auto [minimumWidth, minimumHeight] = minimumSize();
+  // 最小宽度、最小高度按内容算的方向，打开时就用最小值（向上取整到设备像素，与系统的最小尺寸查询一致）
+  const int width = options_.fitMinimumWidth ? static_cast<int>(std::ceil(minimumWidth * scale - 1e-6)) : static_cast<int>(std::lround(std::max(options_.width, minimumWidth) * scale));
+  const int pixelHeight = options_.fitMinimumHeight
+                              ? static_cast<int>(std::ceil(minimumHeight * scale - 1e-6))
+                              : static_cast<int>(std::lround(std::max(options_.height > 0 ? options_.height : frame_->naturalHeight(std::max(options_.width, minimumWidth), (work.bottom - work.top) / scale * kMaximumBodyShare), minimumHeight) * scale));
   const int ownerCenterX = (ownerRect.left + ownerRect.right) / 2;
   const int ownerCenterY = (ownerRect.top + ownerRect.bottom) / 2;
   const int left = std::clamp(ownerCenterX - width / 2, static_cast<int>(work.left), std::max(static_cast<int>(work.left), static_cast<int>(work.right) - width));

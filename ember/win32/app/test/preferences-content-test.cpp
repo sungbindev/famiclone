@@ -323,6 +323,16 @@ TEST(PreferencesContent, UserDataLinkOpensTheDirectoryAndTheButtonSwitches) {
   EXPECT_EQ(s.userData.calls, (std::vector<std::string>{"open", "switch"}));
 }
 
+TEST(PreferencesContent, UserDataLinkAndButtonAreOnTwoLinesAlignedAtTheLeft) {
+  Scene s;
+  s.open();
+  s.selectGroup(3);
+  const auto& link = s.content->userDataLink()->bounds();
+  const auto& button = s.content->userDataSwitch()->bounds();
+  EXPECT_GE(button.y, link.bottom());
+  EXPECT_DOUBLE_EQ(button.x, link.x);
+}
+
 TEST(PreferencesContent, UserDataSwitchIsDisabledWhenTheModelGivesAReason) {
   Scene s;
   s.userData.current.unavailableReason = "软件所在的目录不能写入";
@@ -361,6 +371,55 @@ TEST(PreferencesContent, DestroyingUnsubscribesFromTheModel) {
   EXPECT_EQ(s.preferences.handlers.size(), 1U);
   s.root.setContent(nullptr);
   EXPECT_TRUE(s.preferences.handlers.empty());
+}
+
+TEST(PreferencesContent, RowsStayBesideTheTextInANarrowWindow) {
+  Scene s;
+  s.open();
+  s.root.layout({600, 480});
+  const auto* theme = s.row("appearance.theme");
+  const auto& rowBox = theme->row->bounds();
+  const auto& select = theme->select->bounds();
+  // 控件靠行的右边，和名称在同一行，不上下排列
+  EXPECT_NEAR(select.right(), rowBox.right(), 0.01);
+  EXPECT_GT(select.x, rowBox.x + rowBox.width / 2);
+  EXPECT_LT(select.y, rowBox.bottom());
+  EXPECT_LT(select.bottom(), rowBox.bottom());
+}
+
+TEST(PreferencesContent, MinimumSizeKeepsEveryRowsControlsOnOneLine) {
+  Scene s;
+  s.open();
+  const rujian::ui::Size minimum = s.content->minimumSize();
+  EXPECT_GT(minimum.width, s.content->split().sideWidth());
+  EXPECT_GT(minimum.height, 0);
+  s.root.layout({minimum.width, minimum.height});
+  for (std::size_t group = 0; group < s.preferences.current.groups.size(); ++group) {
+    s.selectGroup(group);
+    for (const auto& state : s.content->rows()) {
+      // 行里显示出来的控件竖直方向的中心都在同一条线上（换行了就不在）
+      double center = -1;
+      for (const rujian::ui::Widget* control : {static_cast<const rujian::ui::Widget*>(state->select), static_cast<const rujian::ui::Widget*>(state->checkbox), static_cast<const rujian::ui::Widget*>(state->input),
+                                                  static_cast<const rujian::ui::Widget*>(state->pick), static_cast<const rujian::ui::Widget*>(state->reset)}) {
+        if (control == nullptr || !control->visible()) continue;
+        const double middle = control->bounds().y + control->bounds().height / 2.0;
+        if (center < 0) center = middle;
+        EXPECT_NEAR(middle, center, 0.5) << state->id;
+      }
+      // 行没有被挤成上下两部分：控件在行的右边
+      EXPECT_GT(state->row->bounds().right(), state->row->bounds().x + 100) << state->id;
+    }
+  }
+}
+
+TEST(PreferencesContent, MinimumSizeCoversThePageWithTheResetButtonShown) {
+  Scene s;
+  s.open();
+  const double without = s.content->minimumSize().width;
+  // 某一页的行显示“恢复默认”后更宽：最小宽度按它们都显示算，已经包含
+  s.preferences.current.groups[0].rows[0].changed = true;
+  s.preferences.notify();
+  EXPECT_DOUBLE_EQ(s.content->minimumSize().width, without);
 }
 
 }  // namespace

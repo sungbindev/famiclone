@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 
 #include "platform/window/resize-border.hpp"
 #include "platform/window/window-shadow.hpp"
@@ -260,8 +261,12 @@ bool FramelessFrame::handle(unsigned message, std::uintptr_t wParam, std::intptr
     case WM_GETMINMAXINFO: {
       auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
       const double scale = options_.scale ? options_.scale() : 1.0;
-      info->ptMinTrackSize.x = static_cast<LONG>(options_.minimumWidth * scale + 0.5);
-      info->ptMinTrackSize.y = static_cast<LONG>(options_.minimumHeight * scale + 0.5);
+      double minimumWidth = options_.minimumWidth;
+      double minimumHeight = options_.minimumHeight;
+      if (options_.minimumProvider) std::tie(minimumWidth, minimumHeight) = options_.minimumProvider();
+      // 向上取整：设备像素取整后的窗口不能比内容的最小尺寸小
+      info->ptMinTrackSize.x = static_cast<LONG>(std::ceil(minimumWidth * scale - 1e-6));
+      info->ptMinTrackSize.y = static_cast<LONG>(std::ceil(minimumHeight * scale - 1e-6));
       // 最大化时窗口矩形就是工作区：系统默认的矩形四周多出一圈缩放边框，会盖满整个显示器，系统把它当成全屏窗口而隐藏任务栏
       MONITORINFO monitor{sizeof(monitor)};
       if (GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor) != FALSE) {

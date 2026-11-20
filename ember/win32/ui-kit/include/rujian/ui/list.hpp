@@ -26,6 +26,10 @@ class ListRow : public Widget {
   void setTrim(bool top, bool bottom);
   [[nodiscard]] bool trimTop() const { return trimTop_; }
   [[nodiscard]] bool trimBottom() const { return trimBottom_; }
+  /** 控件列的自然宽度，没有控件列的行为 0。 */
+  [[nodiscard]] virtual double controlColumnNaturalWidth() { return 0.0; }
+  /** 列表统一的控件列宽度（各行取最宽的），让各行的控件左边对齐；0 表示各行自己算。 */
+  virtual void setSharedControlColumnWidth(double width) { (void)width; }
 
  private:
   bool trimTop_{false};
@@ -49,6 +53,8 @@ class List : public Widget {
   /** 可见的行。 */
   [[nodiscard]] std::vector<ListRow*> rows() const;
   void applyTrim();
+  /** 取各行控件列的最宽值，告诉每一行。 */
+  void shareControlColumnWidth();
 
   bool trimStart_{false};
   bool trimEnd_{false};

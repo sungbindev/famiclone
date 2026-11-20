@@ -38,6 +38,31 @@ constexpr double kSideWidthMinimum = 140;
 constexpr double kSideWidthMaximum = 320;
 /** 右侧滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
 constexpr double kPaneRightPadding = 10;
+/** 用户数据目录的路径链接的最大宽度：路径很长时在链接里换行，不让设置行（和对话框的最小宽度）跟着变宽。 */
+constexpr double kPathLinkMaxWidth = 280;
+/** “用户数据目录”一行里路径链接与按钮上下两行之间的间距。 */
+constexpr double kUserDataControlsGap = 6;
+
+/** 限制最大宽度的容器：子控件自然宽度不超过最大宽度时取自然宽度，超过时按最大宽度排版（文字换行）。 */
+class MaxWidth final : public Widget {
+ public:
+  MaxWidth(std::unique_ptr<Widget> child, double maxWidth) : maxWidth_(maxWidth) { child_ = addChild(std::move(child)); }
+
+  [[nodiscard]] Size measure(Size available) override {
+    const double limit = available.width > 0 ? std::min(available.width, maxWidth_) : maxWidth_;
+    const Size natural = child_->measure(Size{});
+    return natural.width <= limit ? natural : child_->measure(Size{limit, 0});
+  }
+  void arrange(const Rect& bounds) override {
+    setBounds(bounds);
+    child_->arrange(bounds);
+  }
+  [[nodiscard]] bool stretchesWidth() const override { return false; }
+
+ private:
+  double maxWidth_;
+  Widget* child_{nullptr};
+};
 
 std::unique_ptr<Button> compactButton(const char* label) {
   auto button = std::make_unique<Button>(label);
@@ -80,8 +105,42 @@ PreferencesContent::~PreferencesContent() {
 
 Size PreferencesContent::measure(Size available) { return split_->measure(available); }
 
+Size PreferencesContent::minimumSize() {
+  // 还没有挂到窗口上时量不出文字，不缓存
+  if (host() == nullptr) return Size{};
+  const contracts::PreferencesView view = preferences_.view();
+  const contracts::UserDataView userData = userData_.view();
+  std::string signature;
+  for (const contracts::PreferenceGroupView& group : view.groups) signature += signatureOf(view, &group, userData) + '\x1c';
+  if (signature != minimumSignature_) {
+    // 各分组的右边内容都临时挂到本控件上量一遍：宽度取最宽的一页，高度取在这个宽度下最高的一页
+    std::vector<std::unique_ptr<RowWidgets>> scratch;
+    std::pair<Button*, Button*> userDataButtons{nullptr, nullptr};
+    std::vector<Widget*> panes;
+    double width = 0;
+    for (const contracts::PreferenceGroupView& group : view.groups) {
+      Widget* pane = addChild(buildPane(view, &group, userData, scratch, userDataButtons, true));
+      panes.push_back(pane);
+      width = std::max(width, pane->measure(Size{}).width);
+    }
+    double height = 0;
+    for (Widget* pane : panes) height = std::max(height, pane->measure(Size{width, 0}).height);
+    for (Widget* pane : panes) removeChild(pane);
+    minimumSignature_ = signature;
+    paneMinimum_ = Size{width, height};
+  }
+  return Size{split_->sideExtent() + paneMinimum_.width, std::max(paneMinimum_.height, tree_->measure(Size{}).height)};
+}
+
 void PreferencesContent::arrange(const Rect& bounds) {
   setBounds(bounds);
+  // 左栏不能拖得让右边内容放不下
+  const double gap = split_->sideExtent() - split_->sideWidth();
+  const double sideMaximum = std::clamp(bounds.width - minimumSize().width + split_->sideExtent() - gap, kSideWidthMinimum, kSideWidthMaximum);
+  if (sideMaximum != appliedSideMaximum_) {
+    appliedSideMaximum_ = sideMaximum;
+    split_->setSideWidthRange(kSideWidthMinimum, sideMaximum);
+  }
   split_->arrange(bounds);
 }
 
@@ -127,41 +186,52 @@ void PreferencesContent::refresh() {
 
 void PreferencesContent::rebuildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::UserDataView& userData) {
   rows_.clear();
-  userDataLink_ = nullptr;
-  userDataSwitch_ = nullptr;
-
-  auto stack = std::make_unique<Stack>();
-  stack->setPadding(Insets{0, kPaneRightPadding, 0, 0});
-  if (view.load == contracts::PreferencesLoad::Failed) stack->addChild(errorState(view.message));
-
-  if (group != nullptr && (!group->rows.empty() || group->id == kAppGroupId)) {
-    auto list = std::make_unique<List>();
-    for (const contracts::PreferenceRow& spec : group->rows) rows_.push_back(makeRow(spec, *list));
-    if (group->id == kAppGroupId) addUserDataRow(*list, userData);
-    auto panel = std::make_unique<Panel>();
-    panel->addContent(std::move(list));
-    stack->addChild(std::move(panel));
-  }
-
+  std::pair<Button*, Button*> userDataButtons{nullptr, nullptr};
+  auto stack = buildPane(view, group, userData, rows_, userDataButtons, false);
+  userDataLink_ = userDataButtons.first;
+  userDataSwitch_ = userDataButtons.second;
   pane_->setContent(std::move(stack));
   requestLayout();
 }
 
-void PreferencesContent::addUserDataRow(List& list, const contracts::UserDataView& userData) {
+std::unique_ptr<Stack> PreferencesContent::buildPane(const contracts::PreferencesView& view, const contracts::PreferenceGroupView* group, const contracts::UserDataView& userData, std::vector<std::unique_ptr<RowWidgets>>& rows,
+                                                      std::pair<Button*, Button*>& userDataButtons, bool measuring) {
+  auto stack = std::make_unique<Stack>();
+  stack->setPadding(Insets{0, kPaneRightPadding, 0, 0});
+  if (!measuring && view.load == contracts::PreferencesLoad::Failed) stack->addChild(errorState(view.message));
+
+  if (group != nullptr && (!group->rows.empty() || group->id == kAppGroupId)) {
+    auto list = std::make_unique<List>();
+    for (const contracts::PreferenceRow& spec : group->rows) rows.push_back(makeRow(spec, *list));
+    if (group->id == kAppGroupId) userDataButtons = addUserDataRow(*list, userData);
+    if (measuring) {
+      for (const auto& state : rows) state->reset->setVisible(true);
+    }
+    auto panel = std::make_unique<Panel>();
+    panel->addContent(std::move(list));
+    stack->addChild(std::move(panel));
+  }
+  return stack;
+}
+
+std::pair<Button*, Button*> PreferencesContent::addUserDataRow(List& list, const contracts::UserDataView& userData) {
   auto row = std::make_unique<SettingRow>();
+  row->setSideBySide(true);
   row->setLabel(kUserDataLabel);
   row->setDescription(userData.unavailableReason.empty() ? std::string(kUserDataDescription) : std::string(kUserDataDescription) + "\n" + userData.unavailableReason);
-  auto controls = std::make_unique<rujian::ui::Row>();
+  auto controls = std::make_unique<FlexBox>(FlexDirection::Column, false, kUserDataControlsGap, FlexAlign::Start);
   auto link = std::make_unique<Button>(userData.directory);
   link->setVariant(ButtonVariant::Link);
   link->setOnClick([this] { userData_.openDirectory(); });
-  userDataLink_ = static_cast<Button*>(controls->addChild(std::move(link)));
+  Button* linkRaw = link.get();
+  controls->addChild(std::make_unique<MaxWidth>(std::move(link), kPathLinkMaxWidth));
   auto change = compactButton(userData.switchLabel.c_str());
   change->setEnabled(userData.unavailableReason.empty());
   change->setOnClick([this] { userData_.switchPlace(); });
-  userDataSwitch_ = static_cast<Button*>(controls->addChild(std::move(change)));
+  auto* changeRaw = static_cast<Button*>(controls->addChild(std::move(change)));
   row->setControl(std::move(controls));
   list.addRow(std::move(row));
+  return {linkRaw, changeRaw};
 }
 
 std::unique_ptr<PreferencesContent::RowWidgets> PreferencesContent::makeRow(const contracts::PreferenceRow& spec, List& list) {
@@ -173,6 +243,7 @@ std::unique_ptr<PreferencesContent::RowWidgets> PreferencesContent::makeRow(cons
   const std::string id = spec.id;
 
   auto row = std::make_unique<SettingRow>();
+  row->setSideBySide(true);
   row->setLabel(spec.label);
   row->setDescription(spec.description);
   auto controls = std::make_unique<rujian::ui::Row>();

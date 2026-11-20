@@ -42,6 +42,8 @@ class MappersContent final : public rujian::ui::Widget {
   ~MappersContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
+  /** 工具栏在一行里放得下、表格各列放得下所需的宽度；高度没有要求（列表可以滚动）。 */
+  [[nodiscard]] rujian::ui::Size minimumSize() override;
   void arrange(const rujian::ui::Rect& bounds) override;
   void onTimer(unsigned id) override;
 

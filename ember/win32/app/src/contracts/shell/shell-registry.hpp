@@ -80,13 +80,16 @@ struct ShellDialogDefinition {
   std::string id;
   /** 对话框标题。 */
   std::string title;
-  /** 内容区初始宽度（逻辑像素）。 */
+  /** 内容区初始宽度（逻辑像素）；0 表示不登记（最小宽度按内容算的对话框打开时用最小宽度）。 */
   int width{0};
-  /** 内容区初始高度；0 表示按内容。 */
+  /** 内容区初始高度；0 表示按内容（最小高度按内容算的对话框打开时用最小高度）。 */
   int height{0};
   /** 最小宽度与最小高度；0 表示不限。 */
   int minWidth{0};
   int minHeight{0};
+  /** 最小宽度、最小高度按内容算（刚好装下内容、不换行，见 Widget::minimumSize），不低于上面的 minWidth、minHeight。 */
+  bool fitMinWidth{false};
+  bool fitMinHeight{false};
 };
 
 /** 命令：菜单项与快捷键都经命令执行动作。 */

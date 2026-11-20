@@ -339,9 +339,11 @@ Size Select::measure(Size available) {
   if (host() == nullptr) return Size{};
   if (available.width > 0) return Size{available.width, tokens::select_height};
   const double border = snapBorderWidth(kBorderWidth, host()->scale());
+  // 没有给定宽度时取最宽的选项（切换选项时宽度不变），当前显示的占位文字也算
   bool placeholder = false;
-  const std::string& text = shownText(placeholder);
-  const double width = host()->measureText(text, textStyle(kTransparent), 0).width + tokens::select_padding_left + tokens::select_padding_right + 2 * border;
+  double textWidth = host()->measureText(shownText(placeholder), textStyle(kTransparent), 0).width;
+  for (const SelectOption& option : options_) textWidth = std::max(textWidth, host()->measureText(option.label, textStyle(kTransparent), 0).width);
+  const double width = textWidth + tokens::select_padding_left + tokens::select_padding_right + 2 * border;
   return Size{std::max(tokens::select_min_width, width), tokens::select_height};
 }
 

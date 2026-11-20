@@ -11,6 +11,8 @@
 
 #include "ui/machines/machines-content.hpp"
 
+#include <algorithm>
+
 #include "rujian/ui/callout.hpp"
 #include "rujian/ui/list.hpp"
 #include "rujian/ui/panel.hpp"
@@ -32,6 +34,8 @@ constexpr const char* kBiosOpenDirectory = "打开 BIOS 目录";
 
 /** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
 constexpr double kPaneRightPadding = 10;
+/** 顶部说明段落的最小宽度：段落可以折行，但不窄到文字挤成一条（文字宽度至少约 420，再加上说明框的边框与内边距）。 */
+constexpr double kIntroMinWidth = 460;
 
 std::unique_ptr<Button> compactButton(const char* label) {
   auto button = std::make_unique<Button>(label);
@@ -61,6 +65,12 @@ MachinesContent::~MachinesContent() {
 
 Size MachinesContent::measure(Size available) { return pane_->measure(available); }
 
+Size MachinesContent::minimumSize() {
+  if (host() == nullptr) return Size{};
+  const double list = listPanel_ != nullptr ? listPanel_->measure(Size{}).width : 0.0;
+  return Size{std::max(list, kIntroMinWidth) + kPaneRightPadding, 0.0};
+}
+
 void MachinesContent::arrange(const Rect& bounds) {
   setBounds(bounds);
   pane_->arrange(bounds);
@@ -83,6 +93,7 @@ void MachinesContent::refresh() {
 void MachinesContent::rebuild(const contracts::BiosView& view) {
   biosRows_.clear();
   openDirectory_ = nullptr;
+  listPanel_ = nullptr;
 
   auto stack = std::make_unique<Stack>();
   stack->setPadding(Insets{0, kPaneRightPadding, 0, 0});
@@ -99,6 +110,7 @@ void MachinesContent::rebuild(const contracts::BiosView& view) {
     auto list = std::make_unique<List>();
     for (const contracts::BiosRow& spec : view.rows) {
       auto row = std::make_unique<SettingRow>();
+      row->setSideBySide(true);
       row->setLabel(spec.name);
       row->setDescription(spec.status);
       auto controls = std::make_unique<rujian::ui::Row>();
@@ -126,7 +138,7 @@ void MachinesContent::rebuild(const contracts::BiosView& view) {
     }
     auto panel = std::make_unique<Panel>();
     panel->addContent(std::move(list));
-    stack->addChild(std::move(panel));
+    listPanel_ = stack->addChild(std::move(panel));
   }
 
   pane_->setContent(std::move(stack));

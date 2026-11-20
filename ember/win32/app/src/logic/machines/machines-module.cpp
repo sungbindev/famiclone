@@ -15,10 +15,8 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 对话框内容区的初始尺寸与最小尺寸（逻辑像素）。 */
-constexpr int kDialogWidth = 640;
+/** 对话框内容区的初始高度与最小高度（逻辑像素）；宽度按内容算，打开时就用最小宽度。 */
 constexpr int kDialogHeight = 520;
-constexpr int kDialogMinWidth = 480;
 constexpr int kDialogMinHeight = 300;
 
 constexpr const char* kTitle = "机型与 BIOS";
@@ -32,9 +30,8 @@ contracts::ShellModule createMachinesModule(BiosController& controller) {
   contracts::ShellDialogDefinition dialog;
   dialog.id = kMachinesDialogId;
   dialog.title = kTitle;
-  dialog.width = kDialogWidth;
   dialog.height = kDialogHeight;
-  dialog.minWidth = kDialogMinWidth;
+  dialog.fitMinWidth = true;
   dialog.minHeight = kDialogMinHeight;
   module.dialogs.push_back(std::move(dialog));
 

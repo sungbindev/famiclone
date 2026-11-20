@@ -36,6 +36,8 @@ class AboutContent final : public rujian::ui::Widget {
   ~AboutContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
+  /** 头部、信息行不折行、表格各列放得下所需的宽度；高度没有要求（内容可以滚动）。 */
+  [[nodiscard]] rujian::ui::Size minimumSize() override;
   void arrange(const rujian::ui::Rect& bounds) override;
 
   /** 右上角的版本一行文字。 */
@@ -53,6 +55,8 @@ class AboutContent final : public rujian::ui::Widget {
   contracts::AboutModel& model_;
   std::function<void()> unsubscribe_;
   rujian::ui::ScrollArea* scroll_{nullptr};
+  rujian::ui::Widget* header_{nullptr};
+  rujian::ui::Widget* facts_{nullptr};
   rujian::ui::DescriptionRow* versions_{nullptr};
   rujian::ui::DescriptionRow* buildTime_{nullptr};
   rujian::ui::Button* projectLink_{nullptr};

@@ -34,6 +34,8 @@ class SplitView : public Widget {
   /** 左栏宽度，默认 220，会被限制在最小与最大宽度之间。 */
   void setSideWidth(double width);
   [[nodiscard]] double sideWidth() const { return sideWidth_; }
+  /** 主区左边让出的宽度：左栏加它与主区之间的间距。 */
+  [[nodiscard]] double sideExtent() const;
   /** 分隔条（给测试与对照用，它是可获得键盘焦点的控件）。 */
   [[nodiscard]] Widget* splitter() const;
   /** 左栏宽度的范围，默认 160 到 480。 */

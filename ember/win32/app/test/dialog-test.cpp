@@ -85,6 +85,90 @@ TEST(DialogWindow, MinimumTrackSizeIsTheRequestedMinimum) {
   EXPECT_EQ(info.ptMinTrackSize.y, std::lround(200 * scale));
 }
 
+/** 有最小尺寸要求的正文。 */
+class MinimumBody final : public rujian::ui::Widget {
+ public:
+  [[nodiscard]] rujian::ui::Size minimumSize() override { return rujian::ui::Size{400, 250}; }
+};
+
+TEST(DialogWindow, FitMinimumSizeFollowsTheContentsMinimumAndRaisesTheInitialSize) {
+  Owner owner;
+  int closes = 0;
+  // 先用普通对话框量出本机的缩放比例
+  platform::DialogWindow reference(optionsFor(owner, &closes), makeFrame());
+  RECT referenceRect{};
+  GetWindowRect(static_cast<HWND>(reference.handle()), &referenceRect);
+  const double scale = static_cast<double>(referenceRect.right - referenceRect.left) / kWidth;
+
+  platform::DialogWindowOptions options = optionsFor(owner, &closes);
+  options.width = 300;
+  options.height = 100;
+  options.minimumWidth = 0;
+  options.minimumHeight = 0;
+  options.fitMinimumWidth = true;
+  options.fitMinimumHeight = true;
+  auto frame = std::make_unique<rujian::ui::DialogFrame>();
+  frame->setTitle("测试");
+  frame->setContent(std::make_unique<MinimumBody>());
+  platform::DialogWindow dialog(std::move(options), std::move(frame));
+  HWND hwnd = static_cast<HWND>(dialog.handle());
+  MINMAXINFO info{};
+  SendMessageW(hwnd, WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&info));
+  RECT rect{};
+  GetWindowRect(hwnd, &rect);
+  // 正文四周各留 10、标题栏高 32，另有半个像素的余量；窗口的初始大小不小于它
+  EXPECT_EQ(info.ptMinTrackSize.x, std::ceil(420.5 * scale - 1e-6));
+  EXPECT_EQ(info.ptMinTrackSize.y, std::ceil(302.5 * scale - 1e-6));
+  EXPECT_GE(rect.right - rect.left, info.ptMinTrackSize.x - 1);
+  EXPECT_GE(rect.bottom - rect.top, info.ptMinTrackSize.y - 1);
+}
+
+TEST(DialogWindow, FitMinimumSizeIsTheInitialSizeEvenWhenTheRequestedSizeIsLarger) {
+  Owner owner;
+  int closes = 0;
+  platform::DialogWindowOptions options = optionsFor(owner, &closes);
+  options.width = 900;
+  options.height = 700;
+  options.minimumWidth = 0;
+  options.minimumHeight = 0;
+  options.fitMinimumWidth = true;
+  options.fitMinimumHeight = true;
+  auto frame = std::make_unique<rujian::ui::DialogFrame>();
+  frame->setTitle("测试");
+  frame->setContent(std::make_unique<MinimumBody>());
+  platform::DialogWindow dialog(std::move(options), std::move(frame));
+  HWND hwnd = static_cast<HWND>(dialog.handle());
+  MINMAXINFO info{};
+  SendMessageW(hwnd, WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&info));
+  RECT rect{};
+  GetWindowRect(hwnd, &rect);
+  EXPECT_EQ(rect.right - rect.left, info.ptMinTrackSize.x);
+  EXPECT_EQ(rect.bottom - rect.top, info.ptMinTrackSize.y);
+}
+
+TEST(DialogWindow, OnlyTheFitDirectionOpensAtTheMinimum) {
+  Owner owner;
+  int closes = 0;
+  platform::DialogWindowOptions options = optionsFor(owner, &closes);
+  options.width = 900;
+  options.height = 700;
+  options.minimumWidth = 0;
+  options.minimumHeight = 0;
+  options.fitMinimumWidth = true;
+  auto frame = std::make_unique<rujian::ui::DialogFrame>();
+  frame->setTitle("测试");
+  frame->setContent(std::make_unique<MinimumBody>());
+  platform::DialogWindow dialog(std::move(options), std::move(frame));
+  HWND hwnd = static_cast<HWND>(dialog.handle());
+  MINMAXINFO info{};
+  SendMessageW(hwnd, WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&info));
+  RECT rect{};
+  GetWindowRect(hwnd, &rect);
+  EXPECT_EQ(rect.right - rect.left, info.ptMinTrackSize.x);
+  // 高度没有按内容算，仍用请求的高度
+  EXPECT_GT(rect.bottom - rect.top, info.ptMinTrackSize.y);
+}
+
 TEST(DialogWindow, CloseMessageOnlyRequestsClosingAndDoesNotDestroyTheWindow) {
   Owner owner;
   int closes = 0;

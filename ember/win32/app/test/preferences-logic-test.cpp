@@ -300,10 +300,10 @@ TEST(PreferencesModule, RegistersTheDialogTheCommandAndTheSettingsMenuItem) {
   ASSERT_EQ(module.dialogs.size(), 1U);
   EXPECT_EQ(module.dialogs[0].id, "preferences.preferences");
   EXPECT_EQ(module.dialogs[0].title, "首选项");
-  EXPECT_EQ(module.dialogs[0].width, 720);
-  EXPECT_EQ(module.dialogs[0].height, 520);
-  EXPECT_EQ(module.dialogs[0].minWidth, 560);
-  EXPECT_EQ(module.dialogs[0].minHeight, 360);
+  EXPECT_EQ(module.dialogs[0].width, 0);
+  EXPECT_EQ(module.dialogs[0].height, 0);
+  EXPECT_TRUE(module.dialogs[0].fitMinWidth);
+  EXPECT_TRUE(module.dialogs[0].fitMinHeight);
   ASSERT_EQ(module.commands.size(), 1U);
   EXPECT_EQ(module.commands[0].id, "preferences.open");
   EXPECT_EQ(module.commands[0].defaultShortcut, "Ctrl+,");

@@ -127,5 +127,25 @@ TEST(MachinesContent, DestroyingUnsubscribesFromTheModel) {
   EXPECT_TRUE(s.bios.handlers.empty());
 }
 
+TEST(MachinesContent, MinimumWidthKeepsEachRowOnOneLineAndHasNoHeightRequirement) {
+  Scene s;
+  s.open();
+  const rujian::ui::Size minimum = s.content->minimumSize();
+  EXPECT_GE(minimum.width, 460);
+  EXPECT_DOUBLE_EQ(minimum.height, 0);
+  s.root.layout({minimum.width, 420});
+  const auto& second = s.content->biosRows()[1];
+  // 按钮在同一行，并靠列表的右边
+  EXPECT_NEAR(second.replace->bounds().y, second.remove->bounds().y, 0.01);
+  EXPECT_GT(second.replace->bounds().x, minimum.width / 2);
+}
+
+TEST(MachinesContent, MinimumWidthKeepsTheIntroReadableWhileThereIsNoList) {
+  Scene s;
+  s.bios.current = contracts::BiosView{};
+  s.open();
+  EXPECT_GE(s.content->minimumSize().width, 460);
+}
+
 }  // namespace
 }  // namespace ember::win32

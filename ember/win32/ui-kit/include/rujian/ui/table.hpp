@@ -62,6 +62,8 @@ class Table : public Widget {
   void setOnRowSelect(SelectHandler handler);
 
   [[nodiscard]] Size measure(Size available) override;
+  /** 各列都取最小宽度时的表格宽度：再窄列就放不下了（文字超出用省略号）。 */
+  [[nodiscard]] Size minimumSize() override;
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
   [[nodiscard]] CursorKind cursor() const override;
@@ -90,6 +92,8 @@ class Table : public Widget {
   };
 
   [[nodiscard]] Layout layout(double width);
+  /** 每列的最小宽度与最大（内容不换行时的）宽度。 */
+  void columnLimits(std::vector<double>& minimum, std::vector<double>& maximum);
   [[nodiscard]] double borderWidth() const;
   [[nodiscard]] int rowAt(Point point);
 

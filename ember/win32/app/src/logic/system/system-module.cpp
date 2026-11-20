@@ -15,10 +15,8 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 对话框内容区的初始尺寸与最小尺寸（逻辑像素）。 */
-constexpr int kDialogWidth = 520;
+/** 对话框内容区的初始高度与最小高度（逻辑像素）；宽度按内容算，打开时就用最小宽度。 */
 constexpr int kDialogHeight = 560;
-constexpr int kDialogMinWidth = 400;
 constexpr int kDialogMinHeight = 320;
 
 /** 用户可见的文字。 */
@@ -63,9 +61,8 @@ contracts::ShellModule createSystemModule(contracts::RequestBroker& broker, Upda
   contracts::ShellDialogDefinition dialog;
   dialog.id = kAboutDialogId;
   dialog.title = kAbout;
-  dialog.width = kDialogWidth;
   dialog.height = kDialogHeight;
-  dialog.minWidth = kDialogMinWidth;
+  dialog.fitMinWidth = true;
   dialog.minHeight = kDialogMinHeight;
   module.dialogs.push_back(std::move(dialog));
 

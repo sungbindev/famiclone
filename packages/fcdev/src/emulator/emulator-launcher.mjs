@@ -7,7 +7,7 @@
 // 备注：Ember 进程与命令行脱离，命令行退出后窗口保持打开；调试模式不带 --cartridge，等连上调试服务后用 cartridges.load 载入并只上电不运行，由 debug 命令继续。
 //       学习机（sb2000 参数）没有命令行入口，两种模式都经调试服务：添加固件、放入磁盘镜像、整机开机；自由模式再在 SB-DOS 里输入程序名并继续运行后断开，
 //       调试模式停在开机状态（磁盘里的程序还没有被运行，由 debug 命令操作）。
-//       调试服务的 SDK（ember-debug-sdk）只在需要连接时才加载，没有构建时只影响调试模式与学习机。
+//       调试服务的 SDK（fcdev 包内的 dist/debug）只在需要连接时才加载，没有构建时只影响调试模式与学习机。
 // ------------------------------------------------------------------------
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -61,17 +61,17 @@ export function assertPortFree(port) {
 
 /**
  * 加载调试 SDK 的 Node 入口。
- * @returns {Promise<typeof import('ember-debug-sdk/node')>} SDK 的 Node 入口
+ * @returns {Promise<typeof import('../../dist/debug/types/debug-sdk/src/node.js')>} SDK 的 Node 入口
  * @throws {FcdevError} SDK 没有构建
  */
 async function loadSdk() {
   try {
-    return await import('ember-debug-sdk/node');
+    return await import('../../dist/debug/node.js');
   } catch (error) {
-    if (error?.code === 'ERR_MODULE_NOT_FOUND' || error?.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
-      throw new FcdevError('找不到调试 SDK（ember-debug-sdk）的构建产物', {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
+      throw new FcdevError('找不到调试 SDK 的构建产物', {
         code: 'DEBUG_SDK_MISSING',
-        hint: '在本仓库里先运行 npm run build -w packages/ember-debug-sdk；用 npm 安装的 fcdev 会自带',
+        hint: '在本仓库的 packages/fcdev 目录里先运行 npm run debug-sdk:build；用 npm 安装的 fcdev 会自带',
         cause: error,
       });
     }
@@ -88,7 +88,7 @@ async function loadSdk() {
  * @param {boolean} [input.debug] 是否调试模式
  * @param {number} [input.port] 调试端口
  * @param {number} [input.readyTimeoutMs] 等待调试服务就绪的上限
- * @returns {Promise<{pid: number|undefined, client: import('ember-debug-sdk').EmberDebugClient|null}>} 进程号；调试模式下还有已连接的客户端，调用者负责关闭
+ * @returns {Promise<{pid: number|undefined, client: import('../../dist/debug/types/debug-sdk/src/index.js').EmberDebugClient|null}>} 进程号；调试模式下还有已连接的客户端，调用者负责关闭
  * @throws {FcdevError} 文件不存在、无法启动、Ember 提前退出、拒绝载入，或调试服务没有在时限内就绪
  */
 export async function launchEmulator({ executable, romFile, sb2000, debug = false, port = DEFAULT_DEBUG_PORT, readyTimeoutMs = READY_TIMEOUT_MS }) {

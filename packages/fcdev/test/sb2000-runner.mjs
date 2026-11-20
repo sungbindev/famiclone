@@ -64,7 +64,7 @@ function isSdkBuilt() {
  */
 export function findSb2000Setup() {
   const firmware = process.env.FCDEV_TEST_FIRMWARE || REPOSITORY_FIRMWARE;
-  if (!existsSync(firmware) || process.env.FCDEV_SKIP_GUI_TESTS === '1' || SKIP_WITHOUT_TOOLCHAIN || !isSdkBuilt()) return null;
+  if (!process.env.FCDEV_EMULATOR || !existsSync(firmware) || process.env.FCDEV_SKIP_GUI_TESTS === '1' || SKIP_WITHOUT_TOOLCHAIN || !isSdkBuilt()) return null;
   try {
     return { firmware, emulator: locateEmulator() };
   } catch {
@@ -104,7 +104,7 @@ function findSymbol(debugText, symbol) {
 export class Sb2000Session {
   /**
    * @param {object} parts 组成部分
-   * @param {import('ember-debug-sdk').EmberDebugClient} parts.client 调试客户端
+   * @param {import('../dist/debug/types/debug-sdk/src/index.js').EmberDebugClient} parts.client 调试客户端
    * @param {number} parts.pid Ember 进程号
    * @param {number} parts.port 调试端口
    * @param {Record<string, number>} parts.symbols 符号地址

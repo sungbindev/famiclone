@@ -2,6 +2,16 @@
 
 适用于 `fcdev`、`create-fcdev`、`fcdev-cc65` 三个包，它们的版本号相同。
 
+## 未发布
+
+### 模拟器与调试
+
+- 新增 `fcdev mcp`：启动调试服务的 MCP 服务，Copilot 等 AI 工具可以直接连接运行中的 Ember。
+- 模拟器 Ember 随 `fcdev` 一起安装（Windows 64 位），`fcdev run`、`fcdev debug` 不用再下载模拟器、不用设置路径；Ember 自带升级，全机共用一份；`fcdev run --debug` 启动的 Ember 不会在调试中途自行升级。
+- Ember 的调试协议版本与 `fcdev` 不匹配时，连接会提示升级 `fcdev`。
+- 调试 SDK 并入 `fcdev`，不再有单独的 `ember-debug-sdk` 包，不用另外安装；终端客户端用 `fcdev debug` 运行。
+- 需要 Node.js 22.12 及以上。
+
 ## 0.8.0（2026-11-18）
 
 ### 小霸王学习机 SB2000

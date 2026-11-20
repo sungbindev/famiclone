@@ -23,7 +23,7 @@
     "update:publish": "node tools/release/publish-update.mjs",
     "help:build": "node tools/build/build-help.mjs",
     "boundaries": "npm run schema && node tools/check/check-modules.mjs",
-    "debug-sdk:check": "npm --prefix ../packages/ember-debug-sdk run check",
+    "debug-sdk:check": "npm --prefix ../packages/fcdev run debug-sdk:check",
     "test": "npm run schema && vitest run",
     "lint": "oxlint --deny-warnings tools test win32/ui-kit/tools",
     "check": "npm run lint && npm run boundaries && npm run help:build && vitest run && npm run core:test && npm run debug-sdk:check && npm run win32:check",

@@ -90,7 +90,7 @@ BOOT_PLAY_WAV:
     RTS
 ; 作用：开机硬件检测画面（标题“小霸王多媒体学生电脑 - 硬件检测”）的主序列：每一项先显示一张图片与行标题，再给出结果。“显示内存”和“内存”各做一次计数动画（BOOT_COUNT_UP_A 数到 512K、BOOT_COUNT_UP_B 数到 1024K），
 ; 之后是标准鼠标、标准键盘、标准游戏杆接口、标准打印机接口、1.44M 软驱；鼠标看 MOUSE_PACKET_STATE、键盘看 KBD_SELF_TEST_RESULT、软驱看 $80/$00 后的 DISK_STATUS，游戏杆与打印机只等 20 帧（不检测）。
-; 每项结果用 BOOT_PLAY_RESULT_TUNE 播放提示音、BOOT_SHOW_RESULT_MARK 显示 OK（结果为 0 时提示音不同、显示 ERROR）；键盘之后底行文字从“中山市小霸王电子工业有限公司”换成“国防科工委指挥技术学院联合研制”（文字 12）。实测的画面与调用序列见 disassembly/tools/probe-boot-screen.mjs
+; 每项结果用 BOOT_PLAY_RESULT_TUNE 播放提示音、BOOT_SHOW_RESULT_MARK 显示 OK（结果为 0 时提示音不同、显示 ERROR）；键盘之后底行文字从“中山市小霸王电子工业有限公司”换成“国防科工委指挥技术学院联合研制”（文字 12）。
 ; 一项一项显示的对应关系（图片、文字）：显示内存（5、2）、内存（6、3）、鼠标（7、4）、键盘（8、5）、游戏杆（9、6）、打印机（$0A、7）、软驱（$0B、8）
 ; 调用者：BOOT_MAIN
 BOOT_CHECK_SEQUENCE:

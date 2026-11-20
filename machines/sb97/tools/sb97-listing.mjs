@@ -6,7 +6,7 @@
 // 日期：2026-11-17
 // 备注：清单只是阅读用的，不保证能重新汇编出同一份 ROM；标签只给被跳转或调用过的地址，名字取入口名，没有则用 L_地址。
 // ------------------------------------------------------------------------
-import { formatInstruction } from '../../sb2000/disassembly/tools/disasm.mjs';
+import { formatInstruction } from './disasm.mjs';
 import { KIND_OPCODE } from './sb97-analysis.mjs';
 import { WINDOW_START } from './sb97-memory.mjs';
 

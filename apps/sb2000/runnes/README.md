@@ -57,7 +57,7 @@ npm start
 
 | 文件 | 说明 |
 | --- | --- |
-| `src/runnes.c` | 程序：读入并检查 iNES 文件，用 DMA 经 ERAM 缓冲再用 CPU 复制到第 3 个 128K 窗口，改 RESET 向量后进入 FC 兼容模式；硬件细节见 `machines/sb2000/disassembly/docs/research/NES兼容模式研究.md` |
+| `src/runnes.c` | 程序：读入并检查 iNES 文件，用 DMA 经 ERAM 缓冲再用 CPU 复制到第 3 个 128K 窗口，改 RESET 向量后进入 FC 兼容模式；硬件细节见 `machines/sb2000/docs/NES兼容模式研究.md` |
 | `fcdev.json` | fcdev 配置：目标 sb2000，程序名 runnes |
 
 ## 查阅接口

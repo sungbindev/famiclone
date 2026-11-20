@@ -10,6 +10,8 @@
 import { existsSync } from 'node:fs';
 import { FcdevError } from '../shared/index.mjs';
 
+/** @typedef {import('../../dist/debug/types/debug-sdk/src/index.js').EmberDebugClient} EmberDebugClient */
+
 /** 整机机型的标识 */
 export const SB2000_MACHINE = 'sb2000';
 
@@ -40,7 +42,7 @@ export function keyCodeOf(char) {
 
 /**
  * 运行指定的帧数，运行结束才返回。
- * @param {import('ember-debug-sdk').EmberDebugClient} client 已连接的调试客户端
+ * @param {EmberDebugClient} client 已连接的调试客户端
  * @param {number} frames 帧数
  * @returns {Promise<{stopped: string, frames: number, cycles: number}>} 运行结果，stopped 说明停止原因
  */
@@ -50,7 +52,7 @@ export function runFrames(client, frames) {
 
 /**
  * 按下并松开一个键，期间运行若干帧。
- * @param {import('ember-debug-sdk').EmberDebugClient} client 已连接的调试客户端
+ * @param {EmberDebugClient} client 已连接的调试客户端
  * @param {string} code 物理键位（KeyboardEvent.code），如 KeyA、Enter、F1
  * @param {number} [downFrames] 按下后运行的帧数
  * @param {number} [upFrames] 松开后运行的帧数
@@ -65,7 +67,7 @@ export async function tapKey(client, code, downFrames = KEY_DOWN_FRAMES, upFrame
 
 /**
  * 添加固件、放入磁盘镜像，并让整机机型开机：开机后已上电，没有运行。
- * @param {import('ember-debug-sdk').EmberDebugClient} client 已连接的调试客户端
+ * @param {EmberDebugClient} client 已连接的调试客户端
  * @param {{firmware: string, diskImage: string}} input 固件（BIOS）文件与磁盘镜像
  * @returns {Promise<void>}
  * @throws {FcdevError} 文件不存在，或 Ember 拒绝固件、镜像
@@ -89,7 +91,7 @@ export async function bootSb2000(client, { firmware, diskImage }) {
 
 /**
  * 在 SB-DOS 里运行程序：开机运行 900 帧，直接按两次回车跳过日期与时间，输入程序名回车。返回时程序刚被启动，机器仍是暂停的。
- * @param {import('ember-debug-sdk').EmberDebugClient} client 已连接的调试客户端
+ * @param {EmberDebugClient} client 已连接的调试客户端
  * @param {string} programName 程序名（不含扩展名）
  * @returns {Promise<void>}
  * @throws {FcdevError} 程序名里有无法输入的字符

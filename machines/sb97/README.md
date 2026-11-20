@@ -5,7 +5,7 @@
 ## 环境
 
 - Windows，Node.js 22 及以上（脚本无第三方依赖）。
-- 6502 指令解码借用 `machines/sb2000/disassembly/tools/disasm.mjs`，只引用，不改动。
+- 6502 指令解码在 `tools/disasm.mjs`，操作码表取自 `machines/sb2000/bios/tools/opcodes.mjs`。
 
 ## 使用
 

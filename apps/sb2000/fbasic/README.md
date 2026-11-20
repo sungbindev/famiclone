@@ -25,7 +25,7 @@
 
 ## 命令
 
-在本目录运行；FC 模式的运行需要 Ember 打包版（环境变量 `FCDEV_EMULATOR` 指向 `ember.exe`，默认 `../../../build/ember/Ember-win32-x64/ember.exe`）。
+在本目录运行；FC 模式的运行需要 Ember（环境变量 `FCDEV_EMULATOR` 指向 `Ember.exe`；没有设置时用 fcdev 随包的 Ember，见 `packages/fcdev/docs/02-模拟器与调试.md`）。
 
 | 命令 | 作用 |
 | --- | --- |

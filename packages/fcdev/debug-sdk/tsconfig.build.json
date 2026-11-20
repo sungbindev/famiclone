@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "..",
+    "outDir": "../dist/debug/types",
+    "types": ["node"]
+  },
+  "include": ["src", "generated"]
+}

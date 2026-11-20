@@ -21,7 +21,7 @@ import { importFcdevDocs } from './import-fcdev-docs.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const repoRoot = join(root, '..');
-const sdk = join(root, '..', 'packages', 'ember-debug-sdk');
+const sdk = join(root, '..', 'packages', 'fcdev', 'debug-sdk');
 const helpRoot = join(root, 'help');
 
 /** 先重新生成的 fcdev 文档：C 接口参考、符号参考与示例程序源码。 */

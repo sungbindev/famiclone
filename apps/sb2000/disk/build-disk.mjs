@@ -11,13 +11,24 @@
  *       content/ 即可一起打包。源码在仓库里是 UTF-8，放进盘里时转成 GB2312 并统一成 CR LF。
  * ------------------------------------------------------------------------
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildFat12Image } from '../../../machines/sb2000/disassembly/tools/fat12-image.mjs';
-import { readDirectoryFiles } from '../../../machines/sb2000/disassembly/tools/make-floppy.mjs';
+import { buildFat12Image } from '../../../packages/fcdev/src/packagers/fat12-image.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * 读取目录下的所有文件（不含子目录）。
+ * @param {string} dir 源目录
+ * @returns {{name: string, data: Buffer, mtime: Date}[]} 文件名、内容与修改时间
+ */
+function readDirectoryFiles(dir) {
+  return readdirSync(dir)
+    .map((name) => ({ name, full: path.join(dir, name) }))
+    .filter(({ full }) => statSync(full).isFile())
+    .map(({ name, full }) => ({ name, data: readFileSync(full), mtime: statSync(full).mtime }));
+}
 
 /** 放进软盘的文件所在的目录，脚本运行时创建，不入库 */
 const CONTENT_DIR = path.join(SCRIPT_DIR, 'content');

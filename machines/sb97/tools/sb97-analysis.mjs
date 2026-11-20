@@ -8,7 +8,7 @@
 //       控制流只跟 JSR、JMP 绝对、条件分支；JMP 间接与 RTS 之后不再往下走，间接跳转的目标要另给入口（见 sb97-pages.mjs）；
 //       常量追踪只在同一段连续指令里跟踪 A、X、Y 的立即数，遇到跳转目标、JSR、非连续地址就清空。
 // ------------------------------------------------------------------------
-import { decodeInstruction, endsFlow, isBranch } from '../../sb2000/disassembly/tools/disasm.mjs';
+import { decodeInstruction, endsFlow, isBranch } from './disasm.mjs';
 import { WINDOW_END, WINDOW_START } from './sb97-memory.mjs';
 
 /** 窗口里的字节数（$8000-$FFFF） */

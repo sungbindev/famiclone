@@ -13,12 +13,12 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { locateEmulator } from '../../../../../packages/fcdev/src/emulator/index.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..', '..', '..', '..');
-const SDK = pathToFileURL(join(REPO, 'packages', 'ember-debug-sdk', 'dist', 'node.js')).href;
+const SDK = pathToFileURL(join(REPO, 'packages', 'fcdev', 'dist', 'debug', 'node.js')).href;
 export const ROM = join(REPO, 'reference', 'nes-games', 'Family BASIC (Japan) (v3.0).nes');
-const DEFAULT_EMBER = join(REPO, 'build', 'ember', 'Ember-win32-x64', 'ember.exe');
 
 /** 每个字符对应的物理键位与是否按住 Shift（Family BASIC 键盘按 JIS 键位）。 */
 const SHIFT = 'ShiftLeft';
@@ -48,11 +48,11 @@ export function keyFor(char) {
 
 /**
  * 启动 Ember 并连上调试服务。
- * @param {{port?: number, executable?: string}} options 调试端口与 Ember 可执行文件
+ * @param {{port?: number, executable?: string}} options 调试端口与 Ember 可执行文件（不给时按 fcdev 的规则定位）
  * @returns {Promise<{client: object, pid: number, close: () => void}>} 客户端、进程号与关闭函数
  * @throws {Error} 启动失败或连不上
  */
-export async function startEmber({ port = 5721, executable = process.env.FCDEV_EMULATOR ?? DEFAULT_EMBER } = {}) {
+export async function startEmber({ port = 5721, executable = locateEmulator().executable } = {}) {
   const userDataDirectory = join(tmpdir(), 'fbasic-ember', String(port));
   mkdirSync(userDataDirectory, { recursive: true });
   rmSync(join(userDataDirectory, 'run', 'debug-endpoint.json'), { force: true });

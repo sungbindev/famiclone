@@ -6,15 +6,15 @@
 
 | 目录 | 内容 |
 | --- | --- |
-| `packages/fcdev` | 命令行 `fcdev` 与各机型目标（npm 包） |
+| `packages/fcdev` | 命令行 `fcdev`、各机型目标与调试 SDK（TypeScript 源码在 `debug-sdk/`，构建到 `dist/debug/`；终端客户端与 MCP 服务是 `fcdev debug`、`fcdev mcp`）（npm 包） |
 | `packages/create-fcdev` | `npm create fcdev` 的创建包与项目模板（npm 包） |
 | `packages/fcdev-cc65` | cc65 工具链包，由 `tools/build-cc65.mjs` 生成，不入库（npm 包） |
-| `packages/ember-debug-sdk` | Ember 调试服务的 SDK、终端客户端与 MCP 服务（npm 包） |
+| `packages/fcdev-ember` | 随包的 Ember 模拟器（Windows 64 位），由 `tools/build-ember.mjs` 从 Ember 的发布产物组装，只入库 `package.json`（npm 包） |
 | `ember` | 模拟器 Ember：Win32 原生外壳加 C++ 核心，独立的 npm 项目，不发布到 npm |
 | `vscode` | VS Code 扩展 fcdev（独立的 npm 项目，生成 `.vsix`） |
 | `cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `cc65/LICENSE` |
 | `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`runnes`、`memtest`、`fcprobe`、`hwprobe`、`hwtest`、`fbasic`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是独立的 npm 项目 |
-| `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`disassembly`（反汇编与调试工具） |
+| `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`docs`（研究文档） |
 | `machines/bbk` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
 | `machines/sb97` | SB97 的 BIOS 静态分析 |
 | `reference` | 真机参考资料：ROM、软盘镜像、磁带、游戏；`machines` 与测试会用到，不随 npm 包发布 |
@@ -32,6 +32,7 @@
 ```bash
 npm install
 node tools/build-cc65.mjs   # 用 cc65/ 构建工具链包 packages/fcdev-cc65（需要 mingw32-make 与 gcc）
+node tools/build-ember.mjs  # 用 Ember 的发布产物组装模拟器包 packages/fcdev-ember（没有发布产物时加 --package，先运行 Ember 的 npm run package:win）
 npm run build:libs          # 构建各目标的运行库
 npm test                    # 全部测试（会先运行 build:libs）
 npm run check               # 依赖边界检查加测试
@@ -39,11 +40,11 @@ npm run release:check       # 发布前检查（只检查）
 npm run release:verify      # 打包后在临时目录里创建、安装并构建四个模板
 ```
 
-### packages/ember-debug-sdk
+### 调试 SDK（packages/fcdev/debug-sdk）
 
 ```bash
-npm run check -w packages/ember-debug-sdk   # 生成接口类型、类型检查、oxlint、构建、测试
-npm run build -w packages/ember-debug-sdk   # 只构建 dist
+npm run debug-sdk:check -w packages/fcdev   # 生成接口类型、类型检查、oxlint、构建、测试
+npm run debug-sdk:build -w packages/fcdev   # 只构建 dist/debug
 ```
 
 ### ember（在 `ember/` 目录下）
@@ -86,13 +87,13 @@ npm run build          # 构建 BIOS
 npm run build:fast     # 构建 fastboot 变体
 npm test
 
-# machines/sb2000/disassembly、machines/bbk、machines/sb97
+# machines/bbk、machines/sb97
 npm test
 ```
 
 ## npm 包发布
 
-四个包用同一个版本号，发布顺序固定：`fcdev-cc65`、`ember-debug-sdk`、`fcdev`、`create-fcdev`。命令都在仓库根目录运行，说明见 [docs/05-发布.md](docs/05-发布.md)。
+四个包用同一个版本号，发布顺序固定：`fcdev-cc65`、`fcdev-ember`、`fcdev`、`create-fcdev`。命令都在仓库根目录运行，说明见 [docs/05-发布.md](docs/05-发布.md)。
 
 1. 在 `packages/fcdev/CHANGELOG.md` 写好新版本一节，标题为 `## <版本号>（日期）`。
 2. 升版本号（改三个包的 `version`、`fcdev` 的精确依赖，重新构建工具链包，刷新锁文件），然后自己提交：
@@ -118,7 +119,7 @@ npm test
 
 ```bash
 npm publish -w packages/fcdev-cc65
-npm publish -w packages/ember-debug-sdk
+npm publish -w packages/fcdev-ember
 npm publish -w packages/fcdev
 npm publish -w packages/create-fcdev
 ```

@@ -104,6 +104,7 @@
 #include "rujian/ui/window.hpp"
 #include "shared/preferences/allow-multiple-instances.hpp"
 #include "shared/shortcut/shortcut.hpp"
+#include "shared/update/update-policy.hpp"
 #include "shared/update/update-public-key.hpp"
 #include "ui/media/media-panel-content.hpp"
 #include "ui/input/gamepad-settings-content.hpp"
@@ -291,10 +292,10 @@ int runApplication(const shared::LaunchArguments& launch) {
   infra::RememberingFileDialog fileDialog(systemDialogs, lastDirectories);
   infra::ExplorerDirectory logDirectory(userData / "logs");
   infra::ExplorerDirectory biosDirectory(userData / "bios");
-  // 升级：发布配置里、且软件所在目录能写（新程序要覆盖当前程序）时才支持，否则状态固定是不支持
+  // 升级：发布配置里、不是调试会话（带 --debug-port 启动）、且软件所在目录能写（新程序要覆盖当前程序）时才支持，否则状态固定是不支持
   infra::WinHttpUpdateTransport updateTransport;
   infra::SignedExeUpdateEngine::Options updateOptions;
-  updateOptions.supported = kUpdatesEnabled && platform::canCreateFilesIn(executable.parent_path());
+  updateOptions.supported = shared::updatesSupported(kUpdatesEnabled, launch.debugPort.has_value(), platform::canCreateFilesIn(executable.parent_path()));
   updateOptions.feedUrl = kUpdateFeedUrl;
   if (const auto override = platform::environmentVariable(kUpdateFeedOverrideVariable); override && platform::isAllowedHttpUrl(*override)) updateOptions.feedUrl = *override;
   while (!updateOptions.feedUrl.empty() && updateOptions.feedUrl.back() == '/') updateOptions.feedUrl.pop_back();

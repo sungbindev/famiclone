@@ -27,6 +27,7 @@
 #include "platform/network/local-http-server.hpp"
 #include "platform/threading/ui-thread.hpp"
 #include "shared/update/update-manifest.hpp"
+#include "shared/update/update-policy.hpp"
 #include "support/temp-directory.hpp"
 #include "support/update-fixture.hpp"
 
@@ -565,6 +566,21 @@ TEST(EngineAppUpdater, DestroyedUpdaterIgnoresLateEngineCallbacks) {
   }
   EXPECT_NO_THROW(engine.handlers.downloaded("1.0.0"));
   EXPECT_NO_THROW(engine.handlers.failed("x"));
+}
+
+// ---- 升级开启规则 ----
+
+TEST(UpdatePolicy, ReleaseBuildWithWritableDirectoryAndNoDebugSessionIsSupported) {
+  EXPECT_TRUE(shared::updatesSupported(true, false, true));
+}
+
+TEST(UpdatePolicy, DebugSessionNeverUpdates) {
+  EXPECT_FALSE(shared::updatesSupported(true, true, true));
+}
+
+TEST(UpdatePolicy, DevelopmentBuildOrReadOnlyDirectoryIsNotSupported) {
+  EXPECT_FALSE(shared::updatesSupported(false, false, true));
+  EXPECT_FALSE(shared::updatesSupported(true, false, false));
 }
 
 }  // namespace

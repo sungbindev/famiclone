@@ -15,25 +15,40 @@
   ],
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "bin": {
     "fcdev": "bin/fcdev.mjs"
   },
   "scripts": {
-    "prepack": "node ../../tools/build-libs.mjs"
+    "prepack": "node ../../tools/build-libs.mjs && node debug-sdk/scripts/build.mjs",
+    "debug-sdk:schema": "npm --prefix ../../ember run schema",
+    "debug-sdk:typecheck": "tsc -p debug-sdk/tsconfig.json",
+    "debug-sdk:lint": "oxlint -c debug-sdk/.oxlintrc.json --deny-warnings debug-sdk/src debug-sdk/test debug-sdk/scripts",
+    "debug-sdk:build": "node debug-sdk/scripts/build.mjs",
+    "debug-sdk:test": "vitest run --root debug-sdk",
+    "debug-sdk:docs:protocol": "node debug-sdk/scripts/docs.mjs",
+    "debug-sdk:docs": "node debug-sdk/scripts/docs.mjs && typedoc --options debug-sdk/typedoc.json",
+    "debug-sdk:check": "npm run debug-sdk:schema && npm run debug-sdk:typecheck && npm run debug-sdk:lint && npm run debug-sdk:build && npm run debug-sdk:test"
   },
   "files": [
     "bin",
     "CHANGELOG.md",
+    "dist",
     "docs",
     "src",
     "targets"
   ],
-  "dependencies": {
-    "ember-debug-sdk": "0.8.0"
-  },
   "optionalDependencies": {
-    "fcdev-cc65": "0.8.0"
+    "fcdev-cc65": "0.8.0",
+    "fcdev-ember": "0.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "esbuild": "0.28.2",
+    "oxlint": "^1.90.0",
+    "typedoc": "0.28.20",
+    "typescript": "6.0.3",
+    "vitest": "^5.1.0"
   }
 }

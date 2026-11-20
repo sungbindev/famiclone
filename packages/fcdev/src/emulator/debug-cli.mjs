@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：debug-cli.mjs
-// 说明：debug 命令的底层：找到调试 SDK 随包提供的终端客户端 ember-debug，并决定它找 Ember 调试服务的环境变量。
+// 说明：debug、mcp 命令的底层：找到随包提供的调试 SDK 终端客户端 ember-debug 与 MCP 服务，并决定它们找 Ember 调试服务的环境变量。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-15
@@ -16,24 +16,39 @@ import { DEFAULT_DEBUG_PORT, debugUserDataDirectory } from './emulator-launcher.
 const EXPLICIT_ENV_NAMES = ['EMBER_DEBUG_URL', 'EMBER_DEBUG_TOKEN', 'EMBER_DEBUG_ENDPOINT', 'EMBER_USER_DATA'];
 
 /**
- * 调试 SDK 的终端客户端（ember-debug）的入口文件。
+ * 调试 SDK 的构建产物里的一个入口文件。
+ * @param {string} fileName dist/debug 下的文件名
+ * @param {string} what 报错时的名称
  * @returns {string} 入口文件的绝对路径
- * @throws {FcdevError} SDK 没有安装或没有构建
+ * @throws {FcdevError} SDK 没有构建
  */
-export function resolveDebugCli() {
-  let file = null;
-  try {
-    file = fileURLToPath(new URL('./cli.js', import.meta.resolve('ember-debug-sdk')));
-  } catch {
-    // 下面统一报错
-  }
-  if (file === null || !existsSync(file)) {
-    throw new FcdevError('找不到调试 SDK（ember-debug-sdk）的终端客户端', {
+function resolveDebugEntry(fileName, what) {
+  const file = fileURLToPath(new URL(`../../dist/debug/${fileName}`, import.meta.url));
+  if (!existsSync(file)) {
+    throw new FcdevError(`找不到调试 SDK 的${what}`, {
       code: 'DEBUG_SDK_MISSING',
-      hint: '在本仓库里先运行 npm run build -w packages/ember-debug-sdk；用 npm 安装的 fcdev 会自带',
+      hint: '在本仓库的 packages/fcdev 目录里先运行 npm run debug-sdk:build；用 npm 安装的 fcdev 会自带',
     });
   }
   return file;
+}
+
+/**
+ * 调试 SDK 的终端客户端（ember-debug）的入口文件。
+ * @returns {string} 入口文件的绝对路径
+ * @throws {FcdevError} SDK 没有构建
+ */
+export function resolveDebugCli() {
+  return resolveDebugEntry('cli.js', '终端客户端');
+}
+
+/**
+ * 调试 SDK 的 MCP 服务（ember-debug-mcp）的入口文件。
+ * @returns {string} 入口文件的绝对路径
+ * @throws {FcdevError} SDK 没有构建
+ */
+export function resolveDebugMcp() {
+  return resolveDebugEntry('mcp.js', 'MCP 服务');
 }
 
 /**

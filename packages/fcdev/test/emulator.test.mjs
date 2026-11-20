@@ -4,14 +4,16 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：debug 命令的用例需要调试 SDK 已构建（npm run build -w packages/ember-debug-sdk），没有时跳过；
+// 备注：debug、mcp 命令的用例需要调试 SDK 已构建（在 packages/fcdev 目录里运行 npm run debug-sdk:build），没有时跳过；
 //       真实 Ember 的用例会短暂打开一个窗口，需要环境变量 FCDEV_EMULATOR 指向 Ember 的可执行文件、cc65 与已构建的 SDK，缺一就跳过，设置 FCDEV_SKIP_GUI_TESTS=1 也会跳过。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { buildPath } from '../src/build/index.mjs';
 import { runCli } from '../src/cli/index.mjs';
 import { assertPortFree, debugEnvironment, debugUserDataDirectory, keyCodeOf, launchEmulator, locateEmulator, resolveDebugCli } from '../src/emulator/index.mjs';
@@ -42,7 +44,7 @@ function isSdkBuilt() {
   }
 }
 
-const SKIP_WITHOUT_SDK = isSdkBuilt() ? false : '调试 SDK 没有构建（先运行 npm run build -w packages/ember-debug-sdk）';
+const SKIP_WITHOUT_SDK = isSdkBuilt() ? false : '调试 SDK 没有构建（在 packages/fcdev 目录里先运行 npm run debug-sdk:build）';
 
 /** 运行命令行，返回退出码与输出 */
 async function runFcdev(argv, { cwd, env }) {
@@ -91,8 +93,9 @@ describe('Ember 定位', () => {
     assert.throws(() => locateEmulator({ configured: path.join(temp.dir, 'none.exe'), env: {} }), (error) => error.code === 'EMULATOR_NOT_FOUND' && error.message.includes('Ember'));
   });
 
-  it('都没有指定时报错并提示两种指定方式', () => {
-    assert.throws(() => locateEmulator({ env: {} }), (error) => error.code === 'EMULATOR_NOT_FOUND' && error.hint.includes('FCDEV_EMULATOR') && error.hint.includes('emulator'));
+  it('都没有指定且没有随包的 Ember 时报错，并提示两种指定方式', () => {
+    const env = { FCDEV_EMBER_PACKAGE: path.join(temp.dir, 'no-package'), FCDEV_EMBER_HOME: path.join(temp.dir, 'home') };
+    assert.throws(() => locateEmulator({ env, platform: 'win32' }), (error) => error.code === 'EMULATOR_NOT_FOUND' && error.hint.includes('FCDEV_EMULATOR') && error.hint.includes('emulator'));
   });
 });
 
@@ -149,7 +152,7 @@ describe('run 命令', () => {
   it('找不到 Ember 时报错，在构建之前就报', async () => {
     writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'nes' }));
     writeTestFile(temp.dir, 'hello.c', 'int main(void) { for (;;) { } }\n');
-    const env = { ...process.env };
+    const env = { ...process.env, FCDEV_EMBER_PACKAGE: path.join(temp.dir, 'no-package'), FCDEV_EMBER_HOME: path.join(temp.dir, 'home') };
     delete env.FCDEV_EMULATOR;
     const { code, stderr } = await runFcdev(['run', 'hello.c'], { cwd: temp.dir, env });
     assert.equal(code, 1);
@@ -173,9 +176,36 @@ describe('debug 命令（需要调试 SDK）', { skip: SKIP_WITHOUT_SDK }, () =>
   });
 });
 
-/** 找真实的 Ember；没有时返回 null */
+describe('mcp 命令（需要调试 SDK）', { skip: SKIP_WITHOUT_SDK }, () => {
+  it('经标准输入输出回答 MCP 的 initialize，服务名是 ember-debug-mcp，版本与 fcdev 一致', async () => {
+    const bin = fileURLToPath(new URL('../bin/fcdev.mjs', import.meta.url));
+    const child = spawn(process.execPath, [bin, 'mcp'], { stdio: ['pipe', 'pipe', 'inherit'] });
+    try {
+      const request = { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '1' } } };
+      child.stdin.write(`${JSON.stringify(request)}\n`);
+      const line = await new Promise((resolve, reject) => {
+        let text = '';
+        child.stdout.setEncoding('utf8');
+        child.stdout.on('data', (chunk) => {
+          text += chunk;
+          if (text.includes('\n')) resolve(text.split('\n')[0]);
+        });
+        child.once('error', reject);
+        child.once('close', () => reject(new Error(`MCP 服务提前退出：${text}`)));
+      });
+      const reply = JSON.parse(line);
+      const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+      assert.equal(reply.result.serverInfo.name, 'ember-debug-mcp');
+      assert.equal(reply.result.serverInfo.version, version);
+    } finally {
+      child.kill();
+    }
+  });
+});
+
+/** 找真实的 Ember（需要环境变量 FCDEV_EMULATOR，不会触发随包 Ember 的安装）；没有时返回 null */
 function findRealEmber() {
-  if (process.env.FCDEV_SKIP_GUI_TESTS === '1') return null;
+  if (process.env.FCDEV_SKIP_GUI_TESTS === '1' || !process.env.FCDEV_EMULATOR) return null;
   try {
     return locateEmulator();
   } catch {

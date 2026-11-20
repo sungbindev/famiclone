@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
-// 备注：需要环境变量 FCDEV_EMULATOR 指向 ember.exe（默认取 build/ember/Ember-win32-x64/ember.exe）。结束时只结束自己启动的进程。
+// 备注：Ember 按 fcdev 的规则定位（环境变量 FCDEV_EMULATOR，没有时用随包的 Ember）。结束时只结束自己启动的进程。
 // ------------------------------------------------------------------------
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -17,7 +17,6 @@ import { getDiskPackager } from '../../../../../packages/fcdev/src/packagers/ind
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');
 const FIRMWARE = join(REPOSITORY, 'reference', 'rom', '小霸王', 'SB2K_BIOS.NES');
-const DEFAULT_EMULATOR = join(REPOSITORY, 'build', 'ember', 'Ember-win32-x64', 'ember.exe');
 
 /** 找一个空闲端口 */
 function findFreePort() {
@@ -96,7 +95,6 @@ export class Session {
  * @returns {Promise<Session>} 会话；返回时程序刚被启动
  */
 export async function startProgram({ exe = join(ROOT, 'exe', 'build', 'sb2000', 'FBASIC.EXE'), name = 'fbasic' } = {}) {
-  process.env.FCDEV_EMULATOR ??= DEFAULT_EMULATOR;
   const emulator = locateEmulator();
   const work = join(ROOT, 'build', 'run');
   mkdirSync(work, { recursive: true });

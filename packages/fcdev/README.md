@@ -10,7 +10,7 @@
 npm install --save-dev fcdev
 ```
 
-要求 Node.js 22 及以上。cc65 编译器在依赖包 `fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器 Ember 不随包提供，`run` 与 `debug` 需要自备：用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指向 Ember 的可执行文件。调试 SDK `ember-debug-sdk` 是 `fcdev` 的依赖，会自动安装。
+要求 Node.js 22.12 及以上。cc65 编译器在依赖包 `fcdev-cc65` 里，npm 会自动安装；也可以用环境变量 `FCDEV_CC65_HOME` 指向自备的 cc65 目录。模拟器 Ember 随包安装（Windows 64 位，在依赖包 `fcdev-ember` 里），`run` 与 `debug` 不用另外下载：第一次用到时 `fcdev` 把它复制到 `%LOCALAPPDATA%\fcdev\ember`，全机共用，Ember 自带升级；要用自备的 Ember 时，用环境变量 `FCDEV_EMULATOR` 或 `fcdev.json` 的 `emulator` 指向它的可执行文件。调试 SDK 随 `fcdev` 一起安装。
 
 ## 使用
 
@@ -39,7 +39,7 @@ FCDEV_DEBUG_PORT=5688 npx fcdev debug call runtime.run frames=60 wait=true
 FCDEV_DEBUG_PORT=5688 npx fcdev debug screenshot screen.png
 ```
 
-`debug` 把参数原样交给 Ember 调试 SDK 的终端客户端 `ember-debug`，`npx fcdev debug --help` 查看命令，`npx fcdev debug methods` 列出全部请求。调试端口默认 5699。学习机目标需要在 `fcdev.json` 里用 `firmware` 指定 BIOS 文件，`run` 会把程序放进软盘镜像、开机并在 SB-DOS 里输入程序名运行（加 `--debug` 停在开机状态）。
+`debug` 把参数原样交给 Ember 调试 SDK 的终端客户端，`npx fcdev debug --help` 查看命令，`npx fcdev debug methods` 列出全部请求；`npx fcdev mcp` 启动 MCP 服务，让 Copilot 等 AI 工具直接连接运行中的 Ember。调试端口默认 5699。学习机目标需要在 `fcdev.json` 里用 `firmware` 指定 BIOS 文件，`run` 会把程序放进软盘镜像、开机并在 SB-DOS 里输入程序名运行（加 `--debug` 停在开机状态）。
 
 ### 反汇编
 
@@ -65,7 +65,7 @@ npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号�
 | `include` | 空 | 额外的头文件目录 |
 | `toolchain` | 空 | 自备 cc65 的根目录，优先于工具链包 |
 | `firmware` | 无 | 固件（BIOS）文件；SB2000 运行时必填，fcdev 不提供任何 BIOS 或 ROM |
-| `emulator` | 空 | Ember 的路径，不设时读环境变量 `FCDEV_EMULATOR` |
+| `emulator` | 空 | 自备 Ember 的路径，不设时读环境变量 `FCDEV_EMULATOR`，再没有时用随包的 Ember |
 | `targetOptions` | 空 | 目标专用选项，如 NES 的 `font`（是否链接 ASCII 字库，默认 `true`）、SB2000 的 `banks`（大程序的库页个数，默认 0） |
 
 ## 目标

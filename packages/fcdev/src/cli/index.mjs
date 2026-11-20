@@ -16,6 +16,7 @@ import { runDiskCommand } from './commands/disk-command.mjs';
 import { runDisasmCommand } from './commands/disasm-command.mjs';
 import { runDocsCommand } from './commands/docs-command.mjs';
 import { runInfoCommand } from './commands/info-command.mjs';
+import { runMcpCommand } from './commands/mcp-command.mjs';
 import { runRunCommand } from './commands/run-command.mjs';
 import { runSyncCommand } from './commands/sync-command.mjs';
 
@@ -36,6 +37,7 @@ const COMMANDS = {
   disk: runDiskCommand,
   docs: runDocsCommand,
   info: runInfoCommand,
+  mcp: runMcpCommand,
   run: runRunCommand,
   sync: runSyncCommand,
 };
@@ -51,6 +53,7 @@ const HELP_TEXT = `fcdev：6502 兼容机的开发工具
   disk [目录或文件]    构建后把程序放进磁盘镜像（只有支持磁盘的目标可用）
   disasm <文件>       反汇编 NES 程序或平铺二进制为 ca65 源码，并回读校验
   debug <参数>        交给 Ember 调试 SDK 的终端客户端 ember-debug，如 debug call runtime.status、debug screenshot out.png
+  mcp                  启动 Ember 调试的 MCP 服务（标准输入输出），供 AI 工具连接运行中的 Ember
   sync                 生成 IDE 的 C/C++ 配置
   info [--json]        显示目标、工具链与头文件目录
   api [词] [--json]    查询目标的 C 接口文档：函数名、模块名、$功能号或关键词；不带词列出全部模块

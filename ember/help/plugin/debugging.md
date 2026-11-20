@@ -33,7 +33,7 @@
 
 ## 用调试服务验证
 
-Ember 内置的调试服务可以不靠真实游戏就验证插件：安装插件、装入卡带、读写寄存器、看窗口落在哪里、看状态值。打开方式与连接见[调试服务概述](../debug/index.md)，下面用官方的终端客户端 `ember-debug`，见[客户端工具](../debug/clients.md)。
+Ember 内置的调试服务可以不靠真实游戏就验证插件：安装插件、装入卡带、读写寄存器、看窗口落在哪里、看状态值。打开方式与连接见[调试服务概述](../debug/index.md)，下面用官方的终端客户端 `fcdev debug`（省略 `npx`），见[客户端工具](../debug/clients.md)。
 
 ### 做一个最小的测试 ROM
 
@@ -65,12 +65,12 @@ writeFileSync('test.nes', Buffer.concat([header, prg, Buffer.alloc(chrBanks * 81
 先在“设置→首选项”里打开调试服务，再在终端里：
 
 ```text
-ember-debug call mappers.install path=D:/work/demo-bank.emap
-ember-debug call cartridges.load path=D:/work/test.nes
-ember-debug call inspector.resolve space=cpu address=32768
-ember-debug call inspector.writeMemory space=cpu address=32768 bytes=[2]
-ember-debug call inspector.resolve space=cpu address=32768
-ember-debug call inspector.getState module=mapper
+fcdev debug call mappers.install path=D:/work/demo-bank.emap
+fcdev debug call cartridges.load path=D:/work/test.nes
+fcdev debug call inspector.resolve space=cpu address=32768
+fcdev debug call inspector.writeMemory space=cpu address=32768 bytes=[2]
+fcdev debug call inspector.resolve space=cpu address=32768
+fcdev debug call inspector.getState module=mapper
 ```
 
 - `mappers.install` 装入（或替换）插件。
@@ -84,8 +84,8 @@ ember-debug call inspector.getState module=mapper
 ### 监视状态的变化
 
 ```text
-ember-debug call inspector.watch path=mapper.prgBank
-ember-debug watch inspector.* --timeout 5000
+fcdev debug call inspector.watch path=mapper.prgBank
+fcdev debug watch inspector.* --timeout 5000
 ```
 
 `mapper.` 后面是清单里声明的状态名；取值变化时发 `inspector.stateChanged` 事件。运行游戏时用它观察寄存器被写成了什么。

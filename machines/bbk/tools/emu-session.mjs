@@ -12,7 +12,7 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { launchEmulator } from '../../sb2000/disassembly/tools/sb2k-client.mjs';
+import { launchEmulator } from './sb2k-client.mjs';
 import { REPO_ROOT } from './config.mjs';
 
 /** 模拟器程序：本仓库的编译输出 */

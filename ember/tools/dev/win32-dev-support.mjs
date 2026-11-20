@@ -93,7 +93,7 @@ export function readDiagnostics(app) {
  * @throws {Error} 客户端没有构建（先运行 npm run debug-sdk:check）、连不上或请求失败。
  */
 export function debugCall(app, method, ...params) {
-  const cli = join(projectRoot, '..', 'packages', 'ember-debug-sdk', 'dist', 'cli.js');
+  const cli = join(projectRoot, '..', 'packages', 'fcdev', 'dist', 'debug', 'cli.js');
   if (!existsSync(cli)) throw new Error('找不到调试 SDK 的终端客户端，先运行 npm run debug-sdk:check');
   const output = execFileSync(process.execPath, [cli, '--user-data-dir', app.userData, '--compact', 'call', method, ...params], { encoding: 'utf8', timeout: 60_000 });
   return JSON.parse(output);

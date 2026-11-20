@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { buildDisk, renderReadme, utf8ToGb2312 } from '../apps/sb2000/disk/build-disk.mjs';
-import { listFat12, readFat12File } from '../machines/sb2000/disassembly/tools/fat12-image.mjs';
+import { listFat12, readFat12File } from '../packages/fcdev/src/packagers/fat12-image.mjs';
 
 describe('SB2000 汇编开发盘', () => {
   let root;

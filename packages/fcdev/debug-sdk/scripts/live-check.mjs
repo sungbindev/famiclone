@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：live-check.mjs
- * 说明：对正在运行的 Ember 做真实联调：SDK 连接与握手、类型化请求、截图二进制帧、事件订阅，以及终端客户端与 MCP 服务。
+ * 说明：对正在运行的 Ember 做真实联调：SDK 连接与握手、类型化请求、截图二进制帧、事件订阅，以及终端客户端。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -10,11 +10,10 @@
  * ------------------------------------------------------------------------
  */
 
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { createInterface } from 'node:readline';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const dist = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'dist', 'debug');
@@ -154,39 +153,6 @@ const shot = join(work, 'shot.png');
 cli('screenshot', shot);
 check('fcdev debug screenshot 保存 PNG', readFileSync(shot).subarray(1, 4).toString() === 'PNG');
 rmSync(work, { recursive: true, force: true });
-
-// MCP 服务：经标准输入输出走一遍协议。
-const server = spawn(process.execPath, [join(dist, 'mcp.js')], { env: process.env, stdio: ['pipe', 'pipe', 'inherit'] });
-const lines = createInterface({ input: server.stdout });
-const waiting = new Map();
-lines.on('line', (line) => {
-  const message = JSON.parse(line);
-  waiting.get(message.id)?.(message);
-});
-let nextId = 1;
-/** 发一个 MCP 请求并等回复。 */
-function mcp(method, params = {}) {
-  const id = nextId++;
-  return new Promise((resolve) => {
-    waiting.set(id, resolve);
-    server.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
-  });
-}
-const init = await mcp('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'live-check', version: '1' } });
-check('MCP initialize', init.result?.serverInfo?.name === 'ember-debug-mcp');
-const tools = await mcp('tools/list');
-check('MCP tools/list 含 ember_runtime_run 与 ember_events', ['ember_runtime_run', 'ember_events'].every((name) => tools.result.tools.some((tool) => tool.name === name)), `${tools.result.tools.length} 个工具`);
-const mcpStatus = await mcp('tools/call', { name: 'ember_runtime_status', arguments: {} });
-check('MCP 调用 ember_runtime_status', JSON.parse(mcpStatus.result.content[0].text).power === 'on');
-const mcpShot = await mcp('tools/call', { name: 'ember_output_screenshot', arguments: {} });
-check('MCP 截图返回 PNG 图像块', mcpShot.result.content.some((block) => block.type === 'image' && block.mimeType === 'image/png' && block.data.startsWith('iVBOR')));
-const mcpError = await mcp('tools/call', { name: 'ember_input_pad', arguments: { port: 7, buttons: 1 } });
-check('MCP 把请求错误作为工具错误返回', mcpError.result.isError === true && mcpError.result.content[0].text.includes('input.invalidPort'));
-await mcp('tools/call', { name: 'ember_events', arguments: { patterns: ['runtime.*'] } });
-await mcp('tools/call', { name: 'ember_runtime_run', arguments: { frames: 5, wait: true } });
-const mcpEvents = await mcp('tools/call', { name: 'ember_events', arguments: {} });
-check('MCP ember_events 读到运行事件', JSON.parse(mcpEvents.result.content[0].text).events.some((item) => item.event === 'runtime.runFinished'));
-server.stdin.end();
 
 console.log(failed === 0 ? '联调全部通过' : `联调有 ${failed} 项失败`);
 process.exit(failed === 0 ? 0 : 1);

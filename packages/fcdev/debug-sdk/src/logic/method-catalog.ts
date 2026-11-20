@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：终端客户端的 methods、describe 命令与 MCP 服务的工具清单都用它；文档由 Ember 的 npm run schema 生成。
+ * 备注：终端客户端的 methods、describe 命令都用它；文档由 Ember 的 npm run schema 生成。
  * ------------------------------------------------------------------------
  */
 

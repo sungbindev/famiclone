@@ -138,7 +138,7 @@ function checkFcdev() {
   const packageDir = path.join(PACKAGES_DIR, 'fcdev');
   const required = ['README.md', 'CHANGELOG.md', 'bin/fcdev.mjs'];
   if (existsSync(path.join(packageDir, 'dist', 'debug'))) {
-    required.push(...['index.js', 'node.js', 'cli.js', 'mcp.js', 'types/debug-sdk/src/index.d.ts', 'types/debug-sdk/src/node.d.ts'].map((file) => `dist/debug/${file}`));
+    required.push(...['index.js', 'node.js', 'cli.js', 'types/debug-sdk/src/index.d.ts', 'types/debug-sdk/src/node.d.ts'].map((file) => `dist/debug/${file}`));
   } else {
     errors.push('调试 SDK 还没有构建（fcdev 的 dist/debug），先在 packages/fcdev 里运行 npm run debug-sdk:build');
   }

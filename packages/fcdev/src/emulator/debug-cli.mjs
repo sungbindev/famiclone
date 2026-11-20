@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：debug-cli.mjs
-// 说明：debug、mcp 命令的底层：找到随包提供的调试 SDK 终端客户端 ember-debug 与 MCP 服务，并决定它们找 Ember 调试服务的环境变量。
+// 说明：debug 命令的底层：找到随包提供的调试 SDK 终端客户端，并决定它找 Ember 调试服务的环境变量。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-15
@@ -40,15 +40,6 @@ function resolveDebugEntry(fileName, what) {
  */
 export function resolveDebugCli() {
   return resolveDebugEntry('cli.js', '终端客户端');
-}
-
-/**
- * 调试 SDK 的 MCP 服务（ember-debug-mcp）的入口文件。
- * @returns {string} 入口文件的绝对路径
- * @throws {FcdevError} SDK 没有构建
- */
-export function resolveDebugMcp() {
-  return resolveDebugEntry('mcp.js', 'MCP 服务');
 }
 
 /**

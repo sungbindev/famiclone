@@ -89,7 +89,7 @@ function verifyDebugSdk(workDir, tarballs) {
   const script = "const sdk = await import('fcdev/dist/debug/index.js'); const node = await import('fcdev/dist/debug/node.js'); if (typeof sdk.connect !== 'function' || typeof node.connectToEmber !== 'function') throw new Error('missing export');";
   run('node', ['--input-type=module', '-e', script], sdkDir);
   assert(true, '应当调试 SDK 的两个入口都能加载');
-  for (const file of ['cli.js', 'mcp.js']) {
+  for (const file of ['cli.js']) {
     assert(existsSync(path.join(sdkDir, 'node_modules', 'fcdev', 'dist', 'debug', file)), `应当安装出调试 SDK 的 dist/debug/${file}`);
   }
   const version = run('node', [path.join(sdkDir, 'node_modules', 'fcdev', 'bin', 'fcdev.mjs'), 'debug', '--version'], sdkDir).trim();

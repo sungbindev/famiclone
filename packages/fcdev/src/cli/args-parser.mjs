@@ -4,12 +4,12 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：debug、mcp 命令把命令名之后的全部参数原样交给调试 SDK，不再解析选项。
+// 备注：debug 命令把命令名之后的全部参数原样交给调试 SDK，不再解析选项。
 // ------------------------------------------------------------------------
 import { FcdevError } from '../shared/index.mjs';
 
 /** 不解析选项、参数原样传递的命令 */
-const RAW_COMMANDS = new Set(['debug', 'mcp']);
+const RAW_COMMANDS = new Set(['debug']);
 
 /** 带一个字符串值的选项：选项名到 options 里的字段 */
 const VALUE_OPTIONS = {

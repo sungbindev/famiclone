@@ -28,7 +28,7 @@ features:
     details: 用 C 或汇编开发 NES 与 SB2000 程序，完成构建、打包、运行和调试；手册包含命令、系统调用、硬件行为、接口、符号与示例源码。
     link: /fcdev/
   - title: 调试接口手册
-    details: 通过 WebSocket JSON-RPC 控制运行，读写内存与寄存器，设置断点和监视项，记录指令轨迹、生成截图，并用 SDK、终端客户端或 MCP 自动化调试。
+    details: 通过 WebSocket JSON-RPC 控制运行，读写内存与寄存器，设置断点和监视项，记录指令轨迹、生成截图，并用 SDK 或终端客户端自动化调试。
     link: /debug/
   - title: 插件开发手册
     details: 为 NES 卡带编写 mapper 插件，用调试服务验证存储区映射、寄存器、状态与脚本行为，快速完成测试和排错。

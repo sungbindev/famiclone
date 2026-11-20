@@ -6,7 +6,7 @@
 
 | 目录 | 内容 |
 | --- | --- |
-| `packages/fcdev` | 命令行 `fcdev`、各机型目标与调试 SDK（TypeScript 源码在 `debug-sdk/`，构建到 `dist/debug/`；终端客户端与 MCP 服务是 `fcdev debug`、`fcdev mcp`）（npm 包） |
+| `packages/fcdev` | 命令行 `fcdev`、各机型目标与调试 SDK（TypeScript 源码在 `debug-sdk/`，构建到 `dist/debug/`；终端客户端是 `fcdev debug`）（npm 包） |
 | `packages/create-fcdev` | `npm create fcdev` 的创建包与项目模板（npm 包） |
 | `packages/fcdev-cc65` | cc65 工具链包，由 `tools/build-cc65.mjs` 生成，不入库（npm 包） |
 | `packages/fcdev-ember` | 随包的 Ember 模拟器（Windows 64 位），由 `tools/build-ember.mjs` 从 Ember 的发布产物组装，只入库 `package.json`（npm 包） |

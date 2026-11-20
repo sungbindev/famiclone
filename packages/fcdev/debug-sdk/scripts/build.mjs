@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build.mjs
- * 说明：调试 SDK 的构建：用 esbuild 打包库入口、Node 入口、终端客户端与 MCP 服务到 fcdev 的 dist/debug，用 TypeScript 6 生成声明文件。
+ * 说明：调试 SDK 的构建：用 esbuild 打包库入口、Node 入口与终端客户端到 fcdev 的 dist/debug，用 TypeScript 6 生成声明文件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -29,7 +29,6 @@ await build({ ...common, entryPoints: ['src/index.ts'], outfile: join(dist, 'ind
 await build({ ...common, entryPoints: ['src/node.ts'], outfile: join(dist, 'node.js'), platform: 'node' });
 const executable = { ...common, platform: 'node', banner: { js: '#!/usr/bin/env node' } };
 await build({ ...executable, entryPoints: ['src/cli/index.ts'], outfile: join(dist, 'cli.js') });
-await build({ ...executable, entryPoints: ['src/mcp/index.ts'], outfile: join(dist, 'mcp.js') });
 
 const tsc = join(dirname(require.resolve('typescript/package.json')), 'bin', 'tsc');
 execFileSync(process.execPath, [tsc, '-p', join(sdk, 'tsconfig.build.json')], { stdio: 'inherit' });

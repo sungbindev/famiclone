@@ -1,19 +1,19 @@
 # 调试 SDK（fcdev 内置）
 
-Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSocket 客户端，终端客户端 `fcdev debug`，以及给 Copilot 等智能体用的 MCP 服务 `fcdev mcp`。
+Ember（FC 与学习机模拟器）调试服务的 SDK：类型完整的 WebSocket 客户端，终端客户端 `fcdev debug`。
 
 调试服务是 Ember 核心里的一个可开关的 WebSocket 服务（JSON-RPC 2.0），模拟器的全部功能都有接口。本 SDK 是它的官方客户端；协议是开放的，也可以用任何语言直接连接，见 Ember 帮助文档里的“调试接口手册”（源码在 [ember/help/debug/](../../../ember/help/debug/index.md)）。
 
 ## 开启调试服务
 
 1. 在 Ember 的“首选项”里打开“调试服务”分组，启用调试服务（端口默认 5688，令牌自动生成）；或者用启动参数 `--debug-port=5688` 只在本次运行开启。
-2. Ember 开始监听后，会在用户数据目录写端点文件 `run/debug-endpoint.json`（地址与令牌）。SDK、终端客户端与 MCP 服务都读它自动连接，不用手抄端口与令牌。
+2. Ember 开始监听后，会在用户数据目录写端点文件 `run/debug-endpoint.json`（地址与令牌）。SDK 与终端客户端都读它自动连接，不用手抄端口与令牌。
 
 只监听 `127.0.0.1`，每条连接都要先用令牌握手。
 
 ## 安装
 
-SDK 随 `fcdev` 一起安装，不单独发布；需要 Node 22.12 或更高版本。终端客户端与 MCP 服务经 `npx fcdev debug`、`npx fcdev mcp` 使用；在代码里用时从安装的 `fcdev` 包里引用构建产物（`fcdev/dist/debug/node.js`、`fcdev/dist/debug/index.js`，类型声明在 `fcdev/dist/debug/types/debug-sdk/src/`）。从 famiclone 仓库源码构建的方法：先在仓库根目录运行 `npm install`，再在 `packages/fcdev` 目录里运行：
+SDK 随 `fcdev` 一起安装，不单独发布；需要 Node 22.12 或更高版本。终端客户端经 `npx fcdev debug` 使用；在代码里用时从安装的 `fcdev` 包里引用构建产物（`fcdev/dist/debug/node.js`、`fcdev/dist/debug/index.js`，类型声明在 `fcdev/dist/debug/types/debug-sdk/src/`）。从 famiclone 仓库源码构建的方法：先在仓库根目录运行 `npm install`，再在 `packages/fcdev` 目录里运行：
 
 ```text
 npm run debug-sdk:schema   # 生成接口类型与接口文档（等于在 ember 目录运行 npm run schema）
@@ -75,26 +75,6 @@ fcdev debug watch runtime.* --timeout 5000    订阅事件并逐行打印
 
 `call` 的参数写成 `key=value`（值按 JSON 解析，不是 JSON 就当字符串；`0x8000`、`$8000` 是十六进制数，要当字符串就加引号，如 `file='"0x10"'`），或一个 JSON 对象；结果以 JSON 打印，二进制数据显示字节数，加 `--out 文件` 保存。选项 `--url`、`--token`、`--endpoint-file`、`--user-data-dir` 指定连接目标，`--compact` 不缩进输出。退出码：0 成功，1 失败，2 用法错误。`fcdev debug --help` 看全部用法。
 
-## MCP 服务（给 Copilot 等智能体）
-
-`fcdev mcp` 是标准输入输出的 MCP 服务，把调试服务的每个请求做成一个工具（名称 `ember_<模块>_<操作>`，如 `ember_runtime_run`、`ember_output_screenshot`），输入 Schema 由接口定义生成；`ember_events` 读取 Ember 发出的事件；PNG 截图作为图像返回，智能体可以直接看画面。第一次调用工具时才连接 Ember，连接断了下次调用自动重连。
-
-VS Code 的 `.vscode/mcp.json`：
-
-```json
-{
-  "servers": {
-    "ember": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["fcdev", "mcp"]
-    }
-  }
-}
-```
-
-用 `fcdev run --debug` 启动的 Ember 会被自动找到（端口取环境变量 `FCDEV_DEBUG_PORT`，默认 5699）。
-
 ## 环境变量
 
 | 变量 | 说明 |
@@ -102,7 +82,6 @@ VS Code 的 `.vscode/mcp.json`：
 | `EMBER_DEBUG_URL`、`EMBER_DEBUG_TOKEN` | 直接指定调试服务的地址与令牌 |
 | `EMBER_DEBUG_ENDPOINT` | 端点文件的路径 |
 | `EMBER_USER_DATA` | Ember 的用户数据目录（用 `--user-data-dir` 启动了第二个实例时用它区分） |
-| `EMBER_MCP_TIMEOUT_MS` | MCP 服务里每个请求等响应的毫秒数，默认 120000 |
 
 查找顺序：显式参数，环境变量，端点文件（默认在 Windows 的 `%APPDATA%\Ember`、macOS 的 `~/Library/Application Support/Ember`、Linux 的 `~/.config/Ember` 下的 `run` 目录）。端点文件里的进程已退出时视为过期，不会连接。
 

@@ -87,9 +87,10 @@ TEST(ShellRegistry, CollectsEverythingAndKeepsTheShellsMenuItemsLast) {
   const auto registry = logic::buildShellRegistry({logic::createShellModule(), runtime});
   EXPECT_EQ(registry.screenOwner, "runtime");
   EXPECT_EQ(registry.commands.size(), 4U);
-  ASSERT_EQ(registry.menuItems.size(), 3U);
+  ASSERT_EQ(registry.menuItems.size(), 4U);
   EXPECT_EQ(registry.menuItems[0].command, "runtime.open");
-  EXPECT_EQ(registry.menuItems[1].command, "shell.toggleAlwaysOnTop");
+  EXPECT_EQ(registry.menuItems[1].command, "shell.toggleFullScreen");
+  EXPECT_EQ(registry.menuItems[2].command, "shell.toggleAlwaysOnTop");
   EXPECT_EQ(registry.shortcuts.at("F11"), "shell.toggleFullScreen");
 }
 
@@ -239,11 +240,17 @@ TEST(ShellController, MenusShowNamesShortcutsStatesAndHideEmptyMenus) {
   EXPECT_TRUE(menus[0].items[1].items.empty());
   EXPECT_EQ(menus[0].items[2].id, "shell.quit");
   EXPECT_TRUE(menus[0].items[2].separatorBefore);
-  // 设置菜单的“窗口始终置顶”是勾选项，菜单里第一项不画分隔线
-  ASSERT_EQ(menus[2].items.size(), 1U);
+  // 设置菜单的“全屏”（快捷键 F11）与“窗口始终置顶”都是勾选项，菜单里第一项不画分隔线，后一项紧跟前一项
+  ASSERT_EQ(menus[2].items.size(), 2U);
+  EXPECT_EQ(menus[2].items[0].id, "shell.toggleFullScreen");
+  EXPECT_EQ(menus[2].items[0].shortcut, "F11");
   EXPECT_FALSE(menus[2].items[0].separatorBefore);
   ASSERT_TRUE(menus[2].items[0].checked.has_value());
   EXPECT_FALSE(*menus[2].items[0].checked);
+  EXPECT_EQ(menus[2].items[1].id, "shell.toggleAlwaysOnTop");
+  EXPECT_FALSE(menus[2].items[1].separatorBefore);
+  ASSERT_TRUE(menus[2].items[1].checked.has_value());
+  EXPECT_FALSE(*menus[2].items[1].checked);
   f.powered = true;
   EXPECT_EQ(f.controller->menus()[1].items[0].label, "断电");
 }

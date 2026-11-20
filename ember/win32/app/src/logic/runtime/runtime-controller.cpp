@@ -160,6 +160,8 @@ void RuntimeController::selectMachine(const std::string& id) {
 }
 
 void RuntimeController::selectAndBootMachine(const std::string& id) {
+  // 已选的机型正在运行（通电，运行或暂停）时再点它什么都不做
+  if (id == selectedMachine_ && status_ && status_->powerOn) return;
   selectMachine(id);
   bootMachine(id);
 }

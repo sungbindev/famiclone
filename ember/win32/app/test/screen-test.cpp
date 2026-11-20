@@ -167,6 +167,11 @@ TEST(ScanCodeTable, SharedKeyboardLeavesFunctionKeysTabEscapeAndModifiedKeysToTh
   for (const char* key : {"ControlLeft", "ControlRight", "AltLeft", "AltRight", "MetaLeft", "MetaRight", "ShiftLeft"}) EXPECT_FALSE(isShellKey(key, held)) << key;
 }
 
+TEST(ScanCodeTable, F9ToF12AreAlwaysLeftToTheShellEvenWhenTheKeyboardIsExclusive) {
+  for (const char* key : {"F9", "F10", "F11", "F12"}) EXPECT_TRUE(isAlwaysShellKey(key)) << key;
+  for (const char* key : {"F1", "F7", "F8", "F13", "F", "KeyA", "Escape", "Tab"}) EXPECT_FALSE(isAlwaysShellKey(key)) << key;
+}
+
 TEST(ScanCodeTable, EachCommandModifierHasItsOwnBit) {
   unsigned all = 0;
   for (const char* key : {"ControlLeft", "ControlRight", "AltLeft", "AltRight", "MetaLeft", "MetaRight"}) {

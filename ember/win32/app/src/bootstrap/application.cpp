@@ -487,6 +487,8 @@ int runApplication(const shared::LaunchArguments& launch) {
       core.stop();
       return 1;
     }
+    // 键盘独占时 F9 到 F12 也要触发外壳的快捷键
+    screenHost->setOnShellKey([&shell](std::string_view code) { shell.runShortcut(std::string(code), false); });
 
     // 外壳界面：菜单、系统栏、底部面板与通知，显示区是运行画面，面板内容由这里按标识注入
     std::optional<ui::ShellView> shellViewStorage;

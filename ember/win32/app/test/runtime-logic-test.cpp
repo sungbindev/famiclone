@@ -217,17 +217,41 @@ TEST(RuntimeController, SelectingAMachineOnlySavesItAndDoesNotBoot) {
   EXPECT_EQ(f.state.layoutUpdates, 1);
 }
 
-TEST(RuntimeController, SelectAndBootRemembersTheMachineAndBootsItEvenIfAlreadyRunning) {
+TEST(RuntimeController, SelectAndBootRemembersTheMachineAndBootsIt) {
   RuntimeFixture f;
-  f.reply("runtime.status", statusJson("on", "running", "sb2000"));
+  f.reply("runtime.status", statusJson("on", "running", "sb97"));
   f.attach();
   f.controller.selectAndBootMachine("sb2000");
   ASSERT_EQ(f.count("machines.boot"), 1);
   EXPECT_EQ(f.last("machines.boot")->params, json({{"machine", "sb2000"}}));
-  f.controller.selectAndBootMachine("sb2000");
-  EXPECT_EQ(f.count("machines.boot"), 2);
+  EXPECT_EQ(f.controller.selectedMachine(), "sb2000");
   EXPECT_EQ(f.state.layoutUpdates, 1);
-  EXPECT_GE(f.focusCalls, 2);
+  EXPECT_GE(f.focusCalls, 1);
+}
+
+TEST(RuntimeController, SelectingTheRunningCheckedMachineAgainDoesNothing) {
+  for (const char* mode : {"running", "paused"}) {
+    RuntimeFixture f;
+    f.state.state.layout.selectedMachine = "sb2000";
+    f.reply("runtime.status", statusJson("on", mode, "sb2000"));
+    f.attach();
+    f.controller.selectAndBootMachine("sb2000");
+    EXPECT_EQ(f.count("machines.boot"), 0) << mode;
+    EXPECT_EQ(f.state.layoutUpdates, 0) << mode;
+    // 点别的机型照常立即开机，并记住新点的
+    f.controller.selectAndBootMachine("sb97");
+    EXPECT_EQ(f.count("machines.boot"), 1) << mode;
+    EXPECT_EQ(f.controller.selectedMachine(), "sb97") << mode;
+  }
+}
+
+TEST(RuntimeController, SelectingTheCheckedMachineAfterPowerOffBootsIt) {
+  RuntimeFixture f;
+  f.state.state.layout.selectedMachine = "sb2000";
+  f.reply("runtime.status", statusJson("off", "paused", "sb2000"));
+  f.attach();
+  f.controller.selectAndBootMachine("sb2000");
+  EXPECT_EQ(f.count("machines.boot"), 1);
 }
 
 TEST(RuntimeController, BootFailureIsNotifiedAndTheChoiceIsStillRemembered) {

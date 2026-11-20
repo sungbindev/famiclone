@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：规则见 docs/08-Win32原生外壳.md 第 5.5 节与 docs/05-界面.md 第 7 节：帧到界面线程后只取最新一帧上传并显示，旧帧丢弃；
- *       键盘独占期间的物理按键经扫描码对照表转成键位名（不独占的“共享”采集时 F 键、Tab、Esc 与带 Ctrl、Alt、Meta 的组合留给外壳，不上报）；捕获鼠标期间指针的相对位移按画面的显示比例换算成标准帧的位移，双击右键（400 毫秒内两次右键按下，第二次不送给机器）释放；
+ *       键盘独占期间的物理按键经扫描码对照表转成键位名（F9 到 F12 例外，不上报，经 setOnShellKey 交给外壳；不独占的“共享”采集时 F 键、Tab、Esc 与带 Ctrl、Alt、Meta 的组合留给外壳，不上报）；捕获鼠标期间指针的相对位移按画面的显示比例换算成标准帧的位移，双击右键（400 毫秒内两次右键按下，第二次不送给机器）释放；
  *       手柄每个画面帧（约 16 毫秒）读一次，状态变化时上报；窗口消息经 handleMessage 交给原始输入采集（WM_INPUT）。
  * ------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "contracts/core-gateway/frame-source.hpp"
@@ -81,6 +82,9 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
   bool setMouseCaptured(bool captured) override;
   void setOnMouseReleased(std::function<void()> handler) override { onMouseReleased_ = std::move(handler); }
 
+  /** 键盘独占期间按下 F9 到 F12 时调用（参数是键位名，按住不放只调用一次），这几个键不上报给机器；不独占时它们照常经窗口的键盘消息到达外壳。 */
+  void setOnShellKey(std::function<void(std::string_view)> handler) { onShellKey_ = std::move(handler); }
+
  private:
   void showLatestFrame();
   void pollGamepads();
@@ -102,6 +106,9 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
   /** 不独占键盘时跟踪的 Ctrl、Alt、Meta 按键状态（commandModifierBit 的位或）。 */
   unsigned commandModifiers_{0};
   std::function<void()> onMouseReleased_;
+  std::function<void(std::string_view)> onShellKey_;
+  /** 独占期间按着的外壳键（F9 到 F12 各一位），用来忽略按住不放的重复按下。 */
+  unsigned shellKeysDown_{0};
   /** 捕获期间上一次右键按下的时刻，用来判断双击右键。 */
   std::chrono::steady_clock::time_point lastRightDown_{};
   bool haveRightDown_{false};

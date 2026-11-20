@@ -45,10 +45,15 @@ contracts::ShellModule createShellModule() {
   alwaysOnTop.checked = [](const ShellViewState& view) { return view.alwaysOnTop; };
   module.commands.push_back(std::move(alwaysOnTop));
 
+  ShellMenuItemDefinition fullScreenItem;
+  fullScreenItem.menu = "settings";
+  fullScreenItem.command = kShellFullScreenCommand;
+  fullScreenItem.separatorBefore = true;
+  module.menuItems.push_back(std::move(fullScreenItem));
+
   ShellMenuItemDefinition alwaysOnTopItem;
   alwaysOnTopItem.menu = "settings";
   alwaysOnTopItem.command = kShellAlwaysOnTopCommand;
-  alwaysOnTopItem.separatorBefore = true;
   module.menuItems.push_back(std::move(alwaysOnTopItem));
 
   ShellMenuItemDefinition quitItem;

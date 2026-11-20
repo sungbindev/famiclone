@@ -38,4 +38,7 @@ namespace ember::win32::shared {
  */
 [[nodiscard]] bool isShellKey(std::string_view code, unsigned commandModifiers);
 
+/** 键盘独占时也始终留给外壳的键（不上报给机器，机器的键盘没有这些键）：F9、F10、F11、F12。 */
+[[nodiscard]] bool isAlwaysShellKey(std::string_view code);
+
 }  // namespace ember::win32::shared

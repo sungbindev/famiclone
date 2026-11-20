@@ -85,4 +85,6 @@ bool isShellKey(std::string_view code, unsigned commandModifiers) {
   return functionKey || commandModifiers != 0;
 }
 
+bool isAlwaysShellKey(std::string_view code) { return code == "F9" || code == "F10" || code == "F11" || code == "F12"; }
+
 }  // namespace ember::win32::shared

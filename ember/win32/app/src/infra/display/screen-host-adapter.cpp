@@ -86,6 +86,7 @@ void ScreenHostAdapter::setKeyboardMode(contracts::KeyboardMode mode) {
   if (!captured) input_.releaseAllKeys();
   // 重新开始采集时不知道此刻哪些修饰键按着，从“都没按”算起
   else if (!rawInput_->keyboardCaptured()) commandModifiers_ = 0;
+  shellKeysDown_ = 0;
   rawInput_->setKeyboardCapture(captured, exclusive);
   if (rawInput_->keyboardCaptured() != captured || rawInput_->keyboardExclusive() != exclusive) onError_("设置键盘采集方式失败");
 }
@@ -129,6 +130,19 @@ void ScreenHostAdapter::handleRawKey(std::uint16_t make, bool extended, bool pre
   if (!code) return;
   const unsigned modifier = shared::commandModifierBit(*code);
   if (modifier != 0) commandModifiers_ = up ? (commandModifiers_ & ~modifier) : (commandModifiers_ | modifier);
+  // 独占时 F9 到 F12 不交给机器，直接交给外壳（独占期间窗口收不到键盘消息）
+  if (rawInput_->keyboardExclusive() && shared::isAlwaysShellKey(*code)) {
+    // 键位名 F9 到 F12：F 后面的数字就是位号
+    unsigned number = static_cast<unsigned>((*code)[1] - '0');
+    if (code->size() == 3) number = number * 10 + static_cast<unsigned>((*code)[2] - '0');
+    const unsigned bit = 1u << number;
+    if (up) shellKeysDown_ &= ~bit;
+    else if ((shellKeysDown_ & bit) == 0) {
+      shellKeysDown_ |= bit;
+      if (onShellKey_) onShellKey_(*code);
+    }
+    return;
+  }
   // 不独占时留给外壳的键不上报；松开照常上报（没按下过的键输入端口会忽略），避免按下后再按修饰键导致卡键
   if (!up && !rawInput_->keyboardExclusive() && shared::isShellKey(*code, commandModifiers_)) return;
   input_.nativeKey(std::string(*code), !up);

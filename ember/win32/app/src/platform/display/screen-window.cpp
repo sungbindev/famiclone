@@ -253,7 +253,7 @@ struct ScreenWindow::Impl {
   }
 
   /**
-   * 毛玻璃：把一个提示框与画面相交的区域里的画面换成模糊后的，再由提示位图叠上底色、边框与文字；画面之外是黑底，不需要模糊。
+   * 毛玻璃：把一个提示框与画面相交的区域里的画面换成模糊后的，再由提示位图叠上底色与文字；画面之外是黑底，不需要模糊。
    * video 是画面在子窗口里的矩形，v0、v1 是它对应的纹理纵坐标范围。
    */
   void drawGlass(const shared::ScreenRect& box, const shared::ScreenRect& video, float v0, float v1) {

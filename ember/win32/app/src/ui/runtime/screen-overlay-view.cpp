@@ -36,7 +36,6 @@ constexpr double kIconStroke = 1.0;
 /** 提示框的内边距：水平 space-md，垂直 space-sm。 */
 constexpr double kPanelPaddingX = kGapMd;
 constexpr double kPanelPaddingY = kGapSm;
-constexpr double kGlassBorderWidth = 1;
 
 const Color kText = Color::rgba(235, 235, 235);
 const Color kBlack = Color::rgba(0, 0, 0);
@@ -44,8 +43,6 @@ const Color kBlack = Color::rgba(0, 0, 0);
 const Color kPausedFill = Color::rgba(0, 0, 0, 140);
 /** 提示框的底色：黑色，不透明度 0.5，下面是模糊后的画面（毛玻璃）。 */
 const Color kGlassFill = Color::rgba(0, 0, 0, 128);
-/** 提示框的边框：白色，不透明度 0.2，和画面有界限又不生硬。 */
-const Color kGlassBorder = Color::rgba(255, 255, 255, 51);
 
 constexpr const char* kKeyboardHint = "键盘已被机器独占，快捷键无效";
 constexpr const char* kMouseHint = "点击捕获鼠标，双击右键释放";
@@ -174,7 +171,7 @@ void ScreenOverlayView::paintPanels(rujian::ui::Canvas& canvas) const {
   TextStyle style = textStyle(kDisplayFontSize, 400);
   style.wrap = true;
   for (const PanelBox& panel : layoutPanels()) {
-    canvas.drawBox(panel.box, rujian::ui::BoxStyle{.fill = kGlassFill, .radius = kCornerRadius, .borderWidth = kGlassBorderWidth, .borderColor = kGlassBorder});
+    canvas.drawBox(panel.box, rujian::ui::BoxStyle{.fill = kGlassFill, .radius = kCornerRadius});
     canvas.drawText(panel.text, Rect{panel.box.x + kPanelPaddingX, panel.box.y + kPanelPaddingY, panel.size.width + 1, panel.size.height}, style, VerticalAlign::Top);
   }
 }

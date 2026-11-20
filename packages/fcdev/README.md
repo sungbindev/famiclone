@@ -44,12 +44,14 @@ FCDEV_DEBUG_PORT=5688 npx fcdev debug screenshot screen.png
 ### 反汇编
 
 ```bash
-npx fcdev disasm game.nes                                   # NES（NROM），入口取自中断向量
+npx fcdev disasm game.nes                                   # NES，入口取自中断向量
 npx fcdev disasm prog.bin --base 8000 --entry 8008          # 平铺二进制：加载地址与入口
 npx fcdev disasm game.nes --cdl game.cdl --symbols sym.txt  # 加 CDL 与符号文件
 ```
 
 用 `ca65`、`ld65` 把生成的源码重新汇编链接，与原映像逐字节比较，不一致就报错。输出目录是一个工程：`disasm.json`、`src/main.s`、`include/`、`link.cfg`。只追得到的代码才会按指令输出，其余按数据输出；用 `--cdl`（FCEUX、Mesen 格式）或 `--trace`（Ember 记录的指令轨迹）补充运行时才执行到的代码。
+
+在 VS Code 里还可以用扩展“fcdev 6502 开发”：它给 Copilot 提供反汇编与模拟器工具和智能体“6502 反汇编工程师”，多轮完成命名、注释、区域标注、分层与回读，也能连接 Ember 记录运行情况再导入工程。
 
 ## 配置
 

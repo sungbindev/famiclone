@@ -11,6 +11,7 @@
 - 头文件里符号与函数的文档注释（`/** */`），悬停时显示。
 - ca65 汇编的语法高亮（TextMate 语法）。C 用 VS Code 内置的 C 语法，不另提供。
 - 给 Copilot 用的 6502 反汇编与模拟器工具（共 30 个语言模型工具），见第 6 节。
+- 随扩展提供的反汇编指令、skill 与自定义智能体“6502 反汇编工程师”，见第 6.7 节。
 
 首版不含，登记在 [待办备忘](待办备忘.md)：任务与问题匹配器、构建与运行命令、新建项目、调试。
 
@@ -182,11 +183,11 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 - `emu_screen` 的截图作为图像部分随结果返回（文字里不含 base64）。图像部分需要较新的 VS Code（工具结果里的 `LanguageModelDataPart`，按运行时是否存在检测，扩展声明的 `engines` 仍是 ^1.95.0）；不支持时结果里会说明，让模型给 `file` 参数把截图保存成文件。
 - 记录文件由 Ember 写在它的调试输出目录，`emu_record` 结束时返回完整路径，再交给 `disasm_import_record` 导入。
 
-### 6.5 激活
+### 6.6 激活
 
 激活事件在原来的 `workspaceContains:fcdev.json` 之外增加 `workspaceContains:**/disasm.json` 与 `onStartupFinished`：只有一个映像文件的反汇编工作区没有 `fcdev.json`，工具也要能用。真实 VS Code 里 Copilot 是否发现并调用工具，要手动核对。
 
-### 6.6 指令、skill 与 agent
+### 6.7 指令、skill 与 agent
 
 | 文件 | 声明 | 内容 |
 | --- | --- | --- |
@@ -196,4 +197,4 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 - 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。
 - `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整；agent 的工具恰好是内置三项加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*` 都存在。
-- 这三类贡献点要较新的 VS Code，低版本会忽略；agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。
+- 这三类贡献点要较新的 VS Code，低版本会忽略它们，不影响扩展的其他功能（语法高亮、智能感知、语言模型工具）；因此 `engines.vscode` 保持 `^1.95.0`，不为聊天贡献点抬高，否则低版本用户连其他功能也装不上。agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。

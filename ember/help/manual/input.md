@@ -52,7 +52,7 @@
 
 ## Family BASIC 键盘
 
-给经典 FC 接上 Family BASIC 键盘：勾选“机器”菜单里的“接入 Family BASIC 键盘”，或在首选项的“输入”分组里打开。接入后，键盘按键按 Family BASIC 键盘的键位送给机器，不再当作手柄按键。学习机不受这个选项影响。
+给经典 FC 接上 Family BASIC 键盘：勾选“机器”菜单里的“接入 Family BASIC 键盘”。这个选项不保存，每次启动 Ember 都是未接入。接入后，键盘按键按 Family BASIC 键盘的键位送给机器，不再当作手柄按键。学习机不受这个选项影响。
 
 ## 鼠标
 

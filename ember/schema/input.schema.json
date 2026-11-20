@@ -1,5 +1,5 @@
 {
-  "$comment": "input 模块：手柄绑定（界面设置，所有机型共用）与经调试服务注入输入。键盘与鼠标原始事件交给机器自己处理；游戏手柄的原始事件与键盘按键经手柄绑定变成手柄口的按键；pad 直接设置主机手柄口，不经绑定。注入的请求只经调试服务开放（debugOnly），界面的输入走消息端口。规则见 docs/04-调试服务.md 第 4.4 节与 docs/05-界面.md 第 4.6 节。",
+  "$comment": "input 模块：手柄绑定（界面设置，所有机型共用）、Family BASIC 键盘的接入状态（不保存）与经调试服务注入输入。键盘与鼠标原始事件交给机器自己处理；游戏手柄的原始事件与键盘按键经手柄绑定变成手柄口的按键；pad 直接设置主机手柄口，不经绑定。注入的请求只经调试服务开放（debugOnly），界面的输入走消息端口。规则见 docs/04-调试服务.md 第 4.4 节与 docs/05-界面.md 第 4.6 节。",
   "module": "input",
   "types": {
     "PadKeyBinding": {
@@ -85,6 +85,30 @@
       },
       "errors": []
     },
+    "getFamilyKeyboard": {
+      "description": "读取是否给经典 FC 接上了 Family BASIC 键盘；每次启动都是未接入，不保存。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": { "connected": { "type": "boolean", "description": "是否已接入" } },
+        "required": ["connected"]
+      },
+      "errors": []
+    },
+    "setFamilyKeyboard": {
+      "description": "给经典 FC 接入或断开 Family BASIC 键盘：对当前主机立即生效，之后装配的主机也按它设置；接入后电脑键盘的按键按 Family BASIC 键盘的键位送给机器，不再当作手柄按键；学习机用自己内置的键盘，不受影响。状态只在本次运行里保留，不保存；有变化时发出 input.familyKeyboardChanged。",
+      "params": {
+        "type": "object",
+        "properties": { "connected": { "type": "boolean", "description": "true 接入，false 断开" } },
+        "required": ["connected"]
+      },
+      "result": {
+        "type": "object",
+        "properties": { "connected": { "type": "boolean", "description": "设置之后是否已接入" } },
+        "required": ["connected"]
+      },
+      "errors": []
+    },
     "key": {
       "description": "按下或松开一个物理键：键盘属于机器时交给机器，否则按手柄绑定变成手柄口的按键；没有开机时被丢弃。",
       "debugOnly": true,
@@ -166,6 +190,14 @@
           "slots": { "type": "array", "items": { "$ref": "#/types/PadSlot" }, "minItems": 2, "maxItems": 2, "description": "新的玩家槽位" }
         },
         "required": ["slots"]
+      }
+    },
+    "familyKeyboardChanged": {
+      "description": "Family BASIC 键盘的接入状态变了（界面或调试服务设置后发出，没有变化时不发）。",
+      "data": {
+        "type": "object",
+        "properties": { "connected": { "type": "boolean", "description": "新的接入状态" } },
+        "required": ["connected"]
       }
     }
   }

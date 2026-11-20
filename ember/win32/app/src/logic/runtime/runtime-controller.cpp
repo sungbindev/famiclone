@@ -18,8 +18,7 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 接入 Family BASIC 键盘的首选项标识。 */
-constexpr const char* kFamilyKeyboardSetting = "input.familyKeyboard";
+/** 画面效果的首选项标识。 */
 constexpr const char* kScreenFilterSetting = "display.filter";
 
 std::string failedText(const std::string& action, const std::string& reason) { return action + "失败：" + reason; }
@@ -192,26 +191,24 @@ void RuntimeController::adjustSound(nlohmann::json params) {
 
 void RuntimeController::toggleFamilyKeyboard() {
   if (shell_ == nullptr) return;
-  ask("preferences.set", {{"id", kFamilyKeyboardSetting}, {"value", !familyKeyboard_}}, [this](const contracts::CoreReply& reply) {
+  ask("input.setFamilyKeyboard", {{"connected", !familyKeyboard_}}, [this](const contracts::CoreReply& reply) {
     if (!reply.ok) {
       report("设置 Family BASIC 键盘", reply);
       return;
     }
-    familyKeyboard_ = reply.result.contains("value") && reply.result["value"] == true;
+    familyKeyboard_ = reply.result.value("connected", false);
     changed();
-  });
-}
-
-void RuntimeController::setScreenFilter(shared::ScreenFilter filter) {
-  if (shell_ == nullptr || screen_.filter == filter) return;
-  ask("preferences.set", {{"id", kScreenFilterSetting}, {"value", filter == shared::ScreenFilter::Pixel ? "pixel" : "smooth"}}, [this](const contracts::CoreReply& reply) {
-    if (!reply.ok) report("设置画面效果", reply);
   });
 }
 
 void RuntimeController::handleEvent(const std::string& name, const nlohmann::json& data) {
   if (name == "preferences.changed") {
     if (data.is_object() && data.contains("id") && data["id"].is_string() && data.contains("value")) applySetting(data["id"].get<std::string>(), data["value"]);
+  } else if (name == "input.familyKeyboardChanged") {
+    if (data.is_object() && data.contains("connected") && data["connected"].is_boolean() && data["connected"].get<bool>() != familyKeyboard_) {
+      familyKeyboard_ = data["connected"].get<bool>();
+      changed();
+    }
   } else if (name == "runtime.stateChanged") {
     if (data.is_object() && data.contains("reason") && data["reason"] == "reset") ++resetCount_;
     refreshStatus();
@@ -242,6 +239,7 @@ void RuntimeController::refreshAll() {
   refreshMachines();
   refreshVolume();
   refreshSettings();
+  refreshFamilyKeyboard();
 }
 
 void RuntimeController::refreshStatus() {
@@ -284,13 +282,23 @@ void RuntimeController::refreshVolume() {
   });
 }
 
+void RuntimeController::refreshFamilyKeyboard() {
+  if (shell_ == nullptr) return;
+  ask("input.getFamilyKeyboard", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
+    if (!reply.ok) return;
+    const bool connected = reply.result.value("connected", false);
+    if (connected == familyKeyboard_) return;
+    familyKeyboard_ = connected;
+    changed();
+  });
+}
+
 void RuntimeController::refreshSettings() {
   if (shell_ == nullptr) return;
   ask("preferences.list", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
     if (!reply.ok || !reply.result.is_object() || !reply.result.contains("settings") || !reply.result["settings"].is_array()) return;
     // 读不到的项继续用默认值，所以先回到默认再逐项套用
     screen_ = contracts::ScreenSettings{};
-    familyKeyboard_ = false;
     for (const auto& item : reply.result["settings"]) {
       if (item.is_object() && item.contains("id") && item["id"].is_string() && item.contains("value")) applySetting(item["id"].get<std::string>(), item["value"]);
     }
@@ -300,7 +308,6 @@ void RuntimeController::refreshSettings() {
 
 void RuntimeController::applySetting(const std::string& id, const nlohmann::json& value) {
   const contracts::ScreenSettings before = screen_;
-  const bool keyboardBefore = familyKeyboard_;
   if (id == "display.aspect" && value.is_string()) {
     if (value == "4:3") screen_.aspect = shared::ScreenAspect::Ratio4x3;
     else if (value == "8:7") screen_.aspect = shared::ScreenAspect::Ratio8x7;
@@ -314,10 +321,8 @@ void RuntimeController::applySetting(const std::string& id, const nlohmann::json
     screen_.showAllLines = value.get<bool>();
   } else if (id == "input.captureMouse" && value.is_boolean()) {
     screen_.captureMouse = value.get<bool>();
-  } else if (id == kFamilyKeyboardSetting) {
-    familyKeyboard_ = value == true;
   }
-  const bool same = before.aspect == screen_.aspect && before.scaling == screen_.scaling && before.filter == screen_.filter && before.showAllLines == screen_.showAllLines && before.captureMouse == screen_.captureMouse && keyboardBefore == familyKeyboard_;
+  const bool same = before.aspect == screen_.aspect && before.scaling == screen_.scaling && before.filter == screen_.filter && before.showAllLines == screen_.showAllLines && before.captureMouse == screen_.captureMouse;
   if (!same) changed();
 }
 

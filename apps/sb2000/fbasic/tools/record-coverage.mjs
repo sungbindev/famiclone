@@ -33,7 +33,7 @@ mkdirSync(SHOTS, { recursive: true });
  * @returns {Promise<Buffer|null>} CDL 内容；换 ROM 重跑时不记 CDL，返回 null
  */
 async function runScript(client, name, file) {
-  await client.api.preferences.set({ id: 'input.familyKeyboard', value: true });
+  await client.api.input.setFamilyKeyboard({ connected: true });
   await client.api.cartridges.load({ path: romOption ? resolve(romOption) : ROM, powerOn: true, resume: false });
   if (!romOption) await client.api.inspector.cdlStart();
   await frames(client, 200);

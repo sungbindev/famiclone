@@ -97,7 +97,7 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   const auto choices = logic::machineChoices(logic::parseMachines(machinesJson()));
   ASSERT_EQ(choices.size(), 4U);
   EXPECT_EQ(choices[0].id, "sb97");
-  EXPECT_EQ(choices[0].hint, "未添加 BIOS，请到设置→机型与 BIOS 添加");
+  EXPECT_EQ(choices[0].hint, "未添加 BIOS");
   EXPECT_EQ(choices[1].id, "sb2000");
   EXPECT_TRUE(choices[1].hint.empty());
   EXPECT_EQ(choices[2].id, "bbk10");
@@ -155,6 +155,7 @@ struct RuntimeFixture {
     reply("cartridges.recent", {{"items", json::array({{{"id", 1}, {"name", "a.nes"}}, {{"id", 2}, {"name", "b.nes"}}})}});
     reply("output.setVolume", {{"volume", 80}, {"muted", false}});
     reply("preferences.list", {{"settings", json::array()}});
+    reply("input.getFamilyKeyboard", {{"connected", false}});
     controller.setScreenFocus([this] { ++focusCalls; });
     unsubscribe = controller.subscribe([this] { ++changes; });
   }
@@ -409,51 +410,57 @@ TEST(RuntimeController, MuteKeepsTheVolumeAndFailuresAreNotified) {
   EXPECT_EQ(f.shell.notices.back().first, "调整音量失败：声音设备不可用");
 }
 
-TEST(RuntimeController, FamilyKeyboardAndDisplaySettingsFollowThePreferences) {
+TEST(RuntimeController, DisplaySettingsFollowThePreferences) {
   RuntimeFixture f;
-  f.reply("preferences.list", {{"settings", json::array({{{"id", "input.familyKeyboard"}, {"value", true}},
-                                                        {{"id", "display.aspect"}, {"value", "4:3"}},
+  f.reply("preferences.list", {{"settings", json::array({{{"id", "display.aspect"}, {"value", "4:3"}},
                                                         {{"id", "display.scaling"}, {"value", "integer"}},
                                                         {{"id", "display.showAllLines"}, {"value", false}},
                                                         {{"id", "input.captureMouse"}, {"value", false}}})}});
   f.attach();
-  EXPECT_TRUE(f.controller.familyKeyboard());
   const auto view = f.controller.view();
   EXPECT_EQ(view.screen.aspect, shared::ScreenAspect::Ratio4x3);
   EXPECT_EQ(view.screen.scaling, shared::ScreenScaling::Integer);
   EXPECT_FALSE(view.screen.showAllLines);
   EXPECT_FALSE(view.screen.captureMouse);
-  // 其他地方改了取值同样跟随，别的设置项不影响
+  // 其他地方改了取值同样跟随
   f.core.emitEvent("preferences.changed", {{"id", "display.aspect"}, {"value", "8:7"}});
   EXPECT_EQ(f.controller.view().screen.aspect, shared::ScreenAspect::Ratio8x7);
+}
+
+TEST(RuntimeController, FamilyKeyboardIsReadFromAndSetThroughTheInputRequests) {
+  RuntimeFixture f;
+  f.reply("input.getFamilyKeyboard", {{"connected", true}});
+  f.attach();
   EXPECT_TRUE(f.controller.familyKeyboard());
-  f.core.emitEvent("preferences.changed", {{"id", "input.familyKeyboard"}, {"value", false}});
+  // 调试服务或别处改了状态，核心发事件，跟着变
+  f.core.emitEvent("input.familyKeyboardChanged", {{"connected", false}});
   EXPECT_FALSE(f.controller.familyKeyboard());
-  f.reply("preferences.set", {{"id", "input.familyKeyboard"}, {"value", true}});
+  // 菜单勾选发请求，状态以核心的回复为准
+  f.reply("input.setFamilyKeyboard", {{"connected", true}});
   f.controller.toggleFamilyKeyboard();
-  EXPECT_EQ(f.last("preferences.set")->params, json({{"id", "input.familyKeyboard"}, {"value", true}}));
+  EXPECT_EQ(f.last("input.setFamilyKeyboard")->params, json({{"connected", true}}));
   EXPECT_TRUE(f.controller.familyKeyboard());
-  f.fail("preferences.set", "写不进去");
+  f.reply("input.setFamilyKeyboard", {{"connected", false}});
+  f.controller.toggleFamilyKeyboard();
+  EXPECT_EQ(f.last("input.setFamilyKeyboard")->params, json({{"connected", false}}));
+  EXPECT_FALSE(f.controller.familyKeyboard());
+  f.fail("input.setFamilyKeyboard", "写不进去");
   f.controller.toggleFamilyKeyboard();
   EXPECT_EQ(f.shell.notices.back().first, "设置 Family BASIC 键盘失败：写不进去");
+  EXPECT_FALSE(f.controller.familyKeyboard());
+  // 不相关的首选项变化不影响它
+  f.core.emitEvent("input.familyKeyboardChanged", {{"connected", true}});
+  f.core.emitEvent("preferences.changed", {{"id", "display.aspect"}, {"value", "4:3"}});
   EXPECT_TRUE(f.controller.familyKeyboard());
 }
 
-TEST(RuntimeController, ScreenFilterFollowsThePreferenceAndIsSetThroughThePreferences) {
+TEST(RuntimeController, ScreenFilterFollowsThePreference) {
   RuntimeFixture f;
   f.reply("preferences.list", {{"settings", json::array({{{"id", "display.filter"}, {"value", "pixel"}}})}});
   f.attach();
   EXPECT_EQ(f.controller.view().screen.filter, shared::ScreenFilter::Pixel);
   f.core.emitEvent("preferences.changed", {{"id", "display.filter"}, {"value", "smooth"}});
-  EXPECT_EQ(f.controller.screenFilter(), shared::ScreenFilter::Smooth);
-  // 菜单选“像素”只发请求，状态以首选项变化事件为准
-  f.reply("preferences.set", {{"id", "display.filter"}, {"value", "pixel"}});
-  f.controller.setScreenFilter(shared::ScreenFilter::Pixel);
-  EXPECT_EQ(f.last("preferences.set")->params, json({{"id", "display.filter"}, {"value", "pixel"}}));
-  EXPECT_EQ(f.controller.screenFilter(), shared::ScreenFilter::Smooth);
-  f.fail("preferences.set", "写不进去");
-  f.controller.setScreenFilter(shared::ScreenFilter::Pixel);
-  EXPECT_EQ(f.shell.notices.back().first, "设置画面效果失败：写不进去");
+  EXPECT_EQ(f.controller.view().screen.filter, shared::ScreenFilter::Smooth);
 }
 
 TEST(RuntimeController, KeyboardIsExclusiveOnlyForHandheldMachinesOrTheFamilyKeyboard) {
@@ -461,9 +468,9 @@ TEST(RuntimeController, KeyboardIsExclusiveOnlyForHandheldMachinesOrTheFamilyKey
   f.reply("runtime.status", statusJson("on", "running", "fc", false, "a.nes"));
   f.attach();
   EXPECT_FALSE(f.controller.view().exclusiveKeyboard);
-  f.core.emitEvent("preferences.changed", {{"id", "input.familyKeyboard"}, {"value", true}});
+  f.core.emitEvent("input.familyKeyboardChanged", {{"connected", true}});
   EXPECT_TRUE(f.controller.view().exclusiveKeyboard);
-  f.core.emitEvent("preferences.changed", {{"id", "input.familyKeyboard"}, {"value", false}});
+  f.core.emitEvent("input.familyKeyboardChanged", {{"connected", false}});
   EXPECT_FALSE(f.controller.view().exclusiveKeyboard);
   f.reply("runtime.status", statusJson("on", "running", "sb2000", true));
   f.core.emitEvent("runtime.stateChanged", json::object());
@@ -559,23 +566,15 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   ASSERT_EQ(menus[1].items[0].items.size(), 4U);
   EXPECT_FALSE(menus[1].items[0].items[1].disabled);
   EXPECT_TRUE(menus[1].items[0].items[0].disabled);
-  EXPECT_EQ(menus[1].items[0].items[0].hint, "未添加 BIOS，请到设置→机型与 BIOS 添加");
+  EXPECT_EQ(menus[1].items[0].items[0].hint, "未添加 BIOS");
   EXPECT_EQ(menus[1].items[1].label, "断电");
   EXPECT_TRUE(menus[1].items[1].separatorBefore);
   EXPECT_EQ(menus[1].items[2].label, "暂停");
   EXPECT_TRUE(menus[1].items[3].separatorBefore);
   EXPECT_FALSE(menus[1].items[5].checked.value());
-  // “设置”菜单的“画面效果”子菜单：平滑与像素二选一，当前的打对勾，选“像素”经首选项保存
-  ASSERT_EQ(menus[2].items.size(), 3U);
-  EXPECT_EQ(menus[2].items[0].label, "画面效果");
-  ASSERT_EQ(menus[2].items[0].items.size(), 2U);
-  EXPECT_EQ(menus[2].items[0].items[0].label, "平滑");
-  EXPECT_TRUE(menus[2].items[0].items[0].checked.value());
-  EXPECT_EQ(menus[2].items[0].items[1].label, "像素");
-  EXPECT_FALSE(menus[2].items[0].items[1].checked.value());
-  f.reply("preferences.set", {{"id", "display.filter"}, {"value", "pixel"}});
-  shell.selectMenuItem(menus[2].items[0].items[1].id);
-  EXPECT_EQ(f.last("preferences.set")->params, json({{"id", "display.filter"}, {"value", "pixel"}}));
+  // “设置”菜单里没有“画面效果”（只在首选项里设置）
+  ASSERT_EQ(menus[2].items.size(), 2U);
+  for (const auto& item : menus[2].items) EXPECT_NE(item.label, "画面效果");
   const auto host = shell.statusItems(false);
   ASSERT_EQ(host.size(), 3U);
   EXPECT_EQ(host[0].text, "经典 FC");

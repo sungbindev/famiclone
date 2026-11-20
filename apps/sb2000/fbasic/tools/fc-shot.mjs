@@ -20,7 +20,7 @@ try {
   if (keyboard) {
     await bootFamilyBasic(client, count);
   } else {
-    await client.api.preferences.set({ id: 'input.familyKeyboard', value: false });
+    await client.api.input.setFamilyKeyboard({ connected: false });
     await client.api.cartridges.load({ path: (await import('./lib/ember-fc.mjs')).ROM, powerOn: true, resume: false });
     await frames(client, count);
   }

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：设置项由 input 模块登记；点击画面是否捕获鼠标只给界面用，核心不读它；是否接入 Family BASIC 键盘由 input 模块读取并交给运行服务。
+ * 备注：设置项由 input 模块登记；点击画面是否捕获鼠标只给界面用，核心不读它。
  * ------------------------------------------------------------------------
  */
 
@@ -20,8 +20,5 @@ inline constexpr std::string_view SETTING_GROUP = "input";
 
 /** 点击画面时是否捕获鼠标（开关，默认关闭）。 */
 inline constexpr std::string_view SETTING_CAPTURE_MOUSE = "input.captureMouse";
-
-/** 是否给经典 FC 接上 Family BASIC 键盘（开关，默认关闭）；学习机用自己内置的键盘，不受影响。 */
-inline constexpr std::string_view SETTING_FAMILY_KEYBOARD = "input.familyKeyboard";
 
 }  // namespace ember::contracts::input::setting

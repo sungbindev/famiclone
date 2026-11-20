@@ -49,6 +49,18 @@ void addInputRequests(platform::RequestRouter& router, std::shared_ptr<contract:
     result.slots = *bindings->reset();
     return nlohmann::json(result);
   });
+  router.add("input", contract::INPUT_GET_FAMILY_KEYBOARD_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInputGetFamilyKeyboardParams(params, "params"));
+    contract::InputGetFamilyKeyboardResult result;
+    result.connected = service->familyKeyboard();
+    return nlohmann::json(result);
+  });
+  router.add("input", contract::INPUT_SET_FAMILY_KEYBOARD_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInputSetFamilyKeyboardParams(params, "params");
+    contract::InputSetFamilyKeyboardResult result;
+    result.connected = service->setFamilyKeyboard(parsed.connected);
+    return nlohmann::json(result);
+  });
   router.add("input", contract::INPUT_KEY_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInputKeyParams(params, "params");
     service->key(parsed.code, parsed.down);

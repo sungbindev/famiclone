@@ -18,7 +18,7 @@
 
 namespace ember::requests::input {
 
-/** 登记 input 模块的请求：注入输入（调试用）与手柄绑定。 */
+/** 登记 input 模块的请求：注入输入（调试用）、Family BASIC 键盘接入状态与手柄绑定。 */
 void addInputRequests(platform::RequestRouter& router, std::shared_ptr<contracts::input::InputService> service, std::shared_ptr<contracts::input::InputBindingService> bindings);
 
 }  // namespace ember::requests::input

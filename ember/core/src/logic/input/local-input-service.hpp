@@ -18,26 +18,31 @@
 
 #include "contracts/input/input-service.hpp"
 #include "contracts/runtime/runtime-service.hpp"
+#include "platform/events/event-sink.hpp"
 
 namespace ember::logic::input {
 
 /** 输入注入服务。 */
 class LocalInputService final : public contracts::input::InputService {
  public:
-  explicit LocalInputService(std::shared_ptr<contracts::runtime::RuntimeService> runtime);
+  LocalInputService(std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events);
 
   void key(const std::string& code, bool down) override;
   void mouse(const contracts::hardware::MouseInput& event) override;
   void gamepad(const contracts::hardware::GamepadInput& event) override;
   void pad(unsigned port, std::uint8_t buttons) override;
   void releaseAll() override;
+  [[nodiscard]] bool familyKeyboard() const override;
+  bool setFamilyKeyboard(bool connected) override;
 
  private:
   std::shared_ptr<contracts::runtime::RuntimeService> runtime_;
-  std::mutex mutex_;
+  std::shared_ptr<platform::EventSink> events_;
+  mutable std::mutex mutex_;
   std::set<std::string> downKeys_;
   std::set<unsigned> usedPorts_;
   std::set<std::uint8_t> gamepads_;
+  bool familyKeyboard_{false};
 };
 
 }  // namespace ember::logic::input

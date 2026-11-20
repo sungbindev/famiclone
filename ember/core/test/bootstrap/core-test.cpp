@@ -81,8 +81,8 @@ TEST_F(CoreTest, StartsAndAnswersSystemVersion) {
   const auto info = nlohmann::json::parse(core.start(options()));
   EXPECT_FALSE(info["coreVersion"].get<std::string>().empty());
   const auto& requests = info["requests"];
-  EXPECT_EQ(requests.size(), 75U);
-  for (const char* name : {"system.version", "preferences.list", "preferences.set", "preferences.reset", "input.getBindings", "input.setBindings", "input.resetBindings", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled",
+  EXPECT_EQ(requests.size(), 77U);
+  for (const char* name : {"system.version", "preferences.list", "preferences.set", "preferences.reset", "input.getBindings", "input.setBindings", "input.resetBindings", "input.getFamilyKeyboard", "input.setFamilyKeyboard", "mappers.list", "mappers.info", "mappers.install", "mappers.uninstall", "mappers.setEnabled",
                            "mappers.reload", "output.setVolume", "runtime.status", "runtime.powerOn", "runtime.powerOff", "runtime.reset", "runtime.pause", "runtime.resume", "cartridges.load",
                            "cartridges.eject", "cartridges.info", "debug.hello", "debug.subscribe", "debug.unsubscribe", "debug.status", "machines.list", "machines.boot", "media.floppyInsert",
                            "media.floppyWriteProtect", "media.printerFlush", "media.tapeLoad", "media.tapeEject", "media.tapePlay", "media.tapeRecord", "media.tapeStop", "media.tapeStatus"}) {
@@ -160,15 +160,14 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   EXPECT_EQ(groups, (std::vector<std::string>{"appearance", "display", "update", "app", "sound", "input", "printer", "debug"}));
   std::map<std::string, nlohmann::json> byId;
   for (const auto& setting : listed.payload["settings"]) byId[setting["id"]] = setting;
-  EXPECT_EQ(byId.size(), 18U);
+  EXPECT_EQ(byId.size(), 17U);
   EXPECT_EQ(byId["update.autoCheck"]["kind"], "switch");
   EXPECT_EQ(byId["update.autoCheck"]["value"], true);
   EXPECT_EQ(byId["app.allowMultipleInstances"]["kind"], "switch");
   EXPECT_EQ(byId["app.allowMultipleInstances"]["value"], false);
   EXPECT_EQ(byId["input.captureMouse"]["kind"], "switch");
   EXPECT_EQ(byId["input.captureMouse"]["value"], true);
-  EXPECT_EQ(byId["input.familyKeyboard"]["kind"], "switch");
-  EXPECT_EQ(byId["input.familyKeyboard"]["value"], false);
+  EXPECT_FALSE(byId.contains("input.familyKeyboard"));
   EXPECT_EQ(byId["appearance.theme"]["kind"], "choice");
   EXPECT_EQ(byId["appearance.theme"]["value"], "system");
   EXPECT_EQ(byId["appearance.theme"]["options"].size(), 3U);
@@ -198,6 +197,37 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   const auto reset = call(core, "9", "preferences.reset", R"({"id":"appearance.theme"})");
   ASSERT_TRUE(reset.ok);
   EXPECT_EQ(reset.payload["value"], "system");
+  core.stop();
+}
+
+TEST_F(CoreTest, FamilyKeyboardIsOffAtStartAndIsNotKeptAcrossARestart) {
+  {
+    Core core;
+    std::mutex eventsMutex;
+    std::vector<nlohmann::json> changes;
+    core.setEventHandler([&](const std::string& name, const std::string& data) {
+      if (name != "input.familyKeyboardChanged") return;
+      std::lock_guard lock(eventsMutex);
+      changes.push_back(nlohmann::json::parse(data));
+    });
+    static_cast<void>(core.start(options()));
+    EXPECT_EQ(call(core, "1", "input.getFamilyKeyboard", "{}").payload["connected"], false);
+    const auto on = call(core, "2", "input.setFamilyKeyboard", R"({"connected":true})");
+    ASSERT_TRUE(on.ok) << on.payload.dump();
+    EXPECT_EQ(on.payload["connected"], true);
+    EXPECT_EQ(call(core, "3", "input.getFamilyKeyboard", "{}").payload["connected"], true);
+    ASSERT_TRUE(ember::test::waitFor([&] {
+      std::lock_guard lock(eventsMutex);
+      return !changes.empty();
+    }));
+    EXPECT_EQ(changes.front(), (nlohmann::json{{"connected", true}}));
+    EXPECT_EQ(call(core, "4", "input.setFamilyKeyboard", R"({"connected":1})").payload["code"], "core.invalidParams");
+    EXPECT_EQ(call(core, "5", "input.setFamilyKeyboard", "{}").payload["code"], "core.invalidParams");
+    core.stop();
+  }
+  Core core;
+  static_cast<void>(core.start(options()));
+  EXPECT_EQ(call(core, "1", "input.getFamilyKeyboard", "{}").payload["connected"], false);
   core.stop();
 }
 

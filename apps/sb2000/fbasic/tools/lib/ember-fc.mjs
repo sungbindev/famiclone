@@ -92,7 +92,7 @@ export async function startEmber({ port = 5721, executable = locateEmulator().ex
  * @param {number} bootFrames 载入后先运行的帧数
  */
 export async function bootFamilyBasic(client, bootFrames = 120) {
-  await client.api.preferences.set({ id: 'input.familyKeyboard', value: true });
+  await client.api.input.setFamilyKeyboard({ connected: true });
   await client.api.cartridges.load({ path: ROM, powerOn: true, resume: false });
   await client.api.runtime.run({ frames: bootFrames, wait: true });
 }

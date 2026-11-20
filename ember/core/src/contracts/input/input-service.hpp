@@ -40,6 +40,12 @@ class InputService {
 
   /** 松开注入的全部键、手柄口清零、注入的手柄断开。 */
   virtual void releaseAll() = 0;
+
+  /** 是否给经典 FC 接上了 Family BASIC 键盘；每次启动都是未接入，不保存。 */
+  [[nodiscard]] virtual bool familyKeyboard() const = 0;
+
+  /** 接入或断开 Family BASIC 键盘：对当前主机立即生效，状态有变化时发出 input.familyKeyboardChanged；返回设置之后的状态。 */
+  virtual bool setFamilyKeyboard(bool connected) = 0;
 };
 
 }  // namespace ember::contracts::input

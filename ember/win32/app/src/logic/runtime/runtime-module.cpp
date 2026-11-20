@@ -23,7 +23,6 @@ using contracts::ShellViewState;
 /** 子菜单的标识。 */
 constexpr const char* kMachineSubmenuId = "runtime.machine";
 constexpr const char* kRecentSubmenuId = "runtime.recent";
-constexpr const char* kScreenFilterSubmenuId = "runtime.screenFilter";
 
 ShellCommandDefinition makeCommand(const char* id, std::function<std::string()> title, const char* shortcut, std::function<void(ShellApi&)> run) {
   ShellCommandDefinition command;
@@ -120,22 +119,6 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   }};
   machineMenu.submenu->titleText = [&controller] { return machineMenuTitle(controller.machines(), controller.selectedMachine()); };
   module.menuItems.push_back(std::move(machineMenu));
-  // “画面效果”的子菜单项：平滑与像素二选一，当前的打对勾
-  ShellMenuItemDefinition filterMenu;
-  filterMenu.menu = "settings";
-  filterMenu.submenu = contracts::ShellSubmenuDefinition{kScreenFilterSubmenuId, "画面效果", [&controller] {
-    std::vector<contracts::ShellSubmenuEntry> entries;
-    for (const auto filter : {shared::ScreenFilter::Smooth, shared::ScreenFilter::Pixel}) {
-      contracts::ShellSubmenuEntry entry;
-      entry.id = filter == shared::ScreenFilter::Pixel ? "pixel" : "smooth";
-      entry.label = filter == shared::ScreenFilter::Pixel ? "像素" : "平滑";
-      entry.checked = controller.screenFilter() == filter;
-      entry.run = [&controller, filter](ShellApi&) { controller.setScreenFilter(filter); };
-      entries.push_back(std::move(entry));
-    }
-    return entries;
-  }};
-  module.menuItems.push_back(std::move(filterMenu));
   module.menuItems.push_back(commandItem("file", "runtime.openCartridge"));
   // “最近打开”的子菜单项：最近打开的卡带，选中即重新打开
   ShellMenuItemDefinition recentMenu;

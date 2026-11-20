@@ -58,7 +58,6 @@ class RuntimeController final : public contracts::RuntimeModel {
   [[nodiscard]] const std::string& selectedMachine() const { return selectedMachine_; }
   [[nodiscard]] bool muted() const { return muted_; }
   [[nodiscard]] bool familyKeyboard() const { return familyKeyboard_; }
-  [[nodiscard]] shared::ScreenFilter screenFilter() const { return screen_.filter; }
   [[nodiscard]] contracts::RuntimeControls availability() const;
 
   // ---- 操作 ----
@@ -74,10 +73,8 @@ class RuntimeController final : public contracts::RuntimeModel {
   void openDroppedCartridge(std::int64_t droppedId);
   /** 重新打开最近打开清单里的卡带。 */
   void openRecent(std::int64_t id);
-  /** 接入或拔下 Family BASIC 键盘：保存到首选项，核心据此接到经典 FC 的扩展口；状态以首选项变化事件为准。 */
+  /** 接入或拔下 Family BASIC 键盘：经核心的 input.setFamilyKeyboard 设置（不保存，每次启动都是未接入），状态以核心的回复与 input.familyKeyboardChanged 事件为准。 */
   void toggleFamilyKeyboard();
-  /** 设置画面效果（平滑或像素）：保存到首选项“画面”分组，状态以首选项变化事件为准。 */
-  void setScreenFilter(shared::ScreenFilter filter);
 
   // ---- RuntimeModel ----
   [[nodiscard]] contracts::RuntimeView view() const override;
@@ -102,6 +99,7 @@ class RuntimeController final : public contracts::RuntimeModel {
   void refreshRecent();
   void refreshMachines();
   void refreshVolume();
+  void refreshFamilyKeyboard();
   void refreshSettings();
   void applySetting(const std::string& id, const nlohmann::json& value);
   void changed();

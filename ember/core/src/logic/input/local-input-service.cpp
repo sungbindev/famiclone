@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "contracts/input/generated/input.hpp"
 #include "contracts/input/input-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -20,7 +21,7 @@ namespace ember::logic::input {
 
 namespace hw = contracts::hardware;
 
-LocalInputService::LocalInputService(std::shared_ptr<contracts::runtime::RuntimeService> runtime) : runtime_(std::move(runtime)) {}
+LocalInputService::LocalInputService(std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events) : runtime_(std::move(runtime)), events_(std::move(events)) {}
 
 void LocalInputService::key(const std::string& code, bool down) {
   {
@@ -65,6 +66,26 @@ void LocalInputService::releaseAll() {
   for (const auto& code : keys) runtime_->sendInput(hw::KeyInput{code, false});
   for (const auto port : ports) runtime_->setPadButtons(port, 0);
   for (const auto index : gamepads) runtime_->sendInput(hw::GamepadInput{index, false, {}, {}});
+}
+
+bool LocalInputService::familyKeyboard() const {
+  std::lock_guard lock(mutex_);
+  return familyKeyboard_;
+}
+
+bool LocalInputService::setFamilyKeyboard(bool connected) {
+  {
+    std::lock_guard lock(mutex_);
+    if (familyKeyboard_ == connected) return connected;
+    familyKeyboard_ = connected;
+  }
+  runtime_->setFamilyKeyboard(connected);
+  if (events_ != nullptr) {
+    contracts::input::InputFamilyKeyboardChangedData data;
+    data.connected = connected;
+    events_->publish(contracts::input::INPUT_FAMILY_KEYBOARD_CHANGED_EVENT, nlohmann::json(data));
+  }
+  return connected;
 }
 
 }  // namespace ember::logic::input

@@ -166,10 +166,13 @@ Widget* Tabs::addTab(std::string id, std::string label, std::unique_ptr<Widget> 
 void Tabs::select(const std::string& id) {
   for (std::size_t i = 0; i < tabs_.size(); ++i) {
     if (tabs_[i].id != id) continue;
+    const bool changed = selected_ != i;
     selected_ = i;
     showSelectedContent();
     if (host() != nullptr) arrange(bounds());
     invalidate();
+    // 各页签的内容高度不同，选中的页签变了，后面的内容要跟着挪
+    if (changed) requestLayout();
     return;
   }
 }
@@ -186,6 +189,7 @@ void Tabs::choose(std::size_t index) {
   showSelectedContent();
   arrange(bounds());
   invalidate();
+  requestLayout();
   if (onSelect_) onSelect_(tabs_[index].id);
 }
 

@@ -16,6 +16,8 @@ namespace ember::win32::logic {
 namespace {
 
 constexpr const char* kTitle = "首选项";
+/** 打开时的高度：比内容的最小高度高一些，不显得扁。 */
+constexpr int kInitialHeight = 520;
 
 }  // namespace
 
@@ -26,6 +28,7 @@ contracts::ShellModule createPreferencesModule(PreferencesController& preference
   contracts::ShellDialogDefinition dialog;
   dialog.id = kPreferencesDialogId;
   dialog.title = kTitle;
+  dialog.height = kInitialHeight;
   dialog.fitMinWidth = true;
   dialog.fitMinHeight = true;
   module.dialogs.push_back(std::move(dialog));

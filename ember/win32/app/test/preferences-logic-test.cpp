@@ -301,7 +301,7 @@ TEST(PreferencesModule, RegistersTheDialogTheCommandAndTheSettingsMenuItem) {
   EXPECT_EQ(module.dialogs[0].id, "preferences.preferences");
   EXPECT_EQ(module.dialogs[0].title, "首选项");
   EXPECT_EQ(module.dialogs[0].width, 0);
-  EXPECT_EQ(module.dialogs[0].height, 0);
+  EXPECT_EQ(module.dialogs[0].height, 520);
   EXPECT_TRUE(module.dialogs[0].fitMinWidth);
   EXPECT_TRUE(module.dialogs[0].fitMinHeight);
   ASSERT_EQ(module.commands.size(), 1U);

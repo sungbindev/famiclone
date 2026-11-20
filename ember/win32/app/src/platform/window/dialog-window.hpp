@@ -31,7 +31,7 @@ struct DialogWindowOptions {
   void* owner{nullptr};
   /** 窗口标题（任务栏、Alt+Tab 与系统菜单显示）。 */
   std::wstring title;
-  /** 内容区的初始大小（逻辑像素）；高度为 0 表示按内容。 */
+  /** 内容区的初始大小（逻辑像素）；高度为 0 表示按内容。最小高度按内容算时，初始高度不小于最小高度。 */
   double width{0};
   double height{0};
   /** 最小大小（逻辑像素），0 表示不限。 */

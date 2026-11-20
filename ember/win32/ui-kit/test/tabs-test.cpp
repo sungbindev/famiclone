@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "rujian/ui/layout.hpp"
 #include "rujian/ui/root.hpp"
 #include "rujian/ui/tabs.hpp"
 
@@ -131,4 +132,29 @@ TEST(Tabs, CursorIsAHandOverATab) {
   EXPECT_EQ(s.root.cursor(), CursorKind::Hand);
   s.root.mouseMove(Point{290, 100}, 0);
   EXPECT_EQ(s.root.cursor(), CursorKind::Arrow);
+}
+
+TEST(Tabs, ContentBelowFollowsWhenTheSelectedTabChangesTheHeight) {
+  Root root{ThemeName::Dark, 1.0};
+  auto stack = std::make_unique<Stack>();
+  auto tabs = std::make_unique<Tabs>();
+  Tabs* tabsPtr = tabs.get();
+  tabs->addTab("a", "页一", std::make_unique<Block>(30));
+  tabs->addTab("b", "页二", std::make_unique<Block>(80));
+  tabs->setOnSelect([](const std::string&) {});
+  stack->addChild(std::move(tabs));
+  Widget* below = stack->addChild(std::make_unique<Block>(20));
+  root.setContent(std::move(stack));
+  root.layout(Size{300, 400});
+  const double before = below->bounds().y;
+  // 点击第二个页签（页签栏在原点）
+  const Point onSecond{60, 16};
+  root.mouseMove(onSecond, 0);
+  root.mouseDown(onSecond, MouseButton::Left, 0);
+  root.mouseUp(onSecond, MouseButton::Left, 0);
+  ASSERT_EQ(tabsPtr->selectedId(), "b");
+  EXPECT_DOUBLE_EQ(below->bounds().y, before + 50);
+  // 程序切回去也跟着挪
+  tabsPtr->select("a");
+  EXPECT_DOUBLE_EQ(below->bounds().y, before);
 }

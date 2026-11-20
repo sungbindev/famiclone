@@ -123,12 +123,36 @@ TEST(DialogWindow, FitMinimumSizeFollowsTheContentsMinimumAndRaisesTheInitialSiz
   EXPECT_GE(rect.bottom - rect.top, info.ptMinTrackSize.y - 1);
 }
 
-TEST(DialogWindow, FitMinimumSizeIsTheInitialSizeEvenWhenTheRequestedSizeIsLarger) {
+TEST(DialogWindow, FitMinimumWidthOpensAtTheMinimumAndFitMinimumHeightOpensAtTheLargerOfRequestedAndMinimum) {
   Owner owner;
   int closes = 0;
   platform::DialogWindowOptions options = optionsFor(owner, &closes);
   options.width = 900;
   options.height = 700;
+  options.minimumWidth = 0;
+  options.minimumHeight = 0;
+  options.fitMinimumWidth = true;
+  options.fitMinimumHeight = true;
+  auto frame = std::make_unique<rujian::ui::DialogFrame>();
+  frame->setTitle("测试");
+  frame->setContent(std::make_unique<MinimumBody>());
+  platform::DialogWindow dialog(std::move(options), std::move(frame));
+  HWND hwnd = static_cast<HWND>(dialog.handle());
+  MINMAXINFO info{};
+  SendMessageW(hwnd, WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&info));
+  RECT rect{};
+  GetWindowRect(hwnd, &rect);
+  EXPECT_EQ(rect.right - rect.left, info.ptMinTrackSize.x);
+  // 请求的高度比最小高度大，用请求的
+  EXPECT_GT(rect.bottom - rect.top, info.ptMinTrackSize.y);
+}
+
+TEST(DialogWindow, FitMinimumHeightOpensAtTheMinimumWhenNoHeightIsRequested) {
+  Owner owner;
+  int closes = 0;
+  platform::DialogWindowOptions options = optionsFor(owner, &closes);
+  options.width = 900;
+  options.height = 0;
   options.minimumWidth = 0;
   options.minimumHeight = 0;
   options.fitMinimumWidth = true;

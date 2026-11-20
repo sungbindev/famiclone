@@ -192,6 +192,7 @@ if(EMBER_BUILD_TESTS)
     test/preferences-content-test.cpp
     test/resources-test.cpp
     test/runtime-logic-test.cpp
+    test/screen-overlay-test.cpp
     test/screen-test.cpp
     test/shared-rules-test.cpp
     test/shell-logic-test.cpp

@@ -33,15 +33,20 @@ float4 pixelMain(PixelInput input) : SV_Target {
   return screenTexture.Sample(screenSampler, input.uv);
 }
 
-// 毛玻璃：对画面纹理做 17 点采样的模糊（中心、内圈 8 点、外圈 8 点，权重 4:2:1）。
-// blurStep.xy 是内圈半径对应的纹理坐标增量，外圈是它的两倍；共 17 次采样，在 level_9_1 的纹理指令上限之内。
+// 毛玻璃：对画面纹理做 17 点采样的模糊（中心、内圈 8 点、外圈 8 点，权重 4:2:1），圆角矩形之外的像素丢弃（保持清晰）。
+// glassParams[0].xy 是内圈半径对应的纹理坐标增量，外圈是它的两倍；共 17 次采样，在 level_9_1 的纹理指令上限之内；
+// level_9_1 的像素着色器拿不到屏幕位置，所以由纹理坐标换算：像素位置 = glassParams[0].zw + uv * glassParams[1].xy；
+// glassParams[1].zw 是圆角框的中心，glassParams[2].xy 是框的半宽半高减去圆角半径，glassParams[2].z 是圆角半径（像素，相对子窗口）。
 cbuffer GlassConstants : register(b0) {
-  float4 blurStep;
+  float4 glassParams[3];
 }
 
 float4 glassMain(PixelInput input) : SV_Target {
-  const float2 inner = blurStep.xy;
-  const float2 outer = blurStep.xy * 2.0;
+  const float2 pixel = glassParams[0].zw + input.uv * glassParams[1].xy;
+  const float2 corner = abs(pixel - glassParams[1].zw) - glassParams[2].xy;
+  clip(glassParams[2].z - length(max(corner, 0.0)));
+  const float2 inner = glassParams[0].xy;
+  const float2 outer = glassParams[0].xy * 2.0;
   const float2 diagonalInner = inner * 0.7071;
   const float2 diagonalOuter = outer * 0.7071;
   float4 sum = screenTexture.Sample(screenSampler, input.uv) * 4.0;

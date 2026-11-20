@@ -68,14 +68,14 @@ TEST(ScreenWindow, CreatesShowsFramesAndOverlaysWithoutErrors) {
   screen->setFrame(large.data(), 640, 480);
   screen->render();
   std::vector<std::uint8_t> overlay(320 * 300 * 4, 0x80);
-  screen->setOverlay(overlay.data(), 320, 300, shared::ScreenRect{100, 200, 200, 80});
+  screen->setOverlay(overlay.data(), 320, 300, {shared::ScreenRect{100, 200, 200, 80}, shared::ScreenRect{100, 100, 200, 80}}, 6);
   screen->render();
   // 提示框超出画面、与画面不相交时不出错
-  screen->setOverlay(overlay.data(), 320, 300, shared::ScreenRect{300, 280, 100, 100});
+  screen->setOverlay(overlay.data(), 320, 300, {shared::ScreenRect{300, 280, 100, 100}}, 6);
   screen->render();
-  screen->setOverlay(overlay.data(), 320, 300, shared::ScreenRect{0, 0, 5, 5});
+  screen->setOverlay(overlay.data(), 320, 300, {shared::ScreenRect{0, 0, 5, 5}}, 6);
   screen->render();
-  screen->setOverlay(nullptr, 0, 0, shared::ScreenRect{});
+  screen->setOverlay(nullptr, 0, 0, {}, 0);
   // 弹层盖到画面上时挖洞，再还原
   screen->setHoles({shared::ScreenRect{50, 30, 100, 80}});
   screen->setHoles({});

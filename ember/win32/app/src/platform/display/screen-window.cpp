@@ -69,8 +69,10 @@ struct ScreenWindow::Impl {
   std::uint32_t frameWidth{0};
   std::uint32_t frameHeight{0};
   ComPtr<ID3D11ShaderResourceView> overlayView;
-  /** 提示框的矩形（设备像素，相对子窗口）：这块区域里的画面先模糊再叠上提示位图。 */
-  shared::ScreenRect glass;
+  /** 各个提示框的矩形（设备像素，相对子窗口）：这些区域里的画面先模糊再叠上提示位图。 */
+  std::vector<shared::ScreenRect> glass;
+  /** 提示框的圆角半径（设备像素）。 */
+  int glassRadius{0};
   bool frameVisible{false};
   shared::ScreenAspect aspect{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling{shared::kDefaultScreenScaling};
@@ -135,7 +137,7 @@ struct ScreenWindow::Impl {
     check(device->CreatePixelShader(kScreenPixelShader, kScreenPixelShaderSize, nullptr, &pixelShader), "像素着色器");
     check(device->CreatePixelShader(kScreenGlassShader, kScreenGlassShaderSize, nullptr, &glassShader), "毛玻璃着色器");
     D3D11_BUFFER_DESC constantDescription{};
-    constantDescription.ByteWidth = sizeof(float) * 4;
+    constantDescription.ByteWidth = sizeof(float) * 12;
     constantDescription.Usage = D3D11_USAGE_DYNAMIC;
     constantDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     constantDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -251,15 +253,15 @@ struct ScreenWindow::Impl {
   }
 
   /**
-   * 毛玻璃：把提示框与画面相交的区域里的画面换成模糊后的，再由提示位图叠上底色、边框与文字；画面之外是黑底，不需要模糊。
+   * 毛玻璃：把一个提示框与画面相交的区域里的画面换成模糊后的，再由提示位图叠上底色、边框与文字；画面之外是黑底，不需要模糊。
    * video 是画面在子窗口里的矩形，v0、v1 是它对应的纹理纵坐标范围。
    */
-  void drawGlass(const shared::ScreenRect& video, float v0, float v1) {
-    if (glass.width <= 0 || glass.height <= 0 || video.width <= 0 || video.height <= 0) return;
-    const int left = std::max(glass.x, video.x);
-    const int top = std::max(glass.y, video.y);
-    const int right = std::min(glass.x + glass.width, video.x + video.width);
-    const int bottom = std::min(glass.y + glass.height, video.y + video.height);
+  void drawGlass(const shared::ScreenRect& box, const shared::ScreenRect& video, float v0, float v1) {
+    if (box.width <= 0 || box.height <= 0 || video.width <= 0 || video.height <= 0) return;
+    const int left = std::max(box.x, video.x);
+    const int top = std::max(box.y, video.y);
+    const int right = std::min(box.x + box.width, video.x + video.width);
+    const int bottom = std::min(box.y + box.height, video.y + video.height);
     if (right <= left || bottom <= top) return;
     const float width = static_cast<float>(video.width);
     const float height = static_cast<float>(video.height);
@@ -269,11 +271,22 @@ struct ScreenWindow::Impl {
     const float t1 = v0 + static_cast<float>(bottom - video.y) / height * (v1 - v0);
     D3D11_MAPPED_SUBRESOURCE mapped{};
     if (FAILED(context->Map(glassConstants.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) return;
-    auto* step = static_cast<float*>(mapped.pData);
-    step[0] = kGlassBlurRadius / width;
-    step[1] = kGlassBlurRadius / height * (v1 - v0);
-    step[2] = 0.0f;
-    step[3] = 0.0f;
+    auto* params = static_cast<float*>(mapped.pData);
+    // 纹理坐标换算成像素位置的系数见 screen.hlsl
+    const float scaleY = height / (v1 - v0);
+    const float radius = std::min(static_cast<float>(glassRadius), std::min(static_cast<float>(box.width), static_cast<float>(box.height)) / 2.0f);
+    params[0] = kGlassBlurRadius / width;
+    params[1] = kGlassBlurRadius / height * (v1 - v0);
+    params[2] = static_cast<float>(video.x);
+    params[3] = static_cast<float>(video.y) - v0 * scaleY;
+    params[4] = width;
+    params[5] = scaleY;
+    params[6] = static_cast<float>(box.x) + static_cast<float>(box.width) / 2.0f;
+    params[7] = static_cast<float>(box.y) + static_cast<float>(box.height) / 2.0f;
+    params[8] = static_cast<float>(box.width) / 2.0f - radius;
+    params[9] = static_cast<float>(box.height) / 2.0f - radius;
+    params[10] = radius;
+    params[11] = 0.0f;
     context->Unmap(glassConstants.Get(), 0);
     ID3D11Buffer* constants[] = {glassConstants.Get()};
     context->PSSetConstantBuffers(0, 1, constants);
@@ -307,7 +320,9 @@ struct ScreenWindow::Impl {
         const float top = static_cast<float>(cropLines) / static_cast<float>(frameHeight);
         const float bottom = static_cast<float>(static_cast<int>(frameHeight) - cropLines) / static_cast<float>(frameHeight);
         draw(frameView.Get(), scaling == shared::ScreenScaling::Integer ? pointSampler.Get() : linearSampler.Get(), opaqueBlend.Get(), video, 0.0f, 1.0f, top, bottom);
-        if (overlayView) drawGlass(video, top, bottom);
+        if (overlayView) {
+          for (const auto& box : glass) drawGlass(box, video, top, bottom);
+        }
       }
     }
     if (overlayView) draw(overlayView.Get(), linearSampler.Get(), premultipliedBlend.Get(), shared::ScreenRect{0, 0, rect.width, rect.height}, 0.0f, 1.0f, 0.0f, 1.0f);
@@ -421,10 +436,11 @@ void ScreenWindow::setFrameVisible(bool visible) {
   impl_->render();
 }
 
-void ScreenWindow::setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) {
+void ScreenWindow::setOverlay(const std::uint8_t* pixels, int width, int height, const std::vector<shared::ScreenRect>& glass, int glassRadius) {
   Impl& self = *impl_;
   self.overlayView.Reset();
-  self.glass = pixels != nullptr ? glass : shared::ScreenRect{};
+  self.glass = pixels != nullptr ? glass : std::vector<shared::ScreenRect>{};
+  self.glassRadius = glassRadius;
   if (pixels != nullptr && width > 0 && height > 0 && self.device) {
     D3D11_TEXTURE2D_DESC description{};
     description.Width = static_cast<UINT>(width);

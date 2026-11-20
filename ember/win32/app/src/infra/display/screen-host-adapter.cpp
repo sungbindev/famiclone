@@ -62,7 +62,7 @@ double ScreenHostAdapter::nominalRatio() const { return shared::nominalScreenRat
 
 void ScreenHostAdapter::setFrameVisible(bool visible) { window_->setFrameVisible(visible); }
 
-void ScreenHostAdapter::setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) { window_->setOverlay(pixels, width, height, glass); }
+void ScreenHostAdapter::setOverlay(const std::uint8_t* pixels, int width, int height, const std::vector<shared::ScreenRect>& glass, int glassRadius) { window_->setOverlay(pixels, width, height, glass, glassRadius); }
 
 void ScreenHostAdapter::setHoles(const std::vector<shared::ScreenRect>& holes) { window_->setHoles(holes); }
 

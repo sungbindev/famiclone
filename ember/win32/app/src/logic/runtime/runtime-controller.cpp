@@ -61,6 +61,7 @@ contracts::RuntimeView RuntimeController::view() const {
   result.muted = muted_;
   result.capturesMouse = capturesMouse(screen_.captureMouse, status_);
   result.exclusiveKeyboard = exclusiveKeyboard(familyKeyboard_, status_);
+  result.resetCount = resetCount_;
   result.screen = screen_;
   return result;
 }
@@ -202,6 +203,7 @@ void RuntimeController::handleEvent(const std::string& name, const nlohmann::jso
   if (name == "preferences.changed") {
     if (data.is_object() && data.contains("id") && data["id"].is_string() && data.contains("value")) applySetting(data["id"].get<std::string>(), data["value"]);
   } else if (name == "runtime.stateChanged") {
+    if (data.is_object() && data.contains("reason") && data["reason"] == "reset") ++resetCount_;
     refreshStatus();
   } else if (name == "cartridges.loaded") {
     refreshStatus();

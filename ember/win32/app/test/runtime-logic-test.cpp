@@ -420,6 +420,19 @@ TEST(RuntimeController, KeyboardIsExclusiveOnlyForHandheldMachinesOrTheFamilyKey
   EXPECT_TRUE(f.controller.view().exclusiveKeyboard);
 }
 
+TEST(RuntimeController, ResetCountGrowsOnlyWhenTheCoreReportsAReset) {
+  RuntimeFixture f;
+  f.reply("runtime.status", statusJson("on", "running", "sb2000", true));
+  f.attach();
+  EXPECT_EQ(f.controller.view().resetCount, 0U);
+  f.core.emitEvent("runtime.stateChanged", {{"reason", "reset"}});
+  EXPECT_EQ(f.controller.view().resetCount, 1U);
+  f.core.emitEvent("runtime.stateChanged", {{"reason", "pause"}});
+  EXPECT_EQ(f.controller.view().resetCount, 1U);
+  f.core.emitEvent("runtime.stateChanged", {{"reason", "reset"}});
+  EXPECT_EQ(f.controller.view().resetCount, 2U);
+}
+
 TEST(RuntimeController, MouseCaptureNeedsTheSettingAndAMachineWithAMouse) {
   RuntimeFixture f;
   f.reply("runtime.status", statusJson("on", "running", "sb2000", true));

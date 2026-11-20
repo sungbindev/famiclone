@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <vector>
 
 #include "shared/screen/pointer-mapping.hpp"
 #include "shared/screen/screen-layout.hpp"
@@ -39,9 +40,10 @@ class ScreenHost {
   virtual void setFrameVisible(bool visible) = 0;
   /**
    * 设置叠在画面上的提示位图（预乘透明度的 BGRA，铺满画面子窗口）；空指针清除。
-   * @param glass 提示框的矩形（设备像素，相对画面子窗口）：画面子窗口先把这块区域里的画面模糊（毛玻璃），再叠上位图；宽或高为 0 表示没有。
+   * @param glass 各个提示框的矩形（设备像素，相对画面子窗口）：画面子窗口先把这些区域里的画面模糊（毛玻璃），再叠上位图；宽或高为 0 的矩形、空列表表示没有。
+   * @param glassRadius 提示框的圆角半径（设备像素）。
    */
-  virtual void setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) = 0;
+  virtual void setOverlay(const std::uint8_t* pixels, int width, int height, const std::vector<shared::ScreenRect>& glass, int glassRadius) = 0;
 
   /** 指针（相对画面子窗口左上角，设备像素）在标准帧上的位置；还没有画面时没有值。 */
   [[nodiscard]] virtual std::optional<shared::FramePoint> toFramePoint(double x, double y) const = 0;

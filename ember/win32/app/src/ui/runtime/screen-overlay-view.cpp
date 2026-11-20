@@ -29,7 +29,6 @@ using rujian::ui::VerticalAlign;
 constexpr double kIconSize = 32;
 constexpr double kGapMd = 8;
 constexpr double kGapSm = 6;
-constexpr double kGapXs = 4;
 constexpr double kDisplayFontSize = 16;
 constexpr double kCaptionFontSize = 11;
 constexpr int kStrongWeight = 600;
@@ -45,11 +44,11 @@ const Color kBlack = Color::rgba(0, 0, 0);
 const Color kPausedFill = Color::rgba(0, 0, 0, 140);
 /** 提示框的底色：黑色，不透明度 0.5，下面是模糊后的画面（毛玻璃）。 */
 const Color kGlassFill = Color::rgba(0, 0, 0, 128);
-/** 提示框的边框：白色，不透明度 0.35，和画面有清晰的界限。 */
-const Color kGlassBorder = Color::rgba(255, 255, 255, 90);
+/** 提示框的边框：白色，不透明度 0.2，和画面有界限又不生硬。 */
+const Color kGlassBorder = Color::rgba(255, 255, 255, 51);
 
-constexpr const char* kKeyboardHint = "键盘已被机器独占，快捷键无效，请用鼠标操作菜单";
-constexpr const char* kMouseHint = "点击画面捕获鼠标，双击右键释放";
+constexpr const char* kKeyboardHint = "键盘已被机器独占，快捷键无效";
+constexpr const char* kMouseHint = "点击捕获鼠标，双击右键释放";
 
 TextStyle textStyle(double size, int weight) {
   TextStyle style;
@@ -72,7 +71,7 @@ constexpr Step kSteps[] = {{"学习机", "文件→选择机型，选好即开�
 
 void ScreenOverlayView::paint(rujian::ui::Canvas& canvas) {
   if (state_ != OverlayState::Hidden) paintState(canvas);
-  paintPanel(canvas);
+  paintPanels(canvas);
 }
 
 void ScreenOverlayView::paintState(rujian::ui::Canvas& canvas) const {
@@ -142,45 +141,41 @@ void ScreenOverlayView::paintState(rujian::ui::Canvas& canvas) const {
   }
 }
 
-std::optional<ScreenOverlayView::Panel> ScreenOverlayView::layoutPanel() const {
-  if (!keyboardHint_ && !mouseHint_) return std::nullopt;
+std::vector<ScreenOverlayView::PanelBox> ScreenOverlayView::layoutPanels() const {
+  std::vector<const char*> texts;
+  if (keyboardHint_) texts.push_back(kKeyboardHint);
+  if (mouseHint_) texts.push_back(kMouseHint);
   const Rect area = bounds();
   TextStyle style = textStyle(kDisplayFontSize, 400);
   style.wrap = true;
   // 窗口很小时文字换行，不超出画面
   const double maxTextWidth = std::max(0.0, area.width - 2 * (kGapMd + kPanelPaddingX));
-  Panel panel;
-  if (keyboardHint_) panel.lines.push_back({kKeyboardHint, host()->measureText(kKeyboardHint, style, maxTextWidth)});
-  if (mouseHint_) panel.lines.push_back({kMouseHint, host()->measureText(kMouseHint, style, maxTextWidth)});
-  double textWidth = 0;
-  double textHeight = 0;
-  for (const PanelLine& line : panel.lines) {
-    textWidth = std::max(textWidth, line.size.width);
-    textHeight += line.size.height;
+  std::vector<PanelBox> boxes;
+  // 从最下面的框开始往上排，每条提示一个框、与右下角对齐
+  double bottom = area.bottom() - kGapMd;
+  for (auto it = texts.rbegin(); it != texts.rend(); ++it) {
+    const rujian::ui::TextMetrics size = host()->measureText(*it, style, maxTextWidth);
+    const double width = size.width + 2 * kPanelPaddingX;
+    const double height = size.height + 2 * kPanelPaddingY;
+    boxes.push_back({Rect{area.right() - kGapMd - width, bottom - height, width, height}, *it, size});
+    bottom -= height + kGapSm;
   }
-  textHeight += kGapXs * static_cast<double>(panel.lines.size() - 1);
-  const double width = textWidth + 2 * kPanelPaddingX;
-  const double height = textHeight + 2 * kPanelPaddingY;
-  panel.box = Rect{area.right() - kGapMd - width, area.bottom() - kGapMd - height, width, height};
-  return panel;
+  std::reverse(boxes.begin(), boxes.end());
+  return boxes;
 }
 
-std::optional<Rect> ScreenOverlayView::glassRect() const {
-  const auto panel = layoutPanel();
-  if (!panel) return std::nullopt;
-  return panel->box;
+std::vector<Rect> ScreenOverlayView::glassRects() const {
+  std::vector<Rect> rects;
+  for (const PanelBox& panel : layoutPanels()) rects.push_back(panel.box);
+  return rects;
 }
 
-void ScreenOverlayView::paintPanel(rujian::ui::Canvas& canvas) const {
-  const auto panel = layoutPanel();
-  if (!panel) return;
+void ScreenOverlayView::paintPanels(rujian::ui::Canvas& canvas) const {
   TextStyle style = textStyle(kDisplayFontSize, 400);
   style.wrap = true;
-  canvas.drawBox(panel->box, rujian::ui::BoxStyle{.fill = kGlassFill, .borderWidth = kGlassBorderWidth, .borderColor = kGlassBorder});
-  double y = panel->box.y + kPanelPaddingY;
-  for (const PanelLine& line : panel->lines) {
-    canvas.drawText(line.text, Rect{panel->box.x + kPanelPaddingX, y, line.size.width + 1, line.size.height}, style, VerticalAlign::Top);
-    y += line.size.height + kGapXs;
+  for (const PanelBox& panel : layoutPanels()) {
+    canvas.drawBox(panel.box, rujian::ui::BoxStyle{.fill = kGlassFill, .radius = kCornerRadius, .borderWidth = kGlassBorderWidth, .borderColor = kGlassBorder});
+    canvas.drawText(panel.text, Rect{panel.box.x + kPanelPaddingX, panel.box.y + kPanelPaddingY, panel.size.width + 1, panel.size.height}, style, VerticalAlign::Top);
   }
 }
 

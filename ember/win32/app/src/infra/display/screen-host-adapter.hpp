@@ -75,7 +75,7 @@ class ScreenHostAdapter final : public contracts::ScreenHost {
   void setView(shared::ScreenAspect aspect, shared::ScreenScaling scaling, bool showAllLines) override;
   [[nodiscard]] double nominalRatio() const override;
   void setFrameVisible(bool visible) override;
-  void setOverlay(const std::uint8_t* pixels, int width, int height, const shared::ScreenRect& glass) override;
+  void setOverlay(const std::uint8_t* pixels, int width, int height, const std::vector<shared::ScreenRect>& glass, int glassRadius) override;
   [[nodiscard]] std::optional<shared::FramePoint> toFramePoint(double x, double y) const override;
   void setKeyboardMode(contracts::KeyboardMode mode) override;
   bool setMouseCaptured(bool captured) override;

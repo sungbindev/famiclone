@@ -38,7 +38,7 @@ OverlayState overlayStateOf(contracts::MachineState state) {
 
 }  // namespace
 
-ScreenWidget::ScreenWidget(contracts::RuntimeModel& model, contracts::ScreenHost& host, contracts::ScreenInput& input) : model_(model), host_(host), input_(input), view_(model.view()) {
+ScreenWidget::ScreenWidget(contracts::RuntimeModel& model, contracts::ScreenHost& host, contracts::ScreenInput& input) : model_(model), host_(host), input_(input), view_(model.view()), resetCountSeen_(view_.resetCount) {
   unsubscribe_ = model_.subscribe([this] { refresh(); });
   model_.setScreenFocus([this] { focusScreen(); });
   host_.setOnMouseReleased([this] {
@@ -56,7 +56,7 @@ ScreenWidget::~ScreenWidget() {
   if (hintTimer_ != 0 && host() != nullptr) host()->stopTimer(hintTimer_);
   host_.setKeyboardMode(contracts::KeyboardMode::Off);
   host_.setMouseCaptured(false);
-  host_.setOverlay(nullptr, 0, 0, shared::ScreenRect{});
+  host_.setOverlay(nullptr, 0, 0, {}, 0);
   host_.setBounds(shared::ScreenRect{});
 }
 
@@ -117,12 +117,14 @@ void ScreenWidget::updateHints() {
   const bool mouse = view_.capturesMouse && active;
   const bool keyboard = view_.exclusiveKeyboard && active;
   bool restart = false;
-  if (mouse != mouseHintEligible_) {
+  const bool reset = view_.resetCount != resetCountSeen_;
+  resetCountSeen_ = view_.resetCount;
+  if (mouse != mouseHintEligible_ || (reset && mouse)) {
     mouseHintEligible_ = mouse;
     mouseHintShown_ = mouse;
     restart = restart || mouse;
   }
-  if (keyboard != keyboardHintEligible_) {
+  if (keyboard != keyboardHintEligible_ || (reset && keyboard)) {
     keyboardHintEligible_ = keyboard;
     keyboardHintShown_ = keyboard;
     restart = restart || keyboard;
@@ -155,7 +157,7 @@ void ScreenWidget::updateOverlay() {
   overlayKey_ = key;
   overlayDrawn_ = true;
   if ((key.state == OverlayState::Hidden && !key.mouseHint && !key.keyboardHint) || key.width <= 0 || key.height <= 0) {
-    host_.setOverlay(nullptr, 0, 0, shared::ScreenRect{});
+    host_.setOverlay(nullptr, 0, 0, {}, 0);
     return;
   }
   const double scale = key.scale;
@@ -167,20 +169,20 @@ void ScreenWidget::updateOverlay() {
   root.layout(logical);
   rujian::ui::OffscreenSurface surface(logical, scale);
   if (!surface.render(root, rujian::ui::Color::rgba(0, 0, 0, 0))) {
-    host_.setOverlay(nullptr, 0, 0, shared::ScreenRect{});
+    host_.setOverlay(nullptr, 0, 0, {}, 0);
     return;
   }
   // 提示框的设备像素矩形与画的时候一样，边缘四舍五入到设备像素
-  shared::ScreenRect glass;
-  if (const auto box = viewPointer->glassRect()) {
-    const int left = static_cast<int>(std::lround(box->x * scale));
-    const int top = static_cast<int>(std::lround(box->y * scale));
-    const int right = static_cast<int>(std::lround(box->right() * scale));
-    const int bottom = static_cast<int>(std::lround(box->bottom() * scale));
-    if (right > left && bottom > top) glass = shared::ScreenRect{left, top, right - left, bottom - top};
+  std::vector<shared::ScreenRect> glass;
+  for (const auto& box : viewPointer->glassRects()) {
+    const int left = static_cast<int>(std::lround(box.x * scale));
+    const int top = static_cast<int>(std::lround(box.y * scale));
+    const int right = static_cast<int>(std::lround(box.right() * scale));
+    const int bottom = static_cast<int>(std::lround(box.bottom() * scale));
+    if (right > left && bottom > top) glass.push_back(shared::ScreenRect{left, top, right - left, bottom - top});
   }
   const auto pixels = surface.pixels();
-  host_.setOverlay(pixels.data(), surface.pixelWidth(), surface.pixelHeight(), glass);
+  host_.setOverlay(pixels.data(), surface.pixelWidth(), surface.pixelHeight(), glass, static_cast<int>(std::lround(ScreenOverlayView::kCornerRadius * scale)));
 }
 
 void ScreenWidget::updateKeyboard() {

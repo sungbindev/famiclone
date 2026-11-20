@@ -56,6 +56,8 @@ struct RuntimeView {
   bool capturesMouse{false};
   /** 键盘是否整个交给机器（独占）：学习机整机机型，或接入了 Family BASIC 键盘；经典 FC 的普通游戏不独占，快捷键照常生效。 */
   bool exclusiveKeyboard{false};
+  /** 机器复位的次数，每复位一次加一：画面据此重新显示提示。 */
+  unsigned resetCount{0};
   ScreenSettings screen;
 };
 

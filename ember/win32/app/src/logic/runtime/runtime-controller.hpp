@@ -122,6 +122,8 @@ class RuntimeController final : public contracts::RuntimeModel {
   int volume_{100};
   bool muted_{false};
   bool familyKeyboard_{false};
+  /** 核心报告过的复位次数。 */
+  unsigned resetCount_{0};
   contracts::ScreenSettings screen_;
   /** 最近一次读取状态的编号：迟到的旧结果不覆盖新结果。 */
   std::uint64_t statusRequest_{0};

@@ -21,8 +21,8 @@ export const REPO_ROOT = resolve(BBK_ROOT, '..', '..');
 /** 原厂 DOS 源码目录（GBK 编码，缺 tvdef.asm） */
 export const ORIGINAL_SOURCE_DIR = join(REPO_ROOT, 'reference', 'docs', 'BBKDOS源代码');
 
-/** 步步高 BIOS 1.0 的 ROM（128KB，含 16 字节 iNES 头） */
-export const ROM_BIOS10 = join(REPO_ROOT, 'reference', 'rom', 'bbk_bios10.nes');
+/** 步步高 BIOS 1.0 的 ROM（128KB，纯 BIOS，没有文件头） */
+export const ROM_BIOS10 = join(REPO_ROOT, 'ember', 'bios', 'bbk1_bios.bin');
 
 /** 本工程里的原版 BIOS 源码：从原厂资料原样复制（GBK 编码，不要转码保存），分析工具读这一份 */
 export const BIOS_SOURCE = join(BBK_ROOT, 'src', 'bios', 'bios.asm');

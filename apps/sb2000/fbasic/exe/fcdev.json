@@ -1,6 +1,6 @@
 {
   "target": "sb2000",
   "name": "fbasic",
-  "firmware": "../../../../reference/rom/小霸王/SB2K_BIOS.NES",
+  "firmware": "../../../../ember/bios/sb2000_bios.bin",
   "targetOptions": { "banks": 13 }
 }

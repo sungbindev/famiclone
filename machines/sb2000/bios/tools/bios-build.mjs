@@ -25,8 +25,8 @@ export const BIOS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 /** 构建输出目录 */
 export const BUILD_DIR = path.join(BIOS_DIR, 'build');
 
-/** 原始 BIOS ROM（含 iNES 文件头），构建结果默认与它逐字节比对 */
-export const ORIGINAL_ROM = path.join(BIOS_DIR, '..', '..', '..', 'reference', 'rom', 'SB2K_BIOS.NES');
+/** 原始 BIOS（ember/bios 里没有文件头的纯 BIOS），构建结果默认与它逐字节比对 */
+export const ORIGINAL_ROM = path.join(BIOS_DIR, '..', '..', '..', 'ember', 'bios', 'sb2000_bios.bin');
 
 /** ROM 总页数（512K / 4K） */
 export const PAGE_COUNT = 128;
@@ -143,7 +143,8 @@ if (process.argv[1] && path.basename(process.argv[1]) === 'bios-build.mjs') {
   console.log(`已生成 ${target}，${rom.length} 字节`);
   const modified = existsSync(path.join(BIOS_DIR, MODIFIED_MARKER));
   if (!args.includes('--no-compare')) {
-    const original = readFileSync(ORIGINAL_ROM);
+    // 原始 BIOS 没有文件头，比对时在前面补上构建结果自己的文件头
+    const original = Buffer.concat([rom.subarray(0, INES_HEADER_SIZE), readFileSync(ORIGINAL_ROM)]);
     const diff = firstDifference(rom, original);
     if (diff < 0) console.log('与原始 BIOS 逐字节一致');
     else if (modified && !args.includes('--compare')) {

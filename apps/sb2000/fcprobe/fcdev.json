@@ -1,5 +1,5 @@
 {
   "target": "sb2000",
   "name": "fcprobe",
-  "firmware": "../../../reference/rom/小霸王/SB2K_BIOS.NES"
+  "firmware": "../../../ember/bios/sb2000_bios.bin"
 }

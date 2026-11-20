@@ -57,9 +57,7 @@ export function pageListing(result, page) {
 }
 
 function printInfo(rom) {
-  const { header } = rom;
-  console.log(`程序区 ${rom.prg.length} 字节，${PAGE_COUNT} 页，CRC32 ${hex(rom.crc, 8)}`);
-  console.log(`文件头：NES 2.0=${header.nes2}，头里的 mapper 号 ${header.headerMapper}（这台机器按 mapper ${MAPPER_NUMBER} 处理），垂直镜像=${header.verticalMirroring}`);
+  console.log(`程序区 ${rom.prg.length} 字节，${PAGE_COUNT} 页，CRC32 ${hex(rom.crc, 8)}，按 mapper ${MAPPER_NUMBER} 处理`);
 }
 
 function printPages(result) {

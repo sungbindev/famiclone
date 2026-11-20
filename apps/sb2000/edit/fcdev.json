@@ -1,7 +1,7 @@
 {
   "target": "sb2000",
   "name": "edit",
-  "firmware": "../../../machines/sb2000/reference/rom/SB2K_BIOS.NES",
+  "firmware": "../../../ember/bios/sb2000_bios.bin",
   "targetOptions": {
     "banks": 5
   }

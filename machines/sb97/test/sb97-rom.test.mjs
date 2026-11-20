@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-17
-// 备注：用到真实 BIOS（reference/rom/小霸王/SB97.nes）的用例在文件不存在时跳过。
+// 备注：用到真实 BIOS（ember/bios/sb97_bios.bin）的用例在文件不存在时跳过。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { bankView, fixedView, windowView } from '../tools/sb97-memory.mjs';
-import { DEFAULT_ROM_PATH, HEADER_SIZE, MAPPER_NUMBER, PAGE_COUNT, PAGE_SIZE, PRG_CRC32, crc32, loadRom, pageBytes, parseHeader } from '../tools/sb97-rom.mjs';
+import { DEFAULT_ROM_PATH, PAGE_COUNT, PAGE_SIZE, PRG_CRC32, crc32, loadRom, pageBytes } from '../tools/sb97-rom.mjs';
 
 const hasRom = existsSync(DEFAULT_ROM_PATH);
 
@@ -20,35 +20,23 @@ test('crc32 与标准测试向量一致', () => {
   assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
 });
 
-test('parseHeader 拒绝没有 NES 标记的文件，并按 NES 2.0 解出完整的 mapper 号', () => {
-  assert.throws(() => parseHeader(new Uint8Array(16)), /NES/);
-  const bytes = new Uint8Array(16);
-  bytes.set([0x4e, 0x45, 0x53, 0x1a, 64, 0, 0xe1, 0x68, 0x01]);
-  const header = parseHeader(bytes);
-  assert.equal(header.nes2, true);
-  assert.equal(header.headerMapper, 366);
-  assert.equal(header.prgPages, 64);
-});
-
 test('pageBytes 检查页号范围', () => {
   assert.throws(() => pageBytes({ prg: new Uint8Array(0) }, 64), RangeError);
   assert.throws(() => pageBytes({ prg: new Uint8Array(0) }, -1), RangeError);
 });
 
-test('真实 BIOS：程序区 1MB、64 页、校验和是 SB97 的 BIOS，头里的 mapper 号不是 168', { skip: !hasRom }, () => {
+test('真实 BIOS：程序区 1MB、64 页、校验和是 SB97 的 BIOS', { skip: !hasRom }, () => {
   const rom = loadRom();
   assert.equal(rom.prg.length, PAGE_COUNT * PAGE_SIZE);
   assert.equal(rom.crc, PRG_CRC32);
-  assert.equal(rom.header.chrPages, 0);
-  assert.notEqual(rom.header.headerMapper, MAPPER_NUMBER);
 });
 
 test('真实 BIOS：改动一个字节后校验和不对，被拒绝', { skip: !hasRom }, () => {
   const directory = mkdtempSync(join(tmpdir(), 'sb97-'));
   try {
     const bytes = new Uint8Array(readFileSync(DEFAULT_ROM_PATH));
-    bytes[HEADER_SIZE + 100] ^= 0xff;
-    const path = join(directory, 'changed.nes');
+    bytes[100] ^= 0xff;
+    const path = join(directory, 'changed.bin');
     writeFileSync(path, bytes);
     assert.throws(() => loadRom(path), /CRC32/);
   } finally {

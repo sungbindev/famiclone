@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：真实 BIOS 在仓库的 reference/rom/SB2K_BIOS.NES（iNES 文件，16 字节文件头之后是 512KB 的 PRG）；文件不存在时跳过冒烟测试；
+ * 备注：真实 BIOS 在仓库的 ember/bios/sb2000_bios.bin（512KB 的纯 BIOS，没有文件头）；文件不存在时跳过冒烟测试；
  *       设置环境变量 EMBER_SB2000_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成 PPM 文件，供人工查看。
  * ------------------------------------------------------------------------
  */
@@ -61,14 +61,14 @@ std::vector<std::uint8_t> syntheticBios() {
   return bios;
 }
 
-/** 读真实的 BIOS：跳过 iNES 文件头；文件不存在时返回空。 */
+/** 读真实的 BIOS：文件不存在或大小不对时返回空。 */
 std::vector<std::uint8_t> realBios() {
-  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / ".." / "reference" / "rom" / "SB2K_BIOS.NES";
+  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / "bios" / "sb2000_bios.bin";
   std::ifstream stream(path, std::ios::binary);
   if (!stream) return {};
   std::vector<std::uint8_t> file((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-  if (file.size() != 16 + Sb2000Machine::BIOS_SIZE) return {};
-  return std::vector<std::uint8_t>(file.begin() + 16, file.end());
+  if (file.size() != Sb2000Machine::BIOS_SIZE) return {};
+  return file;
 }
 
 /** 读仓库 reference/floppy-images/sb2000 里的盘片镜像；文件不存在时返回空。 */
@@ -310,7 +310,7 @@ TEST(Sb2000Machine, TheSpeechPortSynthesizesAStreamIntoTheMachineAudio) {
 
 TEST(Sb2000Machine, RealBiosBootsToAPicture) {
   std::vector<std::uint8_t> bios = realBios();
-  if (bios.empty()) GTEST_SKIP() << "没有找到 reference/rom/SB2K_BIOS.NES";
+  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb2000_bios.bin";
   Sb2000Machine machine(std::move(bios));
   machine.powerOn();
   for (int frame = 0; frame < 300; ++frame) machine.runFrame();

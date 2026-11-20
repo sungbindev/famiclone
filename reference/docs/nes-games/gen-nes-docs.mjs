@@ -83,7 +83,7 @@ for (const d of fs.readdirSync(SRC, { withFileTypes: true })) {
 }
 for (const file of nesFiles) {
   const f = path.basename(file);
-  const folder = f.slice(0, -4);
+  const folder = f.slice(0, -4).replace(/-mapper\d+$/i, '');
   const info = parseName(folder);
   const genre = classify(info.base);
   const mapper = readMapper(file);

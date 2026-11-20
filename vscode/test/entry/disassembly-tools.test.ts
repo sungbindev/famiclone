@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：disassembly-tools.test.ts
-// 说明：测试反汇编工具的入口层：注册、输入检查、路径规则、确认提示、结果整理与错误处理。
+// 说明：测试反汇编与模拟器工具的入口层：注册、输入检查、路径规则、确认提示、结果整理与错误处理。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -15,11 +15,11 @@ import { pathToFileURL } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BuildComparison } from '../../src/contracts/disassembly/build-comparer';
 import { UserFacingError } from '../../src/shared/errors/user-facing-error';
-import { mockState, resetMock } from '../support/vscode-mock';
+import { enableDataPart, mockState, resetMock } from '../support/vscode-mock';
 
 vi.mock('vscode', () => import('../support/vscode-mock'));
 
-const { DISASSEMBLY_TOOLS, registerDisassemblyTools } = await import('../../src/entry/disassembly/disassembly-tool-registration');
+const { ALL_TOOLS, DISASSEMBLY_TOOLS, registerDisassemblyTools } = await import('../../src/entry/disassembly/disassembly-tool-registration');
 
 const MANIFEST = JSON.parse(readFileSync(path.resolve(__dirname, '..', '..', 'package.json'), 'utf8')) as { contributes: { languageModelTools: Array<{ name: string }> } };
 const WORKSPACE = path.resolve(tmpdir(), 'fcdev-ws');
@@ -38,12 +38,13 @@ function registered(name: string): RegisteredTool {
 }
 
 /** 注册后按名字取工具。 */
-function setup(overrides: { run?: (start: string, operation: string, params: Record<string, unknown>) => Promise<unknown>; build?: () => Promise<BuildComparison> } = {}) {
+function setup(overrides: { run?: (start: string, operation: string, params: Record<string, unknown>) => Promise<unknown>; emulate?: (start: string, operation: string, params: Record<string, unknown>) => Promise<unknown>; build?: () => Promise<BuildComparison> } = {}) {
   const runner = { run: vi.fn(overrides.run ?? (async () => ({ ok: true }))) };
+  const emulator = { run: vi.fn(overrides.emulate ?? (async () => ({ ok: true }))), shutdown: vi.fn(async () => {}) };
   const comparer = { buildAndCompare: vi.fn(overrides.build ?? (async () => ({ identical: true, builtFile: 'a', builtSize: 1, imageSize: 1, firstDifference: null }))) };
   const context = { subscriptions: [] as unknown[], extension: { packageJSON: MANIFEST } };
-  registerDisassemblyTools(context as never, { runner, comparer, logger });
-  return { runner, comparer, tool: registered, context };
+  registerDisassemblyTools(context as never, { runner, emulator, comparer, logger });
+  return { runner, emulator, comparer, tool: registered, context };
 }
 
 beforeEach(() => {
@@ -53,13 +54,14 @@ beforeEach(() => {
 });
 
 describe('注册', () => {
-  it('代码里的 18 个工具都在 package.json 里声明并注册，没有多余的声明', () => {
+  it('代码里的 30 个工具都在 package.json 里声明并注册，没有多余的声明', () => {
     const { context } = setup();
     const declared = MANIFEST.contributes.languageModelTools.map((tool) => tool.name);
-    expect(new Set(DISASSEMBLY_TOOLS.map((spec) => spec.name))).toEqual(new Set(declared));
+    expect(new Set(ALL_TOOLS.map((spec) => spec.name))).toEqual(new Set(declared));
     expect(new Set(mockState.tools.keys())).toEqual(new Set(declared));
-    expect(declared).toHaveLength(18);
-    expect(context.subscriptions).toHaveLength(18);
+    expect(declared).toHaveLength(30);
+    expect(DISASSEMBLY_TOOLS).toHaveLength(19);
+    expect(context.subscriptions).toHaveLength(30);
   });
 
   it('每个工具的声明完整：引用名与工具名相同，参数是不允许多余字段的对象，有给模型的说明', () => {
@@ -76,22 +78,26 @@ describe('注册', () => {
   });
 
   it('代码里每个工具用到的操作，都是仓库里 fcdev 提供的操作（构建比较除外）', async () => {
-    const disasm = (await import(pathToFileURL(path.resolve(__dirname, '..', '..', '..', 'packages', 'fcdev', 'src', 'disasm', 'index.mjs')).href)) as {
-      OPERATION_NAMES: string[];
-      API_VERSION: number;
-    };
+    const packages = path.resolve(__dirname, '..', '..', '..', 'packages', 'fcdev', 'src');
+    const disasm = (await import(pathToFileURL(path.join(packages, 'disasm', 'index.mjs')).href)) as { OPERATION_NAMES: string[]; API_VERSION: number };
+    const emulator = (await import(pathToFileURL(path.join(packages, 'emulator', 'index.mjs')).href)) as { EMULATOR_OPERATION_NAMES: string[]; EMULATOR_API_VERSION: number };
     const operations = DISASSEMBLY_TOOLS.map((spec) => spec.operation).filter((operation) => operation !== 'build');
     expect(new Set(operations)).toEqual(new Set(disasm.OPERATION_NAMES));
     expect(operations).toHaveLength(disasm.OPERATION_NAMES.length);
     expect(disasm.API_VERSION).toBe(1);
+    const emulated = ALL_TOOLS.filter((spec) => spec.target === 'emulator').map((spec) => spec.operation);
+    expect(new Set(emulated)).toEqual(new Set(emulator.EMULATOR_OPERATION_NAMES));
+    expect(emulated).toHaveLength(emulator.EMULATOR_OPERATION_NAMES.length);
+    expect(emulator.EMULATOR_API_VERSION).toBe(1);
   });
 
   it('package.json 里没有声明的工具不注册，并记日志', () => {
     const runner = { run: vi.fn() };
+    const emulator = { run: vi.fn(), shutdown: vi.fn() };
     const context = { subscriptions: [] as unknown[], extension: { packageJSON: { contributes: { languageModelTools: [] } } } };
-    registerDisassemblyTools(context as never, { runner, comparer: { buildAndCompare: vi.fn() }, logger });
+    registerDisassemblyTools(context as never, { runner, emulator, comparer: { buildAndCompare: vi.fn() }, logger });
     expect(mockState.tools.size).toBe(0);
-    expect(logger.error).toHaveBeenCalledTimes(18);
+    expect(logger.error).toHaveBeenCalledTimes(30);
   });
 });
 
@@ -211,5 +217,72 @@ describe('确认提示', () => {
     const { tool } = setup();
     const outsideDir = path.resolve(WORKSPACE, '..', 'elsewhere');
     expect(tool('disasm_trace').prepareInvocation({ input: { projectDir: outsideDir } }).confirmationMessages).toBeDefined();
+  });
+
+  it('导入运行记录要确认，记录文件在工作区之外也允许并在说明里写出', async () => {
+    const { runner, tool } = setup();
+    const record = path.resolve(WORKSPACE, '..', 'out', 'prg.cdl');
+    const prepared = tool('disasm_import_record').prepareInvocation({ input: { projectDir: 'proj', kind: 'cdl', file: record } });
+    expect(prepared.confirmationMessages?.message.value).toContain(record);
+    await tool('disasm_import_record').invoke({ input: { projectDir: 'proj', kind: 'cdl', file: record } });
+    expect(runner.run).toHaveBeenCalledWith(PROJECT, 'importRecord', { projectDir: PROJECT, kind: 'cdl', file: record });
+  });
+});
+
+describe('模拟器工具', () => {
+  it('经模拟器运行器调用，不走反汇编运行器；没有 projectDir 时从工作区根找 fcdev', async () => {
+    const { runner, emulator, tool } = setup({ emulate: async () => ({ stopped: 'completed', frames: 60 }) });
+    const result = await tool('emu_run').invoke({ input: { frames: 60 } });
+    expect(emulator.run).toHaveBeenCalledWith(WORKSPACE, 'run', { frames: 60 });
+    expect(runner.run).not.toHaveBeenCalled();
+    expect(result.content[0]?.value).toContain('"stopped": "completed"');
+  });
+
+  it('只读工具不要确认；启动进程、写内存与寄存器、保存截图要确认', () => {
+    const { tool } = setup();
+    for (const [name, input] of [['emu_run', {}], ['emu_connect', {}], ['emu_step', {}], ['emu_break', { action: 'list' }], ['emu_inspect', { what: 'memory', address: 0 }], ['emu_screen', {}], ['emu_input', { kind: 'releaseAll' }], ['emu_record', { action: 'start', kind: 'cdl' }], ['emu_status', {}]] as const) {
+      expect(tool(name).prepareInvocation({ input }).confirmationMessages, name).toBeUndefined();
+    }
+    expect(tool('emu_launch').prepareInvocation({ input: { port: 5700 } }).confirmationMessages?.message.value).toContain('5700');
+    expect(tool('emu_inspect').prepareInvocation({ input: { what: 'write', address: 16, bytes: [1] } }).confirmationMessages?.message.value).toContain('写内存');
+    expect(tool('emu_inspect').prepareInvocation({ input: { what: 'setState', fields: [{ name: 'pc', value: 0 }] } }).confirmationMessages?.message.value).toContain('寄存器');
+    expect(tool('emu_screen').prepareInvocation({ input: { file: 'shots/a.png' } }).confirmationMessages?.message.value).toContain('shots/a.png');
+  });
+
+  it('载入的文件在工作区之外时要确认并写出路径，工作区里的相对路径换成绝对路径', async () => {
+    const { emulator, tool } = setup();
+    const outside = path.resolve(WORKSPACE, '..', 'game.nes');
+    const prepared = tool('emu_load').prepareInvocation({ input: { file: outside } });
+    expect(prepared.confirmationMessages?.message.value).toContain(outside);
+    expect(tool('emu_load').prepareInvocation({ input: { file: 'game.nes' } }).confirmationMessages).toBeUndefined();
+    await tool('emu_load').invoke({ input: { file: 'game.nes' } });
+    expect(emulator.run).toHaveBeenCalledWith(WORKSPACE, 'load', { file: path.join(WORKSPACE, 'game.nes') });
+  });
+
+  it('截图保存路径必须在工作区里', async () => {
+    const { emulator, tool } = setup();
+    const outside = path.resolve(WORKSPACE, '..', 'a.png');
+    expect((await tool('emu_screen').invoke({ input: { file: outside } })).content[0]?.value).toContain('必须在工作区里');
+    expect(emulator.run).not.toHaveBeenCalled();
+  });
+
+  it('截图：支持图像部分时作为图像返回，文字里不含 base64；不支持时说明怎么办', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const emulate = async () => ({ width: 256, height: 240, imageBase64: png.toString('base64') });
+    const unsupported = setup({ emulate });
+    const plain = await unsupported.tool('emu_screen').invoke({ input: {} });
+    expect(plain.content).toHaveLength(1);
+    expect(plain.content[0]?.value).toContain('"width": 256');
+    expect(plain.content[0]?.value).toContain('不支持在工具结果里返回图像');
+    expect(plain.content[0]?.value).not.toContain(png.toString('base64'));
+    resetMock();
+    mockState.workspaceFolders = [{ uri: { fsPath: WORKSPACE } }];
+    enableDataPart();
+    const supported = setup({ emulate });
+    const withImage = (await supported.tool('emu_screen').invoke({ input: {} })) as unknown as { content: Array<{ value?: string; data?: Uint8Array; mimeType?: string }> };
+    expect(withImage.content).toHaveLength(2);
+    expect(withImage.content[0]?.value).not.toContain('不支持');
+    expect([...(withImage.content[1]?.data ?? [])]).toEqual([...png]);
+    expect(withImage.content[1]?.mimeType).toBe('image/png');
   });
 });

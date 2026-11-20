@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：tool-spec.ts
-// 说明：一个反汇编工具在代码里的描述：对应的 fcdev 操作、是否需要用户确认、
+// 说明：一个反汇编或模拟器工具在代码里的描述：对应的 fcdev 操作、是否需要用户确认、
 //       调用与确认时显示的文字、需要检查的路径参数。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
@@ -18,6 +18,8 @@ export interface ToolSpec {
   readonly name: string;
   /** 对应的 fcdev 操作名；用 fcdev build 构建并比较的工具写 build。 */
   readonly operation: string;
+  /** 操作属于 fcdev 的哪个模块：反汇编（默认）或模拟器。 */
+  readonly target?: 'disasm' | 'emulator';
   /** 会写工程目录、运行汇编链接工具或构建，调用前要用户确认；
    *  有的工具只在某些参数下才写，可以按输入判断。 */
   readonly writes: boolean | ((input: ToolInput) => boolean);

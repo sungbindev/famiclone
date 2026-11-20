@@ -11,7 +11,8 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import {
-  PROJECT_FILE, createAddressSpace, createLayout, createProject, detectFormat, entriesFromAddresses, entriesFromCodeFlags, fromProjectPath, mappedSize, parseCdl, parseFlat, parseSymbols, parseTrace,
+  CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, PROJECT_FILE, createAddressSpace, createLayout, createProject, dataRunsFromFlags, detectFormat, entriesFromAddresses, entriesFromCodeFlags, fromProjectPath, mappedSize,
+  parseCallLog, parseCdl, parseFlat, parseSymbols, parseTrace,
   readProject, readProjectImage, readProjectSymbolSets, toProjectPath, writeProject,
 } from '../src/disasm/index.mjs';
 import { createTempDir } from './helpers.mjs';
@@ -26,6 +27,26 @@ describe('CDL、轨迹与符号文件', () => {
     const buffer = Buffer.concat([Buffer.from('CDLv2'), Buffer.alloc(4), Buffer.from([1, 0])]);
     assert.deepEqual([...parseCdl(buffer, 2)], [1, 0]);
     assert.throws(() => parseCdl(Buffer.from([1]), 4), (error) => error.code === 'DISASM_CDL_INVALID');
+  });
+
+  it('CDL 可以指定保留的位：跳转目标与子程序入口', () => {
+    const buffer = Buffer.from([0x09, 0x04, 0x02, 0x80]);
+    assert.deepEqual([...parseCdl(buffer, 4)], [1, 0, 2, 0]);
+    assert.deepEqual([...parseCdl(buffer, 4, CDL_CODE | CDL_DATA | CDL_JUMP_TARGET | CDL_SUB_ENTRY)], [9, 4, 2, 0]);
+  });
+
+  it('调用记录取出被记录的指令地址，并由栈顶换算返回地址', () => {
+    const text = [
+      'C00B  A:00 X:00 Y:00 P:24 SP:FB CYC:77 | STACK 02 C0 FF | 0300: 11 22',
+      'C00B  A:01 X:00 Y:00 P:24 SP:FB CYC:99 | STACK 02 C0 FF',
+      'C00B  A:02 X:00 Y:00 P:24 SP:FB CYC:120',
+      'C200  A:00 X:00 Y:00 P:24 SP:FD CYC:130 | STACK FF FF',
+      '8000  78        SEI                             A:00 X:00 Y:00 P:24 SP:FD CYC:7',
+    ].join('\n');
+    assert.deepEqual(parseCallLog(text), {
+      addresses: [0xc00b, 0xc200],
+      returns: [{ target: 0xc00b, returnAddress: 0xc003 }, { target: 0xc200, returnAddress: 0x0000 }],
+    });
   });
 
   it('轨迹取出不重复的指令地址，忽略其他行', () => {
@@ -91,6 +112,25 @@ describe('由运行记录生成入口', () => {
     assert.deepEqual(entries.map((entry) => [entry.segmentId, entry.address]), [[0, 0xc000], [1, 0x8000]]);
     assert.equal(mappedSize(banked), 4);
     assert.throws(() => entriesFromCodeFlags(banked, Uint8Array.of(1, 1, 1), { source: 'cdl' }), (error) => error.code === 'DISASM_CDL_INVALID');
+  });
+});
+
+describe('由字节标志取起点与数据段', () => {
+  /** 平铺映像 6 字节，加载在 $8000 */
+  const flat = parseFlat(Buffer.alloc(6), { address: 0x8000 }).layout;
+
+  it('起点位：代码段中间被标成跳转目标或子程序入口的字节也是入口', () => {
+    const flags = Uint8Array.of(1, 1, 1 | CDL_SUB_ENTRY, 1, 1 | CDL_JUMP_TARGET, 0);
+    const run = (startBits) => entriesFromCodeFlags(flat, flags, { source: 'cdl', startBits }).map((entry) => entry.address);
+    assert.deepEqual(run(0), [0x8000]);
+    assert.deepEqual(run(CDL_SUB_ENTRY), [0x8000, 0x8002]);
+    assert.deepEqual(run(CDL_SUB_ENTRY | CDL_JUMP_TARGET), [0x8000, 0x8002, 0x8004]);
+  });
+
+  it('数据段：只被当数据读取的连续字节，当过代码的不算', () => {
+    assert.deepEqual(dataRunsFromFlags(flat, Uint8Array.of(0, 2, 2, 3, 2, 0)), [{ segmentId: 0, address: 0x8001, offset: 1, length: 2 }, { segmentId: 0, address: 0x8004, offset: 4, length: 1 }]);
+    assert.deepEqual(dataRunsFromFlags(flat, Uint8Array.of(2, 2, 2, 2, 2, 2)), [{ segmentId: 0, address: 0x8000, offset: 0, length: 6 }]);
+    assert.throws(() => dataRunsFromFlags(flat, Uint8Array.of(2)), (error) => error.code === 'DISASM_CDL_INVALID');
   });
 });
 

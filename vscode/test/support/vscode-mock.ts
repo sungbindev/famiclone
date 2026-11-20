@@ -122,7 +122,27 @@ export class LanguageModelTextPart {
 /** 语言模型工具的结果。 */
 export class LanguageModelToolResult {
   /** @param content 内容。 */
-  constructor(readonly content: LanguageModelTextPart[]) {}
+  constructor(readonly content: Array<LanguageModelTextPart | FakeDataPart>) {}
+}
+
+/** 较新的 VS Code 才有的结果数据部分（图像）。 */
+export class FakeDataPart {
+  /**
+   * @param data 数据。
+   * @param mimeType 类型。
+   */
+  constructor(
+    readonly data: Uint8Array,
+    readonly mimeType: string
+  ) {}
+}
+
+/** 结果数据部分的工厂：默认没有（模拟较旧的 VS Code），测试用 enableDataPart 打开。 */
+export let LanguageModelDataPart: { image(data: Uint8Array, mimeType: string): FakeDataPart } | undefined;
+
+/** 模拟支持图像结果的 VS Code。 */
+export function enableDataPart(): void {
+  LanguageModelDataPart = { image: (data, mimeType) => new FakeDataPart(data, mimeType) };
 }
 
 export const CompletionItemKind = { Constant: 20, Reference: 17, Function: 2, Snippet: 14, Module: 8, Struct: 21, Enum: 12, Keyword: 13 };
@@ -179,6 +199,7 @@ export function resetMock(): void {
   mockState.workspaceFolders = [];
   mockState.tools.clear();
   mockState.installedExtensions.clear();
+  LanguageModelDataPart = undefined;
   window.showInformationMessage.mockReset();
   window.showInformationMessage.mockResolvedValue(undefined);
   window.showWarningMessage.mockClear();

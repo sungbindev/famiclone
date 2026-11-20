@@ -31,14 +31,15 @@ C/C++ 扩展用哪个配置要在状态栏里选。`.vscode/c_cpp_properties.jso
 
 ### 6502 反汇编工具（Copilot）
 
-扩展给 Copilot 提供 18 个反汇编工具，在聊天里用 `#disasm_open` 这样的名字引用，模型也会自己选用。模型用它们多轮完成“映像到可汇编源码工程”的全过程：
+扩展给 Copilot 提供 30 个 6502 工具（反汇编 19 个、模拟器 11 个），在聊天里用 `#disasm_open` 这样的名字引用，模型也会自己选用。模型用它们多轮完成“映像到可汇编源码工程”的全过程：
 
 - 工程与映像：`disasm_open`（新建或打开工程）、`disasm_status`（进度）、`disasm_layout`、`disasm_hex`、`disasm_find`。
 - 分析：`disasm_trace`（从入口追踪并自动命名）、`disasm_list`、`disasm_view`（带符号与注释的反汇编）、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference`。
-- 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`。
+- 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`、`disasm_import_record`（把模拟器记录的指令轨迹、调用记录或 CDL 导入工程）。
 - 生成与校验：`disasm_generate`、`disasm_verify`（重新汇编后与原映像逐字节比较）、`disasm_build`。
+- 模拟器（Ember）：`emu_launch`（启动）、`emu_connect`（连接已运行的）、`emu_status`、`emu_load`（载入 NES 文件或整机）、`emu_run`、`emu_break`、`emu_step`、`emu_inspect`（读写内存、寄存器、单步核对、解析 bank）、`emu_screen`（截图）、`emu_input`（按键、手柄、鼠标）、`emu_record`（指令跟踪、CDL、调用记录）。让程序跑起来、记录执行过的地址再导入工程，可以补上静态追踪找不到的代码。
 
-会修改工程文件、写生成文件或运行汇编链接的调用，执行前会请你确认。工程目录必须在工作区里；要反汇编的映像可以在工作区外，确认里会写出路径。
+会修改工程文件、写生成文件、运行汇编链接、启动 Ember、写模拟器内存或寄存器的调用，执行前会请你确认。工程目录必须在工作区里；要反汇编的映像、载入的文件、记录文件可以在工作区外，确认里会写出路径。截图作为图像返回，需要较新的 VS Code；较旧的版本用 `file` 参数保存成文件。停用扩展时会关闭模拟器会话并结束工具启动的 Ember。
 
 ## 使用前提
 

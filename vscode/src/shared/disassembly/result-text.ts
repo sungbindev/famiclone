@@ -15,6 +15,27 @@ export const MAX_RESULT_CHARS = 20000;
 /** 原样输出的多行文字字段。 */
 const TEXT_FIELDS = ['text', 'listing'] as const;
 
+/** 结果里用 base64 给出 PNG 图像的字段。 */
+const IMAGE_FIELD = 'imageBase64';
+
+/** 从结果里分出的图像。 */
+export interface ResultImage {
+  readonly data: Uint8Array;
+  readonly mimeType: string;
+}
+
+/**
+ * 把结果里的 base64 图像分出来：图像不写进给模型看的文字（否则会占满长度上限）。
+ * @param result fcdev 操作的结果。
+ * @returns 去掉图像字段的结果，以及分出的图像（没有图像时为 undefined）。
+ */
+export function splitImage(result: unknown): { readonly result: unknown; readonly image?: ResultImage } {
+  if (typeof result !== 'object' || result === null || Array.isArray(result)) return { result };
+  const { [IMAGE_FIELD]: encoded, ...rest } = result as Record<string, unknown>;
+  if (typeof encoded !== 'string') return { result };
+  return { result: rest, image: { data: Uint8Array.from(Buffer.from(encoded, 'base64')), mimeType: 'image/png' } };
+}
+
 /**
  * 把结果写成文字。
  * @param result fcdev 操作的结果。

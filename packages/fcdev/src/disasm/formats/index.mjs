@@ -54,6 +54,7 @@ export function parseImage(format, buffer, options = {}) {
   return parser(buffer, options);
 }
 
-export { CDL_CODE, CDL_DATA, parseCdl } from './cdl.mjs';
+export { CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, parseCdl } from './cdl.mjs';
+export { parseCallLog } from './call-log.mjs';
 export { parseFlat, parseInes, parseInesHeader };
 export { parseTrace } from './trace-log.mjs';

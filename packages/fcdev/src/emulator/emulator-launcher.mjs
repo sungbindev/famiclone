@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { FcdevError } from '../shared/index.mjs';
+import { loadDebugSdk } from './debug-sdk-loader.mjs';
 import { bootSb2000, enterProgram } from './sb2000-session.mjs';
 
 /** fcdev 的调试服务默认端口 */
@@ -60,30 +61,10 @@ export function assertPortFree(port) {
 }
 
 /**
- * 加载调试 SDK 的 Node 入口。
- * @returns {Promise<typeof import('../../dist/debug/types/debug-sdk/src/node.js')>} SDK 的 Node 入口
- * @throws {FcdevError} SDK 没有构建
- */
-async function loadSdk() {
-  try {
-    return await import('../../dist/debug/node.js');
-  } catch (error) {
-    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new FcdevError('找不到调试 SDK 的构建产物', {
-        code: 'DEBUG_SDK_MISSING',
-        hint: '在本仓库的 packages/fcdev 目录里先运行 npm run debug-sdk:build；用 npm 安装的 fcdev 会自带',
-        cause: error,
-      });
-    }
-    throw error;
-  }
-}
-
-/**
  * 启动 Ember。
  * @param {object} input 启动参数
  * @param {string} input.executable Ember 程序
- * @param {string} [input.romFile] 要加载的 .nes 文件（经典 FC）；与 sb2000 二选一
+ * @param {string} [input.romFile] 要加载的 .nes 文件（经典 FC）；与 sb2000 二选一；调试模式下两者都不给就只启动 Ember，不载入任何东西
  * @param {{firmware: string, diskImage: string, programName?: string}} [input.sb2000] 学习机：固件（BIOS）、磁盘镜像，以及自由模式里要在 SB-DOS 运行的程序名
  * @param {boolean} [input.debug] 是否调试模式
  * @param {number} [input.port] 调试端口
@@ -106,7 +87,7 @@ export async function launchEmulator({ executable, romFile, sb2000, debug = fals
     return { pid: child.pid, client: null };
   }
 
-  const { connectToEmber } = await loadSdk();
+  const { connectToEmber } = await loadDebugSdk();
   await assertPortFree(port);
   const userDataDirectory = debugUserDataDirectory(port);
   mkdirSync(userDataDirectory, { recursive: true });
@@ -127,9 +108,9 @@ export async function launchEmulator({ executable, romFile, sb2000, debug = fals
     try {
       const client = await Promise.race([connectToEmber({ userDataDirectory, clientName: CLIENT_NAME, connectTimeoutMs: 1000 }), failure]);
       try {
-        if (sb2000 === undefined) {
+        if (romFile !== undefined) {
           await client.request('cartridges.load', { path: romFile, powerOn: true, resume: false });
-        } else {
+        } else if (sb2000 !== undefined) {
           await bootSb2000(client, sb2000);
           if (!debug && sb2000.programName !== undefined) {
             await enterProgram(client, sb2000.programName);

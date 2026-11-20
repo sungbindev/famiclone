@@ -68,17 +68,17 @@ export async function tapKey(client, code, downFrames = KEY_DOWN_FRAMES, upFrame
 /**
  * 添加固件、放入磁盘镜像，并让整机机型开机：开机后已上电，没有运行。
  * @param {EmberDebugClient} client 已连接的调试客户端
- * @param {{firmware: string, diskImage: string}} input 固件（BIOS）文件与磁盘镜像
+ * @param {{machine?: string, firmware?: string, diskImage?: string}} input 机型（缺省学习机）、固件（BIOS）文件与磁盘镜像；固件与镜像都可以不给
  * @returns {Promise<void>}
  * @throws {FcdevError} 文件不存在，或 Ember 拒绝固件、镜像
  */
-export async function bootSb2000(client, { firmware, diskImage }) {
-  if (!existsSync(firmware)) throw new FcdevError(`找不到固件：${firmware}`, { code: 'FIRMWARE_MISSING', hint: '在 fcdev.json 的 firmware 里指向学习机的 BIOS 文件' });
-  if (!existsSync(diskImage)) throw new FcdevError(`找不到磁盘镜像：${diskImage}`, { code: 'EMULATOR_FILE_MISSING' });
+export async function bootMachine(client, { machine = SB2000_MACHINE, firmware, diskImage }) {
+  if (firmware !== undefined && !existsSync(firmware)) throw new FcdevError(`找不到固件：${firmware}`, { code: 'FIRMWARE_MISSING', hint: '在 fcdev.json 的 firmware 里指向学习机的 BIOS 文件' });
+  if (diskImage !== undefined && !existsSync(diskImage)) throw new FcdevError(`找不到磁盘镜像：${diskImage}`, { code: 'EMULATOR_FILE_MISSING' });
   const steps = [
-    ['添加固件', 'machines.setBios', { machine: SB2000_MACHINE, path: firmware }],
-    ['开机', 'machines.boot', { machine: SB2000_MACHINE, powerOn: true, resume: false }],
-    ['放入磁盘镜像', 'media.floppyInsert', { drive: 0, path: diskImage }],
+    ...(firmware === undefined ? [] : [['添加固件', 'machines.setBios', { machine, path: firmware }]]),
+    ['开机', 'machines.boot', { machine, powerOn: true, resume: false }],
+    ...(diskImage === undefined ? [] : [['放入磁盘镜像', 'media.floppyInsert', { drive: 0, path: diskImage }]]),
   ];
   for (const [name, method, params] of steps) {
     try {
@@ -87,6 +87,17 @@ export async function bootSb2000(client, { firmware, diskImage }) {
       throw new FcdevError(`Ember ${name}失败：${error.message}`, { code: 'EMULATOR_LOAD_FAILED', cause: error });
     }
   }
+}
+
+/**
+ * 学习机：添加固件、放入磁盘镜像并开机。
+ * @param {EmberDebugClient} client 已连接的调试客户端
+ * @param {{firmware: string, diskImage: string}} input 固件（BIOS）文件与磁盘镜像
+ * @returns {Promise<void>}
+ * @throws {FcdevError} 文件不存在，或 Ember 拒绝固件、镜像
+ */
+export function bootSb2000(client, { firmware, diskImage }) {
+  return bootMachine(client, { machine: SB2000_MACHINE, firmware, diskImage });
 }
 
 /**

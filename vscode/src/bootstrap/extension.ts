@@ -8,6 +8,7 @@
 // ------------------------------------------------------------------------
 
 import * as vscode from 'vscode';
+import type { EmulatorRunner } from '../contracts/disassembly/emulator-runner';
 import { registerAssemblyIntelliSense } from '../entry/assembly/assembly-registration';
 import { registerCIntelliSense } from '../entry/c-intellisense/c-intellisense-commands';
 import { registerDisassemblyTools } from '../entry/disassembly/disassembly-tool-registration';
@@ -15,6 +16,7 @@ import { WorkspaceAssemblySourceStore } from '../infra/assembly/workspace-assemb
 import { FileCppConfigurationInspector } from '../infra/c-intellisense/file-cpp-configuration-inspector';
 import { FcdevBuildComparer } from '../infra/disassembly/fcdev-build-comparer';
 import { WorkspaceDisasmRunner } from '../infra/disassembly/workspace-disasm-runner';
+import { WorkspaceEmulatorRunner } from '../infra/disassembly/workspace-emulator-runner';
 import { FcdevCliRunner } from '../infra/project/fcdev-cli-runner';
 import { FcdevProjectInfoProvider } from '../infra/project/fcdev-project-info-provider';
 import { WorkspaceFcdevProjectLocator } from '../infra/project/workspace-fcdev-project-locator';
@@ -23,12 +25,17 @@ import { ResolvingAssemblyIntelliSenseService } from '../logic/assembly/resolvin
 import { RunnerIntelliSenseSyncService } from '../logic/c-intellisense/runner-intellisense-sync-service';
 import { OutputChannelLogger } from '../platform/logging/output-channel-logger';
 
+/** 启用中的模拟器运行器，停用时用它收尾。 */
+let emulatorRunner: EmulatorRunner | undefined;
+
 /**
- * 激活扩展：创建各项实现并注册汇编智能感知、C 智能感知与反汇编工具。
+ * 激活扩展：创建各项实现并注册汇编智能感知、C 智能感知与反汇编、模拟器工具。
  * @param context VS Code 提供的扩展上下文，登记的资源随扩展停用而释放。
  */
 export function activate(context: vscode.ExtensionContext): void {
   const logger = new OutputChannelLogger();
+  const emulator = new WorkspaceEmulatorRunner(logger);
+  emulatorRunner = emulator;
   const runner = new FcdevCliRunner();
   const projects = new FcdevProjectInfoProvider(runner, logger);
   const assembly = new ResolvingAssemblyIntelliSenseService(
@@ -39,8 +46,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(logger);
   registerAssemblyIntelliSense(context, assembly, logger);
   registerCIntelliSense(context, cSync, projects, new FileCppConfigurationInspector(), logger);
-  registerDisassemblyTools(context, { runner: new WorkspaceDisasmRunner(logger), comparer: new FcdevBuildComparer(runner), logger });
+  registerDisassemblyTools(context, { runner: new WorkspaceDisasmRunner(logger), emulator, comparer: new FcdevBuildComparer(runner), logger });
 }
 
-/** 停用扩展：登记在上下文里的资源由 VS Code 释放，这里没有额外要做的事。 */
-export function deactivate(): void {}
+/** 停用扩展：关闭模拟器会话并结束工具启动的 Ember，其余登记在上下文里的资源由 VS Code 释放。 */
+export function deactivate(): Promise<void> | undefined {
+  return emulatorRunner?.shutdown();
+}

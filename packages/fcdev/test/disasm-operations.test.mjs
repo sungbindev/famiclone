@@ -42,9 +42,9 @@ describe('反汇编操作', () => {
     return run('trace');
   }
 
-  it('操作表有 17 个操作，接口版本为 1', () => {
+  it('操作表有 18 个操作，接口版本为 1', () => {
     assert.equal(API_VERSION, 1);
-    assert.deepEqual([...OPERATION_NAMES].sort(), ['apply', 'callgraph', 'detect', 'find', 'generate', 'hex', 'layout', 'list', 'open', 'reference', 'routine', 'status', 'symbols', 'trace', 'verify', 'view', 'xrefs']);
+    assert.deepEqual([...OPERATION_NAMES].sort(), ['apply', 'callgraph', 'detect', 'find', 'generate', 'hex', 'importRecord', 'layout', 'list', 'open', 'reference', 'routine', 'status', 'symbols', 'trace', 'verify', 'view', 'xrefs']);
   });
 
   it('新建工程：布局、入口、进度；再次打开不用 image；已有工程时不能直接重建', async () => {
@@ -226,6 +226,48 @@ describe('反汇编操作', () => {
     const result = await run('trace', { entries: ['$C00B', { address: '$C000' }] });
     assert.equal(result.entriesAdded, 1);
     assert.equal((await run('list', { category: 'entries' })).total, 2);
+  });
+
+  it('导入指令轨迹：映像里的地址成为入口，映像外的忽略并汇总，重复导入不再新增', async () => {
+    await run('open', { image: imageFile, address: 0xc000 });
+    const file = writeTestFile(temp.dir, 'trace.txt', 'C000  20 0B C0  JSR $C00B   A:00 X:00 Y:00 P:24 SP:FD CYC:7\nC00B  A2 10     LDX #$10  A:00 X:00 Y:00 P:24 SP:FD CYC:13\n0200  EA        NOP       A:00 X:00 Y:00 P:24 SP:FD CYC:20\n');
+    const first = await run('importRecord', { kind: 'trace', file });
+    assert.deepEqual([first.entriesAdded, first.entriesExisting, first.skipped], [2, 0, { count: 1, examples: ['$0200'] }]);
+    const again = await run('importRecord', { kind: 'trace', file });
+    assert.deepEqual([again.entriesAdded, again.entriesExisting], [0, 2]);
+    const entries = await run('list', { category: 'entries' });
+    assert.deepEqual(entries.items.map((item) => [item.address, item.source]), [[0xc000, 'trace'], [0xc00b, 'trace']]);
+    assert.equal((await run('trace')).routines, 2);
+  });
+
+  it('导入调用记录：被记录的地址与对照映像核实过的调用者都成为入口', async () => {
+    await run('open', { image: imageFile, address: 0xc000 });
+    const file = writeTestFile(temp.dir, 'calllog.txt', 'C00B  A:00 X:00 Y:00 P:24 SP:FB CYC:77 | STACK 02 C0 FF\nC00B  A:00 X:00 Y:00 P:24 SP:FB CYC:90 | STACK 50 C0 FF\n');
+    const result = await run('importRecord', { kind: 'callLog', file });
+    assert.deepEqual([result.entriesAdded, result.callersVerified], [2, 1]);
+    assert.deepEqual((await run('list', { category: 'entries' })).items.map((item) => [item.address, item.source]), [[0xc00b, 'call-record'], [0xc000, 'call-record']]);
+  });
+
+  it('导入 CDL：代码段起点与子程序入口成为入口，只读过的数据成为数据区域，追踪不盖住它', async () => {
+    await run('open', { image: imageFile, address: 0xc000 });
+    const flags = Buffer.alloc(22, 0x02);
+    flags.fill(0x01, 0, 17);
+    flags[11] = 0x09;
+    const file = path.join(temp.dir, 'prg.cdl');
+    writeFileSync(file, flags);
+    const result = await run('importRecord', { kind: 'cdl', file });
+    assert.deepEqual([result.entriesAdded, result.dataRegionsAdded, result.dataRegionsSkipped], [2, 1, 0]);
+    await run('trace');
+    const view = await run('hex', { address: '$C000', length: 22 });
+    assert.deepEqual(view.regions.map((region) => [region.address, region.length, region.type]), [[0xc000, 17, 'code'], [0xc011, 5, 'bytes']]);
+  });
+
+  it('导入记录出错：没给 kind、文件读不到、记录里没有能导入的地址', async () => {
+    await run('open', { image: imageFile, address: 0xc000 });
+    await assert.rejects(run('importRecord', { file: imageFile }), (error) => error.code === 'DISASM_PARAM_INVALID');
+    await assert.rejects(run('importRecord', { kind: 'trace', file: path.join(temp.dir, 'none.txt') }), (error) => error.code === 'DISASM_RECORD_MISSING');
+    const empty = writeTestFile(temp.dir, 'empty.txt', '0200  EA  NOP\n');
+    await assert.rejects(run('importRecord', { kind: 'trace', file: empty }), (error) => error.code === 'DISASM_RECORD_EMPTY');
   });
 
   it('生成源码工程', async () => {

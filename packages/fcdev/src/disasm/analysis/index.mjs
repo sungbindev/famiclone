@@ -14,7 +14,7 @@ export { detectCandidates } from './detect.mjs';
 export { entriesFromVectors, entryAtAddress } from './entry-points.mjs';
 export { BYTE_KIND } from './kinds.mjs';
 export { traceProject } from './project-trace.mjs';
-export { entriesFromAddresses, entriesFromCodeFlags, mappedSize } from './record-entries.mjs';
+export { dataRunsFromFlags, entriesFromAddresses, entriesFromCodeFlags, mappedSize } from './record-entries.mjs';
 export { findAddressTables } from './tables.mjs';
 export { createAnalysis, traceCode } from './tracer.mjs';
 export { buildXrefs, findXrefs } from './xrefs.mjs';

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：record-entries.mjs
-// 说明：把运行记录换成入口：一组 CPU 地址（指令轨迹、调用记录）与按字节标志的代码段起点（代码数据日志）。
+// 说明：把运行记录换成入口与数据区域：一组 CPU 地址（指令轨迹、调用记录）、按字节标志的代码段起点与只被当作数据读取的字节段（代码数据日志）。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -13,6 +13,9 @@ import { entryAtAddress } from './entry-points.mjs';
 
 /** 字节标志里表示“被当作代码执行过”的位 */
 const CODE_BIT = 0x01;
+
+/** 字节标志里表示“被当作数据读取过”的位 */
+const DATA_BIT = 0x02;
 
 /**
  * 由一组 CPU 地址创建入口。
@@ -48,21 +51,50 @@ export function mappedSize(layout) {
  * 由按字节的标志创建入口：每段连续的代码字节的起点都是被执行过的指令的开头。
  * @param {import('../model/layout.mjs').Layout} layout 布局
  * @param {Uint8Array} flags 标志，长度不少于布局里全部段的字节数；位 0 为代码
- * @param {{source: string, description?: string}} options 来源与说明
+ * @param {{source: string, description?: string, startBits?: number}} options 来源与说明；startBits 是除“代码段第一个字节”外也算起点的标志位（如跳转目标、子程序入口），默认没有
  * @returns {Array<Readonly<import('../model/entries.mjs').Entry>>} 入口
  * @throws {FcdevError} 标志比布局里的字节少
  */
-export function entriesFromCodeFlags(layout, flags, { source, description }) {
+export function entriesFromCodeFlags(layout, flags, { source, description, startBits = 0 }) {
   if (flags.length < mappedSize(layout)) throw new FcdevError(`标志只有 ${flags.length} 个，少于布局里的 ${mappedSize(layout)} 字节`, { code: 'DISASM_CDL_INVALID' });
   const entries = [];
   let index = 0;
   for (const segment of [...layout.segments].sort((a, b) => a.fileOffset - b.fileOffset)) {
     for (let offset = 0; offset < segment.length; offset += 1) {
-      const isCode = (flags[index + offset] & CODE_BIT) !== 0;
-      const startsRun = offset === 0 || (flags[index + offset - 1] & CODE_BIT) === 0;
+      const flag = flags[index + offset];
+      const isCode = (flag & CODE_BIT) !== 0;
+      const startsRun = offset === 0 || (flags[index + offset - 1] & CODE_BIT) === 0 || (flag & startBits) !== 0;
       if (isCode && startsRun) entries.push(createEntry(layout, { segmentId: segment.id, address: segment.address + offset, source, description }));
     }
     index += segment.length;
   }
   return entries;
+}
+
+/**
+ * 由按字节的标志找出只被当作数据读取过的字节段：每段连续的这类字节是一个数据区域。
+ * @param {import('../model/layout.mjs').Layout} layout 布局
+ * @param {Uint8Array} flags 标志，长度不少于布局里全部段的字节数；位 0 为代码，位 1 为数据
+ * @returns {Array<{segmentId: number, address: number, offset: number, length: number}>} 数据段：所在段、起始 CPU 地址、起始文件偏移与字节数；不跨段
+ * @throws {FcdevError} 标志比布局里的字节少
+ */
+export function dataRunsFromFlags(layout, flags) {
+  if (flags.length < mappedSize(layout)) throw new FcdevError(`标志只有 ${flags.length} 个，少于布局里的 ${mappedSize(layout)} 字节`, { code: 'DISASM_CDL_INVALID' });
+  const runs = [];
+  let index = 0;
+  for (const segment of [...layout.segments].sort((a, b) => a.fileOffset - b.fileOffset)) {
+    let runStart = -1;
+    for (let offset = 0; offset <= segment.length; offset += 1) {
+      const flag = offset < segment.length ? flags[index + offset] : 0;
+      const isData = (flag & DATA_BIT) !== 0 && (flag & CODE_BIT) === 0;
+      if (isData && runStart < 0) {
+        runStart = offset;
+      } else if (!isData && runStart >= 0) {
+        runs.push({ segmentId: segment.id, address: segment.address + runStart, offset: segment.fileOffset + runStart, length: offset - runStart });
+        runStart = -1;
+      }
+    }
+    index += segment.length;
+  }
+  return runs;
 }

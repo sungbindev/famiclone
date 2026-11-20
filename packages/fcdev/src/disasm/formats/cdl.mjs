@@ -14,6 +14,12 @@ export const CDL_CODE = 0x01;
 /** CDL 标志：被当作数据读取过 */
 export const CDL_DATA = 0x02;
 
+/** CDL 标志：是 JMP 或成立的分支的目标（Mesen 的位定义） */
+export const CDL_JUMP_TARGET = 0x04;
+
+/** CDL 标志：是 JSR 的目标，即子程序入口（Mesen 的位定义） */
+export const CDL_SUB_ENTRY = 0x08;
+
 /** Mesen CDLv2 的头：魔数 5 字节加 CRC32 4 字节 */
 const MESEN_HEADER = { magic: 'CDLv2', size: 9 };
 
@@ -21,15 +27,16 @@ const MESEN_HEADER = { magic: 'CDLv2', size: 9 };
  * 解析 CDL 文件。
  * @param {Buffer} buffer 文件内容
  * @param {number} size 被记录的程序字节数
- * @returns {Uint8Array} 长度为 size 的标志数组，只保留代码与数据两位
+ * @param {number} [keep] 要保留的标志位，默认只保留代码与数据两位
+ * @returns {Uint8Array} 长度为 size 的标志数组，只保留 keep 里的位
  * @throws {FcdevError} 文件比程序短
  */
-export function parseCdl(buffer, size) {
+export function parseCdl(buffer, size, keep = CDL_CODE | CDL_DATA) {
   const start = buffer.subarray(0, MESEN_HEADER.magic.length).toString('latin1') === MESEN_HEADER.magic ? MESEN_HEADER.size : 0;
   if (buffer.length - start < size) {
     throw new FcdevError(`CDL 只有 ${buffer.length - start} 字节，少于程序的 ${size} 字节`, { code: 'DISASM_CDL_INVALID', hint: '确认 CDL 是用同一个映像记录的' });
   }
   const flags = new Uint8Array(size);
-  for (let index = 0; index < size; index += 1) flags[index] = buffer[start + index] & (CDL_CODE | CDL_DATA);
+  for (let index = 0; index < size; index += 1) flags[index] = buffer[start + index] & keep;
   return flags;
 }

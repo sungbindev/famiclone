@@ -2,7 +2,7 @@
   "name": "fcdev",
   "displayName": "fcdev 6502 开发",
   "description": "6502 兼容机（NES、小霸王学习机等）开发：ca65 汇编的语法高亮、悬停、补全、转到定义与符号，cc65 的 C 头文件配置，以及给 Copilot 用的 6502 反汇编工具。",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "sungbin",
   "license": "Apache-2.0",
   "author": "sungbin <sungbin@3578.cn>",
@@ -1054,6 +1054,666 @@
           "required": [
             "projectDir",
             "buildPath"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "disasm_import_record",
+        "tags": [
+          "6502",
+          "disassembly",
+          "fcdev"
+        ],
+        "toolReferenceName": "disasm_import_record",
+        "displayName": "导入运行记录",
+        "modelDescription": "把 Ember 的运行记录导入反汇编工程。kind 为 trace（指令轨迹，来自 emu_record 的 instruction）、callLog（调用记录：被记录的地址与对照映像核实过的 JSR 调用者成为入口）、cdl（代码数据日志：每段代码的起点、跳转目标与子程序入口成为入口，只被当数据读取的字节成为 bytes 区域，来源写 cdl，不盖住手工标注的区域）。file 是 emu_record 结束时返回的记录文件路径。记录里不在映像里的地址会忽略并汇总。导入后用 disasm_trace 重新追踪，让新入口生成代码区域与自动符号。",
+        "userDescription": "把模拟器记录的指令轨迹、调用记录或 CDL 导入工程。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectDir": {
+              "type": "string",
+              "minLength": 1,
+              "description": "反汇编工程目录（里面有 disasm.json），工作区里的绝对路径或相对工作区根目录的路径"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "trace",
+                "callLog",
+                "cdl"
+              ],
+              "description": "记录种类：trace 指令轨迹、callLog 调用记录、cdl 代码数据日志"
+            },
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "记录文件的路径（emu_record 结束时返回的 file，在 Ember 的调试输出目录，可以在工作区之外）"
+            }
+          },
+          "required": [
+            "projectDir",
+            "kind",
+            "file"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_connect",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_connect",
+        "displayName": "连接 Ember",
+        "modelDescription": "连接已运行且开启了调试服务的 Ember。默认按端口（5699）找 fcdev 启动的 Ember 的端点文件；也可以给 url 与 token（用户给出的地址与令牌），或 userDataDirectory。连不上时用 emu_launch 启动一个。已有会话时先关闭旧连接（不结束进程）。",
+        "userDescription": "连接已运行且开启了调试服务的 Ember。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "调试端口，默认 5699"
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "调试服务的地址，如 ws://127.0.0.1:5699；给了就必须同时给 token"
+            },
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "调试服务的令牌，与 url 一起给"
+            },
+            "userDataDirectory": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ember 的用户数据目录，端点文件在它的 run 子目录下；默认按端口推出"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_launch",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_launch",
+        "displayName": "启动 Ember",
+        "modelDescription": "启动 Ember 并连接：调试模式、独立的用户数据目录，不载入任何东西，载入用 emu_load。executable 默认按环境变量 FCDEV_EMULATOR 与随 fcdev 安装的 Ember 定位。关闭会话（emu_status 的 close，加 terminate）或扩展停用时会结束它；只结束自己启动的进程。",
+        "userDescription": "启动 Ember 并开启调试服务。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "调试端口，默认 5699"
+            },
+            "executable": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ember 的可执行文件路径；默认自动定位"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_status",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_status",
+        "displayName": "模拟器状态",
+        "modelDescription": "查看模拟器会话：是否已连接、端口、是否由 emu_launch 启动、通电与运行状态、正在进行的记录。close 为 true 时关闭会话；terminate 为 true 时同时结束 emu_launch 启动的 Ember（不影响用户自己打开的）。",
+        "userDescription": "查看或关闭模拟器会话。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "close": {
+              "type": "boolean",
+              "description": "关闭会话"
+            },
+            "terminate": {
+              "type": "boolean",
+              "description": "关闭会话时同时结束自己启动的 Ember，默认 false"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_load",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_load",
+        "displayName": "载入程序",
+        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（SB-DOS 里要运行的程序名，开机后自动输入并回车）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。",
+        "userDescription": "把 NES 文件或整机（BIOS、软盘）装入 Ember。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "卡带文件路径（NES 格式）；与 machine 二选一"
+            },
+            "machine": {
+              "type": "string",
+              "minLength": 1,
+              "description": "整机机型，如 sb2000；与 file 二选一"
+            },
+            "firmware": {
+              "type": "string",
+              "minLength": 1,
+              "description": "整机的固件（BIOS）文件"
+            },
+            "diskImage": {
+              "type": "string",
+              "minLength": 1,
+              "description": "放入软驱的磁盘镜像"
+            },
+            "program": {
+              "type": "string",
+              "minLength": 1,
+              "description": "开机后在 SB-DOS 里运行的程序名（字母与数字）"
+            },
+            "familyKeyboard": {
+              "type": "boolean",
+              "description": "是否给经典 FC 接入 Family BASIC 键盘"
+            },
+            "powerOn": {
+              "type": "boolean",
+              "description": "卡带载入后是否通电，默认 true"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_run",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_run",
+        "displayName": "运行",
+        "modelDescription": "不限速地运行指定帧数后暂停，等运行结束再返回：停止原因（completed 完成、breakpoint 命中断点、interrupted、powerOff、error）、实际帧数与周期数、CPU 状态（pc、a、x、y、sp、status、cycles）。",
+        "userDescription": "运行指定帧数，或直到命中断点。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "frames": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000000,
+              "description": "要运行的帧数，默认 60"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_break",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_break",
+        "displayName": "断点",
+        "modelDescription": "断点：action 为 add（要 kind 与 address，可加 endAddress 表示范围）、list、remove（要 id）、clear；返回当前全部断点。execute 断点在执行这个地址的指令之前停下；read、write 断点在访问这个范围里的地址的那条指令执行完后停下。命中后 emu_run 的 stopped 为 breakpoint。",
+        "userDescription": "添加、列出、删除断点。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "add",
+                "list",
+                "remove",
+                "clear"
+              ],
+              "description": "操作，默认 list"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "execute",
+                "read",
+                "write"
+              ],
+              "description": "add 的断点种类"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "add 的地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "endAddress": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "范围的最后一个地址（含）；省略时只有 address 一个"
+            },
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "remove 的断点编号"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_step",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_step",
+        "displayName": "单步",
+        "modelDescription": "先暂停，再按单位运行指定数量后保持暂停：instruction（默认）、cycle、scanline、frame。返回实际执行的指令数、周期数、停下时的 pc 与 CPU 状态。",
+        "userDescription": "按指令、周期、扫描线或帧单步。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "unit": {
+              "type": "string",
+              "enum": [
+                "instruction",
+                "cycle",
+                "scanline",
+                "frame"
+              ],
+              "description": "单位，默认 instruction"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "数量，默认 1"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_inspect",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_inspect",
+        "displayName": "检查模拟器",
+        "modelDescription": "检查或修改模拟器：what 为 state（读寄存器与状态，module 可选 cpu、ppu 等）、memory（读内存，space 默认 cpu，address、length ≤ 4096，返回十六进制视图）、disassemble（从 address 反汇编 count 条指令，只用于核对）、resolve（space 取 cpu 或 ppu，解析地址落在哪块存储区的哪个偏移，用于确定 bank 布局）、spaces（列出全部内存空间）、write（写内存，要 address 与 bytes，需确认）、setState（修改 CPU 寄存器，fields 是 [{ name, value }]，需确认）。",
+        "userDescription": "读状态与内存、反汇编、解析地址，或修改内存与寄存器。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "what": {
+              "type": "string",
+              "enum": [
+                "state",
+                "memory",
+                "disassemble",
+                "resolve",
+                "spaces",
+                "write",
+                "setState"
+              ],
+              "description": "检查什么"
+            },
+            "space": {
+              "type": "string",
+              "minLength": 1,
+              "description": "内存空间，默认 cpu；见 spaces"
+            },
+            "module": {
+              "type": "string",
+              "minLength": 1,
+              "description": "state 与 setState 的模块，如 cpu、ppu、mapper"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "地址：整数，或十六进制文字如 \"$C000\""
+            },
+            "length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096,
+              "description": "memory 的字节数，默认 64"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 256,
+              "description": "disassemble 的指令条数，默认 16"
+            },
+            "bytes": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 1,
+              "description": "write 要写入的字节"
+            },
+            "fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "description": "setState 要修改的状态项，如 [{ \"name\": \"pc\", \"value\": 49152 }]"
+            }
+          },
+          "required": [
+            "what"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_screen",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_screen",
+        "displayName": "截图",
+        "modelDescription": "截取最近一帧画面（暂停与断电后也有上一帧），作为图像返回。给 file 时同时把 PNG 保存到这个路径（工作区里，需确认）；inline 为 false 时不返回图像，只返回尺寸与文件路径。当前 VS Code 不支持返回图像时，用 file 保存后再查看。",
+        "userDescription": "截取模拟器当前画面。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "把截图保存为 PNG 的路径（工作区里）"
+            },
+            "inline": {
+              "type": "boolean",
+              "description": "是否在结果里返回图像，默认 true"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_input",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_input",
+        "displayName": "输入",
+        "modelDescription": "给模拟器输入，按键与手柄会运行 downFrames 帧后松开再运行 upFrames 帧（机器要先载入并通电）。kind 为 key（code 取 KeyboardEvent.code 如 Enter、KeyA；action 取 tap 默认、down、up）、pad（port 默认 0；buttons 是掩码 0 到 255，或按键名数组 a、b、select、start、up、down、left、right；hold 为 true 时只按下不松开）、mouse（event 取 move、down、up、wheel、leave，另有 x、y、dx、dy、buttons、wheel）、familyKeyboard（connected 接入或断开 Family BASIC 键盘）、releaseAll（松开全部按键与手柄）。",
+        "userDescription": "按键、手柄、鼠标，接入或断开 Family BASIC 键盘。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "key",
+                "pad",
+                "mouse",
+                "familyKeyboard",
+                "releaseAll"
+              ],
+              "description": "输入种类"
+            },
+            "code": {
+              "type": "string",
+              "minLength": 1,
+              "description": "key 的物理键位（KeyboardEvent.code）"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "tap",
+                "down",
+                "up"
+              ],
+              "description": "key 的动作，默认 tap"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 7,
+              "description": "pad 的手柄口，默认 0"
+            },
+            "buttons": {
+              "type": [
+                "integer",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "pad 的按键：掩码，或按键名数组；mouse 的按住按键位（1 左、2 右、4 中）"
+            },
+            "hold": {
+              "type": "boolean",
+              "description": "pad 只按下不松开"
+            },
+            "downFrames": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 600,
+              "description": "按下后运行的帧数，默认 8"
+            },
+            "upFrames": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 600,
+              "description": "松开后运行的帧数，默认 4"
+            },
+            "event": {
+              "type": "string",
+              "enum": [
+                "move",
+                "down",
+                "up",
+                "wheel",
+                "leave"
+              ],
+              "description": "mouse 的事件"
+            },
+            "x": {
+              "type": "number",
+              "description": "mouse 的横坐标（标准帧上的位置）"
+            },
+            "y": {
+              "type": "number",
+              "description": "mouse 的纵坐标"
+            },
+            "dx": {
+              "type": "number",
+              "description": "mouse 的横向位移"
+            },
+            "dy": {
+              "type": "number",
+              "description": "mouse 的纵向位移"
+            },
+            "wheel": {
+              "type": "number",
+              "description": "mouse 的滚轮量，向下为正"
+            },
+            "connected": {
+              "type": "boolean",
+              "description": "familyKeyboard 是否接入，默认 true"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_record",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_record",
+        "displayName": "记录",
+        "modelDescription": "开始与结束记录，结束时返回记录文件的路径，交给 disasm_import_record 导入。action 为 start 或 stop；kind 为 instruction（指令轨迹）、io（寄存器读写）、irq（中断）、cdl（代码数据日志）、callLog（调用记录：每次执行到 address 这条指令之前记一行，含寄存器与栈顶 stackBytes 个字节；stackBytes 至少 2 才能核实调用者）。同一时刻可以有多个记录，结束跟踪与调用记录时给 id（只有一个时可省略）。记录文件写在 Ember 的调试输出目录；file 只是文件名，不含目录。",
+        "userDescription": "开始与结束指令跟踪、CDL、调用记录，返回记录文件。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "start",
+                "stop"
+              ],
+              "description": "开始或结束"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "instruction",
+                "io",
+                "irq",
+                "cdl",
+                "callLog"
+              ],
+              "description": "记录种类"
+            },
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "stop 的记录编号（start 返回的 id）"
+            },
+            "address": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "callLog 要记录的指令地址（子程序入口）：整数，或十六进制文字"
+            },
+            "stackBytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32,
+              "description": "callLog 每次记录栈顶的字节数，默认 0"
+            },
+            "ranges": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "required": [
+                  "address",
+                  "length"
+                ],
+                "properties": {
+                  "address": {
+                    "type": "integer"
+                  },
+                  "length": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "description": "callLog 每次记录的内存段（最多 4 段）"
+            },
+            "skip": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "required": [
+                  "address",
+                  "value"
+                ],
+                "properties": {
+                  "address": {
+                    "type": "integer"
+                  },
+                  "value": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "description": "callLog 的跳过条件（最多 4 项）：这个地址上的字节等于这个值时不记录"
+            },
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "记录文件名（不含目录），默认按种类与编号生成"
+            },
+            "maxLines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "description": "最多记录的行数，默认 100000"
+            },
+            "unique": {
+              "type": "boolean",
+              "description": "instruction 每个地址只记第一次"
+            }
+          },
+          "required": [
+            "action",
+            "kind"
           ],
           "additionalProperties": false
         }

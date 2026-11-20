@@ -7,5 +7,6 @@
 // 备注：其他目录只能经这个文件引用 shared。
 // ------------------------------------------------------------------------
 export { FcdevError } from './errors.mjs';
+export { createParamChecks } from './param-checks.mjs';
 export { DEFAULT_TOOL_TIMEOUT_MS, runProcess } from './process.mjs';
 export { ensureDirectory, getModifiedTime, isDirectory, readJsonFile } from './fs-utils.mjs';

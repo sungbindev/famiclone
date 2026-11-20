@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：index.mjs
-// 说明：operations 目录的出口：Copilot 反汇编工具对应的 17 个操作，按名字调用；每次调用从工程目录读出工程，改动后写回。
+// 说明：operations 目录的出口：Copilot 反汇编工具对应的 18 个操作，按名字调用；每次调用从工程目录读出工程，改动后写回。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -11,12 +11,13 @@ import { callgraph, detect, list, reference, routine, trace, view, xrefs } from 
 import { apply, symbols } from './editing-operations.mjs';
 import { generate, verify } from './output-operations.mjs';
 import { find, hex, layout, open, status } from './project-operations.mjs';
+import { importRecord } from './record-operations.mjs';
 
 /** 操作接口的版本 */
 export const API_VERSION = 1;
 
 /** 操作名到实现 */
-export const OPERATIONS = Object.freeze({ open, status, layout, hex, find, trace, list, view, xrefs, routine, callgraph, detect, reference, apply, symbols, generate, verify });
+export const OPERATIONS = Object.freeze({ open, status, layout, hex, find, trace, list, view, xrefs, routine, callgraph, detect, reference, apply, symbols, importRecord, generate, verify });
 
 /** 全部操作名 */
 export const OPERATION_NAMES = Object.freeze(Object.keys(OPERATIONS));

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：yuxing-test.cpp
- * 说明：验证裕兴学习机（yuxing）：四个学习卡的真实 ROM 开机；键盘移动菜单选择；鼠标移动光标；软驱读真实的软盘镜像；游戏 BASIC 里键入程序、SAVE 到磁带、NEW、LOAD 读回；声像学习放真实的声像磁带出现课文画面。
+ * 说明：验证裕兴学习机（yuxing）：四个学习卡的真实 ROM 开机；键盘移动菜单选择；鼠标移动光标；软驱读真实的软盘镜像；游戏 BASIC 里键入程序、SAVE 到磁带、NEW、LOAD 读回；声像学习放真实的声像磁带出现课文画面；V9.0-98 的系统检测菜单里没有多余的字模；V8.3-D 按小容量型号运行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -25,6 +26,7 @@
 #include "../support/real-rom-support.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "infra/media/disk-tape-store.hpp"
+
 
 namespace {
 
@@ -328,3 +330,45 @@ TEST(Yuxing, RealSoundAndPictureTapeDrivesTheLessonScreenOfTheSoundAndPictureCar
 }
 
 }  // namespace
+
+TEST(Yuxing, TheSystemCheckMenuLeavesNoStrayTileInTheMessageRow) {
+  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  menuKey(bench, "ArrowRight");
+  menuKey(bench, "ArrowRight");
+  menuKey(bench, "ArrowDown");
+  menuKey(bench, "ArrowDown");
+  menuKey(bench, "ArrowDown");
+  bench.tap("Enter", 8, 200);
+  bench.dump("system-check-menu");
+  // 程序在画面渲染期间用 $2006、$2007 写调色板，此时 PPU 地址已被渲染推到 $3B02：这样的写入要丢弃，不能把 $16 写进名称表第 24 行第 2 列。
+  std::array<std::uint8_t, 1> tile{};
+  bench.runtime->useMachine([&](hw::Machine& machine) { machine.debugger()->readMemory("board.nametable", 0x302, tile); });
+  EXPECT_EQ(tile[0], 0x81);
+  EXPECT_TRUE(bench.errors->entries.empty());
+}
+
+TEST(Yuxing, TheV83CardRunsWithTheSmallMemoryOfItsRevision) {
+  const auto rom = readMachineRom("yuxing_v8.3-d.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.3-d.bin";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(2));
+  // V8.3-D 的程序 RAM 只有 128K：写入页寄存器的页号只取低 3 位。
+  std::int64_t pageRegister = -1;
+  bench.runtime->useMachine([&](hw::Machine& machine) {
+    const std::array<std::uint8_t, 1> programRamMode{0x04};
+    const std::array<std::uint8_t, 1> pageRegisterMode{0x20};
+    const std::array<std::uint8_t, 1> page{0x3F};
+    machine.debugger()->writeMemory("cpu", 0x5500, programRamMode);
+    machine.debugger()->writeMemory("cpu", 0x4800, pageRegisterMode);
+    machine.debugger()->writeMemory("cpu", 0x8000, page);
+    for (const auto& field : machine.debugger()->readState("board")) {
+      if (field.name == "pageRegister") pageRegister = field.value;
+    }
+  });
+  EXPECT_EQ(pageRegister, 0x07);
+}

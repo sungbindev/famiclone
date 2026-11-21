@@ -733,4 +733,32 @@ TEST(Ppu2c02Variants, SpritePaletteShiftMovesTheSpriteColorsByTwoEntries) {
   EXPECT_EQ(spriteColumns(options), plain) << "回调返回 false 时与不设回调一样";
 }
 
+// ---------------------------------------------------------------- 变体：渲染期间的 $2007 写入
+
+TEST(Ppu2c02Variants, DropVramWriteWhileRenderingDiscardsTheDataWrittenWhileTheScreenIsDrawn) {
+  // 在第 line 行第 150 点经 $2006、$2007 向名称表写 $77，返回写入后那个字节的值。
+  const auto written = [](bool drop, int line, std::uint8_t mask) {
+    Ppu2c02::Options options{262, true};
+    options.dropVramWriteWhileRendering = drop;
+    PpuRig rig(options);
+    rig.write(0x2001, mask);
+    rig.runTo(line, 150);
+    rig.writeVram(0x2005, 0x77);
+    return rig.vram.bytes[0x2005];
+  };
+  EXPECT_EQ(written(false, 50, 0x08), 0x77) << "没有选项时渲染期间照常写入";
+  EXPECT_EQ(written(true, 50, 0x08), 0) << "可见行渲染期间的写入丢弃";
+  EXPECT_EQ(written(true, 261, 0x08), 0) << "预渲染行渲染期间的写入丢弃";
+  EXPECT_EQ(written(true, 245, 0x08), 0x77) << "vblank 里照常写入";
+  EXPECT_EQ(written(true, 50, 0x00), 0x77) << "渲染关闭时照常写入";
+
+  Ppu2c02::Options options{262, true};
+  options.dropVramWriteWhileRendering = true;
+  PpuRig rig(options);
+  rig.write(0x2001, 0x08);
+  rig.runTo(50, 150);
+  rig.writeVram(0x3F01, 0x16);
+  EXPECT_EQ(rig.ppu.palette()[1], 0x16) << "调色板区的写入不受影响";
+}
+
 }  // namespace

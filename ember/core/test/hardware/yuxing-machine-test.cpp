@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：yuxing-machine-test.cpp
- * 说明：主机型号 yuxing（裕兴学习机）的测试：ROM 大小、ROM 模式与程序 RAM 模式的窗口、页寄存器、32K 页、$6000 窗口、名称表镜像、字符页、MMC3 模式、汉字单色模式与 4 分屏的取指、键盘与语音数据口、软驱寄存器、手柄 1 与 2、磁带口、输入与调试接口。
+ * 说明：主机型号 yuxing（裕兴学习机）的测试：ROM 大小、ROM 模式与程序 RAM 模式的窗口、页寄存器、32K 页、$6000 窗口（程序 RAM 的页，与程序窗口是同一块）、型号决定的存储容量、$55xx 的偶数地址别名、MMC3 模式的 8K 工作 RAM、软驱的别名地址、名称表镜像、字符页、MMC3 模式、汉字单色模式与 4 分屏的取指、键盘与语音数据口、软驱寄存器、手柄 1 与 2、磁带口、输入与调试接口。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -147,23 +147,75 @@ TEST(YuxingMachine, ThirtyTwoKilobytePagesUseHalfThePageRegister) {
   EXPECT_EQ(peek(rig.machine, 0xFFFF), 0xD4);
 }
 
-TEST(YuxingMachine, TheWorkWindowAtSixThousandSelectsStaticRamPagesOrTheDefaultProgramRamPage) {
+TEST(YuxingMachine, TheWorkWindowAtSixThousandIsAProgramRamPagePickedByReg5500) {
   PoweredMachine rig;
   poke(rig.machine, 0x6000, 0x34);
   EXPECT_EQ(rig.machine.board().programRam()[0x3C * 0x2000], 0x34) << "页选择为 0 时接程序 RAM 的 8K 页 $3C";
-  poke(rig.machine, 0x5500, 0x01);
-  poke(rig.machine, 0x6000, 0x12);
-  EXPECT_EQ(peek(rig.machine, 0x6000), 0x12);
-  EXPECT_EQ(rig.machine.board().staticRam()[0x2000], 0x12);
-  poke(rig.machine, 0x5500, 0x02);
-  EXPECT_EQ(peek(rig.machine, 0x6000), 0) << "另一个 8K 页是空的";
-  poke(rig.machine, 0x5500, 0x03);
-  poke(rig.machine, 0x7FFF, 0x56);
-  EXPECT_EQ(rig.machine.board().staticRam()[0x7FFF], 0x56);
-  poke(rig.machine, 0x5500, 0x01);
-  EXPECT_EQ(peek(rig.machine, 0x6000), 0x12);
+  for (unsigned selector = 1; selector <= 3; ++selector) {
+    poke(rig.machine, 0x5500, static_cast<std::uint8_t>(selector));
+    poke(rig.machine, 0x6000, static_cast<std::uint8_t>(0x10 + selector));
+    EXPECT_EQ(rig.machine.board().programRam()[(0x3C | selector) * 0x2000], 0x10 + selector) << "页选择 " << selector << " 接程序 RAM 的 8K 页 ($3C 或上页选择)";
+  }
   poke(rig.machine, 0x5500, 0x00);
   EXPECT_EQ(peek(rig.machine, 0x6000), 0x34);
+}
+
+TEST(YuxingMachine, WhatIsWrittenThroughTheProgramWindowIsReadBackThroughTheWorkWindow) {
+  PoweredMachine rig;
+  // 系统检测的做法：程序 RAM 模式下页寄存器选 16K 页 $1E（即 8K 页 $3C、$3D），经 $A000 写入，再经 $6000 窗口的页选择 1 读回。
+  poke(rig.machine, 0x5500, 0x04);
+  poke(rig.machine, 0x4800, 0x20);
+  poke(rig.machine, 0x8000, 0x1E);
+  poke(rig.machine, 0x4800, 0x00);
+  poke(rig.machine, 0xA000, 0x77);
+  poke(rig.machine, 0x5500, 0x05);
+  EXPECT_EQ(peek(rig.machine, 0x6000), 0x77);
+}
+
+TEST(YuxingMachine, TheMemoryMasksFollowTheRevisionOfTheRom) {
+  for (const std::uint32_t crc : {0x3DF65263U, 0x6BA6BD80U, 0x2B1B969EU, 0xA70FD0F3U}) {
+    const YuxingBoard::MemoryMasks small = YuxingBoard::memoryMasksFor(crc);
+    EXPECT_EQ(small.programRam, 0x07) << std::hex << crc;
+    EXPECT_EQ(small.character, 0x03) << std::hex << crc;
+  }
+  for (const std::uint32_t crc : {0x6085FEE8U, 0U}) {
+    const YuxingBoard::MemoryMasks large = YuxingBoard::memoryMasksFor(crc);
+    EXPECT_EQ(large.programRam, 0x3F) << std::hex << crc;
+    EXPECT_EQ(large.character, 0x0F) << std::hex << crc;
+  }
+}
+
+TEST(YuxingMachine, EveryEvenAddressOfFiftyFiveHundredIsReg5500) {
+  PoweredMachine rig;
+  poke(rig.machine, 0x550A, 0x04);
+  EXPECT_EQ(rig.machine.board().registers().reg5500, 0x04);
+  poke(rig.machine, 0x5502, 0x0C);
+  EXPECT_EQ(rig.machine.board().registers().reg5500, 0x0C);
+  poke(rig.machine, 0x5503, 0x00);
+  EXPECT_EQ(rig.machine.board().registers().reg5500, 0x0C) << "奇数地址 $5503 不是它";
+  EXPECT_EQ(rig.machine.board().registers().reg5501, 0x00);
+}
+
+TEST(YuxingMachine, MmcModeWithProgramRamWindowGivesTheWorkWindowItsOwnEightKilobytes) {
+  PoweredMachine rig;
+  poke(rig.machine, 0x5500, 0x04);
+  poke(rig.machine, 0x5501, 0x80);
+  poke(rig.machine, 0x6000, 0x5A);
+  poke(rig.machine, 0x7FFF, 0x6B);
+  EXPECT_EQ(rig.machine.board().mmc3WorkRam()[0], 0x5A);
+  EXPECT_EQ(rig.machine.board().mmc3WorkRam()[0x1FFF], 0x6B);
+  EXPECT_EQ(rig.machine.board().programRam()[0x3C * 0x2000], 0) << "不是程序 RAM 的页";
+  poke(rig.machine, 0x5500, 0x00);
+  EXPECT_EQ(peek(rig.machine, 0x6000), 0) << "reg5500 位 2 为 0 时 $6000 窗口回到程序 RAM 的页 $3C";
+}
+
+TEST(YuxingMachine, TheFloppyControllerAlsoAnswersAtTheAliasAddresses) {
+  PoweredMachine rig;
+  // $4254 是 DOR（寄存器 2）的别名地址。
+  poke(rig.machine, 0x4254, 0x1C);
+  EXPECT_TRUE(rig.machine.floppyDrive(0)->motorRunning());
+  poke(rig.machine, 0x4254, 0x00);
+  EXPECT_FALSE(rig.machine.floppyDrive(0)->motorRunning());
 }
 
 // ---------------------------------------------------------------- 视频
@@ -266,6 +318,12 @@ TEST(YuxingMachine, WithoutTheFourWaySplitTheUpperCharacterPageIsTheSelectedEigh
   poke(rig.machine, 0x5500, 0x80);
   EXPECT_FALSE(rig.machine.board().registers().textMode);
   EXPECT_TRUE(rig.machine.board().registers().fourWaySplit);
+  poke(rig.machine, 0x5501, 0x80);
+  EXPECT_FALSE(rig.machine.board().registers().fourWaySplit) << "MMC3 模式下分屏不生效";
+  poke(rig.machine, 0x5500, 0x00);
+  EXPECT_FALSE(rig.machine.board().registers().textMode) << "MMC3 模式下汉字单色模式也不生效";
+  poke(rig.machine, 0x5501, 0x00);
+  EXPECT_TRUE(rig.machine.board().registers().textMode) << "退出 MMC3 模式后回到分屏的汉字单色模式";
 }
 // ---------------------------------------------------------------- 寄存器与外设
 
@@ -415,7 +473,10 @@ TEST(YuxingMachine, TheDebuggerResolvesTheWindowsToTheirMemory) {
   EXPECT_EQ(target.region, "board.programRam");
   poke(rig.machine, 0x5500, 0x05);
   target = rig.machine.debugger()->resolve("cpu", 0x6000);
-  EXPECT_EQ(target.region, "board.staticRam");
+  EXPECT_EQ(target.region, "board.programRam");
+  poke(rig.machine, 0x5501, 0x80);
+  target = rig.machine.debugger()->resolve("cpu", 0x6000);
+  EXPECT_EQ(target.region, "board.mmc3WorkRam");
   target = rig.machine.debugger()->resolve("cpu", 0x4800);
   EXPECT_EQ(target.kind, "register");
   target = rig.machine.debugger()->resolve("ppu", 0x0100);

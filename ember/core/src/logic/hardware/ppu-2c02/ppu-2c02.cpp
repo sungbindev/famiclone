@@ -331,7 +331,7 @@ void Ppu2c02::writeData(std::uint8_t value) {
   const std::uint16_t address = v_ & 0x3FFF;
   if (address >= 0x3F00) {
     palette_[paletteIndex(address)] = value & 0x3F;
-  } else {
+  } else if (!(options_.dropVramWriteWhileRendering && renderingEnabled() && (scanline_ < 240 || scanline_ == preRenderLine_))) {
     bus_.write(address, value);
   }
   incrementVramAddress();

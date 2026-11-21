@@ -61,6 +61,11 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
      * 落在某个调色板的第 0 项（颜色号 2）时取背景色，超出 16 项的部分回绕；不影响背景；为空（默认）表示不启用。
      */
     std::function<bool()> spritePaletteShifted{};
+    /**
+     * 渲染中（背景或精灵开启，且在可见行或预渲染行）写 $2007 时，v 正被渲染推进，所写的地址不是程序设定的那个；
+     * 为 true 时，这样写入图案表与名称表的数据一律丢弃（调色板区的写入照常），v 仍照常推进；为 false（默认）时照常写入 v 所指的地址。
+     */
+    bool dropVramWriteWhileRendering{false};
   };
 
   /**

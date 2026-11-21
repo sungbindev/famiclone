@@ -99,6 +99,7 @@ void Table::columnLimits(std::vector<double>& minimum, std::vector<double>& maxi
       maximum[c] = std::max(maximum[c], row.cells[c]->measure(Size{}).width + 2 * kCellPaddingX);
     }
     maximum[c] = std::max(maximum[c], minimum[c]);
+    if (columns_[c].maxWidth > 0) maximum[c] = std::max(minimum[c], std::min(maximum[c], columns_[c].maxWidth));
   }
 }
 
@@ -111,11 +112,18 @@ Table::Layout Table::layout(double width) {
 
   const double sumMin = std::accumulate(minimum.begin(), minimum.end(), 0.0);
   const double sumMax = std::accumulate(maximum.begin(), maximum.end(), 0.0);
+  const bool anyGrow = std::any_of(columns_.begin(), columns_.end(), [](const TableColumn& column) { return column.grow; });
+  double sumGrowMax = 0.0;
+  for (std::size_t c = 0; c < count; ++c) {
+    if (!anyGrow || columns_[c].grow) sumGrowMax += maximum[c];
+  }
   result.columnWidths.assign(count, 0.0);
   for (std::size_t c = 0; c < count; ++c) {
     if (width >= sumMax) {
-      // 放得下：多出的宽度按最大内容宽度的比例分
-      result.columnWidths[c] = sumMax > 0 ? maximum[c] + (width - sumMax) * maximum[c] / sumMax : 0.0;
+      // 放得下：多出的宽度按最大内容宽度的比例分给伸展的列（都没设时分给全部列）
+      const bool receives = !anyGrow || columns_[c].grow;
+      const double share = receives && sumGrowMax > 0 ? maximum[c] / sumGrowMax : 0.0;
+      result.columnWidths[c] = maximum[c] + (width - sumMax) * share;
     } else if (width > sumMin && sumMax > sumMin) {
       result.columnWidths[c] = minimum[c] + (maximum[c] - minimum[c]) * (width - sumMin) / (sumMax - sumMin);
     } else {
@@ -158,11 +166,10 @@ Table::Layout Table::layout(double width) {
 Size Table::measure(Size available) {
   double width = available.width;
   if (width <= 0) {
-    for (std::size_t c = 0; c < columns_.size(); ++c) {
-      double widest = headers_[c]->measure(Size{}).width;
-      for (const Row& row : rows_) widest = std::max(widest, row.cells[c]->measure(Size{}).width);
-      width += std::max(columns_[c].minWidth, widest + 2 * kCellPaddingX);
-    }
+    std::vector<double> minimum;
+    std::vector<double> maximum;
+    columnLimits(minimum, maximum);
+    width = std::accumulate(maximum.begin(), maximum.end(), 0.0);
   }
   return Size{width, layout(width).height};
 }

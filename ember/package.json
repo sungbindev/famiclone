@@ -1,7 +1,7 @@
 {
   "name": "ember",
   "productName": "Ember",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "description": "Ember：FC 与学习机模拟器，Win32 原生外壳与 C++ 核心。",
   "author": "sungbin <sungbin@3578.cn>",

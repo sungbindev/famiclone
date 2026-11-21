@@ -50,9 +50,11 @@ constexpr const char* kColumnState = "状态";
 
 /** 搜索框的宽度（逻辑像素）。 */
 constexpr double kSearchWidth = 220;
-/** 匹配列的最小宽度。 */
+/** 名称列的最小宽度（逻辑像素）。 */
 constexpr double kNameMinWidth = 140;
-constexpr double kMatchMinWidth = 120;
+/** 匹配列的最小与最大宽度（逻辑像素），超过最大宽度的匹配条件换行。 */
+constexpr double kMatchMinWidth = 100;
+constexpr double kMatchMaxWidth = 180;
 /** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
 constexpr double kContentRightPadding = 10;
 
@@ -211,9 +213,9 @@ void MappersContent::rebuildBody(const contracts::MappersView& view) {
 
   if (view.load == contracts::MappersLoad::Ready && !view.rows.empty()) {
     auto table = std::make_unique<Table>();
-    table->addColumn({kColumnName, kNameMinWidth, false, false});
+    table->addColumn({kColumnName, kNameMinWidth, false, false, 0, true});
     table->addColumn({kColumnVersion, 0, true, true});
-    table->addColumn({kColumnMatch, kMatchMinWidth, false, true});
+    table->addColumn({kColumnMatch, kMatchMinWidth, false, true, kMatchMaxWidth});
     table->addColumn({kColumnHost, 0, true, true});
     table->addColumn({kColumnSource, 0, true, true});
     table->addColumn({kColumnState, 0, true, false});

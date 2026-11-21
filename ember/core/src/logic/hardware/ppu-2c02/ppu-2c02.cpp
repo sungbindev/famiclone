@@ -15,7 +15,7 @@
 #include <bit>
 
 #include "contracts/hardware/hardware-error.hpp"
-#include "logic/hardware/ppu-2c02/ntsc-palette.hpp"
+#include "logic/hardware/ppu-2c02/ppu-palette.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace ember::logic::hardware {
@@ -56,7 +56,7 @@ Ppu2c02::Ppu2c02(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw
       options_(options),
       preRenderLine_(options.scanlinesPerFrame - 1),
       vblankStartIndex_(options.vblankLine * DOTS_PER_SCANLINE + 1),
-      rgbaTable_(buildNtscPalette()) {
+      rgbaTable_(buildPpuPalette()) {
   if (domain_.ticksPerCycle < 1) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 点时钟的主时钟周期数必须大于 0");
   if (phase_ < 0) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 的相位不能为负");
   if (options_.vblankLine < 241) throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "PPU 的 vblank 起始行不能小于 241");

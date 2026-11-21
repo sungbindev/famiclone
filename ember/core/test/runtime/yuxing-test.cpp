@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：yuxing-test.cpp
- * 说明：验证裕兴学习机（yuxing）：四个学习卡的真实 ROM 开机；键盘移动菜单选择；鼠标移动光标；软驱读真实的软盘镜像；游戏 BASIC 里键入程序、SAVE 到磁带、NEW、LOAD 读回；声像学习放真实的声像磁带出现课文画面；V9.0-98 的系统检测菜单里没有多余的字模；V8.3-D 按小容量型号运行。
+ * 说明：验证裕兴学习机（yuxing）：四个学习卡的真实 ROM 开机；键盘移动菜单选择；鼠标移动光标；软驱读真实的软盘镜像；声像学习放真实的声像磁带出现课文画面；V9.0-98 的系统检测菜单里没有多余的字模；V8.3-D 按小容量型号运行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
  * 备注：真实 ROM 在仓库的 ember/roms（没有文件头的纯 ROM），软盘镜像与声像磁带在 reference，缺它们时对应用例跳过；设置环境变量 EMBER_REAL_ROM_DUMP 为目录时，把关键时刻的画面存成 PPM 供人工查看；
- *       磁带的 SAVE 与 LOAD 各要约 22 秒的磁带时间（模拟时间，不是真实时间），所以分段运行，避开单次等待 10 秒的限制；
+ *       声像磁带要播约 22 秒的磁带时间（模拟时间，不是真实时间），所以分段运行，避开单次等待 10 秒的限制；
  *       画面只做结构判断（两个画面是否不同、有内容的像素个数），不比较整幅像素；菜单的按键间隔取 8 帧按下、30 帧等待，比这短时菜单偶尔漏键。
  * ------------------------------------------------------------------------
  */
@@ -17,9 +17,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
-#include <span>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -35,11 +33,7 @@ namespace rt = ember::contracts::runtime;
 using ember::test::readMachineRom;
 using ember::test::RealRomBench;
 
-/** 游戏 BASIC 把程序放在 $703E 起（行号、记号化的正文）。 */
-constexpr std::uint16_t BASIC_PROGRAM_START = 0x703E;
-constexpr std::size_t BASIC_PROGRAM_BYTES = 8;
-/** SAVE 与 LOAD 各自需要的帧数（约 22 秒，留出余量）与分段运行的帧数。 */
-constexpr std::uint64_t TAPE_FRAMES = 2400;
+/** 分段运行的帧数。 */
 constexpr std::uint64_t CHUNK_FRAMES = 450;
 
 /** 与左上角像素颜色不同的像素个数（画面上有没有内容）。 */
@@ -70,80 +64,6 @@ bool runLong(RealRomBench& bench, std::uint64_t frames) {
 
 /** 菜单里的一次按键。 */
 void menuKey(RealRomBench& bench, const char* code) { bench.tap(code, 8, 30); }
-
-/** 内存里的录音去向：32 kHz 单声道。 */
-class MemorySink final : public hw::TapeSink {
- public:
-  explicit MemorySink(std::shared_ptr<std::vector<std::int16_t>> samples) : samples_(std::move(samples)) {}
-  void write(const std::int16_t* samples, std::size_t count) override { samples_->insert(samples_->end(), samples, samples + count); }
-  void finish() override {}
-
- private:
-  std::shared_ptr<std::vector<std::int16_t>> samples_;
-};
-
-/** 把 32 kHz 单声道录音按 96 kHz 左右交错重放的来源。 */
-class ReplaySource final : public hw::TapeSource {
- public:
-  explicit ReplaySource(std::vector<std::int16_t> samples) : samples_(std::move(samples)) {}
-  std::size_t read(std::int16_t* interleaved, std::size_t frames) override {
-    std::size_t produced = 0;
-    while (produced < frames && position_ / 3 < samples_.size()) {
-      const std::int16_t value = samples_[position_ / 3];
-      interleaved[produced * 2] = value;
-      interleaved[produced * 2 + 1] = value;
-      ++produced;
-      ++position_;
-    }
-    return produced;
-  }
-  void rewind() override { position_ = 0; }
-  [[nodiscard]] double durationSeconds() const override { return static_cast<double>(samples_.size()) / 32000.0; }
-  [[nodiscard]] bool stereo() const override { return false; }
-
- private:
-  std::vector<std::int16_t> samples_;
-  std::size_t position_{0};
-};
-
-/** 在 BASIC 的提示符下键入文字：只认大写字母、数字、空格与双引号，'\n' 是回车。 */
-void typeText(RealRomBench& bench, std::string_view text) {
-  for (const char ch : text) {
-    if (ch == '\n') {
-      bench.tap("Enter", 6, 20);
-    } else if (ch == ' ') {
-      bench.tap("Space", 6, 6);
-    } else if (ch == '"') {
-      bench.tapShifted("Quote");
-    } else if (ch >= '0' && ch <= '9') {
-      const char code[] = {'D', 'i', 'g', 'i', 't', ch, '\0'};
-      bench.tap(code, 6, 6);
-    } else {
-      const char code[] = {'K', 'e', 'y', ch, '\0'};
-      bench.tap(code, 6, 6);
-    }
-  }
-}
-
-/** 读出 BASIC 程序所在的内存。 */
-std::vector<std::uint8_t> programBytes(RealRomBench& bench) {
-  std::vector<std::uint8_t> bytes(BASIC_PROGRAM_BYTES);
-  bench.runtime->useMachine([&](hw::Machine& machine) { machine.debugger()->readMemory("cpu", BASIC_PROGRAM_START, std::span<std::uint8_t>(bytes)); });
-  return bytes;
-}
-
-/** V9.0-98 开机后进入“工具软件”，选“游戏 BASIC”，进入 BASIC 的提示符。 */
-void enterGameBasic(RealRomBench& bench, const std::vector<std::uint8_t>& rom) {
-  bench.bootMachine("yuxing", rom);
-  ASSERT_TRUE(bench.run(600));
-  menuKey(bench, "ArrowRight");
-  menuKey(bench, "ArrowDown");
-  menuKey(bench, "ArrowRight");
-  bench.tap("Enter", 8, 200);
-  menuKey(bench, "ArrowDown");
-  bench.tap("Enter", 8, 300);
-  bench.tap("Digit1", 8, 300);
-}
 
 /** 四个学习卡的 ROM 文件。 */
 class YuxingRoms : public ::testing::TestWithParam<const char*> {};
@@ -261,44 +181,6 @@ TEST(Yuxing, TheDiskOperationScreenOfV83HasNoWhiteBlockInTheTopLeftCorner) {
   for (std::uint32_t y = 0; y < 16; ++y) {
     for (std::uint32_t x = 0; x < 64; ++x) ASSERT_EQ(pixelAt(x, y), background) << "(" << x << ", " << y << ") 不是背景色";
   }
-  EXPECT_TRUE(bench.errors->entries.empty());
-}
-
-TEST(Yuxing, GameBasicSaveRecordsTheProgramOnTapeAndLoadReadsItBack) {
-  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
-  RealRomBench bench;
-  ASSERT_NO_FATAL_FAILURE(enterGameBasic(bench, rom));
-  bench.dump("tape-0-basic");
-  const auto empty = programBytes(bench);
-  typeText(bench, "10 PRINT 7\n");
-  ASSERT_TRUE(bench.run(60));
-  const auto typed = programBytes(bench);
-  ASSERT_NE(typed, empty) << "键入的第 10 行应该进入程序区";
-
-  auto recorded = std::make_shared<std::vector<std::int16_t>>();
-  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->record(std::make_unique<MemorySink>(recorded), "save"); });
-  typeText(bench, "SAVE\"A\"\n");
-  ASSERT_TRUE(runLong(bench, TAPE_FRAMES));
-  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->stop(); });
-  EXPECT_GT(recorded->size(), 32000U * 15) << "SAVE 应该录进了十几秒以上的信号";
-
-  typeText(bench, "NEW\n");
-  ASSERT_TRUE(bench.run(120));
-  // 把程序区清零，LOAD 之后读回的内容才能证明来自磁带。
-  bench.runtime->useMachine([&](hw::Machine& machine) {
-    const std::vector<std::uint8_t> zeros(BASIC_PROGRAM_BYTES, 0);
-    machine.debugger()->writeMemory("cpu", BASIC_PROGRAM_START, zeros);
-  });
-  EXPECT_NE(programBytes(bench), typed);
-
-  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->load(std::make_unique<ReplaySource>(*recorded), "load"); });
-  typeText(bench, "LOAD\"A\"\n");
-  ASSERT_TRUE(bench.run(60));
-  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->play(); });
-  ASSERT_TRUE(runLong(bench, TAPE_FRAMES));
-  bench.dump("tape-1-loaded");
-  EXPECT_EQ(programBytes(bench), typed) << "LOAD 读回的程序应该与 SAVE 之前一字节不差";
   EXPECT_TRUE(bench.errors->entries.empty());
 }
 

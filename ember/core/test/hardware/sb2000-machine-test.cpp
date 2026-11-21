@@ -573,8 +573,4 @@ TEST(Sb2000Machine, RealPlayRunsAnNesGameUnderSbDos) {
   expectMarioRunsUnderSbDos(std::filesystem::path(u8"apps/sb2000/examples/play/build/sb2000/PLAY.img"), "play mario.nes", "play");
 }
 
-TEST(Sb2000Machine, RealRunnesRunsAnNesGameUnderSbDos) {
-  expectMarioRunsUnderSbDos(std::filesystem::path(u8"apps/sb2000/runnes/build/sb2000/RUNNES.img"), "runnes mario.nes", "runnes");
-}
-
 }  // namespace

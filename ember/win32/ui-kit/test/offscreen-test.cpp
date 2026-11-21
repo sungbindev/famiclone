@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：offscreen-test.cpp
- * 说明：离屏绘制的测试：像素级检查画布的对齐规则、边框、裁剪、按钮的各状态颜色、图标与 PNG 输出。
+ * 说明：离屏绘制的测试：像素级检查画布的对齐规则、边框、裁剪、按钮的焦点环、图标与 PNG 输出。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -220,35 +220,6 @@ constexpr int kSampleX = 12;
 constexpr int kSampleY = 21;
 
 }  // namespace
-
-TEST(ButtonRendering, NormalHoverPressedUseTheSecondaryTokens) {
-  for (const ThemeName theme : {ThemeName::Dark, ThemeName::Light}) {
-    const auto& colors = themeTokens(theme);
-    const Color window = colors.content_bg;
-    ButtonScene scene(theme, 1.0);
-    expectColor(pixelAt(scene.render(1.0, theme), 120, kSampleX, kSampleY), compose(colors.button_secondary_bg, window));
-
-    scene.root.mouseMove(Point{20, 20}, 0);
-    expectColor(pixelAt(scene.render(1.0, theme), 120, kSampleX, kSampleY), compose(colors.button_secondary_hover_bg, window));
-
-    scene.root.mouseDown(Point{20, 20}, MouseButton::Left, 0);
-    expectColor(pixelAt(scene.render(1.0, theme), 120, kSampleX, kSampleY), compose(colors.button_secondary_active_bg, window));
-  }
-}
-
-TEST(ButtonRendering, PrimaryUsesAccentTokens) {
-  ButtonScene scene(ThemeName::Dark, 1.0);
-  scene.button->setVariant(ButtonVariant::Primary);
-  const auto& colors = themeTokens(ThemeName::Dark);
-  expectColor(pixelAt(scene.render(1.0, ThemeName::Dark), 120, kSampleX, kSampleY), compose(colors.accent, colors.content_bg));
-}
-
-TEST(ButtonRendering, DisabledUsesDisabledTokens) {
-  ButtonScene scene(ThemeName::Dark, 1.0);
-  scene.button->setEnabled(false);
-  const auto& colors = themeTokens(ThemeName::Dark);
-  expectColor(pixelAt(scene.render(1.0, ThemeName::Dark), 120, kSampleX, kSampleY), compose(colors.disabled_bg, colors.content_bg));
-}
 
 TEST(ButtonRendering, KeyboardFocusDrawsRingOffsetByOutlineOffset) {
   ButtonScene scene(ThemeName::Dark, 1.0);

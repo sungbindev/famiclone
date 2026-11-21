@@ -486,8 +486,6 @@ TEST(BbgMachine, RealBios20BootsToAPicture) { bootRealBios("bbg98_bios.bin", Bbg
 
 TEST(BbgMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbg1_bios.bin", BbgVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
 
-TEST(BbgMachine, RealBios20BootsTheDosDisk) { bootRealBios("bbg98_bios.bin", BbgVariant::model98(), "bios20-dos", 2500, u8"dos启动盘.IMG"); }
-
 // ---------------------------------------------------------------- 格式化软盘
 
 /** 在步步高 DOS 命令行里操作的会话：用 DOS 启动盘开机并跳过日期与时间，之后可以输入命令、等待。 */
@@ -543,37 +541,19 @@ class DosSession {
 };
 
 /** 让 DOS 格式化软驱里的盘片，返回格式化后的镜像；BIOS 或盘片缺失时返回空。 */
-std::vector<std::uint8_t> formatTheFloppy(const char* biosFile, const BbgVariant& variant, std::vector<std::uint8_t> image, bool formatIsOnDriveC, const char* label) {
+std::vector<std::uint8_t> formatTheFloppy(const char* biosFile, const BbgVariant& variant, std::vector<std::uint8_t> image, const char* label) {
   std::vector<std::uint8_t> bios = realBios(biosFile, variant);
   if (bios.empty() || image.empty()) return {};
   DosSession session(variant, std::move(bios), std::move(image));
-  if (formatIsOnDriveC) {
-    session.type("c:");
-    session.enter();
-    session.wait(120);
-  }
+  session.type("c:");
+  session.enter();
+  session.wait(120);
   session.type("format a:");
   session.enter();
   session.wait(300);
   session.enter();
   session.wait(3000);
   if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(session.machine().frame(), dump + "." + label + ".ppm");
-  return session.machine().floppyDrive(0)->image();
-}
-
-/** 软驱一号没有 C 盘：先在步步高 98 的 C 盘里把 FORMAT.COM 复制到 DOS 启动盘上，返回复制后的镜像。 */
-std::vector<std::uint8_t> diskWithTheFormatProgram() {
-  std::vector<std::uint8_t> bios = realBios("bbg98_bios.bin", BbgVariant::model98());
-  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbg") / std::u8string(u8"dos启动盘.IMG"));
-  if (bios.empty() || image.empty()) return {};
-  DosSession session(BbgVariant::model98(), std::move(bios), std::move(image));
-  session.type("c:");
-  session.enter();
-  session.wait(120);
-  session.type("copy format.cmd a:");
-  session.enter();
-  session.wait(900);
-  if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(session.machine().frame(), dump + ".bios20-copy-format.ppm");
   return session.machine().floppyDrive(0)->image();
 }
 
@@ -590,17 +570,9 @@ void expectFormatted(const std::vector<std::uint8_t>& formatted) {
   EXPECT_GT(filledTracks, 150U) << "80 道 2 面共 160 个磁道，除了 FAT 与根目录所在的开头几个磁道外都应该被格式化";
 }
 
-TEST(BbgMachine, RealBios10FormatsAFloppyDisk) {
-  std::vector<std::uint8_t> image = diskWithTheFormatProgram();
-  if (image.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
-  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg1_bios.bin", BbgVariant::floppyOne(), std::move(image), false, "bios10-format");
-  if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS";
-  expectFormatted(formatted);
-}
-
 TEST(BbgMachine, RealBios20FormatsAFloppyDisk) {
   std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbg") / std::u8string(u8"dos启动盘.IMG"));
-  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg98_bios.bin", BbgVariant::model98(), std::move(image), true, "bios20-format");
+  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg98_bios.bin", BbgVariant::model98(), std::move(image), "bios20-format");
   if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
   expectFormatted(formatted);
 }

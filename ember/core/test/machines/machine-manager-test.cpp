@@ -306,7 +306,7 @@ TEST(MachineManager, BootCanLeaveTheMachinePoweredOff) {
   EXPECT_EQ(on.mode, "paused");
 }
 
-TEST(KnownRoms, IdentifiesRomsByContentAndLabelsOnlyMultiVersionMachines) {
+TEST(KnownRoms, IdentifiesRomsByContentAndLabelsThemWithVersionOrModel) {
   using ember::logic::machines::findKnownRom;
   using ember::logic::machines::romLabel;
   const auto yuxing = findKnownRom(0x6085FEE8U);
@@ -317,7 +317,9 @@ TEST(KnownRoms, IdentifiesRomsByContentAndLabelsOnlyMultiVersionMachines) {
   EXPECT_EQ(findKnownRom(0x05F958C4U)->machine, "pec586");
   EXPECT_EQ(romLabel(0x05F958C4U, "x.bin"), "PEC-686F");
   EXPECT_EQ(findKnownRom(0xE07BD2C3U)->machine, "sb2000");
-  EXPECT_EQ(romLabel(0xE07BD2C3U, "sb2000_bios.bin"), "sb2000_bios.bin") << "只有一种 ROM 的机型没有版本名，显示文件名";
+  EXPECT_EQ(romLabel(0xE07BD2C3U, "sb2000_bios.bin"), "SB2000") << "只有一种 ROM 的机型显示型号名";
+  EXPECT_EQ(romLabel(0x8C8FE800U, "bbg98_bios.bin"), "98型");
+  EXPECT_EQ(romLabel(0xB3D11A3CU, "bbg1_bios.bin"), "软驱一号");
   EXPECT_FALSE(findKnownRom(0x12345678U).has_value());
   EXPECT_EQ(romLabel(0x12345678U, "other.bin"), "other.bin");
 }

@@ -19,11 +19,11 @@ namespace {
 
 /** 已知 ROM 表：校验值取自各机型的真实 ROM 文件。 */
 constexpr std::array<KnownRom, 14> KNOWN_ROMS{{
-    {0x40A4C574U, "sb97", ""},
-    {0xE07BD2C3U, "sb2000", ""},
-    {0xB3D11A3CU, "bbg1", ""},
-    {0x8C8FE800U, "bbg98", ""},
-    {0xFE31765BU, "pec9588", ""},
+    {0x40A4C574U, "sb97", "SB97"},
+    {0xE07BD2C3U, "sb2000", "SB2000"},
+    {0xB3D11A3CU, "bbg1", "软驱一号"},
+    {0x8C8FE800U, "bbg98", "98型"},
+    {0xFE31765BU, "pec9588", "PEC-9588"},
     {0x6EEF8BB7U, "pec586", "PEC-586"},
     {0x05F958C4U, "pec586", "PEC-686F"},
     {0x3DF65263U, "yuxing", "V7.0"},
@@ -45,7 +45,7 @@ std::optional<KnownRom> findKnownRom(std::uint32_t crc32) {
 
 std::string romLabel(std::uint32_t crc32, const std::string& fileName) {
   const auto rom = findKnownRom(crc32);
-  if (rom && !rom->version.empty()) return std::string(rom->version);
+  if (rom) return std::string(rom->version);
   return fileName;
 }
 

@@ -8,7 +8,7 @@
       "properties": {
         "fileName": { "type": "string", "description": "文件名，不含路径" },
         "size": { "type": "integer", "minimum": 0, "description": "文件大小（字节），等于机型的 ROM 容量" },
-        "label": { "type": "string", "description": "界面上显示的 ROM 版本：认得出的 ROM 是版本名（如 V9.0-98），认不出或这个机型只有一种 ROM 时是文件名" }
+        "label": { "type": "string", "description": "界面上显示的 ROM 版本：认得出的 ROM 是版本名或型号名（如 V9.0-98、98型），认不出时是文件名" }
       },
       "required": ["fileName", "size", "label"]
     },

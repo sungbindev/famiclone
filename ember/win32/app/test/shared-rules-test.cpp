@@ -141,7 +141,7 @@ TEST(LastDirectories, ParseSkipsBadItemsAndChecksTheVersion) {
   EXPECT_EQ(items, (std::map<std::string, std::string>{{"cartridge", "D:\\roms"}}));
   EXPECT_TRUE(parseLastDirectories({{"version", 2}, {"directories", {{"a", "b"}}}}).empty());
   EXPECT_TRUE(parseLastDirectories(json(nullptr)).empty());
-  EXPECT_EQ(parseLastDirectories(toLastDirectoriesFile({{"bios", "C:\\b"}})), (std::map<std::string, std::string>{{"bios", "C:\\b"}}));
+  EXPECT_EQ(parseLastDirectories(toLastDirectoriesFile({{"rom", "C:\\b"}})), (std::map<std::string, std::string>{{"rom", "C:\\b"}}));
 }
 
 /** 阴影图像在 (x, y) 处的透明度。 */

@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
  * 备注：存储译码用合成的 BIOS 检查：每页的第一个字节写页号（第 0 页写 $A5），复位向量指向第 0 页里的原地跳转；
- *       真实 BIOS 在仓库的 ember/bios/sb97_bios.bin（1MB 的纯 BIOS，没有文件头），文件不存在时跳过这些测试。
+ *       真实 BIOS 在仓库的 ember/roms/sb97.bin（1MB 的纯 BIOS，没有文件头），文件不存在时跳过这些测试。
  * ------------------------------------------------------------------------
  */
 
@@ -293,9 +293,9 @@ std::vector<std::uint8_t> readReferenceFile(const std::filesystem::path& relativ
   return std::vector<std::uint8_t>((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
 }
 
-/** 真实 BIOS（ember/bios 里没有文件头的纯 BIOS）；文件不存在或大小不对时返回空。 */
+/** 真实 BIOS（ember/roms 里没有文件头的纯 BIOS）；文件不存在或大小不对时返回空。 */
 std::vector<std::uint8_t> realBios() {
-  std::vector<std::uint8_t> file = readReferenceFile(std::filesystem::path("ember") / "bios" / "sb97_bios.bin");
+  std::vector<std::uint8_t> file = readReferenceFile(std::filesystem::path("ember") / "roms" / "sb97.bin");
   if (file.size() != Sb97Board::ROM_SIZE) return {};
   return file;
 }
@@ -338,7 +338,7 @@ void bootToMenu(Sb97Machine& machine) {
 
 TEST(Sb97Machine, RealBiosShowsTheLogoWithinTwoAndAHalfSeconds) {
   std::vector<std::uint8_t> bios = realBios();
-  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb97_bios.bin";
+  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/roms/sb97.bin";
   Sb97Machine machine(std::move(bios));
   machine.powerOn();
   run(machine, 150);
@@ -347,7 +347,7 @@ TEST(Sb97Machine, RealBiosShowsTheLogoWithinTwoAndAHalfSeconds) {
 
 TEST(Sb97Machine, RealBiosWaitsOnTheLogoScreenForAKeyThenChecksTheHardwareAndShowsTheMenu) {
   std::vector<std::uint8_t> bios = realBios();
-  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb97_bios.bin";
+  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/roms/sb97.bin";
   Sb97Machine machine(std::move(bios));
   machine.powerOn();
   run(machine, 1200);
@@ -361,7 +361,7 @@ TEST(Sb97Machine, RealBiosWaitsOnTheLogoScreenForAKeyThenChecksTheHardwareAndSho
 
 TEST(Sb97Machine, RealBiosMenuShowsTheLowerHalfWithTheItemsBelowTheMiddle) {
   std::vector<std::uint8_t> bios = realBios();
-  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb97_bios.bin";
+  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/roms/sb97.bin";
   Sb97Machine machine(std::move(bios));
   bootToMenu(machine);
   // 菜单下半屏有“音乐之窗”“WPS”“认知码”三个八边形按钮，在第 140-200 行。
@@ -370,7 +370,7 @@ TEST(Sb97Machine, RealBiosMenuShowsTheLowerHalfWithTheItemsBelowTheMiddle) {
 
 TEST(Sb97Machine, RealBiosMenuStartsDosAtTheCenterAndShowsThePrompt) {
   std::vector<std::uint8_t> bios = realBios();
-  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb97_bios.bin";
+  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/roms/sb97.bin";
   Sb97Machine machine(std::move(bios));
   bootToMenu(machine);
   const std::size_t menuWhite = whitePixels(machine.frame());
@@ -386,7 +386,7 @@ TEST(Sb97Machine, RealBiosMenuStartsDosAtTheCenterAndShowsThePrompt) {
 
 TEST(Sb97Machine, RealBiosFBasicStartsTheBasicPromptNotAnotherProgram) {
   std::vector<std::uint8_t> bios = realBios();
-  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb97_bios.bin";
+  if (bios.empty()) GTEST_SKIP() << "没有找到 ember/roms/sb97.bin";
   Sb97Machine machine(std::move(bios));
   bootToMenu(machine);
   // 菜单顺时针转：指法训练、打字游戏、五笔字型、认知码、WPS、音乐之窗、计算器、F-BASIC。
@@ -404,7 +404,7 @@ TEST(Sb97Machine, RealBiosFBasicStartsTheBasicPromptNotAnotherProgram) {
 TEST(Sb97Machine, RealBiosDosListsTheFilesOnTheFloppyDisk) {
   std::vector<std::uint8_t> bios = realBios();
   std::vector<std::uint8_t> image = readReferenceFile(std::filesystem::path("reference") / "floppy-images" / "sb97" / "1.IMA");
-  if (bios.empty() || image.empty()) GTEST_SKIP() << "没有找到 ember/bios/sb97_bios.bin 或 reference/floppy-images/sb97/1.IMA";
+  if (bios.empty() || image.empty()) GTEST_SKIP() << "没有找到 ember/roms/sb97.bin 或 reference/floppy-images/sb97/1.IMA";
   struct MotorLog final : hw::FloppyActivity {
     int turnedOn{0};
     void motorChanged(unsigned /*drive*/, bool on) override {

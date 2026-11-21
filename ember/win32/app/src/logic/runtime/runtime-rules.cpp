@@ -22,10 +22,11 @@ struct HostName {
   const char* id;
   const char* name;
 };
-constexpr HostName kHostNames[] = {{"fc", "经典 FC"}, {"sb97", "小霸王 97"}, {"sb2000", "小霸王 2000"}, {"bbk10", "步步高软驱一号"}, {"bbk20", "步步高 98"}};
+constexpr HostName kHostNames[] = {{"fc", "经典 FC"},     {"sb97", "小霸王 97"},       {"sb2000", "小霸王 2000"},          {"bbk10", "步步高软驱一号"},
+                                   {"bbk20", "步步高 98"}, {"pec9588", "金字塔 PEC-9588"}, {"pec586", "金字塔 PEC-586、686"}};
 
 constexpr const char* kUnsupported = "暂未支持";
-constexpr const char* kNoBios = "未添加 BIOS";
+constexpr const char* kNoRom = "未添加 ROM";
 constexpr const char* kMachineMenuTitle = "选择机型";
 
 std::string stringOf(const nlohmann::json& object, const char* key) {
@@ -60,9 +61,9 @@ std::vector<MachineEntry> parseMachines(const nlohmann::json& result) {
     MachineEntry entry;
     entry.id = stringOf(item, "id");
     entry.name = stringOf(item, "name");
-    entry.needsBios = boolOf(item, "needsBios");
+    entry.needsRom = boolOf(item, "needsRom");
     entry.supported = boolOf(item, "supported");
-    entry.hasBios = item.contains("bios") && !item["bios"].is_null();
+    entry.hasRom = item.contains("rom") && !item["rom"].is_null();
     if (!entry.id.empty()) machines.push_back(std::move(entry));
   }
   return machines;
@@ -129,9 +130,10 @@ std::string pauseToggleText(const std::optional<RuntimeStatus>& status) { return
 PowerToggleAction powerToggleAction(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine, const std::vector<MachineEntry>& machines) {
   if (!status) return PowerToggleAction::None;
   if (status->powerOn) return PowerToggleAction::PowerOff;
+  // 经典 FC 装着卡带时，断电后能再开机。
   if (selectedMachine == kClassicMachine) return status->machine == std::optional<std::string>(kClassicMachine) ? PowerToggleAction::PowerOn : PowerToggleAction::None;
   const auto info = std::find_if(machines.begin(), machines.end(), [&selectedMachine](const MachineEntry& entry) { return entry.id == selectedMachine; });
-  return info != machines.end() && info->supported && info->hasBios ? PowerToggleAction::Boot : PowerToggleAction::None;
+  return info != machines.end() && info->supported && info->hasRom ? PowerToggleAction::Boot : PowerToggleAction::None;
 }
 
 contracts::RuntimeControls controlAvailability(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine, const std::vector<MachineEntry>& machines) {
@@ -157,13 +159,14 @@ std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machi
     const char* id;
     const char* label;
   };
-  static constexpr Choice kChoices[] = {{"sb97", "小霸王 97"}, {"sb2000", "小霸王 2000"}, {"bbk10", "步步高软驱一号"}, {"bbk20", "步步高 98"}};
+  static constexpr Choice kChoices[] = {{"sb97", "小霸王 97"},        {"sb2000", "小霸王 2000"},          {"bbk10", "步步高软驱一号"},
+                                        {"bbk20", "步步高 98"},       {"pec9588", "金字塔 PEC-9588"}, {"pec586", "金字塔 PEC-586、686"}};
   std::vector<MachineChoice> result;
   for (const auto& choice : kChoices) {
     const auto info = std::find_if(machines.begin(), machines.end(), [&choice](const MachineEntry& entry) { return entry.id == choice.id; });
     std::string hint;
     if (info == machines.end() || !info->supported) hint = kUnsupported;
-    else if (!info->hasBios) hint = kNoBios;
+    else if (!info->hasRom) hint = kNoRom;
     result.push_back({choice.id, choice.label, hint});
   }
   return result;

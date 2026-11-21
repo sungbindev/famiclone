@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-17
-// 备注：用到真实 BIOS（ember/bios/sb97_bios.bin）的用例在文件不存在时跳过。
+// 备注：用到真实 BIOS（ember/roms/sb97.bin）的用例在文件不存在时跳过。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

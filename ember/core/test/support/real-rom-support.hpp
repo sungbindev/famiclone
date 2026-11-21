@@ -50,6 +50,21 @@ inline std::vector<std::uint8_t> readReferenceFile(const std::string& relative) 
   return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
+/** 读 ember/roms 里没有文件头的纯 ROM（如 pec9588.bin）；找不到时为空。 */
+inline std::vector<std::uint8_t> readMachineRom(const std::string& fileName) {
+  std::filesystem::path directory = std::filesystem::current_path();
+  for (int level = 0; level < 8; ++level) {
+    const auto path = directory / "ember" / "roms" / fileName;
+    if (std::filesystem::exists(path)) {
+      std::ifstream stream(path, std::ios::binary);
+      return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
+    }
+    if (!directory.has_parent_path() || directory.parent_path() == directory) break;
+    directory = directory.parent_path();
+  }
+  return {};
+}
+
 /** reference/tapes 里按名字排第一的 m4a；没有时为空。 */
 inline std::filesystem::path firstTape() {
   const auto directory = findReference("tapes");
@@ -140,6 +155,16 @@ struct RealRomBench {
     insertion.resume = true;
     runtime->setFamilyKeyboard(keyboard);
     runtime->insertCartridge(std::move(insertion));
+  }
+
+  /** 按机型标识装入整机机型的 ROM 并开机运行。 */
+  void bootMachine(const std::string& machine, std::vector<std::uint8_t> rom) {
+    contracts::runtime::MachineBoot boot;
+    boot.machine = machine;
+    boot.rom = std::move(rom);
+    boot.powerOn = true;
+    boot.resume = true;
+    runtime->bootMachine(std::move(boot));
   }
 
   /** 再运行 count 帧。 */

@@ -29,7 +29,7 @@ node packages/fcdev/bin/fcdev.mjs disk apps/sb2000/examples/hello   # 另外生�
 
 ## 运行
 
-fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`（仓库里有一份：`ember/bios/sb2000_bios.bin`），用 `npx fcdev run apps/sb2000/examples/<名>` 在 Ember 里运行：程序会放进软盘镜像，开机后自动跳过 SB-DOS 的日期与时间提示并输入程序名。也可以只用 `npx fcdev build`、`npx fcdev disk` 构建并生成磁盘镜像。
+fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`（仓库里有一份：`ember/roms/sb2000_bios.bin`），用 `npx fcdev run apps/sb2000/examples/<名>` 在 Ember 里运行：程序会放进软盘镜像，开机后自动跳过 SB-DOS 的日期与时间提示并输入程序名。也可以只用 `npx fcdev build`、`npx fcdev disk` 构建并生成磁盘镜像。
 
 `show`、`copy`、`peek`、`poke` 需要磁盘里有数据文件，可以自己用 `npx fcdev disk` 生成的镜像加上文件，或在模拟器里挂载别的镜像；`play` 需要 `.nes` 文件，放进软盘镜像时文件名要符合 8.3（如 `mario.nes`）。
 

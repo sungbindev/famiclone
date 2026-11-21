@@ -1,6 +1,6 @@
 {
   "target": "sb2000",
   "name": "fbasic",
-  "firmware": "../../../../ember/bios/sb2000_bios.bin",
+  "firmware": "../../../../ember/roms/sb2000_bios.bin",
   "targetOptions": { "banks": 13 }
 }

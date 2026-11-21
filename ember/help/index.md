@@ -34,6 +34,6 @@ features:
     details: 为 NES 卡带编写 mapper 插件，用调试服务验证存储区映射、寄存器、状态与脚本行为，快速完成测试和排错。
     link: /plugin/
   - title: 使用说明
-    details: 打开 NES 卡带，添加学习机 BIOS，载入软盘与磁带，设置键盘与手柄，调整画面和声音，并解决日常使用问题。
+    details: 打开 NES 卡带，添加学习机 ROM，载入软盘与磁带，设置键盘与手柄，调整画面和声音，并解决日常使用问题。
     link: /manual/
 ---

@@ -62,4 +62,4 @@ DMA 各种写法的结果，每行格式 `阶段 模式 E:ab W:cd`：
 | 文件 | 说明 |
 | --- | --- |
 | `src/memtest.c` | 全部测试与显示 |
-| `fcdev.json` | 项目配置，固件路径指向 `ember/bios/sb2000_bios.bin` |
+| `fcdev.json` | 项目配置，固件路径指向 `ember/roms/sb2000_bios.bin` |

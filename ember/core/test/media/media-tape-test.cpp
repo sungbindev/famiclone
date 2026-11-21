@@ -126,11 +126,11 @@ struct TapeRig {
     runtime->insertCartridge(std::move(insertion));
   }
 
-  /** 装一台断电的 sb2000（BIOS 是合成的），它没有磁带接口。 */
+  /** 装一台断电的 sb2000（ROM 是合成的），它没有磁带接口。 */
   void bootSb2000() {
     rt::MachineBoot boot;
     boot.machine = "sb2000";
-    boot.bios.assign(512 * 1024, 0xEA);
+    boot.rom.assign(512 * 1024, 0xEA);
     boot.powerOn = false;
     runtime->bootMachine(std::move(boot));
   }

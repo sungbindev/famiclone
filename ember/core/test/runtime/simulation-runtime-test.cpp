@@ -44,7 +44,7 @@ using ember::test::waitFor;
 class FailingMachines final : public rt::MachineFactory {
  public:
   std::unique_ptr<hw::Machine> create(const std::string&) const override { throw ember::shared::CoreError(rt::ERROR_HOST_UNSUPPORTED, "没有这个型号"); }
-  std::unique_ptr<hw::Machine> createWithBios(const std::string&, std::vector<std::uint8_t>) const override { throw ember::shared::CoreError(rt::ERROR_HOST_UNSUPPORTED, "没有这个型号"); }
+  std::unique_ptr<hw::Machine> createWithRom(const std::string&, std::vector<std::uint8_t>) const override { throw ember::shared::CoreError(rt::ERROR_HOST_UNSUPPORTED, "没有这个型号"); }
 };
 
 /** 运行服务加它用到的一切。 */
@@ -189,21 +189,21 @@ TEST(SimulationRuntime, InsertingACartridgeRunsFramesAndPublishesThem) {
   EXPECT_EQ(rig.events->last("runtime.stateChanged")["reason"], "load");
 }
 
-/** 合成的 sb2000 BIOS：进入 6576 模式、选窗口 0，向 $4301 写 $55 进入 FC 兼容模式。 */
-std::vector<std::uint8_t> fcModeBios() {
-  std::vector<std::uint8_t> bios(512 * 1024, 0xEA);
+/** 合成的 sb2000 ROM：进入 6576 模式、选窗口 0，向 $4301 写 $55 进入 FC 兼容模式。 */
+std::vector<std::uint8_t> fcModeRom() {
+  std::vector<std::uint8_t> rom(512 * 1024, 0xEA);
   const std::uint8_t vectors[] = {0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0};
-  std::copy(std::begin(vectors), std::end(vectors), bios.begin() + 0x7FFA);
+  std::copy(std::begin(vectors), std::end(vectors), rom.begin() + 0x7FFA);
   const std::uint8_t program[] = {0x78, 0xA9, 0x65, 0x8D, 0x31, 0x40, 0xA9, 0x76, 0x8D, 0x31, 0x40, 0xA9, 0x55, 0x8D, 0x06, 0x50, 0x8D, 0x01, 0x43, 0x4C, 0x13, 0xC0};
-  std::copy(std::begin(program), std::end(program), bios.begin() + 0x4000);
-  return bios;
+  std::copy(std::begin(program), std::end(program), rom.begin() + 0x4000);
+  return rom;
 }
 
 TEST(SimulationRuntime, AWholeMachineHasAMouseUntilItEntersFcModeAndTheChangeIsAnnounced) {
   Rig rig;
   rt::MachineBoot boot;
   boot.machine = "sb2000";
-  boot.bios = fcModeBios();
+  boot.rom = fcModeRom();
   boot.resume = false;
   rig.runtime->bootMachine(std::move(boot));
   // FC 兼容模式里窗口 0 的程序：空转，复位向量指向 $E000。
@@ -573,15 +573,15 @@ TEST(SimulationRuntime, RunsAtTheNtscFrameRateWithoutBusyWaiting) {
 
 TEST(SimulationRuntime, RunsAtTheFrameRateOfTheMachineSoThatAudioIsProducedAtTheSpeedItIsPlayed) {
   Rig rig(ember::logic::runtime::MACHINE_FRAME_RATE);
-  // 6576 模式的学习机每帧 20 毫秒（50 赫兹）；BIOS 复位后原地空转。
-  std::vector<std::uint8_t> bios(512 * 1024, 0xEA);
+  // 6576 模式的学习机每帧 20 毫秒（50 赫兹）；ROM 复位后原地空转。
+  std::vector<std::uint8_t> rom(512 * 1024, 0xEA);
   const std::uint8_t vectors[] = {0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0};
-  std::copy(std::begin(vectors), std::end(vectors), bios.begin() + 0x7FFA);
+  std::copy(std::begin(vectors), std::end(vectors), rom.begin() + 0x7FFA);
   const std::uint8_t program[] = {0x78, 0x4C, 0x01, 0xC0};
-  std::copy(std::begin(program), std::end(program), bios.begin() + 0x4000);
+  std::copy(std::begin(program), std::end(program), rom.begin() + 0x4000);
   rt::MachineBoot boot;
   boot.machine = "sb2000";
-  boot.bios = std::move(bios);
+  boot.rom = std::move(rom);
   rig.runtime->bootMachine(std::move(boot));
   ASSERT_TRUE(rig.waitFrames(2));
   const auto before = rig.frames->count();

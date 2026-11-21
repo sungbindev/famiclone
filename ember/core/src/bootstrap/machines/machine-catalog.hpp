@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：machine-catalog.hpp
- * 说明：主机型号目录：按型号名创建主机；有 fc（经典 FC，要卡带）、sb97（小霸王 97 学习机，要 BIOS）、sb2000（小霸王 2000 学习机，要 BIOS）、bbk10（步步高软驱一号，要 BIOS）与 bbk20（步步高 98，要 BIOS）。
+ * 说明：主机型号目录：按型号名创建主机；有 fc（经典 FC，要卡带）、sb97（小霸王 97 学习机，要 ROM）、sb2000（小霸王 2000 学习机，要 ROM）、bbk10（步步高软驱一号，要 ROM）、bbk20（步步高 98，要 ROM）、pec9588（金字塔 PEC-9588，要 ROM）与 pec586（金字塔 PEC-586、686，要 ROM）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
@@ -41,7 +41,7 @@ class MachineCatalog final : public contracts::runtime::MachineFactory {
   [[nodiscard]] std::shared_ptr<contracts::hardware::FloppyDrive> floppyDrive() const { return floppyDrive_; }
 
   [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> create(const std::string& host) const override;
-  [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const override;
+  [[nodiscard]] std::unique_ptr<contracts::hardware::Machine> createWithRom(const std::string& machine, std::vector<std::uint8_t> rom) const override;
 
  private:
   std::shared_ptr<contracts::hardware::PrinterOutput> printerOutput_;

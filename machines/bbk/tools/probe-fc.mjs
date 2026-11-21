@@ -18,7 +18,7 @@ import { join } from 'node:path';
 import { debugUserDataDirectory, enterProgram, launchEmulator, locateEmulator, runFrames } from '../../../packages/fcdev/src/emulator/index.mjs';
 import { REPO_ROOT } from './config.mjs';
 
-const firmware = join(REPO_ROOT, 'ember', 'bios', 'sb2000_bios.bin');
+const firmware = join(REPO_ROOT, 'ember', 'roms', 'sb2000_bios.bin');
 const image = join(REPO_ROOT, 'apps', 'sb2000', 'fcprobe', 'build', 'sb2000', 'FCPROBE.img');
 for (const file of [firmware, image]) {
   if (!existsSync(file)) throw new Error(`找不到 ${file}`);

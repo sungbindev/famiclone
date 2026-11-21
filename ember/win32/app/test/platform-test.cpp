@@ -104,14 +104,14 @@ TEST(UserDataLocation, MovingToTheExecutableDirectoryCopiesVerifiesAndRemovesThe
   const auto profile = directory.path() / "profile" / "Ember";
   std::filesystem::create_directories(exe);
   writeText(profile / "config" / "preferences.json", "{\"a\":1}");
-  writeText(profile / "bios" / "sb97.bin", "BIOS");
+  writeText(profile / "rom" / "sb97.bin", "ROM");
   writeText(profile / "lockfile", "lock");
   writeText(profile / "run" / "debug-endpoint.json", "{}");
 
   const auto result = platform::moveUserData(exe, profile, shared::UserDataPlace::ExecutableDirectory);
   ASSERT_TRUE(result.ok) << result.message;
   EXPECT_EQ(readAll(exe / "ember-data" / "config" / "preferences.json"), "{\"a\":1}");
-  EXPECT_EQ(readAll(exe / "ember-data" / "bios" / "sb97.bin"), "BIOS");
+  EXPECT_EQ(readAll(exe / "ember-data" / "rom" / "sb97.bin"), "ROM");
   // 运行时才有的东西不复制
   EXPECT_FALSE(std::filesystem::exists(exe / "ember-data" / "lockfile"));
   EXPECT_FALSE(std::filesystem::exists(exe / "ember-data" / "run"));

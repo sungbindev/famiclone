@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：machines-content.hpp
- * 说明：“机型与 BIOS”对话框的内容：一段说明与“打开 BIOS 目录”链接，下面每个需要 BIOS 的整机机型一行，显示 BIOS 状态与按钮（添加 BIOS 文件，或替换与移除）。
+ * 说明：“机型与 ROM”对话框的内容：一段说明与“打开 ROM 目录”链接，下面每个需要 ROM 的整机机型一行，显示 ROM 状态与按钮（添加 ROM 文件，或替换与移除）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -23,18 +23,18 @@
 
 namespace ember::win32::ui {
 
-/** “机型与 BIOS”对话框的内容。 */
+/** “机型与 ROM”对话框的内容。 */
 class MachinesContent final : public rujian::ui::Widget {
  public:
   /** 一个机型一行里的按钮（给测试读）。 */
-  struct BiosWidgets {
+  struct RomWidgets {
     std::string machine;
     rujian::ui::Button* add{nullptr};
     rujian::ui::Button* replace{nullptr};
     rujian::ui::Button* remove{nullptr};
   };
 
-  explicit MachinesContent(contracts::BiosModel& bios);
+  explicit MachinesContent(contracts::RomModel& rom);
   ~MachinesContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
@@ -43,21 +43,21 @@ class MachinesContent final : public rujian::ui::Widget {
   void arrange(const rujian::ui::Rect& bounds) override;
 
   [[nodiscard]] rujian::ui::ScrollArea& pane() const { return *pane_; }
-  [[nodiscard]] const std::vector<BiosWidgets>& biosRows() const { return biosRows_; }
-  /** “打开 BIOS 目录”链接。 */
+  [[nodiscard]] const std::vector<RomWidgets>& romRows() const { return romRows_; }
+  /** “打开 ROM 目录”链接。 */
   [[nodiscard]] rujian::ui::Button* openDirectoryLink() const { return openDirectory_; }
 
  private:
   void refresh();
-  void rebuild(const contracts::BiosView& view);
-  [[nodiscard]] static std::string signatureOf(const contracts::BiosView& view);
+  void rebuild(const contracts::RomView& view);
+  [[nodiscard]] static std::string signatureOf(const contracts::RomView& view);
 
-  contracts::BiosModel& bios_;
+  contracts::RomModel& rom_;
   std::function<void()> unsubscribe_;
   rujian::ui::ScrollArea* pane_{nullptr};
   rujian::ui::Widget* listPanel_{nullptr};
   std::string signature_;
-  std::vector<BiosWidgets> biosRows_;
+  std::vector<RomWidgets> romRows_;
   rujian::ui::Button* openDirectory_{nullptr};
 };
 

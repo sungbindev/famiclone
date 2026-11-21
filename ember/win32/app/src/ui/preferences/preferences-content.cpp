@@ -31,7 +31,7 @@ constexpr const char* kRegenerate = "更换";
 /** “应用”分组的标识（核心登记）与其中“用户数据目录”一行的文字。 */
 constexpr const char* kAppGroupId = "app";
 constexpr const char* kUserDataLabel = "用户数据目录";
-constexpr const char* kUserDataDescription = "设置、BIOS、日志等都保存在这里；点路径用文件管理器打开。软件所在目录旁有 ember-data 目录时使用它，否则使用当前用户的应用数据目录。";
+constexpr const char* kUserDataDescription = "设置、ROM、日志等都保存在这里；点路径用文件管理器打开。软件所在目录旁有 ember-data 目录时使用它，否则使用当前用户的应用数据目录。";
 
 /** 左栏的默认、最小与最大宽度（逻辑像素）。 */
 constexpr double kSideWidthInitial = 140;

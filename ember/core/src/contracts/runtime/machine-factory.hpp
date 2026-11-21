@@ -33,12 +33,12 @@ class MachineFactory {
   [[nodiscard]] virtual std::unique_ptr<hardware::Machine> create(const std::string& host) const = 0;
 
   /**
-   * 创建整机机型的主机：BIOS 在主板上，没有卡带，没有通电。
+   * 创建整机机型的主机：ROM 在主板上，没有卡带，没有通电。
    * @param machine 机型标识，如 sb2000。
-   * @param bios BIOS ROM 的内容（不含文件头）。
-   * @throws shared::CoreError runtime.hostUnsupported：程序里没有这个机型；hardware.invalidArgument：BIOS 的大小不对。
+   * @param rom ROM ROM 的内容（不含文件头）。
+   * @throws shared::CoreError runtime.hostUnsupported：程序里没有这个机型；hardware.invalidArgument：ROM 的大小不对。
    */
-  [[nodiscard]] virtual std::unique_ptr<hardware::Machine> createWithBios(const std::string& machine, std::vector<std::uint8_t> bios) const = 0;
+  [[nodiscard]] virtual std::unique_ptr<hardware::Machine> createWithRom(const std::string& machine, std::vector<std::uint8_t> rom) const = 0;
 };
 
 }  // namespace ember::contracts::runtime

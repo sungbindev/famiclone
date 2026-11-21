@@ -1,6 +1,6 @@
 # mapper 插件规范
 
-mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡带有哪些存储元件、地址如何译码、要哪种主机，寄存器与磁带的接线用清单里的声明表达（宿主原生执行），声明写不出的逻辑用脚本实现；插卡学习机（如裕兴）的卡带还要译码并读写主机上的软驱、声卡等功能模块（后续阶段）。整机机型（自带 BIOS）的译码与胶合逻辑在主机型号里，整机的 BIOS 不是卡带，都不属于本规范，见 [02-硬件模块.md](02-硬件模块.md)。模拟器程序不内置任何 mapper，更新或增加卡带适配只需安装或更新插件。本文写给插件作者，也是核心实现插件宿主的依据。硬件结构见 02。
+mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡带有哪些存储元件、地址如何译码、要哪种主机，寄存器与磁带的接线用清单里的声明表达（宿主原生执行），声明写不出的逻辑用脚本实现；整机机型（学习机，自带 ROM）的译码与胶合逻辑在主机型号里，整机的 ROM 不是卡带，都不属于本规范，见 [02-硬件模块.md](02-硬件模块.md)。模拟器程序不内置任何 mapper，更新或增加卡带适配只需安装或更新插件。本文写给插件作者，也是核心实现插件宿主的依据。硬件结构见 02。
 
 状态说明同 [01-软件架构设计.md](01-软件架构设计.md)。
 
@@ -11,10 +11,10 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | 决策项 | 结论 | 状态 |
 | --- | --- | --- |
 | 插件的含义 | 插件就是卡带上的 mapper 芯片：清单描述卡带的存储区、窗口与寄存器，脚本实现芯片行为 | 已定 |
-| 范围 | 只描述卡带（含学习卡）；整机机型的译码与胶合逻辑在主机型号里，插件不访问整机机型的功能模块；插卡学习机的卡带 mapper 译码并经 `ctx.device` 读写主机上的功能模块（后续阶段，见 02 第 1 节“插卡学习机”） | 已定 |
+| 范围 | 只描述卡带（含学习卡）；整机机型的译码与胶合逻辑在主机型号里，插件不访问整机机型的功能模块 | 已定 |
 | 不内置 | 程序里没有任何内置 mapper，包括 NROM；官方 mapper 以插件形式预装（内置在程序里） | 已定 |
-| 主机的选择 | 清单只能按名字选择主机型号（`host` 字段，目前只有 `fc`，以后有别的卡带主机时再用），不能修改芯片内部、主板上的功能模块与存储 | 已定 |
-| 匹配 | 按 NES 文件头的 mapper 号和变体匹配，规则写在清单里；程序只做通用查询，不认识任何具体卡带；mapper 171（BBK、SB2K 的 BIOS 文件）没有匹配的插件时按 `mappers.noMatch` 报错，不自动识别成学习机，学习机 BIOS 只能走“机型与 BIOS”开机 | 已定 |
+| 主机的选择 | 清单只能按名字选择主机型号（`host` 字段，目前只有 `fc`），不能修改芯片内部、主板上的功能模块与存储 | 已定 |
+| 匹配 | 按 NES 文件头的 mapper 号和变体匹配，规则写在清单里；程序只做通用查询，不认识任何具体卡带；mapper 171（BBK、SB2K 的 BIOS 文件）没有匹配的插件时按 `mappers.noMatch` 报错，不自动识别成学习机，学习机 ROM 只能走“机型与 ROM”开机 | 已定 |
 | 脚本语言 | JavaScript（ES2023 模块），推荐用 TypeScript 编写后打包为单个文件 | 拟定 |
 | 运行环境 | C++ 核心中的 QuickJS-ng，每个插件一个独立的运行时；不能访问文件、网络与进程，一切外部访问只经宿主对象 `ctx` | 拟定 |
 | 调用方式 | 寄存器读写、查表与磁带边沿计时优先写成清单里的声明，由宿主直接执行，不进脚本；脚本只在声明不够用的地方被调用（回调脚本的寄存器、查表表项的首次计算、定时事件、复位、输入）；脚本不逐周期回调，译码结果（bank 窗口）由宿主保存并直接使用 | 拟定 |
@@ -57,7 +57,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 | `apiVersion` | 整数 | 插件接口版本，当前为 `1` |
 | `publisher` | 字符串 | 发布者名称 |
 | `description` | 字符串 | 一两句话的说明，可选 |
-| `host` | 字符串数组 | 要求的主机型号，目前只有 `fc`（`["fc"]`）；宿主按第一个存在的型号装配；插卡学习机的卡带写自己的主机型号（如裕兴系列），打开卡带时按它自动装配，用户不选机型（后续阶段） |
+| `host` | 字符串数组 | 要求的主机型号，目前只有 `fc`（`["fc"]`）；宿主按第一个存在的型号装配 |
 | `devices` | 字符串数组 | 可选；卡带用到的外设，目前只有 `mouse`（鼠标），最多 1 项、不重复；不写等于没有外设，见下面的说明 |
 | `busConflict` | 布尔 | 可选，默认 `false`；写寄存器时是否发生总线冲突：CPU 写入的数据与该地址当前读到的 ROM 字节相与，再交给寄存器的处理；该地址没有映射 ROM 时不相与；每次复位回到这个值，脚本可以用 `ctx.busConflict.set(true 或 false)` 按变体改 |
 | `match` | 数组 | 匹配条件，见第 4.2 节 |
@@ -93,7 +93,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 - 多个插件同时匹配时，写出条件更多的优先（一个插件有多项匹配时取它满足的各项里条件最多的）；条件数相同时报冲突，`mappers.conflict` 的说明列出同样匹配的插件，用户停用其中不需要的即可。“用户在 mapper 插件对话框选择并记住”**后续阶段**再做（需要首选项存储与对应的请求）。
 - 没有任何已启用的插件匹配时不运行，`mappers.noMatch` 的说明写明“缺少 mapper 号 N、变体 V 的插件”（匹配的插件都被停用时改为提示去启用），界面据此给出打开“mapper 插件”页的入口。
 - 宿主只比较这些规范化字段，不理解它们对应哪张卡带。
-- mapper 171（BBK、SB2K 的 BIOS 文件）是学习机的 BIOS，不是卡带：没有匹配的插件时同样按 `mappers.noMatch` 报错，程序不会把它识别成学习机，也不允许改 mapper 号强行运行；学习机 BIOS 只能走“机型与 BIOS”开机，见 02、05。
+- mapper 171（BBK、SB2K 的 BIOS 文件）是学习机的 BIOS，不是卡带：没有匹配的插件时同样按 `mappers.noMatch` 报错，程序不会把它识别成学习机，也不允许改 mapper 号强行运行；学习机 ROM 只能走“机型与 ROM”开机，见 02、05。
 
 ### 4.3 存储区
 
@@ -258,7 +258,7 @@ sequenceDiagram
 ```
 
 - 经典 FC 的游戏同样要有匹配的插件，所以必须预装 NROM 等常用插件。
-- 学习机整机不走本流程：它的 BIOS 由主机型号读入，经“机型与 BIOS”开机（见 02、04 第 4.7 节），不匹配插件。学习卡是卡带，走本流程：用卡带 mapper 插件，主机按插件的 `host` 装配（插卡学习机的主机型号后续阶段做，现在只有 `fc`）。
+- 学习机整机不走本流程：它的 ROM 由主机型号读入，经“机型与 ROM”开机（见 02、04 第 4.7 节），不匹配插件。学习卡的 NES 文件是学习机的 ROM 内容，按机型做成内置的整机机型（金字塔已做，见 02 第 6.11 节），也不走本流程。
 - 插件的 `host` 决定装配哪个主机型号，没有第二条路径。
 - 实现：解析与匹配合为 `CartridgeLoader::plan`（得到卡带映像、匹配到的插件与要装配的主机型号 `host`：插件 `host` 里第一个程序里已有的型号）；调用方据 `host` 装配主机，再用 `assemble` 把主机卡槽上的 IRQ 引脚（`Machine::cartridgeIrq`）与主机的手柄口（`Machine` 本身，`PadSink`）交给插件创建卡带。创建时按清单建存储区、窗口与译码表并加载脚本；阶段 2b-2 起由运行模块（`runtime`）把这几步串起来：`cartridges.load` 读文件、`plan`、再把映像与匹配结果交给运行服务，运行服务在模拟线程里创建主机（按 `host`）、经 `MapperFactory::create` 创建卡带并插入卡槽，三步里任何一步失败都不改动正在运行的主机。
 
@@ -300,7 +300,7 @@ export default definePlugin({
 | `ctx.nametable.set(mode)` | 设置名称表连法：`horizontal`、`vertical`、`single0`、`single1`、`four` |
 | `ctx.nametable.map(slot, source, bank)` | 清单的 `nametable` 是 `custom` 时，给 4 个 1K 名称表槽（`slot` 为 0 到 3）指定来源，见第 4.4 节 |
 | `ctx.irq` | 卡带的 IRQ 引脚：`assert()` 拉低，`release()` 释放 |
-| `ctx.device(name)` | 主机上的功能模块；目前只有 `'tape'`（磁带机，见第 6.6 节）：`level()`、`setComparator(low, high, invert)`；主机没有该功能模块时抛出 `RangeError`（“当前主机没有磁带机”），按插件错误处理；**后续阶段（插卡学习机）**：其他功能模块（如 `fdc`），`read(寄存器)`、`write(寄存器, 值)` 在脚本的读写回调里转发，寄存器编号由脚本从地址取，运行页提示“当前机型没有 xx”并暂停 |
+| `ctx.device(name)` | 主机上的功能模块；目前只有 `'tape'`（磁带机，见第 6.6 节）：`level()`、`setComparator(low, high, invert)`；主机没有该功能模块时抛出 `RangeError`（“当前主机没有磁带机”），按插件错误处理 |
 | `ctx.storage(id)` | 存储区：`size`、`read(offset)`、`write(offset, value)`（ROM 拒绝写） |
 | `ctx.cycle()` | 自上电起的 CPU 周期数（整数），用来忘略连续写入、算计数器的当前值；主机没有调度器时抛 `RangeError` |
 | `ctx.timer` | `after(name, cpuCycles)` 登记事件（同名的计时还在等待时先取消，周期数为 1 到 2 的 40 次方），到期时调用 `onTimer(ctx, name)`；`cancel(name)` 取消；时间单位是 CPU 周期，由宿主调度器预测到期时刻，不逐周期运行脚本；复位取消全部计时；同时最多 32 个不同的名字 |
@@ -313,7 +313,7 @@ export default definePlugin({
 | `ctx.pad(port)` | 手柄口 `port`（经典 FC 为 0 与 1）：`set(button, down)` 按下或松开一个键，`button` 是 `a`、`b`、`select`、`start`、`up`、`down`、`left`、`right`；`release()` 松开这个口的全部按键；见第 6.5 节 |
 
 - 脚本不能访问文件、网络、进程、系统时间和 `Math.random`；需要随机数时用 `ctx.random`。
-- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.busConflict`、`ctx.peek`、`ctx.nametable`（`set`、`map`）、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.random`、`ctx.log.warn`、`ctx.keys`、`ctx.pad`、`ctx.device('tape')`、`ctx.cycle`、`ctx.timer`、`ctx.circuit`、`ctx.settings`（只有默认值）。目前脚本能访问的主机功能模块只有磁带机，卡带与主机之间另有卡槽引脚；其他 `ctx.device` 在插卡学习机阶段实现。
+- **实现范围**：已实现 `ctx.header`、`ctx.window`、`ctx.busConflict`、`ctx.peek`、`ctx.nametable`（`set`、`map`）、`ctx.irq`（`assert`、`release`）、`ctx.storage`、`ctx.state`、`ctx.random`、`ctx.log.warn`、`ctx.keys`、`ctx.pad`、`ctx.device('tape')`、`ctx.cycle`、`ctx.timer`、`ctx.circuit`、`ctx.settings`（只有默认值）。目前脚本能访问的主机功能模块只有磁带机，卡带与主机之间另有卡槽引脚。
 - 沙箱里只加载确定性的内置对象：没有 `Date`、`console`、`performance`、`setTimeout`、`fetch`、`process`、`require` 与 quickjs-libc，`Math.random` 被删除，访问它们报 `ReferenceError` 或 `TypeError`（即 `mappers.scriptError`）。`Promise` 仅作为语言内置保留，宿主不执行异步任务，顶层 `await` 报 `mappers.invalidPackage`。
 - `ctx` 与其中的窗口、存储区对象都是冻结的，`ctx.state` 不能增加属性；参数不合法（bank 为负、不是整数、标识不存在、存储区偏移越界、写入值不在 0 到 255、名称表连法不认识）抛出 `RangeError` 或 `TypeError`，按插件错误处理。`ctx.log.warn` 只接受字符串，超过 2000 字节在 UTF-8 字符边界截断，卡带保留最近 200 条（`MapperCartridge::scriptLog`，运行消息日志模块做好后经它写入）。
 - 宿主对象是脚本与硬件之间的全部接口，所以插件的行为是确定的，同样的输入得到同样的结果，方便测试与调试。
@@ -398,7 +398,7 @@ export default {
 
 ## 9. 官方插件
 
-官方插件放在 `plugins/<id>/`（只含 `manifest.json`、`main.js`（没有脚本逻辑时可以没有）、`icon.png`），预装，覆盖 FC 卡带的 mapper：一块硬件一个插件，同一块硬件用在多个 mapper 号上时用多项 `match`（脚本按 `ctx.header.mapper` 分支）；不含 99 与 171（街机 VS 系统、学习机 BIOS 不是卡带）、UNIF 板名的 mapper、FDS、NSF、StudyBox、FNS，也不含各种外设（Datach 条码读取器、麦克风、手写板、自行车等）。每个插件在 `core/test/data/mapper-vectors/<id>.json` 有测试向量，由 `core/test/mappers/mapper-vectors-test.cpp` 用真实打好的包逐步验证；没有商业游戏 ROM 可用，所以这些插件**只有向量验证**，没有用真实游戏验证过。
+官方插件放在 `plugins/<id>/`（只含 `manifest.json`、`main.js`（没有脚本逻辑时可以没有）、`icon.png`），预装，覆盖 FC 卡带的 mapper：一块硬件一个插件，同一块硬件用在多个 mapper 号上时用多项 `match`（脚本按 `ctx.header.mapper` 分支）；不含 99 与 171（街机 VS 系统、学习机 ROM 不是卡带）、UNIF 板名的 mapper、FDS、NSF、StudyBox、FNS，也不含各种外设（Datach 条码读取器、麦克风、手写板、自行车等）。每个插件在 `core/test/data/mapper-vectors/<id>.json` 有测试向量，由 `core/test/mappers/mapper-vectors-test.cpp` 用真实打好的包逐步验证；没有商业游戏 ROM 可用，所以这些插件**只有向量验证**，没有用真实游戏验证过。
 
 做法：寄存器写入每帧才几次的用回调脚本；每帧要观察很多次的（MMC3 家族的 A12 计数、MMC2/MMC4 的图案页锁存）经 `circuits` 引用宿主里的电路（第 4.10 节）；CPU 周期计数器用 `ctx.timer` 由调度器预测溢出时刻（第 6.2 节）；需要观察 A12 上升沿的小计数器用 `onA12`。MMC3 的变体（`mmc3-*`）都是“电路加外部寄存器”的写法：脚本把写入交给电路，再按外部寄存器重新算窗口。
 
@@ -659,7 +659,7 @@ export default {
 - 已有的 `nrom`、`qls`、`plq` 与测试用的 `test-cnrom` 见下面的说明；mapper 172 的 `txc22211-b` 只按 mapper 号匹配，条件数比 `qls`（加 PRG 32K）、`plq`（加 PRG 16K）少，所以 PRG 为 32K 或 16K 的 172 号文件仍由它们处理。
 - 几个插件的 DIP 开关取清单里的默认值（设置页做好之前用户改不了，见第 4.7 节）；读寄存器时没有被芯片驱动的数据线位按 0 返回（脚本取不到开放总线的值）。
 - 每个插件的初始值以真机上电后的常见状态为准；MMC3 的页寄存器上电为 0，不是真机上某些变体的特殊值，游戏一般会先初始化。
-- 台账之外的学习卡 mapper（如 241、178、169、170、177、560）要用的主机与外设（插卡学习机主机、其他 `ctx.device`）放在经典 FC 之后做，见 02 第 1 节“插卡学习机”与第 11 节待核对；声像磁带的 mapper 172 同样是插件。学习机整机的 BIOS（mapper 171）不是插件，见 02。
+- 台账之外的学习卡 mapper（如 241、178、169、170、177、560）要用的主机与外设放在经典 FC 之后做，见 02 第 11 节待核对；声像磁带的 mapper 172 同样是插件。学习机整机的 ROM（mapper 171 等）不是插件，见 02。
 
 已有的几个插件：
 

@@ -48,10 +48,10 @@ struct RuntimeStatus {
 struct MachineEntry {
   std::string id;
   std::string name;
-  bool needsBios{false};
+  bool needsRom{false};
   bool supported{false};
-  /** 是否已添加 BIOS。 */
-  bool hasBios{false};
+  /** 是否已添加 ROM。 */
+  bool hasRom{false};
 };
 
 /** 最近打开的清单里的一项：编号与显示名，没有路径。 */
@@ -76,7 +76,7 @@ struct RecentCartridge {
 [[nodiscard]] std::optional<std::string> stateText(const std::optional<RuntimeStatus>& status);
 /** 主机型号的显示文字：开机后是正在运行的主机，没有开机时是已选机型；经典 FC（有卡带名就够了）与状态还没读到时没有信息。 */
 [[nodiscard]] std::optional<std::string> hostText(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine);
-/** 卡带的显示文字：卡带文件名；没有卡带（含整机机型用 BIOS 开机）时没有信息。 */
+/** 卡带的显示文字：卡带文件名；没有卡带（含整机机型用 ROM 开机）时没有信息。 */
 [[nodiscard]] std::optional<std::string> cartridgeText(const std::optional<RuntimeStatus>& status);
 /** mapper 插件的显示文字：插件名；没有卡带时没有信息。 */
 [[nodiscard]] std::optional<std::string> pluginText(const std::optional<RuntimeStatus>& status);
@@ -85,11 +85,11 @@ struct RecentCartridge {
 /** 暂停或继续按钮与菜单项的名称：连续运行时是“暂停”，否则是“继续”。 */
 [[nodiscard]] std::string pauseToggleText(const std::optional<RuntimeStatus>& status);
 
-/** 开机或断电按钮这次要做的事：断电、上电（已装入的主机）、用已选机型的 BIOS 开机，或不能做。 */
+/** 开机或断电按钮这次要做的事：断电、上电（已装入的主机）、用已选机型的 ROM 开机，或不能做。 */
 enum class PowerToggleAction { PowerOff, PowerOn, Boot, None };
 
 /**
- * 开机或断电按钮这次要做什么。通电时是断电；未通电时按已选机型：整机机型（学习机）已支持并已添加 BIOS 就开机（不需要卡带，当前装的是别的主机也用它重新开机），
+ * 开机或断电按钮这次要做什么。通电时是断电；未通电时按已选机型：整机机型（学习机）已支持并已添加 ROM 就开机（不需要卡带，当前装的是别的主机也用它重新开机），
  * 经典 FC 要求已经装入 FC 卡带，有就上电。状态还没读到时不能做。
  */
 [[nodiscard]] PowerToggleAction powerToggleAction(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine, const std::vector<MachineEntry>& machines);
@@ -111,7 +111,7 @@ struct MachineChoice {
   std::string hint;
 };
 
-/** “选择机型”的选项：四个整机机型，顺序固定；要程序里有实现并已添加 BIOS 才可选，不可选的注明原因；经典 FC 不在里面。 */
+/** “选择机型”的选项：四个整机机型，顺序固定；要程序里有实现并已添加 ROM 才可选，不可选的注明原因；经典 FC 不在里面。 */
 [[nodiscard]] std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machines);
 
 /** “机器”菜单第一项的名称：已选了整机机型时是它的名字，没选过（或已选的是经典 FC）时是“选择机型”。 */

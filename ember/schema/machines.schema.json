@@ -1,27 +1,27 @@
 {
-  "$comment": "machines 模块：整机机型（学习机）的清单、BIOS 的添加与移除、整机机型开机；openBios 由外壳弹出文件选择窗口后调用 setBios；openBiosDirectory 由外壳用文件管理器打开 BIOS 目录。规则见 docs/04-调试服务.md 第 4.7 节。",
+  "$comment": "machines 模块：整机机型（学习机）的清单、ROM 的添加与移除、整机机型开机；openRom 由外壳弹出文件选择窗口后调用 setRom；openRomDirectory 由外壳用文件管理器打开 ROM 目录。规则见 docs/04-调试服务.md 第 4.7 节。",
   "module": "machines",
   "types": {
-    "BiosFile": {
+    "RomFile": {
       "type": "object",
-      "description": "已添加的 BIOS 文件：文件名与大小。",
+      "description": "已添加的 ROM 文件：文件名与大小。",
       "properties": {
         "fileName": { "type": "string", "description": "文件名，不含路径" },
-        "size": { "type": "integer", "minimum": 0, "description": "文件大小（字节），纯 BIOS 文件等于机型的 PRG 容量，带 iNES 文件头的文件含文件头" }
+        "size": { "type": "integer", "minimum": 0, "description": "文件大小（字节），纯 ROM 文件等于机型的 PRG 容量，带 iNES 文件头的文件含文件头" }
       },
       "required": ["fileName", "size"]
     },
     "MachineInfo": {
       "type": "object",
-      "description": "一个机型：标识、显示名称、是否需要 BIOS、是否已支持与已添加的 BIOS。",
+      "description": "一个机型：标识、显示名称、是否需要 ROM、是否已支持与已添加的 ROM。",
       "properties": {
         "id": { "type": "string", "description": "机型标识：fc、sb97、sb2000、bbk10、bbk20" },
         "name": { "type": "string", "description": "显示名称" },
-        "needsBios": { "type": "boolean", "description": "是否需要 BIOS；fc 为 false，四个整机机型为 true" },
-        "supported": { "type": "boolean", "description": "是否已支持；未支持的机型不能添加 BIOS，也不能开机" },
-        "bios": { "$ref": "#/types/BiosFile", "description": "已添加的 BIOS；没有添加、或不需要 BIOS 时没有这一项" }
+        "needsRom": { "type": "boolean", "description": "是否需要 ROM；fc 为 false，其余整机机型（学习机）为 true" },
+        "supported": { "type": "boolean", "description": "是否已支持；未支持的机型不能添加 ROM，也不能开机" },
+        "rom": { "$ref": "#/types/RomFile", "description": "已添加的 ROM；没有添加、或不需要 ROM 时没有这一项" }
       },
-      "required": ["id", "name", "needsBios", "supported"]
+      "required": ["id", "name", "needsRom", "supported"]
     }
   },
   "requests": {
@@ -35,14 +35,14 @@
       },
       "errors": []
     },
-    "setBios": {
-      "description": "读取并检查 BIOS 文件，复制进 BIOS 目录（新文件写好之后才删旧文件，失败时原有的 BIOS 不变）；成功后发 machines.changed。",
+    "setRom": {
+      "description": "读取并检查 ROM 文件，复制进 ROM 目录（新文件写好之后才删旧文件，失败时原有的 ROM 不变）；成功后发 machines.changed。",
       "mainOnly": true,
       "params": {
         "type": "object",
         "properties": {
           "machine": { "type": "string", "minLength": 1, "description": "机型标识" },
-          "path": { "type": "string", "minLength": 1, "description": "BIOS 文件的路径，由外壳根据用户选择的文件给出，调试服务直接给出" }
+          "path": { "type": "string", "minLength": 1, "description": "ROM 文件的路径，由外壳根据用户选择的文件给出，调试服务直接给出" }
         },
         "required": ["machine", "path"]
       },
@@ -51,10 +51,10 @@
         "properties": { "machine": { "$ref": "#/types/MachineInfo", "description": "更新后的机型项" } },
         "required": ["machine"]
       },
-      "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.biosInvalid", "machines.biosAccessFailed"]
+      "errors": ["machines.notFound", "machines.romNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.romInvalid", "machines.romAccessFailed"]
     },
-    "removeBios": {
-      "description": "删除机型的 BIOS 文件；没有 BIOS 时没有效果也不报错；删除后发 machines.changed。",
+    "removeRom": {
+      "description": "删除机型的 ROM 文件；没有 ROM 时没有效果也不报错；删除后发 machines.changed。",
       "params": {
         "type": "object",
         "properties": { "machine": { "type": "string", "minLength": 1, "description": "机型标识" } },
@@ -65,10 +65,10 @@
         "properties": { "machine": { "$ref": "#/types/MachineInfo", "description": "更新后的机型项" } },
         "required": ["machine"]
       },
-      "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.biosAccessFailed"]
+      "errors": ["machines.notFound", "machines.romNotNeeded", "machines.romAccessFailed"]
     },
     "boot": {
-      "description": "整机机型开机：读入已设置的 BIOS，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的；成功后发 runtime.stateChanged（原因 load），不发 cartridges.loaded。",
+      "description": "整机机型开机：读入已设置的 ROM，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的；成功后发 runtime.stateChanged（原因 load），不发 cartridges.loaded。",
       "params": {
         "type": "object",
         "properties": {
@@ -86,12 +86,12 @@
         },
         "required": ["machine", "state"]
       },
-      "errors": ["machines.notFound", "machines.cartridgeRequired", "machines.unsupported", "machines.noBios", "machines.biosInvalid", "machines.biosAccessFailed"]
+      "errors": ["machines.notFound", "machines.cartridgeRequired", "machines.unsupported", "machines.noRom", "machines.romInvalid", "machines.romAccessFailed"]
     }
   },
   "mainRequests": {
-    "openBios": {
-      "description": "弹出系统文件选择窗口（显示 .bin 与 .nes），把用户选定的文件交给 machines.setBios；用户取消选择时 canceled 为 true，不是错误。",
+    "openRom": {
+      "description": "弹出系统文件选择窗口（显示 .bin 与 .nes），把用户选定的文件交给 machines.setRom；用户取消选择时 canceled 为 true，不是错误。",
       "params": {
         "type": "object",
         "properties": { "machine": { "type": "string", "minLength": 1, "description": "机型标识" } },
@@ -105,18 +105,18 @@
         },
         "required": ["canceled"]
       },
-      "errors": ["machines.notFound", "machines.biosNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.biosInvalid", "machines.biosAccessFailed"]
+      "errors": ["machines.notFound", "machines.romNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.romInvalid", "machines.romAccessFailed"]
     },
-    "openBiosDirectory": {
-      "description": "用系统的文件管理器打开 BIOS 目录（目录不存在时先创建）；路径由外壳决定，界面不能指定。",
+    "openRomDirectory": {
+      "description": "用系统的文件管理器打开 ROM 目录（目录不存在时先创建）；路径由外壳决定，界面不能指定。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": { "type": "object", "properties": {}, "required": [] },
-      "errors": ["machines.biosDirectoryUnavailable"]
+      "errors": ["machines.romDirectoryUnavailable"]
     }
   },
   "events": {
     "changed": {
-      "description": "整机机型的 BIOS 添加、替换或移除。",
+      "description": "整机机型的 ROM 添加、替换或移除。",
       "data": {
         "type": "object",
         "properties": { "machine": { "type": "string", "description": "机型标识" } },

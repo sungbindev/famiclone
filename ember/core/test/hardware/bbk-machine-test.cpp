@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：真实 BIOS 在仓库的 ember/bios/bbk1_bios.bin（128KB）与 bbk98_bios.bin（2048KB），都是没有文件头的纯 BIOS，文件不存在时跳过冒烟测试；
+ * 备注：真实 BIOS 在仓库的 ember/roms/bbk_bios10.bin（128KB）与 bbk_bios20.bin（2048KB），都是没有文件头的纯 BIOS，文件不存在时跳过冒烟测试；
  *       设置环境变量 EMBER_BBK_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成以它为前缀的 PPM 文件，供人工查看。
  * ------------------------------------------------------------------------
  */
@@ -67,7 +67,7 @@ std::vector<std::uint8_t> syntheticBios(const BbkVariant& variant) {
 
 /** 读真实的 BIOS：文件不存在或大小不对时返回空。 */
 std::vector<std::uint8_t> realBios(const char* name, const BbkVariant& variant) {
-  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / "bios" / name;
+  const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / "roms" / name;
   std::ifstream stream(path, std::ios::binary);
   if (!stream) return {};
   std::vector<std::uint8_t> file((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
@@ -447,7 +447,7 @@ TEST(BbkMachine, PowerOnRunsTheProgramFromTheResetVector) {
 
 void bootRealBios(const char* file, const BbkVariant& variant, const char* label, int frames, const char8_t* disk) {
   std::vector<std::uint8_t> bios = realBios(file, variant);
-  if (bios.empty()) GTEST_SKIP() << std::string("没有找到 ember/bios/") + file;
+  if (bios.empty()) GTEST_SKIP() << std::string("没有找到 ember/roms/") + file;
   BbkMachine machine(variant, std::move(bios));
   if (disk != nullptr) {
     std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(disk));
@@ -479,12 +479,12 @@ void bootRealBios(const char* file, const BbkVariant& variant, const char* label
   if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(picture, dump + "." + label + ".ppm");
 }
 
-TEST(BbkMachine, RealBios10BootsToAPicture) { bootRealBios("bbk1_bios.bin", BbkVariant::floppyOne(), "bios10", 300, nullptr); }
+TEST(BbkMachine, RealBios10BootsToAPicture) { bootRealBios("bbk_bios10.bin", BbkVariant::floppyOne(), "bios10", 300, nullptr); }
 
-TEST(BbkMachine, RealBios20BootsToAPicture) { bootRealBios("bbk98_bios.bin", BbkVariant::model98(), "bios20", 300, nullptr); }
+TEST(BbkMachine, RealBios20BootsToAPicture) { bootRealBios("bbk_bios20.bin", BbkVariant::model98(), "bios20", 300, nullptr); }
 
-TEST(BbkMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbk1_bios.bin", BbkVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
+TEST(BbkMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbk_bios10.bin", BbkVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
 
-TEST(BbkMachine, RealBios20BootsTheDosDisk) { bootRealBios("bbk98_bios.bin", BbkVariant::model98(), "bios20-dos", 2500, u8"dos启动盘.IMG"); }
+TEST(BbkMachine, RealBios20BootsTheDosDisk) { bootRealBios("bbk_bios20.bin", BbkVariant::model98(), "bios20-dos", 2500, u8"dos启动盘.IMG"); }
 
 }  // namespace

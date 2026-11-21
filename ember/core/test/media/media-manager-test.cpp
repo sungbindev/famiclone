@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：用真实的运行服务、sb2000 主机（合成的 BIOS，断电状态）与磁盘上的镜像文件；文件写在临时目录里。
+ * 备注：用真实的运行服务、sb2000 主机（合成的 ROM，断电状态）与磁盘上的镜像文件；文件写在临时目录里。
  * ------------------------------------------------------------------------
  */
 
@@ -84,11 +84,11 @@ struct Rig {
     });
   }
 
-  /** 装一台断电的 sb2000（BIOS 是合成的）。 */
+  /** 装一台断电的 sb2000（ROM 是合成的）。 */
   void bootMachine() {
     ember::contracts::runtime::MachineBoot boot;
     boot.machine = "sb2000";
-    boot.bios.assign(512 * 1024, 0xEA);
+    boot.rom.assign(512 * 1024, 0xEA);
     boot.powerOn = false;
     runtime->bootMachine(std::move(boot));
   }

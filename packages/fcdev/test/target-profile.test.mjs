@@ -198,7 +198,7 @@ describe('模拟器 load 按目标描述', () => {
     const client = createFakeClient();
     openSession({ client });
     await runEmulatorOperation('load', { target: 'sb2000', firmware, diskImage, program: 'Hello' });
-    assert.deepEqual(client.calls.slice(0, 4).map((call) => call.method), ['machines.setBios', 'machines.boot', 'media.floppyInsert', 'runtime.run']);
+    assert.deepEqual(client.calls.slice(0, 4).map((call) => call.method), ['machines.setRom', 'machines.boot', 'media.floppyInsert', 'runtime.run']);
     assert.deepEqual(client.calls[3].params, { frames: 900, wait: true });
     const downs = client.calls.filter((call) => call.method === 'input.key' && call.params.down).map((call) => call.params.code);
     assert.deepEqual(downs, ['Enter', 'Enter', 'KeyH', 'KeyE', 'KeyL', 'KeyL', 'KeyO', 'Enter']);

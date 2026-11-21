@@ -37,10 +37,10 @@ json statusJson(const std::string& power, const std::string& mode, const std::st
 
 json machinesJson() {
   return {{"machines",
-           json::array({{{"id", "fc"}, {"name", "经典 FC"}, {"needsBios", false}, {"supported", true}},
-                        {{"id", "sb97"}, {"name", "小霸王 97"}, {"needsBios", true}, {"supported", true}},
-                        {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsBios", true}, {"supported", true}, {"bios", {{"name", "SB2K_BIOS.bin"}}}},
-                        {{"id", "bbk10"}, {"name", "步步高软驱一号"}, {"needsBios", true}, {"supported", false}}})}};
+           json::array({{{"id", "fc"}, {"name", "经典 FC"}, {"needsRom", false}, {"supported", true}},
+                        {{"id", "sb97"}, {"name", "小霸王 97"}, {"needsRom", true}, {"supported", true}},
+                        {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"name", "SB2K_ROM.bin"}}}},
+                        {{"id", "bbk10"}, {"name", "步步高软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
 }
 
 TEST(RuntimeRules, StateTextsFollowPowerAndMode) {
@@ -76,7 +76,7 @@ TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {
   const auto machines = logic::parseMachines(machinesJson());
   auto controls = logic::controlAvailability(std::nullopt, "fc", machines);
   EXPECT_FALSE(controls.powerToggle || controls.pauseToggle || controls.softReset || controls.hardReset || controls.eject);
-  // 没有开机：选了有 BIOS 的整机机型才能开机，其余置灰
+  // 没有开机：选了有 ROM 的整机机型才能开机，其余置灰
   controls = logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused")), "sb2000", machines);
   EXPECT_TRUE(controls.powerToggle);
   EXPECT_FALSE(controls.pauseToggle || controls.softReset || controls.hardReset);
@@ -92,19 +92,26 @@ TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {
   EXPECT_TRUE(controls.powerToggle && controls.pauseToggle && controls.softReset && controls.hardReset);
   // 已选经典 FC、装入的是学习机：要先打开卡带
   EXPECT_FALSE(logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused", "sb2000")), "fc", machines).powerToggle);
+  // 金字塔学习机是内置机型，状态栏显示它的机型名
+  EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec9588")), "fc"), "金字塔 PEC-9588");
+  EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec586")), "fc"), "金字塔 PEC-586、686");
 }
 
 TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   const auto choices = logic::machineChoices(logic::parseMachines(machinesJson()));
-  ASSERT_EQ(choices.size(), 4U);
+  ASSERT_EQ(choices.size(), 6U);
   EXPECT_EQ(choices[0].id, "sb97");
-  EXPECT_EQ(choices[0].hint, "未添加 BIOS");
+  EXPECT_EQ(choices[0].hint, "未添加 ROM");
   EXPECT_EQ(choices[1].id, "sb2000");
   EXPECT_TRUE(choices[1].hint.empty());
   EXPECT_EQ(choices[2].id, "bbk10");
   EXPECT_EQ(choices[2].hint, "暂未支持");
   EXPECT_EQ(choices[3].id, "bbk20");
   EXPECT_EQ(choices[3].hint, "暂未支持");
+  EXPECT_EQ(choices[4].id, "pec9588");
+  EXPECT_EQ(choices[4].label, "金字塔 PEC-9588");
+  EXPECT_EQ(choices[5].id, "pec586");
+  EXPECT_EQ(choices[5].label, "金字塔 PEC-586、686");
   for (const auto& choice : logic::machineChoices({})) EXPECT_EQ(choice.hint, "暂未支持");
 }
 
@@ -206,12 +213,12 @@ TEST(RuntimeController, StatusStaysUnknownWhenTheCoreCannotAnswerYet) {
   EXPECT_TRUE(f.shell.notices.empty());
 }
 
-TEST(RuntimeController, MachinesAreReadAgainAfterTheBiosChanges) {
+TEST(RuntimeController, MachinesAreReadAgainAfterTheRomChanges) {
   RuntimeFixture f;
   f.attach();
   EXPECT_FALSE(logic::machineChoices(f.controller.machines())[0].hint.empty());
   auto machines = machinesJson();
-  machines["machines"][1]["bios"] = {{"name", "SB97.bin"}};
+  machines["machines"][1]["rom"] = {{"name", "SB97.bin"}};
   f.reply("machines.list", machines);
   f.core.emitEvent("machines.changed", json::object());
   EXPECT_TRUE(logic::machineChoices(f.controller.machines())[0].hint.empty());
@@ -267,11 +274,11 @@ TEST(RuntimeController, SelectingTheCheckedMachineAfterPowerOffBootsIt) {
 
 TEST(RuntimeController, BootFailureIsNotifiedAndTheChoiceIsStillRemembered) {
   RuntimeFixture f;
-  f.fail("machines.boot", "BIOS 不合格");
+  f.fail("machines.boot", "ROM 不合格");
   f.attach();
   f.controller.selectAndBootMachine("sb2000");
   ASSERT_EQ(f.shell.notices.size(), 1U);
-  EXPECT_EQ(f.shell.notices[0].first, "开机失败：BIOS 不合格");
+  EXPECT_EQ(f.shell.notices[0].first, "开机失败：ROM 不合格");
   EXPECT_EQ(f.shell.notices[0].second, contracts::NotificationLevel::Error);
   EXPECT_EQ(f.controller.selectedMachine(), "sb2000");
 }
@@ -297,7 +304,7 @@ TEST(RuntimeController, PowerWithClassicSelectedNeedsALoadedCartridge) {
   EXPECT_EQ(f.last("runtime.powerOn")->params, json({{"resume", true}}));
 }
 
-TEST(RuntimeController, PowerWhenOnTurnsItOffAndAMachineBootsWithItsBios) {
+TEST(RuntimeController, PowerWhenOnTurnsItOffAndAMachineBootsWithItsRom) {
   RuntimeFixture f;
   f.reply("runtime.status", statusJson("on", "running", "fc", false, "a.nes"));
   f.attach();
@@ -308,7 +315,7 @@ TEST(RuntimeController, PowerWhenOnTurnsItOffAndAMachineBootsWithItsBios) {
   g.attach();
   g.controller.togglePower();
   EXPECT_EQ(g.count("machines.boot"), 1);
-  // 没有 BIOS 的机型不发请求
+  // 没有 ROM 的机型不发请求
   RuntimeFixture h;
   h.state.state.layout.selectedMachine = "sb97";
   h.attach();
@@ -564,10 +571,10 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   ASSERT_EQ(menus[1].items.size(), 7U);
   EXPECT_EQ(menus[1].items[0].label, "选择机型");
   EXPECT_FALSE(menus[1].items[0].separatorBefore);
-  ASSERT_EQ(menus[1].items[0].items.size(), 4U);
+  ASSERT_EQ(menus[1].items[0].items.size(), 6U);
   EXPECT_FALSE(menus[1].items[0].items[1].disabled);
   EXPECT_TRUE(menus[1].items[0].items[0].disabled);
-  EXPECT_EQ(menus[1].items[0].items[0].hint, "未添加 BIOS");
+  EXPECT_EQ(menus[1].items[0].items[0].hint, "未添加 ROM");
   EXPECT_EQ(menus[1].items[1].label, "断电");
   EXPECT_TRUE(menus[1].items[1].separatorBefore);
   EXPECT_EQ(menus[1].items[2].label, "暂停");

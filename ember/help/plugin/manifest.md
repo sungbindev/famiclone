@@ -71,4 +71,4 @@
 
 想为已有插件的 mapper 做自己的版本，有两条路：停用官方插件，或者在 `match` 里多写一个条件（如 `prgSize`）让自己的插件优先。
 
-mapper 171（学习机 BIOS 文件）没有匹配的插件时同样提示找不到，Ember 不会把它识别成学习机，也不允许改 mapper 号强行运行。学习机的 BIOS 要走“机型与 BIOS”，见[机型与 BIOS](../manual/machines.md)。
+mapper 171（学习机 ROM 文件）没有匹配的插件时同样提示找不到，Ember 不会把它识别成学习机，也不允许改 mapper 号强行运行。学习机的 ROM 要走“机型与 ROM”，见[机型与 ROM](../manual/machines.md)。

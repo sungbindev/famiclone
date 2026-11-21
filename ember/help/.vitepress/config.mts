@@ -53,7 +53,7 @@ const MANUAL_SIDEBAR = [
       { text: '简介', link: '/manual/' },
       { text: '快速开始', link: '/manual/start' },
       { text: '窗口、菜单与快捷键', link: '/manual/window' },
-      { text: '机型与 BIOS', link: '/manual/machines' },
+      { text: '机型与 ROM', link: '/manual/machines' },
       { text: '卡带、软盘、磁带与打印机', link: '/manual/media' },
       { text: '键盘、手柄与鼠标', link: '/manual/input' },
       { text: '画面与声音', link: '/manual/display-sound' },

@@ -16,7 +16,7 @@ import { getDiskPackager } from '../../../../../packages/fcdev/src/packagers/ind
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');
-const FIRMWARE = join(REPOSITORY, 'ember', 'bios', 'sb2000_bios.bin');
+const FIRMWARE = join(REPOSITORY, 'ember', 'roms', 'sb2000_bios.bin');
 
 /** 找一个空闲端口 */
 function findFreePort() {

@@ -27,13 +27,15 @@ constexpr std::size_t HEADER_SIZE = 16;
 constexpr std::size_t TRAINER_SIZE = 512;
 /** PRG 的单位（字节）。 */
 constexpr std::size_t PRG_UNIT = 16 * 1024;
-/** sb97 的 BIOS：1024KB 的 PRG。 */
+/** sb97 的 ROM：1024KB 的 PRG。 */
 constexpr std::size_t SB97_PRG_SIZE = 1024 * 1024;
-/** sb2000 的 BIOS：512KB 的 PRG。 */
+/** sb2000 的 ROM：512KB 的 PRG。 */
 constexpr std::size_t SB2000_PRG_SIZE = 512 * 1024;
-/** 步步高软驱一号与步步高 98 的 BIOS：128KB、2048KB 的 PRG。 */
+/** 步步高软驱一号与步步高 98 的 ROM：128KB、2048KB 的 PRG。 */
 constexpr std::size_t BBK10_PRG_SIZE = 128 * 1024;
 constexpr std::size_t BBK20_PRG_SIZE = 2048 * 1024;
+/** 金字塔 PEC-9588 与 PEC-586、686 的 ROM：512KB 的 PRG。 */
+constexpr std::size_t PYRAMID_PRG_SIZE = 512 * 1024;
 
 /** 路径里最后一段（文件名）；两种分隔符都认。 */
 std::string baseName(const std::string& path) {
@@ -43,7 +45,7 @@ std::string baseName(const std::string& path) {
 
 }  // namespace
 
-MachineManager::MachineManager(std::shared_ptr<api::BiosStorage> storage, std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events)
+MachineManager::MachineManager(std::shared_ptr<api::RomStorage> storage, std::shared_ptr<contracts::runtime::RuntimeService> runtime, std::shared_ptr<platform::EventSink> events)
     : storage_(std::move(storage)),
       runtime_(std::move(runtime)),
       events_(std::move(events)),
@@ -51,7 +53,9 @@ MachineManager::MachineManager(std::shared_ptr<api::BiosStorage> storage, std::s
                {"sb97", "小霸王 97", true, true, SB97_PRG_SIZE},
                {"sb2000", "小霸王 2000", true, true, SB2000_PRG_SIZE},
                {"bbk10", "步步高软驱一号", true, true, BBK10_PRG_SIZE},
-               {"bbk20", "步步高 98", true, true, BBK20_PRG_SIZE}} {}
+               {"bbk20", "步步高 98", true, true, BBK20_PRG_SIZE},
+               {"pec9588", "金字塔 PEC-9588", true, true, PYRAMID_PRG_SIZE},
+               {"pec586", "金字塔 PEC-586、686", true, true, PYRAMID_PRG_SIZE}} {}
 
 const MachineManager::Entry& MachineManager::entry(const std::string& id) const {
   for (const Entry& candidate : entries_) {
@@ -64,28 +68,28 @@ api::MachineInfo MachineManager::info(const Entry& item) const {
   api::MachineInfo result;
   result.id = item.id;
   result.name = item.name;
-  result.needsBios = item.needsBios;
+  result.needsRom = item.needsRom;
   result.supported = item.supported;
-  if (item.needsBios) {
-    if (const auto stored = storage_->find(item.id)) result.bios = api::BiosFile{stored->fileName, stored->size};
+  if (item.needsRom) {
+    if (const auto stored = storage_->find(item.id)) result.rom = api::RomFile{stored->fileName, stored->size};
   }
   return result;
 }
 
-std::vector<std::uint8_t> MachineManager::extractBios(const Entry& item, const std::vector<std::uint8_t>& file) {
+std::vector<std::uint8_t> MachineManager::extractRom(const Entry& item, const std::vector<std::uint8_t>& file) {
   const bool hasHeader = file.size() >= HEADER_SIZE && file[0] == 'N' && file[1] == 'E' && file[2] == 'S' && file[3] == 0x1A;
   if (!hasHeader) {
     if (file.size() != item.prgSize) {
-      throw shared::CoreError(api::ERROR_BIOS_INVALID, item.name + " 的 BIOS 必须是 " + std::to_string(item.prgSize / 1024) + "KB 的 BIOS 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
+      throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 必须是 " + std::to_string(item.prgSize / 1024) + "KB 的 ROM 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
     }
     return file;
   }
   const std::size_t prgSize = static_cast<std::size_t>(file[4]) * PRG_UNIT;
   if (prgSize != item.prgSize) {
-    throw shared::CoreError(api::ERROR_BIOS_INVALID, item.name + " 的 BIOS 的 PRG 必须是 " + std::to_string(item.prgSize / 1024) + "KB，这个文件是 " + std::to_string(prgSize / 1024) + "KB");
+    throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 的 PRG 必须是 " + std::to_string(item.prgSize / 1024) + "KB，这个文件是 " + std::to_string(prgSize / 1024) + "KB");
   }
   const std::size_t start = HEADER_SIZE + ((file[6] & 0x04) != 0 ? TRAINER_SIZE : 0);
-  if (file.size() < start + prgSize) throw shared::CoreError(api::ERROR_BIOS_INVALID, "BIOS 文件被截断，比文件头声明的内容短");
+  if (file.size() < start + prgSize) throw shared::CoreError(api::ERROR_ROM_INVALID, "ROM 文件被截断，比文件头声明的内容短");
   return std::vector<std::uint8_t>(file.begin() + static_cast<std::ptrdiff_t>(start), file.begin() + static_cast<std::ptrdiff_t>(start + prgSize));
 }
 
@@ -95,34 +99,34 @@ api::MachinesListResult MachineManager::list() const {
   return result;
 }
 
-api::MachinesSetBiosResult MachineManager::setBios(const api::MachinesSetBiosParams& params) {
+api::MachinesSetRomResult MachineManager::setRom(const api::MachinesSetRomParams& params) {
   const Entry& target = entry(params.machine);
-  if (!target.needsBios) throw shared::CoreError(api::ERROR_BIOS_NOT_NEEDED, target.name + " 不需要 BIOS");
+  if (!target.needsRom) throw shared::CoreError(api::ERROR_ROM_NOT_NEEDED, target.name + " 不需要 ROM");
   if (!target.supported) throw shared::CoreError(api::ERROR_UNSUPPORTED, target.name + " 暂未支持");
   const std::vector<std::uint8_t> file = storage_->readSource(params.path);
-  static_cast<void>(extractBios(target, file));
+  static_cast<void>(extractRom(target, file));
   storage_->store(target.id, baseName(params.path), file);
   events_->publish(api::MACHINES_CHANGED_EVENT, nlohmann::json(api::MachinesChangedData{target.id}));
-  return api::MachinesSetBiosResult{info(target)};
+  return api::MachinesSetRomResult{info(target)};
 }
 
-api::MachinesRemoveBiosResult MachineManager::removeBios(const api::MachinesRemoveBiosParams& params) {
+api::MachinesRemoveRomResult MachineManager::removeRom(const api::MachinesRemoveRomParams& params) {
   const Entry& target = entry(params.machine);
-  if (!target.needsBios) throw shared::CoreError(api::ERROR_BIOS_NOT_NEEDED, target.name + " 不需要 BIOS");
+  if (!target.needsRom) throw shared::CoreError(api::ERROR_ROM_NOT_NEEDED, target.name + " 不需要 ROM");
   const bool had = storage_->find(target.id).has_value();
   storage_->remove(target.id);
   if (had) events_->publish(api::MACHINES_CHANGED_EVENT, nlohmann::json(api::MachinesChangedData{target.id}));
-  return api::MachinesRemoveBiosResult{info(target)};
+  return api::MachinesRemoveRomResult{info(target)};
 }
 
 api::MachinesBootResult MachineManager::boot(const api::MachinesBootParams& params) {
   const Entry& target = entry(params.machine);
-  if (!target.needsBios) throw shared::CoreError(api::ERROR_CARTRIDGE_REQUIRED, target.name + " 开机必须有 NES 文件，请改用打开卡带");
+  if (!target.needsRom) throw shared::CoreError(api::ERROR_CARTRIDGE_REQUIRED, target.name + " 开机必须有 NES 文件，请改用打开卡带");
   if (!target.supported) throw shared::CoreError(api::ERROR_UNSUPPORTED, target.name + " 暂未支持");
-  if (!storage_->find(target.id)) throw shared::CoreError(api::ERROR_NO_BIOS, target.name + " 还没有添加 BIOS，请先在“设置→机型与 BIOS”里添加");
+  if (!storage_->find(target.id)) throw shared::CoreError(api::ERROR_NO_ROM, target.name + " 还没有添加 ROM，请先在“设置→机型与 ROM”里添加");
   contracts::runtime::MachineBoot request;
   request.machine = target.id;
-  request.bios = extractBios(target, storage_->load(target.id));
+  request.rom = extractRom(target, storage_->load(target.id));
   request.powerOn = params.powerOn.value_or(true);
   request.resume = params.resume.value_or(true);
   const contracts::runtime::RuntimeState state = runtime_->bootMachine(std::move(request));

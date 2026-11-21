@@ -25,8 +25,8 @@ export const BIOS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 /** 构建输出目录 */
 export const BUILD_DIR = path.join(BIOS_DIR, 'build');
 
-/** 原始 BIOS（ember/bios 里没有文件头的纯 BIOS），构建结果默认与它逐字节比对 */
-export const ORIGINAL_ROM = path.join(BIOS_DIR, '..', '..', '..', 'ember', 'bios', 'sb2000_bios.bin');
+/** 原始 BIOS（ember/roms 里没有文件头的纯 BIOS），构建结果默认与它逐字节比对 */
+export const ORIGINAL_ROM = path.join(BIOS_DIR, '..', '..', '..', 'ember', 'roms', 'sb2000_bios.bin');
 
 /** ROM 总页数（512K / 4K） */
 export const PAGE_COUNT = 128;

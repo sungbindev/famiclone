@@ -62,8 +62,8 @@ struct CartridgeInsertionResult {
 struct MachineBoot {
   /** 机型标识，如 sb2000。 */
   std::string machine;
-  /** BIOS ROM 的内容（不含文件头）。 */
-  std::vector<std::uint8_t> bios;
+  /** ROM ROM 的内容（不含文件头）。 */
+  std::vector<std::uint8_t> rom;
   /** 装配后是否上电。 */
   bool powerOn{true};
   /** 上电后是否直接运行；powerOn 为 false 时无效。 */
@@ -149,7 +149,7 @@ class RuntimeService {
 
   /**
    * 装配整机机型的主机（没有卡带），替换已有的卡带与主机；任何一步失败都不改变已有的主机。
-   * @throws shared::CoreError runtime.hostUnsupported，以及 hardware.invalidArgument（BIOS 大小不对）。
+   * @throws shared::CoreError runtime.hostUnsupported，以及 hardware.invalidArgument（ROM 大小不对）。
    */
   virtual RuntimeState bootMachine(MachineBoot boot) = 0;
 

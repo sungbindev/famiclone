@@ -32,7 +32,7 @@ struct Fixture {
   test::FakeCoreGateway core;
   test::FakeFileDialog dialog;
   test::FakeDirectory logDirectory;
-  test::FakeDirectory biosDirectory;
+  test::FakeDirectory romDirectory;
   test::FakeRecentCartridges recent;
   test::FakeErrorLogger logger;
   test::FakeUpdater updater;
@@ -42,7 +42,7 @@ struct Fixture {
 
   Fixture() {
     router.add(entry::createCartridgeHandlers({core, dialog, dropped, recent}));
-    router.add(entry::createMachineHandlers({core, dialog, biosDirectory}));
+    router.add(entry::createMachineHandlers({core, dialog, romDirectory}));
     router.add(entry::createMapperHandlers({core, dialog}));
     router.add(entry::createMediaHandlers({core, dialog, dropped}));
     router.add(entry::createPreferenceHandlers({dialog}));
@@ -126,7 +126,7 @@ TEST(MainRequestRouter, BadParametersGiveInvalidParamsAndUnexpectedExceptionsAre
   EXPECT_EQ(f.call("cartridges.open", {{"droppedId", "1"}}).error.code, "core.invalidParams");
   EXPECT_EQ(f.call("media.openFloppy", {{"drive", 4}}).error.code, "core.invalidParams");
   EXPECT_EQ(f.call("media.openFloppy").error.code, "core.invalidParams");
-  EXPECT_EQ(f.call("machines.openBios", {{"machine", ""}}).error.code, "core.invalidParams");
+  EXPECT_EQ(f.call("machines.openRom", {{"machine", ""}}).error.code, "core.invalidParams");
   EXPECT_EQ(f.call("system.openHelp", {{"page", "other"}}).error.code, "core.invalidParams");
   EXPECT_EQ(f.call("cartridges.recent", json::array()).error.code, "core.invalidParams");
   EXPECT_TRUE(f.dialog.fileCalls.empty());
@@ -233,35 +233,35 @@ TEST(CartridgeHandlers, OpenRecentLoadsByIdAndRejectsUnknownIds) {
   EXPECT_EQ(f.call("cartridges.openRecent").error.code, "core.invalidParams");
 }
 
-TEST(MachineHandlers, OpenBiosPassesTheMachineAndThePickedFileToTheCore) {
+TEST(MachineHandlers, OpenRomPassesTheMachineAndThePickedFileToTheCore) {
   Fixture f;
-  f.dialog.results.push_back("D:\\bios\\sb2000.bin");
-  f.core.replies["machines.setBios"] = [](const json&) { return contracts::CoreReply::success({{"machine", {{"id", "sb2000"}}}}); };
-  const auto reply = f.call("machines.openBios", {{"machine", "sb2000"}});
+  f.dialog.results.push_back("D:\\rom\\sb2000_bios.bin");
+  f.core.replies["machines.setRom"] = [](const json&) { return contracts::CoreReply::success({{"machine", {{"id", "sb2000"}}}}); };
+  const auto reply = f.call("machines.openRom", {{"machine", "sb2000"}});
   ASSERT_TRUE(reply.ok);
   EXPECT_EQ(reply.result["canceled"], false);
   EXPECT_EQ(reply.result["machine"]["id"], "sb2000");
-  EXPECT_EQ(f.core.calls[0].params, json({{"machine", "sb2000"}, {"path", "D:\\bios\\sb2000.bin"}}));
-  EXPECT_EQ(f.dialog.fileCalls[0].purpose, "bios");
+  EXPECT_EQ(f.core.calls[0].params, json({{"machine", "sb2000"}, {"path", "D:\\rom\\sb2000_bios.bin"}}));
+  EXPECT_EQ(f.dialog.fileCalls[0].purpose, "rom");
   EXPECT_EQ(f.dialog.fileCalls[0].filters[0].extensions, (std::vector<std::string>{"bin", "nes"}));
 }
 
-TEST(MachineHandlers, OpenBiosCanceledAndFailedBios) {
+TEST(MachineHandlers, OpenRomCanceledAndFailedRom) {
   Fixture f;
-  EXPECT_EQ(f.call("machines.openBios", {{"machine", "fc"}}).result, json({{"canceled", true}}));
+  EXPECT_EQ(f.call("machines.openRom", {{"machine", "fc"}}).result, json({{"canceled", true}}));
   f.dialog.results.push_back("D:\\x.bin");
-  f.core.replies["machines.setBios"] = [](const json&) { return contracts::CoreReply::failure("machines.biosInvalid", "无效"); };
-  EXPECT_EQ(f.call("machines.openBios", {{"machine", "fc"}}).error.code, "machines.biosInvalid");
+  f.core.replies["machines.setRom"] = [](const json&) { return contracts::CoreReply::failure("machines.romInvalid", "无效"); };
+  EXPECT_EQ(f.call("machines.openRom", {{"machine", "fc"}}).error.code, "machines.romInvalid");
 }
 
-TEST(MachineHandlers, OpenBiosDirectoryReportsFailureWithTheModuleCode) {
+TEST(MachineHandlers, OpenRomDirectoryReportsFailureWithTheModuleCode) {
   Fixture f;
-  EXPECT_TRUE(f.call("machines.openBiosDirectory").ok);
-  EXPECT_EQ(f.biosDirectory.opened, 1);
-  f.biosDirectory.error = "拒绝访问";
-  const auto reply = f.call("machines.openBiosDirectory");
-  EXPECT_EQ(reply.error.code, "machines.biosDirectoryUnavailable");
-  EXPECT_EQ(reply.error.message, "无法打开 BIOS 目录：拒绝访问");
+  EXPECT_TRUE(f.call("machines.openRomDirectory").ok);
+  EXPECT_EQ(f.romDirectory.opened, 1);
+  f.romDirectory.error = "拒绝访问";
+  const auto reply = f.call("machines.openRomDirectory");
+  EXPECT_EQ(reply.error.code, "machines.romDirectoryUnavailable");
+  EXPECT_EQ(reply.error.message, "无法打开 ROM 目录：拒绝访问");
 }
 
 TEST(MapperHandlers, OpenPackageInstallsThePickedPackage) {

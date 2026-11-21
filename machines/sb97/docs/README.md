@@ -2,7 +2,7 @@
 
 ## 文件
 
-- `ember/bios/sb97_bios.bin`：1MB 的纯程序区（64 页，每页 16K），没有 CHR，也没有文件头。这台机器按 mapper 168 处理，程序区的 CRC32 是 `40a4c574`，用它认定 BIOS。
+- `ember/roms/sb97.bin`：1MB 的纯程序区（64 页，每页 16K），没有 CHR，也没有文件头。这台机器按 mapper 168 处理，程序区的 CRC32 是 `40a4c574`，用它认定 BIOS。
 - 这个文件只供开发与测试使用，Ember 不随发布包分发 BIOS。
 
 ## 内存映射

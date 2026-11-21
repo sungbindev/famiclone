@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：smoke-win32.mjs
- * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例先添加测试用的 BIOS，再经菜单选学习机开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮；最后再起一个实例，经快捷键与菜单打开首选项与手柄设置对话框，检查设置保存与手柄按键学习。
+ * 说明：原生外壳冒烟脚本：启动 ember-win.exe 加载一张测试卡带，用系统输入驱动窗口，检查画面、快捷键、菜单盖在画面上、菜单暂停与继续、运行面板展开与自动收缩、键盘独占、窗口始终置顶、全屏、正常关闭与退出；再起实例先添加测试用的 ROM，再经菜单选学习机开机；再起一个带调试端口的实例，检查“调试模式”项、真实拖放软盘镜像载入软驱与设备面板的按钮；最后再起一个实例，经快捷键与菜单打开首选项与手柄设置对话框，检查设置保存与手柄按键学习。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -18,14 +18,14 @@ import { dirname, isAbsolute, join } from 'node:path';
 
 import { debugCall, drive, dropFiles, parseArguments, projectRoot, removeUserData, sleep, startApp } from './win32-dev-support.mjs';
 
-/** 测试用的学习机 BIOS（仓库里的文件）：程序不自带 BIOS，冒烟时复制进实例的 BIOS 目录。 */
-const TEST_BIOS = join(projectRoot, 'bios', 'sb2000_bios.bin');
+/** 测试用的学习机 ROM（仓库里的文件）：程序不自带 ROM，冒烟时复制进实例的 ROM 目录。 */
+const TEST_ROM = join(projectRoot, 'roms', 'sb2000_bios.bin');
 
-/** 把测试用的 BIOS 放进实例的用户数据目录，等于用户在首选项里添加了它。 */
-function addTestBios(app) {
-  const target = join(app.userData, 'bios', 'sb2000', 'SB2K_BIOS.bin');
+/** 把测试用的 ROM 放进实例的用户数据目录，等于用户在首选项里添加了它。 */
+function addTestRom(app) {
+  const target = join(app.userData, 'rom', 'sb2000', 'SB2K_ROM.bin');
   mkdirSync(dirname(target), { recursive: true });
-  copyFileSync(TEST_BIOS, target);
+  copyFileSync(TEST_ROM, target);
 }
 
 /** 默认卡带：1-len_ctr（blargg 的 APU 测试，通过后在画面左下角显示文字）。 */
@@ -157,16 +157,16 @@ async function scenarioFullScreen() {
   }
 }
 
-/** 场景三：先添加测试用的 BIOS，再经“机器 → 选择机型”选小霸王 2000 开机，画面是满屏的 BIOS 硬件检测页。 */
-async function scenarioBios() {
-  console.log('场景三：学习机 BIOS 开机');
+/** 场景三：先添加测试用的 ROM，再经“机器 → 选择机型”选小霸王 2000 开机，画面是满屏的 ROM 硬件检测页。 */
+async function scenarioRom() {
+  console.log('场景三：学习机 ROM 开机');
   const app = startApp({});
   try {
-    addTestBios(app);
+    addTestRom(app);
     check('启动后出现窗口', await waitForWindow(app.pid));
     await sleep(2000);
-    const r = drive(app.pid, ['click:173:19', 'wait:600', 'click:215:49', 'wait:800', 'click:393:78', 'wait:12000', count('biosPicture', PICTURE_AREA)]);
-    check('选择小霸王 2000 后 BIOS 开机，画面铺满显示区', number(r, 'biosPicture') > 20000, `亮像素 ${number(r, 'biosPicture')}`);
+    const r = drive(app.pid, ['click:173:19', 'wait:600', 'click:215:49', 'wait:800', 'click:393:78', 'wait:12000', count('romPicture', PICTURE_AREA)]);
+    check('选择小霸王 2000 后 ROM 开机，画面铺满显示区', number(r, 'romPicture') > 20000, `亮像素 ${number(r, 'romPicture')}`);
     await closeAndExpectExit(app, '场景三');
   } finally {
     app.stop();
@@ -182,7 +182,7 @@ async function scenarioDevices() {
   console.log('场景四：调试服务与设备面板');
   const app = startApp({ args: ['--debug-port=5798', '--debug-token=smoke-token'] });
   try {
-    addTestBios(app);
+    addTestRom(app);
     check('启动后出现窗口', await waitForWindow(app.pid));
     await sleep(2500);
     check('开启调试服务后系统栏出现“调试模式”', number(drive(app.pid, [count('debugItem', DEBUG_ITEM)]), 'debugItem') > 20);
@@ -282,7 +282,7 @@ if (!options.has('no-build')) {
 }
 await scenarioInteractions();
 await scenarioFullScreen();
-await scenarioBios();
+await scenarioRom();
 await scenarioDevices();
 await scenarioDialogs();
 await scenarioSystem();

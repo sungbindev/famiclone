@@ -19,11 +19,11 @@ void addMachineRequests(platform::RequestRouter& router, std::shared_ptr<contrac
     static_cast<void>(contract::parseMachinesListParams(params, "params"));
     return nlohmann::json(service->list());
   });
-  router.add("machines", contract::MACHINES_SET_BIOS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
-    return nlohmann::json(service->setBios(contract::parseMachinesSetBiosParams(params, "params")));
+  router.add("machines", contract::MACHINES_SET_ROM_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->setRom(contract::parseMachinesSetRomParams(params, "params")));
   });
-  router.add("machines", contract::MACHINES_REMOVE_BIOS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
-    return nlohmann::json(service->removeBios(contract::parseMachinesRemoveBiosParams(params, "params")));
+  router.add("machines", contract::MACHINES_REMOVE_ROM_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->removeRom(contract::parseMachinesRemoveRomParams(params, "params")));
   });
   router.add("machines", contract::MACHINES_BOOT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     return nlohmann::json(service->boot(contract::parseMachinesBootParams(params, "params")));

@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：disk-bios-storage.hpp
- * 说明：BIOS 文件存取的磁盘实现：已添加的 BIOS 保存在用户数据目录的 bios/<机型>/ 下，每个机型最多一个文件。
+ * 名称：disk-rom-storage.hpp
+ * 说明：ROM 文件存取的磁盘实现：已添加的 ROM 保存在用户数据目录的 rom/<机型>/ 下，每个机型最多一个文件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：保存时先写临时文件再改名，改名成功之后才删同目录里的其他文件，所以失败时原有的 BIOS 不变；机型标识由调用方按清单检查过，这里仍拒绝带路径分隔符的名字。
+ * 备注：保存时先写临时文件再改名，改名成功之后才删同目录里的其他文件，所以失败时原有的 ROM 不变；机型标识由调用方按清单检查过，这里仍拒绝带路径分隔符的名字。
  * ------------------------------------------------------------------------
  */
 
@@ -13,21 +13,21 @@
 
 #include <filesystem>
 
-#include "contracts/machines/bios-storage.hpp"
+#include "contracts/machines/rom-storage.hpp"
 
 namespace ember::infra::machines {
 
-/** 磁盘上的 BIOS 存取。 */
-class DiskBiosStorage final : public contracts::machines::BiosStorage {
+/** 磁盘上的 ROM 存取。 */
+class DiskRomStorage final : public contracts::machines::RomStorage {
  public:
-  /** BIOS 源文件的大小上限（字节）。 */
+  /** ROM 源文件的大小上限（字节）。 */
   static constexpr std::uintmax_t MAX_FILE_SIZE = 16ULL * 1024 * 1024;
 
-  /** @param root BIOS 根目录（用户数据目录下的 bios）。 */
-  explicit DiskBiosStorage(std::filesystem::path root) : root_(std::move(root)) {}
+  /** @param root ROM 根目录（用户数据目录下的 rom）。 */
+  explicit DiskRomStorage(std::filesystem::path root) : root_(std::move(root)) {}
 
   [[nodiscard]] std::vector<std::uint8_t> readSource(const std::string& path) const override;
-  [[nodiscard]] std::optional<contracts::machines::StoredBios> find(const std::string& machine) const override;
+  [[nodiscard]] std::optional<contracts::machines::StoredRom> find(const std::string& machine) const override;
   [[nodiscard]] std::vector<std::uint8_t> load(const std::string& machine) const override;
   void store(const std::string& machine, const std::string& fileName, const std::vector<std::uint8_t>& bytes) override;
   void remove(const std::string& machine) override;

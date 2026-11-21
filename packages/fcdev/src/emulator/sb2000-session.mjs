@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-15
-// 备注：固件是学习机的 BIOS（iNES 文件），Ember 把它复制进自己的 BIOS 目录；磁盘镜像按 fcdev disk 生成，里面只有程序，开机后进入 SB-DOS 命令行，要输入程序名才运行。
+// 备注：固件是学习机的 BIOS（iNES 文件），Ember 把它复制进自己的 ROM 目录；磁盘镜像按 fcdev disk 生成，里面只有程序，开机后进入 SB-DOS 命令行，要输入程序名才运行。
 //       帧数按 Ember 的运行速度估计：runtime.run 不限速，几千帧只要几秒；SB-DOS 启动后先问日期与时间，回车跳过。
 // ------------------------------------------------------------------------
 import { existsSync } from 'node:fs';
@@ -76,7 +76,7 @@ export async function bootMachine(client, { machine = SB2000_MACHINE, firmware, 
   if (firmware !== undefined && !existsSync(firmware)) throw new FcdevError(`找不到固件：${firmware}`, { code: 'FIRMWARE_MISSING', hint: '在 fcdev.json 的 firmware 里指向学习机的 BIOS 文件' });
   if (diskImage !== undefined && !existsSync(diskImage)) throw new FcdevError(`找不到磁盘镜像：${diskImage}`, { code: 'EMULATOR_FILE_MISSING' });
   const steps = [
-    ...(firmware === undefined ? [] : [['添加固件', 'machines.setBios', { machine, path: firmware }]]),
+    ...(firmware === undefined ? [] : [['添加固件', 'machines.setRom', { machine, path: firmware }]]),
     ['开机', 'machines.boot', { machine, powerOn: true, resume: false }],
     ...(diskImage === undefined ? [] : [['放入磁盘镜像', 'media.floppyInsert', { drive: 0, path: diskImage }]]),
   ];

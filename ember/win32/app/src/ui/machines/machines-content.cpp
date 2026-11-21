@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：machines-content.cpp
- * 说明：“机型与 BIOS”对话框内容的实现。
+ * 说明：“机型与 ROM”对话框内容的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -26,11 +26,11 @@ namespace {
 using namespace rujian::ui;
 
 /** 用户可见的文字。 */
-constexpr const char* kBiosIntro = "软件不自带 BIOS，也不会在电脑里自己查找：需要 BIOS 的机型要在这里手动添加 BIOS 文件。添加的文件会复制到软件的 BIOS 目录，开机时直接使用，原文件可以删除或移动；想换成别的 BIOS，点“替换”。";
-constexpr const char* kBiosAdd = "添加 BIOS 文件";
-constexpr const char* kBiosReplace = "替换";
-constexpr const char* kBiosRemove = "移除";
-constexpr const char* kBiosOpenDirectory = "打开 BIOS 目录";
+constexpr const char* kRomIntro = "软件不自带 ROM，也不会在电脑里自己查找：需要 ROM 的机型要在这里手动添加 ROM 文件。添加的文件会复制到软件的 ROM 目录，开机时直接使用，原文件可以删除或移动；想换成别的 ROM，点“替换”。";
+constexpr const char* kRomAdd = "添加 ROM 文件";
+constexpr const char* kRomReplace = "替换";
+constexpr const char* kRomRemove = "移除";
+constexpr const char* kRomOpenDirectory = "打开 ROM 目录";
 
 /** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
 constexpr double kPaneRightPadding = 10;
@@ -52,11 +52,11 @@ std::unique_ptr<State> errorState(const std::string& message) {
 
 }  // namespace
 
-MachinesContent::MachinesContent(contracts::BiosModel& bios) : bios_(bios) {
+MachinesContent::MachinesContent(contracts::RomModel& rom) : rom_(rom) {
   auto pane = std::make_unique<ScrollArea>();
   pane_ = static_cast<ScrollArea*>(addChild(std::move(pane)));
   refresh();
-  unsubscribe_ = bios_.subscribe([this] { refresh(); });
+  unsubscribe_ = rom_.subscribe([this] { refresh(); });
 }
 
 MachinesContent::~MachinesContent() {
@@ -76,22 +76,22 @@ void MachinesContent::arrange(const Rect& bounds) {
   pane_->arrange(bounds);
 }
 
-std::string MachinesContent::signatureOf(const contracts::BiosView& view) {
+std::string MachinesContent::signatureOf(const contracts::RomView& view) {
   std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message + '\x1e';
-  for (const contracts::BiosRow& row : view.rows) signature += row.machine + '\x1f' + row.name + '\x1f' + row.status + '\x1f' + (row.hasBios ? 'b' : '-') + (row.supported ? 's' : '-') + '\x1e';
+  for (const contracts::RomRow& row : view.rows) signature += row.machine + '\x1f' + row.name + '\x1f' + row.status + '\x1f' + (row.hasRom ? 'b' : '-') + (row.supported ? 's' : '-') + '\x1e';
   return signature;
 }
 
 void MachinesContent::refresh() {
-  const contracts::BiosView view = bios_.view();
+  const contracts::RomView view = rom_.view();
   const std::string signature = signatureOf(view);
   if (signature == signature_) return;
   signature_ = signature;
   rebuild(view);
 }
 
-void MachinesContent::rebuild(const contracts::BiosView& view) {
-  biosRows_.clear();
+void MachinesContent::rebuild(const contracts::RomView& view) {
+  romRows_.clear();
   openDirectory_ = nullptr;
   listPanel_ = nullptr;
 
@@ -99,42 +99,42 @@ void MachinesContent::rebuild(const contracts::BiosView& view) {
   stack->setPadding(Insets{0, kPaneRightPadding, 0, 0});
 
   auto callout = std::make_unique<Callout>();
-  callout->setText(kBiosIntro);
-  auto link = std::make_unique<Button>(kBiosOpenDirectory);
+  callout->setText(kRomIntro);
+  auto link = std::make_unique<Button>(kRomOpenDirectory);
   link->setVariant(ButtonVariant::Link);
-  link->setOnClick([this] { bios_.openDirectory(); });
+  link->setOnClick([this] { rom_.openDirectory(); });
   openDirectory_ = static_cast<Button*>(callout->addContent(std::move(link)));
   stack->addChild(std::move(callout));
   if (view.load == contracts::MachinesLoad::Failed) stack->addChild(errorState(view.message));
   if (!view.rows.empty()) {
     auto list = std::make_unique<List>();
-    for (const contracts::BiosRow& spec : view.rows) {
+    for (const contracts::RomRow& spec : view.rows) {
       auto row = std::make_unique<SettingRow>();
       row->setSideBySide(true);
       row->setLabel(spec.name);
       row->setDescription(spec.status);
       auto controls = std::make_unique<rujian::ui::Row>();
-      BiosWidgets widgets;
+      RomWidgets widgets;
       widgets.machine = spec.machine;
       const std::string machine = spec.machine;
-      if (!spec.hasBios) {
-        auto add = compactButton(kBiosAdd);
+      if (!spec.hasRom) {
+        auto add = compactButton(kRomAdd);
         add->setEnabled(spec.supported);
-        add->setOnClick([this, machine] { bios_.choose(machine); });
+        add->setOnClick([this, machine] { rom_.choose(machine); });
         widgets.add = static_cast<Button*>(controls->addChild(std::move(add)));
       } else {
-        auto replace = compactButton(kBiosReplace);
+        auto replace = compactButton(kRomReplace);
         replace->setEnabled(spec.supported);
-        replace->setOnClick([this, machine] { bios_.choose(machine); });
+        replace->setOnClick([this, machine] { rom_.choose(machine); });
         widgets.replace = static_cast<Button*>(controls->addChild(std::move(replace)));
-        auto remove = compactButton(kBiosRemove);
+        auto remove = compactButton(kRomRemove);
         remove->setEnabled(spec.supported);
-        remove->setOnClick([this, machine] { bios_.remove(machine); });
+        remove->setOnClick([this, machine] { rom_.remove(machine); });
         widgets.remove = static_cast<Button*>(controls->addChild(std::move(remove)));
       }
       row->setControl(std::move(controls));
       list->addRow(std::move(row));
-      biosRows_.push_back(widgets);
+      romRows_.push_back(widgets);
     }
     auto panel = std::make_unique<Panel>();
     panel->addContent(std::move(list));

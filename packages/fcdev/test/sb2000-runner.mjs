@@ -6,7 +6,7 @@
 // 日期：2026-11-11
 // 备注：测试程序放在 test/fixtures/sb2000/，用 sb-test.h 记录检查结果；整机经调试服务启动（固件、软盘镜像、开机），在 SB-DOS 里输入程序名运行，
 //       再对停靠标志 sb_test_stop 设写断点，运行到 sb_test_sync、sb_test_done。
-//       需要 Ember（环境变量 FCDEV_EMULATOR）、cc65 与已构建的调试 SDK；固件取环境变量 FCDEV_TEST_FIRMWARE，没有时用仓库里的 ember/bios/sb2000_bios.bin；缺一就由调用者跳过。
+//       需要 Ember（环境变量 FCDEV_EMULATOR）、cc65 与已构建的调试 SDK；固件取环境变量 FCDEV_TEST_FIRMWARE，没有时用仓库里的 ember/roms/sb2000_bios.bin；缺一就由调用者跳过。
 //       调试端口自动选空闲端口，只结束自己启动的 Ember，不影响其他在运行的实例。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ import { SKIP_WITHOUT_TOOLCHAIN, writeTestFile } from './helpers.mjs';
 const FIXTURE_DIR = fileURLToPath(new URL('./fixtures/sb2000/', import.meta.url));
 
 /** 仓库里的学习机 BIOS，没有设置 FCDEV_TEST_FIRMWARE 时使用 */
-const REPOSITORY_FIRMWARE = fileURLToPath(new URL('../../../ember/bios/sb2000_bios.bin', import.meta.url));
+const REPOSITORY_FIRMWARE = fileURLToPath(new URL('../../../ember/roms/sb2000_bios.bin', import.meta.url));
 
 /** 物理键位（KeyboardEvent.code）：测试里用到的按键 */
 export const KEY = {

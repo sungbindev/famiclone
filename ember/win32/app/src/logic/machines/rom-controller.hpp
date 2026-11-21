@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bios-controller.hpp
- * 说明：“机型与 BIOS”对话框的控制器：核心就绪后读取机型清单，订阅 machines.changed 保持最新，核心重启后重新读取；执行 BIOS 的添加或替换（弹出系统文件选择窗口）、移除，以及用文件管理器打开 BIOS 目录。
+ * 名称：rom-controller.hpp
+ * 说明：“机型与 ROM”对话框的控制器：核心就绪后读取机型清单，订阅 machines.changed 保持最新，核心重启后重新读取；执行 ROM 的添加或替换（弹出系统文件选择窗口）、移除，以及用文件管理器打开 ROM 目录。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -27,17 +27,17 @@
 
 namespace ember::win32::logic {
 
-/** “机型与 BIOS”对话框的控制器。 */
-class BiosController final : public contracts::BiosModel {
+/** “机型与 ROM”对话框的控制器。 */
+class RomController final : public contracts::RomModel {
  public:
   /**
-   * @param broker 请求中转：核心的请求与外壳自己处理的请求（选择 BIOS 文件、打开 BIOS 目录）都经它。
+   * @param broker 请求中转：核心的请求与外壳自己处理的请求（选择 ROM 文件、打开 ROM 目录）都经它。
    * @param core 核心网关：订阅核心事件与核心运行状态。
    */
-  BiosController(contracts::RequestBroker& broker, contracts::CoreGateway& core);
-  ~BiosController() override;
-  BiosController(const BiosController&) = delete;
-  BiosController& operator=(const BiosController&) = delete;
+  RomController(contracts::RequestBroker& broker, contracts::CoreGateway& core);
+  ~RomController() override;
+  RomController(const RomController&) = delete;
+  RomController& operator=(const RomController&) = delete;
 
   /**
    * 接上外壳：订阅核心事件与核心运行状态，并读取机型清单。
@@ -45,8 +45,8 @@ class BiosController final : public contracts::BiosModel {
    */
   std::function<void()> attach(contracts::ShellApi& shell);
 
-  // ---- BiosModel ----
-  [[nodiscard]] contracts::BiosView view() const override;
+  // ---- RomModel ----
+  [[nodiscard]] contracts::RomView view() const override;
   void choose(const std::string& machine) override;
   void remove(const std::string& machine) override;
   void openDirectory() override;

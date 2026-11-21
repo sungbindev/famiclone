@@ -475,7 +475,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
 rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
   return submit([this, boot = std::move(boot)] {
     // 先装配好新的主机，失败时不影响正在运行的旧主机。
-    auto machine = options_.machines->createWithBios(boot.machine, boot.bios);
+    auto machine = options_.machines->createWithRom(boot.machine, boot.rom);
     finishRun("interrupted");
     if (machine_ != nullptr) machine_->cartridgeSlot().eject();
     cartridge_.reset();

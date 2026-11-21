@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：BIOS 是 ember/bios 里不带文件头的纯程序区；这台机器按 mapper 168 处理，
+// 备注：BIOS 是 ember/roms 里不带文件头的纯程序区；这台机器按 mapper 168 处理，
 //       文件用程序区的 CRC32 认定；程序区 1MB，共 64 页、每页 16K，没有 CHR。
 // ------------------------------------------------------------------------
 import { readFileSync } from 'node:fs';
@@ -23,7 +23,7 @@ export const PRG_CRC32 = 0x40a4c574;
 export const MAPPER_NUMBER = 168;
 
 /** 仓库里 SB97 BIOS 的默认位置 */
-export const DEFAULT_ROM_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '../../../ember/bios/sb97_bios.bin');
+export const DEFAULT_ROM_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '../../../ember/roms/sb97.bin');
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);

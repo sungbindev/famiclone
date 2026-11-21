@@ -66,7 +66,7 @@
 #include "logic/media/media-module.hpp"
 #include "logic/input/gamepad-settings-controller.hpp"
 #include "logic/input/input-module.hpp"
-#include "logic/machines/bios-controller.hpp"
+#include "logic/machines/rom-controller.hpp"
 #include "logic/machines/machines-module.hpp"
 #include "logic/mappers/mappers-controller.hpp"
 #include "logic/mappers/mappers-module.hpp"
@@ -291,7 +291,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   const platform::SystemDialogs systemDialogs([&mainWindow]() -> void* { return mainWindow; });
   infra::RememberingFileDialog fileDialog(systemDialogs, lastDirectories);
   infra::ExplorerDirectory logDirectory(userData / "logs");
-  infra::ExplorerDirectory biosDirectory(userData / "bios");
+  infra::ExplorerDirectory romDirectory(userData / "rom");
   // 升级：发布配置里、不是调试会话（带 --debug-port 启动）、且软件所在目录能写（新程序要覆盖当前程序）时才支持，否则状态固定是不支持
   infra::WinHttpUpdateTransport updateTransport;
   infra::SignedExeUpdateEngine::Options updateOptions;
@@ -346,7 +346,7 @@ int runApplication(const shared::LaunchArguments& launch) {
 
   entry::MainRequestRouter router(core, logger);
   router.add(entry::createCartridgeHandlers({core, fileDialog, droppedFiles, recentCartridges}));
-  router.add(entry::createMachineHandlers({core, fileDialog, biosDirectory}));
+  router.add(entry::createMachineHandlers({core, fileDialog, romDirectory}));
   router.add(entry::createMapperHandlers({core, fileDialog}));
   router.add(entry::createMediaHandlers({core, fileDialog, droppedFiles}));
   router.add(entry::createPreferenceHandlers({fileDialog}));
@@ -358,7 +358,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::RuntimeController runtime(router, core, shellState);
     logic::MediaController media(router, core);
     logic::PreferencesController preferencesController(router, core);
-    logic::BiosController biosController(router, core);
+    logic::RomController romController(router, core);
     logic::UserDataController userDataController(userDataLocation, userDataDirectory, confirmation);
     logic::MappersController mappersController(router, core, confirmation);
     logic::UpdateController updateController(router, updater);
@@ -372,10 +372,10 @@ int runApplication(const shared::LaunchArguments& launch) {
     const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
     const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
-    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(biosController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
+    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
     dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &userDataController] { return std::make_unique<ui::PreferencesContent>(preferencesController, userDataController); }, true);
-    dialogs.setBody(logic::kMachinesDialogId, [&biosController] { return std::make_unique<ui::MachinesContent>(biosController); }, true);
+    dialogs.setBody(logic::kMachinesDialogId, [&romController] { return std::make_unique<ui::MachinesContent>(romController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
     dialogs.setBody(logic::kMappersDialogId, [&mappersController] { return std::make_unique<ui::MappersContent>(mappersController); }, true);
     dialogs.setBody(

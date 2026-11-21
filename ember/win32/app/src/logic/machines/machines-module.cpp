@@ -19,11 +19,11 @@ namespace {
 constexpr int kDialogHeight = 520;
 constexpr int kDialogMinHeight = 300;
 
-constexpr const char* kTitle = "机型与 BIOS";
+constexpr const char* kTitle = "机型与 ROM";
 
 }  // namespace
 
-contracts::ShellModule createMachinesModule(BiosController& controller) {
+contracts::ShellModule createMachinesModule(RomController& controller) {
   contracts::ShellModule module;
   module.name = "machines";
 

@@ -1,5 +1,5 @@
 {
   "target": "sb2000",
   "name": "memtest",
-  "firmware": "../../../ember/bios/sb2000_bios.bin"
+  "firmware": "../../../ember/roms/sb2000_bios.bin"
 }

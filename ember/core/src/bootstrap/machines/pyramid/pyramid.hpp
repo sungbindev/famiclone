@@ -1,0 +1,173 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：pyramid.hpp
+ * 说明：主机型号 pec9588（金字塔 PEC-9588 学习机）与 pec586（金字塔 PEC-586、686 学习机，NTSC）的装配：2K 内部 RAM、2C02 PPU、2A03 APU、精灵 DMA、手柄口、键盘、磁带机与主板。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-21
+ * 备注：时钟与经典 FC 相同（主时钟 21.477272 MHz，CPU 12 分频、PPU 4 分频）；CPU 总线：$0000-$1FFF 内部 RAM（2K 镜像）、$2000-$3FFF PPU、$4000-$4013 与 $4015 APU、$4014 精灵 DMA、
+ *       $4016-$4017 手柄口与键盘（写 $4017 同时转给 APU 的帧计数器）、$4020-$FFFF 主板（见 pyramid-board.hpp）；PPU 总线：$0000-$3EFF 由主板译码，调色板在 PPU 内；
+ *       整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；磁带机是独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；
+ *       具体实现只在这里创建并连线，模块之间不互相引用。
+ * ------------------------------------------------------------------------
+ */
+
+#pragma once
+
+#include <array>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "bootstrap/machines/common/cpu-debug-kit.hpp"
+#include "bootstrap/machines/common/pad-apu-port.hpp"
+#include "bootstrap/machines/pyramid/pyramid-board.hpp"
+#include "contracts/hardware/machine.hpp"
+#include "logic/hardware/apu-2a03/apu-2a03.hpp"
+#include "logic/hardware/bus/mapped-bus.hpp"
+#include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
+#include "logic/hardware/cpu-6502/cpu-6502.hpp"
+#include "logic/hardware/dma-2a03/dma-2a03.hpp"
+#include "logic/hardware/joypad/joypad.hpp"
+#include "logic/hardware/keyboard-pyramid/keyboard-pyramid.hpp"
+#include "logic/hardware/lines/line-output.hpp"
+#include "logic/hardware/lines/wired-or-line.hpp"
+#include "logic/hardware/pad-2a03/pad-2a03.hpp"
+#include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
+#include "logic/hardware/ram/ram-block.hpp"
+#include "logic/hardware/scheduler/master-scheduler.hpp"
+#include "logic/hardware/tape-deck/tape-deck.hpp"
+
+namespace ember::bootstrap {
+
+/** 金字塔学习机（NTSC）。 */
+class PyramidMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger {
+ public:
+  /** 主时钟频率（赫兹）。 */
+  static constexpr double MASTER_CLOCK_HZ = 21'477'272.0;
+  /** 每个 CPU 周期的主时钟周期数。 */
+  static constexpr contracts::hardware::MasterTime CPU_TICKS_PER_CYCLE = 12;
+  /** 每个 PPU 点的主时钟周期数。 */
+  static constexpr contracts::hardware::MasterTime PPU_TICKS_PER_DOT = 4;
+  /** 上电后 PPU 第 0 点相对时间 0 的延迟（主时钟周期数）。 */
+  static constexpr contracts::hardware::MasterTime PPU_PHASE_TICKS = 1;
+
+  /**
+   * @param model 主板型号。
+   * @param rom 程序 ROM 的内容，大小必须是 512K（不含 iNES 文件头）。
+   * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；为空时主机自己带一台（测试用）。
+   * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
+   */
+  PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr);
+  ~PyramidMachine() override;
+
+  PyramidMachine(const PyramidMachine&) = delete;
+  PyramidMachine& operator=(const PyramidMachine&) = delete;
+
+  void powerOn() override;
+  void powerOff() override;
+  void softReset() override;
+  [[nodiscard]] bool isPoweredOn() const override { return poweredOn_; }
+  void run(contracts::hardware::MasterTime ticks) override;
+  void runFrame() override;
+  [[nodiscard]] contracts::hardware::FrameBuffer frame() const override { return ppu_.frame(); }
+  /** NTSC：每帧 262 行，开启背景的奇数帧少一个点，平均每帧 89341.5 个点。 */
+  [[nodiscard]] double framesPerSecond() const override { return MASTER_CLOCK_HZ / (static_cast<double>(PPU_TICKS_PER_DOT) * (341.0 * 262.0 - 0.5)); }
+  [[nodiscard]] unsigned audioSampleRate() const override { return logic::hardware::Apu2a03::SAMPLE_RATE; }
+  void takeAudio(std::vector<float>& samples) override;
+  void setButtons(unsigned port, std::uint8_t buttons) override;
+  [[nodiscard]] unsigned padPortCount() const override { return static_cast<unsigned>(joypads_.size()); }
+  void input(const contracts::hardware::InputEvent& event) override;
+  /** 金字塔学习机的键盘属于机器。 */
+  [[nodiscard]] bool keyboardIsMachineInput() const override { return true; }
+  [[nodiscard]] contracts::hardware::CpuRegisters cpuRegisters() const override { return cpu_.registers(); }
+  [[nodiscard]] const contracts::hardware::Clock& clock() const override { return scheduler_; }
+  contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
+  contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
+  contracts::hardware::MachineDebugger* debugger() override { return this; }
+  contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
+
+  // 测试与调试用
+  [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
+  [[nodiscard]] const logic::hardware::Ppu2c02& ppu() const { return ppu_; }
+  [[nodiscard]] logic::hardware::Apu2a03& apu() { return apu_; }
+  [[nodiscard]] PyramidBoard& board() { return board_; }
+  [[nodiscard]] const PyramidBoard& board() const { return board_; }
+  [[nodiscard]] logic::hardware::KeyboardPyramid& keyboard() { return keyboard_; }
+  /** 2K 内部 RAM。 */
+  [[nodiscard]] const contracts::hardware::StorageRegion& internalRam() const { return ram_; }
+  /** 不经 CPU 读 CPU 总线，读不改变状态。 */
+  std::uint8_t peekCpuBus(std::uint16_t address) { return cpuBus_.peek(address); }
+
+ private:
+  /** $4016-$4017：在手柄口与 APU 帧计数器之上，加上键盘的信号线：写 $4016 整个字节给键盘，读 $4017 位 1 是键状态。 */
+  class InputPort final : public contracts::hardware::BusDevice {
+   public:
+    InputPort(contracts::hardware::BusDevice& padApu, logic::hardware::KeyboardPyramid& keyboard) : padApu_(padApu), keyboard_(keyboard) {}
+    contracts::hardware::BusRead read(std::uint16_t address) override;
+    void write(std::uint16_t address, std::uint8_t value) override;
+
+   private:
+    contracts::hardware::BusDevice& padApu_;
+    logic::hardware::KeyboardPyramid& keyboard_;
+  };
+
+  // MachineDebugger
+  [[nodiscard]] std::vector<contracts::hardware::MemorySpace> memorySpaces() const override;
+  void readMemory(std::string_view space, std::uint32_t address, std::span<std::uint8_t> out) override;
+  void writeMemory(std::string_view space, std::uint32_t address, std::span<const std::uint8_t> bytes) override;
+  [[nodiscard]] contracts::hardware::AddressTarget resolve(std::string_view space, std::uint32_t address) const override;
+  [[nodiscard]] std::vector<std::string> stateModules() const override;
+  [[nodiscard]] std::vector<contracts::hardware::StateField> readState(std::string_view module) const override;
+  void writeState(std::string_view module, std::span<const contracts::hardware::StateField> fields) override;
+  contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count) override;
+  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override { return debug_.addBreakpoint(kind, first, last); }
+  bool removeBreakpoint(std::uint32_t id) override { return debug_.removeBreakpoint(id); }
+  std::size_t clearBreakpoints() override { return debug_.clearBreakpoints(); }
+  [[nodiscard]] std::vector<contracts::hardware::Breakpoint> breakpoints() const override { return debug_.breakpoints(); }
+  std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return debug_.takeBreakpointHit(); }
+  std::uint32_t startRecorder(const contracts::hardware::RecorderSpec& spec) override { return debug_.startRecorder(spec); }
+  contracts::hardware::RecorderOutput stopRecorder(std::uint32_t id) override { return debug_.stopRecorder(id); }
+  [[nodiscard]] std::vector<contracts::hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) override { return debug_.disassemble(address, count); }
+  void startCdl(std::size_t size, contracts::hardware::CdlResolver resolver) override { debug_.startCdl(size, std::move(resolver)); }
+  void stopCdl() override { debug_.stopCdl(); }
+  [[nodiscard]] std::optional<std::vector<std::uint8_t>> cdlFlags() const override { return debug_.cdlFlags(); }
+
+  logic::hardware::MasterScheduler scheduler_;
+  logic::hardware::WiredOrIrqLine irq_;
+  logic::hardware::WiredOrIrqLine nmi_;
+  logic::hardware::WiredOrRdyLine rdy_;
+  /** 卡槽的 IRQ 引脚（整机机型没有卡带，只为满足 Machine 契约）。 */
+  logic::hardware::LineIrqOutput cartridgeIrq_;
+  /** 空卡槽：不挂载到任何总线。 */
+  logic::hardware::StandardCartridgeSlot slot_;
+  logic::hardware::CpuAddressBus cpuBus_;
+  logic::hardware::PpuAddressBus ppuBus_;
+
+  logic::hardware::RamBlock ram_;
+  logic::hardware::MirroredRam ramDevice_;
+  logic::hardware::Apu2a03 apu_;
+  logic::hardware::Ppu2c02 ppu_;
+  logic::hardware::Dma2a03 dma_;
+  logic::hardware::Pad2a03 pad_;
+  /** 磁带机：独立于主机的设备；主机通电时才绑定自己的调度器。 */
+  std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_;
+  /** $4016-$4017：手柄口与 APU 帧计数器共用，写入同时转给两边。 */
+  PadApuPort padApuPort_;
+  logic::hardware::KeyboardPyramid keyboard_;
+  InputPort inputPort_;
+  std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
+  PyramidBoard board_;
+  logic::hardware::Cpu6502 cpu_;
+  /** 断点、记录、代码数据标记与反汇编。 */
+  CpuDebugKit debug_;
+
+  bool poweredOn_{false};
+};
+
+}  // namespace ember::bootstrap

@@ -10,7 +10,7 @@
 
 - Node.js 22 及以上，脚本没有第三方依赖。
 - BIOS 原版源码 [src/bios/bios.asm](src/bios/bios.asm) 在本目录里，原样复制自原厂资料（GBK 编码，不要用编辑器转码保存）；分析工具读这一份。
-- 其他原厂资料仍在仓库根目录的 `reference/` 下，只引用不复制：`reference/docs/BBKDOS源代码/`（`Command.asm`、`Smcdos.asm` 与三个 `.sys`）、`reference/floppy-images/bbk/`；BIOS 用 `ember/bios/bbk1_bios.bin`、`ember/bios/bbk98_bios.bin`（不带文件头）。
+- 其他原厂资料仍在仓库根目录的 `reference/` 下，只引用不复制：`reference/docs/BBKDOS源代码/`（`Command.asm`、`Smcdos.asm` 与三个 `.sys`）、`reference/floppy-images/bbk/`；BIOS 用 `ember/roms/bbk_bios10.bin`、`ember/roms/bbk_bios20.bin`（不带文件头）。
 
 ## 使用
 
@@ -29,8 +29,8 @@
 ## 限制
 
 - 原厂源码缺少符号文件 `tvdef.asm`，本目录的 [src/include/tvdef.asm](src/include/tvdef.asm) 是还原版：取值来自使用手册、源码注释和 ROM 里的功能号分发表；`DosGetDOSVersion` 与 `StackTooDepth` 两个符号没有依据，是推测值。
-- 原厂的 `Bios.asm` 与 `bbk1_bios.bin` 不是同一次构建，汇编结果不能与 ROM 逐字节一致；`Command.asm`、`Smcdos.asm` 与同目录的 `.sys` 文件也不是同一版本。
-- 汇编器只做到能还原符号、核对编码和生成 ROM 映像；ROM 的前 7 页（字库）取自 `bbk1_bios.bin`，源码里没有。
+- 原厂的 `Bios.asm` 与 `bbk_bios10.bin` 不是同一次构建，汇编结果不能与 ROM 逐字节一致；`Command.asm`、`Smcdos.asm` 与同目录的 `.sys` 文件也不是同一版本。
+- 汇编器只做到能还原符号、核对编码和生成 ROM 映像；ROM 的前 7 页（字库）取自 `bbk_bios10.bin`，源码里没有。
 
 ## 目录
 

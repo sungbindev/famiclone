@@ -58,7 +58,7 @@ add_library(ember_app STATIC
   src/logic/input/input-controller.cpp
   src/logic/input/input-module.cpp
   src/logic/input/pad-rules.cpp
-  src/logic/machines/bios-controller.cpp
+  src/logic/machines/rom-controller.cpp
   src/logic/machines/machines-module.cpp
   src/logic/machines/machines-rules.cpp
   src/logic/mappers/mappers-controller.cpp

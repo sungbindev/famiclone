@@ -100,7 +100,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   familyKeyboard.checked = [&controller](const ShellViewState&) { return controller.familyKeyboard(); };
   module.commands.push_back(std::move(familyKeyboard));
 
-  // “选择机型”的子菜单项：已选的打对勾，点一项记住并开机；程序里有实现且已添加 BIOS 才可选，否则置灰并在右侧注明原因
+  // “选择机型”的子菜单项：已选的打对勾，点一项记住并开机；程序里有实现且已添加 ROM 才可选，否则置灰并在右侧注明原因
   ShellMenuItemDefinition machineMenu;
   machineMenu.menu = "machine";
   machineMenu.submenu = contracts::ShellSubmenuDefinition{kMachineSubmenuId, "选择机型", [&controller] {

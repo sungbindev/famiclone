@@ -55,6 +55,7 @@
           "power": { "type": "string", "enum": ["off", "on"], "description": "电源" },
           "mode": { "type": "string", "enum": ["paused", "running"], "description": "运行模式" },
           "machine": { "type": "string", "description": "主机型号；没有装入卡带时没有这一项" },
+          "romLabel": { "type": "string", "description": "整机机型（学习机）开机所用 ROM 的版本：认得出的 ROM 是版本名（如 V9.0-98），认不出或这个机型只有一种 ROM 时是文件名；经典 FC 与没有主机时没有这一项" },
           "cartridge": { "$ref": "#/types/CartridgeSummary", "description": "当前的卡带；没有时没有这一项" },
           "frame": { "type": "integer", "minimum": 0, "description": "自上电以来完成的帧数" },
           "cycles": { "type": "integer", "minimum": 0, "description": "自上电以来的 CPU 周期数" },

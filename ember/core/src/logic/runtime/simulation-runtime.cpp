@@ -249,6 +249,7 @@ void SimulationRuntime::publishSnapshot() {
   snapshot.mode = current.mode;
   if (machine_ != nullptr) {
     snapshot.machine = host_;
+    if (!romLabel_.empty()) snapshot.romLabel = romLabel_;
     snapshot.cycles = static_cast<std::int64_t>(machine_->cpuRegisters().cycles);
   }
   snapshot.cartridge = summary_;
@@ -462,6 +463,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_ = summary;
     host_ = insertion.match.host;
+    romLabel_.clear();
     running_ = false;
     failureReported_ = false;
     frame_ = 0;
@@ -485,6 +487,7 @@ rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
     if (inputHook_ != nullptr) inputHook_->machineChanged();
     summary_.reset();
     host_ = boot.machine;
+    romLabel_ = boot.romLabel;
     running_ = false;
     failureReported_ = false;
     frame_ = 0;
@@ -520,6 +523,7 @@ rt::RuntimeState SimulationRuntime::ejectCartridge() {
       if (inputHook_ != nullptr) inputHook_->machineChanged();
       summary_.reset();
       host_.clear();
+      romLabel_.clear();
       running_ = false;
       frame_ = 0;
       failureReported_ = false;

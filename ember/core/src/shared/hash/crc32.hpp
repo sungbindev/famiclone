@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：crc32.hpp
- * 说明：CRC-32（IEEE 802.3，与 zip、PNG 相同）的计算，用于卡带 PRG 与 PRG 加 CHR 的校验值。
+ * 说明：CRC-32（IEEE 802.3，与 zip、PNG 相同）的计算，用于卡带 PRG 与 PRG 加 CHR 的校验值、整机机型 ROM 的识别。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-21
  * ------------------------------------------------------------------------
  */
 
@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <span>
 
-namespace ember::logic::cartridges {
+namespace ember::shared {
 
 namespace detail {
 
@@ -48,4 +48,4 @@ inline constexpr std::array<std::uint32_t, 256> CRC32_TABLE = makeCrc32Table();
 /** 一段数据的校验值。 */
 [[nodiscard]] constexpr std::uint32_t crc32(std::span<const std::uint8_t> data) noexcept { return crc32Continue(0, data); }
 
-}  // namespace ember::logic::cartridges
+}  // namespace ember::shared

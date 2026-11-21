@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：machine-handlers.hpp
- * 说明：machines 模块里外壳自己处理的请求：openRom（选择 ROM 文件并交给核心的 machines.setRom）、openRomDirectory（用资源管理器打开 ROM 目录）。
+ * 说明：machines 模块里外壳自己处理的请求：openRom（选择 ROM 文件并交给核心的 machines.setRom）、openRoms（选择目录并交给核心的 machines.setRoms）、openRomDirectory（用资源管理器打开 ROM 目录）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19

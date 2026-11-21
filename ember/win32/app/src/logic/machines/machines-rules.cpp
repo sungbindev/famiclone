@@ -81,6 +81,29 @@ std::vector<contracts::RomRow> buildRomRows(const std::vector<Machine>& machines
   return rows;
 }
 
+std::optional<RomImport> parseRomImport(const nlohmann::json& result) {
+  const auto added = result.is_object() ? result.find("added") : result.end();
+  const auto skipped = result.is_object() ? result.find("skipped") : result.end();
+  if (added == result.end() || !added->is_array() || skipped == result.end() || !skipped->is_array()) return std::nullopt;
+  RomImport summary;
+  summary.added = static_cast<int>(added->size());
+  for (const auto& item : *skipped) {
+    if (!item.is_object()) continue;
+    if (stringField(item, "reason") == "unrecognized") ++summary.unrecognized;
+    else ++summary.kept;
+  }
+  return summary;
+}
+
+std::pair<std::string, contracts::NotificationLevel> romImportNotice(const RomImport& import) {
+  std::string text;
+  if (import.added > 0) text = "已从目录添加 " + std::to_string(import.added) + " 个机型的 ROM";
+  else text = "目录里没有可添加的 ROM";
+  if (import.kept > 0) text += "；" + std::to_string(import.kept) + " 个文件的机型已有 ROM，未改动";
+  if (import.unrecognized > 0) text += "；" + std::to_string(import.unrecognized) + " 个文件认不出是哪个机型的 ROM，已跳过";
+  return {text, import.added > 0 ? contracts::NotificationLevel::Success : contracts::NotificationLevel::Warning};
+}
+
 std::string machineErrorText(const contracts::CoreError& error) { return error.message.empty() ? std::string(kFailed) : error.message; }
 
 }  // namespace ember::win32::logic

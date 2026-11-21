@@ -30,6 +30,7 @@ class FakeRom final : public contracts::RomModel {
 
   [[nodiscard]] contracts::RomView view() const override { return current; }
   void choose(const std::string& machine) override { calls.push_back("choose " + machine); }
+  void chooseDirectory() override { calls.push_back("chooseDirectory"); }
   void remove(const std::string& machine) override { calls.push_back("remove " + machine); }
   void openDirectory() override { calls.push_back("openDirectory"); }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override {
@@ -88,14 +89,26 @@ TEST(MachinesContent, ShowsTheIntroTheLinkAndOneRowPerMachine) {
   EXPECT_FALSE(third.add->enabled());
 }
 
+TEST(MachinesContent, TheAddFromDirectoryButtonSitsBetweenTheIntroAndTheList) {
+  Scene s;
+  s.open();
+  const auto* button = s.content->addFromDirectoryButton();
+  ASSERT_NE(button, nullptr);
+  EXPECT_GT(button->bounds().width, 0);
+  EXPECT_GT(button->bounds().height, 0);
+  EXPECT_GT(button->bounds().y, s.content->openDirectoryLink()->bounds().y);
+  EXPECT_LT(button->bounds().bottom(), s.content->romRows()[0].add->bounds().y);
+}
+
 TEST(MachinesContent, ButtonsAndTheLinkCallTheModel) {
   Scene s;
   s.open();
   s.click(*s.content->openDirectoryLink());
+  s.click(*s.content->addFromDirectoryButton());
   s.click(*s.content->romRows()[0].add);
   s.click(*s.content->romRows()[1].replace);
   s.click(*s.content->romRows()[1].remove);
-  EXPECT_EQ(s.rom.calls, (std::vector<std::string>{"openDirectory", "choose sb97", "choose sb2000", "remove sb2000"}));
+  EXPECT_EQ(s.rom.calls, (std::vector<std::string>{"openDirectory", "chooseDirectory", "choose sb97", "choose sb2000", "remove sb2000"}));
 }
 
 TEST(MachinesContent, RowsFollowTheModel) {
@@ -113,6 +126,7 @@ TEST(MachinesContent, NoRowsWhileLoadingAndTheLinkIsStillThere) {
   s.open();
   EXPECT_TRUE(s.content->romRows().empty());
   EXPECT_NE(s.content->openDirectoryLink(), nullptr);
+  EXPECT_NE(s.content->addFromDirectoryButton(), nullptr);
   s.rom.current.load = contracts::MachinesLoad::Failed;
   s.rom.current.message = "核心未启动";
   s.rom.notify();

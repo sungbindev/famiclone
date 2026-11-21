@@ -14,12 +14,14 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include "contracts/core-gateway/core-gateway.hpp"
 #include "contracts/machines/machines-model.hpp"
+#include "contracts/shell/shell-registry.hpp"
 
 namespace ember::win32::logic {
 
@@ -44,6 +46,22 @@ struct Machine {
 [[nodiscard]] std::string romStatusText(const Machine& machine);
 /** “机型与 ROM”对话框的行：只有需要 ROM 的机型。 */
 [[nodiscard]] std::vector<contracts::RomRow> buildRomRows(const std::vector<Machine>& machines);
+
+/** 从目录添加 ROM 的结果（machines.openRoms 的 added 与 skipped）统计。 */
+struct RomImport {
+  /** 添加了 ROM 的机型数。 */
+  int added{0};
+  /** 认不出是哪个机型的文件数。 */
+  int unrecognized{0};
+  /** 机型已有 ROM（添加前就有，或目录里更靠前的文件已添加）而没有采用的文件数。 */
+  int kept{0};
+  bool operator==(const RomImport&) const = default;
+};
+
+/** 从 machines.openRoms 的结果读出统计；格式不对时没有值。 */
+[[nodiscard]] std::optional<RomImport> parseRomImport(const nlohmann::json& result);
+/** 从目录添加后给用户的通知文字：有添加是成功，一个也没有添加是警告。 */
+[[nodiscard]] std::pair<std::string, contracts::NotificationLevel> romImportNotice(const RomImport& import);
 
 /** 从请求失败的原因里取出给用户看的说明；没有说明时为“操作失败。”。 */
 [[nodiscard]] std::string machineErrorText(const contracts::CoreError& error);

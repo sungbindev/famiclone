@@ -56,6 +56,27 @@ TEST(MachinesRules, BadShapesAreRejectedOrSkipped) {
   EXPECT_EQ(logic::parseRomMachines(broken)->size(), 1U);
 }
 
+TEST(MachinesRules, RomImportCountsAddedUnrecognizedAndKeptFiles) {
+  const json result = {{"added", json::array({machine("sb2000", "小霸王 2000", true, true), machine("yuxing", "裕兴", true, true)})},
+                       {"skipped", json::array({{{"fileName", "a.bin"}, {"reason", "unrecognized"}}, {{"fileName", "b.bin"}, {"reason", "exists"}}, {{"fileName", "c.bin"}, {"reason", "duplicate"}}, 5})}};
+  const auto summary = logic::parseRomImport(result);
+  ASSERT_TRUE(summary.has_value());
+  EXPECT_EQ(*summary, (logic::RomImport{2, 1, 2}));
+  EXPECT_FALSE(logic::parseRomImport(json::object()).has_value());
+  EXPECT_FALSE(logic::parseRomImport({{"added", 1}, {"skipped", json::array()}}).has_value());
+}
+
+TEST(MachinesRules, RomImportNoticeIsSuccessWhenSomethingWasAddedAndWarningOtherwise) {
+  auto notice = logic::romImportNotice({3, 0, 0});
+  EXPECT_EQ(notice.first, "已从目录添加 3 个机型的 ROM");
+  EXPECT_EQ(notice.second, contracts::NotificationLevel::Success);
+  notice = logic::romImportNotice({1, 2, 4});
+  EXPECT_EQ(notice.first, "已从目录添加 1 个机型的 ROM；4 个文件的机型已有 ROM，未改动；2 个文件认不出是哪个机型的 ROM，已跳过");
+  notice = logic::romImportNotice({0, 1, 0});
+  EXPECT_EQ(notice.first, "目录里没有可添加的 ROM；1 个文件认不出是哪个机型的 ROM，已跳过");
+  EXPECT_EQ(notice.second, contracts::NotificationLevel::Warning);
+}
+
 TEST(MachinesRules, ErrorTextFallsBack) {
   EXPECT_EQ(logic::machineErrorText({"x", "核心未启动"}), "核心未启动");
   EXPECT_EQ(logic::machineErrorText({"x", ""}), "操作失败。");
@@ -137,6 +158,23 @@ TEST(RomController, CancelIsSilentAndErrorsAreNotified) {
   ASSERT_EQ(f.shell.notices.size(), 1U);
   EXPECT_EQ(f.shell.notices[0].first, "小霸王 2000 的 ROM 的 PRG 必须是 512KB");
   EXPECT_EQ(f.shell.notices[0].second, contracts::NotificationLevel::Error);
+}
+
+TEST(RomController, ChooseDirectorySummarizesTheImportAndCancelIsSilent) {
+  RomFixture f;
+  f.attach();
+  f.reply("machines.openRoms", {{"canceled", true}});
+  f.controller.chooseDirectory();
+  EXPECT_TRUE(f.shell.notices.empty());
+  f.reply("machines.openRoms", {{"canceled", false}, {"added", json::array({machine("sb2000", "小霸王 2000", true, true)})}, {"skipped", json::array({{{"fileName", "x.bin"}, {"reason", "unrecognized"}}})}});
+  f.controller.chooseDirectory();
+  ASSERT_EQ(f.shell.notices.size(), 1U);
+  EXPECT_EQ(f.shell.notices[0].first, "已从目录添加 1 个机型的 ROM；1 个文件认不出是哪个机型的 ROM，已跳过");
+  EXPECT_EQ(f.shell.notices[0].second, contracts::NotificationLevel::Success);
+  f.fail("machines.openRoms", "找不到目录");
+  f.controller.chooseDirectory();
+  EXPECT_EQ(f.shell.notices.back().first, "找不到目录");
+  EXPECT_EQ(f.shell.notices.back().second, contracts::NotificationLevel::Error);
 }
 
 TEST(RomController, RemoveNotifiesAndOpenDirectoryReportsFailure) {

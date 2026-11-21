@@ -21,13 +21,29 @@ MainRequestHandlers createMachineHandlers(MachineDependencies dependencies) {
   handlers["machines.openRom"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
     const ParamReader reader(params, {"machine"});
     const std::string machine = reader.requiredString("machine");
-    const auto path = dependencies.dialog.pickFile({"添加 ROM", {{"ROM 文件", {"bin", "nes"}}}, "rom"});
+    const auto path = dependencies.dialog.pickFile({"添加 ROM", {{"ROM 文件", {"bin"}}}, "rom"});
     if (!path) {
       done(contracts::CoreReply::success({{"canceled", true}}));
       return;
     }
     dependencies.core.request("machines.setRom", nlohmann::json{{"machine", machine}, {"path", *path}}, [done](contracts::CoreReply reply) {
       done(reply.ok ? contracts::CoreReply::success({{"canceled", false}, {"machine", reply.result.value("machine", nlohmann::json(nullptr))}}) : std::move(reply));
+    });
+  };
+
+  handlers["machines.openRoms"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
+    const ParamReader reader(params, {});
+    const auto path = dependencies.dialog.pickDirectory({"从目录添加 ROM", "romFolder"});
+    if (!path) {
+      done(contracts::CoreReply::success({{"canceled", true}}));
+      return;
+    }
+    dependencies.core.request("machines.setRoms", nlohmann::json{{"path", *path}}, [done](contracts::CoreReply reply) {
+      if (!reply.ok) {
+        done(std::move(reply));
+        return;
+      }
+      done(contracts::CoreReply::success({{"canceled", false}, {"added", reply.result.value("added", nlohmann::json::array())}, {"skipped", reply.result.value("skipped", nlohmann::json::array())}}));
     });
   };
 

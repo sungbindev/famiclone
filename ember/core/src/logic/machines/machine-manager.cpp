@@ -10,10 +10,14 @@
 
 #include "logic/machines/machine-manager.hpp"
 
+#include <algorithm>
+#include <set>
 #include <utility>
 
 #include "contracts/machines/machines-error.hpp"
+#include "logic/machines/known-roms.hpp"
 #include "shared/errors/core-error.hpp"
+#include "shared/hash/crc32.hpp"
 
 namespace ember::logic::machines {
 
@@ -21,22 +25,16 @@ namespace api = contracts::machines;
 
 namespace {
 
-/** iNES 文件头的大小。 */
-constexpr std::size_t HEADER_SIZE = 16;
-/** 训练器的大小。 */
-constexpr std::size_t TRAINER_SIZE = 512;
-/** PRG 的单位（字节）。 */
-constexpr std::size_t PRG_UNIT = 16 * 1024;
-/** sb97 的 ROM：1024KB 的 PRG。 */
+/** sb97 的 ROM：1024KB。 */
 constexpr std::size_t SB97_PRG_SIZE = 1024 * 1024;
-/** sb2000 的 ROM：512KB 的 PRG。 */
+/** sb2000 的 ROM：512KB。 */
 constexpr std::size_t SB2000_PRG_SIZE = 512 * 1024;
-/** 步步高软驱一号与步步高 98 的 ROM：128KB、2048KB 的 PRG。 */
+/** 步步高软驱一号与步步高 98 的 ROM：128KB、2048KB。 */
 constexpr std::size_t BBK10_PRG_SIZE = 128 * 1024;
 constexpr std::size_t BBK20_PRG_SIZE = 2048 * 1024;
-/** 金字塔 PEC-9588 与 PEC-586、686 的 ROM：512KB 的 PRG。 */
+/** 金字塔 PEC-9588 与 PEC-586、686 的 ROM：512KB。 */
 constexpr std::size_t PYRAMID_PRG_SIZE = 512 * 1024;
-/** 裕兴的 ROM：1024KB 的 PRG（V8.0-C、V8.2-D、V8.3-D、V9.0-98 的学习卡都是这个大小）。 */
+/** 裕兴的 ROM：1024KB（V8.0-C、V8.2-D、V8.3-D、V9.0-98 等学习卡都是这个大小）。 */
 constexpr std::size_t YUXING_PRG_SIZE = 1024 * 1024;
 
 /** 路径里最后一段（文件名）；两种分隔符都认。 */
@@ -74,26 +72,26 @@ api::MachineInfo MachineManager::info(const Entry& item) const {
   result.needsRom = item.needsRom;
   result.supported = item.supported;
   if (item.needsRom) {
-    if (const auto stored = storage_->find(item.id)) result.rom = api::RomFile{stored->fileName, stored->size};
+    if (const auto stored = storage_->find(item.id)) result.rom = api::RomFile{stored->fileName, stored->size, labelOf(item, *stored)};
   }
   return result;
 }
 
-std::vector<std::uint8_t> MachineManager::extractRom(const Entry& item, const std::vector<std::uint8_t>& file) {
-  const bool hasHeader = file.size() >= HEADER_SIZE && file[0] == 'N' && file[1] == 'E' && file[2] == 'S' && file[3] == 0x1A;
-  if (!hasHeader) {
-    if (file.size() != item.prgSize) {
-      throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 必须是 " + std::to_string(item.prgSize / 1024) + "KB 的 ROM 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
-    }
-    return file;
+std::string MachineManager::labelOf(const Entry& item, const api::StoredRom& stored) const {
+  try {
+    const std::vector<std::uint8_t> rom = storage_->load(item.id);
+    checkRom(item, rom);
+    return romLabel(shared::crc32(rom), stored.fileName);
+  } catch (const shared::CoreError&) {
+    // 保存的文件读不出或已经不合格时不让清单失败，只显示文件名。
+    return stored.fileName;
   }
-  const std::size_t prgSize = static_cast<std::size_t>(file[4]) * PRG_UNIT;
-  if (prgSize != item.prgSize) {
-    throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 的 PRG 必须是 " + std::to_string(item.prgSize / 1024) + "KB，这个文件是 " + std::to_string(prgSize / 1024) + "KB");
+}
+
+void MachineManager::checkRom(const Entry& item, const std::vector<std::uint8_t>& file) {
+  if (file.size() != item.prgSize) {
+    throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 必须是 " + std::to_string(item.prgSize / 1024) + "KB 的 ROM 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
   }
-  const std::size_t start = HEADER_SIZE + ((file[6] & 0x04) != 0 ? TRAINER_SIZE : 0);
-  if (file.size() < start + prgSize) throw shared::CoreError(api::ERROR_ROM_INVALID, "ROM 文件被截断，比文件头声明的内容短");
-  return std::vector<std::uint8_t>(file.begin() + static_cast<std::ptrdiff_t>(start), file.begin() + static_cast<std::ptrdiff_t>(start + prgSize));
 }
 
 api::MachinesListResult MachineManager::list() const {
@@ -107,10 +105,46 @@ api::MachinesSetRomResult MachineManager::setRom(const api::MachinesSetRomParams
   if (!target.needsRom) throw shared::CoreError(api::ERROR_ROM_NOT_NEEDED, target.name + " 不需要 ROM");
   if (!target.supported) throw shared::CoreError(api::ERROR_UNSUPPORTED, target.name + " 暂未支持");
   const std::vector<std::uint8_t> file = storage_->readSource(params.path);
-  static_cast<void>(extractRom(target, file));
+  checkRom(target, file);
   storage_->store(target.id, baseName(params.path), file);
   events_->publish(api::MACHINES_CHANGED_EVENT, nlohmann::json(api::MachinesChangedData{target.id}));
   return api::MachinesSetRomResult{info(target)};
+}
+
+api::MachinesSetRomsResult MachineManager::setRoms(const api::MachinesSetRomsParams& params) {
+  api::MachinesSetRomsResult result;
+  std::set<std::string> addedMachines;
+  for (const std::string& path : storage_->listSources(params.path)) {
+    const std::string fileName = baseName(path);
+    const auto skip = [&](const char* reason) { result.skipped.push_back(api::RomSkipped{fileName, reason}); };
+    std::vector<std::uint8_t> file;
+    try {
+      file = storage_->readSource(path);
+    } catch (const shared::CoreError&) {
+      // 读不出或大得不像 ROM 的文件，当作认不出。
+      skip("unrecognized");
+      continue;
+    }
+    const auto known = findKnownRom(shared::crc32(file));
+    if (!known) {
+      skip("unrecognized");
+      continue;
+    }
+    const Entry& target = entry(std::string(known->machine));
+    if (addedMachines.count(target.id) != 0) {
+      skip("duplicate");
+      continue;
+    }
+    if (storage_->find(target.id)) {
+      skip("exists");
+      continue;
+    }
+    storage_->store(target.id, fileName, file);
+    addedMachines.insert(target.id);
+    events_->publish(api::MACHINES_CHANGED_EVENT, nlohmann::json(api::MachinesChangedData{target.id}));
+    result.added.push_back(info(target));
+  }
+  return result;
 }
 
 api::MachinesRemoveRomResult MachineManager::removeRom(const api::MachinesRemoveRomParams& params) {
@@ -129,7 +163,9 @@ api::MachinesBootResult MachineManager::boot(const api::MachinesBootParams& para
   if (!storage_->find(target.id)) throw shared::CoreError(api::ERROR_NO_ROM, target.name + " 还没有添加 ROM，请先在“设置→机型与 ROM”里添加");
   contracts::runtime::MachineBoot request;
   request.machine = target.id;
-  request.rom = extractRom(target, storage_->load(target.id));
+  request.rom = storage_->load(target.id);
+  checkRom(target, request.rom);
+  request.romLabel = romLabel(shared::crc32(request.rom), storage_->find(target.id)->fileName);
   request.powerOn = params.powerOn.value_or(true);
   request.resume = params.resume.value_or(true);
   const contracts::runtime::RuntimeState state = runtime_->bootMachine(std::move(request));

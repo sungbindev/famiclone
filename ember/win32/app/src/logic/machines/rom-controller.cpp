@@ -136,6 +136,21 @@ void RomController::choose(const std::string& machine) {
   });
 }
 
+void RomController::chooseDirectory() {
+  if (shell_ == nullptr) return;
+  ask("machines.openRoms", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
+    if (!reply.ok) {
+      report(machineErrorText(reply.error));
+      return;
+    }
+    if (!reply.result.is_object() || reply.result.value("canceled", false)) return;
+    const auto summary = parseRomImport(reply.result);
+    if (!summary) return;
+    const auto notice = romImportNotice(*summary);
+    shell_->notify(notice.first, notice.second);
+  });
+}
+
 void RomController::remove(const std::string& machine) {
   if (shell_ == nullptr) return;
   const Machine* known = find(machine);

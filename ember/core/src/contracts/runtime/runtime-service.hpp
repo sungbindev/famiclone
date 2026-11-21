@@ -64,6 +64,8 @@ struct MachineBoot {
   std::string machine;
   /** ROM ROM 的内容（不含文件头）。 */
   std::vector<std::uint8_t> rom;
+  /** 界面上显示的 ROM 版本，原样放进运行状态。 */
+  std::string romLabel;
   /** 装配后是否上电。 */
   bool powerOn{true};
   /** 上电后是否直接运行；powerOn 为 false 时无效。 */

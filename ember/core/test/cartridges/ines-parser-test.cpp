@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "contracts/cartridges/cartridge-error.hpp"
-#include "logic/cartridges/crc32.hpp"
+#include "shared/hash/crc32.hpp"
 #include "logic/cartridges/ines-parser.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -25,8 +25,8 @@ namespace {
 
 namespace cart = ember::contracts::cartridges;
 using ember::contracts::mappers::Mirroring;
-using ember::logic::cartridges::crc32;
-using ember::logic::cartridges::crc32Continue;
+using ember::shared::crc32;
+using ember::shared::crc32Continue;
 using ember::logic::cartridges::parseInes;
 
 /** 构造一个文件：16 字节文件头（由参数给出前 10 个字节）、可选的训练器、PRG 与 CHR。数据按位置取值，便于核对。 */

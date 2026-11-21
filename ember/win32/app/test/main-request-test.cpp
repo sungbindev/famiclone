@@ -58,8 +58,8 @@ struct Fixture {
   }
 };
 
-TEST(RequestCatalog, ComesFromTheSchemaAndHasTheFifteenShellRequests) {
-  EXPECT_EQ(std::size(contracts::kShellRequests), 15u);
+TEST(RequestCatalog, ComesFromTheSchemaAndHasTheSixteenShellRequests) {
+  EXPECT_EQ(std::size(contracts::kShellRequests), 16u);
   EXPECT_EQ(contracts::coreRequestKind("runtime.status"), contracts::RequestKind::Ui);
   EXPECT_EQ(contracts::coreRequestKind("cartridges.load"), contracts::RequestKind::MainOnly);
   EXPECT_EQ(contracts::coreRequestKind("inspector.readMemory"), contracts::RequestKind::DebugOnly);
@@ -243,7 +243,29 @@ TEST(MachineHandlers, OpenRomPassesTheMachineAndThePickedFileToTheCore) {
   EXPECT_EQ(reply.result["machine"]["id"], "sb2000");
   EXPECT_EQ(f.core.calls[0].params, json({{"machine", "sb2000"}, {"path", "D:\\rom\\sb2000_bios.bin"}}));
   EXPECT_EQ(f.dialog.fileCalls[0].purpose, "rom");
-  EXPECT_EQ(f.dialog.fileCalls[0].filters[0].extensions, (std::vector<std::string>{"bin", "nes"}));
+  EXPECT_EQ(f.dialog.fileCalls[0].filters[0].extensions, (std::vector<std::string>{"bin"}));
+}
+
+TEST(MachineHandlers, OpenRomsPassesThePickedDirectoryToTheCoreAndReturnsTheSummary) {
+  Fixture f;
+  f.dialog.results.push_back("D:\\rom");
+  f.core.replies["machines.setRoms"] = [](const json&) { return contracts::CoreReply::success({{"added", json::array({{{"id", "sb2000"}}})}, {"skipped", json::array({{{"fileName", "a.bin"}, {"reason", "unrecognized"}}})}}); };
+  const auto reply = f.call("machines.openRoms");
+  ASSERT_TRUE(reply.ok);
+  EXPECT_EQ(reply.result["canceled"], false);
+  EXPECT_EQ(reply.result["added"][0]["id"], "sb2000");
+  EXPECT_EQ(reply.result["skipped"][0]["reason"], "unrecognized");
+  EXPECT_EQ(f.core.calls[0].params, json({{"path", "D:\\rom"}}));
+  EXPECT_EQ(f.dialog.directoryCalls[0].purpose, "romFolder");
+}
+
+TEST(MachineHandlers, OpenRomsCanceledAndFailed) {
+  Fixture f;
+  EXPECT_EQ(f.call("machines.openRoms").result, json({{"canceled", true}}));
+  EXPECT_TRUE(f.core.calls.empty());
+  f.dialog.results.push_back("D:\\nowhere");
+  f.core.replies["machines.setRoms"] = [](const json&) { return contracts::CoreReply::failure("machines.fileNotFound", "找不到目录"); };
+  EXPECT_EQ(f.call("machines.openRoms").error.code, "machines.fileNotFound");
 }
 
 TEST(MachineHandlers, OpenRomCanceledAndFailedRom) {

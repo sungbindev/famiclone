@@ -143,7 +143,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   module.menuItems.push_back(commandItem("machine", "runtime.muteToggle", true));
   module.menuItems.push_back(commandItem("machine", "runtime.familyKeyboardToggle"));
 
-  // 系统栏左侧的项：主机型号、卡带名、mapper 插件；没有信息的项不显示
+  // 系统栏左侧的项：主机型号、ROM 版本、卡带名、mapper 插件；没有信息的项不显示
   const auto statusItem = [](const char* id, const char* title, std::function<std::optional<std::string>()> text) {
     contracts::ShellStatusItemDefinition item;
     item.id = id;
@@ -155,6 +155,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
     return item;
   };
   module.statusItems.push_back(statusItem("runtime.host", "主机型号", [&controller] { return hostText(controller.status(), controller.selectedMachine()); }));
+  module.statusItems.push_back(statusItem("runtime.rom", "ROM 版本", [&controller] { return romVersionText(controller.status(), controller.selectedMachine(), controller.machines()); }));
   module.statusItems.push_back(statusItem("runtime.cartridge", "卡带", [&controller] { return cartridgeText(controller.status()); }));
   module.statusItems.push_back(statusItem("runtime.plugin", "mapper 插件", [&controller] { return pluginText(controller.status()); }));
 

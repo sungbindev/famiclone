@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：machines-content.hpp
- * 说明：“机型与 ROM”对话框的内容：一段说明与“打开 ROM 目录”链接，下面每个需要 ROM 的整机机型一行，显示 ROM 状态与按钮（添加 ROM 文件，或替换与移除）。
+ * 说明：“机型与 ROM”对话框的内容：一段说明与“打开 ROM 目录”链接、“从目录添加 ROM”按钮，下面每个需要 ROM 的整机机型一行，显示 ROM 状态与按钮（添加 ROM 文件，或替换与移除）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -46,6 +46,8 @@ class MachinesContent final : public rujian::ui::Widget {
   [[nodiscard]] const std::vector<RomWidgets>& romRows() const { return romRows_; }
   /** “打开 ROM 目录”链接。 */
   [[nodiscard]] rujian::ui::Button* openDirectoryLink() const { return openDirectory_; }
+  /** “从目录添加 ROM”按钮。 */
+  [[nodiscard]] rujian::ui::Button* addFromDirectoryButton() const { return addFromDirectory_; }
 
  private:
   void refresh();
@@ -59,6 +61,7 @@ class MachinesContent final : public rujian::ui::Widget {
   std::string signature_;
   std::vector<RomWidgets> romRows_;
   rujian::ui::Button* openDirectory_{nullptr};
+  rujian::ui::Button* addFromDirectory_{nullptr};
 };
 
 }  // namespace ember::win32::ui

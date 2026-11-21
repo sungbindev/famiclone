@@ -31,6 +31,7 @@ constexpr const char* kRomAdd = "添加 ROM 文件";
 constexpr const char* kRomReplace = "替换";
 constexpr const char* kRomRemove = "移除";
 constexpr const char* kRomOpenDirectory = "打开 ROM 目录";
+constexpr const char* kRomAddFromDirectory = "从目录添加 ROM";
 
 /** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
 constexpr double kPaneRightPadding = 10;
@@ -93,6 +94,7 @@ void MachinesContent::refresh() {
 void MachinesContent::rebuild(const contracts::RomView& view) {
   romRows_.clear();
   openDirectory_ = nullptr;
+  addFromDirectory_ = nullptr;
   listPanel_ = nullptr;
 
   auto stack = std::make_unique<Stack>();
@@ -105,6 +107,11 @@ void MachinesContent::rebuild(const contracts::RomView& view) {
   link->setOnClick([this] { rom_.openDirectory(); });
   openDirectory_ = static_cast<Button*>(callout->addContent(std::move(link)));
   stack->addChild(std::move(callout));
+  auto toolbar = std::make_unique<rujian::ui::Row>();
+  auto addFromDirectory = std::make_unique<Button>(kRomAddFromDirectory);
+  addFromDirectory->setOnClick([this] { rom_.chooseDirectory(); });
+  addFromDirectory_ = static_cast<Button*>(toolbar->addChild(std::move(addFromDirectory)));
+  stack->addChild(std::move(toolbar));
   if (view.load == contracts::MachinesLoad::Failed) stack->addChild(errorState(view.message));
   if (!view.rows.empty()) {
     auto list = std::make_unique<List>();

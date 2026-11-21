@@ -27,6 +27,7 @@ class DiskRomStorage final : public contracts::machines::RomStorage {
   explicit DiskRomStorage(std::filesystem::path root) : root_(std::move(root)) {}
 
   [[nodiscard]] std::vector<std::uint8_t> readSource(const std::string& path) const override;
+  [[nodiscard]] std::vector<std::string> listSources(const std::string& directory) const override;
   [[nodiscard]] std::optional<contracts::machines::StoredRom> find(const std::string& machine) const override;
   [[nodiscard]] std::vector<std::uint8_t> load(const std::string& machine) const override;
   void store(const std::string& machine, const std::string& fileName, const std::vector<std::uint8_t>& bytes) override;

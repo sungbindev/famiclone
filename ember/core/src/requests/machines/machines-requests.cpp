@@ -22,6 +22,9 @@ void addMachineRequests(platform::RequestRouter& router, std::shared_ptr<contrac
   router.add("machines", contract::MACHINES_SET_ROM_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     return nlohmann::json(service->setRom(contract::parseMachinesSetRomParams(params, "params")));
   });
+  router.add("machines", contract::MACHINES_SET_ROMS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->setRoms(contract::parseMachinesSetRomsParams(params, "params")));
+  });
   router.add("machines", contract::MACHINES_REMOVE_ROM_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     return nlohmann::json(service->removeRom(contract::parseMachinesRemoveRomParams(params, "params")));
   });

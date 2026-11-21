@@ -179,6 +179,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   std::unique_ptr<contracts::mappers::MapperCartridge> cartridge_;
   std::optional<contracts::runtime::CartridgeSummary> summary_;
   std::string host_;
+  /** 整机机型开机所用 ROM 的版本；装入卡带、取出时清空。 */
+  std::string romLabel_;
   /** 最近一次发布的快照里机器是否带鼠标，用来发现运行中的变化（如学习机进入 FC 兼容模式）。 */
   bool mouse_{false};
   bool running_{false};

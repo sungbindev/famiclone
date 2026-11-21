@@ -39,7 +39,7 @@ json machinesJson() {
   return {{"machines",
            json::array({{{"id", "fc"}, {"name", "经典 FC"}, {"needsRom", false}, {"supported", true}},
                         {{"id", "sb97"}, {"name", "小霸王 97"}, {"needsRom", true}, {"supported", true}},
-                        {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"name", "SB2K_ROM.bin"}}}},
+                        {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"fileName", "SB2K_ROM.bin"}, {"size", 524288}, {"label", "SB2K_ROM.bin"}}}},
                         {{"id", "bbk10"}, {"name", "步步高软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
 }
 
@@ -70,6 +70,22 @@ TEST(RuntimeRules, StatusItemsOnlyHaveTextWhenThereIsInformation) {
   EXPECT_EQ(logic::cartridgeText(loaded), "Super Game.nes");
   EXPECT_EQ(logic::pluginText(loaded), "NROM");
   EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "unknown1")), "fc"), "unknown1");
+}
+
+TEST(RuntimeRules, RomVersionFollowsTheRunningRomOrTheSelectedMachinesRom) {
+  const auto machines = logic::parseMachines(machinesJson());
+  json running = statusJson("on", "running", "yuxing");
+  running["romLabel"] = "V9.0-98";
+  EXPECT_EQ(logic::romVersionText(logic::parseRuntimeStatus(running), "sb2000", machines), "V9.0-98") << "开机后用正在运行的 ROM，不看已选机型";
+  EXPECT_FALSE(logic::romVersionText(logic::parseRuntimeStatus(statusJson("on", "running", "yuxing")), "sb2000", machines).has_value());
+  json classic = statusJson("on", "running", "fc", false, "a.nes");
+  classic["romLabel"] = "x";
+  EXPECT_FALSE(logic::romVersionText(logic::parseRuntimeStatus(classic), "sb2000", machines).has_value());
+  const auto none = logic::parseRuntimeStatus(statusJson("off", "paused"));
+  EXPECT_EQ(logic::romVersionText(none, "sb2000", machines), "SB2K_ROM.bin") << "没有开机时是已选机型已添加的 ROM";
+  EXPECT_FALSE(logic::romVersionText(none, "sb97", machines).has_value());
+  EXPECT_FALSE(logic::romVersionText(none, "fc", machines).has_value());
+  EXPECT_FALSE(logic::romVersionText(std::nullopt, "sb2000", machines).has_value());
 }
 
 TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {

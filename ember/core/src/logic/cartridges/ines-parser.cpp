@@ -17,8 +17,8 @@
 #include <string>
 
 #include "contracts/cartridges/cartridge-error.hpp"
-#include "logic/cartridges/crc32.hpp"
 #include "shared/errors/core-error.hpp"
+#include "shared/hash/crc32.hpp"
 
 namespace ember::logic::cartridges {
 
@@ -114,8 +114,8 @@ CartridgeImage parseInes(std::span<const std::uint8_t> file) {
   const auto chrBegin = prgBegin + static_cast<std::ptrdiff_t>(sizes.prg);
   image.prg.assign(prgBegin, chrBegin);
   image.chr.assign(chrBegin, chrBegin + static_cast<std::ptrdiff_t>(sizes.chr));
-  description.crc32Prg = crc32(image.prg);
-  description.crc32All = crc32Continue(description.crc32Prg, image.chr);
+  description.crc32Prg = shared::crc32(image.prg);
+  description.crc32All = shared::crc32Continue(description.crc32Prg, image.chr);
   return image;
 }
 

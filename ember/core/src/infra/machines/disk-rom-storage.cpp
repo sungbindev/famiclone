@@ -10,6 +10,8 @@
 
 #include "infra/machines/disk-rom-storage.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <string>
 
@@ -60,6 +62,32 @@ std::vector<std::uint8_t> DiskRomStorage::readSource(const std::string& path) co
   stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   if (stream.gcount() != static_cast<std::streamsize>(bytes.size())) throw shared::CoreError(api::ERROR_FILE_UNREADABLE, "读取文件时中断：" + path);
   return bytes;
+}
+
+std::vector<std::string> DiskRomStorage::listSources(const std::string& directory) const {
+  const fs::path folder = toPath(directory);
+  std::error_code error;
+  const auto status = fs::status(folder, error);
+  if (error || !fs::exists(status)) throw shared::CoreError(api::ERROR_FILE_NOT_FOUND, "找不到目录：" + directory);
+  if (!fs::is_directory(status)) throw shared::CoreError(api::ERROR_FILE_UNREADABLE, "不是目录：" + directory);
+
+  std::vector<fs::path> files;
+  for (fs::directory_iterator item(folder, error), end; !error && item != end; item.increment(error)) {
+    std::error_code entryError;
+    if (!item->is_regular_file(entryError) || entryError) continue;
+    std::string extension = fileNameOf(item->path().extension());
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char letter) { return static_cast<char>(std::tolower(letter)); });
+    if (extension == ".bin") files.push_back(item->path());
+  }
+  if (error) throw shared::CoreError(api::ERROR_FILE_UNREADABLE, "无法读取目录：" + directory);
+  std::sort(files.begin(), files.end());
+
+  std::vector<std::string> result;
+  for (const fs::path& file : files) {
+    const std::u8string text = file.u8string();
+    result.emplace_back(text.begin(), text.end());
+  }
+  return result;
 }
 
 fs::path DiskRomStorage::directoryOf(const std::string& machine) const {

@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：清单里的机型顺序固定；机型的“已支持”以程序里实际有这个主机型号为准（目前 fc、sb97、sb2000、bbk10、bbk20、pec9588、pec586 与 yuxing）；
- *       ROM 文件是只含程序的纯文件，大小等于机型的 PRG 容量；也接受带 iNES 文件头的文件（16 字节文件头，可选的 512 字节训练器，之后是 PRG）。保存时保持文件原样，开机时才取出 PRG 交给主机。
+ *       ROM 是只含程序的纯 bin 文件，大小等于机型的 ROM 容量，不接受带 iNES 文件头的文件；保存时保持文件原样，开机时原样交给主机。
+ *       ROM 的版本按内容的 CRC-32 对照已知 ROM 表（known-roms）认出，从目录添加也靠它认出机型。
  * ------------------------------------------------------------------------
  */
 
@@ -30,6 +31,7 @@ class MachineManager final : public contracts::machines::MachineService {
 
   [[nodiscard]] contracts::machines::MachinesListResult list() const override;
   contracts::machines::MachinesSetRomResult setRom(const contracts::machines::MachinesSetRomParams& params) override;
+  contracts::machines::MachinesSetRomsResult setRoms(const contracts::machines::MachinesSetRomsParams& params) override;
   contracts::machines::MachinesRemoveRomResult removeRom(const contracts::machines::MachinesRemoveRomParams& params) override;
   contracts::machines::MachinesBootResult boot(const contracts::machines::MachinesBootParams& params) override;
 
@@ -46,8 +48,10 @@ class MachineManager final : public contracts::machines::MachineService {
 
   [[nodiscard]] const Entry& entry(const std::string& id) const;
   [[nodiscard]] contracts::machines::MachineInfo info(const Entry& item) const;
-  /** 取出机型的 ROM（PRG）并检查；@throws shared::CoreError machines.romInvalid。 */
-  [[nodiscard]] static std::vector<std::uint8_t> extractRom(const Entry& item, const std::vector<std::uint8_t>& file);
+  /** 检查 ROM 文件的大小符合机型（ROM 是不带文件头的纯 bin）；@throws shared::CoreError machines.romInvalid。 */
+  static void checkRom(const Entry& item, const std::vector<std::uint8_t>& file);
+  /** 机型已保存的 ROM 的版本：读不出内容时用文件名。 */
+  [[nodiscard]] std::string labelOf(const Entry& item, const contracts::machines::StoredRom& stored) const;
 
   std::shared_ptr<contracts::machines::RomStorage> storage_;
   std::shared_ptr<contracts::runtime::RuntimeService> runtime_;

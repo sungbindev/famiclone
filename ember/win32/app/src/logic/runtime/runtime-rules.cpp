@@ -49,6 +49,7 @@ std::optional<RuntimeStatus> parseRuntimeStatus(const nlohmann::json& result) {
   if (const auto machine = stringOf(result, "machine"); !machine.empty()) status.machine = machine;
   if (const auto found = result.find("cartridge"); found != result.end() && found->is_object()) status.cartridge = RuntimeCartridge{stringOf(*found, "path"), stringOf(*found, "pluginName")};
   status.mouse = boolOf(result, "mouse");
+  if (const auto label = stringOf(result, "romLabel"); !label.empty()) status.romLabel = label;
   return status;
 }
 
@@ -64,6 +65,7 @@ std::vector<MachineEntry> parseMachines(const nlohmann::json& result) {
     entry.needsRom = boolOf(item, "needsRom");
     entry.supported = boolOf(item, "supported");
     entry.hasRom = item.contains("rom") && !item["rom"].is_null();
+    if (entry.hasRom && item["rom"].is_object()) entry.romLabel = stringOf(item["rom"], "label");
     if (!entry.id.empty()) machines.push_back(std::move(entry));
   }
   return machines;
@@ -111,6 +113,15 @@ std::optional<std::string> hostText(const std::optional<RuntimeStatus>& status, 
     if (machine == host.id) return std::string(host.name);
   }
   return machine;
+}
+
+std::optional<std::string> romVersionText(const std::optional<RuntimeStatus>& status, const std::string& selectedMachine, const std::vector<MachineEntry>& machines) {
+  if (!status) return std::nullopt;
+  if (status->machine) return *status->machine == kClassicMachine ? std::nullopt : status->romLabel;
+  if (selectedMachine == kClassicMachine) return std::nullopt;
+  const auto info = std::find_if(machines.begin(), machines.end(), [&selectedMachine](const MachineEntry& entry) { return entry.id == selectedMachine; });
+  if (info == machines.end() || !info->hasRom || info->romLabel.empty()) return std::nullopt;
+  return info->romLabel;
 }
 
 std::optional<std::string> cartridgeText(const std::optional<RuntimeStatus>& status) {

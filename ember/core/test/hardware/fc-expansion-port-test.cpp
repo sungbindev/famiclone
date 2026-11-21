@@ -107,7 +107,7 @@ TEST(FcExpansionPort, BitZeroOfTheWriteIsRecordedAsTheTapeSignal) {
   bench.port.write(0x4016, 0x04);
   bench.deck.stop();
   ASSERT_EQ(samples.size(), 2000U);
-  EXPECT_EQ(samples[0], -ember::logic::hardware::TapeDeck::RECORD_AMPLITUDE);
+  EXPECT_EQ(samples[0], 0) << "第一次拉高之前数据线不叠加";
   EXPECT_EQ(samples[1000], ember::logic::hardware::TapeDeck::RECORD_AMPLITUDE);
   EXPECT_EQ(samples[1999], ember::logic::hardware::TapeDeck::RECORD_AMPLITUDE);
 }

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：disk-tape-store.hpp
- * 说明：磁带文件存取的磁盘实现：用静态链接的 FFmpeg 库把声音文件解码成 96 kHz 立体声的采样流，录音写成 32 kHz 单声道的 WAV 文件。
+ * 说明：磁带文件存取的磁盘实现：用静态链接的 FFmpeg 库把声音文件解码成 96 kHz 立体声的采样流，录音写成 32 kHz 单声道的 WAV 文件；在已有的 WAV 磁带上从某个位置开始录音时，合成 96 kHz 立体声的 WAV 替换原文件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -28,6 +28,7 @@ class DiskTapeStore final : public contracts::media::TapeStore {
 
   [[nodiscard]] std::unique_ptr<contracts::hardware::TapeSource> open(const std::string& path) const override;
   [[nodiscard]] std::unique_ptr<contracts::hardware::TapeSink> create(const std::string& path) const override;
+  [[nodiscard]] std::unique_ptr<contracts::hardware::TapeSink> overwrite(const std::string& path, double startSeconds) const override;
 
  private:
   std::shared_ptr<platform::ErrorLog> errors_;

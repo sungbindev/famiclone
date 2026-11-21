@@ -14,12 +14,16 @@
  *       文件大小与盘片不同或读不出来（别的程序正在保存的中间状态）时忽略，等下一次变化；
  *       所有读写镜像文件的动作都在模拟线程上进行，彼此按顺序执行，不会用旧内容覆盖新内容；
  *       写回失败时区间保留，发 media.floppySaveFailed（成功前只发一次）并写错误日志，后台线程之后每隔重试间隔重试一次；
- *       取出与换盘前、核心停止（shutdown）时也先把未写回的修改写回。
+ *       取出与换盘前、核心停止（shutdown）时也先把未写回的修改写回；
+ *       磁带载入后（录音结束后录好的文件也算）用一个后台线程读一遍声音得出时间轴（读的是独立打开的另一份来源，不碰磁带机），结果只存在内存里；
+ *       在已有的磁带上录音时，复制录音位置之前内容的去向由存取服务在请求线程里创建（不占模拟线程），录音结束时去向把后面的内容接上并替换磁带文件；
+ *       每盘磁带有自己的序号，取出或换磁带时先取消并等待上一份分析结束，分析结果只在序号仍是当前的磁带时才采用。
  * ------------------------------------------------------------------------
  */
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
@@ -79,6 +83,8 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   contracts::media::MediaTapeRecordResult tapeRecord(const contracts::media::MediaTapeRecordParams& params) override;
   contracts::media::MediaTapeStopResult tapeStop() override;
   [[nodiscard]] contracts::media::MediaTapeStatusResult tapeStatus() override;
+  contracts::media::MediaTapeSeekResult tapeSeek(const contracts::media::MediaTapeSeekParams& params) override;
+  [[nodiscard]] contracts::media::MediaTapeTimelineResult tapeTimeline() override;
   void motorChanged(unsigned drive, bool on) override;
 
  private:
@@ -147,8 +153,24 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   template <typename Action>
   contracts::media::TapeStatus withDeck(Action action);
 
-  /** 发磁带机的 media.changed。 */
+  /** 发 media.changed（磁带机）。 */
   void publishTapeChanged();
+
+  /** 在磁带机里已有的磁带上从当前位置开始录音（tapeRecord 没有给文件时）。 */
+  contracts::media::MediaTapeRecordResult recordOverLoadedTape();
+
+  /** 磁带机当前的状态：磁带机自己的状态加上磁带的序号。在模拟线程上调用。 */
+  contracts::media::TapeStatus readTape();
+
+  /** 停止上一盘磁带的分析（等后台线程结束），把时间轴换成这盘磁带的初始状态；path 为空表示没有可分析的磁带（state 为 none），否则启动后台分析。 */
+  void restartAnalysis(const std::string& path, std::int64_t serial);
+
+  /** 后台分析的线程体：读一遍磁带算出时间轴，结束后发 media.tapeAnalyzed。 */
+  void analyzeTapeFile(const std::string& path, std::int64_t serial, const std::shared_ptr<std::atomic<bool>>& cancel);
+
+  /** 只在这盘磁带还是当前的磁带时，用 change 修改时间轴。 */
+  template <typename Change>
+  void updateTimeline(std::int64_t serial, Change change);
 
   std::shared_ptr<contracts::media::FloppyImageStore> store_;
   std::shared_ptr<contracts::media::TapeStore> tapeStore_;
@@ -166,6 +188,15 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   std::mutex watchMutex_;
   std::vector<std::unique_ptr<platform::FileWatcher>> watchers_;
   std::thread autoSaveThread_;
+  /** 磁带的序号：每放入、取出或换掉一盘磁带加 1。 */
+  std::atomic<std::int64_t> tapeSerial_{0};
+  /** 时间轴的最新结果（由 timelineMutex_ 保护）：只存在内存里。 */
+  std::mutex timelineMutex_;
+  contracts::media::TapeTimeline timeline_;
+  /** 分析线程与它的取消标志（由 analysisMutex_ 保护，启动与等待结束都在锁里）。 */
+  std::mutex analysisMutex_;
+  std::thread analysisThread_;
+  std::shared_ptr<std::atomic<bool>> analysisCancel_;
 };
 
 }  // namespace ember::logic::media

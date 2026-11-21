@@ -9,6 +9,7 @@
  *       学习机写盘后核心会自动把镜像写回文件，界面没有保存操作；自动写回失败（media.floppySaveFailed）时用通知给出原因；
  *       软驱的读写状态与磁道、磁带的位置、打印机的状态随机器运行不断变化，核心不推送，所以设备面板展开期间由界面经 refresh 定时读取，面板没有展开时不读取；
  *       失败时用通知提示；打印机每输出一页，用通知告知文件名（规则见 docs/05-界面.md 第 4.3 节）。
+ *       磁带的时间轴（声音大小与空白段）由核心在后台分析：读到磁带后、磁带的序号变了或还在分析中（读进度）时读取，收到 media.tapeAnalyzed 时立即再读；没有磁带时清空。
  * ------------------------------------------------------------------------
  */
 
@@ -69,6 +70,8 @@ class MediaController final : public contracts::MediaModel {
   void playTape() override;
   void recordTape() override;
   void stopTape() override;
+  void seekTape(double seconds) override;
+  [[nodiscard]] contracts::MediaTimelineView timelineView() const override;
   void refresh() override { refreshAll(); }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override;
 
@@ -82,6 +85,8 @@ class MediaController final : public contracts::MediaModel {
   void refreshFloppies();
   void refreshPrinter();
   void refreshTape();
+  /** 读取磁带的时间轴（分析结果由核心在后台算出，结果出来时核心发 media.tapeAnalyzed）。 */
+  void refreshTimeline();
   void clear();
   void changed();
   /** 请求：回复只在仍接着外壳时处理。 */
@@ -99,10 +104,13 @@ class MediaController final : public contracts::MediaModel {
   std::vector<FloppyState> floppies_;
   std::optional<PrinterMode> printer_;
   std::optional<TapeState> tape_;
+  /** 磁带的时间轴；没有磁带、还没读到时没有值，内容里的序号与磁带的序号不同时说明是上一盘的。 */
+  std::optional<TimelineState> timeline_;
   /** 最近一次读取的编号：迟到的旧结果不覆盖新结果。 */
   std::uint64_t floppyRequest_{0};
   std::uint64_t printerRequest_{0};
   std::uint64_t tapeRequest_{0};
+  std::uint64_t timelineRequest_{0};
   std::map<int, std::function<void()>> listeners_;
   int nextListener_{1};
 };

@@ -11,10 +11,14 @@
 #include "infra/media/disk-tape-store.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cctype>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -57,6 +61,44 @@ void writeLe32(std::uint8_t* target, std::uint32_t value) {
   for (unsigned index = 0; index < 4; ++index) target[index] = static_cast<std::uint8_t>(value >> (index * 8));
 }
 
+/** 16 位 PCM 的 WAV 文件头（44 字节），数据长度先占位，写完后用 patchWavSizes 补上。 */
+std::array<std::uint8_t, 44> wavHeader(unsigned sampleRate, unsigned channels) {
+  std::array<std::uint8_t, 44> header{};
+  std::memcpy(header.data(), "RIFF", 4);
+  std::memcpy(header.data() + 8, "WAVEfmt ", 8);
+  writeLe32(header.data() + 16, 16);
+  header[20] = 1;  // PCM
+  header[22] = static_cast<std::uint8_t>(channels);
+  writeLe32(header.data() + 24, sampleRate);
+  writeLe32(header.data() + 28, sampleRate * channels * 2);
+  header[32] = static_cast<std::uint8_t>(channels * 2);  // 每帧字节数
+  header[34] = 16;                                       // 位数
+  std::memcpy(header.data() + 36, "data", 4);
+  return header;
+}
+
+/** 把文件头里的两个长度补成实际写入的数据字节数。 */
+void patchWavSizes(std::ofstream& stream, std::uint64_t dataBytes) {
+  std::uint8_t size[4];
+  writeLe32(size, static_cast<std::uint32_t>(36 + dataBytes));
+  stream.seekp(4);
+  stream.write(reinterpret_cast<const char*>(size), 4);
+  writeLe32(size, static_cast<std::uint32_t>(dataBytes));
+  stream.seekp(40);
+  stream.write(reinterpret_cast<const char*>(size), 4);
+}
+
+/** 16 位采样按小端写入文件。 */
+void writeSamples(std::ofstream& stream, const std::int16_t* samples, std::size_t count) {
+  std::vector<std::uint8_t> bytes(count * 2);
+  for (std::size_t index = 0; index < count; ++index) {
+    const auto value = static_cast<std::uint16_t>(samples[index]);
+    bytes[index * 2] = static_cast<std::uint8_t>(value & 0xFF);
+    bytes[index * 2 + 1] = static_cast<std::uint8_t>(value >> 8);
+  }
+  stream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
 /** 解码失败的原因。 */
 class DecodeFailure : public std::runtime_error {
  public:
@@ -90,6 +132,30 @@ class AudioInput {
   [[nodiscard]] double duration() const { return format_->duration == AV_NOPTS_VALUE ? 0.0 : static_cast<double>(format_->duration) / AV_TIME_BASE; }
   /** 不是单声道。 */
   [[nodiscard]] bool stereo() const { return codec_->ch_layout.nb_channels != 1; }
+
+  /**
+   * 跳到 seconds 之前最近的可解码位置，丢掉解码器与重采样器里的旧内容；只在刚打开、还没有解码时调用。
+   * 成功后，下一次 decodeMore 解出的第一帧的起点用 decodedStart 读出。
+   * @returns 文件不支持跳转时为 false，仍从头解码。
+   */
+  bool seekTo(double seconds) {
+    const AVStream* stream = format_->streams[streamIndex_];
+    std::int64_t target = av_rescale_q(static_cast<std::int64_t>(seconds * AV_TIME_BASE), AV_TIME_BASE_Q, stream->time_base);
+    if (stream->start_time != AV_NOPTS_VALUE) target += stream->start_time;
+    if (av_seek_frame(format_, streamIndex_, target, AVSEEK_FLAG_BACKWARD) < 0) return false;
+    avcodec_flush_buffers(codec_);
+    if (swr_init(resampler_) < 0) throw DecodeFailure("无法重置重采样器");
+    finished_ = false;
+    startPending_ = true;
+    startKnown_ = false;
+    return true;
+  }
+
+  /** 跳转后第一帧的起点（秒）；文件没有给出时间戳时 known 为 false。 */
+  [[nodiscard]] double decodedStart(bool& known) const {
+    known = startKnown_;
+    return startSeconds_;
+  }
 
   /**
    * 追加解码出的采样（左右交错）到 samples。
@@ -178,6 +244,16 @@ class AudioInput {
 
   /** 把一帧（为空表示取出重采样器里剩下的）重采样后追加到 samples。 */
   void convert(const AVFrame* input, std::vector<std::int16_t>& samples) {
+    if (input != nullptr && startPending_) {
+      startPending_ = false;
+      const std::int64_t stamp = input->best_effort_timestamp;
+      if (stamp != AV_NOPTS_VALUE) {
+        const AVStream* stream = format_->streams[streamIndex_];
+        const std::int64_t origin = stream->start_time == AV_NOPTS_VALUE ? 0 : stream->start_time;
+        startSeconds_ = static_cast<double>(stamp - origin) * av_q2d(stream->time_base);
+        startKnown_ = true;
+      }
+    }
     const int inputCount = input == nullptr ? 0 : input->nb_samples;
     const int capacity = swr_get_out_samples(resampler_, inputCount);
     if (capacity <= 0) return;
@@ -199,6 +275,10 @@ class AudioInput {
   AVFrame* frame_{nullptr};
   int streamIndex_{-1};
   bool finished_{false};
+  /** 跳转后还没有解出第一帧，以及第一帧起点的换算结果。 */
+  bool startPending_{false};
+  bool startKnown_{false};
+  double startSeconds_{0};
 };
 
 /** 探测结果。 */
@@ -246,17 +326,57 @@ class LibavTapeSource final : public hw::TapeSource {
     pending_.clear();
     position_ = 0;
     failed_ = false;
+    seekPending_ = false;
+    skip_ = 0;
+  }
+
+  void seek(std::uint64_t frame) override {
+    if (frame == 0) {
+      rewind();
+      return;
+    }
+    input_.reset();
+    pending_.clear();
+    position_ = 0;
+    failed_ = false;
+    // 真正的跳转在下一次 read 打开文件时进行：跳到目标前的可解码位置，再丢掉多出的帧
+    seekPending_ = true;
+    seekTarget_ = frame;
+    skip_ = 0;
   }
 
   [[nodiscard]] double durationSeconds() const override { return info_.duration; }
   [[nodiscard]] bool stereo() const override { return info_.stereo; }
 
  private:
-  /** 解码出更多采样；解完或出错（当作磁带放完并写日志）时为 false。 */
+  /** 解码出更多采样；解完或出错（当作磁带放完并写日志）时为 false。定位后把目标之前的帧丢掉。 */
   bool refill() {
     try {
-      if (input_ == nullptr) input_ = std::make_unique<AudioInput>(file_);
-      return input_->decodeMore(pending_);
+      if (input_ == nullptr) {
+        input_ = std::make_unique<AudioInput>(file_);
+        if (seekPending_ && !input_->seekTo(static_cast<double>(seekTarget_) / hw::TapeSource::SAMPLE_RATE)) {
+          // 文件不支持跳转：从头解码，把目标之前的帧都丢掉
+          seekPending_ = false;
+          skip_ = seekTarget_;
+        }
+      }
+      for (;;) {
+        const bool more = input_->decodeMore(pending_);
+        if (seekPending_ && !pending_.empty()) {
+          seekPending_ = false;
+          bool known = false;
+          const double start = input_->decodedStart(known);
+          const auto startFrame = known ? static_cast<std::uint64_t>(std::llround(std::max(0.0, start) * hw::TapeSource::SAMPLE_RATE)) : seekTarget_;
+          skip_ = seekTarget_ > startFrame ? seekTarget_ - startFrame : 0;
+        }
+        if (skip_ > 0 && !pending_.empty()) {
+          const std::size_t drop = static_cast<std::size_t>(std::min<std::uint64_t>(skip_, pending_.size() / 2));
+          pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(drop * 2));
+          skip_ -= drop;
+        }
+        if (!pending_.empty()) return true;
+        if (!more) return false;
+      }
     } catch (const DecodeFailure& error) {
       failed_ = true;
       input_.reset();
@@ -275,6 +395,10 @@ class LibavTapeSource final : public hw::TapeSource {
   std::vector<std::int16_t> pending_;
   std::size_t position_{0};
   bool failed_{false};
+  /** 定位待执行（下次打开文件时跳转）、目标帧，以及还要丢掉的帧数。 */
+  bool seekPending_{false};
+  std::uint64_t seekTarget_{0};
+  std::uint64_t skip_{0};
 };
 
 /** 录音的 WAV 文件：单声道、16 位、32 kHz。 */
@@ -282,18 +406,8 @@ class WavTapeSink final : public hw::TapeSink {
  public:
   WavTapeSink(const fs::path& file, const std::string& display) : stream_(file, std::ios::binary | std::ios::trunc), display_(display) {
     if (!stream_) throw shared::CoreError(api::ERROR_SAVE_FAILED, "无法创建录音文件：" + display);
-    std::uint8_t header[HEADER_SIZE] = {};
-    std::memcpy(header, "RIFF", 4);
-    std::memcpy(header + 8, "WAVEfmt ", 8);
-    writeLe32(header + 16, 16);
-    header[20] = 1;  // PCM
-    header[22] = 1;  // 单声道
-    writeLe32(header + 24, SAMPLE_RATE);
-    writeLe32(header + 28, SAMPLE_RATE * 2);
-    header[32] = 2;   // 每帧 2 字节
-    header[34] = 16;  // 位数
-    std::memcpy(header + 36, "data", 4);
-    stream_.write(reinterpret_cast<const char*>(header), HEADER_SIZE);
+    const auto header = wavHeader(SAMPLE_RATE, 1);
+    stream_.write(reinterpret_cast<const char*>(header.data()), static_cast<std::streamsize>(header.size()));
     if (!stream_) throw shared::CoreError(api::ERROR_SAVE_FAILED, "无法写入录音文件：" + display);
   }
 
@@ -307,26 +421,14 @@ class WavTapeSink final : public hw::TapeSink {
 
   void write(const std::int16_t* samples, std::size_t count) override {
     if (finished_) return;
-    std::vector<std::uint8_t> bytes(count * 2);
-    for (std::size_t index = 0; index < count; ++index) {
-      const auto value = static_cast<std::uint16_t>(samples[index]);
-      bytes[index * 2] = static_cast<std::uint8_t>(value & 0xFF);
-      bytes[index * 2 + 1] = static_cast<std::uint8_t>(value >> 8);
-    }
-    stream_.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-    dataBytes_ += bytes.size();
+    writeSamples(stream_, samples, count);
+    dataBytes_ += count * 2;
   }
 
   void finish() override {
     if (finished_) return;
     finished_ = true;
-    std::uint8_t size[4];
-    writeLe32(size, static_cast<std::uint32_t>(36 + dataBytes_));
-    stream_.seekp(4);
-    stream_.write(reinterpret_cast<const char*>(size), 4);
-    writeLe32(size, static_cast<std::uint32_t>(dataBytes_));
-    stream_.seekp(40);
-    stream_.write(reinterpret_cast<const char*>(size), 4);
+    patchWavSizes(stream_, dataBytes_);
     stream_.flush();
     const bool ok = static_cast<bool>(stream_);
     stream_.close();
@@ -334,11 +436,133 @@ class WavTapeSink final : public hw::TapeSink {
   }
 
  private:
-  static constexpr std::size_t HEADER_SIZE = 44;
-
   std::ofstream stream_;
   std::string display_;
   std::uint64_t dataBytes_{0};
+  bool finished_{false};
+};
+
+/**
+ * 在已有的 WAV 磁带上从某个帧开始录音的去向：先写到临时文件，依次是原磁带这个位置之前的内容（构造时复制）、新录的内容（左右声道相同）、
+ * 原磁带录音结束处之后的内容（finish 时复制），写完再替换原文件；中途出错或没有 finish 就销毁时原文件不动。
+ */
+class WavOverwriteSink final : public hw::TapeSink {
+ public:
+  /**
+   * @param file 磁带文件。
+   * @param display 显示用的路径（错误说明里用）。
+   * @param original 原磁带的来源，必须是刚打开、还没有读过的。
+   * @param startFrame 录音开始的帧号（原磁带的 96 kHz 帧）。
+   */
+  WavOverwriteSink(fs::path file, std::string display, std::unique_ptr<hw::TapeSource> original, std::uint64_t startFrame)
+      : target_(std::move(file)), temp_(target_), display_(std::move(display)), original_(std::move(original)), startFrame_(startFrame) {
+    temp_ += ".recording";
+    stream_.open(temp_, std::ios::binary | std::ios::trunc);
+    if (!stream_) throw shared::CoreError(api::ERROR_SAVE_FAILED, "无法创建录音文件：" + display_);
+    try {
+      const auto header = wavHeader(hw::TapeSource::SAMPLE_RATE, 2);
+      stream_.write(reinterpret_cast<const char*>(header.data()), static_cast<std::streamsize>(header.size()));
+      copyBefore();
+      checkStream();
+    } catch (...) {
+      discard();
+      throw;
+    }
+  }
+
+  ~WavOverwriteSink() override {
+    if (!finished_) discard();
+  }
+
+  void write(const std::int16_t* samples, std::size_t count) override {
+    if (finished_) return;
+    // 32 kHz 单声道换成 96 kHz 立体声：每个采样分成 3 帧，在上一个采样与这个采样之间线性过渡，左右声道相同
+    constexpr unsigned kRatio = hw::TapeSource::SAMPLE_RATE / hw::TapeSink::SAMPLE_RATE;
+    std::vector<std::int16_t> frames;
+    frames.reserve(count * kRatio * 2);
+    for (std::size_t index = 0; index < count; ++index) {
+      const double from = havePrevious_ ? previous_ : samples[index];
+      for (unsigned step = 1; step <= kRatio; ++step) {
+        const auto value = static_cast<std::int16_t>(std::lround(from + (samples[index] - from) * step / kRatio));
+        frames.push_back(value);
+        frames.push_back(value);
+      }
+      previous_ = samples[index];
+      havePrevious_ = true;
+    }
+    writeSamples(stream_, frames.data(), frames.size());
+    recordedFrames_ += count * kRatio;
+  }
+
+  void finish() override {
+    if (finished_) return;
+    finished_ = true;
+    try {
+      copyAfter();
+      original_.reset();
+      patchWavSizes(stream_, (startFrame_ + recordedFrames_ + afterFrames_) * 4);
+      stream_.flush();
+      checkStream();
+      stream_.close();
+      std::error_code error;
+      fs::rename(temp_, target_, error);
+      if (error) throw shared::CoreError(api::ERROR_SAVE_FAILED, "录音文件写入失败：" + display_);
+    } catch (...) {
+      discard();
+      throw;
+    }
+  }
+
+ private:
+  /** 一次复制的帧数。 */
+  static constexpr std::size_t kCopyFrames = 16384;
+
+  /** 把原磁带的前 startFrame_ 帧复制过来；原磁带比录音位置短时补静音，保证新录的内容落在录音开始的位置。 */
+  void copyBefore() {
+    std::vector<std::int16_t> chunk(kCopyFrames * 2);
+    for (std::uint64_t remaining = startFrame_; remaining > 0;) {
+      const auto want = static_cast<std::size_t>(std::min<std::uint64_t>(remaining, kCopyFrames));
+      const std::size_t got = original_->read(chunk.data(), want);
+      std::fill(chunk.begin() + static_cast<std::ptrdiff_t>(got * 2), chunk.begin() + static_cast<std::ptrdiff_t>(want * 2), std::int16_t{0});
+      writeSamples(stream_, chunk.data(), want * 2);
+      remaining -= want;
+    }
+  }
+
+  /** 把原磁带录音结束处之后的内容复制过来。 */
+  void copyAfter() {
+    original_->seek(startFrame_ + recordedFrames_);
+    std::vector<std::int16_t> chunk(kCopyFrames * 2);
+    for (;;) {
+      const std::size_t got = original_->read(chunk.data(), kCopyFrames);
+      if (got == 0) break;
+      writeSamples(stream_, chunk.data(), got * 2);
+      afterFrames_ += got;
+    }
+  }
+
+  void checkStream() const {
+    if (!stream_) throw shared::CoreError(api::ERROR_SAVE_FAILED, "录音文件写入失败：" + display_);
+  }
+
+  /** 丢弃临时文件，原文件不动。 */
+  void discard() noexcept {
+    original_.reset();
+    stream_.close();
+    std::error_code error;
+    fs::remove(temp_, error);
+  }
+
+  fs::path target_;
+  fs::path temp_;
+  std::string display_;
+  std::unique_ptr<hw::TapeSource> original_;
+  std::uint64_t startFrame_;
+  std::ofstream stream_;
+  std::uint64_t recordedFrames_{0};
+  std::uint64_t afterFrames_{0};
+  double previous_{0};
+  bool havePrevious_{false};
   bool finished_{false};
 };
 
@@ -360,5 +584,15 @@ std::unique_ptr<hw::TapeSource> DiskTapeStore::open(const std::string& path) con
 }
 
 std::unique_ptr<hw::TapeSink> DiskTapeStore::create(const std::string& path) const { return std::make_unique<WavTapeSink>(toPath(path), path); }
+
+std::unique_ptr<hw::TapeSink> DiskTapeStore::overwrite(const std::string& path, double startSeconds) const {
+  const fs::path file = toPath(path);
+  std::string extension = toUtf8(file.extension());
+  std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char letter) { return static_cast<char>(std::tolower(letter)); });
+  if (extension != ".wav") throw shared::CoreError(api::ERROR_TAPE_NOT_WRITABLE, "磁带文件不是 WAV，不能在它上面录音：" + path);
+  auto original = open(path);
+  const auto startFrame = static_cast<std::uint64_t>(std::llround(std::max(0.0, startSeconds) * hw::TapeSource::SAMPLE_RATE));
+  return std::make_unique<WavOverwriteSink>(file, path, std::move(original), startFrame);
+}
 
 }  // namespace ember::infra::media

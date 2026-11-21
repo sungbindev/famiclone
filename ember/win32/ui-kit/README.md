@@ -78,7 +78,8 @@ return rujian::ui::HostWindow::runMessageLoop();
 | 分栏视图 | `split-view.hpp` | 左栏（可滚动）加主区，分隔条可拖动、方向键调整、限制最小与最大宽度 |
 | 页签 | `tabs.hpp` | 页签栏加各页签的内容，鼠标与方向键切换，只显示选中页签的内容 |
 | 分隔线列表 | `list.hpp` | `List`（行之间有分割线）与 `ListRow`（`SettingRow` 是它的一种）；放进面板后贴边的行去掉内边距 |
-| 信息行列表 | `row-list.hpp` | `RowList` 与 `RowListItem`：前导（可带图标、指定宽度、强调样式）、主文字、信息列、行尾操作，悬停与按下底色 |
+| 信息行列表 | `row-list.hpp` | `RowList` 与 `RowListItem`：前导（可带图标、指定宽度、强调样式）、主文字、信息列（`setCellAction` 可让某一列可点击：悬停时列底色变化、光标变手形，回调点击区域）、行尾操作，悬停与按下底色 |
+| 时间轴弹层 | `timeline-popup.hpp` | `TimelinePopup`：弹在窗口弹层上的一条声音包络图，带刻度、播放头、空白段、悬停位置线与时间；拖动后松开鼠标才回调定位的位置，Esc 与在弹层之外按下关闭，没有包络时在轨道中间写说明文字；这是本控件库自己的控件，网页版没有 |
 | 工具栏 | `toolbar.hpp` | 前导控件、说明、右侧操作，放不下时操作换行 |
 | 树 | `tree.hpp` | 扁平条目，鼠标与键盘（上下、Home、End 移焦点，回车与空格选中），焦点行滚入可见范围 |
 | 表格 | `table.hpp` | `Table`（紧凑、平铺：列宽自动分配、行选中、行详情）与 `TableMainCell`（主副文字） |

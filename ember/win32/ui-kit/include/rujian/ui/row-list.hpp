@@ -7,12 +7,13 @@
  * 日期：2026-11-19
  * 备注：对应组件库的 RowList 与 RowListItem，只做 Ember 用到的部分（前导、标题、信息列、操作；行选中与副文字没用到，不做）。
  *       文字单行显示，放不下时用省略号；组件库里按容器宽度隐藏“可选列”的规则没用到，不做。
- *       前导可以带图标、改宽度、用强调样式（半粗字体与强调色图标），这是本控件库自己的扩展，网页版没有。
+ *       前导可以带图标、改宽度、用强调样式（强调色图标），信息列可以设为可点击（setCellAction），这些是本控件库自己的扩展，网页版没有。
  * ------------------------------------------------------------------------
  */
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -40,7 +41,7 @@ struct RowLeading {
   std::optional<IconId> icon;
   /** 固定宽度（逻辑像素，含图标）；0 表示取行列表令牌的前导宽度。 */
   double width{0};
-  /** 是否强调：文字用半粗字体，图标用强调色。 */
+  /** 是否强调：图标用强调色（文字仍是常规字重，微软雅黑没有半粗字重）。 */
   bool emphasized{false};
 };
 
@@ -69,14 +70,25 @@ class RowListItem : public Widget {
   void addCell(RowCell cell);
   /** 修改第 index 列的文字；列宽取文字宽度时同时重排这一行。 */
   void setCellText(std::size_t index, std::string text);
+  /**
+   * 让第 index 列可点击：鼠标移到列上时列的底色变化、光标变手形，在列上按下并抬起时回调，参数是这一列的点击区域（窗口坐标），弹层据此定位。
+   * 这是本控件库自己的扩展，网页版没有；handler 为空表示取消。
+   */
+  void setCellAction(std::size_t index, std::function<void(const Rect&)> handler);
+  /** 第 index 列的点击是否可用；不可用时没有悬停效果，点击也不回调。默认可用。 */
+  void setCellActionEnabled(std::size_t index, bool enabled);
   /** 行尾的操作（一般是 Actions 里放按钮）。 */
   void setActions(std::unique_ptr<Widget> actions);
 
   [[nodiscard]] Size measure(Size available) override;
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
-  /** 按下时底色变深（行本身不响应点击）。 */
+  /** 按下时底色变深（行本身不响应点击；可点击的列在抬起时回调）。 */
   bool onMouseDown(const MouseEvent& event) override;
+  bool onMouseUp(const MouseEvent& event) override;
+  bool onMouseMove(const MouseEvent& event) override;
+  void onStateChanged() override;
+  [[nodiscard]] CursorKind cursor() const override { return hoverCell_ >= 0 ? CursorKind::Hand : CursorKind::Arrow; }
 
  private:
   /** 按可用宽度算出的布局。 */
@@ -91,11 +103,21 @@ class RowListItem : public Widget {
   [[nodiscard]] Layout layout(double width);
   /** 内容区（去掉上下内边距）里各列自己的高度的最大值。 */
   [[nodiscard]] double contentHeight(const Layout& laid);
+  /** 可点击的列的点击区域（窗口坐标）：文字区域左右各多一点，上下贴着行。 */
+  [[nodiscard]] Rect cellHitRect(std::size_t index) const;
+  /** 点在哪个可点击的列上，没有为 -1。 */
+  [[nodiscard]] int cellAt(Point point) const;
 
   Label* leading_{nullptr};
   Label* title_{nullptr};
   std::vector<Label*> cells_;
   std::vector<RowCell> cellSpecs_;
+  /** 各列的点击回调（与是否可用），与 cells_ 一一对应；没有回调的列不可点击。 */
+  std::vector<std::function<void(const Rect&)>> cellHandlers_;
+  std::vector<bool> cellEnabled_;
+  /** 鼠标悬停的、鼠标按下的可点击列，没有为 -1。 */
+  int hoverCell_{-1};
+  int pressedCell_{-1};
   Widget* actions_{nullptr};
   bool hasLeading_{false};
   std::optional<IconId> leadingIcon_;

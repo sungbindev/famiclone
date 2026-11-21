@@ -29,6 +29,8 @@ constexpr double FRAME_EPSILON = 1e-6;
 constexpr double TICK_EPSILON = 1e-9;
 /** 声音电平的比例：满幅 16 位采样换成这个幅度。 */
 constexpr double AUDIO_SCALE = 0.8;
+/** 录音里机器声音的比例：满幅浮点采样换成 16 位。 */
+constexpr double RECORD_AUDIO_SCALE = 32767.0;
 /** 录音缓冲攒到这么多采样就交给去向。 */
 constexpr std::size_t RECORD_FLUSH_SAMPLES = 16384;
 
@@ -108,7 +110,7 @@ bool TapeDeck::ensureBuffered(std::uint64_t frame) {
 
 void TapeDeck::processFrame(const Frame& frame) {
   schmittState_ = schmitt(schmittState_, frame[1]);
-  if (audioRate_ == 0 || !stereo()) return;
+  if (audioRate_ == 0) return;
   audioSum_ += frame[0];
   audioCount_ += 1.0;
   audioPhase_ += 1.0;
@@ -212,7 +214,7 @@ hw::TapeMode TapeDeck::mode() {
 
 double TapeDeck::positionSeconds() {
   const hw::MasterTime current = now();
-  if (mode_ == hw::TapeMode::Recording) return std::max(0.0, (static_cast<double>(current) - recordStartTick_) / masterHz_);
+  if (mode_ == hw::TapeMode::Recording) return std::max(0.0, recordStartSeconds_ + (static_cast<double>(current) - recordStartTick_) / masterHz_);
   advanceTo(current);
   const std::uint64_t frame = mode_ == hw::TapeMode::Playing ? frameAt(current) : processed_;
   return static_cast<double>(frame) / hw::TapeSource::SAMPLE_RATE;
@@ -236,16 +238,49 @@ void TapeDeck::play() {
   scheduleNextEdge();
 }
 
-void TapeDeck::record(std::unique_ptr<hw::TapeSink> sink, std::string name) {
+void TapeDeck::seek(double seconds) {
+  if (source_ == nullptr || mode_ == hw::TapeMode::Recording) return;
+  // 先把播放处理到现在：此时磁带可能刚好放完而停止
+  advanceTo(now());
+  const double total = source_->durationSeconds();
+  double clamped = std::max(0.0, seconds);
+  if (total > 0) clamped = std::min(clamped, total);
+  const auto frame = static_cast<std::uint64_t>(std::llround(clamped * hw::TapeSource::SAMPLE_RATE));
+  const bool playing = mode_ == hw::TapeMode::Playing;
+  if (playing) cancelEvent();
+  source_->seek(frame);
+  buffer_.clear();
+  bufferBase_ = frame;
+  processed_ = frame;
+  endOfSource_ = false;
+  endFrame_ = 0;
+  schmittState_ = schmitt(false, 0);
+  audioPending_.clear();
+  audioPhase_ = 0;
+  audioSum_ = 0;
+  audioCount_ = 0;
+  if (!playing) return;
+  anchorTick_ = static_cast<double>(now());
+  anchorFrame_ = frame;
+  scanFrame_ = frame;
+  scanState_ = schmittState_;
+  lastEdgeFrame_ = frame;
+  scheduleNextEdge();
+}
+
+void TapeDeck::record(std::unique_ptr<hw::TapeSink> sink, std::string name, double startSeconds) {
   if (scheduler_ == nullptr) return;
   eject();
   sink_ = std::move(sink);
   name_ = std::move(name);
   mode_ = hw::TapeMode::Recording;
   recordStartTick_ = static_cast<double>(now());
+  recordStartSeconds_ = std::max(0.0, startSeconds);
   recordedSamples_ = 0;
   recordLevel_ = driven_;
+  recordLineUsed_ = driven_;
   recordBuffer_.clear();
+  recordMixed_ = 0;
 }
 
 void TapeDeck::stop() {
@@ -255,7 +290,7 @@ void TapeDeck::stop() {
     cancelEvent();
   } else if (mode_ == hw::TapeMode::Recording) {
     renderRecording(now());
-    flushRecording();
+    flushRecording(true);
     // 先让磁带机回到空闲，再写完文件：写完时出错抛出异常，状态也是一致的。
     const std::unique_ptr<hw::TapeSink> sink = std::move(sink_);
     name_.clear();
@@ -315,6 +350,7 @@ void TapeDeck::drive(bool high) {
   if (mode_ == hw::TapeMode::Recording) {
     renderRecording(now());
     recordLevel_ = high;
+    if (high) recordLineUsed_ = true;
   }
   driven_ = high;
 }
@@ -326,15 +362,35 @@ void TapeDeck::renderRecording(hw::MasterTime now) {
   if (elapsed <= 0) return;
   const auto due = static_cast<std::uint64_t>(std::floor(elapsed * hw::TapeSink::SAMPLE_RATE / masterHz_));
   if (due <= recordedSamples_) return;
-  const std::int16_t value = recordLevel_ ? RECORD_AMPLITUDE : static_cast<std::int16_t>(-RECORD_AMPLITUDE);
+  const std::int16_t value = !recordLineUsed_ ? std::int16_t{0} : (recordLevel_ ? RECORD_AMPLITUDE : static_cast<std::int16_t>(-RECORD_AMPLITUDE));
   recordBuffer_.insert(recordBuffer_.end(), static_cast<std::size_t>(due - recordedSamples_), value);
   recordedSamples_ = due;
-  if (recordBuffer_.size() >= RECORD_FLUSH_SAMPLES) flushRecording();
 }
 
-void TapeDeck::flushRecording() {
-  if (sink_ != nullptr && !recordBuffer_.empty()) sink_->write(recordBuffer_.data(), recordBuffer_.size());
-  recordBuffer_.clear();
+void TapeDeck::mixRecordedAudio(const std::vector<float>& samples) {
+  renderRecording(now());
+  const std::size_t pending = recordBuffer_.size() - recordMixed_;
+  if (pending > 0 && !samples.empty()) {
+    // 机器声音的采样率高于录音：这一段时间里的机器采样平均后叠到对应的录音采样上
+    const std::size_t total = samples.size();
+    for (std::size_t index = 0; index < pending; ++index) {
+      const std::size_t first = index * total / pending;
+      const std::size_t last = std::max(first + 1, (index + 1) * total / pending);
+      double sum = 0;
+      for (std::size_t position = first; position < last; ++position) sum += samples[position];
+      const double mixed = recordBuffer_[recordMixed_ + index] + sum / static_cast<double>(last - first) * RECORD_AUDIO_SCALE;
+      recordBuffer_[recordMixed_ + index] = static_cast<std::int16_t>(std::clamp(std::lround(mixed), -32768L, 32767L));
+    }
+  }
+  recordMixed_ = recordBuffer_.size();
+  if (recordMixed_ >= RECORD_FLUSH_SAMPLES) flushRecording(false);
+}
+
+void TapeDeck::flushRecording(bool all) {
+  const std::size_t count = all ? recordBuffer_.size() : recordMixed_;
+  if (sink_ != nullptr && count > 0) sink_->write(recordBuffer_.data(), count);
+  recordBuffer_.erase(recordBuffer_.begin(), recordBuffer_.begin() + static_cast<std::ptrdiff_t>(count));
+  recordMixed_ = all ? 0 : recordMixed_ - count;
 }
 
 // ---------------------------------------------------------------- 声音
@@ -353,6 +409,7 @@ void TapeDeck::mixAudio(std::vector<float>& samples) {
   const std::size_t count = std::min(samples.size(), audioPending_.size());
   for (std::size_t index = 0; index < count; ++index) samples[index] += audioPending_[index];
   audioPending_.erase(audioPending_.begin(), audioPending_.begin() + static_cast<std::ptrdiff_t>(count));
+  if (recording()) mixRecordedAudio(samples);
 }
 
 }  // namespace ember::logic::hardware

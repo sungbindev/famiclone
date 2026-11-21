@@ -1,15 +1,17 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：tape-deck.hpp
- * 说明：磁带机：播放时把磁带的采样流按主时钟换成数据线上的 1 位信号与声音，录音时把主机送来的 1 位信号按时间记成采样。
+ * 说明：磁带机：播放时把磁带的采样流按主时钟换成数据线上的 1 位信号与声音，录音时把主机的声音与主机送来的 1 位信号按时间记成采样。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：播放的时间都是模拟时间：位置 = 播放起点的帧号 + 经过的主时钟周期按 96 kHz 换算出的帧数；读数据线、读位置、取声音时才把磁带处理到现在，
  *       所以没有人读时不占调度；设置了边沿通知时，向前扫描找到下一次翻转，在翻转的时刻登记一个调度器事件，事件里再回调；
- *       数据线取立体声磁带的右声道（单声道磁带的唯一声道），经施密特比较器转成 1 位信号；左声道（立体声磁带）降采样后混进机器的声音；
- *       录音记录的是 drive 调用的时刻：每次翻转前，把上一个电平按经过的时间补成 32 kHz 的方波采样（±20000），交给录音去向；
- *       磁带放完后自动停止，再按播放时回到开头；
+ *       数据线取立体声磁带的右声道（单声道磁带的唯一声道），经施密特比较器转成 1 位信号；声音取左声道（单声道磁带的唯一声道），降采样后混进机器的声音，
+ *       不论主机型号有没有接数据线；
+ *       录音记的是主机的声音（每次取声音时由 mixAudio 交来）加数据线：每次翻转前，把上一个电平按经过的时间补成 32 kHz 的方波采样（±20000），
+ *       数据线只在主机第一次把它拉高之后才叠加（游戏每次写手柄口都会拉低它，不能让一路直流偏置进到录音里），再按时间对齐叠加主机的声音，交给录音去向；
+ *       磁带放完后自动停止，再按播放时回到开头；定位（seek）清掉缓冲与声音，从新位置重新开始处理（播放时重新锚定时间并重新扫描边沿，数据线回到静音对应的状态）；
  *       磁带机是独立的设备，不属于主机：主机通电时把自己的调度器绑定给它（bind），断电或被替换时解绑（unbind，先停止，录音在这里写完）；
  *       没绑定时磁带仍然可以载入与取出，位置保持不变，只是不能播放与录音；来源可能阻塞（外部程序解码的管道），读取发生在模拟线程。
  * ------------------------------------------------------------------------
@@ -75,7 +77,8 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   [[nodiscard]] bool stereo() const override { return source_ != nullptr && source_->stereo(); }
   void load(std::unique_ptr<contracts::hardware::TapeSource> source, std::string name) override;
   void play() override;
-  void record(std::unique_ptr<contracts::hardware::TapeSink> sink, std::string name) override;
+  void seek(double seconds) override;
+  void record(std::unique_ptr<contracts::hardware::TapeSink> sink, std::string name, double startSeconds = 0.0) override;
   void stop() override;
   void eject() override;
 
@@ -91,7 +94,10 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   /** 设置声音的输出采样率（赫兹）；0 表示不产生声音。 */
   void setAudioRate(unsigned rate);
 
-  /** 把自上次以来播放的声音（立体声磁带的左声道）加进 samples；多出的留到下次。 */
+  /**
+   * 机器的声音经过磁带机：播放时把磁带的声音加进 samples；多出的留到下次。录音时把 samples（机器完整的声音）记进磁带。
+   * 机器每次取走声音时调用，samples 的采样率是 setAudioRate 设置的采样率。
+   */
   void mixAudio(std::vector<float>& samples);
 
  private:
@@ -126,7 +132,10 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   void cancelEvent();
   /** 录音：把上一个电平补到现在。 */
   void renderRecording(contracts::hardware::MasterTime now);
-  void flushRecording();
+  /** 录音：把 samples 叠加到还没有混入声音的数据线采样上。 */
+  void mixRecordedAudio(const std::vector<float>& samples);
+  /** 把已经混好的采样交给去向；all 为真时连没有混入声音的也一起交出。 */
+  void flushRecording(bool all);
 
   /** 主机的调度器；没有接在通电的主机上时为空。 */
   contracts::hardware::Scheduler* scheduler_{nullptr};
@@ -173,9 +182,15 @@ class TapeDeck final : public contracts::hardware::TapeControl, public contracts
   // 录音
   bool driven_{false};
   double recordStartTick_{0};
+  /** 录音开始处在磁带上的位置（秒）。 */
+  double recordStartSeconds_{0};
   std::uint64_t recordedSamples_{0};
   bool recordLevel_{false};
+  /** 录音以来主机是否拉高过数据线：没有拉高过时数据线不叠加。 */
+  bool recordLineUsed_{false};
+  /** 已按数据线渲染、等待交给去向的采样；前 recordMixed_ 个已经叠加了机器的声音。 */
   std::vector<std::int16_t> recordBuffer_;
+  std::size_t recordMixed_{0};
 };
 
 }  // namespace ember::logic::hardware

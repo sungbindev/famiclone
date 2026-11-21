@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：tape-deck-test.cpp
- * 说明：磁带机的测试：数据线的施密特比较与取反、播放的时间、停止后继续、边沿事件的时刻与间隔、磁带放完与重播、立体声磁带的声音、单声道磁带无声、录音的采样。
+ * 说明：磁带机的测试：数据线的施密特比较与取反、播放的时间、停止后继续、边沿事件的时刻与间隔、磁带放完与重播、立体声与单声道磁带的声音、录音的采样（数据线、机器的声音、从指定位置开始）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
@@ -216,6 +216,74 @@ TEST(TapeDeck, ThePositionAndTheEndOfTheTape) {
   EXPECT_NEAR(bench.deck.positionSeconds(), 1000.0 / 96000.0, 2.0 / 96000.0);
 }
 
+TEST(TapeDeck, SeekingWhileStoppedMovesThePositionAndPlayStartsThere) {
+  DeckBench bench;
+  bench.deck.load(std::make_unique<FakeSource>(squareWave({96000, 96000, 96000}), false), "t");
+  bench.deck.seek(1.5);
+  EXPECT_NEAR(bench.deck.positionSeconds(), 1.5, 1e-6);
+  EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Stopped);
+  bench.deck.play();
+  bench.advanceFrames(10);
+  EXPECT_TRUE(bench.deck.level()) << "1.5 秒处在第二段（96000 到 192000 帧）的高电平里";
+  bench.advanceFrames(48000);
+  EXPECT_FALSE(bench.deck.level()) << "第二段在 192000 帧结束，之后是低电平的第三段";
+  EXPECT_NEAR(bench.deck.positionSeconds(), 1.5 + 48010.0 / 96000.0, 2.0 / 96000.0);
+}
+
+TEST(TapeDeck, SeekingWhilePlayingContinuesFromTheNewPositionAndReschedulesTheEdges) {
+  DeckBench bench;
+  std::vector<std::pair<bool, std::uint32_t>> edges;
+  bench.deck.setEdgeListener([&](bool level, std::uint32_t samples) { edges.emplace_back(level, samples); });
+  bench.deck.load(std::make_unique<FakeSource>(squareWave({1000, 1000, 1000, 1000, 1000}), false), "t");
+  bench.deck.play();
+  bench.advanceFrames(100);
+  bench.deck.seek(3500.0 / 96000.0);  // 第四段（3000 到 4000 帧）的中间，高电平
+  EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Playing);
+  EXPECT_NEAR(bench.deck.positionSeconds(), 3500.0 / 96000.0, 2.0 / 96000.0);
+  bench.advanceFrames(1);
+  ASSERT_EQ(edges.size(), 1U) << "定位处的第一个采样是高电平，数据线从静音状态翻起，在定位的时刻通知一次";
+  EXPECT_EQ(edges[0], std::make_pair(true, 0U));
+  bench.advanceFrames(498);
+  EXPECT_EQ(edges.size(), 1U) << "定位处在高电平中间，到第 4000 帧才再翻转";
+  bench.advanceFrames(1);
+  ASSERT_EQ(edges.size(), 2U);
+  EXPECT_EQ(edges[1], std::make_pair(false, 500U));
+}
+
+TEST(TapeDeck, SeekingClampsToTheTapeAndIgnoresRecordingAndEmptyDecks) {
+  DeckBench bench;
+  bench.deck.seek(5.0);
+  EXPECT_EQ(bench.deck.positionSeconds(), 0.0) << "没有磁带时没有效果";
+  bench.deck.load(std::make_unique<FakeSource>(squareWave({96000, 96000}), false), "t");
+  bench.deck.seek(10.0);
+  EXPECT_NEAR(bench.deck.positionSeconds(), 2.0, 1e-6) << "超过总时长按总时长";
+  bench.deck.seek(-3.0);
+  EXPECT_EQ(bench.deck.positionSeconds(), 0.0) << "小于 0 按 0";
+  std::vector<std::int16_t> samples;
+  bool finished = false;
+  bench.deck.record(std::make_unique<FakeSink>(&samples, &finished), "out.wav");
+  bench.advanceFrames(960);
+  bench.deck.seek(1.0);
+  EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Recording);
+  EXPECT_NEAR(bench.deck.positionSeconds(), 960.0 / 96000.0, 1e-4) << "录音时不能定位";
+}
+
+TEST(TapeDeck, SeekingWorksWithoutAHostAndAfterTheTapeEnded) {
+  TapeDeck deck;
+  deck.load(std::make_unique<FakeSource>(squareWave({96000, 96000}), false), "t");
+  EXPECT_FALSE(deck.connected());
+  deck.seek(1.0);
+  EXPECT_NEAR(deck.positionSeconds(), 1.0, 1e-6) << "没有接上主机也能定位";
+  DeckBench bench;
+  bench.deck.load(std::make_unique<FakeSource>(squareWave({100, 100}), false), "t");
+  bench.deck.play();
+  bench.advanceFrames(1000);
+  ASSERT_EQ(bench.deck.mode(), hw::TapeMode::Stopped) << "放完自动停止";
+  bench.deck.seek(0.0);
+  bench.deck.play();
+  EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Playing) << "放完后定位到开头，可以再播放";
+}
+
 TEST(TapeDeck, AStereoTapePlaysItsLeftChannelThroughTheMachineAudio) {
   DeckBench bench;
   bench.deck.setAudioRate(48000);
@@ -228,15 +296,17 @@ TEST(TapeDeck, AStereoTapePlaysItsLeftChannelThroughTheMachineAudio) {
   EXPECT_NEAR(mix[3999], 0.25F + 0.5F * 0.8F, 1e-3F);
 }
 
-TEST(TapeDeck, AMonoTapeMakesNoSound) {
+TEST(TapeDeck, AMonoTapePlaysItsOnlyChannelThroughTheMachineAudioToo) {
   DeckBench bench;
   bench.deck.setAudioRate(48000);
-  bench.deck.load(std::make_unique<FakeSource>(squareWave({96000}, 10000, 16384), false), "mono");
+  // 单声道磁带解码后左右声道相同
+  bench.deck.load(std::make_unique<FakeSource>(std::vector<std::pair<std::int16_t, std::int16_t>>(96000, {16384, 16384}), false), "mono");
   bench.deck.play();
   bench.advanceFrames(9600);
-  std::vector<float> mix(4000, 0.0F);
+  std::vector<float> mix(4000, 0.25F);
   bench.deck.mixAudio(mix);
-  for (const float sample : mix) ASSERT_EQ(sample, 0.0F);
+  EXPECT_NEAR(mix[100], 0.25F + 0.5F * 0.8F, 1e-3F) << "单声道磁带的声音也经机器播放";
+  EXPECT_NEAR(mix[3999], 0.25F + 0.5F * 0.8F, 1e-3F);
 }
 
 TEST(TapeDeck, RecordingTurnsTheDrivenLineIntoASquareWaveAt32Kilohertz) {
@@ -257,12 +327,58 @@ TEST(TapeDeck, RecordingTurnsTheDrivenLineIntoASquareWaveAt32Kilohertz) {
   EXPECT_EQ(bench.deck.mode(), hw::TapeMode::Stopped);
   EXPECT_FALSE(bench.deck.loaded());
   ASSERT_EQ(samples.size(), 2500U);
-  EXPECT_EQ(samples.front(), -TapeDeck::RECORD_AMPLITUDE);
-  EXPECT_EQ(samples[999], -TapeDeck::RECORD_AMPLITUDE);
+  EXPECT_EQ(samples.front(), 0) << "主机还没有拉高过数据线，数据线不叠加";
+  EXPECT_EQ(samples[999], 0);
   EXPECT_EQ(samples[1000], TapeDeck::RECORD_AMPLITUDE);
   EXPECT_EQ(samples[1999], TapeDeck::RECORD_AMPLITUDE);
   EXPECT_EQ(samples[2000], -TapeDeck::RECORD_AMPLITUDE);
   EXPECT_EQ(samples.back(), -TapeDeck::RECORD_AMPLITUDE);
+}
+
+TEST(TapeDeck, RecordingKeepsTheMachineSoundAndALineThatIsNeverRaisedAddsNothing) {
+  DeckBench bench;
+  std::vector<std::int16_t> samples;
+  bool finished = false;
+  bench.deck.record(std::make_unique<FakeSink>(&samples, &finished), "out.wav");
+  bench.deck.drive(false);  // 游戏每次写手柄口都会把它拉低
+  bench.advanceFrames(3000);  // 1000 个 32 kHz 采样
+  std::vector<float> machine(1500, 0.5F);  // 同一段时间的 48 kHz 机器声音
+  bench.deck.mixAudio(machine);
+  bench.deck.stop();
+  ASSERT_EQ(samples.size(), 1000U);
+  EXPECT_NEAR(samples.front(), 16384, 1);
+  EXPECT_NEAR(samples.back(), 16384, 1);
+}
+
+TEST(TapeDeck, RecordingAddsTheMachineSoundToTheRaisedLineAndClips) {
+  DeckBench bench;
+  std::vector<std::int16_t> samples;
+  bool finished = false;
+  bench.deck.record(std::make_unique<FakeSink>(&samples, &finished), "out.wav");
+  bench.deck.drive(true);
+  bench.advanceFrames(3000);
+  std::vector<float> machine(1500, 0.5F);
+  bench.deck.mixAudio(machine);
+  bench.deck.drive(false);
+  bench.advanceFrames(3000);
+  std::vector<float> quiet(1500, -0.25F);
+  bench.deck.mixAudio(quiet);
+  bench.deck.stop();
+  ASSERT_EQ(samples.size(), 2000U);
+  EXPECT_EQ(samples[10], 32767) << "20000 加 16384 超过 16 位，裁在满幅";
+  EXPECT_NEAR(samples[1990], -TapeDeck::RECORD_AMPLITUDE - 8192, 2) << "线为低时同样叠加";
+}
+
+TEST(TapeDeck, ARecordingThatStartsAtAPositionCountsFromIt) {
+  DeckBench bench;
+  std::vector<std::int16_t> samples;
+  bool finished = false;
+  bench.deck.record(std::make_unique<FakeSink>(&samples, &finished), "out.wav", 2.0);
+  EXPECT_NEAR(bench.deck.positionSeconds(), 2.0, 1e-9);
+  bench.advanceFrames(9600);
+  EXPECT_NEAR(bench.deck.positionSeconds(), 2.1, 1e-6) << "从开始处计录了多久";
+  bench.deck.stop();
+  EXPECT_EQ(samples.size(), 3200U) << "去向只收到新录的内容，保留前后原有内容是去向的事";
 }
 
 TEST(TapeDeck, LoadingATapeStopsAndReplacesTheCurrentOne) {

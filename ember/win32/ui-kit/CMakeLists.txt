@@ -56,6 +56,7 @@ add_library(rujian_ui STATIC
   src/components/table/table-main-cell.cpp
   src/components/table/table.cpp
   src/components/tabs/tabs.cpp
+  src/components/timeline/timeline-popup.cpp
   src/components/title-bar/title-bar.cpp
   src/components/tooltip/tooltip.cpp
   src/components/toolbar/toolbar.cpp
@@ -110,6 +111,7 @@ if(EMBER_BUILD_TESTS)
     test/status-bar-test.cpp
     test/table-test.cpp
     test/tabs-test.cpp
+    test/timeline-popup-test.cpp
     test/title-bar-test.cpp
     test/tooltip-test.cpp
     test/svg-path-test.cpp

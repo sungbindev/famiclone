@@ -331,12 +331,27 @@ TEST(MediaHandlers, OpenTapeAndRecordingUseTheirOwnDialogs) {
   EXPECT_EQ(f.dialog.fileCalls[0].filters.back().extensions, std::vector<std::string>{"*"});
 
   f.dialog.results.push_back("D:\\tapes\\rec.wav");
+  f.core.replies["media.tapeStatus"] = [](const json&) { return contracts::CoreReply::success({{"status", {{"loaded", false}}}}); };
   const auto recording = f.call("media.openTapeRecording");
   ASSERT_TRUE(recording.ok);
   EXPECT_EQ(f.dialog.saveCalls[0].purpose, "tapeRecording");
   EXPECT_EQ(f.core.calls.back().name, "media.tapeRecord");
   EXPECT_EQ(f.core.calls.back().params["path"], "D:\\tapes\\rec.wav");
   EXPECT_EQ(f.call("media.openTapeRecording").result, json({{"canceled", true}}));
+}
+
+TEST(MediaHandlers, RecordingOnALoadedTapeSkipsTheDialogAndRecordsOverTheTape) {
+  Fixture f;
+  f.core.replies["media.tapeStatus"] = [](const json&) { return contracts::CoreReply::success({{"status", {{"loaded", true}}}}); };
+  f.core.replies["media.tapeRecord"] = [](const json&) { return contracts::CoreReply::success({{"status", {{"mode", "recording"}}}}); };
+  const auto reply = f.call("media.openTapeRecording");
+  ASSERT_TRUE(reply.ok);
+  EXPECT_EQ(reply.result["status"]["mode"], "recording");
+  EXPECT_TRUE(f.dialog.saveCalls.empty()) << "已有磁带时不弹保存窗口";
+  EXPECT_EQ(f.core.calls.back().name, "media.tapeRecord");
+  EXPECT_FALSE(f.core.calls.back().params.contains("path")) << "没有文件路径：在已有的磁带上录";
+  f.core.replies["media.tapeRecord"] = [](const json&) { return contracts::CoreReply::failure("media.tapeNotWritable", "磁带文件不是 WAV"); };
+  EXPECT_EQ(f.call("media.openTapeRecording").error.code, "media.tapeNotWritable");
 }
 
 TEST(PreferenceHandlers, PickDirectoryReturnsThePathOrCanceled) {

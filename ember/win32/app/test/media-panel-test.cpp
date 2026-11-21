@@ -25,6 +25,8 @@ namespace {
 class FakeMediaModel final : public contracts::MediaModel {
  public:
   contracts::MediaView current;
+  contracts::MediaTimelineView timeline;
+  std::vector<double> seeks;
   std::vector<std::string> calls;
   std::map<int, std::function<void()>> handlers;
   int refreshes{0};
@@ -49,6 +51,8 @@ class FakeMediaModel final : public contracts::MediaModel {
   void playTape() override { calls.push_back("tapePlay"); }
   void recordTape() override { calls.push_back("tapeRecord"); }
   void stopTape() override { calls.push_back("tapeStop"); }
+  void seekTape(double seconds) override { seeks.push_back(seconds); }
+  [[nodiscard]] contracts::MediaTimelineView timelineView() const override { return timeline; }
   void refresh() override { ++refreshes; }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override {
     const int id = static_cast<int>(handlers.size()) + 1;
@@ -79,6 +83,32 @@ struct Scene {
     const rujian::ui::Point at{box.x + box.width / 2, box.y + box.height / 2};
     root.mouseDown(at, rujian::ui::MouseButton::Left, 0, 0);
     root.mouseUp(at, rujian::ui::MouseButton::Left, 0);
+  }
+
+  /** 磁带机一行里的位置列（子控件顺序：前导、主文字、位置、状态）中心。 */
+  [[nodiscard]] rujian::ui::Point positionCell() const {
+    const auto& box = content->tape().item->children()[2]->bounds();
+    return {box.x + box.width / 2, box.y + box.height / 2};
+  }
+
+  void clickAt(rujian::ui::Point at) {
+    root.mouseMove(at, 0);
+    root.mouseDown(at, rujian::ui::MouseButton::Left, 0, 0);
+    root.mouseUp(at, rujian::ui::MouseButton::Left, 0);
+  }
+
+  /** 磁带里有磁带、可以定位、时间轴分析完成。 */
+  void loadAnalyzedTape() {
+    model.current.tape = {"t.wav", "0:03 / 1:40", "已停止", true, true, true, false, true};
+    model.timeline.available = true;
+    model.timeline.duration = 100;
+    model.timeline.position = 3;
+    model.timeline.ready = true;
+    model.timeline.serial = 1;
+    model.timeline.step = 0.1;
+    model.timeline.peaks.assign(1000, 50);
+    model.timeline.blanks = {{10, 20}};
+    model.notify();
   }
 };
 
@@ -182,6 +212,70 @@ TEST(MediaPanelContent, UnsubscribesWhenDestroyed) {
   s.root.setContent(std::make_unique<rujian::ui::Widget>());
   EXPECT_TRUE(s.model.handlers.empty());
   EXPECT_TRUE(s.root.pendingTimers().empty());
+}
+
+TEST(MediaPanelContent, ThePositionColumnOpensTheTimelineOnlyWhileTheModelAllowsIt) {
+  Scene s;
+  s.clickAt(s.positionCell());
+  EXPECT_EQ(s.content->timelinePopup(), nullptr) << "没有磁带时位置列不可点击";
+  s.loadAnalyzedTape();
+  s.clickAt(s.positionCell());
+  ASSERT_NE(s.content->timelinePopup(), nullptr);
+  EXPECT_TRUE(s.content->timelinePopup()->isOpen());
+  const rujian::ui::Rect popupBox = s.content->timelinePopup()->bounds();
+  const rujian::ui::Rect row = s.content->tape().item->bounds();
+  EXPECT_TRUE(popupBox.bottom() <= row.y || popupBox.y >= row.bottom()) << "弹层不盖住这一行（上方放不下时翻到下方）";
+  s.clickAt(s.positionCell());
+  EXPECT_FALSE(s.content->timelinePopup()->isOpen()) << "再点一次位置列关闭";
+}
+
+TEST(MediaPanelContent, ReleasingOnTheTimelineSeeksTheTapeAndEscapeCloses) {
+  Scene s;
+  s.loadAnalyzedTape();
+  s.clickAt(s.positionCell());
+  rujian::ui::TimelinePopup* popup = s.content->timelinePopup();
+  ASSERT_TRUE(popup != nullptr && popup->isOpen());
+  const rujian::ui::Rect plot = popup->plotRect();
+  const rujian::ui::Point at{plot.x + plot.width / 4, plot.y + plot.height / 2};
+  s.root.mouseMove(at, 0);
+  s.root.mouseDown(at, rujian::ui::MouseButton::Left, 0, 0);
+  EXPECT_TRUE(s.model.seeks.empty());
+  s.root.mouseUp(at, rujian::ui::MouseButton::Left, 0);
+  ASSERT_EQ(s.model.seeks.size(), 1U);
+  EXPECT_NEAR(s.model.seeks[0], 25.0, 0.2);
+  s.root.keyDown(0x1B, 0, false);
+  EXPECT_FALSE(popup->isOpen());
+}
+
+TEST(MediaPanelContent, TheTimelineFollowsTheModelAndClosesWhenTheTapeCannotBeSoughtAnymore) {
+  Scene s;
+  s.loadAnalyzedTape();
+  s.clickAt(s.positionCell());
+  rujian::ui::TimelinePopup* popup = s.content->timelinePopup();
+  ASSERT_TRUE(popup != nullptr && popup->isOpen());
+  // 分析中：只有说明文字，播放头与时长仍然有
+  s.model.timeline.ready = false;
+  s.model.timeline.notice = "分析中 40%";
+  s.model.timeline.position = 50;
+  s.model.notify();
+  EXPECT_TRUE(popup->isOpen());
+  // 开始录音（或取出磁带）后不能定位：弹层关闭
+  s.model.timeline.available = false;
+  s.model.current.tape.canOpenTimeline = false;
+  s.model.notify();
+  EXPECT_FALSE(popup->isOpen());
+}
+
+TEST(MediaPanelContent, TheTimelineClosesWithThePanel) {
+  Scene s;
+  s.loadAnalyzedTape();
+  s.clickAt(s.positionCell());
+  ASSERT_TRUE(s.content->timelinePopup()->isOpen());
+  s.root.setContent(std::make_unique<rujian::ui::Widget>());
+  EXPECT_TRUE(s.model.handlers.empty());
+  // 面板内容卸载后弹层不再留在窗口上：点击任意处不会崩溃
+  s.root.mouseDown({300, 100}, rujian::ui::MouseButton::Left, 0, 0);
+  s.root.mouseUp({300, 100}, rujian::ui::MouseButton::Left, 0);
 }
 
 }  // namespace

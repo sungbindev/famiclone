@@ -64,6 +64,13 @@ void addMediaRequests(platform::RequestRouter& router, std::shared_ptr<contract:
     static_cast<void>(contract::parseMediaTapeStatusParams(params, "params"));
     return nlohmann::json(service->tapeStatus());
   });
+  router.add("media", contract::MEDIA_TAPE_SEEK_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->tapeSeek(contract::parseMediaTapeSeekParams(params, "params")));
+  });
+  router.add("media", contract::MEDIA_TAPE_TIMELINE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseMediaTapeTimelineParams(params, "params"));
+    return nlohmann::json(service->tapeTimeline());
+  });
 }
 
 }  // namespace ember::requests::media

@@ -13,12 +13,14 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -69,6 +71,7 @@ class FakeTapeStore final : public api::TapeStore {
   [[nodiscard]] std::unique_ptr<hw::TapeSource> open(const std::string& path) const override {
     const auto found = tapes.find(path);
     if (found == tapes.end()) throw ember::shared::CoreError(api::ERROR_FILE_NOT_FOUND, "找不到文件：" + path);
+    if (failOpenFrom > 0 && ++opens >= failOpenFrom) throw ember::shared::CoreError(api::ERROR_TAPE_UNSUPPORTED, "无法解码：" + path);
     return std::make_unique<FakeSource>(found->second, true);
   }
 
@@ -90,7 +93,36 @@ class FakeTapeStore final : public api::TapeStore {
     return std::make_unique<Sink>(this, path);
   }
 
+  [[nodiscard]] std::unique_ptr<hw::TapeSink> overwrite(const std::string& path, double startSeconds) const override {
+    if (path.size() < 4 || path.substr(path.size() - 4) != ".wav") throw ember::shared::CoreError(api::ERROR_TAPE_NOT_WRITABLE, "不是 WAV：" + path);
+    const auto found = tapes.find(path);
+    if (found == tapes.end()) throw ember::shared::CoreError(api::ERROR_FILE_NOT_FOUND, "找不到文件：" + path);
+    overwriteStarts.push_back(startSeconds);
+    // 录完后把原磁带的前后内容和新录的内容（每个采样占 3 帧）接起来
+    struct Sink final : hw::TapeSink {
+      Sink(const FakeTapeStore* owner, std::string target, std::size_t start) : store(owner), path(std::move(target)), startFrame(start) {}
+      void write(const std::int16_t* data, std::size_t count) override { samples.insert(samples.end(), data, data + count); }
+      void finish() override {
+        const auto& old = store->tapes[path];
+        std::vector<std::pair<std::int16_t, std::int16_t>> frames(old.begin(), old.begin() + static_cast<std::ptrdiff_t>(std::min(startFrame, old.size())));
+        for (const std::int16_t value : samples) frames.insert(frames.end(), 3, {value, value});
+        for (std::size_t index = startFrame + samples.size() * 3; index < old.size(); ++index) frames.push_back(old[index]);
+        store->tapes[path] = frames;
+      }
+      const FakeTapeStore* store;
+      std::string path;
+      std::size_t startFrame;
+      std::vector<std::int16_t> samples;
+    };
+    return std::make_unique<Sink>(this, path, static_cast<std::size_t>(std::llround(startSeconds * hw::TapeSource::SAMPLE_RATE)));
+  }
+
   mutable std::map<std::string, std::vector<std::pair<std::int16_t, std::int16_t>>> tapes;
+  /** 每次 overwrite 的录音开始位置（秒）。 */
+  mutable std::vector<double> overwriteStarts;
+  /** 从第几次打开起都失败；0 表示不失败。 */
+  int failOpenFrom{0};
+  mutable int opens{0};
 };
 
 /** 真实的介质服务加运行服务。 */
@@ -126,7 +158,7 @@ struct TapeRig {
     runtime->insertCartridge(std::move(insertion));
   }
 
-  /** 装一台断电的 sb2000（ROM 是合成的），它没有磁带接口。 */
+  /** 装一台断电的 sb2000（ROM 是合成的），它没有磁带数据线。 */
   void bootSb2000() {
     rt::MachineBoot boot;
     boot.machine = "sb2000";
@@ -173,6 +205,9 @@ api::MediaTapeRecordParams recordParams(const std::string& path) {
   return params;
 }
 
+/** 没有文件路径的录音：在磁带机里已有的磁带上从当前位置开始录。 */
+api::MediaTapeRecordParams recordOverParams() { return api::MediaTapeRecordParams{}; }
+
 TEST(MediaTape, WithoutAMachineTheDeckStillTakesAndReleasesTapesButCannotPlayOrRecord) {
   TapeRig rig;
   dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(100);
@@ -191,14 +226,18 @@ TEST(MediaTape, WithoutAMachineTheDeckStillTakesAndReleasesTapesButCannotPlayOrR
   EXPECT_FALSE(status.loaded);
 }
 
-TEST(MediaTape, AMachineWithoutATapePortNeverConnectsTheDeckButTheTapeStaysLoadable) {
+TEST(MediaTape, AnyMachineConnectsTheDeckOnceItIsPoweredOnWhateverItsTapePort) {
   TapeRig rig;
-  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(10);
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(100);
   rig.bootSb2000();
-  EXPECT_FALSE(rig.manager->tapeStatus().status.connected);
+  EXPECT_FALSE(rig.manager->tapeStatus().status.connected) << "没通电时没有接上";
   EXPECT_TRUE(rig.manager->tapeLoad(loadParams("a.wav")).status.loaded);
   EXPECT_EQ(errorCodeOf([&] { rig.manager->tapePlay(); }), "media.tapeNotConnected");
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordParams("r.wav")); }), "media.tapeNotConnected");
+  rig.powerOn();
+  EXPECT_TRUE(rig.manager->tapeStatus().status.connected) << "学习机没有数据线，通电后磁带机照样接上";
+  EXPECT_EQ(rig.manager->tapePlay().status.mode, "playing");
+  rig.manager->tapeStop();
+  EXPECT_EQ(rig.manager->tapeRecord(recordParams("r.wav")).status.mode, "recording");
 }
 
 TEST(MediaTape, AnUnpoweredFcDoesNotConnectTheDeckUntilItIsPoweredOn) {
@@ -293,6 +332,46 @@ TEST(MediaTape, StoppingARecordingMakesTheRecordedFileTheTape) {
   EXPECT_EQ(status.mode, "playing");
 }
 
+TEST(MediaTape, RecordingOnALoadedTapeStartsAtThePositionAndStopsWhereItWasStopped) {
+  TapeRig rig;
+  auto& store = dynamic_cast<FakeTapeStore&>(*rig.store);
+  store.tapes["a.wav"] = silence(96000 * 2);
+  rig.insertFc();
+  rig.powerOn();
+  rig.manager->tapeLoad(loadParams("a.wav"));
+  rig.manager->tapeSeek(api::MediaTapeSeekParams{0.5});
+  auto status = rig.manager->tapeRecord(recordOverParams()).status;
+  EXPECT_EQ(status.mode, "recording");
+  EXPECT_NEAR(status.position, 0.5, 1e-6) << "录音的位置从磁带当前的位置算起";
+  ASSERT_EQ(store.overwriteStarts.size(), 1U);
+  EXPECT_NEAR(store.overwriteStarts[0], 0.5, 1e-6);
+  status = rig.manager->tapeStop().status;
+  EXPECT_EQ(status.mode, "stopped");
+  EXPECT_TRUE(status.loaded) << "改写后的磁带自动载入";
+  EXPECT_EQ(*status.fileName, "a.wav");
+  EXPECT_NEAR(status.position, 0.5, 1e-6) << "位置停在录音停止的位置";
+  EXPECT_NEAR(status.duration, 2.0, 1e-6);
+}
+
+TEST(MediaTape, RecordingWithoutAFileNeedsATapeAndAWavTapeAndAPoweredMachine) {
+  TapeRig rig;
+  auto& store = dynamic_cast<FakeTapeStore&>(*rig.store);
+  store.tapes["a.m4a"] = silence(100);
+  store.tapes["b.wav"] = silence(100);
+  rig.insertFc();
+  rig.powerOn();
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordOverParams()); }), "media.noTape");
+  rig.manager->tapeLoad(loadParams("a.m4a"));
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordOverParams()); }), "media.tapeNotWritable") << "不是 WAV 不能改写";
+  auto status = rig.manager->tapeStatus().status;
+  EXPECT_TRUE(status.loaded) << "出错后磁带还在机器里";
+  EXPECT_EQ(status.mode, "stopped");
+  rig.runtime->powerOff();
+  rig.manager->tapeLoad(loadParams("b.wav"));
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeRecord(recordOverParams()); }), "media.tapeNotConnected");
+  EXPECT_TRUE(rig.manager->tapeStatus().status.loaded);
+}
+
 TEST(MediaTape, ARecordingFileThatCannotBeCreatedLeavesTheDeckAlone) {
   TapeRig rig;
   rig.insertFc();
@@ -326,6 +405,141 @@ TEST(MediaTape, PoweringOffStopsThePlaybackAndKeepsTheTape) {
   EXPECT_EQ(status.mode, "stopped");
   EXPECT_TRUE(status.loaded);
   EXPECT_FALSE(status.connected);
+}
+
+/** 追加一段数据线（右声道）固定为 right 的帧；左声道固定为满幅的一半，用来证明分析只看右声道。 */
+void appendRun(std::vector<std::pair<std::int16_t, std::int16_t>>& frames, double seconds, std::int16_t right) {
+  frames.insert(frames.end(), static_cast<std::size_t>(std::llround(seconds * hw::TapeSource::SAMPLE_RATE)), {16384, right});
+}
+
+/** 等后台分析结束（不再是分析中），最多等 10 秒。 */
+api::TapeTimeline waitForTimeline(TapeRig& rig) {
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+  for (;;) {
+    auto timeline = rig.manager->tapeTimeline().timeline;
+    if (timeline.state != "analyzing" || std::chrono::steady_clock::now() > deadline) return timeline;
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+}
+
+TEST(MediaTape, SeekingMovesThePositionWhileStoppedOrPlayingAndNeedsATape) {
+  TapeRig rig;
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = silence(96000 * 2);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeSeek(api::MediaTapeSeekParams{1.0}); }), "media.noTape");
+  rig.manager->tapeLoad(loadParams("a.wav"));
+  auto status = rig.manager->tapeSeek(api::MediaTapeSeekParams{1.25}).status;
+  EXPECT_NEAR(status.position, 1.25, 1e-6) << "没有主机、停止时也能定位";
+  EXPECT_EQ(status.mode, "stopped");
+  rig.insertFc();
+  rig.powerOn();
+  ASSERT_EQ(rig.manager->tapePlay().status.mode, "playing");
+  status = rig.manager->tapeSeek(api::MediaTapeSeekParams{0.5}).status;
+  EXPECT_EQ(status.mode, "playing") << "播放时定位后继续播放";
+  EXPECT_NEAR(status.position, 0.5, 0.01);
+  const std::size_t changes = rig.events->all("media.changed").size();
+  rig.manager->tapeSeek(api::MediaTapeSeekParams{0.75});
+  EXPECT_EQ(rig.events->all("media.changed").size(), changes + 1) << "定位后发 media.changed";
+}
+
+TEST(MediaTape, SeekingIsRefusedWhileRecording) {
+  TapeRig rig;
+  rig.insertFc();
+  rig.powerOn();
+  rig.manager->tapeRecord(recordParams("D:/tapes/out.wav"));
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->tapeSeek(api::MediaTapeSeekParams{1.0}); }), "media.tapeBusy");
+  EXPECT_EQ(rig.manager->tapeStatus().status.mode, "recording");
+}
+
+TEST(MediaTape, TheTimelineFindsTheBlanksOnTheDataLineAndKeepsShortGaps) {
+  TapeRig rig;
+  std::vector<std::pair<std::int16_t, std::int16_t>> frames;
+  appendRun(frames, 1.0, 20000);
+  appendRun(frames, 0.3, 0);  // 不到 0.5 秒的间隔不算空白
+  appendRun(frames, 1.0, -20000);
+  appendRun(frames, 1.0, 100);  // 低于满幅 3% 算静音
+  appendRun(frames, 0.5, 20000);
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["data.wav"] = frames;
+  const auto loaded = rig.manager->tapeLoad(loadParams("data.wav")).status;
+  const auto timeline = waitForTimeline(rig);
+  ASSERT_EQ(timeline.state, "ready");
+  EXPECT_EQ(timeline.serial, loaded.serial);
+  EXPECT_NEAR(timeline.duration, 3.8, 1e-6);
+  EXPECT_NEAR(timeline.step, 0.1, 1e-9);
+  EXPECT_EQ(timeline.progress, 1.0);
+  ASSERT_EQ(timeline.peaks.size(), 38U);
+  EXPECT_EQ(timeline.peaks[0], 62) << "20000 占满幅的 61%，向上取整";
+  EXPECT_EQ(timeline.peaks[11], 0) << "1.1 秒处是静音";
+  EXPECT_EQ(timeline.peaks[25], 1) << "幅度 100 虽然低于静音线，但有声音时至少是 1";
+  ASSERT_EQ(timeline.blanks.size(), 1U);
+  EXPECT_NEAR(timeline.blanks[0].start, 2.3, 1e-6);
+  EXPECT_NEAR(timeline.blanks[0].end, 3.3, 1e-6);
+  const auto events = rig.events->all("media.tapeAnalyzed");
+  ASSERT_EQ(events.size(), 1U);
+  EXPECT_EQ(events[0]["serial"], loaded.serial);
+}
+
+TEST(MediaTape, TheLeadingAndTrailingSilenceCountAsBlanks) {
+  TapeRig rig;
+  std::vector<std::pair<std::int16_t, std::int16_t>> frames;
+  appendRun(frames, 0.6, 0);
+  appendRun(frames, 0.4, 20000);
+  appendRun(frames, 0.75, 0);
+  dynamic_cast<FakeTapeStore&>(*rig.store).tapes["a.wav"] = frames;
+  rig.manager->tapeLoad(loadParams("a.wav"));
+  const auto timeline = waitForTimeline(rig);
+  ASSERT_EQ(timeline.state, "ready");
+  ASSERT_EQ(timeline.blanks.size(), 2U);
+  EXPECT_NEAR(timeline.blanks[0].start, 0.0, 1e-6);
+  EXPECT_NEAR(timeline.blanks[0].end, 0.6, 1e-6);
+  EXPECT_NEAR(timeline.blanks[1].start, 1.0, 1e-6);
+  EXPECT_NEAR(timeline.blanks[1].end, 1.75, 1e-6);
+}
+
+TEST(MediaTape, ChangingTheTapeRestartsTheTimelineAndEjectingClearsIt) {
+  TapeRig rig;
+  auto& store = dynamic_cast<FakeTapeStore&>(*rig.store);
+  store.tapes["a.wav"] = silence(96000);
+  store.tapes["b.wav"] = silence(96000 * 2);
+  EXPECT_EQ(rig.manager->tapeTimeline().timeline.state, "none") << "没有磁带时没有时间轴";
+  const auto first = rig.manager->tapeLoad(loadParams("a.wav")).status;
+  ASSERT_EQ(waitForTimeline(rig).state, "ready");
+  const auto second = rig.manager->tapeLoad(loadParams("b.wav")).status;
+  EXPECT_GT(second.serial, first.serial) << "换磁带序号加 1";
+  auto timeline = waitForTimeline(rig);
+  EXPECT_EQ(timeline.serial, second.serial);
+  EXPECT_NEAR(timeline.duration, 2.0, 1e-6);
+  const auto ejected = rig.manager->tapeEject().status;
+  EXPECT_GT(ejected.serial, second.serial) << "取出序号也加 1";
+  timeline = rig.manager->tapeTimeline().timeline;
+  EXPECT_EQ(timeline.state, "none");
+  EXPECT_EQ(timeline.serial, ejected.serial);
+  EXPECT_TRUE(timeline.peaks.empty());
+  EXPECT_EQ(rig.manager->tapeEject().status.serial, ejected.serial) << "没有磁带时取出没有效果，序号不变";
+}
+
+TEST(MediaTape, TheRecordedFileGetsAnalyzedAfterTheRecordingStops) {
+  TapeRig rig;
+  rig.insertFc();
+  rig.powerOn();
+  const auto recording = rig.manager->tapeRecord(recordParams("D:/tapes/out.wav")).status;
+  EXPECT_EQ(rig.manager->tapeTimeline().timeline.state, "none") << "录音时没有时间轴";
+  const auto stopped = rig.manager->tapeStop().status;
+  EXPECT_GT(stopped.serial, recording.serial);
+  const auto timeline = waitForTimeline(rig);
+  EXPECT_EQ(timeline.state, "ready");
+  EXPECT_EQ(timeline.serial, stopped.serial);
+}
+
+TEST(MediaTape, AFileThatCannotBeReadAgainMakesTheTimelineFail) {
+  auto store = std::make_shared<FakeTapeStore>();
+  store->tapes["a.wav"] = silence(96000);
+  store->failOpenFrom = 2;
+  TapeRig failing(store);
+  failing.manager->tapeLoad(loadParams("a.wav"));
+  const auto timeline = waitForTimeline(failing);
+  EXPECT_EQ(timeline.state, "failed");
+  EXPECT_TRUE(timeline.peaks.empty());
+  EXPECT_TRUE(failing.manager->tapeStatus().status.loaded) << "分析失败不影响磁带本身";
 }
 
 // ---------------------------------------------------------------- 真实的 FFmpeg 库端到端

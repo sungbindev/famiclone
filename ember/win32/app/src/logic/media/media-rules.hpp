@@ -13,8 +13,10 @@
 
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -47,7 +49,24 @@ struct TapeState {
   TapeMode mode{TapeMode::Stopped};
   double position{0};
   double duration{0};
+  /** 磁带的序号：每放入、取出或换掉一盘磁带加 1。 */
+  std::int64_t serial{0};
   bool operator==(const TapeState&) const = default;
+};
+
+/** 时间轴的分析状态。 */
+enum class TimelineMode { None, Analyzing, Ready, Failed };
+
+/** 磁带的时间轴（media.tapeTimeline 结果里的 timeline）。 */
+struct TimelineState {
+  std::int64_t serial{0};
+  TimelineMode mode{TimelineMode::None};
+  double progress{0};
+  double duration{0};
+  double step{0};
+  std::vector<std::uint8_t> peaks;
+  std::vector<std::pair<double, double>> blanks;
+  bool operator==(const TimelineState&) const = default;
 };
 
 /** 打印机的状态。 */
@@ -57,6 +76,8 @@ enum class PrinterMode { Idle, Printing, Done };
 [[nodiscard]] std::vector<FloppyState> parseFloppies(const nlohmann::json& result);
 /** 从磁带机状态（media.tapeStatus 结果的 status，或 openTape 等结果里的 status）读出；格式不对时没有值。 */
 [[nodiscard]] std::optional<TapeState> parseTape(const nlohmann::json& status);
+/** 从 media.tapeTimeline 的结果读出时间轴；格式不对时没有值。 */
+[[nodiscard]] std::optional<TimelineState> parseTimeline(const nlohmann::json& result);
 /** 从 media.printerStatus 的结果读出打印机状态；格式不对时没有值。 */
 [[nodiscard]] std::optional<PrinterMode> parsePrinter(const nlohmann::json& result);
 
@@ -94,5 +115,14 @@ struct TapeAvailability {
 
 /** 设备面板此刻的内容：软驱至少列出软驱 A，还没读到状态时按钮置灰。 */
 [[nodiscard]] contracts::MediaView buildMediaView(const std::vector<FloppyState>& floppies, const std::optional<TapeState>& tape, const std::optional<PrinterMode>& printer);
+
+/** 时间轴需要（重新）读取吗：里面有磁带，而且还没读过、读到的不是这盘磁带的、或还在分析中（要更新进度）。 */
+[[nodiscard]] bool timelineNeedsRefresh(const std::optional<TapeState>& tape, const std::optional<TimelineState>& timeline);
+
+/**
+ * 时间轴弹层此刻的内容：有磁带且不在录音时才可用；总时长优先取磁带机的，不知道时取分析出的；
+ * 读到的时间轴不是这盘磁带的（刚换磁带）按“分析中 0%”显示。
+ */
+[[nodiscard]] contracts::MediaTimelineView buildTimelineView(const std::optional<TapeState>& tape, const std::optional<TimelineState>& timeline);
 
 }  // namespace ember::win32::logic

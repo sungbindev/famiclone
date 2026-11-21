@@ -48,7 +48,6 @@ void RowListItem::setLeading(RowLeading leading) {
   leadingWidth_ = leading.width;
   leadingEmphasized_ = leading.emphasized;
   leading_->setText(std::move(leading.text));
-  leading_->setFontWeight(leading.emphasized ? static_cast<int>(tokens::setting_row_label_font_weight) : 400);
   invalidate();
 }
 
@@ -63,6 +62,8 @@ void RowListItem::addCell(RowCell cell) {
   if (cell.muted) label->setColorProvider([](ThemeName theme) { return themeTokens(theme).row_list_muted_color; });
   cells_.push_back(static_cast<Label*>(addChild(std::move(label))));
   cellSpecs_.push_back(std::move(cell));
+  cellHandlers_.emplace_back();
+  cellEnabled_.push_back(true);
   invalidate();
 }
 
@@ -141,12 +142,73 @@ void RowListItem::arrange(const Rect& bounds) {
   if (actions_ != nullptr) place(actions_, x, laid.actionsWidth);
 }
 
-bool RowListItem::onMouseDown(const MouseEvent& event) { return event.button == MouseButton::Left; }
+bool RowListItem::onMouseDown(const MouseEvent& event) {
+  if (event.button != MouseButton::Left) return false;
+  pressedCell_ = cellAt(event.position);
+  return true;
+}
+
+bool RowListItem::onMouseUp(const MouseEvent& event) {
+  if (event.button != MouseButton::Left) return false;
+  const int pressed = pressedCell_;
+  pressedCell_ = -1;
+  // 在同一列上按下并抬起才算点击；回调里可能改动本行，之后不再访问成员
+  if (pressed >= 0 && pressed == cellAt(event.position)) {
+    const auto handler = cellHandlers_[static_cast<std::size_t>(pressed)];
+    handler(cellHitRect(static_cast<std::size_t>(pressed)));
+  }
+  return true;
+}
+
+bool RowListItem::onMouseMove(const MouseEvent& event) {
+  const int cell = cellAt(event.position);
+  if (cell != hoverCell_) {
+    hoverCell_ = cell;
+    invalidate();
+  }
+  return false;
+}
+
+void RowListItem::onStateChanged() {
+  // 鼠标离开这一行后没有悬停的列
+  if (!hovered()) hoverCell_ = -1;
+  Widget::onStateChanged();
+}
+
+void RowListItem::setCellAction(std::size_t index, std::function<void(const Rect&)> handler) {
+  if (index >= cells_.size()) return;
+  cellHandlers_[index] = std::move(handler);
+  invalidate();
+}
+
+void RowListItem::setCellActionEnabled(std::size_t index, bool enabled) {
+  if (index >= cells_.size() || cellEnabled_[index] == enabled) return;
+  cellEnabled_[index] = enabled;
+  if (!enabled && hoverCell_ == static_cast<int>(index)) hoverCell_ = -1;
+  invalidate();
+}
+
+Rect RowListItem::cellHitRect(std::size_t index) const {
+  const Rect text = cells_[index]->bounds();
+  return Rect{text.x - tokens::space_xs, bounds().y + tokens::space_xxs, text.width + 2 * tokens::space_xs, std::max(0.0, bounds().height - 2 * tokens::space_xxs)};
+}
+
+int RowListItem::cellAt(Point point) const {
+  for (std::size_t i = 0; i < cells_.size(); ++i) {
+    if (cellHandlers_[i] && cellEnabled_[i] && cellHitRect(i).contains(point)) return static_cast<int>(i);
+  }
+  return -1;
+}
 
 void RowListItem::paint(Canvas& canvas) {
   const auto& colors = themeTokens(host()->theme());
   if (pressed()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_active_bg, .radius = tokens::row_list_radius});
   else if (hovered()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_hover_bg, .radius = tokens::row_list_radius});
+  // 可点击的列：悬停时在行底色上再加一块列底色，按下时更深
+  if (hoverCell_ >= 0) {
+    const bool down = pressed() && pressedCell_ == hoverCell_;
+    canvas.drawBox(cellHitRect(static_cast<std::size_t>(hoverCell_)), BoxStyle{.fill = down ? colors.option_active_bg : colors.option_hover_bg, .radius = tokens::row_list_radius});
+  }
   if (hasLeading_ && leadingIcon_) canvas.drawIcon(*leadingIcon_, leadingIconRect_, leadingEmphasized_ ? colors.accent : colors.text, tokens::icon_stroke_width);
 }
 

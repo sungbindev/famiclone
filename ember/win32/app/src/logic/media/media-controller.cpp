@@ -40,6 +40,7 @@ std::function<void()> MediaController::attach(contracts::ShellApi& shell) {
     ++floppyRequest_;
     ++printerRequest_;
     ++tapeRequest_;
+    ++timelineRequest_;
   };
   stopAll();
   shell_ = &shell;
@@ -107,6 +108,10 @@ void MediaController::recordTape() { perform("磁带录音", "media.openTapeReco
 
 void MediaController::stopTape() { perform("停止磁带", "media.tapeStop", nlohmann::json::object()); }
 
+void MediaController::seekTape(double seconds) { perform("磁带定位", "media.tapeSeek", {{"position", seconds}}); }
+
+contracts::MediaTimelineView MediaController::timelineView() const { return buildTimelineView(tape_, timeline_); }
+
 void MediaController::playTape() {
   if (shell_ == nullptr) return;
   if (tape_ && tape_->loaded) {
@@ -142,6 +147,8 @@ void MediaController::handleEvent(const std::string& name, const nlohmann::json&
     }
   } else if (name == "media.printFailed") {
     report("打印机输出", messageOf(data));
+  } else if (name == "media.tapeAnalyzed") {
+    refreshTimeline();
   } else if (name == "media.floppySaveFailed") {
     report("自动保存软盘镜像", messageOf(data));
   }
@@ -192,8 +199,23 @@ void MediaController::refreshTape() {
   ask("media.tapeStatus", nlohmann::json::object(), [this, current](const contracts::CoreReply& reply) {
     if (!reply.ok || tapeRequest_ != current) return;
     const auto next = reply.result.is_object() && reply.result.contains("status") ? parseTape(reply.result["status"]) : std::nullopt;
-    if (next == tape_) return;
+    const bool tapeChanged = next != tape_;
     tape_ = next;
+    // 没有磁带时时间轴作废；换了一盘或还在分析时重新读（分析中时磁带状态可能一直没变，进度要靠这里推进）
+    if (!tape_ || !tape_->loaded) timeline_.reset();
+    if (timelineNeedsRefresh(tape_, timeline_)) refreshTimeline();
+    if (tapeChanged) changed();
+  });
+}
+
+void MediaController::refreshTimeline() {
+  if (shell_ == nullptr) return;
+  const auto current = ++timelineRequest_;
+  ask("media.tapeTimeline", nlohmann::json::object(), [this, current](const contracts::CoreReply& reply) {
+    if (!reply.ok || timelineRequest_ != current) return;
+    auto next = parseTimeline(reply.result);
+    if (next == timeline_) return;
+    timeline_ = std::move(next);
     changed();
   });
 }
@@ -202,9 +224,11 @@ void MediaController::clear() {
   ++floppyRequest_;
   ++printerRequest_;
   ++tapeRequest_;
+  ++timelineRequest_;
   floppies_.clear();
   printer_.reset();
   tape_.reset();
+  timeline_.reset();
   changed();
 }
 

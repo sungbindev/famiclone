@@ -56,7 +56,8 @@ void requireBios(const std::vector<std::uint8_t>& bios) {
 
 }  // namespace
 
-Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
+Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive,
+                             std::shared_ptr<logic::hardware::TapeDeck> tapeDeck)
     : cartridgeIrq_(irq_),
       bios_(std::move(bios)),
       ram_(INTERNAL_RAM_SIZE),
@@ -73,6 +74,7 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
       parallel_(printer_ != nullptr ? static_cast<hw::ParallelPort&>(*printer_) : static_cast<hw::ParallelPort&>(nullParallel_)),
       irqController_(irq_),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
+      tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       fdc_(scheduler_, irqController_, logic::hardware::IrqUm6576::SOURCE_FLOPPY, FDC_STEP_TICKS, FDC_POLL_STEPS),
       speech_(scheduler_, MASTER_CLOCK_HZ),
       superIo_(video_, fdc_, speech_),
@@ -137,8 +139,13 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
 }
 
 Sb2000Machine::~Sb2000Machine() {
-  // 软驱在主机之外继续存在：只解除自己的接入，盘片留在里面。
+  // 软驱与磁带机在主机之外继续存在：只解除自己的接入，盘片与磁带留在里面。
   floppy_->detach(this);
+  try {
+    tapeDeck_->unbind(scheduler_);
+  } catch (...) {
+    // 析构时无法再报告，录音文件保留已写入的部分。
+  }
 }
 
 void Sb2000Machine::resetDevices(bool power) {
@@ -164,6 +171,9 @@ void Sb2000Machine::resetDevices(bool power) {
 }
 
 void Sb2000Machine::powerOn() {
+  // 磁带机重新接到本机的调度器（先停止，录音在这里写完），它的时间基准随时钟一起归零。
+  tapeDeck_->bind(scheduler_, MASTER_CLOCK_HZ);
+  tapeDeck_->setAudioRate(logic::hardware::Apu2a03::SAMPLE_RATE);
   // 时钟先归零并丢弃旧事件，各设备复位时再登记自己的事件；CPU 最后复位，复位序列会推进时钟。
   scheduler_.reset();
   // 上电总是 6576 模式：FC 模式的芯片静默（旧事件已随调度器清掉，这里只释放它们在线上的来源），MMC3 回到初始值。
@@ -187,7 +197,11 @@ void Sb2000Machine::powerOn() {
   debug_.discardPendingHit();
 }
 
-void Sb2000Machine::powerOff() { poweredOn_ = false; }
+void Sb2000Machine::powerOff() {
+  poweredOn_ = false;
+  // 断电时磁带机停止并断开，磁带留在里面。
+  tapeDeck_->unbind(scheduler_);
+}
 
 void Sb2000Machine::softReset() {
   if (!poweredOn_) return;
@@ -269,6 +283,7 @@ void Sb2000Machine::takeAudio(std::vector<float>& samples) {
   if (poweredOn_) catchUpAudio();
   if (fcMode_) fcApu_.takeAudio(samples);
   else psg_.takeAudio(samples);
+  tapeDeck_->mixAudio(samples);
 }
 
 void Sb2000Machine::setButtons(unsigned port, std::uint8_t buttons) {

@@ -94,6 +94,8 @@ MediaPanelContent::MediaPanelContent(contracts::MediaModel& model) : model_(mode
   tape_.eject = addIconButton(*tapeActions, "取出", IconId::PlayerEject, [this] { model_.ejectTape(); });
   tape->setActions(std::move(tapeActions));
   tape_.item = static_cast<rujian::ui::RowListItem*>(list->addChild(std::move(tape)));
+  // 位置列（第 0 个信息列）可点击，打开时间轴弹层
+  tape_.item->setCellAction(0, [this](const rujian::ui::Rect& anchor) { toggleTimeline(anchor); });
 
   auto printer = std::make_unique<rujian::ui::RowListItem>();
   printer->setLeading({"打印机", IconId::Printer, kLeadingWidth, true});
@@ -150,7 +152,49 @@ void MediaPanelContent::refresh() {
   tape_.play->setEnabled(view.tape.canPlay);
   tape_.record->setEnabled(view.tape.canRecord);
   tape_.stop->setEnabled(view.tape.canStop);
+  tape_.item->setCellActionEnabled(0, view.tape.canOpenTimeline);
   printer_->setTitle(view.printer);
+  syncTimeline();
+}
+
+void MediaPanelContent::toggleTimeline(const rujian::ui::Rect& anchor) {
+  if (timeline_ != nullptr && timeline_->isOpen()) {
+    timeline_->close();
+    return;
+  }
+  if (!model_.timelineView().available) return;
+  if (timeline_ == nullptr) {
+    timeline_ = std::make_unique<rujian::ui::TimelinePopup>();
+    timeline_->setOnSeek([this](double seconds) { model_.seekTape(seconds); });
+  }
+  // 每次打开都重新设置包络
+  shownSerial_ = -1;
+  shownReady_ = false;
+  timeline_->open(*tape_.item, anchor);
+  syncTimeline();
+}
+
+void MediaPanelContent::syncTimeline() {
+  if (timeline_ == nullptr || !timeline_->isOpen()) return;
+  const contracts::MediaTimelineView view = model_.timelineView();
+  if (!view.available) {
+    timeline_->close();
+    return;
+  }
+  timeline_->setDuration(view.duration);
+  timeline_->setPosition(view.position);
+  timeline_->setNotice(view.notice);
+  if (view.serial == shownSerial_ && view.ready == shownReady_) return;
+  shownSerial_ = view.serial;
+  shownReady_ = view.ready;
+  if (!view.ready) {
+    timeline_->clearEnvelope();
+    return;
+  }
+  std::vector<rujian::ui::TimelineRange> blanks;
+  blanks.reserve(view.blanks.size());
+  for (const contracts::MediaTimelineBlank& blank : view.blanks) blanks.push_back({blank.start, blank.end});
+  timeline_->setEnvelope(view.peaks, view.step, std::move(blanks));
 }
 
 }  // namespace ember::win32::ui

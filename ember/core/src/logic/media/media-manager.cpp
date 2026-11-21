@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "contracts/media/media-error.hpp"
+#include "logic/media/tape-analysis.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace ember::logic::media {
@@ -89,6 +90,7 @@ MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::sh
       watchFactory_(std::move(watchFactory)),
       autoSave_(autoSave),
       retryInterval_(retryInterval) {
+  timeline_.state = "none";
   watchers_.resize(drives_.size());
   if (!autoSave_) return;
   signal_->memoryChanged.assign(drives_.size(), 0);
@@ -103,6 +105,7 @@ MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::sh
 MediaManager::~MediaManager() { stopThread(); }
 
 void MediaManager::stopThread() {
+  restartAnalysis({}, tapeSerial_.load());
   {
     std::lock_guard lock(watchMutex_);
     for (auto& watcher : watchers_) watcher.reset();
@@ -148,9 +151,63 @@ api::TapeStatus MediaManager::withDeck(Action action) {
   std::optional<api::TapeStatus> status;
   runtime_->runOnSimulation([&] {
     action(*deck_);
-    status = tapeStatusOf(*deck_);
+    status = readTape();
   });
   return *status;
+}
+
+api::TapeStatus MediaManager::readTape() {
+  api::TapeStatus status = tapeStatusOf(*deck_);
+  status.serial = tapeSerial_.load();
+  return status;
+}
+
+template <typename Change>
+void MediaManager::updateTimeline(std::int64_t serial, Change change) {
+  std::lock_guard lock(timelineMutex_);
+  if (timeline_.serial == serial) change(timeline_);
+}
+
+void MediaManager::restartAnalysis(const std::string& path, std::int64_t serial) {
+  std::lock_guard control(analysisMutex_);
+  if (analysisCancel_ != nullptr) analysisCancel_->store(true);
+  if (analysisThread_.joinable()) analysisThread_.join();
+  {
+    std::lock_guard lock(timelineMutex_);
+    timeline_ = api::TapeTimeline{};
+    timeline_.serial = serial;
+    timeline_.state = path.empty() ? "none" : "analyzing";
+  }
+  analysisCancel_.reset();
+  if (path.empty()) return;
+  analysisCancel_ = std::make_shared<std::atomic<bool>>(false);
+  analysisThread_ = std::thread([this, path, serial, cancel = analysisCancel_] { analyzeTapeFile(path, serial, cancel); });
+}
+
+void MediaManager::analyzeTapeFile(const std::string& path, std::int64_t serial, const std::shared_ptr<std::atomic<bool>>& cancel) {
+  std::optional<TapeAnalysis> analysis;
+  try {
+    // 独立打开另一份来源来读，不影响磁带机里正在播放的那一份
+    const auto source = tapeStore_->open(path);
+    analysis = analyzeTape(*source, [&](double progress) { updateTimeline(serial, [progress](api::TapeTimeline& timeline) { timeline.progress = progress; }); }, *cancel);
+  } catch (const shared::CoreError& error) {
+    if (errors_ != nullptr) errors_->write({"media", error.code(), error.what(), nlohmann::json{{"file", path}}});
+  }
+  // 被取消：取出或换磁带的请求已经把时间轴换成新的状态，不再采用结果
+  if (cancel->load()) return;
+  updateTimeline(serial, [&analysis](api::TapeTimeline& timeline) {
+    if (!analysis) {
+      timeline.state = "failed";
+      return;
+    }
+    timeline.state = "ready";
+    timeline.progress = 1;
+    timeline.duration = analysis->duration;
+    timeline.step = analysis->step;
+    timeline.peaks.assign(analysis->peaks.begin(), analysis->peaks.end());
+    for (const auto& [start, end] : analysis->blanks) timeline.blanks.push_back(api::TapeBlank{start, end});
+  });
+  events_->publish(api::MEDIA_TAPE_ANALYZED_EVENT, nlohmann::json(api::MediaTapeAnalyzedData{serial}));
 }
 
 api::MediaFloppyInsertResult MediaManager::floppyInsert(const api::MediaFloppyInsertParams& params) {
@@ -391,13 +448,21 @@ api::MediaTapeLoadResult MediaManager::tapeLoad(const api::MediaTapeLoadParams& 
   auto status = withDeck([&](hw::TapeControl& deck) {
     if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
     deck.load(std::move(source), params.path);
+    ++tapeSerial_;
   });
+  restartAnalysis(params.path, status.serial);
   publishTapeChanged();
   return api::MediaTapeLoadResult{std::move(status)};
 }
 
 api::MediaTapeEjectResult MediaManager::tapeEject() {
-  auto status = withDeck([](hw::TapeControl& deck) { deck.eject(); });
+  bool hadTape = false;
+  auto status = withDeck([&](hw::TapeControl& deck) {
+    hadTape = deck.loaded();
+    deck.eject();
+    if (hadTape) ++tapeSerial_;
+  });
+  if (hadTape) restartAnalysis({}, status.serial);
   publishTapeChanged();
   return api::MediaTapeEjectResult{std::move(status)};
 }
@@ -413,26 +478,64 @@ api::MediaTapePlayResult MediaManager::tapePlay() {
 }
 
 api::MediaTapeRecordResult MediaManager::tapeRecord(const api::MediaTapeRecordParams& params) {
+  if (!params.path) return recordOverLoadedTape();
+  const std::string& path = *params.path;
   auto status = withDeck([&](hw::TapeControl& deck) {
     if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
     if (!deck.connected()) throw shared::CoreError(api::ERROR_TAPE_NOT_CONNECTED, "主机没有通电，磁带机不能录音");
-    deck.record(tapeStore_->create(params.path), params.path);
+    deck.record(tapeStore_->create(path), path);
+    ++tapeSerial_;
   });
+  restartAnalysis({}, status.serial);
+  publishTapeChanged();
+  return api::MediaTapeRecordResult{std::move(status)};
+}
+
+api::MediaTapeRecordResult MediaManager::recordOverLoadedTape() {
+  std::string path;
+  double start = 0;
+  std::int64_t serial = 0;
+  withDeck([&](hw::TapeControl& deck) {
+    if (!deck.loaded()) throw shared::CoreError(api::ERROR_NO_TAPE, "磁带机里没有磁带，请先选择录音文件");
+    if (deck.mode() != hw::TapeMode::Stopped) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在播放或录音，请先停止");
+    if (!deck.connected()) throw shared::CoreError(api::ERROR_TAPE_NOT_CONNECTED, "主机没有通电，磁带机不能录音");
+    path = deck.name();
+    start = deck.positionSeconds();
+    serial = tapeSerial_.load();
+  });
+  // 复制录音位置之前的内容要一段时间，不占用模拟线程；开始录音时磁带必须还是刚才那盘
+  auto sink = tapeStore_->overwrite(path, start);
+  auto status = withDeck([&](hw::TapeControl& deck) {
+    if (!deck.loaded() || deck.mode() != hw::TapeMode::Stopped || tapeSerial_.load() != serial) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带已经变了，请重新开始录音");
+    deck.record(std::move(sink), path, start);
+    if (deck.mode() != hw::TapeMode::Recording) throw shared::CoreError(api::ERROR_TAPE_NOT_CONNECTED, "主机没有通电，磁带机不能录音");
+    ++tapeSerial_;
+  });
+  restartAnalysis({}, status.serial);
   publishTapeChanged();
   return api::MediaTapeRecordResult{std::move(status)};
 }
 
 api::MediaTapeStopResult MediaManager::tapeStop() {
   std::string recordedPath;
+  double stopPosition = 0;
   auto status = withDeck([&](hw::TapeControl& deck) {
-    if (deck.mode() == hw::TapeMode::Recording) recordedPath = deck.name();
+    if (deck.mode() == hw::TapeMode::Recording) {
+      recordedPath = deck.name();
+      stopPosition = deck.positionSeconds();
+    }
     deck.stop();
   });
   if (!recordedPath.empty()) {
-    // 录好的文件自动成为磁带机里的磁带，位置在开头，可以直接播放。
+    // 录好的文件自动成为磁带机里的磁带，位置停在录音停止处，可以直接播放。
     try {
       auto source = tapeStore_->open(recordedPath);
-      status = withDeck([&](hw::TapeControl& deck) { deck.load(std::move(source), recordedPath); });
+      status = withDeck([&](hw::TapeControl& deck) {
+        deck.load(std::move(source), recordedPath);
+        deck.seek(stopPosition);
+        ++tapeSerial_;
+      });
+      restartAnalysis(recordedPath, status.serial);
     } catch (...) {
       publishTapeChanged();
       throw;
@@ -444,8 +547,23 @@ api::MediaTapeStopResult MediaManager::tapeStop() {
 
 api::MediaTapeStatusResult MediaManager::tapeStatus() {
   api::TapeStatus status;
-  runtime_->runOnSimulation([&] { status = tapeStatusOf(*deck_); });
+  runtime_->runOnSimulation([&] { status = readTape(); });
   return api::MediaTapeStatusResult{std::move(status)};
+}
+
+api::MediaTapeSeekResult MediaManager::tapeSeek(const api::MediaTapeSeekParams& params) {
+  auto status = withDeck([&](hw::TapeControl& deck) {
+    if (!deck.loaded()) throw shared::CoreError(api::ERROR_NO_TAPE, "磁带机里没有磁带");
+    if (deck.mode() == hw::TapeMode::Recording) throw shared::CoreError(api::ERROR_TAPE_BUSY, "磁带机正在录音，不能定位");
+    deck.seek(params.position);
+  });
+  publishTapeChanged();
+  return api::MediaTapeSeekResult{std::move(status)};
+}
+
+api::MediaTapeTimelineResult MediaManager::tapeTimeline() {
+  std::lock_guard lock(timelineMutex_);
+  return api::MediaTapeTimelineResult{timeline_};
 }
 
 }  // namespace ember::logic::media

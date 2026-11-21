@@ -11,6 +11,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <vector>
+
 #include "logic/media/media-controller.hpp"
 #include "logic/media/media-module.hpp"
 #include "logic/media/media-rules.hpp"
@@ -42,10 +45,14 @@ json floppyJson(int drive, bool inserted, const std::string& file = "", bool mot
   return item;
 }
 
-json tapeJson(bool connected, bool loaded, const std::string& mode = "stopped", const std::string& file = "", double position = 0, double duration = 0) {
-  json status = {{"connected", connected}, {"loaded", loaded}, {"mode", mode}, {"position", position}, {"duration", duration}, {"stereo", false}};
+json tapeJson(bool connected, bool loaded, const std::string& mode = "stopped", const std::string& file = "", double position = 0, double duration = 0, int serial = 0) {
+  json status = {{"connected", connected}, {"loaded", loaded}, {"mode", mode}, {"position", position}, {"duration", duration}, {"stereo", false}, {"serial", serial}};
   if (!file.empty()) status["fileName"] = file;
   return status;
+}
+
+json timelineJson(int serial, const std::string& state, double progress = 0, const std::vector<int>& peaks = {}, double duration = 0) {
+  return {{"serial", serial}, {"state", state}, {"progress", progress}, {"duration", duration}, {"step", peaks.empty() ? 0.0 : 0.1}, {"peaks", peaks}, {"blanks", json::array()}};
 }
 
 TEST(MediaRules, ParsesStatusesAndIgnoresBadShapes) {
@@ -132,6 +139,68 @@ TEST(MediaRules, TapeButtonsFollowTheTapeAndTheHost) {
   auto playing = logic::tapeAvailability(logic::parseTape(tapeJson(true, true, "playing", "a.wav")));
   EXPECT_TRUE(playing.stop && playing.eject);
   EXPECT_FALSE(playing.play || playing.record);
+}
+
+TEST(MediaRules, ParsesTheTimelineAndTheTapeSerial) {
+  EXPECT_EQ(logic::parseTape(tapeJson(true, true, "stopped", "a.wav", 0, 0, 7))->serial, 7);
+  EXPECT_FALSE(logic::parseTimeline(json::object()).has_value());
+  EXPECT_FALSE(logic::parseTimeline({{"timeline", json::object()}}).has_value());
+  json timeline = timelineJson(4, "ready", 1, {0, 50, 100}, 12.5);
+  timeline["peaks"] = json::array({0, 50, 100, 250});
+  timeline["blanks"] = json::array({json{{"start", 1.0}, {"end", 2.5}}});
+  const auto parsed = logic::parseTimeline({{"timeline", timeline}});
+  ASSERT_TRUE(parsed.has_value());
+  EXPECT_EQ(parsed->serial, 4);
+  EXPECT_EQ(parsed->mode, logic::TimelineMode::Ready);
+  EXPECT_DOUBLE_EQ(parsed->duration, 12.5);
+  EXPECT_EQ(parsed->peaks, (std::vector<std::uint8_t>{0, 50, 100, 100})) << "超过 100 的值按 100";
+  ASSERT_EQ(parsed->blanks.size(), 1U);
+  EXPECT_DOUBLE_EQ(parsed->blanks[0].second, 2.5);
+  EXPECT_EQ(logic::parseTimeline({{"timeline", timelineJson(1, "analyzing", 0.5)}})->mode, logic::TimelineMode::Analyzing);
+  EXPECT_EQ(logic::parseTimeline({{"timeline", timelineJson(1, "failed")}})->mode, logic::TimelineMode::Failed);
+  EXPECT_EQ(logic::parseTimeline({{"timeline", timelineJson(1, "none")}})->mode, logic::TimelineMode::None);
+}
+
+TEST(MediaRules, TheTimelineViewDependsOnTheTapeAndTheAnalysis) {
+  const auto stopped = logic::parseTape(tapeJson(true, true, "stopped", "a.wav", 3, 100, 2));
+  EXPECT_FALSE(logic::buildTimelineView(std::nullopt, std::nullopt).available);
+  EXPECT_FALSE(logic::buildTimelineView(logic::parseTape(tapeJson(true, false)), std::nullopt).available) << "没有磁带";
+  EXPECT_FALSE(logic::buildTimelineView(logic::parseTape(tapeJson(true, true, "recording", "a.wav", 3, 0, 2)), std::nullopt).available) << "录音时不能定位";
+  EXPECT_TRUE(logic::buildTimelineView(logic::parseTape(tapeJson(true, true, "playing", "a.wav", 3, 100, 2)), std::nullopt).available);
+  EXPECT_TRUE(logic::buildMediaView({}, stopped, std::nullopt).tape.canOpenTimeline);
+  EXPECT_FALSE(logic::buildMediaView({}, logic::parseTape(tapeJson(true, true, "recording", "a.wav")), std::nullopt).tape.canOpenTimeline);
+
+  // 还没读到、读到的是上一盘的：按“分析中 0%”
+  auto view = logic::buildTimelineView(stopped, std::nullopt);
+  EXPECT_EQ(view.notice, "分析中 0%");
+  EXPECT_FALSE(view.ready);
+  EXPECT_DOUBLE_EQ(view.duration, 100);
+  EXPECT_DOUBLE_EQ(view.position, 3);
+  EXPECT_EQ(logic::buildTimelineView(stopped, logic::parseTimeline({{"timeline", timelineJson(1, "ready", 1, {10, 20}, 5)}})).notice, "分析中 0%");
+  // 分析中带进度
+  EXPECT_EQ(logic::buildTimelineView(stopped, logic::parseTimeline({{"timeline", timelineJson(2, "analyzing", 0.456)}})).notice, "分析中 45%");
+  // 分析完成：给出包络，没有说明
+  view = logic::buildTimelineView(stopped, logic::parseTimeline({{"timeline", timelineJson(2, "ready", 1, {10, 20}, 5)}}));
+  EXPECT_TRUE(view.ready);
+  EXPECT_TRUE(view.notice.empty());
+  EXPECT_EQ(view.peaks, (std::vector<std::uint8_t>{10, 20}));
+  EXPECT_EQ(view.serial, 2);
+  EXPECT_EQ(logic::buildTimelineView(stopped, logic::parseTimeline({{"timeline", timelineJson(2, "failed")}})).notice, "无法分析这盘磁带的声音");
+  // 磁带机不知道总时长时取分析出的
+  const auto unknown = logic::parseTape(tapeJson(true, true, "stopped", "a.wav", 0, 0, 2));
+  EXPECT_DOUBLE_EQ(logic::buildTimelineView(unknown, logic::parseTimeline({{"timeline", timelineJson(2, "ready", 1, {10}, 12.5)}})).duration, 12.5);
+}
+
+TEST(MediaRules, TheTimelineIsReadAgainOnlyWhenItIsMissingStaleOrStillBeingAnalyzed) {
+  const auto loaded = logic::parseTape(tapeJson(true, true, "stopped", "a.wav", 0, 10, 2));
+  const auto timelineOf = [](int serial, const char* state) { return logic::parseTimeline({{"timeline", timelineJson(serial, state)}}); };
+  EXPECT_FALSE(logic::timelineNeedsRefresh(std::nullopt, std::nullopt));
+  EXPECT_FALSE(logic::timelineNeedsRefresh(logic::parseTape(tapeJson(true, false)), std::nullopt)) << "没有磁带不读";
+  EXPECT_TRUE(logic::timelineNeedsRefresh(loaded, std::nullopt));
+  EXPECT_TRUE(logic::timelineNeedsRefresh(loaded, timelineOf(1, "ready"))) << "读到的是上一盘的";
+  EXPECT_TRUE(logic::timelineNeedsRefresh(loaded, timelineOf(2, "analyzing"))) << "还在分析，要更新进度";
+  EXPECT_FALSE(logic::timelineNeedsRefresh(loaded, timelineOf(2, "ready")));
+  EXPECT_FALSE(logic::timelineNeedsRefresh(loaded, timelineOf(2, "failed")));
 }
 
 TEST(MediaRules, ViewAlwaysListsFloppyATapeAndPrinter) {
@@ -244,6 +313,61 @@ TEST(MediaController, TapeOperationsSendTheirRequests) {
   EXPECT_EQ(f.count("media.openTapeRecording"), 1);
   f.controller.loadDroppedTape(9);
   EXPECT_EQ(f.last("media.openTape")->params, (json{{"droppedId", 9}}));
+}
+
+TEST(MediaController, ReadsTheTimelineOfTheLoadedTapeAndFollowsTheAnalysisToTheEnd) {
+  MediaFixture f;
+  f.reply("media.tapeStatus", {{"status", tapeJson(true, true, "stopped", "a.wav", 0, 10, 5)}});
+  f.reply("media.tapeTimeline", {{"timeline", timelineJson(5, "analyzing", 0.4)}});
+  f.attach();
+  EXPECT_EQ(f.count("media.tapeTimeline"), 1) << "读到磁带后读一次时间轴";
+  auto view = f.controller.timelineView();
+  EXPECT_TRUE(view.available);
+  EXPECT_EQ(view.notice, "分析中 40%");
+  EXPECT_TRUE(view.ready == false);
+
+  // 分析中时每次读磁带状态都继续读时间轴（磁带状态本身没有变化）
+  f.controller.refresh();
+  EXPECT_EQ(f.count("media.tapeTimeline"), 2);
+  f.reply("media.tapeTimeline", {{"timeline", timelineJson(5, "ready", 1, {10, 20, 30}, 10)}});
+  f.core.emitEvent("media.tapeAnalyzed", {{"serial", 5}});
+  EXPECT_EQ(f.count("media.tapeTimeline"), 3) << "核心发 media.tapeAnalyzed 时立即读取";
+  view = f.controller.timelineView();
+  EXPECT_TRUE(view.ready);
+  EXPECT_EQ(view.peaks.size(), 3U);
+  EXPECT_TRUE(view.notice.empty());
+
+  // 分析完成后不再重复读取
+  f.controller.refresh();
+  EXPECT_EQ(f.count("media.tapeTimeline"), 3);
+
+  // 换了一盘磁带（序号变了）：重新读，旧的包络不再使用
+  f.reply("media.tapeStatus", {{"status", tapeJson(true, true, "stopped", "b.wav", 0, 20, 6)}});
+  f.reply("media.tapeTimeline", {{"timeline", timelineJson(6, "analyzing", 0.1)}});
+  f.controller.refresh();
+  EXPECT_EQ(f.count("media.tapeTimeline"), 4);
+  view = f.controller.timelineView();
+  EXPECT_FALSE(view.ready);
+  EXPECT_EQ(view.serial, 6);
+  EXPECT_EQ(view.notice, "分析中 10%");
+
+  // 取出磁带：时间轴作废，弹层不可用
+  f.reply("media.tapeStatus", {{"status", tapeJson(true, false, "stopped", "", 0, 0, 7)}});
+  f.controller.refresh();
+  EXPECT_FALSE(f.controller.timelineView().available);
+}
+
+TEST(MediaController, SeekingTheTapeSendsThePositionAndRefreshes) {
+  MediaFixture f;
+  f.attach();
+  const int before = f.count("media.tapeStatus");
+  f.controller.seekTape(12.5);
+  ASSERT_NE(f.last("media.tapeSeek"), nullptr);
+  EXPECT_EQ(f.last("media.tapeSeek")->params, (json{{"position", 12.5}}));
+  EXPECT_EQ(f.count("media.tapeStatus"), before + 1);
+  f.fail("media.tapeSeek", "磁带机正在录音，不能定位");
+  f.controller.seekTape(1);
+  EXPECT_EQ(f.shell.notices.back().first, "磁带定位失败：磁带机正在录音，不能定位");
 }
 
 TEST(MediaController, PlayWithoutATapePicksOneAndPlaysOnlyWhenTheTapeDeckIsConnected) {

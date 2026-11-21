@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-handlers.hpp
- * 说明：media 模块里外壳自己处理的请求：openFloppy（载入软盘镜像）、openTape（载入磁带）、openTapeRecording（选择录音文件并开始录音）。
+ * 说明：media 模块里外壳自己处理的请求：openFloppy（载入软盘镜像）、openTape（载入磁带）、openTapeRecording（磁带机里有磁带时在它上面录音，没有时选择录音文件并开始录音）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19

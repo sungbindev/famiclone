@@ -43,4 +43,6 @@ inline constexpr std::string_view ERROR_NO_TAPE = "media.noTape";
 inline constexpr std::string_view ERROR_TAPE_BUSY = "media.tapeBusy";
 /** 声音文件里没有声音，或无法解码。 */
 inline constexpr std::string_view ERROR_TAPE_UNSUPPORTED = "media.tapeUnsupported";
+/** 磁带的文件不是 WAV，不能在它上面录音（只有 WAV 能就地改写）。 */
+inline constexpr std::string_view ERROR_TAPE_NOT_WRITABLE = "media.tapeNotWritable";
 }  // namespace ember::contracts::media

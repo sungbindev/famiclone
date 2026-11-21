@@ -27,10 +27,10 @@ std::unique_ptr<contracts::hardware::Machine> MachineCatalog::create(const std::
 }
 
 std::unique_ptr<contracts::hardware::Machine> MachineCatalog::createWithRom(const std::string& machine, std::vector<std::uint8_t> rom) const {
-  if (machine == "sb2000") return std::make_unique<Sb2000Machine>(std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
-  if (machine == "sb97") return std::make_unique<Sb97Machine>(std::move(rom), floppyActivity_.get(), floppyDrive_);
-  if (machine == "bbg1") return std::make_unique<BbgMachine>(BbgVariant::floppyOne(), std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
-  if (machine == "bbg98") return std::make_unique<BbgMachine>(BbgVariant::model98(), std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
+  if (machine == "sb2000") return std::make_unique<Sb2000Machine>(std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_, tapeDeck_);
+  if (machine == "sb97") return std::make_unique<Sb97Machine>(std::move(rom), floppyActivity_.get(), floppyDrive_, tapeDeck_);
+  if (machine == "bbg1") return std::make_unique<BbgMachine>(BbgVariant::floppyOne(), std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_, tapeDeck_);
+  if (machine == "bbg98") return std::make_unique<BbgMachine>(BbgVariant::model98(), std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_, tapeDeck_);
   if (machine == "pec9588") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec9588, std::move(rom), tapeDeck_);
   if (machine == "pec586") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec586, std::move(rom), tapeDeck_);
   if (machine == "yuxing") return std::make_unique<YuxingMachine>(std::move(rom), tapeDeck_, floppyActivity_.get(), floppyDrive_);

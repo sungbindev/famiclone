@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <vector>
 
 #include "rujian/ui/root.hpp"
 #include "rujian/ui/row-list.hpp"
@@ -104,6 +105,71 @@ TEST(RowListItem, ChangingAnAutoWidthCellRearrangesTheRow) {
   EXPECT_GT(s.at(2).width, 40);
   // 行尾操作的位置不变
   EXPECT_DOUBLE_EQ(s.at(3).x, 400 - 10 - 60);
+}
+
+TEST(RowListItem, AClickableCellShowsAHandAndCallsBackWithItsAreaWhenClicked) {
+  Scene<RowListItem> s;
+  s.widget->setTitle("标题");
+  s.widget->addCell({"1:23 / 4:56", 72, true});
+  s.widget->addCell({"已停止", 108, true});
+  std::vector<Rect> clicks;
+  s.widget->setCellAction(0, [&clicks](const Rect& area) { clicks.push_back(area); });
+  s.layout(400);
+  const Rect text = s.at(2);
+  const Point inside{text.x + 5, text.y + text.height / 2};
+  const Point other{s.at(3).x + 5, text.y + text.height / 2};
+
+  s.root.mouseMove(inside, 0);
+  EXPECT_EQ(s.root.cursor(), CursorKind::Hand) << "可点击的列上是手形";
+  s.root.mouseMove(other, 0);
+  EXPECT_EQ(s.root.cursor(), CursorKind::Arrow) << "没有设置点击的列上不是手形";
+  s.root.mouseMove(inside, 0);
+  s.root.mouseDown(inside, MouseButton::Left, 0);
+  EXPECT_TRUE(clicks.empty()) << "按下时还不回调";
+  s.root.mouseUp(inside, MouseButton::Left, 0);
+  ASSERT_EQ(clicks.size(), 1U);
+  // 点击区域比文字多出左右各 4 像素，高度贴着行
+  EXPECT_DOUBLE_EQ(clicks[0].x, text.x - 4);
+  EXPECT_DOUBLE_EQ(clicks[0].width, text.width + 8);
+  EXPECT_DOUBLE_EQ(clicks[0].y, s.widget->bounds().y + 2);
+}
+
+TEST(RowListItem, PressingOnACellAndReleasingElsewhereIsNotAClick) {
+  Scene<RowListItem> s;
+  s.widget->setTitle("标题");
+  s.widget->addCell({"1:23", 72, true});
+  int clicks = 0;
+  s.widget->setCellAction(0, [&clicks](const Rect&) { ++clicks; });
+  s.layout(400);
+  const Rect text = s.at(2);
+  const Point inside{text.x + 5, text.y + text.height / 2};
+  s.root.mouseMove(inside, 0);
+  s.root.mouseDown(inside, MouseButton::Left, 0);
+  s.root.mouseUp(Point{20, text.y + text.height / 2}, MouseButton::Left, 0);
+  EXPECT_EQ(clicks, 0);
+}
+
+TEST(RowListItem, ADisabledOrClearedCellActionDoesNothing) {
+  Scene<RowListItem> s;
+  s.widget->setTitle("标题");
+  s.widget->addCell({"1:23", 72, true});
+  int clicks = 0;
+  s.widget->setCellAction(0, [&clicks](const Rect&) { ++clicks; });
+  s.layout(400);
+  const Rect text = s.at(2);
+  const Point inside{text.x + 5, text.y + text.height / 2};
+  s.widget->setCellActionEnabled(0, false);
+  s.root.mouseMove(inside, 0);
+  EXPECT_EQ(s.root.cursor(), CursorKind::Arrow);
+  s.root.mouseDown(inside, MouseButton::Left, 0);
+  s.root.mouseUp(inside, MouseButton::Left, 0);
+  EXPECT_EQ(clicks, 0) << "禁用后点击无效";
+  s.widget->setCellActionEnabled(0, true);
+  s.widget->setCellAction(0, nullptr);
+  s.root.mouseMove(inside, 0);
+  s.root.mouseDown(inside, MouseButton::Left, 0);
+  s.root.mouseUp(inside, MouseButton::Left, 0);
+  EXPECT_EQ(clicks, 0) << "取消回调后点击无效";
 }
 
 TEST(RowList, RowsHaveNoGap) {

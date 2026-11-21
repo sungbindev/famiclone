@@ -40,6 +40,7 @@
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
 #include "logic/hardware/fdc-upd765/fdc-upd765.hpp"
 #include "logic/hardware/floppy-drive/standard-floppy-drive.hpp"
+#include "logic/hardware/tape-deck/tape-deck.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
 #include "logic/hardware/keyboard-bbg/keyboard-bbg.hpp"
 #include "logic/hardware/lines/line-output.hpp"
@@ -80,10 +81,11 @@ class BbgMachine final : public contracts::hardware::Machine, private contracts:
    * @param printerOutput 打印机输出的页交给它，必须活到主机销毁；为空时并口不接打印机。
    * @param floppyActivity 软驱马达开关变化时通知它，必须活到主机销毁；为空时不通知。
    * @param floppyDrive 软驱 A：独立于主机的设备，由外面创建并在多台主机之间共用，主机创建时接入、销毁时解除，盘片留在里面；为空时主机自己带一个（测试用）。
+   * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它，机器的声音经它播放磁带、录进磁带；为空时主机自己带一台（测试用）。
    * @throws shared::CoreError hardware.invalidArgument：BIOS 大小不对。
    */
   BbgMachine(const BbgVariant& variant, std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr,
-             std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr);
+             std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr);
   ~BbgMachine() override;
 
   BbgMachine(const BbgMachine&) = delete;
@@ -114,6 +116,7 @@ class BbgMachine final : public contracts::hardware::Machine, private contracts:
   [[nodiscard]] unsigned floppyDriveCount() const override { return 1; }
   contracts::hardware::FloppyDrive* floppyDrive(unsigned index) override { return index == 0 ? floppy_.get() : nullptr; }
   contracts::hardware::PrinterControl* printer() override { return printer_.get(); }
+  contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
 
   // 测试与调试用
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
@@ -183,6 +186,8 @@ class BbgMachine final : public contracts::hardware::Machine, private contracts:
   BbgInputPort inputPort_;
   IgnoredInterrupts ignoredInterrupts_;
   std::shared_ptr<logic::hardware::StandardFloppyDrive> floppy_;
+  /** 磁带机：独立于主机，通电时接上。 */
+  std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_;
   logic::hardware::FdcUpd765 fdc_;
   logic::hardware::SpeechLpc speech_;
   VoiceMixer voiceMixer_;

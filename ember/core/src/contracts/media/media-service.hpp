@@ -64,14 +64,27 @@ class MediaService {
   /** 开始播放。@throws shared::CoreError media.noTape、media.tapeNotConnected。 */
   virtual MediaTapePlayResult tapePlay() = 0;
 
-  /** 开始录音，文件被覆盖。@throws shared::CoreError media.tapeBusy、media.tapeNotConnected、media.saveFailed。 */
+  /**
+   * 开始录音：给出 path 时放入一盘空白磁带录到这个文件（已有的文件被覆盖）；没有 path 时在磁带机里已有的磁带上从当前位置开始录，覆盖到哪录到哪，前后的内容保留，录好的内容写回这盘磁带的文件。
+   * 录的是主机的声音加数据线上的信号。
+   * @throws shared::CoreError media.tapeBusy、media.tapeNotConnected、media.saveFailed、media.noTape（没有 path 而磁带机里没有磁带）、media.tapeNotWritable（磁带文件不是 WAV）。
+   */
   virtual MediaTapeRecordResult tapeRecord(const MediaTapeRecordParams& params) = 0;
 
-  /** 停止播放或录音；录音停止后录到的文件成为磁带机里的磁带。@throws shared::CoreError 重新载入录好的文件时的错误。 */
+  /** 停止播放或录音；录音停止后录到的文件成为磁带机里的磁带，位置停在录音停止处。@throws shared::CoreError 重新载入录好的文件时的错误。 */
   virtual MediaTapeStopResult tapeStop() = 0;
 
-  /** 磁带机的状态；没有接在通电的主机上时 connected 为 false。 */
+  /** 磁带机的状态；没有接在通电的主机上（没有主机或主机没有通电）时 connected 为 false。 */
   [[nodiscard]] virtual MediaTapeStatusResult tapeStatus() = 0;
+
+  /**
+   * 把磁带定位到某个位置；停止与播放时都可以，不要求接上主机；成功后发 media.changed。
+   * @throws shared::CoreError media.noTape、media.tapeBusy（正在录音）。
+   */
+  virtual MediaTapeSeekResult tapeSeek(const MediaTapeSeekParams& params) = 0;
+
+  /** 磁带的时间轴：分析中只给进度，完成后给出声音大小与空白段；没有磁带时 state 为 none。 */
+  [[nodiscard]] virtual MediaTapeTimelineResult tapeTimeline() = 0;
 };
 
 }  // namespace ember::contracts::media

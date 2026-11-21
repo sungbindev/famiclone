@@ -51,7 +51,7 @@ std::size_t paletteSlot(std::uint32_t address) {
 // ---------------------------------------------------------------- 装配
 
 BbgMachine::BbgMachine(const BbgVariant& variant, std::vector<std::uint8_t> bios, hw::PrinterOutput* printerOutput, hw::FloppyActivity* floppyActivity,
-                       std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
+                       std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck)
     : cartridgeIrq_(irq_),
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
@@ -60,6 +60,7 @@ BbgMachine::BbgMachine(const BbgVariant& variant, std::vector<std::uint8_t> bios
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       inputPort_(pad_.port(0), apu_, keyboard_, &mouse_),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
+      tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       fdc_(scheduler_, ignoredInterrupts_, FDC_INTERRUPT_SOURCE, FDC_STEP_TICKS, FDC_POLL_STEPS),
       speech_(scheduler_, MASTER_CLOCK_HZ, logic::hardware::SpeechLpc::Variant::Bbg),
       printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),
@@ -86,11 +87,19 @@ BbgMachine::BbgMachine(const BbgVariant& variant, std::vector<std::uint8_t> bios
 }
 
 BbgMachine::~BbgMachine() {
-  // 软驱在主机之外继续存在：只解除自己的接入，盘片留在里面。
+  // 软驱与磁带机在主机之外继续存在：只解除自己的接入，盘片与磁带留在里面。
   floppy_->detach(this);
+  try {
+    tapeDeck_->unbind(scheduler_);
+  } catch (...) {
+    // 析构时无法再报告，录音文件保留已写入的部分。
+  }
 }
 
 void BbgMachine::powerOn() {
+  // 磁带机重新接到本机的调度器（先停止，录音在这里写完），它的时间基准随时钟一起归零。
+  tapeDeck_->bind(scheduler_, MASTER_CLOCK_HZ);
+  tapeDeck_->setAudioRate(logic::hardware::Apu2a03::SAMPLE_RATE);
   // 时钟先归零并丢弃旧事件，各设备复位时再登记自己的事件；CPU 最后复位，复位序列会推进时钟。
   scheduler_.reset();
   ram_.fill(0);
@@ -118,6 +127,8 @@ void BbgMachine::powerOn() {
 void BbgMachine::powerOff() {
   poweredOn_ = false;
   board_.stopLineClock();
+  // 断电时磁带机停止并断开，磁带留在里面。
+  tapeDeck_->unbind(scheduler_);
 }
 
 void BbgMachine::softReset() {
@@ -160,6 +171,7 @@ void BbgMachine::takeAudio(std::vector<float>& samples) {
   if (poweredOn_) apu_.catchUp(scheduler_.now());
   apu_.takeAudio(samples);
   voiceMixer_.mixInto(samples, scheduler_.now());
+  tapeDeck_->mixAudio(samples);
 }
 
 void BbgMachine::setButtons(unsigned port, std::uint8_t buttons) {

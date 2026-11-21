@@ -72,7 +72,8 @@ void Sb97Machine::InputPort::write(std::uint16_t address, std::uint8_t value) {
 
 // ---------------------------------------------------------------- 装配
 
-Sb97Machine::Sb97Machine(std::vector<std::uint8_t> bios, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
+Sb97Machine::Sb97Machine(std::vector<std::uint8_t> bios, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive,
+                         std::shared_ptr<logic::hardware::TapeDeck> tapeDeck)
     : cartridgeIrq_(irq_),
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
@@ -87,6 +88,7 @@ Sb97Machine::Sb97Machine(std::vector<std::uint8_t> bios, hw::FloppyActivity* flo
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       inputPort_(pad_.port(0), apu_, keyboard_),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
+      tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       fdc_(scheduler_, fdcInterrupt_, FDC_INTERRUPT_SOURCE, FDC_STEP_TICKS, FDC_POLL_STEPS),
       speech_(scheduler_, MASTER_CLOCK_HZ, logic::hardware::SpeechLpc::Variant::Subor),
       board_(std::move(bios), irq_, fdc_, speech_),
@@ -110,11 +112,19 @@ Sb97Machine::Sb97Machine(std::vector<std::uint8_t> bios, hw::FloppyActivity* flo
 }
 
 Sb97Machine::~Sb97Machine() {
-  // 软驱在主机之外继续存在：只解除自己的接入，盘片留在里面。
+  // 软驱与磁带机在主机之外继续存在：只解除自己的接入，盘片与磁带留在里面。
   floppy_->detach(this);
+  try {
+    tapeDeck_->unbind(scheduler_);
+  } catch (...) {
+    // 析构时无法再报告，录音文件保留已写入的部分。
+  }
 }
 
 void Sb97Machine::powerOn() {
+  // 磁带机重新接到本机的调度器（先停止，录音在这里写完），它的时间基准随时钟一起归零。
+  tapeDeck_->bind(scheduler_, MASTER_CLOCK_HZ);
+  tapeDeck_->setAudioRate(logic::hardware::Apu2a03::SAMPLE_RATE);
   // 时钟先归零并丢弃旧事件，各设备复位时再登记自己的事件；CPU 最后复位，复位序列会推进时钟。
   scheduler_.reset();
   ram_.fill(0);
@@ -135,7 +145,11 @@ void Sb97Machine::powerOn() {
   debug_.discardPendingHit();
 }
 
-void Sb97Machine::powerOff() { poweredOn_ = false; }
+void Sb97Machine::powerOff() {
+  poweredOn_ = false;
+  // 断电时磁带机停止并断开，磁带留在里面。
+  tapeDeck_->unbind(scheduler_);
+}
 
 void Sb97Machine::softReset() {
   if (!poweredOn_) return;
@@ -176,6 +190,7 @@ void Sb97Machine::takeAudio(std::vector<float>& samples) {
   if (poweredOn_) apu_.catchUp(scheduler_.now());
   apu_.takeAudio(samples);
   voiceMixer_.mixInto(samples, scheduler_.now());
+  tapeDeck_->mixAudio(samples);
 }
 
 void Sb97Machine::setButtons(unsigned port, std::uint8_t buttons) {

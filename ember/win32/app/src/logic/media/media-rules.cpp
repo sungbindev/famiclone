@@ -46,6 +46,9 @@ std::string clockText(double seconds) {
   return std::to_string(minutes) + ":" + rest;
 }
 
+/** 时间轴是否可用：里面有磁带且不在录音（录音时不能定位）。 */
+bool tapeTimelineAvailable(const std::optional<TapeState>& tape) { return tape && tape->loaded && tape->mode != TapeMode::Recording; }
+
 }  // namespace
 
 std::vector<FloppyState> parseFloppies(const nlohmann::json& result) {
@@ -78,7 +81,33 @@ std::optional<TapeState> parseTape(const nlohmann::json& status) {
   tape.mode = mode == "playing" ? TapeMode::Playing : mode == "recording" ? TapeMode::Recording : TapeMode::Stopped;
   tape.position = numberOf(status, "position");
   tape.duration = numberOf(status, "duration");
+  tape.serial = static_cast<std::int64_t>(numberOf(status, "serial"));
   return tape;
+}
+
+std::optional<TimelineState> parseTimeline(const nlohmann::json& result) {
+  const auto found = result.is_object() ? result.find("timeline") : result.end();
+  if (!result.is_object() || found == result.end() || !found->is_object() || !found->contains("state")) return std::nullopt;
+  const nlohmann::json& timeline = *found;
+  TimelineState state;
+  state.serial = static_cast<std::int64_t>(numberOf(timeline, "serial"));
+  const std::string mode = stringOf(timeline, "state");
+  state.mode = mode == "analyzing" ? TimelineMode::Analyzing : mode == "ready" ? TimelineMode::Ready : mode == "failed" ? TimelineMode::Failed : TimelineMode::None;
+  state.progress = numberOf(timeline, "progress");
+  state.duration = numberOf(timeline, "duration");
+  state.step = numberOf(timeline, "step");
+  const auto peaks = timeline.find("peaks");
+  if (peaks != timeline.end() && peaks->is_array()) {
+    state.peaks.reserve(peaks->size());
+    for (const auto& item : *peaks) state.peaks.push_back(static_cast<std::uint8_t>(item.is_number() ? std::clamp(item.get<int>(), 0, 100) : 0));
+  }
+  const auto blanks = timeline.find("blanks");
+  if (blanks != timeline.end() && blanks->is_array()) {
+    for (const auto& item : *blanks) {
+      if (item.is_object()) state.blanks.emplace_back(numberOf(item, "start"), numberOf(item, "end"));
+    }
+  }
+  return state;
 }
 
 std::optional<PrinterMode> parsePrinter(const nlohmann::json& result) {
@@ -158,8 +187,35 @@ contracts::MediaView buildMediaView(const std::vector<FloppyState>& floppies, co
     view.floppies.push_back(std::move(row));
   }
   const TapeAvailability available = tapeAvailability(tape);
-  view.tape = {tapeNameText(tape), tapePositionText(tape), tapeStateText(tape), available.eject, available.play, available.record, available.stop};
+  view.tape = {tapeNameText(tape), tapePositionText(tape), tapeStateText(tape), available.eject, available.play, available.record, available.stop, tapeTimelineAvailable(tape)};
   view.printer = printerStateText(printer);
+  return view;
+}
+
+bool timelineNeedsRefresh(const std::optional<TapeState>& tape, const std::optional<TimelineState>& timeline) {
+  if (!tape || !tape->loaded) return false;
+  return !timeline || timeline->serial != tape->serial || timeline->mode == TimelineMode::Analyzing;
+}
+
+contracts::MediaTimelineView buildTimelineView(const std::optional<TapeState>& tape, const std::optional<TimelineState>& timeline) {
+  contracts::MediaTimelineView view;
+  view.available = tapeTimelineAvailable(tape);
+  if (!view.available) return view;
+  const bool matching = timeline && timeline->serial == tape->serial;
+  view.position = tape->position;
+  view.duration = tape->duration > 0 ? tape->duration : (matching && timeline->mode == TimelineMode::Ready ? timeline->duration : 0.0);
+  view.serial = tape->serial;
+  if (matching && timeline->mode == TimelineMode::Ready) {
+    view.ready = true;
+    view.step = timeline->step;
+    view.peaks = timeline->peaks;
+    for (const auto& [start, end] : timeline->blanks) view.blanks.push_back({start, end});
+  } else if (matching && timeline->mode == TimelineMode::Failed) {
+    view.notice = "无法分析这盘磁带的声音";
+  } else {
+    const double progress = matching && timeline->mode == TimelineMode::Analyzing ? std::clamp(timeline->progress, 0.0, 1.0) : 0.0;
+    view.notice = "分析中 " + std::to_string(static_cast<int>(std::floor(progress * 100))) + "%";
+  }
   return view;
 }
 

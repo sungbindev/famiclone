@@ -8,7 +8,7 @@
 | 运行模式（暂停、运行） | `runtime.pause`、`runtime.resume`、`runtime.run`、`runtime.step`；只在通电时有效 |
 | 卡带（空、已插） | `cartridges.load` 切换并重新装配主机，`cartridges.eject` 取出；整机机型不插卡带，经 `machines.boot` 装配主机 |
 | 每个驱动器（无盘、有盘） | `media.floppyInsert`、`media.floppyEject`；驱动器之间互不影响，与电源无关 |
-| 磁带机（停、播放、录音） | `media.tapePlay`、`media.tapeRecord`、`media.tapeStop`；播放与录音要主机通电 |
+| 磁带机（停、播放、录音） | `media.tapePlay`、`media.tapeRecord`、`media.tapeStop`、`media.tapeSeek`（定位，停止与播放时都可以，录音时不行）；播放与录音要主机通电；`media.tapeTimeline` 读磁带上的声音大小与空白段，用来找程序段 |
 
 - 软复位只发复位信号，不改变电源、运行模式、卡带和介质。
 - 上电后默认进入暂停，调用 `resume` 或 `run` 才运行；`runtime.powerOn` 可以带 `resume: true` 直接运行。`cartridges.load` 默认装入后上电并运行，`powerOn`、`resume` 都可以设为 `false`。

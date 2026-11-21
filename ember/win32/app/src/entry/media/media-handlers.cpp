@@ -92,12 +92,24 @@ MainRequestHandlers createMediaHandlers(MediaDependencies dependencies) {
 
   handlers["media.openTapeRecording"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
     const ParamReader reader(params, {});
-    const auto path = dependencies.dialog.pickSaveFile({"保存录音", {{"WAV 声音文件", {"wav"}}}, "tapeRecording"});
-    if (!path) {
-      done(contracts::CoreReply::success({{"canceled", true}}));
-      return;
-    }
-    dependencies.core.request("media.tapeRecord", nlohmann::json{{"path", *path}}, [done](contracts::CoreReply reply) { done(withStatus(std::move(reply))); });
+    // 磁带机里已有磁带时不弹窗口，直接在这盘磁带上从当前位置开始录；没有磁带时选择录音文件，录成一盘新磁带
+    dependencies.core.request("media.tapeStatus", nlohmann::json::object(), [dependencies, done](contracts::CoreReply current) {
+      if (!current.ok) {
+        done(std::move(current));
+        return;
+      }
+      const bool loaded = current.result.is_object() && current.result.contains("status") && current.result["status"].is_object() && current.result["status"].value("loaded", false);
+      if (loaded) {
+        dependencies.core.request("media.tapeRecord", nlohmann::json::object(), [done](contracts::CoreReply reply) { done(withStatus(std::move(reply))); });
+        return;
+      }
+      const auto path = dependencies.dialog.pickSaveFile({"保存录音", {{"WAV 声音文件", {"wav"}}}, "tapeRecording"});
+      if (!path) {
+        done(contracts::CoreReply::success({{"canceled", true}}));
+        return;
+      }
+      dependencies.core.request("media.tapeRecord", nlohmann::json{{"path", *path}}, [done](contracts::CoreReply reply) { done(withStatus(std::move(reply))); });
+    });
   };
 
   return handlers;

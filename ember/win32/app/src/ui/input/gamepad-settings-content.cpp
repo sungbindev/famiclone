@@ -145,7 +145,9 @@ void GamepadSettingsContent::arrange(const Rect& bounds) {
 }
 
 void GamepadSettingsContent::scheduleTimer() {
-  if (timer_ == 0 && host() != nullptr) timer_ = host()->startTimer(this, model_.pollIntervalMs());
+  if (timer_ != 0 || host() == nullptr) return;
+  timerInterval_ = model_.pollIntervalMs();
+  timer_ = host()->startTimer(this, timerInterval_);
 }
 
 void GamepadSettingsContent::onTimer(unsigned id) {
@@ -156,6 +158,12 @@ void GamepadSettingsContent::onTimer(unsigned id) {
 }
 
 void GamepadSettingsContent::refresh() {
+  // 读取间隔变了（开始学习手柄时由慢变快）立即按新间隔重排，不等旧的定时器到时
+  if (timer_ != 0 && host() != nullptr && model_.pollIntervalMs() != timerInterval_) {
+    host()->stopTimer(timer_);
+    timer_ = 0;
+    scheduleTimer();
+  }
   const contracts::PadSettingsView view = model_.view();
   const bool ready = view.load == contracts::PadSettingsLoad::Ready;
   std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message;

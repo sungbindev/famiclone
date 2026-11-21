@@ -171,6 +171,21 @@ TEST(PadRules, DetectSourceUsesTheBaselineForButtonsAndAxes) {
   EXPECT_FALSE(logic::detectSource(logic::baselineOf(pad(0, "Pad", std::vector<bool>(40, false))), pad(0, "Pad", many)).has_value());
 }
 
+TEST(PadRules, RelaxBaselineFollowsReleasedButtonsAndCenteredAxes) {
+  const auto baseline = logic::baselineOf(pad(0, "Pad", {true, false}, {0.9, -0.9}));
+  EXPECT_TRUE(logic::anyButtonHeld(pad(0, "Pad", {false, true})));
+  EXPECT_FALSE(logic::anyButtonHeld(pad(0, "Pad", {false, false})));
+  // 还按着、还推着的不变
+  const auto held = logic::relaxBaseline(baseline, pad(0, "Pad", {true, false}, {0.9, -0.9}));
+  EXPECT_EQ(held.buttons, baseline.buttons);
+  EXPECT_EQ(held.axes, baseline.axes);
+  // 松开、回中后基准跟着变，之后再按、再推能认出
+  const auto released = logic::relaxBaseline(baseline, pad(0, "Pad", {false, false}, {0.0, -0.9}));
+  EXPECT_EQ(released.buttons, (std::vector<bool>{false, false}));
+  EXPECT_EQ(released.axes, (std::vector<double>{0.0, -0.9}));
+  EXPECT_EQ(logic::detectSource(released, pad(0, "Pad", {true, false}, {0.9, -0.9})), (PadSource{"button", 0, {}}));
+}
+
 TEST(PadRules, SlotsRoundTripThroughJsonAndBadShapesAreRejected) {
   auto slots = logic::assignDevice(slotsOf(defaultSlots()), 0, PadDevice{"Pad", 2});
   slots = logic::bindGamepad(slots, 0, "a", PadSource{"axis", 3, "negative"});
@@ -409,18 +424,17 @@ TEST(GamepadSettingsController, AssigningADeviceSavesItAndReleasesItFromTheOther
 TEST(GamepadSettingsController, LearningAGamepadButtonUsesTheBaselineAndPollsEveryFrame) {
   PadFixture f;
   f.attach();
-  f.connect({pad(0, "Xbox", {false, true, false}, {0.0, 0.0})});
+  f.connect({pad(0, "Xbox", {false, false, false}, {0.0, 0.0})});
   f.controller.setSource(0, PadInputSource::Gamepad);
   f.controller.assignDevice(0, "0:Xbox");
   EXPECT_EQ(f.controller.pollIntervalMs(), 500U);
   f.controller.pickKey(0, "a");
   EXPECT_EQ(f.controller.pollIntervalMs(), 16U);
   EXPECT_EQ(f.player(0).message, "设置“A”：请按下手柄上的按钮或推动摇杆（再点一次取消）");
-  // 第一次读取只取基准，开始前就按着的按钮不算
   f.controller.poll();
   f.controller.poll();
   EXPECT_TRUE(PadFixture::key(f.player(0), "a").learning);
-  f.connect({pad(0, "Xbox", {false, true, true}, {0.0, 0.0})});
+  f.connect({pad(0, "Xbox", {false, false, true}, {0.0, 0.0})});
   EXPECT_FALSE(PadFixture::key(f.player(0), "a").learning);
   const auto saved = *logic::parseSlots(f.last("input.setBindings")->params["slots"]);
   const auto binding = logic::bindingOf(saved[0].gamepad, "a");
@@ -434,6 +448,56 @@ TEST(GamepadSettingsController, LearningAGamepadButtonUsesTheBaselineAndPollsEve
   EXPECT_EQ(f.player(0).clearLabel, "清除手柄按钮：A");
   f.controller.clearSelected(0);
   EXPECT_TRUE(PadFixture::key(f.player(0), "a").unbound);
+}
+
+TEST(GamepadSettingsController, PressingTheGamepadRightAfterClickingAKeyBindsWithoutWaitingForAPoll) {
+  PadFixture f;
+  f.attach();
+  f.connect({pad(0, "Xbox", {false, false, false}, {0.0})});
+  f.controller.setSource(0, PadInputSource::Gamepad);
+  f.controller.assignDevice(0, "0:Xbox");
+  f.controller.pickKey(0, "a");
+  // 点键时已经取了基准，随后第一次读取就能认出按下的按钮
+  f.connect({pad(0, "Xbox", {false, true, false}, {0.0})});
+  EXPECT_EQ(PadFixture::key(f.player(0), "a").current, "按钮 1");
+}
+
+TEST(GamepadSettingsController, ButtonsHeldWhenLearningStartsMustBeReleasedFirstAndTheHintSaysSo) {
+  PadFixture f;
+  f.attach();
+  f.connect({pad(0, "Xbox", {true, false}, {0.0})});
+  f.controller.setSource(0, PadInputSource::Gamepad);
+  f.controller.assignDevice(0, "0:Xbox");
+  f.controller.pickKey(0, "a");
+  EXPECT_EQ(PadFixture::key(f.player(0), "a").current, "请松开");
+  EXPECT_EQ(f.player(0).message, "设置“A”：请先松开手柄上按着的按钮，松开后再按（再点一次取消）");
+  // 还按着时按别的按钮不算
+  f.connect({pad(0, "Xbox", {true, true}, {0.0})});
+  EXPECT_TRUE(PadFixture::key(f.player(0), "a").learning);
+  EXPECT_EQ(PadFixture::key(f.player(0), "a").current, "请松开");
+  // 全部松开后进入可绑定状态，提示换成请按键
+  f.connect({pad(0, "Xbox", {false, false}, {0.0})});
+  EXPECT_EQ(PadFixture::key(f.player(0), "a").current, "请按键");
+  EXPECT_EQ(f.player(0).message, "设置“A”：请按下手柄上的按钮或推动摇杆（再点一次取消）");
+  // 刚才按着的那个按钮再按也能绑定，不用取消后重新点
+  f.connect({pad(0, "Xbox", {true, false}, {0.0})});
+  EXPECT_FALSE(PadFixture::key(f.player(0), "a").learning);
+  EXPECT_EQ(PadFixture::key(f.player(0), "a").current, "按钮 0");
+}
+
+TEST(GamepadSettingsController, AnAxisPushedWhenLearningStartsCanBePushedAgainAfterReleasing) {
+  PadFixture f;
+  f.attach();
+  f.connect({pad(0, "Xbox", {false}, {0.9})});
+  f.controller.setSource(0, PadInputSource::Gamepad);
+  f.controller.assignDevice(0, "0:Xbox");
+  f.controller.pickKey(0, "up");
+  // 开始时就推着的轴不算
+  f.connect({pad(0, "Xbox", {false}, {0.9})});
+  EXPECT_TRUE(PadFixture::key(f.player(0), "up").learning);
+  f.connect({pad(0, "Xbox", {false}, {0.0})});
+  f.connect({pad(0, "Xbox", {false}, {0.9})});
+  EXPECT_EQ(PadFixture::key(f.player(0), "up").current, "轴 0 正向");
 }
 
 TEST(GamepadSettingsController, LearningAnAxisBindsItsDirection) {

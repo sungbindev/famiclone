@@ -22,6 +22,8 @@ constexpr const char* kFailed = "操作失败。";
 constexpr const char* kListening = "请按键";
 constexpr const char* kWaitKey = "请按下键盘上的键（Esc 取消）";
 constexpr const char* kWaitPad = "请按下手柄上的按钮或推动摇杆（再点一次取消）";
+constexpr const char* kHoldPad = "请先松开手柄上按着的按钮，松开后再按（再点一次取消）";
+constexpr const char* kReleasing = "请松开";
 constexpr const char* kIdleKey = "点手柄上的键，再按下键盘上的键来设置。";
 constexpr const char* kIdlePad = "点手柄上的键，再按下手柄上的按钮或推动摇杆来设置。";
 constexpr const char* kNoDevice = "先在上面选择要使用的手柄。";
@@ -181,7 +183,8 @@ contracts::PadPlayerView GamepadSettingsController::buildPlayer(int player) cons
 
   std::string learning;
   if (waiting_ && waiting_->player == player && waiting_->pad == !keyboard) learning = waiting_->button;
-  const std::string waitText = keyboard ? kWaitKey : kWaitPad;
+  const bool holding = !learning.empty() && waiting_->holding;
+  const std::string waitText = keyboard ? kWaitKey : (holding ? kHoldPad : kWaitPad);
   for (const PadButtonInfo& info : kPadButtons) {
     const std::string id = info.id;
     const auto bound = boundText(player, id);
@@ -190,7 +193,7 @@ contracts::PadPlayerView GamepadSettingsController::buildPlayer(int player) cons
     contracts::PadKeyView key;
     key.id = id;
     key.role = info.label;
-    key.current = isLearning ? kListening : current;
+    key.current = isLearning ? (holding ? kReleasing : kListening) : current;
     key.unbound = !bound && !isLearning;
     if (isLearning) key.tip = waitText;
     else key.tip = std::string(keyboard ? "绑定键盘按键：" : "绑定手柄按钮：") + info.label + "（当前：" + current + "）";
@@ -263,6 +266,9 @@ void GamepadSettingsController::pickKey(int player, const std::string& key) {
     waiting_ = Waiting{false, player, key, {}};
   } else if (slot.gamepad && isConnected(PadDevice{slot.gamepad->id, slot.gamepad->occurrence})) {
     waiting_ = Waiting{true, player, key, PadDevice{slot.gamepad->id, slot.gamepad->occurrence}};
+    // 立刻读一次取基准，不等定时器的下一次读取，点键后马上按手柄也认得出
+    samples_ = reader_.read();
+    captureBaseline();
   }
   changed();
 }
@@ -317,6 +323,15 @@ bool GamepadSettingsController::keyPressed(const std::string& code) {
   return true;
 }
 
+bool GamepadSettingsController::captureBaseline() {
+  if (!waiting_ || !waiting_->pad) return false;
+  const contracts::GamepadSample* pad = findPad(samples_, waiting_->device);
+  if (pad == nullptr) return false;
+  baseline_ = baselineOf(*pad);
+  waiting_->holding = anyButtonHeld(*pad);
+  return true;
+}
+
 void GamepadSettingsController::poll() {
   samples_ = reader_.read();
   auto next = listDevices(samples_);
@@ -325,14 +340,23 @@ void GamepadSettingsController::poll() {
   if (waiting_ && waiting_->pad) {
     if (const contracts::GamepadSample* pad = findPad(samples_, waiting_->device)) {
       if (!baseline_) {
-        baseline_ = baselineOf(*pad);
-      } else if (const auto source = detectSource(*baseline_, *pad)) {
-        const Waiting learned = *waiting_;
-        waiting_.reset();
-        baseline_.reset();
-        apply(bindGamepad(slots_, static_cast<std::size_t>(learned.player), learned.button, *source));
+        captureBaseline();
         changed();
-        return;
+      } else {
+        baseline_ = relaxBaseline(*baseline_, *pad);
+        if (waiting_->holding && !anyButtonHeld(*pad)) {
+          waiting_->holding = false;
+          changed();
+        } else if (!waiting_->holding) {
+          if (const auto source = detectSource(*baseline_, *pad)) {
+            const Waiting learned = *waiting_;
+            waiting_.reset();
+            baseline_.reset();
+            apply(bindGamepad(slots_, static_cast<std::size_t>(learned.player), learned.button, *source));
+            changed();
+            return;
+          }
+        }
       }
     }
   }

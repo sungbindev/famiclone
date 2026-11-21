@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
  * 备注：保存与恢复默认不在本地先改：请求成功后以核心给出的结果为准，失败时保持原样并用通知给出核心的说明；
- *       学习键盘：对话框窗口把下一次物理按键交给 keyPressed；学习实体手柄：界面按 pollIntervalMs 定时调用 poll，以开始学习那一刻手柄的状态为基准，开始前就按着的按钮不算；规则见 docs/05-界面.md 第 4.6 节。
+ *       学习键盘：对话框窗口把下一次物理按键交给 keyPressed；学习实体手柄：开始学习时立即读一次手柄取基准，界面按 pollIntervalMs 定时调用 poll；开始时还按着按钮就先等全部松开，基准在学习期间跟着手柄回到静止；规则见 docs/05-界面.md 第 4.6 节。
  * ------------------------------------------------------------------------
  */
 
@@ -70,6 +70,8 @@ class GamepadSettingsController final : public contracts::GamepadSettingsModel {
     int player{0};
     std::string button;
     PadDevice device;
+    /** 手柄学习：开始时手柄上还有按钮按着，等全部松开才开始认。 */
+    bool holding{false};
   };
   /** 一个玩家页签里的操作状态。 */
   struct PlayerState {
@@ -83,6 +85,8 @@ class GamepadSettingsController final : public contracts::GamepadSettingsModel {
   /** 保存修改后的槽位：成功后以核心给出的结果为准，失败时用通知提示。 */
   void apply(const std::vector<PadSlot>& slots);
   void report(const std::string& text);
+  /** 以这一刻手柄的状态为学习基准；读不到这个手柄时返回 false。 */
+  bool captureBaseline();
   void changed();
   void ask(const std::string& name, nlohmann::json params, std::function<void(const contracts::CoreReply&)> done);
   [[nodiscard]] bool validPlayer(int player) const { return player >= 0 && static_cast<std::size_t>(player) < slots_.size(); }

@@ -76,6 +76,8 @@ class GamepadSettingsContent final : public rujian::ui::Widget {
   /** 上一次影响布局的内容签名：没变就不重新布局。 */
   std::string layoutSignature_;
   unsigned timer_{0};
+  /** 当前排着的定时器用的间隔。 */
+  unsigned timerInterval_{0};
 };
 
 }  // namespace ember::win32::ui

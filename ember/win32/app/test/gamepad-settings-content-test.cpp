@@ -263,6 +263,17 @@ TEST(GamepadSettingsContent, ReadsTheGamepadsOnATimerWhoseIntervalComesFromTheMo
   EXPECT_EQ(s.model.polls, 2);
 }
 
+TEST(GamepadSettingsContent, ARefreshThatChangesThePollIntervalReschedulesTheTimerAtOnce) {
+  Scene s;
+  s.open();
+  ASSERT_EQ(s.root.pendingTimers().size(), 1U);
+  const auto slow = s.root.pendingTimers()[0];
+  s.model.interval = 16;
+  s.model.notify();
+  ASSERT_EQ(s.root.pendingTimers().size(), 1U);
+  EXPECT_NE(s.root.pendingTimers()[0], slow);
+}
+
 TEST(GamepadSettingsContent, DestroyingUnsubscribesFromTheModel) {
   Scene s;
   s.open();

@@ -139,6 +139,13 @@ inline constexpr std::array<PadButtonInfo, 10> kPadButtons{{{"up", "上"}, {"dow
 
 /** 取手柄此刻的按钮与轴，作为学习绑定的基准。 */
 [[nodiscard]] PadBaseline baselineOf(const contracts::GamepadSample& pad);
+/** 手柄上是否有按钮正被按住（只看核心接受编号范围内的按钮）。 */
+[[nodiscard]] bool anyButtonHeld(const contracts::GamepadSample& pad);
+/**
+ * 学习期间让基准跟着手柄回到静止：基准里按着的按钮松开后记为没按，基准里推开的轴回到阈值以内后取当前值；
+ * 这样开始前按着的按钮或推着的摇杆松开之后，再按、再推都能被认出，不会因为基准里留着旧状态永远认不出。
+ */
+[[nodiscard]] PadBaseline relaxBaseline(const PadBaseline& baseline, const contracts::GamepadSample& pad);
 /**
  * 从手柄状态相对基准的变化里认出被按下的按钮或轴：先看按钮（从没按下变成按下），再看轴（离开基准超过 0.5 且绝对值超过 0.5，方向取符号）；编号超出核心接受范围的不认。
  */

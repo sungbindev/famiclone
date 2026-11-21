@@ -254,6 +254,26 @@ std::vector<PadSlot> clearGamepad(const std::vector<PadSlot>& slots, std::size_t
 
 PadBaseline baselineOf(const contracts::GamepadSample& pad) { return PadBaseline{pad.buttons, pad.axes}; }
 
+bool anyButtonHeld(const contracts::GamepadSample& pad) {
+  const std::size_t buttons = std::min<std::size_t>(pad.buttons.size(), kMaxButtonIndex + 1);
+  for (std::size_t index = 0; index < buttons; ++index) {
+    if (pad.buttons[index]) return true;
+  }
+  return false;
+}
+
+PadBaseline relaxBaseline(const PadBaseline& baseline, const contracts::GamepadSample& pad) {
+  PadBaseline result = baseline;
+  for (std::size_t index = 0; index < result.buttons.size(); ++index) {
+    if (index >= pad.buttons.size() || !pad.buttons[index]) result.buttons[index] = false;
+  }
+  for (std::size_t index = 0; index < result.axes.size(); ++index) {
+    const double value = index < pad.axes.size() ? pad.axes[index] : 0.0;
+    if (std::abs(value) <= kAxisThreshold) result.axes[index] = value;
+  }
+  return result;
+}
+
 std::optional<PadSource> detectSource(const PadBaseline& baseline, const contracts::GamepadSample& pad) {
   const std::size_t buttons = std::min<std::size_t>(pad.buttons.size(), kMaxButtonIndex + 1);
   for (std::size_t index = 0; index < buttons; ++index) {

@@ -36,6 +36,8 @@ constexpr std::size_t BBK10_PRG_SIZE = 128 * 1024;
 constexpr std::size_t BBK20_PRG_SIZE = 2048 * 1024;
 /** 金字塔 PEC-9588 与 PEC-586、686 的 ROM：512KB 的 PRG。 */
 constexpr std::size_t PYRAMID_PRG_SIZE = 512 * 1024;
+/** 裕兴的 ROM：1024KB 的 PRG（V8.0-C、V8.2-D、V8.3-D、V9.0-98 的学习卡都是这个大小）。 */
+constexpr std::size_t YUXING_PRG_SIZE = 1024 * 1024;
 
 /** 路径里最后一段（文件名）；两种分隔符都认。 */
 std::string baseName(const std::string& path) {
@@ -55,7 +57,8 @@ MachineManager::MachineManager(std::shared_ptr<api::RomStorage> storage, std::sh
                {"bbk10", "步步高软驱一号", true, true, BBK10_PRG_SIZE},
                {"bbk20", "步步高 98", true, true, BBK20_PRG_SIZE},
                {"pec9588", "金字塔 PEC-9588", true, true, PYRAMID_PRG_SIZE},
-               {"pec586", "金字塔 PEC-586、686", true, true, PYRAMID_PRG_SIZE}} {}
+               {"pec586", "金字塔 PEC-586、686", true, true, PYRAMID_PRG_SIZE},
+               {"yuxing", "裕兴", true, true, YUXING_PRG_SIZE}} {}
 
 const MachineManager::Entry& MachineManager::entry(const std::string& id) const {
   for (const Entry& candidate : entries_) {

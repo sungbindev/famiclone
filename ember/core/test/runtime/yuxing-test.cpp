@@ -1,0 +1,310 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：yuxing-test.cpp
+ * 说明：验证裕兴学习机（yuxing）：四个学习卡的真实 ROM 开机；键盘移动菜单选择；鼠标移动光标；软驱读真实的软盘镜像；游戏 BASIC 里键入程序、SAVE 到磁带、NEW、LOAD 读回；声像学习放真实的声像磁带出现课文画面。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-21
+ * 备注：真实 ROM 在仓库的 ember/roms（没有文件头的纯 ROM），软盘镜像与声像磁带在 reference，缺它们时对应用例跳过；设置环境变量 EMBER_REAL_ROM_DUMP 为目录时，把关键时刻的画面存成 PPM 供人工查看；
+ *       磁带的 SAVE 与 LOAD 各要约 22 秒的磁带时间（模拟时间，不是真实时间），所以分段运行，避开单次等待 10 秒的限制；
+ *       画面只做结构判断（两个画面是否不同、有内容的像素个数），不比较整幅像素；菜单的按键间隔取 8 帧按下、30 帧等待，比这短时菜单偶尔漏键。
+ * ------------------------------------------------------------------------
+ */
+
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "../support/real-rom-support.hpp"
+#include "contracts/hardware/tape-deck.hpp"
+#include "infra/media/disk-tape-store.hpp"
+
+namespace {
+
+namespace hw = ember::contracts::hardware;
+namespace rt = ember::contracts::runtime;
+using ember::test::readMachineRom;
+using ember::test::RealRomBench;
+
+/** 游戏 BASIC 把程序放在 $703E 起（行号、记号化的正文）。 */
+constexpr std::uint16_t BASIC_PROGRAM_START = 0x703E;
+constexpr std::size_t BASIC_PROGRAM_BYTES = 8;
+/** SAVE 与 LOAD 各自需要的帧数（约 22 秒，留出余量）与分段运行的帧数。 */
+constexpr std::uint64_t TAPE_FRAMES = 2400;
+constexpr std::uint64_t CHUNK_FRAMES = 450;
+
+/** 与左上角像素颜色不同的像素个数（画面上有没有内容）。 */
+unsigned contentPixels(const rt::FrameImage& image) {
+  unsigned total = 0;
+  for (std::size_t index = 4; index + 3 < image.rgba.size(); index += 4) {
+    if (!std::equal(image.rgba.begin(), image.rgba.begin() + 3, image.rgba.begin() + static_cast<std::ptrdiff_t>(index))) ++total;
+  }
+  return total;
+}
+
+/** 两个画面里颜色不同的像素个数。 */
+std::size_t differingPixels(const rt::FrameImage& first, const rt::FrameImage& second) {
+  std::size_t total = 0;
+  for (std::size_t index = 0; index + 3 < first.rgba.size() && index + 3 < second.rgba.size(); index += 4) {
+    if (!std::equal(first.rgba.begin() + static_cast<std::ptrdiff_t>(index), first.rgba.begin() + static_cast<std::ptrdiff_t>(index) + 3, second.rgba.begin() + static_cast<std::ptrdiff_t>(index))) ++total;
+  }
+  return total;
+}
+
+/** 分段运行 frames 帧；任何一段没跑完就返回 false。 */
+bool runLong(RealRomBench& bench, std::uint64_t frames) {
+  for (std::uint64_t done = 0; done < frames; done += CHUNK_FRAMES) {
+    if (!bench.run(std::min(CHUNK_FRAMES, frames - done))) return false;
+  }
+  return true;
+}
+
+/** 菜单里的一次按键。 */
+void menuKey(RealRomBench& bench, const char* code) { bench.tap(code, 8, 30); }
+
+/** 内存里的录音去向：32 kHz 单声道。 */
+class MemorySink final : public hw::TapeSink {
+ public:
+  explicit MemorySink(std::shared_ptr<std::vector<std::int16_t>> samples) : samples_(std::move(samples)) {}
+  void write(const std::int16_t* samples, std::size_t count) override { samples_->insert(samples_->end(), samples, samples + count); }
+  void finish() override {}
+
+ private:
+  std::shared_ptr<std::vector<std::int16_t>> samples_;
+};
+
+/** 把 32 kHz 单声道录音按 96 kHz 左右交错重放的来源。 */
+class ReplaySource final : public hw::TapeSource {
+ public:
+  explicit ReplaySource(std::vector<std::int16_t> samples) : samples_(std::move(samples)) {}
+  std::size_t read(std::int16_t* interleaved, std::size_t frames) override {
+    std::size_t produced = 0;
+    while (produced < frames && position_ / 3 < samples_.size()) {
+      const std::int16_t value = samples_[position_ / 3];
+      interleaved[produced * 2] = value;
+      interleaved[produced * 2 + 1] = value;
+      ++produced;
+      ++position_;
+    }
+    return produced;
+  }
+  void rewind() override { position_ = 0; }
+  [[nodiscard]] double durationSeconds() const override { return static_cast<double>(samples_.size()) / 32000.0; }
+  [[nodiscard]] bool stereo() const override { return false; }
+
+ private:
+  std::vector<std::int16_t> samples_;
+  std::size_t position_{0};
+};
+
+/** 在 BASIC 的提示符下键入文字：只认大写字母、数字、空格与双引号，'\n' 是回车。 */
+void typeText(RealRomBench& bench, std::string_view text) {
+  for (const char ch : text) {
+    if (ch == '\n') {
+      bench.tap("Enter", 6, 20);
+    } else if (ch == ' ') {
+      bench.tap("Space", 6, 6);
+    } else if (ch == '"') {
+      bench.tapShifted("Quote");
+    } else if (ch >= '0' && ch <= '9') {
+      const char code[] = {'D', 'i', 'g', 'i', 't', ch, '\0'};
+      bench.tap(code, 6, 6);
+    } else {
+      const char code[] = {'K', 'e', 'y', ch, '\0'};
+      bench.tap(code, 6, 6);
+    }
+  }
+}
+
+/** 读出 BASIC 程序所在的内存。 */
+std::vector<std::uint8_t> programBytes(RealRomBench& bench) {
+  std::vector<std::uint8_t> bytes(BASIC_PROGRAM_BYTES);
+  bench.runtime->useMachine([&](hw::Machine& machine) { machine.debugger()->readMemory("cpu", BASIC_PROGRAM_START, std::span<std::uint8_t>(bytes)); });
+  return bytes;
+}
+
+/** V9.0-98 开机后进入“工具软件”，选“游戏 BASIC”，进入 BASIC 的提示符。 */
+void enterGameBasic(RealRomBench& bench, const std::vector<std::uint8_t>& rom) {
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  menuKey(bench, "ArrowRight");
+  menuKey(bench, "ArrowDown");
+  menuKey(bench, "ArrowRight");
+  bench.tap("Enter", 8, 200);
+  menuKey(bench, "ArrowDown");
+  bench.tap("Enter", 8, 300);
+  bench.tap("Digit1", 8, 300);
+}
+
+/** 四个学习卡的 ROM 文件。 */
+class YuxingRoms : public ::testing::TestWithParam<const char*> {};
+
+TEST_P(YuxingRoms, BootsToAScreenWithContentAndNoErrors) {
+  const std::string file = GetParam();
+  const auto rom = readMachineRom(file);
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/" << file;
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  bench.dump(file + "-0-boot");
+  EXPECT_TRUE(bench.errors->entries.empty());
+  EXPECT_EQ(bench.runtime->status().machine, "yuxing");
+  EXPECT_GT(contentPixels(bench.runtime->captureFrame()), 1000U);
+}
+
+INSTANTIATE_TEST_SUITE_P(Roms, YuxingRoms, ::testing::Values("yuxing_v8.0-c.bin", "yuxing_v8.2-d.bin", "yuxing_v8.3-d.bin", "yuxing_v9.0-98.bin"));
+
+TEST(Yuxing, TheKeyboardBelongsToTheMachineAndTheMachineHasAMouse) {
+  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(2));
+  bool machineInput = false;
+  bool mouse = false;
+  unsigned pads = 0;
+  bench.runtime->useMachine([&](hw::Machine& machine) {
+    machineInput = machine.keyboardIsMachineInput();
+    mouse = machine.hasMouse();
+    pads = machine.padPortCount();
+  });
+  EXPECT_TRUE(machineInput);
+  EXPECT_TRUE(mouse);
+  EXPECT_EQ(pads, 2U);
+}
+
+TEST(Yuxing, TheArrowKeysMoveTheSelectionOfTheMainMenu) {
+  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  const auto idle = bench.runtime->captureFrame();
+  menuKey(bench, "ArrowRight");
+  const auto first = bench.runtime->captureFrame();
+  bench.dump("keyboard-1-first");
+  menuKey(bench, "ArrowDown");
+  const auto second = bench.runtime->captureFrame();
+  bench.dump("keyboard-2-second");
+  EXPECT_NE(differingPixels(idle, first), 0U) << "第一次按键唤出光标并选中第一项";
+  EXPECT_GT(differingPixels(first, second), 100U) << "向下键把选中项移到下一项";
+  EXPECT_TRUE(bench.errors->entries.empty());
+}
+
+TEST(Yuxing, MouseMovementMovesTheCursorOfTheMainMenu) {
+  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  menuKey(bench, "ArrowRight");
+  const auto before = bench.runtime->captureFrame();
+  for (int step = 0; step < 6; ++step) {
+    hw::MouseInput move;
+    move.dx = 12;
+    move.dy = -10;
+    bench.runtime->sendInput(move);
+    ASSERT_TRUE(bench.run(3));
+  }
+  bench.dump("mouse-moved");
+  const auto after = bench.runtime->captureFrame();
+  EXPECT_NE(differingPixels(before, after), 0U) << "鼠标移动之后光标的位置变了";
+  EXPECT_TRUE(bench.errors->entries.empty());
+}
+
+TEST(Yuxing, TheFloppyDriveReadsARealDiskInTheDiskManager) {
+  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  const auto disk = ember::test::readReferenceFile("floppy-images/裕兴/工具软件/磁盘处理(98-F).IMG");
+  if (rom.empty() || disk.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin 或软盘镜像";
+  // 同样的操作：进入“磁盘管理”，按回车列目录；有盘时列出文件，没有盘时报“磁盘格式错”。
+  const auto listing = [&](bool withDisk) {
+    RealRomBench bench;
+    bench.bootMachine("yuxing", rom);
+    EXPECT_TRUE(bench.run(600));
+    if (withDisk) bench.runtime->useMachine([&](hw::Machine& machine) { machine.floppyDrive(0)->insertImage(disk, false, "disk.img"); });
+    menuKey(bench, "ArrowRight");
+    menuKey(bench, "ArrowRight");
+    bench.tap("Enter", 8, 200);
+    bench.tap("Enter", 8, 400);
+    bench.dump(withDisk ? "floppy-with-disk" : "floppy-without-disk");
+    EXPECT_TRUE(bench.errors->entries.empty());
+    return bench.runtime->captureFrame();
+  };
+  const auto withDisk = listing(true);
+  const auto withoutDisk = listing(false);
+  EXPECT_GT(differingPixels(withDisk, withoutDisk), 500U) << "有盘时列出文件目录，没有盘时报错";
+}
+
+TEST(Yuxing, GameBasicSaveRecordsTheProgramOnTapeAndLoadReadsItBack) {
+  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  RealRomBench bench;
+  ASSERT_NO_FATAL_FAILURE(enterGameBasic(bench, rom));
+  bench.dump("tape-0-basic");
+  const auto empty = programBytes(bench);
+  typeText(bench, "10 PRINT 7\n");
+  ASSERT_TRUE(bench.run(60));
+  const auto typed = programBytes(bench);
+  ASSERT_NE(typed, empty) << "键入的第 10 行应该进入程序区";
+
+  auto recorded = std::make_shared<std::vector<std::int16_t>>();
+  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->record(std::make_unique<MemorySink>(recorded), "save"); });
+  typeText(bench, "SAVE\"A\"\n");
+  ASSERT_TRUE(runLong(bench, TAPE_FRAMES));
+  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->stop(); });
+  EXPECT_GT(recorded->size(), 32000U * 15) << "SAVE 应该录进了十几秒以上的信号";
+
+  typeText(bench, "NEW\n");
+  ASSERT_TRUE(bench.run(120));
+  // 把程序区清零，LOAD 之后读回的内容才能证明来自磁带。
+  bench.runtime->useMachine([&](hw::Machine& machine) {
+    const std::vector<std::uint8_t> zeros(BASIC_PROGRAM_BYTES, 0);
+    machine.debugger()->writeMemory("cpu", BASIC_PROGRAM_START, zeros);
+  });
+  EXPECT_NE(programBytes(bench), typed);
+
+  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->load(std::make_unique<ReplaySource>(*recorded), "load"); });
+  typeText(bench, "LOAD\"A\"\n");
+  ASSERT_TRUE(bench.run(60));
+  bench.runtime->useMachine([&](hw::Machine& machine) { machine.tape()->play(); });
+  ASSERT_TRUE(runLong(bench, TAPE_FRAMES));
+  bench.dump("tape-1-loaded");
+  EXPECT_EQ(programBytes(bench), typed) << "LOAD 读回的程序应该与 SAVE 之前一字节不差";
+  EXPECT_TRUE(bench.errors->entries.empty());
+}
+
+TEST(Yuxing, RealSoundAndPictureTapeDrivesTheLessonScreenOfTheSoundAndPictureCard) {
+  const auto rom = readMachineRom("yuxing_v8.0-c.bin");
+  const auto tape = ember::test::firstTape();
+  if (rom.empty() || tape.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.0-c.bin 或声像磁带";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  // 主菜单第 5 项“声像学习”：进入声像卡的画面，等磁带送数据。
+  for (int index = 0; index < 4; ++index) menuKey(bench, "ArrowDown");
+  bench.tap("Enter", 8, 300);
+  bench.dump("sound-picture-0-logo");
+  const auto logo = bench.runtime->captureFrame();
+
+  ember::infra::media::DiskTapeStore store(nullptr);
+  const auto tapePath = tape.u8string();
+  auto source = store.open(std::string(tapePath.begin(), tapePath.end()));
+  EXPECT_TRUE(source->stereo());
+  bench.runtime->useMachine([&](hw::Machine& machine) {
+    machine.tape()->load(std::move(source), "tape");
+    machine.tape()->play();
+  });
+  ASSERT_TRUE(runLong(bench, 1350));
+  bench.dump("sound-picture-1-lesson");
+  EXPECT_GT(differingPixels(logo, bench.runtime->captureFrame()), 10000U) << "磁带的数据线驱动了程序，画面应该从声像卡的标志换成课文";
+  EXPECT_TRUE(bench.errors->entries.empty());
+}
+
+}  // namespace

@@ -86,7 +86,7 @@ BbkBoard::BbkBoard(const BbkVariant& variant, std::vector<std::uint8_t> rom, hw:
       irqSource_(irq.addSource()),
       ppu_(ppu),
       ppuRegisters_(ppuRegisters),
-      fdc_(fdc),
+      floppy_(fdc),
       parallel_(parallel),
       speech_(speech),
       mmc3_(mmc3),
@@ -234,24 +234,13 @@ std::optional<std::uint8_t> BbkBoard::readRegister(std::uint16_t address, bool s
       if (sideEffects) clearIrq();
       return IRQ_ACKNOWLEDGE_VALUE;
     case 0xFF80:
-      if (!sideEffects) return std::nullopt;
-      return fdc_.receiveFromDma();
     case 0xFF88:
-      if (!sideEffects) return std::nullopt;
-      fdc_.setTerminalCount();
-      return fdc_.receiveFromDma();
     case 0xFF90:
-      return static_cast<std::uint8_t>(fdc_.dmaRequest() ? 0x40 : 0x00);
     case 0xFF98:
-      if (!sideEffects) return static_cast<std::uint8_t>(fdc_.irqRaised() ? 0x40 : 0x00);
-      return fdc_.readRegister(3);
     case 0xFFA0:
-      return sideEffects ? fdc_.readRegister(4) : fdc_.peekRegister(4);
     case 0xFFA8:
-      return sideEffects ? fdc_.readRegister(5) : fdc_.peekRegister(5);
     case 0xFFB8:
-      if (!sideEffects) return std::nullopt;
-      return fdc_.readRegister(7);
+      return floppy_.readPcPort((address >> 3) & 7U, sideEffects);
     default:
       return std::nullopt;
   }
@@ -409,11 +398,10 @@ void BbkBoard::writeRegister(std::uint16_t address, std::uint8_t value) {
         parallel_.setSelectPrinterN((value & PARALLEL_CONTROL_SELECT) == 0);
         break;
       case 0x80:
-        fdc_.sendToDma(value);
+        floppy_.writePcPort(0, value);
         break;
       case 0x88:
-        fdc_.setTerminalCount();
-        fdc_.sendToDma(value);
+        floppy_.writePcPort(1, value);
         break;
       default:
         break;
@@ -425,9 +413,9 @@ void BbkBoard::writeRegister(std::uint16_t address, std::uint8_t value) {
   } else if (address == 0xFFB0U) {
     clearIrq();
   } else if (address == 0xFFA0U) {
-    fdc_.setResetPin((value & 0x40U) != 0);
+    floppy_.writePcPort(4, value);
   } else if (address <= 0xFFB8U) {
-    fdc_.writeRegister((address >> 3) & 7U, value);
+    floppy_.writePcPort((address >> 3) & 7U, value);
   }
 }
 

@@ -35,6 +35,7 @@
 #include "contracts/hardware/mapper-circuit.hpp"
 #include "contracts/hardware/parallel-port.hpp"
 #include "contracts/hardware/scheduler.hpp"
+#include "bootstrap/machines/common/fdc-port-bridge.hpp"
 #include "logic/hardware/fdc-upd765/fdc-upd765.hpp"
 #include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
 #include "logic/hardware/speech-lpc/speech-lpc.hpp"
@@ -221,7 +222,7 @@ class BbkBoard final : public contracts::hardware::EventListener {
   contracts::hardware::SignalSource irqSource_;
   const logic::hardware::Ppu2c02& ppu_;
   contracts::hardware::BusDevice& ppuRegisters_;
-  logic::hardware::FdcUpd765& fdc_;
+  FdcPortBridge floppy_;
   contracts::hardware::ParallelPort& parallel_;
   logic::hardware::SpeechLpc& speech_;
   contracts::hardware::MapperCircuit& mmc3_;

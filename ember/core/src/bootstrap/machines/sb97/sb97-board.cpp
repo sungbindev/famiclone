@@ -46,7 +46,7 @@ constexpr unsigned FDC_PORT_FROM_5500 = 7;
 Sb97Board::Sb97Board(std::vector<std::uint8_t> rom, hw::IrqLine& irq, logic::hardware::FdcUpd765& fdc, logic::hardware::SpeechLpc& speech)
     : irq_(irq),
       irqSource_(irq.addSource()),
-      fdc_(fdc),
+      floppy_(fdc),
       speech_(speech),
       rom_(std::move(rom)),
       programRam_(PROGRAM_RAM_SIZE, 0),
@@ -74,7 +74,7 @@ void Sb97Board::reset(bool power) {
   irq_.set(irqSource_, false);
 }
 
-void Sb97Board::refreshFdcInterrupt() { irq_.set(irqSource_, fdc_.irqRaised()); }
+void Sb97Board::refreshFdcInterrupt() { irq_.set(irqSource_, floppy_.irqRaised()); }
 
 bool Sb97Board::backgroundUsesTableOne(unsigned nametable) const {
   if (nametable == 2) return true;
@@ -119,10 +119,8 @@ hw::BusRead Sb97Board::readCpu(std::uint16_t address, bool sideEffects) {
     case CpuLocation::Kind::Register:
       if (address == REGISTER_SPEECH) return sideEffects ? speech_.read(address) : speech_.peek(address);
       if (address >= FDC_READ_FIRST && address <= FDC_READ_LAST) {
-        const unsigned port = address & 7U;
-        if (!sideEffects) return hw::driveBus(fdc_.peekRegister(port));
-        const std::uint8_t value = fdc_.readRegister(port);
-        refreshFdcInterrupt();
+        const std::uint8_t value = floppy_.readRegister(address & 7U, sideEffects);
+        if (sideEffects) refreshFdcInterrupt();
         return hw::driveBus(value);
       }
       // 只写的寄存器没有读通路
@@ -152,7 +150,7 @@ void Sb97Board::writeCpu(std::uint16_t address, std::uint8_t value) {
         speech_.write(address, value);
       } else if (address >= FDC_WRITE_FIRST && address <= FDC_WRITE_LAST) {
         const unsigned port = address == 0x5501U ? FDC_PORT_FROM_5501 : address == 0x5500U ? FDC_PORT_FROM_5500 : (address & 7U);
-        fdc_.writeRegister(port, value);
+        floppy_.writeRegister(port, value);
         refreshFdcInterrupt();
       }
       break;

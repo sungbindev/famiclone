@@ -120,14 +120,15 @@ std::string errorCodeOf(Function&& call) {
   return {};
 }
 
-TEST(MachineManager, ListsTheSevenMachinesInFixedOrder) {
+TEST(MachineManager, ListsTheEightMachinesInFixedOrder) {
   Rig rig;
   const auto machines = rig.manager->list().machines;
-  ASSERT_EQ(machines.size(), 7U);
-  const char* ids[] = {"fc", "sb97", "sb2000", "bbk10", "bbk20", "pec9588", "pec586"};
+  ASSERT_EQ(machines.size(), 8U);
+  const char* ids[] = {"fc", "sb97", "sb2000", "bbk10", "bbk20", "pec9588", "pec586", "yuxing"};
   for (std::size_t index = 0; index < machines.size(); ++index) EXPECT_EQ(machines[index].id, ids[index]);
   EXPECT_EQ(machines[5].name, "金字塔 PEC-9588");
   EXPECT_EQ(machines[6].name, "金字塔 PEC-586、686");
+  EXPECT_EQ(machines[7].name, "裕兴");
   for (std::size_t index = 1; index < machines.size(); ++index) {
     EXPECT_TRUE(machines[index].needsRom) << ids[index];
     EXPECT_TRUE(machines[index].supported) << ids[index];
@@ -242,6 +243,19 @@ TEST(MachineManager, ASb97RomOfOneMegabyteIsAcceptedAndBoots) {
   EXPECT_EQ(rig.runtime->status().machine, "sb97");
 }
 
+TEST(MachineManager, AYuxingRomOfOneMegabyteIsAcceptedAndBoots) {
+  Rig rig;
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("yuxing", rig.write("small.nes", romFile()))); }), api::ERROR_ROM_INVALID) << "裕兴要 1024KB 的 PRG，512KB 的不行";
+  const auto result = rig.manager->setRom(rig.setParams("yuxing", rig.write("YX.nes", romFile(64))));
+  ASSERT_TRUE(result.machine.rom.has_value());
+  EXPECT_EQ(result.machine.rom->size, static_cast<std::int64_t>(16 + 1024 * 1024));
+  api::MachinesBootParams params;
+  params.machine = "yuxing";
+  const auto booted = rig.manager->boot(params);
+  EXPECT_EQ(booted.machine.id, "yuxing");
+  ASSERT_TRUE(waitFor([&] { return rig.frames->count() >= 5; }));
+  EXPECT_EQ(rig.runtime->status().machine, "yuxing");
+}
 TEST(MachineManager, BootRunsTheMachineWithoutACartridge) {
   Rig rig;
   rig.manager->setRom(rig.setParams("sb2000", rig.write("good.nes", romFile())));

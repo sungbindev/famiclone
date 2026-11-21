@@ -76,6 +76,7 @@ SpeechLpc::SpeechLpc(hw::Scheduler& scheduler, double masterHz, Variant variant)
 }
 
 hw::BusRead SpeechLpc::read(std::uint16_t /*address*/) {
+  if (variant_ == Variant::Yuxing) return hw::driveBus(count_ < YUXING_BUSY_BYTES ? std::uint8_t{0x00} : STATUS_READY);
   std::uint8_t status = 0;
   if (count_ < FIFO_CAPACITY) status = static_cast<std::uint8_t>(status | STATUS_READY);
   if (ended_ || variant_ == Variant::Bbk) status = static_cast<std::uint8_t>(status | STATUS_ENDED);
@@ -158,18 +159,31 @@ void SpeechLpc::onEvent(hw::MasterTime /*when*/, std::uint32_t /*tag*/) {
 }
 
 void SpeechLpc::finishStream() {
-  state_ = State::Finished;
-  ended_ = true;
   bitCache_ = 0;
   bitsLeft_ = 0;
   waitingNextFrame_ = false;
   emitLevel(0);
+  if (variant_ == Variant::Yuxing) {
+    // 没有确认字节：丢掉当前字节的剩余位，下一段紧接着开始。
+    preloaded_ = 0;
+    state_ = State::Preload;
+    return;
+  }
+  state_ = State::Finished;
+  ended_ = true;
 }
 
 void SpeechLpc::settle() {
   for (;;) {
     switch (state_) {
       case State::Startup: {
+        if (variant_ == Variant::Yuxing) {
+          // 没有命令字节：直接按 PE 码表读帧。
+          useD6Tables_ = false;
+          preloaded_ = 0;
+          state_ = State::Preload;
+          break;
+        }
         if (count_ == 0) return;
         const std::uint8_t command = fifoAt(0);
         fifoPop();

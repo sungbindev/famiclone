@@ -351,6 +351,55 @@ TEST(FdcUpd765, WritesASectorIntoTheImageAndMarksItModified) {
   EXPECT_EQ(bench.drive.readByte(5 * 512), patternAt(5 * 512)) << "下一个扇区不受影响";
 }
 
+/** 格式化磁道命令：512 字节扇区、18 个扇区、间隔 $1B、填充 $F6。 */
+void formatTrackCommand(Bench& bench, std::uint8_t head) { bench.command({0x4D, static_cast<std::uint8_t>(head << 2), 2, 18, 0x1B, 0xF6}); }
+
+TEST(FdcUpd765, FormatsATrackByProgrammedIoAndFillsItWithTheFillByte) {
+  Bench bench;
+  bench.spinUp();
+  bench.specify(true);
+  bench.command({0x0F, 0x00, 3});
+  bench.run(10);
+  bench.command({0x08});
+  bench.results(2);
+  formatTrackCommand(bench, 1);
+  for (unsigned sector = 1; sector <= 18; ++sector) {
+    for (const std::uint8_t id : {std::uint8_t{3}, std::uint8_t{1}, static_cast<std::uint8_t>(sector), std::uint8_t{2}}) bench.put(id);
+  }
+  const auto result = bench.results(7);
+  EXPECT_EQ(result[0] & 0xC0, 0x00) << "正常结束";
+  EXPECT_EQ(result[1], 0x00);
+  const std::size_t base = (3 * 2 + 1) * 18 * 512U;
+  for (std::size_t index = 0; index < 18 * 512U; ++index) ASSERT_EQ(bench.drive.readByte(base + index), 0xF6) << "第 " << index << " 个字节";
+  EXPECT_EQ(bench.drive.readByte(base - 1), patternAt(base - 1)) << "前一道不受影响";
+  EXPECT_EQ(bench.drive.readByte(base + 18 * 512U), patternAt(base + 18 * 512U)) << "后一道不受影响";
+}
+
+TEST(FdcUpd765, FormatsATrackThroughTheDmaDataPortAndLeavesNoStaleTerminalCount) {
+  Bench bench;
+  bench.spinUp();
+  bench.specify(false);
+  formatTrackCommand(bench, 0);
+  for (unsigned sector = 1; sector <= 18; ++sector) {
+    const std::uint8_t ids[] = {0, 0, static_cast<std::uint8_t>(sector), 2};
+    for (unsigned index = 0; index < 4; ++index) {
+      for (unsigned guard = 0; !bench.fdc.dmaRequest() && guard < 1000; ++guard) bench.run(1);
+      ASSERT_TRUE(bench.fdc.dmaRequest()) << "扇区 " << sector << " 的第 " << index << " 个编号字节";
+      if (sector == 18 && index == 3) bench.fdc.setTerminalCount();
+      bench.fdc.sendToDma(ids[index]);
+    }
+  }
+  const auto result = bench.results(7);
+  EXPECT_EQ(result[0] & 0xC0, 0x00) << "正常结束";
+  for (std::size_t index = 0; index < 18 * 512U; ++index) ASSERT_EQ(bench.drive.readByte(index), 0xF6) << "第 " << index << " 个字节";
+  EXPECT_EQ(bench.drive.readByte(18 * 512U), patternAt(18 * 512U)) << "下一道不受影响";
+  // 格式化时的终止计数不能留给下一条读命令。
+  bench.readCommand(0, 1, 1);
+  for (unsigned guard = 0; !bench.fdc.dmaRequest() && guard < 1000; ++guard) bench.run(1);
+  ASSERT_TRUE(bench.fdc.dmaRequest()) << "读命令应该有数据";
+  EXPECT_EQ(bench.fdc.receiveFromDma(), patternAt(18 * 512U)) << "磁头 1 的第 1 个扇区没有被格式化，内容原样";
+}
+
 TEST(FdcUpd765, WriteProtectedDisksRejectWrites) {
   Bench bench;
   bench.drive.setWriteProtected(true);

@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "contracts/hardware/bus-device.hpp"
+#include "bootstrap/machines/common/fdc-port-bridge.hpp"
 #include "logic/hardware/fdc-upd765/fdc-upd765.hpp"
 #include "logic/hardware/paging-um6576/paging-um6576.hpp"
 #include "logic/hardware/ram/ram-block.hpp"
@@ -127,13 +128,13 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
   Sb2000SuperIo(Sb2000VideoMemory& video, logic::hardware::FdcUpd765& floppy, logic::hardware::SpeechLpc& speech) : video_(video), floppy_(floppy), speech_(speech) {}
 
   contracts::hardware::BusRead read(std::uint16_t address) override {
-    if (address >= FIRST_FLOPPY_PORT && address <= LAST_FLOPPY_PORT) return contracts::hardware::driveBus(readFloppy(address & 7U));
+    if (address >= FIRST_FLOPPY_PORT && address <= LAST_FLOPPY_PORT) return contracts::hardware::driveBus(floppy_.readPcPort(address & 7U, true).value_or(0));
     if (address == ADDRESS_SPEECH) return speech_.read(address);
     return contracts::hardware::driveBus(0);
   }
 
   contracts::hardware::BusRead peek(std::uint16_t address) override {
-    if (address >= FIRST_FLOPPY_PORT && address <= LAST_FLOPPY_PORT) return contracts::hardware::driveBus(peekFloppy(address & 7U));
+    if (address >= FIRST_FLOPPY_PORT && address <= LAST_FLOPPY_PORT) return contracts::hardware::driveBus(floppy_.readPcPort(address & 7U, false).value_or(0));
     return read(address);
   }
 
@@ -143,7 +144,7 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
     } else if (address == ADDRESS_DOR) {
       floppy_.writeRegister(2, value);
     } else if (address >= FIRST_FLOPPY_PORT && address <= LAST_FLOPPY_PORT) {
-      writeFloppy(address & 7U, value);
+      floppy_.writePcPort(address & 7U, value);
     } else if (address == ADDRESS_VIDEO_BANK) {
       video_.selectBank(value);
     } else if (address == ADDRESS_FC_MODE) {
@@ -166,59 +167,8 @@ class Sb2000SuperIo final : public contracts::hardware::BusDevice {
   static constexpr std::uint8_t FC_MODE_KEY = 0x55;
   static constexpr std::uint16_t ADDRESS_SPEECH = 0x4302;
 
-  std::uint8_t readFloppy(unsigned port) {
-    switch (port) {
-      case 0:
-        return floppy_.receiveFromDma();
-      case 1:
-        floppy_.setTerminalCount();
-        return floppy_.receiveFromDma();
-      case 2:
-        return floppy_.dmaRequest() ? 0x40 : 0x00;
-      case 6:
-        return 0;
-      default:
-        return floppy_.readRegister(port);
-    }
-  }
-
-  [[nodiscard]] std::uint8_t peekFloppy(unsigned port) const {
-    switch (port) {
-      case 2:
-        return floppy_.dmaRequest() ? 0x40 : 0x00;
-      case 3:
-        return floppy_.irqRaised() ? 0x40 : 0x00;
-      case 6:
-        return 0;
-      default:
-        return floppy_.peekRegister(port);
-    }
-  }
-
-  void writeFloppy(unsigned port, std::uint8_t value) {
-    switch (port) {
-      case 0:
-        floppy_.sendToDma(value);
-        break;
-      case 1:
-        floppy_.setTerminalCount();
-        floppy_.sendToDma(value);
-        break;
-      case 4:
-        floppy_.setResetPin((value & 0x40) != 0);
-        break;
-      case 2:
-      case 5:
-      case 7:
-        floppy_.writeRegister(port, value);
-        break;
-      default:
-        break;
-    }
-  }
-
   Sb2000VideoMemory& video_;
-  logic::hardware::FdcUpd765& floppy_;
+  FdcPortBridge floppy_;
   logic::hardware::SpeechLpc& speech_;
 };
 

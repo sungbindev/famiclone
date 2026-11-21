@@ -32,6 +32,7 @@
 #include "contracts/hardware/bus-device.hpp"
 #include "contracts/hardware/interrupt-sink.hpp"
 #include "contracts/hardware/irq-line.hpp"
+#include "bootstrap/machines/common/fdc-port-bridge.hpp"
 #include "logic/hardware/fdc-upd765/fdc-upd765.hpp"
 #include "logic/hardware/speech-lpc/speech-lpc.hpp"
 
@@ -156,7 +157,7 @@ class Sb97Board final {
 
   contracts::hardware::IrqLine& irq_;
   contracts::hardware::SignalSource irqSource_;
-  logic::hardware::FdcUpd765& fdc_;
+  FdcPortBridge floppy_;
   logic::hardware::SpeechLpc& speech_;
 
   CpuSide cpuSide_{*this};

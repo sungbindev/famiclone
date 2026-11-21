@@ -12,7 +12,8 @@
  *       结束帧读到后“播放结束”置位，此后收到字节 $0F 才重新开始（清空缓冲，等待下一个命令字节），其他字节被丢弃；
  *       合成按主时钟推进：每个采样一个调度器事件，只有在播放时才登记事件，空闲时不占调度；一帧所需的字节不够时输出静音并等待；
  *       输出电平经 onLevel 回调交给主机装配里的 PSG 混音；
- *       缓冲写满时再写入的字节被丢弃（程序应先读状态位 7）。
+ *       缓冲写满时再写入的字节被丢弃（程序应先读状态位 7）；
+ *       裕兴变体：没有命令字节，上电与复位后直接按 PE 码表读帧；读到结束帧后丢掉当前字节的剩余位，紧接着开始读下一段（没有确认字节）；读状态时缓冲里不到 8 个字节读 $00（可以写），否则读 $80（忙）。
  * ------------------------------------------------------------------------
  */
 
@@ -34,9 +35,10 @@ class SpeechLpc final : public contracts::hardware::Device {
   /**
    * 芯片的接线变体：
    * Subor：命令字节 $0A（D6 码表）或 $0B（PE 码表），低 4 位为 $F 表示播放结束，播放结束后收到 $0F 才重新开始；
-   * Bbk：命令字节 $D6（只有 D6 码表），状态低 4 位恒为 $F，读到结束帧后停止，只有复位才重新开始。
+   * Bbk：命令字节 $D6（只有 D6 码表），状态低 4 位恒为 $F，读到结束帧后停止，只有复位才重新开始；
+   * Yuxing：没有命令字节，只有 PE 码表，读到结束帧后直接开始下一段；状态位 7 为 1 表示缓冲已有 8 个字节以上（忙）。
    */
-  enum class Variant : std::uint8_t { Subor, Bbk };
+  enum class Variant : std::uint8_t { Subor, Bbk, Yuxing };
 
   /** 输出采样率（赫兹）。 */
   static constexpr unsigned SAMPLE_RATE = 10000;
@@ -44,6 +46,8 @@ class SpeechLpc final : public contracts::hardware::Device {
   static constexpr unsigned SAMPLES_PER_FRAME = 200;
   /** 接收缓冲的容量（字节）；缓冲是 16 项的环形缓冲，满的判据是留一项，所以实际能放 15 个。 */
   static constexpr std::size_t FIFO_CAPACITY = 15;
+  /** 裕兴变体：缓冲里达到这么多字节就报忙。 */
+  static constexpr std::size_t YUXING_BUSY_BYTES = 8;
   /** LPC 的阶数。 */
   static constexpr unsigned ORDER = 10;
 
@@ -54,7 +58,7 @@ class SpeechLpc final : public contracts::hardware::Device {
    */
   SpeechLpc(contracts::hardware::Scheduler& scheduler, double masterHz, Variant variant = Variant::Subor);
 
-  /** 读状态：位 7 缓冲未满，低 4 位为 $F 表示播放结束。 */
+  /** 读状态：位 7 缓冲未满，低 4 位为 $F 表示播放结束（裕兴变体：位 7 为 1 表示忙，没有播放结束位）。 */
   contracts::hardware::BusRead read(std::uint16_t address) override;
   contracts::hardware::BusRead peek(std::uint16_t address) override { return read(address); }
   /** 写一个码流字节。 */
@@ -115,7 +119,7 @@ class SpeechLpc final : public contracts::hardware::Device {
   void updateInterpolation();
   /** 格型滤波器：以 output_ 里的激励为输入，结果写回 output_。 */
   void runFilter();
-  /** 读到结束帧：播放结束置位，等待确认字节。 */
+  /** 读到结束帧：播放结束置位，等待确认字节（裕兴变体不置位，直接开始读下一段）。 */
   void finishStream();
   /** 伪随机的清音激励位。 */
   bool nextRandomBit();

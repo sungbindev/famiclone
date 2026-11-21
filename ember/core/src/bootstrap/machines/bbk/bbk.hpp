@@ -27,6 +27,7 @@
 
 #include "bootstrap/machines/bbk/bbk-board.hpp"
 #include "bootstrap/machines/common/cpu-debug-kit.hpp"
+#include "bootstrap/machines/common/voice-mixer.hpp"
 #include "bootstrap/machines/bbk/bbk-input-port.hpp"
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/interrupt-sink.hpp"
@@ -133,22 +134,6 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
   class IgnoredInterrupts final : public contracts::hardware::InterruptSink {
    public:
     void raise(std::uint8_t /*sourceMask*/) override {}
-  };
-
-  /** 语音芯片的输出电平：按主时钟时间记下变化，取声音时混进 APU 的采样。 */
-  class VoiceMixer {
-   public:
-    /** 清空（上电与复位时）。 */
-    void reset();
-    /** 记一次电平变化。 */
-    void note(contracts::hardware::MasterTime when, double level);
-    /** 把 [上次混音的时间, now] 里的电平混进 samples（采样均匀分布在这段时间里）。 */
-    void mixInto(std::vector<float>& samples, contracts::hardware::MasterTime now);
-
-   private:
-    std::vector<std::pair<contracts::hardware::MasterTime, double>> changes_;
-    double level_{0};
-    contracts::hardware::MasterTime mixedUntil_{0};
   };
 
   // MachineDebugger

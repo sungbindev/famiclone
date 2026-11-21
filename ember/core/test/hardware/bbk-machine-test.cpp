@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：bbk-machine-test.cpp
- * 说明：主机型号 bbk（步步高软驱一号与步步高 98）的测试：容量与存储译码（用合成的 BIOS 检查）、程序页与 DRAM 页寄存器、系统工作区、PPU 寄存器的影子写、字符页与名称表连接、Dendy 制式的 vblank、扫描线 IRQ 与分屏、MMC3 模式、语音与并口状态、输入；以及用真实 BIOS 开机的冒烟测试。
+ * 说明：主机型号 bbk（步步高软驱一号与步步高 98）的测试：容量与存储译码（用合成的 BIOS 检查）、程序页与 DRAM 页寄存器、系统工作区、PPU 寄存器的影子写、字符页与名称表连接、Dendy 制式的 vblank、扫描线 IRQ 与分屏、MMC3 模式、语音与并口状态、输入；以及用真实 BIOS 开机的冒烟测试与在 DOS 里格式化软盘的测试（每个约半分钟）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -21,6 +21,7 @@
 #include <set>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -486,5 +487,122 @@ TEST(BbkMachine, RealBios20BootsToAPicture) { bootRealBios("bbk_bios20.bin", Bbk
 TEST(BbkMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbk_bios10.bin", BbkVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
 
 TEST(BbkMachine, RealBios20BootsTheDosDisk) { bootRealBios("bbk_bios20.bin", BbkVariant::model98(), "bios20-dos", 2500, u8"dos启动盘.IMG"); }
+
+// ---------------------------------------------------------------- 格式化软盘
+
+/** 在步步高 DOS 命令行里操作的会话：用 DOS 启动盘开机并跳过日期与时间，之后可以输入命令、等待。 */
+class DosSession {
+ public:
+  DosSession(const BbkVariant& variant, std::vector<std::uint8_t> bios, std::vector<std::uint8_t> image) : machine_(variant, std::move(bios)) {
+    machine_.floppyDrive(0)->insertImage(std::move(image), false, "dos.img");
+    machine_.powerOn();
+    wait(2500);
+    tap("Enter", false);
+    wait(60);
+    tap("Enter", false);
+    wait(120);
+  }
+
+  void wait(int frames) {
+    for (int frame = 0; frame < frames; ++frame) machine_.runFrame();
+  }
+
+  /** 按下并松开一个键；shift 为真时先按住左 Shift。 */
+  void tap(const std::string& code, bool shift) {
+    if (shift) {
+      machine_.input(hw::KeyInput{"ShiftLeft", true});
+      wait(6);
+    }
+    machine_.input(hw::KeyInput{code, true});
+    wait(6);
+    machine_.input(hw::KeyInput{code, false});
+    wait(6);
+    if (shift) {
+      machine_.input(hw::KeyInput{"ShiftLeft", false});
+      wait(6);
+    }
+  }
+
+  /** 输入一行命令（小写字母、数字、空格、点与冒号），不含回车。 */
+  void type(std::string_view text) {
+    for (const char letter : text) {
+      if (letter >= 'a' && letter <= 'z') tap(std::string("Key") + static_cast<char>(letter - 'a' + 'A'), false);
+      else if (letter >= '0' && letter <= '9') tap(std::string("Digit") + letter, false);
+      else if (letter == ' ') tap("Space", false);
+      else if (letter == '.') tap("Period", false);
+      else if (letter == ':') tap("Semicolon", true);
+    }
+  }
+
+  void enter() { tap("Enter", false); }
+
+  [[nodiscard]] BbkMachine& machine() { return machine_; }
+
+ private:
+  BbkMachine machine_;
+};
+
+/** 让 DOS 格式化软驱里的盘片，返回格式化后的镜像；BIOS 或盘片缺失时返回空。 */
+std::vector<std::uint8_t> formatTheFloppy(const char* biosFile, const BbkVariant& variant, std::vector<std::uint8_t> image, bool formatIsOnDriveC, const char* label) {
+  std::vector<std::uint8_t> bios = realBios(biosFile, variant);
+  if (bios.empty() || image.empty()) return {};
+  DosSession session(variant, std::move(bios), std::move(image));
+  if (formatIsOnDriveC) {
+    session.type("c:");
+    session.enter();
+    session.wait(120);
+  }
+  session.type("format a:");
+  session.enter();
+  session.wait(300);
+  session.enter();
+  session.wait(3000);
+  if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(session.machine().frame(), dump + "." + label + ".ppm");
+  return session.machine().floppyDrive(0)->image();
+}
+
+/** 软驱一号没有 C 盘：先在步步高 98 的 C 盘里把 FORMAT.COM 复制到 DOS 启动盘上，返回复制后的镜像。 */
+std::vector<std::uint8_t> diskWithTheFormatProgram() {
+  std::vector<std::uint8_t> bios = realBios("bbk_bios20.bin", BbkVariant::model98());
+  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(u8"dos启动盘.IMG"));
+  if (bios.empty() || image.empty()) return {};
+  DosSession session(BbkVariant::model98(), std::move(bios), std::move(image));
+  session.type("c:");
+  session.enter();
+  session.wait(120);
+  session.type("copy format.cmd a:");
+  session.enter();
+  session.wait(900);
+  if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(session.machine().frame(), dump + ".bios20-copy-format.ppm");
+  return session.machine().floppyDrive(0)->image();
+}
+
+/** 格式化后：没有被 FAT 与根目录占用的磁道都被写成了填充字节 $F6。 */
+void expectFormatted(const std::vector<std::uint8_t>& formatted) {
+  ASSERT_EQ(formatted.size(), 1440U * 1024);
+  constexpr std::size_t TRACK_BYTES = 18 * 512;
+  constexpr std::size_t FIRST_DATA_TRACK = 3;
+  std::size_t filledTracks = 0;
+  for (std::size_t track = FIRST_DATA_TRACK; track < formatted.size() / TRACK_BYTES; ++track) {
+    const auto begin = formatted.begin() + static_cast<std::ptrdiff_t>(track * TRACK_BYTES);
+    if (std::all_of(begin, begin + TRACK_BYTES, [](std::uint8_t value) { return value == 0xF6; })) ++filledTracks;
+  }
+  EXPECT_GT(filledTracks, 150U) << "80 道 2 面共 160 个磁道，除了 FAT 与根目录所在的开头几个磁道外都应该被格式化";
+}
+
+TEST(BbkMachine, RealBios10FormatsAFloppyDisk) {
+  std::vector<std::uint8_t> image = diskWithTheFormatProgram();
+  if (image.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
+  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbk_bios10.bin", BbkVariant::floppyOne(), std::move(image), false, "bios10-format");
+  if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS";
+  expectFormatted(formatted);
+}
+
+TEST(BbkMachine, RealBios20FormatsAFloppyDisk) {
+  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(u8"dos启动盘.IMG"));
+  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbk_bios20.bin", BbkVariant::model98(), std::move(image), true, "bios20-format");
+  if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
+  expectFormatted(formatted);
+}
 
 }  // namespace

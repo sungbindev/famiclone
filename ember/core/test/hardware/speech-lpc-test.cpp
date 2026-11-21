@@ -268,4 +268,80 @@ TEST(SpeechLpcBbk, AfterTheEndFrameEveryByteIsIgnoredUntilReset) {
   EXPECT_TRUE(bench.speech.playing()) << "复位后可以重新开始";
 }
 
+/** 裕兴变体的测试台。 */
+struct YuxingSpeechBench {
+  YuxingSpeechBench() : speech(scheduler, MASTER_HZ, SpeechLpc::Variant::Yuxing) {
+    speech.onLevel = [this](double level) { levels.push_back(level); };
+  }
+  void send(const std::vector<std::uint8_t>& bytes) {
+    for (const std::uint8_t byte : bytes) speech.write(PORT, byte);
+  }
+  void run(double ms) { scheduler.advance(milliseconds(ms)); }
+  MasterScheduler scheduler;
+  SpeechLpc speech;
+  std::vector<double> levels;
+};
+
+/** 裕兴的码流：没有命令字节，一组帧之后是结束帧。 */
+std::vector<std::uint8_t> yuxingStream(const std::vector<Field>& frames) { return pack(concat(frames, {{15, 4}})); }
+
+TEST(SpeechLpcYuxing, StartsReadyWithNoPlaybackAndNoEndedFlag) {
+  YuxingSpeechBench bench;
+  EXPECT_EQ(bench.speech.read(PORT).value, 0x00) << "裕兴的状态：能写时读 $00";
+  EXPECT_FALSE(bench.speech.playing());
+  EXPECT_FALSE(bench.speech.ended());
+}
+
+TEST(SpeechLpcYuxing, FramesAreReadWithThePeTablesWithoutAnyCommandByte) {
+  YuxingSpeechBench bench;
+  const auto frame = voicedFramePe();
+  bench.send(yuxingStream(concat(frame, concat(frame, frame))));
+  EXPECT_TRUE(bench.speech.playing());
+  bench.run(70);
+  double peak = 0;
+  for (const double level : bench.levels) peak = std::max(peak, std::fabs(level));
+  EXPECT_GT(peak, 0.01) << "浊音帧有声音";
+  EXPECT_EQ(bench.speech.framesSynthesized(), 2U);
+}
+
+TEST(SpeechLpcYuxing, TheStatusReadsBusyWhenEightOrMoreBytesAreWaiting) {
+  YuxingSpeechBench bench;
+  const auto frame = voicedFramePe();
+  // 开头两帧收齐之后开始播放，播放期间后面的字节留在缓冲里。
+  std::vector<Field> frames;
+  for (unsigned index = 0; index < 8; ++index) frames = concat(frames, frame);
+  bench.send(yuxingStream(frames));
+  ASSERT_TRUE(bench.speech.playing());
+  EXPECT_GE(bench.speech.pendingBytes(), 8U);
+  EXPECT_EQ(bench.speech.read(PORT).value, 0x80);
+  bench.speech.reset(false);
+  EXPECT_EQ(bench.speech.read(PORT).value, 0x00);
+}
+
+TEST(SpeechLpcYuxing, AfterTheEndFrameTheNextSegmentStartsAtOnceWithoutAnAcknowledgeByte) {
+  YuxingSpeechBench bench;
+  const auto frame = voicedFramePe();
+  const auto segment = yuxingStream(concat(frame, concat(frame, frame)));
+  bench.send(segment);
+  bench.run(60);
+  EXPECT_EQ(bench.speech.framesSynthesized(), 2U);
+  EXPECT_FALSE(bench.speech.ended()) << "读到结束帧也不置播放结束";
+  bench.send(segment);
+  bench.run(60);
+  EXPECT_FALSE(bench.speech.ended());
+  EXPECT_EQ(bench.speech.framesSynthesized(), 4U) << "不需要确认字节，第二段直接播";
+}
+
+TEST(SpeechLpcYuxing, ResetStopsPlaybackAndSilencesTheOutput) {
+  YuxingSpeechBench bench;
+  const auto frame = voicedFramePe();
+  bench.send(yuxingStream(concat(frame, concat(frame, frame))));
+  bench.run(5);
+  ASSERT_TRUE(bench.speech.playing());
+  bench.speech.reset(false);
+  EXPECT_FALSE(bench.speech.playing());
+  EXPECT_EQ(bench.speech.pendingBytes(), 0U);
+  EXPECT_EQ(bench.levels.back(), 0.0);
+}
+
 }  // namespace

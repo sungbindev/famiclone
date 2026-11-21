@@ -410,7 +410,8 @@ void FdcUpd765::cmFormatTrack() {
     endCommand(true, {st0_, st1_, st2_, cylinder_, head_, sectorNumber_, command_[CMD_FORMAT_SECTOR_SIZE]});
     return;
   }
-  if ((msr_ & MSR_READY) != 0) return;
+  // 等着 CPU 给扇区编号时什么也不做（不模拟溢出）。
+  if ((msr_ & MSR_READY) != 0 || dmaRequest_) return;
   const hw::FloppyFormat format = unit.format();
   if (bytesLeft_ == 0) {
     if (!dataPosition_.has_value()) {
@@ -420,6 +421,8 @@ void FdcUpd765::cmFormatTrack() {
       sectorSize_ = std::min(static_cast<std::size_t>(128) << command_[CMD_FORMAT_SECTOR_SIZE], MAX_SECTOR_SIZE);
     } else if (++sectorNumber_ > command_[CMD_FORMAT_LAST_SECTOR]) {
       st0_ |= ST0_NORMAL_TERMINATION;
+      // 格式化最后一个编号字节时程序会给出终止计数，不能留给下一条命令。
+      dmaTerminate_ = false;
       endCommand(true, {st0_, st1_, st2_, cylinder_, head_, sectorNumber_, command_[CMD_FORMAT_SECTOR_SIZE]});
       return;
     }
@@ -432,9 +435,13 @@ void FdcUpd765::cmFormatTrack() {
   }
   // 填充扇区头的 4 个字节时请求扇区编号。
   if (bytesLeft_ > STANDARD_SECTOR_SIZE - FORMAT_ID_BYTES) {
-    msr_ |= MSR_READY | MSR_NO_DMA;
-    msr_ &= static_cast<std::uint8_t>(~MSR_DIRECTION);
-    sra_ |= SRA_IRQ;
+    if (useDma_) {
+      dmaRequest_ = true;
+    } else {
+      msr_ |= MSR_READY | MSR_NO_DMA;
+      msr_ &= static_cast<std::uint8_t>(~MSR_DIRECTION);
+      sra_ |= SRA_IRQ;
+    }
   }
 }
 

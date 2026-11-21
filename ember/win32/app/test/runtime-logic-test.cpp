@@ -95,11 +95,12 @@ TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {
   // 金字塔学习机是内置机型，状态栏显示它的机型名
   EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec9588")), "fc"), "金字塔 PEC-9588");
   EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec586")), "fc"), "金字塔 PEC-586、686");
+  EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "yuxing")), "fc"), "裕兴");
 }
 
 TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   const auto choices = logic::machineChoices(logic::parseMachines(machinesJson()));
-  ASSERT_EQ(choices.size(), 6U);
+  ASSERT_EQ(choices.size(), 7U);
   EXPECT_EQ(choices[0].id, "sb97");
   EXPECT_EQ(choices[0].hint, "未添加 ROM");
   EXPECT_EQ(choices[1].id, "sb2000");
@@ -112,6 +113,8 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   EXPECT_EQ(choices[4].label, "金字塔 PEC-9588");
   EXPECT_EQ(choices[5].id, "pec586");
   EXPECT_EQ(choices[5].label, "金字塔 PEC-586、686");
+  EXPECT_EQ(choices[6].id, "yuxing");
+  EXPECT_EQ(choices[6].label, "裕兴");
   for (const auto& choice : logic::machineChoices({})) EXPECT_EQ(choice.hint, "暂未支持");
 }
 
@@ -571,7 +574,7 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   ASSERT_EQ(menus[1].items.size(), 7U);
   EXPECT_EQ(menus[1].items[0].label, "选择机型");
   EXPECT_FALSE(menus[1].items[0].separatorBefore);
-  ASSERT_EQ(menus[1].items[0].items.size(), 6U);
+  ASSERT_EQ(menus[1].items[0].items.size(), 7U);
   EXPECT_FALSE(menus[1].items[0].items[1].disabled);
   EXPECT_TRUE(menus[1].items[0].items[0].disabled);
   EXPECT_EQ(menus[1].items[0].items[0].hint, "未添加 ROM");

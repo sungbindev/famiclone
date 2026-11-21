@@ -291,7 +291,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   const platform::SystemDialogs systemDialogs([&mainWindow]() -> void* { return mainWindow; });
   infra::RememberingFileDialog fileDialog(systemDialogs, lastDirectories);
   infra::ExplorerDirectory logDirectory(userData / "logs");
-  infra::ExplorerDirectory romDirectory(userData / "rom");
+  infra::ExplorerDirectory romDirectory(userData / "roms");
   // 升级：发布配置里、不是调试会话（带 --debug-port 启动）、且软件所在目录能写（新程序要覆盖当前程序）时才支持，否则状态固定是不支持
   infra::WinHttpUpdateTransport updateTransport;
   infra::SignedExeUpdateEngine::Options updateOptions;

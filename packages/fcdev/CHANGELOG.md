@@ -2,6 +2,13 @@
 
 适用于 `fcdev`、`create-fcdev`、`fcdev-cc65`、`fcdev-ember` 四个包，它们的版本号相同。
 
+## 0.9.1（2026-11-21）
+
+### 模拟器与调试
+
+- 随包的 Ember 升到 0.3.4：新增金字塔学习机（PEC-9588、PEC-586 与 PEC-686F）两个机型，学习机的固件统一叫 ROM。
+- Ember 调试接口里添加与移除学习机固件的请求改名：`machines.setBios` 改为 `machines.setRom`，`machines.removeBios` 改为 `machines.removeRom`，数据类型与错误码里的 `bios` 也改成 `rom`；`fcdev run` 的学习机方案已经适配，直接调用这些请求的脚本要跟着改名。
+
 ## 0.9.0（2026-11-21）
 
 ### 模拟器与调试

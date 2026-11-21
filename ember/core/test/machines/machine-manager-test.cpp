@@ -76,7 +76,7 @@ struct Rig {
     options.errors = std::make_shared<ember::test::RecordingErrorLog>();
     options.framesPerSecond = 0;
     runtime = std::make_shared<ember::logic::runtime::SimulationRuntime>(std::move(options));
-    storage = std::make_shared<ember::infra::machines::DiskRomStorage>(dir.path() / "rom");
+    storage = std::make_shared<ember::infra::machines::DiskRomStorage>(dir.path() / "roms");
     manager = std::make_unique<ember::logic::machines::MachineManager>(storage, runtime, events);
   }
 
@@ -147,7 +147,7 @@ TEST(MachineManager, SettingARomKeepsItAndPublishesAChange) {
   EXPECT_EQ(rig.events->count("machines.changed"), 1);
   EXPECT_EQ(rig.events->last("machines.changed")["machine"], "sb2000");
   EXPECT_TRUE(rig.find("sb2000").rom.has_value());
-  EXPECT_TRUE(std::filesystem::exists(rig.dir.path() / "rom" / "sb2000" / "SB2K_ROM.NES"));
+  EXPECT_TRUE(std::filesystem::exists(rig.dir.path() / "roms" / "sb2000" / "SB2K_ROM.NES"));
 }
 
 TEST(MachineManager, ReplacingARomDeletesTheOldFile) {
@@ -155,7 +155,7 @@ TEST(MachineManager, ReplacingARomDeletesTheOldFile) {
   rig.manager->setRom(rig.setParams("sb2000", rig.write("first.nes", romFile())));
   rig.manager->setRom(rig.setParams("sb2000", rig.write("second.nes", romFile())));
   EXPECT_EQ(rig.find("sb2000").rom->fileName, "second.nes");
-  EXPECT_FALSE(std::filesystem::exists(rig.dir.path() / "rom" / "sb2000" / "first.nes"));
+  EXPECT_FALSE(std::filesystem::exists(rig.dir.path() / "roms" / "sb2000" / "first.nes"));
   EXPECT_EQ(rig.events->count("machines.changed"), 2);
 }
 

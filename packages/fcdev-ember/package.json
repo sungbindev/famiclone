@@ -1,6 +1,6 @@
 {
   "name": "fcdev-ember",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "fcdev 随包的 Ember 模拟器（Windows 64 位）：fcdev run、fcdev debug 与调试工具使用",
   "license": "GPL-3.0-only",
   "repository": {

@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
- * 备注：取用 runtime 模块的运行服务，须排在它之后登记；ROM 保存在用户数据目录的 rom/<机型>/ 下。
+ * 备注：取用 runtime 模块的运行服务，须排在它之后登记；ROM 保存在用户数据目录的 roms/<机型>/ 下。
  * ------------------------------------------------------------------------
  */
 
@@ -22,7 +22,7 @@
 namespace ember::bootstrap {
 
 void registerMachines(ModuleRegistry& registry) {
-  auto storage = std::make_shared<infra::machines::DiskRomStorage>(registry.userDataPath / "rom");
+  auto storage = std::make_shared<infra::machines::DiskRomStorage>(registry.userDataPath / "roms");
   auto service = std::make_shared<logic::machines::MachineManager>(storage, registry.services.require<contracts::runtime::RuntimeService>(), registry.events);
   registry.services.provide<contracts::machines::MachineService>(service);
   requests::machines::addMachineRequests(registry.requests, service);

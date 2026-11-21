@@ -23,7 +23,7 @@ const TEST_ROM = join(projectRoot, 'roms', 'sb2000_bios.bin');
 
 /** 把测试用的 ROM 放进实例的用户数据目录，等于用户在首选项里添加了它。 */
 function addTestRom(app) {
-  const target = join(app.userData, 'rom', 'sb2000', 'SB2K_ROM.bin');
+  const target = join(app.userData, 'roms', 'sb2000', 'SB2K_ROM.bin');
   mkdirSync(dirname(target), { recursive: true });
   copyFileSync(TEST_ROM, target);
 }

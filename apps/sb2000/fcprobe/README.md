@@ -2,7 +2,7 @@
 
 在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行，在 FC 兼容模式里测试内存写入、PPU、软驱与键盘；用 fcdev 开发，C 与 ca65 汇编。
 
-它是 bbk-loader 的前期探测程序，结论是 FC 模式走不通，结果和结论见 [machines/bbk/docs/计划与进度.md](../../../machines/bbk/docs/计划与进度.md)。
+它是 bbg-loader 的前期探测程序，结论是 FC 模式走不通，结果和结论见 [machines/bbg/docs/计划与进度.md](../../../machines/bbg/docs/计划与进度.md)。
 
 ## 使用
 
@@ -13,7 +13,7 @@ npm run build    # 生成 build/sb2000/FCPROBE.EXE
 npm run disk     # 生成含 FCPROBE.EXE 的软盘镜像 build/sb2000/FCPROBE.img
 ```
 
-读出测试结果（在仓库里 `machines/bbk` 目录下运行，用 Ember 启动学习机并经调试服务读内存；Ember 的定位规则见 `packages/fcdev/docs/02-模拟器与调试.md`）：
+读出测试结果（在仓库里 `machines/bbg` 目录下运行，用 Ember 启动学习机并经调试服务读内存；Ember 的定位规则见 `packages/fcdev/docs/02-模拟器与调试.md`）：
 
 ```bash
 node tools/probe-fc.mjs

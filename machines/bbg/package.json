@@ -1,8 +1,8 @@
 {
-  "name": "bbk",
+  "name": "bbg",
   "version": "0.1.0",
   "private": true,
-  "description": "BBK learning computer BIOS/DOS source tooling",
+  "description": "BBG learning computer BIOS/DOS source tooling",
   "type": "module",
   "engines": {
     "node": ">=22"

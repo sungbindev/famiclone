@@ -52,7 +52,7 @@ struct Scene {
 
   Scene() {
     rom.current.load = contracts::MachinesLoad::Ready;
-    rom.current.rows = {{"sb97", "小霸王 97", "未添加", false, true}, {"sb2000", "小霸王 2000", "SB2K_ROM.NES（512 KB）", true, true}, {"bbk10", "步步高软驱一号", "暂未支持", false, false}};
+    rom.current.rows = {{"sb97", "小霸王 97", "未添加", false, true}, {"sb2000", "小霸王 2000", "SB2K_ROM.NES（512 KB）", true, true}, {"bbg1", "步步高软驱一号", "暂未支持", false, false}};
   }
 
   void open() {

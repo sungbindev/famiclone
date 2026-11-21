@@ -30,8 +30,8 @@ constexpr std::size_t SB97_PRG_SIZE = 1024 * 1024;
 /** sb2000 的 ROM：512KB。 */
 constexpr std::size_t SB2000_PRG_SIZE = 512 * 1024;
 /** 步步高软驱一号与步步高 98 的 ROM：128KB、2048KB。 */
-constexpr std::size_t BBK10_PRG_SIZE = 128 * 1024;
-constexpr std::size_t BBK20_PRG_SIZE = 2048 * 1024;
+constexpr std::size_t BBG1_PRG_SIZE = 128 * 1024;
+constexpr std::size_t BBG98_PRG_SIZE = 2048 * 1024;
 /** 金字塔 PEC-9588 与 PEC-586、686 的 ROM：512KB。 */
 constexpr std::size_t PYRAMID_PRG_SIZE = 512 * 1024;
 /** 裕兴的 ROM：1024KB（V8.0-C、V8.2-D、V8.3-D、V9.0-98 等学习卡都是这个大小）。 */
@@ -52,8 +52,8 @@ MachineManager::MachineManager(std::shared_ptr<api::RomStorage> storage, std::sh
       entries_{{"fc", "经典 FC", false, true, 0},
                {"sb97", "小霸王 97", true, true, SB97_PRG_SIZE},
                {"sb2000", "小霸王 2000", true, true, SB2000_PRG_SIZE},
-               {"bbk10", "步步高软驱一号", true, true, BBK10_PRG_SIZE},
-               {"bbk20", "步步高 98", true, true, BBK20_PRG_SIZE},
+               {"bbg1", "步步高软驱一号", true, true, BBG1_PRG_SIZE},
+               {"bbg98", "步步高 98", true, true, BBG98_PRG_SIZE},
                {"pec9588", "金字塔 PEC-9588", true, true, PYRAMID_PRG_SIZE},
                {"pec586", "金字塔 PEC-586、686", true, true, PYRAMID_PRG_SIZE},
                {"yuxing", "裕兴", true, true, YUXING_PRG_SIZE}} {}

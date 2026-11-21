@@ -15,7 +15,7 @@
 | `cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `cc65/LICENSE` |
 | `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`runnes`、`memtest`、`fcprobe`、`hwprobe`、`hwtest`、`fbasic`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是独立的 npm 项目 |
 | `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`docs`（研究文档） |
-| `machines/bbk` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
+| `machines/bbg` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
 | `machines/sb97` | SB97 的 BIOS 静态分析 |
 | `reference` | 真机参考资料：ROM、软盘镜像、磁带、游戏；`machines` 与测试会用到，不随 npm 包发布 |
 | `tools` | 构建、检查与发布脚本 |
@@ -23,7 +23,7 @@
 | `docs` | 开发文档，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节 |
 | `build` | 构建产物（cc65、Ember），不入库 |
 
-`apps/bbk` 目前是空目录。仓库根的 npm 工作区只包含 `packages/*`；`ember`、`vscode`、`apps`、`machines` 各自安装依赖。
+`apps/bbg` 目前是空目录。仓库根的 npm 工作区只包含 `packages/*`；`ember`、`vscode`、`apps`、`machines` 各自安装依赖。
 
 ## 构建命令
 
@@ -87,7 +87,7 @@ npm run build          # 构建 BIOS
 npm run build:fast     # 构建 fastboot 变体
 npm test
 
-# machines/bbk、machines/sb97
+# machines/bbg、machines/sb97
 npm test
 ```
 

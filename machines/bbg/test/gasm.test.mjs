@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-12
-// 备注：运行 npm test；集成测试读取 reference/docs/BBKDOS源代码 里的原厂文件。
+// 备注：运行 npm test；集成测试读取 reference/docs/BBGDOS源代码 里的原厂文件。
 // ------------------------------------------------------------------------
 
 import { test } from 'node:test';

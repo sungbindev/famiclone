@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bbk-peripherals-test.cpp
+ * 名称：bbg-peripherals-test.cpp
  * 说明：步步高键盘、鼠标与 $4016-$4017 输入口的测试：按固件的流程读整个矩阵、位置与半边的规则、鼠标的接通检测、命令与帧格式、位移与按键的编码，以及输入口把手柄、键盘、鼠标与 APU 写入接在一起。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -15,25 +15,25 @@
 #include <cstdint>
 #include <vector>
 
-#include "bootstrap/machines/bbk/bbk-input-port.hpp"
+#include "bootstrap/machines/bbg/bbg-input-port.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
-#include "logic/hardware/keyboard-bbk/keyboard-bbk.hpp"
-#include "logic/hardware/mouse-bbk/mouse-bbk.hpp"
+#include "logic/hardware/keyboard-bbg/keyboard-bbg.hpp"
+#include "logic/hardware/mouse-bbg/mouse-bbg.hpp"
 #include "logic/hardware/pad-2a03/pad-2a03.hpp"
 
 namespace {
 
 namespace hw = ember::contracts::hardware;
-using ember::bootstrap::BbkInputPort;
+using ember::bootstrap::BbgInputPort;
 using ember::logic::hardware::ControllerSocket;
 using ember::logic::hardware::Joypad;
-using ember::logic::hardware::KeyboardBbk;
-using ember::logic::hardware::MouseBbk;
+using ember::logic::hardware::KeyboardBbg;
+using ember::logic::hardware::MouseBbg;
 
 constexpr std::uint8_t RELEASED = 0x1E;
 
 /** 按固件的流程读整个矩阵：12 个字节，下标 x 对应位置 x + 1（x 不小于 9 时对应位置 x + 2），低 4 位是前半边，高 4 位是后半边，按下为 1。 */
-std::array<std::uint8_t, 12> scan(KeyboardBbk& keyboard) {
+std::array<std::uint8_t, 12> scan(KeyboardBbg& keyboard) {
   std::array<std::uint8_t, 12> result{};
   keyboard.write(0x05);
   for (unsigned x = 0; x < 12; ++x) {
@@ -50,18 +50,18 @@ std::array<std::uint8_t, 12> scan(KeyboardBbk& keyboard) {
   return result;
 }
 
-TEST(KeyboardBbk, WithNoKeyPressedEveryPositionReadsOne) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, WithNoKeyPressedEveryPositionReadsOne) {
+  KeyboardBbg keyboard;
   keyboard.write(0x05);
-  for (unsigned position = 1; position <= KeyboardBbk::POSITIONS; ++position) {
+  for (unsigned position = 1; position <= KeyboardBbg::POSITIONS; ++position) {
     keyboard.write(0x04);
     if (position != 10) EXPECT_EQ(keyboard.read(), RELEASED) << "位置 " << position << " 前半边";
     keyboard.write(0x06);
   }
 }
 
-TEST(KeyboardBbk, ScanControlWritesMoveThePositionAndFlipTheHalf) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, ScanControlWritesMoveThePositionAndFlipTheHalf) {
+  KeyboardBbg keyboard;
   keyboard.write(0x05);
   EXPECT_EQ(keyboard.position(), 0U);
   EXPECT_FALSE(keyboard.firstHalf());
@@ -80,8 +80,8 @@ TEST(KeyboardBbk, ScanControlWritesMoveThePositionAndFlipTheHalf) {
   EXPECT_EQ(keyboard.position(), 0U) << "位 2 为 0 的写入不是扫描控制";
 }
 
-TEST(KeyboardBbk, PositionZeroHasNoKeys) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, PositionZeroHasNoKeys) {
+  KeyboardBbg keyboard;
   keyboard.setKey("KeyA", true);
   keyboard.write(0x05);
   EXPECT_EQ(keyboard.read(), RELEASED);
@@ -89,8 +89,8 @@ TEST(KeyboardBbk, PositionZeroHasNoKeys) {
   EXPECT_EQ(keyboard.read(), RELEASED);
 }
 
-TEST(KeyboardBbk, APressedKeyShowsUpInTheScan) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, APressedKeyShowsUpInTheScan) {
+  KeyboardBbg keyboard;
   keyboard.setKey("Digit4", true);
   EXPECT_EQ(scan(keyboard)[0], 0x01) << "位置 1 前半边的第 1 个键";
   keyboard.setKey("Digit4", false);
@@ -104,8 +104,8 @@ TEST(KeyboardBbk, APressedKeyShowsUpInTheScan) {
   EXPECT_EQ(matrix[9], 0x10) << "位置 11 后半边的第 1 个键";
 }
 
-TEST(KeyboardBbk, PositionTenSecondHalfFirstKeyIsAlwaysDown) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, PositionTenSecondHalfFirstKeyIsAlwaysDown) {
+  KeyboardBbg keyboard;
   keyboard.write(0x05);
   for (unsigned index = 0; index < 9; ++index) {
     keyboard.write(0x04);
@@ -117,8 +117,8 @@ TEST(KeyboardBbk, PositionTenSecondHalfFirstKeyIsAlwaysDown) {
   EXPECT_EQ(keyboard.read(), static_cast<std::uint8_t>(RELEASED & ~0x02));
 }
 
-TEST(KeyboardBbk, LeftAndRightModifiersShareOneKeyAndStayDownUntilBothAreReleased) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, LeftAndRightModifiersShareOneKeyAndStayDownUntilBothAreReleased) {
+  KeyboardBbg keyboard;
   keyboard.setKey("ShiftLeft", true);
   keyboard.setKey("ShiftRight", true);
   EXPECT_EQ(scan(keyboard)[7], 0x80) << "位置 8 后半边的第 4 个键";
@@ -128,28 +128,28 @@ TEST(KeyboardBbk, LeftAndRightModifiersShareOneKeyAndStayDownUntilBothAreRelease
   EXPECT_EQ(scan(keyboard)[7], 0x00);
 }
 
-TEST(KeyboardBbk, UnknownKeysAreRejected) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, UnknownKeysAreRejected) {
+  KeyboardBbg keyboard;
   EXPECT_FALSE(keyboard.setKey("MediaPlayPause", true));
   EXPECT_TRUE(keyboard.setKey("KeyQ", true));
 }
 
-TEST(KeyboardBbk, EveryKeyHasOneMatrixPositionAndFitsTheMatrix) {
+TEST(KeyboardBbg, EveryKeyHasOneMatrixPositionAndFitsTheMatrix) {
   unsigned position = 0;
   bool first = false;
   unsigned bit = 0;
-  ASSERT_TRUE(KeyboardBbk::locate("Space", position, first, bit));
+  ASSERT_TRUE(KeyboardBbg::locate("Space", position, first, bit));
   EXPECT_EQ(position, 9U);
   EXPECT_TRUE(first);
   EXPECT_EQ(bit, 3U);
-  ASSERT_TRUE(KeyboardBbk::locate("Numpad0", position, first, bit));
+  ASSERT_TRUE(KeyboardBbg::locate("Numpad0", position, first, bit));
   EXPECT_EQ(position, 13U);
   EXPECT_FALSE(first);
   EXPECT_EQ(bit, 3U);
 }
 
-TEST(KeyboardBbk, ResetRestoresTheScanStartButKeepsPressedKeys) {
-  KeyboardBbk keyboard;
+TEST(KeyboardBbg, ResetRestoresTheScanStartButKeepsPressedKeys) {
+  KeyboardBbg keyboard;
   keyboard.setKey("KeyQ", true);
   keyboard.write(0x05);
   keyboard.write(0x04);
@@ -161,12 +161,12 @@ TEST(KeyboardBbk, ResetRestoresTheScanStartButKeepsPressedKeys) {
 // ---------------------------------------------------------------- 鼠标
 
 /** 按固件的流程让鼠标接通：连续读 $4016 九次。 */
-void connect(MouseBbk& mouse) {
+void connect(MouseBbg& mouse) {
   for (unsigned index = 0; index < 9; ++index) mouse.noteStatusRead();
 }
 
 /** 发一个命令：先写 $05，再逐位写入（位 2 为 1，位 0 是命令位的反相），共 22 位。 */
-void sendCommand(MouseBbk& mouse, std::uint8_t command) {
+void sendCommand(MouseBbg& mouse, std::uint8_t command) {
   mouse.write(0x05);
   for (unsigned bit = 0; bit < 22; ++bit) {
     const bool value = bit < 8 && ((command >> bit) & 1U) != 0;
@@ -175,7 +175,7 @@ void sendCommand(MouseBbk& mouse, std::uint8_t command) {
 }
 
 /** 读一帧：32 位之后再读一次帧间隔；返回帧里的数据字节，起始位或格式不对时返回 -1。 */
-int readFrame(MouseBbk& mouse) {
+int readFrame(MouseBbg& mouse) {
   std::array<std::uint8_t, 32> bits{};
   for (auto& bit : bits) bit = mouse.readLine();
   const std::uint8_t gap = mouse.readLine();
@@ -194,8 +194,8 @@ int readFrame(MouseBbk& mouse) {
   return value;
 }
 
-TEST(MouseBbk, IsNotConnectedUntilNineConsecutiveReadsOf4016) {
-  MouseBbk mouse;
+TEST(MouseBbg, IsNotConnectedUntilNineConsecutiveReadsOf4016) {
+  MouseBbg mouse;
   EXPECT_EQ(mouse.readLine(), 0);
   for (unsigned index = 0; index < 8; ++index) mouse.noteStatusRead();
   EXPECT_FALSE(mouse.active());
@@ -204,8 +204,8 @@ TEST(MouseBbk, IsNotConnectedUntilNineConsecutiveReadsOf4016) {
   EXPECT_EQ(mouse.readLine(), 1) << "接通后空闲时位 0 为 1";
 }
 
-TEST(MouseBbk, AReadOf4017OrAWriteBreaksTheConsecutiveReadCount) {
-  MouseBbk mouse;
+TEST(MouseBbg, AReadOf4017OrAWriteBreaksTheConsecutiveReadCount) {
+  MouseBbg mouse;
   for (unsigned index = 0; index < 8; ++index) mouse.noteStatusRead();
   static_cast<void>(mouse.readLine());
   mouse.noteStatusRead();
@@ -216,17 +216,17 @@ TEST(MouseBbk, AReadOf4017OrAWriteBreaksTheConsecutiveReadCount) {
   EXPECT_FALSE(mouse.active());
 }
 
-TEST(MouseBbk, SetRemoteModeAnswersWithAnAcknowledgeAndDisconnects) {
-  MouseBbk mouse;
+TEST(MouseBbg, SetRemoteModeAnswersWithAnAcknowledgeAndDisconnects) {
+  MouseBbg mouse;
   connect(mouse);
   sendCommand(mouse, 0xF0);
   EXPECT_EQ(readFrame(mouse), 0xFA);
   EXPECT_FALSE(mouse.active()) << "应答发完后回到未接通";
 }
 
-TEST(MouseBbk, ReadDataAnswersWithAcknowledgeThenButtonsAndSignedMovement) {
-  MouseBbk mouse;
-  mouse.move(5, -3, MouseBbk::BUTTON_LEFT);
+TEST(MouseBbg, ReadDataAnswersWithAcknowledgeThenButtonsAndSignedMovement) {
+  MouseBbg mouse;
+  mouse.move(5, -3, MouseBbg::BUTTON_LEFT);
   connect(mouse);
   sendCommand(mouse, 0xEB);
   EXPECT_EQ(readFrame(mouse), 0xFA);
@@ -236,10 +236,10 @@ TEST(MouseBbk, ReadDataAnswersWithAcknowledgeThenButtonsAndSignedMovement) {
   EXPECT_FALSE(mouse.active());
 }
 
-TEST(MouseBbk, MovementIsAccumulatedUntilReadAndThenCleared) {
-  MouseBbk mouse;
+TEST(MouseBbg, MovementIsAccumulatedUntilReadAndThenCleared) {
+  MouseBbg mouse;
   mouse.move(-2, 1, 0);
-  mouse.move(-3, 2, MouseBbk::BUTTON_RIGHT);
+  mouse.move(-3, 2, MouseBbg::BUTTON_RIGHT);
   connect(mouse);
   sendCommand(mouse, 0xEB);
   static_cast<void>(readFrame(mouse));
@@ -254,8 +254,8 @@ TEST(MouseBbk, MovementIsAccumulatedUntilReadAndThenCleared) {
   EXPECT_EQ(readFrame(mouse), 0);
 }
 
-TEST(MouseBbk, MovementOutOfRangeSetsTheOverflowBitAndReadsZero) {
-  MouseBbk mouse;
+TEST(MouseBbg, MovementOutOfRangeSetsTheOverflowBitAndReadsZero) {
+  MouseBbg mouse;
   mouse.move(-300, 400, 0);
   connect(mouse);
   sendCommand(mouse, 0xEB);
@@ -265,8 +265,8 @@ TEST(MouseBbk, MovementOutOfRangeSetsTheOverflowBitAndReadsZero) {
   EXPECT_EQ(readFrame(mouse), 0);
 }
 
-TEST(MouseBbk, ReceivingACommandTogglesTheLineOnEveryRead) {
-  MouseBbk mouse;
+TEST(MouseBbg, ReceivingACommandTogglesTheLineOnEveryRead) {
+  MouseBbg mouse;
   connect(mouse);
   mouse.write(0x05);
   EXPECT_EQ(mouse.readLine(), 1);
@@ -287,13 +287,13 @@ struct Rig {
   ControllerSocket socket;
   Joypad joypad;
   RecordingDevice apu;
-  KeyboardBbk keyboard;
-  MouseBbk mouse;
-  BbkInputPort port{socket, apu, keyboard, &mouse};
+  KeyboardBbg keyboard;
+  MouseBbg mouse;
+  BbgInputPort port{socket, apu, keyboard, &mouse};
   Rig() { socket.plug(&joypad); }
 };
 
-TEST(BbkInputPort, Reads4016AsTheJoypadDataLineOnly) {
+TEST(BbgInputPort, Reads4016AsTheJoypadDataLineOnly) {
   Rig rig;
   rig.joypad.setButtons(0x01);
   rig.port.write(0x4016, 0x01);
@@ -304,7 +304,7 @@ TEST(BbkInputPort, Reads4016AsTheJoypadDataLineOnly) {
   EXPECT_EQ(rig.port.read(0x4016).value, 0x00) << "B 键没按";
 }
 
-TEST(BbkInputPort, Reads4017AsKeyboardAndMouseLinesWithHighBitsSet) {
+TEST(BbgInputPort, Reads4017AsKeyboardAndMouseLinesWithHighBitsSet) {
   Rig rig;
   EXPECT_EQ(rig.port.read(0x4017).value, 0xFE | 0x00) << "没有扫描位置时 4 个键位都是 1，鼠标没接通";
   rig.keyboard.setKey("Digit4", true);
@@ -315,13 +315,13 @@ TEST(BbkInputPort, Reads4017AsKeyboardAndMouseLinesWithHighBitsSet) {
   EXPECT_EQ(rig.port.read(0x4017).value, 0xFE) << "后半边没有键按下";
 }
 
-TEST(BbkInputPort, NineReadsOf4016ConnectTheMouseAndTheLineShowsIt) {
+TEST(BbgInputPort, NineReadsOf4016ConnectTheMouseAndTheLineShowsIt) {
   Rig rig;
   for (unsigned index = 0; index < 9; ++index) static_cast<void>(rig.port.read(0x4016));
   EXPECT_EQ(rig.port.read(0x4017).value & 0x01, 0x01);
 }
 
-TEST(BbkInputPort, Writes4016GoToTheJoypadLatchKeyboardAndMouseAndWrites4017GoToTheApu) {
+TEST(BbgInputPort, Writes4016GoToTheJoypadLatchKeyboardAndMouseAndWrites4017GoToTheApu) {
   Rig rig;
   rig.port.write(0x4016, 0x05);
   EXPECT_FALSE(rig.keyboard.firstHalf());
@@ -333,12 +333,12 @@ TEST(BbkInputPort, Writes4016GoToTheJoypadLatchKeyboardAndMouseAndWrites4017GoTo
   EXPECT_EQ(rig.apu.writes[0].second, 0x40);
 }
 
-TEST(BbkInputPort, WithoutAMouseTheMouseLineStaysZeroAndWritesStillReachTheKeyboard) {
+TEST(BbgInputPort, WithoutAMouseTheMouseLineStaysZeroAndWritesStillReachTheKeyboard) {
   ControllerSocket socket;
   Joypad joypad;
   RecordingDevice apu;
-  KeyboardBbk keyboard;
-  BbkInputPort port{socket, apu, keyboard, nullptr};
+  KeyboardBbg keyboard;
+  BbgInputPort port{socket, apu, keyboard, nullptr};
   socket.plug(&joypad);
   for (unsigned index = 0; index < 9; ++index) static_cast<void>(port.read(0x4016));
   EXPECT_EQ(port.read(0x4017).value & 0x01, 0x00) << "没有鼠标，位 0 总是 0";

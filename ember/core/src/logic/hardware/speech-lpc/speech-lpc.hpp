@@ -35,10 +35,10 @@ class SpeechLpc final : public contracts::hardware::Device {
   /**
    * 芯片的接线变体：
    * Subor：命令字节 $0A（D6 码表）或 $0B（PE 码表），低 4 位为 $F 表示播放结束，播放结束后收到 $0F 才重新开始；
-   * Bbk：命令字节 $D6（只有 D6 码表），状态低 4 位恒为 $F，读到结束帧后停止，只有复位才重新开始；
+   * Bbg：命令字节 $D6（只有 D6 码表），状态低 4 位恒为 $F，读到结束帧后停止，只有复位才重新开始；
    * Yuxing：没有命令字节，只有 PE 码表，读到结束帧后直接开始下一段；状态位 7 为 1 表示缓冲已有 8 个字节以上（忙）。
    */
-  enum class Variant : std::uint8_t { Subor, Bbk, Yuxing };
+  enum class Variant : std::uint8_t { Subor, Bbg, Yuxing };
 
   /** 输出采样率（赫兹）。 */
   static constexpr unsigned SAMPLE_RATE = 10000;

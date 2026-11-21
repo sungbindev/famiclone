@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：mouse-bbk.hpp
+ * 名称：mouse-bbg.hpp
  * 说明：步步高鼠标：经键盘控制芯片的串行协议接在 $4016、$4017 上，读 $4016 连续 9 次后接通，主机发命令、鼠标回应答与 3 字节数据。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -24,7 +24,7 @@
 namespace ember::logic::hardware {
 
 /** 步步高鼠标。 */
-class MouseBbk final {
+class MouseBbg final {
  public:
   /** 按键位：左键、右键、中键（读数据命令的第 1 个字节里的位）。 */
   static constexpr std::uint8_t BUTTON_RIGHT = 0x01;

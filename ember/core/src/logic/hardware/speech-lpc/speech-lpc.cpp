@@ -26,7 +26,7 @@ namespace tables = speech_tables;
 /** 命令字节：选 D6 码表、选 PE 码表；步步高只有一种命令字节（D6 码表）。 */
 constexpr std::uint8_t COMMAND_D6 = 0x0A;
 constexpr std::uint8_t COMMAND_PE = 0x0B;
-constexpr std::uint8_t COMMAND_BBK = 0xD6;
+constexpr std::uint8_t COMMAND_BBG = 0xD6;
 /** 播放结束后，收到这个字节表示确认，重新开始。 */
 constexpr std::uint8_t ACKNOWLEDGE = 0x0F;
 /** 状态位：缓冲未满。 */
@@ -79,7 +79,7 @@ hw::BusRead SpeechLpc::read(std::uint16_t /*address*/) {
   if (variant_ == Variant::Yuxing) return hw::driveBus(count_ < YUXING_BUSY_BYTES ? std::uint8_t{0x00} : STATUS_READY);
   std::uint8_t status = 0;
   if (count_ < FIFO_CAPACITY) status = static_cast<std::uint8_t>(status | STATUS_READY);
-  if (ended_ || variant_ == Variant::Bbk) status = static_cast<std::uint8_t>(status | STATUS_ENDED);
+  if (ended_ || variant_ == Variant::Bbg) status = static_cast<std::uint8_t>(status | STATUS_ENDED);
   return hw::driveBus(status);
 }
 
@@ -187,8 +187,8 @@ void SpeechLpc::settle() {
         if (count_ == 0) return;
         const std::uint8_t command = fifoAt(0);
         fifoPop();
-        if (variant_ == Variant::Bbk) {
-          if (command == COMMAND_BBK) {
+        if (variant_ == Variant::Bbg) {
+          if (command == COMMAND_BBG) {
             useD6Tables_ = true;
             preloaded_ = 0;
             state_ = State::Preload;

@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bbk-machine-test.cpp
- * 说明：主机型号 bbk（步步高软驱一号与步步高 98）的测试：容量与存储译码（用合成的 BIOS 检查）、程序页与 DRAM 页寄存器、系统工作区、PPU 寄存器的影子写、字符页与名称表连接、Dendy 制式的 vblank、扫描线 IRQ 与分屏、MMC3 模式、语音与并口状态、输入；以及用真实 BIOS 开机的冒烟测试与在 DOS 里格式化软盘的测试（每个约半分钟）。
+ * 名称：bbg-machine-test.cpp
+ * 说明：主机型号 bbg（步步高软驱一号与步步高 98）的测试：容量与存储译码（用合成的 BIOS 检查）、程序页与 DRAM 页寄存器、系统工作区、PPU 寄存器的影子写、字符页与名称表连接、Dendy 制式的 vblank、扫描线 IRQ 与分屏、MMC3 模式、语音与并口状态、输入；以及用真实 BIOS 开机的冒烟测试与在 DOS 里格式化软盘的测试（每个约半分钟）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：真实 BIOS 在仓库的 ember/roms/bbk_bios10.bin（128KB）与 bbk_bios20.bin（2048KB），都是没有文件头的纯 BIOS，文件不存在时跳过冒烟测试；
- *       设置环境变量 EMBER_BBK_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成以它为前缀的 PPM 文件，供人工查看。
+ * 备注：真实 BIOS 在仓库的 ember/roms/bbg1_bios.bin（128KB）与 bbg98_bios.bin（2048KB），都是没有文件头的纯 BIOS，文件不存在时跳过冒烟测试；
+ *       设置环境变量 EMBER_BBG_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成以它为前缀的 PPM 文件，供人工查看。
  * ------------------------------------------------------------------------
  */
 
@@ -25,20 +25,20 @@
 #include <utility>
 #include <vector>
 
-#include "bootstrap/machines/bbk/bbk.hpp"
+#include "bootstrap/machines/bbg/bbg.hpp"
 #include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace {
 
 namespace hw = ember::contracts::hardware;
-using ember::bootstrap::BbkMachine;
-using ember::bootstrap::BbkVariant;
+using ember::bootstrap::BbgMachine;
+using ember::bootstrap::BbgVariant;
 
 constexpr std::size_t PAGE = 0x2000;
 
 /** 合成的 BIOS：每个 8K 页的第一个字节是页号，向量表在最后一页，RESET 指向 $C000、IRQ 指向 $C080，$C000 处是 CLI 后在 $00 上无限计数的程序，$C080 处是计数加 1 并确认中断的处理程序。 */
-std::vector<std::uint8_t> syntheticBios(const BbkVariant& variant) {
+std::vector<std::uint8_t> syntheticBios(const BbgVariant& variant) {
   std::vector<std::uint8_t> bios(variant.romSize, 0xEA);
   const std::size_t pages = variant.romSize / PAGE;
   for (std::size_t page = 0; page < pages; ++page) bios[page * PAGE] = static_cast<std::uint8_t>(page);
@@ -67,7 +67,7 @@ std::vector<std::uint8_t> syntheticBios(const BbkVariant& variant) {
 }
 
 /** 读真实的 BIOS：文件不存在或大小不对时返回空。 */
-std::vector<std::uint8_t> realBios(const char* name, const BbkVariant& variant) {
+std::vector<std::uint8_t> realBios(const char* name, const BbgVariant& variant) {
   const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / "roms" / name;
   std::ifstream stream(path, std::ios::binary);
   if (!stream) return {};
@@ -76,7 +76,7 @@ std::vector<std::uint8_t> realBios(const char* name, const BbkVariant& variant) 
   return file;
 }
 
-/** 读仓库 reference/floppy-images/bbk 里的盘片镜像；文件不存在时返回空。 */
+/** 读仓库 reference/floppy-images/bbg 里的盘片镜像；文件不存在时返回空。 */
 std::vector<std::uint8_t> realFloppy(const std::filesystem::path& relative) {
   const std::filesystem::path path = std::filesystem::path(EMBER_TEST_DATA_DIR) / ".." / ".." / ".." / ".." / relative;
   std::ifstream stream(path, std::ios::binary);
@@ -94,69 +94,69 @@ void dumpFrame(const hw::FrameBuffer& picture, const std::string& path) {
   }
 }
 
-/** 环境变量 EMBER_BBK_DUMP 的值；没有设置时为空。 */
+/** 环境变量 EMBER_BBG_DUMP 的值；没有设置时为空。 */
 std::string dumpPath() {
 #ifdef _MSC_VER
   char* value = nullptr;
   std::size_t length = 0;
-  if (_dupenv_s(&value, &length, "EMBER_BBK_DUMP") != 0 || value == nullptr) return {};
+  if (_dupenv_s(&value, &length, "EMBER_BBG_DUMP") != 0 || value == nullptr) return {};
   std::string path(value);
   std::free(value);
   return path;
 #else
-  const char* value = std::getenv("EMBER_BBK_DUMP");
+  const char* value = std::getenv("EMBER_BBG_DUMP");
   return value == nullptr ? std::string() : std::string(value);
 #endif
 }
 
-std::uint8_t peek(BbkMachine& machine, std::uint16_t address) { return machine.peekCpuBus(address); }
+std::uint8_t peek(BbgMachine& machine, std::uint16_t address) { return machine.peekCpuBus(address); }
 
-void poke(BbkMachine& machine, std::uint16_t address, std::uint8_t value) {
+void poke(BbgMachine& machine, std::uint16_t address, std::uint8_t value) {
   const std::uint8_t bytes[] = {value};
   machine.debugger()->writeMemory("cpu", address, bytes);
 }
 
-void pokeVideo(BbkMachine& machine, std::uint16_t address, std::uint8_t value) {
+void pokeVideo(BbgMachine& machine, std::uint16_t address, std::uint8_t value) {
   const std::uint8_t bytes[] = {value};
   machine.debugger()->writeMemory("ppu", address, bytes);
 }
 
-std::uint8_t peekVideo(BbkMachine& machine, std::uint16_t address) {
+std::uint8_t peekVideo(BbgMachine& machine, std::uint16_t address) {
   std::uint8_t value = 0;
   machine.debugger()->readMemory("ppu", address, std::span<std::uint8_t>(&value, 1));
   return value;
 }
 
 /** 单步到 PPU 走到指定行（之后再走 extra 条指令）。 */
-void stepToLine(BbkMachine& machine, int line) {
+void stepToLine(BbgMachine& machine, int line) {
   for (int guard = 0; guard < 400000 && machine.ppu().scanline() != line; ++guard) machine.debugger()->step(hw::StepUnit::Instruction, 1);
 }
 
-TEST(BbkMachine, RejectsABiosOfTheWrongSize) {
+TEST(BbgMachine, RejectsABiosOfTheWrongSize) {
   try {
-    BbkMachine machine(BbkVariant::floppyOne(), std::vector<std::uint8_t>(1024, 0));
+    BbgMachine machine(BbgVariant::floppyOne(), std::vector<std::uint8_t>(1024, 0));
     FAIL() << "应该抛出异常";
   } catch (const ember::shared::CoreError& error) {
     EXPECT_EQ(error.code(), hw::ERROR_INVALID_ARGUMENT);
   }
   try {
-    BbkMachine machine(BbkVariant::model98(), std::vector<std::uint8_t>(BbkVariant::floppyOne().romSize, 0));
+    BbgMachine machine(BbgVariant::model98(), std::vector<std::uint8_t>(BbgVariant::floppyOne().romSize, 0));
     FAIL() << "98 不能用软驱一号大小的 BIOS";
   } catch (const ember::shared::CoreError& error) {
     EXPECT_EQ(error.code(), hw::ERROR_INVALID_ARGUMENT);
   }
 }
 
-TEST(BbkMachine, TheTwoVariantsDifferInRomDramAndCharacterPages) {
-  const BbkVariant& one = BbkVariant::floppyOne();
-  const BbkVariant& ninetyEight = BbkVariant::model98();
+TEST(BbgMachine, TheTwoVariantsDifferInRomDramAndCharacterPages) {
+  const BbgVariant& one = BbgVariant::floppyOne();
+  const BbgVariant& ninetyEight = BbgVariant::model98();
   EXPECT_EQ(one.romSize, 128U * 1024);
   EXPECT_EQ(one.dramSize, 512U * 1024);
   EXPECT_EQ(one.characterPageMask, 0x1FU);
   EXPECT_EQ(ninetyEight.romSize, 2048U * 1024);
   EXPECT_EQ(ninetyEight.dramSize, 2048U * 1024);
   EXPECT_EQ(ninetyEight.characterPageMask, 0xFFU);
-  BbkMachine machine(ninetyEight, syntheticBios(ninetyEight));
+  BbgMachine machine(ninetyEight, syntheticBios(ninetyEight));
   std::size_t romSize = 0;
   for (const hw::MemorySpace& space : machine.debugger()->memorySpaces()) {
     if (space.id == "board.rom") romSize = space.size;
@@ -164,8 +164,8 @@ TEST(BbkMachine, TheTwoVariantsDifferInRomDramAndCharacterPages) {
   EXPECT_EQ(romSize, ninetyEight.romSize);
 }
 
-TEST(BbkMachine, AfterResetTheLastSixteenKilobytesOfRomAreAtTheTop) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, AfterResetTheLastSixteenKilobytesOfRomAreAtTheTop) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   EXPECT_EQ(peek(machine, 0x8000), 0);
   EXPECT_EQ(peek(machine, 0xA000), 0);
   EXPECT_EQ(peek(machine, 0xC000), 0x58) << "倒数第 2 页的第一个字节被程序占用（CLI）";
@@ -174,8 +174,8 @@ TEST(BbkMachine, AfterResetTheLastSixteenKilobytesOfRomAreAtTheTop) {
   EXPECT_EQ(peek(machine, 0xFFFD), 0xC0);
 }
 
-TEST(BbkMachine, ProgramPageRegistersSelectRomOrDramPages) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, ProgramPageRegistersSelectRomOrDramPages) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF04, 0x02);
   EXPECT_EQ(peek(machine, 0x8000), 4) << "16K 页 2 是 8K 页 4 与 5";
   EXPECT_EQ(peek(machine, 0xA000), 5);
@@ -190,15 +190,15 @@ TEST(BbkMachine, ProgramPageRegistersSelectRomOrDramPages) {
   EXPECT_EQ(machine.board().dram()[3 * PAGE], 0x66) << "位 7 为 1 选 DRAM，16K 页 1 的后半是 8K 页 3";
 }
 
-TEST(BbkMachine, DramPageNumbersWrapAtTheDramSize) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, DramPageNumbersWrapAtTheDramSize) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF14, 0x41);
   poke(machine, 0x8000, 0x33);
   EXPECT_EQ(machine.board().dram()[1 * PAGE], 0x33) << "512K 的 DRAM 只有 64 个 8K 页，页号 $41 与 1 是同一页";
 }
 
-TEST(BbkMachine, SystemWorkAreaIsTheTopSixteenKilobytesOfDramAtFourThousand) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, SystemWorkAreaIsTheTopSixteenKilobytesOfDramAtFourThousand) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0x5800, 0x11);
   poke(machine, 0x7FFF, 0x22);
   EXPECT_EQ(machine.board().dram()[machine.board().systemBase() + 0x1800], 0x11);
@@ -206,12 +206,12 @@ TEST(BbkMachine, SystemWorkAreaIsTheTopSixteenKilobytesOfDramAtFourThousand) {
   EXPECT_EQ(machine.board().systemBase(), 512U * 1024 - 32 * 1024);
   poke(machine, 0x4300, 0x99);
   EXPECT_EQ(peek(machine, 0x4300), 0) << "$4020-$43FF 没有器件";
-  BbkMachine machine98(BbkVariant::model98(), syntheticBios(BbkVariant::model98()));
+  BbgMachine machine98(BbgVariant::model98(), syntheticBios(BbgVariant::model98()));
   EXPECT_EQ(machine98.board().systemBase(), 2048U * 1024 - 32 * 1024);
 }
 
-TEST(BbkMachine, UpperHalfBecomesDramWhenMapRamOrForceRamIsSetButRegistersStayWritable) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, UpperHalfBecomesDramWhenMapRamOrForceRamIsSetButRegistersStayWritable) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF24, 0x02);
   poke(machine, 0xFF2C, 0x03);
   poke(machine, 0xFF01, 0x08);
@@ -230,8 +230,8 @@ TEST(BbkMachine, UpperHalfBecomesDramWhenMapRamOrForceRamIsSetButRegistersStayWr
   EXPECT_EQ(peek(machine, 0xC000), 0x58) << "写 $FF19 取消强制";
 }
 
-TEST(BbkMachine, WritingPpuRegistersAlsoShadowsThemIntoTheSystemWorkAreaWhenDramIsMapped) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, WritingPpuRegistersAlsoShadowsThemIntoTheSystemWorkAreaWhenDramIsMapped) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0x2000, 0x90);
   EXPECT_EQ(machine.board().dram()[machine.board().systemBase() + 0x2000], 0) << "DRAM 没有映射到 $C000 以上时不做影子写";
   poke(machine, 0xFF01, 0x08);
@@ -246,8 +246,8 @@ TEST(BbkMachine, WritingPpuRegistersAlsoShadowsThemIntoTheSystemWorkAreaWhenDram
   EXPECT_EQ(peek(machine, 0x6000), 0x91) << "固件从 $6000 读回";
 }
 
-TEST(BbkMachine, CharacterPageRegistersSelectOneKilobytePagesOfCharacterRam) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, CharacterPageRegistersSelectOneKilobytePagesOfCharacterRam) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF03, 0x03);
   pokeVideo(machine, 0x0000, 0xA1);
   pokeVideo(machine, 0x0400, 0xA2);
@@ -262,15 +262,15 @@ TEST(BbkMachine, CharacterPageRegistersSelectOneKilobytePagesOfCharacterRam) {
   EXPECT_EQ(peekVideo(machine, 0x0800), 0xC4);
 }
 
-TEST(BbkMachine, The98CharacterPagesUseAllEightBits) {
-  BbkMachine machine(BbkVariant::model98(), syntheticBios(BbkVariant::model98()));
+TEST(BbgMachine, The98CharacterPagesUseAllEightBits) {
+  BbgMachine machine(BbgVariant::model98(), syntheticBios(BbgVariant::model98()));
   poke(machine, 0xFF33, 0xF1);
   pokeVideo(machine, 0x0800, 0xD5);
   EXPECT_EQ(machine.board().characterRam()[0xF1 * 1024], 0xD5);
 }
 
-TEST(BbkMachine, VideoControlSelectsTheNametableConnection) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, VideoControlSelectsTheNametableConnection) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF01, 0x00);
   pokeVideo(machine, 0x2000, 0x01);
   pokeVideo(machine, 0x2400, 0x02);
@@ -291,8 +291,8 @@ TEST(BbkMachine, VideoControlSelectsTheNametableConnection) {
   EXPECT_EQ(peekVideo(machine, 0x3000), 0x06) << "$3000 起镜像 $2000 起";
 }
 
-TEST(BbkMachine, VblankStartsAtLine291LikeADendyConsole) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, VblankStartsAtLine291LikeADendyConsole) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   machine.powerOn();
   stepToLine(machine, 250);
   ASSERT_EQ(machine.ppu().scanline(), 250);
@@ -305,13 +305,13 @@ TEST(BbkMachine, VblankStartsAtLine291LikeADendyConsole) {
   EXPECT_FALSE(machine.ppu().vblankFlag());
 }
 
-TEST(BbkMachine, TheFrameRateIsFiftyHertz) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, TheFrameRateIsFiftyHertz) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   EXPECT_NEAR(machine.framesPerSecond(), 50.007, 0.001);
 }
 
-TEST(BbkMachine, TheScanlineCounterRaisesAnIrqWhenItWrapsAroundOnAVisibleLine) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, TheScanlineCounterRaisesAnIrqWhenItWrapsAroundOnAVisibleLine) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   machine.powerOn();
   poke(machine, 0x4017, 0x40);
   poke(machine, 0xFF02, 0x00);
@@ -325,8 +325,8 @@ TEST(BbkMachine, TheScanlineCounterRaisesAnIrqWhenItWrapsAroundOnAVisibleLine) {
   EXPECT_EQ(machine.board().registers().scanlineCounter, 0);
 }
 
-TEST(BbkMachine, NoIrqIsRaisedWhileTheDisplayIsOff) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, NoIrqIsRaisedWhileTheDisplayIsOff) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   machine.powerOn();
   poke(machine, 0x4017, 0x40);
   poke(machine, 0xFF06, 0x0F);
@@ -335,8 +335,8 @@ TEST(BbkMachine, NoIrqIsRaisedWhileTheDisplayIsOff) {
   EXPECT_EQ(peek(machine, 0x10), 0);
 }
 
-TEST(BbkMachine, SplitModeSwitchesTheCharacterPagesAtTheQueuedLines) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, SplitModeSwitchesTheCharacterPagesAtTheQueuedLines) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   machine.powerOn();
   poke(machine, 0xFF01, 0x40);
   poke(machine, 0xFF12, 0x00);
@@ -352,8 +352,8 @@ TEST(BbkMachine, SplitModeSwitchesTheCharacterPagesAtTheQueuedLines) {
   EXPECT_EQ(machine.board().registers().scanlineCounter, 10) << "取到第一项后计数器装入这一项的行数";
 }
 
-TEST(BbkMachine, Mmc3ModeMapsTheChipsBanksOntoTheDramAndCharacterRam) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, Mmc3ModeMapsTheChipsBanksOntoTheDramAndCharacterRam) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF3C, 0x00);
   poke(machine, 0xFF01, 0x20);
   ASSERT_TRUE(machine.board().registers().mmc3Mode);
@@ -379,8 +379,8 @@ TEST(BbkMachine, Mmc3ModeMapsTheChipsBanksOntoTheDramAndCharacterRam) {
   EXPECT_EQ(peek(machine, 0x4100), 0x77) << "MMC3 模式下 $4020 起也是 DRAM";
 }
 
-TEST(BbkMachine, Mmc3ModeGameSizeRegisterPlacesTheGameAtTheTopOfDram) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, Mmc3ModeGameSizeRegisterPlacesTheGameAtTheTopOfDram) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   poke(machine, 0xFF3C, 0x30);
   poke(machine, 0xFF01, 0x20);
   poke(machine, 0x8000, 0x06);
@@ -389,8 +389,8 @@ TEST(BbkMachine, Mmc3ModeGameSizeRegisterPlacesTheGameAtTheTopOfDram) {
   EXPECT_EQ(machine.board().locate(0xE000).offset, 0x3FU * PAGE);
 }
 
-TEST(BbkMachine, SpeechChipAcceptsTheBbkCommandByteAndReportsStatusLikeTheFirmwareExpects) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, SpeechChipAcceptsTheBbgCommandByteAndReportsStatusLikeTheFirmwareExpects) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   machine.powerOn();
   EXPECT_EQ(peek(machine, 0xFF18), 0x8F);
   poke(machine, 0xFF10, 0x01);
@@ -404,14 +404,14 @@ TEST(BbkMachine, SpeechChipAcceptsTheBbkCommandByteAndReportsStatusLikeTheFirmwa
   EXPECT_TRUE(machine.speech().playing());
 }
 
-TEST(BbkMachine, ParallelPortStatusReadsLikeAnIdleNoPrinterPort) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, ParallelPortStatusReadsLikeAnIdleNoPrinterPort) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   EXPECT_EQ(peek(machine, 0xFF48), 0x38) << "没有接打印机：无错、已选中、缺纸";
   EXPECT_EQ(peek(machine, 0xFF40), 0);
 }
 
-TEST(BbkMachine, KeyboardAndMouseBelongToTheMachine) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, KeyboardAndMouseBelongToTheMachine) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   EXPECT_TRUE(machine.keyboardIsMachineInput());
   EXPECT_TRUE(machine.hasMouse());
   EXPECT_EQ(machine.padPortCount(), 1U);
@@ -424,16 +424,16 @@ TEST(BbkMachine, KeyboardAndMouseBelongToTheMachine) {
   EXPECT_THROW(machine.setButtons(1, 0), ember::shared::CoreError);
 }
 
-TEST(BbkMachine, FloppyDriveAndPrinterPresence) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, FloppyDriveAndPrinterPresence) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   EXPECT_EQ(machine.floppyDriveCount(), 1U);
   EXPECT_NE(machine.floppyDrive(0), nullptr);
   EXPECT_EQ(machine.floppyDrive(1), nullptr);
   EXPECT_EQ(machine.printer(), nullptr) << "没有输出方时并口不接打印机";
 }
 
-TEST(BbkMachine, PowerOnRunsTheProgramFromTheResetVector) {
-  BbkMachine machine(BbkVariant::floppyOne(), syntheticBios(BbkVariant::floppyOne()));
+TEST(BbgMachine, PowerOnRunsTheProgramFromTheResetVector) {
+  BbgMachine machine(BbgVariant::floppyOne(), syntheticBios(BbgVariant::floppyOne()));
   machine.powerOn();
   machine.runFrame();
   machine.runFrame();
@@ -446,12 +446,12 @@ TEST(BbkMachine, PowerOnRunsTheProgramFromTheResetVector) {
 
 // ---------------------------------------------------------------- 真实 BIOS
 
-void bootRealBios(const char* file, const BbkVariant& variant, const char* label, int frames, const char8_t* disk) {
+void bootRealBios(const char* file, const BbgVariant& variant, const char* label, int frames, const char8_t* disk) {
   std::vector<std::uint8_t> bios = realBios(file, variant);
   if (bios.empty()) GTEST_SKIP() << std::string("没有找到 ember/roms/") + file;
-  BbkMachine machine(variant, std::move(bios));
+  BbgMachine machine(variant, std::move(bios));
   if (disk != nullptr) {
-    std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(disk));
+    std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbg") / std::u8string(disk));
     if (image.empty()) GTEST_SKIP() << "没有找到盘片镜像";
     machine.floppyDrive(0)->insertImage(std::move(image), false, "dos.img");
   }
@@ -480,20 +480,20 @@ void bootRealBios(const char* file, const BbkVariant& variant, const char* label
   if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(picture, dump + "." + label + ".ppm");
 }
 
-TEST(BbkMachine, RealBios10BootsToAPicture) { bootRealBios("bbk_bios10.bin", BbkVariant::floppyOne(), "bios10", 300, nullptr); }
+TEST(BbgMachine, RealBios10BootsToAPicture) { bootRealBios("bbg1_bios.bin", BbgVariant::floppyOne(), "bios10", 300, nullptr); }
 
-TEST(BbkMachine, RealBios20BootsToAPicture) { bootRealBios("bbk_bios20.bin", BbkVariant::model98(), "bios20", 300, nullptr); }
+TEST(BbgMachine, RealBios20BootsToAPicture) { bootRealBios("bbg98_bios.bin", BbgVariant::model98(), "bios20", 300, nullptr); }
 
-TEST(BbkMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbk_bios10.bin", BbkVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
+TEST(BbgMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbg1_bios.bin", BbgVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
 
-TEST(BbkMachine, RealBios20BootsTheDosDisk) { bootRealBios("bbk_bios20.bin", BbkVariant::model98(), "bios20-dos", 2500, u8"dos启动盘.IMG"); }
+TEST(BbgMachine, RealBios20BootsTheDosDisk) { bootRealBios("bbg98_bios.bin", BbgVariant::model98(), "bios20-dos", 2500, u8"dos启动盘.IMG"); }
 
 // ---------------------------------------------------------------- 格式化软盘
 
 /** 在步步高 DOS 命令行里操作的会话：用 DOS 启动盘开机并跳过日期与时间，之后可以输入命令、等待。 */
 class DosSession {
  public:
-  DosSession(const BbkVariant& variant, std::vector<std::uint8_t> bios, std::vector<std::uint8_t> image) : machine_(variant, std::move(bios)) {
+  DosSession(const BbgVariant& variant, std::vector<std::uint8_t> bios, std::vector<std::uint8_t> image) : machine_(variant, std::move(bios)) {
     machine_.floppyDrive(0)->insertImage(std::move(image), false, "dos.img");
     machine_.powerOn();
     wait(2500);
@@ -536,14 +536,14 @@ class DosSession {
 
   void enter() { tap("Enter", false); }
 
-  [[nodiscard]] BbkMachine& machine() { return machine_; }
+  [[nodiscard]] BbgMachine& machine() { return machine_; }
 
  private:
-  BbkMachine machine_;
+  BbgMachine machine_;
 };
 
 /** 让 DOS 格式化软驱里的盘片，返回格式化后的镜像；BIOS 或盘片缺失时返回空。 */
-std::vector<std::uint8_t> formatTheFloppy(const char* biosFile, const BbkVariant& variant, std::vector<std::uint8_t> image, bool formatIsOnDriveC, const char* label) {
+std::vector<std::uint8_t> formatTheFloppy(const char* biosFile, const BbgVariant& variant, std::vector<std::uint8_t> image, bool formatIsOnDriveC, const char* label) {
   std::vector<std::uint8_t> bios = realBios(biosFile, variant);
   if (bios.empty() || image.empty()) return {};
   DosSession session(variant, std::move(bios), std::move(image));
@@ -563,10 +563,10 @@ std::vector<std::uint8_t> formatTheFloppy(const char* biosFile, const BbkVariant
 
 /** 软驱一号没有 C 盘：先在步步高 98 的 C 盘里把 FORMAT.COM 复制到 DOS 启动盘上，返回复制后的镜像。 */
 std::vector<std::uint8_t> diskWithTheFormatProgram() {
-  std::vector<std::uint8_t> bios = realBios("bbk_bios20.bin", BbkVariant::model98());
-  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(u8"dos启动盘.IMG"));
+  std::vector<std::uint8_t> bios = realBios("bbg98_bios.bin", BbgVariant::model98());
+  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbg") / std::u8string(u8"dos启动盘.IMG"));
   if (bios.empty() || image.empty()) return {};
-  DosSession session(BbkVariant::model98(), std::move(bios), std::move(image));
+  DosSession session(BbgVariant::model98(), std::move(bios), std::move(image));
   session.type("c:");
   session.enter();
   session.wait(120);
@@ -590,17 +590,17 @@ void expectFormatted(const std::vector<std::uint8_t>& formatted) {
   EXPECT_GT(filledTracks, 150U) << "80 道 2 面共 160 个磁道，除了 FAT 与根目录所在的开头几个磁道外都应该被格式化";
 }
 
-TEST(BbkMachine, RealBios10FormatsAFloppyDisk) {
+TEST(BbgMachine, RealBios10FormatsAFloppyDisk) {
   std::vector<std::uint8_t> image = diskWithTheFormatProgram();
   if (image.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
-  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbk_bios10.bin", BbkVariant::floppyOne(), std::move(image), false, "bios10-format");
+  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg1_bios.bin", BbgVariant::floppyOne(), std::move(image), false, "bios10-format");
   if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS";
   expectFormatted(formatted);
 }
 
-TEST(BbkMachine, RealBios20FormatsAFloppyDisk) {
-  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbk") / std::u8string(u8"dos启动盘.IMG"));
-  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbk_bios20.bin", BbkVariant::model98(), std::move(image), true, "bios20-format");
+TEST(BbgMachine, RealBios20FormatsAFloppyDisk) {
+  std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbg") / std::u8string(u8"dos启动盘.IMG"));
+  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg98_bios.bin", BbgVariant::model98(), std::move(image), true, "bios20-format");
   if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
   expectFormatted(formatted);
 }

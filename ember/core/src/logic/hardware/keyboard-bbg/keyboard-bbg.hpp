@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：keyboard-bbk.hpp
+ * 名称：keyboard-bbg.hpp
  * 说明：步步高键盘：矩阵键盘，接在 $4016、$4017 上，经 $4016 选扫描位置与半边、$4017 读 4 个键的状态；键位按 PC 键盘的物理位置对应键位名。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -23,14 +23,14 @@
 namespace ember::logic::hardware {
 
 /** 步步高键盘。 */
-class KeyboardBbk final {
+class KeyboardBbg final {
  public:
   /** 有键的扫描位置个数（位置 1 到 13）。 */
   static constexpr unsigned POSITIONS = 13;
   /** 读 $4017 时本键盘驱动的位（位 1-4）。 */
   static constexpr std::uint8_t DATA_MASK = 0x1E;
 
-  KeyboardBbk();
+  KeyboardBbg();
 
   /** 写 $4016：只处理位 2 为 1 的写入。 */
   void write(std::uint8_t value);

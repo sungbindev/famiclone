@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bbk-input-port.hpp
- * 说明：主机型号 bbk（步步高学习机）的 $4016-$4017：手柄口 1 的数据线、键盘矩阵与鼠标（可选）的信号线，以及 APU 的帧计数器写入。
+ * 名称：bbg-input-port.hpp
+ * 说明：主机型号 bbg（步步高学习机）的 $4016-$4017：手柄口 1 的数据线、键盘矩阵与鼠标（可选）的信号线，以及 APU 的帧计数器写入。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-17
@@ -18,13 +18,13 @@
 
 #include "contracts/hardware/bus-device.hpp"
 #include "contracts/hardware/controller-port.hpp"
-#include "logic/hardware/keyboard-bbk/keyboard-bbk.hpp"
-#include "logic/hardware/mouse-bbk/mouse-bbk.hpp"
+#include "logic/hardware/keyboard-bbg/keyboard-bbg.hpp"
+#include "logic/hardware/mouse-bbg/mouse-bbg.hpp"
 
 namespace ember::bootstrap {
 
 /** 步步高的 $4016-$4017。 */
-class BbkInputPort final : public contracts::hardware::BusDevice {
+class BbgInputPort final : public contracts::hardware::BusDevice {
  public:
   /**
    * @param pad 手柄口 1。
@@ -32,7 +32,7 @@ class BbkInputPort final : public contracts::hardware::BusDevice {
    * @param keyboard 键盘。
    * @param mouse 鼠标；没有鼠标时为空。
    */
-  BbkInputPort(contracts::hardware::ControllerPort& pad, contracts::hardware::BusDevice& apu, logic::hardware::KeyboardBbk& keyboard, logic::hardware::MouseBbk* mouse)
+  BbgInputPort(contracts::hardware::ControllerPort& pad, contracts::hardware::BusDevice& apu, logic::hardware::KeyboardBbg& keyboard, logic::hardware::MouseBbg* mouse)
       : pad_(pad), apu_(apu), keyboard_(keyboard), mouse_(mouse) {}
 
   contracts::hardware::BusRead read(std::uint16_t address) override {
@@ -62,8 +62,8 @@ class BbkInputPort final : public contracts::hardware::BusDevice {
 
   contracts::hardware::ControllerPort& pad_;
   contracts::hardware::BusDevice& apu_;
-  logic::hardware::KeyboardBbk& keyboard_;
-  logic::hardware::MouseBbk* mouse_;
+  logic::hardware::KeyboardBbg& keyboard_;
+  logic::hardware::MouseBbg* mouse_;
 };
 
 }  // namespace ember::bootstrap

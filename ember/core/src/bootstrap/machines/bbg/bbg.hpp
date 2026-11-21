@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bbk.hpp
- * 说明：主机型号 bbk（步步高学习机：软驱一号与 98 两个容量变体，Dendy 制式）的装配：2A03 的 CPU 与 APU、2C02 的 PPU、精灵 DMA、手柄口 1、键盘、鼠标、软驱控制器、并口、语音芯片、MMC3 电路与主板。
+ * 名称：bbg.hpp
+ * 说明：主机型号 bbg（步步高学习机：软驱一号与 98 两个容量变体，Dendy 制式）的装配：2A03 的 CPU 与 APU、2C02 的 PPU、精灵 DMA、手柄口 1、键盘、鼠标、软驱控制器、并口、语音芯片、MMC3 电路与主板。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
  * 备注：时钟：主时钟 26,601,712 Hz，CPU 15 分频（约 1.7734 MHz），PPU 5 分频（每个 CPU 周期 3 个点），每行 341 点、每帧 312 行、vblank 从第 291 行起（50 Hz）；APU 用 NTSC 的周期表；
- *       CPU 总线与 PPU 总线的译码见 bbk.cpp 与 bbk-board.hpp；整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；
+ *       CPU 总线与 PPU 总线的译码见 bbg.cpp 与 bbg-board.hpp；整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；
  *       软驱控制器的中断不接 CPU，固件靠查询 $FF98 的位 6 得知；语音芯片的输出按主时钟时间混进 APU 的声音；
  *       并口接一台虚拟针式打印机（有输出方时），打印机 6 秒没有数据就输出当前页；
  *       具体实现只在这里创建并连线，模块之间不互相引用。
@@ -25,10 +25,10 @@
 #include <utility>
 #include <vector>
 
-#include "bootstrap/machines/bbk/bbk-board.hpp"
+#include "bootstrap/machines/bbg/bbg-board.hpp"
 #include "bootstrap/machines/common/cpu-debug-kit.hpp"
 #include "bootstrap/machines/common/voice-mixer.hpp"
-#include "bootstrap/machines/bbk/bbk-input-port.hpp"
+#include "bootstrap/machines/bbg/bbg-input-port.hpp"
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/interrupt-sink.hpp"
 #include "contracts/hardware/machine.hpp"
@@ -41,11 +41,11 @@
 #include "logic/hardware/fdc-upd765/fdc-upd765.hpp"
 #include "logic/hardware/floppy-drive/standard-floppy-drive.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
-#include "logic/hardware/keyboard-bbk/keyboard-bbk.hpp"
+#include "logic/hardware/keyboard-bbg/keyboard-bbg.hpp"
 #include "logic/hardware/lines/line-output.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/mapper-chips/mmc3/mmc3.hpp"
-#include "logic/hardware/mouse-bbk/mouse-bbk.hpp"
+#include "logic/hardware/mouse-bbg/mouse-bbg.hpp"
 #include "logic/hardware/pad-2a03/pad-2a03.hpp"
 #include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
 #include "logic/hardware/printer-escp/printer-escp.hpp"
@@ -56,7 +56,7 @@
 namespace ember::bootstrap {
 
 /** 步步高学习机（Dendy 制式）。 */
-class BbkMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger {
+class BbgMachine final : public contracts::hardware::Machine, private contracts::hardware::MachineDebugger {
  public:
   /** 主时钟频率（赫兹）。 */
   static constexpr double MASTER_CLOCK_HZ = 26'601'712.0;
@@ -82,12 +82,12 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
    * @param floppyDrive 软驱 A：独立于主机的设备，由外面创建并在多台主机之间共用，主机创建时接入、销毁时解除，盘片留在里面；为空时主机自己带一个（测试用）。
    * @throws shared::CoreError hardware.invalidArgument：BIOS 大小不对。
    */
-  BbkMachine(const BbkVariant& variant, std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr,
+  BbgMachine(const BbgVariant& variant, std::vector<std::uint8_t> bios, contracts::hardware::PrinterOutput* printerOutput = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr,
              std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr);
-  ~BbkMachine() override;
+  ~BbgMachine() override;
 
-  BbkMachine(const BbkMachine&) = delete;
-  BbkMachine& operator=(const BbkMachine&) = delete;
+  BbgMachine(const BbgMachine&) = delete;
+  BbgMachine& operator=(const BbgMachine&) = delete;
 
   void powerOn() override;
   void powerOff() override;
@@ -119,10 +119,10 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
   [[nodiscard]] const logic::hardware::Ppu2c02& ppu() const { return ppu_; }
   [[nodiscard]] logic::hardware::Apu2a03& apu() { return apu_; }
-  [[nodiscard]] BbkBoard& board() { return board_; }
-  [[nodiscard]] const BbkBoard& board() const { return board_; }
-  [[nodiscard]] logic::hardware::KeyboardBbk& keyboard() { return keyboard_; }
-  [[nodiscard]] logic::hardware::MouseBbk& mouse() { return mouse_; }
+  [[nodiscard]] BbgBoard& board() { return board_; }
+  [[nodiscard]] const BbgBoard& board() const { return board_; }
+  [[nodiscard]] logic::hardware::KeyboardBbg& keyboard() { return keyboard_; }
+  [[nodiscard]] logic::hardware::MouseBbg& mouse() { return mouse_; }
   [[nodiscard]] logic::hardware::SpeechLpc& speech() { return speech_; }
   /** 2K 内部 RAM。 */
   [[nodiscard]] const contracts::hardware::StorageRegion& internalRam() const { return ram_; }
@@ -178,9 +178,9 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
   logic::hardware::Dma2a03 dma_;
   logic::hardware::Pad2a03 pad_;
   logic::hardware::Joypad joypad_;
-  logic::hardware::KeyboardBbk keyboard_;
-  logic::hardware::MouseBbk mouse_;
-  BbkInputPort inputPort_;
+  logic::hardware::KeyboardBbg keyboard_;
+  logic::hardware::MouseBbg mouse_;
+  BbgInputPort inputPort_;
   IgnoredInterrupts ignoredInterrupts_;
   std::shared_ptr<logic::hardware::StandardFloppyDrive> floppy_;
   logic::hardware::FdcUpd765 fdc_;
@@ -193,7 +193,7 @@ class BbkMachine final : public contracts::hardware::Machine, private contracts:
   /** 并口：接着打印机，没有打印机时是空口。 */
   contracts::hardware::ParallelPort& parallel_;
   logic::hardware::mapper_chips::Mmc3 mmc3_;
-  BbkBoard board_;
+  BbgBoard board_;
   logic::hardware::Cpu6502 cpu_;
   /** 断点、记录、代码数据标记与反汇编。 */
   CpuDebugKit debug_;

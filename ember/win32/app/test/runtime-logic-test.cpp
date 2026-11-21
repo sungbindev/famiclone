@@ -40,7 +40,7 @@ json machinesJson() {
            json::array({{{"id", "fc"}, {"name", "经典 FC"}, {"needsRom", false}, {"supported", true}},
                         {{"id", "sb97"}, {"name", "小霸王 97"}, {"needsRom", true}, {"supported", true}},
                         {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"fileName", "SB2K_ROM.bin"}, {"size", 524288}, {"label", "SB2K_ROM.bin"}}}},
-                        {{"id", "bbk10"}, {"name", "步步高软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
+                        {{"id", "bbg1"}, {"name", "步步高软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
 }
 
 TEST(RuntimeRules, StateTextsFollowPowerAndMode) {
@@ -97,7 +97,7 @@ TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {
   EXPECT_TRUE(controls.powerToggle);
   EXPECT_FALSE(controls.pauseToggle || controls.softReset || controls.hardReset);
   EXPECT_FALSE(logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused")), "sb97", machines).powerToggle);
-  EXPECT_FALSE(logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused")), "bbk10", machines).powerToggle);
+  EXPECT_FALSE(logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused")), "bbg1", machines).powerToggle);
   EXPECT_FALSE(logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused")), "fc", machines).powerToggle);
   // 断电：卡带还在时能开机，不能暂停与复位，能关闭卡带
   controls = logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused", "fc", false, "a.nes")), "fc", machines);
@@ -121,9 +121,9 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   EXPECT_EQ(choices[0].hint, "未添加 ROM");
   EXPECT_EQ(choices[1].id, "sb2000");
   EXPECT_TRUE(choices[1].hint.empty());
-  EXPECT_EQ(choices[2].id, "bbk10");
+  EXPECT_EQ(choices[2].id, "bbg1");
   EXPECT_EQ(choices[2].hint, "暂未支持");
-  EXPECT_EQ(choices[3].id, "bbk20");
+  EXPECT_EQ(choices[3].id, "bbg98");
   EXPECT_EQ(choices[3].hint, "暂未支持");
   EXPECT_EQ(choices[4].id, "pec9588");
   EXPECT_EQ(choices[4].label, "金字塔 PEC-9588");
@@ -137,7 +137,7 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
 TEST(RuntimeRules, MachineMenuTitleIsTheSelectedMachineNameOrTheDefault) {
   const auto machines = logic::parseMachines(machinesJson());
   EXPECT_EQ(logic::machineMenuTitle(machines, "sb2000"), "小霸王 2000");
-  EXPECT_EQ(logic::machineMenuTitle(machines, "bbk20"), "步步高 98");
+  EXPECT_EQ(logic::machineMenuTitle(machines, "bbg98"), "步步高 98");
   // 没选过或已选的是经典 FC（不在选项里）时是默认的名称
   EXPECT_EQ(logic::machineMenuTitle(machines, "fc"), "选择机型");
   EXPECT_EQ(logic::machineMenuTitle(machines, ""), "选择机型");
@@ -155,7 +155,7 @@ TEST(RuntimeRules, KeyboardIsExclusiveForHandheldMachinesAndWithTheFamilyKeyboar
   // 学习机整机机型独占，经典 FC 的普通游戏不独占
   EXPECT_TRUE(logic::exclusiveKeyboard(false, status("sb2000")));
   EXPECT_TRUE(logic::exclusiveKeyboard(false, status("sb97")));
-  EXPECT_TRUE(logic::exclusiveKeyboard(false, status("bbk10")));
+  EXPECT_TRUE(logic::exclusiveKeyboard(false, status("bbg1")));
   EXPECT_FALSE(logic::exclusiveKeyboard(false, status("fc")));
   // 接入 Family BASIC 键盘后独占
   EXPECT_TRUE(logic::exclusiveKeyboard(true, status("fc")));

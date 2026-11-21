@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：mouse-bbk.cpp
+ * 名称：mouse-bbg.cpp
  * 说明：步步高鼠标的实现：接通检测、收命令、按帧发送应答与数据。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -8,7 +8,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "logic/hardware/mouse-bbk/mouse-bbk.hpp"
+#include "logic/hardware/mouse-bbg/mouse-bbg.hpp"
 
 namespace ember::logic::hardware {
 
@@ -38,7 +38,7 @@ constexpr int DELTA_MIN = -256;
 
 }  // namespace
 
-void MouseBbk::reset() {
+void MouseBbg::reset() {
   active_ = false;
   state_ = State::Idle;
   statusReads_ = 0;
@@ -53,7 +53,7 @@ void MouseBbk::reset() {
   buttons_ = 0;
 }
 
-void MouseBbk::noteStatusRead() {
+void MouseBbg::noteStatusRead() {
   if (active_) return;
   if (++statusReads_ == CONNECT_READS) {
     active_ = true;
@@ -61,7 +61,7 @@ void MouseBbk::noteStatusRead() {
   }
 }
 
-void MouseBbk::write(std::uint8_t value) {
+void MouseBbg::write(std::uint8_t value) {
   statusReads_ = 0;
   if (!active_) return;
   if (state_ == State::Idle) {
@@ -79,7 +79,7 @@ void MouseBbk::write(std::uint8_t value) {
   }
 }
 
-void MouseBbk::finishCommand() {
+void MouseBbg::finishCommand() {
   const auto command = static_cast<std::uint8_t>(command_ & 0xFF);
   frame_ = encodeFrame(RESPONSE_ACKNOWLEDGE);
   framesLeft_ = 1;
@@ -110,7 +110,7 @@ void MouseBbk::finishCommand() {
   state_ = State::Transmit;
 }
 
-std::uint8_t MouseBbk::readLine() {
+std::uint8_t MouseBbg::readLine() {
   statusReads_ = 0;
   if (!active_) return 0;
   std::uint8_t bit = 0;
@@ -142,13 +142,13 @@ std::uint8_t MouseBbk::readLine() {
   return bit;
 }
 
-void MouseBbk::move(int dx, int dy, std::uint8_t buttons) {
+void MouseBbg::move(int dx, int dy, std::uint8_t buttons) {
   deltaX_ += dx;
   deltaY_ += dy;
   buttons_ = buttons;
 }
 
-std::uint32_t MouseBbk::encodeFrame(std::uint8_t data) {
+std::uint32_t MouseBbg::encodeFrame(std::uint8_t data) {
   // 起始 4 位：1、1、0、1。
   std::uint32_t frame = 0x0B;
   std::uint32_t mask = 0x10;

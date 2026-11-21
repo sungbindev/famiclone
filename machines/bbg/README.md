@@ -1,8 +1,8 @@
-# 步步高学生电脑 BBK
+# 步步高学生电脑 BBG
 
-步步高多媒体学生电脑（BBGDOS）的 BIOS 与 DOS 原厂源码工程：能汇编这些源码的 6502 汇编器、还原出的符号文件，以及核对源码与 ROM 的分析工具。本目录是 famiclone 仓库里的一个机型目录（`machines/bbk/`）。
+步步高多媒体学生电脑（BBGDOS）的 BIOS 与 DOS 原厂源码工程：能汇编这些源码的 6502 汇编器、还原出的符号文件，以及核对源码与 ROM 的分析工具。本目录是 famiclone 仓库里的一个机型目录（`machines/bbg/`）。
 
-把步步高 BIOS 移植到小霸王学习机 SB2000 上运行的部分，是 SB-DOS 下的程序，在 [apps/sb2000/bbk-bios](../../apps/sb2000/bbk-bios/README.md)（BIOS）与 [apps/sb2000/bbk-loader](../../apps/sb2000/bbk-loader/README.md)（加载器）。
+把步步高 BIOS 移植到小霸王学习机 SB2000 上运行的部分，是 SB-DOS 下的程序，在 [apps/sb2000/bbg-bios](../../apps/sb2000/bbg-bios/README.md)（BIOS）与 [apps/sb2000/bbg-loader](../../apps/sb2000/bbg-loader/README.md)（加载器）。
 
 计划、原厂源码的完整性与已查明的结论见 [docs/计划与进度.md](docs/计划与进度.md)。
 
@@ -10,7 +10,7 @@
 
 - Node.js 22 及以上，脚本没有第三方依赖。
 - BIOS 原版源码 [src/bios/bios.asm](src/bios/bios.asm) 在本目录里，原样复制自原厂资料（GBK 编码，不要用编辑器转码保存）；分析工具读这一份。
-- 其他原厂资料仍在仓库根目录的 `reference/` 下，只引用不复制：`reference/docs/BBKDOS源代码/`（`Command.asm`、`Smcdos.asm` 与三个 `.sys`）、`reference/floppy-images/bbk/`；BIOS 用 `ember/roms/bbk_bios10.bin`、`ember/roms/bbk_bios20.bin`（不带文件头）。
+- 其他原厂资料仍在仓库根目录的 `reference/` 下，只引用不复制：`reference/docs/BBGDOS源代码/`（`Command.asm`、`Smcdos.asm` 与三个 `.sys`）、`reference/floppy-images/bbg/`；BIOS 用 `ember/roms/bbg1_bios.bin`、`ember/roms/bbg98_bios.bin`（不带文件头）。
 
 ## 使用
 
@@ -29,13 +29,13 @@
 ## 限制
 
 - 原厂源码缺少符号文件 `tvdef.asm`，本目录的 [src/include/tvdef.asm](src/include/tvdef.asm) 是还原版：取值来自使用手册、源码注释和 ROM 里的功能号分发表；`DosGetDOSVersion` 与 `StackTooDepth` 两个符号没有依据，是推测值。
-- 原厂的 `Bios.asm` 与 `bbk_bios10.bin` 不是同一次构建，汇编结果不能与 ROM 逐字节一致；`Command.asm`、`Smcdos.asm` 与同目录的 `.sys` 文件也不是同一版本。
-- 汇编器只做到能还原符号、核对编码和生成 ROM 映像；ROM 的前 7 页（字库）取自 `bbk_bios10.bin`，源码里没有。
+- 原厂的 `Bios.asm` 与 `bbg1_bios.bin` 不是同一次构建，汇编结果不能与 ROM 逐字节一致；`Command.asm`、`Smcdos.asm` 与同目录的 `.sys` 文件也不是同一版本。
+- 汇编器只做到能还原符号、核对编码和生成 ROM 映像；ROM 的前 7 页（字库）取自 `bbg1_bios.bin`，源码里没有。
 
 ## 目录
 
 ```text
-machines/bbk/
+machines/bbg/
   src/bios/      原版 BIOS 源码 bios.asm（从原厂资料复制，GBK 编码）
   src/include/   还原出的符号文件 tvdef.asm
   tools/         GABBG 方言的 6502 汇编器、检查与比对工具、模拟器驱动

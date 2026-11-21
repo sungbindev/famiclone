@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bbk-board.hpp
- * 说明：主机型号 bbk（步步高学习机）主板上的存储与整机寄存器：BIOS ROM、DRAM、字符 RAM、名称表显存，以及 $FF00-$FFFF 的整机寄存器、扫描线计数与分屏、MMC3 模式。
+ * 名称：bbg-board.hpp
+ * 说明：主机型号 bbg（步步高学习机）主板上的存储与整机寄存器：BIOS ROM、DRAM、字符 RAM、名称表显存，以及 $FF00-$FFFF 的整机寄存器、扫描线计数与分屏、MMC3 模式。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：这些是主机型号自己的胶合逻辑（不属于任何芯片模块），只由 bbk.cpp 创建并挂到总线上；容量与寄存器的行为按原厂 BIOS 的用法与它在模拟器里启动的结果定，没有经过真机核对；
+ * 备注：这些是主机型号自己的胶合逻辑（不属于任何芯片模块），只由 bbg.cpp 创建并挂到总线上；容量与寄存器的行为按原厂 BIOS 的用法与它在模拟器里启动的结果定，没有经过真机核对；
  *       CPU 地址 $4020-$FFFF：
  *         $4020-$43FF 没有器件（MMC3 模式下与 $4400 以上一样是 DRAM）；$4400-$7FFF 是 DRAM 顶部 16K（系统工作区，$4000-$7FFF 整段对应它，$4000-$43FF 被寄存器区占去）；
  *         $8000-$BFFF：两个 8K 窗口，$FF04 选 16K 页（位 7 为 1 选 DRAM，否则选 ROM），$FF14、$FF1C 分别选 8K 页并同时选 DRAM；
@@ -43,7 +43,7 @@
 namespace ember::bootstrap {
 
 /** 步步高机型的容量差别。 */
-struct BbkVariant {
+struct BbgVariant {
   /** 机型标识。 */
   const char* id;
   /** BIOS ROM 的容量（字节），必须是 8K 的 2 的幂倍。 */
@@ -54,13 +54,13 @@ struct BbkVariant {
   unsigned characterPageMask;
 
   /** 步步高软驱一号：128K BIOS、512K DRAM、32K 字符页。 */
-  static const BbkVariant& floppyOne();
+  static const BbgVariant& floppyOne();
   /** 步步高 98：2048K BIOS、2048K DRAM、256K 字符页。 */
-  static const BbkVariant& model98();
+  static const BbgVariant& model98();
 };
 
 /** 步步高主板。 */
-class BbkBoard final : public contracts::hardware::EventListener {
+class BbgBoard final : public contracts::hardware::EventListener {
  public:
   /** 字符 RAM 的物理容量（字节）。 */
   static constexpr std::size_t CHARACTER_RAM_SIZE = 256 * 1024;
@@ -107,12 +107,12 @@ class BbkBoard final : public contracts::hardware::EventListener {
    * @param dotTicks 一个 PPU 点占的主时钟周期数。
    * @throws shared::CoreError hardware.invalidArgument：容量不合格。
    */
-  BbkBoard(const BbkVariant& variant, std::vector<std::uint8_t> rom, contracts::hardware::Scheduler& scheduler, contracts::hardware::IrqLine& irq, const logic::hardware::Ppu2c02& ppu,
+  BbgBoard(const BbgVariant& variant, std::vector<std::uint8_t> rom, contracts::hardware::Scheduler& scheduler, contracts::hardware::IrqLine& irq, const logic::hardware::Ppu2c02& ppu,
            contracts::hardware::BusDevice& ppuRegisters, logic::hardware::FdcUpd765& fdc, contracts::hardware::ParallelPort& parallel, logic::hardware::SpeechLpc& speech,
            contracts::hardware::MapperCircuit& mmc3, contracts::hardware::MasterTime lineTicks, contracts::hardware::MasterTime dotTicks);
 
-  BbkBoard(const BbkBoard&) = delete;
-  BbkBoard& operator=(const BbkBoard&) = delete;
+  BbgBoard(const BbgBoard&) = delete;
+  BbgBoard& operator=(const BbgBoard&) = delete;
 
   /** CPU 总线上 $4020-$FFFF 的设备。 */
   contracts::hardware::BusDevice& cpuSide() { return cpuSide_; }
@@ -135,7 +135,7 @@ class BbkBoard final : public contracts::hardware::EventListener {
   void onEvent(contracts::hardware::MasterTime when, std::uint32_t tag) override;
 
   // 调试与测试用
-  [[nodiscard]] const BbkVariant& variant() const { return variant_; }
+  [[nodiscard]] const BbgVariant& variant() const { return variant_; }
   [[nodiscard]] const std::vector<std::uint8_t>& rom() const { return rom_; }
   [[nodiscard]] const std::vector<std::uint8_t>& dram() const { return dram_; }
   [[nodiscard]] std::vector<std::uint8_t>& dram() { return dram_; }
@@ -157,37 +157,37 @@ class BbkBoard final : public contracts::hardware::EventListener {
   /** CPU 侧：$4020-$FFFF。 */
   class CpuSide final : public contracts::hardware::BusDevice {
    public:
-    explicit CpuSide(BbkBoard& board) : board_(board) {}
+    explicit CpuSide(BbgBoard& board) : board_(board) {}
     contracts::hardware::BusRead read(std::uint16_t address) override;
     contracts::hardware::BusRead peek(std::uint16_t address) override;
     void write(std::uint16_t address, std::uint8_t value) override;
 
    private:
-    BbkBoard& board_;
+    BbgBoard& board_;
   };
 
   /** PPU 侧：图案区与名称表。 */
   class VideoSide final : public contracts::hardware::BusDevice {
    public:
-    explicit VideoSide(BbkBoard& board) : board_(board) {}
+    explicit VideoSide(BbgBoard& board) : board_(board) {}
     contracts::hardware::BusRead read(std::uint16_t address) override;
     contracts::hardware::BusRead peek(std::uint16_t address) override;
     void write(std::uint16_t address, std::uint8_t value) override;
 
    private:
-    BbkBoard& board_;
+    BbgBoard& board_;
   };
 
   /** $2000-$3FFF：把读写交给 PPU，写入再做影子写。 */
   class PpuPort final : public contracts::hardware::BusDevice {
    public:
-    explicit PpuPort(BbkBoard& board) : board_(board) {}
+    explicit PpuPort(BbgBoard& board) : board_(board) {}
     contracts::hardware::BusRead read(std::uint16_t address) override;
     contracts::hardware::BusRead peek(std::uint16_t address) override;
     void write(std::uint16_t address, std::uint8_t value) override;
 
    private:
-    BbkBoard& board_;
+    BbgBoard& board_;
   };
 
   /** DRAM 里 8K 页的字节（页号按 DRAM 容量取低位）。 */
@@ -216,7 +216,7 @@ class BbkBoard final : public contracts::hardware::EventListener {
   [[nodiscard]] std::size_t characterOffset(std::uint16_t address) const;
   [[nodiscard]] std::size_t nametableOffset(std::uint16_t address) const;
 
-  BbkVariant variant_;
+  BbgVariant variant_;
   contracts::hardware::Scheduler& scheduler_;
   contracts::hardware::IrqLine& irq_;
   contracts::hardware::SignalSource irqSource_;

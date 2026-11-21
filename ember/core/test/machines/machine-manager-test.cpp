@@ -139,7 +139,7 @@ TEST(MachineManager, ListsTheEightMachinesInFixedOrder) {
   Rig rig;
   const auto machines = rig.manager->list().machines;
   ASSERT_EQ(machines.size(), 8U);
-  const char* ids[] = {"fc", "sb97", "sb2000", "bbk10", "bbk20", "pec9588", "pec586", "yuxing"};
+  const char* ids[] = {"fc", "sb97", "sb2000", "bbg1", "bbg98", "pec9588", "pec586", "yuxing"};
   for (std::size_t index = 0; index < machines.size(); ++index) EXPECT_EQ(machines[index].id, ids[index]);
   EXPECT_EQ(machines[5].name, "金字塔 PEC-9588");
   EXPECT_EQ(machines[6].name, "金字塔 PEC-586、686");
@@ -203,7 +203,7 @@ TEST(MachineManager, ARomMustBeExactlyTheMachinesSizeAndHasNoHeader) {
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("short.bin", shortFile))); }), api::ERROR_ROM_INVALID);
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("long.bin", longFile))); }), api::ERROR_ROM_INVALID);
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("header.bin", withHeader))); }), api::ERROR_ROM_INVALID) << "带 iNES 文件头的文件不再接受";
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("bbk10", rig.write("wrong-machine.bin", romFile()))); }), api::ERROR_ROM_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("bbg1", rig.write("wrong-machine.bin", romFile()))); }), api::ERROR_ROM_INVALID);
   EXPECT_FALSE(rig.find("sb2000").rom.has_value());
 }
 

@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：keyboard-bbk.cpp
+ * 名称：keyboard-bbg.cpp
  * 说明：步步高键盘的实现：扫描控制与键位表。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -8,7 +8,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "logic/hardware/keyboard-bbk/keyboard-bbk.hpp"
+#include "logic/hardware/keyboard-bbg/keyboard-bbg.hpp"
 
 namespace ember::logic::hardware {
 
@@ -61,7 +61,7 @@ const std::vector<KeyPosition>& keyTable() {
       // 位置 9
       {"KeyT", 9, 0, 0}, {"KeyH", 9, 0, 1}, {"KeyN", 9, 0, 2}, {"Space", 9, 0, 3},
       {"F3", 9, 1, 0}, {"KeyR", 9, 1, 1}, {"Digit6", 9, 1, 2}, {"KeyB", 9, 1, 3},
-      // 位置 10：没有键位名，见 KeyboardBbk 的矩阵初值
+      // 位置 10：没有键位名，见 KeyboardBbg 的矩阵初值
       // 位置 11：小键盘的 4、7 与 F11；F12 与小键盘的 1、2、8
       {"Numpad4", 11, 0, 1}, {"Numpad7", 11, 0, 2}, {"F11", 11, 0, 3},
       {"F12", 11, 1, 0}, {"Numpad1", 11, 1, 1}, {"Numpad2", 11, 1, 2}, {"Numpad8", 11, 1, 3},
@@ -76,14 +76,14 @@ const std::vector<KeyPosition>& keyTable() {
 
 }  // namespace
 
-KeyboardBbk::KeyboardBbk() : pressed_(keyTable().size(), false) { rebuildMatrix(); }
+KeyboardBbg::KeyboardBbg() : pressed_(keyTable().size(), false) { rebuildMatrix(); }
 
-void KeyboardBbk::reset() {
+void KeyboardBbg::reset() {
   position_ = 0;
   firstHalf_ = false;
 }
 
-void KeyboardBbk::write(std::uint8_t value) {
+void KeyboardBbg::write(std::uint8_t value) {
   if ((value & BIT_SCAN) == 0) return;
   if (value == SCAN_RESET) {
     firstHalf_ = false;
@@ -96,7 +96,7 @@ void KeyboardBbk::write(std::uint8_t value) {
   }
 }
 
-std::uint8_t KeyboardBbk::read() const {
+std::uint8_t KeyboardBbg::read() const {
   std::uint8_t value = DATA_MASK;
   if (position_ >= 1 && position_ <= POSITIONS) {
     const std::uint8_t down = matrix_[position_][firstHalf_ ? 0 : 1];
@@ -105,7 +105,7 @@ std::uint8_t KeyboardBbk::read() const {
   return value;
 }
 
-bool KeyboardBbk::setKey(std::string_view code, bool down) {
+bool KeyboardBbg::setKey(std::string_view code, bool down) {
   bool found = false;
   const auto& table = keyTable();
   for (std::size_t index = 0; index < table.size(); ++index) {
@@ -118,12 +118,12 @@ bool KeyboardBbk::setKey(std::string_view code, bool down) {
   return found;
 }
 
-void KeyboardBbk::releaseAll() {
+void KeyboardBbg::releaseAll() {
   pressed_.assign(pressed_.size(), false);
   rebuildMatrix();
 }
 
-void KeyboardBbk::rebuildMatrix() {
+void KeyboardBbg::rebuildMatrix() {
   for (auto& position : matrix_) position.fill(0);
   // 位置 10 后半边的第 1 个键恒为按下。
   matrix_[10][1] = 0x01;
@@ -133,7 +133,7 @@ void KeyboardBbk::rebuildMatrix() {
   }
 }
 
-bool KeyboardBbk::locate(std::string_view code, unsigned& position, bool& firstHalf, unsigned& bit) {
+bool KeyboardBbg::locate(std::string_view code, unsigned& position, bool& firstHalf, unsigned& bit) {
   for (const KeyPosition& key : keyTable()) {
     if (code == key.code) {
       position = key.position;

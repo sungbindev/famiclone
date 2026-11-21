@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：bbk-board.cpp
+ * 名称：bbg-board.cpp
  * 说明：步步高主板的实现：CPU 与 PPU 两侧的存储译码、整机寄存器、行时钟、扫描线 IRQ 与分屏。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -8,7 +8,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "bootstrap/machines/bbk/bbk-board.hpp"
+#include "bootstrap/machines/bbg/bbg-board.hpp"
 
 #include <algorithm>
 #include <string>
@@ -68,17 +68,17 @@ void requireSize(std::size_t size, const char* name) {
 
 }  // namespace
 
-const BbkVariant& BbkVariant::floppyOne() {
-  static const BbkVariant variant{"bbk10", 128 * 1024, 512 * 1024, 0x1F};
+const BbgVariant& BbgVariant::floppyOne() {
+  static const BbgVariant variant{"bbg1", 128 * 1024, 512 * 1024, 0x1F};
   return variant;
 }
 
-const BbkVariant& BbkVariant::model98() {
-  static const BbkVariant variant{"bbk20", 2048 * 1024, 2048 * 1024, 0xFF};
+const BbgVariant& BbgVariant::model98() {
+  static const BbgVariant variant{"bbg98", 2048 * 1024, 2048 * 1024, 0xFF};
   return variant;
 }
 
-BbkBoard::BbkBoard(const BbkVariant& variant, std::vector<std::uint8_t> rom, hw::Scheduler& scheduler, hw::IrqLine& irq, const logic::hardware::Ppu2c02& ppu, hw::BusDevice& ppuRegisters,
+BbgBoard::BbgBoard(const BbgVariant& variant, std::vector<std::uint8_t> rom, hw::Scheduler& scheduler, hw::IrqLine& irq, const logic::hardware::Ppu2c02& ppu, hw::BusDevice& ppuRegisters,
                    logic::hardware::FdcUpd765& fdc, hw::ParallelPort& parallel, logic::hardware::SpeechLpc& speech, hw::MapperCircuit& mmc3, hw::MasterTime lineTicks, hw::MasterTime dotTicks)
     : variant_(variant),
       scheduler_(scheduler),
@@ -109,11 +109,11 @@ BbkBoard::BbkBoard(const BbkVariant& variant, std::vector<std::uint8_t> rom, hw:
   reset(true);
 }
 
-BbkBoard::Registers BbkBoard::registers() const {
+BbgBoard::Registers BbgBoard::registers() const {
   return Registers{videoControl_, prgBank_[0], prgBank_[1], ramEnable_, cdBank_, efBank_, forceRam_, scanlineCounter_, mmc3Mode_, splitMode_};
 }
 
-void BbkBoard::reset(bool power) {
+void BbgBoard::reset(bool power) {
   if (power) {
     std::fill(dram_.begin(), dram_.end(), std::uint8_t{0});
     std::fill(characterRam_.begin(), characterRam_.end(), std::uint8_t{0});
@@ -147,9 +147,9 @@ void BbkBoard::reset(bool power) {
 
 // ---------------------------------------------------------------- 存储译码
 
-std::size_t BbkBoard::dramOffset(unsigned page, std::uint16_t address) const { return static_cast<std::size_t>(page & dramPageMask_) * PROGRAM_PAGE_SIZE + (address & PROGRAM_PAGE_MASK); }
+std::size_t BbgBoard::dramOffset(unsigned page, std::uint16_t address) const { return static_cast<std::size_t>(page & dramPageMask_) * PROGRAM_PAGE_SIZE + (address & PROGRAM_PAGE_MASK); }
 
-std::size_t BbkBoard::mmc3DramOffset(std::uint16_t address) const {
+std::size_t BbgBoard::mmc3DramOffset(std::uint16_t address) const {
   // 游戏装在 DRAM 里：游戏的页号落到 DRAM 的高端，最后两页固定在 DRAM 的最后；游戏的倒数第 4、第 3 页与系统工作区重合，改放到 DRAM 的最前面。
   const unsigned masked = mmc3_.bank(hw::BankSpace::Program, address) & mmc3ProgramMask_;
   unsigned page = masked + (dramPageMask_ - mmc3ProgramMask_);
@@ -158,7 +158,7 @@ std::size_t BbkBoard::mmc3DramOffset(std::uint16_t address) const {
   return dramOffset(page, address);
 }
 
-BbkBoard::CpuLocation BbkBoard::locate(std::uint16_t address) const {
+BbgBoard::CpuLocation BbgBoard::locate(std::uint16_t address) const {
   using Kind = CpuLocation::Kind;
   if (address < 0x4020U) return {};
   if (address < 0x8000U) {
@@ -183,7 +183,7 @@ BbkBoard::CpuLocation BbkBoard::locate(std::uint16_t address) const {
   }
 }
 
-std::uint8_t BbkBoard::readCpu(std::uint16_t address, bool sideEffects, std::uint8_t& drivenMask) {
+std::uint8_t BbgBoard::readCpu(std::uint16_t address, bool sideEffects, std::uint8_t& drivenMask) {
   drivenMask = 0xFF;
   if (address < 0x8000U) {
     if (address >= 0x4400U || mmc3Mode_) return dram_[systemBase_ + (address - 0x4000U)];
@@ -214,7 +214,7 @@ std::uint8_t BbkBoard::readCpu(std::uint16_t address, bool sideEffects, std::uin
   return 0;
 }
 
-std::optional<std::uint8_t> BbkBoard::readRegister(std::uint16_t address, bool sideEffects) {
+std::optional<std::uint8_t> BbgBoard::readRegister(std::uint16_t address, bool sideEffects) {
   switch (address) {
     case 0xFF18:
       return speech_.read(address).value;
@@ -246,7 +246,7 @@ std::optional<std::uint8_t> BbkBoard::readRegister(std::uint16_t address, bool s
   }
 }
 
-void BbkBoard::writeProgramRam(std::uint16_t address, std::uint8_t value) {
+void BbgBoard::writeProgramRam(std::uint16_t address, std::uint8_t value) {
   const unsigned page = address >> 13;
   switch (page) {
     case 4:
@@ -262,7 +262,7 @@ void BbkBoard::writeProgramRam(std::uint16_t address, std::uint8_t value) {
   }
 }
 
-void BbkBoard::writeCpu(std::uint16_t address, std::uint8_t value) {
+void BbgBoard::writeCpu(std::uint16_t address, std::uint8_t value) {
   if (address < 0x8000U) {
     if (address >= 0x4400U || (mmc3Mode_ && address >= 0x4020U)) dram_[systemBase_ + (address - 0x4000U)] = value;
     return;
@@ -278,17 +278,17 @@ void BbkBoard::writeCpu(std::uint16_t address, std::uint8_t value) {
   writeRegister(address, value);
 }
 
-void BbkBoard::shadowPpuWrite(std::uint16_t address, std::uint8_t value) {
+void BbgBoard::shadowPpuWrite(std::uint16_t address, std::uint8_t value) {
   const unsigned reg = address & 7U;
   if ((reg == 0 || reg == 1 || reg == 5) && upperIsRam()) dram_[systemBase_ + 0x2000U + (address & PROGRAM_PAGE_MASK)] = value;
 }
 
-void BbkBoard::applyCharacterBanks() {
+void BbgBoard::applyCharacterBanks() {
   if (splitMode_) return;
   for (std::size_t index = 0; index < characterReg_.size(); ++index) characterEffective_[index] = characterReg_[index] & variant_.characterPageMask;
 }
 
-void BbkBoard::writeRegister(std::uint16_t address, std::uint8_t value) {
+void BbgBoard::writeRegister(std::uint16_t address, std::uint8_t value) {
   if (address < 0xFF90U) {
     const unsigned index = address & 0xFFU;
     switch (index) {
@@ -421,19 +421,19 @@ void BbkBoard::writeRegister(std::uint16_t address, std::uint8_t value) {
 
 // ---------------------------------------------------------------- 行时钟
 
-void BbkBoard::startLineClock() {
+void BbgBoard::startLineClock() {
   stopLineClock();
   line_ = 0;
   nextLineTime_ = scheduler_.now() + static_cast<hw::MasterTime>(LINE_EVENT_DOT) * dotTicks_;
   lineEvent_ = scheduler_.scheduleAt(nextLineTime_, *this, 0);
 }
 
-void BbkBoard::stopLineClock() {
+void BbgBoard::stopLineClock() {
   if (lineEvent_ != hw::NO_EVENT) scheduler_.cancel(lineEvent_);
   lineEvent_ = hw::NO_EVENT;
 }
 
-void BbkBoard::onEvent(hw::MasterTime /*when*/, std::uint32_t /*tag*/) {
+void BbgBoard::onEvent(hw::MasterTime /*when*/, std::uint32_t /*tag*/) {
   lineEvent_ = hw::NO_EVENT;
   const int current = line_;
   line_ = (line_ + 1) % LINES_PER_FRAME;
@@ -442,7 +442,7 @@ void BbkBoard::onEvent(hw::MasterTime /*when*/, std::uint32_t /*tag*/) {
   onLine(current);
 }
 
-void BbkBoard::onLine(int line) {
+void BbgBoard::onLine(int line) {
   if (mmc3Mode_) return;
   if (splitMode_) {
     if (line >= VISIBLE_LINES) {
@@ -471,13 +471,13 @@ void BbkBoard::onLine(int line) {
 
 // ---------------------------------------------------------------- PPU 侧
 
-std::size_t BbkBoard::characterOffset(std::uint16_t address) const {
+std::size_t BbgBoard::characterOffset(std::uint16_t address) const {
   const unsigned slot = (address >> 10) & 7U;
   const unsigned page = mmc3Mode_ ? (mmc3_.bank(hw::BankSpace::Character, address) & mmc3CharacterMask_) : characterEffective_[slot];
   return static_cast<std::size_t>(page & 0xFFU) * CHARACTER_PAGE_SIZE + (address & 0x3FFU);
 }
 
-std::size_t BbkBoard::nametableOffset(std::uint16_t address) const {
+std::size_t BbgBoard::nametableOffset(std::uint16_t address) const {
   const std::uint16_t masked = address & 0x2FFFU;
   const unsigned slot = (masked >> 10) & 3U;
   unsigned page = 0;
@@ -502,19 +502,19 @@ std::size_t BbkBoard::nametableOffset(std::uint16_t address) const {
   return static_cast<std::size_t>(page) * CHARACTER_PAGE_SIZE + (masked & 0x3FFU);
 }
 
-std::size_t BbkBoard::locateVideo(std::uint16_t address, bool& isPattern) const {
+std::size_t BbgBoard::locateVideo(std::uint16_t address, bool& isPattern) const {
   const std::uint16_t masked = address & 0x3FFFU;
   isPattern = masked < 0x2000U;
   return isPattern ? characterOffset(masked) : nametableOffset(masked);
 }
 
-std::uint8_t BbkBoard::readVideo(std::uint16_t address, bool notifyCircuit) {
+std::uint8_t BbgBoard::readVideo(std::uint16_t address, bool notifyCircuit) {
   const std::uint16_t masked = address & 0x3FFFU;
   if (notifyCircuit && mmc3Mode_) mmc3_.onVideoAddress(masked);
   return masked < 0x2000U ? characterRam_[characterOffset(masked)] : nametable_[nametableOffset(masked)];
 }
 
-void BbkBoard::writeVideo(std::uint16_t address, std::uint8_t value) {
+void BbgBoard::writeVideo(std::uint16_t address, std::uint8_t value) {
   const std::uint16_t masked = address & 0x3FFFU;
   if (mmc3Mode_) mmc3_.onVideoAddress(masked);
   if (masked < 0x2000U) characterRam_[characterOffset(masked)] = value;
@@ -523,31 +523,31 @@ void BbkBoard::writeVideo(std::uint16_t address, std::uint8_t value) {
 
 // ---------------------------------------------------------------- 总线设备
 
-hw::BusRead BbkBoard::CpuSide::read(std::uint16_t address) {
+hw::BusRead BbgBoard::CpuSide::read(std::uint16_t address) {
   std::uint8_t mask = 0xFF;
   const std::uint8_t value = board_.readCpu(address, true, mask);
   return hw::BusRead{value, mask};
 }
 
-hw::BusRead BbkBoard::CpuSide::peek(std::uint16_t address) {
+hw::BusRead BbgBoard::CpuSide::peek(std::uint16_t address) {
   std::uint8_t mask = 0xFF;
   const std::uint8_t value = board_.readCpu(address, false, mask);
   return hw::BusRead{value, mask};
 }
 
-void BbkBoard::CpuSide::write(std::uint16_t address, std::uint8_t value) { board_.writeCpu(address, value); }
+void BbgBoard::CpuSide::write(std::uint16_t address, std::uint8_t value) { board_.writeCpu(address, value); }
 
-hw::BusRead BbkBoard::VideoSide::read(std::uint16_t address) { return hw::driveBus(board_.readVideo(address, true)); }
+hw::BusRead BbgBoard::VideoSide::read(std::uint16_t address) { return hw::driveBus(board_.readVideo(address, true)); }
 
-hw::BusRead BbkBoard::VideoSide::peek(std::uint16_t address) { return hw::driveBus(board_.readVideo(address, false)); }
+hw::BusRead BbgBoard::VideoSide::peek(std::uint16_t address) { return hw::driveBus(board_.readVideo(address, false)); }
 
-void BbkBoard::VideoSide::write(std::uint16_t address, std::uint8_t value) { board_.writeVideo(address, value); }
+void BbgBoard::VideoSide::write(std::uint16_t address, std::uint8_t value) { board_.writeVideo(address, value); }
 
-hw::BusRead BbkBoard::PpuPort::read(std::uint16_t address) { return board_.ppuRegisters_.read(address); }
+hw::BusRead BbgBoard::PpuPort::read(std::uint16_t address) { return board_.ppuRegisters_.read(address); }
 
-hw::BusRead BbkBoard::PpuPort::peek(std::uint16_t address) { return board_.ppuRegisters_.peek(address); }
+hw::BusRead BbgBoard::PpuPort::peek(std::uint16_t address) { return board_.ppuRegisters_.peek(address); }
 
-void BbkBoard::PpuPort::write(std::uint16_t address, std::uint8_t value) {
+void BbgBoard::PpuPort::write(std::uint16_t address, std::uint8_t value) {
   board_.ppuRegisters_.write(address, value);
   board_.shadowPpuWrite(address, value);
 }

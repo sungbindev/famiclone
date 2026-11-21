@@ -21,8 +21,8 @@ namespace {
 constexpr std::array<KnownRom, 14> KNOWN_ROMS{{
     {0x40A4C574U, "sb97", ""},
     {0xE07BD2C3U, "sb2000", ""},
-    {0xB3D11A3CU, "bbk10", ""},
-    {0x8C8FE800U, "bbk20", ""},
+    {0xB3D11A3CU, "bbg1", ""},
+    {0x8C8FE800U, "bbg98", ""},
     {0xFE31765BU, "pec9588", ""},
     {0x6EEF8BB7U, "pec586", "PEC-586"},
     {0x05F958C4U, "pec586", "PEC-686F"},

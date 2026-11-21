@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：row-list-test.cpp
- * 说明：信息行与工具栏的测试：行高下限、各列位置与宽度（前导 96、列间距 10、主文字占满剩余）、行垂直居中；工具栏高度、操作靠右、放不下时换行。
+ * 说明：信息行与工具栏的测试：行高下限、各列位置与宽度（前导 96、列间距 10、主文字占满剩余）、带图标与指定宽度的前导、行垂直居中；工具栏高度、操作靠右、放不下时换行。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -71,6 +71,17 @@ TEST(RowListItem, HeightHasAMinimumAndColumnsAreLaidOutInOrder) {
   EXPECT_DOUBLE_EQ(s.at(3).y, (26 - 22) / 2.0);
   // 主文字占满中间剩余的宽度
   EXPECT_DOUBLE_EQ(s.at(1).width, 400 - 20 - 96 - 64 - 60 - 3 * 10);
+}
+
+TEST(RowListItem, LeadingWithAnIconAndAWidthPutsTheTextAfterTheIcon) {
+  Scene<RowListItem> s;
+  s.widget->setLeading({"设备", IconId::DeviceFloppy, 60, true});
+  s.widget->setTitle("标题");
+  s.layout(400);
+  // 前导列取指定的宽度，文字排在图标右边（图标 14 加间距 4），主文字紧跟前导列
+  EXPECT_DOUBLE_EQ(s.at(0).x, 10 + 14 + 4);
+  EXPECT_DOUBLE_EQ(s.at(0).width, 60 - 14 - 4);
+  EXPECT_DOUBLE_EQ(s.at(1).x, 10 + 60 + 10);
 }
 
 TEST(RowListItem, TallContentGrowsTheRow) {

@@ -97,6 +97,32 @@ TEST(MediaPanelContent, ListsFloppyATapeAndPrinterAndReadsStatusAtOnce) {
   EXPECT_DOUBLE_EQ(second - first, third - second);
 }
 
+TEST(MediaPanelContent, EjectButtonsShareTheRightmostPositionAndButtonColumnsAlign) {
+  Scene s;
+  const auto& floppyEject = s.content->floppies()[0].eject->bounds();
+  const auto& tapeEject = s.content->tape().eject->bounds();
+  EXPECT_DOUBLE_EQ(floppyEject.x, tapeEject.x);
+  // 磁带机的取出在四个按钮的最右
+  EXPECT_GT(tapeEject.x, s.content->tape().stop->bounds().x);
+  // 软驱最左的按钮与磁带机的录音按钮同位置（软驱前面有一个按钮宽的空白）
+  EXPECT_DOUBLE_EQ(s.content->floppies()[0].writeProtect->bounds().x, s.content->tape().record->bounds().x);
+}
+
+TEST(MediaPanelContent, StateColumnsStartAtTheSameLeftEdgeAndTheNameColumnsAreNarrow) {
+  Scene s;
+  // 子控件顺序：前导、主文字、信息列、操作；软驱一个信息列（状态），磁带机两个（位置、状态）
+  const auto& floppyRow = s.content->floppies()[0].item->children();
+  const auto& tapeRow = s.content->tape().item->children();
+  EXPECT_DOUBLE_EQ(floppyRow[2]->bounds().x, tapeRow[3]->bounds().x);
+  EXPECT_DOUBLE_EQ(floppyRow[2]->bounds().width, tapeRow[3]->bounds().width);
+  // 三行的设备名列同宽、文件名列左边对齐；设备名列比默认的前导窄
+  EXPECT_DOUBLE_EQ(floppyRow[0]->bounds().x + floppyRow[0]->bounds().width, tapeRow[0]->bounds().x + tapeRow[0]->bounds().width);
+  EXPECT_DOUBLE_EQ(floppyRow[1]->bounds().x, tapeRow[1]->bounds().x);
+  EXPECT_LT(floppyRow[1]->bounds().x, 10 + 96);
+  // 磁带机多一个位置列，文件名列比软驱的窄一个位置列加列间距
+  EXPECT_DOUBLE_EQ(floppyRow[1]->bounds().width - tapeRow[1]->bounds().width, 72 + 10);
+}
+
 TEST(MediaPanelContent, ButtonsFollowTheModel) {
   Scene s;
   const auto& floppy = s.content->floppies()[0];

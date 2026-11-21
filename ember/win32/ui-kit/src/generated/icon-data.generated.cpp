@@ -126,6 +126,13 @@ constexpr IconPath ClockPaths[] = {
     {"M12 7v5l3 3", "", "", 1},
 };
 
+constexpr IconPath DeviceAudioTapePaths[] = {
+    {"M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10", "", "", 1},
+    {"M3 17l4 -3h10l4 3", "", "", 1},
+    {"M7 9.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0", "currentColor", "", 1},
+    {"M16 9.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0", "currentColor", "", 1},
+};
+
 constexpr IconPath DeviceFloppyPaths[] = {
     {"M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2", "", "", 1},
     {"M10 14a2 2 0 1 0 4 0a2 2 0 1 0 -4 0", "", "", 1},
@@ -238,6 +245,12 @@ constexpr IconPath PlusPaths[] = {
 constexpr IconPath PowerPaths[] = {
     {"M7 6a7.75 7.75 0 1 0 10 0", "", "", 1},
     {"M12 4l0 8", "", "", 1},
+};
+
+constexpr IconPath PrinterPaths[] = {
+    {"M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2", "", "", 1},
+    {"M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4", "", "", 1},
+    {"M7 15a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2l0 -4", "", "", 1},
 };
 
 constexpr IconPath RefreshPaths[] = {
@@ -361,6 +374,7 @@ constexpr IconData kIcons[] = {
     {CircleCheckPaths, sizeof(CircleCheckPaths) / sizeof(IconPath)},
     {CircleXPaths, sizeof(CircleXPaths) / sizeof(IconPath)},
     {ClockPaths, sizeof(ClockPaths) / sizeof(IconPath)},
+    {DeviceAudioTapePaths, sizeof(DeviceAudioTapePaths) / sizeof(IconPath)},
     {DeviceFloppyPaths, sizeof(DeviceFloppyPaths) / sizeof(IconPath)},
     {EraserPaths, sizeof(EraserPaths) / sizeof(IconPath)},
     {EyePaths, sizeof(EyePaths) / sizeof(IconPath)},
@@ -382,6 +396,7 @@ constexpr IconData kIcons[] = {
     {PlayerStopPaths, sizeof(PlayerStopPaths) / sizeof(IconPath)},
     {PlusPaths, sizeof(PlusPaths) / sizeof(IconPath)},
     {PowerPaths, sizeof(PowerPaths) / sizeof(IconPath)},
+    {PrinterPaths, sizeof(PrinterPaths) / sizeof(IconPath)},
     {RefreshPaths, sizeof(RefreshPaths) / sizeof(IconPath)},
     {ReloadPaths, sizeof(ReloadPaths) / sizeof(IconPath)},
     {ReplacePaths, sizeof(ReplacePaths) / sizeof(IconPath)},

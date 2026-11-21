@@ -31,9 +31,9 @@
   ],
   "extraIcons": [
     "iconAdjustments", "iconAlertCircle", "iconAlertTriangle", "iconAppWindow", "iconArrowBackUp", "iconArrowDown", "iconArrowLeft", "iconArrowRight", "iconArrowUp", "iconArrowsDiff",
-    "iconBell", "iconCategory", "iconCheck", "iconChevronDown", "iconChevronRight", "iconChevronUp", "iconCircleCheck", "iconCircleX", "iconClock", "iconDeviceFloppy",
+    "iconBell", "iconCategory", "iconCheck", "iconChevronDown", "iconChevronRight", "iconChevronUp", "iconCircleCheck", "iconCircleX", "iconClock", "iconDeviceAudioTape", "iconDeviceFloppy",
     "iconEraser", "iconEye", "iconEyeOff", "iconFileExport", "iconFileUpload", "iconFilter", "iconFolderOpen", "iconHandClick", "iconInfoCircle", "iconLayoutBottombarCollapse",
-    "iconLock", "iconLockOpen", "iconPencil", "iconPlayerEject", "iconPlayerPause", "iconPlayerPlay", "iconPlayerRecord", "iconPlayerStop", "iconPlus", "iconPower",
+    "iconLock", "iconLockOpen", "iconPencil", "iconPlayerEject", "iconPlayerPause", "iconPlayerPlay", "iconPlayerRecord", "iconPlayerStop", "iconPlus", "iconPower", "iconPrinter",
     "iconRefresh", "iconReload", "iconReplace", "iconRotate", "iconSelectAll", "iconSend", "iconSettings", "iconSparkles", "iconSquare", "iconTrash",
     "iconUnlink", "iconUpload", "iconVolume", "iconVolumeOff"
   ],

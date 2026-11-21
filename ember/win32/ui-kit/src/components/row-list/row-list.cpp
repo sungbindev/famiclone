@@ -40,9 +40,15 @@ RowListItem::RowListItem() {
   title_ = static_cast<Label*>(addChild(makeLabel()));
 }
 
-void RowListItem::setLeading(std::string leading) {
+void RowListItem::setLeading(std::string leading) { setLeading(RowLeading{std::move(leading), std::nullopt, 0.0, false}); }
+
+void RowListItem::setLeading(RowLeading leading) {
   hasLeading_ = true;
-  leading_->setText(std::move(leading));
+  leadingIcon_ = leading.icon;
+  leadingWidth_ = leading.width;
+  leadingEmphasized_ = leading.emphasized;
+  leading_->setText(std::move(leading.text));
+  leading_->setFontWeight(leading.emphasized ? static_cast<int>(tokens::setting_row_label_font_weight) : 400);
   invalidate();
 }
 
@@ -76,7 +82,7 @@ void RowListItem::setActions(std::unique_ptr<Widget> actions) {
 
 RowListItem::Layout RowListItem::layout(double width) {
   Layout result;
-  result.leadingWidth = hasLeading_ ? tokens::row_list_leading_width : 0.0;
+  result.leadingWidth = hasLeading_ ? (leadingWidth_ > 0 ? leadingWidth_ : tokens::row_list_leading_width) : 0.0;
   double fixed = result.leadingWidth;
   int columns = 1 + (hasLeading_ ? 1 : 0);
   for (std::size_t i = 0; i < cells_.size(); ++i) {
@@ -105,7 +111,8 @@ double RowListItem::contentHeight(const Layout& laid) {
 }
 
 Size RowListItem::measure(Size available) {
-  const double width = available.width > 0 ? available.width : 2 * tokens::row_list_padding_x + tokens::row_list_leading_width + title_->measure(Size{}).width;
+  const double leadingWidth = leadingWidth_ > 0 ? leadingWidth_ : tokens::row_list_leading_width;
+  const double width = available.width > 0 ? available.width : 2 * tokens::row_list_padding_x + leadingWidth + title_->measure(Size{}).width;
   return Size{width, layout(width).height};
 }
 
@@ -119,7 +126,10 @@ void RowListItem::arrange(const Rect& bounds) {
   };
   double x = bounds.x + tokens::row_list_padding_x;
   if (hasLeading_) {
-    place(leading_, x, laid.leadingWidth);
+    // 图标占在前导列的最左边，文字排在它右边
+    const double iconSpace = leadingIcon_ ? tokens::icon_size + tokens::icon_text_gap : 0.0;
+    leadingIconRect_ = Rect{x, bounds.y + (bounds.height - tokens::icon_size) / 2.0, tokens::icon_size, tokens::icon_size};
+    place(leading_, x + iconSpace, std::max(0.0, laid.leadingWidth - iconSpace));
     x += laid.leadingWidth + tokens::row_list_column_gap;
   }
   place(title_, x, laid.mainWidth);
@@ -137,6 +147,7 @@ void RowListItem::paint(Canvas& canvas) {
   const auto& colors = themeTokens(host()->theme());
   if (pressed()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_active_bg, .radius = tokens::row_list_radius});
   else if (hovered()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_hover_bg, .radius = tokens::row_list_radius});
+  if (hasLeading_ && leadingIcon_) canvas.drawIcon(*leadingIcon_, leadingIconRect_, leadingEmphasized_ ? colors.accent : colors.text, tokens::icon_stroke_width);
 }
 
 }  // namespace rujian::ui

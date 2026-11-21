@@ -7,15 +7,18 @@
  * 日期：2026-11-19
  * 备注：对应组件库的 RowList 与 RowListItem，只做 Ember 用到的部分（前导、标题、信息列、操作；行选中与副文字没用到，不做）。
  *       文字单行显示，放不下时用省略号；组件库里按容器宽度隐藏“可选列”的规则没用到，不做。
+ *       前导可以带图标、改宽度、用强调样式（半粗字体与强调色图标），这是本控件库自己的扩展，网页版没有。
  * ------------------------------------------------------------------------
  */
 
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "rujian/ui/icon-id.hpp"
 #include "rujian/ui/layout.hpp"
 #include "rujian/ui/widget.hpp"
 
@@ -27,6 +30,18 @@ class Label;
 class RowList final : public FlexBox {
  public:
   RowList();
+};
+
+/** 信息行的前导列。 */
+struct RowLeading {
+  /** 文字。 */
+  std::string text;
+  /** 文字左边的图标；没有就不画。 */
+  std::optional<IconId> icon;
+  /** 固定宽度（逻辑像素，含图标）；0 表示取行列表令牌的前导宽度。 */
+  double width{0};
+  /** 是否强调：文字用半粗字体，图标用强调色。 */
+  bool emphasized{false};
 };
 
 /** 信息行里的一列。 */
@@ -46,6 +61,8 @@ class RowListItem : public Widget {
 
   /** 前导文字，占固定宽度；不设置就没有前导列。 */
   void setLeading(std::string leading);
+  /** 前导列，可以带图标、指定宽度与强调样式。 */
+  void setLeading(RowLeading leading);
   /** 主文字，占满剩余宽度。 */
   void setTitle(std::string title);
   /** 在主文字右边加一列。 */
@@ -81,6 +98,11 @@ class RowListItem : public Widget {
   std::vector<RowCell> cellSpecs_;
   Widget* actions_{nullptr};
   bool hasLeading_{false};
+  std::optional<IconId> leadingIcon_;
+  double leadingWidth_{0};
+  bool leadingEmphasized_{false};
+  /** 前导图标的位置，每次摆放时更新。 */
+  Rect leadingIconRect_;
 };
 
 }  // namespace rujian::ui

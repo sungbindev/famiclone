@@ -22,8 +22,24 @@ namespace {
 
 /** 定时读取状态的间隔（毫秒）。 */
 constexpr unsigned kPollMilliseconds = 500;
+/** 设备名列的宽度（逻辑像素，含图标）；刚好放下图标与“磁带机”“打印机”三个字。 */
+constexpr double kLeadingWidth = 60;
 /** 磁带位置列的宽度（逻辑像素）；能放下“28:09 / 28:09”（约 68）。 */
 constexpr double kPositionWidth = 72;
+/** 状态列的宽度（逻辑像素）；能放下最长的“读写中（磁道 79）”（约 100）。 */
+constexpr double kStateWidth = 108;
+
+/** 行尾按钮组里占位用的空白：宽度始终等于参照控件，让软驱行的按钮组与磁带机行等宽，两行的状态列才左边对齐。 */
+class Spacer final : public rujian::ui::Widget {
+ public:
+  void setReference(rujian::ui::Widget* reference) { reference_ = reference; }
+  [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override { return reference_ != nullptr ? reference_->measure(available) : rujian::ui::Size{}; }
+  [[nodiscard]] bool stretchesWidth() const override { return false; }
+  [[nodiscard]] bool stretchesHeight() const override { return false; }
+
+ private:
+  rujian::ui::Widget* reference_{nullptr};
+};
 
 /** 行尾的只有图标的按钮：名称在悬停提示里。 */
 rujian::ui::Button* addIconButton(rujian::ui::Widget& parent, const char* label, rujian::ui::IconId icon, std::function<void()> onClick) {
@@ -46,16 +62,19 @@ MediaPanelContent::MediaPanelContent(contracts::MediaModel& model) : model_(mode
   for (const contracts::MediaFloppyRow& row : view.floppies) {
     const int drive = row.drive;
     auto item = std::make_unique<rujian::ui::RowListItem>();
-    item->setLeading(row.label);
+    item->setLeading({row.label, IconId::DeviceFloppy, kLeadingWidth, true});
     item->setTitle(row.disk);
-    item->addCell({row.state, 0, true});
+    item->addCell({row.state, kStateWidth, true});
     auto actions = std::make_unique<rujian::ui::Actions>();
     FloppyWidgets widgets;
+    // 软驱比磁带机少一个按钮，前面补一个按钮宽的空白，使状态列与磁带机的状态列对齐
+    Spacer* spacer = static_cast<Spacer*>(actions->addChild(std::make_unique<Spacer>()));
     widgets.writeProtect = addIconButton(*actions, "写保护", IconId::LockOpen, [this, drive] {
       for (const auto& floppy : model_.view().floppies) {
         if (floppy.drive == drive) model_.setWriteProtected(drive, !floppy.writeProtected);
       }
     });
+    spacer->setReference(widgets.writeProtect);
     widgets.insert = addIconButton(*actions, "载入镜像", IconId::FolderOpen, [this, drive] { model_.insertFloppy(drive); });
     widgets.eject = addIconButton(*actions, "取出", IconId::PlayerEject, [this, drive] { model_.ejectFloppy(drive); });
     item->setActions(std::move(actions));
@@ -64,20 +83,20 @@ MediaPanelContent::MediaPanelContent(contracts::MediaModel& model) : model_(mode
   }
 
   auto tape = std::make_unique<rujian::ui::RowListItem>();
-  tape->setLeading("磁带机");
+  tape->setLeading({"磁带机", IconId::DeviceAudioTape, kLeadingWidth, true});
   tape->setTitle(view.tape.disk);
   tape->addCell({view.tape.position, kPositionWidth, true});
-  tape->addCell({view.tape.state, 0, true});
+  tape->addCell({view.tape.state, kStateWidth, true});
   auto tapeActions = std::make_unique<rujian::ui::Actions>();
-  tape_.eject = addIconButton(*tapeActions, "取出", IconId::PlayerEject, [this] { model_.ejectTape(); });
   tape_.play = addIconButton(*tapeActions, "播放", IconId::PlayerPlay, [this] { model_.playTape(); });
   tape_.record = addIconButton(*tapeActions, "录音", IconId::PlayerRecord, [this] { model_.recordTape(); });
   tape_.stop = addIconButton(*tapeActions, "停止", IconId::PlayerStop, [this] { model_.stopTape(); });
+  tape_.eject = addIconButton(*tapeActions, "取出", IconId::PlayerEject, [this] { model_.ejectTape(); });
   tape->setActions(std::move(tapeActions));
   tape_.item = static_cast<rujian::ui::RowListItem*>(list->addChild(std::move(tape)));
 
   auto printer = std::make_unique<rujian::ui::RowListItem>();
-  printer->setLeading("打印机");
+  printer->setLeading({"打印机", IconId::Printer, kLeadingWidth, true});
   printer->setTitle(view.printer);
   printer_ = static_cast<rujian::ui::RowListItem*>(list->addChild(std::move(printer)));
 

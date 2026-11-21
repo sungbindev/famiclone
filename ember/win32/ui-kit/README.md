@@ -78,7 +78,7 @@ return rujian::ui::HostWindow::runMessageLoop();
 | 分栏视图 | `split-view.hpp` | 左栏（可滚动）加主区，分隔条可拖动、方向键调整、限制最小与最大宽度 |
 | 页签 | `tabs.hpp` | 页签栏加各页签的内容，鼠标与方向键切换，只显示选中页签的内容 |
 | 分隔线列表 | `list.hpp` | `List`（行之间有分割线）与 `ListRow`（`SettingRow` 是它的一种）；放进面板后贴边的行去掉内边距 |
-| 信息行列表 | `row-list.hpp` | `RowList` 与 `RowListItem`：前导、主文字、信息列、行尾操作，悬停与按下底色 |
+| 信息行列表 | `row-list.hpp` | `RowList` 与 `RowListItem`：前导（可带图标、指定宽度、强调样式）、主文字、信息列、行尾操作，悬停与按下底色 |
 | 工具栏 | `toolbar.hpp` | 前导控件、说明、右侧操作，放不下时操作换行 |
 | 树 | `tree.hpp` | 扁平条目，鼠标与键盘（上下、Home、End 移焦点，回车与空格选中），焦点行滚入可见范围 |
 | 表格 | `table.hpp` | `Table`（紧凑、平铺：列宽自动分配、行选中、行详情）与 `TableMainCell`（主副文字） |

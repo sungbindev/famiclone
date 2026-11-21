@@ -56,6 +56,11 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
      * 不影响精灵；为空（默认）表示不启用，经典 FC 与其他机型都不设。
      */
     std::function<bool(unsigned)> backgroundTableOverride{};
+    /**
+     * 精灵取色的偏移：返回 true 时，精灵像素（颜色号 1 到 3）取色的位置整体后移 2 项，即取“所选精灵调色板第 2 + 颜色号项”；
+     * 落在某个调色板的第 0 项（颜色号 2）时取背景色，超出 16 项的部分回绕；不影响背景；为空（默认）表示不启用。
+     */
+    std::function<bool()> spritePaletteShifted{};
   };
 
   /**

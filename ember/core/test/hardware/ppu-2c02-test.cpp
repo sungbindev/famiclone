@@ -690,4 +690,47 @@ TEST(Ppu2c02Variants, BackgroundTableOverrideSendsTheChosenNametablesToPatternTa
   EXPECT_EQ(centerPixelOfNametable(forcedTable, 0x12), black) << "$2000 位 4 为 1 时本来就取图案表 1";
 }
 
+// ---------------------------------------------------------------- 变体：精灵取色后移
+
+/** 只开精灵：图块 2 最左一列是颜色 1，图块 3 最左一列是颜色 2；背景色黑，精灵调色板 0 的第 1、2、3 项是红、绿、蓝。返回两个精灵最左一列的像素。 */
+std::array<std::array<std::uint8_t, 4>, 2> spriteColumns(const Ppu2c02::Options& options) {
+  PpuRig rig(options);
+  for (int i = 0; i < 8; ++i) {
+    rig.vram.bytes[32 + static_cast<std::size_t>(i)] = 0x80;
+    rig.vram.bytes[48 + 8 + static_cast<std::size_t>(i)] = 0x80;
+  }
+  rig.writeVram(0x3F00, 0x0F);
+  rig.writeVram(0x3F11, 0x16);
+  rig.writeVram(0x3F12, 0x2A);
+  rig.writeVram(0x3F13, 0x12);
+  rig.setAddress(0x0000);
+  writeSprite(rig, 0, 100, 2, 0x00, 100);
+  writeSprite(rig, 1, 100, 3, 0x00, 120);
+  rig.write(0x2001, 0x14);
+  runOneFrame(rig);
+  runOneFrame(rig);
+  return {pixelBytes(rig.ppu.frame(), 105 * 256 + 100), pixelBytes(rig.ppu.frame(), 105 * 256 + 120)};
+}
+
+TEST(Ppu2c02Variants, SpritePaletteShiftMovesTheSpriteColorsByTwoEntries) {
+  const auto red = backdropPixel(0x16, 0x00);
+  const auto green = backdropPixel(0x2A, 0x00);
+  const auto blue = backdropPixel(0x12, 0x00);
+  const auto black = backdropPixel(0x0F, 0x00);
+
+  const auto plain = spriteColumns(Ppu2c02::Options{312, false, 291});
+  EXPECT_EQ(plain[0], red);
+  EXPECT_EQ(plain[1], green);
+
+  Ppu2c02::Options options{312, false, 291};
+  bool shifted = true;
+  options.spritePaletteShifted = [&shifted] { return shifted; };
+  const auto moved = spriteColumns(options);
+  EXPECT_EQ(moved[0], blue) << "颜色 1 取调色板的第 3 项";
+  EXPECT_EQ(moved[1], black) << "颜色 2 落在下一个调色板的第 0 项，取背景色";
+
+  shifted = false;
+  EXPECT_EQ(spriteColumns(options), plain) << "回调返回 false 时与不设回调一样";
+}
+
 }  // namespace

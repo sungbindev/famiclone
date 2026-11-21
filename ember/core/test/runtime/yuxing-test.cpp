@@ -242,6 +242,26 @@ TEST(Yuxing, TheFloppyDriveReadsARealDiskInTheDiskManager) {
   EXPECT_GT(differingPixels(withDisk, withoutDisk), 500U) << "有盘时列出文件目录，没有盘时报错";
 }
 
+TEST(Yuxing, TheDiskOperationScreenOfV83HasNoWhiteBlockInTheTopLeftCorner) {
+  const auto rom = readMachineRom("yuxing_v8.3-d.bin");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.3-d.bin";
+  RealRomBench bench;
+  bench.bootMachine("yuxing", rom);
+  ASSERT_TRUE(bench.run(600));
+  menuKey(bench, "ArrowRight");
+  bench.tap("Enter", 8, 200);
+  bench.dump("disk-operation-v83");
+  // 汉字单色模式下程序在左上角放了 16 个不可见的精灵（图块 $F0、在背景之后）：精灵取色后移 2 项，颜色 2 落到背景色上。
+  const auto image = bench.runtime->captureFrame();
+  ASSERT_GT(image.width, 64U);
+  const auto pixelAt = [&](std::uint32_t x, std::uint32_t y) { return std::vector<std::uint8_t>(image.rgba.begin() + (y * image.width + x) * 4, image.rgba.begin() + (y * image.width + x) * 4 + 4); };
+  const auto background = pixelAt(image.width - 2, 2);
+  for (std::uint32_t y = 0; y < 16; ++y) {
+    for (std::uint32_t x = 0; x < 64; ++x) ASSERT_EQ(pixelAt(x, y), background) << "(" << x << ", " << y << ") 不是背景色";
+  }
+  EXPECT_TRUE(bench.errors->entries.empty());
+}
+
 TEST(Yuxing, GameBasicSaveRecordsTheProgramOnTapeAndLoadReadsItBack) {
   const auto rom = readMachineRom("yuxing_v9.0-98.bin");
   if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";

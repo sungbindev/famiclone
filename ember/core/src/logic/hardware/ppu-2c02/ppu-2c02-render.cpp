@@ -287,7 +287,12 @@ void Ppu2c02::drawPixel(int line, int x) {
     // 背景与精灵都不显示时输出背景色；整个渲染关闭且 v 指向调色板时，输出 v 指向的那一项。
     entry = (!renderingEnabled() && (v_ & 0x3F00) == 0x3F00) ? palette_[paletteIndex(v_)] : palette_[0];
   } else if (spritePixel != 0 && (backgroundPixel == 0 || (spriteAttribute & ATTRIBUTE_BEHIND_BACKGROUND) == 0)) {
-    entry = palette_[paletteIndex(static_cast<std::uint16_t>(0x10 | ((spriteAttribute & 3) << 2) | spritePixel))];
+    if (options_.spritePaletteShifted && options_.spritePaletteShifted()) {
+      const unsigned shifted = ((spriteAttribute & 3U) << 2) + 2U + spritePixel;
+      entry = (shifted & 3U) == 0 ? palette_[0] : palette_[0x10U | (shifted & 0x0FU)];
+    } else {
+      entry = palette_[paletteIndex(static_cast<std::uint16_t>(0x10 | ((spriteAttribute & 3) << 2) | spritePixel))];
+    }
   } else {
     entry = palette_[paletteIndex(static_cast<std::uint16_t>((backgroundPalette << 2) | backgroundPixel))];
   }

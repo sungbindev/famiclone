@@ -81,7 +81,13 @@ YuxingMachine::YuxingMachine(std::vector<std::uint8_t> rom, std::shared_ptr<logi
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
       apu_(cpuBus_, scheduler_, irq_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE), false),
-      ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, 0, logic::hardware::Ppu2c02::Options{SCANLINES_PER_FRAME, false, VBLANK_LINE}),
+      // 精灵取色是否后移由主板决定；回调只在渲染时调用，那时主板已经建好。
+      ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, 0,
+           [this] {
+             logic::hardware::Ppu2c02::Options options{SCANLINES_PER_FRAME, false, VBLANK_LINE};
+             options.spritePaletteShifted = [this] { return board_.spritePaletteShifted(); };
+             return options;
+           }()),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       padApuPort_(pad_, apu_),

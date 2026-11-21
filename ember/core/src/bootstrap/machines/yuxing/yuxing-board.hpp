@@ -20,7 +20,7 @@
  *           ROM 模式：整个窗口是 ROM 的第 (reg4800&$1F) 个 32K；写入忽略；
  *           MMC3 模式：窗口由 MMC3 电路给页（程序页号取低 6 位，落在程序 RAM 的前 512K），写入全部交给 MMC3 电路；
  *       PPU 地址：$0000-$1FFF 是字符 RAM（非 MMC3 模式整体 8K 一页，MMC3 模式按电路的 1K 页），$2000-$2FFF 是名称表显存（2K，水平或垂直镜像）；
- *       汉字单色模式（分屏且 reg5500 位 7 为 0）由 yuxing-text 电路改写背景取字模的地址；4 分屏（分屏且 reg5500 位 7 为 1）时，背景与精灵读 $1000-$1FFF 的 4K 页取自 8K 页
+ *       汉字单色模式（分屏且 reg5500 位 7 为 0）由 yuxing-text 电路改写背景取字模的地址，同时精灵取色整体后移 2 项（spritePaletteShifted）；4 分屏（分屏且 reg5500 位 7 为 1）时，背景与精灵读 $1000-$1FFF 的 4K 页取自 8K 页
  *       ((最近名称表字节地址的位 9、8) << 2 | (reg5501 & 3)) 的上半，其余情况 $1000-$1FFF 照常取 reg5501 所选页；
  *       上电后寄存器为 $00（$5002 读 $02），存储清零，窗口是 ROM 的第 0 个 32K。
  * ------------------------------------------------------------------------
@@ -89,6 +89,9 @@ class YuxingBoard final {
 
   YuxingBoard(const YuxingBoard&) = delete;
   YuxingBoard& operator=(const YuxingBoard&) = delete;
+
+  /** 汉字单色模式下精灵取色整体后移 2 项（PPU 渲染时查询）。 */
+  [[nodiscard]] bool spritePaletteShifted() const { return textMode(); }
 
   /** CPU 总线上 $4020-$FFFF 的设备。 */
   contracts::hardware::BusDevice& cpuSide() { return cpuSide_; }

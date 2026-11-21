@@ -51,6 +51,10 @@ std::wstring startCommand() {
 
 /** 向已有实例发送 START 命令；对方回复 TRUE 才算通知到。 */
 bool notify(HWND remote) {
+  // 本进程刚被用户操作拉起（如双击文件），有前台权限；把它交给对方，对方才能把窗口提到最前
+  DWORD remoteProcess = 0;
+  GetWindowThreadProcessId(remote, &remoteProcess);
+  if (remoteProcess != 0) AllowSetForegroundWindow(remoteProcess);
   const std::wstring command = startCommand();
   COPYDATASTRUCT data{};
   data.dwData = 0;
@@ -83,7 +87,18 @@ struct SingleInstance::Impl {
       static constexpr std::size_t kMinimumSize = 7 * sizeof(wchar_t);
       if (data != nullptr && data->cbData >= kMinimumSize && data->cbData % sizeof(wchar_t) == 0) {
         const std::wstring text(static_cast<const wchar_t*>(data->lpData), data->cbData / sizeof(wchar_t));
-        if (text.compare(0, 5, L"START") == 0 && text.size() > 5 && text[5] == L'\0' && self->onSecondInstance_) self->onSecondInstance_();
+        if (text.compare(0, 5, L"START") == 0 && text.size() > 5 && text[5] == L'\0' && self->onSecondInstance_) {
+          // 命令的三段：START、后启动进程的当前目录、它的命令行；缺段时按空处理
+          std::wstring directory;
+          std::wstring commandLine;
+          const std::size_t directoryEnd = text.find(L'\0', 6);
+          if (directoryEnd != std::wstring::npos) {
+            directory = text.substr(6, directoryEnd - 6);
+            const std::size_t commandEnd = text.find(L'\0', directoryEnd + 1);
+            if (commandEnd != std::wstring::npos) commandLine = text.substr(directoryEnd + 1, commandEnd - directoryEnd - 1);
+          }
+          self->onSecondInstance_(directory, commandLine);
+        }
       }
       return TRUE;
     }
@@ -107,6 +122,11 @@ struct SingleInstance::Impl {
 };
 
 SingleInstance::SingleInstance(std::filesystem::path userDataDirectory, std::function<void()> onSecondInstance)
+    : SingleInstance(std::move(userDataDirectory), SecondInstanceHandler([onSecondInstance = std::move(onSecondInstance)](const std::wstring&, const std::wstring&) {
+        if (onSecondInstance) onSecondInstance();
+      })) {}
+
+SingleInstance::SingleInstance(std::filesystem::path userDataDirectory, SecondInstanceHandler onSecondInstance)
     : userDataDirectory_(std::move(userDataDirectory)), onSecondInstance_(std::move(onSecondInstance)) {}
 
 SingleInstance::~SingleInstance() {

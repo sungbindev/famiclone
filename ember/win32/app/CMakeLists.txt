@@ -100,10 +100,12 @@ add_library(ember_app STATIC
   src/platform/network/https-client.cpp
   src/platform/network/local-http-server.cpp
   src/platform/resources/embedded-archive.cpp
+  src/platform/process/command-line.cpp
   src/platform/process/environment.cpp
   src/platform/process/process-control.cpp
   src/platform/process/single-instance.cpp
   src/platform/shell/directory-opener.cpp
+  src/platform/shell/file-association.cpp
   src/platform/shell/url-opener.cpp
   src/platform/text/wide-text.cpp
   src/platform/theme/system-theme.cpp

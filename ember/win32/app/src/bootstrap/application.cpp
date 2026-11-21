@@ -91,8 +91,10 @@
 #include "platform/files/user-data-location.hpp"
 #include "platform/logging/file-error-logger.hpp"
 #include "platform/process/environment.hpp"
+#include "platform/process/command-line.hpp"
 #include "platform/process/single-instance.hpp"
 #include "platform/resources/embedded-archive.hpp"
+#include "platform/shell/file-association.hpp"
 #include "platform/shell/url-opener.hpp"
 #include "platform/text/wide-text.hpp"
 #include "platform/theme/system-theme.hpp"
@@ -259,9 +261,19 @@ int runApplication(const shared::LaunchArguments& launch) {
 
   // 单实例：首选项里允许同时运行多个实例时不取锁；这时核心还没启动，所以直接读首选项文件
   const auto preferences = platform::readJsonFile(userData / "config" / "preferences.json");
+  /** 打开卡带：核心建好后才有值；双击 .nes 文件时已有实例用它打开后启动进程传来的卡带。 */
+  std::function<void(const std::string& path)> openCartridge;
   std::optional<platform::SingleInstance> singleInstance;
   if (!(preferences && shared::readAllowMultipleInstances(*preferences))) {
-    singleInstance.emplace(userData, [&mainWindow] { activateWindow(mainWindow); });
+    singleInstance.emplace(userData, [&mainWindow, &openCartridge](const std::wstring& workingDirectory, const std::wstring& commandLine) {
+      activateWindow(mainWindow);
+      const shared::LaunchArguments second = shared::parseLaunchArguments(platform::splitCommandLine(commandLine));
+      if (!second.cartridgePath || !openCartridge) return;
+      // 相对路径按后启动进程的当前目录算
+      std::filesystem::path path = platform::pathFromUtf8(*second.cartridgePath);
+      if (path.is_relative()) path = std::filesystem::path(workingDirectory) / path;
+      openCartridge(platform::pathToUtf8(path));
+    });
     switch (singleInstance->acquire()) {
       case platform::SingleInstanceResult::Acquired:
         break;
@@ -275,6 +287,12 @@ int runApplication(const shared::LaunchArguments& launch) {
 
   platform::FileErrorLogger fileLogger(userData / "logs");
   infra::FileErrorLoggerAdapter logger(fileLogger);
+  // 把 .nes 的打开方式登记为本程序（调试会话不动注册表）；登记失败只写日志，不影响使用
+  if (!launch.debugPort) {
+    if (const std::string error = platform::registerCartridgeAssociation(executable); !error.empty()) {
+      logger.write({std::nullopt, kMainErrorCode, error, nlohmann::json{{"source", "fileAssociation"}}});
+    }
+  }
   /** 文件存储读写出错时写日志。 */
   const auto reportTo = [&logger](const char* source) {
     return [&logger, source](const std::string& message) { logger.write({std::nullopt, kMainErrorCode, message, nlohmann::json{{"source", source}}}); };
@@ -557,14 +575,16 @@ int runApplication(const shared::LaunchArguments& launch) {
     const auto diagnosticsPath = platform::environmentVariable("EMBER_WIN_DIAGNOSTICS");
     const auto diagnosticsStart = std::chrono::steady_clock::now();
     if (diagnosticsPath) screenHost->enableLatencyRecording();
-    // 命令行带 --cartridge=路径（.nes）时，核心就绪后加载这张卡带；就绪之前发的请求排队
-    if (launch.cartridgePath) {
-      entry::loadAndRememberCartridge(core, recentCartridges, *launch.cartridgePath, [&logger](contracts::CoreReply reply) {
-        if (!reply.ok) logger.write({std::nullopt, kMainErrorCode, "启动参数指定的卡带加载失败：" + reply.error.code, nlohmann::json{{"source", "launchCartridge"}}});
+    // 命令行带卡带路径（--cartridge=路径 或直接写路径，.nes）时，核心就绪后加载这张卡带；就绪之前发的请求排队。已有实例收到后启动进程的通知时也用它打开卡带
+    openCartridge = [&core, &recentCartridges, &logger](const std::string& path) {
+      entry::loadAndRememberCartridge(core, recentCartridges, path, [&logger](contracts::CoreReply reply) {
+        if (!reply.ok) logger.write({std::nullopt, kMainErrorCode, "指定的卡带加载失败：" + reply.error.code, nlohmann::json{{"source", "launchCartridge"}}});
       });
-    }
+    };
+    if (launch.cartridgePath) openCartridge(*launch.cartridgePath);
 
     rujian::ui::HostWindow::runMessageLoop();
+    openCartridge = nullptr;
 
     // 开发期诊断：环境变量 EMBER_WIN_DIAGNOSTICS 给出文件路径时，退出时写出帧计数与画面延迟
     if (diagnosticsPath) {

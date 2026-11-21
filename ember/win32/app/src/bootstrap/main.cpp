@@ -10,21 +10,11 @@
  */
 
 #include <windows.h>
-#include <shellapi.h>
-
-#include <string>
-#include <vector>
 
 #include "bootstrap/application.hpp"
-#include "platform/text/wide-text.hpp"
+#include "platform/process/command-line.hpp"
 #include "shared/launch/launch-args.hpp"
 
 int WINAPI wWinMain(HINSTANCE /*instance*/, HINSTANCE /*previous*/, PWSTR /*commandLine*/, int /*show*/) {
-  int count = 0;
-  LPWSTR* arguments = CommandLineToArgvW(GetCommandLineW(), &count);
-  std::vector<std::string> utf8;
-  // 第 0 项是程序自己
-  for (int i = 1; arguments != nullptr && i < count; ++i) utf8.push_back(ember::win32::platform::narrow(arguments[i]));
-  if (arguments != nullptr) LocalFree(arguments);
-  return ember::win32::bootstrap::runApplication(ember::win32::shared::parseLaunchArguments(utf8));
+  return ember::win32::bootstrap::runApplication(ember::win32::shared::parseLaunchArguments(ember::win32::platform::splitCommandLine(GetCommandLineW())));
 }

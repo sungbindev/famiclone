@@ -54,6 +54,8 @@ class YuxingBoard final {
   static constexpr std::size_t PROGRAM_RAM_SIZE = 1024 * 1024;
   /** MMC3 模式下 $6000-$7FFF 用的工作 RAM 的容量（字节）。 */
   static constexpr std::size_t MMC3_WORK_RAM_SIZE = 8 * 1024;
+  /** 小容量型号的 $6000 窗口页选择 1-3 用的静态 RAM 的容量（字节）。 */
+  static constexpr std::size_t STATIC_RAM_SIZE = 32 * 1024;
   /** 字符 RAM 的容量（字节）。 */
   static constexpr std::size_t CHARACTER_RAM_SIZE = 128 * 1024;
   /** 名称表显存的容量（字节）。 */
@@ -80,7 +82,7 @@ class YuxingBoard final {
 
   /** CPU 地址对应的存储位置。 */
   struct CpuLocation {
-    enum class Kind : std::uint8_t { None, Register, Rom, ProgramRam, Mmc3WorkRam };
+    enum class Kind : std::uint8_t { None, Register, Rom, ProgramRam, Mmc3WorkRam, StaticRam };
     Kind kind{Kind::None};
     std::size_t offset{0};
   };
@@ -121,6 +123,8 @@ class YuxingBoard final {
   [[nodiscard]] std::vector<std::uint8_t>& programRam() { return programRam_; }
   [[nodiscard]] const std::vector<std::uint8_t>& mmc3WorkRam() const { return mmc3WorkRam_; }
   [[nodiscard]] std::vector<std::uint8_t>& mmc3WorkRam() { return mmc3WorkRam_; }
+  [[nodiscard]] const std::vector<std::uint8_t>& staticRam() const { return staticRam_; }
+  [[nodiscard]] std::vector<std::uint8_t>& staticRam() { return staticRam_; }
   [[nodiscard]] const std::vector<std::uint8_t>& characterRam() const { return characterRam_; }
   [[nodiscard]] std::vector<std::uint8_t>& characterRam() { return characterRam_; }
   [[nodiscard]] const std::array<std::uint8_t, NAMETABLE_SIZE>& nametable() const { return nametable_; }
@@ -197,6 +201,7 @@ class YuxingBoard final {
   std::vector<std::uint8_t> rom_;
   std::vector<std::uint8_t> programRam_;
   std::vector<std::uint8_t> mmc3WorkRam_;
+  std::vector<std::uint8_t> staticRam_;
   std::vector<std::uint8_t> characterRam_;
   std::array<std::uint8_t, NAMETABLE_SIZE> nametable_{};
 

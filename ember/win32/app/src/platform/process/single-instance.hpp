@@ -16,8 +16,12 @@
 
 #include <filesystem>
 #include <functional>
+#include <string>
 
 namespace ember::win32::platform {
+
+/** 后启动的进程通知已有实例时调用：参数是后启动进程的当前目录与完整命令行（含程序名）。 */
+using SecondInstanceHandler = std::function<void(const std::wstring& workingDirectory, const std::wstring& commandLine)>;
 
 /** 取单实例的结果。 */
 enum class SingleInstanceResult {
@@ -37,6 +41,11 @@ class SingleInstance {
    * @param onSecondInstance 别的进程启动并通知本进程时调用（在界面线程）：把窗口提到前面。
    */
   SingleInstance(std::filesystem::path userDataDirectory, std::function<void()> onSecondInstance);
+  /**
+   * @param userDataDirectory 用户数据目录。
+   * @param onSecondInstance 别的进程启动并通知本进程时调用（在界面线程），带上后启动进程的当前目录与命令行：把窗口提到前面，并按命令行里的卡带路径打开卡带。
+   */
+  SingleInstance(std::filesystem::path userDataDirectory, SecondInstanceHandler onSecondInstance);
   ~SingleInstance();
   SingleInstance(const SingleInstance&) = delete;
   SingleInstance& operator=(const SingleInstance&) = delete;
@@ -47,7 +56,7 @@ class SingleInstance {
  private:
   struct Impl;
   std::filesystem::path userDataDirectory_;
-  std::function<void()> onSecondInstance_;
+  SecondInstanceHandler onSecondInstance_;
   void* lockFile_{nullptr};
   void* window_{nullptr};
 

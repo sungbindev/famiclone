@@ -250,6 +250,7 @@ std::vector<hw::MemorySpace> YuxingMachine::memorySpaces() const {
       {"board.rom", "ROM（1024K，只读，不含 iNES 文件头）", YuxingBoard::ROM_SIZE, false},
       {"board.programRam", "程序 RAM（1024K，$6000 起与 $8000 起的窗口按页接到这里）", YuxingBoard::PROGRAM_RAM_SIZE, true},
       {"board.mmc3WorkRam", "MMC3 工作 RAM（8K，MMC3 模式且 reg5500 位 2 为 1 时接到 $6000 窗口）", YuxingBoard::MMC3_WORK_RAM_SIZE, true},
+      {"board.staticRam", "静态 RAM（32K，小容量型号的 reg5500 位 0-1 为 1-3 时接到 $6000 窗口）", YuxingBoard::STATIC_RAM_SIZE, true},
       {"board.characterRam", "字符 RAM（128K，按页接到图案区）", YuxingBoard::CHARACTER_RAM_SIZE, true},
       {"board.nametable", "名称表显存（2K）", YuxingBoard::NAMETABLE_SIZE, true},
       {"chip.oam", "PPU 的精灵属性存储（OAM）", OAM_SIZE, true},
@@ -280,6 +281,8 @@ void YuxingMachine::readMemory(std::string_view space, std::uint32_t address, st
     copyFrom(board_.programRam());
   } else if (space == "board.mmc3WorkRam") {
     copyFrom(board_.mmc3WorkRam());
+  } else if (space == "board.staticRam") {
+    copyFrom(board_.staticRam());
   } else if (space == "board.characterRam") {
     copyFrom(board_.characterRam());
   } else if (space == "board.nametable") {
@@ -322,6 +325,8 @@ void YuxingMachine::writeMemory(std::string_view space, std::uint32_t address, s
     copyTo(board_.programRam());
   } else if (space == "board.mmc3WorkRam") {
     copyTo(board_.mmc3WorkRam());
+  } else if (space == "board.staticRam") {
+    copyTo(board_.staticRam());
   } else if (space == "board.characterRam") {
     copyTo(board_.characterRam());
   } else if (space == "board.nametable") {
@@ -357,6 +362,8 @@ hw::AddressTarget YuxingMachine::resolve(std::string_view space, std::uint32_t a
         return {"ram", "board.programRam", where.offset, "程序 RAM"};
       case YuxingBoard::CpuLocation::Kind::Mmc3WorkRam:
         return {"ram", "board.mmc3WorkRam", where.offset, "MMC3 工作 RAM"};
+      case YuxingBoard::CpuLocation::Kind::StaticRam:
+        return {"ram", "board.staticRam", where.offset, "静态 RAM"};
       case YuxingBoard::CpuLocation::Kind::None:
         break;
     }

@@ -124,6 +124,7 @@ YuxingBoard::YuxingBoard(std::vector<std::uint8_t> rom, logic::hardware::FdcUpd7
       rom_(std::move(rom)),
       programRam_(PROGRAM_RAM_SIZE, 0),
       mmc3WorkRam_(MMC3_WORK_RAM_SIZE, 0),
+      staticRam_(STATIC_RAM_SIZE, 0),
       characterRam_(CHARACTER_RAM_SIZE, 0) {
   if (rom_.size() != ROM_SIZE) {
     throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "裕兴的 ROM 必须是 " + std::to_string(ROM_SIZE) + " 字节，收到 " + std::to_string(rom_.size()) + " 字节");
@@ -142,6 +143,7 @@ void YuxingBoard::reset(bool power) {
   if (power) {
     std::fill(programRam_.begin(), programRam_.end(), std::uint8_t{0});
     std::fill(mmc3WorkRam_.begin(), mmc3WorkRam_.end(), std::uint8_t{0});
+    std::fill(staticRam_.begin(), staticRam_.end(), std::uint8_t{0});
     std::fill(characterRam_.begin(), characterRam_.end(), std::uint8_t{0});
     nametable_.fill(0);
   }
@@ -187,8 +189,13 @@ void YuxingBoard::applyBanks() {
     setRomWindows(static_cast<std::size_t>(reg4800_ & 0x1FU) * 4U);
   }
   horizontalMirroring_ = (reg5500_ & 0x08U) != 0;
-  // $6000 窗口是程序 RAM 的 8K 页：位 0-1 与 $3C（先与程序 RAM 掩码相与）按位或。
+  // $6000 窗口：小容量型号（V8.x，程序 RAM 只有 128K）选择 1-3 接独立的静态 RAM，不占程序 RAM；
+  // 大容量型号是程序 RAM 的 8K 页：位 0-1 与 $3C 按位或。
   const unsigned workPage = reg5500_ & 0x03U;
+  if (workPage != 0 && programRamMask_ <= SMALL_MEMORY_MASKS.programRam) {
+    windows_[0] = Window{CpuLocation::Kind::StaticRam, workPage * WINDOW_SIZE};
+    return;
+  }
   windows_[0] = Window{CpuLocation::Kind::ProgramRam, (((DEFAULT_WORK_PAGE & programRamMask_) | workPage) % PROGRAM_RAM_PAGES) * WINDOW_SIZE};
 }
 
@@ -221,6 +228,8 @@ hw::BusRead YuxingBoard::readCpu(std::uint16_t address, bool sideEffects) {
       return hw::driveBus(programRam_[where.offset]);
     case CpuLocation::Kind::Mmc3WorkRam:
       return hw::driveBus(mmc3WorkRam_[where.offset]);
+    case CpuLocation::Kind::StaticRam:
+      return hw::driveBus(staticRam_[where.offset]);
     case CpuLocation::Kind::Register:
       if (isFloppyAlias(address)) return hw::driveBus(floppy_.readRegister(floppyAliasRegister(address), sideEffects));
       switch (address) {
@@ -347,6 +356,7 @@ void YuxingBoard::writeCpu(std::uint16_t address, std::uint8_t value) {
   const CpuLocation where = locate(address);
   if (where.kind == CpuLocation::Kind::ProgramRam) programRam_[where.offset] = value;
   else if (where.kind == CpuLocation::Kind::Mmc3WorkRam) mmc3WorkRam_[where.offset] = value;
+  else if (where.kind == CpuLocation::Kind::StaticRam) staticRam_[where.offset] = value;
 }
 
 // ---------------------------------------------------------------- PPU 侧

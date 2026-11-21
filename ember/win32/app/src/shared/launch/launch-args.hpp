@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：launch-args.hpp
- * 说明：命令行启动参数：卡带路径（--cartridge=路径）、调试服务的端口与令牌（--debug-port、--debug-token）、用户数据目录（--user-data-dir）、移动用户数据（--move-user-data=executable|profile 与 --wait-pid=进程号）、应用升级（--apply-update=目标程序路径，配 --wait-pid）。
+ * 说明：命令行启动参数：卡带路径（--cartridge=路径，或直接写路径，双击文件时系统这样传）、调试服务的端口与令牌（--debug-port、--debug-token）、用户数据目录（--user-data-dir）、移动用户数据（--move-user-data=executable|profile 与 --wait-pid=进程号）、应用升级（--apply-update=目标程序路径，配 --wait-pid）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19

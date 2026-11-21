@@ -67,6 +67,24 @@ bool isValidToken(const std::string& text) {
   return !text.empty() && text.size() <= kMaxTokenLength && std::all_of(text.begin(), text.end(), [](char c) { return c >= 0x21 && c <= 0x7e; });
 }
 
+/** 带值的参数名（“--名称 值”的写法里，值是下一个参数）。 */
+bool takesValue(const std::string& name) {
+  return name == kDebugPortName || name == kDebugTokenName || name == kUserDataName || name == kMoveUserDataName || name == kWaitPidName || name == kApplyUpdateName;
+}
+
+/** 直接写在命令行里的卡带路径（双击文件时系统这样传）：第一个不是选项也不是选项的值、扩展名是 .nes 的参数。 */
+std::optional<std::string> positionalCartridge(const std::vector<std::string>& arguments) {
+  for (std::size_t index = 0; index < arguments.size(); ++index) {
+    const std::string& argument = arguments[index];
+    if (argument.compare(0, 2, "--") == 0) {
+      if (argument.find('=') == std::string::npos && takesValue(argument)) ++index;
+      continue;
+    }
+    if (argument.size() <= kMaxPathLength && endsWithIgnoreCase(argument, kCartridgeExtension)) return argument;
+  }
+  return std::nullopt;
+}
+
 }  // namespace
 
 LaunchArguments parseLaunchArguments(const std::vector<std::string>& arguments) {
@@ -77,6 +95,7 @@ LaunchArguments parseLaunchArguments(const std::vector<std::string>& arguments) 
     if (endsWithIgnoreCase(path, kCartridgeExtension)) result.cartridgePath = path;
     break;
   }
+  if (!result.cartridgePath) result.cartridgePath = positionalCartridge(arguments);
   if (const auto text = argumentValue(arguments, kDebugPortName)) result.debugPort = parsePort(*text);
   if (const auto text = argumentValue(arguments, kDebugTokenName); text && isValidToken(*text)) result.debugToken = *text;
   if (const auto text = argumentValue(arguments, kUserDataName); text && !text->empty() && text->size() <= kMaxPathLength) result.userDataDirectory = *text;

@@ -156,6 +156,17 @@ api::MachinesRemoveRomResult MachineManager::removeRom(const api::MachinesRemove
   return api::MachinesRemoveRomResult{info(target)};
 }
 
+std::optional<contracts::runtime::MachineRom> MachineManager::currentRom(const std::string& machine) const {
+  const Entry& target = entry(machine);
+  const auto stored = target.needsRom ? storage_->find(target.id) : std::nullopt;
+  if (!stored) return std::nullopt;
+  contracts::runtime::MachineRom result;
+  result.rom = storage_->load(target.id);
+  checkRom(target, result.rom);
+  result.label = romLabel(shared::crc32(result.rom), stored->fileName);
+  return result;
+}
+
 api::MachinesBootResult MachineManager::boot(const api::MachinesBootParams& params) {
   const Entry& target = entry(params.machine);
   if (!target.needsRom) throw shared::CoreError(api::ERROR_CARTRIDGE_REQUIRED, target.name + " 开机必须有 NES 文件，请改用打开卡带");

@@ -14,6 +14,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,9 @@ class MachineManager final : public contracts::machines::MachineService {
   contracts::machines::MachinesSetRomsResult setRoms(const contracts::machines::MachinesSetRomsParams& params) override;
   contracts::machines::MachinesRemoveRomResult removeRom(const contracts::machines::MachinesRemoveRomParams& params) override;
   contracts::machines::MachinesBootResult boot(const contracts::machines::MachinesBootParams& params) override;
+
+  /** 机型当前设置的 ROM（供运行服务在通电与硬复位时换用新 ROM）；机型不需要 ROM 或还没有设置时为空。@throws shared::CoreError machines.romInvalid。 */
+  [[nodiscard]] std::optional<contracts::runtime::MachineRom> currentRom(const std::string& machine) const;
 
  private:
   /** 清单里的一个机型。 */

@@ -215,6 +215,22 @@ void SimulationRuntime::stopMachine() {
   running_ = false;
 }
 
+bool SimulationRuntime::refreshMachineRom() {
+  if (machine_ == nullptr || cartridge_ != nullptr || !machineRomSource_) return false;
+  auto latest = machineRomSource_(host_);
+  if (!latest || latest->rom == machineRom_) return false;
+  // 先装配好新的主机，失败时原主机不变。
+  auto machine = options_.machines->createWithRom(host_, latest->rom);
+  finishRun("interrupted");
+  machine_ = std::move(machine);
+  updateFramePeriod();
+  machine_->connectFamilyKeyboard(familyKeyboard_);
+  if (inputHook_ != nullptr) inputHook_->machineChanged();
+  machineRom_ = std::move(latest->rom);
+  romLabel_ = latest->label;
+  return true;
+}
+
 void SimulationRuntime::pushAudio() {
   if (options_.audio == nullptr) return;
   machine_->takeAudio(audioBuffer_);
@@ -374,6 +390,7 @@ std::optional<rt::CartridgeSummary> SimulationRuntime::cartridge() const {
 rt::RuntimeState SimulationRuntime::powerOn(bool resume) {
   return submit([this, resume] {
     if (machine_ == nullptr) throw shared::CoreError(rt::ERROR_NO_CARTRIDGE, "还没有装入卡带，无法上电");
+    refreshMachineRom();
     startMachine(resume);
     publishState("powerOn");
     publishSnapshot();
@@ -404,7 +421,8 @@ rt::RuntimeState SimulationRuntime::reset(rt::ResetKind kind) {
       maskFramesLeft_ = hideStartupFrames_.load(std::memory_order_relaxed) ? kStartupMaskFrames : 0;
     } else {
       const bool keepRunning = running();
-      stopMachine();
+      // 换了新主机时它还没有通电，不用断电。
+      if (!refreshMachineRom()) stopMachine();
       startMachine(keepRunning);
     }
     publishState("reset");
@@ -464,6 +482,7 @@ rt::CartridgeInsertionResult SimulationRuntime::insertCartridge(rt::CartridgeIns
     summary_ = summary;
     host_ = insertion.match.host;
     romLabel_.clear();
+    machineRom_.clear();
     running_ = false;
     failureReported_ = false;
     frame_ = 0;
@@ -488,6 +507,7 @@ rt::RuntimeState SimulationRuntime::bootMachine(rt::MachineBoot boot) {
     summary_.reset();
     host_ = boot.machine;
     romLabel_ = boot.romLabel;
+    machineRom_ = boot.rom;
     running_ = false;
     failureReported_ = false;
     frame_ = 0;
@@ -524,6 +544,7 @@ rt::RuntimeState SimulationRuntime::ejectCartridge() {
       summary_.reset();
       host_.clear();
       romLabel_.clear();
+      machineRom_.clear();
       running_ = false;
       frame_ = 0;
       failureReported_ = false;
@@ -545,6 +566,10 @@ void SimulationRuntime::sendInput(hw::InputEvent event) {
 
 void SimulationRuntime::setInputHook(std::shared_ptr<rt::InputHook> hook) {
   submit([this, hook = std::move(hook)] { inputHook_ = hook; });
+}
+
+void SimulationRuntime::setMachineRomSource(rt::MachineRomSource source) {
+  submit([this, source = std::move(source)]() mutable { machineRomSource_ = std::move(source); });
 }
 
 void SimulationRuntime::setFamilyKeyboard(bool connected) {

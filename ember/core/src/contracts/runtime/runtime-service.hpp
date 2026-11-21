@@ -72,6 +72,17 @@ struct MachineBoot {
   bool resume{true};
 };
 
+/** 整机机型当前设置的 ROM。 */
+struct MachineRom {
+  /** ROM 的内容（不含文件头）。 */
+  std::vector<std::uint8_t> rom;
+  /** 界面上显示的 ROM 版本。 */
+  std::string label;
+};
+
+/** 查询机型当前设置的 ROM；没有设置时返回空。只在模拟线程调用，不要在里面调用运行服务。 */
+using MachineRomSource = std::function<std::optional<MachineRom>(const std::string& machine)>;
+
 /** 一次授权运行（runtime.run）的结果。 */
 struct RunOutcome {
   /** 实际运行的帧数。 */
@@ -119,7 +130,7 @@ class RuntimeService {
   [[nodiscard]] virtual std::optional<CartridgeSummary> cartridge() const = 0;
 
   /**
-   * 上电：已通电时等同硬复位。
+   * 上电：已通电时等同硬复位；整机机型的 ROM 与设置里的不同时，按设置里的重新装配主机。
    * @param resume 上电后是否直接运行。
    * @throws shared::CoreError runtime.noCartridge。
    */
@@ -129,7 +140,7 @@ class RuntimeService {
   virtual RuntimeState powerOff() = 0;
 
   /**
-   * 复位。
+   * 复位；硬复位时整机机型的 ROM 与设置里的不同，按设置里的重新装配主机。
    * @throws shared::CoreError runtime.noCartridge；软复位时断电为 runtime.notPowered。
    */
   virtual RuntimeState reset(ResetKind kind) = 0;
@@ -174,6 +185,9 @@ class RuntimeService {
 
   /** 设置输入钩子（在核心启动时设置一次）；为空时输入直接交给主机。 */
   virtual void setInputHook(std::shared_ptr<InputHook> hook) = 0;
+
+  /** 设置机型 ROM 的来源（在核心启动时设置一次）；没有设置时通电与硬复位沿用开机时的 ROM。 */
+  virtual void setMachineRomSource(MachineRomSource source) = 0;
 
   /**
    * 设置是否给经典 FC 接上 Family BASIC 键盘：对当前主机立即生效，之后装配的每台主机也按它设置；没有扩展口的主机（学习机）不受影响。

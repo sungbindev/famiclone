@@ -24,6 +24,11 @@ namespace ember::bootstrap {
 void registerMachines(ModuleRegistry& registry) {
   auto storage = std::make_shared<infra::machines::DiskRomStorage>(registry.userDataPath / "roms");
   auto service = std::make_shared<logic::machines::MachineManager>(storage, registry.services.require<contracts::runtime::RuntimeService>(), registry.events);
+  // 运行服务只拿弱引用，避免与机型服务互相持有。
+  registry.services.require<contracts::runtime::RuntimeService>()->setMachineRomSource([weak = std::weak_ptr<logic::machines::MachineManager>(service)](const std::string& machine) -> std::optional<contracts::runtime::MachineRom> {
+    const auto manager = weak.lock();
+    return manager ? manager->currentRom(machine) : std::nullopt;
+  });
   registry.services.provide<contracts::machines::MachineService>(service);
   requests::machines::addMachineRequests(registry.requests, service);
 }

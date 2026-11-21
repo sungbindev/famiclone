@@ -91,6 +91,7 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void runOnSimulation(const std::function<void()>& action) override;
   void sendInput(contracts::hardware::InputEvent event) override;
   void setInputHook(std::shared_ptr<contracts::runtime::InputHook> hook) override;
+  void setMachineRomSource(contracts::runtime::MachineRomSource source) override;
   void setFamilyKeyboard(bool connected) override;
   void setHideStartupFrames(bool hide) override;
   void setFrameEventInterval(std::uint32_t frames) override;
@@ -131,6 +132,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   [[nodiscard]] contracts::runtime::RuntimeState state() const;
   void startMachine(bool resume);
   void stopMachine();
+  /** 整机机型（没有卡带）的 ROM 与设置里的不同时，换成按新 ROM 装配的主机（不通电）；换了返回 true；读不到新 ROM 时抛出，原主机不变。 */
+  bool refreshMachineRom();
   void publishState(const char* reason);
   void publishSnapshot();
   /** 机器现在是否带鼠标：主机自带，或卡带的 mapper 插件声明了 mouse 外设；没有主机时为 false。 */
@@ -181,6 +184,10 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   std::string host_;
   /** 整机机型开机所用 ROM 的版本；装入卡带、取出时清空。 */
   std::string romLabel_;
+  /** 整机机型开机所用 ROM 的内容，用来判断设置里的 ROM 是否换过；装入卡带、取出时清空。 */
+  std::vector<std::uint8_t> machineRom_;
+  /** 机型 ROM 的来源；只在模拟线程访问。 */
+  contracts::runtime::MachineRomSource machineRomSource_;
   /** 最近一次发布的快照里机器是否带鼠标，用来发现运行中的变化（如学习机进入 FC 兼容模式）。 */
   bool mouse_{false};
   bool running_{false};

@@ -67,7 +67,13 @@ PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
       apu_(cpuBus_, scheduler_, irq_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, MASTER_CLOCK_HZ / static_cast<double>(CPU_TICKS_PER_CYCLE)),
-      ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, PPU_PHASE_TICKS),
+      // 精灵取色是否后移由主板决定；回调只在渲染时调用，那时主板已经建好。
+      ppu_(scheduler_, ppuBus_, nmi_, hw::ClockDomain{PPU_TICKS_PER_DOT}, PPU_PHASE_TICKS,
+           [this] {
+             logic::hardware::Ppu2c02::Options options{logic::hardware::Ppu2c02::SCANLINES_PER_FRAME, true};
+             options.spritePaletteShifted = [this] { return board_.textMode(); };
+             return options;
+           }()),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       padApuPort_(pad_, apu_),

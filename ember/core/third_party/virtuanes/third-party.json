@@ -1,0 +1,13 @@
+{
+  "name": "VirtuaNES",
+  "version": "",
+  "authors": [
+    "Norix",
+    "钳工",
+    "惊风"
+  ],
+  "license": "GPL-2.0",
+  "licenseFile": "LICENSE",
+  "homepage": "无公开主页",
+  "usage": "二次开发版模拟器的寄存器与窗口规则来源；源码随附的说明写明按 GPL-2.0 发布，本目录只放许可全文，不含该项目的源码"
+}

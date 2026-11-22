@@ -542,7 +542,7 @@ void expectMarioRunsUnderSbDos(const std::filesystem::path& imagePath, const std
   std::vector<std::uint8_t> disk = realFloppy(imagePath);
   const std::vector<std::uint8_t> game = realFloppy(std::filesystem::path(u8"reference/nes-games/超级马里奥兄弟(日美).nes"));
   const std::string dump = dumpPath();
-  if (bios.empty() || disk.empty() || game.empty()) GTEST_SKIP() << "没有找到 BIOS、" << imagePath.string() << "（用 fcdev disk 生成）或 reference/nes-games 里的超级马里奥兄弟";
+  if (bios.empty() || disk.empty() || game.empty()) GTEST_SKIP() << "没有找到 BIOS、" << imagePath.string() << "（用 fcdev 扩展的“构建磁盘镜像”生成）或 reference/nes-games 里的超级马里奥兄弟";
   ASSERT_TRUE(addRootFile(disk, "MARIO   NES", game));
   Sb2000Machine machine(std::move(bios));
   machine.floppyDrive(0)->insertImage(std::move(disk), false, "game.img");

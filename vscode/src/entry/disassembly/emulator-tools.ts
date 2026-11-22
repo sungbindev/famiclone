@@ -10,9 +10,12 @@
 // ------------------------------------------------------------------------
 
 import type { ToolInput, ToolSpec } from '../../contracts/disassembly/tool-spec';
+import { DEFAULT_DEBUG_PORT } from '../../contracts/emulator/emulator-settings';
 
-/** 默认的调试端口，与 fcdev 的 DEFAULT_DEBUG_PORT 一致，只用于显示。 */
-const DEFAULT_PORT = 5699;
+/** 端口的显示：给了就显示它，否则说明用设置里的调试端口。 */
+function portText(input: ToolInput): string {
+  return input.port === undefined ? `设置里的调试端口，默认 ${DEFAULT_DEBUG_PORT}` : String(input.port);
+}
 
 /** 写模拟器状态的 emu_inspect 项。 */
 const WRITING_INSPECTIONS: readonly unknown[] = ['write', 'setState'];
@@ -24,16 +27,14 @@ function simple(name: string, operation: string, describe: (input: ToolInput) =>
 
 /** “模拟器”一组工具。 */
 export const EMULATOR_TOOLS: readonly ToolSpec[] = [
-  simple('emu_connect', 'connect', (input) => `连接 Ember（端口 ${String(input.port ?? DEFAULT_PORT)}）`),
+  simple('emu_connect', 'connect', (input) => `连接 Ember（端口 ${portText(input)}）`),
   {
     name: 'emu_launch',
     operation: 'launch',
     target: 'emulator',
     writes: true,
-    paths: ['executable'],
-    outsideAllowed: ['executable'],
-    describe: (input) => `启动 Ember（端口 ${String(input.port ?? DEFAULT_PORT)}）`,
-    confirm: (input) => `将启动 Ember（调试模式，端口 ${String(input.port ?? DEFAULT_PORT)}，独立的用户数据目录），不载入任何东西；关闭会话或停用扩展时会结束它。`
+    describe: (input) => `启动 Ember（端口 ${portText(input)}）`,
+    confirm: (input) => `将启动设置 fcdev.emulator.path 里的 Ember（调试模式，端口 ${portText(input)}，独立的用户数据目录），不载入任何东西；关闭会话或停用扩展时会结束它。`
   },
   simple('emu_status', 'status', (input) => (input.close === true ? '关闭模拟器会话' : '查看模拟器状态')),
   {

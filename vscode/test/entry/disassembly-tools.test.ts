@@ -11,9 +11,10 @@
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BuildComparison } from '../../src/contracts/disassembly/build-comparer';
+import { EMULATOR_API_VERSION, EMULATOR_OPERATION_NAMES } from '../../src/logic/emulator/core-emulator-operations';
+import { OPERATION_NAMES } from '../../src/logic/disassembly/operations/index';
 import { UserFacingError } from '../../src/shared/errors/user-facing-error';
 import { enableDataPart, mockState, resetMock } from '../support/vscode-mock';
 
@@ -38,12 +39,13 @@ function registered(name: string): RegisteredTool {
 }
 
 /** 注册后按名字取工具。 */
-function setup(overrides: { run?: (start: string, operation: string, params: Record<string, unknown>) => Promise<unknown>; emulate?: (start: string, operation: string, params: Record<string, unknown>) => Promise<unknown>; build?: () => Promise<BuildComparison> } = {}) {
+function setup(overrides: { run?: (operation: string, params: Record<string, unknown>) => Promise<unknown>; emulate?: (operation: string, params: Record<string, unknown>) => Promise<Record<string, unknown>>; build?: () => Promise<BuildComparison> } = {}) {
   const runner = { run: vi.fn(overrides.run ?? (async () => ({ ok: true }))) };
-  const emulator = { run: vi.fn(overrides.emulate ?? (async () => ({ ok: true }))), shutdown: vi.fn(async () => {}) };
+  const operations = { operationNames: OPERATION_NAMES, run: runner.run, disassemble: vi.fn() };
+  const emulator = { operationNames: EMULATOR_OPERATION_NAMES, run: vi.fn(overrides.emulate ?? (async () => ({ ok: true }))), shutdown: vi.fn(async () => {}) };
   const comparer = { buildAndCompare: vi.fn(overrides.build ?? (async () => ({ identical: true, builtFile: 'a', builtSize: 1, imageSize: 1, firstDifference: null }))) };
   const context = { subscriptions: [] as unknown[], extension: { packageJSON: MANIFEST } };
-  registerDisassemblyTools(context as never, { runner, emulator, comparer, logger });
+  registerDisassemblyTools(context as never, { operations: operations as never, emulator, comparer, logger });
   return { runner, emulator, comparer, tool: registered, context };
 }
 
@@ -56,7 +58,7 @@ beforeEach(() => {
 describe('注册', () => {
   it('代码里的 30 个工具都在 package.json 里声明并注册，没有多余的声明', () => {
     const { context } = setup();
-    const declared = MANIFEST.contributes.languageModelTools.map((tool) => tool.name);
+    const declared = MANIFEST.contributes.languageModelTools.map((tool) => tool.name).filter((name) => !name.startsWith('fcdev_'));
     expect(new Set(ALL_TOOLS.map((spec) => spec.name))).toEqual(new Set(declared));
     expect(new Set(mockState.tools.keys())).toEqual(new Set(declared));
     expect(declared).toHaveLength(30);
@@ -77,25 +79,21 @@ describe('注册', () => {
     }
   });
 
-  it('代码里每个工具用到的操作，都是仓库里 fcdev 提供的操作（构建比较除外）', async () => {
-    const packages = path.resolve(__dirname, '..', '..', '..', 'packages', 'fcdev', 'src');
-    const disasm = (await import(pathToFileURL(path.join(packages, 'disasm', 'index.mjs')).href)) as { OPERATION_NAMES: string[]; API_VERSION: number };
-    const emulator = (await import(pathToFileURL(path.join(packages, 'emulator', 'index.mjs')).href)) as { EMULATOR_OPERATION_NAMES: string[]; EMULATOR_API_VERSION: number };
+  it('代码里每个工具用到的操作，都是扩展提供的操作（构建比较除外）', () => {
     const operations = DISASSEMBLY_TOOLS.map((spec) => spec.operation).filter((operation) => operation !== 'build');
-    expect(new Set(operations)).toEqual(new Set(disasm.OPERATION_NAMES));
-    expect(operations).toHaveLength(disasm.OPERATION_NAMES.length);
-    expect(disasm.API_VERSION).toBe(1);
+    expect(new Set(operations)).toEqual(new Set(OPERATION_NAMES));
+    expect(operations).toHaveLength(OPERATION_NAMES.length);
     const emulated = ALL_TOOLS.filter((spec) => spec.target === 'emulator').map((spec) => spec.operation);
-    expect(new Set(emulated)).toEqual(new Set(emulator.EMULATOR_OPERATION_NAMES));
-    expect(emulated).toHaveLength(emulator.EMULATOR_OPERATION_NAMES.length);
-    expect(emulator.EMULATOR_API_VERSION).toBe(1);
+    expect(new Set(emulated)).toEqual(new Set(EMULATOR_OPERATION_NAMES));
+    expect(emulated).toHaveLength(EMULATOR_OPERATION_NAMES.length);
+    expect(EMULATOR_API_VERSION).toBe(1);
   });
 
   it('package.json 里没有声明的工具不注册，并记日志', () => {
     const runner = { run: vi.fn() };
-    const emulator = { run: vi.fn(), shutdown: vi.fn() };
+    const emulator = { operationNames: [], run: vi.fn(), shutdown: vi.fn() };
     const context = { subscriptions: [] as unknown[], extension: { packageJSON: { contributes: { languageModelTools: [] } } } };
-    registerDisassemblyTools(context as never, { runner, emulator, comparer: { buildAndCompare: vi.fn() }, logger });
+    registerDisassemblyTools(context as never, { operations: { operationNames: [], run: runner.run, disassemble: vi.fn() } as never, emulator, comparer: { buildAndCompare: vi.fn() }, logger });
     expect(mockState.tools.size).toBe(0);
     expect(logger.error).toHaveBeenCalledTimes(30);
   });
@@ -105,7 +103,7 @@ describe('调用', () => {
   it('只读工具：相对路径按第一个工作区文件夹解析，结果整理成文字', async () => {
     const { runner, tool } = setup({ run: async () => ({ total: 1, text: 'sub_C000:\n  rts' }) });
     const result = await tool('disasm_view').invoke({ input: { projectDir: 'proj', routine: 'sub_C000' } });
-    expect(runner.run).toHaveBeenCalledWith(PROJECT, 'view', { projectDir: PROJECT, routine: 'sub_C000' });
+    expect(runner.run).toHaveBeenCalledWith('view', { projectDir: PROJECT, routine: 'sub_C000' });
     expect(result.content[0]?.value).toBe('{\n  "total": 1\n}\n\nsub_C000:\n  rts');
   });
 
@@ -126,7 +124,7 @@ describe('调用', () => {
     expect(runner.run).not.toHaveBeenCalled();
     const outsideImage = path.resolve(WORKSPACE, '..', 'game.nes');
     await tool('disasm_open').invoke({ input: { projectDir: 'proj', image: outsideImage } });
-    expect(runner.run).toHaveBeenCalledWith(PROJECT, 'open', { projectDir: PROJECT, image: outsideImage });
+    expect(runner.run).toHaveBeenCalledWith('open', { projectDir: PROJECT, image: outsideImage });
   });
 
   it('没有打开工作区文件夹时说明原因', async () => {
@@ -138,11 +136,11 @@ describe('调用', () => {
   it('符号集数组里的每个路径都换成绝对路径；disasm_reference 不给 projectDir 时从工作区根找 fcdev', async () => {
     const { runner, tool } = setup();
     await tool('disasm_open').invoke({ input: { projectDir: 'proj', image: 'game.bin', symbolSets: ['a.inc', 'sub/b.inc'] } });
-    expect(runner.run).toHaveBeenCalledWith(PROJECT, 'open', {
+    expect(runner.run).toHaveBeenCalledWith('open', {
       projectDir: PROJECT, image: path.join(WORKSPACE, 'game.bin'), symbolSets: [path.join(WORKSPACE, 'a.inc'), path.join(WORKSPACE, 'sub', 'b.inc')]
     });
     await tool('disasm_reference').invoke({ input: { query: 'lda' } });
-    expect(runner.run).toHaveBeenLastCalledWith(WORKSPACE, 'reference', { query: 'lda' });
+    expect(runner.run).toHaveBeenLastCalledWith('reference', { query: 'lda' });
   });
 
   it('可预期的错误作为结果文字返回；其他错误记日志并给通用说明', async () => {
@@ -225,15 +223,15 @@ describe('确认提示', () => {
     const prepared = tool('disasm_import_record').prepareInvocation({ input: { projectDir: 'proj', kind: 'cdl', file: record } });
     expect(prepared.confirmationMessages?.message.value).toContain(record);
     await tool('disasm_import_record').invoke({ input: { projectDir: 'proj', kind: 'cdl', file: record } });
-    expect(runner.run).toHaveBeenCalledWith(PROJECT, 'importRecord', { projectDir: PROJECT, kind: 'cdl', file: record });
+    expect(runner.run).toHaveBeenCalledWith('importRecord', { projectDir: PROJECT, kind: 'cdl', file: record });
   });
 });
 
 describe('模拟器工具', () => {
-  it('经模拟器运行器调用，不走反汇编运行器；没有 projectDir 时从工作区根找 fcdev', async () => {
+  it('经模拟器操作调用，不走反汇编操作；不需要 projectDir', async () => {
     const { runner, emulator, tool } = setup({ emulate: async () => ({ stopped: 'completed', frames: 60 }) });
     const result = await tool('emu_run').invoke({ input: { frames: 60 } });
-    expect(emulator.run).toHaveBeenCalledWith(WORKSPACE, 'run', { frames: 60 });
+    expect(emulator.run).toHaveBeenCalledWith('run', { frames: 60 });
     expect(runner.run).not.toHaveBeenCalled();
     expect(result.content[0]?.value).toContain('"stopped": "completed"');
   });
@@ -256,15 +254,15 @@ describe('模拟器工具', () => {
     expect(prepared.confirmationMessages?.message.value).toContain(outside);
     expect(tool('emu_load').prepareInvocation({ input: { file: 'game.nes' } }).confirmationMessages).toBeUndefined();
     await tool('emu_load').invoke({ input: { file: 'game.nes' } });
-    expect(emulator.run).toHaveBeenCalledWith(WORKSPACE, 'load', { file: path.join(WORKSPACE, 'game.nes') });
+    expect(emulator.run).toHaveBeenCalledWith('load', { file: path.join(WORKSPACE, 'game.nes') });
   });
 
-  it('目标描述：内置名字原样传给 fcdev，路径换成绝对路径，在工作区之外时要确认', async () => {
+  it('目标描述：内置名字原样传给操作，路径换成绝对路径，在工作区之外时要确认', async () => {
     const { runner, emulator, tool } = setup();
     await tool('emu_load').invoke({ input: { target: 'nes', file: 'game.nes' } });
-    expect(emulator.run).toHaveBeenLastCalledWith(WORKSPACE, 'load', { target: 'nes', file: path.join(WORKSPACE, 'game.nes') });
+    expect(emulator.run).toHaveBeenLastCalledWith('load', { target: 'nes', file: path.join(WORKSPACE, 'game.nes') });
     await tool('disasm_open').invoke({ input: { projectDir: 'proj', image: 'game.nes', target: 'profiles/my.json', input: 'rom' } });
-    expect(runner.run).toHaveBeenLastCalledWith(PROJECT, 'open', { projectDir: PROJECT, image: path.join(WORKSPACE, 'game.nes'), target: path.join(WORKSPACE, 'profiles', 'my.json'), input: 'rom' });
+    expect(runner.run).toHaveBeenLastCalledWith('open', { projectDir: PROJECT, image: path.join(WORKSPACE, 'game.nes'), target: path.join(WORKSPACE, 'profiles', 'my.json'), input: 'rom' });
     expect(tool('emu_load').prepareInvocation({ input: { target: 'sb2000', firmware: 'bios.bin' } }).confirmationMessages).toBeUndefined();
     const outside = path.resolve(WORKSPACE, '..', 'shared', 'profile.json');
     expect(tool('emu_load').prepareInvocation({ input: { target: outside, file: 'a.nes' } }).confirmationMessages?.message.value).toContain(outside);

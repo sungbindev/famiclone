@@ -5,19 +5,19 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
 // 备注：用法 node tools/gen-sb2000-api-doc.mjs；改了头文件注释或 api-unwrapped.json 后重新运行；test/sb2000-api.test.mjs 核对入库的文档与生成结果一致。
-//       文档来源只有头文件注释（fcdev api 命令读的也是同一份），所以这里不手写任何函数说明。
+//       文档来源只有头文件注释（命令“fcdev：查询 C 接口”读的也是同一份），所以这里不手写任何函数说明。
 // ------------------------------------------------------------------------
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { groupByModule } from '../packages/fcdev/src/api/index.mjs';
+import { groupByModule } from '../vscode/out/shared/c-api/api-functions.js';
 import { coverageOf, KNOWN_FUNCTIONS, readFunctions, readUnwrapped } from './check-sb2000-api.mjs';
 
 /** 仓库根目录 */
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** SB2000 目标目录 */
-const TARGET_DIR = path.join(REPO_ROOT, 'packages', 'fcdev', 'targets', 'sb2000');
+const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');
 
 /** 生成的文档路径 */
 export const API_DOC_FILE = path.join(TARGET_DIR, 'api-reference.md');
@@ -42,7 +42,7 @@ export function renderApiReference(targetDir = TARGET_DIR) {
     '# SB2000 C 接口参考',
     '',
     '本文由运行库头文件 `sb2000-*.h` 的文档注释生成。',
-    `共 ${functions.length} 个函数，${groups.size} 个模块。随时查询用 \`npx fcdev api\`：\`npx fcdev api <函数名>\` 看完整文档，\`npx fcdev api <模块名>\` 看模块的函数列表，\`npx fcdev api '$7B'\` 看用到某个系统调用的函数，\`npx fcdev api <词>\` 按名称与说明搜索。`,
+    `共 ${functions.length} 个函数，${groups.length} 个模块。随时查询用命令“fcdev：查询 C 接口”（或 Copilot 工具 \`fcdev_api\`）：输入函数名看完整文档，输入模块名看模块的函数列表，输入 \`$7B\` 看用到某个系统调用的函数，输入其他词按名称与说明搜索。`,
     '',
     '约定：',
     '',
@@ -54,10 +54,10 @@ export function renderApiReference(targetDir = TARGET_DIR) {
     '## 目录',
     '',
   ];
-  for (const [module, items] of groups) lines.push(`- [${MODULE_TITLES[module] ?? module}（${items[0].header}）](#${module})`);
+  for (const { name: module, functions: items } of groups) lines.push(`- [${MODULE_TITLES[module] ?? module}（${items[0].header}）](#${module})`);
   lines.push('- [系统调用覆盖表](#系统调用覆盖表)', '');
 
-  for (const [module, items] of groups) {
+  for (const { name: module, functions: items } of groups) {
     lines.push(`<a id="${module}"></a>`, `## ${MODULE_TITLES[module] ?? module}（${items[0].header}）`, '');
     lines.push('| 函数 | 说明 | 系统调用 |', '| --- | --- | --- |');
     for (const fn of items) lines.push(`| [\`${fn.name}\`](#${fn.name}) | ${fn.summary.replace(/\|/g, '\\|')} | ${fn.syscalls.join('；').replace(/\|/g, '\\|')} |`);

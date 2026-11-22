@@ -12,7 +12,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseHeaderFunctions, syscallMatches } from '../packages/fcdev/src/api/index.mjs';
+import { parseHeaderFunctions, syscallMatches } from '../vscode/out/shared/c-api/api-functions.js';
 
 export { parseHeaderFunctions };
 
@@ -20,7 +20,7 @@ export { parseHeaderFunctions };
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** SB2000 目标目录 */
-const TARGET_DIR = path.join(REPO_ROOT, 'packages', 'fcdev', 'targets', 'sb2000');
+const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');
 
 /** 不检查函数声明的头文件 */
 const SKIPPED_HEADERS = new Set(['sb2000-symbols.h']);
@@ -81,7 +81,7 @@ export function collectDefinitions(targetDir) {
 /**
  * 读出全部带文档注释的函数。
  * @param {string} targetDir 目标目录
- * @returns {import('../packages/fcdev/src/api/header-parser.mjs').ApiFunction[]} 函数列表
+ * @returns {import('../vscode/out/shared/c-api/api-functions.js').ApiFunction[]} 函数列表
  */
 export function readFunctions(targetDir = TARGET_DIR) {
   const includeDir = path.join(targetDir, 'include');
@@ -101,7 +101,7 @@ export function readUnwrapped(targetDir = TARGET_DIR) {
 
 /**
  * 每个已知功能号被哪些函数涉及。
- * @param {import('../packages/fcdev/src/api/header-parser.mjs').ApiFunction[]} functions 函数列表
+ * @param {import('../vscode/out/shared/c-api/api-functions.js').ApiFunction[]} functions 函数列表
  * @returns {Map<string, string[]>} 功能号（两位大写十六进制）到函数名
  */
 export function coverageOf(functions) {
@@ -115,7 +115,7 @@ export function coverageOf(functions) {
 /**
  * 检查接口：文档完整、有且只有一处实现、没有多余的公开函数、系统调用覆盖有交代。
  * @param {string} [targetDir] 目标目录
- * @returns {{problems: string[], functions: import('../packages/fcdev/src/api/header-parser.mjs').ApiFunction[]}} 问题列表与全部函数
+ * @returns {{problems: string[], functions: import('../vscode/out/shared/c-api/api-functions.js').ApiFunction[]}} 问题列表与全部函数
  */
 export function checkSb2000Api(targetDir = TARGET_DIR) {
   const problems = [];

@@ -12,12 +12,11 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { locateEmulator } from '../../../../../packages/fcdev/src/emulator/index.mjs';
+import { fileURLToPath } from 'node:url';
+import { connectToEmber, emberExecutable } from '../../../../../tools/lib/extension.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..', '..', '..', '..');
-const SDK = pathToFileURL(join(REPO, 'packages', 'fcdev', 'dist', 'debug', 'node.js')).href;
 export const ROM = join(REPO, 'reference', 'nes-games', 'Family BASIC (Japan) (v3.0).nes');
 
 /** 每个字符对应的物理键位与是否按住 Shift（Family BASIC 键盘按 JIS 键位）。 */
@@ -48,17 +47,16 @@ export function keyFor(char) {
 
 /**
  * 启动 Ember 并连上调试服务。
- * @param {{port?: number, executable?: string}} options 调试端口与 Ember 可执行文件（不给时按 fcdev 的规则定位）
+ * @param {{port?: number, executable?: string}} options 调试端口与 Ember 可执行文件（不给时取环境变量 EMBER_EXE）
  * @returns {Promise<{client: object, pid: number, close: () => void}>} 客户端、进程号与关闭函数
  * @throws {Error} 启动失败或连不上
  */
-export async function startEmber({ port = 5721, executable = locateEmulator().executable } = {}) {
+export async function startEmber({ port = 5721, executable = emberExecutable() } = {}) {
   const userDataDirectory = join(tmpdir(), 'fbasic-ember', String(port));
   mkdirSync(userDataDirectory, { recursive: true });
   rmSync(join(userDataDirectory, 'run', 'debug-endpoint.json'), { force: true });
   const token = randomBytes(16).toString('hex');
   const child = spawn(executable, [`--user-data-dir=${userDataDirectory}`, `--debug-port=${port}`, `--debug-token=${token}`], { stdio: 'ignore', detached: true });
-  const { connectToEmber } = await import(SDK);
   let exited = false;
   child.on('exit', () => { exited = true; });
   const deadline = Date.now() + 30000;

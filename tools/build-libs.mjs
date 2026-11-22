@@ -4,16 +4,41 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用法 node tools/build-libs.mjs [目标名…]；需要 cc65 工具链（FCDEV_CC65_HOME 或工具链包）。发布前由 prepack 调用，测试前由 pretest 调用。
+// 备注：用法 node tools/build-libs.mjs [目标名…]；需要先构建扩展（vscode 里 npm run build）并组装工具链（npm run build:toolchain）。
+//       引用 vscode/out 里编译好的模块；运行库生成在 vscode/targets/<目标>/lib。
 //       lib-build.json 字段：libraries（库路径到源文件列表）、objects（目标文件路径到源文件）、binIncludeDirs（.incbin 的搜索目录）。
 //       源文件列表里以“/”结尾的项是目录，递归收录其中全部 .c 与 .s 文件；.c 先用 cc65 编成汇编再汇编。库里每个源文件是一个目标文件，链接时只带用到的。
 // ------------------------------------------------------------------------
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FcdevError } from '../packages/fcdev/src/shared/index.mjs';
-import { listTargetNames, loadTarget, resolveTargetPath } from '../packages/fcdev/src/targets/index.mjs';
-import { locateToolchain, runTool } from '../packages/fcdev/src/toolchain/index.mjs';
+import { FcdevError } from '../vscode/out/shared/errors/fcdev-error.js';
+import { NodeFileSystem } from '../vscode/out/infra/files/node-file-system.js';
+import { createExtensionResources } from '../vscode/out/infra/resources/extension-resources-factory.js';
+import { BundledToolchainLocator } from '../vscode/out/infra/toolchain/bundled-toolchain-locator.js';
+import { ProcessToolRunner } from '../vscode/out/infra/toolchain/process-tool-runner.js';
+import { FileTargetRepository } from '../vscode/out/logic/targets/file-target-repository.js';
+import { resolveTargetPath } from '../vscode/out/shared/targets/target-settings.js';
+
+/** 扩展目录 */
+const EXTENSION_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'vscode');
+
+/** 扩展自带资源的位置、目标仓库与工具运行 */
+const resources = createExtensionResources(EXTENSION_DIRECTORY);
+const fileSystem = new NodeFileSystem();
+const targetRepository = new FileTargetRepository(fileSystem, resources);
+const toolRunner = new ProcessToolRunner();
+
+/**
+ * 运行工具链里的一个工具。
+ * @param {{home: string}} toolchain 工具链
+ * @param {string} tool 工具名
+ * @param {string[]} args 参数
+ * @returns {Promise<{code: number, stdout: string, stderr: string}>} 运行结果
+ */
+function runTool(toolchain, tool, args) {
+  return toolRunner.run(toolchain, tool, args);
+}
 
 /**
  * 展开库的源文件列表：以“/”结尾的项按目录递归收录 .c 与 .s 文件。
@@ -39,8 +64,8 @@ function expandSources(targetDir, entries) {
 
 /**
  * 编译一个 C 源文件：cc65 编成汇编，再汇编成目标文件。
- * @param {import('../packages/fcdev/src/toolchain/index.mjs').Toolchain} toolchain 工具链
- * @param {import('../packages/fcdev/src/targets/index.mjs').Target} target 目标
+ * @param {{home: string}} toolchain 工具链
+ * @param {ReturnType<typeof targetRepository.load>} target 目标
  * @param {{binIncludeDirs?: string[]}} spec lib-build.json 的内容
  * @param {string} source 源文件
  * @param {string} output 目标文件
@@ -71,8 +96,8 @@ async function compileC(toolchain, target, spec, source, output) {
 
 /**
  * 汇编一个源文件。
- * @param {import('../packages/fcdev/src/toolchain/index.mjs').Toolchain} toolchain 工具链
- * @param {import('../packages/fcdev/src/targets/index.mjs').Target} target 目标
+ * @param {{home: string}} toolchain 工具链
+ * @param {ReturnType<typeof targetRepository.load>} target 目标
  * @param {{binIncludeDirs?: string[]}} spec lib-build.json 的内容
  * @param {string} source 源文件
  * @param {string} output 目标文件
@@ -96,8 +121,8 @@ async function assemble(toolchain, target, spec, source, output) {
 
 /**
  * 编译一个目标的运行库。
- * @param {import('../packages/fcdev/src/toolchain/index.mjs').Toolchain} toolchain 工具链
- * @param {import('../packages/fcdev/src/targets/index.mjs').Target} target 目标
+ * @param {{home: string}} toolchain 工具链
+ * @param {ReturnType<typeof targetRepository.load>} target 目标
  * @returns {Promise<string[]>} 生成的文件（相对目标目录）；目标没有 lib-build.json 时为空
  */
 export async function buildTargetLibraries(toolchain, target) {
@@ -137,10 +162,10 @@ export async function buildTargetLibraries(toolchain, target) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const toolchain = locateToolchain();
-    const names = process.argv.length > 2 ? process.argv.slice(2) : listTargetNames();
+    const toolchain = new BundledToolchainLocator(fileSystem, resources).locate();
+    const names = process.argv.length > 2 ? process.argv.slice(2) : targetRepository.listNames();
     for (const name of names) {
-      const produced = await buildTargetLibraries(toolchain, loadTarget(name));
+      const produced = await buildTargetLibraries(toolchain, targetRepository.load(name));
       console.log(`${name}：${produced.length > 0 ? produced.join('、') : '没有需要编译的库'}`);
     }
   } catch (error) {

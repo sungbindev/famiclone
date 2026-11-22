@@ -18,7 +18,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 export const EXAMPLES_DIR = path.join(REPO_ROOT, 'apps', 'sb2000', 'examples');
 
 /** 生成的文档路径 */
-export const EXAMPLES_DOC_FILE = path.join(REPO_ROOT, 'packages', 'fcdev', 'targets', 'sb2000', 'examples-source.md');
+export const EXAMPLES_DOC_FILE = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000', 'examples-source.md');
 
 /** 文档里示例的顺序：由简到繁 */
 const EXAMPLE_ORDER = ['hello', 'say', 'show', 'copy', 'peek', 'poke', 'pad', 'mouse', 'play', 'newcall', 'syscall'];
@@ -72,7 +72,7 @@ export function renderExamplesSource(examplesDir = EXAMPLES_DIR) {
     '本文由示例项目的源码生成。',
     `共 ${examples.length} 个示例，每个是一个 fcdev 项目：目录里有 \`fcdev.json\`（\`target\` 是 \`sb2000\`，\`name\` 是 DOS 里的程序名）和 \`src/\` 下的一个源文件，下面给出完整源码。每个示例做什么、怎么用见 [SB2000 开发指南](../../docs/sb2000/01-开发指南.md) 第 10 节，源码开头的注释也有说明。`,
     '',
-    '把源码放进新建的项目后，`npx fcdev build` 构建，`npx fcdev disk` 另外生成放有程序的软盘镜像，`npx fcdev run` 在 Ember 里运行，见 [命令行与构建](../../docs/01-命令行与构建.md) 与 [模拟器与调试](../../docs/02-模拟器与调试.md)。',
+    '把源码放进新建的项目后，用 fcdev 任务构建（`command` 为 `build`）、另外生成放有程序的软盘镜像（`disk`）、在 Ember 里运行（`run`），见 [构建](../../docs/01-构建.md) 与 [模拟器与调试](../../docs/02-模拟器与调试.md)。',
     '',
     '## 目录',
     '',

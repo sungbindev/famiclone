@@ -23,4 +23,4 @@ cd machines/sb2000/bios      # 在仓库根目录运行
 npm run build                # 构建 BIOS 并与原始 ROM 逐字节比对
 ```
 
-应用开发用的 fcdev、系统调用手册与示例在仓库根目录的 [packages/fcdev/](../../packages/fcdev/) 与 [apps/sb2000/examples/](../../apps/sb2000/examples/)。
+应用开发用的 fcdev、系统调用手册与示例在仓库根目录的 [vscode/](../../vscode/)（fcdev 扩展）与 [apps/sb2000/examples/](../../apps/sb2000/examples/)。

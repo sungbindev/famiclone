@@ -13,7 +13,7 @@ npm run build    # 生成 build/sb2000/FCPROBE.EXE
 npm run disk     # 生成含 FCPROBE.EXE 的软盘镜像 build/sb2000/FCPROBE.img
 ```
 
-读出测试结果（在仓库里 `machines/bbg` 目录下运行，用 Ember 启动学习机并经调试服务读内存；Ember 的定位规则见 `packages/fcdev/docs/02-模拟器与调试.md`）：
+读出测试结果（在仓库里 `machines/bbg` 目录下运行，用 Ember 启动学习机并经调试服务读内存；Ember 的位置取环境变量 `EMBER_EXE`）：
 
 ```bash
 node tools/probe-fc.mjs

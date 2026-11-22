@@ -18,8 +18,6 @@ export interface ResolvedToolInput {
   readonly params: ToolInput;
   /** 工作区之外的路径（只有 outsideAllowed 里的参数才可能出现）。 */
   readonly outside: readonly string[];
-  /** 查找 fcdev 的起点目录：工程目录，没有时取第一个工作区文件夹。 */
-  readonly startDirectory: string;
 }
 
 /** 值是文件路径而不是内置名字：带路径分隔符，或以 .json 结尾。 */
@@ -66,6 +64,5 @@ export function resolveToolInput(spec: ToolSpec, input: ToolInput, roots: readon
     const value = params[name];
     if (typeof value === 'string' && looksLikePath(value)) params[name] = resolveOne(name, value);
   }
-  const projectDir = params.projectDir;
-  return { params, outside, startDirectory: typeof projectDir === 'string' ? projectDir : base };
+  return { params, outside };
 }

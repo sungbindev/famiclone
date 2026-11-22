@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** SB2000 目标目录 */
-const TARGET_DIR = path.join(REPO_ROOT, 'packages', 'fcdev', 'targets', 'sb2000');
+const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');
 
 /** 符号定义行：NAME = $HEX，可带行尾注释 */
 const SYMBOL_LINE = /^([A-Z][A-Z0-9_]*)\s*=\s*\$([0-9A-Fa-f]+)\s*(?:;\s*(.*))?$/;

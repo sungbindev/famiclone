@@ -13,7 +13,7 @@
 // ------------------------------------------------------------------------
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { locateToolchain, runTool } from '../../../../packages/fcdev/src/toolchain/index.mjs';
+import { locateToolchain, runTool } from '../../../../tools/lib/extension.mjs';
 import { BASE, PRG_SIZE, ROM_FILE, ROOT, hex4, loadImageModel } from './lib/image-model.mjs';
 import { createEmitter } from './lib/emit.mjs';
 import { OPCODES } from './lib/opcodes.mjs';
@@ -128,7 +128,7 @@ console.log(`写入 ${SOURCE}：${items.length} 个条目，${targets.size} 个�
 // ---- 汇编并核对 ----
 if (!args.includes('--no-verify')) {
   mkdirSync(BUILD, { recursive: true });
-  const toolchain = locateToolchain({});
+  const toolchain = locateToolchain();
   const suffix = PERMUTE !== null ? '-permuted' : '';
   const objectFile = join(BUILD, `fbasic-nes${suffix}.o`);
   const configFile = join(BUILD, `fbasic-nes${suffix}.cfg`);

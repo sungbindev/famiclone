@@ -64,13 +64,8 @@ npm start
 
 运行库把 DOS 的系统调用封装成了 C 函数（文字、键盘手柄鼠标、文件目录、软驱、显示、声音等），头文件是 `sb2000.h`。随时查询：
 
-```bash
-npx fcdev api               # 列出全部模块
-npx fcdev api file          # 看模块里的函数
-npx fcdev api sb_file_open  # 看一个函数的完整文档
-npx fcdev api '$7B'         # 看用到某个系统调用的函数
-```
+用命令“fcdev：查询 C 接口”（或 Copilot 的 `fcdev_api` 工具）：不填查询列出全部模块；填模块名（如 `file`）看模块里的函数；填函数名（如 `sb_file_open`）看完整文档；填系统调用号（如 `$7B`）看用到它的函数。
 
 ## 程序超过 16K
 
-在 `fcdev.json` 里加 `"targetOptions": { "banks": 库页个数 }`，把部分函数用 `SB_BANK_BEGIN(n)` 与 `SB_BANK_END()` 放进库页，声明处用 `SB_BANK_CALLS_BEGIN(n)` 与 `SB_BANK_CALLS_END()` 包起来，调用时自动换页。函数的用法用 `npx fcdev api bank` 查，写法与限制见 `node_modules/fcdev/targets/sb2000/include/sb2000-bank.h` 文件头的说明。
+在 `fcdev.json` 里加 `"targetOptions": { "banks": 库页个数 }`，把部分函数用 `SB_BANK_BEGIN(n)` 与 `SB_BANK_END()` 放进库页，声明处用 `SB_BANK_CALLS_BEGIN(n)` 与 `SB_BANK_CALLS_END()` 包起来，调用时自动换页。函数的用法用“fcdev：查询 C 接口”查 `bank`，写法与限制见 fcdev 扩展 `targets/sb2000/include/sb2000-bank.h`（仓库里是 `vscode/targets/sb2000/include/sb2000-bank.h`）文件头的说明。

@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "构建",
+      "type": "fcdev",
+      "command": "build",
+      "path": "src",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "构建磁盘镜像",
+      "type": "fcdev",
+      "command": "disk",
+      "path": "src"
+    },
+    {
+      "label": "运行",
+      "type": "fcdev",
+      "command": "run",
+      "path": "src"
+    },
+    {
+      "label": "调试运行",
+      "type": "fcdev",
+      "command": "run",
+      "path": "src",
+      "debug": true
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：三个都会写文件或运行外部程序（汇编器、链接器、fcdev build），需要用户确认；
+// 备注：三个都会写文件或运行外部程序（汇编器、链接器、构建），需要用户确认；
 //       disasm_build 的构建目录是按生成的源码整理出的 fcdev 项目，必须在工作区里。
 // ------------------------------------------------------------------------
 
@@ -35,6 +35,6 @@ export const OUTPUT_TOOLS: readonly ToolSpec[] = [
     writes: true,
     paths: ['projectDir', 'buildPath'],
     describe: (input) => `用 fcdev 构建 ${String(input.buildPath ?? '')} 并与 ${projectLabel(input)} 的原映像比较`,
-    confirm: (input) => `将在 ${String(input.buildPath)} 运行 fcdev build，并把产物与 ${String(input.projectDir)} 的原映像逐字节比较。`
+    confirm: (input) => `将在 ${String(input.buildPath)} 构建，并把产物与 ${String(input.projectDir)} 的原映像逐字节比较。`
   }
 ];

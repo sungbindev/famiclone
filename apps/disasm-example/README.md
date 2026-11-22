@@ -4,11 +4,9 @@
 
 ## 准备
 
-```bash
-npx fcdev build src        # 生成 build/nes/hello.nes
-```
+在 VS Code 里打开本仓库，运行任务“fcdev：构建”（或命令“fcdev：构建项目”，路径选 `apps/disasm-example/src`），生成 `build/nes/hello.nes`。
 
-需要 VS Code 的 Copilot 聊天、本仓库已安装的 `fcdev`（工作区里能找到 `node_modules/fcdev`）与 cc65 工具链（随 `fcdev` 安装）。想看运行效果还要 Windows 上的 Ember（随 `fcdev` 安装），没有也能做完前面的步骤。
+需要 VS Code 的 Copilot 聊天与已安装的 fcdev 扩展（自带 cc65 工具链）。想看运行效果还要 Windows 上的 Ember，并在设置 `fcdev.emulator.path` 里指向它，没有也能做完前面的步骤。
 
 ## 走一遍
 
@@ -40,4 +38,4 @@ npx fcdev build src        # 生成 build/nes/hello.nes
 
 ## 自动测试
 
-仓库里的 `packages/fcdev/test/disasm-workflow.test.mjs` 用同一份源码按这些步骤走一遍（构建、打开、追踪、区域分类、命名、注释、分层、生成、回读），并检查每步的完成标准，需要 cc65。
+扩展里的 `vscode/test/logic/disassembly/disasm-workflow.test.ts` 用同一份源码按这些步骤走一遍（构建、打开、追踪、区域分类、命名、注释、分层、生成、回读），并检查每步的完成标准，需要 cc65。

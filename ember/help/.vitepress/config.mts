@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
  * 备注：help/api 由 npm run help:build 先生成（调试接口的各模块页，不提交），侧边栏里的模块按 help/api/index.md 里的顺序列出；
- *       help/fcdev 同样由 help:build 从 packages/fcdev 导入（不提交），侧边栏取自 tools/build/import-fcdev-docs.mjs，与导入用同一份分组规则；
+ *       help/fcdev 同样由 help:build 从 vscode（fcdev 扩展）导入（不提交），侧边栏取自 tools/build/import-fcdev-docs.mjs，与导入用同一份分组规则；
  *       站点由外壳在本机回环地址上提供，只能用 .html 结尾的链接（cleanUrls 保持关闭）；外观跟随系统，不提供切换按钮。
  * ------------------------------------------------------------------------
  */

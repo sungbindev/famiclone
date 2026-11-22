@@ -12,7 +12,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { locateToolchain, runTool } from '../../../../packages/fcdev/src/toolchain/index.mjs';
+import { locateToolchain, runTool } from '../../../../tools/lib/extension.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');
@@ -35,7 +35,7 @@ SEGMENTS { CODE: load = IMAGE, type = ro; VECTORS: load = VECTORS, type = ro; }
 `;
 
 mkdirSync(BUILD, { recursive: true });
-const toolchain = locateToolchain({});
+const toolchain = locateToolchain();
 
 /** 汇编并链接一个源文件，返回二进制的字节数 */
 async function assemble(name, source, config) {

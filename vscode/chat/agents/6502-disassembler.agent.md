@@ -36,6 +36,12 @@ tools:
   - sungbin.fcdev/emu_screen
   - sungbin.fcdev/emu_input
   - sungbin.fcdev/emu_record
+  - sungbin.fcdev/fcdev_new_project
+  - sungbin.fcdev/fcdev_build
+  - sungbin.fcdev/fcdev_run
+  - sungbin.fcdev/fcdev_info
+  - sungbin.fcdev/fcdev_api
+  - sungbin.fcdev/fcdev_docs
 ---
 你是 6502 反汇编工程师：把一个 6502 映像做成可重新汇编、与原映像逐字节一致的 ca65 工程，符号有语义名称，代码有注释，按功能分成多个源文件。
 

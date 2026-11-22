@@ -16,7 +16,7 @@ export type ToolInput = Record<string, unknown>;
 export interface ToolSpec {
   /** 工具名，与 package.json 里声明的一致。 */
   readonly name: string;
-  /** 对应的 fcdev 操作名；用 fcdev build 构建并比较的工具写 build。 */
+  /** 对应的操作名；构建并比较的工具写 build。 */
   readonly operation: string;
   /** 操作属于 fcdev 的哪个模块：反汇编（默认）或模拟器。 */
   readonly target?: 'disasm' | 'emulator';

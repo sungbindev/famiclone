@@ -25,7 +25,7 @@
 
 ## 命令
 
-在本目录运行；FC 模式的运行需要 Ember（环境变量 `FCDEV_EMULATOR` 指向 `Ember.exe`；没有设置时用 fcdev 随包的 Ember，见 `packages/fcdev/docs/02-模拟器与调试.md`）。
+在本目录运行；FC 模式的运行需要 Ember（环境变量 `EMBER_EXE` 指向 `Ember.exe`，见 `tools/lib/extension.mjs`）。
 
 | 命令 | 作用 |
 | --- | --- |
@@ -40,8 +40,8 @@
 | `node tools/show.mjs asm\|hex <地址> [数量]` | 查看 PRG 里的一段内容 |
 | `node tools/scan-text-area.mjs [--abs] [--imm]` | 列出可能与程序文本区 `$6000-$7FFF` 有关的指令及上下文 |
 | `node tools/extract-chr.mjs` | 把 CHR 另存为 `reference/fbasic-chr.bin` |
-| `node tools/build-exe.mjs` | 构建 `exe/build/sb2000/FBASIC.EXE`：先汇编链接 ERAM 小段与 32K 映像，再用 fcdev 构建加载器 |
-| `node tools/run-exe.mjs <步骤>...` | 在 Ember 的学习机里运行 FBASIC.EXE（开机进 DOS 用 fcdev 公共版的 `enterProgram`），步骤：`w120` 等帧、`mED,3` 读内存、`kEnter` 按键、`dShiftLeft` 按下不松、`uShiftLeft` 松开、`r` 打印 CPU 与 PPU 状态、`sboot.png` 截图（存到 `build/run/`） |
+| `node tools/build-exe.mjs` | 构建 `exe/build/sb2000/FBASIC.EXE`：先汇编链接 ERAM 小段与 32K 映像，再用 fcdev 扩展的工具链构建加载器 |
+| `node tools/run-exe.mjs <步骤>...` | 在 Ember 的学习机里运行 FBASIC.EXE（开机进 DOS 用 `tools/lib/extension.mjs` 的 `enterProgram`），步骤：`w120` 等帧、`mED,3` 读内存、`kEnter` 按键、`dShiftLeft` 按下不松、`uShiftLeft` 松开、`r` 打印 CPU 与 PPU 状态、`sboot.png` 截图（存到 `build/run/`） |
 
 ## 目录
 

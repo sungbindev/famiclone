@@ -27,7 +27,7 @@ afterEach(() => {
   rmSync(temp, { recursive: true, force: true });
 });
 
-/** 在临时目录里造一个小的 fcdev 主包：docs 里两篇、目标目录里一篇。 */
+/** 在临时目录里造一个小的扩展目录：docs 里两篇、目标目录里一篇。 */
 function makeFcdev(): { root: string; topics: FcdevDocTopic[] } {
   const root = join(temp, 'fcdev');
   mkdirSync(join(root, 'docs', 'sb2000'), { recursive: true });
@@ -38,7 +38,7 @@ function makeFcdev(): { root: string; topics: FcdevDocTopic[] } {
   const topics: FcdevDocTopic[] = [
     { topic: 'build', file: '01-构建.md', title: '构建', summary: '构建说明' },
     { topic: 'syscall', file: 'sb2000/02-系统调用.md', title: '系统调用', summary: '调用说明' },
-    { topic: 'api', file: 'targets/sb2000/api-reference.md', inPackage: true, title: '接口参考', summary: '函数 | 签名' }
+    { topic: 'api', file: 'targets/sb2000/api-reference.md', root: 'extension', title: '接口参考', summary: '函数 | 签名' }
   ];
   return { root, topics };
 }
@@ -70,7 +70,7 @@ describe('convertDocument', () => {
 
   it('开头有“由导入生成”的标记，换行统一为 LF，结尾只有一个换行', () => {
     const page = convert('# 标题\r\n\r\n正文\r\n\r\n');
-    expect(page.startsWith('<!-- 本文件由 npm run help:build 从 packages/fcdev/docs/a.md 导入，不要手改 -->\n\n# 标题\n')).toBe(true);
+    expect(page.startsWith('<!-- 本文件由 npm run help:build 从 vscode/docs/a.md 导入，不要手改 -->\n\n# 标题\n')).toBe(true);
     expect(page).not.toContain('\r');
     expect(page.endsWith('正文\n')).toBe(true);
   });
@@ -80,7 +80,7 @@ describe('importFcdevDocs', () => {
   it('每个登记的主题一页加一个概述页；文档之间的链接指向站内页面', () => {
     const { root, topics } = makeFcdev();
     const output = join(temp, 'out');
-    expect(importFcdevDocs({ topics, fcdevRoot: root, outputDirectory: output })).toEqual({ pages: 4, written: 4 });
+    expect(importFcdevDocs({ topics, extensionRoot: root, outputDirectory: output })).toEqual({ pages: 4, written: 4 });
     expect(readdirSync(output).toSorted()).toEqual(['api.md', 'build.md', 'index.md', 'syscall.md']);
     const build = readFileSync(join(output, 'build.md'), 'utf8');
     expect(build).toContain('[系统调用](syscall.md#第五节)');
@@ -91,7 +91,7 @@ describe('importFcdevDocs', () => {
   it('概述页按分组列出手册，表格里的竖线被转义', () => {
     const { root, topics } = makeFcdev();
     const output = join(temp, 'out');
-    importFcdevDocs({ topics, fcdevRoot: root, outputDirectory: output });
+    importFcdevDocs({ topics, extensionRoot: root, outputDirectory: output });
     const index = readFileSync(join(output, 'index.md'), 'utf8');
     expect(index).toContain('# fcdev 开发手册');
     expect(index).toContain('## 通用\n');
@@ -103,16 +103,16 @@ describe('importFcdevDocs', () => {
   it('再导入一次没有变化时不写文件；删除不再登记的页面', () => {
     const { root, topics } = makeFcdev();
     const output = join(temp, 'out');
-    importFcdevDocs({ topics, fcdevRoot: root, outputDirectory: output });
+    importFcdevDocs({ topics, extensionRoot: root, outputDirectory: output });
     writeFileSync(join(output, 'old.md'), '旧页面');
-    expect(importFcdevDocs({ topics, fcdevRoot: root, outputDirectory: output })).toEqual({ pages: 4, written: 0 });
+    expect(importFcdevDocs({ topics, extensionRoot: root, outputDirectory: output })).toEqual({ pages: 4, written: 0 });
     expect(existsSync(join(output, 'old.md'))).toBe(false);
   });
 
   it('登记的文档不存在时报错并写出路径', () => {
     const { root, topics } = makeFcdev();
     rmSync(join(root, 'docs', '01-构建.md'));
-    expect(() => importFcdevDocs({ topics, fcdevRoot: root, outputDirectory: join(temp, 'out') })).toThrow('找不到 fcdev 的文档');
+    expect(() => importFcdevDocs({ topics, extensionRoot: root, outputDirectory: join(temp, 'out') })).toThrow('找不到 fcdev 的文档');
   });
 });
 

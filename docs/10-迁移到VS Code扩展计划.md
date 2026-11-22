@@ -2,7 +2,7 @@
 
 把 `packages/` 下 `fcdev`、`create-fcdev`、`fcdev-cc65` 三个包的全部功能移入 VS Code 扩展（`vscode/`），模拟器由使用者在扩展设置里指定位置，不随扩展分发；迁移完成后删除 `packages/`（含 `fcdev-ember`），仓库只维护这一个扩展。
 
-本文是迁移计划：第 1 至 5 节写目标与方案，第 6 节写分阶段计划，第 7、8 节写外部引用清单与完成判据，第 9 节记录进度，每个阶段完成后更新。第 3.2 节的待确认项确认之前不开始修改。
+本文是迁移计划：第 1 至 5 节写目标与方案，第 6 节写分阶段计划，第 7、8 节写外部引用清单与完成判据，第 9 节记录进度，每个阶段完成后更新。第 3.2 节的三项已由用户在 2026-11-22 确认按建议执行。
 
 ## 1. 目标与范围
 
@@ -108,12 +108,12 @@
 | M08 | 47 个测试文件迁成 vitest 用例，放在 `vscode/test/` 的同名功能目录；真实 Ember 的用例经测试专用环境变量 `FCDEV_TEST_EMULATOR` 取得位置，只在测试里读取 | 扩展已用 vitest；设置只在 VS Code 里存在 |
 | M09 | 使用文档放 `vscode/docs/`，主题登记表是 `vscode/docs/topics.json`，扩展与 Ember 帮助站点的导入脚本读同一份 | Ember 帮助站点的“fcdev 开发手册”以使用文档为来源，导入脚本不应依赖扩展的编译产物 |
 | M10 | 阶段 0 先用 `fcdev` 0.9.2 构建全部样例项目并记录产物的 SHA-256，迁移后逐字节核对 | 删除 `fcdev` 之后没有可对照的实现 |
-| M11 | 扩展的 `engines.vscode` 在阶段 4 核对：调试客户端用全局 `WebSocket`，宿主的 Node 要达到 22 以上，按官方文档确定最低版本 | [09-AI反汇编工具](09-AI反汇编工具.md) 第 2 节已定“实施时核对” |
+| M11 | 扩展的 `engines.vscode` 在阶段 4 核对：调试客户端用全局 `WebSocket`，宿主的 Node 要达到 22 以上，按官方文档确定最低版本 | [09-AI反汇编工具](09-AI反汇编工具.md) 第 2 节已定“实施时核对”；2026-11-22 已核对：VS Code 1.101 起扩展宿主的 Node 是 22.15.1（Electron 35，见 1.101 版本说明），故 `engines.vscode` 写 `^1.101.0` |
 | M12 | 头文件目录写进 `.vscode/c_cpp_properties.json` 与 `compile_flags.txt`，路径在扩展目录里，随扩展升级而变；激活时比较路径，不同就重新同步 | 现有自动同步在激活时执行，只需把路径比较纳入 |
 
-### 3.2 待确认
+### 3.2 已确认（2026-11-22）
 
-| 编号 | 问题 | 建议 |
+| 编号 | 问题 | 结论 |
 | --- | --- | --- |
 | Q1 | 取消命令行后，仓库里的样例项目与 Node 脚本如何继续构建、运行 | A：样例项目用 VS Code 任务；仓库内的 Node 脚本直接引用扩展的编译产物 |
 | Q2 | `fcdev debug` 终端客户端与可被外部引用的调试 SDK 如何处理 | B：客户端功能做成扩展命令，SDK 只作扩展内部功能 |
@@ -121,16 +121,16 @@
 
 **Q1 的做法：**
 
-- A（建议）：
+- A（已定）：
   - `apps/` 下每个样例项目加 `.vscode/tasks.json`（`fcdev` 类型的构建、运行、磁盘镜像任务），删除它们的 `package.json`、`package-lock.json` 与对 `fcdev` 的依赖。
-  - `apps/sb2000/fbasic/tools`（5 个脚本）、`machines/bbg/tools/probe-fc.mjs`、`tools/*.mjs`、Ember 的开发脚本直接 `import` `vscode/out/` 里编译好的模块。这些模块属于 `contracts`、`shared`、`logic`、`infra`，由结构测试保证不引用 `vscode`；阶段 0 先验证 `.mjs` 能引用到编译后的导出。
+  - `apps/sb2000/fbasic/tools`（5 个脚本）、`machines/bbg/tools/probe-fc.mjs`、`tools/*.mjs`、Ember 的开发脚本直接 `import` `vscode/out/` 里编译好的模块。这些模块属于 `contracts`、`shared`、`logic`、`infra`，结构测试规定基础设施层只有登记的两个文件引用 `vscode`；阶段 0 已验证 `.mjs` 能按命名导出引用编译后的模块。
 - B：扩展向集成终端的 `PATH` 注入 `fcdev.cmd`，样例项目的 npm 脚本保持不变。不选的原因：这是为扩展之外的终端另留一条途径，与“用 VS Code 的方式提供能力”相悖，外部终端与 CI 仍然要维护命令行。
 - C：把核心代码复制一份给脚本用。不选的原因：一份能力两份实现。
 
 **Q2 的做法：**
 
 - A：终端客户端随扩展发布（`debug/cli.js`），Ember 帮助文档里的示例写成 `node "<扩展目录>/debug/cli.js" call …`。不选的原因：命令行里要写扩展安装目录，路径随扩展版本变化。
-- B（建议）：
+- B（已定）：
   - 终端客户端的 `endpoint`、`methods`、`describe`、`call`、`screenshot`、`watch` 做成命令：调用调试请求（选请求、填参数）、查看请求说明、保存截图、监视事件，结果写入“fcdev 调试”输出通道。
   - Copilot 已有 11 个 `emu_*` 工具，不新增工具。
   - SDK 源码并入扩展作内部功能，不对外提供 `import` 入口，也不生成对外的 API 文档；调试协议是开放的，第三方可以按协议自行连接。
@@ -233,10 +233,10 @@ vscode/
 
 范围：
 
-- 用 `fcdev` 0.9.2 构建全部样例并记录产物的 SHA-256 与反汇编回读结果，写入 `vscode/test/baseline/`：四个模板（用 `create-fcdev` 生成到临时目录）、`apps/sb2000` 下 7 个项目、`apps/sb97/runnes`、`apps/disasm-example`。
-- 建立功能目录骨架与结构测试规则：新增目录的依赖方向、核心层不引用 `vscode`、反汇编核心没有机型名。
+- 用 `fcdev` 0.9.2 构建全部样例并记录产物的 SHA-256 与反汇编回读结果，写入 `vscode/test/baseline/fcdev-0.9.2-baseline.json`：四个模板（用 `create-fcdev` 生成到临时目录）、`apps/sb2000` 下 19 个入库的项目与 `apps/disasm-example`（共 20 个）；学习机产物另记磁盘镜像的 SHA-256（镜像里的文件时间固定）。`apps/sb97/runnes` 未入库，不在基线里。生成脚本是同目录的 `record-baseline.mjs`，迁移完成删除 `packages/` 时随之删除。
+- 建立结构测试规则：基础设施层只有登记的文件引用 `vscode`（脚本才能直接加载编译产物），新增功能目录沿用层间依赖与功能目录隔离规则；“反汇编核心没有机型名”在阶段 3 随核心加入。
 - 验证 `.mjs` 脚本能引用 `vscode/out/` 里的命名导出。
-- `package.json` 脚本骨架与 `.vscodeignore`。
+- `package` 脚本加 `--target win32-x64`；`.vscodeignore` 不排除 `toolchain`、`targets`、`templates`、`docs`，无需修改；其余脚本在对应文件出现的阶段加入。
 
 完成标准：基线文件入库；结构测试与引用验证通过；`npm run check` 通过。
 
@@ -293,7 +293,7 @@ vscode/
 
 范围：第 7 节清单中除 `packages/` 以外的全部位置。
 
-完成标准：按第 2.4 节的正则统计，除 `packages/` 外的命中清零；允许保留的只有扩展 `CHANGELOG.md` 里已发布版本的条目。
+完成标准：按第 2.4 节的正则统计，除 `packages/` 外的命中清零；允许保留的只有：扩展 `CHANGELOG.md` 与 Ember 更新记录里已发布版本的条目、代码里的常量名与标记（`FCDEV_CONFIGURATION_NAME`、`FCDEV_ERROR`、`HELP_FCDEV_DIRECTORY`、`FCDEV_GENERATORS`、`-DFCDEV_GENERATED`）、测试专用的环境变量（`FCDEV_TEST_EMULATOR`、`FCDEV_TEST_FIRMWARE`、`FCDEV_TEST_NES_ROM`、`FCDEV_SKIP_GUI_TESTS`）、调试用户数据目录名 `fcdev-ember`、缺陷记录 B001 的历史说明；本文自身是迁移记录，写旧命令行的地方是历史说明，不计入统计。
 
 ### 阶段 6：删除与收尾
 
@@ -309,8 +309,9 @@ vscode/
 
 | 位置 | 内容 |
 | --- | --- |
-| `apps/sb2000` 下 7 个项目 | 删除 `package.json`、`package-lock.json`，加 `.vscode/tasks.json`，更新 README 与 `.gitignore` 里对 `fcdev sync` 的说明 |
-| `apps/sb97/runnes`、`apps/disasm-example` | 同上；`apps/disasm-example/README.md` 的走法写成扩展命令 |
+| `apps/sb2000` 下 7 个有 `package.json` 的项目 | 删除 `package.json`、`package-lock.json`，加 `.vscode/tasks.json`，更新 README 与 `.gitignore` 里对 `fcdev sync` 的说明 |
+| `apps/sb2000/examples` 12 个示例、`apps/sb2000/fbasic/exe` | 没有 `package.json`，补 `.vscode/tasks.json` 或并入上级项目的任务 |
+| `apps/disasm-example` | 同上；`README.md` 的走法写成扩展命令 |
 | `apps/sb2000/fbasic/tools` | 5 个脚本引用 `vscode/out/`，替换 `packages/fcdev/src/*` 的引用 |
 | `machines/bbg/tools/probe-fc.mjs` 与两份机型文档 | 同上 |
 | `ember/docs`（01、02、04、05、06、07、08、待办备忘） | 调试客户端、帮助站点导入、模拟器随包的描述 |
@@ -336,12 +337,39 @@ vscode/
 
 | 阶段 | 状态 | 完成日期 |
 | --- | --- | --- |
-| 阶段 0：基线与骨架 | 未开始 | |
-| 阶段 1：构建核心 | 未开始 | |
-| 阶段 2：项目入口、新建项目与文档查询 | 未开始 | |
-| 阶段 3：反汇编核心 | 未开始 | |
-| 阶段 4：模拟器与调试 | 未开始 | |
-| 阶段 5：外部引用更新 | 未开始 | |
-| 阶段 6：删除与收尾 | 未开始 | |
+| 阶段 0：基线与骨架 | 已完成 | 2026-11-22 |
+| 阶段 1：构建核心 | 已完成 | 2026-11-22 |
+| 阶段 2：项目入口、新建项目与文档查询 | 已完成（任务报错跳转待用户手动核对） | 2026-11-22 |
+| 阶段 3：反汇编核心 | 已完成 | 2026-11-22 |
+| 阶段 4：模拟器与调试 | 已完成 | 2026-11-22 |
+| 阶段 5：外部引用更新 | 已完成 | 2026-11-22 |
+| 阶段 6：删除与收尾 | 已完成 | 2026-11-22 |
 
-计划状态：待用户确认第 3.2 节。
+计划状态：已完成；第 8 节第 6 项的手动核对待用户确认。
+
+阶段 2 的测试位置：根 `test/` 里测试生成脚本与工具链的 6 个文件移到 `tools/test/`，由 `npm run test:tools` 运行（已并入 `npm run check`）；`gen:docs` 重新生成四份 SB2000 生成文档。
+
+阶段 3 的补充：反汇编测试移成 `test/shared|logic/disassembly`（需要 cc65 的用例没有工具链时跳过）；命令“fcdev：反汇编映像文件”（`fcdev.disassemble`）选映像与输出目录，平铺二进制缺加载地址或入口时再询问。
+
+阶段 4 的补充：
+
+- 设置 `fcdev.emulator.path`（Ember 位置）与 `fcdev.emulator.debugPort`（默认 5699），作用域都是 `machine`；没有设置位置时运行类操作报错并说明设置项，命令“运行”“调试运行”还给“打开设置”按钮。
+- 新增命令“fcdev：运行”“fcdev：调试运行”（任务 `command: run`，`debug` 为真是调试运行）、工具 `fcdev_run`；调试客户端做成 5 个命令：调用调试请求、查看调试请求说明、保存调试截图、监视调试事件、显示调试服务地址，结果写到“fcdev 调试”输出通道。
+- 调试协议的接口文档与类型由 Ember 的 `npm run schema` 写到 `vscode/debug/openrpc.json` 与 `vscode/src/contracts/debug-client/generated/api.ts`；`ember` 的 `vscode:check` 取代 `debug-sdk:check`；帮助文档的协议参考由 `vscode/tools/gen-debug-api-docs.mjs` 生成；开发脚本的调试请求经 `ember/tools/dev/debug-call.mjs` 引用 `vscode/out`。
+- 真实 Ember 的用例在 `test/real-emulator`，用环境变量 `FCDEV_TEST_EMULATOR` 指向 Ember 的可执行文件（固件用 `FCDEV_TEST_FIRMWARE`，没有时用 `ember/roms/sb2000_bios.bin`），缺 Ember、cc65 或固件时跳过，`FCDEV_SKIP_GUI_TESTS=1` 也跳过。
+
+阶段 5 的补充：
+
+- 仓库里的 Node 脚本（`apps/sb2000/fbasic/tools`、`machines/bbg/tools/probe-fc.mjs`、`tools`）经 `tools/lib/extension.mjs` 引用 `vscode/out/`；Ember 位置用环境变量 `EMBER_EXE`（只用于开发脚本）。`tools/build-cc65.mjs` 的 make 程序环境变量改名为 `MAKE_PROGRAM`。
+- `apps/sb2000` 下 7 个有 `package.json` 的项目删除了 `package.json` 与 `package-lock.json`，各加 `.vscode/tasks.json`（构建、构建磁盘镜像、运行、调试运行）；示例与 `fbasic/exe` 没有另加，扩展会为每个含 `fcdev.json` 的项目自动提供任务。
+- Ember 的帮助站点导入脚本改读 `vscode/docs/topics.json`（字段 `root: 'extension'` 指文件相对扩展目录，参数 `extensionRoot`）；帮助文档里的调试客户端、`docs/07-调试客户端工具` 改写为扩展的命令与内部客户端。
+- 开发文档 01 至 09、待办备忘、缺陷记录与扩展的使用文档、README 按新结构重写；`05-发布` 是扩展的打包与发布，`04-测试与验证` 是 vitest 的分层与环境变量。
+- `copilot-plugins` 的 `fcdev-app-development` skill 改写为扩展的命令与工具（`references/cli-and-build.md` 改名 `build-and-config.md`），四个智能体的工具清单加入 6 个 fcdev 工具；`docs` 仓库的 `ember.instructions.md` 同步。
+
+阶段 6 的补充：
+
+- 已删除 `packages/`、根 `package.json`、根 `package-lock.json`、根 `test/`（结构检查已并入扩展的结构测试）、`tools/build-ember.mjs`、`tools/release.mjs`、`tools/release-check.mjs`、`tools/verify-install.mjs`、`tools/check-structure.mjs` 与基线记录脚本 `record-baseline.mjs`（基线文件保留）；`.gitignore` 已清理。
+- 新增 `tools/check-package.mjs`（`npm run check:package`）与它的测试：核对 `.vsix` 里的编译产物、工具链（文件与清单的 SHA-256 一致）、目标与运行库、模板、使用文档与调试接口描述，且不含测试、源码、密钥、Ember、BIOS 与 ROM。
+- 扩展版本升到 0.3.0，`CHANGELOG.md` 新增 0.3.0 一节；`.vscodeignore` 加入 `tools/**`。
+- 核对结果：在 `vscode/` 运行 `npm run check` 通过（66 个测试文件、653 个用例通过，20 个真实 Ember 的用例因没有设置 `FCDEV_TEST_EMULATOR` 跳过）；另用删除前复制出来的 Ember 单独运行 `test/real-emulator`，2 个文件、20 个用例通过；`npm run package` 生成 `fcdev-win32-x64-0.3.0.vsix`（756 个文件，约 2.9 MB），`npm run check:package` 通过；基线核对用例通过；统计正则除允许项外清零。
+- 没有运行 Ember 自己的测试与冒烟，Ember 里改动的帮助站点导入脚本只运行了一次导入（12 页）。

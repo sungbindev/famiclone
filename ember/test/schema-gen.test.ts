@@ -83,14 +83,20 @@ describe('generate：mappers 模块', () => {
   });
 });
 
-/** 在临时目录里准备一个 SDK 目录（ember-debug-sdk 的位置）。 */
-function createSdkDirectory(): string {
-  const sdkRoot = mkdtempSync(join(tmpdir(), 'ember-debug-sdk-'));
-  roots.push(sdkRoot);
-  return sdkRoot;
+/** 在临时目录里准备一个扩展目录（VS Code 扩展的位置），返回它与调试客户端用的两个文件的路径。 */
+function createExtensionDirectory(): { extension: string; debugClient: { documentFile: string; typesFile: string } } {
+  const extension = mkdtempSync(join(tmpdir(), 'ember-extension-'));
+  roots.push(extension);
+  return {
+    extension,
+    debugClient: {
+      documentFile: join(extension, 'debug', 'openrpc.json'),
+      typesFile: join(extension, 'src', 'contracts', 'debug-client', 'generated', 'api.ts')
+    }
+  };
 }
 
-describe('generate：调试 SDK', () => {
+describe('generate：调试客户端的接口文档与类型', () => {
   const debug = { module: 'debug', types: {}, requests: {}, events: {} };
   const shots = {
     module: 'shots',
@@ -107,12 +113,12 @@ describe('generate：调试 SDK', () => {
     events: { taken: { description: '截图完成。', data: { type: 'object', properties: { width: { type: 'integer' } }, required: ['width'] } } }
   };
 
-  it('给出 SDK 目录时，把 OpenRPC 文档与类型写到它的 generated', () => {
+  it('给出扩展里的文件位置时，把 OpenRPC 文档与类型写到那里', () => {
     const root = createProject({ debug, shots });
-    const sdkRoot = createSdkDirectory();
-    generate(root, { sdkDirectory: sdkRoot });
+    const { extension, debugClient } = createExtensionDirectory();
+    generate(root, { debugClient });
 
-    const api = read(sdkRoot, 'generated', 'api.ts');
+    const api = read(extension, 'src', 'contracts', 'debug-client', 'generated', 'api.ts');
     expect(api).toContain('export interface ShotsFrame {');
     expect(api).toContain('export interface ShotsTakeParams {');
     expect(api).toContain('format?: "png" | "rgba";');
@@ -123,25 +129,25 @@ describe('generate：调试 SDK', () => {
     expect(api).toContain('readonly shots: {');
     expect(api).toContain('take(params?: ShotsTakeParams): Promise<ShotsTakeResult>;');
     expect(api).toContain('export type RpcDiscoverResult = Record<string, unknown>;');
-    expect(JSON.parse(read(sdkRoot, 'generated', 'openrpc.json')).methods.map((method: { name: string }) => method.name)).toContain('shots.take');
+    expect(JSON.parse(read(extension, 'debug', 'openrpc.json')).methods.map((method: { name: string }) => method.name)).toContain('shots.take');
   });
 
-  it('没有类型的顶层 data 属性是二进制：OpenRPC 里有 x-binary，SDK 类型是 Uint8Array', () => {
+  it('没有类型的顶层 data 属性是二进制：OpenRPC 里有 x-binary，类型是 Uint8Array', () => {
     const root = createProject({ debug, shots });
-    const sdkRoot = createSdkDirectory();
-    generate(root, { sdkDirectory: sdkRoot });
-    const method = JSON.parse(read(sdkRoot, 'generated', 'openrpc.json')).methods.find((item: { name: string }) => item.name === 'shots.take');
+    const { extension, debugClient } = createExtensionDirectory();
+    generate(root, { debugClient });
+    const method = JSON.parse(read(extension, 'debug', 'openrpc.json')).methods.find((item: { name: string }) => item.name === 'shots.take');
     expect(method.result.schema.properties.data['x-binary']).toBe(true);
-    expect(read(sdkRoot, 'generated', 'api.ts')).toMatch(/\/\*\* 图像数据（二进制） \*\/\n {2}data\?: Uint8Array;/);
+    expect(read(extension, 'src', 'contracts', 'debug-client', 'generated', 'api.ts')).toMatch(/\/\*\* 图像数据（二进制） \*\/\n {2}data\?: Uint8Array;/);
   });
 
-  it('没有给 SDK 目录、或目录不存在时不写', () => {
+  it('没有给文件位置、或扩展目录不存在时不写', () => {
     const root = createProject({ debug, shots });
-    const missing = join(createSdkDirectory(), 'not-there');
-    const result = generate(root, { sdkDirectory: missing });
+    const missing = join(createExtensionDirectory().extension, 'not-there');
+    const result = generate(root, { debugClient: { documentFile: join(missing, 'debug', 'openrpc.json'), typesFile: join(missing, 'api.ts') } });
     expect(existsSync(missing)).toBe(false);
     expect(result.written.every((path) => !path.startsWith(missing))).toBe(true);
-    expect(generate(createProject({ debug, shots })).written.some((path) => path.endsWith('api.ts') && path.includes('debug-sdk'))).toBe(false);
+    expect(generate(createProject({ debug, shots })).written.some((path) => path.endsWith('api.ts'))).toBe(false);
   });
 });
 

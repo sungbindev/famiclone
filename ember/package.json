@@ -23,10 +23,10 @@
     "update:publish": "node tools/release/publish-update.mjs",
     "help:build": "node tools/build/build-help.mjs",
     "boundaries": "npm run schema && node tools/check/check-modules.mjs",
-    "debug-sdk:check": "npm --prefix ../packages/fcdev run debug-sdk:check",
+    "vscode:check": "npm --prefix ../vscode run check",
     "test": "npm run schema && vitest run",
     "lint": "oxlint --deny-warnings tools test win32/ui-kit/tools",
-    "check": "npm run lint && npm run boundaries && npm run help:build && vitest run && npm run core:test && npm run debug-sdk:check && npm run win32:check",
+    "check": "npm run lint && npm run boundaries && npm run help:build && vitest run && npm run core:test && npm run vscode:check && npm run win32:check",
     "ffmpeg:tools": "node tools/ffmpeg/install-build-tools.mjs",
     "ffmpeg:build": "node tools/ffmpeg/build-ffmpeg.mjs",
     "ffmpeg:check": "node tools/ffmpeg/check-ffmpeg.mjs"

@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：disassembly-tool-registration.ts
 // 说明：注册反汇编与模拟器的语言模型工具：按 package.json 里声明的工具逐个注册，检查输入、
-//       确认提示、调用 fcdev、整理结果。
+//       确认提示、调用反汇编核心、整理结果。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -13,9 +13,9 @@
 
 import * as vscode from 'vscode';
 import type { BuildComparer } from '../../contracts/disassembly/build-comparer';
-import type { DisasmRunner } from '../../contracts/disassembly/disasm-runner';
-import type { EmulatorRunner } from '../../contracts/disassembly/emulator-runner';
+import type { DisasmOperations } from '../../contracts/disassembly/disasm-operations';
 import type { ToolInput, ToolSpec } from '../../contracts/disassembly/tool-spec';
+import type { EmulatorOperations } from '../../contracts/emulator/emulator-operations';
 import type { Logger } from '../../platform/logging/logger';
 import { UserFacingError } from '../../shared/errors/user-facing-error';
 import { formatResult, splitImage, type ResultImage } from '../../shared/disassembly/result-text';
@@ -35,8 +35,8 @@ export const ALL_TOOLS: readonly ToolSpec[] = [...DISASSEMBLY_TOOLS, ...EMULATOR
 
 /** 工具要用的外部能力。 */
 export interface DisassemblyToolDependencies {
-  readonly runner: DisasmRunner;
-  readonly emulator: EmulatorRunner;
+  readonly operations: DisasmOperations;
+  readonly emulator: EmulatorOperations;
   readonly comparer: BuildComparer;
   readonly logger: Logger;
 }
@@ -129,8 +129,11 @@ class DisassemblyTool implements vscode.LanguageModelTool<ToolInput> {
         const comparison = await this.deps.comparer.buildAndCompare(String(resolved.params.projectDir), String(resolved.params.buildPath));
         return { text: formatResult(comparison) };
       }
-      const runner = this.spec.target === 'emulator' ? this.deps.emulator : this.deps.runner;
-      const { result, image } = splitImage(await runner.run(resolved.startDirectory, this.spec.operation, resolved.params));
+      const raw =
+        this.spec.target === 'emulator'
+          ? await this.deps.emulator.run(this.spec.operation, resolved.params)
+          : await this.deps.operations.run(this.spec.operation, resolved.params);
+      const { result, image } = splitImage(raw);
       return { text: formatResult(result), image };
     } catch (error) {
       if (error instanceof UserFacingError) return { text: `错误：${error.message}` };

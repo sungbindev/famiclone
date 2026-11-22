@@ -85,17 +85,16 @@ export function readDiagnostics(app) {
 }
 
 /**
- * 经调试 SDK 的终端客户端对实例发一个调试请求（实例要带 --debug-port 与 --debug-token 启动）。
+ * 经 VS Code 扩展里的调试客户端对实例发一个调试请求（实例要带 --debug-port 与 --debug-token 启动）。
  * @param {{ userData: string }} app 实例。
  * @param {string} method 请求名，如 runtime.status。
  * @param {...string} params key=value 形式的参数。
  * @returns {unknown} 请求的结果。
- * @throws {Error} 客户端没有构建（先运行 npm run debug-sdk:check）、连不上或请求失败。
+ * @throws {Error} 客户端没有构建（先在 vscode 目录运行 npm run build）、连不上或请求失败。
  */
 export function debugCall(app, method, ...params) {
-  const cli = join(projectRoot, '..', 'packages', 'fcdev', 'dist', 'debug', 'cli.js');
-  if (!existsSync(cli)) throw new Error('找不到调试 SDK 的终端客户端，先运行 npm run debug-sdk:check');
-  const output = execFileSync(process.execPath, [cli, '--user-data-dir', app.userData, '--compact', 'call', method, ...params], { encoding: 'utf8', timeout: 60_000 });
+  const script = join(projectRoot, 'tools', 'dev', 'debug-call.mjs');
+  const output = execFileSync(process.execPath, [script, app.userData, method, ...params], { encoding: 'utf8', timeout: 60_000 });
   return JSON.parse(output);
 }
 

@@ -486,7 +486,7 @@ void asm_symbols_reset(void)
     asm_state.symbol_count = 0;
 }
 
-/* 符号记录存在哈希桶表之后，按追加的顺序排列；读一条（本库页内部调用，不经过换页蹏床）。 */
+/* 符号记录存在哈希桶表之后，按追加的顺序排列；读一条（本库页内部调用，不经过换页蹦床）。 */
 static unsigned char asm_read_symbol(unsigned int index, AsmSymbol *symbol)
 {
     if (index >= asm_state.symbol_count || asm_state.symbol_page_count == 0) {

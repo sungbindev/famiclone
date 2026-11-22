@@ -28,6 +28,8 @@ const ALLOWED_LAYERS: Record<string, readonly string[]> = {
 
 /** 每层允许引用的外部包（前缀匹配）；没有列出的层不能引用任何外部包。 */
 const ALLOWED_EXTERNALS: Record<string, readonly string[]> = {
+  shared: ['node:path', 'node:crypto'],
+  logic: ['node:path', 'node:crypto'],
   infra: ['vscode', 'node:'],
   entry: ['vscode', 'node:'],
   platform: ['vscode', 'node:'],
@@ -39,6 +41,12 @@ const ABSTRACT_ONLY_LAYERS = ['logic', 'entry'];
 
 /** 同层内，一个功能目录不能引用另一个功能目录的层。 */
 const FEATURE_ISOLATED_LAYERS = ['logic', 'infra', 'entry'];
+
+/** 基础设施层里允许引用 vscode 的文件；其余文件与 vscode 无关，脚本才能直接加载编译产物。 */
+const INFRA_VSCODE_FILES: readonly string[] = [
+  'src/infra/assembly/workspace-assembly-source-store.ts',
+  'src/infra/project/workspace-fcdev-project-locator.ts'
+];
 
 /** 注释行的最大显示宽度：中文字符按 2 列计。 */
 const MAX_COMMENT_WIDTH = 100;
@@ -98,6 +106,9 @@ function constantOf(file: string, name: string): string {
 const sourceFiles = listFiles(SRC, ['.ts']);
 const testFiles = listFiles(path.join(ROOT, 'test'), ['.ts']);
 
+/** 生成的文件（generated 目录下，由 Ember 的 npm run schema 写入）不检查文件头与行宽。 */
+const handWrittenFiles = [...sourceFiles, ...testFiles].filter((file) => !relative(file).split('/').includes('generated'));
+
 describe('依赖规则', () => {
   const problems: string[] = [];
   for (const file of sourceFiles) {
@@ -141,11 +152,28 @@ describe('依赖规则', () => {
   });
 });
 
+describe('基础设施层与 vscode 无关', () => {
+  it('只有登记的文件引用 vscode', () => {
+    const offenders = sourceFiles
+      .filter((file) => locate(file).layer === 'infra')
+      .filter((file) => /from\s+['"]vscode['"]/.test(readFileSync(file, 'utf8')))
+      .map(relative)
+      .filter((file) => !INFRA_VSCODE_FILES.includes(file));
+    expect(offenders).toEqual([]);
+  });
+
+  it('登记的文件都存在并确实引用 vscode', () => {
+    for (const file of INFRA_VSCODE_FILES) {
+      expect(readFileSync(path.join(ROOT, file), 'utf8')).toMatch(/from\s+['"]vscode['"]/);
+    }
+  });
+});
+
 describe('文件头', () => {
   const required = [/名称：/, /说明：/, /作者：sungbin/, /邮箱：sungbin@3578\.cn/, /日期：\d{4}-\d{2}-\d{2}/, /备注：/];
 
   it('每个源文件与测试文件顶部都有完整的文件头', () => {
-    const missing = [...sourceFiles, ...testFiles].filter((file) => {
+    const missing = handWrittenFiles.filter((file) => {
       const head = readFileSync(file, 'utf8').split(/\r?\n/).slice(0, 14).join('\n');
       return required.some((pattern) => !pattern.test(head));
     });
@@ -156,7 +184,7 @@ describe('文件头', () => {
 describe('注释行宽', () => {
   it(`每行注释的显示宽度不超过 ${MAX_COMMENT_WIDTH} 列`, () => {
     const tooWide: string[] = [];
-    for (const file of [...sourceFiles, ...testFiles]) {
+    for (const file of handWrittenFiles) {
       readFileSync(file, 'utf8')
         .split(/\r?\n/)
         .forEach((line, index) => {
@@ -176,6 +204,8 @@ describe('扩展清单与代码一致', () => {
       languages: Array<{ id: string; extensions: string[]; configuration: string }>;
       grammars: Array<{ language: string; scopeName: string; path: string }>;
       commands: Array<{ command: string }>;
+      taskDefinitions: Array<{ type: string }>;
+      problemMatchers: Array<{ name: string }>;
       configuration: { properties: Record<string, { type: string; default: unknown }> };
     };
   };
@@ -198,6 +228,40 @@ describe('扩展清单与代码一致', () => {
   it('代码注册的命令在清单里声明', () => {
     const declared = manifest.contributes.commands.map((item) => item.command);
     expect(declared).toContain(constantOf('entry/c-intellisense/c-intellisense-commands.ts', 'SYNC_COMMAND'));
+  });
+
+  it('构建、新建项目、使用文档、C 接口的命令标识都在清单里声明，声明的命令都有代码注册', () => {
+    const declared = manifest.contributes.commands.map((item) => item.command);
+    const files = [
+      'entry/build/build-commands.ts',
+      'entry/scaffold/scaffold-commands.ts',
+      'entry/usage-docs/usage-docs-commands.ts',
+      'entry/c-api/c-api-commands.ts',
+      'entry/disassembly/disassembly-commands.ts',
+      'entry/debug-client/debug-commands.ts',
+      'entry/c-intellisense/c-intellisense-commands.ts'
+    ];
+    const used = files
+      .flatMap((file) => [...readFileSync(path.join(SRC, file), 'utf8').matchAll(/'(fcdev\.[A-Za-z]+)'/g)].map((match) => match[1] ?? ''))
+      .filter((name) => name !== 'fcdev.intelliSense');
+    expect(used.length).toBeGreaterThanOrEqual(16);
+    expect(declared.toSorted()).toEqual([...new Set(used)].toSorted());
+  });
+
+  it('模拟器设置在清单里声明，位置与端口都只能在用户设置里指定（machine 作用域）', () => {
+    const section = constantOf('entry/emulator/workspace-emulator-settings.ts', 'EMULATOR_SECTION');
+    for (const key of [constantOf('entry/emulator/workspace-emulator-settings.ts', 'PATH_KEY'), constantOf('entry/emulator/workspace-emulator-settings.ts', 'DEBUG_PORT_KEY')]) {
+      const property = manifest.contributes.configuration.properties[`${section}.${key}`] as { scope?: string } | undefined;
+      expect(property, `${section}.${key}`).toBeDefined();
+      expect(property?.scope).toBe('machine');
+    }
+    expect(manifest.contributes.configuration.properties[`${section}.debugPort`]?.default).toBe(5699);
+  });
+
+  it('fcdev 任务类型与问题匹配器在清单里声明，与代码一致', () => {
+    const taskType = constantOf('entry/build/build-task-provider.ts', 'TASK_TYPE');
+    expect(manifest.contributes.taskDefinitions.map((item) => item.type)).toEqual([taskType]);
+    expect(readFileSync(path.join(SRC, 'entry/build/build-task-provider.ts'), 'utf8')).toContain(`'$${manifest.contributes.problemMatchers[0]?.name}'`);
   });
 
   it('自动同步设置在清单里声明，类型为布尔，默认开启', () => {

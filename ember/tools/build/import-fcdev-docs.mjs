@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：import-fcdev-docs.mjs
- * 说明：把 fcdev 的使用文档（含 SB2000 的 C 接口参考与符号参考）导入 Ember 帮助站点的 help/fcdev：按 fcdev 的主题登记表生成各页，改写文档之间的链接，并生成概述页。
+ * 说明：把 fcdev 扩展的使用文档（含 SB2000 的 C 接口参考与符号参考）导入 Ember 帮助站点的 help/fcdev：按扩展的主题登记表（vscode/docs/topics.json）生成各页，改写文档之间的链接，并生成概述页。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
- * 备注：文档只在 packages/fcdev 里维护，help/fcdev 不提交（ember/.gitignore），每次 npm run help:build 都会重新导入，并删除不再登记的页面。
+ * 备注：文档只在 vscode（fcdev 扩展）里维护，help/fcdev 不提交（ember/.gitignore），每次 npm run help:build 都会重新导入，并删除不再登记的页面。
  *       指向文档目录之外的链接（头文件、链接配置、目录）在帮助里打不开，改成普通文字；正文里的尖括号与双花括号要转义，否则 VitePress 会当成 Vue 模板编译；
  *       文档里单独成节的“## 目录”（长文档为单独阅读写的）去掉，帮助页右边有自动生成的页内大纲；
  *       站点的侧边栏分组与导入用同一份分组规则（sidebarGroups），保证两边一致。
@@ -15,16 +15,14 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DOC_TOPICS } from '../../../packages/fcdev/src/docs/doc-topics.mjs';
-
-export { DOC_TOPICS };
-
 const here = dirname(fileURLToPath(import.meta.url));
 
 /** 仓库根目录。 */
 export const REPO_ROOT = resolve(here, '..', '..', '..');
-/** fcdev 主包目录。 */
-export const FCDEV_ROOT = join(REPO_ROOT, 'packages', 'fcdev');
+/** fcdev 扩展目录。 */
+export const EXTENSION_ROOT = join(REPO_ROOT, 'vscode');
+/** fcdev 扩展的使用文档主题登记表（扩展与帮助站点读同一份）。 */
+export const DOC_TOPICS = JSON.parse(readFileSync(join(EXTENSION_ROOT, 'docs', 'topics.json'), 'utf8')).topics;
 /** 导入的目标目录（ember/help/fcdev）。 */
 export const HELP_FCDEV_DIRECTORY = resolve(here, '..', '..', 'help', 'fcdev');
 
@@ -32,14 +30,14 @@ export const HELP_FCDEV_DIRECTORY = resolve(here, '..', '..', 'help', 'fcdev');
 const TEXT = {
   title: 'fcdev 开发手册',
   overview: '概述',
-  intro: 'fcdev 是 6502 兼容机（NES、小霸王学习机等）的开发工具：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可以在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。`fcdev run` 与 `fcdev debug` 就是经 Ember 的调试服务运行与调试程序的，所以手册放在这里，直接就能查。',
-  source: '手册随 fcdev 的 npm 包一起发布，这里是同一份内容；在终端里用 `npx fcdev docs` 也能查到。',
+    intro: 'fcdev 是 6502 兼容机（NES、小霸王学习机等）的 VS Code 扩展：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可以在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。命令“fcdev：运行”“fcdev：调试运行”与调试命令就是经 Ember 的调试服务运行与调试程序的，所以手册放在这里，直接就能查。',
+  source: '手册随 fcdev 扩展一起发布，这里是同一份内容；在 VS Code 里用命令“fcdev：打开使用文档”也能查到。',
   columns: ['手册', '内容'],
   common: '通用',
   nes: 'NES',
   sb2000: 'SB2000（小霸王学习机）',
   missing: (file) => `找不到 fcdev 的文档：${file}`,
-  marker: (file) => `<!-- 本文件由 npm run help:build 从 packages/fcdev/${file} 导入，不要手改 -->`
+  marker: (file) => `<!-- 本文件由 npm run help:build 从 vscode/${file} 导入，不要手改 -->`
 };
 
 /** 单独成行的锚点标签，导入时原样保留。 */
@@ -88,13 +86,13 @@ export function sidebarGroups(topics = DOC_TOPICS) {
 
 /**
  * 主题的源文件绝对路径。
- * @param {{file: string, inPackage?: boolean}} topic 主题登记项
- * @param {string} [fcdevRoot] fcdev 主包目录
+ * @param {{file: string, root?: 'extension'}} topic 主题登记项；root 为 extension 时文件相对扩展目录，否则相对 docs 目录
+ * @param {string} [extensionRoot] fcdev 扩展目录
  * @returns {string} 绝对路径
  */
-export function topicSourceFile(topic, fcdevRoot = FCDEV_ROOT) {
+export function topicSourceFile(topic, extensionRoot = EXTENSION_ROOT) {
   const parts = topic.file.split('/');
-  return topic.inPackage ? join(fcdevRoot, ...parts) : join(fcdevRoot, 'docs', ...parts);
+  return topic.root === 'extension' ? join(extensionRoot, ...parts) : join(extensionRoot, 'docs', ...parts);
 }
 
 /**
@@ -133,7 +131,7 @@ function escapeMarkup(line) {
  * @param {object} input 参数
  * @param {string} input.text 文档全文
  * @param {string} input.sourceFile 文档的绝对路径
- * @param {string} input.relativeFile 文档相对 fcdev 主包目录的路径，写进标记
+ * @param {string} input.relativeFile 文档相对扩展目录的路径，写进标记
  * @param {ReadonlyMap<string, string>} input.pageByFile 源文件绝对路径到页面主题名的映射
  * @returns {string} 页面文本（LF 换行）
  */
@@ -176,25 +174,25 @@ export function renderOverview(topics) {
     for (const topic of group.topics) lines.push(`| [${topic.title}](${topic.topic}.md) | ${topic.summary.replace(/\|/g, '\\|')} |`);
     lines.push('');
   }
-  return `<!-- 本文件由 npm run help:build 根据 fcdev 的主题登记表生成，不要手改 -->\n\n${lines.map(escapeMarkup).join('\n')}`;
+  return `<!-- 本文件由 npm run help:build 根据 fcdev 扩展的主题登记表生成，不要手改 -->\n\n${lines.map(escapeMarkup).join('\n')}`;
 }
 
 /**
  * 导入全部文档到目标目录：只写有变化的页面，删除不再登记的页面。
  * @param {object} [options] 选项
- * @param {readonly {topic: string, title: string, summary: string, file: string, inPackage?: boolean}[]} [options.topics] 主题登记项
- * @param {string} [options.fcdevRoot] fcdev 主包目录
+ * @param {readonly {topic: string, title: string, summary: string, file: string, root?: 'extension'}[]} [options.topics] 主题登记项
+ * @param {string} [options.extensionRoot] fcdev 扩展目录
  * @param {string} [options.outputDirectory] 目标目录
  * @returns {{pages: number, written: number}} 页数与实际写入的页数
  */
-export function importFcdevDocs({ topics = DOC_TOPICS, fcdevRoot = FCDEV_ROOT, outputDirectory = HELP_FCDEV_DIRECTORY } = {}) {
-  const pageByFile = new Map(topics.map((topic) => [resolve(topicSourceFile(topic, fcdevRoot)), topic.topic]));
+export function importFcdevDocs({ topics = DOC_TOPICS, extensionRoot = EXTENSION_ROOT, outputDirectory = HELP_FCDEV_DIRECTORY } = {}) {
+  const pageByFile = new Map(topics.map((topic) => [resolve(topicSourceFile(topic, extensionRoot)), topic.topic]));
   /** @type {Map<string, string>} */
   const pages = new Map([['index.md', renderOverview(topics)]]);
   for (const topic of topics) {
-    const sourceFile = topicSourceFile(topic, fcdevRoot);
+    const sourceFile = topicSourceFile(topic, extensionRoot);
     if (!existsSync(sourceFile)) throw new Error(TEXT.missing(sourceFile));
-    const relativeFile = relative(fcdevRoot, sourceFile).replaceAll('\\', '/');
+    const relativeFile = relative(extensionRoot, sourceFile).replaceAll('\\', '/');
     pages.set(`${topic.topic}.md`, convertDocument({ text: readFileSync(sourceFile, 'utf8'), sourceFile: resolve(sourceFile), relativeFile, pageByFile }));
   }
 

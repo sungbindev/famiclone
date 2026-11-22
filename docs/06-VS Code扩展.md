@@ -1,25 +1,25 @@
 # VS Code 扩展
 
-扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“6502 开发（fcdev）”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。首版做 ca65 汇编的语法高亮，以及 ca65 汇编与 cc65 的 C 的智能感知。扩展不内置编译器，只经 `node_modules` 里的 `fcdev` 命令行读取项目信息。
+扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“6502 开发（fcdev）”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。它是 fcdev 唯一的发行形式：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具都在这里，整体架构见 [01-软件架构设计](01-软件架构设计.md)。
 
 ## 1. 范围
 
-首版包含：
+- 构建：任务类型 `fcdev`、构建命令、问题匹配器 `$fcdev`，用随扩展发布的 cc65 构建 C 与 ca65 汇编程序，使用说明见 `vscode/docs/01-构建.md`。
+- 运行与调试：命令“运行”“调试运行”、5 个调试命令，经 Ember 的调试服务工作；Ember 的位置来自设置，使用说明见 `vscode/docs/02-模拟器与调试.md`。
+- 新建项目：命令“fcdev：新建项目”与四个模板，使用说明见 `vscode/docs/04-新建项目与模板.md`。
+- 反汇编：命令“反汇编映像文件”与给 Copilot 用的工具，见第 6 节与 [09-AI反汇编工具](09-AI反汇编工具.md)。
+- ca65 汇编（`.s`、`.asm`、`.inc`）的悬停、补全、转到定义、文档符号与语法高亮。
+- C 代码的智能感知：自动同步 C/C++ 配置，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏；头文件里符号与函数的文档注释（`/** */`）悬停时显示。C 用 VS Code 内置的 C 语法。
+- 命令“fcdev：查询 C 接口”“fcdev：打开使用文档”与对应的工具。
+- 给 Copilot 用的 36 个语言模型工具（19 个反汇编工具、11 个模拟器工具、6 个 fcdev 工具），以及反汇编指令、skill 与自定义智能体“6502 反汇编工程师”，见第 6 节。
 
-- ca65 汇编（`.s`、`.asm`、`.inc`）的悬停、补全、转到定义、文档符号。
-- C 代码的智能感知：自动运行 `fcdev sync`，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。
-- 头文件里符号与函数的文档注释（`/** */`），悬停时显示。
-- ca65 汇编的语法高亮（TextMate 语法）。C 用 VS Code 内置的 C 语法，不另提供。
-- 给 Copilot 用的 6502 反汇编与模拟器工具（共 30 个语言模型工具），见第 6 节。
-- 随扩展提供的反汇编指令、skill 与自定义智能体“6502 反汇编工程师”，见第 6.7 节。
-
-首版不含，登记在 [待办备忘](待办备忘.md)：任务与问题匹配器、构建与运行命令、新建项目、调试。
+不含：调试适配器协议（DAP）与断点、单步等调试界面，调试经命令与 `emu_*` 工具完成，登记在 [待办备忘](待办备忘.md)。
 
 ## 2. 语言支持的分工
 
 | 语言 | 由谁提供 | 做法 |
 | --- | --- | --- |
-| C | VS Code 的 C/C++ 扩展或 clangd | 本扩展运行 `fcdev sync`，生成 `.vscode/c_cpp_properties.json` 与 `compile_flags.txt`，里面有头文件目录与预定义宏 |
+| C | VS Code 的 C/C++ 扩展或 clangd | 本扩展同步 `.vscode/c_cpp_properties.json` 与 `compile_flags.txt`，里面有头文件目录与预定义宏 |
 | 汇编 | 本扩展 | 自己解析 ca65 源码，不依赖其他扩展 |
 
 本扩展的 `package.json` 用 `extensionPack` 带上 C/C++ 扩展（`ms-vscode.cpptools`），安装本扩展时一并安装；用户仍可单独卸载它，改用 clangd。
@@ -37,7 +37,11 @@ C 的头文件注释用 Doxygen 的 `/** */` 写法，C/C++ 扩展与 clangd 都
 
 自动同步只写日志，失败也不弹提示；日志在“输出”面板的 fcdev 通道。设置 `fcdev.intelliSense.autoSync`（默认开启）可关闭自动同步。
 
-`fcdev sync` 的预定义宏里带 `__fastcall__`、`__cdecl__` 两个空宏：cc65 的头文件用它们标注调用约定，C/C++ 扩展与 clangd 不认识，不定义会报语法错误。这两个宏只出现在 `info` 与 `sync` 的输出里，不参与构建。
+生成的头文件目录在扩展目录里，路径随扩展版本变化：激活时总是同步所有项目，所以升级扩展后配置自动更新。
+
+预定义宏里带 `__fastcall__`、`__cdecl__` 两个空宏：cc65 的头文件用它们标注调用约定，C/C++ 扩展与 clangd 不认识，不定义会报语法错误。这两个宏只出现在项目信息与同步的结果里，不参与构建。
+
+生成的 `compile_flags.txt` 第一行是标记 `-DFCDEV_GENERATED`，`c_cpp_properties.json` 里的配置名是 `fcdev`；已有同名文件但没有标记时视为用户自己的文件，不覆盖。
 
 #### 提示选择配置
 
@@ -61,7 +65,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 可见的符号来自：
 
 1. 当前文件，含局部标签与未保存的修改；名字重名时优先取这里的定义。
-2. 当前文件 `.include` 的文件，最多展开 8 层；路径先按当前文件所在目录找，再按 `fcdev info --json` 给出的汇编引入目录找（含目标的 `asminclude`，所以 `sb2000.inc` 的符号能直接看到）。
+2. 当前文件 `.include` 的文件，最多展开 8 层；路径先按当前文件所在目录找，再按项目信息给出的汇编引入目录找（含目标的 `asminclude`，所以 `sb2000.inc` 的符号能直接看到）。
 3. 工作区里其他汇编文件里的非局部符号。
 
 后两项读自磁盘并缓存；汇编文件变化时，丢弃该文件的解析缓存与工作区文件列表。扩展不理解条件汇编的取舍，`.if` 里的符号都会被收集。
@@ -92,34 +96,47 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 - 宏的调用与不在词表里的标识符不着色，因为单行匹配无法区分它们与符号。
 - 指令词表与 `vscode/src/shared/assembly/instruction-reference.ts`、`vscode/src/shared/assembly/directive-reference.ts` 的覆盖，由 `test/syntaxes/ca65-grammar.test.ts` 逐条检查。
 
-## 3. 项目信息的来源
+## 3. 构建、运行与项目信息
 
-扩展经 `node <项目根>/node_modules/fcdev/bin/fcdev.mjs` 调用命令行，不经 shell，不依赖全局安装。
+### 3.1 项目信息
 
-| 命令 | 用途 |
+项目信息由扩展自己读取，不经任何命令行：`logic/project` 读 `fcdev.json`，`logic/targets` 读 `vscode/targets/<目标>/target.json`，合成项目根、目标、头文件目录、汇编引入目录与预定义宏；每个项目缓存一份，`fcdev.json` 变化后失效。智能感知、同步与命令“显示项目信息”、工具 `fcdev_info` 共用它。项目没有 `fcdev.json` 或配置有误时，汇编智能感知只用当前文件与工作区里的源码，引入目录里的符号看不到；原因写在日志里，不弹提示。
+
+### 3.2 任务、命令与工具
+
+| 位置 | 内容 |
 | --- | --- |
-| `fcdev info --json` | 读取目标、头文件目录、汇编引入目录与预定义宏；每个项目缓存一份，`fcdev.json` 变化后失效 |
-| `fcdev sync` | 生成 C/C++ 扩展的配置 |
+| `entry/build/build-task-provider.ts` | 任务类型 `fcdev`（`command`、`path`、`target`、`debug`），为每个含 `fcdev.json` 的项目提供构建、构建磁盘镜像、运行三个任务；解析 `.vscode/tasks.json` 里的任务；问题匹配器 `$fcdev` |
+| `entry/build/build-task-runner.ts` | 任务在终端里运行：调用构建服务或运行服务，输出原始工具输出，失败输出“错误：”加说明与建议，退出码为 1 |
+| `entry/build/build-commands.ts` | 命令“构建项目”“构建磁盘镜像”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”，都经任务运行 |
+| `entry/fcdev-tools/` | 工具 `fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs` |
+| `entry/debug-client/debug-commands.ts` | 5 个调试命令，结果写到“fcdev 调试”输出通道 |
+| `entry/scaffold`、`entry/c-api`、`entry/usage-docs`、`entry/disassembly/disassembly-commands.ts` | 命令“新建项目”“查询 C 接口”“打开使用文档”“反汇编映像文件” |
+| `entry/emulator/workspace-emulator-settings.ts` | 读设置 `fcdev.emulator.path` 与 `fcdev.emulator.debugPort`（作用域 `machine`，每次使用时读取） |
 
-项目没有安装 `fcdev` 或命令失败时，汇编智能感知只用当前文件与工作区里的源码，引入目录里的符号看不到；原因写在日志里，不弹提示。
+构建、运行、调试的行为细节在使用文档里，不在本文重复。
 
 ## 4. 目录与分层
 
-按分层组织，层内再按功能分目录，具体类只在组装根创建：
+按分层组织，层内再按功能分目录，具体类只在组装根 `src/bootstrap/extension.ts` 创建：
 
 | 目录 | 职责 |
 | --- | --- |
-| `src/contracts` | 接口：汇编智能感知服务、汇编源文件存取、C 配置同步服务、C/C++ 配置检查器、命令行执行器、项目信息提供者、反汇编操作运行器、模拟器操作运行器、构建比较器、工具描述 |
-| `src/shared` | 纯函数与数据：ca65 解析、行内词法、数字格式、指令与伪指令参考、悬停文字、项目信息与 c_cpp_properties.json 的解析、反汇编工具的输入结构检查、结果文字的整理与截断 |
-| `src/logic` | 业务：符号解析（含 `.include` 展开）、汇编智能感知服务、C 配置同步服务 |
-| `src/infra` | 与外部交互：读工作区文件、调用命令行、查找项目、读取 c_cpp_properties.json、动态加载工作区里 fcdev 的反汇编模块与模拟器模块（共用一个加载与版本检查的基类）、用 fcdev build 构建并比较 |
-| `src/entry` | VS Code 入口：四个汇编提供者、命令与文件监视器、反汇编工具的注册（四组工具与模拟器工具各一个文件）与路径规则 |
+| `src/contracts` | 接口与数据类型：汇编智能感知服务、汇编源文件存取、C 配置同步服务、C/C++ 配置检查器、项目配置读取、目标仓库与目标描述读取、工具链定位与工具运行、构建服务、新建项目服务、使用文档服务、C 接口服务、反汇编操作、模拟器操作、进程启动与设置、调试连接器与会话、文件系统、扩展资源位置、工具描述；`debug-client/generated/api.ts` 是 Ember 生成的请求与事件类型 |
+| `src/shared` | 纯函数与数据：ca65 解析、行内词法、数字格式、指令与伪指令参考、悬停文字、c_cpp_properties.json 的解析与生成、项目配置 fcdev.json 的校验、目标定义的解析与取值、构建用的文本处理（依赖文件、工具参数、多页链接配置）与 GB2312 转码、打包器与 FAT12 镜像、新建项目的文件、使用文档的主题、C 接口的解析、调试客户端的请求目录与参数解析、运行结果文字、反汇编的指令表、解码、映像格式、工程模型与视图、可预期错误 |
+| `src/logic` | 业务：符号解析（含 `.include` 展开）、汇编智能感知服务、C 配置同步、项目信息、目标读取、构建规划与编译链接（含增量）、磁盘镜像、新建项目、使用文档与 C 接口查询、反汇编的分析、工程编辑、源码生成与回读、模拟器操作与会话、调试客户端（帧解码、会话、客户端、连接器） |
+| `src/infra` | 与外部交互：读工作区文件、查找项目、读取 c_cpp_properties.json、工具链定位与工具进程运行、扩展资源位置、Ember 进程的启动与结束、端点文件、WebSocket 传输、接口描述文档读取、节点文件系统 |
+| `src/entry` | VS Code 入口：汇编提供者、命令与文件监视器、任务、语言模型工具的注册与路径规则、设置读取 |
 | `src/platform` | 日志（输出通道） |
 | `src/bootstrap` | 组装根 `extension.ts` |
 | `syntaxes` | ca65 的 TextMate 语法文件（静态资源，不经分层） |
+| `targets`、`toolchain`、`templates`、`docs`、`debug`、`chat` | 随扩展发布的资源：目标定义与运行库、cc65 工具链（生成物）、项目模板、使用文档、调试接口描述、聊天贡献文件 |
 
 - 层之间的依赖方向、文件头、注释宽度与 `package.json` 声明和代码的一致性，由 `test/structure.test.ts` 检查。
-- 各层之间只经 `contracts` 里的接口协作；只有 `entry`、`platform`、`infra` 可以引用 `vscode`。
+- 各层之间只经 `contracts` 里的接口协作；只有 `entry`、`platform` 与登记的两个 `infra` 文件（工作区汇编源文件存取、工作区项目定位）可以引用 `vscode`。
+- `shared` 与 `logic` 只能引用 Node 的纯函数模块（`node:path`、`node:crypto`），文件、进程的读写都经 `contracts` 的接口。
+- 仓库里的脚本经 `tools/lib/extension.mjs` 加载 `vscode/out/` 下编译后的模块，所以这些层不能引用 `vscode`；这条由结构测试检查。
+- 读取随扩展发布的资源（目标、工具链、模板、文档）一律经 `ExtensionResources` 取路径。
 
 ## 5. 构建、测试与打包
 
@@ -127,14 +144,18 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm run check` | 类型检查、oxlint、测试、构建 |
-| `npm run package` | 生成 `.vsix`（不入库）；发布到应用市场需要发布者账号，由用户操作 |
+| `npm run check` | 类型检查、oxlint、测试、构建、维护脚本的测试 |
+| `npm run build:toolchain` | 用 `cc65/` 的源码构建并组装 `vscode/toolchain/`（需要 mingw32-make 与 gcc） |
+| `npm run build:libs` | 编译各目标的运行库到 `vscode/targets/<目标>/lib`，需要先 `npm run build` 与 `npm run build:toolchain` |
+| `npm run gen:docs` | 重新生成 SB2000 的符号头文件、接口参考、符号参考与示例源码 |
+| `npm run package` | 生成 `.vsix`（不入库）；发布到应用市场需要发布者账号，由用户操作，见 [05-发布](05-发布.md) |
+| `npm run check:package` | 核对 `.vsix` 的内容 |
 
-测试在 Node 环境里运行，`vscode` 模块用 `test/support/vscode-mock.ts` 替代；入口层的测试验证提供者与命令的行为，真实 VS Code 里的显示效果要手动打开项目核对。语法文件的测试用开发依赖 `vscode-textmate` 与 `vscode-oniguruma` 真实加载语法并分词，不依赖 VS Code；颜色由用户的主题决定，只检查作用域名。
+测试在 Node 环境里运行，`vscode` 模块用 `test/support/vscode-mock.ts` 替代；入口层的测试验证提供者与命令的行为，真实 VS Code 里的显示效果要手动打开项目核对。语法文件的测试用开发依赖 `vscode-textmate` 与 `vscode-oniguruma` 真实加载语法并分词，不依赖 VS Code；颜色由用户的主题决定，只检查作用域名。测试分层见 [04-测试与验证](04-测试与验证.md)。
 
 ## 6. 反汇编与模拟器工具
 
-扩展用 VS Code 的语言模型工具接口（`contributes.languageModelTools` 声明，`vscode.lm.registerTool` 实现，不使用 MCP）给 Copilot 提供 30 个 6502 工具：19 个反汇编工具和 11 个模拟器工具。工作流、工具的用途与计划见 [09-AI 反汇编工具](09-AI反汇编工具.md)，核心在 `fcdev` 里，见 [07-反汇编设计](07-反汇编设计.md)。
+扩展用 VS Code 的语言模型工具接口（`contributes.languageModelTools` 声明，`vscode.lm.registerTool` 实现，不使用 MCP）给 Copilot 提供 36 个工具：19 个反汇编工具、11 个模拟器工具与 6 个 fcdev 工具。工作流、工具的用途见 [09-AI反汇编工具](09-AI反汇编工具.md)，核心见 [07-反汇编设计](07-反汇编设计.md)。
 
 ### 6.1 工具
 
@@ -145,56 +166,45 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | 编辑 | `disasm_apply`、`disasm_symbols`、`disasm_import_record` |
 | 生成与校验 | `disasm_generate`、`disasm_verify`、`disasm_build` |
 | 模拟器 | `emu_connect`、`emu_launch`、`emu_status`、`emu_load`、`emu_run`、`emu_break`、`emu_step`、`emu_inspect`、`emu_screen`、`emu_input`、`emu_record` |
+| fcdev | `fcdev_new_project`、`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_api`、`fcdev_docs` |
 
-- 工具的名字、给模型的说明与参数结构只写在 `package.json` 的 `languageModelTools` 里；代码（`src/entry/disassembly`，每组一个文件）只写“对应的 fcdev 操作、要不要确认、显示的文字、要检查的路径参数”，运行时按名字读 `package.json` 里的参数结构检查输入（`shared/disassembly/schema-validator.ts` 支持 JSON Schema 的一个子集）。`test/entry/disassembly-tools.test.ts` 核对两边的工具一一对应，并核对每个操作都是 `fcdev` 提供的。
-- 除 `disasm_build` 外，每个工具对应 `fcdev` 的一个操作（`disasm_open` 对应 `open`，`disasm_import_record` 对应 `importRecord`，`emu_break` 对应 `breakpoint`，`emu_screen` 对应 `screenshot`，依此类推）；`disasm_reference` 不给 `projectDir` 时只查指令。模拟器工具的操作在 `fcdev` 的 `src/emulator/`，调用方式与会话见 6.5。
+- 工具的名字、给模型的说明与参数结构只写在 `package.json` 的 `languageModelTools` 里；代码（`src/entry/disassembly` 每组一个文件、`src/entry/fcdev-tools`）只写“对应的操作、要不要确认、显示的文字、要检查的路径参数”，运行时按名字读 `package.json` 里的参数结构检查输入（`shared/disassembly/schema-validator.ts` 支持 JSON Schema 的一个子集）。`test/entry/disassembly-tools.test.ts` 与 `test/entry/fcdev-tools/` 核对两边的工具一一对应。
+- 除 `disasm_build` 外，每个反汇编与模拟器工具对应核心的一个操作（`disasm_open` 对应 `open`，`disasm_import_record` 对应 `importRecord`，`emu_break` 对应 `breakpoint`，`emu_screen` 对应 `screenshot`，依此类推）；`disasm_reference` 不给 `projectDir` 时只查指令。模拟器工具的操作在 `src/logic/emulator/`，会话见 6.4。
+- `disasm_build` 用构建服务构建项目（`logic/disassembly/build-service-comparer.ts`），把产物与工程记录的原映像逐字节比较；构建的是按生成的源码整理出来的 fcdev 项目，不是反汇编工程目录本身。
 
-### 6.2 加载 fcdev
-
-扩展不把 `fcdev` 打进包，也不经命令行：`infra/disassembly/fcdev-module-runner.ts`（基类，`workspace-disasm-runner.ts` 与 `workspace-emulator-runner.ts` 各给出一个模块的描述）从工程目录向上找 `node_modules/fcdev`，用动态 `import()` 加载它的 `src/disasm/index.mjs`（调用 `runOperation`）或 `src/emulator/index.mjs`（调用 `runEmulatorOperation`），按操作名调用。加载后按路径缓存，所以升级 `fcdev` 后要重新加载窗口；模块实例只有一个，模拟器的会话因此在多次工具调用之间保持。
-
-| 情况 | 行为 |
-| --- | --- |
-| 没有安装 `fcdev` | 返回“项目里没有安装 fcdev”的说明 |
-| 没有 `API_VERSION`、模块缺失 | 提示升级 `fcdev` |
-| `API_VERSION` 小于扩展支持的版本（1） | 提示升级 `fcdev`（模拟器模块看 `EMULATOR_API_VERSION`，支持的版本也是 1） |
-| `API_VERSION` 大于扩展支持的版本 | 提示升级扩展 |
-| `fcdev` 抛出的可预期错误（`FcdevError`） | 转成带“建议”的说明返回给模型，模型据此改参数 |
-
-`disasm_build` 经命令行 `fcdev build`（`infra/disassembly/fcdev-build-comparer.ts`）构建，取输出里“已生成 …”那一行的路径，与工程记录的原映像逐字节比较。
-
-### 6.3 路径与确认
+### 6.2 路径与确认
 
 - 相对路径按第一个工作区文件夹解析；`projectDir`、`buildPath` 必须在工作区里，否则拒绝。要反汇编的映像（`image`）、符号集（`symbolSets`、`file`）可以在工作区外，但调用前的确认里会写出这些路径。
-- 会修改工程文件、写生成文件、运行外部程序、启动进程或改模拟器状态的调用，在调用前弹出确认：`disasm_trace`、`disasm_apply`、`disasm_generate`、`disasm_verify`、`disasm_build`、`disasm_import_record`、`emu_launch`，以及带 `image` 的 `disasm_open`、带 `segments` 的 `disasm_layout`、`action` 为 `import` 的 `disasm_symbols`、`what` 为 `write` 或 `setState` 的 `emu_inspect`、带 `file` 的 `emu_screen`。其他调用只显示一行说明。
-- 任何调用里有在工作区之外的路径时都要确认，确认里写出这些路径（如 `emu_load` 的 `file`、`firmware`、`diskImage`，`disasm_import_record` 的记录文件，`emu_launch` 的 `executable`）；`emu_screen` 的保存路径必须在工作区里。
-- 不向模型开放工具链路径等会改变被运行程序的参数；工具链由 `fcdev` 按环境变量与随包的工具链定位。
+- 会修改工程文件、写生成文件、运行外部程序、启动进程或改模拟器状态的调用，在调用前弹出确认：`disasm_trace`、`disasm_apply`、`disasm_generate`、`disasm_verify`、`disasm_build`、`disasm_import_record`、`emu_launch`，以及带 `image` 的 `disasm_open`、带 `segments` 的 `disasm_layout`、`action` 为 `import` 的 `disasm_symbols`、`what` 为 `write` 或 `setState` 的 `emu_inspect`、带 `file` 的 `emu_screen`；`fcdev_build`、`fcdev_run`、`fcdev_new_project` 也会确认。其他调用只显示一行说明。
+- 任何调用里有在工作区之外的路径时都要确认，确认里写出这些路径（如 `emu_load` 的 `file`、`firmware`、`diskImage`，`disasm_import_record` 的记录文件）；`emu_screen` 的保存路径必须在工作区里。
+- 不向模型开放会改变被运行程序的参数：Ember 的位置只来自用户设置 `fcdev.emulator.path`，模型不能指定。
 
-### 6.4 结果与出错
+### 6.3 结果与出错
 
 - 结果是缩进的 JSON；清单、十六进制视图、调用图这类多行文字（结果里的 `text` 与 `listing`）单独成块原样输出。
 - 一次结果最多 20000 个字符，超出时截断并说明怎么缩小范围；列表类工具带 `limit`（默认 50，最多 500）与 `cursor`，下一页的游标是结果里的 `nextCursor`。
 - 出错时不抛异常，把原因作为结果文字（以“错误：”开头）返回，模型据此改参数；非预期的错误写进“fcdev”输出通道，并返回通用说明。
 
-### 6.5 模拟器会话
+### 6.4 模拟器会话
 
-- 连接保存在 `fcdev` 的模拟器模块里，整个扩展主机进程只有一个会话；`emu_connect` 与 `emu_launch` 建立会话（已有会话先关闭，不结束进程），`emu_status` 查看，带 `close` 时关闭，再带 `terminate` 才结束自己启动的 Ember，不影响用户自己打开的。
+- 连接保存在模拟器操作的会话存储里，整个扩展主机进程只有一个会话；`emu_connect` 与 `emu_launch` 建立会话（已有会话先关闭，不结束进程），`emu_status` 查看，带 `close` 时关闭，再带 `terminate` 才结束自己启动的 Ember，不影响用户自己打开的。
 - 扩展停用时（`deactivate`）如果用过模拟器，会关闭会话并结束自己启动的 Ember；没用过则什么也不做。
-- `emu_screen` 的截图作为图像部分随结果返回（文字里不含 base64）。图像部分需要较新的 VS Code（工具结果里的 `LanguageModelDataPart`，按运行时是否存在检测，扩展声明的 `engines` 仍是 ^1.95.0）；不支持时结果里会说明，让模型给 `file` 参数把截图保存成文件。
+- `emu_screen` 的截图作为图像部分随结果返回（文字里不含 base64）。图像部分需要较新的 VS Code（工具结果里的 `LanguageModelDataPart`，按运行时是否存在检测）；不支持时结果里会说明，让模型给 `file` 参数把截图保存成文件。
 - 记录文件由 Ember 写在它的调试输出目录，`emu_record` 结束时返回完整路径，再交给 `disasm_import_record` 导入。
 
-### 6.6 激活
+### 6.5 激活
 
-激活事件在原来的 `workspaceContains:fcdev.json` 之外增加 `workspaceContains:**/disasm.json` 与 `onStartupFinished`：只有一个映像文件的反汇编工作区没有 `fcdev.json`，工具也要能用。真实 VS Code 里 Copilot 是否发现并调用工具，要手动核对。
+激活事件有 `workspaceContains:fcdev.json`、`workspaceContains:**/disasm.json` 与 `onStartupFinished`：只有一个映像文件的反汇编工作区没有 `fcdev.json`，工具也要能用。真实 VS Code 里 Copilot 是否发现并调用工具，要手动核对。
 
-### 6.7 指令、skill 与 agent
+### 6.6 指令、skill 与 agent
 
 | 文件 | 声明 | 内容 |
 | --- | --- | --- |
 | `chat/instructions/6502-disassembly.instructions.md` | `chatInstructions`，`applyTo: '**/disasm.json'` | 只经工具改工程、命名与注释要有依据、每批编辑后看 `disasm_status`、编辑后重新校验、关闭模拟器会话、不把有版权的映像放进仓库 |
 | `chat/skills/disassemble-6502/SKILL.md` 与 `references/` | `chatSkills` | 八步与每步的完成标准、各种输入的打开方式、区域类型与参数、运行记录的闭环、符号与提示的形式 |
-| `chat/agents/6502-disassembler.agent.md` | `chatAgents` | “6502 反汇编工程师”：内置的 `read`、`search`、`todo` 加本扩展的全部 30 个工具（写成 `sungbin.fcdev/工具引用名`），按 skill 多轮完成并在结束时汇报 |
+| `chat/agents/6502-disassembler.agent.md` | `chatAgents` | “6502 反汇编工程师”：内置的 `read`、`search`、`todo` 加本扩展的全部工具（写成 `sungbin.fcdev/工具引用名`），按 skill 多轮完成并在结束时汇报 |
 
 - 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。
 - `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整；agent 的工具恰好是内置三项加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*` 都存在。
-- 这三类贡献点要较新的 VS Code，低版本会忽略它们，不影响扩展的其他功能（语法高亮、智能感知、语言模型工具）；因此 `engines.vscode` 保持 `^1.95.0`，不为聊天贡献点抬高，否则低版本用户连其他功能也装不上。agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。
+- 这三类贡献点要较新的 VS Code，低版本会忽略它们，不影响扩展的其他功能。agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。
+- `engines.vscode` 为 `^1.101.0`：调试客户端用全局 `WebSocket`，扩展宿主的 Node 要达到 22（VS Code 1.101 起的扩展宿主是 Node 22.15.1）。

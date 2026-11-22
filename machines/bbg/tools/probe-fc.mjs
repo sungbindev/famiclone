@@ -5,9 +5,8 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：用法 node tools/probe-fc.mjs；先在 apps/sb2000/fcprobe 里构建并生成软盘镜像：
-//       node ../../../packages/fcdev/bin/fcdev.mjs build src；node ../../../packages/fcdev/bin/fcdev.mjs disk src。
-//       Ember 按 fcdev 的规则定位（环境变量 FCDEV_EMULATOR，没有时用随包的 Ember）；结束时只结束自己启动的进程。
+// 备注：用法 node tools/probe-fc.mjs；先在 apps/sb2000/fcprobe 里用任务“fcdev：构建磁盘镜像”（命令 fcdev.buildDisk）生成软盘镜像；
+//       Ember 的位置取环境变量 EMBER_EXE；结束时只结束自己启动的进程。
 //       结果区在 ERAM $7F00 起，各项的含义见 probe-stub.s 的文件头。
 // ------------------------------------------------------------------------
 
@@ -15,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import { join } from 'node:path';
-import { debugUserDataDirectory, enterProgram, launchEmulator, locateEmulator, runFrames } from '../../../packages/fcdev/src/emulator/index.mjs';
+import { debugUserDataDirectory, emberExecutable, enterProgram, launchEmulator, runFrames } from '../../../tools/lib/extension.mjs';
 import { REPO_ROOT } from './config.mjs';
 
 const firmware = join(REPO_ROOT, 'ember', 'roms', 'sb2000_bios.bin');
@@ -48,7 +47,7 @@ async function readMemory(client, address, length) {
 
 const hex = (value) => `$${value.toString(16).toUpperCase().padStart(2, '0')}`;
 const port = await findFreePort();
-const { pid, client } = await launchEmulator({ executable: locateEmulator().executable, sb2000: { firmware, diskImage: image }, debug: true, port });
+const { pid, client } = await launchEmulator({ executable: emberExecutable(), sb2000: { firmware, diskImage: image }, debug: true, port });
 try {
   await enterProgram(client, 'fcprobe');
   const run = await runFrames(client, PROBE_FRAMES);

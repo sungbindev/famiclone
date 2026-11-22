@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：sdk-ts.mjs
- * 说明：由 OpenRPC 文档生成调试 SDK 的 TypeScript 类型文件：数据类型、每个请求的参数与结果、请求表（RequestMap）、事件表（EventMap）与按模块分组的接口（EmberApi）。
+ * 说明：由 OpenRPC 文档生成调试客户端的 TypeScript 类型文件：数据类型、每个请求的参数与结果、请求表（RequestMap）、事件表（EventMap）与按模块分组的接口（EmberApi）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14

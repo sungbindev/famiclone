@@ -1,0 +1,262 @@
+{
+  "fcdevVersion": "0.9.2",
+  "toolchain": "cc65 V2.19 - Git 357f64e",
+  "projects": {
+    "apps/disasm-example": {
+      "target": "nes",
+      "output": "hello.nes",
+      "size": 40976,
+      "sha256": "c4fe6a6b64df5151e31f6f02a5971fa655057c5478b308baeda988242bd7ea05"
+    },
+    "apps/sb2000/asm": {
+      "target": "sb2000",
+      "output": "ASM.EXE",
+      "size": 45056,
+      "sha256": "870feead1e85c29434c74ec2e2f7e9d76ee458b4c960ad1d72452e903f3c24ee",
+      "image": {
+        "size": 1474560,
+        "sha256": "6919757447406f9837429e76c0025900beb3985523194173602774cc5de497d4"
+      }
+    },
+    "apps/sb2000/edit": {
+      "target": "sb2000",
+      "output": "EDIT.EXE",
+      "size": 32768,
+      "sha256": "4434c25bc74320703d2462ef94a92413a4023cb1459d3283602aed10eef41f2e",
+      "image": {
+        "size": 1474560,
+        "sha256": "bd3f27456b2e781fad7810754772e913a10659f0170993ae9a001e15f0d4d699"
+      }
+    },
+    "apps/sb2000/examples/copy": {
+      "target": "sb2000",
+      "output": "CP.EXE",
+      "size": 2913,
+      "sha256": "6fecbf41baaa338a23b2d2d9331f9d86e04fb466cd1cf5e97dd5a5c028817bd4",
+      "image": {
+        "size": 1474560,
+        "sha256": "f9f0597d5a45856aa6f4370c7d47ffa566b4b7b275bcdba16a5ad3ca403ba395"
+      }
+    },
+    "apps/sb2000/examples/hello": {
+      "target": "sb2000",
+      "output": "HELLO.EXE",
+      "size": 420,
+      "sha256": "b772cc1fa254d116437012bf87b9a5fcc7d20c3de527c3c35974a6ff2528b80c",
+      "image": {
+        "size": 1474560,
+        "sha256": "b95be80b106ff4959f1f63ac62a983f2c8c29650b0a18ce3b33edc1cd899b1e5"
+      }
+    },
+    "apps/sb2000/examples/mouse": {
+      "target": "sb2000",
+      "output": "MOUSE.EXE",
+      "size": 1532,
+      "sha256": "cb885871ffc48bb3f9ccb760e8504e77d2cd0cf25c37bb8c56c0a14ae2d0bb51",
+      "image": {
+        "size": 1474560,
+        "sha256": "69dff6760294bcd8a770569987db603119716bad7baf278e60fe3a273247b786"
+      }
+    },
+    "apps/sb2000/examples/newcall": {
+      "target": "sb2000",
+      "output": "NEWCALL.EXE",
+      "size": 560,
+      "sha256": "4380f9bf7b2fc61291e4c0ce6085b442c9a982deb08114abdfb29345d0fb7cfa",
+      "image": {
+        "size": 1474560,
+        "sha256": "85e462915c7753d1989397c2dbd6db26b660c948478d8f44f275d397a3c35e9b"
+      }
+    },
+    "apps/sb2000/examples/pad": {
+      "target": "sb2000",
+      "output": "PAD.EXE",
+      "size": 1038,
+      "sha256": "3d42f19b662546bb7855df6709704cf3e31960a64e8098f6cf313eee6041bbf7",
+      "image": {
+        "size": 1474560,
+        "sha256": "38edbc3f1c591c3e8f862a839fb9f2fdfa8bee48883c4ceb521ad52a2e3f6b54"
+      }
+    },
+    "apps/sb2000/examples/peek": {
+      "target": "sb2000",
+      "output": "PEEK.EXE",
+      "size": 3244,
+      "sha256": "5eec39de3a1856db221d401ddd8e0ca24c312ddb2988f392e8ea85f49da09f3d",
+      "image": {
+        "size": 1474560,
+        "sha256": "f6598ea5346b9f313c835d4e3362342aea32b53f649a67f89290d3e4cee61e17"
+      }
+    },
+    "apps/sb2000/examples/play": {
+      "target": "sb2000",
+      "output": "PLAY.EXE",
+      "size": 1399,
+      "sha256": "d98cd355a7f14344438e0ffc3f54e45e4229e1869d9caa3124c73c2fa158d1f0",
+      "image": {
+        "size": 1474560,
+        "sha256": "c4d09424635535de98631e4d39d9ed60a80d6594a0fab0b75b039d9c3670d969"
+      }
+    },
+    "apps/sb2000/examples/poke": {
+      "target": "sb2000",
+      "output": "POKE.EXE",
+      "size": 3636,
+      "sha256": "766591a2e25c836e95332dc4534f35c4b825f9ef06c992dbc0ff4aa43810ae18",
+      "image": {
+        "size": 1474560,
+        "sha256": "d285f3ccace3e0ad6aa0089ccbf607d47417aa031a774a8cad4baf609f1ee1b3"
+      }
+    },
+    "apps/sb2000/examples/say": {
+      "target": "sb2000",
+      "output": "SAY.EXE",
+      "size": 555,
+      "sha256": "966699aca692876f3ebb29bcd1952341031fd2938382e9743e55bf1d831e3724",
+      "image": {
+        "size": 1474560,
+        "sha256": "edca25160f513894da19acaa165b4952271736c519e6abcd1160140b6fae762b"
+      }
+    },
+    "apps/sb2000/examples/show": {
+      "target": "sb2000",
+      "output": "SHOW.EXE",
+      "size": 3384,
+      "sha256": "1de5f931b879a4aa5949fbbcce1ae7abc60fea5b783f6cc5a7c080c0eb2db185",
+      "image": {
+        "size": 1474560,
+        "sha256": "f0065a31f5ae2479f1d74e9b8fa313604fdcba99c2c91e7c1ebaffa9729d8425"
+      }
+    },
+    "apps/sb2000/examples/syscall": {
+      "target": "sb2000",
+      "output": "SYSCALL.EXE",
+      "size": 550,
+      "sha256": "4a8457895af8c0f0e6af39c87b8a1200efd27da89eef55c7a67cee8b6778a0ef",
+      "image": {
+        "size": 1474560,
+        "sha256": "158e80f0f9b7c99373ae18dfcee35673bfe2a09a6ed368d015537d0dc61c68d2"
+      }
+    },
+    "apps/sb2000/fbasic/exe": {
+      "target": "sb2000",
+      "output": "FBASIC.EXE",
+      "size": 65536,
+      "sha256": "28b5e7f8c49314e1a1adceb6557a91a56c69bb96d82d0e23edb90b2bc4f1a8ce",
+      "image": {
+        "size": 1474560,
+        "sha256": "eee2dca76a8e155ef658dda8f7eac06041fa15f319b55d5f2612eca722921e65"
+      }
+    },
+    "apps/sb2000/fcprobe": {
+      "target": "sb2000",
+      "output": "FCPROBE.EXE",
+      "size": 1374,
+      "sha256": "f839741f11d8499862443d84274f22f7c0066d89483c26e1d637dcb0627efaa1",
+      "image": {
+        "size": 1474560,
+        "sha256": "90830534028177cc9f9c3c882c570e52d6827826044a04a1bbb71b1c41556809"
+      }
+    },
+    "apps/sb2000/hwprobe": {
+      "target": "sb2000",
+      "output": "HWPROBE.EXE",
+      "size": 4031,
+      "sha256": "fe0f56df6e61a4a95d916e5f701efc332571e4c7c695384a9bb394bf9f280243",
+      "image": {
+        "size": 1474560,
+        "sha256": "22e71f51acbe6ef6c0e94214a41ff9cd2f7c235c1b738dd34b7f07f806e14b53"
+      }
+    },
+    "apps/sb2000/hwtest": {
+      "target": "sb2000",
+      "output": "HWTEST.EXE",
+      "size": 15144,
+      "sha256": "afe6a1cdc0e2301750f0dfac6f7456cf4e7ab77dabf7370887a66886effbfc93",
+      "image": {
+        "size": 1474560,
+        "sha256": "20256178a615ffbcb0e4d9640e6d7d3ba6fca258d28e01e50fbb0d5d6c747a7b"
+      }
+    },
+    "apps/sb2000/memtest": {
+      "target": "sb2000",
+      "output": "MEMTEST.EXE",
+      "size": 5783,
+      "sha256": "b924e017a60ddfe47b79163348f7749dc07dfabc071371173667452306496c90",
+      "image": {
+        "size": 1474560,
+        "sha256": "75d3c604860bbffde46bf41a9e4822a7376297d0724e808e59a8276441990143"
+      }
+    },
+    "apps/sb2000/runnes": {
+      "target": "sb2000",
+      "output": "RUNNES.EXE",
+      "size": 4089,
+      "sha256": "36121ec27be4ac300a20109841c25af67957b8aba14d7e0a32a983f0de609f2b",
+      "image": {
+        "size": 1474560,
+        "sha256": "946e3a5828ef354fa5fa0c7ff6cbfb49f9222957d0898ba9697ab922416086c4"
+      }
+    }
+  },
+  "templates": {
+    "nes-asm": {
+      "target": "nes",
+      "output": "hello.nes",
+      "size": 40976,
+      "sha256": "c4fe6a6b64df5151e31f6f02a5971fa655057c5478b308baeda988242bd7ea05"
+    },
+    "nes-c": {
+      "target": "nes",
+      "output": "hello.nes",
+      "size": 40976,
+      "sha256": "05aa1cdd3566137027350534b3c12d50737ed56c480004e6a4d7146bc9beab98"
+    },
+    "sb2000-asm": {
+      "target": "sb2000",
+      "output": "HELLO.EXE",
+      "size": 417,
+      "sha256": "b0db016ed6921983fff5fc0537b45454ceec63801867a191220f431ceeb17c83",
+      "image": {
+        "size": 1474560,
+        "sha256": "4f785800078eada2a3836176a07178a5e56aad211f3945ca40ad91074fcbd92c"
+      }
+    },
+    "sb2000-c": {
+      "target": "sb2000",
+      "output": "HELLO.EXE",
+      "size": 420,
+      "sha256": "b772cc1fa254d116437012bf87b9a5fcc7d20c3de527c3c35974a6ff2528b80c",
+      "image": {
+        "size": 1474560,
+        "sha256": "b95be80b106ff4959f1f63ac62a983f2c8c29650b0a18ce3b33edc1cd899b1e5"
+      }
+    }
+  },
+  "disassembly": {
+    "apps/disasm-example": {
+      "size": 40976,
+      "mappedBytes": 32768,
+      "instructions": 213,
+      "codeBytes": 452,
+      "verified": true,
+      "files": {
+        "src/main.s": "e4d7305bc29c2702f8bd2985eb0344d7737927c77d3cdaba0b8732478bff0c61",
+        "link.cfg": "eec00cf3a9bb8fd334b6023af5762fd9470dc4859f6afb42c46adf680d73a645",
+        "include/globals.inc": "e436fece22624e80f05d0758f4e3f71b4687b6ba47d3a3965e1dfed6e9d1efcb"
+      }
+    },
+    "apps/sb2000/examples/hello": {
+      "size": 420,
+      "mappedBytes": 420,
+      "instructions": 162,
+      "codeBytes": 358,
+      "verified": true,
+      "files": {
+        "src/main.s": "a40e1a0597ca0cfe1f7e1ab5ed4b40cfb860194a403e966818db7bdb50f1ce37",
+        "link.cfg": "c5a294d05e1dfbc4796141be8383b2f8a5779d05b0472c853c926cfc6f3ab928",
+        "include/globals.inc": "9a1468c67a549e3f1eaca75e2dec377b775708a6656d3425423072040ae591ee"
+      }
+    }
+  }
+}

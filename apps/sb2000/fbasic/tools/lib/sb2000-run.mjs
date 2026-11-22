@@ -1,18 +1,17 @@
 // ------------------------------------------------------------------------
 // 名称：sb2000-run.mjs
-// 说明：在 Ember 的学习机里运行 FBASIC.EXE 的会话：把 EXE 放进软盘镜像，启动模拟器，经 fcdev 公共版的 enterProgram 进入 SB-DOS 并运行程序；提供运行帧数、读写内存、按键与截图。
+// 说明：在 Ember 的学习机里运行 FBASIC.EXE 的会话：把 EXE 放进软盘镜像，启动模拟器，经扩展的 enterProgram 进入 SB-DOS 并运行程序；提供运行帧数、读写内存、按键与截图。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
-// 备注：Ember 按 fcdev 的规则定位（环境变量 FCDEV_EMULATOR，没有时用随包的 Ember）。结束时只结束自己启动的进程。
+// 备注：Ember 的位置取环境变量 EMBER_EXE。结束时只结束自己启动的进程。
 // ------------------------------------------------------------------------
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { debugUserDataDirectory, enterProgram, launchEmulator, locateEmulator, runFrames, tapKey } from '../../../../../packages/fcdev/src/emulator/index.mjs';
-import { getDiskPackager } from '../../../../../packages/fcdev/src/packagers/index.mjs';
+import { debugUserDataDirectory, emberExecutable, enterProgram, launchEmulator, packageDisk, runFrames, tapKey } from '../../../../../tools/lib/extension.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');
@@ -95,13 +94,13 @@ export class Session {
  * @returns {Promise<Session>} 会话；返回时程序刚被启动
  */
 export async function startProgram({ exe = join(ROOT, 'exe', 'build', 'sb2000', 'FBASIC.EXE'), name = 'fbasic' } = {}) {
-  const emulator = locateEmulator();
+  const executable = emberExecutable();
   const work = join(ROOT, 'build', 'run');
   mkdirSync(work, { recursive: true });
   const imageFile = join(work, 'fbasic.img');
-  getDiskPackager('fat-floppy')({ files: [{ name: 'FBASIC.EXE', data: readFileSync(exe) }], outputFile: imageFile, options: { label: 'FCDEV' } });
+  writeFileSync(imageFile, packageDisk('fat-floppy', [{ name: 'FBASIC.EXE', data: readFileSync(exe) }], { label: 'FCDEV' }));
   const port = await findFreePort();
-  const { pid, client } = await launchEmulator({ executable: emulator.executable, sb2000: { firmware: FIRMWARE, diskImage: imageFile }, debug: true, port });
+  const { pid, client } = await launchEmulator({ executable, sb2000: { firmware: FIRMWARE, diskImage: imageFile }, debug: true, port });
   const session = new Session({ client, pid, port });
   try {
     await enterProgram(client, name);

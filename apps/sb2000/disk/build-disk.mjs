@@ -14,7 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildFat12Image } from '../../../packages/fcdev/src/packagers/fat12-image.mjs';
+import { buildFat12Image } from '../../../vscode/out/shared/packaging/fat12-image.js';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 

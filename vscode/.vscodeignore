@@ -8,3 +8,4 @@ vitest.config.mts
 .oxlintrc.json
 .gitignore
 **/*.vsix
+tools/**

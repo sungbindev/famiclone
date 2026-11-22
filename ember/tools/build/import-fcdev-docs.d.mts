@@ -8,11 +8,11 @@
  * ------------------------------------------------------------------------
  */
 
-/** fcdev 的使用文档主题登记项（与 packages/fcdev/src/docs/doc-topics.mjs 一致）。 */
+/** fcdev 扩展的使用文档主题登记项（与 vscode/docs/topics.json 一致）。 */
 export interface FcdevDocTopic {
   readonly topic: string;
   readonly file: string;
-  readonly inPackage?: boolean;
+  readonly root?: 'extension';
   readonly title: string;
   readonly summary: string;
 }
@@ -23,13 +23,13 @@ export interface SidebarGroup {
   readonly items: { readonly text: string; readonly link: string }[];
 }
 
-/** fcdev 的使用文档主题登记表。 */
+/** fcdev 扩展的使用文档主题登记表。 */
 export const DOC_TOPICS: readonly FcdevDocTopic[];
 
 /** 仓库根目录。 */
 export const REPO_ROOT: string;
-/** fcdev 主包目录。 */
-export const FCDEV_ROOT: string;
+/** fcdev 扩展目录。 */
+export const EXTENSION_ROOT: string;
 /** 导入的目标目录（ember/help/fcdev）。 */
 export const HELP_FCDEV_DIRECTORY: string;
 
@@ -40,10 +40,10 @@ export function groupTopics<T extends { readonly file: string }>(topics: readonl
 /** 站点侧边栏：概述加各分组。 */
 export function sidebarGroups(topics?: readonly FcdevDocTopic[]): SidebarGroup[];
 /** 主题的源文件绝对路径。 */
-export function topicSourceFile(topic: { readonly file: string; readonly inPackage?: boolean }, fcdevRoot?: string): string;
+export function topicSourceFile(topic: { readonly file: string; readonly root?: 'extension' }, extensionRoot?: string): string;
 /** 把一份文档转成帮助站点的页面。 */
 export function convertDocument(input: { text: string; sourceFile: string; relativeFile: string; pageByFile: ReadonlyMap<string, string> }): string;
 /** 概述页。 */
 export function renderOverview(topics: readonly FcdevDocTopic[]): string;
 /** 导入全部文档到目标目录，返回页数与实际写入的页数。 */
-export function importFcdevDocs(options?: { topics?: readonly FcdevDocTopic[]; fcdevRoot?: string; outputDirectory?: string }): { pages: number; written: number };
+export function importFcdevDocs(options?: { topics?: readonly FcdevDocTopic[]; extensionRoot?: string; outputDirectory?: string }): { pages: number; written: number };

@@ -16,7 +16,7 @@ import { parseSymbolSections } from './gen-sb2000-header.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** SB2000 目标目录 */
-const TARGET_DIR = path.join(REPO_ROOT, 'packages', 'fcdev', 'targets', 'sb2000');
+const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');
 
 /** 生成的文档路径 */
 export const SYMBOLS_DOC_FILE = path.join(TARGET_DIR, 'symbols-reference.md');

@@ -9,7 +9,7 @@
 
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import type { FcdevProjectLocator } from '../../contracts/project/fcdev-command-runner';
+import type { FcdevProjectLocator } from '../../contracts/project/project-locator';
 
 /** 项目配置文件的匹配模式。 */
 const CONFIG_FILES = '**/fcdev.json';

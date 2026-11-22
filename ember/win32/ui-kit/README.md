@@ -98,4 +98,4 @@ return rujian::ui::HostWindow::runMessageLoop();
 
 ## 许可
 
-Apache-2.0，见 [LICENSE](LICENSE)；图标图形来自 Tabler Icons（MIT），标题栏应用名的字体是 Quicksand（SIL OFL 1.1），许可与清单见 `third_party/tabler-icons`、`third_party/quicksand`。
+Apache-2.0，见 [LICENSE](LICENSE)；图标图形来自 Tabler Icons（MIT）与 IconPark（Apache-2.0），标题栏应用名的字体是 Quicksand（SIL OFL 1.1），许可与清单见 `third_party/tabler-icons`、`third_party/iconpark`、`third_party/quicksand`。

@@ -1,12 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：gen-icons.mjs
- * 说明：图标生成器：从 rujian-ui-kit 的图标数据里取出界面与已登记组件用到的图标，生成公共的图标编号 icon-id.hpp 与路径数据 icon-data.generated.cpp。
+ * 说明：图标生成器：从 rujian-ui-kit 的图标数据里取出界面与已登记组件用到的图标，加上 third_party/iconpark/icon-data.json 里的全部图标，生成公共的图标编号 icon-id.hpp 与路径数据 icon-data.generated.cpp。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：用到的图标 = 已登记组件目录的源码里出现的 icon<名称> 标识符中在图标数据里存在的那些，加上 tools/kit-components.json 的 extraIcons（应用自己用到的图标，需要新图标时在这里加）；
- *       图标数据的路径是 24×24 画布内的 SVG 路径，字符串是描边路径，对象还可带 fill、stroke、opacity。
+ *       图标数据的路径是 24×24 画布内的 SVG 路径，字符串是描边路径，对象还可带 fill、stroke、opacity；fill 为 accent 的路径由界面指定颜色填充，没有指定时不填充；
+ *       icon-data.json 的路径在 48×48 的画布里（只用 M、L、H、V、C、Z 的绝对写法），生成时缩放一半。
  *       用法：node tools/gen-icons.mjs 写文件，node tools/gen-icons.mjs --check 只检查已提交的文件与生成结果一致。
  * ------------------------------------------------------------------------
  */
@@ -23,6 +24,8 @@ export const ID_FILE = join(KIT_ROOT, 'include', 'rujian', 'ui', 'icon-id.hpp');
 export const DATA_FILE = join(KIT_ROOT, 'src', 'generated', 'icon-data.generated.cpp');
 /** 按文字匹配图标的规则表文件。 */
 export const RULES_FILE = join(KIT_ROOT, 'src', 'generated', 'icon-rules.generated.cpp');
+/** 另一套图标的路径数据。 */
+const ICON_SET_FILE = join(KIT_ROOT, 'third_party', 'iconpark', 'icon-data.json');
 
 /**
  * 递归列出目录里的源码文件（.ts 与 .tsx，排除示例与测试）。
@@ -49,6 +52,37 @@ function readIconData(file) {
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     const match = /^export const (icon\w+) = (\[.*\]);\s*$/.exec(line);
     if (match) icons.set(match[1], vm.runInNewContext(match[2], Object.create(null), { timeout: 1000 }));
+  }
+  return icons;
+}
+
+/**
+ * 把路径里的全部坐标乘以系数；只支持 M、L、H、V、C、Z 的绝对写法。
+ * @param {string} d 路径。
+ * @param {number} factor 系数。
+ * @returns {string} 缩放后的路径。
+ */
+function scalePath(d, factor) {
+  return d.replace(/([A-Za-z])|(-?\d*\.?\d+)/g, (_, command, number) => {
+    if (command !== undefined) {
+      if (!'MLHVCZ'.includes(command)) throw new Error(`图标路径用了不支持的命令 ${command}：${d}`);
+      return command;
+    }
+    return String(Math.round(Number(number) * factor * 100000) / 100000);
+  });
+}
+
+/**
+ * 读取另一套图标的数据，标识符写成 icon<名称>（名称由连字符分隔的单词转大驼峰），路径缩放到 24×24。
+ * @returns {Map<string, (string | object)[]>} 图标标识符到路径数组。
+ */
+function readIconSet() {
+  const data = JSON.parse(readFileSync(ICON_SET_FILE, 'utf8'));
+  const factor = 24 / data.viewBox;
+  const icons = new Map();
+  for (const [name, paths] of Object.entries(data.icons)) {
+    const identifier = `icon${name.split('-').map((word) => word[0].toUpperCase() + word.slice(1)).join('')}`;
+    icons.set(identifier, paths.map((path) => ({ ...path, d: scalePath(path.d, factor) })));
   }
   return icons;
 }
@@ -98,7 +132,7 @@ function header(name, description) {
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：由 tools/gen-icons.mjs 生成，不要手改；图标图形来自 Tabler Icons（MIT，见 third_party/tabler-icons）。
+ * 备注：由 tools/gen-icons.mjs 生成，不要手改；图标图形的来源与许可见 third_party。
  * ------------------------------------------------------------------------
  */
 `;
@@ -147,7 +181,10 @@ function readLabelRules(webKit, known) {
 export function generate() {
   const webKit = findWebKit();
   const icons = readIconData(join(webKit, 'src', 'third_party', 'tabler-icons', 'icon-data.ts'));
-  const used = findUsedIcons(webKit, new Set(icons.keys()));
+  const iconSet = readIconSet();
+  const used = [...findUsedIcons(webKit, new Set(icons.keys())), ...iconSet.keys()].toSorted();
+  if (new Set(used).size !== used.length) throw new Error('两套图标里有同名的图标');
+  const allIcons = new Map([...icons, ...iconSet]);
 
   const id = [
     header('icon-id.hpp', '图标编号：界面与已登记组件用到的全部图标，名称与组件库里的 icon<名称> 对应。'),
@@ -177,7 +214,7 @@ export function generate() {
     ''
   ];
   for (const name of used) {
-    const paths = icons.get(name).map((path) => (typeof path === 'string' ? { d: path } : path));
+    const paths = allIcons.get(name).map((path) => (typeof path === 'string' ? { d: path } : path));
     data.push(`constexpr IconPath ${enumName(name)}Paths[] = {`);
     for (const path of paths) {
       const unknown = Object.keys(path).filter((key) => !['d', 'fill', 'stroke', 'opacity'].includes(key));

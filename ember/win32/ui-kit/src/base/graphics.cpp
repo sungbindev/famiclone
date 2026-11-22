@@ -90,13 +90,15 @@ const std::vector<IconPart>& Graphics::icon(IconId id) {
   for (std::size_t i = 0; i < data.count; ++i) {
     const IconPath& path = data.paths[i];
     const bool fill = path.fill == "currentColor";
+    const bool accent = path.fill == "accent";
     const bool stroke = path.stroke != "none";
-    if (!fill && !stroke) continue;
+    if (!fill && !accent && !stroke) continue;
     const auto segments = parseSvgPath(path.d);
     if (!segments) continue;
     IconPart part;
-    if (!buildGeometry(d2d_.Get(), *segments, fill, part.geometry)) continue;
+    if (!buildGeometry(d2d_.Get(), *segments, fill || accent, part.geometry)) continue;
     part.fill = fill;
+    part.accent = accent;
     part.stroke = stroke;
     part.opacity = path.opacity;
     icons_[index].push_back(std::move(part));

@@ -17,8 +17,8 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 软盘图标中间那个圆在图标里的位置（百分比）：读写灯画在这个圆上。 */
-constexpr std::pair<double, double> kFloppyLampInIcon{50.0, 60.0};
+/** 软驱图标的方块就是读写灯，给面板灯的 inIcon。 */
+constexpr bool kLampIsIconAccent = true;
 
 /** 软盘名状态项的个数：核心的软驱编号最大到 3。 */
 constexpr int kMaxFloppyDrives = 4;
@@ -59,7 +59,7 @@ contracts::ShellModule createMediaModule(MediaController& controller) {
     const auto& floppies = controller.floppies();
     if (floppies.empty()) return std::nullopt;
     const bool lit = std::any_of(floppies.begin(), floppies.end(), [](const FloppyState& floppy) { return floppy.motor; });
-    return contracts::ShellPanelLamp{lit, "软驱读写灯", kFloppyLampInIcon};
+    return contracts::ShellPanelLamp{lit, "软驱读写灯", kLampIsIconAccent};
   };
   module.bottomPanels.push_back(std::move(panel));
 

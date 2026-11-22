@@ -52,7 +52,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   module.name = "runtime";
   module.hasScreen = true;
 
-  // 运行面板：按钮图标实时显示运行状态——运行中是绿色三角形，暂停是暂停图标，其余（未开机、已断电）是常色三角形
+  // 运行面板：按钮图标实时显示运行状态——运行中是填满绿色的三角形，暂停是暂停图标，其余（未开机、已断电）是常色三角形
   contracts::ShellPanelDefinition panel;
   panel.id = kRuntimePanelId;
   panel.title = "运行";

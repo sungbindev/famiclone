@@ -1,0 +1,8 @@
+{
+  "name": "IconPark",
+  "authors": ["ByteDance"],
+  "license": "Apache-2.0",
+  "licenseFile": "LICENSE",
+  "homepage": "https://github.com/bytedance/IconPark",
+  "usage": "系统栏按钮的图标图形（软驱、播放、暂停），原图的 48×48 路径数据在 icon-data.json，由生成器缩放成 24×24 并转成 C++ 数据；原图里蓝色填充的部分在数据里标为 accent，由界面按状态上色；对原图的修改：去掉了颜色，只保留路径；播放与暂停图标放大到与软驱图标同高"
+}

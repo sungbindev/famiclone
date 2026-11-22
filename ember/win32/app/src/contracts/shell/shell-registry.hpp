@@ -36,7 +36,7 @@ inline constexpr ShellMenuInfo kShellMenus[] = {{"file", "文件", 'F'}, {"machi
 /** 面板按钮与状态项用到的图标。 */
 enum class ShellIcon { PlayerPlay, PlayerPause, DeviceFloppy };
 
-/** 状态项与面板按钮的等级：success 只改文字颜色，warning 与 error 配对应的图标。 */
+/** 状态项与面板按钮的等级：success 改文字颜色，图标有强调部分时（如播放三角形）强调部分也填成成功色；warning 与 error 配对应的图标。 */
 enum class ShellTone { Normal, Success, Warning, Error };
 
 /** 通知的级别。 */
@@ -164,8 +164,8 @@ struct ShellPanelLamp {
   bool lit{false};
   /** 可访问名称，写明这盏灯表示什么。 */
   std::string label;
-  /** 画在图标里：灯心在图标内的位置（百分比，0 到 100，从左上角算）；没有值时灯是文字后的小灯。 */
-  std::optional<std::pair<double, double>> inIcon;
+  /** 为 true 时灯画成图标里的强调部分（亮时填亮色，熄时填暗色）；为 false 时灯是文字后的小灯。 */
+  bool inIcon{false};
 };
 
 /** 底部面板：同时在系统栏左侧有一个只有图标的按钮，点击展开或收起面板并切到本面板的内容；面板内容由界面层按标识提供。 */

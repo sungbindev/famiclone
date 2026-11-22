@@ -90,7 +90,7 @@ std::optional<IconId> StatusBarItem::shownIcon() const {
   return std::nullopt;
 }
 
-bool StatusBarItem::lampInIcon() const { return lamp_ && lamp_->inIcon && shownIcon(); }
+bool StatusBarItem::lampInIcon() const { return lamp_ && (lamp_->inIcon || lamp_->onIconAccent) && shownIcon(); }
 
 double StatusBarItem::iconSize() const { return large_ ? tokens::status_bar_large_icon_size : tokens::status_bar_icon_size; }
 
@@ -183,8 +183,11 @@ void StatusBarItem::paint(Canvas& canvas) {
     if (tone_ == StatusItemTone::Warning) iconColor = colors.status_warning;
     else if (tone_ == StatusItemTone::Error) iconColor = colors.status_error;
     const Rect iconBox{x, box.y + (box.height - size) / 2.0, size, size};
-    canvas.drawIcon(*icon, iconBox, iconColor, tokens::icon_stroke_width);
-    if (lampInIcon()) {
+    Color accent = kTransparent;
+    if (lamp_ && lamp_->onIconAccent) accent = lamp_->lit ? colors.status_bar_lamp_on : colors.status_bar_lamp_off;
+    else if (tone_ == StatusItemTone::Success) accent = colors.status_success;
+    canvas.drawIcon(*icon, iconBox, iconColor, tokens::icon_stroke_width, accent);
+    if (lampInIcon() && lamp_->inIcon) {
       const double diameter = size * kInIconLampRatio;
       const double cx = iconBox.x + size * lamp_->inIcon->x / 100.0;
       const double cy = iconBox.y + size * lamp_->inIcon->y / 100.0;

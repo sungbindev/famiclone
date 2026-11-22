@@ -22,7 +22,7 @@ namespace rujian::ui {
 struct IconPath {
   /** SVG 路径的 d 属性。 */
   std::string_view d;
-  /** 填充：空表示不填充，currentColor 表示用图标颜色填充。 */
+  /** 填充：空表示不填充，currentColor 表示用图标颜色填充，accent 表示用调用方给的强调色填充（没有给强调色时不填充）。 */
   std::string_view fill;
   /** 描边：空表示按默认描边图标颜色，none 表示不描边。 */
   std::string_view stroke;

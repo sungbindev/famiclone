@@ -130,8 +130,9 @@ class Canvas {
    * @param rect 图标的显示区域（一般是正方形）。
    * @param color 图标颜色。
    * @param strokeWidth 描边宽度（逻辑像素）。
+   * @param accent 强调色：图标里标为强调的路径（如指示灯、播放三角形的内部）用它填充；透明表示这些路径不填充。
    */
-  virtual void drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth) = 0;
+  virtual void drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth, Color accent = kTransparent) = 0;
 
   /**
    * 画位图，边缘对齐到设备像素；位图尺寸与对齐后的区域一样大时一个像素对应一个设备像素，不模糊。

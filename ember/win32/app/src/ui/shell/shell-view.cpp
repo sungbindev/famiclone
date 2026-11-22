@@ -32,11 +32,11 @@ constexpr double kPanelBorder = 1;
 
 IconId iconOf(contracts::ShellIcon icon) {
   switch (icon) {
-    case contracts::ShellIcon::PlayerPlay: return IconId::PlayerPlay;
-    case contracts::ShellIcon::PlayerPause: return IconId::PlayerPause;
-    case contracts::ShellIcon::DeviceFloppy: return IconId::DeviceFloppy;
+    case contracts::ShellIcon::PlayerPlay: return IconId::PlayOne;
+    case contracts::ShellIcon::PlayerPause: return IconId::Pause;
+    case contracts::ShellIcon::DeviceFloppy: return IconId::HardDiskOne;
   }
-  return IconId::PlayerPlay;
+  return IconId::PlayOne;
 }
 
 StatusItemTone toneOf(contracts::ShellTone tone) {
@@ -263,7 +263,7 @@ void ShellView::rebuildStatusBar() {
       StatusLamp lamp;
       lamp.lit = button.lamp->lit;
       lamp.label = button.lamp->label;
-      if (button.lamp->inIcon) lamp.inIcon = Point{button.lamp->inIcon->first, button.lamp->inIcon->second};
+      lamp.onIconAccent = button.lamp->inIcon;
       item->setLamp(lamp);
     }
     const std::string id = button.id;

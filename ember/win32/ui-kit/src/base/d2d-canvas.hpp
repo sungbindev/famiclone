@@ -50,7 +50,7 @@ class D2DCanvas final : public Canvas {
   void drawText(std::string_view text, const Rect& box, const TextStyle& style, VerticalAlign vertical) override;
   void drawText16(std::u16string_view text, const Rect& box, const TextStyle& style, VerticalAlign vertical) override;
   [[nodiscard]] TextMetrics measureText(std::string_view text, const TextStyle& style, double maxWidth) override;
-  void drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth) override;
+  void drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth, Color accent) override;
   void drawBitmap(const std::uint32_t* pixels, int width, int height, const Rect& rect) override;
 
  private:

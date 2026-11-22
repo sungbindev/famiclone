@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：由 tools/gen-icons.mjs 生成，不要手改；图标图形来自 Tabler Icons（MIT，见 third_party/tabler-icons）。
+ * 备注：由 tools/gen-icons.mjs 生成，不要手改；图标图形的来源与许可见 third_party。
  * ------------------------------------------------------------------------
  */
 
@@ -46,11 +46,14 @@ enum class IconId : std::uint16_t {
   Filter,
   FolderOpen,
   HandClick,
+  HardDiskOne,
   InfoCircle,
   LayoutBottombarCollapse,
   Lock,
   LockOpen,
+  Pause,
   Pencil,
+  PlayOne,
   PlayerEject,
   PlayerPause,
   PlayerPlay,

@@ -320,7 +320,7 @@ TextMetrics D2DCanvas::measureText(std::string_view text, const TextStyle& style
   return graphics_.text().measure(text, style, maxWidth);
 }
 
-void D2DCanvas::drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth) {
+void D2DCanvas::drawIcon(IconId id, const Rect& rect, Color color, double strokeWidth, Color accent) {
   if (color.a() == 0 || rect.width <= 0 || rect.height <= 0) return;
   // 图标在 24×24 的画布里，显示中间 20×20
   const double factor = std::min(rect.width, rect.height) / 20.0;
@@ -333,9 +333,19 @@ void D2DCanvas::drawIcon(IconId id, const Rect& rect, Color color, double stroke
                                   D2D1::Matrix3x2F::Translation(static_cast<FLOAT>(left), static_cast<FLOAT>(top));
   target_->SetTransform(local * previous);
   for (const IconPart& part : graphics_.icon(id)) {
-    setBrush(color.withOpacity(part.opacity));
-    if (part.fill) target_->FillGeometry(part.geometry.Get(), brush_.Get());
-    if (part.stroke) target_->DrawGeometry(part.geometry.Get(), brush_.Get(), static_cast<FLOAT>(strokeWidth / factor), graphics_.roundStroke());
+    if (part.accent) {
+      if (accent.a() != 0) {
+        setBrush(accent.withOpacity(part.opacity));
+        target_->FillGeometry(part.geometry.Get(), brush_.Get());
+      }
+    } else {
+      setBrush(color.withOpacity(part.opacity));
+      if (part.fill) target_->FillGeometry(part.geometry.Get(), brush_.Get());
+    }
+    if (part.stroke) {
+      setBrush(color.withOpacity(part.opacity));
+      target_->DrawGeometry(part.geometry.Get(), brush_.Get(), static_cast<FLOAT>(strokeWidth / factor), graphics_.roundStroke());
+    }
   }
   target_->SetTransform(previous);
 }

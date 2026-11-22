@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：由 tools/gen-icons.mjs 生成，不要手改；图标图形来自 Tabler Icons（MIT，见 third_party/tabler-icons）。
+ * 备注：由 tools/gen-icons.mjs 生成，不要手改；图标图形的来源与许可见 third_party。
  * ------------------------------------------------------------------------
  */
 
@@ -186,6 +186,12 @@ constexpr IconPath HandClickPaths[] = {
     {"M15 6h1", "", "", 1},
 };
 
+constexpr IconPath HardDiskOnePaths[] = {
+    {"M19.5 3H4.5C3.67158 3 3 3.67158 3 4.5V19.5C3 20.32845 3.67158 21 4.5 21H19.5C20.32845 21 21 20.32845 21 19.5V4.5C21 3.67158 20.32845 3 19.5 3Z", "", "", 1},
+    {"M16 3H8V8H16V3Z", "accent", "", 1},
+    {"M8.5 18H15.5", "", "", 1},
+};
+
 constexpr IconPath InfoCirclePaths[] = {
     {"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "", "", 1},
     {"M12 9h.01", "", "", 1},
@@ -210,9 +216,18 @@ constexpr IconPath LockOpenPaths[] = {
     {"M8 11v-5a4 4 0 0 1 8 0", "", "", 1},
 };
 
+constexpr IconPath PausePaths[] = {
+    {"M8 3V21", "", "", 1},
+    {"M16 3V21", "", "", 1},
+};
+
 constexpr IconPath PencilPaths[] = {
     {"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4", "", "", 1},
     {"M13.5 6.5l4 4", "", "", 1},
+};
+
+constexpr IconPath PlayOnePaths[] = {
+    {"M5 12V3L12.79425 7.5L20.58845 12L12.79425 16.5L5 21V12Z", "accent", "", 1},
 };
 
 constexpr IconPath PlayerEjectPaths[] = {
@@ -384,11 +399,14 @@ constexpr IconData kIcons[] = {
     {FilterPaths, sizeof(FilterPaths) / sizeof(IconPath)},
     {FolderOpenPaths, sizeof(FolderOpenPaths) / sizeof(IconPath)},
     {HandClickPaths, sizeof(HandClickPaths) / sizeof(IconPath)},
+    {HardDiskOnePaths, sizeof(HardDiskOnePaths) / sizeof(IconPath)},
     {InfoCirclePaths, sizeof(InfoCirclePaths) / sizeof(IconPath)},
     {LayoutBottombarCollapsePaths, sizeof(LayoutBottombarCollapsePaths) / sizeof(IconPath)},
     {LockPaths, sizeof(LockPaths) / sizeof(IconPath)},
     {LockOpenPaths, sizeof(LockOpenPaths) / sizeof(IconPath)},
+    {PausePaths, sizeof(PausePaths) / sizeof(IconPath)},
     {PencilPaths, sizeof(PencilPaths) / sizeof(IconPath)},
+    {PlayOnePaths, sizeof(PlayOnePaths) / sizeof(IconPath)},
     {PlayerEjectPaths, sizeof(PlayerEjectPaths) / sizeof(IconPath)},
     {PlayerPausePaths, sizeof(PlayerPausePaths) / sizeof(IconPath)},
     {PlayerPlayPaths, sizeof(PlayerPlayPaths) / sizeof(IconPath)},

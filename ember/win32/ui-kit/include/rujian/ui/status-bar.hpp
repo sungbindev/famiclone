@@ -23,7 +23,7 @@
 
 namespace rujian::ui {
 
-/** 状态项的等级：success 只改文字颜色；warning 与 error 在没有指定图标时配对应的图标。 */
+/** 状态项的等级：success 只改文字颜色（图标有强调部分时，强调部分也填成成功色）；warning 与 error 在没有指定图标时配对应的图标。 */
 enum class StatusItemTone { Normal, Success, Warning, Error };
 
 /** 状态点：绿色（如运行中）、黄色（如已暂停）、灰色（如未开机）；状态不能只靠颜色，状态点旁必须有文字。 */
@@ -37,6 +37,8 @@ struct StatusLamp {
   std::string label;
   /** 画在图标里：灯的中心在图标内的位置（百分比，0 到 100，从左上角算）；灯是圆点，盖在图标的圆形部位上；没有值时灯是文字后的长方形小灯。 */
   std::optional<Point> inIcon;
+  /** 把灯画成图标里的强调部分（图标数据里 fill 为 accent 的路径）：亮时填充灯的亮色，熄时填充暗色；图标没有强调部分时没有灯。 */
+  bool onIconAccent{false};
 };
 
 /** 状态项。 */

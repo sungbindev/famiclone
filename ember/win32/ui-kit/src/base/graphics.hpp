@@ -30,6 +30,8 @@ struct IconPart {
   Microsoft::WRL::ComPtr<ID2D1PathGeometry> geometry;
   /** 是否填充。 */
   bool fill{false};
+  /** 是否用强调色填充（调用方没有给强调色时不画这一层填充）。 */
+  bool accent{false};
   /** 是否描边。 */
   bool stroke{true};
   /** 不透明度。 */

@@ -7,7 +7,7 @@
 ; 备注：DOS 运行的程序是 32K 映像，映射在 $8000-$FFFF，偏移 $7FF8、$7FF9 是签名 AA 55，$FFFC 是入口。
 ;       装载程序复制到工作 RAM $6000 运行，切换程序 RAM 时执行的代码不会丢失。
 ;       流程：读参数 -> 软驱初始化 -> 在根目录找文件 -> 沿簇链读扇区 -> 检查 iNES 头
-;       -> PRG 写入程序 RAM 第 1 个 32K 页（$5000=$81），CHR 写入图案区 -> 设置镜像 -> JMP ($FFFC)。
+;       -> PRG 写入程序 RAM 第 1 个 32K 页（$5000=$81），CHR 写入图案区 -> 设置镜像 -> 改掉读手柄 2 的指令 -> JMP ($FFFC)。
 ;       出错时在画面第 10 行显示英文提示并停住，需要重新开机。
 ; ------------------------------------------------------------------------
 
@@ -182,6 +182,7 @@ loader_start:
     bne @go
     jsr mirror16
 @go:
+    jsr patch_pad
     jmp tramp
 disk_err:
     lda #E_DISK
@@ -959,6 +960,91 @@ mirror16:
     inc ptr2+1
     dex
     bne @pg
+    rts
+
+; ------------------------------------------------------------------------
+; 手柄 2：SB97 的 $4017 接键盘，没按键时读到 1，游戏读它会当成手柄 2 一直按着全部按键
+; （超级玛丽标题画面要求只按开始键，因此完全不响应）。
+; 在 $8000-$FFF7 里找 LDA $4017（AD 17 40）与 LDA $4016,X（BD 16 40），改成 JSR 到下面的桩。
+; ------------------------------------------------------------------------
+patch_pad:
+    lda #$00
+    sta ptr
+    lda #$80
+    sta ptr+1
+@scan:
+    ldy #0
+    lda (ptr),y
+    cmp #$AD
+    bne @notabs
+    ldy #1
+    lda (ptr),y
+    cmp #$17
+    bne @adv
+    iny
+    lda (ptr),y
+    cmp #$40
+    bne @adv
+    lda #<pad2_abs
+    ldx #>pad2_abs
+    jmp @patch
+@notabs:
+    cmp #$BD
+    bne @adv
+    ldy #1
+    lda (ptr),y
+    cmp #$16
+    bne @adv
+    iny
+    lda (ptr),y
+    cmp #$40
+    bne @adv
+    lda #<pad_x
+    ldx #>pad_x
+@patch:
+    ldy #1
+    sta (ptr),y
+    txa
+    iny
+    sta (ptr),y
+    ldy #0
+    lda #$20                ; JSR
+    sta (ptr),y
+    lda #3                  ; 跳过改好的 3 个字节
+    bne @step
+@adv:
+    lda #1
+@step:
+    clc
+    adc ptr
+    sta ptr
+    bcc @chk
+    inc ptr+1
+@chk:
+    lda ptr+1
+    cmp #$FF
+    bcc @scan
+    lda ptr
+    cmp #$F8
+    bcc @scan
+    rts
+
+; 替换 LDA $4017：没有手柄 2，读到 0
+pad2_abs:
+    lda #$00
+    rts
+
+; 替换 LDA $4016,X：X 为 1 时读手柄 2，读到 0；X 为 0 时照常读，进位标志不变
+pad_x:
+    php
+    cpx #$01
+    beq @none
+    plp
+    lda $4016,x
+    rts
+@none:
+    plp
+    lda #$00
     rts
 
 ; ------------------------------------------------------------------------

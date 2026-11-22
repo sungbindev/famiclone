@@ -76,6 +76,7 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 npm install
 npm run check      # 类型检查、oxlint、测试、构建
 npm run package    # 生成 .vsix
+npm run release    # 检查并打包，加 -- --publish 才上传到市场
 ```
 
 按 F5 可以在扩展开发宿主里调试。设计与目录说明见仓库的 `docs/06-VS Code扩展.md`。

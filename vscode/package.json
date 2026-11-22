@@ -2089,7 +2089,8 @@
     "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:tools",
     "vscode:prepublish": "npm run build",
     "check:package": "node ../tools/check-package.mjs",
-    "package": "vsce package --target win32-x64 --allow-missing-repository --out ../build/vscode/"
+    "package": "vsce package --target win32-x64 --allow-missing-repository --out ../build/vscode/",
+    "release": "node tools/release.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

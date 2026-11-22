@@ -1,0 +1,7 @@
+{
+  "target": "sb2000",
+  "name": "fbasic",
+  "firmware": "../../../ember/roms/sb2000_bios.bin",
+  "include": ["src"],
+  "linkConfig": "link.cfg"
+}

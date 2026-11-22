@@ -124,8 +124,14 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
 }
 
 DialogWindow::~DialogWindow() {
-  // 先恢复归属窗口可用再销毁窗口，系统才会把焦点还给它
-  if (ownerLocked_ && options_.owner != nullptr && IsWindow(static_cast<HWND>(options_.owner)) != FALSE) EnableWindow(static_cast<HWND>(options_.owner), TRUE);
+  HWND owner = static_cast<HWND>(options_.owner);
+  if (ownerLocked_ && owner != nullptr && IsWindow(owner) != FALSE) {
+    // 先恢复归属窗口可用再销毁窗口，系统才会把焦点还给它
+    const bool inForeground = GetForegroundWindow() == static_cast<HWND>(window_.nativeHandle());
+    EnableWindow(owner, TRUE);
+    // 用 ShellExecute 打开网页再回来后，销毁前台窗口时系统可能把前台交给别的程序；趁本程序还在前台，先交给归属窗口
+    if (inForeground) SetForegroundWindow(owner);
+  }
   frameless_.reset();
 }
 

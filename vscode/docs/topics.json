@@ -1,5 +1,6 @@
 {
   "topics": [
+    { "topic": "install", "file": "00-安装与入门.md", "title": "安装与入门", "summary": "安装扩展的方式与位置、环境要求、模拟器位置设置、第一次新建、构建与运行" },
     { "topic": "build", "file": "01-构建.md", "title": "构建", "summary": "任务与命令、构建规则、配置文件 fcdev.json、构建流程、设置" },
     { "topic": "emulator", "file": "02-模拟器与调试.md", "title": "模拟器与调试", "summary": "运行方案、模拟器位置设置、调试服务与调试命令" },
     { "topic": "disasm", "file": "03-反汇编.md", "title": "反汇编", "summary": "反汇编的命令、输入、追踪规则与限制" },

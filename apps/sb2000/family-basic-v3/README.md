@@ -20,7 +20,7 @@
 | `src/game.s` | 内置程序 GAME 0-3 的数据（段 `GAME`） |
 | `src/chr.s` | CHR 图案表（段 `CHR`，两张共 8K） |
 | `src/platform.inc`、`src/platform-code.inc`、`src/keyboard.inc`、`src/disk.inc` | 平台代码：显示、声音、手柄、键盘、磁盘 |
-| `docs/` | 移植计划与移植对照表 |
+| `docs/程序文档.md` | 程序的启动、按键、保存与读取、限制与常见问题 |
 
 ## 程序文件页布局
 
@@ -36,4 +36,4 @@ ERAM 小段运行在 `$7E00`，由加载器从程序页复制过去。
 ## 备注
 
 - 旧项目的反汇编参考源码（`reference/fbasic-nes.s`）没有带入本项目：fcdev 会编译项目内全部 `.s` 文件。它保留在旧项目的 git 历史里。
-- `docs/` 里提到的 `tools/`、`analysis/`、`exe/`、`build/*.bin` 是旧版工具与中间文件，已删除，相关段落只作为移植记录保留。
+- 程序的使用说明见 [docs/程序文档.md](docs/程序文档.md)。

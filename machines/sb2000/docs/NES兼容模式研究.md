@@ -121,6 +121,6 @@
 # 在 VS Code 里用命令“fcdev：构建项目”构建 apps/sb2000/examples/play
 Copy-Item <仓库根目录>/apps/sb2000/examples/play/build/sb2000/PLAY.EXE out/sdk-test/PLAY.EXE
 Copy-Item <游戏文件> out/sdk-test/MARIO.NES        # 文件名要符合 8.3
-# 把 out/sdk-test 里的文件做成软盘镜像（见 apps/sb2000/disk/build-disk.mjs 的做法），
+# 把 out/sdk-test 里的文件做成软盘镜像，
 # 在 Ember 里选 SB2000 机型、放入镜像，进入 SB-DOS 后输入 play mario.nes
 ```

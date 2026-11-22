@@ -32,10 +32,7 @@ runnes mario.nes
 
 ## 构建
 
-```bash
-npm run build    # 生成 build/sb2000/RUNNES.EXE
-npm run disk     # 生成只放有 RUNNES.EXE 的软盘镜像 build/sb2000/RUNNES.img
-```
+“fcdev：构建”任务生成 `build/sb2000/RUNNES.EXE` 与只放有 `RUNNES.EXE` 的软盘镜像 `build/sb2000/RUNNES.img`。
 
 程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 
@@ -47,11 +44,7 @@ fcdev 不提供 BIOS。先在 `fcdev.json` 里用 `firmware` 指定 SB2000 的 B
 { "target": "sb2000", "name": "runnes", "firmware": "D:/rom/SB2K_BIOS.NES" }
 ```
 
-```bash
-npm start
-```
-
-`npm start` 的镜像里只有 `RUNNES.EXE`，要试游戏时用 fcdev 的 `fat-floppy` 打包器另做一张放有游戏文件的镜像，再用调试命令 `disk <镜像>` 挂载。
+“fcdev：运行”任务在 Ember 里启动，镜像里只有 `RUNNES.EXE`。要试游戏，把 `.nes` 文件放进项目的 `disk/` 目录后重新构建。
 
 ## 文件
 

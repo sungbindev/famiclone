@@ -4,12 +4,7 @@ SB-DOS 下运行的 6502 汇编器，独立生成 `ASM.EXE`。程序支持官方
 
 ## 构建
 
-在 Windows 上使用 Node.js 22 及以上版本：
-
-```powershell
-npm install
-npm run build
-```
+用 VS Code 的“fcdev：构建”任务构建（或工具 `fcdev_build`，路径取 `src`）。
 
 产物为 `build/sb2000/ASM.EXE`。运行模拟器需要在 `fcdev.json` 中配置 BIOS 路径。
 

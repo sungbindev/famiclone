@@ -4,12 +4,7 @@
 
 ## 构建
 
-在 Windows 上使用 Node.js 22 及以上版本：
-
-```powershell
-npm install
-npm run build
-```
+用 VS Code 的“fcdev：构建”任务构建（或工具 `fcdev_build`，路径取 `src`）。
 
 产物为 `build/sb2000/EDIT.EXE`。运行模拟器需要在 `fcdev.json` 中配置 BIOS 路径。
 

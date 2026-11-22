@@ -2079,7 +2079,7 @@
     "build:toolchain": "node tools/build/build-cc65.mjs",
     "build:libs": "node tools/build/build-libs.mjs",
     "gen:docs": "node tools/gen/gen-sb2000-header.mjs && node tools/gen/gen-sb2000-api-doc.mjs && node tools/gen/gen-sb2000-symbols-doc.mjs && node tools/gen/gen-sb2000-examples-doc.mjs",
-    "test:tools": "node --test \"tools/test/**/*.test.mjs\" \"../apps/sb2000/disk/test/*.test.mjs\"",
+    "test:tools": "node --test \"tools/test/**/*.test.mjs\"",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json",
     "lint": "oxlint --deny-warnings src test",
     "test": "vitest run",

@@ -27,6 +27,8 @@ constexpr double kFocusOffset = 1.0;
 constexpr double kFocusWidth = 1.0;
 /** ui-button.css 没有设置行高，沿用页面的 normal。 */
 constexpr double kNormalLineHeight = 0.0;
+/** 不折行的链接绘制时向右多给的宽度，文字不被自己的区域裁切。 */
+constexpr double kNoWrapOverhang = 32.0;
 
 /** 按钮当前状态下的颜色。 */
 struct Look {
@@ -167,7 +169,9 @@ void Button::paint(Canvas& canvas) {
   const TextStyle style = textStyle(look.foreground);
   double focusRadius = 0;
   if (variant_ == ButtonVariant::Link) {
-    canvas.drawText(label_, box, style, VerticalAlign::Top);
+    // 不折行的链接不裁切：绘制的区域向右多给一些，文字排版后比度量值略宽也能显示完
+    const Rect drawBox = wrap_ ? box : Rect{box.x, box.y, box.width + kNoWrapOverhang, box.height};
+    canvas.drawText(label_, drawBox, style, VerticalAlign::Top);
   } else {
     canvas.drawBox(box, BoxStyle{.fill = look.background, .radius = frame_ ? 0.0 : tokens::btn_radius});
     focusRadius = tokens::btn_radius;

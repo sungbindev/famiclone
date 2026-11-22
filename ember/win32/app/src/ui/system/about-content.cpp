@@ -50,8 +50,11 @@ constexpr double kHeaderGap = 16;
 constexpr double kHeaderRightPadding = 14;
 /** 右侧两行（版本、编译时间）之间的间距。 */
 constexpr double kInfoGap = 4;
-/** 内容右边的留白（滚动条贴着对话框的右边，内容自己空出来，要比滚动条的轨道宽一些，网址才不会被挡住）。 */
-constexpr double kContentRightPadding = 24;
+/** 上面固定部分右边的留白（滚动条只在表格那一段，不会挡住它）；网址文字宽度之外多留的余量，文字排版后的实际宽度会比度量值略宽。 */
+constexpr double kContentRightPadding = 10;
+constexpr double kLinkSlack = 16;
+/** 滚动条轨道的宽度：表格右边空出它的宽度，表格与滚动条紧挨着，滚动条贴着对话框的右边。 */
+constexpr double kScrollbarWidth = 10;
 /** 上面的固定部分与下面表格之间的间距，以及表格区至少要露出的高度（表头加两行多一点）。 */
 constexpr double kTableGap = 10;
 constexpr double kTableMinHeight = 110;
@@ -162,7 +165,7 @@ AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget>
   }
   // 只有表格滚动：上面的头部、信息与说明固定，滚动条贴着对话框的右边，表格自己空出右边的留白
   auto tableBox = std::make_unique<Stack>();
-  tableBox->setPadding(Insets{0, kContentRightPadding, 0, 0});
+  tableBox->setPadding(Insets{0, kScrollbarWidth, 0, 0});
   table_ = static_cast<Table*>(tableBox->addChild(std::move(table)));
 
   auto scroll = std::make_unique<ScrollArea>();
@@ -183,8 +186,8 @@ Size AboutContent::measure(Size available) {
 
 Size AboutContent::minimumSize() {
   if (host() == nullptr) return Size{};
-  const double widest = std::max({header_->measure(Size{}).width, facts_->measure(Size{}).width, table_->minimumSize().width});
-  const double width = widest + kContentRightPadding;
+  const double topWidth = std::max(header_->measure(Size{}).width, facts_->minimumSize().width + kLinkSlack) + kContentRightPadding;
+  const double width = std::max(topWidth, table_->minimumSize().width + kScrollbarWidth);
   return Size{width, top_->measure(Size{width, 0}).height + kTableGap + kTableMinHeight};
 }
 

@@ -79,6 +79,12 @@ Size Facts::measure(Size available) {
   return Size{width, layout(width).height};
 }
 
+Size Facts::minimumSize() {
+  double widest = 0.0;
+  for (const Fact& fact : facts_) widest = std::max(widest, fact.value->measure(Size{}).width);
+  return Size{tokens::facts_label_width + tokens::space_page + widest, 0.0};
+}
+
 void Facts::arrange(const Rect& bounds) {
   Widget::arrange(bounds);
   const Layout laid = layout(bounds.width);

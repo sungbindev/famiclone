@@ -29,6 +29,8 @@ class Facts : public Widget {
   void addFact(std::string label, std::unique_ptr<Widget> value);
 
   [[nodiscard]] Size measure(Size available) override;
+  /** 左右并排时的最小宽度（名称列加最宽的内容），与窗口当前是否处于窄窗口无关；对话框刚创建时窗口还很窄，按当前宽度算会漏掉名称列。 */
+  [[nodiscard]] Size minimumSize() override;
   void arrange(const Rect& bounds) override;
 
  private:

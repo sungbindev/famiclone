@@ -5,10 +5,11 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
 // 备注：用法 npm run release [-- --publish]（在 vscode/ 里）；不带参数只检查与打包。
-//       上传需要环境变量 VSCE_PAT，或事先执行 vsce login sungbin；凭据不写进脚本。
+//       上传时若没有环境变量 VSCE_PAT，会提示输入发布令牌（不回显）；令牌只在本次运行中使用，不保存到任何文件。
 // ------------------------------------------------------------------------
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,6 +35,26 @@ function run(command, args) {
 }
 
 /**
+ * 从终端读取发布令牌，输入不回显。
+ * @returns {Promise<string>} 令牌。
+ */
+function readToken() {
+  return new Promise((resolve, reject) => {
+    const terminal = process.stdin.isTTY === true;
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal });
+    if (terminal) rl._writeToOutput = () => {};
+    process.stdout.write('请输入 VS Code 市场的发布令牌（输入时不显示）：');
+    rl.question('', (answer) => {
+      rl.close();
+      process.stdout.write('\n');
+      const token = answer.trim();
+      if (token === '') reject(new Error('没有输入发布令牌'));
+      else resolve(token);
+    });
+  });
+}
+
+/**
  * 列出仓库里还没有提交的改动。
  * @returns {string[]} 每行一条 git status 的输出。
  */
@@ -44,7 +65,7 @@ function uncommittedChanges() {
 }
 
 /** 命令行入口 */
-function main() {
+async function main() {
   const publish = process.argv.includes('--publish');
   const { version } = JSON.parse(readFileSync(path.join(EXTENSION_DIRECTORY, 'package.json'), 'utf8'));
   console.log(`发布检查：fcdev ${version}`);
@@ -58,6 +79,7 @@ function main() {
 
   const changelog = readFileSync(path.join(EXTENSION_DIRECTORY, 'CHANGELOG.md'), 'utf8').split(/\r?\n/);
   if (!changelog.includes(`## ${version}`)) throw new Error(`CHANGELOG.md 里没有 “## ${version}” 一节`);
+  if (publish && !process.env.VSCE_PAT) process.env.VSCE_PAT = await readToken();
 
   run('npm', ['run', 'check']);
   run('npm', ['run', 'package']);
@@ -75,7 +97,7 @@ function main() {
 }
 
 try {
-  main();
+  await main();
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);

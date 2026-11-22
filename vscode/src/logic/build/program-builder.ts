@@ -210,25 +210,39 @@ async function compileSource(context: CompileContext, source: string, objectFile
 }
 
 /**
- * 确定链接用的配置文件与打包选项：多页程序展开模板并写到中间文件目录，
- * 普通程序直接用目标的链接配置。
+ * 确定链接用的配置文件与打包选项：项目自定义了链接配置时原样使用，
+ * 多页程序展开模板并写到中间文件目录，普通程序直接用目标的链接配置。
  * @param plan 构建计划。
  * @param dependencies 构建能力。
  * @returns 链接配置的路径与打包选项。
+ * @throws FcdevError 自定义的链接配置不存在，或与库页个数同时设置。
  */
 function resolveLinkSetup(plan: BuildPlan, dependencies: BuilderDependencies): { linkConfig: string; packagerOptions: PackagerOptions } {
   const { target } = plan;
   const { fileSystem, toolchain } = dependencies;
   const bankCount = target.banked === null ? 0 : Number(plan.targetOptions[target.banked.option] ?? 0);
+  // 自定义布局和多页程序一样，大小由链接配置决定，不再检查单页的大小上限
+  const withoutMaxSize = Object.fromEntries(Object.entries(target.packagerOptions).filter(([key]) => key !== 'maxSize'));
+  const customConfig = plan.config.linkConfig;
+  if (customConfig !== undefined) {
+    if (bankCount > 0) {
+      throw new FcdevError('fcdev.json 同时写了 linkConfig 与库页个数', {
+        code: 'CONFIG_LINK_CONFLICT',
+        hint: '自定义的链接配置自己决定页的排布，去掉 linkConfig 或把库页个数设为 0'
+      });
+    }
+    if (fileSystem.kindOf(customConfig) !== 'file') {
+      throw new FcdevError(`找不到链接配置 ${customConfig}`, { code: 'LINK_CONFIG_NOT_FOUND', hint: 'linkConfig 的相对路径以 fcdev.json 所在目录为基准' });
+    }
+    return { linkConfig: customConfig, packagerOptions: withoutMaxSize };
+  }
   if (target.banked === null || bankCount === 0) {
     return { linkConfig: resolveTargetPath(target, target.linkConfig, toolchain.home), packagerOptions: target.packagerOptions };
   }
   const template = fileSystem.readText(resolveTargetPath(target, target.banked.linkConfig, toolchain.home));
   const linkConfig = path.join(plan.objectDir, `${plan.programName}.cfg`);
   fileSystem.writeText(linkConfig, expandBankedLinkConfig(template, target.banked, bankCount));
-  // 多页程序的大小由库页个数决定，不再检查单页的大小上限
-  const packagerOptions = Object.fromEntries(Object.entries(target.packagerOptions).filter(([key]) => key !== 'maxSize'));
-  return { linkConfig, packagerOptions };
+  return { linkConfig, packagerOptions: withoutMaxSize };
 }
 
 /**

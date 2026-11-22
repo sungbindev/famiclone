@@ -25,6 +25,13 @@ describe('项目配置', () => {
     expect(config.firmware).toBe(path.join(ROOT, 'rom', 'bios.nes'));
   });
 
+  it('linkConfig 换成绝对路径，不写时为 undefined，类型不对报错', () => {
+    const file = path.join(ROOT, 'fcdev.json');
+    expect(normalizeConfig({ linkConfig: 'cfg/image.cfg' }, file, ROOT).linkConfig).toBe(path.join(ROOT, 'cfg', 'image.cfg'));
+    expect(normalizeConfig({}, file, ROOT).linkConfig).toBeUndefined();
+    expect(() => normalizeConfig({ linkConfig: 1 }, file, ROOT)).toThrow(/类型不对/);
+  });
+
   it('disk 为 false 时不生成磁盘镜像，类型不对报错', () => {
     expect(normalizeConfig({ disk: false }, null, ROOT).disk).toBe(false);
     expect(() => normalizeConfig({ disk: 'no' }, null, ROOT)).toThrow(/类型不对/);

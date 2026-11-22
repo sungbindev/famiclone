@@ -24,6 +24,7 @@ const KEY_TYPES: Readonly<Record<string, 'string' | 'boolean' | 'object' | 'stri
   define: 'object',
   include: 'string-array',
   firmware: 'string',
+  linkConfig: 'string',
   targetOptions: 'object'
 };
 
@@ -49,6 +50,8 @@ export interface ProjectConfig {
   readonly include: readonly string[];
   /** 固件文件的绝对路径。 */
   readonly firmware: string | undefined;
+  /** 自定义链接配置的绝对路径；没有时用目标自带的链接配置。 */
+  readonly linkConfig: string | undefined;
   /** 目标专用选项。 */
   readonly targetOptions: Readonly<Record<string, unknown>>;
 }
@@ -96,6 +99,7 @@ export function normalizeConfig(raw: unknown, file: string | null, fallbackRoot:
     }
   }
   const firmware = raw.firmware as string | undefined;
+  const linkConfig = raw.linkConfig as string | undefined;
   return {
     file,
     root,
@@ -107,6 +111,7 @@ export function normalizeConfig(raw: unknown, file: string | null, fallbackRoot:
     define: define as Record<string, string | number>,
     include: ((raw.include as string[] | undefined) ?? []).map((item) => path.resolve(root, item)),
     firmware: firmware === undefined ? undefined : path.resolve(root, firmware),
+    linkConfig: linkConfig === undefined ? undefined : path.resolve(root, linkConfig),
     targetOptions: (raw.targetOptions as Record<string, unknown> | undefined) ?? {}
   };
 }

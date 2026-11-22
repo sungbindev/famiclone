@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listFat12, readFat12File } from '../../../src/shared/packaging/fat12-image';
-import { HAS_TOOLCHAIN, createRealBuildEnvironment, createTempDir, writeTestFile, type TempDir } from '../../support/build-fixtures';
+import { EXTENSION_DIRECTORY, HAS_TOOLCHAIN, createRealBuildEnvironment, createTempDir, writeTestFile, type TempDir } from '../../support/build-fixtures';
 
 /** 真实构建较慢，单个用例的超时时间。 */
 const TIMEOUT_MS = 120_000;
@@ -33,6 +33,12 @@ const BANK_MARKERS_C = [
   'int main(void) { return marker1[0] + marker2[0] + marker3[0]; }',
   ''
 ].join('\n');
+
+/** 目标自带的链接配置，把程序区放大到 32K。 */
+function wideLinkConfig(): string {
+  const original = readFileSync(path.join(EXTENSION_DIRECTORY, 'targets', 'sb2000', 'link.cfg'), 'utf8');
+  return original.replace('size = __STACKSTART__ - __STACKSIZE__ - $8000;', 'size = $8000;');
+}
 
 describe.skipIf(!HAS_TOOLCHAIN)('SB2000 目标（需要 cc65）', { timeout: TIMEOUT_MS }, () => {
   const { service } = createRealBuildEnvironment();
@@ -122,6 +128,30 @@ describe.skipIf(!HAS_TOOLCHAIN)('SB2000 目标（需要 cc65）', { timeout: TIM
     writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'big', targetOptions: { banks: 114 } }));
     writeTestFile(temp.dir, 'src/hello.c', HELLO_C);
     await expect(build('src')).rejects.toMatchObject({ code: 'TARGET_OPTION_INVALID' });
+  });
+
+  describe('自定义链接配置 linkConfig', () => {
+    it('用项目自己的链接配置：目标自带配置放不下的程序能链接，产物不再受 16K 上限限制', async () => {
+      writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'huge', linkConfig: 'wide.cfg' }));
+      writeTestFile(temp.dir, 'wide.cfg', wideLinkConfig());
+      writeTestFile(temp.dir, 'src/huge.c', 'const unsigned char table[20000] = { 1 };\nint main(void) { return table[0]; }\n');
+      const { result } = await build('src');
+      expect(result.size).toBeGreaterThan(20000);
+      expect(readFileSync(result.outputFile).subarray(3, 5)).toEqual(Buffer.from([0xaa, 0x55]));
+    });
+
+    it('linkConfig 指向的文件不存在时报错', async () => {
+      writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'hello', linkConfig: 'missing.cfg' }));
+      writeTestFile(temp.dir, 'src/hello.s', HELLO_ASM);
+      await expect(build('src')).rejects.toMatchObject({ code: 'LINK_CONFIG_NOT_FOUND' });
+    });
+
+    it('linkConfig 与库页个数同时设置时报错', async () => {
+      writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'sb2000', name: 'hello', linkConfig: 'wide.cfg', targetOptions: { banks: 2 } }));
+      writeTestFile(temp.dir, 'wide.cfg', wideLinkConfig());
+      writeTestFile(temp.dir, 'src/hello.s', HELLO_ASM);
+      await expect(build('src')).rejects.toMatchObject({ code: 'CONFIG_LINK_CONFLICT' });
+    });
   });
 
   it('程序名超过 8 个字符时报错', async () => {

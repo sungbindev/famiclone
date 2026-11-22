@@ -17,8 +17,11 @@ import { NodeFileSystem } from '../../vscode/out/infra/files/node-file-system.js
 import { createExtensionResources } from '../../vscode/out/infra/resources/extension-resources-factory.js';
 import { BundledToolchainLocator } from '../../vscode/out/infra/toolchain/bundled-toolchain-locator.js';
 import { ProcessToolRunner } from '../../vscode/out/infra/toolchain/process-tool-runner.js';
+import { DefaultBuildService } from '../../vscode/out/logic/build/default-build-service.js';
 import { EmberConnector } from '../../vscode/out/logic/debug-client/ember-connector.js';
 import { launchEmulator as launchWithEnvironment } from '../../vscode/out/logic/emulator/emulator-launcher.js';
+import { FileProjectConfigReader } from '../../vscode/out/logic/project/file-project-config-reader.js';
+import { FileTargetRepository } from '../../vscode/out/logic/targets/file-target-repository.js';
 import { enterProgram, runFrames, tapKey } from '../../vscode/out/logic/emulator/sb2000-session.js';
 import { packageDisk } from '../../vscode/out/shared/packaging/program-packager.js';
 
@@ -48,7 +51,7 @@ export function locateToolchain() {
  * @param {string} tool 工具名：cc65、ca65、ld65、ar65。
  * @param {readonly string[]} args 参数。
  * @param {string} [cwd] 工作目录；省略时用当前进程的。
- * @returns {Promise<{exitCode: number, stdout: string, stderr: string}>} 运行结果。
+ * @returns {Promise<{code: number, stdout: string, stderr: string}>} 运行结果。
  */
 export function runTool(toolchain, tool, args, cwd) {
   return toolRunner.run(toolchain, tool, args, cwd);
@@ -90,4 +93,25 @@ export function launchEmulator(input) {
  */
 export function connectToEmber(options = {}) {
   return connector.connectToEmber(options);
+}
+
+/**
+ * 构建一个项目目录或源文件（与任务“构建项目”同一套逻辑），工具输出原样写到标准输出。
+ * @param {string} pathArg 项目的源目录或源文件，相对 cwd。
+ * @param {string} cwd 起始目录。
+ * @returns {Promise<{programName: string, outputFile: string, size: number, compiled: number, reused: number}>} 构建结果。
+ * @throws {Error} 路径不存在、没有目标或编译链接失败。
+ */
+export async function buildProject(pathArg, cwd) {
+  const resources = createExtensionResources(EXTENSION_DIRECTORY);
+  const service = new DefaultBuildService({
+    fileSystem: files,
+    configReader: new FileProjectConfigReader(files),
+    targets: new FileTargetRepository(files, resources),
+    toolchainLocator: new BundledToolchainLocator(files, resources),
+    toolRunner,
+    resources
+  });
+  const outcome = await service.build({ pathArg, cwd }, { log: (message) => console.log(message), write: (text) => process.stdout.write(text) });
+  return outcome.result;
 }

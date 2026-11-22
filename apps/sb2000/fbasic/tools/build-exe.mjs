@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-exe.mjs
-// 说明：构建 FBASIC.EXE：先汇编链接 ERAM 小段（build/stub.bin）、32K 映像（build/image.bin）与内置程序 GAME 0-3 的数据（build/game.bin，三页），再用 fcdev 构建外壳程序（exe/）。
+// 说明：构建 FBASIC.EXE：先汇编链接 ERAM 小段（build/stub.bin）、32K 映像（build/image.bin）与内置程序 GAME 0-3 的数据（build/game.bin，三页），再用 fcdev 扩展的构建逻辑构建外壳程序（exe/）。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-16
@@ -8,16 +8,15 @@
 //       fcdev 的多页模板把库页固定链接在 $A000，放不下 $8000 起的整机映像，所以映像单独链接，再由 exe/ 里的加载器用 .incbin 放进程序文件。
 //       输出 exe/build/sb2000/FBASIC.EXE。
 // ------------------------------------------------------------------------
-import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { locateToolchain, runTool } from '../../../../tools/lib/extension.mjs';
+import { buildProject, locateToolchain, runTool } from '../../../../tools/lib/extension.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');
 const BUILD = join(ROOT, 'build');
-const INCLUDES = ['-I', join(REPOSITORY, 'packages', 'fcdev', 'targets', 'sb2000', 'asminc'), '-I', join(ROOT, 'image')];
+const INCLUDES = ['-I', join(REPOSITORY, 'vscode', 'targets', 'sb2000', 'asminc'), '-I', join(ROOT, 'image')];
 const IMAGE_SIZE = 0x8000;
 const STUB_LIMIT = 0x1a0;
 
@@ -58,7 +57,10 @@ console.log(`小段 ${stubSize} 字节，映像 ${imageSize} 字节`);
 const gameSize = await assemble('game', join(ROOT, 'image', 'game.s'), GAME_CONFIG);
 if (gameSize !== 0x3000) { console.error(`GAME 数据 ${gameSize} 字节，应为 ${0x3000}`); process.exit(1); }
 
-const built = spawnSync(process.execPath, [join(REPOSITORY, 'packages', 'fcdev', 'bin', 'fcdev.mjs'), 'build', 'src'], { cwd: join(ROOT, 'exe'), encoding: 'utf8' });
-process.stdout.write(built.stdout ?? '');
-process.stderr.write(built.stderr ?? '');
-process.exit(built.status ?? 1);
+try {
+  const built = await buildProject('src', join(ROOT, 'exe'));
+  console.log(`${built.outputFile}（${built.size} 字节）`);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}

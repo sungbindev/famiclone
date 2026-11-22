@@ -17,13 +17,13 @@ import { CC65_COMMIT } from '../build/build-cc65.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 describe('入库的 cc65 源码', () => {
-  it('构建工具与运行库需要的路径都在 cc65/ 里', () => {
+  it('构建工具与运行库需要的路径都在 vscode/third_party/cc65 里', () => {
     const required = ['LICENSE', 'README-FCDEV.txt', 'src/cc65', 'src/ca65', 'src/ld65', 'src/ar65', 'src/da65', 'libsrc/none', 'libsrc/nes', 'include', 'asminc', 'cfg/none.cfg', 'cfg/nes.cfg', 'cfg/module.cfg'];
-    for (const relative of required) assert.ok(existsSync(path.join(REPO_ROOT, 'cc65', relative)), `缺少 ${relative}`);
+    for (const relative of required) assert.ok(existsSync(path.join(REPO_ROOT, 'vscode', 'third_party', 'cc65', relative)), `缺少 ${relative}`);
   });
 
   it('说明文件写明是删减版并给出导入的提交', () => {
-    const notice = readFileSync(path.join(REPO_ROOT, 'cc65', 'README-FCDEV.txt'), 'utf8');
+    const notice = readFileSync(path.join(REPO_ROOT, 'vscode', 'third_party', 'cc65', 'README-FCDEV.txt'), 'utf8');
     assert.match(notice, /删减版/);
     assert.ok(notice.includes(CC65_COMMIT));
   });

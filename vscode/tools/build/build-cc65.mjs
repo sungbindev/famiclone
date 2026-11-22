@@ -1,11 +1,11 @@
 // ------------------------------------------------------------------------
 // 名称：build-cc65.mjs
-// 说明：用 cc65/ 的源码构建 cc65 工具与 none、nes 运行库，并组装到扩展目录的 toolchain。
+// 说明：用 vscode/third_party/cc65 的源码构建 cc65 工具与 none、nes 运行库，并组装到扩展目录的 toolchain。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
 // 备注：用法 node vscode/tools/build/build-cc65.mjs；用 mingw32-make 与 gcc 构建，环境变量 MAKE_PROGRAM 可指定 make 程序。
-//       构建在 build/cc65 下进行，不污染 cc65/ 源码目录；产物在 vscode/toolchain，随 .vsix 发布，不入库。
+//       构建在 build/vscode/cc65 下进行，不污染源码目录；产物在 vscode/toolchain，随 .vsix 发布，不入库。
 // ------------------------------------------------------------------------
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -56,7 +56,7 @@ function runProcess(file, args, { cwd, timeoutMs }) {
   });
 }
 
-/** cc65/ 最初导入自的上游提交，写进工具链包清单并作为 cc65 的版本串 */
+/** vscode/third_party/cc65 最初导入自的上游提交，写进工具链包清单并作为 cc65 的版本串 */
 export const CC65_COMMIT = '357f64e4e3c733d54b82bc155afc841fd8d9ee8d';
 
 /** 上游仓库地址 */
@@ -119,8 +119,8 @@ async function runMake(make, args, cwd) {
  */
 export async function buildCc65(options = {}) {
   const make = options.make ?? process.env.MAKE_PROGRAM ?? 'mingw32-make';
-  const workDir = options.workDir ?? path.join(REPO_ROOT, 'build', 'cc65');
-  const sourceDir = path.join(REPO_ROOT, 'cc65');
+  const workDir = options.workDir ?? path.join(REPO_ROOT, 'build', 'vscode', 'cc65');
+  const sourceDir = path.join(REPO_ROOT, 'vscode', 'third_party', 'cc65');
   const packageDir = path.join(REPO_ROOT, 'vscode', 'toolchain');
   const jobs = String(Math.max(1, cpus().length));
   // 不指定时 Makefile 会用 git 取当前目录所在仓库（即 fcdev）的提交号，版本输出会指向错误的提交

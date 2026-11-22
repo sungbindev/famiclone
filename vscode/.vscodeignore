@@ -9,3 +9,4 @@ vitest.config.mts
 .gitignore
 **/*.vsix
 tools/**
+third_party/**

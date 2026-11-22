@@ -145,7 +145,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | 命令 | 用途 |
 | --- | --- |
 | `npm run check` | 类型检查、oxlint、测试、构建、维护脚本的测试 |
-| `npm run build:toolchain` | 用 `cc65/` 的源码构建并组装 `vscode/toolchain/`（需要 mingw32-make 与 gcc） |
+| `npm run build:toolchain` | 用 `vscode/third_party/cc65/` 的源码构建并组装 `vscode/toolchain/`（需要 mingw32-make 与 gcc） |
 | `npm run build:libs` | 编译各目标的运行库到 `vscode/targets/<目标>/lib`，需要先 `npm run build` 与 `npm run build:toolchain` |
 | `npm run gen:docs` | 重新生成 SB2000 的符号头文件、接口参考、符号参考与示例源码 |
 | `npm run package` | 生成 `.vsix`（不入库）；发布到应用市场需要发布者账号，由用户操作，见 [05-发布](05-发布.md) |

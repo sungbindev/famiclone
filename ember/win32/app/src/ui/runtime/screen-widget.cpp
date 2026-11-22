@@ -45,7 +45,7 @@ ScreenWidget::ScreenWidget(contracts::RuntimeModel& model, contracts::ScreenHost
     mouseCaptured_ = false;
     buttons_ = 0;
   });
-  host_.setView(view_.screen.aspect, view_.screen.scaling, view_.screen.filter, view_.screen.showAllLines);
+  applyView();
   host_.setFrameVisible(false);
 }
 
@@ -70,6 +70,17 @@ void ScreenWidget::focusScreen() {
   if (host() != nullptr) host()->setFocus(this, false);
 }
 
+void ScreenWidget::setFullScreen(bool fullScreen) {
+  if (fullScreen_ == fullScreen) return;
+  fullScreen_ = fullScreen;
+  applyView();
+  updateBox();
+}
+
+bool ScreenWidget::stretching() const { return fullScreen_ && view_.screen.fullScreenStretch; }
+
+void ScreenWidget::applyView() { host_.setView(view_.screen.aspect, stretching() ? shared::ScreenScaling::Stretch : view_.screen.scaling, view_.screen.filter, view_.screen.showAllLines); }
+
 void ScreenWidget::arrange(const rujian::ui::Rect& bounds) {
   Widget::arrange(bounds);
   updateBox();
@@ -85,8 +96,9 @@ void ScreenWidget::updateBox() {
   const rujian::ui::Rect area = bounds();
   const double scale = host()->scale();
   const double ratio = host_.nominalRatio();
-  const double width = std::min(area.width, area.height * ratio);
-  const double height = ratio > 0 ? width / ratio : 0;
+  // 拉伸铺满时画面框就是整个显示区，不再按比例留边
+  const double width = stretching() ? area.width : std::min(area.width, area.height * ratio);
+  const double height = stretching() ? area.height : (ratio > 0 ? width / ratio : 0);
   box_ = rujian::ui::Rect{area.x + (area.width - width) / 2, area.y + (area.height - height) / 2, std::max(0.0, width), std::max(0.0, height)};
   // 子窗口的位置与大小取整到设备像素：左上角四舍五入，右下角也四舍五入，相邻内容之间不留缝
   const int left = static_cast<int>(std::lround(box_.x * scale));
@@ -102,13 +114,13 @@ void ScreenWidget::updateBox() {
 void ScreenWidget::refresh() {
   const contracts::RuntimeView previous = view_;
   view_ = model_.view();
-  host_.setView(view_.screen.aspect, view_.screen.scaling, view_.screen.filter, view_.screen.showAllLines);
+  applyView();
   host_.setFrameVisible(view_.state == contracts::MachineState::Paused || view_.state == contracts::MachineState::Running);
   // 不再带鼠标（或关掉了“点击画面捕获鼠标”）时，已有的捕获立即释放
   if (!view_.capturesMouse && mouseCaptured_) releaseMouse();
   updateHints();
   updateKeyboard();
-  if (previous.screen.aspect != view_.screen.aspect || previous.screen.showAllLines != view_.screen.showAllLines) updateBox();
+  if (previous.screen.aspect != view_.screen.aspect || previous.screen.showAllLines != view_.screen.showAllLines || previous.screen.fullScreenStretch != view_.screen.fullScreenStretch) updateBox();
   else updateOverlay();
 }
 

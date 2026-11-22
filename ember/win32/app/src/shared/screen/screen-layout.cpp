@@ -47,6 +47,7 @@ double nominalScreenRatio(ScreenAspect aspect, int cropLines) { return displayAs
 
 ScreenRect computeScreenRect(double canvasWidth, double canvasHeight, double frameWidth, double frameHeight, ScreenAspect aspect, ScreenScaling scaling) {
   if (!(canvasWidth > 0 && canvasHeight > 0 && frameWidth > 0 && frameHeight > 0)) return ScreenRect{};
+  if (scaling == ScreenScaling::Stretch) return ScreenRect{0, 0, static_cast<int>(canvasWidth), static_cast<int>(canvasHeight)};
   const double ratio = displayAspectRatio(aspect, frameWidth, frameHeight);
   if (scaling == ScreenScaling::Integer) {
     const double multiple = std::floor(std::min(canvasHeight / frameHeight, canvasWidth / (frameHeight * ratio)));

@@ -18,8 +18,8 @@ namespace ember::win32::shared {
 /** 画面比例：4:3 为整帧的显示宽高比，8:7 为像素宽高比。 */
 enum class ScreenAspect { Ratio4x3, Ratio8x7 };
 
-/** 缩放方式：适应窗口（尽量放大）或整数倍（放不下时取最大的整数倍）。 */
-enum class ScreenScaling { Fit, Integer };
+/** 缩放方式：适应窗口（尽量放大）、整数倍（放不下时取最大的整数倍）或拉伸铺满（不保持比例，只在全屏时由外壳使用，首选项里没有这一项）。 */
+enum class ScreenScaling { Fit, Integer, Stretch };
 
 /** 画面效果：平滑（适应窗口时用双线性插值，边缘柔和）或像素（始终最近邻采样，保持像素颗粒分明）；整数倍缩放时两者都是像素。 */
 enum class ScreenFilter { Smooth, Pixel };

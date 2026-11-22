@@ -497,6 +497,7 @@ int runApplication(const shared::LaunchArguments& launch) {
         [&] {
           shell.setWindowState(windowModes->fullScreen(), windowModes->alwaysOnTop());
           if (shellView != nullptr) shellView->setFullScreen(windowModes->fullScreen());
+          if (screenWidget != nullptr) screenWidget->setFullScreen(windowModes->fullScreen());
         },
         [&shell](std::vector<std::string> paths) { shell.dropFiles(paths); });
     modes = &*windowModes;

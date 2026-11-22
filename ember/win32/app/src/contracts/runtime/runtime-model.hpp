@@ -33,12 +33,14 @@ struct RuntimeControls {
   bool eject{false};
 };
 
-/** 画面区用的设置：显示（比例、缩放、画面效果、行数）与点击画面是否捕获鼠标。 */
+/** 画面区用的设置：显示（比例、缩放、画面效果、行数、全屏时是否拉伸铺满）与点击画面是否捕获鼠标。 */
 struct ScreenSettings {
   shared::ScreenAspect aspect{shared::kDefaultScreenAspect};
   shared::ScreenScaling scaling{shared::kDefaultScreenScaling};
   shared::ScreenFilter filter{shared::kDefaultScreenFilter};
   bool showAllLines{true};
+  /** 全屏时画面拉伸铺满整个显示器（不保持比例）；窗口模式不受影响。 */
+  bool fullScreenStretch{false};
   bool captureMouse{true};
 };
 

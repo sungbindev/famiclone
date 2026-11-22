@@ -319,10 +319,14 @@ void RuntimeController::applySetting(const std::string& id, const nlohmann::json
     else if (value == "pixel") screen_.filter = shared::ScreenFilter::Pixel;
   } else if (id == "display.showAllLines" && value.is_boolean()) {
     screen_.showAllLines = value.get<bool>();
+  } else if (id == "display.fullScreen" && value.is_string()) {
+    if (value == "keep") screen_.fullScreenStretch = false;
+    else if (value == "stretch") screen_.fullScreenStretch = true;
   } else if (id == "input.captureMouse" && value.is_boolean()) {
     screen_.captureMouse = value.get<bool>();
   }
-  const bool same = before.aspect == screen_.aspect && before.scaling == screen_.scaling && before.filter == screen_.filter && before.showAllLines == screen_.showAllLines && before.captureMouse == screen_.captureMouse;
+  const bool same = before.aspect == screen_.aspect && before.scaling == screen_.scaling && before.filter == screen_.filter && before.showAllLines == screen_.showAllLines && before.fullScreenStretch == screen_.fullScreenStretch &&
+                    before.captureMouse == screen_.captureMouse;
   if (!same) changed();
 }
 

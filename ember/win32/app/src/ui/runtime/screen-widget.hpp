@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：规则见 docs/05-界面.md 第 2、7 节：
- *       画面框的显示宽高比固定为标准帧（256x240）在当前画面比例下的显示宽高比（默认 128:105；关闭“显示全部 240 行”时按 256x224 计算），尽量放大；
+ *       画面框的显示宽高比固定为标准帧（256x240）在当前画面比例下的显示宽高比（默认 128:105；关闭“显示全部 240 行”时按 256x224 计算），尽量放大；全屏且首选项“全屏时的画面”为“拉伸铺满”时，画面框铺满整个显示区、不保持比例；
  *       点击画面捕获鼠标（首选项“点击画面捕获鼠标”，且机器带鼠标）：第一次点击只用来捕获，不把这次按下送给机器；没有捕获时鼠标不进画面；双击右键释放；
  *       开启且机器在运行或暂停时，画面右下角显示“点击捕获鼠标，双击右键释放”提示框；键盘独占时另有一个“键盘已被机器独占，快捷键无效”提示框；
  *       两个提示 4 秒后一起消失，机器断电、重新开机或复位后再次显示；
@@ -36,6 +36,8 @@ class ScreenWidget final : public rujian::ui::Widget {
 
   /** 窗口是否在前台：不在前台时关闭键盘采集与鼠标捕获。 */
   void setWindowActive(bool active);
+  /** 窗口是否全屏：全屏且首选项选了“拉伸铺满”时，画面框铺满整个显示区。 */
+  void setFullScreen(bool fullScreen);
   /** 把键盘焦点交给画面区（操作结束后键盘才能继续控制游戏）。 */
   void focusScreen();
   /** 画面子窗口此刻的矩形（设备像素，测试用）。 */
@@ -58,6 +60,8 @@ class ScreenWidget final : public rujian::ui::Widget {
 
  private:
   void refresh();
+  void applyView();
+  [[nodiscard]] bool stretching() const;
   void updateBox();
   void updateKeyboard();
   void updateOverlay();
@@ -76,6 +80,7 @@ class ScreenWidget final : public rujian::ui::Widget {
   rujian::ui::Rect box_;
   shared::ScreenRect deviceRect_;
   bool windowActive_{true};
+  bool fullScreen_{false};
   contracts::KeyboardMode keyboardMode_{contracts::KeyboardMode::Off};
   bool mouseCaptured_{false};
   /** 鼠标捕获与键盘独占的提示：是否显示、上一次是否满足显示条件，以及共用的计时器（两个提示一起消失）。 */

@@ -58,6 +58,13 @@ void registerInterfaceSettings(api::PreferenceService& service) {
                       .description = "关闭时裁掉上下各 8 行。",
                       .kind = api::SettingKind::Switch,
                       .defaultValue = true});
+  service.addSetting({.id = "display.fullScreen",
+                      .group = "display",
+                      .label = "全屏时的画面",
+                      .description = "保持比例时按上面的画面比例与缩放方式显示；拉伸铺满会让画面铺满整个显示器，比例可能与显示器不符而变形。只在全屏时生效，窗口模式不受影响。",
+                      .kind = api::SettingKind::Choice,
+                      .options = {{"keep", "保持比例"}, {"stretch", "拉伸铺满"}},
+                      .defaultValue = std::string("keep")});
 
   service.addGroup({"update", "更新"});
   service.addSetting({.id = "update.autoCheck",

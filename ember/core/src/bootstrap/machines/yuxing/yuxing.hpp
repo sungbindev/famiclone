@@ -1,13 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：yuxing.hpp
- * 说明：主机型号 yuxing（裕兴学习机，Dendy 制式）的装配：2A03 的 CPU 与 APU、2C02 的 PPU、精灵 DMA、手柄口 1 与 2、裕兴键盘、串口鼠标、软驱控制器、语音芯片、磁带机、MMC3 电路与主板。
+ * 说明：主机型号 yuxing（裕兴学习机，Dendy 制式）的装配：2A03 的 CPU 与 APU、2C02 的 PPU、精灵 DMA、手柄口 1 与 2、裕兴键盘、串口鼠标、软驱控制器、语音芯片、磁带机、打印机、MMC3 电路与主板。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
  * 备注：时钟：主时钟 26,601,712 Hz，CPU 15 分频（约 1.7734 MHz），PPU 5 分频（每个 CPU 周期 3 个点），每行 341 点、每帧 312 行、vblank 从第 291 行起（50 Hz）；APU 用 NTSC 的周期表；
  *       CPU 总线：$0000-$1FFF 内部 RAM（2K 镜像）、$2000-$3FFF PPU、$4000-$4013 与 $4015 APU、$4014 精灵 DMA、
- *       $4016-$4017 手柄 1 与 2、鼠标与磁带（写 $4017 同时转给 APU 的帧计数器）、$4020-$FFFF 主板（见 yuxing-board.hpp）；$4018-$401F 无设备（开放总线）；
+ *       $4016-$4017 手柄 1 与 2、鼠标、磁带与打印机（写 $4017 转给 APU 的帧计数器，打印机见 yuxing-printer-port.hpp）、$4020-$FFFF 主板（见 yuxing-board.hpp）；$4018-$401F 无设备（开放总线）；
  *       PPU 总线：$0000-$3EFF 由主板译码（字符 RAM 与名称表显存），调色板在 PPU 内；
  *       整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；磁带机与软驱 A 都是独立于主机的设备，由外面创建并在多台主机之间共用；
  *       软驱控制器的中断不接 CPU，程序靠查询主状态；语音芯片的输出按主时钟时间混进 APU 的声音；
@@ -31,6 +31,7 @@
 #include "bootstrap/machines/common/pad-apu-port.hpp"
 #include "bootstrap/machines/common/voice-mixer.hpp"
 #include "bootstrap/machines/yuxing/yuxing-board.hpp"
+#include "bootstrap/machines/yuxing/yuxing-printer-port.hpp"
 #include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/interrupt-sink.hpp"
 #include "contracts/hardware/machine.hpp"
@@ -49,6 +50,7 @@
 #include "logic/hardware/mouse-yuxing/mouse-yuxing.hpp"
 #include "logic/hardware/pad-2a03/pad-2a03.hpp"
 #include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
+#include "logic/hardware/printer-escp/printer-escp.hpp"
 #include "logic/hardware/ram/ram-block.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
 #include "logic/hardware/speech-lpc/speech-lpc.hpp"
@@ -72,16 +74,19 @@ class YuxingMachine final : public contracts::hardware::Machine, private contrac
   static constexpr contracts::hardware::MasterTime FDC_STEP_TICKS = 64;
   /** 软驱控制器轮询一个驱动器占的步数（约 220 微秒）。 */
   static constexpr unsigned FDC_POLL_STEPS = 91;
+  /** 打印机没有数据多久之后输出当前页（6 秒，主时钟周期数）。 */
+  static constexpr contracts::hardware::MasterTime PRINTER_TIMEOUT_TICKS = 6 * 26'601'712;
 
   /**
    * @param rom ROM 的内容，大小必须是 1024K（不含 iNES 文件头）。
    * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；为空时主机自己带一台（测试用）。
    * @param floppyActivity 软驱马达开关变化时通知它，必须活到主机销毁；为空时不通知。
    * @param floppyDrive 软驱 A：独立于主机的设备，由外面创建并在多台主机之间共用，主机创建时接入、销毁时解除，盘片留在里面；为空时主机自己带一个（测试用）。
+   * @param printerOutput 打印机输出的页交给它，必须活到主机销毁；为空时不接打印机。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
   explicit YuxingMachine(std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr,
-                         std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr);
+                         std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr, contracts::hardware::PrinterOutput* printerOutput = nullptr);
   ~YuxingMachine() override;
 
   YuxingMachine(const YuxingMachine&) = delete;
@@ -111,6 +116,7 @@ class YuxingMachine final : public contracts::hardware::Machine, private contrac
   contracts::hardware::MachineDebugger* debugger() override { return this; }
   [[nodiscard]] unsigned floppyDriveCount() const override { return 1; }
   contracts::hardware::FloppyDrive* floppyDrive(unsigned index) override { return index == 0 ? floppy_.get() : nullptr; }
+  contracts::hardware::PrinterControl* printer() override { return printer_.get(); }
   contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
 
   // 测试与调试用
@@ -134,10 +140,11 @@ class YuxingMachine final : public contracts::hardware::Machine, private contrac
     void raise(std::uint8_t /*sourceMask*/) override {}
   };
 
-  /** $4016-$4017：在手柄口与 APU 帧计数器之上，加上鼠标的数据位（位 0）与磁带（写 $4016 的位 0 是送给磁带的信号，读 $4016 的位 1 是磁带送回的信号）。 */
+  /** $4016-$4017：在手柄口与 APU 帧计数器之上，加上鼠标的数据位（位 0）、磁带（写 $4016 的位 0 是送给磁带的信号，读 $4016 的位 1 是磁带送回的信号）与打印机。 */
   class InputPort final : public contracts::hardware::BusDevice {
    public:
-    InputPort(contracts::hardware::BusDevice& padApu, contracts::hardware::TapeLine& tape, logic::hardware::MouseYuxing& mouse) : padApu_(padApu), tape_(tape), mouse_(mouse) {}
+    InputPort(contracts::hardware::BusDevice& padApu, contracts::hardware::TapeLine& tape, logic::hardware::MouseYuxing& mouse, YuxingPrinterPort& printer)
+        : padApu_(padApu), tape_(tape), mouse_(mouse), printer_(printer) {}
     contracts::hardware::BusRead read(std::uint16_t address) override;
     void write(std::uint16_t address, std::uint8_t value) override;
 
@@ -145,6 +152,7 @@ class YuxingMachine final : public contracts::hardware::Machine, private contrac
     contracts::hardware::BusDevice& padApu_;
     contracts::hardware::TapeLine& tape_;
     logic::hardware::MouseYuxing& mouse_;
+    YuxingPrinterPort& printer_;
   };
 
   // MachineDebugger
@@ -191,6 +199,10 @@ class YuxingMachine final : public contracts::hardware::Machine, private contrac
   std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
   /** 磁带机：独立于主机的设备；主机通电时才绑定自己的调度器。 */
   std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_;
+  /** 虚拟针式打印机；没有输出方时为空。 */
+  std::unique_ptr<logic::hardware::PrinterEscp> printer_;
+  /** $4016 上的打印机接口。 */
+  YuxingPrinterPort printerPort_;
   /** $4016-$4017：手柄口与 APU 帧计数器共用，写入同时转给两边。 */
   PadApuPort padApuPort_;
   logic::hardware::KeyboardYuxing keyboard_;

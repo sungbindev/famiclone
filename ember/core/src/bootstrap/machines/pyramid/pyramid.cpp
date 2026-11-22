@@ -34,6 +34,8 @@ constexpr std::size_t OAM_SIZE = 256;
 constexpr std::size_t PALETTE_SIZE = 32;
 constexpr std::uint16_t KEYBOARD_WRITE_ADDRESS = 0x4016;
 constexpr std::uint16_t KEYBOARD_READ_ADDRESS = 0x4017;
+/** PEC-9588 的打印机就绪线：读 $4017 的位 2。 */
+constexpr std::uint8_t PRINTER_READY_BIT_9588 = 0x04;
 
 /** 调色板的存储下标：$3F10、$3F14、$3F18、$3F1C 镜像 $3F00、$3F04、$3F08、$3F0C。 */
 std::size_t paletteSlot(std::uint32_t address) {
@@ -51,6 +53,10 @@ hw::BusRead PyramidMachine::InputPort::read(std::uint16_t address) {
   if (address == KEYBOARD_READ_ADDRESS) {
     result.value = static_cast<std::uint8_t>(result.value | keyboard_.read());
     result.drivenMask = static_cast<std::uint8_t>(result.drivenMask | logic::hardware::KeyboardPyramid::DATA_MASK);
+    if (board_.model() == PyramidBoard::Model::Pec9588 && board_.printerReady()) {
+      result.value = static_cast<std::uint8_t>(result.value | PRINTER_READY_BIT_9588);
+      result.drivenMask = static_cast<std::uint8_t>(result.drivenMask | PRINTER_READY_BIT_9588);
+    }
   }
   return result;
 }
@@ -62,7 +68,7 @@ void PyramidMachine::InputPort::write(std::uint16_t address, std::uint8_t value)
 
 // ---------------------------------------------------------------- 装配
 
-PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck)
+PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck, hw::PrinterOutput* printerOutput)
     : cartridgeIrq_(irq_),
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
@@ -77,8 +83,9 @@ PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       padApuPort_(pad_, apu_),
-      inputPort_(padApuPort_, keyboard_),
-      board_(model, std::move(rom), *tapeDeck_),
+      inputPort_(padApuPort_, keyboard_, board_),
+      printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),
+      board_(model, std::move(rom), *tapeDeck_, printer_.get()),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
@@ -117,6 +124,7 @@ void PyramidMachine::powerOn() {
   ppu_.reset(true);
   cartridgeIrq_.set(false);
   board_.reset(true);
+  if (printer_ != nullptr) printer_->reset();
   poweredOn_ = true;
   debug_.clearStopState();
   cpu_.reset(true);
@@ -136,6 +144,7 @@ void PyramidMachine::softReset() {
   dma_.reset(false);
   ppu_.reset(false);
   board_.reset(false);
+  if (printer_ != nullptr) printer_->reset();
   cpu_.reset(false);
   debug_.clearStopState();
 }
@@ -281,12 +290,12 @@ hw::AddressTarget PyramidMachine::resolve(std::string_view space, std::uint32_t 
     if (address < 0x4000U) return {"register", "chip.ppu", address & 7U, "PPU 寄存器，$2000-$3FFF 每 8 字节镜像一次"};
     if (address == 0x4014U) return {"register", "chip.dma", 0, "精灵 DMA"};
     if (address <= 0x4013U || address == 0x4015U) return {"register", "chip.apu", address - 0x4000U, "APU 寄存器"};
-    if (address <= 0x4017U) return {"register", "chip.input", address - 0x4016U, "手柄口与键盘（写 $4017 同时属于 APU 的帧计数器）"};
+    if (address <= 0x4017U) return {"register", "chip.input", address - 0x4016U, "手柄口与键盘（写 $4017 同时属于 APU 的帧计数器；9588 读 $4017 位 2 是打印机就绪）"};
     if (address < 0x4020U) return {"none", "", 0, "没有设备，读到总线上最近的值"};
     const PyramidBoard::CpuLocation where = board_.locate(static_cast<std::uint16_t>(address));
     switch (where.kind) {
       case PyramidBoard::CpuLocation::Kind::Register:
-        return {"register", "board.registers", where.offset, "主板寄存器（$4100-$5FFF 写入 reg[(地址>>8)&7]、$5100 写磁带输出、$5500 读状态与磁带输入）"};
+        return {"register", "board.registers", where.offset, "主板寄存器（$4100-$5FFF 写入 reg[(地址>>8)&7]、$5100 写磁带输出与打印机选通、$5200 写打印机数据、$5300 读 586 的磁带输入与打印机就绪、$5500 读状态与 9588 的磁带输入）"};
       case PyramidBoard::CpuLocation::Kind::Rom:
         return {"rom", "board.rom", where.offset, "程序 ROM"};
       case PyramidBoard::CpuLocation::Kind::BootImage:

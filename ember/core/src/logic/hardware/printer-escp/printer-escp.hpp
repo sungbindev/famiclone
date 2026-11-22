@@ -5,7 +5,8 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：命令：ESC @ 复位并开始一页、ESC * 选点密度并打印位图、ESC L 120 点密度位图、ESC 3 设置行距、ESC J 进纸、ESC C 与 ESC N 读入页长与下边距（忽略）、ESC < 打印头回左端，CR、LF、FF；其余字节忽略；
+ * 备注：命令：ESC @ 复位并开始一页、ESC * 选点密度并打印位图、ESC K 60 点密度位图、ESC L 120 点密度位图、ESC 3 与 ESC A 设置行距、ESC J 进纸、ESC C 与 ESC N 读入页长与下边距（忽略）、ESC < 打印头回左端，CR、LF、FF；其余字节忽略；
+ *       收到数据时没有页就开一页（不要求先有 ESC @）；
  *       页面：A4，按 200 点/英寸画成 1660x2340 像素，左边距 60、上边距 96，9 针与 24 针都按 200 点/英寸近似；
  *       输出时机：收到 FF；复位线出现上升沿；复位（断电或硬复位）；一段时间（6 秒，主时钟计）没有收到数据或控制线变化；写满一页（先输出再开新页）；控制方要求立即输出；
  *       页上没有任何点时不输出；
@@ -89,10 +90,12 @@ class PrinterEscp final : public contracts::hardware::ParallelPort, public contr
     int t{0};
     int scaleX{1};
     int scaleY{1};
+    /** 最近一次位图命令里每个点纵向占的像素数，换页时用它判断有没有写满一页。 */
+    int pitchY{1};
     bool mode24{false};
     bool graphicsMode{false};
-    int dpiX{0};
-    int dpiY{0};
+    int dpiX{60};
+    int dpiY{72};
     int lineSpace{DEFAULT_LINE_SPACE};
   };
 

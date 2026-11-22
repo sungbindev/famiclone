@@ -60,6 +60,8 @@ hw::BusRead YuxingMachine::InputPort::read(std::uint16_t address) {
   result.value = static_cast<std::uint8_t>(result.value | mouse_.read());
   if (address == TAPE_ADDRESS) {
     if (tape_.level()) result.value = static_cast<std::uint8_t>(result.value | TAPE_INPUT_BIT);
+    // 打印机就绪也是位 1。
+    if (printer_.ready()) result.value = static_cast<std::uint8_t>(result.value | TAPE_INPUT_BIT);
     result.drivenMask = static_cast<std::uint8_t>(result.drivenMask | TAPE_INPUT_BIT);
   }
   return result;
@@ -70,13 +72,14 @@ void YuxingMachine::InputPort::write(std::uint16_t address, std::uint8_t value) 
   if (address == TAPE_ADDRESS) {
     tape_.drive((value & TAPE_OUTPUT_BIT) != 0);
     mouse_.write(value);
+    printer_.write(value);
   }
 }
 
 // ---------------------------------------------------------------- 装配
 
 YuxingMachine::YuxingMachine(std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck, hw::FloppyActivity* floppyActivity,
-                             std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
+                             std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive, hw::PrinterOutput* printerOutput)
     : cartridgeIrq_(irq_),
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
@@ -91,8 +94,10 @@ YuxingMachine::YuxingMachine(std::vector<std::uint8_t> rom, std::shared_ptr<logi
            }()),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
+      printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),
+      printerPort_(printer_.get()),
       padApuPort_(pad_, apu_),
-      inputPort_(padApuPort_, *tapeDeck_, mouse_),
+      inputPort_(padApuPort_, *tapeDeck_, mouse_, printerPort_),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
       fdc_(scheduler_, ignoredInterrupts_, FDC_INTERRUPT_SOURCE, FDC_STEP_TICKS, FDC_POLL_STEPS),
       speech_(scheduler_, MASTER_CLOCK_HZ, logic::hardware::SpeechLpc::Variant::Yuxing),
@@ -146,6 +151,8 @@ void YuxingMachine::powerOn() {
   ppu_.reset(true);
   cartridgeIrq_.set(false);
   board_.reset(true);
+  printerPort_.reset();
+  if (printer_ != nullptr) printer_->reset();
   poweredOn_ = true;
   debug_.clearStopState();
   cpu_.reset(true);
@@ -168,6 +175,8 @@ void YuxingMachine::softReset() {
   dma_.reset(false);
   ppu_.reset(false);
   board_.reset(false);
+  printerPort_.reset();
+  if (printer_ != nullptr) printer_->reset();
   cpu_.reset(false);
   debug_.clearStopState();
 }
@@ -350,7 +359,7 @@ hw::AddressTarget YuxingMachine::resolve(std::string_view space, std::uint32_t a
     if (address < 0x4000U) return {"register", "chip.ppu", address & 7U, "PPU 寄存器，$2000-$3FFF 每 8 字节镜像一次"};
     if (address == 0x4014U) return {"register", "chip.dma", 0, "精灵 DMA"};
     if (address <= 0x4013U || address == 0x4015U) return {"register", "chip.apu", address - 0x4000U, "APU 寄存器"};
-    if (address <= 0x4017U) return {"register", "chip.input", address - 0x4016U, "手柄 1 与 2、鼠标与磁带（写 $4017 同时属于 APU 的帧计数器）"};
+    if (address <= 0x4017U) return {"register", "chip.input", address - 0x4016U, "手柄 1 与 2、鼠标、磁带与打印机（写 $4017 同时属于 APU 的帧计数器）"};
     if (address < 0x4020U) return {"none", "", 0, "没有设备，读到总线上最近的值"};
     const YuxingBoard::CpuLocation where = board_.locate(static_cast<std::uint16_t>(address));
     switch (where.kind) {

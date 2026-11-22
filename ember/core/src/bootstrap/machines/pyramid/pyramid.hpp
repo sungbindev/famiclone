@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：pyramid.hpp
- * 说明：主机型号 pec9588（金字塔 PEC-9588 学习机）与 pec586（金字塔 PEC-586、686 学习机，NTSC）的装配：2K 内部 RAM、2C02 PPU、2A03 APU、精灵 DMA、手柄口、键盘、磁带机与主板。
+ * 说明：主机型号 pec9588（金字塔 PEC-9588 学习机）与 pec586（金字塔 PEC-586、686 学习机，NTSC）的装配：2K 内部 RAM、2C02 PPU、2A03 APU、精灵 DMA、手柄口、键盘、磁带机、并口打印机与主板。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -39,6 +39,7 @@
 #include "logic/hardware/lines/wired-or-line.hpp"
 #include "logic/hardware/pad-2a03/pad-2a03.hpp"
 #include "logic/hardware/ppu-2c02/ppu-2c02.hpp"
+#include "logic/hardware/printer-escp/printer-escp.hpp"
 #include "logic/hardware/ram/ram-block.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
 #include "logic/hardware/tape-deck/tape-deck.hpp"
@@ -56,14 +57,17 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   static constexpr contracts::hardware::MasterTime PPU_TICKS_PER_DOT = 4;
   /** 上电后 PPU 第 0 点相对时间 0 的延迟（主时钟周期数）。 */
   static constexpr contracts::hardware::MasterTime PPU_PHASE_TICKS = 1;
+  /** 打印机没有数据多久之后输出当前页（6 秒，主时钟周期数）。 */
+  static constexpr contracts::hardware::MasterTime PRINTER_TIMEOUT_TICKS = 6 * 21'477'272;
 
   /**
    * @param model 主板型号。
    * @param rom 程序 ROM 的内容，大小必须是 512K（不含 iNES 文件头）。
    * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；为空时主机自己带一台（测试用）。
+   * @param printerOutput 打印机输出的页交给它，必须活到主机销毁；为空时并口不接打印机。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
-  PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr);
+  PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr, contracts::hardware::PrinterOutput* printerOutput = nullptr);
   ~PyramidMachine() override;
 
   PyramidMachine(const PyramidMachine&) = delete;
@@ -90,6 +94,7 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   contracts::hardware::CartridgeSlot& cartridgeSlot() override { return slot_; }
   contracts::hardware::IrqOutput& cartridgeIrq() override { return cartridgeIrq_; }
   contracts::hardware::MachineDebugger* debugger() override { return this; }
+  contracts::hardware::PrinterControl* printer() override { return printer_.get(); }
   contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
 
   // 测试与调试用
@@ -105,16 +110,17 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   std::uint8_t peekCpuBus(std::uint16_t address) { return cpuBus_.peek(address); }
 
  private:
-  /** $4016-$4017：在手柄口与 APU 帧计数器之上，加上键盘的信号线：写 $4016 整个字节给键盘，读 $4017 位 1 是键状态。 */
+  /** $4016-$4017：在手柄口与 APU 帧计数器之上，加上键盘的信号线：写 $4016 整个字节给键盘，读 $4017 位 1 是键状态；PEC-9588 的打印机就绪线也在 $4017 的位 2。 */
   class InputPort final : public contracts::hardware::BusDevice {
    public:
-    InputPort(contracts::hardware::BusDevice& padApu, logic::hardware::KeyboardPyramid& keyboard) : padApu_(padApu), keyboard_(keyboard) {}
+    InputPort(contracts::hardware::BusDevice& padApu, logic::hardware::KeyboardPyramid& keyboard, const PyramidBoard& board) : padApu_(padApu), keyboard_(keyboard), board_(board) {}
     contracts::hardware::BusRead read(std::uint16_t address) override;
     void write(std::uint16_t address, std::uint8_t value) override;
 
    private:
     contracts::hardware::BusDevice& padApu_;
     logic::hardware::KeyboardPyramid& keyboard_;
+    const PyramidBoard& board_;
   };
 
   // MachineDebugger
@@ -162,6 +168,8 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   logic::hardware::KeyboardPyramid keyboard_;
   InputPort inputPort_;
   std::array<logic::hardware::Joypad, logic::hardware::Pad2a03::PORT_COUNT> joypads_;
+  /** 虚拟针式打印机；没有输出方时为空。 */
+  std::unique_ptr<logic::hardware::PrinterEscp> printer_;
   PyramidBoard board_;
   logic::hardware::Cpu6502 cpu_;
   /** 断点、记录、代码数据标记与反汇编。 */

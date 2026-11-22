@@ -27,6 +27,8 @@ constexpr std::uint8_t CHAR_ESC = 0x1B;
 constexpr std::uint8_t ESC_HEAD_LEFT = 0x3C;      // <
 constexpr std::uint8_t ESC_RESET = 0x40;          // @
 constexpr std::uint8_t ESC_LINE_SPACING = 0x33;   // 3
+constexpr std::uint8_t ESC_LINE_SPACING_72 = 0x41;  // A
+constexpr std::uint8_t ESC_GRAPHICS_60 = 0x4B;    // K
 constexpr std::uint8_t ESC_ADVANCE = 0x4A;        // J
 constexpr std::uint8_t ESC_BOTTOM_MARGIN = 0x4E;  // N
 constexpr std::uint8_t ESC_PAGE_LENGTH = 0x43;    // C
@@ -58,6 +60,8 @@ PrinterEscp::~PrinterEscp() { cancelTimeout(); }
 // ---------------------------------------------------------------- 并口
 
 void PrinterEscp::writeData(std::uint8_t value) {
+  // 真实的针式打印机不需要 ESC @ 也能打印：收到数据时没有页就开一页。
+  if (!pageOpen_) openPage();
   restartTimeout();
   process(value);
 }
@@ -116,6 +120,7 @@ void PrinterEscp::process(std::uint8_t value) {
         state_ = State::Idle;
         if (pen_.graphicsMode) {
           pen_.graphicsMode = false;
+          pen_.scaleX = 1;
           pen_.scaleY = 1;
         } else {
           pen_.x = 0;
@@ -168,6 +173,7 @@ void PrinterEscp::processEsc(std::uint8_t command) {
       state_ = State::Idle;
       break;
     case ESC_LINE_SPACING:
+    case ESC_LINE_SPACING_72:
     case ESC_ADVANCE:
     case ESC_BOTTOM_MARGIN:
       paramLength_ = 1;
@@ -175,6 +181,7 @@ void PrinterEscp::processEsc(std::uint8_t command) {
       break;
     case ESC_PAGE_LENGTH:
     case ESC_GRAPHICS_120:
+    case ESC_GRAPHICS_60:
       paramLength_ = 2;
       state_ = State::Param;
       break;
@@ -213,6 +220,7 @@ void PrinterEscp::executeParams() {
       std::size_t length = static_cast<std::size_t>(params_[2]) * 256 + params_[1];
       if (pen_.mode24) length *= 3;
       pen_.t = 0;
+      pen_.pitchY = 1;
       if (length > 0) {
         dataLength_ = length;
         state_ = State::Data;
@@ -222,6 +230,27 @@ void PrinterEscp::executeParams() {
     case ESC_LINE_SPACING:
       pen_.lineSpace = params_[0];
       break;
+    case ESC_LINE_SPACING_72:
+      // n/72 英寸（24 针机是 n/60 英寸），折成与 ESC 3 相同的单位。
+      pen_.lineSpace = params_[0] * 3;
+      break;
+    case ESC_GRAPHICS_60: {
+      // 60 点/英寸的 8 针位图：每点横纵各占 3 个像素，一列一个字节。
+      pen_.dpiX = 60;
+      pen_.dpiY = 72;
+      pen_.mode24 = false;
+      const std::size_t length = static_cast<std::size_t>(params_[1]) * 256 + params_[0];
+      pen_.t = 0;
+      pen_.pitchY = 3;
+      if (length > 0) {
+        pen_.scaleX = 3;
+        pen_.scaleY = 3;
+        pen_.graphicsMode = true;
+        dataLength_ = length;
+        state_ = State::Data;
+      }
+      break;
+    }
     case ESC_ADVANCE:
       advance(params_[0] * pen_.dpiY / (pen_.mode24 ? 180 : 216));
       break;
@@ -231,6 +260,7 @@ void PrinterEscp::executeParams() {
       pen_.dpiY = pen_.mode24 ? 60 : 72;
       const std::size_t length = static_cast<std::size_t>(params_[1]) * 256 + params_[0];
       pen_.t = 0;
+      pen_.pitchY = 2;
       if (length > 0) {
         pen_.scaleY = 2;
         pen_.graphicsMode = true;
@@ -278,7 +308,7 @@ void PrinterEscp::closePage() {
 
 void PrinterEscp::advance(int units) {
   pen_.y += units;
-  if (!pageOpen_ || TOP_MARGIN + pen_.y < PAGE_HEIGHT) return;
+  if (!pageOpen_ || (TOP_MARGIN + pen_.y) * pen_.pitchY < PAGE_HEIGHT) return;
   // 写满一页：先输出再开新页，竖直位置回到页首，打印头的横向位置与行距不变。
   const Pen keep = pen_;
   closePage();

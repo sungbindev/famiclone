@@ -9,8 +9,9 @@
  *       CPU 地址 $4020-$FFFF：
  *         $4100-$5FFF 写：存入寄存器 reg[(地址>>8)&7]，随后按 reg0 重新计算镜像、汉字模式与程序窗口；
  *           reg0 位 7 是汉字模式；(reg0&$18)==$18 名称表水平镜像，否则垂直镜像；
- *         $5100 写：磁带的输出线——PEC-9588 取位 0，PEC-586 与 PEC-686F 取位 2（其余位没有接，位 1 在 9588 上是打印机选通）；磁带的输入线：PEC-9588 在 $5500 读出值的位 2（$5500 读出 $10，位 2 叠加输入线），
- *           PEC-586 与 PEC-686F 在 $5300 读出值的位 2（只驱动这一位，其余位是开放总线；$5500 读出 $10）；其余 $4020-$5FFF 读到开放总线；
+ *         $5100 写：磁带的输出线——PEC-9588 取位 0，PEC-586 与 PEC-686F 取位 2；位 1 是打印机的选通线，从低变高时打印机取走 $5200 里的数据（没有接打印机时忽略）；磁带的输入线：PEC-9588 在 $5500 读出值的位 2（$5500 读出 $10，位 2 叠加输入线），
+ *           PEC-586 与 PEC-686F 在 $5300 读出值的位 2（只驱动位 2 与位 0，其余位是开放总线，位 0 是打印机就绪：接着打印机且不忙时为 1；$5500 读出 $10）；其余 $4020-$5FFF 读到开放总线；
+ *           PEC-9588 的打印机就绪线在 $4017 的位 2，由主机装配里的输入口叠加，主板只给出 printerReady；
  *         $6000-$7FFF：8K 工作 RAM；$8000-$FFFF：程序窗口，只读，写入忽略；
  *       PEC-9588 的程序窗口（16K 块，ROM 共 32 块）：由 reg0&$70 决定：$00 是 $8000 块 reg0&$F、$C000 块 31；$20 是 $8000 块 (reg0&$F)|$10、$C000 块 31；
  *         $40 是 $8000 块 reg0&$F、$C000 块 30；$60 是 $8000 块 (reg0&$F)|$10、$C000 块 30（reg0 大于等于 $6C 时是块 28）；位 4 为 1 的值不改变窗口；复位后 $8000 块 0、$C000 块 31；
@@ -29,6 +30,7 @@
 #include <vector>
 
 #include "contracts/hardware/bus-device.hpp"
+#include "contracts/hardware/parallel-port.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "logic/hardware/pyramid-text/pyramid-text.hpp"
 
@@ -70,9 +72,10 @@ class PyramidBoard final {
    * @param model 主板型号。
    * @param rom 程序 ROM 的内容，大小必须等于 ROM_SIZE（不含 iNES 文件头）。
    * @param tape 磁带机的信号线：$5100 写位 0 驱动输出，读 $5500 位 2 取输入。
+   * @param printer 并口打印机，必须活到主板销毁；为空时没有接打印机：数据丢弃、就绪线读 0。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
-  PyramidBoard(Model model, std::vector<std::uint8_t> rom, contracts::hardware::TapeLine& tape);
+  PyramidBoard(Model model, std::vector<std::uint8_t> rom, contracts::hardware::TapeLine& tape, contracts::hardware::ParallelPort* printer = nullptr);
 
   PyramidBoard(const PyramidBoard&) = delete;
   PyramidBoard& operator=(const PyramidBoard&) = delete;
@@ -100,6 +103,8 @@ class PyramidBoard final {
   [[nodiscard]] std::array<std::uint8_t, NAMETABLE_SIZE>& nametable() { return nametable_; }
   [[nodiscard]] const std::array<std::uint8_t, REGISTER_COUNT>& registers() const { return registers_; }
   [[nodiscard]] bool textMode() const { return text_.textMode(); }
+  /** 打印机就绪：接着打印机且打印机不忙。 */
+  [[nodiscard]] bool printerReady() const { return printer_ != nullptr && printer_->busyN(); }
   [[nodiscard]] bool horizontalMirroring() const { return (registers_[0] & MIRROR_MASK) == MIRROR_MASK; }
   /** CPU 地址当前对应的存储位置。 */
   [[nodiscard]] CpuLocation locate(std::uint16_t address) const;
@@ -157,6 +162,7 @@ class PyramidBoard final {
 
   Model model_;
   contracts::hardware::TapeLine& tape_;
+  contracts::hardware::ParallelPort* printer_;
 
   CpuSide cpuSide_{*this};
   VideoSide videoSide_{*this};

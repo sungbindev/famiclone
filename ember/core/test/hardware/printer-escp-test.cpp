@@ -192,11 +192,12 @@ TEST(PrinterEscp, ResetCommandWhileAPageIsOpenKeepsThePage) {
   EXPECT_EQ(bench.output.pages.size(), 1U);
 }
 
-TEST(PrinterEscp, DrawingWithoutAPageIsIgnored) {
+TEST(PrinterEscp, DrawingWithoutAnEscResetOpensAPage) {
   Bench bench;
   bench.send({0x1B, '*', 0, 1, 0, 0xFF});
   bench.send({0x0C});
-  EXPECT_TRUE(bench.output.pages.empty());
+  ASSERT_EQ(bench.output.pages.size(), 1U);
+  EXPECT_TRUE(ink(bench.output.pages[0], LEFT, TOP));
 }
 
 TEST(PrinterEscp, TheTimeoutOutputsTheCurrentPage) {

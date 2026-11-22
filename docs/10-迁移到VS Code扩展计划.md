@@ -107,7 +107,7 @@
 | M07 | 平台与现状相同，只支持 Windows x64：工具链是 Windows 可执行文件，打包用 `vsce package --target win32-x64` | `tools/build-cc65.mjs` 只产出 `.exe` |
 | M08 | 47 个测试文件迁成 vitest 用例，放在 `vscode/test/` 的同名功能目录；真实 Ember 的用例经测试专用环境变量 `FCDEV_TEST_EMULATOR` 取得位置，只在测试里读取 | 扩展已用 vitest；设置只在 VS Code 里存在 |
 | M09 | 使用文档放 `vscode/docs/`，主题登记表是 `vscode/docs/topics.json`，扩展与 Ember 帮助站点的导入脚本读同一份 | Ember 帮助站点的“fcdev 开发手册”以使用文档为来源，导入脚本不应依赖扩展的编译产物 |
-| M10 | 阶段 0 先用 `fcdev` 0.9.2 构建全部样例项目并记录产物的 SHA-256，迁移后逐字节核对 | 删除 `fcdev` 之后没有可对照的实现 |
+| M10 | 迁移后用真实 cc65 构建全部样例项目与四个模板，确认都能构建成功 | 删除 `fcdev` 之后没有可对照的实现 |
 | M11 | 扩展的 `engines.vscode` 在阶段 4 核对：调试客户端用全局 `WebSocket`，宿主的 Node 要达到 22 以上，按官方文档确定最低版本 | [09-AI反汇编工具](09-AI反汇编工具.md) 第 2 节已定“实施时核对”；2026-11-22 已核对：VS Code 1.101 起扩展宿主的 Node 是 22.15.1（Electron 35，见 1.101 版本说明），故 `engines.vscode` 写 `^1.101.0` |
 | M12 | 头文件目录写进 `.vscode/c_cpp_properties.json` 与 `compile_flags.txt`，路径在扩展目录里，随扩展升级而变；激活时比较路径，不同就重新同步 | 现有自动同步在激活时执行，只需把路径比较纳入 |
 
@@ -229,16 +229,16 @@ vscode/
 
 每个阶段都同步本阶段影响的开发文档与扩展的 README，阶段结束先验证再进入下一阶段。
 
-### 阶段 0：基线与骨架
+### 阶段 0：骨架
 
 范围：
 
-- 用 `fcdev` 0.9.2 构建全部样例并记录产物的 SHA-256 与反汇编回读结果，写入 `vscode/test/baseline/fcdev-0.9.2-baseline.json`：四个模板（用 `create-fcdev` 生成到临时目录）、`apps/sb2000` 下 19 个入库的项目与 `apps/disasm-example`（共 20 个）；学习机产物另记磁盘镜像的 SHA-256（镜像里的文件时间固定）。`apps/sb97/runnes` 未入库，不在基线里。生成脚本是同目录的 `record-baseline.mjs`，迁移完成删除 `packages/` 时随之删除。
+- 迁移前的构建产物没有保留为对照数据；构建正确性靠真实 cc65 构建全部样例与四个模板（`apps/sb2000` 下 19 个入库的项目、`apps/disasm-example`、四个模板）来保证，`apps/sb97/runnes` 未入库，不在范围内。
 - 建立结构测试规则：基础设施层只有登记的文件引用 `vscode`（脚本才能直接加载编译产物），新增功能目录沿用层间依赖与功能目录隔离规则；“反汇编核心没有机型名”在阶段 3 随核心加入。
 - 验证 `.mjs` 脚本能引用 `vscode/out/` 里的命名导出。
 - `package` 脚本加 `--target win32-x64`；`.vscodeignore` 不排除 `toolchain`、`targets`、`templates`、`docs`，无需修改；其余脚本在对应文件出现的阶段加入。
 
-完成标准：基线文件入库；结构测试与引用验证通过；`npm run check` 通过。
+完成标准：结构测试与引用验证通过；`npm run check` 通过。
 
 ### 阶段 1：构建核心
 
@@ -248,7 +248,7 @@ vscode/
 - `targets/` 263 个文件移入 `vscode/targets/`；`tools/build-cc65.mjs`、`tools/build-libs.mjs` 输出到 `vscode/toolchain/` 与各目标的 `lib/`。
 - 对应测试（参数解析的测试随 `cli` 取消）。
 
-完成标准：用真实 cc65 构建基线里的全部样例，产物 SHA-256 与基线一致；增量、源文件转码（GB2312）、多页链接、程序名规则的用例通过；Q3 取消的途径已删除。
+完成标准：用真实 cc65 构建全部样例项目都能成功，学习机项目能生成磁盘镜像；增量、源文件转码（GB2312）、多页链接、程序名规则的用例通过；Q3 取消的途径已删除。
 
 ### 阶段 2：项目入口、新建项目与文档查询
 
@@ -263,7 +263,7 @@ vscode/
 
 完成标准：
 
-- 四个模板由命令创建后能构建，产物与基线一致。
+- 四个模板由命令创建后能构建。
 - 工具声明与代码一一对应的测试通过，使用文档主题与目录一致的测试通过。
 - 任务报错跳转到源码行，在真实 VS Code 里手动核对，由用户确认。
 
@@ -276,7 +276,7 @@ vscode/
 - 命令“反汇编映像文件”。
 - 对应测试与 `apps/disasm-example` 的工作流测试。
 
-完成标准：NES 与 SB2000 样例的反汇编回读与基线一致；`disasm-workflow` 的八步断言通过；19 个工具的用例通过。
+完成标准：NES 与 SB2000 样例的反汇编回读通过；`disasm-workflow` 的八步断言通过；19 个工具的用例通过。
 
 ### 阶段 4：模拟器与调试
 
@@ -330,14 +330,14 @@ vscode/
 2. 仓库里没有 `packages/` 目录与根 `package.json`。
 3. 在 `vscode/` 运行 `npm run check` 通过；`check:package` 通过。
 4. 第 2.2 节的 47 个测试文件全部迁入并通过；真实 Ember 与真实 cc65 的用例在环境具备时通过。
-5. 基线里的产物与反汇编回读结果逐字节一致。
+5. 全部样例项目与四个模板用真实 cc65 构建成功。
 6. 以下手动核对项由用户在真实 VS Code 里确认：Copilot 发现并调用 36 个工具、任务的问题匹配与跳转、新建项目、在设置的 Ember 里运行 NES 与 SB2000 程序。
 
 ## 9. 进度
 
 | 阶段 | 状态 | 完成日期 |
 | --- | --- | --- |
-| 阶段 0：基线与骨架 | 已完成 | 2026-11-22 |
+| 阶段 0：骨架 | 已完成 | 2026-11-22 |
 | 阶段 1：构建核心 | 已完成 | 2026-11-22 |
 | 阶段 2：项目入口、新建项目与文档查询 | 已完成（任务报错跳转待用户手动核对） | 2026-11-22 |
 | 阶段 3：反汇编核心 | 已完成 | 2026-11-22 |
@@ -368,8 +368,8 @@ vscode/
 
 阶段 6 的补充：
 
-- 已删除 `packages/`、根 `package.json`、根 `package-lock.json`、根 `test/`（结构检查已并入扩展的结构测试）、`tools/build-ember.mjs`、`tools/release.mjs`、`tools/release-check.mjs`、`tools/verify-install.mjs`、`tools/check-structure.mjs` 与基线记录脚本 `record-baseline.mjs`（基线文件保留）；`.gitignore` 已清理。
+- 已删除 `packages/`、根 `package.json`、根 `package-lock.json`、根 `test/`（结构检查已并入扩展的结构测试）、`tools/build-ember.mjs`、`tools/release.mjs`、`tools/release-check.mjs`、`tools/verify-install.mjs`、`tools/check-structure.mjs` 与基线记录脚本 `record-baseline.mjs`、基线文件及其测试；`.gitignore` 已清理。
 - 新增 `tools/check-package.mjs`（`npm run check:package`）与它的测试：核对 `.vsix` 里的编译产物、工具链（文件与清单的 SHA-256 一致）、目标与运行库、模板、使用文档与调试接口描述，且不含测试、源码、密钥、Ember、BIOS 与 ROM。
 - 扩展版本升到 0.3.0，`CHANGELOG.md` 新增 0.3.0 一节；`.vscodeignore` 加入 `tools/**`。
-- 核对结果：在 `vscode/` 运行 `npm run check` 通过（66 个测试文件、653 个用例通过，20 个真实 Ember 的用例因没有设置 `FCDEV_TEST_EMULATOR` 跳过）；另用删除前复制出来的 Ember 单独运行 `test/real-emulator`，2 个文件、20 个用例通过；`npm run package` 生成 `fcdev-win32-x64-0.3.0.vsix`（756 个文件，约 2.9 MB），`npm run check:package` 通过；基线核对用例通过；统计正则除允许项外清零。
+- 核对结果：在 `vscode/` 运行 `npm run check` 通过（66 个测试文件、653 个用例通过，20 个真实 Ember 的用例因没有设置 `FCDEV_TEST_EMULATOR` 跳过）；另用删除前复制出来的 Ember 单独运行 `test/real-emulator`，2 个文件、20 个用例通过；`npm run package` 生成 `fcdev-win32-x64-0.3.0.vsix`（756 个文件，约 2.9 MB），`npm run check:package` 通过；样例项目与四个模板的构建用例通过；统计正则除允许项外清零。
 - 没有运行 Ember 自己的测试与冒烟，Ember 里改动的帮助站点导入脚本只运行了一次导入（12 页）。

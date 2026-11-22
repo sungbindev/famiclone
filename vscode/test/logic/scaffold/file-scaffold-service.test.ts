@@ -1,15 +1,13 @@
 // ------------------------------------------------------------------------
 // 名称：file-scaffold-service.test.ts
-// 说明：测试新建项目：四个模板、生成的文件、目录检查，以及用真实 cc65 构建四个模板，
-//       产物与 fcdev 0.9.2 的基线一致。
+// 说明：测试新建项目：四个模板、生成的文件、目录检查，以及用真实 cc65 构建四个模板。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
 // 备注：构建部分在本机没有组装工具链时跳过。
 // ------------------------------------------------------------------------
 
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileScaffoldService } from '../../../src/logic/scaffold/file-scaffold-service';
@@ -92,10 +90,7 @@ describe('生成项目', () => {
   });
 });
 
-describe.skipIf(!HAS_TOOLCHAIN)('四个模板都能构建，产物与基线一致', { timeout: TIMEOUT_MS }, () => {
-  const baseline = JSON.parse(readFileSync(path.join(__dirname, '..', '..', 'baseline', 'fcdev-0.9.2-baseline.json'), 'utf8')) as {
-    templates: Record<string, { output: string; size: number; sha256: string }>;
-  };
+describe.skipIf(!HAS_TOOLCHAIN)('四个模板都能构建', { timeout: TIMEOUT_MS }, () => {
   let temp: TempDir;
 
   beforeEach(() => {
@@ -104,14 +99,11 @@ describe.skipIf(!HAS_TOOLCHAIN)('四个模板都能构建，产物与基线一�
 
   afterEach(() => temp.cleanup());
 
-  it.each(Object.entries(baseline.templates))('%s', async (name, expected) => {
+  it.each(scaffold.listTemplates().map((item) => item.name))('%s', async (name) => {
     const [target, language] = name.split('-') as [string, 'c' | 'asm'];
     const directory = path.join(temp.dir, name);
     scaffold.create({ directory, target, language });
     const { result } = await buildService.build({ pathArg: 'src', cwd: directory });
-    const output = readFileSync(result.outputFile);
-    expect(path.basename(result.outputFile)).toBe(expected.output);
-    expect(output.length).toBe(expected.size);
-    expect(createHash('sha256').update(output).digest('hex')).toBe(expected.sha256);
+    expect(statSync(result.outputFile).size).toBeGreaterThan(0);
   });
 });

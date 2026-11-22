@@ -65,7 +65,7 @@ npm run build:fast     # 构建 fastboot 变体
 npm test
 
 # machines/bbg
-npm test
+# 汇编链接见 machines/bbg/README.md
 ```
 
 ## 扩展发布

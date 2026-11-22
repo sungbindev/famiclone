@@ -24,7 +24,7 @@ user-invocable: false
 | --- | --- |
 | 运行 fcdev 项目的程序，只需要打开窗口看看 | `fcdev_run`，不给 `debug`；Ember 窗口留给用户，之后工具不能再控制它 |
 | 运行并核对 fcdev 项目的 NES 程序 | `fcdev_build`，再走“起步”与“载入”的 NES 一行，然后“观察与核对” |
-| 运行并核对 fcdev 项目的 SB2000 程序 | `fcdev_build` 且 `disk` 为 `true`，再走“起步”与“载入”的 SB2000 一行，然后“观察与核对” |
+| 运行并核对 fcdev 项目的 SB2000 或 SB97 程序 | `fcdev_build`（磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
 | 载入不属于 fcdev 项目的 NES 文件 | “起步”，再 `emu_load` 的 `file` |
 | 载入整机加软盘镜像（SB2000、SB97、步步高、金字塔、裕兴） | “起步”，再 `emu_load` 的 `machine`，开机后的操作读 [machines.md](references/machines.md) |
 | 为反汇编记录运行数据 | 读 skill `disassemble-6502` 的 `references/records.md`，它先走本 skill 的“起步”与“载入” |
@@ -53,11 +53,12 @@ user-invocable: false
 | NES 文件 | `file`：`.nes` 的绝对路径 | 已通电，暂停在开机状态 |
 | 需要 Family BASIC 键盘的 NES 文件 | `file` 加 `familyKeyboard: true` | 同上 |
 | SB2000 程序 | `machine: "sb2000"`、`firmware`（BIOS 文件）、`diskImage`（软盘镜像）、`program`（程序名，只含字母与数字） | 已自动开机、跳过日期与时间、输入程序名并回车，程序刚启动，暂停 |
-| 其他整机，或 SB2000 只开机 | `machine`、`firmware`，可加 `diskImage`；不给 `program` | 已通电，暂停在开机状态，之后的操作读 [machines.md](references/machines.md) |
+| SB97 程序 | `machine: "sb97"`、`firmware`（ROM 文件）、`diskImage`、`program` | 已自动开机、进入 DOS、输入程序名并回车，程序刚启动，暂停 |
+| 其他整机，或只开机 | `machine`、`firmware`，可加 `diskImage`；不给 `program` | 已通电，暂停在开机状态，之后的操作读 [machines.md](references/machines.md) |
 
 - 机型标识只有这些：`fc`、`sb97`、`sb2000`、`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`。
 - 整机必须给 `firmware`。路径取自用户的话、`fcdev.json` 的 `firmware`（相对 `fcdev.json` 所在目录）或项目 README；都没有时问用户，不搜索磁盘。
-- SB2000 的磁盘镜像用 `fcdev_build` 且 `disk` 为 `true` 生成，镜像路径取自它的输出；不猜扩展名。
+- SB2000、SB97 的磁盘镜像由 `fcdev_build` 生成，镜像路径取自它的输出；不猜扩展名。
 - `file`、`firmware`、`diskImage` 在工作区之外时会弹确认，直接调用即可。
 
 ## 观察与核对

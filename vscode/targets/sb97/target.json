@@ -1,0 +1,30 @@
+{
+  "name": "sb97",
+  "title": "小霸王 97 学习机（SB97 DOS）",
+  "cpu": "6502",
+  "cc65Target": "none",
+  "linkConfig": "link.cfg",
+  "startup": ["lib/crt0.o"],
+  "libraries": [],
+  "include": [],
+  "asminclude": ["asminc"],
+  "defines": {
+    "__SB97__": 1
+  },
+  "packager": "flat-exe",
+  "packagerOptions": {
+    "header": "AA55",
+    "headerOffset": 32760,
+    "size": 32768
+  },
+  "extension": ".EXE",
+  "nameRule": "dos-8.3",
+  "disk": {
+    "packager": "fat-floppy"
+  },
+  "run": {
+    "emulator": "ember",
+    "mode": "firmware-disk",
+    "machine": "sb97"
+  }
+}

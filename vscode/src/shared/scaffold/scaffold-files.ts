@@ -80,16 +80,11 @@ function createTask(label: string, command: string, extra: Record<string, unknow
 }
 
 /**
- * 生成 .vscode/tasks.json 的内容：构建、运行，目标支持磁盘镜像时再加生成镜像。
- * @param supportsDisk 目标是否支持磁盘镜像。
+ * 生成 .vscode/tasks.json 的内容：构建（默认构建任务）、运行。
  * @returns 文件文本。
  */
-export function buildTasksText(supportsDisk: boolean): string {
-  const tasks = [
-    createTask('fcdev：构建', 'build', { group: { kind: 'build', isDefault: true } }),
-    ...(supportsDisk ? [createTask('fcdev：构建磁盘镜像', 'disk')] : []),
-    createTask('fcdev：运行', 'run')
-  ];
+export function buildTasksText(): string {
+  const tasks = [createTask('fcdev：构建', 'build', { group: { kind: 'build', isDefault: true } }), createTask('fcdev：运行', 'run')];
   return `${JSON.stringify({ version: '2.0.0', tasks }, null, 2)}\n`;
 }
 

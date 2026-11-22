@@ -77,16 +77,17 @@ function completeEntries() {
     'extension/targets/sb2000/api-reference.md': '接口'
   };
   for (const [name, text] of Object.entries(toolchainFiles)) entries[`extension/toolchain/${name}`] = text;
-  for (const target of ['nes', 'sb2000']) {
+  for (const target of ['nes', 'sb2000', 'sb97']) {
     entries[`extension/targets/${target}/target.json`] = '{}';
     entries[`extension/targets/${target}/lib-build.json`] = JSON.stringify({ libraries: { [`lib/${target}.lib`]: [] }, objects: { 'lib/crt0.o': 'src/crt0.s' } });
     entries[`extension/targets/${target}/lib/${target}.lib`] = 'lib';
     entries[`extension/targets/${target}/lib/crt0.o`] = 'object';
   }
-  for (const template of ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm']) {
+  for (const template of ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm']) {
     entries[`extension/templates/${template}/template.json`] = '{}';
     entries[`extension/templates/${template}/README.md`] = '模板';
     entries[`extension/templates/${template}/src/hello.${template.endsWith('asm') ? 's' : 'c'}`] = '程序';
+    if (!template.startsWith('nes')) entries[`extension/templates/${template}/disk/README.TXT`] = '使用说明';
   }
   return entries;
 }
@@ -162,4 +163,11 @@ test('缺少使用文档、运行库、模板与入口文件时报出对应的�
   assert.ok(errors.some((error) => error.includes('templates/nes-c/src/hello')));
   assert.ok(errors.some((error) => error.includes('out/bootstrap/extension.js')));
   assert.ok(errors.some((error) => error.includes('缺少目标 nes')));
+});
+
+test('带磁盘能力的模板缺少 disk/README.TXT 时报出', () => {
+  const { errors } = check((entries) => {
+    delete entries['extension/templates/sb97-asm/disk/README.TXT'];
+  });
+  assert.ok(errors.some((error) => error.includes('templates/sb97-asm/disk/README.TXT')));
 });

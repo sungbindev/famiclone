@@ -7,3 +7,4 @@
 *.img binary
 *.png binary
 *.tgz binary
+README.TXT -text

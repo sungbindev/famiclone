@@ -122,8 +122,8 @@ export function createFcdevTools(services: FcdevToolServices): readonly FcdevToo
     name: 'fcdev_build',
     writes: true,
     paths: ['path'],
-    describe: (input) => `${input.disk === true ? '构建并生成磁盘镜像' : '构建'}：${String(input.path ?? '工作区')}`,
-    confirm: (input) => `将构建 ${String(input.path ?? '工作区文件夹')}${input.disk === true ? '并生成磁盘镜像' : ''}，产物与中间文件写在项目的输出目录（默认 build）里。`,
+    describe: (input) => `构建：${String(input.path ?? '工作区')}`,
+    confirm: (input) => `将构建 ${String(input.path ?? '工作区文件夹')}，产物、磁盘镜像与中间文件写在项目的输出目录（默认 build）里。`,
     async run(input, context) {
       const base = resolveWorkspacePath(undefined, 'path', context.roots);
       const target = resolveWorkspacePath(input.path, 'path', context.roots);
@@ -135,7 +135,7 @@ export function createFcdevTools(services: FcdevToolServices): readonly FcdevToo
           reporter
         );
         output.push(`${describeBuildResult(outcome.result, outcome.plan.target.name, base)}\n`);
-        if (input.disk === true) output.push(`${describeDiskImage(services.build.buildDisk(outcome), outcome.result.outputFile, base)}\n`);
+        if (outcome.disk !== undefined) output.push(`${describeDiskImage(outcome.disk, base)}\n`);
         return output.join('').trim();
       } catch (error) {
         const failure = describeFailure(error);

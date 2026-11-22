@@ -1,6 +1,6 @@
 # runnes（小霸王 97）
 
-在小霸王 97 学习机（SB97）的 DOS 下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，不依赖 fcdev 的 C 运行库。
+在小霸王 97 学习机（SB97）的 DOS 下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 sb97 目标项目，不依赖 C 运行库。
 
 ## 使用
 
@@ -33,25 +33,23 @@ NES MARIO.NES
 
 ## 构建
 
-```text
-node tools/build.mjs [游戏文件.nes]
-```
+在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/sb97/runnes`（或任务“fcdev：构建”）：
 
-- 用仓库里的 cc65（`build/cc65/bin`）汇编、链接，产物是 `build/NES.EXE`（32768 字节）。
-- 同时生成测试软盘 `build/RUNNES.ima`（1.44MB FAT12），里面有 `NES.EXE` 与游戏文件；没有给游戏文件时用 `reference/mario.nes`。
-- `tools/make-disk.mjs` 单独生成软盘：`node tools/make-disk.mjs <输出.ima> <文件>...`。
+- 产物是 `build/sb97/NES.EXE`（32768 字节）。
+- 同时生成软盘镜像 `build/sb97/NES.img`（1.44MB FAT12），里面有 `NES.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
+- 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库。
 
 `build/` 不入库。
 
 ## 在模拟器里运行
 
-用 Ember 的 SB97 机型，ROM 为 `ember/roms/sb97.bin`，软驱挂载 `build/RUNNES.ima`，开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `NES MARIO`。
+任务“fcdev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.bin` 开机，挂载镜像，进入 DOS 并输入 `nes`（不带参数，画面显示用法提示）。要运行游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `NES MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
 
 ## 原理
 
-- SB97 的 DOS 运行的是 32K 映像：映射在 `$8000-$FFFF`，偏移 `$7FF8`、`$7FF9` 是签名 `AA 55`，`$FFFC` 是入口。`NES.EXE` 的向量区在 `src/nes.s` 的 `VECTORS` 段。
+- SB97 的 DOS 运行的是 32K 映像：映射在 `$8000-$FFFF`，偏移 `$7FF8`、`$7FF9` 是签名 `AA 55`，`$FFFC` 是入口。签名与向量由 sb97 目标自带的启动代码提供，启动代码调用 `src/nes.s` 里导出的 `_main`。
 - DOS 把第一个参数写在 `$680E`（零结尾，大写）。程序启动后先把参数复制到零页。
-- 装载程序（`LOADER` 段）复制到工作 RAM `$6000` 运行，之后切换程序 RAM 时执行的代码不会丢失。
+- 装载程序（`RAMCODE` 段）复制到工作 RAM `$6000` 运行，之后切换程序 RAM 时执行的代码不会丢失。
 - 软驱用 1.44MB 的布局直接读：根目录在扇区 19-32，FAT 在扇区 1-18，数据从扇区 33 开始。读命令与状态判断和 SB97 BIOS 保持一致。
 - PRG 写入程序 RAM 的第 1 个 32K 页（`$5000=$81`），`$5200` 设为 32K 模式与镜像位。CHR 用 `$2006`、`$2007` 写入图案表。
 - 工作 RAM 里的跳转桩设置 `$5000`、`$5200` 后执行 `JMP ($FFFC)`，进入游戏的复位向量。
@@ -61,7 +59,6 @@ node tools/build.mjs [游戏文件.nes]
 
 | 文件 | 说明 |
 | --- | --- |
-| `src/nes.s` | 程序：入口、装载程序、软驱与 FAT12 读取、iNES 头检查、启动游戏 |
-| `src/sb97-exe.cfg` | 链接配置：32K 映像、装载程序的运行地址与缓冲 |
-| `tools/build.mjs` | 构建 `NES.EXE` 与测试软盘 |
-| `tools/make-disk.mjs` | 生成 FAT12 软盘镜像 |
+| `src/nes.s` | 程序：入口 `_main`、装载程序、软驱与 FAT12 读取、iNES 头检查、启动游戏 |
+| `fcdev.json` | fcdev 配置：目标 sb97，程序名 nes，运行用的固件 |
+| `disk/` | 构建时全部放进软盘镜像的文件，目前是使用说明 `README.TXT` |

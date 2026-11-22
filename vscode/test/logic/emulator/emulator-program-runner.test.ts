@@ -17,31 +17,37 @@ import type { FcdevError } from '../../../src/shared/errors/fcdev-error';
 import { createTempDir, writeTestFile, type TempDir } from '../../support/build-fixtures';
 import { createFakeClient, FakeConnector, FakeProcesses, FakeSettings } from '../../support/emulator-fixtures';
 
-/** 假的构建服务：计划里只有运行方案与固件，记录是否构建。 */
+/** 假的构建服务：计划里只有运行方案与固件，记录是否构建、是否另外生成镜像。 */
 class FakeBuildService {
   builds = 0;
+  diskBuilds = 0;
 
   /**
    * @param mode 运行方案；null 表示目标没有运行方案。 @param firmware 项目配置里的固件。 @param
-   * output 产物路径。
+   * output 产物路径。 @param machine 整机机型。 @param builtDisk 构建时是否已经生成了镜像。
    */
   constructor(
     private readonly mode: 'rom' | 'firmware-disk' | null,
     private readonly firmware: string | undefined,
-    private readonly output: string
+    private readonly output: string,
+    private readonly machine: string = 'sb2000',
+    private readonly builtDisk = false
   ) {}
 
   plan(): ReturnType<BuildService['plan']> {
-    return { target: { name: 'fake', run: this.mode === null ? null : { emulator: 'ember', mode: this.mode } }, config: { firmware: this.firmware } } as never;
+    const run = this.mode === null ? null : { emulator: 'ember', mode: this.mode, machine: this.mode === 'firmware-disk' ? this.machine : null };
+    return { target: { name: 'fake', run }, config: { firmware: this.firmware } } as never;
   }
 
   async build(): Promise<BuildOutcome> {
     this.builds += 1;
-    return { plan: this.plan(), result: { programName: 'hello', outputFile: this.output, size: 1, compiled: 1, reused: 0 } };
+    const disk = this.builtDisk ? { imageFile: this.output.replace(/\.exe$/, '.img'), size: 1, files: ['HELLO.EXE'] } : undefined;
+    return { plan: this.plan(), result: { programName: 'hello', outputFile: this.output, size: 1, compiled: 1, reused: 0 }, disk };
   }
 
   buildDisk(): ReturnType<BuildService['buildDisk']> {
-    return { imageFile: this.output.replace(/\.exe$/, '.img'), size: 1 };
+    this.diskBuilds += 1;
+    return { imageFile: this.output.replace(/\.exe$/, '.img'), size: 1, files: ['HELLO.EXE'] };
   }
 }
 
@@ -115,5 +121,29 @@ describe('构建并运行', () => {
     assert.equal(result.firmwareDisk, true);
     const downs = client.calls.filter((call) => call.method === 'input.key' && (call.params as { down: boolean }).down).length;
     assert.equal(downs, 'hello'.length + 3);
+  });
+
+  it('SB97 程序：按目标的机型开机，先选中 DOS 再输入程序名；构建已生成镜像时不再另外生成', async () => {
+    const exe = writeTestFile(temp.dir, 'hello.exe', 'x');
+    writeTestFile(temp.dir, 'hello.img', 'x');
+    const firmware = writeTestFile(temp.dir, 'sb97.bin', 'x');
+    const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'input.key': {}, 'runtime.resume': {} });
+    connector.next = client;
+    const build = new FakeBuildService('firmware-disk', firmware, exe, 'sb97', true);
+    await createRunner(build).run({ build: { cwd: temp.dir }, debug: false });
+    assert.deepEqual(client.calls[0], { method: 'machines.setRom', params: { machine: 'sb97', path: firmware } });
+    const keys = client.calls.filter((call) => call.method === 'input.key' && (call.params as { down: boolean }).down).map((call) => (call.params as { code: string }).code);
+    assert.deepEqual(keys, ['Space', 'ArrowLeft', 'Enter', 'KeyH', 'KeyE', 'KeyL', 'KeyL', 'KeyO', 'Enter']);
+    assert.equal(build.diskBuilds, 0);
+  });
+
+  it('构建没有生成镜像时（配置里 disk 为 false），运行前另外生成', async () => {
+    const exe = writeTestFile(temp.dir, 'hello.exe', 'x');
+    writeTestFile(temp.dir, 'hello.img', 'x');
+    const firmware = writeTestFile(temp.dir, 'bios.nes', 'x');
+    connector.next = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'input.key': {}, 'runtime.resume': {} });
+    const build = new FakeBuildService('firmware-disk', firmware, exe);
+    await createRunner(build).run({ build: { cwd: temp.dir }, debug: false });
+    assert.equal(build.diskBuilds, 1);
   });
 });

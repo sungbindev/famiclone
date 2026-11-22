@@ -14,14 +14,14 @@ import { isRecord } from '../json/json-text';
 import type { BuildResult, DiskImageResult } from './build-plan';
 
 /** 任务能做的事。 */
-export const TASK_COMMANDS = ['build', 'disk', 'run'] as const;
+export const TASK_COMMANDS = ['build', 'run'] as const;
 
 /** 任务命令。 */
 export type TaskCommand = (typeof TASK_COMMANDS)[number];
 
 /** 一个 fcdev 任务的定义。 */
 export interface FcdevTaskDefinition {
-  /** 要做的事：构建、生成磁盘镜像、运行。 */
+  /** 要做的事：构建（目标支持磁盘镜像时同时生成镜像）、运行。 */
   readonly command: TaskCommand;
   /** 构建路径（文件或目录），相对工作区文件夹；不给时为文件夹本身。 */
   readonly path?: string | undefined;
@@ -70,10 +70,9 @@ export function describeBuildResult(result: BuildResult, targetName: string, bas
 /**
  * 磁盘镜像的一行说明。
  * @param image 镜像结果。
- * @param programFile 放进镜像的程序文件路径。
  * @param base 显示相对路径时的基准目录。
  * @returns 说明文字。
  */
-export function describeDiskImage(image: DiskImageResult, programFile: string, base: string): string {
-  return `已生成 ${path.relative(base, image.imageFile) || image.imageFile}（${image.size} 字节，含 ${path.basename(programFile)}）`;
+export function describeDiskImage(image: DiskImageResult, base: string): string {
+  return `已生成 ${path.relative(base, image.imageFile) || image.imageFile}（${image.size} 字节，含 ${image.files.join('、')}）`;
 }

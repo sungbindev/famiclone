@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-commands.ts
-// 说明：构建和运行相关的命令：构建项目、构建磁盘镜像、构建当前文件、构建当前目录、运行、调试运行、
+// 说明：构建和运行相关的命令：构建项目、构建当前文件、构建当前目录、运行、调试运行、
 //       显示项目信息。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
@@ -25,7 +25,6 @@ import { TASK_TYPE, type BuildTaskProvider } from './build-task-provider';
 /** 命令的标识，与 package.json 里声明的一致。 */
 export const BUILD_COMMANDS = {
   build: 'fcdev.build',
-  buildDisk: 'fcdev.buildDisk',
   buildFile: 'fcdev.buildCurrentFile',
   buildDirectory: 'fcdev.buildCurrentDirectory',
   run: 'fcdev.run',
@@ -92,7 +91,7 @@ export function registerBuildCommands(context: vscode.ExtensionContext, dependen
   const output = vscode.window.createOutputChannel('fcdev 项目信息');
 
   /** 在工作区文件夹里运行一个构建路径的任务。 */
-  const runTask = async (command: 'build' | 'disk' | 'run', absolutePath: string, debug = false): Promise<void> => {
+  const runTask = async (command: 'build' | 'run', absolutePath: string, debug = false): Promise<void> => {
     const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(absolutePath));
     if (folder === undefined) {
       void vscode.window.showWarningMessage('只能构建工作区文件夹里的内容');
@@ -118,11 +117,11 @@ export function registerBuildCommands(context: vscode.ExtensionContext, dependen
   };
 
   /** 构建整个项目：有 src 目录就构建它，否则构建项目目录。 */
-  const buildProject = async (command: 'build' | 'disk'): Promise<void> => {
+  const buildProject = async (): Promise<void> => {
     const root = await pickProject(await locator.findProjectRoots());
     if (root === undefined) return;
     const source = path.join(root, 'src');
-    await runTask(command, fileSystem.kindOf(source) === 'directory' ? source : root);
+    await runTask('build', fileSystem.kindOf(source) === 'directory' ? source : root);
   };
 
   /** 构建活动文件：只有 .c、.s、.asm 能单独构建。 */
@@ -171,8 +170,7 @@ export function registerBuildCommands(context: vscode.ExtensionContext, dependen
 
   context.subscriptions.push(
     output,
-    vscode.commands.registerCommand(BUILD_COMMANDS.build, guarded('构建项目', () => buildProject('build'))),
-    vscode.commands.registerCommand(BUILD_COMMANDS.buildDisk, guarded('构建磁盘镜像', () => buildProject('disk'))),
+    vscode.commands.registerCommand(BUILD_COMMANDS.build, guarded('构建项目', buildProject)),
     vscode.commands.registerCommand(BUILD_COMMANDS.buildFile, guarded('构建当前文件', buildFile)),
     vscode.commands.registerCommand(BUILD_COMMANDS.buildDirectory, guarded('构建当前目录', buildDirectory)),
     vscode.commands.registerCommand(BUILD_COMMANDS.run, guarded('运行', () => runProject(false))),

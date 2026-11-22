@@ -4,7 +4,7 @@
 
 ## 构建
 
-在 VS Code 里打开仓库，用命令“fcdev：构建项目”选 `apps/sb2000/examples/hello`；命令“fcdev：构建磁盘镜像”另外生成放有程序的软盘镜像。产物在各示例的 `build/sb2000/` 下。
+在 VS Code 里打开仓库，用命令“fcdev：构建项目”选 `apps/sb2000/examples/hello`；构建同时生成放有程序的软盘镜像。产物在各示例的 `build/sb2000/` 下。
 
 ## 示例
 
@@ -24,8 +24,8 @@
 
 ## 运行
 
-fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`（仓库里有一份：`ember/roms/sb2000_bios.bin`），并在设置 `fcdev.emulator.path` 里指向 Ember，用命令“fcdev：运行”选这个示例在 Ember 里运行：程序会放进软盘镜像，开机后自动跳过 SB-DOS 的日期与时间提示并输入程序名。也可以只用“fcdev：构建项目”“fcdev：构建磁盘镜像”构建并生成磁盘镜像。
+fcdev 不提供 BIOS。在示例目录的 `fcdev.json` 里加上 `"firmware": "BIOS 文件路径"`（仓库里有一份：`ember/roms/sb2000_bios.bin`），并在设置 `fcdev.emulator.path` 里指向 Ember，用命令“fcdev：运行”选这个示例在 Ember 里运行：程序会放进软盘镜像，开机后自动跳过 SB-DOS 的日期与时间提示并输入程序名。也可以只用“fcdev：构建项目”构建并生成磁盘镜像。
 
-`show`、`copy`、`peek`、`poke` 需要磁盘里有数据文件，可以自己用“fcdev：构建磁盘镜像”生成的镜像加上文件，或在模拟器里挂载别的镜像；`play` 需要 `.nes` 文件，放进软盘镜像时文件名要符合 8.3（如 `mario.nes`）。
+`show`、`copy`、`peek`、`poke` 需要磁盘里有数据文件，可以自己把文件放进示例目录的 `disk` 目录（构建时会和程序一起放进镜像），或在模拟器里挂载别的镜像；`play` 需要 `.nes` 文件，放进软盘镜像时文件名要符合 8.3（如 `mario.nes`）。
 
 用命令“fcdev：调试运行”启动后，调试请求 `input.pad port=0 buttons=1`（按下 1 号手柄 A）、`input.mouse kind=move dx=10 dy=5`（移动鼠标）、`input.mouse kind=down buttons=1`（按下鼠标左键）可以给 `pad`、`mouse` 注入输入，用命令“fcdev：调用调试请求”发送，请求表见 [02-模拟器与调试](../../../vscode/docs/02-模拟器与调试.md)。

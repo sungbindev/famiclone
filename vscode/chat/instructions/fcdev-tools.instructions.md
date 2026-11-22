@@ -11,7 +11,7 @@ description: '使用 fcdev 扩展的工具（fcdev_*、emu_*、disasm_*）开发
 
 | 要做的事 | 必须先读取 | 流程 |
 | --- | --- | --- |
-| 新建、编写、构建 NES 或 SB2000 程序（项目里有 `fcdev.json`，或要新建这类项目） | skill `fcdev-app-development` | 它的“工作流程” |
+| 新建、编写、构建 NES、SB2000 或 SB97 程序（项目里有 `fcdev.json`，或要新建这类项目） | skill `fcdev-app-development` | 它的“工作流程” |
 | 运行、调试、截图、读写内存、注入输入，包括不属于 fcdev 项目的 NES 文件、整机与磁盘镜像 | skill `ember-emulator` | 它的“任务判定” |
 | 反汇编（有 `disasm.json`、有映像文件，或要读懂已有的 6502 程序） | skill `disassemble-6502` | 它的八个步骤 |
 | 同时涉及多项 | 全部相关 skill | 先用 todo 列出步骤，按依赖顺序做 |

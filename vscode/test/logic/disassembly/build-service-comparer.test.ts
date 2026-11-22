@@ -30,7 +30,7 @@ describe('构建并比较', () => {
       build: async (input: BuildInput): Promise<BuildOutcome> => {
         inputs.push(input);
         const outputFile = writeTestFile(buildDir, 'build/out.bin', built);
-        return { plan: {} as BuildOutcome['plan'], result: { programName: 'out', outputFile, size: built.length, compiled: 1, reused: 0 } };
+        return { plan: {} as BuildOutcome['plan'], result: { programName: 'out', outputFile, size: built.length, compiled: 1, reused: 0 }, disk: undefined };
       }
     };
   }

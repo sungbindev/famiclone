@@ -4,8 +4,7 @@
 
 ## 构建
 
-在 VS Code 里运行“终端 → 运行生成任务”（默认任务“fcdev：构建”），生成 `build/sb2000/HELLO.EXE`；
-任务“fcdev：构建磁盘镜像”另外生成放有 HELLO.EXE 的软盘镜像 `build/sb2000/HELLO.img`。
+在 VS Code 里运行“终端 → 运行生成任务”（默认任务“fcdev：构建”），生成 `build/sb2000/HELLO.EXE`，同时生成软盘镜像 `build/sb2000/HELLO.img`，里面有 HELLO.EXE 和项目 `disk` 目录下的全部文件（模板里是一份使用说明 `disk/README.TXT`，名字与内容可以自己改，文件名必须是 8.3 名字，不能有子目录）。不想生成镜像时，在 `fcdev.json` 里加 `"disk": false`。
 
 程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 
@@ -27,7 +26,8 @@
 | --- | --- |
 | `src/hello.s` | 示例程序：显示一行英文和一行中文，等待按键后返回 DOS，入口是导出的 `_main` |
 | `fcdev.json` | fcdev 配置：目标 sb2000，程序名 hello |
-| `.vscode/tasks.json` | 构建、生成磁盘镜像与运行的任务 |
+| `disk/README.TXT` | 放进磁盘镜像的使用说明示例，用 WinImage 等软件打开镜像时可直接查看；`disk` 目录下的文件都会放进镜像 |
+| `.vscode/tasks.json` | 构建与运行的任务 |
 
 ## 文档
 

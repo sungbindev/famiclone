@@ -401,7 +401,7 @@ export async function startSb2000Program(temp: TempDir, { sources, extraFiles = 
 
   const { pid, client } = await launchEmulator(emulator.environment, {
     executable: REAL_EMBER,
-    sb2000: { firmware: REAL_FIRMWARE, diskImage: image },
+    firmwareDisk: { machine: 'sb2000', firmware: REAL_FIRMWARE, diskImage: image },
     debug: true,
     port: emulator.port
   });

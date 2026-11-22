@@ -34,7 +34,8 @@ const DOCS = parseTopics(JSON.stringify({ topics: [{ topic: 'build', file: '01-�
 function createServices(overrides: Partial<FcdevToolServices> = {}): FcdevToolServices {
   const outcome = {
     plan: { target: { name: 'nes' } },
-    result: { programName: 'hello', outputFile: path.join(ROOT, 'build', 'nes', 'hello.nes'), size: 40976, compiled: 1, reused: 0 }
+    result: { programName: 'hello', outputFile: path.join(ROOT, 'build', 'nes', 'hello.nes'), size: 40976, compiled: 1, reused: 0 },
+    disk: undefined
   } as BuildOutcome;
   return {
     build: {
@@ -43,7 +44,7 @@ function createServices(overrides: Partial<FcdevToolServices> = {}): FcdevToolSe
         reporter?.log('编译 hello.c');
         return outcome;
       }),
-      buildDisk: vi.fn(() => ({ imageFile: path.join(ROOT, 'build', 'nes', 'hello.img'), size: 1474560 }))
+      buildDisk: vi.fn()
     },
     runner: {
       run: vi.fn(async (_input, reporter) => {
@@ -105,8 +106,8 @@ describe('与清单的对应', () => {
   it('清单里的输入结构能检查示例输入', () => {
     expect(validateInput(schemaOf('fcdev_new_project'), { directory: 'game', target: 'nes', language: 'c' })).toEqual([]);
     expect(validateInput(schemaOf('fcdev_new_project'), { directory: 'game', target: 'gba', language: 'c' })).not.toEqual([]);
-    expect(validateInput(schemaOf('fcdev_build'), { path: 'src', disk: true })).toEqual([]);
-    expect(validateInput(schemaOf('fcdev_build'), { disk: 'yes' })).not.toEqual([]);
+    expect(validateInput(schemaOf('fcdev_build'), { path: 'src', target: 'nes' })).toEqual([]);
+    expect(validateInput(schemaOf('fcdev_build'), { disk: true })).not.toEqual([]);
     expect(validateInput(schemaOf('fcdev_run'), { path: 'src', debug: true })).toEqual([]);
     expect(validateInput(schemaOf('fcdev_run'), { debug: 'yes' })).not.toEqual([]);
     expect(validateInput(schemaOf('fcdev_docs'), {})).toEqual([]);
@@ -167,13 +168,25 @@ describe('新建项目', () => {
 });
 
 describe('构建', () => {
-  it('返回进度与结果，disk 为 true 时再返回镜像', async () => {
+  it('返回进度与结果，没有生成磁盘镜像时不返回镜像行', async () => {
     const services = createServices();
-    const text = await toolOf('fcdev_build', services).run({ path: 'src', disk: true, target: 'nes' }, { roots: [ROOT] });
+    const text = await toolOf('fcdev_build', services).run({ path: 'src', target: 'nes' }, { roots: [ROOT] });
     expect(text).toContain('编译 hello.c');
     expect(text).toContain('40976 字节，目标 nes');
-    expect(text).toContain('hello.img');
+    expect(text).not.toContain('.img');
     expect(vi.mocked(services.build.build).mock.calls[0]?.[0]).toEqual({ pathArg: 'src', cwd: ROOT, targetOverride: 'nes' });
+  });
+
+  it('构建同时生成了磁盘镜像时，再返回镜像行', async () => {
+    const outcome = {
+      plan: { target: { name: 'sb2000' } },
+      result: { programName: 'hello', outputFile: path.join(ROOT, 'build', 'sb2000', 'HELLO.EXE'), size: 420, compiled: 1, reused: 0 },
+      disk: { imageFile: path.join(ROOT, 'build', 'sb2000', 'HELLO.img'), size: 1474560, files: ['HELLO.EXE', 'README.TXT'] }
+    } as unknown as BuildOutcome;
+    const services = createServices({ build: { plan: vi.fn(), buildDisk: vi.fn(), build: vi.fn(async () => outcome) } });
+    const text = await toolOf('fcdev_build', services).run({ path: 'src' }, { roots: [ROOT] });
+    expect(text).toContain('HELLO.img');
+    expect(text).toContain('含 HELLO.EXE、README.TXT');
   });
 
   it('不给路径时构建工作区第一个文件夹', async () => {

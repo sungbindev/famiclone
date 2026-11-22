@@ -129,10 +129,10 @@ describe.skipIf(!HAS_TOOLCHAIN)('SB2000 目标（需要 cc65）', { timeout: TIM
     await expect(build('src/toolongname.c')).rejects.toMatchObject({ code: 'NAME_INVALID' });
   });
 
-  it('磁盘镜像里的 HELLO.EXE 与产物一致', async () => {
+  it('构建同时生成磁盘镜像，镜像里的 HELLO.EXE 与产物一致', async () => {
     writeTestFile(temp.dir, 'src/hello.c', HELLO_C);
     const outcome = await build('src');
-    const { imageFile } = service.buildDisk(outcome);
+    const imageFile = outcome.disk?.imageFile ?? '';
     expect(imageFile).toBe(path.join(temp.dir, 'build', 'sb2000', 'HELLO.img'));
     const image = readFileSync(imageFile);
     const [entry] = listFat12(image);

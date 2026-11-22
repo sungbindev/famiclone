@@ -54,7 +54,7 @@ npm run check                # 全部检查与测试（含 vscode:check）
 
 ### apps/sb2000（fcdev 项目）
 
-在 VS Code 里打开仓库，用“终端 → 运行任务”选 `fcdev` 的构建、构建磁盘镜像、运行任务（每个项目的 `.vscode/tasks.json` 或扩展自动提供的任务）；运行需要先在用户设置 `fcdev.emulator.path` 里指向 Ember。
+在 VS Code 里打开仓库，用“终端 → 运行任务”选 `fcdev` 的构建、运行任务（每个项目的 `.vscode/tasks.json` 或扩展自动提供的任务），构建会同时生成软盘镜像；运行需要先在用户设置 `fcdev.emulator.path` 里指向 Ember。
 
 软盘镜像：先构建 `edit`、`asm`、`runnes`，再运行 `node apps/sb2000/disk/build-disk.mjs`（先在 `vscode/` 里 `npm run build`）。
 

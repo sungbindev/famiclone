@@ -5,7 +5,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：用法 node tools/probe-fc.mjs；先在 apps/sb2000/fcprobe 里用任务“fcdev：构建磁盘镜像”（命令 fcdev.buildDisk）生成软盘镜像；
+// 备注：用法 node tools/probe-fc.mjs；先在 apps/sb2000/fcprobe 里用任务“fcdev：构建”生成软盘镜像；
 //       Ember 的位置取环境变量 EMBER_EXE；结束时只结束自己启动的进程。
 //       结果区在 ERAM $7F00 起，各项的含义见 probe-stub.s 的文件头。
 // ------------------------------------------------------------------------

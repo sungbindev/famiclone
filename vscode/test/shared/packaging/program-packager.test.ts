@@ -37,6 +37,23 @@ describe('打包器', () => {
     expect(() => packageProgram('flat-exe', new Uint8Array(17), { maxSize: 16 })).toThrow(expect.objectContaining({ code: 'PACKAGE_TOO_LARGE' }));
   });
 
+  it('flat-exe 的文件头可以在指定偏移处，偏移处不符时报错并给出偏移与实际内容', () => {
+    const image = new Uint8Array(16);
+    image.set([0xaa, 0x55], 8);
+    expect(packageProgram('flat-exe', image, { header: 'AA55', headerOffset: 8 })).toEqual(image);
+    expect(() => packageProgram('flat-exe', image, { header: 'AA55', headerOffset: 7 })).toThrow(
+      expect.objectContaining({ code: 'PACKAGE_HEADER_MISMATCH', message: expect.stringContaining('偏移 7') })
+    );
+    expect(() => packageProgram('flat-exe', new Uint8Array(9), { header: 'AA55', headerOffset: 8 })).toThrow(expect.objectContaining({ code: 'PACKAGE_HEADER_MISMATCH' }));
+    expect(() => packageProgram('flat-exe', image, { header: 'AA55', headerOffset: -1 })).toThrow(expect.objectContaining({ code: 'PACKAGER_OPTION_INVALID' }));
+  });
+
+  it('flat-exe 的 size 要求映像大小正好相等', () => {
+    expect(packageProgram('flat-exe', new Uint8Array(16), { size: 16 }).length).toBe(16);
+    expect(() => packageProgram('flat-exe', new Uint8Array(15), { size: 16 })).toThrow(expect.objectContaining({ code: 'PACKAGE_SIZE_MISMATCH' }));
+    expect(() => packageProgram('flat-exe', new Uint8Array(17), { size: 16 })).toThrow(expect.objectContaining({ code: 'PACKAGE_SIZE_MISMATCH' }));
+  });
+
   it('ines 接受文件头与长度一致的文件', () => {
     const header = [0x4e, 0x45, 0x53, 0x1a, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     const image = Uint8Array.from([...header, ...Array.from({ length: 0x6000 }, () => 0)]);

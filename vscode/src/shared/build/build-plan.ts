@@ -62,6 +62,8 @@ export interface DiskImageResult {
   readonly imageFile: string;
   /** 镜像大小。 */
   readonly size: number;
+  /** 放进镜像的文件名，程序在最前面。 */
+  readonly files: readonly string[];
 }
 
 /** 构建进度的汇报方。 */

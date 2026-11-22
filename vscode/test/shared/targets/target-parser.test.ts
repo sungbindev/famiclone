@@ -50,6 +50,12 @@ describe('目标定义的解析', () => {
     expect(parseTarget(validTarget({ run: { emulator: 'ember', mode: 'rom' } }), DIR).run?.mode).toBe('rom');
   });
 
+  it('firmware-disk 的运行方案必须给整机机型，rom 的机型为 null', () => {
+    expect(() => parseTarget(validTarget({ run: { emulator: 'ember', mode: 'firmware-disk' } }), DIR)).toThrow(/machine/);
+    expect(parseTarget(validTarget({ run: { emulator: 'ember', mode: 'firmware-disk', machine: 'sb97' } }), DIR).run?.machine).toBe('sb97');
+    expect(parseTarget(validTarget({ run: { emulator: 'ember', mode: 'rom' } }), DIR).run?.machine).toBeNull();
+  });
+
   it('links 只能用在布尔选项上', () => {
     const options = { size: { type: 'number', default: 1, links: ['a.o'] } };
     expect(() => parseTarget(validTarget({ options }), DIR)).toThrow(/links/);

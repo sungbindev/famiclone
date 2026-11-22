@@ -12,12 +12,6 @@
       }
     },
     {
-      "label": "构建磁盘镜像",
-      "type": "fcdev",
-      "command": "disk",
-      "path": "src"
-    },
-    {
       "label": "运行",
       "type": "fcdev",
       "command": "run",

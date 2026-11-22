@@ -34,12 +34,10 @@ describe('生成的文件内容', () => {
     expect(JSON.parse(buildProjectConfigText('nes'))).toEqual({ target: 'nes', name: 'hello' });
   });
 
-  it('tasks.json 有默认构建任务与运行任务，支持磁盘的目标另有磁盘镜像任务', () => {
-    const plain = JSON.parse(buildTasksText(false)) as { tasks: Array<Record<string, unknown>> };
-    expect(plain.tasks.map((task) => task.command)).toEqual(['build', 'run']);
-    expect(plain.tasks[0]).toMatchObject({ type: 'fcdev', path: 'src', problemMatcher: '$fcdev', group: { kind: 'build', isDefault: true } });
-    const withDisk = JSON.parse(buildTasksText(true)) as { tasks: Array<Record<string, unknown>> };
-    expect(withDisk.tasks.map((task) => task.command)).toEqual(['build', 'disk', 'run']);
+  it('tasks.json 有默认构建任务与运行任务', () => {
+    const { tasks } = JSON.parse(buildTasksText()) as { tasks: Array<Record<string, unknown>> };
+    expect(tasks.map((task) => task.command)).toEqual(['build', 'run']);
+    expect(tasks[0]).toMatchObject({ type: 'fcdev', path: 'src', problemMatcher: '$fcdev', group: { kind: 'build', isDefault: true } });
   });
 
   it('README 里的 {{name}} 换成项目名', () => {

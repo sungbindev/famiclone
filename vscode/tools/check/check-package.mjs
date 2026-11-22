@@ -24,10 +24,13 @@ const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');
 const PREFIX = 'extension/';
 
 /** 必须随扩展发布的目标 */
-const REQUIRED_TARGETS = ['nes', 'sb2000'];
+const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97'];
 
 /** 必须随扩展发布的模板 */
-const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm'];
+const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm'];
+
+/** 带磁盘能力的模板：构建磁盘镜像时放进镜像的使用说明在模板的 disk 目录里 */
+const TEMPLATES_WITH_DISK = ['sb2000-c', 'sb2000-asm', 'sb97-asm'];
 
 /** 不允许出现的路径：测试、源码、依赖、密钥、安装包、模拟器与固件 */
 const FORBIDDEN = [
@@ -193,6 +196,7 @@ export function checkPackage(vsixFile) {
     if (!files.has(`templates/${template}/src/hello.c`) && !files.has(`templates/${template}/src/hello.s`)) {
       errors.push(`缺少 templates/${template}/src/hello.c 或 hello.s（模板的示例程序）`);
     }
+    if (TEMPLATES_WITH_DISK.includes(template)) mustHave(`templates/${template}/disk/README.TXT`, '模板自带的磁盘镜像使用说明');
   }
 
   // 使用文档：登记表里的每份文档都在

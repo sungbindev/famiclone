@@ -19,9 +19,15 @@ describe('项目配置', () => {
     const config = normalizeConfig({ target: 'nes', include: ['inc'], out: 'dist', firmware: 'rom/bios.nes' }, file, ROOT);
     expect(config.target).toBe('nes');
     expect(config.optimize).toBe(true);
+    expect(config.disk).toBe(true);
     expect(config.include).toEqual([path.join(ROOT, 'inc')]);
     expect(config.outDir).toBe(path.join(ROOT, 'dist'));
     expect(config.firmware).toBe(path.join(ROOT, 'rom', 'bios.nes'));
+  });
+
+  it('disk 为 false 时不生成磁盘镜像，类型不对报错', () => {
+    expect(normalizeConfig({ disk: false }, null, ROOT).disk).toBe(false);
+    expect(() => normalizeConfig({ disk: 'no' }, null, ROOT)).toThrow(/类型不对/);
   });
 
   it('没有配置文件时以给定目录为项目根', () => {

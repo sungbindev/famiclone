@@ -38,6 +38,7 @@
   },
   "run": {
     "emulator": "ember",
-    "mode": "firmware-disk"
+    "mode": "firmware-disk",
+    "machine": "sb2000"
   }
 }

@@ -117,9 +117,9 @@ describe('importFcdevDocs', () => {
 });
 
 describe('分组与侧边栏', () => {
-  it('分组顺序固定为通用、NES、SB2000，空分组不出现，组内保持登记顺序', () => {
+  it('分组顺序固定为通用、NES、SB2000、SB97，空分组不出现，组内保持登记顺序', () => {
     const groups = groupTopics(DOC_TOPICS);
-    expect(groups.map((group) => group.title)).toEqual(['通用', 'NES', 'SB2000（小霸王学习机）']);
+    expect(groups.map((group) => group.title)).toEqual(['通用', 'NES', 'SB2000（小霸王学习机）', 'SB97（小霸王 97）']);
     expect(groups[0]?.topics.map((topic) => topic.topic)).toEqual(['build', 'emulator', 'disasm', 'create']);
     expect(groupTopics([{ file: 'nes/01.md' }]).map((group) => group.title)).toEqual(['NES']);
   });

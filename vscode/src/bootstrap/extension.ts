@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
     new AssemblySymbolResolver(new WorkspaceAssemblySourceStore(), projects)
   );
   const cSync = new FileIntelliSenseSyncService(fileSystem, describer, locator);
-  const scaffold = new FileScaffoldService(fileSystem, resources, targets);
+  const scaffold = new FileScaffoldService(fileSystem, resources);
   const docs = new FileUsageDocsService(fileSystem, resources);
   const api = new TargetCApiService(fileSystem, configReader, targets);
   const profiles = new FileTargetProfileReader(fileSystem, resources);

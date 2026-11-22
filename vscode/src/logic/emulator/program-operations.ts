@@ -84,7 +84,7 @@ export async function load(context: OperationContext, params: Record<string, unk
       diskImage: diskImage === undefined ? undefined : path.resolve(diskImage)
     });
     const program = optionalString(params, 'program');
-    if (program !== undefined) await enterProgram(client, program);
+    if (program !== undefined) await enterProgram(client, program, machine);
   }
   return { ...(await client.request('runtime.status', {})) };
 }

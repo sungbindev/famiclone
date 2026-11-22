@@ -4,15 +4,17 @@
 ; 作者：sungbin
 ; 邮箱：sungbin@3578.cn
 ; 日期：2026-11-22
-; 备注：DOS 运行的程序是 32K 映像，映射在 $8000-$FFFF，偏移 $7FF8、$7FF9 是签名 AA 55，$FFFC 是入口。
-;       装载程序复制到工作 RAM $6000 运行，切换程序 RAM 时执行的代码不会丢失。
+; 备注：DOS 运行的程序是 32K 映像，映射在 $8000-$FFFF；签名 AA 55 与向量由 sb97 目标的启动代码提供，启动代码调用 _main。
+;       装载程序（RAMCODE 段）复制到工作 RAM $6000 运行，切换程序 RAM 时执行的代码不会丢失。
 ;       流程：读参数 -> 软驱初始化 -> 在根目录找文件 -> 沿簇链读扇区 -> 检查 iNES 头
 ;       -> PRG 写入程序 RAM 第 1 个 32K 页（$5000=$81），CHR 写入图案区 -> 设置镜像 -> 改掉读手柄 2 的指令 -> JMP ($FFFC)。
 ;       出错时在画面第 10 行显示英文提示并停住，需要重新开机。
 ; ------------------------------------------------------------------------
 
     .setcpu "6502"
-    .import __LOADER_LOAD__, __LOADER_RUN__, __LOADER_SIZE__
+    .include "sb97.inc"
+    .export _main
+    .import __RAMCODE_LOAD__, __RAMCODE_RUN__, __RAMCODE_SIZE__
 
 ; 长距离条件分支：条件不满足时短跳过，满足时用 JMP 去远处的标签（用匿名标签，不切断 @ 局部标签的作用域）
 .macro JCS target
@@ -73,22 +75,8 @@ trkn    = $30   ; 读扇区时算出的磁道
 hdrflag = $31   ; 头部是否已经解析
 
 ; 参数与 8.3 文件名放在零页
-args    = $40   ; 16 字节：DOS 第一个参数（$680E 起，以 0 结尾）
+args    = $40   ; 16 字节：DOS 第一个参数（DOS_ARGUMENT 起，以 0 结尾）
 name    = $50   ; 11 字节：8.3 文件名
-
-; 小霸王 97 的寄存器
-FDC_DCR    = $5500   ; 数据速率
-FDC_DOR    = $5501   ; 数字输出寄存器（电机、复位）
-FDC_DATAW  = $5505   ; 数据寄存器（写）
-FDC_MSR    = $5604   ; 主状态寄存器（读）
-FDC_DATAR  = $5605   ; 数据寄存器（读）
-PRAM_SEL   = $5000   ; 程序页选择，位 7 为 1 时选程序 RAM
-MIRROR     = $5200   ; 镜像位、32K 模式位
-PPU_CTRL   = $2000
-PPU_MASK   = $2001
-PPU_SCROLL = $2005
-PPU_ADDR   = $2006
-PPU_DATA   = $2007
 
 ; 出错码（与 msg_table 的顺序一致）
 E_USAGE    = 1
@@ -102,31 +90,27 @@ E_TRUNC    = 8
 E_TRAINER  = 9
 
 ; ------------------------------------------------------------------------
-; 入口：复制装载程序到工作 RAM，然后执行
+; 入口：由启动代码调用；复制装载程序到工作 RAM，然后执行
 ; ------------------------------------------------------------------------
-    .segment "STUB"
-reset:
-    sei
-    cld
-    ldx #$FF
-    txs
+    .segment "CODE"
+_main:
     ldx #$0F
 @args:
-    lda $680E,x             ; DOS 把第一个参数放在这里
+    lda DOS_ARGUMENT,x      ; DOS 把第一个参数放在这里
     sta args,x
     dex
     bpl @args
-    lda #<__LOADER_LOAD__
+    lda #<__RAMCODE_LOAD__
     sta ptr
-    lda #>__LOADER_LOAD__
+    lda #>__RAMCODE_LOAD__
     sta ptr+1
-    lda #<__LOADER_RUN__
+    lda #<__RAMCODE_RUN__
     sta ptr2
-    lda #>__LOADER_RUN__
+    lda #>__RAMCODE_RUN__
     sta ptr2+1
-    lda #<__LOADER_SIZE__
+    lda #<__RAMCODE_SIZE__
     sta cnt
-    lda #>__LOADER_SIZE__
+    lda #>__RAMCODE_SIZE__
     sta cnt+1
 @copy:
     ldy #0
@@ -150,13 +134,10 @@ reset:
     bne @copy
     jmp loader_start
 
-nmi_irq:
-    rti
-
 ; ------------------------------------------------------------------------
 ; 装载程序：运行在工作 RAM $6000，只能访问 RAM、寄存器与程序 RAM 窗口
 ; ------------------------------------------------------------------------
-    .segment "LOADER"
+    .segment "RAMCODE"
 loader_start:
     lda #$00
     sta PPU_CTRL
@@ -1114,19 +1095,8 @@ msg_trainer:  .byte "Trainer not supported", 0
 ; ------------------------------------------------------------------------
 ; 工作 RAM 的缓冲：SECTBUF 放一个扇区，FATBUF 放 FAT 的一个扇区
 ; ------------------------------------------------------------------------
-    .segment "SECTBUF"
+    .segment "WRAM"
 SECTBUF:
     .res 512
-
-    .segment "FATBUF"
 FATBUF:
     .res 512
-
-; ------------------------------------------------------------------------
-; 复位与中断向量，AA 55 签名在 $FFF8（DOS 检查 $BFF8-$BFF9 位置对应的偏移 $7FF8）
-; ------------------------------------------------------------------------
-    .segment "VECTORS"
-    .byte $AA, $55
-    .word nmi_irq
-    .word reset
-    .word nmi_irq

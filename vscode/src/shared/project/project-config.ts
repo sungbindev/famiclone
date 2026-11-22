@@ -20,6 +20,7 @@ const KEY_TYPES: Readonly<Record<string, 'string' | 'boolean' | 'object' | 'stri
   name: 'string',
   out: 'string',
   optimize: 'boolean',
+  disk: 'boolean',
   define: 'object',
   include: 'string-array',
   firmware: 'string',
@@ -40,6 +41,8 @@ export interface ProjectConfig {
   readonly outDir: string;
   /** 是否优化。 */
   readonly optimize: boolean;
+  /** 构建时是否同时生成磁盘镜像（只对有磁盘能力的目标有效）。 */
+  readonly disk: boolean;
   /** 预定义宏。 */
   readonly define: Readonly<Record<string, string | number>>;
   /** 额外头文件目录的绝对路径。 */
@@ -100,6 +103,7 @@ export function normalizeConfig(raw: unknown, file: string | null, fallbackRoot:
     name: raw.name as string | undefined,
     outDir: path.resolve(root, (raw.out as string | undefined) ?? 'build'),
     optimize: (raw.optimize as boolean | undefined) ?? true,
+    disk: (raw.disk as boolean | undefined) ?? true,
     define: define as Record<string, string | number>,
     include: ((raw.include as string[] | undefined) ?? []).map((item) => path.resolve(root, item)),
     firmware: firmware === undefined ? undefined : path.resolve(root, firmware),

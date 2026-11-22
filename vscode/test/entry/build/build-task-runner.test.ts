@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-task-runner.test.ts
-// 说明：测试 fcdev 任务的执行：构建、生成磁盘镜像的输出与退出码，
+// 说明：测试 fcdev 任务的执行：构建、同时生成磁盘镜像的输出与退出码，
 //       可预期的错误写成“错误：…”并带建议，未预期的错误原样抛出；
 //       任务定义的解析与问题匹配器对工具输出的识别。
 // 作者：sungbin
@@ -20,17 +20,18 @@ import { parseTaskDefinition } from '../../../src/shared/build/task-definition';
 
 const FOLDER = path.resolve('work');
 
-/** 一次成功构建的结果。 */
-function outcomeOf(): BuildOutcome {
+/** 一次成功构建的结果；不给 disk 时没有生成磁盘镜像。 */
+function outcomeOf(disk?: BuildOutcome['disk']): BuildOutcome {
   return {
     plan: { target: { name: 'sb2000' } } as BuildOutcome['plan'],
-    result: { programName: 'hello', outputFile: path.join(FOLDER, 'build', 'sb2000', 'HELLO.EXE'), size: 420, compiled: 1, reused: 2 }
+    result: { programName: 'hello', outputFile: path.join(FOLDER, 'build', 'sb2000', 'HELLO.EXE'), size: 420, compiled: 1, reused: 2 },
+    disk
   };
 }
 
 /** 构建服务替身：build 的行为由参数决定。 */
 function fakeService(build: BuildService['build']): BuildService {
-  return { plan: vi.fn(), build, buildDisk: () => ({ imageFile: path.join(FOLDER, 'build', 'sb2000', 'HELLO.img'), size: 1474560 }) };
+  return { plan: vi.fn(), build, buildDisk: vi.fn() };
 }
 
 /** 运行器替身：构建任务用不到它。 */
@@ -50,11 +51,12 @@ describe('执行任务', () => {
     expect(build.mock.calls[0]?.[0]).toEqual({ pathArg: 'src', cwd: FOLDER, targetOverride: 'sb2000' });
   });
 
-  it('生成磁盘镜像时再输出镜像行', async () => {
+  it('构建同时生成了磁盘镜像时再输出镜像行，列出镜像里的文件', async () => {
+    const disk = { imageFile: path.join(FOLDER, 'build', 'sb2000', 'HELLO.img'), size: 1474560, files: ['HELLO.EXE', 'README.TXT'] };
     const output: string[] = [];
-    const code = await runBuildTask(parseTaskDefinition({ command: 'disk' }), FOLDER, { buildService: fakeService(async () => outcomeOf()), runner: UNUSED_RUNNER }, (text) => output.push(text));
+    const code = await runBuildTask(parseTaskDefinition({ command: 'build' }), FOLDER, { buildService: fakeService(async () => outcomeOf(disk)), runner: UNUSED_RUNNER }, (text) => output.push(text));
     expect(code).toBe(0);
-    expect(output.join('')).toContain(`已生成 ${path.join('build', 'sb2000', 'HELLO.img')}（1474560 字节，含 HELLO.EXE）`);
+    expect(output.join('')).toContain(`已生成 ${path.join('build', 'sb2000', 'HELLO.img')}（1474560 字节，含 HELLO.EXE、README.TXT）`);
   });
 
   it('可预期的错误：写“错误：…”与建议，退出码 1；未预期的错误原样抛出', async () => {

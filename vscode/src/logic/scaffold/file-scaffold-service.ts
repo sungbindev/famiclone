@@ -12,7 +12,6 @@ import * as path from 'node:path';
 import type { FileSystem } from '../../contracts/files/file-system';
 import type { ExtensionResources } from '../../contracts/resources/extension-resources';
 import type { CreateProjectInput, CreatedProject, ProjectTemplate, ScaffoldService } from '../../contracts/scaffold/scaffold-service';
-import type { TargetRepository } from '../../contracts/targets/target-repository';
 import { FcdevError } from '../../shared/errors/fcdev-error';
 import { parseJsonText } from '../../shared/json/json-text';
 import {
@@ -38,12 +37,10 @@ export class FileScaffoldService implements ScaffoldService {
    * 创建服务。
    * @param fileSystem 文件系统。
    * @param resources 扩展资源位置。
-   * @param targets 目标定义读取，用来判断目标是否支持磁盘镜像。
    */
   constructor(
     private readonly fileSystem: FileSystem,
-    private readonly resources: ExtensionResources,
-    private readonly targets: TargetRepository
+    private readonly resources: ExtensionResources
   ) {}
 
   /** @inheritdoc */
@@ -82,7 +79,7 @@ export class FileScaffoldService implements ScaffoldService {
     }
     this.fileSystem.writeText(path.join(directory, 'fcdev.json'), buildProjectConfigText(template.target));
     this.fileSystem.ensureDirectory(path.join(directory, '.vscode'));
-    this.fileSystem.writeText(path.join(directory, '.vscode', 'tasks.json'), buildTasksText(this.targets.load(template.target).disk !== null));
+    this.fileSystem.writeText(path.join(directory, '.vscode', 'tasks.json'), buildTasksText());
     return { directory, template, files: this.listFiles(directory) };
   }
 

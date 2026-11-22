@@ -6,7 +6,7 @@ user-invocable: false
 
 # fcdev 程序开发
 
-fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标只有两个：`nes`（产物 `.nes`）与 `sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
+fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有三个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）与 `sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
 
 ## 必须先读取的参考文件
 
@@ -27,9 +27,9 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 
 | 情形 | 流程 |
 | --- | --- |
-| 要新建 NES 或 SB2000 程序，目录里还没有 `fcdev.json` | 流程 1 |
+| 要新建 NES、SB2000 或 SB97 程序，目录里还没有 `fcdev.json` | 流程 1 |
 | 要在已有的 fcdev 项目里写或改程序 | 流程 2 |
-| 只要构建，或只要生成磁盘镜像 | 流程 3 |
+| 只要构建（学习机目标会同时生成磁盘镜像） | 流程 3 |
 | 要运行、看画面、调试、核对结果 | 流程 4 |
 | 构建失败、运行不对、找不到命令 | 流程 5 |
 | 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
@@ -56,7 +56,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 
 ## 流程 3：构建
 
-1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；SB2000 需要磁盘镜像时 `disk` 为 `true`。
+1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`）默认同时生成磁盘镜像，项目 `fcdev.json` 里 `disk` 为 `false` 时不生成。
 2. 完成标准：返回产物路径、大小与重新编译的文件数；磁盘镜像的路径取自输出，不猜扩展名。
 3. 汇报时把工具输出里的错误行原样给用户，不改写。
 
@@ -78,7 +78,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | 报“还没有设置 Ember 的位置”或“找不到 Ember” | 按 skill `ember-emulator` 的 `references/errors.md` 汇报给用户 |
 | `ld65` 报内存区放不下 | NES：程序超过 16K PRG 或 RAM，需要精简；SB2000：超过 15K，考虑 `targetOptions.banks`，读 [sb2000-development.md](references/sb2000-development.md) 的“大程序” |
 | 缺少或重复 `main` | 检查目录里是否混入别的程序的源文件，汇编是否有 `.export _main` |
-| SB2000 程序在 DOS 里“找不到命令” | 程序名与内部命令重名（如 `COPY`、`TYPE`、`DIR`），或镜像里没有该文件，先用 `fcdev_build` 的 `disk` 重新生成镜像 |
+| SB2000 程序在 DOS 里“找不到命令” | 程序名与内部命令重名（如 `COPY`、`TYPE`、`DIR`），或镜像里没有该文件，重新 `fcdev_build`（确认 `fcdev.json` 里 `disk` 不为 `false`） |
 | SB2000 程序运行后屏幕一闪而过 | 返回 DOS 会清屏，退出前先等键，见 [sb2000-recipes.md](references/sb2000-recipes.md) |
 | 运行 SB2000 报缺固件 | `fcdev.json` 没写 `firmware` |
 | 怀疑增量缓存不一致 | 请用户确认后删除项目的 `build/` 目录重新构建 |
@@ -88,7 +88,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | 要做的事 | 智能体用 |
 | --- | --- |
 | 新建项目 | `fcdev_new_project` |
-| 构建、生成磁盘镜像 | `fcdev_build`（`disk`） |
+| 构建（学习机目标同时生成磁盘镜像） | `fcdev_build` |
 | 只运行 | `fcdev_run` |
 | 运行并调试 | `ember-emulator` skill 里的 `emu_*` 工具 |
 | 反汇编 | `disasm_*` 工具，skill `disassemble-6502` |

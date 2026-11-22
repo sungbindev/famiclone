@@ -8,8 +8,8 @@
 
 - 目录必须为空（允许已有 `.git`），不会覆盖已有文件；目录不存在时工具会创建。
 - 目标与语言必须由用户确定，不要猜。
-- 生成的文件：`fcdev.json`、`.gitignore`、`README.md`、`.vscode/tasks.json`（构建、运行任务；目标支持磁盘镜像时再加磁盘镜像任务）、`src/hello.c` 或 `src/hello.s`。程序名固定为 `hello`，要改名同时改 `fcdev.json` 的 `name`。
-- 四个模板：`nes-c`、`nes-asm`、`sb2000-c`、`sb2000-asm`。
+- 生成的文件：`fcdev.json`、`.gitignore`、`README.md`、`.vscode/tasks.json`（构建、运行任务）、`src/hello.c` 或 `src/hello.s`；带磁盘能力的目标（`sb2000`、`sb97`）还有 `disk/README.TXT`（构建磁盘镜像时放进镜像的使用说明）。程序名固定为 `hello`，要改名同时改 `fcdev.json` 的 `name`。
+- 五个模板：`nes-c`、`nes-asm`、`sb2000-c`、`sb2000-asm`、`sb97-asm`（SB97 没有 C 运行库，只有汇编）。
 
 ## 任务、命令与工具
 
@@ -21,12 +21,12 @@
 
 | 字段 | 说明 |
 | --- | --- |
-| `command` | `build`、`disk`（构建并放进磁盘镜像，只有 SB2000）、`run`（构建后在 Ember 里运行） |
+| `command` | `build`（带磁盘能力的目标同时生成磁盘镜像）、`run`（构建后在 Ember 里运行） |
 | `path` | 构建路径，相对工作区文件夹，缺省为文件夹本身 |
 | `target` | 覆盖 `fcdev.json` 的 `target` |
 | `debug` | `run` 以调试模式启动 |
 
-扩展也为每个含 `fcdev.json` 的项目自动提供构建、构建磁盘镜像、运行三个任务。任务输出就是工具的原始输出，错误出现在“问题”面板并可跳转到源码行。智能体用工具 `fcdev_build`、`fcdev_run`，参数含义相同。
+扩展也为每个含 `fcdev.json` 的项目自动提供构建、运行两个任务。任务输出就是工具的原始输出，错误出现在“问题”面板并可跳转到源码行。智能体用工具 `fcdev_build`、`fcdev_run`，参数含义相同。
 
 ## 构建单位
 
@@ -48,9 +48,10 @@
 | `name` | 目录名 | 目录构建时的程序名（SB2000 必须是 8.3 名字） |
 | `out` | `build` | 输出目录，相对项目根 |
 | `optimize` | `true` | 给 `cc65` 加 `-Oirs` |
+| `disk` | `true` | 构建时是否同时生成磁盘镜像（只对 `sb2000`、`sb97` 有效）；镜像里有程序与项目 `disk` 目录下的全部文件，文件名须是 8.3 名字，不能有子目录 |
 | `define` | 空 | 预定义宏，值为字符串或数字，覆盖目标自带的同名宏 |
 | `include` | 空 | 额外头文件目录，相对项目根 |
-| `firmware` | 无 | 固件（BIOS）文件；SB2000 运行时必填 |
+| `firmware` | 无 | 固件（BIOS）文件；SB2000、SB97 运行时必填 |
 | `targetOptions` | 空 | 目标专用：NES 的 `font`（布尔，默认 `true`），SB2000 的 `banks`（0 到 113，默认 0） |
 
 - 未知项、类型不对、`define` 值不是字符串或数字时报错并列出可用项；`targetOptions` 里目标没定义的选项也报错。`toolchain` 与 `emulator` 不是配置项：工具链随扩展发布，Ember 的位置在扩展设置里指定。

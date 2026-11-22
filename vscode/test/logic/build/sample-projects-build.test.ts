@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：sample-projects-build.test.ts
 // 说明：用扩展自带的构建核心构建仓库里的全部样例项目：都能构建成功，产物非空，
-//       学习机项目能生成磁盘镜像。
+//       学习机项目默认同时生成磁盘镜像。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -45,8 +45,8 @@ function listSampleProjects(group: string): string[] {
   return found;
 }
 
-/** apps/sb97/runnes 未入库，不在范围内。 */
-const SAMPLE_PROJECTS = [...listSampleProjects('apps/sb2000'), ...listSampleProjects('apps/disasm-example')].toSorted();
+/** 样例项目所在的目录。 */
+const SAMPLE_PROJECTS = [...listSampleProjects('apps/sb2000'), ...listSampleProjects('apps/sb97'), ...listSampleProjects('apps/disasm-example')].toSorted();
 
 describe.skipIf(!HAS_TOOLCHAIN)('样例项目都能构建', { timeout: TIMEOUT_MS }, () => {
   const { service, fileSystem } = createRealBuildEnvironment();
@@ -59,7 +59,7 @@ describe.skipIf(!HAS_TOOLCHAIN)('样例项目都能构建', { timeout: TIMEOUT_M
     const outcome = await service.build({ pathArg: 'src', cwd: path.join(REPO_ROOT, name) });
     expect(statSync(outcome.result.outputFile).size).toBeGreaterThan(0);
     if (outcome.plan.target.disk !== null) {
-      expect(fileSystem.kindOf(service.buildDisk(outcome).imageFile)).toBe('file');
+      expect(fileSystem.kindOf(outcome.disk?.imageFile ?? '')).toBe('file');
     }
   });
 });

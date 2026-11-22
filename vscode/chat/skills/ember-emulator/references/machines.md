@@ -29,7 +29,15 @@
 - 从键盘启动的程序，模拟器会把回车当作手柄的选择加开始键；读手柄的程序要先等几十帧再初始化。
 - 程序的内存布局、系统调用与易错点读 skill `fcdev-app-development` 的 `references/sb2000-development.md` 与 `sb2000-recipes.md`。
 
-## 其他整机（`sb97`、`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`）
+## SB97 程序（机型 `sb97`）
+
+`emu_load` 的 `machine: "sb97"`、`firmware`、`diskImage`、`program` 会依次做：开机运行 200 帧，按空格跳过开机画面，运行 300 帧等菜单稳定，按左键选中 DOS，回车进入，运行 120 帧等提示符，输入程序名，回车。按键都是按下 8 帧、松开 8 帧。返回时程序刚启动，机器暂停。
+
+- 菜单没稳定前按的左键会丢，所以要等满 300 帧。
+- SB97 的 DOS 程序不能返回 DOS，运行后画面停在程序的输出上。
+- 需要给程序传参数时（如 `NES MARIO`），不给 `program`，按上面的步骤手动操作，再逐个字符输入命令行（空格用 `Space`，点用 `Period`）。
+
+## 其他整机（`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`）
 
 载入：`emu_load` 的 `machine`、`firmware`，需要软盘时加 `diskImage`；不给 `program`。开机后的菜单、按键与等待时间因机型而异，本文不记录没有验证过的步骤。操作步骤按下面的顺序取得：
 

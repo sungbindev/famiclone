@@ -1,0 +1,5 @@
+{
+  "target": "sb97",
+  "name": "nes",
+  "firmware": "../../../ember/roms/sb97.bin"
+}

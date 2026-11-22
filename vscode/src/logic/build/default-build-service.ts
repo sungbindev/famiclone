@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：default-build-service.ts
-// 说明：构建服务的实现：串起规划、工具链定位、编译链接与磁盘镜像。
+// 说明：构建服务的实现：串起规划、工具链定位、编译链接与磁盘镜像；默认构建后同时生成磁盘镜像。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -52,7 +52,8 @@ export class DefaultBuildService implements BuildService {
     const plan = this.plan(input);
     const toolchain = this.dependencies.toolchainLocator.locate();
     const result = await buildProgram(plan, { ...this.dependencies, toolchain }, reporter);
-    return { plan, result };
+    const outcome = { plan, result, disk: undefined };
+    return plan.target.disk !== null && plan.config.disk ? { ...outcome, disk: this.buildDisk(outcome) } : outcome;
   }
 
   /** @inheritdoc */

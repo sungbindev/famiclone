@@ -100,14 +100,14 @@ describe('启动 Ember', () => {
   it('学习机的调试模式：添加固件、开机、放入磁盘，停在开机状态，不输入程序名', async () => {
     const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {} });
     connector.next = client;
-    await launchEmulator({ files, connector, processes }, { executable: 'Ember.exe', sb2000: { firmware, diskImage: disk, programName: 'HELLO' }, debug: true });
+    await launchEmulator({ files, connector, processes }, { executable: 'Ember.exe', firmwareDisk: { machine: 'sb2000', firmware, diskImage: disk, programName: 'HELLO' }, debug: true });
     assert.deepEqual(client.calls.map((call) => call.method), ['machines.setRom', 'machines.boot', 'media.floppyInsert']);
   });
 
   it('学习机的自由运行：开机后在 SB-DOS 里输入程序名，继续运行并断开连接', async () => {
     const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'input.key': {}, 'runtime.resume': {} });
     connector.next = client;
-    const result = await launchEmulator({ files, connector, processes }, { executable: 'Ember.exe', sb2000: { firmware, diskImage: disk, programName: 'Hi' } });
+    const result = await launchEmulator({ files, connector, processes }, { executable: 'Ember.exe', firmwareDisk: { machine: 'sb2000', firmware, diskImage: disk, programName: 'Hi' } });
     const downs = client.calls.filter((call) => call.method === 'input.key' && (call.params as { down: boolean }).down).map((call) => (call.params as { code: string }).code);
     assert.deepEqual(downs, ['Enter', 'Enter', 'KeyH', 'KeyI', 'Enter']);
     assert.deepEqual(client.calls.filter((call) => call.method === 'runtime.run')[0]?.params, { frames: 900, wait: true });

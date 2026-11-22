@@ -70,10 +70,6 @@
         "title": "fcdev：构建项目"
       },
       {
-        "command": "fcdev.buildDisk",
-        "title": "fcdev：构建磁盘镜像"
-      },
-      {
         "command": "fcdev.buildCurrentFile",
         "title": "fcdev：构建当前文件"
       },
@@ -137,12 +133,10 @@
             "type": "string",
             "enum": [
               "build",
-              "disk",
               "run"
             ],
             "enumDescriptions": [
-              "构建程序",
-              "构建程序并放进磁盘镜像（只有支持磁盘的目标可用）",
+              "构建程序；目标支持磁盘镜像时同时生成磁盘镜像",
               "构建后在模拟器里运行"
             ],
             "description": "要做的事。"
@@ -1346,7 +1340,7 @@
         ],
         "toolReferenceName": "emu_load",
         "displayName": "载入程序",
-        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（SB-DOS 里要运行的程序名，开机后自动输入并回车）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。",
+        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000、sb97），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（DOS 里要运行的程序名，sb2000 与 sb97 开机后自动进入 DOS、输入并回车）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。",
         "userDescription": "把 NES 文件或整机（BIOS、软盘）装入 Ember。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1360,7 +1354,7 @@
             "machine": {
               "type": "string",
               "minLength": 1,
-              "description": "整机机型，如 sb2000；与 file 二选一"
+              "description": "整机机型，如 sb2000、sb97；与 file 二选一"
             },
             "firmware": {
               "type": "string",
@@ -1375,7 +1369,7 @@
             "program": {
               "type": "string",
               "minLength": 1,
-              "description": "开机后在 SB-DOS 里运行的程序名（字母与数字）"
+              "description": "开机后在 DOS 里运行的程序名（字母与数字）"
             },
             "familyKeyboard": {
               "type": "boolean",
@@ -1875,7 +1869,7 @@
         ],
         "toolReferenceName": "fcdev_new_project",
         "displayName": "新建 fcdev 项目",
-        "modelDescription": "在一个空目录里按模板生成 fcdev 项目：fcdev.json、.gitignore、.vscode/tasks.json、README.md 与 src 下的 hello 示例程序。target 选目标（nes 或 sb2000），language 选语言（c 或 asm）；目录不存在时创建，必须为空（允许已有 .git），已有文件不会被覆盖。生成后用 fcdev_build 构建。",
+        "modelDescription": "在一个空目录里按模板生成 fcdev 项目：fcdev.json、.gitignore、.vscode/tasks.json、README.md、src 下的 hello 示例程序，学习机目标还有 disk/README.TXT（构建磁盘镜像时放进镜像的使用说明）。target 选目标（nes、sb2000 或 sb97），language 选语言（c 或 asm；sb97 只有 asm）；目录不存在时创建，必须为空（允许已有 .git），已有文件不会被覆盖。生成后用 fcdev_build 构建。",
         "userDescription": "新建 fcdev 项目（NES 或学习机，C 或汇编）。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1890,9 +1884,10 @@
               "type": "string",
               "enum": [
                 "nes",
-                "sb2000"
+                "sb2000",
+                "sb97"
               ],
-              "description": "目标：nes 任天堂红白机，sb2000 小霸王学习机"
+              "description": "目标：nes 任天堂红白机，sb2000 小霸王学习机，sb97 小霸王 97 学习机（只有汇编模板）"
             },
             "language": {
               "type": "string",
@@ -1919,8 +1914,8 @@
         ],
         "toolReferenceName": "fcdev_build",
         "displayName": "构建 fcdev 项目",
-        "modelDescription": "用随扩展发布的 cc65 构建一个程序，返回工具的输出（cc65、ca65、ld65 的错误是“文件(行): Error: 信息”格式）与产物路径、大小、重新编译的文件数。path 是构建路径：目录整体构成一个程序（递归收集 .c、.s、.asm，程序名取 fcdev.json 的 name 或目录名），文件单独构成一个程序；不给 path 时构建工作区第一个文件夹。目标取自 path 向上最近的 fcdev.json，也可以用 target 指定。disk 为 true 时再把程序放进 1.44MB 的 FAT12 磁盘镜像（只有声明了磁盘能力的目标可用，如 sb2000），镜像放在产物旁边。构建会写项目的输出目录（默认 build）。",
-        "userDescription": "构建 fcdev 项目，可同时生成磁盘镜像。",
+        "modelDescription": "用随扩展发布的 cc65 构建一个程序，返回工具的输出（cc65、ca65、ld65 的错误是“文件(行): Error: 信息”格式）与产物路径、大小、重新编译的文件数。path 是构建路径：目录整体构成一个程序（递归收集 .c、.s、.asm，程序名取 fcdev.json 的 name 或目录名），文件单独构成一个程序；不给 path 时构建工作区第一个文件夹。目标取自 path 向上最近的 fcdev.json，也可以用 target 指定。目标声明了磁盘能力（如 sb2000）且 fcdev.json 的 disk 不为 false 时，同时把程序与项目 disk 目录下的文件放进 1.44MB 的 FAT12 磁盘镜像，放在产物旁边，输出里有镜像路径。构建会写项目的输出目录（默认 build）。",
+        "userDescription": "构建 fcdev 项目，学习机目标同时生成磁盘镜像。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -1934,10 +1929,6 @@
               "type": "string",
               "minLength": 1,
               "description": "覆盖 fcdev.json 里的目标"
-            },
-            "disk": {
-              "type": "boolean",
-              "description": "构建后再生成磁盘镜像，默认 false"
             }
           },
           "additionalProperties": false
@@ -1951,7 +1942,7 @@
         ],
         "toolReferenceName": "fcdev_run",
         "displayName": "构建并在 Ember 里运行",
-        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机，自由运行时再在 SB-DOS 里输入程序名运行。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
+        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）与 sb97 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机，自由运行时再在 DOS 里输入程序名运行。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
         "userDescription": "构建并在 Ember 里运行，可调试运行。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {

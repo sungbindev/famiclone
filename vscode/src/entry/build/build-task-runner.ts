@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：build-task-runner.ts
-// 说明：执行一个 fcdev 任务：构建、生成磁盘镜像、构建后在 Ember 里运行，进度与结果写给调用者，
-//       返回退出码。
+// 说明：执行一个 fcdev 任务：构建（同时生成磁盘镜像）、构建后在 Ember 里运行，进度与结果写给
+//       调用者，返回退出码。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -25,7 +25,7 @@ export interface BuildTaskDependencies {
 }
 
 /**
- * 执行构建、生成磁盘镜像或运行的任务。
+ * 执行构建或运行的任务。
  * @param definition 任务定义。
  * @param folder 工作区文件夹的绝对路径，任务里的路径相对它。
  * @param dependencies 要用到的能力。
@@ -48,8 +48,8 @@ export async function runBuildTask(
     }
     const outcome = await buildService.build(input, reporter);
     write(`${describeBuildResult(outcome.result, outcome.plan.target.name, folder)}\n`);
-    if (definition.command === 'disk') {
-      write(`${describeDiskImage(buildService.buildDisk(outcome), outcome.result.outputFile, folder)}\n`);
+    if (outcome.disk !== undefined) {
+      write(`${describeDiskImage(outcome.disk, folder)}\n`);
     }
     return 0;
   } catch (error) {

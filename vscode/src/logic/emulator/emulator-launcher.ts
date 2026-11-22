@@ -6,16 +6,17 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
 // 备注：Ember 进程与扩展脱离，扩展退出后窗口保持打开；调试模式不带 --cartridge，等连上调试服务后用
-//       cartridges.load 载入并只上电不运行，由调试命令与 emu 工具继续。学习机（sb2000 参数）没有命
-//       令行入口，两种模式都经调试服务：添加固件、放入磁盘镜像、整机开机；自由模式再在 SB-DOS 里输
-//       入程序名并继续运行后断开，调试模式停在开机状态（磁盘里的程序还没有被运行）。
+//       cartridges.load 载入并只上电不运行，由调试命令与 emu 工具继续。整机（firmwareDisk
+//       参数）没有命令行入口，两种模式都经调试服务：添加固件、放入磁盘镜像、整机开机；
+//       自由模式再在 DOS 里输入程序名并继续运行后断开，调试模式停在开机状态（磁盘里的
+//       程序还没有被运行）。
 // ------------------------------------------------------------------------
 
 import type { DebugSession } from '../../contracts/debug-client/debug-session';
 import type { EmulatorEnvironment } from '../../contracts/emulator/emulator-environment';
 import { DEFAULT_DEBUG_PORT } from '../../contracts/emulator/emulator-settings';
 import { FcdevError } from '../../shared/errors/fcdev-error';
-import { bootSb2000, enterProgram } from './sb2000-session';
+import { bootMachine, enterProgram } from './sb2000-session';
 
 /** 等待调试服务就绪的上限，单位毫秒。 */
 const READY_TIMEOUT_MS = 30_000;
@@ -26,13 +27,15 @@ const READY_POLL_MS = 300;
 /** 调试服务连接名，显示在 Ember 的连接列表里。 */
 export const CLIENT_NAME = 'fcdev';
 
-/** 学习机的启动内容。 */
-export interface Sb2000Launch {
+/** 整机（固件加磁盘镜像）的启动内容。 */
+export interface FirmwareDiskLaunch {
+  /** 整机机型，如 sb2000、sb97。 */
+  readonly machine: string;
   /** 固件（BIOS）文件。 */
   readonly firmware: string;
   /** 磁盘镜像。 */
   readonly diskImage: string;
-  /** 自由模式里要在 SB-DOS 运行的程序名。 */
+  /** 自由模式里要在 DOS 运行的程序名。 */
   readonly programName?: string | undefined;
 }
 
@@ -40,10 +43,10 @@ export interface Sb2000Launch {
 export interface LaunchInput {
   /** Ember 可执行文件。 */
   readonly executable: string;
-  /** 要加载的 .nes 文件（经典 FC）；与 sb2000 二选一；调试模式下两者都不给就只启动 Ember。 */
+  /** 要加载的 .nes 文件（经典 FC）；与 firmwareDisk 二选一；调试模式下两者都不给就只启动 Ember。 */
   readonly romFile?: string | undefined;
-  /** 学习机的启动内容。 */
-  readonly sb2000?: Sb2000Launch | undefined;
+  /** 整机（学习机、SB97）的启动内容。 */
+  readonly firmwareDisk?: FirmwareDiskLaunch | undefined;
   /** 是否调试模式。 */
   readonly debug?: boolean | undefined;
   /** 调试端口。 */
@@ -80,12 +83,12 @@ function delay(milliseconds: number): Promise<void> {
  */
 export async function launchEmulator(env: LauncherEnvironment, input: LaunchInput): Promise<LaunchResult> {
   const { files, connector, processes } = env;
-  const { executable, romFile, sb2000, debug = false, port = DEFAULT_DEBUG_PORT, readyTimeoutMs = READY_TIMEOUT_MS } = input;
+  const { executable, romFile, firmwareDisk, debug = false, port = DEFAULT_DEBUG_PORT, readyTimeoutMs = READY_TIMEOUT_MS } = input;
   if (romFile !== undefined && files.kindOf(romFile) !== 'file') {
     throw new FcdevError(`找不到要加载的文件：${romFile}`, { code: 'EMULATOR_FILE_MISSING' });
   }
 
-  if (!debug && sb2000 === undefined) {
+  if (!debug && firmwareDisk === undefined) {
     if (romFile === undefined) throw new FcdevError('自由运行要给出要加载的文件', { code: 'EMULATOR_PARAM_INVALID' });
     const child = processes.start(executable, [`--cartridge=${romFile}`], false);
     await processes.confirmStarted(child);
@@ -104,10 +107,10 @@ export async function launchEmulator(env: LauncherEnvironment, input: LaunchInpu
       try {
         if (romFile !== undefined) {
           await client.request('cartridges.load', { path: romFile, powerOn: true, resume: false });
-        } else if (sb2000 !== undefined) {
-          await bootSb2000(files, client, sb2000);
-          if (!debug && sb2000.programName !== undefined) {
-            await enterProgram(client, sb2000.programName);
+        } else if (firmwareDisk !== undefined) {
+          await bootMachine(files, client, firmwareDisk);
+          if (!debug && firmwareDisk.programName !== undefined) {
+            await enterProgram(client, firmwareDisk.programName, firmwareDisk.machine);
             await client.request('runtime.resume', {});
           }
         }
@@ -115,7 +118,7 @@ export async function launchEmulator(env: LauncherEnvironment, input: LaunchInpu
         client.close();
         child.kill();
         if (error instanceof FcdevError) throw error;
-        throw new FcdevError(`Ember 无法载入 ${romFile ?? sb2000?.diskImage ?? ''}：${error instanceof Error ? error.message : String(error)}`, {
+        throw new FcdevError(`Ember 无法载入 ${romFile ?? firmwareDisk?.diskImage ?? ''}：${error instanceof Error ? error.message : String(error)}`, {
           code: 'EMULATOR_LOAD_FAILED',
           cause: error
         });

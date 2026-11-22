@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-task-provider.ts
-// 说明：fcdev 任务的提供者：为工作区里的每个 fcdev 项目提供构建、磁盘镜像与运行任务，
+// 说明：fcdev 任务的提供者：为工作区里的每个 fcdev 项目提供构建与运行任务，
 //       并解析 tasks.json 里 type 为 fcdev 的任务。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
@@ -28,7 +28,7 @@ const TASK_SOURCE = 'fcdev';
 const PROBLEM_MATCHER = '$fcdev';
 
 /** 各命令在任务名里的说明。 */
-const COMMAND_LABELS: Readonly<Record<TaskCommand, string>> = { build: '构建', disk: '构建磁盘镜像', run: '运行' };
+const COMMAND_LABELS: Readonly<Record<TaskCommand, string>> = { build: '构建', run: '运行' };
 
 /** 运行任务要用到的能力。 */
 export interface BuildTaskProviderDependencies extends BuildTaskDependencies {

@@ -6,7 +6,7 @@
 
 - 构建：任务类型 `fcdev`、构建命令、问题匹配器 `$fcdev`，用随扩展发布的 cc65 构建 C 与 ca65 汇编程序，使用说明见 `vscode/docs/01-构建.md`。
 - 运行与调试：命令“运行”“调试运行”、5 个调试命令，经 Ember 的调试服务工作；Ember 的位置来自设置，使用说明见 `vscode/docs/02-模拟器与调试.md`。
-- 新建项目：命令“fcdev：新建项目”与四个模板，使用说明见 `vscode/docs/04-新建项目与模板.md`。
+- 新建项目：命令“fcdev：新建项目”与五个模板，使用说明见 `vscode/docs/04-新建项目与模板.md`。
 - 反汇编：命令“反汇编映像文件”与给 Copilot 用的工具，见第 6 节与 [09-AI反汇编工具](09-AI反汇编工具.md)。
 - ca65 汇编（`.s`、`.asm`、`.inc`）的悬停、补全、转到定义、文档符号与语法高亮。
 - C 代码的智能感知：自动同步 C/C++ 配置，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏；头文件里符号与函数的文档注释（`/** */`）悬停时显示。C 用 VS Code 内置的 C 语法。
@@ -106,9 +106,9 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 | 位置 | 内容 |
 | --- | --- |
-| `entry/build/build-task-provider.ts` | 任务类型 `fcdev`（`command`、`path`、`target`、`debug`），为每个含 `fcdev.json` 的项目提供构建、构建磁盘镜像、运行三个任务；解析 `.vscode/tasks.json` 里的任务；问题匹配器 `$fcdev` |
+| `entry/build/build-task-provider.ts` | 任务类型 `fcdev`（`command`、`path`、`target`、`debug`），为每个含 `fcdev.json` 的项目提供构建、运行两个任务；解析 `.vscode/tasks.json` 里的任务；问题匹配器 `$fcdev` |
 | `entry/build/build-task-runner.ts` | 任务在终端里运行：调用构建服务或运行服务，输出原始工具输出，失败输出“错误：”加说明与建议，退出码为 1 |
-| `entry/build/build-commands.ts` | 命令“构建项目”“构建磁盘镜像”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”，都经任务运行 |
+| `entry/build/build-commands.ts` | 命令“构建项目”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”，都经任务运行 |
 | `entry/fcdev-tools/` | 工具 `fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs` |
 | `entry/debug-client/debug-commands.ts` | 5 个调试命令，结果写到“fcdev 调试”输出通道 |
 | `entry/scaffold`、`entry/c-api`、`entry/usage-docs`、`entry/disassembly/disassembly-commands.ts` | 命令“新建项目”“查询 C 接口”“打开使用文档”“反汇编映像文件” |

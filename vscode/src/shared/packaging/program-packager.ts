@@ -6,7 +6,8 @@
 // 日期：2026-11-22
 // 备注：只做字节处理，读写文件由调用者负责；新增打包器时在 PROGRAM_PACKAGERS 或
 //       DISK_PACKAGERS 登记。
-//       flat-exe 的选项 header 为十六进制字符串（?? 表示任意字节），maxSize 为映像大小上限。
+//       flat-exe 的选项 header 为十六进制字符串（?? 表示任意字节），headerOffset 为它在映像里的
+//       偏移（默认 0），maxSize 为映像大小上限，size 为映像必须正好等于的大小。
 // ------------------------------------------------------------------------
 
 import { FcdevError } from '../errors/fcdev-error';
@@ -44,21 +45,27 @@ export function parseHeaderPattern(pattern: string): Array<number | null> {
  * @param image 链接输出。
  * @param options 打包选项。
  * @returns 要写出的内容。
- * @throws FcdevError 文件头不符或超过大小上限。
+ * @throws FcdevError 选项不合法，文件头不符，或大小不符。
  */
 function packFlatBinary(image: Uint8Array, options: PackagerOptions): Uint8Array {
-  const { header, maxSize } = options;
+  const { header, headerOffset = 0, maxSize, size } = options;
+  if (typeof headerOffset !== 'number' || !Number.isInteger(headerOffset) || headerOffset < 0) {
+    throw new FcdevError('headerOffset 选项必须是不小于 0 的整数', { code: 'PACKAGER_OPTION_INVALID' });
+  }
   if (header !== undefined) {
     if (typeof header !== 'string') throw new FcdevError('header 选项必须是字符串', { code: 'PACKAGER_OPTION_INVALID' });
     const expected = parseHeaderPattern(header);
-    const matches = image.length >= expected.length && expected.every((byte, index) => byte === null || image[index] === byte);
+    const matches = image.length >= headerOffset + expected.length && expected.every((byte, index) => byte === null || image[headerOffset + index] === byte);
     if (!matches) {
-      const actual = Buffer.from(image.subarray(0, expected.length)).toString('hex').toUpperCase();
-      throw new FcdevError(`程序文件头不符：应为 ${header}，实际为 ${actual}`, {
+      const actual = Buffer.from(image.subarray(headerOffset, headerOffset + expected.length)).toString('hex').toUpperCase();
+      throw new FcdevError(`程序文件头不符：偏移 ${headerOffset} 处应为 ${header}，实际为 ${actual}`, {
         code: 'PACKAGE_HEADER_MISMATCH',
-        hint: '检查启动代码是否放在映像最前面'
+        hint: headerOffset === 0 ? '检查启动代码是否放在映像最前面' : '检查链接配置，文件头要放在映像里的这个位置'
       });
     }
+  }
+  if (size !== undefined && typeof size === 'number' && image.length !== size) {
+    throw new FcdevError(`程序大小 ${image.length} 字节，必须正好是 ${size} 字节`, { code: 'PACKAGE_SIZE_MISMATCH' });
   }
   if (maxSize !== undefined && typeof maxSize === 'number' && image.length > maxSize) {
     throw new FcdevError(`程序大小 ${image.length} 字节，超过上限 ${maxSize} 字节`, { code: 'PACKAGE_TOO_LARGE' });

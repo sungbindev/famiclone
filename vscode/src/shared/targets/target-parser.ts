@@ -131,6 +131,9 @@ export function parseTarget(raw: unknown, dir: string): Target {
   if (run !== null && (!isRecord(run) || typeof run.emulator !== 'string' || typeof run.mode !== 'string' || !RUN_MODES.includes(run.mode))) {
     invalid(`目标 ${name} 的 run 必须包含 emulator，且 mode 为 ${RUN_MODES.join(' 或 ')}`);
   }
+  if (run !== null && (run as { mode: string }).mode === 'firmware-disk' && typeof (run as { machine?: unknown }).machine !== 'string') {
+    invalid(`目标 ${name} 的 run 在 firmware-disk 模式下必须包含 machine（整机机型）`);
+  }
   const options = parseOptions(raw.options, name);
   const banked = parseBanked(raw.banked, name, options);
   if (raw.sourceCharset !== undefined && (typeof raw.sourceCharset !== 'string' || !SOURCE_CHARSETS.includes(raw.sourceCharset))) {
@@ -157,7 +160,14 @@ export function parseTarget(raw: unknown, dir: string): Target {
     extension: raw.extension as string,
     nameRule: typeof raw.nameRule === 'string' ? raw.nameRule : null,
     disk: disk === null ? null : { packager: (disk as { packager: string }).packager },
-    run: run === null ? null : { emulator: (run as { emulator: string }).emulator, mode: (run as { mode: string }).mode as RunMode },
+    run:
+      run === null
+        ? null
+        : {
+            emulator: (run as { emulator: string }).emulator,
+            mode: (run as { mode: string }).mode as RunMode,
+            machine: typeof (run as { machine?: unknown }).machine === 'string' ? (run as { machine: string }).machine : null
+          },
     options,
     banked,
     sourceCharset: raw.sourceCharset === undefined ? null : (raw.sourceCharset as 'gb2312')

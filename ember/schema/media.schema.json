@@ -37,9 +37,10 @@
         "state": { "type": "string", "enum": ["idle", "printing", "done"], "description": "状态：idle 空闲（机器没有运行，或还没有内容），printing 打印中（当前页上有内容），done 打印完成（输出过一页且下一页还没有内容）" },
         "hasContent": { "type": "boolean", "description": "当前页上是否已经有内容" },
         "pages": { "type": "integer", "minimum": 0, "description": "本次运行以来已输出的页数" },
-        "lastFile": { "type": "string", "description": "最近一页的文件名，不含路径；还没有输出过时没有这一项" }
+        "lastFile": { "type": "string", "description": "最近一页的文件名，不含路径；还没有输出过时没有这一项" },
+        "directory": { "type": "string", "description": "图片保存的目录（首选项“打印机”里设置的位置，留空时是用户数据目录下的 printer-output）" }
       },
-      "required": ["state", "hasContent", "pages"]
+      "required": ["state", "hasContent", "pages", "directory"]
     },
     "TapeStatus": {
       "type": "object",
@@ -340,6 +341,12 @@
         "required": ["canceled"]
       },
       "errors": ["media.tapeBusy", "media.tapeNotConnected", "media.saveFailed", "media.noTape", "media.tapeNotWritable", "media.fileNotFound", "media.fileUnreadable", "media.tapeUnsupported"]
+    },
+    "openPrinterDirectory": {
+      "description": "用系统的文件管理器打开打印机图片的保存目录（目录不存在时先创建）；目录取自 media.printerStatus 的 directory，界面不能指定。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": { "type": "object", "properties": {}, "required": [] },
+      "errors": ["media.printerDirectoryUnavailable"]
     }
   },
   "events": {

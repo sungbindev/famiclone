@@ -28,6 +28,12 @@ namespace rujian::ui {
 /** 通知级别；除颜色外还以图标形状区分。 */
 enum class NoticeLevel { Info, Success, Warning, Error };
 
+/** 通知里的链接：显示在消息下面，点击后执行 run；label 或 run 为空表示没有链接。 */
+struct NoticeAction {
+  std::string label;
+  std::function<void()> run;
+};
+
 /** 一条通知记录。 */
 struct NoticeRecord {
   int id{0};
@@ -35,6 +41,8 @@ struct NoticeRecord {
   NoticeLevel level{NoticeLevel::Info};
   /** 发出的时间，显示为“时:分”。 */
   std::string time;
+  /** 消息下面的链接；没有时为空。 */
+  NoticeAction action;
 };
 
 /** 消息是否较长：超过 60 个字符或含换行时只显示摘要，可点击查看全文。 */
@@ -47,8 +55,8 @@ class NotificationCenter final : public Widget {
   explicit NotificationCenter(Root& root);
   ~NotificationCenter() override;
 
-  /** 发一条通知；空文字不发送。 */
-  void notify(std::string text, NoticeLevel level = NoticeLevel::Info);
+  /** 发一条通知；空文字不发送；给出 action 时消息下面带一个链接。 */
+  void notify(std::string text, NoticeLevel level = NoticeLevel::Info, NoticeAction action = {});
   /** 通知历史，新的在前。 */
   [[nodiscard]] const std::vector<NoticeRecord>& records() const { return records_; }
   /** 正在弹出的通知，先弹出的在前（显示时在上）。 */

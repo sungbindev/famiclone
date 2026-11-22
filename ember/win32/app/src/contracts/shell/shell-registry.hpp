@@ -42,6 +42,12 @@ enum class ShellTone { Normal, Success, Warning, Error };
 /** 通知的级别。 */
 enum class NotificationLevel { Info, Success, Warning, Error };
 
+/** 通知里的链接：显示在消息下面，点击后执行 run；label 为空表示没有链接。 */
+struct NotificationAction {
+  std::string label;
+  std::function<void()> run;
+};
+
 /** 外壳当前的视图状态，命令用它决定菜单项是否可用、是否勾选。 */
 struct ShellViewState {
   bool bottomPanelOpen{false};
@@ -70,8 +76,8 @@ class ShellApi {
   virtual void runCommand(const std::string& commandId) = 0;
   /** 通知外壳重新计算菜单里命令的名称、勾选与可用状态，并重画状态栏（模块自己的状态变化后调用）。 */
   virtual void refreshCommands() = 0;
-  /** 弹出通知。 */
-  virtual void notify(const std::string& text, NotificationLevel level) = 0;
+  /** 弹出通知；给出 action 时消息下面带一个链接。 */
+  virtual void notify(const std::string& text, NotificationLevel level, NotificationAction action = {}) = 0;
 };
 
 /** 对话框：独立的系统窗口，同一个对话框同时只开一个，再次打开时聚焦已有的；内容由界面层按标识提供。 */

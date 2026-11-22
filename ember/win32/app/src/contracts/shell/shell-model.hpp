@@ -148,7 +148,7 @@ class ShellDialogOpener {
 class ShellNotifier {
  public:
   virtual ~ShellNotifier() = default;
-  virtual void notify(const std::string& text, NotificationLevel level) = 0;
+  virtual void notify(const std::string& text, NotificationLevel level, NotificationAction action = {}) = 0;
 };
 
 }  // namespace ember::win32::contracts

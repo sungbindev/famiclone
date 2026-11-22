@@ -33,6 +33,7 @@ struct Fixture {
   test::FakeFileDialog dialog;
   test::FakeDirectory logDirectory;
   test::FakeDirectory romDirectory;
+  test::FakeDirectoryOpener directories;
   test::FakeRecentCartridges recent;
   test::FakeErrorLogger logger;
   test::FakeUpdater updater;
@@ -44,7 +45,7 @@ struct Fixture {
     router.add(entry::createCartridgeHandlers({core, dialog, dropped, recent}));
     router.add(entry::createMachineHandlers({core, dialog, romDirectory}));
     router.add(entry::createMapperHandlers({core, dialog}));
-    router.add(entry::createMediaHandlers({core, dialog, dropped}));
+    router.add(entry::createMediaHandlers({core, dialog, dropped, directories}));
     router.add(entry::createPreferenceHandlers({dialog}));
     router.add(entry::createSystemHandlers({logDirectory, help, updater}));
   }
@@ -58,8 +59,8 @@ struct Fixture {
   }
 };
 
-TEST(RequestCatalog, ComesFromTheSchemaAndHasTheSixteenShellRequests) {
-  EXPECT_EQ(std::size(contracts::kShellRequests), 16u);
+TEST(RequestCatalog, ComesFromTheSchemaAndHasTheSeventeenShellRequests) {
+  EXPECT_EQ(std::size(contracts::kShellRequests), 17u);
   EXPECT_EQ(contracts::coreRequestKind("runtime.status"), contracts::RequestKind::Ui);
   EXPECT_EQ(contracts::coreRequestKind("cartridges.load"), contracts::RequestKind::MainOnly);
   EXPECT_EQ(contracts::coreRequestKind("inspector.readMemory"), contracts::RequestKind::DebugOnly);

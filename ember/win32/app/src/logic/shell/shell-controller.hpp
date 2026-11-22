@@ -61,7 +61,7 @@ class ShellController final : public contracts::ShellApi, public contracts::Shel
   void quit() override;
   void runCommand(const std::string& commandId) override;
   void refreshCommands() override;
-  void notify(const std::string& text, contracts::NotificationLevel level) override;
+  void notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) override;
 
   // ---- ShellModel ----
   [[nodiscard]] std::vector<contracts::ShellMenuModel> menus() override;

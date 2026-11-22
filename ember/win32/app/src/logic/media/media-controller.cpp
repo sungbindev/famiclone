@@ -15,6 +15,8 @@ namespace ember::win32::logic {
 
 namespace {
 
+constexpr const char* kOpenPrinterDirectory = "打开图片目录";
+
 std::string failedText(const std::string& action, const std::string& reason) { return action + "失败：" + reason; }
 
 std::string messageOf(const nlohmann::json& data) {
@@ -143,7 +145,7 @@ void MediaController::handleEvent(const std::string& name, const nlohmann::json&
     const auto file = data.is_object() ? data.find("fileName") : data.end();
     const auto page = data.is_object() ? data.find("page") : data.end();
     if (file != data.end() && file->is_string() && page != data.end() && page->is_number_integer() && shell_ != nullptr) {
-      shell_->notify("打印机输出了第 " + std::to_string(page->get<int>()) + " 页：" + file->get<std::string>(), contracts::NotificationLevel::Info);
+      shell_->notify("打印机输出了第 " + std::to_string(page->get<int>()) + " 页：" + file->get<std::string>(), contracts::NotificationLevel::Info, {kOpenPrinterDirectory, [this] { openPrinterDirectory(); }});
     }
   } else if (name == "media.printFailed") {
     report("打印机输出", messageOf(data));
@@ -160,6 +162,13 @@ void MediaController::handleCoreStatus(const contracts::CoreStatus& status) {
     return;
   }
   clear();
+}
+
+void MediaController::openPrinterDirectory() {
+  if (shell_ == nullptr) return;
+  ask("media.openPrinterDirectory", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
+    if (!reply.ok) shell_->notify(reply.error.message, contracts::NotificationLevel::Error);
+  });
 }
 
 void MediaController::refreshAll() {

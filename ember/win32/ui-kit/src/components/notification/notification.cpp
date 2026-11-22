@@ -120,6 +120,15 @@ std::unique_ptr<Button> makeCloseButton(bool compact) {
   return button;
 }
 
+/** 消息下面的链接：没有链接时返回空。 */
+std::unique_ptr<Button> makeActionLink(const NoticeAction& action) {
+  if (action.label.empty() || !action.run) return nullptr;
+  auto link = std::make_unique<Button>(action.label);
+  link->setVariant(ButtonVariant::Link);
+  link->setOnClick(action.run);
+  return link;
+}
+
 }  // namespace
 
 bool isLongNotice(const std::string& text) { return toUtf16(text).size() > kLongMessageLength || text.find('\n') != std::string::npos; }
@@ -201,6 +210,7 @@ class NoticeToast final : public Widget {
     auto button = makeCloseButton(false);
     button->setOnClick([&center, id = record.id] { center.dismissToast(id); });
     close_ = static_cast<Button*>(addChild(std::move(button)));
+    if (auto link = makeActionLink(record.action)) link_ = static_cast<Button*>(addChild(std::move(link)));
   }
 
   [[nodiscard]] Size measure(Size available) override {
@@ -209,7 +219,8 @@ class NoticeToast final : public Widget {
     const Size closeSize = close_->measure(Size{});
     const double content = width - 2 * border - 2 * tokens::space_page - kIconColumn - 2 * kColumnGap - closeSize.width;
     const double messageHeight = message_->measure(Size{content, 0}).height;
-    const double row = std::max({kIconTop + tokens::icon_size, messageHeight, closeSize.height});
+    const double linkHeight = link_ != nullptr ? kContentGap + link_->measure(Size{content, 0}).height : 0.0;
+    const double row = std::max({kIconTop + tokens::icon_size, messageHeight + linkHeight, closeSize.height});
     return Size{width, 2 * border + 2 * tokens::space_sm + row};
   }
 
@@ -221,7 +232,13 @@ class NoticeToast final : public Widget {
     const double top = bounds.y + border + tokens::space_sm;
     const double textX = left + kIconColumn + kColumnGap;
     const double closeX = bounds.right() - border - tokens::space_page - closeSize.width;
-    message_->arrange(Rect{textX, top, closeX - kColumnGap - textX, message_->measure(Size{closeX - kColumnGap - textX, 0}).height});
+    const double messageWidth = closeX - kColumnGap - textX;
+    const double messageHeight = message_->measure(Size{messageWidth, 0}).height;
+    message_->arrange(Rect{textX, top, messageWidth, messageHeight});
+    if (link_ != nullptr) {
+      const Size linkSize = link_->measure(Size{messageWidth, 0});
+      link_->arrange(Rect{textX, top + messageHeight + kContentGap, std::min(linkSize.width, messageWidth), linkSize.height});
+    }
     close_->arrange(Rect{closeX, top, closeSize.width, closeSize.height});
   }
 
@@ -237,6 +254,7 @@ class NoticeToast final : public Widget {
   NoticeLevel level_;
   NoticeMessage* message_{nullptr};
   Button* close_{nullptr};
+  Button* link_{nullptr};
 };
 
 /** 通知面板里的一条历史。 */
@@ -247,14 +265,16 @@ class NoticeRow final : public Widget {
     auto button = makeCloseButton(true);
     button->setOnClick([&center, id = record.id] { center.remove(id); });
     close_ = static_cast<Button*>(addChild(std::move(button)));
+    if (auto link = makeActionLink(record.action)) link_ = static_cast<Button*>(addChild(std::move(link)));
   }
 
   [[nodiscard]] Size measure(Size available) override {
     const Size closeSize = close_->measure(Size{});
     const double content = available.width - 2 * tokens::space_page - kIconColumn - 2 * kColumnGap - closeSize.width;
     const double messageHeight = message_->measure(Size{content, 0}).height;
+    const double linkHeight = link_ != nullptr ? kContentGap + link_->measure(Size{content, 0}).height : 0.0;
     const double timeHeight = host()->measureText(time_, timeStyle(kTransparent), 0).height;
-    const double row = std::max({kIconTop + tokens::icon_size, messageHeight + kContentGap + timeHeight, closeSize.height});
+    const double row = std::max({kIconTop + tokens::icon_size, messageHeight + linkHeight + kContentGap + timeHeight, closeSize.height});
     return Size{available.width, (separator_ ? borderOf(*this) : 0.0) + 2 * tokens::space_sm + row};
   }
 
@@ -268,6 +288,11 @@ class NoticeRow final : public Widget {
     message_->arrange(Rect{textX, top, width, message_->measure(Size{width, 0}).height});
     close_->arrange(Rect{closeX, top, closeSize.width, closeSize.height});
     timeY_ = top + message_->bounds().height + kContentGap;
+    if (link_ != nullptr) {
+      const Size linkSize = link_->measure(Size{width, 0});
+      link_->arrange(Rect{textX, timeY_, std::min(linkSize.width, width), linkSize.height});
+      timeY_ += linkSize.height + kContentGap;
+    }
     timeX_ = textX;
   }
 
@@ -290,6 +315,7 @@ class NoticeRow final : public Widget {
   bool separator_;
   NoticeMessage* message_{nullptr};
   Button* close_{nullptr};
+  Button* link_{nullptr};
   double timeX_{0};
   double timeY_{0};
 };
@@ -403,9 +429,9 @@ NotificationCenter::~NotificationCenter() {
   if (host() != nullptr) root_.hideLayer(this);
 }
 
-void NotificationCenter::notify(std::string text, NoticeLevel level) {
+void NotificationCenter::notify(std::string text, NoticeLevel level, NoticeAction action) {
   if (text.empty()) return;
-  NoticeRecord record{nextId_++, std::move(text), level, timeSource_ ? timeSource_() : localTime()};
+  NoticeRecord record{nextId_++, std::move(text), level, timeSource_ ? timeSource_() : localTime(), std::move(action)};
   records_.insert(records_.begin(), record);
   if (records_.size() > kMaxHistory) records_.resize(kMaxHistory);
   // 面板打开期间直接进入历史，不弹出、不计未读

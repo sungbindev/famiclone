@@ -23,6 +23,7 @@
 #include "contracts/logging/error-logger.hpp"
 #include "contracts/shell/file-dialog.hpp"
 #include "contracts/shell/confirmation.hpp"
+#include "contracts/shell/directory-opener.hpp"
 #include "contracts/shell/openable-directory.hpp"
 #include "contracts/shell/request-broker.hpp"
 #include "contracts/shell/shell-model.hpp"
@@ -127,6 +128,18 @@ class FakeDirectory : public contracts::OpenableDirectory {
 
   [[nodiscard]] std::string open() override {
     ++opened;
+    return error;
+  }
+};
+
+/** 假的目录打开者：记下打开的路径。 */
+class FakeDirectoryOpener : public contracts::DirectoryOpener {
+ public:
+  std::string error;
+  std::vector<std::string> opened;
+
+  [[nodiscard]] std::string open(const std::string& path) override {
+    opened.push_back(path);
     return error;
   }
 };
@@ -305,8 +318,13 @@ class FakeShellDialogs : public contracts::ShellDialogOpener {
 class FakeNotifier : public contracts::ShellNotifier {
  public:
   std::vector<std::pair<std::string, contracts::NotificationLevel>> notices;
+  /** 与 notices 一一对应：每条通知带的链接（没有链接时 label 为空）。 */
+  std::vector<contracts::NotificationAction> actions;
 
-  void notify(const std::string& text, contracts::NotificationLevel level) override { notices.emplace_back(text, level); }
+  void notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) override {
+    notices.emplace_back(text, level);
+    actions.push_back(std::move(action));
+  }
 };
 
 /** 假的请求中转：请求都交给假核心网关（主进程处理的请求也在它的 replies 里设回复）。 */
@@ -324,6 +342,7 @@ class FakeBroker : public contracts::RequestBroker {
 class FakeShellApi : public contracts::ShellApi {
  public:
   std::vector<std::pair<std::string, contracts::NotificationLevel>> notices;
+  std::vector<contracts::NotificationAction> actions;
   int refreshes{0};
   std::vector<std::string> commands;
   std::vector<std::string> dialogs;
@@ -336,7 +355,10 @@ class FakeShellApi : public contracts::ShellApi {
   void quit() override { ++quits; }
   void runCommand(const std::string& commandId) override { commands.push_back(commandId); }
   void refreshCommands() override { ++refreshes; }
-  void notify(const std::string& text, contracts::NotificationLevel level) override { notices.emplace_back(text, level); }
+  void notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) override {
+    notices.emplace_back(text, level);
+    actions.push_back(std::move(action));
+  }
 };
 
 }  // namespace ember::win32::test

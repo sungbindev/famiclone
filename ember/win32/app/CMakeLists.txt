@@ -37,6 +37,7 @@ add_library(ember_app STATIC
   src/infra/dialogs/message-box-confirmation.cpp
   src/infra/dialogs/remembering-file-dialog.cpp
   src/infra/directories/explorer-directory.cpp
+  src/infra/directories/explorer-directory-opener.cpp
   src/infra/display/screen-host-adapter.cpp
   src/infra/dropped-files/memory-dropped-files-service.cpp
   src/infra/help/local-help-viewer.cpp

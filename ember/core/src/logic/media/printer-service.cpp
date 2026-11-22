@@ -54,8 +54,13 @@ void PrinterService::outputPage(contracts::hardware::PrintedPage page) {
 }
 
 api::PrinterRecordSnapshot PrinterService::snapshot() const {
-  std::lock_guard lock(mutex_);
-  return record_;
+  api::PrinterRecordSnapshot copy;
+  {
+    std::lock_guard lock(mutex_);
+    copy = record_;
+  }
+  copy.directory = directory_();
+  return copy;
 }
 
 }  // namespace ember::logic::media

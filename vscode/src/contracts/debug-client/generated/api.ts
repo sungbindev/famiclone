@@ -373,6 +373,8 @@ export interface MediaPrinterStatus {
   pages: number;
   /** 最近一页的文件名，不含路径；还没有输出过时没有这一项 */
   lastFile?: string;
+  /** 图片保存的目录（首选项“打印机”里设置的位置，留空时是用户数据目录下的 printer-output） */
+  directory: string;
 }
 
 /** 磁带机的状态。 */

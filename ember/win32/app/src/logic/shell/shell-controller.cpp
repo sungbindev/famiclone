@@ -109,7 +109,7 @@ void ShellController::runCommand(const std::string& commandId) {
 
 void ShellController::refreshCommands() { changed(); }
 
-void ShellController::notify(const std::string& text, contracts::NotificationLevel level) { notifier_.notify(text, level); }
+void ShellController::notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) { notifier_.notify(text, level, std::move(action)); }
 
 std::vector<contracts::ShellMenuModel> ShellController::menus() {
   std::vector<contracts::ShellMenuModel> result;

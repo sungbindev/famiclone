@@ -26,6 +26,7 @@ const std::vector<std::string> kFloppyExtensions{"img", "ima", "vfd", "dsk", "fl
 const std::vector<std::string> kSoundExtensions{"m4a", "mp3", "wav", "aac", "flac", "ogg", "opus", "mp4", "mka"};
 
 constexpr const char* kDroppedNotFound = "media.droppedNotFound";
+constexpr const char* kPrinterDirectoryUnavailable = "media.printerDirectoryUnavailable";
 
 /** 选择文件或取拖入的文件：取消时 canceled 为 true，拖入的文件找不到时直接回复错误。 */
 enum class PickOutcome { Picked, Canceled, DroppedMissing };
@@ -109,6 +110,24 @@ MainRequestHandlers createMediaHandlers(MediaDependencies dependencies) {
         return;
       }
       dependencies.core.request("media.tapeRecord", nlohmann::json{{"path", *path}}, [done](contracts::CoreReply reply) { done(withStatus(std::move(reply))); });
+    });
+  };
+
+  handlers["media.openPrinterDirectory"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
+    const ParamReader reader(params, {});
+    // 目录取自核心当前的打印机状态，界面不能指定
+    dependencies.core.request("media.printerStatus", nlohmann::json::object(), [dependencies, done](contracts::CoreReply current) {
+      if (!current.ok) {
+        done(std::move(current));
+        return;
+      }
+      const std::string directory = current.result.is_object() && current.result.contains("status") && current.result["status"].is_object() ? current.result["status"].value("directory", std::string()) : std::string();
+      if (directory.empty()) {
+        done(contracts::CoreReply::failure(kPrinterDirectoryUnavailable, "无法打开图片目录：读不到打印机的保存位置"));
+        return;
+      }
+      const std::string error = dependencies.directories.open(directory);
+      done(error.empty() ? contracts::CoreReply::success(nlohmann::json::object()) : contracts::CoreReply::failure(kPrinterDirectoryUnavailable, "无法打开图片目录：" + error));
     });
   };
 

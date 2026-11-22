@@ -42,6 +42,7 @@
 #include "infra/dialogs/remembering-file-dialog.hpp"
 #include "infra/input/system-gamepad-reader.hpp"
 #include "infra/directories/explorer-directory.hpp"
+#include "infra/directories/explorer-directory-opener.hpp"
 #include "infra/display/screen-host-adapter.hpp"
 #include "infra/dropped-files/memory-dropped-files-service.hpp"
 #include "infra/help/archive-help-site.hpp"
@@ -219,8 +220,8 @@ class ForwardingWindowControl final : public contracts::ShellWindowControl {
 class ForwardingNotifier final : public contracts::ShellNotifier {
  public:
   contracts::ShellNotifier* target{nullptr};
-  void notify(const std::string& text, contracts::NotificationLevel level) override {
-    if (target != nullptr) target->notify(text, level);
+  void notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) override {
+    if (target != nullptr) target->notify(text, level, std::move(action));
   }
 };
 
@@ -310,6 +311,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   infra::RememberingFileDialog fileDialog(systemDialogs, lastDirectories);
   infra::ExplorerDirectory logDirectory(userData / "logs");
   infra::ExplorerDirectory romDirectory(userData / "roms");
+  infra::ExplorerDirectoryOpener directoryOpener;
   // 升级：发布配置里、不是调试会话（带 --debug-port 启动）、且软件所在目录能写（新程序要覆盖当前程序）时才支持，否则状态固定是不支持
   infra::WinHttpUpdateTransport updateTransport;
   infra::SignedExeUpdateEngine::Options updateOptions;
@@ -366,7 +368,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   router.add(entry::createCartridgeHandlers({core, fileDialog, droppedFiles, recentCartridges}));
   router.add(entry::createMachineHandlers({core, fileDialog, romDirectory}));
   router.add(entry::createMapperHandlers({core, fileDialog}));
-  router.add(entry::createMediaHandlers({core, fileDialog, droppedFiles}));
+  router.add(entry::createMediaHandlers({core, fileDialog, droppedFiles, directoryOpener}));
   router.add(entry::createPreferenceHandlers({fileDialog}));
   router.add(entry::createSystemHandlers({logDirectory, help, updater}));
 

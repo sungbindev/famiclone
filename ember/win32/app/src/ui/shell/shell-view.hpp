@@ -76,7 +76,7 @@ class ShellView final : public contracts::ShellNotifier {
   [[nodiscard]] rujian::ui::MenuBar* menuBar() const { return menuBar_; }
 
   // ---- ShellNotifier ----
-  void notify(const std::string& text, contracts::NotificationLevel level) override;
+  void notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) override;
 
  private:
   void scheduleRefresh();

@@ -184,7 +184,9 @@ void ShellView::setScreen(std::unique_ptr<Widget> screen) { view_.frame().setPag
 
 void ShellView::setPanelContent(const std::string& panelId, WidgetFactory factory) { panelFactories_[panelId] = std::move(factory); }
 
-void ShellView::notify(const std::string& text, contracts::NotificationLevel level) { center_->notify(text, levelOf(level)); }
+void ShellView::notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) {
+  center_->notify(text, levelOf(level), NoticeAction{std::move(action.label), std::move(action.run)});
+}
 
 void ShellView::scheduleRefresh() {
   if (refreshPending_) return;

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-handlers.hpp
- * 说明：media 模块里外壳自己处理的请求：openFloppy（载入软盘镜像）、openTape（载入磁带）、openTapeRecording（磁带机里有磁带时在它上面录音，没有时选择录音文件并开始录音）。
+ * 说明：media 模块里外壳自己处理的请求：openFloppy（载入软盘镜像）、openTape（载入磁带）、openTapeRecording（磁带机里有磁带时在它上面录音，没有时选择录音文件并开始录音）、openPrinterDirectory（用资源管理器打开核心给出的打印机图片目录）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -12,6 +12,7 @@
 #pragma once
 
 #include "contracts/core-gateway/core-gateway.hpp"
+#include "contracts/shell/directory-opener.hpp"
 #include "contracts/shell/dropped-files.hpp"
 #include "contracts/shell/file-dialog.hpp"
 #include "entry/main-requests/main-request-handler.hpp"
@@ -23,6 +24,7 @@ struct MediaDependencies {
   contracts::CoreGateway& core;
   contracts::FileDialog& dialog;
   contracts::DroppedFilesService& dropped;
+  contracts::DirectoryOpener& directories;
 };
 
 /** 创建 media 模块的处理函数。 */

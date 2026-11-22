@@ -408,6 +408,7 @@ api::MediaPrinterStatusResult MediaManager::printerStatus() {
   api::PrinterStatus status;
   status.state = "idle";
   status.pages = record.pages;
+  status.directory = record.directory;
   if (!record.lastFile.empty()) status.lastFile = record.lastFile;
   runtime_->useMachine([&](hw::Machine& machine) {
     const hw::PrinterControl* printer = machine.printer();

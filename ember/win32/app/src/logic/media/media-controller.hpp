@@ -8,7 +8,7 @@
  * 备注：状态变化时通知订阅者并让外壳重算命令与重画状态栏（软驱读写灯与软盘名取自这里的状态），所以设备面板没有展开时状态也是最新的；
  *       学习机写盘后核心会自动把镜像写回文件，界面没有保存操作；自动写回失败（media.floppySaveFailed）时用通知给出原因；
  *       软驱的读写状态与磁道、磁带的位置、打印机的状态随机器运行不断变化，核心不推送，所以设备面板展开期间由界面经 refresh 定时读取，面板没有展开时不读取；
- *       失败时用通知提示；打印机每输出一页，用通知告知文件名（规则见 docs/05-界面.md 第 4.3 节）。
+ *       失败时用通知提示；打印机每输出一页，用通知告知文件名，通知里带“打开图片目录”链接（规则见 docs/05-界面.md 第 4.3 节）。
  *       磁带的时间轴（声音大小与空白段）由核心在后台分析：读到磁带后、磁带的序号变了或还在分析中（读进度）时读取，收到 media.tapeAnalyzed 时立即再读；没有磁带时清空。
  * ------------------------------------------------------------------------
  */
@@ -80,6 +80,8 @@ class MediaController final : public contracts::MediaModel {
   void perform(const std::string& action, const std::string& request, nlohmann::json params);
   void report(const std::string& action, const std::string& reason);
   void handleEvent(const std::string& name, const nlohmann::json& data);
+  /** 用文件管理器打开打印机图片的保存目录；失败时用通知提示。 */
+  void openPrinterDirectory();
   void handleCoreStatus(const contracts::CoreStatus& status);
   void refreshAll();
   void refreshFloppies();

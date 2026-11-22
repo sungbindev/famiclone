@@ -22,6 +22,8 @@ struct PrinterRecordSnapshot {
   std::int64_t pages{0};
   /** 最近一页的文件名；还没有时为空。 */
   std::string lastFile;
+  /** 图片保存的目录（读取时按首选项取当前值）。 */
+  std::string directory;
 };
 
 /** 打印机输出的记录。 */

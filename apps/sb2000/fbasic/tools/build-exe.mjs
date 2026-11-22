@@ -11,7 +11,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildProject, locateToolchain, runTool } from '../../../../tools/lib/extension.mjs';
+import { buildProject, locateToolchain, runTool } from '../../../../tools/extension.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');

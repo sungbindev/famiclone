@@ -135,7 +135,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 - 层之间的依赖方向、文件头、注释宽度与 `package.json` 声明和代码的一致性，由 `test/structure.test.ts` 检查。
 - 各层之间只经 `contracts` 里的接口协作；只有 `entry`、`platform` 与登记的两个 `infra` 文件（工作区汇编源文件存取、工作区项目定位）可以引用 `vscode`。
 - `shared` 与 `logic` 只能引用 Node 的纯函数模块（`node:path`、`node:crypto`），文件、进程的读写都经 `contracts` 的接口。
-- 仓库里的脚本经 `tools/lib/extension.mjs` 加载 `vscode/out/` 下编译后的模块，所以这些层不能引用 `vscode`；这条由结构测试检查。
+- 仓库里的脚本经 `tools/extension.mjs` 加载 `vscode/out/` 下编译后的模块，所以这些层不能引用 `vscode`；这条由结构测试检查。
 - 读取随扩展发布的资源（目标、工具链、模板、文档）一律经 `ExtensionResources` 取路径。
 
 ## 5. 构建、测试与打包

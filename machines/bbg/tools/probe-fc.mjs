@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import { join } from 'node:path';
-import { debugUserDataDirectory, emberExecutable, enterProgram, launchEmulator, runFrames } from '../../../tools/lib/extension.mjs';
+import { debugUserDataDirectory, emberExecutable, enterProgram, launchEmulator, runFrames } from '../../../tools/extension.mjs';
 import { REPO_ROOT } from './config.mjs';
 
 const firmware = join(REPO_ROOT, 'ember', 'roms', 'sb2000_bios.bin');

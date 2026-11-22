@@ -10,26 +10,26 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NodeEmulatorProcessLauncher } from '../../vscode/out/infra/emulator/node-process-launcher.js';
-import { FileEndpointResolver } from '../../vscode/out/infra/debug-client/endpoint-file.js';
-import { openWebSocket } from '../../vscode/out/infra/debug-client/web-socket-transport.js';
-import { NodeFileSystem } from '../../vscode/out/infra/files/node-file-system.js';
-import { createExtensionResources } from '../../vscode/out/infra/resources/extension-resources-factory.js';
-import { BundledToolchainLocator } from '../../vscode/out/infra/toolchain/bundled-toolchain-locator.js';
-import { ProcessToolRunner } from '../../vscode/out/infra/toolchain/process-tool-runner.js';
-import { DefaultBuildService } from '../../vscode/out/logic/build/default-build-service.js';
-import { EmberConnector } from '../../vscode/out/logic/debug-client/ember-connector.js';
-import { launchEmulator as launchWithEnvironment } from '../../vscode/out/logic/emulator/emulator-launcher.js';
-import { FileProjectConfigReader } from '../../vscode/out/logic/project/file-project-config-reader.js';
-import { FileTargetRepository } from '../../vscode/out/logic/targets/file-target-repository.js';
-import { enterProgram, runFrames, tapKey } from '../../vscode/out/logic/emulator/sb2000-session.js';
-import { packageDisk } from '../../vscode/out/shared/packaging/program-packager.js';
+import { NodeEmulatorProcessLauncher } from '../vscode/out/infra/emulator/node-process-launcher.js';
+import { FileEndpointResolver } from '../vscode/out/infra/debug-client/endpoint-file.js';
+import { openWebSocket } from '../vscode/out/infra/debug-client/web-socket-transport.js';
+import { NodeFileSystem } from '../vscode/out/infra/files/node-file-system.js';
+import { createExtensionResources } from '../vscode/out/infra/resources/extension-resources-factory.js';
+import { BundledToolchainLocator } from '../vscode/out/infra/toolchain/bundled-toolchain-locator.js';
+import { ProcessToolRunner } from '../vscode/out/infra/toolchain/process-tool-runner.js';
+import { DefaultBuildService } from '../vscode/out/logic/build/default-build-service.js';
+import { EmberConnector } from '../vscode/out/logic/debug-client/ember-connector.js';
+import { launchEmulator as launchWithEnvironment } from '../vscode/out/logic/emulator/emulator-launcher.js';
+import { FileProjectConfigReader } from '../vscode/out/logic/project/file-project-config-reader.js';
+import { FileTargetRepository } from '../vscode/out/logic/targets/file-target-repository.js';
+import { enterProgram, runFrames, tapKey } from '../vscode/out/logic/emulator/sb2000-session.js';
+import { packageDisk } from '../vscode/out/shared/packaging/program-packager.js';
 
-export { OPCODE_TABLE } from '../../vscode/out/shared/disassembly/cpu/opcodes.js';
+export { OPCODE_TABLE } from '../vscode/out/shared/disassembly/cpu/opcodes.js';
 export { enterProgram, packageDisk, runFrames, tapKey };
 
 /** 扩展目录。 */
-const EXTENSION_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'vscode');
+const EXTENSION_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'vscode');
 
 const files = new NodeFileSystem();
 const processes = new NodeEmulatorProcessLauncher();

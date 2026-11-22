@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { debugUserDataDirectory, emberExecutable, enterProgram, launchEmulator, packageDisk, runFrames, tapKey } from '../../../../../tools/lib/extension.mjs';
+import { debugUserDataDirectory, emberExecutable, enterProgram, launchEmulator, packageDisk, runFrames, tapKey } from '../../../../../tools/extension.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const REPOSITORY = resolve(ROOT, '..', '..', '..');

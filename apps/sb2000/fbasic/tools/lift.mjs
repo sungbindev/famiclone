@@ -13,7 +13,7 @@
 // ------------------------------------------------------------------------
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { locateToolchain, runTool } from '../../../../tools/lib/extension.mjs';
+import { locateToolchain, runTool } from '../../../../tools/extension.mjs';
 import { BASE, PRG_SIZE, ROM_FILE, ROOT, hex4, loadImageModel } from './lib/image-model.mjs';
 import { createEmitter } from './lib/emit.mjs';
 import { OPCODES } from './lib/opcodes.mjs';

@@ -360,7 +360,7 @@ vscode/
 
 阶段 5 的补充：
 
-- 仓库里的 Node 脚本（`apps/sb2000/fbasic/tools`、`machines/bbg/tools/probe-fc.mjs`、`tools`）经 `tools/lib/extension.mjs` 引用 `vscode/out/`；Ember 位置用环境变量 `EMBER_EXE`（只用于开发脚本）。`vscode/tools/build/build-cc65.mjs` 的 make 程序环境变量改名为 `MAKE_PROGRAM`。
+- 仓库里的 Node 脚本（`apps/sb2000/fbasic/tools`、`machines/bbg/tools/probe-fc.mjs`、`tools`）经 `tools/extension.mjs` 引用 `vscode/out/`；Ember 位置用环境变量 `EMBER_EXE`（只用于开发脚本）。`vscode/tools/build/build-cc65.mjs` 的 make 程序环境变量改名为 `MAKE_PROGRAM`。
 - `apps/sb2000` 下 7 个有 `package.json` 的项目删除了 `package.json` 与 `package-lock.json`，各加 `.vscode/tasks.json`（构建、构建磁盘镜像、运行、调试运行）；示例与 `fbasic/exe` 没有另加，扩展会为每个含 `fcdev.json` 的项目自动提供任务。
 - Ember 的帮助站点导入脚本改读 `vscode/docs/topics.json`（字段 `root: 'extension'` 指文件相对扩展目录，参数 `extensionRoot`）；帮助文档里的调试客户端、`docs/07-调试客户端工具` 改写为扩展的命令与内部客户端。
 - 开发文档 01 至 09、待办备忘、缺陷记录与扩展的使用文档、README 按新结构重写；`05-发布` 是扩展的打包与发布，`04-测试与验证` 是 vitest 的分层与环境变量。

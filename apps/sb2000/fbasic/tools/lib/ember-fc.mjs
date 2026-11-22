@@ -13,7 +13,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { connectToEmber, emberExecutable } from '../../../../../tools/lib/extension.mjs';
+import { connectToEmber, emberExecutable } from '../../../../../tools/extension.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..', '..', '..', '..');

@@ -3,9 +3,14 @@ name: 6502 程序开发工程师
 description: 用 fcdev 为 6502 兼容机开发程序：新建 NES 或小霸王学习机 SB2000 项目，用 C 或 ca65 汇编编写，构建，在 Ember 模拟器里运行并用画面、内存与寄存器核对结果，排查构建与运行问题。
 argument-hint: 要做的程序与目标，例如：新建 SB2000 的 C 项目 hello 并在模拟器里验证；或：给 src/main.c 增加手柄输入并运行核对
 tools:
+  - browser
+  - edit
+  - execute
   - read
   - search
   - todo
+  - vscode
+  - web
   - sungbin.fcdev/disasm_open
   - sungbin.fcdev/disasm_status
   - sungbin.fcdev/disasm_layout

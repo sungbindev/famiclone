@@ -15,8 +15,8 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = path.resolve(__dirname, '..');
 const EXTENSION_ID = 'sungbin.fcdev';
-/** 智能体可以直接使用的 VS Code 内置工具。 */
-const BUILT_IN_TOOLS = ['read', 'search', 'todo'];
+/** 智能体使用的 VS Code 内置工具：除 agent 以外的全部。 */
+const BUILT_IN_TOOLS = ['browser', 'edit', 'execute', 'read', 'search', 'todo', 'vscode', 'web'];
 
 interface Manifest {
   contributes: {
@@ -102,7 +102,7 @@ describe('聊天指令、技能与智能体的声明', () => {
       expect(fields.name, item.path).toBeTruthy();
       expect(fields.description, item.path).toBeTruthy();
       const own = tools.filter((tool) => !BUILT_IN_TOOLS.includes(tool));
-      expect(tools.filter((tool) => BUILT_IN_TOOLS.includes(tool)).toSorted()).toEqual(BUILT_IN_TOOLS.toSorted());
+      expect(tools.filter((tool) => BUILT_IN_TOOLS.includes(tool)).toSorted(), item.path).toEqual(BUILT_IN_TOOLS.toSorted());
       expect(own.toSorted()).toEqual(toolNames.map((name) => `${EXTENSION_ID}/${name}`).toSorted());
     }
   });

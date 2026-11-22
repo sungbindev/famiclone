@@ -205,10 +205,10 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | `chat/skills/disassemble-6502/SKILL.md` 与 `references/` | `chatSkills` | 开始前收集的输入、新建与继续的判断、八步各自的操作顺序与完成标准（数字取自 `disasm_status`）、命名与注释的依据、各种输入的打开方式、区域类型与参数、运行记录的闭环与导入种类对应、符号与提示的形式 |
 | `chat/skills/ember-emulator/SKILL.md` 与 `references/` | `chatSkills` | `emu_*` 工具的任务判定、起步与载入、观察与核对循环、断点与单步、记录、收尾；工具参数表、机型与开机后的操作、报错处理表 |
 | `chat/skills/fcdev-app-development/SKILL.md` 与 `references/` | `chatSkills` | 用 fcdev 开发 NES 与 SB2000 程序：任务判定与五个流程（新建、编写、构建、运行核对、排查）、`fcdev.json`、构建、C 接口、各目标的内存与程序格式、使用文档的读取顺序；内容随扩展的命令与工具维护，不放在 `copilot-plugins` |
-| `chat/agents/6502-developer.agent.md` | `chatAgents` | “6502 程序开发工程师”：内置的 `read`、`search`、`todo` 加本扩展的全部工具，按 skill 选流程、列步骤、遇到指定情形停下询问，结束时汇报 |
-| `chat/agents/6502-disassembler.agent.md` | `chatAgents` | “6502 反汇编工程师”：内置的 `read`、`search`、`todo` 加本扩展的全部工具（写成 `sungbin.fcdev/工具引用名`），按 skill 多轮完成、遇到指定情形停下询问，并在结束时汇报 |
+| `chat/agents/6502-developer.agent.md` | `chatAgents` | “6502 程序开发工程师”：除 `agent` 以外的全部内置工具加本扩展的全部工具，按 skill 选流程、列步骤、遇到指定情形停下询问，结束时汇报 |
+| `chat/agents/6502-disassembler.agent.md` | `chatAgents` | “6502 反汇编工程师”：除 `agent` 以外的全部内置工具加本扩展的全部工具（写成 `sungbin.fcdev/工具引用名`），按 skill 多轮完成、遇到指定情形停下询问，并在结束时汇报 |
 
 - 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。
-- `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整（反汇编指令还要有 `applyTo`）；agent 的工具恰好是内置三项加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*`、`fcdev_*` 都存在。
+- `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整（反汇编指令还要有 `applyTo`）；agent 的工具恰好是除 `agent` 以外的全部内置工具加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*`、`fcdev_*` 都存在。
 - 这三类贡献点要较新的 VS Code，低版本会忽略它们，不影响扩展的其他功能。agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。
 - `engines.vscode` 为 `^1.101.0`：调试客户端用全局 `WebSocket`，扩展宿主的 Node 要达到 22（VS Code 1.101 起的扩展宿主是 Node 22.15.1）。

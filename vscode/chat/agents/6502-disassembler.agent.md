@@ -3,9 +3,14 @@ name: 6502 反汇编工程师
 description: 把 6502 程序（NES 卡带、学习机 BIOS、SB-DOS 的 .EXE、任意平铺二进制）反汇编成可重新汇编、逐字节一致的 ca65 工程：按识别、追踪、区域分类、命名、注释、分层、生成与回读、构建八步多轮完成，并可连接 Ember 运行记录来补全静态追踪。
 argument-hint: 映像文件路径与要求，例如：反汇编 build/game.nes，工程放在 disasm/game
 tools:
+  - browser
+  - edit
+  - execute
   - read
   - search
   - todo
+  - vscode
+  - web
   - sungbin.fcdev/disasm_open
   - sungbin.fcdev/disasm_status
   - sungbin.fcdev/disasm_layout

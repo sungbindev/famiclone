@@ -50,8 +50,11 @@ constexpr double kHeaderGap = 16;
 constexpr double kHeaderRightPadding = 14;
 /** 右侧两行（版本、编译时间）之间的间距。 */
 constexpr double kInfoGap = 4;
-/** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
-constexpr double kContentRightPadding = 10;
+/** 内容右边的留白（滚动条贴着对话框的右边，内容自己空出来，要比滚动条的轨道宽一些，网址才不会被挡住）。 */
+constexpr double kContentRightPadding = 24;
+/** 上面的固定部分与下面表格之间的间距，以及表格区至少要露出的高度（表头加两行多一点）。 */
+constexpr double kTableGap = 10;
+constexpr double kTableMinHeight = 110;
 /** 表格列的最小宽度。 */
 constexpr double kNameMinWidth = 160;
 constexpr double kAuthorsMinWidth = 120;
@@ -91,8 +94,8 @@ std::string versionsOf(const contracts::AboutView& view) {
 
 AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget> logo) : model_(model) {
   const contracts::AboutView view = model_.view();
-  auto stack = std::make_unique<Stack>();
-  stack->setPadding(Insets{0, kContentRightPadding, 0, 0});
+  auto top = std::make_unique<Stack>();
+  top->setPadding(Insets{0, kContentRightPadding, 0, 0});
 
   // 头部：标志、应用名（大字，和标志垂直居中），右边靠右对齐两行：版本与核心版本、编译时间
   auto title = std::make_unique<Row>();
@@ -117,7 +120,7 @@ AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget>
   buildTime_ = static_cast<DescriptionRow*>(info->addChild(std::move(buildTime)));
   Widget* infoRaw = title->addChild(std::move(info));
   title->setGrow(infoRaw, 1);
-  header_ = stack->addChild(std::move(title));
+  header_ = top->addChild(std::move(title));
 
   auto facts = std::make_unique<Facts>();
   facts->addFact(kAuthor, view.author);
@@ -136,12 +139,13 @@ AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget>
   projectLink_ = link.get();
   facts->addFact(kProject, std::move(link));
   facts->addFact(kLicense, view.license);
-  facts_ = stack->addChild(std::move(facts));
+  facts_ = top->addChild(std::move(facts));
 
-  stack->addChild(std::make_unique<Heading>(kThirdParty));
+  top->addChild(std::make_unique<Heading>(kThirdParty));
   auto hint = std::make_unique<DescriptionRow>();
   hint->setText(kThirdPartyHint);
-  stack->addChild(std::move(hint));
+  top->addChild(std::move(hint));
+  top_ = addChild(std::move(top));
 
   auto table = std::make_unique<Table>();
   table->addColumn({kColumnName, kNameMinWidth, false, false});
@@ -156,10 +160,13 @@ AboutContent::AboutContent(contracts::AboutModel& model, std::unique_ptr<Widget>
     cells.push_back(Table::makeText(notice.license));
     table->addRow(std::move(cells));
   }
-  table_ = static_cast<Table*>(stack->addChild(std::move(table)));
+  // 只有表格滚动：上面的头部、信息与说明固定，滚动条贴着对话框的右边，表格自己空出右边的留白
+  auto tableBox = std::make_unique<Stack>();
+  tableBox->setPadding(Insets{0, kContentRightPadding, 0, 0});
+  table_ = static_cast<Table*>(tableBox->addChild(std::move(table)));
 
   auto scroll = std::make_unique<ScrollArea>();
-  scroll->setContent(std::move(stack));
+  scroll->setContent(std::move(tableBox));
   scroll_ = static_cast<ScrollArea*>(addChild(std::move(scroll)));
 
   unsubscribe_ = model_.subscribe([this] { refresh(); });
@@ -169,17 +176,24 @@ AboutContent::~AboutContent() {
   if (unsubscribe_) unsubscribe_();
 }
 
-Size AboutContent::measure(Size available) { return scroll_->measure(available); }
+Size AboutContent::measure(Size available) {
+  const Size limit{available.width, 0};
+  return Size{available.width > 0 ? available.width : top_->measure(limit).width, top_->measure(limit).height + kTableGap + scroll_->measure(limit).height};
+}
 
 Size AboutContent::minimumSize() {
   if (host() == nullptr) return Size{};
   const double widest = std::max({header_->measure(Size{}).width, facts_->measure(Size{}).width, table_->minimumSize().width});
-  return Size{widest + kContentRightPadding, 0.0};
+  const double width = widest + kContentRightPadding;
+  return Size{width, top_->measure(Size{width, 0}).height + kTableGap + kTableMinHeight};
 }
 
 void AboutContent::arrange(const Rect& bounds) {
   setBounds(bounds);
-  scroll_->arrange(bounds);
+  const double topHeight = top_->measure(Size{bounds.width, 0}).height;
+  top_->arrange(Rect{bounds.x, bounds.y, bounds.width, topHeight});
+  const double tableTop = bounds.y + topHeight + kTableGap;
+  scroll_->arrange(Rect{bounds.x, tableTop, bounds.width, std::max(0.0, bounds.bottom() - tableTop)});
 }
 
 void AboutContent::refresh() {

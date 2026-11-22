@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
- * 备注：文字取自模型，界面只显示；两个网址链接不折行，对话框的最小宽度按它们算；版本读取中显示“正在读取…”，读不到显示“读取失败”；表格里名称一列的悬停提示是该项的用途；规则见 docs/05-界面.md 第 8 节。
+ * 备注：文字取自模型，界面只显示；两个网址链接不折行，对话框的最小宽度按它们算；只有表格滚动（上面的头部、信息与说明固定），滚动条贴着对话框的右边；版本读取中显示“正在读取…”，读不到显示“读取失败”；表格里名称一列的悬停提示是该项的用途；规则见 docs/05-界面.md 第 8 节。
  * ------------------------------------------------------------------------
  */
 
@@ -36,7 +36,7 @@ class AboutContent final : public rujian::ui::Widget {
   ~AboutContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
-  /** 头部、信息行不折行、表格各列放得下所需的宽度；高度没有要求（内容可以滚动）。 */
+  /** 头部、信息行不折行、表格各列放得下所需的宽度；高度是上面固定部分加上表格区至少露出的一点。 */
   [[nodiscard]] rujian::ui::Size minimumSize() override;
   void arrange(const rujian::ui::Rect& bounds) override;
 
@@ -57,6 +57,7 @@ class AboutContent final : public rujian::ui::Widget {
   contracts::AboutModel& model_;
   std::function<void()> unsubscribe_;
   rujian::ui::ScrollArea* scroll_{nullptr};
+  rujian::ui::Widget* top_{nullptr};
   rujian::ui::Widget* header_{nullptr};
   rujian::ui::Widget* facts_{nullptr};
   rujian::ui::DescriptionRow* versions_{nullptr};

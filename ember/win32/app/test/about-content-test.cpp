@@ -122,12 +122,12 @@ TEST(AboutContent, WorksWithoutALogoAndUnsubscribesWhenDestroyed) {
   EXPECT_TRUE(s.model.handlers.empty());
 }
 
-TEST(AboutContent, MinimumWidthFitsTheHeaderAndTheFactsAndHasNoHeightRequirement) {
+TEST(AboutContent, MinimumSizeFitsTheHeaderAndTheFactsAndKeepsSomeTableRowsVisible) {
   Scene s;
   const rujian::ui::Size minimum = s.content->minimumSize();
   EXPECT_GT(minimum.width, 200);
-  EXPECT_DOUBLE_EQ(minimum.height, 0);
-  s.root.layout({minimum.width, 560});
+  EXPECT_GT(minimum.height, 110);
+  s.root.layout({minimum.width, minimum.height});
   EXPECT_LE(s.content->projectLink().bounds().right(), minimum.width);
 }
 

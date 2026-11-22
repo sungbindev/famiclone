@@ -300,6 +300,7 @@ TEST(SystemModule, AboutDialogHasTheAgreedSize) {
   EXPECT_EQ(dialog.width, 0);
   EXPECT_EQ(dialog.height, 560);
   EXPECT_TRUE(dialog.fitMinWidth);
+  EXPECT_TRUE(dialog.fitMinHeight);
   EXPECT_EQ(dialog.minHeight, 320);
   f.command("system.openAbout")->run(f.shell);
   EXPECT_EQ(f.shell.dialogs, (std::vector<std::string>{"system.about"}));

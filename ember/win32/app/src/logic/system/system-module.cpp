@@ -63,6 +63,7 @@ contracts::ShellModule createSystemModule(contracts::RequestBroker& broker, Upda
   dialog.title = kAbout;
   dialog.height = kDialogHeight;
   dialog.fitMinWidth = true;
+  dialog.fitMinHeight = true;
   dialog.minHeight = kDialogMinHeight;
   module.dialogs.push_back(std::move(dialog));
 

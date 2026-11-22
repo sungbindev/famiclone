@@ -172,7 +172,7 @@ TEST_F(CoreTest, PreferencesListSetAndResetThroughTheRequests) {
   EXPECT_EQ(byId["appearance.theme"]["value"], "system");
   EXPECT_EQ(byId["appearance.theme"]["options"].size(), 3U);
   EXPECT_EQ(byId["display.aspect"]["defaultValue"], "8:7");
-  EXPECT_EQ(byId["display.filter"]["value"], "smooth");
+  EXPECT_EQ(byId["display.filter"]["value"], "pixel");
   EXPECT_EQ(byId["display.filter"]["options"].size(), 2U);
   EXPECT_EQ(byId["display.showAllLines"]["value"], true);
   EXPECT_EQ(byId["display.hideStartupFrames"]["kind"], "switch");

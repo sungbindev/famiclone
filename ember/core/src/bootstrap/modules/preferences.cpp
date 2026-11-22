@@ -48,10 +48,10 @@ void registerInterfaceSettings(api::PreferenceService& service) {
   service.addSetting({.id = "display.filter",
                       .group = "display",
                       .label = "画面效果",
-                      .description = "平滑让放大后的画面边缘柔和，像素让每个像素都清晰分明；整数倍缩放时两者相同。",
+                      .description = "像素让每个像素都清晰分明，平滑让放大后的画面边缘柔和；整数倍缩放时两者相同。",
                       .kind = api::SettingKind::Choice,
-                      .options = {{"smooth", "平滑"}, {"pixel", "像素"}},
-                      .defaultValue = std::string("smooth")});
+                      .options = {{"pixel", "像素"}, {"smooth", "平滑"}},
+                      .defaultValue = std::string("pixel")});
   service.addSetting({.id = "display.showAllLines",
                       .group = "display",
                       .label = "显示全部 240 行",

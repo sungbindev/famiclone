@@ -31,7 +31,7 @@ inline constexpr ScreenAspect kDefaultScreenAspect = ScreenAspect::Ratio8x7;
 inline constexpr ScreenScaling kDefaultScreenScaling = ScreenScaling::Fit;
 
 /** 默认的画面效果。 */
-inline constexpr ScreenFilter kDefaultScreenFilter = ScreenFilter::Smooth;
+inline constexpr ScreenFilter kDefaultScreenFilter = ScreenFilter::Pixel;
 
 /** 标准帧（FC 的整帧）的尺寸：画面框的显示比例按它算，不随当前这一帧的实际尺寸变化。 */
 inline constexpr int kNominalFrameWidth = 256;

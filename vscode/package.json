@@ -2079,10 +2079,7 @@
     ],
     "chatAgents": [
       {
-        "path": "./chat/agents/6502-developer.agent.md"
-      },
-      {
-        "path": "./chat/agents/6502-disassembler.agent.md"
+        "path": "./chat/agents/6502-engineer.agent.md"
       }
     ]
   },

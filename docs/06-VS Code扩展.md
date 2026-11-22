@@ -11,7 +11,7 @@
 - ca65 汇编（`.s`、`.asm`、`.inc`）的悬停、补全、转到定义、文档符号与语法高亮。
 - C 代码的智能感知：自动同步 C/C++ 配置，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏；头文件里符号与函数的文档注释（`/** */`）悬停时显示。C 用 VS Code 内置的 C 语法。
 - 命令“fcdev：查询 C 接口”“fcdev：打开使用文档”与对应的工具。
-- 给 Copilot 用的 36 个语言模型工具（19 个反汇编工具、11 个模拟器工具、6 个 fcdev 工具），以及两份指令（6502 工具使用规则、6502 反汇编规则）、三个 skill（反汇编、fcdev 程序开发、Ember 模拟器操作）与两个自定义智能体（“6502 程序开发工程师”“6502 反汇编工程师”），见第 6 节。
+- 给 Copilot 用的 36 个语言模型工具（19 个反汇编工具、11 个模拟器工具、6 个 fcdev 工具），以及两份指令（6502 工具使用规则、6502 反汇编规则）、三个 skill（反汇编、fcdev 程序开发、Ember 模拟器操作）与一个自定义智能体（“6502 工程师”），见第 6 节。
 
 不含：调试适配器协议（DAP）与断点、单步等调试界面，调试经命令与 `emu_*` 工具完成，登记在 [待办备忘](待办备忘.md)。
 
@@ -205,8 +205,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | `chat/skills/disassemble-6502/SKILL.md` 与 `references/` | `chatSkills` | 开始前收集的输入、新建与继续的判断、八步各自的操作顺序与完成标准（数字取自 `disasm_status`）、命名与注释的依据、各种输入的打开方式、区域类型与参数、运行记录的闭环与导入种类对应、符号与提示的形式 |
 | `chat/skills/ember-emulator/SKILL.md` 与 `references/` | `chatSkills` | `emu_*` 工具的任务判定、起步与载入、观察与核对循环、断点与单步、记录、收尾；工具参数表、机型与开机后的操作、报错处理表 |
 | `chat/skills/fcdev-app-development/SKILL.md` 与 `references/` | `chatSkills` | 用 fcdev 开发 NES 与 SB2000 程序：任务判定与五个流程（新建、编写、构建、运行核对、排查）、`fcdev.json`、构建、C 接口、各目标的内存与程序格式、使用文档的读取顺序；内容随扩展的命令与工具维护，不放在 `copilot-plugins` |
-| `chat/agents/6502-developer.agent.md` | `chatAgents` | “6502 程序开发工程师”：除 `agent` 以外的全部内置工具加本扩展的全部工具，按 skill 选流程、列步骤、遇到指定情形停下询问，结束时汇报 |
-| `chat/agents/6502-disassembler.agent.md` | `chatAgents` | “6502 反汇编工程师”：除 `agent` 以外的全部内置工具加本扩展的全部工具（写成 `sungbin.fcdev/工具引用名`），按 skill 多轮完成、遇到指定情形停下询问，并在结束时汇报 |
+| `chat/agents/6502-engineer.agent.md` | `chatAgents` | “6502 工程师”：除 `agent` 以外的全部内置工具加本扩展的全部工具（写成 `sungbin.fcdev/工具引用名`），一个智能体覆盖开发、模拟器调试与反汇编；按任务类型选 skill、列合并的步骤、遇到指定情形停下询问，结束时按任务类型汇报 |
 
 - 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。
 - `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整（反汇编指令还要有 `applyTo`）；agent 的工具恰好是除 `agent` 以外的全部内置工具加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*`、`fcdev_*` 都存在。

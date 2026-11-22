@@ -70,7 +70,7 @@ describe('聊天指令、技能与智能体的声明', () => {
 
   it('声明的文件都存在，且打进扩展包（不在忽略清单里）', () => {
     const declared = [...manifest.contributes.chatInstructions, ...manifest.contributes.chatSkills, ...manifest.contributes.chatAgents];
-    expect(declared.length).toBe(3);
+    expect(declared.length).toBe(4);
     for (const item of declared) expect(existsSync(path.join(ROOT, item.path)), item.path).toBe(true);
     expect(readFileSync(path.join(ROOT, '.vscodeignore'), 'utf8')).not.toMatch(/^chat/m);
   });
@@ -112,7 +112,7 @@ describe('聊天指令、技能与智能体的声明', () => {
       ...manifest.contributes.chatSkills.map((item) => readMarkdown(path.dirname(path.join(ROOT, item.path)))),
       ...manifest.contributes.chatInstructions.map((item) => readDeclared(item.path))
     ].join('\n');
-    const mentioned = new Set([...text.matchAll(/\b((?:disasm|emu)_[a-z_]+)\b/g)].map((match) => match[1] ?? ''));
+    const mentioned = new Set([...text.matchAll(/\b((?:disasm|emu|fcdev)_[a-z_]+)\b/g)].map((match) => match[1] ?? ''));
     expect(mentioned.size).toBeGreaterThan(0);
     expect([...mentioned].filter((name) => !toolNames.includes(name))).toEqual([]);
   });

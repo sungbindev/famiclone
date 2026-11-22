@@ -2066,6 +2066,9 @@
     "chatSkills": [
       {
         "path": "./chat/skills/disassemble-6502/SKILL.md"
+      },
+      {
+        "path": "./chat/skills/fcdev-app-development/SKILL.md"
       }
     ],
     "chatAgents": [

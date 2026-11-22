@@ -321,7 +321,7 @@ vscode/
 | `docs`（01 至 09、待办备忘、缺陷记录） | 包与依赖、目录、发布、测试、反汇编与 AI 工具的设计文档按新结构重写；`05-发布` 重写为扩展的打包与发布；`04-测试与验证` 重写为 vitest 的分层与环境变量 |
 | `vscode` 的 `README.md`、`chat/`、`test/`、`src/` | 说明、指令、skill、智能体的工具清单；删除对 `fcdev` 外部包的说明 |
 | 仓库根 `README.md` | 使用说明 |
-| `copilot-plugins` | 四个智能体的工具清单、`README.md`、`skills/fcdev-app-development`（`SKILL.md` 与 6 个参考文件）按扩展的命令与工具重写 |
+| `copilot-plugins` | 四个智能体的工具清单、`README.md` 按扩展的命令与工具重写；`skills/fcdev-app-development`（`SKILL.md` 与 6 个参考文件）重写后迁入扩展的 `vscode/chat/skills/`，不再放在 `copilot-plugins` |
 | `docs` 仓库 | `.github/instructions/ember.instructions.md` 里关于 `packages/fcdev`、`fcdev-ember`、公共调试函数路径的说明 |
 
 ## 8. 完成判据
@@ -364,7 +364,7 @@ vscode/
 - `apps/sb2000` 下 7 个有 `package.json` 的项目删除了 `package.json` 与 `package-lock.json`，各加 `.vscode/tasks.json`（构建、构建磁盘镜像、运行、调试运行）；示例与 `fbasic/exe` 没有另加，扩展会为每个含 `fcdev.json` 的项目自动提供任务。
 - Ember 的帮助站点导入脚本改读 `vscode/docs/topics.json`（字段 `root: 'extension'` 指文件相对扩展目录，参数 `extensionRoot`）；帮助文档里的调试客户端、`docs/07-调试客户端工具` 改写为扩展的命令与内部客户端。
 - 开发文档 01 至 09、待办备忘、缺陷记录与扩展的使用文档、README 按新结构重写；`05-发布` 是扩展的打包与发布，`04-测试与验证` 是 vitest 的分层与环境变量。
-- `copilot-plugins` 的 `fcdev-app-development` skill 改写为扩展的命令与工具（`references/cli-and-build.md` 改名 `build-and-config.md`），四个智能体的工具清单加入 6 个 fcdev 工具；`docs` 仓库的 `ember.instructions.md` 同步。
+- `copilot-plugins` 的 `fcdev-app-development` skill 改写为扩展的命令与工具（`references/cli-and-build.md` 改名 `build-and-config.md`），并迁入 `vscode/chat/skills/`，经 `chatSkills` 声明、随扩展发布，使用扩展的人不需要再装 `copilot-plugins`；四个智能体的工具清单加入 6 个 fcdev 工具；`docs` 仓库的 `ember.instructions.md` 同步。
 
 阶段 6 的补充：
 

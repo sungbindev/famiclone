@@ -1,5 +1,0 @@
-{
-  "target": "sb2000",
-  "name": "fcprobe",
-  "firmware": "../../../ember/roms/sb2000_bios.bin"
-}

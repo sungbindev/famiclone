@@ -1,0 +1,994 @@
+{
+  "version": 1,
+  "image": {
+    "path": "../../../ember/roms/sb97.bin",
+    "size": 1048576,
+    "sha256": "0992ecd49b1af200ba5df822cac30b53d982933242370e5830c7cc2a7b63521b"
+  },
+  "format": {
+    "name": "flat",
+    "options": {
+      "segments": [
+        {
+          "address": 49152,
+          "bank": 0,
+          "fileOffset": 0,
+          "id": 0,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 1,
+          "fileOffset": 16384,
+          "id": 1,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 2,
+          "fileOffset": 32768,
+          "id": 2,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 3,
+          "fileOffset": 49152,
+          "id": 3,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 4,
+          "fileOffset": 65536,
+          "id": 4,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 5,
+          "fileOffset": 81920,
+          "id": 5,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 6,
+          "fileOffset": 98304,
+          "id": 6,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 7,
+          "fileOffset": 114688,
+          "id": 7,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 8,
+          "fileOffset": 131072,
+          "id": 8,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 9,
+          "fileOffset": 147456,
+          "id": 9,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 10,
+          "fileOffset": 163840,
+          "id": 10,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 11,
+          "fileOffset": 180224,
+          "id": 11,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 12,
+          "fileOffset": 196608,
+          "id": 12,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 13,
+          "fileOffset": 212992,
+          "id": 13,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 14,
+          "fileOffset": 229376,
+          "id": 14,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 15,
+          "fileOffset": 245760,
+          "id": 15,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 16,
+          "fileOffset": 262144,
+          "id": 16,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 17,
+          "fileOffset": 278528,
+          "id": 17,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 18,
+          "fileOffset": 294912,
+          "id": 18,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 19,
+          "fileOffset": 311296,
+          "id": 19,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 20,
+          "fileOffset": 327680,
+          "id": 20,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 21,
+          "fileOffset": 344064,
+          "id": 21,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 22,
+          "fileOffset": 360448,
+          "id": 22,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 23,
+          "fileOffset": 376832,
+          "id": 23,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 24,
+          "fileOffset": 393216,
+          "id": 24,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 25,
+          "fileOffset": 409600,
+          "id": 25,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 26,
+          "fileOffset": 425984,
+          "id": 26,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 27,
+          "fileOffset": 442368,
+          "id": 27,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 28,
+          "fileOffset": 458752,
+          "id": 28,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 29,
+          "fileOffset": 475136,
+          "id": 29,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 30,
+          "fileOffset": 491520,
+          "id": 30,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 31,
+          "fileOffset": 507904,
+          "id": 31,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 32,
+          "fileOffset": 524288,
+          "id": 32,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 33,
+          "fileOffset": 540672,
+          "id": 33,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 34,
+          "fileOffset": 557056,
+          "id": 34,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 35,
+          "fileOffset": 573440,
+          "id": 35,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 36,
+          "fileOffset": 589824,
+          "id": 36,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 37,
+          "fileOffset": 606208,
+          "id": 37,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 38,
+          "fileOffset": 622592,
+          "id": 38,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 39,
+          "fileOffset": 638976,
+          "id": 39,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 40,
+          "fileOffset": 655360,
+          "id": 40,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 41,
+          "fileOffset": 671744,
+          "id": 41,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 42,
+          "fileOffset": 688128,
+          "id": 42,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 43,
+          "fileOffset": 704512,
+          "id": 43,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 44,
+          "fileOffset": 720896,
+          "id": 44,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 45,
+          "fileOffset": 737280,
+          "id": 45,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 46,
+          "fileOffset": 753664,
+          "id": 46,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 47,
+          "fileOffset": 770048,
+          "id": 47,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 48,
+          "fileOffset": 786432,
+          "id": 48,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 49,
+          "fileOffset": 802816,
+          "id": 49,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 50,
+          "fileOffset": 819200,
+          "id": 50,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 51,
+          "fileOffset": 835584,
+          "id": 51,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 52,
+          "fileOffset": 851968,
+          "id": 52,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 53,
+          "fileOffset": 868352,
+          "id": 53,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 54,
+          "fileOffset": 884736,
+          "id": 54,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 55,
+          "fileOffset": 901120,
+          "id": 55,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 56,
+          "fileOffset": 917504,
+          "id": 56,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 57,
+          "fileOffset": 933888,
+          "id": 57,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 58,
+          "fileOffset": 950272,
+          "id": 58,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 59,
+          "fileOffset": 966656,
+          "id": 59,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 60,
+          "fileOffset": 983040,
+          "id": 60,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 61,
+          "fileOffset": 999424,
+          "id": 61,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 62,
+          "fileOffset": 1015808,
+          "id": 62,
+          "length": 16384
+        },
+        {
+          "address": 32768,
+          "bank": 63,
+          "fileOffset": 1032192,
+          "id": 63,
+          "length": 16384
+        }
+      ]
+    }
+  },
+  "profile": null,
+  "layout": {
+    "imageSize": 1048576,
+    "segments": [
+      {
+        "id": 0,
+        "fileOffset": 0,
+        "length": 16384,
+        "address": 49152,
+        "bank": 0,
+        "writable": false
+      },
+      {
+        "id": 1,
+        "fileOffset": 16384,
+        "length": 16384,
+        "address": 32768,
+        "bank": 1,
+        "writable": false
+      },
+      {
+        "id": 2,
+        "fileOffset": 32768,
+        "length": 16384,
+        "address": 32768,
+        "bank": 2,
+        "writable": false
+      },
+      {
+        "id": 3,
+        "fileOffset": 49152,
+        "length": 16384,
+        "address": 32768,
+        "bank": 3,
+        "writable": false
+      },
+      {
+        "id": 4,
+        "fileOffset": 65536,
+        "length": 16384,
+        "address": 32768,
+        "bank": 4,
+        "writable": false
+      },
+      {
+        "id": 5,
+        "fileOffset": 81920,
+        "length": 16384,
+        "address": 32768,
+        "bank": 5,
+        "writable": false
+      },
+      {
+        "id": 6,
+        "fileOffset": 98304,
+        "length": 16384,
+        "address": 32768,
+        "bank": 6,
+        "writable": false
+      },
+      {
+        "id": 7,
+        "fileOffset": 114688,
+        "length": 16384,
+        "address": 32768,
+        "bank": 7,
+        "writable": false
+      },
+      {
+        "id": 8,
+        "fileOffset": 131072,
+        "length": 16384,
+        "address": 32768,
+        "bank": 8,
+        "writable": false
+      },
+      {
+        "id": 9,
+        "fileOffset": 147456,
+        "length": 16384,
+        "address": 32768,
+        "bank": 9,
+        "writable": false
+      },
+      {
+        "id": 10,
+        "fileOffset": 163840,
+        "length": 16384,
+        "address": 32768,
+        "bank": 10,
+        "writable": false
+      },
+      {
+        "id": 11,
+        "fileOffset": 180224,
+        "length": 16384,
+        "address": 32768,
+        "bank": 11,
+        "writable": false
+      },
+      {
+        "id": 12,
+        "fileOffset": 196608,
+        "length": 16384,
+        "address": 32768,
+        "bank": 12,
+        "writable": false
+      },
+      {
+        "id": 13,
+        "fileOffset": 212992,
+        "length": 16384,
+        "address": 32768,
+        "bank": 13,
+        "writable": false
+      },
+      {
+        "id": 14,
+        "fileOffset": 229376,
+        "length": 16384,
+        "address": 32768,
+        "bank": 14,
+        "writable": false
+      },
+      {
+        "id": 15,
+        "fileOffset": 245760,
+        "length": 16384,
+        "address": 32768,
+        "bank": 15,
+        "writable": false
+      },
+      {
+        "id": 16,
+        "fileOffset": 262144,
+        "length": 16384,
+        "address": 32768,
+        "bank": 16,
+        "writable": false
+      },
+      {
+        "id": 17,
+        "fileOffset": 278528,
+        "length": 16384,
+        "address": 32768,
+        "bank": 17,
+        "writable": false
+      },
+      {
+        "id": 18,
+        "fileOffset": 294912,
+        "length": 16384,
+        "address": 32768,
+        "bank": 18,
+        "writable": false
+      },
+      {
+        "id": 19,
+        "fileOffset": 311296,
+        "length": 16384,
+        "address": 32768,
+        "bank": 19,
+        "writable": false
+      },
+      {
+        "id": 20,
+        "fileOffset": 327680,
+        "length": 16384,
+        "address": 32768,
+        "bank": 20,
+        "writable": false
+      },
+      {
+        "id": 21,
+        "fileOffset": 344064,
+        "length": 16384,
+        "address": 32768,
+        "bank": 21,
+        "writable": false
+      },
+      {
+        "id": 22,
+        "fileOffset": 360448,
+        "length": 16384,
+        "address": 32768,
+        "bank": 22,
+        "writable": false
+      },
+      {
+        "id": 23,
+        "fileOffset": 376832,
+        "length": 16384,
+        "address": 32768,
+        "bank": 23,
+        "writable": false
+      },
+      {
+        "id": 24,
+        "fileOffset": 393216,
+        "length": 16384,
+        "address": 32768,
+        "bank": 24,
+        "writable": false
+      },
+      {
+        "id": 25,
+        "fileOffset": 409600,
+        "length": 16384,
+        "address": 32768,
+        "bank": 25,
+        "writable": false
+      },
+      {
+        "id": 26,
+        "fileOffset": 425984,
+        "length": 16384,
+        "address": 32768,
+        "bank": 26,
+        "writable": false
+      },
+      {
+        "id": 27,
+        "fileOffset": 442368,
+        "length": 16384,
+        "address": 32768,
+        "bank": 27,
+        "writable": false
+      },
+      {
+        "id": 28,
+        "fileOffset": 458752,
+        "length": 16384,
+        "address": 32768,
+        "bank": 28,
+        "writable": false
+      },
+      {
+        "id": 29,
+        "fileOffset": 475136,
+        "length": 16384,
+        "address": 32768,
+        "bank": 29,
+        "writable": false
+      },
+      {
+        "id": 30,
+        "fileOffset": 491520,
+        "length": 16384,
+        "address": 32768,
+        "bank": 30,
+        "writable": false
+      },
+      {
+        "id": 31,
+        "fileOffset": 507904,
+        "length": 16384,
+        "address": 32768,
+        "bank": 31,
+        "writable": false
+      },
+      {
+        "id": 32,
+        "fileOffset": 524288,
+        "length": 16384,
+        "address": 32768,
+        "bank": 32,
+        "writable": false
+      },
+      {
+        "id": 33,
+        "fileOffset": 540672,
+        "length": 16384,
+        "address": 32768,
+        "bank": 33,
+        "writable": false
+      },
+      {
+        "id": 34,
+        "fileOffset": 557056,
+        "length": 16384,
+        "address": 32768,
+        "bank": 34,
+        "writable": false
+      },
+      {
+        "id": 35,
+        "fileOffset": 573440,
+        "length": 16384,
+        "address": 32768,
+        "bank": 35,
+        "writable": false
+      },
+      {
+        "id": 36,
+        "fileOffset": 589824,
+        "length": 16384,
+        "address": 32768,
+        "bank": 36,
+        "writable": false
+      },
+      {
+        "id": 37,
+        "fileOffset": 606208,
+        "length": 16384,
+        "address": 32768,
+        "bank": 37,
+        "writable": false
+      },
+      {
+        "id": 38,
+        "fileOffset": 622592,
+        "length": 16384,
+        "address": 32768,
+        "bank": 38,
+        "writable": false
+      },
+      {
+        "id": 39,
+        "fileOffset": 638976,
+        "length": 16384,
+        "address": 32768,
+        "bank": 39,
+        "writable": false
+      },
+      {
+        "id": 40,
+        "fileOffset": 655360,
+        "length": 16384,
+        "address": 32768,
+        "bank": 40,
+        "writable": false
+      },
+      {
+        "id": 41,
+        "fileOffset": 671744,
+        "length": 16384,
+        "address": 32768,
+        "bank": 41,
+        "writable": false
+      },
+      {
+        "id": 42,
+        "fileOffset": 688128,
+        "length": 16384,
+        "address": 32768,
+        "bank": 42,
+        "writable": false
+      },
+      {
+        "id": 43,
+        "fileOffset": 704512,
+        "length": 16384,
+        "address": 32768,
+        "bank": 43,
+        "writable": false
+      },
+      {
+        "id": 44,
+        "fileOffset": 720896,
+        "length": 16384,
+        "address": 32768,
+        "bank": 44,
+        "writable": false
+      },
+      {
+        "id": 45,
+        "fileOffset": 737280,
+        "length": 16384,
+        "address": 32768,
+        "bank": 45,
+        "writable": false
+      },
+      {
+        "id": 46,
+        "fileOffset": 753664,
+        "length": 16384,
+        "address": 32768,
+        "bank": 46,
+        "writable": false
+      },
+      {
+        "id": 47,
+        "fileOffset": 770048,
+        "length": 16384,
+        "address": 32768,
+        "bank": 47,
+        "writable": false
+      },
+      {
+        "id": 48,
+        "fileOffset": 786432,
+        "length": 16384,
+        "address": 32768,
+        "bank": 48,
+        "writable": false
+      },
+      {
+        "id": 49,
+        "fileOffset": 802816,
+        "length": 16384,
+        "address": 32768,
+        "bank": 49,
+        "writable": false
+      },
+      {
+        "id": 50,
+        "fileOffset": 819200,
+        "length": 16384,
+        "address": 32768,
+        "bank": 50,
+        "writable": false
+      },
+      {
+        "id": 51,
+        "fileOffset": 835584,
+        "length": 16384,
+        "address": 32768,
+        "bank": 51,
+        "writable": false
+      },
+      {
+        "id": 52,
+        "fileOffset": 851968,
+        "length": 16384,
+        "address": 32768,
+        "bank": 52,
+        "writable": false
+      },
+      {
+        "id": 53,
+        "fileOffset": 868352,
+        "length": 16384,
+        "address": 32768,
+        "bank": 53,
+        "writable": false
+      },
+      {
+        "id": 54,
+        "fileOffset": 884736,
+        "length": 16384,
+        "address": 32768,
+        "bank": 54,
+        "writable": false
+      },
+      {
+        "id": 55,
+        "fileOffset": 901120,
+        "length": 16384,
+        "address": 32768,
+        "bank": 55,
+        "writable": false
+      },
+      {
+        "id": 56,
+        "fileOffset": 917504,
+        "length": 16384,
+        "address": 32768,
+        "bank": 56,
+        "writable": false
+      },
+      {
+        "id": 57,
+        "fileOffset": 933888,
+        "length": 16384,
+        "address": 32768,
+        "bank": 57,
+        "writable": false
+      },
+      {
+        "id": 58,
+        "fileOffset": 950272,
+        "length": 16384,
+        "address": 32768,
+        "bank": 58,
+        "writable": false
+      },
+      {
+        "id": 59,
+        "fileOffset": 966656,
+        "length": 16384,
+        "address": 32768,
+        "bank": 59,
+        "writable": false
+      },
+      {
+        "id": 60,
+        "fileOffset": 983040,
+        "length": 16384,
+        "address": 32768,
+        "bank": 60,
+        "writable": false
+      },
+      {
+        "id": 61,
+        "fileOffset": 999424,
+        "length": 16384,
+        "address": 32768,
+        "bank": 61,
+        "writable": false
+      },
+      {
+        "id": 62,
+        "fileOffset": 1015808,
+        "length": 16384,
+        "address": 32768,
+        "bank": 62,
+        "writable": false
+      },
+      {
+        "id": 63,
+        "fileOffset": 1032192,
+        "length": 16384,
+        "address": 32768,
+        "bank": 63,
+        "writable": false
+      }
+    ]
+  },
+  "entries": [],
+  "regions": [],
+  "symbols": [],
+  "comments": [],
+  "hints": [],
+  "modules": [],
+  "symbolSets": [],
+  "unresolved": [],
+  "verification": {
+    "ok": true,
+    "digest": "e2ead560626e29fd2ea0beca0e4fb9e86bd91e92133a844fee123ef68128ce0e",
+    "at": "2026-11-22T23:03:10.156Z"
+  }
+}

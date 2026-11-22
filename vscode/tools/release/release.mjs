@@ -9,7 +9,6 @@
 // ------------------------------------------------------------------------
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { createInterface } from 'node:readline';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -40,17 +39,33 @@ function run(command, args) {
  */
 function readToken() {
   return new Promise((resolve, reject) => {
-    const terminal = process.stdin.isTTY === true;
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal });
-    if (terminal) rl._writeToOutput = () => {};
-    process.stdout.write('请输入 VS Code 市场的发布令牌（输入时不显示）：');
-    rl.question('', (answer) => {
-      rl.close();
+    if (process.stdin.isTTY !== true) {
+      reject(new Error('没有环境变量 VSCE_PAT，且不在终端里，无法输入发布令牌'));
+      return;
+    }
+    let token = '';
+    const finish = (error) => {
+      process.stdin.off('data', onData);
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
       process.stdout.write('\n');
-      const token = answer.trim();
-      if (token === '') reject(new Error('没有输入发布令牌'));
-      else resolve(token);
-    });
+      if (error !== undefined) reject(error);
+      else if (token.trim() === '') reject(new Error('没有输入发布令牌'));
+      else resolve(token.trim());
+    };
+    const onData = (chunk) => {
+      for (const char of chunk) {
+        if (char === '\r' || char === '\n') return finish();
+        if (char === '\u0003') return finish(new Error('已取消上传'));
+        if (char === '\u007f' || char === '\b') token = token.slice(0, -1);
+        else token += char;
+      }
+    };
+    process.stdout.write('请输入 VS Code 市场的发布令牌（输入时不显示），回车确认：');
+    process.stdin.setRawMode(true);
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', onData);
+    process.stdin.resume();
   });
 }
 

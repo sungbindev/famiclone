@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="fcdev 开发手册：模拟器与调试"/><title>模拟器与调试 · fcdev 开发手册 · Ember 与 fcdev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 fcdev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="../manual/start.html"><span>Ember 模拟器</span></a><a class="ui-button ui-button--ghost" href="index.html"><span>fcdev 扩展</span></a><a class="ui-button ui-button--ghost" href="../manual/index.html"><span>帮助文档</span></a><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section" open=""><summary>fcdev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="install.html">安装与入门</a></li><li><a class="site-nav__link" href="build.html">构建</a></li><li><a class="site-nav__link site-nav__link--active" href="emulator.html" aria-current="page">模拟器与调试</a></li><li><a class="site-nav__link" href="disasm.html">反汇编</a></li><li><a class="site-nav__link" href="create.html">新建项目与模板</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb97.html">SB97 开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">fcdev 开发手册</a><span aria-hidden="true">›</span><span aria-current="page">模拟器与调试</span></nav><header class="doc-head"><p class="kicker">fcdev 开发手册</p><h1 class="ui-title doc-title">模拟器与调试</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#1-ember-的位置">1. Ember 的位置</a></li><li><a href="#2-运行">2. 运行</a></li><li><a href="#3-调试运行">3. 调试运行</a></li><li><a href="#4-调试命令">4. 调试命令</a></li><li class="toc-sub"><a href="#41-常用操作">4.1 常用操作</a></li><li><a href="#5-限制">5. 限制</a></li><li><a href="#6-学习机在-ember-里的调试">6. 学习机在 Ember 里的调试</a></li></ul></div></div></nav><article class="doc"><!-- 本文件由 npm run help:build 从 vscode/docs/02-模拟器与调试.md 导入，不要手改 -->
+<p>扩展的“运行”“调试运行”命令与任务、Copilot 工具 <code>fcdev_run</code>、<code>emu_launch</code> 使用模拟器 Ember。Ember 不随扩展发布，要在设置里指明它的位置（见第 1 节）；调试服务由 Ember 提供，扩展内置调试客户端与它通信。Ember 的调试协议与全部请求见 Ember 帮助文档里的“调试接口手册”。</p>
+<p>Ember 运行 NES 程序，也运行学习机整机（SB2000、SB97）；整机的启动方式见第 2 节与第 6 节。</p>
+<h2 id="1-ember-的位置">1. Ember 的位置</h2>
+<ul>
+<li>用户设置 <code>fcdev.emulator.path</code> 填 Ember 可执行文件（<code>Ember.exe</code>）的路径。没有设置、或指向的文件不存在时，运行与调试相关的功能会报错并提示来这里设置；扩展不去 <code>PATH</code> 里猜，也不自带 Ember。</li>
+<li>这个设置只能在用户设置里指定，工作区设置不能指定要运行的程序，避免打开别人的工作区时被指向恶意的可执行文件。</li>
+<li>设置 <code>fcdev.emulator.debugPort</code> 是调试服务的端口，默认 5699；调试运行与 <code>emu_launch</code> 用它启动 Ember，调试命令与 <code>emu_connect</code> 也按它找到这个 Ember。不是 1 到 65535 的整数时按默认端口处理。</li>
+<li>两项设置每次使用时读取，改了立即生效。</li>
+</ul>
+<h2 id="2-运行">2. 运行</h2>
+<p>命令“fcdev：运行”、任务 <code>run</code>、Copilot 工具 <code>fcdev_run</code> 先确认目标能运行、能找到 Ember，再构建并启动 Ember。目标没有运行方案时报错。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>运行方案</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rom</code></td>
+<td>Ember 直接加载产物（<code>.nes</code>），不需要固件</td>
+</tr>
+<tr>
+<td><code>firmware-disk</code></td>
+<td>整机方案（SB2000、SB97）：加载 <code>fcdev.json</code> 里 <code>firmware</code> 指定的 BIOS（ROM），把程序放进磁盘镜像挂到软驱 0，按目标声明的机型（<code>run.machine</code>）开机；没有设置 <code>firmware</code> 时在构建之前报“需要固件”，见下面与第 6 节</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>整机（<code>firmware-disk</code>）没有命令行入口，不论是否调试运行都经调试服务启动（独立的用户数据目录与调试端口，同下一条）：依次 <code>machines.setRom</code>（Ember 把 ROM 复制进自己的 ROM 目录）、<code>machines.boot</code>（上电、不运行）、<code>media.floppyInsert</code>（放入构建生成的磁盘镜像，里面有程序与项目 <code>disk</code> 目录下的文件；配置里 <code>disk</code> 为 <code>false</code> 时运行前另外生成）。普通运行时，再让机器进入 DOS 并输入程序名、回车，随后 <code>runtime.resume</code>，扩展断开调试连接，Ember 留在运行状态；调试运行时停在开机状态，程序还没有被运行，要在 DOS 里输入程序名才运行。程序名只能用字母与数字，不合适时用 <code>fcdev.json</code> 的 <code>name</code> 改名。</li>
+<li>进入 DOS 的操作按机型不同：学习机 SB2000 开机运行 900 帧，SB-DOS 询问日期与时间，回车跳过两次；SB97 开机运行 200 帧后按空格跳过开机画面，等 300 帧菜单稳定后按左键选中“DOS”，回车进入，再等 120 帧出现提示符。按键都是按下 8 帧、松开 8 帧。</li>
+<li>普通运行（NES）：用 <code>--cartridge=&lt;产物&gt;</code> 启动 Ember，窗口打开并开始运行，任务立即结束。用的是 Ember 平时的用户数据目录（首选项、键位映射等设置照常生效），遵守 Ember 的单实例规则，见第 5 节。</li>
+<li>Ember 进程与扩展脱离，VS Code 关闭后窗口保持打开；工作目录是 Ember 所在目录。</li>
+<li>运行成功后输出“已启动 Ember（进程号），加载 ……”。Ember 没有“退出”请求，用完后关闭它的窗口，或按输出的进程号结束进程。</li>
+</ul>
+<h2 id="3-调试运行">3. 调试运行</h2>
+<p>命令“fcdev：调试运行”、任务 <code>run</code> 加 <code>&quot;debug&quot;: true</code>、<code>fcdev_run</code> 的 <code>debug</code> 参数：</p>
+<ul>
+<li>用独立的用户数据目录（系统临时目录下的 <code>fcdev-ember/&lt;端口&gt;</code>）、<code>--debug-port=&lt;端口&gt;</code> 与随机生成的令牌启动 Ember，不带 <code>--cartridge</code>；连上调试服务后用 <code>cartridges.load</code> 载入产物，上电但不运行（<code>powerOn</code> 为真、<code>resume</code> 为假）；之后用第 4 节的调试命令继续。独立的用户数据目录让调试用的 Ember 能和平时在用的 Ember 同时运行，互不影响设置；调试实例（带 <code>--debug-port</code> 启动）不会自行升级重启，调试中途不会被打断。</li>
+<li>启动前先检查端口是否被占用，被占用就报错，不去连接，避免连到别的 Ember；启动后最多等 30 秒，等到调试服务可连接并成功载入程序，超时则结束 Ember 进程并报错；Ember 在就绪前退出时立即报错。</li>
+<li>每次启动前清掉上一次留下的端点文件，保证客户端读到的是这一次的地址与令牌。</li>
+</ul>
+<h2 id="4-调试命令">4. 调试命令</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fcdev：调用调试请求</td>
+<td>选一个请求，输入参数后调用；结果写到“输出”面板的“fcdev 调试”</td>
+</tr>
+<tr>
+<td>fcdev：查看调试请求说明</td>
+<td>选一个请求或事件，显示参数、结果、错误码与示例</td>
+</tr>
+<tr>
+<td>fcdev：保存调试截图</td>
+<td>把当前画面保存为 PNG</td>
+</tr>
+<tr>
+<td>fcdev：监视调试事件</td>
+<td>订阅事件并逐行写到输出，取消或连接关闭时停止</td>
+</tr>
+<tr>
+<td>fcdev：显示调试服务地址</td>
+<td>显示正在运行的 Ember 的调试服务地址（令牌打码）</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>找到 Ember：先按设置 <code>fcdev.emulator.debugPort</code> 找调试运行启动的 Ember（读那个端口对应的用户数据目录里的端点文件，取得地址与令牌），没有端点文件再找 Ember 自己的用户数据目录，可以连到平时在用的 Ember（它要开启了调试服务）。也可以设置环境变量 <code>EMBER_DEBUG_URL</code>、<code>EMBER_DEBUG_TOKEN</code>、<code>EMBER_DEBUG_ENDPOINT</code>、<code>EMBER_USER_DATA</code> 指定位置。</li>
+<li>“调用调试请求”的参数写成 <code>key=value</code>（值按 JSON 解析，不是 JSON 就当字符串；<code>0x8000</code> 与 <code>$8000</code> 是十六进制数），或一个 JSON 对象。结果里有二进制数据（如读内存）时询问是否保存成文件。</li>
+<li><code>file</code> 参数（如 <code>inspector.traceStart</code> 的文件名）由 Ember 写进它的调试输出目录，调试运行时是用户数据目录里的 <code>debug-output</code>，结果里的 <code>file</code> 给出完整路径。</li>
+<li>请求默认最多等 60 秒。</li>
+<li>Copilot 的 <code>emu_*</code> 工具用同一个调试客户端，见 <a href="disasm.html">03-反汇编</a> 与扩展的 README。</li>
+</ul>
+<h3 id="41-常用操作">4.1 常用操作</h3>
+<p>下表的“请求”都用命令“fcdev：调用调试请求”调用，括号里是参数。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>要做的事</th>
+<th>请求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>看运行状态与卡带</td>
+<td><code>runtime.status</code></td>
+</tr>
+<tr>
+<td>运行 N 帧并等运行结束</td>
+<td><code>runtime.run</code>（<code>frames=N wait=true</code>）</td>
+</tr>
+<tr>
+<td>单步</td>
+<td><code>runtime.step</code>（<code>unit=instruction count=N</code>；<code>unit</code> 还有 <code>cycle</code>、<code>scanline</code>、<code>frame</code>）</td>
+</tr>
+<tr>
+<td>继续运行、暂停</td>
+<td><code>runtime.resume</code>、<code>runtime.pause</code></td>
+</tr>
+<tr>
+<td>复位</td>
+<td><code>runtime.reset</code>（<code>kind=soft</code>，或 <code>hard</code>）</td>
+</tr>
+<tr>
+<td>看寄存器与芯片状态</td>
+<td><code>inspector.getState</code>、<code>inspector.snapshot</code></td>
+</tr>
+<tr>
+<td>读内存</td>
+<td><code>inspector.readMemory</code>（<code>space=cpu address=0x8000 length=16</code>；数据是二进制，结果里会询问是否保存；<code>inspector.listSpaces</code> 列出全部空间）</td>
+</tr>
+<tr>
+<td>断点</td>
+<td><code>inspector.addBreakpoint</code>（<code>kind=execute address=0x8000</code>）</td>
+</tr>
+<tr>
+<td>截图</td>
+<td>命令“fcdev：保存调试截图”</td>
+</tr>
+<tr>
+<td>记录指令轨迹</td>
+<td><code>inspector.traceStart</code>（<code>kind=instruction file=trace.txt</code>），运行后 <code>inspector.traceStop</code>（<code>id=&lt;编号&gt;</code>）；文件用 <code>disasm_import_record</code> 导入反汇编工程</td>
+</tr>
+<tr>
+<td>记录代码与数据标记</td>
+<td><code>inspector.cdlStart</code>，运行后 <code>inspector.cdlSave</code>（<code>file=prg.cdl</code>）</td>
+</tr>
+<tr>
+<td>注入按键</td>
+<td><code>input.key</code>（<code>code=KeyW down=true</code>；<code>code</code> 是 <code>KeyboardEvent.code</code>，由卡带的 mapper 脚本翻译）、<code>input.pad</code>（<code>port=0 buttons=1</code>）</td>
+</tr>
+<tr>
+<td>订阅事件</td>
+<td>命令“fcdev：监视调试事件”（如 <code>runtime.*</code>）</td>
+</tr>
+</tbody>
+</table></div>
+<p>全部请求、参数与错误码用命令“fcdev：查看调试请求说明”查看。</p>
+<h2 id="5-限制">5. 限制</h2>
+<ul>
+<li>学习机的运行方式是自动在 SB-DOS 里输入程序名，靠固定的帧数等待 DOS 启动（开机运行 900 帧后直接按两次回车，调试服务里不限速、几秒完成）；换了别的 BIOS 或磁盘时提示的出现时间不同，就会输错位置，这时用调试运行启动，自己用调试命令操作。</li>
+<li>普通运行（NES）遵守 Ember 的单实例规则：平时用的 Ember 已经在运行时，新启动的进程只会把已有窗口提到前面，不会载入新程序（Ember 首选项里开启“允许同时运行多个实例”后不受此限，会打开新窗口）；这时先关闭 Ember，或改用调试运行（独立的用户数据目录，不受影响）。学习机目标不受影响，它总是用独立的用户数据目录。</li>
+<li>不发布任何 BIOS 或 ROM，由用户经 <code>firmware</code> 提供（学习机目标必填）。</li>
+</ul>
+<h2 id="6-学习机在-ember-里的调试">6. 学习机在 Ember 里的调试</h2>
+<p>学习机调试运行后，机器已开机、磁盘在软驱 0 里、没有运行，操作与 NES 相同，另有：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>要做的事</th>
+<th>请求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>在 SB-DOS 里敲键</td>
+<td><code>input.key</code>（<code>code=KeyA down=true</code>），运行几帧后 <code>down=false</code>；回车是 <code>Enter</code>，不要连续几帧不运行就松开，BIOS 来不及读到</td>
+</tr>
+<tr>
+<td>手柄、鼠标</td>
+<td><code>input.pad</code>（<code>port=0 buttons=1</code>）、<code>input.mouse</code>（<code>kind=move dx=10 dy=5</code>、<code>kind=down buttons=1</code>）</td>
+</tr>
+<tr>
+<td>把软驱里被程序改写的盘片存回镜像文件</td>
+<td><code>media.floppySave</code>（<code>drive=0</code>）</td>
+</tr>
+<tr>
+<td>取出、重新放入盘片</td>
+<td><code>media.floppyEject</code>（<code>drive=0</code>）、<code>media.floppyInsert</code>（<code>drive=0 path=&lt;镜像&gt;</code>）</td>
+</tr>
+</tbody>
+</table></div>
+</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="build.html" class="doc-pager__prev"><span>上一页 · fcdev 开发手册</span>构建</a><a href="disasm.html" class="doc-pager__next"><span>下一页 · fcdev 开发手册</span>反汇编</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

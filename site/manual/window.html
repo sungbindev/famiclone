@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="使用说明：窗口、菜单与快捷键"/><title>窗口、菜单与快捷键 · 使用说明 · Ember 与 fcdev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 fcdev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="start.html"><span>Ember 模拟器</span></a><a class="ui-button ui-button--ghost" href="../fcdev/index.html"><span>fcdev 扩展</span></a><a class="ui-button ui-button--ghost" href="index.html"><span>帮助文档</span></a><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section" open=""><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">简介</a></li><li><a class="site-nav__link" href="start.html">快速开始</a></li><li><a class="site-nav__link site-nav__link--active" href="window.html" aria-current="page">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="preferences.html">首选项</a></li><li><a class="site-nav__link" href="faq.html">常见问题</a></li><li><a class="site-nav__link" href="changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>fcdev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">使用说明</a><span aria-hidden="true">›</span><span aria-current="page">窗口、菜单与快捷键</span></nav><header class="doc-head"><p class="kicker">使用说明</p><h1 class="ui-title doc-title">窗口、菜单与快捷键</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#窗口的组成">窗口的组成</a></li><li class="toc-sub"><a href="#底部面板">底部面板</a></li><li class="toc-sub"><a href="#运行按钮的含义">运行按钮的含义</a></li><li class="toc-sub"><a href="#通知">通知</a></li><li><a href="#菜单">菜单</a></li><li><a href="#检查更新">检查更新</a></li><li><a href="#默认快捷键">默认快捷键</a></li><li><a href="#键盘跟着画面走">键盘跟着画面走</a></li><li><a href="#全屏">全屏</a></li></ul></div></div></nav><article class="doc"><h2 id="窗口的组成">窗口的组成</h2>
+<ul>
+<li><strong>标题栏</strong>：应用图标、名称和菜单，右侧是系统的窗口按钮；有新版本可以安装时，窗口按钮左边会出现一个蓝色的“更新”按钮。</li>
+<li><strong>显示区</strong>：模拟器的运行画面，居中显示，周围是底色。</li>
+<li><strong>底部面板</strong>：平时收起，点系统栏左侧的按钮才展开，里面有“运行”和“设备”两个面板。</li>
+<li><strong>系统栏</strong>：窗口最下面一条。左侧是运行按钮、设备按钮、主机型号、已载入的软盘名、卡带名和 mapper 插件；右侧是“调试模式”提示（调试服务开启时才有）和通知按钮。</li>
+</ul>
+<p>没有信息的项目不显示。比如没有开机时看不到卡带和 mapper 插件，整机机型开机后只显示主机型号，经典 FC 不显示主机型号。</p>
+<h3 id="底部面板">底部面板</h3>
+<ul>
+<li>点系统栏左侧的按钮展开对应的面板，再点同一个按钮收起；点另一个按钮切换面板。面板标题行右上角的“关闭”也能收起。</li>
+<li>运行与设备两个面板的标题栏有“自动收缩”开关，默认开着，开着时点面板以外的地方会自动收起面板，在面板里操作不会；想让面板一直展开，点一下开关关掉它。两个面板各自记住自己的开关。</li>
+<li>面板的高度由内容决定，刚好装下面板里的内容，不能拖动；运行面板和设备面板各有各的高度。</li>
+<li>展开面板时窗口大小不变，运行画面按剩下的空间等比缩放。</li>
+</ul>
+<h3 id="运行按钮的含义">运行按钮的含义</h3>
+<p>系统栏里运行按钮的图标会显示当前状态：运行中是填满绿色的三角形，暂停时是暂停图标，没有开机或已断电是普通三角形。把鼠标停在上面能看到文字说明。</p>
+<h3 id="通知">通知</h3>
+<p>操作结果和错误提示以通知的形式出现在窗口右下角。点系统栏右侧的通知按钮可以查看。</p>
+<h2 id="菜单">菜单</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>菜单</th>
+<th>菜单项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文件</td>
+<td>打开卡带、最近打开、关闭卡带、退出</td>
+</tr>
+<tr>
+<td>机器</td>
+<td>选择机型、开机或断电、暂停或继续、软复位、硬复位、静音、接入 Family BASIC 键盘</td>
+</tr>
+<tr>
+<td>设置</td>
+<td>手柄设置、机型与 ROM、mapper 插件、首选项、全屏、窗口始终置顶</td>
+</tr>
+<tr>
+<td>帮助</td>
+<td>帮助文档、更新记录、打开日志目录、检查更新、关于 Ember</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>“机器”菜单里的“静音”和“接入 Family BASIC 键盘”是勾选项；“设置”菜单里的“全屏”（快捷键 <code>F11</code>，全屏时只显示画面，再按 <code>F11</code> 回到窗口）和“窗口始终置顶”也是勾选项，“窗口始终置顶”只对当前这次运行有效，下次启动恢复为不置顶。</li>
+<li>“关闭卡带”只对卡带有效；用 ROM 开机的整机机型不涉及卡带。</li>
+<li>菜单项置灰表示现在不能用，比如没有开机时暂停与复位都是灰的。</li>
+<li>“关于 Ember”里显示应用信息（右上角是版本、核心版本与编译时间）、许可证和项目地址。项目地址直接指向 GitHub 上的 <code>famiclone/ember</code> 子目录，点链接会用系统浏览器打开。</li>
+<li>对话框的标题栏左边是 Ember 的图标，右边和主窗口一样有最小化、最大化和关闭三个按钮；在对话框里点最小化会把 Ember 整个最小化，从任务栏还原后对话框一起回来。对话框打开时不聚焦到某个按钮或链接上，<code>Esc</code> 仍然可以关闭它。</li>
+<li>“帮助文档”和“更新记录”用系统默认浏览器打开；Windows 7 上的默认浏览器如果太旧（比如 Internet Explorer 11），请先安装较新的浏览器。</li>
+</ul>
+<h2 id="检查更新">检查更新</h2>
+<p>Ember 可以自己升级（只支持 Windows，只替换 <code>Ember.exe</code> 这一个文件）：</p>
+<ul>
+<li>首选项“更新”分组里的“启动时检查更新”打开时（默认打开），每次启动后 Ember 会自动检查一次新版本；有新版本时在后台下载，下载好后弹出通知，没有新版本或检查失败时不打扰。</li>
+<li>想马上检查，点“帮助→检查更新”：会通知“正在检查更新…”，之后告诉你已是最新版本、发现新版本，或检查失败的原因。检查和下载期间这一项是灰的。</li>
+<li>新版本下载好后，这一项变成“重启并安装更新（版本号）”，标题栏右侧（系统窗口按钮左边）同时出现蓝色的“更新”按钮；点其中任何一个，Ember 会先正常退出，再自动重新启动并使用新版本。不点也可以，下次启动就是新版本。</li>
+<li>放在不能写入的文件夹里（比如 <code>Program Files</code>）时不支持升级，点“检查更新”会提示“当前运行方式不支持检查更新。”；把 <code>Ember.exe</code> 放到可以写入的文件夹里即可。用启动参数 <code>--debug-port</code> 启动的调试实例（如 fcdev 扩展的“调试运行”）也不支持升级。</li>
+<li>升级后第一次启动新版本时，Ember 会自动打开帮助文档里的<a href="changelog.html">更新记录</a>，告诉你这个版本有什么变化，每个版本只打开一次；以后想再看，点“帮助→更新记录”。第一次使用时不会打开。</li>
+</ul>
+<h2 id="默认快捷键">默认快捷键</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>快捷键</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>打开卡带</td>
+<td><code>Ctrl+O</code></td>
+</tr>
+<tr>
+<td>开机或断电</td>
+<td><code>F9</code></td>
+</tr>
+<tr>
+<td>暂停或继续</td>
+<td><code>F8</code></td>
+</tr>
+<tr>
+<td>软复位</td>
+<td><code>F7</code></td>
+</tr>
+<tr>
+<td>硬复位</td>
+<td><code>Ctrl+F7</code></td>
+</tr>
+<tr>
+<td>全屏</td>
+<td><code>F11</code></td>
+</tr>
+<tr>
+<td>首选项</td>
+<td><code>Ctrl+,</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>快捷键暂时不能自己修改。</li>
+<li>焦点在文本输入框里时，不带 <code>Ctrl</code> 的快捷键（<code>F7</code>、<code>F8</code>、<code>F9</code>、<code>F11</code>）不触发，带 <code>Ctrl</code> 的照常触发。</li>
+<li>命令置灰时，对应的快捷键也不起作用。</li>
+</ul>
+<h2 id="键盘跟着画面走">键盘跟着画面走</h2>
+<p>主窗口里点过任何地方后，焦点都会回到画面，不用专门点进画面里，键盘就能继续输入；打开菜单期间不抢焦点，菜单关闭后再还给画面。</p>
+<p>玩经典 FC 游戏时，Ember 不独占键盘：<code>F1</code> 到 <code>F24</code>、<code>Tab</code>、<code>Esc</code> 和带 <code>Ctrl</code>、<code>Alt</code>、<code>Meta</code> 的组合键不会送给游戏，留给 Ember 的快捷键和菜单（<code>Alt+F</code> 等）；其余按键照常送给游戏。</p>
+<p>在 Windows 上，运行学习机（包括金字塔学习机与裕兴学习机），或者接入了 Family BASIC 键盘时，画面获得焦点期间 Ember 会独占键盘：所有物理按键，包括 Esc、Tab、其余 F 键以及带 Ctrl、Alt 的组合，都只交给模拟的机器，Ember 收不到，所以这时 <code>F7</code>、<code>F8</code> 等快捷键和 <code>Alt</code> 加字母的菜单键都不生效，要用鼠标操作菜单和面板按钮；只有 <code>F9</code>、<code>F10</code>、<code>F11</code>、<code>F12</code> 始终留给 Ember（学习机的键盘没有这几个键），所以 <code>F9</code> 开机与断电、<code>F11</code> 全屏任何时候都有效。画面右下角的提示框会提醒“键盘已被机器独占，快捷键无效”。独占在这些情况下结束：</p>
+<ul>
+<li>切换到别的窗口（如 <code>Alt+Tab</code>）；</li>
+<li>关闭窗口。</li>
+</ul>
+<p><code>Win</code> 键、<code>Ctrl+Alt+Del</code> 与 <code>Alt+Tab</code> 仍由系统处理。其他系统上没有独占，F1 到 F24、Tab、Esc 和带 <code>Ctrl</code>、<code>Alt</code>、<code>Meta</code> 的组合键不会送给机器。</p>
+<h2 id="全屏">全屏</h2>
+<p>按 <code>F11</code> 进入或退出全屏，全屏时只显示画面。所有机型的键盘最高只到 <code>F8</code>，<code>F9</code> 到 <code>F12</code> 始终留给 Ember，所以键盘被机器独占时 <code>F11</code> 也有效。</p>
+<p>全屏时画面默认保持比例，四周留黑边；想让画面铺满整个显示器，在“设置→首选项”的“画面”分组里把“全屏时的画面”改成“拉伸铺满”，见<a href="display-sound.html">画面与声音</a>。</p>
+</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="start.html" class="doc-pager__prev"><span>上一页 · 使用说明</span>快速开始</a><a href="machines.html" class="doc-pager__next"><span>下一页 · 使用说明</span>机型与 ROM</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="插件开发手册：脚本接口"/><title>脚本接口 · 插件开发手册 · Ember 与 fcdev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 fcdev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="../manual/start.html"><span>Ember 模拟器</span></a><a class="ui-button ui-button--ghost" href="../fcdev/index.html"><span>fcdev 扩展</span></a><a class="ui-button ui-button--ghost" href="../manual/index.html"><span>帮助文档</span></a><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section" open=""><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li><li><a class="site-nav__link" href="quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="package.html">插件包与安装</a></li><li><a class="site-nav__link" href="manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link site-nav__link--active" href="script.html" aria-current="page">脚本接口</a></li><li><a class="site-nav__link" href="recipes.html">常见写法</a></li><li><a class="site-nav__link" href="debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>fcdev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">脚本接口</span></nav><header class="doc-head"><p class="kicker">插件开发手册</p><h1 class="ui-title doc-title">脚本接口</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#基本写法">基本写法</a></li><li><a href="#回调">回调</a></li><li><a href="#宿主对象-ctx">宿主对象 ctx</a></li><li class="toc-sub"><a href="#窗口-ctxwindowid">窗口 ctx.window(id)</a></li><li class="toc-sub"><a href="#计时器-ctxtimer">计时器 ctx.timer</a></li><li><a href="#键盘与鼠标">键盘与鼠标</a></li><li><a href="#磁带机">磁带机</a></li><li><a href="#沙箱与限制">沙箱与限制</a></li></ul></div></div></nav><article class="doc"><p>脚本是包里的 <code>main.js</code>，用来补充清单写不出的逻辑。这一页列出脚本能导出什么、Ember 给脚本什么对象、有哪些限制。</p>
+<h2 id="基本写法">基本写法</h2>
+<p>脚本是单个 ES 模块，默认导出一个对象，对象上的函数就是回调：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  reset</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">kind</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  read</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">bus</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">addr</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">bus</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">addr</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">value</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onTimer</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">name</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onCircuit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">id</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onA12</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onKey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">event</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onMouse</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">event</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onTapeEdge</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">level</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">samples</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {},</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  tables: { </span><span style="color:#6F42C1;--shiki-dark:#B392F0">表标识</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">...</span><span style="color:#E36209;--shiki-dark:#FFAB70">各来源的值</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {} }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
+<span class="line"></span></code></pre></div>
+<ul>
+<li>每个导出都是可选的，只写用得到的。</li>
+<li>脚本里不能 <code>import</code>，也不能引用别的文件；需要的辅助函数直接写在同一个文件里。</li>
+<li>函数都是同步的，没有 <code>Promise</code> 与定时器，顶层不能 <code>await</code>。</li>
+<li>第一个参数 <code>ctx</code> 是 Ember 给的宿主对象，脚本与硬件之间的一切都经它进行。</li>
+</ul>
+<h2 id="回调">回调</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>回调</th>
+<th>什么时候调用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reset(ctx, kind)</code></td>
+<td>复位时。<code>kind</code> 是 <code>'power'</code>（上电）或 <code>'soft'</code>（软复位）。上电复位时，Ember 先把窗口回到 <code>initial</code>、状态清零、名称表回到初始连法、释放中断，再调用 <code>reset</code>；软复位只调用 <code>reset</code>，窗口与状态保持不变，要不要改由脚本自己决定</td>
+</tr>
+<tr>
+<td><code>read(ctx, bus, addr)</code></td>
+<td>CPU 或 PPU 读一个声明为 <code>read: true</code> 的寄存器。返回 0 到 255 的整数；返回 <code>undefined</code> 表示不驱动总线</td>
+</tr>
+<tr>
+<td><code>write(ctx, bus, addr, value)</code></td>
+<td>写一个声明为 <code>write: true</code> 的寄存器</td>
+</tr>
+<tr>
+<td><code>onTimer(ctx, name)</code></td>
+<td><code>ctx.timer.after(name, 周期数)</code> 登记的计时到期</td>
+</tr>
+<tr>
+<td><code>onCircuit(ctx, id)</code></td>
+<td>声明式寄存器把写入交给电路之后，可以在这里按电路的新状态重算窗口</td>
+</tr>
+<tr>
+<td><code>onA12(ctx)</code></td>
+<td>PPU 地址线 A12 出现一次上升沿；A12 先连续低过 4 次显存访问再变高才算一次（滤掉取图块时的短暂低电平）。脚本导出了它，卡带才会收到显存地址</td>
+</tr>
+<tr>
+<td><code>onKey(ctx, event)</code></td>
+<td>键盘事件，见下面的“键盘与鼠标”</td>
+</tr>
+<tr>
+<td><code>onMouse(ctx, event)</code></td>
+<td>鼠标事件，见下面的“键盘与鼠标”</td>
+</tr>
+<tr>
+<td><code>onTapeEdge(ctx, level, samples)</code></td>
+<td>磁带数据线翻转，见下面的“磁带机”</td>
+</tr>
+<tr>
+<td><code>tables.&lt;表标识&gt;</code></td>
+<td>查表的一个表项，见<a href="registers.html">寄存器与状态</a></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>清单里声明了 <code>read: true</code> 的寄存器，就必须实现 <code>read</code>；声明了 <code>write: true</code>，就必须实现 <code>write</code>。</li>
+<li><code>bus</code> 是 <code>'cpu'</code> 或 <code>'ppu'</code>，<code>addr</code> 是访问的地址。</li>
+<li>读回调只能返回整个字节：没有“只驱动其中几位，其余位保持总线上最近的值”的办法；芯片没有驱动的位按 0 返回。</li>
+</ul>
+<h2 id="宿主对象-ctx">宿主对象 ctx</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>成员</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx.header</code></td>
+<td>只读的卡带描述（mapper 号、变体、大小、镜像、校验值等），字段见<a href="manifest.html">清单：基本字段与匹配</a></td>
+</tr>
+<tr>
+<td><code>ctx.window(id)</code></td>
+<td>窗口，见下</td>
+</tr>
+<tr>
+<td><code>ctx.state</code></td>
+<td>已声明状态的读写，如 <code>ctx.state.prgBank = 5</code></td>
+</tr>
+<tr>
+<td><code>ctx.storage(id)</code></td>
+<td>存储区：<code>size</code>、<code>read(offset)</code>、<code>write(offset, value)</code>；ROM 拒绝写入，返回 <code>false</code></td>
+</tr>
+<tr>
+<td><code>ctx.peek(address)</code></td>
+<td>按卡带自己的 CPU 侧窗口读一个字节，不经过寄存器，没有副作用；窗口没有映射或不驱动数据线时返回 <code>undefined</code>；地址不在 0 到 65535 之间抛出 <code>RangeError</code></td>
+</tr>
+<tr>
+<td><code>ctx.nametable</code></td>
+<td><code>set(mode)</code>：<code>horizontal</code>、<code>vertical</code>、<code>single0</code>、<code>single1</code>、<code>four</code>；<code>map(slot, source, bank)</code>：清单为 <code>custom</code> 时逐个槽映射</td>
+</tr>
+<tr>
+<td><code>ctx.irq</code></td>
+<td>卡带的中断引脚：<code>assert()</code> 拉低，<code>release()</code> 释放</td>
+</tr>
+<tr>
+<td><code>ctx.busConflict.set(enabled)</code></td>
+<td>设置写寄存器时是否发生总线冲突</td>
+</tr>
+<tr>
+<td><code>ctx.cycle()</code></td>
+<td>自上电起的 CPU 周期数</td>
+</tr>
+<tr>
+<td><code>ctx.timer</code></td>
+<td><code>after(name, cpuCycles)</code> 登记计时，<code>cancel(name)</code> 取消，见下</td>
+</tr>
+<tr>
+<td><code>ctx.circuit(id)</code></td>
+<td>清单里的电路：<code>write(addr, value)</code>、<code>get(name)</code>、<code>bank('program' 或 'character', addr)</code></td>
+</tr>
+<tr>
+<td><code>ctx.settings.get(key)</code></td>
+<td>读设置项，目前只有清单里的默认值</td>
+</tr>
+<tr>
+<td><code>ctx.random(max)</code></td>
+<td>返回 0 到 <code>max - 1</code> 的整数，<code>max</code> 为 1 到 2147483648</td>
+</tr>
+<tr>
+<td><code>ctx.log.warn(message)</code></td>
+<td>记一条警告，目前不会显示在任何地方</td>
+</tr>
+<tr>
+<td><code>ctx.keys.isDown(code)</code></td>
+<td>物理键现在是否按着，见“键盘与鼠标”</td>
+</tr>
+<tr>
+<td><code>ctx.pad(port)</code></td>
+<td>手柄口：<code>set(button, down)</code>、<code>release()</code>，见“键盘与鼠标”</td>
+</tr>
+<tr>
+<td><code>ctx.device('tape')</code></td>
+<td>磁带机，见“磁带机”</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="窗口-ctxwindowid">窗口 ctx.window(id)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>成员</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>setBank(n)</code></td>
+<td>切换 bank，<code>n</code> 按窗口的规则取模</td>
+</tr>
+<tr>
+<td><code>setOffset(bytes)</code></td>
+<td>按字节偏移映射，按存储区容量取模</td>
+</tr>
+<tr>
+<td><code>unmap()</code></td>
+<td>取消映射：读到开放总线，写被丢弃；再调用 <code>setBank</code> 或 <code>setOffset</code> 重新映射</td>
+</tr>
+<tr>
+<td><code>bankCount</code></td>
+<td>只读：当前绑定的存储区里有几个窗口大小的 bank，至少 1，用来写“倒数第 n 个 bank”</td>
+</tr>
+<tr>
+<td><code>select(存储区标识, bank)</code></td>
+<td>切到清单里该窗口列出的另一个存储区并选 bank，<code>bank</code> 默认 0；不在列表里抛出 <code>RangeError</code></td>
+</tr>
+<tr>
+<td><code>setAccess('r' 或 'rw')</code></td>
+<td>写保护或允许写入，上电复位回到清单的 <code>access</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="计时器-ctxtimer">计时器 ctx.timer</h3>
+<ul>
+<li><code>after(name, cpuCycles)</code>：登记一个计时，<code>cpuCycles</code> 个 CPU 周期之后调用 <code>onTimer(ctx, name)</code>；周期数为 1 到 2 的 40 次方。同名的计时还在等待时先取消再重新登记。</li>
+<li><code>cancel(name)</code>：取消。</li>
+<li>时间单位是 CPU 周期，由 Ember 的调度器预测到期时刻，脚本不逐周期运行；复位取消全部计时；同时最多 32 个不同的名字。</li>
+<li>要实现 CPU 周期计数的中断：写寄存器时用 <code>ctx.cycle()</code> 算出到期周期，登记计时，到点在 <code>onTimer</code> 里拉低中断，见<a href="recipes.html">常见写法</a>。</li>
+</ul>
+<h2 id="键盘与鼠标">键盘与鼠标</h2>
+<p>手柄按键不由脚本产生：游戏手柄的事件与键盘按键，由手柄设置里的绑定换算成手柄口的按键，所以脚本不需要写通用的键位。没有被手柄绑定截下的键盘事件（没有绑定的键，或键盘属于机器时）与鼠标事件才交给卡带的脚本，用来实现这张卡带自己的外设或热键。没有导出对应回调的卡带忽略这类事件。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>回调</th>
+<th>事件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>onKey(ctx, event)</code></td>
+<td><code>{ code, down }</code></td>
+<td><code>code</code> 是物理键位（<code>KeyboardEvent.code</code>，如 <code>KeyW</code>、<code>Space</code>、<code>Numpad1</code>），<code>down</code> 为按下或松开；按住不放的重复按下不上报；已被手柄绑定截下的按下事件不会到这里，松开事件总是同时交给脚本</td>
+</tr>
+<tr>
+<td><code>onMouse(ctx, event)</code></td>
+<td><code>{ kind, x, y, dx, dy, buttons, wheel }</code></td>
+<td><code>kind</code> 是 <code>move</code>、<code>down</code>、<code>up</code>、<code>wheel</code>、<code>leave</code>；<code>x</code>、<code>y</code> 是指针在标准画面（256×240）上的坐标，指针在画面之外时可以超出范围；<code>dx</code>、<code>dy</code> 是相对上一次事件的位移；<code>buttons</code> 是事件之后按住的按键位（1 左键、2 右键、4 中键）；<code>wheel</code> 向下为正，约一格为 1，只有 <code>wheel</code> 事件不为 0</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>要接收鼠标事件，清单里要声明 <code>&quot;devices&quot;: [&quot;mouse&quot;]</code>，否则经典 FC 不会把鼠标交给这张卡带。</li>
+<li><code>ctx.keys.isDown(code)</code> 读到的是这次事件之后的状态，写组合键用它。</li>
+<li><code>ctx.pad(port).set(button, down)</code>：按下或松开手柄口 <code>port</code> 的一个键。经典 FC 的 <code>port</code> 是 0 和 1，<code>button</code> 是 <code>a</code>、<code>b</code>、<code>select</code>、<code>start</code>、<code>up</code>、<code>down</code>、<code>left</code>、<code>right</code>；<code>ctx.pad(port).release()</code> 松开这个口的全部按键。参数不合法按脚本错误处理。</li>
+<li>事件按到达的顺序在模拟线程里执行，最迟在下一帧开始前生效。</li>
+<li>Windows 上画面区获得焦点期间，所有物理按键（包括 Esc、Tab、F 键与 Ctrl、Alt 组合）都上报；其他平台不上报 F1 到 F24、Tab、Escape 与带 Ctrl、Alt、Meta 的组合键，修饰键本身照常上报。</li>
+</ul>
+<p>示例：按住右 Shift 时，F 键当作手柄 2 的开始键：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  onKey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">event</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (event.code </span><span style="color:#D73A49;--shiki-dark:#F97583">===</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'KeyF'</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ctx.keys.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">isDown</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'ShiftRight'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)) ctx.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">pad</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">).</span><span style="color:#6F42C1;--shiki-dark:#B392F0">set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'start'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, event.down);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="磁带机">磁带机</h2>
+<p>声像磁带的卡带把磁带机的数据线接在卡上。磁带机是独立于主机的设备，主机通电时才能播放，播放时按模拟时间推进。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx.device('tape').level()</code></td>
+<td>数据线现在的电平，0 或 1；没有播放时是“静音”对应的电平</td>
+</tr>
+<tr>
+<td><code>ctx.device('tape').setComparator(low, high, invert)</code></td>
+<td>设置比较器：数据线取磁带右声道，采样不低于 <code>high</code> 为 1、不高于 <code>low</code> 为 0，之间保持原值；<code>invert</code> 为 <code>true</code> 时输出取反；<code>low</code>、<code>high</code> 是 -32768 到 32767 的整数且 <code>low</code> 小于 <code>high</code>，否则抛出 <code>RangeError</code>；默认是 -3072、3072、不取反；通常在 <code>reset</code> 里设置</td>
+</tr>
+<tr>
+<td><code>onTapeEdge(ctx, level, samples)</code></td>
+<td>数据线翻转时调用：<code>level</code> 是翻转后的电平，<code>samples</code> 是距上一次翻转的采样数（96 kHz；播放刚开始时是距开始播放的采样数）；只在播放时发生</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>磁带的接线用清单的 <code>tape</code> 就能写出来（见<a href="registers.html">寄存器与状态</a>）；<code>ctx.device('tape')</code> 与 <code>onTapeEdge</code> 用于清单写不出的磁带逻辑。</li>
+<li>主机没有磁带机时，<code>ctx.device('tape')</code> 抛出 <code>RangeError</code>。</li>
+<li><code>level()</code> 只给当前电平；需要精确的边沿时刻用 <code>onTapeEdge</code>。</li>
+</ul>
+<h2 id="沙箱与限制">沙箱与限制</h2>
+<ul>
+<li>脚本不能访问文件、网络、进程、系统时间。没有 <code>Date</code>、<code>console</code>、<code>performance</code>、<code>setTimeout</code>、<code>fetch</code>、<code>process</code>、<code>require</code>，<code>Math.random</code> 被删除；用到它们会得到 <code>ReferenceError</code> 或 <code>TypeError</code>。需要随机数用 <code>ctx.random</code>，它由卡带固定的种子决定，每次上电复位后从头开始，所以同样的操作得到同样的结果。</li>
+<li><code>ctx</code> 与其中的窗口、存储区对象都是冻结的，<code>ctx.state</code> 不能增加属性。</li>
+<li>参数不合法（bank 不是整数或为负、标识不存在、存储区偏移越界、写入值不在 0 到 255、名称表连法不认识）会抛出 <code>RangeError</code> 或 <code>TypeError</code>，按脚本错误处理。</li>
+<li>读返回的值必须是 0 到 255 的整数或 <code>undefined</code>，否则按脚本错误处理。</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>运行时内存</td>
+<td>32 MB</td>
+</tr>
+<tr>
+<td>栈</td>
+<td>256 KB</td>
+</tr>
+<tr>
+<td>一次回调的时长</td>
+<td>超过 50 毫秒即终止</td>
+</tr>
+<tr>
+<td>同时登记的计时名字</td>
+<td>最多 32 个</td>
+</tr>
+</tbody>
+</table></div>
+<p>超出限制或脚本抛出异常时，模拟器暂停并报告：超时、内存或栈超限是 <code>mappers.limitExceeded</code>，其他异常与不合法的返回值是 <code>mappers.scriptError</code>，说明里带插件标识与脚本位置。脚本顶层代码（加载阶段）同样受时长与内存限制。出错后卡带不再调用脚本，复位后才恢复。处理办法见<a href="debugging.html">测试与排错</a>。</p>
+<p>脚本只在寄存器访问、查表首次计算、复位、计时、输入与磁带翻转时被调用，所以不会拖慢普通的程序执行；但每次回调仍有开销（约几微秒到十几微秒），访问特别频繁的寄存器要写成声明。</p>
+</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="registers.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>清单：寄存器与状态</a><a href="recipes.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>常见写法</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

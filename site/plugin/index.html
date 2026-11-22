@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="插件开发手册：概述"/><title>概述 · 插件开发手册 · Ember 与 fcdev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 fcdev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="../manual/start.html"><span>Ember 模拟器</span></a><a class="ui-button ui-button--ghost" href="../fcdev/index.html"><span>fcdev 扩展</span></a><a class="ui-button ui-button--ghost" href="../manual/index.html"><span>帮助文档</span></a><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section" open=""><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link site-nav__link--active" href="index.html" aria-current="page">概述</a></li><li><a class="site-nav__link" href="quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="package.html">插件包与安装</a></li><li><a class="site-nav__link" href="manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="script.html">脚本接口</a></li><li><a class="site-nav__link" href="recipes.html">常见写法</a></li><li><a class="site-nav__link" href="debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>fcdev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">概述</span></nav><header class="doc-head"><p class="kicker">插件开发手册</p><h1 class="ui-title doc-title">插件开发手册</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#mapper-插件是什么">mapper 插件是什么</a></li><li><a href="#能做什么不能做什么">能做什么，不能做什么</a></li><li><a href="#开发流程">开发流程</a></li><li><a href="#目前的限制">目前的限制</a></li><li><a href="#各页内容">各页内容</a></li></ul></div></div></nav><article class="doc"><p>这本手册教你给 Ember 写 mapper 插件：让模拟器能运行一种它还不认识的 FC 卡带，或者按你的想法改写某种卡带的行为。</p>
+<h2 id="mapper-插件是什么">mapper 插件是什么</h2>
+<p>红白机卡带上除了存放程序和图案的 ROM，还有一颗 mapper 芯片，负责把 CPU 与 PPU 的地址对应到 ROM 的哪一段、响应寄存器的写入、产生中断。不同卡带的 mapper 芯片各不相同。Ember 本身不内置任何 mapper，每一种都由一个插件描述；安装包里预装了覆盖常见卡带的一批官方插件。</p>
+<p>打开 <code>.nes</code> 文件时，Ember 读文件头里的 mapper 号和变体，找到匹配的插件，再按插件的描述造出这张卡带。找不到匹配的插件时卡带不能打开，提示里会写出缺少的 mapper 号和变体，这就是需要你写插件的时候。</p>
+<p>一个插件由两部分组成：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>部分</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>清单 <code>manifest.json</code></td>
+<td>描述卡带的硬件：有哪些存储区、地址怎么分段、有哪些寄存器、匹配哪些文件。能写成声明的都写在这里，由 Ember 直接执行</td>
+</tr>
+<tr>
+<td>脚本 <code>main.js</code></td>
+<td>可选。清单写不出的逻辑用 JavaScript 补充，如要计算的寄存器、定时中断</td>
+</tr>
+</tbody>
+</table></div>
+<p>很多简单的 mapper 只要清单就够了，不需要脚本。</p>
+<h2 id="能做什么不能做什么">能做什么，不能做什么</h2>
+<p>插件可以：</p>
+<ul>
+<li>声明卡带上的 ROM 与 RAM（含带电池的 RAM），文件里没有 CHR 时改用 CHR RAM。</li>
+<li>把 CPU 与 PPU 的地址范围划成窗口，窗口指向存储区的某一块，寄存器写入时切换。</li>
+<li>处理寄存器的读和写，控制名称表的连法，产生中断（按 CPU 周期定时，或按 PPU 地址线 A12 计数）。</li>
+<li>接上磁带机，处理键盘与鼠标事件。</li>
+</ul>
+<p>插件不能：</p>
+<ul>
+<li>访问文件、网络、进程与系统时间；脚本只能通过 Ember 给的 <code>ctx</code> 对象和硬件打交道。</li>
+<li>修改主机本身：主机型号、主板上的存储、芯片内部都不由插件决定。</li>
+<li>描述学习机整机。学习机的 ROM 不是卡带，不走插件，见<a href="../manual/machines.html">机型与 ROM</a>。</li>
+</ul>
+<h2 id="开发流程">开发流程</h2>
+<ol>
+<li>打开游戏，从提示里记下 mapper 号和变体。</li>
+<li>写清单，描述存储区、窗口和寄存器。</li>
+<li>清单不够用的地方再写脚本。</li>
+<li>把文件打成 <code>.emap</code> 包，在“设置→mapper 插件”里安装。</li>
+<li>重新打开卡带试运行；有问题时用调试服务观察状态。</li>
+</ol>
+<h2 id="目前的限制">目前的限制</h2>
+<ul>
+<li>没有开发工具包：脚本是单个 JavaScript 文件，没有类型声明和现成的测试工具，包要自己用压缩软件打。</li>
+<li>不能直接加载未打包的插件目录，改了要重新打包并安装。</li>
+<li>清单里的设置项（<code>settings</code>）还没有设置页，脚本读到的永远是清单里的默认值。</li>
+<li>带电池的 RAM 只在这次运行里保持，不会保存成存档文件。</li>
+<li>卡带还没有声音输出，带扩展声音的 mapper 做不了。</li>
+<li>脚本能访问的主机设备只有磁带机。</li>
+<li>脚本的 <code>ctx.log.warn</code> 目前不会显示在任何地方，排错时看卡带状态，见<a href="debugging.html">测试与排错</a>。</li>
+</ul>
+<h2 id="各页内容">各页内容</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>页面</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="quickstart.html">第一个插件</a></td>
+<td>从零写一个切换 bank 的插件，打包、安装并运行</td>
+</tr>
+<tr>
+<td><a href="package.html">插件包与安装</a></td>
+<td>包里能放什么，怎么打包，怎么安装、替换与卸载</td>
+</tr>
+<tr>
+<td><a href="manifest.html">清单：基本字段与匹配</a></td>
+<td>标识、版本、匹配规则，插件之间的优先级</td>
+</tr>
+<tr>
+<td><a href="memory.html">清单：存储区、窗口与名称表</a></td>
+<td>卡带上的存储芯片与地址译码</td>
+</tr>
+<tr>
+<td><a href="registers.html">清单：寄存器与状态</a></td>
+<td>寄存器的声明式处理、状态、查表、磁带、电路</td>
+</tr>
+<tr>
+<td><a href="script.html">脚本接口</a></td>
+<td>脚本能导出什么，<code>ctx</code> 提供什么，运行限制</td>
+</tr>
+<tr>
+<td><a href="recipes.html">常见写法</a></td>
+<td>切 bank、总线冲突、定时中断、扫描线中断等的现成写法</td>
+</tr>
+<tr>
+<td><a href="debugging.html">测试与排错</a></td>
+<td>出错时的表现，用调试服务观察与验证</td>
+</tr>
+</tbody>
+</table></div>
+<p>预装的官方插件是很好的参考：Ember 的应用目录（<code>app-版本号</code>）下的 <code>resources/plugins</code> 里每个 <code>.emap</code> 就是一个 zip 文件，复制一份把扩展名改成 <code>.zip</code> 就能解开看到清单和脚本。</p>
+</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="../manual/changelog.html" class="doc-pager__prev"><span>上一页 · 使用说明</span>更新记录</a><a href="quickstart.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>第一个插件</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

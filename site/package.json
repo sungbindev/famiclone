@@ -1,0 +1,26 @@
+{
+  "name": "famiclone-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "fcdev.cn 站点：首页、Ember 模拟器与 fcdev 扩展的介绍，以及两者的整套帮助文档，构建为静态页。",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "shiki": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5"
+  }
+}

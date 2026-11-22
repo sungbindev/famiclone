@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="fcdev 开发手册：SB2000 示例程序源码"/><title>SB2000 示例程序源码 · fcdev 开发手册 · Ember 与 fcdev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 fcdev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="../manual/start.html"><span>Ember 模拟器</span></a><a class="ui-button ui-button--ghost" href="index.html"><span>fcdev 扩展</span></a><a class="ui-button ui-button--ghost" href="../manual/index.html"><span>帮助文档</span></a><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section" open=""><summary>fcdev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="install.html">安装与入门</a></li><li><a class="site-nav__link" href="build.html">构建</a></li><li><a class="site-nav__link" href="emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="disasm.html">反汇编</a></li><li><a class="site-nav__link" href="create.html">新建项目与模板</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link site-nav__link--active" href="examples.html" aria-current="page">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb97.html">SB97 开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">fcdev 开发手册</a><span aria-hidden="true">›</span><span aria-current="page">SB2000 示例程序源码</span></nav><header class="doc-head"><p class="kicker">fcdev 开发手册</p><h1 class="ui-title doc-title">SB2000 示例程序源码</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#hello">hello</a></li><li><a href="#say">say</a></li><li><a href="#show">show</a></li><li><a href="#copy">copy</a></li><li><a href="#peek">peek</a></li><li><a href="#poke">poke</a></li><li><a href="#pad">pad</a></li><li><a href="#mouse">mouse</a></li><li><a href="#play">play</a></li><li><a href="#newcall">newcall</a></li><li><a href="#syscall">syscall</a></li></ul></div></div></nav><article class="doc"><!-- 本文件由 npm run help:build 从 vscode/targets/sb2000/examples-source.md 导入，不要手改 -->
+<p>本文由示例项目的源码生成。
+共 11 个示例，每个是一个 fcdev 项目：目录里有 <code>fcdev.json</code>（<code>target</code> 是 <code>sb2000</code>，<code>name</code> 是 DOS 里的程序名）和 <code>src/</code> 下的一个源文件，下面给出完整源码。每个示例做什么、怎么用见 <a href="sb2000.html">SB2000 开发指南</a> 第 10 节，源码开头的注释也有说明。</p>
+<p>把源码放进新建的项目后，用 fcdev 任务构建（<code>command</code> 为 <code>build</code>）、另外生成放有程序的软盘镜像（<code>disk</code>）、在 Ember 里运行（<code>run</code>），见 <a href="build.html">构建</a> 与 <a href="emulator.html">模拟器与调试</a>。</p>
+<h2 id="hello">hello</h2>
+<p>程序名 <code>HELLO</code>。</p>
+<p><code>src/hello.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：hello.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：最小的 SB-DOS 程序：显示英文与中文各一行，等待按键后返回 DOS。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：源文件用 UTF-8 保存，字符串里的汉字构建时自动转成学习机用的 GB2312；</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       返回 DOS 后 DOS 会清屏，所以显示后先等待按键。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Hello, SB2000!"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"你好，小霸王！"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="say">say</h2>
+<p>程序名 <code>SAY</code>。</p>
+<p><code>src/say.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：say.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：显示命令行参数的 SB-DOS 程序：在 DOS 下输入“say hello world”，屏幕上显示 HELLO WORLD。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：DOS 把程序名之后的部分转成大写，以零结尾放在扩展 RAM 的 SB_CMD_TAIL 起，第一个字节是分隔用的空格；</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       没有参数时第一个字节为 0，之后的内容是上一条命令的残留，不能显示。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       字符串要在程序窗口里才能交给 sb_puts，所以先复制进程序自己的缓冲。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 参数缓冲，最多显示 39 个字符 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">40</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_CMD_TAIL;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#E36209;--shiki-dark:#FFAB70">tail</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (count </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#D73A49;--shiki-dark:#F97583"> sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(text) </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#E36209;--shiki-dark:#FFAB70"> tail</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> tail</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">            ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">count;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(text);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="show">show</h2>
+<p>程序名 <code>SHOW</code>。</p>
+<p><code>src/show.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：show.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：显示文件开头内容的 SB-DOS 程序：在 DOS 下输入“show hello.txt”，显示文件的前 90 个字节（每行 30 个字符，共 3 行）。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：演示文件接口的标准顺序：取命令行参数 → 打开 → 取大小 → 读入 → 关闭；每个调用都检查出错码，出错时先关闭文件再显示“ERROR 码”。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       控制字符显示成“.”。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 一次最多显示的字节数 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> SHOW_BYTES</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 90</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 每行显示的字符数 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> LINE_CHARS</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 30</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> path</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">29</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[SHOW_BYTES];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> line</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[LINE_CHARS </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 从命令行取下一个以空格分隔的词放进 out，没有词时返回 0 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> **</span><span style="color:#E36209;--shiki-dark:#FFAB70">cursor</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#E36209;--shiki-dark:#FFAB70">out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> size</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (count </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 显示“ERROR 码”并等待按键 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> void</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> report_error</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> code</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_cursor_set_column</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"ERROR "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(code);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_CMD_TAIL;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> handle;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> error;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> int</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> int</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> start;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> int</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> n;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">!</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, path, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path))) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"USAGE: SHOW FILENAME"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path, SB_MODE_OPEN, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">handle);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        report_error</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(error);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_size</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">size);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">></span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">></span><span style="color:#24292E;--shiki-dark:#E1E4E8"> SHOW_BYTES </span><span style="color:#D73A49;--shiki-dark:#F97583">?</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> SHOW_BYTES </span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> int</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)size;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_read</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, data, count);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_file_close</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        report_error</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(error);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (count </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"(EMPTY FILE)"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (start </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; start </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count; start </span><span style="color:#D73A49;--shiki-dark:#F97583">+=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> LINE_CHARS) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        n </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> start </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> LINE_CHARS </span><span style="color:#D73A49;--shiki-dark:#F97583">?</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> start </span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> LINE_CHARS;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; error </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> n; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">error) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            line</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[error] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[start </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> error] </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">20</span><span style="color:#D73A49;--shiki-dark:#F97583"> ?</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '.'</span><span style="color:#D73A49;--shiki-dark:#F97583"> :</span><span style="color:#E36209;--shiki-dark:#FFAB70"> data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[start </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> error];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        line</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[n] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(line);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="copy">copy</h2>
+<p>程序名 <code>CP</code>。</p>
+<p><code>src/copy.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：copy.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：复制文件的 SB-DOS 程序：在 DOS 下输入“cp 源文件 目标文件”，把源文件整个复制成目标文件。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：程序名取 CP，避开 DOS 内部的 COPY 命令。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       演示整个文件的加载与保存：sb_file_load 把源文件读入新分配的扩展 RAM 页，sb_file_save 把这些页写成目标文件（已存在则覆盖），</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       最后释放页。出错时也要释放页，再显示“ERROR 码”。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> source</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">29</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> target</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">29</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 从命令行取下一个以空格分隔的词放进 out，没有词时返回 0 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> **</span><span style="color:#E36209;--shiki-dark:#FFAB70">cursor</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#E36209;--shiki-dark:#FFAB70">out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> size</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (count </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_CMD_TAIL;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> page </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> pages;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> error;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">!</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, source, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(source)) </span><span style="color:#D73A49;--shiki-dark:#F97583">||</span><span style="color:#D73A49;--shiki-dark:#F97583"> !</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, target, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(target))) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"USAGE: CP SRC DST"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_load</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(source, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">page, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">size);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_save</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(target, page, size);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    /* 空文件没有分配页，页号为 0 */</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    pages </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)((size </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 4095</span><span style="color:#D73A49;--shiki-dark:#F97583">UL</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">/</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 4096</span><span style="color:#D73A49;--shiki-dark:#F97583">UL</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (page </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> pages </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_page_free</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(page, pages);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"COPY OK"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_cursor_set_column</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"ERROR "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(error);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="peek">peek</h2>
+<p>程序名 <code>PEEK</code>。</p>
+<p><code>src/peek.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：peek.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：按偏移读文件的 SB-DOS 程序：在 DOS 下输入“peek 文件名 十六进制偏移”，显示文件里从该偏移起的 30 个字节。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：演示按偏移读取 sb_file_read：偏移不小于文件大小、或偏移加长度超过文件大小时出错码为 SB_ERR_BAD_POSITION（0x14）。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       省略偏移时从 0 开始；控制字符显示成“.”；出错时先关闭文件再显示“ERROR 码”。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 显示的字节数 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> SHOW_BYTES</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 30</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> path</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">29</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> offset_text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">9</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[SHOW_BYTES];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> line</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[SHOW_BYTES </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 从命令行取下一个以空格分隔的词放进 out，没有词时返回 0 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> **</span><span style="color:#E36209;--shiki-dark:#FFAB70">cursor</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#E36209;--shiki-dark:#FFAB70">out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> size</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (count </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 解析大写十六进制数，遇到非十六进制字符停止 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> parse_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#E36209;--shiki-dark:#FFAB70">text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> digit;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (; </span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">>=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '0'</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '9'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">            digit </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '0'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#D73A49;--shiki-dark:#F97583"> if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">>=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'A'</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'F'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">            digit </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">text </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'A'</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">            break</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        value </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (value </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 4</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">|</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> digit;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_CMD_TAIL;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> handle;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> error;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> offset </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">!</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, path, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path))) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"USAGE: PEEK FILE HEXOFFSET"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, offset_text, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(offset_text))) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        offset </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> parse_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(offset_text);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path, SB_MODE_OPEN, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">handle);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_cursor_set_column</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"ERROR "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(error);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_read</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle, offset, data, SHOW_BYTES);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_file_close</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_cursor_set_column</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"ERROR "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(error);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> SHOW_BYTES; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            line</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[i] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[i] </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">20</span><span style="color:#D73A49;--shiki-dark:#F97583"> ?</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '.'</span><span style="color:#D73A49;--shiki-dark:#F97583"> :</span><span style="color:#E36209;--shiki-dark:#FFAB70"> data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[i];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        line</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[SHOW_BYTES] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(line);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="poke">poke</h2>
+<p>程序名 <code>POKE</code>。</p>
+<p><code>src/poke.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：poke.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：按偏移写文件的 SB-DOS 程序：在 DOS 下输入“poke 文件名 十六进制偏移 文字”，把文字（大写）写进已有文件的该偏移处。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：演示按偏移写入 sb_file_write：以 SB_MODE_UPDATE 打开已有文件，写入范围不能超出文件当前大小（否则出错码 0x14），</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       关闭时才把改动写回目录项。文字最长 60 个字符；出错时先关闭文件再显示“ERROR 码”。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 文字的最大长度 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> TEXT_MAX</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 60</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> path</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">29</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> offset_text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">9</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[TEXT_MAX </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 从命令行取下一个以空格分隔的词放进 out，没有词时返回 0 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> **</span><span style="color:#E36209;--shiki-dark:#FFAB70">cursor</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#E36209;--shiki-dark:#FFAB70">out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> size</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (count </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> size </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">p;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    out</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[count] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">cursor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> p;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 解析大写十六进制数，遇到非十六进制字符停止 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> parse_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#E36209;--shiki-dark:#FFAB70">digits</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> long</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> digit;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (; </span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">>=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '0'</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '9'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">            digit </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '0'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#D73A49;--shiki-dark:#F97583"> if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">>=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'A'</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'F'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">            digit </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">digits </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'A'</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">            break</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        value </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (value </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 4</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">|</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> digit;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_CMD_TAIL;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> handle;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> error;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> length </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">!</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, path, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path)) </span><span style="color:#D73A49;--shiki-dark:#F97583">||</span><span style="color:#D73A49;--shiki-dark:#F97583"> !</span><span style="color:#6F42C1;--shiki-dark:#B392F0">next_word</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail, offset_text, </span><span style="color:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(offset_text))) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"USAGE: POKE FILE HEXOFF TEXT"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ' '</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        ++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x26;&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> length </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> TEXT_MAX) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[length</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">tail</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[length] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (length </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"USAGE: POKE FILE HEXOFF TEXT"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path, SB_MODE_UPDATE, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">handle);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        error </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_file_write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle, </span><span style="color:#6F42C1;--shiki-dark:#B392F0">parse_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(offset_text), text, length);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_file_close</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(handle);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (error </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"POKE OK"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_cursor_set_column</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"ERROR "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(error);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="pad">pad</h2>
+<p>程序名 <code>PAD</code>。</p>
+<p><code>src/pad.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：pad.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：测试手柄服务的 SB-DOS 程序：初始化后等待手柄按键，显示键码与两个手柄的状态，再等键盘按键后返回。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：显示格式：KEY xx P1 xx P2 xx，三个值依次是键码、1 号手柄与 2 号手柄的原始状态（位 7 为 A，位 0 为右）。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       在模拟器里用调试命令“pad 0 01”按下 1 号手柄 A，松开用“pad 0 clear”。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       从键盘启动程序时，回车键在启动后的一小段时间里还按着，模拟器把它当成手柄的开始键，所以先等 120 帧再初始化。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> key;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_wait_frames</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">120</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_pad_init</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"PRESS A PAD BUTTON"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    key </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sb_pad_wait</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"KEY "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" P1 "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#6F42C1;--shiki-dark:#B392F0">sb_pad_state</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">));</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" P2 "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#6F42C1;--shiki-dark:#B392F0">sb_pad_state</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">));</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="mouse">mouse</h2>
+<p>程序名 <code>MOUSE</code>。</p>
+<p><code>src/mouse.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：mouse.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：测试鼠标服务的 SB-DOS 程序：复位鼠标、设置坐标范围与初始坐标，等 250 帧后取坐标并显示。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：在模拟器里等程序显示“MOVE THE MOUSE”后，用调试命令“mouse move dx dy”移动鼠标，“mouse btn 掩码”注入按键。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       显示格式：X xx Y xx（十六进制），初始坐标是 X=80、Y=40；没有检测到鼠标时显示 NO MOUSE。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       第二行 B 后面依次是两个键的状态、双击、单击、拖动共 8 个字节。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> x;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> y;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i;</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">    sb_mouse_buttons_t</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> buttons;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">!</span><span style="color:#6F42C1;--shiki-dark:#B392F0">sb_mouse_reset</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"NO MOUSE"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    /* 鼠标中断要先允许，再设范围与初始坐标 */</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_irq_enable</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(SB_IRQ_SOURCE_MOUSE);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_mouse_set_limits</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">FF</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">FF</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_mouse_set_position</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">80</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">40</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"MOVE THE MOUSE"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_wait_frames</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">250</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_mouse_position</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">x, </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">y);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_mouse_buttons</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#24292E;--shiki-dark:#E1E4E8">buttons);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"X "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" Y "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(y);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"B"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(buttons.state[i]);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(buttons.double_click[i]);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(buttons.click[i]);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">" "</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_print_hex</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(buttons.drag[i]);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="play">play</h2>
+<p>程序名 <code>PLAY</code>。</p>
+<p><code>src/play.s</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>; ------------------------------------------------------------------------</span></span>
+<span class="line"><span>; 名称：play.s</span></span>
+<span class="line"><span>; 说明：在 DOS 下运行 .nes 游戏：play 文件名.nes，支持 mapper 0 与 mapper 4（MMC3），PRG、CHR 各不超过 128K。</span></span>
+<span class="line"><span>; 作者：sungbin</span></span>
+<span class="line"><span>; 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span>; 日期：2026-11-11</span></span>
+<span class="line"><span>; 备注：用 fcdev 构建任务构建 src 目录（程序入口是导出的 _main，由启动代码调用）；游戏文件名放在命令行，如 play mario.nes</span></span>
+<span class="line"><span>;       流程：取参数里的文件名 -> 打开 -> 取大小（超过 256K+16 就按 256K+16 读，文件末尾可能带说明文字）-> 分配页 -> 读入 -> 关闭</span></span>
+<span class="line"><span>;       -> 检查 iNES 头 -> 关 NMI -> PRG 先用 DMA 复制到 ERAM 缓冲 $6800-$77FF，再把目的页映射到 $B000 后用 CPU 复制过去，CHR 用 DMA 复制到扩展 RAM、扩展显存的第 3 个 128K 窗口（$5006=$FF）</span></span>
+<span class="line"><span>;       -> 把 PRG 里的 RESET 向量改为 ERAM $6100 的启动桩 -> 在 ERAM $6000 写 $5006、$4301 进入 FC 兼容模式。</span></span>
+<span class="line"><span>;       放置方式：MMC3 仿真下 $C000-$FFFF 固定为窗口末尾 16K，$8000-$BFFF 由 R6/R7 选 8K 页（R6/R7 只取低 4 位）。</span></span>
+<span class="line"><span>;       mapper 0：PRG 放在窗口末尾，启动桩把 R6/R7 设为末尾前的两个 8K（32K 为 12、13，16K 为 14、15）；</span></span>
+<span class="line"><span>;       mapper 4：PRG 放在窗口开头（银行号直接对应），PRG 不足 128K 时再把最后 16K 复制到窗口末尾，R6/R7 设为 0、1，之后游戏自己设置。</span></span>
+<span class="line"><span>;       CHR 放在扩展显存同一窗口开头，R0-R5 设为 0、2、4、5、6、7（与 CHR 顺序一致）。</span></span>
+<span class="line"><span>;       DMA 寄存器（$4048-$404F）：$4049 低 4 位与 bit4 为源（bit4=1 表示扩展 RAM），$404A/$404B 为源偏移（$404B 位 7 必须为 1，否则 DMA 不传输），</span></span>
+<span class="line"><span>;       $404C/$404D 为目的，$404E/$404F 为长度（字节数减 1）；$4048 写 $E0 为复制到 CPU 地址（目的在 $8000 以上写不进去，所以只用来写 ERAM 缓冲），$C0 为复制到显存（目的 bit15 置位表示扩展显存，再加 $4300 选的 32K bank）。</span></span>
+<span class="line"><span>;       运行变量（ERAM）：$6700 文件页数、$6701 文件首页、$6702 PRG 个数（16K）、$6703 CHR 个数（8K）、$6704 iNES 标志 6、</span></span>
+<span class="line"><span>;       $6705 标志 7 高 4 位、$6706 PRG 页数（4K）、$6707 复制序号、$6709/$670A DMA 目的、$670B/$670C DMA 长度、</span></span>
+<span class="line"><span>;       $670F 当前目的页、$6710/$6711 游戏原 RESET 入口、$6712 mapper、$6713 CHR 4K 块数、$6714 PRG 首个目的页、$6715-$6717 DMA 源偏移。</span></span>
+<span class="line"><span>; ------------------------------------------------------------------------</span></span>
+<span class="line"><span>    .export _main</span></span>
+<span class="line"><span>    .segment "ZEROPAGE"</span></span>
+<span class="line"><span>copy_src:</span></span>
+<span class="line"><span>    .res 2</span></span>
+<span class="line"><span>copy_dst:</span></span>
+<span class="line"><span>    .res 2</span></span>
+<span class="line"><span>    .segment "CODE"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>_main:</span></span>
+<span class="line"><span>start:</span></span>
+<span class="line"><span>    LDA #$01</span></span>
+<span class="line"><span>    STA $630C</span></span>
+<span class="line"><span>    JSR copy_name</span></span>
+<span class="line"><span>    LDA $6543</span></span>
+<span class="line"><span>    BNE name_ok</span></span>
+<span class="line"><span>    LDX #&#x3C;msg_usage</span></span>
+<span class="line"><span>    LDY #>msg_usage</span></span>
+<span class="line"><span>    JMP fail</span></span>
+<span class="line"><span>name_ok:</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6560</span></span>
+<span class="line"><span>    LDA #$7B</span></span>
+<span class="line"><span>    LDX #$09</span></span>
+<span class="line"><span>    JSR sys</span></span>
+<span class="line"><span>    LDA $6300</span></span>
+<span class="line"><span>    BEQ opened</span></span>
+<span class="line"><span>    LDX #&#x3C;msg_open</span></span>
+<span class="line"><span>    LDY #>msg_open</span></span>
+<span class="line"><span>    JMP fail</span></span>
+<span class="line"><span>opened:</span></span>
+<span class="line"><span>    LDA #$7C</span></span>
+<span class="line"><span>    LDX #$0D</span></span>
+<span class="line"><span>    JSR sys</span></span>
+<span class="line"><span>    JSR clamp_size</span></span>
+<span class="line"><span>    ; 页数 = (大小 + 4095) / 4096，大小在 $6568-$656A（小端）</span></span>
+<span class="line"><span>    LDA $656A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    STA $6700</span></span>
+<span class="line"><span>    LDA $6569</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    ORA $6700</span></span>
+<span class="line"><span>    STA $6700</span></span>
+<span class="line"><span>    LDA $6569</span></span>
+<span class="line"><span>    AND #$0F</span></span>
+<span class="line"><span>    ORA $6568</span></span>
+<span class="line"><span>    BEQ whole_pages</span></span>
+<span class="line"><span>    INC $6700</span></span>
+<span class="line"><span>whole_pages:</span></span>
+<span class="line"><span>    LDA $6700</span></span>
+<span class="line"><span>    STA $65A6</span></span>
+<span class="line"><span>    LDA #$7E</span></span>
+<span class="line"><span>    LDX #$00</span></span>
+<span class="line"><span>    JSR sys</span></span>
+<span class="line"><span>    LDA $6300</span></span>
+<span class="line"><span>    BEQ allocated</span></span>
+<span class="line"><span>no_memory:</span></span>
+<span class="line"><span>    LDX #&#x3C;msg_mem</span></span>
+<span class="line"><span>    LDY #>msg_mem</span></span>
+<span class="line"><span>    JMP fail</span></span>
+<span class="line"><span>allocated:</span></span>
+<span class="line"><span>    LDA $65A7</span></span>
+<span class="line"><span>    STA $656B</span></span>
+<span class="line"><span>    STA $6701</span></span>
+<span class="line"><span>    ; 文件所在页必须全部低于目的窗口（页 $E0 起）</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6700</span></span>
+<span class="line"><span>    CMP #$E1</span></span>
+<span class="line"><span>    BCS no_memory</span></span>
+<span class="line"><span>    LDA #$7C</span></span>
+<span class="line"><span>    LDX #$0F</span></span>
+<span class="line"><span>    JSR sys</span></span>
+<span class="line"><span>    LDA $6300</span></span>
+<span class="line"><span>    PHA</span></span>
+<span class="line"><span>    LDA #$7B</span></span>
+<span class="line"><span>    LDX #$0A</span></span>
+<span class="line"><span>    JSR sys</span></span>
+<span class="line"><span>    PLA</span></span>
+<span class="line"><span>    BEQ loaded</span></span>
+<span class="line"><span>    LDX #&#x3C;msg_read</span></span>
+<span class="line"><span>    LDY #>msg_read</span></span>
+<span class="line"><span>    JMP fail</span></span>
+<span class="line"><span>loaded:</span></span>
+<span class="line"><span>    ; 把文件第一页映射到 $B000，检查 iNES 头</span></span>
+<span class="line"><span>    LDA $6701</span></span>
+<span class="line"><span>    JSR map_b000</span></span>
+<span class="line"><span>    LDA $B000</span></span>
+<span class="line"><span>    CMP #$4E</span></span>
+<span class="line"><span>    BNE bad_header</span></span>
+<span class="line"><span>    LDA $B001</span></span>
+<span class="line"><span>    CMP #$45</span></span>
+<span class="line"><span>    BNE bad_header</span></span>
+<span class="line"><span>    LDA $B002</span></span>
+<span class="line"><span>    CMP #$53</span></span>
+<span class="line"><span>    BNE bad_header</span></span>
+<span class="line"><span>    LDA $B003</span></span>
+<span class="line"><span>    CMP #$1A</span></span>
+<span class="line"><span>    BEQ header_ok</span></span>
+<span class="line"><span>bad_header:</span></span>
+<span class="line"><span>    LDX #&#x3C;msg_header</span></span>
+<span class="line"><span>    LDY #>msg_header</span></span>
+<span class="line"><span>    JMP fail</span></span>
+<span class="line"><span>header_ok:</span></span>
+<span class="line"><span>    LDA $B004</span></span>
+<span class="line"><span>    STA $6702</span></span>
+<span class="line"><span>    LDA $B005</span></span>
+<span class="line"><span>    STA $6703</span></span>
+<span class="line"><span>    LDA $B006</span></span>
+<span class="line"><span>    STA $6704</span></span>
+<span class="line"><span>    LDA $B007</span></span>
+<span class="line"><span>    AND #$F0</span></span>
+<span class="line"><span>    STA $6705</span></span>
+<span class="line"><span>    LDA $6704</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    ORA $6705</span></span>
+<span class="line"><span>    STA $6712</span></span>
+<span class="line"><span>    JSR check_header</span></span>
+<span class="line"><span>    BCC size_ok</span></span>
+<span class="line"><span>    LDX $6720</span></span>
+<span class="line"><span>    LDY $6721</span></span>
+<span class="line"><span>    JMP fail</span></span>
+<span class="line"><span>size_ok:</span></span>
+<span class="line"><span>    ; PRG 页数（每 16K 为 4 页）与首个目的页：mapper 0 放窗口末尾，mapper 4 放窗口开头</span></span>
+<span class="line"><span>    LDA $6702</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    STA $6706</span></span>
+<span class="line"><span>    LDA #$E0</span></span>
+<span class="line"><span>    LDX $6712</span></span>
+<span class="line"><span>    BNE prg_start_set</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    SBC $6706</span></span>
+<span class="line"><span>prg_start_set:</span></span>
+<span class="line"><span>    STA $6714</span></span>
+<span class="line"><span>    ; 关 NMI 并禁止中断：此后不再返回 DOS，DOS 的显示与键盘不应再运行</span></span>
+<span class="line"><span>    SEI</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $2000</span></span>
+<span class="line"><span>    STA $6707</span></span>
+<span class="line"><span>prg_loop:</span></span>
+<span class="line"><span>    LDA $6701</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    SBC #$80</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6707</span></span>
+<span class="line"><span>    LDY $6714</span></span>
+<span class="line"><span>    JSR copy_page_k</span></span>
+<span class="line"><span>    INC $6707</span></span>
+<span class="line"><span>    LDA $6707</span></span>
+<span class="line"><span>    CMP $6706</span></span>
+<span class="line"><span>    BNE prg_loop</span></span>
+<span class="line"><span>    ; mapper 4 的 PRG 不足 128K 时，把最后 16K 再复制到窗口末尾（页 $FC-$FF）</span></span>
+<span class="line"><span>    LDA $6712</span></span>
+<span class="line"><span>    BEQ prg_done</span></span>
+<span class="line"><span>    LDA $6706</span></span>
+<span class="line"><span>    CMP #$20</span></span>
+<span class="line"><span>    BEQ prg_done</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6707</span></span>
+<span class="line"><span>tail_loop:</span></span>
+<span class="line"><span>    LDA $6701</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    SBC #$80</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6706</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    SBC #$04</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6707</span></span>
+<span class="line"><span>    LDY #$FC</span></span>
+<span class="line"><span>    JSR copy_page_k</span></span>
+<span class="line"><span>    INC $6707</span></span>
+<span class="line"><span>    LDA $6707</span></span>
+<span class="line"><span>    CMP #$04</span></span>
+<span class="line"><span>    BNE tail_loop</span></span>
+<span class="line"><span>prg_done:</span></span>
+<span class="line"><span>    ; 窗口最后一页（$FF）里有向量：保存原 RESET 入口，再改为 $6100</span></span>
+<span class="line"><span>    LDA #$FF</span></span>
+<span class="line"><span>    JSR map_b000</span></span>
+<span class="line"><span>    LDA $BFFC</span></span>
+<span class="line"><span>    STA $6710</span></span>
+<span class="line"><span>    LDA $BFFD</span></span>
+<span class="line"><span>    STA $6711</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $BFFC</span></span>
+<span class="line"><span>    LDA #$61</span></span>
+<span class="line"><span>    STA $BFFD</span></span>
+<span class="line"><span>    ; CHR 紧接在 PRG 之后：每 4K 一块，源页序号 = 起始页 - $80 + PRG 页数 + 块号</span></span>
+<span class="line"><span>    LDA $6703</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    STA $6713</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6707</span></span>
+<span class="line"><span>chr_loop:</span></span>
+<span class="line"><span>    LDA $6701</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    SBC #$80</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6706</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6707</span></span>
+<span class="line"><span>    JSR set_source</span></span>
+<span class="line"><span>    ; 目的 = $8000 + (块号 mod 8) * $1000，显存 bank = 12 + 块号 / 8（第 3 个窗口从 32K 单位 12 开始）</span></span>
+<span class="line"><span>    LDA $6707</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC #$0C</span></span>
+<span class="line"><span>    STA $4300</span></span>
+<span class="line"><span>    LDA $6707</span></span>
+<span class="line"><span>    AND #$07</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ORA #$80</span></span>
+<span class="line"><span>    STA $670A</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6709</span></span>
+<span class="line"><span>    LDA #$FF</span></span>
+<span class="line"><span>    STA $670B</span></span>
+<span class="line"><span>    LDA #$0F</span></span>
+<span class="line"><span>    STA $670C</span></span>
+<span class="line"><span>    LDA #$C0</span></span>
+<span class="line"><span>    JSR dma</span></span>
+<span class="line"><span>    INC $6707</span></span>
+<span class="line"><span>    LDA $6707</span></span>
+<span class="line"><span>    CMP $6713</span></span>
+<span class="line"><span>    BNE chr_loop</span></span>
+<span class="line"><span>    ; 把启动桩复制到 ERAM</span></span>
+<span class="line"><span>    LDX #$00</span></span>
+<span class="line"><span>copy_trampoline:</span></span>
+<span class="line"><span>    LDA trampoline_image,X</span></span>
+<span class="line"><span>    STA $6000,X</span></span>
+<span class="line"><span>    INX</span></span>
+<span class="line"><span>    CPX #$0C</span></span>
+<span class="line"><span>    BNE copy_trampoline</span></span>
+<span class="line"><span>    LDX #$00</span></span>
+<span class="line"><span>copy_stub:</span></span>
+<span class="line"><span>    LDA stub_image,X</span></span>
+<span class="line"><span>    STA $6100,X</span></span>
+<span class="line"><span>    INX</span></span>
+<span class="line"><span>    CPX #$30</span></span>
+<span class="line"><span>    BNE copy_stub</span></span>
+<span class="line"><span>    ; 启动桩的参数：原 RESET 入口、镜像（iNES 标志位 0 为 1 表示垂直，MMC3 的 $A000 写 0 为垂直）与 PRG 银行</span></span>
+<span class="line"><span>    LDA $6710</span></span>
+<span class="line"><span>    STA $611B</span></span>
+<span class="line"><span>    LDA $6711</span></span>
+<span class="line"><span>    STA $611C</span></span>
+<span class="line"><span>    LDA $6704</span></span>
+<span class="line"><span>    AND #$01</span></span>
+<span class="line"><span>    EOR #$01</span></span>
+<span class="line"><span>    STA $6116</span></span>
+<span class="line"><span>    LDA $6712</span></span>
+<span class="line"><span>    BNE regs_mapper4</span></span>
+<span class="line"><span>    LDA #$0C</span></span>
+<span class="line"><span>    LDX $6702</span></span>
+<span class="line"><span>    CPX #$01</span></span>
+<span class="line"><span>    BNE prg_regs</span></span>
+<span class="line"><span>    LDA #$0E</span></span>
+<span class="line"><span>    JMP prg_regs</span></span>
+<span class="line"><span>regs_mapper4:</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>prg_regs:</span></span>
+<span class="line"><span>    STA $612A</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC #$01</span></span>
+<span class="line"><span>    STA $612C</span></span>
+<span class="line"><span>    JMP $6000</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 文件大小超过 $040010 时按 $040010 读取（128K PRG + 128K CHR + 头）</span></span>
+<span class="line"><span>clamp_size:</span></span>
+<span class="line"><span>    LDA $656A</span></span>
+<span class="line"><span>    CMP #$04</span></span>
+<span class="line"><span>    BCC clamp_done</span></span>
+<span class="line"><span>    BNE clamp_set</span></span>
+<span class="line"><span>    LDA $6569</span></span>
+<span class="line"><span>    BNE clamp_set</span></span>
+<span class="line"><span>    LDA $6568</span></span>
+<span class="line"><span>    CMP #$11</span></span>
+<span class="line"><span>    BCC clamp_done</span></span>
+<span class="line"><span>clamp_set:</span></span>
+<span class="line"><span>    LDA #$10</span></span>
+<span class="line"><span>    STA $6568</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6569</span></span>
+<span class="line"><span>    LDA #$04</span></span>
+<span class="line"><span>    STA $656A</span></span>
+<span class="line"><span>clamp_done:</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 检查 iNES 头：可运行则清进位返回；否则置进位，信息指针放在 $6720/$6721</span></span>
+<span class="line"><span>check_header:</span></span>
+<span class="line"><span>    LDA $6704</span></span>
+<span class="line"><span>    AND #$04</span></span>
+<span class="line"><span>    BNE check_size_bad</span></span>
+<span class="line"><span>    LDA $6703</span></span>
+<span class="line"><span>    BEQ check_size_bad</span></span>
+<span class="line"><span>    CMP #$11</span></span>
+<span class="line"><span>    BCS check_size_bad</span></span>
+<span class="line"><span>    LDA $6702</span></span>
+<span class="line"><span>    BEQ check_size_bad</span></span>
+<span class="line"><span>    CMP #$09</span></span>
+<span class="line"><span>    BCS check_size_bad</span></span>
+<span class="line"><span>    LDA $6712</span></span>
+<span class="line"><span>    BEQ check_mapper0</span></span>
+<span class="line"><span>    CMP #$04</span></span>
+<span class="line"><span>    BEQ check_ok</span></span>
+<span class="line"><span>    LDA #&#x3C;msg_mapper</span></span>
+<span class="line"><span>    STA $6720</span></span>
+<span class="line"><span>    LDA #>msg_mapper</span></span>
+<span class="line"><span>    STA $6721</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span>check_mapper0:</span></span>
+<span class="line"><span>    LDA $6703</span></span>
+<span class="line"><span>    CMP #$01</span></span>
+<span class="line"><span>    BNE check_size_bad</span></span>
+<span class="line"><span>    LDA $6702</span></span>
+<span class="line"><span>    CMP #$03</span></span>
+<span class="line"><span>    BCS check_size_bad</span></span>
+<span class="line"><span>check_ok:</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span>check_size_bad:</span></span>
+<span class="line"><span>    LDA #&#x3C;msg_size</span></span>
+<span class="line"><span>    STA $6720</span></span>
+<span class="line"><span>    LDA #>msg_size</span></span>
+<span class="line"><span>    STA $6721</span></span>
+<span class="line"><span>    SEC</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 复制一个 4K 页：A 为源页序号（相对 $80），Y 为目的起始页，$6707 为序号（目的页 = Y + 序号）</span></span>
+<span class="line"><span>copy_page_k:</span></span>
+<span class="line"><span>    PHA</span></span>
+<span class="line"><span>    TYA</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    ADC $6707</span></span>
+<span class="line"><span>    STA $670F</span></span>
+<span class="line"><span>    PLA</span></span>
+<span class="line"><span>copy_page_do:</span></span>
+<span class="line"><span>    JSR set_source</span></span>
+<span class="line"><span>    ; 先 DMA 到 ERAM $6800 的缓冲：目的在 $8000 以上（程序窗口）时 DMA 写不进去</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6709</span></span>
+<span class="line"><span>    LDA #$68</span></span>
+<span class="line"><span>    STA $670A</span></span>
+<span class="line"><span>    LDA #$FF</span></span>
+<span class="line"><span>    STA $670B</span></span>
+<span class="line"><span>    LDA #$0F</span></span>
+<span class="line"><span>    STA $670C</span></span>
+<span class="line"><span>    LDA #$E0</span></span>
+<span class="line"><span>    JSR dma</span></span>
+<span class="line"><span>    ; 再把目的页映射到 $B000，用 CPU 从缓冲复制 16 个 256 字节</span></span>
+<span class="line"><span>    LDA $670F</span></span>
+<span class="line"><span>    JSR map_b000</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA copy_src</span></span>
+<span class="line"><span>    STA copy_dst</span></span>
+<span class="line"><span>    LDA #$68</span></span>
+<span class="line"><span>    STA copy_src+1</span></span>
+<span class="line"><span>    LDA #$B0</span></span>
+<span class="line"><span>    STA copy_dst+1</span></span>
+<span class="line"><span>    LDX #$10</span></span>
+<span class="line"><span>    LDY #$00</span></span>
+<span class="line"><span>copy_loop:</span></span>
+<span class="line"><span>    LDA (copy_src),Y</span></span>
+<span class="line"><span>    STA (copy_dst),Y</span></span>
+<span class="line"><span>    INY</span></span>
+<span class="line"><span>    BNE copy_loop</span></span>
+<span class="line"><span>    INC copy_src+1</span></span>
+<span class="line"><span>    INC copy_dst+1</span></span>
+<span class="line"><span>    DEX</span></span>
+<span class="line"><span>    BNE copy_loop</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 取参数里的第一个词作为文件路径，放到 $6543；$6364 为 0 表示没有参数（$6365 起可能有上一条命令的残留）</span></span>
+<span class="line"><span>copy_name:</span></span>
+<span class="line"><span>    LDX #$00</span></span>
+<span class="line"><span>skip_blank:</span></span>
+<span class="line"><span>    LDA $6364,X</span></span>
+<span class="line"><span>    BEQ copy_name_none</span></span>
+<span class="line"><span>    CMP #$20</span></span>
+<span class="line"><span>    BNE copy_name_start</span></span>
+<span class="line"><span>    INX</span></span>
+<span class="line"><span>    BNE skip_blank</span></span>
+<span class="line"><span>copy_name_none:</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6543</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span>copy_name_start:</span></span>
+<span class="line"><span>    LDY #$00</span></span>
+<span class="line"><span>copy_name_loop:</span></span>
+<span class="line"><span>    LDA $6364,X</span></span>
+<span class="line"><span>    BEQ copy_name_end</span></span>
+<span class="line"><span>    CMP #$20</span></span>
+<span class="line"><span>    BEQ copy_name_end</span></span>
+<span class="line"><span>    STA $6543,Y</span></span>
+<span class="line"><span>    INX</span></span>
+<span class="line"><span>    INY</span></span>
+<span class="line"><span>    CPY #$30</span></span>
+<span class="line"><span>    BNE copy_name_loop</span></span>
+<span class="line"><span>copy_name_end:</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $6543,Y</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 把页 A 映射到窗口 3（$B000）</span></span>
+<span class="line"><span>map_b000:</span></span>
+<span class="line"><span>    STA $0641</span></span>
+<span class="line"><span>    LDA #$03</span></span>
+<span class="line"><span>    STA $0653</span></span>
+<span class="line"><span>    LDA #$29</span></span>
+<span class="line"><span>    LDX #$00</span></span>
+<span class="line"><span>    JMP sys</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 设置 DMA 源偏移 = A * $1000 + 16（A 是以 4K 为单位的页序号）</span></span>
+<span class="line"><span>set_source:</span></span>
+<span class="line"><span>    PHA</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    STA $6716</span></span>
+<span class="line"><span>    PLA</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    LSR A</span></span>
+<span class="line"><span>    STA $6717</span></span>
+<span class="line"><span>    LDA #$10</span></span>
+<span class="line"><span>    STA $6715</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 启动 DMA：A 为 $4048 的值，源偏移在 $6715-$6717，目的在 $6709/$670A，长度在 $670B/$670C</span></span>
+<span class="line"><span>dma:</span></span>
+<span class="line"><span>    PHA</span></span>
+<span class="line"><span>    LDA $6716</span></span>
+<span class="line"><span>    ASL A</span></span>
+<span class="line"><span>    LDA $6717</span></span>
+<span class="line"><span>    ROL A</span></span>
+<span class="line"><span>    AND #$0F</span></span>
+<span class="line"><span>    ORA #$10</span></span>
+<span class="line"><span>    STA $4049</span></span>
+<span class="line"><span>    LDA $6715</span></span>
+<span class="line"><span>    STA $404A</span></span>
+<span class="line"><span>    LDA $6716</span></span>
+<span class="line"><span>    AND #$7F</span></span>
+<span class="line"><span>    ORA #$80</span></span>
+<span class="line"><span>    STA $404B</span></span>
+<span class="line"><span>    LDA $6709</span></span>
+<span class="line"><span>    STA $404C</span></span>
+<span class="line"><span>    LDA $670A</span></span>
+<span class="line"><span>    STA $404D</span></span>
+<span class="line"><span>    LDA $670B</span></span>
+<span class="line"><span>    STA $404E</span></span>
+<span class="line"><span>    LDA $670C</span></span>
+<span class="line"><span>    STA $404F</span></span>
+<span class="line"><span>    PLA</span></span>
+<span class="line"><span>    STA $4048</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 失败：显示 Y:X 指向的信息，等待按键后返回 DOS</span></span>
+<span class="line"><span>fail:</span></span>
+<span class="line"><span>    STX $4B</span></span>
+<span class="line"><span>    STY $4C</span></span>
+<span class="line"><span>    LDA #$80</span></span>
+<span class="line"><span>    STA $6308</span></span>
+<span class="line"><span>    LDA #$62</span></span>
+<span class="line"><span>    LDX #$82</span></span>
+<span class="line"><span>    JSR rom_call</span></span>
+<span class="line"><span>    LDA #$01</span></span>
+<span class="line"><span>    STA $630C</span></span>
+<span class="line"><span>    LDA #$E2</span></span>
+<span class="line"><span>    LDX #$80</span></span>
+<span class="line"><span>    JSR rom_call</span></span>
+<span class="line"><span>    LDA #$6B</span></span>
+<span class="line"><span>    LDX #$04</span></span>
+<span class="line"><span>    JSR sys</span></span>
+<span class="line"><span>    CLC</span></span>
+<span class="line"><span>    RTS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 经功能 $25 调用 ROM 页组 0 的 X:A（返回后回到调用者）</span></span>
+<span class="line"><span>rom_call:</span></span>
+<span class="line"><span>    STA $0C</span></span>
+<span class="line"><span>    STX $0D</span></span>
+<span class="line"><span>    LDA #$25</span></span>
+<span class="line"><span>    STA $063E</span></span>
+<span class="line"><span>    LDA #$00</span></span>
+<span class="line"><span>    STA $0642</span></span>
+<span class="line"><span>    JMP $FFF0</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 调用系统功能：A 为功能号，X 为子功能号</span></span>
+<span class="line"><span>sys:</span></span>
+<span class="line"><span>    STA $063E</span></span>
+<span class="line"><span>    STX $063F</span></span>
+<span class="line"><span>    JMP $FFF0</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; Usage: PLAY FILE.NES</span></span>
+<span class="line"><span>msg_usage:</span></span>
+<span class="line"><span>    .byte $55,$73,$61,$67,$65,$3A,$20,$50,$4C,$41,$59,$20,$46,$49,$4C,$45,$2E,$4E,$45,$53,$00</span></span>
+<span class="line"><span>; Can't open file</span></span>
+<span class="line"><span>msg_open:</span></span>
+<span class="line"><span>    .byte $43,$61,$6E,$27,$74,$20,$6F,$70,$65,$6E,$20,$66,$69,$6C,$65,$00</span></span>
+<span class="line"><span>; No memory</span></span>
+<span class="line"><span>msg_mem:</span></span>
+<span class="line"><span>    .byte $4E,$6F,$20,$6D,$65,$6D,$6F,$72,$79,$00</span></span>
+<span class="line"><span>; Read error</span></span>
+<span class="line"><span>msg_read:</span></span>
+<span class="line"><span>    .byte $52,$65,$61,$64,$20,$65,$72,$72,$6F,$72,$00</span></span>
+<span class="line"><span>; Not an iNES file</span></span>
+<span class="line"><span>msg_header:</span></span>
+<span class="line"><span>    .byte $4E,$6F,$74,$20,$61,$6E,$20,$69,$4E,$45,$53,$20,$66,$69,$6C,$65,$00</span></span>
+<span class="line"><span>; Mapper not supported</span></span>
+<span class="line"><span>msg_mapper:</span></span>
+<span class="line"><span>    .byte $4D,$61,$70,$70,$65,$72,$20,$6E,$6F,$74,$20,$73,$75,$70,$70,$6F,$72,$74,$65,$64,$00</span></span>
+<span class="line"><span>; Size not supported</span></span>
+<span class="line"><span>msg_size:</span></span>
+<span class="line"><span>    .byte $53,$69,$7A,$65,$20,$6E,$6F,$74,$20,$73,$75,$70,$70,$6F,$72,$74,$65,$64,$00</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>; 以下两段在运行时复制到 ERAM（$6000 的跳板、$6100 的启动桩）；它们按 ERAM 地址取值，ca65 没有 .rorg，所以写成字节并在注释里给出汇编</span></span>
+<span class="line"><span>trampoline_image:</span></span>
+<span class="line"><span>    .byte $A9,$FF            ; LDA #$FF</span></span>
+<span class="line"><span>    .byte $8D,$06,$50        ; STA $5006</span></span>
+<span class="line"><span>    .byte $A9,$55            ; LDA #$55</span></span>
+<span class="line"><span>    .byte $8D,$01,$43        ; STA $4301</span></span>
+<span class="line"><span>    .byte $EA                ; NOP</span></span>
+<span class="line"><span>stub_image:                  ; 汇编地址 $6100</span></span>
+<span class="line"><span>    .byte $78                ; $6100 SEI</span></span>
+<span class="line"><span>    .byte $A2,$00            ; $6101 LDX #$00</span></span>
+<span class="line"><span>    .byte $BD,$1D,$61        ; $6103 stub_loop: LDA stable,X（stable 在 $611D）</span></span>
+<span class="line"><span>    .byte $8D,$00,$80        ; $6106 STA $8000</span></span>
+<span class="line"><span>    .byte $BD,$1E,$61        ; $6109 LDA stable+1,X</span></span>
+<span class="line"><span>    .byte $8D,$01,$80        ; $610C STA $8001</span></span>
+<span class="line"><span>    .byte $E8,$E8            ; $610F INX、INX</span></span>
+<span class="line"><span>    .byte $E0,$10            ; $6111 CPX #$10</span></span>
+<span class="line"><span>    .byte $D0,$EE            ; $6113 BNE stub_loop</span></span>
+<span class="line"><span>    .byte $A9,$00            ; $6115 stub_mirror: LDA #$00（运行时改写第 2 字节）</span></span>
+<span class="line"><span>    .byte $8D,$00,$A0        ; $6117 STA $A000</span></span>
+<span class="line"><span>    .byte $4C,$00,$00        ; $611A stub_jmp: JMP $0000（运行时改写后两个字节）</span></span>
+<span class="line"><span>    .byte $00,$00,$01,$02,$02,$04,$03,$05,$04,$06,$05,$07,$06,$0C,$07,$0D   ; $611D stable：MMC3 寄存器序号与初值</span></span>
+<span class="line"><span></span></span></code></pre></div>
+<h2 id="newcall">newcall</h2>
+<p>程序名 <code>NEWCALL</code>。</p>
+<p><code>src/newcall.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：newcall.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：调用 BIOS 新增的系统调用 $35，显示它返回的扩展版本号；BIOS 不支持时显示 NOT SUPPORTED。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：给自己修改过的 BIOS 做功能检测的写法：新系统调用只能经内存返回结果，约定它把主版本写入 SYS_PAGE、次版本写入 SYS_GROUP。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       调用前先把这两个单元置 0xFF；原始 BIOS 里功能 $35 是空桩，不会改写它们，据此判断是否支持。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 新增的系统调用号 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> FN_BIOS_VERSION</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">35</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> SYS_PAGE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">volatile</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_SYS_PAGE)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> SYS_GROUP</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">volatile</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_SYS_GROUP)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> text</span><span style="color:#D73A49;--shiki-dark:#F97583">[]</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "BIOS EXT VER 0.0"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 低 4 位转成十六进制字符 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">static</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> hex_digit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#E36209;--shiki-dark:#FFAB70"> value</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    value </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;=</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0F</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="color:#D73A49;--shiki-dark:#F97583"> ?</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> '0'</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value </span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'A'</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value </span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> major;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> minor;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    SYS_PAGE </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">FF</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    SYS_GROUP </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">FF</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_syscall</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(FN_BIOS_VERSION, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    major </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> SYS_PAGE;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    minor </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> SYS_GROUP;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (major </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#D73A49;--shiki-dark:#F97583"> 0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">FF</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"NOT SUPPORTED"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">14</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> hex_digit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(major);</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">16</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> hex_digit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(minor);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_puts</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(text);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    sb_getkey</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+<h2 id="syscall">syscall</h2>
+<p>程序名 <code>SYSCALL</code>。</p>
+<p><code>src/syscall.c</code>：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 名称：syscall.c</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 说明：系统调用实验程序：由调试器把功能号与参数写进 ERAM 的请求块，程序代为调用，用来在模拟器里逐个核对没有示例的系统服务。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 作者：sungbin</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 邮箱：sungbin@3578.cn</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 日期：2026-11-11</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * 备注：DOS 下输入 syscall 运行，之后一直等待请求，不会退出。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       请求块在 $7E00：+0 请求标志（调试器写 1，程序执行完清 0）、+1 功能号、+2 子功能、</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> *       +3 起 20 字节写入 $0640-$0653、+$1F 与 +$20 写入 $0C、$0D；调用后 $0640-$0653 复制回 +$30 起，+$44 放 DOS_ERROR。</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> * ------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"> */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 请求块的起始地址 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ((</span><span style="color:#D73A49;--shiki-dark:#F97583">volatile</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">7E00</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">/** 参数区 $0640-$0653 的字节数 */</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> PARAM_BYTES</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 20</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> PARAM_AREA</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ((</span><span style="color:#D73A49;--shiki-dark:#F97583">volatile</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0640</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#define</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> PROG_ENTRY</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ((</span><span style="color:#D73A49;--shiki-dark:#F97583">volatile</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">000C</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">void</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (;;) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        while</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#E36209;--shiki-dark:#FFAB70">BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> PARAM_BYTES; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            PARAM_AREA</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[i] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">3</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        PROG_ENTRY</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1F</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        PROG_ENTRY</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">20</span><span style="color:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        sb_syscall</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">], </span><span style="color:#E36209;--shiki-dark:#FFAB70">BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> PARAM_BYTES; </span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">            BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">30</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#E36209;--shiki-dark:#FFAB70"> PARAM_AREA</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[i];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">44</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">volatile</span><span style="color:#D73A49;--shiki-dark:#F97583"> unsigned</span><span style="color:#D73A49;--shiki-dark:#F97583"> char</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)SB_DOS_ERROR;</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">        BLOCK</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span></code></pre></div>
+</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="sb2000.html" class="doc-pager__prev"><span>上一页 · fcdev 开发手册</span>SB2000 开发指南</a><a href="syscall.html" class="doc-pager__next"><span>下一页 · fcdev 开发手册</span>SB-DOS 系统调用手册</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

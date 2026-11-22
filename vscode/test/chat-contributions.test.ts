@@ -70,17 +70,17 @@ describe('聊天指令、技能与智能体的声明', () => {
 
   it('声明的文件都存在，且打进扩展包（不在忽略清单里）', () => {
     const declared = [...manifest.contributes.chatInstructions, ...manifest.contributes.chatSkills, ...manifest.contributes.chatAgents];
-    expect(declared.length).toBe(4);
+    expect(declared.length).toBe(7);
     for (const item of declared) expect(existsSync(path.join(ROOT, item.path)), item.path).toBe(true);
     expect(readFileSync(path.join(ROOT, '.vscodeignore'), 'utf8')).not.toMatch(/^chat/m);
   });
 
-  it('指令文件有名称、说明与适用范围', () => {
+  it('指令文件有名称与说明，反汇编指令还有适用范围', () => {
     for (const item of manifest.contributes.chatInstructions) {
       const { fields } = frontmatterOf(readDeclared(item.path));
       expect(fields.name, item.path).toBeTruthy();
       expect(fields.description, item.path).toBeTruthy();
-      expect(fields.applyTo, item.path).toBeTruthy();
+      if (item.path.endsWith('6502-disassembly.instructions.md')) expect(fields.applyTo, item.path).toBe('**/disasm.json');
     }
   });
 

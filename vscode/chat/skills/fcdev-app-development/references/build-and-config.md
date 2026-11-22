@@ -71,7 +71,7 @@ SB2000 示例：
 - 产物：`<项目根>/<out>/<目标>/<程序名><扩展名>`；中间文件：`<out>/obj/<目标>/<程序名>/`，含 `.o`、`.d`、`.s`、链接产物 `.bin`、`.map`、`.dbg`，多页程序另有 `<程序名>.cfg`，以及指纹 `stamp.json`。
 - 流程：`cc65`（.c → .s）→ `ca65`（.s → .o）→ `ld65`（按目标链接配置链接启动代码、用户目标文件、目标库）→ 打包器（`.bin` → `.nes` 或 `.EXE`）。
 - 增量：源文件与依赖没变就不重编；扩展版本、工具链版本、目标定义、目标选项、`optimize`、`define`、`include`、源文件列表任一变化，会清掉中间目录全部重编。
-- `.map` 用来看各段大小，`.dbg` 用来查符号地址（调试时设断点用，见 [debugging-and-disassembly.md](debugging-and-disassembly.md)）。
+- `.map` 用来看各段大小，`.dbg` 用来查符号地址（调试时设断点用，见 [run-and-verify.md](run-and-verify.md) 的“定位符号地址”）。
 - 工具输出原样透传，不改写。
 
 ## 工具链与 Ember 的位置

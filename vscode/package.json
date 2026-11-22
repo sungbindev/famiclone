@@ -2060,6 +2060,9 @@
     ],
     "chatInstructions": [
       {
+        "path": "./chat/instructions/fcdev-tools.instructions.md"
+      },
+      {
         "path": "./chat/instructions/6502-disassembly.instructions.md"
       }
     ],
@@ -2068,10 +2071,16 @@
         "path": "./chat/skills/disassemble-6502/SKILL.md"
       },
       {
+        "path": "./chat/skills/ember-emulator/SKILL.md"
+      },
+      {
         "path": "./chat/skills/fcdev-app-development/SKILL.md"
       }
     ],
     "chatAgents": [
+      {
+        "path": "./chat/agents/6502-developer.agent.md"
+      },
       {
         "path": "./chat/agents/6502-disassembler.agent.md"
       }

@@ -5,7 +5,7 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
 // 备注：用法 npm run release [-- --publish]（在 vscode/ 里）；不带参数只检查与打包。
-//       上传时若没有环境变量 VSCE_PAT，会提示输入发布令牌（不回显）；令牌只在本次运行中使用，不保存到任何文件。
+//       上传时令牌取自环境变量 VSCE_PAT；没有则读取文档仓库的令牌文件，再没有则提示输入（不回显）。令牌只在本次运行中使用，内容不输出。
 // ------------------------------------------------------------------------
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -21,6 +21,9 @@ const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');
 /** 打包输出目录，与扩展的 package 脚本一致 */
 const OUTPUT_DIRECTORY = path.join(REPOSITORY_ROOT, 'build', 'vscode');
 
+/** 发布令牌文件，位于文档仓库的密钥目录 */
+const TOKEN_FILE = path.resolve(REPOSITORY_ROOT, '..', 'docs', '01-文档', '密钥', 'vscode-publish-token.txt');
+
 /**
  * 在扩展目录里运行一条命令，输出直接显示在终端里，失败时抛出错误。
  * @param {string} command 命令名。
@@ -31,6 +34,17 @@ function run(command, args) {
   if (result.error !== undefined || result.status !== 0) {
     throw new Error(`${[command, ...args].join(' ')} 失败（${result.error?.message ?? `退出码 ${result.status}`}）`);
   }
+}
+
+/**
+ * 读取令牌文件，文件不存在时返回 undefined；令牌内容不输出。
+ * @returns {string | undefined} 令牌。
+ */
+function readTokenFile() {
+  if (!existsSync(TOKEN_FILE)) return undefined;
+  const token = readFileSync(TOKEN_FILE, 'utf8').trim();
+  if (token === '') throw new Error(`令牌文件是空的：${TOKEN_FILE}`);
+  return token;
 }
 
 /**
@@ -94,7 +108,7 @@ async function main() {
 
   const changelog = readFileSync(path.join(EXTENSION_DIRECTORY, 'CHANGELOG.md'), 'utf8').split(/\r?\n/);
   if (!changelog.includes(`## ${version}`)) throw new Error(`CHANGELOG.md 里没有 “## ${version}” 一节`);
-  if (publish && !process.env.VSCE_PAT) process.env.VSCE_PAT = await readToken();
+  if (publish && !process.env.VSCE_PAT) process.env.VSCE_PAT = readTokenFile() ?? (await readToken());
 
   run('npm', ['run', 'check']);
   run('npm', ['run', 'package']);

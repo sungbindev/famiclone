@@ -5,7 +5,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
-// 备注：用法 node tools/check-package.mjs [.vsix 路径]；不给路径时取 vscode/fcdev-win32-x64-<版本>.vsix。只检查，
+// 备注：用法 node tools/check-package.mjs [.vsix 路径]；不给路径时取 build/vscode/fcdev-win32-x64-<版本>.vsix。只检查，
 //       不修改任何文件；用自带的最小 zip 读取器，不依赖第三方包。
 // ------------------------------------------------------------------------
 import { createHash } from 'node:crypto';
@@ -214,7 +214,7 @@ function main() {
   let vsixFile = argument === undefined ? undefined : path.resolve(argument);
   if (vsixFile === undefined) {
     const version = JSON.parse(readFileSync(path.join(EXTENSION_DIRECTORY, 'package.json'), 'utf8')).version;
-    vsixFile = path.join(EXTENSION_DIRECTORY, `fcdev-win32-x64-${version}.vsix`);
+    vsixFile = path.join(REPOSITORY_ROOT, 'build', 'vscode', `fcdev-win32-x64-${version}.vsix`);
   }
   if (!existsSync(vsixFile)) {
     console.error(`找不到 ${vsixFile}：先在 vscode/ 里运行 npm run package`);

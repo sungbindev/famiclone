@@ -49,6 +49,8 @@ class Button : public Widget {
   void setFrameStyle(bool frame);
   /** 最小宽度（对话框按钮区的按钮用），默认 0；与紧凑按钮的最小宽度取大者。 */
   void setMinWidth(double minWidth);
+  /** 链接样式的文字是否在宽度不够时折行，默认是；网址这类不能断开的文字设为否。其他样式的文字本来就不折行。 */
+  void setWrap(bool wrap);
   /** 设置点击回调：鼠标在按钮上按下并抬起，或按 Enter、Space 键时触发。 */
   void setOnClick(std::function<void()> handler) { onClick_ = std::move(handler); }
 
@@ -84,6 +86,7 @@ class Button : public Widget {
   bool iconOnly_{false};
   bool compact_{false};
   bool frame_{false};
+  bool wrap_{true};
   double minWidth_{0};
   std::optional<bool> toggled_;
   std::function<void()> onClick_;

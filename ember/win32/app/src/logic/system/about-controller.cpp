@@ -20,6 +20,7 @@ constexpr const char* kAppName = "Ember";
 constexpr const char* kAuthor = "sungbin";
 constexpr const char* kEmail = "sungbin@3578.cn";
 constexpr const char* kQq = "46427991";
+constexpr const char* kHomepageUrl = "https://fcdev.cn";
 constexpr const char* kProjectUrl = "https://github.com/sungbindev/famiclone/tree/master/ember";
 constexpr const char* kLicense = "GNU 通用公共许可证第 3 版（GPL-3.0）";
 
@@ -66,6 +67,7 @@ contracts::AboutView AboutController::view() const {
   result.author = kAuthor;
   result.email = kEmail;
   result.qq = kQq;
+  result.homepageUrl = kHomepageUrl;
   result.projectUrl = kProjectUrl;
   result.license = kLicense;
   result.notices = notices_;
@@ -109,10 +111,14 @@ std::function<void()> AboutController::subscribe(std::function<void()> handler) 
   };
 }
 
-void AboutController::openProject() {
+void AboutController::openLink(const char* url, const char* failure) {
   if (shell_ == nullptr) return;
-  const std::string error = links_.open(kProjectUrl);
-  if (!error.empty()) shell_->notify("无法打开项目地址：" + error, contracts::NotificationLevel::Error);
+  const std::string error = links_.open(url);
+  if (!error.empty()) shell_->notify(std::string(failure) + "：" + error, contracts::NotificationLevel::Error);
 }
+
+void AboutController::openHomepage() { openLink(kHomepageUrl, "无法打开主页地址"); }
+
+void AboutController::openProject() { openLink(kProjectUrl, "无法打开项目地址"); }
 
 }  // namespace ember::win32::logic

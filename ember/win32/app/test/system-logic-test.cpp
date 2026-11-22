@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：system-logic-test.cpp
- * 说明：系统模块逻辑的测试：升级控制器（读取初始状态、菜单名称与可用状态、手动与自动检查的通知差别、重启安装、不支持升级）、自动检查更新（延时、设置开关、只检查一次、停止）、升级后的更新记录提示、关于控制器（固定文字、版本读取与失败、核心重启后重新读取、打开项目地址）与系统模块的登记项（帮助菜单、对话框、标题栏“更新”按钮、请求与失败通知）。
+ * 说明：系统模块逻辑的测试：升级控制器（读取初始状态、菜单名称与可用状态、手动与自动检查的通知差别、重启安装、不支持升级）、自动检查更新（延时、设置开关、只检查一次、停止）、升级后的更新记录提示、关于控制器（固定文字、版本读取与失败、核心重启后重新读取、打开主页地址与项目地址）与系统模块的登记项（帮助菜单、对话框、标题栏“更新”按钮、请求与失败通知）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -194,6 +194,7 @@ TEST(AboutController, ShowsTheFixedTextsTheBuildTimeAndTheNotices) {
   EXPECT_EQ(view.author, "sungbin");
   EXPECT_EQ(view.email, "sungbin@3578.cn");
   EXPECT_EQ(view.qq, "46427991");
+  EXPECT_EQ(view.homepageUrl, "https://fcdev.cn");
   EXPECT_EQ(view.projectUrl, "https://github.com/sungbindev/famiclone/tree/master/ember");
   EXPECT_EQ(view.license, "GNU 通用公共许可证第 3 版（GPL-3.0）");
   EXPECT_EQ(view.buildTime, "2026-11-21 10:00:00");
@@ -226,6 +227,19 @@ TEST(AboutController, UnreadableVersionShowsFailedWithoutANotice) {
   f.core.replies["system.version"] = [](const json&) { return CoreReply::success({{"appVersion", 1}}); };
   f.core.setState(contracts::CoreState::Running);
   EXPECT_EQ(f.controller.view().versionLoad, contracts::AboutVersionLoad::Failed);
+}
+
+TEST(AboutController, OpenHomepageUsesTheBrowserAndReportsFailure) {
+  AboutFixture f;
+  f.attach();
+  f.controller.openHomepage();
+  ASSERT_EQ(f.links.opened.size(), 1U);
+  EXPECT_EQ(f.links.opened[0], "https://fcdev.cn");
+  EXPECT_TRUE(f.shell.notices.empty());
+  f.links.error = "没有浏览器";
+  f.controller.openHomepage();
+  ASSERT_EQ(f.shell.notices.size(), 1U);
+  EXPECT_EQ(f.shell.notices[0].first, "无法打开主页地址：没有浏览器");
 }
 
 TEST(AboutController, OpenProjectUsesTheBrowserAndReportsFailure) {

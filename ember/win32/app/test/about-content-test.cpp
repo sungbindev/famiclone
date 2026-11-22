@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：about-content-test.cpp
- * 说明：“关于 Ember”对话框内容的测试：版本一行在读取中、读取失败与读到时的文字，模型变化后跟着更新，点项目地址链接调用模型，没有标志时照常显示，销毁后取消订阅。
+ * 说明：“关于 Ember”对话框内容的测试：版本一行在读取中、读取失败与读到时的文字，模型变化后跟着更新，点项目地址链接调用模型，两个网址链接在最小宽度下不折行，没有标志时照常显示，销毁后取消订阅。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -26,9 +26,11 @@ class FakeAbout final : public contracts::AboutModel {
  public:
   contracts::AboutView current;
   int projectOpens{0};
+  int homepageOpens{0};
   std::map<int, std::function<void()>> handlers;
 
   [[nodiscard]] contracts::AboutView view() const override { return current; }
+  void openHomepage() override { ++homepageOpens; }
   void openProject() override { ++projectOpens; }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override {
     const int id = static_cast<int>(handlers.size()) + 1;
@@ -53,7 +55,8 @@ struct Scene {
     model.current.author = "sungbin";
     model.current.email = "sungbin@3578.cn";
     model.current.qq = "46427991";
-    model.current.projectUrl = "https://example.com/ember";
+    model.current.homepageUrl = "https://fcdev.cn";
+    model.current.projectUrl = "https://github.com/sungbindev/famiclone/tree/master/ember";
     model.current.license = "GPL-3.0";
     model.current.notices = {{"Zlib", "1.0", "A、B", "MIT", "https://z", "压缩"}, {"Tabler Icons", "3.0", "Paweł", "MIT", "https://t", "图标"}};
     auto created = std::make_unique<ui::AboutContent>(model, withLogo ? std::make_unique<rujian::ui::Widget>() : nullptr);
@@ -94,6 +97,14 @@ TEST(AboutContent, ProjectLinkOpensTheProjectThroughTheModel) {
   EXPECT_EQ(s.model.projectOpens, 1);
 }
 
+TEST(AboutContent, HomepageLinkOpensTheHomepageAndSitsAboveTheProjectLink) {
+  Scene s;
+  EXPECT_LT(s.content->homepageLink().bounds().y, s.content->projectLink().bounds().y);
+  s.click(s.content->homepageLink());
+  EXPECT_EQ(s.model.homepageOpens, 1);
+  EXPECT_EQ(s.model.projectOpens, 0);
+}
+
 TEST(AboutContent, ProjectLinkIsAsWideAsItsTextAndNothingIsFocusedAtFirst) {
   Scene s;
   const auto& link = s.content->projectLink();
@@ -118,6 +129,15 @@ TEST(AboutContent, MinimumWidthFitsTheHeaderAndTheFactsAndHasNoHeightRequirement
   EXPECT_DOUBLE_EQ(minimum.height, 0);
   s.root.layout({minimum.width, 560});
   EXPECT_LE(s.content->projectLink().bounds().right(), minimum.width);
+}
+
+TEST(AboutContent, LinksStayOnOneLineAtTheMinimumWidth) {
+  Scene s;
+  const double lineHeight = s.content->homepageLink().bounds().height;
+  EXPECT_GT(lineHeight, 0);
+  s.root.layout({s.content->minimumSize().width, 560});
+  EXPECT_DOUBLE_EQ(s.content->homepageLink().bounds().height, lineHeight);
+  EXPECT_DOUBLE_EQ(s.content->projectLink().bounds().height, lineHeight);
 }
 
 }  // namespace

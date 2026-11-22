@@ -88,6 +88,11 @@ void Button::setMinWidth(double minWidth) {
   invalidate();
 }
 
+void Button::setWrap(bool wrap) {
+  wrap_ = wrap;
+  invalidate();
+}
+
 std::optional<Button::ResolvedIcon> Button::resolveIcon() const {
   if (variant_ == ButtonVariant::Link) return std::nullopt;
   if (icon_) return ResolvedIcon{*icon_, iconAtEnd_.value_or(false)};
@@ -104,7 +109,7 @@ TextStyle Button::textStyle(Color color) const {
   style.lineHeight = kNormalLineHeight;
   style.color = color;
   if (variant_ == ButtonVariant::Link) {
-    style.wrap = true;
+    style.wrap = wrap_;
     style.underline = hovered() || pressed();
   }
   return style;

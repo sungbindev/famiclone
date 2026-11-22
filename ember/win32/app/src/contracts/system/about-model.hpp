@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：about-model.hpp
- * 说明：“关于 Ember”对话框的模型：应用名称、版本与核心版本（读取状态）、编译时间、作者、邮箱、QQ、项目地址、许可证与第三方依赖清单，以及用户的操作（打开项目地址）。
+ * 说明：“关于 Ember”对话框的模型：应用名称、版本与核心版本（读取状态）、编译时间、作者、邮箱、QQ、主页地址、项目地址、许可证与第三方依赖清单，以及用户的操作（打开主页地址、打开项目地址）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -43,6 +43,7 @@ struct AboutView {
   std::string author;
   std::string email;
   std::string qq;
+  std::string homepageUrl;
   std::string projectUrl;
   std::string license;
   std::vector<ThirdPartyNotice> notices;
@@ -55,6 +56,9 @@ class AboutModel {
   virtual ~AboutModel() = default;
 
   [[nodiscard]] virtual AboutView view() const = 0;
+
+  /** 用系统默认浏览器打开主页地址，打不开时用通知给出原因。 */
+  virtual void openHomepage() = 0;
 
   /** 用系统默认浏览器打开项目地址，打不开时用通知给出原因。 */
   virtual void openProject() = 0;

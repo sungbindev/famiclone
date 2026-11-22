@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：about-controller.hpp
- * 说明：“关于 Ember”对话框的控制器：给出对话框要显示的固定文字、编译时间与第三方依赖清单，经核心的 system.version 读取应用版本与核心版本（核心就绪后读取，核心重启后重新读取），打开项目地址。
+ * 说明：“关于 Ember”对话框的控制器：给出对话框要显示的固定文字、编译时间与第三方依赖清单，经核心的 system.version 读取应用版本与核心版本（核心就绪后读取，核心重启后重新读取），打开主页地址与项目地址。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
- * 备注：版本读不到时显示“读取失败”，不用通知；打开项目地址失败用外壳通知给出原因；规则见 docs/05-界面.md 第 8 节。
+ * 备注：版本读不到时显示“读取失败”，不用通知；打开主页地址或项目地址失败用外壳通知给出原因；规则见 docs/05-界面.md 第 8 节。
  * ------------------------------------------------------------------------
  */
 
@@ -32,7 +32,7 @@ class AboutController final : public contracts::AboutModel {
   /**
    * @param broker 请求中转：读取版本的 system.version 经它。
    * @param core 核心网关：订阅核心运行状态。
-   * @param links 打开项目地址。
+   * @param links 打开主页地址与项目地址。
    * @param notices 第三方依赖清单（构建脚本生成）。
    * @param buildTime 编译时间（构建时确定）。
    */
@@ -49,12 +49,14 @@ class AboutController final : public contracts::AboutModel {
 
   // ---- AboutModel ----
   [[nodiscard]] contracts::AboutView view() const override;
+  void openHomepage() override;
   void openProject() override;
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override;
 
  private:
   void load();
   void changed();
+  void openLink(const char* url, const char* failure);
 
   contracts::RequestBroker& broker_;
   contracts::CoreGateway& core_;

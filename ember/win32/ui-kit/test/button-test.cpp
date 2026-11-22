@@ -208,6 +208,15 @@ TEST(Button, LinkWrapsInNarrowWidthAndHasNoBackground) {
   expectColor(pixelAt(scene.render(), 8, 8), themeTokens(ThemeName::Dark).content_bg);
 }
 
+TEST(Button, LinkWithoutWrapStaysOnOneLineInNarrowWidth) {
+  Scene scene("https://example.com/a/very/long/address/that/cannot/break");
+  scene.button->setVariant(ButtonVariant::Link);
+  const Size wide = scene.button->measure({});
+  EXPECT_GT(scene.button->measure(Size{60, 0}).height, wide.height);
+  scene.button->setWrap(false);
+  EXPECT_EQ(scene.button->measure(Size{60, 0}), wide);
+}
+
 TEST(Button, LinkIgnoresIconsAndKeepsKeyboardClick) {
   Scene scene("保存");
   scene.button->setVariant(ButtonVariant::Link);

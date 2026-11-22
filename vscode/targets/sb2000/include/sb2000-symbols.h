@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-10
- * 备注：由 tools/gen-sb2000-header.mjs 从 asminc/sb2000.inc 生成，不要手工修改（DO NOT EDIT）；注释里的符号名省略 SB_ 前缀。
+ * 备注：由 vscode/tools/gen/gen-sb2000-header.mjs 从 asminc/sb2000.inc 生成，不要手工修改（DO NOT EDIT）；注释里的符号名省略 SB_ 前缀。
  * ------------------------------------------------------------------------
  */
 #ifndef SB2000_SYMBOLS_H

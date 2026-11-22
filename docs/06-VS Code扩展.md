@@ -24,7 +24,7 @@
 
 本扩展的 `package.json` 用 `extensionPack` 带上 C/C++ 扩展（`ms-vscode.cpptools`），安装本扩展时一并安装；用户仍可单独卸载它，改用 clangd。
 
-C 的头文件注释用 Doxygen 的 `/** */` 写法，C/C++ 扩展与 clangd 都会在悬停时显示；`sb2000-symbols.h` 里每个常量宏上方的注释由 `tools/gen-sb2000-header.mjs` 从 `sb2000.inc` 的行尾注释生成。
+C 的头文件注释用 Doxygen 的 `/** */` 写法，C/C++ 扩展与 clangd 都会在悬停时显示；`sb2000-symbols.h` 里每个常量宏上方的注释由 `vscode/tools/gen/gen-sb2000-header.mjs` 从 `sb2000.inc` 的行尾注释生成。
 
 ### 2.1 C 的配置同步
 

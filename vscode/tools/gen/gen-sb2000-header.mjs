@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用法 node tools/gen-sb2000-header.mjs；符号以 NAME = $值 的行定义，分节注释与行尾注释转成 C 注释；
+// 备注：用法 node vscode/tools/gen/gen-sb2000-header.mjs；符号以 NAME = $值 的行定义，分节注释与行尾注释转成 C 注释；
 //       改动 sb2000.inc 后重新运行，测试会检查入库的头文件与生成结果一致。
 // ------------------------------------------------------------------------
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** 仓库根目录 */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** SB2000 目标目录 */
 const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');
@@ -81,7 +81,7 @@ export function generateSymbolsHeader(incText) {
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-10
- * 备注：由 tools/gen-sb2000-header.mjs 从 asminc/sb2000.inc 生成，不要手工修改（DO NOT EDIT）；注释里的符号名省略 SB_ 前缀。
+ * 备注：由 vscode/tools/gen/gen-sb2000-header.mjs 从 asminc/sb2000.inc 生成，不要手工修改（DO NOT EDIT）；注释里的符号名省略 SB_ 前缀。
  * ------------------------------------------------------------------------
  */
 #ifndef SB2000_SYMBOLS_H

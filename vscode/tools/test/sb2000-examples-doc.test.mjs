@@ -4,14 +4,14 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-18
-// 备注：文档 targets/sb2000/examples-source.md 由 tools/gen-sb2000-examples-doc.mjs 生成，改了示例源码后要重新生成。
+// 备注：文档 targets/sb2000/examples-source.md 由 vscode/tools/gen/gen-sb2000-examples-doc.mjs 生成，改了示例源码后要重新生成。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { EXAMPLES_DIR, EXAMPLES_DOC_FILE, listExampleNames, renderExamplesSource } from '../gen-sb2000-examples-doc.mjs';
+import { EXAMPLES_DIR, EXAMPLES_DOC_FILE, listExampleNames, renderExamplesSource } from '../gen/gen-sb2000-examples-doc.mjs';
 
 /** 在临时目录里造一个示例项目。 */
 function writeExample(root, name, config, files) {
@@ -23,7 +23,7 @@ function writeExample(root, name, config, files) {
 describe('examples-source.md', () => {
   it('入库的文档与示例项目的生成结果一致', () => {
     const stored = readFileSync(EXAMPLES_DOC_FILE, 'utf8').replaceAll('\r\n', '\n');
-    assert.equal(stored, renderExamplesSource(), '改了示例源码后要运行 node tools/gen-sb2000-examples-doc.mjs');
+    assert.equal(stored, renderExamplesSource(), '改了示例源码后要运行 node vscode/tools/gen/gen-sb2000-examples-doc.mjs');
   });
 
   it('每个示例项目都有一节，并包含它的源文件全文', () => {

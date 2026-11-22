@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：工具链校验在 vscode/toolchain 已组装时才运行；用 node --test tools/test 运行。
+// 备注：工具链校验在 vscode/toolchain 已组装时才运行；用 node --test vscode/tools/test 运行。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -12,9 +12,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { CC65_COMMIT } from '../build-cc65.mjs';
+import { CC65_COMMIT } from '../build/build-cc65.mjs';
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 describe('入库的 cc65 源码', () => {
   it('构建工具与运行库需要的路径都在 cc65/ 里', () => {
@@ -31,7 +31,7 @@ describe('入库的 cc65 源码', () => {
 
 const toolchainDir = path.join(REPO_ROOT, 'vscode', 'toolchain');
 
-describe('cc65 工具链', { skip: existsSync(path.join(toolchainDir, 'manifest.json')) ? false : '工具链尚未组装（运行 node tools/build-cc65.mjs）' }, () => {
+describe('cc65 工具链', { skip: existsSync(path.join(toolchainDir, 'manifest.json')) ? false : '工具链尚未组装（运行 node vscode/tools/build/build-cc65.mjs）' }, () => {
   it('manifest.json 记录的每个文件都存在且校验值一致', () => {
     const manifest = JSON.parse(readFileSync(path.join(toolchainDir, 'manifest.json'), 'utf8'));
     assert.equal(manifest.commit, CC65_COMMIT);

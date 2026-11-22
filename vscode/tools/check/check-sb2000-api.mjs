@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
-// 备注：用法 node tools/check-sb2000-api.mjs [--list]；--list 另外列出各函数对应的系统调用（文档注释里的 @syscall 标签）。
+// 备注：用法 node vscode/tools/check/check-sb2000-api.mjs [--list]；--list 另外列出各函数对应的系统调用（文档注释里的 @syscall 标签）。
 //       头文件是接口文档的唯一来源：注释写函数说明、@param、@return、@syscall；库内部使用的辅助函数以 sbi_ 开头，不在检查范围内。
 //       覆盖检查：KNOWN_FUNCTIONS 是 BIOS 里有处理例程的全部功能号（BIOS 里登记过处理例程的功能号，共 83 个），每个都必须“被某个函数的 @syscall 标签涉及”
 //       或“在 targets/sb2000/api-unwrapped.json 的 functions 里写明不封装的原因”，两者不能同时成立；封装了一部分子功能的，在 partial 里写明没封装的部分。
@@ -12,12 +12,12 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseHeaderFunctions, syscallMatches } from '../vscode/out/shared/c-api/api-functions.js';
+import { parseHeaderFunctions, syscallMatches } from '../../out/shared/c-api/api-functions.js';
 
 export { parseHeaderFunctions };
 
 /** 仓库根目录 */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** SB2000 目标目录 */
 const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');
@@ -81,7 +81,7 @@ export function collectDefinitions(targetDir) {
 /**
  * 读出全部带文档注释的函数。
  * @param {string} targetDir 目标目录
- * @returns {import('../vscode/out/shared/c-api/api-functions.js').ApiFunction[]} 函数列表
+ * @returns {import('../../out/shared/c-api/api-functions.js').ApiFunction[]} 函数列表
  */
 export function readFunctions(targetDir = TARGET_DIR) {
   const includeDir = path.join(targetDir, 'include');
@@ -101,7 +101,7 @@ export function readUnwrapped(targetDir = TARGET_DIR) {
 
 /**
  * 每个已知功能号被哪些函数涉及。
- * @param {import('../vscode/out/shared/c-api/api-functions.js').ApiFunction[]} functions 函数列表
+ * @param {import('../../out/shared/c-api/api-functions.js').ApiFunction[]} functions 函数列表
  * @returns {Map<string, string[]>} 功能号（两位大写十六进制）到函数名
  */
 export function coverageOf(functions) {
@@ -115,7 +115,7 @@ export function coverageOf(functions) {
 /**
  * 检查接口：文档完整、有且只有一处实现、没有多余的公开函数、系统调用覆盖有交代。
  * @param {string} [targetDir] 目标目录
- * @returns {{problems: string[], functions: import('../vscode/out/shared/c-api/api-functions.js').ApiFunction[]}} 问题列表与全部函数
+ * @returns {{problems: string[], functions: import('../../out/shared/c-api/api-functions.js').ApiFunction[]}} 问题列表与全部函数
  */
 export function checkSb2000Api(targetDir = TARGET_DIR) {
   const problems = [];

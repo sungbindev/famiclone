@@ -4,14 +4,14 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
-// 备注：规则见 tools/check-sb2000-api.mjs：每个函数有说明、@param、@return，且有且只有一处实现，每个功能号被封装或写明不封装的原因；
-//       参考文档 targets/sb2000/api-reference.md 由 tools/gen-sb2000-api-doc.mjs 生成，改了头文件注释或清单后要重新生成。
+// 备注：规则见 vscode/tools/check/check-sb2000-api.mjs：每个函数有说明、@param、@return，且有且只有一处实现，每个功能号被封装或写明不封装的原因；
+//       参考文档 targets/sb2000/api-reference.md 由 vscode/tools/gen/gen-sb2000-api-doc.mjs 生成，改了头文件注释或清单后要重新生成。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { checkSb2000Api, coverageOf, KNOWN_FUNCTIONS, parseHeaderFunctions, readFunctions, readUnwrapped } from '../check-sb2000-api.mjs';
-import { API_DOC_FILE, renderApiReference } from '../gen-sb2000-api-doc.mjs';
+import { checkSb2000Api, coverageOf, KNOWN_FUNCTIONS, parseHeaderFunctions, readFunctions, readUnwrapped } from '../check/check-sb2000-api.mjs';
+import { API_DOC_FILE, renderApiReference } from '../gen/gen-sb2000-api-doc.mjs';
 
 describe('SB2000 接口检查', () => {
   it('入库的头文件与库源码没有问题', () => {
@@ -59,6 +59,6 @@ describe('SB2000 接口检查', () => {
 
   it('入库的 API 参考文档与头文件生成的一致', () => {
     const stored = readFileSync(API_DOC_FILE, 'utf8').replace(/\r\n/g, '\n');
-    assert.equal(stored, renderApiReference(), '头文件注释或不封装清单改过了：运行 node tools/gen-sb2000-api-doc.mjs 重新生成 api-reference.md');
+    assert.equal(stored, renderApiReference(), '头文件注释或不封装清单改过了：运行 node vscode/tools/gen/gen-sb2000-api-doc.mjs 重新生成 api-reference.md');
   });
 });

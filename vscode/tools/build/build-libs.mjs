@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用法 node tools/build-libs.mjs [目标名…]；需要先构建扩展（vscode 里 npm run build）并组装工具链（npm run build:toolchain）。
+// 备注：用法 node vscode/tools/build/build-libs.mjs [目标名…]；需要先构建扩展（vscode 里 npm run build）并组装工具链（npm run build:toolchain）。
 //       引用 vscode/out 里编译好的模块；运行库生成在 vscode/targets/<目标>/lib。
 //       lib-build.json 字段：libraries（库路径到源文件列表）、objects（目标文件路径到源文件）、binIncludeDirs（.incbin 的搜索目录）。
 //       源文件列表里以“/”结尾的项是目录，递归收录其中全部 .c 与 .s 文件；.c 先用 cc65 编成汇编再汇编。库里每个源文件是一个目标文件，链接时只带用到的。
@@ -12,16 +12,16 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FcdevError } from '../vscode/out/shared/errors/fcdev-error.js';
-import { NodeFileSystem } from '../vscode/out/infra/files/node-file-system.js';
-import { createExtensionResources } from '../vscode/out/infra/resources/extension-resources-factory.js';
-import { BundledToolchainLocator } from '../vscode/out/infra/toolchain/bundled-toolchain-locator.js';
-import { ProcessToolRunner } from '../vscode/out/infra/toolchain/process-tool-runner.js';
-import { FileTargetRepository } from '../vscode/out/logic/targets/file-target-repository.js';
-import { resolveTargetPath } from '../vscode/out/shared/targets/target-settings.js';
+import { FcdevError } from '../../out/shared/errors/fcdev-error.js';
+import { NodeFileSystem } from '../../out/infra/files/node-file-system.js';
+import { createExtensionResources } from '../../out/infra/resources/extension-resources-factory.js';
+import { BundledToolchainLocator } from '../../out/infra/toolchain/bundled-toolchain-locator.js';
+import { ProcessToolRunner } from '../../out/infra/toolchain/process-tool-runner.js';
+import { FileTargetRepository } from '../../out/logic/targets/file-target-repository.js';
+import { resolveTargetPath } from '../../out/shared/targets/target-settings.js';
 
 /** 扩展目录 */
-const EXTENSION_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'vscode');
+const EXTENSION_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** 扩展自带资源的位置、目标仓库与工具运行 */
 const resources = createExtensionResources(EXTENSION_DIRECTORY);

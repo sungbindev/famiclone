@@ -32,7 +32,7 @@
 | --- | --- | --- | --- |
 | `fcdev` | 491 | `bin` 1、根文件 5、`debug-sdk` 35、`docs` 8、`src` 123、`targets` 263、`test` 56 | 全部移入扩展 |
 | `create-fcdev` | 24 | `src` 6、`templates` 13、`bin` 1、`test` 1、其余 3 | 移入扩展 |
-| `fcdev-cc65` | 1 | 只入库 `package.json`；工具与运行库由 `tools/build-cc65.mjs` 生成 | 工具链随扩展发布 |
+| `fcdev-cc65` | 1 | 只入库 `package.json`；工具与运行库由 `vscode/tools/build/build-cc65.mjs` 生成 | 工具链随扩展发布 |
 | `fcdev-ember` | 1 | 只入库 `package.json`；`Ember.exe` 由 `tools/build-ember.mjs` 组装 | 取消 |
 | 合计 | 517 | | |
 
@@ -104,7 +104,7 @@
 | M04 | 取消 `fcdev.json` 的 `emulator` 项、环境变量 `FCDEV_EMULATOR`、随包 Ember 的复制与定位、`fcdev-ember` 包和 `tools/build-ember.mjs` | 位置只有设置这一种途径 |
 | M05 | `run --debug` 的端口由设置 `fcdev.emulator.debugPort` 给出，默认 5699；取消环境变量 `FCDEV_DEBUG_PORT` | 与 M03 同理 |
 | M06 | 命令行取消，能力经命令、任务、设置与语言模型工具提供，对照见第 4.3 节 | 用户要求用 VS Code 的方式提供能力 |
-| M07 | 平台与现状相同，只支持 Windows x64：工具链是 Windows 可执行文件，打包用 `vsce package --target win32-x64` | `tools/build-cc65.mjs` 只产出 `.exe` |
+| M07 | 平台与现状相同，只支持 Windows x64：工具链是 Windows 可执行文件，打包用 `vsce package --target win32-x64` | `vscode/tools/build/build-cc65.mjs` 只产出 `.exe` |
 | M08 | 47 个测试文件迁成 vitest 用例，放在 `vscode/test/` 的同名功能目录；真实 Ember 的用例经测试专用环境变量 `FCDEV_TEST_EMULATOR` 取得位置，只在测试里读取 | 扩展已用 vitest；设置只在 VS Code 里存在 |
 | M09 | 使用文档放 `vscode/docs/`，主题登记表是 `vscode/docs/topics.json`，扩展与 Ember 帮助站点的导入脚本读同一份 | Ember 帮助站点的“fcdev 开发手册”以使用文档为来源，导入脚本不应依赖扩展的编译产物 |
 | M10 | 迁移后用真实 cc65 构建全部样例项目与四个模板，确认都能构建成功 | 删除 `fcdev` 之后没有可对照的实现 |
@@ -213,8 +213,8 @@ vscode/
 
 ### 4.5 构建与打包
 
-- `vscode/package.json` 的脚本顺序：`build`（`tsc`）、`build:toolchain`（运行 `tools/build-cc65.mjs`，输出到 `vscode/toolchain/`）、`build:libs`（各目标的运行库）、`gen:docs`（接口参考、符号参考、示例源码三份生成文档）、`check:package`（核对 `.vsix` 清单）、`package`（`vsce package --target win32-x64`）；`vscode:prepublish` 串联它们。
-- `tools/build-cc65.mjs` 把工具与运行库放进 `vscode/toolchain/` 并写出校验清单；`tools/build-libs.mjs`、三个文档生成脚本与 `check-sb2000-api.mjs` 引用 `vscode/out/` 里的模块。
+- `vscode/package.json` 的脚本顺序：`build`（`tsc`）、`build:toolchain`（运行 `vscode/tools/build/build-cc65.mjs`，输出到 `vscode/toolchain/`）、`build:libs`（各目标的运行库）、`gen:docs`（接口参考、符号参考、示例源码三份生成文档）、`check:package`（核对 `.vsix` 清单）、`package`（`vsce package --target win32-x64`）；`vscode:prepublish` 串联它们。
+- `vscode/tools/build/build-cc65.mjs` 把工具与运行库放进 `vscode/toolchain/` 并写出校验清单；`vscode/tools/build/build-libs.mjs`、三个文档生成脚本与 `check-sb2000-api.mjs` 引用 `vscode/out/` 里的模块。
 - `check:package` 取代 `release-check` 与 `verify-install`：核对 `.vsix` 含工具链（文件与清单的 SHA-256 一致）、各目标的运行库、模板、使用文档，不含测试、`node_modules`、密钥与 `.tgz`。
 - `.vscodeignore` 排除源码与测试，保留 `toolchain`、`targets`、`templates`、`docs`。
 
@@ -245,7 +245,7 @@ vscode/
 范围：
 
 - `src/shared`、`config`、`targets`、`toolchain`、`packagers`、`build` 共 27 个文件、1,830 行。
-- `targets/` 263 个文件移入 `vscode/targets/`；`tools/build-cc65.mjs`、`tools/build-libs.mjs` 输出到 `vscode/toolchain/` 与各目标的 `lib/`。
+- `targets/` 263 个文件移入 `vscode/targets/`；`vscode/tools/build/build-cc65.mjs`、`vscode/tools/build/build-libs.mjs` 输出到 `vscode/toolchain/` 与各目标的 `lib/`。
 - 对应测试（参数解析的测试随 `cli` 取消）。
 
 完成标准：用真实 cc65 构建全部样例项目都能成功，学习机项目能生成磁盘镜像；增量、源文件转码（GB2312）、多页链接、程序名规则的用例通过；Q3 取消的途径已删除。
@@ -347,7 +347,7 @@ vscode/
 
 计划状态：已完成；第 8 节第 6 项的手动核对待用户确认。
 
-阶段 2 的测试位置：根 `test/` 里测试生成脚本与工具链的 6 个文件移到 `tools/test/`，由 `npm run test:tools` 运行（已并入 `npm run check`）；`gen:docs` 重新生成四份 SB2000 生成文档。
+阶段 2 的测试位置：根 `test/` 里测试生成脚本与工具链的 6 个文件移到 `vscode/tools/test/`，由 `npm run test:tools` 运行（已并入 `npm run check`）；`gen:docs` 重新生成四份 SB2000 生成文档。
 
 阶段 3 的补充：反汇编测试移成 `test/shared|logic/disassembly`（需要 cc65 的用例没有工具链时跳过）；命令“fcdev：反汇编映像文件”（`fcdev.disassemble`）选映像与输出目录，平铺二进制缺加载地址或入口时再询问。
 
@@ -355,12 +355,12 @@ vscode/
 
 - 设置 `fcdev.emulator.path`（Ember 位置）与 `fcdev.emulator.debugPort`（默认 5699），作用域都是 `machine`；没有设置位置时运行类操作报错并说明设置项，命令“运行”“调试运行”还给“打开设置”按钮。
 - 新增命令“fcdev：运行”“fcdev：调试运行”（任务 `command: run`，`debug` 为真是调试运行）、工具 `fcdev_run`；调试客户端做成 5 个命令：调用调试请求、查看调试请求说明、保存调试截图、监视调试事件、显示调试服务地址，结果写到“fcdev 调试”输出通道。
-- 调试协议的接口文档与类型由 Ember 的 `npm run schema` 写到 `vscode/debug/openrpc.json` 与 `vscode/src/contracts/debug-client/generated/api.ts`；`ember` 的 `vscode:check` 取代 `debug-sdk:check`；帮助文档的协议参考由 `vscode/tools/gen-debug-api-docs.mjs` 生成；开发脚本的调试请求经 `ember/tools/dev/debug-call.mjs` 引用 `vscode/out`。
+- 调试协议的接口文档与类型由 Ember 的 `npm run schema` 写到 `vscode/debug/openrpc.json` 与 `vscode/src/contracts/debug-client/generated/api.ts`；`ember` 的 `vscode:check` 取代 `debug-sdk:check`；帮助文档的协议参考由 `vscode/tools/gen/gen-debug-api-docs.mjs` 生成；开发脚本的调试请求经 `ember/tools/dev/debug-call.mjs` 引用 `vscode/out`。
 - 真实 Ember 的用例在 `test/real-emulator`，用环境变量 `FCDEV_TEST_EMULATOR` 指向 Ember 的可执行文件（固件用 `FCDEV_TEST_FIRMWARE`，没有时用 `ember/roms/sb2000_bios.bin`），缺 Ember、cc65 或固件时跳过，`FCDEV_SKIP_GUI_TESTS=1` 也跳过。
 
 阶段 5 的补充：
 
-- 仓库里的 Node 脚本（`apps/sb2000/fbasic/tools`、`machines/bbg/tools/probe-fc.mjs`、`tools`）经 `tools/lib/extension.mjs` 引用 `vscode/out/`；Ember 位置用环境变量 `EMBER_EXE`（只用于开发脚本）。`tools/build-cc65.mjs` 的 make 程序环境变量改名为 `MAKE_PROGRAM`。
+- 仓库里的 Node 脚本（`apps/sb2000/fbasic/tools`、`machines/bbg/tools/probe-fc.mjs`、`tools`）经 `tools/lib/extension.mjs` 引用 `vscode/out/`；Ember 位置用环境变量 `EMBER_EXE`（只用于开发脚本）。`vscode/tools/build/build-cc65.mjs` 的 make 程序环境变量改名为 `MAKE_PROGRAM`。
 - `apps/sb2000` 下 7 个有 `package.json` 的项目删除了 `package.json` 与 `package-lock.json`，各加 `.vscode/tasks.json`（构建、构建磁盘镜像、运行、调试运行）；示例与 `fbasic/exe` 没有另加，扩展会为每个含 `fcdev.json` 的项目自动提供任务。
 - Ember 的帮助站点导入脚本改读 `vscode/docs/topics.json`（字段 `root: 'extension'` 指文件相对扩展目录，参数 `extensionRoot`）；帮助文档里的调试客户端、`docs/07-调试客户端工具` 改写为扩展的命令与内部客户端。
 - 开发文档 01 至 09、待办备忘、缺陷记录与扩展的使用文档、README 按新结构重写；`05-发布` 是扩展的打包与发布，`04-测试与验证` 是 vitest 的分层与环境变量。
@@ -369,7 +369,7 @@ vscode/
 阶段 6 的补充：
 
 - 已删除 `packages/`、根 `package.json`、根 `package-lock.json`、根 `test/`（结构检查已并入扩展的结构测试）、`tools/build-ember.mjs`、`tools/release.mjs`、`tools/release-check.mjs`、`tools/verify-install.mjs`、`tools/check-structure.mjs` 与基线记录脚本 `record-baseline.mjs`、基线文件及其测试；`.gitignore` 已清理。
-- 新增 `tools/check-package.mjs`（`npm run check:package`）与它的测试：核对 `.vsix` 里的编译产物、工具链（文件与清单的 SHA-256 一致）、目标与运行库、模板、使用文档与调试接口描述，且不含测试、源码、密钥、Ember、BIOS 与 ROM。
+- 新增 `vscode/tools/check/check-package.mjs`（`npm run check:package`）与它的测试：核对 `.vsix` 里的编译产物、工具链（文件与清单的 SHA-256 一致）、目标与运行库、模板、使用文档与调试接口描述，且不含测试、源码、密钥、Ember、BIOS 与 ROM。
 - 扩展版本升到 0.3.0，`CHANGELOG.md` 新增 0.3.0 一节；`.vscodeignore` 加入 `tools/**`。
 - 核对结果：在 `vscode/` 运行 `npm run check` 通过（66 个测试文件、653 个用例通过，20 个真实 Ember 的用例因没有设置 `FCDEV_TEST_EMULATOR` 跳过）；另用删除前复制出来的 Ember 单独运行 `test/real-emulator`，2 个文件、20 个用例通过；`npm run package` 生成 `fcdev-win32-x64-0.3.0.vsix`（756 个文件，约 2.9 MB），`npm run check:package` 通过；样例项目与四个模板的构建用例通过；统计正则除允许项外清零。
 - 没有运行 Ember 自己的测试与冒烟，Ember 里改动的帮助站点导入脚本只运行了一次导入（12 页）。

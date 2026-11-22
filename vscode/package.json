@@ -2079,18 +2079,18 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "build:toolchain": "node ../tools/build-cc65.mjs",
-    "build:libs": "node ../tools/build-libs.mjs",
-    "gen:docs": "node ../tools/gen-sb2000-header.mjs && node ../tools/gen-sb2000-api-doc.mjs && node ../tools/gen-sb2000-symbols-doc.mjs && node ../tools/gen-sb2000-examples-doc.mjs",
-    "test:tools": "node --test \"../tools/test/**/*.test.mjs\"",
+    "build:toolchain": "node tools/build/build-cc65.mjs",
+    "build:libs": "node tools/build/build-libs.mjs",
+    "gen:docs": "node tools/gen/gen-sb2000-header.mjs && node tools/gen/gen-sb2000-api-doc.mjs && node tools/gen/gen-sb2000-symbols-doc.mjs && node tools/gen/gen-sb2000-examples-doc.mjs",
+    "test:tools": "node --test \"tools/test/**/*.test.mjs\" \"../apps/sb2000/disk/test/*.test.mjs\"",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json",
     "lint": "oxlint --deny-warnings src test",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:tools",
     "vscode:prepublish": "npm run build",
-    "check:package": "node ../tools/check-package.mjs",
+    "check:package": "node tools/check/check-package.mjs",
     "package": "vsce package --target win32-x64 --allow-missing-repository --out ../build/vscode/",
-    "release": "node tools/release.mjs"
+    "release": "node tools/release/release.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

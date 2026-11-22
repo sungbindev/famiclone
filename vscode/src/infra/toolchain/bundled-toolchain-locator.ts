@@ -45,7 +45,7 @@ export class BundledToolchainLocator implements ToolchainLocator {
     if (missing.length > 0) {
       throw new FcdevError(`扩展自带的 cc65 工具链不完整（${toolchain.home} 的 bin 下缺少 ${missing.join('、')}）`, {
         code: 'TOOLCHAIN_INCOMPLETE',
-        hint: '在源码里运行 tools/build-cc65.mjs 组装工具链，或重新安装扩展'
+        hint: '在源码里运行 vscode/tools/build/build-cc65.mjs 组装工具链，或重新安装扩展'
       });
     }
     return toolchain;

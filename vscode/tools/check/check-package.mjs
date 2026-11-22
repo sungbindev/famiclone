@@ -5,7 +5,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
-// 备注：用法 node tools/check-package.mjs [.vsix 路径]；不给路径时取 build/vscode/fcdev-win32-x64-<版本>.vsix。只检查，
+// 备注：用法 node vscode/tools/check/check-package.mjs [.vsix 路径]；不给路径时取 build/vscode/fcdev-win32-x64-<版本>.vsix。只检查，
 //       不修改任何文件；用自带的最小 zip 读取器，不依赖第三方包。
 // ------------------------------------------------------------------------
 import { createHash } from 'node:crypto';
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 
 /** 仓库根目录 */
-const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** 扩展目录 */
 const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');

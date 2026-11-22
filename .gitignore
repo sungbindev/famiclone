@@ -3,10 +3,10 @@ node_modules/
 *.tgz
 .cache/
 
-# 工具链里的二进制是生成物，由 tools/build-cc65.mjs 组装到扩展目录，不入库
+# 工具链里的二进制是生成物，由 vscode/tools/build/build-cc65.mjs 组装到扩展目录，不入库
 vscode/toolchain/
 
-# 目标运行库由 tools/build-libs.mjs 生成
+# 目标运行库由 vscode/tools/build/build-libs.mjs 生成
 vscode/targets/*/lib/*.o
 vscode/targets/*/lib/*.lib
 apps/**/build/

@@ -32,7 +32,7 @@ const TEXT = {
   noExtension: `找不到 VS Code 扩展：${extension}`,
   noOpenRpc: '扩展里没有 debug/openrpc.json：先运行 npm run schema',
   noBuild: '找不到扩展的编译产物：先在 vscode 目录运行 npm run build',
-  noGenerator: (script) => `找不到 fcdev 文档的生成脚本：${join(repoRoot, 'tools', script)}`
+  noGenerator: (script) => `找不到 fcdev 文档的生成脚本：${join(extension, 'tools', 'gen', script)}`
 };
 
 try {
@@ -41,12 +41,12 @@ try {
   if (!existsSync(join(extension, 'out', 'shared', 'debug-client', 'api-reference.js'))) throw new Error(TEXT.noBuild);
 
   // 调试接口的各模块页：由接口定义生成，写到 help/api（不提交）。
-  execFileSync(process.execPath, [join(extension, 'tools', 'gen-debug-api-docs.mjs'), join(helpRoot, 'api')], { cwd: extension, stdio: 'inherit' });
+  execFileSync(process.execPath, [join(extension, 'tools', 'gen', 'gen-debug-api-docs.mjs'), join(helpRoot, 'api')], { cwd: extension, stdio: 'inherit' });
 
   // fcdev 扩展的手册：参考文档先重新生成，再连同手册一起导入 help/fcdev（不提交）。
   for (const script of FCDEV_GENERATORS) {
-    if (!existsSync(join(repoRoot, 'tools', script))) throw new Error(TEXT.noGenerator(script));
-    execFileSync(process.execPath, [join(repoRoot, 'tools', script)], { cwd: repoRoot, stdio: 'inherit' });
+    if (!existsSync(join(extension, 'tools', 'gen', script))) throw new Error(TEXT.noGenerator(script));
+    execFileSync(process.execPath, [join(extension, 'tools', 'gen', script)], { cwd: repoRoot, stdio: 'inherit' });
   }
   const { pages, written } = importFcdevDocs();
   console.log(`fcdev 手册：${pages} 页，写入 ${written} 页：ember/help/fcdev`);

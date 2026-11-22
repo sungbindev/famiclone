@@ -4,21 +4,21 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-18
-// 备注：参考文档 targets/sb2000/symbols-reference.md 由 tools/gen-sb2000-symbols-doc.mjs 生成，改了 sb2000.inc 后要重新生成。
+// 备注：参考文档 targets/sb2000/symbols-reference.md 由 vscode/tools/gen/gen-sb2000-symbols-doc.mjs 生成，改了 sb2000.inc 后要重新生成。
 // ------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { renderSymbolsReference, SYMBOLS_DOC_FILE } from '../gen-sb2000-symbols-doc.mjs';
+import { renderSymbolsReference, SYMBOLS_DOC_FILE } from '../gen/gen-sb2000-symbols-doc.mjs';
 
-const INC_FILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'vscode', 'targets', 'sb2000', 'asminc', 'sb2000.inc');
+const INC_FILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'targets', 'sb2000', 'asminc', 'sb2000.inc');
 
 describe('symbols-reference.md', () => {
   it('入库的文档与 sb2000.inc 的生成结果一致', () => {
     const stored = readFileSync(SYMBOLS_DOC_FILE, 'utf8').replaceAll('\r\n', '\n');
-    assert.equal(stored, renderSymbolsReference(readFileSync(INC_FILE, 'utf8')), '改了 sb2000.inc 后要运行 node tools/gen-sb2000-symbols-doc.mjs');
+    assert.equal(stored, renderSymbolsReference(readFileSync(INC_FILE, 'utf8')), '改了 sb2000.inc 后要运行 node vscode/tools/gen/gen-sb2000-symbols-doc.mjs');
   });
 
   it('每个符号一行：汇编名、SB_ 前缀的 C 名、零页两位其余四位的值、行尾注释；竖线被转义', () => {

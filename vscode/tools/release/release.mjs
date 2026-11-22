@@ -13,7 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** 仓库根目录 */
-const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** 扩展目录 */
 const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');
@@ -64,7 +64,7 @@ function main() {
 
   const vsix = path.join(OUTPUT_DIRECTORY, `fcdev-win32-x64-${version}.vsix`);
   if (!existsSync(vsix)) throw new Error(`找不到 ${vsix}`);
-  run(process.execPath, [path.join(REPOSITORY_ROOT, 'tools', 'check-package.mjs'), vsix]);
+  run(process.execPath, [path.join(EXTENSION_DIRECTORY, 'tools', 'check', 'check-package.mjs'), vsix]);
 
   if (!publish) {
     console.log(`已打包并通过核对：${vsix}\n确认后执行 npm run release -- --publish 上传。`);

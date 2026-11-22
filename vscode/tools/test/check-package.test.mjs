@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { crc32 } from 'node:zlib';
-import { checkPackage } from '../check-package.mjs';
+import { checkPackage } from '../check/check-package.mjs';
 
 /**
  * 按 store 方式写一个 zip 文件。

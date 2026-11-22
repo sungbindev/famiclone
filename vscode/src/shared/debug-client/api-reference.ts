@@ -5,8 +5,8 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-14
-// 备注：tools/gen-debug-api-docs.mjs 调用，输出到 Ember 帮助文档的 help/api；页面里的“连接与报文”
-//       链接指向帮助文档里手写的 help/debug/protocol.md。
+// 备注：vscode/tools/gen/gen-debug-api-docs.mjs 调用，输出到 Ember 帮助文档的
+//       help/api；页面里的“连接与报文”链接指向帮助文档里手写的 help/debug/protocol.md。
 // ------------------------------------------------------------------------
 
 import { moduleOf, typeSummary, type OpenRpcDocument, type OpenRpcMethod, type OpenRpcSchema } from './method-catalog';

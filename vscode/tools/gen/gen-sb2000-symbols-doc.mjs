@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-18
-// 备注：用法 node tools/gen-sb2000-symbols-doc.mjs；改了 sb2000.inc 后重新运行；test/sb2000-symbols-doc.test.mjs 核对入库的文档与生成结果一致。
+// 备注：用法 node vscode/tools/gen/gen-sb2000-symbols-doc.mjs；改了 sb2000.inc 后重新运行；test/sb2000-symbols-doc.test.mjs 核对入库的文档与生成结果一致。
 //       符号的说明只来自 sb2000.inc 的行尾注释，这里不手写任何符号说明；C 名按 gen-sb2000-header.mjs 的规则在汇编名前加 SB_。
 // ------------------------------------------------------------------------
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { parseSymbolSections } from './gen-sb2000-header.mjs';
 
 /** 仓库根目录 */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** SB2000 目标目录 */
 const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');

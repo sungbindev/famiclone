@@ -4,17 +4,17 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
-// 备注：用法 node tools/gen-sb2000-api-doc.mjs；改了头文件注释或 api-unwrapped.json 后重新运行；test/sb2000-api.test.mjs 核对入库的文档与生成结果一致。
+// 备注：用法 node vscode/tools/gen/gen-sb2000-api-doc.mjs；改了头文件注释或 api-unwrapped.json 后重新运行；test/sb2000-api.test.mjs 核对入库的文档与生成结果一致。
 //       文档来源只有头文件注释（命令“fcdev：查询 C 接口”读的也是同一份），所以这里不手写任何函数说明。
 // ------------------------------------------------------------------------
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { groupByModule } from '../vscode/out/shared/c-api/api-functions.js';
-import { coverageOf, KNOWN_FUNCTIONS, readFunctions, readUnwrapped } from './check-sb2000-api.mjs';
+import { groupByModule } from '../../out/shared/c-api/api-functions.js';
+import { coverageOf, KNOWN_FUNCTIONS, readFunctions, readUnwrapped } from '../check/check-sb2000-api.mjs';
 
 /** 仓库根目录 */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** SB2000 目标目录 */
 const TARGET_DIR = path.join(REPO_ROOT, 'vscode', 'targets', 'sb2000');

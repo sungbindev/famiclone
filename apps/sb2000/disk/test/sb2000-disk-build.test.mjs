@@ -11,8 +11,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { buildDisk, renderReadme, utf8ToGb2312 } from '../../apps/sb2000/disk/build-disk.mjs';
-import { listFat12, readFat12File } from '../../vscode/out/shared/packaging/fat12-image.js';
+import { buildDisk, renderReadme, utf8ToGb2312 } from '../build-disk.mjs';
+import { listFat12, readFat12File } from '../../../../vscode/out/shared/packaging/fat12-image.js';
 
 describe('SB2000 汇编开发盘', () => {
   let root;

@@ -5,7 +5,7 @@
 ; 邮箱：sungbin@3578.cn
 ; 日期：2026-11-10
 ; 备注：ca65 程序用 .include "sb2000.inc" 引入，只含符号定义，不占空间；值不超过 $FF 的符号汇编时按零页寻址。
-;       C 程序用的常量由 tools/gen-sb2000-header.mjs 从本文件生成到 include/sb2000-symbols.h，改本文件后要重新生成。
+;       C 程序用的常量由 vscode/tools/gen/gen-sb2000-header.mjs 从本文件生成到 include/sb2000-symbols.h，改本文件后要重新生成。
 ; ------------------------------------------------------------------------
 
 ; ---- 系统调用：JSR SYSCALL，功能号写 SYS_FUNCTION ----

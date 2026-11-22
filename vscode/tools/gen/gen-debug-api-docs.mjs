@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-22
- * 备注：用法：node tools/gen-debug-api-docs.mjs <输出目录>，输出目录一般是 Ember 帮助文档的 help/api（Ember 的 npm run help:build 调用，生成的页面不提交）；
+ * 备注：用法：node vscode/tools/gen/gen-debug-api-docs.mjs <输出目录>，输出目录一般是 Ember 帮助文档的 help/api（Ember 的 npm run help:build 调用，生成的页面不提交）；
  *       生成器是扩展的编译产物 out/shared/debug-client/api-reference.js，要先运行 npm run build；内容没有变化的页面不改写。
  * ------------------------------------------------------------------------
  */
@@ -16,11 +16,11 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const extension = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const extension = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 try {
   const output = process.argv[2];
-  if (output === undefined) throw new Error('用法：node tools/gen-debug-api-docs.mjs <输出目录>');
+  if (output === undefined) throw new Error('用法：node vscode/tools/gen/gen-debug-api-docs.mjs <输出目录>');
   const generator = join(extension, 'out', 'shared', 'debug-client', 'api-reference.js');
   if (!existsSync(generator)) throw new Error('找不到扩展的编译产物，先运行 npm run build');
   const { generateApiReference } = require(generator);

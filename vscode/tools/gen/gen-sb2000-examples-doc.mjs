@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-18
-// 备注：用法 node tools/gen-sb2000-examples-doc.mjs；改了示例源码或 fcdev.json 后重新运行；test/sb2000-examples-doc.test.mjs 核对入库的文档与生成结果一致。
+// 备注：用法 node vscode/tools/gen/gen-sb2000-examples-doc.mjs；改了示例源码或 fcdev.json 后重新运行；test/sb2000-examples-doc.test.mjs 核对入库的文档与生成结果一致。
 //       示例的说明只来自源码文件头的注释，这里不手写；示例的顺序由 EXAMPLE_ORDER 决定，没列出的示例按名字排在最后。
 // ------------------------------------------------------------------------
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** 仓库根目录 */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** 示例项目所在目录 */
 export const EXAMPLES_DIR = path.join(REPO_ROOT, 'apps', 'sb2000', 'examples');

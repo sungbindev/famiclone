@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用法 node tools/build-cc65.mjs；用 mingw32-make 与 gcc 构建，环境变量 MAKE_PROGRAM 可指定 make 程序。
+// 备注：用法 node vscode/tools/build/build-cc65.mjs；用 mingw32-make 与 gcc 构建，环境变量 MAKE_PROGRAM 可指定 make 程序。
 //       构建在 build/cc65 下进行，不污染 cc65/ 源码目录；产物在 vscode/toolchain，随 .vsix 发布，不入库。
 // ------------------------------------------------------------------------
 import { spawn } from 'node:child_process';
@@ -63,7 +63,7 @@ export const CC65_COMMIT = '357f64e4e3c733d54b82bc155afc841fd8d9ee8d';
 export const CC65_UPSTREAM = 'https://github.com/cc65/cc65';
 
 /** 仓库根目录 */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /** 工具链包里的可执行程序 */
 export const TOOLCHAIN_TOOLS = ['ar65', 'ca65', 'cc65', 'da65', 'ld65'];

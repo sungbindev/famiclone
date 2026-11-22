@@ -82,7 +82,6 @@ export interface PageView {
   logo: string;
   home: string;
   repository: string;
-  topLinks: { label: string; href: string }[];
   nav: NavSection[];
   doc?: DocView;
   landing?: LandingView;

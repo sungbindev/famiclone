@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：SiteFrame.tsx
- * 说明：站点框架：顶部标题栏（组件库的 TitleBar，右侧是顶部链接），下面左右分栏：左边侧边栏，右边是首页或帮助页，底部是页脚。
+ * 说明：站点框架：顶部标题栏（组件库的 TitleBar，右侧是作者联系方式与顶部链接），下面左右分栏：左边侧边栏，右边是首页或帮助页，底部是页脚。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-23
@@ -17,6 +17,8 @@ import type { PageView } from './types';
 
 /** 标题栏的应用名与副名。 */
 const BRAND = { title: 'Ember 与 fcdev', subtitle: '6502 模拟器与开发工具' };
+/** 标题栏里的作者与联系方式。 */
+const CONTACT = { author: 'sungbin', email: 'sungbin@3578.cn', qq: '46427991' };
 
 /**
  * 站点框架。
@@ -24,16 +26,18 @@ const BRAND = { title: 'Ember 与 fcdev', subtitle: '6502 模拟器与开发工�
  */
 export function SiteFrame({ view }: { view: PageView }) {
   const actions = (
-    <nav className="site-top-links" aria-label="站点链接">
-      {view.topLinks.map((link) => (
-        <a key={link.href} className="ui-button ui-button--ghost" href={link.href}>
-          <span>{link.label}</span>
+    <div className="site-header-actions">
+      <div className="site-contact">
+        <span>作者 {CONTACT.author}</span>
+        <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+        <span>QQ {CONTACT.qq}</span>
+      </div>
+      <nav className="site-top-links" aria-label="站点链接">
+        <a className="ui-button ui-button--ghost" href={view.repository} target="_blank" rel="noopener">
+          <span>GitHub</span>
         </a>
-      ))}
-      <a className="ui-button ui-button--ghost" href={view.repository} target="_blank" rel="noopener">
-        <span>GitHub</span>
-      </a>
-    </nav>
+      </nav>
+    </div>
   );
   return (
     <div className="site-frame">

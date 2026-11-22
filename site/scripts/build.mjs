@@ -155,11 +155,6 @@ function commonView(out, content, title, description) {
     logo: hrefFrom(out, `${ASSETS_DIR}/ember-logo.png`),
     home: hrefFrom(out, 'index.html'),
     repository: REPOSITORY_URL,
-    topLinks: [
-      { label: 'Ember 模拟器', href: href('manual/start') },
-      { label: 'fcdev 扩展', href: href('fcdev/index') },
-      { label: '帮助文档', href: href('manual/index') }
-    ],
     nav: null,
     href
   };

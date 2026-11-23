@@ -7,44 +7,45 @@
 
 .segment "SEG0_07A8"
 ; 段 0，$83A8-$8A14
-sub_83A8:
+; 选定 current_drive 指定的驱动器（drive_select），并在换盘后重新确认当前目录：软盘且 drive_path_stale 非 0 时先执行 BIOS 磁盘命令 6（参数在 dio_sector，含义未确认），再用 path_walk 沿 current_dir_path 回到该目录，路径不存在（A=3）就退回根目录；否则直接恢复已保存的当前目录（dir_restore_committed）。出口：选定失败时 A=3、C=1；其余出错时 A 为出错码。
+drive_activate:
   jsr drive_select
-  bcs loc_83F2
+  bcs drive_activate_error
   ldx current_drive
-  bmi loc_83EC
-  lda data_8025,x
-  beq loc_83EC
-  inc data_8025,x
+  bmi drive_activate_restore_dir
+  lda drive_path_stale,x
+  beq drive_activate_restore_dir
+  inc drive_path_stale,x
   lda sectors_per_track
-  sta var_00E9
+  sta dio_sector
   lda #$06
   jsr bios_disk_command
   lda current_dir_path
-  beq loc_83E4
+  beq drive_activate_root
   lda dos_page
   ldx #$80
   ldy #$32
-  sta data_8029
-  stx data_8028
-  sty data_8027
+  sta path_page
+  stx path_ptr_high
+  sty path_ptr_low
   ldx #$FF
-  jsr sub_A28A
-  bcc loc_83E7
+  jsr path_walk
+  bcc drive_activate_commit_dir
   cmp #$03
-  bne loc_83F1
-loc_83E4:
-  jsr sub_A27B
-loc_83E7:
-  jsr sub_A316
+  bne drive_activate_fail
+drive_activate_root:
+  jsr dir_set_root
+drive_activate_commit_dir:
+  jsr dir_commit_current
   clc
   rts
-loc_83EC:
-  jsr sub_A2F8
+drive_activate_restore_dir:
+  jsr dir_restore_committed
   clc
   rts
-loc_83F1:
+drive_activate_fail:
   sec
-loc_83F2:
+drive_activate_error:
   lda #$03
   rts
 
@@ -52,20 +53,20 @@ loc_83F2:
 block_name_pointer:
   lda #$05
   clc
-  adc var_00EE
-  sta var_00F4
+  adc block_ptr_low
+  sta name_ptr_low
   lda #$00
-  adc var_00EF
-  sta var_00F5
+  adc block_ptr_high
+  sta name_ptr_high
   rts
 
 ; 目录项指针：dir_buffer（$9400）加 A 乘 2，放入 $F1:$F2。A 是目录项在扇区里的字节偏移除以 2（即通道块里的 FH_DIR_ENTRY）。
 dir_entry_pointer:
   asl a
-  sta var_00F1
+  sta dir_entry_ptr_low
   lda #$94
   adc #$00
-  sta var_00F2
+  sta dir_entry_ptr_high
   rts
 
 ; 把 dir_buffer 写回磁盘上 dir_buffer_lba_0-2 指定的扇区。
@@ -75,44 +76,44 @@ dir_buffer_write:
   lda dir_buffer_lba_2
   ldx dir_buffer_lba_1
   ldy dir_buffer_lba_0
-  jmp loc_843C
+  jmp dir_buffer_transfer
 
 ; 把逻辑扇区 A:X:Y（Y 为低字节）读进目录缓冲区 dir_buffer（$9400）：已缓冲该扇区时直接返回 C=0；读失败时清除缓冲记录。
 dir_buffer_read:
   cmp dir_buffer_lba_2
-  bne loc_842D
+  bne dir_read_set_lba_2
   cpx dir_buffer_lba_1
-  bne loc_8430
+  bne dir_read_set_lba_1
   cpy dir_buffer_lba_0
-  bne loc_8433
+  bne dir_read_set_lba_0
   clc
   rts
-loc_842D:
+dir_read_set_lba_2:
   sta dir_buffer_lba_2
-loc_8430:
+dir_read_set_lba_1:
   stx dir_buffer_lba_1
-loc_8433:
+dir_read_set_lba_0:
   sty dir_buffer_lba_0
   lda #$02
   pha
   lda dir_buffer_lba_2
-loc_843C:
-  sty var_00E7
+dir_buffer_transfer:
+  sty dio_cylinder
   pha
   txa
   tay
   pla
   tax
   lda #$94
-  sta var_00EC
+  sta dio_addr_high
   lda #$00
-  sta var_00EB
+  sta dio_addr_low
   pla
   jsr disk_transfer_sector
-  bcc loc_8456
+  bcc dir_buffer_done
   ldy #$FF
   sty dir_buffer_lba_2
-loc_8456:
+dir_buffer_done:
   rts
 
 ; 开始扫描目录。入口：A 的位 3=1 且当前在子目录里时从子目录首簇起，否则从根目录起。出口：A:X:Y 为起始逻辑扇区号（Y 低），$FB 为该段的扇区数，$FA 清零。
@@ -120,25 +121,26 @@ dir_scan_start:
   pha
   jsr block_name_pointer
   lda #$00
-  sta data_8022
-  sta var_00FA
+  sta dir_cluster_index
+  sta dir_entry_offset
   lda sectors_per_cluster
-  sta var_00FB
+  sta dir_sectors_left
   pla
   and #$08
-  beq loc_8471
+  beq dir_scan_root
   bit in_subdirectory
-  bmi sub_8480
-loc_8471:
+  bmi current_dir_to_lba
+dir_scan_root:
   lda root_dir_sectors
-  sta var_00FB
+  sta dir_sectors_left
   lda #$00
   ldx root_dir_lba_high
   ldy root_dir_lba_low
   clc
   rts
 
-sub_8480:
+; 把当前子目录的首簇（current_dir_cluster_low/high）换成逻辑扇区号，参数与结果同 cluster_to_lba。
+current_dir_to_lba:
   ldx current_dir_cluster_high
   ldy current_dir_cluster_low
 
@@ -147,41 +149,41 @@ cluster_to_lba:
   tya
   sec
   sbc #$02
-  sta var_00F1
+  sta dir_entry_ptr_low
   tay
   txa
   sbc #$00
-  sta var_00F2
+  sta dir_entry_ptr_high
   cmp cluster_limit_high
-  beq loc_8499
-  bcc loc_84A1
-loc_8499:
+  beq lba_check_low
+  bcc lba_scale_clusters
+lba_check_low:
   cpy cluster_limit_low
-  bcc loc_84A1
+  bcc lba_scale_clusters
   lda #$1B
   rts
-loc_84A1:
+lba_scale_clusters:
   lda #$00
-  sta var_00F0
+  sta scratch_f0
   lda sectors_per_cluster
-loc_84A8:
+lba_scale_loop:
   lsr a
-  beq loc_84B3
-  asl var_00F1
-  rol var_00F2
-  rol var_00F0
-  bcc loc_84A8
-loc_84B3:
-  lda var_00F1
+  beq lba_add_data_area
+  asl dir_entry_ptr_low
+  rol dir_entry_ptr_high
+  rol scratch_f0
+  bcc lba_scale_loop
+lba_add_data_area:
+  lda dir_entry_ptr_low
   clc
   adc data_area_lba_low
   tay
   sta sector_lba_0
-  lda var_00F2
+  lda dir_entry_ptr_high
   adc data_area_lba_high
   sta sector_lba_1
   tax
-  lda var_00F0
+  lda scratch_f0
   adc #$00
   sta sector_lba_2
   rts
@@ -189,29 +191,31 @@ loc_84B3:
 ; 在当前目录里查找与文件通道块里文件名相同的目录项；入口 A、Y 是两个属性过滤值（data_8023、data_8024，具体用法未确认）。找到 C=0，$FA 为目录项偏移；找不到 C=1、A=$02；查找时会记下第一个空闲项（$FE）。
 dir_find_entry:
   ldx #$FF
-  stx var_00FE
+  stx far_ptr_low
 
+; dir_find_entry 的入口之二（不清除空闲项记录 $FE）：A、Y 存入 dir_attr_filter、dir_attr_forbidden，从当前目录的起始扇区起逐扇区读入 dir_buffer，用 dir_compare_entries 比较名字。出口同 dir_find_entry。
 dir_find_entry_with_mask:
-  sta data_8023
-  sty data_8024
+  sta dir_attr_filter
+  sty dir_attr_forbidden
   lda #$08
   jsr dir_scan_start
-  bcs loc_84F4
-loc_84DF:
+  bcs dir_find_done
+dir_find_loop:
   jsr dir_buffer_read
-  bcs loc_84F4
+  bcs dir_find_done
   jsr dir_compare_entries
-  bcc loc_84F4
-  bne loc_84F1
+  bcc dir_find_done
+  bne dir_find_not_found
   jsr dir_next_sector_current
-  bcc loc_84DF
+  bcc dir_find_loop
   rts
-loc_84F1:
+dir_find_not_found:
   lda #$02
   sec
-loc_84F4:
+dir_find_done:
   rts
 
+; 以 dir_buffer_lba_0-2 记录的当前目录扇区为起点取下一个目录扇区，转 dir_next_sector。
 dir_next_sector_current:
   lda dir_buffer_lba_2
   ldx dir_buffer_lba_1
@@ -221,118 +225,118 @@ dir_next_sector_current:
 dir_next_sector:
   clc
   iny
-  bne loc_8507
+  bne dir_next_check_chunk
   inx
-  bne loc_8507
+  bne dir_next_check_chunk
   adc #$01
-loc_8507:
-  dec var_00FB
-  bne loc_8546
+dir_next_check_chunk:
+  dec dir_sectors_left
+  bne dir_next_done
   bit in_subdirectory
-  bpl loc_8543
+  bpl dir_next_end
   lda current_dir_cluster_high
   ldy current_dir_cluster_low
-  sta var_00F7
-  sty var_00F6
+  sta cluster_high
+  sty cluster_low
   ldx #$00
-loc_851C:
-  stx var_00F8
+dir_next_chain_loop:
+  stx scratch_f8
   tax
-  ldy var_00F6
+  ldy cluster_low
   jsr fat_sector_for_cluster
-  bcs loc_8546
-  jsr sub_8885
-  bcs loc_8546
-  ldx var_00F8
-  cpx data_8022
+  bcs dir_next_done
+  jsr fat_follow_chain
+  bcs dir_next_done
+  ldx scratch_f8
+  cpx dir_cluster_index
   inx
-  bcc loc_851C
-  stx data_8022
+  bcc dir_next_chain_loop
+  stx dir_cluster_index
   jsr fat_cluster_is_last
-  bcs loc_8543
+  bcs dir_next_end
   lda sectors_per_cluster
-  sta var_00FB
+  sta dir_sectors_left
   jmp cluster_to_lba
-loc_8543:
+dir_next_end:
   lda #$02
   sec
-loc_8546:
+dir_next_done:
   rts
 
 ; 在 dir_buffer 里逐项比较：目录项第 0 字节为 0 表示目录到此为止（记下空闲项），为 $E5 的是已删除项（同样记下），名字第 0 字节 $05 按 $E5 比较；11 字节全部相同才匹配，匹配后把属性按位与 data_8023、data_8024 比较（未确认），相符返回 C=0，否则 A=$05、C=1。
 dir_compare_entries:
   jsr dir_entry_pointer
   ldy #$00
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   beq dir_note_free_slot
   cmp #$E5
-  beq loc_8578
+  beq dir_compare_deleted
   cmp #$05
-  bne loc_855A
+  bne dir_compare_name_loop
   lda #$E5
-loc_855A:
-  cmp (var_00F4),y
-  bne loc_857B
+dir_compare_name_loop:
+  cmp (name_ptr_low),y
+  bne dir_compare_advance
   iny
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   cpy #$0B
-  bne loc_855A
-  lda (var_00F1),y
+  bne dir_compare_name_loop
+  lda (dir_entry_ptr_low),y
   ora #$20
-  bit data_8023
-  beq loc_8585
-  bit data_8024
-  bne loc_8585
-  sta data_8023
-loc_8576:
+  bit dir_attr_filter
+  beq dir_compare_attr_mismatch
+  bit dir_attr_forbidden
+  bne dir_compare_attr_mismatch
+  sta dir_attr_filter
+dir_compare_match:
   clc
   rts
-loc_8578:
+dir_compare_deleted:
   jsr dir_note_free_slot
-loc_857B:
-  lda var_00FA
+dir_compare_advance:
+  lda dir_entry_offset
   clc
   adc #$10
-  sta var_00FA
+  sta dir_entry_offset
   bne dir_compare_entries
   rts
-loc_8585:
+dir_compare_attr_mismatch:
   lda #$05
   sec
   rts
 
 ; 记下第一个空闲目录项：$FE 为 $FF（尚未记录）时，把当前目录项偏移 $FA 与目录缓冲区的扇区号 dir_buffer_lba_0-2 存到 $FE 与 free_slot_lba_0-2。
 dir_note_free_slot:
-  ldx var_00FE
+  ldx far_ptr_low
   inx
-  bne loc_859D
-  lda var_00FA
-  sta var_00FE
+  bne free_slot_done
+  lda dir_entry_offset
+  sta far_ptr_low
   ldx #$02
-loc_8594:
+free_slot_copy_loop:
   lda dir_buffer_lba_0,x
   sta free_slot_lba_0,x
   dex
-  bpl loc_8594
-loc_859D:
+  bpl free_slot_copy_loop
+free_slot_done:
   sec
   rts
 
 ; FAT 缓冲区有修改（fat_buffer_dirty 非 0）时，把 fat_buffer 写回第一份与第二份 FAT。
 fat_buffer_flush:
   lda fat_buffer_dirty
-  beq loc_8576
+  beq dir_compare_match
   inc fat_buffer_dirty
   ldx #$96
   ldy #$00
-  stx var_00EC
-  sty var_00EB
+  stx dio_addr_high
+  sty dio_addr_low
   ldx #$00
   lda fat_buffer_sector
-  sta var_00E7
+  sta dio_cylinder
   lda #$03
   jsr disk_transfer_sector
-  bcs loc_859D
+  bcs free_slot_done
   ldx #$00
   ldy #$00
   lda fat_buffer_sector
@@ -340,21 +344,22 @@ fat_buffer_flush:
   sbc fat1_start_sector
   clc
   adc fat2_start_sector
-  sta var_00E7
-  bcc loc_85D1
+  sta dio_cylinder
+  bcc fat_flush_second_copy
   iny
-loc_85D1:
+fat_flush_second_copy:
   lda #$03
   jmp disk_transfer_sector
 
+; 写回全部缓冲区：先 FAT 缓冲区（fat_buffer_flush），再数据缓冲区（data_buffer_flush）。出口：C=1 出错。
 buffers_flush_all:
   jsr fat_buffer_flush
-  bcs loc_85F7
+  bcs data_flush_done
 
 ; 数据缓冲区有修改（data_buffer_dirty 为负）时把 sector_buffer 写回磁盘。
 data_buffer_flush:
   bit data_buffer_dirty
-  bpl loc_8576
+  bpl dir_compare_match
   inc data_buffer_dirty
   pha
   txa
@@ -368,9 +373,9 @@ data_buffer_flush:
   pla
   tax
   pla
-  bcc loc_85F7
+  bcc data_flush_done
   lda disk_last_error
-loc_85F7:
+data_flush_done:
   rts
 
 ; 把 FAT 的第 A 个扇区读进 fat_buffer（$9600）：先把旧内容写回，再读入，并记在 fat_buffer_sector（读失败时为 $FF）。
@@ -378,24 +383,25 @@ fat_buffer_load:
   pha
   jsr fat_buffer_flush
   pla
-  bcs loc_8615
+  bcs fat_load_failed
   ldx #$96
   ldy #$00
-  stx var_00EC
-  sty var_00EB
+  stx dio_addr_high
+  sty dio_addr_low
   sta fat_buffer_sector
-  sta var_00E7
+  sta dio_cylinder
   ldx #$00
   lda #$02
   jsr disk_transfer_sector
-  bcc loc_861A
-loc_8615:
+  bcc fat_load_done
+fat_load_failed:
   ldy #$FF
   sty fat_buffer_sector
-loc_861A:
+fat_load_done:
   rts
 
-sub_861B:
+; FAT12 的 FAT 扇区序号：X:Y 与 cluster_low/high 都是簇号，把 X:Y 变为簇号乘 3，A 为它除以 1024 的结果（即簇号乘 1.5 除以 512，FAT 内的扇区序号）。
+fat12_sector_index:
   tya
   asl a
   tay
@@ -403,43 +409,46 @@ sub_861B:
   rol a
   tax
   tya
-  adc var_00F6
+  adc cluster_low
   tay
   txa
-  adc var_00F7
+  adc cluster_high
   tax
   lsr a
   lsr a
   rts
 
-sub_862C:
-  ldx var_00F7
-  ldy var_00F6
+; 把 cluster_low/high 指定簇所在的 FAT 扇区读进 fat_buffer（fat_sector_for_cluster）；出错或该扇区已在缓冲区里（A=0）时直接返回，否则继续执行 block_store_chain_position。Y 暂存在 scratch_f0。
+fat_load_cluster_sector:
+  ldx cluster_high
+  ldy cluster_low
   jsr fat_sector_for_cluster
-  bcs loc_8651
-  beq loc_8651
-  sty var_00F0
+  bcs fat_load_cluster_done
+  beq fat_load_cluster_done
+  sty scratch_f0
 
-sub_8639:
+; 把当前簇链位置记入文件通道块：偏移 $15-$16 存 name_ptr（簇序号），偏移 $17-$18 存 cluster_low/high（簇号），供下次从该处继续查找簇链（见 file_seek_cluster）。出口：Y 取回 scratch_f0。
+block_store_chain_position:
   ldy #$15
-  lda var_00F4
-  sta (var_00EE),y
+  lda name_ptr_low
+  sta (block_ptr_low),y
   iny
-  lda var_00F5
-  sta (var_00EE),y
+  lda name_ptr_high
+  sta (block_ptr_low),y
   ldy #$17
-  lda var_00F6
-  sta (var_00EE),y
+  lda cluster_low
+  sta (block_ptr_low),y
   iny
-  lda var_00F7
-  sta (var_00EE),y
-  ldy var_00F0
-loc_8651:
+  lda cluster_high
+  sta (block_ptr_low),y
+  ldy scratch_f0
+fat_load_cluster_done:
   rts
 
+; cluster_low/high 里的簇号是否为链结束标记，转 fat_xy_is_last。C=1 表示结束。
 fat_cluster_is_last:
-  ldx var_00F7
-  ldy var_00F6
+  ldx cluster_high
+  ldy cluster_low
   jmp fat_xy_is_last
 
 ; FAT 项的值是否表示链结束（不小于 $FF0 或 FAT16 的 $FFF0）：C=1 为结束；fat_xy_is_last 用 X:Y 作为值。
@@ -447,37 +456,38 @@ fat_value_is_last:
   ldx fat_value_high
   ldy fat_value_low
 
+; X:Y 是否为 FAT 链结束值（高字节不小于 fat16_flag，且低字节不小于 $F0，即 FAT12 的 $FF0 以上或 FAT16 的 $FFF0 以上）。C=1 表示结束。
 fat_xy_is_last:
   cpx fat16_flag
-  bcc loc_8666
+  bcc fat_last_done
   cpy #$F0
-loc_8666:
+fat_last_done:
   rts
 
 ; 把簇 X:Y 的 FAT 项所在的 FAT 扇区读进 fat_buffer；重新读过返回 A=1，已在缓冲区里返回 A=0。
 fat_sector_for_cluster:
   txa
   bit fat16_flag
-  bmi loc_8670
-  jsr sub_861B
-loc_8670:
+  bmi fat_sector_compute
+  jsr fat12_sector_index
+fat_sector_compute:
   clc
   adc fat1_start_sector
   cmp fat_buffer_sector
   clc
-  beq loc_8689
-  stx var_00F0
-  sty var_00F3
+  beq fat_sector_done
+  stx scratch_f0
+  sty scratch_f3
   jsr fat_buffer_load
-  ldx var_00F0
-  ldy var_00F3
-  bcs loc_8689
+  ldx scratch_f0
+  ldy scratch_f3
+  bcs fat_sector_done
   lda #$01
-loc_8689:
+fat_sector_done:
   rts
-data_868A:
+fat12_high_byte_keep:
   .byte $F0
-data_868B:
+fat12_low_byte_keep:
   .byte $00, $0F
 fat_odd_flag:
   .byte $00
@@ -489,7 +499,7 @@ fat_value_high:
 ; 把簇 chain_cluster 的 FAT 项写成链结束标记（具体值由 fat_entry_access 按 FAT12 或 FAT16 处理）。
 fat_write_entry:
   lda #$FF
-  sta var_00FC
+  sta fat_access_mode
   lda fat16_flag
   sta fat_value_high
   lda #$FF
@@ -499,104 +509,104 @@ fat_write_entry:
 
 ; 读写 FAT 项。入口：簇号 X:Y；$FC 位 7=0 读出，位 7=1 写入（新值在 fat_value_low、fat_value_high，原值换到这里）。簇号为 0 表示文件的首簇，它不在 FAT 里，存在文件通道块偏移 $0B、$0C。FAT12 按 12 位拆包（半字节 fat_odd_flag），FAT16 直接取 2 字节。出口：读出的值在 fat_value_low、fat_value_high。
 fat_entry_access:
-  stx var_00F5
-  sty var_00F4
+  stx name_ptr_high
+  sty name_ptr_low
   txa
-  ora var_00F4
-  bne loc_8702
-  bit var_00FC
-  bpl loc_86E0
+  ora name_ptr_low
+  bne fat_entry_normal
+  bit fat_access_mode
+  bpl fat_entry_first_read
   jsr fat_value_is_last
-  bcc loc_86BF
+  bcc fat_entry_first_swap
   lda #$00
   sta fat_value_low
   sta fat_value_high
-loc_86BF:
+fat_entry_first_swap:
   ldy #$0B
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   tax
   lda fat_value_low
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   stx fat_value_low
   iny
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   tax
   lda fat_value_high
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   stx fat_value_high
   ldy #$19
   lda #$01
-  sta (var_00EE),y
-  bne loc_86ED
-loc_86E0:
+  sta (block_ptr_low),y
+  bne fat_entry_first_done
+fat_entry_first_read:
   ldy #$0B
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   sta fat_value_low
   iny
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   sta fat_value_high
-loc_86ED:
+fat_entry_first_done:
   lda fat_value_low
   ora fat_value_high
-  bne loc_8700
+  bne fat_entry_ok
   lda fat16_flag
   sta fat_value_high
   lda #$FF
   sta fat_value_low
-loc_8700:
+fat_entry_ok:
   clc
   rts
-loc_8702:
+fat_entry_normal:
   bit fat16_flag
-  bpl loc_875A
+  bpl fat12_entry
   txa
   clc
   adc fat1_start_sector
   cmp fat_buffer_sector
-  beq loc_8716
+  beq fat16_entry_have_sector
   jsr fat_buffer_load
-  bcs loc_8759
-loc_8716:
+  bcs fat16_entry_done
+fat16_entry_have_sector:
   ldx #$96
   ldy #$00
-  bit var_00F4
-  bpl loc_871F
+  bit name_ptr_low
+  bpl fat16_entry_pointer
   inx
-loc_871F:
-  lda var_00F4
-  stx var_00F5
-  sty var_00F4
+fat16_entry_pointer:
+  lda name_ptr_low
+  stx name_ptr_high
+  sty name_ptr_low
   asl a
   tay
-  bit var_00FC
-  bpl loc_874D
-  lda (var_00F4),y
+  bit fat_access_mode
+  bpl fat16_entry_read
+  lda (name_ptr_low),y
   tax
   lda fat_value_low
-  sta (var_00F4),y
+  sta (name_ptr_low),y
   stx fat_value_low
   iny
-  lda (var_00F4),y
+  lda (name_ptr_low),y
   tax
   lda fat_value_high
-  sta (var_00F4),y
+  sta (name_ptr_low),y
   stx fat_value_high
   lda #$FF
   sta fat_buffer_dirty
   ldy #$1A
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   clc
   rts
-loc_874D:
-  lda (var_00F4),y
+fat16_entry_read:
+  lda (name_ptr_low),y
   sta fat_value_low
   iny
-  lda (var_00F4),y
+  lda (name_ptr_low),y
   sta fat_value_high
   clc
-loc_8759:
+fat16_entry_done:
   rts
-loc_875A:
+fat12_entry:
   tya
   asl a
   tay
@@ -604,104 +614,104 @@ loc_875A:
   rol a
   tax
   tya
-  adc var_00F4
-  sta var_00F0
+  adc name_ptr_low
+  sta scratch_f0
   txa
-  adc var_00F5
+  adc name_ptr_high
   lsr a
-  sta var_00F3
-  ror var_00F0
+  sta scratch_f3
+  ror scratch_f0
   lsr a
   clc
   adc fat1_start_sector
   cmp fat_buffer_sector
-  beq loc_877C
+  beq fat12_entry_have_sector
   jsr fat_buffer_load
-  bcs loc_87DB
-loc_877C:
-  lda var_00F4
+  bcs fat12_entry_fail
+fat12_entry_have_sector:
+  lda name_ptr_low
   and #$01
   sta fat_odd_flag
-  beq loc_8790
+  beq fat12_entry_pointer
   ldx #$04
-loc_8787:
+fat12_shift_new_loop:
   asl fat_value_low
   rol fat_value_high
   dex
-  bne loc_8787
-loc_8790:
+  bne fat12_shift_new_loop
+fat12_entry_pointer:
   ldx #$96
   ldy #$00
-  stx var_00F5
-  sty var_00F4
-  lda var_00F3
-  ldy var_00F0
+  stx name_ptr_high
+  sty name_ptr_low
+  lda scratch_f3
+  ldy scratch_f0
   lsr a
-  bcc loc_87A1
-  inc var_00F5
-loc_87A1:
-  lda (var_00F4),y
-  bit var_00FC
-  bpl loc_87C1
+  bcc fat12_read_low_byte
+  inc name_ptr_high
+fat12_read_low_byte:
+  lda (name_ptr_low),y
+  bit fat_access_mode
+  bpl fat12_store_low
   pha
   ldx fat_odd_flag
-  and data_868B,x
+  and fat12_low_byte_keep,x
   ora fat_value_low
-  sta (var_00F4),y
+  sta (name_ptr_low),y
   tya
   tax
   lda #$FF
   sta fat_buffer_dirty
   ldy #$1A
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   txa
   tay
   pla
-loc_87C1:
+fat12_store_low:
   sta fat_value_low
   iny
-  bne loc_87DE
+  bne fat12_read_high_byte
   lda #$96
-  cmp var_00F5
-  beq loc_87DC
-  dec var_00F5
+  cmp name_ptr_high
+  beq fat12_page_boundary
+  dec name_ptr_high
   ldx fat_buffer_sector
   inx
   txa
   jsr fat_buffer_load
   ldy #$00
-  bcc loc_87DE
-loc_87DB:
+  bcc fat12_read_high_byte
+fat12_entry_fail:
   rts
-loc_87DC:
-  inc var_00F5
-loc_87DE:
-  lda (var_00F4),y
-  bit var_00FC
-  bpl loc_87FA
+fat12_page_boundary:
+  inc name_ptr_high
+fat12_read_high_byte:
+  lda (name_ptr_low),y
+  bit fat_access_mode
+  bpl fat12_store_high
   pha
   ldx fat_odd_flag
-  and data_868A,x
+  and fat12_high_byte_keep,x
   ora fat_value_high
-  sta (var_00F4),y
+  sta (name_ptr_low),y
   lda #$FF
   sta fat_buffer_dirty
   ldy #$1A
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   pla
-loc_87FA:
+fat12_store_high:
   sta fat_value_high
   lda fat_odd_flag
-  beq loc_880F
+  beq fat12_even_mask
   ldx #$04
-loc_8804:
+fat12_shift_old_loop:
   lsr fat_value_high
   ror fat_value_low
   dex
-  bne loc_8804
+  bne fat12_shift_old_loop
   clc
   rts
-loc_880F:
+fat12_even_mask:
   lda fat_value_high
   and #$0F
   sta fat_value_high
@@ -713,41 +723,41 @@ fat_advance_search:
   ldx free_search_cluster_high
   ldy free_search_cluster_low
   iny
-  bne loc_8823
+  bne search_no_carry
   inx
-loc_8823:
+search_no_carry:
   cpx cluster_limit_high
-  bne loc_8831
+  bne search_store
   cpy cluster_limit_low
-  bne loc_8831
+  bne search_store
   ldx #$00
   ldy #$02
-loc_8831:
+search_store:
   stx free_search_cluster_high
   sty free_search_cluster_low
-  cpx var_00F7
-  bne loc_883D
-  cpy var_00F6
-loc_883D:
+  cpx cluster_high
+  bne search_done
+  cpy cluster_low
+search_done:
   rts
 
 ; 从 free_search_cluster 起顺序找空闲簇（FAT 项为 0）；整张磁盘没有空闲簇时 A=$27（磁盘已满）、C=1。
 fat_find_free:
   lda #$00
-  sta var_00FC
+  sta fat_access_mode
   ldx free_search_cluster_high
   ldy free_search_cluster_low
-loc_8848:
+find_free_loop:
   jsr fat_entry_access
-  bcs loc_885D
+  bcs find_free_done
   lda fat_value_low
   ora fat_value_high
-  beq loc_885D
+  beq find_free_done
   jsr fat_advance_search
-  bne loc_8848
+  bne find_free_loop
   lda #$27
   sec
-loc_885D:
+find_free_done:
   rts
 chain_cluster_low:
   .byte $00
@@ -757,9 +767,9 @@ chain_cluster_high:
 ; 分配一个空闲簇：用 fat_find_free 找到后，把前一簇（chain_cluster）的链接改成它，并把它标成链结束。
 fat_allocate_cluster:
   jsr fat_find_free
-  bcs loc_8884
+  bcs allocate_done
   lda #$FF
-  sta var_00FC
+  sta fat_access_mode
   ldx chain_cluster_high
   ldy chain_cluster_low
   lda free_search_cluster_high
@@ -769,180 +779,185 @@ fat_allocate_cluster:
   sta chain_cluster_low
   sta fat_value_low
   jsr fat_entry_access
-loc_8884:
+allocate_done:
   rts
 
-sub_8885:
+; fat_read_value 的入口，A=0：允许跨 FAT 缓冲区边界再读下一个 FAT 扇区。取 cluster_low/high 指定簇的下一簇号，结果放回 cluster_low/high。
+fat_follow_chain:
   lda #$00
 
+; 从 fat_buffer 取出 FAT 项并放进 cluster_low/high：入口 Y 为项在缓冲区里的偏移（fat_sector_for_cluster 的返回值），FAT12 先解包 12 位，FAT16 取 2 字节并按 fat16_flag 屏蔽高字节。A 位 7 为 1 时不再读下一个 FAT 扇区。出口：C=1 为读盘出错。
 fat_read_value:
-  sta var_00F0
+  sta scratch_f0
   bit fat16_flag
-  bpl loc_8896
-  lsr var_00F7
+  bpl fat_read_12bit
+  lsr cluster_high
   tya
   asl a
   tay
-  jmp loc_8899
-loc_8896:
-  jsr sub_88DF
-loc_8899:
-  bcs loc_88A8
+  jmp fat_read_have_index
+fat_read_12bit:
+  jsr fat12_unpack_index
+fat_read_have_index:
+  bcs fat_read_second_half
   lda fat_buffer,y
-  sta var_00F6
+  sta cluster_low
   iny
-  beq loc_88C5
+  beq fat_read_high_buffer
   lda fat_buffer,y
-  bcc loc_88C8
-loc_88A8:
-  lda data_9700,y
-  sta var_00F6
+  bcc fat_read_unpack
+fat_read_second_half:
+  lda fat_buffer_high,y
+  sta cluster_low
   iny
-  bne loc_88C5
-  bit var_00F0
-  bmi loc_88DE
+  bne fat_read_high_buffer
+  bit scratch_f0
+  bmi fat_read_done
   ldx fat_buffer_sector
   inx
   txa
   jsr fat_buffer_load
-  bcs loc_88DE
-  inc var_00F0
+  bcs fat_read_done
+  inc scratch_f0
   lda fat_buffer
-  bcc loc_88C8
-loc_88C5:
-  lda data_9700,y
-loc_88C8:
-  bit var_00F7
-  bpl loc_88D8
+  bcc fat_read_unpack
+fat_read_high_buffer:
+  lda fat_buffer_high,y
+fat_read_unpack:
+  bit cluster_high
+  bpl fat_read_mask
   lsr a
-  ror var_00F6
+  ror cluster_low
   lsr a
-  ror var_00F6
+  ror cluster_low
   lsr a
-  ror var_00F6
+  ror cluster_low
   lsr a
-  ror var_00F6
-loc_88D8:
+  ror cluster_low
+fat_read_mask:
   and fat16_flag
-  sta var_00F7
+  sta cluster_high
   clc
-loc_88DE:
+fat_read_done:
   rts
 
-sub_88DF:
+; FAT12 取项前的下标换算：X:Y 右移 1 位，被移出的位（簇号奇偶）存入 cluster_high 的位 7，A 为 X 再右移一位的结果。
+fat12_unpack_index:
   txa
   lsr a
   tax
   tya
   ror a
   tay
-  ror var_00F7
+  ror cluster_high
   txa
   lsr a
   rts
 
-sub_88EA:
+; 定位文件读写位置所在的簇。入口：通道块偏移 7-10 为读写位置；A 非 0 时先对 cluster_low/high 指定的簇调用 fat_load_cluster_sector。处理：读写位置除以簇的字节数得簇序号（放 $F1-$F3），从通道块缓存的位置（偏移 $15-$18）或首簇（偏移 $0B-$0C）出发沿簇链前进到该序号，并记下位置（block_store_chain_position）。出口：找到时 C=0，cluster_low/high 为簇号，sector_lba_0-2 为簇内对应扇区，X 为扇区在簇内的序号；链结束仍未到达时 A=0、C=1；出错 A 为出错码、C=1。
+file_seek_cluster:
   pha
   ldy #$0A
-  lda (var_00EE),y
-  sta var_00F3
+  lda (block_ptr_low),y
+  sta scratch_f3
   dey
-  lda (var_00EE),y
-  sta var_00F2
+  lda (block_ptr_low),y
+  sta dir_entry_ptr_high
   dey
-  lda (var_00EE),y
-  sta var_00F1
+  lda (block_ptr_low),y
+  sta dir_entry_ptr_low
   lda sectors_per_cluster
-loc_88FE:
-  lsr var_00F3
-  ror var_00F2
-  ror var_00F1
+chain_seek_shift_loop:
+  lsr scratch_f3
+  ror dir_entry_ptr_high
+  ror dir_entry_ptr_low
   lsr a
-  bne loc_88FE
-  lda var_00F1
+  bne chain_seek_shift_loop
+  lda dir_entry_ptr_low
   ldy #$15
-  cmp (var_00EE),y
+  cmp (block_ptr_low),y
   iny
-  lda var_00F2
-  sbc (var_00EE),y
-  bcs loc_891E
+  lda dir_entry_ptr_high
+  sbc (block_ptr_low),y
+  bcs chain_seek_from_cached
   lda #$00
-  sta var_00F5
-  sta var_00F4
+  sta name_ptr_high
+  sta name_ptr_low
   ldy #$0B
-  bne loc_8929
-loc_891E:
-  lda (var_00EE),y
-  sta var_00F5
+  bne chain_seek_load_start
+chain_seek_from_cached:
+  lda (block_ptr_low),y
+  sta name_ptr_high
   dey
-  lda (var_00EE),y
-  sta var_00F4
+  lda (block_ptr_low),y
+  sta name_ptr_low
   ldy #$17
-loc_8929:
-  lda (var_00EE),y
-  sta var_00F6
+chain_seek_load_start:
+  lda (block_ptr_low),y
+  sta cluster_low
   iny
-  lda (var_00EE),y
-  sta var_00F7
+  lda (block_ptr_low),y
+  sta cluster_high
   pla
-  beq loc_893A
-  jsr sub_862C
-  bcs loc_8964
-loc_893A:
-  lda var_00F4
-  cmp var_00F1
-  bne loc_8946
-  lda var_00F5
-  cmp var_00F2
-  beq loc_8965
-loc_8946:
-  jsr sub_862C
-  bcs loc_8964
-  jsr sub_8885
-  bcs loc_8964
-  inc var_00F4
-  bne loc_8956
-  inc var_00F5
-loc_8956:
-  lda var_00F0
-  beq loc_895D
-  jsr sub_8639
-loc_895D:
+  beq chain_seek_walk_check
+  jsr fat_load_cluster_sector
+  bcs chain_seek_done
+chain_seek_walk_check:
+  lda name_ptr_low
+  cmp dir_entry_ptr_low
+  bne chain_seek_walk_step
+  lda name_ptr_high
+  cmp dir_entry_ptr_high
+  beq chain_seek_found
+chain_seek_walk_step:
+  jsr fat_load_cluster_sector
+  bcs chain_seek_done
+  jsr fat_follow_chain
+  bcs chain_seek_done
+  inc name_ptr_low
+  bne chain_seek_no_carry
+  inc name_ptr_high
+chain_seek_no_carry:
+  lda scratch_f0
+  beq chain_seek_chain_end
+  jsr block_store_chain_position
+chain_seek_chain_end:
   jsr fat_cluster_is_last
-  bcc loc_893A
+  bcc chain_seek_walk_check
   lda #$00
-loc_8964:
+chain_seek_done:
   rts
-loc_8965:
-  ldx var_00F7
-  ldy var_00F6
+chain_seek_found:
+  ldx cluster_high
+  ldy cluster_low
   jsr cluster_to_lba
   lda sectors_per_cluster
   asl a
   sbc #$00
   ldy #$08
-  and (var_00EE),y
+  and (block_ptr_low),y
   lsr a
   tax
   clc
   adc sector_lba_0
   sta sector_lba_0
-  bcc loc_898A
+  bcc chain_seek_found_done
   clc
   inc sector_lba_1
-  bne loc_898A
+  bne chain_seek_found_done
   inc sector_lba_2
-loc_898A:
+chain_seek_found_done:
   rts
 
-sub_898B:
+; 估算从读写位置所在扇区起可以连续读写多少扇区（所在簇及其后相邻编号的簇，不含需要换 FAT 扇区的情形）。入口：A 为要传送的扇区数。出口：C=0 时 A 为可连续传送的扇区数的页数（扇区数乘 2，不超过要求值），sector_lba_0-2 为起始扇区；C=1 为簇链出错。
+file_contiguous_run:
   sta sectors_left
   lda sectors_per_cluster
   asl a
   sec
   sbc #$01
   ldy #$08
-  and (var_00EE),y
+  and (block_ptr_low),y
   lsr a
   clc
   adc sectors_left
@@ -950,64 +965,64 @@ sub_898B:
   sbc #$00
   sta sectors_left
   lda sectors_per_cluster
-loc_89A9:
+run_shift_loop:
   lsr a
-  beq loc_89B1
+  beq run_seek
   lsr sectors_left
-  bne loc_89A9
-loc_89B1:
+  bne run_shift_loop
+run_seek:
   lda #$01
-  jsr sub_88EA
-  bcc loc_89BB
+  jsr file_seek_cluster
+  bcc run_count_start
   cmp #$01
   rts
-loc_89BB:
-  stx var_00ED
+run_count_start:
+  stx dio_count
   lda #$01
-  sta data_800A
-loc_89C2:
+  sta contiguous_count
+run_extend_loop:
   dec sectors_left
-  beq loc_8A01
-  ldx var_00F7
-  ldy var_00F6
+  beq run_scale
+  ldx cluster_high
+  ldy cluster_low
   jsr fat_xy_is_last
-  bcs loc_8A01
-  stx var_00F9
-  sty var_00F8
+  bcs run_scale
+  stx scratch_f9
+  sty scratch_f8
   txa
   bit fat16_flag
-  bmi loc_89DE
-  jsr sub_861B
+  bmi run_check_sector
+  jsr fat12_sector_index
   clc
-loc_89DE:
+run_check_sector:
   adc fat1_start_sector
   cmp fat_buffer_sector
-  bne loc_8A01
+  bne run_scale
   lda #$80
   jsr fat_read_value
-  bcs loc_8A01
+  bcs run_scale
   tax
-  ldy var_00F6
-  bne loc_89F3
+  ldy cluster_low
+  bne run_compare
   dex
-loc_89F3:
+run_compare:
   dey
-  cpy var_00F8
-  bne loc_8A01
-  cpx var_00F9
-  bne loc_8A01
-  inc data_800A
-  bcs loc_89C2
-loc_8A01:
+  cpy scratch_f8
+  bne run_scale
+  cpx scratch_f9
+  bne run_scale
+  inc contiguous_count
+  bcs run_extend_loop
+run_scale:
   lda sectors_per_cluster
-loc_8A04:
+run_scale_loop:
   lsr a
-  beq loc_8A0D
-  asl data_800A
-  jmp loc_8A04
-loc_8A0D:
-  lda data_800A
+  beq run_result
+  asl contiguous_count
+  jmp run_scale_loop
+run_result:
+  lda contiguous_count
   sec
-  sbc var_00ED
+  sbc dio_count
   clc
   rts

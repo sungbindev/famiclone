@@ -7,13 +7,18 @@
 
 .segment "SEG0_1C00"
 ; 段 0，$9800-$9D76
+; 英文提示“Insert diskette for drive ”，后接盘符与后半句
+msg_insert_english:
   .byte $0D, $0A, $49, $6E, $73, $65, $72, $74, $20, $64, $69, $73, $6B, $65, $74, $74
   .byte $65, $20, $66, $6F, $72, $20, $64, $72, $69, $76, $65, $20
-data_981C:
+prompt_drive_letter_english:
   .byte $3F, $3A, $0D, $0A, $61, $6E, $64, $20, $70, $72, $65, $73, $73, $20, $61, $6E
   .byte $79, $20, $6B, $65, $79, $20, $77, $68, $65, $6E, $20, $72, $65, $61, $64, $79
-  .byte $0D, $0A, $0A, $24, $0D, $0A, $B0, $D1
-data_9844:
+  .byte $0D, $0A, $0A, $24
+; 中文方式下的换盘提示（GB2312），后接盘符
+msg_insert_chinese:
+  .byte $0D, $0A, $B0, $D1
+prompt_drive_letter_chinese:
   .byte $3F, $C5, $CC, $B2, $E5, $C8, $EB, $C7, $FD, $B6, $AF, $C6, $F7, $D6, $D0, $2C
   .byte $B0, $B4, $C8, $CE, $D2, $E2, $BC, $FC, $C8, $B7, $C8, $CF, $0D, $0A, $24
 
@@ -22,29 +27,29 @@ critical_disk_prompt:
   tya
   clc
   adc #$41
-  sta data_981C
-  sta data_9844
+  sta prompt_drive_letter_english
+  sta prompt_drive_letter_chinese
   ldx #$98
   ldy #$00
-  lda data_A544
-  beq loc_987A
+  lda display_mode
+  beq prompt_show
   ldx #$98
   ldy #$40
-loc_987A:
+prompt_show:
   lda dos_page
-  sta data_A53D
+  sta current_page
   jsr dos_display_string
-loc_9883:
+prompt_wait_loop:
   lda #$18
   ldx #$01
   jsr BIOS_ENTRY
   tya
-  beq loc_9897
+  beq prompt_finish
   lda #$18
   ldx #$00
   jsr BIOS_ENTRY
-  jmp loc_9883
-loc_9897:
+  jmp prompt_wait_loop
+prompt_finish:
   lda #$18
   ldx #$00
   jmp BIOS_ENTRY
@@ -53,7 +58,7 @@ loc_9897:
 file_call_reset:
   jsr drive_state_offset
   lda #$00
-  sta data_9C83,x
+  sta drive_state_marker,x
   lda current_drive
   cmp mounted_drive
   bne drive_info_read
@@ -73,40 +78,40 @@ drive_info_read:
   txa
   and #$03
   ldy #$02
-loc_98CB:
+drive_count_loop:
   lsr a
-  bcc loc_98CF
+  bcc drive_count_next
   iny
-loc_98CF:
-  bne loc_98CB
+drive_count_next:
+  bne drive_count_loop
   lda drive_info_y
-  beq loc_98D7
+  beq drive_count_store
   iny
-loc_98D7:
+drive_count_store:
   sty logical_drive_count
   lda #$00
   rts
-data_98DD:
+disk_error_code_table:
   .byte $CC, $80, $40, $10, $08, $06, $04, $03
-data_98E5:
+critical_reason_table:
   .byte $0A, $02, $06, $04, $04, $02, $08, $00, $0C
 
 ; 把 BIOS 磁盘错误码（A）经 data_98DD 表换成严重错误的原因编号（data_98E5 表），然后调用严重错误入口 CRITICAL_ERROR_ENTRY（$5818）；Y 是读写标志与驱动器相关的参数（未确认）。
 critical_error_report:
   ldx disk_command_temp
   cpx #$03
-  bne loc_98F6
+  bne report_find_code
   iny
-loc_98F6:
+report_find_code:
   ldx #$00
-loc_98F8:
-  cmp data_98DD,x
-  beq loc_9902
+report_search_loop:
+  cmp disk_error_code_table,x
+  beq report_call_handler
   inx
   cpx #$08
-  bne loc_98F8
-loc_9902:
-  lda data_98E5,x
+  bne report_search_loop
+report_call_handler:
+  lda critical_reason_table,x
   tax
   jmp CRITICAL_ERROR_ENTRY
 critical_messages_english:
@@ -126,7 +131,7 @@ critical_messages_english:
   .byte $77, $72, $69, $74, $65, $00, $20, $64, $72, $69, $76, $65, $20, $00, $0D, $0A
   .byte $41, $62, $6F, $72, $74, $00, $2C, $20, $49, $67, $6E, $6F, $72, $65, $00, $2C
   .byte $20, $52, $65, $74, $72, $79, $00, $2C, $20, $46, $61, $69, $6C, $00
-data_9A07:
+english_message_offsets:
   .byte $00, $0E, $1B, $25, $34, $3F, $52, $5D, $70, $81, $96, $A8, $B9
 critical_messages_chinese:
   .byte $D0, $B4, $B1, $A3, $BB, $A4, $00, $CE, $B4, $D6, $AA, $B5, $A5, $D4, $AA, $00
@@ -140,15 +145,15 @@ critical_messages_chinese:
   .byte $00, $0D, $0A, $CD, $CB, $B3, $F6, $41, $00, $2C, $BA, $F6, $C2, $D4, $49, $00
   .byte $2C, $D6, $D8, $CA, $D4, $52, $00, $2C, $CA, $A7, $B0, $DC, $46, $00, $20, $CA
   .byte $B1, $B7, $A2, $CF, $D6, $00, $0D, $0A, $00
-data_9ABD:
+chinese_message_offsets:
   .byte $00, $07, $10, $17, $20, $29, $32, $3B, $48, $53, $5E, $65, $6C
-data_9ACA:
+critical_flags:
   .byte $00
 
 ; 显示中文消息：从 critical_messages_chinese 的偏移 Y 起逐字节显示，到 0 为止。
 critical_print_chinese:
   ldx critical_messages_chinese,y
-  beq loc_9ADA
+  beq print_chinese_done
   tya
   pha
   jsr dos_display_char
@@ -156,13 +161,13 @@ critical_print_chinese:
   tay
   iny
   bne critical_print_chinese
-loc_9ADA:
+print_chinese_done:
   rts
 
 ; 显示英文消息：从 critical_messages_english 的偏移 Y 起逐字节显示，到 0 为止。
 critical_print_english:
   ldx critical_messages_english,y
-  beq loc_9AEA
+  beq print_english_done
   tya
   pha
   jsr dos_display_char
@@ -170,7 +175,7 @@ critical_print_english:
   tay
   iny
   bne critical_print_english
-loc_9AEA:
+print_english_done:
   rts
 
 ; 显示中文方式下的前缀消息（中文表偏移 $A6，即 CRLF），保留 Y。
@@ -188,62 +193,62 @@ critical_ask_action:
   ldx #$3F
   jsr dos_display_char
   lda #$01
-  jsr sub_A74E
+  jsr kb_clear_and_call
   and #$DF
   tax
   ldy #$02
   cpx #$41
-  beq loc_9B24
+  beq ask_accepted
   ldy #$00
   lda #$20
   cpx #$49
-  beq loc_9B1D
+  beq ask_check_option
   iny
   lsr a
   cpx #$52
-  beq loc_9B1D
+  beq ask_check_option
   ldy #$03
   lsr a
   cpx #$46
-  bne loc_9B22
-loc_9B1D:
-  and data_9ACA
-  bne loc_9B24
-loc_9B22:
+  bne ask_invalid
+ask_check_option:
+  and critical_flags
+  bne ask_accepted
+ask_invalid:
   sec
   rts
-loc_9B24:
+ask_accepted:
   jsr critical_print_reason
   clc
   rts
 
 ; 严重错误处理（CRITICAL_ERROR_ENTRY 的目标，启动时装入）。入口：X 为原因编号，Y 为读写与可用选项标志。显示“原因 read/write error on drive X”与“Abort, Ignore, Retry, Fail”中允许的选项，等待用户选择。出口：Y 为选择结果（见 critical_ask_action）。显示方式为中文时用中文消息表。
 critical_error_handler:
-  sty data_9ACA
+  sty critical_flags
   cpx #$0D
-  bcc loc_9B32
+  bcc handler_clamp_reason
   ldx #$0C
-loc_9B32:
-  lda data_A544
-  bpl loc_9B96
-  ldy data_9ABD,x
+handler_clamp_reason:
+  lda display_mode
+  bpl handler_english
+  ldy chinese_message_offsets,x
   tya
   pha
   jsr critical_print_reason
-  lda data_9ACA
+  lda critical_flags
   ldy #$75
   lsr a
-  bcc loc_9B49
+  bcc handler_chinese_rw
   ldy #$78
-loc_9B49:
+handler_chinese_rw:
   jsr critical_print_chinese
-  lda data_9ACA
-  bpl loc_9B51
-loc_9B51:
+  lda critical_flags
+  bpl handler_chinese_drive
+handler_chinese_drive:
   ldy #$7B
   jsr critical_print_chinese
   ldy #$01
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   clc
   adc #$40
   tax
@@ -253,90 +258,90 @@ loc_9B51:
   pla
   tay
   jsr critical_print_chinese
-loc_9B6B:
+handler_chinese_options:
   ldy #$81
   jsr critical_print_chinese
-  lda data_9ACA
+  lda critical_flags
   asl a
   asl a
-  bpl loc_9B7E
+  bpl handler_chinese_ignore
   pha
   ldy #$89
   jsr critical_print_chinese
   pla
-loc_9B7E:
+handler_chinese_ignore:
   asl a
-  bpl loc_9B88
+  bpl handler_chinese_retry
   pha
   ldy #$90
   jsr critical_print_chinese
   pla
-loc_9B88:
+handler_chinese_retry:
   asl a
-  bpl loc_9B90
+  bpl handler_chinese_ask
   ldy #$97
   jsr critical_print_chinese
-loc_9B90:
+handler_chinese_ask:
   jsr critical_ask_action
-  bcs loc_9B6B
+  bcs handler_chinese_options
   rts
-loc_9B96:
-  sty data_9ACA
+handler_english:
+  sty critical_flags
   cpx #$0D
-  bcc loc_9B9F
+  bcc handler_english_clamp
   ldx #$0C
-loc_9B9F:
-  ldy data_9A07,x
+handler_english_clamp:
+  ldy english_message_offsets,x
   jsr critical_print_reason
   jsr critical_print_english
-  lda data_9ACA
+  lda critical_flags
   ldy #$C9
   lsr a
-  bcc loc_9BB2
+  bcc handler_english_rw
   ldy #$CF
-loc_9BB2:
+handler_english_rw:
   jsr critical_print_english
-  lda data_9ACA
-  bpl loc_9BBA
-loc_9BBA:
+  lda critical_flags
+  bpl handler_english_drive
+handler_english_drive:
   ldy #$D6
   jsr critical_print_english
   ldy #$01
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   clc
   adc #$40
   tax
   jsr dos_display_char
-loc_9BCA:
+handler_english_options:
   ldy #$DE
   jsr critical_print_english
-  lda data_9ACA
+  lda critical_flags
   asl a
   asl a
-  bpl loc_9BDD
+  bpl handler_english_ignore
   pha
   ldy #$E6
   jsr critical_print_english
   pla
-loc_9BDD:
+handler_english_ignore:
   asl a
-  bpl loc_9BE7
+  bpl handler_english_retry
   pha
   ldy #$EF
   jsr critical_print_english
   pla
-loc_9BE7:
+handler_english_retry:
   asl a
-  bpl loc_9BEF
+  bpl handler_english_ask
   ldy #$F7
   jsr critical_print_english
-loc_9BEF:
+handler_english_ask:
   jsr critical_ask_action
-  bcs loc_9BCA
+  bcs handler_english_options
   rts
-data_9BF5:
+work_dir_path:
   .res 62, $00
-data_9C33:
+drive_state_table:
   .res 80, $00
-data_9C83:
+drive_state_marker:
   .res 244, $00

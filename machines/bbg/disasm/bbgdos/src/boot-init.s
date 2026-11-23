@@ -7,46 +7,55 @@
 
 .segment "SEG0_0000"
 ; 段 0，$7C00-$7FFF
-sub_7C00:
-  jmp loc_7C96
+; BBGDOS.SYS 装入后的入口（引导程序从 $7C00 开始执行）：跳到 dos_init_start 做初始化。A 为 BIOS 引导传入的盘号，X 为第二个引导参数（初始化里存入 far_ptr_high，用途未确认）。
+dos_boot_entry:
+  jmp dos_init_start
+; 启动提示“Starting BBGDOS...”，以 $ 结束
+msg_starting:
   .byte $0A, $53, $74, $61, $72, $74, $69, $6E, $67, $20, $42, $42, $47, $44, $4F, $53
-  .byte $2E, $2E, $2E, $0D, $0A, $24, $43, $4F, $4E, $46, $49, $47, $20, $20, $53, $59
-  .byte $53
-data_7C24:
+  .byte $2E, $2E, $2E, $0D, $0A, $24
+; CONFIG.SYS 的 11 字节文件名（主名 8 加扩展名 3）
+name_config_sys:
+  .byte $43, $4F, $4E, $46, $49, $47, $20, $20, $53, $59, $53
+file_stub:
   .byte $A9, $02, $20, $00, $58, $48, $8A, $48, $A9, $01, $AE
-data_7C2F:
+file_stub_page_ref_low:
   .byte $3C
-data_7C30:
+file_stub_page_ref_high:
   .byte $7C, $20, $00, $58, $68, $AA, $68, $20, $BE, $90, $98, $60
-data_7C3C:
+file_stub_page:
   .byte $00
-data_7C3D:
+dos_stub:
   .byte $48, $8A, $48, $A9, $02, $20, $00, $58, $48, $A9, $01, $AE
-data_7C49:
+dos_stub_page_ref_low:
   .byte $69
-data_7C4A:
+dos_stub_page_ref_high:
   .byte $7C, $20, $00, $58, $68, $8D, $3D, $A5, $68, $AA, $68, $20, $86, $A6, $08, $48
   .byte $8A, $48, $A9, $01, $AE, $3D, $A5, $20, $00, $58, $68, $AA, $68, $28, $60
-data_7C69:
-  .byte $00, $4E, $6F, $20, $65, $6E, $6F, $75, $67, $68, $20, $6C, $6F, $77, $20, $52
-  .byte $41, $4D, $20, $74, $6F, $20, $77, $6F, $72, $6B, $2E, $24
+dos_stub_page:
+  .byte $00
+; 低端内存不足的提示，以 $ 结束
+msg_no_low_ram:
+  .byte $4E, $6F, $20, $65, $6E, $6F, $75, $67, $68, $20, $6C, $6F, $77, $20, $52, $41
+  .byte $4D, $20, $74, $6F, $20, $77, $6F, $72, $6B, $2E, $24
 
-sub_7C85:
+; 把引导传入的驱动器号 A 换成 DOS 盘号：非负数（软盘）得 1（A 盘）；$FF 得 logical_drive_count（最后一个驱动器）；其余（位 7 为 1，硬盘）加 $83 取低 8 位（未确认）。
+boot_drive_to_disk:
   tax
-  bpl loc_7C8F
+  bpl boot_drive_floppy
   inx
-  beq loc_7C92
+  beq boot_drive_default
   clc
   adc #$83
   rts
-loc_7C8F:
+boot_drive_floppy:
   lda #$01
   rts
-loc_7C92:
+boot_drive_default:
   lda logical_drive_count
   rts
-loc_7C96:
-  stx var_00FF
+dos_init_start:
+  stx far_ptr_high
   ldx #$FF
   txs
   pha
@@ -54,155 +63,155 @@ loc_7C96:
   lda #$FF
   ldx #$FF
   jsr BIOS_ENTRY
-  sta data_A7F5
-  stx data_A7F6
+  sta bios_version_high
+  stx bios_version_low
   pla
-  jsr sub_7C85
-  sta data_8004
-  ldx data_A7F5
+  jsr boot_drive_to_disk
+  sta boot_disk
+  ldx bios_version_high
   cpx #$40
-  bne loc_7CC6
-  ldx data_A7F6
+  bne init_store_default_disk
+  ldx bios_version_low
   cpx #$62
-  bcc loc_7CC6
-  lda var_00FF
-  jsr sub_7C85
-loc_7CC6:
-  sta data_8003
+  bcc init_store_default_disk
+  lda far_ptr_high
+  jsr boot_drive_to_disk
+init_store_default_disk:
+  sta default_disk
   ldx #$7C
   ldy #$03
-  jsr sub_B3B6
+  jsr startup_print_string
   lda #$07
   jsr BIOS_ENTRY
   tax
-  stx data_A53A
-  stx data_7C69
+  stx dos_home_page
+  stx dos_stub_page
   stx dos_page
-  stx data_7C3C
-  stx data_A53D
-  stx data_A824
+  stx file_stub_page
+  stx current_page
+  stx init_screen_page
   inx
-  stx data_A7D9
+  stx free_page
   lda #$02
   jsr BIOS_ENTRY
-  sta var_0080
-  lda data_A53A
-  sta var_0083
+  sta move_src_page
+  lda dos_home_page
+  sta move_dst_page
   ldx #$80
   ldy #$00
-  stx var_0082
-  sty var_0081
-  stx var_0085
-  sty var_0084
+  stx move_src_high
+  sty move_src_low
+  stx move_dst_high
+  sty move_dst_low
   ldx #$40
   ldy #$00
-  stx var_0087
-  sty var_0086
+  stx move_length_high
+  sty move_length_low
   lda #$0C
   ldx #$80
   jsr BIOS_ENTRY
   lda #$01
-  ldx data_A53A
+  ldx dos_home_page
   jsr BIOS_ENTRY
   lda #$0F
   ldx #$00
   ldy #$19
   jsr BIOS_ENTRY
   cmp #$00
-  bne loc_7D61
+  bne init_no_low_ram
   lda #$4C
   sta FILE_ENTRY
-  stx var_5805
-  sty var_5804
-  stx var_00FF
-  sty var_00FE
-  stx data_A53C
-  sty data_A53B
+  stx file_entry_target_high
+  sty file_entry_target_low
+  stx far_ptr_high
+  sty far_ptr_low
+  stx file_stub_addr_high
+  sty file_stub_addr_low
   tya
   clc
   adc #$18
-  sta data_7C2F
+  sta file_stub_page_ref_low
   txa
   adc #$00
-  sta data_7C30
+  sta file_stub_page_ref_high
   ldy #$18
-loc_7D4C:
-  lda data_7C24,y
-  sta (var_00FE),y
+init_copy_file_stub:
+  lda file_stub,y
+  sta (far_ptr_low),y
   dey
-  bpl loc_7D4C
+  bpl init_copy_file_stub
   ldx #$00
   ldy #$2D
   lda #$0F
   jsr BIOS_ENTRY
   cmp #$00
-  beq loc_7D68
-loc_7D61:
+  beq init_install_dos_stub
+init_no_low_ram:
   ldx #$7C
   ldy #$6A
-  jmp loc_B5E0
-loc_7D68:
+  jmp startup_print_halt
+init_install_dos_stub:
   lda #$4C
   sta DOS_ENTRY
-  stx var_580E
-  sty var_580D
-  stx var_0081
-  sty var_0080
+  stx dos_entry_target_high
+  sty dos_entry_target_low
+  stx move_src_low
+  sty move_src_page
   tya
   clc
   adc #$2C
-  sta data_7C49
+  sta dos_stub_page_ref_low
   txa
   adc #$00
-  sta data_7C4A
+  sta dos_stub_page_ref_high
   ldy #$2C
-loc_7D86:
-  lda data_7C3D,y
-  sta (var_0080),y
+init_copy_dos_stub:
+  lda dos_stub,y
+  sta (move_src_page),y
   dey
-  bpl loc_7D86
+  bpl init_copy_dos_stub
   lda #$01
   ldx #$FF
   jsr BIOS_ENTRY
   ldx #$58
   ldy #$06
-  stx var_BFFD
-  sty var_BFFC
+  stx page_reset_vector_high
+  sty page_reset_vector_low
   lda #$01
-  ldx data_7C69
+  ldx dos_stub_page
   jsr BIOS_ENTRY
-  lda data_A7F5
+  lda bios_version_high
   cmp #$40
-  bcc loc_7DB3
+  bcc init_install_vectors
   lda #$FF
-  sta data_A53E
-loc_7DB3:
+  sta ctrl_check_enabled
+init_install_vectors:
   lda #$60
   ldx #$B2
   ldy #$5C
   sta CTRL_C_ENTRY
-  stx var_5817
-  sty var_5816
+  stx ctrl_c_target_high
+  sty ctrl_c_target_low
   lda #$A0
   sta CRITICAL_ERROR_ENTRY
   lda #$03
-  sta var_5819
+  sta critical_target_low
   lda #$60
-  sta var_581A
+  sta critical_target_high
   lda #$4C
   ldx #$98
   ldy #$63
-  sta var_581B
-  stx var_581D
-  sty var_581C
-  lda data_8003
-  sta var_0401
+  sta disk_prompt_entry
+  stx disk_prompt_target_high
+  sty disk_prompt_target_low
+  lda default_disk
+  sta fb_drive
   lda #$01
   ldx #$7C
   ldy #$19
-  jsr sub_B4A4
-  bcs loc_7DF4
-  jmp loc_B536
-loc_7DF4:
-  jmp loc_B5AE
+  jsr file_call_with_buffer
+  bcs init_open_config_failed
+  jmp config_read_line
+init_open_config_failed:
+  jmp shell_install_vectors
   .res 521, $FF

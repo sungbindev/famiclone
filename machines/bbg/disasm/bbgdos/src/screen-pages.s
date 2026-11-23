@@ -12,46 +12,47 @@
 dos_get_set_disp_mode:
   txa
   lsr a
-  bcs loc_AAB1
-  lda data_A544
+  bcs dispmode_set
+  lda display_mode
   rts
-loc_AAB1:
+dispmode_set:
   lsr a
-  bcc sub_AAB9
-  sty data_A544
+  bcc display_mode_apply
+  sty display_mode
   clc
   rts
 
-sub_AAB9:
-  lda data_A544
+; 应用 Y 给出的显示方式：display_mode 暂设为 Y，调用 dos_initial_screen 重新初始化屏幕；BIOS 返回 C=1 时恢复原显示方式；最后清除 display_mode 位 0 与 pending_char_byte。
+display_mode_apply:
+  lda display_mode
   pha
-  sty data_A544
+  sty display_mode
   jsr dos_initial_screen
   pla
-  bcc loc_AAC9
-  sta data_A544
-loc_AAC9:
-  lda data_A544
+  bcc dispmode_finish
+  sta display_mode
+dispmode_finish:
+  lda display_mode
   and #$FE
-  sta data_A544
+  sta display_mode
   lda #$00
-  sta data_A771
+  sta pending_char_byte
   rts
 
 ; DOS 功能 13 DosGetSetInitScrn：取并设置初始化显示屏幕处理向量。
 ; 入口：$FF 为新向量所在页，X:Y 为新的处理程序地址减 1（X 高字节）。
 ; 出口：A 为原向量所在页，X:Y 为原处理程序地址减 1。
 dos_get_set_init_screen:
-  lda data_A826
-  stx data_A826
+  lda init_screen_vector_high
+  stx init_screen_vector_high
   tax
-  lda data_A825
-  sty data_A825
+  lda init_screen_vector_low
+  sty init_screen_vector_low
   tay
-  lda data_A824
+  lda init_screen_page
   pha
-  lda var_00FF
-  sta data_A824
+  lda far_ptr_high
+  sta init_screen_page
   pla
   rts
 
@@ -59,875 +60,897 @@ dos_get_set_init_screen:
 ; 入口：X:Y 为以 0 结尾的文件名地址；转换结果写回原地址。
 ; 出口：A 为盘号（0 默认盘，1 为 A 盘），盘符非法时 A=$0F。
 dos_file_name_access:
-  lda var_00FF
+  lda far_ptr_high
   pha
-  lda var_00FE
+  lda far_ptr_low
   pha
-  lda var_00FD
+  lda transfer_command
   pha
-  stx var_00FF
-  sty var_00FE
+  stx far_ptr_high
+  sty far_ptr_low
   ldy #$00
-  sty data_A53F
-loc_AB02:
-  jsr sub_A5FD
+  sty result_code
+fname_skip_blank:
+  jsr read_far_byte
   tax
-  beq loc_AB36
+  beq fname_main_start
   iny
   cmp #$20
-  beq loc_AB02
+  beq fname_skip_blank
   cmp #$09
-  beq loc_AB02
-  jsr sub_A5FD
+  beq fname_skip_blank
+  jsr read_far_byte
   dey
   cmp #$3A
-  bne loc_AB36
-  jsr sub_A5FD
+  bne fname_main_start
+  jsr read_far_byte
   and #$DF
   cmp #$5B
-  bcs loc_AB27
+  bcs fname_bad_drive
   sbc #$40
-  bcs loc_AB2F
+  bcs fname_store_drive
   sec
-loc_AB27:
+fname_bad_drive:
   lda #$0F
-  sta data_A53F
-  jmp loc_ABAC
-loc_AB2F:
+  sta result_code
+  jmp fname_finish
+fname_store_drive:
   adc #$00
-  sta data_A53F
+  sta result_code
   iny
   iny
-loc_AB36:
+fname_main_start:
   ldx #$00
-loc_AB38:
-  jsr sub_A5FD
+fname_main_loop:
+  jsr read_far_byte
   cmp #$00
-  beq loc_AB57
+  beq fname_main_pad_space
   cmp #$2E
-  beq loc_AB57
+  beq fname_main_pad_space
   iny
   cmp #$2A
-  beq loc_AB5B
+  beq fname_main_star
   cpx #$08
-  bcs loc_AB38
-  jsr sub_A623
-  bcs loc_ABAC
-  sta data_A5AF,x
+  bcs fname_main_loop
+  jsr name_char_check
+  bcs fname_finish
+  sta name_buffer,x
   inx
-  bne loc_AB38
-loc_AB57:
+  bne fname_main_loop
+fname_main_pad_space:
   lda #$20
-  bne loc_AB5D
-loc_AB5B:
+  bne fname_main_fill
+fname_main_star:
   lda #$3F
-loc_AB5D:
+fname_main_fill:
   cpx #$08
-  bcs loc_AB67
-  sta data_A5AF,x
+  bcs fname_skip_to_ext
+  sta name_buffer,x
   inx
-  bne loc_AB5D
-loc_AB67:
-  jsr sub_A5FD
+  bne fname_main_fill
+fname_skip_to_ext:
+  jsr read_far_byte
   cmp #$00
-  beq loc_AB8E
+  beq fname_ext_pad_space
   iny
   cmp #$2E
-  bne loc_AB67
-loc_AB73:
-  jsr sub_A5FD
+  bne fname_skip_to_ext
+fname_ext_loop:
+  jsr read_far_byte
   iny
   cmp #$00
-  beq loc_AB8E
+  beq fname_ext_pad_space
   cmp #$2A
-  beq loc_AB92
+  beq fname_ext_star
   cpx #$0B
-  bcs loc_AB73
-  jsr sub_A623
-  bcs loc_ABAC
-  sta data_A5AF,x
+  bcs fname_ext_loop
+  jsr name_char_check
+  bcs fname_finish
+  sta name_buffer,x
   inx
-  bne loc_AB73
-loc_AB8E:
+  bne fname_ext_loop
+fname_ext_pad_space:
   lda #$20
-  bne loc_AB94
-loc_AB92:
+  bne fname_ext_fill
+fname_ext_star:
   lda #$3F
-loc_AB94:
+fname_ext_fill:
   cpx #$0B
-  bcs loc_AB9E
-  sta data_A5AF,x
+  bcs fname_write_back
+  sta name_buffer,x
   inx
-  bne loc_AB94
-loc_AB9E:
+  bne fname_ext_fill
+fname_write_back:
   ldy #$0A
-loc_ABA0:
-  lda data_A5AF,y
-  sta var_00FD
-  jsr sub_A614
+fname_write_loop:
+  lda name_buffer,y
+  sta transfer_command
+  jsr write_far_byte
   dey
-  bpl loc_ABA0
+  bpl fname_write_loop
   clc
-loc_ABAC:
+fname_finish:
   pla
-  sta var_00FD
+  sta transfer_command
   pla
-  sta var_00FE
+  sta far_ptr_low
   pla
-  sta var_00FF
-  lda data_A53F
+  sta far_ptr_high
+  lda result_code
   rts
 
-sub_ABB9:
-  lda data_A53A
-  sta var_0080
+; 把 DOS 自己所在页（dos_home_page）的 $8000-$97FF（6KB 常驻代码）经 BIOS 功能 $0C 复制到页 0 的同一地址，并把 dos_page 改为 0。
+dos_copy_to_page_0:
+  lda dos_home_page
+  sta move_src_page
   ldx #$80
   ldy #$00
-  stx var_0082
-  sty var_0081
+  stx move_src_high
+  sty move_src_low
   lda #$00
-  sta var_0083
+  sta move_dst_page
   sta dos_page
-  stx var_0085
-  sty var_0084
+  stx move_dst_high
+  sty move_dst_low
   ldx #$18
   ldy #$00
-  stx var_0087
-  sty var_0086
+  stx move_length_high
+  sty move_length_low
   lda #$0C
   ldx #$80
   jmp BIOS_ENTRY
 
-sub_ABE0:
-  ldx var_0406
-  ldy var_0405
-  stx data_A540
-  sty data_A53F
+; 用 $0400 的文件调用块读程序文件：记下请求的字节数，调用 file_call_function（功能 2），再核对实际读到的字节数。出口：C=0 读满；读失败 A=$1E、C=1；没有读满 A=$0B、C=1。
+exe_read_checked:
+  ldx fb_bytes_high
+  ldy fb_bytes_low
+  stx result_flags
+  sty result_code
   lda #$02
-  jsr sub_B4AA
+  jsr file_call_function
   lda #$1E
-  bcs loc_AC09
-  ldx data_A540
-  cpx var_0406
-  bne loc_AC06
-  ldy data_A53F
-  cpy var_0405
+  bcs read_checked_done
+  ldx result_flags
+  cpx fb_bytes_high
+  bne read_checked_short
+  ldy result_code
+  cpy fb_bytes_low
   clc
-  beq loc_AC09
-loc_AC06:
+  beq read_checked_done
+read_checked_short:
   lda #$0B
   sec
-loc_AC09:
+read_checked_done:
   rts
 
-sub_AC0A:
+; 把段表第 Y/4 项的 3 字节文件偏移写进 fb_position_0-2，并把 fb_bytes_high 清零，作为下一次读的位置。
+exe_set_position:
   lda #$00
-  sta var_0406
-  lda var_045F,y
-  sta var_0409
-  lda var_045E,y
-  sta var_0408
-  lda var_045D,y
-  sta var_0407
+  sta fb_bytes_high
+  lda exe_seg_offset_2,y
+  sta fb_position_2
+  lda exe_seg_offset_1,y
+  sta fb_position_1
+  lda exe_seg_offset_0,y
+  sta fb_position_0
   rts
 
-sub_AC22:
-  sta var_0405
-  jsr sub_AC0A
+; 读段表项 Y/4 指向的段记录：A 为要读的字节数，读到 $0457 起（seg_rec_1 起），位置由 exe_set_position 设置。出口同 exe_read_checked。
+exe_read_segment_record:
+  sta fb_bytes_low
+  jsr exe_set_position
   ldx #$04
   ldy #$57
-  stx var_0404
-  sty var_0403
-  jmp sub_ABE0
+  stx fb_buffer_high
+  sty fb_buffer_low
+  jmp exe_read_checked
 
-sub_AC35:
-  ldx var_045C
-  ldy var_045B
-  stx var_0406
-  sty var_0405
-  ldx var_045A
-  ldy var_0459
-  stx var_0404
-  sty var_0403
+; 按 6 字节段记录设置读写块：缓冲区地址取 seg_rec_2、seg_rec_3（低、高），字节数取 seg_rec_4、seg_rec_5。出口：X:Y 为缓冲区地址（X 高）。
+exe_set_buffer_from_record:
+  ldx seg_rec_5
+  ldy seg_rec_4
+  stx fb_bytes_high
+  sty fb_bytes_low
+  ldx seg_rec_3
+  ldy seg_rec_2
+  stx fb_buffer_high
+  sty fb_buffer_low
   rts
 
-sub_AC4E:
+; 把 fb_bytes 设为 $C000 减缓冲区地址与 5 字节段记录里的长度（seg_rec_3、seg_rec_4）中较小者，不让数据超过 $C000。
+exe_limit_to_page_end:
   lda #$00
   sec
-  sbc var_0403
+  sbc fb_buffer_low
   tay
   lda #$C0
-  sbc var_0404
+  sbc fb_buffer_high
   tax
-  cpy var_045A
-  sbc var_045B
-  bcc loc_AC69
-  ldx var_045B
-  ldy var_045A
-loc_AC69:
-  stx var_0406
-  sty var_0405
+  cpy seg_rec_3
+  sbc seg_rec_4
+  bcc limit_store
+  ldx seg_rec_4
+  ldy seg_rec_3
+limit_store:
+  stx fb_bytes_high
+  sty fb_bytes_low
   rts
 
-sub_AC70:
+; 第 4 类段（5 字节记录：地址、长度）：把数据读进 free_page 页的 $8000 起，再经 BIOS 功能 $25（参数块在 $80，Y=$40，目标页为 free_page；记录地址高字节为 $C0 时为页 $FF）处理（BIOS $25 的含义未确认）。
+exe_load_type_04:
   lda #$05
-  jsr sub_AC22
-  bcs loc_ACAD
-  lda data_A7D9
-  sta var_0402
-  sta var_0080
+  jsr exe_read_segment_record
+  bcs type04_done
+  lda free_page
+  sta fb_page
+  sta move_src_page
   ldx #$80
   ldy #$00
-  stx var_0404
-  sty var_0403
-  stx var_0082
-  sty var_0081
-  jsr sub_AC4E
-  jsr sub_ABE0
-  bcs loc_ACAD
-  ldx data_A7D9
-  lda var_0459
+  stx fb_buffer_high
+  sty fb_buffer_low
+  stx move_src_high
+  sty move_src_low
+  jsr exe_limit_to_page_end
+  jsr exe_read_checked
+  bcs type04_done
+  ldx free_page
+  lda seg_rec_2
   cmp #$C0
-  bne loc_ACA1
+  bne type04_store_page
   ldx #$FF
-loc_ACA1:
-  stx var_0083
+type04_store_page:
+  stx move_dst_page
   lda #$25
   ldx #$80
   ldy #$40
   jsr BIOS_ENTRY
   clc
-loc_ACAD:
+type04_done:
   rts
 
-sub_ACAE:
+; 第 2 类段（5 字节记录）：把数据读进 free_page 页的记录地址（seg_rec_1:seg_rec_2）处；超过 $C000 的部分分两次读，后一部分读进页 $FF（地址去掉位 6）。
+exe_load_type_02:
   lda #$05
-  jsr sub_AC22
-  bcs loc_ACFE
-  ldx var_0459
-  ldy var_0458
+  jsr exe_read_segment_record
+  bcs type02_done
+  ldx seg_rec_2
+  ldy seg_rec_1
   cpx #$C0
-  bcs loc_ACEA
-  lda data_A7D9
-  sta var_0402
-  stx var_0404
-  sty var_0403
-  jsr sub_AC4E
-  lda var_045A
+  bcs type02_spill
+  lda free_page
+  sta fb_page
+  stx fb_buffer_high
+  sty fb_buffer_low
+  jsr exe_limit_to_page_end
+  lda seg_rec_3
   sec
-  sbc var_0405
-  sta var_045A
-  lda var_045B
-  sbc var_0406
-  sta var_045B
-  jsr sub_ABE0
-  bcs loc_ACFE
+  sbc fb_bytes_low
+  sta seg_rec_3
+  lda seg_rec_4
+  sbc fb_bytes_high
+  sta seg_rec_4
+  jsr exe_read_checked
+  bcs type02_done
   ldx #$C0
   ldy #$00
-loc_ACEA:
+type02_spill:
   lda #$FF
-  sta var_0402
+  sta fb_page
   txa
   and #$BF
-  sta var_0404
-  sty var_0403
-  jsr sub_AC4E
-  jsr sub_ABE0
-loc_ACFE:
+  sta fb_buffer_high
+  sty fb_buffer_low
+  jsr exe_limit_to_page_end
+  jsr exe_read_checked
+type02_done:
   rts
 
-sub_ACFF:
+; 装入需要整页覆盖时的屏幕准备（仅 X=$FF 时执行，其他值直接返回）：exe_type_flag 位 7 为 1 时先用 BIOS 功能 4（参数 exe_flags）初始化系统资源并把显示方式切成英文；中文方式下清 ppu_reg_2009；最后把 ppu_control_shadow 去掉位 7 写入 ppu_control（关 NMI）并 SEI。
+exe_screen_off:
   cpx #$FF
-  bne loc_AD32
-  bit data_A547
-  bpl loc_AD1F
-  inc data_A546
+  bne screen_off_done
+  bit exe_type_flag
+  bpl screen_off_check_mode
+  inc screen_initialized
   lda #$04
-  ldx var_0447
+  ldx exe_flags
   jsr BIOS_ENTRY
-  bit data_A544
-  bpl loc_AD29
+  bit display_mode
+  bpl screen_off_ppu
   ldx #$01
   ldy #$00
   jsr dos_get_set_disp_mode
-loc_AD1F:
-  bit data_A544
-  bpl loc_AD29
+screen_off_check_mode:
+  bit display_mode
+  bpl screen_off_ppu
   lda #$00
-  sta var_2009
-loc_AD29:
-  lda var_6000
+  sta ppu_reg_2009
+screen_off_ppu:
+  lda ppu_control_shadow
   and #$7F
-  sta var_2000
+  sta ppu_control
   sei
-loc_AD32:
+screen_off_done:
   rts
 
-sub_AD33:
+; 第 0D 类段（6 字节记录：页、地址、长度）：先把数据读进 free_page 页的缓冲区，再经 BIOS 功能 $25 复制到记录页 seg_rec_1（复制前先 exe_screen_off，BIOS $25 的具体含义未确认），最后落入 type0b_check_full。
+exe_load_type_0d:
   lda #$06
-  jsr sub_AC22
-  bcs loc_AD8F
-  lda data_A7D9
-  sta var_0402
-  sta var_0080
-  jsr sub_AC35
-  stx var_0082
-  sty var_0081
-  jsr sub_ABE0
-  bcs loc_AD8F
-  ldx var_0458
-  stx var_0083
-  jsr sub_ACFF
+  jsr exe_read_segment_record
+  bcs type_load_done
+  lda free_page
+  sta fb_page
+  sta move_src_page
+  jsr exe_set_buffer_from_record
+  stx move_src_high
+  sty move_src_low
+  jsr exe_read_checked
+  bcs type_load_done
+  ldx seg_rec_1
+  stx move_dst_page
+  jsr exe_screen_off
   lda #$25
   ldx #$80
   ldy #$40
   jsr BIOS_ENTRY
-  jmp loc_AD82
+  jmp type0b_check_full
 
-sub_AD62:
+; 第 0B、0C 类段（6 字节记录）：把数据直接读进记录页 seg_rec_1 的记录地址处（页号小于 free_page 时 screen_initialized 加 1），读前先 exe_screen_off；页号为 $FF 时读完调用 BIOS 功能 9（未确认用途）。
+exe_load_type_0b_0c:
   lda #$06
-  jsr sub_AC22
-  bcs loc_AD8F
-  ldx var_0458
-  stx var_0402
-  cpx data_A7D9
-  bcs loc_AD77
-  inc data_A546
-loc_AD77:
-  jsr sub_ACFF
-  jsr sub_AC35
-  jsr sub_ABE0
-  bcs loc_AD8F
-loc_AD82:
-  lda var_0458
+  jsr exe_read_segment_record
+  bcs type_load_done
+  ldx seg_rec_1
+  stx fb_page
+  cpx free_page
+  bcs type0b_read
+  inc screen_initialized
+type0b_read:
+  jsr exe_screen_off
+  jsr exe_set_buffer_from_record
+  jsr exe_read_checked
+  bcs type_load_done
+type0b_check_full:
+  lda seg_rec_1
   cmp #$FF
-  bcc loc_AD8F
+  bcc type_load_done
   lda #$09
   jsr BIOS_ENTRY
   clc
-loc_AD8F:
+type_load_done:
   rts
 
-sub_AD90:
+; 第 0E 类段（6 字节记录）：目标页为 free_page 加 seg_rec_1 加 1（相对页号），页号用完（达到 $FF）时 A=8、C=1；否则把数据读进该页。
+exe_load_type_0e:
   lda #$06
-  jsr sub_AC22
-  bcs loc_AD8F
-  lda data_A7D9
+  jsr exe_read_segment_record
+  bcs type_load_done
+  lda free_page
   sec
-  adc var_0458
-  bcs loc_ADAD
+  adc seg_rec_1
+  bcs type0e_no_pages
   cmp #$FF
-  beq loc_ADAD
-  sta var_0402
-  jsr sub_AC35
-  jmp sub_ABE0
-loc_ADAD:
+  beq type0e_no_pages
+  sta fb_page
+  jsr exe_set_buffer_from_record
+  jmp exe_read_checked
+type0e_no_pages:
   lda #$08
   rts
 
-sub_ADB0:
+; 读 3 字节段记录得到数据长度（seg_rec_1、seg_rec_2），并落入 exe_read_data_at_8000 把这么多字节读进 free_page 页的 $8000。
+exe_read_data_length:
   lda #$03
-  jsr sub_AC22
-  bcs loc_AD8F
-  ldx var_0459
-  ldy var_0458
+  jsr exe_read_segment_record
+  bcs type_load_done
+  ldx seg_rec_2
+  ldy seg_rec_1
 
-sub_ADBD:
-  stx var_0406
-  sty var_0405
-  ldx data_A7D9
-  stx var_0402
+; 把 X:Y（X 高）个字节读进 free_page 页的 $8000 起（设置 fb_* 后调用 exe_read_checked）。
+exe_read_data_at_8000:
+  stx fb_bytes_high
+  sty fb_bytes_low
+  ldx free_page
+  stx fb_page
   ldx #$80
   ldy #$00
-  stx var_0404
-  sty var_0403
-  jmp sub_ABE0
+  stx fb_buffer_high
+  sty fb_buffer_low
+  jmp exe_read_checked
 
-sub_ADD6:
-  bit data_A544
-  bpl loc_ADE2
+; 为装入图形数据准备屏幕：中文方式先切成英文显示，清 ppu_mask；screen_initialized 为 0 时置 1 并用 BIOS 功能 4（参数 exe_flags）初始化系统资源。
+exe_screen_prepare:
+  bit display_mode
+  bpl screen_prepare_check_init
   ldx #$01
   ldy #$00
   jsr dos_get_set_disp_mode
-loc_ADE2:
+screen_prepare_check_init:
   lda #$00
-  sta var_2001
-  lda data_A546
-  bne loc_ADF7
-  inc data_A546
+  sta ppu_mask
+  lda screen_initialized
+  bne screen_prepare_done
+  inc screen_initialized
   lda #$04
-  ldx var_0447
+  ldx exe_flags
   jsr BIOS_ENTRY
-loc_ADF7:
+screen_prepare_done:
   rts
 
-sub_ADF8:
-  lda data_A7D9
-  sta var_0080
+; 调用 BIOS 功能 $15（参数块在零页 $80）：源页为 free_page、源地址 $8000，Y 由调用者给出；块里 $83:$84 是显示存储器目标地址，$85:$86 是长度（含义为由用法推断，未确认）。
+exe_bios_15:
+  lda free_page
+  sta move_src_page
   lda #$80
-  sta var_0082
+  sta move_src_high
   lda #$00
-  sta var_0081
+  sta move_src_low
   lda #$15
   ldx #$80
   jmp BIOS_ENTRY
 
-sub_AE0C:
-  jsr sub_ADB0
-  bcs loc_AE36
+; 第 5 类段：读入数据（长度取自 3 字节记录），把目标地址清零、长度写入 $85:$86，然后经 exe_screen_prepare 与 exe_bios_15（Y=1）送入显示存储器。
+exe_load_type_05:
+  jsr exe_read_data_length
+  bcs type05_06_done
   lda #$00
-  sta var_0084
-  sta var_0083
-  ldx var_0459
-  ldy var_0458
-  stx var_0086
-  sty var_0085
+  sta move_dst_low
+  sta move_dst_page
+  ldx seg_rec_2
+  ldy seg_rec_1
+  stx move_length_low
+  sty move_dst_high
   lda #$01
-  bne loc_AE2C
+  bne type05_06_common
 
-sub_AE25:
-  jsr sub_ADB0
-  bcs loc_AE36
+; 第 6 类段：读入数据后以 Y=0 调用 exe_bios_15 送入显示存储器（目标地址沿用上一次设置，未确认）。
+exe_load_type_06:
+  jsr exe_read_data_length
+  bcs type05_06_done
   lda #$00
-loc_AE2C:
+type05_06_common:
   pha
-  jsr sub_ADD6
+  jsr exe_screen_prepare
   pla
   tay
-  jsr sub_ADF8
+  jsr exe_bios_15
   clc
-loc_AE36:
+type05_06_done:
   rts
 
-sub_AE37:
+; 第 10 类段（图形数据）：本段长度取下一段表项偏移减本项偏移（copy_left_0-2，24 位）；每 $2000 字节为一块：先用 BIOS 功能 $13 对 4 项做设置（Y 为递增序号，含义未确认），再读入 $2000 字节到 free_page 的 $8000，用 exe_bios_15（Y=1）送入显示存储器，直到数据用完。
+exe_load_type_10:
   sec
-  lda var_0461,y
-  sbc var_045D,y
-  sta var_0088
-  lda var_0462,y
-  sbc var_045E,y
-  sta var_0089
-  lda var_0463,y
-  sbc var_045F,y
-  sta var_008A
-  jsr sub_AC0A
-  jsr sub_ADD6
+  lda exe_seg_next_offset_0,y
+  sbc exe_seg_offset_0,y
+  sta copy_left_0
+  lda exe_seg_next_offset_1,y
+  sbc exe_seg_offset_1,y
+  sta copy_left_1
+  lda exe_seg_next_offset_2,y
+  sbc exe_seg_offset_2,y
+  sta copy_left_2
+  jsr exe_set_position
+  jsr exe_screen_prepare
   lda #$00
-  sta var_0088
-loc_AE5A:
+  sta copy_left_0
+type10_block_loop:
   ldx #$00
-loc_AE5C:
+type10_bios13_loop:
   txa
   pha
   lda #$13
-  ldy var_0088
+  ldy copy_left_0
   jsr BIOS_ENTRY
   pla
   tax
-  inc var_0088
+  inc copy_left_0
   inx
   cpx #$04
-  bcc loc_AE5C
+  bcc type10_bios13_loop
   ldx #$20
   ldy #$00
-  stx var_0086
-  sty var_0085
-  jsr sub_ADBD
+  stx move_length_low
+  sty move_dst_high
+  jsr exe_read_data_at_8000
   lda #$00
-  sta var_0084
-  sta var_0083
+  sta move_dst_low
+  sta move_dst_page
   ldy #$01
-  jsr sub_ADF8
+  jsr exe_bios_15
   sec
-  lda var_0089
+  lda copy_left_1
   sbc #$20
-  bcs loc_AE8F
-  dec var_008A
-  bmi loc_AE95
-loc_AE8F:
-  sta var_0089
-  ora var_008A
-  bne loc_AE5A
-loc_AE95:
+  bcs type10_count_down
+  dec copy_left_2
+  bmi type10_done
+type10_count_down:
+  sta copy_left_1
+  ora copy_left_2
+  bne type10_block_loop
+type10_done:
   clc
   rts
-data_AE97:
+exe_seg10_index:
   .byte $00
 
-sub_AE98:
+; 装入并运行 .EXC 映像。步骤：读 $1A 字节文件头到 $043D 起，检查标识“MY”、类型 exe_type、显示方式与所需页数和资源（出错码：$0B 头无效，$28 显示方式不符，$08 页数不够，$29 资源不足）；读段表到 $045D 起，逐段按类型调用 exe_load_type_ 例程；装完后将入口地址（exe_entry_low、exe_entry_high 减 1）压栈，用 BIOS 功能 1 切到程序页并经 RTS 进入程序，需要时先把 DOS 复制到页 0。出错时 A 为出错码、C=1。
+exe_load_and_run:
   ldx #$04
   ldy #$3D
-  stx var_0404
-  sty var_0403
+  stx fb_buffer_high
+  sty fb_buffer_low
   ldx #$00
   ldy #$1A
-  stx var_0406
-  sty var_0405
-  jsr sub_ABE0
-  bcs loc_AF10
-  lda var_043D
+  stx fb_bytes_high
+  sty fb_bytes_low
+  jsr exe_read_checked
+  bcs exe_error_return
+  lda exe_magic_0
   cmp #$4D
-  bne loc_AF0D
-  lda var_043E
+  bne exe_bad_header
+  lda exe_magic_1
   cmp #$59
-  bne loc_AF0D
+  bne exe_bad_header
   lda #$00
-  sta data_A547
-  sta data_A546
-  lda var_044A
+  sta exe_type_flag
+  sta screen_initialized
+  lda exe_type
   cmp #$01
-  beq loc_AED9
+  beq exe_check_mode
   cmp #$00
-  beq loc_AED6
+  beq exe_flag_decrement
   cmp #$03
-  bne loc_AF0D
-loc_AED6:
-  dec data_A547
-loc_AED9:
-  lda var_0447
+  bne exe_bad_header
+exe_flag_decrement:
+  dec exe_type_flag
+exe_check_mode:
+  lda exe_flags
   and #$08
-  beq loc_AEE5
-  lda data_A544
-  bmi loc_AEF1
-loc_AEE5:
-  lda var_0447
+  beq exe_check_mode_10
+  lda display_mode
+  bmi exe_mode_mismatch
+exe_check_mode_10:
+  lda exe_flags
   and #$10
-  beq loc_AEF5
-  lda data_A544
-  bmi loc_AEF5
-loc_AEF1:
+  beq exe_check_pages
+  lda display_mode
+  bmi exe_check_pages
+exe_mode_mismatch:
   lda #$28
   sec
   rts
-loc_AEF5:
-  ldx data_A7D9
+exe_check_pages:
+  ldx free_page
   dex
-  bit data_A547
-  bpl loc_AF05
+  bit exe_type_flag
+  bpl exe_compare_pages
   lda #$07
   jsr BIOS_ENTRY
   tax
   dex
-loc_AF05:
-  cpx var_044D
-  bcc loc_AF11
+exe_compare_pages:
+  cpx exe_min_pages
+  bcc exe_check_resource
   lda #$08
   rts
-loc_AF0D:
+exe_bad_header:
   lda #$0B
   sec
-loc_AF10:
+exe_error_return:
   rts
-loc_AF11:
+exe_check_resource:
   lda #$0A
   jsr BIOS_ENTRY
-  cmp var_044E
-  bcs loc_AF1F
+  cmp exe_min_resource
+  bcs exe_read_segment_table
   lda #$29
   sec
   rts
-loc_AF1F:
+exe_read_segment_table:
   ldx #$04
   ldy #$5D
-  stx var_0404
-  sty var_0403
-  ldx var_0456
-  ldy var_0455
-  stx var_0408
-  sty var_0407
+  stx fb_buffer_high
+  sty fb_buffer_low
+  ldx exe_table_pos_high
+  ldy exe_table_pos_low
+  stx fb_position_1
+  sty fb_position_0
   lda #$00
-  sta var_0406
-  lda var_0443
+  sta fb_bytes_high
+  lda exe_segment_count
   asl a
-  bcc loc_AF43
-  inc var_0406
-loc_AF43:
+  bcc exe_table_shift
+  inc fb_bytes_high
+exe_table_shift:
   asl a
-  bcc loc_AF49
-  inc var_0406
-loc_AF49:
-  sta var_0405
-  jsr sub_ABE0
-  bcs loc_AF10
+  bcc exe_table_read
+  inc fb_bytes_high
+exe_table_read:
+  sta fb_bytes_low
+  jsr exe_read_checked
+  bcs exe_error_return
   lda #$FF
-  sta data_AE97
+  sta exe_seg10_index
   lda #$00
-loc_AF58:
+exe_segment_loop:
   pha
   asl a
   asl a
   tay
-  lda var_0460,y
+  lda exe_seg_type,y
   cmp #$0B
-  beq loc_AF67
+  beq exe_segment_0b_0c
   cmp #$0C
-  bne loc_AF6D
-loc_AF67:
-  jsr sub_AD62
-  jmp loc_AFB7
-loc_AF6D:
+  bne exe_segment_check_0e
+exe_segment_0b_0c:
+  jsr exe_load_type_0b_0c
+  jmp exe_segment_result
+exe_segment_check_0e:
   cmp #$0E
-  bne loc_AF77
-  jsr sub_AD90
-  jmp loc_AFB7
-loc_AF77:
+  bne exe_segment_check_0d
+  jsr exe_load_type_0e
+  jmp exe_segment_result
+exe_segment_check_0d:
   cmp #$0D
-  bne loc_AF81
-  jsr sub_AD33
-  jmp loc_AFB7
-loc_AF81:
+  bne exe_segment_check_02
+  jsr exe_load_type_0d
+  jmp exe_segment_result
+exe_segment_check_02:
   cmp #$02
-  bne loc_AF8B
-  jsr sub_ACAE
-  jmp loc_AFB7
-loc_AF8B:
+  bne exe_segment_check_04
+  jsr exe_load_type_02
+  jmp exe_segment_result
+exe_segment_check_04:
   cmp #$04
-  bne loc_AF95
-  jsr sub_AC70
-  jmp loc_AFB7
-loc_AF95:
-  bit data_A547
-  bpl loc_AFB9
+  bne exe_segment_check_05
+  jsr exe_load_type_04
+  jmp exe_segment_result
+exe_segment_check_05:
+  bit exe_type_flag
+  bpl exe_segment_next
   cmp #$05
-  bne loc_AFA4
-  jsr sub_AE0C
-  jmp loc_AFB7
-loc_AFA4:
+  bne exe_segment_check_06
+  jsr exe_load_type_05
+  jmp exe_segment_result
+exe_segment_check_06:
   cmp #$06
-  bne loc_AFAE
-  jsr sub_AE25
-  jmp loc_AFB7
-loc_AFAE:
+  bne exe_segment_check_10
+  jsr exe_load_type_06
+  jmp exe_segment_result
+exe_segment_check_10:
   cmp #$10
-  bne loc_AFB9
-  sty data_AE97
-  beq loc_AFB9
-loc_AFB7:
-  bcs loc_AFCF
-loc_AFB9:
+  bne exe_segment_next
+  sty exe_seg10_index
+  beq exe_segment_next
+exe_segment_result:
+  bcs exe_segment_error
+exe_segment_next:
   pla
   clc
   adc #$01
-  cmp var_0443
-  bne loc_AF58
-  bit data_AE97
-  bmi loc_AFD8
-  ldy data_AE97
-  jsr sub_AE37
-  bcc loc_AFD8
-loc_AFCF:
+  cmp exe_segment_count
+  bne exe_segment_loop
+  bit exe_seg10_index
+  bmi exe_launch
+  ldy exe_seg10_index
+  jsr exe_load_type_10
+  bcc exe_launch
+exe_segment_error:
   tax
   pla
-  ldy data_A546
-  bne loc_AF58
+  ldy screen_initialized
+  bne exe_segment_loop
   txa
   rts
-loc_AFD8:
-  bit data_A547
-  bmi loc_AFFB
-  ldx var_0452
-  ldy var_0451
-  bne loc_AFE6
+exe_launch:
+  bit exe_type_flag
+  bmi exe_launch_screen_mode
+  ldx exe_entry_high
+  ldy exe_entry_low
+  bne exe_launch_entry_adjust
   dex
-loc_AFE6:
+exe_launch_entry_adjust:
   dey
   txa
   pha
   tya
   pha
-  ldx data_A7D9
-  bit data_A547
-  bpl loc_AFF6
-  ldx var_0449
-loc_AFF6:
+  ldx free_page
+  bit exe_type_flag
+  bpl exe_launch_switch_page
+  ldx exe_start_page
+exe_launch_switch_page:
   lda #$01
   jmp BIOS_ENTRY
-loc_AFFB:
-  ldx data_A546
-  bne loc_B015
+exe_launch_screen_mode:
+  ldx screen_initialized
+  bne exe_launch_check_flag_20
   lda #$04
-  ldx var_0447
+  ldx exe_flags
   jsr BIOS_ENTRY
   ldy #$00
-  jsr sub_AAB9
+  jsr display_mode_apply
   lda #$00
-  sta var_2001
-  sta var_2000
-loc_B015:
-  lda var_0447
+  sta ppu_mask
+  sta ppu_control
+exe_launch_check_flag_20:
+  lda exe_flags
   and #$20
-  bne loc_B02F
-  jsr sub_ABB9
-  ldx data_A53C
-  ldy data_A53B
-  stx var_00FF
-  sty var_00FE
+  bne exe_launch_check_flag_04
+  jsr dos_copy_to_page_0
+  ldx file_stub_addr_high
+  ldy file_stub_addr_low
+  stx far_ptr_high
+  sty far_ptr_low
   ldy #$18
   lda #$00
-  sta (var_00FE),y
-loc_B02F:
-  lda var_044A
+  sta (far_ptr_low),y
+exe_launch_check_flag_04:
+  lda exe_type
   cmp #$03
-  beq loc_B087
-  lda var_0447
+  beq exe_launch_run
+  lda exe_flags
   and #$04
-  beq loc_B087
+  beq exe_launch_run
   lda #$00
   tax
-loc_B040:
+exe_compact_loop:
   pha
   asl a
   asl a
   tay
-  lda var_0460,y
+  lda exe_seg_type,y
   cmp #$01
-  beq loc_B053
+  beq exe_compact_copy
   cmp #$03
-  beq loc_B053
+  beq exe_compact_copy
   cmp #$09
-  bne loc_B06C
-loc_B053:
-  sta var_0460,x
-  lda var_045F,y
-  sta var_045F,x
-  lda var_045E,y
-  sta var_045E,x
-  lda var_045D,y
-  sta var_045D,x
+  bne exe_compact_next
+exe_compact_copy:
+  sta exe_seg_type,x
+  lda exe_seg_offset_2,y
+  sta exe_seg_offset_2,x
+  lda exe_seg_offset_1,y
+  sta exe_seg_offset_1,x
+  lda exe_seg_offset_0,y
+  sta exe_seg_offset_0,x
   inx
   inx
   inx
   inx
-loc_B06C:
+exe_compact_next:
   pla
   clc
   adc #$01
-  cmp var_0443
-  bne loc_B040
+  cmp exe_segment_count
+  bne exe_compact_loop
   lda #$04
-  sta var_0404
+  sta fb_buffer_high
   lda #$5D
-  sta var_0403
+  sta fb_buffer_low
   ldx #$04
   ldy #$00
-  stx var_00FF
-  sty var_00FE
-loc_B087:
+  stx far_ptr_high
+  sty far_ptr_low
+exe_launch_run:
   lda #$08
   ldx #$04
   ldy #$3D
   jmp BIOS_ENTRY
-data_B090:
+launch_stub_template:
   .byte $A9, $01, $AE, $D9, $A7, $20, $00, $58, $6C, $FE, $00
 
-sub_B09B:
+; 装入并运行 .CMD 程序：先读 2 字节头到 cmd_header_low/high（装入地址，也是入口地址），再把正文读进 free_page 页的该地址处，超过 $C000 的部分另读一次（未确认），关闭文件后把 launch_stub_template 复制到零页 launch_stub 执行，经 BIOS 功能 1 切到该页再用 JMP (far_ptr) 进入程序。出错时 A 为出错码、C=1。
+cmd_load_and_run:
   ldx #$61
   ldy #$30
-  stx var_0404
-  sty var_0403
+  stx fb_buffer_high
+  sty fb_buffer_low
   ldx #$00
   ldy #$02
-  stx var_0406
-  sty var_0405
-  jsr sub_ABE0
-  bcs loc_B0E8
-  lda data_A7D9
-  sta var_0402
-  ldx var_6131
-  ldy var_6130
-  stx var_00FF
-  sty var_00FE
+  stx fb_bytes_high
+  sty fb_bytes_low
+  jsr exe_read_checked
+  bcs cmd_load_done
+  lda free_page
+  sta fb_page
+  ldx cmd_header_high
+  ldy cmd_header_low
+  stx far_ptr_high
+  sty far_ptr_low
   cpx #$C0
-  bcs loc_B0ED
-  stx var_0404
-  sty var_0403
+  bcs cmd_load_rest
+  stx fb_buffer_high
+  sty fb_buffer_low
   lda #$00
   sec
-  sbc var_00FE
-  sta var_0405
+  sbc far_ptr_low
+  sta fb_bytes_low
   lda #$C0
-  sbc var_00FF
-  sta var_0406
-  jsr sub_ABE0
-  bcc loc_B0E9
+  sbc far_ptr_high
+  sta fb_bytes_high
+  jsr exe_read_checked
+  bcc cmd_load_full_page
   cmp #$1E
   clc
-  bne loc_B107
+  bne cmd_close_file
   sec
-loc_B0E8:
+cmd_load_done:
   rts
-loc_B0E9:
+cmd_load_full_page:
   ldx #$C0
   ldy #$00
-loc_B0ED:
+cmd_load_rest:
   lda #$00
   sec
-  sbc var_0403
-  sta var_0405
+  sbc fb_buffer_low
+  sta fb_bytes_low
   lda #$FF
-  sbc var_0404
-  sta var_0406
+  sbc fb_buffer_high
+  sta fb_bytes_high
   lda #$0B
-  bcc loc_B127
+  bcc cmd_load_failed
   lda #$02
-  jsr sub_B4A4
-loc_B107:
+  jsr file_call_with_buffer
+cmd_close_file:
   php
   lda #$05
-  jsr sub_B4AA
+  jsr file_call_function
   plp
-  bcs loc_B125
-  bit data_8030
-  bmi loc_B118
-  asl data_8030
-loc_B118:
+  bcs cmd_read_error
+  bit critical_error_flags
+  bmi cmd_install_stub
+  asl critical_error_flags
+cmd_install_stub:
   ldx #$0A
-loc_B11A:
-  lda data_B090,x
-  sta var_00E0,x
+cmd_stub_copy_loop:
+  lda launch_stub_template,x
+  sta launch_stub,x
   dex
-  bpl loc_B11A
-  jmp a:var_00E0
-loc_B125:
+  bpl cmd_stub_copy_loop
+  jmp a:launch_stub
+cmd_read_error:
   lda #$1E
-loc_B127:
+cmd_load_failed:
   sec
   rts
-data_B129:
+command_cmd_path:
   .byte $5C, $43, $4F, $4D, $4D, $41, $4E, $44, $2E, $43, $4D
   .byte $44, $00
-data_B136:
+program_ext_table:
   .byte $43, $4D, $44, $45, $58, $43, $47, $41, $4D
 
-sub_B13F:
+; 把 far_ptr 指向的 11 字节名字（调用者页中，主名 8、扩展名 3，空格补齐）转成“主名.扩展名”的 0 结尾字符串放进 run_name_buffer（$0430）。出口：X:Y 为该字符串地址（$04:$30）。
+run_name_format:
   ldy #$00
-loc_B141:
-  jsr sub_A5FD
+name_format_main_loop:
+  jsr read_far_byte
   cmp #$20
-  beq loc_B150
-  sta var_0430,y
+  beq name_format_dot
+  sta run_name_buffer,y
   iny
   cpy #$08
-  bne loc_B141
-loc_B150:
+  bne name_format_main_loop
+name_format_dot:
   lda #$2E
-  sta var_0430,y
+  sta run_name_buffer,y
   iny
   tya
   tax
   ldy #$08
-loc_B15A:
-  jsr sub_A5FD
+name_format_ext_loop:
+  jsr read_far_byte
   cmp #$20
-  beq loc_B16A
-  sta var_0430,x
+  beq name_format_end
+  sta run_name_buffer,x
   inx
   iny
   cpy #$0B
-  bne loc_B15A
-loc_B16A:
+  bne name_format_ext_loop
+name_format_end:
   lda #$00
-  sta var_0430,x
+  sta run_name_buffer,x
   ldx #$04
   ldy #$30
   rts

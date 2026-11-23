@@ -7,25 +7,27 @@
 
 .segment "SEG0_2177"
 ; 段 0，$9D77-$A5BB
-sub_9D77:
+; 写回全部缓冲区，并把当前选定驱动器（mounted_drive）的当前目录路径（80 字节）存入 drive_state_table 里对应的状态块，块末标志置 $FF；写回失败或没有选定驱动器（$FF）时跳过保存。之后落入 buffers_invalidate。
+drives_flush_and_save:
   jsr buffers_flush_all
-  bcs sub_9D99
+  bcs buffers_invalidate
   lda mounted_drive
   cmp #$FF
-  beq sub_9D99
+  beq buffers_invalidate
   jsr drive_state_offset_of
   ldy #$00
-loc_9D88:
+save_dir_loop:
   lda current_dir_path,y
-  sta data_9C33,x
+  sta drive_state_table,x
   inx
   iny
   cpy #$50
-  bne loc_9D88
+  bne save_dir_loop
   lda #$FF
-  sta data_9C33,x
+  sta drive_state_table,x
 
-sub_9D99:
+; 把 FAT、目录、数据三个缓冲区都标成“没有内容”（扇区号置 $FF）并清除脏标志。出口：C=0。
+buffers_invalidate:
   ldx #$FF
   stx fat_buffer_sector
   stx dir_buffer_lba_2
@@ -36,134 +38,139 @@ sub_9D99:
   clc
   rts
 
-sub_9DAD:
+; path_scan_limit 置 $FF（不限制路径长度），再落入 path_get_char。
+path_get_char_unlimited:
   lda #$FF
-  sta data_802A
+  sta path_scan_limit
 
-sub_9DB2:
-  cpx data_802A
-  beq loc_9DD5
-  stx var_00F8
-  sty var_00F9
-  lda data_8028
-  sta var_00FF
-  lda data_8027
-  sta var_00FE
+; 读路径字符串的第 X 个字符（页 path_page、地址 path_ptr 加 X，BIOS 功能 $20）。出口：A 为该字符；Z=1 表示字符串结束（字符为 0，或 X 已到 path_scan_limit）；X、Y 不变。
+path_get_char:
+  cpx path_scan_limit
+  beq path_get_done
+  stx scratch_f8
+  sty scratch_f9
+  lda path_ptr_high
+  sta far_ptr_high
+  lda path_ptr_low
+  sta far_ptr_low
   lda #$20
-  ldx data_8029
-  ldy var_00F8
+  ldx path_page
+  ldy scratch_f8
   jsr BIOS_ENTRY
-  ldx var_00F8
-  ldy var_00F9
+  ldx scratch_f8
+  ldy scratch_f9
   cmp #$00
-loc_9DD5:
+path_get_done:
   rts
 
-sub_9DD6:
+; 把通道块偏移 2-4（页、地址低、地址高）抄到 path_page、path_ptr_low、path_ptr_high，作为要解析的路径字符串位置。
+path_load_pointer:
   ldy #$02
-  lda (var_00EE),y
-  sta data_8029
+  lda (block_ptr_low),y
+  sta path_page
   iny
-  lda (var_00EE),y
-  sta data_8027
+  lda (block_ptr_low),y
+  sta path_ptr_low
   iny
-  lda (var_00EE),y
-  sta data_8028
+  lda (block_ptr_low),y
+  sta path_ptr_high
   rts
 
-sub_9DEA:
-  jsr sub_9DD6
+; 解析路径：先装好路径位置；找出最后一个反斜杠，它之前的部分交给 path_walk 逐级进入目录（只有开头一个反斜杠时回根目录），剩下的文件名交给 path_parse_component 转成 11 字节名放进通道块偏移 5 起。路径末尾没有文件名时 A=3。出口：C=1 出错，A 为出错码。
+path_resolve_directory:
+  jsr path_load_pointer
   ldx #$00
-  stx var_00F3
-loc_9DF1:
-  jsr sub_9DAD
-  beq loc_9DFF
+  stx scratch_f3
+resolve_scan_loop:
+  jsr path_get_char_unlimited
+  beq resolve_scan_done
   inx
   cmp #$5C
-  bne loc_9DF1
-  stx var_00F3
-  beq loc_9DF1
-loc_9DFF:
-  ldx var_00F3
-  beq loc_9E14
+  bne resolve_scan_loop
+  stx scratch_f3
+  beq resolve_scan_loop
+resolve_scan_done:
+  ldx scratch_f3
+  beq resolve_parse_name
   dex
-  beq loc_9E0F
-  jsr sub_A28A
-  bcs loc_9E1C
-  ldx var_00F3
-  bne loc_9E14
-loc_9E0F:
-  jsr sub_A27B
+  beq resolve_use_root
+  jsr path_walk
+  bcs resolve_done
+  ldx scratch_f3
+  bne resolve_parse_name
+resolve_use_root:
+  jsr dir_set_root
   ldx #$01
-loc_9E14:
-  jsr sub_9DAD
-  beq loc_9E1D
-  jsr sub_A151
-loc_9E1C:
+resolve_parse_name:
+  jsr path_get_char_unlimited
+  beq resolve_no_name
+  jsr path_parse_component
+resolve_done:
   rts
-loc_9E1D:
+resolve_no_name:
   lda #$03
   rts
 
-sub_9E20:
+; 检查通道块偏移 5 起的 11 字节名字里没有通配符 ?（遇空格结束该字段）。出口：C=0 时 X 为名字的字符数加 1；有通配符时 A=5、C=1。
+name_check_wildcards:
   ldy #$05
   ldx #$01
-loc_9E24:
-  lda (var_00EE),y
+check_main_loop:
+  lda (block_ptr_low),y
   cmp #$3F
-  beq loc_9E4F
+  beq check_has_wildcard
   cmp #$20
-  beq loc_9E34
+  beq check_extension
   inx
   iny
   cpy #$0D
-  bne loc_9E24
-loc_9E34:
+  bne check_main_loop
+check_extension:
   ldy #$0D
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   cmp #$20
-  beq loc_9E4D
+  beq check_ok
   inx
-loc_9E3D:
-  lda (var_00EE),y
+check_ext_loop:
+  lda (block_ptr_low),y
   cmp #$3F
-  beq loc_9E4F
+  beq check_has_wildcard
   cmp #$20
-  beq loc_9E4D
+  beq check_ok
   inx
   iny
   cpy #$10
-  bne loc_9E3D
-loc_9E4D:
+  bne check_ext_loop
+check_ok:
   clc
   rts
-loc_9E4F:
+check_has_wildcard:
   lda #$05
   rts
 
 ; 文件调用 24（手册未列）：按通道块偏移 $16 的值改写目录项属性。Ember 实测对已打开的文件调用返回 A=$05（拒绝访问），用法未查清。
 file_call_write_attribute:
   ldy #$16
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   and #$D8
-  bne loc_9E79
+  bne write_attr_denied
   lda #$37
   ldy #$08
   jsr dir_find_entry
-  bcs loc_9E78
+  bcs write_attr_done
   ldy #$0B
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   and #$18
   ldy #$16
-  ora (var_00EE),y
+  ora (block_ptr_low),y
   ldy #$0B
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   jsr dir_buffer_write
-  bcs loc_9E78
+  bcs write_attr_done
   lda #$00
-loc_9E78:
+write_attr_done:
   rts
-loc_9E79:
+write_attr_denied:
   lda #$05
   rts
 
@@ -172,99 +179,100 @@ loc_9E79:
 ; 出口与 FileFirst 相同，之后用 FileNext 继续。
 file_call_path_first:
   ldy #$16
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   tax
   and #$10
-  beq loc_9E89
+  beq path_first_mask
   txa
   and #$F7
   tax
-loc_9E89:
+path_first_mask:
   txa
   ora #$A1
   eor #$FF
-  jsr sub_9F22
+  jsr find_first_with_mask
   pha
   ldy #$2B
-  lda data_A53A
-  sta (var_00EE),y
+  lda dos_home_page
+  sta (block_ptr_low),y
   iny
   lda #$F5
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   iny
   lda #$9B
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   lda #$00
   tax
   bit in_subdirectory
-  bpl loc_9EB1
+  bpl path_first_dir_cluster
   ldx current_dir_cluster_high
   lda current_dir_cluster_low
-loc_9EB1:
+path_first_dir_cluster:
   ldy #$2E
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   iny
   txa
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   pla
   rts
 
 ; 文件调用 8 FileCreate、21 FilePathCreate：建立文件，建立后文件已打开、长度为 0。文件名含通配符、与目录或卷标同名时 A=$05。Ember 实测：建立后可写入并关闭，重新打开长度正确。
 file_call_create:
-  jsr sub_9E20
-  bcs loc_9EE4
+  jsr name_check_wildcards
+  bcs create_done
   lda #$3F
   ldy #$00
   jsr file_open_common
-  bcs loc_9EE5
-  lda data_8023
+  bcs create_not_found
+  lda dir_attr_filter
   and #$18
-  beq loc_9ED3
+  beq create_new_entry
   lda #$05
   rts
-loc_9ED3:
-  jsr sub_8EEB
-  bcs loc_9EE4
+create_new_entry:
+  jsr file_truncate_chain
+  bcs create_done
   lda #$20
   jsr dir_entry_init
   jsr dir_buffer_write
-  bcs loc_9EE4
+  bcs create_done
   lda #$00
-loc_9EE4:
+create_done:
   rts
-loc_9EE5:
+create_not_found:
   cmp #$02
-  bne loc_9EF5
-  ldx var_00FE
+  bne create_return
+  ldx far_ptr_low
   inx
-  bne loc_9EFB
+  bne create_claim_slot
   bit in_subdirectory
-  bmi loc_9EF6
+  bmi create_grow_dir
   lda #$05
-loc_9EF5:
+create_return:
   rts
-loc_9EF6:
-  jsr sub_8B0C
-  bcs loc_9EF5
-loc_9EFB:
-  jsr sub_8AEF
-  bcs loc_9EF5
+create_grow_dir:
+  jsr dir_grow
+  bcs create_return
+create_claim_slot:
+  jsr dir_claim_free_slot
+  bcs create_return
   ldx #$20
   jsr dir_entry_init
   jsr dir_buffer_write
-  bcs loc_9EF5
-  jmp loc_8BBA
+  bcs create_return
+  jmp open_init_state
 
-sub_9F0D:
+; 把查找结果区地址（调用者通道块地址加 $17）写进通道块偏移 3、4。
+result_area_setup:
   lda caller_block_low
   clc
   adc #$17
   ldy #$03
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   lda caller_block_high
   adc #$00
   iny
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   rts
 
 ; 文件调用 6 FileFirst：查找第一个匹配的文件。
@@ -273,120 +281,121 @@ sub_9F0D:
 file_call_first:
   lda #$FF
 
-sub_9F22:
+; FileFirst 与 FilePathFirst 的公共部分：A 为属性掩码，写入通道块偏移 $16 与 dir_attr_filter，设好结果区，用 dir_scan_start 与 dir_match_next 找第一个匹配的目录项，找到后落入 find_report_entry 把结果填进通道块。
+find_first_with_mask:
   ldy #$16
-  sta (var_00EE),y
-  sta data_8023
+  sta (block_ptr_low),y
+  sta dir_attr_filter
   pha
-  jsr sub_9F0D
+  jsr result_area_setup
   pla
   jsr dir_scan_start
-  bcs loc_9F38
-  jsr sub_8FC0
-  bcc loc_9F80
-loc_9F38:
+  bcs find_first_done
+  jsr dir_match_next
+  bcc find_report_entry
+find_first_done:
   rts
 
 ; 文件调用 7 FileNext：接着 FileFirst 的状态查找下一个匹配的文件；没有更多文件时返回出错码 $12（SearchEnding）。
 file_call_next:
   ldy #$16
-  lda (var_00EE),y
-  sta data_8023
-  jsr sub_9F0D
+  lda (block_ptr_low),y
+  sta dir_attr_filter
+  jsr result_area_setup
   jsr drive_select
   jsr block_name_pointer
   ldy #$15
-  lda (var_00EE),y
-  sta data_8022
+  lda (block_ptr_low),y
+  sta dir_cluster_index
   dey
-  lda (var_00EE),y
-  sta var_00FB
+  lda (block_ptr_low),y
+  sta dir_sectors_left
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   pha
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   tax
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   pha
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   clc
   adc #$10
-  sta var_00FA
+  sta dir_entry_offset
   pla
   tay
   pla
-  bcc loc_9F7B
+  bcc find_next_search
   jsr dir_next_sector
-  bcc loc_9F7B
+  bcc find_next_search
   cmp #$02
-  bne loc_9F79
+  bne find_next_error
   lda #$12
-loc_9F79:
+find_next_error:
   sec
   rts
-loc_9F7B:
-  jsr sub_8FC0
-  bcs loc_9F79
-loc_9F80:
+find_next_search:
+  jsr dir_match_next
+  bcs find_next_error
+find_report_entry:
   ldy #$15
-  lda data_8022
-  sta (var_00EE),y
+  lda dir_cluster_index
+  sta (block_ptr_low),y
   dey
-  lda var_00FB
-  sta (var_00EE),y
+  lda dir_sectors_left
+  sta (block_ptr_low),y
   dey
   lda dir_buffer_lba_2
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   dey
   lda dir_buffer_lba_1
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   dey
   lda dir_buffer_lba_0
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   dey
-  lda var_00FA
-  sta (var_00EE),y
+  lda dir_entry_offset
+  sta (block_ptr_low),y
   ldy #$0B
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   pha
   ldy #$16
-loc_9FAA:
-  lda (var_00F1),y
+find_copy_attr_loop:
+  lda (dir_entry_ptr_low),y
   pha
   iny
   cpy #$1A
-  bne loc_9FAA
+  bne find_copy_attr_loop
   ldy #$1C
-loc_9FB4:
-  lda (var_00F1),y
+find_copy_times_loop:
+  lda (dir_entry_ptr_low),y
   pha
   iny
   cpy #$20
-  bne loc_9FB4
+  bne find_copy_times_loop
   ldy #$20
-loc_9FBE:
+find_store_times_loop:
   dey
   pla
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   cpy #$17
-  bne loc_9FBE
+  bne find_store_times_loop
   ldy #$00
-loc_9FC8:
-  lda (var_00F1),y
+find_copy_name_loop:
+  lda (dir_entry_ptr_low),y
   pha
   iny
   cpy #$0B
-  bne loc_9FC8
+  bne find_copy_name_loop
   ldy #$2B
-loc_9FD2:
+find_store_name_loop:
   dey
   pla
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   cpy #$20
-  bne loc_9FD2
+  bne find_store_name_loop
   lda #$00
   rts
 
@@ -394,29 +403,29 @@ loc_9FD2:
 file_call_set_drive:
   ldy #$02
   lda logical_drive_count
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   ldy #$01
-  lda (var_00EE),y
-  beq loc_9FFD
+  lda (block_ptr_low),y
+  beq set_drive_report
   cmp logical_drive_count
-  bcc loc_9FF1
-  bne loc_A00C
-loc_9FF1:
+  bcc set_drive_check_count
+  bne set_drive_invalid
+set_drive_check_count:
   cmp #$03
-  bcs loc_9FFA
+  bcs set_drive_store
   ldy drive_info_a
-  beq loc_A00C
-loc_9FFA:
-  sta data_8003
-loc_9FFD:
-  lda data_8003
-  sta (var_00EE),y
+  beq set_drive_invalid
+set_drive_store:
+  sta default_disk
+set_drive_report:
+  lda default_disk
+  sta (block_ptr_low),y
   ldy #$04
-  lda data_802F
-  sta (var_00EE),y
+  lda last_probed_drive
+  sta (block_ptr_low),y
   lda #$00
   rts
-loc_A00C:
+set_drive_invalid:
   lda #$0F
   rts
 
@@ -424,31 +433,31 @@ loc_A00C:
 file_call_seek:
   ldx #$03
   ldy #$0D
-loc_A013:
-  lda (var_00EE),y
-  sta var_00F1,x
+fileseek_copy_loop:
+  lda (block_ptr_low),y
+  sta dir_entry_ptr_low,x
   iny
   dex
-  bpl loc_A013
+  bpl fileseek_copy_loop
   ldy #$07
   ldx #$03
   sec
-loc_A020:
-  lda var_00F1,x
-  sbc (var_00EE),y
+fileseek_compare_loop:
+  lda dir_entry_ptr_low,x
+  sbc (block_ptr_low),y
   iny
   dex
-  bpl loc_A020
-  bcs loc_A036
+  bpl fileseek_compare_loop
+  bcs fileseek_done
   ldx #$03
   ldy #$07
-loc_A02E:
-  lda var_00F1,x
-  sta (var_00EE),y
+fileseek_store_loop:
+  lda dir_entry_ptr_low,x
+  sta (block_ptr_low),y
   iny
   dex
-  bpl loc_A02E
-loc_A036:
+  bpl fileseek_store_loop
+fileseek_done:
   lda #$00
   rts
 
@@ -456,602 +465,610 @@ loc_A036:
 file_call_drive_size:
   ldx #$00
   ldy #$02
-  stx var_00F5
-  sty var_00F4
-  stx var_00F2
-  stx var_00F1
-loc_A045:
-  stx var_00F7
-  sty var_00F6
+  stx name_ptr_high
+  sty name_ptr_low
+  stx dir_entry_ptr_high
+  stx dir_entry_ptr_low
+size_scan_loop:
+  stx cluster_high
+  sty cluster_low
   jsr fat_sector_for_cluster
-  bcs loc_A0A5
-  jsr sub_8885
-  bcs loc_A0A5
-  ora var_00F6
-  bne loc_A05D
-  inc var_00F1
-  bne loc_A05D
-  inc var_00F2
-loc_A05D:
-  inc var_00F4
-  bne loc_A063
-  inc var_00F5
-loc_A063:
-  ldx var_00F5
-  ldy var_00F4
+  bcs size_done
+  jsr fat_follow_chain
+  bcs size_done
+  ora cluster_low
+  bne size_next_cluster
+  inc dir_entry_ptr_low
+  bne size_next_cluster
+  inc dir_entry_ptr_high
+size_next_cluster:
+  inc name_ptr_low
+  bne size_check_end
+  inc name_ptr_high
+size_check_end:
+  ldx name_ptr_high
+  ldy name_ptr_low
   cpx cluster_limit_high
-  bne loc_A045
+  bne size_scan_loop
   cpy cluster_limit_low
-  bne loc_A045
+  bne size_scan_loop
   ldy #$06
   lda #$02
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   lda #$00
   dey
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   ldy #$04
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   lda sectors_per_cluster
   dey
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   ldy #$09
   lda cluster_limit_low
   sec
   sbc #$02
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   iny
   lda cluster_limit_high
   sbc #$00
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   ldy #$08
-  lda var_00F2
-  sta (var_00EE),y
+  lda dir_entry_ptr_high
+  sta (block_ptr_low),y
   dey
-  lda var_00F1
-  sta (var_00EE),y
+  lda dir_entry_ptr_low
+  sta (block_ptr_low),y
   lda #$00
-loc_A0A5:
+size_done:
   rts
 
 ; 文件调用 10 FileDelete、23 FilePathDelete：删除文件（目录项标成已删除并释放簇链），不检查只读属性。Ember 实测。
 file_call_delete:
   jsr file_call_open
-  bcs loc_A0C9
-  jsr sub_8EEB
-  bcs loc_A0C9
+  bcs delete_done
+  jsr file_truncate_chain
+  bcs delete_done
   jsr fat_buffer_flush
-  bcs loc_A0C9
+  bcs delete_done
   ldy #$11
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   jsr dir_entry_pointer
   lda #$E5
   ldy #$00
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   jsr dir_buffer_write
-  bcs loc_A0C9
+  bcs delete_done
   lda #$00
-loc_A0C9:
+delete_done:
   rts
 
 ; 文件调用 14 FileReadAbs：从绝对扇区号（通道块偏移 7，从 0 起）起读 FH_BYTES 个扇区到 FH_PAGE:FH_BUFFER。Ember 实测读 0 号扇区得到引导扇区。
 file_call_read_absolute:
   lda #$02
-  bne loc_A0D0
+  bne absolute_transfer
 
 ; 文件调用 15 FileWriteAbs：参数同 FileReadAbs，写扇区。Ember 实测把 0 号扇区原样写回。
 file_call_write_absolute:
   lda #$03
-loc_A0D0:
-  sta var_00FD
+absolute_transfer:
+  sta transfer_command
   jsr drive_select
   ldy #$09
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   sta sector_lba_2
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   sta sector_lba_1
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   sta sector_lba_0
   ldy #$05
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   jsr disk_transfer_sectors
-  bcs loc_A0F3
+  bcs absolute_done
   lda #$00
-loc_A0F3:
+absolute_done:
   rts
 
 ; 文件调用 13 FileRename：给已打开的文件改名，新文件名取自 FH_PAGE:FH_BUFFER 指向的 11 字节，并复制到通道块偏移 5。Ember 实测。
 file_call_rename:
-  jsr sub_9E20
-  bcs loc_A10B
-  jsr sub_8F62
-  bcs loc_A10B
+  jsr name_check_wildcards
+  bcs rename_done
+  jsr block_load_dir_entry
+  bcs rename_done
   jsr block_name_pointer
   jsr dta_copy_name
   jsr dir_buffer_write
-  bcs loc_A10B
+  bcs rename_done
   lda #$00
-loc_A10B:
+rename_done:
   rts
 
 ; 文件调用 12 FileAttribute：设置已打开文件的属性（偏移 2）、日期（偏移 3-4）、时间（偏移 5-6），关闭时写入目录项。Ember 实测。
 file_call_attribute:
-  jsr sub_8F62
-  bcs loc_A14D
+  jsr block_load_dir_entry
+  bcs attribute_done
   ldy #$02
-  lda (var_00EE),y
-  sta var_00F0
+  lda (block_ptr_low),y
+  sta scratch_f0
   and #$18
-  bne loc_A14E
+  bne attribute_denied
   ldy #$0B
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   and #$18
-  ora var_00F0
-  sta (var_00F1),y
+  ora scratch_f0
+  sta (dir_entry_ptr_low),y
   ldy #$03
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   tax
   iny
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   ldy #$19
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   dey
   txa
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   ldy #$06
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   tax
   dey
-  lda (var_00EE),y
+  lda (block_ptr_low),y
   ldy #$16
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   iny
   txa
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   ldy #$19
   lda #$01
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   lda #$00
-loc_A14D:
+attribute_done:
   rts
-loc_A14E:
+attribute_denied:
   lda #$05
   rts
 
-sub_A151:
+; 把路径里从下标 X 起的一个分量转成 11 字节名字（主名 8、扩展名 3，空格补齐，* 展开成 ?），写进通道块偏移 5 起；分量为“.”或“..”时只写点号。出口：C=0 成功，X 指向该分量之后；字符非法或点号过多时 C=1、A=2。
+path_parse_component:
   ldy #$05
-  jsr sub_9DB2
+  jsr path_get_char
   cmp #$2E
-  bne loc_A174
-  sta (var_00EE),y
+  bne component_main_loop
+  sta (block_ptr_low),y
   iny
   inx
-  jsr sub_9DB2
-  beq loc_A192
+  jsr path_get_char
+  beq component_pad_space
   cmp #$2E
-  bne loc_A170
-  sta (var_00EE),y
+  bne component_bad_dots
+  sta (block_ptr_low),y
   iny
   inx
-  jsr sub_9DB2
-  beq loc_A192
-loc_A170:
+  jsr path_get_char
+  beq component_pad_space
+component_bad_dots:
   lda #$02
   sec
   rts
-loc_A174:
+component_main_loop:
   inx
   cmp #$2A
-  beq loc_A196
+  beq component_star
   cpy #$0D
-  beq loc_A1A2
-  jsr sub_A623
-  bcs loc_A1E9
-  sta (var_00EE),y
+  beq component_skip_to_ext
+  jsr name_char_check
+  bcs component_done
+  sta (block_ptr_low),y
   iny
-  jsr sub_9DB2
-  beq loc_A192
+  jsr path_get_char
+  beq component_pad_space
   cmp #$5C
-  beq loc_A192
+  beq component_pad_space
   cmp #$2E
-  bne loc_A174
-loc_A192:
+  bne component_main_loop
+component_pad_space:
   lda #$20
-  bne loc_A198
-loc_A196:
+  bne component_fill_main
+component_star:
   lda #$3F
-loc_A198:
+component_fill_main:
   cpy #$0D
-  beq loc_A1A2
-  sta (var_00EE),y
+  beq component_skip_to_ext
+  sta (block_ptr_low),y
   iny
-  jmp loc_A198
-loc_A1A2:
-  jsr sub_9DB2
-  beq loc_A1B0
+  jmp component_fill_main
+component_skip_to_ext:
+  jsr path_get_char
+  beq component_ext_loop
   cmp #$5C
-  beq loc_A1B0
+  beq component_ext_loop
   inx
   cmp #$2E
-  bne loc_A1A2
-loc_A1B0:
-  jsr sub_9DB2
-  beq loc_A1D0
+  bne component_skip_to_ext
+component_ext_loop:
+  jsr path_get_char
+  beq component_ext_pad
   cmp #$5C
-  beq loc_A1D0
+  beq component_ext_pad
   inx
   cmp #$2A
-  beq loc_A1CC
+  beq component_ext_star
   cpy #$10
-  beq loc_A1DC
-  jsr sub_A623
-  bcs loc_A1E9
-  sta (var_00EE),y
+  beq component_skip_rest
+  jsr name_char_check
+  bcs component_done
+  sta (block_ptr_low),y
   iny
-  bne loc_A1B0
-loc_A1CC:
+  bne component_ext_loop
+component_ext_star:
   lda #$3F
-  bne loc_A1D2
-loc_A1D0:
+  bne component_fill_ext
+component_ext_pad:
   lda #$20
-loc_A1D2:
+component_fill_ext:
   cpy #$10
-  beq loc_A1DC
-  sta (var_00EE),y
+  beq component_skip_rest
+  sta (block_ptr_low),y
   iny
-  jmp loc_A1D2
-loc_A1DC:
-  jsr sub_9DB2
-  beq loc_A1E8
+  jmp component_fill_ext
+component_skip_rest:
+  jsr path_get_char
+  beq component_ok
   cmp #$5C
-  beq loc_A1E8
+  beq component_ok
   inx
-  bne loc_A1DC
-loc_A1E8:
+  bne component_skip_rest
+component_ok:
   clc
-loc_A1E9:
+component_done:
   rts
 
-sub_A1EA:
+; 把 dir_entry_ptr 指向的目录项名字（去掉空格，主名与扩展名之间加点）以反斜杠开头追加到 work_dir_path；总长不得超过 $3E，超过时恢复原长度并返回 C=1。
+work_path_append:
   ldx #$FF
-loc_A1EC:
+append_find_end:
   inx
-  lda data_9BF5,x
-  bne loc_A1EC
-  stx var_00F0
+  lda work_dir_path,x
+  bne append_find_end
+  stx scratch_f0
   lda #$5C
-  sta data_9BF5,x
+  sta work_dir_path,x
   inx
   cpx #$3E
-  bcs loc_A239
+  bcs append_overflow
   ldy #$00
-loc_A200:
-  lda (var_00F1),y
+append_name_loop:
+  lda (dir_entry_ptr_low),y
   iny
   cmp #$20
-  beq loc_A20F
-  sta data_9BF5,x
+  beq append_name_check
+  sta work_dir_path,x
   inx
   cpx #$3E
-  bcs loc_A239
-loc_A20F:
+  bcs append_overflow
+append_name_check:
   cpy #$08
-  bne loc_A200
-  lda (var_00F1),y
+  bne append_name_loop
+  lda (dir_entry_ptr_low),y
   cmp #$20
-  beq loc_A236
+  beq append_ok
   lda #$2E
-  sta data_9BF5,x
+  sta work_dir_path,x
   inx
   cpx #$3E
-  bcs loc_A239
-loc_A223:
-  lda (var_00F1),y
+  bcs append_overflow
+append_ext_loop:
+  lda (dir_entry_ptr_low),y
   iny
   cmp #$20
-  beq loc_A232
-  sta data_9BF5,x
+  beq append_ext_check
+  sta work_dir_path,x
   inx
   cpx #$3E
-  bcs loc_A239
-loc_A232:
+  bcs append_overflow
+append_ext_check:
   cpy #$0B
-  bne loc_A223
-loc_A236:
+  bne append_ext_loop
+append_ok:
   clc
-  bcc loc_A23B
-loc_A239:
-  ldx var_00F0
-loc_A23B:
+  bcc append_terminate
+append_overflow:
+  ldx scratch_f0
+append_terminate:
   lda #$00
-  sta data_9BF5,x
+  sta work_dir_path,x
   rts
 
-sub_A241:
+; 回到上一级目录：读入当前子目录的第二项（“..”）取得上级目录首簇作为当前目录，并从 work_dir_path 去掉最后一级；上级为根目录（簇号 0）时转 dir_set_root。当前不在子目录里时 A=3、C=1。
+dir_go_parent:
   bit in_subdirectory
-  bpl loc_A277
-  jsr sub_8480
+  bpl parent_in_root
+  jsr current_dir_to_lba
   jsr dir_buffer_read
-  bcs loc_A27A
-  ldx data_943B
-  ldy data_943A
+  bcs parent_done
+  ldx dir_dotdot_cluster_high
+  ldy dir_dotdot_cluster_low
   txa
-  ora data_943A
-  beq sub_A27B
+  ora dir_dotdot_cluster_low
+  beq dir_set_root
   stx current_dir_cluster_high
   sty current_dir_cluster_low
   ldx #$FF
-loc_A262:
+parent_find_end:
   inx
-  lda data_9BF5,x
-  bne loc_A262
-loc_A268:
+  lda work_dir_path,x
+  bne parent_find_end
+parent_strip_loop:
   dex
-  lda data_9BF5,x
+  lda work_dir_path,x
   cmp #$5C
-  bne loc_A268
+  bne parent_strip_loop
   lda #$00
-  sta data_9BF5,x
+  sta work_dir_path,x
   clc
   rts
-loc_A277:
+parent_in_root:
   lda #$03
   sec
-loc_A27A:
+parent_done:
   rts
 
-sub_A27B:
+; 把当前目录设为根目录：in_subdirectory、current_dir_cluster 清零，work_dir_path 置空。
+dir_set_root:
   lda #$00
   sta in_subdirectory
-  sta data_9BF5
+  sta work_dir_path
   sta current_dir_cluster_high
   sta current_dir_cluster_low
   rts
 
-sub_A28A:
-  stx data_802A
+; 沿路径逐级进入目录。入口：路径位置已由 path_load_pointer 设好；X 为路径有效长度（存入 path_scan_limit），$FF 表示整个路径。以反斜杠开头从根目录起；“.”留在原处，“..”回上级，其余分量在当前目录里查找子目录并进入（同时更新 work_dir_path）。出口：C=0 成功；找不到目录时 A=3；分量非法时 A 同 path_parse_component。
+path_walk:
+  stx path_scan_limit
   ldx #$00
-  jsr sub_9DB2
-  beq loc_A2F3
+  jsr path_get_char
+  beq walk_ok
   cmp #$5C
-  bne loc_A29C
-  jsr sub_A27B
+  bne walk_component
+  jsr dir_set_root
   inx
-loc_A29C:
-  jsr sub_9DB2
-  beq loc_A2F3
+walk_component:
+  jsr path_get_char
+  beq walk_ok
   cmp #$2E
-  bne loc_A2B8
+  bne walk_name
   inx
-  jsr sub_9DB2
-  beq loc_A2F3
+  jsr path_get_char
+  beq walk_ok
   cmp #$2E
-  bne loc_A2E7
+  bne walk_next_separator
   inx
-  stx var_00F9
-  jsr sub_A241
-  bcc loc_A2E5
+  stx scratch_f9
+  jsr dir_go_parent
+  bcc walk_after_dir
   rts
-loc_A2B8:
-  jsr sub_A151
-  bcs loc_A2CD
-  stx var_00F9
+walk_name:
+  jsr path_parse_component
+  bcs walk_error_return
+  stx scratch_f9
   lda #$10
   ldy #$08
   jsr dir_find_entry_with_mask
-  bcc loc_A2CE
+  bcc walk_enter_dir
   cmp #$02
-  beq loc_A2F5
+  beq walk_not_found
   sec
-loc_A2CD:
+walk_error_return:
   rts
-loc_A2CE:
-  jsr sub_A1EA
-  bcs loc_A2F5
+walk_enter_dir:
+  jsr work_path_append
+  bcs walk_not_found
   ldy #$1B
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   sta current_dir_cluster_high
   dey
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   sta current_dir_cluster_low
   lda #$FF
   sta in_subdirectory
-loc_A2E5:
-  ldx var_00F9
-loc_A2E7:
-  jsr sub_9DB2
-  beq loc_A2F3
+walk_after_dir:
+  ldx scratch_f9
+walk_next_separator:
+  jsr path_get_char
+  beq walk_ok
   cmp #$5C
-  bne loc_A2F5
+  bne walk_not_found
   inx
-  bne loc_A29C
-loc_A2F3:
+  bne walk_component
+walk_ok:
   clc
   rts
-loc_A2F5:
+walk_not_found:
   lda #$03
   rts
 
-sub_A2F8:
-  ldx data_807B
-  ldy data_807A
+; 把已确认的当前目录（committed_*、current_dir_path）恢复成工作状态：当前簇、是否在子目录、work_dir_path。
+dir_restore_committed:
+  ldx committed_dir_cluster_high
+  ldy committed_dir_cluster_low
   stx current_dir_cluster_high
   sty current_dir_cluster_low
-  lda data_807C
+  lda committed_in_subdirectory
   sta in_subdirectory
   ldx #$FF
-loc_A30C:
+restore_path_loop:
   inx
   lda current_dir_path,x
-  sta data_9BF5,x
-  bne loc_A30C
+  sta work_dir_path,x
+  bne restore_path_loop
   rts
 
-sub_A316:
+; 把工作状态里的当前目录（簇号、是否在子目录、work_dir_path）保存为已确认的当前目录：committed_* 与 current_dir_path。
+dir_commit_current:
   ldx current_dir_cluster_high
   ldy current_dir_cluster_low
-  stx data_807B
-  sty data_807A
+  stx committed_dir_cluster_high
+  sty committed_dir_cluster_low
   lda in_subdirectory
-  sta data_807C
+  sta committed_in_subdirectory
   ldx #$FF
-loc_A32A:
+commit_path_loop:
   inx
-  lda data_9BF5,x
+  lda work_dir_path,x
   sta current_dir_path,x
-  bne loc_A32A
+  bne commit_path_loop
   rts
 
 ; 文件调用 16 FileChangeDir：改变当前目录，路径是以 0 结尾的字符串（\ 分隔，“..”回上一级），成功后更新 current_dir_path 与目录首簇；路径不存在 A=$03。Ember 实测。
 file_call_change_dir:
-  jsr sub_9DD6
+  jsr path_load_pointer
   ldx #$FF
-  jsr sub_A28A
-  bcs loc_A343
-  jsr sub_A316
+  jsr path_walk
+  bcs change_dir_done
+  jsr dir_commit_current
   lda #$00
-loc_A343:
+change_dir_done:
   rts
 
 ; 文件调用 17 FileMakeDir：建立目录，路径是以 0 结尾的字符串。Ember 实测。
 file_call_make_dir:
-  jsr sub_9E20
-  bcs loc_A37B
-  stx var_00F0
+  jsr name_check_wildcards
+  bcs make_dir_done
+  stx scratch_f0
   ldx #$FF
-loc_A34D:
+make_dir_len_loop:
   inx
-  lda data_9BF5,x
-  bne loc_A34D
+  lda work_dir_path,x
+  bne make_dir_len_loop
   txa
-  adc var_00F0
+  adc scratch_f0
   cmp #$3E
-  bcs loc_A363
+  bcs make_dir_denied
   lda #$3F
   ldy #$00
   jsr dir_find_entry
-  bcs loc_A366
-loc_A363:
+  bcs make_dir_not_found
+make_dir_denied:
   lda #$05
   rts
-loc_A366:
+make_dir_not_found:
   cmp #$02
-  bne loc_A37B
-  ldx var_00FE
+  bne make_dir_done
+  ldx far_ptr_low
   inx
-  bne loc_A381
+  bne make_dir_find_cluster
   bit in_subdirectory
-  bmi loc_A37C
+  bmi make_dir_grow
   lda #$52
-  sta data_8031
+  sta extended_error
   lda #$05
-loc_A37B:
+make_dir_done:
   rts
-loc_A37C:
-  jsr sub_8B0C
-  bcs loc_A390
-loc_A381:
+make_dir_grow:
+  jsr dir_grow
+  bcs make_dir_alloc_failed
+make_dir_find_cluster:
   ldx free_search_cluster_high
   ldy free_search_cluster_low
-  stx var_00F7
-  sty var_00F6
+  stx cluster_high
+  sty cluster_low
   jsr fat_find_free
-  bcc loc_A39B
-loc_A390:
+  bcc make_dir_allocated
+make_dir_alloc_failed:
   cmp #$27
   sec
-  bne loc_A37B
-  sta data_8031
+  bne make_dir_done
+  sta extended_error
   lda #$05
   rts
-loc_A39B:
-  jsr sub_8AEF
-  bcs loc_A37B
+make_dir_allocated:
+  jsr dir_claim_free_slot
+  bcs make_dir_done
   ldx #$10
   jsr dir_entry_init
   ldy #$1B
   lda free_search_cluster_high
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   tax
   dey
   lda free_search_cluster_low
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   tay
   lda fat16_flag
   sta fat_value_high
   lda #$FF
   sta fat_value_low
-  sta var_00FC
+  sta fat_access_mode
   jsr fat_entry_access
-  bcs loc_A37B
+  bcs make_dir_done
   jsr dir_buffer_write
-  bcs loc_A37B
+  bcs make_dir_done
   jsr buffers_flush_all
-  bcs loc_A37B
+  bcs make_dir_done
   jsr data_buffer_clear
   ldx free_search_cluster_high
   ldy free_search_cluster_low
-  stx data_921B
+  stx dot_entry_cluster_high
   sty boot_head_count
   jsr cluster_to_lba
-  bcs loc_A456
+  bcs make_dir_return
   sta data_buffer_lba_2
   stx data_buffer_lba_1
   sty data_buffer_lba_0
   ldx #$0A
   lda #$20
-loc_A3F1:
+make_dir_blank_loop:
   sta sector_buffer,x
   sta boot_total_sectors32_0,x
   dex
-  bne loc_A3F1
+  bne make_dir_blank_loop
   lda #$2E
   sta sector_buffer
   sta boot_total_sectors32_0
   sta boot_total_sectors32_1
   ldx #$92
   ldy #$00
-  stx var_00F2
-  sty var_00F1
+  stx dir_entry_ptr_high
+  sty dir_entry_ptr_low
   lda #$10
   jsr dir_entry_set_timestamp
   lda #$20
-  sta var_00F1
+  sta dir_entry_ptr_low
   lda #$10
   jsr dir_entry_set_timestamp
   bit in_subdirectory
-  bpl loc_A42C
+  bpl make_dir_write_first
   ldx current_dir_cluster_high
   ldy current_dir_cluster_low
-  stx data_923B
-  sty data_923A
-loc_A42C:
+  stx dotdot_entry_cluster_high
+  sty dotdot_entry_cluster_low
+make_dir_write_first:
   lda #$03
   jsr data_buffer_transfer
-  bcs loc_A456
+  bcs make_dir_return
   jsr data_buffer_clear
   ldx sectors_per_cluster
-  stx var_00F3
-loc_A43B:
-  dec var_00F3
-  bne loc_A442
+  stx scratch_f3
+make_dir_clear_loop:
+  dec scratch_f3
+  bne make_dir_next_sector
   lda #$00
   rts
-loc_A442:
+make_dir_next_sector:
   inc data_buffer_lba_0
-  bne loc_A44F
+  bne make_dir_write_next
   inc data_buffer_lba_1
-  bne loc_A44F
+  bne make_dir_write_next
   inc data_buffer_lba_2
-loc_A44F:
+make_dir_write_next:
   lda #$03
   jsr data_buffer_transfer
-  bcc loc_A43B
-loc_A456:
+  bcc make_dir_clear_loop
+make_dir_return:
   rts
 
-sub_A457:
+; 检查簇 X:Y 的子目录是否为空（除“.”和“..”外没有有效目录项）。出口：A=0 为空；A=5 不空；其他为读盘出错码。结束时恢复原来的当前目录。
+dir_check_empty:
   lda current_dir_cluster_high
   pha
   lda current_dir_cluster_low
@@ -1059,47 +1076,47 @@ sub_A457:
   stx current_dir_cluster_high
   sty current_dir_cluster_low
   lda #$00
-  sta data_8022
+  sta dir_cluster_index
   lda sectors_per_cluster
-  sta var_00FB
+  sta dir_sectors_left
   lda #$40
-  sta var_00FA
+  sta dir_entry_offset
   dec in_subdirectory
   jsr cluster_to_lba
-  bcs loc_A4B1
-loc_A47B:
+  bcs empty_restore
+empty_next_sector:
   jsr dir_buffer_read
-  bcs loc_A4B1
-  ldy var_00FA
-loc_A482:
+  bcs empty_restore
+  ldy dir_entry_offset
+empty_scan_loop:
   lda dir_buffer,y
-  beq loc_A4B1
+  beq empty_restore
   cmp #$E5
-  bne loc_A4AF
+  bne empty_not_empty
   tya
   adc #$1F
   tay
-  bne loc_A482
-loc_A491:
-  lda data_9500,y
-  beq loc_A4B1
+  bne empty_scan_loop
+empty_scan_high_loop:
+  lda dir_buffer_high,y
+  beq empty_restore
   cmp #$E5
-  bne loc_A4AF
+  bne empty_not_empty
   tya
   adc #$1F
   tay
-  bne loc_A491
-  sty var_00FA
+  bne empty_scan_high_loop
+  sty dir_entry_offset
   jsr dir_next_sector_current
-  bcc loc_A47B
+  bcc empty_next_sector
   cmp #$02
-  beq loc_A4B1
+  beq empty_restore
   lda #$00
-  beq loc_A4B1
-loc_A4AF:
+  beq empty_restore
+empty_not_empty:
   lda #$05
-loc_A4B1:
-  sta var_00F0
+empty_restore:
+  sta scratch_f0
   ldx current_dir_cluster_high
   ldy current_dir_cluster_low
   pla
@@ -1107,7 +1124,7 @@ loc_A4B1:
   pla
   sta current_dir_cluster_high
   inc in_subdirectory
-  lda var_00F0
+  lda scratch_f0
   rts
 
 ; 文件调用 18 FileRemoveDir：删除目录，路径不存在 A=$03，删除当前目录 A=$10（后者只依据手册）。Ember 实测删除空目录成功。
@@ -1115,97 +1132,97 @@ file_call_remove_dir:
   lda #$10
   ldy #$08
   jsr dir_find_entry
-  bcc loc_A4D7
+  bcc remove_dir_found
   cmp #$02
-  bne loc_A524
+  bne remove_dir_done
   lda #$03
   rts
-loc_A4D7:
+remove_dir_found:
   jsr block_store_dir_position
   ldy #$1B
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   tax
   dey
-  lda (var_00F1),y
+  lda (dir_entry_ptr_low),y
   tay
-  cpx data_807B
-  bne loc_A4F0
-  cpy data_807A
-  bne loc_A4F0
+  cpx committed_dir_cluster_high
+  bne remove_dir_not_current
+  cpy committed_dir_cluster_low
+  bne remove_dir_not_current
   lda #$10
   rts
-loc_A4F0:
-  jsr sub_A457
+remove_dir_not_current:
+  jsr dir_check_empty
   cmp #$00
-  bne loc_A524
+  bne remove_dir_done
   lda #$FF
-  sta var_00FC
-loc_A4FB:
+  sta fat_access_mode
+remove_dir_free_loop:
   lda #$00
   sta fat_value_low
   sta fat_value_high
   jsr fat_entry_access
-  bcs loc_A524
+  bcs remove_dir_done
   jsr fat_value_is_last
-  bcc loc_A4FB
+  bcc remove_dir_free_loop
   jsr fat_buffer_flush
-  bcs loc_A524
-  jsr sub_8F62
-  bcs loc_A524
+  bcs remove_dir_done
+  jsr block_load_dir_entry
+  bcs remove_dir_done
   ldy #$00
   lda #$E5
-  sta (var_00F1),y
+  sta (dir_entry_ptr_low),y
   jsr dir_buffer_write
-  bcs loc_A524
+  bcs remove_dir_done
   lda #$00
-loc_A524:
+remove_dir_done:
   rts
 
 ; 文件调用 19 FileGetDir：取当前目录：出口 FH_PAGE 为 dos_page、FH_BUFFER 为 current_dir_path（DOS 页里以 0 结尾的路径串，根目录为空串）。Ember 实测。
 file_call_get_dir:
   ldy #$02
-  lda data_A53A
-  sta (var_00EE),y
+  lda dos_home_page
+  sta (block_ptr_low),y
   ldy #$04
   lda #$80
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   dey
   lda #$32
-  sta (var_00EE),y
+  sta (block_ptr_low),y
   lda #$00
   rts
-data_A53A:
+dos_home_page:
   .byte $00
-data_A53B:
+file_stub_addr_low:
   .byte $00
-data_A53C:
+file_stub_addr_high:
   .byte $00
-data_A53D:
+current_page:
   .byte $00
-data_A53E:
+ctrl_check_enabled:
   .byte $00
-data_A53F:
+result_code:
   .byte $00
-data_A540:
+result_flags:
   .byte $00, $00, $00
-data_A543:
+saved_x:
   .byte $00
-data_A544:
+display_mode:
   .byte $00
-data_A545:
+pending_function_key:
   .byte $00
-data_A546:
+screen_initialized:
   .byte $00
-data_A547:
+exe_type_flag:
   .byte $00
-data_A548:
+run_stack_top:
   .byte $00
-data_A549:
+run_stack:
   .res 40, $00
-data_A571:
+line_buffer:
   .byte $0D
   .res 60, $00
-data_A5AE:
+line_buffer_end:
   .byte $00
-data_A5AF:
+name_buffer:
   .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00

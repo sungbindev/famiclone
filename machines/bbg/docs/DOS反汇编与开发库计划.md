@@ -173,12 +173,12 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 | 1 BIOS 接口基线 | 部分：`bios-rom` 工程已追踪、分 12 个模块、43 个分发项与入口向量已命名，回读一致；`bios-calls.inc` 已写，硬件寄存器与系统变量文件未写；`bbg98_bios.bin` 未分析 |
 | 2 启动扇区 | 完成 |
 | 3 `COMMAND.CMD` | 部分：已追踪、分 10 个模块、19 个内部命令入口命名并写说明，回读一致；其余例程与变量仍是自动名 |
-| 4 `BBGDOS.SYS` | 部分：已追踪、分 11 个模块，回读一致；DOS 17 个功能、文件调用 25 项、磁盘 I/O、FAT 与目录、严重错误处理（含此前没有追踪到的中英文消息、原因表与处理代码）的主要例程已命名并写说明，各缓冲区、BIOS 参数块字段与 FAT12/16 状态变量已命名；文件读写、路径解析、程序装入、屏幕与启动配置里的其余例程与变量仍是自动名 |
+| 4 `BBGDOS.SYS` | 完成：已追踪、分 11 个模块，回读一致；全部符号已有语义名（自动名 0 个，其中零页 `$E5-$FF`、`$0400` 文件调用块、`.EXC` 文件头与段表、`$6000` 起的 BIOS 与 CONFIG.SYS 工作区都已命名），全部例程有说明；覆盖 DOS 17 个功能、文件调用 25 项、磁盘 I/O、FAT12/16 与目录、文件读写与簇链、路径解析、程序装入（`.CMD`、`.EXC` 各类段）、屏幕与启动配置（CONFIG.SYS 的 DEVICE、SHELL）、严重错误处理；还补出此前没有追踪到的 CONFIG.SYS 解析代码与一个没有被引用的例程；个别 BIOS 功能（`$25`、`$13`、`$34` 等）的含义标了“未确认” |
 | 5 API 提取与文档 | 部分：`dos-calls.inc`、`docs/api/` 已写；文件调用 0-23 与除 13 以外的 DOS 调用已在 Ember 里用库的测试程序验证（目录枚举问题已解决，`DOS_DISPLAY_STRING` 的参数顺序与 `DOS_RUN_PROGRAM` 的文件名约定已查清）；外设调用（`$5809`）的子功能、`EXC` 文件头与程序运行时的低端内存约定、版本支持表未做 |
 | 6 汇编开发库 | 完成：`vscode/targets/bbg` 的 `bbg.lib`（`dos`、`file`、`bios`、`text` 四个模块共 59 个函数，一个函数一个文件），`bbg.inc` 由符号文件生成，`api-reference.md` 由源码注释生成，`api-unwrapped.json` 登记没有封装的功能号与原因；DOS 功能 13、文件功能 24 与多数 BIOS 功能没有封装 |
 | 7 库验证 | 完成：`vscode/test/real-emulator/bbg-library.test.ts` 在 Ember 的 `bbg1` 上运行 5 个测试程序（BIOS 9 项、文件 77 项、文字 5 项加 6 组截图对比、DOS 18 项加按键输入、运行程序 8 项），接口检查 `check-bbg-api.mjs` 通过；`apps/bbg/game` 没有改用库 |
 
-自动符号的剩余量（`disasm_status` 的 `symbols.auto`）：`bbgdos` 863、`command` 749、`bios-rom` 1040、`boot-sector` 0。
+自动符号的剩余量（`disasm_status` 的 `symbols.auto`）：`bbgdos` 0、`command` 749、`bios-rom` 1040、`boot-sector` 0。
 
 ## 实测发现的行为
 

@@ -7,115 +7,123 @@
 
 .segment "SEG0_29BC"
 ; 段 0，$A5BC-$AAA8
-sub_A5BC:
+; 判断按键是否为 Ctrl-C：A=3，或 A=0 且 X=0，Z=1 表示是。
+key_is_ctrl_c:
   cmp #$03
-  beq loc_A5C6
+  beq key_check_done
   cmp #$00
-  bne loc_A5C6
+  bne key_check_done
   cpx #$00
-loc_A5C6:
+key_check_done:
   rts
 
-sub_A5C7:
+; 调用 BIOS 功能 $34（X=0），开始等待键盘输入（具体作用未确认）。
+key_wait_begin:
   lda #$34
   ldx #$00
   jmp BIOS_ENTRY
 
-sub_A5CE:
+; 调用 BIOS 功能 $18（外设调用）子功能 0：取出已按下的键，A 为字符码，X 为功能键码。
+key_fetch:
   lda #$18
   ldx #$00
   jmp BIOS_ENTRY
 
-sub_A5D5:
+; 输出字符 X：调用 BIOS 功能 $1B（Y=0）。
+console_put_char:
   lda #$1B
   ldy #$00
   jmp BIOS_ENTRY
 
-sub_A5DC:
+; 查询键盘并处理控制键：有 Ctrl-S（$13）则暂停到再按键；按 Ctrl-C 经 CTRL_C_ENTRY 通知应用。出口：Z=1 无键；Z=0 有键，A 为键码。
+key_poll_control:
   jsr dos_check_keyboard
-  beq loc_A5FC
+  beq poll_done
   cmp #$13
-  bne loc_A5F1
-  jsr sub_A5CE
-  jsr sub_A5CE
-  jsr sub_A5BC
-  beq loc_A5F9
+  bne poll_other_key
+  jsr key_fetch
+  jsr key_fetch
+  jsr key_is_ctrl_c
+  beq poll_call_ctrl_c
   rts
-loc_A5F1:
-  jsr sub_A5BC
-  bne loc_A5FC
-  jsr sub_A5CE
-loc_A5F9:
+poll_other_key:
+  jsr key_is_ctrl_c
+  bne poll_done
+  jsr key_fetch
+poll_call_ctrl_c:
   jsr CTRL_C_ENTRY
-loc_A5FC:
+poll_done:
   rts
 
-sub_A5FD:
-  stx data_A543
-  ldx data_A53D
-  lda var_00FF
+; 读调用者页 current_page 中地址 far_ptr 加 Y 处的一个字节（BIOS 功能 $20）。出口：A 为该字节，X、far_ptr_high 与 saved_x 保持不变。
+read_far_byte:
+  stx saved_x
+  ldx current_page
+  lda far_ptr_high
   pha
   lda #$20
   jsr BIOS_ENTRY
   tax
   pla
-  sta var_00FF
+  sta far_ptr_high
   txa
-  ldx data_A543
+  ldx saved_x
   rts
 
-sub_A614:
-  lda var_00FF
+; 把 transfer_command 里的字节写到调用者页 current_page 中地址 far_ptr 加 Y 处（BIOS 功能 $21），far_ptr_high 保持不变。
+write_far_byte:
+  lda far_ptr_high
   pha
   lda #$21
-  ldx data_A53D
+  ldx current_page
   jsr BIOS_ENTRY
   pla
-  sta var_00FF
+  sta far_ptr_high
   rts
 
-sub_A623:
+; 检查文件名字符 A：控制字符、空格与 双引号 * + , . / : ; < = > [ 反斜杠 ] | $7F 无效（? 与 - 有效）；小写字母转成大写。出口：C=0 有效，A 为结果字符；C=1 无效，并把 result_code 置 2。
+name_char_check:
   cmp #$21
-  bcc loc_A659
-  beq loc_A662
+  bcc char_invalid
+  beq char_valid
   cmp #$23
-  bcc loc_A659
+  bcc char_invalid
   cmp #$2A
-  bcc loc_A662
+  bcc char_valid
   cmp #$2D
-  beq loc_A662
+  beq char_valid
   cmp #$30
-  bcc loc_A659
+  bcc char_invalid
   cmp #$3A
-  bcc loc_A662
+  bcc char_valid
   cmp #$3F
-  bcc loc_A659
+  bcc char_invalid
   cmp #$5B
-  bcc loc_A662
+  bcc char_valid
   cmp #$5E
-  bcc loc_A659
+  bcc char_invalid
   cmp #$61
-  bcc loc_A662
+  bcc char_valid
   cmp #$7B
-  bcc loc_A660
+  bcc char_uppercase
   cmp #$7C
-  beq loc_A659
+  beq char_invalid
   cmp #$7F
-  bne loc_A662
-loc_A659:
+  bne char_valid
+char_invalid:
   lda #$02
-  sta data_A53F
+  sta result_code
   sec
   rts
-loc_A660:
+char_uppercase:
   and #$DF
-loc_A662:
+char_valid:
   clc
   rts
 
 ; DOS 调用分发表：17 项（功能号 0-16），每项 2 字节，内容是处理例程地址减 1（用 RTS 跳转）。
 dos_call_table:
-data_A665 = * + 1
+dos_call_table_high = * + 1
   .word dos_program_return - 1, dos_read_key_echo - 1
   .word dos_display_char - 1, dos_inquire_pages - 1
   .word dos_display_string - 1, dos_run_program - 1
@@ -132,16 +140,16 @@ data_A665 = * + 1
 dos_call_dispatch:
   asl a
   cmp #$22
-  bcs loc_A69B
-  stx data_A543
+  bcs dos_dispatch_bad_function
+  stx saved_x
   tax
-  lda data_A665,x
+  lda dos_call_table_high,x
   pha
   lda dos_call_table,x
   pha
-  ldx data_A543
+  ldx saved_x
   clc
-loc_A69B:
+dos_dispatch_bad_function:
   lda #$01
   rts
 
@@ -157,15 +165,15 @@ dos_get_version:
 ; 入口：X 为返回码；Y 位 0=1 先初始化显示屏幕（DosInitialScreen），位 1=1 先初始化系统资源（BIOS 功能 4）。
 ; 副作用：把堆栈置空，恢复调用者的程序状态（弹出运行程序时压入的 4 字节与页号），随后返回上一层程序。
 dos_program_return:
-  stx data_A53F
-  sty data_A540
+  stx result_code
+  sty result_flags
   ldx #$FF
   txs
   lda #$22
   jsr BIOS_ENTRY
-  lda data_A540
+  lda result_flags
   and #$02
-  beq loc_A6D9
+  beq return_check_screen
   lda #$18
   ldx #$06
   ldy #$00
@@ -184,60 +192,61 @@ dos_program_return:
   tax
   lda #$16
   jsr BIOS_ENTRY
-loc_A6D9:
-  lda data_A540
+return_check_screen:
+  lda result_flags
   lsr a
-  bcc loc_A6E2
+  bcc program_return_pop
   jsr dos_initial_screen
-loc_A6E2:
-  ldx data_A548
+program_return_pop:
+  ldx run_stack_top
   dex
-  lda data_A549,x
-  sta data_A53D
+  lda run_stack,x
+  sta current_page
   ldy #$04
-loc_A6EE:
+return_pop_loop:
   dex
-  lda data_A549,x
+  lda run_stack,x
   pha
   dey
-  bne loc_A6EE
-  stx data_A548
-  lda data_A53F
-  ldy data_A540
+  bne return_pop_loop
+  stx run_stack_top
+  lda result_code
+  ldy result_flags
   clc
   rts
 
-sub_A701:
+; 判断读到的键是否为功能键：A=0，或 A=$E0 且 X 不是 $E2、$E3 时 C=1；否则 C=0（普通字符）。
+key_is_function_key:
   cmp #$00
-  beq loc_A712
+  beq fkey_done
   cpx #$E2
-  beq loc_A711
+  beq fkey_clear_carry
   cpx #$E3
-  beq loc_A711
+  beq fkey_clear_carry
   cmp #$E0
-  beq loc_A712
-loc_A711:
+  beq fkey_done
+fkey_clear_carry:
   clc
-loc_A712:
+fkey_done:
   rts
 
 ; DOS 功能 7 DosReadKeyNoEcho：读键盘，不回显。
 ; 出口：A 为字符码；0 表示功能键，下一次调用取功能键码。
 dos_read_key_no_echo:
   ldx #$00
-  lda data_A545
-  bne loc_A72C
-  jsr sub_A5C7
-loc_A71D:
-  jsr sub_A5DC
-  beq loc_A71D
-  jsr sub_A5CE
-  jsr sub_A701
-  bcc loc_A72F
+  lda pending_function_key
+  bne read_key_store_pending
+  jsr key_wait_begin
+read_key_wait:
+  jsr key_poll_control
+  beq read_key_wait
+  jsr key_fetch
+  jsr key_is_function_key
+  bcc read_key_done
   lda #$00
-loc_A72C:
-  stx data_A545
-loc_A72F:
+read_key_store_pending:
+  stx pending_function_key
+read_key_done:
   rts
 
 ; DOS 功能 1 DosReadKeyEcho：读键盘并回显。
@@ -256,34 +265,35 @@ dos_check_keyboard:
   ldx #$01
   jsr DEVICE_ENTRY
   tya
-  beq loc_A74B
+  beq check_kb_done
   lda #$18
   ldx #$01
   jsr BIOS_ENTRY
   cpy #$00
-loc_A74B:
+check_kb_done:
   rts
 
 ; DOS 功能 8 DosReadKBClear：先清空键盘缓冲，再执行 $FF 里指定的键盘功能（1、6、7）。
 ; 入口：$FF 为要执行的 DOS 功能号。
 dos_read_kb_clear:
-  lda var_00FF
+  lda far_ptr_high
 
-sub_A74E:
+; 先清空键盘缓冲（把已按下的键都读掉，并清除待取的功能键），再按 A 给出的 DOS 功能号调用 dos_call_dispatch；X、Y 保持。
+kb_clear_and_call:
   pha
   lda #$00
-  sta data_A545
+  sta pending_function_key
   txa
   pha
   tya
   pha
-  jsr sub_A5C7
-loc_A75B:
-  jsr sub_A5DC
-  beq loc_A766
-  jsr sub_A5CE
-  jmp loc_A75B
-loc_A766:
+  jsr key_wait_begin
+clear_kb_loop:
+  jsr key_poll_control
+  beq clear_kb_dispatch
+  jsr key_fetch
+  jmp clear_kb_loop
+clear_kb_dispatch:
   pla
   tay
   pla
@@ -291,77 +301,79 @@ loc_A766:
   pla
   jmp dos_call_dispatch
 
-sub_A76E:
+; 弹出两层返回地址后返回（直接回到上上层调用者）。未找到调用处，用途未确认。
+pop_two_return:
   pla
   pla
   rts
-data_A771:
+pending_char_byte:
   .byte $00
 
-sub_A772:
-  ldx data_A771
-  beq loc_A783
+; 如果有等待配对的汉字首字节（pending_char_byte），把它单独输出（BIOS 功能 $1B，Y=0）并清除。
+display_flush_pending:
+  ldx pending_char_byte
+  beq flush_pending_done
   lda #$1B
   ldy #$00
   jsr BIOS_ENTRY
   lda #$00
-  sta data_A771
-loc_A783:
+  sta pending_char_byte
+flush_pending_done:
   rts
 
 ; DOS 功能 2 DosDisplayChar：显示字符。
 ; 入口：X 为字符码；$0D 回车，$0A 换行，$09 按 8 列制表位补空格；中文方式下两个字节组成一个汉字。
 dos_display_char:
   cpx #$09
-  bne loc_A7AA
-  jsr sub_A772
+  bne char_mode_check
+  jsr display_flush_pending
   lda #$1E
   jsr BIOS_ENTRY
   tya
-  sta data_A543
+  sta saved_x
   ora #$07
   sec
-  sbc data_A543
-  beq loc_A7A8
-loc_A79C:
+  sbc saved_x
+  beq char_after_tab
+tab_fill_loop:
   pha
   ldx #$20
-  jsr sub_A5D5
+  jsr console_put_char
   pla
   sec
   sbc #$01
-  bne loc_A79C
-loc_A7A8:
+  bne tab_fill_loop
+char_after_tab:
   ldx #$20
-loc_A7AA:
-  bit data_A544
-  bpl loc_A7BA
+char_mode_check:
+  bit display_mode
+  bpl char_single_byte
   cpx #$80
-  bcs loc_A7BE
+  bcs char_high_byte
   txa
   pha
-  jsr sub_A772
+  jsr display_flush_pending
   pla
   tax
-loc_A7BA:
+char_single_byte:
   ldy #$00
-  beq loc_A7C8
-loc_A7BE:
-  ldy data_A771
-  beq loc_A7D5
+  beq char_output
+char_high_byte:
+  ldy pending_char_byte
+  beq char_hold_lead
   lda #$00
-  sta data_A771
-loc_A7C8:
+  sta pending_char_byte
+char_output:
   lda #$1B
   jsr BIOS_ENTRY
-  lda data_A53E
-  beq loc_A7D8
-  jmp sub_A5DC
-loc_A7D5:
-  stx data_A771
-loc_A7D8:
+  lda ctrl_check_enabled
+  beq char_done
+  jmp key_poll_control
+char_hold_lead:
+  stx pending_char_byte
+char_done:
   rts
-data_A7D9:
+free_page:
   .byte $00
 
 ; DOS 功能 3 DosInquirePages：申请内存页（16KB 一页）。
@@ -370,31 +382,59 @@ data_A7D9:
 dos_inquire_pages:
   txa
   clc
-  adc data_A7D9
-  bcs loc_A7EE
+  adc free_page
+  bcs pages_insufficient
   cmp #$FF
-  beq loc_A7EE
-  ldx data_A7D9
-  sta data_A7D9
+  beq pages_insufficient
+  ldx free_page
+  sta free_page
   txa
   clc
   rts
-loc_A7EE:
+pages_insufficient:
   lda #$00
-  sbc data_A7D9
+  sbc free_page
   sec
   rts
-data_A7F5:
+bios_version_high:
   .byte $00
-data_A7F6:
-  .byte $00, $68, $AA, $AD, $F5, $A7, $C9, $40, $D0, $16, $AD, $F6, $A7, $C9, $62, $B0
-  .byte $0F, $E0, $00, $F0, $03, $38, $B0, $0F, $A9, $3C, $20, $00, $58, $18, $90, $07
-  .byte $A9, $3C, $20, $00, $58, $C9, $01, $68, $AA, $A9, $01, $4C, $00, $58
-data_A824:
+bios_version_low:
   .byte $00
-data_A825:
+
+; 没有被引用的例程：按 BIOS 版本（bios_version_high、bios_version_low，即 $40 与 $62 以上）选择不同方式调用 BIOS 功能 $3C，并经 BIOS 功能 1 切回原页（用途未确认）。
+; 没有被引用的例程：按 BIOS 版本判断后调用 BIOS 功能 $3C（未确认用途）
+dos_unused_bios_3c:
+  pla
+  tax
+  lda bios_version_high
+  cmp #$40
+  bne bios3c_call_old
+  lda bios_version_low
+  cmp #$62
+  bcs bios3c_call_old
+  cpx #$00
+  beq bios3c_call_new
+  sec
+  bcs bios3c_finish
+bios3c_call_new:
+  lda #$3C
+  jsr BIOS_ENTRY
+  clc
+  bcc bios3c_finish
+bios3c_call_old:
+  lda #$3C
+  jsr BIOS_ENTRY
+  cmp #$01
+bios3c_finish:
+  pla
+  tax
+  lda #$01
+  jmp BIOS_ENTRY
+init_screen_page:
+  .byte $00
+init_screen_vector_low:
   .byte $F6
-data_A826:
+init_screen_vector_high:
   .byte $A7
 
 ; DOS 功能 9 DosInitialScreen：初始化显示屏幕（字模、调色板、汉字提示行、光标），清屏。
@@ -403,42 +443,42 @@ dos_initial_screen:
   lda #$22
   jsr BIOS_ENTRY
   lda #$00
-  sta data_A771
-  sta data_A545
-  lda data_A53A
+  sta pending_char_byte
+  sta pending_function_key
+  lda dos_home_page
   pha
-  lda data_A544
+  lda display_mode
   pha
-  lda data_A826
+  lda init_screen_vector_high
   pha
-  lda data_A825
+  lda init_screen_vector_low
   pha
   lda #$01
-  ldx data_A824
+  ldx init_screen_page
   jmp BIOS_ENTRY
 
 ; DOS 功能 10 DosReleasePages：释放内存页。
 ; 入口：X 为要释放的起始页号，从该页起的所有页都被释放。
 dos_release_pages:
-  stx data_A7D9
+  stx free_page
   clc
   rts
 
 ; DOS 功能 4 DosDisplayString：显示字符串。
 ; 入口：X:Y 为字符串地址（X 高字节，Y 低字节，当前页），字符串以 '$' 结束；逐字符调用 dos_display_char。
 dos_display_string:
-  lda var_00FF
+  lda far_ptr_high
   pha
-  lda var_00FE
+  lda far_ptr_low
   pha
-  stx var_00FF
-  sty var_00FE
-  jsr sub_A772
+  stx far_ptr_high
+  sty far_ptr_low
+  jsr display_flush_pending
   ldy #$00
-loc_A860:
-  jsr sub_A5FD
+display_string_loop:
+  jsr read_far_byte
   cmp #$24
-  beq loc_A877
+  beq display_string_end
   tax
   tya
   pha
@@ -446,184 +486,212 @@ loc_A860:
   pla
   tay
   iny
-  bne loc_A860
-  inc var_00FF
-  jmp loc_A860
-loc_A877:
-  jsr sub_A772
+  bne display_string_loop
+  inc far_ptr_high
+  jmp display_string_loop
+display_string_end:
+  jsr display_flush_pending
   pla
-  sta var_00FE
+  sta far_ptr_low
   pla
-  sta var_00FF
+  sta far_ptr_high
   rts
 
-sub_A881:
-  bit data_A544
-  bmi loc_A898
+; 英文方式下在光标处画实心块（字符 $DB，BIOS 功能 $1D）作光标；中文方式不处理。
+cursor_show_block:
+  bit display_mode
+  bmi cursor_done
   ldx #$DB
-  bne loc_A891
+  bne cursor_draw
 
-sub_A88A:
-  bit data_A544
-  bmi loc_A898
+; 英文方式下擦掉光标（画空格）；中文方式不处理。
+cursor_hide_english:
+  bit display_mode
+  bmi cursor_done
 
-sub_A88F:
+; 在光标处画空格擦掉光标（BIOS 功能 $1D，Y=1，X=$20）。
+cursor_hide:
   ldx #$20
-loc_A891:
+cursor_draw:
   lda #$1D
   ldy #$01
   jsr BIOS_ENTRY
-loc_A898:
+cursor_done:
   rts
-data_A899:
+edit_max_length:
   .byte $00
-data_A89A:
+edit_length:
   .byte $00
-data_A89B:
+edit_recall_index:
   .byte $00
-data_A89C:
+edit_insert_mode:
   .byte $00
-data_A89D:
+edit_start_column:
   .byte $00
 
-sub_A89E:
-  ldx data_A89A
+; 把字符 A 追加到正在输入的行：写入用户缓冲区的 edit_length 位置并回显（控制字符显示为 ^ 加字母）；缓冲区满（edit_length 加 1 达到 edit_max_length）时 C=1。
+edit_insert_char:
+  ldx edit_length
   inx
-  cpx data_A899
-  bcs loc_A8C6
-  sta var_00FD
-  ldy data_A89A
-  jsr sub_A614
-  inc data_A89A
-  ldx var_00FD
+  cpx edit_max_length
+  bcs insert_done
+  sta transfer_command
+  ldy edit_length
+  jsr write_far_byte
+  inc edit_length
+  ldx transfer_command
   cpx #$20
-  bcs loc_A8C2
+  bcs insert_echo
   ldy #$5E
   jsr dos_display_char
-  lda var_00FD
+  lda transfer_command
   ora #$40
   tax
-loc_A8C2:
+insert_echo:
   jsr dos_display_char
   clc
-loc_A8C6:
+insert_done:
   rts
 
-sub_A8C7:
+; F1 与右键：把上一次输入行（line_buffer）的下一个字符（edit_recall_index 处，不是回车时）复制到当前行并前进一位；edit_insert_mode 清零。Z=1 表示已到行尾。
+edit_copy_char:
   lda #$00
-  sta data_A89C
-  ldx data_A89B
-  lda data_A571,x
+  sta edit_insert_mode
+  ldx edit_recall_index
+  lda line_buffer,x
   cmp #$0D
-  beq loc_A8DC
-  jsr sub_A89E
-  inc data_A89B
-loc_A8DC:
+  beq copy_char_done
+  jsr edit_insert_char
+  inc edit_recall_index
+copy_char_done:
   rts
 
-sub_A8DD:
+; 退格与左键：删掉当前行最后一个字符并擦除屏幕上的显示（控制字符占两格），同时上一行的回显位置 edit_recall_index 退一位（不小于 0）。
+edit_backspace:
   lda #$00
-  sta data_A89C
-  ldy data_A89A
-  beq loc_A908
+  sta edit_insert_mode
+  ldy edit_length
+  beq backspace_recall
   dey
-  sty data_A89A
-  jsr sub_A5FD
+  sty edit_length
+  jsr read_far_byte
   cmp #$20
-  bcs loc_A8FD
-  jsr sub_A88A
+  bcs backspace_erase
+  jsr cursor_hide_english
   ldx #$08
   jsr dos_display_char
-  jsr sub_A88F
-loc_A8FD:
-  jsr sub_A88A
+  jsr cursor_hide
+backspace_erase:
+  jsr cursor_hide_english
   ldx #$08
   jsr dos_display_char
-  jsr sub_A88F
-loc_A908:
-  dec data_A89B
-  bpl loc_A910
-  inc data_A89B
-loc_A910:
+  jsr cursor_hide
+backspace_recall:
+  dec edit_recall_index
+  bpl backspace_done
+  inc edit_recall_index
+backspace_done:
   rts
 
-sub_A911:
-  jsr sub_A881
-  jsr sub_A5C7
-loc_A917:
-  jsr sub_A5DC
-  beq loc_A917
-  jsr sub_A5CE
+; 显示光标并等待按键：等到有键后取出。出口：A 为字符码，X 为功能键码；光标留在屏幕上，由调用者擦除。
+edit_read_key:
+  jsr cursor_show_block
+  jsr key_wait_begin
+edit_read_key_loop:
+  jsr key_poll_control
+  beq edit_read_key_loop
+  jsr key_fetch
   rts
+
+; F2 键：等待按下一个字符，把上一行从当前回显位置起直到该字符之前的内容复制到当前行；上一行里没有该字符时不复制。
+; 命令行编辑 F2 键：从上一行复制到指定字符之前
+edit_copy_up_to_char:
   lda #$00
-  sta data_A89C
-  jsr sub_A911
-  beq loc_A951
-  ldx data_A89B
+  sta edit_insert_mode
+  jsr edit_read_key
+  beq copy_up_to_done
+  ldx edit_recall_index
   cpx #$3E
-  beq loc_A951
-loc_A931:
+  beq copy_up_to_done
+copy_up_to_scan:
   inx
   cpx #$3E
-  beq loc_A951
-  cmp data_A571,x
-  bne loc_A931
-  ldx data_A89B
-loc_A93E:
+  beq copy_up_to_done
+  cmp line_buffer,x
+  bne copy_up_to_scan
+  ldx edit_recall_index
+copy_up_to_copy_loop:
   pha
-  lda data_A571,x
-  jsr sub_A89E
+  lda line_buffer,x
+  jsr edit_insert_char
   pla
-  inc data_A89B
-  ldx data_A89B
-  cmp data_A571,x
-  bne loc_A93E
-loc_A951:
+  inc edit_recall_index
+  ldx edit_recall_index
+  cmp line_buffer,x
+  bne copy_up_to_copy_loop
+copy_up_to_done:
   rts
+
+; F3 键：把上一行剩下的部分全部复制到当前行。
+; 命令行编辑 F3 键：复制上一行的剩余部分
+edit_copy_rest:
   lda #$00
-  sta data_A89C
-loc_A957:
-  jsr sub_A8C7
-  bne loc_A957
+  sta edit_insert_mode
+copy_rest_loop:
+  jsr edit_copy_char
+  bne copy_rest_loop
   rts
+
+; F4 键：等待按下一个字符，把上一行的回显位置跳到该字符处（跳过之前的内容，不复制）。
+; 命令行编辑 F4 键：跳过上一行到指定字符为止的内容
+edit_skip_up_to_char:
   lda #$00
-  sta data_A89C
-  jsr sub_A911
+  sta edit_insert_mode
+  jsr edit_read_key
   cmp #$0D
-  beq loc_A97D
-  ldx data_A89B
-loc_A96C:
-  cmp data_A571,x
-  beq loc_A97A
-  ldy data_A571,x
+  beq skip_up_to_done
+  ldx edit_recall_index
+skip_up_to_scan:
+  cmp line_buffer,x
+  beq skip_up_to_found
+  ldy line_buffer,x
   inx
   cpy #$0D
-  bne loc_A96C
+  bne skip_up_to_scan
   rts
-loc_A97A:
-  stx data_A89B
-loc_A97D:
+skip_up_to_found:
+  stx edit_recall_index
+skip_up_to_done:
   rts
-  inc data_A89C
+
+; Ins 键：切换插入方式（edit_insert_mode 加 1，位 0 为 1 时每输入一个字符不推进上一行的回显位置）。
+; 命令行编辑 Ins 键：切换插入方式
+edit_toggle_insert:
+  inc edit_insert_mode
   rts
-  ldx data_A89B
-  lda data_A571,x
+
+; Del 键：跳过上一行的一个字符（不是回车时回显位置加 1）。
+; 命令行编辑 Del 键：跳过上一行的一个字符
+edit_skip_char:
+  ldx edit_recall_index
+  lda line_buffer,x
   cmp #$0D
-  beq loc_A98F
-  inc data_A89B
-loc_A98F:
+  beq skip_char_done
+  inc edit_recall_index
+skip_char_done:
   rts
-data_A990:
+edit_key_codes:
   .byte $3B, $3C, $3D, $3E, $4B, $4D, $52, $53
-data_A998:
+edit_key_handler_high:
   .byte $A8, $A9, $A9, $A9, $A8, $A8, $A9, $A9
-data_A9A0:
+edit_key_handler_low:
   .byte $C6, $1F, $51, $5C, $DC, $C6, $7D, $81
 
-sub_A9A8:
-  lda data_A998,x
+; 按功能键在 edit_key_codes 里的下标 X，用 RTS 跳转到命令行编辑处理例程（edit_key_handler_high、edit_key_handler_low，地址减 1）。
+edit_dispatch_key:
+  lda edit_key_handler_high,x
   pha
-  lda data_A9A0,x
+  lda edit_key_handler_low,x
   pha
   rts
 
@@ -631,133 +699,133 @@ sub_A9A8:
 ; 入口：X:Y 为缓冲区地址；缓冲区第 0 字节是最大字符个数（含回车）。
 ; 出口：缓冲区第 1 字节为实际输入的字符个数（不含回车），第 2 字节起是输入内容，以回车结束。
 dos_get_kb_string:
-  lda var_00FF
+  lda far_ptr_high
   pha
-  lda var_00FE
+  lda far_ptr_low
   pha
-  lda var_00FD
+  lda transfer_command
   pha
-  stx var_00FF
-  sty var_00FE
+  stx far_ptr_high
+  sty far_ptr_low
   ldy #$00
-  jsr sub_A5FD
-  sta data_A899
-  lda var_00FE
+  jsr read_far_byte
+  sta edit_max_length
+  lda far_ptr_low
   clc
   adc #$02
-  sta var_00FE
-  bcc loc_A9D1
-  inc var_00FF
-loc_A9D1:
+  sta far_ptr_low
+  bcc getstr_init
+  inc far_ptr_high
+getstr_init:
   lda #$00
-  sta data_A89A
-  sta data_A89B
-  sta data_A89C
+  sta edit_length
+  sta edit_recall_index
+  sta edit_insert_mode
   lda #$1E
   jsr BIOS_ENTRY
-  sty data_A89D
-loc_A9E4:
-  jsr sub_A911
+  sty edit_start_column
+getstr_loop:
+  jsr edit_read_key
   cmp #$08
-  bne loc_A9F1
-  jsr sub_A8DD
-  jmp loc_A9E4
-loc_A9F1:
-  jsr sub_A701
-  bcs loc_AA1F
+  bne getstr_check_special
+  jsr edit_backspace
+  jmp getstr_loop
+getstr_check_special:
+  jsr key_is_function_key
+  bcs getstr_function_key
   cmp #$1B
-  bne loc_AA30
+  bne getstr_normal_key
   ldx #$5C
   jsr dos_display_char
-  jsr sub_B3D1
-  lda data_A89D
-  beq loc_AA12
-  sta var_00FD
-loc_AA09:
+  jsr startup_print_crlf
+  lda edit_start_column
+  beq getstr_reset_line
+  sta transfer_command
+getstr_erase_loop:
   ldx #$20
   jsr dos_display_char
-  dec var_00FD
-  bne loc_AA09
-loc_AA12:
+  dec transfer_command
+  bne getstr_erase_loop
+getstr_reset_line:
   lda #$00
-  sta data_A89A
-  sta data_A89B
-  sta data_A89C
-  beq loc_A9E4
-loc_AA1F:
+  sta edit_length
+  sta edit_recall_index
+  sta edit_insert_mode
+  beq getstr_loop
+getstr_function_key:
   txa
   ldx #$08
-loc_AA22:
+getstr_find_key_loop:
   dex
-  bmi loc_A9E4
-  cmp data_A990,x
-  bne loc_AA22
-  jsr sub_A9A8
-  jmp loc_A9E4
-loc_AA30:
+  bmi getstr_loop
+  cmp edit_key_codes,x
+  bne getstr_find_key_loop
+  jsr edit_dispatch_key
+  jmp getstr_loop
+getstr_normal_key:
   cmp #$0D
-  beq loc_AA60
+  beq getstr_enter
   cmp #$09
-  bne loc_AA3A
+  bne getstr_check_ctrl_c
   lda #$20
-loc_AA3A:
+getstr_check_ctrl_c:
   cmp #$03
-  beq loc_AA58
-  jsr sub_A89E
-  bcs loc_A9E4
-  lda data_A89C
+  beq getstr_cancel
+  jsr edit_insert_char
+  bcs getstr_loop
+  lda edit_insert_mode
   lsr a
-  bcs loc_A9E4
-  ldx data_A89B
-  lda data_A571,x
+  bcs getstr_loop
+  ldx edit_recall_index
+  lda line_buffer,x
   cmp #$0D
-  beq loc_A9E4
-  inc data_A89B
-  bne loc_A9E4
-loc_AA58:
+  beq getstr_loop
+  inc edit_recall_index
+  bne getstr_loop
+getstr_cancel:
   ldy #$00
-  sty data_A89A
+  sty edit_length
   sec
-  bcs loc_AA6A
-loc_AA60:
+  bcs getstr_finish
+getstr_enter:
   pha
-  jsr sub_A88A
+  jsr cursor_hide_english
   pla
   tax
   jsr dos_display_char
   clc
-loc_AA6A:
+getstr_finish:
   php
   lda #$0D
-  sta var_00FD
-  ldy data_A89A
-  jsr sub_A614
+  sta transfer_command
+  ldy edit_length
+  jsr write_far_byte
   cpy #$3E
-  bcc loc_AA80
+  bcc getstr_save_line_loop
   lda #$0D
-  sta data_A5AE
+  sta line_buffer_end
   ldy #$3C
-loc_AA80:
-  jsr sub_A5FD
-  sta data_A571,y
+getstr_save_line_loop:
+  jsr read_far_byte
+  sta line_buffer,y
   dey
-  bpl loc_AA80
-  lda var_00FE
+  bpl getstr_save_line_loop
+  lda far_ptr_low
   sec
   sbc #$02
-  sta var_00FE
-  bcs loc_AA94
-  dec var_00FF
-loc_AA94:
-  ldx data_A89A
-  stx var_00FD
+  sta far_ptr_low
+  bcs getstr_store_length
+  dec far_ptr_high
+getstr_store_length:
+  ldx edit_length
+  stx transfer_command
   ldy #$01
-  jsr sub_A614
+  jsr write_far_byte
   plp
   pla
-  sta var_00FD
+  sta transfer_command
   pla
-  sta var_00FE
+  sta far_ptr_low
   pla
-  sta var_00FF
+  sta far_ptr_high
   rts

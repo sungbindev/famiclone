@@ -13,9 +13,9 @@ drive_info_a:
   .byte $00
 drive_info_x:
   .byte $00
-data_8003:
+default_disk:
   .byte $03
-data_8004:
+boot_disk:
   .byte $00
 ; 当前操作的逻辑驱动器号（0 起，位 7 为硬盘）
 current_drive:
@@ -30,7 +30,7 @@ caller_page:
   .byte $FE
 sectors_left:
   .byte $00
-data_800A:
+contiguous_count:
   .byte $00
 disk_retry_count:
   .byte $00
@@ -78,21 +78,21 @@ free_slot_lba_1:
   .byte $00
 free_slot_lba_2:
   .byte $00
-data_8022:
+dir_cluster_index:
   .byte $00
-data_8023:
+dir_attr_filter:
   .byte $00
-data_8024:
+dir_attr_forbidden:
   .byte $00
-data_8025:
+drive_path_stale:
   .byte $FF, $FF
-data_8027:
+path_ptr_low:
   .byte $00
-data_8028:
+path_ptr_high:
   .byte $00
-data_8029:
+path_page:
   .byte $00
-data_802A:
+path_scan_limit:
   .byte $00
 current_dir_cluster_low:
   .byte $00
@@ -102,11 +102,11 @@ in_subdirectory:
   .byte $00
 mounted_drive:
   .byte $FF
-data_802F:
+last_probed_drive:
   .byte $00
-data_8030:
+critical_error_flags:
   .byte $00
-data_8031:
+extended_error:
   .byte $00
 ; 当前目录路径串（80 字节，以 0 结尾，根目录为空串），FILE_GET_DIR 返回它的地址
 current_dir_path:
@@ -132,17 +132,17 @@ root_dir_lba_high:
   .byte $00
 root_dir_sectors:
   .byte $00
-data_807A:
+committed_dir_cluster_low:
   .byte $00
-data_807B:
+committed_dir_cluster_high:
   .byte $00
-data_807C:
+committed_in_subdirectory:
   .byte $00
 data_area_lba_low:
   .byte $00
 data_area_lba_high:
   .byte $00
-; FAT12 或 FAT16：0 为 FAT12，$FF 为 FAT16
+; FAT 类型与簇号高字节的屏蔽值：$0F 为 FAT12，$FF 为 FAT16（位 7 为 1 即 FAT16）
 fat16_flag:
   .byte $00
 free_search_cluster_low:

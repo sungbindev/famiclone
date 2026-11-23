@@ -1,6 +1,6 @@
 # 更新记录
 
-## 未发布
+## 0.8.0
 
 - 目标：新增“整机 ROM 工程”目标 `rom`，用来构建各机型（步步高、学习机等）的 BIOS 与固件源码；`fcdev.json` 的 `firmware` 指向完整的固件当底，构建时把源码的链接结果覆盖进去，在 `targetOptions` 里写机型 `machine`、覆盖位置 `offset` 与固件大小 `size`。
 - 运行：整机 ROM 工程构建后把产物当作该机型的固件在 Ember 里开机运行，不用输入程序名；`fcdev.json` 新增 `diskImage`，可以把一张现成的软盘镜像挂到软驱。

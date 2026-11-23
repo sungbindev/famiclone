@@ -233,7 +233,7 @@ vscode/
 
 范围：
 
-- 迁移前的构建产物没有保留为对照数据；构建正确性靠真实 cc65 构建全部样例与四个模板（`apps/sb2000` 下 19 个入库的项目、`apps/disasm-example`、四个模板）来保证，`apps/sb97/runnes` 未入库，不在范围内。
+- 迁移前的构建产物没有保留为对照数据；构建正确性靠真实 cc65 构建全部样例与四个模板（`apps/sb2000` 下 19 个入库的项目、四个模板）来保证，`apps/sb97/runnes` 未入库，不在范围内。
 - 建立结构测试规则：基础设施层只有登记的文件引用 `vscode`（脚本才能直接加载编译产物），新增功能目录沿用层间依赖与功能目录隔离规则；“反汇编核心没有机型名”在阶段 3 随核心加入。
 - 验证 `.mjs` 脚本能引用 `vscode/out/` 里的命名导出。
 - `package` 脚本加 `--target win32-x64`；`.vscodeignore` 不排除 `toolchain`、`targets`、`templates`、`docs`，无需修改；其余脚本在对应文件出现的阶段加入。
@@ -274,9 +274,9 @@ vscode/
 - `src/disasm` 65 个文件、5,487 行移入 `shared`、`logic`、`infra` 的 `disassembly`。
 - 删除 `fcdev-module-runner.ts`、`workspace-disasm-runner.ts` 与 `disasm-runner` 契约里面向动态加载的部分；19 个 `disasm_*` 工具直接调用核心。
 - 命令“反汇编映像文件”。
-- 对应测试与 `apps/disasm-example` 的工作流测试。
+- 对应测试。
 
-完成标准：NES 与 SB2000 样例的反汇编回读通过；`disasm-workflow` 的八步断言通过；19 个工具的用例通过。
+完成标准：NES 与 SB2000 样例的反汇编回读通过；19 个工具的用例通过。
 
 ### 阶段 4：模拟器与调试
 
@@ -311,7 +311,6 @@ vscode/
 | --- | --- |
 | `apps/sb2000` 下 7 个有 `package.json` 的项目 | 删除 `package.json`、`package-lock.json`，加 `.vscode/tasks.json`，更新 README 与 `.gitignore` 里对 `fcdev sync` 的说明 |
 | `apps/sb2000/examples` 12 个示例、`apps/sb2000/fbasic/exe` | 没有 `package.json`，补 `.vscode/tasks.json` 或并入上级项目的任务 |
-| `apps/disasm-example` | 同上；`README.md` 的走法写成扩展命令 |
 | `apps/sb2000/fbasic/tools` | 5 个脚本引用 `vscode/out/`，替换 `packages/fcdev/src/*` 的引用 |
 | `machines/bbg/tools/probe-fc.mjs` 与两份机型文档 | 同上 |
 | `ember/docs`（01、02、04、05、06、07、08、待办备忘） | 调试客户端、帮助站点导入、模拟器随包的描述 |

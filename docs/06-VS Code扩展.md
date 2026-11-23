@@ -209,5 +209,5 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 - 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。
 - `test/chat-contributions.test.ts` 检查：声明的文件都存在；前置信息完整（反汇编指令还要有 `applyTo`）；agent 的工具恰好是除 `agent` 以外的全部内置工具加清单里的全部语言模型工具；skill 与指令里提到的 `disasm_*`、`emu_*`、`fcdev_*` 都存在。
-- 这三类贡献点要较新的 VS Code，低版本会忽略它们，不影响扩展的其他功能。agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。示例走法见 `apps/disasm-example/README.md`。
+- 这三类贡献点要较新的 VS Code，低版本会忽略它们，不影响扩展的其他功能。agent 里工具引用的写法与实际效果要在真实 VS Code 里核对。
 - `engines.vscode` 为 `^1.101.0`：调试客户端用全局 `WebSocket`，扩展宿主的 Node 要达到 22（VS Code 1.101 起的扩展宿主是 Node 22.15.1）。

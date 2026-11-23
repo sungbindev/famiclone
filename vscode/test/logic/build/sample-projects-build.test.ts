@@ -46,7 +46,7 @@ function listSampleProjects(group: string): string[] {
 }
 
 /** 样例项目所在的目录。 */
-const SAMPLE_PROJECTS = [...listSampleProjects('apps/sb2000'), ...listSampleProjects('apps/sb97'), ...listSampleProjects('apps/disasm-example')].toSorted();
+const SAMPLE_PROJECTS = [...listSampleProjects('apps/sb2000'), ...listSampleProjects('apps/sb97')].toSorted();
 
 describe.skipIf(!HAS_TOOLCHAIN)('样例项目都能构建', { timeout: TIMEOUT_MS }, () => {
   const { service, fileSystem } = createRealBuildEnvironment();

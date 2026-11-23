@@ -1,6 +1,6 @@
 {
   "target": "bbg",
-  "name": "run",
+  "name": "game",
   "linkConfig": "link.cfg",
   "firmware": "../../../ember/roms/bbg1_bios.bin",
   "diskImage": "../../../reference/floppy-images/bbg/系统类/001-3.IMG"

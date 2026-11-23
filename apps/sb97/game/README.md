@@ -1,17 +1,18 @@
-# run-nes（小霸王 97）
+# game（小霸王 97）
 
 在小霸王 97 学习机（SB97）的 DOS 下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 sb97 目标项目，不依赖 C 运行库。
 
 ## 使用
 
-把 `RUN.EXE` 与游戏文件（文件名符合 8.3，如 `MARIO.NES`）放在同一张软盘上，在 DOS 提示符下输入：
+把 `GAME.EXE` 与游戏文件（文件名符合 8.3，如 `MARIO.NES`）放在同一张软盘上，在 DOS 提示符下输入：
 
 ```text
-RUN MARIO
-RUN MARIO.NES
+GAME
+GAME MARIO
+GAME MARIO.NES
 ```
 
-两种写法等价：参数没有扩展名时按 `.NES` 处理。进入游戏后按手柄的 Start 开始。
+不带参数时显示游戏菜单（手柄上下键选择，按 Start 运行）；带参数时直接运行。进入游戏后按手柄的 Start 开始。
 
 | 支持 | 不支持 |
 | --- | --- |
@@ -21,7 +22,7 @@ RUN MARIO.NES
 
 | 提示 | 原因 |
 | --- | --- |
-| `Usage: RUN FILE.NES` | 没有给文件名 |
+| `Usage: GAME FILE.NES` | 没有给文件名（不带参数时进入菜单，盘上没有 .NES 文件时显示 `No .NES file on the disk`） |
 | `Bad file name` | 文件名超过 8 个字符的主名或 3 个字符的扩展名 |
 | `Disk read error` | 软驱读盘出错 |
 | `File not found` | 软盘根目录里没有这个文件 |
@@ -33,17 +34,17 @@ RUN MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/sb97/run-nes`（或任务“fcdev：构建”）：
+在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/sb97/game`（或任务“fcdev：构建”）：
 
-- 产物是 `build/sb97/RUN.EXE`（32768 字节）。
-- 同时生成软盘镜像 `build/sb97/RUN.img`（1.44MB FAT12），里面有 `RUN.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
+- 产物是 `build/sb97/GAME.EXE`（32768 字节）。
+- 同时生成软盘镜像 `build/sb97/GAME.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
 - 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库。
 
 `build/` 不入库。
 
 ## 在模拟器里运行
 
-任务“fcdev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.bin` 开机，挂载镜像，进入 DOS 并输入 `run`（不带参数，画面显示用法提示）。要运行游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `RUN MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
+任务“fcdev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.bin` 开机，挂载镜像，进入 DOS 并输入 `game`（不带参数，显示游戏菜单）。要运行带参数的游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `GAME MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
 
 ## 原理
 
@@ -60,5 +61,5 @@ RUN MARIO.NES
 | 文件 | 说明 |
 | --- | --- |
 | `src/nes.s` | 程序：入口 `_main`、装载程序、软驱与 FAT12 读取、iNES 头检查、启动游戏 |
-| `fcdev.json` | fcdev 配置：目标 sb97，程序名 run，运行用的固件 |
+| `fcdev.json` | fcdev 配置：目标 sb97，程序名 game，运行用的固件 |
 | `disk/` | 构建时全部放进软盘镜像的文件，目前是使用说明 `README.TXT` |

@@ -57,6 +57,7 @@ DOS_REG_ROM     = $90
 MENU_FIRST      = 3             ; 第一项的行号，每项占两行（汉字是 16 点高）
 MENU_VIS        = 10            ; 一屏显示的项数
 MENU_HELP_ROW   = 24            ; 操作提示的行号
+MENU_AUTHOR_ROW = 27            ; 作者行的行号
 PAD_START       = $10           ; 手柄读数的位：A 在位 7，依次到右键在位 0
 PAD_UP          = $08
 PAD_DOWN        = $04
@@ -130,6 +131,7 @@ eptr:           .res 2          ; 游戏表项的指针
 padacc:         .res 1          ; 手柄读数的累加
 pressed:        .res 1          ; 刚按下的键
 bidx:           .res 1          ; 正在写入菜单行的表项序号
+pace:           .res 1          ; print_paced 要等的帧数
 
         .segment "BSS"
 
@@ -166,6 +168,7 @@ msg_trainer:    .byte STR_LOCATE, 2, 10, "Trainer not supported", STR_END
 ; 菜单标题与操作提示用 GB2312 汉字码：游戏菜单、上下键选择 开始键运行
 msg_title:      .byte STR_LOCATE, 2, 1, $D3,$CE,$CF,$B7,$B2,$CB,$B5,$A5, STR_END
 msg_help:       .byte STR_LOCATE, 2, MENU_HELP_ROW, $C9,$CF,$CF,$C2,$D1,$A1,$D4,$F1,' ',$BF,$AA,$CA,$BC,$D4,$CB,$D0,$D0, STR_END
+msg_author:     .byte STR_LOCATE, 2, MENU_AUTHOR_ROW, "https://fcdev.cn", STR_END
 
 ; 目录项里首簇（26-27）与大小（28-31）的位置，按这个顺序复制进游戏表
 copy_src:       .byte 26, 27, 28, 29, 30, 31
@@ -917,7 +920,7 @@ menu_draw:
         jsr BIOS_CLEAR
         lda #<msg_title
         ldy #>msg_title
-        jsr BIOS_PRINT
+        jsr print_paced
         lda #0
         sta mv_k
 @row:
@@ -931,14 +934,51 @@ menu_draw:
         jsr build_row
         lda #<ROWBUF
         ldy #>ROWBUF
-        jsr BIOS_PRINT
+        jsr print_paced
         inc mv_k
         jmp @row
 @help:
         lda #<msg_help
         ldy #>msg_help
-        jsr BIOS_PRINT
+        jsr print_paced
+        lda #<msg_author
+        ldy #>msg_author
+        jsr print_paced
         jsr set_backdrop
+        rts
+
+; 显示字符串（A、Y 为地址），再等 BIOS 每帧画一个字符的时间；BIOS 的队列满了会丢字
+print_paced:
+        sta ptr
+        sty ptr+1
+        ldy #0
+@len:
+        lda (ptr),y
+        cmp #STR_END
+        beq @go
+        iny
+        bne @len
+@go:
+        sty pace
+        lda ptr
+        ldy ptr+1
+        jsr BIOS_PRINT
+@wait:
+        jsr wait_frame
+        dec pace
+        bne @wait
+        rts
+
+; 等约一个画面帧（Dendy 制式每帧约 35000 个 CPU 周期）；NMI 会先清掉 $2002 的标志，不能靠它判断
+wait_frame:
+        ldx #28
+@x:
+        ldy #0
+@y:
+        dey
+        bne @y
+        dex
+        bne @x
         rts
 
 ; 把背景色写进 BIOS 的调色板影子，下一次 NMI 就会送到 $3F00（直接写 $3F00 会被 NMI 覆盖）

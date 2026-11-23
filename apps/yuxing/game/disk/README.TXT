@@ -9,3 +9,6 @@
 - 支持 mapper 0（PRG 16K 或 32K，CHR 8K）；V9.0-98 学习卡还支持 mapper 4（MMC3）。V8.x 学习卡遇到 mapper 4 显示 Mapper not supported。
 - 游戏里不能回到菜单或 DOS，只能复位。
 - 出错时画面第 10 行显示英文提示并停住，需要复位。
+
+作者：sungbin
+GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/yuxing/game

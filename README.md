@@ -9,12 +9,12 @@
 | `vscode` | VS Code 扩展 fcdev（唯一的开发环境发行形式，独立的 npm 项目，生成 `.vsix`）：任务与命令、各机型目标与运行库、cc65 工具链、项目模板、使用文档、反汇编核心、调试客户端、Copilot 工具 |
 | `ember` | 模拟器 Ember：Win32 原生外壳加 C++ 核心，独立的 npm 项目，不发布到 npm，也不随扩展发布；使用者在扩展设置 `fcdev.emulator.path` 里指向它 |
 | `vscode/third_party/cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `vscode/third_party/cc65/LICENSE` |
-| `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`run-nes`、`memtest`、`hwprobe`、`hwtest`、`family-basic-v3`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是一个 fcdev 项目，用 VS Code 任务构建 |
-| `apps/sb97`、`apps/yuxing`、`apps/bbg` | 各机型 DOS 下的 `run-nes`（运行 NES 游戏的加载程序，汇编）：SB97 与步步高运行 mapper 0 的游戏，裕兴运行 mapper 0 与 mapper 4 的游戏；每个是一个 fcdev 项目 |
+| `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`game`、`memtest`、`hwprobe`、`hwtest`、`family-basic-v3`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是一个 fcdev 项目，用 VS Code 任务构建 |
+| `apps/sb97`、`apps/yuxing`、`apps/bbg` | 各机型 DOS 下的 `game`（运行 NES 游戏的加载程序，汇编）：SB97 与步步高运行 mapper 0 的游戏，裕兴运行 mapper 0 与 mapper 4 的游戏；每个是一个 fcdev 项目 |
 | `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`docs`（研究文档） |
 | `machines/bbg` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
 | `machines/sb97` | SB97 的 BIOS 反汇编工程与分析结论 |
-| `reference` | 真机参考资料：ROM、软盘镜像、磁带、游戏；`machines` 与测试会用到，不随扩展发布 |
+| `reference` | 真机参考资料：ROM、软盘镜像、磁带、游戏；`machines` 与测试会用到，不随扩展发布；按机型的资料索引见 [reference/README.md](reference/README.md) |
 | `tools` | 各部分脚本共用的入口 `tools/extension.mjs`（引用扩展的编译产物）；扩展自己的维护脚本（工具链、运行库、SB2000 生成文档、打包检查、发布）在 `vscode/tools/` |
 | `docs` | 开发文档，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节 |
 | `build` | 构建产物（cc65、Ember），不入库 |

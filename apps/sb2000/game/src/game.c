@@ -1,11 +1,12 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：runnes.c
- * 说明：在 DOS 下运行 NES 游戏：run 文件名.nes；支持 mapper 0 与 mapper 4（MMC3），PRG、CHR 各不超过 128K，不带 trainer，必须有 CHR。
+ * 名称：game.c
+ * 说明：在 DOS 下运行 NES 游戏：game 文件名.nes 直接运行；不带参数时列出磁盘里的 .NES 文件，手柄选择后运行。
+ *       支持 mapper 0 与 mapper 4（MMC3），PRG、CHR 各不超过 128K，不带 trainer，必须有 CHR。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-11
- * 备注：流程：取命令行里的文件名 -> 读入扩展 RAM 页（超过 256K+16 字节的部分不读，文件末尾可能带说明文字）-> 检查 iNES 头
+ * 日期：2026-11-24
+ * 备注：流程：取命令行里的文件名，没有时进入菜单选择 -> 读入扩展 RAM 页（超过 256K+16 字节的部分不读，文件末尾可能带说明文字）-> 检查 iNES 头
  *       -> 关 NMI 与中断 -> PRG 先用 DMA 复制到 ERAM 缓冲，再用 CPU 复制到扩展 RAM 第 3 个 128K 窗口（$5006 写 $FF，页 $E0-$FF）；CHR 用 DMA 复制到扩展显存的同一窗口
  *       -> 把 PRG 的 RESET 向量改成 ERAM $6100 的启动桩 -> 在 ERAM $6000 的跳板里写 $5006、$4301 进入 FC 兼容模式。
  *       放置方式与汇编版 play（本仓库 apps/sb2000/examples/play）相同：MMC3 仿真下 $C000-$FFFF 固定为窗口末尾 16K，$8000-$BFFF 由 R6/R7 选 8K 页；
@@ -13,13 +14,13 @@
  *       CHR 放在扩展显存同一窗口的开头，R0-R5 设为 0、2、4、5、6、7。
  *       DMA 的目的在程序窗口（$8000 以上）时写不进去，所以 PRG 的每 4K 先 DMA 到 ERAM $6800-$77FF，再把目的页映射到窗口 2（$A000）后用 CPU 复制过去；窗口 3 里有 C 软件栈，不能换页，
  *       所以程序（含数据）必须在 $A000 以下，超出时拒绝运行。游戏中不再返回 DOS，要回 DOS 只能硬复位。
+ *       菜单用文字控制台：每次重画先把光标退回菜单顶行，再逐行覆盖旧内容。
  * ------------------------------------------------------------------------
  */
 #include <string.h>
 #include <sb2000.h>
 
 /* 提示信息（显示后等待按键，再返回 DOS） */
-#define MSG_USAGE "Usage: RUN FILE.NES"
 #define MSG_OPEN "Can't open file"
 #define MSG_MEMORY "No memory"
 #define MSG_READ "Read error"
@@ -28,6 +29,7 @@
 #define MSG_SIZE "Size not supported"
 #define MSG_TRUNCATED "File is truncated"
 #define MSG_TOO_BIG "Program too big"
+#define MSG_NO_GAME "No .NES file on the disk"
 
 /* 映射器寄存器，含义见 MapperSB2K.cpp；其余寄存器用 sb2000.h 里的 SB_HW_ 符号 */
 #define REG_EXT_WINDOW 0x5006
@@ -55,6 +57,29 @@
 #define STUB_R6 0x2A /* 偏移：MMC3 寄存器 R6 的初值，R7 的初值在 +2 */
 #define STUB_R7 0x2C
 
+/* 菜单：可见行数、最多收的游戏数、每个文件名的长度（12 个字符加结束符） */
+#define MENU_VIS 6
+#define MAX_GAMES 24
+#define NAME_LEN 13
+
+/* 全屏菜单：行号、图块区（每行的图块号互不相同）与颜色 */
+#define MENU_ROW_TITLE 4
+#define MENU_ROW_LIST 8
+#define MENU_ROW_HELP 24
+#define MENU_ROW_AUTHOR 26
+#define MENU_COL 2
+#define MENU_TILE_BASE 0x0300
+#define MENU_TILE_LINE 0x80
+#define MENU_COLOR 0x0F
+#define MENU_BG 0x12 /* 调色板第 0 项是背景色，$12 为蓝 */
+#define MENU_TEXT 0x30 /* 调色板第 1 到 3 项为白色 */
+#define MENU_LINE_LEN 16
+
+/* 手柄 1 状态的位（sb_pad_state） */
+#define PAD_START 0x10
+#define PAD_UP 0x08
+#define PAD_DOWN 0x04
+
 /* 文件路径，最长 0x2F 个字符 */
 static char path[0x30];
 /* iNES 头 */
@@ -67,6 +92,11 @@ static unsigned char prg_units;
 static unsigned char chr_units;
 static unsigned char mapper;
 static unsigned char flags;
+/* 菜单：磁盘上的 .NES 文件名、个数、选中项与列表顶行 */
+static char games[MAX_GAMES][NAME_LEN];
+static unsigned char game_count;
+static unsigned char sel;
+static unsigned char top;
 
 /*
  * 启动桩，运行时复制到 ERAM $6100，游戏复位后先执行它：
@@ -121,6 +151,116 @@ static unsigned char read_name(void)
     return length;
 }
 
+/* 取磁盘根目录（当前目录）里的 .NES 文件名到 games；磁盘出错时返回 0 */
+static unsigned char scan_games(void)
+{
+    sb_dir_entry_t entry;
+    unsigned char length;
+
+    game_count = 0;
+    if (sb_dir_open("\\") != 0) {
+        return 0;
+    }
+    while (sb_dir_read(&entry) == 0) {
+        length = (unsigned char)strlen(entry.name);
+        if (game_count < MAX_GAMES && length >= 4 && (entry.attr & (SB_ATTR_DIRECTORY | SB_ATTR_VOLUME)) == 0
+            && strcmp(entry.name + length - 4, ".NES") == 0) {
+            memcpy(games[game_count], entry.name, NAME_LEN);
+            ++game_count;
+        }
+    }
+    return 1;
+}
+
+/* 在第 row 行写一行文字，line 决定图块区（每行不同） */
+static void menu_line(unsigned char row, unsigned char line, const char *text)
+{
+    sb_text_field(0, MENU_COL, row, text, MENU_TILE_BASE + (unsigned int)line * MENU_TILE_LINE, 0, MENU_COLOR);
+}
+
+/* 画列表第 k 行（从 0 起）：选中的前面是 >，空行不画字 */
+static void draw_list_row(unsigned char k)
+{
+    char buf[MENU_LINE_LEN];
+    unsigned char index = top + k;
+
+    buf[0] = 0;
+    if (index < game_count) {
+        buf[0] = index == sel ? '>' : ' ';
+        buf[1] = ' ';
+        strcpy(buf + 2, games[index]);
+    }
+    menu_line(MENU_ROW_LIST + 2 * k, 1 + k, buf);
+}
+
+/* 清屏并画出整个菜单：标题、列表、操作提示、网址 */
+static void draw_menu(void)
+{
+    static const unsigned char menu_colors[16] = {
+        MENU_BG, MENU_TEXT, MENU_TEXT, MENU_TEXT,
+        MENU_BG, MENU_TEXT, MENU_TEXT, MENU_TEXT,
+        MENU_BG, MENU_TEXT, MENU_TEXT, MENU_TEXT,
+        MENU_BG, MENU_TEXT, MENU_TEXT, MENU_TEXT
+    };
+    unsigned char k;
+
+    sb_palette_write(0, menu_colors, 16);
+    sb_screen_clear(0x01, 0);
+    menu_line(MENU_ROW_TITLE, 0, "游戏菜单");
+    for (k = 0; k < MENU_VIS; ++k) {
+        draw_list_row(k);
+    }
+    menu_line(MENU_ROW_HELP, 1 + MENU_VIS, "上下选择 开始运行");
+    menu_line(MENU_ROW_AUTHOR, 2 + MENU_VIS, "https://fcdev.cn");
+    sb_screen_flush(0);
+}
+
+/* 移动选中项后重画 */
+static void redraw_rows(void)
+{
+    draw_menu();
+}
+
+/* 显示菜单，手柄 1 上下选择、开始键确认；选中的文件名写进 path，返回 0 表示没有游戏 */
+static unsigned char menu_choose(void)
+{
+    unsigned char state;
+    unsigned char prev;
+    unsigned char pressed;
+
+    if (!scan_games() || game_count == 0) {
+        sb_puts(MSG_NO_GAME);
+        return 0;
+    }
+    sb_pad_init();
+    draw_menu();
+    sb_pad_poll();
+    prev = sb_pad_state(0);
+    for (;;) {
+        sb_pad_poll();
+        state = sb_pad_state(0);
+        pressed = (unsigned char)(state & (unsigned char)~prev);
+        prev = state;
+        if ((pressed & PAD_START) != 0) {
+            memcpy(path, games[sel], NAME_LEN);
+            return 1;
+        }
+        if ((pressed & PAD_UP) != 0 && sel > 0) {
+            --sel;
+            if (sel < top) {
+                top = sel;
+            }
+            redraw_rows();
+        } else if ((pressed & PAD_DOWN) != 0 && sel + 1 < game_count) {
+            ++sel;
+            if (sel >= top + MENU_VIS) {
+                top = sel - MENU_VIS + 1;
+            }
+            redraw_rows();
+        }
+    }
+}
+
 /* 检查 iNES 头，通过时记下 PRG、CHR 个数与 mapper；size 是已读入的字节数 */
 static const char *check_header(unsigned long size)
 {
@@ -147,7 +287,7 @@ static const char *check_header(unsigned long size)
     return 0;
 }
 
-/* 读入文件并检查，成功返回 0，失败返回提示信息；文件占用的页记在 first_page、page_count */
+/* 读入 path 指定的文件并检查，成功返回 0，失败返回提示信息；文件占用的页记在 first_page、page_count */
 static const char *load_game(void)
 {
     unsigned char handle;
@@ -157,9 +297,6 @@ static const char *load_game(void)
 
     if ((unsigned)&_BSS_RUN__ + (unsigned)&_BSS_SIZE__ > COPY_ADDRESS) {
         return MSG_TOO_BIG;
-    }
-    if (read_name() == 0) {
-        return MSG_USAGE;
     }
     if (sb_file_open(path, SB_MODE_OPEN, &handle) != 0) {
         return MSG_OPEN;
@@ -263,7 +400,13 @@ static void start_game(void)
 
 int main(void)
 {
-    const char *message = load_game();
+    const char *message;
+
+    if (read_name() == 0 && !menu_choose()) {
+        sb_getkey();
+        return 0;
+    }
+    message = load_game();
 
     if (message == 0) {
         start_game();

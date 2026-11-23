@@ -88,6 +88,7 @@ E_MAPPER   = 6
 E_SIZE     = 7
 E_TRUNC    = 8
 E_TRAINER  = 9
+E_NOGAME   = 10
 
 ; ------------------------------------------------------------------------
 ; 入口：由启动代码调用；复制装载程序到工作 RAM，然后执行
@@ -144,8 +145,11 @@ loader_start:
     sta PPU_MASK
     lda args
     bne @arg
-    lda #E_USAGE
-    jmp fail_code
+    jsr fdc_init
+    JCS disk_err
+    jsr menu_run
+    JCS fail_set
+    jmp @load
 @arg:
     jsr make_name
     bcc @named
@@ -154,6 +158,7 @@ loader_start:
 @named:
     jsr fdc_init
     JCS disk_err
+@load:
     jsr find_file
     JCS fail_set
     jsr load_file
@@ -1081,8 +1086,8 @@ halt:
 
 msg_table:
     .word msg_usage, msg_badname, msg_disk, msg_notfound, msg_ines
-    .word msg_mapper, msg_size, msg_trunc, msg_trainer
-msg_usage:    .byte "Usage: RUN FILE.NES", 0
+    .word msg_mapper, msg_size, msg_trunc, msg_trainer, msg_nogame
+msg_usage:    .byte "Usage: GAME FILE.NES", 0
 msg_badname:  .byte "Bad file name", 0
 msg_disk:     .byte "Disk read error", 0
 msg_notfound: .byte "File not found", 0
@@ -1091,12 +1096,419 @@ msg_mapper:   .byte "Mapper not supported", 0
 msg_size:     .byte "Size not supported", 0
 msg_trunc:    .byte "File is truncated", 0
 msg_trainer:  .byte "Trainer not supported", 0
+msg_nogame:   .byte "No .NES file on the disk", 0
 
 ; ------------------------------------------------------------------------
-; 工作 RAM 的缓冲：SECTBUF 放一个扇区，FATBUF 放 FAT 的一个扇区
+; 菜单：只用 PPU 显示 ASCII（字库在图案表 1，字符码就是图块号），手柄 1 选择
+; ------------------------------------------------------------------------
+    .segment "CODE"
+
+MENU_ROW0       = 4             ; 列表第一行
+MENU_VIS        = 8             ; 一屏显示的项数
+MENU_CELLS      = 14            ; 一行列表占的列数
+MENU_HELP_ROW   = 22
+MENU_AUTHOR_ROW = 24
+MAX_GAMES       = 16
+PAD_START       = $10           ; 手柄 1 的位：A 在位 7，依次到右键在位 0
+PAD_UP          = $08
+PAD_DOWN        = $04
+
+; 菜单的零页变量（装载程序的 $5B 以后没有用到）
+mcount          = $5B           ; 游戏个数
+msel            = $5C           ; 选中的项
+mtop            = $5D           ; 列表顶行对应的项
+mprev           = $5E
+mpad            = $5F
+mpressed        = $60
+mptr            = $61           ; 2 字节：游戏表项的指针
+mk              = $63           ; 列表行号
+mtmp            = $64
+mcnt            = $65
+mloop           = $66
+
+str_title:      .byte "GAME MENU", 0
+str_help:       .byte "UP/DOWN  START=RUN", 0
+str_author:     .byte "https://fcdev.cn", 0
+
+; 把 PPU 地址设为第 A 行第 X 列（名称表 0）
+ppu_at:
+    pha
+    lsr a
+    lsr a
+    lsr a
+    ora #$20
+    sta PPU_ADDR
+    pla
+    and #$07
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    sta mtmp
+    txa
+    ora mtmp
+    sta PPU_ADDR
+    rts
+
+; 把 ptr 指向的 0 结尾字符串写到 PPU
+ppu_text:
+    ldy #0
+@c:
+    lda (ptr),y
+    beq @done
+    sta PPU_DATA
+    iny
+    bne @c
+@done:
+    rts
+
+; 清空名称表 0（写 960 个空格）
+clear_screen:
+    lda #$3F
+    sta PPU_ADDR
+    lda #$00
+    sta PPU_ADDR
+    lda #$12
+    sta PPU_DATA
+    lda #$20
+    sta PPU_ADDR
+    lda #$00
+    sta PPU_ADDR
+    lda #$20
+    ldx #3
+@pg:
+    ldy #0
+@b:
+    sta PPU_DATA
+    iny
+    bne @b
+    dex
+    bne @pg
+    ldy #192
+@t:
+    sta PPU_DATA
+    dey
+    bne @t
+    rts
+
+; 把 mptr = games + A * 11（A 为项号，不超过 15）
+entry_ptr:
+    sta mtmp
+    lda #<games
+    sta mptr
+    lda #>games
+    sta mptr+1
+@s:
+    lda mtmp
+    beq @r
+    lda mptr
+    clc
+    adc #11
+    sta mptr
+    bcc @nc
+    inc mptr+1
+@nc:
+    dec mtmp
+    jmp @s
+@r:
+    rts
+
+; 写列表第 A 行（行号从 0 起）：内容是第 mtop+A 项，选中的前面标 >，补空格到 MENU_CELLS 列
+draw_row:
+    sta mk
+    clc
+    adc #MENU_ROW0
+    ldx #2
+    jsr ppu_at
+    lda mk
+    clc
+    adc mtop
+    sta mtmp
+    cmp mcount
+    bcc @has
+    lda #' '
+    ldx #MENU_CELLS
+@blank:
+    sta PPU_DATA
+    dex
+    bne @blank
+    rts
+@has:
+    lda mtmp
+    cmp msel
+    bne @plain
+    lda #'>'
+    bne @mark
+@plain:
+    lda #' '
+@mark:
+    sta PPU_DATA
+    lda #' '
+    sta PPU_DATA
+    lda mtmp
+    jsr entry_ptr
+    ldy #0
+@name:
+    cpy #8
+    beq @ext
+    lda (mptr),y
+    cmp #' '
+    beq @ext
+    sta PPU_DATA
+    iny
+    bne @name
+@ext:
+    lda #'.'
+    sta PPU_DATA
+    lda #'N'
+    sta PPU_DATA
+    lda #'E'
+    sta PPU_DATA
+    lda #'S'
+    sta PPU_DATA
+    tya
+    clc
+    adc #6
+    sta mcnt
+    lda #MENU_CELLS
+    sec
+    sbc mcnt
+    beq @end
+    tax
+    lda #' '
+@pad:
+    sta PPU_DATA
+    dex
+    bne @pad
+@end:
+    rts
+
+; 重画整个列表（先关显示，写完再打开）
+draw_list:
+    lda #0
+    sta PPU_MASK
+    sta mloop
+@k:
+    lda mloop
+    jsr draw_row
+    inc mloop
+    lda mloop
+    cmp #MENU_VIS
+    bne @k
+    lda #0
+    sta PPU_SCROLL
+    sta PPU_SCROLL
+    lda #$10
+    sta PPU_CTRL
+    lda #$08
+    sta PPU_MASK
+    rts
+
+; 读手柄 1：A 返回，位 7 为 A 键，依次到位 0 为右键，按下为 1
+read_pad:
+    lda #1
+    sta $4016
+    lda #0
+    sta $4016
+    sta mtmp
+    ldx #8
+@r:
+    lda $4016
+    lsr a
+    rol mtmp
+    dex
+    bne @r
+    lda mtmp
+    rts
+
+; 读根目录的 .NES 文件名到 games（最多 MAX_GAMES 个）；磁盘出错时 C 置位
+scan_games:
+    lda #19
+    sta lbaLo
+    lda #0
+    sta lbaHi
+    lda #14
+    sta dirn
+@sec:
+    lda #<SECTBUF
+    sta destp
+    lda #>SECTBUF
+    sta destp+1
+    jsr read_sector
+    bcs sg_fail
+    lda #<SECTBUF
+    sta ptr2
+    lda #>SECTBUF
+    sta ptr2+1
+    ldx #16
+@ent:
+    ldy #0
+    lda (ptr2),y
+    beq sg_done
+    cmp #$E5
+    beq @next
+    ldy #11
+    lda (ptr2),y
+    and #$18
+    bne @next
+    ldy #8
+    lda (ptr2),y
+    cmp #'N'
+    bne @next
+    iny
+    lda (ptr2),y
+    cmp #'E'
+    bne @next
+    iny
+    lda (ptr2),y
+    cmp #'S'
+    bne @next
+    lda mcount
+    cmp #MAX_GAMES
+    bcs @next
+    lda mcount
+    jsr entry_ptr
+    ldy #10
+@cp:
+    lda (ptr2),y
+    sta (mptr),y
+    dey
+    bpl @cp
+    inc mcount
+@next:
+    lda ptr2
+    clc
+    adc #32
+    sta ptr2
+    bcc @nc
+    inc ptr2+1
+@nc:
+    dex
+    bne @ent
+    dec dirn
+    bne @sec
+sg_done:
+    clc
+    rts
+sg_fail:
+    sec
+    rts
+
+; 显示菜单，手柄 1 上下选择、开始键确认：成功时 name 为所选文件名，C 清零；失败时 err 为出错码，C 置位
+menu_run:
+    lda #0
+    sta mcount
+    sta msel
+    sta mtop
+    jsr scan_games
+    bcc @scanned
+    lda #E_DISK
+    sta err
+    sec
+    rts
+@scanned:
+    lda mcount
+    bne @some
+    lda #E_NOGAME
+    sta err
+    sec
+    rts
+@some:
+    jsr clear_screen
+    lda #2
+    ldx #2
+    jsr ppu_at
+    lda #<str_title
+    sta ptr
+    lda #>str_title
+    sta ptr+1
+    jsr ppu_text
+    lda #MENU_HELP_ROW
+    ldx #2
+    jsr ppu_at
+    lda #<str_help
+    sta ptr
+    lda #>str_help
+    sta ptr+1
+    jsr ppu_text
+    lda #MENU_AUTHOR_ROW
+    ldx #2
+    jsr ppu_at
+    lda #<str_author
+    sta ptr
+    lda #>str_author
+    sta ptr+1
+    jsr ppu_text
+    jsr draw_list
+    jsr read_pad
+    sta mprev
+@loop:
+    jsr read_pad
+    sta mpad
+    lda mprev
+    eor #$FF
+    and mpad
+    sta mpressed
+    lda mpad
+    sta mprev
+    lda mpressed
+    and #PAD_START
+    bne @run
+    lda mpressed
+    and #PAD_UP
+    beq @down
+    lda msel
+    beq @loop
+    dec msel
+    lda msel
+    cmp mtop
+    bcs @redraw
+    sta mtop
+    jmp @redraw
+@down:
+    lda mpressed
+    and #PAD_DOWN
+    beq @loop
+    lda msel
+    clc
+    adc #1
+    cmp mcount
+    bcs @loop
+    sta msel
+    sec
+    sbc mtop
+    cmp #MENU_VIS
+    bcc @redraw
+    lda msel
+    sec
+    sbc #MENU_VIS - 1
+    sta mtop
+@redraw:
+    jsr draw_list
+    jmp @loop
+@run:
+    lda msel
+    jsr entry_ptr
+    ldy #10
+@copy:
+    lda (mptr),y
+    sta a:name,y
+    dey
+    bpl @copy
+    lda #0
+    sta PPU_MASK
+    sta PPU_CTRL
+    clc
+    rts
+
+; ------------------------------------------------------------------------
+; 工作 RAM 的缓冲：SECTBUF 放一个扇区，FATBUF 放 FAT 的一个扇区，games 放菜单的游戏表（每项 11 字节）
 ; ------------------------------------------------------------------------
     .segment "WRAM"
 SECTBUF:
     .res 512
 FATBUF:
     .res 512
+games:
+    .res MAX_GAMES * 11

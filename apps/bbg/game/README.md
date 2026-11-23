@@ -1,15 +1,17 @@
-# run-nes（步步高）
+# game（步步高）
 
-在步步高多媒体学生电脑（BBGDOS）下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 bbg 目标项目，不依赖 C 运行库。`RUN.CMD` 只是加载程序，游戏是软盘上单独的 `.NES` 文件。
+在步步高多媒体学生电脑（BBGDOS）下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 bbg 目标项目，不依赖 C 运行库。`GAME.CMD` 只是加载程序，游戏是软盘上单独的 `.NES` 文件。
 
 ## 使用
 
-把 `RUN.CMD` 与游戏文件（文件名符合 8.3，如 `MARIO.NES`）放在同一张带 BBGDOS 的系统盘上，在 DOS 提示符下输入：
+把 `GAME.CMD` 与游戏文件（文件名符合 8.3，如 `MARIO.NES`）放在同一张带 BBGDOS 的系统盘上，在 DOS 提示符下输入：
 
 ```text
-RUN MARIO
-RUN MARIO.NES
+GAME MARIO
+GAME MARIO.NES
 ```
+
+不带参数时显示游戏菜单，列出盘上的 `.NES` 文件，手柄上下键选择，按 Start 运行；带参数时直接运行指定的游戏。BBGDOS 运行 `.CMD` 程序不用写扩展名；游戏名没有扩展名时按 `.NES` 处理。进入游戏后按手柄的 Start 开始。
 
 两种写法等价：BBGDOS 运行 `.CMD` 程序不用写扩展名；游戏名没有扩展名时按 `.NES` 处理。进入游戏后按手柄的 Start 开始。
 
@@ -21,7 +23,7 @@ RUN MARIO.NES
 
 | 提示 | 原因 |
 | --- | --- |
-| `Usage: RUN FILE.NES` | 没有给文件名 |
+| `No .NES file on the disk` | 盘上没有 .NES 文件，菜单为空 |
 | `Bad file name` | 文件名超过 8 个字符的主名或 3 个字符的扩展名 |
 | `No memory` | 可用的分页内存不够 |
 | `Can't open file` | 找不到文件 |
@@ -34,21 +36,21 @@ RUN MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/bbg/run-nes`（或任务“fcdev：构建”）：
+在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/bbg/game`（或任务“fcdev：构建”）：
 
-- 产物是 `build/bbg/RUN.CMD`。
-- `fcdev.json` 的 `diskImage` 指向系统盘镜像 `reference/floppy-images/bbg/系统类/001-3.IMG`（`DOS.IMG` 已装满，放不下文件），同时生成软盘镜像 `build/bbg/RUN.img`：系统盘的全部内容加上 `RUN.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
+- 产物是 `build/bbg/GAME.CMD`。
+- `fcdev.json` 的 `diskImage` 指向系统盘镜像 `reference/floppy-images/bbg/系统类/001-3.IMG`（`DOS.IMG` 已装满，放不下文件），同时生成软盘镜像 `build/bbg/GAME.img`：系统盘的全部内容加上 `GAME.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
 - 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库，目录里没有入库的文件。
 
 `build/` 不入库。
 
 ## 在模拟器里运行
 
-设置 `fcdev.emulator.path` 指向 Ember 后，任务“fcdev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `run`（不带参数，显示用法提示）。要运行游戏，在 `A:\>` 提示符下手动输入 `RUN MARIO`。
+设置 `fcdev.emulator.path` 指向 Ember 后，任务“fcdev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
 
 ## 原理
 
-- DOS 把 `RUN.CMD` 装进当前空闲页的 `$8000`（装入地址在文件头里），按手册，从这一页起所有分页内存都归程序使用。程序用 BIOS 功能 2 取得自己所在的页，PRG 读进后面两页，CHR 读进第三页。
+- DOS 把 `GAME.CMD` 装进当前空闲页的 `$8000`（装入地址在文件头里），按手册，从这一页起所有分页内存都归程序使用。程序用 BIOS 功能 2 取得自己所在的页，PRG 读进后面两页，CHR 读进第三页。
 - 命令行在 `$0100`：第一个字节是长度，`$0101` 起是参数（含程序名后的空格）。程序取第一个词、转大写，没有扩展名时加 `.NES`。
 - 文件用 DOS 的文件调用（入口 `$5803`）读：带路径打开、读 16 字节头检查、再按页读 PRG 与 CHR，缓冲是页加 `$8000`。
 - 最后一步不再调用 DOS：把跳板复制到内部 RAM `$0300`、小桩复制到公共 RAM `$7E00`，进入跳板。跳板关掉 NMI、显示与声音，把 `$FF01` 设成 `$C000` 起用 DRAM、不用 MMC3 与分屏（名称表连接取自头里的镜像位），1K 字符页寄存器指向字符 RAM 的 0-7 页，把 CHR 页映射到 `$8000` 写进图案表，再映射 PRG（`$FF04` 选 `$8000` 的 16K 页，`$FF24`、`$FF2C` 选 `$C000` 起的两个 8K 页，16K 的 PRG 镜像成两份），`JMP ($FFFC)`。

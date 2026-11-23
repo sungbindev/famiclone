@@ -1,5 +1,5 @@
 {
   "target": "sb97",
-  "name": "run",
+  "name": "game",
   "firmware": "../../../ember/roms/sb97.bin"
 }

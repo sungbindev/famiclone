@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-module.hpp
- * 说明：外壳自己的登记项：命令与菜单项（文件→退出、设置→全屏、设置→窗口始终置顶）。
+ * 说明：外壳自己的登记项：命令与菜单项（文件→退出、设置→全屏、设置→窗口始终置顶、设置→画面尺寸）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -19,6 +19,8 @@ namespace ember::win32::logic {
 inline constexpr const char* kShellQuitCommand = "shell.quit";
 inline constexpr const char* kShellFullScreenCommand = "shell.toggleFullScreen";
 inline constexpr const char* kShellAlwaysOnTopCommand = "shell.toggleAlwaysOnTop";
+/** “设置”菜单里“画面尺寸”子菜单的标识。 */
+inline constexpr const char* kShellScreenSizeSubmenu = "shell.screenSize";
 
 /** 外壳自己的登记项，排在各模块之前。 */
 [[nodiscard]] contracts::ShellModule createShellModule();

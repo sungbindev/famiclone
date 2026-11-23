@@ -30,6 +30,7 @@ class RuntimePanelContent final : public rujian::ui::Widget {
   ~RuntimePanelContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
+  void arrange(const rujian::ui::Rect& bounds) override;
 
   /** 按钮与滑块（测试用）。 */
   [[nodiscard]] rujian::ui::Button& powerButton() { return *power_; }

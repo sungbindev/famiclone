@@ -1,14 +1,14 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：win32-dev-support.mjs
- * 说明：原生外壳（ember-win.exe）的开发期脚本（冒烟、延迟测量）共用的工具：启动与结束自己启动的进程、用系统输入驱动窗口（点击、按键、截屏取像素统计、读窗口属性、正常关闭）。
+ * 说明：原生外壳（ember-win32.exe）的开发期脚本（冒烟、延迟测量）共用的工具：启动与结束自己启动的进程、用系统输入驱动窗口（点击、按键、截屏取像素统计、读窗口属性、正常关闭）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：窗口里没有 CDP，所以用 PowerShell 经 SendInput 一类系统接口驱动，截屏统计亮像素数来判断画面、菜单、提示与面板是否出现；
  *       坐标都是窗口的逻辑像素（默认窗口 524×500），驱动时按窗口实际宽度换算成设备像素，所以任何缩放比例下都能用；
  *       只结束本脚本启动的进程（按 PID），不按进程名结束任何进程；用户数据目录是临时目录，不影响已打开的 Ember，也避开单实例锁；
- *       可执行文件是发布配置的 ember-win.exe（`npm run win32:build` 构建），环境变量 EMBER_WIN_EXE 可指定别的路径（如调试配置的）。
+ *       可执行文件是发布配置的 ember-win32.exe（`npm run win32:build` 构建），环境变量 EMBER_WIN_EXE 可指定别的路径（如调试配置的）。
  * ------------------------------------------------------------------------
  */
 
@@ -41,9 +41,9 @@ export function sleep(milliseconds) {
 /** 默认窗口的逻辑尺寸（与 bootstrap/application.cpp 的 kWindowWidth、kWindowHeight 一致）。 */
 export const WINDOW_LOGICAL = { width: 524, height: 500 };
 
-/** ember-win.exe 的路径。 */
+/** ember-win32.exe 的路径。 */
 export function executablePath() {
-  return process.env.EMBER_WIN_EXE ?? join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win.exe');
+  return process.env.EMBER_WIN_EXE ?? join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win32.exe');
 }
 
 /**

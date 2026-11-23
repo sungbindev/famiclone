@@ -58,6 +58,7 @@ class ShellController final : public contracts::ShellApi, public contracts::Shel
   void togglePanel(const std::string& panelId) override;
   void toggleFullScreen() override;
   void toggleAlwaysOnTop() override;
+  void setScreenSize(int multiple) override;
   void quit() override;
   void runCommand(const std::string& commandId) override;
   void refreshCommands() override;

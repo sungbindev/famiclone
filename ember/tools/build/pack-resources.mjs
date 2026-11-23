@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：pack-resources.mjs
- * 说明：把随程序分发的资源打成一个 zip（build/ember/resources/resources.zip），由 CMake 作为资源嵌进 ember-win.exe：plugins/<id>.emap（预装插件）、help/…（帮助文档站点）、THIRD_PARTY_NOTICES.txt（第三方许可全文）。
+ * 说明：把随程序分发的资源打成一个 zip（build/ember/resources/resources.zip），由 CMake 作为资源嵌进 ember-win32.exe：plugins/<id>.emap（预装插件）、help/…（帮助文档站点）、THIRD_PARTY_NOTICES.txt（第三方许可全文）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21

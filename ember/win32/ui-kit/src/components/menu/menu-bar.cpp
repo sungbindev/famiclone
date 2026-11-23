@@ -102,6 +102,8 @@ Size MenuBar::measure(Size /*available*/) {
 
 void MenuBar::paint(Canvas& canvas) {
   const auto& colors = themeTokens(host()->theme());
+  // 菜单栏的区域比菜单名的总宽度窄时，超出的部分截掉
+  canvas.pushClip(bounds());
   for (std::size_t i = 0; i < menus_.size(); ++i) {
     const Rect rect = buttonRect(i);
     const bool open = popup_ != nullptr && menus_[i].id == openId_;
@@ -110,6 +112,7 @@ void MenuBar::paint(Canvas& canvas) {
     const std::string label = menuItemText(MenuItem{.label = menus_[i].label, .mnemonic = menus_[i].mnemonic});
     canvas.drawText(label, Rect{rect.x + tokens::menubar_button_padding, rect.y, rect.width, rect.height}, barTextStyle(lit ? colors.chrome_text_strong : colors.chrome_text), VerticalAlign::Center);
   }
+  canvas.popClip();
 }
 
 void MenuBar::openAt(std::size_t index, int itemIndex) {

@@ -71,7 +71,7 @@ TEST(MappersRules, RuleTextListsMapperNumberAndWrittenConditions) {
 }
 
 TEST(MappersRules, HostsAndSourcesUseDisplayNames) {
-  EXPECT_EQ(logic::hostsText({"fc", "sb2000", "bbg1", "bbg98", "sb97", "other"}), "经典 FC、小霸王 2000、步步高软驱一号、步步高 98、小霸王 97、other");
+  EXPECT_EQ(logic::hostsText({"fc", "sb2000", "bbg1", "bbg98", "sb97", "other"}), "经典 FC、小霸王 2000、步步高 软驱一号、步步高 98、小霸王 97、other");
   EXPECT_EQ(logic::sourceLabel("bundled"), "预装");
   EXPECT_EQ(logic::sourceLabel("user"), "用户安装");
   EXPECT_EQ(logic::matchesText({{4, {}, {}, {}, {}, {}}, {118, {}, {}, {}, {}, {}}}), "mapper 4；mapper 118");

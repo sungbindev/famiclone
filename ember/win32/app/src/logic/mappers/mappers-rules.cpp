@@ -192,7 +192,7 @@ std::string hostLabel(const std::string& host) {
   if (host == "fc") return "经典 FC";
   if (host == "sb97") return "小霸王 97";
   if (host == "sb2000") return "小霸王 2000";
-  if (host == "bbg1") return "步步高软驱一号";
+  if (host == "bbg1") return "步步高 软驱一号";
   if (host == "bbg98") return "步步高 98";
   return host;
 }

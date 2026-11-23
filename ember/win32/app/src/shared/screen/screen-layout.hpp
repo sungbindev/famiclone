@@ -53,6 +53,20 @@ struct ScreenRect {
 /** “显示全部 240 行”对应的上下裁剪行数。 */
 [[nodiscard]] int cropLinesFor(bool showAllLines);
 
+/** 画面的尺寸（设备像素）。 */
+struct ScreenSize {
+  int width{0};
+  int height{0};
+};
+
+/**
+ * 画面按整数倍显示时的大小：高度是帧高度（减去上下裁剪的行）的 multiple 倍，宽度按画面比例算，与“整数倍”缩放的画面一致。
+ * @param aspect 画面比例。
+ * @param cropLines 上下各裁掉的行数。
+ * @param multiple 倍数，不小于 1。
+ */
+[[nodiscard]] ScreenSize nominalScreenSize(ScreenAspect aspect, int cropLines, int multiple);
+
 /** 画面的显示宽高比（宽除以高）。 */
 [[nodiscard]] double displayAspectRatio(ScreenAspect aspect, double frameWidth, double frameHeight);
 

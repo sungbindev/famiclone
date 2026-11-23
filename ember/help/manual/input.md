@@ -56,7 +56,7 @@
 
 ## 金字塔学习机的键盘
 
-用金字塔学习机（PEC-9588、PEC-586、686）开机后，机器自带键盘，不用在“机器”菜单里接入，也不能拔下。按键按电脑键盘的物理位置对应，字母、数字、标点、小键盘、Esc、Tab、Caps Lock、空格、回车、退格、Shift、Ctrl、Alt（左右各一个都可以）、F1 到 F8、Delete、Insert、End、Page Up、Page Down、Home、方向键、Num Lock、Scroll Lock、Print Screen 和 Pause 都对应机器上的键；`F9` 到 `F12` 始终留给 Ember，不会送给机器。键盘上没有的键会被忽略。
+用金字塔学习机（PEC-9588、PEC-586(686)）开机后，机器自带键盘，不用在“机器”菜单里接入，也不能拔下。按键按电脑键盘的物理位置对应，字母、数字、标点、小键盘、Esc、Tab、Caps Lock、空格、回车、退格、Shift、Ctrl、Alt（左右各一个都可以）、F1 到 F8、Delete、Insert、End、Page Up、Page Down、Home、方向键、Num Lock、Scroll Lock、Print Screen 和 Pause 都对应机器上的键；`F9` 到 `F12` 始终留给 Ember，不会送给机器。键盘上没有的键会被忽略。
 
 系统主菜单里按数字键 1 到 8 选择项目，输入 BASIC 或监控命令时直接打字，回车确认。
 

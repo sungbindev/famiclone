@@ -1,6 +1,6 @@
 ﻿# ------------------------------------------------------------------------
 # 名称：debug-win32.ps1
-# 说明：启动 Ember 的 Win32 原生外壳开发版：生成 Schema 代码、打包预装插件、构建 Release 版的 ember-win.exe 并运行。
+# 说明：启动 Ember 的 Win32 原生外壳开发版：生成 Schema 代码、打包预装插件、构建 Release 版的 ember-win32.exe 并运行。
 # 作者：sungbin
 # 邮箱：sungbin@3578.cn
 # 日期：2026-11-19

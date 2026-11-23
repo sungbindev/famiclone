@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：左右各留 8；顶部有 1 像素分割线，状态项在去掉分割线的内容区里上下居中；同一组内相邻状态项之间留 4 像素，左右两组之间至少留 8 像素；
- *       右侧保持原宽靠右排列，左侧是一个可收缩的组：放不下时，较长文字的状态项按“文字字符数的平方 × 原宽”分担收缩量（与 CSS flex-shrink 的算法一致）。
+ *       右侧保持原宽靠右排列，左侧是一个可收缩的组：放不下时，较长文字的状态项按“文字字符数的平方 × 原宽”分担收缩量（与 CSS flex-shrink 的算法一致）；这样仍放不下时，所有带文字的项都按同样的规则收缩，文字以省略号结尾，不压到右侧的项上。
  * ------------------------------------------------------------------------
  */
 
@@ -140,6 +140,18 @@ void StatusBar::arrange(const Rect& bounds) {
   const double itemsNatural = startNatural - gaps;
   const double itemsAvailable = std::max(0.0, groupWidth - gaps);
   std::vector<double> widths = itemsAvailable < itemsNatural ? shrinkWidths(basis, shrink, minimum, itemsNatural - itemsAvailable) : basis;
+  // 只让长文字收缩仍放不下时，所有带文字的项都按文字长度收缩（文字以省略号结尾），不压到右侧的项上
+  double widthsTotal = 0.0;
+  for (const double width : widths) widthsTotal += width;
+  if (widthsTotal > itemsAvailable + 0.01) {
+    std::vector<double> forcedShrink;
+    std::vector<double> forcedMinimum;
+    for (std::size_t i = 0; i < start_.size(); ++i) {
+      forcedShrink.push_back(start_[i]->forcedShrinkWeight());
+      forcedMinimum.push_back(std::max(0.0, basis[i] - start_[i]->textShrinkRoom()));
+    }
+    widths = shrinkWidths(basis, forcedShrink, forcedMinimum, itemsNatural - itemsAvailable);
+  }
 
   double x = bounds.x + tokens::status_bar_padding_x;
   for (std::size_t i = 0; i < start_.size(); ++i) {

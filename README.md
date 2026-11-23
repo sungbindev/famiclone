@@ -41,7 +41,7 @@ npm run check:package     # 核对 .vsix 的内容
 ### ember（在 `ember/` 目录下）
 
 ```powershell
-.\build-win32.ps1            # Win32 原生外壳：安装依赖、编译 Release 版、边界与导入表检查，输出 build\ember\win32\app\Release\ember-win.exe
+.\build-win32.ps1            # Win32 原生外壳：安装依赖、编译 Release 版、边界与导入表检查，输出 build\ember\win32\app\Release\ember-win32.exe
 npm run win32:start          # 以开发方式启动原生外壳
 npm run win32:test           # 原生外壳的 C++ 测试（核心、控件库、应用）
 npm run package:win          # 发布打包：生成 build\ember\release\Ember-<版本>.exe（升级用）与 Ember-<版本>-学习机开发模拟器.zip（发给用户）

@@ -70,6 +70,8 @@ class ShellApi {
   virtual void toggleFullScreen() = 0;
   /** 窗口置顶或取消置顶。 */
   virtual void toggleAlwaysOnTop() = 0;
+  /** 把窗口调成画面为 1 倍、2 倍、3 倍尺寸的大小（电视画面的像素按整数倍显示）；全屏时不处理。 */
+  virtual void setScreenSize(int multiple) = 0;
   /** 退出应用。 */
   virtual void quit() = 0;
   /** 执行命令；命令不存在或当前不可用时什么都不做。 */
@@ -190,6 +192,8 @@ struct ShellStatusItemView {
   /** 悬停提示，说明这一项是什么。 */
   std::string title;
   ShellTone tone{ShellTone::Normal};
+  /** 次要项：跟在前一项后面的补充说明（如机型后的 ROM 版本），用弱化的文字色并带前导分隔圆点。 */
+  bool secondary{false};
 };
 
 /** 状态栏项：放在系统栏左侧或右侧，左侧的状态项排在面板按钮之后，右侧最后一项是通知按钮。 */

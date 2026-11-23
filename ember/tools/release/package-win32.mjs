@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：package-win32.mjs
- * 说明：打发布包（npm run package:win）：先打预装插件包、构建帮助文档并写出第三方许可全文，再用开启升级的 Release 配置构建 ember-win.exe（资源嵌进去，是单个文件），检查导入表在 Windows 7 SP1 的基线内，
+ * 说明：打发布包（npm run package:win）：先打预装插件包、构建帮助文档并写出第三方许可全文，再用开启升级的 Release 配置构建 ember-win32.exe（资源嵌进去，是单个文件），检查导入表在 Windows 7 SP1 的基线内，
  *       最后在 build/ember/release 下生成 Ember-<版本号>.exe（升级用，原样上传）与 Ember-<版本号>-学习机开发模拟器.zip（发给用户：Ember.exe、LICENSE.txt、THIRD_PARTY_NOTICES.txt，以及 roms 目录下的文件，放在 zip 内的 roms/ 中）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -38,7 +38,7 @@ try {
   // 配置前会写出第三方许可全文并把资源打成包；开启升级只在发布配置里做
   configure(['-DEMBER_BUILD_TESTS=OFF', '-DEMBER_ENABLE_UPDATES=ON']);
   build(WIN32_BUILD_DIRECTORY, 'Release', ['ember_win']);
-  const exe = join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win.exe');
+  const exe = join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win32.exe');
   if (!existsSync(exe)) throw new Error(`找不到构建出的 ${exe}`);
   execFileSync(process.execPath, [join(ROOT, 'tools', 'check', 'check-win32-imports.mjs')], { cwd: ROOT, stdio: 'inherit' });
 

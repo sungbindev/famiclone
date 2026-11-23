@@ -15,6 +15,7 @@
 #include <windows.h>
 #include <windowsx.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -106,6 +107,7 @@
 #include "platform/window/window-placement.hpp"
 #include "rujian/ui/window.hpp"
 #include "shared/preferences/allow-multiple-instances.hpp"
+#include "shared/screen/screen-layout.hpp"
 #include "shared/shortcut/shortcut.hpp"
 #include "shared/update/update-policy.hpp"
 #include "shared/update/update-public-key.hpp"
@@ -129,7 +131,7 @@ namespace {
 constexpr const char* kAppName = "EMBER";
 /** 窗口标题（任务栏与系统菜单里的名字）。 */
 constexpr const wchar_t* kWindowTitle = L"Ember";
-/** 窗口的大小与最小尺寸（逻辑像素），见 docs/05-界面.md 第 2 节。 */
+/** 窗口的默认大小（逻辑像素），见 docs/05-界面.md 第 2 节；最小尺寸另按画面的 1 倍算。 */
 constexpr double kWindowWidth = 524;
 constexpr double kWindowHeight = 500;
 /** 显示窗口前最多等保存的主题多久（毫秒），核心起不来时不能一直不显示。 */
@@ -206,11 +208,16 @@ class ForwardingWindowControl final : public contracts::ShellWindowControl {
  public:
   platform::WindowModes* target{nullptr};
   std::function<void()> onQuit;
+  /** 把窗口调成画面为整数倍尺寸的大小；窗口创建后才有值。 */
+  std::function<void(int)> onScreenSize;
   void toggleFullScreen() override {
     if (target != nullptr) target->toggleFullScreen();
   }
   void toggleAlwaysOnTop() override {
     if (target != nullptr) target->toggleAlwaysOnTop();
+  }
+  void setScreenSize(int multiple) override {
+    if (onScreenSize) onScreenSize(multiple);
   }
   void quit() override {
     if (onQuit) onQuit();
@@ -421,6 +428,14 @@ int runApplication(const shared::LaunchArguments& launch) {
     view->setBorderVisible(customFrame || !platform::FramelessFrame::compositionEnabled());
 
     platform::FramelessFrame* framePointer = nullptr;
+    // 画面按整数倍显示时窗口的大小（逻辑像素）：画面的大小（其中电视画面的每个像素占整数个设备像素）加上标题栏与状态栏的高度
+    const auto windowSizeForScreen = [&runtime, &window, view](int multiple) {
+      const contracts::ScreenSettings screen = runtime.view().screen;
+      const shared::ScreenSize box = shared::nominalScreenSize(screen.aspect, shared::cropLinesFor(screen.showAllLines), multiple);
+      const double scale = window.root().scale();
+      const double barsHeight = view->frame().titleBar()->measure(rujian::ui::Size{}).height + view->frame().statusBar()->measure(rujian::ui::Size{}).height;
+      return rujian::ui::Size{box.width / scale, barsHeight + box.height / scale};
+    };
     const auto applyBorderColor = [&] {
       if (framePointer == nullptr) return;
       const rujian::ui::Color border = rujian::ui::windowBorderColor(resolveTheme(themeSource));
@@ -453,7 +468,11 @@ int runApplication(const shared::LaunchArguments& launch) {
     callbacks.compositionChanged = [view, customFrame](bool enabled) { view->setBorderVisible(customFrame || !enabled); };
     // 点标题栏、系统按钮、缩放边框不会作为客户区的鼠标消息到达控件，打开着的菜单要在这里关掉
     callbacks.nonClientPressed = [&window] { window.root().dismissLayers(); };
-    platform::FramelessFrame frame(mainWindow, platform::FramelessOptions{kWindowWidth, kWindowHeight, [&window] { return window.root().scale(); }, customFrame}, std::move(callbacks));
+    platform::FramelessFrame frame(mainWindow, platform::FramelessOptions{kWindowWidth, kWindowHeight, [&window] { return window.root().scale(); }, customFrame, [&windowSizeForScreen] {
+                                     const rujian::ui::Size minimum = windowSizeForScreen(1);
+                                     return std::make_pair(minimum.width, minimum.height);
+                                   }},
+                                   std::move(callbacks));
     framePointer = &frame;
     applyBorderColor();
     window.setMessageHook([&](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
@@ -504,6 +523,11 @@ int runApplication(const shared::LaunchArguments& launch) {
         [&shell](std::vector<std::string> paths) { shell.dropFiles(paths); });
     modes = &*windowModes;
     windowControl.target = modes;
+    windowControl.onScreenSize = [&](int multiple) {
+      const rujian::ui::Size size = windowSizeForScreen(multiple);
+      const double sizeScale = window.root().scale();
+      modes->resizeTo(static_cast<int>(std::lround(size.width * sizeScale)), static_cast<int>(std::lround(size.height * sizeScale)));
+    };
     // 上次退出时是置顶的，这次启动沿用
     if (shellState.get().layout.alwaysOnTop) modes->toggleAlwaysOnTop();
     try {

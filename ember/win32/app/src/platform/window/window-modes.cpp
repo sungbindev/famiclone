@@ -14,6 +14,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include <algorithm>
+
 #include "platform/text/wide-text.hpp"
 #include "platform/window/frameless-frame.hpp"
 
@@ -62,6 +64,25 @@ void WindowModes::toggleFullScreen() {
     SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
   }
   if (onChanged_) onChanged_();
+}
+
+void WindowModes::resizeTo(int width, int height) {
+  if (fullScreen_) return;
+  HWND hwnd = static_cast<HWND>(window_);
+  if (IsZoomed(hwnd) != FALSE) ShowWindow(hwnd, SW_RESTORE);
+  RECT current{};
+  GetWindowRect(hwnd, &current);
+  MONITORINFO monitor{sizeof(monitor)};
+  if (GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor) == FALSE) {
+    SetWindowPos(hwnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    return;
+  }
+  const RECT& work = monitor.rcWork;
+  const int fittedWidth = std::min(width, static_cast<int>(work.right - work.left));
+  const int fittedHeight = std::min(height, static_cast<int>(work.bottom - work.top));
+  const int left = std::max(static_cast<int>(work.left), std::min(static_cast<int>(current.left), static_cast<int>(work.right) - fittedWidth));
+  const int top = std::max(static_cast<int>(work.top), std::min(static_cast<int>(current.top), static_cast<int>(work.bottom) - fittedHeight));
+  SetWindowPos(hwnd, nullptr, left, top, fittedWidth, fittedHeight, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 bool WindowModes::handle(unsigned message, std::uintptr_t wParam, std::intptr_t /*lParam*/, std::intptr_t& result) {

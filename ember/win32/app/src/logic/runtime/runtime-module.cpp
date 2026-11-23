@@ -112,6 +112,7 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
       entry.checked = choice.id == controller.selectedMachine();
       entry.hint = choice.hint;
       entry.disabled = !choice.hint.empty();
+      entry.separatorBefore = choice.separatorBefore;
       entry.run = [&controller, id = choice.id](ShellApi&) { controller.selectAndBootMachine(id); };
       entries.push_back(std::move(entry));
     }
@@ -143,21 +144,21 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   module.menuItems.push_back(commandItem("machine", "runtime.muteToggle", true));
   module.menuItems.push_back(commandItem("machine", "runtime.familyKeyboardToggle"));
 
-  // 系统栏左侧的项：主机型号、ROM 版本、卡带名、mapper 插件；没有信息的项不显示
-  const auto statusItem = [](const char* id, const char* title, std::function<std::optional<std::string>()> text) {
+  // 系统栏左侧的项：主机型号、ROM 版本、卡带名、mapper 插件；没有信息的项不显示；ROM 版本与 mapper 插件是跟在前一项后面的次要项
+  const auto statusItem = [](const char* id, const char* title, std::function<std::optional<std::string>()> text, bool secondary = false) {
     contracts::ShellStatusItemDefinition item;
     item.id = id;
-    item.view = [text = std::move(text), title]() -> std::optional<contracts::ShellStatusItemView> {
+    item.view = [text = std::move(text), title, secondary]() -> std::optional<contracts::ShellStatusItemView> {
       const auto shown = text();
       if (!shown) return std::nullopt;
-      return contracts::ShellStatusItemView{*shown, title, contracts::ShellTone::Normal};
+      return contracts::ShellStatusItemView{*shown, title, contracts::ShellTone::Normal, secondary};
     };
     return item;
   };
   module.statusItems.push_back(statusItem("runtime.host", "主机型号", [&controller] { return hostText(controller.status(), controller.selectedMachine()); }));
-  module.statusItems.push_back(statusItem("runtime.rom", "ROM 版本", [&controller] { return romVersionText(controller.status(), controller.selectedMachine(), controller.machines()); }));
+  module.statusItems.push_back(statusItem("runtime.rom", "ROM 版本", [&controller] { return romVersionText(controller.status(), controller.selectedMachine(), controller.machines()); }, true));
   module.statusItems.push_back(statusItem("runtime.cartridge", "卡带", [&controller] { return cartridgeText(controller.status()); }));
-  module.statusItems.push_back(statusItem("runtime.plugin", "mapper 插件", [&controller] { return pluginText(controller.status()); }));
+  module.statusItems.push_back(statusItem("runtime.plugin", "mapper 插件", [&controller] { return pluginText(controller.status()); }, true));
 
   module.fileHandlers.push_back({"runtime.cartridge", {"nes"}, [&controller](const contracts::DroppedFile& file) { controller.openDroppedCartridge(file.id); }});
   module.attach = [&controller](ShellApi& shell) { return controller.attach(shell); };

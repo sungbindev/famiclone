@@ -24,8 +24,14 @@ constexpr int kVirtualKeyReturn = 0x0D;
 constexpr int kVirtualKeySpace = 0x20;
 /** 文字超过这个字数才参与收缩。 */
 constexpr std::size_t kShrinkableTextLength = 16;
+/** 次要项在二次收缩里的权重倍数：放不下时先收缩次要项。 */
+constexpr double kSecondaryShrinkBoost = 4.0;
 /** 画在图标里的灯的直径占图标边长的比例。 */
 constexpr double kInIconLampRatio = 0.3;
+/** 次要项前面的分隔圆点的直径。 */
+constexpr double kSeparatorDotSize = 4.0;
+/** 次要项的文字色在“弱化色”上再叠的不透明度。 */
+constexpr double kSecondaryOpacity = 0.7;
 
 }  // namespace
 
@@ -61,6 +67,17 @@ void StatusBarItem::setPressed(bool pressed) {
   invalidate();
 }
 
+void StatusBarItem::setSecondary(bool secondary) {
+  secondary_ = secondary;
+  invalidate();
+}
+
+double StatusBarItem::leadingWidth() const {
+  // 次要项没有左边距，前面是分隔圆点；圆点与后面文字的间距，等于它与前一项文字的间距（前一项的右边距加项之间的间隔）
+  if (secondary_) return kSeparatorDotSize + paddingX() + tokens::icon_text_gap;
+  return paddingX();
+}
+
 void StatusBarItem::setIconOnly(bool iconOnly) {
   iconOnly_ = iconOnly;
   invalidate();
@@ -81,6 +98,15 @@ double StatusBarItem::shrinkWeight() const {
   const std::size_t length = toUtf16(text_).size();
   return length > kShrinkableTextLength ? static_cast<double>(length) * static_cast<double>(length) : 0.0;
 }
+
+double StatusBarItem::forcedShrinkWeight() const {
+  if (iconOnly_) return 0.0;
+  const double length = static_cast<double>(toUtf16(text_).size());
+  // 次要项先收缩
+  return length * length * (secondary_ ? kSecondaryShrinkBoost : 1.0);
+}
+
+double StatusBarItem::textShrinkRoom() const { return iconOnly_ || host() == nullptr ? 0.0 : textWidth(); }
 
 std::optional<IconId> StatusBarItem::shownIcon() const {
   if (dot_ != StatusDot::None) return std::nullopt;
@@ -113,7 +139,7 @@ double StatusBarItem::textWidth() const { return host()->measureText(text_, text
 Size StatusBarItem::measure(Size /*available*/) {
   if (host() == nullptr) return Size{};
   const double height = large_ ? tokens::status_bar_large_item_height : tokens::status_bar_item_height;
-  double width = 2 * paddingX();
+  double width = leadingWidth() + paddingX();
   int parts = 0;
   const auto add = [&](double size) {
     width += size;
@@ -136,7 +162,7 @@ void StatusBarItem::paint(Canvas& canvas) {
   const bool selected = button && pressedFlag_;
 
   Color background = kTransparent;
-  Color foreground = colors.chrome_text;
+  Color foreground = secondary_ ? colors.text_muted.withOpacity(kSecondaryOpacity) : colors.chrome_text;
   if (selected) {
     background = colors.ghost_selected_background;
     foreground = colors.ghost_selected_foreground;
@@ -155,7 +181,7 @@ void StatusBarItem::paint(Canvas& canvas) {
   const auto icon = shownIcon();
   const bool plainLamp = lamp_ && !lampInIcon();
   // 文字之外的部分占的宽度，剩下的给文字（放不下时文字以省略号结尾）
-  double fixed = 2 * paddingX();
+  double fixed = leadingWidth() + paddingX();
   int parts = 0;
   const auto count = [&](double size) {
     fixed += size;
@@ -168,7 +194,11 @@ void StatusBarItem::paint(Canvas& canvas) {
   if (parts > 1) fixed += (parts - 1) * tokens::space_xs;
   const double available = std::max(0.0, box.width - fixed);
 
-  double x = box.x + paddingX();
+  double x = box.x;
+  if (secondary_) {
+    canvas.drawBox(Rect{x, box.y + (box.height - kSeparatorDotSize) / 2.0, kSeparatorDotSize, kSeparatorDotSize}, BoxStyle{.fill = foreground, .radius = kSeparatorDotSize / 2.0});
+  }
+  x += leadingWidth();
   if (dot_ != StatusDot::None) {
     Color dotColor = colors.text_muted;
     if (dot_ == StatusDot::Success) dotColor = colors.status_success;
@@ -197,7 +227,8 @@ void StatusBarItem::paint(Canvas& canvas) {
   }
   if (!iconOnly_) {
     const double width = std::min(available, textWidth());
-    canvas.drawText(text_, Rect{x, box.y, std::max(width, 0.0) + (width < available ? 1.0 : 0.0), box.height}, textStyle(foreground), VerticalAlign::Center);
+    // 宽度为 0 的矩形表示不限宽，没有空间时不画文字，否则整段文字会画出去压到右边的项
+    if (width > 0.0) canvas.drawText(text_, Rect{x, box.y, width + (width < available ? 1.0 : 0.0), box.height}, textStyle(foreground), VerticalAlign::Center);
     x += width + tokens::space_xs;
   }
   if (plainLamp) {

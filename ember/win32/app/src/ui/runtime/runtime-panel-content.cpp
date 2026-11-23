@@ -11,6 +11,7 @@
 
 #include "ui/runtime/runtime-panel-content.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 
@@ -70,7 +71,14 @@ RuntimePanelContent::~RuntimePanelContent() {
   if (unsubscribe_) unsubscribe_();
 }
 
-rujian::ui::Size RuntimePanelContent::measure(rujian::ui::Size available) { return row_->measure(available); }
+rujian::ui::Size RuntimePanelContent::measure(rujian::ui::Size /*available*/) { return row_->measure(rujian::ui::Size{}); }
+
+void RuntimePanelContent::arrange(const rujian::ui::Rect& bounds) {
+  Widget::arrange(bounds);
+  // 不换行：窗口放不下时按钮与音量仍排在一行，超出窗口的部分不显示
+  const rujian::ui::Size natural = row_->measure(rujian::ui::Size{});
+  row_->arrange(rujian::ui::Rect{bounds.x, bounds.y, std::max(bounds.width, natural.width), natural.height});
+}
 
 void RuntimePanelContent::refresh() {
   const contracts::RuntimeView view = model_.view();

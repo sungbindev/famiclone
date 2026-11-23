@@ -301,9 +301,12 @@ class FakeShellWindow : public contracts::ShellWindowControl {
   int fullScreenToggles{0};
   int topmostToggles{0};
   int quits{0};
+  /** 每次调整画面尺寸的倍数。 */
+  std::vector<int> screenSizes;
 
   void toggleFullScreen() override { ++fullScreenToggles; }
   void toggleAlwaysOnTop() override { ++topmostToggles; }
+  void setScreenSize(int multiple) override { screenSizes.push_back(multiple); }
   void quit() override { ++quits; }
 };
 
@@ -352,6 +355,7 @@ class FakeShellApi : public contracts::ShellApi {
   void togglePanel(const std::string&) override {}
   void toggleFullScreen() override {}
   void toggleAlwaysOnTop() override {}
+  void setScreenSize(int) override {}
   void quit() override { ++quits; }
   void runCommand(const std::string& commandId) override { commands.push_back(commandId); }
   void refreshCommands() override { ++refreshes; }

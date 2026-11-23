@@ -26,9 +26,9 @@ BEGIN
             VALUE "CompanyName", "sungbin"
             VALUE "FileDescription", "Ember"
             VALUE "FileVersion", "@EMBER_CORE_VERSION@"
-            VALUE "InternalName", "ember-win"
+            VALUE "InternalName", "ember-win32"
             VALUE "LegalCopyright", "Copyright (C) sungbin"
-            VALUE "OriginalFilename", "ember-win.exe"
+            VALUE "OriginalFilename", "ember-win32.exe"
             VALUE "ProductName", "Ember"
             VALUE "ProductVersion", "@EMBER_CORE_VERSION@"
         END

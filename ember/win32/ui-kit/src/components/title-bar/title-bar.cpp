@@ -171,10 +171,6 @@ void TitleBar::arrange(const Rect& bounds) {
   }
   titleX_ = x;
   x += titleWidth() + subtitleWidth() + tokens::space_md;
-  if (menuBar_ != nullptr) {
-    const Size size = menuBar_->measure(Size{});
-    menuBar_->arrange(Rect{x, centerY - size.height / 2.0, size.width, size.height});
-  }
 
   // 右侧：系统按钮之左依次是折叠按钮与操作区，各自右边留 title_bar_tool_gap
   const double right = bounds.right() - (windowButtons_ ? kSystemButtonCount * tokens::title_bar_tool_width : 0.0);
@@ -190,9 +186,20 @@ void TitleBar::arrange(const Rect& bounds) {
     actionsWidth += sizes.back().width;
   }
   double ax = (toolButtons_.empty() ? right : toolsX) - tokens::title_bar_tool_gap - actionsWidth;
+  // 窗口太窄、操作区会压到名称上时整个隐藏，不显示也不响应点击
+  const bool actionsFit = actions_.empty() || ax >= x;
+  double menuLimit = ax;
+  if (!actionsFit) menuLimit = toolButtons_.empty() ? right : toolsX;
   for (std::size_t i = 0; i < actions_.size(); ++i) {
-    actions_[i]->arrange(Rect{ax, centerY - sizes[i].height / 2.0, sizes[i].width, sizes[i].height});
+    actions_[i]->setVisible(actionsFit);
+    if (actionsFit) actions_[i]->arrange(Rect{ax, centerY - sizes[i].height / 2.0, sizes[i].width, sizes[i].height});
     ax += sizes[i].width;
+  }
+
+  // 菜单栏只占名称与右侧控件之间的空位，放不下的菜单名不显示
+  if (menuBar_ != nullptr) {
+    const Size size = menuBar_->measure(Size{});
+    menuBar_->arrange(Rect{x, centerY - size.height / 2.0, std::min(size.width, std::max(0.0, menuLimit - x)), size.height});
   }
 }
 

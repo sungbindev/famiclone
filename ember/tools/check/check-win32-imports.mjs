@@ -23,7 +23,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BASELINE_FILE = join(root, 'win32', 'baseline', 'win7-sp1-exports.json');
 /** 默认检查的可执行文件。 */
 const DEFAULT_TARGETS = [
-  join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win.exe'),
+  join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win32.exe'),
   join(WIN32_BUILD_DIRECTORY, 'probe', 'Release', 'ember-probe.exe'),
   join(WIN32_BUILD_DIRECTORY, 'tools', 'export-dump', 'Release', 'ember-export-dump.exe'),
   join(WIN32_BUILD_DIRECTORY, 'ui-kit', 'Release', 'rujian-ui-gallery.exe')

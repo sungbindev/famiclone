@@ -37,6 +37,10 @@ class WindowModes {
 
   void toggleFullScreen();
   void toggleAlwaysOnTop();
+  /**
+   * 把窗口调成指定大小（设备像素）：全屏时不处理；最大化时先还原；大小不超过所在显示器的工作区，调整后窗口不会超出工作区，左上角尽量保持不动。
+   */
+  void resizeTo(int width, int height);
   [[nodiscard]] bool fullScreen() const { return fullScreen_; }
   /** 窗口现在是否置顶（取系统里的真实状态）。 */
   [[nodiscard]] bool alwaysOnTop() const;

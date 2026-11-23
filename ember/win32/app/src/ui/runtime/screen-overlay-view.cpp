@@ -57,13 +57,6 @@ TextStyle textStyle(double size, int weight) {
   return style;
 }
 
-/** “未开机”的步骤：每一行是加粗的机型名加一句说明。 */
-struct Step {
-  const char* label;
-  const char* text;
-};
-constexpr Step kSteps[] = {{"学习机", "机器→选择机型，选好即开机"}, {"经典 FC", "文件→打开卡带，选好即开机"}};
-
 }  // namespace
 
 void ScreenOverlayView::paint(rujian::ui::Canvas& canvas) {
@@ -80,7 +73,6 @@ void ScreenOverlayView::paintState(rujian::ui::Canvas& canvas) const {
   const auto icon = state_ == OverlayState::Paused ? rujian::ui::IconId::PlayerPause : rujian::ui::IconId::Power;
   const TextStyle titleStyle = textStyle(kDisplayFontSize, kStrongWeight);
   const TextStyle captionStyle = textStyle(kCaptionFontSize, 400);
-  const TextStyle labelStyle = textStyle(kCaptionFontSize, kStrongWeight);
   const auto measure = [this](const std::string& text, const TextStyle& style) { return host()->measureText(text, style, 0); };
 
   const auto titleSize = measure(title, titleStyle);
@@ -91,22 +83,6 @@ void ScreenOverlayView::paintState(rujian::ui::Canvas& canvas) const {
   if (!caption.empty()) {
     captionHeight = measure(caption, captionStyle).height;
     contentHeight += kGapMd + captionHeight;
-  }
-  // 步骤：两列对齐（机型名一列，说明一列），整块居中、文字靠左
-  double labelWidth = 0;
-  double stepWidth = 0;
-  std::vector<double> rowHeights;
-  if (state_ == OverlayState::NotPoweredOn) {
-    for (const Step& step : kSteps) {
-      const auto label = measure(step.label, labelStyle);
-      const auto text = measure(step.text, captionStyle);
-      labelWidth = std::max(labelWidth, label.width);
-      stepWidth = std::max(stepWidth, text.width);
-      rowHeights.push_back(std::max(label.height, text.height));
-    }
-    contentHeight += kGapMd;
-    for (const double height : rowHeights) contentHeight += height;
-    contentHeight += kGapSm * static_cast<double>(rowHeights.size() - 1);
   }
 
   double y = area.y + (area.height - contentHeight) / 2;
@@ -123,18 +99,6 @@ void ScreenOverlayView::paintState(rujian::ui::Canvas& canvas) const {
     TextStyle centered = captionStyle;
     centered.align = rujian::ui::TextAlign::Center;
     canvas.drawText(caption, Rect{area.x, y, area.width, captionHeight}, centered, VerticalAlign::Top);
-  }
-  if (state_ == OverlayState::NotPoweredOn) {
-    y += kGapMd;
-    const double blockWidth = labelWidth + kGapMd + stepWidth;
-    const double left = area.x + (area.width - blockWidth) / 2;
-    std::size_t index = 0;
-    for (const Step& step : kSteps) {
-      const double rowHeight = rowHeights[index++];
-      canvas.drawText(step.label, Rect{left, y, labelWidth + 1, rowHeight}, labelStyle, VerticalAlign::Top);
-      canvas.drawText(step.text, Rect{left + labelWidth + kGapMd, y, stepWidth + 1, rowHeight}, captionStyle, VerticalAlign::Top);
-      y += rowHeight + kGapSm;
-    }
   }
 }
 

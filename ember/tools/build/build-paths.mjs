@@ -28,7 +28,7 @@ export const PLUGINS_BUILD_DIRECTORY = join(BUILD_ROOT, 'plugins');
 export const THIRD_PARTY_BUILD_DIRECTORY = join(BUILD_ROOT, 'third-party');
 /** 帮助文档站点（help/ 由 VitePress 构建）的输出目录。 */
 export const HELP_BUILD_DIRECTORY = join(BUILD_ROOT, 'help');
-/** 随程序分发的资源包（预装插件、帮助文档、许可全文）的输出目录，CMake 把它嵌进 ember-win.exe。 */
+/** 随程序分发的资源包（预装插件、帮助文档、许可全文）的输出目录，CMake 把它嵌进 ember-win32.exe。 */
 export const RESOURCES_BUILD_DIRECTORY = join(BUILD_ROOT, 'resources');
 /** 发布包（可执行文件与压缩包）的输出目录。 */
 export const RELEASE_BUILD_DIRECTORY = join(BUILD_ROOT, 'release');

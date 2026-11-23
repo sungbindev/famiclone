@@ -1,6 +1,6 @@
 ﻿# ------------------------------------------------------------------------
 # 名称：build-win32.ps1
-# 说明：构建 Ember 的 Win32 原生外壳（ember-win.exe）：安装依赖、编译 Release 版，再运行检查。
+# 说明：构建 Ember 的 Win32 原生外壳（ember-win32.exe）：安装依赖、编译 Release 版，再运行检查。
 # 作者：sungbin
 # 邮箱：sungbin@3578.cn
 # 日期：2026-11-19
@@ -54,7 +54,7 @@ try {
         Invoke-Step 'Win32 检查' { npm run win32:check }
     }
 
-    $executable = Join-Path $buildRoot 'win32\app\Release\ember-win.exe'
+    $executable = Join-Path $buildRoot 'win32\app\Release\ember-win32.exe'
     if (-not (Test-Path -LiteralPath $executable)) {
         throw "编译完成但没有找到：$executable"
     }

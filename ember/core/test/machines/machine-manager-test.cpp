@@ -142,7 +142,7 @@ TEST(MachineManager, ListsTheEightMachinesInFixedOrder) {
   const char* ids[] = {"fc", "sb97", "sb2000", "bbg1", "bbg98", "pec9588", "pec586", "yuxing"};
   for (std::size_t index = 0; index < machines.size(); ++index) EXPECT_EQ(machines[index].id, ids[index]);
   EXPECT_EQ(machines[5].name, "金字塔 PEC-9588");
-  EXPECT_EQ(machines[6].name, "金字塔 PEC-586、686");
+  EXPECT_EQ(machines[6].name, "金字塔 PEC-586(686)");
   EXPECT_EQ(machines[7].name, "裕兴");
   for (std::size_t index = 1; index < machines.size(); ++index) {
     EXPECT_TRUE(machines[index].needsRom) << ids[index];

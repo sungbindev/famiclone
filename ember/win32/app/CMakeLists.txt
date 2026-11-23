@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------
 # 名称：CMakeLists.txt
-# 说明：Ember 原生应用 ember-win.exe：应用库（八层的全部源码，除程序入口外）、可执行文件与单元测试。
+# 说明：Ember 原生应用 ember-win32.exe：应用库（八层的全部源码，除程序入口外）、可执行文件与单元测试。
 # 作者：sungbin
 # 邮箱：sungbin@3578.cn
 # 日期：2026-11-19
@@ -165,9 +165,9 @@ set(EMBER_VERSION_MAJOR "${CMAKE_MATCH_1}")
 set(EMBER_VERSION_MINOR "${CMAKE_MATCH_2}")
 set(EMBER_VERSION_PATCH "${CMAKE_MATCH_3}")
 set(EMBER_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../../resources/icon.ico")
-# 随程序分发的资源包（预装插件、帮助文档、许可全文，由 tools/build/pack-resources.mjs 打成 zip）嵌进 ember-win.exe；为空或不存在时不嵌。
+# 随程序分发的资源包（预装插件、帮助文档、许可全文，由 tools/build/pack-resources.mjs 打成 zip）嵌进 ember-win32.exe；为空或不存在时不嵌。
 # 资源包的 SHA-256 写进生成的 .rc 里，内容变了 .rc 才会被重新编译。
-set(EMBER_RESOURCE_ARCHIVE "" CACHE FILEPATH "嵌进 ember-win.exe 的资源包")
+set(EMBER_RESOURCE_ARCHIVE "" CACHE FILEPATH "嵌进 ember-win32.exe 的资源包")
 set(EMBER_RESOURCE_ARCHIVE_LINE "")
 set(EMBER_RESOURCE_ARCHIVE_HASH "none")
 if(EMBER_RESOURCE_ARCHIVE AND EXISTS "${EMBER_RESOURCE_ARCHIVE}")
@@ -177,7 +177,7 @@ if(EMBER_RESOURCE_ARCHIVE AND EXISTS "${EMBER_RESOURCE_ARCHIVE}")
 endif()
 configure_file(resources/ember-win.rc.in ${CMAKE_CURRENT_BINARY_DIR}/ember-win.rc @ONLY)
 add_executable(ember_win WIN32 src/bootstrap/main.cpp ${CMAKE_CURRENT_BINARY_DIR}/ember-win.rc resources/ember-win.manifest)
-set_target_properties(ember_win PROPERTIES OUTPUT_NAME "ember-win")
+set_target_properties(ember_win PROPERTIES OUTPUT_NAME "ember-win32")
 target_link_libraries(ember_win PRIVATE ember_app)
 
 if(EMBER_BUILD_TESTS)

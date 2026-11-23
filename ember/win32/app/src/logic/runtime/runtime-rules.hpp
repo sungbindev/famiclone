@@ -115,6 +115,8 @@ struct MachineChoice {
   std::string label;
   /** 不可选的原因；可选时为空。 */
   std::string hint;
+  /** 上面是否加分隔线：不同品牌之间分开。 */
+  bool separatorBefore{false};
 };
 
 /** “选择机型”的选项：四个整机机型，顺序固定；要程序里有实现并已添加 ROM 才可选，不可选的注明原因；经典 FC 不在里面。 */

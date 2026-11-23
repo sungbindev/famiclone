@@ -102,6 +102,8 @@ void ShellController::toggleFullScreen() { window_.toggleFullScreen(); }
 
 void ShellController::toggleAlwaysOnTop() { window_.toggleAlwaysOnTop(); }
 
+void ShellController::setScreenSize(int multiple) { window_.setScreenSize(multiple); }
+
 void ShellController::quit() { window_.quit(); }
 
 void ShellController::runCommand(const std::string& commandId) {
@@ -236,7 +238,7 @@ std::vector<contracts::ShellStatusItemModel> ShellController::statusItems(bool a
     if (item.alignEnd != alignEnd || !item.view) continue;
     const auto view = item.view();
     if (!view) continue;
-    result.push_back({item.id, view->text, view->title, view->tone, static_cast<bool>(item.click)});
+    result.push_back({item.id, view->text, view->title, view->tone, static_cast<bool>(item.click), view->secondary});
   }
   return result;
 }

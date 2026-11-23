@@ -66,6 +66,7 @@ struct ShellStatusItemModel {
   std::string title;
   ShellTone tone{ShellTone::Normal};
   bool clickable{false};
+  bool secondary{false};
 };
 
 /** 标题栏项此刻的内容。 */
@@ -128,12 +129,14 @@ class ShellModel {
   virtual void setOnChanged(std::function<void()> handler) = 0;
 };
 
-/** 窗口控制：全屏、置顶与退出，由窗口所在的层实现。 */
+/** 窗口控制：全屏、置顶、画面尺寸与退出，由窗口所在的层实现。 */
 class ShellWindowControl {
  public:
   virtual ~ShellWindowControl() = default;
   virtual void toggleFullScreen() = 0;
   virtual void toggleAlwaysOnTop() = 0;
+  /** 把窗口调成画面为整数倍尺寸的大小。 */
+  virtual void setScreenSize(int multiple) = 0;
   virtual void quit() = 0;
 };
 

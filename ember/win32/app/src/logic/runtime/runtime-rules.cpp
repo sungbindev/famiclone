@@ -22,8 +22,8 @@ struct HostName {
   const char* id;
   const char* name;
 };
-constexpr HostName kHostNames[] = {{"fc", "经典 FC"},     {"sb97", "小霸王 97"},       {"sb2000", "小霸王 2000"},          {"bbg1", "步步高软驱一号"},
-                                   {"bbg98", "步步高 98"}, {"pec9588", "金字塔 PEC-9588"}, {"pec586", "金字塔 PEC-586、686"}, {"yuxing", "裕兴"}};
+constexpr HostName kHostNames[] = {{"fc", "经典 FC"},     {"sb97", "小霸王 97"},       {"sb2000", "小霸王 2000"},          {"bbg1", "步步高 软驱一号"},
+                                   {"bbg98", "步步高 98"}, {"pec9588", "金字塔 PEC-9588"}, {"pec586", "金字塔 PEC-586(686)"}, {"yuxing", "裕兴"}};
 
 constexpr const char* kUnsupported = "暂未支持";
 constexpr const char* kNoRom = "未添加 ROM";
@@ -169,16 +169,18 @@ std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machi
   struct Choice {
     const char* id;
     const char* label;
+    /** 品牌的第一个机型，上面加分隔线。 */
+    bool separatorBefore;
   };
-  static constexpr Choice kChoices[] = {{"sb97", "小霸王 97"},        {"sb2000", "小霸王 2000"},          {"bbg1", "步步高软驱一号"},
-                                        {"bbg98", "步步高 98"},       {"pec9588", "金字塔 PEC-9588"}, {"pec586", "金字塔 PEC-586、686"}, {"yuxing", "裕兴"}};
+  static constexpr Choice kChoices[] = {{"sb97", "小霸王 97", false},  {"sb2000", "小霸王 2000", false},          {"bbg1", "步步高 软驱一号", true},
+                                        {"bbg98", "步步高 98", false}, {"pec9588", "金字塔 PEC-9588", true}, {"pec586", "金字塔 PEC-586(686)", false}, {"yuxing", "裕兴", true}};
   std::vector<MachineChoice> result;
   for (const auto& choice : kChoices) {
     const auto info = std::find_if(machines.begin(), machines.end(), [&choice](const MachineEntry& entry) { return entry.id == choice.id; });
     std::string hint;
     if (info == machines.end() || !info->supported) hint = kUnsupported;
     else if (!info->hasRom) hint = kNoRom;
-    result.push_back({choice.id, choice.label, hint});
+    result.push_back({choice.id, choice.label, hint, choice.separatorBefore});
   }
   return result;
 }

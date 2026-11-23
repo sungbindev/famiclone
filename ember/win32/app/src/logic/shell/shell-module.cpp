@@ -45,10 +45,26 @@ contracts::ShellModule createShellModule() {
   alwaysOnTop.checked = [](const ShellViewState& view) { return view.alwaysOnTop; };
   module.commands.push_back(std::move(alwaysOnTop));
 
+  // “画面尺寸”子菜单：按下的那一刻把窗口调成相应大小，尺寸不记忆，所以没有对勾；窗口相关的三项排在一组，前面有分隔线
+  ShellMenuItemDefinition screenSizeItem;
+  screenSizeItem.menu = "settings";
+  screenSizeItem.separatorBefore = true;
+  screenSizeItem.submenu = contracts::ShellSubmenuDefinition{kShellScreenSizeSubmenu, "画面尺寸", [] {
+    std::vector<contracts::ShellSubmenuEntry> entries;
+    for (const int multiple : {1, 2, 3}) {
+      contracts::ShellSubmenuEntry entry;
+      entry.id = std::to_string(multiple) + "x";
+      entry.label = entry.id;
+      entry.run = [multiple](ShellApi& shell) { shell.setScreenSize(multiple); };
+      entries.push_back(std::move(entry));
+    }
+    return entries;
+  }};
+  module.menuItems.push_back(std::move(screenSizeItem));
+
   ShellMenuItemDefinition fullScreenItem;
   fullScreenItem.menu = "settings";
   fullScreenItem.command = kShellFullScreenCommand;
-  fullScreenItem.separatorBefore = true;
   module.menuItems.push_back(std::move(fullScreenItem));
 
   ShellMenuItemDefinition alwaysOnTopItem;

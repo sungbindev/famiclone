@@ -553,7 +553,7 @@ TEST(AppLogo, DrawsNothingWhenTheBitmapIsMissingOrTheWrongSize) {
 }
 
 TEST(AppIcon, IsEmptyWithoutTheIconResourceOrASize) {
-  // 测试程序里没有应用图标资源；真正的图标在 ember-win.exe 里，由冒烟脚本的截图核对
+  // 测试程序里没有应用图标资源；真正的图标在 ember-win32.exe 里，由冒烟脚本的截图核对
   EXPECT_TRUE(platform::renderAppIcon(16).empty());
   EXPECT_TRUE(platform::renderAppIcon(0).empty());
   EXPECT_TRUE(platform::renderAppIcon(-4).empty());

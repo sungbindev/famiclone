@@ -42,7 +42,7 @@ export function configure(extraArguments = []) {
   const version = JSON.parse(readFileSync(join(EMBER_ROOT, 'package.json'), 'utf8')).version;
   generate(EMBER_ROOT);
   writeThirdPartyFiles();
-  // 随程序分发的资源（预装插件、帮助文档、许可全文）打成一个 zip，由 CMake 嵌进 ember-win.exe；还没有构建出来的部分跳过
+  // 随程序分发的资源（预装插件、帮助文档、许可全文）打成一个 zip，由 CMake 嵌进 ember-win32.exe；还没有构建出来的部分跳过
   const resources = packResources();
   if (resources.skipped.length > 0) console.log(`资源包里没有：${resources.skipped.join('、')}（先运行 npm run plugins:pack 与 npm run help:build）`);
   const { cmake } = findCmake();

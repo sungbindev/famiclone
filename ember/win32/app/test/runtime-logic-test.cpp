@@ -40,7 +40,7 @@ json machinesJson() {
            json::array({{{"id", "fc"}, {"name", "经典 FC"}, {"needsRom", false}, {"supported", true}},
                         {{"id", "sb97"}, {"name", "小霸王 97"}, {"needsRom", true}, {"supported", true}},
                         {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"fileName", "SB2K_ROM.bin"}, {"size", 524288}, {"label", "SB2K_ROM.bin"}}}},
-                        {{"id", "bbg1"}, {"name", "步步高软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
+                        {{"id", "bbg1"}, {"name", "步步高 软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
 }
 
 TEST(RuntimeRules, StateTextsFollowPowerAndMode) {
@@ -110,7 +110,7 @@ TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {
   EXPECT_FALSE(logic::controlAvailability(logic::parseRuntimeStatus(statusJson("off", "paused", "sb2000")), "fc", machines).powerToggle);
   // 金字塔学习机是内置机型，状态栏显示它的机型名
   EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec9588")), "fc"), "金字塔 PEC-9588");
-  EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec586")), "fc"), "金字塔 PEC-586、686");
+  EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "pec586")), "fc"), "金字塔 PEC-586(686)");
   EXPECT_EQ(logic::hostText(logic::parseRuntimeStatus(statusJson("on", "running", "yuxing")), "fc"), "裕兴");
 }
 
@@ -128,7 +128,7 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   EXPECT_EQ(choices[4].id, "pec9588");
   EXPECT_EQ(choices[4].label, "金字塔 PEC-9588");
   EXPECT_EQ(choices[5].id, "pec586");
-  EXPECT_EQ(choices[5].label, "金字塔 PEC-586、686");
+  EXPECT_EQ(choices[5].label, "金字塔 PEC-586(686)");
   EXPECT_EQ(choices[6].id, "yuxing");
   EXPECT_EQ(choices[6].label, "裕兴");
   for (const auto& choice : logic::machineChoices({})) EXPECT_EQ(choice.hint, "暂未支持");
@@ -600,7 +600,7 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   EXPECT_TRUE(menus[1].items[3].separatorBefore);
   EXPECT_FALSE(menus[1].items[5].checked.value());
   // “设置”菜单里没有“画面效果”（只在首选项里设置）
-  ASSERT_EQ(menus[2].items.size(), 2U);
+  ASSERT_EQ(menus[2].items.size(), 3U);
   for (const auto& item : menus[2].items) EXPECT_NE(item.label, "画面效果");
   const auto host = shell.statusItems(false);
   ASSERT_EQ(host.size(), 2U);

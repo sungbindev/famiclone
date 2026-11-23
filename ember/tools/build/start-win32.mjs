@@ -27,7 +27,7 @@ try {
   }
   configure(['-DEMBER_BUILD_TESTS=OFF']);
   build(WIN32_BUILD_DIRECTORY, 'Release', ['ember_win']);
-  execFileSync(join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win.exe'), process.argv.slice(2), { stdio: 'inherit' });
+  execFileSync(join(WIN32_BUILD_DIRECTORY, 'app', 'Release', 'ember-win32.exe'), process.argv.slice(2), { stdio: 'inherit' });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

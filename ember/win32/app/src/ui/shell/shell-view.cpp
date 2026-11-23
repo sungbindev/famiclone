@@ -242,7 +242,7 @@ void ShellView::rebuildStatusBar() {
     signature += '\x1e';
   }
   const auto addItems = [&signature](const std::vector<contracts::ShellStatusItemModel>& items) {
-    for (const auto& item : items) signature += item.id + '\x1f' + item.text + '\x1f' + item.title + std::to_string(static_cast<int>(item.tone)) + '\x1e';
+    for (const auto& item : items) signature += item.id + '\x1f' + item.text + '\x1f' + item.title + std::to_string(static_cast<int>(item.tone)) + (item.secondary ? 's' : '-') + '\x1e';
     signature += '\x1d';
   };
   addItems(start);
@@ -273,6 +273,7 @@ void ShellView::rebuildStatusBar() {
   const auto addStatusItem = [this, bar](const contracts::ShellStatusItemModel& model, bool atEnd) {
     auto item = std::make_unique<StatusBarItem>(model.text);
     item->setTone(toneOf(model.tone));
+    item->setSecondary(model.secondary);
     if (!model.title.empty()) item->setTooltip(model.title);
     if (model.clickable) {
       const std::string id = model.id;

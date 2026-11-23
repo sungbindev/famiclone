@@ -31,7 +31,7 @@ json machine(const std::string& id, const std::string& name, bool needsRom, bool
 
 json machinesResult() {
   return {{"machines", json::array({machine("fc", "经典 FC", false, true), machine("sb97", "小霸王 97", true, true), machine("sb2000", "小霸王 2000", true, true, {{"fileName", "SB2K_ROM.NES"}, {"size", 524304}}),
-                                    machine("bbg1", "步步高软驱一号", true, false)})}};
+                                    machine("bbg1", "步步高 软驱一号", true, false)})}};
 }
 
 TEST(MachinesRules, RomStatusAndRowsOnlyForMachinesThatNeedRom) {

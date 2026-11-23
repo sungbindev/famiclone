@@ -57,6 +57,8 @@ class StatusBarItem : public Widget {
   void setLamp(std::optional<StatusLamp> lamp);
   /** 按下状态：用于开关面板的按钮，只改背景；仅按钮状态项有效。 */
   void setPressed(bool pressed);
+  /** 次要项：跟在主要项后面的补充说明，用弱化的文字色，前面带一个圆点分隔，放不下时先收缩。 */
+  void setSecondary(bool secondary);
   /** 只显示图标：文字不显示（悬停提示由提示控件处理）；需要同时有图标。 */
   void setIconOnly(bool iconOnly);
   /** 点击回调；设置后状态项是按钮（可悬停、按下、获得焦点、点击）。 */
@@ -68,6 +70,10 @@ class StatusBarItem : public Widget {
   [[nodiscard]] bool clickable() const { return static_cast<bool>(onClick_); }
   /** 放不下时的收缩权重：文字超过 16 个字符为字符数的平方，否则为 0（不收缩）。 */
   [[nodiscard]] double shrinkWeight() const;
+  /** 常规收缩之后仍放不下时用的收缩权重：带文字的项都按字符数的平方收缩，只有图标的项为 0。 */
+  [[nodiscard]] double forcedShrinkWeight() const;
+  /** 文字能收缩掉的最大宽度（文字的完整宽度，只有图标的项为 0）。 */
+  [[nodiscard]] double textShrinkRoom() const;
   /** 指示灯（没有时为空）。 */
   [[nodiscard]] const std::optional<StatusLamp>& lamp() const { return lamp_; }
 
@@ -84,6 +90,8 @@ class StatusBarItem : public Widget {
 
  private:
   [[nodiscard]] std::optional<IconId> shownIcon() const;
+  /** 左边距；次要项是前面的分隔圆点加它与文字的间距。 */
+  [[nodiscard]] double leadingWidth() const;
   [[nodiscard]] bool lampInIcon() const;
   [[nodiscard]] double iconSize() const;
   [[nodiscard]] double dotSize() const;
@@ -99,6 +107,7 @@ class StatusBarItem : public Widget {
   std::optional<StatusLamp> lamp_;
   bool pressedFlag_{false};
   bool iconOnly_{false};
+  bool secondary_{false};
   bool large_{false};
   std::function<void()> onClick_;
   bool spaceDown_{false};

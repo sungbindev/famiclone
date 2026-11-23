@@ -1,6 +1,6 @@
 {
   "name": "fcdev",
-  "displayName": "FC Development",
+  "displayName": "FC 6502 Dev Kit",
   "description": "NES、学习机等 6502 机型的汇编与 C 开发支持，附带 Copilot 反汇编工具。",
   "icon": "resources/icon.png",
   "version": "0.8.0",

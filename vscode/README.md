@@ -1,4 +1,4 @@
-# FC Development
+# FC 6502 Dev Kit
 
 NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具：用随扩展发布的 cc65 构建 C 与 ca65 汇编程序，在模拟器 Ember 里运行与调试，反汇编已有程序，并给 Copilot 提供反汇编与模拟器工具。打开含 `fcdev.json` 的文件夹即可使用，不需要 Node 项目，也不需要另外安装 cc65。扩展只支持 Windows 64 位。
 

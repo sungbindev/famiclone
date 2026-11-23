@@ -1,5 +1,9 @@
 # 更新记录
 
+## 未发布
+
+- 扩展显示名改为 FC 6502 Dev Kit。
+
 ## 0.8.0
 
 - 目标：新增“整机 ROM 工程”目标 `rom`，用来构建各机型（步步高、学习机等）的 BIOS 与固件源码；`fcdev.json` 的 `firmware` 指向完整的固件当底，构建时把源码的链接结果覆盖进去，在 `targetOptions` 里写机型 `machine`、覆盖位置 `offset` 与固件大小 `size`。

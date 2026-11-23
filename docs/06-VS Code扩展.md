@@ -1,6 +1,6 @@
 # VS Code 扩展
 
-扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“FC Development”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。它是 fcdev 唯一的发行形式：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具都在这里，整体架构见 [01-软件架构设计](01-软件架构设计.md)。
+扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“FC 6502 Dev Kit”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。它是 fcdev 唯一的发行形式：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具都在这里，整体架构见 [01-软件架构设计](01-软件架构设计.md)。
 
 ## 1. 范围
 

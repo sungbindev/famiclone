@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：build-integration.test.ts
-// 说明：用真实 cc65 构建：NES 程序（含增量、错误提示），学习机程序里的汉字被转成 GB2312 字节。
+// 说明：用真实 cc65 构建：NES 程序（含增量、错误提示），学习机程序里的汉字被转成 GB2312
+//       字节，整机 ROM 工程覆盖底固件。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -186,5 +187,44 @@ describe.skipIf(!HAS_TOOLCHAIN)('用真实 cc65 构建含汉字的源文件', { 
       code: 'SOURCE_CHAR_UNSUPPORTED',
       message: expect.stringContaining(':2:4：')
     });
+  });
+});
+
+describe.skipIf(!HAS_TOOLCHAIN)('用真实 cc65 构建整机 ROM 工程', { timeout: TIMEOUT_MS }, () => {
+  const { service } = createRealBuildEnvironment();
+  let temp: TempDir;
+
+  /** 底固件：64K，每个字节是 $EE。 */
+  const baseFirmware = new Uint8Array(0x10000).fill(0xee);
+
+  beforeEach(() => {
+    temp = createTempDir();
+    writeTestFile(temp.dir, 'base.bin', baseFirmware);
+    writeTestFile(temp.dir, 'src/rom.s', '.segment "CODE"\n        lda #$42\n.segment "VECTORS"\n        .word $8000, $8000, $8000\n');
+  });
+
+  afterEach(() => temp.cleanup());
+
+  it('用目标自带的链接配置链接，输出覆盖到底固件的 offset 处，其余字节不变', async () => {
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'rom', name: 'demo', firmware: 'base.bin', targetOptions: { machine: 'demo', offset: 0x8000, size: 0x10000 } }));
+    const { result } = await service.build({ pathArg: 'src', cwd: temp.dir });
+    const image = readFileSync(result.outputFile);
+    expect(path.basename(result.outputFile)).toBe('demo.bin');
+    expect(image.length).toBe(0x10000);
+    expect(image.subarray(0, 0x8000).every((byte) => byte === 0xee)).toBe(true);
+    expect([...image.subarray(0x8000, 0x8002)]).toEqual([0xa9, 0x42]);
+    expect([...image.subarray(0x8000 + 0x7ffa, 0x8000 + 0x8000)]).toEqual([0x00, 0x80, 0x00, 0x80, 0x00, 0x80]);
+  });
+
+  it('没有 firmware 时输出就是整块固件，offset 不为 0 时报缺少底固件', async () => {
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'rom', targetOptions: { size: 0x8000 } }));
+    expect(readFileSync((await service.build({ pathArg: 'src', cwd: temp.dir })).result.outputFile).length).toBe(0x8000);
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'rom', targetOptions: { offset: 0x8000 } }));
+    await expect(service.build({ pathArg: 'src', cwd: temp.dir })).rejects.toMatchObject({ code: 'PACKAGE_BASE_MISSING' });
+  });
+
+  it('firmware 指向的文件不存在时报错', async () => {
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'rom', firmware: 'missing.bin', targetOptions: { offset: 0x8000 } }));
+    await expect(service.build({ pathArg: 'src', cwd: temp.dir })).rejects.toMatchObject({ code: 'FIRMWARE_MISSING' });
   });
 });

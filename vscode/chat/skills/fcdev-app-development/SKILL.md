@@ -6,7 +6,7 @@ user-invocable: false
 
 # fcdev 程序开发
 
-fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有三个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）与 `sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
+fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有四个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
 
 ## 必须先读取的参考文件
 
@@ -32,7 +32,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | 只要构建（学习机目标会同时生成磁盘镜像） | 流程 3 |
 | 要运行、看画面、调试、核对结果 | 流程 4 |
 | 构建失败、运行不对、找不到命令 | 流程 5 |
-| 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
+| 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`、`sb97`、`rom`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
 
 ## 流程 1：新建项目
 

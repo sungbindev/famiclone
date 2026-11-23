@@ -83,6 +83,7 @@ function completeEntries() {
     entries[`extension/targets/${target}/lib/${target}.lib`] = 'lib';
     entries[`extension/targets/${target}/lib/crt0.o`] = 'object';
   }
+  entries['extension/targets/rom/target.json'] = '{}';
   for (const template of ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm']) {
     entries[`extension/templates/${template}/template.json`] = '{}';
     entries[`extension/templates/${template}/README.md`] = '模板';

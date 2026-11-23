@@ -7,6 +7,7 @@
     { "topic": "create", "file": "04-新建项目与模板.md", "title": "新建项目与模板", "summary": "新建项目命令、模板与生成内容" },
     { "topic": "nes", "file": "nes/01-开发指南.md", "title": "NES 开发指南", "summary": "NES 目标的内存与映射器、fcnes 函数、字库、运行" },
     { "topic": "sb97", "file": "sb97/01-开发指南.md", "title": "SB97 开发指南", "summary": "小霸王 97 的程序格式（签名与向量）、内存与段、显示文字、硬件寄存器、构建与运行" },
+    { "topic": "rom", "file": "rom/01-开发指南.md", "title": "整机 ROM 工程开发指南", "summary": "构建各机型的 BIOS 与固件：底固件与覆盖、机型与磁盘镜像的配置、构建与运行" },
     { "topic": "sb2000", "file": "sb2000/01-开发指南.md", "title": "SB2000 开发指南", "summary": "程序格式、内存布局、运行库、大程序换页、常用做法、易错点与示例" },
     { "topic": "examples", "file": "targets/sb2000/examples-source.md", "root": "extension", "title": "SB2000 示例程序源码", "summary": "手册里提到的示例程序（hello、show、copy、pad、mouse、play 等）的完整源码，由示例项目生成" },
     { "topic": "syscall", "file": "sb2000/02-系统调用手册.md", "title": "SB-DOS 系统调用手册", "summary": "系统调用的参数、结果、出错码与可靠程度" },

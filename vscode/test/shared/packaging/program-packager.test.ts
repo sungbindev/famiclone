@@ -66,6 +66,39 @@ describe('打包器', () => {
     expect(() => packageProgram('ines', wrongSize, {})).toThrow(expect.objectContaining({ code: 'PACKAGE_SIZE_MISMATCH' }));
   });
 
+  describe('rom-overlay', () => {
+    /** 底固件：8 字节，每字节等于它的下标。 */
+    const base = Uint8Array.from([0, 1, 2, 3, 4, 5, 6, 7]);
+    const context = (targetOptions: Record<string, unknown>, withBase = true) => ({ targetOptions, readBase: () => (withBase ? base : undefined) });
+
+    it('把链接输出覆盖到底固件的 offset 处，不改动底固件本身', () => {
+      const result = packageProgram('rom-overlay', Uint8Array.from([0xaa, 0xbb]), {}, context({ offset: 6, size: 8 }));
+      expect(Array.from(result)).toEqual([0, 1, 2, 3, 4, 5, 0xaa, 0xbb]);
+      expect(Array.from(base)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    });
+
+    it('没有底固件且 offset 为 0 时，链接输出就是整块固件，size 要求大小正好相等', () => {
+      expect(packageProgram('rom-overlay', new Uint8Array(4), {}, context({ size: 4 }, false)).length).toBe(4);
+      expect(() => packageProgram('rom-overlay', new Uint8Array(3), {}, context({ size: 4 }, false))).toThrow(expect.objectContaining({ code: 'PACKAGE_SIZE_MISMATCH' }));
+    });
+
+    it('offset 不为 0 而没有底固件时报错并提示配置 firmware', () => {
+      expect(() => packageProgram('rom-overlay', new Uint8Array(2), {}, context({ offset: 4 }, false))).toThrow(
+        expect.objectContaining({ code: 'PACKAGE_BASE_MISSING', hint: expect.stringContaining('firmware') })
+      );
+    });
+
+    it('底固件大小与 size 不符，或链接输出放不进底固件时报错', () => {
+      expect(() => packageProgram('rom-overlay', new Uint8Array(2), {}, context({ offset: 0, size: 16 }))).toThrow(expect.objectContaining({ code: 'PACKAGE_SIZE_MISMATCH' }));
+      expect(() => packageProgram('rom-overlay', new Uint8Array(3), {}, context({ offset: 6 }))).toThrow(expect.objectContaining({ code: 'PACKAGE_TOO_LARGE' }));
+    });
+
+    it('offset 与 size 必须是不小于 0 的整数', () => {
+      expect(() => packageProgram('rom-overlay', new Uint8Array(1), {}, context({ offset: -1 }))).toThrow(expect.objectContaining({ code: 'PACKAGER_OPTION_INVALID' }));
+      expect(() => packageProgram('rom-overlay', new Uint8Array(1), {}, context({ size: 1.5 }))).toThrow(expect.objectContaining({ code: 'PACKAGER_OPTION_INVALID' }));
+    });
+  });
+
   it('fat-floppy 把文件放进镜像根目录', () => {
     const image = packageDisk('fat-floppy', [{ name: 'a.exe', data: Uint8Array.from([1, 2, 3]) }], { label: 'FCDEV' });
     expect(listFat12(image).map((entry) => entry.name)).toEqual(['A.EXE']);

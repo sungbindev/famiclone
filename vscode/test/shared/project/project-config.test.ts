@@ -32,6 +32,13 @@ describe('项目配置', () => {
     expect(() => normalizeConfig({ linkConfig: 1 }, file, ROOT)).toThrow(/类型不对/);
   });
 
+  it('diskImage 的相对路径以配置文件所在目录为基准，类型不对报错', () => {
+    const file = path.join(ROOT, 'fcdev.json');
+    expect(normalizeConfig({ diskImage: 'disk/dos.img' }, file, ROOT).diskImage).toBe(path.join(ROOT, 'disk', 'dos.img'));
+    expect(normalizeConfig({}, file, ROOT).diskImage).toBeUndefined();
+    expect(() => normalizeConfig({ diskImage: 1 }, file, ROOT)).toThrow(/类型不对/);
+  });
+
   it('disk 为 false 时不生成磁盘镜像，类型不对报错', () => {
     expect(normalizeConfig({ disk: false }, null, ROOT).disk).toBe(false);
     expect(() => normalizeConfig({ disk: 'no' }, null, ROOT)).toThrow(/类型不对/);

@@ -45,9 +45,10 @@ describe('目标定义的解析', () => {
     expect(parseTarget(validTarget(), DIR).sourceCharset).toBeNull();
   });
 
-  it('运行方案的 mode 只能是 rom 或 firmware-disk', () => {
+  it('运行方案的 mode 只能是 rom、firmware-disk 或 firmware', () => {
     expect(() => parseTarget(validTarget({ run: { emulator: 'ember', mode: 'x' } }), DIR)).toThrow(/mode/);
     expect(parseTarget(validTarget({ run: { emulator: 'ember', mode: 'rom' } }), DIR).run?.mode).toBe('rom');
+    expect(parseTarget(validTarget({ run: { emulator: 'ember', mode: 'firmware' } }), DIR).run).toEqual({ emulator: 'ember', mode: 'firmware', machine: null });
   });
 
   it('firmware-disk 的运行方案必须给整机机型，rom 的机型为 null', () => {

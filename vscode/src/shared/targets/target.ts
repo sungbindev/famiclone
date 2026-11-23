@@ -37,8 +37,11 @@ export interface BankedSpec {
   readonly segment: string;
 }
 
-/** 运行方案：rom 直接加载产物；firmware-disk 加载固件、挂载磁盘镜像并按整机机型开机。 */
-export type RunMode = 'rom' | 'firmware-disk';
+/**
+ * 运行方案：rom 直接加载产物；firmware-disk 加载固件、挂载磁盘镜像并按整机机型开机；
+ * firmware 把产物当整机固件，机型取自目标专用选项 machine，可挂载 diskImage。
+ */
+export type RunMode = 'rom' | 'firmware-disk' | 'firmware';
 
 /** 一个目标。 */
 export interface Target {
@@ -76,7 +79,7 @@ export interface Target {
   readonly nameRule: string | null;
   /** 磁盘镜像能力；不支持时为 null。 */
   readonly disk: { readonly packager: string } | null;
-  /** 运行方案；没有时为 null。machine 是 firmware-disk 模式的整机机型，rom 模式为 null。 */
+  /** 运行方案；没有时为 null。machine 是 firmware-disk 模式的整机机型，其他模式为 null。 */
   readonly run: { readonly emulator: string; readonly mode: RunMode; readonly machine: string | null } | null;
   /** 目标专用选项。 */
   readonly options: Readonly<Record<string, TargetOptionSpec>>;

@@ -17,17 +17,24 @@ import type { FcdevError } from '../../../src/shared/errors/fcdev-error';
 import { createTempDir, writeTestFile, type TempDir } from '../../support/build-fixtures';
 import { createFakeClient, FakeConnector, FakeProcesses, FakeSettings } from '../../support/emulator-fixtures';
 
-/** 假的构建服务：计划里只有运行方案与固件，记录是否构建、是否另外生成镜像。 */
+/**
+ * 假的构建服务：计划里只有运行方案、固件、目标专用选项与磁盘镜像，
+ * 记录是否构建、是否另外生成镜像。
+ */
 class FakeBuildService {
   builds = 0;
   diskBuilds = 0;
+  /** 目标专用选项。 */
+  targetOptions: Record<string, unknown> = {};
+  /** 项目配置里的 diskImage。 */
+  diskImage: string | undefined;
 
   /**
    * @param mode 运行方案；null 表示目标没有运行方案。 @param firmware 项目配置里的固件。 @param
    * output 产物路径。 @param machine 整机机型。 @param builtDisk 构建时是否已经生成了镜像。
    */
   constructor(
-    private readonly mode: 'rom' | 'firmware-disk' | null,
+    private readonly mode: 'rom' | 'firmware-disk' | 'firmware' | null,
     private readonly firmware: string | undefined,
     private readonly output: string,
     private readonly machine: string = 'sb2000',
@@ -36,7 +43,7 @@ class FakeBuildService {
 
   plan(): ReturnType<BuildService['plan']> {
     const run = this.mode === null ? null : { emulator: 'ember', mode: this.mode, machine: this.mode === 'firmware-disk' ? this.machine : null };
-    return { target: { name: 'fake', run }, config: { firmware: this.firmware } } as never;
+    return { target: { name: 'fake', run }, config: { firmware: this.firmware, diskImage: this.diskImage }, targetOptions: this.targetOptions } as never;
   }
 
   async build(): Promise<BuildOutcome> {
@@ -145,5 +152,46 @@ describe('构建并运行', () => {
     const build = new FakeBuildService('firmware-disk', firmware, exe);
     await createRunner(build).run({ build: { cwd: temp.dir }, debug: false });
     assert.equal(build.diskBuilds, 1);
+  });
+
+  it('整机 ROM 工程没有指定机型时在构建之前报错，并提示写 targetOptions.machine', async () => {
+    const build = new FakeBuildService('firmware', undefined, 'x');
+    await assert.rejects(createRunner(build).run({ build: { cwd: temp.dir }, debug: false }), (error: FcdevError) => error.code === 'MACHINE_MISSING' && error.hint.includes('machine'));
+    assert.equal(build.builds, 0);
+  });
+
+  it('整机 ROM 工程：把产物当固件、挂上磁盘镜像开机，不输入程序名，继续运行', async () => {
+    const rom = writeTestFile(temp.dir, 'bbg.bin', 'x');
+    const disk = writeTestFile(temp.dir, 'dos.img', 'x');
+    const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.resume': {} });
+    connector.next = client;
+    const build = new FakeBuildService('firmware', undefined, rom);
+    build.targetOptions = { machine: 'bbg1' };
+    build.diskImage = disk;
+    const result = await createRunner(build).run({ build: { cwd: temp.dir }, debug: false });
+    assert.deepEqual(
+      client.calls.slice(0, 3).map((call) => [call.method, call.params]),
+      [
+        ['machines.setRom', { machine: 'bbg1', path: rom }],
+        ['machines.boot', { machine: 'bbg1', powerOn: true, resume: false }],
+        ['media.floppyInsert', { drive: 0, path: disk }]
+      ]
+    );
+    assert.ok(client.calls.some((call) => call.method === 'runtime.resume'));
+    assert.equal(client.calls.filter((call) => call.method === 'input.key').length, 0);
+    assert.match(result.description, /bbg\.bin（机型 bbg1，磁盘镜像 .*dos\.img）/);
+    assert.equal(result.firmwareDisk, false);
+    assert.equal(build.diskBuilds, 0);
+  });
+
+  it('整机 ROM 工程没有配置磁盘镜像时不放磁盘，调试运行停在开机状态', async () => {
+    const rom = writeTestFile(temp.dir, 'bbg.bin', 'x');
+    const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.resume': {} });
+    connector.next = client;
+    const build = new FakeBuildService('firmware', undefined, rom);
+    build.targetOptions = { machine: 'bbg1' };
+    const result = await createRunner(build).run({ build: { cwd: temp.dir }, debug: true });
+    assert.deepEqual(client.calls.map((call) => call.method).filter((method) => method !== 'close'), ['machines.setRom', 'machines.boot']);
+    assert.deepEqual([result.debug, result.port], [true, 5701]);
   });
 });

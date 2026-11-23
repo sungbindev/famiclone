@@ -1942,7 +1942,7 @@
         ],
         "toolReferenceName": "fcdev_run",
         "displayName": "构建并在 Ember 里运行",
-        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）与 sb97 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机，自由运行时再在 DOS 里输入程序名运行。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
+        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）与 sb97 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机，自由运行时再在 DOS 里输入程序名运行。整机 ROM 工程（rom 目标）把产物当作 targetOptions.machine 机型的固件开机运行，fcdev.json 的 diskImage 有值时挂到软驱，不输入程序名。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
         "userDescription": "构建并在 Ember 里运行，可调试运行。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {

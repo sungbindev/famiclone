@@ -1,0 +1,35 @@
+{
+  "name": "rom",
+  "title": "整机 ROM 工程（BIOS 与固件）",
+  "cpu": "6502",
+  "cc65Target": "none",
+  "linkConfig": "link.cfg",
+  "startup": [],
+  "libraries": [],
+  "include": [],
+  "asminclude": [],
+  "defines": {
+    "__ROM__": 1
+  },
+  "packager": "rom-overlay",
+  "extension": ".bin",
+  "nameRule": null,
+  "options": {
+    "machine": {
+      "type": "string",
+      "default": ""
+    },
+    "offset": {
+      "type": "number",
+      "default": 0
+    },
+    "size": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "run": {
+    "emulator": "ember",
+    "mode": "firmware"
+  }
+}

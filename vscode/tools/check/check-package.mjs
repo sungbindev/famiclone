@@ -24,7 +24,7 @@ const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');
 const PREFIX = 'extension/';
 
 /** 必须随扩展发布的目标 */
-const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97'];
+const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97', 'rom'];
 
 /** 必须随扩展发布的模板 */
 const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm'];

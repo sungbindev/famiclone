@@ -9,6 +9,7 @@
 | `nes` | Ember 直接加载 `.nes`，不需要固件；不给 `debug` 时启动后立即返回，窗口留给用户 |
 | `sb2000` | 需要 `fcdev.json` 的 `firmware`（没有时在构建之前报“需要固件”）：添加 BIOS、开机、把程序所在的磁盘镜像放进软驱 0；不给 `debug` 时再在 SB-DOS 里跳过日期、时间并输入程序名，随后断开连接；给 `debug` 时停在开机状态 |
 | `sb97` | 同 `sb2000`，`firmware` 是 SB97 的 ROM；不给 `debug` 时开机后按空格、等菜单稳定再按左键选中 DOS、回车进入，再输入程序名 |
+| `rom` | 把构建出的整块固件当作 `targetOptions.machine` 机型的 BIOS，`diskImage` 有值就挂到软驱 0，开机后直接运行，不输入程序名；给 `debug` 时停在开机状态；没有 `machine` 时在构建之前报错 |
 
 - 给 `debug` 的 `fcdev_run` 与 `emu_launch` 用同一个调试端口。要用 `emu_*` 工具核对时，不用 `fcdev_run` 的 `debug`，改用 `fcdev_build` 加 `emu_launch` 加 `emu_load`，只有一条路径，不会端口冲突。
 - 普通运行（NES）遵守 Ember 的单实例规则：用户平时用的 Ember 已在运行时，新进程只会把已有窗口提到前面，不会载入新程序；这时汇报给用户，由用户关闭它或改用 `emu_*` 核对。

@@ -23,6 +23,13 @@ describe('扩展自带的目标', () => {
     expect(repository.load('sb2000').run?.mode).toBe('firmware-disk');
   });
 
+  it('rom 目标：整机 ROM 工程用 rom-overlay 打包，运行方案是 firmware，机型、偏移与大小是目标专用选项', () => {
+    const rom = repository.load('rom');
+    expect(rom).toMatchObject({ packager: 'rom-overlay', extension: '.bin', nameRule: null, disk: null });
+    expect(rom.run).toEqual({ emulator: 'ember', mode: 'firmware', machine: null });
+    expect(Object.keys(rom.options).toSorted()).toEqual(['machine', 'offset', 'size']);
+  });
+
   it('sb2000 支持多页程序与 gb2312 源文件，nes 都不支持', () => {
     expect(repository.load('sb2000').banked).toMatchObject({ option: 'banks', maxBanks: 113 });
     expect(repository.load('sb2000').sourceCharset).toBe('gb2312');

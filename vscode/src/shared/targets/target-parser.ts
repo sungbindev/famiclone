@@ -13,7 +13,7 @@ import { isRecord } from '../json/json-text';
 import type { BankedSpec, RunMode, Target, TargetOptionSpec, TargetOptionValue } from './target';
 
 /** 运行方案允许的模式。 */
-const RUN_MODES: readonly string[] = ['rom', 'firmware-disk'];
+const RUN_MODES: readonly string[] = ['rom', 'firmware-disk', 'firmware'];
 
 /** 目标专用选项允许的类型。 */
 const OPTION_TYPES: readonly string[] = ['boolean', 'string', 'number'];

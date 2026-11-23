@@ -7,9 +7,9 @@
 // 日期：2026-11-10
 // 备注：Ember 进程与扩展脱离，扩展退出后窗口保持打开；调试模式不带 --cartridge，等连上调试服务后用
 //       cartridges.load 载入并只上电不运行，由调试命令与 emu 工具继续。整机（firmwareDisk
-//       参数）没有命令行入口，两种模式都经调试服务：添加固件、放入磁盘镜像、整机开机；
-//       自由模式再在 DOS 里输入程序名并继续运行后断开，调试模式停在开机状态（磁盘里的
-//       程序还没有被运行）。
+//       参数）没有命令行入口，两种模式都经调试服务：添加固件、放入磁盘镜像（可选）、整机开机；
+//       自由模式有程序名时再在 DOS 里输入程序名，然后继续运行并断开，调试模式停在开机
+//       状态（磁盘里的程序还没有被运行）。
 // ------------------------------------------------------------------------
 
 import type { DebugSession } from '../../contracts/debug-client/debug-session';
@@ -27,15 +27,15 @@ const READY_POLL_MS = 300;
 /** 调试服务连接名，显示在 Ember 的连接列表里。 */
 export const CLIENT_NAME = 'fcdev';
 
-/** 整机（固件加磁盘镜像）的启动内容。 */
+/** 整机（固件加可选磁盘镜像）的启动内容。 */
 export interface FirmwareDiskLaunch {
   /** 整机机型，如 sb2000、sb97。 */
   readonly machine: string;
   /** 固件（BIOS）文件。 */
   readonly firmware: string;
-  /** 磁盘镜像。 */
-  readonly diskImage: string;
-  /** 自由模式里要在 DOS 运行的程序名。 */
+  /** 磁盘镜像；不给时软驱是空的。 */
+  readonly diskImage?: string | undefined;
+  /** 自由模式里要在 DOS 运行的程序名；不给时开机后直接继续运行。 */
   readonly programName?: string | undefined;
 }
 
@@ -109,8 +109,8 @@ export async function launchEmulator(env: LauncherEnvironment, input: LaunchInpu
           await client.request('cartridges.load', { path: romFile, powerOn: true, resume: false });
         } else if (firmwareDisk !== undefined) {
           await bootMachine(files, client, firmwareDisk);
-          if (!debug && firmwareDisk.programName !== undefined) {
-            await enterProgram(client, firmwareDisk.programName, firmwareDisk.machine);
+          if (!debug) {
+            if (firmwareDisk.programName !== undefined) await enterProgram(client, firmwareDisk.programName, firmwareDisk.machine);
             await client.request('runtime.resume', {});
           }
         }
@@ -118,7 +118,7 @@ export async function launchEmulator(env: LauncherEnvironment, input: LaunchInpu
         client.close();
         child.kill();
         if (error instanceof FcdevError) throw error;
-        throw new FcdevError(`Ember 无法载入 ${romFile ?? firmwareDisk?.diskImage ?? ''}：${error instanceof Error ? error.message : String(error)}`, {
+        throw new FcdevError(`Ember 无法载入 ${romFile ?? firmwareDisk?.diskImage ?? firmwareDisk?.firmware ?? ''}：${error instanceof Error ? error.message : String(error)}`, {
           code: 'EMULATOR_LOAD_FAILED',
           cause: error
         });

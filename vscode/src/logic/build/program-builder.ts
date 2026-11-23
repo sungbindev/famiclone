@@ -246,6 +246,21 @@ function resolveLinkSetup(plan: BuildPlan, dependencies: BuilderDependencies): {
 }
 
 /**
+ * 读取底固件，供打包器把链接输出覆盖进去。
+ * @param fileSystem 文件系统。
+ * @param firmware fcdev.json 的 firmware（绝对路径）；没有配置时为 undefined。
+ * @returns 底固件的内容；没有配置时为 undefined。
+ * @throws FcdevError 配置了但文件不存在。
+ */
+function readBaseFirmware(fileSystem: FileSystem, firmware: string | undefined): Uint8Array | undefined {
+  if (firmware === undefined) return undefined;
+  if (fileSystem.kindOf(firmware) !== 'file') {
+    throw new FcdevError(`找不到底固件 ${firmware}`, { code: 'FIRMWARE_MISSING', hint: 'firmware 的相对路径以 fcdev.json 所在目录为基准' });
+  }
+  return fileSystem.readBytes(firmware);
+}
+
+/**
  * 读取工具链版本，用于增量构建的指纹。
  * @param dependencies 构建能力。
  * @returns cc65 的版本输出，如 “cc65 V2.19 - Git 357f64e”。
@@ -327,7 +342,10 @@ export async function buildProgram(plan: BuildPlan, dependencies: BuilderDepende
     `链接失败：${plan.programName}`
   );
 
-  const packaged = packageProgram(target.packager, fileSystem.readBytes(binaryFile), linkSetup.packagerOptions);
+  const packaged = packageProgram(target.packager, fileSystem.readBytes(binaryFile), linkSetup.packagerOptions, {
+    targetOptions: plan.targetOptions,
+    readBase: () => readBaseFirmware(fileSystem, config.firmware)
+  });
   fileSystem.writeBytes(plan.outputFile, packaged);
   fileSystem.writeText(stampFile, JSON.stringify({ fingerprint }));
   return { programName: plan.programName, outputFile: plan.outputFile, size: packaged.length, compiled, reused };

@@ -8,6 +8,8 @@
 //       DISK_PACKAGERS 登记。
 //       flat-exe 的选项 header 为十六进制字符串（?? 表示任意字节），headerOffset 为它在映像里的
 //       偏移（默认 0），maxSize 为映像大小上限，size 为映像必须正好等于的大小。
+//       rom-overlay 的偏移与大小取自目标专用选项 offset、size（0 表示不限）：有底固件时，把链接
+//       输出覆盖到底固件的 offset 处；没有底固件时，链接输出就是整块固件。
 // ------------------------------------------------------------------------
 
 import { FcdevError } from '../errors/fcdev-error';
@@ -15,6 +17,17 @@ import { buildFat12Image, type DiskFile } from './fat12-image';
 
 /** 打包器选项。 */
 export type PackagerOptions = Readonly<Record<string, unknown>>;
+
+/** 打包时由构建提供的上下文：目标专用选项，以及按需读取底固件的函数。 */
+export interface PackagerContext {
+  /** 合并后的目标专用选项。 */
+  readonly targetOptions: Readonly<Record<string, unknown>>;
+  /** 读取底固件（fcdev.json 的 firmware）；没有配置时返回 undefined，文件读不到时抛错。 */
+  readonly readBase: () => Uint8Array | undefined;
+}
+
+/** 不提供底固件的上下文。 */
+const EMPTY_CONTEXT: PackagerContext = { targetOptions: {}, readBase: () => undefined };
 
 /** iNES 文件头的前 4 个字节：“NES”加 $1A。 */
 const INES_MAGIC = Buffer.from([0x4e, 0x45, 0x53, 0x1a]);
@@ -93,10 +106,61 @@ function packInes(image: Uint8Array): Uint8Array {
   return image;
 }
 
+/**
+ * 读取目标专用选项里的非负整数，缺省为 0。
+ * @param targetOptions 目标专用选项。
+ * @param key 选项名。
+ * @returns 选项值。
+ * @throws FcdevError 选项不是非负整数。
+ */
+function readNonNegativeInteger(targetOptions: Readonly<Record<string, unknown>>, key: string): number {
+  const value = targetOptions[key] ?? 0;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new FcdevError(`目标选项 ${key} 必须是不小于 0 的整数`, { code: 'PACKAGER_OPTION_INVALID' });
+  }
+  return value;
+}
+
+/**
+ * 把链接输出做成整块固件：有底固件时覆盖到 offset 处，没有时链接输出就是整块固件。
+ * @param image 链接输出。
+ * @param _options 打包选项（未使用）。
+ * @param context 目标专用选项与底固件。
+ * @returns 要写出的内容。
+ * @throws FcdevError 选项不合法、缺少底固件、大小不符，或链接输出放不进底固件。
+ */
+function packRomOverlay(image: Uint8Array, _options: PackagerOptions, context: PackagerContext): Uint8Array {
+  const offset = readNonNegativeInteger(context.targetOptions, 'offset');
+  const size = readNonNegativeInteger(context.targetOptions, 'size');
+  const base = context.readBase();
+  if (base === undefined) {
+    if (offset !== 0) {
+      throw new FcdevError(`offset 为 ${offset}，链接输出只是整块固件的一部分，需要底固件`, {
+        code: 'PACKAGE_BASE_MISSING',
+        hint: '在 fcdev.json 里用 firmware 指向完整的固件文件，其余部分取自它'
+      });
+    }
+    if (size !== 0 && image.length !== size) {
+      throw new FcdevError(`固件大小 ${image.length} 字节，必须正好是 ${size} 字节`, { code: 'PACKAGE_SIZE_MISMATCH' });
+    }
+    return image;
+  }
+  if (size !== 0 && base.length !== size) {
+    throw new FcdevError(`底固件 ${base.length} 字节，与 size 选项的 ${size} 字节不符`, { code: 'PACKAGE_SIZE_MISMATCH', hint: '检查 fcdev.json 的 firmware 指向的文件' });
+  }
+  if (offset + image.length > base.length) {
+    throw new FcdevError(`链接输出 ${image.length} 字节，放在偏移 ${offset} 处超出底固件的 ${base.length} 字节`, { code: 'PACKAGE_TOO_LARGE' });
+  }
+  const result = Uint8Array.from(base);
+  result.set(image, offset);
+  return result;
+}
+
 /** 已登记的程序打包器。 */
-const PROGRAM_PACKAGERS: Readonly<Record<string, (image: Uint8Array, options: PackagerOptions) => Uint8Array>> = {
+const PROGRAM_PACKAGERS: Readonly<Record<string, (image: Uint8Array, options: PackagerOptions, context: PackagerContext) => Uint8Array>> = {
   'flat-exe': packFlatBinary,
-  ines: packInes
+  ines: packInes,
+  'rom-overlay': packRomOverlay
 };
 
 /** 已登记的磁盘打包器：输入一组文件，输出一个镜像。 */
@@ -109,15 +173,16 @@ const DISK_PACKAGERS: Readonly<Record<string, (files: readonly DiskFile[], optio
  * @param name 打包器名。
  * @param image 链接输出。
  * @param options 打包选项。
+ * @param context 目标专用选项与底固件；不给时没有选项也没有底固件。
  * @returns 最终产物的内容。
  * @throws FcdevError 打包器没有登记，或链接输出不符合要求。
  */
-export function packageProgram(name: string, image: Uint8Array, options: PackagerOptions): Uint8Array {
+export function packageProgram(name: string, image: Uint8Array, options: PackagerOptions, context: PackagerContext = EMPTY_CONTEXT): Uint8Array {
   const packager = PROGRAM_PACKAGERS[name];
   if (packager === undefined) {
     throw new FcdevError(`未知的打包器：${name}`, { code: 'PACKAGER_UNKNOWN', hint: `可用的打包器：${Object.keys(PROGRAM_PACKAGERS).join('、')}` });
   }
-  return packager(image, options);
+  return packager(image, options, context);
 }
 
 /**

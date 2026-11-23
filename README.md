@@ -58,7 +58,7 @@ npm run check                # 全部检查与测试（含 vscode:check）
 ### machines
 
 ```bash
-# machines/sb2000/bios（在 VS Code 中运行 fcdev 构建，产物 build/rom/sb2000.bin）
+# machines/sb2000（在 VS Code 中运行 fcdev 构建，产物 build/rom/sb2000.bin）
 
 # machines/bbg
 # 汇编链接见 machines/bbg/README.md

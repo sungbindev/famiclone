@@ -4,7 +4,7 @@
 
 | 目录 | 内容 |
 | --- | --- |
-| `study_roms/` | `SB2K_BIOS.NES`：SB2000 的 BIOS（512KB，含 16 字节 iNES 文件头），整个反汇编工程的对象，`machines/sb2000/bios/` 用 fcdev 构建的结果与它逐字节一致；`bbg1_bios.nes`（128KB）、`bbg98_bios.nes`（2MB）：小霸王其他版本的 BIOS，没有做分析 |
+| `study_roms/` | `SB2K_BIOS.NES`：SB2000 的 BIOS（512KB，含 16 字节 iNES 文件头），整个反汇编工程的对象，`machines/sb2000/` 用 fcdev 构建的结果与它逐字节一致；`bbg1_bios.nes`（128KB）、`bbg98_bios.nes`（2MB）：小霸王其他版本的 BIOS，没有做分析 |
 | `floppy-images/sb2000/` | 小霸王官方全部 22 张软盘（`FLPPY0`-`FLPPY21`），都是 1.44MB 的原始 `.img`，模拟器可直接挂载。`FLPPY1` 是 WPS 文字处理系统，`FLPPY18`-`FLPPY21` 是游戏集锦 |
 | `floppy-images/bbg/` | 步步高（BBG）的软盘镜像，由 `machines/bbg` 使用 |
 | `floppy-dos.img` | DOS 开机镜像：1.44MB 的 FAT12，不含 `AUTOEXEC.BAT`，开机停在 DOS 提示符，里面有 `HELLO.TXT`。 |

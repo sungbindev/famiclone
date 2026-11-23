@@ -72,11 +72,12 @@
 </tr>
 <tr>
 <td><code>link.cfg</code></td>
-<td>每个映像段一个内存区，输出到 <code>verify/seg&lt;段号&gt;.bin</code></td>
+<td>每个映像段一个内存区；段按映像文件偏移排序后首尾相接时，所有区都输出到同一个文件（<code>file = %O</code>，产物就是映像本身），否则每段输出到 <code>verify/seg&lt;段号&gt;.bin</code></td>
 </tr>
 </tbody>
 </table></div>
 <p>生成的源码用 <code>ca65 -I include</code> 汇编，再用 <code>ld65 -C link.cfg</code> 链接。回读校验就是这样做，并把每个段的输出与映像里对应的字节逐字节比较；不一致时命令报错，指出第一处差异的段与地址，工程目录仍然保留。</p>
+<p>段首尾相接的工程（如学习机的 BIOS 映像），<code>link.cfg</code> 也可以直接交给 fcdev 的 <code>rom</code> 目标：新建 <code>fcdev.json</code>，写 <code>&quot;target&quot;: &quot;rom&quot;</code>、<code>&quot;linkConfig&quot;: &quot;link.cfg&quot;</code>、<code>&quot;include&quot;: [&quot;include&quot;]</code>，<code>targetOptions</code> 里写机型与整块大小，构建出的产物与原映像逐字节一致，见 <a href="rom.html">整机 ROM 工程开发指南</a>。</p>
 <p>源码里没有裸地址：被调用的地址叫 <code>sub_&lt;地址&gt;</code>，被跳转与分支的叫 <code>loc_&lt;地址&gt;</code>，映像内被读写的数据叫 <code>data_&lt;地址&gt;</code>，映像外被读写的叫 <code>var_&lt;地址&gt;</code>（符号集里有同值的常量时直接用它的名字）；中断向量的入口叫 <code>reset</code>、<code>nmi</code>、<code>irq</code>。目标落在指令中间时，符号放在那条指令的开头，引用处写成“符号加偏移”。<code>ca65</code> 不接受的写法（如 <code>jmp ($xxFF)</code>）与非官方操作码写成 <code>.byte</code>，并在行尾注释里写出反汇编文字。</p>
 <p>映像文件本身不复制到工程目录，工程文件里记着它的路径与摘要；工程用文本 JSON，可以用 git 比较。命令每次重新生成全部文件，会覆盖输出目录里的同名文件。</p>
 <h2 id="3-输入">3. 输入</h2>

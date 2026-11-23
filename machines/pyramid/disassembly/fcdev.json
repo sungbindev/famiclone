@@ -1,0 +1,10 @@
+{
+  "target": "rom",
+  "name": "pec9588",
+  "linkConfig": "link.cfg",
+  "include": ["include"],
+  "targetOptions": {
+    "machine": "pec9588",
+    "size": 524288
+  }
+}

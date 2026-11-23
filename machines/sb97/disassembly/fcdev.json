@@ -1,0 +1,10 @@
+{
+  "target": "rom",
+  "name": "sb97",
+  "linkConfig": "link.cfg",
+  "include": ["include"],
+  "targetOptions": {
+    "machine": "sb97",
+    "size": 1048576
+  }
+}

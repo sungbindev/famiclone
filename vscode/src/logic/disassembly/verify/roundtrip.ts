@@ -4,9 +4,10 @@
 //       像里对应的字节逐字节比较。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
-// 日期：2026-11-21
+// 日期：2026-11-23
 // 备注：生成的文件按原样写入（UTF-8，没有 BOM，换行为 LF）；目标文件与链接输出放在 verify 子目录，
 //       每次先清空；不一致时报告第一处差异所在的段、地址、文件偏移与两边的字节，以及它附近的符号。
+//       段在映像里首尾相接时全部段在同一个输出文件里，按段的起始位置取出。
 // ------------------------------------------------------------------------
 import * as path from 'node:path';
 import type { FileSystem } from '../../../contracts/files/file-system';
@@ -15,6 +16,7 @@ import { FcdevError } from '../../../shared/errors/fcdev-error';
 import { expectSegment, projectDigest } from '../../../shared/disassembly/model/index';
 import type { Project } from '../../../shared/disassembly/model/project';
 import type { GeneratedProject } from '../../../shared/disassembly/generate/index';
+import { JOINED_OUTPUT_NAME } from '../../../shared/disassembly/generate/link-config';
 
 export interface RoundtripResult {
   /** 每个段的输出都与映像一致 */
@@ -68,16 +70,17 @@ export async function verifyRoundtrip({ files, tools, project, bytes, generated,
     await runOrThrow(tools, toolchain, 'ca65', ['-I', 'include', path.join('src', `${module}.s`), '-o', object], projectDir, `汇编 src/${module}.s 失败`);
     objects.push(`${module}.o`);
   }
-  await runOrThrow(tools, toolchain, 'ld65', ['-C', path.join('..', 'link.cfg'), '-o', 'unused.bin', ...objects], verifyDir, '链接失败');
+  await runOrThrow(tools, toolchain, 'ld65', ['-C', path.join('..', 'link.cfg'), '-o', JOINED_OUTPUT_NAME, ...objects], verifyDir, '链接失败');
 
   for (const segment of generated.segments) {
     const expected = bytes.subarray(segment.fileOffset, segment.fileOffset + segment.length);
-    let actual: Uint8Array;
+    let output: Uint8Array;
     try {
-      actual = files.readBytes(path.join(verifyDir, segment.output));
+      output = files.readBytes(path.join(verifyDir, segment.output));
     } catch {
       throw new FcdevError(`链接没有生成 ${segment.output}`, { code: 'DISASM_ROUNDTRIP_FAILED' });
     }
+    const actual = output.subarray(segment.outputOffset, segment.outputOffset + segment.length);
     const length = Math.max(expected.length, actual.length);
     for (let index = 0; index < length; index += 1) {
       if (expected[index] === actual[index]) continue;

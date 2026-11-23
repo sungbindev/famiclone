@@ -154,7 +154,7 @@ describe('生成的源码（不需要工具链）', () => {
     assert.deepEqual(generated.pieces.map((piece) => [piece.name, piece.module, piece.start, piece.end]), [['SEG0_0000', 'main', 0, 2], ['SEG0_0002', 'video', 2, 4], ['SEG0_0004', 'main', 4, 7]]);
     assert.match(generated.files.get('src/video.s')!, /^; 模块：video\n; 显示/);
     const config = generated.files.get('link.cfg')!;
-    assert.ok(config.includes('SEG0: file = "seg0.bin", start = $C000, size = $7, fill = yes;'));
+    assert.ok(config.includes('SEG0: file = %O, start = $C000, size = $7, fill = yes;'));
     assert.ok(config.indexOf('SEG0_0000') < config.indexOf('SEG0_0002') && config.indexOf('SEG0_0002') < config.indexOf('SEG0_0004'));
   });
 
@@ -241,7 +241,7 @@ describe.skipIf(!HAS_TOOLCHAIN)('回读（需要 cc65）', () => {
     }
   });
 
-  it('换页布局：固定区与两个 bank 各有输出文件，bank 里的转移留在 bank 内，跨 bank 的写成数值', async () => {
+  it('换页布局：固定区与两个 bank 首尾相接，输出到同一个文件，bank 里的转移留在 bank 内，跨 bank 的写成数值', async () => {
     const bytes = Buffer.alloc(48, 0xff);
     bytes.set([0x20, 0x00, 0x80, 0x60], 0x00);
     bytes.set([0x20, 0x04, 0x80, 0x60, 0xa9, 0x01, 0x60], 0x10);
@@ -259,12 +259,52 @@ describe.skipIf(!HAS_TOOLCHAIN)('回读（需要 cc65）', () => {
     const { result, generated, project: named } = await roundtrip(modular, bytes);
     assert.deepEqual(result, { ok: true, firstDifference: null });
     const config = generated.files.get('link.cfg')!;
-    assert.ok(config.includes('SEG1: file = "seg1.bin", start = $8000, size = $10, fill = yes;'));
-    assert.ok(config.includes('SEG2: file = "seg2.bin", start = $8000, size = $10, fill = yes;'));
+    assert.ok(config.includes('SEG1: file = %O, start = $8000, size = $10, fill = yes;'));
+    assert.ok(config.includes('SEG2: file = %O, start = $8000, size = $10, fill = yes;'));
+    assert.ok(!config.includes('.bin'));
     assert.ok(generated.files.get('src/main.s')!.includes('  jsr $8000\n'));
     assert.ok(generated.files.get('src/main.s')!.includes('  jsr sub_b0_8004\n'));
     assert.ok(generated.files.get('src/bank1.s')!.includes('  jmp loc_b1_8006\n'));
     assert.deepEqual(named.unresolved.map((item) => item.kind), ['cross-bank']);
+  });
+
+  it('段号与文件顺序不同也首尾相接：存储区按文件偏移排列，回读与映像一致', async () => {
+    const bytes = Buffer.alloc(32, 0xff);
+    bytes.set([0x60], 0x00);
+    bytes.set([0x60], 0x10);
+    const layout = createLayout([
+      { id: 0, fileOffset: 0x10, length: 0x10, address: 0x8000, bank: 0 },
+      { id: 1, fileOffset: 0x00, length: 0x10, address: 0xc000 },
+    ], { imageSize: 32 });
+    const project = createProject({
+      imagePath: 'ordered.bin', bytes, format: 'flat', layout,
+      entries: [{ segmentId: 0, address: 0x8000 }, { segmentId: 1, address: 0xc000 }].map((entry) => ({ ...entry, source: 'manual', description: '' })),
+    });
+    const { result, generated } = await roundtrip(project, bytes);
+    assert.deepEqual(result, { ok: true, firstDifference: null });
+    const config = generated.files.get('link.cfg')!;
+    assert.ok(config.indexOf('SEG1: file = %O') < config.indexOf('SEG0: file = %O'));
+    assert.deepEqual(generated.segments.map((segment) => [segment.id, segment.output, segment.outputOffset]), [[0, 'rom.bin', 0x10], [1, 'rom.bin', 0x00]]);
+  });
+
+  it('段之间有空隙时每段一个输出文件，回读仍与映像一致', async () => {
+    const bytes = Buffer.alloc(48, 0xff);
+    bytes.set([0x60], 0x00);
+    bytes.set([0x60], 0x20);
+    const layout = createLayout([
+      { id: 0, fileOffset: 0x00, length: 0x10, address: 0xc000 },
+      { id: 1, fileOffset: 0x20, length: 0x10, address: 0x8000, bank: 0 },
+    ], { imageSize: 48 });
+    const project = createProject({
+      imagePath: 'gap.bin', bytes, format: 'flat', layout,
+      entries: [{ segmentId: 0, address: 0xc000 }, { segmentId: 1, address: 0x8000 }].map((entry) => ({ ...entry, source: 'manual', description: '' })),
+    });
+    const { result, generated } = await roundtrip(project, bytes);
+    assert.deepEqual(result, { ok: true, firstDifference: null });
+    const config = generated.files.get('link.cfg')!;
+    assert.ok(config.includes('SEG0: file = "seg0.bin", start = $C000, size = $10, fill = yes;'));
+    assert.ok(config.includes('SEG1: file = "seg1.bin", start = $8000, size = $10, fill = yes;'));
+    assert.deepEqual(generated.segments.map((segment) => [segment.id, segment.output, segment.outputOffset]), [[0, 'seg0.bin', 0], [1, 'seg1.bin', 0]]);
   });
 
   it('生成的文件里改动一个字节，回读指出第一处差异的段、地址与符号', async () => {

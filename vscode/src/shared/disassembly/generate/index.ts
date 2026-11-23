@@ -4,15 +4,15 @@
 //       有链接配置；返回文件内容，不写盘。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
-// 日期：2026-11-21
-// 备注：生成的工程用 ca65 -I include 汇编每个 src/*.s，再用 ld65 -C link.cfg 链接，得到每个段一个
-//       seg<段号>.bin，与映像逐字节一致。没有归入模块的字节属于 main 模块。符号集的内容由调用者读好
-//       传入（名称到文本），这里不读文件。
+// 日期：2026-11-23
+// 备注：生成的工程用 ca65 -I include 汇编每个 src/*.s，再用 ld65 -C link.cfg 链接，得到与映像逐
+//       字节一致的输出（段在映像里首尾相接时是一个文件，否则每段一个 seg<段号>.bin）。没有归入
+//       模块的字节属于 main 模块。符号集的内容由调用者读好传入（名称到文本），这里不读文件。
 // ------------------------------------------------------------------------
 import { FcdevError } from '../../errors/fcdev-error';
 import { expectSegment } from '../model/index';
 import { indexByValue, parseSymbolSet } from '../profile/index';
-import { renderLinkConfig, segmentOutputName } from './link-config';
+import { renderLinkConfig, segmentOutput } from './link-config';
 import { DEFAULT_MODULE, buildPieces } from './pieces';
 import { createSourceContext, emitPiece } from './source';
 import type { Piece } from './pieces';
@@ -29,8 +29,8 @@ export interface GeneratedProject {
   warnings: Array<{code: string, segmentId: number, address: number, message: string}>;
   /** 片 */
   pieces: Piece[];
-  /** 每个段的输出文件与它对应的映像字节 */
-  segments: Array<{id: number, output: string, fileOffset: number, length: number}>;
+  /** 每个段的输出文件、在输出文件里的起始位置与它对应的映像字节 */
+  segments: Array<{id: number, output: string, outputOffset: number, fileOffset: number, length: number}>;
   /** 生成了源文件的模块名 */
   modules: string[];
 }
@@ -110,7 +110,10 @@ export function generateProject(project: Project, bytes: Uint8Array, { symbolSet
     files,
     warnings: context.warnings,
     pieces,
-    segments: project.layout.segments.map((segment) => ({ id: segment.id, output: segmentOutputName(segment.id), fileOffset: segment.fileOffset, length: segment.length })),
+    segments: project.layout.segments.map((segment) => {
+      const { file, offset } = segmentOutput(project.layout, segment);
+      return { id: segment.id, output: file, outputOffset: offset, fileOffset: segment.fileOffset, length: segment.length };
+    }),
     modules: moduleNames,
   };
 }

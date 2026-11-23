@@ -60,6 +60,8 @@ MENU_HELP_ROW   = 24            ; 操作提示的行号
 PAD_START       = $10           ; 手柄读数的位：A 在位 7，依次到右键在位 0
 PAD_UP          = $08
 PAD_DOWN        = $04
+MENU_BG         = $12           ; 菜单背景色，$12 为蓝色
+BIOS_BG_SHADOW  = $06B7         ; BIOS 调色板影子的背景项，NMI 每帧复制到 $3F00；与 FATBUF 重叠，菜单时 FATBUF 未用
 
 ; 内部 RAM 里运行的代码的位置
 RAM_BASE        = $0300
@@ -161,8 +163,9 @@ msg_mapper:     .byte STR_LOCATE, 2, 10, "Mapper not supported", STR_END
 msg_size:       .byte STR_LOCATE, 2, 10, "Size not supported", STR_END
 msg_trunc:      .byte STR_LOCATE, 2, 10, "File is truncated", STR_END
 msg_trainer:    .byte STR_LOCATE, 2, 10, "Trainer not supported", STR_END
-msg_title:      .byte STR_LOCATE, 2, 1, "NES GAMES", STR_END
-msg_help:       .byte STR_LOCATE, 2, MENU_HELP_ROW, "UP/DOWN  START=RUN", STR_END
+; 菜单标题与操作提示用 GB2312 汉字码：游戏菜单、上下键选择 开始键运行
+msg_title:      .byte STR_LOCATE, 2, 1, $D3,$CE,$CF,$B7,$B2,$CB,$B5,$A5, STR_END
+msg_help:       .byte STR_LOCATE, 2, MENU_HELP_ROW, $C9,$CF,$CF,$C2,$D1,$A1,$D4,$F1,' ',$BF,$AA,$CA,$BC,$D4,$CB,$D0,$D0, STR_END
 
 ; 目录项里首簇（26-27）与大小（28-31）的位置，按这个顺序复制进游戏表
 copy_src:       .byte 26, 27, 28, 29, 30, 31
@@ -935,6 +938,13 @@ menu_draw:
         lda #<msg_help
         ldy #>msg_help
         jsr BIOS_PRINT
+        jsr set_backdrop
+        rts
+
+; 把背景色写进 BIOS 的调色板影子，下一次 NMI 就会送到 $3F00（直接写 $3F00 会被 NMI 覆盖）
+set_backdrop:
+        lda #MENU_BG
+        sta BIOS_BG_SHADOW
         rts
 
 ; 把第 A 项写进 ROWBUF：定位、光标（选中的为 >）、主名、结束符；行号由 mv_k 决定

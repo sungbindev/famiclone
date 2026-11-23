@@ -1,0 +1,5 @@
+{
+  "target": "yuxing",
+  "name": "run",
+  "firmware": "../../../ember/roms/yuxing_v8.2-d.bin"
+}

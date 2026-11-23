@@ -63,19 +63,19 @@ TEST(Shortcut, WritesModifiersInCtrlShiftAltOrder) {
 }
 
 TEST(Shortcut, AcceptsTheDefaultShortcutsOfEmber) {
-  for (const char* shortcut : {"Ctrl+O", "F9", "F8", "F7", "Ctrl+F7", "F11", "Ctrl+,", "Alt+Z", "Shift+F7"}) EXPECT_FALSE(shared::checkDefaultShortcut(shortcut, kMnemonics).has_value()) << shortcut;
+  for (const char* shortcut : {"Ctrl+O", "F9", "F8", "F7", "Ctrl+F7", "F11", "Ctrl+,", "Alt+Z", "Shift+F7"}) EXPECT_FALSE(shared::checkShortcut(shortcut, kMnemonics).has_value()) << shortcut;
 }
 
 TEST(Shortcut, RejectsBadWritingReservedMnemonicAndMissingModifier) {
-  EXPECT_TRUE(shared::checkDefaultShortcut("ctrl+o", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("Shift+Ctrl+O", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("Ctrl+", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("F25", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("Ctrl+C", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("Alt+F4", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("Alt+F", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("K", kMnemonics).has_value());
-  EXPECT_TRUE(shared::checkDefaultShortcut("Shift+K", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("ctrl+o", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("Shift+Ctrl+O", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("Ctrl+", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("F25", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("Ctrl+C", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("Alt+F4", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("Alt+F", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("K", kMnemonics).has_value());
+  EXPECT_TRUE(shared::checkShortcut("Shift+K", kMnemonics).has_value());
 }
 
 TEST(ShellRegistry, CollectsEverythingAndKeepsTheShellsMenuItemsLast) {

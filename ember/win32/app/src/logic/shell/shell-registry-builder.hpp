@@ -37,7 +37,7 @@ struct ShellRegistry {
   std::vector<contracts::ShellStatusItemDefinition> statusItems;
   std::vector<contracts::ShellTitleBarItemDefinition> titleBarItems;
   std::vector<contracts::ShellFileHandlerDefinition> fileHandlers;
-  /** 默认快捷键到命令标识。 */
+  /** 默认快捷键到命令标识（用来检查默认快捷键之间不重复；实际使用的快捷键由 KeybindingsController 算出）。 */
   std::map<std::string, std::string> shortcuts;
   /** 常驻部分，按登记顺序。 */
   std::vector<std::pair<std::string, std::function<std::function<void()>(contracts::ShellApi&)>>> attachments;

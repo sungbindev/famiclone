@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-controller.hpp
- * 说明：外壳控制器：同时是外壳接口（给模块用）与外壳的界面模型（给界面层用）：处理命令与快捷键、菜单的内容与选择、底部面板的展开与自动收缩、状态项与标题栏项的内容、拖入的文件。
+ * 说明：外壳控制器：同时是外壳接口（给模块用）与外壳的界面模型（给界面层用）：处理命令与快捷键（实际使用的快捷键由快捷键控制器算出，用户可以修改）、菜单的内容与选择、底部面板的展开与自动收缩、状态项与标题栏项的内容、拖入的文件。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -21,6 +21,7 @@
 #include "contracts/shell/dropped-files.hpp"
 #include "contracts/shell/shell-model.hpp"
 #include "contracts/shell/shell-state-service.hpp"
+#include "logic/shell/keybindings-controller.hpp"
 #include "logic/shell/shell-registry-builder.hpp"
 
 namespace ember::win32::logic {
@@ -52,6 +53,8 @@ class ShellController final : public contracts::ShellApi, public contracts::Shel
 
   /** 登记表。 */
   [[nodiscard]] const ShellRegistry& registry() const { return registry_; }
+  /** 快捷键设置的模型（首选项的“快捷键”页用）；菜单显示与按键触发用的实际快捷键也由它算出。 */
+  [[nodiscard]] contracts::KeybindingsModel& keybindings() { return keybindings_; }
 
   // ---- ShellApi ----
   void openDialog(const std::string& dialogId) override;
@@ -94,6 +97,7 @@ class ShellController final : public contracts::ShellApi, public contracts::Shel
   contracts::ShellNotifier& notifier_;
   contracts::ShellStateService& state_;
   contracts::DroppedFilesService& dropped_;
+  KeybindingsController keybindings_;
   contracts::ShellViewState view_;
   /** 用户手动关掉“自动收缩”的面板标识。 */
   std::set<std::string> autoCollapseOff_;

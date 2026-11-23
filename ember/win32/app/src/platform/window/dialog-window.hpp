@@ -15,6 +15,7 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -54,6 +55,11 @@ struct DialogWindowOptions {
    * 返回 true 表示按键被吞掉，不再交给控件，这个键的后续字符与抬起消息也一并吞掉；没有设置时不拦截。
    */
   std::function<bool(const std::string& code)> onPhysicalKey;
+  /**
+   * 快捷键拦截（设置快捷键用）：每次不重复的按下（含带 Alt 的系统键）先交给它，参数是 Windows 虚拟键码与当时的修饰键（Shift=1、Ctrl=2、Alt=4 的位和）；
+   * 返回 true 表示按键被吞掉，不再交给控件，这个键的后续字符与抬起消息也一并吞掉（Alt 键的抬起也吞掉，系统才不会把它当成单按 Alt 去激活系统菜单）；没有设置时不拦截。
+   */
+  std::function<bool(int virtualKey, unsigned modifiers)> onShortcutKey;
 };
 
 /** 对话框窗口。 */
@@ -96,8 +102,8 @@ class DialogWindow {
   rujian::ui::DialogFrame* frame_{nullptr};
   std::unique_ptr<FramelessFrame> frameless_;
   bool ownerLocked_{false};
-  /** 刚吞掉的那个键的标识（扫描码加扩展位），没有时为 -1：它的字符与抬起消息也要吞掉。 */
-  int swallowedKey_{-1};
+  /** 刚吞掉的那些键的标识（扫描码加扩展位），它们的字符与抬起消息也要吞掉；抬起后移出。 */
+  std::set<int> swallowedKeys_;
 };
 
 }  // namespace ember::win32::platform

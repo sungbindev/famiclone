@@ -38,7 +38,7 @@ std::string extensionOf(const std::string& name) {
 
 ShellController::ShellController(ShellRegistry registry, contracts::ShellWindowControl& window, contracts::ShellDialogOpener& dialogs, contracts::ShellNotifier& notifier,
                                  contracts::ShellStateService& state, contracts::DroppedFilesService& dropped)
-    : registry_(std::move(registry)), window_(window), dialogs_(dialogs), notifier_(notifier), state_(state), dropped_(dropped) {
+    : registry_(std::move(registry)), window_(window), dialogs_(dialogs), notifier_(notifier), state_(state), dropped_(dropped), keybindings_(registry_.commands, registry_.menuItems, state_, [this] { changed(); }) {
   const auto& off = state_.get().layout.autoCollapseOffPanels;
   autoCollapseOff_.insert(off.begin(), off.end());
 }
@@ -159,7 +159,7 @@ std::vector<contracts::ShellMenuModel> ShellController::menus() {
         const auto& command = found->second;
         entry.id = command.id;
         entry.label = command.title ? command.title() : command.id;
-        entry.shortcut = command.defaultShortcut;
+        entry.shortcut = keybindings_.shortcutOf(command.id);
         if (command.checked) entry.checked = command.checked(view_);
         entry.disabled = command.enabled && !command.enabled(view_);
       }
@@ -200,9 +200,9 @@ std::optional<std::string> ShellController::shortcutFromKey(int virtualKey, unsi
 bool ShellController::runShortcut(const std::string& shortcut, bool textEditing) {
   // 焦点在输入控件里时，不带 Ctrl 或 Alt 的快捷键（如 F7）留给控件自己
   if (textEditing && !shared::shortcutHasCtrlOrAlt(shortcut)) return false;
-  const auto found = registry_.shortcuts.find(shortcut);
-  if (found == registry_.shortcuts.end()) return false;
-  runCommand(found->second);
+  const auto command = keybindings_.commandFor(shortcut);
+  if (!command) return false;
+  runCommand(*command);
   return true;
 }
 

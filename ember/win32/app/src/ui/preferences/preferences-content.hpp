@@ -1,13 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：preferences-content.hpp
- * 说明：“首选项”对话框的内容：左边是分组导航（只用来切换），右边是该分组的设置项（每项一行），改动立即保存，取值与出厂默认不同时可恢复默认。
+ * 说明：“首选项”对话框的内容：左边是分组导航（只用来切换），右边是该分组的设置项（每项一行），改动立即保存，取值与出厂默认不同时可恢复默认；导航最后还有页面自己提供的“快捷键”分组（不是核心登记的设置项）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
  * 备注：文字与可用状态取自模型，设置项由核心登记，界面不认识具体的设置项；
  *       页面不显示操作结果：保存失败用通知（由控制器发出），控件恢复成模型里的值；输入框在回车或失焦时提交，整数不合格时只把输入框标红并在行内给出说明；
- *       模型变化时：分组或行的结构变了才重建右边的内容，只有取值变了就原地更新（输入中的内容不被无关的变化冲掉）；规则见 docs/05-界面.md 第 4.5 节。
+ *       模型变化时：分组或行的结构变了才重建右边的内容，只有取值变了就原地更新（输入中的内容不被无关的变化冲掉，点击中的按钮也不会被销毁）；规则见 docs/05-界面.md 第 4.5 节。
  * ------------------------------------------------------------------------
  */
 
@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "contracts/preferences/preferences-model.hpp"
+#include "contracts/shell/keybindings-model.hpp"
 #include "rujian/ui/button.hpp"
 #include "rujian/ui/checkbox.hpp"
 #include "rujian/ui/layout.hpp"
@@ -59,11 +60,27 @@ class PreferencesContent final : public rujian::ui::Widget {
     std::string error;
   };
 
+  /** “快捷键”分组里一条命令的控件（给测试读）。 */
+  struct KeybindingWidgets {
+    std::string id;
+    rujian::ui::SettingRow* row{nullptr};
+    rujian::ui::Button* shortcut{nullptr};
+    rujian::ui::Button* clear{nullptr};
+    rujian::ui::Button* reset{nullptr};
+    /** 快捷键按钮上现在显示的文字。 */
+    std::string shownText;
+    /** 正在等用户按键。 */
+    bool capturing{false};
+    /** 行里显示的说明，空表示没有。 */
+    std::string error;
+  };
+
   /**
    * @param preferences 首选项模型。
    * @param userData “应用”分组里“用户数据目录”一行的模型。
+   * @param keybindings “快捷键”分组的模型，对话框关闭时取消正在等的设置；没有时不显示这个分组。
    */
-  PreferencesContent(contracts::PreferencesModel& preferences, contracts::UserDataModel& userData);
+  PreferencesContent(contracts::PreferencesModel& preferences, contracts::UserDataModel& userData, contracts::KeybindingsModel* keybindings = nullptr);
   ~PreferencesContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override;
@@ -81,6 +98,10 @@ class PreferencesContent final : public rujian::ui::Widget {
   /** “应用”分组里的“用户数据目录”链接与切换按钮；当前不是“应用”分组时为空。 */
   [[nodiscard]] rujian::ui::Button* userDataLink() const { return userDataLink_; }
   [[nodiscard]] rujian::ui::Button* userDataSwitch() const { return userDataSwitch_; }
+  /** 当前是“快捷键”分组时各条命令的控件，否则为空。 */
+  [[nodiscard]] const std::vector<std::unique_ptr<KeybindingWidgets>>& keybindingRows() const { return keybindingRows_; }
+  /** “快捷键”分组里的“全部恢复默认”按钮；当前不是这个分组时为空。 */
+  [[nodiscard]] rujian::ui::Button* resetAllKeybindings() const { return resetAllKeybindings_; }
 
  private:
   void refresh();
@@ -93,6 +114,14 @@ class PreferencesContent final : public rujian::ui::Widget {
                                                 std::pair<rujian::ui::Button*, rujian::ui::Button*>& userDataButtons, bool measuring);
   void updateRows(const contracts::PreferenceGroupView& group);
   std::unique_ptr<RowWidgets> makeRow(const contracts::PreferenceRow& row, rujian::ui::List& list);
+  /** 建“快捷键”分组的右边内容；rows 收集各行的控件，resetAll 返回“全部恢复默认”按钮；measuring 为真时用来量尺寸：不放说明段落，各行的“清除”“恢复默认”按钮都显示。 */
+  std::unique_ptr<rujian::ui::Stack> buildKeybindingsPane(const contracts::KeybindingsView& view, std::vector<std::unique_ptr<KeybindingWidgets>>& rows, rujian::ui::Button*& resetAll, bool measuring);
+  std::unique_ptr<KeybindingWidgets> makeKeybindingRow(const contracts::KeybindingRowView& spec, rujian::ui::List& list, bool measuring);
+  /** 把模型里的一行显示到控件上；返回显示的内容是否影响布局（文字、按钮是否显示、说明变了）。 */
+  static bool applyKeybinding(KeybindingWidgets& widgets, const contracts::KeybindingRowView& spec, bool measuring);
+  void updateKeybindingRows(const contracts::KeybindingsView& view);
+  void rebuildKeybindingsPane(const contracts::KeybindingsView& view);
+  [[nodiscard]] static std::string keybindingsSignature(const contracts::KeybindingsView& view);
   /** 在列表末尾加“用户数据目录”一行（“应用”分组），返回行里的链接与切换按钮。 */
   std::pair<rujian::ui::Button*, rujian::ui::Button*> addUserDataRow(rujian::ui::List& list, const contracts::UserDataView& userData);
   void submit(RowWidgets& state);
@@ -100,7 +129,9 @@ class PreferencesContent final : public rujian::ui::Widget {
 
   contracts::PreferencesModel& preferences_;
   contracts::UserDataModel& userData_;
+  contracts::KeybindingsModel* keybindings_;
   std::function<void()> unsubscribePreferences_;
+  std::function<void()> unsubscribeKeybindings_;
   rujian::ui::SplitView* split_{nullptr};
   rujian::ui::Tree* tree_{nullptr};
   rujian::ui::ScrollArea* pane_{nullptr};
@@ -110,6 +141,8 @@ class PreferencesContent final : public rujian::ui::Widget {
   std::vector<std::unique_ptr<RowWidgets>> rows_;
   rujian::ui::Button* userDataLink_{nullptr};
   rujian::ui::Button* userDataSwitch_{nullptr};
+  std::vector<std::unique_ptr<KeybindingWidgets>> keybindingRows_;
+  rujian::ui::Button* resetAllKeybindings_{nullptr};
   /** 右边内容最小尺寸的缓存：对应的各分组结构签名与结果（宽度只含右边内容）。 */
   std::string minimumSignature_;
   rujian::ui::Size paneMinimum_;

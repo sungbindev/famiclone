@@ -75,6 +75,7 @@ add_library(ember_app STATIC
   src/logic/runtime/runtime-controller.cpp
   src/logic/runtime/runtime-module.cpp
   src/logic/runtime/runtime-rules.cpp
+  src/logic/shell/keybindings-controller.cpp
   src/logic/shell/shell-controller.cpp
   src/logic/shell/shell-module.cpp
   src/logic/shell/shell-registry-builder.cpp

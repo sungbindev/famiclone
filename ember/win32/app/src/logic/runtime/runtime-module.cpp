@@ -83,9 +83,11 @@ contracts::ShellModule createRuntimeModule(RuntimeController& controller) {
   module.commands.push_back(std::move(eject));
   auto power = makeCommand("runtime.powerToggle", [&controller] { return powerToggleText(controller.status()); }, "F9", [&controller](ShellApi&) { controller.togglePower(); });
   power.enabled = makeEnabled(&contracts::RuntimeControls::powerToggle);
+  power.settingsTitle = "开机或断电";
   module.commands.push_back(std::move(power));
   auto pause = makeCommand("runtime.pauseToggle", [&controller] { return pauseToggleText(controller.status()); }, "F8", [&controller](ShellApi&) { controller.togglePause(); });
   pause.enabled = makeEnabled(&contracts::RuntimeControls::pauseToggle);
+  pause.settingsTitle = "暂停或继续";
   module.commands.push_back(std::move(pause));
   auto softReset = makeCommand("runtime.softReset", fixedTitle("软复位"), "F7", [&controller](ShellApi&) { controller.softReset(); });
   softReset.enabled = makeEnabled(&contracts::RuntimeControls::softReset);

@@ -401,7 +401,6 @@ int runApplication(const shared::LaunchArguments& launch) {
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
     auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
-    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &userDataController] { return std::make_unique<ui::PreferencesContent>(preferencesController, userDataController); }, true);
     dialogs.setBody(logic::kMachinesDialogId, [&romController] { return std::make_unique<ui::MachinesContent>(romController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
     dialogs.setBody(logic::kMappersDialogId, [&mappersController] { return std::make_unique<ui::MappersContent>(mappersController); }, true);
@@ -410,6 +409,9 @@ int runApplication(const shared::LaunchArguments& launch) {
     dialogs.setKeyCapture(logic::kGamepadSettingsDialogId, [&gamepadSettings](const std::string& code) { return gamepadSettings.keyPressed(code); });
     dialogs.setLogo([] { return std::make_unique<ui::AppLogo>(platform::renderAppIcon); });
     logic::ShellController shell(std::move(registry), windowControl, dialogs, notifier, shellState, droppedFiles);
+    // 首选项里的“快捷键”页用外壳的快捷键模型；设置快捷键时对话框窗口把按下的键交给它
+    dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &userDataController, &shell] { return std::make_unique<ui::PreferencesContent>(preferencesController, userDataController, &shell.keybindings()); }, true);
+    dialogs.setShortcutCapture(logic::kPreferencesDialogId, [&shell](int virtualKey, unsigned modifiers) { return shell.keybindings().shortcutKeyPressed(virtualKey, modifiers); });
     std::optional<infra::ScreenHostAdapter> screenHost;
     platform::WindowModes* modes = nullptr;
     ui::ShellView* shellView = nullptr;
@@ -614,6 +616,8 @@ int runApplication(const shared::LaunchArguments& launch) {
 
     rujian::ui::HostWindow::runMessageLoop();
     openCartridge = nullptr;
+    // 对话框的内容引用着外壳的快捷键模型，在外壳销毁之前先关掉
+    dialogs.closeAll();
 
     // 开发期诊断：环境变量 EMBER_WIN_DIAGNOSTICS 给出文件路径时，退出时写出帧计数与画面延迟
     if (diagnosticsPath) {

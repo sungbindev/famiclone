@@ -106,7 +106,9 @@ struct ShellCommandDefinition {
   std::string id;
   /** 菜单里显示的名称；每次渲染菜单都重新取（如“开机”与“断电”的切换）。 */
   std::function<std::string()> title;
-  /** 默认快捷键，如 Ctrl+Shift+K；全部命令之间不能重复；没有时为空。 */
+  /** 快捷键设置里显示的名称；名称随状态变化的命令（如“开机”与“断电”）在这里给出固定的名称，为空时用 title 的结果。 */
+  std::string settingsTitle;
+  /** 默认快捷键，如 Ctrl+Shift+K；全部命令之间不能重复；没有时为空；用户可以在首选项的“快捷键”里改。 */
   std::string defaultShortcut;
   std::function<void(ShellApi&)> run;
   /** 当前是否可用，没有设置时总是可用。 */

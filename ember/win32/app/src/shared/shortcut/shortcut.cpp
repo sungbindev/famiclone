@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iterator>
+#include <set>
 #include <string_view>
 
 namespace ember::win32::shared {
@@ -111,18 +112,41 @@ bool shortcutHasCtrlOrAlt(const std::string& shortcut) {
   return std::find(parts.begin(), parts.end(), "Ctrl") != parts.end() || std::find(parts.begin(), parts.end(), "Alt") != parts.end();
 }
 
-std::optional<std::string> checkDefaultShortcut(const std::string& shortcut, const std::vector<char>& menuMnemonics) {
+bool isValidShortcutText(const std::string& shortcut) {
   const auto parts = split(shortcut);
   // 修饰键必须按 Ctrl、Shift、Alt 的顺序，最后一段是按键
   std::size_t index = 0;
   for (const char* modifier : {"Ctrl", "Shift", "Alt"}) {
     if (index + 1 < parts.size() && parts[index] == modifier) ++index;
   }
-  if (index + 1 != parts.size() || !isValidKeyName(parts.back())) return "写法不合格，应写成 Ctrl+Shift+K 这样的形式（修饰键按 Ctrl、Shift、Alt 排列）";
+  return index + 1 == parts.size() && isValidKeyName(parts.back());
+}
+
+std::optional<std::string> checkShortcut(const std::string& shortcut, const std::vector<char>& menuMnemonics) {
+  if (!isValidShortcutText(shortcut)) return "写法不合格，应写成 Ctrl+Shift+K 这样的形式（修饰键按 Ctrl、Shift、Alt 排列）";
+  const auto parts = split(shortcut);
   if (std::any_of(std::begin(kReserved), std::end(kReserved), [&shortcut](const char* reserved) { return shortcut == reserved; })) return "留给系统、文本编辑或菜单，不能使用";
   if (std::any_of(menuMnemonics.begin(), menuMnemonics.end(), [&shortcut](char mnemonic) { return shortcut == std::string("Alt+") + mnemonic; })) return "留给系统、文本编辑或菜单，不能使用";
   if (!shortcutHasCtrlOrAlt(shortcut) && !isFunctionKey(parts.back())) return "必须包含 Ctrl 或 Alt（F1 至 F24 除外）";
   return std::nullopt;
+}
+
+std::map<std::string, std::string> resolveShortcuts(const std::vector<CommandShortcut>& commands, const std::map<std::string, std::string>& overrides, const std::vector<char>& menuMnemonics) {
+  std::map<std::string, std::string> result;
+  // 被用户的修改占用的快捷键
+  std::set<std::string> taken;
+  for (const CommandShortcut& command : commands) {
+    const auto found = overrides.find(command.id);
+    if (found == overrides.end()) continue;
+    const std::string& shortcut = found->second;
+    if (!shortcut.empty() && (checkShortcut(shortcut, menuMnemonics).has_value() || !taken.insert(shortcut).second)) continue;
+    result[command.id] = shortcut;
+  }
+  for (const CommandShortcut& command : commands) {
+    if (result.find(command.id) != result.end()) continue;
+    result[command.id] = taken.count(command.defaultShortcut) != 0 ? std::string() : command.defaultShortcut;
+  }
+  return result;
 }
 
 }  // namespace ember::win32::shared

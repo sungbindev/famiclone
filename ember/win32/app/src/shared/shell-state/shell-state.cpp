@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cctype>
 
+#include "shared/shortcut/shortcut.hpp"
+
 namespace ember::win32::shared {
 
 namespace {
@@ -23,6 +25,7 @@ constexpr std::size_t kMaxMachineLength = 32;
 constexpr std::size_t kMaxVersionLength = 64;
 constexpr std::size_t kMaxPanelIdLength = 64;
 constexpr std::size_t kMaxAutoCollapsePanels = 16;
+constexpr std::size_t kMaxKeybindings = 128;
 
 bool isLower(char c) { return c >= 'a' && c <= 'z'; }
 bool isAlpha(char c) { return isLower(c) || (c >= 'A' && c <= 'Z'); }
@@ -40,8 +43,8 @@ bool isVersion(const std::string& text) {
   return std::all_of(text.begin(), text.end(), [](char c) { return isAlpha(c) || isDigit(c) || c == '.' || c == '+' || c == '-'; });
 }
 
-/** 面板标识：模块名加点加面板名，如 runtime.panel。 */
-bool isPanelId(const std::string& text) {
+/** 登记项标识（面板、命令）：模块名加点加名字，如 runtime.panel。 */
+bool isRegisteredId(const std::string& text) {
   if (text.empty() || text.size() > kMaxPanelIdLength) return false;
   const std::size_t dot = text.find('.');
   if (dot == std::string::npos || dot == 0 || text.find('.', dot + 1) != std::string::npos) return false;
@@ -74,8 +77,21 @@ std::optional<std::vector<std::string>> parsePanelList(const nlohmann::json& raw
   for (const nlohmann::json& item : raw) {
     if (!item.is_string()) return std::nullopt;
     std::string id = item.get<std::string>();
-    if (!isPanelId(id) || std::find(result.begin(), result.end(), id) != result.end()) return std::nullopt;
+    if (!isRegisteredId(id) || std::find(result.begin(), result.end(), id) != result.end()) return std::nullopt;
     result.push_back(std::move(id));
+  }
+  return result;
+}
+
+/** 用户修改的快捷键：不合格的项单独丢弃，其余照常保留。 */
+std::map<std::string, std::string> parseKeybindings(const nlohmann::json& raw) {
+  std::map<std::string, std::string> result;
+  if (!raw.is_object()) return result;
+  for (const auto& [id, shortcut] : raw.items()) {
+    if (result.size() >= kMaxKeybindings) break;
+    if (!isRegisteredId(id) || !shortcut.is_string()) continue;
+    const std::string text = shortcut.get<std::string>();
+    if (text.empty() || isValidShortcutText(text)) result.emplace(id, text);
   }
   return result;
 }
@@ -93,6 +109,7 @@ ShellState parseShellState(const nlohmann::json& raw) {
       if (auto panels = parsePanelList(layout["autoCollapseOffPanels"])) state.layout.autoCollapseOffPanels = std::move(*panels);
     }
     if (layout.contains("alwaysOnTop") && layout["alwaysOnTop"].is_boolean()) state.layout.alwaysOnTop = layout["alwaysOnTop"].get<bool>();
+    if (layout.contains("keybindings")) state.layout.keybindings = parseKeybindings(layout["keybindings"]);
   }
   if (raw.contains("releaseNotesVersion") && raw["releaseNotesVersion"].is_string() && isVersion(raw["releaseNotesVersion"].get<std::string>())) {
     state.releaseNotesVersion = raw["releaseNotesVersion"].get<std::string>();
@@ -103,7 +120,8 @@ ShellState parseShellState(const nlohmann::json& raw) {
 nlohmann::json toJson(const ShellState& state) {
   nlohmann::json layout{{"selectedMachine", state.layout.selectedMachine ? nlohmann::json(*state.layout.selectedMachine) : nlohmann::json(nullptr)},
                         {"autoCollapseOffPanels", state.layout.autoCollapseOffPanels},
-                        {"alwaysOnTop", state.layout.alwaysOnTop}};
+                        {"alwaysOnTop", state.layout.alwaysOnTop},
+                        {"keybindings", state.layout.keybindings}};
   return {{"window", state.window ? nlohmann::json{{"x", state.window->x}, {"y", state.window->y}} : nlohmann::json(nullptr)},
           {"layout", layout},
           {"releaseNotesVersion", state.releaseNotesVersion ? nlohmann::json(*state.releaseNotesVersion) : nlohmann::json(nullptr)}};

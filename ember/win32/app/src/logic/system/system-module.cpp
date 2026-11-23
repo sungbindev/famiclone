@@ -26,6 +26,7 @@ constexpr const char* kOpenChangelog = "更新记录";
 constexpr const char* kHelpFailed = "无法打开帮助文档";
 constexpr const char* kOpenLogDirectory = "打开日志目录";
 constexpr const char* kLogDirectoryFailed = "无法打开日志目录";
+constexpr const char* kCheckUpdate = "检查更新";
 constexpr const char* kUpdate = "更新";
 
 /** 发一个外壳请求，失败时用通知给出核心给的说明（没有说明用 fallback）。 */
@@ -84,6 +85,7 @@ contracts::ShellModule createSystemModule(contracts::RequestBroker& broker, Upda
                                     [&broker](contracts::ShellApi& shell) { requestOrNotify(broker, shell, "system.openLogDirectory", nlohmann::json::object(), kLogDirectoryFailed); }));
   auto check = command(kSystemCheckUpdateCommand, [&update] { return update.title(); }, [&update](contracts::ShellApi& shell) { update.run(shell); });
   check.enabled = [&update](const contracts::ShellViewState&) { return update.canRun(); };
+  check.settingsTitle = kCheckUpdate;
   module.commands.push_back(std::move(check));
   module.commands.push_back(command(kSystemOpenAboutCommand, [] { return std::string(kAbout); }, [](contracts::ShellApi& shell) { shell.openDialog(kAboutDialogId); }));
 

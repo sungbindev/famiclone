@@ -19,6 +19,7 @@
 #include <string>
 
 #include "shared/input/scan-code-table.hpp"
+#include "shared/shortcut/shortcut.hpp"
 
 namespace ember::win32::platform {
 
@@ -26,6 +27,15 @@ namespace {
 
 /** 内容高度按正文时，正文最高占工作区高度的这个比例。 */
 constexpr double kMaximumBodyShare = 0.7;
+
+/** 当前按着的修饰键（Shift=1、Ctrl=2、Alt=4 的位和）。 */
+unsigned currentModifiers() {
+  unsigned modifiers = 0;
+  if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) modifiers |= shared::kShortcutShift;
+  if ((GetKeyState(VK_CONTROL) & 0x8000) != 0) modifiers |= shared::kShortcutCtrl;
+  if ((GetKeyState(VK_MENU) & 0x8000) != 0) modifiers |= shared::kShortcutAlt;
+  return modifiers;
+}
 
 rujian::ui::HostWindow::Options hostOptions(const DialogWindowOptions& options) {
   rujian::ui::HostWindow::Options host;
@@ -77,7 +87,7 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
       result = 0;
       return true;
     }
-    if (options_.onPhysicalKey || swallowedKey_ >= 0) {
+    if (options_.onPhysicalKey || options_.onShortcutKey || !swallowedKeys_.empty()) {
       // 键的标识：扫描码加扩展位（lParam 的 16 到 24 位），按下、字符与抬起消息里都一样
       const int keyId = static_cast<int>((lParam >> 16) & 0x1FF);
       switch (message) {
@@ -85,11 +95,16 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
         case WM_SYSKEYDOWN: {
           // 按住不放的重复按下不再上报，但学习期间同样吞掉
           const bool repeat = (lParam & 0x40000000) != 0;
-          const auto scan = static_cast<std::uint16_t>(keyId & 0xFF);
-          const bool extended = (keyId & 0x100) != 0;
-          const auto code = shared::scanCodeToKeyCode(scan, extended, false);
-          if (!repeat && code && options_.onPhysicalKey && options_.onPhysicalKey(std::string(*code))) swallowedKey_ = keyId;
-          if (swallowedKey_ == keyId) {
+          if (!repeat) {
+            const auto scan = static_cast<std::uint16_t>(keyId & 0xFF);
+            const bool extended = (keyId & 0x100) != 0;
+            const auto code = shared::scanCodeToKeyCode(scan, extended, false);
+            const bool physicalTaken = code && options_.onPhysicalKey && options_.onPhysicalKey(std::string(*code));
+            // 重新按下的键只看这一次有没有被拦截，之前漏掉抬起消息留下的标记不再算
+            if (physicalTaken || (options_.onShortcutKey && options_.onShortcutKey(static_cast<int>(wParam), currentModifiers()))) swallowedKeys_.insert(keyId);
+            else swallowedKeys_.erase(keyId);
+          }
+          if (swallowedKeys_.count(keyId) != 0) {
             result = 0;
             return true;
           }
@@ -99,15 +114,14 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
         case WM_SYSCHAR:
         case WM_DEADCHAR:
         case WM_SYSDEADCHAR:
-          if (swallowedKey_ == keyId) {
+          if (swallowedKeys_.count(keyId) != 0) {
             result = 0;
             return true;
           }
           break;
         case WM_KEYUP:
         case WM_SYSKEYUP:
-          if (swallowedKey_ == keyId) {
-            swallowedKey_ = -1;
+          if (swallowedKeys_.erase(keyId) != 0) {
             result = 0;
             return true;
           }

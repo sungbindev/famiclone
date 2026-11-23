@@ -147,7 +147,7 @@ ShellRegistry buildShellRegistry(std::vector<contracts::ShellModule> modules) {
   for (const auto& menu : contracts::kShellMenus) mnemonics.push_back(menu.mnemonic);
   for (const auto& [id, command] : registry.commands) {
     if (command.defaultShortcut.empty()) continue;
-    if (const auto reason = shared::checkDefaultShortcut(command.defaultShortcut, mnemonics)) errors.push_back("命令“" + id + "”的默认快捷键 " + command.defaultShortcut + " 不可用：" + *reason);
+    if (const auto reason = shared::checkShortcut(command.defaultShortcut, mnemonics)) errors.push_back("命令“" + id + "”的默认快捷键 " + command.defaultShortcut + " 不可用：" + *reason);
     const auto [position, inserted] = registry.shortcuts.emplace(command.defaultShortcut, id);
     if (!inserted) errors.push_back("命令“" + id + "”与“" + position->second + "”的默认快捷键 " + command.defaultShortcut + " 重复");
   }

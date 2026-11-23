@@ -61,6 +61,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
   /** 设置一个对话框的物理按键拦截（见 DialogWindowOptions::onPhysicalKey）：对话框打开期间调用它的按键都先经过这里。 */
   void setKeyCapture(const std::string& dialogId, std::function<bool(const std::string& code)> capture);
 
+  /** 设置一个对话框的快捷键拦截（见 DialogWindowOptions::onShortcutKey）：对话框打开期间按下的键都先经过这里。 */
+  void setShortcutCapture(const std::string& dialogId, std::function<bool(int virtualKey, unsigned modifiers)> capture);
+
   /** 现在打开着的对话框个数。 */
   [[nodiscard]] std::size_t openCount() const { return open_.size(); }
 
@@ -69,6 +72,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
 
   /** 关闭一个对话框（没有打开时什么都不做）。 */
   void closeDialog(const std::string& dialogId);
+
+  /** 马上关闭并销毁全部打开着的对话框：对话框的内容引用着外壳的模型，要在这些模型之前销毁时用。 */
+  void closeAll();
 
  private:
   std::function<void*()> owner_;
@@ -80,6 +86,7 @@ class DialogHost final : public contracts::ShellDialogOpener {
   LogoFactory logo_;
   std::set<std::string> fillingBodies_;
   std::map<std::string, std::function<bool(const std::string&)>> keyCaptures_;
+  std::map<std::string, std::function<bool(int, unsigned)>> shortcutCaptures_;
   std::map<std::string, std::unique_ptr<platform::DialogWindow>> open_;
   std::shared_ptr<bool> alive_{std::make_shared<bool>(true)};
 };

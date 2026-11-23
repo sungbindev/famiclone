@@ -30,6 +30,8 @@ void DialogHost::setBody(const std::string& dialogId, BodyFactory factory, bool 
 
 void DialogHost::setKeyCapture(const std::string& dialogId, std::function<bool(const std::string& code)> capture) { keyCaptures_[dialogId] = std::move(capture); }
 
+void DialogHost::setShortcutCapture(const std::string& dialogId, std::function<bool(int virtualKey, unsigned modifiers)> capture) { shortcutCaptures_[dialogId] = std::move(capture); }
+
 void DialogHost::setTheme(rujian::ui::ThemeName theme) {
   theme_ = theme;
   for (auto& entry : open_) entry.second->setTheme(theme);
@@ -69,6 +71,7 @@ void DialogHost::openDialog(const std::string& dialogId) {
   options.customFrame = customFrame_;
   options.onCloseRequested = [this, dialogId] { closeDialog(dialogId); };
   if (const auto capture = keyCaptures_.find(dialogId); capture != keyCaptures_.end()) options.onPhysicalKey = capture->second;
+  if (const auto capture = shortcutCaptures_.find(dialogId); capture != shortcutCaptures_.end()) options.onShortcutKey = capture->second;
   auto window = std::make_unique<platform::DialogWindow>(std::move(options), std::move(frame));
   platform::DialogWindow* raw = window.get();
   open_.emplace(dialogId, std::move(window));
@@ -82,5 +85,7 @@ void DialogHost::closeDialog(const std::string& dialogId) {
     if (*alive) open_.erase(dialogId);
   });
 }
+
+void DialogHost::closeAll() { open_.clear(); }
 
 }  // namespace ember::win32::bootstrap

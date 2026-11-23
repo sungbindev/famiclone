@@ -43,14 +43,14 @@ loc_7C8F:
   lda #$01
   rts
 loc_7C92:
-  lda data_8006
+  lda logical_drive_count
   rts
 loc_7C96:
   stx var_00FF
   ldx #$FF
   txs
   pha
-  jsr sub_98B3
+  jsr drive_info_read
   lda #$FF
   ldx #$FF
   jsr BIOS_ENTRY
@@ -77,7 +77,7 @@ loc_7CC6:
   tax
   stx data_A53A
   stx data_7C69
-  stx data_8007
+  stx dos_page
   stx data_7C3C
   stx data_A53D
   stx data_A824

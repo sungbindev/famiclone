@@ -28,11 +28,32 @@ BIOS 调用、DOS 调用与文件调用的约定、已核对的行为，以及�
 - FILE_NEXT 沿用通道块里的查找状态，找不到更多文件时 A=`$12`（ERR_SEARCH_ENDING）。
 - FILE_FIRST 与 FILE_PATH_FIRST 是两个不同的处理例程：后者把属性掩码取反后调用同一个查找例程，并在 `FH_SEARCH_STATE`（`$2B`）起记下页号与当前目录簇。
 
+## 文件调用的字段与行为
+
+全部由 Ember 里的库测试程序（`vscode/test/fixtures/bbg/file.s`）核对，字段见 `dos-calls.inc` 的 `FH_*`：
+
+- 打开（`FILE_OPEN`、`FILE_PATH_OPEN`）：出口偏移 2 为属性、3-4 为日期、5-6 为时间、`$0D` 起 4 字节为长度，读写位置为 0；不存在为 `ERR_FILE_NOT_EXIST`。
+- 读（`FILE_READ`）、写（`FILE_WRITE`）：从读写位置（偏移 7，4 字节）起，可跨扇区；到文件末尾时 `FH_BYTES` 是实际字节数；写时 `FH_BYTES` 为 0 表示在读写位置截断；出口 `FH_BUFFER` 是缓冲区结束地址。不检查只读属性。
+- 关闭（`FILE_CLOSE`）把长度、日期、时间写回目录项；`FILE_ATTRIBUTE` 设置属性、日期、时间；`FILE_RENAME` 给已打开的文件改名。
+- 建立（`FILE_CREATE`）后文件已打开、长度为 0；删除（`FILE_DELETE`）不检查只读属性。
+- 驱动器（`FILE_DRIVE`）读取返回默认盘号 1（A 盘）与逻辑驱动器数 2；`FILE_DRIVE_SIZE` 返回每簇扇区数、每扇区字节数、空闲簇数与总簇数。
+- 目录：`FILE_MAKE_DIR`、`FILE_CHANGE_DIR`（含“..”回上级）、`FILE_REMOVE_DIR`；`FILE_GET_DIR` 返回 DOS 页里的路径串地址；路径查找 `FILE_PATH_FIRST` 的通配符是 `*` 与 `?`。
+- 绝对扇区（`FILE_READ_ABS`、`FILE_WRITE_ABS`）：位置是扇区号（从 0 起），长度是扇区数。
+
+## DOS 调用的实测
+
+- `DOS_DISPLAY_STRING`：`X` 是地址高字节、`Y` 是低字节，与手册文字相反。
+- `DOS_RUN_PROGRAM`：`$FF` 为盘号，`X:Y`（`X` 高）指向 11 字节文件名，扩展名必须是 `CMD`、`EXC` 或 `GAM`（DOS 用它判断程序类型，不会自己依次试）；`DOS_RUN_PATH_PROGRAM` 用以 0 结尾的路径；成功时 `C=0`、`A` 是被运行程序的退出码；`$0100` 起的参数交给被运行的程序。
+- `DOS_FILE_NAME_ACCESS`：把 `D:FFFFFFFF.XXX` 转成 11 字节的内部格式，结果写回原地址，`A` 返回盘号。
+- `DOS_READ_KB_CLEAR`：先清键盘缓冲区，再执行 `$FF` 指定的键盘功能。
 ## 与手册的差异
 
 | 项目 | 手册 | 反汇编结果 |
 | --- | --- | --- |
 | DOS 功能 16 | 未列 | 存在，返回 A=3、X=0（版本 3.0） |
+| DOS 功能 4 的参数 | X 低地址、Y 高地址 | X 高地址、Y 低地址（`bbg_dos_put_string` 已验证） |
+| DOS 功能 5 的文件名 | 文件名地址 | X:Y 指向 11 字节内部格式的名字，扩展名必须是 CMD、EXC、GAM |
+| 文件调用只读属性 | 未说明 | 写与删除都不检查只读属性 |
 | 文件功能 24 | 未列 | 存在，按 `$16` 的值改写目录项属性 |
 | DOS 功能 12 与 13 的编号 | 列表里 12、13 重复 | 12 是 DosFileNameAccs，13 是 DosGetSetInitScrn，14 是 DosCheckKeyBoard，15 是 DosRunPathProgram |
 | 文件功能 20、21、23 | 各自独立 | 与 1、8、10 共用处理例程，区别在功能标志（路径解析） |
@@ -44,4 +65,4 @@ BIOS 调用、DOS 调用与文件调用的约定、已核对的行为，以及�
 | 工程 | 状态 |
 | --- | --- |
 | `boot-sector` | 完整：全部符号命名、全部例程有说明、回读一致 |
-| `bbgdos`、`command`、`bios-rom` | 回读一致；API 入口（DOS 17 个、文件 25 个、BIOS 43 个、内部命令 19 个）已命名并写了说明，其余例程与变量仍是自动名；文件调用 0-5、8-19 的行为只依据手册，注释里标了“未确认” |
+| `bbgdos`、`command`、`bios-rom` | 回读一致；API 入口（DOS 17 个、文件 25 个、BIOS 43 个、内部命令 19 个）已命名并写了说明；`bbgdos` 另有磁盘 I/O、FAT 与目录、严重错误处理的主要例程、缓冲区与 FAT 状态变量已命名（自动名剩 863 个），文件调用 0-23 的注释已按 Ember 实测核对；`command`、`bios-rom` 其余例程与变量仍是自动名 |

@@ -5,7 +5,7 @@
   "cc65Target": "none",
   "linkConfig": "link.cfg",
   "startup": ["lib/crt0.o"],
-  "libraries": [],
+  "libraries": ["lib/bbg.lib"],
   "include": [],
   "asminclude": ["asminc"],
   "defines": {

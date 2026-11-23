@@ -8,15 +8,15 @@
 .segment "SEG0_2177"
 ; 段 0，$9D77-$A5BB
 sub_9D77:
-  jsr sub_85D6
+  jsr buffers_flush_all
   bcs sub_9D99
-  lda data_802E
+  lda mounted_drive
   cmp #$FF
   beq sub_9D99
-  jsr sub_820C
+  jsr drive_state_offset_of
   ldy #$00
 loc_9D88:
-  lda data_8032,y
+  lda current_dir_path,y
   sta data_9C33,x
   inx
   iny
@@ -27,12 +27,12 @@ loc_9D88:
 
 sub_9D99:
   ldx #$FF
-  stx data_801B
-  stx data_801A
-  stx data_801E
+  stx fat_buffer_sector
+  stx dir_buffer_lba_2
+  stx data_buffer_lba_2
   inx
-  stx data_8017
-  stx data_8016
+  stx data_buffer_dirty
+  stx fat_buffer_dirty
   clc
   rts
 
@@ -141,7 +141,7 @@ loc_9E4F:
   lda #$05
   rts
 
-; 文件调用 24（手册未列）：按通道块偏移 $16 的属性值改写目录项的属性，保留目录与卷标位。属性值含 $D8 的位时返回 $05（AccessDenied）。
+; 文件调用 24（手册未列）：按通道块偏移 $16 的值改写目录项属性。Ember 实测对已打开的文件调用返回 A=$05（拒绝访问），用法未查清。
 file_call_write_attribute:
   ldy #$16
   lda (var_00EE),y
@@ -149,7 +149,7 @@ file_call_write_attribute:
   bne loc_9E79
   lda #$37
   ldy #$08
-  jsr sub_84CE
+  jsr dir_find_entry
   bcs loc_9E78
   ldy #$0B
   lda (var_00F1),y
@@ -158,7 +158,7 @@ file_call_write_attribute:
   ora (var_00EE),y
   ldy #$0B
   sta (var_00F1),y
-  jsr sub_840D
+  jsr dir_buffer_write
   bcs loc_9E78
   lda #$00
 loc_9E78:
@@ -196,10 +196,10 @@ loc_9E89:
   sta (var_00EE),y
   lda #$00
   tax
-  bit data_802D
+  bit in_subdirectory
   bpl loc_9EB1
-  ldx data_802C
-  lda data_802B
+  ldx current_dir_cluster_high
+  lda current_dir_cluster_low
 loc_9EB1:
   ldy #$2E
   sta (var_00EE),y
@@ -209,15 +209,13 @@ loc_9EB1:
   pla
   rts
 
-; 文件调用 8 FileCreate、21 FilePathCreate：建立文件。
-; 已读代码：文件名里含 '?' 通配符时返回 $05（AccessDenied）；已有同名的目录或卷标项时也返回 $05。
-; 未确认：其余行为来自手册功能名，代码尚未逐条核对。
+; 文件调用 8 FileCreate、21 FilePathCreate：建立文件，建立后文件已打开、长度为 0。文件名含通配符、与目录或卷标同名时 A=$05。Ember 实测：建立后可写入并关闭，重新打开长度正确。
 file_call_create:
   jsr sub_9E20
   bcs loc_9EE4
   lda #$3F
   ldy #$00
-  jsr sub_8B91
+  jsr file_open_common
   bcs loc_9EE5
   lda data_8023
   and #$18
@@ -228,8 +226,8 @@ loc_9ED3:
   jsr sub_8EEB
   bcs loc_9EE4
   lda #$20
-  jsr sub_8AB6
-  jsr sub_840D
+  jsr dir_entry_init
+  jsr dir_buffer_write
   bcs loc_9EE4
   lda #$00
 loc_9EE4:
@@ -240,7 +238,7 @@ loc_9EE5:
   ldx var_00FE
   inx
   bne loc_9EFB
-  bit data_802D
+  bit in_subdirectory
   bmi loc_9EF6
   lda #$05
 loc_9EF5:
@@ -252,18 +250,18 @@ loc_9EFB:
   jsr sub_8AEF
   bcs loc_9EF5
   ldx #$20
-  jsr sub_8AB6
-  jsr sub_840D
+  jsr dir_entry_init
+  jsr dir_buffer_write
   bcs loc_9EF5
   jmp loc_8BBA
 
 sub_9F0D:
-  lda data_800D
+  lda caller_block_low
   clc
   adc #$17
   ldy #$03
   sta (var_00EE),y
-  lda data_800E
+  lda caller_block_high
   adc #$00
   iny
   sta (var_00EE),y
@@ -282,7 +280,7 @@ sub_9F22:
   pha
   jsr sub_9F0D
   pla
-  jsr sub_8457
+  jsr dir_scan_start
   bcs loc_9F38
   jsr sub_8FC0
   bcc loc_9F80
@@ -295,8 +293,8 @@ file_call_next:
   lda (var_00EE),y
   sta data_8023
   jsr sub_9F0D
-  jsr sub_8230
-  jsr sub_83F5
+  jsr drive_select
+  jsr block_name_pointer
   ldy #$15
   lda (var_00EE),y
   sta data_8022
@@ -321,7 +319,7 @@ file_call_next:
   tay
   pla
   bcc loc_9F7B
-  jsr sub_84FE
+  jsr dir_next_sector
   bcc loc_9F7B
   cmp #$02
   bne loc_9F79
@@ -340,13 +338,13 @@ loc_9F80:
   lda var_00FB
   sta (var_00EE),y
   dey
-  lda data_801A
+  lda dir_buffer_lba_2
   sta (var_00EE),y
   dey
-  lda data_8019
+  lda dir_buffer_lba_1
   sta (var_00EE),y
   dey
-  lda data_8018
+  lda dir_buffer_lba_0
   sta (var_00EE),y
   dey
   lda var_00FA
@@ -392,22 +390,21 @@ loc_9FD2:
   lda #$00
   rts
 
-; 文件调用 9 FileDrive：设置当前默认驱动器。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 9 FileDriver：FH_DRIVE 为 0 时读取默认盘号（写回 FH_DRIVE）与逻辑驱动器数（偏移 2），否则设置默认盘号（1 为 A 盘）。Ember 实测读取返回盘号 1、驱动器数 2。
 file_call_set_drive:
   ldy #$02
-  lda data_8006
+  lda logical_drive_count
   sta (var_00EE),y
   ldy #$01
   lda (var_00EE),y
   beq loc_9FFD
-  cmp data_8006
+  cmp logical_drive_count
   bcc loc_9FF1
   bne loc_A00C
 loc_9FF1:
   cmp #$03
   bcs loc_9FFA
-  ldy data_8001
+  ldy drive_info_a
   beq loc_A00C
 loc_9FFA:
   sta data_8003
@@ -423,8 +420,7 @@ loc_A00C:
   lda #$0F
   rts
 
-; 文件调用 4 FileSeek：移动文件读写位置指针。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 4 FileSeek：把读写位置改为通道块偏移 7 起的 4 字节值。Ember 实测。
 file_call_seek:
   ldx #$03
   ldy #$0D
@@ -456,8 +452,7 @@ loc_A036:
   lda #$00
   rts
 
-; 文件调用 11 FileDriveSize：取驱动器容量与剩余空间。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 11 DriveSize：按 FH_DRIVE 返回每簇扇区数（偏移 3）、每扇区字节数（偏移 5）、空闲簇数（偏移 7）、总簇数（偏移 9）。Ember 实测：1.44MB 系统盘每簇 4 个扇区、每扇区 512 字节、总簇数 715。
 file_call_drive_size:
   ldx #$00
   ldy #$02
@@ -468,7 +463,7 @@ file_call_drive_size:
 loc_A045:
   stx var_00F7
   sty var_00F6
-  jsr sub_8667
+  jsr fat_sector_for_cluster
   bcs loc_A0A5
   jsr sub_8885
   bcs loc_A0A5
@@ -484,9 +479,9 @@ loc_A05D:
 loc_A063:
   ldx var_00F5
   ldy var_00F4
-  cpx data_8074
+  cpx cluster_limit_high
   bne loc_A045
-  cpy data_8073
+  cpy cluster_limit_low
   bne loc_A045
   ldy #$06
   lda #$02
@@ -496,16 +491,16 @@ loc_A063:
   sta (var_00EE),y
   ldy #$04
   sta (var_00EE),y
-  lda data_8070
+  lda sectors_per_cluster
   dey
   sta (var_00EE),y
   ldy #$09
-  lda data_8073
+  lda cluster_limit_low
   sec
   sbc #$02
   sta (var_00EE),y
   iny
-  lda data_8074
+  lda cluster_limit_high
   sbc #$00
   sta (var_00EE),y
   ldy #$08
@@ -518,74 +513,69 @@ loc_A063:
 loc_A0A5:
   rts
 
-; 文件调用 10 FileDelete、23 FilePathDelete：删除文件。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 10 FileDelete、23 FilePathDelete：删除文件（目录项标成已删除并释放簇链），不检查只读属性。Ember 实测。
 file_call_delete:
   jsr file_call_open
   bcs loc_A0C9
   jsr sub_8EEB
   bcs loc_A0C9
-  jsr sub_859F
+  jsr fat_buffer_flush
   bcs loc_A0C9
   ldy #$11
   lda (var_00EE),y
-  jsr sub_8403
+  jsr dir_entry_pointer
   lda #$E5
   ldy #$00
   sta (var_00F1),y
-  jsr sub_840D
+  jsr dir_buffer_write
   bcs loc_A0C9
   lda #$00
 loc_A0C9:
   rts
 
-; 文件调用 14 FileReadAbs：按绝对扇区号读磁盘。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 14 FileReadAbs：从绝对扇区号（通道块偏移 7，从 0 起）起读 FH_BYTES 个扇区到 FH_PAGE:FH_BUFFER。Ember 实测读 0 号扇区得到引导扇区。
 file_call_read_absolute:
   lda #$02
   bne loc_A0D0
 
-; 文件调用 15 FileWriteAbs：按绝对扇区号写磁盘。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 15 FileWriteAbs：参数同 FileReadAbs，写扇区。Ember 实测把 0 号扇区原样写回。
 file_call_write_absolute:
   lda #$03
 loc_A0D0:
   sta var_00FD
-  jsr sub_8230
+  jsr drive_select
   ldy #$09
   lda (var_00EE),y
-  sta data_8011
+  sta sector_lba_2
   dey
   lda (var_00EE),y
-  sta data_8010
+  sta sector_lba_1
   dey
   lda (var_00EE),y
-  sta data_800F
+  sta sector_lba_0
   ldy #$05
   lda (var_00EE),y
-  jsr sub_8188
+  jsr disk_transfer_sectors
   bcs loc_A0F3
   lda #$00
 loc_A0F3:
   rts
 
-; 文件调用 13 FileRename：给文件改名。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 13 FileRename：给已打开的文件改名，新文件名取自 FH_PAGE:FH_BUFFER 指向的 11 字节，并复制到通道块偏移 5。Ember 实测。
 file_call_rename:
   jsr sub_9E20
   bcs loc_A10B
   jsr sub_8F62
   bcs loc_A10B
-  jsr sub_83F5
-  jsr sub_8AA2
-  jsr sub_840D
+  jsr block_name_pointer
+  jsr dta_copy_name
+  jsr dir_buffer_write
   bcs loc_A10B
   lda #$00
 loc_A10B:
   rts
 
-; 文件调用 12 FileAttribute：取或设置文件属性。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 12 FileAttribute：设置已打开文件的属性（偏移 2）、日期（偏移 3-4）、时间（偏移 5-6），关闭时写入目录项。Ember 实测。
 file_call_attribute:
   jsr sub_8F62
   bcs loc_A14D
@@ -779,18 +769,18 @@ loc_A23B:
   rts
 
 sub_A241:
-  bit data_802D
+  bit in_subdirectory
   bpl loc_A277
   jsr sub_8480
-  jsr sub_841C
+  jsr dir_buffer_read
   bcs loc_A27A
   ldx data_943B
   ldy data_943A
   txa
   ora data_943A
   beq sub_A27B
-  stx data_802C
-  sty data_802B
+  stx current_dir_cluster_high
+  sty current_dir_cluster_low
   ldx #$FF
 loc_A262:
   inx
@@ -813,10 +803,10 @@ loc_A27A:
 
 sub_A27B:
   lda #$00
-  sta data_802D
+  sta in_subdirectory
   sta data_9BF5
-  sta data_802C
-  sta data_802B
+  sta current_dir_cluster_high
+  sta current_dir_cluster_low
   rts
 
 sub_A28A:
@@ -849,7 +839,7 @@ loc_A2B8:
   stx var_00F9
   lda #$10
   ldy #$08
-  jsr sub_84D2
+  jsr dir_find_entry_with_mask
   bcc loc_A2CE
   cmp #$02
   beq loc_A2F5
@@ -861,12 +851,12 @@ loc_A2CE:
   bcs loc_A2F5
   ldy #$1B
   lda (var_00F1),y
-  sta data_802C
+  sta current_dir_cluster_high
   dey
   lda (var_00F1),y
-  sta data_802B
+  sta current_dir_cluster_low
   lda #$FF
-  sta data_802D
+  sta in_subdirectory
 loc_A2E5:
   ldx var_00F9
 loc_A2E7:
@@ -886,35 +876,34 @@ loc_A2F5:
 sub_A2F8:
   ldx data_807B
   ldy data_807A
-  stx data_802C
-  sty data_802B
+  stx current_dir_cluster_high
+  sty current_dir_cluster_low
   lda data_807C
-  sta data_802D
+  sta in_subdirectory
   ldx #$FF
 loc_A30C:
   inx
-  lda data_8032,x
+  lda current_dir_path,x
   sta data_9BF5,x
   bne loc_A30C
   rts
 
 sub_A316:
-  ldx data_802C
-  ldy data_802B
+  ldx current_dir_cluster_high
+  ldy current_dir_cluster_low
   stx data_807B
   sty data_807A
-  lda data_802D
+  lda in_subdirectory
   sta data_807C
   ldx #$FF
 loc_A32A:
   inx
   lda data_9BF5,x
-  sta data_8032,x
+  sta current_dir_path,x
   bne loc_A32A
   rts
 
-; 文件调用 16 FileChangeDir：改变当前目录。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 16 FileChangeDir：改变当前目录，路径是以 0 结尾的字符串（\ 分隔，“..”回上一级），成功后更新 current_dir_path 与目录首簇；路径不存在 A=$03。Ember 实测。
 file_call_change_dir:
   jsr sub_9DD6
   ldx #$FF
@@ -925,8 +914,7 @@ file_call_change_dir:
 loc_A343:
   rts
 
-; 文件调用 17 FileMakeDir：建立子目录。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 17 FileMakeDir：建立目录，路径是以 0 结尾的字符串。Ember 实测。
 file_call_make_dir:
   jsr sub_9E20
   bcs loc_A37B
@@ -942,7 +930,7 @@ loc_A34D:
   bcs loc_A363
   lda #$3F
   ldy #$00
-  jsr sub_84CE
+  jsr dir_find_entry
   bcs loc_A366
 loc_A363:
   lda #$05
@@ -953,7 +941,7 @@ loc_A366:
   ldx var_00FE
   inx
   bne loc_A381
-  bit data_802D
+  bit in_subdirectory
   bmi loc_A37C
   lda #$52
   sta data_8031
@@ -964,11 +952,11 @@ loc_A37C:
   jsr sub_8B0C
   bcs loc_A390
 loc_A381:
-  ldx data_8081
-  ldy data_8080
+  ldx free_search_cluster_high
+  ldy free_search_cluster_low
   stx var_00F7
   sty var_00F6
-  jsr sub_883E
+  jsr fat_find_free
   bcc loc_A39B
 loc_A390:
   cmp #$27
@@ -981,69 +969,69 @@ loc_A39B:
   jsr sub_8AEF
   bcs loc_A37B
   ldx #$10
-  jsr sub_8AB6
+  jsr dir_entry_init
   ldy #$1B
-  lda data_8081
+  lda free_search_cluster_high
   sta (var_00F1),y
   tax
   dey
-  lda data_8080
+  lda free_search_cluster_low
   sta (var_00F1),y
   tay
-  lda data_807F
-  sta data_868F
+  lda fat16_flag
+  sta fat_value_high
   lda #$FF
-  sta data_868E
+  sta fat_value_low
   sta var_00FC
-  jsr sub_86A5
+  jsr fat_entry_access
   bcs loc_A37B
-  jsr sub_840D
+  jsr dir_buffer_write
   bcs loc_A37B
-  jsr sub_85D6
+  jsr buffers_flush_all
   bcs loc_A37B
-  jsr sub_8ADF
-  ldx data_8081
-  ldy data_8080
+  jsr data_buffer_clear
+  ldx free_search_cluster_high
+  ldy free_search_cluster_low
   stx data_921B
-  sty data_921A
-  jsr sub_8486
+  sty boot_head_count
+  jsr cluster_to_lba
   bcs loc_A456
-  sta data_801E
-  stx data_801D
-  sty data_801C
+  sta data_buffer_lba_2
+  stx data_buffer_lba_1
+  sty data_buffer_lba_0
   ldx #$0A
   lda #$20
 loc_A3F1:
-  sta data_9200,x
-  sta data_9220,x
+  sta sector_buffer,x
+  sta boot_total_sectors32_0,x
   dex
   bne loc_A3F1
   lda #$2E
-  sta data_9200
-  sta data_9220
-  sta data_9221
+  sta sector_buffer
+  sta boot_total_sectors32_0
+  sta boot_total_sectors32_1
   ldx #$92
   ldy #$00
   stx var_00F2
   sty var_00F1
   lda #$10
-  jsr sub_8AC2
+  jsr dir_entry_set_timestamp
   lda #$20
   sta var_00F1
   lda #$10
-  jsr sub_8AC2
-  bit data_802D
+  jsr dir_entry_set_timestamp
+  bit in_subdirectory
   bpl loc_A42C
-  ldx data_802C
-  ldy data_802B
+  ldx current_dir_cluster_high
+  ldy current_dir_cluster_low
   stx data_923B
   sty data_923A
 loc_A42C:
   lda #$03
-  jsr sub_81EB
+  jsr data_buffer_transfer
   bcs loc_A456
-  jsr sub_8ADF
-  ldx data_8070
+  jsr data_buffer_clear
+  ldx sectors_per_cluster
   stx var_00F3
 loc_A43B:
   dec var_00F3
@@ -1051,40 +1039,40 @@ loc_A43B:
   lda #$00
   rts
 loc_A442:
-  inc data_801C
+  inc data_buffer_lba_0
   bne loc_A44F
-  inc data_801D
+  inc data_buffer_lba_1
   bne loc_A44F
-  inc data_801E
+  inc data_buffer_lba_2
 loc_A44F:
   lda #$03
-  jsr sub_81EB
+  jsr data_buffer_transfer
   bcc loc_A43B
 loc_A456:
   rts
 
 sub_A457:
-  lda data_802C
+  lda current_dir_cluster_high
   pha
-  lda data_802B
+  lda current_dir_cluster_low
   pha
-  stx data_802C
-  sty data_802B
+  stx current_dir_cluster_high
+  sty current_dir_cluster_low
   lda #$00
   sta data_8022
-  lda data_8070
+  lda sectors_per_cluster
   sta var_00FB
   lda #$40
   sta var_00FA
-  dec data_802D
-  jsr sub_8486
+  dec in_subdirectory
+  jsr cluster_to_lba
   bcs loc_A4B1
 loc_A47B:
-  jsr sub_841C
+  jsr dir_buffer_read
   bcs loc_A4B1
   ldy var_00FA
 loc_A482:
-  lda data_9400,y
+  lda dir_buffer,y
   beq loc_A4B1
   cmp #$E5
   bne loc_A4AF
@@ -1102,7 +1090,7 @@ loc_A491:
   tay
   bne loc_A491
   sty var_00FA
-  jsr sub_84F5
+  jsr dir_next_sector_current
   bcc loc_A47B
   cmp #$02
   beq loc_A4B1
@@ -1112,29 +1100,28 @@ loc_A4AF:
   lda #$05
 loc_A4B1:
   sta var_00F0
-  ldx data_802C
-  ldy data_802B
+  ldx current_dir_cluster_high
+  ldy current_dir_cluster_low
   pla
-  sta data_802B
+  sta current_dir_cluster_low
   pla
-  sta data_802C
-  inc data_802D
+  sta current_dir_cluster_high
+  inc in_subdirectory
   lda var_00F0
   rts
 
-; 文件调用 18 FileRemoveDir：删除空子目录，试图删除当前目录时按手册返回 $10。
-; 未确认：含义来自手册功能名与出错码表，代码尚未逐条核对。
+; 文件调用 18 FileRemoveDir：删除目录，路径不存在 A=$03，删除当前目录 A=$10（后者只依据手册）。Ember 实测删除空目录成功。
 file_call_remove_dir:
   lda #$10
   ldy #$08
-  jsr sub_84CE
+  jsr dir_find_entry
   bcc loc_A4D7
   cmp #$02
   bne loc_A524
   lda #$03
   rts
 loc_A4D7:
-  jsr sub_8BEC
+  jsr block_store_dir_position
   ldy #$1B
   lda (var_00F1),y
   tax
@@ -1155,27 +1142,26 @@ loc_A4F0:
   sta var_00FC
 loc_A4FB:
   lda #$00
-  sta data_868E
-  sta data_868F
-  jsr sub_86A5
+  sta fat_value_low
+  sta fat_value_high
+  jsr fat_entry_access
   bcs loc_A524
-  jsr sub_8659
+  jsr fat_value_is_last
   bcc loc_A4FB
-  jsr sub_859F
+  jsr fat_buffer_flush
   bcs loc_A524
   jsr sub_8F62
   bcs loc_A524
   ldy #$00
   lda #$E5
   sta (var_00F1),y
-  jsr sub_840D
+  jsr dir_buffer_write
   bcs loc_A524
   lda #$00
 loc_A524:
   rts
 
-; 文件调用 19 FileGetDir：取当前目录路径。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 19 FileGetDir：取当前目录：出口 FH_PAGE 为 dos_page、FH_BUFFER 为 current_dir_path（DOS 页里以 0 结尾的路径串，根目录为空串）。Ember 实测。
 file_call_get_dir:
   ldy #$02
   lda data_A53A

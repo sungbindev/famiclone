@@ -53,10 +53,7 @@ loc_B1B7:
   sec
   rts
 
-; DOS 功能 15 DosRunPathProgram：运行一个程序，程序名可以带路径。
-; 入口：$FF 为程序所在盘号；X:Y 为路径与文件名地址，以 0 结尾；$0100 起是传给程序的参数。
-; 出口：C=0 时 A 为程序退出码；C=1 时执行出错，A 为出错码。
-; 限制：嵌套运行最多 4 层；返回后寄存器与堆栈内容都被破坏。
+; DOS 功能 15 DosRunPathProgram：运行一个程序，程序名可以带路径。入口：$FF 为程序所在盘号；X:Y（X 高）为以 0 结尾的路径与文件名，文件名必须带扩展名 CMD、EXC 或 GAM；$0100 起是传给程序的参数。出口同功能 5。嵌套最多 4 层。Ember 实测。
 dos_run_path_program:
   lda var_00FF
   sta var_0401
@@ -64,10 +61,7 @@ dos_run_path_program:
   sta var_0402
   jmp loc_B1D3
 
-; DOS 功能 5 DosRunProgram：运行一个程序（CMD、EXC、GAM）。
-; 入口：$FF 为程序所在盘号（0 默认，1 为 A 盘）；X:Y 为文件名地址（以 0 结尾）；$0100 起是传给程序的参数。
-; 出口：C=0 时 A 为程序退出码；C=1 时执行出错，A 为出错码。
-; 说明：扩展名依次试 CMD、EXC、GAM（表在 $B136）；嵌套最多 4 层；返回后寄存器与堆栈内容都被破坏。
+; DOS 功能 5 DosRunProgram：运行一个程序（CMD、EXC、GAM）。入口：$FF 为程序所在盘号（0 默认，1 为 A 盘）；X:Y（X 高）指向 11 字节文件名（主名 8 加扩展名 3，空格补齐），经 sub_B13F 转成“主名.扩展名”放在 $0430 再继续；$0100 起是传给程序的参数。程序类型由扩展名判断（表在 $B136：CMD、EXC、GAM），扩展名不是这三种时返回 C=1（Ember 实测 Y=$0B）。出口：C=0 时 A 为程序的退出码。嵌套最多 4 层；返回后寄存器内容被破坏。Ember 实测。
 dos_run_program:
   lda var_00FF
   sta var_0401

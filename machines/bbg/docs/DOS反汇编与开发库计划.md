@@ -173,9 +173,17 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 | 1 BIOS 接口基线 | 部分：`bios-rom` 工程已追踪、分 12 个模块、43 个分发项与入口向量已命名，回读一致；`bios-calls.inc` 已写，硬件寄存器与系统变量文件未写；`bbg98_bios.bin` 未分析 |
 | 2 启动扇区 | 完成 |
 | 3 `COMMAND.CMD` | 部分：已追踪、分 10 个模块、19 个内部命令入口命名并写说明，回读一致；其余例程与变量仍是自动名 |
-| 4 `BBGDOS.SYS` | 部分：已追踪、分 11 个模块、DOS 17 个功能与文件调用 25 项命名并写说明，回读一致；其余例程与变量仍是自动名；文件调用 0-5、8-19 的行为只依据手册 |
-| 5 API 提取与文档 | 部分：`dos-calls.inc`、`docs/api/` 已写；文件查找通道块布局已用 `apps/bbg/filetest` 在模拟器里实测通过（目录枚举问题已解决）；外设调用（`$5809`）的子功能、`EXC` 文件头与程序运行时的低端内存约定、版本支持表未做 |
-| 6 汇编开发库 | 未开始 |
-| 7 库验证 | 未开始 |
+| 4 `BBGDOS.SYS` | 部分：已追踪、分 11 个模块，回读一致；DOS 17 个功能、文件调用 25 项、磁盘 I/O、FAT 与目录、严重错误处理（含此前没有追踪到的中英文消息、原因表与处理代码）的主要例程已命名并写说明，各缓冲区、BIOS 参数块字段与 FAT12/16 状态变量已命名；文件读写、路径解析、程序装入、屏幕与启动配置里的其余例程与变量仍是自动名 |
+| 5 API 提取与文档 | 部分：`dos-calls.inc`、`docs/api/` 已写；文件调用 0-23 与除 13 以外的 DOS 调用已在 Ember 里用库的测试程序验证（目录枚举问题已解决，`DOS_DISPLAY_STRING` 的参数顺序与 `DOS_RUN_PROGRAM` 的文件名约定已查清）；外设调用（`$5809`）的子功能、`EXC` 文件头与程序运行时的低端内存约定、版本支持表未做 |
+| 6 汇编开发库 | 完成：`vscode/targets/bbg` 的 `bbg.lib`（`dos`、`file`、`bios`、`text` 四个模块共 59 个函数，一个函数一个文件），`bbg.inc` 由符号文件生成，`api-reference.md` 由源码注释生成，`api-unwrapped.json` 登记没有封装的功能号与原因；DOS 功能 13、文件功能 24 与多数 BIOS 功能没有封装 |
+| 7 库验证 | 完成：`vscode/test/real-emulator/bbg-library.test.ts` 在 Ember 的 `bbg1` 上运行 5 个测试程序（BIOS 9 项、文件 77 项、文字 5 项加 6 组截图对比、DOS 18 项加按键输入、运行程序 8 项），接口检查 `check-bbg-api.mjs` 通过；`apps/bbg/game` 没有改用库 |
 
-自动符号的剩余量（`disasm_status` 的 `symbols.auto`）：`bbgdos` 966、`command` 749、`bios-rom` 1040、`boot-sector` 0。
+自动符号的剩余量（`disasm_status` 的 `symbols.auto`）：`bbgdos` 863、`command` 749、`bios-rom` 1040、`boot-sector` 0。
+
+## 实测发现的行为
+
+- `DOS_DISPLAY_STRING`：`X` 是地址高字节、`Y` 是低字节，与手册文字相反。
+- `DOS_RUN_PROGRAM` 的文件名必须带扩展名 `CMD`、`EXC` 或 `GAM`（DOS 用扩展名判断程序类型，不会自己依次试）；成功时 `C=0`、`A` 为被运行程序的退出码；文件名不合规时返回 `C=1`。
+- 文件调用 12 能设置属性、日期与时间并在关闭后保存；写与删除都不检查只读属性。
+- 文件打开后的通道块偏移 2 起是属性、日期、时间，偏移 `$0D` 起是 4 字节长度（见 `dos-calls.inc` 的 `FH_OPEN_*`、`FH_FILE_SIZE`）。
+- 文件调用的 `FILE_SET_ATTRIBUTE`（24）手册未列，对已打开的文件调用返回 `$05`，用法没有查清。

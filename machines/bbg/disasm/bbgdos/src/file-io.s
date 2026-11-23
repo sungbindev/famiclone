@@ -7,27 +7,28 @@
 
 .segment "SEG0_0E15"
 ; 段 0，$8A15-$97FF
+; 文件调用进入（入口桩代码把 $8000 窗口切到 DOS 页后调用）。入口：A 为调用者所在页，X:Y 为调用者的通道块地址。先把零页 $E5-$FF 保存到 saved_zero_page；通道块在 $8000-$BFFF 窗口里时，经 BIOS 功能 17 把它的 48 字节与低端内存 $0700 交换，$EE:$EF 指向 $0700，否则直接指向调用者的块。
 file_call_enter:
-  sta data_8008
+  sta caller_page
   cld
   txa
   pha
   ldx #$1A
 loc_8A1D:
   lda var_00E5,x
-  sta data_8082,x
+  sta saved_zero_page,x
   dex
   bpl loc_8A1D
   pla
-  sta data_800E
-  sty data_800D
+  sta caller_block_high
+  sty caller_block_low
   cmp #$80
   bcc loc_8A58
   cmp #$C0
   bcs loc_8A58
   sta var_00F2
   sty var_00F1
-  lda data_8008
+  lda caller_page
   sta var_00F0
   ldx #$07
   ldy #$00
@@ -46,17 +47,19 @@ loc_8A58:
   sta var_00EF
   sty var_00EE
   rts
+
+; 文件调用退出：按进入时的逆序把 $0700 里的通道块经 BIOS 功能 17 交换回调用者的窗口页，恢复零页 $E5-$FF，再把窗口切回调用者页（BIOS 功能 1）并返回；返回前 A 为出错码，并按它设 C。
 file_call_leave:
   pha
-  lda data_800E
+  lda caller_block_high
   cmp #$80
   bcc loc_8A8C
   cmp #$C0
   bcs loc_8A8C
   sta var_00F2
-  lda data_800D
+  lda caller_block_low
   sta var_00F1
-  lda data_8008
+  lda caller_page
   sta var_00F0
   ldx #$07
   ldy #$00
@@ -72,7 +75,7 @@ file_call_leave:
 loc_8A8C:
   ldx #$1A
 loc_8A8E:
-  lda data_8082,x
+  lda saved_zero_page,x
   sta var_00E5,x
   dex
   bpl loc_8A8E
@@ -80,10 +83,11 @@ loc_8A8E:
   cmp #$01
   tay
   lda #$01
-  ldx data_8008
+  ldx caller_page
   jmp BIOS_ENTRY
 
-sub_8AA2:
+; 把目录项（$F4 指向）的 11 字节文件名复制到 $F1 指向的结果区，第 0 字节的 $E5 改成 $05。
+dta_copy_name:
   ldy #$0A
 loc_8AA4:
   lda (var_00F4),y
@@ -98,7 +102,8 @@ loc_8AB3:
   sta (var_00F1),y
   rts
 
-sub_8AB6:
+; 初始化新目录项（$F1 指向）：偏移 $0C-$1F 清零，偏移 $0B 写属性 X，再写入当前时间。
+dir_entry_init:
   ldy #$0C
   lda #$00
 loc_8ABA:
@@ -108,7 +113,8 @@ loc_8ABA:
   bne loc_8ABA
   txa
 
-sub_8AC2:
+; 把属性 A 写进目录项偏移 $0B，并用 BIOS 功能 $3F（取日期时间）把当前时间与日期写进偏移 $16-$19。
+dir_entry_set_timestamp:
   ldy #$0B
   sta (var_00F1),y
   lda #$3F
@@ -128,11 +134,12 @@ sub_8AC2:
   sta (var_00F1),y
   rts
 
-sub_8ADF:
+; 把数据缓冲区 sector_buffer（$9200-$93FF）清零。
+data_buffer_clear:
   ldy #$00
   tya
 loc_8AE2:
-  sta data_9200,y
+  sta sector_buffer,y
   iny
   bne loc_8AE2
 loc_8AE8:
@@ -142,16 +149,16 @@ loc_8AE8:
   rts
 
 sub_8AEF:
-  lda data_8021
-  ldx data_8020
-  ldy data_801F
-  jsr sub_841C
+  lda free_slot_lba_2
+  ldx free_slot_lba_1
+  ldy free_slot_lba_0
+  jsr dir_buffer_read
   bcs loc_8B0B
   lda var_00FE
   sta var_00FA
-  jsr sub_8403
-  jsr sub_83F5
-  jsr sub_8AA2
+  jsr dir_entry_pointer
+  jsr block_name_pointer
+  jsr dta_copy_name
   clc
 loc_8B0B:
   rts
@@ -159,20 +166,20 @@ loc_8B0B:
 sub_8B0C:
   lda #$00
   sta var_00FC
-  ldx data_802C
-  ldy data_802B
+  ldx current_dir_cluster_high
+  ldy current_dir_cluster_low
 loc_8B16:
-  stx data_885F
-  sty data_885E
-  jsr sub_86A5
+  stx chain_cluster_high
+  sty chain_cluster_low
+  jsr fat_entry_access
   bcs loc_8B8C
-  jsr sub_8659
+  jsr fat_value_is_last
   bcc loc_8B16
-  ldx data_8081
-  ldy data_8080
+  ldx free_search_cluster_high
+  ldy free_search_cluster_low
   stx var_00F7
   sty var_00F6
-  jsr sub_8860
+  jsr fat_allocate_cluster
   bcc loc_8B40
   cmp #$27
   sec
@@ -181,48 +188,48 @@ loc_8B16:
   lda #$05
   rts
 loc_8B40:
-  jsr sub_8819
-  jsr sub_8690
+  jsr fat_advance_search
+  jsr fat_write_entry
   bcs loc_8B8C
-  jsr sub_85D6
-  ldx data_885F
-  ldy data_885E
-  jsr sub_8486
+  jsr buffers_flush_all
+  ldx chain_cluster_high
+  ldy chain_cluster_low
+  jsr cluster_to_lba
   bcs loc_8B8C
-  sta data_8021
-  stx data_8020
-  sty data_801F
-  sta data_801E
-  stx data_801D
-  sty data_801C
+  sta free_slot_lba_2
+  stx free_slot_lba_1
+  sty free_slot_lba_0
+  sta data_buffer_lba_2
+  stx data_buffer_lba_1
+  sty data_buffer_lba_0
   lda #$00
   sta var_00FE
-  jsr sub_8ADF
-  ldx data_8070
+  jsr data_buffer_clear
+  ldx sectors_per_cluster
   stx var_00F3
 loc_8B74:
   lda #$03
-  jsr sub_81EB
+  jsr data_buffer_transfer
   bcs loc_8B8C
-  inc data_801C
+  inc data_buffer_lba_0
   bne loc_8B88
-  inc data_801D
+  inc data_buffer_lba_1
   bne loc_8B88
-  inc data_801E
+  inc data_buffer_lba_2
 loc_8B88:
   dec var_00F3
   bne loc_8B74
 loc_8B8C:
   rts
 
-; 文件调用 1 FileOpen、20 FilePathOpen：打开文件，通道块里的文件名从偏移 5 起（主名 8 字节加扩展名 3 字节）。
-; 未确认：具体行为来自手册功能名，代码尚未逐条核对。
+; 文件调用 1 FileOpen、20 FilePathOpen：打开文件。出口：通道块偏移 2 为属性、3-4 为日期、5-6 为时间、$0B-$0C 为首簇、$0D-$10 为长度，读写位置（偏移 7-10）为 0；文件不存在 A=$02。Ember 实测。
 file_call_open:
   lda #$27
   ldy #$18
 
-sub_8B91:
-  jsr sub_84CE
+; 打开文件的公共部分：用 dir_find_entry 找到目录项后，把属性、时间、日期、首簇、长度从目录项复制到通道块（偏移 2-6、$0B-$10），读写位置（偏移 7-10）清零，并记下目录项位置（block_store_dir_position）。
+file_open_common:
+  jsr dir_find_entry
   bcs loc_8C07
   ldy #$0B
   lda (var_00F1),y
@@ -280,58 +287,61 @@ loc_8BE5:
   cpy #$0B
   bne loc_8BE5
 
-sub_8BEC:
+; 把目录项位置存进通道块：偏移 $11 为项偏移除以 2，偏移 $12-$14 为目录扇区号（3 字节），用于关闭文件时回写。
+block_store_dir_position:
   ldy #$11
   lda var_00FA
   sta (var_00EE),y
   iny
-  lda data_8018
+  lda dir_buffer_lba_0
   sta (var_00EE),y
   iny
-  lda data_8019
+  lda dir_buffer_lba_1
   sta (var_00EE),y
   iny
-  lda data_801A
+  lda dir_buffer_lba_2
   sta (var_00EE),y
   lda #$00
   clc
 loc_8C07:
   rts
 
-sub_8C08:
+; 把本次传送字节数 chunk_bytes_low/high 加到通道块里从偏移 Y 起的 2 字节字里（用来推进缓冲区地址、字节数与读写位置）。
+add_chunk_to_pointer:
   clc
   lda (var_00EE),y
-  adc data_8012
+  adc chunk_bytes_low
   sta (var_00EE),y
   iny
   lda (var_00EE),y
-  adc data_8013
+  adc chunk_bytes_high
   sta (var_00EE),y
 loc_8C18:
   rts
 
-sub_8C19:
+; 传送不满一个扇区的一段：把读写位置所在的扇区取进 sector_buffer，经 BIOS_MOVE_BLOCK 在 sector_buffer 与调用者缓冲区之间复制 chunk_bytes 字节（读时从 sector_buffer 复制出去，写时复制进来并标记 data_buffer_dirty），再推进缓冲区地址、字节数与读写位置。
+file_transfer_partial_sector:
   lda #$00
   jsr sub_88EA
   bcs loc_8C18
-  lda data_8011
-  ldx data_8010
-  ldy data_800F
-  jsr sub_81CA
+  lda sector_lba_2
+  ldx sector_lba_1
+  ldy sector_lba_0
+  jsr data_sector_select
   bcs loc_8C18
-  lda data_8014
+  lda remaining_bytes_low
   sec
-  sbc data_8012
-  sta data_8014
-  lda data_8015
-  sbc data_8013
-  sta data_8015
+  sbc chunk_bytes_low
+  sta remaining_bytes_low
+  lda remaining_bytes_high
+  sbc chunk_bytes_high
+  sta remaining_bytes_high
   lda var_00FD
   cmp #$02
   beq loc_8C74
   lda #$FF
-  sta data_8017
-  lda data_8007
+  sta data_buffer_dirty
+  lda dos_page
   sta var_00F3
   ldy #$07
   lda (var_00EE),y
@@ -352,7 +362,7 @@ sub_8C19:
   sta var_00F2
   jmp loc_8C99
 loc_8C74:
-  lda data_8007
+  lda dos_page
   sta var_00F0
   ldy #$07
   lda (var_00EE),y
@@ -372,21 +382,21 @@ loc_8C74:
   lda (var_00EE),y
   sta var_00F5
 loc_8C99:
-  lda data_8012
+  lda chunk_bytes_low
   sta var_00F6
-  lda data_8013
+  lda chunk_bytes_high
   sta var_00F7
   lda #$0C
   ldx #$F0
   jsr BIOS_ENTRY
   ldy #$03
-  jsr sub_8C08
+  jsr add_chunk_to_pointer
   ldy #$05
-  jsr sub_8C08
+  jsr add_chunk_to_pointer
   ldy #$07
-  jsr sub_8C08
+  jsr add_chunk_to_pointer
 
-sub_8CB9:
+carry_into_position:
   ldx #$02
 loc_8CBB:
   iny
@@ -398,8 +408,8 @@ loc_8CBB:
   rts
 
 sub_8CC6:
-  ldx data_8015
-  ldy data_8014
+  ldx remaining_bytes_high
+  ldy remaining_bytes_low
   bne loc_8CCF
   dex
 loc_8CCF:
@@ -420,7 +430,7 @@ loc_8CCF:
   lda #$00
   adc (var_00EE),y
   sta var_00F0
-  lda data_8070
+  lda sectors_per_cluster
 loc_8CEF:
   lsr var_00F0
   ror a:var_00F9
@@ -464,23 +474,23 @@ loc_8D2C:
   cmp var_00F1
   beq loc_8D7C
 loc_8D38:
-  stx data_885F
-  sty data_885E
-  jsr sub_86A5
+  stx chain_cluster_high
+  sty chain_cluster_low
+  jsr fat_entry_access
   bcs loc_8D7D
-  jsr sub_8659
+  jsr fat_value_is_last
   bcs loc_8D51
   inc var_00F1
   bne loc_8D2C
   inc var_00F2
   jmp loc_8D2C
 loc_8D51:
-  ldx data_8081
-  ldy data_8080
+  ldx free_search_cluster_high
+  ldy free_search_cluster_low
   stx var_00F7
   sty var_00F6
 loc_8D5B:
-  jsr sub_8860
+  jsr fat_allocate_cluster
   bcs loc_8D7D
   inc var_00F1
   bne loc_8D66
@@ -491,19 +501,20 @@ loc_8D66:
   lda var_00F2
   sbc var_00F9
   bcs loc_8D79
-  jsr sub_8819
+  jsr fat_advance_search
   bne loc_8D5B
   lda #$27
   sec
   rts
 loc_8D79:
-  jmp sub_8690
+  jmp fat_write_entry
 loc_8D7C:
   clc
 loc_8D7D:
   rts
 
-sub_8D7E:
+; 算出文件长度（偏移 $0D，4 字节）减读写位置（偏移 7，4 字节）的差：低 16 位在 $F0:$F1，高 16 位在 X:A；差为负时 C=0。
+file_bytes_left:
   ldy #$10
   lda (var_00EE),y
   pha
@@ -532,30 +543,30 @@ sub_8D7E:
   sbc (var_00EE),y
   rts
 
-sub_8DA5:
+; 取出通道块里的读写字节数（偏移 5-6）到 remaining_bytes_low/high 并把它清零（之后用它累计实际传送的字节数）；Z=1 表示要求的字节数为 0。
+block_take_length:
   ldy #$06
   lda (var_00EE),y
-  sta data_8015
+  sta remaining_bytes_high
   lda #$00
   sta (var_00EE),y
   dey
   lda (var_00EE),y
-  sta data_8014
+  sta remaining_bytes_low
   pha
   lda #$00
   sta (var_00EE),y
   pla
-  ora data_8015
+  ora remaining_bytes_high
   rts
 
-; 文件调用 2 FileRead：从已打开的文件读数据，缓冲区页、地址与长度取自通道块。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 2 FileRead：从读写位置（偏移 7）起读 FH_BYTES 字节到 FH_PAGE:FH_BUFFER，可跨扇区；读到文件末尾时 FH_BYTES 是实际读到的字节数。出口：FH_BUFFER 为缓冲区结束地址，读写位置前进。Ember 实测。
 file_call_read:
-  jsr sub_8230
+  jsr drive_select
   bcs loc_8E0B
-  jsr sub_8D7E
+  jsr file_bytes_left
   sta var_00FE
-  jsr sub_8DA5
+  jsr block_take_length
   bcc loc_8DF5
   beq loc_8E09
   lda var_00FE
@@ -564,18 +575,18 @@ file_call_read:
   bne loc_8DF0
   ldx var_00F1
   ldy var_00F0
-  cpy data_8014
+  cpy remaining_bytes_low
   txa
-  sbc data_8015
+  sbc remaining_bytes_high
   bcs loc_8DF0
   txa
   ora var_00F0
   beq loc_8E0B
-  stx data_8015
-  sty data_8014
+  stx remaining_bytes_high
+  sty remaining_bytes_low
 loc_8DF0:
   lda #$02
-  jmp sub_8E4D
+  jmp file_transfer
 loc_8DF5:
   ldy #$0D
 loc_8DF7:
@@ -596,32 +607,31 @@ loc_8E09:
 loc_8E0B:
   rts
 
-; 文件调用 3 FileWrite：向已打开的文件写数据，缓冲区页、地址与长度取自通道块。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 3 FileWrite：从读写位置起把 FH_PAGE:FH_BUFFER 里的 FH_BYTES 字节写进文件，必要时分配新簇并扩大文件长度；FH_BYTES 为 0 表示在读写位置截断文件。不检查只读属性。出口同 FileRead。Ember 实测。
 file_call_write:
-  jsr sub_8230
+  jsr drive_select
   bcs loc_8E4A
-  jsr sub_8DA5
+  jsr block_take_length
   bne loc_8E1C
   jsr sub_8EEB
   bcc loc_8E48
   rts
 loc_8E1C:
-  jsr sub_8D7E
+  jsr file_bytes_left
   bcc loc_8E32
   bne loc_8E4B
   txa
   bne loc_8E4B
-  lda data_8014
+  lda remaining_bytes_low
   cmp var_00F0
-  lda data_8015
+  lda remaining_bytes_high
   sbc var_00F1
   bcc loc_8E4B
 loc_8E32:
   jsr sub_8CC6
   bcs loc_8E44
   lda #$03
-  jsr sub_8E4D
+  jsr file_transfer
   bcs loc_8E43
   jsr sub_8F46
   lda #$00
@@ -637,7 +647,8 @@ loc_8E4A:
 loc_8E4B:
   lda #$03
 
-sub_8E4D:
+; 读写文件的主体。入口：A 为命令（2 读、3 写），remaining_bytes 为要传送的字节数。分三段：先补齐当前扇区的剩余部分（file_transfer_partial_sector），再整扇区、整簇连续传送（disk_transfer_sectors），最后传送尾部不满一个扇区的部分。
+file_transfer:
   sta var_00FD
   ldy #$07
   lda (var_00EE),y
@@ -654,20 +665,20 @@ sub_8E4D:
   cpy #$02
   beq loc_8E81
 loc_8E66:
-  cpy data_8015
+  cpy remaining_bytes_high
   bne loc_8E6E
-  cpx data_8014
+  cpx remaining_bytes_low
 loc_8E6E:
   bcc loc_8E76
-  ldy data_8015
-  ldx data_8014
+  ldy remaining_bytes_high
+  ldx remaining_bytes_low
 loc_8E76:
-  sty data_8013
-  stx data_8012
-  jsr sub_8C19
+  sty chunk_bytes_high
+  stx chunk_bytes_low
+  jsr file_transfer_partial_sector
   bcs loc_8EEA
 loc_8E81:
-  lda data_8015
+  lda remaining_bytes_high
   lsr a
   beq loc_8ED0
   jsr sub_898B
@@ -675,26 +686,26 @@ loc_8E81:
   asl a
   bcs loc_8E96
   beq loc_8EEA
-  cmp data_8015
+  cmp remaining_bytes_high
   bcc loc_8E99
 loc_8E96:
-  lda data_8015
+  lda remaining_bytes_high
 loc_8E99:
   and #$FE
   sta data_800A
   lsr a
-  jsr sub_8188
+  jsr disk_transfer_sectors
   bcs loc_8EEA
-  lda data_8015
+  lda remaining_bytes_high
   sec
   sbc data_800A
-  sta data_8015
+  sta remaining_bytes_high
   ldy #$08
   clc
   lda (var_00EE),y
   adc data_800A
   sta (var_00EE),y
-  jsr sub_8CB9
+  jsr carry_into_position
   ldy #$06
   lda (var_00EE),y
   adc data_800A
@@ -705,14 +716,14 @@ loc_8E99:
   sta (var_00EE),y
   jmp loc_8E81
 loc_8ED0:
-  ldx data_8015
+  ldx remaining_bytes_high
   txa
-  ora data_8014
+  ora remaining_bytes_low
   beq loc_8EE9
-  ldy data_8014
-  stx data_8013
-  sty data_8012
-  jsr sub_8C19
+  ldy remaining_bytes_low
+  stx chunk_bytes_high
+  sty chunk_bytes_low
+  jsr file_transfer_partial_sector
   bcs loc_8EEA
   lda #$00
 loc_8EE9:
@@ -745,22 +756,22 @@ loc_8F0A:
   ldx var_00F7
   ldy var_00F6
 loc_8F0E:
-  stx data_885F
-  sty data_885E
+  stx chain_cluster_high
+  sty chain_cluster_low
   lda #$FF
   sta var_00FC
-  lda data_807F
-  sta data_868F
+  lda fat16_flag
+  sta fat_value_high
   lda #$FF
-  sta data_868E
+  sta fat_value_low
 loc_8F23:
-  jsr sub_86A5
+  jsr fat_entry_access
   bcs loc_8EEA
-  jsr sub_8659
+  jsr fat_value_is_last
   bcs loc_8F37
   lda #$00
-  sta data_868E
-  sta data_868F
+  sta fat_value_low
+  sta fat_value_high
   beq loc_8F23
 loc_8F37:
   ldy #$07
@@ -796,7 +807,7 @@ loc_8F52:
   rts
 
 sub_8F62:
-  jsr sub_8230
+  jsr drive_select
   ldy #$14
   lda (var_00EE),y
   pha
@@ -807,29 +818,28 @@ sub_8F62:
   lda (var_00EE),y
   tay
   pla
-  jsr sub_841C
+  jsr dir_buffer_read
   bcs loc_8F80
   ldy #$11
   lda (var_00EE),y
-  jsr sub_8403
+  jsr dir_entry_pointer
   clc
 loc_8F80:
   rts
 
-; 文件调用 5 FileClose：关闭文件通道。
-; 未确认：含义来自手册功能名，代码尚未逐条核对。
+; 文件调用 5 FileClose：把文件长度、日期、时间和属性写回目录项，并把缓冲区写回磁盘。Ember 实测。
 file_call_close:
-  lda data_8017
+  lda data_buffer_dirty
   beq loc_8F90
-  inc data_8017
+  inc data_buffer_dirty
   lda #$03
-  jsr sub_81EB
+  jsr data_buffer_transfer
   bcs loc_8FBF
 loc_8F90:
   ldy #$1A
   lda (var_00EE),y
   beq loc_8F99
-  jsr sub_859F
+  jsr fat_buffer_flush
 loc_8F99:
   ldy #$19
   lda (var_00EE),y
@@ -850,7 +860,7 @@ loc_8FB0:
   sta (var_00F1),y
   cpy #$1A
   bne loc_8FB0
-  jsr sub_840D
+  jsr dir_buffer_write
   bcs loc_8FBF
 loc_8FBD:
   lda #$00
@@ -858,11 +868,11 @@ loc_8FBF:
   rts
 
 sub_8FC0:
-  jsr sub_841C
+  jsr dir_buffer_read
   bcs loc_900E
   lda var_00FA
 loc_8FC7:
-  jsr sub_8403
+  jsr dir_entry_pointer
   ldy #$00
   lda (var_00F1),y
   beq loc_900B
@@ -899,7 +909,7 @@ loc_8FFD:
   adc #$10
   sta var_00FA
   bne loc_8FC7
-  jsr sub_84F5
+  jsr dir_next_sector_current
   bcc sub_8FC0
 loc_900B:
   lda #$12
@@ -1017,10 +1027,10 @@ loc_90DE:
   bne loc_90E5
   lda data_8004
 loc_90E5:
-  cmp data_8006
+  cmp logical_drive_count
   bcc loc_90F1
   bne loc_9138
-  ldy data_8000
+  ldy drive_info_y
   bne loc_9146
 loc_90F1:
   sec
@@ -1031,10 +1041,10 @@ loc_90F1:
   ora #$80
   bne loc_9103
 loc_90FE:
-  ldy data_8001
+  ldy drive_info_a
   beq loc_9138
 loc_9103:
-  sta data_8005
+  sta current_drive
   lda file_call_flags,x
   bpl loc_9115
   jsr sub_83A8
@@ -1121,8 +1131,8 @@ loc_9190:
   ldy var_00EE
   jsr sub_91B0
   jsr sub_913D
-  ldx data_800E
-  ldy data_800D
+  ldx caller_block_high
+  ldy caller_block_low
   jsr sub_91B0
   jmp loc_91A9
 loc_91A6:
@@ -1136,7 +1146,7 @@ loc_91AD:
 sub_91B0:
   tya
   pha
-  lda data_8008
+  lda caller_page
   ldy #$02
   sta (var_00EE),y
   pla
@@ -1150,39 +1160,41 @@ sub_91B0:
   sta (var_00EE),y
   rts
   .res 56, $FF
-data_9200:
+; 数据缓冲区（512 字节，$9200-$93FF），引导扇区也读到这里解析
+sector_buffer:
   .byte $FF, $FF
 data_9202:
-  .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-data_920D:
+  .res 11, $FF
+; 引导扇区里的 BPB 字段：每簇扇区数（偏移 $0D）
+boot_sectors_per_cluster:
   .byte $FF
-data_920E:
+boot_reserved_sectors:
   .byte $FF, $FF
-data_9210:
+boot_fat_count:
   .byte $FF
-data_9211:
+boot_root_entries_low:
   .byte $FF
-data_9212:
+boot_root_entries_high:
   .byte $FF
-data_9213:
+boot_total_sectors_low:
   .byte $FF
-data_9214:
+boot_total_sectors_high:
   .byte $FF
-data_9215:
+boot_media_descriptor:
   .byte $FF
-data_9216:
+boot_sectors_per_fat:
   .byte $FF, $FF
-data_9218:
+boot_sectors_per_track:
   .byte $FF, $FF
-data_921A:
+boot_head_count:
   .byte $FF
 data_921B:
-  .byte $FF, $FF, $FF, $FF, $FF
-data_9220:
+  .res 5, $FF
+boot_total_sectors32_0:
   .byte $FF
-data_9221:
+boot_total_sectors32_1:
   .byte $FF
-data_9222:
+boot_total_sectors32_2:
   .res 24, $FF
 data_923A:
   .byte $FF
@@ -1190,7 +1202,8 @@ data_923B:
   .res 197, $FF
 data_9300:
   .res 256, $FF
-data_9400:
+; 目录缓冲区（512 字节，$9400-$95FF）
+dir_buffer:
   .res 58, $FF
 data_943A:
   .byte $FF
@@ -1198,7 +1211,8 @@ data_943B:
   .res 197, $FF
 data_9500:
   .res 256, $FF
-data_9600:
+; FAT 缓冲区（512 字节，$9600-$97FF）
+fat_buffer:
   .res 256, $FF
 data_9700:
   .res 256, $FF

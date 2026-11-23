@@ -268,6 +268,8 @@ loc_A74B:
 ; 入口：$FF 为要执行的 DOS 功能号。
 dos_read_kb_clear:
   lda var_00FF
+
+sub_A74E:
   pha
   lda #$00
   sta data_A545

@@ -196,12 +196,21 @@ interface SessionParts {
   readonly symbols: Readonly<Record<string, number>>;
   readonly imageFile: string;
   readonly processes: NodeEmulatorProcessLauncher;
+  /** 测试程序里记录变量的名字前缀，默认 sb_test（步步高的测试程序用 bbg_test）。 */
+  readonly prefix?: string;
+  /** 停靠时是否核对 $8000 窗口里的学习机程序文件头；步步高没有这个文件头，为 false。 */
+  readonly checkHeader?: boolean;
 }
 
 /** 一次测试运行：封装 Ember 与测试程序的符号。 */
 export class Sb2000Session {
   /** @param parts 调试会话、Ember 进程号、调试端口、符号地址、镜像路径与进程启动。 */
   constructor(private readonly parts: SessionParts) {}
+
+  /** 测试程序记录变量的名字前缀。 */
+  private get prefix(): string {
+    return this.parts.prefix ?? 'sb_test';
+  }
 
   /**
    * 按下并松开一个键，期间运行若干帧让 BIOS 读到。
@@ -263,9 +272,11 @@ export class Sb2000Session {
       }
       // DOS 外壳也在 $8000 窗口里运行，可能写到同一地址；窗口里是本程序（文件头魔数 AA 55）时才算到
       // 达
-      const header = await this.read(0x8000, 5);
-      if (header[3] !== 0xaa || header[4] !== 0x55) continue;
-      const flag = (await this.readVariable('sb_test_stop', 1))[0];
+      if (this.parts.checkHeader !== false) {
+        const header = await this.read(0x8000, 5);
+        if (header[3] !== 0xaa || header[4] !== 0x55) continue;
+      }
+      const flag = (await this.readVariable(`${this.prefix}_stop`, 1))[0];
       if (flag === 0) continue; // 启动代码清零 BSS 时也写这个单元
       if (flag === 1) return 'done';
       if (flag === 2) return 'sync';
@@ -275,15 +286,37 @@ export class Sb2000Session {
   }
 
   /**
+   * 运行到步步高测试程序的停靠点：每运行若干帧读一次停靠标志（不设断点），程序在 bbt_sync 里写 2 并等待，结束时写 1。
+   * 停在 sync 时调用者做完截图等操作后要调用 resume() 让程序继续。
+   * @param maxFrames 最多运行的帧数。
+   * @returns 停在哪个停靠点。
+   */
+  async runToStopPolled(maxFrames = 6000): Promise<'sync' | 'done'> {
+    const step = 20;
+    for (let done = 0; done < maxFrames; done += step) {
+      await runFrames(this.parts.client, step);
+      const flag = (await this.readVariable(`${this.prefix}_stop`, 1))[0];
+      if (flag === 1) return 'done';
+      if (flag === 2) return 'sync';
+    }
+    return assert.fail(`运行 ${maxFrames} 帧后测试程序仍没有到达停靠点`);
+  }
+
+  /** 让停在 sync 的步步高测试程序继续运行（把停靠标志清零）。 */
+  async resume(): Promise<void> {
+    await this.parts.client.request('inspector.writeMemory', { space: CPU_SPACE, address: this.parts.symbols[`${this.prefix}_stop`] ?? 0, bytes: [0] });
+  }
+
+  /**
    * 读出测试程序记录的全部检查结果。
    * @returns 检查结果。
    */
   async readChecks(): Promise<CheckResult[]> {
-    const count = (await this.readVariable('sb_test_count', 1))[0] ?? 0;
+    const count = (await this.readVariable(`${this.prefix}_count`, 1))[0] ?? 0;
     const max = 80;
-    const ok = await this.readVariable('sb_test_ok', max);
-    const lines = await this.readVariable('sb_test_line', max * 2);
-    const values = await this.readVariable('sb_test_value', max * 2);
+    const ok = await this.readVariable(`${this.prefix}_ok`, max);
+    const lines = await this.readVariable(`${this.prefix}_line`, max * 2);
+    const values = await this.readVariable(`${this.prefix}_value`, max * 2);
     return Array.from({ length: Math.min(count, max) }, (_, index) => ({
       ok: ok[index] === 1,
       line: lines.readUInt16LE(index * 2),
@@ -297,7 +330,8 @@ export class Sb2000Session {
    */
   async assertAllPassed(expectedCount: number): Promise<void> {
     const checks = await this.readChecks();
-    const failed = checks.filter((check) => !check.ok).map((check) => `第 ${check.line} 行（实际值 ${check.value}，$${check.value.toString(16)}）`);
+    const where = (line: number): string => (this.prefix === 'sb_test' ? `第 ${line} 行` : `检查 ${line}`);
+    const failed = checks.filter((check) => !check.ok).map((check) => `${where(check.line)}（实际值 ${check.value}，$${check.value.toString(16)}）`);
     assert.deepEqual(failed, [], `失败的检查：${failed.join('；')}`);
     assert.equal(checks.length, expectedCount, `应执行 ${expectedCount} 次检查，实际 ${checks.length} 次`);
   }
@@ -411,6 +445,75 @@ export async function startSb2000Program(temp: TempDir, { sources, extraFiles = 
     await enterProgram(client, PROGRAM_NAME);
     // 断点要在输入完程序名之后再设：设早了会打断按键所需的帧数
     await client.request('inspector.addBreakpoint', { kind: 'write', address: symbols.sb_test_stop ?? 0 }, { timeoutMs: RUN_TIMEOUT_MS });
+  } catch (error) {
+    session.close();
+    throw error;
+  }
+  return session;
+}
+
+/** 步步高测试程序目录。 */
+const BBG_FIXTURE_DIR = path.join(EXTENSION_DIRECTORY, 'test', 'fixtures', 'bbg');
+
+/** 仓库里的步步高软驱一号 BIOS，没有设置 FCDEV_TEST_BBG_FIRMWARE 时使用。 */
+const REPOSITORY_BBG_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'bbg1_bios.bin');
+
+/** 仓库里的步步高系统盘（BBGDOS 3.0），测试程序放在它的副本上。 */
+const REPOSITORY_BBG_SYSTEM_DISK = path.resolve(EXTENSION_DIRECTORY, '..', 'reference', 'floppy-images', 'bbg', 'BBGDOS.IMG');
+
+/** 步步高测试程序名，必须是 8.3 名字。 */
+const BBG_PROGRAM_NAME = 'bbgtest';
+
+/** 步步高测试程序的公共源文件。 */
+const BBG_COMMON_SOURCES = ['bbg-test.inc', 'bbg-test.s'];
+
+/** 步步高测试程序记录变量的名字前缀。 */
+const BBG_TEST_PREFIX = 'bbg_test';
+
+/** 步步高固件的位置：环境变量 FCDEV_TEST_BBG_FIRMWARE，没有时用仓库里的；文件不存在时为 undefined。 */
+export const REAL_BBG_FIRMWARE: string | undefined = (() => {
+  const firmware = process.env.FCDEV_TEST_BBG_FIRMWARE ?? REPOSITORY_BBG_FIRMWARE;
+  return existsSync(firmware) ? firmware : undefined;
+})();
+
+/** 需要 Ember、cc65、步步高固件与系统盘的测试是否可以运行。 */
+export const CAN_RUN_REAL_BBG = CAN_RUN_REAL_EMBER && REAL_BBG_FIRMWARE !== undefined && existsSync(REPOSITORY_BBG_SYSTEM_DISK);
+
+/**
+ * 构建步步高测试程序，放进系统盘的副本，在 Ember 的 bbg1 里启动到 BBGDOS，输入程序名运行它。返回时测试程序已经开始运行，调用 session.runToStopPolled() 运行到停靠点。
+ * @param temp 临时目录。
+ * @param sources fixtures/bbg 下的测试程序文件名。
+ * @returns 会话，检查结果的变量前缀是 bbg_test。
+ */
+export async function startBbgProgram(temp: TempDir, sources: readonly string[]): Promise<Sb2000Session> {
+  assert.ok(REAL_EMBER && REAL_BBG_FIRMWARE, '没有可用的 Ember 与步步高固件');
+  const emulator = await createRealEmulator();
+  const build = createRealBuildEnvironment().service;
+  writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'bbg', name: BBG_PROGRAM_NAME, firmware: REAL_BBG_FIRMWARE, diskImage: REPOSITORY_BBG_SYSTEM_DISK }));
+  mkdirSync(path.join(temp.dir, 'src'), { recursive: true });
+  for (const name of [...BBG_COMMON_SOURCES, ...sources]) {
+    copyFileSync(path.join(BBG_FIXTURE_DIR, name), path.join(temp.dir, 'src', name));
+  }
+  const { plan, disk } = await build.build({ pathArg: 'src', cwd: temp.dir });
+  assert.ok(disk, '构建没有生成磁盘镜像');
+
+  const debugText = readFileSync(path.join(plan.objectDir, `${BBG_PROGRAM_NAME}.dbg`), 'utf8');
+  const symbols: Record<string, number> = {};
+  for (const suffix of ['stop', 'count', 'ok', 'line', 'value']) {
+    const name = `${BBG_TEST_PREFIX}_${suffix}`;
+    symbols[name] = findSymbol(debugText, name);
+  }
+
+  const { pid, client } = await launchEmulator(emulator.environment, {
+    executable: REAL_EMBER,
+    firmwareDisk: { machine: 'bbg1', firmware: REAL_BBG_FIRMWARE, diskImage: disk.imageFile },
+    debug: true,
+    port: emulator.port
+  });
+  assert.ok(client !== null && pid !== undefined, 'Ember 没有给出调试连接');
+  const session = new Sb2000Session({ client, pid, port: emulator.port, symbols, imageFile: disk.imageFile, processes: emulator.processes, prefix: BBG_TEST_PREFIX, checkHeader: false });
+  try {
+    await enterProgram(client, BBG_PROGRAM_NAME, 'bbg1');
   } catch (error) {
     session.close();
     throw error;

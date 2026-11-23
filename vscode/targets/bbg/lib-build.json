@@ -1,4 +1,7 @@
 {
+  "libraries": {
+    "lib/bbg.lib": ["src/lib/"]
+  },
   "objects": {
     "lib/crt0.o": "src/crt0.s"
   }

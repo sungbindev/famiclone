@@ -7,73 +7,76 @@
 
 .segment "SEG0_0400"
 ; 段 0，$8000-$809D
-data_8000:
+drive_info_y:
   .byte $00
-data_8001:
+drive_info_a:
   .byte $00
-data_8002:
+drive_info_x:
   .byte $00
 data_8003:
   .byte $03
 data_8004:
   .byte $00
-data_8005:
+; 当前操作的逻辑驱动器号（0 起，位 7 为硬盘）
+current_drive:
   .byte $00
-data_8006:
+logical_drive_count:
   .byte $03
-data_8007:
+; DOS 自己所在的内存页号，磁盘 I/O 的缓冲页
+dos_page:
   .byte $FE
-data_8008:
+; 文件调用入口桩传入的调用者页号
+caller_page:
   .byte $FE
-data_8009:
+sectors_left:
   .byte $00
 data_800A:
   .byte $00
-data_800B:
+disk_retry_count:
   .byte $00
-data_800C:
+disk_last_error:
   .byte $00
-data_800D:
+caller_block_low:
   .byte $00
-data_800E:
+caller_block_high:
   .byte $00
-data_800F:
+sector_lba_0:
   .byte $00
-data_8010:
+sector_lba_1:
   .byte $00
-data_8011:
+sector_lba_2:
   .byte $00
-data_8012:
+chunk_bytes_low:
   .byte $00
-data_8013:
+chunk_bytes_high:
   .byte $00
-data_8014:
+remaining_bytes_low:
   .byte $00
-data_8015:
+remaining_bytes_high:
   .byte $00
-data_8016:
+fat_buffer_dirty:
   .byte $00
-data_8017:
+data_buffer_dirty:
   .byte $00
-data_8018:
+dir_buffer_lba_0:
   .byte $00
-data_8019:
+dir_buffer_lba_1:
   .byte $00
-data_801A:
+dir_buffer_lba_2:
   .byte $00
-data_801B:
+fat_buffer_sector:
   .byte $00
-data_801C:
+data_buffer_lba_0:
   .byte $00
-data_801D:
+data_buffer_lba_1:
   .byte $00
-data_801E:
+data_buffer_lba_2:
   .byte $00
-data_801F:
+free_slot_lba_0:
   .byte $00
-data_8020:
+free_slot_lba_1:
   .byte $00
-data_8021:
+free_slot_lba_2:
   .byte $00
 data_8022:
   .byte $00
@@ -91,13 +94,13 @@ data_8029:
   .byte $00
 data_802A:
   .byte $00
-data_802B:
+current_dir_cluster_low:
   .byte $00
-data_802C:
+current_dir_cluster_high:
   .byte $00
-data_802D:
+in_subdirectory:
   .byte $00
-data_802E:
+mounted_drive:
   .byte $FF
 data_802F:
   .byte $00
@@ -105,27 +108,29 @@ data_8030:
   .byte $00
 data_8031:
   .byte $00
-data_8032:
+; 当前目录路径串（80 字节，以 0 结尾，根目录为空串），FILE_GET_DIR 返回它的地址
+current_dir_path:
   .res 62, $00
-data_8070:
+; 每簇扇区数（从引导扇区解析得到）
+sectors_per_cluster:
   .byte $00
-data_8071:
+sectors_per_track:
   .byte $00
-data_8072:
+head_count:
   .byte $00
-data_8073:
+cluster_limit_low:
   .byte $00
-data_8074:
+cluster_limit_high:
   .byte $00
-data_8075:
+fat1_start_sector:
   .byte $00
-data_8076:
+fat2_start_sector:
   .byte $00
-data_8077:
+root_dir_lba_low:
   .byte $00
-data_8078:
+root_dir_lba_high:
   .byte $00
-data_8079:
+root_dir_sectors:
   .byte $00
 data_807A:
   .byte $00
@@ -133,17 +138,18 @@ data_807B:
   .byte $00
 data_807C:
   .byte $00
-data_807D:
+data_area_lba_low:
   .byte $00
-data_807E:
+data_area_lba_high:
   .byte $00
-data_807F:
+; FAT12 或 FAT16：0 为 FAT12，$FF 为 FAT16
+fat16_flag:
   .byte $00
-data_8080:
+free_search_cluster_low:
   .byte $00
-data_8081:
+free_search_cluster_high:
   .byte $00
-data_8082:
+saved_zero_page:
   .res 27, $00
-data_809D:
+disk_command_temp:
   .byte $00

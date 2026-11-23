@@ -187,7 +187,7 @@ sub_ABB9:
   sty var_0081
   lda #$00
   sta var_0083
-  sta data_8007
+  sta dos_page
   stx var_0085
   sty var_0084
   ldx #$18

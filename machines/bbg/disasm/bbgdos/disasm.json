@@ -223,6 +223,42 @@
       "address": 45960,
       "source": "manual",
       "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 39011,
+      "source": "manual",
+      "description": "严重错误：提示更换磁盘"
+    },
+    {
+      "segmentId": 0,
+      "address": 39627,
+      "source": "manual",
+      "description": "显示中文消息"
+    },
+    {
+      "segmentId": 0,
+      "address": 39643,
+      "source": "manual",
+      "description": "显示英文消息"
+    },
+    {
+      "segmentId": 0,
+      "address": 39659,
+      "source": "manual",
+      "description": "显示消息（Y 为偏移）"
+    },
+    {
+      "segmentId": 0,
+      "address": 39669,
+      "source": "manual",
+      "description": "询问放弃、忽略、重试、失败"
+    },
+    {
+      "segmentId": 0,
+      "address": 39721,
+      "source": "manual",
+      "description": "严重错误处理（CRITICAL_ERROR_ENTRY 的目标）"
     }
   ],
   "regions": [
@@ -251,7 +287,16 @@
     },
     {
       "offset": 503,
-      "length": 679,
+      "length": 521,
+      "type": "padding",
+      "params": {
+        "value": 255
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 1024,
+      "length": 158,
       "type": "bytes",
       "params": {
         "perLine": 16
@@ -333,7 +378,16 @@
     },
     {
       "offset": 5576,
-      "length": 1750,
+      "length": 1592,
+      "type": "padding",
+      "params": {
+        "value": 255
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 7168,
+      "length": 99,
       "type": "bytes",
       "params": {
         "perLine": 16
@@ -341,11 +395,18 @@
       "source": "manual"
     },
     {
+      "offset": 7267,
+      "length": 59,
+      "type": "code",
+      "params": {},
+      "source": "manual"
+    },
+    {
       "offset": 7326,
       "length": 63,
       "type": "code",
       "params": {},
-      "source": "trace"
+      "source": "manual"
     },
     {
       "offset": 7389,
@@ -365,7 +426,7 @@
     },
     {
       "offset": 7433,
-      "length": 1016,
+      "length": 450,
       "type": "bytes",
       "params": {
         "perLine": 16
@@ -373,18 +434,18 @@
       "source": "manual"
     },
     {
-      "offset": 8449,
-      "length": 1,
+      "offset": 7883,
+      "length": 298,
       "type": "code",
       "params": {},
-      "source": "trace"
+      "source": "manual"
     },
     {
-      "offset": 8450,
-      "length": 117,
-      "type": "bytes",
+      "offset": 8181,
+      "length": 386,
+      "type": "padding",
       "params": {
-        "perLine": 16
+        "value": 0
       },
       "source": "manual"
     },
@@ -576,10 +637,19 @@
     },
     {
       "offset": 13948,
-      "length": 232,
+      "length": 103,
       "type": "bytes",
       "params": {
         "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 14051,
+      "length": 129,
+      "type": "padding",
+      "params": {
+        "value": 0
       },
       "source": "manual"
     },
@@ -837,31 +907,31 @@
       "auto": true
     },
     {
-      "name": "data_8000",
+      "name": "drive_info_y",
       "address": 32768,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8001",
+      "name": "drive_info_a",
       "address": 32769,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8002",
+      "name": "drive_info_x",
       "address": 32770,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_8003",
@@ -882,22 +952,22 @@
       "auto": true
     },
     {
-      "name": "data_8006",
+      "name": "logical_drive_count",
       "address": 32774,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8007",
+      "name": "dos_page",
       "address": 32775,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "DOS 自己所在的内存页号，磁盘 I/O 的缓冲页",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_8030",
@@ -909,13 +979,13 @@
       "auto": true
     },
     {
-      "name": "sub_98B3",
+      "name": "drive_info_read",
       "address": 39091,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_98CB",
@@ -3222,31 +3292,31 @@
       "auto": true
     },
     {
-      "name": "data_8005",
+      "name": "current_drive",
       "address": 32773,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "当前操作的逻辑驱动器号（0 起，位 7 为硬盘）",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8008",
+      "name": "caller_page",
       "address": 32776,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "文件调用入口桩传入的调用者页号",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8009",
+      "name": "sectors_left",
       "address": 32777,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_800A",
@@ -3258,211 +3328,211 @@
       "auto": true
     },
     {
-      "name": "data_800B",
+      "name": "disk_retry_count",
       "address": 32779,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_800C",
+      "name": "disk_last_error",
       "address": 32780,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_800D",
+      "name": "caller_block_low",
       "address": 32781,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_800E",
+      "name": "caller_block_high",
       "address": 32782,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_800F",
+      "name": "sector_lba_0",
       "address": 32783,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8010",
+      "name": "sector_lba_1",
       "address": 32784,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8011",
+      "name": "sector_lba_2",
       "address": 32785,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8012",
+      "name": "chunk_bytes_low",
       "address": 32786,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8013",
+      "name": "chunk_bytes_high",
       "address": 32787,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8014",
+      "name": "remaining_bytes_low",
       "address": 32788,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8015",
+      "name": "remaining_bytes_high",
       "address": 32789,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8016",
+      "name": "fat_buffer_dirty",
       "address": 32790,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8017",
+      "name": "data_buffer_dirty",
       "address": 32791,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8018",
+      "name": "dir_buffer_lba_0",
       "address": 32792,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8019",
+      "name": "dir_buffer_lba_1",
       "address": 32793,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_801A",
+      "name": "dir_buffer_lba_2",
       "address": 32794,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_801B",
+      "name": "fat_buffer_sector",
       "address": 32795,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_801C",
+      "name": "data_buffer_lba_0",
       "address": 32796,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_801D",
+      "name": "data_buffer_lba_1",
       "address": 32797,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_801E",
+      "name": "data_buffer_lba_2",
       "address": 32798,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_801F",
+      "name": "free_slot_lba_0",
       "address": 32799,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8020",
+      "name": "free_slot_lba_1",
       "address": 32800,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8021",
+      "name": "free_slot_lba_2",
       "address": 32801,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_8022",
@@ -3537,40 +3607,40 @@
       "auto": true
     },
     {
-      "name": "data_802B",
+      "name": "current_dir_cluster_low",
       "address": 32811,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_802C",
+      "name": "current_dir_cluster_high",
       "address": 32812,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_802D",
+      "name": "in_subdirectory",
       "address": 32813,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_802E",
+      "name": "mounted_drive",
       "address": 32814,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_802F",
@@ -3591,103 +3661,103 @@
       "auto": true
     },
     {
-      "name": "data_8032",
+      "name": "current_dir_path",
       "address": 32818,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "当前目录路径串（80 字节，以 0 结尾，根目录为空串），FILE_GET_DIR 返回它的地址",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8070",
+      "name": "sectors_per_cluster",
       "address": 32880,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "每簇扇区数（从引导扇区解析得到）",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8071",
+      "name": "sectors_per_track",
       "address": 32881,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8072",
+      "name": "head_count",
       "address": 32882,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8073",
+      "name": "cluster_limit_low",
       "address": 32883,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8074",
+      "name": "cluster_limit_high",
       "address": 32884,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8075",
+      "name": "fat1_start_sector",
       "address": 32885,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8076",
+      "name": "fat2_start_sector",
       "address": 32886,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8077",
+      "name": "root_dir_lba_low",
       "address": 32887,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8078",
+      "name": "root_dir_lba_high",
       "address": 32888,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8079",
+      "name": "root_dir_sectors",
       "address": 32889,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_807A",
@@ -3717,76 +3787,76 @@
       "auto": true
     },
     {
-      "name": "data_807D",
+      "name": "data_area_lba_low",
       "address": 32893,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_807E",
+      "name": "data_area_lba_high",
       "address": 32894,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_807F",
+      "name": "fat16_flag",
       "address": 32895,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "FAT12 或 FAT16：0 为 FAT12，$FF 为 FAT16",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8080",
+      "name": "free_search_cluster_low",
       "address": 32896,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8081",
+      "name": "free_search_cluster_high",
       "address": 32897,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_8082",
+      "name": "saved_zero_page",
       "address": 32898,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_809D",
+      "name": "disk_command_temp",
       "address": 32925,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_809E",
+      "name": "disk_set_unit",
       "address": 32926,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_80AF",
@@ -3798,22 +3868,22 @@
       "auto": true
     },
     {
-      "name": "sub_80B2",
+      "name": "bios_disk_command",
       "address": 32946,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "loc_80BD",
+      "name": "disk_transfer_retry",
       "address": 32957,
       "segmentId": 0,
       "kind": "label",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_80CD",
@@ -3861,13 +3931,13 @@
       "auto": true
     },
     {
-      "name": "sub_8110",
+      "name": "divide_e7_ed_by_e8",
       "address": 33040,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8112",
@@ -3888,31 +3958,31 @@
       "auto": true
     },
     {
-      "name": "sub_8125",
+      "name": "lba_to_chs",
       "address": 33061,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_814A",
+      "name": "disk_transfer_sector",
       "address": 33098,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_815B",
+      "name": "disk_limit_to_track",
       "address": 33115,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8170",
@@ -3942,13 +4012,13 @@
       "auto": true
     },
     {
-      "name": "sub_8188",
+      "name": "disk_transfer_sectors",
       "address": 33160,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_81AF",
@@ -3969,31 +4039,31 @@
       "auto": true
     },
     {
-      "name": "sub_81CA",
+      "name": "data_sector_select",
       "address": 33226,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_81DB",
+      "name": "data_sector_load",
       "address": 33243,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_81EB",
+      "name": "data_buffer_transfer",
       "address": 33259,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8208",
@@ -4005,22 +4075,22 @@
       "auto": true
     },
     {
-      "name": "sub_8209",
+      "name": "drive_state_offset",
       "address": 33289,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_820C",
+      "name": "drive_state_offset_of",
       "address": 33292,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8213",
@@ -4041,13 +4111,13 @@
       "auto": true
     },
     {
-      "name": "sub_821B",
+      "name": "drive_state_load",
       "address": 33307,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8220",
@@ -4059,13 +4129,13 @@
       "auto": true
     },
     {
-      "name": "sub_8230",
+      "name": "drive_select",
       "address": 33328,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_824D",
@@ -4122,13 +4192,13 @@
       "auto": true
     },
     {
-      "name": "loc_829B",
+      "name": "drive_read_boot_sector",
       "address": 33435,
       "segmentId": 0,
       "kind": "label",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_82BD",
@@ -4158,13 +4228,13 @@
       "auto": true
     },
     {
-      "name": "loc_82E4",
+      "name": "drive_parse_boot_sector",
       "address": 33508,
       "segmentId": 0,
       "kind": "label",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_82F5",
@@ -4320,40 +4390,40 @@
       "auto": true
     },
     {
-      "name": "sub_83F5",
+      "name": "block_name_pointer",
       "address": 33781,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_8403",
+      "name": "dir_entry_pointer",
       "address": 33795,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_840D",
+      "name": "dir_buffer_write",
       "address": 33805,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_841C",
+      "name": "dir_buffer_read",
       "address": 33820,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_842D",
@@ -4401,13 +4471,13 @@
       "auto": true
     },
     {
-      "name": "sub_8457",
+      "name": "dir_scan_start",
       "address": 33879,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8471",
@@ -4428,13 +4498,13 @@
       "auto": true
     },
     {
-      "name": "sub_8486",
+      "name": "cluster_to_lba",
       "address": 33926,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8499",
@@ -4473,22 +4543,22 @@
       "auto": true
     },
     {
-      "name": "sub_84CE",
+      "name": "dir_find_entry",
       "address": 33998,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_84D2",
+      "name": "dir_find_entry_with_mask",
       "address": 34002,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_84DF",
@@ -4518,22 +4588,22 @@
       "auto": true
     },
     {
-      "name": "sub_84F5",
+      "name": "dir_next_sector_current",
       "address": 34037,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_84FE",
+      "name": "dir_next_sector",
       "address": 34046,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8507",
@@ -4572,13 +4642,13 @@
       "auto": true
     },
     {
-      "name": "sub_8547",
+      "name": "dir_compare_entries",
       "address": 34119,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_855A",
@@ -4626,13 +4696,13 @@
       "auto": true
     },
     {
-      "name": "sub_8589",
+      "name": "dir_note_free_slot",
       "address": 34185,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8594",
@@ -4653,13 +4723,13 @@
       "auto": true
     },
     {
-      "name": "sub_859F",
+      "name": "fat_buffer_flush",
       "address": 34207,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_85D1",
@@ -4671,22 +4741,22 @@
       "auto": true
     },
     {
-      "name": "sub_85D6",
+      "name": "buffers_flush_all",
       "address": 34262,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_85DB",
+      "name": "data_buffer_flush",
       "address": 34267,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_85F7",
@@ -4698,13 +4768,13 @@
       "auto": true
     },
     {
-      "name": "sub_85F8",
+      "name": "fat_buffer_load",
       "address": 34296,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8615",
@@ -4761,31 +4831,31 @@
       "auto": true
     },
     {
-      "name": "sub_8652",
+      "name": "fat_cluster_is_last",
       "address": 34386,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_8659",
+      "name": "fat_value_is_last",
       "address": 34393,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_865F",
+      "name": "fat_xy_is_last",
       "address": 34399,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8666",
@@ -4797,13 +4867,13 @@
       "auto": true
     },
     {
-      "name": "sub_8667",
+      "name": "fat_sector_for_cluster",
       "address": 34407,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8670",
@@ -4842,49 +4912,49 @@
       "auto": true
     },
     {
-      "name": "data_868D",
+      "name": "fat_odd_flag",
       "address": 34445,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_868E",
+      "name": "fat_value_low",
       "address": 34446,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_868F",
+      "name": "fat_value_high",
       "address": 34447,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_8690",
+      "name": "fat_write_entry",
       "address": 34448,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_86A5",
+      "name": "fat_entry_access",
       "address": 34469,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_86BF",
@@ -5076,13 +5146,13 @@
       "auto": true
     },
     {
-      "name": "sub_8819",
+      "name": "fat_advance_search",
       "address": 34841,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8823",
@@ -5112,13 +5182,13 @@
       "auto": true
     },
     {
-      "name": "sub_883E",
+      "name": "fat_find_free",
       "address": 34878,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8848",
@@ -5139,31 +5209,31 @@
       "auto": true
     },
     {
-      "name": "data_885E",
+      "name": "chain_cluster_low",
       "address": 34910,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_885F",
+      "name": "chain_cluster_high",
       "address": 34911,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_8860",
+      "name": "fat_allocate_cluster",
       "address": 34912,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8884",
@@ -5184,13 +5254,13 @@
       "auto": true
     },
     {
-      "name": "sub_8887",
+      "name": "fat_read_value",
       "address": 34951,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8896",
@@ -5508,13 +5578,13 @@
       "auto": true
     },
     {
-      "name": "sub_8AA2",
+      "name": "dta_copy_name",
       "address": 35490,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8AA4",
@@ -5535,13 +5605,13 @@
       "auto": true
     },
     {
-      "name": "sub_8AB6",
+      "name": "dir_entry_init",
       "address": 35510,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8ABA",
@@ -5553,22 +5623,22 @@
       "auto": true
     },
     {
-      "name": "sub_8AC2",
+      "name": "dir_entry_set_timestamp",
       "address": 35522,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_8ADF",
+      "name": "data_buffer_clear",
       "address": 35551,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8AE2",
@@ -5670,13 +5740,13 @@
       "auto": false
     },
     {
-      "name": "sub_8B91",
+      "name": "file_open_common",
       "address": 35729,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8BA0",
@@ -5724,13 +5794,13 @@
       "auto": true
     },
     {
-      "name": "sub_8BEC",
+      "name": "block_store_dir_position",
       "address": 35820,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8C07",
@@ -5742,13 +5812,13 @@
       "auto": true
     },
     {
-      "name": "sub_8C08",
+      "name": "add_chunk_to_pointer",
       "address": 35848,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8C18",
@@ -5760,13 +5830,13 @@
       "auto": true
     },
     {
-      "name": "sub_8C19",
+      "name": "file_transfer_partial_sector",
       "address": 35865,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8C74",
@@ -5787,13 +5857,13 @@
       "auto": true
     },
     {
-      "name": "sub_8CB9",
+      "name": "carry_into_position",
       "address": 36025,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "sub_8CC6",
@@ -5913,22 +5983,22 @@
       "auto": true
     },
     {
-      "name": "sub_8D7E",
+      "name": "file_bytes_left",
       "address": 36222,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "sub_8DA5",
+      "name": "block_take_length",
       "address": 36261,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8DF0",
@@ -6048,13 +6118,13 @@
       "auto": true
     },
     {
-      "name": "sub_8E4D",
+      "name": "file_transfer",
       "address": 36429,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_8E66",
@@ -6678,13 +6748,13 @@
       "auto": true
     },
     {
-      "name": "data_9200",
+      "name": "sector_buffer",
       "address": 37376,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "数据缓冲区（512 字节，$9200-$93FF），引导扇区也读到这里解析",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_9202",
@@ -6696,103 +6766,103 @@
       "auto": true
     },
     {
-      "name": "data_920D",
+      "name": "boot_sectors_per_cluster",
       "address": 37389,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "引导扇区里的 BPB 字段：每簇扇区数（偏移 $0D）",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_920E",
+      "name": "boot_reserved_sectors",
       "address": 37390,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9210",
+      "name": "boot_fat_count",
       "address": 37392,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9211",
+      "name": "boot_root_entries_low",
       "address": 37393,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9212",
+      "name": "boot_root_entries_high",
       "address": 37394,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9213",
+      "name": "boot_total_sectors_low",
       "address": 37395,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9214",
+      "name": "boot_total_sectors_high",
       "address": 37396,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9215",
+      "name": "boot_media_descriptor",
       "address": 37397,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9216",
+      "name": "boot_sectors_per_fat",
       "address": 37398,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9218",
+      "name": "boot_sectors_per_track",
       "address": 37400,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_921A",
+      "name": "boot_head_count",
       "address": 37402,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_921B",
@@ -6804,31 +6874,31 @@
       "auto": true
     },
     {
-      "name": "data_9220",
+      "name": "boot_total_sectors32_0",
       "address": 37408,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9221",
+      "name": "boot_total_sectors32_1",
       "address": 37409,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
-      "name": "data_9222",
+      "name": "boot_total_sectors32_2",
       "address": 37410,
       "segmentId": 0,
       "kind": "data",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_923A",
@@ -6858,13 +6928,13 @@
       "auto": true
     },
     {
-      "name": "data_9400",
+      "name": "dir_buffer",
       "address": 37888,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "目录缓冲区（512 字节，$9400-$95FF）",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_943A",
@@ -6894,13 +6964,13 @@
       "auto": true
     },
     {
-      "name": "data_9600",
+      "name": "fat_buffer",
       "address": 38400,
       "segmentId": 0,
       "kind": "data",
-      "description": "",
+      "description": "FAT 缓冲区（512 字节，$9600-$97FF）",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "data_9700",
@@ -6930,13 +7000,13 @@
       "auto": true
     },
     {
-      "name": "sub_98EE",
+      "name": "critical_error_report",
       "address": 39150,
       "segmentId": 0,
       "kind": "procedure",
       "description": "",
       "module": null,
-      "auto": true
+      "auto": false
     },
     {
       "name": "loc_98F6",
@@ -9790,6 +9860,339 @@
       "description": "",
       "module": null,
       "auto": true
+    },
+    {
+      "name": "data_981C",
+      "address": 38940,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9844",
+      "address": 38980,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_disk_prompt",
+      "address": 39011,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_987A",
+      "address": 39034,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9883",
+      "address": 39043,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9897",
+      "address": 39063,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_messages_english",
+      "address": 39177,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "data_9A07",
+      "address": 39431,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_messages_chinese",
+      "address": 39444,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "data_9ABD",
+      "address": 39613,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9ACA",
+      "address": 39626,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_print_chinese",
+      "address": 39627,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9ADA",
+      "address": 39642,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_print_english",
+      "address": 39643,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9AEA",
+      "address": 39658,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_print_reason",
+      "address": 39659,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "critical_ask_action",
+      "address": 39669,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9B1D",
+      "address": 39709,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B22",
+      "address": 39714,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B24",
+      "address": 39716,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "critical_error_handler",
+      "address": 39721,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9B32",
+      "address": 39730,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B49",
+      "address": 39753,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B51",
+      "address": 39761,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B6B",
+      "address": 39787,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B7E",
+      "address": 39806,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B88",
+      "address": 39816,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B90",
+      "address": 39824,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B96",
+      "address": 39830,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9B9F",
+      "address": 39839,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BB2",
+      "address": 39858,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BBA",
+      "address": 39866,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BCA",
+      "address": 39882,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BDD",
+      "address": 39901,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BE7",
+      "address": 39911,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BEF",
+      "address": 39919,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A74E",
+      "address": 42830,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
     }
   ],
   "comments": [
@@ -9885,18 +10288,6 @@
     },
     {
       "segmentId": 0,
-      "address": 45497,
-      "kind": "block",
-      "text": "DOS 功能 15 DosRunPathProgram：运行一个程序，程序名可以带路径。\n入口：$FF 为程序所在盘号；X:Y 为路径与文件名地址，以 0 结尾；$0100 起是传给程序的参数。\n出口：C=0 时 A 为程序退出码；C=1 时执行出错，A 为出错码。\n限制：嵌套运行最多 4 层；返回后寄存器与堆栈内容都被破坏。"
-    },
-    {
-      "segmentId": 0,
-      "address": 45511,
-      "kind": "block",
-      "text": "DOS 功能 5 DosRunProgram：运行一个程序（CMD、EXC、GAM）。\n入口：$FF 为程序所在盘号（0 默认，1 为 A 盘）；X:Y 为文件名地址（以 0 结尾）；$0100 起是传给程序的参数。\n出口：C=0 时 A 为程序退出码；C=1 时执行出错，A 为出错码。\n说明：扩展名依次试 CMD、EXC、GAM（表在 $B136）；嵌套最多 4 层；返回后寄存器与堆栈内容都被破坏。"
-    },
-    {
-      "segmentId": 0,
       "address": 42654,
       "kind": "block",
       "text": "DOS 功能 16 DosGetDOSVersion（手册未列）：取 DOS 版本。\n出口：A=3，X=0，C=0，对应屏幕上显示的 BBGDOS Version 3.0。"
@@ -9927,123 +10318,9 @@
     },
     {
       "segmentId": 0,
-      "address": 40530,
-      "kind": "block",
-      "text": "文件调用 24（手册未列）：按通道块偏移 $16 的属性值改写目录项的属性，保留目录与卷标位。属性值含 $D8 的位时返回 $05（AccessDenied）。"
-    },
-    {
-      "segmentId": 0,
-      "address": 39070,
-      "kind": "block",
-      "text": "文件调用 0 FileReset：复位文件系统，丢弃所有已打开的文件通道。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 35725,
-      "kind": "block",
-      "text": "文件调用 1 FileOpen、20 FilePathOpen：打开文件，通道块里的文件名从偏移 5 起（主名 8 字节加扩展名 3 字节）。\n未确认：具体行为来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 36288,
-      "kind": "block",
-      "text": "文件调用 2 FileRead：从已打开的文件读数据，缓冲区页、地址与长度取自通道块。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 36364,
-      "kind": "block",
-      "text": "文件调用 3 FileWrite：向已打开的文件写数据，缓冲区页、地址与长度取自通道块。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 40975,
-      "kind": "block",
-      "text": "文件调用 4 FileSeek：移动文件读写位置指针。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 36737,
-      "kind": "block",
-      "text": "文件调用 5 FileClose：关闭文件通道。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 40925,
-      "kind": "block",
-      "text": "文件调用 9 FileDrive：设置当前默认驱动器。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41126,
-      "kind": "block",
-      "text": "文件调用 10 FileDelete、23 FilePathDelete：删除文件。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41017,
-      "kind": "block",
-      "text": "文件调用 11 FileDriveSize：取驱动器容量与剩余空间。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41228,
-      "kind": "block",
-      "text": "文件调用 12 FileAttribute：取或设置文件属性。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41204,
-      "kind": "block",
-      "text": "文件调用 13 FileRename：给文件改名。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41162,
-      "kind": "block",
-      "text": "文件调用 14 FileReadAbs：按绝对扇区号读磁盘。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41166,
-      "kind": "block",
-      "text": "文件调用 15 FileWriteAbs：按绝对扇区号写磁盘。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41780,
-      "kind": "block",
-      "text": "文件调用 16 FileChangeDir：改变当前目录。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 41796,
-      "kind": "block",
-      "text": "文件调用 17 FileMakeDir：建立子目录。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 42183,
-      "kind": "block",
-      "text": "文件调用 18 FileRemoveDir：删除空子目录，试图删除当前目录时按手册返回 $10。\n未确认：含义来自手册功能名与出错码表，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
-      "address": 42277,
-      "kind": "block",
-      "text": "文件调用 19 FileGetDir：取当前目录路径。\n未确认：含义来自手册功能名，代码尚未逐条核对。"
-    },
-    {
-      "segmentId": 0,
       "address": 43089,
       "kind": "block",
       "text": "DOS 功能 4 DosDisplayString：显示字符串。\n入口：X:Y 为字符串地址（X 高字节，Y 低字节，当前页），字符串以 '$' 结束；逐字符调用 dos_display_char。"
-    },
-    {
-      "segmentId": 0,
-      "address": 40635,
-      "kind": "block",
-      "text": "文件调用 8 FileCreate、21 FilePathCreate：建立文件。\n已读代码：文件名里含 '?' 通配符时返回 $05（AccessDenied）；已有同名的目录或卷标项时也返回 $05。\n未确认：其余行为来自手册功能名，代码尚未逐条核对。"
     },
     {
       "segmentId": 0,
@@ -10056,6 +10333,468 @@
       "address": 36929,
       "kind": "block",
       "text": "文件调用的功能标志（25 项，下标为功能号）：位 7 表示先准备驱动器（检查介质），位 6 表示从通道块里的缓冲区页与地址（偏移 2、3、4）取出文件名并存入偏移 5 起的 11 字节，位 5 表示要解析路径。开头的 $00 表示三个都不需要。"
+    },
+    {
+      "segmentId": 0,
+      "address": 32926,
+      "kind": "block",
+      "text": "写磁盘 I/O 块的驱动器号 $E6：当前盘是硬盘或 drive_info_a 为 3 时用 A，否则用 drive_info_a 减 1（未确认各取值的含义）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 32946,
+      "kind": "block",
+      "text": "调用 BIOS_DISK_IO。入口：A 为命令（写入磁盘 I/O 块第 0 字节）。磁盘 I/O 块放在零页 $E5-$ED（X=0、Y=$E5）：$E5 命令、$E6 驱动器、$E7 柱面、$E8 磁头、$E9 扇区、$EA 缓冲页、$EB:$EC 缓冲地址、$ED 扇区数（见 DISK_BLOCK_*）。出口：BIOS 的返回值。"
+    },
+    {
+      "segmentId": 0,
+      "address": 32957,
+      "kind": "block",
+      "text": "带重试的磁盘传送。入口：A 为命令（2 读、3 写），其余参数已在 $E7-$ED。出错时先复位（命令 0）再重试，最多 5 次；仍失败则经 critical_error_report 调用严重错误处理（放弃、忽略、重试、失败），返回 A=$1F、C=1。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33040,
+      "kind": "block",
+      "text": "除法：$ED:$E7 为 16 位被除数，A 为初始余数，$E8 为除数；返回商在 $ED:$E7，余数在 A。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33061,
+      "kind": "block",
+      "text": "把逻辑扇区号（$E7 低字节、X 中、Y 高）换成柱面、磁头、扇区：用 sectors_per_track、head_count 两次相除；结果在 $E7（柱面）、$E8（磁头）、$E9（扇区号，位 6-7 为柱面高位）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33098,
+      "kind": "block",
+      "text": "传送一个扇区。入口：A 为命令（2 读、3 写），逻辑扇区号在 $E7、X、Y，缓冲区地址在 $EB:$EC（缓冲页为 dos_page）。出口：C=1 出错，A 为出错码。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33115,
+      "kind": "block",
+      "text": "把一次传送限制在当前磁道的剩余扇区内，从 sectors_left 里扣除已安排的扇区数，然后执行传送。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33160,
+      "kind": "block",
+      "text": "连续传送 A 个扇区：起始逻辑扇区号在 sector_lba_0-2，缓冲区的页与地址取自调用者的文件通道块（偏移 2-4）；遇到磁道边界分段（disk_limit_to_track）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33226,
+      "kind": "block",
+      "text": "把逻辑扇区 A:X:Y（Y 为低字节）取进数据缓冲区 sector_buffer：与 data_buffer_lba_0-2 相同则已在缓冲区里，直接返回；否则先写回旧内容再读入。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33259,
+      "kind": "block",
+      "text": "传送数据缓冲区 sector_buffer（$9200）与 data_buffer_lba_0-2 指定的扇区。入口：A 为命令（2 读、3 写）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33289,
+      "kind": "block",
+      "text": "驱动器状态表偏移：按 current_drive 算出该驱动器在 $9C33 起的状态表里的偏移（硬盘加 $A2，奇数驱动器加 $50，每个驱动器 80 字节）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33307,
+      "kind": "block",
+      "text": "把当前驱动器保存在状态表里的 80 字节当前目录路径复制到 current_dir_path。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33328,
+      "kind": "block",
+      "text": "选定 current_drive 指定的驱动器：与 mounted_drive 不同就换盘——保存原驱动器的当前目录、读引导扇区并解析参数块（drive_read_boot_sector）、装入新驱动器的当前目录。出口：C=1 出错，A 为出错码。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33435,
+      "kind": "block",
+      "text": "读 0 号扇区（引导扇区），要求开头是 $E9 或 $EB $90 的跳转指令且媒体描述符高 4 位为 $F，否则按“未识别介质”处理（可经严重错误处理重试），出错 A=$1F。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33508,
+      "kind": "block",
+      "text": "解析引导扇区里的 BIOS 参数块（BPB），算出 sectors_per_cluster、sectors_per_track、head_count、fat1_start_sector、fat2_start_sector、root_dir_lba、root_dir_sectors、data_area_lba、cluster_limit，并以总簇数是否不小于 $FF0 判断 FAT12 或 FAT16（fat16_flag 为 0 或 $FF）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33781,
+      "kind": "block",
+      "text": "算出文件通道块里文件名字段（偏移 5）的地址，放入 $F4:$F5（通道块地址在 $EE:$EF）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33795,
+      "kind": "block",
+      "text": "目录项指针：dir_buffer（$9400）加 A 乘 2，放入 $F1:$F2。A 是目录项在扇区里的字节偏移除以 2（即通道块里的 FH_DIR_ENTRY）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33805,
+      "kind": "block",
+      "text": "把 dir_buffer 写回磁盘上 dir_buffer_lba_0-2 指定的扇区。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33820,
+      "kind": "block",
+      "text": "把逻辑扇区 A:X:Y（Y 为低字节）读进目录缓冲区 dir_buffer（$9400）：已缓冲该扇区时直接返回 C=0；读失败时清除缓冲记录。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33879,
+      "kind": "block",
+      "text": "开始扫描目录。入口：A 的位 3=1 且当前在子目录里时从子目录首簇起，否则从根目录起。出口：A:X:Y 为起始逻辑扇区号（Y 低），$FB 为该段的扇区数，$FA 清零。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33926,
+      "kind": "block",
+      "text": "簇号 X:Y 换成逻辑扇区号（存入 sector_lba_0-2 并返回 A:X:Y）：簇号减 2，乘 sectors_per_cluster，加 data_area_lba；簇号超出 cluster_limit 时 A=$1B（扇区未找到）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 33998,
+      "kind": "block",
+      "text": "在当前目录里查找与文件通道块里文件名相同的目录项；入口 A、Y 是两个属性过滤值（data_8023、data_8024，具体用法未确认）。找到 C=0，$FA 为目录项偏移；找不到 C=1、A=$02；查找时会记下第一个空闲项（$FE）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34046,
+      "kind": "block",
+      "text": "下一个目录扇区：逻辑扇区号 A:X:Y 加 1；当前簇的扇区用完时（$FB 减到 0）在子目录里沿 FAT 链转到下一簇，根目录走完则 A=$02、C=1。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34119,
+      "kind": "block",
+      "text": "在 dir_buffer 里逐项比较：目录项第 0 字节为 0 表示目录到此为止（记下空闲项），为 $E5 的是已删除项（同样记下），名字第 0 字节 $05 按 $E5 比较；11 字节全部相同才匹配，匹配后把属性按位与 data_8023、data_8024 比较（未确认），相符返回 C=0，否则 A=$05、C=1。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34185,
+      "kind": "block",
+      "text": "记下第一个空闲目录项：$FE 为 $FF（尚未记录）时，把当前目录项偏移 $FA 与目录缓冲区的扇区号 dir_buffer_lba_0-2 存到 $FE 与 free_slot_lba_0-2。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34207,
+      "kind": "block",
+      "text": "FAT 缓冲区有修改（fat_buffer_dirty 非 0）时，把 fat_buffer 写回第一份与第二份 FAT。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34267,
+      "kind": "block",
+      "text": "数据缓冲区有修改（data_buffer_dirty 为负）时把 sector_buffer 写回磁盘。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34296,
+      "kind": "block",
+      "text": "把 FAT 的第 A 个扇区读进 fat_buffer（$9600）：先把旧内容写回，再读入，并记在 fat_buffer_sector（读失败时为 $FF）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34393,
+      "kind": "block",
+      "text": "FAT 项的值是否表示链结束（不小于 $FF0 或 FAT16 的 $FFF0）：C=1 为结束；fat_xy_is_last 用 X:Y 作为值。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34407,
+      "kind": "block",
+      "text": "把簇 X:Y 的 FAT 项所在的 FAT 扇区读进 fat_buffer；重新读过返回 A=1，已在缓冲区里返回 A=0。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34448,
+      "kind": "block",
+      "text": "把簇 chain_cluster 的 FAT 项写成链结束标记（具体值由 fat_entry_access 按 FAT12 或 FAT16 处理）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34469,
+      "kind": "block",
+      "text": "读写 FAT 项。入口：簇号 X:Y；$FC 位 7=0 读出，位 7=1 写入（新值在 fat_value_low、fat_value_high，原值换到这里）。簇号为 0 表示文件的首簇，它不在 FAT 里，存在文件通道块偏移 $0B、$0C。FAT12 按 12 位拆包（半字节 fat_odd_flag），FAT16 直接取 2 字节。出口：读出的值在 fat_value_low、fat_value_high。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34841,
+      "kind": "block",
+      "text": "查找空闲簇的起点 free_search_cluster 前进一簇，到 cluster_limit 回绕到 2；回到起点（$F6:$F7）时 Z=1。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34878,
+      "kind": "block",
+      "text": "从 free_search_cluster 起顺序找空闲簇（FAT 项为 0）；整张磁盘没有空闲簇时 A=$27（磁盘已满）、C=1。"
+    },
+    {
+      "segmentId": 0,
+      "address": 34912,
+      "kind": "block",
+      "text": "分配一个空闲簇：用 fat_find_free 找到后，把前一簇（chain_cluster）的链接改成它，并把它标成链结束。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35490,
+      "kind": "block",
+      "text": "把目录项（$F4 指向）的 11 字节文件名复制到 $F1 指向的结果区，第 0 字节的 $E5 改成 $05。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35510,
+      "kind": "block",
+      "text": "初始化新目录项（$F1 指向）：偏移 $0C-$1F 清零，偏移 $0B 写属性 X，再写入当前时间。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35522,
+      "kind": "block",
+      "text": "把属性 A 写进目录项偏移 $0B，并用 BIOS 功能 $3F（取日期时间）把当前时间与日期写进偏移 $16-$19。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35551,
+      "kind": "block",
+      "text": "把数据缓冲区 sector_buffer（$9200-$93FF）清零。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35729,
+      "kind": "block",
+      "text": "打开文件的公共部分：用 dir_find_entry 找到目录项后，把属性、时间、日期、首簇、长度从目录项复制到通道块（偏移 2-6、$0B-$10），读写位置（偏移 7-10）清零，并记下目录项位置（block_store_dir_position）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35820,
+      "kind": "block",
+      "text": "把目录项位置存进通道块：偏移 $11 为项偏移除以 2，偏移 $12-$14 为目录扇区号（3 字节），用于关闭文件时回写。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35848,
+      "kind": "block",
+      "text": "把本次传送字节数 chunk_bytes_low/high 加到通道块里从偏移 Y 起的 2 字节字里（用来推进缓冲区地址、字节数与读写位置）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35865,
+      "kind": "block",
+      "text": "传送不满一个扇区的一段：把读写位置所在的扇区取进 sector_buffer，经 BIOS_MOVE_BLOCK 在 sector_buffer 与调用者缓冲区之间复制 chunk_bytes 字节（读时从 sector_buffer 复制出去，写时复制进来并标记 data_buffer_dirty），再推进缓冲区地址、字节数与读写位置。"
+    },
+    {
+      "segmentId": 0,
+      "address": 36222,
+      "kind": "block",
+      "text": "算出文件长度（偏移 $0D，4 字节）减读写位置（偏移 7，4 字节）的差：低 16 位在 $F0:$F1，高 16 位在 X:A；差为负时 C=0。"
+    },
+    {
+      "segmentId": 0,
+      "address": 36261,
+      "kind": "block",
+      "text": "取出通道块里的读写字节数（偏移 5-6）到 remaining_bytes_low/high 并把它清零（之后用它累计实际传送的字节数）；Z=1 表示要求的字节数为 0。"
+    },
+    {
+      "segmentId": 0,
+      "address": 36429,
+      "kind": "block",
+      "text": "读写文件的主体。入口：A 为命令（2 读、3 写），remaining_bytes 为要传送的字节数。分三段：先补齐当前扇区的剩余部分（file_transfer_partial_sector），再整扇区、整簇连续传送（disk_transfer_sectors），最后传送尾部不满一个扇区的部分。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39011,
+      "kind": "block",
+      "text": "严重错误：显示“Insert diskette for drive ?: and press any key when ready”（中文方式显示中文提示），盘符由 Y 加 $41 填入消息，然后等待用户更换磁盘：用 BIOS 功能 24（外设调用，子功能 1）查询磁盘是否已更换，直到子功能返回的 Y 为 0。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39091,
+      "kind": "block",
+      "text": "读驱动器信息：调用 BIOS 功能 20（BiosGetDriveMessage），结果存入 drive_info_a（A 低 2 位）、drive_info_x、drive_info_y（Y 低 7 位），并由 X 低 2 位按位计数算出 logical_drive_count（至少 2）。出口：A=0。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39150,
+      "kind": "block",
+      "text": "把 BIOS 磁盘错误码（A）经 data_98DD 表换成严重错误的原因编号（data_98E5 表），然后调用严重错误入口 CRITICAL_ERROR_ENTRY（$5818）；Y 是读写标志与驱动器相关的参数（未确认）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39627,
+      "kind": "block",
+      "text": "显示中文消息：从 critical_messages_chinese 的偏移 Y 起逐字节显示，到 0 为止。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39643,
+      "kind": "block",
+      "text": "显示英文消息：从 critical_messages_english 的偏移 Y 起逐字节显示，到 0 为止。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39659,
+      "kind": "block",
+      "text": "显示中文方式下的前缀消息（中文表偏移 $A6，即 CRLF），保留 Y。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39669,
+      "kind": "block",
+      "text": "询问用户怎么处理：显示“?”，等待按键（大写化）：A（Abort）返回 Y=2，I（Ignore）Y=0，R（Retry）Y=1，F（Fail）Y=3；只接受消息里列出的选项，其他按键 C=1 要求重新输入。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39721,
+      "kind": "block",
+      "text": "严重错误处理（CRITICAL_ERROR_ENTRY 的目标，启动时装入）。入口：X 为原因编号，Y 为读写与可用选项标志。显示“原因 read/write error on drive X”与“Abort, Ignore, Retry, Fail”中允许的选项，等待用户选择。出口：Y 为选择结果（见 critical_ask_action）。显示方式为中文时用中文消息表。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35349,
+      "kind": "block",
+      "text": "文件调用进入（入口桩代码把 $8000 窗口切到 DOS 页后调用）。入口：A 为调用者所在页，X:Y 为调用者的通道块地址。先把零页 $E5-$FF 保存到 saved_zero_page；通道块在 $8000-$BFFF 窗口里时，经 BIOS 功能 17 把它的 48 字节与低端内存 $0700 交换，$EE:$EF 指向 $0700，否则直接指向调用者的块。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35421,
+      "kind": "block",
+      "text": "文件调用退出：按进入时的逆序把 $0700 里的通道块经 BIOS 功能 17 交换回调用者的窗口页，恢复零页 $E5-$FF，再把窗口切回调用者页（BIOS 功能 1）并返回；返回前 A 为出错码，并按它设 C。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39070,
+      "kind": "block",
+      "text": "文件调用 0 FileReset：复位驱动器。清除当前驱动器保存的状态字节（$9C83 起的状态表），若它是已选定的驱动器（mounted_drive）则标成未选定，再重新读取驱动器信息（drive_info_read）。Ember 实测返回成功。"
+    },
+    {
+      "segmentId": 0,
+      "address": 35725,
+      "kind": "block",
+      "text": "文件调用 1 FileOpen、20 FilePathOpen：打开文件。出口：通道块偏移 2 为属性、3-4 为日期、5-6 为时间、$0B-$0C 为首簇、$0D-$10 为长度，读写位置（偏移 7-10）为 0；文件不存在 A=$02。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 36288,
+      "kind": "block",
+      "text": "文件调用 2 FileRead：从读写位置（偏移 7）起读 FH_BYTES 字节到 FH_PAGE:FH_BUFFER，可跨扇区；读到文件末尾时 FH_BYTES 是实际读到的字节数。出口：FH_BUFFER 为缓冲区结束地址，读写位置前进。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 36364,
+      "kind": "block",
+      "text": "文件调用 3 FileWrite：从读写位置起把 FH_PAGE:FH_BUFFER 里的 FH_BYTES 字节写进文件，必要时分配新簇并扩大文件长度；FH_BYTES 为 0 表示在读写位置截断文件。不检查只读属性。出口同 FileRead。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 36737,
+      "kind": "block",
+      "text": "文件调用 5 FileClose：把文件长度、日期、时间和属性写回目录项，并把缓冲区写回磁盘。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 40530,
+      "kind": "block",
+      "text": "文件调用 24（手册未列）：按通道块偏移 $16 的值改写目录项属性。Ember 实测对已打开的文件调用返回 A=$05（拒绝访问），用法未查清。"
+    },
+    {
+      "segmentId": 0,
+      "address": 40635,
+      "kind": "block",
+      "text": "文件调用 8 FileCreate、21 FilePathCreate：建立文件，建立后文件已打开、长度为 0。文件名含通配符、与目录或卷标同名时 A=$05。Ember 实测：建立后可写入并关闭，重新打开长度正确。"
+    },
+    {
+      "segmentId": 0,
+      "address": 40925,
+      "kind": "block",
+      "text": "文件调用 9 FileDriver：FH_DRIVE 为 0 时读取默认盘号（写回 FH_DRIVE）与逻辑驱动器数（偏移 2），否则设置默认盘号（1 为 A 盘）。Ember 实测读取返回盘号 1、驱动器数 2。"
+    },
+    {
+      "segmentId": 0,
+      "address": 40975,
+      "kind": "block",
+      "text": "文件调用 4 FileSeek：把读写位置改为通道块偏移 7 起的 4 字节值。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41017,
+      "kind": "block",
+      "text": "文件调用 11 DriveSize：按 FH_DRIVE 返回每簇扇区数（偏移 3）、每扇区字节数（偏移 5）、空闲簇数（偏移 7）、总簇数（偏移 9）。Ember 实测：1.44MB 系统盘每簇 4 个扇区、每扇区 512 字节、总簇数 715。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41126,
+      "kind": "block",
+      "text": "文件调用 10 FileDelete、23 FilePathDelete：删除文件（目录项标成已删除并释放簇链），不检查只读属性。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41162,
+      "kind": "block",
+      "text": "文件调用 14 FileReadAbs：从绝对扇区号（通道块偏移 7，从 0 起）起读 FH_BYTES 个扇区到 FH_PAGE:FH_BUFFER。Ember 实测读 0 号扇区得到引导扇区。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41166,
+      "kind": "block",
+      "text": "文件调用 15 FileWriteAbs：参数同 FileReadAbs，写扇区。Ember 实测把 0 号扇区原样写回。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41204,
+      "kind": "block",
+      "text": "文件调用 13 FileRename：给已打开的文件改名，新文件名取自 FH_PAGE:FH_BUFFER 指向的 11 字节，并复制到通道块偏移 5。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41228,
+      "kind": "block",
+      "text": "文件调用 12 FileAttribute：设置已打开文件的属性（偏移 2）、日期（偏移 3-4）、时间（偏移 5-6），关闭时写入目录项。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41780,
+      "kind": "block",
+      "text": "文件调用 16 FileChangeDir：改变当前目录，路径是以 0 结尾的字符串（\\ 分隔，“..”回上一级），成功后更新 current_dir_path 与目录首簇；路径不存在 A=$03。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 41796,
+      "kind": "block",
+      "text": "文件调用 17 FileMakeDir：建立目录，路径是以 0 结尾的字符串。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 42183,
+      "kind": "block",
+      "text": "文件调用 18 FileRemoveDir：删除目录，路径不存在 A=$03，删除当前目录 A=$10（后者只依据手册）。Ember 实测删除空目录成功。"
+    },
+    {
+      "segmentId": 0,
+      "address": 42277,
+      "kind": "block",
+      "text": "文件调用 19 FileGetDir：取当前目录：出口 FH_PAGE 为 dos_page、FH_BUFFER 为 current_dir_path（DOS 页里以 0 结尾的路径串，根目录为空串）。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 45497,
+      "kind": "block",
+      "text": "DOS 功能 15 DosRunPathProgram：运行一个程序，程序名可以带路径。入口：$FF 为程序所在盘号；X:Y（X 高）为以 0 结尾的路径与文件名，文件名必须带扩展名 CMD、EXC 或 GAM；$0100 起是传给程序的参数。出口同功能 5。嵌套最多 4 层。Ember 实测。"
+    },
+    {
+      "segmentId": 0,
+      "address": 45511,
+      "kind": "block",
+      "text": "DOS 功能 5 DosRunProgram：运行一个程序（CMD、EXC、GAM）。入口：$FF 为程序所在盘号（0 默认，1 为 A 盘）；X:Y（X 高）指向 11 字节文件名（主名 8 加扩展名 3，空格补齐），经 sub_B13F 转成“主名.扩展名”放在 $0430 再继续；$0100 起是传给程序的参数。程序类型由扩展名判断（表在 $B136：CMD、EXC、GAM），扩展名不是这三种时返回 C=1（Ember 实测 Y=$0B）。出口：C=0 时 A 为程序的退出码。嵌套最多 4 层；返回后寄存器内容被破坏。Ember 实测。"
     }
   ],
   "hints": [],
@@ -10191,7 +10930,7 @@
   "unresolved": [],
   "verification": {
     "ok": true,
-    "digest": "c96c04b1abb43d61cf505bb9cd89601ce150bc31ed0f9fb552ef3817bf80d7f6",
-    "at": "2026-11-23T20:02:43.936Z"
+    "digest": "e8ad5f211533df6cfc2d4295710816fada103af76a44dd1a69e563e4c264b919",
+    "at": "2026-11-23T20:51:36.115Z"
   }
 }

@@ -1,6 +1,13 @@
 ; 作用：等 SYS_ARG_0E 个垂直消隐周期（为 0 不等）；NMI 处理程序也读 PPU_STATUS 清标志，实测每个周期占 1 到 3 个模拟器帧。
 ; 输入：SYS_ARG_0E。
 ; 调用者：API_75_PORT4302_SEND
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import MAP_WINDOWS_8000, CALL_VECTOR_10, SYSCALL_TABLE, VEC_SYSCALL
+.export DELAY_FRAMES_0651, DEC16_064F, SYSCALL_DISPATCH, SYSCALL_RETURN
+.segment "S0030"
 DELAY_FRAMES_0651:
     LDA SYS_ARG_0E
     BEQ @return

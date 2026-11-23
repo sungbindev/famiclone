@@ -6,7 +6,18 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 E-E 页，汇编地址 $A000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $A000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL, IME_SUB_17_BODY, IME_SEEK_DICT, IME_READ_DICT_BYTE, IME_CALL_EXT1, IME_CALL_EXT2
+.import IME_CALL_EXT3
+.export IME_SUB_16_EXIT, IME_SUB_16_CONT, IME_SUB_16_FINISH, IME_SUB_17, IME_SUB_18, IME_FIND_CHAR_IN_DICT
+.export IME_LEN_FROM_BUF, IME_EXT1_SUB_1, IME_EXT1_SUB_2, IME_EXT1_SUB_3, IME_EXT1_SUB_4, IME_EXT1_SUB_5
+.export IME_EXT1_SUB_6, IME_EXT2_SUB_1, IME_EXT2_SUB_2, IME_EXT2_SUB_3, IME_EXT2_SUB_4, IME_EXT2_SUB_5
+.export IME_EXT2_SUB_6, IME_EXT3_SUB_1, IME_EXT3_SUB_2, IME_EXT3_SUB_3, IME_EXT3_SUB_4, IME_EXT3_SUB_5
+.export IME_EXT3_SUB_6, IME_GET_AVAILABLE
+.segment "S0044"
     .byte $03 ; 上一页末尾 BNE 的操作数（跳到 IME_SUB_16_CONT）
 ; 作用：跳到 IME_SUB_16_FINISH。候选数为 0 时 IME_SUB_16 的 BNE 不跳，顺序落到这里；候选数不为 0 时 BNE 的操作数 $03 越过这条 JMP，转到 IME_SUB_16_CONT。
 ; 调用者：全 ROM 没有指令或地址表引用它（只能由外部直接进入）

@@ -8,6 +8,12 @@
 ; ------------------------------------------------------------------------
 ; 内存页服务 $7E/$02：求位图里最长的连续空闲页数，放 ALLOC_COUNT
 ; 调用者：GROUP_5C_DISPATCH_7E（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.export PAGE_LARGEST_FREE, PAGE_FREE, PAGE_ALLOC
+.segment "S0058"
 PAGE_LARGEST_FREE:
     PHA
     TXA

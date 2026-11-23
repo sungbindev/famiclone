@@ -6,7 +6,28 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 C-D 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import IME_SUB_12, IME_SUB_13_PARSE, IME_SUB_14_HEX, IME_SUB_15, IME_SUB_16, IME_SUB_17
+.import IME_SUB_18, IME_EXT1_SUB_1, IME_EXT1_SUB_2, IME_EXT1_SUB_3, IME_EXT1_SUB_4, IME_EXT1_SUB_5
+.import IME_EXT1_SUB_6, IME_EXT2_SUB_1, IME_EXT2_SUB_2, IME_EXT2_SUB_3, IME_EXT2_SUB_4, IME_EXT2_SUB_5
+.import IME_EXT2_SUB_6, IME_EXT3_SUB_1, IME_EXT3_SUB_2, IME_EXT3_SUB_3, IME_EXT3_SUB_4, IME_EXT3_SUB_5
+.import IME_EXT3_SUB_6, IME_SHOW_METHOD_NAME, IME_BUILD_CANDIDATE_LIST, IME_SHOW_ZONE_LABEL, IME_SHOW_HINT_IF_EMPTY, IME_DRAW_STATUS_LINE
+.import IME_RESET_SEARCH, IME_SPECIAL_KEY_LOOKUP, IME_PASS_KEY, IME_CLEAR_STATUS_LINE, VEC_SYSCALL, IME_SHOW_HINT
+.import IME_KEY_PASS_OR_FLUSH, IME_KEY_CALL_EXT1, IME_KEY_CALL_EXT2, IME_KEY_CALL_EXT3, IME_KEY_PASS, IME_KEY_PAGE_KEYS
+.import IME_COPY_CANDIDATE, IME_BACKSPACE, IME_SHOW_INPUT, IME_APPEND_KEY, IME_TABLE_LOOKUP, IME_LOAD_CANDIDATES
+.export IME_SUB_TABLE, IME_SUB_00, IME_SELECT_FAIL, IME_VERSION_TEXT, IME_SUB_01, IME_OPTION_MASKS
+.export IME_CHECK_OPTION, IME_SUB_02, IME_SUB_03, IME_SUB_04, IME_SUB_05, IME_TEXT_HALF_WIDTH
+.export IME_TEXT_FULL_WIDTH, IME_SUB_06, IME_SUB_07, IME_SUB_08, IME_SUB_09, IME_LOAD_STATUS_LINE
+.export IME_STATUS_LINE_TEXT, IME_SUB_10, IME_SUB_11, IME_POLL_KEY, IME_CALL_SUB03_IF_ACTIVE, IME_TOGGLE_MODE
+.export IME_TEXT_SET_ASSOC, IME_TEXT_CANCEL_ASSOC, IME_CALL_SUB06_IF_IDLE, IME_GET_KEY_NOWAIT, IME_FLUSH_KEYS, IME_PROCESS_KEY
+.export IME_KEY_HANDLER_TABLE, IME_CALL_MODULE_ENTRY, IME_HANDLE_CANDIDATE_KEY, IME_OUTPUT_CANDIDATE, IME_KEY_AREA_CODE, CHECK_GB2312
+.export IME_PARSE_CODE, ASCII_DIGIT_TO_VALUE, IME_PINYIN_TABLE, IME_SHUANGPIN_TABLE, IME_KEY_PINYIN, IME_PINYIN_APPEND
+.export IME_PINYIN_LOOKUP, IME_IS_LOWER_LETTER, IME_PINYIN_FIRST_KEY, IME_PINYIN_RESTART, IME_PINYIN_REJECT, IME_PINYIN_SHOW
+.export IME_PAGE_NEXT, IME_PAGE_PREV
+.segment "S0042"
     LDA SYS_SUBFUNCTION
     ASL A
     TAY
@@ -1125,476 +1146,476 @@ ASCII_DIGIT_TO_VALUE:
 ; 作用：全拼音节表：408 项，每项 6 字节（音节的小写字母，不足补空格），按字母顺序；输入法序号不是 2 时 IME_TABLE_LOOKUP 逐项比对
 ; 引用者：IME_TABLE_LOOKUP（取地址）
 IME_PINYIN_TABLE:
-    .ascii "a     "
-    .ascii "ai    "
-    .ascii "an    "
-    .ascii "ang   "
-    .ascii "ao    "
-    .ascii "ba    "
-    .ascii "bai   "
-    .ascii "ban   "
-    .ascii "bang  "
-    .ascii "bao   "
-    .ascii "bei   "
-    .ascii "ben   "
-    .ascii "beng  "
-    .ascii "bi    "
-    .ascii "bian  "
-    .ascii "biao  "
-    .ascii "bie   "
-    .ascii "bin   "
-    .ascii "bing  "
-    .ascii "bo    "
-    .ascii "bu    "
-    .ascii "ca    "
-    .ascii "cai   "
-    .ascii "can   "
-    .ascii "cang  "
-    .ascii "cao   "
-    .ascii "ce    "
-    .ascii "cen   "
-    .ascii "ceng  "
-    .ascii "cha   "
-    .ascii "chai  "
-    .ascii "chan  "
-    .ascii "chang "
-    .ascii "chao  "
-    .ascii "che   "
-    .ascii "chen  "
-    .ascii "cheng "
-    .ascii "chi   "
-    .ascii "chong "
-    .ascii "chou  "
-    .ascii "chu   "
-    .ascii "chuai "
-    .ascii "chuan "
-    .ascii "chuang"
-    .ascii "chui  "
-    .ascii "chun  "
-    .ascii "chuo  "
-    .ascii "ci    "
-    .ascii "cong  "
-    .ascii "cou   "
-    .ascii "cu    "
-    .ascii "cuan  "
-    .ascii "cui   "
-    .ascii "cun   "
-    .ascii "cuo   "
-    .ascii "da    "
-    .ascii "dai   "
-    .ascii "dan   "
-    .ascii "dang  "
-    .ascii "dao   "
-    .ascii "de    "
-    .ascii "deng  "
-    .ascii "di    "
-    .ascii "dia   "
-    .ascii "dian  "
-    .ascii "diao  "
-    .ascii "die   "
-    .ascii "ding  "
-    .ascii "diu   "
-    .ascii "dong  "
-    .ascii "dou   "
-    .ascii "du    "
-    .ascii "duan  "
-    .ascii "dui   "
-    .ascii "dun   "
-    .ascii "duo   "
-    .ascii "e     "
-    .ascii "ei    "
-    .ascii "en    "
-    .ascii "er    "
-    .ascii "fa    "
-    .ascii "fan   "
-    .ascii "fang  "
-    .ascii "fei   "
-    .ascii "fen   "
-    .ascii "feng  "
-    .ascii "fo    "
-    .ascii "fou   "
-    .ascii "fu    "
-    .ascii "ga    "
-    .ascii "gai   "
-    .ascii "gan   "
-    .ascii "gang  "
-    .ascii "gao   "
-    .ascii "ge    "
-    .ascii "gei   "
-    .ascii "gen   "
-    .ascii "geng  "
-    .ascii "gong  "
-    .ascii "gou   "
-    .ascii "gu    "
-    .ascii "gua   "
-    .ascii "guai  "
-    .ascii "guan  "
-    .ascii "guang "
-    .ascii "gui   "
-    .ascii "gun   "
-    .ascii "guo   "
-    .ascii "ha    "
-    .ascii "hai   "
-    .ascii "han   "
-    .ascii "hang  "
-    .ascii "hao   "
-    .ascii "he    "
-    .ascii "hei   "
-    .ascii "hen   "
-    .ascii "heng  "
-    .ascii "hong  "
-    .ascii "hou   "
-    .ascii "hu    "
-    .ascii "hua   "
-    .ascii "huai  "
-    .ascii "huan  "
-    .ascii "huang "
-    .ascii "hui   "
-    .ascii "hun   "
-    .ascii "huo   "
-    .ascii "ji    "
-    .ascii "jia   "
-    .ascii "jian  "
-    .ascii "jiang "
-    .ascii "jiao  "
-    .ascii "jie   "
-    .ascii "jin   "
-    .ascii "jing  "
-    .ascii "jiong "
-    .ascii "jiu   "
-    .ascii "ju    "
-    .ascii "juan  "
-    .ascii "jue   "
-    .ascii "jun   "
-    .ascii "ka    "
-    .ascii "kai   "
-    .ascii "kan   "
-    .ascii "kang  "
-    .ascii "kao   "
-    .ascii "ke    "
-    .ascii "ken   "
-    .ascii "keng  "
-    .ascii "kong  "
-    .ascii "kou   "
-    .ascii "ku    "
-    .ascii "kua   "
-    .ascii "kuai  "
-    .ascii "kuan  "
-    .ascii "kuang "
-    .ascii "kui   "
-    .ascii "kun   "
-    .ascii "kuo   "
-    .ascii "la    "
-    .ascii "lai   "
-    .ascii "lan   "
-    .ascii "lang  "
-    .ascii "lao   "
-    .ascii "le    "
-    .ascii "lei   "
-    .ascii "leng  "
-    .ascii "li    "
-    .ascii "lia   "
-    .ascii "lian  "
-    .ascii "liang "
-    .ascii "liao  "
-    .ascii "lie   "
-    .ascii "lin   "
-    .ascii "ling  "
-    .ascii "liu   "
-    .ascii "long  "
-    .ascii "lou   "
-    .ascii "lu    "
-    .ascii "luan  "
-    .ascii "lue   "
-    .ascii "lun   "
-    .ascii "luo   "
-    .ascii "m     "
-    .ascii "ma    "
-    .ascii "mai   "
-    .ascii "man   "
-    .ascii "mang  "
-    .ascii "mao   "
-    .ascii "me    "
-    .ascii "mei   "
-    .ascii "men   "
-    .ascii "meng  "
-    .ascii "mi    "
-    .ascii "mian  "
-    .ascii "miao  "
-    .ascii "mie   "
-    .ascii "min   "
-    .ascii "ming  "
-    .ascii "miu   "
-    .ascii "mo    "
-    .ascii "mou   "
-    .ascii "mu    "
-    .ascii "n     "
-    .ascii "na    "
-    .ascii "nai   "
-    .ascii "nan   "
-    .ascii "nang  "
-    .ascii "nao   "
-    .ascii "ne    "
-    .ascii "nei   "
-    .ascii "nen   "
-    .ascii "neng  "
-    .ascii "ni    "
-    .ascii "nian  "
-    .ascii "niang "
-    .ascii "niao  "
-    .ascii "nie   "
-    .ascii "nin   "
-    .ascii "ning  "
-    .ascii "niu   "
-    .ascii "nong  "
-    .ascii "nou   "
-    .ascii "nu    "
-    .ascii "nuan  "
-    .ascii "nue   "
-    .ascii "nuo   "
-    .ascii "o     "
-    .ascii "ou    "
-    .ascii "pa    "
-    .ascii "pai   "
-    .ascii "pan   "
-    .ascii "pang  "
-    .ascii "pao   "
-    .ascii "pei   "
-    .ascii "pen   "
-    .ascii "peng  "
-    .ascii "pi    "
-    .ascii "pian  "
-    .ascii "piao  "
-    .ascii "pie   "
-    .ascii "pin   "
-    .ascii "ping  "
-    .ascii "po    "
-    .ascii "pou   "
-    .ascii "pu    "
-    .ascii "qi    "
-    .ascii "qia   "
-    .ascii "qian  "
-    .ascii "qiang "
-    .ascii "qiao  "
-    .ascii "qie   "
-    .ascii "qin   "
-    .ascii "qing  "
-    .ascii "qiong "
-    .ascii "qiu   "
-    .ascii "qu    "
-    .ascii "quan  "
-    .ascii "que   "
-    .ascii "qun   "
-    .ascii "ran   "
-    .ascii "rang  "
-    .ascii "rao   "
-    .ascii "re    "
-    .ascii "ren   "
-    .ascii "reng  "
-    .ascii "ri    "
-    .ascii "rong  "
-    .ascii "rou   "
-    .ascii "ru    "
-    .ascii "ruan  "
-    .ascii "rui   "
-    .ascii "run   "
-    .ascii "ruo   "
-    .ascii "sa    "
-    .ascii "sai   "
-    .ascii "san   "
-    .ascii "sang  "
-    .ascii "sao   "
-    .ascii "se    "
-    .ascii "sen   "
-    .ascii "seng  "
-    .ascii "sha   "
-    .ascii "shai  "
-    .ascii "shan  "
-    .ascii "shang "
-    .ascii "shao  "
-    .ascii "she   "
-    .ascii "shei  "
-    .ascii "shen  "
-    .ascii "sheng "
-    .ascii "shi   "
-    .ascii "shou  "
-    .ascii "shu   "
-    .ascii "shua  "
-    .ascii "shuai "
-    .ascii "shuan "
-    .ascii "shuang"
-    .ascii "shui  "
-    .ascii "shun  "
-    .ascii "shuo  "
-    .ascii "si    "
-    .ascii "song  "
-    .ascii "sou   "
-    .ascii "su    "
-    .ascii "suan  "
-    .ascii "sui   "
-    .ascii "sun   "
-    .ascii "suo   "
-    .ascii "ta    "
-    .ascii "tai   "
-    .ascii "tan   "
-    .ascii "tang  "
-    .ascii "tao   "
-    .ascii "te    "
-    .ascii "teng  "
-    .ascii "ti    "
-    .ascii "tian  "
-    .ascii "tiao  "
-    .ascii "tie   "
-    .ascii "ting  "
-    .ascii "tong  "
-    .ascii "tou   "
-    .ascii "tu    "
-    .ascii "tuan  "
-    .ascii "tui   "
-    .ascii "tun   "
-    .ascii "tuo   "
-    .ascii "wa    "
-    .ascii "wai   "
-    .ascii "wan   "
-    .ascii "wang  "
-    .ascii "wei   "
-    .ascii "wen   "
-    .ascii "weng  "
-    .ascii "wo    "
-    .ascii "wu    "
-    .ascii "xi    "
-    .ascii "xia   "
-    .ascii "xian  "
-    .ascii "xiang "
-    .ascii "xiao  "
-    .ascii "xie   "
-    .ascii "xin   "
-    .ascii "xing  "
-    .ascii "xiong "
-    .ascii "xiu   "
-    .ascii "xu    "
-    .ascii "xuan  "
-    .ascii "xue   "
-    .ascii "xun   "
-    .ascii "ya    "
-    .ascii "yan   "
-    .ascii "yang  "
-    .ascii "yao   "
-    .ascii "ye    "
-    .ascii "yi    "
-    .ascii "yin   "
-    .ascii "ying  "
-    .ascii "yo    "
-    .ascii "yong  "
-    .ascii "you   "
-    .ascii "yu    "
-    .ascii "yuan  "
-    .ascii "yue   "
-    .ascii "yun   "
-    .ascii "za    "
-    .ascii "zai   "
-    .ascii "zan   "
-    .ascii "zang  "
-    .ascii "zao   "
-    .ascii "ze    "
-    .ascii "zei   "
-    .ascii "zen   "
-    .ascii "zeng  "
-    .ascii "zha   "
-    .ascii "zhai  "
-    .ascii "zhan  "
-    .ascii "zhang "
-    .ascii "zhao  "
-    .ascii "zhe   "
-    .ascii "zhen  "
-    .ascii "zheng "
-    .ascii "zhi   "
-    .ascii "zhong "
-    .ascii "zhou  "
-    .ascii "zhu   "
-    .ascii "zhua  "
-    .ascii "zhuai "
-    .ascii "zhuan "
-    .ascii "zhuang"
-    .ascii "zhui  "
-    .ascii "zhun  "
-    .ascii "zhuo  "
-    .ascii "zi    "
-    .ascii "zong  "
-    .ascii "zou   "
-    .ascii "zu    "
-    .ascii "zuan  "
-    .ascii "zui   "
-    .ascii "zun   "
-    .ascii "zuo   "
-    .ascii "nv    "
-    .ascii "lv    "
-    .ascii "jv    "
-    .ascii "qv    "
-    .ascii "xv    "
-    .ascii "yv    "
+    .byte $61,$20,$20,$20,$20,$20
+    .byte $61,$69,$20,$20,$20,$20
+    .byte $61,$6E,$20,$20,$20,$20
+    .byte $61,$6E,$67,$20,$20,$20
+    .byte $61,$6F,$20,$20,$20,$20
+    .byte $62,$61,$20,$20,$20,$20
+    .byte $62,$61,$69,$20,$20,$20
+    .byte $62,$61,$6E,$20,$20,$20
+    .byte $62,$61,$6E,$67,$20,$20
+    .byte $62,$61,$6F,$20,$20,$20
+    .byte $62,$65,$69,$20,$20,$20
+    .byte $62,$65,$6E,$20,$20,$20
+    .byte $62,$65,$6E,$67,$20,$20
+    .byte $62,$69,$20,$20,$20,$20
+    .byte $62,$69,$61,$6E,$20,$20
+    .byte $62,$69,$61,$6F,$20,$20
+    .byte $62,$69,$65,$20,$20,$20
+    .byte $62,$69,$6E,$20,$20,$20
+    .byte $62,$69,$6E,$67,$20,$20
+    .byte $62,$6F,$20,$20,$20,$20
+    .byte $62,$75,$20,$20,$20,$20
+    .byte $63,$61,$20,$20,$20,$20
+    .byte $63,$61,$69,$20,$20,$20
+    .byte $63,$61,$6E,$20,$20,$20
+    .byte $63,$61,$6E,$67,$20,$20
+    .byte $63,$61,$6F,$20,$20,$20
+    .byte $63,$65,$20,$20,$20,$20
+    .byte $63,$65,$6E,$20,$20,$20
+    .byte $63,$65,$6E,$67,$20,$20
+    .byte $63,$68,$61,$20,$20,$20
+    .byte $63,$68,$61,$69,$20,$20
+    .byte $63,$68,$61,$6E,$20,$20
+    .byte $63,$68,$61,$6E,$67,$20
+    .byte $63,$68,$61,$6F,$20,$20
+    .byte $63,$68,$65,$20,$20,$20
+    .byte $63,$68,$65,$6E,$20,$20
+    .byte $63,$68,$65,$6E,$67,$20
+    .byte $63,$68,$69,$20,$20,$20
+    .byte $63,$68,$6F,$6E,$67,$20
+    .byte $63,$68,$6F,$75,$20,$20
+    .byte $63,$68,$75,$20,$20,$20
+    .byte $63,$68,$75,$61,$69,$20
+    .byte $63,$68,$75,$61,$6E,$20
+    .byte $63,$68,$75,$61,$6E,$67
+    .byte $63,$68,$75,$69,$20,$20
+    .byte $63,$68,$75,$6E,$20,$20
+    .byte $63,$68,$75,$6F,$20,$20
+    .byte $63,$69,$20,$20,$20,$20
+    .byte $63,$6F,$6E,$67,$20,$20
+    .byte $63,$6F,$75,$20,$20,$20
+    .byte $63,$75,$20,$20,$20,$20
+    .byte $63,$75,$61,$6E,$20,$20
+    .byte $63,$75,$69,$20,$20,$20
+    .byte $63,$75,$6E,$20,$20,$20
+    .byte $63,$75,$6F,$20,$20,$20
+    .byte $64,$61,$20,$20,$20,$20
+    .byte $64,$61,$69,$20,$20,$20
+    .byte $64,$61,$6E,$20,$20,$20
+    .byte $64,$61,$6E,$67,$20,$20
+    .byte $64,$61,$6F,$20,$20,$20
+    .byte $64,$65,$20,$20,$20,$20
+    .byte $64,$65,$6E,$67,$20,$20
+    .byte $64,$69,$20,$20,$20,$20
+    .byte $64,$69,$61,$20,$20,$20
+    .byte $64,$69,$61,$6E,$20,$20
+    .byte $64,$69,$61,$6F,$20,$20
+    .byte $64,$69,$65,$20,$20,$20
+    .byte $64,$69,$6E,$67,$20,$20
+    .byte $64,$69,$75,$20,$20,$20
+    .byte $64,$6F,$6E,$67,$20,$20
+    .byte $64,$6F,$75,$20,$20,$20
+    .byte $64,$75,$20,$20,$20,$20
+    .byte $64,$75,$61,$6E,$20,$20
+    .byte $64,$75,$69,$20,$20,$20
+    .byte $64,$75,$6E,$20,$20,$20
+    .byte $64,$75,$6F,$20,$20,$20
+    .byte $65,$20,$20,$20,$20,$20
+    .byte $65,$69,$20,$20,$20,$20
+    .byte $65,$6E,$20,$20,$20,$20
+    .byte $65,$72,$20,$20,$20,$20
+    .byte $66,$61,$20,$20,$20,$20
+    .byte $66,$61,$6E,$20,$20,$20
+    .byte $66,$61,$6E,$67,$20,$20
+    .byte $66,$65,$69,$20,$20,$20
+    .byte $66,$65,$6E,$20,$20,$20
+    .byte $66,$65,$6E,$67,$20,$20
+    .byte $66,$6F,$20,$20,$20,$20
+    .byte $66,$6F,$75,$20,$20,$20
+    .byte $66,$75,$20,$20,$20,$20
+    .byte $67,$61,$20,$20,$20,$20
+    .byte $67,$61,$69,$20,$20,$20
+    .byte $67,$61,$6E,$20,$20,$20
+    .byte $67,$61,$6E,$67,$20,$20
+    .byte $67,$61,$6F,$20,$20,$20
+    .byte $67,$65,$20,$20,$20,$20
+    .byte $67,$65,$69,$20,$20,$20
+    .byte $67,$65,$6E,$20,$20,$20
+    .byte $67,$65,$6E,$67,$20,$20
+    .byte $67,$6F,$6E,$67,$20,$20
+    .byte $67,$6F,$75,$20,$20,$20
+    .byte $67,$75,$20,$20,$20,$20
+    .byte $67,$75,$61,$20,$20,$20
+    .byte $67,$75,$61,$69,$20,$20
+    .byte $67,$75,$61,$6E,$20,$20
+    .byte $67,$75,$61,$6E,$67,$20
+    .byte $67,$75,$69,$20,$20,$20
+    .byte $67,$75,$6E,$20,$20,$20
+    .byte $67,$75,$6F,$20,$20,$20
+    .byte $68,$61,$20,$20,$20,$20
+    .byte $68,$61,$69,$20,$20,$20
+    .byte $68,$61,$6E,$20,$20,$20
+    .byte $68,$61,$6E,$67,$20,$20
+    .byte $68,$61,$6F,$20,$20,$20
+    .byte $68,$65,$20,$20,$20,$20
+    .byte $68,$65,$69,$20,$20,$20
+    .byte $68,$65,$6E,$20,$20,$20
+    .byte $68,$65,$6E,$67,$20,$20
+    .byte $68,$6F,$6E,$67,$20,$20
+    .byte $68,$6F,$75,$20,$20,$20
+    .byte $68,$75,$20,$20,$20,$20
+    .byte $68,$75,$61,$20,$20,$20
+    .byte $68,$75,$61,$69,$20,$20
+    .byte $68,$75,$61,$6E,$20,$20
+    .byte $68,$75,$61,$6E,$67,$20
+    .byte $68,$75,$69,$20,$20,$20
+    .byte $68,$75,$6E,$20,$20,$20
+    .byte $68,$75,$6F,$20,$20,$20
+    .byte $6A,$69,$20,$20,$20,$20
+    .byte $6A,$69,$61,$20,$20,$20
+    .byte $6A,$69,$61,$6E,$20,$20
+    .byte $6A,$69,$61,$6E,$67,$20
+    .byte $6A,$69,$61,$6F,$20,$20
+    .byte $6A,$69,$65,$20,$20,$20
+    .byte $6A,$69,$6E,$20,$20,$20
+    .byte $6A,$69,$6E,$67,$20,$20
+    .byte $6A,$69,$6F,$6E,$67,$20
+    .byte $6A,$69,$75,$20,$20,$20
+    .byte $6A,$75,$20,$20,$20,$20
+    .byte $6A,$75,$61,$6E,$20,$20
+    .byte $6A,$75,$65,$20,$20,$20
+    .byte $6A,$75,$6E,$20,$20,$20
+    .byte $6B,$61,$20,$20,$20,$20
+    .byte $6B,$61,$69,$20,$20,$20
+    .byte $6B,$61,$6E,$20,$20,$20
+    .byte $6B,$61,$6E,$67,$20,$20
+    .byte $6B,$61,$6F,$20,$20,$20
+    .byte $6B,$65,$20,$20,$20,$20
+    .byte $6B,$65,$6E,$20,$20,$20
+    .byte $6B,$65,$6E,$67,$20,$20
+    .byte $6B,$6F,$6E,$67,$20,$20
+    .byte $6B,$6F,$75,$20,$20,$20
+    .byte $6B,$75,$20,$20,$20,$20
+    .byte $6B,$75,$61,$20,$20,$20
+    .byte $6B,$75,$61,$69,$20,$20
+    .byte $6B,$75,$61,$6E,$20,$20
+    .byte $6B,$75,$61,$6E,$67,$20
+    .byte $6B,$75,$69,$20,$20,$20
+    .byte $6B,$75,$6E,$20,$20,$20
+    .byte $6B,$75,$6F,$20,$20,$20
+    .byte $6C,$61,$20,$20,$20,$20
+    .byte $6C,$61,$69,$20,$20,$20
+    .byte $6C,$61,$6E,$20,$20,$20
+    .byte $6C,$61,$6E,$67,$20,$20
+    .byte $6C,$61,$6F,$20,$20,$20
+    .byte $6C,$65,$20,$20,$20,$20
+    .byte $6C,$65,$69,$20,$20,$20
+    .byte $6C,$65,$6E,$67,$20,$20
+    .byte $6C,$69,$20,$20,$20,$20
+    .byte $6C,$69,$61,$20,$20,$20
+    .byte $6C,$69,$61,$6E,$20,$20
+    .byte $6C,$69,$61,$6E,$67,$20
+    .byte $6C,$69,$61,$6F,$20,$20
+    .byte $6C,$69,$65,$20,$20,$20
+    .byte $6C,$69,$6E,$20,$20,$20
+    .byte $6C,$69,$6E,$67,$20,$20
+    .byte $6C,$69,$75,$20,$20,$20
+    .byte $6C,$6F,$6E,$67,$20,$20
+    .byte $6C,$6F,$75,$20,$20,$20
+    .byte $6C,$75,$20,$20,$20,$20
+    .byte $6C,$75,$61,$6E,$20,$20
+    .byte $6C,$75,$65,$20,$20,$20
+    .byte $6C,$75,$6E,$20,$20,$20
+    .byte $6C,$75,$6F,$20,$20,$20
+    .byte $6D,$20,$20,$20,$20,$20
+    .byte $6D,$61,$20,$20,$20,$20
+    .byte $6D,$61,$69,$20,$20,$20
+    .byte $6D,$61,$6E,$20,$20,$20
+    .byte $6D,$61,$6E,$67,$20,$20
+    .byte $6D,$61,$6F,$20,$20,$20
+    .byte $6D,$65,$20,$20,$20,$20
+    .byte $6D,$65,$69,$20,$20,$20
+    .byte $6D,$65,$6E,$20,$20,$20
+    .byte $6D,$65,$6E,$67,$20,$20
+    .byte $6D,$69,$20,$20,$20,$20
+    .byte $6D,$69,$61,$6E,$20,$20
+    .byte $6D,$69,$61,$6F,$20,$20
+    .byte $6D,$69,$65,$20,$20,$20
+    .byte $6D,$69,$6E,$20,$20,$20
+    .byte $6D,$69,$6E,$67,$20,$20
+    .byte $6D,$69,$75,$20,$20,$20
+    .byte $6D,$6F,$20,$20,$20,$20
+    .byte $6D,$6F,$75,$20,$20,$20
+    .byte $6D,$75,$20,$20,$20,$20
+    .byte $6E,$20,$20,$20,$20,$20
+    .byte $6E,$61,$20,$20,$20,$20
+    .byte $6E,$61,$69,$20,$20,$20
+    .byte $6E,$61,$6E,$20,$20,$20
+    .byte $6E,$61,$6E,$67,$20,$20
+    .byte $6E,$61,$6F,$20,$20,$20
+    .byte $6E,$65,$20,$20,$20,$20
+    .byte $6E,$65,$69,$20,$20,$20
+    .byte $6E,$65,$6E,$20,$20,$20
+    .byte $6E,$65,$6E,$67,$20,$20
+    .byte $6E,$69,$20,$20,$20,$20
+    .byte $6E,$69,$61,$6E,$20,$20
+    .byte $6E,$69,$61,$6E,$67,$20
+    .byte $6E,$69,$61,$6F,$20,$20
+    .byte $6E,$69,$65,$20,$20,$20
+    .byte $6E,$69,$6E,$20,$20,$20
+    .byte $6E,$69,$6E,$67,$20,$20
+    .byte $6E,$69,$75,$20,$20,$20
+    .byte $6E,$6F,$6E,$67,$20,$20
+    .byte $6E,$6F,$75,$20,$20,$20
+    .byte $6E,$75,$20,$20,$20,$20
+    .byte $6E,$75,$61,$6E,$20,$20
+    .byte $6E,$75,$65,$20,$20,$20
+    .byte $6E,$75,$6F,$20,$20,$20
+    .byte $6F,$20,$20,$20,$20,$20
+    .byte $6F,$75,$20,$20,$20,$20
+    .byte $70,$61,$20,$20,$20,$20
+    .byte $70,$61,$69,$20,$20,$20
+    .byte $70,$61,$6E,$20,$20,$20
+    .byte $70,$61,$6E,$67,$20,$20
+    .byte $70,$61,$6F,$20,$20,$20
+    .byte $70,$65,$69,$20,$20,$20
+    .byte $70,$65,$6E,$20,$20,$20
+    .byte $70,$65,$6E,$67,$20,$20
+    .byte $70,$69,$20,$20,$20,$20
+    .byte $70,$69,$61,$6E,$20,$20
+    .byte $70,$69,$61,$6F,$20,$20
+    .byte $70,$69,$65,$20,$20,$20
+    .byte $70,$69,$6E,$20,$20,$20
+    .byte $70,$69,$6E,$67,$20,$20
+    .byte $70,$6F,$20,$20,$20,$20
+    .byte $70,$6F,$75,$20,$20,$20
+    .byte $70,$75,$20,$20,$20,$20
+    .byte $71,$69,$20,$20,$20,$20
+    .byte $71,$69,$61,$20,$20,$20
+    .byte $71,$69,$61,$6E,$20,$20
+    .byte $71,$69,$61,$6E,$67,$20
+    .byte $71,$69,$61,$6F,$20,$20
+    .byte $71,$69,$65,$20,$20,$20
+    .byte $71,$69,$6E,$20,$20,$20
+    .byte $71,$69,$6E,$67,$20,$20
+    .byte $71,$69,$6F,$6E,$67,$20
+    .byte $71,$69,$75,$20,$20,$20
+    .byte $71,$75,$20,$20,$20,$20
+    .byte $71,$75,$61,$6E,$20,$20
+    .byte $71,$75,$65,$20,$20,$20
+    .byte $71,$75,$6E,$20,$20,$20
+    .byte $72,$61,$6E,$20,$20,$20
+    .byte $72,$61,$6E,$67,$20,$20
+    .byte $72,$61,$6F,$20,$20,$20
+    .byte $72,$65,$20,$20,$20,$20
+    .byte $72,$65,$6E,$20,$20,$20
+    .byte $72,$65,$6E,$67,$20,$20
+    .byte $72,$69,$20,$20,$20,$20
+    .byte $72,$6F,$6E,$67,$20,$20
+    .byte $72,$6F,$75,$20,$20,$20
+    .byte $72,$75,$20,$20,$20,$20
+    .byte $72,$75,$61,$6E,$20,$20
+    .byte $72,$75,$69,$20,$20,$20
+    .byte $72,$75,$6E,$20,$20,$20
+    .byte $72,$75,$6F,$20,$20,$20
+    .byte $73,$61,$20,$20,$20,$20
+    .byte $73,$61,$69,$20,$20,$20
+    .byte $73,$61,$6E,$20,$20,$20
+    .byte $73,$61,$6E,$67,$20,$20
+    .byte $73,$61,$6F,$20,$20,$20
+    .byte $73,$65,$20,$20,$20,$20
+    .byte $73,$65,$6E,$20,$20,$20
+    .byte $73,$65,$6E,$67,$20,$20
+    .byte $73,$68,$61,$20,$20,$20
+    .byte $73,$68,$61,$69,$20,$20
+    .byte $73,$68,$61,$6E,$20,$20
+    .byte $73,$68,$61,$6E,$67,$20
+    .byte $73,$68,$61,$6F,$20,$20
+    .byte $73,$68,$65,$20,$20,$20
+    .byte $73,$68,$65,$69,$20,$20
+    .byte $73,$68,$65,$6E,$20,$20
+    .byte $73,$68,$65,$6E,$67,$20
+    .byte $73,$68,$69,$20,$20,$20
+    .byte $73,$68,$6F,$75,$20,$20
+    .byte $73,$68,$75,$20,$20,$20
+    .byte $73,$68,$75,$61,$20,$20
+    .byte $73,$68,$75,$61,$69,$20
+    .byte $73,$68,$75,$61,$6E,$20
+    .byte $73,$68,$75,$61,$6E,$67
+    .byte $73,$68,$75,$69,$20,$20
+    .byte $73,$68,$75,$6E,$20,$20
+    .byte $73,$68,$75,$6F,$20,$20
+    .byte $73,$69,$20,$20,$20,$20
+    .byte $73,$6F,$6E,$67,$20,$20
+    .byte $73,$6F,$75,$20,$20,$20
+    .byte $73,$75,$20,$20,$20,$20
+    .byte $73,$75,$61,$6E,$20,$20
+    .byte $73,$75,$69,$20,$20,$20
+    .byte $73,$75,$6E,$20,$20,$20
+    .byte $73,$75,$6F,$20,$20,$20
+    .byte $74,$61,$20,$20,$20,$20
+    .byte $74,$61,$69,$20,$20,$20
+    .byte $74,$61,$6E,$20,$20,$20
+    .byte $74,$61,$6E,$67,$20,$20
+    .byte $74,$61,$6F,$20,$20,$20
+    .byte $74,$65,$20,$20,$20,$20
+    .byte $74,$65,$6E,$67,$20,$20
+    .byte $74,$69,$20,$20,$20,$20
+    .byte $74,$69,$61,$6E,$20,$20
+    .byte $74,$69,$61,$6F,$20,$20
+    .byte $74,$69,$65,$20,$20,$20
+    .byte $74,$69,$6E,$67,$20,$20
+    .byte $74,$6F,$6E,$67,$20,$20
+    .byte $74,$6F,$75,$20,$20,$20
+    .byte $74,$75,$20,$20,$20,$20
+    .byte $74,$75,$61,$6E,$20,$20
+    .byte $74,$75,$69,$20,$20,$20
+    .byte $74,$75,$6E,$20,$20,$20
+    .byte $74,$75,$6F,$20,$20,$20
+    .byte $77,$61,$20,$20,$20,$20
+    .byte $77,$61,$69,$20,$20,$20
+    .byte $77,$61,$6E,$20,$20,$20
+    .byte $77,$61,$6E,$67,$20,$20
+    .byte $77,$65,$69,$20,$20,$20
+    .byte $77,$65,$6E,$20,$20,$20
+    .byte $77,$65,$6E,$67,$20,$20
+    .byte $77,$6F,$20,$20,$20,$20
+    .byte $77,$75,$20,$20,$20,$20
+    .byte $78,$69,$20,$20,$20,$20
+    .byte $78,$69,$61,$20,$20,$20
+    .byte $78,$69,$61,$6E,$20,$20
+    .byte $78,$69,$61,$6E,$67,$20
+    .byte $78,$69,$61,$6F,$20,$20
+    .byte $78,$69,$65,$20,$20,$20
+    .byte $78,$69,$6E,$20,$20,$20
+    .byte $78,$69,$6E,$67,$20,$20
+    .byte $78,$69,$6F,$6E,$67,$20
+    .byte $78,$69,$75,$20,$20,$20
+    .byte $78,$75,$20,$20,$20,$20
+    .byte $78,$75,$61,$6E,$20,$20
+    .byte $78,$75,$65,$20,$20,$20
+    .byte $78,$75,$6E,$20,$20,$20
+    .byte $79,$61,$20,$20,$20,$20
+    .byte $79,$61,$6E,$20,$20,$20
+    .byte $79,$61,$6E,$67,$20,$20
+    .byte $79,$61,$6F,$20,$20,$20
+    .byte $79,$65,$20,$20,$20,$20
+    .byte $79,$69,$20,$20,$20,$20
+    .byte $79,$69,$6E,$20,$20,$20
+    .byte $79,$69,$6E,$67,$20,$20
+    .byte $79,$6F,$20,$20,$20,$20
+    .byte $79,$6F,$6E,$67,$20,$20
+    .byte $79,$6F,$75,$20,$20,$20
+    .byte $79,$75,$20,$20,$20,$20
+    .byte $79,$75,$61,$6E,$20,$20
+    .byte $79,$75,$65,$20,$20,$20
+    .byte $79,$75,$6E,$20,$20,$20
+    .byte $7A,$61,$20,$20,$20,$20
+    .byte $7A,$61,$69,$20,$20,$20
+    .byte $7A,$61,$6E,$20,$20,$20
+    .byte $7A,$61,$6E,$67,$20,$20
+    .byte $7A,$61,$6F,$20,$20,$20
+    .byte $7A,$65,$20,$20,$20,$20
+    .byte $7A,$65,$69,$20,$20,$20
+    .byte $7A,$65,$6E,$20,$20,$20
+    .byte $7A,$65,$6E,$67,$20,$20
+    .byte $7A,$68,$61,$20,$20,$20
+    .byte $7A,$68,$61,$69,$20,$20
+    .byte $7A,$68,$61,$6E,$20,$20
+    .byte $7A,$68,$61,$6E,$67,$20
+    .byte $7A,$68,$61,$6F,$20,$20
+    .byte $7A,$68,$65,$20,$20,$20
+    .byte $7A,$68,$65,$6E,$20,$20
+    .byte $7A,$68,$65,$6E,$67,$20
+    .byte $7A,$68,$69,$20,$20,$20
+    .byte $7A,$68,$6F,$6E,$67,$20
+    .byte $7A,$68,$6F,$75,$20,$20
+    .byte $7A,$68,$75,$20,$20,$20
+    .byte $7A,$68,$75,$61,$20,$20
+    .byte $7A,$68,$75,$61,$69,$20
+    .byte $7A,$68,$75,$61,$6E,$20
+    .byte $7A,$68,$75,$61,$6E,$67
+    .byte $7A,$68,$75,$69,$20,$20
+    .byte $7A,$68,$75,$6E,$20,$20
+    .byte $7A,$68,$75,$6F,$20,$20
+    .byte $7A,$69,$20,$20,$20,$20
+    .byte $7A,$6F,$6E,$67,$20,$20
+    .byte $7A,$6F,$75,$20,$20,$20
+    .byte $7A,$75,$20,$20,$20,$20
+    .byte $7A,$75,$61,$6E,$20,$20
+    .byte $7A,$75,$69,$20,$20,$20
+    .byte $7A,$75,$6E,$20,$20,$20
+    .byte $7A,$75,$6F,$20,$20,$20
+    .byte $6E,$76,$20,$20,$20,$20
+    .byte $6C,$76,$20,$20,$20,$20
+    .byte $6A,$76,$20,$20,$20,$20
+    .byte $71,$76,$20,$20,$20,$20
+    .byte $78,$76,$20,$20,$20,$20
+    .byte $79,$76,$20,$20,$20,$20
 ; 作用：双拼键位表：465 项，每项 2 个小写字母（8 项一行）；输入法序号为 2 时 IME_TABLE_LOOKUP 逐项比对，表尾是 IME_KEY_PINYIN
 ; 引用者：IME_TABLE_LOOKUP（取地址）
 IME_SHUANGPIN_TABLE:
-    .ascii "oaosofogodbabsbf"
-    .ascii "bgbdbwbrbtbibjbk"
-    .ascii "bmblb;bobucacscf"
-    .ascii "cgcdcecrctuausuf"
-    .ascii "ugudueurutuiuyup"
-    .ascii "uuuxucuhuvuzuoci"
-    .ascii "cycpcucccvczcoda"
-    .ascii "dsdfdgdddedtdidb"
-    .ascii "djdkdmd;dndydpdu"
-    .ascii "dcdvdzdooeeioroq"
-    .ascii "fafffgfwfrftfofp"
-    .ascii "fugagsgfgggdgegw"
-    .ascii "grgtgygpgugbgxgc"
-    .ascii "ghgvgzgohahshfhg"
-    .ascii "hdhehwhrhthyhphu"
-    .ascii "hbhxhchhhvhzhoji"
-    .ascii "jbjjjhjkjmjlj;jy"
-    .ascii "jnjxjcjvjzkakskf"
-    .ascii "kgkdkekrktkykpku"
-    .ascii "kbkxkckhkvkzkola"
-    .ascii "lslflgldlelwltli"
-    .ascii "lbljlhlklmlll;ln"
-    .ascii "lylplulclvlzloom"
-    .ascii "mamsmfmgmdmemwmr"
-    .ascii "mtmimjmkmmmlm;mn"
-    .ascii "mompmuonnansnfng"
-    .ascii "ndnenwnrntninjnh"
-    .ascii "nknmnln;nnnynpnu"
-    .ascii "ncnvnooooppapspf"
-    .ascii "pgpdpwprptpipjpk"
-    .ascii "pmplp;popppuqiqb"
-    .ascii "qjqhqkqmqlq;qyqn"
-    .ascii "qxqcqvqzrfrgrdre"
-    .ascii "rrrtriryrprurcrv"
-    .ascii "rzrosasssfsgsdse"
-    .ascii "srstiaisifigidie"
-    .ascii "iwiritiiipiuibix"
-    .ascii "icihiviziosisysp"
-    .ascii "suscsvszsotatstf"
-    .ascii "tgtdtetttitjtktm"
-    .ascii "t;tytptutctvtzto"
-    .ascii "wawswfwgwwwrwtwo"
-    .ascii "wuxixbxjxhxkxmxl"
-    .ascii "x;xyxnxxxcxvxzya"
-    .ascii "yfygydyeyiyly;yo"
-    .ascii "yyypyxycyvyzzazs"
-    .ascii "zfzgzdzezwzrztva"
-    .ascii "vsvfvgvdvevrvtvi"
-    .ascii "vyvpvuvbvxvcvhvv"
-    .ascii "vzvozizyzpzuzczv"
-    .ascii "zzzonxlxjuquxuyu"
-    .ascii "a b c d e f g h "
-    .ascii "i j k l m n o p "
-    .ascii "q r s t u v w x "
-    .ascii "y z aaasafagadae"
-    .ascii "arataiayapauabax"
-    .ascii "acahavazaoeaesef"
-    .ascii "egedeeereqeoepem"
-    .ascii "en"
+    .byte $6F,$61,$6F,$73,$6F,$66,$6F,$67,$6F,$64,$62,$61,$62,$73,$62,$66
+    .byte $62,$67,$62,$64,$62,$77,$62,$72,$62,$74,$62,$69,$62,$6A,$62,$6B
+    .byte $62,$6D,$62,$6C,$62,$3B,$62,$6F,$62,$75,$63,$61,$63,$73,$63,$66
+    .byte $63,$67,$63,$64,$63,$65,$63,$72,$63,$74,$75,$61,$75,$73,$75,$66
+    .byte $75,$67,$75,$64,$75,$65,$75,$72,$75,$74,$75,$69,$75,$79,$75,$70
+    .byte $75,$75,$75,$78,$75,$63,$75,$68,$75,$76,$75,$7A,$75,$6F,$63,$69
+    .byte $63,$79,$63,$70,$63,$75,$63,$63,$63,$76,$63,$7A,$63,$6F,$64,$61
+    .byte $64,$73,$64,$66,$64,$67,$64,$64,$64,$65,$64,$74,$64,$69,$64,$62
+    .byte $64,$6A,$64,$6B,$64,$6D,$64,$3B,$64,$6E,$64,$79,$64,$70,$64,$75
+    .byte $64,$63,$64,$76,$64,$7A,$64,$6F,$6F,$65,$65,$69,$6F,$72,$6F,$71
+    .byte $66,$61,$66,$66,$66,$67,$66,$77,$66,$72,$66,$74,$66,$6F,$66,$70
+    .byte $66,$75,$67,$61,$67,$73,$67,$66,$67,$67,$67,$64,$67,$65,$67,$77
+    .byte $67,$72,$67,$74,$67,$79,$67,$70,$67,$75,$67,$62,$67,$78,$67,$63
+    .byte $67,$68,$67,$76,$67,$7A,$67,$6F,$68,$61,$68,$73,$68,$66,$68,$67
+    .byte $68,$64,$68,$65,$68,$77,$68,$72,$68,$74,$68,$79,$68,$70,$68,$75
+    .byte $68,$62,$68,$78,$68,$63,$68,$68,$68,$76,$68,$7A,$68,$6F,$6A,$69
+    .byte $6A,$62,$6A,$6A,$6A,$68,$6A,$6B,$6A,$6D,$6A,$6C,$6A,$3B,$6A,$79
+    .byte $6A,$6E,$6A,$78,$6A,$63,$6A,$76,$6A,$7A,$6B,$61,$6B,$73,$6B,$66
+    .byte $6B,$67,$6B,$64,$6B,$65,$6B,$72,$6B,$74,$6B,$79,$6B,$70,$6B,$75
+    .byte $6B,$62,$6B,$78,$6B,$63,$6B,$68,$6B,$76,$6B,$7A,$6B,$6F,$6C,$61
+    .byte $6C,$73,$6C,$66,$6C,$67,$6C,$64,$6C,$65,$6C,$77,$6C,$74,$6C,$69
+    .byte $6C,$62,$6C,$6A,$6C,$68,$6C,$6B,$6C,$6D,$6C,$6C,$6C,$3B,$6C,$6E
+    .byte $6C,$79,$6C,$70,$6C,$75,$6C,$63,$6C,$76,$6C,$7A,$6C,$6F,$6F,$6D
+    .byte $6D,$61,$6D,$73,$6D,$66,$6D,$67,$6D,$64,$6D,$65,$6D,$77,$6D,$72
+    .byte $6D,$74,$6D,$69,$6D,$6A,$6D,$6B,$6D,$6D,$6D,$6C,$6D,$3B,$6D,$6E
+    .byte $6D,$6F,$6D,$70,$6D,$75,$6F,$6E,$6E,$61,$6E,$73,$6E,$66,$6E,$67
+    .byte $6E,$64,$6E,$65,$6E,$77,$6E,$72,$6E,$74,$6E,$69,$6E,$6A,$6E,$68
+    .byte $6E,$6B,$6E,$6D,$6E,$6C,$6E,$3B,$6E,$6E,$6E,$79,$6E,$70,$6E,$75
+    .byte $6E,$63,$6E,$76,$6E,$6F,$6F,$6F,$6F,$70,$70,$61,$70,$73,$70,$66
+    .byte $70,$67,$70,$64,$70,$77,$70,$72,$70,$74,$70,$69,$70,$6A,$70,$6B
+    .byte $70,$6D,$70,$6C,$70,$3B,$70,$6F,$70,$70,$70,$75,$71,$69,$71,$62
+    .byte $71,$6A,$71,$68,$71,$6B,$71,$6D,$71,$6C,$71,$3B,$71,$79,$71,$6E
+    .byte $71,$78,$71,$63,$71,$76,$71,$7A,$72,$66,$72,$67,$72,$64,$72,$65
+    .byte $72,$72,$72,$74,$72,$69,$72,$79,$72,$70,$72,$75,$72,$63,$72,$76
+    .byte $72,$7A,$72,$6F,$73,$61,$73,$73,$73,$66,$73,$67,$73,$64,$73,$65
+    .byte $73,$72,$73,$74,$69,$61,$69,$73,$69,$66,$69,$67,$69,$64,$69,$65
+    .byte $69,$77,$69,$72,$69,$74,$69,$69,$69,$70,$69,$75,$69,$62,$69,$78
+    .byte $69,$63,$69,$68,$69,$76,$69,$7A,$69,$6F,$73,$69,$73,$79,$73,$70
+    .byte $73,$75,$73,$63,$73,$76,$73,$7A,$73,$6F,$74,$61,$74,$73,$74,$66
+    .byte $74,$67,$74,$64,$74,$65,$74,$74,$74,$69,$74,$6A,$74,$6B,$74,$6D
+    .byte $74,$3B,$74,$79,$74,$70,$74,$75,$74,$63,$74,$76,$74,$7A,$74,$6F
+    .byte $77,$61,$77,$73,$77,$66,$77,$67,$77,$77,$77,$72,$77,$74,$77,$6F
+    .byte $77,$75,$78,$69,$78,$62,$78,$6A,$78,$68,$78,$6B,$78,$6D,$78,$6C
+    .byte $78,$3B,$78,$79,$78,$6E,$78,$78,$78,$63,$78,$76,$78,$7A,$79,$61
+    .byte $79,$66,$79,$67,$79,$64,$79,$65,$79,$69,$79,$6C,$79,$3B,$79,$6F
+    .byte $79,$79,$79,$70,$79,$78,$79,$63,$79,$76,$79,$7A,$7A,$61,$7A,$73
+    .byte $7A,$66,$7A,$67,$7A,$64,$7A,$65,$7A,$77,$7A,$72,$7A,$74,$76,$61
+    .byte $76,$73,$76,$66,$76,$67,$76,$64,$76,$65,$76,$72,$76,$74,$76,$69
+    .byte $76,$79,$76,$70,$76,$75,$76,$62,$76,$78,$76,$63,$76,$68,$76,$76
+    .byte $76,$7A,$76,$6F,$7A,$69,$7A,$79,$7A,$70,$7A,$75,$7A,$63,$7A,$76
+    .byte $7A,$7A,$7A,$6F,$6E,$78,$6C,$78,$6A,$75,$71,$75,$78,$75,$79,$75
+    .byte $61,$20,$62,$20,$63,$20,$64,$20,$65,$20,$66,$20,$67,$20,$68,$20
+    .byte $69,$20,$6A,$20,$6B,$20,$6C,$20,$6D,$20,$6E,$20,$6F,$20,$70,$20
+    .byte $71,$20,$72,$20,$73,$20,$74,$20,$75,$20,$76,$20,$77,$20,$78,$20
+    .byte $79,$20,$7A,$20,$61,$61,$61,$73,$61,$66,$61,$67,$61,$64,$61,$65
+    .byte $61,$72,$61,$74,$61,$69,$61,$79,$61,$70,$61,$75,$61,$62,$61,$78
+    .byte $61,$63,$61,$68,$61,$76,$61,$7A,$61,$6F,$65,$61,$65,$73,$65,$66
+    .byte $65,$67,$65,$64,$65,$65,$65,$72,$65,$71,$65,$6F,$65,$70,$65,$6D
+    .byte $65,$6E
 ; 作用：全拼、双拼的按键处理（IME_KEY_HANDLER_TABLE 序号 1、2）：按键在 KEY_ASCII
 ; 退格：删一个字符并重查；空格：把第 1 个候选字作为输出（IME_PROCESS_KEY 已先把空格当第 1 个候选字选走，实测没有执行到这一支）；= 与 . 候选字翻下一页；- 与 , 翻上一页；
 ; 小写字母：追加到输入串后查表，没有音节以它开头时先输出第 1 个候选字再以这个字母重新开始；输入串为空时遇到非字母键原样传回

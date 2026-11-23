@@ -2,6 +2,14 @@
 ; 输入：SYS_PAGE、FAR_OFFSET_LO/HI、Y。
 ; 输出：A=读到的字节。
 ; 调用者：VEC_FAR_READ_BYTE
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.export FAR_READ_BYTE, FAR_WRITE_BYTE, FAR_COPY_IN, FAR_COPY_OUT, API_24_FAR_READ_NEXT, API_25_CALL_BANKED
+.export API_26_JUMP_BANKED, API_27, MAP_WINDOWS_8000, RESTORE_WINDOWS_8000, API_28, API_29_MAP_WINDOW
+.export API_2A_SET_VRAM_BANK, API_2B_FAR_WRITE_NEXT, API_2C_ADDR_TO_FAR, INLINE_JUMP_TABLE
+.segment "S0025"
 FAR_READ_BYTE:
     LDA WINDOW_SAVE_3
     PHA

@@ -1,6 +1,17 @@
 ; 作用：命令 DIR（实现在页组 0 里）：解析命令行；开关位 0 打开时显示帮助消息 $84、$85；记下当前目录；驱动器缺省取当前驱动器，第二参数必须为空；把名称“.”改成“*.*”、“..”改成上一级目录；检查非法字符；用 CMD_BUILD_PATH 切到目录，名称是目录时列出该目录下的全部文件；读卷标与卷序列号并显示（消息 $86、$87、$88）；显示“目录：驱动器:路径”（消息 $89）；逐个目录项显示（每扇区 16 项，必要时读下一扇区）：只列匹配通配名称、不是卷标的项，隐藏与系统项要开关位 2；开关位 3 简洁方式只列名称，开关位 4 宽列表每行两列，否则显示名称、大小或目录标记与日期；开关位 1 打开时每满一屏等键（消息 $3B）；最后显示文件数、目录数、占用字节数与剩余空间（消息 $8B 至 $8E，没有任何项时显示 $8A）；恢复原来的当前目录并让软驱停转。
 ; 输出：C=0 成功，C=1 失败。
 ; 调用者：DOS_CMD_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CMD_PARSE_PATH_ARG, DOS_CHECK_ERROR, VEC_SYSCALL, SHELL_PRINT_MESSAGE, SHELL_NEWLINE, LIB_CHECK_NAME
+.import CMD_BUILD_PATH, DIR_PREPARE_SPEC, OUTBUF_PUT_CHAR, LIB_MAKE_FCB_NAME, LIB_PRINT_STRING, PRINT_HEX16
+.import FS_LOAD_DIR_SECTOR, DIR_ENTRY_CHECK, DIR_ENTRY_ATTR_CHECK, SHELL_INPUT_KEY, DIR_ENTRY_TO_NAME, TOTAL_ADD
+.import DIR_PRINT_SIZE, DIR_PRINT_DATE, DIR_ADVANCE_PTR, FS_NEXT_DIR_SECTOR, PRINT_4_SPACES, PRINT_DECIMAL_24
+.import TOTAL_TO_CUR
+.export CMD_DIR
+.segment "S0006"
 CMD_DIR:
     JSR CMD_PARSE_PATH_ARG
     JSR DOS_CHECK_ERROR

@@ -1,0 +1,10 @@
+{
+  "target": "rom",
+  "name": "sb2000",
+  "linkConfig": "link.cfg",
+  "include": ["src/include"],
+  "targetOptions": {
+    "machine": "sb2000",
+    "size": 524288
+  }
+}

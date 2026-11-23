@@ -1,6 +1,14 @@
 ; 作用：REN 命令的实现（页组 $60，序号 1）：解析命令行；开关位 0 打开时显示帮助消息 $75；记下当前目录，驱动器只能是空、A、B；把名称“.”改成“*.*”、“..”改成上一级目录；新名称必须给出且不带驱动器与路径，名称里不能有非法字符；用 CALL_CMD_BUILD_PATH 切到旧文件所在目录；旧名称对应目录时显示消息 $76；以方式 2 打开旧文件（$7B/$09），用 $7C/$04 改成新名称，关闭（$7B/$0A）；最后恢复原来的当前目录并让软驱停转。
 ; 输出：C=0 成功，C=1 失败。
 ; 调用者：CMD_GROUP60_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CALL_CMD_PARSE_PATH_ARG, CMD_CHECK_ERROR, VEC_SYSCALL, CALL_SHELL_PRINT_MESSAGE, CMD_NEWLINE, CMD_STR_DOT
+.import CMD_STR_DOTDOT, CMD_STR_ALL_FILES, CMD_STR_PARENT_DIR, STR_ALL_IN_SET, CALL_CMD_BUILD_PATH, CMD_DIR_PREPARE_SPEC
+.export CMD_REN_IMPL
+.segment "S0066"
 CMD_REN_IMPL:
     JSR CALL_CMD_PARSE_PATH_ARG
     JSR CMD_CHECK_ERROR

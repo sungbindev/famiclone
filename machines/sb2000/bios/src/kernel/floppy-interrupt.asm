@@ -8,6 +8,12 @@
 ; ------------------------------------------------------------------------
 ; 向软驱控制器发命令 $08（读中断状态），读回两个结果字节存入 FDC_RESULT_0/1，成功 C=0；超时 FDC_ERROR_FLAG 置 $FF、C=1
 ; 调用者：FDC_IRQ_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.export FDC_ISR_SENSE_INTERRUPT, FDC_ISR_WRITE_BYTE, FDC_ISR_READ_BYTE, FDC_ISR_READ_RESULT7, FDC_IRQ_HANDLER, FDC_ISR_READ_RESULT_CHECKED
+.segment "S0021"
 FDC_ISR_SENSE_INTERRUPT:
     LDA #$08
     JSR FDC_ISR_WRITE_BYTE

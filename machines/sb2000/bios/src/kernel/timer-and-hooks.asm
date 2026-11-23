@@ -8,6 +8,14 @@
 ; ------------------------------------------------------------------------
 ; 定时器中断（$4033 位 7）：双击计时 $035F、$0368 加 1，到 MOUSE_PARAM 时置 $0369、$036A 位 0；再推进软件时钟 $0689（计到 $10）、$068A（$3C）、$068B（$3C）、$068C（$18），最后进入 TIMER_CALL_HOOK
 ; 调用者：IRQ_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import MAP_WINDOWS_8000
+.export TIMER_IRQ_HANDLER, TIMER_CALL_HOOK, MOUSE_CALL_HOOK, KBD_CALL_HOOK, IRQ4_CALL_HOOK, IRQ1_CALL_HOOK
+.export IRQ2_CALL_HOOK
+.segment "S0020"
 TIMER_IRQ_HANDLER:
     INC MOUSE_BTN1_TIMER
     LDA MOUSE_BTN1_TIMER

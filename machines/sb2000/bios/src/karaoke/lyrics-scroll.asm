@@ -9,6 +9,15 @@
 ; 功能 $66：卡拉 OK 歌词滚动显示（KARAOK.EXE 调用）；分发器直接进入 $8700，不经入口内联表：
 ; 先设置条带绘制参数（TEXT_SETUP_DRAW），$65/$02 停止声音、$65/$09 起播曲子，初始化文字排版状态，逐行建下一行直到 TEXT_BUILD_NEXT_LINE 返回非 0，再反复调用 $65/$03 直到 $0653 非 0（曲子播完），$65/$02 停止声音，NMI_FLAGS（$0630）高 2 位清 0
 ; 调用者：全 ROM 没有指令或地址表引用它（只能由外部直接进入）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL, VEC_FAR_READ_BYTE
+.export API_66, TEXT_INIT_STATE, TEXT_PUSH_A, TEXT_POP_A, TEXT_PUSH_B, TEXT_POP_B
+.export TEXT_BUILD_NEXT_LINE, BAR_CALC_ADDR, BAR_SPLIT_LENGTH, BAR_QUEUE_COMMAND, ZP32_INC, TEXT_PARSE_LINE
+.export TEXT_PARSE_BACK, TEXT_FETCH_BYTE, TEXT_READ_FAR, BAR_ADDR_INC, TEXT_SETUP_DRAW
+.segment "S0049"
 API_66:
     JSR TEXT_SETUP_DRAW
     LDA #$02

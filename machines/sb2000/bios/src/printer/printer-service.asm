@@ -7,7 +7,21 @@
 ; 备注：在 ROM 里接在 input-method/ime-extra-services.asm 之后
 ; ------------------------------------------------------------------------
 ; ---- 同一页的第二种用途：页组 $0E 的页，汇编地址 $8000，从页内偏移 $0300 起 ----
-.rorg $8300
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL
+.export PRN_ENTRY, PRN_JUMP_TABLE, PRN_SUB_00, PRN_START_JOB, PRN_BEGIN_PASS, PRN_FINISH_PASS
+.export PRN_END_JOB, PRN_RETURN, PRN_SUB_12, PRN_SEND_BYTE, PRN_FILTER_BY_PHASE, PRN_FEED_PAPER_A
+.export PRN_FEED_PAPER_B, PRN_FEED_PAPER_C, PRN_SUB_09, PRN_INC_COLUMN, PRN_SUB_11, PRN_SUB_10
+.export PRN_EXPAND_BITS_X2, PRN_EXPAND_BITS_X3, PRN_BUILD_BITMAP, PRN_EXPAND_ROWS, PRN_SHRINK_ROWS, PRN_SHRINK_BITS
+.export PRN_COPY_UP, PRN_COMBINE_ROWS, PRN_PARSE_CONTROL, PRN_MODE_TABLE, PRN_FONT_TABLE, PRN_FETCH_CLEAR_BUFFER
+.export PRN_FETCH_DATA_BYTE, PRN_CLEAR_LINE_BUFFER, PRN_ADVANCE_WIDE, PRN_ADVANCE_NARROW, PRN_SUB_01, PRN_SUB_02
+.export PRN_SUB_03, PRN_SUB_04, PRN_SUB_05, PRN_SUB_06, PRN_SUB_07, PRN_SUB_08
+.export PRN_SUB_14, PRN_SUB_15, PRN_COUNT_FEED
+.segment "S0045"
+.segment "S0046"
 ; 作用：打印机服务（功能 $76-$7A）的共用入口（页组 $0E，汇编地址 $8300 起）：先调用 PRN_SUB_14，清 SYS_STATUS，把 SYS_ARG_0B 存为打印方式 PRN_MODE、SYS_ARG_05 存为重复次数 PRN_REPEAT、SYS_ARG_06 存为走纸量 PRN_FEED_AMOUNT，再按 SYS_SUBFUNCTION（0-15）跳到子功能入口（13 与 0 同为整段文字打印）。
 ; 输入：SYS_SUBFUNCTION、SYS_ARG_05、SYS_ARG_06、SYS_ARG_0B 等。
 ; 输出：SYS_STATUS=0 成功，$FF 表示出错或超时。
@@ -1626,4 +1640,4 @@ PRN_COUNT_FEED:
     .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
     .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 
-.rend
+.segment "S0047"

@@ -2,6 +2,13 @@
 ; 输入：SYS_SUBFUNCTION=子功能；新建时 SYS_ARG_03/SYS_ARG_04=左上角列（0-31）、行（0-29），SYS_ARG_05/SYS_ARG_06=右下角列、行（坐标不是宽高，且不小于左上角）；子功能 4 时 SYS_ARG_0F=窗口号。
 ; 输出：新建成功时 SYS_ARG_0F=窗口号（从 1 起）；坐标超界为 $FD，无空闲窗口号为 $FE，保存区不够为 $FF。
 ; 调用者：全 ROM 没有指令或地址表引用它（只能由外部直接进入）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_FAR_READ_BYTE, VEC_SYSCALL, VEC_FAR_WRITE_BYTE, VEC_FAR_COPY_IN, VEC_FAR_COPY_OUT
+.export API_59, WIN_COPY_BUFFER, WIN_PREV_ENTRY
+.segment "S0039"
 API_59:
     LDA SYS_SUBFUNCTION
     CMP #$04

@@ -6,7 +6,16 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 F-F 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL, VEC_FAR_COPY_IN
+.export BUFFER_INLINE_JUMP, BUFFER_CALL_HOOK_1C, BUFFER_DRAW_HOOK_2PLANE, BUFFER_SELECT_DRAW_MODE, BUFFER_DRAW_FLAGS_NORMAL, BUFFER_PLANE2_FILL
+.export BUFFER_PLANE1_FILL, BUFFER_DRAW_FLAGS_REVERSE, BUFFER_BLANK_HOOK_2PLANE, BUFFER_CALL_HOOK_18, API_47, BUFFER_MAP_FAR_BUFFER
+.export BUFFER_REMAP_WINDOWS_23, API_48, BUFFER_PLANE_FILL_TABLE, BUFFER_PLANE_INVERT_TABLE, BUFFER_DECODE_FLAGS, BUFFER_BLANK_HOOK_4PLANE
+.export BUFFER_DRAW_HOOK_4PLANE
+.segment "S0048"
     LDA SYS_FUNCTION
     SEC
     SBC #$47

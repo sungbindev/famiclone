@@ -6,7 +6,16 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 58-5A 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import FS_DISPATCH, VEC_SYSCALL, FS_OPEN_PARSE_PATH, FS_DRIVE_PARAMS, FS_CLUSTER_TO_LBA, FS_FREE_HANDLE_CHAIN
+.import FS_ALLOC_CHAIN, FS_WRITE_BACK_DIR_ENTRY, FS_FAT_LOAD, FS_DIR_ENTRY_FREE, FS_PTR_ADD_A, FS_NEXT_SECTOR
+.import FS_LBA_TO_CLUSTER, FS_CLEAR_NEW_CLUSTER
+.export FS_OPEN_CALL, FS_OPEN, FS_OPEN_CHECK_WRITE_LOCK, FS_OPEN_AFTER_LOOKUP, FS_CLOSE_FLUSH, FS_CLOSE
+.export FS_RESET_HANDLES, FS_FIND_FREE_HANDLE, FS_FIND_FREE_DIR_ENTRY
+.segment "S0051"
     JMP FS_DISPATCH
 ; 作用：文件服务 $7C/$00：调用 FS_OPEN，打开方式由调用者先写入 FILE_MODE
 ; 调用者：FS_OPEN_MODE1、FS_OPEN_MODE3_CLOSE、FS_DISPATCH_7C（地址表）

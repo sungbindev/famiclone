@@ -8,6 +8,12 @@
 ; ------------------------------------------------------------------------
 ; NMI_FLAGS 位 7 打开：按 BAR_QUEUE 里的命令逐段向 PPU 画条带图案（图案字节取自 BAR_PATTERN_TABLE）；队列由 API_66 的 TEXT_BUILD_NEXT_LINE 排入（卡拉 OK 歌词的条带）
 ; 调用者：NMI_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.export NMI_BAR_ANIMATION, BAR_ANIM_NEXT, BAR_ANIM_ERASE, BAR_PATTERN_TABLE, BAR_ANIM_STEP_BACK
+.segment "S0015"
 NMI_BAR_ANIMATION:
     LDA SOUND_TEMPO
     CLC

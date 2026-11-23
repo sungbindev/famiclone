@@ -6,9 +6,18 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 9-9 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import TEXT_CHECK_FONT_MODE, TEXT_GET_NAMETABLE_MAP3, VEC_SYSCALL, TEXT_GET_NAMETABLE_ADDR, MATH_INLINE_JUMP, API_4A
+.import API_4B, API_4C, API_4D, API_4E, API_4F, API_50
+.import API_51, API_52, API_53, API_54
+.export CELL_WRITE_PAIR, API_42, CELL_PUT_PAIR, API_43, CELL_PUT_NEXT_COL, API_44
+.export CELL_PUT_NEXT_ROW, CELL_COMBINE_ATTR
+.segment "S0034"
 ; ---- 页内偏移 $0000-$04FF：页组 $08 的页，汇编地址 $9000 起 ----
-.rorg $9000
+.segment "S0035"
 ; 作用：在 FAR_OFFSET 处写相邻两行的单元（偏移 Y 与 $40、$41 处），单元值 SYS_ARG_09/SYS_ARG_0A 每写一次加 SYS_ARG_0F，写完 FAR_OFFSET 前进 2。
 ; 输入：FAR_OFFSET_LO/HI、Y、SYS_ARG_09/0A（单元值）、SYS_ARG_0F（步长）。
 ; 调用者：TEXT_PUT_CELL（顺序执行到这里）
@@ -621,7 +630,7 @@ CELL_COMBINE_ATTR:
     .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
     .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
     .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-.rend
+.segment "S0036"
 ; ---- 页内偏移 $0500 起：回到本页原来的汇编地址 ----
     LDA SYS_FUNCTION
     SEC

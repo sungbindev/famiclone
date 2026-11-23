@@ -6,7 +6,16 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 78-78 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL
+.export BOOT_MAIN, BOOT_PLAY_WAV, BOOT_CHECK_SEQUENCE, BOOT_COPY_TILES_TO_BUFFER, BOOT_COUNT_UP_A, BOOT_COUNT_UP_B
+.export BOOT_IMAGE_TABLE, BOOT_SHOW_IMAGE, BOOT_UPLOAD_PATTERNS, BOOT_MARK_COLUMNS, BOOT_MARK_ROWS, BOOT_SHOW_RESULT_MARK
+.export BOOT_PLAY_RESULT_TUNE, BOOT_TEXT_TABLE, BOOT_PUT_TEXT, BOOT_SHOW_IMAGE_3, BOOT_SHOW_IMAGE_0, BOOT_SHOW_IMAGE_1
+.export BOOT_SHOW_IMAGE_2, BOOT_BLANK_CELL, BOOT_CALL_12_SUB2, BOOT_WAIT_VBLANK_ON, BOOT_DISPLAY_MODE_2, BOOT_SET_2008
+.segment "S0071"
     JMP BOOT_MAIN
 ; 作用：开机启动程序主流程：显示开机画面与各项检测，播放开机 WAV，最后经功能 $26 进入页组 0（DOS）
 ; 调用者：boot-program.asm 开头的入口代码

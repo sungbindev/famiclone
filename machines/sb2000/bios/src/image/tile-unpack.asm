@@ -6,7 +6,15 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 B-B 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import API_5C_UNPACK_MAP, API_5D_WRITE_PALETTE, API_5E, API_5F_SHOW_IMAGE, API_60, API_61
+.import VEC_SYSCALL, VEC_FAR_COPY_IN
+.export IMAGE_INLINE_JUMP, API_5A, TILE_NUM_TO_VRAM_ADDR, WAIT_FRAMES_X, WAIT_ONE_FRAME_0B, API_5B_UNPACK_TILES
+.export TILE_DMA_FLUSH, TILE_MAP_NEXT_PAGE
+.segment "S0040"
     LDA SYS_FUNCTION
     SEC
     SBC #$5A

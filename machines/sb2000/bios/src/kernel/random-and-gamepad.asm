@@ -8,6 +8,12 @@
 ; ------------------------------------------------------------------------
 ; 伪随机数：把 $0300-$0303 当 32 位移位寄存器（位 1 异或后移入），NMI 每帧调用一次
 ; 调用者：NMI_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.export RANDOM_STEP, READ_PADS
+.segment "S0014"
 RANDOM_STEP:
     LDA RANDOM_STATE_0
     BNE @seeded

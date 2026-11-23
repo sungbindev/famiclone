@@ -8,6 +8,15 @@
 ; ------------------------------------------------------------------------
 ; 内核启动时初始化 DOS 状态：磁盘参数默认值、扩展 RAM 页位图、当前路径与文件句柄表
 ; 调用者：API_18
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import WAIT_VBLANK_RETURN, API74_SUB_1, API74_SUB_2, API74_SUB_3, API74_SUB_4, API74_SUB_5
+.import API74_SUB_6, API74_SUB_7, API74_SUB_8, API74_SUB_9, API74_SEND_COMMAND
+.export DOS_INIT_STATE, DOS_INIT_DISK_PARAMS, DOS_INIT_PAGE_BITMAP, DOS_INIT_PATH, DOS_INIT_HANDLES, FILL_SPACES_11
+.export API_1F, API_74_PORT4302_CONTROL, API74_JUMP_TABLE, API74_SUB_0
+.segment "S0028"
 DOS_INIT_STATE:
     JSR DOS_INIT_DISK_PARAMS
     JSR DOS_INIT_PAGE_BITMAP

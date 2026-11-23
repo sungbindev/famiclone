@@ -1,16 +1,15 @@
-# 小霸王学生电脑 SB2000 BIOS 源码工程
+# SB2000 BIOS 源码工程
 
-SB2000 BIOS 的 6502 汇编源码：可构建、可修改、可在模拟器里调试。用自写的汇编器 `tools/asm6502.mjs` 构建，不依赖 cc65；构建结果与原始 BIOS（`../../../ember/roms/sb2000_bios.bin`，比对时不含文件头）逐字节一致。
+SB2000 BIOS 的 ca65 汇编源码，是 fcdev 的整机 ROM 工程（`rom` 目标）。用 fcdev 构建，产物与原始 BIOS（`../../../ember/roms/sb2000_bios.bin`）逐字节一致。
 
-> 状态：整理中（阶段 S2）。工具与目录就绪（S2.0），文件已按功能分目录、行尾标注已删除、符号文件已按功能拆分（S2.1）；例程与变量里的自动名已全部换成有含义的名字，1126 个全局标签都有结构化头注释，局部标签都按流程命名（S2.2）；还剩无标签数据块的格式说明和收尾工作（S2.3）。
+> 状态：整理中（阶段 S2）。文件已按功能分目录，符号定义按功能拆分，例程与变量都有含义的名字；还剩无标签数据块的格式说明和收尾工作（S2.3）。
 
 ## 目录
 
 ```text
 bios/
-  bios.json          清单：iNES 文件头、符号定义文件、按页顺序铺满 128 页的各个部分
-  data-notes.json    数据块的人工说明（供数据区清单使用）
-  variants.json      调试用的变体补丁（如跳过开机画面的 fastboot）
+  fcdev.json         fcdev 工程：目标 rom、链接配置 link.cfg、机型 sb2000、大小 524288 字节
+  link.cfg           链接配置：128 页，每页一个内存区，按页号顺序首尾拼成整块 BIOS
   src/               汇编源文件与符号定义，按功能分目录：
     boot/            开机启动程序
     kernel/          内核：复位与中断、声音、键盘鼠标、系统调用分发与基础服务
@@ -28,49 +27,29 @@ bios/
     karaoke/         卡拉 OK 歌词滚动
     messages/        DOS 出错信息（中英文）
     include/         符号定义：零页、系统内存、硬件寄存器、扩展 RAM
+    assets/          二进制资源的包装文件，用 .incbin 按页放入 ROM
   assets/            二进制资源（字库、WAV、图片等）
-  tools/             汇编器、构建脚本、改名工具
-  test/              汇编器、构建与改名的单元测试
   build/             构建输出（不进 Git）
 ```
 
-## 清单
+## 构建
 
-`bios.json` 的 `includes` 列出只含符号定义（`NAME = 值`）的文件，不占 ROM 空间；`parts` 按页号顺序铺满 128 页，每项是下面两种之一：
+在 VS Code 中打开本目录，运行 fcdev 的构建（或工具 `fcdev_build`）。产物为 `build/rom/sb2000.bin`，共 524288 字节，与 `ember/roms/sb2000_bios.bin` 逐字节一致。
 
-```json
-{ "firstPage": 0, "pageCount": 3, "base": 32768, "sources": ["src/dos-shell/startup-and-library.asm", "src/dos-shell/shell-helpers.asm", "src/dos-shell/command-dispatch.asm"] }
-{ "firstPage": 16, "pageCount": 72, "binary": "assets/p10-p57.bin" }
-```
+运行：fcdev 的运行任务把产物作为 SB2000 的固件开机（需要在用户设置 `fcdev.emulator.path` 中指向 Ember）。
 
-规则：
+## 链接配置
 
-- `sources` 的第一个文件写 `.org`（起始地址等于 `base`），后面的文件不写 `.org`，接在它后面继续汇编，合起来的长度必须恰好是“页数 × 4096”字节。一个文件是 ROM 里连续的一段，文件之间的顺序就是字节的顺序，不能打乱。
-- 所有源文件（含 `includes`）一起汇编，全局标签与符号在文件之间共享，名字不能重复；符号定义可以先使用后定义。
-- 局部标签 `@名字` 的作用域是同一个文件里从前一个全局标签到下一个全局标签之前，不同例程里可以重名。
-- 要把一段二进制资源改成汇编源文件，把清单里的项换成 `sources`，源文件用 `.byte` 或指令写出对应的页数即可。
+- 每个源文件都以 `.segment "Sxxxx"` 开始一段；`link.cfg` 的 `SEGMENTS` 段表按 ROM 中的先后顺序列出这些段。段的顺序就是字节的顺序，不能打乱。
+- `.rorg` 与 `.rend` 之间的代码按运行地址汇编，但仍放在紧接前面字节的 ROM 位置：`.rorg` 处切换到新段，`.rend` 处再切换回来，`link.cfg` 中该段用 `run =` 指定运行地址区。
+- 新增、删除或拆分源文件时，同步修改 `.segment` 与 `link.cfg` 的段表，保持顺序与页边界一致。
 
-## 构建与调试
+## 源文件约定
 
-在本目录运行：
-
-| 目的 | 命令 |
-| --- | --- |
-| 构建并与原始 ROM 比对 | `npm run build`（输出 `build/SB2K_BIOS.NES`） |
-| 只构建不比对 | `node tools/bios-build.mjs --no-compare` |
-| 构建调试变体（跳过开机画面） | `npm run build:fast`（输出 `build/SB2K_BIOS_FASTBOOT.NES`） |
-| 单元测试 | `npm test` |
-| 给标签或符号改名并写注释 | `node tools/bios-rename.mjs --file 映射文件`（每行“旧名 新名 [注释]”） |
-| 把一个源文件按标签拆成几个文件，或把符号文件按取值范围拆开 | `node tools/bios-split.mjs 方案.json`（格式见文件头；拆完自动重新构建，ROM 有变化就恢复原状） |
-| 把只被同一例程内分支引用的自动名标签改成局部标签 | `node tools/bios-localize.mjs [--dry] [--drop-unreferenced] [--keep=名字,名字]`（`--dry` 只统计；`--drop-unreferenced` 删除没有任何引用的自动名；改完 ROM 必须不变） |
-
-在模拟器里运行构建出的 ROM：在 Ember 里选 SB2000 机型，在首选项的“机型与 BIOS”里添加 `build/SB2K_BIOS.NES`（接受带 iNES 头的 `.nes`）。
-
-目录里有 `.modified` 文件时表示 BIOS 已经有意修改过，构建不再因为与原始 ROM 不同而报错，只报告差异的字节数与所在的页。
-
-## 汇编语法
-
-见 `tools/asm6502.mjs` 的文件头：指令、`label:`、`@局部标签:`、`.org`、`.rorg/.rend`、`.byte`、`.word`、`.ascii`、`NAME = 值`、`#<标签`、`#>标签`、标签加减偏移。符号值不超过 `$FF` 时按零页寻址，否则按绝对寻址，所以绝对寻址的低地址（如 `LDA $0010`）保持数字写法。
+- 每个源文件先 `.include` 四个符号文件（`src/include` 下的 `zero-page.inc`、`system-ram.inc`、`hardware-registers.inc`、`extended-ram.inc`）。
+- 全局标签用 `.export` 导出；引用其他文件的全局标签前用 `.import` 引入。
+- 例程内部的跳转目标用局部标签（`@名字`），作用域是同一个文件里从前一个全局标签到下一个全局标签之前。
+- 字符串用 `.byte` 写出字节；页内的数据与代码都按 ca65 语法书写。
 
 ## 命名与注释规范
 
@@ -88,9 +67,9 @@ bios/
 **注释**
 - 每个例程上方写头注释：作用、输入（寄存器与内存）、输出、副作用（改写了什么）、调用者；没有的项省略。
 - 数据块前写明格式：项数、每项的大小与含义、谁来读它。
-- 行尾注释只写代码本身看不出的关键点；不写地址，也不写“推断”“启发式”“未访问”之类的来源标记（这些分类只出现在生成的覆盖率报告里）。
+- 行尾注释只写代码本身看不出的关键点；不写地址，也不写“推断”“启发式”“未访问”之类的来源标记。
 - 中文注释，标点用全角。
 
 ## 维护方式
 
-把 ROM 转成源码的一次性工具已经删除，本目录的源码只靠手工维护。
+源码只靠手工维护。原来的自写汇编器（`asm6502`）及其清单、测试与改名、拆分工具已删除，历史见 git 提交 `239523b3`。

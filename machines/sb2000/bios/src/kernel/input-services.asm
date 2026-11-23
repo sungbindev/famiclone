@@ -1,6 +1,17 @@
 ; 作用：功能 $1E 子功能 0：读 PPU_EXT_CTRL_SHADOW 位 7。
 ; 输出：SYS_ARG_0F。
 ; 调用者：API_1E_QUERY_STATE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL
+.export QUERY_0, QUERY_1, QUERY_2, QUERY_3, QUERY_4, QUERY_5
+.export QUERY_6, QUERY_7, QUERY_8, QUERY_9, QUERY_10, QUERY_11
+.export QUERY_12, QUERY_STORE_RESULT, API_6A_GAMEPAD, GAMEPAD_SCAN, GAMEPAD_WAIT, API_6B_INPUT_SERVICE
+.export INPUT_INIT, KEY_GET_NOWAIT, KEY_GET_WAIT, KEY_COUNT, KEY_FLUSH, API_6C_MOUSE
+.export MOUSE_SET_LIMITS, MOUSE_SAVE_PARAM, MOUSE_GET_POS, MOUSE_GET_BUTTONS, MOUSE_SET_POS
+.segment "S0024"
 QUERY_0:
     LDA PPU_EXT_CTRL_SHADOW
     AND #$80

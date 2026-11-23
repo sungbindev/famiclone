@@ -6,7 +6,15 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 0-2 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import SHELL_MAIN, VEC_SYSCALL, CMD_CLS, SHELL_READ_COMMAND, LIB_STRLEN
+.export SHELL_ENTRY, SHELL_RTS_STUB, LIB_BEEP, LIB_PRINT_HEX, LIB_CURSOR_LEFT, LIB_CURSOR_UP
+.export LIB_CURSOR_RIGHT, LIB_NEWLINE, LIB_GET_KEY, LIB_PRINT_MESSAGE, LIB_PRINT_STRING, LIB_CALC_VRAM_ADDR
+.export STR_BLANK, SHELL_VIDEO_SETUP_1
+.segment "S0000"
 ; 作用：页组 0 的入口（$8000）；开机程序经功能 $26 进入
 ; 调用者：全 ROM 没有指令或地址表引用它（只能由外部直接进入）
 SHELL_ENTRY:

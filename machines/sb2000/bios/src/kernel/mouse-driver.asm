@@ -8,6 +8,12 @@
 ; ------------------------------------------------------------------------
 ; 鼠标串口中断（$4033 位 6）：读 $4024 取反存 $0358，按 MOUSE_PACKET_STATE 依次收 3 字节包（第 1 字节位 6 为 1 且带按键位和 DX、DY 高位，第 2、3 字节低 6 位补全 DX、DY），再把坐标限制在 MOUSE_X/Y 的最小最大值内并更新左右键状态
 ; 调用者：IRQ_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.export MOUSE_IRQ_HANDLER, MOUSE_BTN1_UPDATE, MOUSE_BTN2_UPDATE, MOUSE_NEW_DATA, MOUSE_IRQ_RETURN
+.segment "S0018"
 MOUSE_IRQ_HANDLER:
     LDA MOUSE_DATA
     EOR #$FF

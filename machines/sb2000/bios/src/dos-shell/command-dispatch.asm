@@ -9,6 +9,15 @@
 ; 把 DOS_CMD_NAME、空格、参数拼接后放回 CMD_TAIL，再按 DOS_CMD_INDEX 查 DOS_CMD_TABLE 跳转到内部命令的处理例程
 ; 输入：DOS_CMD_NAME、CMD_TAIL（参数）、DOS_CMD_INDEX（内部命令序号）。
 ; 调用者：SHELL_EXECUTE_LINE
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CMD_CLJS, CMD_EXIT, CMD_DIR, CMD_REN, CMD_COPY, CMD_SBWIN
+.import CMD_TYPE, CMD_DEL, CMD_CLS, CMD_DATE, CMD_TIME, CMD_CD
+.import CMD_MD, CMD_RD, CMD_DISKCOPY, CMD_REM, CMD_VER, CMD_HELP
+.export DOS_RUN_COMMAND, DOS_CMD_TABLE, DOS_PARSE_COMMAND, TO_UPPER, DOS_FIND_COMMAND, DOS_CMD_NAMES
+.segment "S0002"
 DOS_RUN_COMMAND:
     LDX #$FF
 @loop:

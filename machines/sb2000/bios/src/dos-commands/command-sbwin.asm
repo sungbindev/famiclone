@@ -1,5 +1,12 @@
 ; 作用：命令 SB-WIN：运行 SB-WIN.EXE（文件名在 STR_SBWIN_EXE）：SBWIN_FLAG 已置位（正在运行）时显示消息 $82 后返回；否则以方式 0 打开文件，打不开就提示放入磁盘并等键（Ctrl+C 放弃）后重试；取文件大小，按每页 4096 字节算出页数 SBWIN_PAGE_COUNT 并分配（$7E/$00），整个读入这些页（$7C/$0F），关闭文件；读入内容第 3、4 字节必须是 $AA、$55，是则把起始页与页数写进内容的第 5、6 字节，置 SBWIN_FLAG，经功能 $25 在起始页的 $8100 处运行，返回后清标志并调用 CMD_CLS；不是则显示消息 $3E；最后释放页（$7E/$01），让软驱停转（$80/$07）。保存和恢复 A、X、Y。
 ; 调用者：DOS_CMD_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import SHELL_PRINT_MESSAGE, LIB_NEWLINE, VEC_SYSCALL, LIB_GET_KEY, CMD_CLS, LIB_PRINT_MESSAGE
+.export CMD_SBWIN, STR_SBWIN_EXE
+.segment "S0008"
 CMD_SBWIN:
     PHA
     TXA

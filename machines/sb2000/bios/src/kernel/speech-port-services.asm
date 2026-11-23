@@ -8,6 +8,15 @@
 ; ------------------------------------------------------------------------
 ; 功能 $74 子功能 1：$032B 位 6 置位
 ; 调用者：API74_JUMP_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import API_1B_WAIT_FRAMES, VEC_SYSCALL, DELAY_FRAMES_0651, DEC16_064F
+.export API74_SUB_1, API74_SUB_2, API74_SUB_3, API74_SUB_4, API74_SUB_5, API74_SUB_6
+.export API74_SUB_7, API74_SUB_8, API74_SUB_9, API74_SEND_COMMAND, WAIT_VBLANK_RETURN, API_75_PORT4302_SEND
+.export PORT4302_PREPARE_SEND, PORT4302_RETURN, PORT4302_START
+.segment "S0029"
 API74_SUB_1:
     LDA PORT4302_FLAGS
     ORA #$40

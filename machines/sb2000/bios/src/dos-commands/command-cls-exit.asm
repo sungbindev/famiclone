@@ -1,5 +1,13 @@
 ; 作用：CLS 命令的实现（页组 $60，序号 4）：解析命令行（CALL_CMD_PARSE_PATH_ARG），出错就显示 DOS_ERROR 对应的消息并返回；开关位 $01 时显示帮助消息 $43；否则复位显示（CLS_RESET_VIDEO），FONT_SIZE 不为 0 时用功能 $11 子功能 2 并重新初始化输入法（CLS_INIT_INPUT），为 0 时用功能 $11 子功能 1，最后光标行与字形行清 0。
 ; 调用者：CMD_GROUP60_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CALL_CMD_PARSE_PATH_ARG, CALL_SHELL_PRINT_MESSAGE, CALL_LIB_NEWLINE, VEC_SYSCALL, SHELL_VIDEO_SETUP_1
+.export CMD_CLS_IMPL, CLS_RESET_VIDEO, CLS_INIT_INPUT, CMD_EXIT_IMPL, CMD_POW10_TABLE, CMD_STR_DOTDOT
+.export CMD_STR_DOT, CMD_STR_PARENT_DIR, CMD_STR_ROOT, CMD_STR_ALL_FILES
+.segment "S0069"
 CMD_CLS_IMPL:
     JSR CALL_CMD_PARSE_PATH_ARG
     LDA DOS_ERROR

@@ -6,7 +6,14 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 5C-5D 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import GROUP_5C_DISPATCH, VEC_SYSCALL
+.export GROUP_5C_ENTRY, GET_TIME, SET_TIME, SET_DATE, GET_DATE, EXEC_PROGRAM
+.export CLOCK_CHECK_DATE, CLOCK_CHECK_TIME, CLOCK_APPLY_DAY_CARRY, CLOCK_DAYS_IN_MONTH
+.segment "S0057"
 ; 作用：页组 $5C 的入口（功能 $7E-$81）：跳到分发例程
 ; 调用者：EXEC_PROGRAM（取地址）
 GROUP_5C_ENTRY:

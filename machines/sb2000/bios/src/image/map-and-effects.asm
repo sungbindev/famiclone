@@ -8,6 +8,17 @@
 ; ------------------------------------------------------------------------
 ; 功能 $5C：解压映射流并写进屏幕单元：$064B、$064A 为宽高，单元值要加上 $064C/$064D 的图块基数；格式见 tools/decode-img.mjs
 ; 调用者：tile-unpack.asm 开头的入口代码（地址表）、API_5F_SHOW_IMAGE
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL, WAIT_ONE_FRAME_0B, VEC_FAR_COPY_IN, API_5B_UNPACK_TILES, IMAGE_INLINE_JUMP, WAIT_FRAMES_X
+.import TILE_MAP_NEXT_PAGE
+.export API_5C_UNPACK_MAP, MAP_UNPACK_PREPARE, EFFECT_CALC_ROW_ADDR, API_5D_WRITE_PALETTE, API_5E, API_5F_SHOW_IMAGE
+.export API_60, EFFECT_DISPATCH, EFFECT_ROWS_DOWN, EFFECT_COLS_RIGHT, MAP_FLUSH_AND_JUMP, EFFECT_FLUSH_COPY_BUFFER
+.export EFFECT_COLS_LEFT, EFFECT_ROWS_DOWN_TIMED, EFFECT_ROWS_UP_TIMED, EFFECT_FRAME_SHRINK, MAP_SHRINK_RECT, EFFECT_FRAME_DRAW
+.export EFFECT_COLS_FROM_CENTER, EFFECT_COLS_TO_CENTER, MAP_CLIP_PARAMS, MIN_A_X, API_61, MAP_NEXT_PAGE_P0B
+.segment "S0041"
 API_5C_UNPACK_MAP:
     LDA #$00
     STA MAP_SKIP_EFFECT

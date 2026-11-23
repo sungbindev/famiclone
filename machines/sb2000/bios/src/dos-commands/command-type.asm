@@ -1,5 +1,14 @@
 ; 作用：TYPE 命令的实现（页组 $60，序号 0）：跳过后面的字符串，转到 CMD_TYPE_BODY。
 ; 调用者：CMD_GROUP60_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CALL_LIB_NEWLINE, CALL_CMD_PARSE_PATH_ARG, CALL_SHELL_PRINT_MESSAGE, CMD_PUT_CHAR, CALL_GET_KEY_WAIT, VEC_SYSCALL
+.import CALL_LIB_PRINT_STRING
+.export CMD_TYPE_IMPL, STR_MORE_PIPE, CMD_TYPE_BODY, TYPE_SHOW_BUFFER, TYPE_FLUSH_LINE, TYPE_NEXT_BYTE
+.export CALL_GET_KEY_NOWAIT
+.segment "S0065"
 CMD_TYPE_IMPL:
     JMP CMD_TYPE_BODY
 ; 作用：字符串“|MORE”（以 0 结尾），TYPE 命令行里分页管道的写法。

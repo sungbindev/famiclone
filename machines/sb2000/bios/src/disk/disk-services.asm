@@ -8,6 +8,15 @@
 ; ------------------------------------------------------------------------
 ; 磁盘服务 $80/$00：清中断标志，启动软驱、复位到 0 磁道、读出状态后停转
 ; 调用者：GROUP_5C_DISPATCH_80（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import FDC_CLEAR_IRQ, FDC_START, FDC_RECALIBRATE, FDC_STOP, VEC_SYSCALL, FDC_DETECT_MEDIA
+.import FDC_TRANSFER_SECTOR
+.export DISK_INIT, DISK_START, DISK_STOP, DISK_CHECK_PARAMS, DISK_NEXT_BUFFER, DISK_NEXT_SECTOR
+.export DISK_NEXT_COUNT, DISK_READ_SECTORS, DISK_READ_SECTOR_BUFFER, DISK_WRITE_SECTORS, DISK_WRITE_SECTOR_BUFFER, DISK_SCAN_TRACK
+.segment "S0060"
 DISK_INIT:
     JSR FDC_CLEAR_IRQ
     JSR FDC_START

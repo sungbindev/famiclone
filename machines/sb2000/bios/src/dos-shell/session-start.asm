@@ -2,6 +2,13 @@
 ; 输入：SHELL_RUN_STATE。
 ; 输出：C，DOS_ERROR。
 ; 调用者：SHELL_EXECUTE_LINE
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import LIB_PRINT_MESSAGE, LIB_NEWLINE, VEC_SYSCALL, SHELL_PRINT_MESSAGE
+.export RUN_CHECK_STATUS, SHELL_INIT_INPUT, SHELL_INIT_PPU, SHELL_START_SESSION
+.segment "S0010"
 RUN_CHECK_STATUS:
     LDA SHELL_RUN_STATE
     CMP #$80

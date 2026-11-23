@@ -6,7 +6,11 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 5F-5F 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.segment "S0063"
 ; ---- 第 1 页（$8000 起）----
     .byte $CE,$DE,$B4
     .byte $ED
@@ -111,25 +115,30 @@
     .byte $B6,$D3,$AD,$CA,$B9,$D3,$C3,$00,$D0,$A1,$B0,$D4,$CD,$F5,$B5,$E7
     .byte $C4,$D4,$D1,$A7,$CF,$B0,$BB,$FA,$00,$CA,$F3,$B1,$EA,$BC,$EC,$B2
     .byte $E2
-    .ascii "   ............ "
+    .byte $20,$20,$20,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$20
     .byte $00,$D3,$CE,$CF,$B7,$B8,$CB,$BC,$EC,$B2,$E2
-    .ascii " ............ "
+    .byte $20,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$20
     .byte $00,$BC,$FC,$C5,$CC,$BC,$EC,$B2,$E2
-    .ascii "   ............ "
+    .byte $20,$20,$20,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$20
     .byte $00,$C4,$DA,$B4,$E6,$BC,$EC,$B2,$E2
-    .ascii "   ............    K"
+    .byte $20,$20,$20,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$20
+    .byte $20,$20,$20,$4B
     .byte $00,$C8,$ED,$C7,$FD,$BC,$EC,$B2,$E2
-    .ascii "   ............ "
+    .byte $20,$20,$20,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$20
     .byte $00
-    .ascii "------------------------------"
+    .byte $2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D
+    .byte $2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D,$2D
     .byte $00,$4F,$4B,$00,$45,$72,$72,$6F,$72,$00,$B0,$B4,$C8,$CE,$D2,$E2
     .byte $BC,$FC,$BC,$CC,$D0,$F8,$2E,$2E,$2E,$00,$C3,$FC,$C1,$EE,$CA,$E4
     .byte $C8,$EB,$B4,$ED,$00,$B7,$C7,$D0,$A1,$B0,$D4,$CD,$F5,$B8,$F1,$CA
     .byte $BD,$21,$00
-    .ascii "SB DOS V2.0\r\nCopyright by SUBOR,1989-1998.\r\nAll rights reser"
+    .byte $53,$42,$20,$44,$4F,$53,$20,$56,$32,$2E,$30,$0D,$0A,$43,$6F,$70
+    .byte $79,$72,$69,$67,$68,$74,$20,$62,$79,$20,$53,$55,$42,$4F,$52,$2C
+    .byte $31,$39,$38,$39,$2D,$31,$39,$39,$38,$2E,$0D,$0A,$41,$6C,$6C,$20
+    .byte $72,$69,$67,$68,$74,$73,$20,$72,$65,$73,$65,$72
     .byte $76,$65,$64,$0D,$0A,$00,$41,$3A,$00,$C7,$E5,$B3,$FD,$C6,$C1,$C4
     .byte $BB
-    .ascii "\n\rCLS\n\r"
+    .byte $0A,$0D,$43,$4C,$53,$0A,$0D
     .byte $00,$C4,$DA,$B4,$E6,$B2,$BB,$B9,$BB,$21,$00,$B6,$C1,$CE,$C4,$BC
     .byte $FE,$B4,$ED,$21,$00,$BD,$AB,$D4,$B4,$C5,$CC,$B2,$E5,$C8,$EB,$20
     .byte $00,$D5,$FD,$D4,$DA,$B6,$C1,$D4,$B4,$C5,$CC,$2E,$2E,$2E,$00,$BD
@@ -137,44 +146,46 @@
     .byte $DA,$D0,$B4,$C4,$BF,$B1,$EA,$C5,$CC,$2E,$2E,$2E,$00,$B0,$D1,$D2
     .byte $BB,$D5,$C5,$C8,$ED,$C5,$CC,$B8,$B4,$D6,$C6,$B5,$BD,$C1,$ED,$D2
     .byte $BB,$D5,$C5,$C8,$ED,$C5,$CC
-    .ascii "\n\r\n\rDISKCOPY "
+    .byte $0A,$0D,$0A,$0D,$44,$49,$53,$4B,$43,$4F,$50,$59,$20
     .byte $D4,$B4,$C5,$CC,$3A,$20,$C4,$BF,$B1,$EA,$C5,$CC,$3A,$0A,$0D,$C1
     .byte $BD,$D5,$C5,$C5,$CC,$B5,$C4,$C0,$E0,$D0,$CD,$B1,$D8,$D0,$EB,$D2
     .byte $BB,$D6,$C2,$20,$20,$0A,$0D,$00,$D0,$A1,$B0,$D4,$CD,$F5,$D6,$D0
     .byte $D3,$A2,$CE,$C4,$CF,$B5,$CD,$B3
-    .ascii " 2.00 "
+    .byte $20,$32,$2E,$30,$30,$20
     .byte $B0,$E6,$B1,$BE,$00,$CF,$D4,$CA,$BE,$B5,$B1,$C7,$B0,$53,$42,$44
     .byte $4F,$53,$B0,$E6,$B1,$BE,$BA,$C5
-    .ascii "\r\r\nVER"
+    .byte $0D,$0D,$0A,$56,$45,$52
     .byte $00,$D4,$DA
-    .ascii " SUBERDOS "
+    .byte $20,$53,$55,$42,$45,$52,$44,$4F,$53,$20
     .byte $CF,$B5,$CD,$B3,$C9,$CF,$B8,$F1,$CA,$BD,$BB,$AF,$C8,$ED,$C5,$CC
-    .ascii "\r\nFORMAT drive: [/V[:label]] [/Q]\r\n/V[:label] "
+    .byte $0D,$0A,$46,$4F,$52,$4D,$41,$54,$20,$64,$72,$69,$76,$65,$3A,$20
+    .byte $5B,$2F,$56,$5B,$3A,$6C,$61,$62,$65,$6C,$5D,$5D,$20,$5B,$2F,$51
+    .byte $5D,$0D,$0A,$2F,$56,$5B,$3A,$6C,$61,$62,$65,$6C,$5D,$20
     .byte $D6,$B8,$B6,$A8,$BE,$ED,$B1,$EA
-    .ascii "\r\n/Q         "
+    .byte $0D,$0A,$2F,$51,$20,$20,$20,$20,$20,$20,$20,$20,$20
     .byte $BF,$EC,$CB,$D9,$B8,$F1,$CA,$BD,$BB,$AF,$20,$0D,$0A,$00,$C7,$EB
     .byte $BD,$AB,$C8,$ED,$C5,$CC,$B2,$E5,$C8,$EB,$C7,$FD,$B6,$AF,$C6,$F7
     .byte $20,$41,$3A,$0D,$0A,$D7,$BC,$B1,$B8,$BA,$C3,$BA,$F3,$C7,$EB,$B0
     .byte $B4,$BB,$D8,$B3,$B5
-    .ascii " ...\r\n"
+    .byte $20,$2E,$2E,$2E,$0D,$0A
     .byte $00,$C7,$EB,$BD,$AB,$C8,$ED,$C5,$CC,$B2,$E5,$C8,$EB,$C7,$FD,$B6
     .byte $AF,$C6,$F7,$20,$42,$3A,$0D,$0A,$D7,$BC,$B1,$B8,$BA,$C3,$BA,$F3
     .byte $C7,$EB,$B0,$B4,$BB,$D8,$B3,$B5
-    .ascii " ...\r\n"
+    .byte $20,$2E,$2E,$2E,$0D,$0A
     .byte $00,$B8,$F1,$CA,$BD,$BB,$AF,$CE,$AA
-    .ascii " 1.44M\r\n"
+    .byte $20,$31,$2E,$34,$34,$4D,$0D,$0A
     .byte $00,$20,$20,$30,$20,$25,$00,$B8,$F1,$CA,$BD,$BB,$AF,$CD,$EA,$B1
     .byte $CF
-    .ascii "      \r\n\r\n"
+    .byte $20,$20,$20,$20,$20,$20,$0D,$0A,$0D,$0A
     .byte $00,$C7,$EB,$CA,$E4,$C8,$EB,$BE,$ED,$B1,$EA,$28,$31,$31,$20,$D7
     .byte $D6,$B7,$FB,$A3,$AC,$B0,$B4,$BB,$D8,$B3,$B5,$CE,$AA,$BF,$D5,$29
     .byte $3F,$0A,$0D,$00
-    .ascii "\r\n1,462,272"
+    .byte $0D,$0A,$31,$2C,$34,$36,$32,$2C,$32,$37,$32
     .byte $00,$20,$D7,$D6,$BD,$DA,$D7,$DC,$BF,$D5,$BC,$E4,$0D,$0A,$00,$20
     .byte $D7,$D6,$BD,$DA,$D4,$DA,$BB,$B5,$C9,$C8,$D6,$D0,$0D,$0A,$00,$20
     .byte $D7,$D6,$BD,$DA,$BF,$C9,$D3,$C3,$BF,$D5,$BC,$E4,$0D,$0A,$0D,$0A
     .byte $00
-    .ascii "  512 "
+    .byte $20,$20,$35,$31,$32,$20
     .byte $D7,$D6,$BD,$DA,$C3,$BF,$C9,$C8,$C7,$F8,$0D,$0A,$00,$20,$BF,$C9
     .byte $D3,$C3,$C9,$C8,$C7,$F8,$0D,$0A,$00,$32,$2C,$38,$35,$36,$00,$0D
     .byte $0A,$C7,$FD,$B6,$AF,$C6,$F7,$C3,$BB,$D3,$D0,$D7,$BC,$B1,$B8,$BA
@@ -183,65 +194,84 @@
     .byte $BD,$BB,$AF,$CA,$A7,$B0,$DC,$0D,$0A,$00,$B2,$CE,$CA,$FD,$B4,$ED
     .byte $0D,$0A,$00,$20,$20,$2D,$2D,$BC,$CC,$D0,$F8,$2D,$2D,$00,$CF,$D4
     .byte $CA,$BE,$D2,$BB,$B8,$F6,$CE,$C4,$B1,$BE,$CE,$C4,$BC,$FE
-    .ascii " \r\n\r\nTYPE [drive:][path]filename\r\n"
+    .byte $20,$0D,$0A,$0D,$0A,$54,$59,$50,$45,$20,$5B,$64,$72,$69,$76,$65
+    .byte $3A,$5D,$5B,$70,$61,$74,$68,$5D,$66,$69,$6C,$65,$6E,$61,$6D,$65
+    .byte $0D,$0A
     .byte $00,$C7,$EB,$B2,$E5,$C8,$EB,$20,$00,$20,$C5,$CC,$2C,$C8,$BB,$BA
     .byte $F3,$B0,$B4,$C8,$CE,$D2,$E2,$BC,$FC,$0D,$0A,$00,$CE,$DE,$D0,$A7
     .byte $B4,$C5,$C5,$CC,$BB,$F2,$20,$30,$B5,$C0,$BB,$B5,$A3,$A1,$0D,$0A
     .byte $00,$CF,$D4,$CA,$BE,$BB,$F2,$C9,$E8,$D6,$C3,$CF,$B5,$CD,$B3,$C8
     .byte $D5,$C6,$DA
-    .ascii "\r\n\r\nDATE [date]\r\n"
+    .byte $0D,$0A,$0D,$0A,$44,$41,$54,$45,$20,$5B,$64,$61,$74,$65,$5D,$0D
+    .byte $0A
     .byte $00,$B5,$B1,$C7,$B0,$C8,$D5,$C6,$DA,$A3,$BA,$00,$0D,$0A,$C7,$EB
     .byte $CA,$E4,$C8,$EB,$D0,$C2,$C8,$D5,$C6,$DA
-    .ascii "(mm-dd-yy)"
+    .byte $28,$6D,$6D,$2D,$64,$64,$2D,$79,$79,$29
     .byte $A3,$BA,$0D,$0A,$00,$0D,$0A,$B7,$C7,$B7,$A8,$C8,$D5,$C6,$DA,$0D
     .byte $0A,$00,$0D,$0A,$B7,$C7,$B7,$A8,$C8,$D5,$C6,$DA,$B2,$CE,$CA,$FD
     .byte $0D,$0A,$00,$CF,$D4,$CA,$BE,$BB,$F2,$C9,$E8,$D6,$C3,$CF,$B5,$CD
     .byte $B3,$CA,$B1,$BC,$E4
-    .ascii "\r\n\r\nTIME [time]\r\n"
+    .byte $0D,$0A,$0D,$0A,$54,$49,$4D,$45,$20,$5B,$74,$69,$6D,$65,$5D,$0D
+    .byte $0A
     .byte $00,$B5,$B1,$C7,$B0,$CA,$B1,$BC,$E4,$A3,$BA,$00,$0D,$0A,$C7,$EB
     .byte $CA,$E4,$C8,$EB,$D0,$C2,$CA,$B1,$BC,$E4
-    .ascii "(hh:mm:ss)"
+    .byte $28,$68,$68,$3A,$6D,$6D,$3A,$73,$73,$29
     .byte $A3,$BA,$0D,$0A,$00,$0D,$0A,$B7,$C7,$B7,$A8,$CA,$B1,$BC,$E4,$0D
     .byte $0A,$00,$0D,$0A,$B7,$C7,$B7,$A8,$CA,$B1,$BC,$E4,$B2,$CE,$CA,$FD
     .byte $0D,$0A,$00,$0D,$0A,$CF,$D4,$CA,$BE,$BB,$F2,$B8,$C4,$B1,$E4,$B5
     .byte $B1,$C7,$B0,$C4,$BF,$C2,$BC
-    .ascii "\r\nCHDIR [Drive:][Path]\r\nCHDIR [..]\r\nCD [Drive:][Path]\r\nCD [."
-    .ascii ".]\r\n\r\n.. "
+    .byte $0D,$0A,$43,$48,$44,$49,$52,$20,$5B,$44,$72,$69,$76,$65,$3A,$5D
+    .byte $5B,$50,$61,$74,$68,$5D,$0D,$0A,$43,$48,$44,$49,$52,$20,$5B,$2E
+    .byte $2E,$5D,$0D,$0A,$43,$44,$20,$5B,$44,$72,$69,$76,$65,$3A,$5D,$5B
+    .byte $50,$61,$74,$68,$5D,$0D,$0A,$43,$44,$20,$5B,$2E
+    .byte $2E,$5D,$0D,$0A,$0D,$0A,$2E,$2E,$20
     .byte $BB,$D8,$B5,$BD,$B5,$B1,$C7,$B0,$B5,$C4,$B8,$B8,$C4,$BF,$C2,$BC
     .byte $0D,$0A,$00,$0D,$0A,$B7,$C7,$B7,$A8,$C4,$BF,$C2,$BC,$0D,$0A,$00
     .byte $0D,$0A,$BD,$A8,$C1,$A2,$D7,$D3,$C4,$BF,$C2,$BC
-    .ascii ".\r\nMKDIR [Drive:]Path\r\nMD [Drive:]Path\r\n\r\n"
+    .byte $2E,$0D,$0A,$4D,$4B,$44,$49,$52,$20,$5B,$44,$72,$69,$76,$65,$3A
+    .byte $5D,$50,$61,$74,$68,$0D,$0A,$4D,$44,$20,$5B,$44,$72,$69,$76,$65
+    .byte $3A,$5D,$50,$61,$74,$68,$0D,$0A,$0D,$0A
     .byte $00,$0D,$0A,$B2,$BB,$C4,$DC,$B4,$B4,$BD,$A8,$C4,$BF,$C2,$BC,$0D
     .byte $0A,$00,$0D,$0A,$C9,$BE,$B3,$FD,$D6,$B8,$B6,$A8,$C4,$BF,$C2,$BC
-    .ascii "\r\nRMDIR [Drive:]Path\r\nRD [Drive:]Path\r\n"
+    .byte $0D,$0A,$52,$4D,$44,$49,$52,$20,$5B,$44,$72,$69,$76,$65,$3A,$5D
+    .byte $50,$61,$74,$68,$0D,$0A,$52,$44,$20,$5B,$44,$72,$69,$76,$65,$3A
+    .byte $5D,$50,$61,$74,$68,$0D,$0A
     .byte $00,$0D,$0A,$B7,$C7,$B7,$A8,$C2,$B7,$BE,$B6,$A3,$AC,$C4,$BF,$C2
     .byte $BC,$BB,$F2,$C4,$BF,$C2,$BC,$B2,$BB,$BF,$D5,$0D,$0A,$00,$0D,$0A
     .byte $B0,$D1,$D2,$BB,$B8,$F6,$CE,$C4,$BC,$FE,$C3,$FB,$B8,$C4,$CE,$AA
     .byte $C1,$ED,$D2,$BB,$B8,$F6,$CE,$C4,$BC,$FE,$C3,$FB
-    .ascii "\r\nRename|Ren [drive:][path]\r\n[filename1][filename2]\r\n\r\n"
+    .byte $0D,$0A,$52,$65,$6E,$61,$6D,$65,$7C,$52,$65,$6E,$20,$5B,$64,$72
+    .byte $69,$76,$65,$3A,$5D,$5B,$70,$61,$74,$68,$5D,$0D,$0A,$5B,$66,$69
+    .byte $6C,$65,$6E,$61,$6D,$65,$31,$5D,$5B,$66,$69,$6C,$65,$6E,$61,$6D
+    .byte $65,$32,$5D,$0D,$0A,$0D,$0A
     .byte $B2,$BB,$BF,$C9,$CE,$AA,$C4,$BF,$B1,$EA,$CE,$C4,$BC,$FE,$D6,$B8
     .byte $B6,$A8,$C5,$CC,$B7,$FB,$BA,$CD,$C2,$B7,$BE,$B6,$20,$20,$0D,$0A
     .byte $00,$0D,$0A,$B2,$BB,$BF,$C9,$B8,$C4,$B1,$E4,$C4,$BF,$C2,$BC,$C3
     .byte $FB,$0D,$0A,$00,$0D,$0A,$C9,$BE,$B3,$FD,$D2,$BB,$B8,$F6,$BB,$F2
     .byte $B6,$E0,$B8,$F6,$CE,$C4,$BC,$FE
-    .ascii "\r\n\r\nDEL [drive:][path]filename [/P]\r\n\r\n/P  "
+    .byte $0D,$0A,$0D,$0A,$44,$45,$4C,$20,$5B,$64,$72,$69,$76,$65,$3A,$5D
+    .byte $5B,$70,$61,$74,$68,$5D,$66,$69,$6C,$65,$6E,$61,$6D,$65,$20,$5B
+    .byte $2F,$50,$5D,$0D,$0A,$0D,$0A,$2F,$50,$20,$20
     .byte $C9,$BE,$B3,$FD,$CE,$C4,$BC,$FE,$CA,$B1,$A3,$AC,$B5,$C8,$B4,$FD
     .byte $CA,$E4,$C8,$EB,$C8,$B7,$C8,$CF,$0D,$0A,$00,$C9,$BE,$B3,$FD
-    .ascii "(Y/N)?"
+    .byte $28,$59,$2F,$4E,$29,$3F
     .byte $00,$20,$B8,$F6,$CE,$C4,$BC,$FE,$B1,$BB,$C9,$BE,$B3,$FD,$0D,$0A
     .byte $00,$C9,$BE,$B3,$FD,$C4,$BF,$C2,$BC,$D6,$D0,$CB,$F9,$D3,$D0,$CE
     .byte $C4,$BC,$FE,$2C,$C8,$B7,$C8,$CF
-    .ascii "(Y/N)?"
+    .byte $28,$59,$2F,$4E,$29,$3F
     .byte $00,$0D,$0A,$C3,$BB,$D3,$D0,$C9,$BE,$B3,$FD,$C8,$CE,$BA,$CE,$CE
     .byte $C4,$BC,$FE,$0D,$0A,$00,$B0,$D1,$D2,$BB,$28,$B6,$E0,$29,$B8,$F6
     .byte $CE,$C4,$BC,$FE,$B8,$B4,$D6,$C6,$B5,$BD,$20,$20,$0D,$0A,$C1,$ED
     .byte $CD,$E2,$D2,$BB,$28,$B6,$E0,$29,$B8,$F6,$CE,$C4,$BC,$FE,$D6,$D0
-    .ascii "\r\nCOPY [/A] Source \r\n[destination[/A]][/V][/Y]\r\n/A  "
+    .byte $0D,$0A,$43,$4F,$50,$59,$20,$5B,$2F,$41,$5D,$20,$53,$6F,$75,$72
+    .byte $63,$65,$20,$0D,$0A,$5B,$64,$65,$73,$74,$69,$6E,$61,$74,$69,$6F
+    .byte $6E,$5B,$2F,$41,$5D,$5D,$5B,$2F,$56,$5D,$5B,$2F,$59,$5D,$0D,$0A
+    .byte $2F,$41,$20,$20
     .byte $D6,$B8,$B6,$A8,$CE,$C4,$B1,$BE,$CE,$C4,$BC,$FE,$B8,$B4,$D6,$C6
     .byte $00
-    .ascii "\r\n/V  "
+    .byte $0D,$0A,$2F,$56,$20,$20
     .byte $B8,$B4,$D6,$C6,$BA,$F3,$D0,$A3,$D1,$E9
-    .ascii "\r\n/Y  "
+    .byte $0D,$0A,$2F,$59,$20,$20
     .byte $C4,$BF,$B1,$EA,$CE,$C4,$BC,$FE,$B4,$E6,$D4,$DA,$CA,$B1,$A3,$AC
     .byte $B2,$BB,$CC,$E1,$CA,$BE,$C8,$B7,$C8,$CF,$0D,$0A,$00,$0D,$B6,$E0
     .byte $CE,$C4,$BC,$FE,$B2,$BB,$C4,$DC,$B8,$B4,$D6,$C6,$B5,$BD,$B5,$A5
@@ -250,22 +280,26 @@
     .byte $00,$20,$B8,$F6,$CE,$C4,$BC,$FE,$B1,$BB,$B8,$B4,$D6,$C6,$00,$CE
     .byte $C4,$BC,$FE,$B4,$E6,$D4,$DA,$A3,$AC,$CA,$C7,$B7,$F1,$B8,$B2,$B8
     .byte $C7
-    .ascii "(Y/N)?"
+    .byte $28,$59,$2F,$4E,$29,$3F
     .byte $00,$B7,$C5,$C6,$FA,$41,$2C,$D6,$D8,$CA,$D4,$52,$2C,$CA,$A7,$B0
     .byte $DC,$46,$20,$3F,$00,$0D,$0A,$CF,$D4,$CA,$BE,$B4,$C5,$C5,$CC,$C4
     .byte $BF,$C2,$BC,$B5,$C4,$CE,$C4,$BC,$FE
-    .ascii "\r\nDIR [Drive:][Path][Filename]\r\n[/P] [/A] [/B] [/W]\r\n[Drive:"
-    .ascii "] [Path] [Filename]\r\n"
+    .byte $0D,$0A,$44,$49,$52,$20,$5B,$44,$72,$69,$76,$65,$3A,$5D,$5B,$50
+    .byte $61,$74,$68,$5D,$5B,$46,$69,$6C,$65,$6E,$61,$6D,$65,$5D,$0D,$0A
+    .byte $5B,$2F,$50,$5D,$20,$5B,$2F,$41,$5D,$20,$5B,$2F,$42,$5D,$20,$5B
+    .byte $2F,$57,$5D,$0D,$0A,$5B,$44,$72,$69,$76,$65,$3A
+    .byte $5D,$20,$5B,$50,$61,$74,$68,$5D,$20,$5B,$46,$69,$6C,$65,$6E,$61
+    .byte $6D,$65,$5D,$0D,$0A
     .byte $D6,$B8,$B6,$A8,$CF,$D4,$CA,$BE,$B5,$C4,$C5,$CC,$2C,$C2,$B7,$BE
     .byte $B6,$BC,$B0,$CE,$C4,$BC,$FE,$20,$20,$0D,$0A,$00
-    .ascii "/P    "
+    .byte $2F,$50,$20,$20,$20,$20
     .byte $C3,$BF,$CF,$D4,$CA,$BE,$D2,$BB,$C6,$C1,$D0,$C5,$CF,$A2,$BA,$F3
     .byte $D4,$DD,$CD,$A3
-    .ascii "\r\n/A    "
+    .byte $0D,$0A,$2F,$41,$20,$20,$20,$20
     .byte $CF,$D4,$CA,$BE,$CB,$F9,$D3,$D0,$CE,$C4,$BC,$FE
-    .ascii "\r\n/W    "
+    .byte $0D,$0A,$2F,$57,$20,$20,$20,$20
     .byte $BF,$ED,$D0,$D0,$D0,$CE,$CA,$BD,$CF,$D4,$CA,$BE,$CE,$C4,$BC,$FE
-    .ascii "\r\n/B    "
+    .byte $0D,$0A,$2F,$42,$20,$20,$20,$20
     .byte $BC,$F2,$C2,$D4,$D0,$CE,$CA,$BD,$CF,$D4,$CA,$BE,$CE,$C4,$BC,$FE
     .byte $0D,$0A,$00,$BE,$ED,$B1,$EA,$CA,$C7,$20,$00,$BE,$ED,$B1,$EA,$CE
     .byte $AA,$20,$BF,$D5,$00,$D0,$F2,$C1,$D0,$BA,$C5,$CA,$C7,$20,$00,$C4

@@ -6,9 +6,16 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 A-A 页，汇编地址 $8000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $8000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL
+.export INTMUL_CLEAR_RESULT, INTMUL_SET_SIGN, INTMUL_CORE, INTDIV_MAIN, INTDIV_RETURN, INTDIV_CLEAR
+.export INTDIV_SET_SIGN, INTDIV_CHECK_ZERO, INTDIV_COMPUTE
+.segment "S0038"
 ; 上一页末尾 INT_MUL_START 里 JSR INTMUL_CORE+4096 的第 3 个字节（目标地址的高字节）；该指令的前 2 个字节在上一页末尾，跨页
-    .byte >INTMUL_CORE+4096
+    .byte >(INTMUL_CORE+4096)
 ; INT_MUL_START 的最后一条 RTS 落在这里
     RTS
 ; 作用：把 $06A3-$06A8 清 0（整数乘法的结果区）

@@ -1,6 +1,14 @@
 ; 作用：命令 MD、MKDIR（实现在页组 0 里）：解析命令行；开关位 0 打开时显示帮助消息 $71；检查驱动器（空、A、B）、第二参数为空、路径与名称里没有非法字符，名称不能为空或以“.”开头；记下当前目录；路径不为空时先切到该路径（CMD_BUILD_PATH）；目录名已存在时显示消息 $8F；否则取当前目录名（$7D/$01），与扩展 RAM $B1BA 处的字符串（应为根目录名）比较，相同才用 $7D/$02 创建目录，不同显示消息 $72（只支持一级子目录）；最后恢复原来的当前目录并让软驱停转。
 ; 输出：C=0 成功，C=1 失败。
 ; 调用者：DOS_CMD_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CMD_PARSE_PATH_ARG, DOS_CHECK_ERROR, VEC_SYSCALL, SHELL_PRINT_MESSAGE, CMD_PRINT_PATH_ERROR, LIB_CHECK_NAME
+.import CMD_BUILD_PATH, DIR_PREPARE_SPEC, SHELL_NEWLINE
+.export CMD_MD, CMD_RD
+.segment "S0007"
 CMD_MD:
     JSR CMD_PARSE_PATH_ARG
     JSR DOS_CHECK_ERROR

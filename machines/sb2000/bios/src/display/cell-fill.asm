@@ -8,6 +8,17 @@
 ; ------------------------------------------------------------------------
 ; 功能 $40：子功能位 2、3 为 0 时从起点线性写 $064C/$064D 常量单元，为 01 时从 $0C/$0D（页组 $0642）指向的内存按行复制单元（行宽 $064B，行距 $064A+1），其余按列复制（高度 $064A+1，列距 $064B）；先经 $94B0 合成属性字节（用例 p08-display.mjs）
 ; 调用者：text-output.asm 开头的入口代码（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CELL_COMBINE_ATTR, VEC_SYSCALL, TEXT_SELECT_DRAW_MODE, TEXT_DRAW_HOOK_2PLANE, TEXT_BLANK_HOOK_2PLANE, TEXT_DECODE_FLAGS
+.import TEXT_DRAW_HOOK_4PLANE, TEXT_BLANK_HOOK_4PLANE, TEXT_MAP_TEXT_BUFFER, VEC_FAR_COPY_IN, TEXT_CALL_HOOK_1C, TEXT_DMA_BUFFER_TO_VRAM
+.import TEXT_CALL_HOOK_18
+.export API_40, TEXT_LIMIT_LENGTH, TEXT_PUT_CELL_NEXT, TEXT_COPY_CELL_NEXT_COL, TEXT_COPY_CELL_NEXT_ROW, TEXT_CALL_DMA_NAMETABLE
+.export TEXT_MAP_SOURCE_STRING, API_46, TEXT_FILL_ROW_CELLS, API_45_PUT_TEXT_FIELD, TEXT_FILL_TWO_ROW_CELLS, API_41_FILL_RECT
+.export TEXT_CHECK_FONT_MODE, TEXT_GET_NAMETABLE_MAP3, TEXT_GET_NAMETABLE_ADDR, TEXT_PUT_CELL
+.segment "S0033"
 API_40:
     LDA SYS_SUBFUNCTION
     STA DRAW_MODE_TEMP

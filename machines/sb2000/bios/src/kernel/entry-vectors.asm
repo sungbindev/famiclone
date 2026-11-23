@@ -8,6 +8,14 @@
 ; ------------------------------------------------------------------------
 ; 内核返回桩：弹出并恢复窗口页 2、1、0 后返回（也可作为回调地址）
 ; 调用者：SYSCALL_RETURN（顺序执行到这里）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import RESTORE_WINDOWS_8000, FAR_COPY_IN, FAR_COPY_OUT, SYSCALL_DISPATCH, FAR_READ_BYTE, FAR_WRITE_BYTE
+.export SYS_RETURN_STUB, SYS_RETURN_STUB_MID, CALL_VECTOR_10, KERNEL_FREE_SPACE, VEC_FAR_COPY_IN, VEC_FAR_COPY_OUT
+.export VEC_SYSCALL, VEC_FAR_READ_BYTE, VEC_FAR_WRITE_BYTE
+.segment "S0031"
 SYS_RETURN_STUB:
     PLA
     STA WINDOW_SAVE_2

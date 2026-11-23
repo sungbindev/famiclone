@@ -8,6 +8,13 @@
 ; ------------------------------------------------------------------------
 ; NMI 末尾每帧调用：$0329 非 0 时把 PORT4302_FEED_PAGE/36/37（页、偏移）处的数据经功能 $24 逐字节读出并送到 $4302，仅当 $4302 状态位 7 为 1 才送，遇 $0F 结束；这是语音数据流的送出（用例 p04-speech.mjs 核对写入序列、指针推进与播完后写 $0F）
 ; 调用者：NMI_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import VEC_SYSCALL, MAP_WINDOWS_8000
+.export NMI_IO4302_FEED, NMI_HOOK_5, NMI_HOOK_4, NMI_PALETTE_UPLOAD
+.segment "S0017"
 NMI_IO4302_FEED:
     LDA PORT4302_BUSY
     BNE @active

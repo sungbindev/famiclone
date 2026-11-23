@@ -8,6 +8,15 @@
 ; ------------------------------------------------------------------------
 ; NMI 中断：保存寄存器与窗口页，再按 $0630 的位依次做：位 5 钩子、位 2 精灵 DMA、位 7 条带动画、位 1 调色板上传，随后写 PPU 控制/掩码/滚动寄存器，推进 $0304/$0305 与随机数，再做位 4 钩子、位 3 读手柄、位 6 声音更新，最后 NMI_IO4302_FEED，恢复窗口后返回
 ; 调用者：全 ROM 没有指令或地址表引用它（只能由外部直接进入）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import NMI_HOOK_5, NMI_BAR_ANIMATION, NMI_PALETTE_UPLOAD, RANDOM_STEP, NMI_HOOK_4, READ_PADS
+.import NMI_SOUND_UPDATE, NMI_IO4302_FEED, RESTORE_WINDOWS_8000, TIMER_IRQ_HANDLER, MOUSE_IRQ_HANDLER, MOUSE_CALL_HOOK
+.import KBD_HANDLER, KBD_CALL_HOOK, IRQ4_CALL_HOOK, FDC_IRQ_HANDLER, IRQ2_CALL_HOOK, IRQ1_CALL_HOOK
+.export NMI_HANDLER, IRQ_HANDLER
+.segment "S0013"
 NMI_HANDLER:
     PHP
     PHA

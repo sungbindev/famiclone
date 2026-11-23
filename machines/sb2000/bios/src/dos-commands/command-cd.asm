@@ -1,6 +1,15 @@
 ; 作用：命令 CD、CHDIR（实现在页组 0 里）：解析命令行参数，取当前目录名（$7D/$01）存入 CMD_SAVED_PATH；没有任何参数时显示“驱动器:当前路径”；有参数时用 CMD_BUILD_PATH 逐级切换目录，失败就恢复原目录；最后换行，把 PATH_BUFFER 记入 CMD_CURRENT_DIR 并让软驱停转（$80/$07）。
 ; 输出：C=0 成功，C=1 失败。
 ; 调用者：DOS_CMD_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CMD_PARSE_PATH_ARG, DOS_CHECK_ERROR, VEC_SYSCALL, SHELL_PUT_CHAR, LIB_PRINT_STRING, SHELL_NEWLINE
+.import SHELL_PRINT_MESSAGE, OUTBUF_PUT_CHAR, LIB_CHECK_NAME, LIB_NEWLINE
+.export CMD_CD, CMD_BUILD_PATH, CMD_SAVE_CURRENT_DIR, CMD_PATH_FAIL, CMD_PRINT_PATH_ERROR, CMD_REM
+.export DIR_ENTRY_TO_NAME
+.segment "S0005"
 CMD_CD:
     LDA #$00
     STA CMD_FULL_PATH

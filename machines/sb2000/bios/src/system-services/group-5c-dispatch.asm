@@ -8,6 +8,16 @@
 ; ------------------------------------------------------------------------
 ; 页组 $5C 的分发：按功能号 $7E、$7F、$80、$81 选各自的子功能表
 ; 调用者：GROUP_5C_ENTRY
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import PAGE_ALLOC, PAGE_FREE, PAGE_LARGEST_FREE, EXEC_PROGRAM, SET_DATE, GET_DATE
+.import SET_TIME, GET_TIME, DISK_INIT, DISK_FORMAT_TRACK, DISK_READ_SECTOR_BUFFER, DISK_WRITE_SECTOR_BUFFER
+.import DISK_READ_SECTORS, DISK_WRITE_SECTORS, DISK_START, DISK_STOP, DISK_SCAN_TRACK
+.export GROUP_5C_DISPATCH, GROUP_5C_DISPATCH_7E, GROUP_5C_DISPATCH_7F, GROUP_5C_DISPATCH_80, GROUP_5C_DISPATCH_81, GROUP_5C_BAD_SUBFUNCTION
+.export GROUP_5C_INLINE_JUMP
+.segment "S0061"
 GROUP_5C_DISPATCH:
     SEC
     LDA SYS_FUNCTION

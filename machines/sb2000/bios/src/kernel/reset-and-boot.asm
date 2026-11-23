@@ -6,7 +6,13 @@
 ; 日期：2026-11-09
 ; 备注：占ROM 第 4-7 页，汇编地址 $C000 起，后面的文件接在它后面
 ; ------------------------------------------------------------------------
-.org $C000
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import API_1B_WAIT_FRAMES, API_18, VEC_SYSCALL, API_14_MOUSE_RESET, API_17_KEYBOARD_INIT, HOOK_NOP
+.export RESET, BOOT_INIT_DEVICES
+.segment "S0012"
 ; 作用：复位入口（$C000）：关中断、清十进制标志、设栈，等 2 帧，进入 6576 模式（MODE_6576 先后写 $65、$76），系统初始化（API_18）与外设初始化（BOOT_INIT_DEVICES），然后经功能 $26 跳到页组 $78 的 $8000 处（开机程序）；功能 $26 若返回则顺序落入 BOOT_INIT_DEVICES。
 ; 调用者：全 ROM 没有指令或地址表引用它（只能由外部直接进入）
 RESET:

@@ -1,6 +1,16 @@
 ; 作用：DEL 命令的实现（页组 $60，序号 2）：解析命令行；开关位 0 打开时显示帮助消息 $77；检查当前盘（$7C/$0E）并记下当前目录；驱动器只能是空、A、B，必须给出文件名；把“.”改成“*.*”、“..”改成上一级目录；检查非法字符；用 CALL_CMD_BUILD_PATH 切到文件所在目录；名称是目录时改为删除该目录下的“*.*”；名称是“*.*”时先询问确认（消息 $7A，Y/N）；逐个读目录项，与通配名称匹配、不是卷标隐藏系统项、不是只读也不是子目录的文件，开关位 1 打开时逐个询问（消息 $78），用 $7B/$12 删除并累计 CMD_MATCH_COUNT；最后显示删除的个数或“没有文件”（消息 $7B），恢复原来的当前目录并让软驱停转。
 ; 输出：C=0 成功，C=1 失败。
 ; 调用者：CMD_GROUP60_TABLE（地址表）
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import CALL_CMD_PARSE_PATH_ARG, CMD_CHECK_ERROR, VEC_SYSCALL, CALL_SHELL_PRINT_MESSAGE, CMD_STR_DOT, CMD_STR_DOTDOT
+.import CMD_STR_ALL_FILES, CMD_STR_PARENT_DIR, STR_ALL_IN_SET, CALL_CMD_BUILD_PATH, CMD_DIR_PREPARE_SPEC, CMD_NEWLINE
+.import CMD_OUTBUF_PUT_CHAR, GET_KEY_ASCII, CMD_PUT_CHAR, CALL_LIB_MAKE_FCB_NAME, CMD_FS_LOAD_DIR_SECTOR, CMD_DIR_ENTRY_CHECK
+.import CMD_DIR_ENTRY_ATTR_CHECK, CALL_LIB_PRINT_STRING, CMD_DIR_ENTRY_TO_NAME, CMD_DIR_ADVANCE_PTR, CMD_FS_NEXT_DIR_SECTOR, CMD_PRINT_DEC_2DIGIT
+.export CMD_DEL_IMPL
+.segment "S0067"
 CMD_DEL_IMPL:
     JSR CALL_CMD_PARSE_PATH_ARG
     JSR CMD_CHECK_ERROR

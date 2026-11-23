@@ -9,6 +9,15 @@
 ; 键盘数据处理：读 $4020 的扫描码，按修饰键状态查映射表，把（ASCII，扫描码）放入按键队列
 ; 按下 ESC 且 ESC_BREAK 不为 0 时，调用功能 $1D 恢复保存的上下文
 ; 调用者：IRQ_HANDLER
+.include "zero-page.inc"
+.include "system-ram.inc"
+.include "hardware-registers.inc"
+.include "extended-ram.inc"
+.import API_1B_WAIT_FRAMES, VEC_SYSCALL
+.export KBD_HANDLER, KBD_MODIFIER_KEYS, KBD_SET_LEDS, KBD_TOGGLE_CAPS_LOCK, KBD_TRANSLATE, KBD_DONE
+.export KEY_ENQUEUE, KEYMAP_ALT, KEYMAP_ALT_MID, KEYMAP_NORMAL, KEYMAP_CAPS, KEYMAP_CTRL
+.export KEYMAP_NUMLOCK, KEYMAP_SHIFT, KBD_HANDLER_RETURN
+.segment "S0019"
 KBD_HANDLER:
     LDA #$00
     STA KBD_CTRL

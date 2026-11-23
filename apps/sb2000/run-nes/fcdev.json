@@ -1,5 +1,5 @@
 {
   "target": "sb2000",
-  "name": "runnes",
+  "name": "run",
   "firmware": "../../../ember/roms/sb2000_bios.bin"
 }

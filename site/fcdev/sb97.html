@@ -111,7 +111,7 @@
 </tbody>
 </table></div>
 <ul>
-<li><code>RAMCODE</code> 段用 <code>__RAMCODE_LOAD__</code>、<code>__RAMCODE_RUN__</code>、<code>__RAMCODE_SIZE__</code> 三个符号复制，写法见 <code>apps/sb97/runnes/src/nes.s</code>。需要在切换程序 RAM 页之后还能执行的代码放在这里。</li>
+<li><code>RAMCODE</code> 段用 <code>__RAMCODE_LOAD__</code>、<code>__RAMCODE_RUN__</code>、<code>__RAMCODE_SIZE__</code> 三个符号复制，写法见 <code>apps/sb97/run-nes/src/nes.s</code>。需要在切换程序 RAM 页之后还能执行的代码放在这里。</li>
 <li>内部 RAM 里 BIOS 功能占用的单元没有核对，调用 BIOS 功能的程序要自己确认。</li>
 </ul>
 <h2 id="4-显示文字">4. 显示文字</h2>
@@ -164,13 +164,13 @@
 <ul>
 <li>构建：任务“fcdev：构建”，产物 <code>build/sb97/&lt;NAME&gt;.EXE</code> 与 <code>build/sb97/&lt;NAME&gt;.img</code>。</li>
 <li>运行：任务“fcdev：运行”，需要在设置 <code>fcdev.emulator.path</code> 里指定 Ember，在 <code>fcdev.json</code> 里用 <code>firmware</code> 指定 SB97 的 ROM。扩展依次添加 ROM、开机、放入镜像，开机运行 200 帧后按空格跳过开机画面，等 300 帧菜单稳定后按左键选中“DOS”，回车进入，再等 120 帧出现提示符，输入程序名并回车。按键都是按下 8 帧、松开 8 帧。程序名只能用字母与数字。运行任务只输入程序名，不带参数；要带参数就在 Ember 里手动输入。</li>
-<li>样例：<code>apps/sb97/runnes</code> 是在 SB97 的 DOS 下运行 NES 游戏的程序（<code>NES MARIO</code>），读软驱、解析 iNES 头、切换程序页，是本目标最完整的例子。</li>
+<li>样例：<code>apps/sb97/run-nes</code> 是在 SB97 的 DOS 下运行 NES 游戏的程序（<code>RUN MARIO</code>），读软驱、解析 iNES 头、切换程序页，是本目标最完整的例子。</li>
 </ul>
 <h2 id="7-还没有验证的内容">7. 还没有验证的内容</h2>
 <ul>
 <li>64K、128K 与 16K 的程序格式：目标只生成 32K 映像。</li>
 <li>C 语言支持：没有运行库，也没有 C 模板。</li>
-<li>用 BIOS 功能读键盘、读文件等：模板与 <code>runnes</code> 都是直接操作硬件。</li>
+<li>用 BIOS 功能读键盘、读文件等：模板与 <code>run-nes</code> 都是直接操作硬件。</li>
 <li>真机运行：只在 Ember 里验证过。</li>
 </ul>
 </article><nav class="doc-pager" aria-label="上一页与下一页"><a href="symbols.html" class="doc-pager__prev"><span>上一页 · fcdev 开发手册</span>SB2000 符号参考</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

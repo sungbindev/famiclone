@@ -1,8 +1,8 @@
-﻿NES.EXE：在小霸王 97（SB97）的 DOS 下运行 NES 游戏。
+﻿RUN.EXE：在小霸王 97（SB97）的 DOS 下运行 NES 游戏。
 
 使用方法：
-1. 把 NES.EXE 和游戏文件放在同一张软盘上，游戏文件名须是 8.3 名字（如 MARIO.NES）。
-2. 进入 DOS，在提示符下输入：NES MARIO（或 NES MARIO.NES）。
+1. 把 RUN.EXE 和游戏文件放在同一张软盘上，游戏文件名须是 8.3 名字（如 MARIO.NES）。
+2. 进入 DOS，在提示符下输入：RUN MARIO（或 RUN MARIO.NES）。
 3. 进入游戏后按手柄的 Start 开始。
 
 注意：

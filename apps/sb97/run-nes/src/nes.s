@@ -1082,7 +1082,7 @@ halt:
 msg_table:
     .word msg_usage, msg_badname, msg_disk, msg_notfound, msg_ines
     .word msg_mapper, msg_size, msg_trunc, msg_trainer
-msg_usage:    .byte "Usage: NES FILE.NES", 0
+msg_usage:    .byte "Usage: RUN FILE.NES", 0
 msg_badname:  .byte "Bad file name", 0
 msg_disk:     .byte "Disk read error", 0
 msg_notfound: .byte "File not found", 0

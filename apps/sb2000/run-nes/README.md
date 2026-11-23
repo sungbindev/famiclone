@@ -1,13 +1,13 @@
-# runnes
+# run-nes
 
 在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行 NES 游戏，用 fcdev 开发，C 语言。汇编版是本仓库的 `apps/sb2000/examples/play`，做法相同。
 
 ## 使用
 
-把 `RUNNES.EXE` 与游戏文件（文件名要符合 8.3）放在同一张盘里，在 DOS 提示符下输入：
+把 `RUN.EXE` 与游戏文件（文件名要符合 8.3）放在同一张盘里，在 DOS 提示符下输入：
 
 ```text
-runnes mario.nes
+run mario.nes
 ```
 
 读入游戏需要一会儿，之后直接进入游戏。游戏里不能回到 DOS，只能硬复位。
@@ -20,7 +20,7 @@ runnes mario.nes
 
 | 提示 | 原因 |
 | --- | --- |
-| `Usage: RUNNES FILE.NES` | 没有给文件名 |
+| `Usage: RUN FILE.NES` | 没有给文件名 |
 | `Can't open file` | 文件打不开 |
 | `No memory` | 扩展 RAM 放不下文件 |
 | `Read error` | 读盘出错 |
@@ -32,7 +32,7 @@ runnes mario.nes
 
 ## 构建
 
-“fcdev：构建”任务生成 `build/sb2000/RUNNES.EXE` 与只放有 `RUNNES.EXE` 的软盘镜像 `build/sb2000/RUNNES.img`。
+“fcdev：构建”任务生成 `build/sb2000/RUN.EXE` 与只放有 `RUN.EXE` 的软盘镜像 `build/sb2000/RUN.img`。
 
 程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 
@@ -41,17 +41,17 @@ runnes mario.nes
 fcdev 不提供 BIOS。先在 `fcdev.json` 里用 `firmware` 指定 SB2000 的 BIOS 文件：
 
 ```json
-{ "target": "sb2000", "name": "runnes", "firmware": "D:/rom/SB2K_BIOS.NES" }
+{ "target": "sb2000", "name": "run", "firmware": "D:/rom/SB2K_BIOS.NES" }
 ```
 
-“fcdev：运行”任务在 Ember 里启动，镜像里只有 `RUNNES.EXE`。要试游戏，把 `.nes` 文件放进项目的 `disk/` 目录后重新构建。
+“fcdev：运行”任务在 Ember 里启动，镜像里只有 `RUN.EXE`。要试游戏，把 `.nes` 文件放进项目的 `disk/` 目录后重新构建。
 
 ## 文件
 
 | 文件 | 说明 |
 | --- | --- |
 | `src/runnes.c` | 程序：读入并检查 iNES 文件，用 DMA 经 ERAM 缓冲再用 CPU 复制到第 3 个 128K 窗口，改 RESET 向量后进入 FC 兼容模式；硬件细节见 `machines/sb2000/docs/NES兼容模式研究.md` |
-| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 runnes |
+| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 run |
 
 ## 查阅接口
 

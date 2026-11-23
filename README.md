@@ -9,7 +9,7 @@
 | `vscode` | VS Code 扩展 fcdev（唯一的开发环境发行形式，独立的 npm 项目，生成 `.vsix`）：任务与命令、各机型目标与运行库、cc65 工具链、项目模板、使用文档、反汇编核心、调试客户端、Copilot 工具 |
 | `ember` | 模拟器 Ember：Win32 原生外壳加 C++ 核心，独立的 npm 项目，不发布到 npm，也不随扩展发布；使用者在扩展设置 `fcdev.emulator.path` 里指向它 |
 | `vscode/third_party/cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `vscode/third_party/cc65/LICENSE` |
-| `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`runnes`、`memtest`、`hwprobe`、`hwtest`、`family-basic-v3`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是一个 fcdev 项目，用 VS Code 任务构建 |
+| `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`run-nes`、`memtest`、`hwprobe`、`hwtest`、`family-basic-v3`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是一个 fcdev 项目，用 VS Code 任务构建 |
 | `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`docs`（研究文档） |
 | `machines/bbg` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
 | `machines/sb97` | SB97 的 BIOS 反汇编工程与分析结论 |

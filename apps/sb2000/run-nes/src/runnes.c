@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：runnes.c
- * 说明：在 DOS 下运行 NES 游戏：runnes 文件名.nes；支持 mapper 0 与 mapper 4（MMC3），PRG、CHR 各不超过 128K，不带 trainer，必须有 CHR。
+ * 说明：在 DOS 下运行 NES 游戏：run 文件名.nes；支持 mapper 0 与 mapper 4（MMC3），PRG、CHR 各不超过 128K，不带 trainer，必须有 CHR。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-11
@@ -19,7 +19,7 @@
 #include <sb2000.h>
 
 /* 提示信息（显示后等待按键，再返回 DOS） */
-#define MSG_USAGE "Usage: RUNNES FILE.NES"
+#define MSG_USAGE "Usage: RUN FILE.NES"
 #define MSG_OPEN "Can't open file"
 #define MSG_MEMORY "No memory"
 #define MSG_READ "Read error"

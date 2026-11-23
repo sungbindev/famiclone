@@ -30,6 +30,7 @@ ld65 -C link.cfg -m build/bios.map -o build/bios.bin build/bios.o
 | `link.cfg` | 链接配置：8 个段（`S0` 至 `S7`）对应原版的 8 个 `org`，内存区都带 `fill`，输出 16384 字节按地址排满 |
 | `fcdev.json` | fcdev 项目配置：`rom` 目标、底固件、机型、软盘镜像 |
 | `docs/计划与进度.md` | 计划、原厂源码的完整性与已查明的结论 |
+| `docs/DOS反汇编与开发库计划.md` | `BBGDOS.SYS`、`COMMAND.CMD`、启动扇区的反汇编，系统 API 的整理与汇编开发库的计划 |
 
 ## 限制
 

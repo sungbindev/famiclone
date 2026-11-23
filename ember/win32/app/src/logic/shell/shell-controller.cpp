@@ -59,6 +59,11 @@ void ShellController::detachModules() {
 }
 
 void ShellController::setWindowState(bool fullScreen, bool alwaysOnTop) {
+  if (state_.get().layout.alwaysOnTop != alwaysOnTop) {
+    shared::ShellLayout layout = state_.get().layout;
+    layout.alwaysOnTop = alwaysOnTop;
+    state_.updateLayout(layout);
+  }
   if (view_.fullScreen == fullScreen && view_.alwaysOnTop == alwaysOnTop) return;
   view_.fullScreen = fullScreen;
   view_.alwaysOnTop = alwaysOnTop;

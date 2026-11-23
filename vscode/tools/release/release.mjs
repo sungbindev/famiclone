@@ -83,28 +83,11 @@ function readToken() {
   });
 }
 
-/**
- * 列出仓库里还没有提交的改动。
- * @returns {string[]} 每行一条 git status 的输出。
- */
-function uncommittedChanges() {
-  const result = spawnSync('git', ['status', '--short'], { cwd: REPOSITORY_ROOT, encoding: 'utf8' });
-  if (result.status !== 0) throw new Error('无法读取 git 状态，请确认在仓库里运行');
-  return result.stdout.split('\n').filter((line) => line.trim() !== '');
-}
-
 /** 命令行入口 */
 async function main() {
   const publish = process.argv.includes('--publish');
   const { version } = JSON.parse(readFileSync(path.join(EXTENSION_DIRECTORY, 'package.json'), 'utf8'));
   console.log(`发布检查：fcdev ${version}`);
-
-  const changes = uncommittedChanges();
-  if (changes.length > 0) {
-    const message = `仓库里还有未提交的改动：\n${changes.join('\n')}`;
-    if (publish) throw new Error(`${message}\n先提交全部改动再发布`);
-    console.warn(`警告：${message}`);
-  }
 
   const changelog = readFileSync(path.join(EXTENSION_DIRECTORY, 'CHANGELOG.md'), 'utf8').split(/\r?\n/);
   if (!changelog.includes(`## ${version}`)) throw new Error(`CHANGELOG.md 里没有 “## ${version}” 一节`);

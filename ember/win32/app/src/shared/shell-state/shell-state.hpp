@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：shell-state.hpp
- * 说明：界面状态的类型、默认值与校验：窗口位置、上次选择的机型、手动关掉“自动收缩”的底部面板、上次显示更新记录时的应用版本。
+ * 说明：界面状态的类型、默认值与校验：窗口位置、窗口是否始终置顶、上次选择的机型、手动关掉“自动收缩”的底部面板、上次显示更新记录时的应用版本。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -34,6 +34,8 @@ struct ShellLayout {
   std::optional<std::string> selectedMachine;
   /** 用户手动关掉“自动收缩”的底部面板标识，没有重复。 */
   std::vector<std::string> autoCollapseOffPanels;
+  /** 窗口是否始终置顶，下次启动沿用；没保存过为 false。 */
+  bool alwaysOnTop{false};
 
   friend bool operator==(const ShellLayout&, const ShellLayout&) = default;
 };

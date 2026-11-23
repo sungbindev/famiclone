@@ -504,6 +504,8 @@ int runApplication(const shared::LaunchArguments& launch) {
         [&shell](std::vector<std::string> paths) { shell.dropFiles(paths); });
     modes = &*windowModes;
     windowControl.target = modes;
+    // 上次退出时是置顶的，这次启动沿用
+    if (shellState.get().layout.alwaysOnTop) modes->toggleAlwaysOnTop();
     try {
       screenHost.emplace(mainWindow, frames, input, ui, [&logger](const std::string& message) { logger.write({std::nullopt, kMainErrorCode, message, nlohmann::json{{"source", "screenHost"}}}); });
     } catch (const std::runtime_error& error) {

@@ -1,0 +1,6 @@
+{
+  "target": "bbg",
+  "name": "filetest",
+  "firmware": "../../../ember/roms/bbg1_bios.bin",
+  "diskImage": "../../../reference/floppy-images/bbg/BBGDOS.IMG"
+}

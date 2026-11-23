@@ -1,0 +1,7883 @@
+{
+  "version": 1,
+  "image": {
+    "path": "../../build/image/COMMAND.CMD",
+    "size": 15277,
+    "sha256": "0890365e65f7b86daa8f14c0db066efaa0c5b93c25338737e3d1e46526d42680"
+  },
+  "format": {
+    "name": "flat",
+    "options": {
+      "segments": [
+        {
+          "address": 32768,
+          "fileOffset": 2,
+          "id": 0,
+          "length": 15275
+        }
+      ]
+    }
+  },
+  "profile": null,
+  "layout": {
+    "imageSize": 15277,
+    "segments": [
+      {
+        "id": 0,
+        "fileOffset": 2,
+        "length": 15275,
+        "address": 32768,
+        "bank": null,
+        "writable": false
+      }
+    ]
+  },
+  "entries": [
+    {
+      "segmentId": 0,
+      "address": 32768,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 39511,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 39812,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 37871,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 43894,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 38599,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 45271,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 42253,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 42601,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 37014,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 40017,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 37170,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 40172,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 37633,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 38072,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 39185,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 37280,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 44703,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 44791,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 44973,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 45789,
+      "source": "manual",
+      "description": "手工指定"
+    },
+    {
+      "segmentId": 0,
+      "address": 45749,
+      "source": "manual",
+      "description": "手工指定"
+    }
+  ],
+  "regions": [
+    {
+      "offset": 2,
+      "length": 3,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 5,
+      "length": 2162,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 2167,
+      "length": 77,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 2244,
+      "length": 342,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 2586,
+      "length": 876,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 3462,
+      "length": 4,
+      "type": "bytes",
+      "params": {
+        "perLine": 4
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 3466,
+      "length": 323,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 3789,
+      "length": 8,
+      "type": "bytes",
+      "params": {
+        "perLine": 8
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 3797,
+      "length": 101,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 3898,
+      "length": 58,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 3956,
+      "length": 217,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 4173,
+      "length": 75,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 4248,
+      "length": 63,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 4311,
+      "length": 93,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 4404,
+      "length": 2,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 4406,
+      "length": 108,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 4514,
+      "length": 204,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 4718,
+      "length": 149,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 4867,
+      "length": 196,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 5063,
+      "length": 42,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 5105,
+      "length": 19,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 5124,
+      "length": 182,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 5306,
+      "length": 56,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 5362,
+      "length": 286,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 5648,
+      "length": 53,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 5701,
+      "length": 47,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 5748,
+      "length": 388,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 6136,
+      "length": 221,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 6357,
+      "length": 359,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 6716,
+      "length": 29,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 6745,
+      "length": 21,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 6766,
+      "length": 262,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 7028,
+      "length": 123,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 7151,
+      "length": 100,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 7251,
+      "length": 44,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 7295,
+      "length": 111,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 7406,
+      "length": 62,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 7468,
+      "length": 1195,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 8663,
+      "length": 1021,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 9684,
+      "length": 151,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 9835,
+      "length": 102,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 9937,
+      "length": 338,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 10275,
+      "length": 1607,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 11882,
+      "length": 55,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 11937,
+      "length": 15,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 11952,
+      "length": 73,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 12025,
+      "length": 84,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 12109,
+      "length": 52,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 12161,
+      "length": 86,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 12247,
+      "length": 258,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 12505,
+      "length": 231,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 12736,
+      "length": 237,
+      "type": "bytes",
+      "params": {
+        "perLine": 8
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 12973,
+      "length": 466,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 13439,
+      "length": 42,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 13481,
+      "length": 260,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 13741,
+      "length": 8,
+      "type": "bytes",
+      "params": {
+        "perLine": 8
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 13749,
+      "length": 8,
+      "type": "bytes",
+      "params": {
+        "role": "split-address-high"
+      },
+      "source": "table"
+    },
+    {
+      "offset": 13757,
+      "length": 8,
+      "type": "bytes",
+      "params": {
+        "role": "split-address-low"
+      },
+      "source": "table"
+    },
+    {
+      "offset": 13765,
+      "length": 154,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 13919,
+      "length": 3,
+      "type": "bytes",
+      "params": {
+        "perLine": 3
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 13922,
+      "length": 81,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 14003,
+      "length": 682,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 14685,
+      "length": 11,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 14696,
+      "length": 178,
+      "type": "bytes",
+      "params": {
+        "perLine": 16
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 14874,
+      "length": 403,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    }
+  ],
+  "symbols": [
+    {
+      "name": "sub_8000",
+      "address": 32768,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_884B",
+      "address": 34891,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8875",
+      "address": 34933,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8877",
+      "address": 34935,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_889D",
+      "address": 34973,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_88C2",
+      "address": 35010,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_88C3",
+      "address": 35011,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_8966",
+      "address": 35174,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_8967",
+      "address": 35175,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A18",
+      "address": 35352,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A29",
+      "address": 35369,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A30",
+      "address": 35376,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8A3A",
+      "address": 35386,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A3B",
+      "address": 35387,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8A4E",
+      "address": 35406,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A54",
+      "address": 35412,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A59",
+      "address": 35417,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A5A",
+      "address": 35418,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A64",
+      "address": 35428,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A67",
+      "address": 35431,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A70",
+      "address": 35440,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8A9A",
+      "address": 35482,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8A9F",
+      "address": 35487,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8AA3",
+      "address": 35491,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8AB7",
+      "address": 35511,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8ADF",
+      "address": 35551,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8AE6",
+      "address": 35558,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8AE8",
+      "address": 35560,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8AED",
+      "address": 35565,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8AF0",
+      "address": 35568,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8AFB",
+      "address": 35579,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B02",
+      "address": 35586,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B0B",
+      "address": 35595,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B13",
+      "address": 35603,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B19",
+      "address": 35609,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B2F",
+      "address": 35631,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B4A",
+      "address": 35658,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B4D",
+      "address": 35661,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B50",
+      "address": 35664,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B57",
+      "address": 35671,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B5A",
+      "address": 35674,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B5E",
+      "address": 35678,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B78",
+      "address": 35704,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B79",
+      "address": 35705,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B7D",
+      "address": 35709,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B8F",
+      "address": 35727,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B98",
+      "address": 35736,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8B99",
+      "address": 35737,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8B9A",
+      "address": 35738,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8BA3",
+      "address": 35747,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8BB6",
+      "address": 35766,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8BB7",
+      "address": 35767,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8BBA",
+      "address": 35770,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8BBC",
+      "address": 35772,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8BD0",
+      "address": 35792,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8BD6",
+      "address": 35798,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8BE1",
+      "address": 35809,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8BE3",
+      "address": 35811,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8BEA",
+      "address": 35818,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C14",
+      "address": 35860,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C1B",
+      "address": 35867,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C1D",
+      "address": 35869,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C2D",
+      "address": 35885,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C41",
+      "address": 35905,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C45",
+      "address": 35909,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C61",
+      "address": 35937,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C65",
+      "address": 35941,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C73",
+      "address": 35955,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C7F",
+      "address": 35967,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8C8A",
+      "address": 35978,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C90",
+      "address": 35984,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8C9C",
+      "address": 35996,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8CA1",
+      "address": 36001,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8CA5",
+      "address": 36005,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8CC1",
+      "address": 36033,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8CCA",
+      "address": 36042,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8CCF",
+      "address": 36047,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8CF1",
+      "address": 36081,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8CF6",
+      "address": 36086,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8CFE",
+      "address": 36094,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D0B",
+      "address": 36107,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D0F",
+      "address": 36111,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D21",
+      "address": 36129,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D25",
+      "address": 36133,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D2D",
+      "address": 36141,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D37",
+      "address": 36151,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D43",
+      "address": 36163,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D4B",
+      "address": 36171,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D62",
+      "address": 36194,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8D63",
+      "address": 36195,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D64",
+      "address": 36196,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D69",
+      "address": 36201,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D6D",
+      "address": 36205,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D73",
+      "address": 36211,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D7D",
+      "address": 36221,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D88",
+      "address": 36232,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D8E",
+      "address": 36238,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8D98",
+      "address": 36248,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8DA2",
+      "address": 36258,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8DAC",
+      "address": 36268,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8DB8",
+      "address": 36280,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8DE7",
+      "address": 36327,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8DF2",
+      "address": 36338,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8DF3",
+      "address": 36339,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E02",
+      "address": 36354,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E0C",
+      "address": 36364,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E16",
+      "address": 36374,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E17",
+      "address": 36375,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8E22",
+      "address": 36386,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E3E",
+      "address": 36414,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E44",
+      "address": 36420,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E4B",
+      "address": 36427,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8E66",
+      "address": 36454,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E68",
+      "address": 36456,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8E72",
+      "address": 36466,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E74",
+      "address": 36468,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8E7E",
+      "address": 36478,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8E81",
+      "address": 36481,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E85",
+      "address": 36485,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8E94",
+      "address": 36500,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8EA2",
+      "address": 36514,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8EB1",
+      "address": 36529,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8EB7",
+      "address": 36535,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8EC6",
+      "address": 36550,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8ED3",
+      "address": 36563,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8EE4",
+      "address": 36580,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8EF1",
+      "address": 36593,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8EFA",
+      "address": 36602,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8F09",
+      "address": 36617,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8F13",
+      "address": 36627,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_8F14",
+      "address": 36628,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8F72",
+      "address": 36722,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8F85",
+      "address": 36741,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FB2",
+      "address": 36786,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FB8",
+      "address": 36792,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FDC",
+      "address": 36828,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FE4",
+      "address": 36836,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FE8",
+      "address": 36840,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FEA",
+      "address": 36842,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_8FF6",
+      "address": 36854,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9017",
+      "address": 36887,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9028",
+      "address": 36904,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9038",
+      "address": 36920,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_exit",
+      "address": 37014,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_90A0",
+      "address": 37024,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_90A9",
+      "address": 37033,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_90BE",
+      "address": 37054,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_rem",
+      "address": 37170,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "cmd_type",
+      "address": 37280,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_91A9",
+      "address": 37289,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91C1",
+      "address": 37313,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91CD",
+      "address": 37325,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91D0",
+      "address": 37328,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91D4",
+      "address": 37332,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91DD",
+      "address": 37341,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91DF",
+      "address": 37343,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91E2",
+      "address": 37346,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91ED",
+      "address": 37357,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_91FA",
+      "address": 37370,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9217",
+      "address": 37399,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_923F",
+      "address": 37439,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9254",
+      "address": 37460,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_925E",
+      "address": 37470,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9265",
+      "address": 37477,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_926A",
+      "address": 37482,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_rename",
+      "address": 37633,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_931B",
+      "address": 37659,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_931E",
+      "address": 37662,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_931F",
+      "address": 37663,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9332",
+      "address": 37682,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9343",
+      "address": 37699,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_934A",
+      "address": 37706,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_934B",
+      "address": 37707,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_934E",
+      "address": 37710,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9361",
+      "address": 37729,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_938C",
+      "address": 37772,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_93AD",
+      "address": 37805,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_93B6",
+      "address": 37814,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_93BE",
+      "address": 37822,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_93C3",
+      "address": 37827,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_cls",
+      "address": 37871,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "cmd_screen",
+      "address": 38072,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_94C1",
+      "address": 38081,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_94D4",
+      "address": 38100,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_94EC",
+      "address": 38124,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_960E",
+      "address": 38414,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9627",
+      "address": 38439,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9632",
+      "address": 38450,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_963E",
+      "address": 38462,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_963F",
+      "address": 38463,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9643",
+      "address": 38467,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9644",
+      "address": 38468,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9651",
+      "address": 38481,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9652",
+      "address": 38482,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9653",
+      "address": 38483,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_9665",
+      "address": 38501,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9672",
+      "address": 38514,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_969A",
+      "address": 38554,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_96A9",
+      "address": 38569,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_96AD",
+      "address": 38573,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_96C4",
+      "address": 38596,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_date",
+      "address": 38599,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "sub_96CF",
+      "address": 38607,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9723",
+      "address": 38691,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_975B",
+      "address": 38747,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9778",
+      "address": 38776,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9786",
+      "address": 38790,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_97C6",
+      "address": 38854,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_97D6",
+      "address": 38870,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_97E9",
+      "address": 38889,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_97EB",
+      "address": 38891,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_98D3",
+      "address": 39123,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_98DD",
+      "address": 39133,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_98EC",
+      "address": 39148,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_98F7",
+      "address": 39159,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9910",
+      "address": 39184,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_time",
+      "address": 39185,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "sub_9919",
+      "address": 39193,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9935",
+      "address": 39221,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_993C",
+      "address": 39228,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9977",
+      "address": 39287,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_997F",
+      "address": 39295,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_999C",
+      "address": 39324,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_99A8",
+      "address": 39336,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9A01",
+      "address": 39425,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9A02",
+      "address": 39426,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9A19",
+      "address": 39449,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9A24",
+      "address": 39460,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9A30",
+      "address": 39472,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_bbgcdos",
+      "address": 39511,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9A61",
+      "address": 39521,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9A69",
+      "address": 39529,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9B72",
+      "address": 39794,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9B79",
+      "address": 39801,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9B7C",
+      "address": 39804,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_chdir",
+      "address": 39812,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9B9F",
+      "address": 39839,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BA9",
+      "address": 39849,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BB2",
+      "address": 39858,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9BB3",
+      "address": 39859,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_9BBD",
+      "address": 39869,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BC6",
+      "address": 39878,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BDB",
+      "address": 39899,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9BEB",
+      "address": 39915,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_mkdir",
+      "address": 40017,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9C6E",
+      "address": 40046,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9C75",
+      "address": 40053,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9C78",
+      "address": 40056,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9C79",
+      "address": 40057,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_rmdir",
+      "address": 40172,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_9D09",
+      "address": 40201,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9D14",
+      "address": 40212,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9D17",
+      "address": 40215,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_9D18",
+      "address": 40216,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_A1CD",
+      "address": 41421,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_A1D1",
+      "address": 41425,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A1D5",
+      "address": 41429,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A1D7",
+      "address": 41431,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A1EE",
+      "address": 41454,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A1FC",
+      "address": 41468,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A1FD",
+      "address": 41469,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A20B",
+      "address": 41483,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A21B",
+      "address": 41499,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A223",
+      "address": 41507,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A22C",
+      "address": 41516,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A23D",
+      "address": 41533,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A255",
+      "address": 41557,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A277",
+      "address": 41591,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A294",
+      "address": 41620,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A295",
+      "address": 41621,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A29D",
+      "address": 41629,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A2A0",
+      "address": 41632,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2AB",
+      "address": 41643,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A2AC",
+      "address": 41644,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2B6",
+      "address": 41654,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A2B7",
+      "address": 41655,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2C4",
+      "address": 41668,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2CA",
+      "address": 41674,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2CC",
+      "address": 41676,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A2CE",
+      "address": 41678,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2D4",
+      "address": 41684,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2D6",
+      "address": 41686,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A2F2",
+      "address": 41714,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A2F3",
+      "address": 41715,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A30E",
+      "address": 41742,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A310",
+      "address": 41744,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A316",
+      "address": 41750,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A324",
+      "address": 41764,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A329",
+      "address": 41769,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A334",
+      "address": 41780,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A33C",
+      "address": 41788,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A345",
+      "address": 41797,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A34D",
+      "address": 41805,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A35B",
+      "address": 41819,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A374",
+      "address": 41844,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A382",
+      "address": 41858,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A3BB",
+      "address": 41915,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A3D1",
+      "address": 41937,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A3DF",
+      "address": 41951,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A3E5",
+      "address": 41957,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A3F0",
+      "address": 41968,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A3F8",
+      "address": 41976,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A409",
+      "address": 41993,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A41B",
+      "address": 42011,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A423",
+      "address": 42019,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A429",
+      "address": 42025,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A435",
+      "address": 42037,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A44C",
+      "address": 42060,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A479",
+      "address": 42105,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A47A",
+      "address": 42106,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A489",
+      "address": 42121,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A4A2",
+      "address": 42146,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A4BC",
+      "address": 42172,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A4CF",
+      "address": 42191,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A4DC",
+      "address": 42204,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A4F6",
+      "address": 42230,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A4FD",
+      "address": 42237,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A505",
+      "address": 42245,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_dir",
+      "address": 42253,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_A52B",
+      "address": 42283,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A547",
+      "address": 42311,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A549",
+      "address": 42313,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A55D",
+      "address": 42333,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A563",
+      "address": 42339,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A567",
+      "address": 42343,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A5AB",
+      "address": 42411,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A5CB",
+      "address": 42443,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A5CF",
+      "address": 42447,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_echo",
+      "address": 42601,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_A67F",
+      "address": 42623,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A682",
+      "address": 42626,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A6A6",
+      "address": 42662,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A6B3",
+      "address": 42675,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A6BE",
+      "address": 42686,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A6C0",
+      "address": 42688,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A6C2",
+      "address": 42690,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A821",
+      "address": 43041,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A840",
+      "address": 43072,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A843",
+      "address": 43075,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A84C",
+      "address": 43084,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A855",
+      "address": 43093,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A85F",
+      "address": 43103,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A862",
+      "address": 43106,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A864",
+      "address": 43108,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A87C",
+      "address": 43132,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A886",
+      "address": 43142,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A88A",
+      "address": 43146,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A88D",
+      "address": 43149,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A8AD",
+      "address": 43181,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8B1",
+      "address": 43185,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8CD",
+      "address": 43213,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8D7",
+      "address": 43223,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8E5",
+      "address": 43237,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8EF",
+      "address": 43247,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8FB",
+      "address": 43259,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A8FD",
+      "address": 43261,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A901",
+      "address": 43265,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A913",
+      "address": 43283,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A919",
+      "address": 43289,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A91A",
+      "address": 43290,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A920",
+      "address": 43296,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A927",
+      "address": 43303,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A92B",
+      "address": 43307,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A930",
+      "address": 43312,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A932",
+      "address": 43314,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A940",
+      "address": 43328,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A941",
+      "address": 43329,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A954",
+      "address": 43348,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A95A",
+      "address": 43354,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A979",
+      "address": 43385,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A98D",
+      "address": 43405,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A98E",
+      "address": 43406,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A99E",
+      "address": 43422,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A9C3",
+      "address": 43459,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A9D2",
+      "address": 43474,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_A9D3",
+      "address": 43475,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A9D9",
+      "address": 43481,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_A9F2",
+      "address": 43506,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA17",
+      "address": 43543,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA2C",
+      "address": 43564,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA31",
+      "address": 43569,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AA33",
+      "address": 43571,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA4B",
+      "address": 43595,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA63",
+      "address": 43619,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA6D",
+      "address": 43629,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AA83",
+      "address": 43651,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AA84",
+      "address": 43652,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AAA9",
+      "address": 43689,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AAC9",
+      "address": 43721,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AACA",
+      "address": 43722,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AADC",
+      "address": 43740,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AAEE",
+      "address": 43758,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AAF5",
+      "address": 43765,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB02",
+      "address": 43778,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AB03",
+      "address": 43779,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB10",
+      "address": 43792,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB20",
+      "address": 43808,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB27",
+      "address": 43815,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB2E",
+      "address": 43822,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB30",
+      "address": 43824,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB31",
+      "address": 43825,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AB32",
+      "address": 43826,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB4C",
+      "address": 43852,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AB51",
+      "address": 43857,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB62",
+      "address": 43874,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB6F",
+      "address": 43887,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB74",
+      "address": 43892,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_copy",
+      "address": 43894,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_AB7F",
+      "address": 43903,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB99",
+      "address": 43929,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AB9B",
+      "address": 43931,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ABBC",
+      "address": 43964,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ABCE",
+      "address": 43982,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ABD4",
+      "address": 43988,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ABE5",
+      "address": 44005,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ABF3",
+      "address": 44019,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC0A",
+      "address": 44042,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC0C",
+      "address": 44044,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC1A",
+      "address": 44058,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC33",
+      "address": 44083,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC3C",
+      "address": 44092,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC3E",
+      "address": 44094,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC45",
+      "address": 44101,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC4C",
+      "address": 44108,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC53",
+      "address": 44115,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC60",
+      "address": 44128,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC92",
+      "address": 44178,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC9B",
+      "address": 44187,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AC9E",
+      "address": 44190,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACA8",
+      "address": 44200,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACAF",
+      "address": 44207,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACD0",
+      "address": 44240,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACD4",
+      "address": 44244,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACDB",
+      "address": 44251,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACDE",
+      "address": 44254,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACE1",
+      "address": 44257,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACE7",
+      "address": 44263,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACEE",
+      "address": 44270,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ACFA",
+      "address": 44282,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD11",
+      "address": 44305,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD1E",
+      "address": 44318,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD20",
+      "address": 44320,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD40",
+      "address": 44352,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD50",
+      "address": 44368,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD6B",
+      "address": 44395,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD70",
+      "address": 44400,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD78",
+      "address": 44408,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD7D",
+      "address": 44413,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD88",
+      "address": 44424,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD8F",
+      "address": 44431,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AD96",
+      "address": 44438,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADAA",
+      "address": 44458,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADB4",
+      "address": 44468,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADB9",
+      "address": 44473,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADC5",
+      "address": 44485,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADCA",
+      "address": 44490,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADCF",
+      "address": 44495,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADD2",
+      "address": 44498,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADE2",
+      "address": 44514,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_ADE5",
+      "address": 44517,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE07",
+      "address": 44551,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE16",
+      "address": 44566,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE1A",
+      "address": 44570,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE26",
+      "address": 44582,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE37",
+      "address": 44599,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE3F",
+      "address": 44607,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE44",
+      "address": 44612,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE4C",
+      "address": 44620,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE51",
+      "address": 44625,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE59",
+      "address": 44633,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE5B",
+      "address": 44635,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AE60",
+      "address": 44640,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_ver",
+      "address": 44703,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_AEA9",
+      "address": 44713,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_vol",
+      "address": 44791,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "sub_AF0C",
+      "address": 44812,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AF1C",
+      "address": 44828,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AF37",
+      "address": 44855,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AF44",
+      "address": 44868,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AF49",
+      "address": 44873,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_AF7F",
+      "address": 44927,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AF9A",
+      "address": 44954,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AF9F",
+      "address": 44959,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AFA1",
+      "address": 44961,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AFAC",
+      "address": 44972,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_help",
+      "address": 44973,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_AFB7",
+      "address": 44983,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AFBC",
+      "address": 44988,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_AFC8",
+      "address": 45000,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "cmd_del",
+      "address": 45271,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_B0DF",
+      "address": 45279,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B0E0",
+      "address": 45280,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B0FB",
+      "address": 45307,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B103",
+      "address": 45315,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B114",
+      "address": 45332,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B11E",
+      "address": 45342,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B12F",
+      "address": 45359,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B153",
+      "address": 45395,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B15A",
+      "address": 45402,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B16E",
+      "address": 45422,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B175",
+      "address": 45429,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B192",
+      "address": 45458,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B19F",
+      "address": 45471,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B1A3",
+      "address": 45475,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B1A8",
+      "address": 45480,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B1B8",
+      "address": 45496,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B1BA",
+      "address": 45498,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B1BC",
+      "address": 45500,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B1BD",
+      "address": 45501,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1BE",
+      "address": 45502,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1BF",
+      "address": 45503,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1C0",
+      "address": 45504,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1C1",
+      "address": 45505,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1C2",
+      "address": 45506,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1C3",
+      "address": 45507,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B1CC",
+      "address": 45516,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B29F",
+      "address": 45727,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B2AB",
+      "address": 45739,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B2B0",
+      "address": 45744,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B2B3",
+      "address": 45747,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "command_name_match",
+      "address": 45749,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_B2C5",
+      "address": 45765,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B2C6",
+      "address": 45766,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B2CD",
+      "address": 45773,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B2DC",
+      "address": 45788,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "command_dispatch",
+      "address": 45789,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loc_B315",
+      "address": 45845,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B321",
+      "address": 45857,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B322",
+      "address": 45858,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B325",
+      "address": 45861,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B327",
+      "address": 45863,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B32D",
+      "address": 45869,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B344",
+      "address": 45892,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B351",
+      "address": 45905,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B36D",
+      "address": 45933,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B391",
+      "address": 45969,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B397",
+      "address": 45975,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B399",
+      "address": 45977,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3AC",
+      "address": 45996,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3BD",
+      "address": 46013,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3CF",
+      "address": 46031,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3D6",
+      "address": 46038,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3D8",
+      "address": 46040,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3F0",
+      "address": 46064,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B3FC",
+      "address": 46076,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B403",
+      "address": 46083,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B405",
+      "address": 46085,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B40F",
+      "address": 46095,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B415",
+      "address": 46101,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B41F",
+      "address": 46111,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B42B",
+      "address": 46123,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B443",
+      "address": 46147,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B448",
+      "address": 46152,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B45B",
+      "address": 46171,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B4A7",
+      "address": 46247,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B4B0",
+      "address": 46256,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B4B5",
+      "address": 46261,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B4B7",
+      "address": 46263,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B4BE",
+      "address": 46270,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B4BF",
+      "address": 46271,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B4DA",
+      "address": 46298,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B4DF",
+      "address": 46303,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B4E0",
+      "address": 46304,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B4F6",
+      "address": 46326,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B4F7",
+      "address": 46327,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B517",
+      "address": 46359,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B522",
+      "address": 46370,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B52A",
+      "address": 46378,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B52B",
+      "address": 46379,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B53D",
+      "address": 46397,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B550",
+      "address": 46416,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B55E",
+      "address": 46430,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B571",
+      "address": 46449,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B577",
+      "address": 46455,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B58A",
+      "address": 46474,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B597",
+      "address": 46487,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B59A",
+      "address": 46490,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B5AA",
+      "address": 46506,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B5AB",
+      "address": 46507,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B5B3",
+      "address": 46515,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B5BB",
+      "address": 46523,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B5C3",
+      "address": 46531,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B5CC",
+      "address": 46540,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B5D4",
+      "address": 46548,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B5DF",
+      "address": 46559,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B5EE",
+      "address": 46574,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B601",
+      "address": 46593,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B60C",
+      "address": 46604,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B60E",
+      "address": 46606,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B61C",
+      "address": 46620,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B626",
+      "address": 46630,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B63E",
+      "address": 46654,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B653",
+      "address": 46675,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B65C",
+      "address": 46684,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B660",
+      "address": 46688,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B668",
+      "address": 46696,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B68D",
+      "address": 46733,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B69C",
+      "address": 46748,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B69F",
+      "address": 46751,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B6A9",
+      "address": 46761,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B6BC",
+      "address": 46780,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B6FF",
+      "address": 46847,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "data_B700",
+      "address": 46848,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_B95B",
+      "address": 47451,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_B965",
+      "address": 47461,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "sub_BA18",
+      "address": 47640,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BA3D",
+      "address": 47677,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BA59",
+      "address": 47705,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BA5E",
+      "address": 47710,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BA60",
+      "address": 47712,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BA99",
+      "address": 47769,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BAAC",
+      "address": 47788,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BABB",
+      "address": 47803,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BAC7",
+      "address": 47815,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BACD",
+      "address": 47821,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BAE2",
+      "address": 47842,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BAE4",
+      "address": 47844,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BB07",
+      "address": 47879,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BB15",
+      "address": 47893,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BB27",
+      "address": 47911,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BB5D",
+      "address": 47965,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "loc_BB9E",
+      "address": 48030,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0000",
+      "address": 0,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0001",
+      "address": 1,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0002",
+      "address": 2,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0003",
+      "address": 3,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_007F",
+      "address": 127,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0080",
+      "address": 128,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0081",
+      "address": 129,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0082",
+      "address": 130,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0083",
+      "address": 131,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0084",
+      "address": 132,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0085",
+      "address": 133,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0086",
+      "address": 134,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0087",
+      "address": 135,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00DE",
+      "address": 222,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00DF",
+      "address": 223,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E0",
+      "address": 224,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E1",
+      "address": 225,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E2",
+      "address": 226,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E3",
+      "address": 227,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E4",
+      "address": 228,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E5",
+      "address": 229,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E6",
+      "address": 230,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E7",
+      "address": 231,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E8",
+      "address": 232,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00E9",
+      "address": 233,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00EA",
+      "address": 234,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00EB",
+      "address": 235,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00EC",
+      "address": 236,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00ED",
+      "address": 237,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00EE",
+      "address": 238,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00EF",
+      "address": 239,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F0",
+      "address": 240,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F1",
+      "address": 241,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F2",
+      "address": 242,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F3",
+      "address": 243,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F4",
+      "address": 244,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F5",
+      "address": 245,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F6",
+      "address": 246,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F7",
+      "address": 247,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F8",
+      "address": 248,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00F9",
+      "address": 249,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00FA",
+      "address": 250,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00FB",
+      "address": 251,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00FC",
+      "address": 252,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00FD",
+      "address": 253,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00FE",
+      "address": 254,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_00FF",
+      "address": 255,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0100",
+      "address": 256,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0101",
+      "address": 257,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0400",
+      "address": 1024,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0401",
+      "address": 1025,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0402",
+      "address": 1026,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0403",
+      "address": 1027,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0404",
+      "address": 1028,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0405",
+      "address": 1029,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0406",
+      "address": 1030,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0407",
+      "address": 1031,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0408",
+      "address": 1032,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_0409",
+      "address": 1033,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_040A",
+      "address": 1034,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_5816",
+      "address": 22550,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_5817",
+      "address": 22551,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_5819",
+      "address": 22553,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_581A",
+      "address": 22554,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6018",
+      "address": 24600,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6019",
+      "address": 24601,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_601A",
+      "address": 24602,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_601E",
+      "address": 24606,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_601F",
+      "address": 24607,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6020",
+      "address": 24608,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6021",
+      "address": 24609,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6022",
+      "address": 24610,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6023",
+      "address": 24611,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6024",
+      "address": 24612,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6025",
+      "address": 24613,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6026",
+      "address": 24614,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6027",
+      "address": 24615,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6028",
+      "address": 24616,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6029",
+      "address": 24617,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_602A",
+      "address": 24618,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_602B",
+      "address": 24619,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_602C",
+      "address": 24620,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_602D",
+      "address": 24621,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_602E",
+      "address": 24622,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_602F",
+      "address": 24623,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6031",
+      "address": 24625,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6032",
+      "address": 24626,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6033",
+      "address": 24627,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6034",
+      "address": 24628,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_604D",
+      "address": 24653,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6100",
+      "address": 24832,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6101",
+      "address": 24833,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6102",
+      "address": 24834,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6103",
+      "address": 24835,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6104",
+      "address": 24836,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6105",
+      "address": 24837,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6106",
+      "address": 24838,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6130",
+      "address": 24880,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6131",
+      "address": 24881,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6132",
+      "address": 24882,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6133",
+      "address": 24883,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6134",
+      "address": 24884,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6135",
+      "address": 24885,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6136",
+      "address": 24886,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6137",
+      "address": 24887,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6138",
+      "address": 24888,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6139",
+      "address": 24889,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_613A",
+      "address": 24890,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6160",
+      "address": 24928,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6161",
+      "address": 24929,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6190",
+      "address": 24976,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6290",
+      "address": 25232,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6291",
+      "address": 25233,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6292",
+      "address": 25234,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6293",
+      "address": 25235,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62B7",
+      "address": 25271,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E2",
+      "address": 25314,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E3",
+      "address": 25315,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E4",
+      "address": 25316,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E5",
+      "address": 25317,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E6",
+      "address": 25318,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E7",
+      "address": 25319,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E8",
+      "address": 25320,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62E9",
+      "address": 25321,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_62EA",
+      "address": 25322,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6337",
+      "address": 25399,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6338",
+      "address": 25400,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6388",
+      "address": 25480,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6389",
+      "address": 25481,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_638A",
+      "address": 25482,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63D9",
+      "address": 25561,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63DA",
+      "address": 25562,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63DB",
+      "address": 25563,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63DC",
+      "address": 25564,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63DD",
+      "address": 25565,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63DE",
+      "address": 25566,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63DF",
+      "address": 25567,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E0",
+      "address": 25568,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E1",
+      "address": 25569,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E2",
+      "address": 25570,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E3",
+      "address": 25571,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E4",
+      "address": 25572,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E5",
+      "address": 25573,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E6",
+      "address": 25574,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63E7",
+      "address": 25575,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_63EB",
+      "address": 25579,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6416",
+      "address": 25622,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    },
+    {
+      "name": "var_6445",
+      "address": 25669,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": true
+    }
+  ],
+  "comments": [
+    {
+      "segmentId": 0,
+      "address": 45502,
+      "kind": "block",
+      "text": "内部命令表：每项依次为主名（0 结尾）、别名（0 结尾，没有则为空）、处理例程地址减 1（2 字节）、用法说明地址（2 字节）、标志字节，共 5 字节的尾部。命令匹配后用 RTS 跳到处理例程。"
+    },
+    {
+      "segmentId": 0,
+      "address": 45789,
+      "kind": "block",
+      "text": "在命令行里查找并执行命令：先按内部命令表匹配（命令后必须是空格、点、反斜线或结束），匹配到就把处理例程地址压栈后 RTS；匹配不到就按外部命令查找 CMD、EXC、GAM、BAT 文件并运行。\n入口与出口：未确认。首先用 DOS 功能 11、3 取显示方式与空闲页。"
+    },
+    {
+      "segmentId": 0,
+      "address": 45749,
+      "kind": "block",
+      "text": "把命令行里从 Y 开始的字符与命令表里从 X 开始的名字逐字符比较（不区分大小写），Z=1 表示名字到结尾仍然相等。"
+    },
+    {
+      "segmentId": 0,
+      "address": 37014,
+      "kind": "block",
+      "text": "内部命令 EXIT：退出 COMMAND.CMD（常驻的命令解释器拒绝退出）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 37170,
+      "kind": "block",
+      "text": "内部命令 REM：批处理或 CONFIG.SYS 里的注释，不执行任何操作。"
+    },
+    {
+      "segmentId": 0,
+      "address": 37280,
+      "kind": "block",
+      "text": "内部命令 TYPE [drive:][path]filename：显示文件内容。"
+    },
+    {
+      "segmentId": 0,
+      "address": 37633,
+      "kind": "block",
+      "text": "内部命令 RENAME、REN [drive:][path]filename1 filename2：给文件改名。"
+    },
+    {
+      "segmentId": 0,
+      "address": 37871,
+      "kind": "block",
+      "text": "内部命令 CLS：清除屏幕（调用 DOS 功能 9 初始化屏幕）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 38072,
+      "kind": "block",
+      "text": "内部命令 SCREEN num：设置新的屏幕显示方式，0 为 ASCII，1 为 HANZI。"
+    },
+    {
+      "segmentId": 0,
+      "address": 38599,
+      "kind": "block",
+      "text": "内部命令 DATE [mm-dd-yy]：显示或设置日期，只输入 DATE 时显示后等待输入新值。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39185,
+      "kind": "block",
+      "text": "内部命令 TIME [time]：显示或设置时间，只输入 TIME 时显示后等待输入新值。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39511,
+      "kind": "block",
+      "text": "内部命令 BBGCDOS：启动中文系统（用法说明在 $9A3A）。未确认：具体行为。"
+    },
+    {
+      "segmentId": 0,
+      "address": 39812,
+      "kind": "block",
+      "text": "内部命令 CHDIR、CD [drive:][path]：显示或改变当前目录，不带参数时显示当前目录。"
+    },
+    {
+      "segmentId": 0,
+      "address": 40017,
+      "kind": "block",
+      "text": "内部命令 MKDIR、MD [drive:][path]Directory：建立目录。"
+    },
+    {
+      "segmentId": 0,
+      "address": 40172,
+      "kind": "block",
+      "text": "内部命令 RMDIR、RD [drive:][path]Directory：删除目录。"
+    },
+    {
+      "segmentId": 0,
+      "address": 42253,
+      "kind": "block",
+      "text": "内部命令 DIR [drive:][path][filename] [/P][/W][/B][/A[:][attribs]][/L][/S][/O[:][sortord]]：列目录。用法说明在 $A0E0。"
+    },
+    {
+      "segmentId": 0,
+      "address": 42601,
+      "kind": "block",
+      "text": "内部命令 ECHO [ON | OFF]、ECHO [message]：显示信息或开关命令回显。"
+    },
+    {
+      "segmentId": 0,
+      "address": 43894,
+      "kind": "block",
+      "text": "内部命令 COPY [drive:][path]source [+[drive:][path]source ...] [[drive:][path][destination]] [/Y]：复制文件，/Y 表示覆盖时不询问。用法说明在 $A80E。"
+    },
+    {
+      "segmentId": 0,
+      "address": 44703,
+      "kind": "block",
+      "text": "内部命令 VER：显示 BBGDOS 版本（“BBG(R) BBGDOS(R) Version 3.0”）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 44791,
+      "kind": "block",
+      "text": "内部命令 VOL [drive:]：显示磁盘卷标。"
+    },
+    {
+      "segmentId": 0,
+      "address": 44973,
+      "kind": "block",
+      "text": "内部命令 ?：列出内部命令。"
+    },
+    {
+      "segmentId": 0,
+      "address": 45271,
+      "kind": "block",
+      "text": "内部命令 DEL、ERASE [drive:][path]filename [/P]：删除一个或多个文件，可用通配符，/P 表示每个文件都询问。"
+    }
+  ],
+  "hints": [],
+  "modules": [
+    {
+      "name": "messages",
+      "description": "入口跳转与英文提示信息表",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 32768,
+          "length": 2164
+        }
+      ]
+    },
+    {
+      "name": "shell-helpers",
+      "description": "命令解释器的公用例程：字符与数字处理、输出、路径与文件操作封装（边界未确认）",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 34932,
+          "length": 2064
+        }
+      ]
+    },
+    {
+      "name": "cmd-exit-rem-type-rename",
+      "description": "EXIT、REM、TYPE、RENAME 命令",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 36996,
+          "length": 875
+        }
+      ]
+    },
+    {
+      "name": "cmd-screen-date-time",
+      "description": "CLS、SCREEN、DATE、TIME 命令",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 37871,
+          "length": 1941
+        }
+      ]
+    },
+    {
+      "name": "cmd-copy",
+      "description": "COPY 命令",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 42703,
+          "length": 1945
+        }
+      ]
+    },
+    {
+      "name": "cmd-ver-vol-help-del",
+      "description": "VER、VOL、?、DEL、ERASE 命令",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 44648,
+          "length": 853
+        }
+      ]
+    },
+    {
+      "name": "command-dispatch",
+      "description": "内部命令表与命令查找分发",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 45501,
+          "length": 707
+        }
+      ]
+    },
+    {
+      "name": "shell-main",
+      "description": "命令解释器主循环：启动、批处理、提示符与 COMMAND 命令行选项",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 46208,
+          "length": 1835
+        }
+      ]
+    },
+    {
+      "name": "cmd-directory",
+      "description": "BBGCDOS 的说明与 CD、MD、RD、DIR 命令",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 39812,
+          "length": 2638
+        }
+      ]
+    },
+    {
+      "name": "cmd-echo",
+      "description": "ECHO 命令",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 42450,
+          "length": 253
+        }
+      ]
+    }
+  ],
+  "symbolSets": [
+    {
+      "name": "system-entries.inc",
+      "path": "../../src/include/system-entries.inc"
+    }
+  ],
+  "unresolved": [],
+  "verification": {
+    "ok": true,
+    "digest": "f3dbc5d349db130070968138e1bccf17c1cc4ad3ec19a9360b8d84ac617f75ea",
+    "at": "2026-11-23T20:02:44.829Z"
+  }
+}

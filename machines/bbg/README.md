@@ -31,6 +31,10 @@ ld65 -C link.cfg -m build/bios.map -o build/bios.bin build/bios.o
 | `fcdev.json` | fcdev 项目配置：`rom` 目标、底固件、机型、软盘镜像 |
 | `docs/计划与进度.md` | 计划、原厂源码的完整性与已查明的结论 |
 | `docs/DOS反汇编与开发库计划.md` | `BBGDOS.SYS`、`COMMAND.CMD`、启动扇区的反汇编，系统 API 的整理与汇编开发库的计划 |
+| `docs/api/` | 系统接口说明与符号参考（BIOS、DOS、文件调用） |
+| `disasm/` | 反汇编工程：`boot-sector`、`bbgdos`、`command`、`bios-rom`，每个工程的 `disasm.json` 是唯一的修改入口，生成的源码按功能分模块 |
+| `src/include/system-entries.inc`、`bios-calls.inc`、`dos-calls.inc` | 系统调用入口、功能号、文件通道块与出错码的符号定义 |
+| `tools/` | 提取系统文件（`extract-system-files.mjs`）、读 Ember 内存（`ember-dump.mjs`）、生成符号参考（`gen-symbols-doc.mjs`） |
 
 ## 限制
 

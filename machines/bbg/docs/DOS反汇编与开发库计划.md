@@ -12,7 +12,7 @@
 | --- | --- | --- | --- | --- |
 | 启动扇区 | `BBGDOS.IMG` 第 0 扇区 | 512 字节 | BIOS 读到 `$0400`，校验偏移 3 的 `SMDOS1.0`，从 `$0400 + 偏移 1 的字节 + 2`（即偏移 `$3E`）执行 | 只有二进制 |
 | `BBGDOS.SYS` | `BBGDOS.IMG` 根目录，1998-01-11 | 14822 字节 | 文件头无装入地址，`Bios.asm` 的 `SMDOS_Begin` 是 `$7C00`，首条指令 `JMP $7C96` | 只有二进制，与 `reference/docs/BBGDOS源代码/Bbgdos.sys` 逐字节相同 |
-| `COMMAND.CMD` | `BBGDOS.IMG` 根目录，1998-01-13 | 15277 字节 | 前 2 字节是装入地址 `$8000`，其余 15275 字节装入 `$8000-$BAAA`，入口 `JMP $BA3D` | 只有二进制，与 `Command.sys`、`Command.asm` 都不是同一版本 |
+| `COMMAND.CMD` | `BBGDOS.IMG` 根目录，1998-01-13 | 15277 字节 | 前 2 字节是装入地址 `$8000`，其余 15275 字节装入 `$8000-$BBAA`，入口 `JMP $BA3D` | 只有二进制，与 `Command.sys`、`Command.asm` 都不是同一版本 |
 | 原厂 BIOS 源码 | `reference/docs/BBGDOS源代码/Bios.asm`，已移植为 `machines/bbg/src/bios/bios.s` | 7412 行 | `$C000-$FFFF` | 只作参考：工程版，与发布版 ROM 不是同一次构建，内容不一定准确 |
 | 发布版 BIOS | `ember/roms/bbg1_bios.bin`（128KB）、`bbg98_bios.bin`（2MB） | 固定页 16KB 是代码，其余是字库 | `$C000-$FFFF` | 只有二进制，BIOS 接口以它的反汇编为准；`bbg98_bios.bin` 只提取功能号分发表 |
 | 使用手册 | `reference/docs/步步高多媒体学生电脑 BIOS系统 DOS系统使用手册（可搜索）.pdf` | | | 系统篇第二至六章是 BIOS、外设、文件、DOS 调用与严重错误接口，数据定义技术手册有 CMD 与 EXC 文件格式 |
@@ -53,11 +53,14 @@
 machines/bbg/
   src/bios/                 原厂 BIOS 源码的移植（已有，只作参考）
   src/include/              共享符号定义（供四个工程与开发库使用）
-    tvdef.inc               已还原的符号（阶段 1 后由下面的分节文件取代）
-    bios-calls.inc          BIOS 与外设调用：入口、功能号、子功能号、参数单元
-    dos-calls.inc           文件调用与 DOS 调用：功能号、通道结构、出错码
-    system-memory.inc       零页、$0100-$07FF、$5800-$7FFF 的系统变量与固定地址
-    hardware.inc            $FF00 起的系统寄存器与 PPU、APU、软驱等 I/O
+    tvdef.inc               已还原的符号（原厂 BIOS 源码的移植使用）
+    system-entries.inc      $5800-$5818 的系统调用入口向量
+    bios-calls.inc          BIOS 调用功能号与磁盘 I/O 块
+    dos-calls.inc           DOS 调用与文件调用的功能号、文件通道块、出错码
+    system-memory.inc       （待写）零页、$0100-$07FF、$5800-$7FFF 的系统变量与固定地址
+    hardware.inc            （待写）$FF00 起的系统寄存器与 PPU、APU、软驱等 I/O
+  tools/                    提取系统文件、读 Ember 内存、生成符号参考文档的脚本
+  build/image/              提取出的启动扇区、BBGDOS.SYS、COMMAND.CMD（不进 Git）
   disasm/
     bios-rom/               发布版 BIOS 固定页（bbg1_bios.bin 的 $C000-$FFFF）工程
     boot-sector/            启动扇区工程
@@ -65,12 +68,12 @@ machines/bbg/
     command/                COMMAND.CMD 工程
   docs/
     DOS反汇编与开发库计划.md  本文件
-    api/                    接口文档（阶段 5 生成）
+    api/                    接口说明与符号参考（符号参考由 tools/gen-symbols-doc.mjs 生成）
 ```
 
 - 每个工程的 `disasm.json` 是唯一的修改入口，`src/`、`include/`、`link.cfg`、`verify/` 由 `disasm_generate` 生成，不手改。
 - 模块名能否带目录（如 `file-system/fat`）在阶段 0 试验；不能时用连字符前缀（`file-system-fat.s`），仍按功能分文件。
-- 命名沿用 SB2000 的约定：例程与全局标签用大写字母加下划线，前缀写所属模块（`FS_OPEN`、`MEM_ALLOC_PAGE`）；内部跳转用局部标签；功能号等常量用 `BIOS_`、`DEV_`、`FILE_`、`DOS_`、`ERR_` 前缀，注释里写手册里的原名（如 `DosReadKeyEcho`）；硬件寄存器用 `IO_`、`PPU_` 前缀。
+- 命名：例程、变量、标签用小写字母加下划线，前缀写所属模块或功能（`file_call_open`、`dos_run_program`、`bios_set_page`、`cmd_dir`）；功能号等常量用大写字母加下划线，用 `BIOS_`、`DOS_`、`FILE_`、`FH_`、`ERR_` 前缀，注释里写手册里的原名（如 `DosReadKeyEcho`）。
 - 每个 `.inc` 符号的行尾都写含义，格式与 `vscode/targets/sb2000/asminc/sb2000.inc` 一致，使编辑器悬停可显示。
 
 ## 总量与统计方法
@@ -141,3 +144,38 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 
 - 其他版本的系统文件：`floppy-images/bbg` 下另有约 10 个 `BBGDOS.SYS`（14822、15371、15375、16240、16516、16553、16647、16660、16668 字节）和约 7 个 `COMMAND.CMD`，含中文版。只反汇编 `BBGDOS.IMG` 的版本；阶段 5 对其他版本只提取功能号分发表，做“版本支持表”，标注每个功能号存在于哪些版本。
 - BIOS 以发布版 ROM 的反汇编为准，原厂源码只作参考。
+
+## 阶段 0 的结果
+
+装入与运行布局（Ember 里启动 `bbg1` 加 `BBGDOS.IMG` 到 `A:\>` 后读内存，与映像逐段比对）：
+
+| 对象 | 布局 |
+| --- | --- |
+| `BBGDOS.SYS` | 文件偏移 0 起整块连续装入 `$7C00-$B5E5`，一个段。`$7C00-$7DFF` 是常驻的初始化与入口桩模板：初始化时把 `$7C24` 起的 25 字节、`$7C3D` 起的 45 字节复制到 BIOS 功能 15 申请的低端内存，作为 `$5803`、`$580C` 的桩，并修改桩里的页号地址。`$8000-$B5E5` 原样位于 DRAM 页 1，运行时由桩切到 `$8000` 窗口 |
+| `COMMAND.CMD` | 前 2 字节装入地址 `$8000`，其余装入当前空闲页的 `$8000-$BBAA`；DOS 调用时窗口里是 DOS 页，COMMAND 的页被换出 |
+| 启动扇区 | BIOS 读到 `$0400`，从 `$043E` 起执行 |
+| `bbg1_bios.bin` | 固定页文件偏移 114688 起 16KB 映射到 `$C000-$FFFF`；其中 `$C000-$C228`（553 字节）在复位时复制到 `$5800` 运行，是入口表、NMI、IRQ 与页切换代码 |
+
+探针结论：
+
+| 探针 | 结论 |
+| --- | --- |
+| `disasm_open` 的 `flat` 与 `segments` | 可用：BIOS 用两个段表示复制到 `$5800` 运行的部分与其余部分 |
+| 模块名带目录 | 未试，模块名用连字符，一个模块一个 `.s` 文件 |
+| 运行记录 | `bbg1` 不支持 `cdl`；`instruction`（`unique`）可用，但换页地址的执行记录会互相覆盖，导入前必须按映像字节与未识别范围过滤（`bbg1` 的 `disasm_import_record` 会给每个地址建入口） |
+| 内存核对 | 用 `emu_inspect` 读小段；整段比对用 `tools/ember-dump.mjs` 经调试服务读成文件 |
+
+## 进度
+
+| 阶段 | 状态 |
+| --- | --- |
+| 0 资料基线与探针 | 完成 |
+| 1 BIOS 接口基线 | 部分：`bios-rom` 工程已追踪、分 12 个模块、43 个分发项与入口向量已命名，回读一致；`bios-calls.inc` 已写，硬件寄存器与系统变量文件未写；`bbg98_bios.bin` 未分析 |
+| 2 启动扇区 | 完成 |
+| 3 `COMMAND.CMD` | 部分：已追踪、分 10 个模块、19 个内部命令入口命名并写说明，回读一致；其余例程与变量仍是自动名 |
+| 4 `BBGDOS.SYS` | 部分：已追踪、分 11 个模块、DOS 17 个功能与文件调用 25 项命名并写说明，回读一致；其余例程与变量仍是自动名；文件调用 0-5、8-19 的行为只依据手册 |
+| 5 API 提取与文档 | 部分：`dos-calls.inc`、`docs/api/` 已写；文件查找通道块布局已用 `apps/bbg/filetest` 在模拟器里实测通过（目录枚举问题已解决）；外设调用（`$5809`）的子功能、`EXC` 文件头与程序运行时的低端内存约定、版本支持表未做 |
+| 6 汇编开发库 | 未开始 |
+| 7 库验证 | 未开始 |
+
+自动符号的剩余量（`disasm_status` 的 `symbols.auto`）：`bbgdos` 966、`command` 749、`bios-rom` 1040、`boot-sector` 0。

@@ -1,0 +1,25 @@
+; 布局外的地址（寄存器、RAM 变量）：符号集与工程里定义的常量。
+.include "system-entries.inc"
+zero_page_base = $0000
+zero_page_base_next = $0001
+disk_command = $0080
+disk_drive = $0081
+disk_cylinder = $0082
+disk_head = $0083
+disk_sector = $0084
+disk_buffer_page = $0085
+disk_buffer_low = $0086
+disk_buffer_high = $0087
+disk_sector_count = $0088
+boot_root_lba_low = $0089
+boot_root_lba_high = $008A
+boot_retry_count = $008B
+boot_next_lba_low = $008C
+boot_next_lba_high = $008D
+boot_sectors_left = $008E
+boot_quotient_high = $0090
+system_file_load_address = $7C00
+loaded_entry_cluster_low = $7C1A
+loaded_entry_cluster_high = $7C1B
+loaded_entry_size_low = $7C1C
+loaded_entry_size_high = $7C1D

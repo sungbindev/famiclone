@@ -1,0 +1,905 @@
+{
+  "version": 1,
+  "image": {
+    "path": "../../build/image/boot-sector.bin",
+    "size": 512,
+    "sha256": "907c866b00362ccb6039bc50c012249135e8d824cd2805cd4f9aeeb3d60b73fd"
+  },
+  "format": {
+    "name": "flat",
+    "options": {
+      "address": 1024
+    }
+  },
+  "profile": null,
+  "layout": {
+    "imageSize": 512,
+    "segments": [
+      {
+        "id": 0,
+        "fileOffset": 0,
+        "length": 512,
+        "address": 1024,
+        "bank": null,
+        "writable": false
+      }
+    ]
+  },
+  "entries": [
+    {
+      "segmentId": 0,
+      "address": 1086,
+      "source": "manual",
+      "description": "手工指定"
+    }
+  ],
+  "regions": [
+    {
+      "offset": 0,
+      "length": 62,
+      "type": "bytes",
+      "params": {
+        "perLine": 8
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 62,
+      "length": 357,
+      "type": "code",
+      "params": {},
+      "source": "trace"
+    },
+    {
+      "offset": 419,
+      "length": 11,
+      "type": "bytes",
+      "params": {
+        "perLine": 11
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 430,
+      "length": 62,
+      "type": "string",
+      "params": {
+        "encoding": "ascii",
+        "terminator": 0
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 492,
+      "length": 18,
+      "type": "padding",
+      "params": {
+        "value": 255
+      },
+      "source": "manual"
+    },
+    {
+      "offset": 510,
+      "length": 2,
+      "type": "bytes",
+      "params": {
+        "perLine": 2
+      },
+      "source": "manual"
+    }
+  ],
+  "symbols": [
+    {
+      "name": "bpb_reserved_sectors",
+      "address": 1038,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_reserved_sectors_hi",
+      "address": 1039,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_root_entries",
+      "address": 1041,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_root_entries_hi",
+      "address": 1042,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_sectors_per_fat",
+      "address": 1046,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_sectors_per_fat_hi",
+      "address": 1047,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_sectors_per_track",
+      "address": 1048,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_heads",
+      "address": 1050,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_main",
+      "address": 1086,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_root_sectors_shift",
+      "address": 1114,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_name_compare",
+      "address": 1158,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_read_first_part",
+      "address": 1202,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_read_rest",
+      "address": 1213,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_fail",
+      "address": 1230,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_show_error",
+      "address": 1240,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_show_char_loop",
+      "address": 1242,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_halt",
+      "address": 1261,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_lba_to_chs",
+      "address": 1263,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_divide_by_spt",
+      "address": 1277,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_divide_by_spt_next",
+      "address": 1286,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_divide_by_heads",
+      "address": 1303,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_divide_by_heads_next",
+      "address": 1312,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_read_sectors",
+      "address": 1331,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_read_retry",
+      "address": 1337,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_read_done",
+      "address": 1373,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_load_file_sectors",
+      "address": 1374,
+      "segmentId": 0,
+      "kind": "procedure",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_load_loop",
+      "address": 1376,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_track_remaining",
+      "address": 1391,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_track_clamp",
+      "address": 1404,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_track_read",
+      "address": 1410,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_lba_no_carry",
+      "address": 1433,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_load_done",
+      "address": 1442,
+      "segmentId": 0,
+      "kind": "label",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_system_file_name",
+      "address": 1443,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_error_text",
+      "address": 1454,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "zero_page_base",
+      "address": 0,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "zero_page_base_next",
+      "address": 1,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_command",
+      "address": 128,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_drive",
+      "address": 129,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_cylinder",
+      "address": 130,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_head",
+      "address": 131,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_sector",
+      "address": 132,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_buffer_page",
+      "address": 133,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_buffer_low",
+      "address": 134,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_buffer_high",
+      "address": 135,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "disk_sector_count",
+      "address": 136,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_root_lba_low",
+      "address": 137,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_root_lba_high",
+      "address": 138,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_retry_count",
+      "address": 139,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_next_lba_low",
+      "address": 140,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_next_lba_high",
+      "address": 141,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_sectors_left",
+      "address": 142,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_quotient_high",
+      "address": 144,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "system_file_load_address",
+      "address": 31744,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loaded_entry_cluster_low",
+      "address": 31770,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loaded_entry_cluster_high",
+      "address": 31771,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loaded_entry_size_low",
+      "address": 31772,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "loaded_entry_size_high",
+      "address": 31773,
+      "segmentId": null,
+      "kind": "variable",
+      "description": "",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_jump",
+      "address": 1024,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "跳转指令 EB 3C 90，越过参数块",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_oem_name",
+      "address": 1027,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "系统标识 SMDOS1.0，BIOS 用它判断是否为可启动的步步高系统盘",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_bytes_per_sector",
+      "address": 1035,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "每扇区字节数（2 字节），512",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_sectors_per_cluster",
+      "address": 1037,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "每簇扇区数，4",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_fat_count",
+      "address": 1040,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "FAT 表个数，2",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_total_sectors",
+      "address": 1043,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "总扇区数（2 字节），2880",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_media_descriptor",
+      "address": 1045,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "介质描述符，$F0 表示 1.44MB 软盘",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_hidden_sectors",
+      "address": 1052,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "隐藏扇区数（4 字节）",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_total_sectors_32",
+      "address": 1056,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "32 位总扇区数（4 字节），未使用",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_drive_number",
+      "address": 1060,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "物理驱动器号",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_signature",
+      "address": 1062,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "扩展引导标志 $29",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_volume_serial",
+      "address": 1063,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "卷序列号（4 字节）",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_volume_label",
+      "address": 1067,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "卷标（11 字节，空格填充）",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "bpb_file_system",
+      "address": 1078,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "文件系统类型 FAT12",
+      "module": null,
+      "auto": false
+    },
+    {
+      "name": "boot_signature",
+      "address": 1534,
+      "segmentId": 0,
+      "kind": "data",
+      "description": "引导扇区结束标志 $55 $AA",
+      "module": null,
+      "auto": false
+    }
+  ],
+  "comments": [
+    {
+      "segmentId": 0,
+      "address": 1024,
+      "kind": "block",
+      "text": "引导扇区的 BPB（BIOS 参数块，FAT12 格式）。BIOS 把本扇区读到 $0400，校验偏移 3 起的“SMDOS1.0”后，从偏移 1 的字节加 2（即 $043E）开始执行。1.44MB 软盘：512 字节一扇区，4 扇区一簇，FAT 两份各 3 扇区，根目录 208 项，18 扇区一磁道，2 个磁头。"
+    },
+    {
+      "segmentId": 0,
+      "address": 1086,
+      "kind": "block",
+      "text": "引导程序入口：把根目录第一项指定的 BBGDOS.SYS 读到 $7C00 并跳转执行。\n入口：A 为启动盘的驱动器号。\n出口：成功时不返回，跳到 $7C00 并把驱动器号放在 A；失败时，BIOS 版本不小于 2 就显示提示并死循环，否则返回 BIOS。\n副作用：使用零页 $80-$90 作磁盘 I/O 块与计算单元。"
+    },
+    {
+      "segmentId": 0,
+      "address": 1089,
+      "kind": "inline",
+      "text": "每个 FAT 的扇区数乘 FAT 个数 2，加保留扇区数，得到根目录起始扇区（LBA）"
+    },
+    {
+      "segmentId": 0,
+      "address": 1109,
+      "kind": "inline",
+      "text": "根目录项数除以 16（每扇区 16 项），向上取整的扇区数加到根目录起点，得到数据区起点"
+    },
+    {
+      "segmentId": 0,
+      "address": 1132,
+      "kind": "inline",
+      "text": "读缓冲区设为 $7C00，缓冲区页号 $FE 表示当前页"
+    },
+    {
+      "segmentId": 0,
+      "address": 1146,
+      "kind": "inline",
+      "text": "把根目录起始扇区转成磁头、柱面、扇区"
+    },
+    {
+      "segmentId": 0,
+      "address": 1149,
+      "kind": "inline",
+      "text": "读 1 个扇区：根目录的第一个扇区"
+    },
+    {
+      "segmentId": 0,
+      "address": 1156,
+      "kind": "inline",
+      "text": "第一项必须是“BBGDOS  SYS”，起始簇必须是 2"
+    },
+    {
+      "segmentId": 0,
+      "address": 1181,
+      "kind": "inline",
+      "text": "文件大小折算成 512 字节的扇区数（向上取整）"
+    },
+    {
+      "segmentId": 0,
+      "address": 1192,
+      "kind": "inline",
+      "text": "不到 35 个扇区一次读完；多于 62 个扇区按 62 处理；超过 34 个扇区时先读 34 个，再读剩下的"
+    },
+    {
+      "segmentId": 0,
+      "address": 1218,
+      "kind": "inline",
+      "text": "BIOS 功能 1（SetPage）：把 $8000 窗口设为 $FE 页（当前页）"
+    },
+    {
+      "segmentId": 0,
+      "address": 1225,
+      "kind": "inline",
+      "text": "A 为驱动器号，跳转到刚读入的 BBGDOS.SYS"
+    },
+    {
+      "segmentId": 0,
+      "address": 1230,
+      "kind": "inline",
+      "text": "BIOS 功能 $FF 取版本；BIOS 版本小于 2 时返回 BIOS，由 BIOS 提示"
+    },
+    {
+      "segmentId": 0,
+      "address": 1249,
+      "kind": "inline",
+      "text": "BIOS 功能 27（DisplayTTY）逐字符显示错误提示"
+    },
+    {
+      "segmentId": 0,
+      "address": 1263,
+      "kind": "block",
+      "text": "把零页里的 16 位扇区号（LBA）转成磁头、柱面、扇区。\n入口：X 为零页中扇区号的低字节地址，扇区号的高字节在其后一个字节。\n出口：disk_cylinder 为柱面低 8 位；disk_head 为磁头；disk_sector 为扇区号（从 1 起）与柱面高 2 位的组合（位 6、7 是柱面高位）。\n依据 BPB 的每磁道扇区数与磁头数做两次长除。"
+    },
+    {
+      "segmentId": 0,
+      "address": 1331,
+      "kind": "block",
+      "text": "按 disk_cylinder、disk_head、disk_sector 读若干扇区。\n入口：A 为扇区数，缓冲区在 disk_buffer_page 与 disk_buffer_low、disk_buffer_high。\n出口：Z 为 1 表示成功（BIOS 返回码为 0）。\n失败时复位磁盘（命令 0）后重试，最多重试 2 次。磁盘 I/O 块在 $0080，由 BIOS 功能 6 处理，命令 2 为读。"
+    },
+    {
+      "segmentId": 0,
+      "address": 1374,
+      "kind": "block",
+      "text": "从 boot_next_lba 起读入若干扇区，不跨磁道，一次只读到本磁道末尾，然后循环到读完。\n入口：A 为要读的扇区总数。\n出口：C 为 1 表示成功（BIOS 读盘的 Z 标志经 CLC/BNE 转换），C 为 0 表示失败。\n副作用：读缓冲区高字节随读入的扇区数增加。"
+    },
+    {
+      "segmentId": 0,
+      "address": 1443,
+      "kind": "block",
+      "text": "根目录第一项必须有的文件名（8 加 3 格式）。"
+    },
+    {
+      "segmentId": 0,
+      "address": 1454,
+      "kind": "block",
+      "text": "加载失败时显示的提示：“Non-System disk or disk error，Replace and press RESET again”。"
+    }
+  ],
+  "hints": [],
+  "modules": [
+    {
+      "name": "bpb",
+      "description": "引导扇区的 BPB 参数块",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 1024,
+          "length": 62
+        }
+      ]
+    },
+    {
+      "name": "boot-loader",
+      "description": "引导程序：读根目录、装入 BBGDOS.SYS 并跳转",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 1086,
+          "length": 357
+        }
+      ]
+    },
+    {
+      "name": "boot-messages",
+      "description": "引导程序用的文件名、提示与扇区标志",
+      "ranges": [
+        {
+          "segmentId": 0,
+          "address": 1443,
+          "length": 93
+        }
+      ]
+    }
+  ],
+  "symbolSets": [
+    {
+      "name": "system-entries.inc",
+      "path": "../../src/include/system-entries.inc"
+    }
+  ],
+  "unresolved": [],
+  "verification": {
+    "ok": true,
+    "digest": "229ebb0cba50f284a93f08ddaee813c353a50c32ee03f6908a473e4943723be5",
+    "at": "2026-11-23T19:43:59.454Z"
+  }
+}

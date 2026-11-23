@@ -144,6 +144,21 @@ describe('构建并运行', () => {
     assert.equal(build.diskBuilds, 0);
   });
 
+  it('裕兴程序：经主菜单与“学DOS”进入 DOS，输入带 .EXE 扩展名的程序名', async () => {
+    const exe = writeTestFile(temp.dir, 'hello.exe', 'x');
+    writeTestFile(temp.dir, 'hello.img', 'x');
+    const firmware = writeTestFile(temp.dir, 'yuxing.bin', 'x');
+    const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'input.key': {}, 'runtime.resume': {} });
+    connector.next = client;
+    await createRunner(new FakeBuildService('firmware-disk', firmware, exe, 'yuxing', true)).run({ build: { cwd: temp.dir }, debug: false });
+    assert.deepEqual(client.calls[0], { method: 'machines.setRom', params: { machine: 'yuxing', path: firmware } });
+    const keys = client.calls.filter((call) => call.method === 'input.key' && (call.params as { down: boolean }).down).map((call) => (call.params as { code: string }).code);
+    assert.deepEqual(keys, [
+      'Space', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter', 'Space', 'ArrowDown', 'ArrowDown', 'Enter',
+      'KeyH', 'KeyE', 'KeyL', 'KeyL', 'KeyO', 'Period', 'KeyE', 'KeyX', 'KeyE', 'Enter'
+    ]);
+  });
+
   it('构建没有生成镜像时（配置里 disk 为 false），运行前另外生成', async () => {
     const exe = writeTestFile(temp.dir, 'hello.exe', 'x');
     writeTestFile(temp.dir, 'hello.img', 'x');

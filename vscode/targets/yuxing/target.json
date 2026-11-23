@@ -1,0 +1,29 @@
+{
+  "name": "yuxing",
+  "title": "裕兴学习机（Yuxing DOS）",
+  "cpu": "6502",
+  "cc65Target": "none",
+  "linkConfig": "link.cfg",
+  "startup": ["lib/crt0.o"],
+  "libraries": [],
+  "include": [],
+  "asminclude": ["asminc"],
+  "defines": {
+    "__YUXING__": 1
+  },
+  "packager": "flat-exe",
+  "packagerOptions": {
+    "header": "4C????",
+    "maxSize": 8192
+  },
+  "extension": ".EXE",
+  "nameRule": "dos-8.3",
+  "disk": {
+    "packager": "fat-floppy"
+  },
+  "run": {
+    "emulator": "ember",
+    "mode": "firmware-disk",
+    "machine": "yuxing"
+  }
+}

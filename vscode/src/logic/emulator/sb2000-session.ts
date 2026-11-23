@@ -1,14 +1,15 @@
 // ------------------------------------------------------------------------
 // 名称：sb2000-session.ts
-// 说明：整机（学习机 SB2000、小霸王 97）在 Ember 里的启动与操作：经调试服务添加固件、放入磁盘
-//       镜像、整机开机，并在 DOS 里输入程序名运行；还有按键与运行帧数的小工具。
+// 说明：整机（学习机 SB2000、小霸王 97、裕兴）在 Ember 里的启动与操作：经调试服务添加固件、
+//       放入磁盘镜像、整机开机，并在 DOS 里输入程序名运行；还有按键与运行帧数的小工具。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
-// 日期：2026-11-15
+// 日期：2026-11-23
 // 备注：固件是机器的 BIOS（ROM）文件，Ember 把它复制进自己的 ROM 目录；磁盘镜像由构建生成，
 //       里面有程序和项目 disk 目录下的文件，开机后进入 DOS 命令行，要输入程序名才运行。帧数按
 //       Ember 的运行速度估计：runtime.run 不限速，几千帧只要几秒；SB-DOS 启动后先问日期与时
-//       间，回车跳过；SB97 开机后要先选中菜单里的 DOS。
+//       间，回车跳过；SB97 开机后要先选中菜单里的 DOS；裕兴开机后要经主菜单与“学DOS”的
+//       两个画面才进 DOS，提示符下运行程序必须带扩展名。
 // ------------------------------------------------------------------------
 
 import type { DebugSession } from '../../contracts/debug-client/debug-session';
@@ -32,6 +33,33 @@ const SB97_MENU_FRAMES = 300;
 
 /** SB97 进入 DOS 后等到提示符出现的帧数。 */
 const SB97_DOS_FRAMES = 120;
+
+/** 裕兴的机型标识。 */
+export const YUXING_MACHINE = 'yuxing';
+
+/** 裕兴开机到显示“按任意键”的画面所需的帧数。 */
+const YUXING_LOGO_FRAMES = 300;
+
+/** 裕兴按键后显示主菜单所需的帧数。 */
+const YUXING_MENU_FRAMES = 120;
+
+/** 裕兴选中主菜单的“学DOS”要按的下键次数。 */
+const YUXING_MENU_DOWNS = 3;
+
+/** 裕兴进入“学DOS”后，“DOS入门”动画播完所需的帧数。 */
+const YUXING_INTRO_FRAMES = 300;
+
+/** 裕兴按空格后显示 DOS 学习菜单所需的帧数。 */
+const YUXING_LESSON_FRAMES = 120;
+
+/** 裕兴选中“三.DOS系统操作”要按的下键次数。 */
+const YUXING_LESSON_DOWNS = 2;
+
+/** 裕兴进入 DOS 后等到提示符出现的帧数。 */
+const YUXING_DOS_FRAMES = 120;
+
+/** 裕兴的 DOS 运行程序要输入的扩展名（含点）对应的键位。 */
+const YUXING_EXTENSION_CODES = ['Period', 'KeyE', 'KeyX', 'KeyE'];
 
 /** 按键按下与松开之后各运行的帧数，让 BIOS 读到。 */
 const KEY_DOWN_FRAMES = 5;
@@ -121,16 +149,30 @@ export async function bootMachine(files: FileSystem, client: DebugSession, { mac
 
 /**
  * 在 DOS 里运行程序：学习机开机运行 900 帧，直接按两次回车跳过日期与时间；SB97 开机后
- * 按空格跳过开机画面，等菜单稳定后按左键选中 DOS，回车进入。再输入程序名回车。返回时程序刚
- * 被启动，机器仍是暂停的。
+ * 按空格跳过开机画面，等菜单稳定后按左键选中 DOS，回车进入；裕兴开机后按空格进主菜单，选中
+ * “学DOS”回车，等动画后按空格，选中“三.DOS系统操作”回车进入。再输入程序名回车（裕兴的 DOS
+ * 必须带扩展名，这里补上 .EXE）。返回时程序刚被启动，机器仍是暂停的。
  * @param client 已连接的调试会话。
  * @param programName 程序名（不含扩展名）。
- * @param machine 机型，默认学习机；不是 SB97 的都按学习机的流程。
+ * @param machine 机型，默认学习机；不是 SB97 与裕兴的都按学习机的流程。
  * @throws FcdevError 程序名里有无法输入的字符。
  */
 export async function enterProgram(client: DebugSession, programName: string, machine: string = SB2000_MACHINE): Promise<void> {
   const codes = [...programName].map(keyCodeOf);
-  if (machine === SB97_MACHINE) {
+  if (machine === YUXING_MACHINE) {
+    await runFrames(client, YUXING_LOGO_FRAMES);
+    await tapKey(client, 'Space', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await runFrames(client, YUXING_MENU_FRAMES);
+    for (let count = 0; count < YUXING_MENU_DOWNS; count += 1) await tapKey(client, 'ArrowDown', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await runFrames(client, YUXING_INTRO_FRAMES);
+    await tapKey(client, 'Space', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await runFrames(client, YUXING_LESSON_FRAMES);
+    for (let count = 0; count < YUXING_LESSON_DOWNS; count += 1) await tapKey(client, 'ArrowDown', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await runFrames(client, YUXING_DOS_FRAMES);
+    codes.push(...YUXING_EXTENSION_CODES);
+  } else if (machine === SB97_MACHINE) {
     await runFrames(client, SB97_LOGO_FRAMES);
     await tapKey(client, 'Space', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
     await runFrames(client, SB97_MENU_FRAMES);

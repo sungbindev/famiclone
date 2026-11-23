@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：file-scaffold-service.test.ts
-// 说明：测试新建项目：五个模板、生成的文件、目录检查，以及用真实 cc65 构建五个模板。
+// 说明：测试新建项目：六个模板、生成的文件、目录检查，以及用真实 cc65 构建六个模板。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -25,8 +25,8 @@ function commandsOf(directory: string): unknown[] {
 }
 
 describe('模板', () => {
-  it('有五个模板：nes 与 sb2000 各有 c 和 asm，sb97 只有 asm', () => {
-    expect(scaffold.listTemplates().map((item) => item.name)).toEqual(['nes-asm', 'nes-c', 'sb2000-asm', 'sb2000-c', 'sb97-asm']);
+  it('有六个模板：nes 与 sb2000 各有 c 和 asm，sb97 与 yuxing 只有 asm', () => {
+    expect(scaffold.listTemplates().map((item) => item.name)).toEqual(['nes-asm', 'nes-c', 'sb2000-asm', 'sb2000-c', 'sb97-asm', 'yuxing-asm']);
   });
 
   it('每个模板都有示例源码与说明', () => {
@@ -57,7 +57,7 @@ describe('生成项目', () => {
   });
 
   it('模板里的 disk/README.TXT 是 UTF-8 带 BOM、CRLF 换行，按字节原样复制', () => {
-    for (const [name, target] of [['a', 'sb2000'], ['b', 'sb97']] as const) {
+    for (const [name, target] of [['a', 'sb2000'], ['b', 'sb97'], ['c', 'yuxing']] as const) {
       const directory = path.join(temp.dir, name);
       scaffold.create({ directory, target, language: 'asm' });
       const bytes = readFileSync(path.join(directory, 'disk', 'README.TXT'));
@@ -95,12 +95,12 @@ describe('生成项目', () => {
 
   it('没有这个目标与语言的模板时报错，列出可用的目标与语言', () => {
     expect(() => scaffold.create({ directory: path.join(temp.dir, 'x'), target: 'nope', language: 'c' })).toThrow(
-      expect.objectContaining({ code: 'TEMPLATE_NOT_FOUND', hint: expect.stringMatching(/sb2000.*sb97.*asm/) })
+      expect.objectContaining({ code: 'TEMPLATE_NOT_FOUND', hint: expect.stringMatching(/sb2000.*sb97.*yuxing.*asm/) })
     );
   });
 });
 
-describe.skipIf(!HAS_TOOLCHAIN)('五个模板都能构建', { timeout: TIMEOUT_MS }, () => {
+describe.skipIf(!HAS_TOOLCHAIN)('六个模板都能构建', { timeout: TIMEOUT_MS }, () => {
   let temp: TempDir;
 
   beforeEach(() => {

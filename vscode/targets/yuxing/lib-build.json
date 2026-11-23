@@ -1,0 +1,5 @@
+{
+  "objects": {
+    "lib/crt0.o": "src/crt0.s"
+  }
+}

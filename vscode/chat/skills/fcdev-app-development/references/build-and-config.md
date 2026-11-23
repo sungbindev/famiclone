@@ -8,8 +8,8 @@
 
 - 目录必须为空（允许已有 `.git`），不会覆盖已有文件；目录不存在时工具会创建。
 - 目标与语言必须由用户确定，不要猜。
-- 生成的文件：`fcdev.json`、`.gitignore`、`README.md`、`.vscode/tasks.json`（构建、运行任务）、`src/hello.c` 或 `src/hello.s`；带磁盘能力的目标（`sb2000`、`sb97`）还有 `disk/README.TXT`（构建磁盘镜像时放进镜像的使用说明）。程序名固定为 `hello`，要改名同时改 `fcdev.json` 的 `name`。
-- 五个模板：`nes-c`、`nes-asm`、`sb2000-c`、`sb2000-asm`、`sb97-asm`（SB97 没有 C 运行库，只有汇编）。
+- 生成的文件：`fcdev.json`、`.gitignore`、`README.md`、`.vscode/tasks.json`（构建、运行任务）、`src/hello.c` 或 `src/hello.s`；带磁盘能力的目标（`sb2000`、`sb97`、`yuxing`）还有 `disk/README.TXT`（构建磁盘镜像时放进镜像的使用说明）。程序名固定为 `hello`，要改名同时改 `fcdev.json` 的 `name`。
+- 六个模板：`nes-c`、`nes-asm`、`sb2000-c`、`sb2000-asm`、`sb97-asm`、`yuxing-asm`（SB97 与裕兴没有 C 运行库，只有汇编）。
 
 ## 任务、命令与工具
 
@@ -44,14 +44,14 @@
 
 | 项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `target` | 必填 | `nes`、`sb2000`、`sb97` 或 `rom` |
+| `target` | 必填 | `nes`、`sb2000`、`sb97`、`yuxing` 或 `rom` |
 | `name` | 目录名 | 目录构建时的程序名（SB2000 必须是 8.3 名字） |
 | `out` | `build` | 输出目录，相对项目根 |
 | `optimize` | `true` | 给 `cc65` 加 `-Oirs` |
-| `disk` | `true` | 构建时是否同时生成磁盘镜像（只对 `sb2000`、`sb97` 有效）；镜像里有程序与项目 `disk` 目录下的全部文件，文件名须是 8.3 名字，不能有子目录 |
+| `disk` | `true` | 构建时是否同时生成磁盘镜像（只对 `sb2000`、`sb97`、`yuxing` 有效）；镜像里有程序与项目 `disk` 目录下的全部文件，文件名须是 8.3 名字，不能有子目录 |
 | `define` | 空 | 预定义宏，值为字符串或数字，覆盖目标自带的同名宏 |
 | `include` | 空 | 额外头文件目录，相对项目根 |
-| `firmware` | 无 | 固件（BIOS）文件；SB2000、SB97 运行时必填；`rom` 目标把它当底固件，构建时把链接输出覆盖进去 |
+| `firmware` | 无 | 固件（BIOS）文件；SB2000、SB97、裕兴运行时必填；`rom` 目标把它当底固件，构建时把链接输出覆盖进去 |
 | `diskImage` | 无 | 运行时放进软驱 0 的磁盘镜像（只对 `rom` 目标有效） |
 | `linkConfig` | 无 | 自定义 `ld65` 链接配置，相对项目根；替换目标自带的链接配置，原样使用，不检查产物大小上限；不能与大于 0 的 `banks` 同用；以目标自带的 `link.cfg` 为底稿改，启动代码与库仍按目标链接 |
 | `targetOptions` | 空 | 目标专用：NES 的 `font`（布尔，默认 `true`），SB2000 的 `banks`（0 到 113，默认 0），`rom` 的 `machine`（机型，运行时必填）、`offset`（链接输出在整块固件里的偏移）、`size`（整块固件必须正好等于的大小） |

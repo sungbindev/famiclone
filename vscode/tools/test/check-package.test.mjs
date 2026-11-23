@@ -77,14 +77,14 @@ function completeEntries() {
     'extension/targets/sb2000/api-reference.md': '接口'
   };
   for (const [name, text] of Object.entries(toolchainFiles)) entries[`extension/toolchain/${name}`] = text;
-  for (const target of ['nes', 'sb2000', 'sb97']) {
+  for (const target of ['nes', 'sb2000', 'sb97', 'yuxing']) {
     entries[`extension/targets/${target}/target.json`] = '{}';
     entries[`extension/targets/${target}/lib-build.json`] = JSON.stringify({ libraries: { [`lib/${target}.lib`]: [] }, objects: { 'lib/crt0.o': 'src/crt0.s' } });
     entries[`extension/targets/${target}/lib/${target}.lib`] = 'lib';
     entries[`extension/targets/${target}/lib/crt0.o`] = 'object';
   }
   entries['extension/targets/rom/target.json'] = '{}';
-  for (const template of ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm']) {
+  for (const template of ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm', 'yuxing-asm']) {
     entries[`extension/templates/${template}/template.json`] = '{}';
     entries[`extension/templates/${template}/README.md`] = '模板';
     entries[`extension/templates/${template}/src/hello.${template.endsWith('asm') ? 's' : 'c'}`] = '程序';

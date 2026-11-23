@@ -24,13 +24,13 @@ const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');
 const PREFIX = 'extension/';
 
 /** 必须随扩展发布的目标 */
-const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97', 'rom'];
+const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97', 'yuxing', 'rom'];
 
 /** 必须随扩展发布的模板 */
-const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm'];
+const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm', 'yuxing-asm'];
 
 /** 带磁盘能力的模板：构建磁盘镜像时放进镜像的使用说明在模板的 disk 目录里 */
-const TEMPLATES_WITH_DISK = ['sb2000-c', 'sb2000-asm', 'sb97-asm'];
+const TEMPLATES_WITH_DISK = ['sb2000-c', 'sb2000-asm', 'sb97-asm', 'yuxing-asm'];
 
 /** 不允许出现的路径：测试、源码、依赖、密钥、安装包、模拟器与固件 */
 const FORBIDDEN = [

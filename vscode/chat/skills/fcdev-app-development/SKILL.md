@@ -6,7 +6,7 @@ user-invocable: false
 
 # fcdev 程序开发
 
-fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有四个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
+fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有五个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）、`yuxing`（裕兴学习机的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向学习卡的 ROM，DOS 里运行要写扩展名）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
 
 ## 必须先读取的参考文件
 
@@ -27,12 +27,12 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 
 | 情形 | 流程 |
 | --- | --- |
-| 要新建 NES、SB2000 或 SB97 程序，目录里还没有 `fcdev.json` | 流程 1 |
+| 要新建 NES、SB2000、SB97 或裕兴程序，目录里还没有 `fcdev.json` | 流程 1 |
 | 要在已有的 fcdev 项目里写或改程序 | 流程 2 |
 | 只要构建（学习机目标会同时生成磁盘镜像） | 流程 3 |
 | 要运行、看画面、调试、核对结果 | 流程 4 |
 | 构建失败、运行不对、找不到命令 | 流程 5 |
-| 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`、`sb97`、`rom`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
+| 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`、`sb97`、`yuxing`、`rom`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
 
 ## 流程 1：新建项目
 
@@ -56,7 +56,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 
 ## 流程 3：构建
 
-1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`）默认同时生成磁盘镜像，项目 `fcdev.json` 里 `disk` 为 `false` 时不生成。
+1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`、`yuxing`）默认同时生成磁盘镜像，项目 `fcdev.json` 里 `disk` 为 `false` 时不生成。
 2. 完成标准：返回产物路径、大小与重新编译的文件数；磁盘镜像的路径取自输出，不猜扩展名。
 3. 汇报时把工具输出里的错误行原样给用户，不改写。
 

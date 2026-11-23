@@ -37,6 +37,7 @@ const TEXT = {
   nes: 'NES',
   sb2000: 'SB2000（小霸王学习机）',
   sb97: 'SB97（小霸王 97）',
+  yuxing: '裕兴（学习机）',
   missing: (file) => `找不到 fcdev 的文档：${file}`,
   marker: (file) => `<!-- 本文件由 npm run help:build 从 vscode/${file} 导入，不要手改 -->`
 };
@@ -59,17 +60,18 @@ export function groupTitleOf(topic) {
   if (topic.file.startsWith('nes/')) return TEXT.nes;
   if (topic.file.startsWith('sb2000/') || topic.file.startsWith('targets/sb2000/')) return TEXT.sb2000;
   if (topic.file.startsWith('sb97/')) return TEXT.sb97;
+  if (topic.file.startsWith('yuxing/')) return TEXT.yuxing;
   return TEXT.common;
 }
 
 /**
- * 把主题按分组归类，分组顺序固定为通用、NES、SB2000、SB97，组内保持登记顺序，空分组不返回。
+ * 把主题按分组归类，分组顺序固定为通用、NES、SB2000、SB97、裕兴，组内保持登记顺序，空分组不返回。
  * @template {{file: string}} T
  * @param {readonly T[]} topics 主题登记项
  * @returns {{title: string, topics: T[]}[]} 分组清单
  */
 export function groupTopics(topics) {
-  return [TEXT.common, TEXT.nes, TEXT.sb2000, TEXT.sb97]
+  return [TEXT.common, TEXT.nes, TEXT.sb2000, TEXT.sb97, TEXT.yuxing]
     .map((title) => ({ title, topics: topics.filter((topic) => groupTitleOf(topic) === title) }))
     .filter((group) => group.topics.length > 0);
 }

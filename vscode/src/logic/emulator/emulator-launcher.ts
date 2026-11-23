@@ -29,7 +29,7 @@ export const CLIENT_NAME = 'fcdev';
 
 /** 整机（固件加可选磁盘镜像）的启动内容。 */
 export interface FirmwareDiskLaunch {
-  /** 整机机型，如 sb2000、sb97。 */
+  /** 整机机型，如 sb2000、sb97、yuxing。 */
   readonly machine: string;
   /** 固件（BIOS）文件。 */
   readonly firmware: string;
@@ -45,7 +45,7 @@ export interface LaunchInput {
   readonly executable: string;
   /** 要加载的 .nes 文件（经典 FC）；与 firmwareDisk 二选一；调试模式下两者都不给就只启动 Ember。 */
   readonly romFile?: string | undefined;
-  /** 整机（学习机、SB97）的启动内容。 */
+  /** 整机（学习机、SB97、裕兴）的启动内容。 */
   readonly firmwareDisk?: FirmwareDiskLaunch | undefined;
   /** 是否调试模式。 */
   readonly debug?: boolean | undefined;

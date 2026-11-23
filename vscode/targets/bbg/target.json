@@ -1,0 +1,30 @@
+{
+  "name": "bbg",
+  "title": "步步高学生电脑（BBGDOS）",
+  "cpu": "6502",
+  "cc65Target": "none",
+  "linkConfig": "link.cfg",
+  "startup": ["lib/crt0.o"],
+  "libraries": [],
+  "include": [],
+  "asminclude": ["asminc"],
+  "defines": {
+    "__BBG__": 1
+  },
+  "packager": "flat-exe",
+  "packagerOptions": {
+    "header": "0080",
+    "maxSize": 16386
+  },
+  "extension": ".CMD",
+  "nameRule": "dos-8.3",
+  "disk": {
+    "packager": "fat-floppy-overlay",
+    "baseImage": true
+  },
+  "run": {
+    "emulator": "ember",
+    "mode": "firmware-disk",
+    "machine": "bbg1"
+  }
+}

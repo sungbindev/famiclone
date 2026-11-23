@@ -5,7 +5,8 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
 // 备注：镜像里放这一次构建的程序与项目根 disk 目录下的全部文件（使用说明等，由用户自己写）；
-//       镜像放在程序产物旁边，文件名与程序名相同，卷标为 FCDEV。
+//       镜像放在程序产物旁边，文件名与程序名相同，卷标为 FCDEV。目标声明 baseImage（如步步高的 DOS
+//       在磁盘上）时，以 fcdev.json 的 diskImage 为底盘在其上添加文件，卷标保持底盘的。
 // ------------------------------------------------------------------------
 
 import * as path from 'node:path';
@@ -48,18 +49,40 @@ function readDiskDirectory(fileSystem: FileSystem, root: string): DiskFile[] {
 }
 
 /**
+ * 读取底盘镜像。
+ * @param fileSystem 文件系统。
+ * @param file 底盘镜像的绝对路径。
+ * @returns 镜像内容。
+ * @throws FcdevError 找不到文件。
+ */
+function readBaseImage(fileSystem: FileSystem, file: string): Uint8Array {
+  if (fileSystem.kindOf(file) !== 'file') {
+    throw new FcdevError(`找不到底盘镜像：${file}`, { code: 'DISK_BASE_MISSING', hint: '检查 fcdev.json 的 diskImage' });
+  }
+  return fileSystem.readBytes(file);
+}
+
+/**
  * 生成包含这次构建的程序与项目 disk 目录下全部文件的磁盘镜像。
  * @param fileSystem 文件系统。
  * @param plan 构建计划。
  * @param result 构建结果。
  * @returns 镜像路径与大小。
  * @throws FcdevError 目标不支持磁盘镜像，disk 目录有子目录或与程序重名，
- *   或文件名不符合镜像文件名规则。
+ *   文件名不符合镜像文件名规则，目标需要底盘镜像而配置里没有 diskImage，或底盘读不到。
  */
 export function buildDiskImage(fileSystem: FileSystem, plan: BuildPlan, result: BuildResult): DiskImageResult {
   if (plan.target.disk === null) {
     throw new FcdevError(`目标 ${plan.target.name} 不支持磁盘镜像`, { code: 'TARGET_NO_DISK' });
   }
+  const { diskImage } = plan.config;
+  if (plan.target.disk.baseImage && diskImage === undefined) {
+    throw new FcdevError(`目标 ${plan.target.name} 的磁盘镜像建在系统盘镜像之上，fcdev.json 里没有设置 diskImage`, {
+      code: 'DISK_BASE_MISSING',
+      hint: '在 fcdev.json 里用 diskImage 指向带系统文件的软盘镜像（如 DOS 启动盘）'
+    });
+  }
+  const base = plan.target.disk.baseImage && diskImage !== undefined ? readBaseImage(fileSystem, diskImage) : undefined;
   const outputName = path.basename(result.outputFile);
   const imageFile = path.join(path.dirname(result.outputFile), `${path.basename(outputName, path.extname(outputName))}.img`);
   const modified = fileSystem.modifiedTime(result.outputFile);
@@ -75,7 +98,7 @@ export function buildDiskImage(fileSystem: FileSystem, plan: BuildPlan, result: 
     { name: outputName, data: fileSystem.readBytes(result.outputFile), ...(modified === undefined ? {} : { mtime: new Date(modified) }) },
     ...extraFiles
   ];
-  const image = packageDisk(plan.target.disk.packager, files, { label: DISK_LABEL });
+  const image = packageDisk(plan.target.disk.packager, files, { label: DISK_LABEL, ...(base === undefined ? {} : { base }) });
   fileSystem.writeBytes(imageFile, image);
   return { imageFile, size: image.length, files: files.map((file) => file.name) };
 }

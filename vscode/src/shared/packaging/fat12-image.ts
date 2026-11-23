@@ -45,13 +45,13 @@ export interface Fat12Entry {
 }
 
 /** 目录项大小。 */
-const ENTRY_SIZE = 32;
+export const ENTRY_SIZE = 32;
 
 /** FAT12 的簇链结束标记。 */
-const END_OF_CHAIN = 0xfff;
+export const END_OF_CHAIN = 0xfff;
 
 /** 卷标属性位。 */
-const ATTR_VOLUME = 0x08;
+export const ATTR_VOLUME = 0x08;
 
 /** 8.3 名字里允许的字符。 */
 const NAME_PART = /^[A-Z0-9_$~!#%&\-{}()@'`^]+$/;
@@ -99,7 +99,7 @@ function fromShortName(raw: string): string {
  * @param date 日期时间。
  * @returns 目录项里的日期与时间字段。
  */
-function dosDateTime(date: Date): { date: number; time: number } {
+export function dosDateTime(date: Date): { date: number; time: number } {
   const year = Math.min(Math.max(date.getFullYear(), 1980), 2107);
   return {
     date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
@@ -113,7 +113,7 @@ function dosDateTime(date: Date): { date: number; time: number } {
  * @param cluster 簇号。
  * @param value 条目值。
  */
-function setFatEntry(fat: Buffer, cluster: number, value: number): void {
+export function setFatEntry(fat: Buffer, cluster: number, value: number): void {
   const offset = Math.floor((cluster * 3) / 2);
   if (cluster % 2 === 0) {
     fat[offset] = value & 0xff;
@@ -130,7 +130,7 @@ function setFatEntry(fat: Buffer, cluster: number, value: number): void {
  * @param cluster 簇号。
  * @returns 条目值。
  */
-function getFatEntry(fat: Uint8Array, cluster: number): number {
+export function getFatEntry(fat: Uint8Array, cluster: number): number {
   const offset = Math.floor((cluster * 3) / 2);
   const pair = byteAt(fat, offset) | (byteAt(fat, offset + 1) << 8);
   return cluster % 2 === 0 ? pair & 0x0fff : pair >> 4;

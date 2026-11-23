@@ -1340,7 +1340,7 @@
         ],
         "toolReferenceName": "emu_load",
         "displayName": "载入程序",
-        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000、sb97、yuxing），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（DOS 里要运行的程序名，sb2000、sb97 与 yuxing 开机后自动进入 DOS、输入并回车；yuxing 自动补 .EXE）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。",
+        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000、sb97、yuxing、bbg1），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（DOS 里要运行的程序名，sb2000、sb97、yuxing 与 bbg1 开机后自动进入 DOS、输入并回车；yuxing 自动补 .EXE；bbg1 的 diskImage 要是带 DOS 的系统盘镜像）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。",
         "userDescription": "把 NES 文件或整机（BIOS、软盘）装入 Ember。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1354,7 +1354,7 @@
             "machine": {
               "type": "string",
               "minLength": 1,
-              "description": "整机机型，如 sb2000、sb97、yuxing；与 file 二选一"
+              "description": "整机机型，如 sb2000、sb97、yuxing、bbg1；与 file 二选一"
             },
             "firmware": {
               "type": "string",
@@ -1869,7 +1869,7 @@
         ],
         "toolReferenceName": "fcdev_new_project",
         "displayName": "新建 fcdev 项目",
-        "modelDescription": "在一个空目录里按模板生成 fcdev 项目：fcdev.json、.gitignore、.vscode/tasks.json、README.md、src 下的 hello 示例程序，学习机目标还有 disk/README.TXT（构建磁盘镜像时放进镜像的使用说明）。target 选目标（nes、sb2000、sb97 或 yuxing），language 选语言（c 或 asm；sb97 与 yuxing 只有 asm）；目录不存在时创建，必须为空（允许已有 .git），已有文件不会被覆盖。生成后用 fcdev_build 构建。",
+        "modelDescription": "在一个空目录里按模板生成 fcdev 项目：fcdev.json、.gitignore、.vscode/tasks.json、README.md、src 下的 hello 示例程序，学习机目标还有 disk/README.TXT（构建磁盘镜像时放进镜像的使用说明）。target 选目标（nes、sb2000、sb97、yuxing 或 bbg），language 选语言（c 或 asm；sb97、yuxing 与 bbg 只有 asm）；目录不存在时创建，必须为空（允许已有 .git），已有文件不会被覆盖。生成后用 fcdev_build 构建。",
         "userDescription": "新建 fcdev 项目（NES 或学习机，C 或汇编）。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1886,9 +1886,10 @@
                 "nes",
                 "sb2000",
                 "sb97",
-                "yuxing"
+                "yuxing",
+                "bbg"
               ],
-              "description": "目标：nes 任天堂红白机，sb2000 小霸王学习机，sb97 小霸王 97 学习机，yuxing 裕兴学习机（sb97 与 yuxing 只有汇编模板）"
+              "description": "目标：nes 任天堂红白机，sb2000 小霸王学习机，sb97 小霸王 97 学习机，yuxing 裕兴学习机，bbg 步步高学生电脑（sb97、yuxing 与 bbg 只有汇编模板）"
             },
             "language": {
               "type": "string",
@@ -1943,7 +1944,7 @@
         ],
         "toolReferenceName": "fcdev_run",
         "displayName": "构建并在 Ember 里运行",
-        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）、sb97 与 yuxing 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机，自由运行时再在 DOS 里输入程序名运行。整机 ROM 工程（rom 目标）把产物当作 targetOptions.machine 机型的固件开机运行，fcdev.json 的 diskImage 有值时挂到软驱，不输入程序名。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
+        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）、sb97、yuxing 与 bbg 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机（bbg 的镜像建在 fcdev.json 的 diskImage 系统盘上），自由运行时再在 DOS 里输入程序名运行。整机 ROM 工程（rom 目标）把产物当作 targetOptions.machine 机型的固件开机运行，fcdev.json 的 diskImage 有值时挂到软驱，不输入程序名。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
         "userDescription": "构建并在 Ember 里运行，可调试运行。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {

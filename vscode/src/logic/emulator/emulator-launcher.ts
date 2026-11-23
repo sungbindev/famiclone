@@ -45,7 +45,7 @@ export interface LaunchInput {
   readonly executable: string;
   /** 要加载的 .nes 文件（经典 FC）；与 firmwareDisk 二选一；调试模式下两者都不给就只启动 Ember。 */
   readonly romFile?: string | undefined;
-  /** 整机（学习机、SB97、裕兴）的启动内容。 */
+  /** 整机（学习机、SB97、裕兴、步步高）的启动内容。 */
   readonly firmwareDisk?: FirmwareDiskLaunch | undefined;
   /** 是否调试模式。 */
   readonly debug?: boolean | undefined;

@@ -53,7 +53,10 @@ export class DefaultBuildService implements BuildService {
     const toolchain = this.dependencies.toolchainLocator.locate();
     const result = await buildProgram(plan, { ...this.dependencies, toolchain }, reporter);
     const outcome = { plan, result, disk: undefined };
-    return plan.target.disk !== null && plan.config.disk ? { ...outcome, disk: this.buildDisk(outcome) } : outcome;
+    const { disk } = plan.target;
+    // 需要底盘镜像的目标没有配置 diskImage 时只构建程序，运行时再提示缺底盘
+    const wantsDisk = disk !== null && plan.config.disk && !(disk.baseImage && plan.config.diskImage === undefined);
+    return wantsDisk ? { ...outcome, disk: this.buildDisk(outcome) } : outcome;
   }
 
   /** @inheritdoc */

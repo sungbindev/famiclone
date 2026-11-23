@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：sb2000-session.ts
-// 说明：整机（学习机 SB2000、小霸王 97、裕兴）在 Ember 里的启动与操作：经调试服务添加固件、
+// 说明：整机（学习机 SB2000、小霸王 97、裕兴、步步高）在 Ember 里的启动与操作：经调试服务添加固件、
 //       放入磁盘镜像、整机开机，并在 DOS 里输入程序名运行；还有按键与运行帧数的小工具。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
@@ -9,7 +9,9 @@
 //       里面有程序和项目 disk 目录下的文件，开机后进入 DOS 命令行，要输入程序名才运行。帧数按
 //       Ember 的运行速度估计：runtime.run 不限速，几千帧只要几秒；SB-DOS 启动后先问日期与时
 //       间，回车跳过；SB97 开机后要先选中菜单里的 DOS；裕兴开机后要经主菜单与“学DOS”的
-//       两个画面才进 DOS，提示符下运行程序必须带扩展名。
+//       两个画面才进 DOS，提示符下运行程序必须带扩展名；步步高的 DOS 在磁盘上，开机后由 BIOS
+//       读入，系统盘有自动批处理时要等它跑完，没有时先问日期与时间（回车跳过），运行程序不用写
+//       扩展名。
 // ------------------------------------------------------------------------
 
 import type { DebugSession } from '../../contracts/debug-client/debug-session';
@@ -60,6 +62,15 @@ const YUXING_DOS_FRAMES = 120;
 
 /** 裕兴的 DOS 运行程序要输入的扩展名（含点）对应的键位。 */
 const YUXING_EXTENSION_CODES = ['Period', 'KeyE', 'KeyX', 'KeyE'];
+
+/** 步步高软驱一号的机型标识。 */
+export const BBG_MACHINE = 'bbg1';
+
+/** 步步高开机到 BBGDOS 读键盘（有自动批处理的系统盘要等批处理跑完）所需的帧数。 */
+const BBG_DOS_FRAMES = 1200;
+
+/** 步步高按两次回车跳过日期与时间后，等提示符出现的帧数。 */
+const BBG_PROMPT_FRAMES = 60;
 
 /** 按键按下与松开之后各运行的帧数，让 BIOS 读到。 */
 const KEY_DOWN_FRAMES = 5;
@@ -150,11 +161,12 @@ export async function bootMachine(files: FileSystem, client: DebugSession, { mac
 /**
  * 在 DOS 里运行程序：学习机开机运行 900 帧，直接按两次回车跳过日期与时间；SB97 开机后
  * 按空格跳过开机画面，等菜单稳定后按左键选中 DOS，回车进入；裕兴开机后按空格进主菜单，选中
- * “学DOS”回车，等动画后按空格，选中“三.DOS系统操作”回车进入。再输入程序名回车（裕兴的 DOS
- * 必须带扩展名，这里补上 .EXE）。返回时程序刚被启动，机器仍是暂停的。
+ * “学DOS”回车，等动画后按空格，选中“三.DOS系统操作”回车进入；步步高开机运行 1200 帧（系统盘的
+ * 批处理跑完），按两次回车跳过可能出现的日期与时间。再输入程序名回车（裕兴的 DOS 必须带
+ * 扩展名，这里补上 .EXE）。返回时程序刚被启动，机器仍是暂停的。
  * @param client 已连接的调试会话。
  * @param programName 程序名（不含扩展名）。
- * @param machine 机型，默认学习机；不是 SB97 与裕兴的都按学习机的流程。
+ * @param machine 机型，默认学习机；不是 SB97、裕兴与步步高的都按学习机的流程。
  * @throws FcdevError 程序名里有无法输入的字符。
  */
 export async function enterProgram(client: DebugSession, programName: string, machine: string = SB2000_MACHINE): Promise<void> {
@@ -179,6 +191,12 @@ export async function enterProgram(client: DebugSession, programName: string, ma
     await tapKey(client, 'ArrowLeft', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
     await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
     await runFrames(client, SB97_DOS_FRAMES);
+  } else if (machine === BBG_MACHINE) {
+    await runFrames(client, BBG_DOS_FRAMES);
+    // 没有自动批处理的系统盘会先问日期与时间；已在提示符下时这两次回车只是空行
+    await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
+    await runFrames(client, BBG_PROMPT_FRAMES);
   } else {
     await runFrames(client, DOS_PROMPT_FRAMES);
     await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);

@@ -8,7 +8,7 @@
 // ------------------------------------------------------------------------
 
 import { describe, expect, it } from 'vitest';
-import { listFat12 } from '../../../src/shared/packaging/fat12-image';
+import { buildFat12Image, listFat12 } from '../../../src/shared/packaging/fat12-image';
 import { packageDisk, packageProgram, parseHeaderPattern } from '../../../src/shared/packaging/program-packager';
 
 describe('打包器', () => {
@@ -102,5 +102,12 @@ describe('打包器', () => {
   it('fat-floppy 把文件放进镜像根目录', () => {
     const image = packageDisk('fat-floppy', [{ name: 'a.exe', data: Uint8Array.from([1, 2, 3]) }], { label: 'FCDEV' });
     expect(listFat12(image).map((entry) => entry.name)).toEqual(['A.EXE']);
+  });
+
+  it('fat-floppy-overlay 在底盘镜像上添加文件，没有底盘镜像时报错并提示 diskImage', () => {
+    const base = buildFat12Image([{ name: 'system.sys', data: Uint8Array.from([9]) }]);
+    const image = packageDisk('fat-floppy-overlay', [{ name: 'a.cmd', data: Uint8Array.from([1, 2, 3]) }], { base });
+    expect(listFat12(image).map((entry) => entry.name)).toEqual(['SYSTEM.SYS', 'A.CMD']);
+    expect(() => packageDisk('fat-floppy-overlay', [])).toThrow(expect.objectContaining({ code: 'DISK_BASE_MISSING', hint: expect.stringContaining('diskImage') }));
   });
 });

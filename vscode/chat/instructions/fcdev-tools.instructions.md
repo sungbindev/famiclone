@@ -1,6 +1,6 @@
 ---
 name: '6502 工具使用规则'
-description: '使用 fcdev 扩展的工具（fcdev_*、emu_*、disasm_*）开发、构建、运行、调试、反汇编 6502 程序（NES、学习机 SB2000、SB97、裕兴等整机）时遵循：先按任务类型选流程并读取对应 skill，直接调用工具而不自行检查设置与路径，模拟器的固定起步顺序，失败时的处理。'
+description: '使用 fcdev 扩展的工具（fcdev_*、emu_*、disasm_*）开发、构建、运行、调试、反汇编 6502 程序（NES、学习机 SB2000、SB97、裕兴、步步高等整机）时遵循：先按任务类型选流程并读取对应 skill，直接调用工具而不自行检查设置与路径，模拟器的固定起步顺序，失败时的处理。'
 ---
 
 # 6502 工具使用规则
@@ -11,7 +11,7 @@ description: '使用 fcdev 扩展的工具（fcdev_*、emu_*、disasm_*）开发
 
 | 要做的事 | 必须先读取 | 流程 |
 | --- | --- | --- |
-| 新建、编写、构建 NES、SB2000、SB97 或裕兴程序（项目里有 `fcdev.json`，或要新建这类项目） | skill `fcdev-app-development` | 它的“工作流程” |
+| 新建、编写、构建 NES、SB2000、SB97、裕兴或步步高程序（项目里有 `fcdev.json`，或要新建这类项目） | skill `fcdev-app-development` | 它的“工作流程” |
 | 运行、调试、截图、读写内存、注入输入，包括不属于 fcdev 项目的 NES 文件、整机与磁盘镜像 | skill `ember-emulator` | 它的“任务判定” |
 | 反汇编（有 `disasm.json`、有映像文件，或要读懂已有的 6502 程序） | skill `disassemble-6502` | 它的八个步骤 |
 | 同时涉及多项 | 全部相关 skill | 先用 todo 列出步骤，按依赖顺序做 |

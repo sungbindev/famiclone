@@ -24,10 +24,10 @@ const EXTENSION_DIRECTORY = path.join(REPOSITORY_ROOT, 'vscode');
 const PREFIX = 'extension/';
 
 /** 必须随扩展发布的目标 */
-const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97', 'yuxing', 'rom'];
+const REQUIRED_TARGETS = ['nes', 'sb2000', 'sb97', 'yuxing', 'bbg', 'rom'];
 
 /** 必须随扩展发布的模板 */
-const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm', 'yuxing-asm'];
+const REQUIRED_TEMPLATES = ['nes-c', 'nes-asm', 'sb2000-c', 'sb2000-asm', 'sb97-asm', 'yuxing-asm', 'bbg-asm'];
 
 /** 带磁盘能力的模板：构建磁盘镜像时放进镜像的使用说明在模板的 disk 目录里 */
 const TEMPLATES_WITH_DISK = ['sb2000-c', 'sb2000-asm', 'sb97-asm', 'yuxing-asm'];

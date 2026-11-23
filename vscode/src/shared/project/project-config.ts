@@ -51,7 +51,10 @@ export interface ProjectConfig {
   readonly include: readonly string[];
   /** 固件文件的绝对路径。 */
   readonly firmware: string | undefined;
-  /** 运行时挂到软驱 0 的磁盘镜像的绝对路径；只对运行方案为 firmware 的目标有效。 */
+  /**
+   * 磁盘镜像的绝对路径：运行方案为 firmware 的目标运行时挂到软驱 0；
+   * 磁盘能力声明 baseImage 的目标以它为系统盘，构建磁盘镜像时在其上添加文件。
+   */
   readonly diskImage: string | undefined;
   /** 自定义链接配置的绝对路径；没有时用目标自带的链接配置。 */
   readonly linkConfig: string | undefined;

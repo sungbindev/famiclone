@@ -57,6 +57,13 @@ describe('目标定义的解析', () => {
     expect(parseTarget(validTarget({ run: { emulator: 'ember', mode: 'rom' } }), DIR).run?.machine).toBeNull();
   });
 
+  it('disk 的 baseImage 缺省为 false，只能是布尔值', () => {
+    expect(parseTarget(validTarget({ disk: { packager: 'fat-floppy' } }), DIR).disk).toEqual({ packager: 'fat-floppy', baseImage: false });
+    expect(parseTarget(validTarget({ disk: { packager: 'fat-floppy-overlay', baseImage: true } }), DIR).disk).toEqual({ packager: 'fat-floppy-overlay', baseImage: true });
+    expect(() => parseTarget(validTarget({ disk: { packager: 'fat-floppy', baseImage: 'yes' } }), DIR)).toThrow(/baseImage/);
+    expect(parseTarget(validTarget(), DIR).disk).toBeNull();
+  });
+
   it('links 只能用在布尔选项上', () => {
     const options = { size: { type: 'number', default: 1, links: ['a.o'] } };
     expect(() => parseTarget(validTarget({ options }), DIR)).toThrow(/links/);

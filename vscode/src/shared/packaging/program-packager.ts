@@ -5,7 +5,8 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
 // 备注：只做字节处理，读写文件由调用者负责；新增打包器时在 PROGRAM_PACKAGERS 或
-//       DISK_PACKAGERS 登记。
+//       DISK_PACKAGERS 登记。fat-floppy 生成空白 1.44MB 镜像；fat-floppy-overlay 在调用
+//       者给的底盘镜像（如带系统文件的启动盘）上添加文件，没有底盘时报错。
 //       flat-exe 的选项 header 为十六进制字符串（?? 表示任意字节），headerOffset 为它在映像里的
 //       偏移（默认 0），maxSize 为映像大小上限，size 为映像必须正好等于的大小。
 //       rom-overlay 的偏移与大小取自目标专用选项 offset、size（0 表示不限）：有底固件时，把链接
@@ -14,6 +15,7 @@
 
 import { FcdevError } from '../errors/fcdev-error';
 import { buildFat12Image, type DiskFile } from './fat12-image';
+import { overlayFat12Image } from './fat12-overlay';
 
 /** 打包器选项。 */
 export type PackagerOptions = Readonly<Record<string, unknown>>;
@@ -163,9 +165,26 @@ const PROGRAM_PACKAGERS: Readonly<Record<string, (image: Uint8Array, options: Pa
   'rom-overlay': packRomOverlay
 };
 
+/** 磁盘打包器的选项。 */
+export interface DiskPackagerOptions {
+  /** 卷标（只用于新建的镜像）。 */
+  readonly label?: string;
+  /** 底盘镜像（只用于覆盖打包器）。 */
+  readonly base?: Uint8Array;
+}
+
 /** 已登记的磁盘打包器：输入一组文件，输出一个镜像。 */
-const DISK_PACKAGERS: Readonly<Record<string, (files: readonly DiskFile[], options: { readonly label?: string }) => Uint8Array>> = {
-  'fat-floppy': (files, options) => buildFat12Image(files, options)
+const DISK_PACKAGERS: Readonly<Record<string, (files: readonly DiskFile[], options: DiskPackagerOptions) => Uint8Array>> = {
+  'fat-floppy': (files, options) => buildFat12Image(files, options),
+  'fat-floppy-overlay': (files, options) => {
+    if (options.base === undefined) {
+      throw new FcdevError('这个目标的磁盘镜像要在系统盘镜像上添加文件，没有给底盘镜像', {
+        code: 'DISK_BASE_MISSING',
+        hint: '在 fcdev.json 里用 diskImage 指向带系统文件的软盘镜像'
+      });
+    }
+    return overlayFat12Image(options.base, files);
+  }
 };
 
 /**
@@ -191,9 +210,9 @@ export function packageProgram(name: string, image: Uint8Array, options: Package
  * @param files 要放进镜像的文件。
  * @param options 打包选项。
  * @returns 镜像内容。
- * @throws FcdevError 打包器没有登记，文件名不符合 8.3，或空间不足。
+ * @throws FcdevError 打包器没有登记，文件名不符合 8.3，空间不足，或覆盖打包器没有底盘。
  */
-export function packageDisk(name: string, files: readonly DiskFile[], options: { readonly label?: string } = {}): Uint8Array {
+export function packageDisk(name: string, files: readonly DiskFile[], options: DiskPackagerOptions = {}): Uint8Array {
   const packager = DISK_PACKAGERS[name];
   if (packager === undefined) {
     throw new FcdevError(`未知的磁盘打包器：${name}`, { code: 'PACKAGER_UNKNOWN', hint: `可用的磁盘打包器：${Object.keys(DISK_PACKAGERS).join('、')}` });

@@ -56,7 +56,7 @@ tools:
 
 | 任务 | 必须先读取 | 流程 |
 | --- | --- | --- |
-| 新建、编写、构建 NES、SB2000、SB97 或裕兴程序 | skill `fcdev-app-development` | 它的“任务判定”与五个流程 |
+| 新建、编写、构建 NES、SB2000、SB97、裕兴或步步高程序 | skill `fcdev-app-development` | 它的“任务判定”与五个流程 |
 | 运行、调试、截图、读写内存、注入输入 | skill `ember-emulator` | 它的“任务判定” |
 | 反汇编映像，或为了读懂程序而反汇编参考映像 | skill `disassemble-6502` | 它的八个步骤 |
 

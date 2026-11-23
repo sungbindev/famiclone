@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：file-scaffold-service.test.ts
-// 说明：测试新建项目：六个模板、生成的文件、目录检查，以及用真实 cc65 构建六个模板。
+// 说明：测试新建项目：七个模板、生成的文件、目录检查，以及用真实 cc65 构建七个模板。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -25,8 +25,8 @@ function commandsOf(directory: string): unknown[] {
 }
 
 describe('模板', () => {
-  it('有六个模板：nes 与 sb2000 各有 c 和 asm，sb97 与 yuxing 只有 asm', () => {
-    expect(scaffold.listTemplates().map((item) => item.name)).toEqual(['nes-asm', 'nes-c', 'sb2000-asm', 'sb2000-c', 'sb97-asm', 'yuxing-asm']);
+  it('有七个模板：nes 与 sb2000 各有 c 和 asm，sb97、yuxing 与 bbg 只有 asm', () => {
+    expect(scaffold.listTemplates().map((item) => item.name)).toEqual(['bbg-asm', 'nes-asm', 'nes-c', 'sb2000-asm', 'sb2000-c', 'sb97-asm', 'yuxing-asm']);
   });
 
   it('每个模板都有示例源码与说明', () => {
@@ -67,6 +67,13 @@ describe('生成项目', () => {
     }
   });
 
+  it('bbg 模板没有 disk 目录：磁盘镜像建在用户指定的系统盘上，空间有限', () => {
+    const directory = path.join(temp.dir, 'bbg');
+    const { files } = scaffold.create({ directory, target: 'bbg', language: 'asm' });
+    expect(files).toEqual(['.gitignore', '.vscode/tasks.json', 'README.md', 'fcdev.json', 'src/hello.s']);
+    expect(JSON.parse(readFileSync(path.join(directory, 'fcdev.json'), 'utf8'))).toEqual({ target: 'bbg', name: 'hello' });
+  });
+
   it('所有模板的任务都是构建与运行', () => {
     scaffold.create({ directory: path.join(temp.dir, 'a'), target: 'sb2000', language: 'asm' });
     scaffold.create({ directory: path.join(temp.dir, 'b'), target: 'nes', language: 'c' });
@@ -100,7 +107,7 @@ describe('生成项目', () => {
   });
 });
 
-describe.skipIf(!HAS_TOOLCHAIN)('六个模板都能构建', { timeout: TIMEOUT_MS }, () => {
+describe.skipIf(!HAS_TOOLCHAIN)('七个模板都能构建', { timeout: TIMEOUT_MS }, () => {
   let temp: TempDir;
 
   beforeEach(() => {
@@ -115,7 +122,8 @@ describe.skipIf(!HAS_TOOLCHAIN)('六个模板都能构建', { timeout: TIMEOUT_M
     scaffold.create({ directory, target, language });
     const { result, disk } = await buildService.build({ pathArg: 'src', cwd: directory });
     expect(statSync(result.outputFile).size).toBeGreaterThan(0);
-    // 带磁盘能力的目标默认同时生成镜像，镜像里有模板自带的使用说明
-    expect(disk?.files).toEqual(target === 'nes' ? undefined : ['HELLO.EXE', 'README.TXT']);
+    // 带磁盘能力的目标默认同时生成镜像，镜像里有模板自带的使用说明；
+    // bbg 需要用户指定底盘镜像，没有时只构建程序
+    expect(disk?.files).toEqual(target === 'nes' || target === 'bbg' ? undefined : ['HELLO.EXE', 'README.TXT']);
   });
 });

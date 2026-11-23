@@ -140,7 +140,9 @@ export function parseTarget(raw: unknown, dir: string): Target {
     invalid(`目标 ${name} 的 sourceCharset 只能是 ${SOURCE_CHARSETS.join(' 或 ')}`);
   }
   const disk = raw.disk ?? null;
-  if (disk !== null && (!isRecord(disk) || typeof disk.packager !== 'string')) invalid(`目标 ${name} 的 disk 必须包含 packager`);
+  if (disk !== null && (!isRecord(disk) || typeof disk.packager !== 'string' || (disk.baseImage !== undefined && typeof disk.baseImage !== 'boolean'))) {
+    invalid(`目标 ${name} 的 disk 必须包含 packager，且 baseImage 只能是布尔值`);
+  }
 
   return {
     name,
@@ -159,7 +161,7 @@ export function parseTarget(raw: unknown, dir: string): Target {
     packagerOptions: (raw.packagerOptions ?? {}) as Record<string, unknown>,
     extension: raw.extension as string,
     nameRule: typeof raw.nameRule === 'string' ? raw.nameRule : null,
-    disk: disk === null ? null : { packager: (disk as { packager: string }).packager },
+    disk: disk === null ? null : { packager: (disk as { packager: string }).packager, baseImage: (disk as { baseImage?: boolean }).baseImage === true },
     run:
       run === null
         ? null

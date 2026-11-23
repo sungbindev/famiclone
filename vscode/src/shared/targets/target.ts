@@ -77,8 +77,11 @@ export interface Target {
   readonly extension: string;
   /** 程序名规则；null 表示不限制。 */
   readonly nameRule: string | null;
-  /** 磁盘镜像能力；不支持时为 null。 */
-  readonly disk: { readonly packager: string } | null;
+  /**
+   * 磁盘镜像能力；不支持时为 null。baseImage 为 true 时，镜像建在 fcdev.json 的
+   * diskImage（系统盘）之上。
+   */
+  readonly disk: { readonly packager: string; readonly baseImage: boolean } | null;
   /** 运行方案；没有时为 null。machine 是 firmware-disk 模式的整机机型，其他模式为 null。 */
   readonly run: { readonly emulator: string; readonly mode: RunMode; readonly machine: string | null } | null;
   /** 目标专用选项。 */

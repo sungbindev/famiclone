@@ -1,11 +1,13 @@
 // ------------------------------------------------------------------------
 // 名称：bbg-library.test.ts
-// 说明：测试步步高汇编运行库 bbg.lib 的各个模块：每个模块一个测试程序，在 Ember 的 bbg1（BBGDOS 3.0 系统盘）里运行，核对函数的实际效果。
+// 说明：测试步步高汇编运行库 bbg.lib 的各个模块：每个模块一个测试程序，
+//       在 Ember 的 bbg1（BBGDOS 3.0 系统盘）里运行，核对函数的实际效果。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-24
-// 备注：整机经 Ember 的调试服务启动（见 support/real-emulator.ts 的 startBbgProgram）；环境不齐（Ember、cc65、
-//       步步高 BIOS 与系统盘）时整组跳过；测试程序在 test/fixtures/bbg/，检查编号与程序里的 CHECK_ 宏一一对应。
+// 备注：整机经 Ember 的调试服务启动（见 support/real-emulator.ts）；
+//       环境不齐（Ember、cc65、步步高 BIOS 与系统盘）时整组跳过；
+//       测试程序在 test/fixtures/bbg/，检查编号与程序里的 CHECK_ 宏一一对应。
 // ------------------------------------------------------------------------
 
 import assert from 'node:assert/strict';

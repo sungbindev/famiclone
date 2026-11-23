@@ -39,7 +39,8 @@ const FORBIDDEN = [
   { pattern: /(^|\/)\.env/, reason: '环境变量文件不随扩展发布' },
   { pattern: /(^|\/)ember(-win)?\.exe$/i, reason: '扩展不含模拟器 Ember' },
   { pattern: /\.(nes|rom)$/i, reason: '扩展不含 ROM 文件' },
-  { pattern: /(^|[/_.-])bios([/_.-]|$)/i, reason: '扩展不含 BIOS 文件' }
+  // 库里的 BIOS 调用封装是汇编源码，不是 BIOS 镜像，源码放行
+  { pattern: /^(?!.*\.(?:s|inc|h|c|md|json|txt)$)(?=.*(?:^|[/_.-])bios(?:[/_.-]|$))/i, reason: '扩展不含 BIOS 文件' }
 ];
 
 /** 中央目录结束记录的签名 */

@@ -270,8 +270,7 @@ export class Sb2000Session {
         assert.ok(run.stopped === 'completed' || run.stopped === 'interrupted', `运行意外停止：${String(run.stopped)}`);
         continue;
       }
-      // DOS 外壳也在 $8000 窗口里运行，可能写到同一地址；窗口里是本程序（文件头魔数 AA 55）时才算到
-      // 达
+      // DOS 外壳也在 $8000 窗口里运行，窗口里是本程序（文件头 AA 55）时才算到达
       if (this.parts.checkHeader !== false) {
         const header = await this.read(0x8000, 5);
         if (header[3] !== 0xaa || header[4] !== 0x55) continue;
@@ -286,7 +285,8 @@ export class Sb2000Session {
   }
 
   /**
-   * 运行到步步高测试程序的停靠点：每运行若干帧读一次停靠标志（不设断点），程序在 bbt_sync 里写 2 并等待，结束时写 1。
+   * 运行到步步高测试程序的停靠点：每运行若干帧读一次停靠标志（不设断点）。
+   * 程序在 bbt_sync 里写 2 并等待，结束时写 1。
    * 停在 sync 时调用者做完截图等操作后要调用 resume() 让程序继续。
    * @param maxFrames 最多运行的帧数。
    * @returns 停在哪个停靠点。
@@ -470,7 +470,7 @@ const BBG_COMMON_SOURCES = ['bbg-test.inc', 'bbg-test.s'];
 /** 步步高测试程序记录变量的名字前缀。 */
 const BBG_TEST_PREFIX = 'bbg_test';
 
-/** 步步高固件的位置：环境变量 FCDEV_TEST_BBG_FIRMWARE，没有时用仓库里的；文件不存在时为 undefined。 */
+/** 步步高固件位置：环境变量 FCDEV_TEST_BBG_FIRMWARE，没有时用仓库里的；不存在时为 undefined。 */
 export const REAL_BBG_FIRMWARE: string | undefined = (() => {
   const firmware = process.env.FCDEV_TEST_BBG_FIRMWARE ?? REPOSITORY_BBG_FIRMWARE;
   return existsSync(firmware) ? firmware : undefined;
@@ -480,7 +480,8 @@ export const REAL_BBG_FIRMWARE: string | undefined = (() => {
 export const CAN_RUN_REAL_BBG = CAN_RUN_REAL_EMBER && REAL_BBG_FIRMWARE !== undefined && existsSync(REPOSITORY_BBG_SYSTEM_DISK);
 
 /**
- * 构建步步高测试程序，放进系统盘的副本，在 Ember 的 bbg1 里启动到 BBGDOS，输入程序名运行它。返回时测试程序已经开始运行，调用 session.runToStopPolled() 运行到停靠点。
+ * 构建步步高测试程序，放进系统盘副本，在 bbg1 里启动 BBGDOS 并运行它。
+ * 返回时测试程序已经开始运行，调用 session.runToStopPolled() 运行到停靠点。
  * @param temp 临时目录。
  * @param sources fixtures/bbg 下的测试程序文件名。
  * @returns 会话，检查结果的变量前缀是 bbg_test。

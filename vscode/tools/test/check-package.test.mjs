@@ -142,6 +142,7 @@ test('测试、源码、密钥、Ember 与 BIOS 文件不该出现在包里', ()
     entries['extension/bin/Ember.exe'] = '';
     entries['extension/roms/sb2000_bios.bin'] = '';
     entries['extension/roms/game.nes'] = '';
+    entries['extension/targets/bbg/src/lib/bios/bbg-bios-version.s'] = '';
   });
   for (const name of ['test/a.test.ts', 'src/a.ts', 'keys/signing.pem', 'bin/Ember.exe', 'roms/sb2000_bios.bin', 'roms/game.nes']) {
     assert.ok(
@@ -149,6 +150,7 @@ test('测试、源码、密钥、Ember 与 BIOS 文件不该出现在包里', ()
       name
     );
   }
+  assert.ok(!errors.some((error) => error.includes('bbg-bios-version.s')));
 });
 
 test('缺少使用文档、运行库、模板与入口文件时报出对应的问题', () => {

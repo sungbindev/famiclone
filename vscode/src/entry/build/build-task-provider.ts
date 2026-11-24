@@ -34,7 +34,7 @@ const COMMAND_LABELS: Readonly<Record<TaskCommand, string>> = { build: '构建',
 export interface BuildTaskProviderDependencies extends BuildTaskDependencies {
   /** 文件系统，用来判断项目有没有 src 目录。 */
   readonly fileSystem: FileSystem;
-  /** 查找工作区里的 fcdev 项目。 */
+  /** 查找工作区里的 FC Dev 项目。 */
   readonly locator: FcdevProjectLocator;
   /** 日志。 */
   readonly logger: Logger;
@@ -80,7 +80,7 @@ class BuildTaskTerminal implements vscode.Pseudoterminal {
       this.closeEmitter.fire(await runBuildTask(this.definition, this.folder, this.dependencies, write));
     } catch (error) {
       this.dependencies.logger.error('fcdev 任务出错', error);
-      write(`错误：任务出错（${error instanceof Error ? error.message : String(error)}），详见“fcdev”输出通道\n`);
+      write(`错误：任务出错（${error instanceof Error ? error.message : String(error)}），详见“FC Dev”输出通道\n`);
       this.closeEmitter.fire(1);
     }
   }
@@ -91,7 +91,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
   /** @param dependencies 运行任务要用到的能力。 */
   constructor(private readonly dependencies: BuildTaskProviderDependencies) {}
 
-  /** 为工作区里的每个 fcdev 项目提供任务。 */
+  /** 为工作区里的每个 FC Dev 项目提供任务。 */
   async provideTasks(): Promise<vscode.Task[]> {
     const roots = await this.dependencies.locator.findProjectRoots();
     const tasks: vscode.Task[] = [];

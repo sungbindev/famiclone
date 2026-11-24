@@ -27,7 +27,7 @@ describe('parseConfigurationNames', () => {
     expect(parseConfigurationNames('null')).toEqual([]);
   });
 
-  it('FC Dev 配置名与命令行写入的一致', () => {
+  it('fcdev 配置名与命令行写入的一致', () => {
     expect(FCDEV_CONFIGURATION_NAME).toBe('fcdev');
   });
 });

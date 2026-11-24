@@ -20,7 +20,7 @@ export interface ConnectOptions {
   readonly url: string;
   /** 令牌（首选项的“调试服务”分组里，或端点文件里）。 */
   readonly token: string;
-  /** 客户端名称，显示在调试服务的连接列表里（1 到 64 个字符），默认 FC Dev。 */
+  /** 客户端名称，显示在调试服务的连接列表里（1 到 64 个字符），默认 fcdev。 */
   readonly clientName?: string;
   /** 请求默认的超时毫秒数，默认 60000；0 表示一直等。 */
   readonly requestTimeoutMs?: number;

@@ -123,7 +123,7 @@ export async function buildCc65(options = {}) {
   const sourceDir = path.join(REPO_ROOT, 'vscode', 'third_party', 'cc65');
   const packageDir = path.join(REPO_ROOT, 'vscode', 'toolchain');
   const jobs = String(Math.max(1, cpus().length));
-  // 不指定时 Makefile 会用 git 取当前目录所在仓库（即 fcdev）的提交号，版本输出会指向错误的提交
+  // 不指定时 Makefile 会用 git 取当前目录所在仓库（即 FC Dev）的提交号，版本输出会指向错误的提交
   const buildId = `BUILD_ID=Git ${CC65_COMMIT.slice(0, 7)}`;
 
   rmSync(workDir, { recursive: true, force: true });

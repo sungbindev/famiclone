@@ -72,7 +72,7 @@ export function registerCIntelliSense(
   const timers = new Map<string, NodeJS.Timeout>();
   const prompted = new Set<string>();
 
-  /** 同步成功的项目里还有其他配置时，提示去选 FC Dev 配置；每个项目每次会话只提示一次。 */
+  /** 同步成功的项目里还有其他配置时，提示去选 fcdev 配置；每个项目每次会话只提示一次。 */
   const promptSelection = async (results: readonly SyncResult[]): Promise<void> => {
     if (!isPromptEnabled() || vscode.extensions.getExtension(CPPTOOLS_EXTENSION_ID) === undefined) return;
     const roots: string[] = [];
@@ -86,7 +86,7 @@ export function registerCIntelliSense(
     if (roots.length === 0) return;
     const names = roots.map((root) => path.basename(root)).join('、');
     const choice = await vscode.window.showInformationMessage(
-      `${names} 的 C/C++ 配置里除 FC Dev 外还有其他配置。C/C++ 扩展用哪个配置由你选择，选 FC Dev 才会使用 cc65 的头文件。`,
+      `${names} 的 C/C++ 配置里除 fcdev 外还有其他配置。C/C++ 扩展用哪个配置由你选择，选 fcdev 才会使用 cc65 的头文件。`,
       SELECT_BUTTON
     );
     if (choice === SELECT_BUTTON) await vscode.commands.executeCommand(SELECT_CONFIGURATION_COMMAND);

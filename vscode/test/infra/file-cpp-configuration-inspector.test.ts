@@ -34,7 +34,7 @@ describe('hasOtherConfigurations', () => {
     expect(await new FileCppConfigurationInspector().hasOtherConfigurations(root)).toBe(false);
   });
 
-  it('只有 FC Dev 配置：没有其他配置', async () => {
+  it('只有 fcdev 配置：没有其他配置', async () => {
     await writeProperties(JSON.stringify({ configurations: [{ name: 'fcdev' }] }));
     expect(await new FileCppConfigurationInspector().hasOtherConfigurations(root)).toBe(false);
   });

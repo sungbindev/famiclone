@@ -1,14 +1,14 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：import-fcdev-docs.d.mts
- * 说明：fcdev 手册导入脚本的类型声明，供测试引用。
+ * 说明：FC Dev 手册导入脚本的类型声明，供测试引用。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
  * ------------------------------------------------------------------------
  */
 
-/** fcdev 扩展的使用文档主题登记项（与 vscode/docs/topics.json 一致）。 */
+/** FC Dev 扩展的使用文档主题登记项（与 vscode/docs/topics.json 一致）。 */
 export interface FcdevDocTopic {
   readonly topic: string;
   readonly file: string;
@@ -23,12 +23,12 @@ export interface SidebarGroup {
   readonly items: { readonly text: string; readonly link: string }[];
 }
 
-/** fcdev 扩展的使用文档主题登记表。 */
+/** FC Dev 扩展的使用文档主题登记表。 */
 export const DOC_TOPICS: readonly FcdevDocTopic[];
 
 /** 仓库根目录。 */
 export const REPO_ROOT: string;
-/** fcdev 扩展目录。 */
+/** FC Dev 扩展目录。 */
 export const EXTENSION_ROOT: string;
 /** 导入的目标目录（ember/help/fcdev）。 */
 export const HELP_FCDEV_DIRECTORY: string;

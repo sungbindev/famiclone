@@ -25,7 +25,7 @@ const DESCRIPTION: ProjectDescription = {
 };
 
 describe('合并 c_cpp_properties.json', () => {
-  it('没有文件时新建，只含 FC Dev 配置', () => {
+  it('没有文件时新建，只含 fcdev 配置', () => {
     const document = JSON.parse(mergeCppProperties(undefined, 'f', DESCRIPTION)) as { version: number; configurations: Array<Record<string, unknown>> };
     expect(document.version).toBe(4);
     expect(document.configurations).toEqual([
@@ -33,14 +33,14 @@ describe('合并 c_cpp_properties.json', () => {
     ]);
   });
 
-  it('已有 FC Dev 配置时替换，其他配置保留', () => {
+  it('已有 fcdev 配置时替换，其他配置保留', () => {
     const existing = JSON.stringify({ version: 4, configurations: [{ name: 'Win32' }, { name: 'fcdev', includePath: ['旧'] }] });
     const document = JSON.parse(mergeCppProperties(existing, 'f', DESCRIPTION)) as { configurations: Array<{ name: string; includePath?: string[] }> };
     expect(document.configurations.map((item) => item.name)).toEqual(['Win32', 'fcdev']);
     expect(document.configurations[1]?.includePath).toEqual(['a/include', 'tc/include']);
   });
 
-  it('没有 FC Dev 配置时追加', () => {
+  it('没有 fcdev 配置时追加', () => {
     const document = JSON.parse(mergeCppProperties(JSON.stringify({ configurations: [{ name: 'Win32' }] }), 'f', DESCRIPTION)) as { configurations: unknown[] };
     expect(document.configurations).toHaveLength(2);
   });

@@ -175,7 +175,7 @@ describe('提示选择 C/C++ 配置', () => {
     window.showInformationMessage.mockResolvedValueOnce('选择配置');
     setup([OK], [OTHER_ROOT]);
     await settle();
-    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('game 的 C/C++ 配置里除 FC Dev 外还有其他配置'), '选择配置');
+    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('game 的 C/C++ 配置里除 fcdev 外还有其他配置'), '选择配置');
     expect(commands.executeCommand).toHaveBeenCalledWith(SELECT_COMMAND);
   });
 
@@ -194,7 +194,7 @@ describe('提示选择 C/C++ 配置', () => {
     await runCommand();
     await settle();
     expect(window.showInformationMessage).toHaveBeenCalledTimes(2);
-    const prompts = window.showInformationMessage.mock.calls.filter(([message]) => message.includes('除 FC Dev 外'));
+    const prompts = window.showInformationMessage.mock.calls.filter(([message]) => message.includes('除 fcdev 外'));
     expect(prompts).toHaveLength(1);
   });
 
@@ -240,7 +240,7 @@ describe('提示选择 C/C++ 配置', () => {
     mockState.settings['fcdev.intelliSense.autoSync'] = false;
     await runCommand();
     await settle();
-    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('除 FC Dev 外还有其他配置'), '选择配置');
+    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('除 fcdev 外还有其他配置'), '选择配置');
   });
 
   it('检查配置文件出错只记日志，不影响同步结果', async () => {

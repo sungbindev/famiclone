@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：build-help.mjs
- * 说明：构建 Ember 的帮助文档站点：先由 VS Code 扩展里的生成脚本把 OpenRPC 接口文档生成成 help/api 下的各模块页，再把 fcdev 扩展的使用文档导入 help/fcdev，最后用 VitePress 把 help/ 构建成静态站点，输出到 build/ember/help。
+ * 说明：构建 Ember 的帮助文档站点：先由 VS Code 扩展里的生成脚本把 OpenRPC 接口文档生成成 help/api 下的各模块页，再把 FC Dev 扩展的使用文档导入 help/fcdev，最后用 VitePress 把 help/ 构建成静态站点，输出到 build/ember/help。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
@@ -24,7 +24,7 @@ const repoRoot = join(root, '..');
 const extension = join(root, '..', 'vscode');
 const helpRoot = join(root, 'help');
 
-/** 先重新生成的 fcdev 扩展文档：C 接口参考、符号参考与示例程序源码。 */
+/** 先重新生成的 FC Dev 扩展文档：C 接口参考、符号参考与示例程序源码。 */
 const FCDEV_GENERATORS = ['gen-sb2000-api-doc.mjs', 'gen-sb2000-symbols-doc.mjs', 'gen-sb2000-examples-doc.mjs'];
 
 /** 用户可见的文字。 */
@@ -32,7 +32,7 @@ const TEXT = {
   noExtension: `找不到 VS Code 扩展：${extension}`,
   noOpenRpc: '扩展里没有 debug/openrpc.json：先运行 npm run schema',
   noBuild: '找不到扩展的编译产物：先在 vscode 目录运行 npm run build',
-  noGenerator: (script) => `找不到 fcdev 文档的生成脚本：${join(extension, 'tools', 'gen', script)}`
+  noGenerator: (script) => `找不到 FC Dev 文档的生成脚本：${join(extension, 'tools', 'gen', script)}`
 };
 
 try {
@@ -43,7 +43,7 @@ try {
   // 调试接口的各模块页：由接口定义生成，写到 help/api（不提交）。
   execFileSync(process.execPath, [join(extension, 'tools', 'gen', 'gen-debug-api-docs.mjs'), join(helpRoot, 'api')], { cwd: extension, stdio: 'inherit' });
 
-  // fcdev 扩展的手册：参考文档先重新生成，再连同手册一起导入 help/fcdev（不提交）。
+  // FC Dev 扩展的手册：参考文档先重新生成，再连同手册一起导入 help/fcdev（不提交）。
   for (const script of FCDEV_GENERATORS) {
     if (!existsSync(join(extension, 'tools', 'gen', script))) throw new Error(TEXT.noGenerator(script));
     execFileSync(process.execPath, [join(extension, 'tools', 'gen', script)], { cwd: repoRoot, stdio: 'inherit' });

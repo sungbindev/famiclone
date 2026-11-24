@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：import-fcdev-docs.mjs
- * 说明：把 fcdev 扩展的使用文档（含 SB2000 的 C 接口参考与符号参考）导入 Ember 帮助站点的 help/fcdev：按扩展的主题登记表（vscode/docs/topics.json）生成各页，改写文档之间的链接，并生成概述页。
+ * 说明：把 FC Dev 扩展的使用文档（含 SB2000 的 C 接口参考与符号参考）导入 Ember 帮助站点的 help/fcdev：按扩展的主题登记表（vscode/docs/topics.json）生成各页，改写文档之间的链接，并生成概述页。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
- * 备注：文档只在 vscode（fcdev 扩展）里维护，help/fcdev 不提交（ember/.gitignore），每次 npm run help:build 都会重新导入，并删除不再登记的页面。
+ * 备注：文档只在 vscode（FC Dev 扩展）里维护，help/fcdev 不提交（ember/.gitignore），每次 npm run help:build 都会重新导入，并删除不再登记的页面。
  *       指向文档目录之外的链接（头文件、链接配置、目录）在帮助里打不开，改成普通文字；正文里的尖括号与双花括号要转义，否则 VitePress 会当成 Vue 模板编译；
  *       文档里单独成节的“## 目录”（长文档为单独阅读写的）去掉，帮助页右边有自动生成的页内大纲；
  *       站点的侧边栏分组与导入用同一份分组规则（sidebarGroups），保证两边一致。
@@ -19,19 +19,19 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 /** 仓库根目录。 */
 export const REPO_ROOT = resolve(here, '..', '..', '..');
-/** fcdev 扩展目录。 */
+/** FC Dev 扩展目录。 */
 export const EXTENSION_ROOT = join(REPO_ROOT, 'vscode');
-/** fcdev 扩展的使用文档主题登记表（扩展与帮助站点读同一份）。 */
+/** FC Dev 扩展的使用文档主题登记表（扩展与帮助站点读同一份）。 */
 export const DOC_TOPICS = JSON.parse(readFileSync(join(EXTENSION_ROOT, 'docs', 'topics.json'), 'utf8')).topics;
 /** 导入的目标目录（ember/help/fcdev）。 */
 export const HELP_FCDEV_DIRECTORY = resolve(here, '..', '..', 'help', 'fcdev');
 
 /** 用户可见的文字。 */
 const TEXT = {
-  title: 'fcdev 开发手册',
+  title: 'FC Dev 开发手册',
   overview: '概述',
-  intro: 'fcdev 是 6502 兼容机（NES、小霸王学习机等）的 VS Code 扩展：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可以在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。这个扩展是 fcdev 唯一的开发环境，使用前先按“安装与入门”安装。命令“FCDEV：运行”“FCDEV：调试运行”与调试命令就是经 Ember 的调试服务运行与调试程序的，所以手册放在这里，直接就能查。',
-  source: '手册随 fcdev 扩展一起发布，这里是同一份内容；在 VS Code 里用命令“FCDEV：打开使用文档”也能查到。',
+  intro: 'FC Dev 是 6502 兼容机（NES、小霸王学习机等）的 VS Code 扩展：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可以在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。这个扩展是 FC Dev 唯一的开发环境，使用前先按“安装与入门”安装。命令“FCDEV：运行”“FCDEV：调试运行”与调试命令就是经 Ember 的调试服务运行与调试程序的，所以手册放在这里，直接就能查。',
+  source: '手册随 FC Dev 扩展一起发布，这里是同一份内容；在 VS Code 里用命令“FCDEV：打开使用文档”也能查到。',
   columns: ['手册', '内容'],
   common: '通用',
   nes: 'NES',
@@ -39,7 +39,7 @@ const TEXT = {
   sb97: 'SB97（小霸王 97）',
   yuxing: '裕兴（学习机）',
   bbg: '步步高（学生电脑）',
-  missing: (file) => `找不到 fcdev 的文档：${file}`,
+  missing: (file) => `找不到 FC Dev 的文档：${file}`,
   marker: (file) => `<!-- 本文件由 npm run help:build 从 vscode/${file} 导入，不要手改 -->`
 };
 
@@ -93,7 +93,7 @@ export function sidebarGroups(topics = DOC_TOPICS) {
 /**
  * 主题的源文件绝对路径。
  * @param {{file: string, root?: 'extension'}} topic 主题登记项；root 为 extension 时文件相对扩展目录，否则相对 docs 目录
- * @param {string} [extensionRoot] fcdev 扩展目录
+ * @param {string} [extensionRoot] FC Dev 扩展目录
  * @returns {string} 绝对路径
  */
 export function topicSourceFile(topic, extensionRoot = EXTENSION_ROOT) {
@@ -180,14 +180,14 @@ export function renderOverview(topics) {
     for (const topic of group.topics) lines.push(`| [${topic.title}](${topic.topic}.md) | ${topic.summary.replace(/\|/g, '\\|')} |`);
     lines.push('');
   }
-  return `<!-- 本文件由 npm run help:build 根据 fcdev 扩展的主题登记表生成，不要手改 -->\n\n${lines.map(escapeMarkup).join('\n')}`;
+  return `<!-- 本文件由 npm run help:build 根据 FC Dev 扩展的主题登记表生成，不要手改 -->\n\n${lines.map(escapeMarkup).join('\n')}`;
 }
 
 /**
  * 导入全部文档到目标目录：只写有变化的页面，删除不再登记的页面。
  * @param {object} [options] 选项
  * @param {readonly {topic: string, title: string, summary: string, file: string, root?: 'extension'}[]} [options.topics] 主题登记项
- * @param {string} [options.extensionRoot] fcdev 扩展目录
+ * @param {string} [options.extensionRoot] FC Dev 扩展目录
  * @param {string} [options.outputDirectory] 目标目录
  * @returns {{pages: number, written: number}} 页数与实际写入的页数
  */

@@ -2,7 +2,7 @@
 
 Ember 是面向 NES 与小霸王、步步高等学习机应用开发者的模拟器。它不只运行 `.nes`、ROM 和软盘程序，还提供运行控制、内存与状态检查、断点、单步、跟踪、截图和自动化调试接口，并与 `fcdev` 工具链配套使用。
 
-项目代码、开发工具、学习机程序和文档都在 [GitHub 仓库](https://github.com/sungbindev/famiclone)。完整开发资料见 [fcdev 开发手册](../fcdev/index.md)、[调试接口手册](../debug/index.md) 和 [插件开发手册](../plugin/index.md)。
+项目代码、开发工具、学习机程序和文档都在 [GitHub 仓库](https://github.com/sungbindev/famiclone)。完整开发资料见 [FC Dev 开发手册](../fcdev/index.md)、[调试接口手册](../debug/index.md) 和 [插件开发手册](../plugin/index.md)。
 
 ## 能运行什么
 
@@ -22,7 +22,7 @@ Ember 是面向 NES 与小霸王、步步高等学习机应用开发者的模拟
 - 键盘、手柄与鼠标怎么用：[键盘、手柄与鼠标](input.md)
 - 遇到问题：[常见问题](faq.md)
 - 想自己写 mapper 插件：[插件开发手册](../plugin/index.md)
-- 想用 FC Dev 为 NES 或学习机开发程序：[fcdev 开发手册](../fcdev/index.md)
+- 想用 FC Dev 为 NES 或学习机开发程序：[FC Dev 开发手册](../fcdev/index.md)
 
 ## 调试功能
 

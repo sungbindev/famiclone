@@ -38,7 +38,7 @@ export interface BuildCommandDependencies {
   readonly tasks: BuildTaskProvider;
   /** 文件系统。 */
   readonly fileSystem: FileSystem;
-  /** 查找工作区里的 fcdev 项目。 */
+  /** 查找工作区里的 FC Dev 项目。 */
   readonly locator: FcdevProjectLocator;
   /** 项目描述器。 */
   readonly describer: ProjectDescriber;
@@ -67,7 +67,7 @@ function activeFile(): string | undefined {
  */
 async function pickProject(roots: readonly string[]): Promise<string | undefined> {
   if (roots.length === 0) {
-    void vscode.window.showInformationMessage('工作区里没有 fcdev 项目（找不到 fcdev.json）');
+    void vscode.window.showInformationMessage('工作区里没有 FC Dev 项目（找不到 fcdev.json）');
     return undefined;
   }
   const file = activeFile();
@@ -76,7 +76,7 @@ async function pickProject(roots: readonly string[]): Promise<string | undefined
   if (roots.length === 1) return roots[0];
   const picked = await vscode.window.showQuickPick(
     roots.map((root) => ({ label: path.basename(root), description: root, root })),
-    { placeHolder: '选择 fcdev 项目' }
+    { placeHolder: '选择 FC Dev 项目' }
   );
   return picked?.root;
 }
@@ -88,7 +88,7 @@ async function pickProject(roots: readonly string[]): Promise<string | undefined
  */
 export function registerBuildCommands(context: vscode.ExtensionContext, dependencies: BuildCommandDependencies): void {
   const { tasks, fileSystem, locator, describer, settings, logger } = dependencies;
-  const output = vscode.window.createOutputChannel('fcdev 项目信息');
+  const output = vscode.window.createOutputChannel('FC Dev 项目信息');
 
   /** 在工作区文件夹里运行一个构建路径的任务。 */
   const runTask = async (command: 'build' | 'run', absolutePath: string, debug = false): Promise<void> => {

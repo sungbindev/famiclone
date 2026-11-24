@@ -4,7 +4,7 @@
 
 ## 使用
 
-- 构建：“fcdev：构建”任务，生成 `build/sb2000/HWTEST.EXE` 与含该程序的软盘镜像 `build/sb2000/HWTEST.img`。
+- 构建：“fcdev：构建”任务，生成 `build/sb2000/HWTEST.EXE` 与软盘镜像 `build/sb2000/HWTEST.img`（`fcdev.json` 的 `diskName`，Ember 的测试用它）。
 - 运行：“fcdev：运行”任务，在 `fcdev.emulator.path` 指定的 Ember 里启动。
 
 把 `build/sb2000/HWTEST.EXE` 复制到 SB-DOS 的软盘，在 `A:\>` 下输入 `hwtest`：

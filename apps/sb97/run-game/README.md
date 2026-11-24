@@ -1,4 +1,4 @@
-# game（小霸王 97）
+# run-game（小霸王 97）
 
 在小霸王 97 学习机（SB97）的 DOS 下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 sb97 目标项目，不依赖 C 运行库。
 
@@ -34,10 +34,10 @@ GAME MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/sb97/game`（或任务“fcdev：构建”）：
+在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/sb97/run-game`（或任务“fcdev：构建”）：
 
 - 产物是 `build/sb97/GAME.EXE`（32768 字节）。
-- 同时生成软盘镜像 `build/sb97/GAME.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
+- `fcdev.json` 的 `diskName` 设为 `sb97-run-game.img`，同时生成软盘镜像 `build/sb97/sb97-run-game.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
 - 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库。
 
 `build/` 不入库。
@@ -61,5 +61,5 @@ GAME MARIO.NES
 | 文件 | 说明 |
 | --- | --- |
 | `src/nes.s` | 程序：入口 `_main`、装载程序、软驱与 FAT12 读取、iNES 头检查、启动游戏 |
-| `fcdev.json` | fcdev 配置：目标 sb97，程序名 game，运行用的固件 |
+| `fcdev.json` | fcdev 配置：目标 sb97，程序名 game，镜像文件名，运行用的固件 |
 | `disk/` | 构建时全部放进软盘镜像的文件，目前是使用说明 `README.TXT` |

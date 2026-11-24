@@ -13,4 +13,4 @@
 - 出错时画面第 10 行显示英文提示并停住，需要重新开机。
 
 作者：sungbin
-GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/sb97/game
+GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/sb97/run-game

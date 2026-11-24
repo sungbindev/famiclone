@@ -1,6 +1,7 @@
 {
   "target": "yuxing",
   "name": "game",
+  "diskName": "yuxing-run-game.img",
   "linkConfig": "link.cfg",
   "firmware": "../../../ember/roms/yuxing_v8.2-d.bin"
 }

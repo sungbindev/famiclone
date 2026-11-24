@@ -55,8 +55,8 @@ describe.skipIf(!HAS_TOOLCHAIN)('步步高目标（需要 cc65）', { timeout: T
     expect(image.length).toBeLessThanOrEqual(16386);
   });
 
-  it('没有 diskImage 时只构建程序，不生成镜像', async () => {
-    writeConfig();
+  it('有 diskName 但没有 diskImage 时只构建程序，不生成镜像', async () => {
+    writeConfig({ diskName: 'bbg-hello.img' });
     const outcome = await service.build({ pathArg: 'src', cwd: temp.dir });
     expect(outcome.disk).toBeUndefined();
     expect(() => service.buildDisk(outcome)).toThrow(expect.objectContaining({ code: 'DISK_BASE_MISSING', hint: expect.stringContaining('diskImage') }));
@@ -67,9 +67,9 @@ describe.skipIf(!HAS_TOOLCHAIN)('步步高目标（需要 cc65）', { timeout: T
     const base = buildFat12Image([{ name: 'BBGDOS.SYS', data: system }], { label: 'BBGSYS' });
     writeTestFile(temp.dir, 'system.img', base);
     writeTestFile(temp.dir, 'disk/DATA.BIN', Uint8Array.from([1, 2, 3]));
-    writeConfig({ diskImage: 'system.img' });
+    writeConfig({ diskImage: 'system.img', diskName: 'bbg-hello.img' });
     const { disk, result } = await service.build({ pathArg: 'src', cwd: temp.dir });
-    expect(disk).toMatchObject({ imageFile: path.join(temp.dir, 'build', 'bbg', 'HELLO.img'), files: ['HELLO.CMD', 'DATA.BIN'] });
+    expect(disk).toMatchObject({ imageFile: path.join(temp.dir, 'build', 'bbg', 'bbg-hello.img'), files: ['HELLO.CMD', 'DATA.BIN'] });
     const image = readFileSync(disk!.imageFile);
     const entries = listFat12(image);
     expect(entries.map((entry) => entry.name)).toEqual(['BBGDOS.SYS', 'HELLO.CMD', 'DATA.BIN']);
@@ -79,7 +79,7 @@ describe.skipIf(!HAS_TOOLCHAIN)('步步高目标（需要 cc65）', { timeout: T
   });
 
   it('diskImage 指向的文件不存在时报错', async () => {
-    writeConfig({ diskImage: 'missing.img' });
+    writeConfig({ diskImage: 'missing.img', diskName: 'bbg-hello.img' });
     await expect(service.build({ pathArg: 'src', cwd: temp.dir })).rejects.toMatchObject({ code: 'DISK_BASE_MISSING' });
   });
 

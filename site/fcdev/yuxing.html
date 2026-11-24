@@ -107,15 +107,15 @@
 <li><code>A</code> 放字符串地址的低字节、<code>Y</code> 放高字节，<code>JSR BIOS_PRINT</code>：显示字符串。</li>
 </ol>
 <p>字符串的格式：<code>STR_LOCATE</code>（<code>$15</code>）后跟列、行两个字节，之后的字符显示在这个位置；以 <code>STR_END</code>（<code>$9F</code>）结束。文字可以是 ASCII，也可以是 GB2312 的汉字码。一个字符串里可以多次定位。</p>
-<p>背景色：BIOS 的 NMI 每帧把 <code>$06B7</code> 起的 9 个字节复制到调色板 <code>$3F00</code>、<code>$3F03</code>、<code>$3F07</code>……（第 0 个字节是背景色），直接写 <code>$3F00</code> 会被覆盖，要改背景色写 <code>$06B7</code>。这 9 个字节与 <code>FATBUF</code> 重叠（<code>apps/yuxing/game</code> 的菜单时 FAT 缓冲未用）。</p>
+<p>背景色：BIOS 的 NMI 每帧把 <code>$06B7</code> 起的 9 个字节复制到调色板 <code>$3F00</code>、<code>$3F03</code>、<code>$3F07</code>……（第 0 个字节是背景色），直接写 <code>$3F00</code> 会被覆盖，要改背景色写 <code>$06B7</code>。这 9 个字节与 <code>FATBUF</code> 重叠（<code>apps/yuxing/run-game</code> 的菜单时 FAT 缓冲未用）。</p>
 <h2 id="5-硬件寄存器">5. 硬件寄存器</h2>
 <p><code>yuxing.inc</code> 目前只有第 4 节的入口与控制码。整机寄存器的说明见 Ember 文档 <code>ember/docs/02-硬件模块.md</code> 第 6.12 节。</p>
 <h2 id="6-构建与运行">6. 构建与运行</h2>
 <ul>
-<li>构建：任务“fcdev：构建”，产物 <code>build/yuxing/&lt;NAME&gt;.EXE</code> 与 <code>build/yuxing/&lt;NAME&gt;.img</code>。</li>
+<li>构建：任务“fcdev：构建”，产物 <code>build/yuxing/&lt;NAME&gt;.EXE</code>；<code>fcdev.json</code> 配置了 <code>diskName</code> 时，同时生成 <code>build/yuxing/</code> 下这个名字的磁盘镜像。</li>
 <li>运行：任务“fcdev：运行”，需要在设置 <code>fcdev.emulator.path</code> 里指定 Ember，在 <code>fcdev.json</code> 里用 <code>firmware</code> 指定裕兴学习卡的 ROM。扩展依次添加 ROM、开机、放入镜像，开机运行 300 帧后按空格，等 120 帧进主菜单，按下键 3 次选中“学DOS”，回车，等 300 帧让动画播完，按空格，等 120 帧后按下键 2 次选中“三.DOS系统操作”，回车，再等 120 帧出现提示符，输入程序名加 <code>.EXE</code> 并回车。按键都是按下 8 帧、松开 8 帧。程序名只能用字母与数字。</li>
 <li>手动进入 DOS（真机或模拟器）：开机画面按任意键，进主菜单，选“学DOS”，等动画后按空格，选“三.DOS系统操作”进入命令行；<code>dir</code> 列目录要等几秒。V9.0-98 的主菜单用方向键移动选择，开机约 600 帧后按一次右键选中第一项，再按下键两次选中“学DOS”，之后同上；运行任务的自动步骤不适用于它。</li>
-<li>样例：<code>apps/yuxing/game</code> 是在裕兴的 DOS 下选择并运行 NES 游戏的程序（<code>GAME.EXE</code>，列出软盘根目录里的 <code>.NES</code> 文件，手柄选择后用 Start 运行），读软驱、解析 iNES 头、切换程序 RAM 页与 MMC3 模式，是本目标最完整的例子；在 V8.2-D 上验证了 mapper 0，mapper 4 显示 <code>Mapper not supported</code>；在 V9.0-98 上验证了 mapper 0 与 mapper 4。</li>
+<li>样例：<code>apps/yuxing/run-game</code> 是在裕兴的 DOS 下选择并运行 NES 游戏的程序（<code>GAME.EXE</code>，列出软盘根目录里的 <code>.NES</code> 文件，手柄选择后用 Start 运行），读软驱、解析 iNES 头、切换程序 RAM 页与 MMC3 模式，是本目标最完整的例子；在 V8.2-D 上验证了 mapper 0，mapper 4 显示 <code>Mapper not supported</code>；在 V9.0-98 上验证了 mapper 0 与 mapper 4。</li>
 </ul>
 <h2 id="7-还没有验证的内容">7. 还没有验证的内容</h2>
 <ul>

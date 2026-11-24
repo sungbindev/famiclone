@@ -13,7 +13,7 @@
 | 打包器 | `flat-exe`：文件头必须匹配 `4C????AA55`，普通程序不超过 16384 字节 |
 | 产物 | 大写主名的 `.EXE`，如 `build/sb2000/HELLO.EXE` |
 | 程序名 | 符合 DOS 8.3，不与 DOS 内部命令重名 |
-| 磁盘镜像 | 构建时默认同时生成 1.44MB FAT12 镜像，里面是这个程序与项目 `disk` 目录下的全部文件；`fcdev.json` 的 `disk` 为 `false` 时不生成 |
+| 磁盘镜像 | `fcdev.json` 配置了 `diskName` 时，构建同时生成 1.44MB FAT12 镜像，里面是这个程序与项目 `disk` 目录下的全部文件；没有配置时不生成 |
 | 运行 | 需要固件，`fcdev.json` 的 `firmware` 指向 BIOS 文件 |
 
 ## 程序格式

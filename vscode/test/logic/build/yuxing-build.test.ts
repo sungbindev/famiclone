@@ -48,10 +48,12 @@ describe.skipIf(!HAS_TOOLCHAIN)('裕兴目标（需要 cc65）', { timeout: TIME
     expect(image.length).toBeLessThanOrEqual(8192);
   });
 
-  it('默认同时生成磁盘镜像，里面有程序与项目 disk 目录下的文件', async () => {
+  it('配置了 diskName 时生成磁盘镜像，里面有程序与项目 disk 目录下的文件', async () => {
+    writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'yuxing', name: 'hello', diskName: 'yuxing-hello.img' }));
     writeTestFile(temp.dir, 'src/hello.s', templateSource());
     writeTestFile(temp.dir, 'disk/README.TXT', '说明');
     const { disk } = await service.build({ pathArg: 'src', cwd: temp.dir });
+    expect(path.basename(disk!.imageFile)).toBe('yuxing-hello.img');
     expect(listFat12(readFileSync(disk!.imageFile)).map((entry) => entry.name)).toEqual(['HELLO.EXE', 'README.TXT']);
   });
 

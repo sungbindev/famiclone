@@ -32,7 +32,7 @@
 - BIOS 有参考源码：`Bios.asm` 的例程名与注释可提示用途，但不作为依据，BIOS 调用的约定从发布版 ROM 的反汇编得到。
 - 有实际调用样本：对 `COMMAND.CMD` 的静态扫描（统计 `JSR` 与 `JMP` 到 `$58xx` 入口的指令，功能号取前 12 字节内最近的 `LDA #立即数`，是粗略值）找到 31 处 DOS 调用（12 个不同的功能号：0、1、2、3、4、6、7、8、9、11、12、16）、9 处文件调用、25 处 BIOS 调用；`BBGDOS.SYS` 有 63 处 BIOS 调用，用到 29 个不同的功能号。
 - Ember 支持 `bbg1` 机型，能载入 BIOS 与软盘镜像开机到 `A:\>`，可以读内存、设断点、记录运行数据。
-- 工程实现手段齐备：`vscode/targets/bbg` 已有 `.CMD` 的打包（头 `0080`）、`crt0.s` 与 `asminc/bbg.inc`，`COMMAND.CMD` 可以直接用它回读校验；`apps/bbg/game` 已验证过文件调用与 BIOS 调用的实际用法。
+- 工程实现手段齐备：`vscode/targets/bbg` 已有 `.CMD` 的打包（头 `0080`）、`crt0.s` 与 `asminc/bbg.inc`，`COMMAND.CMD` 可以直接用它回读校验；`apps/bbg/run-game` 已验证过文件调用与 BIOS 调用的实际用法。
 
 **风险与处理**
 
@@ -43,7 +43,7 @@
 | 运行记录对 `bbg1` 是否可用未验证 | 技能文档只说明了 NES 与 SB2000 的记录闭环 | 阶段 0 实测 `cdl`、`instruction`、`callLog` 三种记录对 RAM 中的代码是否生效；不可用时用断点与内存读取代替，在报告中写明 |
 | 分发表在 RAM 中 | DOS 调用 `$580C`、文件调用 `$5803` 的分发表可能是初始化时才写入的 | 静态追踪找不到的目标用 `callLog` 或断点补全，剩余项在注释中写明原因 |
 | BIOS 接口只能来自发布版 ROM | 原厂 `Bios.asm` 与 ROM 不是同一次构建，功能号集合与寄存器约定可能不同 | 阶段 1 反汇编 `bbg1_bios.bin` 的固定页，接口以它为准；`bbg98_bios.bin` 提取分发表，每个功能号标注存在于哪个版本 |
-| 手册与实现不一致 | 手册编号有错位（如 `DosGetSetInitScrn`），OCR 文本有错字；`apps/bbg/game` 的目录枚举（`FileFirst`、`FileNext`）参数约定至今没有查清 | 以反汇编结果与模拟器实测为准，差异记入“手册差异表”；目录枚举作为文件调用阶段的第一个验证用例 |
+| 手册与实现不一致 | 手册编号有错位（如 `DosGetSetInitScrn`），OCR 文本有错字；`apps/bbg/run-game` 的目录枚举（`FileFirst`、`FileNext`）参数约定至今没有查清 | 以反汇编结果与模拟器实测为准，差异记入“手册差异表”；目录枚举作为文件调用阶段的第一个验证用例 |
 
 ## 工程布局
 
@@ -102,7 +102,7 @@ machines/bbg/
 | 4 `BBGDOS.SYS` | 核心工作。按子系统分批：初始化与入口表安装、DOS 调用分发、文件调用分发、文件系统（FAT12、目录、通道）、内存页管理、程序装载（CMD 与 EXC）、显示与键盘、严重错误处理、对 BIOS 的扩展功能 | 八步标准达标；用 ca65 与 ld65 按 `$7C00` 构建，与 `BBGDOS.SYS` 逐字节一致 |
 | 5 API 提取与文档 | 由分发表导出全部 DOS、文件、外设调用与扩展 BIOS 功能的子功能；整理出错码、文件通道结构、EXC 与 CMD 文件头、程序运行时的低端内存约定；每个功能写入口、出口、进位与出错码、副作用、内核实现位置、手册章节、验证状态；解决目录枚举的参数约定 | `bios-calls.inc` 与 `dos-calls.inc` 补齐；接口文档覆盖分发表 100%；手册差异表完成；目录枚举（`FileFirst`、`FileNext`）在模拟器里实测通过 |
 | 6 汇编开发库 | 在符号文件之上写汇编库：一个函数一个文件，参数传递与出错返回统一；扩展 `vscode/targets/bbg` 的 `lib-build.json`、`asminc`；`asminc/bbg.inc` 由符号文件整理而来，只保留面向开发者的符号 | 库覆盖全部可封装的功能号；未封装的功能号在 `api-unwrapped.json` 里写明原因 |
-| 7 库验证 | 为库的每个函数写测试程序，在 Ember 的 `bbg1` 上运行并读回内存与镜像核对；`apps/bbg/game` 改用库验证回归 | 每个库函数有测试并通过；接口检查脚本（仿 `check-sb2000-api.mjs`）通过 |
+| 7 库验证 | 为库的每个函数写测试程序，在 Ember 的 `bbg1` 上运行并读回内存与镜像核对；`apps/bbg/run-game` 改用库验证回归 | 每个库函数有测试并通过；接口检查脚本（仿 `check-sb2000-api.mjs`）通过 |
 
 C 语言函数库与头文件：阶段 7 完成后另行立项。
 
@@ -176,7 +176,7 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 | 4 `BBGDOS.SYS` | 完成：已追踪、分 11 个模块，回读一致；全部符号已有语义名（自动名 0 个，其中零页 `$E5-$FF`、`$0400` 文件调用块、`.EXC` 文件头与段表、`$6000` 起的 BIOS 与 CONFIG.SYS 工作区都已命名），全部例程有说明；覆盖 DOS 17 个功能、文件调用 25 项、磁盘 I/O、FAT12/16 与目录、文件读写与簇链、路径解析、程序装入（`.CMD`、`.EXC` 各类段）、屏幕与启动配置（CONFIG.SYS 的 DEVICE、SHELL）、严重错误处理；还补出此前没有追踪到的 CONFIG.SYS 解析代码与一个没有被引用的例程；个别 BIOS 功能（`$25`、`$13`、`$34` 等）的含义标了“未确认” |
 | 5 API 提取与文档 | 部分：`dos-calls.inc`、`docs/api/` 已写；文件调用 0-23 与除 13 以外的 DOS 调用已在 Ember 里用库的测试程序验证（目录枚举问题已解决，`DOS_DISPLAY_STRING` 的参数顺序与 `DOS_RUN_PROGRAM` 的文件名约定已查清）；外设调用（`$5809`）的子功能、`EXC` 文件头与程序运行时的低端内存约定、版本支持表未做 |
 | 6 汇编开发库 | 完成：`vscode/targets/bbg` 的 `bbg.lib`（`dos`、`file`、`bios`、`text` 四个模块共 59 个函数，一个函数一个文件），`bbg.inc` 由符号文件生成，`api-reference.md` 由源码注释生成，`api-unwrapped.json` 登记没有封装的功能号与原因；DOS 功能 13、文件功能 24 与多数 BIOS 功能没有封装 |
-| 7 库验证 | 完成：`vscode/test/real-emulator/bbg-library.test.ts` 在 Ember 的 `bbg1` 上运行 5 个测试程序（BIOS 9 项、文件 77 项、文字 5 项加 6 组截图对比、DOS 18 项加按键输入、运行程序 8 项），接口检查 `check-bbg-api.mjs` 通过；`apps/bbg/game` 没有改用库 |
+| 7 库验证 | 完成：`vscode/test/real-emulator/bbg-library.test.ts` 在 Ember 的 `bbg1` 上运行 5 个测试程序（BIOS 9 项、文件 77 项、文字 5 项加 6 组截图对比、DOS 18 项加按键输入、运行程序 8 项），接口检查 `check-bbg-api.mjs` 通过；`apps/bbg/run-game` 没有改用库 |
 
 自动符号的剩余量（`disasm_status` 的 `symbols.auto`）：`bbgdos` 0、`command` 749、`bios-rom` 1040、`boot-sector` 0。
 
@@ -210,7 +210,7 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 
 - 为更多 BIOS 功能、DOS 功能 13 与文件功能 24 写封装并测试（现在共 59 个函数，其余登记在 `api-unwrapped.json`）。
 - C 语言库：在汇编库之后做。
-- `apps/bbg/game` 改用库。
+- `apps/bbg/run-game` 改用库。
 
 ## 实测发现的行为
 

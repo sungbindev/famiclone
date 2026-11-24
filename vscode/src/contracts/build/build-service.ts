@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-service.ts
-// 说明：构建服务的接口：解析构建路径、构建程序（默认同时生成磁盘镜像）、单独生成磁盘镜像。
+// 说明：构建服务的接口：解析构建路径、构建程序（配置了 diskName 时同时生成磁盘镜像）、单独生成磁盘镜像。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -17,7 +17,7 @@ export interface BuildOutcome {
   readonly plan: BuildPlan;
   /** 构建结果。 */
   readonly result: BuildResult;
-  /** 同时生成的磁盘镜像；目标不支持磁盘镜像，或配置里 disk 为 false 时为 undefined。 */
+  /** 同时生成的磁盘镜像；目标不支持磁盘镜像，或配置里没有 diskName 时为 undefined。 */
   readonly disk: DiskImageResult | undefined;
 }
 
@@ -32,7 +32,7 @@ export interface BuildService {
   plan(input: BuildInput): BuildPlan;
 
   /**
-   * 构建一个程序；目标支持磁盘镜像且配置的 disk 不为 false 时，同时生成磁盘镜像。
+   * 构建一个程序；目标支持磁盘镜像且配置了 diskName 时，同时生成磁盘镜像。
    * @param input 构建输入。
    * @param reporter 进度汇报。
    * @returns 计划、结果与磁盘镜像。
@@ -41,7 +41,7 @@ export interface BuildService {
   build(input: BuildInput, reporter?: BuildReporter): Promise<BuildOutcome>;
 
   /**
-   * 把已构建的程序与项目 disk 目录下的文件放进磁盘镜像，不看配置的 disk；
+   * 把已构建的程序与项目 disk 目录下的文件放进磁盘镜像，不看有没有配置 diskName（没有配置时放在中间文件目录）；
    * 运行需要镜像而构建没有生成时用。
    * @param outcome 构建的计划与结果。
    * @returns 镜像路径与大小。

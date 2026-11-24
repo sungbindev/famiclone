@@ -1,4 +1,4 @@
-# game（裕兴）
+# run-game（裕兴）
 
 在裕兴学习机的 DOS 下选择并运行 NES 游戏，支持 mapper 0 与 mapper 4（MMC3）。用汇编（ca65）开发，是 fcdev 的 yuxing 目标项目，不依赖 C 运行库。`GAME.EXE` 是加载程序，游戏是软盘上单独的 `.NES` 文件。
 
@@ -36,10 +36,10 @@ GAME.EXE
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/yuxing/game`（或任务“fcdev：构建”）：
+在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/yuxing/run-game`（或任务“fcdev：构建”）：
 
 - 产物是 `build/yuxing/GAME.EXE`。
-- 同时生成软盘镜像 `build/yuxing/GAME.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF）；文件名须是 8.3 名字，不能有子目录。
+- `fcdev.json` 的 `diskName` 设为 `yuxing-run-game.img`，同时生成软盘镜像 `build/yuxing/yuxing-run-game.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF）；文件名须是 8.3 名字，不能有子目录。
 - 要测试游戏，把游戏文件放进 `disk/` 后重新构建；`disk/*.nes` 不入库。目前 `disk/` 放了 `MARIO.NES`（mapper 0）与 `GAME4.NES`（mapper 4），用来在 V8.2-D 与 V9.0-98 上核对。
 
 `build/` 不入库。
@@ -65,5 +65,5 @@ GAME.EXE
 | 文件 | 说明 |
 | --- | --- |
 | `src/nes.s` | 程序：入口 `_main`、窗口探测、软驱与 FAT12 读取、根目录扫描与菜单、iNES 头检查、mapper 0 与 4 的启动 |
-| `fcdev.json` | fcdev 配置：目标 yuxing，程序名 game，运行用的固件 |
+| `fcdev.json` | fcdev 配置：目标 yuxing，程序名 game，镜像文件名，运行用的固件 |
 | `disk/` | 构建时全部放进软盘镜像的文件：使用说明 `README.TXT`，以及测试用的游戏（不入库的 `*.nes`） |

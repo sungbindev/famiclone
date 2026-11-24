@@ -29,7 +29,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | --- | --- |
 | 要新建 NES、SB2000、SB97、裕兴或步步高程序，目录里还没有 `fcdev.json` | 流程 1 |
 | 要在已有的 fcdev 项目里写或改程序 | 流程 2 |
-| 只要构建（学习机目标会同时生成磁盘镜像） | 流程 3 |
+| 只要构建（配置了 `diskName` 的学习机目标会同时生成磁盘镜像） | 流程 3 |
 | 要运行、看画面、调试、核对结果 | 流程 4 |
 | 构建失败、运行不对、找不到命令 | 流程 5 |
 | 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`、`sb97`、`yuxing`、`bbg`、`rom`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
@@ -56,7 +56,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 
 ## 流程 3：构建
 
-1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`、`yuxing`）默认同时生成磁盘镜像，项目 `fcdev.json` 里 `disk` 为 `false` 时不生成；`bbg` 只在 `fcdev.json` 里有 `diskImage` 时生成。
+1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`、`yuxing`）在项目 `fcdev.json` 配置了 `diskName` 时同时生成磁盘镜像，没有配置不生成；`bbg` 还要 `fcdev.json` 里有 `diskImage` 才生成。
 2. 完成标准：返回产物路径、大小与重新编译的文件数；磁盘镜像的路径取自输出，不猜扩展名。
 3. 汇报时把工具输出里的错误行原样给用户，不改写。
 
@@ -78,7 +78,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | 报“还没有设置 Ember 的位置”或“找不到 Ember” | 按 skill `ember-emulator` 的 `references/errors.md` 汇报给用户 |
 | `ld65` 报内存区放不下 | NES：程序超过 16K PRG 或 RAM，需要精简；SB2000：超过 15K，考虑 `targetOptions.banks`，读 [sb2000-development.md](references/sb2000-development.md) 的“大程序” |
 | 缺少或重复 `main` | 检查目录里是否混入别的程序的源文件，汇编是否有 `.export _main` |
-| SB2000 程序在 DOS 里“找不到命令” | 程序名与内部命令重名（如 `COPY`、`TYPE`、`DIR`），或镜像里没有该文件，重新 `fcdev_build`（确认 `fcdev.json` 里 `disk` 不为 `false`） |
+| SB2000 程序在 DOS 里“找不到命令” | 程序名与内部命令重名（如 `COPY`、`TYPE`、`DIR`），或镜像里没有该文件，重新 `fcdev_build`（要用镜像时确认 `fcdev.json` 里配置了 `diskName`） |
 | SB2000 程序运行后屏幕一闪而过 | 返回 DOS 会清屏，退出前先等键，见 [sb2000-recipes.md](references/sb2000-recipes.md) |
 | 运行 SB2000 报缺固件 | `fcdev.json` 没写 `firmware` |
 | 怀疑增量缓存不一致 | 请用户确认后删除项目的 `build/` 目录重新构建 |
@@ -88,7 +88,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | 要做的事 | 智能体用 |
 | --- | --- |
 | 新建项目 | `fcdev_new_project` |
-| 构建（学习机目标同时生成磁盘镜像） | `fcdev_build` |
+| 构建（配置了 `diskName` 的学习机目标同时生成磁盘镜像） | `fcdev_build` |
 | 只运行 | `fcdev_run` |
 | 运行并调试 | `ember-emulator` skill 里的 `emu_*` 工具 |
 | 反汇编 | `disasm_*` 工具，skill `disassemble-6502` |

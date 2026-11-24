@@ -14,4 +14,4 @@
 - 出错时显示英文提示，按任意键返回 DOS，如 Usage: GAME FILE.NES、Mapper not supported。
 
 作者：sungbin
-GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/sb2000/game
+GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/sb2000/run-game

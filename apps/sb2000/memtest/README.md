@@ -4,7 +4,7 @@
 
 ## 使用
 
-- 构建：“fcdev：构建”任务，生成 `build/sb2000/MEMTEST.EXE` 与软盘镜像 `build/sb2000/MEMTEST.img`。
+- 构建：“fcdev：构建”任务，生成 `build/sb2000/MEMTEST.EXE` 与软盘镜像 `build/sb2000/MEMTEST.img`（`fcdev.json` 的 `diskName`，Ember 的测试用它）。
 - 运行：“fcdev：运行”任务，在 `fcdev.emulator.path` 指定的 Ember 里启动。
 
 把 `build/sb2000/MEMTEST.EXE` 复制到 SB-DOS 的软盘，在 `A:\>` 下输入 `memtest`。屏幕先显示等待提示，约几秒后给出第一屏，按任意键看第二屏，再按任意键返回 DOS。

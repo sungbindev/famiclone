@@ -11,4 +11,4 @@
 - 出错时在命令行显示英文提示并回到 DOS，如 Mapper not supported、No .NES file on the disk。
 
 作者：sungbin
-GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/bbg/game
+GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/bbg/run-game

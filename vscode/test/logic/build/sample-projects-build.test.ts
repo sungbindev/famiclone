@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：sample-projects-build.test.ts
 // 说明：用扩展自带的构建核心构建仓库里的全部样例项目：都能构建成功，产物非空，
-//       学习机项目默认同时生成磁盘镜像。
+//       配置了 diskName 的学习机项目同时生成磁盘镜像。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -58,7 +58,7 @@ describe.skipIf(!HAS_TOOLCHAIN)('样例项目都能构建', { timeout: TIMEOUT_M
   it.each(SAMPLE_PROJECTS)('%s', async (name) => {
     const outcome = await service.build({ pathArg: 'src', cwd: path.join(REPO_ROOT, name) });
     expect(statSync(outcome.result.outputFile).size).toBeGreaterThan(0);
-    if (outcome.plan.target.disk !== null) {
+    if (outcome.plan.target.disk !== null && outcome.plan.config.diskName !== undefined && !outcome.plan.target.disk.baseImage) {
       expect(fileSystem.kindOf(outcome.disk?.imageFile ?? '')).toBe('file');
     }
   });

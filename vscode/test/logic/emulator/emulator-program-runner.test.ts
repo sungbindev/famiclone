@@ -171,7 +171,7 @@ describe('构建并运行', () => {
     assert.deepEqual(keys, ['Enter', 'Enter', 'KeyH', 'KeyE', 'KeyL', 'KeyL', 'KeyO', 'Enter']);
   });
 
-  it('构建没有生成镜像时（配置里 disk 为 false），运行前另外生成', async () => {
+  it('构建没有生成镜像时（没有配置 diskName），运行前另外生成', async () => {
     const exe = writeTestFile(temp.dir, 'hello.exe', 'x');
     writeTestFile(temp.dir, 'hello.img', 'x');
     const firmware = writeTestFile(temp.dir, 'bios.nes', 'x');

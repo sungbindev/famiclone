@@ -318,7 +318,7 @@
 </ul>
 <h2 id="5-磁盘镜像与系统盘">5. 磁盘镜像与系统盘</h2>
 <ul>
-<li>镜像不是空白数据盘：它要能开机并读入 DOS，所以建在系统盘镜像上。在 <code>fcdev.json</code> 里用 <code>diskImage</code> 指向系统盘镜像，构建时复制它，加入 <code>&lt;NAME&gt;.CMD</code> 和项目 <code>disk</code> 目录下的全部文件（文件名必须是 8.3 名字，不能有子目录），存成 <code>build/bbg/&lt;NAME&gt;.img</code>；系统盘文件本身不改，引导扇区、卷标与原有文件原样保留，同名文件被替换。</li>
+<li>镜像不是空白数据盘：它要能开机并读入 DOS，所以建在系统盘镜像上。在 <code>fcdev.json</code> 里用 <code>diskImage</code> 指向系统盘镜像，构建时复制它，加入 <code>&lt;NAME&gt;.CMD</code> 和项目 <code>disk</code> 目录下的全部文件（文件名必须是 8.3 名字，不能有子目录），存成 <code>build/bbg/&lt;diskName&gt;</code>（要在 <code>fcdev.json</code> 里配置 <code>diskName</code>）；系统盘文件本身不改，引导扇区、卷标与原有文件原样保留，同名文件被替换。</li>
 <li>没有设置 <code>diskImage</code> 时构建只生成程序，不生成镜像；要运行时才报“没有设置 diskImage”。</li>
 <li>步步高的系统盘大多是装满的：<code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 没有空闲簇，放不下任何文件，运行会报“剩余空间不足”。同一目录里的 <code>001-3.IMG</code> 剩余约 592KB，没有 <code>AUTOEXEC.BAT</code>，开机后先问日期与时间，适合当底盘。</li>
 <li>系统盘里有 <code>AUTOEXEC.BAT</code> 时，DOS 开机后先运行它，不问日期与时间；批处理最后要停在命令提示符（<code>bbgcdos/z4</code>、<code>pinyin</code>、<code>tishi</code> 这样的可以，会启动一个不返回的程序的不行）。</li>
@@ -326,10 +326,10 @@
 </ul>
 <h2 id="6-构建与运行">6. 构建与运行</h2>
 <ul>
-<li>构建：任务“fcdev：构建”，产物 <code>build/bbg/&lt;NAME&gt;.CMD</code>；设置了 <code>diskImage</code> 时还有 <code>build/bbg/&lt;NAME&gt;.img</code>。</li>
+<li>构建：任务“fcdev：构建”，产物 <code>build/bbg/&lt;NAME&gt;.CMD</code>；设置了 <code>diskImage</code> 与 <code>diskName</code> 时还有 <code>build/bbg/&lt;diskName&gt;</code>。</li>
 <li>运行：任务“fcdev：运行”，需要在设置 <code>fcdev.emulator.path</code> 里指定 Ember，在 <code>fcdev.json</code> 里用 <code>firmware</code> 指定软驱一号的 ROM、用 <code>diskImage</code> 指定系统盘镜像。扩展依次添加 ROM、以 <code>bbg1</code> 开机、放入镜像，开机运行 1200 帧（让系统盘的批处理跑完），按两次回车跳过可能出现的日期与时间（已在提示符下时只是两个空行），再等 60 帧，输入程序名并回车。按键都是按下 8 帧、松开 8 帧。程序名只能用字母与数字。</li>
 <li>手动运行（真机或模拟器）：挂载镜像开机，进入命令行后输入程序名。</li>
-<li>样例：<code>apps/bbg/game</code> 是在 BBGDOS 下运行 NES 游戏的程序（<code>RUN MARIO</code>），用 DOS 的文件调用读文件、取命令行参数、直接操作分页寄存器，是本目标最完整的例子；它在 <code>fcdev.json</code> 里用 <code>linkConfig</code> 指定自己的链接配置，把进入游戏的跳板放在内部 RAM。</li>
+<li>样例：<code>apps/bbg/run-game</code> 是在 BBGDOS 下运行 NES 游戏的程序（<code>RUN MARIO</code>），用 DOS 的文件调用读文件、取命令行参数、直接操作分页寄存器，是本目标最完整的例子；它在 <code>fcdev.json</code> 里用 <code>linkConfig</code> 指定自己的链接配置，把进入游戏的跳板放在内部 RAM。</li>
 </ul>
 <h2 id="7-还没有验证的内容">7. 还没有验证的内容</h2>
 <ul>
@@ -338,7 +338,7 @@
 <li>超过 16K 的程序、多页程序（<code>.EXC</code>）。</li>
 <li>BIOS 功能：只有运行库封装的几个（<code>BIOS_GET_PAGE</code>、<code>BIOS_GET_DRAM_SIZE</code>、<code>BIOS_DISPLAY_TTY</code>、<code>BIOS_GET_CURSOR</code>、<code>BIOS_GET_VERSION</code>）验证过，其余见 <code>api-reference.md</code> 的覆盖表。bbg1 的 BIOS 1.0 不实现手册里的 <code>BIOS_SET_PALETTE</code>（43）等功能号，调用时被忽略。</li>
 <li>外设调用（<code>$5809</code>）。</li>
-<li>命令行参数已由 <code>apps/bbg/game</code> 验证：<code>$0100</code> 是长度、<code>$0101</code> 起是参数（含程序名后的空格），<code>bbg_dos_run</code> 也是这样把参数交给被运行的程序；按手册，程序所在页之后的分页内存都归程序使用，<code>BIOS_GET_PAGE</code>（功能 2）取得程序所在的页。</li>
+<li>命令行参数已由 <code>apps/bbg/run-game</code> 验证：<code>$0100</code> 是长度、<code>$0101</code> 起是参数（含程序名后的空格），<code>bbg_dos_run</code> 也是这样把参数交给被运行的程序；按手册，程序所在页之后的分页内存都归程序使用，<code>BIOS_GET_PAGE</code>（功能 2）取得程序所在的页。</li>
 <li>零页与内部 RAM 里 DOS、BIOS 占用的单元。</li>
 <li>真机运行：只在 Ember 里验证过；BIOS 源码是工程版，与 <code>bbg1_bios.bin</code> 不是同一次构建，大同小异。</li>
 </ul>

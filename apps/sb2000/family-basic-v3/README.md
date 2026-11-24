@@ -4,7 +4,7 @@
 
 ## 构建与运行
 
-- 构建：fcdev 的“构建”（或 `fcdev_build`），产物在 `build/sb2000/`：`FBASIC.EXE` 与磁盘镜像 `FBASIC.img`。
+- 构建：fcdev 的“构建”（或 `fcdev_build`），产物在 `build/sb2000/`：`FBASIC.EXE`。要磁盘镜像时在 `fcdev.json` 里加 `diskName`。
 - 运行：fcdev 的“运行”（或 `fcdev_run`），固件取自 `fcdev.json` 的 `firmware`，需要在设置里指定 Ember 的位置。
 
 ## 目录

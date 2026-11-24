@@ -19,7 +19,7 @@ describe('项目配置', () => {
     const config = normalizeConfig({ target: 'nes', include: ['inc'], out: 'dist', firmware: 'rom/bios.nes' }, file, ROOT);
     expect(config.target).toBe('nes');
     expect(config.optimize).toBe(true);
-    expect(config.disk).toBe(true);
+    expect(config.diskName).toBeUndefined();
     expect(config.include).toEqual([path.join(ROOT, 'inc')]);
     expect(config.outDir).toBe(path.join(ROOT, 'dist'));
     expect(config.firmware).toBe(path.join(ROOT, 'rom', 'bios.nes'));
@@ -39,9 +39,17 @@ describe('项目配置', () => {
     expect(() => normalizeConfig({ diskImage: 1 }, file, ROOT)).toThrow(/类型不对/);
   });
 
-  it('disk 为 false 时不生成磁盘镜像，类型不对报错', () => {
-    expect(normalizeConfig({ disk: false }, null, ROOT).disk).toBe(false);
-    expect(() => normalizeConfig({ disk: 'no' }, null, ROOT)).toThrow(/类型不对/);
+  it('diskName 没有设置时为 undefined，缺 .img 时补上，类型不对或含路径分隔符报错', () => {
+    expect(normalizeConfig({}, null, ROOT).diskName).toBeUndefined();
+    expect(normalizeConfig({ diskName: 'sb97-run-game.img' }, null, ROOT).diskName).toBe('sb97-run-game.img');
+    expect(normalizeConfig({ diskName: 'sb97-run-game' }, null, ROOT).diskName).toBe('sb97-run-game.img');
+    expect(() => normalizeConfig({ diskName: 1 }, null, ROOT)).toThrow(/类型不对/);
+    expect(() => normalizeConfig({ diskName: 'out/a.img' }, null, ROOT)).toThrow(/diskName/);
+    expect(() => normalizeConfig({ diskName: '' }, null, ROOT)).toThrow(/diskName/);
+  });
+
+  it('旧的 disk 配置项不再支持，按未知配置项报错', () => {
+    expect(() => normalizeConfig({ disk: false }, null, ROOT)).toThrow(expect.objectContaining({ code: 'CONFIG_UNKNOWN_KEY' }));
   });
 
   it('没有配置文件时以给定目录为项目根', () => {

@@ -21,7 +21,7 @@ export type TaskCommand = (typeof TASK_COMMANDS)[number];
 
 /** 一个 fcdev 任务的定义。 */
 export interface FcdevTaskDefinition {
-  /** 要做的事：构建（目标支持磁盘镜像时同时生成镜像）、运行。 */
+  /** 要做的事：构建（目标支持磁盘镜像且配置了 diskName 时同时生成镜像）、运行。 */
   readonly command: TaskCommand;
   /** 构建路径（文件或目录），相对工作区文件夹；不给时为文件夹本身。 */
   readonly path?: string | undefined;

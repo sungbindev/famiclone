@@ -28,7 +28,7 @@
 ## 核对清单：SB2000
 
 1. 读 `fcdev.json`，取 `name`（程序名，不含扩展名）与 `firmware`（相对 `fcdev.json` 所在目录）。没有 `firmware` 就停下，汇报“未运行验证：缺少 BIOS”。
-2. `fcdev_build`（磁盘镜像随构建生成，`fcdev.json` 里 `disk` 不能为 `false`）；磁盘镜像路径取自输出。
+2. `fcdev_build`（要拿到磁盘镜像时 `fcdev.json` 里要配置 `diskName`）；磁盘镜像路径取自输出。
 3. 按 skill `ember-emulator` 的“起步”，再 `emu_load`：`machine: "sb2000"`、`firmware`、`diskImage`、`program`（程序名）。
 4. `emu_run` 60 帧，`emu_screen` 一张，与预期对照。
 5. 需要输入时用 `emu_input` 的 `kind: "key"`（SB-DOS 里输入字符时 `downFrames` 与 `upFrames` 都给 8）或 `kind: "pad"`。

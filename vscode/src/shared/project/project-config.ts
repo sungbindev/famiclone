@@ -20,7 +20,7 @@ const KEY_TYPES: Readonly<Record<string, 'string' | 'boolean' | 'object' | 'stri
   name: 'string',
   out: 'string',
   optimize: 'boolean',
-  disk: 'boolean',
+  diskName: 'string',
   define: 'object',
   include: 'string-array',
   firmware: 'string',
@@ -43,8 +43,8 @@ export interface ProjectConfig {
   readonly outDir: string;
   /** 是否优化。 */
   readonly optimize: boolean;
-  /** 构建时是否同时生成磁盘镜像（只对有磁盘能力的目标有效）。 */
-  readonly disk: boolean;
+  /** 构建时生成的磁盘镜像文件名（已补 .img）；没有设置时构建不生成镜像。只对有磁盘能力的目标有效。 */
+  readonly diskName: string | undefined;
   /** 预定义宏。 */
   readonly define: Readonly<Record<string, string | number>>;
   /** 额外头文件目录的绝对路径。 */
@@ -72,6 +72,28 @@ function matchesType(value: unknown, type: string): boolean {
   if (type === 'string-array') return Array.isArray(value) && value.every((item) => typeof item === 'string');
   if (type === 'object') return isRecord(value);
   return typeof value === type;
+}
+
+/** 磁盘镜像文件名里不允许的字符（路径分隔符与 Windows 文件名保留字符）。 */
+const DISK_NAME_FORBIDDEN = /[\\/:*?"<>|]/;
+
+/**
+ * 校验镜像文件名并补全扩展名。
+ * @param name 配置里的 diskName；没有设置时为 undefined。
+ * @param where 出错提示里的配置文件位置。
+ * @returns 带 .img 扩展名的文件名；没有设置时为 undefined。
+ * @throws FcdevError 文件名为空，或含路径分隔符等不允许的字符。
+ */
+function normalizeDiskName(name: string | undefined, where: string): string | undefined {
+  if (name === undefined) return undefined;
+  const trimmed = name.trim();
+  if (trimmed === '' || trimmed === '.img' || trimmed === '.' || trimmed === '..' || DISK_NAME_FORBIDDEN.test(trimmed)) {
+    throw new FcdevError(`${where} 中的 diskName 必须是镜像文件名，不能为空，也不能含路径分隔符等字符：${name}`, {
+      code: 'CONFIG_INVALID',
+      hint: '例如 "diskName": "sb97-run-game.img"，镜像放在产物旁边'
+    });
+  }
+  return /\.img$/i.test(trimmed) ? trimmed : `${trimmed}.img`;
 }
 
 /**
@@ -114,7 +136,7 @@ export function normalizeConfig(raw: unknown, file: string | null, fallbackRoot:
     name: raw.name as string | undefined,
     outDir: path.resolve(root, (raw.out as string | undefined) ?? 'build'),
     optimize: (raw.optimize as boolean | undefined) ?? true,
-    disk: (raw.disk as boolean | undefined) ?? true,
+    diskName: normalizeDiskName(raw.diskName as string | undefined, where),
     define: define as Record<string, string | number>,
     include: ((raw.include as string[] | undefined) ?? []).map((item) => path.resolve(root, item)),
     firmware: firmware === undefined ? undefined : path.resolve(root, firmware),

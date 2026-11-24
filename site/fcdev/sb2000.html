@@ -205,7 +205,7 @@
 <tbody>
 <tr>
 <td><code>build</code></td>
-<td><code>build/sb2000/&lt;NAME&gt;.EXE</code>，同时生成 <code>build/sb2000/&lt;NAME&gt;.img</code>：软盘里有这个程序与项目 <code>disk</code> 目录下的全部文件（新建项目的模板带示例 <code>disk/README.TXT</code>）；<code>fcdev.json</code> 里 <code>disk</code> 为 <code>false</code> 时不生成镜像，见 <a href="build.html">01-构建</a> 4.5</td>
+<td><code>build/sb2000/&lt;NAME&gt;.EXE</code>；<code>fcdev.json</code> 配置了 <code>diskName</code> 时，同时在 <code>build/sb2000/</code> 下生成这个名字的镜像：软盘里有这个程序与项目 <code>disk</code> 目录下的全部文件（新建项目的模板带示例 <code>disk/README.TXT</code>）；没有配置时不生成镜像，见 <a href="build.html">01-构建</a> 4.5</td>
 </tr>
 <tr>
 <td><code>run</code></td>

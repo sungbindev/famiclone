@@ -24,7 +24,7 @@ user-invocable: false
 | --- | --- |
 | 运行 fcdev 项目的程序，只需要打开窗口看看 | `fcdev_run`，不给 `debug`；Ember 窗口留给用户，之后工具不能再控制它 |
 | 运行并核对 fcdev 项目的 NES 程序 | `fcdev_build`，再走“起步”与“载入”的 NES 一行，然后“观察与核对” |
-| 运行并核对 fcdev 项目的 SB2000、SB97、裕兴或步步高程序 | `fcdev_build`（磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
+| 运行并核对 fcdev 项目的 SB2000、SB97、裕兴或步步高程序 | `fcdev_build`（`fcdev.json` 配置了 `diskName` 时磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
 | 载入不属于 fcdev 项目的 NES 文件 | “起步”，再 `emu_load` 的 `file` |
 | 载入整机加软盘镜像（SB2000、SB97、步步高、金字塔、裕兴） | “起步”，再 `emu_load` 的 `machine`，开机后的操作读 [machines.md](references/machines.md) |
 | 为反汇编记录运行数据 | 读 skill `disassemble-6502` 的 `references/records.md`，它先走本 skill 的“起步”与“载入” |

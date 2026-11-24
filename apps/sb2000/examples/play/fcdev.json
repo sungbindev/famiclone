@@ -1,4 +1,5 @@
 {
   "target": "sb2000",
-  "name": "play"
+  "name": "play",
+  "diskName": "PLAY.img"
 }

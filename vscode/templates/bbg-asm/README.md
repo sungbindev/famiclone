@@ -6,7 +6,7 @@
 
 在 VS Code 里运行“终端 → 运行生成任务”（默认任务“fcdev：构建”），生成 `build/bbg/HELLO.CMD`。程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 
-步步高的 DOS 在软盘上，所以软盘镜像要建在一张带 DOS 的系统盘上：在 `fcdev.json` 里用 `diskImage` 指向系统盘镜像，构建时在它的基础上加入 HELLO.CMD 和项目 `disk` 目录下的全部文件（文件名必须是 8.3 名字，不能有子目录），生成 `build/bbg/HELLO.img`，系统盘本身不改。没有设置 `diskImage` 时只构建程序，不生成镜像。步步高的系统盘大多是装满的，要选剩余空间够放程序的；系统盘里有 AUTOEXEC.BAT 时，开机后先运行它，再出现命令提示符。
+步步高的 DOS 在软盘上，所以软盘镜像要建在一张带 DOS 的系统盘上：在 `fcdev.json` 里用 `diskImage` 指向系统盘镜像，构建时在它的基础上加入 HELLO.CMD 和项目 `disk` 目录下的全部文件（文件名必须是 8.3 名字，不能有子目录），系统盘本身不改。要生成镜像，在 `fcdev.json` 里加 `diskName`（如 `"diskName": "bbg-hello.img"`），镜像生成在 `build/bbg/` 下；没有设置 `diskImage` 或 `diskName` 时只构建程序，不生成镜像。步步高的系统盘大多是装满的，要选剩余空间够放程序的；系统盘里有 AUTOEXEC.BAT 时，开机后先运行它，再出现命令提示符。
 
 ## 在模拟器里运行（只支持 Windows）
 

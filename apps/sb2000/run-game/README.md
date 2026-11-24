@@ -1,4 +1,4 @@
-# game
+# run-game
 
 在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行 NES 游戏，用 fcdev 开发，C 语言。汇编版是本仓库的 `apps/sb2000/examples/play`，做法相同。
 
@@ -33,7 +33,7 @@ game mario.nes
 
 ## 构建
 
-“fcdev：构建”任务生成 `build/sb2000/GAME.EXE` 与只放有 `GAME.EXE` 的软盘镜像 `build/sb2000/GAME.img`。
+“fcdev：构建”任务生成 `build/sb2000/GAME.EXE`，`fcdev.json` 的 `diskName` 设为 `sb2000-run-game.img`，同时生成只放有 `GAME.EXE` 的软盘镜像 `build/sb2000/sb2000-run-game.img`。
 
 程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 
@@ -52,7 +52,7 @@ fcdev 不提供 BIOS。先在 `fcdev.json` 里用 `firmware` 指定 SB2000 的 B
 | 文件 | 说明 |
 | --- | --- |
 | `src/game.c` | 程序：菜单（列出 .NES 文件、手柄选择）或带参数直接运行；读入并检查 iNES 文件，用 DMA 经 ERAM 缓冲再用 CPU 复制到第 3 个 128K 窗口，改 RESET 向量后进入 FC 兼容模式；硬件细节见 `machines/sb2000/docs/NES兼容模式研究.md` |
-| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 game |
+| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 game，镜像文件名 |
 
 ## 查阅接口
 

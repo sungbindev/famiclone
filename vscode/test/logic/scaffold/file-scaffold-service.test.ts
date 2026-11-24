@@ -122,8 +122,7 @@ describe.skipIf(!HAS_TOOLCHAIN)('七个模板都能构建', { timeout: TIMEOUT_M
     scaffold.create({ directory, target, language });
     const { result, disk } = await buildService.build({ pathArg: 'src', cwd: directory });
     expect(statSync(result.outputFile).size).toBeGreaterThan(0);
-    // 带磁盘能力的目标默认同时生成镜像，镜像里有模板自带的使用说明；
-    // bbg 需要用户指定底盘镜像，没有时只构建程序
-    expect(disk?.files).toEqual(target === 'nes' || target === 'bbg' ? undefined : ['HELLO.EXE', 'README.TXT']);
+    // 模板的 fcdev.json 没有配置 diskName，构建不生成镜像
+    expect(disk).toBeUndefined();
   });
 });

@@ -5,7 +5,8 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
 // 备注：镜像里放这一次构建的程序与项目根 disk 目录下的全部文件（使用说明等，由用户自己写）；
-//       镜像放在程序产物旁边，文件名与程序名相同，卷标为 FCDEV。目标声明 baseImage（如步步高的 DOS
+//       配置了 diskName 时镜像放在程序产物旁边，文件名取 diskName，卷标为 FCDEV；没有配置时（运行
+//       需要镜像）放在中间文件目录的 run.img，不进产物目录。目标声明 baseImage（如步步高的 DOS
 //       在磁盘上）时，以 fcdev.json 的 diskImage 为底盘在其上添加文件，卷标保持底盘的。
 // ------------------------------------------------------------------------
 
@@ -21,6 +22,9 @@ const DISK_LABEL = 'FCDEV';
 
 /** 项目根下放进镜像的文件所在的目录名。 */
 const DISK_DIRECTORY = 'disk';
+
+/** 没有配置 diskName 时，运行用的临时镜像在中间文件目录里的文件名。 */
+const RUN_IMAGE_NAME = 'run.img';
 
 /**
  * 读取项目 disk 目录下要放进镜像的文件；没有这个目录时为空。
@@ -67,7 +71,7 @@ function readBaseImage(fileSystem: FileSystem, file: string): Uint8Array {
  * @param fileSystem 文件系统。
  * @param plan 构建计划。
  * @param result 构建结果。
- * @returns 镜像路径与大小。
+ * @returns 镜像路径与大小；配置了 diskName 时在产物旁边，没有时在中间文件目录里。
  * @throws FcdevError 目标不支持磁盘镜像，disk 目录有子目录或与程序重名，
  *   文件名不符合镜像文件名规则，目标需要底盘镜像而配置里没有 diskImage，或底盘读不到。
  */
@@ -84,7 +88,8 @@ export function buildDiskImage(fileSystem: FileSystem, plan: BuildPlan, result: 
   }
   const base = plan.target.disk.baseImage && diskImage !== undefined ? readBaseImage(fileSystem, diskImage) : undefined;
   const outputName = path.basename(result.outputFile);
-  const imageFile = path.join(path.dirname(result.outputFile), `${path.basename(outputName, path.extname(outputName))}.img`);
+  const { diskName } = plan.config;
+  const imageFile = diskName === undefined ? path.join(plan.objectDir, RUN_IMAGE_NAME) : path.join(path.dirname(result.outputFile), diskName);
   const modified = fileSystem.modifiedTime(result.outputFile);
   const extraFiles = readDiskDirectory(fileSystem, plan.config.root);
   const clash = extraFiles.find((file) => file.name.toUpperCase() === outputName.toUpperCase());

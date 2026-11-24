@@ -11,4 +11,4 @@
 - 出错时画面第 10 行显示英文提示并停住，需要复位。
 
 作者：sungbin
-GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/yuxing/game
+GitHub：https://github.com/sungbindev/famiclone/tree/master/apps/yuxing/run-game

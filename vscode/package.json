@@ -136,7 +136,7 @@
               "run"
             ],
             "enumDescriptions": [
-              "构建程序；目标支持磁盘镜像时同时生成磁盘镜像",
+              "构建程序；目标支持磁盘镜像且 fcdev.json 配置了 diskName 时同时生成磁盘镜像",
               "构建后在模拟器里运行"
             ],
             "description": "要做的事。"
@@ -1916,7 +1916,7 @@
         ],
         "toolReferenceName": "fcdev_build",
         "displayName": "构建 fcdev 项目",
-        "modelDescription": "用随扩展发布的 cc65 构建一个程序，返回工具的输出（cc65、ca65、ld65 的错误是“文件(行): Error: 信息”格式）与产物路径、大小、重新编译的文件数。path 是构建路径：目录整体构成一个程序（递归收集 .c、.s、.asm，程序名取 fcdev.json 的 name 或目录名），文件单独构成一个程序；不给 path 时构建工作区第一个文件夹。目标取自 path 向上最近的 fcdev.json，也可以用 target 指定。目标声明了磁盘能力（如 sb2000）且 fcdev.json 的 disk 不为 false 时，同时把程序与项目 disk 目录下的文件放进 1.44MB 的 FAT12 磁盘镜像，放在产物旁边，输出里有镜像路径。构建会写项目的输出目录（默认 build）。",
+        "modelDescription": "用随扩展发布的 cc65 构建一个程序，返回工具的输出（cc65、ca65、ld65 的错误是“文件(行): Error: 信息”格式）与产物路径、大小、重新编译的文件数。path 是构建路径：目录整体构成一个程序（递归收集 .c、.s、.asm，程序名取 fcdev.json 的 name 或目录名），文件单独构成一个程序；不给 path 时构建工作区第一个文件夹。目标取自 path 向上最近的 fcdev.json，也可以用 target 指定。目标声明了磁盘能力（如 sb2000）且 fcdev.json 配置了 diskName（镜像文件名，缺 .img 时自动补上）时，同时把程序与项目 disk 目录下的文件放进 1.44MB 的 FAT12 磁盘镜像，放在产物旁边，输出里有镜像路径；没有配置 diskName 时不生成镜像。构建会写项目的输出目录（默认 build）。",
         "userDescription": "构建 fcdev 项目，学习机目标同时生成磁盘镜像。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {

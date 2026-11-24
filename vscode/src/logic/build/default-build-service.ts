@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：default-build-service.ts
-// 说明：构建服务的实现：串起规划、工具链定位、编译链接与磁盘镜像；默认构建后同时生成磁盘镜像。
+// 说明：构建服务的实现：串起规划、工具链定位、编译链接与磁盘镜像；配置了 diskName 时构建后生成磁盘镜像。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -55,7 +55,7 @@ export class DefaultBuildService implements BuildService {
     const outcome = { plan, result, disk: undefined };
     const { disk } = plan.target;
     // 需要底盘镜像的目标没有配置 diskImage 时只构建程序，运行时再提示缺底盘
-    const wantsDisk = disk !== null && plan.config.disk && !(disk.baseImage && plan.config.diskImage === undefined);
+    const wantsDisk = disk !== null && plan.config.diskName !== undefined && !(disk.baseImage && plan.config.diskImage === undefined);
     return wantsDisk ? { ...outcome, disk: this.buildDisk(outcome) } : outcome;
   }
 

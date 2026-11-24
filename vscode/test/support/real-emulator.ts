@@ -490,7 +490,7 @@ export async function startBbgProgram(temp: TempDir, sources: readonly string[])
   assert.ok(REAL_EMBER && REAL_BBG_FIRMWARE, '没有可用的 Ember 与步步高固件');
   const emulator = await createRealEmulator();
   const build = createRealBuildEnvironment().service;
-  writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'bbg', name: BBG_PROGRAM_NAME, firmware: REAL_BBG_FIRMWARE, diskImage: REPOSITORY_BBG_SYSTEM_DISK }));
+  writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target: 'bbg', name: BBG_PROGRAM_NAME, firmware: REAL_BBG_FIRMWARE, diskImage: REPOSITORY_BBG_SYSTEM_DISK, diskName: 'bbg-test.img' }));
   mkdirSync(path.join(temp.dir, 'src'), { recursive: true });
   for (const name of [...BBG_COMMON_SOURCES, ...sources]) {
     copyFileSync(path.join(BBG_FIXTURE_DIR, name), path.join(temp.dir, 'src', name));

@@ -4,7 +4,7 @@
 
 ## 构建与运行
 
-用 VS Code 的“fcdev：构建”任务构建，产物在 `build/sb2000/PLAY.EXE`，同时生成软盘镜像 `build/sb2000/PLAY.img`。
+用 VS Code 的“fcdev：构建”任务构建，产物在 `build/sb2000/PLAY.EXE`，同时生成软盘镜像 `build/sb2000/PLAY.img`（`fcdev.json` 的 `diskName`，Ember 的测试用它）。
 
 在 SB-DOS 的 `A:\>` 下输入：
 

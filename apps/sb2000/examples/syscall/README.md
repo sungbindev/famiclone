@@ -4,6 +4,6 @@
 
 ## 构建与运行
 
-用 VS Code 的“fcdev：构建”任务构建，产物在 `build/sb2000/SYSCALL.EXE`，同时生成软盘镜像 `build/sb2000/SYSCALL.img`。
+用 VS Code 的“fcdev：构建”任务构建，产物在 `build/sb2000/SYSCALL.EXE`。
 
 在 Ember 的调试运行中使用（`fcdev：运行` 的调试模式），按调试器写入的请求块执行。

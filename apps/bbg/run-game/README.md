@@ -1,4 +1,4 @@
-# game（步步高）
+# run-game（步步高）
 
 在步步高多媒体学生电脑（BBGDOS）下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 bbg 目标项目，不依赖 C 运行库。`GAME.CMD` 只是加载程序，游戏是软盘上单独的 `.NES` 文件。
 
@@ -36,10 +36,10 @@ GAME MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/bbg/game`（或任务“fcdev：构建”）：
+在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/bbg/run-game`（或任务“fcdev：构建”）：
 
 - 产物是 `build/bbg/GAME.CMD`。
-- `fcdev.json` 的 `diskImage` 指向系统盘镜像 `reference/floppy-images/bbg/系统类/001-3.IMG`（`DOS.IMG` 已装满，放不下文件），同时生成软盘镜像 `build/bbg/GAME.img`：系统盘的全部内容加上 `GAME.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
+- `fcdev.json` 的 `diskImage` 指向系统盘镜像 `reference/floppy-images/bbg/系统类/001-3.IMG`（`DOS.IMG` 已装满，放不下文件），`fcdev.json` 的 `diskName` 设为 `bbg-run-game.img`，同时生成软盘镜像 `build/bbg/bbg-run-game.img`：系统盘的全部内容加上 `GAME.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
 - 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库，目录里没有入库的文件。
 
 `build/` 不入库。
@@ -63,5 +63,5 @@ GAME MARIO.NES
 | --- | --- |
 | `src/nes.s` | 程序：入口 `_main`、命令行与文件名、DOS 文件调用、iNES 头检查、跳板与小桩 |
 | `link.cfg` | 链接配置：bbg 目标的配置加 `TRAMP`、`STUBS` 两段 |
-| `fcdev.json` | fcdev 配置：目标 bbg，程序名 run，链接配置，运行用的固件与系统盘镜像 |
+| `fcdev.json` | fcdev 配置：目标 bbg，程序名 game，镜像文件名，链接配置，运行用的固件与系统盘镜像 |
 | `disk/` | 构建时全部放进软盘镜像的文件，只放自己的游戏文件，不入库 |

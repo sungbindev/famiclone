@@ -1,5 +1,6 @@
 {
   "target": "sb2000",
   "name": "hwtest",
+  "diskName": "HWTEST.img",
   "firmware": "../../../ember/roms/sb2000_bios.bin"
 }

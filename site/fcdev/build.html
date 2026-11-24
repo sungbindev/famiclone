@@ -22,7 +22,7 @@
 <tbody>
 <tr>
 <td><code>command</code></td>
-<td>必填：<code>build</code> 构建（目标声明了磁盘能力且配置的 <code>disk</code> 不为 <code>false</code> 时，同时生成磁盘镜像，见 4.5），<code>run</code> 构建后在模拟器里运行</td>
+<td>必填：<code>build</code> 构建（目标声明了磁盘能力且配置了 <code>diskName</code> 时，同时生成磁盘镜像，见 4.5），<code>run</code> 构建后在模拟器里运行</td>
 </tr>
 <tr>
 <td><code>path</code></td>
@@ -54,7 +54,7 @@
 <tbody>
 <tr>
 <td>fcdev：构建项目</td>
-<td>构建活动文件所属的项目；有 <code>src</code> 目录就构建它，没有就构建项目目录；工作区里有多个项目又没有活动文件时让你选；有磁盘能力的目标同时生成磁盘镜像</td>
+<td>构建活动文件所属的项目；有 <code>src</code> 目录就构建它，没有就构建项目目录；工作区里有多个项目又没有活动文件时让你选；配置了 <code>diskName</code> 的有磁盘能力的目标同时生成磁盘镜像</td>
 </tr>
 <tr>
 <td>fcdev：构建当前文件</td>
@@ -76,7 +76,7 @@
 </table></div>
 <p>构建命令都经上面的任务运行。</p>
 <h3 id="13-copilot-工具">1.3 Copilot 工具</h3>
-<p>扩展给 Copilot 提供的 <code>fcdev_build</code>（构建，有磁盘能力的目标同时生成磁盘镜像）与 <code>fcdev_info</code>（项目信息）与命令等价；<code>fcdev_new_project</code>、<code>fcdev_api</code>、<code>fcdev_docs</code> 见 <a href="create.html">04-新建项目与模板</a> 与第 5 节。构建会写项目的输出目录，调用前会弹出确认。</p>
+<p>扩展给 Copilot 提供的 <code>fcdev_build</code>（构建，配置了 <code>diskName</code> 的有磁盘能力的目标同时生成磁盘镜像）与 <code>fcdev_info</code>（项目信息）与命令等价；<code>fcdev_new_project</code>、<code>fcdev_api</code>、<code>fcdev_docs</code> 见 <a href="create.html">04-新建项目与模板</a> 与第 5 节。构建会写项目的输出目录，调用前会弹出确认。</p>
 <h2 id="2-构建单位">2. 构建单位</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -144,10 +144,10 @@
 <td>给 <code>cc65</code> 加 <code>-Oirs</code></td>
 </tr>
 <tr>
-<td><code>disk</code></td>
-<td>布尔</td>
-<td><code>true</code></td>
-<td>构建时是否同时生成磁盘镜像，只对声明了磁盘能力的目标有效，见 4.5</td>
+<td><code>diskName</code></td>
+<td>字符串</td>
+<td>无</td>
+<td>构建时生成的磁盘镜像文件名，只对声明了磁盘能力的目标有效：写了就生成镜像（文件名不带 <code>.img</code> 时自动补上，不能含路径分隔符），不写就不生成，见 4.5</td>
 </tr>
 <tr>
 <td><code>define</code></td>
@@ -216,7 +216,7 @@
 </tr>
 <tr>
 <td>磁盘镜像</td>
-<td><code>&lt;项目根&gt;/&lt;out&gt;/&lt;目标&gt;/&lt;程序名&gt;.img</code>，见 4.5</td>
+<td><code>&lt;项目根&gt;/&lt;out&gt;/&lt;目标&gt;/&lt;diskName&gt;</code>，见 4.5</td>
 </tr>
 <tr>
 <td>中间文件</td>
@@ -234,7 +234,7 @@
 <ol start="3">
 <li><code>ld65</code>：按目标的链接配置（项目写了 <code>linkConfig</code> 时用项目的，见 3.1），依次链接启动代码、用户的 <code>.o</code>、开启的目标选项所带的目标文件，最后链接目标声明的库；生成 <code>.bin</code>、<code>.map</code>、<code>.dbg</code>。目标声明了多页（换页）程序且库页个数大于 0 时，链接配置按库页个数展开，写在中间文件目录里；多页程序与自定义链接配置的产物，打包器都不再检查映像大小上限。</li>
 <li>打包器把 <code>.bin</code> 做成最终产物。</li>
-<li>目标有磁盘能力且 <code>disk</code> 不为 <code>false</code> 时，把产物与 <code>disk</code> 目录里的文件放进磁盘镜像，见 4.5。</li>
+<li>目标有磁盘能力且配置了 <code>diskName</code> 时，把产物与 <code>disk</code> 目录里的文件放进磁盘镜像，见 4.5。</li>
 </ol>
 <p>工具参数：</p>
 <div class="table-wrap"><table>
@@ -270,12 +270,12 @@
 <h3 id="44-工具链">4.4 工具链</h3>
 <p>工具链在扩展目录的 <code>toolchain</code> 里（cc65、ca65、ld65、ar65、da65 与 none、nes 两个运行库），随扩展一起升级；缺少 <code>cc65</code>、<code>ca65</code>、<code>ld65</code> 任一个时报错，提示重新安装扩展。不使用 <code>PATH</code> 里的 cc65，也不接受其他位置的工具链，避免与目标运行库的版本不一致。</p>
 <h3 id="45-磁盘镜像">4.5 磁盘镜像</h3>
-<p>目标声明了磁盘能力（<code>target.json</code> 的 <code>disk</code>，目前是 <code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 与 <code>bbg</code>）且 <code>fcdev.json</code> 的 <code>disk</code> 不为 <code>false</code> 时，每次构建成功后都会生成 1.44MB 的 FAT12 磁盘镜像：</p>
+<p>目标声明了磁盘能力（<code>target.json</code> 的 <code>disk</code>，目前是 <code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 与 <code>bbg</code>）且 <code>fcdev.json</code> 配置了 <code>diskName</code> 时，每次构建成功后都会生成 1.44MB 的 FAT12 磁盘镜像：</p>
 <ul>
-<li>镜像放在产物旁边，文件名与程序名相同，扩展名为 <code>.img</code>，卷标为 <code>FCDEV</code>。</li>
+<li>镜像放在产物旁边，文件名取 <code>diskName</code>（如 <code>&quot;diskName&quot;: &quot;sb97-run-game.img&quot;</code>），卷标为 <code>FCDEV</code>。<code>diskName</code> 与程序名无关，程序名仍按目标的 <code>nameRule</code> 校验。</li>
 <li>镜像里先是这一次构建的程序，再是项目根目录下 <code>disk</code> 目录里的全部文件（按文件名排序，内容原样放入）。用户的使用说明、数据文件都放在这里；用 WinImage 等软件打开镜像就能看到。新建项目的模板自带一份 <code>disk/README.TXT</code>（UTF-8 带 BOM、CRLF 换行，记事本与 WinImage 都能正确显示中文）。</li>
 <li><code>disk</code> 目录里的文件名必须符合 8.3 规则，不能有子目录（镜像只支持根目录），不能与程序重名（不分大小写），总大小不能超过软盘容量，否则构建报错。没有这个目录时镜像里只有程序。</li>
-<li>不想生成镜像时在 <code>fcdev.json</code> 里写 <code>&quot;disk&quot;: false</code>，构建只生成产物。运行（<code>run</code>）需要镜像时仍会生成。</li>
+<li>没有写 <code>diskName</code> 时构建只生成产物，不生成镜像。运行（<code>run</code>）需要镜像时仍会生成，放在中间文件目录的 <code>run.img</code>，不进产物目录。</li>
 <li>步步高（<code>bbg</code>）的 DOS 在软盘上，镜像不是空白的 1.44MB 盘，而是复制 <code>fcdev.json</code> 的 <code>diskImage</code>（带 DOS 的系统盘镜像）后在根目录加入程序与 <code>disk</code> 目录里的文件：系统盘的引导扇区、卷标与原有文件不变，同名文件被替换，空间或根目录项不够报错；没有设置 <code>diskImage</code> 时构建只生成产物，运行时才报错。细节见 <a href="bbg.html">bbg/01-开发指南</a>。</li>
 <li>不支持磁盘镜像的目标（<code>nes</code>）不生成镜像，<code>disk</code> 目录也不会被读取。</li>
 </ul>

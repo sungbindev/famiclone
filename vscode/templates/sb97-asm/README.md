@@ -4,7 +4,7 @@
 
 ## 构建
 
-在 VS Code 里运行“终端 → 运行生成任务”（默认任务“fcdev：构建”），生成 `build/sb97/HELLO.EXE`，同时生成软盘镜像 `build/sb97/HELLO.img`，里面有 HELLO.EXE 和项目 `disk` 目录下的全部文件（模板里是一份使用说明 `disk/README.TXT`，名字与内容可以自己改，文件名必须是 8.3 名字，不能有子目录）。不想生成镜像时，在 `fcdev.json` 里加 `"disk": false`。
+在 VS Code 里运行“终端 → 运行生成任务”（默认任务“fcdev：构建”），生成 `build/sb97/HELLO.EXE`。要生成软盘镜像，在 `fcdev.json` 里加 `diskName`（如 `"diskName": "sb97-hello.img"`），镜像生成在 `build/sb97/` 下，里面有 HELLO.EXE 和项目 `disk` 目录下的全部文件（模板里是一份使用说明 `disk/README.TXT`，名字与内容可以自己改，文件名必须是 8.3 名字，不能有子目录）；没有 `diskName` 时不生成镜像。
 
 程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 

@@ -14,6 +14,8 @@
 #include <utility>
 
 #include "contracts/inspector/generated/inspector.hpp"
+#include "contracts/inspector/inspector-error.hpp"
+#include "shared/errors/core-error.hpp"
 
 namespace ember::requests::inspector {
 
@@ -34,16 +36,10 @@ constexpr std::int64_t DEFAULT_EVENT_CAPACITY = 65536;
 constexpr std::int64_t DEFAULT_EVENT_READ = 20000;
 constexpr std::int64_t DEFAULT_TRACE_READ_LINES = 1000;
 
-hw::BreakpointKind kindOf(const std::string& name) {
-  if (name == "read") return hw::BreakpointKind::Read;
-  if (name == "write") return hw::BreakpointKind::Write;
-  return hw::BreakpointKind::Execute;
-}
-
 contract::Breakpoint breakpointToWire(const hw::Breakpoint& breakpoint) {
   contract::Breakpoint wire;
   wire.id = breakpoint.id;
-  wire.kind = breakpoint.kind == hw::BreakpointKind::Execute ? "execute" : (breakpoint.kind == hw::BreakpointKind::Read ? "read" : "write");
+  wire.kind = hw::breakpointKindName(breakpoint.kind);
   wire.address = breakpoint.first;
   wire.endAddress = breakpoint.last;
   wire.hits = static_cast<std::int64_t>(breakpoint.hits);
@@ -226,9 +222,14 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
   });
   router.add("inspector", contract::INSPECTOR_ADD_BREAKPOINT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInspectorAddBreakpointParams(params, "params");
-    const auto first = static_cast<std::uint16_t>(parsed.address);
-    const auto last = static_cast<std::uint16_t>(parsed.endAddress.value_or(parsed.address));
-    return nlohmann::json(contract::InspectorAddBreakpointResult{breakpointToWire(service->addBreakpoint(kindOf(parsed.kind), first, last, parsed.condition.value_or("")))});
+    // Schema 已限定种类的取值，这里一定认得。
+    const hw::BreakpointKind kind = hw::parseBreakpointKind(parsed.kind).value_or(hw::BreakpointKind::Execute);
+    if (hw::breakpointHasAddress(kind) && !parsed.address.has_value()) {
+      throw shared::CoreError(contract::ERROR_INVALID_BREAKPOINT, "此种断点要给 address");
+    }
+    const auto first = static_cast<std::uint16_t>(parsed.address.value_or(0));
+    const auto last = static_cast<std::uint16_t>(parsed.endAddress.value_or(parsed.address.value_or(0)));
+    return nlohmann::json(contract::InspectorAddBreakpointResult{breakpointToWire(service->addBreakpoint(kind, first, last, parsed.condition.value_or("")))});
   });
   router.add("inspector", contract::INSPECTOR_UPDATE_BREAKPOINT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseInspectorUpdateBreakpointParams(params, "params");

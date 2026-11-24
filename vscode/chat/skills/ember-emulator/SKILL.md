@@ -89,10 +89,12 @@ user-invocable: false
 
 ## 断点与单步
 
-1. 要在某处停下：`emu_break` 的 `action: "add"`、`kind: "execute"`、`address`；要在变量被写时停下：`kind: "write"`。
-2. `emu_run` 命中后 `stopped` 为 `breakpoint`；读结果后用 `emu_break` 的 `action: "remove"` 与 `id` 删除，或 `action: "clear"`。
-3. `emu_step` 忽略断点，用来看几条指令的效果；`unit` 取 `instruction`、`cycle`、`scanline`、`frame`。
-4. fcdev 项目的符号地址在 `build/obj/<目标>/<程序名>/<程序名>.dbg` 里：找 `sym` 行，`name` 是符号名（C 符号带前导下划线），`val` 是地址。
+1. 要在某处停下：`emu_break` 的 `action: "add"`、`kind: "execute"`、`address`；要在变量被写时停下：`kind: "write"`；要在进入中断处理程序或复位之后停下：`kind` 取 `irq`、`nmi`、`brk`、`reset`（不给 `address`）。
+2. 只在满足条件时停下：加 `condition`，如 `a == $40 && [$10] != 0`；先不想用的断点用 `action: "disable"`（`enable` 恢复），`update` 改条件。
+3. `emu_run` 命中后 `stopped` 为 `breakpoint`；读结果后用 `emu_break` 的 `action: "remove"` 与 `id` 删除，或 `action: "clear"`。
+4. `emu_step` 忽略断点，用来看几条指令的效果；`unit` 取 `instruction`、`cycle`、`scanline`、`frame`。
+5. 停下后用 `emu_inspect` 的 `what: "callStack"` 看是从哪里调用进来的。
+6. fcdev 项目的符号地址在 `build/obj/<目标>/<程序名>/<程序名>.dbg` 里：找 `sym` 行，`name` 是符号名（C 符号带前导下划线），`val` 是地址。
 
 ## 读写内存与寄存器
 
@@ -106,6 +108,13 @@ user-invocable: false
 2. 用 `emu_run`、`emu_input` 让程序跑到要覆盖的代码。
 3. `emu_record`，`action: "stop"`；`instruction` 与 `callLog` 要给 `id`（开始时返回），只有一个记录时可省略。返回的 `file` 是记录文件的完整路径。
 4. 导入反汇编工程：`disasm_import_record`，`kind` 的对应关系为 `instruction` 对 `trace`、`callLog` 对 `callLog`、`cdl` 对 `cdl`；`io` 与 `irq` 不导入，只读文件内容。
+5. 长时间运行只看最近的轨迹：开始时给 `ring: true`（行数满了丢弃最早的行），随时用 `action: "read"`（可给 `from`、`maxLines`）读，不必结束记录；返回的 `total` 是已产生的行数，下次 `from` 取它就只读新增的行。
+
+## 统计与事件
+
+- 找最耗时的代码：`emu_profile` 的 `action: "start"`，运行一段时间，再 `get`（统计继续）或 `stop`；结果按不含子程序的周期数从大到小排列。
+- 判断某个寄存器是在画面的哪个位置被写的：`emu_events` 的 `action: "start"`，运行，再 `get`（可给 `fromFrame`），每行有帧、扫描线与点。
+- 看调色板的实际颜色：`emu_inspect` 的 `what: "palette"`。
 
 ## 收尾
 

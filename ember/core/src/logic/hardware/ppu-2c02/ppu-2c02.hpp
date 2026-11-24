@@ -109,7 +109,7 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
    * 64 个颜色号现在显示的颜色，按当前的颜色强调与灰度位换算，每项内存顺序 R、G、B、A（小端整数为 0xAABBGGRR）。
    */
   [[nodiscard]] std::array<std::uint32_t, 64> colorTable() const;
-  /** 追赶到 now 之后的扫描位置，不改变 PPU 的状态；奇数帧少一个点的情形不计，位置最多差一个点。 */
+  /** 追赶到 now 之后的扫描位置，不改变 PPU 的状态；奇数帧预渲染行少一个点按现在的背景开关算。 */
   [[nodiscard]] contracts::hardware::VideoPosition positionAt(contracts::hardware::MasterTime now) const;
   [[nodiscard]] std::uint16_t vramAddress() const { return v_; }
   [[nodiscard]] std::uint16_t tempAddress() const { return t_; }

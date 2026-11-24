@@ -57,6 +57,7 @@ Cpu6502::Cpu6502(hw::CpuBus& bus, hw::Clock& clock, hw::ClockDomain domain, hw::
 // ---------------------------------------------------------------- 对外接口
 
 void Cpu6502::reset(bool power) {
+  if (callObserver_ != nullptr) callObserver_->onResetBegin();
   if (power) {
     pc_ = 0;
     a_ = 0;

@@ -23,6 +23,9 @@ const MAX_READ = 4096;
 /** 每行显示的字节数。 */
 const ROW_BYTES = 16;
 
+/** 调色板每行显示的颜色数。 */
+const PALETTE_ROW_COLORS = 8;
+
 /** 手柄按键名对应的掩码位。 */
 const PAD_BITS: Readonly<Record<string, number>> = { a: 1, b: 2, select: 4, start: 8, up: 16, down: 32, left: 64, right: 128 };
 
@@ -71,16 +74,31 @@ function wideAddress(value: unknown, name: string): number {
 }
 
 /**
- * 检查：状态、内存读写、反汇编、地址解析、内存空间列表、修改 CPU 状态。
+ * 把调色板（每项 4 个字节 R、G、B、A）写成每行 8 个颜色的文字：“编号=#RRGGBB”。
+ * @param data 调色板字节。
+ * @returns 多行文字。
+ */
+function paletteText(data: Uint8Array): string {
+  const cells: string[] = [];
+  for (let index = 0; index + 3 < data.length; index += 4) {
+    cells.push(`${hex(index / 4, 2)}=#${hex(data[index] ?? 0, 2)}${hex(data[index + 1] ?? 0, 2)}${hex(data[index + 2] ?? 0, 2)}`);
+  }
+  const rows: string[] = [];
+  for (let offset = 0; offset < cells.length; offset += PALETTE_ROW_COLORS) rows.push(cells.slice(offset, offset + PALETTE_ROW_COLORS).join(' '));
+  return rows.join('\n');
+}
+
+/**
+ * 检查：状态、内存读写、反汇编、地址解析、内存空间列表、修改 CPU 状态、调用栈、当前调色板。
  * @param context 上下文。
- * @param params what：state、memory、write、disassemble、resolve、spaces、setState；其余参数见各
+ * @param params what：state、memory、write、disassemble、resolve、spaces、setState、callStack、palette；其余参数见各
  *   项。
  * @returns 结果。
  */
 export async function inspect(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { client } = context.store.currentSession();
-  const what = optionalEnum(params, 'what', ['state', 'memory', 'write', 'disassemble', 'resolve', 'spaces', 'setState']);
-  if (what === undefined) invalidParam('要给 what：state、memory、write、disassemble、resolve、spaces、setState');
+  const what = optionalEnum(params, 'what', ['state', 'memory', 'write', 'disassemble', 'resolve', 'spaces', 'setState', 'callStack', 'palette']);
+  if (what === undefined) invalidParam('要给 what：state、memory、write、disassemble、resolve、spaces、setState、callStack、palette');
   const space = optionalString(params, 'space') ?? 'cpu';
 
   switch (what) {
@@ -116,6 +134,12 @@ export async function inspect(context: OperationContext, params: Record<string, 
     }
     case 'spaces':
       return { ...(await client.request('inspector.listSpaces', {})) };
+    case 'callStack':
+      return { ...(await client.request('inspector.callStack', {})) };
+    case 'palette': {
+      const result = await client.request('inspector.getPalette', {});
+      return { count: result.count, text: paletteText(result.data ?? new Uint8Array()) };
+    }
     default: {
       const fields = optionalArray(params, 'fields');
       if (fields === undefined || fields.length === 0) invalidParam('修改状态要给 fields：[{ name, value }]');
@@ -222,23 +246,25 @@ export async function input(context: OperationContext, params: Record<string, un
 }
 
 /**
- * 记录：start 开始、stop 结束并取得文件。
+ * 记录：start 开始、read 边记边读、stop 结束并取得文件。
  * @param context 上下文。
- * @param params action（start、stop）、kind（instruction、io、irq、cdl、callLog）；callLog 开始时要
- *   address；停止跟踪与调用记录时要 id（只有一个时可省略）。
- * @returns 开始时的编号，或结束时的文件路径与行数。
+ * @param params action（start、read、stop）、kind（instruction、io、irq、cdl、callLog）；callLog 开始时要
+ *   address；跟踪开始时可给 ring（环形，满了丢弃最早的行）；read 可给 from、maxLines；
+ *   read 与 stop 要 id（只有一个时可省略）。
+ * @returns 开始时的编号，读到的行，或结束时的文件路径与行数。
  */
 export async function record(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
   const session = context.store.currentSession();
   const { client } = session;
-  const action = optionalEnum(params, 'action', ['start', 'stop']);
+  const action = optionalEnum(params, 'action', ['start', 'read', 'stop']);
   const kind = optionalEnum(params, 'kind', ['instruction', 'io', 'irq', 'cdl', 'callLog']);
-  if (action === undefined || kind === undefined) invalidParam('要给 action（start、stop）与 kind（instruction、io、irq、cdl、callLog）');
+  if (action === undefined || kind === undefined) invalidParam('要给 action（start、read、stop）与 kind（instruction、io、irq、cdl、callLog）');
   const file = optionalString(params, 'file');
   const maxLines = optionalInteger(params, 'maxLines', { min: 1, max: 1_000_000 });
   const extra = { ...(file === undefined ? {} : { file }), ...(maxLines === undefined ? {} : { maxLines }) };
 
   if (kind === 'cdl') {
+    if (action === 'read') invalidParam('cdl 没有文字行可读，结束时取得文件');
     if (action === 'start') {
       const { size } = await client.request('inspector.cdlStart', {});
       session.flags.cdl = true;
@@ -266,9 +292,11 @@ export async function record(context: OperationContext, params: Record<string, u
       return { kind, id, started: true };
     }
     const unique = optionalBoolean(params, 'unique', false);
+    const ring = optionalBoolean(params, 'ring', false);
     const { id } = await client.request('inspector.traceStart', {
       kind: kind as 'instruction' | 'io' | 'irq',
       ...(kind === 'instruction' && unique ? { unique } : {}),
+      ...(ring ? { ring } : {}),
       ...extra
     });
     session.records.set(id, { kind });
@@ -280,6 +308,12 @@ export async function record(context: OperationContext, params: Record<string, u
     const candidates = [...session.records].filter(([, entry]) => entry.kind === kind).map(([key]) => key);
     if (candidates.length !== 1 || candidates[0] === undefined) invalidParam(`要给 id（正在进行的 ${kind} 记录有 ${candidates.length} 个）`);
     id = candidates[0];
+  }
+  if (action === 'read') {
+    const from = optionalInteger(params, 'from', { min: 0 });
+    const lines = optionalInteger(params, 'maxLines', { min: 1, max: 1_000_000 });
+    const result = await client.request('inspector.traceRead', { id, ...(from === undefined ? {} : { from }), ...(lines === undefined ? {} : { maxLines: lines }) });
+    return { kind, id, ...result };
   }
   const stopped = await client.request(kind === 'callLog' ? 'inspector.callLogStop' : 'inspector.traceStop', { id });
   session.records.delete(id);

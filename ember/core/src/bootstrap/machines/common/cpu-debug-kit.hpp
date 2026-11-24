@@ -164,6 +164,7 @@ class CpuDebugKit final : private contracts::hardware::InterruptObserver, privat
   // CallObserver
   void onCall(std::uint16_t callAddress, std::uint16_t target) override;
   void onReturn(bool fromInterrupt) override;
+  void onResetBegin() override;
   void onReset() override;
 
   /** 有读写断点、I/O 记录或事件记录时在 CPU 总线上安装探针，没有时去掉。 */
@@ -189,6 +190,8 @@ class CpuDebugKit final : private contracts::hardware::InterruptObserver, privat
   VideoPositionFunction position_;
   /** 刚命中执行断点的地址：下一次运行先越过它，不再重复命中。 */
   std::optional<std::uint16_t> skipExecuteAt_;
+  /** 刚复位完成、第一条指令还没有执行，等着查复位断点。 */
+  bool resetPending_{false};
   /** 最近一条指令开始时的 PC，事件记录说明是哪条指令访问的（只在事件记录进行时更新）。 */
   std::uint16_t lastPc_{0};
 };

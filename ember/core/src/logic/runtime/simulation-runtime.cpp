@@ -347,9 +347,9 @@ void SimulationRuntime::handleBreakpoint(const hw::BreakpointHit& hit) {
   const hw::CpuRegisters registers = machine_->cpuRegisters();
   rt::RuntimeBreakpointHitData data;
   data.id = hit.id;
-  data.kind = hit.kind == hw::BreakpointKind::Execute ? "execute" : (hit.kind == hw::BreakpointKind::Read ? "read" : "write");
+  data.kind = hw::breakpointKindName(hit.kind);
   data.address = hit.address;
-  if (hit.kind != hw::BreakpointKind::Execute) data.value = hit.value;
+  if (hit.kind == hw::BreakpointKind::Read || hit.kind == hw::BreakpointKind::Write) data.value = hit.value;
   data.pc = registers.pc;
   data.a = registers.a;
   data.x = registers.x;

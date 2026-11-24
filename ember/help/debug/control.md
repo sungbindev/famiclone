@@ -51,6 +51,7 @@
 | 要看什么 | 请求 |
 | --- | --- |
 | 带条件的断点（如 `a == $40 && [$10] != 0`）、启用与禁用断点 | `inspector.addBreakpoint`（参数 `condition`）、`inspector.updateBreakpoint` |
+| 在 CPU 响应 IRQ、NMI、BRK 之后、复位之后停下 | `inspector.addBreakpoint`（`kind` 取 `irq`、`nmi`、`brk`、`reset`，不给 `address`） |
 | 调用栈（JSR 调用的子程序与中断处理程序） | `inspector.callStack` |
 | 每个子程序花掉的 CPU 周期 | `inspector.profilerStart`、`profilerGet`、`profilerStop` |
 | 寄存器读写与中断发生在哪一帧、哪一行、哪一点 | `inspector.eventsStart`、`eventsGet`、`eventsStop` |

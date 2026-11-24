@@ -103,11 +103,11 @@ export interface InspectorStateField {
 export interface InspectorBreakpoint {
   /** 断点编号 */
   id: number;
-  /** 种类：execute CPU 要执行这个地址的指令之前停下；read、write 总线读写这个范围里的地址，那条指令执行完后停下 */
-  kind: "execute" | "read" | "write";
-  /** 地址范围的第一个地址 */
+  /** 种类：execute CPU 要执行这个地址的指令之前停下；read、write 总线读写这个范围里的地址，那条指令执行完后停下；irq、nmi、brk CPU 响应这种中断、处理程序的第一条指令执行之前停下；reset 上电或复位之后、第一条指令执行之前停下 */
+  kind: "execute" | "read" | "write" | "irq" | "nmi" | "brk" | "reset";
+  /** 地址范围的第一个地址；irq、nmi、brk、reset 没有地址范围，为 0 */
   address: number;
-  /** 地址范围的最后一个地址（含）；单个地址时与 address 相同 */
+  /** 地址范围的最后一个地址（含）；单个地址时与 address 相同；irq、nmi、brk、reset 为 0 */
   endAddress: number;
   /** 已经命中的次数（只算条件成立的命中） */
   hits: number;
@@ -1043,10 +1043,10 @@ export interface InspectorCallLogStopResult {
 
 /** inspector.addBreakpoint 的参数。 */
 export interface InspectorAddBreakpointParams {
-  /** 种类 */
-  kind: "execute" | "read" | "write";
-  /** 地址，或地址范围的第一个地址 */
-  address: number;
+  /** 种类：execute、read、write 要给 address；irq、nmi、brk 在 CPU 响应这种中断之后、处理程序的第一条指令执行之前停下，条件里的 address 是处理程序的地址；reset 在上电或复位（软、硬）之后、第一条指令执行之前停下，条件里的 address 是复位后的 PC。这四种不带地址范围，给了 address 与 endAddress 也忽略 */
+  kind: "execute" | "read" | "write" | "irq" | "nmi" | "brk" | "reset";
+  /** 地址，或地址范围的第一个地址；execute、read、write 必填 */
+  address?: number;
   /** 地址范围的最后一个地址（含），省略时只有 address 一个地址 */
   endAddress?: number;
   /** 条件表达式：地址范围满足之后再求值，结果为 0 或求值失败（除以零）就当作没有命中，命中次数也不增加。数值写成 $C000、0xC000、0b1010 或十进制；变量（不分大小写）：a、x、y、sp、pc、p（也可写 status）、cycles（CPU 周期数）、frame、scanline、dot（PPU 的帧序号、扫描线与点，见 DebugEvent），以及读写断点的 address（被访问的地址）、value（读到或写入的值）、write（写为 1，读为 0），执行断点命中时 address 是指令地址、value 与 write 为 0；读内存：[地址] 读 CPU 总线上的一个字节，{地址} 读 16 位小端数值，读不产生副作用（寄存器类地址读出 0）；运算符 + - * / % & | ^ ~ << >> == != < <= > >= && || ! 与括号，优先级同 C，按 64 位整数计算，非 0 为真；省略时没有条件。例：a == $40 && [$10] != 0 */
@@ -1881,10 +1881,10 @@ export interface RuntimeBreakpointHitData {
   /** 断点编号 */
   id: number;
   /** 断点种类 */
-  kind: "execute" | "read" | "write";
-  /** 执行断点是将要执行的指令地址；读写断点是被访问的地址 */
+  kind: "execute" | "read" | "write" | "irq" | "nmi" | "brk" | "reset";
+  /** 执行断点是将要执行的指令地址；读写断点是被访问的地址；irq、nmi、brk 是处理程序的地址；reset 是复位后的 PC */
   address: number;
-  /** 读写断点读到或写入的值；执行断点没有这一项 */
+  /** 读写断点读到或写入的值；其余种类没有这一项 */
   value?: number;
   /** 停下时的程序计数器 */
   pc: number;
@@ -2140,7 +2140,7 @@ export interface EmberApi {
     profilerStop(): Promise<InspectorProfilerStopResult>;
     /** 读子程序统计的当前结果，不停止统计；进行中时还在栈上的帧按此刻返回计。没有开始过时返回 inspector.noProfile。需要已开机。 */
     profilerGet(): Promise<InspectorProfilerGetResult>;
-    /** 开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的；已经在记录时重新开始。PPU 寄存器的访问位置是精确的，其他访问的位置按所在点的时间推算，最多差一个点；按行处理的 PPU（sb2000 的 6576 模式）只有行。调试写内存不记。记录属于当前的主机，装入新卡带后作废。需要已开机。 */
+    /** 开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的；已经在记录时重新开始。PPU 寄存器的访问位置是精确的，其他访问的位置按所在点的时间推算（奇数帧少一个点的预渲染行按此刻的背景开关计）；按行处理的 PPU（sb2000 的 6576 模式）只有行。调试写内存不记。记录属于当前的主机，装入新卡带后作废。需要已开机。 */
     eventsStart(params?: InspectorEventsStartParams): Promise<InspectorEventsStartResult>;
     /** 停止事件记录，已有的事件保留到下一次 eventsStart 或换卡带；已经停止时没有效果。没有开始过时返回 inspector.noEventLog。需要已开机。 */
     eventsStop(): Promise<InspectorEventsStopResult>;

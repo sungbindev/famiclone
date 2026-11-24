@@ -102,29 +102,57 @@ export async function run(context: OperationContext, params: Record<string, unkn
   return { stopped: result.stopped, frames: result.frames, cycles: result.cycles, state: result.state, cpu: await cpuState(client) };
 }
 
+/** 带地址的断点种类。 */
+const ADDRESS_BREAKPOINT_KINDS = ['execute', 'read', 'write'] as const;
+
+/** 事件类断点种类：CPU 响应中断或复位之后停下，没有地址。 */
+const EVENT_BREAKPOINT_KINDS = ['irq', 'nmi', 'brk', 'reset'] as const;
+
 /**
- * 断点：add 添加、list 列出、remove 删除一个、clear 全部删除。
+ * 断点：add 添加、list 列出、remove 删除一个、clear 全部删除、enable 与 disable 启用或禁用一个、
+ * update 改条件。
  * @param context 上下文。
- * @param params action；add 要 kind（execute、read、write）与 address，可选 endAddress；remove 要
- *   id。
- * @returns 添加的断点，或当前的全部断点。
+ * @param params action；add 要 kind（execute、read、write、irq、nmi、brk、reset），前三种要
+ *   address，可选 endAddress；add 与 update 可带 condition；remove、enable、disable、update 要 id。
+ * @returns 当前的全部断点。
  */
 export async function breakpoint(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { client } = context.store.currentSession();
-  const action = optionalEnum(params, 'action', ['add', 'list', 'remove', 'clear'], 'list');
+  const action = optionalEnum(params, 'action', ['add', 'list', 'remove', 'clear', 'enable', 'disable', 'update'], 'list');
   if (action === 'add') {
-    const kind = optionalEnum(params, 'kind', ['execute', 'read', 'write']);
-    if (kind !== 'execute' && kind !== 'read' && kind !== 'write') invalidParam('添加断点要给 kind：execute、read、write');
-    const address = optionalAddress(params, 'address');
-    if (address === undefined) invalidParam('添加断点要给 address');
-    const endAddress = optionalAddress(params, 'endAddress');
-    await client.request('inspector.addBreakpoint', { kind, address, ...(endAddress === undefined ? {} : { endAddress }) });
+    const kind = optionalEnum(params, 'kind', [...ADDRESS_BREAKPOINT_KINDS, ...EVENT_BREAKPOINT_KINDS]);
+    if (kind === undefined) invalidParam('添加断点要给 kind：execute、read、write、irq、nmi、brk、reset');
+    const condition = optionalString(params, 'condition');
+    const conditionPart = condition === undefined ? {} : { condition };
+    if ((EVENT_BREAKPOINT_KINDS as readonly string[]).includes(kind)) {
+      await client.request('inspector.addBreakpoint', { kind: kind as (typeof EVENT_BREAKPOINT_KINDS)[number], ...conditionPart });
+    } else {
+      const address = optionalAddress(params, 'address');
+      if (address === undefined) invalidParam(`${kind} 断点要给 address`);
+      const endAddress = optionalAddress(params, 'endAddress');
+      await client.request('inspector.addBreakpoint', {
+        kind: kind as (typeof ADDRESS_BREAKPOINT_KINDS)[number],
+        address,
+        ...(endAddress === undefined ? {} : { endAddress }),
+        ...conditionPart
+      });
+    }
   } else if (action === 'remove') {
     const id = optionalInteger(params, 'id', { min: 1 });
     if (id === undefined) invalidParam('删除断点要给 id');
     await client.request('inspector.removeBreakpoint', { id });
   } else if (action === 'clear') {
     await client.request('inspector.clearBreakpoints', {});
+  } else if (action === 'enable' || action === 'disable' || action === 'update') {
+    const id = optionalInteger(params, 'id', { min: 1 });
+    if (id === undefined) invalidParam(`${action} 要给 id`);
+    const condition = optionalString(params, 'condition');
+    if (action === 'update' && condition === undefined) invalidParam('update 要给 condition（空字符串表示去掉条件）');
+    await client.request('inspector.updateBreakpoint', {
+      id,
+      ...(action === 'update' ? {} : { enabled: action === 'enable' }),
+      ...(condition === undefined ? {} : { condition })
+    });
   }
   return { ...(await client.request('inspector.listBreakpoints', {})) };
 }

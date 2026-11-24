@@ -70,6 +70,9 @@ class CallObserver {
    */
   virtual void onReturn(bool fromInterrupt) = 0;
 
+  /** 复位开始：寄存器与周期数还是复位之前的值。 */
+  virtual void onResetBegin() = 0;
+
   /** 复位序列执行完毕，栈上原有的调用关系作废。 */
   virtual void onReset() = 0;
 };

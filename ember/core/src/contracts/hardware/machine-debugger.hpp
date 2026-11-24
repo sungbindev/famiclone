@@ -86,14 +86,54 @@ enum class BreakpointKind : std::uint8_t {
   /** 总线读到这个范围里的地址，那条指令执行完后停下。 */
   Read,
   /** 总线写到这个范围里的地址，那条指令执行完后停下。 */
-  Write
+  Write,
+  /** CPU 响应 IRQ 之后、处理程序的第一条指令执行之前停下；没有地址范围。 */
+  Irq,
+  /** CPU 响应 NMI 之后、处理程序的第一条指令执行之前停下；没有地址范围。 */
+  Nmi,
+  /** CPU 执行 BRK 进入处理程序之后、处理程序的第一条指令执行之前停下；没有地址范围。 */
+  Brk,
+  /** 上电或复位（软复位与硬复位）之后、第一条指令执行之前停下；没有地址范围。 */
+  Reset
 };
+
+/** 断点种类的名字（协议里的写法）。 */
+[[nodiscard]] inline const char* breakpointKindName(BreakpointKind kind) {
+  switch (kind) {
+    case BreakpointKind::Execute:
+      return "execute";
+    case BreakpointKind::Read:
+      return "read";
+    case BreakpointKind::Write:
+      return "write";
+    case BreakpointKind::Irq:
+      return "irq";
+    case BreakpointKind::Nmi:
+      return "nmi";
+    case BreakpointKind::Brk:
+      return "brk";
+    case BreakpointKind::Reset:
+      return "reset";
+  }
+  return "";
+}
+
+/** 由名字取断点种类；名字不认识时返回空。 */
+[[nodiscard]] inline std::optional<BreakpointKind> parseBreakpointKind(std::string_view name) {
+  for (const BreakpointKind kind : {BreakpointKind::Execute, BreakpointKind::Read, BreakpointKind::Write, BreakpointKind::Irq, BreakpointKind::Nmi, BreakpointKind::Brk, BreakpointKind::Reset}) {
+    if (name == breakpointKindName(kind)) return kind;
+  }
+  return std::nullopt;
+}
+
+/** 种类是否带地址范围（execute、read、write）；irq、nmi、brk、reset 没有。 */
+[[nodiscard]] inline bool breakpointHasAddress(BreakpointKind kind) { return kind == BreakpointKind::Execute || kind == BreakpointKind::Read || kind == BreakpointKind::Write; }
 
 /** 一个断点。 */
 struct Breakpoint {
   std::uint32_t id{0};
   BreakpointKind kind{BreakpointKind::Execute};
-  /** 地址范围的第一个与最后一个地址（含）。 */
+  /** 地址范围的第一个与最后一个地址（含）；irq、nmi、brk、reset 没有地址范围，都为 0。 */
   std::uint16_t first{0};
   std::uint16_t last{0};
   /** 已经命中的次数（只算条件成立的命中）。 */
@@ -108,9 +148,9 @@ struct Breakpoint {
 struct BreakpointHit {
   std::uint32_t id{0};
   BreakpointKind kind{BreakpointKind::Execute};
-  /** 执行断点是将要执行的指令地址；读写断点是被访问的地址。 */
+  /** 执行断点是将要执行的指令地址；读写断点是被访问的地址；irq、nmi、brk 是处理程序的地址；reset 是复位后的 PC。 */
   std::uint16_t address{0};
-  /** 读写断点读到或写入的值；执行断点为 0。 */
+  /** 读写断点读到或写入的值；其余为 0。 */
   std::uint8_t value{0};
 };
 

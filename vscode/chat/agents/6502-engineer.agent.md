@@ -41,6 +41,8 @@ tools:
   - sungbin.fcdev/emu_screen
   - sungbin.fcdev/emu_input
   - sungbin.fcdev/emu_record
+  - sungbin.fcdev/emu_profile
+  - sungbin.fcdev/emu_events
   - sungbin.fcdev/fcdev_new_project
   - sungbin.fcdev/fcdev_build
   - sungbin.fcdev/fcdev_run

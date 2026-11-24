@@ -13,6 +13,7 @@ import type { EmulatorEnvironment } from '../../contracts/emulator/emulator-envi
 import type { EmulatorOperations } from '../../contracts/emulator/emulator-operations';
 import { EmberConnectionError, EmberRequestError } from '../../shared/debug-client/errors';
 import { FcdevError } from '../../shared/errors/fcdev-error';
+import { events, profile } from './analysis-operations';
 import { connect, launch, status } from './connection-operations';
 import { EmulatorSessionStore } from './emulator-session';
 import { inspect, input, record, screenshot } from './inspect-operations';
@@ -26,7 +27,7 @@ export const EMULATOR_API_VERSION = 1;
 type Operation = (context: OperationContext, params: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
 /** 操作名到实现。 */
-const OPERATIONS: Readonly<Record<string, Operation>> = Object.freeze({ connect, launch, status, load, run, breakpoint, step, inspect, screenshot, input, record });
+const OPERATIONS: Readonly<Record<string, Operation>> = Object.freeze({ connect, launch, status, load, run, breakpoint, step, inspect, screenshot, input, record, profile, events });
 
 /** 全部操作名。 */
 export const EMULATOR_OPERATION_NAMES: readonly string[] = Object.freeze(Object.keys(OPERATIONS));

@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：emulator-tools.ts
 // 说明：“模拟器”一组工具：emu_connect、emu_launch、emu_status、emu_load、emu_run、emu_break、
-//       emu_step、emu_inspect、emu_screen、emu_input、emu_record。
+//       emu_step、emu_inspect、emu_screen、emu_input、emu_record、emu_profile、emu_events。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -68,5 +68,7 @@ export const EMULATOR_TOOLS: readonly ToolSpec[] = [
     confirm: (input) => `将把截图保存为 ${String(input.file)}。`
   },
   simple('emu_input', 'input', (input) => `模拟器输入：${String(input.kind)}`),
-  simple('emu_record', 'record', (input) => `${input.action === 'stop' ? '结束' : '开始'}记录 ${String(input.kind)}`)
+  simple('emu_record', 'record', (input) => `${input.action === 'stop' ? '结束' : input.action === 'read' ? '读取' : '开始'}记录 ${String(input.kind)}`),
+  simple('emu_profile', 'profile', (input) => `子程序周期统计：${String(input.action ?? 'get')}`),
+  simple('emu_events', 'events', (input) => `事件记录：${String(input.action ?? 'get')}`)
 ];

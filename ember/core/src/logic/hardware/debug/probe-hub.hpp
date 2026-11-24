@@ -47,6 +47,9 @@ class ProbeHub final : public contracts::hardware::AccessProbe {
     recordingSuspended_ = before.recording;
   }
 
+  /** 断点现在是否被暂停（调试访问期间）。 */
+  [[nodiscard]] bool breakpointsSuspended() const { return breakpointsSuspended_; }
+
   void onAccess(contracts::hardware::AccessKind kind, std::uint16_t address, std::uint8_t value) override {
     if (!breakpointsSuspended_ && breakpoints_.hasAccess()) breakpoints_.onAccess(kind, address, value);
     if (recordingSuspended_) return;

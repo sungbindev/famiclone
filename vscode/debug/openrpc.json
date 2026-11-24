@@ -2389,25 +2389,29 @@
           "required": true,
           "schema": {
             "type": "string",
-            "description": "种类",
+            "description": "种类：execute、read、write 要给 address；irq、nmi、brk 在 CPU 响应这种中断之后、处理程序的第一条指令执行之前停下，条件里的 address 是处理程序的地址；reset 在上电或复位（软、硬）之后、第一条指令执行之前停下，条件里的 address 是复位后的 PC。这四种不带地址范围，给了 address 与 endAddress 也忽略",
             "enum": [
               "execute",
               "read",
-              "write"
+              "write",
+              "irq",
+              "nmi",
+              "brk",
+              "reset"
             ]
           },
-          "description": "种类"
+          "description": "种类：execute、read、write 要给 address；irq、nmi、brk 在 CPU 响应这种中断之后、处理程序的第一条指令执行之前停下，条件里的 address 是处理程序的地址；reset 在上电或复位（软、硬）之后、第一条指令执行之前停下，条件里的 address 是复位后的 PC。这四种不带地址范围，给了 address 与 endAddress 也忽略"
         },
         {
           "name": "address",
-          "required": true,
+          "required": false,
           "schema": {
             "type": "integer",
-            "description": "地址，或地址范围的第一个地址",
+            "description": "地址，或地址范围的第一个地址；execute、read、write 必填",
             "minimum": 0,
             "maximum": 65535
           },
-          "description": "地址，或地址范围的第一个地址"
+          "description": "地址，或地址范围的第一个地址；execute、read、write 必填"
         },
         {
           "name": "endAddress",
@@ -3003,7 +3007,7 @@
     {
       "name": "inspector.eventsStart",
       "summary": "开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的",
-      "description": "开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的；已经在记录时重新开始。PPU 寄存器的访问位置是精确的，其他访问的位置按所在点的时间推算，最多差一个点；按行处理的 PPU（sb2000 的 6576 模式）只有行。调试写内存不记。记录属于当前的主机，装入新卡带后作废。需要已开机。",
+      "description": "开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的；已经在记录时重新开始。PPU 寄存器的访问位置是精确的，其他访问的位置按所在点的时间推算（奇数帧少一个点的预渲染行按此刻的背景开关计）；按行处理的 PPU（sb2000 的 6576 模式）只有行。调试写内存不记。记录属于当前的主机，装入新卡带后作废。需要已开机。",
       "tags": [
         {
           "name": "inspector"
@@ -6189,22 +6193,26 @@
           },
           "kind": {
             "type": "string",
-            "description": "种类：execute CPU 要执行这个地址的指令之前停下；read、write 总线读写这个范围里的地址，那条指令执行完后停下",
+            "description": "种类：execute CPU 要执行这个地址的指令之前停下；read、write 总线读写这个范围里的地址，那条指令执行完后停下；irq、nmi、brk CPU 响应这种中断、处理程序的第一条指令执行之前停下；reset 上电或复位之后、第一条指令执行之前停下",
             "enum": [
               "execute",
               "read",
-              "write"
+              "write",
+              "irq",
+              "nmi",
+              "brk",
+              "reset"
             ]
           },
           "address": {
             "type": "integer",
-            "description": "地址范围的第一个地址",
+            "description": "地址范围的第一个地址；irq、nmi、brk、reset 没有地址范围，为 0",
             "minimum": 0,
             "maximum": 65535
           },
           "endAddress": {
             "type": "integer",
-            "description": "地址范围的最后一个地址（含）；单个地址时与 address 相同",
+            "description": "地址范围的最后一个地址（含）；单个地址时与 address 相同；irq、nmi、brk、reset 为 0",
             "minimum": 0,
             "maximum": 65535
           },
@@ -8137,18 +8145,22 @@
             "enum": [
               "execute",
               "read",
-              "write"
+              "write",
+              "irq",
+              "nmi",
+              "brk",
+              "reset"
             ]
           },
           "address": {
             "type": "integer",
-            "description": "执行断点是将要执行的指令地址；读写断点是被访问的地址",
+            "description": "执行断点是将要执行的指令地址；读写断点是被访问的地址；irq、nmi、brk 是处理程序的地址；reset 是复位后的 PC",
             "minimum": 0,
             "maximum": 65535
           },
           "value": {
             "type": "integer",
-            "description": "读写断点读到或写入的值；执行断点没有这一项",
+            "description": "读写断点读到或写入的值；其余种类没有这一项",
             "minimum": 0,
             "maximum": 255
           },

@@ -51,7 +51,7 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 - 分析：`disasm_trace`（从入口追踪并自动命名）、`disasm_list`、`disasm_view`（带符号与注释的反汇编）、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference`。
 - 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`、`disasm_import_record`（把模拟器记录的指令轨迹、调用记录或 CDL 导入工程）。
 - 生成与校验：`disasm_generate`、`disasm_verify`（重新汇编后与原映像逐字节比较）、`disasm_build`。
-- 模拟器（Ember）：`emu_launch`（启动）、`emu_connect`（连接已运行的）、`emu_status`、`emu_load`（载入 NES 文件或整机）、`emu_run`、`emu_break`、`emu_step`、`emu_inspect`（读写内存、寄存器、单步核对、解析 bank）、`emu_screen`（截图）、`emu_input`（按键、手柄、鼠标）、`emu_record`（指令跟踪、CDL、调用记录）。让程序跑起来、记录执行过的地址再导入工程，可以补上静态追踪找不到的代码。
+- 模拟器（Ember）：`emu_launch`（启动）、`emu_connect`（连接已运行的）、`emu_status`、`emu_load`（载入 NES 文件或整机）、`emu_run`、`emu_break`（断点，支持条件、启用与禁用，以及中断、复位断点）、`emu_step`、`emu_inspect`（读写内存、寄存器、单步核对、解析 bank、调用栈、调色板）、`emu_screen`（截图）、`emu_input`（按键、手柄、鼠标）、`emu_record`（指令跟踪、CDL、调用记录，跟踪可环形记录、边记边读）、`emu_profile`（子程序周期统计）、`emu_events`（PPU 与 mapper 寄存器读写、中断的扫描位置）。让程序跑起来、记录执行过的地址再导入工程，可以补上静态追踪找不到的代码。
 - fcdev：`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs`。
 
 会修改工程文件、写生成文件、运行汇编链接、启动 Ember、写模拟器内存或寄存器的调用，执行前会请你确认。工程目录必须在工作区里；要反汇编的映像、载入的文件、记录文件可以在工作区外，确认里会写出路径。截图作为图像返回，需要较新的 VS Code；较旧的版本用 `file` 参数保存成文件。停用扩展时会关闭模拟器会话并结束工具启动的 Ember。

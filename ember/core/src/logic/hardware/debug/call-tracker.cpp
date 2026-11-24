@@ -17,7 +17,6 @@ namespace ember::logic::hardware {
 namespace hw = contracts::hardware;
 
 void CallTracker::enter(hw::CallKind kind, std::uint16_t callAddress, std::uint16_t targetAddress, std::uint16_t returnAddress, std::uint8_t stackPointer, int stackBytes, std::uint64_t cycles) {
-  lastCycles_ = cycles;
   const int stackBefore = static_cast<int>(stackPointer) + stackBytes;
   // 栈上已经没有返回地址的过期帧（程序改过栈指针，或用 RTS 当跳转）先弹掉。
   while (!frames_.empty() && frames_.back().stackBefore <= stackBefore) closeTop(cycles);
@@ -30,7 +29,6 @@ void CallTracker::enter(hw::CallKind kind, std::uint16_t callAddress, std::uint1
 }
 
 void CallTracker::leave(std::uint8_t stackPointer, std::uint64_t cycles) {
-  lastCycles_ = cycles;
   while (!frames_.empty() && frames_.back().stackBefore <= static_cast<int>(stackPointer)) closeTop(cycles);
 }
 
@@ -52,13 +50,14 @@ void CallTracker::closeTop(std::uint64_t cycles) {
   else frames_.back().childCycles += inclusive;
 }
 
+void CallTracker::beginReset(std::uint64_t cycles) {
+  while (!frames_.empty()) closeTop(cycles);
+  if (profiling_) accumulatedCycles_ += cycles > rootEntryCycles_ ? cycles - rootEntryCycles_ : 0;
+}
+
 void CallTracker::reset(std::uint64_t cycles) {
   frames_.clear();
-  if (profiling_) {
-    accumulatedCycles_ += lastCycles_ > rootEntryCycles_ ? lastCycles_ - rootEntryCycles_ : 0;
-    rootEntryCycles_ = cycles;
-  }
-  lastCycles_ = cycles;
+  if (profiling_) rootEntryCycles_ = cycles;
 }
 
 std::vector<hw::CallFrame> CallTracker::stack() const {
@@ -74,7 +73,6 @@ void CallTracker::startProfile(std::uint64_t cycles) {
   profiling_ = true;
   hasProfile_ = true;
   accumulatedCycles_ = 0;
-  lastCycles_ = cycles;
   rootEntryCycles_ = cycles;
   rootChildCycles_ = 0;
   for (Frame& frame : frames_) {

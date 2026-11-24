@@ -43,6 +43,9 @@ class CallTracker {
    */
   void leave(std::uint8_t stackPointer, std::uint64_t cycles);
 
+  /** 复位开始（周期数还是复位之前的）：还在栈上的帧按此刻返回计入统计，统计在进行时把到此刻为止的周期累计起来。 */
+  void beginReset(std::uint64_t cycles);
+
   /** 复位序列执行完毕：调用栈清空；统计在进行时，统计的时间起点移到现在。 */
   void reset(std::uint64_t cycles);
 
@@ -83,9 +86,8 @@ class CallTracker {
   /** 根（不在任何子程序里的代码）：进入统计的周期数与已返回的顶层调用占去的周期数。 */
   std::uint64_t rootEntryCycles_{0};
   std::uint64_t rootChildCycles_{0};
-  /** 复位之前已经统计过的周期数，与最近一次收到的周期数（复位时估算复位之前的时长）。 */
+  /** 复位之前已经统计过的周期数。 */
   std::uint64_t accumulatedCycles_{0};
-  std::uint64_t lastCycles_{0};
   /** 停止时算好的结果。 */
   std::optional<contracts::hardware::ProfileReport> stopped_;
 };

@@ -21,14 +21,15 @@ namespace ember::logic::hardware {
 namespace hw = contracts::hardware;
 
 hw::Breakpoint BreakpointTable::add(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) {
-  if (first > last) throw shared::CoreError(hw::ERROR_INVALID_BREAKPOINT, "断点地址范围的起点大于终点");
+  const bool ranged = hw::breakpointHasAddress(kind);
+  if (ranged && first > last) throw shared::CoreError(hw::ERROR_INVALID_BREAKPOINT, "断点地址范围的起点大于终点");
   if (entries_.size() >= MAX_BREAKPOINTS) throw shared::CoreError(hw::ERROR_BREAKPOINT_LIMIT, "断点最多 " + std::to_string(MAX_BREAKPOINTS) + " 个");
   Entry entry;
   if (!condition.empty()) entry.expression = Expression::parse(condition);
   entry.info.id = nextId_++;
   entry.info.kind = kind;
-  entry.info.first = first;
-  entry.info.last = last;
+  entry.info.first = ranged ? first : 0;
+  entry.info.last = ranged ? last : 0;
   entry.info.condition = condition;
   entries_.push_back(std::move(entry));
   recount();
@@ -76,10 +77,21 @@ std::vector<hw::Breakpoint> BreakpointTable::list() const {
 void BreakpointTable::recount() {
   executeCount_ = 0;
   accessCount_ = 0;
+  eventCount_ = 0;
   for (const Entry& entry : entries_) {
     if (!entry.info.enabled) continue;
-    if (entry.info.kind == hw::BreakpointKind::Execute) ++executeCount_;
-    else ++accessCount_;
+    switch (entry.info.kind) {
+      case hw::BreakpointKind::Execute:
+        ++executeCount_;
+        break;
+      case hw::BreakpointKind::Read:
+      case hw::BreakpointKind::Write:
+        ++accessCount_;
+        break;
+      default:
+        ++eventCount_;
+        break;
+    }
   }
 }
 
@@ -97,6 +109,19 @@ bool BreakpointTable::hitsExecute(std::uint16_t pc) {
     if (!conditionHolds(entry, AccessValues{pc, 0, false})) continue;
     ++info.hits;
     pending_ = hw::BreakpointHit{info.id, info.kind, pc, 0};
+    return true;
+  }
+  return false;
+}
+
+bool BreakpointTable::hitsEvent(hw::BreakpointKind kind, std::uint16_t address) {
+  if (pending_.has_value()) return false;
+  for (Entry& entry : entries_) {
+    hw::Breakpoint& info = entry.info;
+    if (!info.enabled || info.kind != kind) continue;
+    if (!conditionHolds(entry, AccessValues{address, 0, false})) continue;
+    ++info.hits;
+    pending_ = hw::BreakpointHit{info.id, info.kind, address, 0};
     return true;
   }
   return false;

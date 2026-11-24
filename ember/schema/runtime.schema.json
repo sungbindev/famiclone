@@ -205,9 +205,9 @@
         "type": "object",
         "properties": {
           "id": { "type": "integer", "minimum": 1, "description": "断点编号" },
-          "kind": { "type": "string", "enum": ["execute", "read", "write"], "description": "断点种类" },
-          "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "执行断点是将要执行的指令地址；读写断点是被访问的地址" },
-          "value": { "type": "integer", "minimum": 0, "maximum": 255, "description": "读写断点读到或写入的值；执行断点没有这一项" },
+          "kind": { "type": "string", "enum": ["execute", "read", "write", "irq", "nmi", "brk", "reset"], "description": "断点种类" },
+          "address": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "执行断点是将要执行的指令地址；读写断点是被访问的地址；irq、nmi、brk 是处理程序的地址；reset 是复位后的 PC" },
+          "value": { "type": "integer", "minimum": 0, "maximum": 255, "description": "读写断点读到或写入的值；其余种类没有这一项" },
           "pc": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "停下时的程序计数器" },
           "a": { "type": "integer", "minimum": 0, "maximum": 255, "description": "累加器" },
           "x": { "type": "integer", "minimum": 0, "maximum": 255, "description": "X 寄存器" },

@@ -1427,8 +1427,8 @@
         ],
         "toolReferenceName": "emu_break",
         "displayName": "断点",
-        "modelDescription": "断点：action 为 add（要 kind 与 address，可加 endAddress 表示范围）、list、remove（要 id）、clear；返回当前全部断点。execute 断点在执行这个地址的指令之前停下；read、write 断点在访问这个范围里的地址的那条指令执行完后停下。命中后 emu_run 的 stopped 为 breakpoint。",
-        "userDescription": "添加、列出、删除断点。",
+        "modelDescription": "断点：action 为 add（要 kind；execute、read、write 还要 address，可加 endAddress 表示范围；可加 condition 条件表达式）、list（每项含 enabled、condition、hits）、remove（要 id）、clear、enable 与 disable（要 id，禁用的断点保留但不触发）、update（要 id 与 condition，空字符串表示去掉条件）；返回当前全部断点。kind：execute 在执行这个地址的指令之前停下；read、write 在访问这个范围里的地址的那条指令执行完后停下；irq、nmi、brk 在 CPU 响应这种中断之后、处理程序的第一条指令执行之前停下；reset 在上电或复位之后、第一条指令执行之前停下（这四种不给 address）。condition 在地址满足后再求值，结果为 0 就不停：数值写 $C000 或十进制；变量 a、x、y、sp、pc、p、cycles、frame、scanline、dot，读写断点还有 address、value、write；[地址] 读一个字节，{地址} 读 16 位；运算符同 C。例：a == $40 && [$10] != 0。命中后 emu_run 的 stopped 为 breakpoint。",
+        "userDescription": "添加、列出、删除、启用、禁用断点，支持条件与中断、复位断点。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -1439,7 +1439,10 @@
                 "add",
                 "list",
                 "remove",
-                "clear"
+                "clear",
+                "enable",
+                "disable",
+                "update"
               ],
               "description": "操作，默认 list"
             },
@@ -1448,7 +1451,11 @@
               "enum": [
                 "execute",
                 "read",
-                "write"
+                "write",
+                "irq",
+                "nmi",
+                "brk",
+                "reset"
               ],
               "description": "add 的断点种类"
             },
@@ -1457,7 +1464,7 @@
                 "string",
                 "integer"
               ],
-              "description": "add 的地址：整数，或十六进制文字如 \"$C000\""
+              "description": "add 的地址（execute、read、write 必填）：整数，或十六进制文字如 \"$C000\""
             },
             "endAddress": {
               "type": [
@@ -1466,10 +1473,15 @@
               ],
               "description": "范围的最后一个地址（含）；省略时只有 address 一个"
             },
+            "condition": {
+              "type": "string",
+              "maxLength": 256,
+              "description": "add 与 update 的条件表达式；update 给空字符串表示去掉条件"
+            },
             "id": {
               "type": "integer",
               "minimum": 1,
-              "description": "remove 的断点编号"
+              "description": "remove、enable、disable、update 的断点编号"
             }
           },
           "additionalProperties": false
@@ -1519,8 +1531,8 @@
         ],
         "toolReferenceName": "emu_inspect",
         "displayName": "检查模拟器",
-        "modelDescription": "检查或修改模拟器：what 为 state（读寄存器与状态，module 可选 cpu、ppu 等）、memory（读内存，space 默认 cpu，address、length ≤ 4096，返回十六进制视图）、disassemble（从 address 反汇编 count 条指令，只用于核对）、resolve（space 取 cpu 或 ppu，解析地址落在哪块存储区的哪个偏移，用于确定 bank 布局）、spaces（列出全部内存空间）、write（写内存，要 address 与 bytes，需确认）、setState（修改 CPU 寄存器，fields 是 [{ name, value }]，需确认）。",
-        "userDescription": "读状态与内存、反汇编、解析地址，或修改内存与寄存器。",
+        "modelDescription": "检查或修改模拟器：what 为 state（读寄存器与状态，module 可选 cpu、ppu 等）、memory（读内存，space 默认 cpu，address、length ≤ 4096，返回十六进制视图）、disassemble（从 address 反汇编 count 条指令，只用于核对）、resolve（space 取 cpu 或 ppu，解析地址落在哪块存储区的哪个偏移，用于确定 bank 布局）、spaces（列出全部内存空间）、write（写内存，要 address 与 bytes，需确认）、setState（修改 CPU 寄存器，fields 是 [{ name, value }]，需确认）、callStack（调用栈，最里层的在前；Ember 在机器运行时跟踪 JSR 与中断，显示调用位置、入口、返回地址与栈指针）、palette（当前 64 个调色板颜色的 RGB，已计入黑白与强调色设置）。",
+        "userDescription": "读状态与内存、反汇编、解析地址、查看调用栈与调色板，或修改内存与寄存器。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -1534,7 +1546,9 @@
                 "resolve",
                 "spaces",
                 "write",
-                "setState"
+                "setState",
+                "callStack",
+                "palette"
               ],
               "description": "检查什么"
             },
@@ -1755,8 +1769,8 @@
         ],
         "toolReferenceName": "emu_record",
         "displayName": "记录",
-        "modelDescription": "开始与结束记录，结束时返回记录文件的路径，交给 disasm_import_record 导入。action 为 start 或 stop；kind 为 instruction（指令轨迹）、io（寄存器读写）、irq（中断）、cdl（代码数据日志）、callLog（调用记录：每次执行到 address 这条指令之前记一行，含寄存器与栈顶 stackBytes 个字节；stackBytes 至少 2 才能核实调用者）。同一时刻可以有多个记录，结束跟踪与调用记录时给 id（只有一个时可省略）。记录文件写在 Ember 的调试输出目录；file 只是文件名，不含目录。",
-        "userDescription": "开始与结束指令跟踪、CDL、调用记录，返回记录文件。",
+        "modelDescription": "开始、读取与结束记录，结束时返回记录文件的路径，交给 disasm_import_record 导入。action 为 start、read 或 stop；kind 为 instruction（指令轨迹）、io（寄存器读写）、irq（中断）、cdl（代码数据日志）、callLog（调用记录：每次执行到 address 这条指令之前记一行，含寄存器与栈顶 stackBytes 个字节；stackBytes 至少 2 才能核实调用者）。同一时刻可以有多个记录，读取与结束跟踪、调用记录时给 id（只有一个时可省略）。跟踪开始时给 ring 为 true 即环形记录：行数满了丢弃最早的行继续记，适合长时间运行只看最近的轨迹；read 边记边读（不结束记录），从行号 from 起最多读 maxLines 行，返回的 total 是已产生的行数、oldest 是还留着的最早一行的行号，下次从 total 读起即只读新增的行。记录文件写在 Ember 的调试输出目录；file 只是文件名，不含目录。",
+        "userDescription": "开始、读取与结束指令跟踪、CDL、调用记录，返回记录文件。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -1765,9 +1779,10 @@
               "type": "string",
               "enum": [
                 "start",
+                "read",
                 "stop"
               ],
-              "description": "开始或结束"
+              "description": "开始、读取或结束（cdl 没有 read）"
             },
             "kind": {
               "type": "string",
@@ -1783,7 +1798,7 @@
             "id": {
               "type": "integer",
               "minimum": 1,
-              "description": "stop 的记录编号（start 返回的 id）"
+              "description": "stop 与 read 的记录编号（start 返回的 id）"
             },
             "address": {
               "type": [
@@ -1852,12 +1867,88 @@
             "unique": {
               "type": "boolean",
               "description": "instruction 每个地址只记第一次"
+            },
+            "ring": {
+              "type": "boolean",
+              "description": "instruction、io、irq 开始时的环形记录：行数满了丢弃最早的行，默认 false"
+            },
+            "from": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "read 的第一行的行号，默认 0；早于还留着的最早一行时从最早一行读起"
             }
           },
           "required": [
             "action",
             "kind"
           ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_profile",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_profile",
+        "displayName": "子程序周期统计",
+        "modelDescription": "统计各子程序与中断处理程序占用的 CPU 周期，找出最耗时的代码。action 为 start（开始统计，机器运行时累计）、get（默认，读取当前结果，统计继续）、stop（结束并返回结果）。结果含统计期间的总周期数，以及每一项的调用次数、含子程序的周期数、不含子程序的周期数，按不含子程序的周期数从大到小排列；root 一项是不在任何子程序里的代码。",
+        "userDescription": "统计各子程序与中断处理程序的 CPU 周期。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "start",
+                "get",
+                "stop"
+              ],
+              "description": "开始、读取或结束，默认 get"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_events",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_events",
+        "displayName": "事件记录",
+        "modelDescription": "记录对 PPU 寄存器（$2000-$5FFF）、mapper 寄存器（$8000 以上的写）的读写，以及 IRQ、NMI、BRK 中断，每个事件带帧序号、扫描线与点，用来判断某个寄存器是在画面的哪一个位置被写的。action 为 start（开始记录，可给 maxEvents 指定保留的事件数，默认 65536，满了丢弃最早的）、get（默认，读取，可给 fromFrame 只读这一帧及以后的、maxEvents 限制读的个数）、stop（结束记录）。",
+        "userDescription": "记录 PPU、mapper 寄存器的读写与中断发生在画面的哪个位置。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "start",
+                "get",
+                "stop"
+              ],
+              "description": "开始、读取或结束，默认 get"
+            },
+            "maxEvents": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "description": "start 保留的事件数，默认 65536；get 最多读的事件数，默认 20000"
+            },
+            "fromFrame": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "get 只读这个帧序号及以后的事件；省略时读全部"
+            }
+          },
           "additionalProperties": false
         }
       },

@@ -52,6 +52,11 @@ CpuDebugKit::CpuDebugKit(logic::hardware::CpuAddressBus& bus, logic::hardware::C
 }
 
 bool CpuDebugKit::stopAtExecuteBreakpoint() {
+  // 复位断点：复位完成后的第一次查询，即第一条指令执行之前。
+  if (resetPending_) {
+    resetPending_ = false;
+    if (breakpoints_.hasEvent() && breakpoints_.hitsEvent(hw::BreakpointKind::Reset, cpu_.registers().pc)) return true;
+  }
   if (!breakpoints_.hasExecute()) return false;
   const std::uint16_t pc = cpu_.registers().pc;
   const bool skip = skipExecuteAt_ == pc;
@@ -62,6 +67,8 @@ bool CpuDebugKit::stopAtExecuteBreakpoint() {
 }
 
 void CpuDebugKit::beforeInstruction() {
+  // 单步不查断点，复位后第一条指令一旦执行，复位断点就不再有效。
+  resetPending_ = false;
   const bool recording = recorders_.needsInstructionHook();
   const bool eventing = events_.active();
   if (!recording && !eventing && !cdl_.active()) return;
@@ -185,6 +192,10 @@ void CpuDebugKit::onInterrupt(hw::InterruptKind kind, std::uint16_t returnAddres
   // BRK 的返回地址在 BRK 之后两个字节；IRQ 与 NMI 打断的是还没有执行的那条指令。
   const auto callAddress = static_cast<std::uint16_t>(kind == hw::InterruptKind::Brk ? returnAddress - 2 : returnAddress);
   tracker_.enter(callKind, callAddress, handler, returnAddress, registers.sp, 3, registers.cycles);
+  // 调试访问（单步）期间不查断点，与读写断点一样。
+  if (breakpoints_.hasEvent() && !probeHub_.breakpointsSuspended()) {
+    breakpoints_.hitsEvent(kind == hw::InterruptKind::Brk ? hw::BreakpointKind::Brk : (kind == hw::InterruptKind::Nmi ? hw::BreakpointKind::Nmi : hw::BreakpointKind::Irq), handler);
+  }
   if (recorders_.recordsIrq()) recorders_.onInterrupt(kind, returnAddress, handler, registers.cycles);
   if (events_.active()) {
     const hw::VideoPosition position = currentPosition();
@@ -211,7 +222,12 @@ void CpuDebugKit::onReturn(bool /*fromInterrupt*/) {
   tracker_.leave(registers.sp, registers.cycles);
 }
 
-void CpuDebugKit::onReset() { tracker_.reset(cpu_.registers().cycles); }
+void CpuDebugKit::onResetBegin() { tracker_.beginReset(cpu_.registers().cycles); }
+
+void CpuDebugKit::onReset() {
+  tracker_.reset(cpu_.registers().cycles);
+  resetPending_ = true;
+}
 
 std::vector<hw::StateField> CpuDebugKit::readCpuState() const {
   const hw::CpuRegisters registers = cpu_.registers();

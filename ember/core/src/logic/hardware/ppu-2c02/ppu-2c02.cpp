@@ -119,17 +119,32 @@ std::array<std::uint32_t, 64> Ppu2c02::colorTable() const {
 }
 
 hw::VideoPosition Ppu2c02::positionAt(hw::MasterTime now) const {
-  const std::int64_t perFrame = static_cast<std::int64_t>(DOTS_PER_SCANLINE) * options_.scanlinesPerFrame;
-  const std::int64_t index = static_cast<std::int64_t>(scanline_) * DOTS_PER_SCANLINE + dot_;
-  // frameCount_ 在第 240 行第 0 点执行时加 1：下一个点已经越过它时，要减回来才是帧序号。
-  const std::int64_t publishIndex = static_cast<std::int64_t>(240) * DOTS_PER_SCANLINE;
-  std::int64_t frame = static_cast<std::int64_t>(frameCount_) - (index > publishIndex ? 1 : 0);
-  std::int64_t end = index;
+  // frameCount_ 在第 240 行第 0 点执行时加 1：下一个点已经越过它时，要减回来才是帧序号（每帧从第 0 行起算）。
+  const bool pastPublish = scanline_ > 240 || (scanline_ == 240 && dot_ > 0);
+  std::int64_t frame = static_cast<std::int64_t>(frameCount_) - (pastPublish ? 1 : 0);
+  int line = scanline_;
+  int dot = dot_;
+  bool odd = oddFrame_;
   // 开始时间不晚于 now 的点都算已经执行。
-  if (now >= nextDotTime_) end += static_cast<std::int64_t>((now - nextDotTime_) / domain_.ticksPerCycle) + 1;
-  frame += end / perFrame;
-  const std::int64_t inFrame = end % perFrame;
-  return hw::VideoPosition{static_cast<std::uint64_t>(frame), static_cast<std::int32_t>(inFrame / DOTS_PER_SCANLINE), static_cast<std::int32_t>(inFrame % DOTS_PER_SCANLINE)};
+  std::int64_t remaining = now >= nextDotTime_ ? static_cast<std::int64_t>((now - nextDotTime_) / domain_.ticksPerCycle) + 1 : 0;
+  // 按行推进；奇数帧且背景开启时，预渲染行少最后一个点（背景开关按现在的值算，之后的改写无从预知）。
+  const bool backgroundOn = (mask_ & 0x08) != 0;
+  while (remaining > 0) {
+    const bool shortLine = options_.oddFrameSkip && line == preRenderLine_ && odd && backgroundOn;
+    const int left = std::max(1, (shortLine ? DOTS_PER_SCANLINE - 1 : DOTS_PER_SCANLINE) - dot);
+    if (remaining < left) {
+      dot += static_cast<int>(remaining);
+      break;
+    }
+    remaining -= left;
+    dot = 0;
+    if (++line == options_.scanlinesPerFrame) {
+      line = 0;
+      odd = !odd;
+      ++frame;
+    }
+  }
+  return hw::VideoPosition{static_cast<std::uint64_t>(frame), line, dot};
 }
 
 void Ppu2c02::halt() {

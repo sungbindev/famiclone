@@ -57,6 +57,9 @@ class BreakpointTable final : public contracts::hardware::AccessProbe {
   /** 有没有启用的读写断点（需要在总线上安装探针）。 */
   [[nodiscard]] bool hasAccess() const { return accessCount_ > 0; }
 
+  /** 有没有启用的 irq、nmi、brk、reset 断点。 */
+  [[nodiscard]] bool hasEvent() const { return eventCount_ > 0; }
+
   /** 有没有没取走的命中。 */
   [[nodiscard]] bool hasPending() const { return pending_.has_value(); }
 
@@ -65,6 +68,14 @@ class BreakpointTable final : public contracts::hardware::AccessProbe {
    * @return 命中返回 true。
    */
   bool hitsExecute(std::uint16_t pc);
+
+  /**
+   * 查询 irq、nmi、brk、reset 断点：有启用的同种断点、条件也成立就记录命中；已经有没取走的命中时不记。
+   * @param kind irq、nmi、brk 或 reset。
+   * @param address 处理程序的地址（reset 是复位后的 PC），条件里的 address 取它。
+   * @return 命中返回 true。
+   */
+  bool hitsEvent(contracts::hardware::BreakpointKind kind, std::uint16_t address);
 
   /** 取走命中；没有时为空。 */
   std::optional<contracts::hardware::BreakpointHit> take();
@@ -91,6 +102,7 @@ class BreakpointTable final : public contracts::hardware::AccessProbe {
   std::uint32_t nextId_{1};
   std::size_t executeCount_{0};
   std::size_t accessCount_{0};
+  std::size_t eventCount_{0};
   const ExpressionContext* context_{nullptr};
   std::optional<contracts::hardware::BreakpointHit> pending_;
 };

@@ -12,6 +12,50 @@ export interface CartridgesRecentCartridge {
   name: string;
 }
 
+/** NES 文件头里的信息（不装配就能得到）。 */
+export interface CartridgesCartridgeHeader {
+  /** 文件路径 */
+  path: string;
+  /** mapper 号 */
+  mapper: number;
+  /** 变体号（同一 mapper 号的不同卡带） */
+  variant: number;
+  /** PRG-ROM 字节数 */
+  prgSize: number;
+  /** CHR-ROM 字节数；0 表示用 CHR-RAM */
+  chrSize: number;
+  /** 文件头里的镜像方式 */
+  mirroring: "horizontal" | "vertical" | "four";
+  /** 是否带电池备份的 RAM */
+  battery: boolean;
+  /** PRG-ROM 的 CRC-32（8 位大写十六进制） */
+  crc32Prg: string;
+  /** PRG-ROM 与 CHR-ROM 合在一起的 CRC-32（8 位大写十六进制） */
+  crc32All: string;
+}
+
+/** 按文件头匹配到的插件。 */
+export interface CartridgesHeaderMatch {
+  /** 插件标识 */
+  pluginId: string;
+  /** 插件名称 */
+  pluginName: string;
+  /** 插件版本 */
+  pluginVersion: string;
+  /** 会装配的主机型号 */
+  host: string;
+  /** 插件声明的外设，目前只有 mouse（鼠标） */
+  devices: "mouse"[];
+}
+
+/** 匹配插件失败的原因。 */
+export interface CartridgesMatchFailure {
+  /** 错误码：mappers.noMatch、mappers.conflict 或 mappers.hostUnknown */
+  code: string;
+  /** 说明 */
+  message: string;
+}
+
 /** 加载完成的卡带与加载后的运行状态。 */
 export interface CartridgesLoadedCartridge {
   cartridge: RuntimeCartridgeSummary;
@@ -277,8 +321,8 @@ export interface MappersMapperSummary {
   devices: "mouse"[];
   /** 匹配条件，任一项满足即匹配 */
   match: MappersMapperMatchRule[];
-  /** 来源：bundled 预装，user 用户安装 */
-  source: "bundled" | "user";
+  /** 来源：bundled 预装，user 用户安装，development 开发目录（首选项 mappers.developmentDirectory 指定的目录里未打包的插件） */
+  source: "bundled" | "user" | "development";
   /** 是否启用 */
   enabled: boolean;
 }
@@ -599,6 +643,22 @@ export interface CartridgesLoadParams {
 export interface CartridgesLoadResult {
   cartridge: RuntimeCartridgeSummary;
   state: RuntimeState;
+}
+
+/** cartridges.parseHeader 的参数。 */
+export interface CartridgesParseHeaderParams {
+  /** NES 文件的路径 */
+  path: string;
+}
+
+/** cartridges.parseHeader 的结果。 */
+export interface CartridgesParseHeaderResult {
+  /** 文件头里的信息 */
+  header: CartridgesCartridgeHeader;
+  /** 匹配到的插件；没有匹配时没有这一项 */
+  match?: CartridgesHeaderMatch;
+  /** 匹配失败的原因；匹配成功时没有这一项 */
+  matchError?: CartridgesMatchFailure;
 }
 
 /** cartridges.eject 的参数。 */
@@ -1520,6 +1580,18 @@ export interface MediaTapeTimelineResult {
   timeline: MediaTapeTimeline;
 }
 
+/** output.setAudioMode 的参数。 */
+export interface OutputSetAudioModeParams {
+  /** 播放方式 */
+  mode: "real" | "fast";
+}
+
+/** output.setAudioMode 的结果。 */
+export interface OutputSetAudioModeResult {
+  /** 设置之后的播放方式 */
+  mode: "real" | "fast";
+}
+
 /** output.setVolume 的参数。 */
 export interface OutputSetVolumeParams {
   /** 音量百分比，0 到 100 */
@@ -1620,8 +1692,10 @@ export interface RuntimeStatusResult {
   frame: number;
   /** 自上电以来的 CPU 周期数 */
   cycles: number;
-  /** 速度百分比，目前固定为 100 */
+  /** 速度百分比，默认 100；maxSpeed 为 true 时不限速，这一项保持最近一次设置的百分比 */
   speed: number;
+  /** 是否不限速（最快） */
+  maxSpeed: boolean;
   /** 机器现在是否带鼠标：学习机在 6576 模式下带串口鼠标（进入 FC 兼容模式后没有），经典 FC 只有卡带的 mapper 插件声明了 mouse 外设才有；没有主机时为 false */
   mouse: boolean;
 }
@@ -1675,7 +1749,13 @@ export interface RuntimeResumeResult {
 /** runtime.run 的参数。 */
 export interface RuntimeRunParams {
   /** 要运行的帧数 */
-  frames: number;
+  frames?: number;
+  /** 要运行的 CPU 周期数 */
+  cycles?: number;
+  /** 要运行的指令条数 */
+  instructions?: number;
+  /** 要推进的扫描线行数 */
+  scanlines?: number;
   /** 是否等运行结束再返回，默认 false */
   wait?: boolean;
 }
@@ -1688,8 +1768,26 @@ export interface RuntimeRunResult {
   frames: number;
   /** 实际经过的 CPU 周期数；wait 为 false 时为 0 */
   cycles: number;
-  /** 停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；breakpoint 命中断点；error 运行出错 */
+  /** 实际执行的指令条数；只有按 cycles、instructions、scanlines 授权且 wait 为 true 时有 */
+  instructions?: number;
+  /** 停止原因（只有 wait 为 true 时有）：completed 运行完授权的量；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；breakpoint 命中断点；error 运行出错 */
   stopped?: "completed" | "interrupted" | "powerOff" | "breakpoint" | "error";
+}
+
+/** runtime.setSpeed 的参数。 */
+export interface RuntimeSetSpeedParams {
+  /** 速度百分比，如 50 是半速，200 是两倍速 */
+  percent?: number;
+  /** 为 true 时不限速（最快）；不能与 percent 同时给 */
+  max?: boolean;
+}
+
+/** runtime.setSpeed 的结果。 */
+export interface RuntimeSetSpeedResult {
+  /** 设置之后的速度百分比 */
+  speed: number;
+  /** 设置之后是否不限速 */
+  maxSpeed: boolean;
 }
 
 /** runtime.step 的参数。 */
@@ -1852,8 +1950,8 @@ export interface RuntimeStateChangedData {
   power: "off" | "on";
   /** 新的运行模式 */
   mode: "paused" | "running";
-  /** 原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变 */
-  reason: "load" | "eject" | "powerOn" | "powerOff" | "reset" | "pause" | "resume" | "run" | "runEnded" | "step" | "breakpoint" | "error" | "inputChanged";
+  /** 原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，speed 运行速度变了，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变 */
+  reason: "load" | "eject" | "powerOn" | "powerOff" | "reset" | "pause" | "resume" | "run" | "runEnded" | "step" | "breakpoint" | "error" | "inputChanged" | "speed";
 }
 
 /** runtime.frame 事件的数据。 */
@@ -1913,6 +2011,7 @@ export interface RuntimeErrorData {
 /** 全部请求：方法名对应参数与结果。 */
 export interface RequestMap {
   "cartridges.load": { params: CartridgesLoadParams; result: CartridgesLoadResult };
+  "cartridges.parseHeader": { params: CartridgesParseHeaderParams; result: CartridgesParseHeaderResult };
   "cartridges.eject": { params: CartridgesEjectParams; result: CartridgesEjectResult };
   "cartridges.info": { params: CartridgesInfoParams; result: CartridgesInfoResult };
   "debug.hello": { params: DebugHelloParams; result: DebugHelloResult };
@@ -1987,6 +2086,7 @@ export interface RequestMap {
   "media.tapeStatus": { params: MediaTapeStatusParams; result: MediaTapeStatusResult };
   "media.tapeSeek": { params: MediaTapeSeekParams; result: MediaTapeSeekResult };
   "media.tapeTimeline": { params: MediaTapeTimelineParams; result: MediaTapeTimelineResult };
+  "output.setAudioMode": { params: OutputSetAudioModeParams; result: OutputSetAudioModeResult };
   "output.setVolume": { params: OutputSetVolumeParams; result: OutputSetVolumeResult };
   "output.screenshot": { params: OutputScreenshotParams; result: OutputScreenshotResult };
   "preferences.list": { params: PreferencesListParams; result: PreferencesListResult };
@@ -1999,6 +2099,7 @@ export interface RequestMap {
   "runtime.pause": { params: RuntimePauseParams; result: RuntimePauseResult };
   "runtime.resume": { params: RuntimeResumeParams; result: RuntimeResumeResult };
   "runtime.run": { params: RuntimeRunParams; result: RuntimeRunResult };
+  "runtime.setSpeed": { params: RuntimeSetSpeedParams; result: RuntimeSetSpeedResult };
   "runtime.step": { params: RuntimeStepParams; result: RuntimeStepResult };
   "runtime.setFrameEvents": { params: RuntimeSetFrameEventsParams; result: RuntimeSetFrameEventsResult };
   "system.version": { params: SystemVersionParams; result: SystemVersionResult };
@@ -2052,6 +2153,8 @@ export interface EmberApi {
   readonly cartridges: {
     /** 读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽；已有的卡带与主机被替换，失败时原有的保持不变。匹配失败的错误码是 mappers.noMatch、mappers.conflict、mappers.hostUnknown，插件加载失败的是 mappers.notFound、mappers.invalidPackage、mappers.limitExceeded。 */
     load(params: CartridgesLoadParams): Promise<CartridgesLoadResult>;
+    /** 只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机。文件头解析失败时返回错误；解析成功但没有匹配的插件时 header 照常返回，matchError 说明原因。 */
+    parseHeader(params: CartridgesParseHeaderParams): Promise<CartridgesParseHeaderResult>;
     /** 取出卡带：主机随之拆除，电源状态变为断电；没有卡带时没有效果。 */
     eject(): Promise<CartridgesEjectResult>;
     /** 当前卡带的描述、匹配到的插件与存储区清单。 */
@@ -2166,17 +2269,17 @@ export interface EmberApi {
     boot(params: MachinesBootParams): Promise<MachinesBootResult>;
   };
   readonly mappers: {
-    /** 列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。 */
+    /** 列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先。 */
     list(): Promise<MappersListResult>;
     /** 返回一个插件的摘要与清单详情。 */
     info(params: MappersInfoParams): Promise<MappersInfoResult>;
     /** 安装一个 .emap 插件包：检查通过后放进用户插件目录；已有同标识的用户插件时替换。 */
     install(params: MappersInstallParams): Promise<MappersInstallResult>;
-    /** 卸载用户安装的插件；预装的插件只能停用。 */
+    /** 卸载用户安装的插件；预装的插件只能停用，开发目录里的插件从开发目录里删除它的目录。 */
     uninstall(params: MappersUninstallParams): Promise<MappersUninstallResult>;
     /** 启用或停用一个插件；停用的插件不参与匹配。 */
     setEnabled(params: MappersSetEnabledParams): Promise<MappersSetEnabledResult>;
-    /** 重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效；不合格的包被跳过并写入错误日志。 */
+    /** 重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效；不合格的包或目录被跳过并写入错误日志。 */
     reload(): Promise<MappersReloadResult>;
   };
   readonly media: {
@@ -2214,6 +2317,8 @@ export interface EmberApi {
     tapeTimeline(): Promise<MediaTapeTimelineResult>;
   };
   readonly output: {
+    /** 设置声音的播放方式：real 按真实时间播放；fast 不等声卡，采样直接丢弃，设备播放静音，模拟器内部的时序不变。不保存，每次启动都是 real。 */
+    setAudioMode(params: OutputSetAudioModeParams): Promise<OutputSetAudioModeResult>;
     /** 设置声音的音量与静音；两个参数都可以省略，省略的保持不变。音量保存到首选项的 sound.volume，核心重启后保持；静音不保存，每次启动由 sound.startMuted 决定；变化平滑过渡，不会产生爆音。 */
     setVolume(params?: OutputSetVolumeParams): Promise<OutputSetVolumeResult>;
     /** 截取最近一次完成的画面（256x240，暂停与断电后也有上一帧）。不带 file 时图像以二进制帧返回（结果里的 data，见 docs/04-调试服务.md 第 2.3 节）；带 file 时保存到调试输出目录下，结果里的 file 是保存后的完整路径，不再返回 data。 */
@@ -2240,8 +2345,10 @@ export interface EmberApi {
     pause(): Promise<RuntimePauseResult>;
     /** 继续：按真实帧率连续运行；已在运行时没有效果；只在通电时有效。 */
     resume(): Promise<RuntimeResumeResult>;
-    /** 授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）。wait 为 true 时等运行结束才返回结果（结果里有 stopped）；否则立即返回，运行结束时发事件 runtime.runFinished。已在授权运行中时旧的被打断，由新的替代；等待中的请求被取消（如连接断开）时运行被打断并暂停。之后会加入 cycles、scanlines、instructions 等其他授权量。 */
-    run(params: RuntimeRunParams): Promise<RuntimeRunResult>;
+    /** 授权运行：不限速地连续运行指定的量后暂停（运行中不输出声音，每帧之间照常处理输入等命令）。授权量 frames、cycles、instructions、scanlines 必须给且只能给一个：frames 完成这么多帧；cycles 至少这么多 CPU 周期（指令不被打断，实际周期数可能多几个）；instructions 这么多条指令（含随后响应的中断序列）；scanlines PPU 的扫描线推进这么多行。命中断点时自动停止。wait 为 true 时等运行结束才返回结果（结果里有 stopped）；否则立即返回，运行结束时发事件 runtime.runFinished。已在授权运行中时旧的被打断，由新的替代；等待中的请求被取消（如连接断开）时运行被打断并暂停。 */
+    run(params?: RuntimeRunParams): Promise<RuntimeRunResult>;
+    /** 设置运行速度：percent 是相对真实速度的百分比，max 为 true 时不限速、尽快运行；两者给一个，都不给时恢复 100%。只影响自由运行（继续、上电后运行），授权运行与单步不受影响。速度不是 100% 或不限速时不输出声音（采样丢弃，恢复 100% 后继续）。设置不保存，每次启动都是 100%。 */
+    setSpeed(params?: RuntimeSetSpeedParams): Promise<RuntimeSetSpeedResult>;
     /** 单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停。instruction 一条指令（含随后响应的中断序列）；cycle 至少这么多 CPU 周期（指令不被打断，实际周期数可能多几个）；scanline PPU 的扫描线推进这么多行；frame 完成这么多帧画面。结果里的 pc 是停下时下一条要执行的指令地址。经过的帧会照常显示。 */
     step(params: RuntimeStepParams): Promise<RuntimeStepResult>;
     /** 设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）。这是全局设置，对订阅了 runtime.frame 的所有连接生效。 */

@@ -33,8 +33,10 @@ constexpr int MAX_LAG_FRAMES = 5;
 constexpr int kStartupMaskFrames = 6;
 /** 不透明的黑色像素（内存顺序 R、G、B、A）。 */
 constexpr std::uint32_t kOpaqueBlack = 0xFF000000U;
-/** 状态里的速度百分比；速度调节以后再做。 */
-constexpr std::int64_t SPEED_PERCENT = 100;
+/** 按周期、指令、扫描线授权时，每小块运行的最大量，块之间处理命令与发布画面。 */
+constexpr std::int64_t kChunkCycles = 20000;
+constexpr std::int64_t kChunkInstructions = 5000;
+constexpr std::int64_t kChunkScanlines = 64;
 
 /** 8 位十六进制（大写），与插件管理里的写法一致。 */
 std::string hex8(std::uint32_t value) {
@@ -73,7 +75,8 @@ rt::CartridgeSummary makeSummary(const rt::CartridgeInsertion& insertion, const 
 SimulationRuntime::SimulationRuntime(SimulationRuntimeOptions options) : options_(std::move(options)) {
   snapshot_.power = "off";
   snapshot_.mode = "paused";
-  snapshot_.speed = SPEED_PERCENT;
+  snapshot_.speed = speedPercent_;
+  snapshot_.maxSpeed = maxSpeed_;
   thread_ = std::thread([this] { threadMain(); });
 }
 
@@ -167,18 +170,20 @@ void SimulationRuntime::threadMain() {
       resync_ = false;
     }
     lock.unlock();
-    runFrame();
+    if (run_.has_value() && run_->unit != rt::RunUnit::Frames) runQuotaChunk();
+    else runFrame();
     lock.lock();
-    // 授权运行不限速，跑完一帧马上跑下一帧（命令在循环开头处理）。
-    if (run_.has_value()) continue;
+    // 授权运行与不限速不等帧节拍，跑完一帧马上跑下一帧（命令在循环开头处理）。
+    if (run_.has_value() || maxSpeed_) continue;
     if (framePeriod_.count() <= 0) continue;
-    next += framePeriod_;
+    const auto period = framePeriod_ * 100 / speedPercent_;
+    next += period;
     const auto now = Clock::now();
-    if (now - next > framePeriod_ * MAX_LAG_FRAMES) {
+    if (now - next > period * MAX_LAG_FRAMES) {
       next = now;
     } else {
       // 休眠中收到命令就处理，处理完接着睡到帧节拍；命令不能让下一帧提前开始，否则连续的输入（如鼠标移动）会让机器与声音加速。
-      while (!stopping_ && !resync_ && !run_.has_value() && running() && Clock::now() < next) {
+      while (!stopping_ && !resync_ && !run_.has_value() && !maxSpeed_ && running() && Clock::now() < next) {
         wake_.wait_until(lock, next, [this] { return stopping_ || !commands_.empty(); });
         runPending(lock);
       }
@@ -245,8 +250,8 @@ void SimulationRuntime::updateFramePeriod() {
 
 void SimulationRuntime::syncAudio() {
   if (options_.audio == nullptr) return;
-  // 运行中才播放；暂停、断电、出错时淡出到静音，继续时清掉过时的采样再淡入；授权运行不限速，不播放。
-  const bool playing = running() && !run_.has_value();
+  // 运行中才播放；暂停、断电、出错时淡出到静音，继续时清掉过时的采样再淡入；授权运行与不是 100% 的速度不播放。
+  const bool playing = running() && !run_.has_value() && normalSpeed();
   if (playing == audioPlaying_) return;
   audioPlaying_ = playing;
   options_.audio->setPlaying(playing);
@@ -270,7 +275,8 @@ void SimulationRuntime::publishSnapshot() {
   }
   snapshot.cartridge = summary_;
   snapshot.frame = static_cast<std::int64_t>(frame_);
-  snapshot.speed = SPEED_PERCENT;
+  snapshot.speed = speedPercent_;
+  snapshot.maxSpeed = maxSpeed_;
   mouse_ = mouseAvailable();
   snapshot.mouse = mouse_;
   std::lock_guard lock(snapshotMutex_);
@@ -321,7 +327,7 @@ void SimulationRuntime::runFrame() {
   if (inputHook_ != nullptr) inputHook_->frameCompleted(*machine_);
   const hw::FrameBuffer picture = machine_->frame();
   if (picture.width > 0 && picture.height > 0) publishPicture(picture);
-  if (!run_.has_value()) pushAudio();
+  if (!run_.has_value() && normalSpeed()) pushAudio();
   const bool mouseBefore = mouse_;
   publishSnapshot();
   // 运行中机器的输入设备变了（学习机进入 FC 兼容模式后没有鼠标）：通知界面重新读取状态。
@@ -365,7 +371,8 @@ void SimulationRuntime::handleBreakpoint(const hw::BreakpointHit& hit) {
 void SimulationRuntime::finishRun(const char* stopped) {
   if (!run_.has_value()) return;
   rt::RunOutcome outcome;
-  outcome.frames = run_->total - run_->remaining;
+  outcome.frames = run_->unit == rt::RunUnit::Frames ? run_->total - run_->remaining : static_cast<std::int64_t>(frame_ - run_->startFrame);
+  if (run_->unit != rt::RunUnit::Frames) outcome.instructions = run_->instructions;
   const auto cycles = machine_ == nullptr ? 0 : machine_->cpuRegisters().cycles;
   outcome.cycles = cycles > run_->startCycles ? static_cast<std::int64_t>(cycles - run_->startCycles) : 0;
   outcome.stopped = stopped;
@@ -597,15 +604,18 @@ void SimulationRuntime::publishPicture(const hw::FrameBuffer& picture) {
 
 void SimulationRuntime::setFrameEventInterval(std::uint32_t frames) { frameEventInterval_.store(frames, std::memory_order_relaxed); }
 
-std::shared_future<rt::RunOutcome> SimulationRuntime::startRun(std::int64_t frames) {
-  return submit([this, frames] {
+std::shared_future<rt::RunOutcome> SimulationRuntime::startRun(rt::RunQuota quota) {
+  return submit([this, quota] {
     if (machine_ == nullptr) throw shared::CoreError(rt::ERROR_NO_CARTRIDGE, "还没有装入卡带，无法运行");
     if (!powered()) throw shared::CoreError(rt::ERROR_NOT_POWERED, "主机没有通电，无法运行");
+    if (quota.unit != rt::RunUnit::Frames && machine_->debugger() == nullptr) throw shared::CoreError(rt::ERROR_DEBUG_UNSUPPORTED, "当前主机型号不支持按周期、指令、扫描线运行");
     finishRun("interrupted");
     ActiveRun active;
-    active.total = frames;
-    active.remaining = frames;
+    active.unit = quota.unit;
+    active.total = quota.count;
+    active.remaining = quota.count;
     active.startCycles = machine_->cpuRegisters().cycles;
+    active.startFrame = frame_;
     active.promise = std::make_shared<std::promise<rt::RunOutcome>>();
     auto future = active.promise->get_future().share();
     run_ = std::move(active);
@@ -616,6 +626,75 @@ std::shared_future<rt::RunOutcome> SimulationRuntime::startRun(std::int64_t fram
     publishSnapshot();
     return future;
   });
+}
+
+rt::SpeedSetting SimulationRuntime::setSpeed(rt::SpeedSetting speed) {
+  return submit([this, speed] {
+    const bool wasNormal = normalSpeed();
+    speedPercent_ = std::clamp<std::int64_t>(speed.percent, 10, 1000);
+    maxSpeed_ = speed.max;
+    resync_ = true;
+    // 回到正常速度时丢掉机器在不播放期间留着的采样，不让它们接在新的后面。
+    if (machine_ != nullptr && !wasNormal && normalSpeed()) machine_->takeAudio(audioBuffer_);
+    publishState("speed");
+    publishSnapshot();
+    return rt::SpeedSetting{speedPercent_, maxSpeed_};
+  });
+}
+
+void SimulationRuntime::runQuotaChunk() {
+  hw::MachineDebugger* debugger = machine_->debugger();
+  if (debugger == nullptr) {
+    finishRun("error");
+    running_ = false;
+    return;
+  }
+  hw::StepUnit unit = hw::StepUnit::Instruction;
+  std::int64_t chunk = kChunkInstructions;
+  if (run_->unit == rt::RunUnit::Cycles) {
+    unit = hw::StepUnit::Cycle;
+    chunk = kChunkCycles;
+  } else if (run_->unit == rt::RunUnit::Scanlines) {
+    unit = hw::StepUnit::Scanline;
+    chunk = kChunkScanlines;
+  }
+  chunk = std::min(chunk, run_->remaining);
+  hw::StepResult done;
+  try {
+    done = debugger->step(unit, static_cast<std::uint64_t>(chunk), true);
+  } catch (const shared::CoreError& error) {
+    reportFailure("hardware", error.code(), error.what());
+    return;
+  } catch (const std::exception& error) {
+    options_.errors->write({"runtime", std::string(shared::ERROR_INTERNAL), error.what(), {{"frame", frame_}}});
+    reportFailure("runtime", std::string(shared::ERROR_INTERNAL), "模拟器内部错误，详情已写入日志");
+    return;
+  }
+  run_->instructions += static_cast<std::int64_t>(done.instructions);
+  const auto hit = debugger->takeBreakpointHit();
+  // 命中断点时这一块没有跑完，扫描线数不可知；命中之后运行就结束了，不再用到剩余量。
+  if (run_->unit == rt::RunUnit::Cycles) run_->remaining -= static_cast<std::int64_t>(done.cycles);
+  else if (run_->unit == rt::RunUnit::Instructions) run_->remaining -= static_cast<std::int64_t>(done.instructions);
+  else run_->remaining -= chunk;
+  frame_ += done.frames;
+  if (done.frames > 0) {
+    if (inputHook_ != nullptr) inputHook_->frameCompleted(*machine_);
+    const hw::FrameBuffer picture = machine_->frame();
+    if (picture.width > 0 && picture.height > 0) publishPicture(picture);
+  }
+  if (hit.has_value()) {
+    handleBreakpoint(*hit);
+    return;
+  }
+  publishSnapshot();
+  checkCartridge();
+  notifyObserver();
+  if (run_.has_value() && run_->remaining <= 0) {
+    finishRun("completed");
+    running_ = false;
+    publishState("runEnded");
+    publishSnapshot();
+  }
 }
 
 void SimulationRuntime::cancelRun() {

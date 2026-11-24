@@ -45,6 +45,8 @@ class NullAudioOutput final : public AudioOutput {
 
   void flush() override { flushes_.fetch_add(1, std::memory_order_relaxed); }
 
+  void setFast(bool fast) override { fast_.store(fast, std::memory_order_relaxed); }
+
   void setBufferProfile(AudioBufferProfile profile) override { profile_.store(profile, std::memory_order_relaxed); }
 
   [[nodiscard]] AudioStats stats() const noexcept override { return AudioStats{written_.load(std::memory_order_relaxed), 0, 0}; }
@@ -53,6 +55,8 @@ class NullAudioOutput final : public AudioOutput {
   [[nodiscard]] unsigned volume() const { return volume_.load(std::memory_order_relaxed); }
   [[nodiscard]] bool muted() const { return muted_.load(std::memory_order_relaxed); }
   [[nodiscard]] bool playing() const { return playing_.load(std::memory_order_relaxed); }
+  /** 最近设置的快速模式。 */
+  [[nodiscard]] bool fast() const { return fast_.load(std::memory_order_relaxed); }
   /** 最近设置的缓冲档位。 */
   [[nodiscard]] AudioBufferProfile bufferProfile() const { return profile_.load(std::memory_order_relaxed); }
   /** 清空缓冲的次数（含 setPlaying(true) 隐含的清空）。 */
@@ -65,6 +69,7 @@ class NullAudioOutput final : public AudioOutput {
   std::atomic<unsigned> volume_{100};
   std::atomic<bool> muted_{false};
   std::atomic<bool> playing_{false};
+  std::atomic<bool> fast_{false};
   std::atomic<AudioBufferProfile> profile_{AudioBufferProfile::Standard};
 };
 

@@ -131,7 +131,7 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   [[nodiscard]] std::vector<std::string> stateModules() const override;
   [[nodiscard]] std::vector<contracts::hardware::StateField> readState(std::string_view module) const override;
   void writeState(std::string_view module, std::span<const contracts::hardware::StateField> fields) override;
-  contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count) override;
+  contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count, bool stopAtBreakpoints) override;
   contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) override { return debug_.addBreakpoint(kind, first, last, condition); }
   std::optional<contracts::hardware::Breakpoint> updateBreakpoint(std::uint32_t id, std::optional<bool> enabled, const std::optional<std::string>& condition) override { return debug_.updateBreakpoint(id, enabled, condition); }
   bool removeBreakpoint(std::uint32_t id) override { return debug_.removeBreakpoint(id); }

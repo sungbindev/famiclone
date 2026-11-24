@@ -43,7 +43,7 @@ mapper 插件提供 FC 卡带（含学习卡）上的 mapper 芯片：声明卡�
 - 文件名必须严格等于上表的名字（区分大小写）；绝对路径、盘符、反斜杠、含 `..` 的名字按路径穿越拒绝；加密或使用不支持的压缩方式的条目、重复的条目、解压后超过上限的条目都拒绝（按压缩包目录里声明的大小判断，不会先解压再检查）。
 - `icon.png` 必须是 PNG，宽高相等且不小于 64 像素。
 - 包末尾可以有 zip 注释，读取时忽略；官方插件包由打包脚本附一段 256 字节的可压缩注释，原因见 06 第 7 节。
-- 开发时可以直接加载未打包的插件目录（含 `manifest.json` 与 `main.js`），修改后用 `mappers.reload` 重新加载，不用反复打包，见第 7 节（**后续阶段**；目前只能安装 `.emap` 包）。
+- 开发时可以直接加载未打包的插件目录（含 `manifest.json` 与 `main.js`，可选 `icon.png`），修改后用 `mappers.reload` 重新加载，不用反复打包，见第 7 节的开发目录。
 
 ## 4. 清单
 
@@ -380,11 +380,11 @@ export default {
 ## 7. 安装与管理
 
 - 预装的官方插件内置在程序里（打进资源包嵌在可执行文件中，见 01 第 9 节），首次启动或程序版本变化时由外壳解压到 `<用户数据目录>/bundled-plugins/`，只读；用户安装的插件放在用户数据目录的插件文件夹。实现：预装目录由启动核心时的可选参数 `bundledPluginsPath` 给出（外壳传入解压出来的 `bundled-plugins/`，核心启动即自动加载其中的 `nrom` 等预装插件；插件包由 `npm run plugins:pack` 从 `plugins/` 打成 `build/ember/plugins/<id>.emap`），用户插件目录是 `<用户数据目录>/plugins/`，安装后的文件名是 `<id>.emap`（id 只含小写字母、数字与 `-`，不会写到目录之外）。
-- 同一个 `id` 同时存在时，版本高的生效（按三段数字比较，`10.0.0` 高于 `9.0.0`）；版本相同时用户安装的优先。`mappers.list` 只列生效的那一个。安装的插件与用户目录里已有的同标识插件直接替换，不比较版本。
+- 同一个 `id` 同时存在时，开发目录里的优先（不比版本），其余版本高的生效（按三段数字比较，`10.0.0` 高于 `9.0.0`）；版本相同时用户安装的优先。`mappers.list` 只列生效的那一个。安装的插件与用户目录里已有的同标识插件直接替换，不比较版本。
 - 用户可以停用任何插件，卸载自己安装的插件；预装的插件只能停用，不能删除（`mappers.bundledReadonly`）。停用状态保存在用户插件目录的 `state.json`，重启后保持；插件被完全卸载后对应的停用记录一并清除。
 - 安装时检查：包结构与大小、清单符合规范、`apiVersion` 受支持、`host` 中至少有一个存在的主机型号（`mappers.hostUnknown`）、`main.js` 能加载并导出声明的函数（有 `main.js` 时用空卡带试创建一次，脚本的顶层代码会真的执行，受第 6.3 节的限制）；不通过则拒绝并说明原因。用户目录与预装目录里不合格的包在重新读取时被跳过，写入系统错误日志。
-- 开发目录：首选项里可以指定“开发中的插件目录”，目录下每个子目录是一个未打包的插件；这些插件优先于同 `id` 的已安装插件，用 `mappers.reload` 重新加载，调试服务也提供同名请求。**后续阶段**实现；目前 `mappers.reload` 只重新读取预装目录与用户目录。
-- `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由外壳或调试服务发起；界面经外壳自己处理的 `mappers.openPackage` 安装），插件变化时发事件 `mappers.changed`；`match`（按文件头预览匹配结果）随 `cartridges.parseHeader` 在**后续阶段**实现。
+- 开发目录：首选项 `mappers.developmentDirectory`（“mapper 插件”分组里的“开发中的插件目录”，默认空，空表示不用）指定一个目录，目录下每个子目录是一个未打包的插件，根下的 `manifest.json`、`main.js`、`icon.png` 三个文件按插件包的大小与图标规则检查（必须是普通文件，不允许符号链接，其他文件不读），其余的检查与安装时相同；不合格的子目录被跳过并写入系统错误日志。这些插件优先于同 `id` 的其他来源，列表里的来源是 `development`（界面显示“开发目录”），只能停用，不能卸载（`mappers.developmentReadonly`，从开发目录里删掉它的目录）。改了插件后用 `mappers.reload` 重新加载（调试服务也有同名请求），改了开发目录这一首选项时核心自动重新读取；重新加载后下次装配或硬复位生效。
+- `mappers` 模块的请求：`list`、`info`、`install`、`uninstall`、`setEnabled`、`reload` 已实现（字段见 `schema/mappers.schema.json`，`install` 只能由外壳或调试服务发起；界面经外壳自己处理的 `mappers.openPackage` 安装），插件变化时发事件 `mappers.changed`；按文件头预览匹配结果由 `cartridges.parseHeader` 提供（已实现，没有单独的 `mappers.match`）。
 
 错误码：`mappers.noMatch`、`mappers.conflict`、`mappers.invalidPackage`、`mappers.hostUnknown`、`mappers.scriptError`、`mappers.limitExceeded`，以及插件管理增加的 `mappers.notFound`（没有这个标识的插件）、`mappers.bundledReadonly`（预装插件不能卸载）。
 
@@ -733,7 +733,7 @@ export default definePlugin({
 | 官方插件（第 9 节） | 部分完成 | 台账里已做的有测试向量；未做的原因写在台账里 |
 | 设置页 | 后续阶段 | `ctx.settings.get` 目前只返回清单的默认值 |
 | 扩展声音、EEPROM 存档与闪存写入、PRG ROM 可写 | 后续阶段 | 卡带还没有声音输出；`bandai-fcg` 的 EEPROM、`un-rom512` 与 `cheapocabra` 的闪存只在内存里，闪存命令不处理 |
-| SDK、假宿主、命令行工具、开发目录、冲突时用户选择并记住、`mappers.match`、训练器载入、存档文件 | 后续阶段 | 见各节标注 |
+| SDK、假宿主、命令行工具、冲突时用户选择并记住、训练器载入、存档文件 | 后续阶段 | 见各节标注 |
 
 与前文设计的出入：
 

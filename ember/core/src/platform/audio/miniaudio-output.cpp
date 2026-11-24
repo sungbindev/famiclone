@@ -52,6 +52,10 @@ struct MiniaudioOutput::Device {
   AudioRenderer renderer;
   std::atomic<std::uint64_t> written{0};
   std::atomic<std::uint64_t> dropped{0};
+  /** 快速模式：采样丢弃，设备播放静音。 */
+  std::atomic<bool> fast{false};
+  /** 最近一次 setPlaying 的值；快速模式结束时据此恢复。 */
+  std::atomic<bool> wantPlaying{false};
   ma_device device{};
   bool initialized{false};
 };
@@ -104,6 +108,7 @@ std::unique_ptr<MiniaudioOutput> MiniaudioOutput::open(unsigned sampleRate, std:
 unsigned MiniaudioOutput::sampleRate() const { return device_->sampleRate; }
 
 std::size_t MiniaudioOutput::write(std::span<const float> samples) noexcept {
+  if (device_->fast.load(std::memory_order_relaxed)) return 0;
   const std::size_t accepted = device_->ring.write(samples);
   device_->written.fetch_add(samples.size(), std::memory_order_relaxed);
   if (accepted < samples.size()) device_->dropped.fetch_add(samples.size() - accepted, std::memory_order_relaxed);
@@ -115,7 +120,21 @@ std::size_t MiniaudioOutput::bufferedSamples() const noexcept { return device_->
 void MiniaudioOutput::setVolume(unsigned percent, bool muted) { device_->renderer.setVolume(percent, muted); }
 
 void MiniaudioOutput::setPlaying(bool playing) {
+  device_->wantPlaying.store(playing, std::memory_order_relaxed);
+  if (device_->fast.load(std::memory_order_relaxed)) return;
   // 继续播放前先丢弃过时的采样，渲染器会从静音淡入。
+  if (playing) device_->renderer.requestFlush();
+  device_->renderer.setPlaying(playing);
+}
+
+void MiniaudioOutput::setFast(bool fast) {
+  device_->fast.store(fast, std::memory_order_relaxed);
+  if (fast) {
+    device_->renderer.setPlaying(false);
+    return;
+  }
+  // 回到真实时间：按 setPlaying 的最近一次取值恢复，先丢弃过时的采样。
+  const bool playing = device_->wantPlaying.load(std::memory_order_relaxed);
   if (playing) device_->renderer.requestFlush();
   device_->renderer.setPlaying(playing);
 }

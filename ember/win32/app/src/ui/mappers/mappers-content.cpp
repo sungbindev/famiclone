@@ -31,6 +31,7 @@ constexpr const char* kSearchPlaceholder = "搜索名称、标识或发布者";
 constexpr const char* kInstall = "安装插件";
 constexpr const char* kUninstall = "卸载";
 constexpr const char* kBundledHint = "预装插件不能卸载，只能停用";
+constexpr const char* kDevelopmentHint = "开发目录里的插件不能卸载，要从开发目录里删除它的目录";
 constexpr const char* kEnable = "启用";
 constexpr const char* kDisable = "停用";
 constexpr const char* kEnabled = "已启用";
@@ -41,6 +42,7 @@ constexpr const char* kDetailLoading = "正在读取清单…";
 constexpr const char* kSourceAll = "全部来源";
 constexpr const char* kSourceBundled = "预装";
 constexpr const char* kSourceUser = "用户安装";
+constexpr const char* kSourceDevelopment = "开发目录";
 constexpr const char* kColumnName = "名称";
 constexpr const char* kColumnVersion = "版本";
 constexpr const char* kColumnMatch = "匹配";
@@ -104,7 +106,7 @@ MappersContent::MappersContent(contracts::MappersModel& model) : model_(model) {
   auto actions = std::make_unique<Actions>();
   auto source = std::make_unique<Select>();
   source->setAllowEmpty(false);
-  source->setOptions({{contracts::kMapperSourceAll, kSourceAll}, {contracts::kMapperSourceBundled, kSourceBundled}, {contracts::kMapperSourceUser, kSourceUser}});
+  source->setOptions({{contracts::kMapperSourceAll, kSourceAll}, {contracts::kMapperSourceBundled, kSourceBundled}, {contracts::kMapperSourceUser, kSourceUser}, {contracts::kMapperSourceDevelopment, kSourceDevelopment}});
   source->setValue(contracts::kMapperSourceAll);
   source->setOnChange([this](const std::string& value) {
     if (!syncing_) model_.setSource(value);
@@ -163,7 +165,7 @@ std::string MappersContent::signatureOf(const contracts::MappersView& view) {
   for (const contracts::MapperRow& row : view.rows) {
     signature += row.id + '\x1f' + row.name + '\x1f' + row.description + '\x1f' + row.version + '\x1f' + row.match + '\x1f' + row.hosts + '\x1f' + row.source + '\x1f' + (row.enabled ? 'e' : '-') + '\x1e';
   }
-  signature += '\x1d' + view.selected.name + '\x1f' + (view.selected.enabled ? 'e' : '-') + '\x1f' + (view.selected.bundled ? 'b' : '-') + '\x1d';
+  signature += '\x1d' + view.selected.name + '\x1f' + (view.selected.enabled ? 'e' : '-') + '\x1f' + (view.selected.bundled ? 'b' : '-') + '\x1f' + (view.selected.development ? 'd' : '-') + '\x1d';
   for (const contracts::MapperFact& fact : view.facts) {
     signature += fact.label;
     for (const std::string& line : fact.lines) signature += '\x1f' + line;
@@ -267,8 +269,8 @@ std::unique_ptr<Widget> MappersContent::makeDetail(const contracts::MappersView&
   uninstall->setVariant(ButtonVariant::Danger);
   uninstall->setCompact(true);
   uninstall->setIcon(IconId::Trash);
-  uninstall->setEnabled(!view.selected.bundled);
-  uninstall->setTooltip(view.selected.bundled ? kBundledHint : kUninstall);
+  uninstall->setEnabled(!view.selected.bundled && !view.selected.development);
+  uninstall->setTooltip(view.selected.bundled ? kBundledHint : (view.selected.development ? kDevelopmentHint : kUninstall));
   uninstall->setOnClick([this, id] { model_.uninstall(id); });
   detail_.uninstall = static_cast<Button*>(actions->addChild(std::move(uninstall)));
   panel->setAside(std::move(actions));

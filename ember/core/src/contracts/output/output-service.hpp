@@ -33,6 +33,13 @@ class OutputService {
 
   /** 当前的音量与静音。 */
   [[nodiscard]] virtual OutputSetVolumeResult volume() const = 0;
+
+  /**
+   * 设置播放方式："real" 按真实时间播放，"fast" 采样直接丢弃（不等声卡）；可在任意线程调用，不保存。
+   * @param mode "real" 或 "fast"，由 Schema 保证。
+   * @return 设置之后的方式。
+   */
+  virtual std::string setAudioMode(const std::string& mode) = 0;
 };
 
 }  // namespace ember::contracts::output

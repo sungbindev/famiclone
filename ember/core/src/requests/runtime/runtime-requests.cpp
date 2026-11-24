@@ -13,6 +13,8 @@
 #include <chrono>
 #include <future>
 
+#include "shared/errors/core-error.hpp"
+
 namespace ember::requests::runtime {
 
 namespace contract = ::ember::contracts::runtime;
@@ -45,7 +47,26 @@ void addRuntimeRequests(platform::RequestRouter& router, std::shared_ptr<contrac
   });
   router.add("runtime", contract::RUNTIME_RUN_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken& token) {
     const auto parsed = contract::parseRuntimeRunParams(params, "params");
-    auto outcome = service->startRun(parsed.frames);
+    contract::RunQuota quota;
+    int given = 0;
+    if (parsed.frames.has_value()) {
+      quota = {contract::RunUnit::Frames, *parsed.frames};
+      ++given;
+    }
+    if (parsed.cycles.has_value()) {
+      quota = {contract::RunUnit::Cycles, *parsed.cycles};
+      ++given;
+    }
+    if (parsed.instructions.has_value()) {
+      quota = {contract::RunUnit::Instructions, *parsed.instructions};
+      ++given;
+    }
+    if (parsed.scanlines.has_value()) {
+      quota = {contract::RunUnit::Scanlines, *parsed.scanlines};
+      ++given;
+    }
+    if (given != 1) throw shared::SchemaError("frames、cycles、instructions、scanlines 必须给且只能给一个");
+    auto outcome = service->startRun(quota);
     contract::RuntimeRunResult result;
     if (parsed.wait.value_or(false)) {
       // 等运行结束；请求被取消（连接断开、服务停止）时打断运行，结果给出已经跑的部分。
@@ -58,6 +79,7 @@ void addRuntimeRequests(platform::RequestRouter& router, std::shared_ptr<contrac
       const auto& finished = outcome.get();
       result.frames = finished.frames;
       result.cycles = finished.cycles;
+      result.instructions = finished.instructions;
       result.stopped = finished.stopped;
     }
     const auto status = service->status();
@@ -79,6 +101,17 @@ void addRuntimeRequests(platform::RequestRouter& router, std::shared_ptr<contrac
     result.frames = outcome.frames;
     result.pc = outcome.pc;
     return nlohmann::json(result);
+  });
+  router.add("runtime", contract::RUNTIME_SET_SPEED_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseRuntimeSetSpeedParams(params, "params");
+    const bool max = parsed.max.value_or(false);
+    if (max && parsed.percent.has_value()) throw shared::SchemaError("percent 与 max 不能同时给");
+    contract::SpeedSetting speed;
+    // 不限速时百分比保持原值，取消不限速时按给的百分比，都不给就恢复 100%。
+    speed.max = max;
+    speed.percent = max ? service->status().speed : parsed.percent.value_or(100);
+    const auto applied = service->setSpeed(speed);
+    return nlohmann::json(contract::RuntimeSetSpeedResult{applied.percent, applied.max});
   });
   router.add("runtime", contract::RUNTIME_SET_FRAME_EVENTS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseRuntimeSetFrameEventsParams(params, "params");

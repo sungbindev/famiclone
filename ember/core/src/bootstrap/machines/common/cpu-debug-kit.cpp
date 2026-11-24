@@ -83,6 +83,57 @@ void CpuDebugKit::clearStopState() {
   breakpoints_.discardPending();
 }
 
+hw::StepResult CpuDebugKit::step(hw::StepUnit unit, std::uint64_t count, bool stopAtBreakpoints, const StepOperations& operations) {
+  hw::StepResult result;
+  // 单步忽略断点；按授权量运行时断点生效，不清“要越过的地址”，继续运行才能越过刚命中的断点。
+  std::optional<Suspend> suspend;
+  if (!stopAtBreakpoints) {
+    suspend.emplace(*this, false);
+    clearStopState();
+  }
+  const std::uint64_t startCycles = operations.cycles();
+  const std::uint64_t startFrames = operations.frames();
+  // 执行一条指令；断点要求停下时返回 false。
+  const auto instruction = [&] {
+    if (stopAtBreakpoints && stopAtExecuteBreakpoint()) return false;
+    beforeInstruction();
+    operations.instruction();
+    ++result.instructions;
+    return !(stopAtBreakpoints && hasPendingHit());
+  };
+  switch (unit) {
+    case hw::StepUnit::Instruction:
+      for (std::uint64_t done = 0; done < count; ++done) {
+        if (!instruction()) break;
+      }
+      break;
+    case hw::StepUnit::Cycle:
+      while (operations.cycles() - startCycles < count) {
+        if (!instruction()) break;
+      }
+      break;
+    case hw::StepUnit::Scanline: {
+      int last = operations.line();
+      for (std::uint64_t remaining = count; remaining > 0;) {
+        if (!instruction()) break;
+        if (operations.line() != last) {
+          last = operations.line();
+          --remaining;
+        }
+      }
+      break;
+    }
+    case hw::StepUnit::Frame:
+      while (operations.frames() - startFrames < count) {
+        if (!instruction()) break;
+      }
+      break;
+  }
+  result.cycles = operations.cycles() - startCycles;
+  result.frames = operations.frames() - startFrames;
+  return result;
+}
+
 CpuDebugKit::Suspend::Suspend(CpuDebugKit& kit, bool alsoRecording) : kit_(kit), before_(kit.probeHub_.suspend(true, alsoRecording)) {}
 
 CpuDebugKit::Suspend::~Suspend() { kit_.probeHub_.restore(before_); }

@@ -109,12 +109,14 @@ PluginRegistry::PluginRegistry(PluginRegistryOptions options) : options_(std::mo
   loadDisabled();
   scanDirectory(options_.bundledDirectory, PluginSource::Bundled, entries_);
   scanDirectory(options_.userDirectory, PluginSource::User, entries_);
+  scanDevelopmentDirectory(entries_);
 }
 
 // ---------------------------------------------------------------- 检查与读取
 
-std::shared_ptr<const LoadedPlugin> PluginRegistry::checkPackage(std::span<const std::uint8_t> bytes) const {
-  const EmapPackage package = readEmapPackage(bytes);
+std::shared_ptr<const LoadedPlugin> PluginRegistry::checkPackage(std::span<const std::uint8_t> bytes) const { return checkContents(readEmapPackage(bytes)); }
+
+std::shared_ptr<const LoadedPlugin> PluginRegistry::checkContents(const EmapPackage& package) const {
   auto plugin = std::make_shared<LoadedPlugin>();
   plugin->manifest = parseManifest(package.manifestText);
   plugin->script = package.scriptText;
@@ -151,6 +153,25 @@ void PluginRegistry::scanDirectory(const fs::path& directory, PluginSource sourc
       into.push_back(Entry{checkPackage(readFile(file, MAX_PACKAGE_BYTES)), source, source == PluginSource::User ? file : fs::path()});
     } catch (const shared::CoreError& failure) {
       logError(failure.code(), failure.what(), toUtf8(file.filename()));
+    }
+  }
+}
+
+void PluginRegistry::scanDevelopmentDirectory(std::vector<Entry>& into) const {
+  if (!options_.developmentDirectory) return;
+  const fs::path directory = options_.developmentDirectory();
+  std::error_code error;
+  if (directory.empty() || !fs::is_directory(directory, error)) return;
+  std::vector<fs::path> children;
+  for (fs::directory_iterator it(directory, error), end; !error && it != end; it.increment(error)) {
+    if (it->is_directory(error)) children.push_back(it->path());
+  }
+  std::sort(children.begin(), children.end());
+  for (const fs::path& child : children) {
+    try {
+      into.push_back(Entry{checkContents(readEmapDirectory(child)), PluginSource::Development, fs::path()});
+    } catch (const shared::CoreError& failure) {
+      logError(failure.code(), failure.what(), toUtf8(child.filename()));
     }
   }
 }
@@ -195,6 +216,12 @@ std::vector<PluginRegistry::Entry> PluginRegistry::effectiveEntriesLocked() cons
     const auto found = best.find(id);
     if (found == best.end()) {
       best.emplace(id, entry);
+      continue;
+    }
+    // 开发目录里的插件优先，不比版本。
+    const bool candidateDevelopment = entry.source == PluginSource::Development;
+    if (candidateDevelopment != (found->second.source == PluginSource::Development)) {
+      if (candidateDevelopment) found->second = entry;
       continue;
     }
     const Version& current = found->second.plugin->manifest.versionNumber;
@@ -264,6 +291,8 @@ void PluginRegistry::uninstall(const std::string& id) {
     const std::lock_guard lock(mutex_);
     const bool anyUser = std::any_of(entries_.begin(), entries_.end(), [&](const Entry& entry) { return entry.source == PluginSource::User && entry.plugin->manifest.id == id; });
     if (!anyUser) {
+      const bool anyDevelopment = std::any_of(entries_.begin(), entries_.end(), [&](const Entry& entry) { return entry.source == PluginSource::Development && entry.plugin->manifest.id == id; });
+      if (anyDevelopment) throw shared::CoreError(api::ERROR_DEVELOPMENT_READONLY, "开发目录里的插件 " + id + " 不能卸载，从开发目录里删除它的目录后重新加载");
       const bool anyBundled = std::any_of(entries_.begin(), entries_.end(), [&](const Entry& entry) { return entry.plugin->manifest.id == id; });
       if (anyBundled) throw shared::CoreError(api::ERROR_BUNDLED_READONLY, "预装的插件 " + id + " 只能停用，不能卸载");
       throw shared::CoreError(api::ERROR_NOT_FOUND, "没有标识为 " + id + " 的插件");
@@ -307,6 +336,7 @@ api::MappersReloadResult PluginRegistry::reload() {
   std::vector<Entry> fresh;
   scanDirectory(options_.bundledDirectory, PluginSource::Bundled, fresh);
   scanDirectory(options_.userDirectory, PluginSource::User, fresh);
+  scanDevelopmentDirectory(fresh);
   api::MappersReloadResult result;
   {
     const std::lock_guard lock(mutex_);

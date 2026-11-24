@@ -538,46 +538,15 @@ void Sb2000Machine::writeState(std::string_view module, std::span<const hw::Stat
   debug_.writeCpuState(fields);
 }
 
-hw::StepResult Sb2000Machine::step(hw::StepUnit unit, std::uint64_t count) {
-  hw::StepResult result;
-  if (!poweredOn_ || count == 0) return result;
-  // 单步忽略断点，但照常进记录。
-  const CpuDebugKit::Suspend suspend(debug_, false);
-  debug_.clearStopState();
-  const std::uint64_t startCycles = cpu_.registers().cycles;
-  const std::uint64_t startFrames = completedFrames();
-  // 每次执行恰好一条指令（含随后响应的中断序列）。
-  const auto instruction = [&] {
-    debug_.beforeInstruction();
-    runInstruction();
-    catchUpPpu();
-    ++result.instructions;
-  };
-  switch (unit) {
-    case hw::StepUnit::Instruction:
-      for (std::uint64_t done = 0; done < count; ++done) instruction();
-      break;
-    case hw::StepUnit::Cycle:
-      while (cpu_.registers().cycles - startCycles < count) instruction();
-      break;
-    case hw::StepUnit::Scanline: {
-      int last = currentLine();
-      for (std::uint64_t remaining = count; remaining > 0;) {
-        instruction();
-        if (currentLine() != last) {
-          last = currentLine();
-          --remaining;
-        }
-      }
-      break;
-    }
-    case hw::StepUnit::Frame:
-      while (completedFrames() - startFrames < count) instruction();
-      break;
-  }
+hw::StepResult Sb2000Machine::step(hw::StepUnit unit, std::uint64_t count, bool stopAtBreakpoints) {
+  if (!poweredOn_ || count == 0) return {};
+  const hw::StepResult result = debug_.step(unit, count, stopAtBreakpoints,
+                                            {[&] {
+                                               runInstruction();
+                                               catchUpPpu();
+                                             },
+                                             [&] { return cpu_.registers().cycles; }, [&] { return completedFrames(); }, [&] { return currentLine(); }});
   catchUpAudio();
-  result.cycles = cpu_.registers().cycles - startCycles;
-  result.frames = completedFrames() - startFrames;
   return result;
 }
 

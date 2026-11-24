@@ -17,6 +17,14 @@ function portText(input: ToolInput): string {
   return input.port === undefined ? `设置里的调试端口，默认 ${DEFAULT_DEBUG_PORT}` : String(input.port);
 }
 
+/** emu_run 的授权量显示：给了周期、指令、扫描线就显示它，否则是帧数（默认 60）。 */
+function runAmountText(input: ToolInput): string {
+  if (input.cycles !== undefined) return `${String(input.cycles)} 个 CPU 周期`;
+  if (input.instructions !== undefined) return `${String(input.instructions)} 条指令`;
+  if (input.scanlines !== undefined) return `${String(input.scanlines)} 行扫描线`;
+  return `${String(input.frames ?? 60)} 帧`;
+}
+
 /** 写模拟器状态的 emu_inspect 项。 */
 const WRITING_INSPECTIONS: readonly unknown[] = ['write', 'setState'];
 
@@ -47,7 +55,7 @@ export const EMULATOR_TOOLS: readonly ToolSpec[] = [
     references: ['target'],
     describe: (input) => (input.target === undefined ? (input.file === undefined ? `载入 ${String(input.machine)} 整机` : `载入 ${String(input.file)}`) : `按目标 ${String(input.target)} 载入`)
   },
-  simple('emu_run', 'run', (input) => `运行 ${String(input.frames ?? 60)} 帧`),
+  simple('emu_run', 'run', (input) => `运行 ${runAmountText(input)}`),
   simple('emu_break', 'breakpoint', (input) => `断点：${String(input.action ?? 'list')}`),
   simple('emu_step', 'step', (input) => `单步 ${String(input.count ?? 1)} 个${String(input.unit ?? 'instruction')}`),
   {

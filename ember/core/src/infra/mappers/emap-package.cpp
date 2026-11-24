@@ -12,6 +12,8 @@
 
 #include <algorithm>
 #include <cstring>
+#include <fstream>
+#include <optional>
 #include <set>
 #include <vector>
 
@@ -84,6 +86,39 @@ void checkIcon(const std::vector<char>& data) {
 }
 
 }  // namespace
+
+EmapPackage readEmapDirectory(const std::filesystem::path& directory) {
+  namespace fs = std::filesystem;
+  // 读目录里的一个文件；不存在返回空，不是普通文件、太大或读不全时报错。
+  const auto readOne = [&directory](const char* name, std::size_t limit) -> std::optional<std::vector<char>> {
+    const fs::path file = directory / name;
+    std::error_code error;
+    const fs::file_status status = fs::symlink_status(file, error);
+    if (error || status.type() == fs::file_type::not_found) return std::nullopt;
+    if (status.type() != fs::file_type::regular) fail(std::string(name) + " 不是普通文件（不允许目录与符号链接）");
+    const auto size = fs::file_size(file, error);
+    if (error) fail(std::string("无法读取 ") + name);
+    if (size > limit) fail(std::string(name) + " 超过大小上限");
+    std::ifstream stream(file, std::ios::binary);
+    std::vector<char> data(static_cast<std::size_t>(size));
+    stream.read(data.data(), static_cast<std::streamsize>(data.size()));
+    if (!stream || static_cast<std::size_t>(stream.gcount()) != data.size()) fail(std::string("读取 ") + name + " 时文件被截断");
+    return data;
+  };
+  EmapPackage package;
+  const auto manifest = readOne(MANIFEST_NAME, MAX_MANIFEST_BYTES);
+  if (!manifest.has_value()) fail("缺少 manifest.json");
+  package.manifestText.assign(manifest->begin(), manifest->end());
+  if (const auto script = readOne(SCRIPT_NAME, MAX_SCRIPT_BYTES)) {
+    package.hasScript = true;
+    package.scriptText.assign(script->begin(), script->end());
+  }
+  if (const auto icon = readOne(ICON_NAME, MAX_PACKAGE_BYTES)) {
+    checkIcon(*icon);
+    package.hasIcon = true;
+  }
+  return package;
+}
 
 EmapPackage readEmapPackage(std::span<const std::uint8_t> bytes) {
   if (bytes.empty()) fail("文件是空的");

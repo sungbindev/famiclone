@@ -43,6 +43,18 @@ class CartridgeLoader {
   [[nodiscard]] virtual CartridgePlan plan(std::span<const std::uint8_t> file) const = 0;
 
   /**
+   * 只解析 NES 文件头与内容，不匹配插件。
+   * @throws shared::CoreError cartridges.notInes、cartridges.truncated、cartridges.unsupportedFormat、cartridges.invalidHeader。
+   */
+  [[nodiscard]] virtual mappers::CartridgeImage parse(std::span<const std::uint8_t> file) const = 0;
+
+  /**
+   * 按卡带描述匹配插件。
+   * @throws shared::CoreError mappers.noMatch、mappers.conflict、mappers.hostUnknown。
+   */
+  [[nodiscard]] virtual mappers::MapperMatch match(const mappers::CartridgeDescription& description) const = 0;
+
+  /**
    * 按计划创建卡带。
    * @param irq 主机卡槽上的 IRQ 引脚，必须活到卡带销毁。
    * @param pads 主机上的手柄口，必须活到卡带销毁。

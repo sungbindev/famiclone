@@ -83,12 +83,41 @@ struct MachineRom {
 /** 查询机型当前设置的 ROM；没有设置时返回空。只在模拟线程调用，不要在里面调用运行服务。 */
 using MachineRomSource = std::function<std::optional<MachineRom>(const std::string& machine)>;
 
+/** 授权运行的单位。 */
+enum class RunUnit : std::uint8_t {
+  /** 完成这么多帧。 */
+  Frames,
+  /** 至少这么多 CPU 周期（指令不被打断）。 */
+  Cycles,
+  /** 这么多条指令（含随后响应的中断序列）。 */
+  Instructions,
+  /** PPU 的扫描线推进这么多行。 */
+  Scanlines
+};
+
+/** 授权运行的授权量。 */
+struct RunQuota {
+  RunUnit unit{RunUnit::Frames};
+  /** 数量，正整数。 */
+  std::int64_t count{1};
+};
+
+/** 运行速度。 */
+struct SpeedSetting {
+  /** 相对真实速度的百分比（10 到 1000）。 */
+  std::int64_t percent{100};
+  /** 为 true 时不限速，percent 保持原值。 */
+  bool max{false};
+};
+
 /** 一次授权运行（runtime.run）的结果。 */
 struct RunOutcome {
   /** 实际运行的帧数。 */
   std::int64_t frames{0};
   /** 实际经过的 CPU 周期数。 */
   std::int64_t cycles{0};
+  /** 实际执行的指令条数；只有按周期、指令、扫描线授权时有。 */
+  std::optional<std::int64_t> instructions;
   /** 停止原因：completed 运行完授权的帧数；interrupted 被暂停、继续、复位、换卡带或新的授权运行打断；powerOff 断电；error 运行出错。 */
   std::string stopped;
 };
@@ -205,13 +234,19 @@ class RuntimeService {
   virtual void setFrameEventInterval(std::uint32_t frames) = 0;
 
   /**
-   * 授权运行：不限速地运行指定的帧数后暂停（运行中不输出声音）。已在授权运行中时旧的被打断（interrupted），由新的替代。
+   * 授权运行：不限速地按授权量（帧、CPU 周期、指令、扫描线）运行后暂停（运行中不输出声音）。已在授权运行中时旧的被打断（interrupted），由新的替代。
    * 运行期间收到暂停、继续、硬复位、断电、换卡带会结束它；完成或结束时发 runtime.runFinished。
-   * @param frames 要运行的帧数，正整数。
+   * @param quota 授权量，数量为正整数。
    * @returns 结果：运行结束后就绪；调用方可以等，也可以不等。
-   * @throws shared::CoreError runtime.noCartridge、runtime.notPowered。
+   * @throws shared::CoreError runtime.noCartridge、runtime.notPowered；按周期、指令、扫描线授权而主机不支持调试时为 runtime.debugUnsupported。
    */
-  virtual std::shared_future<RunOutcome> startRun(std::int64_t frames) = 0;
+  virtual std::shared_future<RunOutcome> startRun(RunQuota quota) = 0;
+
+  /**
+   * 设置运行速度：只影响自由运行，不是 100% 或不限速时不输出声音；不保存。
+   * @return 设置之后的速度。
+   */
+  virtual SpeedSetting setSpeed(SpeedSetting speed) = 0;
 
   /** 结束正在进行的授权运行（interrupted），机器暂停；没有授权运行时没有效果。 */
   virtual void cancelRun() = 0;

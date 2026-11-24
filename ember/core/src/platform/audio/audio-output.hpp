@@ -63,6 +63,11 @@ class AudioOutput {
    */
   virtual void setPlaying(bool playing) = 0;
 
+  /**
+   * 设置快速模式：true 时写入的采样直接丢弃，设备播放静音（不等声卡）；false 时按 setPlaying 的状态正常播放。
+   */
+  virtual void setFast(bool fast) = 0;
+
   /** 清空缓冲（上电、复位时）。 */
   virtual void flush() = 0;
 

@@ -358,46 +358,15 @@ void PyramidMachine::writeState(std::string_view module, std::span<const hw::Sta
   debug_.writeCpuState(fields);
 }
 
-hw::StepResult PyramidMachine::step(hw::StepUnit unit, std::uint64_t count) {
-  hw::StepResult result;
-  if (!poweredOn_ || count == 0) return result;
-  // 单步忽略断点，但照常进记录。
-  const CpuDebugKit::Suspend suspend(debug_, false);
-  debug_.clearStopState();
-  const std::uint64_t startCycles = cpu_.registers().cycles;
-  const std::uint64_t startFrames = ppu_.frameCount();
-  // 每次 run(1) 执行恰好一条指令（含随后响应的中断序列）。
-  const auto instruction = [&] {
-    debug_.beforeInstruction();
-    cpu_.run(1);
-    ppu_.catchUp(scheduler_.now());
-    ++result.instructions;
-  };
-  switch (unit) {
-    case hw::StepUnit::Instruction:
-      for (std::uint64_t done = 0; done < count; ++done) instruction();
-      break;
-    case hw::StepUnit::Cycle:
-      while (cpu_.registers().cycles - startCycles < count) instruction();
-      break;
-    case hw::StepUnit::Scanline: {
-      int last = ppu_.scanline();
-      for (std::uint64_t remaining = count; remaining > 0;) {
-        instruction();
-        if (ppu_.scanline() != last) {
-          last = ppu_.scanline();
-          --remaining;
-        }
-      }
-      break;
-    }
-    case hw::StepUnit::Frame:
-      while (ppu_.frameCount() - startFrames < count) instruction();
-      break;
-  }
+hw::StepResult PyramidMachine::step(hw::StepUnit unit, std::uint64_t count, bool stopAtBreakpoints) {
+  if (!poweredOn_ || count == 0) return {};
+  const hw::StepResult result = debug_.step(unit, count, stopAtBreakpoints,
+                                            {[&] {
+                                               cpu_.run(1);
+                                               ppu_.catchUp(scheduler_.now());
+                                             },
+                                             [&] { return cpu_.registers().cycles; }, [&] { return ppu_.frameCount(); }, [&] { return ppu_.scanline(); }});
   apu_.catchUp(scheduler_.now());
-  result.cycles = cpu_.registers().cycles - startCycles;
-  result.frames = ppu_.frameCount() - startFrames;
   return result;
 }
 

@@ -35,6 +35,7 @@ class LocalOutputService final : public contracts::output::OutputService {
 
   contracts::output::OutputSetVolumeResult setVolume(std::optional<std::int64_t> volume, std::optional<bool> muted) override;
   [[nodiscard]] contracts::output::OutputSetVolumeResult volume() const override;
+  std::string setAudioMode(const std::string& mode) override;
 
   /** 首选项的取值变了时调用（由登记函数订阅）：缓冲大小立即应用，音量与当前不同时也应用；其他设置项忽略。 */
   void applyPreference(const std::string& id, const contracts::preferences::SettingValue& value);
@@ -48,6 +49,7 @@ class LocalOutputService final : public contracts::output::OutputService {
   mutable std::mutex mutex_;
   std::int64_t volume_{DEFAULT_VOLUME};
   bool muted_{false};
+  bool fast_{false};
 };
 
 }  // namespace ember::logic::output

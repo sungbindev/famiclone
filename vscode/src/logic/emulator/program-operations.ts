@@ -90,16 +90,28 @@ export async function load(context: OperationContext, params: Record<string, unk
 }
 
 /**
- * 运行指定的帧数（不限速），结束或命中断点后暂停。
+ * 按授权量运行（不限速），结束或命中断点后暂停。
  * @param context 上下文。
- * @param params 可选 frames（默认 60）。
- * @returns 停止原因、实际帧数与周期数、CPU 状态。
+ * @param params 可选 frames、cycles、instructions、scanlines 之一（都不给时 frames 为 60）。
+ * @returns 停止原因、实际帧数与周期数（按周期、指令、扫描线授权时还有实际指令条数）、CPU 状态。
  */
 export async function run(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { client } = context.store.currentSession();
-  const frames = optionalInteger(params, 'frames', { min: 1, max: 10_000_000 }) ?? 60;
-  const result = await client.request('runtime.run', { frames, wait: true }, { timeoutMs: RUN_TIMEOUT_MS });
-  return { stopped: result.stopped, frames: result.frames, cycles: result.cycles, state: result.state, cpu: await cpuState(client) };
+  const frames = optionalInteger(params, 'frames', { min: 1, max: 10_000_000 });
+  const cycles = optionalInteger(params, 'cycles', { min: 1, max: 100_000_000_000 });
+  const instructions = optionalInteger(params, 'instructions', { min: 1, max: 100_000_000_000 });
+  const scanlines = optionalInteger(params, 'scanlines', { min: 1, max: 1_000_000_000 });
+  if ([frames, cycles, instructions, scanlines].filter((value) => value !== undefined).length > 1) invalidParam('frames、cycles、instructions、scanlines 只能给一个');
+  const quota = cycles !== undefined ? { cycles } : instructions !== undefined ? { instructions } : scanlines !== undefined ? { scanlines } : { frames: frames ?? 60 };
+  const result = await client.request('runtime.run', { ...quota, wait: true }, { timeoutMs: RUN_TIMEOUT_MS });
+  return {
+    stopped: result.stopped,
+    frames: result.frames,
+    cycles: result.cycles,
+    ...(result.instructions === undefined ? {} : { instructions: result.instructions }),
+    state: result.state,
+    cpu: await cpuState(client)
+  };
 }
 
 /** 带地址的断点种类。 */

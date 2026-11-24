@@ -29,6 +29,7 @@ class CartridgeManager final : public contracts::cartridges::CartridgeService {
 
   contracts::cartridges::CartridgesLoadResult load(const contracts::cartridges::CartridgesLoadParams& params) override;
   contracts::cartridges::CartridgesEjectResult eject() override;
+  contracts::cartridges::CartridgesParseHeaderResult parseHeader(const contracts::cartridges::CartridgesParseHeaderParams& params) override;
   [[nodiscard]] contracts::cartridges::CartridgesInfoResult info() const override;
 
  private:

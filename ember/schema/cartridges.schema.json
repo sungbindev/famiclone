@@ -11,6 +11,43 @@
       },
       "required": ["id", "name"]
     },
+    "CartridgeHeader": {
+      "type": "object",
+      "description": "NES 文件头里的信息（不装配就能得到）。",
+      "properties": {
+        "path": { "type": "string", "description": "文件路径" },
+        "mapper": { "type": "integer", "minimum": 0, "description": "mapper 号" },
+        "variant": { "type": "integer", "minimum": 0, "description": "变体号（同一 mapper 号的不同卡带）" },
+        "prgSize": { "type": "integer", "minimum": 0, "description": "PRG-ROM 字节数" },
+        "chrSize": { "type": "integer", "minimum": 0, "description": "CHR-ROM 字节数；0 表示用 CHR-RAM" },
+        "mirroring": { "type": "string", "enum": ["horizontal", "vertical", "four"], "description": "文件头里的镜像方式" },
+        "battery": { "type": "boolean", "description": "是否带电池备份的 RAM" },
+        "crc32Prg": { "type": "string", "description": "PRG-ROM 的 CRC-32（8 位大写十六进制）" },
+        "crc32All": { "type": "string", "description": "PRG-ROM 与 CHR-ROM 合在一起的 CRC-32（8 位大写十六进制）" }
+      },
+      "required": ["path", "mapper", "variant", "prgSize", "chrSize", "mirroring", "battery", "crc32Prg", "crc32All"]
+    },
+    "HeaderMatch": {
+      "type": "object",
+      "description": "按文件头匹配到的插件。",
+      "properties": {
+        "pluginId": { "type": "string", "description": "插件标识" },
+        "pluginName": { "type": "string", "description": "插件名称" },
+        "pluginVersion": { "type": "string", "description": "插件版本" },
+        "host": { "type": "string", "description": "会装配的主机型号" },
+        "devices": { "type": "array", "items": { "type": "string", "enum": ["mouse"] }, "description": "插件声明的外设，目前只有 mouse（鼠标）" }
+      },
+      "required": ["pluginId", "pluginName", "pluginVersion", "host", "devices"]
+    },
+    "MatchFailure": {
+      "type": "object",
+      "description": "匹配插件失败的原因。",
+      "properties": {
+        "code": { "type": "string", "description": "错误码：mappers.noMatch、mappers.conflict 或 mappers.hostUnknown" },
+        "message": { "type": "string", "description": "说明" }
+      },
+      "required": ["code", "message"]
+    },
     "LoadedCartridge": {
       "type": "object",
       "description": "加载完成的卡带与加载后的运行状态。",
@@ -41,6 +78,27 @@
           "state": { "$ref": "runtime#/types/RuntimeState" }
         },
         "required": ["cartridge", "state"]
+      },
+      "errors": ["cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
+    },
+    "parseHeader": {
+      "description": "只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机。文件头解析失败时返回错误；解析成功但没有匹配的插件时 header 照常返回，matchError 说明原因。",
+      "mainOnly": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "description": "NES 文件的路径" }
+        },
+        "required": ["path"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "header": { "$ref": "#/types/CartridgeHeader", "description": "文件头里的信息" },
+          "match": { "$ref": "#/types/HeaderMatch", "description": "匹配到的插件；没有匹配时没有这一项" },
+          "matchError": { "$ref": "#/types/MatchFailure", "description": "匹配失败的原因；匹配成功时没有这一项" }
+        },
+        "required": ["header"]
       },
       "errors": ["cartridges.fileNotFound", "cartridges.fileUnreadable", "cartridges.notInes", "cartridges.truncated", "cartridges.unsupportedFormat", "cartridges.invalidHeader"]
     },

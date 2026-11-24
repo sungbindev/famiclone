@@ -39,6 +39,7 @@ enum class MapperDetailLoad {
 inline constexpr const char* kMapperSourceAll = "all";
 inline constexpr const char* kMapperSourceBundled = "bundled";
 inline constexpr const char* kMapperSourceUser = "user";
+inline constexpr const char* kMapperSourceDevelopment = "development";
 
 /** 表格里的一行插件。 */
 struct MapperRow {
@@ -51,11 +52,13 @@ struct MapperRow {
   std::string match;
   /** 主机型号的一行文字。 */
   std::string hosts;
-  /** 来源的显示名：预装、用户安装。 */
+  /** 来源的显示名：预装、用户安装、开发目录。 */
   std::string source;
   bool enabled{false};
   /** 预装插件：只能停用，不能卸载。 */
   bool bundled{false};
+  /** 开发目录里的插件：只能停用，不能卸载，要从开发目录里删除它的目录。 */
+  bool development{false};
   bool operator==(const MapperRow&) const = default;
 };
 
@@ -98,7 +101,7 @@ class MappersModel {
 
   /** 设置搜索词（按名称、标识、发布者、说明筛选，不分大小写、忽略全部空白）。 */
   virtual void setSearch(const std::string& text) = 0;
-  /** 设置来源筛选：all、bundled、user。 */
+  /** 设置来源筛选：all、bundled、user、development。 */
   virtual void setSource(const std::string& source) = 0;
   /** 选中或取消选中（空标识表示取消）；已选中的再选一次就是取消。 */
   virtual void toggleSelect(const std::string& id) = 0;

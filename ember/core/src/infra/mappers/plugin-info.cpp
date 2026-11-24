@@ -52,7 +52,7 @@ api::MapperSummary makeSummary(const LoadedPlugin& plugin, PluginSource source, 
   summary.host = manifest.host;
   summary.devices = manifest.devices;
   for (const MatchRule& rule : manifest.match) summary.match.push_back(makeRule(rule));
-  summary.source = source == PluginSource::Bundled ? "bundled" : "user";
+  summary.source = source == PluginSource::Bundled ? "bundled" : (source == PluginSource::Development ? "development" : "user");
   summary.enabled = enabled;
   return summary;
 }

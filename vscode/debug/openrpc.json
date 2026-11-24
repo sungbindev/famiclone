@@ -124,6 +124,98 @@
       "x-mainOnly": true
     },
     {
+      "name": "cartridges.parseHeader",
+      "summary": "只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机",
+      "description": "只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机。文件头解析失败时返回错误；解析成功但没有匹配的插件时 header 照常返回，matchError 说明原因。",
+      "tags": [
+        {
+          "name": "cartridges"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "NES 文件的路径",
+            "minLength": 1
+          },
+          "description": "NES 文件的路径"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "header": {
+              "$ref": "#/components/schemas/cartridges.CartridgeHeader",
+              "description": "文件头里的信息"
+            },
+            "match": {
+              "$ref": "#/components/schemas/cartridges.HeaderMatch",
+              "description": "匹配到的插件；没有匹配时没有这一项"
+            },
+            "matchError": {
+              "$ref": "#/components/schemas/cartridges.MatchFailure",
+              "description": "匹配失败的原因；匹配成功时没有这一项"
+            }
+          },
+          "required": [
+            "header"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "cartridges.fileNotFound",
+          "data": {
+            "code": "cartridges.fileNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.fileUnreadable",
+          "data": {
+            "code": "cartridges.fileUnreadable"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.notInes",
+          "data": {
+            "code": "cartridges.notInes"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.truncated",
+          "data": {
+            "code": "cartridges.truncated"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.unsupportedFormat",
+          "data": {
+            "code": "cartridges.unsupportedFormat"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "cartridges.invalidHeader",
+          "data": {
+            "code": "cartridges.invalidHeader"
+          }
+        }
+      ],
+      "x-mainOnly": true
+    },
+    {
       "name": "cartridges.eject",
       "summary": "取出卡带：主机随之拆除，电源状态变为断电",
       "description": "取出卡带：主机随之拆除，电源状态变为断电；没有卡带时没有效果。",
@@ -3856,8 +3948,8 @@
     },
     {
       "name": "mappers.list",
-      "summary": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先",
-      "description": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。",
+      "summary": "列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先",
+      "description": "列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先。",
       "tags": [
         {
           "name": "mappers"
@@ -3999,7 +4091,7 @@
     {
       "name": "mappers.uninstall",
       "summary": "卸载用户安装的插件",
-      "description": "卸载用户安装的插件；预装的插件只能停用。",
+      "description": "卸载用户安装的插件；预装的插件只能停用，开发目录里的插件从开发目录里删除它的目录。",
       "tags": [
         {
           "name": "mappers"
@@ -4041,6 +4133,13 @@
           "message": "mappers.bundledReadonly",
           "data": {
             "code": "mappers.bundledReadonly"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "mappers.developmentReadonly",
+          "data": {
+            "code": "mappers.developmentReadonly"
           }
         }
       ]
@@ -4104,8 +4203,8 @@
     },
     {
       "name": "mappers.reload",
-      "summary": "重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效",
-      "description": "重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效；不合格的包被跳过并写入错误日志。",
+      "summary": "重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效",
+      "description": "重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效；不合格的包或目录被跳过并写入错误日志。",
       "tags": [
         {
           "name": "mappers"
@@ -4998,6 +5097,53 @@
       "errors": []
     },
     {
+      "name": "output.setAudioMode",
+      "summary": "设置声音的播放方式：real 按真实时间播放",
+      "description": "设置声音的播放方式：real 按真实时间播放；fast 不等声卡，采样直接丢弃，设备播放静音，模拟器内部的时序不变。不保存，每次启动都是 real。",
+      "tags": [
+        {
+          "name": "output"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "mode",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "播放方式",
+            "enum": [
+              "real",
+              "fast"
+            ]
+          },
+          "description": "播放方式"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "description": "设置之后的播放方式",
+              "enum": [
+                "real",
+                "fast"
+              ]
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
+    },
+    {
       "name": "output.setVolume",
       "summary": "设置声音的音量与静音",
       "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。音量保存到首选项的 sound.volume，核心重启后保持；静音不保存，每次启动由 sound.startMuted 决定；变化平滑过渡，不会产生爆音。",
@@ -5378,8 +5524,12 @@
             },
             "speed": {
               "type": "integer",
-              "description": "速度百分比，目前固定为 100",
+              "description": "速度百分比，默认 100；maxSpeed 为 true 时不限速，这一项保持最近一次设置的百分比",
               "minimum": 1
+            },
+            "maxSpeed": {
+              "type": "boolean",
+              "description": "是否不限速（最快）"
             },
             "mouse": {
               "type": "boolean",
@@ -5392,6 +5542,7 @@
             "frame",
             "cycles",
             "speed",
+            "maxSpeed",
             "mouse"
           ],
           "additionalProperties": false
@@ -5604,8 +5755,8 @@
     },
     {
       "name": "runtime.run",
-      "summary": "授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）",
-      "description": "授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）。wait 为 true 时等运行结束才返回结果（结果里有 stopped）；否则立即返回，运行结束时发事件 runtime.runFinished。已在授权运行中时旧的被打断，由新的替代；等待中的请求被取消（如连接断开）时运行被打断并暂停。之后会加入 cycles、scanlines、instructions 等其他授权量。",
+      "summary": "授权运行：不限速地连续运行指定的量后暂停（运行中不输出声音，每帧之间照常处理输入等命令）",
+      "description": "授权运行：不限速地连续运行指定的量后暂停（运行中不输出声音，每帧之间照常处理输入等命令）。授权量 frames、cycles、instructions、scanlines 必须给且只能给一个：frames 完成这么多帧；cycles 至少这么多 CPU 周期（指令不被打断，实际周期数可能多几个）；instructions 这么多条指令（含随后响应的中断序列）；scanlines PPU 的扫描线推进这么多行。命中断点时自动停止。wait 为 true 时等运行结束才返回结果（结果里有 stopped）；否则立即返回，运行结束时发事件 runtime.runFinished。已在授权运行中时旧的被打断，由新的替代；等待中的请求被取消（如连接断开）时运行被打断并暂停。",
       "tags": [
         {
           "name": "runtime"
@@ -5615,7 +5766,7 @@
       "params": [
         {
           "name": "frames",
-          "required": true,
+          "required": false,
           "schema": {
             "type": "integer",
             "description": "要运行的帧数",
@@ -5623,6 +5774,39 @@
             "maximum": 10000000
           },
           "description": "要运行的帧数"
+        },
+        {
+          "name": "cycles",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "要运行的 CPU 周期数",
+            "minimum": 1,
+            "maximum": 100000000000
+          },
+          "description": "要运行的 CPU 周期数"
+        },
+        {
+          "name": "instructions",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "要运行的指令条数",
+            "minimum": 1,
+            "maximum": 100000000000
+          },
+          "description": "要运行的指令条数"
+        },
+        {
+          "name": "scanlines",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "要推进的扫描线行数",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "description": "要推进的扫描线行数"
         },
         {
           "name": "wait",
@@ -5653,9 +5837,14 @@
               "description": "实际经过的 CPU 周期数；wait 为 false 时为 0",
               "minimum": 0
             },
+            "instructions": {
+              "type": "integer",
+              "description": "实际执行的指令条数；只有按 cycles、instructions、scanlines 授权且 wait 为 true 时有",
+              "minimum": 0
+            },
             "stopped": {
               "type": "string",
-              "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的帧数；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；breakpoint 命中断点；error 运行出错",
+              "description": "停止原因（只有 wait 为 true 时有）：completed 运行完授权的量；interrupted 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断；powerOff 断电；breakpoint 命中断点；error 运行出错",
               "enum": [
                 "completed",
                 "interrupted",
@@ -5687,9 +5876,72 @@
           "data": {
             "code": "runtime.notPowered"
           }
+        },
+        {
+          "code": -32000,
+          "message": "runtime.debugUnsupported",
+          "data": {
+            "code": "runtime.debugUnsupported"
+          }
         }
       ],
       "x-debugOnly": true
+    },
+    {
+      "name": "runtime.setSpeed",
+      "summary": "设置运行速度：percent 是相对真实速度的百分比，max 为 true 时不限速、尽快运行",
+      "description": "设置运行速度：percent 是相对真实速度的百分比，max 为 true 时不限速、尽快运行；两者给一个，都不给时恢复 100%。只影响自由运行（继续、上电后运行），授权运行与单步不受影响。速度不是 100% 或不限速时不输出声音（采样丢弃，恢复 100% 后继续）。设置不保存，每次启动都是 100%。",
+      "tags": [
+        {
+          "name": "runtime"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "percent",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "速度百分比，如 50 是半速，200 是两倍速",
+            "minimum": 10,
+            "maximum": 1000
+          },
+          "description": "速度百分比，如 50 是半速，200 是两倍速"
+        },
+        {
+          "name": "max",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "为 true 时不限速（最快）；不能与 percent 同时给"
+          },
+          "description": "为 true 时不限速（最快）；不能与 percent 同时给"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "speed": {
+              "type": "integer",
+              "description": "设置之后的速度百分比",
+              "minimum": 1
+            },
+            "maxSpeed": {
+              "type": "boolean",
+              "description": "设置之后是否不限速"
+            }
+          },
+          "required": [
+            "speed",
+            "maxSpeed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": []
     },
     {
       "name": "runtime.step",
@@ -5912,6 +6164,128 @@
         "required": [
           "id",
           "name"
+        ],
+        "additionalProperties": false
+      },
+      "cartridges.CartridgeHeader": {
+        "type": "object",
+        "description": "NES 文件头里的信息（不装配就能得到）。",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "文件路径"
+          },
+          "mapper": {
+            "type": "integer",
+            "description": "mapper 号",
+            "minimum": 0
+          },
+          "variant": {
+            "type": "integer",
+            "description": "变体号（同一 mapper 号的不同卡带）",
+            "minimum": 0
+          },
+          "prgSize": {
+            "type": "integer",
+            "description": "PRG-ROM 字节数",
+            "minimum": 0
+          },
+          "chrSize": {
+            "type": "integer",
+            "description": "CHR-ROM 字节数；0 表示用 CHR-RAM",
+            "minimum": 0
+          },
+          "mirroring": {
+            "type": "string",
+            "description": "文件头里的镜像方式",
+            "enum": [
+              "horizontal",
+              "vertical",
+              "four"
+            ]
+          },
+          "battery": {
+            "type": "boolean",
+            "description": "是否带电池备份的 RAM"
+          },
+          "crc32Prg": {
+            "type": "string",
+            "description": "PRG-ROM 的 CRC-32（8 位大写十六进制）"
+          },
+          "crc32All": {
+            "type": "string",
+            "description": "PRG-ROM 与 CHR-ROM 合在一起的 CRC-32（8 位大写十六进制）"
+          }
+        },
+        "required": [
+          "path",
+          "mapper",
+          "variant",
+          "prgSize",
+          "chrSize",
+          "mirroring",
+          "battery",
+          "crc32Prg",
+          "crc32All"
+        ],
+        "additionalProperties": false
+      },
+      "cartridges.HeaderMatch": {
+        "type": "object",
+        "description": "按文件头匹配到的插件。",
+        "properties": {
+          "pluginId": {
+            "type": "string",
+            "description": "插件标识"
+          },
+          "pluginName": {
+            "type": "string",
+            "description": "插件名称"
+          },
+          "pluginVersion": {
+            "type": "string",
+            "description": "插件版本"
+          },
+          "host": {
+            "type": "string",
+            "description": "会装配的主机型号"
+          },
+          "devices": {
+            "type": "array",
+            "description": "插件声明的外设，目前只有 mouse（鼠标）",
+            "items": {
+              "type": "string",
+              "enum": [
+                "mouse"
+              ]
+            }
+          }
+        },
+        "required": [
+          "pluginId",
+          "pluginName",
+          "pluginVersion",
+          "host",
+          "devices"
+        ],
+        "additionalProperties": false
+      },
+      "cartridges.MatchFailure": {
+        "type": "object",
+        "description": "匹配插件失败的原因。",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "错误码：mappers.noMatch、mappers.conflict 或 mappers.hostUnknown"
+          },
+          "message": {
+            "type": "string",
+            "description": "说明"
+          }
+        },
+        "required": [
+          "code",
+          "message"
         ],
         "additionalProperties": false
       },
@@ -6709,10 +7083,11 @@
           },
           "source": {
             "type": "string",
-            "description": "来源：bundled 预装，user 用户安装",
+            "description": "来源：bundled 预装，user 用户安装，development 开发目录（首选项 mappers.developmentDirectory 指定的目录里未打包的插件）",
             "enum": [
               "bundled",
-              "user"
+              "user",
+              "development"
             ]
           },
           "enabled": {
@@ -8020,7 +8395,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变",
+            "description": "原因：run 开始授权运行，runEnded 授权运行跑完后暂停，step 单步，breakpoint 命中断点后暂停，speed 运行速度变了，inputChanged 机器的输入设备变了（如学习机进入 FC 兼容模式后不再带鼠标），电源与运行模式不变",
             "enum": [
               "load",
               "eject",
@@ -8034,7 +8409,8 @@
               "step",
               "breakpoint",
               "error",
-              "inputChanged"
+              "inputChanged",
+              "speed"
             ]
           }
         },

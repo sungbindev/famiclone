@@ -23,6 +23,7 @@ using nlohmann::json;
 /** 用户可见的文字。 */
 constexpr const char* kSourceBundled = "预装";
 constexpr const char* kSourceUser = "用户安装";
+constexpr const char* kSourceDevelopment = "开发目录";
 constexpr const char* kNone = "无";
 constexpr const char* kLabelId = "标识";
 constexpr const char* kLabelVersion = "版本";
@@ -186,7 +187,10 @@ std::optional<MapperDetail> parseMapperDetail(const json& result) {
   return detail;
 }
 
-std::string sourceLabel(const std::string& source) { return source == "bundled" ? kSourceBundled : kSourceUser; }
+std::string sourceLabel(const std::string& source) {
+  if (source == "bundled") return kSourceBundled;
+  return source == "development" ? kSourceDevelopment : kSourceUser;
+}
 
 std::string hostLabel(const std::string& host) {
   if (host == "fc") return "经典 FC";
@@ -255,6 +259,7 @@ contracts::MapperRow toRow(const MapperSummary& plugin) {
   row.source = sourceLabel(plugin.source);
   row.enabled = plugin.enabled;
   row.bundled = plugin.source == "bundled";
+  row.development = plugin.source == "development";
   return row;
 }
 

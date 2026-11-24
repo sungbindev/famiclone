@@ -5,9 +5,9 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：规则见 docs/03-mapper插件规范.md 第 4.2、5、7 节。同一标识有多个来源时版本高的生效，版本相同时用户安装的优先；
+ * 备注：规则见 docs/03-mapper插件规范.md 第 4.2、5、7 节。开发目录里的插件优先于同标识的其他来源，其余版本高的生效，版本相同时用户安装的优先；
  *       用户目录为空时安装只保存在内存里（测试用）。线程安全：请求线程与模拟线程可以同时使用。
- *       后续阶段：开发中的插件目录、冲突时用户选择并记住（本阶段条件数相同即报冲突）。
+ *       后续阶段：冲突时用户选择并记住（本阶段条件数相同即报冲突）。
  * ------------------------------------------------------------------------
  */
 
@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -27,6 +28,7 @@
 #include "contracts/hardware/mapper-circuit-catalog.hpp"
 #include "contracts/mappers/mapper-factory.hpp"
 #include "contracts/mappers/mapper-service.hpp"
+#include "infra/mappers/emap-package.hpp"
 #include "infra/mappers/loaded-plugin.hpp"
 #include "infra/mappers/plugin-info.hpp"
 #include "infra/mappers/script-runtime.hpp"
@@ -46,6 +48,8 @@ struct PluginRegistryOptions {
   std::filesystem::path bundledDirectory;
   /** 用户插件目录；为空时安装只保存在内存里。 */
   std::filesystem::path userDirectory;
+  /** 取开发目录的函数（每次读取时调用）：目录下每个子目录是一个未打包的插件；为空函数或返回空路径时不用开发目录。 */
+  std::function<std::filesystem::path()> developmentDirectory;
   HostCatalog hosts;
   /** 错误日志，可以为空；跳过不合格的插件包时写入。 */
   std::shared_ptr<platform::ErrorLog> errors;
@@ -91,10 +95,14 @@ class PluginRegistry final : public contracts::mappers::MapperService, public co
   };
 
   [[nodiscard]] std::shared_ptr<const LoadedPlugin> checkPackage(std::span<const std::uint8_t> bytes) const;
+  /** 检查已读出的插件内容（插件包或开发目录都走这里）。 */
+  [[nodiscard]] std::shared_ptr<const LoadedPlugin> checkContents(const EmapPackage& package) const;
   void scanDirectory(const std::filesystem::path& directory, PluginSource source, std::vector<Entry>& into) const;
+  /** 扫描开发目录：每个子目录是一个未打包的插件，不合格的跳过并写错误日志。 */
+  void scanDevelopmentDirectory(std::vector<Entry>& into) const;
   void loadDisabled();
   void saveDisabled(const std::set<std::string>& disabled) const;
-  /** 每个标识生效的条目：版本高的生效，版本相同时用户安装的优先，按标识排序。调用方必须持有 mutex_。 */
+  /** 每个标识生效的条目：开发目录的优先，其余版本高的生效，版本相同时用户安装的优先，按标识排序。调用方必须持有 mutex_。 */
   [[nodiscard]] std::vector<Entry> effectiveEntriesLocked() const;
   [[nodiscard]] std::optional<Entry> findEffectiveLocked(const std::string& id) const;
   void publishChanged(const std::string* id) const;

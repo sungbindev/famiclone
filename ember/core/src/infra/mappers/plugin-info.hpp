@@ -16,7 +16,7 @@
 namespace ember::infra::mappers {
 
 /** 插件的来源。 */
-enum class PluginSource { Bundled, User };
+enum class PluginSource { Bundled, User, Development };
 
 /** 插件摘要。 */
 [[nodiscard]] contracts::mappers::MapperSummary makeSummary(const LoadedPlugin& plugin, PluginSource source, bool enabled);

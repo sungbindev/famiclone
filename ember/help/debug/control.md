@@ -17,18 +17,31 @@
 
 ## 授权运行
 
-`runtime.run` 让模拟器不限速地连续运行指定的帧数，之后暂停：
+`runtime.run` 让模拟器不限速地按授权量连续运行，之后暂停：
 
 | 参数 | 说明 |
 | --- | --- |
 | `frames` | 要运行的帧数，1 到 10000000 |
+| `cycles` | 至少这么多 CPU 周期（指令不被打断，实际周期数可能多几个） |
+| `instructions` | 这么多条指令（含随后响应的中断序列） |
+| `scanlines` | PPU 的扫描线推进这么多行 |
 | `wait` | 默认 `false`；为 `true` 时等运行结束才返回响应 |
 
+- `frames`、`cycles`、`instructions`、`scanlines` 必须给且只能给一个；按周期、指令、扫描线运行要主机型号支持调试。
+
 - 运行中不输出声音，每帧之间照常处理输入等命令。
-- `wait: true` 时，结果的 `stopped` 说明停止原因：`completed` 跑完、`interrupted` 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断、`powerOff` 断电、`breakpoint` 命中断点、`error` 运行出错；`frames` 与 `cycles` 是实际运行的帧数与 CPU 周期数。
+- `wait: true` 时，结果的 `stopped` 说明停止原因：`completed` 跑完、`interrupted` 被暂停、继续、硬复位、换卡带、新的授权运行或请求被取消打断、`powerOff` 断电、`breakpoint` 命中断点、`error` 运行出错；`frames` 与 `cycles` 是实际运行的帧数与 CPU 周期数，按周期、指令、扫描线授权时还有 `instructions`（实际执行的指令条数）。
 - `wait: false` 时立即返回，结束时发事件 `runtime.runFinished`。
 - 已在授权运行中时，旧的被打断，由新的替代。
 - 命中断点时运行自动停止，不需要额外参数。
+
+## 运行速度与声音
+
+| 要做什么 | 请求 |
+| --- | --- |
+| 改运行速度 | `runtime.setSpeed`：`percent`（10 到 1000，相对真实速度的百分比）或 `max`（为 `true` 时不限速），都不给时恢复 100%；只影响自由运行，授权运行与单步不受影响；速度不是 100% 或不限速时不输出声音；不保存，每次启动都是 100% |
+| 让声音不等声卡 | `output.setAudioMode`：`mode` 为 `fast` 时采样直接丢弃、设备播放静音，模拟器内部时序不变；`real` 恢复；不保存 |
+| 装入前预览卡带 | `cartridges.parseHeader`：只解析 NES 文件头并预览匹配到的插件，不装配、不影响正在运行的卡带；匹配失败时结果里的 `matchError` 说明原因 |
 
 ## 典型流程
 

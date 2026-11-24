@@ -95,7 +95,8 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   void setFamilyKeyboard(bool connected) override;
   void setHideStartupFrames(bool hide) override;
   void setFrameEventInterval(std::uint32_t frames) override;
-  std::shared_future<contracts::runtime::RunOutcome> startRun(std::int64_t frames) override;
+  std::shared_future<contracts::runtime::RunOutcome> startRun(contracts::runtime::RunQuota quota) override;
+  contracts::runtime::SpeedSetting setSpeed(contracts::runtime::SpeedSetting speed) override;
   void cancelRun() override;
   unsigned padPortCount() override;
   void setPadButtons(unsigned port, std::uint8_t buttons) override;
@@ -107,9 +108,13 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
  private:
   /** 正在进行的授权运行（只由模拟线程访问）。 */
   struct ActiveRun {
+    contracts::runtime::RunUnit unit{contracts::runtime::RunUnit::Frames};
     std::int64_t total{0};
     std::int64_t remaining{0};
     std::uint64_t startCycles{0};
+    std::uint64_t startFrame{0};
+    /** 按周期、指令、扫描线授权时已执行的指令条数。 */
+    std::int64_t instructions{0};
     std::shared_ptr<std::promise<contracts::runtime::RunOutcome>> promise;
   };
 
@@ -127,6 +132,10 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   /** 以下方法只在模拟线程调用。 */
   void runPending(std::unique_lock<std::mutex>& lock);
   void runFrame();
+  /** 按周期、指令、扫描线授权的运行：跑一小块，然后像一帧结束那样发布画面与状态。 */
+  void runQuotaChunk();
+  /** 运行速度是 100% 且不限速。 */
+  [[nodiscard]] bool normalSpeed() const { return !maxSpeed_ && speedPercent_ == 100; }
   [[nodiscard]] bool powered() const;
   [[nodiscard]] bool running() const { return running_ && powered(); }
   [[nodiscard]] contracts::runtime::RuntimeState state() const;
@@ -191,6 +200,9 @@ class SimulationRuntime final : public contracts::runtime::RuntimeService {
   /** 最近一次发布的快照里机器是否带鼠标，用来发现运行中的变化（如学习机进入 FC 兼容模式）。 */
   bool mouse_{false};
   bool running_{false};
+  /** 运行速度（百分比）与是否不限速，只由模拟线程访问。 */
+  std::int64_t speedPercent_{100};
+  bool maxSpeed_{false};
   /** 正在进行的授权运行。 */
   std::optional<ActiveRun> run_;
   /** 要重新对齐帧节拍（刚开始运行，或落后太多）。 */

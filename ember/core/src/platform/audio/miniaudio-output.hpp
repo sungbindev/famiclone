@@ -41,6 +41,7 @@ class MiniaudioOutput final : public AudioOutput {
   [[nodiscard]] std::size_t bufferedSamples() const noexcept override;
   void setVolume(unsigned percent, bool muted) override;
   void setPlaying(bool playing) override;
+  void setFast(bool fast) override;
   void flush() override;
   void setBufferProfile(AudioBufferProfile profile) override;
   [[nodiscard]] AudioStats stats() const noexcept override;

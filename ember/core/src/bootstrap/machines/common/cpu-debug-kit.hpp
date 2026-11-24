@@ -86,6 +86,23 @@ class CpuDebugKit final : private contracts::hardware::InterruptObserver, privat
   /** 上电与复位时：清掉未取走的命中。 */
   void discardPendingHit() { breakpoints_.discardPending(); }
 
+  /** 单步与按授权量运行共用的循环里，机型各自提供的操作。 */
+  struct StepOperations {
+    /** 执行恰好一条指令（含随后响应的中断序列）并让 PPU 追赶到当前时间。 */
+    std::function<void()> instruction;
+    /** CPU 周期数。 */
+    std::function<std::uint64_t()> cycles;
+    /** 已完成的帧数。 */
+    std::function<std::uint64_t()> frames;
+    /** 当前的扫描线。 */
+    std::function<int()> line;
+  };
+
+  /**
+   * 单步或按授权量运行：按单位运行 count 个；stopAtBreakpoints 为 false 时忽略断点（照常进记录），为 true 时断点生效，命中后提前返回。
+   */
+  contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count, bool stopAtBreakpoints, const StepOperations& operations);
+
   /** 不带副作用地读 CPU 总线。 */
   [[nodiscard]] std::uint8_t peek(std::uint16_t address) const { return bus_.peek(address); }
 

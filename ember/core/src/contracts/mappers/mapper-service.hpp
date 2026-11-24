@@ -17,6 +17,10 @@
 
 namespace ember::contracts::mappers {
 
+/** 首选项里“mapper 插件”分组与开发目录设置项的标识。 */
+inline constexpr const char* SETTING_GROUP = "mappers";
+inline constexpr const char* SETTING_DEVELOPMENT_DIRECTORY = "mappers.developmentDirectory";
+
 /** 插件管理。 */
 class MapperService {
  public:
@@ -41,7 +45,7 @@ class MapperService {
   /** 启用或停用插件。 @throws shared::CoreError mappers.notFound。 */
   virtual MappersSetEnabledResult setEnabled(const std::string& id, bool enabled) = 0;
 
-  /** 重新读取预装目录与用户目录。 */
+  /** 重新读取预装目录、用户目录与开发目录。 */
   virtual MappersReloadResult reload() = 0;
 };
 

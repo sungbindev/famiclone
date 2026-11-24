@@ -29,6 +29,13 @@ class CartridgeService {
   /** 取出卡带，电源变为断电；没有卡带时没有效果。 */
   virtual CartridgesEjectResult eject() = 0;
 
+  /**
+   * 只解析文件头并预览匹配结果，不装配、不改变正在运行的卡带与主机。
+   * @throws shared::CoreError cartridges.fileNotFound、cartridges.fileUnreadable、cartridges.notInes、cartridges.truncated、
+   *         cartridges.unsupportedFormat、cartridges.invalidHeader；匹配失败不抄出，写在结果的 matchError 里。
+   */
+  virtual CartridgesParseHeaderResult parseHeader(const CartridgesParseHeaderParams& params) = 0;
+
   /** 当前卡带的描述、插件与存储区清单。@throws shared::CoreError cartridges.empty。 */
   [[nodiscard]] virtual CartridgesInfoResult info() const = 0;
 };

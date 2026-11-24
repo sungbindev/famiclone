@@ -1402,8 +1402,8 @@
         ],
         "toolReferenceName": "emu_run",
         "displayName": "运行",
-        "modelDescription": "不限速地运行指定帧数后暂停，等运行结束再返回：停止原因（completed 完成、breakpoint 命中断点、interrupted、powerOff、error）、实际帧数与周期数、CPU 状态（pc、a、x、y、sp、status、cycles）。",
-        "userDescription": "运行指定帧数，或直到命中断点。",
+        "modelDescription": "不限速地按授权量运行后暂停，等运行结束再返回：停止原因（completed 完成、breakpoint 命中断点、interrupted、powerOff、error）、实际帧数与周期数（按 cycles、instructions、scanlines 授权时还有实际指令条数 instructions）、CPU 状态（pc、a、x、y、sp、status、cycles）。授权量 frames（帧数，默认 60）、cycles（至少这么多 CPU 周期）、instructions（这么多条指令）、scanlines（PPU 扫描线推进这么多行）只能给一个；按周期、指令、扫描线运行可以不用设断点就停在某个精确位置附近。",
+        "userDescription": "运行指定的帧数、周期、指令或扫描线，或直到命中断点。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -1412,7 +1412,25 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 10000000,
-              "description": "要运行的帧数，默认 60"
+              "description": "要运行的帧数，默认 60（不给 cycles、instructions、scanlines 时）"
+            },
+            "cycles": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000000000,
+              "description": "要运行的 CPU 周期数（指令不被打断，实际可能多几个）"
+            },
+            "instructions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000000000,
+              "description": "要运行的指令条数"
+            },
+            "scanlines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000,
+              "description": "PPU 扫描线推进的行数"
             }
           },
           "additionalProperties": false

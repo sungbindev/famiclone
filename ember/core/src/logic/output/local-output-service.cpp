@@ -75,6 +75,13 @@ contracts::output::OutputSetVolumeResult LocalOutputService::volume() const {
   return contracts::output::OutputSetVolumeResult{volume_, muted_};
 }
 
+std::string LocalOutputService::setAudioMode(const std::string& mode) {
+  std::lock_guard lock(mutex_);
+  fast_ = mode == "fast";
+  if (audio_ != nullptr) audio_->setFast(fast_);
+  return fast_ ? "fast" : "real";
+}
+
 void LocalOutputService::applyPreference(const std::string& id, const pref::SettingValue& value) {
   if (id == setting::SETTING_BUFFER) {
     if (audio_ != nullptr) audio_->setBufferProfile(profileFor(textOf(value)));

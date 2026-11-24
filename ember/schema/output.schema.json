@@ -1,8 +1,26 @@
 {
-  "$comment": "output 模块：声音输出的设置与画面截图。规则见 docs/04-调试服务.md 第 4.4 节；setAudioMode 在后续阶段加入。",
+  "$comment": "output 模块：声音输出的设置与画面截图。规则见 docs/04-调试服务.md 第 4.4 节。",
   "module": "output",
   "types": {},
   "requests": {
+    "setAudioMode": {
+      "description": "设置声音的播放方式：real 按真实时间播放；fast 不等声卡，采样直接丢弃，设备播放静音，模拟器内部的时序不变。不保存，每次启动都是 real。",
+      "params": {
+        "type": "object",
+        "properties": {
+          "mode": { "type": "string", "enum": ["real", "fast"], "description": "播放方式" }
+        },
+        "required": ["mode"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "mode": { "type": "string", "enum": ["real", "fast"], "description": "设置之后的播放方式" }
+        },
+        "required": ["mode"]
+      },
+      "errors": []
+    },
     "setVolume": {
       "description": "设置声音的音量与静音；两个参数都可以省略，省略的保持不变。音量保存到首选项的 sound.volume，核心重启后保持；静音不保存，每次启动由 sound.startMuted 决定；变化平滑过渡，不会产生爆音。",
       "params": {

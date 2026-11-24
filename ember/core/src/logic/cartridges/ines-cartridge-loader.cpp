@@ -18,10 +18,14 @@ namespace ember::logic::cartridges {
 
 contracts::cartridges::CartridgePlan InesCartridgeLoader::plan(std::span<const std::uint8_t> file) const {
   contracts::cartridges::CartridgePlan result;
-  result.image = parseInes(file);
-  result.match = factory_->match(result.image.description);
+  result.image = parse(file);
+  result.match = match(result.image.description);
   return result;
 }
+
+contracts::mappers::CartridgeImage InesCartridgeLoader::parse(std::span<const std::uint8_t> file) const { return parseInes(file); }
+
+contracts::mappers::MapperMatch InesCartridgeLoader::match(const contracts::mappers::CartridgeDescription& description) const { return factory_->match(description); }
 
 std::unique_ptr<contracts::mappers::MapperCartridge> InesCartridgeLoader::assemble(const contracts::cartridges::CartridgePlan& plan, contracts::hardware::IrqOutput& irq,
                                                                                     contracts::hardware::PadSink& pads) const {

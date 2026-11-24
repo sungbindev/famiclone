@@ -31,5 +31,7 @@ inline constexpr std::string_view ERROR_LIMIT_EXCEEDED = "mappers.limitExceeded"
 inline constexpr std::string_view ERROR_NOT_FOUND = "mappers.notFound";
 /** 预装的插件只能停用，不能卸载。 */
 inline constexpr std::string_view ERROR_BUNDLED_READONLY = "mappers.bundledReadonly";
+/** 开发目录里的插件不能卸载，从开发目录里删除它的目录。 */
+inline constexpr std::string_view ERROR_DEVELOPMENT_READONLY = "mappers.developmentReadonly";
 
 }  // namespace ember::contracts::mappers

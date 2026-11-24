@@ -380,11 +380,12 @@ class MachineDebugger {
   virtual void writeState(std::string_view module, std::span<const StateField> fields) = 0;
 
   /**
-   * 单步。
+   * 单步，或按授权量运行（runtime.run 的 cycles、instructions、scanlines）。
    * @param unit 单位。
    * @param count 数量，至少 1。
+   * @param stopAtBreakpoints 为 false（单步）时忽略断点；为 true 时断点照常生效，命中后提前返回，命中用 takeBreakpointHit 取走，继续时越过刚命中的执行断点。
    */
-  virtual StepResult step(StepUnit unit, std::uint64_t count) = 0;
+  virtual StepResult step(StepUnit unit, std::uint64_t count, bool stopAtBreakpoints = false) = 0;
 
   /**
    * 添加断点。断点在主机的 runFrame 里生效（自由运行与授权运行）；单步（step）忽略断点。

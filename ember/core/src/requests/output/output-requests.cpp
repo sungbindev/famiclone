@@ -19,6 +19,10 @@ void addOutputRequests(platform::RequestRouter& router, std::shared_ptr<contract
     const auto parsed = contract::parseOutputSetVolumeParams(params, "params");
     return nlohmann::json(service->setVolume(parsed.volume, parsed.muted));
   });
+  router.add("output", contract::OUTPUT_SET_AUDIO_MODE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseOutputSetAudioModeParams(params, "params");
+    return nlohmann::json(contract::OutputSetAudioModeResult{service->setAudioMode(parsed.mode)});
+  });
   router.add("output", contract::OUTPUT_SCREENSHOT_REQUEST, [screenshots](const nlohmann::json& params, const platform::CancellationToken&) {
     const auto parsed = contract::parseOutputScreenshotParams(params, "params");
     auto shot = screenshots->capture(parsed.format.value_or("png"), parsed.file);

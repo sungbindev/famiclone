@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <span>
 #include <string>
 
@@ -46,5 +47,12 @@ struct EmapPackage {
  * @throws shared::CoreError mappers.invalidPackage，说明指出原因。
  */
 [[nodiscard]] EmapPackage readEmapPackage(std::span<const std::uint8_t> bytes);
+
+/**
+ * 读取未打包的插件目录（开发目录里的一个子目录）：目录根下的 manifest.json、main.js、icon.png，大小与图标的检查同插件包；
+ * 其他文件不读，三个文件必须是普通文件（不允许符号链接）。
+ * @throws shared::CoreError mappers.invalidPackage，说明指出原因。
+ */
+[[nodiscard]] EmapPackage readEmapDirectory(const std::filesystem::path& directory);
 
 }  // namespace ember::infra::mappers

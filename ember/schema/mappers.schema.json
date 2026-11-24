@@ -27,7 +27,7 @@
         "host": { "type": "array", "items": { "type": "string" }, "description": "要求的主机型号" },
         "devices": { "type": "array", "items": { "type": "string", "enum": ["mouse"] }, "description": "卡带用到的外设，目前只有 mouse（鼠标）；没有声明的外设，界面不会把它接到卡带上" },
         "match": { "type": "array", "items": { "$ref": "#/types/MapperMatchRule" }, "description": "匹配条件，任一项满足即匹配" },
-        "source": { "type": "string", "enum": ["bundled", "user"], "description": "来源：bundled 预装，user 用户安装" },
+        "source": { "type": "string", "enum": ["bundled", "user", "development"], "description": "来源：bundled 预装，user 用户安装，development 开发目录（首选项 mappers.developmentDirectory 指定的目录里未打包的插件）" },
         "enabled": { "type": "boolean", "description": "是否启用" }
       },
       "required": ["id", "name", "version", "publisher", "host", "devices", "match", "source", "enabled"]
@@ -119,7 +119,7 @@
   },
   "requests": {
     "list": {
-      "description": "列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。",
+      "description": "列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",
@@ -159,14 +159,14 @@
       "errors": ["mappers.invalidPackage", "mappers.hostUnknown", "mappers.limitExceeded"]
     },
     "uninstall": {
-      "description": "卸载用户安装的插件；预装的插件只能停用。",
+      "description": "卸载用户安装的插件；预装的插件只能停用，开发目录里的插件从开发目录里删除它的目录。",
       "params": {
         "type": "object",
         "properties": { "id": { "type": "string", "minLength": 1, "maxLength": 40, "description": "插件标识" } },
         "required": ["id"]
       },
       "result": { "type": "object", "properties": {}, "required": [] },
-      "errors": ["mappers.notFound", "mappers.bundledReadonly"]
+      "errors": ["mappers.notFound", "mappers.bundledReadonly", "mappers.developmentReadonly"]
     },
     "setEnabled": {
       "description": "启用或停用一个插件；停用的插件不参与匹配。",
@@ -186,7 +186,7 @@
       "errors": ["mappers.notFound"]
     },
     "reload": {
-      "description": "重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效；不合格的包被跳过并写入错误日志。",
+      "description": "重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效；不合格的包或目录被跳过并写入错误日志。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",

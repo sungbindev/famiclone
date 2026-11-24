@@ -18,6 +18,9 @@ void addCartridgeRequests(platform::RequestRouter& router, std::shared_ptr<contr
   router.add("cartridges", contract::CARTRIDGES_LOAD_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     return nlohmann::json(service->load(contract::parseCartridgesLoadParams(params, "params")));
   });
+  router.add("cartridges", contract::CARTRIDGES_PARSE_HEADER_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->parseHeader(contract::parseCartridgesParseHeaderParams(params, "params")));
+  });
   router.add("cartridges", contract::CARTRIDGES_EJECT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     static_cast<void>(contract::parseCartridgesEjectParams(params, "params"));
     return nlohmann::json(service->eject());

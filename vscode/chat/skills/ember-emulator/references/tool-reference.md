@@ -15,7 +15,7 @@
 | 工具 | 参数 | 返回 |
 | --- | --- | --- |
 | `emu_load` | `file` 与 `machine` 二选一；整机可加 `firmware`、`diskImage`、`program`；`familyKeyboard`；`powerOn`（卡带，默认 `true`）；`target` 加 `input`（按目标描述载入，此时不给 `machine`） | 运行状态（`runtime.status`） |
-| `emu_run` | `frames`（默认 60，1 到 10000000） | `stopped`、`frames`、`cycles`、`state`、`cpu`（`pc`、`a`、`x`、`y`、`sp`、`status`、`cycles`） |
+| `emu_run` | 授权量给一个：`frames`（默认 60，1 到 10000000）、`cycles`（至少这么多 CPU 周期）、`instructions`（这么多条指令）、`scanlines`（PPU 扫描线推进这么多行） | `stopped`、`frames`、`cycles`（按 `cycles`、`instructions`、`scanlines` 授权时还有 `instructions`）、`state`、`cpu`（`pc`、`a`、`x`、`y`、`sp`、`status`、`cycles`） |
 | `emu_step` | `unit`（`instruction`、`cycle`、`scanline`、`frame`，默认 `instruction`）、`count`（默认 1，最多 100000） | 实际执行数、停下时的 `pc` 与 CPU 状态 |
 | `emu_break` | `action`（`add`、`list`、`remove`、`clear`、`enable`、`disable`、`update`，默认 `list`）；`add` 要 `kind`（`execute`、`read`、`write`、`irq`、`nmi`、`brk`、`reset`），前三种还要 `address`，可加 `endAddress`；`add` 与 `update` 可带 `condition`（`update` 给空字符串表示去掉条件）；`remove`、`enable`、`disable`、`update` 要 `id` | 当前全部断点（含 `enabled`、`condition`、`hits`） |
 

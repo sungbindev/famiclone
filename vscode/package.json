@@ -1340,7 +1340,7 @@
         ],
         "toolReferenceName": "emu_load",
         "displayName": "载入程序",
-        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000、sb97、yuxing、bbg1），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（DOS 里要运行的程序名，sb2000、sb97、yuxing 与 bbg1 开机后自动进入 DOS、输入并回车；yuxing 自动补 .EXE；bbg1 的 diskImage 要是带 DOS 的系统盘镜像）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。",
+        "modelDescription": "装入程序并保持暂停，返回运行状态。卡带：给 file（NES 文件），默认通电（powerOn 默认 true）。整机：给 machine（如 sb2000、sb97、yuxing、bbg1），可加 firmware（BIOS）、diskImage（软盘镜像）与 program（DOS 里要运行的程序名，sb2000、sb97、yuxing 与 bbg1 开机后自动进入 DOS、输入并回车；yuxing 自动补 .EXE；bbg1 的 diskImage 要是带 DOS 的系统盘镜像）。familyKeyboard 为 true 时给经典 FC 接入 Family BASIC 键盘。file、firmware、diskImage 可以在工作区之外（会提示确认）。 给 target 时按目标描述里该输入的启动步骤载入（nes 的 cartridge 载入 file；family-basic 先接入 Family BASIC 键盘；sb2000 的 program 要给 firmware、diskImage 与 program；bios 只要 firmware，用来在整机里运行要研究的 BIOS），此时不要再给 machine。给 preview 为 true 且给 file 时只解析 NES 文件头并预览匹配的 mapper 插件，不装入、不改变正在运行的程序：返回 header（mapper 号、变体、PRG 与 CHR 大小、镜像、电池、CRC）与 match（匹配到的插件和主机型号）或 matchError（没有匹配的原因）。",
         "userDescription": "把 NES 文件或整机（BIOS、软盘）装入 Ember。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1378,6 +1378,10 @@
             "powerOn": {
               "type": "boolean",
               "description": "卡带载入后是否通电，默认 true"
+            },
+            "preview": {
+              "type": "boolean",
+              "description": "为 true 时只预览 file 的文件头与匹配的插件，不装入；只能与 file 一起用"
             },
             "target": {
               "type": "string",
@@ -1965,6 +1969,43 @@
               "type": "integer",
               "minimum": 0,
               "description": "get 只读这个帧序号及以后的事件；省略时读全部"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "emu_speed",
+        "tags": [
+          "6502",
+          "emulator",
+          "fcdev"
+        ],
+        "toolReferenceName": "emu_speed",
+        "displayName": "运行速度与声音",
+        "modelDescription": "设置模拟器自由运行的速度与声音方式（不影响 emu_run 与 emu_step）。percent 是相对真实速度的百分比（10 到 1000，100 恢复正常），max 为 true 时不限速，两者给一个；速度不是 100% 或不限速时不输出声音。audio 为 real 按真实时间播放，fast 采样直接丢弃、设备静音，模拟器内部时序不变。至少给 percent、max、audio 之一；返回设置之后的 speed、maxSpeed 与 mode。设置不保存，每次启动都是 100% 与 real。",
+        "userDescription": "调模拟器的运行速度，或让声音不等声卡。",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "percent": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 1000,
+              "description": "速度百分比，如 50 是半速，200 是两倍速"
+            },
+            "max": {
+              "type": "boolean",
+              "description": "为 true 时不限速（最快）；不能与 percent 同时给"
+            },
+            "audio": {
+              "type": "string",
+              "enum": [
+                "real",
+                "fast"
+              ],
+              "description": "声音方式：real 按真实时间播放，fast 采样丢弃"
             }
           },
           "additionalProperties": false

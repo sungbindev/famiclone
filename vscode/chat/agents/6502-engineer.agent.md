@@ -43,6 +43,7 @@ tools:
   - sungbin.fcdev/emu_record
   - sungbin.fcdev/emu_profile
   - sungbin.fcdev/emu_events
+  - sungbin.fcdev/emu_speed
   - sungbin.fcdev/fcdev_new_project
   - sungbin.fcdev/fcdev_build
   - sungbin.fcdev/fcdev_run

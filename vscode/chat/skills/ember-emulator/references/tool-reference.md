@@ -14,7 +14,7 @@
 
 | 工具 | 参数 | 返回 |
 | --- | --- | --- |
-| `emu_load` | `file` 与 `machine` 二选一；整机可加 `firmware`、`diskImage`、`program`；`familyKeyboard`；`powerOn`（卡带，默认 `true`）；`target` 加 `input`（按目标描述载入，此时不给 `machine`） | 运行状态（`runtime.status`） |
+| `emu_load` | `file` 与 `machine` 二选一；整机可加 `firmware`、`diskImage`、`program`；`familyKeyboard`；`powerOn`（卡带，默认 `true`）；`target` 加 `input`（按目标描述载入，此时不给 `machine`）；`preview: true` 加 `file`（只预览文件头与匹配的插件，不装入） | 运行状态（`runtime.status`）；预览返回 `header`（`mapper`、`variant`、`prgSize`、`chrSize`、`mirroring`、`battery`、`crc32Prg`、`crc32All`）与 `match`（插件与主机型号）或 `matchError`（没有匹配的原因） |
 | `emu_run` | 授权量给一个：`frames`（默认 60，1 到 10000000）、`cycles`（至少这么多 CPU 周期）、`instructions`（这么多条指令）、`scanlines`（PPU 扫描线推进这么多行） | `stopped`、`frames`、`cycles`（按 `cycles`、`instructions`、`scanlines` 授权时还有 `instructions`）、`state`、`cpu`（`pc`、`a`、`x`、`y`、`sp`、`status`、`cycles`） |
 | `emu_step` | `unit`（`instruction`、`cycle`、`scanline`、`frame`，默认 `instruction`）、`count`（默认 1，最多 100000） | 实际执行数、停下时的 `pc` 与 CPU 状态 |
 | `emu_break` | `action`（`add`、`list`、`remove`、`clear`、`enable`、`disable`、`update`，默认 `list`）；`add` 要 `kind`（`execute`、`read`、`write`、`irq`、`nmi`、`brk`、`reset`），前三种还要 `address`，可加 `endAddress`；`add` 与 `update` 可带 `condition`（`update` 给空字符串表示去掉条件）；`remove`、`enable`、`disable`、`update` 要 `id` | 当前全部断点（含 `enabled`、`condition`、`hits`） |
@@ -31,6 +31,7 @@
 | `emu_screen` | `file`（工作区里的 PNG 路径，需确认）、`inline`（默认 `true`） | 图像、尺寸、文件路径；暂停与断电后也有上一帧 |
 | `emu_profile` | `action`（`start`、`get`、`stop`，默认 `get`） | `start` 开始统计；`get` 读取当前结果（统计继续）；`stop` 结束并返回结果。结果含 `totalCycles`、`entries`（每项的 `kind`、`address`、`calls`、`inclusiveCycles`、`exclusiveCycles`，按不含子程序的周期数从大到小）与 `text` |
 | `emu_events` | `action`（`start`、`get`、`stop`，默认 `get`）；`maxEvents`（`start` 保留的事件数默认 65536，`get` 读的事件数默认 20000）；`fromFrame`（`get` 只读这一帧及以后的事件） | `get` 返回 `text`（每行一个事件：帧、行、点，读写的地址与值、发起的指令，或中断的处理程序）、`count`、`dropped`、`frame`；记录 PPU 与 mapper 寄存器的读写和 IRQ、NMI、BRK 中断 |
+| `emu_speed` | `percent`（10 到 1000，相对真实速度的百分比，100 恢复正常）或 `max`（不限速）二选一；`audio`（`real` 按真实时间播放，`fast` 采样丢弃）；至少给一项 | 设置之后的 `speed`、`maxSpeed` 与 `mode`；只影响自由运行，不影响 `emu_run` 与 `emu_step`；速度不是 100% 或不限速时不输出声音；不保存 |
 
 ## 输入
 

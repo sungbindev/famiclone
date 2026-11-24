@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：emulator-tools.ts
 // 说明：“模拟器”一组工具：emu_connect、emu_launch、emu_status、emu_load、emu_run、emu_break、
-//       emu_step、emu_inspect、emu_screen、emu_input、emu_record、emu_profile、emu_events。
+//       emu_step、emu_inspect、emu_screen、emu_input、emu_record、emu_profile、emu_events、emu_speed。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -53,7 +53,7 @@ export const EMULATOR_TOOLS: readonly ToolSpec[] = [
     paths: ['file', 'firmware', 'diskImage'],
     outsideAllowed: ['file', 'firmware', 'diskImage', 'target'],
     references: ['target'],
-    describe: (input) => (input.target === undefined ? (input.file === undefined ? `载入 ${String(input.machine)} 整机` : `载入 ${String(input.file)}`) : `按目标 ${String(input.target)} 载入`)
+    describe: (input) => (input.target === undefined ? (input.file === undefined ? `载入 ${String(input.machine)} 整机` : `${input.preview === true ? '预览' : '载入'} ${String(input.file)}`) : `按目标 ${String(input.target)} 载入`)
   },
   simple('emu_run', 'run', (input) => `运行 ${runAmountText(input)}`),
   simple('emu_break', 'breakpoint', (input) => `断点：${String(input.action ?? 'list')}`),
@@ -78,5 +78,6 @@ export const EMULATOR_TOOLS: readonly ToolSpec[] = [
   simple('emu_input', 'input', (input) => `模拟器输入：${String(input.kind)}`),
   simple('emu_record', 'record', (input) => `${input.action === 'stop' ? '结束' : input.action === 'read' ? '读取' : '开始'}记录 ${String(input.kind)}`),
   simple('emu_profile', 'profile', (input) => `子程序周期统计：${String(input.action ?? 'get')}`),
-  simple('emu_events', 'events', (input) => `事件记录：${String(input.action ?? 'get')}`)
+  simple('emu_events', 'events', (input) => `事件记录：${String(input.action ?? 'get')}`),
+  simple('emu_speed', 'speed', (input) => `设置运行速度与声音：${input.max === true ? '不限速' : input.percent === undefined ? '' : `${String(input.percent)}%`}${input.audio === undefined ? '' : ` 声音 ${String(input.audio)}`}`)
 ];

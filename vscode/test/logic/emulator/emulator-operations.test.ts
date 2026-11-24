@@ -33,7 +33,7 @@ function hasCode(code: string): (error: FcdevError) => boolean {
 describe('模拟器操作：会话与参数', () => {
   it('操作表与接口版本', () => {
     assert.equal(EMULATOR_API_VERSION, 1);
-    assert.deepEqual(EMULATOR_OPERATION_NAMES.toSorted(), ['breakpoint', 'connect', 'events', 'input', 'inspect', 'launch', 'load', 'profile', 'record', 'run', 'screenshot', 'status', 'step']);
+    assert.deepEqual(EMULATOR_OPERATION_NAMES.toSorted(), ['breakpoint', 'connect', 'events', 'input', 'inspect', 'launch', 'load', 'profile', 'record', 'run', 'screenshot', 'speed', 'status', 'step']);
   });
 
   it('没有连接时：状态说没连，其他操作报错并提示怎么连', async () => {

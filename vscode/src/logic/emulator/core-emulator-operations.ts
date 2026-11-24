@@ -18,7 +18,7 @@ import { connect, launch, status } from './connection-operations';
 import { EmulatorSessionStore } from './emulator-session';
 import { inspect, input, record, screenshot } from './inspect-operations';
 import type { OperationContext } from './operation-context';
-import { breakpoint, load, run, step } from './program-operations';
+import { breakpoint, load, run, speed, step } from './program-operations';
 
 /** 操作接口的版本。 */
 export const EMULATOR_API_VERSION = 1;
@@ -27,7 +27,7 @@ export const EMULATOR_API_VERSION = 1;
 type Operation = (context: OperationContext, params: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
 /** 操作名到实现。 */
-const OPERATIONS: Readonly<Record<string, Operation>> = Object.freeze({ connect, launch, status, load, run, breakpoint, step, inspect, screenshot, input, record, profile, events });
+const OPERATIONS: Readonly<Record<string, Operation>> = Object.freeze({ connect, launch, status, load, run, breakpoint, step, inspect, screenshot, input, record, profile, events, speed });
 
 /** 全部操作名。 */
 export const EMULATOR_OPERATION_NAMES: readonly string[] = Object.freeze(Object.keys(OPERATIONS));

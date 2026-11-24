@@ -51,6 +51,13 @@ export async function load(context: OperationContext, params: Record<string, unk
   const { env, store } = context;
   const { client } = store.currentSession();
   const target = optionalString(params, 'target');
+  if (optionalBoolean(params, 'preview', false)) {
+    const previewFile = optionalString(params, 'file');
+    if (previewFile === undefined || target !== undefined || params.machine !== undefined) invalidParam('preview 只能与 file 一起用，不要再给 target、machine');
+    const absolute = path.resolve(previewFile);
+    if (env.files.kindOf(absolute) !== 'file') throw new FcdevError(`找不到要预览的文件：${absolute}`, { code: 'EMULATOR_FILE_MISSING' });
+    return { ...(await client.request('cartridges.parseHeader', { path: absolute })) };
+  }
   if (target !== undefined) {
     if (params.machine !== undefined) invalidParam('给了 target 就不要再给 machine，机型由目标描述的启动步骤决定');
     const { profile } = env.profiles.read(target, '');
@@ -167,6 +174,25 @@ export async function breakpoint(context: OperationContext, params: Record<strin
     });
   }
   return { ...(await client.request('inspector.listBreakpoints', {})) };
+}
+
+/**
+ * 设置自由运行的速度与声音方式。
+ * @param context 上下文。
+ * @param params percent 或 max（二选一）、audio（real、fast），至少给一项。
+ * @returns 设置之后的 speed、maxSpeed（设置了速度时）与 mode（设置了声音方式时）。
+ */
+export async function speed(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { client } = context.store.currentSession();
+  const percent = optionalInteger(params, 'percent', { min: 10, max: 1000 });
+  const max = optionalBoolean(params, 'max', false);
+  const audio = optionalEnum(params, 'audio', ['real', 'fast']) as 'real' | 'fast' | undefined;
+  if (percent === undefined && !max && audio === undefined) invalidParam('要给 percent、max、audio 之一');
+  if (percent !== undefined && max) invalidParam('percent 与 max 不能同时给');
+  const result: Record<string, unknown> = {};
+  if (percent !== undefined || max) Object.assign(result, await client.request('runtime.setSpeed', max ? { max } : { percent }));
+  if (audio !== undefined) Object.assign(result, await client.request('output.setAudioMode', { mode: audio }));
+  return result;
 }
 
 /**

@@ -112,17 +112,30 @@ class FcMachine final : public contracts::hardware::Machine, private contracts::
   [[nodiscard]] std::vector<contracts::hardware::StateField> readState(std::string_view module) const override;
   void writeState(std::string_view module, std::span<const contracts::hardware::StateField> fields) override;
   contracts::hardware::StepResult step(contracts::hardware::StepUnit unit, std::uint64_t count) override;
-  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override { return debug_.addBreakpoint(kind, first, last); }
+  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) override { return debug_.addBreakpoint(kind, first, last, condition); }
+  std::optional<contracts::hardware::Breakpoint> updateBreakpoint(std::uint32_t id, std::optional<bool> enabled, const std::optional<std::string>& condition) override { return debug_.updateBreakpoint(id, enabled, condition); }
   bool removeBreakpoint(std::uint32_t id) override { return debug_.removeBreakpoint(id); }
   std::size_t clearBreakpoints() override { return debug_.clearBreakpoints(); }
   [[nodiscard]] std::vector<contracts::hardware::Breakpoint> breakpoints() const override { return debug_.breakpoints(); }
   std::optional<contracts::hardware::BreakpointHit> takeBreakpointHit() override { return debug_.takeBreakpointHit(); }
   std::uint32_t startRecorder(const contracts::hardware::RecorderSpec& spec) override { return debug_.startRecorder(spec); }
   contracts::hardware::RecorderOutput stopRecorder(std::uint32_t id) override { return debug_.stopRecorder(id); }
+  [[nodiscard]] contracts::hardware::RecorderSlice readRecorder(std::uint32_t id, std::uint64_t from, std::uint32_t maxLines) const override { return debug_.readRecorder(id, from, maxLines); }
   [[nodiscard]] std::vector<contracts::hardware::DisassembledInstruction> disassemble(std::uint16_t address, std::uint32_t count) override { return debug_.disassemble(address, count); }
   void startCdl(std::size_t size, contracts::hardware::CdlResolver resolver) override { debug_.startCdl(size, std::move(resolver)); }
   void stopCdl() override { debug_.stopCdl(); }
   [[nodiscard]] std::optional<std::vector<std::uint8_t>> cdlFlags() const override { return debug_.cdlFlags(); }
+  [[nodiscard]] std::vector<contracts::hardware::CallFrame> callStack() const override { return debug_.callStack(); }
+  void startProfiler() override { debug_.startProfiler(); }
+  void stopProfiler() override { debug_.stopProfiler(); }
+  [[nodiscard]] std::optional<contracts::hardware::ProfileReport> profile() const override { return debug_.profile(); }
+  void startEventLog(std::uint32_t maxEvents) override { debug_.startEventLog(maxEvents); }
+  void stopEventLog() override { debug_.stopEventLog(); }
+  [[nodiscard]] std::optional<contracts::hardware::EventLogOutput> eventLog(std::optional<std::uint64_t> fromFrame, std::uint32_t maxEvents) const override { return debug_.eventLog(fromFrame, maxEvents); }
+  [[nodiscard]] std::vector<std::uint32_t> colorTable() const override {
+    const auto table = ppu_.colorTable();
+    return {table.begin(), table.end()};
+  }
 
   logic::hardware::MasterScheduler scheduler_;
   logic::hardware::WiredOrIrqLine irq_;

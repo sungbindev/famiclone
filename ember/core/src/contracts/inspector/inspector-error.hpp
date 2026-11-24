@@ -46,6 +46,12 @@ inline constexpr std::string_view ERROR_FILE_FAILED = "inspector.fileFailed";
 inline constexpr std::string_view ERROR_RECORDING_LIMIT = "inspector.recordingLimit";
 /** 没有这个编号的记录（或它不是这种记录）。 */
 inline constexpr std::string_view ERROR_NO_RECORDING = "inspector.noRecording";
+/** 断点的条件表达式不合格。 */
+inline constexpr std::string_view ERROR_INVALID_CONDITION = "inspector.invalidCondition";
+/** 还没有开始过子程序统计。 */
+inline constexpr std::string_view ERROR_NO_PROFILE = "inspector.noProfile";
+/** 还没有开始过事件记录。 */
+inline constexpr std::string_view ERROR_NO_EVENT_LOG = "inspector.noEventLog";
 /** 监视项数量超过上限。 */
 inline constexpr std::string_view ERROR_WATCH_LIMIT = "inspector.watchLimit";
 /** 没有监视这个路径。 */

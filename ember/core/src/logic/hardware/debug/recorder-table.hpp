@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <string>
 #include <vector>
@@ -46,6 +47,9 @@ class RecorderTable {
   /** 结束一项记录并取走内容。@throws shared::CoreError hardware.noRecorder。 */
   contracts::hardware::RecorderOutput stop(std::uint32_t id);
 
+  /** 读一项正在进行的记录的一段内容，不结束记录。@throws shared::CoreError hardware.noRecorder。 */
+  [[nodiscard]] contracts::hardware::RecorderSlice read(std::uint32_t id, std::uint64_t from, std::uint32_t maxLines) const;
+
   /** 丢弃全部记录。 */
   void clear();
 
@@ -69,13 +73,20 @@ class RecorderTable {
   struct Recorder {
     std::uint32_t id{0};
     contracts::hardware::RecorderSpec spec;
-    contracts::hardware::RecorderOutput output;
+    /** 已经记下的行；环形记录满了以后丢弃最早的。 */
+    std::deque<std::string> lines;
+    /** 环形记录里被丢弃的最早的行数。 */
+    std::uint64_t dropped{0};
+    /** 非环形记录因为行数满了而少记了。 */
+    bool truncated{false};
     /** Instruction 且 unique 时：已经记过的地址。 */
     std::vector<bool> seen;
   };
 
-  /** 行数满了返回 true，并标记少记了。 */
-  static bool full(Recorder& recorder);
+  /** 这项记录现在还能不能再记：环形的永远可以，非环形满了就不行，并标记少记了。 */
+  static bool accepts(Recorder& recorder);
+  /** 追加一行，环形记录满了先丢弃最早的一行。 */
+  static void append(Recorder& recorder, std::string line);
   [[nodiscard]] std::string instructionLine(const contracts::hardware::CpuRegisters& registers) const;
   [[nodiscard]] std::string callLine(const contracts::hardware::CpuRegisters& registers, const contracts::hardware::RecorderSpec& spec) const;
   void refreshFlags();

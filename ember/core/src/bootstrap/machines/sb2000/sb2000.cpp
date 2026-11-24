@@ -98,6 +98,8 @@ Sb2000Machine::Sb2000Machine(std::vector<std::uint8_t> bios, hw::PrinterOutput* 
       programSwitch_(fcMode_, program_, fcProgram_),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
+  // FC 兼容模式用点精度的 2C02，6576 模式按行处理。
+  debug_.setVideoPosition([this] { return fcMode_ ? fcPpu_.positionAt(scheduler_.now()) : ppu_.position(); });
   requireBios(bios_);
 
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
@@ -497,7 +499,10 @@ std::vector<hw::StateField> Sb2000Machine::readState(std::string_view module) co
             field("writeToggle", fcPpu_.writeToggle() ? 1 : 0, "写锁存 w"),
             field("vblank", fcPpu_.vblankFlag() ? 1 : 0, "vblank 标志"),
             field("spriteZeroHit", fcPpu_.spriteZeroHit() ? 1 : 0, "精灵 0 命中标志"),
-            field("spriteOverflow", fcPpu_.spriteOverflow() ? 1 : 0, "精灵溢出标志")};
+            field("spriteOverflow", fcPpu_.spriteOverflow() ? 1 : 0, "精灵溢出标志"),
+            field("control", fcPpu_.control(), "$2000 的值"),
+            field("mask", fcPpu_.mask(), "$2001 的值"),
+            field("status", fcPpu_.status(), "$2002 的当前取值（位 7 垂直消隐、位 6 精灵 0 命中、位 5 精灵溢出）")};
   }
   if (module == "ppu") {
     return {field("scanline", ppu_.nextLine(), "下一个要处理的扫描线（0 到 311，241 是垂直消隐的第一行）"),

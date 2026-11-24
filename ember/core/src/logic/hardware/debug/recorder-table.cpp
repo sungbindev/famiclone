@@ -12,9 +12,12 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <iterator>
+#include <string>
 #include <utility>
 
 #include "contracts/hardware/hardware-error.hpp"
+#include "logic/hardware/debug/io-address.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace ember::logic::hardware {
@@ -29,12 +32,6 @@ std::string format(const char* pattern, Args... args) {
   char buffer[256];
   std::snprintf(buffer, sizeof(buffer), pattern, args...);
   return buffer;
-}
-
-/** I/O 记录关心的地址：芯片、手柄口与卡带扩展寄存器的读写，以及对 $8000 以上的写（mapper 寄存器）。 */
-bool isIoAddress(hw::AccessKind kind, std::uint16_t address) {
-  if (address >= 0x2000 && address <= 0x5FFF) return true;
-  return kind == hw::AccessKind::Write && address >= 0x8000;
 }
 
 const char* interruptName(hw::InterruptKind kind) {
@@ -67,10 +64,27 @@ std::uint32_t RecorderTable::start(const hw::RecorderSpec& spec) {
 hw::RecorderOutput RecorderTable::stop(std::uint32_t id) {
   const auto found = std::find_if(recorders_.begin(), recorders_.end(), [id](const Recorder& recorder) { return recorder.id == id; });
   if (found == recorders_.end()) throw shared::CoreError(hw::ERROR_NO_RECORDER, "没有编号为 " + std::to_string(id) + " 的记录");
-  hw::RecorderOutput output = std::move(found->output);
+  hw::RecorderOutput output;
+  output.lines.assign(std::make_move_iterator(found->lines.begin()), std::make_move_iterator(found->lines.end()));
+  output.truncated = found->truncated;
+  output.dropped = found->dropped;
   recorders_.erase(found);
   refreshFlags();
   return output;
+}
+
+hw::RecorderSlice RecorderTable::read(std::uint32_t id, std::uint64_t from, std::uint32_t maxLines) const {
+  const auto found = std::find_if(recorders_.begin(), recorders_.end(), [id](const Recorder& recorder) { return recorder.id == id; });
+  if (found == recorders_.end()) throw shared::CoreError(hw::ERROR_NO_RECORDER, "没有编号为 " + std::to_string(id) + " 的记录");
+  hw::RecorderSlice slice;
+  slice.oldest = found->dropped;
+  slice.total = found->dropped + found->lines.size();
+  slice.truncated = found->truncated;
+  slice.first = std::min(std::max(from, slice.oldest), slice.total);
+  const std::uint64_t count = std::min<std::uint64_t>(maxLines, slice.total - slice.first);
+  const auto begin = found->lines.begin() + static_cast<std::ptrdiff_t>(slice.first - slice.oldest);
+  slice.lines.assign(begin, begin + static_cast<std::ptrdiff_t>(count));
+  return slice;
 }
 
 void RecorderTable::clear() {
@@ -89,10 +103,18 @@ void RecorderTable::refreshFlags() {
   }
 }
 
-bool RecorderTable::full(Recorder& recorder) {
-  if (recorder.output.lines.size() < recorder.spec.maxLines) return false;
-  recorder.output.truncated = true;
-  return true;
+bool RecorderTable::accepts(Recorder& recorder) {
+  if (recorder.spec.ring || recorder.lines.size() < recorder.spec.maxLines) return true;
+  recorder.truncated = true;
+  return false;
+}
+
+void RecorderTable::append(Recorder& recorder, std::string line) {
+  if (recorder.spec.ring && recorder.lines.size() >= recorder.spec.maxLines) {
+    recorder.lines.pop_front();
+    ++recorder.dropped;
+  }
+  recorder.lines.push_back(std::move(line));
 }
 
 std::string RecorderTable::instructionLine(const hw::CpuRegisters& registers) const {
@@ -129,26 +151,26 @@ void RecorderTable::onInstruction(const hw::CpuRegisters& registers) {
         if (recorder.seen[registers.pc]) continue;
         recorder.seen[registers.pc] = true;
       }
-      if (!full(recorder)) recorder.output.lines.push_back(instructionLine(registers));
+      if (accepts(recorder)) append(recorder, instructionLine(registers));
     } else if (recorder.spec.kind == hw::RecorderKind::Call && recorder.spec.address == registers.pc) {
       const bool skipped = std::any_of(recorder.spec.skip.begin(), recorder.spec.skip.end(), [this](const hw::ByteCondition& condition) { return peek_(condition.address) == condition.value; });
-      if (!skipped && !full(recorder)) recorder.output.lines.push_back(callLine(registers, recorder.spec));
+      if (!skipped && accepts(recorder)) append(recorder, callLine(registers, recorder.spec));
     }
   }
 }
 
 void RecorderTable::onInterrupt(hw::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler, std::uint64_t cycles) {
   for (Recorder& recorder : recorders_) {
-    if (recorder.spec.kind != hw::RecorderKind::Irq || full(recorder)) continue;
-    recorder.output.lines.push_back(format("%s  return:%04X handler:%04X CYC:%llu", interruptName(kind), returnAddress, handler, static_cast<unsigned long long>(cycles)));
+    if (recorder.spec.kind != hw::RecorderKind::Irq || !accepts(recorder)) continue;
+    append(recorder, format("%s  return:%04X handler:%04X CYC:%llu", interruptName(kind), returnAddress, handler, static_cast<unsigned long long>(cycles)));
   }
 }
 
 void RecorderTable::onIo(hw::AccessKind kind, std::uint16_t address, std::uint8_t value) {
   if (!isIoAddress(kind, address)) return;
   for (Recorder& recorder : recorders_) {
-    if (recorder.spec.kind != hw::RecorderKind::Io || full(recorder)) continue;
-    recorder.output.lines.push_back(format("%c $%04X = %02X  PC:%04X CYC:%llu", kind == hw::AccessKind::Read ? 'R' : 'W', address, value, lastPc_, static_cast<unsigned long long>(lastCycles_)));
+    if (recorder.spec.kind != hw::RecorderKind::Io || !accepts(recorder)) continue;
+    append(recorder, format("%c $%04X = %02X  PC:%04X CYC:%llu", kind == hw::AccessKind::Read ? 'R' : 'W', address, value, lastPc_, static_cast<unsigned long long>(lastCycles_)));
   }
 }
 

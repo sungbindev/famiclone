@@ -128,8 +128,25 @@ class InspectorService {
    */
   virtual RecordingReport stopRecording(std::uint32_t id, bool callLog) = 0;
 
-  /** 添加断点（CPU 总线上的地址，范围含两端）。 */
-  virtual hardware::Breakpoint addBreakpoint(hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) = 0;
+  /**
+   * 读一项正在进行的记录（跟踪或调用记录）的一段内容，不结束记录。
+   * @param from 要读的第一行的行号。
+   * @throws shared::CoreError inspector.noRecording。
+   */
+  virtual hardware::RecorderSlice readRecording(std::uint32_t id, std::uint64_t from, std::uint32_t maxLines) = 0;
+
+  /**
+   * 添加断点（CPU 总线上的地址，范围含两端）。
+   * @param condition 条件表达式，空表示没有条件。
+   * @throws shared::CoreError inspector.invalidBreakpoint、inspector.breakpointLimit、inspector.invalidCondition。
+   */
+  virtual hardware::Breakpoint addBreakpoint(hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) = 0;
+
+  /**
+   * 修改断点的启用状态或条件，没有给出的项不变。
+   * @throws shared::CoreError inspector.noBreakpoint、inspector.invalidCondition。
+   */
+  virtual hardware::Breakpoint updateBreakpoint(std::uint32_t id, std::optional<bool> enabled, const std::optional<std::string>& condition) = 0;
 
   /** 全部断点。 */
   virtual std::vector<hardware::Breakpoint> listBreakpoints() = 0;
@@ -139,6 +156,30 @@ class InspectorService {
 
   /** 删除全部断点，返回删除的个数。 */
   virtual std::size_t clearBreakpoints() = 0;
+
+  /** 调用栈，最里层的在前。 */
+  virtual std::vector<hardware::CallFrame> callStack() = 0;
+
+  /** 开始子程序统计（统计清零，已经在统计时重新开始）。 */
+  virtual void startProfiler() = 0;
+
+  /** 停止子程序统计并返回结果。@throws shared::CoreError inspector.noProfile。 */
+  virtual hardware::ProfileReport stopProfiler() = 0;
+
+  /** 子程序统计的当前结果，不停止统计。@throws shared::CoreError inspector.noProfile。 */
+  virtual hardware::ProfileReport profile() = 0;
+
+  /** 开始事件记录（已经在记录时重新开始）。 */
+  virtual void startEventLog(std::uint32_t maxEvents) = 0;
+
+  /** 停止事件记录。@throws shared::CoreError inspector.noEventLog。 */
+  virtual void stopEventLog() = 0;
+
+  /** 读事件记录的内容。@throws shared::CoreError inspector.noEventLog。 */
+  virtual hardware::EventLogOutput eventLog(std::optional<std::uint64_t> fromFrame, std::uint32_t maxEvents) = 0;
+
+  /** 64 个颜色号现在显示的颜色，每项 4 个字节 R、G、B、A。 */
+  virtual std::vector<std::uint8_t> palette() = 0;
 };
 
 }  // namespace ember::contracts::inspector

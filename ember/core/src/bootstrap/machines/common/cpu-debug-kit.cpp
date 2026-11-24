@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "contracts/hardware/hardware-error.hpp"
+#include "logic/hardware/debug/io-address.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace ember::bootstrap {
@@ -40,10 +41,14 @@ using debugging::field;
 CpuDebugKit::CpuDebugKit(logic::hardware::CpuAddressBus& bus, logic::hardware::Cpu6502& cpu)
     : bus_(bus),
       cpu_(cpu),
+      context_(*this),
       peek_([this](std::uint16_t address) { return bus_.peek(address); }),
       recorders_(peek_),
-      probeHub_(breakpoints_, recorders_) {
+      eventProbe_(*this),
+      probeHub_(breakpoints_, recorders_, events_, eventProbe_) {
+  breakpoints_.setContext(&context_);
   cpu_.setInterruptObserver(this);
+  cpu_.setCallObserver(this);
 }
 
 bool CpuDebugKit::stopAtExecuteBreakpoint() {
@@ -58,8 +63,10 @@ bool CpuDebugKit::stopAtExecuteBreakpoint() {
 
 void CpuDebugKit::beforeInstruction() {
   const bool recording = recorders_.needsInstructionHook();
-  if (!recording && !cdl_.active()) return;
+  const bool eventing = events_.active();
+  if (!recording && !eventing && !cdl_.active()) return;
   const hw::CpuRegisters registers = cpu_.registers();
+  if (eventing) lastPc_ = registers.pc;
   if (recording) recorders_.onInstruction(registers);
   if (cdl_.active()) cdl_.onInstruction(registers, peek_);
 }
@@ -75,10 +82,16 @@ CpuDebugKit::Suspend::~Suspend() { kit_.probeHub_.restore(before_); }
 
 void CpuDebugKit::refreshProbe() { bus_.setProbe(probeHub_.needed() ? &probeHub_ : nullptr); }
 
-hw::Breakpoint CpuDebugKit::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last) {
-  const hw::Breakpoint added = breakpoints_.add(kind, first, last);
+hw::Breakpoint CpuDebugKit::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) {
+  const hw::Breakpoint added = breakpoints_.add(kind, first, last, condition);
   refreshProbe();
   return added;
+}
+
+std::optional<hw::Breakpoint> CpuDebugKit::updateBreakpoint(std::uint32_t id, std::optional<bool> enabled, const std::optional<std::string>& condition) {
+  auto updated = breakpoints_.update(id, enabled, condition);
+  refreshProbe();
+  return updated;
 }
 
 bool CpuDebugKit::removeBreakpoint(std::uint32_t id) {
@@ -130,9 +143,75 @@ std::optional<std::vector<std::uint8_t>> CpuDebugKit::cdlFlags() const {
   return cdl_.flags();
 }
 
-void CpuDebugKit::onInterrupt(hw::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) {
-  if (recorders_.recordsIrq()) recorders_.onInterrupt(kind, returnAddress, handler, cpu_.registers().cycles);
+void CpuDebugKit::startProfiler() { tracker_.startProfile(cpu_.registers().cycles); }
+
+void CpuDebugKit::stopProfiler() { tracker_.stopProfile(cpu_.registers().cycles); }
+
+std::optional<hw::ProfileReport> CpuDebugKit::profile() const { return tracker_.profile(cpu_.registers().cycles); }
+
+void CpuDebugKit::startEventLog(std::uint32_t maxEvents) {
+  events_.start(maxEvents);
+  refreshProbe();
 }
+
+void CpuDebugKit::stopEventLog() {
+  events_.stop();
+  refreshProbe();
+}
+
+std::optional<hw::EventLogOutput> CpuDebugKit::eventLog(std::optional<std::uint64_t> fromFrame, std::uint32_t maxEvents) const {
+  if (!events_.exists()) return std::nullopt;
+  return events_.output(fromFrame, maxEvents, currentPosition().frame);
+}
+
+void CpuDebugKit::recordAccessEvent(hw::AccessKind kind, std::uint16_t address, std::uint8_t value) {
+  if (!logic::hardware::isIoAddress(kind, address)) return;
+  const hw::VideoPosition position = currentPosition();
+  hw::DebugEvent event;
+  event.frame = position.frame;
+  event.scanline = position.scanline;
+  event.dot = position.dot;
+  event.kind = kind == hw::AccessKind::Read ? hw::EventKind::Read : hw::EventKind::Write;
+  event.address = address;
+  event.value = value;
+  event.pc = lastPc_;
+  event.cycles = cpu_.registers().cycles;
+  events_.record(event);
+}
+
+void CpuDebugKit::onInterrupt(hw::InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) {
+  const hw::CpuRegisters registers = cpu_.registers();
+  const hw::CallKind callKind = kind == hw::InterruptKind::Brk ? hw::CallKind::Brk : (kind == hw::InterruptKind::Nmi ? hw::CallKind::Nmi : hw::CallKind::Irq);
+  // BRK 的返回地址在 BRK 之后两个字节；IRQ 与 NMI 打断的是还没有执行的那条指令。
+  const auto callAddress = static_cast<std::uint16_t>(kind == hw::InterruptKind::Brk ? returnAddress - 2 : returnAddress);
+  tracker_.enter(callKind, callAddress, handler, returnAddress, registers.sp, 3, registers.cycles);
+  if (recorders_.recordsIrq()) recorders_.onInterrupt(kind, returnAddress, handler, registers.cycles);
+  if (events_.active()) {
+    const hw::VideoPosition position = currentPosition();
+    hw::DebugEvent event;
+    event.frame = position.frame;
+    event.scanline = position.scanline;
+    event.dot = position.dot;
+    event.kind = kind == hw::InterruptKind::Brk ? hw::EventKind::Brk : (kind == hw::InterruptKind::Nmi ? hw::EventKind::Nmi : hw::EventKind::Irq);
+    event.address = handler;
+    event.pc = returnAddress;
+    event.cycles = registers.cycles;
+    events_.record(event);
+  }
+}
+
+void CpuDebugKit::onCall(std::uint16_t callAddress, std::uint16_t target) {
+  const hw::CpuRegisters registers = cpu_.registers();
+  // JSR 是三字节指令，调用返回后执行它后面的那一条。
+  tracker_.enter(hw::CallKind::Jsr, callAddress, target, static_cast<std::uint16_t>(callAddress + 3), registers.sp, 2, registers.cycles);
+}
+
+void CpuDebugKit::onReturn(bool /*fromInterrupt*/) {
+  const hw::CpuRegisters registers = cpu_.registers();
+  tracker_.leave(registers.sp, registers.cycles);
+}
+
+void CpuDebugKit::onReset() { tracker_.reset(cpu_.registers().cycles); }
 
 std::vector<hw::StateField> CpuDebugKit::readCpuState() const {
   const hw::CpuRegisters registers = cpu_.registers();

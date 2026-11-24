@@ -84,6 +84,13 @@ class PpuUm6576 final : public contracts::hardware::Ppu, public contracts::hardw
   // 测试与调试用的只读访问
   /** 下一个要处理的行号。 */
   [[nodiscard]] int nextLine() const { return line_; }
+  /** 扫描位置：这颗 PPU 按行处理，位置是下一个要处理的行，点恒为 0；不追赶时间，不产生副作用。 */
+  [[nodiscard]] contracts::hardware::VideoPosition position() const {
+    // frameCount_ 在第 240 行处理时加 1，下一行已经越过它时要减回来才是帧序号。
+    return contracts::hardware::VideoPosition{frameCount_ - (line_ > static_cast<int>(FRAME_HEIGHT) ? 1U : 0U), line_, 0};
+  }
+  /** 64 个颜色号现在显示的颜色，按当前的黑白与增强位换算，每项内存顺序 R、G、B、A（小端整数为 0xAABBGGRR）。 */
+  [[nodiscard]] std::array<std::uint32_t, 64> colorTable() const;
   [[nodiscard]] std::uint16_t vramAddress() const { return address_; }
   [[nodiscard]] std::uint8_t control() const { return ctrl_; }
   [[nodiscard]] std::uint8_t mask() const { return mask_; }

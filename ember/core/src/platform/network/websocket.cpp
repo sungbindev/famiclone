@@ -187,6 +187,23 @@ std::string acceptKey(std::string_view clientKey) {
   return base64Encode(digest);
 }
 
+/** 解析头字段（从 position 开始的每一行），字段名转小写，重名的字段用逗号连起来；某一行没有冒号时返回 false。 */
+static bool parseHeaderFields(std::string_view head, std::size_t position, std::map<std::string, std::string>& headers) {
+  while (position < head.size()) {
+    auto lineEnd = head.find("\r\n", position);
+    if (lineEnd == std::string_view::npos) lineEnd = head.size();
+    const auto line = head.substr(position, lineEnd - position);
+    position = lineEnd + 2;
+    const auto colon = line.find(':');
+    if (colon == std::string_view::npos || colon == 0) return false;
+    const auto name = lower(trim(line.substr(0, colon)));
+    const auto value = std::string(trim(line.substr(colon + 1)));
+    auto [it, inserted] = headers.try_emplace(name, value);
+    if (!inserted) it->second += ", " + value;
+  }
+  return true;
+}
+
 HandshakeParse parseHandshake(std::string_view buffer) {
   HandshakeParse result;
   const auto end = buffer.find("\r\n\r\n");
@@ -212,24 +229,71 @@ HandshakeParse parseHandshake(std::string_view buffer) {
   result.request.target = std::string(requestLine.substr(firstSpace + 1, secondSpace - firstSpace - 1));
 
   std::size_t position = firstLineEnd == std::string_view::npos ? head.size() : firstLineEnd + 2;
-  while (position < head.size()) {
-    auto lineEnd = head.find("\r\n", position);
-    if (lineEnd == std::string_view::npos) lineEnd = head.size();
-    const auto line = head.substr(position, lineEnd - position);
-    position = lineEnd + 2;
-    const auto colon = line.find(':');
-    if (colon == std::string_view::npos || colon == 0) {
-      result.status = HandshakeParse::Status::Invalid;
-      return result;
-    }
-    const auto name = lower(trim(line.substr(0, colon)));
-    const auto value = std::string(trim(line.substr(colon + 1)));
-    auto [it, inserted] = result.request.headers.try_emplace(name, value);
-    if (!inserted) it->second += ", " + value;
+  if (!parseHeaderFields(head, position, result.request.headers)) {
+    result.status = HandshakeParse::Status::Invalid;
+    return result;
   }
   result.status = HandshakeParse::Status::Complete;
   result.consumed = end + 4;
   return result;
+}
+
+std::string buildClientHandshake(std::string_view host, std::uint16_t port, std::string_view key) {
+  std::string request = "GET / HTTP/1.1\r\nHost: ";
+  request += host;
+  request += ':';
+  request += std::to_string(port);
+  request += "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ";
+  request += key;
+  request += "\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: ";
+  request += SUBPROTOCOL;
+  request += "\r\n\r\n";
+  return request;
+}
+
+HandshakeResponseParse parseHandshakeResponse(std::string_view buffer) {
+  HandshakeResponseParse result;
+  const auto end = buffer.find("\r\n\r\n");
+  if (end == std::string_view::npos) {
+    result.status = buffer.size() > MAX_HANDSHAKE_BYTES ? HandshakeResponseParse::Status::Invalid : HandshakeResponseParse::Status::Incomplete;
+    return result;
+  }
+  if (end + 4 > MAX_HANDSHAKE_BYTES) {
+    result.status = HandshakeResponseParse::Status::Invalid;
+    return result;
+  }
+  const auto head = buffer.substr(0, end);
+  const auto firstLineEnd = head.find("\r\n");
+  const auto statusLine = head.substr(0, firstLineEnd);
+  // 状态行：HTTP/1.1 状态码 原因
+  const auto firstSpace = statusLine.find(' ');
+  if (statusLine.substr(0, firstSpace) != "HTTP/1.1" || firstSpace == std::string_view::npos || statusLine.size() < firstSpace + 4) {
+    result.status = HandshakeResponseParse::Status::Invalid;
+    return result;
+  }
+  int code = 0;
+  for (std::size_t i = firstSpace + 1; i < firstSpace + 4; ++i) {
+    if (statusLine[i] < '0' || statusLine[i] > '9') {
+      result.status = HandshakeResponseParse::Status::Invalid;
+      return result;
+    }
+    code = code * 10 + (statusLine[i] - '0');
+  }
+  result.statusCode = code;
+  const std::size_t position = firstLineEnd == std::string_view::npos ? head.size() : firstLineEnd + 2;
+  if (!parseHeaderFields(head, position, result.headers)) {
+    result.status = HandshakeResponseParse::Status::Invalid;
+    return result;
+  }
+  result.status = HandshakeResponseParse::Status::Complete;
+  result.consumed = end + 4;
+  return result;
+}
+
+bool clientHandshakeAccepted(const HandshakeResponseParse& response, std::string_view key) {
+  if (response.status != HandshakeResponseParse::Status::Complete || response.statusCode != 101) return false;
+  const auto accept = response.headers.find("sec-websocket-accept");
+  return accept != response.headers.end() && accept->second == acceptKey(key);
 }
 
 HandshakeCheck checkHandshake(const HttpRequest& request, const HandshakePolicy& policy) {
@@ -329,7 +393,7 @@ bool isValidUtf8(std::span<const std::uint8_t> data) noexcept {
   return true;
 }
 
-FrameDecoder::FrameDecoder(std::size_t maxMessageBytes) : maxMessageBytes_(maxMessageBytes) {}
+FrameDecoder::FrameDecoder(std::size_t maxMessageBytes, Role role) : maxMessageBytes_(maxMessageBytes), role_(role) {}
 
 void FrameDecoder::feed(std::span<const std::uint8_t> data) {
   if (status_ != Status::Ok) return;
@@ -360,7 +424,8 @@ bool FrameDecoder::parseFrame() {
   std::uint64_t length = head[1] & 0x7F;
   std::size_t headerBytes = 2;
 
-  if ((head[0] & 0x70) != 0 || !masked) {
+  // 按 RFC 6455：客户端发的帧必须带掩码，服务端发的帧不能带。
+  if ((head[0] & 0x70) != 0 || masked != (role_ == Role::Server)) {
     status_ = Status::ProtocolError;
     return false;
   }
@@ -391,12 +456,17 @@ bool FrameDecoder::parseFrame() {
     return false;
   }
 
-  if (available < headerBytes + 4 + length) return false;
-  const auto* mask = head + headerBytes;
-  const auto* body = mask + 4;
+  const std::size_t maskBytes = masked ? 4 : 0;
+  if (available < headerBytes + maskBytes + length) return false;
   std::vector<std::uint8_t> payload(static_cast<std::size_t>(length));
-  for (std::size_t i = 0; i < payload.size(); ++i) payload[i] = body[i] ^ mask[i % 4];
-  offset_ += headerBytes + 4 + static_cast<std::size_t>(length);
+  const auto* body = head + headerBytes + maskBytes;
+  if (masked) {
+    const auto* mask = head + headerBytes;
+    for (std::size_t i = 0; i < payload.size(); ++i) payload[i] = body[i] ^ mask[i % 4];
+  } else {
+    std::copy(body, body + payload.size(), payload.begin());
+  }
+  offset_ += headerBytes + maskBytes + static_cast<std::size_t>(length);
 
   if (control) {
     if (opcode == Opcode::Close && !payload.empty() && (payload.size() == 1 || !isValidUtf8(std::span(payload).subspan(2)))) {

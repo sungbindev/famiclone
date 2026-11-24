@@ -43,6 +43,7 @@ std::string translate(const std::string& code) {
   if (code == hw::ERROR_INVALID_STATE) return std::string(api::ERROR_INVALID_STATE);
   if (code == hw::ERROR_INVALID_BREAKPOINT) return std::string(api::ERROR_INVALID_BREAKPOINT);
   if (code == hw::ERROR_BREAKPOINT_LIMIT) return std::string(api::ERROR_BREAKPOINT_LIMIT);
+  if (code == hw::ERROR_INVALID_CONDITION) return std::string(api::ERROR_INVALID_CONDITION);
   if (code == hw::ERROR_RECORDER_LIMIT) return std::string(api::ERROR_RECORDING_LIMIT);
   if (code == hw::ERROR_NO_RECORDER) return std::string(api::ERROR_NO_RECORDING);
   if (code == hw::ERROR_CDL_ACTIVE) return std::string(api::ERROR_CDL_ACTIVE);
@@ -339,10 +340,20 @@ api::RecordingReport LocalInspectorService::stopRecording(std::uint32_t id, bool
   return report;
 }
 
-hw::Breakpoint LocalInspectorService::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last) {
+hw::Breakpoint LocalInspectorService::addBreakpoint(hw::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) {
   hw::Breakpoint added;
-  inspect([&](rt::DebugContext& context) { added = context.debugger.addBreakpoint(kind, first, last); });
+  inspect([&](rt::DebugContext& context) { added = context.debugger.addBreakpoint(kind, first, last, condition); });
   return added;
+}
+
+hw::Breakpoint LocalInspectorService::updateBreakpoint(std::uint32_t id, std::optional<bool> enabled, const std::optional<std::string>& condition) {
+  hw::Breakpoint updated;
+  inspect([&](rt::DebugContext& context) {
+    const auto result = context.debugger.updateBreakpoint(id, enabled, condition);
+    if (!result.has_value()) throw shared::CoreError(api::ERROR_NO_BREAKPOINT, "没有编号为 " + std::to_string(id) + " 的断点");
+    updated = *result;
+  });
+  return updated;
 }
 
 std::vector<hw::Breakpoint> LocalInspectorService::listBreakpoints() {
@@ -361,6 +372,76 @@ std::size_t LocalInspectorService::clearBreakpoints() {
   std::size_t removed = 0;
   inspect([&](rt::DebugContext& context) { removed = context.debugger.clearBreakpoints(); });
   return removed;
+}
+
+hw::RecorderSlice LocalInspectorService::readRecording(std::uint32_t id, std::uint64_t from, std::uint32_t maxLines) {
+  hw::RecorderSlice slice;
+  inspect([&](rt::DebugContext& context) { slice = context.debugger.readRecorder(id, from, maxLines); });
+  return slice;
+}
+
+std::vector<hw::CallFrame> LocalInspectorService::callStack() {
+  std::vector<hw::CallFrame> frames;
+  inspect([&](rt::DebugContext& context) { frames = context.debugger.callStack(); });
+  return frames;
+}
+
+void LocalInspectorService::startProfiler() {
+  inspect([&](rt::DebugContext& context) { context.debugger.startProfiler(); });
+}
+
+hw::ProfileReport LocalInspectorService::stopProfiler() {
+  hw::ProfileReport report;
+  inspect([&](rt::DebugContext& context) {
+    if (!context.debugger.profile().has_value()) throw shared::CoreError(api::ERROR_NO_PROFILE, "还没有开始过子程序统计");
+    context.debugger.stopProfiler();
+    report = *context.debugger.profile();
+  });
+  return report;
+}
+
+hw::ProfileReport LocalInspectorService::profile() {
+  hw::ProfileReport report;
+  inspect([&](rt::DebugContext& context) {
+    auto current = context.debugger.profile();
+    if (!current.has_value()) throw shared::CoreError(api::ERROR_NO_PROFILE, "还没有开始过子程序统计");
+    report = std::move(*current);
+  });
+  return report;
+}
+
+void LocalInspectorService::startEventLog(std::uint32_t maxEvents) {
+  inspect([&](rt::DebugContext& context) { context.debugger.startEventLog(maxEvents); });
+}
+
+void LocalInspectorService::stopEventLog() {
+  inspect([&](rt::DebugContext& context) {
+    if (!context.debugger.eventLog(std::nullopt, 1).has_value()) throw shared::CoreError(api::ERROR_NO_EVENT_LOG, "还没有开始过事件记录");
+    context.debugger.stopEventLog();
+  });
+}
+
+hw::EventLogOutput LocalInspectorService::eventLog(std::optional<std::uint64_t> fromFrame, std::uint32_t maxEvents) {
+  hw::EventLogOutput output;
+  inspect([&](rt::DebugContext& context) {
+    auto current = context.debugger.eventLog(fromFrame, maxEvents);
+    if (!current.has_value()) throw shared::CoreError(api::ERROR_NO_EVENT_LOG, "还没有开始过事件记录");
+    output = std::move(*current);
+  });
+  return output;
+}
+
+std::vector<std::uint8_t> LocalInspectorService::palette() {
+  std::vector<std::uint8_t> bytes;
+  inspect([&](rt::DebugContext& context) {
+    for (const std::uint32_t color : context.debugger.colorTable()) {
+      bytes.push_back(static_cast<std::uint8_t>(color & 0xFFU));
+      bytes.push_back(static_cast<std::uint8_t>((color >> 8) & 0xFFU));
+      bytes.push_back(static_cast<std::uint8_t>((color >> 16) & 0xFFU));
+      bytes.push_back(static_cast<std::uint8_t>((color >> 24) & 0xFFU));
+    }
+  });
+  return bytes;
 }
 
 }  // namespace ember::logic::inspector

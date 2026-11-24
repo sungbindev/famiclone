@@ -29,6 +29,11 @@ constexpr std::int64_t DEFAULT_RECORDER_LINES = 100000;
 /** 反汇编的默认条数，与 Schema 里的说明一致。 */
 constexpr std::int64_t DEFAULT_DISASSEMBLE_COUNT = 16;
 
+/** 事件记录的默认容量与默认读取个数，记录读取的默认行数，与 Schema 里的说明一致。 */
+constexpr std::int64_t DEFAULT_EVENT_CAPACITY = 65536;
+constexpr std::int64_t DEFAULT_EVENT_READ = 20000;
+constexpr std::int64_t DEFAULT_TRACE_READ_LINES = 1000;
+
 hw::BreakpointKind kindOf(const std::string& name) {
   if (name == "read") return hw::BreakpointKind::Read;
   if (name == "write") return hw::BreakpointKind::Write;
@@ -42,7 +47,50 @@ contract::Breakpoint breakpointToWire(const hw::Breakpoint& breakpoint) {
   wire.address = breakpoint.first;
   wire.endAddress = breakpoint.last;
   wire.hits = static_cast<std::int64_t>(breakpoint.hits);
+  wire.enabled = breakpoint.enabled;
+  if (!breakpoint.condition.empty()) wire.condition = breakpoint.condition;
   return wire;
+}
+
+std::string callKindName(hw::CallKind kind) {
+  switch (kind) {
+    case hw::CallKind::Jsr:
+      return "jsr";
+    case hw::CallKind::Irq:
+      return "irq";
+    case hw::CallKind::Nmi:
+      return "nmi";
+    case hw::CallKind::Brk:
+      return "brk";
+    case hw::CallKind::Root:
+      return "root";
+  }
+  return "";
+}
+
+std::string eventKindName(hw::EventKind kind) {
+  switch (kind) {
+    case hw::EventKind::Read:
+      return "read";
+    case hw::EventKind::Write:
+      return "write";
+    case hw::EventKind::Irq:
+      return "irq";
+    case hw::EventKind::Nmi:
+      return "nmi";
+    case hw::EventKind::Brk:
+      return "brk";
+  }
+  return "";
+}
+
+std::vector<contract::ProfileEntry> profileEntriesToWire(const hw::ProfileReport& report) {
+  std::vector<contract::ProfileEntry> entries;
+  entries.reserve(report.entries.size());
+  for (const auto& entry : report.entries) {
+    entries.push_back({callKindName(entry.kind), entry.address, static_cast<std::int64_t>(entry.calls), static_cast<std::int64_t>(entry.inclusiveCycles), static_cast<std::int64_t>(entry.exclusiveCycles)});
+  }
+  return entries;
 }
 
 contract::ModuleState toWire(const contract::StateReport& state) {
@@ -152,6 +200,7 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
     spec.kind = parsed.kind == "io" ? hw::RecorderKind::Io : (parsed.kind == "irq" ? hw::RecorderKind::Irq : hw::RecorderKind::Instruction);
     spec.maxLines = static_cast<std::uint32_t>(parsed.maxLines.value_or(DEFAULT_RECORDER_LINES));
     spec.unique = parsed.unique.value_or(false);
+    spec.ring = parsed.ring.value_or(false);
     return nlohmann::json(contract::InspectorTraceStartResult{static_cast<std::int64_t>(service->startRecording(spec, parsed.file.value_or("")))});
   });
   router.add("inspector", contract::INSPECTOR_TRACE_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
@@ -179,7 +228,77 @@ void addInspectorRequests(platform::RequestRouter& router, std::shared_ptr<contr
     const auto parsed = contract::parseInspectorAddBreakpointParams(params, "params");
     const auto first = static_cast<std::uint16_t>(parsed.address);
     const auto last = static_cast<std::uint16_t>(parsed.endAddress.value_or(parsed.address));
-    return nlohmann::json(contract::InspectorAddBreakpointResult{breakpointToWire(service->addBreakpoint(kindOf(parsed.kind), first, last))});
+    return nlohmann::json(contract::InspectorAddBreakpointResult{breakpointToWire(service->addBreakpoint(kindOf(parsed.kind), first, last, parsed.condition.value_or("")))});
+  });
+  router.add("inspector", contract::INSPECTOR_UPDATE_BREAKPOINT_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorUpdateBreakpointParams(params, "params");
+    return nlohmann::json(contract::InspectorUpdateBreakpointResult{breakpointToWire(service->updateBreakpoint(static_cast<std::uint32_t>(parsed.id), parsed.enabled, parsed.condition))});
+  });
+  router.add("inspector", contract::INSPECTOR_CALL_STACK_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorCallStackParams(params, "params"));
+    contract::InspectorCallStackResult result;
+    for (const auto& frame : service->callStack()) result.frames.push_back({callKindName(frame.kind), frame.callAddress, frame.targetAddress, frame.returnAddress, frame.stackPointer});
+    return nlohmann::json(result);
+  });
+  router.add("inspector", contract::INSPECTOR_PROFILER_START_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorProfilerStartParams(params, "params"));
+    service->startProfiler();
+    return nlohmann::json(contract::InspectorProfilerStartResult{});
+  });
+  router.add("inspector", contract::INSPECTOR_PROFILER_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorProfilerStopParams(params, "params"));
+    const auto report = service->stopProfiler();
+    return nlohmann::json(contract::InspectorProfilerStopResult{report.active, static_cast<std::int64_t>(report.totalCycles), profileEntriesToWire(report)});
+  });
+  router.add("inspector", contract::INSPECTOR_PROFILER_GET_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorProfilerGetParams(params, "params"));
+    const auto report = service->profile();
+    return nlohmann::json(contract::InspectorProfilerGetResult{report.active, static_cast<std::int64_t>(report.totalCycles), profileEntriesToWire(report)});
+  });
+  router.add("inspector", contract::INSPECTOR_EVENTS_START_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorEventsStartParams(params, "params");
+    service->startEventLog(static_cast<std::uint32_t>(parsed.maxEvents.value_or(DEFAULT_EVENT_CAPACITY)));
+    return nlohmann::json(contract::InspectorEventsStartResult{});
+  });
+  router.add("inspector", contract::INSPECTOR_EVENTS_STOP_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorEventsStopParams(params, "params"));
+    service->stopEventLog();
+    return nlohmann::json(contract::InspectorEventsStopResult{});
+  });
+  router.add("inspector", contract::INSPECTOR_EVENTS_GET_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorEventsGetParams(params, "params");
+    std::optional<std::uint64_t> fromFrame;
+    if (parsed.fromFrame.has_value()) fromFrame = static_cast<std::uint64_t>(*parsed.fromFrame);
+    const auto output = service->eventLog(fromFrame, static_cast<std::uint32_t>(parsed.maxEvents.value_or(DEFAULT_EVENT_READ)));
+    contract::InspectorEventsGetResult result;
+    result.active = output.active;
+    result.frame = static_cast<std::int64_t>(output.frame);
+    result.dropped = static_cast<std::int64_t>(output.dropped);
+    result.events.reserve(output.events.size());
+    for (const auto& event : output.events) {
+      result.events.push_back({static_cast<std::int64_t>(event.frame), event.scanline, event.dot, eventKindName(event.kind), event.address, event.value, event.pc, static_cast<std::int64_t>(event.cycles)});
+    }
+    return nlohmann::json(result);
+  });
+  router.add("inspector", contract::INSPECTOR_GET_PALETTE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    static_cast<void>(contract::parseInspectorGetPaletteParams(params, "params"));
+    auto bytes = service->palette();
+    contract::InspectorGetPaletteResult result;
+    result.count = static_cast<std::int64_t>(bytes.size() / 4);
+    nlohmann::json json(result);
+    json["data"] = nlohmann::json::binary(std::move(bytes));
+    return json;
+  });
+  router.add("inspector", contract::INSPECTOR_TRACE_READ_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    const auto parsed = contract::parseInspectorTraceReadParams(params, "params");
+    const auto slice = service->readRecording(static_cast<std::uint32_t>(parsed.id), static_cast<std::uint64_t>(parsed.from.value_or(0)), static_cast<std::uint32_t>(parsed.maxLines.value_or(DEFAULT_TRACE_READ_LINES)));
+    contract::InspectorTraceReadResult result;
+    result.first = static_cast<std::int64_t>(slice.first);
+    result.total = static_cast<std::int64_t>(slice.total);
+    result.oldest = static_cast<std::int64_t>(slice.oldest);
+    result.truncated = slice.truncated;
+    result.lines = slice.lines;
+    return nlohmann::json(result);
   });
   router.add("inspector", contract::INSPECTOR_LIST_BREAKPOINTS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     static_cast<void>(contract::parseInspectorListBreakpointsParams(params, "params"));

@@ -110,6 +110,28 @@ void Ppu2c02::catchUp(hw::MasterTime now) {
   while (nextDotTime_ <= now) runDot();
 }
 
+std::array<std::uint32_t, 64> Ppu2c02::colorTable() const {
+  const std::size_t emphasis = static_cast<std::size_t>(mask_ >> 5) & 7;
+  const unsigned colorMask = (mask_ & MASK_GRAYSCALE) != 0 ? 0x30U : 0x3FU;
+  std::array<std::uint32_t, 64> table{};
+  for (std::size_t color = 0; color < table.size(); ++color) table[color] = rgbaTable_[emphasis * 64 + (color & colorMask)];
+  return table;
+}
+
+hw::VideoPosition Ppu2c02::positionAt(hw::MasterTime now) const {
+  const std::int64_t perFrame = static_cast<std::int64_t>(DOTS_PER_SCANLINE) * options_.scanlinesPerFrame;
+  const std::int64_t index = static_cast<std::int64_t>(scanline_) * DOTS_PER_SCANLINE + dot_;
+  // frameCount_ 在第 240 行第 0 点执行时加 1：下一个点已经越过它时，要减回来才是帧序号。
+  const std::int64_t publishIndex = static_cast<std::int64_t>(240) * DOTS_PER_SCANLINE;
+  std::int64_t frame = static_cast<std::int64_t>(frameCount_) - (index > publishIndex ? 1 : 0);
+  std::int64_t end = index;
+  // 开始时间不晚于 now 的点都算已经执行。
+  if (now >= nextDotTime_) end += static_cast<std::int64_t>((now - nextDotTime_) / domain_.ticksPerCycle) + 1;
+  frame += end / perFrame;
+  const std::int64_t inFrame = end % perFrame;
+  return hw::VideoPosition{static_cast<std::uint64_t>(frame), static_cast<std::int32_t>(inFrame / DOTS_PER_SCANLINE), static_cast<std::int32_t>(inFrame % DOTS_PER_SCANLINE)};
+}
+
 void Ppu2c02::halt() {
   if (eventId_ != hw::NO_EVENT) scheduler_.cancel(eventId_);
   eventId_ = hw::NO_EVENT;

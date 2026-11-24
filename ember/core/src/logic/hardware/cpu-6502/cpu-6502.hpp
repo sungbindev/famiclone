@@ -47,6 +47,9 @@ class Cpu6502 final : public contracts::hardware::Cpu {
   /** 调试用：设置中断通知（传空指针取消）；不拥有观察者。 */
   void setInterruptObserver(contracts::hardware::InterruptObserver* observer) { observer_ = observer; }
 
+  /** 调试用：设置调用与返回的通知（传空指针取消）；不拥有观察者。 */
+  void setCallObserver(contracts::hardware::CallObserver* observer) { callObserver_ = observer; }
+
  private:
   /** 内存操作的访问方式：决定带索引的寻址是否一定做一次修正前的空读。 */
   enum class Access : std::uint8_t { Read, Write, Modify };
@@ -104,6 +107,7 @@ class Cpu6502 final : public contracts::hardware::Cpu {
 
   // 中断采样：每个周期结束时更新，“prev”是上一个周期结束时的值。
   contracts::hardware::InterruptObserver* observer_{nullptr};
+  contracts::hardware::CallObserver* callObserver_{nullptr};
   bool nmiLevel_{false};
   bool needNmi_{false};
   bool prevNeedNmi_{false};

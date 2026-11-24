@@ -94,6 +94,7 @@ Sb97Machine::Sb97Machine(std::vector<std::uint8_t> bios, hw::FloppyActivity* flo
       board_(std::move(bios), irq_, fdc_, speech_),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
+  debug_.setVideoPosition([this] { return ppu_.positionAt(scheduler_.now()); });
   fdcInterrupt_.attach(board_);
   cpuBus_.mount(0x0000, 0x1FFF, ramDevice_);
   cpuBus_.mount(0x2000, 0x3FFF, ppu_);
@@ -352,7 +353,10 @@ std::vector<hw::StateField> Sb97Machine::readState(std::string_view module) cons
             field("writeToggle", ppu_.writeToggle() ? 1 : 0, "写锁存 w"),
             field("vblank", ppu_.vblankFlag() ? 1 : 0, "vblank 标志"),
             field("spriteZeroHit", ppu_.spriteZeroHit() ? 1 : 0, "精灵 0 命中标志"),
-            field("spriteOverflow", ppu_.spriteOverflow() ? 1 : 0, "精灵溢出标志")};
+            field("spriteOverflow", ppu_.spriteOverflow() ? 1 : 0, "精灵溢出标志"),
+            field("control", ppu_.control(), "$2000 的值"),
+            field("mask", ppu_.mask(), "$2001 的值"),
+            field("status", ppu_.status(), "$2002 的当前取值（位 7 垂直消隐、位 6 精灵 0 命中、位 5 精灵溢出）")};
   }
   if (module == "board") {
     const Sb97Board::Registers registers = board_.registers();

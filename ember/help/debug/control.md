@@ -44,6 +44,19 @@
 
 各请求的参数与结果见[请求与事件总览](../api/index.md)。
 
+## 调试与分析
+
+`inspector` 模块还提供下面这些调试数据，只在 6502 类的机型（经典 FC 与全部学习机）上有，参数与结果见[请求与事件总览](../api/index.md)：
+
+| 要看什么 | 请求 |
+| --- | --- |
+| 带条件的断点（如 `a == $40 && [$10] != 0`）、启用与禁用断点 | `inspector.addBreakpoint`（参数 `condition`）、`inspector.updateBreakpoint` |
+| 调用栈（JSR 调用的子程序与中断处理程序） | `inspector.callStack` |
+| 每个子程序花掉的 CPU 周期 | `inspector.profilerStart`、`profilerGet`、`profilerStop` |
+| 寄存器读写与中断发生在哪一帧、哪一行、哪一点 | `inspector.eventsStart`、`eventsGet`、`eventsStop` |
+| 现在显示的 64 种颜色的 RGB 值 | `inspector.getPalette` |
+| 边记边读指令跟踪 | `inspector.traceStart`（参数 `ring` 为 `true` 保留最新的行）、`inspector.traceRead` |
+
 ## 事件
 
 订阅后才会收到事件，高频事件（如 `runtime.frame`）还要再开启才会发。常用的事件有：

@@ -29,6 +29,16 @@ struct FrameBuffer {
   std::span<const std::uint32_t> pixels;
 };
 
+/** PPU 的扫描位置：下一个要处理的点；调试用，不追赶时间，不产生副作用。 */
+struct VideoPosition {
+  /** 帧序号：从 0 起，每帧从第 0 行开始（与 frameCount 不同，frameCount 在画面完成的那一行就加 1）。 */
+  std::uint64_t frame{0};
+  /** 扫描线。 */
+  std::int32_t scanline{0};
+  /** 点；按行处理的 PPU 恒为 0。 */
+  std::int32_t dot{0};
+};
+
 /** PPU。 */
 class Ppu : public BusDevice {
  public:

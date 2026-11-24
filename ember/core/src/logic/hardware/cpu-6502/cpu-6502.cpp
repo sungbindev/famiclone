@@ -84,6 +84,7 @@ void Cpu6502::reset(bool power) {
   const std::uint8_t low = readCycle(RESET_VECTOR);
   const std::uint8_t high = readCycle(RESET_VECTOR + 1);
   pc_ = makeAddress(low, high);
+  if (callObserver_ != nullptr) callObserver_->onReset();
 }
 
 std::uint32_t Cpu6502::run(std::uint32_t cycles) {
@@ -553,6 +554,8 @@ std::uint8_t Cpu6502::modifyValue(Op op, std::uint8_t value) {
 }
 
 void Cpu6502::jsr() {
+  // 操作码已经取走，pc_ 指向第一个操作数字节。
+  const auto callAddress = static_cast<std::uint16_t>(pc_ - 1);
   const std::uint8_t low = fetch();
   readCycle(stackAddress(sp_));
   // 压入的是第二个操作数字节的地址，RTS 再加 1。
@@ -560,6 +563,7 @@ void Cpu6502::jsr() {
   push(static_cast<std::uint8_t>(pc_ & 0xFF));
   const std::uint8_t high = readCycle(pc_);
   pc_ = makeAddress(low, high);
+  if (callObserver_ != nullptr) callObserver_->onCall(callAddress, pc_);
 }
 
 void Cpu6502::rts() {
@@ -570,6 +574,7 @@ void Cpu6502::rts() {
   pc_ = makeAddress(low, high);
   readCycle(pc_);
   ++pc_;
+  if (callObserver_ != nullptr) callObserver_->onReturn(false);
 }
 
 void Cpu6502::rti() {
@@ -579,6 +584,7 @@ void Cpu6502::rti() {
   const std::uint8_t low = pull();
   const std::uint8_t high = pull();
   pc_ = makeAddress(low, high);
+  if (callObserver_ != nullptr) callObserver_->onReturn(true);
 }
 
 void Cpu6502::jmp(Mode mode) {

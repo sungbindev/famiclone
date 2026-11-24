@@ -99,6 +99,18 @@ class Ppu2c02 final : public contracts::hardware::Ppu, public contracts::hardwar
   // 测试与调试用的只读访问（不追赶时间，不产生副作用）
   [[nodiscard]] int scanline() const { return scanline_; }
   [[nodiscard]] int dot() const { return dot_; }
+  /** $2000 的当前取值。 */
+  [[nodiscard]] std::uint8_t control() const { return ctrl_; }
+  /** $2001 的当前取值。 */
+  [[nodiscard]] std::uint8_t mask() const { return mask_; }
+  /** $2002 的当前取值（位 7 vblank、位 6 精灵 0 命中、位 5 精灵溢出，低 5 位为 0）；读它不清标志。 */
+  [[nodiscard]] std::uint8_t status() const { return static_cast<std::uint8_t>((vblank_ ? 0x80 : 0) | (sprite0Hit_ ? 0x40 : 0) | (spriteOverflow_ ? 0x20 : 0)); }
+  /**
+   * 64 个颜色号现在显示的颜色，按当前的颜色强调与灰度位换算，每项内存顺序 R、G、B、A（小端整数为 0xAABBGGRR）。
+   */
+  [[nodiscard]] std::array<std::uint32_t, 64> colorTable() const;
+  /** 追赶到 now 之后的扫描位置，不改变 PPU 的状态；奇数帧少一个点的情形不计，位置最多差一个点。 */
+  [[nodiscard]] contracts::hardware::VideoPosition positionAt(contracts::hardware::MasterTime now) const;
   [[nodiscard]] std::uint16_t vramAddress() const { return v_; }
   [[nodiscard]] std::uint16_t tempAddress() const { return t_; }
   [[nodiscard]] std::uint8_t fineX() const { return fineX_; }

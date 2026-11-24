@@ -46,6 +46,26 @@ constexpr std::uint8_t MASK_SP_LEFT = 0x04;
 constexpr std::uint8_t MASK_BG = 0x08;
 constexpr std::uint8_t MASK_SP = 0x10;
 
+/** 6 位色号按 $2001 的黑白与增强位换算成显示的颜色（内存顺序 R、G、B、A）。 */
+std::uint32_t displayColor(unsigned entry, std::uint8_t mask) {
+  // 真机实测：$2001 位 5 增强绿、位 6 增强红、位 7 增强蓝（PAL 的顺序），位 0 为黑白。
+  const bool emphasizeGreen = (mask & 0x20) != 0;
+  const bool emphasizeRed = (mask & 0x40) != 0;
+  const bool emphasizeBlue = (mask & 0x80) != 0;
+  const bool emphasis = emphasizeGreen || emphasizeRed || emphasizeBlue;
+  entry &= 0x3FU;
+  if ((mask & MASK_MONO) != 0) entry &= 0x30U;
+  unsigned red = NES_PALETTE[entry][0];
+  unsigned green = NES_PALETTE[entry][1];
+  unsigned blue = NES_PALETTE[entry][2];
+  if (emphasis) {
+    if (!emphasizeRed) red = red * 3 / 4;
+    if (!emphasizeGreen) green = green * 3 / 4;
+    if (!emphasizeBlue) blue = blue * 3 / 4;
+  }
+  return OPAQUE_BLACK | (blue << 16) | (green << 8) | red;
+}
+
 }  // namespace
 
 PpuUm6576::PpuUm6576(hw::Scheduler& scheduler, hw::PpuBus& bus, hw::IrqLine& nmi, hw::ClockDomain domain, hw::MasterTime phase)
@@ -342,26 +362,14 @@ void PpuUm6576::renderLine(int line) {
 }
 
 void PpuUm6576::storeLine(int line) {
-  // 真机实测：$2001 位 5 增强绿、位 6 增强红、位 7 增强蓝（PAL 的顺序），位 0 为黑白。
-  const bool emphasizeGreen = (mask_ & 0x20) != 0;
-  const bool emphasizeRed = (mask_ & 0x40) != 0;
-  const bool emphasizeBlue = (mask_ & 0x80) != 0;
-  const bool emphasis = emphasizeGreen || emphasizeRed || emphasizeBlue;
-  const bool mono = (mask_ & MASK_MONO) != 0;
   std::uint32_t* row = &drawing_[static_cast<std::size_t>(line) * FRAME_WIDTH];
-  for (std::uint32_t x = 0; x < FRAME_WIDTH; ++x) {
-    unsigned entry = lineBuffer_[x + LINE_PAD] & 0x3FU;
-    if (mono) entry &= 0x30U;
-    unsigned red = NES_PALETTE[entry][0];
-    unsigned green = NES_PALETTE[entry][1];
-    unsigned blue = NES_PALETTE[entry][2];
-    if (emphasis) {
-      if (!emphasizeRed) red = red * 3 / 4;
-      if (!emphasizeGreen) green = green * 3 / 4;
-      if (!emphasizeBlue) blue = blue * 3 / 4;
-    }
-    row[x] = OPAQUE_BLACK | (blue << 16) | (green << 8) | red;
-  }
+  for (std::uint32_t x = 0; x < FRAME_WIDTH; ++x) row[x] = displayColor(lineBuffer_[x + LINE_PAD], mask_);
+}
+
+std::array<std::uint32_t, 64> PpuUm6576::colorTable() const {
+  std::array<std::uint32_t, 64> table{};
+  for (unsigned color = 0; color < table.size(); ++color) table[color] = displayColor(color, mask_);
+  return table;
 }
 
 }  // namespace ember::logic::hardware

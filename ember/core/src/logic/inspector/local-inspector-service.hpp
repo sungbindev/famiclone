@@ -48,10 +48,20 @@ class LocalInspectorService final : public contracts::inspector::InspectorServic
   contracts::inspector::CdlReport saveCdl(const std::string& fileName) override;
   std::uint32_t startRecording(const contracts::hardware::RecorderSpec& spec, const std::string& fileName) override;
   contracts::inspector::RecordingReport stopRecording(std::uint32_t id, bool callLog) override;
-  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last) override;
+  contracts::hardware::RecorderSlice readRecording(std::uint32_t id, std::uint64_t from, std::uint32_t maxLines) override;
+  contracts::hardware::Breakpoint addBreakpoint(contracts::hardware::BreakpointKind kind, std::uint16_t first, std::uint16_t last, const std::string& condition) override;
+  contracts::hardware::Breakpoint updateBreakpoint(std::uint32_t id, std::optional<bool> enabled, const std::optional<std::string>& condition) override;
   std::vector<contracts::hardware::Breakpoint> listBreakpoints() override;
   void removeBreakpoint(std::uint32_t id) override;
   std::size_t clearBreakpoints() override;
+  std::vector<contracts::hardware::CallFrame> callStack() override;
+  void startProfiler() override;
+  contracts::hardware::ProfileReport stopProfiler() override;
+  contracts::hardware::ProfileReport profile() override;
+  void startEventLog(std::uint32_t maxEvents) override;
+  void stopEventLog() override;
+  contracts::hardware::EventLogOutput eventLog(std::optional<std::uint64_t> fromFrame, std::uint32_t maxEvents) override;
+  std::vector<std::uint8_t> palette() override;
 
  private:
   /** 在模拟线程执行回调，并把错误码转成 inspector 的。 */

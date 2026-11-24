@@ -52,6 +52,28 @@ class InterruptObserver {
   virtual void onInterrupt(InterruptKind kind, std::uint16_t returnAddress, std::uint16_t handler) = 0;
 };
 
+/** CPU 执行调用与返回指令的通知，调试用（调用栈、子程序统计）；通知都在指令执行完之后发出，此时读到的寄存器已经是指令之后的值。 */
+class CallObserver {
+ public:
+  virtual ~CallObserver() = default;
+
+  /**
+   * JSR 执行完毕：返回地址已压栈，PC 已指向子程序。
+   * @param callAddress JSR 指令本身的地址。
+   * @param target 子程序的地址。
+   */
+  virtual void onCall(std::uint16_t callAddress, std::uint16_t target) = 0;
+
+  /**
+   * RTS 或 RTI 执行完毕。
+   * @param fromInterrupt 为 true 表示 RTI（从中断返回），否则是 RTS。
+   */
+  virtual void onReturn(bool fromInterrupt) = 0;
+
+  /** 复位序列执行完毕，栈上原有的调用关系作废。 */
+  virtual void onReset() = 0;
+};
+
 /** CPU。 */
 class Cpu {
  public:

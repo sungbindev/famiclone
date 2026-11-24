@@ -13,5 +13,5 @@ import type { KeyObject } from 'node:crypto';
 
 export declare const LATEST_FILE: string;
 export declare function buildLatest(privateKey: KeyObject, version: string, content: Buffer): string;
-export declare function planUploads(version: string): Array<{ file: string; key: string }>;
+export declare function planFeedFiles(version: string): string[];
 export declare function publicKeyMatches(privateKey: KeyObject, headerText: string): boolean;

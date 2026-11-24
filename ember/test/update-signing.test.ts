@@ -1,17 +1,17 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：update-signing.test.ts
- * 说明：升级签名与发布脚本的测试：被签名的文字格式、清单的生成与签名能用公钥校验、改动任何一项签名都对不上、上传顺序（程序文件在前、清单在最后）、公钥头文件的生成与比对、不合格的版本号被拒绝。
+ * 说明：升级签名与发布脚本的测试：被签名的文字格式、清单的生成与签名能用公钥校验、改动任何一项签名都对不上、复制顺序（程序文件在前、清单在最后）、公钥头文件的生成与比对、不合格的版本号被拒绝。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
- * 备注：用测试里现生成的小密钥（2048 位），不读用户目录里的私钥，不访问网络，不运行 ossutil。
+ * 备注：用测试里现生成的小密钥（2048 位），不读用户目录里的私钥，不访问网络。
  * ------------------------------------------------------------------------
  */
 
 import { createHash, createPublicKey, createVerify, generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { buildLatest, planUploads, publicKeyMatches } from '../tools/release/publish-update.mjs';
+import { buildLatest, planFeedFiles, publicKeyMatches } from '../tools/release/publish-update.mjs';
 import { buildManifest, digestOf, formatPublicKeyHeader, publicKeyParts, signedMessage } from '../tools/release/update-signing.mjs';
 
 const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -47,11 +47,8 @@ describe('升级签名', () => {
     for (const version of ['1.2', '1.2.3.4', 'v1.2.3', '1.2.x', '']) expect(() => buildLatest(privateKey, version, CONTENT)).toThrow('版本号');
   });
 
-  it('先传程序文件、最后传清单，放在约定的目录', () => {
-    expect(planUploads('0.3.0')).toEqual([
-      { file: 'Ember-0.3.0.exe', key: 'updates/ember/windows/Ember-0.3.0.exe' },
-      { file: 'latest.json', key: 'updates/ember/windows/latest.json' }
-    ]);
+  it('先复制程序文件、最后复制清单', () => {
+    expect(planFeedFiles('0.3.0')).toEqual(['Ember-0.3.0.exe', 'latest.json']);
   });
 
   it('公钥头文件与私钥一致才算对得上', () => {

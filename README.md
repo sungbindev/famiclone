@@ -75,7 +75,7 @@ npm run check                # 全部检查与测试（含 vscode:check）
 
 ## 模拟器构建与上传
 
-升级文件放在阿里云 OSS 的 `famiclone` Bucket 下的 `updates/ember/windows/`，地址写在 `ember/win32/app/src/bootstrap/application.cpp` 的 `kUpdateFeedUrl`。命令在 `ember/` 目录下运行，上传需要先安装 `ossutil` 并运行 `ossutil config`（密钥只放本机配置）。升级清单要用签名私钥（文档仓库 `01-文档/密钥/ember-update-signing-key.pem`，与本仓库并列，不入本仓库）签名，第一次发布前运行 `npm run update:keygen` 生成。
+升级文件放在仓库的 `updates/ember/windows/`，提交并推送后由 GitHub Pages 经自有域名 `fcdev.cn` 对外，地址写在 `ember/win32/app/src/bootstrap/application.cpp` 的 `kUpdateFeedUrl`。命令在 `ember/` 目录下运行。升级清单要用签名私钥（文档仓库 `01-文档/密钥/ember-update-signing-key.pem`，与本仓库并列，不入本仓库）签名，第一次发布前运行 `npm run update:keygen` 生成。
 
 1. 把 `ember/package.json` 的 `version` 升到新版本，在 `ember/help/manual/changelog.md` 写好该版本一节。
 2. 生成发布包（单个 `Ember.exe`，帮助文档、预装插件与许可全文都嵌在里面）：

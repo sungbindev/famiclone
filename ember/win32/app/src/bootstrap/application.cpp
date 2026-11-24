@@ -138,8 +138,8 @@ constexpr double kWindowHeight = 500;
 constexpr unsigned kThemeWaitMilliseconds = 2000;
 /** 主进程错误的错误码。 */
 constexpr const char* kMainErrorCode = "shell.mainError";
-/** 升级地址：阿里云 OSS 的 famiclone Bucket 下的 updates/ember/windows/（里面有 latest.json 与 Ember-<版本号>.exe）；只写在这里，界面与首选项都不能指定。 */
-constexpr const char* kUpdateFeedUrl = "https://famiclone.oss-cn-beijing.aliyuncs.com/updates/ember/windows";
+/** 升级地址：自有域名 fcdev.cn（GitHub Pages）下的 updates/ember/windows/（里面有 latest.json 与 Ember-<版本号>.exe）；只写在这里，界面与首选项都不能指定。 */
+constexpr const char* kUpdateFeedUrl = "https://fcdev.cn/updates/ember/windows";
 /** 环境变量 EMBER_UPDATE_FEED_URL 可以改用别的升级地址（只接受 https 或指向 127.0.0.1 的 http，本地演练升级流程用；签名照常校验，换了地址也无法让程序接受没签名的文件）。 */
 constexpr const char* kUpdateFeedOverrideVariable = "EMBER_UPDATE_FEED_URL";
 /** 自动检查更新与启动的间隔（毫秒）。 */

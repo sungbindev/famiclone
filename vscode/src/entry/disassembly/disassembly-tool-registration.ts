@@ -104,7 +104,7 @@ class DisassemblyTool implements vscode.LanguageModelTool<ToolInput> {
     if (!writes && outside.length === 0) return { invocationMessage: message };
     let text = writes ? (this.spec.confirm?.(input) ?? `将执行 ${this.spec.name}。`) : '将读取工作区之外的文件。';
     if (outside.length > 0) text += `\n\n注意：这些路径在工作区之外：${outside.join('、')}`;
-    return { invocationMessage: message, confirmationMessages: { title: `FC Dev：${message}`, message: new vscode.MarkdownString(text) } };
+    return { invocationMessage: message, confirmationMessages: { title: `FCDEV：${message}`, message: new vscode.MarkdownString(text) } };
   }
 
   /** 调用：检查输入、换算路径、运行操作、整理结果。 */

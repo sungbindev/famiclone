@@ -44,7 +44,7 @@ class FcdevTool implements vscode.LanguageModelTool<ToolInput> {
     const message = this.definition.describe(input);
     if (!this.definition.writes) return { invocationMessage: message };
     const text = this.definition.confirm?.(input) ?? `将执行 ${this.definition.name}。`;
-    return { invocationMessage: message, confirmationMessages: { title: `FC Dev：${message}`, message: new vscode.MarkdownString(text) } };
+    return { invocationMessage: message, confirmationMessages: { title: `FCDEV：${message}`, message: new vscode.MarkdownString(text) } };
   }
 
   /** 调用：检查输入、运行、整理结果。 */

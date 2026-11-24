@@ -16,17 +16,6 @@
         .import __TRAMP_LOAD__, __TRAMP_RUN__, __TRAMP_SIZE__
         .import __STUBS_LOAD__, __STUBS_RUN__, __STUBS_SIZE__
 
-; 系统调用入口与功能号（手册：系统篇第一章、第二章、第四章）
-BIOS_ENTRY      = $5800
-FILE_ENTRY      = $5803
-BIOS_GET_PAGE   = 2
-FILE_READ       = 2
-FILE_CLOSE      = 5
-FILE_PATH_OPEN  = 20
-FILE_NEXT       = 7
-FILE_FIRST      = 6
-FILE_PATH_FIRST = 22
-
 ; 菜单
 MENU_VIS        = 8
 MAX_GAMES       = 16
@@ -34,22 +23,11 @@ PAD_START       = $10           ; 手柄 1 的位：A 在位 7，依次到右键
 PAD_UP          = $08
 PAD_DOWN        = $04
 
-; BIOS 功能号（手册第二章）：设置光标（X 行、Y 列），以 TTY 方式显示字符（X 字符码、Y 为 0）
-BIOS_SET_CURSOR = 28
-BIOS_DISPLAY_TTY = 27
 ; 全屏菜单的行号（西文方式 30 行）
 MENU_ROW_TITLE  = 4
 MENU_ROW_LIST   = 7
 MENU_ROW_HELP   = 21
 MENU_ROW_AUTHOR = 23
-
-; 文件通道的偏移（共 48 字节）
-FH_CMD          = 0
-FH_DRIVE        = 1
-FH_PAGE         = 2
-FH_BUF          = 3
-FH_BYTES        = 5
-FH_SIZE         = 48
 
 ; 命令行参数：$0100 是长度，$0101 起是参数（含程序名后的空格）
 CMD_LENGTH      = $0100
@@ -246,7 +224,7 @@ call_file:
 
 close_file:
         lda #FILE_CLOSE
-        sta fh + FH_CMD
+        sta fh + FH_COMMAND
         jsr call_file
         lda #0
         sta file_open
@@ -326,27 +304,27 @@ make_path:
 ; 打开 pathbuf 里的文件；失败时 C 置位
 open_file:
         lda #FILE_PATH_OPEN
-        sta fh + FH_CMD
+        sta fh + FH_COMMAND
         lda #0
         sta fh + FH_DRIVE
         lda cur_page
         sta fh + FH_PAGE
         lda #<pathbuf
-        sta fh + FH_BUF
+        sta fh + FH_BUFFER
         lda #>pathbuf
-        sta fh + FH_BUF + 1
+        sta fh + FH_BUFFER + 1
         jmp call_file
 
 ; 读 16 字节的头到 hdrbuf；失败时 C 置位，A 是出错码
 read_header:
         lda #FILE_READ
-        sta fh + FH_CMD
+        sta fh + FH_COMMAND
         lda cur_page
         sta fh + FH_PAGE
         lda #<hdrbuf
-        sta fh + FH_BUF
+        sta fh + FH_BUFFER
         lda #>hdrbuf
-        sta fh + FH_BUF + 1
+        sta fh + FH_BUFFER + 1
         lda #16
         sta fh + FH_BYTES
         lda #0
@@ -438,18 +416,18 @@ scan_games:
         lda cur_page
         sta fh + FH_PAGE
         lda #<dta
-        sta fh + FH_BUF
+        sta fh + FH_BUFFER
         lda #>dta
-        sta fh + FH_BUF + 1
+        sta fh + FH_BUFFER + 1
         lda #FILE_PATH_FIRST
-        sta fh + FH_CMD
+        sta fh + FH_COMMAND
         jsr call_file
 @loop:
         bcs @end
         jsr copy_dta
         jsr check_entry
         lda #FILE_NEXT
-        sta fh + FH_CMD
+        sta fh + FH_COMMAND
         jsr call_file
         jmp @loop
 @end:
@@ -493,9 +471,9 @@ check_entry:
 
 ; 把服务端返回的目录项（HPAGE|HBUF 指向）复制到 dta，通道本身不改动
 copy_dta:
-        lda fh + FH_BUF
+        lda fh + FH_BUFFER
         sta zp_ptr
-        lda fh + FH_BUF + 1
+        lda fh + FH_BUFFER + 1
         sta zp_ptr + 1
         ldy #20
 @c:
@@ -766,11 +744,11 @@ read_pages:
         stx fh + FH_BYTES + 1
         lda #0
         sta fh + FH_BYTES
-        sta fh + FH_BUF
+        sta fh + FH_BUFFER
         lda #$80
-        sta fh + FH_BUF + 1
+        sta fh + FH_BUFFER + 1
         lda #FILE_READ
-        sta fh + FH_CMD
+        sta fh + FH_COMMAND
         jsr call_file
         bcs @error
         lda fh + FH_BYTES

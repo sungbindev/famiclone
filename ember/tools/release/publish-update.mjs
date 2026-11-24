@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：publish-update.mjs
- * 说明：发布升级文件（npm run update:publish）：用私钥给 build/ember/release/Ember-<版本号>.exe 生成签名清单 latest.json，再先复制程序文件、最后复制 latest.json 到仓库的 updates/ember/windows/。
+ * 说明：发布升级文件（npm run update:publish）：用私钥给 build/ember/release/Ember-<版本号>.exe 生成签名清单 latest.json，再复制程序文件、下载用的 Ember-<版本号>.zip，最后复制 latest.json 到仓库的 updates/ember/windows/。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -38,9 +38,9 @@ export function buildLatest(privateKey, version, content) {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
-/** 要复制到升级目录的文件名：程序文件在前，清单在最后。 */
+/** 要复制到升级目录的文件名：程序文件与下载用的压缩包在前，清单在最后。 */
 export function planFeedFiles(version) {
-  return [`Ember-${version}.exe`, LATEST_FILE];
+  return [`Ember-${version}.exe`, `Ember-${version}.zip`, LATEST_FILE];
 }
 
 /** 程序里编译进去的公钥头文件是否就是这把私钥的公钥。 */
@@ -55,6 +55,8 @@ function main() {
   const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const exe = join(RELEASE_BUILD_DIRECTORY, `Ember-${version}.exe`);
   if (!existsSync(exe)) throw new Error(`找不到 ${exe}：先运行 npm run package:win（并确认 package.json 的 version 就是要发布的版本）`);
+  const zip = join(RELEASE_BUILD_DIRECTORY, `Ember-${version}.zip`);
+  if (!existsSync(zip)) throw new Error(`找不到 ${zip}：先运行 npm run package:win`);
   const privateKey = loadPrivateKey();
   if (!publicKeyMatches(privateKey, readFileSync(PUBLIC_KEY_HEADER, 'utf8'))) {
     throw new Error(`${PUBLIC_KEY_HEADER} 里的公钥不是这把私钥的公钥：重新运行 npm run update:keygen -- --export-public 并重新打包`);

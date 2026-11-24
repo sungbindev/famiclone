@@ -163,17 +163,18 @@ function commonView(out, content, title, description) {
 }
 
 /**
- * 读取 Ember 的最新发布版本：版本号与程序文件名取自升级清单 latest.json。
- * @returns {{version: string, file: string}} 最新版本
+ * 读取 Ember 的最新发布版本：版本号取自升级清单 latest.json，压缩包名按版本拼出。
+ * @returns {{version: string, zip: string}} 最新版本
  */
 function readEmberRelease() {
   const directory = join(REPO_ROOT, ...EMBER_UPDATE_DIRECTORY.split('/'));
   const manifestFile = join(directory, 'latest.json');
   if (!existsSync(manifestFile)) throw new Error(`找不到 Ember 的升级清单：${manifestFile}（先在 ember 目录运行 npm run update:publish）`);
   const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-  if (typeof manifest.version !== 'string' || typeof manifest.file !== 'string') throw new Error(`升级清单缺少 version 或 file：${manifestFile}`);
-  if (!existsSync(join(directory, manifest.file))) throw new Error(`升级清单指向的程序文件不存在：${manifest.file}`);
-  return { version: manifest.version, file: manifest.file };
+  if (typeof manifest.version !== 'string') throw new Error(`升级清单缺少 version：${manifestFile}`);
+  const zip = `Ember-${manifest.version}.zip`;
+  if (!existsSync(join(directory, zip))) throw new Error(`找不到下载用的压缩包：${zip}（先在 ember 目录运行 npm run update:publish）`);
+  return { version: manifest.version, zip };
 }
 
 /**
@@ -202,8 +203,8 @@ function homeView(content) {
       },
       download: {
         version: release.version,
-        file: release.file,
-        href: hrefFrom('index.html', `${EMBER_UPDATE_DIRECTORY}/${release.file}`)
+        file: release.zip,
+        href: encodeURI(hrefFrom('index.html', `${EMBER_UPDATE_DIRECTORY}/${release.zip}`))
       },
       links: {
         manualStart: common.href('manual/start'),

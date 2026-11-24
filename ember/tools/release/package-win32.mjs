@@ -2,7 +2,7 @@
  * ------------------------------------------------------------------------
  * 名称：package-win32.mjs
  * 说明：打发布包（npm run package:win）：先打预装插件包、构建帮助文档并写出第三方许可全文，再用开启升级的 Release 配置构建 ember-win32.exe（资源嵌进去，是单个文件），检查导入表在 Windows 7 SP1 的基线内，
- *       最后在 build/ember/release 下生成 Ember-<版本号>.exe（升级用，原样上传）与 Ember-<版本号>-学习机开发模拟器.zip（发给用户：Ember.exe、LICENSE.txt、THIRD_PARTY_NOTICES.txt，以及 roms 目录下的文件，放在 zip 内的 roms/ 中）。
+ *       最后在 build/ember/release 下生成 Ember-<版本号>.exe（升级用，原样上传）与 Ember-<版本号>-学习机开发模拟器.zip（发给用户：Ember.exe、LICENSE.txt、THIRD_PARTY_NOTICES.txt，以及 roms 目录下的文件，放在 zip 内的 roms/ 中）；下载用的 Ember-<版本号>.zip 与它内容相同。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -47,20 +47,20 @@ try {
   copyFileSync(exe, updateFile);
   const notices = join(dirname(RELEASE_BUILD_DIRECTORY), 'third-party', 'THIRD_PARTY_NOTICES.txt');
   const zipFile = join(RELEASE_BUILD_DIRECTORY, `Ember-${version}-${ZIP_LABEL}.zip`);
+  const downloadFile = join(RELEASE_BUILD_DIRECTORY, `Ember-${version}.zip`);
   const romEntries = readdirSync(ROMS_DIRECTORY, { withFileTypes: true }).map((entry) => {
     if (!entry.isFile()) throw new Error(`roms 目录里不允许有子目录：${entry.name}`);
     return { name: `roms/${entry.name}`, data: readFileSync(join(ROMS_DIRECTORY, entry.name)) };
   });
-  writeFileSync(
-    zipFile,
-    createZip([
-      { name: 'Ember.exe', data: readFileSync(exe) },
-      { name: 'LICENSE.txt', data: readFileSync(join(ROOT, 'LICENSE')) },
-      { name: 'THIRD_PARTY_NOTICES.txt', data: readFileSync(notices) },
-      ...romEntries
-    ])
-  );
-  console.log(`发布包：${updateFile}（升级用）\n发布包：${zipFile}（发给用户）`);
+  const archive = createZip([
+    { name: 'Ember.exe', data: readFileSync(exe) },
+    { name: 'LICENSE.txt', data: readFileSync(join(ROOT, 'LICENSE')) },
+    { name: 'THIRD_PARTY_NOTICES.txt', data: readFileSync(notices) },
+    ...romEntries
+  ]);
+  writeFileSync(zipFile, archive);
+  writeFileSync(downloadFile, archive);
+  console.log(`发布包：${updateFile}（升级用）\n发布包：${zipFile}（发给用户）\n下载包：${downloadFile}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

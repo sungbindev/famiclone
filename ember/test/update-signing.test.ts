@@ -48,7 +48,7 @@ describe('升级签名', () => {
   });
 
   it('先复制程序文件、最后复制清单', () => {
-    expect(planFeedFiles('0.3.0')).toEqual(['Ember-0.3.0.exe', 'latest.json']);
+    expect(planFeedFiles('0.3.0')).toEqual(['Ember-0.3.0.exe', 'Ember-0.3.0.zip', 'latest.json']);
   });
 
   it('公钥头文件与私钥一致才算对得上', () => {

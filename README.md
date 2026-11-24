@@ -44,7 +44,7 @@ npm run check:package     # 核对 .vsix 的内容
 .\build-win32.ps1            # Win32 原生外壳：安装依赖、编译 Release 版、边界与导入表检查，输出 build\ember\win32\app\Release\ember-win32.exe
 npm run win32:start          # 以开发方式启动原生外壳
 npm run win32:test           # 原生外壳的 C++ 测试（核心、控件库、应用）
-npm run package:win          # 发布打包：生成 build\ember\release\Ember-<版本>.exe（升级用）与 Ember-<版本>-学习机开发模拟器.zip（发给用户）
+npm run package:win          # 发布打包：生成 build\ember\release\Ember-<版本>.exe（升级用）与 Ember-<版本>-学习机开发模拟器.zip（发给用户），以及下载用的 Ember-<版本>.zip
 npm run core:test            # C++ 测试；-- -R <名称> 只跑匹配的用例
 npm run check                # 全部检查与测试（含 vscode:check）
 .\debug-win32.ps1             # 启动 Win32 原生外壳的开发版
@@ -90,13 +90,16 @@ npm run check                # 全部检查与测试（含 vscode:check）
    npm run update:publish -- --dry-run
    ```
 
-4. 上传，顺序是 `Ember-<版本号>.exe`、`latest.json`：
+4. 上传（复制到 `updates/ember/windows/`），顺序是 `Ember-<版本号>.exe`、`Ember-<版本号>.zip`、`latest.json`：
 
    ```powershell
    npm run update:publish
    ```
 
-发给用户的是 `build/ember/release/Ember-<版本号>-学习机开发模拟器.zip`（里面是 `Ember.exe`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt`），解压即用，不需要安装。
+5. 发给用户的 `Ember-<版本号>-学习机开发模拟器.zip` 不随上传复制，留在 `build/ember/release/`，由你手动发出。
+6. 在 `site/` 目录运行 `npm run build`，更新站点的首页与帮助页；提交并推送仓库根目录的 `index.html` 与 `site/`。
+
+发给用户的是 `build/ember/release/Ember-<版本号>-学习机开发模拟器.zip`（里面是 `Ember.exe`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt`，以及 `roms/` 目录下的 ROM 文件），解压即用，不需要安装。
 
 ## 许可证
 

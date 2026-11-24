@@ -104,7 +104,7 @@ export function HomePage({ view, landing }: { view: PageView; landing: LandingVi
           <a className="ui-button ui-button--primary" href={download.href} download={download.file}>
             <span>下载 Ember {download.version}</span>
           </a>
-          <span className="download__note">Windows 7 SP1 至 Windows 11（64 位），单个 exe 文件，双击即可运行，不需要安装。</span>
+          <span className="download__note">Windows 7 SP1 至 Windows 11（64 位），解压即用，不需要安装。</span>
         </div>
         <div className="feature-grid">
           {EMBER_FEATURES.map((feature) => (

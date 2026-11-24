@@ -3,7 +3,7 @@
 <h2 id="插件对话框">插件对话框</h2>
 <p>点“设置→mapper 插件”打开。</p>
 <ul>
-<li>顶部一行：搜索框（按名称、标识、发布者、说明筛选，不分大小写，空格不影响，搜“mmc 3”或“mmc3”都行）、搜索框右边的统计（共安装多少个插件、其中几个已启用、一共支持多少种 mapper）、来源筛选（全部来源、预装、用户安装）和“安装插件”按钮。</li>
+<li>顶部一行：搜索框（按名称、标识、发布者、说明筛选，不分大小写，空格不影响，搜“mmc 3”或“mmc3”都行）、搜索框右边的统计（共安装多少个插件、其中几个已启用、一共支持多少种 mapper）、来源筛选（全部来源、预装、用户安装、开发目录）和“安装插件”按钮。</li>
 <li>下面是插件表格：名称、版本、匹配、主机型号、来源和状态（已启用、已停用）。点一行展开它的清单摘要，再点一次收起。</li>
 <li>展开后，这一行的正下方显示这个插件的详细信息，标题行右侧是“停用”或“启用”与“卸载”按钮。</li>
 </ul>
@@ -11,11 +11,12 @@
 <ul>
 <li><strong>安装</strong>：点“安装插件”，选择 <code>.emap</code> 文件。已有同标识的用户插件时直接替换。</li>
 <li><strong>停用与启用</strong>：停用的插件不参与匹配。</li>
-<li><strong>卸载</strong>：只能卸载自己安装的插件，卸载前会询问。预装插件只能停用，“卸载”置灰。</li>
+<li><strong>卸载</strong>：只能卸载自己安装的插件，卸载前会询问。预装插件与开发目录里的插件只能停用，“卸载”置灰。</li>
 </ul>
 <p>安装与卸载成功时有通知，失败时通知会给出原因。</p>
 <h2 id="插件放在哪里">插件放在哪里</h2>
 <p>预装插件内置在 Ember 里，只读；你安装的插件放在 Ember 的用户数据目录下的插件文件夹里。</p>
 <h2 id="自己开发插件">自己开发插件</h2>
 <p>打开卡带提示找不到匹配的插件，又想让它跑起来时，可以自己写一个插件：见<a href="../plugin/index.html">插件开发手册</a>。</p>
+<p>开发时不必每次打包：在“设置→首选项”的“mapper 插件”分组里把“开发中的插件目录”指到一个文件夹，其中每个子文件夹放一个未打包的插件（里面有 <code>manifest.json</code>、<code>main.js</code>，可以有 <code>icon.png</code>）。这些插件优先于同标识的已安装插件，在插件对话框里来源显示“开发目录”。改了首选项里的目录会自动重新读取；只改了插件文件时，把这个目录先清空再重新选一次即可重新读取，也可以用调试服务的 <code>mappers.reload</code>。下次装配或硬复位时新的插件生效。</p>
 </article><nav class="doc-pager" aria-label="上一页与下一页"><a href="display-sound.html" class="doc-pager__prev"><span>上一页 · 使用说明</span>画面与声音</a><a href="preferences.html" class="doc-pager__next"><span>下一页 · 使用说明</span>首选项</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>

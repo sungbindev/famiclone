@@ -30,9 +30,9 @@ describe('generateApiReference', () => {
 
   it('请求小节有参数表、结果表、错误码与两种示例', () => {
     const runtime = page('runtime.md');
-    expect(runtime).toContain('| `frames` | `integer（1..10000000）` | 是 |');
+    expect(runtime).toContain('| `frames` | `integer（1..10000000）` | 否 |');
     expect(runtime).toContain('**错误码**：`runtime.noCartridge`、`runtime.notPowered`');
-    expect(runtime).toContain('```text\nruntime.run frames=<integer>\n```');
+    expect(runtime).toContain('```text\nruntime.run\n```');
     expect(runtime).toContain('> 只经调试服务开放');
   });
 

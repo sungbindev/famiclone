@@ -91,8 +91,8 @@ function paletteText(data: Uint8Array): string {
 /**
  * 检查：状态、内存读写、反汇编、地址解析、内存空间列表、修改 CPU 状态、调用栈、当前调色板。
  * @param context 上下文。
- * @param params what：state、memory、write、disassemble、resolve、spaces、setState、callStack、palette；其余参数见各
- *   项。
+ * @param params what：state、memory、write、disassemble、resolve、spaces、setState、
+ *   callStack、palette；其余参数见各项。
  * @returns 结果。
  */
 export async function inspect(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -248,9 +248,9 @@ export async function input(context: OperationContext, params: Record<string, un
 /**
  * 记录：start 开始、read 边记边读、stop 结束并取得文件。
  * @param context 上下文。
- * @param params action（start、read、stop）、kind（instruction、io、irq、cdl、callLog）；callLog 开始时要
- *   address；跟踪开始时可给 ring（环形，满了丢弃最早的行）；read 可给 from、maxLines；
- *   read 与 stop 要 id（只有一个时可省略）。
+ * @param params action（start、read、stop）、kind（instruction、io、irq、cdl、callLog）；
+ *   callLog 开始时要 address；跟踪开始时可给 ring（环形，满了丢弃最早的行）；
+ *   read 可给 from、maxLines；read 与 stop 要 id（只有一个时可省略）。
  * @returns 开始时的编号，读到的行，或结束时的文件路径与行数。
  */
 export async function record(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {

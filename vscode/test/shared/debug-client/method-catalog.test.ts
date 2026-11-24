@@ -44,11 +44,11 @@ describe('method-catalog', () => {
   it('describeMethod 写出标志、参数、结果、错误码与示例', () => {
     const run = describeMethod(findMethod(OPENRPC_DOCUMENT, 'runtime.run')!);
     expect(run).toContain('runtime.run（只经调试服务）');
-    expect(run).toContain('frames: integer（1..10000000）');
+    expect(run).toContain('frames?: integer（1..10000000）');
     expect(run).toContain('wait?: boolean');
     expect(run).toContain('stopped?:');
     expect(run).toContain('runtime.noCartridge、runtime.notPowered');
-    expect(run).toContain('示例（命令“fcdev：调用调试请求”里输入）：runtime.run frames=<integer>');
+    expect(run).toContain('示例（命令“fcdev：调用调试请求”里输入）：runtime.run');
     expect(describeMethod(findMethod(OPENRPC_DOCUMENT, 'runtime.pause')!)).toContain('参数：\n  （无）');
   });
 });

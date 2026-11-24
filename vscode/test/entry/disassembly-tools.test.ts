@@ -56,14 +56,14 @@ beforeEach(() => {
 });
 
 describe('注册', () => {
-  it('代码里的 30 个工具都在 package.json 里声明并注册，没有多余的声明', () => {
+  it('代码里的 33 个工具都在 package.json 里声明并注册，没有多余的声明', () => {
     const { context } = setup();
     const declared = MANIFEST.contributes.languageModelTools.map((tool) => tool.name).filter((name) => !name.startsWith('fcdev_'));
     expect(new Set(ALL_TOOLS.map((spec) => spec.name))).toEqual(new Set(declared));
     expect(new Set(mockState.tools.keys())).toEqual(new Set(declared));
-    expect(declared).toHaveLength(30);
+    expect(declared).toHaveLength(33);
     expect(DISASSEMBLY_TOOLS).toHaveLength(19);
-    expect(context.subscriptions).toHaveLength(30);
+    expect(context.subscriptions).toHaveLength(33);
   });
 
   it('每个工具的声明完整：引用名与工具名相同，参数是不允许多余字段的对象，有给模型的说明', () => {
@@ -95,7 +95,7 @@ describe('注册', () => {
     const context = { subscriptions: [] as unknown[], extension: { packageJSON: { contributes: { languageModelTools: [] } } } };
     registerDisassemblyTools(context as never, { operations: { operationNames: [], run: runner.run, disassemble: vi.fn() } as never, emulator, comparer: { buildAndCompare: vi.fn() }, logger });
     expect(mockState.tools.size).toBe(0);
-    expect(logger.error).toHaveBeenCalledTimes(30);
+    expect(logger.error).toHaveBeenCalledTimes(33);
   });
 });
 

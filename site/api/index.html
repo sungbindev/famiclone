@@ -18,6 +18,10 @@
 <td>读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽</td>
 </tr>
 <tr>
+<td><code>cartridges.parseHeader</code></td>
+<td>只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机</td>
+</tr>
+<tr>
 <td><code>cartridges.eject</code></td>
 <td>取出卡带：主机随之拆除，电源状态变为断电</td>
 </tr>
@@ -198,6 +202,46 @@
 <td>删除全部断点</td>
 </tr>
 <tr>
+<td><code>inspector.updateBreakpoint</code></td>
+<td>修改断点的启用状态或条件，没有给出的项不变</td>
+</tr>
+<tr>
+<td><code>inspector.callStack</code></td>
+<td>读调用栈，最里层的在前</td>
+</tr>
+<tr>
+<td><code>inspector.profilerStart</code></td>
+<td>开始子程序统计：统计清零，之后经过的 CPU 周期按子程序与中断处理程序累计（含与不含它们调用的下层）</td>
+</tr>
+<tr>
+<td><code>inspector.profilerStop</code></td>
+<td>停止子程序统计并返回结果，结果保留到下一次 profilerStart</td>
+</tr>
+<tr>
+<td><code>inspector.profilerGet</code></td>
+<td>读子程序统计的当前结果，不停止统计</td>
+</tr>
+<tr>
+<td><code>inspector.eventsStart</code></td>
+<td>开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的</td>
+</tr>
+<tr>
+<td><code>inspector.eventsStop</code></td>
+<td>停止事件记录，已有的事件保留到下一次 eventsStart 或换卡带</td>
+</tr>
+<tr>
+<td><code>inspector.eventsGet</code></td>
+<td>读事件记录里的事件，按发生的先后排列，记录进行中与停止后都可以读</td>
+</tr>
+<tr>
+<td><code>inspector.getPalette</code></td>
+<td>读 64 个颜色号现在显示的颜色：按主机当前的 PPU（6576 模式与 FC 兼容模式各用自己的）和 $2001 的颜色强调与灰度位换算</td>
+</tr>
+<tr>
+<td><code>inspector.traceRead</code></td>
+<td>读一项正在进行的跟踪或调用记录的一段内容，不结束记录</td>
+</tr>
+<tr>
 <td><code>inspector.setState</code></td>
 <td>修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读</td>
 </tr>
@@ -247,7 +291,7 @@
 <tbody>
 <tr>
 <td><code>mappers.list</code></td>
-<td>列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先</td>
+<td>列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先</td>
 </tr>
 <tr>
 <td><code>mappers.info</code></td>
@@ -267,7 +311,7 @@
 </tr>
 <tr>
 <td><code>mappers.reload</code></td>
-<td>重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效</td>
+<td>重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效</td>
 </tr>
 </tbody>
 </table></div>
@@ -358,6 +402,10 @@
 </thead>
 <tbody>
 <tr>
+<td><code>output.setAudioMode</code></td>
+<td>设置声音的播放方式：real 按真实时间播放</td>
+</tr>
+<tr>
 <td><code>output.setVolume</code></td>
 <td>设置声音的音量与静音</td>
 </tr>
@@ -426,7 +474,11 @@
 </tr>
 <tr>
 <td><code>runtime.run</code></td>
-<td>授权运行：不限速地连续运行指定的帧数后暂停（运行中不输出声音，每帧之间照常处理输入等命令）</td>
+<td>授权运行：不限速地连续运行指定的量后暂停（运行中不输出声音，每帧之间照常处理输入等命令）</td>
+</tr>
+<tr>
+<td><code>runtime.setSpeed</code></td>
+<td>设置运行速度：percent 是相对真实速度的百分比，max 为 true 时不限速、尽快运行</td>
 </tr>
 <tr>
 <td><code>runtime.step</code></td>

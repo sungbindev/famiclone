@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // 名称：emulator-tools.ts
-// 说明：“模拟器”一组工具：emu_connect、emu_launch、emu_status、emu_load、emu_run、emu_break、
-//       emu_step、emu_inspect、emu_screen、emu_input、emu_record、emu_profile、emu_events、emu_speed。
+// 说明：“模拟器”一组工具：emu_connect、emu_launch、emu_status、emu_load、emu_run、
+//       emu_break、emu_step、emu_inspect、emu_screen、emu_input、emu_record、
+//       emu_profile、emu_events、emu_speed。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21

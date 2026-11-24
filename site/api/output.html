@@ -10,6 +10,10 @@
 </thead>
 <tbody>
 <tr>
+<td><a href="#outputsetaudiomode"><code>output.setAudioMode</code></a></td>
+<td>设置声音的播放方式：real 按真实时间播放</td>
+</tr>
+<tr>
 <td><a href="#outputsetvolume"><code>output.setVolume</code></a></td>
 <td>设置声音的音量与静音</td>
 </tr>
@@ -19,6 +23,51 @@
 </tr>
 </tbody>
 </table></div>
+<h3 id="outputsetaudiomode">output.setAudioMode</h3>
+<p>设置声音的播放方式：real 按真实时间播放；fast 不等声卡，采样直接丢弃，设备播放静音，模拟器内部的时序不变。不保存，每次启动都是 real。</p>
+<p><strong>参数</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td><code>&quot;real&quot; | &quot;fast&quot;</code></td>
+<td>是</td>
+<td>播放方式</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td><code>&quot;real&quot; | &quot;fast&quot;</code></td>
+<td>是</td>
+<td>设置之后的播放方式</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）</p>
+<p><strong>示例</strong></p>
+<p>在 VS Code 的命令“fcdev：调用调试请求”里输入：</p>
+<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>output.setAudioMode mode=&#x3C;"real" | "fast"></span></span>
+<span class="line"><span></span></span></code></pre></div>
 <h3 id="outputsetvolume">output.setVolume</h3>
 <p>设置声音的音量与静音；两个参数都可以省略，省略的保持不变。音量保存到首选项的 sound.volume，核心重启后保持；静音不保存，每次启动由 sound.startMuted 决定；变化平滑过渡，不会产生爆音。</p>
 <p><strong>参数</strong></p>

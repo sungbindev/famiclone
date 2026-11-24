@@ -125,7 +125,19 @@
 </tr>
 <tr>
 <td>断点</td>
-<td><code>inspector.addBreakpoint</code>（<code>kind=execute address=0x8000</code>）</td>
+<td><code>inspector.addBreakpoint</code>（<code>kind=execute address=0x8000</code>；还有 <code>read</code>、<code>write</code>、<code>irq</code>、<code>nmi</code>、<code>brk</code>、<code>reset</code>，后四种不给 <code>address</code>；可加 <code>condition</code>）、<code>inspector.updateBreakpoint</code>（启用、禁用、改条件）</td>
+</tr>
+<tr>
+<td>看调用栈、调色板</td>
+<td><code>inspector.callStack</code>、<code>inspector.getPalette</code></td>
+</tr>
+<tr>
+<td>统计子程序占用的周期</td>
+<td><code>inspector.profilerStart</code>，运行后 <code>inspector.profilerGet</code> 或 <code>inspector.profilerStop</code></td>
+</tr>
+<tr>
+<td>记录 PPU 与 mapper 寄存器的读写、中断的扫描位置</td>
+<td><code>inspector.eventsStart</code>，运行后 <code>inspector.eventsGet</code>，<code>inspector.eventsStop</code></td>
 </tr>
 <tr>
 <td>截图</td>
@@ -133,7 +145,7 @@
 </tr>
 <tr>
 <td>记录指令轨迹</td>
-<td><code>inspector.traceStart</code>（<code>kind=instruction file=trace.txt</code>），运行后 <code>inspector.traceStop</code>（<code>id=&lt;编号&gt;</code>）；文件用 <code>disasm_import_record</code> 导入反汇编工程</td>
+<td><code>inspector.traceStart</code>（<code>kind=instruction file=trace.txt</code>；加 <code>ring=true</code> 为环形，可用 <code>inspector.traceRead</code> 边记边读），运行后 <code>inspector.traceStop</code>（<code>id=&lt;编号&gt;</code>）；文件用 <code>disasm_import_record</code> 导入反汇编工程</td>
 </tr>
 <tr>
 <td>记录代码与数据标记</td>

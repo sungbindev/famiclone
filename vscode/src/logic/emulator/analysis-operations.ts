@@ -71,8 +71,8 @@ export async function profile(context: OperationContext, params: Record<string, 
 /**
  * PPU 与中断事件记录：start 开始，get 读取，stop 结束。
  * @param context 上下文。
- * @param params action（start、get、stop，默认 get）；start 可给 maxEvents（保留的事件数）；get 可给
- *   fromFrame、maxEvents（读取的事件数）。
+ * @param params action（start、get、stop，默认 get）；start 可给 maxEvents（保留的事件数）；
+ *   get 可给 fromFrame、maxEvents（读取的事件数）。
  * @returns start 与 stop 返回状态；get 返回事件的文字与个数、被丢弃的个数。
  */
 export async function events(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {

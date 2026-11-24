@@ -11,7 +11,7 @@
 <tbody>
 <tr>
 <td><a href="#mapperslist"><code>mappers.list</code></a></td>
-<td>列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先</td>
+<td>列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先</td>
 </tr>
 <tr>
 <td><a href="#mappersinfo"><code>mappers.info</code></a></td>
@@ -31,12 +31,12 @@
 </tr>
 <tr>
 <td><a href="#mappersreload"><code>mappers.reload</code></a></td>
-<td>重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效</td>
+<td>重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效</td>
 </tr>
 </tbody>
 </table></div>
 <h3 id="mapperslist">mappers.list</h3>
-<p>列出生效的插件：同一标识有多个来源时只列版本最高的，版本相同时用户安装的优先。</p>
+<p>列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先。</p>
 <p><strong>参数</strong></p>
 <p>（无）</p>
 <p><strong>结果</strong></p>
@@ -157,7 +157,7 @@
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>mappers.install path=&#x3C;string></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mappersuninstall">mappers.uninstall</h3>
-<p>卸载用户安装的插件；预装的插件只能停用。</p>
+<p>卸载用户安装的插件；预装的插件只能停用，开发目录里的插件从开发目录里删除它的目录。</p>
 <p><strong>参数</strong></p>
 <div class="table-wrap"><table>
 <thead>
@@ -179,7 +179,7 @@
 </table></div>
 <p><strong>结果</strong></p>
 <p>（无）</p>
-<p><strong>错误码</strong>：<code>mappers.notFound</code>、<code>mappers.bundledReadonly</code></p>
+<p><strong>错误码</strong>：<code>mappers.notFound</code>、<code>mappers.bundledReadonly</code>、<code>mappers.developmentReadonly</code></p>
 <p><strong>示例</strong></p>
 <p>在 VS Code 的命令“fcdev：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>mappers.uninstall id=&#x3C;string></span></span>
@@ -236,7 +236,7 @@
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>mappers.setEnabled id=&#x3C;string> enabled=&#x3C;boolean></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mappersreload">mappers.reload</h3>
-<p>重新读取预装目录与用户目录里的插件包，下次装配或硬复位时生效；不合格的包被跳过并写入错误日志。</p>
+<p>重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效；不合格的包或目录被跳过并写入错误日志。</p>
 <p><strong>参数</strong></p>
 <p>（无）</p>
 <p><strong>结果</strong></p>
@@ -398,9 +398,9 @@
 </tr>
 <tr>
 <td><code>source</code></td>
-<td><code>&quot;bundled&quot; | &quot;user&quot;</code></td>
+<td><code>&quot;bundled&quot; | &quot;user&quot; | &quot;development&quot;</code></td>
 <td>是</td>
-<td>来源：bundled 预装，user 用户安装</td>
+<td>来源：bundled 预装，user 用户安装，development 开发目录（首选项 mappers.developmentDirectory 指定的目录里未打包的插件）</td>
 </tr>
 <tr>
 <td><code>enabled</code></td>

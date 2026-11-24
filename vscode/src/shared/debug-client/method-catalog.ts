@@ -125,7 +125,7 @@ export function describeMethod(method: OpenRpcMethod): string {
   lines.push('', '结果：', ...(method.result.schema.properties === undefined ? [`  ${typeSummary(method.result.schema)}`] : propertyLines(method.result.schema, '  ')));
   if ((method.errors ?? []).length > 0) lines.push('', `错误码：${(method.errors ?? []).map((error) => error.message).join('、')}`);
   const example = method.params.filter((param) => param.required).map((param) => `${param.name}=<${param.schema.type === undefined ? 'json' : typeSummary(param.schema).split('（')[0]}>`);
-  lines.push('', `示例（命令“FC Dev：调用调试请求”里输入）：${method.name}${example.length === 0 ? '' : ` ${example.join(' ')}`}`);
+  lines.push('', `示例（命令“FCDEV：调用调试请求”里输入）：${method.name}${example.length === 0 ? '' : ` ${example.join(' ')}`}`);
   return lines.join('\n');
 }
 

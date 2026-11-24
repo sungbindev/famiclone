@@ -33,7 +33,7 @@
 
 ## 用调试服务验证
 
-Ember 内置的调试服务可以不靠真实游戏就验证插件：安装插件、装入卡带、读写寄存器、看窗口落在哪里、看状态值。打开方式与连接见[调试服务概述](../debug/index.md)，下面用 VS Code 扩展 FC Dev 的命令“FC Dev：调用调试请求”（请求名后写参数），见[客户端工具](../debug/clients.md)。
+Ember 内置的调试服务可以不靠真实游戏就验证插件：安装插件、装入卡带、读写寄存器、看窗口落在哪里、看状态值。打开方式与连接见[调试服务概述](../debug/index.md)，下面用 VS Code 扩展 FC Dev 的命令“FCDEV：调用调试请求”（请求名后写参数），见[客户端工具](../debug/clients.md)。
 
 ### 做一个最小的测试 ROM
 
@@ -85,7 +85,7 @@ inspector.getState module=mapper
 
 ```text
 inspector.watch path=mapper.prgBank
-监视事件 inspector.*（命令“FC Dev：监视调试事件”）
+监视事件 inspector.*（命令“FCDEV：监视调试事件”）
 ```
 
 `mapper.` 后面是清单里声明的状态名；取值变化时发 `inspector.stateChanged` 事件。运行游戏时用它观察寄存器被写成了什么。

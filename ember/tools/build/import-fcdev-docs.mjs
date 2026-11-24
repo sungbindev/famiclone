@@ -30,8 +30,8 @@ export const HELP_FCDEV_DIRECTORY = resolve(here, '..', '..', 'help', 'fcdev');
 const TEXT = {
   title: 'fcdev 开发手册',
   overview: '概述',
-  intro: 'fcdev 是 6502 兼容机（NES、小霸王学习机等）的 VS Code 扩展：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可以在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。这个扩展是 fcdev 唯一的开发环境，使用前先按“安装与入门”安装。命令“fcdev：运行”“fcdev：调试运行”与调试命令就是经 Ember 的调试服务运行与调试程序的，所以手册放在这里，直接就能查。',
-  source: '手册随 fcdev 扩展一起发布，这里是同一份内容；在 VS Code 里用命令“fcdev：打开使用文档”也能查到。',
+  intro: 'fcdev 是 6502 兼容机（NES、小霸王学习机等）的 VS Code 扩展：用 cc65 把 C 或 ca65 汇编构建成机型对应的程序，可以在模拟器里运行与调试，也能把已有程序反汇编回 ca65 源码。这个扩展是 fcdev 唯一的开发环境，使用前先按“安装与入门”安装。命令“FCDEV：运行”“FCDEV：调试运行”与调试命令就是经 Ember 的调试服务运行与调试程序的，所以手册放在这里，直接就能查。',
+  source: '手册随 fcdev 扩展一起发布，这里是同一份内容；在 VS Code 里用命令“FCDEV：打开使用文档”也能查到。',
   columns: ['手册', '内容'],
   common: '通用',
   nes: 'NES',

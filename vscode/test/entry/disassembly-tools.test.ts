@@ -188,7 +188,7 @@ describe('确认提示', () => {
       ['disasm_build', { projectDir: 'proj', buildPath: 'r' }]
     ] as const) {
       const prepared = tool(name).prepareInvocation({ input });
-      expect(prepared.confirmationMessages?.title, name).toContain('FC Dev：');
+      expect(prepared.confirmationMessages?.title, name).toContain('FCDEV：');
       expect(prepared.confirmationMessages?.message.value, name).toContain('proj');
     }
   });

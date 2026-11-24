@@ -174,7 +174,7 @@
 </ol>
 <p><code>DATA</code> 随文件原位装入，不复制；返回 DOS 时不保存也不恢复零页，原因见 <a href="syscall.html">系统调用手册</a> 第 9 节。<code>main</code> 的返回值被忽略。运行子程序（<code>sb_exec</code>）时，子程序的启动代码会重设软件栈指针并改写零页，所以 <code>sb_exec</code> 在运行前后保存、恢复零页 <code>$60</code> 到 <code>$7F</code>（见 <a href="syscall.html">系统调用手册</a> 第 9 节 V07）。</p>
 <h2 id="5-最小程序构建与运行">5. 最小程序、构建与运行</h2>
-<p>用命令“FC Dev：新建项目”创建项目（目标 <code>sb2000</code>，语言 <code>c</code> 或 <code>asm</code>），然后运行默认构建任务“FC Dev：构建”，生成 <code>build/sb2000/HELLO.EXE</code>。任务与命令见 <a href="build.html">01-构建</a>。</p>
+<p>用命令“FCDEV：新建项目”创建项目（目标 <code>sb2000</code>，语言 <code>c</code> 或 <code>asm</code>），然后运行默认构建任务“FCDEV：构建”，生成 <code>build/sb2000/HELLO.EXE</code>。任务与命令见 <a href="build.html">01-构建</a>。</p>
 <p>C 的最小程序（模板里的 <code>src/hello.c</code>）：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">#include</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> &#x3C;sb2000.h></span></span>
 <span class="line"></span>
@@ -315,7 +315,7 @@
 </ul>
 <p>随时查询接口：</p>
 <ul>
-<li>命令“FC Dev：查询 C 接口”与 Copilot 工具 <code>fcdev_api</code>：留空列出全部模块；输入函数名看完整文档；输入模块名看函数列表；输入 <code>$7B</code> 或 <code>$7B/$09</code> 看用到某个系统调用的函数；输入词按名称与说明搜索。见 <a href="build.html">01-构建</a> 第 5 节。</li>
+<li>命令“FCDEV：查询 C 接口”与 Copilot 工具 <code>fcdev_api</code>：留空列出全部模块；输入函数名看完整文档；输入模块名看函数列表；输入 <code>$7B</code> 或 <code>$7B/$09</code> 看用到某个系统调用的函数；输入词按名称与说明搜索。见 <a href="build.html">01-构建</a> 第 5 节。</li>
 <li><a href="api.html">SB2000 C 接口参考</a>是同一份文档的完整版，末尾有“系统调用覆盖表”，登记了没有封装的功能号与原因。</li>
 </ul>
 <p>不封装的内容（详见覆盖表）：文件系统内部步骤（FAT、簇链、扇区定位）、<code>$41</code> 到 <code>$44</code> 带步长的屏幕单元写入、<code>$31</code> 与 <code>$34</code> 的显存填充与 DMA 变体、<code>$66</code> 卡拉 OK、<code>$65</code> 与 <code>$6D</code> 的部分子功能、<code>$74</code> 与 <code>$75</code> 的 NMI 发送与播放列表等，需要时用 <code>sb_syscall</code> 加 <code>sb2000-symbols.h</code> 里的常量自行调用。</p>

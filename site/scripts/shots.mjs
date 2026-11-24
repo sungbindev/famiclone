@@ -22,5 +22,5 @@ export const EMBER_SHOTS = [
 /** FC Dev 扩展部分的截图。 */
 export const FCDEV_SHOTS = [
   { file: 'fcdev-editor.png', alt: 'VS Code 中打开 FC Dev 的 SB2000 示例程序 hello.c', caption: 'VS Code 里打开 FC Dev 的 SB2000 示例程序' },
-  { file: 'fcdev-build.png', alt: 'FC Dev 构建任务的输出，生成 HELLO.EXE 与磁盘镜像 HELLO.img', caption: '“FC Dev：构建”输出 HELLO.EXE 与软盘镜像 HELLO.img' }
+  { file: 'fcdev-build.png', alt: 'FC Dev 构建任务的输出，生成 HELLO.EXE 与磁盘镜像 HELLO.img', caption: '“FCDEV：构建”输出 HELLO.EXE 与软盘镜像 HELLO.img' }
 ];

@@ -10,7 +10,7 @@
 <li>两项设置每次使用时读取，改了立即生效。</li>
 </ul>
 <h2 id="2-运行">2. 运行</h2>
-<p>命令“FC Dev：运行”、任务 <code>run</code>、Copilot 工具 <code>fcdev_run</code> 先确认目标能运行、能找到 Ember，再构建并启动 Ember。目标没有运行方案时报错。</p>
+<p>命令“FCDEV：运行”、任务 <code>run</code>、Copilot 工具 <code>fcdev_run</code> 先确认目标能运行、能找到 Ember，再构建并启动 Ember。目标没有运行方案时报错。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -41,7 +41,7 @@
 <li>运行成功后输出“已启动 Ember（进程号），加载 ……”。Ember 没有“退出”请求，用完后关闭它的窗口，或按输出的进程号结束进程。</li>
 </ul>
 <h2 id="3-调试运行">3. 调试运行</h2>
-<p>命令“FC Dev：调试运行”、任务 <code>run</code> 加 <code>&quot;debug&quot;: true</code>、<code>fcdev_run</code> 的 <code>debug</code> 参数：</p>
+<p>命令“FCDEV：调试运行”、任务 <code>run</code> 加 <code>&quot;debug&quot;: true</code>、<code>fcdev_run</code> 的 <code>debug</code> 参数：</p>
 <ul>
 <li>用独立的用户数据目录（系统临时目录下的 <code>fcdev-ember/&lt;端口&gt;</code>）、<code>--debug-port=&lt;端口&gt;</code> 与随机生成的令牌启动 Ember，不带 <code>--cartridge</code>；连上调试服务后用 <code>cartridges.load</code> 载入产物，上电但不运行（<code>powerOn</code> 为真、<code>resume</code> 为假）；之后用第 4 节的调试命令继续。独立的用户数据目录让调试用的 Ember 能和平时在用的 Ember 同时运行，互不影响设置；调试实例（带 <code>--debug-port</code> 启动）不会自行升级重启，调试中途不会被打断。</li>
 <li>启动前先检查端口是否被占用，被占用就报错，不去连接，避免连到别的 Ember；启动后最多等 30 秒，等到调试服务可连接并成功载入程序，超时则结束 Ember 进程并报错；Ember 在就绪前退出时立即报错。</li>
@@ -57,23 +57,23 @@
 </thead>
 <tbody>
 <tr>
-<td>FC Dev：调用调试请求</td>
+<td>FCDEV：调用调试请求</td>
 <td>选一个请求，输入参数后调用；结果写到“输出”面板的“FC Dev 调试”</td>
 </tr>
 <tr>
-<td>FC Dev：查看调试请求说明</td>
+<td>FCDEV：查看调试请求说明</td>
 <td>选一个请求或事件，显示参数、结果、错误码与示例</td>
 </tr>
 <tr>
-<td>FC Dev：保存调试截图</td>
+<td>FCDEV：保存调试截图</td>
 <td>把当前画面保存为 PNG</td>
 </tr>
 <tr>
-<td>FC Dev：监视调试事件</td>
+<td>FCDEV：监视调试事件</td>
 <td>订阅事件并逐行写到输出，取消或连接关闭时停止</td>
 </tr>
 <tr>
-<td>FC Dev：显示调试服务地址</td>
+<td>FCDEV：显示调试服务地址</td>
 <td>显示正在运行的 Ember 的调试服务地址（令牌打码）</td>
 </tr>
 </tbody>
@@ -86,7 +86,7 @@
 <li>Copilot 的 <code>emu_*</code> 工具用同一个调试客户端，见 <a href="disasm.html">03-反汇编</a> 与扩展的 README。</li>
 </ul>
 <h3 id="41-常用操作">4.1 常用操作</h3>
-<p>下表的“请求”都用命令“FC Dev：调用调试请求”调用，括号里是参数。</p>
+<p>下表的“请求”都用命令“FCDEV：调用调试请求”调用，括号里是参数。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -141,7 +141,7 @@
 </tr>
 <tr>
 <td>截图</td>
-<td>命令“FC Dev：保存调试截图”</td>
+<td>命令“FCDEV：保存调试截图”</td>
 </tr>
 <tr>
 <td>记录指令轨迹</td>
@@ -157,11 +157,11 @@
 </tr>
 <tr>
 <td>订阅事件</td>
-<td>命令“FC Dev：监视调试事件”（如 <code>runtime.*</code>）</td>
+<td>命令“FCDEV：监视调试事件”（如 <code>runtime.*</code>）</td>
 </tr>
 </tbody>
 </table></div>
-<p>全部请求、参数与错误码用命令“FC Dev：查看调试请求说明”查看。</p>
+<p>全部请求、参数与错误码用命令“FCDEV：查看调试请求说明”查看。</p>
 <h2 id="5-限制">5. 限制</h2>
 <ul>
 <li>学习机的运行方式是自动在 SB-DOS 里输入程序名，靠固定的帧数等待 DOS 启动（开机运行 900 帧后直接按两次回车，调试服务里不限速、几秒完成）；换了别的 BIOS 或磁盘时提示的出现时间不同，就会输错位置，这时用调试运行启动，自己用调试命令操作。</li>

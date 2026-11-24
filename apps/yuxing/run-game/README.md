@@ -36,7 +36,7 @@ GAME.EXE
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“FC Dev：构建项目”选 `apps/yuxing/run-game`（或任务“FC Dev：构建”）：
+在 VS Code 里打开仓库，运行命令“FCDEV：构建项目”选 `apps/yuxing/run-game`（或任务“FCDEV：构建”）：
 
 - 产物是 `build/yuxing/GAME.EXE`。
 - `fcdev.json` 的 `diskName` 设为 `yuxing-run-game.img`，同时生成软盘镜像 `build/yuxing/yuxing-run-game.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF）；文件名须是 8.3 名字，不能有子目录。
@@ -46,7 +46,7 @@ GAME.EXE
 
 ## 在模拟器里运行
 
-设置 `fcdev.emulator.path` 指向 Ember 后，任务“FC Dev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/yuxing_v8.2-d.bin` 开机，挂载镜像，经主菜单进入 DOS 并输入 `GAME.EXE`。这套自动步骤只适用于 V8.x 的学习卡；V9.0-98 要手动进 DOS：开机后右键选中第一项，下键两次选“学DOS”，回车，动画播完后按空格，下键两次选“三.DOS系统操作”，回车，再输入 `GAME.EXE`。
+设置 `fcdev.emulator.path` 指向 Ember 后，任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/yuxing_v8.2-d.bin` 开机，挂载镜像，经主菜单进入 DOS 并输入 `GAME.EXE`。这套自动步骤只适用于 V8.x 的学习卡；V9.0-98 要手动进 DOS：开机后右键选中第一项，下键两次选“学DOS”，回车，动画播完后按空格，下键两次选“三.DOS系统操作”，回车，再输入 `GAME.EXE`。
 
 ## 原理
 

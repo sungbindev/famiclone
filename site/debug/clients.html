@@ -10,7 +10,7 @@
 <tbody>
 <tr>
 <td>调试命令</td>
-<td>在 VS Code 的命令面板里输入“FC Dev：”：显示调试服务地址、查看调试请求说明、调用调试请求、保存调试截图、监视调试事件；结果写到“输出”面板的“FC Dev 调试”</td>
+<td>在 VS Code 的命令面板里输入“FCDEV：”：显示调试服务地址、查看调试请求说明、调用调试请求、保存调试截图、监视调试事件；结果写到“输出”面板的“FC Dev 调试”</td>
 </tr>
 <tr>
 <td>Copilot 工具</td>
@@ -42,7 +42,7 @@
 </tr>
 </tbody>
 </table></div>
-<p>查找顺序：显式指定、环境变量、端点文件。端点文件里的进程已退出时视为过期，不会连接。扩展用命令“FC Dev：运行”“FC Dev：调试运行”启动的 Ember 按设置 <code>fcdev.emulator.debugPort</code> 的端口区分用户数据目录，调试命令先找它，没有再找 Ember 自己的用户数据目录。</p>
+<p>查找顺序：显式指定、环境变量、端点文件。端点文件里的进程已退出时视为过期，不会连接。扩展用命令“FCDEV：运行”“FCDEV：调试运行”启动的 Ember 按设置 <code>fcdev.emulator.debugPort</code> 的端口区分用户数据目录，调试命令先找它，没有再找 Ember 自己的用户数据目录。</p>
 <h2 id="调试命令">调试命令</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -53,23 +53,23 @@
 </thead>
 <tbody>
 <tr>
-<td>FC Dev：显示调试服务地址</td>
+<td>FCDEV：显示调试服务地址</td>
 <td>显示正在运行的 Ember 的调试服务地址（令牌打码）</td>
 </tr>
 <tr>
-<td>FC Dev：查看调试请求说明</td>
+<td>FCDEV：查看调试请求说明</td>
 <td>选一个请求或事件，显示参数、结果、错误码与示例</td>
 </tr>
 <tr>
-<td>FC Dev：调用调试请求</td>
+<td>FCDEV：调用调试请求</td>
 <td>选一个请求，输入参数后调用</td>
 </tr>
 <tr>
-<td>FC Dev：保存调试截图</td>
+<td>FCDEV：保存调试截图</td>
 <td>把当前画面保存为 PNG</td>
 </tr>
 <tr>
-<td>FC Dev：监视调试事件</td>
+<td>FCDEV：监视调试事件</td>
 <td>订阅事件并逐行写到输出，取消或连接关闭时停止</td>
 </tr>
 </tbody>

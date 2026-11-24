@@ -4,6 +4,6 @@
 
 ## 构建与运行
 
-用 VS Code 的“FC Dev：构建”任务构建，产物在 `build/sb2000/SYSCALL.EXE`。
+用 VS Code 的“FCDEV：构建”任务构建，产物在 `build/sb2000/SYSCALL.EXE`。
 
-在 Ember 的调试运行中使用（`FC Dev：运行` 的调试模式），按调试器写入的请求块执行。
+在 Ember 的调试运行中使用（`FCDEV：运行` 的调试模式），按调试器写入的请求块执行。

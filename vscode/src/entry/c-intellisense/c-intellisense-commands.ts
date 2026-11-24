@@ -37,7 +37,7 @@ const CONFIG_FILES = '**/fcdev.json';
 const DEBOUNCE_MS = 500;
 
 /** 手动同步时进度通知的标题。 */
-const PROGRESS_TITLE = 'FC Dev：同步 C/C++ 智能感知配置';
+const PROGRESS_TITLE = 'FCDEV：同步 C/C++ 智能感知配置';
 
 /** 自动同步是否开启。 */
 function isAutoSyncEnabled(): boolean {

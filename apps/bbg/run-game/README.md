@@ -36,7 +36,7 @@ GAME MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“FC Dev：构建项目”选 `apps/bbg/run-game`（或任务“FC Dev：构建”）：
+在 VS Code 里打开仓库，运行命令“FCDEV：构建项目”选 `apps/bbg/run-game`（或任务“FCDEV：构建”）：
 
 - 产物是 `build/bbg/GAME.CMD`。
 - `fcdev.json` 的 `diskImage` 指向系统盘镜像 `apps/bbg/BBGDOS.IMG`，`fcdev.json` 的 `diskName` 设为 `bbg-run-game.img`，同时生成软盘镜像 `build/bbg/bbg-run-game.img`：系统盘的全部内容加上 `GAME.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
@@ -46,7 +46,7 @@ GAME MARIO.NES
 
 ## 在模拟器里运行
 
-设置 `fcdev.emulator.path` 指向 Ember 后，任务“FC Dev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
+设置 `fcdev.emulator.path` 指向 Ember 后，任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
 
 ## 原理
 

@@ -15,7 +15,7 @@
 - `disasm_status`：查看进度与校验结果。
 - `disasm_generate`：由 `disasm.json` 生成 `src/`、`include/` 与 `link.cfg`。
 - `disasm_verify`：重新汇编链接并与原映像比较。
-- FC Dev 构建：目录里有 `fcdev.json`（`rom` 目标，直接使用 `link.cfg`），用任务“FC Dev：构建”或 `fcdev_build` 构建，产物 `build/rom/sb97.bin`（1048576 字节）与 `ember/roms/sb97.bin` 逐字节一致。
+- FC Dev 构建：目录里有 `fcdev.json`（`rom` 目标，直接使用 `link.cfg`），用任务“FCDEV：构建”或 `fcdev_build` 构建，产物 `build/rom/sb97.bin`（1048576 字节）与 `ember/roms/sb97.bin` 逐字节一致。
 
 ## 目录
 

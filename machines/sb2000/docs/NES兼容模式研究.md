@@ -118,7 +118,7 @@
 ## 8. 复现步骤
 
 ```powershell
-# 在 VS Code 里用命令“FC Dev：构建项目”构建 apps/sb2000/examples/play
+# 在 VS Code 里用命令“FCDEV：构建项目”构建 apps/sb2000/examples/play
 Copy-Item <仓库根目录>/apps/sb2000/examples/play/build/sb2000/PLAY.EXE out/sdk-test/PLAY.EXE
 Copy-Item <游戏文件> out/sdk-test/MARIO.NES        # 文件名要符合 8.3
 # 把 out/sdk-test 里的文件做成软盘镜像，

@@ -34,7 +34,7 @@ GAME MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“FC Dev：构建项目”选 `apps/sb97/run-game`（或任务“FC Dev：构建”）：
+在 VS Code 里打开仓库，运行命令“FCDEV：构建项目”选 `apps/sb97/run-game`（或任务“FCDEV：构建”）：
 
 - 产物是 `build/sb97/GAME.EXE`（32768 字节）。
 - `fcdev.json` 的 `diskName` 设为 `sb97-run-game.img`，同时生成软盘镜像 `build/sb97/sb97-run-game.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
@@ -44,7 +44,7 @@ GAME MARIO.NES
 
 ## 在模拟器里运行
 
-任务“FC Dev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.bin` 开机，挂载镜像，进入 DOS 并输入 `game`（不带参数，显示游戏菜单）。要运行带参数的游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `GAME MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
+任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.bin` 开机，挂载镜像，进入 DOS 并输入 `game`（不带参数，显示游戏菜单）。要运行带参数的游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `GAME MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
 
 ## 原理
 

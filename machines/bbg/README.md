@@ -10,7 +10,7 @@
 - `targetOptions`：`machine` 为 `bbg1`，`offset` 为 114688（BIOS 在固件里的偏移），`size` 为 131072。
 - `diskImage`：运行时放进软驱的系统盘 `DOS.IMG`。
 
-任务“FC Dev：构建”（构建路径 `src`）生成 `build/rom/bbg.bin`（131072 字节），任务“FC Dev：运行”在 Ember 里以它为 `bbg1` 的固件开机。
+任务“FCDEV：构建”（构建路径 `src`）生成 `build/rom/bbg.bin`（131072 字节），任务“FCDEV：运行”在 Ember 里以它为 `bbg1` 的固件开机。
 
 手动构建 BIOS 部分（工具链在 FC Dev 扩展的 `toolchain/bin` 下，在本目录运行）：
 

@@ -90,7 +90,7 @@
 </tbody>
 </table></div>
 <h2 id="用调试服务验证">用调试服务验证</h2>
-<p>Ember 内置的调试服务可以不靠真实游戏就验证插件：安装插件、装入卡带、读写寄存器、看窗口落在哪里、看状态值。打开方式与连接见<a href="../debug/index.html">调试服务概述</a>，下面用 VS Code 扩展 FC Dev 的命令“FC Dev：调用调试请求”（请求名后写参数），见<a href="../debug/clients.html">客户端工具</a>。</p>
+<p>Ember 内置的调试服务可以不靠真实游戏就验证插件：安装插件、装入卡带、读写寄存器、看窗口落在哪里、看状态值。打开方式与连接见<a href="../debug/index.html">调试服务概述</a>，下面用 VS Code 扩展 FC Dev 的命令“FCDEV：调用调试请求”（请求名后写参数），见<a href="../debug/clients.html">客户端工具</a>。</p>
 <h3 id="做一个最小的测试-rom">做一个最小的测试 ROM</h3>
 <p>文件头的 mapper 号和变体决定匹配哪个插件，所以测试时可以自己做一个空的 ROM：程序区每个 16K 的 bank 开头填上 bank 号，之后读 <code>$8000</code> 就知道现在映射的是哪一块。用 Node 生成（NES 2.0 文件头，mapper 号可以超过 255）：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">import</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> { writeFileSync } </span><span style="color:#D73A49;--shiki-dark:#F97583">from</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'node:fs'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
@@ -131,7 +131,7 @@
 <p><code>inspector.readMemory</code> 读内存不会触发寄存器的回调，需要看卡带存储区的内容时，先用 <code>inspector.listSpaces</code> 查空间标识（卡带的存储区是 <code>cart.&lt;存储区标识&gt;</code>）。</p>
 <h3 id="监视状态的变化">监视状态的变化</h3>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>inspector.watch path=mapper.prgBank</span></span>
-<span class="line"><span>监视事件 inspector.*（命令“FC Dev：监视调试事件”）</span></span>
+<span class="line"><span>监视事件 inspector.*（命令“FCDEV：监视调试事件”）</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <p><code>mapper.</code> 后面是清单里声明的状态名；取值变化时发 <code>inspector.stateChanged</code> 事件。运行游戏时用它观察寄存器被写成了什么。</p>
 <h3 id="改了插件之后">改了插件之后</h3>

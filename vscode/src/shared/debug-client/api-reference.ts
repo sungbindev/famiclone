@@ -57,7 +57,7 @@ function methodSection(method: OpenRpcMethod): string[] {
   const errors = (method.errors ?? []).map((error) => `\`${error.message}\``);
   lines.push(`**错误码**：${errors.length === 0 ? '无专有错误码（参数不合格返回 `core.invalidParams`）' : errors.join('、')}`, '');
   const required = method.params.filter((param) => param.required).map((param) => `${param.name}=<${param.schema.type === undefined ? 'json' : typeSummary(param.schema).split('（')[0]}>`);
-  lines.push('**示例**', '', '在 VS Code 的命令“FC Dev：调用调试请求”里输入：', '', '```text', `${method.name}${required.length === 0 ? '' : ` ${required.join(' ')}`}`, '```', '');
+  lines.push('**示例**', '', '在 VS Code 的命令“FCDEV：调用调试请求”里输入：', '', '```text', `${method.name}${required.length === 0 ? '' : ` ${required.join(' ')}`}`, '```', '');
   return lines;
 }
 

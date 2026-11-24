@@ -84,7 +84,7 @@ function createTask(label: string, command: string, extra: Record<string, unknow
  * @returns 文件文本。
  */
 export function buildTasksText(): string {
-  const tasks = [createTask('FC Dev：构建', 'build', { group: { kind: 'build', isDefault: true } }), createTask('FC Dev：运行', 'run')];
+  const tasks = [createTask('FCDEV：构建', 'build', { group: { kind: 'build', isDefault: true } }), createTask('FCDEV：运行', 'run')];
   return `${JSON.stringify({ version: '2.0.0', tasks }, null, 2)}\n`;
 }
 

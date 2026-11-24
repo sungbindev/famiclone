@@ -31,8 +31,8 @@ export function describeRunResult(result: RunSummary): string {
   if (result.debug) {
     lines.push(
       result.firmwareDisk
-        ? `调试模式：端口 ${result.port ?? '未知'}，固件已加载、磁盘已放入软驱、整机已开机，但没有运行；程序要在 SB-DOS 里输入程序名才会运行。继续操作用 emu_connect 连接，或命令“FC Dev：调用调试请求”。`
-        : `调试模式：端口 ${result.port ?? '未知'}，程序已载入并上电，但没有运行。继续操作用 emu_connect 连接，或命令“FC Dev：调用调试请求”。`
+        ? `调试模式：端口 ${result.port ?? '未知'}，固件已加载、磁盘已放入软驱、整机已开机，但没有运行；程序要在 SB-DOS 里输入程序名才会运行。继续操作用 emu_connect 连接，或命令“FCDEV：调用调试请求”。`
+        : `调试模式：端口 ${result.port ?? '未知'}，程序已载入并上电，但没有运行。继续操作用 emu_connect 连接，或命令“FCDEV：调用调试请求”。`
     );
   }
   return lines.join('\n');

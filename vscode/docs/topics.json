@@ -14,7 +14,7 @@
     { "topic": "examples", "file": "targets/sb2000/examples-source.md", "root": "extension", "title": "SB2000 示例程序源码", "summary": "手册里提到的示例程序（hello、show、copy、pad、mouse、play 等）的完整源码，由示例项目生成" },
     { "topic": "syscall", "file": "sb2000/02-系统调用手册.md", "title": "SB-DOS 系统调用手册", "summary": "系统调用的参数、结果、出错码与可靠程度" },
     { "topic": "hardware", "file": "sb2000/03-硬件说明.md", "title": "SB2000 硬件说明", "summary": "SB2000 的硬件行为与寄存器" },
-    { "topic": "api", "file": "targets/sb2000/api-reference.md", "root": "extension", "title": "SB2000 C 接口参考", "summary": "运行库全部函数的签名、参数、返回值与系统调用，由头文件文档注释生成，查询用命令“FC Dev：查询 C 接口”" },
+    { "topic": "api", "file": "targets/sb2000/api-reference.md", "root": "extension", "title": "SB2000 C 接口参考", "summary": "运行库全部函数的签名、参数、返回值与系统调用，由头文件文档注释生成，查询用命令“FCDEV：查询 C 接口”" },
     { "topic": "symbols", "file": "targets/sb2000/symbols-reference.md", "root": "extension", "title": "SB2000 符号参考", "summary": "功能号、子功能号、系统变量地址、出错码、硬件寄存器与位、运行库入口的汇编名与 C 名，由 sb2000.inc 生成" }
   ]
 }

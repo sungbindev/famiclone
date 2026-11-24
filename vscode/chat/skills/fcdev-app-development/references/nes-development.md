@@ -77,7 +77,7 @@ int main(void)
 
 ## 运行与验证
 
-- 运行任务“FC Dev：运行”（或工具 `fcdev_run`）在模拟器里打开 `.nes`，不需要固件；Ember 的位置由用户在设置 `fcdev.emulator.path` 里指定。
+- 运行任务“FCDEV：运行”（或工具 `fcdev_run`）在模拟器里打开 `.nes`，不需要固件；Ember 的位置由用户在设置 `fcdev.emulator.path` 里指定。
 - 自动核对：按 [run-and-verify.md](run-and-verify.md) 的“核对清单：NES”做，模板应显示 `HELLO, NES!`。
 - 手柄按键用 `emu_input` 的 `kind: "pad"` 注入（1=A、2=B、4=选择、8=开始、16=上、32=下、64=左、128=右），用法见 skill `ember-emulator`。
 - 已有 `.nes` 要读懂时用 skill `disassemble-6502`（内置支持 NROM 等常见映射器）。

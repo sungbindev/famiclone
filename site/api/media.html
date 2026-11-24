@@ -132,7 +132,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noDrive</code>、<code>media.fileNotFound</code>、<code>media.fileUnreadable</code>、<code>media.imageInvalid</code>、<code>media.saveFailed</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.floppyInsert drive=&#x3C;integer> path=&#x3C;string></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediafloppyeject">media.floppyEject</h3>
@@ -177,7 +177,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noDrive</code>、<code>media.saveFailed</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.floppyEject drive=&#x3C;integer></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediafloppysave">media.floppySave</h3>
@@ -222,7 +222,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noDrive</code>、<code>media.noDisk</code>、<code>media.saveFailed</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.floppySave drive=&#x3C;integer></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediafloppywriteprotect">media.floppyWriteProtect</h3>
@@ -273,7 +273,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noDrive</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.floppyWriteProtect drive=&#x3C;integer> writeProtected=&#x3C;boolean></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediafloppystatus">media.floppyStatus</h3>
@@ -301,7 +301,7 @@
 </table></div>
 <p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）</p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.floppyStatus</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediafloppyfault">media.floppyFault</h3>
@@ -367,7 +367,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noDrive</code>、<code>media.sectorRequired</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.floppyFault drive=&#x3C;integer> fault=&#x3C;"ejected" | "writeProtected" | "noIndex" | "seekFail" | "unresponsive" | "badSector" | "clear"></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediaprinterstatus">media.printerStatus</h3>
@@ -395,7 +395,7 @@
 </table></div>
 <p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）</p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.printerStatus</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediaprinterflush">media.printerFlush</h3>
@@ -423,7 +423,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noMachine</code>、<code>media.noPrinter</code>、<code>media.printerEmpty</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.printerFlush</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapeload">media.tapeLoad</h3>
@@ -471,7 +471,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.tapeBusy</code>、<code>media.fileNotFound</code>、<code>media.fileUnreadable</code>、<code>media.tapeUnsupported</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeLoad path=&#x3C;string></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapeeject">media.tapeEject</h3>
@@ -499,7 +499,7 @@
 </table></div>
 <p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）</p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeEject</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapeplay">media.tapePlay</h3>
@@ -527,7 +527,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noTape</code>、<code>media.tapeNotConnected</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapePlay</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediataperecord">media.tapeRecord</h3>
@@ -575,7 +575,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.tapeBusy</code>、<code>media.tapeNotConnected</code>、<code>media.saveFailed</code>、<code>media.noTape</code>、<code>media.tapeNotWritable</code>、<code>media.fileNotFound</code>、<code>media.fileUnreadable</code>、<code>media.tapeUnsupported</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeRecord</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapestop">media.tapeStop</h3>
@@ -603,7 +603,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.fileUnreadable</code>、<code>media.tapeUnsupported</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeStop</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapestatus">media.tapeStatus</h3>
@@ -631,7 +631,7 @@
 </table></div>
 <p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）</p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeStatus</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapeseek">media.tapeSeek</h3>
@@ -676,7 +676,7 @@
 </table></div>
 <p><strong>错误码</strong>：<code>media.noTape</code>、<code>media.tapeBusy</code></p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeSeek position=&#x3C;number></span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h3 id="mediatapetimeline">media.tapeTimeline</h3>
@@ -704,7 +704,7 @@
 </table></div>
 <p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）</p>
 <p><strong>示例</strong></p>
-<p>在 VS Code 的命令“FC Dev：调用调试请求”里输入：</p>
+<p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>media.tapeTimeline</span></span>
 <span class="line"><span></span></span></code></pre></div>
 <h2 id="事件">事件</h2>

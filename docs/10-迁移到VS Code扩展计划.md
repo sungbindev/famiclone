@@ -186,7 +186,7 @@ vscode/
 
 | 现有能力 | 扩展中的提供方式 |
 | --- | --- |
-| `npm create fcdev` | 命令“FC Dev：新建项目”（选目标、语言、空目录）、工具 `fcdev_new_project` |
+| `npm create fcdev` | 命令“FCDEV：新建项目”（选目标、语言、空目录）、工具 `fcdev_new_project` |
 | `fcdev build [路径]` | 任务类型 `fcdev`（`command` 为 `build`，可给 `path`）、命令“构建项目”“构建当前文件”“构建当前目录”、工具 `fcdev_build`；问题匹配器 `$fcdev` 识别 `文件(行): Error: 信息` |
 | `fcdev disk [路径]` | 任务 `command` 为 `disk`、命令“构建磁盘镜像”、工具 `fcdev_build` 的 `disk` 参数 |
 | `fcdev run [路径]`、`--debug`、`--port` | 任务 `command` 为 `run`（`debug` 参数）、命令“运行”“调试运行”、工具 `fcdev_run`；端口来自设置 |
@@ -348,12 +348,12 @@ vscode/
 
 阶段 2 的测试位置：根 `test/` 里测试生成脚本与工具链的 6 个文件移到 `vscode/tools/test/`，由 `npm run test:tools` 运行（已并入 `npm run check`）；`gen:docs` 重新生成四份 SB2000 生成文档。
 
-阶段 3 的补充：反汇编测试移成 `test/shared|logic/disassembly`（需要 cc65 的用例没有工具链时跳过）；命令“FC Dev：反汇编映像文件”（`fcdev.disassemble`）选映像与输出目录，平铺二进制缺加载地址或入口时再询问。
+阶段 3 的补充：反汇编测试移成 `test/shared|logic/disassembly`（需要 cc65 的用例没有工具链时跳过）；命令“FCDEV：反汇编映像文件”（`fcdev.disassemble`）选映像与输出目录，平铺二进制缺加载地址或入口时再询问。
 
 阶段 4 的补充：
 
 - 设置 `fcdev.emulator.path`（Ember 位置）与 `fcdev.emulator.debugPort`（默认 5699），作用域都是 `machine`；没有设置位置时运行类操作报错并说明设置项，命令“运行”“调试运行”还给“打开设置”按钮。
-- 新增命令“FC Dev：运行”“FC Dev：调试运行”（任务 `command: run`，`debug` 为真是调试运行）、工具 `fcdev_run`；调试客户端做成 5 个命令：调用调试请求、查看调试请求说明、保存调试截图、监视调试事件、显示调试服务地址，结果写到“FC Dev 调试”输出通道。
+- 新增命令“FCDEV：运行”“FCDEV：调试运行”（任务 `command: run`，`debug` 为真是调试运行）、工具 `fcdev_run`；调试客户端做成 5 个命令：调用调试请求、查看调试请求说明、保存调试截图、监视调试事件、显示调试服务地址，结果写到“FC Dev 调试”输出通道。
 - 调试协议的接口文档与类型由 Ember 的 `npm run schema` 写到 `vscode/debug/openrpc.json` 与 `vscode/src/contracts/debug-client/generated/api.ts`；`ember` 的 `vscode:check` 取代 `debug-sdk:check`；帮助文档的协议参考由 `vscode/tools/gen/gen-debug-api-docs.mjs` 生成；开发脚本的调试请求经 `ember/tools/dev/debug-call.mjs` 引用 `vscode/out`。
 - 真实 Ember 的用例在 `test/real-emulator`，用环境变量 `FCDEV_TEST_EMULATOR` 指向 Ember 的可执行文件（固件用 `FCDEV_TEST_FIRMWARE`，没有时用 `ember/roms/sb2000_bios.bin`），缺 Ember、cc65 或固件时跳过，`FCDEV_SKIP_GUI_TESTS=1` 也跳过。
 

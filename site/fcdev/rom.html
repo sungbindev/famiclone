@@ -116,7 +116,7 @@
 <li>源码覆盖整块固件时（例如整机的反汇编工程），不写 <code>firmware</code>，<code>offset</code> 保持 0，用 <code>size</code> 要求大小正好相等。</li>
 </ul>
 <h2 id="4-构建">4. 构建</h2>
-<p>和其他目标一样：任务“FC Dev：构建”、命令“构建项目”、工具 <code>fcdev_build</code>。构建路径取项目的 <code>src</code> 目录，目录里递归收集的全部 <code>.s</code>、<code>.asm</code> 汇编后一起链接；汇编的符号文件（<code>.inc</code>）不会被收集，用 <code>include</code> 指定它所在的目录，源码里再 <code>.include</code>。</p>
+<p>和其他目标一样：任务“FCDEV：构建”、命令“构建项目”、工具 <code>fcdev_build</code>。构建路径取项目的 <code>src</code> 目录，目录里递归收集的全部 <code>.s</code>、<code>.asm</code> 汇编后一起链接；汇编的符号文件（<code>.inc</code>）不会被收集，用 <code>include</code> 指定它所在的目录，源码里再 <code>.include</code>。</p>
 <p>示例（步步高 <code>bbg1</code>，<code>machines/bbg/fcdev.json</code>）：</p>
 <div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  "target"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"rom"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
@@ -130,7 +130,7 @@
 <span class="line"></span></code></pre></div>
 <p><code>114688</code> 是 128K 减 16K，也就是 BIOS 在固件里的偏移。产物是 <code>build/rom/bbg.bin</code>，共 131072 字节。</p>
 <h2 id="5-运行">5. 运行</h2>
-<p>任务“FC Dev：运行”、命令“运行”、工具 <code>fcdev_run</code>：</p>
+<p>任务“FCDEV：运行”、命令“运行”、工具 <code>fcdev_run</code>：</p>
 <ol>
 <li>构建，得到整块固件。</li>
 <li>启动 Ember 并经调试服务依次：<code>machines.setRom</code>（把产物设为 <code>machine</code> 机型的固件）、<code>machines.boot</code>（上电）、<code>diskImage</code> 有值时 <code>media.floppyInsert</code>（放进软驱 0）。</li>

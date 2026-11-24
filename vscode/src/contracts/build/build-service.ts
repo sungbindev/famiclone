@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：build-service.ts
-// 说明：构建服务的接口：解析构建路径、构建程序（配置了 diskName 时同时生成磁盘镜像）、单独生成磁盘镜像。
+// 说明：构建服务的接口：解析路径、构建程序（配置了 diskName 时生成镜像）、单独生成镜像。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -41,7 +41,7 @@ export interface BuildService {
   build(input: BuildInput, reporter?: BuildReporter): Promise<BuildOutcome>;
 
   /**
-   * 把已构建的程序与项目 disk 目录下的文件放进磁盘镜像，不看有没有配置 diskName（没有配置时放在中间文件目录）；
+   * 把程序与 disk 目录文件放进磁盘镜像，未配置 diskName 时放在中间文件目录；
    * 运行需要镜像而构建没有生成时用。
    * @param outcome 构建的计划与结果。
    * @returns 镜像路径与大小。

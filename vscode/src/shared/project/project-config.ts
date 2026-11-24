@@ -43,7 +43,7 @@ export interface ProjectConfig {
   readonly outDir: string;
   /** 是否优化。 */
   readonly optimize: boolean;
-  /** 构建时生成的磁盘镜像文件名（已补 .img）；没有设置时构建不生成镜像。只对有磁盘能力的目标有效。 */
+  /** 磁盘镜像文件名（已补 .img），只对有磁盘能力的目标有效；没有设置时不生成镜像。 */
   readonly diskName: string | undefined;
   /** 预定义宏。 */
   readonly define: Readonly<Record<string, string | number>>;

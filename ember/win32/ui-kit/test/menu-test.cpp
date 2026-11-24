@@ -371,7 +371,7 @@ TEST(Menu, MenuItemTextAppendsTheMnemonicInUpperCase) {
   EXPECT_EQ(menuItemText(MenuItem{.label = "文件"}), "文件");
 }
 
-TEST(Menu, ASubmenuThatFitsNeitherSideIsNarrowedBesideTheParentInsteadOfCoveringIt) {
+TEST(Menu, ASubmenuThatFitsNeitherSideCoversPartOfTheParentAndIsNarrowed) {
   Root root{ThemeName::Dark, 1.0};
   auto holder = std::make_unique<Holder>();
   auto menuBar = std::make_unique<MenuBar>();
@@ -396,8 +396,10 @@ TEST(Menu, ASubmenuThatFitsNeitherSideIsNarrowedBesideTheParentInsteadOfCovering
   root.mouseMove(Point{parentItem.x + parentItem.width / 2, parentItem.y + parentItem.height / 2}, 0);
   MenuPopup* sub = bar->popup()->sub();
   ASSERT_NE(sub, nullptr);
-  // 子菜单紧挨着父菜单的右边，不盖在它上面，也不超出窗口
-  EXPECT_GE(sub->bounds().x, bar->popup()->bounds().right() - 5.0);
+  // 子菜单盖住父菜单的右边一部分，父菜单左侧仍露出至少 40，右边不超出窗口，宽度被缩窄
+  const Rect parentBox = bar->popup()->bounds();
+  EXPECT_LT(sub->bounds().x, parentBox.right());
+  EXPECT_GE(sub->bounds().x, parentBox.x + 40.0);
   EXPECT_LE(sub->bounds().right(), 400.0 - 8.0 + 0.001);
   EXPECT_GE(sub->bounds().width, 120.0);
 }

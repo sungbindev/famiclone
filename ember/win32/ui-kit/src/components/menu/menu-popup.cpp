@@ -26,6 +26,8 @@ constexpr double kPopupGap = 2.0;
 constexpr double kViewportMargin = 8.0;
 /** 子菜单两侧都放不下、要缩窄时的最小宽度。 */
 constexpr double kMinimumSubmenuWidth = 120.0;
+/** 子菜单盖住父菜单时，父菜单左侧至少露出的宽度（从父项的左边算起）。 */
+constexpr double kParentVisibleWidth = 40.0;
 /** 提示或快捷键文字与名称之间至少留的距离。 */
 constexpr double kMinimumTrailingGap = tokens::space_md;
 constexpr double kIconTextGap = tokens::icon_text_gap;
@@ -134,10 +136,10 @@ void MenuPopup::placeBeside(const Rect& parentItem) {
   } else if (size.width <= roomLeft) {
     left = parentItem.x - size.width;
   } else {
-    // 两侧都放不下：选空间大的一侧并把宽度缩到这一侧的空间，不盖在父菜单上（文字放不下的部分用省略号）
-    const bool useRight = roomRight >= roomLeft;
-    width = std::max(std::min(size.width, useRight ? roomRight : roomLeft), kMinimumSubmenuWidth);
-    left = useRight ? parentItem.right() : parentItem.x - width;
+    // 两侧都放不下：向左滑到窗口右边缘，盖住父菜单的一部分，但父菜单左侧至少露出 kParentVisibleWidth；还放不下就缩窄（名称放不下的部分用省略号）
+    const double maxRight = viewport.width - kViewportMargin;
+    left = std::max(parentItem.x + kParentVisibleWidth, maxRight - size.width);
+    width = std::max(std::min(size.width, maxRight - left), kMinimumSubmenuWidth);
   }
   const double top = std::max(kViewportMargin, std::min(parentItem.y, viewport.height - kViewportMargin - height));
   arrange(Rect{std::max(kViewportMargin, left), top, width, height});
@@ -331,7 +333,11 @@ void MenuPopup::paint(Canvas& canvas) {
     const double rightEdge = row.right() - tokens::menu_item_padding_right;
     const std::string label = menuItemText(item);
     const double labelWidth = host()->measureText(label, textStyle(kTransparent), 0).width;
-    canvas.drawText(label, Rect{labelX, row.y, std::max(0.0, rightEdge - labelX), row.height}, textStyle(color), VerticalAlign::Center);
+    // 子菜单项的名称不压到右侧的箭头上；放不下时用省略号结尾
+    const double labelRoom = std::max(0.0, rightEdge - (item.items.empty() ? 0.0 : tokens::icon_size + kMinimumTrailingGap) - labelX);
+    TextStyle labelStyle = textStyle(color);
+    if (labelWidth > labelRoom) labelStyle.overflow = TextOverflow::Ellipsis;
+    canvas.drawText(label, Rect{labelX, row.y, labelRoom, row.height}, labelStyle, VerticalAlign::Center);
     if (!item.items.empty()) {
       canvas.drawIcon(IconId::ChevronRight, Rect{rightEdge - tokens::icon_size, row.y + (row.height - tokens::icon_size) / 2.0, tokens::icon_size, tokens::icon_size}, color, tokens::icon_stroke_width);
     } else if (const std::string& trailing = !item.shortcut.empty() ? item.shortcut : item.hint; !trailing.empty()) {

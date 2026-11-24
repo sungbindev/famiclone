@@ -52,7 +52,7 @@ function Shot({ shot, className }: { shot: ShotView; className?: string }) {
  * @param props 视图与首页内容。
  */
 export function HomePage({ view, landing }: { view: PageView; landing: LandingView }) {
-  const { links, counts } = landing;
+  const { links, counts, download } = landing;
   const total = counts.manual + counts.plugin + counts.debug + counts.fcdev;
   return (
     <div className="home">
@@ -64,7 +64,10 @@ export function HomePage({ view, landing }: { view: PageView; landing: LandingVi
             Ember 运行 NES 卡带与学习机整机，带有调试服务、断点、单步与截图。FC Dev 是配套的 VS Code 扩展，用 cc65 把 C 或汇编构建成程序，并在 Ember 里运行与调试。
           </p>
           <div className="hero__actions">
-            <a className="ui-button ui-button--primary" href={links.manualStart}>
+            <a className="ui-button ui-button--primary" href={download.href} download={download.file}>
+              <span>下载 Ember {download.version}</span>
+            </a>
+            <a className="ui-button ui-button--secondary" href={links.manualStart}>
               <span>快速开始</span>
             </a>
             <a className="ui-button ui-button--secondary" href={links.fcdevStart}>
@@ -97,6 +100,12 @@ export function HomePage({ view, landing }: { view: PageView; landing: LandingVi
             Ember 是 FC 与学习机的模拟器。NES 卡带靠 mapper 插件描述映射，学习机按整机机型运行，两者共用同一套调试服务。
           </p>
         </header>
+        <div className="download">
+          <a className="ui-button ui-button--primary" href={download.href} download={download.file}>
+            <span>下载 Ember {download.version}</span>
+          </a>
+          <span className="download__note">Windows 7 SP1 至 Windows 11（64 位），单个 exe 文件，双击即可运行，不需要安装。</span>
+        </div>
         <div className="feature-grid">
           {EMBER_FEATURES.map((feature) => (
             <Panel key={feature.title} as="div" title={feature.title} className="feature">

@@ -35,6 +35,8 @@ const ASSETS_DIR = `${SITE_DIR}/assets`;
 const STYLE_FILE = 'site.css';
 /** 站点的 GitHub 仓库。 */
 const REPOSITORY_URL = 'https://github.com/sungbindev/famiclone';
+/** Ember 的升级目录（相对仓库根目录）：update:publish 把程序文件与 latest.json 放在这里，首页的下载地址也指向这里。 */
+const EMBER_UPDATE_DIRECTORY = 'updates/ember/windows';
 /** 各分区的首页（用于清理旧页面）。 */
 const SECTION_DIRECTORIES = ['manual', 'plugin', 'debug', 'api', 'fcdev'];
 /** FC Dev 的参考文档生成脚本（先于手册导入运行）。 */
@@ -161,6 +163,20 @@ function commonView(out, content, title, description) {
 }
 
 /**
+ * 读取 Ember 的最新发布版本：版本号与程序文件名取自升级清单 latest.json。
+ * @returns {{version: string, file: string}} 最新版本
+ */
+function readEmberRelease() {
+  const directory = join(REPO_ROOT, ...EMBER_UPDATE_DIRECTORY.split('/'));
+  const manifestFile = join(directory, 'latest.json');
+  if (!existsSync(manifestFile)) throw new Error(`找不到 Ember 的升级清单：${manifestFile}（先在 ember 目录运行 npm run update:publish）`);
+  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
+  if (typeof manifest.version !== 'string' || typeof manifest.file !== 'string') throw new Error(`升级清单缺少 version 或 file：${manifestFile}`);
+  if (!existsSync(join(directory, manifest.file))) throw new Error(`升级清单指向的程序文件不存在：${manifest.file}`);
+  return { version: manifest.version, file: manifest.file };
+}
+
+/**
  * 首页的视图。
  * @param {object} content 站点内容
  * @returns {object} 视图
@@ -169,6 +185,7 @@ function homeView(content) {
   const common = commonView('index.html', content, 'Ember 与 FC Dev', 'Ember 模拟器与 FC Dev 开发工具：NES 与学习机的运行、调试，以及 VS Code 扩展与帮助文档。');
   const shot = (item) => ({ src: hrefFrom('index.html', `${ASSETS_DIR}/shots/${item.file}`), alt: item.alt, caption: item.caption });
   const sectionCount = (id) => content.sections.find((section) => section.id === id).groups.reduce((sum, group) => sum + group.pages.length, 0);
+  const release = readEmberRelease();
   return {
     ...common,
     kind: 'home',
@@ -182,6 +199,11 @@ function homeView(content) {
         plugin: sectionCount('plugin'),
         debug: sectionCount('debug'),
         fcdev: sectionCount('fcdev')
+      },
+      download: {
+        version: release.version,
+        file: release.file,
+        href: hrefFrom('index.html', `${EMBER_UPDATE_DIRECTORY}/${release.file}`)
       },
       links: {
         manualStart: common.href('manual/start'),

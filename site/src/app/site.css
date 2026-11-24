@@ -385,6 +385,19 @@ html {
   margin-top: 36px;
 }
 
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin: 0 0 36px;
+}
+
+.download__note {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
 .section-links {
   display: flex;
   flex-wrap: wrap;

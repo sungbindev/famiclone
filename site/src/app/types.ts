@@ -63,12 +63,20 @@ export interface DocView {
   next?: PagerItem;
 }
 
-/** 首页的内容：截图、页数与各处的链接。 */
+/** Ember 的下载地址：最新版本号、程序文件名与相对当前页面的地址。 */
+export interface DownloadView {
+  version: string;
+  file: string;
+  href: string;
+}
+
+/** 首页的内容：截图、页数、下载地址与各处的链接。 */
 export interface LandingView {
   hero: ShotView;
   emberShots: ShotView[];
   fcdevShots: ShotView[];
   counts: { manual: number; plugin: number; debug: number; fcdev: number };
+  download: DownloadView;
   links: Record<string, string>;
 }
 

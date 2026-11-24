@@ -60,10 +60,10 @@ describe('EmberDebugClient 握手', () => {
     await expect(EmberDebugClient.open({ url: 'ws://x/', token: 't', transportFactory: unreachable })).rejects.toMatchObject({ kind: 'unavailable' });
   });
 
-  it('Ember 的协议版本与 SDK 不一致时以 protocol 错误失败，提示升级 fcdev，并关闭连接', async () => {
+  it('Ember 的协议版本与 SDK 不一致时以 protocol 错误失败，提示升级 FC Dev，并关闭连接', async () => {
     const transport = new FakeTransport((request) => (request.method === 'debug.hello' ? { result: { ...HELLO_RESULT, protocol: 2, appVersion: '9.0.0' } } : undefined));
     const opened = EmberDebugClient.open({ url: 'ws://x/', token: 't', transportFactory: async () => transport });
-    await expect(opened).rejects.toMatchObject({ kind: 'protocol', message: expect.stringContaining('升级 fcdev') });
+    await expect(opened).rejects.toMatchObject({ kind: 'protocol', message: expect.stringContaining('升级 FC Dev') });
     expect(transport.closeArguments).toBeDefined();
   });
 });

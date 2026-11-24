@@ -5,7 +5,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
-// 备注：只写或更新名为 fcdev 的配置，保留其他配置；compile_flags.txt 的第一行是标记
+// 备注：只写或更新名为 FC Dev 的配置，保留其他配置；compile_flags.txt 的第一行是标记
 //       -DFCDEV_GENERATED，没有标记的同名文件视为用户自己的，不覆盖。
 //       解析失败或格式不符时返回空数组。
 // ------------------------------------------------------------------------
@@ -13,14 +13,14 @@
 import { FcdevError } from '../errors/fcdev-error';
 import { formatDefines, type ProjectDescription } from '../project/project-info';
 
-/** fcdev 管理的配置名。 */
+/** FC Dev 管理的配置名。 */
 export const FCDEV_CONFIGURATION_NAME = 'fcdev';
 
 /** compile_flags.txt 里标记“由扩展生成”的第一行。 */
 export const GENERATED_MARKER = '-DFCDEV_GENERATED';
 
 /**
- * 把 fcdev 配置合并进 c_cpp_properties.json：已有 fcdev 配置就替换，没有就追加，其他配置保留。
+ * 把 FC Dev 配置合并进 c_cpp_properties.json：已有 FC Dev 配置就替换，没有就追加，其他配置保留。
  * @param existing 已有文件的文本；文件不存在时为 undefined。
  * @param file 文件路径，用在出错提示里。
  * @param description 项目描述。

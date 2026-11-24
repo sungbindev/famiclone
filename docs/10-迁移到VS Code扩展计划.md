@@ -106,7 +106,7 @@
 | M06 | 命令行取消，能力经命令、任务、设置与语言模型工具提供，对照见第 4.3 节 | 用户要求用 VS Code 的方式提供能力 |
 | M07 | 平台与现状相同，只支持 Windows x64：工具链是 Windows 可执行文件，打包用 `vsce package --target win32-x64` | `vscode/tools/build/build-cc65.mjs` 只产出 `.exe` |
 | M08 | 47 个测试文件迁成 vitest 用例，放在 `vscode/test/` 的同名功能目录；真实 Ember 的用例经测试专用环境变量 `FCDEV_TEST_EMULATOR` 取得位置，只在测试里读取 | 扩展已用 vitest；设置只在 VS Code 里存在 |
-| M09 | 使用文档放 `vscode/docs/`，主题登记表是 `vscode/docs/topics.json`，扩展与 Ember 帮助站点的导入脚本读同一份 | Ember 帮助站点的“fcdev 开发手册”以使用文档为来源，导入脚本不应依赖扩展的编译产物 |
+| M09 | 使用文档放 `vscode/docs/`，主题登记表是 `vscode/docs/topics.json`，扩展与 Ember 帮助站点的导入脚本读同一份 | Ember 帮助站点的“FC Dev 开发手册”以使用文档为来源，导入脚本不应依赖扩展的编译产物 |
 | M10 | 迁移后用真实 cc65 构建全部样例项目与四个模板，确认都能构建成功 | 删除 `fcdev` 之后没有可对照的实现 |
 | M11 | 扩展的 `engines.vscode` 在阶段 4 核对：调试客户端用全局 `WebSocket`，宿主的 Node 要达到 22 以上，按官方文档确定最低版本 | [09-AI反汇编工具](09-AI反汇编工具.md) 第 2 节已定“实施时核对”；2026-11-22 已核对：VS Code 1.101 起扩展宿主的 Node 是 22.15.1（Electron 35，见 1.101 版本说明），故 `engines.vscode` 写 `^1.101.0` |
 | M12 | 头文件目录写进 `.vscode/c_cpp_properties.json` 与 `compile_flags.txt`，路径在扩展目录里，随扩展升级而变；激活时比较路径，不同就重新同步 | 现有自动同步在激活时执行，只需把路径比较纳入 |
@@ -131,7 +131,7 @@
 
 - A：终端客户端随扩展发布（`debug/cli.js`），Ember 帮助文档里的示例写成 `node "<扩展目录>/debug/cli.js" call …`。不选的原因：命令行里要写扩展安装目录，路径随扩展版本变化。
 - B（已定）：
-  - 终端客户端的 `endpoint`、`methods`、`describe`、`call`、`screenshot`、`watch` 做成命令：调用调试请求（选请求、填参数）、查看请求说明、保存截图、监视事件，结果写入“fcdev 调试”输出通道。
+  - 终端客户端的 `endpoint`、`methods`、`describe`、`call`、`screenshot`、`watch` 做成命令：调用调试请求（选请求、填参数）、查看请求说明、保存截图、监视事件，结果写入“FC Dev 调试”输出通道。
   - Copilot 已有 11 个 `emu_*` 工具，不新增工具。
   - SDK 源码并入扩展作内部功能，不对外提供 `import` 入口，也不生成对外的 API 文档；调试协议是开放的，第三方可以按协议自行连接。
   - Ember 的开发脚本按 Q1 的 A 引用 `vscode/out/` 里的客户端。
@@ -186,7 +186,7 @@ vscode/
 
 | 现有能力 | 扩展中的提供方式 |
 | --- | --- |
-| `npm create fcdev` | 命令“fcdev：新建项目”（选目标、语言、空目录）、工具 `fcdev_new_project` |
+| `npm create fcdev` | 命令“FC Dev：新建项目”（选目标、语言、空目录）、工具 `fcdev_new_project` |
 | `fcdev build [路径]` | 任务类型 `fcdev`（`command` 为 `build`，可给 `path`）、命令“构建项目”“构建当前文件”“构建当前目录”、工具 `fcdev_build`；问题匹配器 `$fcdev` 识别 `文件(行): Error: 信息` |
 | `fcdev disk [路径]` | 任务 `command` 为 `disk`、命令“构建磁盘镜像”、工具 `fcdev_build` 的 `disk` 参数 |
 | `fcdev run [路径]`、`--debug`、`--port` | 任务 `command` 为 `run`（`debug` 参数）、命令“运行”“调试运行”、工具 `fcdev_run`；端口来自设置 |
@@ -348,12 +348,12 @@ vscode/
 
 阶段 2 的测试位置：根 `test/` 里测试生成脚本与工具链的 6 个文件移到 `vscode/tools/test/`，由 `npm run test:tools` 运行（已并入 `npm run check`）；`gen:docs` 重新生成四份 SB2000 生成文档。
 
-阶段 3 的补充：反汇编测试移成 `test/shared|logic/disassembly`（需要 cc65 的用例没有工具链时跳过）；命令“fcdev：反汇编映像文件”（`fcdev.disassemble`）选映像与输出目录，平铺二进制缺加载地址或入口时再询问。
+阶段 3 的补充：反汇编测试移成 `test/shared|logic/disassembly`（需要 cc65 的用例没有工具链时跳过）；命令“FC Dev：反汇编映像文件”（`fcdev.disassemble`）选映像与输出目录，平铺二进制缺加载地址或入口时再询问。
 
 阶段 4 的补充：
 
 - 设置 `fcdev.emulator.path`（Ember 位置）与 `fcdev.emulator.debugPort`（默认 5699），作用域都是 `machine`；没有设置位置时运行类操作报错并说明设置项，命令“运行”“调试运行”还给“打开设置”按钮。
-- 新增命令“fcdev：运行”“fcdev：调试运行”（任务 `command: run`，`debug` 为真是调试运行）、工具 `fcdev_run`；调试客户端做成 5 个命令：调用调试请求、查看调试请求说明、保存调试截图、监视调试事件、显示调试服务地址，结果写到“fcdev 调试”输出通道。
+- 新增命令“FC Dev：运行”“FC Dev：调试运行”（任务 `command: run`，`debug` 为真是调试运行）、工具 `fcdev_run`；调试客户端做成 5 个命令：调用调试请求、查看调试请求说明、保存调试截图、监视调试事件、显示调试服务地址，结果写到“FC Dev 调试”输出通道。
 - 调试协议的接口文档与类型由 Ember 的 `npm run schema` 写到 `vscode/debug/openrpc.json` 与 `vscode/src/contracts/debug-client/generated/api.ts`；`ember` 的 `vscode:check` 取代 `debug-sdk:check`；帮助文档的协议参考由 `vscode/tools/gen/gen-debug-api-docs.mjs` 生成；开发脚本的调试请求经 `ember/tools/dev/debug-call.mjs` 引用 `vscode/out`。
 - 真实 Ember 的用例在 `test/real-emulator`，用环境变量 `FCDEV_TEST_EMULATOR` 指向 Ember 的可执行文件（固件用 `FCDEV_TEST_FIRMWARE`，没有时用 `ember/roms/sb2000_bios.bin`），缺 Ember、cc65 或固件时跳过，`FCDEV_SKIP_GUI_TESTS=1` 也跳过。
 
@@ -363,7 +363,7 @@ vscode/
 - `apps/sb2000` 下 7 个有 `package.json` 的项目删除了 `package.json` 与 `package-lock.json`，各加 `.vscode/tasks.json`（构建、构建磁盘镜像、运行、调试运行）；示例与 `fbasic/exe` 没有另加，扩展会为每个含 `fcdev.json` 的项目自动提供任务。
 - Ember 的帮助站点导入脚本改读 `vscode/docs/topics.json`（字段 `root: 'extension'` 指文件相对扩展目录，参数 `extensionRoot`）；帮助文档里的调试客户端、`docs/07-调试客户端工具` 改写为扩展的命令与内部客户端。
 - 开发文档 01 至 09、待办备忘、缺陷记录与扩展的使用文档、README 按新结构重写；`05-发布` 是扩展的打包与发布，`04-测试与验证` 是 vitest 的分层与环境变量。
-- `copilot-plugins` 的 `fcdev-app-development` skill 改写为扩展的命令与工具（`references/cli-and-build.md` 改名 `build-and-config.md`），并迁入 `vscode/chat/skills/`，经 `chatSkills` 声明、随扩展发布，使用扩展的人不需要再装 `copilot-plugins`；四个智能体的工具清单加入 6 个 fcdev 工具；`docs` 仓库的 `ember.instructions.md` 同步。
+- `copilot-plugins` 的 `fcdev-app-development` skill 改写为扩展的命令与工具（`references/cli-and-build.md` 改名 `build-and-config.md`），并迁入 `vscode/chat/skills/`，经 `chatSkills` 声明、随扩展发布，使用扩展的人不需要再装 `copilot-plugins`；四个智能体的工具清单加入 6 个 FC Dev 工具；`docs` 仓库的 `ember.instructions.md` 同步。
 
 阶段 6 的补充：
 

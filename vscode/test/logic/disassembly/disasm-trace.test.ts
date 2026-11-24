@@ -235,12 +235,12 @@ describe('换页窗口', () => {
   });
 });
 
-describe.skipIf(!HAS_TOOLCHAIN)('fcdev 构建的真实程序（需要 cc65）', () => {
+describe.skipIf(!HAS_TOOLCHAIN)('FC Dev 构建的真实程序（需要 cc65）', () => {
   let temp: TempDir;
   beforeEach(() => { temp = createTempDir(); });
   afterEach(() => temp.cleanup());
 
-  /** 构建一个 fcdev 项目并返回产物路径 */
+  /** 构建一个 FC Dev 项目并返回产物路径 */
   async function buildProject(target: string, fileName: string, source: string): Promise<string> {
     writeTestFile(temp.dir, 'fcdev.json', JSON.stringify({ target }));
     writeTestFile(temp.dir, fileName, source);

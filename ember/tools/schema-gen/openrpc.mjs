@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：文档写到 fcdev 扩展的 vscode/debug/openrpc.json（给协议参考与客户端生成工具用）与核心的 C++ 常量（调试服务的 rpc.discover 返回它）；
+ * 备注：文档写到 FC Dev 扩展的 vscode/debug/openrpc.json（给协议参考与客户端生成工具用）与核心的 C++ 常量（调试服务的 rpc.discover 返回它）；
  *       主进程自己处理的请求（mainRequests）不在调试服务里，不收录；协议与报文约定见 docs/04-调试服务.md。
  * ------------------------------------------------------------------------
  */

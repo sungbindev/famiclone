@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：disasm-generate.test.ts
 // 说明：测试源码生成与回读：生成的文字、符号与注释的输出位置、写不成文字时退回 .byte；用 ca65 与
-//       ld65 回读，全部 151 条指令、随机字节序列、换页布局、fcdev 构建的真实程序都必须与映像逐字节
+//       ld65 回读，全部 151 条指令、随机字节序列、换页布局、FC Dev 构建的真实程序都必须与映像逐字节
 //       一致。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
@@ -343,7 +343,7 @@ describe.skipIf(!HAS_TOOLCHAIN)('回读（需要 cc65）', () => {
     return result.outputFile;
   }
 
-  describe('fcdev 构建的真实程序', () => {
+  describe('FC Dev 构建的真实程序', () => {
     it('NES 程序：入口取自中断向量，用 fcnes.inc 的寄存器名，回读一致', async () => {
       const file = readFileSync(await buildProject('nes', 'hello.c', '#include <fcnes.h>\nint main(void) { nes_screen_off(); nes_print(1, 1, "HI"); nes_screen_on(); for (;;) { } }\n'));
       const parsed = parseInes(file);

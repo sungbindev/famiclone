@@ -31,7 +31,7 @@ export async function describeSession(session: EmulatorSession): Promise<Record<
 /**
  * 连接已运行且开启了调试服务的 Ember。
  * @param context 上下文。
- * @param params 可选 port（默认取设置里的调试端口，按它找 fcdev 启动的 Ember 的端点文件）、
+ * @param params 可选 port（默认取设置里的调试端口，按它找 FC Dev 启动的 Ember 的端点文件）、
  *   userDataDirectory、url 与 token。
  * @returns 连接结果与运行状态。
  * @throws FcdevError 连不上。

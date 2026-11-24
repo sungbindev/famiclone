@@ -4,15 +4,15 @@
 
 ## 构建与运行
 
-用 fcdev 扩展的 `rom` 目标（说明见扩展使用文档“整机 ROM 工程开发指南”）。配置在 `fcdev.json`：
+用 FC Dev 扩展的 `rom` 目标（说明见扩展使用文档“整机 ROM 工程开发指南”）。配置在 `fcdev.json`：
 
 - `firmware`：完整的 128KB 固件 `ember/roms/bbg1_bios.bin` 当底。BIOS 源码只对应最后 16KB（`$C000-$FFFF`），前 112KB 是字库点阵，取自底固件。
 - `targetOptions`：`machine` 为 `bbg1`，`offset` 为 114688（BIOS 在固件里的偏移），`size` 为 131072。
 - `diskImage`：运行时放进软驱的系统盘 `DOS.IMG`。
 
-任务“fcdev：构建”（构建路径 `src`）生成 `build/rom/bbg.bin`（131072 字节），任务“fcdev：运行”在 Ember 里以它为 `bbg1` 的固件开机。
+任务“FC Dev：构建”（构建路径 `src`）生成 `build/rom/bbg.bin`（131072 字节），任务“FC Dev：运行”在 Ember 里以它为 `bbg1` 的固件开机。
 
-手动构建 BIOS 部分（工具链在 fcdev 扩展的 `toolchain/bin` 下，在本目录运行）：
+手动构建 BIOS 部分（工具链在 FC Dev 扩展的 `toolchain/bin` 下，在本目录运行）：
 
 ```text
 ca65 --cpu 6502 -I src/include -g src/bios/bios.s -o build/bios.o
@@ -28,7 +28,7 @@ ld65 -C link.cfg -m build/bios.map -o build/bios.bin build/bios.o
 | `src/bios/bios.s` | BIOS 源码 |
 | `src/include/tvdef.inc` | 符号定义，原厂 `tvdef.asm` 的还原版 |
 | `link.cfg` | 链接配置：8 个段（`S0` 至 `S7`）对应原版的 8 个 `org`，内存区都带 `fill`，输出 16384 字节按地址排满 |
-| `fcdev.json` | fcdev 项目配置：`rom` 目标、底固件、机型、软盘镜像 |
+| `fcdev.json` | FC Dev 项目配置：`rom` 目标、底固件、机型、软盘镜像 |
 | `docs/计划与进度.md` | 计划、原厂源码的完整性与已查明的结论 |
 | `docs/DOS反汇编与开发库计划.md` | `BBGDOS.SYS`、`COMMAND.CMD`、启动扇区的反汇编，系统 API 的整理与汇编开发库的计划 |
 | `docs/api/` | 系统接口说明与符号参考（BIOS、DOS、文件调用） |

@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "fcdev：构建",
+      "label": "FC Dev：构建",
       "type": "fcdev",
       "command": "build",
       "path": "src",
@@ -13,7 +13,7 @@
       "problemMatcher": "$fcdev"
     },
     {
-      "label": "fcdev：运行",
+      "label": "FC Dev：运行",
       "type": "fcdev",
       "command": "run",
       "path": "src",

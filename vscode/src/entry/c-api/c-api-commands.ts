@@ -36,7 +36,7 @@ export function registerCApiCommands(context: vscode.ExtensionContext, api: CApi
   const queryAndShow = async (): Promise<void> => {
     const cwd = startDirectory();
     if (cwd === undefined) {
-      void vscode.window.showInformationMessage('请先打开一个 fcdev 项目的文件');
+      void vscode.window.showInformationMessage('请先打开一个 FC Dev 项目的文件');
       return;
     }
     const target = api.describe({ cwd });
@@ -66,7 +66,7 @@ export function registerCApiCommands(context: vscode.ExtensionContext, api: CApi
           return;
         }
         logger.error('查询 C 接口出错', error);
-        void vscode.window.showErrorMessage('查询 C 接口时出错，详情见“输出”面板里的 fcdev');
+        void vscode.window.showErrorMessage('查询 C 接口时出错，详情见“输出”面板里的 FC Dev');
       }
     })
   );

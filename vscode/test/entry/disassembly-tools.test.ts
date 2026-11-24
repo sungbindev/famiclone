@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
-// 备注：用 vscode 替身；fcdev 与构建比较用替身，只验证入口层“检查、委派、整理”的行为；
+// 备注：用 vscode 替身；FC Dev 与构建比较用替身，只验证入口层“检查、委派、整理”的行为；
 //       工具的结构取自真实的 package.json。
 // ------------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ describe('调用', () => {
     expect(result.content[0]?.value).toBe('{\n  "total": 1\n}\n\nsub_C000:\n  rts');
   });
 
-  it('输入不合法时返回原因，不调用 fcdev', async () => {
+  it('输入不合法时返回原因，不调用 FC Dev', async () => {
     const { runner, tool } = setup();
     const result = await tool('disasm_list').invoke({ input: { projectDir: 'proj', category: 'bad', extra: 1 } });
     const text = result.content[0]?.value ?? '';
@@ -133,7 +133,7 @@ describe('调用', () => {
     expect((await tool('disasm_status').invoke({ input: { projectDir: 'proj' } })).content[0]?.value).toContain('没有打开工作区文件夹');
   });
 
-  it('符号集数组里的每个路径都换成绝对路径；disasm_reference 不给 projectDir 时从工作区根找 fcdev', async () => {
+  it('符号集数组里的每个路径都换成绝对路径；disasm_reference 不给 projectDir 时从工作区根找 FC Dev', async () => {
     const { runner, tool } = setup();
     await tool('disasm_open').invoke({ input: { projectDir: 'proj', image: 'game.bin', symbolSets: ['a.inc', 'sub/b.inc'] } });
     expect(runner.run).toHaveBeenCalledWith('open', {
@@ -155,7 +155,7 @@ describe('调用', () => {
     expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it('disasm_build 经构建比较器运行，不走 fcdev 的反汇编操作', async () => {
+  it('disasm_build 经构建比较器运行，不走 FC Dev 的反汇编操作', async () => {
     const { runner, comparer, tool } = setup({ build: async () => ({ identical: false, builtFile: 'x.nes', builtSize: 4, imageSize: 4, firstDifference: 2 }) });
     const result = await tool('disasm_build').invoke({ input: { projectDir: 'proj', buildPath: 'rebuilt' } });
     expect(comparer.buildAndCompare).toHaveBeenCalledWith(PROJECT, path.join(WORKSPACE, 'rebuilt'));
@@ -188,7 +188,7 @@ describe('确认提示', () => {
       ['disasm_build', { projectDir: 'proj', buildPath: 'r' }]
     ] as const) {
       const prepared = tool(name).prepareInvocation({ input });
-      expect(prepared.confirmationMessages?.title, name).toContain('fcdev：');
+      expect(prepared.confirmationMessages?.title, name).toContain('FC Dev：');
       expect(prepared.confirmationMessages?.message.value, name).toContain('proj');
     }
   });

@@ -1,11 +1,11 @@
 # fbasic（SB2000 版）
 
-把 Family BASIC v3.0（NS-HUBASIC V3.0）原生移植成小霸王学习机 SB2000 的 SB-DOS 程序 `FBASIC.EXE`。项目用 fcdev 扩展构建，不用旧的任何工具。
+把 Family BASIC v3.0（NS-HUBASIC V3.0）原生移植成小霸王学习机 SB2000 的 SB-DOS 程序 `FBASIC.EXE`。项目用 FC Dev 扩展构建，不用旧的任何工具。
 
 ## 构建与运行
 
-- 构建：fcdev 的“构建”（或 `fcdev_build`），产物在 `build/sb2000/`：`FBASIC.EXE`。要磁盘镜像时在 `fcdev.json` 里加 `diskName`。
-- 运行：fcdev 的“运行”（或 `fcdev_run`），固件取自 `fcdev.json` 的 `firmware`，需要在设置里指定 Ember 的位置。
+- 构建：FC Dev 的“构建”（或 `fcdev_build`），产物在 `build/sb2000/`：`FBASIC.EXE`。要磁盘镜像时在 `fcdev.json` 里加 `diskName`。
+- 运行：FC Dev 的“运行”（或 `fcdev_run`），固件取自 `fcdev.json` 的 `firmware`，需要在设置里指定 Ember 的位置。
 
 ## 目录
 
@@ -35,5 +35,5 @@ ERAM 小段运行在 `$7E00`，由加载器从程序页复制过去。
 
 ## 备注
 
-- 旧项目的反汇编参考源码（`reference/fbasic-nes.s`）没有带入本项目：fcdev 会编译项目内全部 `.s` 文件。它保留在旧项目的 git 历史里。
+- 旧项目的反汇编参考源码（`reference/fbasic-nes.s`）没有带入本项目：FC Dev 会编译项目内全部 `.s` 文件。它保留在旧项目的 git 历史里。
 - 程序的使用说明见 [docs/程序文档.md](docs/程序文档.md)。

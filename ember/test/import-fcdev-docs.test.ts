@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：import-fcdev-docs.test.ts
- * 说明：fcdev 手册导入脚本的测试：文档之间的链接改成站内页面、指向文档目录之外的链接变成普通文字、尖括号与双花括号只在代码之外转义、只写有变化的页面并删除不再登记的页面、侧边栏分组，以及真实手册导入后没有失效的页面链接。
+ * 说明：FC Dev 手册导入脚本的测试：文档之间的链接改成站内页面、指向文档目录之外的链接变成普通文字、尖括号与双花括号只在代码之外转义、只写有变化的页面并删除不再登记的页面、侧边栏分组，以及真实手册导入后没有失效的页面链接。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
@@ -93,7 +93,7 @@ describe('importFcdevDocs', () => {
     const output = join(temp, 'out');
     importFcdevDocs({ topics, extensionRoot: root, outputDirectory: output });
     const index = readFileSync(join(output, 'index.md'), 'utf8');
-    expect(index).toContain('# fcdev 开发手册');
+    expect(index).toContain('# FC Dev 开发手册');
     expect(index).toContain('## 通用\n');
     expect(index).toContain('## SB2000（小霸王学习机）\n');
     expect(index).toContain('| [构建](build.md) | 构建说明 |');
@@ -112,7 +112,7 @@ describe('importFcdevDocs', () => {
   it('登记的文档不存在时报错并写出路径', () => {
     const { root, topics } = makeFcdev();
     rmSync(join(root, 'docs', '01-构建.md'));
-    expect(() => importFcdevDocs({ topics, extensionRoot: root, outputDirectory: join(temp, 'out') })).toThrow('找不到 fcdev 的文档');
+    expect(() => importFcdevDocs({ topics, extensionRoot: root, outputDirectory: join(temp, 'out') })).toThrow('找不到 FC Dev 的文档');
   });
 });
 
@@ -126,13 +126,13 @@ describe('分组与侧边栏', () => {
 
   it('侧边栏第一组是概述，其余每个登记的主题恰好出现一次，链接是 /fcdev/<主题>', () => {
     const sidebar = sidebarGroups();
-    expect(sidebar[0]).toEqual({ text: 'fcdev 开发手册', items: [{ text: '概述', link: '/fcdev/' }] });
+    expect(sidebar[0]).toEqual({ text: 'FC Dev 开发手册', items: [{ text: '概述', link: '/fcdev/' }] });
     const links = sidebar.slice(1).flatMap((group) => group.items.map((item) => item.link));
     expect(links.toSorted()).toEqual(DOC_TOPICS.map((topic) => `/fcdev/${topic.topic}`).toSorted());
   });
 });
 
-describe('真实的 fcdev 手册', () => {
+describe('真实的 FC Dev 手册', () => {
   it('导入后每个页面链接都指向存在的页面，没有留下指向文档目录之外的相对链接', () => {
     const output = join(temp, 'real');
     importFcdevDocs({ outputDirectory: output });

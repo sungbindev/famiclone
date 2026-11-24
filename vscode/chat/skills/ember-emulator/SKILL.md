@@ -22,10 +22,10 @@ user-invocable: false
 
 | 要做的事 | 做法 |
 | --- | --- |
-| 运行 fcdev 项目的程序，只需要打开窗口看看 | `fcdev_run`，不给 `debug`；Ember 窗口留给用户，之后工具不能再控制它 |
-| 运行并核对 fcdev 项目的 NES 程序 | `fcdev_build`，再走“起步”与“载入”的 NES 一行，然后“观察与核对” |
-| 运行并核对 fcdev 项目的 SB2000、SB97、裕兴或步步高程序 | `fcdev_build`（`fcdev.json` 配置了 `diskName` 时磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
-| 载入不属于 fcdev 项目的 NES 文件 | “起步”，再 `emu_load` 的 `file` |
+| 运行 FC Dev 项目的程序，只需要打开窗口看看 | `fcdev_run`，不给 `debug`；Ember 窗口留给用户，之后工具不能再控制它 |
+| 运行并核对 FC Dev 项目的 NES 程序 | `fcdev_build`，再走“起步”与“载入”的 NES 一行，然后“观察与核对” |
+| 运行并核对 FC Dev 项目的 SB2000、SB97、裕兴或步步高程序 | `fcdev_build`（`fcdev.json` 配置了 `diskName` 时磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
+| 载入不属于 FC Dev 项目的 NES 文件 | “起步”，再 `emu_load` 的 `file` |
 | 载入整机加软盘镜像（SB2000、SB97、步步高、金字塔、裕兴） | “起步”，再 `emu_load` 的 `machine`，开机后的操作读 [machines.md](references/machines.md) |
 | 为反汇编记录运行数据 | 读 skill `disassemble-6502` 的 `references/records.md`，它先走本 skill 的“起步”与“载入” |
 
@@ -94,7 +94,7 @@ user-invocable: false
 3. `emu_run` 命中后 `stopped` 为 `breakpoint`；读结果后用 `emu_break` 的 `action: "remove"` 与 `id` 删除，或 `action: "clear"`。
 4. `emu_step` 忽略断点，用来看几条指令的效果；`unit` 取 `instruction`、`cycle`、`scanline`、`frame`。
 5. 停下后用 `emu_inspect` 的 `what: "callStack"` 看是从哪里调用进来的。
-6. fcdev 项目的符号地址在 `build/obj/<目标>/<程序名>/<程序名>.dbg` 里：找 `sym` 行，`name` 是符号名（C 符号带前导下划线），`val` 是地址。
+6. FC Dev 项目的符号地址在 `build/obj/<目标>/<程序名>/<程序名>.dbg` 里：找 `sym` 行，`name` 是符号名（C 符号带前导下划线），`val` 是地址。
 
 ## 读写内存与寄存器
 

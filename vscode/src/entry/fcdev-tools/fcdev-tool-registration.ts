@@ -25,7 +25,7 @@ function workspaceRoots(): string[] {
   return (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath);
 }
 
-/** 一个 fcdev 语言模型工具。 */
+/** 一个 FC Dev 语言模型工具。 */
 class FcdevTool implements vscode.LanguageModelTool<ToolInput> {
   /**
    * @param definition 工具的定义。
@@ -44,7 +44,7 @@ class FcdevTool implements vscode.LanguageModelTool<ToolInput> {
     const message = this.definition.describe(input);
     if (!this.definition.writes) return { invocationMessage: message };
     const text = this.definition.confirm?.(input) ?? `将执行 ${this.definition.name}。`;
-    return { invocationMessage: message, confirmationMessages: { title: `fcdev：${message}`, message: new vscode.MarkdownString(text) } };
+    return { invocationMessage: message, confirmationMessages: { title: `FC Dev：${message}`, message: new vscode.MarkdownString(text) } };
   }
 
   /** 调用：检查输入、运行、整理结果。 */
@@ -66,7 +66,7 @@ class FcdevTool implements vscode.LanguageModelTool<ToolInput> {
       const failure = describeFailure(error);
       if (failure !== undefined) return `错误：${failure}`;
       this.logger.error(`${this.definition.name} 执行出错`, error);
-      return `错误：${this.definition.name} 执行出错（${error instanceof Error ? error.message : String(error)}），详见“fcdev”输出通道`;
+      return `错误：${this.definition.name} 执行出错（${error instanceof Error ? error.message : String(error)}），详见“FC Dev”输出通道`;
     }
   }
 }

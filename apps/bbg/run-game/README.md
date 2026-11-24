@@ -1,6 +1,6 @@
 # run-game（步步高）
 
-在步步高多媒体学生电脑（BBGDOS）下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 fcdev 的 bbg 目标项目，不依赖 C 运行库。`GAME.CMD` 只是加载程序，游戏是软盘上单独的 `.NES` 文件。
+在步步高多媒体学生电脑（BBGDOS）下运行 NES 游戏，只支持 mapper 0 的游戏。用汇编（ca65）开发，是 FC Dev 的 bbg 目标项目，不依赖 C 运行库。`GAME.CMD` 只是加载程序，游戏是软盘上单独的 `.NES` 文件。
 
 ## 使用
 
@@ -36,7 +36,7 @@ GAME MARIO.NES
 
 ## 构建
 
-在 VS Code 里打开仓库，运行命令“fcdev：构建项目”选 `apps/bbg/run-game`（或任务“fcdev：构建”）：
+在 VS Code 里打开仓库，运行命令“FC Dev：构建项目”选 `apps/bbg/run-game`（或任务“FC Dev：构建”）：
 
 - 产物是 `build/bbg/GAME.CMD`。
 - `fcdev.json` 的 `diskImage` 指向系统盘镜像 `apps/bbg/BBGDOS.IMG`，`fcdev.json` 的 `diskName` 设为 `bbg-run-game.img`，同时生成软盘镜像 `build/bbg/bbg-run-game.img`：系统盘的全部内容加上 `GAME.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
@@ -46,7 +46,7 @@ GAME MARIO.NES
 
 ## 在模拟器里运行
 
-设置 `fcdev.emulator.path` 指向 Ember 后，任务“fcdev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
+设置 `fcdev.emulator.path` 指向 Ember 后，任务“FC Dev：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
 
 ## 原理
 
@@ -63,5 +63,5 @@ GAME MARIO.NES
 | --- | --- |
 | `src/nes.s` | 程序：入口 `_main`、命令行与文件名、DOS 文件调用、iNES 头检查、跳板与小桩 |
 | `link.cfg` | 链接配置：bbg 目标的配置加 `TRAMP`、`STUBS` 两段 |
-| `fcdev.json` | fcdev 配置：目标 bbg，程序名 game，镜像文件名，链接配置，运行用的固件与系统盘镜像 |
+| `fcdev.json` | FC Dev 配置：目标 bbg，程序名 game，镜像文件名，链接配置，运行用的固件与系统盘镜像 |
 | `disk/` | 构建时全部放进软盘镜像的文件，只放自己的游戏文件，不入库 |

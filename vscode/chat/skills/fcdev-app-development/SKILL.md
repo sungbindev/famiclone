@@ -1,12 +1,12 @@
 ---
 name: fcdev-app-development
-description: '使用 fcdev 扩展为 6502 兼容机开发程序时使用：开发 NES（红白机）程序、开发小霸王学习机 SB2000 的 SB-DOS 应用程序（.EXE）；包括新建项目、用 C 或 ca65 汇编编写、fcdev.json 配置、构建、在模拟器里运行与核对、查询 SB2000 的 C 接口与系统调用、大程序换页、排查构建与运行问题；给出任务判定、五个流程的逐步做法与完成标准、工具速查与易错点。'
+description: '使用 FC Dev 扩展为 6502 兼容机开发程序时使用：开发 NES（红白机）程序、开发小霸王学习机 SB2000 的 SB-DOS 应用程序（.EXE）；包括新建项目、用 C 或 ca65 汇编编写、fcdev.json 配置、构建、在模拟器里运行与核对、查询 SB2000 的 C 接口与系统调用、大程序换页、排查构建与运行问题；给出任务判定、五个流程的逐步做法与完成标准、工具速查与易错点。'
 user-invocable: false
 ---
 
-# fcdev 程序开发
+# FC Dev 程序开发
 
-fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有六个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）、`yuxing`（裕兴学习机的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向学习卡的 ROM，DOS 里运行要写扩展名）、`bbg`（步步高学生电脑的 BBGDOS，只有汇编，产物 `.CMD`，运行需要 `firmware` 指向软驱一号的 ROM 且 `diskImage` 指向带 DOS 的系统盘镜像，磁盘镜像建在它上面）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 fcdev 写目标机的程序”，不涉及修改 fcdev 自己的源码。
+FC Dev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有六个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）、`yuxing`（裕兴学习机的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向学习卡的 ROM，DOS 里运行要写扩展名）、`bbg`（步步高学生电脑的 BBGDOS，只有汇编，产物 `.CMD`，运行需要 `firmware` 指向软驱一号的 ROM 且 `diskImage` 指向带 DOS 的系统盘镜像，磁盘镜像建在它上面）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 FC Dev 写目标机的程序”，不涉及修改 FC Dev 自己的源码。
 
 ## 必须先读取的参考文件
 
@@ -28,7 +28,7 @@ fcdev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C
 | 情形 | 流程 |
 | --- | --- |
 | 要新建 NES、SB2000、SB97、裕兴或步步高程序，目录里还没有 `fcdev.json` | 流程 1 |
-| 要在已有的 fcdev 项目里写或改程序 | 流程 2 |
+| 要在已有的 FC Dev 项目里写或改程序 | 流程 2 |
 | 只要构建（配置了 `diskName` 的学习机目标会同时生成磁盘镜像） | 流程 3 |
 | 要运行、看画面、调试、核对结果 | 流程 4 |
 | 构建失败、运行不对、找不到命令 | 流程 5 |

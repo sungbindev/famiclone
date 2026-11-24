@@ -1,11 +1,11 @@
 // ------------------------------------------------------------------------
 // 名称：debug-commands.ts
 // 说明：调试服务的命令：调用调试请求、查看请求说明、保存调试截图、监视调试事件、显示调试服务地址；
-//       结果写到“fcdev 调试”输出通道。
+//       结果写到“FC Dev 调试”输出通道。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
-// 备注：先按设置里的调试端口找 fcdev 启动的 Ember（用户数据目录按端口区分），找不到端点文件时再找
+// 备注：先按设置里的调试端口找 FC Dev 启动的 Ember（用户数据目录按端口区分），找不到端点文件时再找
 //       Ember 自己的用户数据目录；请求名与参数说明来自随扩展发布的接口描述文档。
 // ------------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ export const DEBUG_COMMANDS = {
 const CLIENT_NAME = 'fcdev';
 
 /** 输出通道的名字。 */
-const CHANNEL_NAME = 'fcdev 调试';
+const CHANNEL_NAME = 'FC Dev 调试';
 
 /** 命令要用到的能力。 */
 export interface DebugCommandDependencies {
@@ -92,7 +92,7 @@ export function registerDebugCommands(context: vscode.ExtensionContext, dependen
   const output = vscode.window.createOutputChannel(CHANNEL_NAME);
 
   /**
-   * 连接 Ember：先找 fcdev 启动的（按设置里的端口），没有端点文件再找 Ember 自己的用户数据目录。
+   * 连接 Ember：先找 FC Dev 启动的（按设置里的端口），没有端点文件再找 Ember 自己的用户数据目录。
    */
   const connect = async (): Promise<DebugSession> => {
     const options = { clientName: CLIENT_NAME };
@@ -233,7 +233,7 @@ export function registerDebugCommands(context: vscode.ExtensionContext, dependen
         return;
       }
       logger.error(`${name}出错`, error);
-      void vscode.window.showErrorMessage(`${name}时出错，详情见“输出”面板里的 fcdev`);
+      void vscode.window.showErrorMessage(`${name}时出错，详情见“输出”面板里的 FC Dev`);
     }
   };
 

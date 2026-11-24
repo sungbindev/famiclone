@@ -10,7 +10,7 @@
  */
 
 /** 首页的大图：模拟器运行中的窗口。 */
-export const HERO_SHOT = { file: 'ember-nes.png', alt: 'Ember 运行 NES 程序，画面上显示 HELLO, NES!', caption: 'Ember 运行 fcdev 构建的 NES 程序' };
+export const HERO_SHOT = { file: 'ember-nes.png', alt: 'Ember 运行 NES 程序，画面上显示 HELLO, NES!', caption: 'Ember 运行 FC Dev 构建的 NES 程序' };
 
 /** 模拟器部分的截图。 */
 export const EMBER_SHOTS = [
@@ -19,8 +19,8 @@ export const EMBER_SHOTS = [
   { file: 'ember-machines.png', alt: 'Ember 的机型与 ROM 对话框', caption: '机型与 ROM：按机型添加学习机的 ROM 文件' }
 ];
 
-/** fcdev 扩展部分的截图。 */
+/** FC Dev 扩展部分的截图。 */
 export const FCDEV_SHOTS = [
-  { file: 'fcdev-editor.png', alt: 'VS Code 中打开 fcdev 的 SB2000 示例程序 hello.c', caption: 'VS Code 里打开 fcdev 的 SB2000 示例程序' },
-  { file: 'fcdev-build.png', alt: 'fcdev 构建任务的输出，生成 HELLO.EXE 与磁盘镜像 HELLO.img', caption: '“fcdev：构建”输出 HELLO.EXE 与软盘镜像 HELLO.img' }
+  { file: 'fcdev-editor.png', alt: 'VS Code 中打开 FC Dev 的 SB2000 示例程序 hello.c', caption: 'VS Code 里打开 FC Dev 的 SB2000 示例程序' },
+  { file: 'fcdev-build.png', alt: 'FC Dev 构建任务的输出，生成 HELLO.EXE 与磁盘镜像 HELLO.img', caption: '“FC Dev：构建”输出 HELLO.EXE 与软盘镜像 HELLO.img' }
 ];

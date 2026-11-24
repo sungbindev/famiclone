@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：release.mjs
-// 说明：发布 fcdev 扩展：检查版本与更新记录、运行全部检查、打包并核对 .vsix，加 --publish 才上传到扩展市场。
+// 说明：发布 FC Dev 扩展：检查版本与更新记录、运行全部检查、打包并核对 .vsix，加 --publish 才上传到扩展市场。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -87,7 +87,7 @@ function readToken() {
 async function main() {
   const publish = process.argv.includes('--publish');
   const { version } = JSON.parse(readFileSync(path.join(EXTENSION_DIRECTORY, 'package.json'), 'utf8'));
-  console.log(`发布检查：fcdev ${version}`);
+  console.log(`发布检查：FC Dev ${version}`);
 
   const changelog = readFileSync(path.join(EXTENSION_DIRECTORY, 'CHANGELOG.md'), 'utf8').split(/\r?\n/);
   if (!changelog.includes(`## ${version}`)) throw new Error(`CHANGELOG.md 里没有 “## ${version}” 一节`);
@@ -105,7 +105,7 @@ async function main() {
     return;
   }
   run('npx', ['vsce', 'publish', '--packagePath', vsix]);
-  console.log(`已发布 fcdev ${version}`);
+  console.log(`已发布 FC Dev ${version}`);
 }
 
 try {

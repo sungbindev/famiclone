@@ -4,7 +4,7 @@
 
 ## 构建
 
-用 VS Code 的“fcdev：构建”任务构建（或工具 `fcdev_build`，路径取 `src`）。
+用 VS Code 的“FC Dev：构建”任务构建（或工具 `fcdev_build`，路径取 `src`）。
 
 产物为 `build/sb2000/EDIT.EXE`。运行模拟器需要在 `fcdev.json` 中配置 BIOS 路径。
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：content.mjs
- * 说明：站点的内容层：读取 Ember 帮助文档与 fcdev 手册的源文件，渲染成页面的 HTML，整理导航、页内目录与上一页、下一页。
+ * 说明：站点的内容层：读取 Ember 帮助文档与 FC Dev 手册的源文件，渲染成页面的 HTML，整理导航、页内目录与上一页、下一页。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-23
@@ -95,7 +95,7 @@ function buildSections() {
     },
     {
       id: 'fcdev',
-      title: 'fcdev 开发手册',
+      title: 'FC Dev 开发手册',
       summary: '用 C 或 ca65 汇编开发 NES 与 SB2000 程序：构建、运行、调试、反汇编，以及系统调用与硬件参考。',
       groups: [{ title: null, pages: [{ id: 'fcdev/index', src: 'fcdev/index.md', label: '概述' }] }, ...fcdev]
     }

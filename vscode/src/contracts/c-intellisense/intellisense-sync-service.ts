@@ -13,7 +13,7 @@ export interface SyncResult {
   readonly root: string;
   /** 是否成功。 */
   readonly ok: boolean;
-  /** 说明：成功时是 fcdev 的输出，失败时是原因。 */
+  /** 说明：成功时是 FC Dev 的输出，失败时是原因。 */
   readonly message: string;
 }
 
@@ -27,8 +27,8 @@ export interface IntelliSenseSyncService {
   syncProject(root: string): Promise<SyncResult>;
 
   /**
-   * 同步工作区里全部 fcdev 项目的配置。
-   * @returns 每个项目的同步结果；工作区里没有 fcdev 项目时为空数组。
+   * 同步工作区里全部 FC Dev 项目的配置。
+   * @returns 每个项目的同步结果；工作区里没有 FC Dev 项目时为空数组。
    */
   syncWorkspace(): Promise<readonly SyncResult[]>;
 }

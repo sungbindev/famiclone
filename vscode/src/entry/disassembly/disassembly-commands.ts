@@ -128,7 +128,7 @@ export function registerDisassemblyCommands(context: vscode.ExtensionContext, op
         return;
       }
       logger.error('反汇编映像文件出错', error);
-      void vscode.window.showErrorMessage('反汇编映像文件时出错，详情见“输出”面板里的 fcdev');
+      void vscode.window.showErrorMessage('反汇编映像文件时出错，详情见“输出”面板里的 FC Dev');
     }
   };
 

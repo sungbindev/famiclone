@@ -1,16 +1,16 @@
 # famiclone 仓库说明
 
-面向 FC 兼容机和小霸王、步步高、裕兴等 6502 学习机的综合开发仓库，提供基于 cc65 的 C 与汇编开发环境（VS Code 扩展 fcdev：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具）、Ember 模拟器与调试工具，以及 SB2000、步步高等机型的 BIOS、系统程序、示例程序和硬件资料。
+面向 FC 兼容机和小霸王、步步高、裕兴等 6502 学习机的综合开发仓库，提供基于 cc65 的 C 与汇编开发环境（VS Code 扩展 FC Dev：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具）、Ember 模拟器与调试工具，以及 SB2000、步步高等机型的 BIOS、系统程序、示例程序和硬件资料。
 
 ## 目录说明
 
 | 目录 | 内容 |
 | --- | --- |
-| `vscode` | VS Code 扩展 fcdev（唯一的开发环境发行形式，独立的 npm 项目，生成 `.vsix`）：任务与命令、各机型目标与运行库、cc65 工具链、项目模板、使用文档、反汇编核心、调试客户端、Copilot 工具 |
+| `vscode` | VS Code 扩展 FC Dev（唯一的开发环境发行形式，独立的 npm 项目，生成 `.vsix`）：任务与命令、各机型目标与运行库、cc65 工具链、项目模板、使用文档、反汇编核心、调试客户端、Copilot 工具 |
 | `ember` | 模拟器 Ember：Win32 原生外壳加 C++ 核心，独立的 npm 项目，不发布到 npm，也不随扩展发布；使用者在扩展设置 `fcdev.emulator.path` 里指向它 |
 | `vscode/third_party/cc65` | cc65 源码，在本仓库维护，zlib 许可，许可文件在 `vscode/third_party/cc65/LICENSE` |
-| `apps/sb2000` | 用 fcdev 开发的 SB-DOS 程序：`asm`、`edit`、`game`、`memtest`、`hwprobe`、`hwtest`、`family-basic-v3`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是一个 fcdev 项目，用 VS Code 任务构建 |
-| `apps/sb97`、`apps/yuxing`、`apps/bbg` | 各机型 DOS 下的 `game`（运行 NES 游戏的加载程序，汇编）：SB97 与步步高运行 mapper 0 的游戏，裕兴运行 mapper 0 与 mapper 4 的游戏；每个是一个 fcdev 项目 |
+| `apps/sb2000` | 用 FC Dev 开发的 SB-DOS 程序：`asm`、`edit`、`game`、`memtest`、`hwprobe`、`hwtest`、`family-basic-v3`，另有 `disk`（软盘镜像脚本）与 `examples`（示例）；每个程序是一个 FC Dev 项目，用 VS Code 任务构建 |
+| `apps/sb97`、`apps/yuxing`、`apps/bbg` | 各机型 DOS 下的 `game`（运行 NES 游戏的加载程序，汇编）：SB97 与步步高运行 mapper 0 的游戏，裕兴运行 mapper 0 与 mapper 4 的游戏；每个是一个 FC Dev 项目 |
 | `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`docs`（研究文档） |
 | `machines/bbg` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
 | `machines/sb97` | SB97 的 BIOS 反汇编工程与分析结论 |
@@ -19,7 +19,7 @@
 | `docs` | 开发文档，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节 |
 | `build` | 构建产物（cc65、Ember），不入库 |
 
-仓库根没有 `package.json`：`vscode`、`ember`、`machines` 各自安装依赖；`apps` 下的 fcdev 项目不需要 Node。
+仓库根没有 `package.json`：`vscode`、`ember`、`machines` 各自安装依赖；`apps` 下的 FC Dev 项目不需要 Node。
 
 ## 构建命令
 
@@ -52,14 +52,14 @@ npm run check                # 全部检查与测试（含 vscode:check）
 
 发布包输出到 `build/ember/release/`。
 
-### apps/sb2000（fcdev 项目）
+### apps/sb2000（FC Dev 项目）
 
 在 VS Code 里打开仓库，用“终端 → 运行任务”选 `fcdev` 的构建、运行任务（每个项目的 `.vscode/tasks.json` 或扩展自动提供的任务），构建会同时生成软盘镜像；运行需要先在用户设置 `fcdev.emulator.path` 里指向 Ember。
 
 ### machines
 
 ```bash
-# machines/sb2000（在 VS Code 中运行 fcdev 构建，产物 build/rom/sb2000.bin）
+# machines/sb2000（在 VS Code 中运行 FC Dev 构建，产物 build/rom/sb2000.bin）
 
 # machines/bbg
 # 汇编链接见 machines/bbg/README.md

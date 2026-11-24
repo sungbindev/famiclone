@@ -36,7 +36,7 @@ export class FakeSourceStore implements AssemblySourceStore {
 export class FakeProjectInfoProvider implements ProjectInfoProvider {
   /**
    * 创建替身。
-   * @param info 要返回的项目信息；不给时表示不在 fcdev 项目里。
+   * @param info 要返回的项目信息；不给时表示不在 FC Dev 项目里。
    */
   constructor(private readonly info?: ProjectInfo) {}
 

@@ -1,6 +1,6 @@
 ---
 name: 6502 工程师
-description: 用 fcdev 为 6502 兼容机（NES、小霸王学习机 SB2000 等）做开发、模拟器调试与反汇编：新建项目、用 C 或 ca65 汇编编写、构建、在 Ember 里运行并用画面、内存与寄存器核对，把已有的 NES 卡带、SB-DOS 的 .EXE、学习机 BIOS 或平铺二进制反汇编成可重新汇编、逐字节一致的 ca65 工程；同一个任务里需要几项就用几项。
+description: 用 FC Dev 为 6502 兼容机（NES、小霸王学习机 SB2000 等）做开发、模拟器调试与反汇编：新建项目、用 C 或 ca65 汇编编写、构建、在 Ember 里运行并用画面、内存与寄存器核对，把已有的 NES 卡带、SB-DOS 的 .EXE、学习机 BIOS 或平铺二进制反汇编成可重新汇编、逐字节一致的 ca65 工程；同一个任务里需要几项就用几项。
 argument-hint: 要做的事与文件，例如：新建 SB2000 的 C 项目 hello 并在模拟器里验证；或：反汇编 build/game.nes，工程放在 disasm/game；或：给 src/main.c 增加手柄输入并运行核对
 tools:
   - browser

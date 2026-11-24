@@ -1,17 +1,17 @@
 # VS Code 扩展
 
-扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“FC 6502 Dev Kit”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。它是 fcdev 唯一的发行形式：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具都在这里，整体架构见 [01-软件架构设计](01-软件架构设计.md)。
+扩展放在仓库的 `vscode/` 目录，包名 `fcdev`，显示名“FC Dev”，图标用模拟器 Ember 的 logo（`vscode/resources/icon.png`，复制自 `ember/resources/ember-logo.png`）。它是 FC Dev 唯一的发行形式：构建、运行、调试、新建项目、反汇编、智能感知与 Copilot 工具都在这里，整体架构见 [01-软件架构设计](01-软件架构设计.md)。
 
 ## 1. 范围
 
 - 构建：任务类型 `fcdev`、构建命令、问题匹配器 `$fcdev`，用随扩展发布的 cc65 构建 C 与 ca65 汇编程序，使用说明见 `vscode/docs/01-构建.md`。
 - 运行与调试：命令“运行”“调试运行”、5 个调试命令，经 Ember 的调试服务工作；Ember 的位置来自设置，使用说明见 `vscode/docs/02-模拟器与调试.md`。
-- 新建项目：命令“fcdev：新建项目”与七个模板，使用说明见 `vscode/docs/04-新建项目与模板.md`。
+- 新建项目：命令“FC Dev：新建项目”与七个模板，使用说明见 `vscode/docs/04-新建项目与模板.md`。
 - 反汇编：命令“反汇编映像文件”与给 Copilot 用的工具，见第 6 节与 [09-AI反汇编工具](09-AI反汇编工具.md)。
 - ca65 汇编（`.s`、`.asm`、`.inc`）的悬停、补全、转到定义、文档符号与语法高亮。
 - C 代码的智能感知：自动同步 C/C++ 配置，让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏；头文件里符号与函数的文档注释（`/** */`）悬停时显示。C 用 VS Code 内置的 C 语法。
-- 命令“fcdev：查询 C 接口”“fcdev：打开使用文档”与对应的工具。
-- 给 Copilot 用的 36 个语言模型工具（19 个反汇编工具、11 个模拟器工具、6 个 fcdev 工具），以及两份指令（6502 工具使用规则、6502 反汇编规则）、三个 skill（反汇编、fcdev 程序开发、Ember 模拟器操作）与一个自定义智能体（“6502 工程师”），见第 6 节。
+- 命令“FC Dev：查询 C 接口”“FC Dev：打开使用文档”与对应的工具。
+- 给 Copilot 用的 36 个语言模型工具（19 个反汇编工具、11 个模拟器工具、6 个 FC Dev 工具），以及两份指令（6502 工具使用规则、6502 反汇编规则）、三个 skill（反汇编、FC Dev 程序开发、Ember 模拟器操作）与一个自定义智能体（“6502 工程师”），见第 6 节。
 
 不含：调试适配器协议（DAP）与断点、单步等调试界面，调试经命令与 `emu_*` 工具完成，登记在 [待办备忘](待办备忘.md)。
 
@@ -30,12 +30,12 @@ C 的头文件注释用 Doxygen 的 `/** */` 写法，C/C++ 扩展与 clangd 都
 
 | 触发 | 行为 |
 | --- | --- |
-| 扩展激活（工作区里有 `fcdev.json`） | 同步所有工作区文件夹里的 fcdev 项目 |
+| 扩展激活（工作区里有 `fcdev.json`） | 同步所有工作区文件夹里的 FC Dev 项目 |
 | 工作区文件夹增减 | 同步 |
 | `fcdev.json` 新建或修改 | 丢弃该项目的信息缓存，合并 500 毫秒内的连续变化后同步该项目 |
-| 命令“fcdev：同步 C/C++ 智能感知配置” | 手动同步，带进度，结束后弹出结果；没有 fcdev 项目时提示 |
+| 命令“FC Dev：同步 C/C++ 智能感知配置” | 手动同步，带进度，结束后弹出结果；没有 FC Dev 项目时提示 |
 
-自动同步只写日志，失败也不弹提示；日志在“输出”面板的 fcdev 通道。设置 `fcdev.intelliSense.autoSync`（默认开启）可关闭自动同步。
+自动同步只写日志，失败也不弹提示；日志在“输出”面板的 FC Dev 通道。设置 `fcdev.intelliSense.autoSync`（默认开启）可关闭自动同步。
 
 生成的头文件目录在扩展目录里，路径随扩展版本变化：激活时总是同步所有项目，所以升级扩展后配置自动更新。
 
@@ -110,7 +110,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | `entry/build/build-task-runner.ts` | 任务在终端里运行：调用构建服务或运行服务，输出原始工具输出，失败输出“错误：”加说明与建议，退出码为 1 |
 | `entry/build/build-commands.ts` | 命令“构建项目”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”，都经任务运行 |
 | `entry/fcdev-tools/` | 工具 `fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs` |
-| `entry/debug-client/debug-commands.ts` | 5 个调试命令，结果写到“fcdev 调试”输出通道 |
+| `entry/debug-client/debug-commands.ts` | 5 个调试命令，结果写到“FC Dev 调试”输出通道 |
 | `entry/scaffold`、`entry/c-api`、`entry/usage-docs`、`entry/disassembly/disassembly-commands.ts` | 命令“新建项目”“查询 C 接口”“打开使用文档”“反汇编映像文件” |
 | `entry/emulator/workspace-emulator-settings.ts` | 读设置 `fcdev.emulator.path` 与 `fcdev.emulator.debugPort`（作用域 `machine`，每次使用时读取） |
 
@@ -155,7 +155,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 ## 6. 反汇编与模拟器工具
 
-扩展用 VS Code 的语言模型工具接口（`contributes.languageModelTools` 声明，`vscode.lm.registerTool` 实现，不使用 MCP）给 Copilot 提供 36 个工具：19 个反汇编工具、11 个模拟器工具与 6 个 fcdev 工具。工作流、工具的用途见 [09-AI反汇编工具](09-AI反汇编工具.md)，核心见 [07-反汇编设计](07-反汇编设计.md)。
+扩展用 VS Code 的语言模型工具接口（`contributes.languageModelTools` 声明，`vscode.lm.registerTool` 实现，不使用 MCP）给 Copilot 提供 36 个工具：19 个反汇编工具、11 个模拟器工具与 6 个 FC Dev 工具。工作流、工具的用途见 [09-AI反汇编工具](09-AI反汇编工具.md)，核心见 [07-反汇编设计](07-反汇编设计.md)。
 
 ### 6.1 工具
 
@@ -166,11 +166,11 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | 编辑 | `disasm_apply`、`disasm_symbols`、`disasm_import_record` |
 | 生成与校验 | `disasm_generate`、`disasm_verify`、`disasm_build` |
 | 模拟器 | `emu_connect`、`emu_launch`、`emu_status`、`emu_load`、`emu_run`、`emu_break`、`emu_step`、`emu_inspect`、`emu_screen`、`emu_input`、`emu_record` |
-| fcdev | `fcdev_new_project`、`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_api`、`fcdev_docs` |
+| FC Dev | `fcdev_new_project`、`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_api`、`fcdev_docs` |
 
 - 工具的名字、给模型的说明与参数结构只写在 `package.json` 的 `languageModelTools` 里；代码（`src/entry/disassembly` 每组一个文件、`src/entry/fcdev-tools`）只写“对应的操作、要不要确认、显示的文字、要检查的路径参数”，运行时按名字读 `package.json` 里的参数结构检查输入（`shared/disassembly/schema-validator.ts` 支持 JSON Schema 的一个子集）。`test/entry/disassembly-tools.test.ts` 与 `test/entry/fcdev-tools/` 核对两边的工具一一对应。
 - 除 `disasm_build` 外，每个反汇编与模拟器工具对应核心的一个操作（`disasm_open` 对应 `open`，`disasm_import_record` 对应 `importRecord`，`emu_break` 对应 `breakpoint`，`emu_screen` 对应 `screenshot`，依此类推）；`disasm_reference` 不给 `projectDir` 时只查指令。模拟器工具的操作在 `src/logic/emulator/`，会话见 6.4。
-- `disasm_build` 用构建服务构建项目（`logic/disassembly/build-service-comparer.ts`），把产物与工程记录的原映像逐字节比较；构建的是按生成的源码整理出来的 fcdev 项目，不是反汇编工程目录本身。
+- `disasm_build` 用构建服务构建项目（`logic/disassembly/build-service-comparer.ts`），把产物与工程记录的原映像逐字节比较；构建的是按生成的源码整理出来的 FC Dev 项目，不是反汇编工程目录本身。
 
 ### 6.2 路径与确认
 
@@ -183,7 +183,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 
 - 结果是缩进的 JSON；清单、十六进制视图、调用图这类多行文字（结果里的 `text` 与 `listing`）单独成块原样输出。
 - 一次结果最多 20000 个字符，超出时截断并说明怎么缩小范围；列表类工具带 `limit`（默认 50，最多 500）与 `cursor`，下一页的游标是结果里的 `nextCursor`。
-- 出错时不抛异常，把原因作为结果文字（以“错误：”开头）返回，模型据此改参数；非预期的错误写进“fcdev”输出通道，并返回通用说明。
+- 出错时不抛异常，把原因作为结果文字（以“错误：”开头）返回，模型据此改参数；非预期的错误写进“FC Dev”输出通道，并返回通用说明。
 
 ### 6.4 模拟器会话
 
@@ -204,7 +204,7 @@ C/C++ 扩展用哪个配置，只保存在它自己的工作区状态里，其�
 | `chat/instructions/6502-disassembly.instructions.md` | `chatInstructions`，`applyTo: '**/disasm.json'` | 只经工具改工程、不手改生成的文件、映像与 BIOS 不提交、`image.stale` 时停下、做法读 skill |
 | `chat/skills/disassemble-6502/SKILL.md` 与 `references/` | `chatSkills` | 开始前收集的输入、新建与继续的判断、八步各自的操作顺序与完成标准（数字取自 `disasm_status`）、命名与注释的依据、各种输入的打开方式、区域类型与参数、运行记录的闭环与导入种类对应、符号与提示的形式 |
 | `chat/skills/ember-emulator/SKILL.md` 与 `references/` | `chatSkills` | `emu_*` 工具的任务判定、起步与载入、观察与核对循环、断点与单步、记录、收尾；工具参数表、机型与开机后的操作、报错处理表 |
-| `chat/skills/fcdev-app-development/SKILL.md` 与 `references/` | `chatSkills` | 用 fcdev 开发 NES 与 SB2000 程序：任务判定与五个流程（新建、编写、构建、运行核对、排查）、`fcdev.json`、构建、C 接口、各目标的内存与程序格式、使用文档的读取顺序；内容随扩展的命令与工具维护，不放在 `copilot-plugins` |
+| `chat/skills/fcdev-app-development/SKILL.md` 与 `references/` | `chatSkills` | 用 FC Dev 开发 NES 与 SB2000 程序：任务判定与五个流程（新建、编写、构建、运行核对、排查）、`fcdev.json`、构建、C 接口、各目标的内存与程序格式、使用文档的读取顺序；内容随扩展的命令与工具维护，不放在 `copilot-plugins` |
 | `chat/agents/6502-engineer.agent.md` | `chatAgents` | “6502 工程师”：除 `agent` 以外的全部内置工具加本扩展的全部工具（写成 `sungbin.fcdev/工具引用名`），一个智能体覆盖开发、模拟器调试与反汇编；按任务类型选 skill、列合并的步骤、遇到指定情形停下询问，结束时按任务类型汇报 |
 
 - 路径相对扩展根目录；skill 所在目录名必须与 `SKILL.md` 的 `name` 一致。`chat/` 随扩展打包。

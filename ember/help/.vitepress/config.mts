@@ -1,12 +1,12 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：config.mts
- * 说明：Ember 帮助文档站点的 VitePress 配置：中文界面、四个分类（使用说明、插件开发手册、调试接口手册、fcdev 开发手册）的导航与侧边栏、离线搜索，构建输出到仓库根目录的 build/ember/help。
+ * 说明：Ember 帮助文档站点的 VitePress 配置：中文界面、四个分类（使用说明、插件开发手册、调试接口手册、FC Dev 开发手册）的导航与侧边栏、离线搜索，构建输出到仓库根目录的 build/ember/help。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-18
  * 备注：help/api 由 npm run help:build 先生成（调试接口的各模块页，不提交），侧边栏里的模块按 help/api/index.md 里的顺序列出；
- *       help/fcdev 同样由 help:build 从 vscode（fcdev 扩展）导入（不提交），侧边栏取自 tools/build/import-fcdev-docs.mjs，与导入用同一份分组规则；
+ *       help/fcdev 同样由 help:build 从 vscode（FC Dev 扩展）导入（不提交），侧边栏取自 tools/build/import-fcdev-docs.mjs，与导入用同一份分组规则；
  *       站点由外壳在本机回环地址上提供，只能用 .html 结尾的链接（cleanUrls 保持关闭）；外观跟随系统，不提供切换按钮。
  * ------------------------------------------------------------------------
  */
@@ -29,11 +29,11 @@ const THEME_CLASS_SCRIPT =
 /** 用户可见的文字。 */
 const TEXT = {
   title: 'Ember 帮助文档',
-  description: '面向 NES 与学习机应用开发者的 Ember 模拟器：调试接口、fcdev 开发工具、插件开发与完整使用手册',
+  description: '面向 NES 与学习机应用开发者的 Ember 模拟器：调试接口、FC Dev 开发工具、插件开发与完整使用手册',
   manual: '使用说明',
   plugin: '插件开发手册',
   debug: '调试接口手册',
-  fcdev: 'fcdev 开发手册',
+  fcdev: 'FC Dev 开发手册',
   missingApi: '找不到 help/api：先运行 npm run help:build 生成调试接口的各模块页'
 } as const;
 
@@ -109,7 +109,7 @@ export default defineConfig({
   // 主题里直接引用组件库源码的令牌、主题与标题栏样式，位置与界面打包用的一致（见 ui-kit-source.mts）
   vite: {
     resolve: { alias: [{ find: /^@ember-ui-kit\//, replacement: `${resolve(uiKitDirectory(), 'src').replaceAll('\\', '/')}/` }] },
-    // 站点从本地读取，不走网络，体积提示没有意义；fcdev 手册与搜索索引让打包文件超过默认的 500 kB
+    // 站点从本地读取，不走网络，体积提示没有意义；FC Dev 手册与搜索索引让打包文件超过默认的 500 kB
     build: { chunkSizeWarningLimit: 2000 }
   },
   markdown: { theme: { light: 'github-light', dark: 'github-dark' } },

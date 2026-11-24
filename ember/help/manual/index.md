@@ -22,8 +22,8 @@ Ember 是面向 NES 与小霸王、步步高等学习机应用开发者的模拟
 - 键盘、手柄与鼠标怎么用：[键盘、手柄与鼠标](input.md)
 - 遇到问题：[常见问题](faq.md)
 - 想自己写 mapper 插件：[插件开发手册](../plugin/index.md)
-- 想用 fcdev 为 NES 或学习机开发程序：[fcdev 开发手册](../fcdev/index.md)
+- 想用 FC Dev 为 NES 或学习机开发程序：[fcdev 开发手册](../fcdev/index.md)
 
 ## 调试功能
 
-Ember 内置一个调试服务，可以用 VS Code 的 fcdev 扩展、Copilot 工具或脚本实时控制模拟器，并读取内存、状态和寄存器，设置断点、监视项与指令跟踪。普通使用不需要它，默认也是关闭的；需要时见[调试接口手册](../debug/index.md)。
+Ember 内置一个调试服务，可以用 VS Code 的 FC Dev 扩展、Copilot 工具或脚本实时控制模拟器，并读取内存、状态和寄存器，设置断点、监视项与指令跟踪。普通使用不需要它，默认也是关闭的；需要时见[调试接口手册](../debug/index.md)。

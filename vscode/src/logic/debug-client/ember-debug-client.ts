@@ -89,7 +89,7 @@ export class EmberDebugClient implements DebugSession {
         const info = (await session.request('debug.hello', { client: options.clientName ?? DEFAULT_CLIENT_NAME, token: options.token, protocol: PROTOCOL_VERSION }, { timeoutMs: connectTimeoutMs })) as HelloInfo;
         // Ember 可能自动升级到比本 SDK 新的版本：同一协议号内只增不改，协议号不同就不能用
         if (info.protocol !== PROTOCOL_VERSION) {
-          throw new EmberConnectionError('protocol', `Ember 的调试协议版本是 ${info.protocol}，这个版本的扩展支持的是 ${PROTOCOL_VERSION}（Ember ${info.appVersion}）：请升级 fcdev 扩展或 Ember`);
+          throw new EmberConnectionError('protocol', `Ember 的调试协议版本是 ${info.protocol}，这个版本的扩展支持的是 ${PROTOCOL_VERSION}（Ember ${info.appVersion}）：请升级 FC Dev 扩展或 Ember`);
         }
         return new EmberDebugClient(session, info);
       } catch (error) {

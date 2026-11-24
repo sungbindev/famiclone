@@ -37,13 +37,13 @@ const STYLE_FILE = 'site.css';
 const REPOSITORY_URL = 'https://github.com/sungbindev/famiclone';
 /** 各分区的首页（用于清理旧页面）。 */
 const SECTION_DIRECTORIES = ['manual', 'plugin', 'debug', 'api', 'fcdev'];
-/** fcdev 的参考文档生成脚本（先于手册导入运行）。 */
+/** FC Dev 的参考文档生成脚本（先于手册导入运行）。 */
 const FCDEV_GENERATORS = ['gen-sb2000-api-doc.mjs', 'gen-sb2000-symbols-doc.mjs', 'gen-sb2000-examples-doc.mjs'];
-/** 首页与页面要链接的 fcdev 手册页。 */
+/** 首页与页面要链接的 FC Dev 手册页。 */
 const FCDEV_LINKS = { start: 'fcdev/install', build: 'fcdev/build', emulator: 'fcdev/emulator', nes: 'fcdev/nes', sb2000: 'fcdev/sb2000', syscall: 'fcdev/syscall' };
 
 /**
- * 刷新帮助文档的生成内容：调试接口模块页、fcdev 参考文档与手册导入（与 npm run help:build 的步骤一致，只是不再构建 VitePress）。
+ * 刷新帮助文档的生成内容：调试接口模块页、FC Dev 参考文档与手册导入（与 npm run help:build 的步骤一致，只是不再构建 VitePress）。
  * @returns {void}
  */
 function refreshHelpSources() {
@@ -53,7 +53,7 @@ function refreshHelpSources() {
   execFileSync(process.execPath, [join(extension, 'tools', 'gen', 'gen-debug-api-docs.mjs'), join(HELP_ROOT, 'api')], { cwd: extension, stdio: 'inherit' });
   for (const script of FCDEV_GENERATORS) execFileSync(process.execPath, [join(extension, 'tools', 'gen', script)], { cwd: REPO_ROOT, stdio: 'inherit' });
   const { pages, written } = importFcdevDocs();
-  console.log(`fcdev 手册：${pages} 页，写入 ${written} 页`);
+  console.log(`FC Dev 手册：${pages} 页，写入 ${written} 页`);
 }
 
 /**
@@ -166,7 +166,7 @@ function commonView(out, content, title, description) {
  * @returns {object} 视图
  */
 function homeView(content) {
-  const common = commonView('index.html', content, 'Ember 与 fcdev', 'Ember 模拟器与 fcdev 开发工具：NES 与学习机的运行、调试，以及 VS Code 扩展与帮助文档。');
+  const common = commonView('index.html', content, 'Ember 与 FC Dev', 'Ember 模拟器与 FC Dev 开发工具：NES 与学习机的运行、调试，以及 VS Code 扩展与帮助文档。');
   const shot = (item) => ({ src: hrefFrom('index.html', `${ASSETS_DIR}/shots/${item.file}`), alt: item.alt, caption: item.caption });
   const sectionCount = (id) => content.sections.find((section) => section.id === id).groups.reduce((sum, group) => sum + group.pages.length, 0);
   return {
@@ -207,7 +207,7 @@ function homeView(content) {
  * @returns {object} 视图
  */
 function docView(content, page) {
-  const common = commonView(page.out, content, `${page.label} · ${page.section.title} · Ember 与 fcdev`, `${page.section.title}：${page.label}`);
+  const common = commonView(page.out, content, `${page.label} · ${page.section.title} · Ember 与 FC Dev`, `${page.section.title}：${page.label}`);
   const index = content.pages.indexOf(page);
   const pager = (target) => (target ? { title: target.label, href: hrefFrom(page.out, target.out), section: target.section.title } : undefined);
   return {

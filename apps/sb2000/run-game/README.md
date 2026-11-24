@@ -1,6 +1,6 @@
 # run-game
 
-在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行 NES 游戏，用 fcdev 开发，C 语言。汇编版是本仓库的 `apps/sb2000/examples/play`，做法相同。
+在小霸王学习机 SB2000（SB-DOS）的 DOS 下运行 NES 游戏，用 FC Dev 开发，C 语言。汇编版是本仓库的 `apps/sb2000/examples/play`，做法相同。
 
 ## 使用
 
@@ -33,33 +33,33 @@ game mario.nes
 
 ## 构建
 
-“fcdev：构建”任务生成 `build/sb2000/GAME.EXE`，`fcdev.json` 的 `diskName` 设为 `sb2000-run-game.img`，同时生成只放有 `GAME.EXE` 的软盘镜像 `build/sb2000/sb2000-run-game.img`。
+“FC Dev：构建”任务生成 `build/sb2000/GAME.EXE`，`fcdev.json` 的 `diskName` 设为 `sb2000-run-game.img`，同时生成只放有 `GAME.EXE` 的软盘镜像 `build/sb2000/sb2000-run-game.img`。
 
 程序名必须符合 DOS 8.3 规则（主名不超过 8 个字符），在 `fcdev.json` 的 `name` 里修改。
 
 ## 在模拟器里运行（只支持 Windows）
 
-fcdev 不提供 BIOS。先在 `fcdev.json` 里用 `firmware` 指定 SB2000 的 BIOS 文件：
+FC Dev 不提供 BIOS。先在 `fcdev.json` 里用 `firmware` 指定 SB2000 的 BIOS 文件：
 
 ```json
 { "target": "sb2000", "name": "game", "firmware": "D:/rom/SB2K_BIOS.NES" }
 ```
 
-“fcdev：运行”任务在 Ember 里启动，镜像里只有 `GAME.EXE`。要试游戏，把 `.nes` 文件放进项目的 `disk/` 目录后重新构建。
+“FC Dev：运行”任务在 Ember 里启动，镜像里只有 `GAME.EXE`。要试游戏，把 `.nes` 文件放进项目的 `disk/` 目录后重新构建。
 
 ## 文件
 
 | 文件 | 说明 |
 | --- | --- |
 | `src/game.c` | 程序：菜单（列出 .NES 文件、手柄选择）或带参数直接运行；读入并检查 iNES 文件，用 DMA 经 ERAM 缓冲再用 CPU 复制到第 3 个 128K 窗口，改 RESET 向量后进入 FC 兼容模式；硬件细节见 `machines/sb2000/docs/NES兼容模式研究.md` |
-| `fcdev.json` | fcdev 配置：目标 sb2000，程序名 game，镜像文件名 |
+| `fcdev.json` | FC Dev 配置：目标 sb2000，程序名 game，镜像文件名 |
 
 ## 查阅接口
 
 运行库把 DOS 的系统调用封装成了 C 函数（文字、键盘手柄鼠标、文件目录、软驱、显示、声音等），头文件是 `sb2000.h`。随时查询：
 
-用命令“fcdev：查询 C 接口”（或 Copilot 的 `fcdev_api` 工具）：不填查询列出全部模块；填模块名（如 `file`）看模块里的函数；填函数名（如 `sb_file_open`）看完整文档；填系统调用号（如 `$7B`）看用到它的函数。
+用命令“FC Dev：查询 C 接口”（或 Copilot 的 `fcdev_api` 工具）：不填查询列出全部模块；填模块名（如 `file`）看模块里的函数；填函数名（如 `sb_file_open`）看完整文档；填系统调用号（如 `$7B`）看用到它的函数。
 
 ## 程序超过 16K
 
-在 `fcdev.json` 里加 `"targetOptions": { "banks": 库页个数 }`，把部分函数用 `SB_BANK_BEGIN(n)` 与 `SB_BANK_END()` 放进库页，声明处用 `SB_BANK_CALLS_BEGIN(n)` 与 `SB_BANK_CALLS_END()` 包起来，调用时自动换页。函数的用法用“fcdev：查询 C 接口”查 `bank`，写法与限制见 fcdev 扩展 `targets/sb2000/include/sb2000-bank.h`（仓库里是 `vscode/targets/sb2000/include/sb2000-bank.h`）文件头的说明。
+在 `fcdev.json` 里加 `"targetOptions": { "banks": 库页个数 }`，把部分函数用 `SB_BANK_BEGIN(n)` 与 `SB_BANK_END()` 放进库页，声明处用 `SB_BANK_CALLS_BEGIN(n)` 与 `SB_BANK_CALLS_END()` 包起来，调用时自动换页。函数的用法用“FC Dev：查询 C 接口”查 `bank`，写法与限制见 FC Dev 扩展 `targets/sb2000/include/sb2000-bank.h`（仓库里是 `vscode/targets/sb2000/include/sb2000-bank.h`）文件头的说明。

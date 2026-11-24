@@ -6,7 +6,7 @@
 // 日期：2026-11-23
 // 备注：换页窗口里同一个 CPU 地址的多个 bank 各有自己的存储区，互不冲突；存储区的大小恰好是段的长
 //       度。各段按文件偏移排序后在映像里首尾相接时，所有存储区都写到同一个输出文件（%O），按偏移
-//       顺序拼接，产物就是映像本身，可以直接用 fcdev 的 rom 目标构建；否则每段一个输出文件
+//       顺序拼接，产物就是映像本身，可以直接用 FC Dev 的 rom 目标构建；否则每段一个输出文件
 //       （seg<段号>.bin），逐字节对应映像里的这一段。
 // ------------------------------------------------------------------------
 import type { Layout, Segment } from '../model/layout';
@@ -69,5 +69,5 @@ export function renderLinkConfig(project: Project, pieces: Piece[]): string {
     }
   }
   const note = joined ? '\n# 各段按映像文件偏移顺序首尾相接，写到同一个输出文件，产物就是映像本身。' : '';
-  return `# 链接配置：由 fcdev 的反汇编工程按布局生成，不要手改。${note}\nMEMORY {\n${memory.join('\n')}\n}\nSEGMENTS {\n${segments.join('\n')}\n}\n`;
+  return `# 链接配置：由 FC Dev 的反汇编工程按布局生成，不要手改。${note}\nMEMORY {\n${memory.join('\n')}\n}\nSEGMENTS {\n${segments.join('\n')}\n}\n`;
 }

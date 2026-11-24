@@ -62,7 +62,7 @@ export function registerScaffoldCommands(context: vscode.ExtensionContext, scaff
           return;
         }
         logger.error('新建项目出错', error);
-        void vscode.window.showErrorMessage('新建项目时出错，详情见“输出”面板里的 fcdev');
+        void vscode.window.showErrorMessage('新建项目时出错，详情见“输出”面板里的 FC Dev');
       }
     })
   );

@@ -48,7 +48,7 @@ describe('method-catalog', () => {
     expect(run).toContain('wait?: boolean');
     expect(run).toContain('stopped?:');
     expect(run).toContain('runtime.noCartridge、runtime.notPowered');
-    expect(run).toContain('示例（命令“fcdev：调用调试请求”里输入）：runtime.run');
+    expect(run).toContain('示例（命令“FC Dev：调用调试请求”里输入）：runtime.run');
     expect(describeMethod(findMethod(OPENRPC_DOCUMENT, 'runtime.pause')!)).toContain('参数：\n  （无）');
   });
 });

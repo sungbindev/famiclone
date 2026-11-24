@@ -258,7 +258,7 @@ describe('扩展清单与代码一致', () => {
     expect(manifest.contributes.configuration.properties[`${section}.debugPort`]?.default).toBe(5699);
   });
 
-  it('fcdev 任务类型与问题匹配器在清单里声明，与代码一致', () => {
+  it('FC Dev 任务类型与问题匹配器在清单里声明，与代码一致', () => {
     const taskType = constantOf('entry/build/build-task-provider.ts', 'TASK_TYPE');
     expect(manifest.contributes.taskDefinitions.map((item) => item.type)).toEqual([taskType]);
     expect(readFileSync(path.join(SRC, 'entry/build/build-task-provider.ts'), 'utf8')).toContain(`'$${manifest.contributes.problemMatchers[0]?.name}'`);

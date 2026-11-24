@@ -104,7 +104,7 @@ class DisassemblyTool implements vscode.LanguageModelTool<ToolInput> {
     if (!writes && outside.length === 0) return { invocationMessage: message };
     let text = writes ? (this.spec.confirm?.(input) ?? `将执行 ${this.spec.name}。`) : '将读取工作区之外的文件。';
     if (outside.length > 0) text += `\n\n注意：这些路径在工作区之外：${outside.join('、')}`;
-    return { invocationMessage: message, confirmationMessages: { title: `fcdev：${message}`, message: new vscode.MarkdownString(text) } };
+    return { invocationMessage: message, confirmationMessages: { title: `FC Dev：${message}`, message: new vscode.MarkdownString(text) } };
   }
 
   /** 调用：检查输入、换算路径、运行操作、整理结果。 */
@@ -138,7 +138,7 @@ class DisassemblyTool implements vscode.LanguageModelTool<ToolInput> {
     } catch (error) {
       if (error instanceof UserFacingError) return { text: `错误：${error.message}` };
       this.deps.logger.error(`${this.spec.name} 执行出错`, error);
-      return { text: `错误：${this.spec.name} 执行出错（${error instanceof Error ? error.message : String(error)}），详见“fcdev”输出通道` };
+      return { text: `错误：${this.spec.name} 执行出错（${error instanceof Error ? error.message : String(error)}），详见“FC Dev”输出通道` };
     }
   }
 }

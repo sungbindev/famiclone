@@ -1,4 +1,4 @@
-# FC 6502 Dev Kit
+# FC Dev
 
 NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具：用随扩展发布的 cc65 构建 C 与 ca65 汇编程序，在模拟器 Ember 里运行与调试，反汇编已有程序，并给 Copilot 提供反汇编与模拟器工具。打开含 `fcdev.json` 的文件夹即可使用，不需要 Node 项目，也不需要另外安装 cc65。扩展只支持 Windows 64 位。
 
@@ -7,14 +7,14 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 ### 构建与运行
 
 - 任务类型 `fcdev`：为每个含 `fcdev.json` 的项目提供构建、运行两个任务，在“终端 → 运行任务”里选用；错误通过问题匹配器 `$fcdev` 出现在“问题”面板。学习机目标在 `fcdev.json` 里写了 `diskName` 时，构建同时生成这个文件名的软盘镜像，里面有程序和项目 `disk` 目录下的全部文件；不写不生成。
-- 命令：“fcdev：构建项目”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”“新建项目”。
+- 命令：“FC Dev：构建项目”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”“新建项目”。
 - 运行与调试运行需要 Ember：在用户设置 `fcdev.emulator.path` 里指向 `Ember.exe`。扩展不自带 Ember，没设置时会提示来设置。
 - 学习机（SB2000、SB97、裕兴、步步高）目标需要 BIOS：在项目的 `fcdev.json` 里用 `firmware` 指向它；步步高的 DOS 在软盘上，还要用 `diskImage` 指向带 DOS 的系统盘镜像。
 - 整机 ROM 工程（`rom` 目标）：用 `firmware` 指向完整的固件当底，构建时把 BIOS 源码的链接结果覆盖进去，`diskImage` 挂软盘镜像。
 
 ### 调试
 
-“调试运行”启动 Ember 的调试模式，程序载入后停在开机状态，之后用命令调试：“fcdev：调用调试请求”“查看调试请求说明”“保存调试截图”“监视调试事件”“显示调试服务地址”。调试服务的全部请求见 Ember 帮助文档里的“调试接口手册”。
+“调试运行”启动 Ember 的调试模式，程序载入后停在开机状态，之后用命令调试：“FC Dev：调用调试请求”“查看调试请求说明”“保存调试截图”“监视调试事件”“显示调试服务地址”。调试服务的全部请求见 Ember 帮助文档里的“调试接口手册”。
 
 ### ca65 汇编
 
@@ -31,41 +31,41 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 
 扩展自动同步 C/C++ 配置，生成 `.vscode/c_cpp_properties.json` 与 `compile_flags.txt`，让 C/C++ 扩展或 clangd 找到 cc65 的头文件与预定义宏，头文件里的文档注释会在悬停时显示。安装本扩展时会一并安装 C/C++ 扩展（`ms-vscode.cpptools`）；改用 clangd 时可卸载它。
 
-触发时机：打开含 `fcdev.json` 的工作区、`fcdev.json` 变化。也可以手动运行命令“fcdev：同步 C/C++ 智能感知配置”。C/C++ 扩展用哪个配置要在状态栏里选；`.vscode/c_cpp_properties.json` 里除 `fcdev` 外还有其他配置时，同步后会提示你选择 `fcdev`。
+触发时机：打开含 `fcdev.json` 的工作区、`fcdev.json` 变化。也可以手动运行命令“FC Dev：同步 C/C++ 智能感知配置”。C/C++ 扩展用哪个配置要在状态栏里选；`.vscode/c_cpp_properties.json` 里除 `fcdev` 外还有其他配置时，同步后会提示你选择 `fcdev`。
 
-“fcdev：查询 C 接口”查 SB2000 运行库的函数、模块与系统调用号。
+“FC Dev：查询 C 接口”查 SB2000 运行库的函数、模块与系统调用号。
 
 ### 新建项目
 
-命令“fcdev：新建项目”选目标（NES、SB2000、SB97、裕兴、步步高）与语言（C、汇编；SB97、裕兴与步步高只有汇编），在空目录里生成项目、示例程序与构建任务。
+命令“FC Dev：新建项目”选目标（NES、SB2000、SB97、裕兴、步步高）与语言（C、汇编；SB97、裕兴与步步高只有汇编），在空目录里生成项目、示例程序与构建任务。
 
 ### 6502 反汇编
 
-命令“fcdev：反汇编映像文件”把 NES 程序、SB-DOS 程序或平铺二进制反汇编成可重新汇编、逐字节一致的 ca65 工程。
+命令“FC Dev：反汇编映像文件”把 NES 程序、SB-DOS 程序或平铺二进制反汇编成可重新汇编、逐字节一致的 ca65 工程。
 
 ### Copilot 工具
 
-扩展给 Copilot 提供 6502 反汇编工具（19 个）、模拟器工具（11 个）与 fcdev 工具（构建、运行、项目信息、新建项目、C 接口、使用文档），在聊天里用 `#disasm_open` 这样的名字引用，模型也会自己选用。
+扩展给 Copilot 提供 6502 反汇编工具（19 个）、模拟器工具（11 个）与 FC Dev 工具（构建、运行、项目信息、新建项目、C 接口、使用文档），在聊天里用 `#disasm_open` 这样的名字引用，模型也会自己选用。
 
 - 工程与映像：`disasm_open`（新建或打开工程；给 `target` 为 `nes` 或 `sb2000` 时自动选映像格式、符号集与图形数据端口）、`disasm_status`（进度）、`disasm_layout`、`disasm_hex`、`disasm_find`。
 - 分析：`disasm_trace`（从入口追踪并自动命名）、`disasm_list`、`disasm_view`（带符号与注释的反汇编）、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference`。
 - 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`、`disasm_import_record`（把模拟器记录的指令轨迹、调用记录或 CDL 导入工程）。
 - 生成与校验：`disasm_generate`、`disasm_verify`（重新汇编后与原映像逐字节比较）、`disasm_build`。
 - 模拟器（Ember）：`emu_launch`（启动）、`emu_connect`（连接已运行的）、`emu_status`、`emu_load`（载入 NES 文件或整机，也可只预览 NES 文件头与匹配的插件）、`emu_run`（可按帧、CPU 周期、指令、扫描线运行）、`emu_break`（断点，支持条件、启用与禁用，以及中断、复位断点）、`emu_step`、`emu_inspect`（读写内存、寄存器、单步核对、解析 bank、调用栈、调色板）、`emu_screen`（截图）、`emu_input`（按键、手柄、鼠标）、`emu_record`（指令跟踪、CDL、调用记录，跟踪可环形记录、边记边读）、`emu_profile`（子程序周期统计）、`emu_events`（PPU 与 mapper 寄存器读写、中断的扫描位置）、`emu_speed`（运行速度与声音方式）。让程序跑起来、记录执行过的地址再导入工程，可以补上静态追踪找不到的代码。
-- fcdev：`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs`。
+- FC Dev：`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs`。
 
 会修改工程文件、写生成文件、运行汇编链接、启动 Ember、写模拟器内存或寄存器的调用，执行前会请你确认。工程目录必须在工作区里；要反汇编的映像、载入的文件、记录文件可以在工作区外，确认里会写出路径。截图作为图像返回，需要较新的 VS Code；较旧的版本用 `file` 参数保存成文件。停用扩展时会关闭模拟器会话并结束工具启动的 Ember。
 
 扩展还带两份指令、三个 skill 与两个自定义智能体，写明了开发、运行调试与反汇编的步骤和完成标准：
 
 - 智能体“6502 工程师”：在 Copilot 聊天的智能体下拉里选它，一个智能体覆盖开发、模拟器调试与反汇编。开发：新建 NES 或 SB2000 项目、编写、构建，并在 Ember 里运行核对。反汇编：给出映像路径，它按识别、追踪、区域分类、命名、注释、分层、生成与回读、构建八步完成，每步有完成标准（例如自动命名的符号数为 0、回读一致）。同一个任务里需要几项就用几项。
-- skill `fcdev-app-development` 是用 fcdev 开发 NES 与 SB2000 程序的流程与知识（新建项目、构建、运行、C 接口与易错点），skill `ember-emulator` 是用 `emu_*` 工具操作模拟器的流程（起步、载入、观察与核对、收尾、报错处理），skill `disassemble-6502` 是反汇编八步；Copilot 在你要做这些事时会自动读取。
+- skill `fcdev-app-development` 是用 FC Dev 开发 NES 与 SB2000 程序的流程与知识（新建项目、构建、运行、C 接口与易错点），skill `ember-emulator` 是用 `emu_*` 工具操作模拟器的流程（起步、载入、观察与核对、收尾、报错处理），skill `disassemble-6502` 是反汇编八步；Copilot 在你要做这些事时会自动读取。
 
 这些内容需要较新的 VS Code。
 
 ### 使用文档
 
-命令“fcdev：打开使用文档”列出随扩展发布的文档：构建、模拟器与调试、反汇编、新建项目、NES、SB97、裕兴、步步高、SB2000 与整机 ROM 工程的开发指南、系统调用手册、硬件说明与 C 接口参考。
+命令“FC Dev：打开使用文档”列出随扩展发布的文档：构建、模拟器与调试、反汇编、新建项目、NES、SB97、裕兴、步步高、SB2000 与整机 ROM 工程的开发指南、系统调用手册、硬件说明与 C 接口参考。
 
 ## 设置
 

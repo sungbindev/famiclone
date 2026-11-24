@@ -1,6 +1,6 @@
 # NES 程序开发
 
-开发 NES（红白机）程序时使用。fcdev 的 `nes` 目标复用 cc65 自带的 `nes` 目标，在它之上加了辅助库 `fcnes` 与 ASCII 字库。目标文件位于 `targets/nes/`（`include/fcnes.h`、`asminc/fcnes.inc`、`chr/`、`src/`）。
+开发 NES（红白机）程序时使用。FC Dev 的 `nes` 目标复用 cc65 自带的 `nes` 目标，在它之上加了辅助库 `fcnes` 与 ASCII 字库。目标文件位于 `targets/nes/`（`include/fcnes.h`、`asminc/fcnes.inc`、`chr/`、`src/`）。
 
 ## 目标定义
 
@@ -32,7 +32,7 @@ C 程序引入 cc65 的 `nes.h`（寄存器与颜色等定义）和 `fcnes.h`；
 | `void nes_wait_vblank(void)` | 等下一次垂直消隐开始 |
 
 - 汇编可直接调用 `_nes_*` 符号。参数用 cc65 的 fastcall：最后一个参数在 A（低字节）与 X（高字节），其余参数在 C 栈上，由被调用者弹出。
-- `fcnes` 只提供上面 5 个函数。精灵、手柄、声音、滚动、中断等没有封装，也没有在 fcdev 里验证过的示例：用到时直接写 PPU/APU 寄存器，或用 cc65 `nes.lib` 提供的接口（名字以工具链 `include/` 下的 `nes.h`、`joystick.h` 等为准，`fcdev_info` 可查工具链目录），写完要在模拟器里实测。
+- `fcnes` 只提供上面 5 个函数。精灵、手柄、声音、滚动、中断等没有封装，也没有在 FC Dev 里验证过的示例：用到时直接写 PPU/APU 寄存器，或用 cc65 `nes.lib` 提供的接口（名字以工具链 `include/` 下的 `nes.h`、`joystick.h` 等为准，`fcdev_info` 可查工具链目录），写完要在模拟器里实测。
 
 ## 字库与图块
 
@@ -77,7 +77,7 @@ int main(void)
 
 ## 运行与验证
 
-- 运行任务“fcdev：运行”（或工具 `fcdev_run`）在模拟器里打开 `.nes`，不需要固件；Ember 的位置由用户在设置 `fcdev.emulator.path` 里指定。
+- 运行任务“FC Dev：运行”（或工具 `fcdev_run`）在模拟器里打开 `.nes`，不需要固件；Ember 的位置由用户在设置 `fcdev.emulator.path` 里指定。
 - 自动核对：按 [run-and-verify.md](run-and-verify.md) 的“核对清单：NES”做，模板应显示 `HELLO, NES!`。
 - 手柄按键用 `emu_input` 的 `kind: "pad"` 注入（1=A、2=B、4=选择、8=开始、16=上、32=下、64=左、128=右），用法见 skill `ember-emulator`。
 - 已有 `.nes` 要读懂时用 skill `disassemble-6502`（内置支持 NROM 等常见映射器）。

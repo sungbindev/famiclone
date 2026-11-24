@@ -146,7 +146,7 @@ describe('项目信息提供者', () => {
     expect(describer.calls).toBe(1);
   });
 
-  it('文件不在 fcdev 项目里时不读取；失效后重新读取', async () => {
+  it('文件不在 FC Dev 项目里时不读取；失效后重新读取', async () => {
     const describer = new CountingDescriber(fakeDescription);
     const provider = new DescribingProjectInfoProvider(new NodeFileSystem(), describer, fakeLogger());
     expect(await provider.get(path.join(tmpdir(), 'fcdev-ext-no-project', 'a.s'))).toBeUndefined();

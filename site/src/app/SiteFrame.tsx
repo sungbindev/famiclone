@@ -16,7 +16,7 @@ import { Sidebar } from './Sidebar';
 import type { PageView } from './types';
 
 /** 标题栏的应用名与副名。 */
-const BRAND = { title: 'Ember 与 fcdev', subtitle: '6502 模拟器与开发工具' };
+const BRAND = { title: 'Ember 与 FC Dev', subtitle: '6502 模拟器与开发工具' };
 /** 标题栏里的作者与联系方式。 */
 const CONTACT = { author: 'sungbin', email: 'sungbin@3578.cn', qq: '46427991' };
 
@@ -50,7 +50,7 @@ export function SiteFrame({ view }: { view: PageView }) {
         </main>
       </div>
       <footer className="site-footer">
-        Ember 以 GPLv3 发布，fcdev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href={view.repository} target="_blank" rel="noopener">GitHub 仓库</a>。
+        Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href={view.repository} target="_blank" rel="noopener">GitHub 仓库</a>。
       </footer>
     </div>
   );

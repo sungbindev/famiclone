@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：file-cpp-configuration-inspector.ts
-// 说明：C/C++ 配置检查器的实现：读取项目 .vscode/c_cpp_properties.json，找出 fcdev 以外的配置。
+// 说明：C/C++ 配置检查器的实现：读取项目 .vscode/c_cpp_properties.json，找出 FC Dev 以外的配置。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11

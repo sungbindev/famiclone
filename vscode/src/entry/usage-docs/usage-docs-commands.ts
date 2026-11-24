@@ -46,7 +46,7 @@ export function registerUsageDocsCommands(context: vscode.ExtensionContext, docs
           return;
         }
         logger.error('打开使用文档出错', error);
-        void vscode.window.showErrorMessage('打开使用文档时出错，详情见“输出”面板里的 fcdev');
+        void vscode.window.showErrorMessage('打开使用文档时出错，详情见“输出”面板里的 FC Dev');
       }
     })
   );

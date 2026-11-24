@@ -32,7 +32,7 @@ export class FileIntelliSenseSyncService implements IntelliSenseSyncService {
    * 创建服务。
    * @param fileSystem 文件系统。
    * @param describer 项目描述器。
-   * @param locator 查找工作区里 fcdev 项目的能力。
+   * @param locator 查找工作区里 FC Dev 项目的能力。
    */
   constructor(
     private readonly fileSystem: FileSystem,

@@ -1,6 +1,6 @@
 {
   "name": "fcdev",
-  "displayName": "FC 6502 Dev Kit",
+  "displayName": "FC Dev",
   "description": "NES、学习机等 6502 机型的汇编与 C 开发支持，附带 Copilot 反汇编工具。",
   "icon": "resources/icon.png",
   "version": "0.13.0",
@@ -59,67 +59,67 @@
     "commands": [
       {
         "command": "fcdev.syncIntelliSense",
-        "title": "fcdev：同步 C/C++ 智能感知配置"
+        "title": "FC Dev：同步 C/C++ 智能感知配置"
       },
       {
         "command": "fcdev.newProject",
-        "title": "fcdev：新建项目"
+        "title": "FC Dev：新建项目"
       },
       {
         "command": "fcdev.build",
-        "title": "fcdev：构建项目"
+        "title": "FC Dev：构建项目"
       },
       {
         "command": "fcdev.buildCurrentFile",
-        "title": "fcdev：构建当前文件"
+        "title": "FC Dev：构建当前文件"
       },
       {
         "command": "fcdev.buildCurrentDirectory",
-        "title": "fcdev：构建当前目录"
+        "title": "FC Dev：构建当前目录"
       },
       {
         "command": "fcdev.run",
-        "title": "fcdev：运行"
+        "title": "FC Dev：运行"
       },
       {
         "command": "fcdev.debugRun",
-        "title": "fcdev：调试运行"
+        "title": "FC Dev：调试运行"
       },
       {
         "command": "fcdev.showProjectInfo",
-        "title": "fcdev：显示项目信息"
+        "title": "FC Dev：显示项目信息"
       },
       {
         "command": "fcdev.debugCall",
-        "title": "fcdev：调用调试请求"
+        "title": "FC Dev：调用调试请求"
       },
       {
         "command": "fcdev.debugDescribe",
-        "title": "fcdev：查看调试请求说明"
+        "title": "FC Dev：查看调试请求说明"
       },
       {
         "command": "fcdev.debugScreenshot",
-        "title": "fcdev：保存调试截图"
+        "title": "FC Dev：保存调试截图"
       },
       {
         "command": "fcdev.debugWatch",
-        "title": "fcdev：监视调试事件"
+        "title": "FC Dev：监视调试事件"
       },
       {
         "command": "fcdev.debugEndpoint",
-        "title": "fcdev：显示调试服务地址"
+        "title": "FC Dev：显示调试服务地址"
       },
       {
         "command": "fcdev.disassemble",
-        "title": "fcdev：反汇编映像文件"
+        "title": "FC Dev：反汇编映像文件"
       },
       {
         "command": "fcdev.queryApi",
-        "title": "fcdev：查询 C 接口"
+        "title": "FC Dev：查询 C 接口"
       },
       {
         "command": "fcdev.openDocs",
-        "title": "fcdev：打开使用文档"
+        "title": "FC Dev：打开使用文档"
       }
     ],
     "taskDefinitions": [
@@ -174,7 +174,7 @@
       }
     ],
     "configuration": {
-      "title": "fcdev",
+      "title": "FC Dev",
       "properties": {
         "fcdev.emulator.path": {
           "type": "string",
@@ -194,7 +194,7 @@
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "markdownDescription": "打开 fcdev 项目、修改 `fcdev.json` 时，自动同步 C/C++ 配置（与命令“fcdev：同步 C/C++ 智能感知配置”相同），让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。"
+          "markdownDescription": "打开 FC Dev 项目、修改 `fcdev.json` 时，自动同步 C/C++ 配置（与命令“FC Dev：同步 C/C++ 智能感知配置”相同），让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。"
         },
         "fcdev.intelliSense.promptConfigurationSelection": {
           "type": "boolean",
@@ -1171,8 +1171,8 @@
           "fcdev"
         ],
         "toolReferenceName": "disasm_build",
-        "displayName": "用 fcdev 构建并比较",
-        "modelDescription": "构建一个 fcdev 项目（buildPath 是项目目录，或其中的一个源文件；项目里要有 fcdev.json），并把产物与 projectDir 工程的原映像逐字节比较。只适用于 fcdev 支持的目标（NES 的 NROM，SB2000 的 .EXE）；项目需要由你按生成的源码整理（段名要改成目标的链接配置用的名字）。",
+        "displayName": "用 FC Dev 构建并比较",
+        "modelDescription": "构建一个 FC Dev 项目（buildPath 是项目目录，或其中的一个源文件；项目里要有 fcdev.json），并把产物与 projectDir 工程的原映像逐字节比较。只适用于 FC Dev 支持的目标（NES 的 NROM，SB2000 的 .EXE）；项目需要由你按生成的源码整理（段名要改成目标的链接配置用的名字）。",
         "userDescription": "构建并与原映像比较。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1186,7 +1186,7 @@
             "buildPath": {
               "type": "string",
               "minLength": 1,
-              "description": "fcdev 项目目录，或其中的源文件"
+              "description": "FC Dev 项目目录，或其中的源文件"
             }
           },
           "required": [
@@ -1248,7 +1248,7 @@
         ],
         "toolReferenceName": "emu_connect",
         "displayName": "连接 Ember",
-        "modelDescription": "连接已运行且开启了调试服务的 Ember。默认按设置 fcdev.emulator.debugPort 里的端口（默认 5699）找 fcdev 启动的 Ember 的端点文件；也可以给 url 与 token（用户给出的地址与令牌），或 userDataDirectory。连不上时用 emu_launch 启动一个。已有会话时先关闭旧连接（不结束进程）。",
+        "modelDescription": "连接已运行且开启了调试服务的 Ember。默认按设置 fcdev.emulator.debugPort 里的端口（默认 5699）找 FC Dev 启动的 Ember 的端点文件；也可以给 url 与 token（用户给出的地址与令牌），或 userDataDirectory。连不上时用 emu_launch 启动一个。已有会话时先关闭旧连接（不结束进程）。",
         "userDescription": "连接已运行且开启了调试服务的 Ember。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -2018,9 +2018,9 @@
           "fcdev"
         ],
         "toolReferenceName": "fcdev_new_project",
-        "displayName": "新建 fcdev 项目",
-        "modelDescription": "在一个空目录里按模板生成 fcdev 项目：fcdev.json、.gitignore、.vscode/tasks.json、README.md、src 下的 hello 示例程序，学习机目标还有 disk/README.TXT（构建磁盘镜像时放进镜像的使用说明）。target 选目标（nes、sb2000、sb97、yuxing 或 bbg），language 选语言（c 或 asm；sb97、yuxing 与 bbg 只有 asm）；目录不存在时创建，必须为空（允许已有 .git），已有文件不会被覆盖。生成后用 fcdev_build 构建。",
-        "userDescription": "新建 fcdev 项目（NES 或学习机，C 或汇编）。",
+        "displayName": "新建 FC Dev 项目",
+        "modelDescription": "在一个空目录里按模板生成 FC Dev 项目：fcdev.json、.gitignore、.vscode/tasks.json、README.md、src 下的 hello 示例程序，学习机目标还有 disk/README.TXT（构建磁盘镜像时放进镜像的使用说明）。target 选目标（nes、sb2000、sb97、yuxing 或 bbg），language 选语言（c 或 asm；sb97、yuxing 与 bbg 只有 asm）；目录不存在时创建，必须为空（允许已有 .git），已有文件不会被覆盖。生成后用 fcdev_build 构建。",
+        "userDescription": "新建 FC Dev 项目（NES 或学习机，C 或汇编）。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -2065,9 +2065,9 @@
           "fcdev"
         ],
         "toolReferenceName": "fcdev_build",
-        "displayName": "构建 fcdev 项目",
+        "displayName": "构建 FC Dev 项目",
         "modelDescription": "用随扩展发布的 cc65 构建一个程序，返回工具的输出（cc65、ca65、ld65 的错误是“文件(行): Error: 信息”格式）与产物路径、大小、重新编译的文件数。path 是构建路径：目录整体构成一个程序（递归收集 .c、.s、.asm，程序名取 fcdev.json 的 name 或目录名），文件单独构成一个程序；不给 path 时构建工作区第一个文件夹。目标取自 path 向上最近的 fcdev.json，也可以用 target 指定。目标声明了磁盘能力（如 sb2000）且 fcdev.json 配置了 diskName（镜像文件名，缺 .img 时自动补上）时，同时把程序与项目 disk 目录下的文件放进 1.44MB 的 FAT12 磁盘镜像，放在产物旁边，输出里有镜像路径；没有配置 diskName 时不生成镜像。构建会写项目的输出目录（默认 build）。",
-        "userDescription": "构建 fcdev 项目，学习机目标同时生成磁盘镜像。",
+        "userDescription": "构建 FC Dev 项目，学习机目标同时生成磁盘镜像。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -2094,7 +2094,7 @@
         ],
         "toolReferenceName": "fcdev_run",
         "displayName": "构建并在 Ember 里运行",
-        "modelDescription": "构建一个 fcdev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）、sb97、yuxing 与 bbg 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机（bbg 的镜像建在 fcdev.json 的 diskImage 系统盘上），自由运行时再在 DOS 里输入程序名运行。整机 ROM 工程（rom 目标）把产物当作 targetOptions.machine 机型的固件开机运行，fcdev.json 的 diskImage 有值时挂到软驱，不输入程序名。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
+        "modelDescription": "构建一个 FC Dev 项目并在设置 fcdev.emulator.path 指定的 Ember 里运行，返回构建输出与启动结果。path 与 target 的含义同 fcdev_build。NES 程序直接加载产物；学习机（sb2000）、sb97、yuxing 与 bbg 加载 fcdev.json 的 firmware 指定的固件，把程序放进磁盘镜像挂到软驱并开机（bbg 的镜像建在 fcdev.json 的 diskImage 系统盘上），自由运行时再在 DOS 里输入程序名运行。整机 ROM 工程（rom 目标）把产物当作 targetOptions.machine 机型的固件开机运行，fcdev.json 的 diskImage 有值时挂到软驱，不输入程序名。debug 为 true 时用调试模式启动（端口取自设置 fcdev.emulator.debugPort），程序载入后停在开机状态不运行，随后用 emu_connect 连接再用 emu_run、emu_step、emu_inspect 等继续调试。Ember 与扩展脱离，窗口会一直打开，由用户关闭。没有设置 Ember 的位置时报错。",
         "userDescription": "构建并在 Ember 里运行，可调试运行。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -2125,9 +2125,9 @@
           "fcdev"
         ],
         "toolReferenceName": "fcdev_info",
-        "displayName": "读取 fcdev 项目信息",
-        "modelDescription": "读取 fcdev 项目的信息：项目根目录、配置文件、目标、工具链目录、输出目录、C 头文件目录与汇编引入目录。path 是项目里的目录，从它向上找最近的 fcdev.json；不给时用工作区第一个文件夹。只读。",
-        "userDescription": "读取 fcdev 项目的目标、工具链与头文件目录。",
+        "displayName": "读取 FC Dev 项目信息",
+        "modelDescription": "读取 FC Dev 项目的信息：项目根目录、配置文件、目标、工具链目录、输出目录、C 头文件目录与汇编引入目录。path 是项目里的目录，从它向上找最近的 fcdev.json；不给时用工作区第一个文件夹。只读。",
+        "userDescription": "读取 FC Dev 项目的目标、工具链与头文件目录。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",
@@ -2185,9 +2185,9 @@
           "fcdev"
         ],
         "toolReferenceName": "fcdev_docs",
-        "displayName": "查询 fcdev 使用文档",
+        "displayName": "查询 FC Dev 使用文档",
         "modelDescription": "查询随扩展发布的使用文档：构建、模拟器与调试、反汇编、新建项目，以及 NES 与 SB2000（程序格式、内存布局、运行库、系统调用手册、硬件说明、示例源码）的开发指南。不给 query 列出全部主题；query 依次按主题名、文件名、标题与说明里的关键词匹配，只匹配到一份时返回全文，多份时列出摘要。只读。",
-        "userDescription": "查询 fcdev 的使用文档。",
+        "userDescription": "查询 FC Dev 的使用文档。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
           "type": "object",

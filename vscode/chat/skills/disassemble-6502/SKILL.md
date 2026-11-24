@@ -130,7 +130,7 @@ description: '把 6502 程序（NES 卡带、学习机 BIOS、SB-DOS 的 .EXE、
 
 ## 8 构建
 
-目标支持时（NES 的 NROM、SB2000 的 `.EXE`），把生成的源码整理成 fcdev 项目（段名改成目标链接配置用的名字），用 `disasm_build`（`buildPath` 为该项目目录）构建并与原映像比较；不支持的目标跳过这一步，回读一致即完成。
+目标支持时（NES 的 NROM、SB2000 的 `.EXE`），把生成的源码整理成 FC Dev 项目（段名改成目标链接配置用的名字），用 `disasm_build`（`buildPath` 为该项目目录）构建并与原映像比较；不支持的目标跳过这一步，回读一致即完成。
 
 ## 报告
 

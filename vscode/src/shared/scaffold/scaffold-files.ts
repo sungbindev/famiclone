@@ -69,7 +69,7 @@ export function buildProjectConfigText(target: string): string {
 }
 
 /**
- * 生成一个 fcdev 任务。
+ * 生成一个 FC Dev 任务。
  * @param label 任务名。
  * @param command 任务命令。
  * @param extra 额外字段。
@@ -84,7 +84,7 @@ function createTask(label: string, command: string, extra: Record<string, unknow
  * @returns 文件文本。
  */
 export function buildTasksText(): string {
-  const tasks = [createTask('fcdev：构建', 'build', { group: { kind: 'build', isDefault: true } }), createTask('fcdev：运行', 'run')];
+  const tasks = [createTask('FC Dev：构建', 'build', { group: { kind: 'build', isDefault: true } }), createTask('FC Dev：运行', 'run')];
   return `${JSON.stringify({ version: '2.0.0', tasks }, null, 2)}\n`;
 }
 

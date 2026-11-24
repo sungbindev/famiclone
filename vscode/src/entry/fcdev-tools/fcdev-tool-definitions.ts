@@ -105,7 +105,7 @@ export function createFcdevTools(services: FcdevToolServices): readonly FcdevToo
     name: 'fcdev_new_project',
     writes: true,
     paths: ['directory'],
-    describe: (input) => `新建 fcdev 项目：${String(input.directory)}`,
+    describe: (input) => `新建 FC Dev 项目：${String(input.directory)}`,
     confirm: (input) => `将在 ${String(input.directory)} 里按模板 ${String(input.target)}（${String(input.language)}）生成项目文件。目录必须为空，已有文件不会被覆盖。`,
     async run(input, context) {
       if (!isTemplateLanguage(input.language)) throw new UserFacingError('参数 language 必须是 c 或 asm');
@@ -176,7 +176,7 @@ export function createFcdevTools(services: FcdevToolServices): readonly FcdevToo
     name: 'fcdev_info',
     writes: false,
     paths: ['path'],
-    describe: (input) => `读取 fcdev 项目信息：${String(input.path ?? '工作区')}`,
+    describe: (input) => `读取 FC Dev 项目信息：${String(input.path ?? '工作区')}`,
     run: (input, context) =>
       Promise.resolve(
         formatProjectDescription(
@@ -209,7 +209,7 @@ export function createFcdevTools(services: FcdevToolServices): readonly FcdevToo
     name: 'fcdev_docs',
     writes: false,
     paths: [],
-    describe: (input) => `查询 fcdev 使用文档：${String(input.query ?? '全部主题')}`,
+    describe: (input) => `查询 FC Dev 使用文档：${String(input.query ?? '全部主题')}`,
     run(input) {
       const query = typeof input.query === 'string' ? input.query.trim() : '';
       if (query === '') return Promise.resolve(`使用文档：${services.docs.list().length} 份\n${formatDocList(services.docs.list())}`);

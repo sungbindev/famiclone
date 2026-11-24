@@ -37,7 +37,7 @@ const CONFIG_FILES = '**/fcdev.json';
 const DEBOUNCE_MS = 500;
 
 /** 手动同步时进度通知的标题。 */
-const PROGRESS_TITLE = 'fcdev：同步 C/C++ 智能感知配置';
+const PROGRESS_TITLE = 'FC Dev：同步 C/C++ 智能感知配置';
 
 /** 自动同步是否开启。 */
 function isAutoSyncEnabled(): boolean {
@@ -72,7 +72,7 @@ export function registerCIntelliSense(
   const timers = new Map<string, NodeJS.Timeout>();
   const prompted = new Set<string>();
 
-  /** 同步成功的项目里还有其他配置时，提示去选 fcdev 配置；每个项目每次会话只提示一次。 */
+  /** 同步成功的项目里还有其他配置时，提示去选 FC Dev 配置；每个项目每次会话只提示一次。 */
   const promptSelection = async (results: readonly SyncResult[]): Promise<void> => {
     if (!isPromptEnabled() || vscode.extensions.getExtension(CPPTOOLS_EXTENSION_ID) === undefined) return;
     const roots: string[] = [];
@@ -86,7 +86,7 @@ export function registerCIntelliSense(
     if (roots.length === 0) return;
     const names = roots.map((root) => path.basename(root)).join('、');
     const choice = await vscode.window.showInformationMessage(
-      `${names} 的 C/C++ 配置里除 fcdev 外还有其他配置。C/C++ 扩展用哪个配置由你选择，选 fcdev 才会使用 cc65 的头文件。`,
+      `${names} 的 C/C++ 配置里除 FC Dev 外还有其他配置。C/C++ 扩展用哪个配置由你选择，选 FC Dev 才会使用 cc65 的头文件。`,
       SELECT_BUTTON
     );
     if (choice === SELECT_BUTTON) await vscode.commands.executeCommand(SELECT_CONFIGURATION_COMMAND);
@@ -117,19 +117,19 @@ export function registerCIntelliSense(
       );
       logResults(logger, results);
       if (results.length === 0) {
-        void vscode.window.showInformationMessage('工作区里没有 fcdev 项目（找不到 fcdev.json）');
+        void vscode.window.showInformationMessage('工作区里没有 FC Dev 项目（找不到 fcdev.json）');
         return;
       }
       const failures = results.filter((result) => !result.ok);
       if (failures.length > 0) {
         void vscode.window.showWarningMessage(failures.map((result) => `${path.basename(result.root)}：${result.message}`).join('\n'));
       } else {
-        void vscode.window.showInformationMessage(`已同步 ${results.length} 个 fcdev 项目的 C/C++ 配置`);
+        void vscode.window.showInformationMessage(`已同步 ${results.length} 个 FC Dev 项目的 C/C++ 配置`);
       }
       promptQuietly(results);
     } catch (error) {
       logger.error('同步 C/C++ 配置出错', error);
-      void vscode.window.showErrorMessage('同步 C/C++ 配置时出错，详情见“输出”面板里的 fcdev');
+      void vscode.window.showErrorMessage('同步 C/C++ 配置时出错，详情见“输出”面板里的 FC Dev');
     }
   };
 

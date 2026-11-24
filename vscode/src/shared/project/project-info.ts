@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：project-info.ts
-// 说明：fcdev 项目信息的数据类型，以及项目描述的汇总、转换与格式化。
+// 说明：FC Dev 项目信息的数据类型，以及项目描述的汇总、转换与格式化。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -14,7 +14,7 @@ import type { ProjectConfig } from './project-config';
 import type { Target } from '../targets/target';
 import { resolveTargetPath } from '../targets/target-settings';
 
-/** 一个 fcdev 项目的信息，智能感知用。 */
+/** 一个 FC Dev 项目的信息，智能感知用。 */
 export interface ProjectInfo {
   /** 项目根目录，即 fcdev.json 所在目录。 */
   readonly root: string;
@@ -26,7 +26,7 @@ export interface ProjectInfo {
   readonly asmIncludeDirs: readonly string[];
 }
 
-/** 一个 fcdev 项目的完整描述。 */
+/** 一个 FC Dev 项目的完整描述。 */
 export interface ProjectDescription extends ProjectInfo {
   /** 配置文件路径；没有配置文件时为 null。 */
   readonly configFile: string | null;

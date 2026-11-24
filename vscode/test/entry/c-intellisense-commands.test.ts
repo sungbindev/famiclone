@@ -20,7 +20,7 @@ vi.mock('vscode', () => import('../support/vscode-mock'));
 const { registerCIntelliSense, SYNC_COMMAND } = await import('../../src/entry/c-intellisense/c-intellisense-commands');
 
 const OK: SyncResult = { root: 'd:\\proj\\game', ok: true, message: '已写入' };
-const FAILED: SyncResult = { root: 'd:\\proj\\bad', ok: false, message: '项目里没有安装 fcdev' };
+const FAILED: SyncResult = { root: 'd:\\proj\\bad', ok: false, message: '项目里没有安装 FC Dev' };
 
 const logger = { info: vi.fn(), error: vi.fn() };
 
@@ -136,20 +136,20 @@ describe('同步命令', () => {
   it('全部成功：提示同步了几个项目', async () => {
     setup([OK, { ...OK, root: 'd:\\proj\\two' }]);
     await runCommand();
-    expect(window.showInformationMessage).toHaveBeenCalledWith('已同步 2 个 fcdev 项目的 C/C++ 配置');
+    expect(window.showInformationMessage).toHaveBeenCalledWith('已同步 2 个 FC Dev 项目的 C/C++ 配置');
     expect(window.withProgress).toHaveBeenCalled();
   });
 
   it('有项目失败：用警告列出项目目录名与原因', async () => {
     setup([OK, FAILED]);
     await runCommand();
-    expect(window.showWarningMessage).toHaveBeenCalledWith('bad：项目里没有安装 fcdev');
+    expect(window.showWarningMessage).toHaveBeenCalledWith('bad：项目里没有安装 FC Dev');
   });
 
-  it('工作区里没有 fcdev 项目：提示找不到 fcdev.json', async () => {
+  it('工作区里没有 FC Dev 项目：提示找不到 fcdev.json', async () => {
     setup([]);
     await runCommand();
-    expect(window.showInformationMessage).toHaveBeenCalledWith('工作区里没有 fcdev 项目（找不到 fcdev.json）');
+    expect(window.showInformationMessage).toHaveBeenCalledWith('工作区里没有 FC Dev 项目（找不到 fcdev.json）');
   });
 
   it('同步出错：记日志并提示去输出面板看详情', async () => {
@@ -159,7 +159,7 @@ describe('同步命令', () => {
     sync.syncWorkspace.mockRejectedValueOnce(new Error('坏了'));
     await runCommand();
     expect(logger.error).toHaveBeenCalled();
-    expect(window.showErrorMessage).toHaveBeenCalledWith('同步 C/C++ 配置时出错，详情见“输出”面板里的 fcdev');
+    expect(window.showErrorMessage).toHaveBeenCalledWith('同步 C/C++ 配置时出错，详情见“输出”面板里的 FC Dev');
   });
 });
 
@@ -175,7 +175,7 @@ describe('提示选择 C/C++ 配置', () => {
     window.showInformationMessage.mockResolvedValueOnce('选择配置');
     setup([OK], [OTHER_ROOT]);
     await settle();
-    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('game 的 C/C++ 配置里除 fcdev 外还有其他配置'), '选择配置');
+    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('game 的 C/C++ 配置里除 FC Dev 外还有其他配置'), '选择配置');
     expect(commands.executeCommand).toHaveBeenCalledWith(SELECT_COMMAND);
   });
 
@@ -194,7 +194,7 @@ describe('提示选择 C/C++ 配置', () => {
     await runCommand();
     await settle();
     expect(window.showInformationMessage).toHaveBeenCalledTimes(2);
-    const prompts = window.showInformationMessage.mock.calls.filter(([message]) => message.includes('除 fcdev 外'));
+    const prompts = window.showInformationMessage.mock.calls.filter(([message]) => message.includes('除 FC Dev 外'));
     expect(prompts).toHaveLength(1);
   });
 
@@ -240,7 +240,7 @@ describe('提示选择 C/C++ 配置', () => {
     mockState.settings['fcdev.intelliSense.autoSync'] = false;
     await runCommand();
     await settle();
-    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('除 fcdev 外还有其他配置'), '选择配置');
+    expect(window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('除 FC Dev 外还有其他配置'), '选择配置');
   });
 
   it('检查配置文件出错只记日志，不影响同步结果', async () => {

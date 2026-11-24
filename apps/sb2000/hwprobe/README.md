@@ -1,11 +1,11 @@
 # hwprobe
 
-在小霸王学习机 SB2000（SB-DOS）下运行的补测程序：在真机上补测 `hwtest` 还没弄清楚的三处读回，结果用来对齐模拟器。用 fcdev 开发，C 语言。`hwtest` 的程序窗口已经装满，所以补测单独成一个程序。
+在小霸王学习机 SB2000（SB-DOS）下运行的补测程序：在真机上补测 `hwtest` 还没弄清楚的三处读回，结果用来对齐模拟器。用 FC Dev 开发，C 语言。`hwtest` 的程序窗口已经装满，所以补测单独成一个程序。
 
 ## 使用
 
-- 构建：“fcdev：构建”任务，生成 `build/sb2000/HWPROBE.EXE`。
-- 运行：“fcdev：运行”任务，在 `fcdev.emulator.path` 指定的 Ember 里启动。
+- 构建：“FC Dev：构建”任务，生成 `build/sb2000/HWPROBE.EXE`。
+- 运行：“FC Dev：运行”任务，在 `fcdev.emulator.path` 指定的 Ember 里启动。
 
 把 `build/sb2000/HWPROBE.EXE` 复制到 SB-DOS 的软盘，在 `A:\>` 下输入 `hwprobe`，按 Enter 运行（Esc 退出）。测试在关 NMI、关中断的状态下一次跑完，结果写成软盘当前目录下的 `HWPROBE.TXT`，屏幕上显示“Saved HWPROBE.TXT”；显示 `Save failed` 时，后面的数是错误码，请记下来。把 `HWPROBE.TXT` 取回。
 

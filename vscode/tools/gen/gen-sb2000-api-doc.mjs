@@ -5,7 +5,7 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-11
 // 备注：用法 node vscode/tools/gen/gen-sb2000-api-doc.mjs；改了头文件注释或 api-unwrapped.json 后重新运行；test/sb2000-api.test.mjs 核对入库的文档与生成结果一致。
-//       文档来源只有头文件注释（命令“fcdev：查询 C 接口”读的也是同一份），所以这里不手写任何函数说明。
+//       文档来源只有头文件注释（命令“FC Dev：查询 C 接口”读的也是同一份），所以这里不手写任何函数说明。
 // ------------------------------------------------------------------------
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -42,7 +42,7 @@ export function renderApiReference(targetDir = TARGET_DIR) {
     '# SB2000 C 接口参考',
     '',
     '本文由运行库头文件 `sb2000-*.h` 的文档注释生成。',
-    `共 ${functions.length} 个函数，${groups.length} 个模块。随时查询用命令“fcdev：查询 C 接口”（或 Copilot 工具 \`fcdev_api\`）：输入函数名看完整文档，输入模块名看模块的函数列表，输入 \`$7B\` 看用到某个系统调用的函数，输入其他词按名称与说明搜索。`,
+    `共 ${functions.length} 个函数，${groups.length} 个模块。随时查询用命令“FC Dev：查询 C 接口”（或 Copilot 工具 \`fcdev_api\`）：输入函数名看完整文档，输入模块名看模块的函数列表，输入 \`$7B\` 看用到某个系统调用的函数，输入其他词按名称与说明搜索。`,
     '',
     '约定：',
     '',

@@ -1,10 +1,10 @@
 # 配置与构建
 
-新建项目、写配置、构建与排查构建问题时使用。内容取自 fcdev 的使用文档《构建》《新建项目与模板》。
+新建项目、写配置、构建与排查构建问题时使用。内容取自 FC Dev 的使用文档《构建》《新建项目与模板》。
 
 ## 新建项目
 
-工具 `fcdev_new_project`（参数 `directory`、`target`、`language`，调用前会请用户确认），或命令“fcdev：新建项目”（选目标与语言、选空目录、询问在当前窗口还是新窗口打开）。
+工具 `fcdev_new_project`（参数 `directory`、`target`、`language`，调用前会请用户确认），或命令“FC Dev：新建项目”（选目标与语言、选空目录、询问在当前窗口还是新窗口打开）。
 
 - 目录必须为空（允许已有 `.git`），不会覆盖已有文件；目录不存在时工具会创建。
 - 目标与语言必须由用户确定，不要猜。
@@ -16,7 +16,7 @@
 任务类型是 `fcdev`，在 `.vscode/tasks.json` 里这样写：
 
 ```json
-{ "label": "fcdev：构建", "type": "fcdev", "command": "build", "path": "src", "problemMatcher": "$fcdev", "group": { "kind": "build", "isDefault": true } }
+{ "label": "FC Dev：构建", "type": "fcdev", "command": "build", "path": "src", "problemMatcher": "$fcdev", "group": { "kind": "build", "isDefault": true } }
 ```
 
 | 字段 | 说明 |
@@ -81,11 +81,11 @@ SB2000 示例：
 
 - 工具链在扩展目录的 `toolchain/` 里，随扩展升级；缺少 `cc65`、`ca65`、`ld65` 任一个时报错。不使用 `PATH` 里的 cc65，也不接受其他位置的工具链。
 - Ember：用户设置 `fcdev.emulator.path`（只能在用户设置里指定，工作区设置无效）；没有设置时“运行”报错，构建不受影响。调试端口是设置 `fcdev.emulator.debugPort`，默认 5699。扩展不提供 Ember。
-- 项目信息（目标、工具链目录、头文件目录、汇编引入目录）用工具 `fcdev_info` 或命令“fcdev：显示项目信息”查看。
+- 项目信息（目标、工具链目录、头文件目录、汇编引入目录）用工具 `fcdev_info` 或命令“FC Dev：显示项目信息”查看。
 
 ## 编辑器配置
 
-扩展自动生成 `.vscode/c_cpp_properties.json`（只写或更新名为 `fcdev` 的配置）与根目录的 `compile_flags.txt`（第一行 `-DFCDEV_GENERATED`，不是这个标记的同名文件视为用户自己的，不覆盖）。两者含本机路径，已被 `.gitignore` 忽略。`__fastcall__`、`__cdecl__` 在编辑器配置里是空宏，不参与构建。打开项目、`fcdev.json` 变化时自动同步，也可以运行命令“fcdev：同步 C/C++ 智能感知配置”。
+扩展自动生成 `.vscode/c_cpp_properties.json`（只写或更新名为 `fcdev` 的配置）与根目录的 `compile_flags.txt`（第一行 `-DFCDEV_GENERATED`，不是这个标记的同名文件视为用户自己的，不覆盖）。两者含本机路径，已被 `.gitignore` 忽略。`__fastcall__`、`__cdecl__` 在编辑器配置里是空宏，不参与构建。打开项目、`fcdev.json` 变化时自动同步，也可以运行命令“FC Dev：同步 C/C++ 智能感知配置”。
 
 ## 排查构建问题
 

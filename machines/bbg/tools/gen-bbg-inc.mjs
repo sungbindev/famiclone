@@ -18,7 +18,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 /** 符号定义文件所在目录。 */
 export const INCLUDE_DIR = path.join(here, '..', 'src', 'include');
 
-/** 开发库（fcdev 目标）所在目录。 */
+/** 开发库（FC Dev 目标）所在目录。 */
 export const TARGET_DIR = path.join(here, '..', '..', '..', 'vscode', 'targets', 'bbg');
 
 /** 运行库源码目录。 */

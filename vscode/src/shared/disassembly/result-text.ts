@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // 名称：result-text.ts
-// 说明：把 fcdev 操作的结果写成给模型看的文字，并限制长度。
+// 说明：把 FC Dev 操作的结果写成给模型看的文字，并限制长度。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-21
@@ -26,7 +26,7 @@ export interface ResultImage {
 
 /**
  * 把结果里的 base64 图像分出来：图像不写进给模型看的文字（否则会占满长度上限）。
- * @param result fcdev 操作的结果。
+ * @param result FC Dev 操作的结果。
  * @returns 去掉图像字段的结果，以及分出的图像（没有图像时为 undefined）。
  */
 export function splitImage(result: unknown): { readonly result: unknown; readonly image?: ResultImage } {
@@ -38,7 +38,7 @@ export function splitImage(result: unknown): { readonly result: unknown; readonl
 
 /**
  * 把结果写成文字。
- * @param result fcdev 操作的结果。
+ * @param result FC Dev 操作的结果。
  * @param maxChars 最大字符数，默认 MAX_RESULT_CHARS。
  * @returns 文字；超长时已截断。
  */

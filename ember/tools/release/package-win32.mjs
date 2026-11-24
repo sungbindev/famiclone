@@ -6,7 +6,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
- * 备注：发布前把 package.json 的 version 升到新版本；帮助文档的构建要用到 ember 自己的依赖与 fcdev 扩展的编译产物（见 build-help.mjs）；不运行测试，测试用 npm run check。
+ * 备注：发布前把 package.json 的 version 升到新版本；帮助文档的构建要用到 ember 自己的依赖与 FC Dev 扩展的编译产物（见 build-help.mjs）；不运行测试，测试用 npm run check。
  *       这个脚本不上传；上传升级文件用 npm run update:publish。
  * ------------------------------------------------------------------------
  */

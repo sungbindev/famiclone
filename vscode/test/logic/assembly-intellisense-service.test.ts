@@ -4,7 +4,7 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-10
-// 备注：用内存里的源文件代替磁盘；符号定义与调用写法取自 fcdev 自带的 SB2000 与 NES 目标。
+// 备注：用内存里的源文件代替磁盘；符号定义与调用写法取自 FC Dev 自带的 SB2000 与 NES 目标。
 // ------------------------------------------------------------------------
 
 import { describe, expect, it } from 'vitest';
@@ -92,7 +92,7 @@ describe('悬停', () => {
     expect(await service.hover(document, { line: 3, character: 17 })).toBeUndefined();
   });
 
-  it('不在 fcdev 项目里时没有引入目录，引入文件回落到工作区文件里查找', async () => {
+  it('不在 FC Dev 项目里时没有引入目录，引入文件回落到工作区文件里查找', async () => {
     const { service, document } = create(false);
     expect((await service.hover(document, { line: 4, character: 13 }))?.markdown).toContain('定义于 sb2000.inc 第 3 行');
     expect((await service.hover(document, { line: 8, character: 14 }))?.markdown).toContain('_sb_newline:');

@@ -59,67 +59,67 @@
     "commands": [
       {
         "command": "fcdev.syncIntelliSense",
-        "title": "FC Dev：同步 C/C++ 智能感知配置"
+        "title": "FCDEV：同步 C/C++ 智能感知配置"
       },
       {
         "command": "fcdev.newProject",
-        "title": "FC Dev：新建项目"
+        "title": "FCDEV：新建项目"
       },
       {
         "command": "fcdev.build",
-        "title": "FC Dev：构建项目"
+        "title": "FCDEV：构建项目"
       },
       {
         "command": "fcdev.buildCurrentFile",
-        "title": "FC Dev：构建当前文件"
+        "title": "FCDEV：构建当前文件"
       },
       {
         "command": "fcdev.buildCurrentDirectory",
-        "title": "FC Dev：构建当前目录"
+        "title": "FCDEV：构建当前目录"
       },
       {
         "command": "fcdev.run",
-        "title": "FC Dev：运行"
+        "title": "FCDEV：运行"
       },
       {
         "command": "fcdev.debugRun",
-        "title": "FC Dev：调试运行"
+        "title": "FCDEV：调试运行"
       },
       {
         "command": "fcdev.showProjectInfo",
-        "title": "FC Dev：显示项目信息"
+        "title": "FCDEV：显示项目信息"
       },
       {
         "command": "fcdev.debugCall",
-        "title": "FC Dev：调用调试请求"
+        "title": "FCDEV：调用调试请求"
       },
       {
         "command": "fcdev.debugDescribe",
-        "title": "FC Dev：查看调试请求说明"
+        "title": "FCDEV：查看调试请求说明"
       },
       {
         "command": "fcdev.debugScreenshot",
-        "title": "FC Dev：保存调试截图"
+        "title": "FCDEV：保存调试截图"
       },
       {
         "command": "fcdev.debugWatch",
-        "title": "FC Dev：监视调试事件"
+        "title": "FCDEV：监视调试事件"
       },
       {
         "command": "fcdev.debugEndpoint",
-        "title": "FC Dev：显示调试服务地址"
+        "title": "FCDEV：显示调试服务地址"
       },
       {
         "command": "fcdev.disassemble",
-        "title": "FC Dev：反汇编映像文件"
+        "title": "FCDEV：反汇编映像文件"
       },
       {
         "command": "fcdev.queryApi",
-        "title": "FC Dev：查询 C 接口"
+        "title": "FCDEV：查询 C 接口"
       },
       {
         "command": "fcdev.openDocs",
-        "title": "FC Dev：打开使用文档"
+        "title": "FCDEV：打开使用文档"
       }
     ],
     "taskDefinitions": [
@@ -194,7 +194,7 @@
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "markdownDescription": "打开 FC Dev 项目、修改 `fcdev.json` 时，自动同步 C/C++ 配置（与命令“FC Dev：同步 C/C++ 智能感知配置”相同），让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。"
+          "markdownDescription": "打开 FC Dev 项目、修改 `fcdev.json` 时，自动同步 C/C++ 配置（与命令“FCDEV：同步 C/C++ 智能感知配置”相同），让 C/C++ 扩展与 clangd 找到 cc65 的头文件与宏。"
         },
         "fcdev.intelliSense.promptConfigurationSelection": {
           "type": "boolean",

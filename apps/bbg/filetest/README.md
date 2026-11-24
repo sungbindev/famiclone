@@ -8,7 +8,7 @@
 filetest
 ```
 
-用 fcdev 的 bbg 目标构建，`fcdev.json` 的 `diskImage` 指向系统盘 `reference/floppy-images/bbg/BBGDOS.IMG`，构建后生成 `build/bbg/FILETEST.CMD` 与带它的软盘镜像 `build/bbg/bbg-filetest.img`（`fcdev.json` 的 `diskName`）。在 Ember 里以 `bbg1` 机型加 `ember/roms/bbg1_bios.bin` 开机，等到 `A:\>` 后输入 `filetest`。
+用 fcdev 的 bbg 目标构建，`fcdev.json` 的 `diskImage` 指向系统盘 `apps/bbg/BBGDOS.IMG`，构建后生成 `build/bbg/FILETEST.CMD` 与带它的软盘镜像 `build/bbg/bbg-filetest.img`（`fcdev.json` 的 `diskName`）。在 Ember 里以 `bbg1` 机型加 `ember/roms/bbg1_bios.bin` 开机，等到 `A:\>` 后输入 `filetest`。
 
 ## 原理
 

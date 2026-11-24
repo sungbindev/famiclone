@@ -3,5 +3,5 @@
   "name": "filetest",
   "diskName": "bbg-filetest.img",
   "firmware": "../../../ember/roms/bbg1_bios.bin",
-  "diskImage": "../../../reference/floppy-images/bbg/BBGDOS.IMG"
+  "diskImage": "../BBGDOS.IMG"
 }

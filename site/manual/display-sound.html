@@ -1,64 +1,400 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="使用说明：画面与声音"/><title>画面与声音 · 使用说明 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section" open=""><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">简介</a></li><li><a class="site-nav__link" href="start.html">快速开始</a></li><li><a class="site-nav__link" href="window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link site-nav__link--active" href="display-sound.html" aria-current="page">画面与声音</a></li><li><a class="site-nav__link" href="plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="preferences.html">首选项</a></li><li><a class="site-nav__link" href="faq.html">常见问题</a></li><li><a class="site-nav__link" href="changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">使用说明</a><span aria-hidden="true">›</span><span aria-current="page">画面与声音</span></nav><header class="doc-head"><p class="kicker">使用说明</p><h1 class="ui-title doc-title">画面与声音</h1></header><article class="doc"><h2 id="画面">画面</h2>
-<p>在“设置→首选项”的“画面”分组里调整，改动立即生效，不需要重新开机。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>设置</th>
-<th>选项</th>
-<th>默认</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>画面比例</td>
-<td>4:3、8:7</td>
-<td>8:7</td>
-</tr>
-<tr>
-<td>缩放方式</td>
-<td>适应窗口、整数倍</td>
-<td>适应窗口</td>
-</tr>
-<tr>
-<td>画面效果</td>
-<td>像素、平滑</td>
-<td>像素</td>
-</tr>
-<tr>
-<td>显示全部 240 行</td>
-<td>开、关</td>
-<td>开</td>
-</tr>
-<tr>
-<td>全屏时的画面</td>
-<td>保持比例、拉伸铺满</td>
-<td>保持比例</td>
-</tr>
-<tr>
-<td>开机与复位后隐藏最初的画面</td>
-<td>开、关</td>
-<td>关</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li><strong>画面比例</strong>：8:7 是像素宽高比，画面不变形；4:3 是整帧的显示宽高比为 4:3。</li>
-<li><strong>缩放方式</strong>：“适应窗口”把画面尽量放大；“整数倍”让画面高度是原始高度的整数倍，窗口放不下就取最大的整数倍，一倍也放不下时退回适应窗口。</li>
-<li><strong>画面效果</strong>：“像素”让每个像素都清晰分明，窗口大小不是整数倍时个别像素会略宽一点；“平滑”在适应窗口放大时让画面边缘柔和；“整数倍”缩放时两者没有区别。</li>
-<li><strong>显示全部 240 行</strong>：关闭时上下各裁掉 8 行，只显示中间的 224 行。这只影响显示，不影响模拟。</li>
-<li><strong>全屏时的画面</strong>：“保持比例”按上面的画面比例与缩放方式显示；“拉伸铺满”让全屏的画面铺满整个显示器，显示器的比例与画面不一致时画面会变形。只在全屏时生效，窗口模式不受影响。</li>
-<li><strong>开机与复位后隐藏最初的画面</strong>：机器刚开机或复位时，最初几帧可能闪过灰色、绿色或花屏。开启后，开机和复位后最初约 0.1 秒显示为黑色。这只影响显示，截图和调试里看到的仍是机器真实的画面。改动在下一次开机或复位时起作用。</li>
-<li>画面居中放在一个比例固定的“画面框”里，框外是底色。</li>
-<li>展开底部面板时，画面会按剩下的空间等比缩放。</li>
-</ul>
-<p>按 <code>F11</code> 全屏，见<a href="window.html">窗口、菜单与快捷键</a>。</p>
-<h2 id="声音">声音</h2>
-<ul>
-<li>运行面板里有静音按钮、音量滑块与数值；“机器”菜单里也有“静音”。</li>
-<li>音量会保存，下次启动保持；静音不保存，每次启动是否静音由首选项“声音”分组里的“启动时静音”决定。</li>
-<li>首选项“声音”分组的“缓冲大小”可选“低延迟”“标准”“稳定”，默认是“标准”。声音断断续续时选“稳定”，要更小的延迟时选“低延迟”。</li>
-<li>暂停与断电时声音淡出，继续时淡入。</li>
-<li>如果没有可用的声音设备，Ember 会静默运行，并在日志里记一条错误，见<a href="faq.html">常见问题</a>。</li>
-</ul>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="input.html" class="doc-pager__prev"><span>上一页 · 使用说明</span>键盘、手柄与鼠标</a><a href="plugins.html" class="doc-pager__next"><span>下一页 · 使用说明</span>mapper 插件</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="使用说明：画面与声音"/><title>画面与声音 · 使用说明 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section" open="">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link site-nav__link--active" href="display-sound.html" aria-current="page">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../plugin/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../api/index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">使用说明</a><span aria-hidden="true">›</span><span aria-current="page">画面与声音</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">使用说明
+              </p>
+              <h1 class="ui-title doc-title">画面与声音
+              </h1>
+            </header>
+            <article class="doc">
+              <h2 id="画面">画面
+              </h2>
+
+              <p>在“设置→首选项”的“画面”分组里调整，改动立即生效，不需要重新开机。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>设置
+                      </th>
+
+                      <th>选项
+                      </th>
+
+                      <th>默认
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>画面比例
+                      </td>
+
+                      <td>4:3、8:7
+                      </td>
+
+                      <td>8:7
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>缩放方式
+                      </td>
+
+                      <td>适应窗口、整数倍
+                      </td>
+
+                      <td>适应窗口
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>画面效果
+                      </td>
+
+                      <td>像素、平滑
+                      </td>
+
+                      <td>像素
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>显示全部 240 行
+                      </td>
+
+                      <td>开、关
+                      </td>
+
+                      <td>开
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>全屏时的画面
+                      </td>
+
+                      <td>保持比例、拉伸铺满
+                      </td>
+
+                      <td>保持比例
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>开机与复位后隐藏最初的画面
+                      </td>
+
+                      <td>开、关
+                      </td>
+
+                      <td>关
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li><strong>画面比例</strong>：8:7 是像素宽高比，画面不变形；4:3 是整帧的显示宽高比为 4:3。
+                </li>
+
+                <li><strong>缩放方式</strong>：“适应窗口”把画面尽量放大；“整数倍”让画面高度是原始高度的整数倍，窗口放不下就取最大的整数倍，一倍也放不下时退回适应窗口。
+                </li>
+
+                <li><strong>画面效果</strong>：“像素”让每个像素都清晰分明，窗口大小不是整数倍时个别像素会略宽一点；“平滑”在适应窗口放大时让画面边缘柔和；“整数倍”缩放时两者没有区别。
+                </li>
+
+                <li><strong>显示全部 240 行</strong>：关闭时上下各裁掉 8 行，只显示中间的 224 行。这只影响显示，不影响模拟。
+                </li>
+
+                <li><strong>全屏时的画面</strong>：“保持比例”按上面的画面比例与缩放方式显示；“拉伸铺满”让全屏的画面铺满整个显示器，显示器的比例与画面不一致时画面会变形。只在全屏时生效，窗口模式不受影响。
+                </li>
+
+                <li><strong>开机与复位后隐藏最初的画面</strong>：机器刚开机或复位时，最初几帧可能闪过灰色、绿色或花屏。开启后，开机和复位后最初 12 帧显示为黑色。这只影响显示，截图和调试里看到的仍是机器真实的画面。改动在下一次开机或复位时起作用。
+                </li>
+
+                <li>画面居中放在一个比例固定的“画面框”里，框外是底色。
+                </li>
+
+                <li>展开底部面板时，画面会按剩下的空间等比缩放。
+                </li>
+
+              </ul>
+
+              <p>按 <code>F11</code> 全屏，见<a href="window.html">窗口、菜单与快捷键</a>。
+              </p>
+
+              <h2 id="声音">声音
+              </h2>
+
+              <ul>
+
+                <li>运行面板里有静音按钮、音量滑块与数值；“机器”菜单里也有“静音”。
+                </li>
+
+                <li>音量会保存，下次启动保持；静音不保存，每次启动是否静音由首选项“声音”分组里的“启动时静音”决定。
+                </li>
+
+                <li>首选项“声音”分组的“缓冲大小”可选“低延迟”“标准”“稳定”，默认是“标准”。声音断断续续时选“稳定”，要更小的延迟时选“低延迟”。
+                </li>
+
+                <li>暂停与断电时声音淡出，继续时淡入。
+                </li>
+
+                <li>如果没有可用的声音设备，Ember 会静默运行，并在日志里记一条错误，见<a href="faq.html">常见问题</a>。
+                </li>
+
+              </ul>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="input.html" class="doc-pager__prev"><span>上一页 · 使用说明</span>键盘、手柄与鼠标</a><a href="plugins.html" class="doc-pager__next"><span>下一页 · 使用说明</span>mapper 插件</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

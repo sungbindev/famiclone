@@ -499,22 +499,23 @@ TEST(SimulationRuntime, TheFamilyKeyboardSettingAppliesToTheCurrentAndTheNextMac
 TEST(SimulationRuntime, StartupFramesAreBlackOnlyWhenTheSettingIsOnAndOnlyForTheDisplayedFrames) {
   const auto program = ember::test::makeBootMarkerProgram(0x16, 0x2A);
   constexpr std::uint32_t kBlack = 0xFF000000U;
+  constexpr std::size_t kMasked = 12;
   {
     Rig rig;
     rig.runtime->setHideStartupFrames(true);
     rig.runtime->insertCartridge(rig.insertion(ember::test::makeInesFile(program)));
-    ASSERT_TRUE(rig.waitFrames(20));
+    ASSERT_TRUE(rig.waitFrames(30));
     const auto centers = rig.frames->centerPixels();
-    ASSERT_GE(centers.size(), 12U);
-    for (std::size_t i = 0; i < 6; ++i) EXPECT_EQ(centers[i], kBlack) << "第 " << i + 1 << " 帧";
-    EXPECT_NE(centers[10], kBlack) << "最初的几帧过后显示真实的画面";
+    ASSERT_GE(centers.size(), kMasked + 6);
+    for (std::size_t i = 0; i < kMasked; ++i) EXPECT_EQ(centers[i], kBlack) << "第 " << i + 1 << " 帧";
+    EXPECT_NE(centers[kMasked + 4], kBlack) << "最初的几帧过后显示真实的画面";
     EXPECT_NE(rig.runtime->captureFrame().rgba.size(), 0U);
 
     rig.runtime->reset(rt::ResetKind::Soft);
-    ASSERT_TRUE(rig.waitFrames(20));
+    ASSERT_TRUE(rig.waitFrames(30));
     const auto afterReset = rig.frames->centerPixels();
     EXPECT_NE(afterReset.back(), kBlack);
-    EXPECT_EQ(std::count(afterReset.begin(), afterReset.end(), kBlack), 12) << "开机与软复位各遮黑 6 帧";
+    EXPECT_EQ(std::count(afterReset.begin(), afterReset.end(), kBlack), static_cast<std::ptrdiff_t>(kMasked * 2)) << "开机与软复位各遮黑 12 帧";
   }
   {
     Rig rig;

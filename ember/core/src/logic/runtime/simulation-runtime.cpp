@@ -29,8 +29,8 @@ namespace {
 
 /** 落后于帧节拍超过这么多帧时放弃追赶，重新对齐（如机器休眠之后）。 */
 constexpr int MAX_LAG_FRAMES = 5;
-/** 开机与复位后遮黑的帧数（约 0.1 秒）。 */
-constexpr int kStartupMaskFrames = 6;
+/** 开机与复位后遮黑的帧数：中华学习机冷启动要到第 8 帧才清完屏。 */
+constexpr int kStartupMaskFrames = 12;
 /** 不透明的黑色像素（内存顺序 R、G、B、A）。 */
 constexpr std::uint32_t kOpaqueBlack = 0xFF000000U;
 /** 按周期、指令、扫描线授权时，每小块运行的最大量，块之间处理命令与发布画面。 */

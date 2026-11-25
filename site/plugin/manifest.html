@@ -1,180 +1,713 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="插件开发手册：清单：基本字段与匹配"/><title>清单：基本字段与匹配 · 插件开发手册 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section" open=""><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li><li><a class="site-nav__link" href="quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="package.html">插件包与安装</a></li><li><a class="site-nav__link site-nav__link--active" href="manifest.html" aria-current="page">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="script.html">脚本接口</a></li><li><a class="site-nav__link" href="recipes.html">常见写法</a></li><li><a class="site-nav__link" href="debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">清单：基本字段与匹配</span></nav><header class="doc-head"><p class="kicker">插件开发手册</p><h1 class="ui-title doc-title">清单：基本字段与匹配</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#基本字段">基本字段</a></li><li><a href="#匹配">匹配</a></li><li><a href="#匹配的优先级">匹配的优先级</a></li></ul></div></div></nav><article class="doc"><p>清单是包里的 <code>manifest.json</code>，一个 JSON 对象。清单里不认识的字段一律拒绝安装。本页讲基本字段与匹配，其余内容分在<a href="memory.html">存储区、窗口与名称表</a>和<a href="registers.html">寄存器与状态</a>。</p>
-<h2 id="基本字段">基本字段</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>类型</th>
-<th>必填</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>字符串</td>
-<td>是</td>
-<td>插件标识，小写字母、数字与 <code>-</code>，3 到 40 个字符，不能以 <code>-</code> 开头；安装后不能改，改了就是另一个插件</td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>字符串</td>
-<td>是</td>
-<td>显示名称，1 到 40 个字符</td>
-</tr>
-<tr>
-<td><code>version</code></td>
-<td>字符串</td>
-<td>是</td>
-<td>插件版本，<code>主.次.修订</code>，如 <code>1.0.0</code></td>
-</tr>
-<tr>
-<td><code>apiVersion</code></td>
-<td>整数</td>
-<td>是</td>
-<td>插件接口版本，目前只能写 <code>1</code></td>
-</tr>
-<tr>
-<td><code>publisher</code></td>
-<td>字符串</td>
-<td>是</td>
-<td>发布者名称，1 到 40 个字符</td>
-</tr>
-<tr>
-<td><code>description</code></td>
-<td>字符串</td>
-<td>否</td>
-<td>一两句话的说明，不超过 200 个字符，显示在插件列表里</td>
-</tr>
-<tr>
-<td><code>host</code></td>
-<td>字符串数组</td>
-<td>是</td>
-<td>要求的主机型号，目前只有 <code>[&quot;fc&quot;]</code></td>
-</tr>
-<tr>
-<td><code>devices</code></td>
-<td>字符串数组</td>
-<td>否</td>
-<td>卡带用到的外设，目前只有 <code>mouse</code>，最多一项，不重复</td>
-</tr>
-<tr>
-<td><code>busConflict</code></td>
-<td>布尔</td>
-<td>否</td>
-<td>写寄存器时是否发生总线冲突，默认 <code>false</code></td>
-</tr>
-<tr>
-<td><code>match</code></td>
-<td>数组</td>
-<td>是</td>
-<td>匹配条件，1 到 32 项，见下</td>
-</tr>
-</tbody>
-</table></div>
-<p>说明：</p>
-<ul>
-<li><code>devices</code>：经典 FC 只有声明了 <code>mouse</code> 的卡带，点击画面才会捕获鼠标，没有声明的点不进去；鼠标事件用脚本的 <code>onMouse</code> 接收，见<a href="script.html">脚本接口</a>。</li>
-<li><code>busConflict</code>：为 <code>true</code> 时，CPU 写入的数据先与该地址当前读到的 ROM 字节按位相与，再交给寄存器；该地址没有映射 ROM 时不相与。每次复位回到清单的值，脚本可以用 <code>ctx.busConflict.set(true 或 false)</code> 按变体改。</li>
-<li>其余部分的字段（<code>storage</code>、<code>windows</code>、<code>nametable</code>、<code>registers</code>、<code>state</code>、<code>settings</code>、<code>tables</code>、<code>tape</code>、<code>circuits</code>）见后面两页。</li>
-</ul>
-<h2 id="匹配">匹配</h2>
-<p>打开 <code>.nes</code> 文件时，Ember 先解析文件头，得到下面这些信息，再拿它们和每个插件的 <code>match</code> 比较：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>含义</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>mapper</code></td>
-<td>mapper 号</td>
-</tr>
-<tr>
-<td><code>variant</code></td>
-<td>变体：NES 2.0 文件头取 submapper；旧的 iNES 文件头取头部第 9 字节（从 0 数起）右移 1 位</td>
-</tr>
-<tr>
-<td><code>prgSize</code>、<code>chrSize</code></td>
-<td>程序 ROM 与图案 ROM 的字节数</td>
-</tr>
-<tr>
-<td><code>mirroring</code>、<code>battery</code>、<code>trainer</code></td>
-<td>头里的镜像方式、电池标志、训练器标志</td>
-</tr>
-<tr>
-<td><code>nes20</code></td>
-<td>是不是 NES 2.0 文件头</td>
-</tr>
-<tr>
-<td><code>prgRamSize</code>、<code>prgNvramSize</code>、<code>chrRamSize</code>、<code>chrNvramSize</code></td>
-<td>头里写明的 PRG RAM、带电池的 PRG RAM、CHR RAM、带电池的 CHR RAM 字节数，只有 NES 2.0 头写明，旧头里是 <code>null</code></td>
-</tr>
-<tr>
-<td><code>crc32Prg</code>、<code>crc32All</code></td>
-<td>程序 ROM 的校验值、程序加图案 ROM 的校验值</td>
-</tr>
-</tbody>
-</table></div>
-<p>这些信息在脚本里就是只读的 <code>ctx.header</code>。</p>
-<p><code>match</code> 是一个数组，每一项是一组条件：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>条件</th>
-<th>写法</th>
-<th>含义</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>mapper</code></td>
-<td>整数</td>
-<td>必须写，mapper 号</td>
-</tr>
-<tr>
-<td><code>variant</code></td>
-<td>整数</td>
-<td>变体</td>
-</tr>
-<tr>
-<td><code>prgSize</code>、<code>chrSize</code></td>
-<td>整数</td>
-<td>程序 ROM、图案 ROM 的字节数</td>
-</tr>
-<tr>
-<td><code>chr</code></td>
-<td><code>&quot;present&quot;</code> 或 <code>&quot;none&quot;</code></td>
-<td>文件里有 CHR ROM，或没有</td>
-</tr>
-<tr>
-<td><code>crc32Prg</code>、<code>crc32All</code></td>
-<td>8 位十六进制字符串，如 <code>&quot;A1B2C3D4&quot;</code></td>
-<td>校验值，大小写都行</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>一项里写出的条件必须全部满足；数组里任意一项满足，插件就匹配。</li>
-<li>同一个 mapper 号对应多种卡带时，用变体、大小或校验值区分，可以写成一个插件的多项匹配，也可以每种卡带一个插件。</li>
-<li>同一块硬件用在多个 mapper 号上时，写多项 <code>match</code>，脚本里按 <code>ctx.header.mapper</code> 分支。</li>
-</ul>
-<p>示例：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"match"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="插件开发手册：清单：基本字段与匹配"/><title>清单：基本字段与匹配 · 插件开发手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link site-nav__link--active" href="manifest.html" aria-current="page">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../api/index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">清单：基本字段与匹配</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">插件开发手册
+              </p>
+              <h1 class="ui-title doc-title">清单：基本字段与匹配
+              </h1>
+            </header>
+            <nav class="ui-panel doc-toc" aria-label="本页目录">
+              <div class="ui-panel__head">
+                <div class="ui-panel__heading">
+                  <h3 class="ui-title">本页目录
+                  </h3>
+                </div>
+              </div>
+              <div class="ui-scroll-area ui-scrollable-element ui-panel__scroll">
+                <div class="ui-scroll-area__viewport ui-panel__body">
+                  <ul>
+                    <li><a href="#基本字段">基本字段</a>
+                    </li>
+                    <li><a href="#匹配">匹配</a>
+                    </li>
+                    <li><a href="#匹配的优先级">匹配的优先级</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+            <article class="doc">
+              <p>清单是包里的 <code>manifest.json</code>，一个 JSON 对象。清单里不认识的字段一律拒绝安装。本页讲基本字段与匹配，其余内容分在<a href="memory.html">存储区、窗口与名称表</a>和<a href="registers.html">寄存器与状态</a>。
+              </p>
+
+              <h2 id="基本字段">基本字段
+              </h2>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>id</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>插件标识，小写字母、数字与 <code>-</code>，3 到 40 个字符，不能以 <code>-</code> 开头；安装后不能改，改了就是另一个插件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>显示名称，1 到 40 个字符
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>version</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>插件版本，<code>主.次.修订</code>，如 <code>1.0.0</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>apiVersion</code>
+                      </td>
+
+                      <td>整数
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>插件接口版本，目前只能写 <code>1</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>publisher</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>发布者名称，1 到 40 个字符
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>description</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>否
+                      </td>
+
+                      <td>一两句话的说明，不超过 200 个字符，显示在插件列表里
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>host</code>
+                      </td>
+
+                      <td>字符串数组
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要求的主机型号，目前只有 <code>[&quot;fc&quot;]</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>devices</code>
+                      </td>
+
+                      <td>字符串数组
+                      </td>
+
+                      <td>否
+                      </td>
+
+                      <td>卡带用到的外设，目前只有 <code>mouse</code>，最多一项，不重复
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>busConflict</code>
+                      </td>
+
+                      <td>布尔
+                      </td>
+
+                      <td>否
+                      </td>
+
+                      <td>写寄存器时是否发生总线冲突，默认 <code>false</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>match</code>
+                      </td>
+
+                      <td>数组
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>匹配条件，1 到 32 项，见下
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>说明：
+              </p>
+
+              <ul>
+
+                <li><code>devices</code>：经典 FC 只有声明了 <code>mouse</code> 的卡带，点击画面才会捕获鼠标，没有声明的点不进去；鼠标事件用脚本的 <code>onMouse</code> 接收，见<a href="script.html">脚本接口</a>。
+                </li>
+
+                <li><code>busConflict</code>：为 <code>true</code> 时，CPU 写入的数据先与该地址当前读到的 ROM 字节按位相与，再交给寄存器；该地址没有映射 ROM 时不相与。每次复位回到清单的值，脚本可以用 <code>ctx.busConflict.set(true 或 false)</code> 按变体改。
+                </li>
+
+                <li>其余部分的字段（<code>storage</code>、<code>windows</code>、<code>nametable</code>、<code>registers</code>、<code>state</code>、<code>settings</code>、<code>tables</code>、<code>tape</code>、<code>circuits</code>）见后面两页。
+                </li>
+
+              </ul>
+
+              <h2 id="匹配">匹配
+              </h2>
+
+              <p>打开 <code>.nes</code> 文件时，Ember 先解析文件头，得到下面这些信息，再拿它们和每个插件的 <code>match</code> 比较：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>含义
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>mapper</code>
+                      </td>
+
+                      <td>mapper 号
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>variant</code>
+                      </td>
+
+                      <td>变体：NES 2.0 文件头取 submapper；旧的 iNES 文件头取头部第 9 字节（从 0 数起）右移 1 位
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>prgSize</code>、<code>chrSize</code>
+                      </td>
+
+                      <td>程序 ROM 与图案 ROM 的字节数
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mirroring</code>、<code>battery</code>、<code>trainer</code>
+                      </td>
+
+                      <td>头里的镜像方式、电池标志、训练器标志
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>nes20</code>
+                      </td>
+
+                      <td>是不是 NES 2.0 文件头
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>prgRamSize</code>、<code>prgNvramSize</code>、<code>chrRamSize</code>、<code>chrNvramSize</code>
+                      </td>
+
+                      <td>头里写明的 PRG RAM、带电池的 PRG RAM、CHR RAM、带电池的 CHR RAM 字节数，只有 NES 2.0 头写明，旧头里是 <code>null</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>crc32Prg</code>、<code>crc32All</code>
+                      </td>
+
+                      <td>程序 ROM 的校验值、程序加图案 ROM 的校验值
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>这些信息在脚本里就是只读的 <code>ctx.header</code>。
+              </p>
+
+              <p><code>match</code> 是一个数组，每一项是一组条件：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>条件
+                      </th>
+
+                      <th>写法
+                      </th>
+
+                      <th>含义
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>mapper</code>
+                      </td>
+
+                      <td>整数
+                      </td>
+
+                      <td>必须写，mapper 号
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>variant</code>
+                      </td>
+
+                      <td>整数
+                      </td>
+
+                      <td>变体
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>prgSize</code>、<code>chrSize</code>
+                      </td>
+
+                      <td>整数
+                      </td>
+
+                      <td>程序 ROM、图案 ROM 的字节数
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>chr</code>
+                      </td>
+
+                      <td><code>&quot;present&quot;</code> 或 <code>&quot;none&quot;</code>
+                      </td>
+
+                      <td>文件里有 CHR ROM，或没有
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>crc32Prg</code>、<code>crc32All</code>
+                      </td>
+
+                      <td>8 位十六进制字符串，如 <code>&quot;A1B2C3D4&quot;</code>
+                      </td>
+
+                      <td>校验值，大小写都行
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>一项里写出的条件必须全部满足；数组里任意一项满足，插件就匹配。
+                </li>
+
+                <li>同一个 mapper 号对应多种卡带时，用变体、大小或校验值区分，可以写成一个插件的多项匹配，也可以每种卡带一个插件。
+                </li>
+
+                <li>同一块硬件用在多个 mapper 号上时，写多项 <code>match</code>，脚本里按 <code>ctx.header.mapper</code> 分支。
+                </li>
+
+              </ul>
+
+              <p>示例：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"match"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"mapper"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">4</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> },</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"mapper"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">118</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"chr"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"present"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> },</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"mapper"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">172</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"prgSize"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">32768</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
-<span class="line"></span></code></pre></div>
-<h2 id="匹配的优先级">匹配的优先级</h2>
-<ul>
-<li>多个插件同时匹配同一个文件时，写出的条件更多的优先。一个插件有多项匹配时，取它满足的那些项里条件最多的一项来比较。</li>
-<li>条件数相同时提示冲突，说明里列出同样匹配的插件，把不需要的那个停用即可。</li>
-<li>没有任何已启用的插件匹配时，提示缺少哪个 mapper 号和变体的插件；匹配的插件都被停用时，改为提示去启用。</li>
-</ul>
-<p>想为已有插件的 mapper 做自己的版本，有两条路：停用官方插件，或者在 <code>match</code> 里多写一个条件（如 <code>prgSize</code>）让自己的插件优先。</p>
-<p>mapper 171（学习机 ROM 文件）没有匹配的插件时同样提示找不到，Ember 不会把它识别成学习机，也不允许改 mapper 号强行运行。学习机的 ROM 要走“机型与 ROM”，见<a href="../manual/machines.html">机型与 ROM</a>。</p>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="package.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>插件包与安装</a><a href="memory.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>清单：存储区、窗口与名称表</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<span class="line"></span></code></pre>
+              </div>
+
+              <h2 id="匹配的优先级">匹配的优先级
+              </h2>
+
+              <ul>
+
+                <li>多个插件同时匹配同一个文件时，写出的条件更多的优先。一个插件有多项匹配时，取它满足的那些项里条件最多的一项来比较。
+                </li>
+
+                <li>条件数相同时提示冲突，说明里列出同样匹配的插件，把不需要的那个停用即可。
+                </li>
+
+                <li>没有任何已启用的插件匹配时，提示缺少哪个 mapper 号和变体的插件；匹配的插件都被停用时，改为提示去启用。
+                </li>
+
+              </ul>
+
+              <p>想为已有插件的 mapper 做自己的版本，有两条路：停用官方插件，或者在 <code>match</code> 里多写一个条件（如 <code>prgSize</code>）让自己的插件优先。
+              </p>
+
+              <p>mapper 171（学习机 ROM 文件）没有匹配的插件时同样提示找不到，Ember 不会把它识别成学习机，也不允许改 mapper 号强行运行。学习机的 ROM 要走“机型与 ROM”，见<a href="../manual/machines.html">机型与 ROM</a>。
+              </p>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="package.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>插件包与安装</a><a href="memory.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>清单：存储区、窗口与名称表</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

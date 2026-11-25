@@ -1,329 +1,1114 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="FC Dev 开发手册：构建"/><title>构建 · FC Dev 开发手册 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section" open=""><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="install.html">安装与入门</a></li><li><a class="site-nav__link site-nav__link--active" href="build.html" aria-current="page">构建</a></li><li><a class="site-nav__link" href="emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="disasm.html">反汇编</a></li><li><a class="site-nav__link" href="create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="bbg.html">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">FC Dev 开发手册</a><span aria-hidden="true">›</span><span aria-current="page">构建</span></nav><header class="doc-head"><p class="kicker">FC Dev 开发手册</p><h1 class="ui-title doc-title">构建</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#1-任务命令与工具">1. 任务、命令与工具</a></li><li class="toc-sub"><a href="#11-任务">1.1 任务</a></li><li class="toc-sub"><a href="#12-命令">1.2 命令</a></li><li class="toc-sub"><a href="#13-copilot-工具">1.3 Copilot 工具</a></li><li><a href="#2-构建单位">2. 构建单位</a></li><li><a href="#3-配置文件-fcdevjson">3. 配置文件 fcdev.json</a></li><li class="toc-sub"><a href="#31-自定义链接配置">3.1 自定义链接配置</a></li><li><a href="#4-构建流程">4. 构建流程</a></li><li class="toc-sub"><a href="#41-产物位置">4.1 产物位置</a></li><li class="toc-sub"><a href="#42-单个程序">4.2 单个程序</a></li><li class="toc-sub"><a href="#43-增量构建">4.3 增量构建</a></li><li class="toc-sub"><a href="#44-工具链">4.4 工具链</a></li><li class="toc-sub"><a href="#45-磁盘镜像">4.5 磁盘镜像</a></li><li><a href="#5-查询">5. 查询</a></li><li><a href="#6-cc-智能感知配置">6. C/C++ 智能感知配置</a></li></ul></div></div></nav><article class="doc"><!-- 本文件由 npm run help:build 从 vscode/docs/01-构建.md 导入，不要手改 -->
-<p>本文说明 FC Dev 扩展怎样构建程序：任务与命令、构建规则、配置文件 <code>fcdev.json</code>、构建流程。模拟器相关的细节见 <a href="emulator.html">02-模拟器与调试</a>，反汇编见 <a href="disasm.html">03-反汇编</a>，新建项目见 <a href="create.html">04-新建项目与模板</a>。</p>
-<p>构建用随扩展发布的 cc65 工具链，不使用系统里已装的 cc65，也不需要 Node 项目与 <code>package.json</code>：打开含 <code>fcdev.json</code> 的文件夹，扩展就能工作。扩展只支持 Windows 64 位。</p>
-<h2 id="1-任务命令与工具">1. 任务、命令与工具</h2>
-<h3 id="11-任务">1.1 任务</h3>
-<p>任务类型是 <code>fcdev</code>，在 <code>.vscode/tasks.json</code> 里这样写：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="FC Dev 开发手册：构建"/><title>构建 · FC Dev 开发手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../plugin/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../api/index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link site-nav__link--active" href="build.html" aria-current="page">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">FC Dev 开发手册</a><span aria-hidden="true">›</span><span aria-current="page">构建</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">FC Dev 开发手册
+              </p>
+              <h1 class="ui-title doc-title">构建
+              </h1>
+            </header>
+            <nav class="ui-panel doc-toc" aria-label="本页目录">
+              <div class="ui-panel__head">
+                <div class="ui-panel__heading">
+                  <h3 class="ui-title">本页目录
+                  </h3>
+                </div>
+              </div>
+              <div class="ui-scroll-area ui-scrollable-element ui-panel__scroll">
+                <div class="ui-scroll-area__viewport ui-panel__body">
+                  <ul>
+                    <li><a href="#1-任务命令与工具">1. 任务、命令与工具</a>
+                    </li>
+                    <li class="toc-sub"><a href="#11-任务">1.1 任务</a>
+                    </li>
+                    <li class="toc-sub"><a href="#12-命令">1.2 命令</a>
+                    </li>
+                    <li class="toc-sub"><a href="#13-copilot-工具">1.3 Copilot 工具</a>
+                    </li>
+                    <li><a href="#2-构建单位">2. 构建单位</a>
+                    </li>
+                    <li><a href="#3-配置文件-fcdevjson">3. 配置文件 fcdev.json</a>
+                    </li>
+                    <li class="toc-sub"><a href="#31-自定义链接配置">3.1 自定义链接配置</a>
+                    </li>
+                    <li><a href="#4-构建流程">4. 构建流程</a>
+                    </li>
+                    <li class="toc-sub"><a href="#41-产物位置">4.1 产物位置</a>
+                    </li>
+                    <li class="toc-sub"><a href="#42-单个程序">4.2 单个程序</a>
+                    </li>
+                    <li class="toc-sub"><a href="#43-增量构建">4.3 增量构建</a>
+                    </li>
+                    <li class="toc-sub"><a href="#44-工具链">4.4 工具链</a>
+                    </li>
+                    <li class="toc-sub"><a href="#45-磁盘镜像">4.5 磁盘镜像</a>
+                    </li>
+                    <li><a href="#5-查询">5. 查询</a>
+                    </li>
+                    <li><a href="#6-cc-智能感知配置">6. C/C++ 智能感知配置</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+            <article class="doc"><!-- 本文件由 npm run help:build 从 vscode/docs/01-构建.md 导入，不要手改 -->
+
+              <p>本文说明 FC Dev 扩展怎样构建程序：任务与命令、构建规则、配置文件 <code>fcdev.json</code>、构建流程。模拟器相关的细节见 <a href="emulator.html">02-模拟器与调试</a>，反汇编见 <a href="disasm.html">03-反汇编</a>，新建项目见 <a href="create.html">04-新建项目与模板</a>。
+              </p>
+
+              <p>构建用随扩展发布的 cc65 工具链，不使用系统里已装的 cc65，也不需要 Node 项目与 <code>package.json</code>：打开含 <code>fcdev.json</code> 的文件夹，扩展就能工作。扩展只支持 Windows 64 位。
+              </p>
+
+              <h2 id="1-任务命令与工具">1. 任务、命令与工具
+              </h2>
+
+              <h3 id="11-任务">1.1 任务
+              </h3>
+
+              <p>任务类型是 <code>fcdev</code>，在 <code>.vscode/tasks.json</code> 里这样写：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  "version"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"2.0.0"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  "tasks"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"label"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"FCDEV：构建"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"type"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"fcdev"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"command"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"build"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"path"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"src"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"problemMatcher"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$fcdev"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"group"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"kind"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"build"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"isDefault"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">true</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  ]</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
-<span class="line"></span></code></pre></div>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>command</code></td>
-<td>必填：<code>build</code> 构建（目标声明了磁盘能力且配置了 <code>diskName</code> 时，同时生成磁盘镜像，见 4.5），<code>run</code> 构建后在模拟器里运行</td>
-</tr>
-<tr>
-<td><code>path</code></td>
-<td>构建路径，规则见第 2 节；相对工作区文件夹，缺省为文件夹本身</td>
-</tr>
-<tr>
-<td><code>target</code></td>
-<td>指定目标，覆盖 <code>fcdev.json</code> 里的 <code>target</code></td>
-</tr>
-<tr>
-<td><code>debug</code></td>
-<td><code>run</code> 以调试模式启动模拟器</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>扩展为工作区里每个含 <code>fcdev.json</code> 的项目提供两个任务（构建、运行），在“终端 → 运行任务”里直接选；构建路径取项目的 <code>src</code> 目录，没有 <code>src</code> 时取项目目录。</li>
-<li>任务在终端面板里运行，输出就是工具的原始输出；问题匹配器 <code>$fcdev</code> 识别 <code>文件(行): Error: 信息</code> 与 <code>文件:行: Error: 信息</code>，错误出现在“问题”面板，点击跳到源码行。</li>
-<li>任务成功输出产物大小，以及本次重新编译与沿用的文件数；失败输出“错误：”加说明与建议，退出码为 1。</li>
-</ul>
-<h3 id="12-命令">1.2 命令</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>命令</th>
-<th>作用</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>FCDEV：构建项目</td>
-<td>构建活动文件所属的项目；有 <code>src</code> 目录就构建它，没有就构建项目目录；工作区里有多个项目又没有活动文件时让你选；配置了 <code>diskName</code> 的有磁盘能力的目标同时生成磁盘镜像</td>
-</tr>
-<tr>
-<td>FCDEV：构建当前文件</td>
-<td>只构建活动的 <code>.c</code>、<code>.s</code>、<code>.asm</code> 文件，它自己是一个程序</td>
-</tr>
-<tr>
-<td>FCDEV：构建当前目录</td>
-<td>构建活动文件所在的目录，目录整体是一个程序</td>
-</tr>
-<tr>
-<td>FCDEV：显示项目信息</td>
-<td>在“FC Dev 项目信息”输出通道里显示项目根目录、配置文件、目标、工具链、输出目录、头文件目录与汇编引入目录</td>
-</tr>
-<tr>
-<td>FCDEV：同步 C/C++ 智能感知配置</td>
-<td>见第 6 节</td>
-</tr>
-</tbody>
-</table></div>
-<p>构建命令都经上面的任务运行。</p>
-<h3 id="13-copilot-工具">1.3 Copilot 工具</h3>
-<p>扩展给 Copilot 提供的 <code>fcdev_build</code>（构建，配置了 <code>diskName</code> 的有磁盘能力的目标同时生成磁盘镜像）与 <code>fcdev_info</code>（项目信息）与命令等价；<code>fcdev_new_project</code>、<code>fcdev_api</code>、<code>fcdev_docs</code> 见 <a href="create.html">04-新建项目与模板</a> 与第 5 节。构建会写项目的输出目录，调用前会弹出确认。</p>
-<h2 id="2-构建单位">2. 构建单位</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>构建路径</th>
-<th>含义</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>工作区文件夹本身（<code>path</code> 缺省）</td>
-<td>以这个文件夹为项目</td>
-</tr>
-<tr>
-<td>一个目录，如 <code>src</code></td>
-<td>把目录作为一个项目：递归收集其中全部 <code>.c</code>、<code>.s</code>、<code>.asm</code>，编译后链接成一个程序，程序名取配置里的 <code>name</code>，未配置时取目录名</td>
-</tr>
-<tr>
-<td>一个文件，如 <code>src/hello.c</code></td>
-<td>只编译并链接这一个文件，它自己是一个程序，程序名取文件名（不含扩展名）</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>入口是 <code>main</code>（汇编写 <code>.export _main</code>），不设置入口文件。缺少或重复时 <code>ld65</code> 报错，扩展补一句提示。</li>
-<li>收集目录时跳过 <code>build</code>、<code>node_modules</code>、以 <code>.</code> 开头的目录，以及配置里的输出目录；目录里没有源文件时报错。</li>
-<li>程序名按目标的 <code>nameRule</code> 校验（例如 DOS 8.3），不符合就报错，不静默截断。</li>
-<li>目标取自构建路径向上查找到的最近一个 <code>fcdev.json</code>，任务的 <code>target</code> 可覆盖；两者都没有时报错，不默认猜测。</li>
-<li>项目根是 <code>fcdev.json</code> 所在目录；找不到配置时是任务的工作区文件夹。</li>
-<li>目录里有多个独立的单文件程序时，不能用一次目录构建批量构建，只能逐个指定文件。</li>
-</ul>
-<h2 id="3-配置文件-fcdevjson">3. 配置文件 <code>fcdev.json</code></h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>项</th>
-<th>类型</th>
-<th>默认值</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>target</code></td>
-<td>字符串</td>
-<td>无</td>
-<td>目标名</td>
-</tr>
-<tr>
-<td><code>name</code></td>
-<td>字符串</td>
-<td>目录名</td>
-<td>目录构建时的程序名</td>
-</tr>
-<tr>
-<td><code>out</code></td>
-<td>字符串</td>
-<td><code>build</code></td>
-<td>输出目录，相对项目根</td>
-</tr>
-<tr>
-<td><code>optimize</code></td>
-<td>布尔</td>
-<td><code>true</code></td>
-<td>给 <code>cc65</code> 加 <code>-Oirs</code></td>
-</tr>
-<tr>
-<td><code>diskName</code></td>
-<td>字符串</td>
-<td>无</td>
-<td>构建时生成的磁盘镜像文件名，只对声明了磁盘能力的目标有效：写了就生成镜像（文件名不带 <code>.img</code> 时自动补上，不能含路径分隔符），不写就不生成，见 4.5</td>
-</tr>
-<tr>
-<td><code>define</code></td>
-<td>对象</td>
-<td>空</td>
-<td>预定义宏，值为字符串或数字</td>
-</tr>
-<tr>
-<td><code>include</code></td>
-<td>字符串数组</td>
-<td>空</td>
-<td>额外头文件目录，相对项目根</td>
-</tr>
-<tr>
-<td><code>firmware</code></td>
-<td>字符串</td>
-<td>无</td>
-<td>固件（BIOS、ROM）文件路径；目标的运行方案要求固件时必填；<code>rom</code> 目标把它当底固件，构建时把链接输出覆盖进去</td>
-</tr>
-<tr>
-<td><code>diskImage</code></td>
-<td>字符串</td>
-<td>无</td>
-<td>磁盘镜像文件路径：运行方案是 <code>firmware</code> 的目标（<code>rom</code>）运行时把它放进软驱 0，见 <a href="rom.html">rom/01-开发指南</a>；磁盘能力声明了 <code>baseImage</code> 的目标（<code>bbg</code>）把它当系统盘，构建磁盘镜像时在其上添加文件，见 4.5</td>
-</tr>
-<tr>
-<td><code>linkConfig</code></td>
-<td>字符串</td>
-<td>无</td>
-<td>自定义 <code>ld65</code> 链接配置，相对项目根；写了就替换目标自带的链接配置，见 3.1</td>
-</tr>
-<tr>
-<td><code>targetOptions</code></td>
-<td>对象</td>
-<td>空</td>
-<td>目标专用选项，由各目标定义并校验</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>配置里出现未知项、类型不对、<code>define</code> 的值不是字符串或数字时，报错并列出可用的项。<code>toolchain</code> 与 <code>emulator</code> 不是配置项：工具链随扩展发布，模拟器的位置在扩展设置里指定（见 <a href="emulator.html">02-模拟器与调试</a>）。</li>
-<li><code>out</code>、<code>include</code>、<code>firmware</code>、<code>diskImage</code>、<code>linkConfig</code> 里的相对路径都以配置文件所在目录为基准。</li>
-<li><code>targetOptions</code> 里出现目标没有定义的选项、类型不对或超出目标规定的范围时报错。</li>
-</ul>
-<h3 id="31-自定义链接配置">3.1 自定义链接配置</h3>
-<p>程序需要目标自带布局之外的内存排布时（例如整机映像要链接在 <code>$8000-$FFFF</code>），在 <code>fcdev.json</code> 里写 <code>&quot;linkConfig&quot;: &quot;路径&quot;</code>：</p>
-<ul>
-<li>构建用这份配置链接，原样使用，不做多页模板的展开；启动代码、库与目标选项带的目标文件仍按目标定义链接，所以配置里要有它们用到的内存区与段（以目标自带的 <code>link.cfg</code> 为底稿修改）。</li>
-<li>内存区的起始地址由配置决定，不同内存区的地址可以重叠；输出文件里各内存区按配置里的先后顺序排列。</li>
-<li>产物大小由配置决定，不再检查目标的大小上限（如 SB2000 的 16384 字节），文件头等其他检查不变。</li>
-<li>文件不存在时报错；与大于 0 的 <code>targetOptions.banks</code> 同时出现时报错。</li>
-</ul>
-<h2 id="4-构建流程">4. 构建流程</h2>
-<h3 id="41-产物位置">4.1 产物位置</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>内容</th>
-<th>位置</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>产物</td>
-<td><code>&lt;项目根&gt;/&lt;out&gt;/&lt;目标&gt;/&lt;程序名&gt;&lt;扩展名&gt;</code>，程序名按目标的 <code>nameRule</code> 规范化</td>
-</tr>
-<tr>
-<td>磁盘镜像</td>
-<td><code>&lt;项目根&gt;/&lt;out&gt;/&lt;目标&gt;/&lt;diskName&gt;</code>，见 4.5</td>
-</tr>
-<tr>
-<td>中间文件</td>
-<td><code>&lt;项目根&gt;/&lt;out&gt;/obj/&lt;目标&gt;/&lt;程序名&gt;/</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>中间文件目录里有每个源文件对应的 <code>.o</code>、依赖文件 <code>.d</code>，C 文件还有编译出的 <code>.s</code> 与汇编依赖文件 <code>.asm.d</code>；目标声明了源文件编码时（如 sb2000），还有每个源文件转码后的副本 <code>.gb2312.c</code> 或 <code>.gb2312.s</code>；链接产物 <code>&lt;程序名&gt;.bin</code>、<code>&lt;程序名&gt;.map</code>、<code>&lt;程序名&gt;.dbg</code>；多页程序还有展开后的链接配置 <code>&lt;程序名&gt;.cfg</code>；以及指纹文件 <code>stamp.json</code>。<code>.o</code> 的文件名取源文件相对目录的路径，去掉扩展名，目录分隔符换成 <code>__</code>。</p>
-<h3 id="42-单个程序">4.2 单个程序</h3>
-<ol>
-<li>对每个 <code>.c</code>：<code>cc65</code> 输出 <code>.s</code> 与依赖文件（<code>--create-dep</code>）。</li>
-<li>对每个 <code>.s</code>（含上一步生成的）：<code>ca65</code> 汇编成 <code>.o</code>，同样输出依赖文件。</li>
-</ol>
-<p>目标声明了源文件编码时（sb2000 声明了 GB2312），上面两步编译的是转码后的副本，错误信息仍指向原文件；转换规则见 <a href="sb2000.html">sb2000 开发指南</a> 第 5 节。</p>
-<ol start="3">
-<li><code>ld65</code>：按目标的链接配置（项目写了 <code>linkConfig</code> 时用项目的，见 3.1），依次链接启动代码、用户的 <code>.o</code>、开启的目标选项所带的目标文件，最后链接目标声明的库；生成 <code>.bin</code>、<code>.map</code>、<code>.dbg</code>。目标声明了多页（换页）程序且库页个数大于 0 时，链接配置按库页个数展开，写在中间文件目录里；多页程序与自定义链接配置的产物，打包器都不再检查映像大小上限。</li>
-<li>打包器把 <code>.bin</code> 做成最终产物。</li>
-<li>目标有磁盘能力且配置了 <code>diskName</code> 时，把产物与 <code>disk</code> 目录里的文件放进磁盘镜像，见 4.5。</li>
-</ol>
-<p>工具参数：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>工具</th>
-<th>参数</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>cc65</code></td>
-<td><code>-t &lt;cc65Target&gt; --cpu &lt;cpu&gt; -g</code>，<code>optimize</code> 为真时加 <code>-Oirs</code>，每个头文件目录一个 <code>-I</code>，每个宏一个 <code>-D 名=值</code>，<code>--create-dep</code>，<code>-o</code></td>
-</tr>
-<tr>
-<td><code>ca65</code></td>
-<td><code>-t</code>、<code>--cpu</code>、<code>-g</code>，每个汇编引入目录同时给 <code>-I</code> 与 <code>--bin-include-dir</code>，<code>-D</code>，<code>--create-dep</code>，<code>-o</code></td>
-</tr>
-<tr>
-<td><code>ld65</code></td>
-<td><code>-C &lt;链接配置&gt; -m &lt;map&gt; --dbgfile &lt;dbg&gt; -o &lt;bin&gt;</code>，再接 <code>-u</code> 强制引入、目标文件、库</td>
-</tr>
-</tbody>
-</table></div>
-<p>头文件目录依次是：目标的 <code>include</code>、配置的 <code>include</code>、源文件的公共根目录；汇编引入目录同理，用目标的 <code>asminclude</code>。预定义宏是目标的 <code>defines</code> 加配置的 <code>define</code>，后者覆盖前者。</p>
-<p>工具的输出（<code>文件(行): Error: 信息</code> 格式）原样写进任务终端，供问题匹配器识别。调用工具时设置环境变量 <code>CC65_HOME</code> 为工具链根目录。</p>
-<h3 id="43-增量构建">4.3 增量构建</h3>
-<ul>
-<li>某个 <code>.o</code> 存在，且比它的源文件与依赖文件里列出的所有文件都新，就不重编。</li>
-<li>指纹由扩展版本、工具链版本（<code>cc65 --version</code> 的输出）、整个目标定义、目标选项、<code>optimize</code>、<code>define</code>、<code>include</code> 和源文件列表算出，记在 <code>stamp.json</code>。指纹变了（包括扩展升级后第一次构建），先删掉整个中间文件目录再全部重编。</li>
-<li>构建成功后才写 <code>stamp.json</code>。</li>
-</ul>
-<h3 id="44-工具链">4.4 工具链</h3>
-<p>工具链在扩展目录的 <code>toolchain</code> 里（cc65、ca65、ld65、ar65、da65 与 none、nes 两个运行库），随扩展一起升级；缺少 <code>cc65</code>、<code>ca65</code>、<code>ld65</code> 任一个时报错，提示重新安装扩展。不使用 <code>PATH</code> 里的 cc65，也不接受其他位置的工具链，避免与目标运行库的版本不一致。</p>
-<h3 id="45-磁盘镜像">4.5 磁盘镜像</h3>
-<p>目标声明了磁盘能力（<code>target.json</code> 的 <code>disk</code>，目前是 <code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 与 <code>bbg</code>）且 <code>fcdev.json</code> 配置了 <code>diskName</code> 时，每次构建成功后都会生成 1.44MB 的 FAT12 磁盘镜像：</p>
-<ul>
-<li>镜像放在产物旁边，文件名取 <code>diskName</code>（如 <code>&quot;diskName&quot;: &quot;sb97-run-game.img&quot;</code>），卷标为 <code>FCDEV</code>。<code>diskName</code> 与程序名无关，程序名仍按目标的 <code>nameRule</code> 校验。</li>
-<li>镜像里先是这一次构建的程序，再是项目根目录下 <code>disk</code> 目录里的全部文件（按文件名排序，内容原样放入）。用户的使用说明、数据文件都放在这里；用 WinImage 等软件打开镜像就能看到。新建项目的模板自带一份 <code>disk/README.TXT</code>（UTF-8 带 BOM、CRLF 换行，记事本与 WinImage 都能正确显示中文）。</li>
-<li><code>disk</code> 目录里的文件名必须符合 8.3 规则，不能有子目录（镜像只支持根目录），不能与程序重名（不分大小写），总大小不能超过软盘容量，否则构建报错。没有这个目录时镜像里只有程序。</li>
-<li>没有写 <code>diskName</code> 时构建只生成产物，不生成镜像。运行（<code>run</code>）需要镜像时仍会生成，放在中间文件目录的 <code>run.img</code>，不进产物目录。</li>
-<li>步步高（<code>bbg</code>）的 DOS 在软盘上，镜像不是空白的 1.44MB 盘，而是复制 <code>fcdev.json</code> 的 <code>diskImage</code>（带 DOS 的系统盘镜像）后在根目录加入程序与 <code>disk</code> 目录里的文件：系统盘的引导扇区、卷标与原有文件不变，同名文件被替换，空间或根目录项不够报错；没有设置 <code>diskImage</code> 时构建只生成产物，运行时才报错。细节见 <a href="bbg.html">bbg/01-开发指南</a>。</li>
-<li>不支持磁盘镜像的目标（<code>nes</code>）不生成镜像，<code>disk</code> 目录也不会被读取。</li>
-</ul>
-<h2 id="5-查询">5. 查询</h2>
-<ul>
-<li>
-<p>命令“FCDEV：查询 C 接口”与工具 <code>fcdev_api</code> 读目标 <code>include</code> 目录下头文件里带 <code>/** */</code> 文档注释的函数（注释写法见 <a href="sb2000.html">sb2000/01-开发指南</a> 第 6 节），不需要工具链。目标取自活动文件所属项目的 <code>fcdev.json</code>；目标没有带文档注释的函数时报“没有 C 接口文档”，目前只有 <code>sb2000</code> 有。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>查询词</th>
-<th>结果</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>留空</td>
-<td>列出全部模块、各模块的函数个数与头文件</td>
-</tr>
-<tr>
-<td>函数名，如 <code>sb_file_open</code></td>
-<td>完整文档：签名、所在头文件、系统调用、说明、每个参数、返回值</td>
-</tr>
-<tr>
-<td>模块名或头文件名，如 <code>file</code></td>
-<td>该模块的函数与一行说明</td>
-</tr>
-<tr>
-<td>功能号，如 <code>$7B</code> 或 <code>$7B/$09</code>（不分大小写，<code>$</code> 可以省略）</td>
-<td>用到该系统调用的函数</td>
-</tr>
-<tr>
-<td>其他词</td>
-<td>名称或说明里包含该词的函数</td>
-</tr>
-</tbody>
-</table></div>
-<p>查询依次按函数名、模块名、功能号、关键词匹配，先匹配上的为准。</p>
-</li>
-<li>
-<p>命令“FCDEV：打开使用文档”与工具 <code>fcdev_docs</code> 查询随扩展发布的使用文档（扩展的 <code>docs/</code> 目录，主题登记在 <code>docs/topics.json</code>），只读、不联网、不需要 <code>fcdev.json</code>。命令列出全部主题，选一份用 Markdown 预览打开；工具不带查询词时列出全部主题，查询词依次按主题名、文件名、关键词匹配，只匹配到一份时返回全文，多份时列出摘要。</p>
-</li>
-</ul>
-<h2 id="6-cc-智能感知配置">6. C/C++ 智能感知配置</h2>
-<p>扩展自动生成 IDE 的 C/C++ 配置，让智能提示找到 cc65 与目标的头文件：</p>
-<ul>
-<li><code>.vscode/c_cpp_properties.json</code>：只写或更新名为 <code>fcdev</code> 的配置，保留其他配置；该配置含 <code>includePath</code>、<code>defines</code>（<code>__CC65__</code>、<code>__&lt;目标&gt;__</code>、目标和配置里的宏，以及给编辑器用的空宏 <code>__fastcall__</code>、<code>__cdecl__</code>，它们不参与构建）、<code>cStandard</code> 为 <code>c89</code>。已有文件不是合法的配置时报错，不改写它。</li>
-<li>项目根的 <code>compile_flags.txt</code>：第一行是标记 <code>-DFCDEV_GENERATED</code>，之后是 <code>-I</code> 与 <code>-D</code> 行。已有同名文件但第一行不是该标记时，视为用户自己的文件，不覆盖。</li>
-</ul>
-<p>头文件目录在扩展目录里，路径随扩展版本变化：打开项目、<code>fcdev.json</code> 变化、工作区文件夹增减时自动同步，每次都按当前路径改写，内容没变时不写盘；命令“FCDEV：同步 C/C++ 智能感知配置”手动同步。设置 <code>fcdev.intelliSense.autoSync</code>（默认开启）可关闭自动同步。</p>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="install.html" class="doc-pager__prev"><span>上一页 · FC Dev 开发手册</span>安装与入门</a><a href="emulator.html" class="doc-pager__next"><span>下一页 · FC Dev 开发手册</span>模拟器与调试</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<span class="line"></span></code></pre>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>command</code>
+                      </td>
+
+                      <td>必填：<code>build</code> 构建（目标声明了磁盘能力且配置了 <code>diskName</code> 时，同时生成磁盘镜像，见 4.5），<code>run</code> 构建后在模拟器里运行
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td>构建路径，规则见第 2 节；相对工作区文件夹，缺省为文件夹本身
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>target</code>
+                      </td>
+
+                      <td>指定目标，覆盖 <code>fcdev.json</code> 里的 <code>target</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>debug</code>
+                      </td>
+
+                      <td><code>run</code> 以调试模式启动模拟器
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>扩展为工作区里每个含 <code>fcdev.json</code> 的项目提供两个任务（构建、运行），在“终端 → 运行任务”里直接选；构建路径取项目的 <code>src</code> 目录，没有 <code>src</code> 时取项目目录。
+                </li>
+
+                <li>任务在终端面板里运行，输出就是工具的原始输出；问题匹配器 <code>$fcdev</code> 识别 <code>文件(行): Error: 信息</code> 与 <code>文件:行: Error: 信息</code>，错误出现在“问题”面板，点击跳到源码行。
+                </li>
+
+                <li>任务成功输出产物大小，以及本次重新编译与沿用的文件数；失败输出“错误：”加说明与建议，退出码为 1。
+                </li>
+
+              </ul>
+
+              <h3 id="12-命令">1.2 命令
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>命令
+                      </th>
+
+                      <th>作用
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>FCDEV：构建项目
+                      </td>
+
+                      <td>构建活动文件所属的项目；有 <code>src</code> 目录就构建它，没有就构建项目目录；工作区里有多个项目又没有活动文件时让你选；配置了 <code>diskName</code> 的有磁盘能力的目标同时生成磁盘镜像
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>FCDEV：构建当前文件
+                      </td>
+
+                      <td>只构建活动的 <code>.c</code>、<code>.s</code>、<code>.asm</code> 文件，它自己是一个程序
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>FCDEV：构建当前目录
+                      </td>
+
+                      <td>构建活动文件所在的目录，目录整体是一个程序
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>FCDEV：显示项目信息
+                      </td>
+
+                      <td>在“FC Dev 项目信息”输出通道里显示项目根目录、配置文件、目标、工具链、输出目录、头文件目录与汇编引入目录
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>FCDEV：同步 C/C++ 智能感知配置
+                      </td>
+
+                      <td>见第 6 节
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>构建命令都经上面的任务运行。
+              </p>
+
+              <h3 id="13-copilot-工具">1.3 Copilot 工具
+              </h3>
+
+              <p>扩展给 Copilot 提供的 <code>fcdev_build</code>（构建，配置了 <code>diskName</code> 的有磁盘能力的目标同时生成磁盘镜像）与 <code>fcdev_info</code>（项目信息）与命令等价；<code>fcdev_new_project</code>、<code>fcdev_api</code>、<code>fcdev_docs</code> 见 <a href="create.html">04-新建项目与模板</a> 与第 5 节。构建会写项目的输出目录，调用前会弹出确认。
+              </p>
+
+              <h2 id="2-构建单位">2. 构建单位
+              </h2>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>构建路径
+                      </th>
+
+                      <th>含义
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>工作区文件夹本身（<code>path</code> 缺省）
+                      </td>
+
+                      <td>以这个文件夹为项目
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>一个目录，如 <code>src</code>
+                      </td>
+
+                      <td>把目录作为一个项目：递归收集其中全部 <code>.c</code>、<code>.s</code>、<code>.asm</code>，编译后链接成一个程序，程序名取配置里的 <code>name</code>，未配置时取目录名
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>一个文件，如 <code>src/hello.c</code>
+                      </td>
+
+                      <td>只编译并链接这一个文件，它自己是一个程序，程序名取文件名（不含扩展名）
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>入口是 <code>main</code>（汇编写 <code>.export _main</code>），不设置入口文件。缺少或重复时 <code>ld65</code> 报错，扩展补一句提示。
+                </li>
+
+                <li>收集目录时跳过 <code>build</code>、<code>node_modules</code>、以 <code>.</code> 开头的目录，以及配置里的输出目录；目录里没有源文件时报错。
+                </li>
+
+                <li>程序名按目标的 <code>nameRule</code> 校验（例如 DOS 8.3），不符合就报错，不静默截断。
+                </li>
+
+                <li>目标取自构建路径向上查找到的最近一个 <code>fcdev.json</code>，任务的 <code>target</code> 可覆盖；两者都没有时报错，不默认猜测。
+                </li>
+
+                <li>项目根是 <code>fcdev.json</code> 所在目录；找不到配置时是任务的工作区文件夹。
+                </li>
+
+                <li>目录里有多个独立的单文件程序时，不能用一次目录构建批量构建，只能逐个指定文件。
+                </li>
+
+              </ul>
+
+              <h2 id="3-配置文件-fcdevjson">3. 配置文件 <code>fcdev.json</code>
+              </h2>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>项
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>默认值
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>target</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>无
+                      </td>
+
+                      <td>目标名
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>目录名
+                      </td>
+
+                      <td>目录构建时的程序名
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>out</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td><code>build</code>
+                      </td>
+
+                      <td>输出目录，相对项目根
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>optimize</code>
+                      </td>
+
+                      <td>布尔
+                      </td>
+
+                      <td><code>true</code>
+                      </td>
+
+                      <td>给 <code>cc65</code> 加 <code>-Oirs</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>diskName</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>无
+                      </td>
+
+                      <td>构建时生成的磁盘镜像文件名，只对声明了磁盘能力的目标有效：写了就生成镜像（文件名不带 <code>.img</code> 时自动补上，不能含路径分隔符），不写就不生成，见 4.5
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>define</code>
+                      </td>
+
+                      <td>对象
+                      </td>
+
+                      <td>空
+                      </td>
+
+                      <td>预定义宏，值为字符串或数字
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>include</code>
+                      </td>
+
+                      <td>字符串数组
+                      </td>
+
+                      <td>空
+                      </td>
+
+                      <td>额外头文件目录，相对项目根
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>firmware</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>无
+                      </td>
+
+                      <td>固件（BIOS、ROM）文件路径；目标的运行方案要求固件时必填；<code>rom</code> 目标把它当底固件，构建时把链接输出覆盖进去
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>diskImage</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>无
+                      </td>
+
+                      <td>磁盘镜像文件路径：运行方案是 <code>firmware</code> 的目标（<code>rom</code>）运行时把它放进软驱 0，见 <a href="rom.html">rom/01-开发指南</a>；磁盘能力声明了 <code>baseImage</code> 的目标（<code>bbg</code>）把它当系统盘，构建磁盘镜像时在其上添加文件，见 4.5
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>linkConfig</code>
+                      </td>
+
+                      <td>字符串
+                      </td>
+
+                      <td>无
+                      </td>
+
+                      <td>自定义 <code>ld65</code> 链接配置，相对项目根；写了就替换目标自带的链接配置，见 3.1
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>targetOptions</code>
+                      </td>
+
+                      <td>对象
+                      </td>
+
+                      <td>空
+                      </td>
+
+                      <td>目标专用选项，由各目标定义并校验
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>配置里出现未知项、类型不对、<code>define</code> 的值不是字符串或数字时，报错并列出可用的项。<code>toolchain</code> 与 <code>emulator</code> 不是配置项：工具链随扩展发布，模拟器的位置在扩展设置里指定（见 <a href="emulator.html">02-模拟器与调试</a>）。
+                </li>
+
+                <li><code>out</code>、<code>include</code>、<code>firmware</code>、<code>diskImage</code>、<code>linkConfig</code> 里的相对路径都以配置文件所在目录为基准。
+                </li>
+
+                <li><code>targetOptions</code> 里出现目标没有定义的选项、类型不对或超出目标规定的范围时报错。
+                </li>
+
+              </ul>
+
+              <h3 id="31-自定义链接配置">3.1 自定义链接配置
+              </h3>
+
+              <p>程序需要目标自带布局之外的内存排布时（例如整机映像要链接在 <code>$8000-$FFFF</code>），在 <code>fcdev.json</code> 里写 <code>&quot;linkConfig&quot;: &quot;路径&quot;</code>：
+              </p>
+
+              <ul>
+
+                <li>构建用这份配置链接，原样使用，不做多页模板的展开；启动代码、库与目标选项带的目标文件仍按目标定义链接，所以配置里要有它们用到的内存区与段（以目标自带的 <code>link.cfg</code> 为底稿修改）。
+                </li>
+
+                <li>内存区的起始地址由配置决定，不同内存区的地址可以重叠；输出文件里各内存区按配置里的先后顺序排列。
+                </li>
+
+                <li>产物大小由配置决定，不再检查目标的大小上限（如 SB2000 的 16384 字节），文件头等其他检查不变。
+                </li>
+
+                <li>文件不存在时报错；与大于 0 的 <code>targetOptions.banks</code> 同时出现时报错。
+                </li>
+
+              </ul>
+
+              <h2 id="4-构建流程">4. 构建流程
+              </h2>
+
+              <h3 id="41-产物位置">4.1 产物位置
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>内容
+                      </th>
+
+                      <th>位置
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>产物
+                      </td>
+
+                      <td><code>&lt;项目根&gt;/&lt;out&gt;/&lt;目标&gt;/&lt;程序名&gt;&lt;扩展名&gt;</code>，程序名按目标的 <code>nameRule</code> 规范化
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>磁盘镜像
+                      </td>
+
+                      <td><code>&lt;项目根&gt;/&lt;out&gt;/&lt;目标&gt;/&lt;diskName&gt;</code>，见 4.5
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>中间文件
+                      </td>
+
+                      <td><code>&lt;项目根&gt;/&lt;out&gt;/obj/&lt;目标&gt;/&lt;程序名&gt;/</code>
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>中间文件目录里有每个源文件对应的 <code>.o</code>、依赖文件 <code>.d</code>，C 文件还有编译出的 <code>.s</code> 与汇编依赖文件 <code>.asm.d</code>；目标声明了源文件编码时（如 sb2000），还有每个源文件转码后的副本 <code>.gb2312.c</code> 或 <code>.gb2312.s</code>；链接产物 <code>&lt;程序名&gt;.bin</code>、<code>&lt;程序名&gt;.map</code>、<code>&lt;程序名&gt;.dbg</code>；多页程序还有展开后的链接配置 <code>&lt;程序名&gt;.cfg</code>；以及指纹文件 <code>stamp.json</code>。<code>.o</code> 的文件名取源文件相对目录的路径，去掉扩展名，目录分隔符换成 <code>__</code>。
+              </p>
+
+              <h3 id="42-单个程序">4.2 单个程序
+              </h3>
+
+              <ol>
+
+                <li>对每个 <code>.c</code>：<code>cc65</code> 输出 <code>.s</code> 与依赖文件（<code>--create-dep</code>）。
+                </li>
+
+                <li>对每个 <code>.s</code>（含上一步生成的）：<code>ca65</code> 汇编成 <code>.o</code>，同样输出依赖文件。
+                </li>
+
+              </ol>
+
+              <p>目标声明了源文件编码时（sb2000 声明了 GB2312），上面两步编译的是转码后的副本，错误信息仍指向原文件；转换规则见 <a href="sb2000.html">sb2000 开发指南</a> 第 5 节。
+              </p>
+
+              <ol start="3">
+
+                <li><code>ld65</code>：按目标的链接配置（项目写了 <code>linkConfig</code> 时用项目的，见 3.1），依次链接启动代码、用户的 <code>.o</code>、开启的目标选项所带的目标文件，最后链接目标声明的库；生成 <code>.bin</code>、<code>.map</code>、<code>.dbg</code>。目标声明了多页（换页）程序且库页个数大于 0 时，链接配置按库页个数展开，写在中间文件目录里；多页程序与自定义链接配置的产物，打包器都不再检查映像大小上限。
+                </li>
+
+                <li>打包器把 <code>.bin</code> 做成最终产物。
+                </li>
+
+                <li>目标有磁盘能力且配置了 <code>diskName</code> 时，把产物与 <code>disk</code> 目录里的文件放进磁盘镜像，见 4.5。
+                </li>
+
+              </ol>
+
+              <p>工具参数：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>工具
+                      </th>
+
+                      <th>参数
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>cc65</code>
+                      </td>
+
+                      <td><code>-t &lt;cc65Target&gt; --cpu &lt;cpu&gt; -g</code>，<code>optimize</code> 为真时加 <code>-Oirs</code>，每个头文件目录一个 <code>-I</code>，每个宏一个 <code>-D 名=值</code>，<code>--create-dep</code>，<code>-o</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>ca65</code>
+                      </td>
+
+                      <td><code>-t</code>、<code>--cpu</code>、<code>-g</code>，每个汇编引入目录同时给 <code>-I</code> 与 <code>--bin-include-dir</code>，<code>-D</code>，<code>--create-dep</code>，<code>-o</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>ld65</code>
+                      </td>
+
+                      <td><code>-C &lt;链接配置&gt; -m &lt;map&gt; --dbgfile &lt;dbg&gt; -o &lt;bin&gt;</code>，再接 <code>-u</code> 强制引入、目标文件、库
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>头文件目录依次是：目标的 <code>include</code>、配置的 <code>include</code>、源文件的公共根目录；汇编引入目录同理，用目标的 <code>asminclude</code>。预定义宏是目标的 <code>defines</code> 加配置的 <code>define</code>，后者覆盖前者。
+              </p>
+
+              <p>工具的输出（<code>文件(行): Error: 信息</code> 格式）原样写进任务终端，供问题匹配器识别。调用工具时设置环境变量 <code>CC65_HOME</code> 为工具链根目录。
+              </p>
+
+              <h3 id="43-增量构建">4.3 增量构建
+              </h3>
+
+              <ul>
+
+                <li>某个 <code>.o</code> 存在，且比它的源文件与依赖文件里列出的所有文件都新，就不重编。
+                </li>
+
+                <li>指纹由扩展版本、工具链版本（<code>cc65 --version</code> 的输出）、整个目标定义、目标选项、<code>optimize</code>、<code>define</code>、<code>include</code> 和源文件列表算出，记在 <code>stamp.json</code>。指纹变了（包括扩展升级后第一次构建），先删掉整个中间文件目录再全部重编。
+                </li>
+
+                <li>构建成功后才写 <code>stamp.json</code>。
+                </li>
+
+              </ul>
+
+              <h3 id="44-工具链">4.4 工具链
+              </h3>
+
+              <p>工具链在扩展目录的 <code>toolchain</code> 里（cc65、ca65、ld65、ar65、da65 与 none、nes 两个运行库），随扩展一起升级；缺少 <code>cc65</code>、<code>ca65</code>、<code>ld65</code> 任一个时报错，提示重新安装扩展。不使用 <code>PATH</code> 里的 cc65，也不接受其他位置的工具链，避免与目标运行库的版本不一致。
+              </p>
+
+              <h3 id="45-磁盘镜像">4.5 磁盘镜像
+              </h3>
+
+              <p>目标声明了磁盘能力（<code>target.json</code> 的 <code>disk</code>，目前是 <code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 与 <code>bbg</code>）且 <code>fcdev.json</code> 配置了 <code>diskName</code> 时，每次构建成功后都会生成 1.44MB 的 FAT12 磁盘镜像：
+              </p>
+
+              <ul>
+
+                <li>镜像放在产物旁边，文件名取 <code>diskName</code>（如 <code>&quot;diskName&quot;: &quot;sb97-run-game.img&quot;</code>），卷标为 <code>FCDEV</code>。<code>diskName</code> 与程序名无关，程序名仍按目标的 <code>nameRule</code> 校验。
+                </li>
+
+                <li>镜像里先是这一次构建的程序，再是项目根目录下 <code>disk</code> 目录里的全部文件（按文件名排序，内容原样放入）。用户的使用说明、数据文件都放在这里；用 WinImage 等软件打开镜像就能看到。新建项目的模板自带一份 <code>disk/README.TXT</code>（UTF-8 带 BOM、CRLF 换行，记事本与 WinImage 都能正确显示中文）。
+                </li>
+
+                <li><code>disk</code> 目录里的文件名必须符合 8.3 规则，不能有子目录（镜像只支持根目录），不能与程序重名（不分大小写），总大小不能超过软盘容量，否则构建报错。没有这个目录时镜像里只有程序。
+                </li>
+
+                <li>没有写 <code>diskName</code> 时构建只生成产物，不生成镜像。运行（<code>run</code>）需要镜像时仍会生成，放在中间文件目录的 <code>run.img</code>，不进产物目录。
+                </li>
+
+                <li>步步高（<code>bbg</code>）的 DOS 在软盘上，镜像不是空白的 1.44MB 盘，而是复制 <code>fcdev.json</code> 的 <code>diskImage</code>（带 DOS 的系统盘镜像）后在根目录加入程序与 <code>disk</code> 目录里的文件：系统盘的引导扇区、卷标与原有文件不变，同名文件被替换，空间或根目录项不够报错；没有设置 <code>diskImage</code> 时构建只生成产物，运行时才报错。细节见 <a href="bbg.html">bbg/01-开发指南</a>。
+                </li>
+
+                <li>不支持磁盘镜像的目标（<code>nes</code>）不生成镜像，<code>disk</code> 目录也不会被读取。
+                </li>
+
+              </ul>
+
+              <h2 id="5-查询">5. 查询
+              </h2>
+
+              <ul>
+
+                <li>
+
+                  <p>命令“FCDEV：查询 C 接口”与工具 <code>fcdev_api</code> 读目标 <code>include</code> 目录下头文件里带 <code>/** */</code> 文档注释的函数（注释写法见 <a href="sb2000.html">sb2000/01-开发指南</a> 第 6 节），不需要工具链。目标取自活动文件所属项目的 <code>fcdev.json</code>；目标没有带文档注释的函数时报“没有 C 接口文档”，目前只有 <code>sb2000</code> 有。
+                  </p>
+
+                  <div class="table-wrap">
+                    <table>
+
+                      <thead>
+
+                        <tr>
+
+                          <th>查询词
+                          </th>
+
+                          <th>结果
+                          </th>
+
+                        </tr>
+
+                      </thead>
+
+                      <tbody>
+
+                        <tr>
+
+                          <td>留空
+                          </td>
+
+                          <td>列出全部模块、各模块的函数个数与头文件
+                          </td>
+
+                        </tr>
+
+                        <tr>
+
+                          <td>函数名，如 <code>sb_file_open</code>
+                          </td>
+
+                          <td>完整文档：签名、所在头文件、系统调用、说明、每个参数、返回值
+                          </td>
+
+                        </tr>
+
+                        <tr>
+
+                          <td>模块名或头文件名，如 <code>file</code>
+                          </td>
+
+                          <td>该模块的函数与一行说明
+                          </td>
+
+                        </tr>
+
+                        <tr>
+
+                          <td>功能号，如 <code>$7B</code> 或 <code>$7B/$09</code>（不分大小写，<code>$</code> 可以省略）
+                          </td>
+
+                          <td>用到该系统调用的函数
+                          </td>
+
+                        </tr>
+
+                        <tr>
+
+                          <td>其他词
+                          </td>
+
+                          <td>名称或说明里包含该词的函数
+                          </td>
+
+                        </tr>
+
+                      </tbody>
+
+                    </table>
+                  </div>
+
+                  <p>查询依次按函数名、模块名、功能号、关键词匹配，先匹配上的为准。
+                  </p>
+
+                </li>
+
+                <li>
+
+                  <p>命令“FCDEV：打开使用文档”与工具 <code>fcdev_docs</code> 查询随扩展发布的使用文档（扩展的 <code>docs/</code> 目录，主题登记在 <code>docs/topics.json</code>），只读、不联网、不需要 <code>fcdev.json</code>。命令列出全部主题，选一份用 Markdown 预览打开；工具不带查询词时列出全部主题，查询词依次按主题名、文件名、关键词匹配，只匹配到一份时返回全文，多份时列出摘要。
+                  </p>
+
+                </li>
+
+              </ul>
+
+              <h2 id="6-cc-智能感知配置">6. C/C++ 智能感知配置
+              </h2>
+
+              <p>扩展自动生成 IDE 的 C/C++ 配置，让智能提示找到 cc65 与目标的头文件：
+              </p>
+
+              <ul>
+
+                <li><code>.vscode/c_cpp_properties.json</code>：只写或更新名为 <code>fcdev</code> 的配置，保留其他配置；该配置含 <code>includePath</code>、<code>defines</code>（<code>__CC65__</code>、<code>__&lt;目标&gt;__</code>、目标和配置里的宏，以及给编辑器用的空宏 <code>__fastcall__</code>、<code>__cdecl__</code>，它们不参与构建）、<code>cStandard</code> 为 <code>c89</code>。已有文件不是合法的配置时报错，不改写它。
+                </li>
+
+                <li>项目根的 <code>compile_flags.txt</code>：第一行是标记 <code>-DFCDEV_GENERATED</code>，之后是 <code>-I</code> 与 <code>-D</code> 行。已有同名文件但第一行不是该标记时，视为用户自己的文件，不覆盖。
+                </li>
+
+              </ul>
+
+              <p>头文件目录在扩展目录里，路径随扩展版本变化：打开项目、<code>fcdev.json</code> 变化、工作区文件夹增减时自动同步，每次都按当前路径改写，内容没变时不写盘；命令“FCDEV：同步 C/C++ 智能感知配置”手动同步。设置 <code>fcdev.intelliSense.autoSync</code>（默认开启）可关闭自动同步。
+              </p>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="install.html" class="doc-pager__prev"><span>上一页 · FC Dev 开发手册</span>安装与入门</a><a href="emulator.html" class="doc-pager__next"><span>下一页 · FC Dev 开发手册</span>模拟器与调试</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

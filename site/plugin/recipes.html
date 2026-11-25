@@ -1,8 +1,275 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="插件开发手册：常见写法"/><title>常见写法 · 插件开发手册 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section" open=""><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li><li><a class="site-nav__link" href="quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="package.html">插件包与安装</a></li><li><a class="site-nav__link" href="manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="script.html">脚本接口</a></li><li><a class="site-nav__link site-nav__link--active" href="recipes.html" aria-current="page">常见写法</a></li><li><a class="site-nav__link" href="debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">常见写法</span></nav><header class="doc-head"><p class="kicker">插件开发手册</p><h1 class="ui-title doc-title">常见写法</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#一个寄存器同时切程序与图案窗口">一个寄存器同时切程序与图案窗口</a></li><li><a href="#总线冲突">总线冲突</a></li><li><a href="#带电池或不带电池的-prg-ram">带电池或不带电池的 PRG RAM</a></li><li><a href="#用寄存器改名称表连法">用寄存器改名称表连法</a></li><li><a href="#读寄存器">读寄存器</a></li><li><a href="#按-cpu-周期计时的中断">按 CPU 周期计时的中断</a></li><li><a href="#按-ppu-地址线-a12-计数的中断">按 PPU 地址线 A12 计数的中断</a></li><li><a href="#mmc3-与它的变体">MMC3 与它的变体</a></li><li><a href="#查表实现的逻辑方程">查表实现的逻辑方程</a></li><li><a href="#键盘热键">键盘热键</a></li><li><a href="#参考官方插件">参考官方插件</a></li></ul></div></div></nav><article class="doc"><p>这一页收集写插件时常用的现成写法。标注“已验证”的示例都在 Ember 里真实加载并运行过，可以直接改了用。</p>
-<h2 id="一个寄存器同时切程序与图案窗口">一个寄存器同时切程序与图案窗口</h2>
-<p>用 <code>bank</code> 数组，每项取写入值的一段：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="插件开发手册：常见写法"/><title>常见写法 · 插件开发手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link site-nav__link--active" href="recipes.html" aria-current="page">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../api/index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">常见写法</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">插件开发手册
+              </p>
+              <h1 class="ui-title doc-title">常见写法
+              </h1>
+            </header>
+            <nav class="ui-panel doc-toc" aria-label="本页目录">
+              <div class="ui-panel__head">
+                <div class="ui-panel__heading">
+                  <h3 class="ui-title">本页目录
+                  </h3>
+                </div>
+              </div>
+              <div class="ui-scroll-area ui-scrollable-element ui-panel__scroll">
+                <div class="ui-scroll-area__viewport ui-panel__body">
+                  <ul>
+                    <li><a href="#一个寄存器同时切程序与图案窗口">一个寄存器同时切程序与图案窗口</a>
+                    </li>
+                    <li><a href="#总线冲突">总线冲突</a>
+                    </li>
+                    <li><a href="#带电池或不带电池的-prg-ram">带电池或不带电池的 PRG RAM</a>
+                    </li>
+                    <li><a href="#用寄存器改名称表连法">用寄存器改名称表连法</a>
+                    </li>
+                    <li><a href="#读寄存器">读寄存器</a>
+                    </li>
+                    <li><a href="#按-cpu-周期计时的中断">按 CPU 周期计时的中断</a>
+                    </li>
+                    <li><a href="#按-ppu-地址线-a12-计数的中断">按 PPU 地址线 A12 计数的中断</a>
+                    </li>
+                    <li><a href="#mmc3-与它的变体">MMC3 与它的变体</a>
+                    </li>
+                    <li><a href="#查表实现的逻辑方程">查表实现的逻辑方程</a>
+                    </li>
+                    <li><a href="#键盘热键">键盘热键</a>
+                    </li>
+                    <li><a href="#参考官方插件">参考官方插件</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+            <article class="doc">
+              <p>这一页收集写插件时常用的现成写法。标注“已验证”的示例都在 Ember 里真实加载并运行过，可以直接改了用。
+              </p>
+
+              <h2 id="一个寄存器同时切程序与图案窗口">一个寄存器同时切程序与图案窗口
+              </h2>
+
+              <p>用 <code>bank</code> 数组，每项取写入值的一段：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  {</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">    "bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">    "range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$8000-$FFFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
@@ -16,46 +283,92 @@
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">],</span></span>
 <span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"state"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [{ </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"name"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"latch"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bits"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">8</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"description"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"最近一次写入的值"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> }]</span></span>
-<span class="line"></span></code></pre></div>
-<p>写入 <code>0x32</code>：低 3 位是 2，程序窗口切到第 2 个 bank；<code>(0x32 &gt;&gt; 4) &amp; 15</code> 是 3，图案窗口切到第 3 个 bank。（已验证）</p>
-<h2 id="总线冲突">总线冲突</h2>
-<p>有些卡带的寄存器直接接在 ROM 的输出上，CPU 写入的数据会和该地址的 ROM 字节相与。清单写 <code>&quot;busConflict&quot;: true</code> 就是默认有冲突；要按变体决定，在脚本的 <code>reset</code> 里设置：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>写入 <code>0x32</code>：低 3 位是 2，程序窗口切到第 2 个 bank；<code>(0x32 &gt;&gt; 4) &amp; 15</code> 是 3，图案窗口切到第 3 个 bank。（已验证）
+              </p>
+
+              <h2 id="总线冲突">总线冲突
+              </h2>
+
+              <p>有些卡带的寄存器直接接在 ROM 的输出上，CPU 写入的数据会和该地址的 ROM 字节相与。清单写 <code>&quot;busConflict&quot;: true</code> 就是默认有冲突；要按变体决定，在脚本的 <code>reset</code> 里设置：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  reset</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    ctx.busConflict.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx.header.variant </span><span style="color:#D73A49;--shiki-dark:#F97583">===</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
-<span class="line"></span></code></pre></div>
-<p>官方插件 <code>cnrom</code> 就是这样：寄存器是声明式的，脚本只在复位时决定有没有总线冲突。</p>
-<h2 id="带电池或不带电池的-prg-ram">带电池或不带电池的 PRG RAM</h2>
-<p>挂在 <code>$6000-$7FFF</code> 的 8K RAM，大小与是否带电池交给文件头决定：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"storage"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>官方插件 <code>cnrom</code> 就是这样：寄存器是声明式的，脚本只在复位时决定有没有总线冲突。
+              </p>
+
+              <h2 id="带电池或不带电池的-prg-ram">带电池或不带电池的 PRG RAM
+              </h2>
+
+              <p>挂在 <code>$6000-$7FFF</code> 的 8K RAM，大小与是否带电池交给文件头决定：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"storage"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"id"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"prg-ram"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"kind"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"ram"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"size"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"header"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"prgAny"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"default"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">8192</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">],</span></span>
 <span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"windows"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"id"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"prg-ram"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$6000-$7FFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"storage"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"prg-ram"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"size"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">8192</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"initial"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"access"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"rw"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
-<span class="line"></span></code></pre></div>
-<h2 id="用寄存器改名称表连法">用寄存器改名称表连法</h2>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, bus, addr, value) {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <h2 id="用寄存器改名称表连法">用寄存器改名称表连法
+              </h2>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, bus, addr, value) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">  if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ((addr </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0xE000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">===</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0xE000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) ctx.nametable.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(value </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> ?</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'horizontal'</span><span style="color:#D73A49;--shiki-dark:#F97583"> :</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'vertical'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
-<span class="line"></span></code></pre></div>
-<p>清单里的 <code>nametable</code> 要先给一个初始连法（如 <code>vertical</code>）。（已验证）</p>
-<h2 id="读寄存器">读寄存器</h2>
-<p>只想读出一个状态，用声明：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{ </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$5000-$5FFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"read"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"state"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"status"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
-<span class="line"></span></code></pre></div>
-<p>要按地址算出读到的值，用脚本，清单写 <code>&quot;read&quot;: true</code>：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">read</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, bus, addr) {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>清单里的 <code>nametable</code> 要先给一个初始连法（如 <code>vertical</code>）。（已验证）
+              </p>
+
+              <h2 id="读寄存器">读寄存器
+              </h2>
+
+              <p>只想读出一个状态，用声明：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{ </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$5000-$5FFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"read"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"state"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"status"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>要按地址算出读到的值，用脚本，清单写 <code>&quot;read&quot;: true</code>：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">read</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, bus, addr) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">  if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (addr </span><span style="color:#D73A49;--shiki-dark:#F97583">===</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0x5000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ctx.state.status;</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">  return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> undefined</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
-<span class="line"></span></code></pre></div>
-<p>返回 <code>undefined</code> 表示这次不驱动总线，读到的是总线上最近的值。（已验证）</p>
-<h2 id="按-cpu-周期计时的中断">按 CPU 周期计时的中断</h2>
-<p>很多 mapper 有一个按 CPU 周期递减或递增的计数器，数到头就向 CPU 发中断。不要在脚本里逐周期计数：写寄存器时算出还要多少个周期，登记一个计时，到点在 <code>onTimer</code> 里拉低中断。</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>返回 <code>undefined</code> 表示这次不驱动总线，读到的是总线上最近的值。（已验证）
+              </p>
+
+              <h2 id="按-cpu-周期计时的中断">按 CPU 周期计时的中断
+              </h2>
+
+              <p>很多 mapper 有一个按 CPU 周期递减或递增的计数器，数到头就向 CPU 发中断。不要在脚本里逐周期计数：写寄存器时算出还要多少个周期，登记一个计时，到点在 <code>onTimer</code> 里拉低中断。
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">bus</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">addr</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">value</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    switch</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (addr </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0xE000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">      case</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0xA000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">:</span></span>
@@ -72,17 +385,36 @@
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    ctx.irq.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">assert</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(); </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 拉低中断线</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
-<span class="line"></span></code></pre></div>
-<p>要点：</p>
-<ul>
-<li>中断线被拉低后一直保持，直到脚本调用 <code>ctx.irq.release()</code>，所以要在应答的寄存器里释放。</li>
-<li>想知道计数器“现在数到了哪”，用 <code>ctx.cycle()</code> 减去开始计时时记下的周期数，官方插件 <code>irem-h3001</code> 就是这样读回计数值的。</li>
-<li>复位会取消全部计时。</li>
-</ul>
-<p>示例中的 <code>ctx.state.status</code> 要在清单里声明成状态。（已验证）</p>
-<h2 id="按-ppu-地址线-a12-计数的中断">按 PPU 地址线 A12 计数的中断</h2>
-<p>扫描线中断类的 mapper 靠 PPU 取图块时地址线 A12 的上升沿计数。简单的计数器用 <code>onA12</code>，每次上升沿调用一次：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>要点：
+              </p>
+
+              <ul>
+
+                <li>中断线被拉低后一直保持，直到脚本调用 <code>ctx.irq.release()</code>，所以要在应答的寄存器里释放。
+                </li>
+
+                <li>想知道计数器“现在数到了哪”，用 <code>ctx.cycle()</code> 减去开始计时时记下的周期数，官方插件 <code>irem-h3001</code> 就是这样读回计数值的。
+                </li>
+
+                <li>复位会取消全部计时。
+                </li>
+
+              </ul>
+
+              <p>示例中的 <code>ctx.state.status</code> 要在清单里声明成状态。（已验证）
+              </p>
+
+              <h2 id="按-ppu-地址线-a12-计数的中断">按 PPU 地址线 A12 计数的中断
+              </h2>
+
+              <p>扫描线中断类的 mapper 靠 PPU 取图块时地址线 A12 的上升沿计数。简单的计数器用 <code>onA12</code>，每次上升沿调用一次：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">bus</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">addr</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">value</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (addr </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0xC000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">      ctx.state.counter </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value; </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 设定计数值</span></span>
@@ -96,12 +428,23 @@
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (ctx.state.counter </span><span style="color:#D73A49;--shiki-dark:#F97583">===</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) ctx.irq.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">assert</span><span style="color:#24292E;--shiki-dark:#E1E4E8">();</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
-<span class="line"></span></code></pre></div>
-<p>Ember 已经把 A12 先低过 4 次显存访问再变高的才算一次上升沿，脚本不用再滤波。脚本导出了 <code>onA12</code>，卡带才会收到显存地址。（已验证）</p>
-<p>MMC3 家族的完整计数规则（重载、使能、版本差异）不用自己写，用电路，见下一节。</p>
-<h2 id="mmc3-与它的变体">MMC3 与它的变体</h2>
-<p>MMC3 的寄存器、镜像、保护位和扫描线中断都由主机里的 <code>mmc3</code> 电路实现，清单声明一下就行：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>Ember 已经把 A12 先低过 4 次显存访问再变高的才算一次上升沿，脚本不用再滤波。脚本导出了 <code>onA12</code>，卡带才会收到显存地址。（已验证）
+              </p>
+
+              <p>MMC3 家族的完整计数规则（重载、使能、版本差异）不用自己写，用电路，见下一节。
+              </p>
+
+              <h2 id="mmc3-与它的变体">MMC3 与它的变体
+              </h2>
+
+              <p>MMC3 的寄存器、镜像、保护位和扫描线中断都由主机里的 <code>mmc3</code> 电路实现，清单声明一下就行：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$8000-$FFFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"write"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"circuit"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"mmc3"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">],</span></span>
 <span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"circuits"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
@@ -112,9 +455,14 @@
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">    "ram"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"prg-ram"</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
-<span class="line"></span></code></pre></div>
-<p>很多 MMC3 变体多了一个外部寄存器，用来扩大 bank 范围。这时不写 <code>wire</code>，由脚本把写入交给电路，再按外部寄存器重算全部窗口：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, bus, addr, value) {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>很多 MMC3 变体多了一个外部寄存器，用来扩大 bank 范围。这时不写 <code>wire</code>，由脚本把写入交给电路，再按外部寄存器重算全部窗口：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, bus, addr, value) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">  if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (addr </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0x8000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    // 外部寄存器：记下新的值，然后重算窗口</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    block </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0x07</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
@@ -124,54 +472,142 @@
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  ctx.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">circuit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'mmc3'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">).</span><span style="color:#6F42C1;--shiki-dark:#B392F0">write</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(addr, value); </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 交给电路</span></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">  update</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx); </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 再按外部寄存器重算窗口</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
-<span class="line"></span></code></pre></div>
-<p><code>update</code> 里用 <code>ctx.circuit('mmc3').get('r6')</code> 之类读出电路的页寄存器，加工后调用各窗口的 <code>setBank</code>。完整写法见官方插件 <code>mmc3-37</code>；其他 <code>mmc3-*</code> 插件是同一类做法。</p>
-<h2 id="查表实现的逻辑方程">查表实现的逻辑方程</h2>
-<p>寄存器的输出是几个输入的逻辑函数时（如卡上的 PAL 芯片），用查表：清单声明输入的来源，脚本算每个输入组合的结果，Ember 缓存，游戏每次访问都是原生速度。完整的清单与脚本见<a href="registers.html">寄存器与状态</a>里的“查表”一节，以及官方插件 <code>plq</code>。</p>
-<h2 id="键盘热键">键盘热键</h2>
-<p>见<a href="script.html">脚本接口</a>里的“键盘与鼠标”。</p>
-<h2 id="参考官方插件">参考官方插件</h2>
-<p>预装的官方插件覆盖了常见的各种写法，按需要找一个接近的改：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>想做的</th>
-<th>参考</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>最简单的整体切换</td>
-<td><code>unrom</code>、<code>cnrom</code>（声明式寄存器）</td>
-</tr>
-<tr>
-<td>串行寄存器、多个窗口联动重算</td>
-<td><code>mmc1</code></td>
-</tr>
-<tr>
-<td>周期计数的中断</td>
-<td><code>irem-h3001</code>、<code>front-fareast</code></td>
-</tr>
-<tr>
-<td>A12 计数的中断</td>
-<td><code>mapper-117</code>、<code>mapper-222</code></td>
-</tr>
-<tr>
-<td>MMC3 电路与外部寄存器</td>
-<td><code>mmc3</code>、<code>mmc3-37</code></td>
-</tr>
-<tr>
-<td>图案页锁存</td>
-<td><code>mmc2</code>、<code>mmc4</code></td>
-</tr>
-<tr>
-<td>查表</td>
-<td><code>plq</code></td>
-</tr>
-<tr>
-<td>磁带</td>
-<td><code>qls</code>、<code>plq</code></td>
-</tr>
-</tbody>
-</table></div>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="script.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>脚本接口</a><a href="debugging.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>测试与排错</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p><code>update</code> 里用 <code>ctx.circuit('mmc3').get('r6')</code> 之类读出电路的页寄存器，加工后调用各窗口的 <code>setBank</code>。完整写法见官方插件 <code>mmc3-37</code>；其他 <code>mmc3-*</code> 插件是同一类做法。
+              </p>
+
+              <h2 id="查表实现的逻辑方程">查表实现的逻辑方程
+              </h2>
+
+              <p>寄存器的输出是几个输入的逻辑函数时（如卡上的 PAL 芯片），用查表：清单声明输入的来源，脚本算每个输入组合的结果，Ember 缓存，游戏每次访问都是原生速度。完整的清单与脚本见<a href="registers.html">寄存器与状态</a>里的“查表”一节，以及官方插件 <code>plq</code>。
+              </p>
+
+              <h2 id="键盘热键">键盘热键
+              </h2>
+
+              <p>见<a href="script.html">脚本接口</a>里的“键盘与鼠标”。
+              </p>
+
+              <h2 id="参考官方插件">参考官方插件
+              </h2>
+
+              <p>预装的官方插件覆盖了常见的各种写法，按需要找一个接近的改：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>想做的
+                      </th>
+
+                      <th>参考
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>最简单的整体切换
+                      </td>
+
+                      <td><code>unrom</code>、<code>cnrom</code>（声明式寄存器）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>串行寄存器、多个窗口联动重算
+                      </td>
+
+                      <td><code>mmc1</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>周期计数的中断
+                      </td>
+
+                      <td><code>irem-h3001</code>、<code>front-fareast</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>A12 计数的中断
+                      </td>
+
+                      <td><code>mapper-117</code>、<code>mapper-222</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>MMC3 电路与外部寄存器
+                      </td>
+
+                      <td><code>mmc3</code>、<code>mmc3-37</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>图案页锁存
+                      </td>
+
+                      <td><code>mmc2</code>、<code>mmc4</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>查表
+                      </td>
+
+                      <td><code>plq</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>磁带
+                      </td>
+
+                      <td><code>qls</code>、<code>plq</code>
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="script.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>脚本接口</a><a href="debugging.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>测试与排错</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

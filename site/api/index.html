@@ -1,524 +1,1540 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="调试接口手册：总览"/><title>总览 · 调试接口手册 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section" open=""><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link site-nav__link--active" href="index.html" aria-current="page">总览</a></li><li><a class="site-nav__link" href="cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="debug.html">debug</a></li><li><a class="site-nav__link" href="input.html">input</a></li><li><a class="site-nav__link" href="inspector.html">inspector</a></li><li><a class="site-nav__link" href="machines.html">machines</a></li><li><a class="site-nav__link" href="mappers.html">mappers</a></li><li><a class="site-nav__link" href="media.html">media</a></li><li><a class="site-nav__link" href="output.html">output</a></li><li><a class="site-nav__link" href="preferences.html">preferences</a></li><li><a class="site-nav__link" href="runtime.html">runtime</a></li><li><a class="site-nav__link" href="system.html">system</a></li><li><a class="site-nav__link" href="rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="../debug/index.html">调试接口手册</a><span aria-hidden="true">›</span><span aria-current="page">总览</span></nav><header class="doc-head"><p class="kicker">调试接口手册</p><h1 class="ui-title doc-title">请求与事件总览</h1></header><article class="doc"><!-- 本文件由 npm run help:build 根据 OpenRPC 文档生成，不要手改 -->
-<p>调试服务的全部请求与事件，按模块分页。连接、认证、报文格式、二进制帧、限制与关闭码见<a href="../debug/protocol.html">连接与报文</a>。</p>
-<h2 id="错误">错误</h2>
-<p>错误响应的 <code>error.code</code> 是 JSON-RPC 错误码（-32700 报文不是 JSON、-32600 不是合法请求、-32601 方法不存在、-32602 参数不合格、-32603 核心内部错误、-32000 业务错误），<code>error.data.code</code> 是模块登记的错误码（如 <code>runtime.noCartridge</code>）。扩展的调试客户端把它抛成 <code>EmberRequestError</code>（<code>code</code> 为错误码）。</p>
-<h2 id="模块">模块</h2>
-<h3 id="cartridges"><a href="cartridges.html">cartridges</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>cartridges.load</code></td>
-<td>读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽</td>
-</tr>
-<tr>
-<td><code>cartridges.parseHeader</code></td>
-<td>只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机</td>
-</tr>
-<tr>
-<td><code>cartridges.eject</code></td>
-<td>取出卡带：主机随之拆除，电源状态变为断电</td>
-</tr>
-<tr>
-<td><code>cartridges.info</code></td>
-<td>当前卡带的描述、匹配到的插件与存储区清单</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>cartridges.loaded</code></p>
-<h3 id="debug"><a href="debug.html">debug</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>debug.hello</code></td>
-<td>握手：每条连接上第一个请求必须是它，令牌不对时连接被关闭（关闭码 4001）</td>
-</tr>
-<tr>
-<td><code>debug.subscribe</code></td>
-<td>订阅事件</td>
-</tr>
-<tr>
-<td><code>debug.unsubscribe</code></td>
-<td>取消订阅：写法要与订阅时一致</td>
-</tr>
-<tr>
-<td><code>debug.status</code></td>
-<td>调试服务的状态：是否开启、是否在监听、端口与当前的连接</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>debug.statusChanged</code>、<code>debug.eventsDropped</code></p>
-<h3 id="input"><a href="input.html">input</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>input.getBindings</code></td>
-<td>读取手柄绑定：两个玩家槽位（对应手柄口 1、2）</td>
-</tr>
-<tr>
-<td><code>input.setBindings</code></td>
-<td>替换全部手柄绑定：核心校验后保存到文件，并发出 input.bindingsChanged</td>
-</tr>
-<tr>
-<td><code>input.resetBindings</code></td>
-<td>把手柄绑定恢复为出厂默认</td>
-</tr>
-<tr>
-<td><code>input.getFamilyKeyboard</code></td>
-<td>读取是否给经典 FC 接上了 Family BASIC 键盘</td>
-</tr>
-<tr>
-<td><code>input.setFamilyKeyboard</code></td>
-<td>给经典 FC 接入或断开 Family BASIC 键盘：对当前主机立即生效，之后装配的主机也按它设置</td>
-</tr>
-<tr>
-<td><code>input.key</code></td>
-<td>按下或松开一个物理键：键盘属于机器时交给机器，否则按手柄绑定变成手柄口的按键</td>
-</tr>
-<tr>
-<td><code>input.mouse</code></td>
-<td>鼠标事件，交给机器</td>
-</tr>
-<tr>
-<td><code>input.gamepad</code></td>
-<td>游戏手柄一个手柄的当前全部状态，按手柄绑定变成手柄口的按键</td>
-</tr>
-<tr>
-<td><code>input.pad</code></td>
-<td>直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本</td>
-</tr>
-<tr>
-<td><code>input.releaseAll</code></td>
-<td>松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>input.bindingsChanged</code>、<code>input.familyKeyboardChanged</code></p>
-<h3 id="inspector"><a href="inspector.html">inspector</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>inspector.listSpaces</code></td>
-<td>列出全部内存空间：总线视角的 cpu 与 ppu，主板与芯片里的存储，以及卡带上的存储区（cart.&lt;存储区标识&gt;）</td>
-</tr>
-<tr>
-<td><code>inspector.readMemory</code></td>
-<td>读一段内存，不改变主机的任何状态：cpu 与 ppu 空间里寄存器类地址读出 0（不读寄存器，所以不会清标志），卡带脚本的寄存器也不会被回调</td>
-</tr>
-<tr>
-<td><code>inspector.writeMemory</code></td>
-<td>写一段内存</td>
-</tr>
-<tr>
-<td><code>inspector.resolve</code></td>
-<td>解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器</td>
-</tr>
-<tr>
-<td><code>inspector.getState</code></td>
-<td>读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper）</td>
-</tr>
-<tr>
-<td><code>inspector.snapshot</code></td>
-<td>取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的</td>
-</tr>
-<tr>
-<td><code>inspector.watch</code></td>
-<td>监视一个状态项：它的取值变化时发事件 inspector.stateChanged</td>
-</tr>
-<tr>
-<td><code>inspector.unwatch</code></td>
-<td>取消监视</td>
-</tr>
-<tr>
-<td><code>inspector.disassemble</code></td>
-<td>从 address 起反汇编 count 条指令（CPU 总线上的地址）</td>
-</tr>
-<tr>
-<td><code>inspector.cdlStart</code></td>
-<td>开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标）</td>
-</tr>
-<tr>
-<td><code>inspector.cdlStop</code></td>
-<td>停止标记，已有的标记保留到下一次 cdlStart 或换卡带</td>
-</tr>
-<tr>
-<td><code>inspector.cdlSave</code></td>
-<td>把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen</td>
-</tr>
-<tr>
-<td><code>inspector.traceStart</code></td>
-<td>开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件</td>
-</tr>
-<tr>
-<td><code>inspector.traceStop</code></td>
-<td>结束跟踪并把内容写成文件</td>
-</tr>
-<tr>
-<td><code>inspector.callLogStart</code></td>
-<td>开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段</td>
-</tr>
-<tr>
-<td><code>inspector.callLogStop</code></td>
-<td>结束调用记录并把内容写成文件</td>
-</tr>
-<tr>
-<td><code>inspector.addBreakpoint</code></td>
-<td>添加断点</td>
-</tr>
-<tr>
-<td><code>inspector.listBreakpoints</code></td>
-<td>列出全部断点，按编号升序</td>
-</tr>
-<tr>
-<td><code>inspector.removeBreakpoint</code></td>
-<td>删除一个断点</td>
-</tr>
-<tr>
-<td><code>inspector.clearBreakpoints</code></td>
-<td>删除全部断点</td>
-</tr>
-<tr>
-<td><code>inspector.updateBreakpoint</code></td>
-<td>修改断点的启用状态或条件，没有给出的项不变</td>
-</tr>
-<tr>
-<td><code>inspector.callStack</code></td>
-<td>读调用栈，最里层的在前</td>
-</tr>
-<tr>
-<td><code>inspector.profilerStart</code></td>
-<td>开始子程序统计：统计清零，之后经过的 CPU 周期按子程序与中断处理程序累计（含与不含它们调用的下层）</td>
-</tr>
-<tr>
-<td><code>inspector.profilerStop</code></td>
-<td>停止子程序统计并返回结果，结果保留到下一次 profilerStart</td>
-</tr>
-<tr>
-<td><code>inspector.profilerGet</code></td>
-<td>读子程序统计的当前结果，不停止统计</td>
-</tr>
-<tr>
-<td><code>inspector.eventsStart</code></td>
-<td>开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的</td>
-</tr>
-<tr>
-<td><code>inspector.eventsStop</code></td>
-<td>停止事件记录，已有的事件保留到下一次 eventsStart 或换卡带</td>
-</tr>
-<tr>
-<td><code>inspector.eventsGet</code></td>
-<td>读事件记录里的事件，按发生的先后排列，记录进行中与停止后都可以读</td>
-</tr>
-<tr>
-<td><code>inspector.getPalette</code></td>
-<td>读 64 个颜色号现在显示的颜色：按主机当前的 PPU（6576 模式与 FC 兼容模式各用自己的）和 $2001 的颜色强调与灰度位换算</td>
-</tr>
-<tr>
-<td><code>inspector.traceRead</code></td>
-<td>读一项正在进行的跟踪或调用记录的一段内容，不结束记录</td>
-</tr>
-<tr>
-<td><code>inspector.setState</code></td>
-<td>修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>inspector.stateChanged</code></p>
-<h3 id="machines"><a href="machines.html">machines</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>machines.list</code></td>
-<td>机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing</td>
-</tr>
-<tr>
-<td><code>machines.setRom</code></td>
-<td>读取并检查 ROM 文件，复制进 ROM 目录（新文件写好之后才删旧文件，失败时原有的 ROM 不变）</td>
-</tr>
-<tr>
-<td><code>machines.setRoms</code></td>
-<td>读取目录里的 .bin 文件（不含子目录，按文件名排序），按内容的校验值认出各是哪个机型的 ROM，把还没有 ROM 的机型的 ROM 添加进来</td>
-</tr>
-<tr>
-<td><code>machines.removeRom</code></td>
-<td>删除机型的 ROM 文件</td>
-</tr>
-<tr>
-<td><code>machines.boot</code></td>
-<td>整机机型开机：读入已设置的 ROM，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>machines.changed</code></p>
-<h3 id="mappers"><a href="mappers.html">mappers</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>mappers.list</code></td>
-<td>列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先</td>
-</tr>
-<tr>
-<td><code>mappers.info</code></td>
-<td>返回一个插件的摘要与清单详情</td>
-</tr>
-<tr>
-<td><code>mappers.install</code></td>
-<td>安装一个 .emap 插件包：检查通过后放进用户插件目录</td>
-</tr>
-<tr>
-<td><code>mappers.uninstall</code></td>
-<td>卸载用户安装的插件</td>
-</tr>
-<tr>
-<td><code>mappers.setEnabled</code></td>
-<td>启用或停用一个插件</td>
-</tr>
-<tr>
-<td><code>mappers.reload</code></td>
-<td>重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>mappers.changed</code></p>
-<h3 id="media"><a href="media.html">media</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>media.floppyInsert</code></td>
-<td>读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片</td>
-</tr>
-<tr>
-<td><code>media.floppyEject</code></td>
-<td>取出盘片并丢弃镜像</td>
-</tr>
-<tr>
-<td><code>media.floppySave</code></td>
-<td>立即把驱动器里的镜像写回放入时的文件，并清除“已修改”标志</td>
-</tr>
-<tr>
-<td><code>media.floppyWriteProtect</code></td>
-<td>设置或取消盘片的写保护</td>
-</tr>
-<tr>
-<td><code>media.floppyStatus</code></td>
-<td>全部软驱的状态</td>
-</tr>
-<tr>
-<td><code>media.floppyFault</code></td>
-<td>故障注入：取盘、写保护、无索引脉冲、磁头卡住、控制器无响应、指定扇区校验错、全部清除</td>
-</tr>
-<tr>
-<td><code>media.printerStatus</code></td>
-<td>打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名</td>
-</tr>
-<tr>
-<td><code>media.printerFlush</code></td>
-<td>立即输出当前页，等同打印机收到换页</td>
-</tr>
-<tr>
-<td><code>media.tapeLoad</code></td>
-<td>把声音文件放进磁带机当磁带（解码由核心内置的 FFmpeg 库完成，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带</td>
-</tr>
-<tr>
-<td><code>media.tapeEject</code></td>
-<td>取出磁带</td>
-</tr>
-<tr>
-<td><code>media.tapePlay</code></td>
-<td>开始播放</td>
-</tr>
-<tr>
-<td><code>media.tapeRecord</code></td>
-<td>开始录音：录的是主机的声音（游戏、学习机里的声音）加主机经数据线送来的 1 位信号，与主机型号无关</td>
-</tr>
-<tr>
-<td><code>media.tapeStop</code></td>
-<td>停止播放或录音</td>
-</tr>
-<tr>
-<td><code>media.tapeStatus</code></td>
-<td>磁带机的状态</td>
-</tr>
-<tr>
-<td><code>media.tapeSeek</code></td>
-<td>把磁带定位到某个位置</td>
-</tr>
-<tr>
-<td><code>media.tapeTimeline</code></td>
-<td>磁带的时间轴：载入磁带后核心在后台读一遍声音，得出数据线上各时刻的声音大小与空白段，用来在磁带上找到程序的位置</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>media.changed</code>、<code>media.tapeAnalyzed</code>、<code>media.printed</code>、<code>media.printFailed</code>、<code>media.floppySaveFailed</code></p>
-<h3 id="output"><a href="output.html">output</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>output.setAudioMode</code></td>
-<td>设置声音的播放方式：real 按真实时间播放</td>
-</tr>
-<tr>
-<td><code>output.setVolume</code></td>
-<td>设置声音的音量与静音</td>
-</tr>
-<tr>
-<td><code>output.screenshot</code></td>
-<td>截取最近一次完成的画面（256x240，暂停与断电后也有上一帧）</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="preferences"><a href="preferences.html">preferences</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>preferences.list</code></td>
-<td>列出全部分组与设置项（含当前取值）</td>
-</tr>
-<tr>
-<td><code>preferences.set</code></td>
-<td>修改一个设置项：核心按登记的种类校验取值，保存到文件，并发出 preferences.changed</td>
-</tr>
-<tr>
-<td><code>preferences.reset</code></td>
-<td>把一个设置项恢复为出厂默认值</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>preferences.changed</code></p>
-<h3 id="runtime"><a href="runtime.html">runtime</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>runtime.status</code></td>
-<td>返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标</td>
-</tr>
-<tr>
-<td><code>runtime.powerOn</code></td>
-<td>上电：创建或重置全部芯片，卡带的存储区重新从文件载入</td>
-</tr>
-<tr>
-<td><code>runtime.powerOff</code></td>
-<td>断电：停止运行，芯片状态丢弃</td>
-</tr>
-<tr>
-<td><code>runtime.reset</code></td>
-<td>复位：soft 只发 RESET 线，不改变电源与运行模式</td>
-</tr>
-<tr>
-<td><code>runtime.pause</code></td>
-<td>暂停：已暂停时没有效果</td>
-</tr>
-<tr>
-<td><code>runtime.resume</code></td>
-<td>继续：按真实帧率连续运行</td>
-</tr>
-<tr>
-<td><code>runtime.run</code></td>
-<td>授权运行：不限速地连续运行指定的量后暂停（运行中不输出声音，每帧之间照常处理输入等命令）</td>
-</tr>
-<tr>
-<td><code>runtime.setSpeed</code></td>
-<td>设置运行速度：percent 是相对真实速度的百分比，max 为 true 时不限速、尽快运行</td>
-</tr>
-<tr>
-<td><code>runtime.step</code></td>
-<td>单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停</td>
-</tr>
-<tr>
-<td><code>runtime.setFrameEvents</code></td>
-<td>设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）</td>
-</tr>
-</tbody>
-</table></div>
-<p>事件：<code>runtime.stateChanged</code>、<code>runtime.frame</code>、<code>runtime.runFinished</code>、<code>runtime.breakpointHit</code>、<code>runtime.error</code></p>
-<h3 id="system"><a href="system.html">system</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>system.version</code></td>
-<td>返回应用版本与核心版本</td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="rpc"><a href="rpc.html">rpc</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>请求</th>
-<th>简介</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>rpc.discover</code></td>
-<td>返回本文档</td>
-</tr>
-</tbody>
-</table></div>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="../debug/clients.html" class="doc-pager__prev"><span>上一页 · 调试接口手册</span>客户端工具</a><a href="cartridges.html" class="doc-pager__next"><span>下一页 · 调试接口手册</span>cartridges</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="调试接口手册：总览"/><title>总览 · 调试接口手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../plugin/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link site-nav__link--active" href="index.html" aria-current="page">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="../debug/index.html">调试接口手册</a><span aria-hidden="true">›</span><span aria-current="page">总览</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">调试接口手册
+              </p>
+              <h1 class="ui-title doc-title">请求与事件总览
+              </h1>
+            </header>
+            <article class="doc"><!-- 本文件由 npm run help:build 根据 OpenRPC 文档生成，不要手改 -->
+
+              <p>调试服务的全部请求与事件，按模块分页。连接、认证、报文格式、二进制帧、限制与关闭码见<a href="../debug/protocol.html">连接与报文</a>。
+              </p>
+
+              <h2 id="错误">错误
+              </h2>
+
+              <p>错误响应的 <code>error.code</code> 是 JSON-RPC 错误码（-32700 报文不是 JSON、-32600 不是合法请求、-32601 方法不存在、-32602 参数不合格、-32603 核心内部错误、-32000 业务错误），<code>error.data.code</code> 是模块登记的错误码（如 <code>runtime.noCartridge</code>）。扩展的调试客户端把它抛成 <code>EmberRequestError</code>（<code>code</code> 为错误码）。
+              </p>
+
+              <h2 id="模块">模块
+              </h2>
+
+              <h3 id="cartridges"><a href="cartridges.html">cartridges</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>cartridges.load</code>
+                      </td>
+
+                      <td>读取 NES 文件，解析文件头，按 mapper 号与变体匹配插件，装配主机并插入卡槽
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>cartridges.parseHeader</code>
+                      </td>
+
+                      <td>只解析 NES 文件头并预览匹配结果，不装配主机、不改变正在运行的卡带与主机
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>cartridges.eject</code>
+                      </td>
+
+                      <td>取出卡带：主机随之拆除，电源状态变为断电
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>cartridges.info</code>
+                      </td>
+
+                      <td>当前卡带的描述、匹配到的插件与存储区清单
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>cartridges.loaded</code>
+              </p>
+
+              <h3 id="debug"><a href="debug.html">debug</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>debug.hello</code>
+                      </td>
+
+                      <td>握手：每条连接上第一个请求必须是它，令牌不对时连接被关闭（关闭码 4001）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>debug.subscribe</code>
+                      </td>
+
+                      <td>订阅事件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>debug.unsubscribe</code>
+                      </td>
+
+                      <td>取消订阅：写法要与订阅时一致
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>debug.status</code>
+                      </td>
+
+                      <td>调试服务的状态：是否开启、是否在监听、端口与当前的连接
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>debug.statusChanged</code>、<code>debug.eventsDropped</code>
+              </p>
+
+              <h3 id="input"><a href="input.html">input</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>input.getBindings</code>
+                      </td>
+
+                      <td>读取手柄绑定：两个玩家槽位（对应手柄口 1、2）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.setBindings</code>
+                      </td>
+
+                      <td>替换全部手柄绑定：核心校验后保存到文件，并发出 input.bindingsChanged
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.resetBindings</code>
+                      </td>
+
+                      <td>把手柄绑定恢复为出厂默认
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.getFamilyKeyboard</code>
+                      </td>
+
+                      <td>读取是否给经典 FC 接上了 Family BASIC 键盘
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.setFamilyKeyboard</code>
+                      </td>
+
+                      <td>给经典 FC 接入或断开 Family BASIC 键盘：对当前主机立即生效，之后装配的主机也按它设置
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.key</code>
+                      </td>
+
+                      <td>按下或松开一个物理键：键盘属于机器时交给机器，否则按手柄绑定变成手柄口的按键
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.mouse</code>
+                      </td>
+
+                      <td>鼠标事件，交给机器
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.gamepad</code>
+                      </td>
+
+                      <td>游戏手柄一个手柄的当前全部状态，按手柄绑定变成手柄口的按键
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.pad</code>
+                      </td>
+
+                      <td>直接设置主机某个手柄口上标准手柄的按键，不经 mapper 脚本
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>input.releaseAll</code>
+                      </td>
+
+                      <td>松开经 key 按下的全部键、把经 pad 设置过的手柄口清零、并让经 gamepad 注入的手柄断开
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>input.bindingsChanged</code>、<code>input.familyKeyboardChanged</code>
+              </p>
+
+              <h3 id="inspector"><a href="inspector.html">inspector</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>inspector.listSpaces</code>
+                      </td>
+
+                      <td>列出全部内存空间：总线视角的 cpu 与 ppu，主板与芯片里的存储，以及卡带上的存储区（cart.&lt;存储区标识&gt;）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.readMemory</code>
+                      </td>
+
+                      <td>读一段内存，不改变主机的任何状态：cpu 与 ppu 空间里寄存器类地址读出 0（不读寄存器，所以不会清标志），卡带脚本的寄存器也不会被回调
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.writeMemory</code>
+                      </td>
+
+                      <td>写一段内存
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.resolve</code>
+                      </td>
+
+                      <td>解析一个总线地址：它落在哪块存储区的哪个偏移，或哪个寄存器
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.getState</code>
+                      </td>
+
+                      <td>读状态：cpu（寄存器与周期数）、ppu（扫描线、点、帧数、滚动寄存器、标志）与卡带的脚本状态（mapper）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.snapshot</code>
+                      </td>
+
+                      <td>取得完整快照：各模块的状态、断点与监视项，以及此刻的 CPU 周期数，都在同一个时刻读出，是一致的
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.watch</code>
+                      </td>
+
+                      <td>监视一个状态项：它的取值变化时发事件 inspector.stateChanged
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.unwatch</code>
+                      </td>
+
+                      <td>取消监视
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.disassemble</code>
+                      </td>
+
+                      <td>从 address 起反汇编 count 条指令（CPU 总线上的地址）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.cdlStart</code>
+                      </td>
+
+                      <td>开始代码与数据标记（CDL）：给卡带 PRG-ROM 的每个字节打标记，标记清零后，运行与单步执行的每条指令都记：Code（0x01，被当作指令执行，含操作数字节）、Data（0x02，被指令当数据读取，不含只写的存储指令、栈与中断向量）、JumpTarget（0x04，JMP 或成立的分支的目标）、SubEntry（0x08，JSR 的目标）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.cdlStop</code>
+                      </td>
+
+                      <td>停止标记，已有的标记保留到下一次 cdlStart 或换卡带
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.cdlSave</code>
+                      </td>
+
+                      <td>把当前的标记写成调试输出目录下的文件：PRG-ROM 每个字节一个标记字节，没有文件头，位定义同 Mesen
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.traceStart</code>
+                      </td>
+
+                      <td>开始跟踪，内容记在内存里，traceStop 时写成调试输出目录下的文件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.traceStop</code>
+                      </td>
+
+                      <td>结束跟踪并把内容写成文件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.callLogStart</code>
+                      </td>
+
+                      <td>开始调用记录：每次执行到 address 这条指令之前记一行，含寄存器、周期数、栈顶的若干字节（SP 之上，栈顶在前）与指定的内存段
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.callLogStop</code>
+                      </td>
+
+                      <td>结束调用记录并把内容写成文件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.addBreakpoint</code>
+                      </td>
+
+                      <td>添加断点
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.listBreakpoints</code>
+                      </td>
+
+                      <td>列出全部断点，按编号升序
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.removeBreakpoint</code>
+                      </td>
+
+                      <td>删除一个断点
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.clearBreakpoints</code>
+                      </td>
+
+                      <td>删除全部断点
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.updateBreakpoint</code>
+                      </td>
+
+                      <td>修改断点的启用状态或条件，没有给出的项不变
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.callStack</code>
+                      </td>
+
+                      <td>读调用栈，最里层的在前
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.profilerStart</code>
+                      </td>
+
+                      <td>开始子程序统计：统计清零，之后经过的 CPU 周期按子程序与中断处理程序累计（含与不含它们调用的下层）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.profilerStop</code>
+                      </td>
+
+                      <td>停止子程序统计并返回结果，结果保留到下一次 profilerStart
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.profilerGet</code>
+                      </td>
+
+                      <td>读子程序统计的当前结果，不停止统计
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.eventsStart</code>
+                      </td>
+
+                      <td>开始事件记录：记录清零，之后运行与单步产生的事件（对 $2000-$5FFF 寄存器的读写、对 $8000 以上的 mapper 寄存器的写、CPU 响应 IRQ、NMI 与 BRK）连同发生时 PPU 的帧、扫描线与点记在内存里，容量满了丢弃最早的
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.eventsStop</code>
+                      </td>
+
+                      <td>停止事件记录，已有的事件保留到下一次 eventsStart 或换卡带
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.eventsGet</code>
+                      </td>
+
+                      <td>读事件记录里的事件，按发生的先后排列，记录进行中与停止后都可以读
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.getPalette</code>
+                      </td>
+
+                      <td>读 64 个颜色号现在显示的颜色：按主机当前的 PPU（6576 模式与 FC 兼容模式各用自己的）和 $2001 的颜色强调与灰度位换算
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.traceRead</code>
+                      </td>
+
+                      <td>读一项正在进行的跟踪或调用记录的一段内容，不结束记录
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>inspector.setState</code>
+                      </td>
+
+                      <td>修改一个模块的状态：目前只有 cpu 可以改（pc、a、x、y、sp、status，只在指令之间生效），其余模块只读
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>inspector.stateChanged</code>
+              </p>
+
+              <h3 id="machines"><a href="machines.html">machines</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>machines.list</code>
+                      </td>
+
+                      <td>机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>machines.setRom</code>
+                      </td>
+
+                      <td>读取并检查 ROM 文件，复制进 ROM 目录（新文件写好之后才删旧文件，失败时原有的 ROM 不变）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>machines.setRoms</code>
+                      </td>
+
+                      <td>读取目录里的 .bin 文件（不含子目录，按文件名排序），按内容的校验值认出各是哪个机型的 ROM，把还没有 ROM 的机型的 ROM 添加进来
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>machines.removeRom</code>
+                      </td>
+
+                      <td>删除机型的 ROM 文件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>machines.boot</code>
+                      </td>
+
+                      <td>整机机型开机：读入已设置的 ROM，装配该机型的主机，已有的卡带与主机被替换，任何一步失败都不改动原有的
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>machines.changed</code>
+              </p>
+
+              <h3 id="mappers"><a href="mappers.html">mappers</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>mappers.list</code>
+                      </td>
+
+                      <td>列出生效的插件：同一标识有多个来源时只列一个，开发目录里的优先，其余版本最高的生效，版本相同时用户安装的优先
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mappers.info</code>
+                      </td>
+
+                      <td>返回一个插件的摘要与清单详情
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mappers.install</code>
+                      </td>
+
+                      <td>安装一个 .emap 插件包：检查通过后放进用户插件目录
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mappers.uninstall</code>
+                      </td>
+
+                      <td>卸载用户安装的插件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mappers.setEnabled</code>
+                      </td>
+
+                      <td>启用或停用一个插件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mappers.reload</code>
+                      </td>
+
+                      <td>重新读取预装目录、用户目录里的插件包，以及开发目录（首选项 mappers.developmentDirectory）里的未打包插件，下次装配或硬复位时生效
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>mappers.changed</code>
+              </p>
+
+              <h3 id="media"><a href="media.html">media</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>media.floppyInsert</code>
+                      </td>
+
+                      <td>读取盘片镜像文件（上限 16 MB）放进驱动器，替换已有的盘片
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.floppyEject</code>
+                      </td>
+
+                      <td>取出盘片并丢弃镜像
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.floppySave</code>
+                      </td>
+
+                      <td>立即把驱动器里的镜像写回放入时的文件，并清除“已修改”标志
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.floppyWriteProtect</code>
+                      </td>
+
+                      <td>设置或取消盘片的写保护
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.floppyStatus</code>
+                      </td>
+
+                      <td>全部软驱的状态
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.floppyFault</code>
+                      </td>
+
+                      <td>故障注入：取盘、写保护、无索引脉冲、磁头卡住、控制器无响应、指定扇区校验错、全部清除
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.printerStatus</code>
+                      </td>
+
+                      <td>打印机的状态：空闲、打印中、打印完成，当前页是否有内容，已输出的页数与最近一页的文件名
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.printerFlush</code>
+                      </td>
+
+                      <td>立即输出当前页，等同打印机收到换页
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeLoad</code>
+                      </td>
+
+                      <td>把声音文件放进磁带机当磁带（解码由核心内置的 FFmpeg 库完成，m4a、mp3、wav 等都可以），位置回到开头，替换已有的磁带
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeEject</code>
+                      </td>
+
+                      <td>取出磁带
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapePlay</code>
+                      </td>
+
+                      <td>开始播放
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeRecord</code>
+                      </td>
+
+                      <td>开始录音：录的是主机的声音（游戏、学习机里的声音）加主机经数据线送来的 1 位信号，与主机型号无关
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeStop</code>
+                      </td>
+
+                      <td>停止播放或录音
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeStatus</code>
+                      </td>
+
+                      <td>磁带机的状态
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeSeek</code>
+                      </td>
+
+                      <td>把磁带定位到某个位置
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>media.tapeTimeline</code>
+                      </td>
+
+                      <td>磁带的时间轴：载入磁带后核心在后台读一遍声音，得出数据线上各时刻的声音大小与空白段，用来在磁带上找到程序的位置
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>media.changed</code>、<code>media.tapeAnalyzed</code>、<code>media.printed</code>、<code>media.printFailed</code>、<code>media.floppySaveFailed</code>
+              </p>
+
+              <h3 id="output"><a href="output.html">output</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>output.setAudioMode</code>
+                      </td>
+
+                      <td>设置声音的播放方式：real 按真实时间播放
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>output.setVolume</code>
+                      </td>
+
+                      <td>设置声音的音量与静音
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>output.screenshot</code>
+                      </td>
+
+                      <td>截取最近一次完成的画面（256x240，暂停与断电后也有上一帧）
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="preferences"><a href="preferences.html">preferences</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>preferences.list</code>
+                      </td>
+
+                      <td>列出全部分组与设置项（含当前取值）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>preferences.set</code>
+                      </td>
+
+                      <td>修改一个设置项：核心按登记的种类校验取值，保存到文件，并发出 preferences.changed
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>preferences.reset</code>
+                      </td>
+
+                      <td>把一个设置项恢复为出厂默认值
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>preferences.changed</code>
+              </p>
+
+              <h3 id="runtime"><a href="runtime.html">runtime</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>runtime.status</code>
+                      </td>
+
+                      <td>返回电源、运行模式、主机型号、卡带、帧号、总周期数、速度与是否带鼠标
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.powerOn</code>
+                      </td>
+
+                      <td>上电：创建或重置全部芯片，卡带的存储区重新从文件载入
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.powerOff</code>
+                      </td>
+
+                      <td>断电：停止运行，芯片状态丢弃
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.reset</code>
+                      </td>
+
+                      <td>复位：soft 只发 RESET 线，不改变电源与运行模式
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.pause</code>
+                      </td>
+
+                      <td>暂停：已暂停时没有效果
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.resume</code>
+                      </td>
+
+                      <td>继续：按真实帧率连续运行
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.run</code>
+                      </td>
+
+                      <td>授权运行：不限速地连续运行指定的量后暂停（运行中不输出声音，每帧之间照常处理输入等命令）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.setSpeed</code>
+                      </td>
+
+                      <td>设置运行速度：percent 是相对真实速度的百分比，max 为 true 时不限速、尽快运行
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.step</code>
+                      </td>
+
+                      <td>单步：先暂停（正在进行的授权运行被打断），再按单位运行指定的数量后保持暂停
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>runtime.setFrameEvents</code>
+                      </td>
+
+                      <td>设置 runtime.frame 事件的发布间隔：每 frames 帧发一次，0 表示不发（默认）
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>runtime.stateChanged</code>、<code>runtime.frame</code>、<code>runtime.runFinished</code>、<code>runtime.breakpointHit</code>、<code>runtime.error</code>
+              </p>
+
+              <h3 id="system"><a href="system.html">system</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>system.version</code>
+                      </td>
+
+                      <td>返回应用版本与核心版本
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="rpc"><a href="rpc.html">rpc</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>rpc.discover</code>
+                      </td>
+
+                      <td>返回本文档
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="../debug/clients.html" class="doc-pager__prev"><span>上一页 · 调试接口手册</span>客户端工具</a><a href="cartridges.html" class="doc-pager__next"><span>下一页 · 调试接口手册</span>cartridges</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

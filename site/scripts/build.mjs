@@ -20,6 +20,7 @@ import { build as viteBuild, createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import { REPO_ROOT, SITE_DIR, HELP_ROOT, hrefFrom, loadContent, navigationFor } from './content.mjs';
 import { EMBER_SHOTS, FCDEV_SHOTS, HERO_SHOT } from './shots.mjs';
+import { formatHtml } from './format-html.mjs';
 import { importFcdevDocs } from '../../ember/tools/build/import-fcdev-docs.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -259,7 +260,7 @@ function docView(content, page) {
 function writePage(out, html) {
   const file = join(REPO_ROOT, ...out.split('/'));
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `<!doctype html>\n${html}`, 'utf8');
+  writeFileSync(file, `<!doctype html>\n${formatHtml(html)}`, 'utf8');
 }
 
 /**

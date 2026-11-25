@@ -1,100 +1,504 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="插件开发手册：清单：寄存器与状态"/><title>清单：寄存器与状态 · 插件开发手册 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section" open=""><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li><li><a class="site-nav__link" href="quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="package.html">插件包与安装</a></li><li><a class="site-nav__link" href="manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link site-nav__link--active" href="registers.html" aria-current="page">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="script.html">脚本接口</a></li><li><a class="site-nav__link" href="recipes.html">常见写法</a></li><li><a class="site-nav__link" href="debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section"><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a></li><li><a class="site-nav__link" href="../fcdev/build.html">构建</a></li><li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a></li><li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">清单：寄存器与状态</span></nav><header class="doc-head"><p class="kicker">插件开发手册</p><h1 class="ui-title doc-title">清单：寄存器与状态</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#寄存器">寄存器</a></li><li class="toc-sub"><a href="#读的声明">读的声明</a></li><li class="toc-sub"><a href="#写的声明">写的声明</a></li><li class="toc-sub"><a href="#调试读取">调试读取</a></li><li><a href="#状态">状态</a></li><li><a href="#查表">查表</a></li><li><a href="#磁带">磁带</a></li><li><a href="#电路">电路</a></li><li class="toc-sub"><a href="#电路的状态名">电路的状态名</a></li><li><a href="#设置项">设置项</a></li></ul></div></div></nav><article class="doc"><p>这一页讲怎么在清单里声明寄存器、状态、查表、磁带接线、mapper 电路和设置项。原则是：能声明的都声明，由 Ember 直接执行，不进脚本；每帧要访问很多次的寄存器尤其应当声明，脚本每回调一次都有开销。</p>
-<h2 id="寄存器">寄存器</h2>
-<p><code>registers</code> 声明卡带上的寄存器地址范围，最多 64 项。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>bus</code></td>
-<td><code>cpu</code> 或 <code>ppu</code></td>
-</tr>
-<tr>
-<td><code>range</code></td>
-<td>地址范围，如 <code>$4100-$4107</code></td>
-</tr>
-<tr>
-<td><code>read</code>、<code>write</code></td>
-<td>这个范围怎么处理读、写：<code>true</code> 表示回调脚本；对象表示由 Ember 直接执行（声明式，见下）；不写或 <code>false</code> 表示不处理，读写落到窗口或开放总线</td>
-</tr>
-</tbody>
-</table></div>
-<p>规则：</p>
-<ul>
-<li>只有落在声明范围内的访问才由寄存器处理，其余访问由窗口直接处理。</li>
-<li>同一条总线上的寄存器范围不能重叠；每项的 <code>read</code>、<code>write</code> 至少要有一个有处理。</li>
-<li>寄存器的地址范围受窗口同样的限制：CPU 侧在 <code>$4020-$FFFF</code>，PPU 侧在 <code>$0000-$1FFF</code>。</li>
-<li>寄存器范围可以与窗口的地址范围重叠：寄存器按读、写分别优先于窗口。声明了 <code>read</code> 的地址，读由寄存器回答；声明了 <code>write</code> 的地址，写只交给寄存器，窗口不再处理；没声明的方向仍落到窗口。例如只读的程序窗口上声明了 <code>write</code>，读取照常由窗口回答，写入交给寄存器。</li>
-<li>声明里引用的状态、窗口、表都必须存在。</li>
-<li>不要用回调脚本的读寄存器盖住整个 <code>$8000-$FFFF</code>：每次取指令都会进脚本，会把模拟拖慢到没法用。需要“读程序 ROM 的同时改变读出的值”的 mapper（比如读地址被开关改写的多合一卡）目前不支持。</li>
-</ul>
-<h3 id="读的声明">读的声明</h3>
-<p><code>read</code> 是对象时，<code>value</code>、<code>open</code>、<code>state</code> 必须且只能写一个：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>value</code></td>
-<td>驱动固定值，0 到 255</td>
-</tr>
-<tr>
-<td><code>open</code></td>
-<td>写 <code>true</code>：不驱动数据线，读到总线上最近的值</td>
-</tr>
-<tr>
-<td><code>state</code></td>
-<td>驱动这个状态的低 8 位</td>
-</tr>
-<tr>
-<td><code>releaseIrq</code></td>
-<td>可选。<code>true</code> 时每次读完撤销卡带的中断</td>
-</tr>
-</tbody>
-</table></div>
-<p>示例：读 <code>$A000-$BFFF</code> 得到状态 <code>pal</code>，读 <code>$5000-$5FFF</code> 得到固定值 0 并撤销中断：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{ </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$A000-$BFFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"read"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"state"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"pal"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="插件开发手册：清单：寄存器与状态"/><title>清单：寄存器与状态 · 插件开发手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link site-nav__link--active" href="registers.html" aria-current="page">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../api/index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">插件开发手册</a><span aria-hidden="true">›</span><span aria-current="page">清单：寄存器与状态</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">插件开发手册
+              </p>
+              <h1 class="ui-title doc-title">清单：寄存器与状态
+              </h1>
+            </header>
+            <nav class="ui-panel doc-toc" aria-label="本页目录">
+              <div class="ui-panel__head">
+                <div class="ui-panel__heading">
+                  <h3 class="ui-title">本页目录
+                  </h3>
+                </div>
+              </div>
+              <div class="ui-scroll-area ui-scrollable-element ui-panel__scroll">
+                <div class="ui-scroll-area__viewport ui-panel__body">
+                  <ul>
+                    <li><a href="#寄存器">寄存器</a>
+                    </li>
+                    <li class="toc-sub"><a href="#读的声明">读的声明</a>
+                    </li>
+                    <li class="toc-sub"><a href="#写的声明">写的声明</a>
+                    </li>
+                    <li class="toc-sub"><a href="#调试读取">调试读取</a>
+                    </li>
+                    <li><a href="#状态">状态</a>
+                    </li>
+                    <li><a href="#查表">查表</a>
+                    </li>
+                    <li><a href="#磁带">磁带</a>
+                    </li>
+                    <li><a href="#电路">电路</a>
+                    </li>
+                    <li class="toc-sub"><a href="#电路的状态名">电路的状态名</a>
+                    </li>
+                    <li><a href="#设置项">设置项</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+            <article class="doc">
+              <p>这一页讲怎么在清单里声明寄存器、状态、查表、磁带接线、mapper 电路和设置项。原则是：能声明的都声明，由 Ember 直接执行，不进脚本；每帧要访问很多次的寄存器尤其应当声明，脚本每回调一次都有开销。
+              </p>
+
+              <h2 id="寄存器">寄存器
+              </h2>
+
+              <p><code>registers</code> 声明卡带上的寄存器地址范围，最多 64 项。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>bus</code>
+                      </td>
+
+                      <td><code>cpu</code> 或 <code>ppu</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>range</code>
+                      </td>
+
+                      <td>地址范围，如 <code>$4100-$4107</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>read</code>、<code>write</code>
+                      </td>
+
+                      <td>这个范围怎么处理读、写：<code>true</code> 表示回调脚本；对象表示由 Ember 直接执行（声明式，见下）；不写或 <code>false</code> 表示不处理，读写落到窗口或开放总线
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>规则：
+              </p>
+
+              <ul>
+
+                <li>只有落在声明范围内的访问才由寄存器处理，其余访问由窗口直接处理。
+                </li>
+
+                <li>同一条总线上的寄存器范围不能重叠；每项的 <code>read</code>、<code>write</code> 至少要有一个有处理。
+                </li>
+
+                <li>寄存器的地址范围受窗口同样的限制：CPU 侧在 <code>$4020-$FFFF</code>，PPU 侧在 <code>$0000-$1FFF</code>。
+                </li>
+
+                <li>寄存器范围可以与窗口的地址范围重叠：寄存器按读、写分别优先于窗口。声明了 <code>read</code> 的地址，读由寄存器回答；声明了 <code>write</code> 的地址，写只交给寄存器，窗口不再处理；没声明的方向仍落到窗口。例如只读的程序窗口上声明了 <code>write</code>，读取照常由窗口回答，写入交给寄存器。
+                </li>
+
+                <li>声明里引用的状态、窗口、表都必须存在。
+                </li>
+
+                <li>不要用回调脚本的读寄存器盖住整个 <code>$8000-$FFFF</code>：每次取指令都会进脚本，会把模拟拖慢到没法用。需要“读程序 ROM 的同时改变读出的值”的 mapper（比如读地址被开关改写的多合一卡）目前不支持。
+                </li>
+
+              </ul>
+
+              <h3 id="读的声明">读的声明
+              </h3>
+
+              <p><code>read</code> 是对象时，<code>value</code>、<code>open</code>、<code>state</code> 必须且只能写一个：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>value</code>
+                      </td>
+
+                      <td>驱动固定值，0 到 255
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>open</code>
+                      </td>
+
+                      <td>写 <code>true</code>：不驱动数据线，读到总线上最近的值
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>state</code>
+                      </td>
+
+                      <td>驱动这个状态的低 8 位
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>releaseIrq</code>
+                      </td>
+
+                      <td>可选。<code>true</code> 时每次读完撤销卡带的中断
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>示例：读 <code>$A000-$BFFF</code> 得到状态 <code>pal</code>，读 <code>$5000-$5FFF</code> 得到固定值 0 并撤销中断：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{ </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$A000-$BFFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"read"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"state"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"pal"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{ </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$5000-$5FFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"read"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"value"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"releaseIrq"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">true</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
-<span class="line"></span></code></pre></div>
-<h3 id="写的声明">写的声明</h3>
-<p><code>write</code> 是对象时，<code>state</code>、<code>bank</code>、<code>update</code> 至少写一个，或者只写 <code>circuit</code>；同一次写入按 <code>state</code>、<code>bank</code>、<code>update</code> 的顺序做：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>state</code></td>
-<td>把写入的数据（8 位）存进这个状态，按位宽截断</td>
-</tr>
-<tr>
-<td><code>bank</code></td>
-<td>数组（1 到 8 项），每项 <code>{ &quot;window&quot;, &quot;shift&quot;, &quot;mask&quot; }</code>：把窗口切到 bank <code>(数据 &gt;&gt; shift) &amp; mask</code>；<code>shift</code> 为 0 到 7，默认 0；<code>mask</code> 为 1 到 255，默认 255；bank 号再按窗口的规则取模</td>
-</tr>
-<tr>
-<td><code>update</code></td>
-<td><code>{ &quot;table&quot;: 表标识, &quot;into&quot;: 状态名 }</code>：按表的索引查表，结果存进这个状态，见下面的“查表”</td>
-</tr>
-<tr>
-<td><code>circuit</code></td>
-<td>电路标识：把写入的地址与数据交给这个电路，再按电路的接线设置窗口，见下面的“电路”；与 <code>state</code>、<code>bank</code>、<code>update</code> 互斥</td>
-</tr>
-</tbody>
-</table></div>
-<p>示例：写入值的低 3 位选程序窗口，高 4 位选图案窗口：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <h3 id="写的声明">写的声明
+              </h3>
+
+              <p><code>write</code> 是对象时，<code>state</code>、<code>bank</code>、<code>update</code> 至少写一个，或者只写 <code>circuit</code>；同一次写入按 <code>state</code>、<code>bank</code>、<code>update</code> 的顺序做：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>state</code>
+                      </td>
+
+                      <td>把写入的数据（8 位）存进这个状态，按位宽截断
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>bank</code>
+                      </td>
+
+                      <td>数组（1 到 8 项），每项 <code>{ &quot;window&quot;, &quot;shift&quot;, &quot;mask&quot; }</code>：把窗口切到 bank <code>(数据 &gt;&gt; shift) &amp; mask</code>；<code>shift</code> 为 0 到 7，默认 0；<code>mask</code> 为 1 到 255，默认 255；bank 号再按窗口的规则取模
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>update</code>
+                      </td>
+
+                      <td><code>{ &quot;table&quot;: 表标识, &quot;into&quot;: 状态名 }</code>：按表的索引查表，结果存进这个状态，见下面的“查表”
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>circuit</code>
+                      </td>
+
+                      <td>电路标识：把写入的地址与数据交给这个电路，再按电路的接线设置窗口，见下面的“电路”；与 <code>state</code>、<code>bank</code>、<code>update</code> 互斥
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>示例：写入值的低 3 位选程序窗口，高 4 位选图案窗口：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  "bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  "range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$8000-$FFFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  "write"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: {</span></span>
@@ -105,112 +509,279 @@
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    ]</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
-<span class="line"></span></code></pre></div>
-<h3 id="调试读取">调试读取</h3>
-<p>调试服务读内存时不会触发寄存器的回调：声明的固定值与状态可以直接读到，回调脚本的寄存器与 <code>open</code> 读不到值。</p>
-<h2 id="状态">状态</h2>
-<p><code>state</code> 声明卡带的内部寄存器，最多 64 项。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>name</code></td>
-<td>状态名，字母开头的 camelCase，不超过 32 个字符</td>
-</tr>
-<tr>
-<td><code>bits</code></td>
-<td>位宽，1 到 32</td>
-</tr>
-<tr>
-<td><code>description</code></td>
-<td>说明，1 到 200 个字符</td>
-</tr>
-<tr>
-<td><code>initial</code></td>
-<td>可选的复位值，不超过位宽</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>脚本通过 <code>ctx.state.名称</code> 读写已声明的状态，不能增加属性，写未声明的状态会抛出 <code>TypeError</code>；写入时按位宽截断。</li>
-<li>上电复位时全部状态清零。写了 <code>initial</code> 的状态在每次复位（上电与软复位）都回到这个值；没写的只在上电时清零，软复位保持。</li>
-<li>声明式寄存器、查表与磁带计时都通过状态存取，所以不用脚本也能在调试服务里看到卡带的内部寄存器，见<a href="debugging.html">测试与排错</a>。</li>
-<li>脚本自己用 <code>let</code> 存的变量，调试服务看不到，也不会随复位自动清零。需要观察或需要跟着复位走的数据，请声明成状态。</li>
-</ul>
-<h2 id="查表">查表</h2>
-<p><code>tables</code> 声明查表，最多 16 张。寄存器写入时按一组输入拼成索引，查出一个值存进状态。表项的内容由脚本算出，Ember 只在第一次遇到某个索引时调用一次脚本并缓存，之后同样的索引直接取缓存，所以逻辑方程可以写成好读的脚本，运行时仍是原生速度。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>表标识，同一插件内不重复；脚本里的计算函数是 <code>tables.&lt;id&gt;</code></td>
-</tr>
-<tr>
-<td><code>index</code></td>
-<td>索引的来源，数组（1 到 8 项），按顺序拼成索引，第一项在高位</td>
-</tr>
-<tr>
-<td><code>bits</code></td>
-<td>表项的位宽，1 到 32，脚本返回的值按它截断</td>
-</tr>
-</tbody>
-</table></div>
-<p>索引的来源，每项 <code>{ &quot;from&quot;: ... }</code>：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th><code>from</code></th>
-<th>其他字段</th>
-<th>位数</th>
-<th>取值</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>state</code></td>
-<td><code>name</code>：状态名</td>
-<td>状态的位宽</td>
-<td>状态现在的值</td>
-</tr>
-<tr>
-<td><code>address</code></td>
-<td><code>shift</code>（0 到 15）、<code>bits</code>（1 到 16），<code>shift + bits</code> 不超过 16</td>
-<td><code>bits</code></td>
-<td>这次访问的地址的 <code>[shift, shift + bits)</code> 位</td>
-</tr>
-<tr>
-<td><code>data</code></td>
-<td><code>shift</code>（0 到 7）、<code>bits</code>（1 到 8），<code>shift + bits</code> 不超过 8</td>
-<td><code>bits</code></td>
-<td>这次写入的数据的 <code>[shift, shift + bits)</code> 位</td>
-</tr>
-<tr>
-<td><code>tape</code></td>
-<td>无</td>
-<td>1</td>
-<td>磁带数据线现在的电平，主机没有磁带机时为 0</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>索引的总位数不超过 16，表最多 65536 项。</li>
-<li>脚本里的计算函数写成 <code>export default { tables: { 表标识(ctx, ...各来源的值) { return 整数; } } }</code>，参数按 <code>index</code> 的顺序给出各来源取出的值；返回 0 到 4294967295 的整数，不是整数或越界按脚本错误处理。</li>
-<li>计算函数必须是纯函数：同样的参数得到同样的结果，不读取会变的东西，不改变卡带状态，因为结果被缓存。</li>
-<li>声明了表而脚本没有导出对应的函数时，安装会被拒绝。</li>
-</ul>
-<p>示例见官方插件 <code>plq</code>：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <h3 id="调试读取">调试读取
+              </h3>
+
+              <p>调试服务读内存时不会触发寄存器的回调：声明的固定值与状态可以直接读到，回调脚本的寄存器与 <code>open</code> 读不到值。
+              </p>
+
+              <h2 id="状态">状态
+              </h2>
+
+              <p><code>state</code> 声明卡带的内部寄存器，最多 64 项。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td>状态名，字母开头的 camelCase，不超过 32 个字符
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>bits</code>
+                      </td>
+
+                      <td>位宽，1 到 32
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>description</code>
+                      </td>
+
+                      <td>说明，1 到 200 个字符
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>initial</code>
+                      </td>
+
+                      <td>可选的复位值，不超过位宽
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>脚本通过 <code>ctx.state.名称</code> 读写已声明的状态，不能增加属性，写未声明的状态会抛出 <code>TypeError</code>；写入时按位宽截断。
+                </li>
+
+                <li>上电复位时全部状态清零。写了 <code>initial</code> 的状态在每次复位（上电与软复位）都回到这个值；没写的只在上电时清零，软复位保持。
+                </li>
+
+                <li>声明式寄存器、查表与磁带计时都通过状态存取，所以不用脚本也能在调试服务里看到卡带的内部寄存器，见<a href="debugging.html">测试与排错</a>。
+                </li>
+
+                <li>脚本自己用 <code>let</code> 存的变量，调试服务看不到，也不会随复位自动清零。需要观察或需要跟着复位走的数据，请声明成状态。
+                </li>
+
+              </ul>
+
+              <h2 id="查表">查表
+              </h2>
+
+              <p><code>tables</code> 声明查表，最多 16 张。寄存器写入时按一组输入拼成索引，查出一个值存进状态。表项的内容由脚本算出，Ember 只在第一次遇到某个索引时调用一次脚本并缓存，之后同样的索引直接取缓存，所以逻辑方程可以写成好读的脚本，运行时仍是原生速度。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>id</code>
+                      </td>
+
+                      <td>表标识，同一插件内不重复；脚本里的计算函数是 <code>tables.&lt;id&gt;</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>index</code>
+                      </td>
+
+                      <td>索引的来源，数组（1 到 8 项），按顺序拼成索引，第一项在高位
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>bits</code>
+                      </td>
+
+                      <td>表项的位宽，1 到 32，脚本返回的值按它截断
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>索引的来源，每项 <code>{ &quot;from&quot;: ... }</code>：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th><code>from</code>
+                      </th>
+
+                      <th>其他字段
+                      </th>
+
+                      <th>位数
+                      </th>
+
+                      <th>取值
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>state</code>
+                      </td>
+
+                      <td><code>name</code>：状态名
+                      </td>
+
+                      <td>状态的位宽
+                      </td>
+
+                      <td>状态现在的值
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>address</code>
+                      </td>
+
+                      <td><code>shift</code>（0 到 15）、<code>bits</code>（1 到 16），<code>shift + bits</code> 不超过 16
+                      </td>
+
+                      <td><code>bits</code>
+                      </td>
+
+                      <td>这次访问的地址的 <code>[shift, shift + bits)</code> 位
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>data</code>
+                      </td>
+
+                      <td><code>shift</code>（0 到 7）、<code>bits</code>（1 到 8），<code>shift + bits</code> 不超过 8
+                      </td>
+
+                      <td><code>bits</code>
+                      </td>
+
+                      <td>这次写入的数据的 <code>[shift, shift + bits)</code> 位
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>tape</code>
+                      </td>
+
+                      <td>无
+                      </td>
+
+                      <td>1
+                      </td>
+
+                      <td>磁带数据线现在的电平，主机没有磁带机时为 0
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>索引的总位数不超过 16，表最多 65536 项。
+                </li>
+
+                <li>脚本里的计算函数写成 <code>export default { tables: { 表标识(ctx, ...各来源的值) { return 整数; } } }</code>，参数按 <code>index</code> 的顺序给出各来源取出的值；返回 0 到 4294967295 的整数，不是整数或越界按脚本错误处理。
+                </li>
+
+                <li>计算函数必须是纯函数：同样的参数得到同样的结果，不读取会变的东西，不改变卡带状态，因为结果被缓存。
+                </li>
+
+                <li>声明了表而脚本没有导出对应的函数时，安装会被拒绝。
+                </li>
+
+              </ul>
+
+              <p>示例见官方插件 <code>plq</code>：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$8000-$9FFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"read"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"value"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> }, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"write"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"update"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"table"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"pal"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"into"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"pal"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">],</span></span>
 <span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"tables"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
@@ -220,104 +791,244 @@
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">    "bits"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">8</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
-<span class="line"></span></code></pre></div>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  tables: {</span></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    pal</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">ctx</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">reg</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">sel</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">data</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">tape</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
 <span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">      return</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> computeNext</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(reg, sel, data, tape);</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
-<span class="line"></span></code></pre></div>
-<h2 id="磁带">磁带</h2>
-<p><code>tape</code> 声明卡带与磁带机的接线，由 Ember 直接执行；主机没有磁带机时什么也不做。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>comparator</code></td>
-<td>数据线的比较器 <code>{ &quot;low&quot;, &quot;high&quot;, &quot;invert&quot; }</code>：采样不低于 <code>high</code> 为 1、不高于 <code>low</code> 为 0，之间保持原值；<code>invert</code> 为 <code>true</code> 时输出取反；<code>low</code>、<code>high</code> 是 -32768 到 32767 的整数，且 <code>low</code> 小于 <code>high</code>；每次复位设置一次</td>
-</tr>
-<tr>
-<td><code>timer</code></td>
-<td>边沿计时 <code>{ &quot;samples&quot;, &quot;ticks&quot;, &quot;scale&quot;, &quot;irq&quot; }</code>：数据线每次翻转，把距上一次翻转的采样数累加进状态 <code>samples</code>；下降沿（翻转后为 0）时，把 <code>samples</code> 乘 <code>scale[0]</code> 除以 <code>scale[1]</code>（整数除法）加进状态 <code>ticks</code>，再把 <code>samples</code> 清零，<code>irq</code> 为 <code>true</code> 时拉低卡带的中断</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li><code>comparator</code>、<code>timer</code> 至少写一个；<code>samples</code>、<code>ticks</code> 是已声明的两个不同的状态（<code>ticks</code> 的位宽决定计时的回绕）；<code>scale</code> 是两个 1 到 65535 的整数；<code>timer</code> 的 <code>irq</code> 为 <code>true</code> 时，每次复位也撤销中断。</li>
-<li>采样率是 96 kHz，<code>samples</code> 的单位是 1/96000 秒。</li>
-<li>清单写不出的磁带逻辑，脚本可以用 <code>ctx.device('tape')</code> 与 <code>onTapeEdge</code>，见<a href="script.html">脚本接口</a>。</li>
-</ul>
-<h2 id="电路">电路</h2>
-<p><code>circuits</code> 声明卡带上用到的 mapper 电路，最多 4 个。电路是 Ember 里已有的芯片逻辑，原生执行，适合每帧要处理成百上千次的逻辑（寄存器译码、按 PPU 地址线 A12 计数、图案页锁存）。插件只能按类型名选择，不能自己造电路。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>电路标识，同一插件内不重复</td>
-</tr>
-<tr>
-<td><code>type</code></td>
-<td>电路类型：<code>mmc3</code>（MMC3：8 个页寄存器、镜像位、PRG RAM 保护位、按 A12 上升沿计数的扫描线中断）、<code>mmc2</code>（MMC2：8K 程序页，左右两个 4K 图案区各有两个页号，按取到 <code>$FD</code>、<code>$FE</code> 图块的地址切换）、<code>mmc4</code>（MMC4：16K 程序页，左半区锁存器认 8 个地址一组）</td>
-</tr>
-<tr>
-<td><code>revA</code></td>
-<td>可选。<code>true</code> 时 <code>mmc3</code> 的中断按 A 版行为（计数器从 0 重载到 0 不发中断），其他类型忽略</td>
-</tr>
-<tr>
-<td><code>wire</code></td>
-<td>可选，电路给窗口的接线</td>
-</tr>
-</tbody>
-</table></div>
-<p><code>wire</code> 的字段，都是可选的：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>prg</code></td>
-<td>窗口标识数组，依次对应电路从 <code>$8000</code> 起按页大小排列的程序页</td>
-</tr>
-<tr>
-<td><code>chr</code></td>
-<td>窗口标识数组，依次对应从 <code>$0000</code> 起的图案页</td>
-</tr>
-<tr>
-<td><code>mirroring</code></td>
-<td><code>true</code> 时电路的镜像位控制名称表（名称表是 <code>four</code> 或 <code>custom</code> 时不起作用；电路还没给出镜像时保持文件头的连法）</td>
-</tr>
-<tr>
-<td><code>ram</code></td>
-<td>窗口标识：按电路状态 <code>ramProtect</code> 的位 7（允许）、位 6（写保护）切换这个窗口的映射与写入</td>
-</tr>
-</tbody>
-</table></div>
-<p>检查与规则：</p>
-<ul>
-<li><code>wire</code> 里的窗口必须存在；<code>prg</code>、<code>ram</code> 在 CPU 总线上，<code>chr</code> 在 PPU 总线上；数量不超过电路的页数；窗口大小等于电路给出的页大小。</li>
-<li>寄存器声明里引用的 <code>circuit</code> 必须存在。</li>
-<li>电路的中断线与脚本的 <code>ctx.irq</code> 在同一条卡带中断线上混合，任一来源为低即为低，互不覆盖；上电复位时电路复位。</li>
-<li>电路给出的页号按电路的位数计算，窗口按 bank 数取模，所以超出文件大小的页号自动回绕。</li>
-</ul>
-<p>完整的 MMC3 卡带，一个声明就够，不需要脚本：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
+<span class="line"></span></code></pre>
+              </div>
+
+              <h2 id="磁带">磁带
+              </h2>
+
+              <p><code>tape</code> 声明卡带与磁带机的接线，由 Ember 直接执行；主机没有磁带机时什么也不做。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>comparator</code>
+                      </td>
+
+                      <td>数据线的比较器 <code>{ &quot;low&quot;, &quot;high&quot;, &quot;invert&quot; }</code>：采样不低于 <code>high</code> 为 1、不高于 <code>low</code> 为 0，之间保持原值；<code>invert</code> 为 <code>true</code> 时输出取反；<code>low</code>、<code>high</code> 是 -32768 到 32767 的整数，且 <code>low</code> 小于 <code>high</code>；每次复位设置一次
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>timer</code>
+                      </td>
+
+                      <td>边沿计时 <code>{ &quot;samples&quot;, &quot;ticks&quot;, &quot;scale&quot;, &quot;irq&quot; }</code>：数据线每次翻转，把距上一次翻转的采样数累加进状态 <code>samples</code>；下降沿（翻转后为 0）时，把 <code>samples</code> 乘 <code>scale[0]</code> 除以 <code>scale[1]</code>（整数除法）加进状态 <code>ticks</code>，再把 <code>samples</code> 清零，<code>irq</code> 为 <code>true</code> 时拉低卡带的中断
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li><code>comparator</code>、<code>timer</code> 至少写一个；<code>samples</code>、<code>ticks</code> 是已声明的两个不同的状态（<code>ticks</code> 的位宽决定计时的回绕）；<code>scale</code> 是两个 1 到 65535 的整数；<code>timer</code> 的 <code>irq</code> 为 <code>true</code> 时，每次复位也撤销中断。
+                </li>
+
+                <li>采样率是 96 kHz，<code>samples</code> 的单位是 1/96000 秒。
+                </li>
+
+                <li>清单写不出的磁带逻辑，脚本可以用 <code>ctx.device('tape')</code> 与 <code>onTapeEdge</code>，见<a href="script.html">脚本接口</a>。
+                </li>
+
+              </ul>
+
+              <h2 id="电路">电路
+              </h2>
+
+              <p><code>circuits</code> 声明卡带上用到的 mapper 电路，最多 4 个。电路是 Ember 里已有的芯片逻辑，原生执行，适合每帧要处理成百上千次的逻辑（寄存器译码、按 PPU 地址线 A12 计数、图案页锁存）。插件只能按类型名选择，不能自己造电路。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>id</code>
+                      </td>
+
+                      <td>电路标识，同一插件内不重复
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>type</code>
+                      </td>
+
+                      <td>电路类型：<code>mmc3</code>（MMC3：8 个页寄存器、镜像位、PRG RAM 保护位、按 A12 上升沿计数的扫描线中断）、<code>mmc2</code>（MMC2：8K 程序页，左右两个 4K 图案区各有两个页号，按取到 <code>$FD</code>、<code>$FE</code> 图块的地址切换）、<code>mmc4</code>（MMC4：16K 程序页，左半区锁存器认 8 个地址一组）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>revA</code>
+                      </td>
+
+                      <td>可选。<code>true</code> 时 <code>mmc3</code> 的中断按 A 版行为（计数器从 0 重载到 0 不发中断），其他类型忽略
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>wire</code>
+                      </td>
+
+                      <td>可选，电路给窗口的接线
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><code>wire</code> 的字段，都是可选的：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>prg</code>
+                      </td>
+
+                      <td>窗口标识数组，依次对应电路从 <code>$8000</code> 起按页大小排列的程序页
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>chr</code>
+                      </td>
+
+                      <td>窗口标识数组，依次对应从 <code>$0000</code> 起的图案页
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mirroring</code>
+                      </td>
+
+                      <td><code>true</code> 时电路的镜像位控制名称表（名称表是 <code>four</code> 或 <code>custom</code> 时不起作用；电路还没给出镜像时保持文件头的连法）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>ram</code>
+                      </td>
+
+                      <td>窗口标识：按电路状态 <code>ramProtect</code> 的位 7（允许）、位 6（写保护）切换这个窗口的映射与写入
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>检查与规则：
+              </p>
+
+              <ul>
+
+                <li><code>wire</code> 里的窗口必须存在；<code>prg</code>、<code>ram</code> 在 CPU 总线上，<code>chr</code> 在 PPU 总线上；数量不超过电路的页数；窗口大小等于电路给出的页大小。
+                </li>
+
+                <li>寄存器声明里引用的 <code>circuit</code> 必须存在。
+                </li>
+
+                <li>电路的中断线与脚本的 <code>ctx.irq</code> 在同一条卡带中断线上混合，任一来源为低即为低，互不覆盖；上电复位时电路复位。
+                </li>
+
+                <li>电路给出的页号按电路的位数计算，窗口按 bank 数取模，所以超出文件大小的页号自动回绕。
+                </li>
+
+              </ul>
+
+              <p>完整的 MMC3 卡带，一个声明就够，不需要脚本：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"registers"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"bus"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"cpu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"range"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"$8000-$FFFF"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"write"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: { </span><span style="color:#005CC5;--shiki-dark:#79B8FF">"circuit"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"mmc3"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">],</span></span>
 <span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"circuits"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: [</span></span>
@@ -328,63 +1039,163 @@
 <span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">    "ram"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"prg-ram"</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  } }</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
-<span class="line"></span></code></pre></div>
-<p>页号需要再加工时（外部 bank 寄存器、掩码、偏移），不写 <code>wire</code>，由脚本用 <code>ctx.circuit(id)</code> 把写入交给电路，再取页号自己设置窗口，见<a href="script.html">脚本接口</a>与<a href="recipes.html">常见写法</a>。官方的 <code>mmc3-*</code> 系列插件都是这样做的。</p>
-<h3 id="电路的状态名">电路的状态名</h3>
-<p>脚本用 <code>ctx.circuit(id).get(名称)</code> 读电路的内部状态：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>类型</th>
-<th>状态名</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>mmc3</code></td>
-<td><code>selector</code>、<code>r0</code> 到 <code>r7</code>、<code>horizontalMirroring</code>、<code>irqLatch</code>、<code>irqCounter</code>、<code>irqEnabled</code>、<code>ramProtect</code>（上电值 <code>$80</code>：允许、可写）</td>
-</tr>
-<tr>
-<td><code>mmc2</code>、<code>mmc4</code></td>
-<td><code>prg</code>、<code>left0</code>、<code>left1</code>、<code>right0</code>、<code>right1</code>、<code>leftLatch</code>、<code>rightLatch</code>、<code>horizontalMirroring</code></td>
-</tr>
-</tbody>
-</table></div>
-<h2 id="设置项">设置项</h2>
-<p><code>settings</code> 声明用户可调的选项（可选，最多 32 项），脚本经 <code>ctx.settings.get(key)</code> 读取。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>字段</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>key</code></td>
-<td>设置项的键，同一插件内不重复</td>
-</tr>
-<tr>
-<td><code>label</code></td>
-<td>显示名称</td>
-</tr>
-<tr>
-<td><code>kind</code></td>
-<td><code>text</code>、<code>choice</code> 或 <code>switch</code></td>
-</tr>
-<tr>
-<td><code>default</code></td>
-<td>默认值：<code>text</code>、<code>choice</code> 是字符串，<code>switch</code> 是布尔值</td>
-</tr>
-<tr>
-<td><code>description</code></td>
-<td>说明，不超过 200 个字符</td>
-</tr>
-<tr>
-<td><code>options</code></td>
-<td><code>choice</code> 必写：数组，每项 <code>{ &quot;value&quot;, &quot;label&quot; }</code>，最多 32 项，<code>default</code> 必须是其中一个取值</td>
-</tr>
-</tbody>
-</table></div>
-<p>目前还没有设置页，用户改不了，<code>ctx.settings.get</code> 总是返回清单里的默认值（卡带上的拨码开关因此固定在默认位置）。设置页做好之后，脚本不用改。</p>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="memory.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>清单：存储区、窗口与名称表</a><a href="script.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>脚本接口</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<span class="line"></span></code></pre>
+              </div>
+
+              <p>页号需要再加工时（外部 bank 寄存器、掩码、偏移），不写 <code>wire</code>，由脚本用 <code>ctx.circuit(id)</code> 把写入交给电路，再取页号自己设置窗口，见<a href="script.html">脚本接口</a>与<a href="recipes.html">常见写法</a>。官方的 <code>mmc3-*</code> 系列插件都是这样做的。
+              </p>
+
+              <h3 id="电路的状态名">电路的状态名
+              </h3>
+
+              <p>脚本用 <code>ctx.circuit(id).get(名称)</code> 读电路的内部状态：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>类型
+                      </th>
+
+                      <th>状态名
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>mmc3</code>
+                      </td>
+
+                      <td><code>selector</code>、<code>r0</code> 到 <code>r7</code>、<code>horizontalMirroring</code>、<code>irqLatch</code>、<code>irqCounter</code>、<code>irqEnabled</code>、<code>ramProtect</code>（上电值 <code>$80</code>：允许、可写）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>mmc2</code>、<code>mmc4</code>
+                      </td>
+
+                      <td><code>prg</code>、<code>left0</code>、<code>left1</code>、<code>right0</code>、<code>right1</code>、<code>leftLatch</code>、<code>rightLatch</code>、<code>horizontalMirroring</code>
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h2 id="设置项">设置项
+              </h2>
+
+              <p><code>settings</code> 声明用户可调的选项（可选，最多 32 项），脚本经 <code>ctx.settings.get(key)</code> 读取。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>key</code>
+                      </td>
+
+                      <td>设置项的键，同一插件内不重复
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>label</code>
+                      </td>
+
+                      <td>显示名称
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>kind</code>
+                      </td>
+
+                      <td><code>text</code>、<code>choice</code> 或 <code>switch</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>default</code>
+                      </td>
+
+                      <td>默认值：<code>text</code>、<code>choice</code> 是字符串，<code>switch</code> 是布尔值
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>description</code>
+                      </td>
+
+                      <td>说明，不超过 200 个字符
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>options</code>
+                      </td>
+
+                      <td><code>choice</code> 必写：数组，每项 <code>{ &quot;value&quot;, &quot;label&quot; }</code>，最多 32 项，<code>default</code> 必须是其中一个取值
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>目前还没有设置页，用户改不了，<code>ctx.settings.get</code> 总是返回清单里的默认值（卡带上的拨码开关因此固定在默认位置）。设置页做好之后，脚本不用改。
+              </p>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="memory.html" class="doc-pager__prev"><span>上一页 · 插件开发手册</span>清单：存储区、窗口与名称表</a><a href="script.html" class="doc-pager__next"><span>下一页 · 插件开发手册</span>脚本接口</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

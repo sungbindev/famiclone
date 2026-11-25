@@ -1,268 +1,953 @@
 <!doctype html>
-<html lang="zh-CN" class="theme-light"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="image" href="../assets/ember-logo.png"/><meta name="description" content="FC Dev 开发手册：步步高开发指南"/><title>步步高开发指南 · FC Dev 开发手册 · Ember 与 FC Dev</title><link rel="icon" href="../assets/fcdev-icon.png"/><link rel="stylesheet" href="../assets/site.css"/><script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script></head><body class="site"><div class="site-frame"><header class="ui-title-bar"><div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span></div><div class="ui-title-bar__actions"><div class="site-header-actions"><div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span></div><nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a></nav></div></div></header><div class="site-body"><aside class="site-sidebar"><nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a><details class="site-nav__section"><summary>使用说明</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../manual/index.html">简介</a></li><li><a class="site-nav__link" href="../manual/start.html">快速开始</a></li><li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a></li><li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a></li><li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a></li><li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a></li><li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a></li><li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a></li><li><a class="site-nav__link" href="../manual/preferences.html">首选项</a></li><li><a class="site-nav__link" href="../manual/faq.html">常见问题</a></li><li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a></li></ul></div></details><details class="site-nav__section"><summary>插件开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="../plugin/index.html">概述</a></li><li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a></li><li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a></li><li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a></li><li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a></li><li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a></li><li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a></li><li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a></li><li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a></li></ul></div></details><details class="site-nav__section"><summary>调试接口手册</summary><div class="site-nav__group"><p class="site-nav__group-title">调试服务</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../debug/index.html">概述</a></li><li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a></li><li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a></li><li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">请求与事件</p><ul class="site-nav__list"><li><a class="site-nav__link" href="../api/index.html">总览</a></li><li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a></li><li><a class="site-nav__link" href="../api/debug.html">debug</a></li><li><a class="site-nav__link" href="../api/input.html">input</a></li><li><a class="site-nav__link" href="../api/inspector.html">inspector</a></li><li><a class="site-nav__link" href="../api/machines.html">machines</a></li><li><a class="site-nav__link" href="../api/mappers.html">mappers</a></li><li><a class="site-nav__link" href="../api/media.html">media</a></li><li><a class="site-nav__link" href="../api/output.html">output</a></li><li><a class="site-nav__link" href="../api/preferences.html">preferences</a></li><li><a class="site-nav__link" href="../api/runtime.html">runtime</a></li><li><a class="site-nav__link" href="../api/system.html">system</a></li><li><a class="site-nav__link" href="../api/rpc.html">rpc</a></li></ul></div></details><details class="site-nav__section" open=""><summary>FC Dev 开发手册</summary><div class="site-nav__group"><ul class="site-nav__list"><li><a class="site-nav__link" href="index.html">概述</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">通用</p><ul class="site-nav__list"><li><a class="site-nav__link" href="install.html">安装与入门</a></li><li><a class="site-nav__link" href="build.html">构建</a></li><li><a class="site-nav__link" href="emulator.html">模拟器与调试</a></li><li><a class="site-nav__link" href="disasm.html">反汇编</a></li><li><a class="site-nav__link" href="create.html">新建项目与模板</a></li><li><a class="site-nav__link" href="rom.html">整机 ROM 工程开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">NES</p><ul class="site-nav__list"><li><a class="site-nav__link" href="nes.html">NES 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB2000（小霸王学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb2000.html">SB2000 开发指南</a></li><li><a class="site-nav__link" href="examples.html">SB2000 示例程序源码</a></li><li><a class="site-nav__link" href="syscall.html">SB-DOS 系统调用手册</a></li><li><a class="site-nav__link" href="hardware.html">SB2000 硬件说明</a></li><li><a class="site-nav__link" href="api.html">SB2000 C 接口参考</a></li><li><a class="site-nav__link" href="symbols.html">SB2000 符号参考</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">SB97（小霸王 97）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="sb97.html">SB97 开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">裕兴（学习机）</p><ul class="site-nav__list"><li><a class="site-nav__link" href="yuxing.html">裕兴开发指南</a></li></ul></div><div class="site-nav__group"><p class="site-nav__group-title">步步高（学生电脑）</p><ul class="site-nav__list"><li><a class="site-nav__link site-nav__link--active" href="bbg.html" aria-current="page">步步高开发指南</a></li></ul></div></details></nav></aside><main class="site-main"><div class="doc-page"><nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">FC Dev 开发手册</a><span aria-hidden="true">›</span><span aria-current="page">步步高开发指南</span></nav><header class="doc-head"><p class="kicker">FC Dev 开发手册</p><h1 class="ui-title doc-title">步步高开发指南</h1></header><nav class="ui-panel doc-toc" aria-label="本页目录"><div class="ui-panel__head"><div class="ui-panel__heading"><h3 class="ui-title">本页目录</h3></div></div><div class="ui-scroll-area ui-scrollable-element ui-panel__scroll"><div class="ui-scroll-area__viewport ui-panel__body"><ul><li><a href="#1-目标定义">1. 目标定义</a></li><li><a href="#2-程序格式">2. 程序格式</a></li><li><a href="#3-内存与段">3. 内存与段</a></li><li><a href="#4-系统调用与运行库">4. 系统调用与运行库</a></li><li class="toc-sub"><a href="#41-调用入口">4.1 调用入口</a></li><li class="toc-sub"><a href="#42-dos-调用">4.2 DOS 调用</a></li><li class="toc-sub"><a href="#43-文件调用">4.3 文件调用</a></li><li class="toc-sub"><a href="#44-汇编运行库-bbglib">4.4 汇编运行库 bbg.lib</a></li><li><a href="#5-磁盘镜像与系统盘">5. 磁盘镜像与系统盘</a></li><li><a href="#6-构建与运行">6. 构建与运行</a></li><li><a href="#7-还没有验证的内容">7. 还没有验证的内容</a></li></ul></div></div></nav><article class="doc"><!-- 本文件由 npm run help:build 从 vscode/docs/bbg/01-开发指南.md 导入，不要手改 -->
-<p>用 FC Dev 为步步高多媒体学生电脑（BBGDOS）开发程序：构建出能在 DOS 提示符下运行的 <code>.CMD</code>。步步高目标只支持 ca65 汇编，没有 C 运行库。目标的定义与启动代码随 <code>fcdev</code> 包安装，在包里的 <code>targets/bbg/</code> 下。本文只写已经在 Ember 里用软驱一号的 ROM（<code>ember/roms/bbg1_bios.bin</code>）验证过的用法，没验证的在第 7 节列出。</p>
-<h2 id="1-目标定义">1. 目标定义</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>项</th>
-<th>值</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>目标名</td>
-<td><code>bbg</code></td>
-</tr>
-<tr>
-<td><code>cc65Target</code></td>
-<td><code>none</code></td>
-</tr>
-<tr>
-<td>链接配置</td>
-<td><code>link.cfg</code>，段见第 3 节</td>
-</tr>
-<tr>
-<td>启动代码</td>
-<td><code>lib/crt0.o</code>：文件头里的装入地址，装入地址上的 <code>JMP</code>，初始化后调用 <code>_main</code>，<code>_main</code> 返回后调用 DOS 的“程序结束返回”</td>
-</tr>
-<tr>
-<td>库</td>
-<td><code>lib/bbg.lib</code>：汇编运行库（DOS、文件、BIOS 调用的封装与文字输出），见第 4 节</td>
-</tr>
-<tr>
-<td>汇编引入</td>
-<td><code>asminc/bbg.inc</code>：系统调用入口、BIOS、DOS 与文件调用的功能号、文件通道块的布局、出错码、运行库函数的声明（由 <code>machines/bbg/src/include</code> 下的符号文件生成）</td>
-</tr>
-<tr>
-<td>预定义宏</td>
-<td><code>__BBG__</code></td>
-</tr>
-<tr>
-<td>打包器</td>
-<td><code>flat-exe</code>，文件前 2 个字节必须是 <code>00 80</code>（装入地址 <code>$8000</code>），大小不超过 16386 字节</td>
-</tr>
-<tr>
-<td>产物</td>
-<td>大写主名的 <code>.CMD</code></td>
-</tr>
-<tr>
-<td>程序名规则</td>
-<td><code>dos-8.3</code></td>
-</tr>
-<tr>
-<td>磁盘镜像</td>
-<td><code>fat-floppy-overlay</code>，建在 <code>fcdev.json</code> 的 <code>diskImage</code>（系统盘镜像）上，见第 5 节</td>
-</tr>
-<tr>
-<td>运行方案</td>
-<td><code>firmware-disk</code>，机型 <code>bbg1</code>，需要固件（<code>ember/roms/bbg1_bios.bin</code> 那样的 128KB ROM 文件）</td>
-</tr>
-</tbody>
-</table></div>
-<h2 id="2-程序格式">2. 程序格式</h2>
-<ul>
-<li>步步高的 DOS 在软盘上，开机时由 ROM 从系统盘读入；ROM 里没有 DOS。</li>
-<li>CMD 是单页可执行程序：文件的前 2 个字节是装入地址（低字节在前），后面是程序内容；DOS 把内容装到这个地址并从这个地址开始执行（手册《系统篇》第四章 1.）。目标的装入地址是 <code>$8000</code>，所以文件开头是 <code>00 80</code>，第 3 个字节是启动代码的 <code>JMP</code>。</li>
-<li>程序的入口是导出的 <code>_main</code>，由启动代码调用；<code>_main</code> 返回后启动代码调用 DOS 的“程序结束返回”（<code>X</code> 为 0、<code>Y</code> 为 0），回到命令行。</li>
-<li>在 DOS 提示符下输入主名运行，不用写扩展名（<code>hello</code>，<code>.CMD</code> 已验证）；手册说 <code>.EXC</code>（多页程序，目标不生成）也能这样运行，没有验证。</li>
-<li>官方系统盘里的汇编示例（<code>TSTPUTC.ASM</code> 等，在 <code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 里）也是装入 <code>$8000</code> 或 <code>$6500</code>，文件的第一条指令是 <code>JMP</code>。</li>
-</ul>
-<h2 id="3-内存与段">3. 内存与段</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>内存区</th>
-<th>地址</th>
-<th>段</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>零页</td>
-<td><code>$0020-$007F</code></td>
-<td><code>ZEROPAGE</code></td>
-</tr>
-<tr>
-<td>程序（装在 DOS 分给程序的页里）</td>
-<td><code>$8000-$BFFF</code>（16K）</td>
-<td><code>STARTUP</code>、<code>CODE</code>、<code>RODATA</code>、<code>DATA</code>，<code>BSS</code> 紧接其后</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li><code>BSS</code> 在程序所在的 RAM 里，不写进文件，也不会被清零，程序要自己赋初值；程序加 <code>BSS</code> 超过 16384 字节时链接报错，文件超过 16386 字节时打包报错。</li>
-<li>程序所在的是 RAM，<code>DATA</code> 段可以直接读写，不用复制。</li>
-<li>手册给出的地址分布（系统篇第一章）：<code>$0200-$07FF</code> 公共内存，<code>$5800-$5FFF</code> BIOS 工作区与调用入口，<code>$6100-$7FFF</code> 公共 RAM，<code>$8000-$BFFF</code> 分页区，<code>$C000-$FFFF</code> 公共 RAM（与分页区的最后一页是同一块）；BBGDOS 内核从 <code>$7C00</code> 起（见 <code>machines/bbg/docs/计划与进度.md</code>）。</li>
-<li>零页 <code>$0020-$007F</code> 里 BIOS 与 DOS 的调用是否改写没有核对；官方示例用 <code>$FC-$FF</code> 当 BIOS 调用的参数。</li>
-</ul>
-<h2 id="4-系统调用与运行库">4. 系统调用与运行库</h2>
-<h3 id="41-调用入口">4.1 调用入口</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>入口</th>
-<th>地址</th>
-<th>参数</th>
-<th>返回</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>BIOS 调用 <code>BIOS_ENTRY</code></td>
-<td><code>$5800</code></td>
-<td><code>A</code> 为功能号，<code>X</code>、<code>Y</code> 视功能而定</td>
-<td>视功能而定</td>
-</tr>
-<tr>
-<td>文件调用 <code>FILE_ENTRY</code></td>
-<td><code>$5803</code></td>
-<td><code>X</code> 为文件通道块地址高字节，<code>Y</code> 为低字节，<code>A</code> 不用设置；功能号在块的第 0 字节</td>
-<td><code>A</code> 为出错码（0 成功），<code>C=1</code> 出错</td>
-</tr>
-<tr>
-<td>DOS 调用 <code>DOS_ENTRY</code></td>
-<td><code>$580C</code></td>
-<td><code>A</code> 为功能号，<code>X</code>、<code>Y</code> 视功能而定</td>
-<td><code>C=0</code> 成功，<code>C=1</code> 出错且 <code>A</code> 为出错码</td>
-</tr>
-</tbody>
-</table></div>
-<p>都用 <code>JSR</code> 调用，不保留寄存器。外设调用（<code>$5809</code>）没有分析，没有封装。</p>
-<h3 id="42-dos-调用">4.2 DOS 调用</h3>
-<p>下表的功能都在 Ember 里用运行库的测试程序验证过（<code>vscode/test/real-emulator/bbg-library.test.ts</code>）：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>功能</th>
-<th>常量</th>
-<th>库函数</th>
-<th>参数与结果</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td><code>DOS_PROGRAM_RETURN</code></td>
-<td><code>bbg_dos_exit</code></td>
-<td>程序结束返回：<code>X</code> 返回码，<code>Y</code> 为 0 时直接回到命令行（<code>Y</code> 的位 0、位 1 按手册分别要求先初始化屏幕、先初始化系统资源，没有验证）</td>
-</tr>
-<tr>
-<td>1</td>
-<td><code>DOS_READ_KEY_ECHO</code></td>
-<td><code>bbg_dos_read_key_echo</code></td>
-<td>读键盘并回显，<code>A</code> 返回字符码</td>
-</tr>
-<tr>
-<td>2</td>
-<td><code>DOS_DISPLAY_CHAR</code></td>
-<td><code>bbg_dos_put_char</code></td>
-<td>显示字符：<code>X</code> 是字符码；<code>$0D</code>、<code>$0A</code> 换行</td>
-</tr>
-<tr>
-<td>3</td>
-<td><code>DOS_INQUIRE_PAGES</code></td>
-<td><code>bbg_dos_pages_alloc</code></td>
-<td>申请内存页：<code>X</code> 为页数，0 只查询空闲页号；<code>C=0</code> 时 <code>A</code> 为起始页</td>
-</tr>
-<tr>
-<td>4</td>
-<td><code>DOS_DISPLAY_STRING</code></td>
-<td><code>bbg_dos_put_string</code></td>
-<td>显示以 <code>$</code> 结尾的字符串：<code>X</code> 为地址高字节、<code>Y</code> 为低字节（与手册的文字相反）</td>
-</tr>
-<tr>
-<td>5</td>
-<td><code>DOS_RUN_PROGRAM</code></td>
-<td><code>bbg_dos_run</code></td>
-<td>运行程序：<code>$FF</code> 为盘号，<code>X:Y</code>（<code>X</code> 高）为 11 字节文件名，扩展名必须是 <code>CMD</code>、<code>EXC</code> 或 <code>GAM</code>，<code>$0100</code> 起是传给程序的参数；<code>C=0</code> 时 <code>A</code> 为程序的退出码</td>
-</tr>
-<tr>
-<td>6</td>
-<td><code>DOS_GET_KB_STRING</code></td>
-<td><code>bbg_dos_get_line</code></td>
-<td>输入一行并回显：缓冲区第 0 字节是最大字符数，第 1 字节返回字符数，文本从第 2 字节起</td>
-</tr>
-<tr>
-<td>7</td>
-<td><code>DOS_READ_KEY_NO_ECHO</code></td>
-<td><code>bbg_dos_read_key</code></td>
-<td>读键盘不回显，<code>A</code> 返回字符码</td>
-</tr>
-<tr>
-<td>8</td>
-<td><code>DOS_READ_KB_CLEAR</code></td>
-<td><code>bbg_dos_read_key_clear</code></td>
-<td>先清键盘缓冲，再执行 <code>$FF</code> 指定的键盘功能 1、6、7</td>
-</tr>
-<tr>
-<td>9</td>
-<td><code>DOS_INITIAL_SCREEN</code></td>
-<td><code>bbg_dos_clear_screen</code></td>
-<td>初始化屏幕，清屏</td>
-</tr>
-<tr>
-<td>10</td>
-<td><code>DOS_RELEASE_PAGES</code></td>
-<td><code>bbg_dos_pages_free</code></td>
-<td>释放内存页：<code>X</code> 为起始页号</td>
-</tr>
-<tr>
-<td>11</td>
-<td><code>DOS_GET_SET_DISP_MODE</code></td>
-<td><code>bbg_dos_display_mode_get</code>、<code>bbg_dos_display_mode_set</code></td>
-<td>取或设置显示方式：<code>$00</code> 英文，<code>$80</code> 中文</td>
-</tr>
-<tr>
-<td>12</td>
-<td><code>DOS_FILE_NAME_ACCESS</code></td>
-<td><code>bbg_dos_convert_name</code></td>
-<td>把 <code>D:FFFFFFFF.XXX</code> 转成 11 字节内部文件名，结果写回原地址，<code>A</code> 返回盘号</td>
-</tr>
-<tr>
-<td>14</td>
-<td><code>DOS_CHECK_KEYBOARD</code></td>
-<td><code>bbg_dos_key_ready</code></td>
-<td>测试键盘：<code>Z=1</code> 无键，<code>Z=0</code> 有键</td>
-</tr>
-<tr>
-<td>15</td>
-<td><code>DOS_RUN_PATH_PROGRAM</code></td>
-<td><code>bbg_dos_run_path</code></td>
-<td>同功能 5，文件名是以 0 结尾的路径加文件名（必须带扩展名）</td>
-</tr>
-<tr>
-<td>16</td>
-<td><code>DOS_GET_DOS_VERSION</code></td>
-<td><code>bbg_dos_version</code></td>
-<td><code>A</code>=3，<code>X</code>=0</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>DOS 调用不保留寄存器，循环里的位置要放在内存里（模板的 <code>hello.s</code> 用 <code>BSS</code> 里的 <code>index</code>，每显示一个字符加 1）。</li>
-<li>功能 13（取并设置初始化屏幕向量）没有封装，没有验证。</li>
-</ul>
-<h3 id="43-文件调用">4.3 文件调用</h3>
-<p>文件通道块是 48 字节（<code>FH_SIZE</code>）的内存，由程序提供，每个打开的文件一个。常用字段：<code>FH_COMMAND</code>（0，功能号）、<code>FH_DRIVE</code>（1，盘号：0 默认盘，1 为 A 盘）、<code>FH_PAGE</code> 与 <code>FH_BUFFER</code>（2、3-4，缓冲区或文件名所在页与地址）、<code>FH_BYTES</code>（5-6，读写长度）、<code>FH_POSITION</code>（7-10，读写位置）。文件名是 11 字节（主名 8 加扩展名 3，大写，空格补齐，<code>?</code> 是通配符）；路径是以 0 结尾的字符串，目录之间用 <code>\</code> 分隔。在 Ember 里验证过全部 24 个功能（<code>FILE_RESET</code> 到 <code>FILE_PATH_DELETE</code>）：</p>
-<ul>
-<li>打开（<code>FILE_OPEN</code>）后块里 <code>FH_OPEN_ATTRIBUTE</code>、<code>FH_OPEN_DATE</code>、<code>FH_OPEN_TIME</code> 是文件的属性、日期与时间，<code>FH_FILE_SIZE</code> 是 4 字节的长度，读写位置为 0；不存在时 <code>A=ERR_FILE_NOT_EXIST</code>（<code>$02</code>）。</li>
-<li>读写（<code>FILE_READ</code>、<code>FILE_WRITE</code>）从 <code>FH_POSITION</code> 开始，可跨扇区；读到文件末尾时 <code>FH_BYTES</code> 是实际读到的字节数；写时 <code>FH_BYTES</code> 为 0 表示在读写位置截断；返回后 <code>FH_BUFFER</code> 是缓冲区结束地址，<code>FH_POSITION</code> 前进。写不检查只读属性。</li>
-<li>查找（<code>FILE_FIRST</code>、<code>FILE_NEXT</code>、<code>FILE_PATH_FIRST</code>）：结果在块里 <code>FH_DTA_*</code>（属性、时间、日期、长度、11 字节文件名）；没有更多文件时 <code>A=ERR_SEARCH_ENDING</code>（<code>$12</code>），查找时块不能改动，至少 48 字节。</li>
-<li>绝对扇区（<code>FILE_READ_ABS</code>、<code>FILE_WRITE_ABS</code>）：<code>FH_POSITION</code> 是起始扇区号（从 0 起），<code>FH_BYTES</code> 是扇区数。</li>
-<li>磁盘容量（<code>FILE_DRIVE_SIZE</code>）：<code>FH_SECTORS_PER_CLUSTER</code>、<code>FH_BYTES_PER_SECTOR</code>、<code>FH_FREE_CLUSTERS</code>、<code>FH_TOTAL_CLUSTERS</code>。</li>
-<li>取当前目录（<code>FILE_GET_DIR</code>）返回的路径串在 DOS 的页里，内容不能改写。</li>
-<li>功能 24（<code>FILE_SET_ATTRIBUTE</code>）手册没有列出，没有封装。</li>
-</ul>
-<h3 id="44-汇编运行库-bbglib">4.4 汇编运行库 bbg.lib</h3>
-<p>库里每个函数一个源文件（<code>targets/bbg/src/lib/&lt;模块&gt;/</code>），按模块分为 <code>dos</code>、<code>file</code>、<code>bios</code>、<code>text</code>；函数的入口、出口与备注见 api-reference.md，其中的“功能号覆盖表”列出每个 DOS、文件与 BIOS 功能号被哪个函数封装，没封装的写明原因。约定：</p>
-<ul>
-<li>一个字节的参数放 <code>A</code>；一个 16 位参数（地址、数值）低字节放 <code>A</code>、高字节放 <code>X</code>；更多的参数写进零页单元 <code>bbg_arg0</code>、<code>bbg_arg1</code>（各 2 字节），盘号等第二个字节参数放 <code>Y</code>。</li>
-<li>返回值在 <code>A</code>（16 位在 <code>A</code>、<code>X</code>），出错时 <code>C=1</code>、<code>A</code> 是出错码；不保留 <code>A</code>、<code>X</code>、<code>Y</code>。</li>
-<li>库只使用 <code>bbg_arg0</code>、<code>bbg_arg1</code> 与几个内部零页单元，都在链接配置划给程序的 <code>$0020-$007F</code> 里。</li>
-</ul>
-<p>示例（显示字符串，再读 <code>COMMAND.CMD</code> 的前 8 个字节）：</p>
-<div class="code"><pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        .include "bbg.</span><span style="color:#D73A49;--shiki-dark:#F97583">inc</span><span style="color:#24292E;--shiki-dark:#E1E4E8">"</span></span>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="FC Dev 开发手册：步步高开发指南"/><title>步步高开发指南 · FC Dev 开发手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../plugin/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../api/index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../api/rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link site-nav__link--active" href="bbg.html" aria-current="page">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="index.html">FC Dev 开发手册</a><span aria-hidden="true">›</span><span aria-current="page">步步高开发指南</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">FC Dev 开发手册
+              </p>
+              <h1 class="ui-title doc-title">步步高开发指南
+              </h1>
+            </header>
+            <nav class="ui-panel doc-toc" aria-label="本页目录">
+              <div class="ui-panel__head">
+                <div class="ui-panel__heading">
+                  <h3 class="ui-title">本页目录
+                  </h3>
+                </div>
+              </div>
+              <div class="ui-scroll-area ui-scrollable-element ui-panel__scroll">
+                <div class="ui-scroll-area__viewport ui-panel__body">
+                  <ul>
+                    <li><a href="#1-目标定义">1. 目标定义</a>
+                    </li>
+                    <li><a href="#2-程序格式">2. 程序格式</a>
+                    </li>
+                    <li><a href="#3-内存与段">3. 内存与段</a>
+                    </li>
+                    <li><a href="#4-系统调用与运行库">4. 系统调用与运行库</a>
+                    </li>
+                    <li class="toc-sub"><a href="#41-调用入口">4.1 调用入口</a>
+                    </li>
+                    <li class="toc-sub"><a href="#42-dos-调用">4.2 DOS 调用</a>
+                    </li>
+                    <li class="toc-sub"><a href="#43-文件调用">4.3 文件调用</a>
+                    </li>
+                    <li class="toc-sub"><a href="#44-汇编运行库-bbglib">4.4 汇编运行库 bbg.lib</a>
+                    </li>
+                    <li><a href="#5-磁盘镜像与系统盘">5. 磁盘镜像与系统盘</a>
+                    </li>
+                    <li><a href="#6-构建与运行">6. 构建与运行</a>
+                    </li>
+                    <li><a href="#7-还没有验证的内容">7. 还没有验证的内容</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+            <article class="doc"><!-- 本文件由 npm run help:build 从 vscode/docs/bbg/01-开发指南.md 导入，不要手改 -->
+
+              <p>用 FC Dev 为步步高多媒体学生电脑（BBGDOS）开发程序：构建出能在 DOS 提示符下运行的 <code>.CMD</code>。步步高目标只支持 ca65 汇编，没有 C 运行库。目标的定义与启动代码随 <code>fcdev</code> 包安装，在包里的 <code>targets/bbg/</code> 下。本文只写已经在 Ember 里用软驱一号的 ROM（<code>ember/roms/bbg1_bios.bin</code>）验证过的用法，没验证的在第 7 节列出。
+              </p>
+
+              <h2 id="1-目标定义">1. 目标定义
+              </h2>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>项
+                      </th>
+
+                      <th>值
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>目标名
+                      </td>
+
+                      <td><code>bbg</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>cc65Target</code>
+                      </td>
+
+                      <td><code>none</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>链接配置
+                      </td>
+
+                      <td><code>link.cfg</code>，段见第 3 节
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>启动代码
+                      </td>
+
+                      <td><code>lib/crt0.o</code>：文件头里的装入地址，装入地址上的 <code>JMP</code>，初始化后调用 <code>_main</code>，<code>_main</code> 返回后调用 DOS 的“程序结束返回”
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>库
+                      </td>
+
+                      <td><code>lib/bbg.lib</code>：汇编运行库（DOS、文件、BIOS 调用的封装与文字输出），见第 4 节
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>汇编引入
+                      </td>
+
+                      <td><code>asminc/bbg.inc</code>：系统调用入口、BIOS、DOS 与文件调用的功能号、文件通道块的布局、出错码、运行库函数的声明（由 <code>machines/bbg/src/include</code> 下的符号文件生成）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>预定义宏
+                      </td>
+
+                      <td><code>__BBG__</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>打包器
+                      </td>
+
+                      <td><code>flat-exe</code>，文件前 2 个字节必须是 <code>00 80</code>（装入地址 <code>$8000</code>），大小不超过 16386 字节
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>产物
+                      </td>
+
+                      <td>大写主名的 <code>.CMD</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>程序名规则
+                      </td>
+
+                      <td><code>dos-8.3</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>磁盘镜像
+                      </td>
+
+                      <td><code>fat-floppy-overlay</code>，建在 <code>fcdev.json</code> 的 <code>diskImage</code>（系统盘镜像）上，见第 5 节
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>运行方案
+                      </td>
+
+                      <td><code>firmware-disk</code>，机型 <code>bbg1</code>，需要固件（<code>ember/roms/bbg1_bios.bin</code> 那样的 128KB ROM 文件）
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h2 id="2-程序格式">2. 程序格式
+              </h2>
+
+              <ul>
+
+                <li>步步高的 DOS 在软盘上，开机时由 ROM 从系统盘读入；ROM 里没有 DOS。
+                </li>
+
+                <li>CMD 是单页可执行程序：文件的前 2 个字节是装入地址（低字节在前），后面是程序内容；DOS 把内容装到这个地址并从这个地址开始执行（手册《系统篇》第四章 1.）。目标的装入地址是 <code>$8000</code>，所以文件开头是 <code>00 80</code>，第 3 个字节是启动代码的 <code>JMP</code>。
+                </li>
+
+                <li>程序的入口是导出的 <code>_main</code>，由启动代码调用；<code>_main</code> 返回后启动代码调用 DOS 的“程序结束返回”（<code>X</code> 为 0、<code>Y</code> 为 0），回到命令行。
+                </li>
+
+                <li>在 DOS 提示符下输入主名运行，不用写扩展名（<code>hello</code>，<code>.CMD</code> 已验证）；手册说 <code>.EXC</code>（多页程序，目标不生成）也能这样运行，没有验证。
+                </li>
+
+                <li>官方系统盘里的汇编示例（<code>TSTPUTC.ASM</code> 等，在 <code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 里）也是装入 <code>$8000</code> 或 <code>$6500</code>，文件的第一条指令是 <code>JMP</code>。
+                </li>
+
+              </ul>
+
+              <h2 id="3-内存与段">3. 内存与段
+              </h2>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>内存区
+                      </th>
+
+                      <th>地址
+                      </th>
+
+                      <th>段
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>零页
+                      </td>
+
+                      <td><code>$0020-$007F</code>
+                      </td>
+
+                      <td><code>ZEROPAGE</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>程序（装在 DOS 分给程序的页里）
+                      </td>
+
+                      <td><code>$8000-$BFFF</code>（16K）
+                      </td>
+
+                      <td><code>STARTUP</code>、<code>CODE</code>、<code>RODATA</code>、<code>DATA</code>，<code>BSS</code> 紧接其后
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li><code>BSS</code> 在程序所在的 RAM 里，不写进文件，也不会被清零，程序要自己赋初值；程序加 <code>BSS</code> 超过 16384 字节时链接报错，文件超过 16386 字节时打包报错。
+                </li>
+
+                <li>程序所在的是 RAM，<code>DATA</code> 段可以直接读写，不用复制。
+                </li>
+
+                <li>手册给出的地址分布（系统篇第一章）：<code>$0200-$07FF</code> 公共内存，<code>$5800-$5FFF</code> BIOS 工作区与调用入口，<code>$6100-$7FFF</code> 公共 RAM，<code>$8000-$BFFF</code> 分页区，<code>$C000-$FFFF</code> 公共 RAM（与分页区的最后一页是同一块）；BBGDOS 内核从 <code>$7C00</code> 起（见 <code>machines/bbg/docs/计划与进度.md</code>）。
+                </li>
+
+                <li>零页 <code>$0020-$007F</code> 里 BIOS 与 DOS 的调用是否改写没有核对；官方示例用 <code>$FC-$FF</code> 当 BIOS 调用的参数。
+                </li>
+
+              </ul>
+
+              <h2 id="4-系统调用与运行库">4. 系统调用与运行库
+              </h2>
+
+              <h3 id="41-调用入口">4.1 调用入口
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>入口
+                      </th>
+
+                      <th>地址
+                      </th>
+
+                      <th>参数
+                      </th>
+
+                      <th>返回
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>BIOS 调用 <code>BIOS_ENTRY</code>
+                      </td>
+
+                      <td><code>$5800</code>
+                      </td>
+
+                      <td><code>A</code> 为功能号，<code>X</code>、<code>Y</code> 视功能而定
+                      </td>
+
+                      <td>视功能而定
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>文件调用 <code>FILE_ENTRY</code>
+                      </td>
+
+                      <td><code>$5803</code>
+                      </td>
+
+                      <td><code>X</code> 为文件通道块地址高字节，<code>Y</code> 为低字节，<code>A</code> 不用设置；功能号在块的第 0 字节
+                      </td>
+
+                      <td><code>A</code> 为出错码（0 成功），<code>C=1</code> 出错
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>DOS 调用 <code>DOS_ENTRY</code>
+                      </td>
+
+                      <td><code>$580C</code>
+                      </td>
+
+                      <td><code>A</code> 为功能号，<code>X</code>、<code>Y</code> 视功能而定
+                      </td>
+
+                      <td><code>C=0</code> 成功，<code>C=1</code> 出错且 <code>A</code> 为出错码
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>都用 <code>JSR</code> 调用，不保留寄存器。外设调用（<code>$5809</code>）没有分析，没有封装。
+              </p>
+
+              <h3 id="42-dos-调用">4.2 DOS 调用
+              </h3>
+
+              <p>下表的功能都在 Ember 里用运行库的测试程序验证过（<code>vscode/test/real-emulator/bbg-library.test.ts</code>）：
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>功能
+                      </th>
+
+                      <th>常量
+                      </th>
+
+                      <th>库函数
+                      </th>
+
+                      <th>参数与结果
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td>0
+                      </td>
+
+                      <td><code>DOS_PROGRAM_RETURN</code>
+                      </td>
+
+                      <td><code>bbg_dos_exit</code>
+                      </td>
+
+                      <td>程序结束返回：<code>X</code> 返回码，<code>Y</code> 为 0 时直接回到命令行（<code>Y</code> 的位 0、位 1 按手册分别要求先初始化屏幕、先初始化系统资源，没有验证）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>1
+                      </td>
+
+                      <td><code>DOS_READ_KEY_ECHO</code>
+                      </td>
+
+                      <td><code>bbg_dos_read_key_echo</code>
+                      </td>
+
+                      <td>读键盘并回显，<code>A</code> 返回字符码
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>2
+                      </td>
+
+                      <td><code>DOS_DISPLAY_CHAR</code>
+                      </td>
+
+                      <td><code>bbg_dos_put_char</code>
+                      </td>
+
+                      <td>显示字符：<code>X</code> 是字符码；<code>$0D</code>、<code>$0A</code> 换行
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>3
+                      </td>
+
+                      <td><code>DOS_INQUIRE_PAGES</code>
+                      </td>
+
+                      <td><code>bbg_dos_pages_alloc</code>
+                      </td>
+
+                      <td>申请内存页：<code>X</code> 为页数，0 只查询空闲页号；<code>C=0</code> 时 <code>A</code> 为起始页
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>4
+                      </td>
+
+                      <td><code>DOS_DISPLAY_STRING</code>
+                      </td>
+
+                      <td><code>bbg_dos_put_string</code>
+                      </td>
+
+                      <td>显示以 <code>$</code> 结尾的字符串：<code>X</code> 为地址高字节、<code>Y</code> 为低字节（与手册的文字相反）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>5
+                      </td>
+
+                      <td><code>DOS_RUN_PROGRAM</code>
+                      </td>
+
+                      <td><code>bbg_dos_run</code>
+                      </td>
+
+                      <td>运行程序：<code>$FF</code> 为盘号，<code>X:Y</code>（<code>X</code> 高）为 11 字节文件名，扩展名必须是 <code>CMD</code>、<code>EXC</code> 或 <code>GAM</code>，<code>$0100</code> 起是传给程序的参数；<code>C=0</code> 时 <code>A</code> 为程序的退出码
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>6
+                      </td>
+
+                      <td><code>DOS_GET_KB_STRING</code>
+                      </td>
+
+                      <td><code>bbg_dos_get_line</code>
+                      </td>
+
+                      <td>输入一行并回显：缓冲区第 0 字节是最大字符数，第 1 字节返回字符数，文本从第 2 字节起
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>7
+                      </td>
+
+                      <td><code>DOS_READ_KEY_NO_ECHO</code>
+                      </td>
+
+                      <td><code>bbg_dos_read_key</code>
+                      </td>
+
+                      <td>读键盘不回显，<code>A</code> 返回字符码
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>8
+                      </td>
+
+                      <td><code>DOS_READ_KB_CLEAR</code>
+                      </td>
+
+                      <td><code>bbg_dos_read_key_clear</code>
+                      </td>
+
+                      <td>先清键盘缓冲，再执行 <code>$FF</code> 指定的键盘功能 1、6、7
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>9
+                      </td>
+
+                      <td><code>DOS_INITIAL_SCREEN</code>
+                      </td>
+
+                      <td><code>bbg_dos_clear_screen</code>
+                      </td>
+
+                      <td>初始化屏幕，清屏
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>10
+                      </td>
+
+                      <td><code>DOS_RELEASE_PAGES</code>
+                      </td>
+
+                      <td><code>bbg_dos_pages_free</code>
+                      </td>
+
+                      <td>释放内存页：<code>X</code> 为起始页号
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>11
+                      </td>
+
+                      <td><code>DOS_GET_SET_DISP_MODE</code>
+                      </td>
+
+                      <td><code>bbg_dos_display_mode_get</code>、<code>bbg_dos_display_mode_set</code>
+                      </td>
+
+                      <td>取或设置显示方式：<code>$00</code> 英文，<code>$80</code> 中文
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>12
+                      </td>
+
+                      <td><code>DOS_FILE_NAME_ACCESS</code>
+                      </td>
+
+                      <td><code>bbg_dos_convert_name</code>
+                      </td>
+
+                      <td>把 <code>D:FFFFFFFF.XXX</code> 转成 11 字节内部文件名，结果写回原地址，<code>A</code> 返回盘号
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>14
+                      </td>
+
+                      <td><code>DOS_CHECK_KEYBOARD</code>
+                      </td>
+
+                      <td><code>bbg_dos_key_ready</code>
+                      </td>
+
+                      <td>测试键盘：<code>Z=1</code> 无键，<code>Z=0</code> 有键
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>15
+                      </td>
+
+                      <td><code>DOS_RUN_PATH_PROGRAM</code>
+                      </td>
+
+                      <td><code>bbg_dos_run_path</code>
+                      </td>
+
+                      <td>同功能 5，文件名是以 0 结尾的路径加文件名（必须带扩展名）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td>16
+                      </td>
+
+                      <td><code>DOS_GET_DOS_VERSION</code>
+                      </td>
+
+                      <td><code>bbg_dos_version</code>
+                      </td>
+
+                      <td><code>A</code>=3，<code>X</code>=0
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <ul>
+
+                <li>DOS 调用不保留寄存器，循环里的位置要放在内存里（模板的 <code>hello.s</code> 用 <code>BSS</code> 里的 <code>index</code>，每显示一个字符加 1）。
+                </li>
+
+                <li>功能 13（取并设置初始化屏幕向量）没有封装，没有验证。
+                </li>
+
+              </ul>
+
+              <h3 id="43-文件调用">4.3 文件调用
+              </h3>
+
+              <p>文件通道块是 48 字节（<code>FH_SIZE</code>）的内存，由程序提供，每个打开的文件一个。常用字段：<code>FH_COMMAND</code>（0，功能号）、<code>FH_DRIVE</code>（1，盘号：0 默认盘，1 为 A 盘）、<code>FH_PAGE</code> 与 <code>FH_BUFFER</code>（2、3-4，缓冲区或文件名所在页与地址）、<code>FH_BYTES</code>（5-6，读写长度）、<code>FH_POSITION</code>（7-10，读写位置）。文件名是 11 字节（主名 8 加扩展名 3，大写，空格补齐，<code>?</code> 是通配符）；路径是以 0 结尾的字符串，目录之间用 <code>\</code> 分隔。在 Ember 里验证过全部 24 个功能（<code>FILE_RESET</code> 到 <code>FILE_PATH_DELETE</code>）：
+              </p>
+
+              <ul>
+
+                <li>打开（<code>FILE_OPEN</code>）后块里 <code>FH_OPEN_ATTRIBUTE</code>、<code>FH_OPEN_DATE</code>、<code>FH_OPEN_TIME</code> 是文件的属性、日期与时间，<code>FH_FILE_SIZE</code> 是 4 字节的长度，读写位置为 0；不存在时 <code>A=ERR_FILE_NOT_EXIST</code>（<code>$02</code>）。
+                </li>
+
+                <li>读写（<code>FILE_READ</code>、<code>FILE_WRITE</code>）从 <code>FH_POSITION</code> 开始，可跨扇区；读到文件末尾时 <code>FH_BYTES</code> 是实际读到的字节数；写时 <code>FH_BYTES</code> 为 0 表示在读写位置截断；返回后 <code>FH_BUFFER</code> 是缓冲区结束地址，<code>FH_POSITION</code> 前进。写不检查只读属性。
+                </li>
+
+                <li>查找（<code>FILE_FIRST</code>、<code>FILE_NEXT</code>、<code>FILE_PATH_FIRST</code>）：结果在块里 <code>FH_DTA_*</code>（属性、时间、日期、长度、11 字节文件名）；没有更多文件时 <code>A=ERR_SEARCH_ENDING</code>（<code>$12</code>），查找时块不能改动，至少 48 字节。
+                </li>
+
+                <li>绝对扇区（<code>FILE_READ_ABS</code>、<code>FILE_WRITE_ABS</code>）：<code>FH_POSITION</code> 是起始扇区号（从 0 起），<code>FH_BYTES</code> 是扇区数。
+                </li>
+
+                <li>磁盘容量（<code>FILE_DRIVE_SIZE</code>）：<code>FH_SECTORS_PER_CLUSTER</code>、<code>FH_BYTES_PER_SECTOR</code>、<code>FH_FREE_CLUSTERS</code>、<code>FH_TOTAL_CLUSTERS</code>。
+                </li>
+
+                <li>取当前目录（<code>FILE_GET_DIR</code>）返回的路径串在 DOS 的页里，内容不能改写。
+                </li>
+
+                <li>功能 24（<code>FILE_SET_ATTRIBUTE</code>）手册没有列出，没有封装。
+                </li>
+
+              </ul>
+
+              <h3 id="44-汇编运行库-bbglib">4.4 汇编运行库 bbg.lib
+              </h3>
+
+              <p>库里每个函数一个源文件（<code>targets/bbg/src/lib/&lt;模块&gt;/</code>），按模块分为 <code>dos</code>、<code>file</code>、<code>bios</code>、<code>text</code>；函数的入口、出口与备注见 api-reference.md，其中的“功能号覆盖表”列出每个 DOS、文件与 BIOS 功能号被哪个函数封装，没封装的写明原因。约定：
+              </p>
+
+              <ul>
+
+                <li>一个字节的参数放 <code>A</code>；一个 16 位参数（地址、数值）低字节放 <code>A</code>、高字节放 <code>X</code>；更多的参数写进零页单元 <code>bbg_arg0</code>、<code>bbg_arg1</code>（各 2 字节），盘号等第二个字节参数放 <code>Y</code>。
+                </li>
+
+                <li>返回值在 <code>A</code>（16 位在 <code>A</code>、<code>X</code>），出错时 <code>C=1</code>、<code>A</code> 是出错码；不保留 <code>A</code>、<code>X</code>、<code>Y</code>。
+                </li>
+
+                <li>库只使用 <code>bbg_arg0</code>、<code>bbg_arg1</code> 与几个内部零页单元，都在链接配置划给程序的 <code>$0020-$007F</code> 里。
+                </li>
+
+              </ul>
+
+              <p>示例（显示字符串，再读 <code>COMMAND.CMD</code> 的前 8 个字节）：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        .include "bbg.</span><span style="color:#D73A49;--shiki-dark:#F97583">inc</span><span style="color:#24292E;--shiki-dark:#E1E4E8">"</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        .export _main</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        .bss</span></span>
@@ -311,35 +996,99 @@
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        ldx #></span><span style="color:#005CC5;--shiki-dark:#79B8FF">fh</span></span>
 <span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        jsr bbg_file_read</span></span>
 <span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">failed:</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> rts</span></span>
-<span class="line"></span></code></pre></div>
-<ul>
-<li>运行库的维护（生成、测试、接口检查）见 docs/08-目标运行库维护 的 BBG 一节。</li>
-<li>完整的 DOS 与 BIOS 功能见手册《系统篇》第二章、第五章；<code>machines/bbg/src/include</code> 下是由反汇编核对过的符号文件，<code>machines/bbg/docs/api/</code> 是接口说明。</li>
-</ul>
-<h2 id="5-磁盘镜像与系统盘">5. 磁盘镜像与系统盘</h2>
-<ul>
-<li>镜像不是空白数据盘：它要能开机并读入 DOS，所以建在系统盘镜像上。在 <code>fcdev.json</code> 里用 <code>diskImage</code> 指向系统盘镜像，构建时复制它，加入 <code>&lt;NAME&gt;.CMD</code> 和项目 <code>disk</code> 目录下的全部文件（文件名必须是 8.3 名字，不能有子目录），存成 <code>build/bbg/&lt;diskName&gt;</code>（要在 <code>fcdev.json</code> 里配置 <code>diskName</code>）；系统盘文件本身不改，引导扇区、卷标与原有文件原样保留，同名文件被替换。</li>
-<li>没有设置 <code>diskImage</code> 时构建只生成程序，不生成镜像；要运行时才报“没有设置 diskImage”。</li>
-<li>步步高的系统盘大多是装满的：<code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 没有空闲簇，放不下任何文件，运行会报“剩余空间不足”。同一目录里的 <code>001-3.IMG</code> 剩余约 592KB，没有 <code>AUTOEXEC.BAT</code>，开机后先问日期与时间，适合当底盘。</li>
-<li>系统盘里有 <code>AUTOEXEC.BAT</code> 时，DOS 开机后先运行它，不问日期与时间；批处理最后要停在命令提示符（<code>bbgcdos/z4</code>、<code>pinyin</code>、<code>tishi</code> 这样的可以，会启动一个不返回的程序的不行）。</li>
-<li>开机后 DOS 显示“Starting BBGDOS...”，读入 <code>COMMAND.CMD</code>，提示符是 <code>A:\&gt;</code>。</li>
-</ul>
-<h2 id="6-构建与运行">6. 构建与运行</h2>
-<ul>
-<li>构建：任务“FCDEV：构建”，产物 <code>build/bbg/&lt;NAME&gt;.CMD</code>；设置了 <code>diskImage</code> 与 <code>diskName</code> 时还有 <code>build/bbg/&lt;diskName&gt;</code>。</li>
-<li>运行：任务“FCDEV：运行”，需要在设置 <code>fcdev.emulator.path</code> 里指定 Ember，在 <code>fcdev.json</code> 里用 <code>firmware</code> 指定软驱一号的 ROM、用 <code>diskImage</code> 指定系统盘镜像。扩展依次添加 ROM、以 <code>bbg1</code> 开机、放入镜像，开机运行 1200 帧（让系统盘的批处理跑完），按两次回车跳过可能出现的日期与时间（已在提示符下时只是两个空行），再等 60 帧，输入程序名并回车。按键都是按下 8 帧、松开 8 帧。程序名只能用字母与数字。</li>
-<li>手动运行（真机或模拟器）：挂载镜像开机，进入命令行后输入程序名。</li>
-<li>样例：<code>apps/bbg/run-game</code> 是在 BBGDOS 下运行 NES 游戏的程序（<code>RUN MARIO</code>），用 DOS 的文件调用读文件、取命令行参数、直接操作分页寄存器，是本目标最完整的例子；它在 <code>fcdev.json</code> 里用 <code>linkConfig</code> 指定自己的链接配置，把进入游戏的跳板放在内部 RAM。</li>
-</ul>
-<h2 id="7-还没有验证的内容">7. 还没有验证的内容</h2>
-<ul>
-<li>98 型（<code>bbg98</code>）的 ROM：目标的机型固定为 <code>bbg1</code>，只用软驱一号的 ROM 验证过。</li>
-<li><code>DOS_DISPLAY_STRING</code>（功能 4）：手册写“<code>X</code> 低地址、<code>Y</code> 高地址”，实际是 <code>X</code> 高地址、<code>Y</code> 低地址；按手册的顺序调用会读到错误的地址而死机。用 <code>bbg_dos_put_string</code> 即可。</li>
-<li>超过 16K 的程序、多页程序（<code>.EXC</code>）。</li>
-<li>BIOS 功能：只有运行库封装的几个（<code>BIOS_GET_PAGE</code>、<code>BIOS_GET_DRAM_SIZE</code>、<code>BIOS_DISPLAY_TTY</code>、<code>BIOS_GET_CURSOR</code>、<code>BIOS_GET_VERSION</code>）验证过，其余见 <code>api-reference.md</code> 的覆盖表。bbg1 的 BIOS 1.0 不实现手册里的 <code>BIOS_SET_PALETTE</code>（43）等功能号，调用时被忽略。</li>
-<li>外设调用（<code>$5809</code>）。</li>
-<li>命令行参数已由 <code>apps/bbg/run-game</code> 验证：<code>$0100</code> 是长度、<code>$0101</code> 起是参数（含程序名后的空格），<code>bbg_dos_run</code> 也是这样把参数交给被运行的程序；按手册，程序所在页之后的分页内存都归程序使用，<code>BIOS_GET_PAGE</code>（功能 2）取得程序所在的页。</li>
-<li>零页与内部 RAM 里 DOS、BIOS 占用的单元。</li>
-<li>真机运行：只在 Ember 里验证过；BIOS 源码是工程版，与 <code>bbg1_bios.bin</code> 不是同一次构建，大同小异。</li>
-</ul>
-</article><nav class="doc-pager" aria-label="上一页与下一页"><a href="yuxing.html" class="doc-pager__prev"><span>上一页 · FC Dev 开发手册</span>裕兴开发指南</a></nav></div></main></div><footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。</footer></div></body></html>
+<span class="line"></span></code></pre>
+              </div>
+
+              <ul>
+
+                <li>运行库的维护（生成、测试、接口检查）见 docs/08-目标运行库维护 的 BBG 一节。
+                </li>
+
+                <li>完整的 DOS 与 BIOS 功能见手册《系统篇》第二章、第五章；<code>machines/bbg/src/include</code> 下是由反汇编核对过的符号文件，<code>machines/bbg/docs/api/</code> 是接口说明。
+                </li>
+
+              </ul>
+
+              <h2 id="5-磁盘镜像与系统盘">5. 磁盘镜像与系统盘
+              </h2>
+
+              <ul>
+
+                <li>镜像不是空白数据盘：它要能开机并读入 DOS，所以建在系统盘镜像上。在 <code>fcdev.json</code> 里用 <code>diskImage</code> 指向系统盘镜像，构建时复制它，加入 <code>&lt;NAME&gt;.CMD</code> 和项目 <code>disk</code> 目录下的全部文件（文件名必须是 8.3 名字，不能有子目录），存成 <code>build/bbg/&lt;diskName&gt;</code>（要在 <code>fcdev.json</code> 里配置 <code>diskName</code>）；系统盘文件本身不改，引导扇区、卷标与原有文件原样保留，同名文件被替换。
+                </li>
+
+                <li>没有设置 <code>diskImage</code> 时构建只生成程序，不生成镜像；要运行时才报“没有设置 diskImage”。
+                </li>
+
+                <li>步步高的系统盘大多是装满的：<code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 没有空闲簇，放不下任何文件，运行会报“剩余空间不足”。同一目录里的 <code>001-3.IMG</code> 剩余约 592KB，没有 <code>AUTOEXEC.BAT</code>，开机后先问日期与时间，适合当底盘。
+                </li>
+
+                <li>系统盘里有 <code>AUTOEXEC.BAT</code> 时，DOS 开机后先运行它，不问日期与时间；批处理最后要停在命令提示符（<code>bbgcdos/z4</code>、<code>pinyin</code>、<code>tishi</code> 这样的可以，会启动一个不返回的程序的不行）。
+                </li>
+
+                <li>开机后 DOS 显示“Starting BBGDOS...”，读入 <code>COMMAND.CMD</code>，提示符是 <code>A:\&gt;</code>。
+                </li>
+
+              </ul>
+
+              <h2 id="6-构建与运行">6. 构建与运行
+              </h2>
+
+              <ul>
+
+                <li>构建：任务“FCDEV：构建”，产物 <code>build/bbg/&lt;NAME&gt;.CMD</code>；设置了 <code>diskImage</code> 与 <code>diskName</code> 时还有 <code>build/bbg/&lt;diskName&gt;</code>。
+                </li>
+
+                <li>运行：任务“FCDEV：运行”，需要在设置 <code>fcdev.emulator.path</code> 里指定 Ember，在 <code>fcdev.json</code> 里用 <code>firmware</code> 指定软驱一号的 ROM、用 <code>diskImage</code> 指定系统盘镜像。扩展依次添加 ROM、以 <code>bbg1</code> 开机、放入镜像，开机运行 1200 帧（让系统盘的批处理跑完），按两次回车跳过可能出现的日期与时间（已在提示符下时只是两个空行），再等 60 帧，输入程序名并回车。按键都是按下 8 帧、松开 8 帧。程序名只能用字母与数字。
+                </li>
+
+                <li>手动运行（真机或模拟器）：挂载镜像开机，进入命令行后输入程序名。
+                </li>
+
+                <li>样例：<code>apps/bbg/run-game</code> 是在 BBGDOS 下运行 NES 游戏的程序（<code>RUN MARIO</code>），用 DOS 的文件调用读文件、取命令行参数、直接操作分页寄存器，是本目标最完整的例子；它在 <code>fcdev.json</code> 里用 <code>linkConfig</code> 指定自己的链接配置，把进入游戏的跳板放在内部 RAM。
+                </li>
+
+              </ul>
+
+              <h2 id="7-还没有验证的内容">7. 还没有验证的内容
+              </h2>
+
+              <ul>
+
+                <li>98 型（<code>bbg98</code>）的 ROM：目标的机型固定为 <code>bbg1</code>，只用软驱一号的 ROM 验证过。
+                </li>
+
+                <li><code>DOS_DISPLAY_STRING</code>（功能 4）：手册写“<code>X</code> 低地址、<code>Y</code> 高地址”，实际是 <code>X</code> 高地址、<code>Y</code> 低地址；按手册的顺序调用会读到错误的地址而死机。用 <code>bbg_dos_put_string</code> 即可。
+                </li>
+
+                <li>超过 16K 的程序、多页程序（<code>.EXC</code>）。
+                </li>
+
+                <li>BIOS 功能：只有运行库封装的几个（<code>BIOS_GET_PAGE</code>、<code>BIOS_GET_DRAM_SIZE</code>、<code>BIOS_DISPLAY_TTY</code>、<code>BIOS_GET_CURSOR</code>、<code>BIOS_GET_VERSION</code>）验证过，其余见 <code>api-reference.md</code> 的覆盖表。bbg1 的 BIOS 1.0 不实现手册里的 <code>BIOS_SET_PALETTE</code>（43）等功能号，调用时被忽略。
+                </li>
+
+                <li>外设调用（<code>$5809</code>）。
+                </li>
+
+                <li>命令行参数已由 <code>apps/bbg/run-game</code> 验证：<code>$0100</code> 是长度、<code>$0101</code> 起是参数（含程序名后的空格），<code>bbg_dos_run</code> 也是这样把参数交给被运行的程序；按手册，程序所在页之后的分页内存都归程序使用，<code>BIOS_GET_PAGE</code>（功能 2）取得程序所在的页。
+                </li>
+
+                <li>零页与内部 RAM 里 DOS、BIOS 占用的单元。
+                </li>
+
+                <li>真机运行：只在 Ember 里验证过；BIOS 源码是工程版，与 <code>bbg1_bios.bin</code> 不是同一次构建，大同小异。
+                </li>
+
+              </ul>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="yuxing.html" class="doc-pager__prev"><span>上一页 · FC Dev 开发手册</span>裕兴开发指南</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

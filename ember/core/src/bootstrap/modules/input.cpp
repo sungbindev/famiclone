@@ -51,7 +51,7 @@ void registerInput(ModuleRegistry& registry) {
   preferences->addSetting({.id = std::string(contracts::runtime::setting::SETTING_HIDE_STARTUP_FRAMES),
                            .group = "display",
                            .label = "开机与复位后隐藏最初的画面",
-                           .description = "开启后，开机和复位后最初约 0.1 秒显示为黑色，避免闪过灰色、绿色或花屏；只影响显示，不影响模拟和调试截图。",
+                           .description = "开启后，开机和复位后最初 12 帧显示为黑色，避免闪过灰色、绿色或花屏；只影响显示，不影响模拟和调试截图。",
                            .kind = contracts::preferences::SettingKind::Switch,
                            .defaultValue = false});
   runtime->setHideStartupFrames(isOn(preferences->value(std::string(contracts::runtime::setting::SETTING_HIDE_STARTUP_FRAMES))));

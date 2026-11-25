@@ -14,6 +14,8 @@
  *       行内重命名：beginRename 在名称上放一个输入框，回车或失去焦点提交，Esc 取消。
  *       点空白处：在空白处按下并松开会取消选中（调用“取消选中”回调）。
  *       逐级收起：collapseDeepestLevel 只收起此刻显示着的、已展开的条目里最深的一层，反复调用就一层一层往外收起。
+ *       最小宽度：minimumSize 给出此刻显示的行里最宽的一行（名称与说明文字都完整显示）需要的宽度，放在允许横向滚动的滚动区域里时放不下就出现横向滚动条。
+ *       重命名：文件条目（不是文件夹）打开输入框时只选中扩展名之前的部分，文件夹全选。
  * ------------------------------------------------------------------------
  */
 
@@ -105,6 +107,7 @@ class Tree : public Widget {
   [[nodiscard]] const std::string& visibleId(std::size_t index) const { return items_[rows_[index]].id; }
 
   [[nodiscard]] Size measure(Size available) override;
+  [[nodiscard]] Size minimumSize() override;
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
   [[nodiscard]] bool focusable() const override { return true; }
@@ -143,6 +146,8 @@ class Tree : public Widget {
   std::vector<TreeItem> items_;
   /** 显示的行：items_ 的下标。 */
   std::vector<std::size_t> rows_;
+  /** 显示的行里最宽的一行需要的宽度；负数表示需要重新计算。 */
+  double naturalWidth_{-1.0};
   std::map<std::string, bool> expanded_;
   bool defaultExpanded_{false};
   std::string selectedId_;

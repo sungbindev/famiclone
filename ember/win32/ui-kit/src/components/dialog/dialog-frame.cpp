@@ -176,6 +176,11 @@ void DialogFrame::setTitle(std::string title) {
   invalidate();
 }
 
+void DialogFrame::setTitleDetail(std::string detail) {
+  titleDetail_ = std::move(detail);
+  invalidate();
+}
+
 void DialogFrame::setContent(std::unique_ptr<Widget> content) {
   content_ = nullptr;
   wrapper_ = nullptr;
@@ -407,7 +412,20 @@ void DialogFrame::paint(Canvas& canvas) {
   }
   if (hasControl) textRight -= tokens::space_xs;
   const double textX = box.x + tokens::space_sm + (logo_ != nullptr ? tokens::title_bar_logo_size + tokens::space_sm : 0.0);
-  canvas.drawText(title_, Rect{textX, titleBar.y, std::max(0.0, textRight - textX), titleBar.height - border}, style, VerticalAlign::Center);
+  const Rect textBox{textX, titleBar.y, std::max(0.0, textRight - textX), titleBar.height - border};
+  if (titleDetail_.empty()) {
+    canvas.drawText(title_, textBox, style, VerticalAlign::Center);
+    return;
+  }
+  // 标题优先完整显示，说明文字接在后面、用剩下的空间
+  const double titleWidth = std::min(host()->measureText(title_, style, 0).width + 1.0, textBox.width);
+  canvas.drawText(title_, Rect{textBox.x, textBox.y, titleWidth, textBox.height}, style, VerticalAlign::Center);
+  const double detailX = textBox.x + titleWidth + tokens::space_sm;
+  if (detailX >= textRight) return;
+  TextStyle detailStyle = style;
+  detailStyle.fontWeight = 400;
+  detailStyle.color = colors.text_muted;
+  canvas.drawText(titleDetail_, Rect{detailX, textBox.y, textRight - detailX, textBox.height}, detailStyle, VerticalAlign::Center);
 }
 
 bool DialogFrame::onKeyDown(const KeyEvent& event) {

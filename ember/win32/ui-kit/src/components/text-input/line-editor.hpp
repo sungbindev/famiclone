@@ -62,6 +62,8 @@ class LineEditor {
   /** 把光标移到指定位置（会对齐到字符边界）；extend 为真时保留固定端。 */
   void moveTo(std::size_t position, bool extend);
   void selectAll();
+  /** 选中 [start, end) 这一段（超出文字的部分截到末尾）。 */
+  void selectRange(std::size_t start, std::size_t end);
   /** 选中 position 处的词（连续的同类字符；汉字与假名每个字算一个词）。 */
   void selectWordAt(std::size_t position);
 

@@ -43,9 +43,13 @@ bool isUnder(const std::string& path, const std::string& folder) { return rebase
 /** 新建文件夹的基本名称。 */
 constexpr const char* kNewFolderName = "新建文件夹";
 
+/** 删除确认的标题。 */
+constexpr const char* kDeleteTitle = "删除";
+
 }  // namespace
 
-DiskImagesController::DiskImagesController(contracts::RequestBroker& broker, contracts::CoreGateway& core, contracts::DroppedFilesService& dropped) : broker_(broker), core_(core), dropped_(dropped) {}
+DiskImagesController::DiskImagesController(contracts::RequestBroker& broker, contracts::CoreGateway& core, contracts::DroppedFilesService& dropped, contracts::Confirmation& confirmation)
+    : broker_(broker), core_(core), dropped_(dropped), confirmation_(confirmation) {}
 
 DiskImagesController::~DiskImagesController() {
   *alive_ = false;
@@ -320,6 +324,8 @@ void DiskImagesController::rename(const std::string& name, const std::string& ne
 
 void DiskImagesController::remove(const std::vector<std::string>& names) {
   if (!image_.selected || names.empty()) return;
+  const std::string what = names.size() == 1 ? "“" + names.front() + "”" : "选中的 " + std::to_string(names.size()) + " 项";
+  if (!confirmation_.ask(kDeleteTitle, "从镜像“" + image_.imageName + "”里删除" + what + "？删除后可以用 Ctrl+Z 撤销。")) return;
   operate("diskimages.remove", {{"image", image_.image}, {"entries", entryPaths(names)}});
 }
 
@@ -455,6 +461,15 @@ void DiskImagesController::renameItem(const std::string& path, const std::string
 
 void DiskImagesController::removeItems(const std::vector<std::string>& paths) {
   if (paths.empty()) return;
+  std::string text;
+  if (paths.size() == 1) {
+    const contracts::DiskTreeNode* node = findNode(paths.front());
+    const std::string name = node != nullptr ? node->name : baseName(paths.front());
+    text = node != nullptr && node->directory ? "删除文件夹“" + name + "”及里面的全部内容？它们会被移进回收站。" : "删除“" + name + "”？它会被移进回收站。";
+  } else {
+    text = "删除选中的 " + std::to_string(paths.size()) + " 项？它们会被移进回收站。";
+  }
+  if (!confirmation_.ask(kDeleteTitle, text)) return;
   operate("diskimages.removeItems", {{"paths", paths}}, [this, paths](const nlohmann::json&) { dropSelectionUnder(paths); });
 }
 

@@ -172,30 +172,28 @@ void FileTable::setDropHighlight(const std::string& id) {
   invalidate();
 }
 
+double FileTable::fixedColumnWidth(std::size_t index) const {
+  const auto user = userWidths_.find(columns_[index].title);
+  if (user != userWidths_.end()) return user->second;
+  return columns_[index].width > 0 ? columns_[index].width : (index == 0 ? kDefaultNameWidth : kMinimumColumnWidth);
+}
+
+double FileTable::lastColumnMinimum() const {
+  if (columns_.size() == 1) return kMinimumNameWidth;
+  return std::max(kMinimumColumnWidth, columns_.back().width);
+}
+
 std::vector<double> FileTable::columnWidths() const {
   std::vector<double> widths(columns_.size(), 0.0);
   if (columns_.empty()) return widths;
   const std::size_t last = columns_.size() - 1;
   const double total = bounds().width - kPaddingX - kScrollbarRoom - kColumnGap * static_cast<double>(last);
-  if (last == 0) {
-    widths[0] = std::max(kMinimumNameWidth, total);
-    return widths;
-  }
   double fixed = 0.0;
   for (std::size_t i = 0; i < last; ++i) {
-    const auto user = userWidths_.find(columns_[i].title);
-    const double base = columns_[i].width > 0 ? columns_[i].width : (i == 0 ? kDefaultNameWidth : kMinimumColumnWidth);
-    widths[i] = user != userWidths_.end() ? user->second : base;
+    widths[i] = fixedColumnWidth(i);
     fixed += widths[i];
   }
-  // 窗口太窄时先让名称列变窄，保证最后一列有最小宽度
-  const double shortage = kMinimumColumnWidth - (total - fixed);
-  if (shortage > 0) {
-    const double narrowed = std::max(kMinimumNameWidth, widths[0] - shortage);
-    fixed -= widths[0] - narrowed;
-    widths[0] = narrowed;
-  }
-  widths[last] = std::max(kMinimumColumnWidth, total - fixed);
+  widths[last] = std::max(lastColumnMinimum(), total - fixed);
   return widths;
 }
 
@@ -218,11 +216,11 @@ int FileTable::dividerAt(Point point) const {
 void FileTable::resizeTo(double x) {
   const std::size_t index = static_cast<std::size_t>(resizeIndex_);
   const std::vector<double>& start = resizeStartWidths_;
-  // 线左边那一列变宽或变窄，线右边的列跟着移动，最后一列吸收差值
+  // 线左边那一列变宽或变窄，线右边的列跟着移动，没有上限（超出可见宽度的部分靠横向滚动看）
   const double lowest = (index == 0 ? kMinimumNameWidth : kMinimumColumnWidth) - start[index];
-  const double highest = std::max(lowest, start.back() - kMinimumColumnWidth);
-  const double delta = std::clamp(x - resizeStartX_, lowest, highest);
+  const double delta = std::max(lowest, x - resizeStartX_);
   userWidths_[columns_[index].title] = start[index] + delta;
+  requestLayout();
   invalidate();
 }
 
@@ -261,6 +259,14 @@ Size FileTable::measure(Size available) {
   // 内容不够高时撑满滚动区域，空白处也能点击与右键
   if (const auto* area = dynamic_cast<const ScrollArea*>(parent())) height = std::max(height, area->bounds().height);
   return Size{available.width, height};
+}
+
+Size FileTable::minimumSize() {
+  if (columns_.empty()) return Size{};
+  const std::size_t last = columns_.size() - 1;
+  double width = kPaddingX + kScrollbarRoom + kColumnGap * static_cast<double>(last) + lastColumnMinimum();
+  for (std::size_t i = 0; i < last; ++i) width += fixedColumnWidth(i);
+  return Size{width, 0};
 }
 
 void FileTable::arrange(const Rect& bounds) {
@@ -507,6 +513,8 @@ void FileTable::beginRename(const std::string& id) {
   focusId_ = id;
   for (Widget* ancestor = parent(); ancestor != nullptr; ancestor = ancestor->parent()) ancestor->onDescendantFocused(this);
   host()->setFocus(editor_, true);
+  // 文件只选中扩展名之前的部分（获得焦点时输入框会全选，要在之后调整）
+  if (!row.folder) editor_->selectBaseName();
   invalidate();
 }
 
@@ -617,12 +625,6 @@ void FileTable::paint(Canvas& canvas) {
       // 与名称列的文字对齐：图标的位置留空
       textX += tokens::icon_size + tokens::icon_text_gap;
       textWidth -= tokens::icon_size + tokens::icon_text_gap;
-    } else if (columns_[c].alignEnd && c + 1 < columns_.size()) {
-      const double natural = host()->measureText(columns_[c].title, headerStyle, 0).width + 1.0;
-      if (natural <= textWidth) {
-        textX += textWidth - natural;
-        textWidth = natural;
-      }
     }
     canvas.drawText(columns_[c].title, Rect{textX, header.y, std::max(0.0, textWidth), header.height}, headerStyle, VerticalAlign::Center);
     x += widths[c] + kColumnGap;

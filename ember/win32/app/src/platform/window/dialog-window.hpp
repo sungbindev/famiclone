@@ -32,7 +32,7 @@ struct DialogWindowOptions {
   void* owner{nullptr};
   /** 窗口标题（任务栏、Alt+Tab 与系统菜单显示）。 */
   std::wstring title;
-  /** 内容区的初始大小（逻辑像素）；高度为 0 表示按内容。最小高度按内容算时，初始高度不小于最小高度。 */
+  /** 内容区的初始大小（逻辑像素）；高度为 0 表示按内容。最小高度按内容算时，初始高度不小于最小高度；最小宽度按内容算时，初始宽度不小于最小宽度（宽度为 0 就是最小宽度）。 */
   double width{0};
   double height{0};
   /** 最小大小（逻辑像素），0 表示不限。 */
@@ -45,7 +45,7 @@ struct DialogWindowOptions {
   bool maximizable{false};
   /** 是否有最小化按钮：模态对话框的归属窗口不可用，所以“最小化”是把归属窗口最小化（对话框跟着隐藏，还原归属窗口时一起回来）；非模态对话框只最小化自己，有自己的任务栏按钮。 */
   bool minimizable{false};
-  /** 非模态：打开期间归属窗口仍然可用。 */
+  /** 非模态：打开期间归属窗口仍然可用；窗口本身没有归属窗口，不会总盖在主窗口上面（归属窗口只用来决定打开时的位置）。 */
   bool modeless{false};
   rujian::ui::ThemeName theme{rujian::ui::ThemeName::Dark};
   /** 自绘阴影与边框的模式，见 FramelessFrame。 */

@@ -13,8 +13,10 @@
  *       Shift+F10 与菜单键触发右键菜单回调；其余按键先交给“按键处理”回调（重命名、删除、剪切复制粘贴、撤销等由使用方决定）。
  *       拖动：在已选中的行上按下并拖过一小段距离，用选中的行标识调用“开始拖动”回调（真正的拖放由应用完成）。
  *       行内重命名：beginRename 在名称单元格上放一个输入框，回车或失去焦点提交，Esc 取消。
- *       列宽：除最后一列外每列都有自己的宽度（名称列也是），最后一列占满剩余宽度；表头里相邻两列之间有竖线，鼠标在线上变成左右调整光标并停留 200 毫秒后变成聚焦色（与分栏的分隔条一致），拖动它改变线左边那一列的宽度，线右边的列跟着移动，最后一列吸收差值；调过的列宽按表头文字记住，重新 setColumns 后仍然有效。
- *       靠右对齐的列（如大小）在它不是最后一列时表头与内容都靠右，是最后一列时靠左，这样竖线右边总是紧挨着文字。
+ *       列宽：除最后一列外每列都有自己的宽度（名称列也是），最后一列占满剩余宽度（不小于它自己的宽度）；表头里相邻两列之间有竖线，鼠标在线上变成左右调整光标并停留 200 毫秒后变成聚焦色（与分栏的分隔条一致），拖动它改变线左边那一列的宽度（没有上限），线右边的列跟着移动；调过的列宽按表头文字记住，重新 setColumns 后仍然有效。
+ *       最小宽度：minimumSize 是各列宽度之和（最后一列取它的最小宽度），放在允许横向滚动的滚动区域里时放不下就出现横向滚动条，表头跟着左右滚动。
+ *       靠右对齐的列（如大小）在它不是最后一列时内容靠右，是最后一列时靠左；表头文字一律靠左，与竖线右边的起点对齐。
+ *       重命名：文件（不是文件夹）打开输入框时只选中扩展名之前的部分，文件夹全选。
  * ------------------------------------------------------------------------
  */
 
@@ -38,7 +40,7 @@ class TextInput;
 struct FileTableColumn {
   /** 表头文字。 */
   std::string title;
-  /** 列宽（逻辑像素）；最后一列忽略它，名称列为 0 时用默认宽度。 */
+  /** 列宽（逻辑像素）；最后一列的宽度是它的最小宽度，名称列为 0 时用默认宽度。 */
   double width{0};
   /** 内容靠右对齐（如大小）；最后一列不受它影响，一律靠左。 */
   bool alignEnd{false};
@@ -50,6 +52,8 @@ struct FileTableRow {
   std::string id;
   /** 名称前的图标；没有时不画。 */
   std::optional<IconId> icon;
+  /** 是文件夹：重命名时名称全选，文件只选中扩展名之前的部分。 */
+  bool folder{false};
   /** 各列的文字，第一个是名称；个数可以少于列数。 */
   std::vector<std::string> cells;
 };
@@ -104,6 +108,7 @@ class FileTable : public Widget {
   void setDropHighlight(const std::string& id);
 
   [[nodiscard]] Size measure(Size available) override;
+  [[nodiscard]] Size minimumSize() override;
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
   [[nodiscard]] bool focusable() const override { return true; }
@@ -119,6 +124,10 @@ class FileTable : public Widget {
  private:
   /** 各列的宽度（最后一列占满剩余）。 */
   [[nodiscard]] std::vector<double> columnWidths() const;
+  /** 除最后一列外第 index 列的宽度：用户拖过的，否则是登记的宽度。 */
+  [[nodiscard]] double fixedColumnWidth(std::size_t index) const;
+  /** 最后一列的最小宽度。 */
+  [[nodiscard]] double lastColumnMinimum() const;
   /** 可见区域：放在滚动区域里时是滚动区域的区域，否则是自己的区域。 */
   [[nodiscard]] Rect viewport() const;
   /** 表头里第 index 条列分割线（index 和 index+1 两列之间）的 x（窗口坐标）。 */

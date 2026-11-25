@@ -88,7 +88,7 @@ struct ShellDialogDefinition {
   std::string id;
   /** 对话框标题。 */
   std::string title;
-  /** 内容区初始宽度（逻辑像素）；0 表示不登记（最小宽度按内容算的对话框打开时用最小宽度）。 */
+  /** 内容区初始宽度（逻辑像素）；0 表示不登记（最小宽度按内容算的对话框，登记了初始宽度时打开用它与最小宽度中大的，没登记就用最小宽度）。 */
   int width{0};
   /** 内容区初始高度；0 表示按内容（最小高度按内容算的对话框，登记了初始高度时打开用它与最小高度中大的）。 */
   int height{0};
@@ -98,7 +98,7 @@ struct ShellDialogDefinition {
   /** 最小宽度、最小高度按内容算（刚好装下内容、不换行，见 Widget::minimumSize），不低于上面的 minWidth、minHeight。 */
   bool fitMinWidth{false};
   bool fitMinHeight{false};
-  /** 非模态：打开期间主窗口仍然可用，没有最小化按钮（主窗口最小化时它跟着隐藏）。 */
+  /** 非模态：打开期间主窗口仍然可用，有最小化按钮（只最小化它自己），不总盖在主窗口上面。 */
   bool modeless{false};
 };
 

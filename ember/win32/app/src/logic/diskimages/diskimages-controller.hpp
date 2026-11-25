@@ -21,6 +21,7 @@
 
 #include "contracts/core-gateway/core-gateway.hpp"
 #include "contracts/diskimages/diskimages-model.hpp"
+#include "contracts/shell/confirmation.hpp"
 #include "contracts/shell/dropped-files.hpp"
 #include "contracts/shell/request-broker.hpp"
 #include "contracts/shell/shell-registry.hpp"
@@ -34,8 +35,9 @@ class DiskImagesController final : public contracts::DiskImagesModel {
    * @param broker 请求中转：核心的请求与外壳自己处理的请求（选择镜像目录、导入、载入软驱、显示文件）都经它。
    * @param core 核心网关：订阅核心事件与核心运行状态。
    * @param dropped 拖入文件服务：导入时登记拖入的路径。
+   * @param confirmation 删除前的确认询问：镜像里的文件与镜像目录里的文件、文件夹的删除都要确认。
    */
-  DiskImagesController(contracts::RequestBroker& broker, contracts::CoreGateway& core, contracts::DroppedFilesService& dropped);
+  DiskImagesController(contracts::RequestBroker& broker, contracts::CoreGateway& core, contracts::DroppedFilesService& dropped, contracts::Confirmation& confirmation);
   ~DiskImagesController() override;
   DiskImagesController(const DiskImagesController&) = delete;
   DiskImagesController& operator=(const DiskImagesController&) = delete;
@@ -111,6 +113,7 @@ class DiskImagesController final : public contracts::DiskImagesModel {
   contracts::RequestBroker& broker_;
   contracts::CoreGateway& core_;
   contracts::DroppedFilesService& dropped_;
+  contracts::Confirmation& confirmation_;
   contracts::ShellApi* shell_{nullptr};
   std::vector<std::function<void()>> stops_;
   std::shared_ptr<bool> alive_{std::make_shared<bool>(true)};

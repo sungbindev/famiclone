@@ -391,7 +391,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::InputController input(core);
     logic::RuntimeController runtime(router, core, shellState);
     logic::MediaController media(router, core);
-    logic::DiskImagesController diskImages(router, core, droppedFiles);
+    logic::DiskImagesController diskImages(router, core, droppedFiles, confirmation);
     infra::OleDiskDragHost diskDragHost;
     logic::PreferencesController preferencesController(router, core);
     logic::RomController romController(router, core);
@@ -418,6 +418,7 @@ int runApplication(const shared::LaunchArguments& launch) {
       auto* content = static_cast<ui::DiskImagesContent*>(&body);
       content->focusInitial();
       content->setOnResizeWindow([&window](double delta) { return window.resizeWidthBy(delta); });
+      content->setOnRootChanged([&window](const std::string& root) { window.frame().setTitleDetail(root); });
       platform::DropCallbacks callbacks;
       callbacks.over = [&window, content](platform::DropKind kind, int x, int y) { return content->dragOver(kind == platform::DropKind::Internal, window.clientPointFromScreen(x, y)); };
       callbacks.drop = [&window, content](platform::DropKind kind, int x, int y, const std::vector<std::string>& paths, std::uint64_t) {

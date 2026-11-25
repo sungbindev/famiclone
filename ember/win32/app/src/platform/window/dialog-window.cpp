@@ -42,7 +42,8 @@ rujian::ui::HostWindow::Options hostOptions(const DialogWindowOptions& options) 
   host.title = options.title;
   host.clientSize = rujian::ui::Size{options.width > 0 ? options.width : 200.0, options.height > 0 ? options.height : 200.0};
   host.theme = options.theme;
-  host.owner = options.owner;
+  // 非模态对话框不设归属窗口：有归属窗口的窗口总是盖在它上面，点主窗口时也不会被盖住到后面
+  host.owner = options.modeless ? nullptr : options.owner;
   return host;
 }
 
@@ -181,8 +182,8 @@ void DialogWindow::place() {
   RECT work = ownerRect;
   if (GetMonitorInfoW(MonitorFromRect(&ownerRect, MONITOR_DEFAULTTONEAREST), &monitor) != FALSE) work = monitor.rcWork;
   const auto [minimumWidth, minimumHeight] = minimumSize();
-  // 最小宽度按内容算的方向，打开时就用最小值（向上取整到设备像素，与系统的最小尺寸查询一致）；最小高度按内容算时，登记了初始高度就取它与最小高度中大的
-  const int width = options_.fitMinimumWidth ? static_cast<int>(std::ceil(minimumWidth * scale - 1e-6)) : static_cast<int>(std::lround(std::max(options_.width, minimumWidth) * scale));
+  // 最小宽度按内容算的方向，打开时用最小值，登记了初始宽度就取它与最小值中大的（向上取整到设备像素，与系统的最小尺寸查询一致）；最小高度按内容算时，登记了初始高度就取它与最小高度中大的
+  const int width = options_.fitMinimumWidth ? static_cast<int>(std::ceil(std::max(options_.width, minimumWidth) * scale - 1e-6)) : static_cast<int>(std::lround(std::max(options_.width, minimumWidth) * scale));
   const int fitHeight = static_cast<int>(std::ceil(minimumHeight * scale - 1e-6));
   const int pixelHeight = options_.fitMinimumHeight
                               ? std::max(fitHeight, static_cast<int>(std::lround(options_.height * scale)))

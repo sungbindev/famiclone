@@ -60,6 +60,8 @@ class DialogFrame : public Widget {
   DialogFrame();
 
   void setTitle(std::string title);
+  /** 标题后面的说明文字（弱化色，标题栏空间不够时用省略号）；空表示没有。 */
+  void setTitleDetail(std::string detail);
   /** 设置正文（放在滚动区域里，四周留 10 像素的内边距）；空表示没有正文。 */
   void setContent(std::unique_ptr<Widget> content);
   /** 正文是否铺满正文区（减去四周的内边距），默认否：铺满时正文自己负责滚动，对话框不滚动；在 setContent 之前调用。 */
@@ -125,6 +127,7 @@ class DialogFrame : public Widget {
   void rebuildControls();
 
   std::string title_;
+  std::string titleDetail_;
   Widget* content_{nullptr};
   Widget* wrapper_{nullptr};
   ScrollArea* scroll_{nullptr};

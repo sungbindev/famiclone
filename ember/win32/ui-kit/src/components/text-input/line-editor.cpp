@@ -226,6 +226,12 @@ void LineEditor::selectAll() {
   caret_ = text_.size();
 }
 
+void LineEditor::selectRange(std::size_t start, std::size_t end) {
+  lastKind_ = Kind::None;
+  anchor_ = std::min(start, text_.size());
+  caret_ = std::min(end, text_.size());
+}
+
 void LineEditor::selectWordAt(std::size_t position) {
   lastKind_ = Kind::None;
   if (text_.empty()) return;

@@ -33,6 +33,10 @@ class TextInput : public Widget {
   void setValue(const std::string& value);
   /** 当前值（UTF-8）。 */
   [[nodiscard]] std::string value() const;
+  /** 选中值里 [start, end) 这一段，位置是 UTF-8 的字节偏移（超出的部分截到末尾）。 */
+  void selectRange(std::size_t start, std::size_t end);
+  /** 选中文件名里扩展名之前的部分（最后一个点之前；没有点或点在开头时选中全部）。 */
+  void selectBaseName();
   /** 占位文字。 */
   void setPlaceholder(std::string placeholder);
   /** 校验失败：边框与焦点环变成错误色。 */

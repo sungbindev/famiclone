@@ -57,11 +57,43 @@ void ScrollArea::setFitContent(bool fit) {
   invalidate();
 }
 
+void ScrollArea::setHorizontalScroll(bool enabled) {
+  horizontal_ = enabled;
+  if (!enabled) scrollLeft_ = 0;
+  invalidate();
+}
+
 double ScrollArea::maxScrollTop() const { return std::max(0.0, contentHeight_ - bounds().height); }
+
+double ScrollArea::maxScrollLeft() const { return horizontal_ ? std::max(0.0, contentWidth_ - bounds().width) : 0.0; }
 
 Rect ScrollArea::trackRect() const {
   const Rect box = bounds();
   return Rect{box.right() - kTrackWidth, box.y, kTrackWidth, box.height};
+}
+
+Rect ScrollArea::horizontalTrackRect() const {
+  const Rect box = bounds();
+  const double corner = scrollbarNeeded() ? kTrackWidth : 0.0;
+  return Rect{box.x, box.bottom() - kTrackWidth, std::max(0.0, box.width - corner), kTrackWidth};
+}
+
+double ScrollArea::horizontalSliderLength() const {
+  const double track = horizontalTrackRect().width;
+  if (contentWidth_ <= 0) return track;
+  return std::round(std::max(kMinimumSlider, std::floor(track * bounds().width / contentWidth_)));
+}
+
+double ScrollArea::horizontalSliderOffset() const {
+  const double range = maxScrollLeft();
+  if (range <= 0) return 0;
+  return std::round(scrollLeft_ * (horizontalTrackRect().width - horizontalSliderLength()) / range);
+}
+
+Rect ScrollArea::horizontalSliderRect() const {
+  if (!horizontalNeeded()) return Rect{};
+  const Rect track = horizontalTrackRect();
+  return Rect{track.x + horizontalSliderOffset(), track.y + (kTrackWidth - kSliderWidth) / 2.0, horizontalSliderLength(), kSliderWidth};
 }
 
 double ScrollArea::sliderLength() const {
@@ -92,14 +124,16 @@ Size ScrollArea::measure(Size available) {
 void ScrollArea::arrange(const Rect& bounds) {
   setBounds(bounds);
   if (content_ == nullptr) return;
-  contentHeight_ = fitContent_ ? bounds.height : content_->measure(Size{bounds.width, 0}).height;
+  contentWidth_ = horizontal_ ? std::max(bounds.width, content_->minimumSize().width) : bounds.width;
+  contentHeight_ = fitContent_ ? bounds.height : content_->measure(Size{contentWidth_, 0}).height;
   scrollTop_ = std::clamp(scrollTop_, 0.0, maxScrollTop());
-  content_->arrange(Rect{bounds.x, bounds.y - scrollTop_, bounds.width, contentHeight_});
+  scrollLeft_ = std::clamp(scrollLeft_, 0.0, maxScrollLeft());
+  content_->arrange(Rect{bounds.x - scrollLeft_, bounds.y - scrollTop_, contentWidth_, contentHeight_});
   updateVisibility();
 }
 
 void ScrollArea::applyScroll() {
-  if (content_ != nullptr) content_->arrange(Rect{bounds().x, bounds().y - scrollTop_, bounds().width, contentHeight_});
+  if (content_ != nullptr) content_->arrange(Rect{bounds().x - scrollLeft_, bounds().y - scrollTop_, contentWidth_, contentHeight_});
   invalidate();
 }
 
@@ -114,33 +148,72 @@ void ScrollArea::setScrollTop(double top) {
   if (host() != nullptr) scheduleHide();
 }
 
+void ScrollArea::setScrollLeft(double left) {
+  const double scale = host() != nullptr ? host()->scale() : 1.0;
+  const double clamped = std::clamp(std::round(left * scale + 1e-6) / scale, 0.0, maxScrollLeft());
+  if (clamped == scrollLeft_) return;
+  scrollLeft_ = clamped;
+  applyScroll();
+  if (host() != nullptr) scheduleHide();
+}
+
 void ScrollArea::scrollIntoView(const Rect& area) {
   const Rect box = bounds();
   if (area.y < box.y) setScrollTop(scrollTop_ - (box.y - area.y));
   else if (area.bottom() > box.bottom()) setScrollTop(scrollTop_ + std::min(area.bottom() - box.bottom(), area.y - box.y));
+  // 比可见区域还宽的区域（整行）不调整横向位置
+  if (!horizontal_ || area.width > box.width) return;
+  if (area.x < box.x) setScrollLeft(scrollLeft_ - (box.x - area.x));
+  else if (area.right() > box.right()) setScrollLeft(scrollLeft_ + (area.right() - box.right()));
 }
 
 void ScrollArea::paintChildren(Canvas& canvas) {
   canvas.pushClip(bounds());
   Widget::paintChildren(canvas);
   canvas.popClip();
-  if (opacity_ <= 0 || !scrollbarNeeded()) return;
+  if (opacity_ <= 0 || (!scrollbarNeeded() && !horizontalNeeded())) return;
   const auto& colors = themeTokens(host()->theme());
-  Color color = colors.scrollbar_slider_bg;
-  if (dragging_) color = colors.scrollbar_slider_active_bg;
-  else if (overSlider_) color = colors.scrollbar_slider_hover_bg;
-  const Rect slider = sliderRect();
-  canvas.drawBox(slider, BoxStyle{.fill = color.withOpacity(opacity_), .radius = kSliderWidth / 2.0});
+  if (scrollbarNeeded()) {
+    Color color = colors.scrollbar_slider_bg;
+    if (dragging_) color = colors.scrollbar_slider_active_bg;
+    else if (overSlider_) color = colors.scrollbar_slider_hover_bg;
+    canvas.drawBox(sliderRect(), BoxStyle{.fill = color.withOpacity(opacity_), .radius = kSliderWidth / 2.0});
+  }
+  if (horizontalNeeded()) {
+    Color color = colors.scrollbar_slider_bg;
+    if (draggingHorizontal_) color = colors.scrollbar_slider_active_bg;
+    else if (overHorizontalSlider_) color = colors.scrollbar_slider_hover_bg;
+    canvas.drawBox(horizontalSliderRect(), BoxStyle{.fill = color.withOpacity(opacity_), .radius = kSliderWidth / 2.0});
+  }
 }
 
 Widget* ScrollArea::hitTest(Point point) {
   // 滚动条显示着才响应鼠标（不显示时 pointer-events: none，鼠标穿过去点到内容）
-  if (visible() && opacity_ > 0 && scrollbarNeeded() && trackRect().contains(point)) return this;
+  if (visible() && opacity_ > 0) {
+    if (scrollbarNeeded() && trackRect().contains(point)) return this;
+    if (horizontalNeeded() && horizontalTrackRect().contains(point)) return this;
+  }
   return Widget::hitTest(point);
 }
 
 bool ScrollArea::onMouseDown(const MouseEvent& event) {
-  if (event.button != MouseButton::Left || opacity_ <= 0 || !scrollbarNeeded() || !trackRect().contains(event.position)) return false;
+  if (event.button != MouseButton::Left || opacity_ <= 0) return false;
+  if (horizontalNeeded() && horizontalTrackRect().contains(event.position)) {
+    const Rect slider = horizontalSliderRect();
+    if (slider.contains(event.position)) {
+      dragGrabHorizontal_ = event.position.x - slider.x;
+    } else {
+      // 点在轨道上：滑块中心先跳到指针处，再接着拖
+      dragGrabHorizontal_ = slider.width / 2.0;
+      const double range = horizontalTrackRect().width - slider.width;
+      if (range > 0) setScrollLeft(std::round((event.position.x - bounds().x - dragGrabHorizontal_) * maxScrollLeft() / range));
+    }
+    draggingHorizontal_ = true;
+    host()->captureMouse(this);
+    updateVisibility();
+    return true;
+  }
+  if (!scrollbarNeeded() || !trackRect().contains(event.position)) return false;
   const Rect slider = sliderRect();
   if (slider.contains(event.position)) {
     dragGrab_ = event.position.y - slider.y;
@@ -157,28 +230,43 @@ bool ScrollArea::onMouseDown(const MouseEvent& event) {
 }
 
 bool ScrollArea::onMouseMove(const MouseEvent& event) {
+  if (draggingHorizontal_) {
+    const double range = horizontalTrackRect().width - horizontalSliderLength();
+    if (range > 0) setScrollLeft(std::round((event.position.x - bounds().x - dragGrabHorizontal_) * maxScrollLeft() / range));
+    return true;
+  }
   if (dragging_) {
     const double range = bounds().height - sliderLength();
     if (range > 0) setScrollTop(std::round((event.position.y - bounds().y - dragGrab_) * maxScrollTop() / range));
     return true;
   }
   const bool over = scrollbarNeeded() && sliderRect().contains(event.position);
-  if (over != overSlider_) {
+  const bool overHorizontal = horizontalNeeded() && horizontalSliderRect().contains(event.position);
+  if (over != overSlider_ || overHorizontal != overHorizontalSlider_) {
     overSlider_ = over;
+    overHorizontalSlider_ = overHorizontal;
     invalidate();
   }
   return false;
 }
 
 bool ScrollArea::onMouseUp(const MouseEvent& event) {
-  if (event.button != MouseButton::Left || !dragging_) return false;
+  if (event.button != MouseButton::Left || (!dragging_ && !draggingHorizontal_)) return false;
   dragging_ = false;
+  draggingHorizontal_ = false;
   host()->releaseMouse(this);
   scheduleHide();
   return true;
 }
 
 bool ScrollArea::onMouseWheel(const MouseEvent& event) {
+  // Shift+滚轮横向滚动；没有纵向滚动而有横向滚动时，滚轮也横向滚动
+  const bool toHorizontal = horizontalNeeded() && ((event.modifiers & kModifierShift) != 0 || !scrollbarNeeded());
+  if (toHorizontal) {
+    const double before = scrollLeft_;
+    setScrollLeft(scrollLeft_ - event.wheelDelta * kWheelStep);
+    return scrollLeft_ != before;
+  }
   if (!scrollbarNeeded()) return false;
   const double before = scrollTop_;
   setScrollTop(scrollTop_ - event.wheelDelta * kWheelStep);
@@ -224,6 +312,7 @@ void ScrollArea::onDescendantFocused(Widget* descendant) {
 void ScrollArea::onStateChanged() {
   if (!hovered()) {
     overSlider_ = false;
+    overHorizontalSlider_ = false;
     // 鼠标移出后过一会儿再隐藏
     if (host() != nullptr && opacity_ > 0) scheduleHide();
   }
@@ -247,7 +336,7 @@ void ScrollArea::scheduleHide() {
 
 void ScrollArea::updateVisibility() {
   if (host() == nullptr) return;
-  setTarget(scrollbarNeeded() && (hovered() || dragging_ || recentlyScrolled_));
+  setTarget((scrollbarNeeded() || horizontalNeeded()) && (hovered() || dragging_ || draggingHorizontal_ || recentlyScrolled_));
 }
 
 void ScrollArea::setTarget(bool visible) {

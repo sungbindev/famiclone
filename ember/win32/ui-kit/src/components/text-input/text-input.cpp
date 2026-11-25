@@ -72,6 +72,21 @@ void TextInput::setValue(const std::string& value) {
 
 std::string TextInput::value() const { return toUtf8(editor_->text()); }
 
+void TextInput::selectRange(std::size_t start, std::size_t end) {
+  const std::string text = value();
+  start = std::min(start, text.size());
+  end = std::min(end, text.size());
+  editor_->selectRange(toUtf16(text.substr(0, start)).size(), toUtf16(text.substr(0, end)).size());
+  ensureCaretVisible();
+  invalidate();
+}
+
+void TextInput::selectBaseName() {
+  const std::string text = value();
+  const std::size_t dot = text.find_last_of('.');
+  selectRange(0, dot == std::string::npos || dot == 0 ? text.size() : dot);
+}
+
 void TextInput::setPlaceholder(std::string placeholder) {
   placeholder_ = std::move(placeholder);
   invalidate();

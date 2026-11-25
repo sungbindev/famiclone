@@ -115,6 +115,8 @@ void Tree::beginRename(const std::string& id) {
   // 让外层的滚动区域把这一行滚进可见范围
   for (Widget* ancestor = parent(); ancestor != nullptr; ancestor = ancestor->parent()) ancestor->onDescendantFocused(this);
   host()->setFocus(editor_, true);
+  // 文件只选中扩展名之前的部分（获得焦点时输入框会全选，要在之后调整）
+  if (!items_[static_cast<std::size_t>(index)].folder) editor_->selectBaseName();
   invalidate();
 }
 
@@ -234,6 +236,7 @@ bool Tree::collapseDeepestLevel() {
 bool Tree::hasChildren(std::size_t itemIndex) const { return itemIndex + 1 < items_.size() && items_[itemIndex + 1].depth > items_[itemIndex].depth; }
 
 void Tree::rebuildRows() {
+  naturalWidth_ = -1.0;
   rows_.clear();
   // 收起的条目的子项（比它深的后续条目）不显示
   int hiddenDepth = -1;
@@ -250,6 +253,34 @@ Size Tree::measure(Size available) {
   // 放在滚动区域里时撑满可见高度，条目下面的空白处也能点到树（右键菜单用）
   if (const auto* area = dynamic_cast<const ScrollArea*>(parent())) height = std::max(height, area->bounds().height);
   return Size{available.width, height};
+}
+
+Size Tree::minimumSize() {
+  if (host() == nullptr) return Size{};
+  if (naturalWidth_ < 0) {
+    TextStyle style;
+    style.fontSize = tokens::tree_font_size;
+    style.lineHeight = 0;
+    TextStyle trailingStyle;
+    trailingStyle.fontSize = tokens::tree_count_font_size;
+    trailingStyle.lineHeight = 0;
+    double widest = 0.0;
+    for (const std::size_t index : rows_) {
+      const TreeItem& item = items_[index];
+      // 与 paint 一致：箭头位置、图标、名称，靠右的说明文字（至多占名称区的一半，所以名称区不小于说明文字的两倍）
+      double head = tokens::tree_padding_x + item.depth * tokens::tree_indent + tokens::icon_size + tokens::icon_text_gap;
+      if (item.icon) head += tokens::icon_size + tokens::icon_text_gap;
+      const double label = host()->measureText(item.label, style, 0).width + 1.0;
+      double body = label;
+      if (!item.trailing.empty()) {
+        const double trailing = host()->measureText(item.trailing, trailingStyle, 0).width + 1.0;
+        body = std::max(label + kTrailingGap + trailing, 2.0 * trailing);
+      }
+      widest = std::max(widest, head + body + tokens::tree_padding_x);
+    }
+    naturalWidth_ = std::ceil(widest);
+  }
+  return Size{naturalWidth_, 0};
 }
 
 Rect Tree::rowRect(std::size_t visibleIndex) const { return Rect{bounds().x, bounds().y + tokens::tree_row_height * static_cast<double>(visibleIndex), bounds().width, tokens::tree_row_height}; }

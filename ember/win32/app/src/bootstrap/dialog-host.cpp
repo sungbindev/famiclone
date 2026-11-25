@@ -82,6 +82,15 @@ void DialogHost::openDialog(const std::string& dialogId) {
   open_.emplace(dialogId, std::move(window));
   raw->show();
   if (const auto hook = openHooks_.find(dialogId); hook != openHooks_.end()) attachments_[dialogId] = hook->second(*raw, *contentPointer);
+  if (definition->second.modeless) {
+    // 非模态对话框没有归属窗口，打开它的菜单关闭后主窗口会重新取得焦点并盖住它：等当前消息处理完再把它带到最前面
+    const auto alive = alive_;
+    post_([this, alive, dialogId] {
+      if (!*alive) return;
+      const auto found = open_.find(dialogId);
+      if (found != open_.end()) found->second->activate();
+    });
+  }
 }
 
 void DialogHost::closeDialog(const std::string& dialogId) {

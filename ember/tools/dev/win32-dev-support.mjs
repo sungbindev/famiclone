@@ -113,6 +113,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Text;
 public class W32 {
   public delegate bool EnumProc(IntPtr h, IntPtr p);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
@@ -120,7 +121,14 @@ public class W32 {
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] public static extern int GetWindowTextLengthW(IntPtr h);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowTextW(IntPtr h, StringBuilder text, int count);
   [DllImport("user32.dll")] public static extern uint MapVirtualKeyW(uint code, uint type);
+  // main window: the visible window of this process titled Ember (modeless dialogs have no owner, so MainWindowHandle may point to one)
+  public static IntPtr FindMain(uint pid) {
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((h, p) => { uint id; GetWindowThreadProcessId(h, out id); if (id != pid || !IsWindowVisible(h)) return true; StringBuilder text = new StringBuilder(64); GetWindowTextW(h, text, 64); if (text.ToString() == "Ember") { found = h; return false; } return true; }, IntPtr.Zero);
+    return found;
+  }
   public static IntPtr Dialog(uint pid, IntPtr main) {
     IntPtr found = IntPtr.Zero;
     EnumWindows((h, p) => { uint id; GetWindowThreadProcessId(h, out id); if (id == pid && h != main && IsWindowVisible(h) && GetWindowTextLengthW(h) > 0) { found = h; return false; } return true; }, IntPtr.Zero);
@@ -156,7 +164,8 @@ public class W32 {
 "@
 [void][W32]::SetProcessDPIAware()
 $proc = Get-Process -Id $ProcessIdValue
-$h = $proc.MainWindowHandle
+$h = [W32]::FindMain([uint32]$proc.Id)
+if ($h -eq [IntPtr]::Zero) { $h = $proc.MainWindowHandle }
 if ($h -eq [IntPtr]::Zero) { Write-Output 'RESULT error no-window'; exit 0 }
 # 先直接把窗口提到前台；有对话框时提的是对话框（主窗口被它禁用）；失败时按一下 Alt 取得权限再试（Alt 会被应用当成菜单键，所以不要每次都按）
 $target = [W32]::Dialog([uint32]$proc.Id, $h)

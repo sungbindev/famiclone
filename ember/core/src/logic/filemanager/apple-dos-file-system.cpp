@@ -219,6 +219,16 @@ void AppleDosFileSystem::requireWritable() const {
 
 void AppleDosFileSystem::commit() { appleFromLinear(image_, linear_, identity_.fileOrder, AppleOrder::Dos, identity_.tracks); }
 
+api::FileSystemSpace AppleDosFileSystem::space() {
+  std::uint64_t freeSectors = 0;
+  for (unsigned track = 0; track < identity_.tracks; ++track) {
+    for (unsigned sector = 0; sector < APPLE_SECTORS; ++sector) {
+      if (sectorFree(track, sector)) ++freeSectors;
+    }
+  }
+  return api::FileSystemSpace{static_cast<std::uint64_t>(identity_.tracks) * APPLE_SECTORS * APPLE_SECTOR_SIZE, freeSectors * APPLE_SECTOR_SIZE};
+}
+
 std::vector<api::DiskEntry> AppleDosFileSystem::list(const api::EntryPath& directory) {
   if (!directory.empty()) fail(api::ERROR_ENTRY_NOT_FOUND, "DOS 3.3 磁盘没有文件夹");
   std::vector<api::DiskEntry> result;

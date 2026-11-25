@@ -291,6 +291,11 @@ void FileManagerController::showFolder(const std::string& folder) {
   loadFolder(folder);
 }
 
+std::string FileManagerController::floppyInfo() const {
+  if (!image_.selected || image_.kind != contracts::kKindFloppy || image_.failed || image_.loading || image_.formatName.empty()) return {};
+  return image_.formatName + " · 容量 " + imageSizeText(image_.capacity) + " · 可用 " + imageSizeText(image_.freeSpace);
+}
+
 void FileManagerController::loadKinds() {
   ask("filemanager.blankKinds", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
     const auto kinds = reply.ok ? parseBlankKinds(reply.result) : std::nullopt;
@@ -319,6 +324,7 @@ void FileManagerController::loadImage() {
       image_.entries.clear();
       image_.format.clear();
       image_.formatName.clear();
+      image_.info.clear();
       image_.writable = false;
       image_.subdirectories = false;
       image_.readOnlyReason.clear();
@@ -333,10 +339,13 @@ void FileManagerController::loadImage() {
     image_.formatName = parsed->formatName;
     image_.writable = parsed->writable;
     image_.subdirectories = parsed->subdirectories;
+    image_.capacity = parsed->capacity;
+    image_.freeSpace = parsed->freeSpace;
     image_.readOnlyReason = parsed->readOnlyReason;
     image_.drive = parsed->drive;
     image_.undoDepth = parsed->undoDepth;
     image_.entries = parsed->entries;
+    image_.info = floppyInfo();
     changed();
   });
 }
@@ -438,7 +447,8 @@ void FileManagerController::fillSingleFile(const contracts::DiskTreeNode& node) 
 }
 
 void FileManagerController::syncSingleFile() {
-  if (!image_.selected || image_.kind == contracts::kKindFloppy) return;
+  if (!image_.selected) return;
+  if (image_.kind == contracts::kKindFloppy) return;
   const contracts::DiskTreeNode* node = findNode(image_.image);
   // 所在的文件夹还没读出来（刚移进去）时还不能说它没了
   const std::size_t slash = image_.image.find_last_of('/');

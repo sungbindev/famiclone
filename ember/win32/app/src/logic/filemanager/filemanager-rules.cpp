@@ -114,7 +114,7 @@ std::optional<ParsedList> parseList(const nlohmann::json& result) {
   if (const auto drive = result.find("drive"); drive != result.end() && drive->is_number_integer()) list.drive = static_cast<int>(drive->get<std::int64_t>());
   if (const auto reason = result.find("readOnlyReason"); reason != result.end() && reason->is_string()) list.readOnlyReason = reason->get<std::string>();
   std::uint64_t depth = 0;
-  if (!readInteger(result, "undoDepth", depth)) return std::nullopt;
+  if (!readInteger(result, "undoDepth", depth) || !readInteger(result, "capacity", list.capacity) || !readInteger(result, "freeSpace", list.freeSpace)) return std::nullopt;
   list.undoDepth = static_cast<int>(depth);
   const auto entries = result.find("entries");
   if (entries == result.end() || !entries->is_array()) return std::nullopt;

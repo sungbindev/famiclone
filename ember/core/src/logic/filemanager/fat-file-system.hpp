@@ -33,6 +33,7 @@ class FatFileSystem final : public contracts::filemanager::DiskFileSystem {
   [[nodiscard]] static std::unique_ptr<FatFileSystem> open(std::vector<std::uint8_t>& image);
 
   [[nodiscard]] const contracts::filemanager::FileSystemTraits& traits() const override { return traits_; }
+  [[nodiscard]] contracts::filemanager::FileSystemSpace space() override;
   [[nodiscard]] std::vector<contracts::filemanager::DiskEntry> list(const contracts::filemanager::EntryPath& directory) override;
   void rename(const contracts::filemanager::EntryPath& entry, const std::string& name) override;
   void remove(const contracts::filemanager::EntryPath& entry) override;

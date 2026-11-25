@@ -106,6 +106,8 @@ class FileManagerController final : public contracts::FileManagerModel {
   void showFolder(const std::string& folder);
   /** 把已经读出来的文件夹拼成先序的节点列表。 */
   void appendFolder(const std::string& folder, std::vector<contracts::DiskTreeNode>& out) const;
+  /** 选中的软盘镜像的概况文字：格式与文件大小。 */
+  [[nodiscard]] std::string floppyInfo() const;
   /** 选中的镜像因为重命名或移动换了路径时，选中项跟着走（from 是旧路径，可以是它所在的文件夹）。 */
   void followSelection(const std::string& from, const std::string& to);
   /** 选中的镜像被删除（它本身或它所在的文件夹）时取消选中。 */

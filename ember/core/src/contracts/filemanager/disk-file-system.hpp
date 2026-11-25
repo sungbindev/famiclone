@@ -55,6 +55,12 @@ struct FileSystemTraits {
   bool subdirectories{true};
 };
 
+/** 文件系统的容量与可用空间（字节）：容量是能存放文件内容的全部空间（FAT 按簇、DOS 3.3 按扇区、ProDOS 按块）。 */
+struct FileSystemSpace {
+  std::uint64_t capacity{0};
+  std::uint64_t free{0};
+};
+
 /** 导出的文件：Windows 上的建议文件名与内容。 */
 struct ExportedFile {
   std::string name;
@@ -67,6 +73,9 @@ class DiskFileSystem {
   virtual ~DiskFileSystem() = default;
 
   [[nodiscard]] virtual const FileSystemTraits& traits() const = 0;
+
+  /** 容量与可用空间。@throws shared::CoreError filemanager.corrupt。 */
+  [[nodiscard]] virtual FileSystemSpace space() = 0;
 
   /**
    * 列出一个目录的内容，顺序与磁盘上的目录一致（文件夹不提前）。

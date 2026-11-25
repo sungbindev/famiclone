@@ -41,6 +41,7 @@ class OwningFileSystem final : public api::DiskFileSystem {
   void attach(std::unique_ptr<api::DiskFileSystem> inner) { inner_ = std::move(inner); }
 
   [[nodiscard]] const api::FileSystemTraits& traits() const override { return inner_->traits(); }
+  [[nodiscard]] api::FileSystemSpace space() override { return inner_->space(); }
   [[nodiscard]] std::vector<api::DiskEntry> list(const api::EntryPath& directory) override { return inner_->list(directory); }
   void rename(const api::EntryPath& entry, const std::string& name) override { inner_->rename(entry, name); }
   void remove(const api::EntryPath& entry) override { inner_->remove(entry); }

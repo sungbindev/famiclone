@@ -44,6 +44,9 @@ struct ParsedList {
   std::string formatName;
   bool writable{false};
   bool subdirectories{false};
+  /** 文件系统的容量与可用空间（字节）。 */
+  std::uint64_t capacity{0};
+  std::uint64_t freeSpace{0};
   int drive{-1};
   std::string readOnlyReason;
   int undoDepth{0};

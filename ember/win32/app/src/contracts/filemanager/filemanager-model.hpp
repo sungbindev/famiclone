@@ -98,6 +98,11 @@ struct DiskImageView {
   /** 文件系统的格式标识与显示名称。 */
   std::string format;
   std::string formatName;
+  /** 文件系统的容量与可用空间（字节）。 */
+  std::uint64_t capacity{0};
+  std::uint64_t freeSpace{0};
+  /** 软盘镜像的概况：格式、容量与可用空间，如“FAT12 · 容量 1.41 MB · 可用 1.2 MB”，显示在右边列表最后一行的下面；其他文件、还在读取和读取失败时为空。 */
+  std::string info;
   /** 有没有子目录：没有时（DOS 3.3）不能新建文件夹，也不能移动文件。 */
   bool subdirectories{false};
   /** 文件系统能不能修改（.nib、.woz 只能看）。 */

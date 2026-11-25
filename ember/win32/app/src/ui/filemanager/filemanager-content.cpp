@@ -569,6 +569,7 @@ void FileManagerContent::updateImage(const contracts::DiskImageView& previous) {
     }
   }
   table_->setRows(std::move(rows));
+  table_->setFooterText(shown && !view.failed ? view.info : std::string());
   tryStartRename();
 }
 

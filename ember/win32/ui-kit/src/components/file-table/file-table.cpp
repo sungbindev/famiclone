@@ -67,6 +67,8 @@ constexpr double kRowMarginRight = tokens::space_page;
 constexpr double kDimmedOpacity = 0.5;
 /** 没有行时说明文字离表头的距离。 */
 constexpr double kEmptyTextTop = 12.0;
+/** 说明行与上面最后一行之间的空隔。 */
+constexpr double kFooterGap = 12.0;
 
 }  // namespace
 
@@ -112,6 +114,13 @@ void FileTable::setRows(std::vector<FileTableRow> rows) {
 
 void FileTable::setEmptyText(std::string text) {
   emptyText_ = std::move(text);
+  invalidate();
+}
+
+void FileTable::setFooterText(std::string text) {
+  if (footerText_ == text) return;
+  footerText_ = std::move(text);
+  requestLayout();
   invalidate();
 }
 
@@ -270,7 +279,7 @@ Rect FileTable::nameCellRect(std::size_t index) const {
 }
 
 Size FileTable::measure(Size available) {
-  double height = kRowHeight * static_cast<double>(rows_.size() + 1);
+  double height = kRowHeight * static_cast<double>(rows_.size() + 1) + (footerText_.empty() ? 0.0 : kFooterGap + kRowHeight);
   // 内容不够高时撑满滚动区域，空白处也能点击与右键
   if (const auto* area = dynamic_cast<const ScrollArea*>(parent())) height = std::max(height, area->bounds().height);
   return Size{available.width, height};
@@ -626,7 +635,14 @@ void FileTable::paint(Canvas& canvas) {
 
   if (rows_.empty() && !emptyText_.empty()) {
     const double width = host()->measureText(emptyText_, cellStyle, 0).width + 1.0;
-    canvas.drawText(emptyText_, Rect{view.x + std::max(0.0, (view.width - width) / 2.0), view.y + kRowHeight + kEmptyTextTop, width, kRowHeight}, cellStyle, VerticalAlign::Center);
+    const double top = view.y + kRowHeight + kEmptyTextTop + (footerText_.empty() ? 0.0 : kRowHeight + kFooterGap);
+    canvas.drawText(emptyText_, Rect{view.x + std::max(0.0, (view.width - width) / 2.0), top, width, kRowHeight}, cellStyle, VerticalAlign::Center);
+  }
+
+  if (!footerText_.empty()) {
+    const Rect footer = rowRectAt(rows_.size());
+    const Rect line{footer.x, footer.y + kFooterGap, footer.width, footer.height};
+    if (line.bottom() >= view.y && line.y <= view.bottom()) canvas.drawText(footerText_, Rect{line.x + kPaddingX, line.y, std::max(0.0, line.width - kPaddingX - kRowMarginRight), line.height}, cellStyle, VerticalAlign::Center);
   }
 
   // 表头：固定在可见区域顶部，盖住下面滚过去的行

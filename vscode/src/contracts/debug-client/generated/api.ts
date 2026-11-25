@@ -855,6 +855,10 @@ export interface FilemanagerListParams {
 /** filemanager.list 的结果。 */
 export interface FilemanagerListResult {
   fileSystem: FilemanagerFileSystemInfo;
+  /** 文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 按扇区、ProDOS 按块算 */
+  capacity: number;
+  /** 现在还空着的空间（字节） */
+  freeSpace: number;
   /** 目录里的条目 */
   entries: FilemanagerEntryInfo[];
   /** 镜像插在哪个软驱里（编号从 0 起）；没有插入时为 null */

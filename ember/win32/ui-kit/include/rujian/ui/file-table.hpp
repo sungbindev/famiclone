@@ -17,6 +17,7 @@
  *       最小宽度：minimumSize 是各列宽度之和（最后一列取它的最小宽度），放在允许横向滚动的滚动区域里时放不下就出现横向滚动条，表头跟着左右滚动。
  *       靠右对齐的列（如大小）在它不是最后一列时内容靠右，是最后一列时靠左；表头文字一律靠左，与竖线右边的起点对齐。
  *       重命名：文件（不是文件夹）打开输入框时只选中扩展名之前的部分，文件夹全选。
+ *       说明行：setFooterText 在最后一行下面紧跟着画一行弱化色文字，不是行，不能选中，跟着内容一起滚动。
  * ------------------------------------------------------------------------
  */
 
@@ -84,6 +85,8 @@ class FileTable : public Widget {
   void setDimmedIds(const std::vector<std::string>& ids);
   /** 没有行时在中间显示的说明文字。 */
   void setEmptyText(std::string text);
+  /** 紧跟在最后一行下面的一行弱化色说明（不是行，不能选中，也不在窗口最底下）；空串表示没有。 */
+  void setFooterText(std::string text);
 
   /** 此刻选中的行标识，按行的顺序。 */
   [[nodiscard]] std::vector<std::string> selectedIds() const;
@@ -174,6 +177,7 @@ class FileTable : public Widget {
   std::vector<double> resizeStartWidths_;
   std::vector<FileTableRow> rows_;
   std::string emptyText_;
+  std::string footerText_;
   std::set<std::string> selection_;
   std::string anchorId_;
   std::string focusId_;

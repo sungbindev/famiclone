@@ -342,6 +342,14 @@ void ProDosFileSystem::requireWritable() const {
 
 void ProDosFileSystem::commit() { appleFromLinear(image_, linear_, identity_.fileOrder, AppleOrder::ProDos, identity_.tracks); }
 
+api::FileSystemSpace ProDosFileSystem::space() {
+  std::uint64_t freeBlocks = 0;
+  for (std::uint32_t block = 0; block < totalBlocks_; ++block) {
+    if (blockFree(block)) ++freeBlocks;
+  }
+  return api::FileSystemSpace{static_cast<std::uint64_t>(totalBlocks_) * BLOCK_SIZE, freeBlocks * BLOCK_SIZE};
+}
+
 std::vector<api::DiskEntry> ProDosFileSystem::list(const api::EntryPath& directory) {
   const std::uint32_t key = resolveDirectory(directory);
   std::vector<api::DiskEntry> result;

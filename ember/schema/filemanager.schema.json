@@ -119,12 +119,14 @@
         "type": "object",
         "properties": {
           "fileSystem": { "$ref": "#/types/FileSystemInfo" },
+          "capacity": { "type": "integer", "minimum": 0, "description": "文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 按扇区、ProDOS 按块算" },
+          "freeSpace": { "type": "integer", "minimum": 0, "description": "现在还空着的空间（字节）" },
           "entries": { "type": "array", "items": { "$ref": "#/types/EntryInfo" }, "description": "目录里的条目" },
           "drive": { "type": ["integer", "null"], "description": "镜像插在哪个软驱里（编号从 0 起）；没有插入时为 null" },
           "readOnlyReason": { "type": ["string", "null"], "description": "不能修改的原因（位流格式、软驱里的盘片写保护）；可以修改时为 null" },
           "undoDepth": { "type": "integer", "minimum": 0, "description": "这个镜像里可以撤销的操作数" }
         },
-        "required": ["fileSystem", "entries", "drive", "readOnlyReason", "undoDepth"]
+        "required": ["fileSystem", "capacity", "freeSpace", "entries", "drive", "readOnlyReason", "undoDepth"]
       },
       "errors": ["filemanager.noRoot", "filemanager.invalidPath", "filemanager.imageNotFound", "filemanager.imageUnreadable", "filemanager.unknownFormat", "filemanager.entryNotFound", "filemanager.corrupt"]
     },

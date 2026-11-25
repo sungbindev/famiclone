@@ -689,6 +689,16 @@
             "fileSystem": {
               "$ref": "#/components/schemas/filemanager.FileSystemInfo"
             },
+            "capacity": {
+              "type": "integer",
+              "description": "文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 按扇区、ProDOS 按块算",
+              "minimum": 0
+            },
+            "freeSpace": {
+              "type": "integer",
+              "description": "现在还空着的空间（字节）",
+              "minimum": 0
+            },
             "entries": {
               "type": "array",
               "description": "目录里的条目",
@@ -718,6 +728,8 @@
           },
           "required": [
             "fileSystem",
+            "capacity",
+            "freeSpace",
             "entries",
             "drive",
             "readOnlyReason",

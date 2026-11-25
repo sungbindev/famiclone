@@ -399,6 +399,9 @@ api::FilemanagerListResult FileManager::list(const api::FilemanagerListParams& p
   api::FilemanagerListResult result;
   const api::FileSystemTraits& traits = fileSystem->traits();
   result.fileSystem = api::FileSystemInfo{traits.formatId, traits.formatName, traits.writable, traits.subdirectories};
+  const api::FileSystemSpace space = fileSystem->space();
+  result.capacity = static_cast<std::int64_t>(space.capacity);
+  result.freeSpace = static_cast<std::int64_t>(space.free);
   for (const api::DiskEntry& entry : fileSystem->list(params.directory)) {
     result.entries.push_back(api::EntryInfo{entry.name, entry.directory, entry.type, entry.size, entry.sizeIsAllocated, entry.modified, entry.locked});
   }

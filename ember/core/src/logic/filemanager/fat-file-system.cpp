@@ -241,6 +241,14 @@ void FatFileSystem::freeChain(std::uint32_t first) {
   for (const std::uint32_t cluster : chain(first)) fatSet(cluster, 0);
 }
 
+api::FileSystemSpace FatFileSystem::space() {
+  std::uint64_t freeClusters = 0;
+  for (std::uint32_t cluster = 2; cluster < geometry_.clusterCount + 2; ++cluster) {
+    if (fatGet(cluster) == 0) ++freeClusters;
+  }
+  return api::FileSystemSpace{static_cast<std::uint64_t>(geometry_.clusterCount) * geometry_.clusterBytes(), freeClusters * geometry_.clusterBytes()};
+}
+
 // ---------------------------------------------------------------- 目录
 
 std::vector<std::size_t> FatFileSystem::slots(const DirRef& directory) const {

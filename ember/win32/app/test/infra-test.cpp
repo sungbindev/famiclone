@@ -49,16 +49,12 @@ TEST(FileShellStateService, StartsFromDefaultsAndPersistsEveryKindOfChange) {
   {
     platform::JsonFileStore store(file, ui);
     infra::FileShellStateService service(store);
-    EXPECT_FALSE(service.get().window);
-    service.updateWindow({30, 40});
     service.updateLayout({std::string("sb2000"), {"runtime.panel"}});
     service.updateReleaseNotesVersion("0.3.0");
     service.flush();
   }
   platform::JsonFileStore store(file, ui);
   infra::FileShellStateService service(store);
-  ASSERT_TRUE(service.get().window);
-  EXPECT_EQ(*service.get().window, (shared::WindowPlacement{30, 40}));
   EXPECT_EQ(service.get().layout.selectedMachine, "sb2000");
   EXPECT_EQ(service.get().layout.autoCollapseOffPanels, std::vector<std::string>{"runtime.panel"});
   EXPECT_EQ(service.get().releaseNotesVersion, "0.3.0");
@@ -68,10 +64,9 @@ TEST(FileShellStateService, ReadsTheSavedFileFormat) {
   test::TempDirectory directory;
   platform::UiThread ui;
   const auto file = directory.path() / "shell-state.json";
-  std::ofstream(file) << R"({"window":{"x":100,"y":50},"layout":{"selectedMachine":null,"autoCollapseOffPanels":["media.devices"]},"releaseNotesVersion":"0.2.2"})";
+  std::ofstream(file) << R"({"layout":{"selectedMachine":null,"autoCollapseOffPanels":["media.devices"]},"releaseNotesVersion":"0.2.2"})";
   platform::JsonFileStore store(file, ui);
   infra::FileShellStateService service(store);
-  EXPECT_EQ(*service.get().window, (shared::WindowPlacement{100, 50}));
   EXPECT_FALSE(service.get().layout.selectedMachine);
   EXPECT_EQ(service.get().layout.autoCollapseOffPanels, std::vector<std::string>{"media.devices"});
 }

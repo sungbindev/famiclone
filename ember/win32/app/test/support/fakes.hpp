@@ -279,7 +279,6 @@ class FakeShellState : public contracts::ShellStateService {
     state.layout = layout;
     ++layoutUpdates;
   }
-  void updateWindow(const shared::WindowPlacement& placement) override { state.window = placement; }
   void updateReleaseNotesVersion(const std::string& version) override { state.releaseNotesVersion = version; }
   void updateFileManagerRoot(const std::optional<std::string>& path) override { state.fileManagerRoot = path; }
   void flush() override {}

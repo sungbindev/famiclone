@@ -49,8 +49,6 @@ struct FramelessCallbacks {
   std::function<void(bool maximized)> maximizedChanged;
   /** 窗口激活或失去激活。 */
   std::function<void(bool active)> activeChanged;
-  /** 窗口位置变化（设备像素，窗口左上角）；最大化与最小化时不报告。 */
-  std::function<void(int x, int y)> moved;
   /** 系统的明暗主题设置变化。 */
   std::function<void()> systemThemeChanged;
   /** 系统的窗口合成（DWM）开关变化。 */

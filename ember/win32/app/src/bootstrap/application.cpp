@@ -487,7 +487,6 @@ int runApplication(const shared::LaunchArguments& launch) {
       applyBorderColor();
     };
 
-    bool trackMoves = false;
     platform::FramelessCallbacks callbacks;
     callbacks.hitTest = [view](double x, double y) { return toFrameHit(view->hitTestWindow(rujian::ui::Point{x, y})); };
     callbacks.systemButtonState = [view](platform::FrameHit hover, platform::FrameHit pressed) { view->setSystemButtonState(toTitleBarHit(hover), toTitleBarHit(pressed)); };
@@ -497,10 +496,6 @@ int runApplication(const shared::LaunchArguments& launch) {
       if (screenWidget != nullptr) screenWidget->setWindowActive(active);
       // 失去激活时菜单等弹层跟着关闭
       if (!active) window.root().dismissLayers();
-    };
-    // 开始的摆放不算用户移动窗口，显示之后的位置变化才保存
-    callbacks.moved = [&shellState, &trackMoves](int x, int y) {
-      if (trackMoves) shellState.updateWindow(shared::WindowPlacement{x, y});
     };
     callbacks.systemThemeChanged = [&] {
       if (themeSource == entry::ThemeSource::System) applyTheme();
@@ -552,7 +547,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     frame.attach();
 
     const double scale = window.root().scale();
-    platform::placeWindow(mainWindow, static_cast<int>(std::lround(kWindowWidth * scale)), static_cast<int>(std::lround(kWindowHeight * scale)), shellState.get().window);
+    platform::placeWindow(mainWindow, static_cast<int>(std::lround(kWindowWidth * scale)), static_cast<int>(std::lround(kWindowHeight * scale)));
 
     // 窗口模式（全屏、置顶、拖放）与运行画面宿主
     windowControl.onQuit = [window = mainWindow] { PostMessageW(window, WM_CLOSE, 0, 0); };
@@ -619,7 +614,6 @@ int runApplication(const shared::LaunchArguments& launch) {
       shown = true;
       if (showTimer != 0) ui.cancelDelayed(showTimer);
       window.show();
-      trackMoves = true;
       // 上次媒体库是开着的，这次启动同时打开，停靠在主窗口左边，焦点留在主窗口
       if (shellState.get().layout.fileManagerOpen) dialogs.openDialogInBackground(logic::kFileManagerDialogId);
     };

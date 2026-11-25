@@ -66,7 +66,6 @@ TEST(RecentCartridges, FileFormatRoundTripsAndNameIsTheFileName) {
 TEST(ShellState, DefaultsWhenMissingOrBroken) {
   for (const json& raw : {json(nullptr), json::array(), json("x"), json(5)}) {
     const ShellState state = parseShellState(raw);
-    EXPECT_FALSE(state.window);
     EXPECT_FALSE(state.layout.selectedMachine);
     EXPECT_TRUE(state.layout.autoCollapseOffPanels.empty());
     EXPECT_FALSE(state.releaseNotesVersion);
@@ -74,21 +73,15 @@ TEST(ShellState, DefaultsWhenMissingOrBroken) {
 }
 
 TEST(ShellState, ReadsEachValidItemAndReplacesOnlyTheBrokenOnes) {
-  const ShellState state = parseShellState({{"window", {{"x", 10}, {"y", -20}}},
-                                            {"layout", {{"selectedMachine", "sb2000"}, {"autoCollapseOffPanels", {"runtime.panel", "bad id"}}}},
+  const ShellState state = parseShellState({{"layout", {{"selectedMachine", "sb2000"}, {"autoCollapseOffPanels", {"runtime.panel", "bad id"}}}},
                                             {"releaseNotesVersion", "0.2.2"}});
-  ASSERT_TRUE(state.window);
-  EXPECT_EQ(*state.window, (WindowPlacement{10, -20}));
   EXPECT_EQ(state.layout.selectedMachine, "sb2000");
   // 清单里有一项不合格，整个清单不用
   EXPECT_TRUE(state.layout.autoCollapseOffPanels.empty());
   EXPECT_EQ(state.releaseNotesVersion, "0.2.2");
 }
 
-TEST(ShellState, RejectsOutOfRangeWindowAndMalformedFields) {
-  EXPECT_FALSE(parseShellState({{"window", {{"x", 100001}, {"y", 0}}}}).window);
-  EXPECT_FALSE(parseShellState({{"window", {{"x", 1.5}, {"y", 0}}}}).window);
-  EXPECT_FALSE(parseShellState({{"window", {{"x", 1}}}}).window);
+TEST(ShellState, RejectsMalformedFields) {
   EXPECT_FALSE(parseShellState({{"layout", {{"selectedMachine", "Bad Machine"}}}}).layout.selectedMachine);
   EXPECT_FALSE(parseShellState({{"releaseNotesVersion", "v1"}}).releaseNotesVersion);
   const auto dup = parseShellState({{"layout", {{"autoCollapseOffPanels", {"runtime.panel", "runtime.panel"}}}}});
@@ -99,18 +92,14 @@ TEST(ShellState, RejectsOutOfRangeWindowAndMalformedFields) {
 
 TEST(ShellState, SerialisesToTheSameFormat) {
   ShellState state;
-  state.window = WindowPlacement{5, 6};
   state.layout.selectedMachine = "fc";
   state.layout.autoCollapseOffPanels = {"runtime.panel"};
   state.releaseNotesVersion = "1.0.0";
   const json written = toJson(state);
-  EXPECT_EQ(written["window"]["x"], 5);
   EXPECT_EQ(written["layout"]["selectedMachine"], "fc");
   const ShellState back = parseShellState(written);
-  EXPECT_EQ(back.window, state.window);
   EXPECT_EQ(back.layout, state.layout);
   EXPECT_EQ(back.releaseNotesVersion, state.releaseNotesVersion);
-  EXPECT_TRUE(toJson(ShellState{})["window"].is_null());
 }
 
 TEST(AllowMultipleInstances, OnlyAnExplicitTrueInAVersionOneFileCounts) {

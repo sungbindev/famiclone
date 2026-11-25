@@ -20,7 +20,6 @@ namespace ember::win32::shared {
 
 namespace {
 
-constexpr long long kMaxCoordinate = 100000;
 constexpr std::size_t kMaxMachineLength = 32;
 constexpr std::size_t kMaxVersionLength = 64;
 constexpr std::size_t kMaxPanelIdLength = 64;
@@ -60,22 +59,6 @@ bool isDirectoryPath(const std::string& text) {
   return !text.empty() && text.size() <= kMaxPathLength && std::none_of(text.begin(), text.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; });
 }
 
-std::optional<int> parseCoordinate(const nlohmann::json& value) {
-  if (!value.is_number_integer()) return std::nullopt;
-  const long long number = value.get<long long>();
-  if (number < -kMaxCoordinate || number > kMaxCoordinate) return std::nullopt;
-  return static_cast<int>(number);
-}
-
-/** 窗口位置：任一项不合格时整个位置不用。 */
-std::optional<WindowPlacement> parseWindow(const nlohmann::json& raw) {
-  if (!raw.is_object() || !raw.contains("x") || !raw.contains("y")) return std::nullopt;
-  const auto x = parseCoordinate(raw["x"]);
-  const auto y = parseCoordinate(raw["y"]);
-  if (!x || !y) return std::nullopt;
-  return WindowPlacement{*x, *y};
-}
-
 /** 合格的面板标识清单：长度有限、每项写法合格、没有重复；不合格时为空。 */
 std::optional<std::vector<std::string>> parsePanelList(const nlohmann::json& raw) {
   if (!raw.is_array() || raw.size() > kMaxAutoCollapsePanels) return std::nullopt;
@@ -107,7 +90,6 @@ std::map<std::string, std::string> parseKeybindings(const nlohmann::json& raw) {
 ShellState parseShellState(const nlohmann::json& raw) {
   ShellState state;
   if (!raw.is_object()) return state;
-  if (raw.contains("window")) state.window = parseWindow(raw["window"]);
   if (raw.contains("layout") && raw["layout"].is_object()) {
     const nlohmann::json& layout = raw["layout"];
     if (layout.contains("selectedMachine") && layout["selectedMachine"].is_string() && isMachineId(layout["selectedMachine"].get<std::string>())) state.layout.selectedMachine = layout["selectedMachine"].get<std::string>();
@@ -131,8 +113,7 @@ nlohmann::json toJson(const ShellState& state) {
                         {"alwaysOnTop", state.layout.alwaysOnTop},
                         {"fileManagerOpen", state.layout.fileManagerOpen},
                         {"keybindings", state.layout.keybindings}};
-  return {{"window", state.window ? nlohmann::json{{"x", state.window->x}, {"y", state.window->y}} : nlohmann::json(nullptr)},
-          {"layout", layout},
+  return {{"layout", layout},
           {"releaseNotesVersion", state.releaseNotesVersion ? nlohmann::json(*state.releaseNotesVersion) : nlohmann::json(nullptr)},
           {"fileManagerRoot", state.fileManagerRoot ? nlohmann::json(*state.fileManagerRoot) : nlohmann::json(nullptr)}};
 }

@@ -176,7 +176,6 @@ struct FrameFixture {
   std::vector<std::pair<platform::FrameHit, platform::FrameHit>> buttonStates;
   std::vector<bool> activeStates;
   std::vector<bool> maximizedStates;
-  std::vector<std::pair<int, int>> moves;
   int themeChanges{0};
   int nonClientPresses{0};
   std::unique_ptr<platform::FramelessFrame> frame;
@@ -209,7 +208,6 @@ struct FrameFixture {
     callbacks.systemButtonState = [this](platform::FrameHit hover, platform::FrameHit pressed) { buttonStates.emplace_back(hover, pressed); };
     callbacks.activeChanged = [this](bool active) { activeStates.push_back(active); };
     callbacks.maximizedChanged = [this](bool maximized) { maximizedStates.push_back(maximized); };
-    callbacks.moved = [this](int x, int y) { moves.emplace_back(x, y); };
     callbacks.systemThemeChanged = [this] { ++themeChanges; };
     callbacks.nonClientPressed = [this] { ++nonClientPresses; };
     frame = std::make_unique<platform::FramelessFrame>(hwnd, platform::FramelessOptions{kWidth, kHeight, [this] { return window.root().scale(); }, customFrame}, std::move(callbacks));
@@ -386,14 +384,6 @@ TEST(FramelessFrame, ActivationAndThemeSettingChangesAreReported) {
   SendMessageW(f.hwnd, WM_SETTINGCHANGE, 0, reinterpret_cast<LPARAM>(L"ImmersiveColorSet"));
   SendMessageW(f.hwnd, WM_SETTINGCHANGE, 0, reinterpret_cast<LPARAM>(L"intl"));
   EXPECT_EQ(f.themeChanges, 1);
-}
-
-TEST(FramelessFrame, MovesAreReportedWithTheWindowPosition) {
-  FrameFixture f;
-  f.moves.clear();
-  SetWindowPos(f.hwnd, nullptr, 321, 123, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-  ASSERT_FALSE(f.moves.empty());
-  EXPECT_EQ(f.moves.back(), std::make_pair(321, 123));
 }
 
 TEST(FramelessFrame, MaximizedClientAreaIsTheMonitorWorkArea) {

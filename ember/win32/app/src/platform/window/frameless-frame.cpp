@@ -287,8 +287,6 @@ bool FramelessFrame::handle(unsigned message, std::uintptr_t wParam, std::intptr
       return false;
     }
     case WM_WINDOWPOSCHANGED: {
-      const auto* position = reinterpret_cast<const WINDOWPOS*>(lParam);
-      if ((position->flags & SWP_NOMOVE) == 0 && IsZoomed(hwnd) == FALSE && IsIconic(hwnd) == FALSE && callbacks_.moved) callbacks_.moved(position->x, position->y);
       if (shadow_) {
         shadow_->setScale(options_.scale ? options_.scale() : 1.0);
         shadow_->sync();

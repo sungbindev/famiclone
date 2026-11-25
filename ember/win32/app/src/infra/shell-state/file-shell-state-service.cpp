@@ -23,12 +23,6 @@ void FileShellStateService::updateLayout(const shared::ShellLayout& layout) {
   replace(std::move(next));
 }
 
-void FileShellStateService::updateWindow(const shared::WindowPlacement& placement) {
-  shared::ShellState next = state_;
-  next.window = placement;
-  replace(std::move(next));
-}
-
 void FileShellStateService::updateReleaseNotesVersion(const std::string& version) {
   shared::ShellState next = state_;
   next.releaseNotesVersion = version;

@@ -23,7 +23,6 @@ class FileShellStateService : public contracts::ShellStateService {
 
   [[nodiscard]] const shared::ShellState& get() const override { return state_; }
   void updateLayout(const shared::ShellLayout& layout) override;
-  void updateWindow(const shared::WindowPlacement& placement) override;
   void updateReleaseNotesVersion(const std::string& version) override;
   void updateFileManagerRoot(const std::optional<std::string>& path) override;
   void flush() override { store_.flush(); }

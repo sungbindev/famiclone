@@ -7,6 +7,8 @@
 | 目录 | 内容 |
 | --- | --- |
 | [disassembly/](disassembly/README.md) | PEC-9588 的反汇编工程（ca65 源码，构建结果与 `ember/roms/pec9588.bin` 逐字节一致） |
+| [docs/LM-DOS命令.md](docs/LM-DOS命令.md) | 磁盘操作系统 LM-DOS 3.31 的 37 个命令：格式、作用、参数规则表、错误信息 |
+| [docs/LM-DOS系统接口.md](docs/LM-DOS系统接口.md) | 页 3 向量、文件管理器、读写盘程序（RWTS）、控制台与系统跳转表 |
 
 ## 映像
 

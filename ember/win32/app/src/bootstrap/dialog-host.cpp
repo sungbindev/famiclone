@@ -22,12 +22,12 @@ DialogHost::~DialogHost() { *alive_ = false; }
 
 void DialogHost::setDefinitions(std::map<std::string, contracts::ShellDialogDefinition> definitions) { definitions_ = std::move(definitions); }
 
-void DialogHost::setBody(const std::string& dialogId, BodyFactory factory, bool fills, bool flushTop) {
+void DialogHost::setBody(const std::string& dialogId, BodyFactory factory, bool fills, bool flushVertical) {
   bodies_[dialogId] = std::move(factory);
   if (fills) fillingBodies_.insert(dialogId);
   else fillingBodies_.erase(dialogId);
-  if (flushTop) flushTopBodies_.insert(dialogId);
-  else flushTopBodies_.erase(dialogId);
+  if (flushVertical) flushVerticalBodies_.insert(dialogId);
+  else flushVerticalBodies_.erase(dialogId);
 }
 
 void DialogHost::setKeyCapture(const std::string& dialogId, std::function<bool(const std::string& code)> capture) { keyCaptures_[dialogId] = std::move(capture); }
@@ -57,7 +57,7 @@ void DialogHost::openDialog(const std::string& dialogId) {
   frame->setContentFill(fillingBodies_.count(dialogId) > 0);
   // 铺满的正文自己负责滚动，滚动条要贴到对话框的右边
   frame->setContentFlushRight(true);
-  frame->setContentFlushTop(flushTopBodies_.count(dialogId) > 0);
+  frame->setContentFlushVertical(flushVerticalBodies_.count(dialogId) > 0);
   if (logo_) frame->setLogo(logo_());
   std::unique_ptr<rujian::ui::Widget> content = body->second();
   rujian::ui::Widget* contentPointer = content.get();

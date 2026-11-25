@@ -29,26 +29,26 @@ constexpr int kVirtualKeySpace = 0x20;
 /** 最小尺寸的余量（逻辑像素）：文字宽度刚好放下时不因浮点误差换行。 */
 constexpr double kFitSlack = 0.5;
 
-/** 铺满正文区的正文包装：四周留正文内边距（flushRight 时右边不留，flushTop 时上边不留），正文自己占满剩下的区域（对应网页版正文元素的 height: 100%）。 */
+/** 铺满正文区的正文包装：四周留正文内边距（flushRight 时右边不留，flushVertical 时上下不留），正文自己占满剩下的区域（对应网页版正文元素的 height: 100%）。 */
 class FillBody final : public Widget {
  public:
-  FillBody(std::unique_ptr<Widget> content, bool flushRight, bool flushTop) : rightPadding_(flushRight ? 0.0 : tokens::space_page), topPadding_(flushTop ? 0.0 : tokens::space_page) { content_ = addChild(std::move(content)); }
+  FillBody(std::unique_ptr<Widget> content, bool flushRight, bool flushVertical) : rightPadding_(flushRight ? 0.0 : tokens::space_page), verticalPadding_(flushVertical ? 0.0 : tokens::space_page) { content_ = addChild(std::move(content)); }
 
   [[nodiscard]] Widget* content() const { return content_; }
 
   [[nodiscard]] Size measure(Size available) override {
     const double inner = std::max(0.0, available.width - tokens::space_page - rightPadding_);
-    return Size{available.width, content_->measure(Size{inner, 0}).height + topPadding_ + tokens::space_page};
+    return Size{available.width, content_->measure(Size{inner, 0}).height + 2 * verticalPadding_};
   }
 
   void arrange(const Rect& bounds) override {
     setBounds(bounds);
-    content_->arrange(Rect{bounds.x + tokens::space_page, bounds.y + topPadding_, std::max(0.0, bounds.width - tokens::space_page - rightPadding_), std::max(0.0, bounds.height - topPadding_ - tokens::space_page)});
+    content_->arrange(Rect{bounds.x + tokens::space_page, bounds.y + verticalPadding_, std::max(0.0, bounds.width - tokens::space_page - rightPadding_), std::max(0.0, bounds.height - 2 * verticalPadding_)});
   }
 
  private:
   double rightPadding_;
-  double topPadding_;
+  double verticalPadding_;
   Widget* content_{nullptr};
 };
 
@@ -191,7 +191,7 @@ void DialogFrame::setContent(std::unique_ptr<Widget> content) {
   }
   scroll_->setFitContent(contentFill_);
   if (contentFill_) {
-    auto body = std::make_unique<FillBody>(std::move(content), contentFlushRight_, contentFlushTop_);
+    auto body = std::make_unique<FillBody>(std::move(content), contentFlushRight_, contentFlushVertical_);
     content_ = body->content();
     wrapper_ = body.get();
     scroll_->setContent(std::move(body));
@@ -345,13 +345,13 @@ double DialogFrame::naturalHeight(double width, double maxBodyHeight) {
 Size DialogFrame::minimumWindowSize() {
   const Size body = content_ != nullptr ? content_->minimumSize() : Size{};
   const double rightPadding = contentFill_ && contentFlushRight_ ? 0.0 : tokens::space_page;
-  const double topPadding = contentFill_ && contentFlushTop_ ? 0.0 : tokens::space_page;
+  const double verticalPadding = contentFill_ && contentFlushVertical_ ? 0.0 : tokens::space_page;
   double controls = tokens::space_sm + tokens::space_xs + (logo_ != nullptr ? tokens::title_bar_logo_size + tokens::space_sm : 0.0);
   for (const Widget* control : {minimize_, maximize_, close_}) {
     if (control != nullptr) controls += systemButtons_ ? tokens::title_bar_tool_width : tokens::dialog_control_size + tokens::space_xxs;
   }
   const double bodyWidth = body.width > 0 ? body.width + tokens::space_page + rightPadding + kFitSlack : 0.0;
-  const double bodyHeight = body.height > 0 ? body.height + topPadding + tokens::space_page + kFitSlack : 0.0;
+  const double bodyHeight = body.height > 0 ? body.height + 2 * verticalPadding + kFitSlack : 0.0;
   return Size{std::max(controls, bodyWidth), tokens::dialog_titlebar_height + bodyHeight + footerHeight()};
 }
 

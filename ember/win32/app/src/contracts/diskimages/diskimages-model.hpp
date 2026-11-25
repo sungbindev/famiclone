@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
- * 备注：数据来自核心（diskimages.*），文字由逻辑层算好，界面只显示；操作立即生效，不弹确认；
+ * 备注：数据来自核心（diskimages.*），文字由逻辑层算好，界面只显示；操作立即生效，只有删除与移动由控制器先弹确认；
  *       操作的结果与错误用外壳通知给出，模型不显示结果；某个文件系统不支持的操作由界面按 canModify、subdirectories 判断并给出提示，不去调用；规则见 docs/05-界面.md 第 4.8 节。
  * ------------------------------------------------------------------------
  */
@@ -145,7 +145,7 @@ class DiskImagesModel {
 
   /** 重命名当前文件夹里的条目。 */
   virtual void rename(const std::string& name, const std::string& newName) = 0;
-  /** 删除当前文件夹里的条目，不确认。 */
+  /** 删除当前文件夹里的条目（先确认）。 */
   virtual void remove(const std::vector<std::string>& names) = 0;
   /** 把当前文件夹里的条目移进当前文件夹里的一个文件夹。 */
   virtual void moveInto(const std::vector<std::string>& names, const std::string& folder) = 0;

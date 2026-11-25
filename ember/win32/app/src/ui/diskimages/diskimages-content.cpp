@@ -48,9 +48,6 @@ constexpr const char* kColumnType = "类型";
 constexpr const char* kColumnSize = "大小";
 constexpr const char* kColumnModified = "修改时间";
 constexpr const char* kParentName = "..";
-constexpr const char* kInfoSeparator = "  ·  ";
-constexpr const char* kInDrive = "已插入软驱 A";
-constexpr const char* kReadOnlyPrefix = "只读：";
 
 constexpr const char* kMenuNewImage = "新建空白镜像";
 constexpr const char* kMenuLoad = "载入软驱 A";
@@ -93,7 +90,7 @@ constexpr int kKeyV = 0x56;
 constexpr int kKeyX = 0x58;
 constexpr int kKeyZ = 0x5A;
 
-/** 资源管理器上方标题行的高度、内边距、标题文字，以及右边镜像信息行的高度（与标题行等高）。 */
+/** 资源管理器上方标题行的高度、内边距、标题文字，以及右边提示行的高度（与标题行等高）。 */
 constexpr double kHeaderRowHeight = 28.0;
 constexpr double kHeaderPadding = 10.0;
 constexpr double kButtonsPadding = 6.0;
@@ -102,7 +99,6 @@ constexpr double kTitleFontSize = 12.0;
 constexpr int kTitleFontWeight = 600;
 /** 标题首字笔画左边的字面空隙，对齐展开箭头时要扣掉。 */
 constexpr double kTitleBearing = 1.0;
-constexpr double kInfoHeight = kHeaderRowHeight;
 /** 资源管理器的初始宽度、最小宽度与最大宽度，镜像内容展开时窗口增加的宽度，以及镜像内容至少要有的宽度。 */
 constexpr double kSideWidth = 320.0;
 constexpr double kSideMinWidth = 260.0;
@@ -120,14 +116,15 @@ class Notice final : public State {
   [[nodiscard]] Widget* hitTest(Point /*point*/) override { return nullptr; }
 };
 
-/** 右边的窗格：上面一行镜像信息，下面是放在滚动区域里的文件列表，没有内容时在列表上方盖一块说明。 */
+/** 右边的窗格：没选镜像时最上面一行是提示，否则最上面就是放在滚动区域里的文件列表（表头固定显示），失败时在列表上方盖一块说明。 */
 class MainPane final : public Widget {
  public:
   MainPane() {
-    auto info = std::make_unique<Label>();
-    info->setWrap(false);
-    info->setMuted(true);
-    info_ = static_cast<Label*>(addChild(std::move(info)));
+    auto hint = std::make_unique<Label>();
+    hint->setWrap(false);
+    hint->setMuted(true);
+    hint->setVisible(false);
+    hint_ = static_cast<Label*>(addChild(std::move(hint)));
     auto scroll = std::make_unique<ScrollArea>();
     scroll->setHorizontalScroll(true);
     auto table = std::make_unique<FileTable>();
@@ -138,7 +135,7 @@ class MainPane final : public Widget {
     notice_->setVisible(false);
   }
 
-  [[nodiscard]] Label* info() const { return info_; }
+  [[nodiscard]] Label* hint() const { return hint_; }
   [[nodiscard]] ScrollArea* scroll() const { return scroll_; }
   [[nodiscard]] FileTable* table() const { return table_; }
   [[nodiscard]] State* notice() const { return notice_; }
@@ -147,9 +144,13 @@ class MainPane final : public Widget {
 
   void arrange(const Rect& bounds) override {
     setBounds(bounds);
-    const double infoHeight = info_->measure(Size{std::max(0.0, bounds.width - 2 * kHeaderPadding), 0}).height;
-    info_->arrange(Rect{bounds.x + kHeaderPadding, bounds.y + (kInfoHeight - infoHeight) / 2.0, std::max(0.0, bounds.width - 2 * kHeaderPadding), infoHeight});
-    const Rect listArea{bounds.x, bounds.y + kInfoHeight, bounds.width, std::max(0.0, bounds.height - kInfoHeight)};
+    const double hintRowHeight = hint_->visible() ? kHeaderRowHeight : 0.0;
+    if (hint_->visible()) {
+      const double hintWidth = std::max(0.0, bounds.width - 2 * kHeaderPadding);
+      const double hintHeight = hint_->measure(Size{hintWidth, 0}).height;
+      hint_->arrange(Rect{bounds.x + kHeaderPadding, bounds.y + (hintRowHeight - hintHeight) / 2.0, hintWidth, hintHeight});
+    }
+    const Rect listArea{bounds.x, bounds.y + hintRowHeight, bounds.width, std::max(0.0, bounds.height - hintRowHeight)};
     scroll_->arrange(listArea);
     if (notice_->visible()) {
       const double width = std::max(0.0, listArea.width - 2 * kNoticeMargin);
@@ -158,7 +159,7 @@ class MainPane final : public Widget {
   }
 
  private:
-  Label* info_{nullptr};
+  Label* hint_{nullptr};
   ScrollArea* scroll_{nullptr};
   FileTable* table_{nullptr};
   Notice* notice_{nullptr};
@@ -318,7 +319,7 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
   split->setSideWidth(kSideWidth);
   split->setSideWidthRange(kSideMinWidth, kSideMaxWidth);
   auto pane = std::make_unique<MainPane>();
-  infoLabel_ = pane->info();
+  hintLabel_ = pane->hint();
   listScroll_ = pane->scroll();
   table_ = pane->table();
   listNotice_ = pane->notice();
@@ -501,21 +502,9 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
 
   // 左边没有可选的镜像时（没设目录、目录读不了或为空），左边已有说明，右边留空
   const bool treeUsable = treeView_.state == contracts::DiskImagesState::Ready && !treeView_.nodes.empty();
-  std::string info;
-  if (shown) {
-    info = view.imageName;
-    if (!view.formatName.empty()) info += kInfoSeparator + view.formatName;
-    if (view.drive >= 0) info += std::string(kInfoSeparator) + kInDrive;
-    if (!view.readOnlyReason.empty()) info += std::string(kInfoSeparator) + kReadOnlyPrefix + view.readOnlyReason;
-    if (!view.directory.empty()) {
-      info += kInfoSeparator;
-      for (const std::string& part : view.directory) info += "\\" + part;
-    }
-  } else if (treeUsable) {
-    // 还没选镜像：提示放在第一行（镜像信息的位置）
-    info = kNoImageNotice;
-  }
-  infoLabel_->setText(info);
+  const bool showHint = !shown && treeUsable;
+  hintLabel_->setText(showHint ? kNoImageNotice : "");
+  hintLabel_->setVisible(showHint);
 
   std::string notice;
   bool error = false;
@@ -533,6 +522,8 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   std::vector<FileTableColumn> columns{{kColumnName, kNameColumnWidth, false}, {kColumnType, 70, false}, {kColumnSize, 90, true}};
   if (showModified) columns.push_back({kColumnModified, 120, false});
   table_->setColumns(std::move(columns));
+  // 读取中还没有内容，不能显示“这个文件夹是空的”
+  table_->setEmptyText(view.loading ? "" : kEmptyFolder);
 
   std::vector<FileTableRow> rows;
   if (shown && !view.failed && !view.directory.empty()) {

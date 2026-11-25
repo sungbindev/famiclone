@@ -45,6 +45,33 @@ constexpr const char* kNewFolderName = "新建文件夹";
 
 /** 删除确认的标题。 */
 constexpr const char* kDeleteTitle = "删除";
+/** 移动确认的标题。 */
+constexpr const char* kMoveTitle = "移动";
+
+/** 镜像目录里的路径列表对应的名称（路径最后一级）。 */
+std::vector<std::string> itemNames(const std::vector<std::string>& paths) {
+  std::vector<std::string> names;
+  for (const std::string& path : paths) names.push_back(baseName(path));
+  return names;
+}
+
+/** 镜像里逐级路径列表对应的名称（路径最后一级）。 */
+std::vector<std::string> entryNames(const std::vector<std::vector<std::string>>& entries) {
+  std::vector<std::string> names;
+  for (const std::vector<std::string>& entry : entries) {
+    if (!entry.empty()) names.push_back(entry.back());
+  }
+  return names;
+}
+
+/** 镜像目录里的目标文件夹的说法：空路径是镜像目录本身。 */
+std::string folderPhrase(const std::string& folder) { return folder.empty() ? std::string("镜像目录") : "文件夹“" + baseName(folder) + "”"; }
+
+/** 移动前的确认：把 names 描述的条目移动到 destination（已经写成“文件夹“x””这样的说法）。 */
+bool confirmMove(contracts::Confirmation& confirmation, const std::vector<std::string>& names, const std::string& destination) {
+  const std::string what = names.size() == 1 ? "“" + names.front() + "”" : "选中的 " + std::to_string(names.size()) + " 项";
+  return confirmation.ask(kMoveTitle, "把" + what + "移动到" + destination + "？");
+}
 
 }  // namespace
 
@@ -331,6 +358,7 @@ void DiskImagesController::remove(const std::vector<std::string>& names) {
 
 void DiskImagesController::moveInto(const std::vector<std::string>& names, const std::string& folder) {
   if (!image_.selected || names.empty()) return;
+  if (!confirmMove(confirmation_, names, "文件夹“" + folder + "”")) return;
   operate("diskimages.move", {{"image", image_.image}, {"entries", entryPaths(names)}, {"target", entryPath(folder)}});
 }
 
@@ -365,9 +393,12 @@ void DiskImagesController::paste() {
   const Clipboard source = clipboard_;
   if (source.cut && source.image == image_.image) {
     // 同一个镜像里剪切再粘贴：移动
+    if (!confirmMove(confirmation_, entryNames(source.entries), "当前文件夹")) return;
     operate("diskimages.move", {{"image", image_.image}, {"entries", source.entries}, {"target", image_.directory}}, [this](const nlohmann::json&) { clipboard_ = Clipboard{}; });
     return;
   }
+  // 剪切到另一个镜像：复制过去再从来源镜像里删掉，也是移动
+  if (source.cut && !confirmMove(confirmation_, entryNames(source.entries), "镜像“" + image_.imageName + "”")) return;
   operate("diskimages.copy", {{"image", source.image}, {"entries", source.entries}, {"targetImage", image_.image}, {"target", image_.directory}}, [this, source](const nlohmann::json&) {
     if (!source.cut) return;
     // 剪切到另一个镜像：复制成功后再从来源镜像里删掉
@@ -475,6 +506,7 @@ void DiskImagesController::removeItems(const std::vector<std::string>& paths) {
 
 void DiskImagesController::moveItems(const std::vector<std::string>& paths, const std::string& targetFolder) {
   if (paths.empty()) return;
+  if (!confirmMove(confirmation_, itemNames(paths), folderPhrase(targetFolder))) return;
   operate("diskimages.moveItems", {{"paths", paths}, {"target", targetFolder}}, [this, paths](const nlohmann::json& result) {
     const auto moved = result.is_object() ? result.find("paths") : result.end();
     if (!result.is_object() || moved == result.end() || !moved->is_array() || moved->size() != paths.size()) return;
@@ -505,6 +537,7 @@ void DiskImagesController::pasteItems(const std::string& targetFolder) {
   if (!itemClipboard_.present) return;
   const ItemClipboard source = itemClipboard_;
   if (source.cut) {
+    if (!confirmMove(confirmation_, itemNames(source.paths), folderPhrase(targetFolder))) return;
     operate("diskimages.moveItems", {{"paths", source.paths}, {"target", targetFolder}}, [this, source](const nlohmann::json& result) {
       itemClipboard_ = ItemClipboard{};
       const auto moved = result.is_object() ? result.find("paths") : result.end();

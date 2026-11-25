@@ -1,0 +1,3628 @@
+<!doctype html>
+<html lang="zh-CN" class="theme-light">
+  <head>
+    <meta charSet="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="preload" as="image" href="../assets/ember-logo.png"/>
+    <meta name="description" content="调试接口手册：filemanager"/><title>filemanager · 调试接口手册 · Ember 与 FC Dev</title>
+    <link rel="icon" href="../assets/fcdev-icon.png"/>
+    <link rel="stylesheet" href="../assets/site.css"/>
+    <script>(function(){var q=matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;function a(){r.classList.remove('theme-dark','theme-light');r.classList.add(q.matches?'theme-dark':'theme-light');r.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()</script>
+  </head>
+  <body class="site">
+    <div class="site-frame">
+      <header class="ui-title-bar">
+        <div class="ui-title-bar__brand"><span class="ui-title-bar__logo" aria-hidden="true"><img src="../assets/ember-logo.png" alt="" draggable="false"/></span><span class="ui-title-bar__title">Ember 与 FC Dev<span class="ui-title-bar__subtitle"> 6502 模拟器与开发工具</span></span>
+        </div>
+        <div class="ui-title-bar__actions">
+          <div class="site-header-actions">
+            <div class="site-contact"><span>作者 sungbin</span><a href="mailto:sungbin@3578.cn">sungbin@3578.cn</a><span>QQ 46427991</span>
+            </div>
+            <nav class="site-top-links" aria-label="站点链接"><a class="ui-button ui-button--ghost" href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener"><span>GitHub</span></a>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <div class="site-body">
+        <aside class="site-sidebar">
+          <nav aria-label="帮助文档导航"><a class="site-nav__home" href="../../index.html">首页</a>
+            <details class="site-nav__section">
+              <summary>使用说明
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../manual/index.html">简介</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/start.html">快速开始</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/window.html">窗口、菜单与快捷键</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/machines.html">机型与 ROM</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/media.html">卡带、软盘、磁带与打印机</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/input.html">键盘、手柄与鼠标</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/display-sound.html">画面与声音</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/plugins.html">mapper 插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/preferences.html">首选项</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/faq.html">常见问题</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../manual/changelog.html">更新记录</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>插件开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../plugin/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/quickstart.html">第一个插件</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/package.html">插件包与安装</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/manifest.html">清单：基本字段与匹配</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/memory.html">清单：存储区、窗口与名称表</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/registers.html">清单：寄存器与状态</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/script.html">脚本接口</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/recipes.html">常见写法</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../plugin/debugging.html">测试与排错</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section" open="">
+              <summary>调试接口手册
+              </summary>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">调试服务
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../debug/index.html">概述</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/protocol.html">连接与报文</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/control.html">运行控制与典型流程</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../debug/clients.html">客户端工具</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">请求与事件
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="index.html">总览</a>
+                  </li>
+                  <li><a class="site-nav__link" href="cartridges.html">cartridges</a>
+                  </li>
+                  <li><a class="site-nav__link" href="debug.html">debug</a>
+                  </li>
+                  <li><a class="site-nav__link site-nav__link--active" href="filemanager.html" aria-current="page">filemanager</a>
+                  </li>
+                  <li><a class="site-nav__link" href="input.html">input</a>
+                  </li>
+                  <li><a class="site-nav__link" href="inspector.html">inspector</a>
+                  </li>
+                  <li><a class="site-nav__link" href="machines.html">machines</a>
+                  </li>
+                  <li><a class="site-nav__link" href="mappers.html">mappers</a>
+                  </li>
+                  <li><a class="site-nav__link" href="media.html">media</a>
+                  </li>
+                  <li><a class="site-nav__link" href="output.html">output</a>
+                  </li>
+                  <li><a class="site-nav__link" href="preferences.html">preferences</a>
+                  </li>
+                  <li><a class="site-nav__link" href="runtime.html">runtime</a>
+                  </li>
+                  <li><a class="site-nav__link" href="system.html">system</a>
+                  </li>
+                  <li><a class="site-nav__link" href="rpc.html">rpc</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="site-nav__section">
+              <summary>FC Dev 开发手册
+              </summary>
+              <div class="site-nav__group">
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/index.html">概述</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">通用
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/install.html">安装与入门</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/build.html">构建</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/emulator.html">模拟器与调试</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/disasm.html">反汇编</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/create.html">新建项目与模板</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/rom.html">整机 ROM 工程开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">NES
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/nes.html">NES 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB2000（小霸王学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb2000.html">SB2000 开发指南</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/examples.html">SB2000 示例程序源码</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/syscall.html">SB-DOS 系统调用手册</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/hardware.html">SB2000 硬件说明</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/api.html">SB2000 C 接口参考</a>
+                  </li>
+                  <li><a class="site-nav__link" href="../fcdev/symbols.html">SB2000 符号参考</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">SB97（小霸王 97）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/sb97.html">SB97 开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">裕兴（学习机）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/yuxing.html">裕兴开发指南</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">步步高（学生电脑）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="../fcdev/bbg.html">步步高开发指南</a>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </aside>
+        <main class="site-main">
+          <div class="doc-page">
+            <nav class="site-crumbs" aria-label="当前位置"><a href="../../index.html">首页</a><span aria-hidden="true">›</span><a href="../debug/index.html">调试接口手册</a><span aria-hidden="true">›</span><span aria-current="page">filemanager</span>
+            </nav>
+            <header class="doc-head">
+              <p class="kicker">调试接口手册
+              </p>
+              <h1 class="ui-title doc-title">filemanager 模块
+              </h1>
+            </header>
+            <nav class="ui-panel doc-toc" aria-label="本页目录">
+              <div class="ui-panel__head">
+                <div class="ui-panel__heading">
+                  <h3 class="ui-title">本页目录
+                  </h3>
+                </div>
+              </div>
+              <div class="ui-scroll-area ui-scrollable-element ui-panel__scroll">
+                <div class="ui-scroll-area__viewport ui-panel__body">
+                  <ul>
+                    <li><a href="#请求">请求</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagersetroot">filemanager.setRoot</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagertree">filemanager.tree</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerlist">filemanager.list</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerrename">filemanager.rename</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerremove">filemanager.remove</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagermove">filemanager.move</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagercopy">filemanager.copy</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagermakedirectory">filemanager.makeDirectory</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerundo">filemanager.undo</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerreadentries">filemanager.readEntries</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerimportfiles">filemanager.importFiles</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagercreateimage">filemanager.createImage</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerrenameitem">filemanager.renameItem</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerremoveitems">filemanager.removeItems</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagermoveitems">filemanager.moveItems</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagercopyitems">filemanager.copyItems</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagermakefolder">filemanager.makeFolder</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerblankkinds">filemanager.blankKinds</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerimagepath">filemanager.imagePath</a>
+                    </li>
+                    <li><a href="#事件">事件</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagertreechanged">filemanager.treeChanged</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filemanagerimagechanged">filemanager.imageChanged</a>
+                    </li>
+                    <li><a href="#数据类型">数据类型</a>
+                    </li>
+                    <li class="toc-sub"><a href="#imagenode">ImageNode</a>
+                    </li>
+                    <li class="toc-sub"><a href="#filesysteminfo">FileSystemInfo</a>
+                    </li>
+                    <li class="toc-sub"><a href="#entryinfo">EntryInfo</a>
+                    </li>
+                    <li class="toc-sub"><a href="#blankkind">BlankKind</a>
+                    </li>
+                    <li class="toc-sub"><a href="#exportitem">ExportItem</a>
+                    </li>
+                    <li class="toc-sub"><a href="#importoutcome">ImportOutcome</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+            <article class="doc">
+              <p>连接、认证与报文规则见<a href="../debug/protocol.html">连接与报文</a>，全部请求见<a href="index.html">请求与事件总览</a>。
+              </p>
+
+              <h2 id="请求">请求
+              </h2>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><a href="#filemanagersetroot"><code>filemanager.setRoot</code></a>
+                      </td>
+
+                      <td>设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagertree"><code>filemanager.tree</code></a>
+                      </td>
+
+                      <td>目录里一个文件夹的直接内容：全部子文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerlist"><code>filemanager.list</code></a>
+                      </td>
+
+                      <td>列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerrename"><code>filemanager.rename</code></a>
+                      </td>
+
+                      <td>重命名镜像里的条目（不改所在文件夹）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerremove"><code>filemanager.remove</code></a>
+                      </td>
+
+                      <td>删除镜像里的条目，文件夹连同里面的全部内容
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagermove"><code>filemanager.move</code></a>
+                      </td>
+
+                      <td>把条目移到镜像里的另一个文件夹，名称不变
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagercopy"><code>filemanager.copy</code></a>
+                      </td>
+
+                      <td>把条目（文件夹连同里面的内容）复制到另一个文件夹，可以在同一个镜像里，也可以复制到另一个镜像（用来在两个镜像之间搬文件）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagermakedirectory"><code>filemanager.makeDirectory</code></a>
+                      </td>
+
+                      <td>在镜像里新建文件夹
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerundo"><code>filemanager.undo</code></a>
+                      </td>
+
+                      <td>撤销这个镜像里最近一次管理操作（每个镜像各有一份撤销记录，只在内存里，核心重启后清空）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerreadentries"><code>filemanager.readEntries</code></a>
+                      </td>
+
+                      <td>读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerimportfiles"><code>filemanager.importFiles</code></a>
+                      </td>
+
+                      <td>把 Windows 上的文件与文件夹导入镜像的一个文件夹（文件夹连同里面的文件）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagercreateimage"><code>filemanager.createImage</code></a>
+                      </td>
+
+                      <td>在目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerrenameitem"><code>filemanager.renameItem</code></a>
+                      </td>
+
+                      <td>重命名目录里的文件或文件夹（不换所在文件夹）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerremoveitems"><code>filemanager.removeItems</code></a>
+                      </td>
+
+                      <td>把目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagermoveitems"><code>filemanager.moveItems</code></a>
+                      </td>
+
+                      <td>把目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagercopyitems"><code>filemanager.copyItems</code></a>
+                      </td>
+
+                      <td>把目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagermakefolder"><code>filemanager.makeFolder</code></a>
+                      </td>
+
+                      <td>在目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerblankkinds"><code>filemanager.blankKinds</code></a>
+                      </td>
+
+                      <td>能新建的空白镜像种类
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><a href="#filemanagerimagepath"><code>filemanager.imagePath</code></a>
+                      </td>
+
+                      <td>镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="filemanagersetroot">filemanager.setRoot
+              </h3>
+
+              <blockquote>
+
+                <p>界面里只能由主进程发起，调试服务可以调用
+                </p>
+
+              </blockquote>
+
+              <p>设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string | null</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录的路径；null 表示取消
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>available</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录是否存在、能否读取
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.invalidPath</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.setRoot path=&#x3C;string | null></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagertree">filemanager.tree
+              </h3>
+
+              <p>目录里一个文件夹的直接内容：全部子文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件；支持的种类是软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka，其他文件标为 unsupported），文件夹在前、按名称排序；只读这一层的文件名、大小与种类，不读文件内容，不递归。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>string（长度 ..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录里的相对文件夹路径；空串是目录本身
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>root</code>
+                      </td>
+
+                      <td><code>string | null</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录的路径，用来显示；没有设置时为 null
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>available</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录是否存在、能否读取
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>nodes</code>
+                      </td>
+
+                      <td><a href="filemanager.html#imagenode">filemanager.ImageNode</a>[]
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>这个文件夹里的节点，文件夹在前、名称排序；path 是节点相对目录的完整路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.invalidPath</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.tree directory=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerlist">filemanager.list
+              </h3>
+
+              <p>列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致；镜像插在软驱里时读软驱里的盘片，否则读文件。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像里的文件夹路径，逐级的名称；空数组是根目录
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>fileSystem</code>
+                      </td>
+
+                      <td><a href="filemanager.html#filesysteminfo">filemanager.FileSystemInfo</a>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>capacity</code>
+                      </td>
+
+                      <td><code>integer（0..）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 按扇区、ProDOS 按块算
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>freeSpace</code>
+                      </td>
+
+                      <td><code>integer（0..）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>现在还空着的空间（字节）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>entries</code>
+                      </td>
+
+                      <td><a href="filemanager.html#entryinfo">filemanager.EntryInfo</a>[]
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录里的条目
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>drive</code>
+                      </td>
+
+                      <td><code>integer | null</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像插在哪个软驱里（编号从 0 起）；没有插入时为 null
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>readOnlyReason</code>
+                      </td>
+
+                      <td><code>string | null</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>不能修改的原因（位流格式、软驱里的盘片写保护）；可以修改时为 null
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>undoDepth</code>
+                      </td>
+
+                      <td><code>integer（0..）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>这个镜像里可以撤销的操作数
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.corrupt</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.list image=&#x3C;string> directory=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerrename">filemanager.rename
+              </h3>
+
+              <p>重命名镜像里的条目（不改所在文件夹）；立即生效：镜像插在软驱里时改软驱里的盘片并随后写回文件，否则直接改文件。名称规则按文件系统：FAT 是 8.3，DOS 3.3 最长 30 个字符，ProDOS 最长 15 个字符。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>entry</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>条目的路径：从根目录开始逐级的名称
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>新名称
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.readOnly</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.exists</code>、<code>filemanager.invalidName</code>、<code>filemanager.corrupt</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.rename image=&#x3C;string> entry=&#x3C;string> name=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerremove">filemanager.remove
+              </h3>
+
+              <p>删除镜像里的条目，文件夹连同里面的全部内容；立即生效，不确认，可以用 filemanager.undo 撤销。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>entries</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[][]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要删除的条目，每项是从根目录开始逐级的名称
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.readOnly</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.corrupt</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.remove image=&#x3C;string> entries=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagermove">filemanager.move
+              </h3>
+
+              <p>把条目移到镜像里的另一个文件夹，名称不变；没有子目录的文件系统（DOS 3.3）返回 filemanager.unsupported。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>entries</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[][]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要移动的条目
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>target</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目标文件夹的路径；空数组是根目录
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.readOnly</code>、<code>filemanager.unsupported</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.exists</code>、<code>filemanager.moveIntoSelf</code>、<code>filemanager.noSpace</code>、<code>filemanager.corrupt</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.move image=&#x3C;string> entries=&#x3C;string> target=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagercopy">filemanager.copy
+              </h3>
+
+              <p>把条目（文件夹连同里面的内容）复制到另一个文件夹，可以在同一个镜像里，也可以复制到另一个镜像（用来在两个镜像之间搬文件）；名称不变，目标里已有同名条目时拒绝。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>来源镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>entries</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[][]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要复制的条目
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>targetImage</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目标镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>target</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目标文件夹的路径；空数组是根目录
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.readOnly</code>、<code>filemanager.unsupported</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.exists</code>、<code>filemanager.invalidName</code>、<code>filemanager.noSpace</code>、<code>filemanager.corrupt</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.copy image=&#x3C;string> entries=&#x3C;string> targetImage=&#x3C;string> target=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagermakedirectory">filemanager.makeDirectory
+              </h3>
+
+              <p>在镜像里新建文件夹；没有子目录的文件系统（DOS 3.3）返回 filemanager.unsupported。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>在哪个文件夹里新建；空数组是根目录
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>文件夹名称
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.readOnly</code>、<code>filemanager.unsupported</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.exists</code>、<code>filemanager.invalidName</code>、<code>filemanager.noSpace</code>、<code>filemanager.corrupt</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.makeDirectory image=&#x3C;string> directory=&#x3C;string> name=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerundo">filemanager.undo
+              </h3>
+
+              <p>撤销这个镜像里最近一次管理操作（每个镜像各有一份撤销记录，只在内存里，核心重启后清空）；镜像里被撤销的位置已被别的程序或机器改动过时拒绝，不覆盖那些改动。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>description</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>撤销的是哪一步操作，如“删除 HELLO.BAS”
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.readOnly</code>、<code>filemanager.nothingToUndo</code>、<code>filemanager.undoBlocked</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.undo image=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerreadentries">filemanager.readEntries
+              </h3>
+
+              <p>读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容；总量超过 64 MB 时返回 filemanager.noSpace。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>entries</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[][]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要导出的条目
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>items</code>
+                      </td>
+
+                      <td><a href="filemanager.html#exportitem">filemanager.ExportItem</a>[]
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>导出的内容，文件夹在它里面的文件之前
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.noSpace</code>、<code>filemanager.corrupt</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.readEntries image=&#x3C;string> entries=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerimportfiles">filemanager.importFiles
+              </h3>
+
+              <blockquote>
+
+                <p>界面里只能由主进程发起，调试服务可以调用
+                </p>
+
+              </blockquote>
+
+              <p>把 Windows 上的文件与文件夹导入镜像的一个文件夹（文件夹连同里面的文件）；每个拖入的文件或文件夹各给一个结果，某一个失败不影响其他的。路径只来自拖入窗口的文件，界面不能传。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>导入到哪个文件夹；空数组是根目录
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>paths</code>
+                      </td>
+
+                      <td><code>string（长度 1..）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要导入的文件与文件夹的路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>outcomes</code>
+                      </td>
+
+                      <td><a href="filemanager.html#importoutcome">filemanager.ImportOutcome</a>[]
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>每个拖入项的结果，顺序同 paths
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>、<code>filemanager.imageUnreadable</code>、<code>filemanager.unknownFormat</code>、<code>filemanager.readOnly</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.importFiles image=&#x3C;string> directory=&#x3C;string> paths=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagercreateimage">filemanager.createImage
+              </h3>
+
+              <p>在目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>string（长度 ..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目录里的相对文件夹路径；空串是目录本身
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>kind</code>
+                      </td>
+
+                      <td><code>string（长度 1..32）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>空白镜像的种类，见 filemanager.blankKinds
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>新建的镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.unsupported</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.createImage directory=&#x3C;string> kind=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerrenameitem">filemanager.renameItem
+              </h3>
+
+              <p>重命名目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>文件或文件夹的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>新名称
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>重命名之后的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.invalidName</code>、<code>filemanager.exists</code>、<code>filemanager.inUse</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.renameItem path=&#x3C;string> name=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerremoveitems">filemanager.removeItems
+              </h3>
+
+              <p>把目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>paths</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要删除的文件或文件夹的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.inUse</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.removeItems paths=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagermoveitems">filemanager.moveItems
+              </h3>
+
+              <p>把目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>paths</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要移动的文件或文件夹的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>target</code>
+                      </td>
+
+                      <td><code>string（长度 ..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目标文件夹的相对路径；空串是目录本身
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>paths</code>
+                      </td>
+
+                      <td><code>string[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>移动之后的相对路径，顺序同参数
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.exists</code>、<code>filemanager.moveIntoSelf</code>、<code>filemanager.inUse</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.moveItems paths=&#x3C;string> target=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagercopyitems">filemanager.copyItems
+              </h3>
+
+              <p>把目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>paths</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>要复制的文件或文件夹的相对路径
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>target</code>
+                      </td>
+
+                      <td><code>string（长度 ..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>目标文件夹的相对路径；空串是目录本身
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>paths</code>
+                      </td>
+
+                      <td><code>string[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>复制出来的相对路径，顺序同参数
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.entryNotFound</code>、<code>filemanager.moveIntoSelf</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.copyItems paths=&#x3C;string> target=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagermakefolder">filemanager.makeFolder
+              </h3>
+
+              <p>在目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>string（长度 ..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>在哪个文件夹里新建（相对路径）；空串是目录本身
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string（长度 1..255）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>文件夹的基本名称
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>新文件夹的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.invalidName</code>、<code>filemanager.saveFailed</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.makeFolder directory=&#x3C;string> name=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerblankkinds">filemanager.blankKinds
+              </h3>
+
+              <p>能新建的空白镜像种类。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <p>（无）
+              </p>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>kinds</code>
+                      </td>
+
+                      <td><a href="filemanager.html#blankkind">filemanager.BlankKind</a>[]
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>种类，按界面显示的顺序
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：无专有错误码（参数不合格返回 <code>core.invalidParams</code>）
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.blankKinds</span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h3 id="filemanagerimagepath">filemanager.imagePath
+              </h3>
+
+              <blockquote>
+
+                <p>界面里只能由主进程发起，调试服务可以调用
+                </p>
+
+              </blockquote>
+
+              <p>镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示；界面不能调用。
+              </p>
+
+              <p><strong>参数</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>名称
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string（长度 1..1024）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>结果</strong>
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>完整路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p><strong>错误码</strong>：<code>filemanager.noRoot</code>、<code>filemanager.invalidPath</code>、<code>filemanager.imageNotFound</code>
+              </p>
+
+              <p><strong>示例</strong>
+              </p>
+
+              <p>在 VS Code 的命令“FCDEV：调用调试请求”里输入：
+              </p>
+
+              <div class="code">
+                <pre class="shiki shiki-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8" tabindex="0"><code><span class="line"><span>filemanager.imagePath image=&#x3C;string></span></span>
+<span class="line"><span></span></span></code></pre>
+              </div>
+
+              <h2 id="事件">事件
+              </h2>
+
+              <p>事件要先用 <code>debug.subscribe</code> 订阅才会收到，以 JSON-RPC 通知送达。
+              </p>
+
+              <h3 id="filemanagertreechanged">filemanager.treeChanged
+              </h3>
+
+              <p>目录的树变了：文件夹或文件被创建、删除、改名；用 filemanager.tree 重新读取已经展开的文件夹。
+              </p>
+
+              <p>（无）
+              </p>
+
+              <h3 id="filemanagerimagechanged">filemanager.imageChanged
+              </h3>
+
+              <p>一个镜像的内容变了：管理操作、机器写盘、别的程序改了镜像文件；正在查看它的界面要重新读取。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>image</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>镜像的相对路径
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h2 id="数据类型">数据类型
+              </h2>
+
+              <h3 id="imagenode">ImageNode
+              </h3>
+
+              <p>目录树里的一个节点：文件（软盘镜像、卡带、音频、图片、不支持的文件）或文件夹。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>相对目录的路径，用 / 分隔，不以 / 开头
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>完整的文件名或文件夹名
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>是否是文件夹
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>kind</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）、unsupported（其他文件，包括隐藏文件与符号链接）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>size</code>
+                      </td>
+
+                      <td><code>integer（0..）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>文件的大小（字节）；文件夹为 0
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>formatName</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>界面显示的文件种类名称：NES 卡带、PNG 图片、MP3 音频这样的名称，不支持的文件是“不支持”；文件夹与软盘镜像为空（软盘镜像的文件系统格式在 filemanager.list 的 fileSystem 里）
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="filesysteminfo">FileSystemInfo
+              </h3>
+
+              <p>一个镜像的文件系统。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>format</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>格式标识：fat12、fat16、appledos33、prodos
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>formatName</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>界面显示的格式名称
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>writable</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>能否修改文件系统里的内容
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>subdirectories</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>有没有子目录：没有时不能新建文件夹，也不能移动文件
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="entryinfo">EntryInfo
+              </h3>
+
+              <p>镜像里的一个文件或文件夹。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>完整名称
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>是否是文件夹
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>type</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>类型文字：FAT 是扩展名，DOS 3.3 与 ProDOS 是类型名，文件夹是“文件夹”
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>size</code>
+                      </td>
+
+                      <td><code>integer（0..）</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>大小（字节）；文件夹为 0
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>sizeIsAllocated</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>大小是占用的空间而不是准确的字节数（DOS 3.3 只知道占用的扇区数）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>modified</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>修改时间，形如 2026-11-25 14:30；文件系统没有时间时为空
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>locked</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>只读或锁定的标记，只作显示
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="blankkind">BlankKind
+              </h3>
+
+              <p>一种能新建的空白镜像。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>id</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>标识：fat1440、fat720、fat2880、fat1200、fat360、appledos33、prodos、pyramid
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>title</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>界面显示的名称
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>extension</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>新建文件的扩展名，不带点
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="exportitem">ExportItem
+              </h3>
+
+              <p>导出的一个文件或文件夹。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>path</code>
+                      </td>
+
+                      <td><code>string[]</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>在导出的内容里的路径：第一项是选中条目的 Windows 文件名，其后是它里面的层级
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>directory</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>是否是文件夹（文件夹没有内容）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>content</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>文件的内容，Base64 编码；文件夹为空
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <h3 id="importoutcome">ImportOutcome
+              </h3>
+
+              <p>导入一个文件或文件夹的结果。
+              </p>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>字段
+                      </th>
+
+                      <th>类型
+                      </th>
+
+                      <th>必填
+                      </th>
+
+                      <th>说明
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>name</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>拖入的文件或文件夹的名称
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>ok</code>
+                      </td>
+
+                      <td><code>boolean</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>是否成功
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>message</code>
+                      </td>
+
+                      <td><code>string</code>
+                      </td>
+
+                      <td>是
+                      </td>
+
+                      <td>失败的原因，面向用户；成功时为空
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+            </article>
+            <nav class="doc-pager" aria-label="上一页与下一页"><a href="debug.html" class="doc-pager__prev"><span>上一页 · 调试接口手册</span>debug</a><a href="input.html" class="doc-pager__next"><span>下一页 · 调试接口手册</span>input</a>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <footer class="site-footer">Ember 以 GPLv3 发布，FC Dev 扩展以 Apache-2.0 发布。源码与问题反馈见 <a href="https://github.com/sungbindev/famiclone" target="_blank" rel="noopener">GitHub 仓库</a>。
+      </footer>
+    </div>
+  </body>
+</html>

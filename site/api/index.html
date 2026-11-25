@@ -109,6 +109,8 @@
                   </li>
                   <li><a class="site-nav__link" href="debug.html">debug</a>
                   </li>
+                  <li><a class="site-nav__link" href="filemanager.html">filemanager</a>
+                  </li>
                   <li><a class="site-nav__link" href="input.html">input</a>
                   </li>
                   <li><a class="site-nav__link" href="inspector.html">inspector</a>
@@ -374,6 +376,226 @@
               </div>
 
               <p>事件：<code>debug.statusChanged</code>、<code>debug.eventsDropped</code>
+              </p>
+
+              <h3 id="filemanager"><a href="filemanager.html">filemanager</a>
+              </h3>
+
+              <div class="table-wrap">
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>请求
+                      </th>
+
+                      <th>简介
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+
+                      <td><code>filemanager.setRoot</code>
+                      </td>
+
+                      <td>设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.tree</code>
+                      </td>
+
+                      <td>目录里一个文件夹的直接内容：全部子文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.list</code>
+                      </td>
+
+                      <td>列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.rename</code>
+                      </td>
+
+                      <td>重命名镜像里的条目（不改所在文件夹）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.remove</code>
+                      </td>
+
+                      <td>删除镜像里的条目，文件夹连同里面的全部内容
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.move</code>
+                      </td>
+
+                      <td>把条目移到镜像里的另一个文件夹，名称不变
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.copy</code>
+                      </td>
+
+                      <td>把条目（文件夹连同里面的内容）复制到另一个文件夹，可以在同一个镜像里，也可以复制到另一个镜像（用来在两个镜像之间搬文件）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.makeDirectory</code>
+                      </td>
+
+                      <td>在镜像里新建文件夹
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.undo</code>
+                      </td>
+
+                      <td>撤销这个镜像里最近一次管理操作（每个镜像各有一份撤销记录，只在内存里，核心重启后清空）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.readEntries</code>
+                      </td>
+
+                      <td>读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.importFiles</code>
+                      </td>
+
+                      <td>把 Windows 上的文件与文件夹导入镜像的一个文件夹（文件夹连同里面的文件）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.createImage</code>
+                      </td>
+
+                      <td>在目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.renameItem</code>
+                      </td>
+
+                      <td>重命名目录里的文件或文件夹（不换所在文件夹）
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.removeItems</code>
+                      </td>
+
+                      <td>把目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.moveItems</code>
+                      </td>
+
+                      <td>把目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.copyItems</code>
+                      </td>
+
+                      <td>把目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.makeFolder</code>
+                      </td>
+
+                      <td>在目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.blankKinds</code>
+                      </td>
+
+                      <td>能新建的空白镜像种类
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>filemanager.imagePath</code>
+                      </td>
+
+                      <td>镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+              </div>
+
+              <p>事件：<code>filemanager.treeChanged</code>、<code>filemanager.imageChanged</code>
               </p>
 
               <h3 id="input"><a href="input.html">input</a>

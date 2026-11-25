@@ -94,12 +94,14 @@ constexpr int kKeyX = 0x58;
 constexpr int kKeyZ = 0x5A;
 
 /** 资源管理器上方标题行的高度、内边距、标题文字，以及右边镜像信息行的高度（与标题行等高）。 */
-constexpr double kHeaderRowHeight = 32.0;
+constexpr double kHeaderRowHeight = 28.0;
 constexpr double kHeaderPadding = 10.0;
 constexpr double kButtonsPadding = 6.0;
 constexpr double kButtonGap = 2.0;
 constexpr double kTitleFontSize = 12.0;
 constexpr int kTitleFontWeight = 600;
+/** 标题首字笔画左边的字面空隙，对齐展开箭头时要扣掉。 */
+constexpr double kTitleBearing = 1.0;
 constexpr double kInfoHeight = kHeaderRowHeight;
 /** 资源管理器的初始宽度、最小宽度与最大宽度，镜像内容展开时窗口增加的宽度，以及镜像内容至少要有的宽度。 */
 constexpr double kSideWidth = 320.0;
@@ -203,9 +205,11 @@ class ExplorerPane final : public Widget {
       button->arrange(Rect{right, bounds.y + (kHeaderRowHeight - size.height) / 2.0, size.width, size.height});
       right -= kButtonGap;
     }
-    const double titleWidth = std::max(0.0, right - bounds.x - kHeaderPadding);
+    // 标题与树第一层的展开箭头左对齐
+    const double titleLeft = bounds.x + Tree::arrowLeftInset() - kTitleBearing;
+    const double titleWidth = std::max(0.0, right - titleLeft);
     const double titleHeight = title_->measure(Size{titleWidth, 0}).height;
-    title_->arrange(Rect{bounds.x + kHeaderPadding, bounds.y + (kHeaderRowHeight - titleHeight) / 2.0, titleWidth, titleHeight});
+    title_->arrange(Rect{titleLeft, bounds.y + (kHeaderRowHeight - titleHeight) / 2.0, titleWidth, titleHeight});
     const Rect treeArea{bounds.x, bounds.y + kHeaderRowHeight, bounds.width, std::max(0.0, bounds.height - kHeaderRowHeight)};
     scroll_->arrange(treeArea);
     if (notice_->visible()) {
@@ -494,6 +498,8 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
     listScroll_->setScrollTop(0);
   }
 
+  // 左边没有可选的镜像时（没设目录、目录读不了或为空），左边已有说明，右边留空
+  const bool treeUsable = treeView_.state == contracts::DiskImagesState::Ready && !treeView_.nodes.empty();
   std::string info;
   if (shown) {
     info = view.imageName;
@@ -504,16 +510,15 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
       info += kInfoSeparator;
       for (const std::string& part : view.directory) info += "\\" + part;
     }
+  } else if (treeUsable) {
+    // 还没选镜像：提示放在第一行（镜像信息的位置）
+    info = kNoImageNotice;
   }
   infoLabel_->setText(info);
 
   std::string notice;
   bool error = false;
-  // 左边没有可选的镜像时（没设目录、目录读不了或为空），左边已有说明，右边留空
-  const bool treeUsable = treeView_.state == contracts::DiskImagesState::Ready && !treeView_.nodes.empty();
-  if (!shown) {
-    if (treeUsable) notice = kNoImageNotice;
-  } else if (view.failed) {
+  if (shown && view.failed) {
     notice = view.message;
     error = true;
   }

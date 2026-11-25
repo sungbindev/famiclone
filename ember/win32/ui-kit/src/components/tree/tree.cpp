@@ -294,6 +294,12 @@ Size Tree::minimumSize() {
 
 Rect Tree::rowRect(std::size_t visibleIndex) const { return Rect{bounds().x, bounds().y + tokens::tree_row_height * static_cast<double>(visibleIndex), std::max(0.0, bounds().width - kRowMarginRight), tokens::tree_row_height}; }
 
+double Tree::arrowLeftInset() {
+  // 朝下的箭头在 24 格里最左的点在第 6 格，按图标尺寸缩放，再减去圆角线端伸出的半个线宽
+  const double scale = tokens::icon_size / 24.0;
+  return tokens::tree_padding_x + 6.0 * scale - tokens::icon_stroke_width * scale / 2.0;
+}
+
 Rect Tree::arrowRect(std::size_t visibleIndex) const {
   const Rect row = rowRect(visibleIndex);
   const double x = row.x + tokens::tree_padding_x + items_[rows_[visibleIndex]].depth * tokens::tree_indent;

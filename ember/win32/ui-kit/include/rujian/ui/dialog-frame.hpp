@@ -68,6 +68,8 @@ class DialogFrame : public Widget {
   void setContentFill(bool fill) { contentFill_ = fill; }
   /** 铺满时正文区右边不留内边距（正文里的滚动条贴到窗口右边，正文自己给右边留空），默认否；在 setContent 之前调用。 */
   void setContentFlushRight(bool flush) { contentFlushRight_ = flush; }
+  /** 铺满时正文区上边不留内边距（正文紧挨着标题栏，自己给上边留空），默认否；在 setContent 之前调用。 */
+  void setContentFlushTop(bool flush) { contentFlushTop_ = flush; }
   [[nodiscard]] Widget* content() const { return content_; }
   /** 设置按钮区的按钮；空表示没有按钮区。 */
   void setButtons(std::vector<DialogButton> buttons);
@@ -143,6 +145,7 @@ class DialogFrame : public Widget {
   bool closable_{true};
   bool contentFill_{false};
   bool contentFlushRight_{false};
+  bool contentFlushTop_{false};
   bool maximized_{false};
   bool windowActive_{true};
   std::function<void(const std::string&)> onButton_;

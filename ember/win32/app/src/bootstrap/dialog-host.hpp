@@ -49,8 +49,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
   /**
    * 设置一个对话框的正文工厂。
    * @param fills 正文是否铺满对话框的正文区（正文自己负责滚动，如左右分栏的对话框）；否则正文按内容高度排列，放不下时由对话框滚动。
+   * @param flushTop 铺满时正文上边是否紧挨标题栏（不留内边距，正文自己给上边留空）。
    */
-  void setBody(const std::string& dialogId, BodyFactory factory, bool fills = false);
+  void setBody(const std::string& dialogId, BodyFactory factory, bool fills = false, bool flushTop = false);
 
   /** 设置对话框标题栏的图标（应用图标）；没有设置时不显示。 */
   void setLogo(LogoFactory factory) { logo_ = std::move(factory); }
@@ -91,6 +92,7 @@ class DialogHost final : public contracts::ShellDialogOpener {
   std::map<std::string, BodyFactory> bodies_;
   LogoFactory logo_;
   std::set<std::string> fillingBodies_;
+  std::set<std::string> flushTopBodies_;
   std::map<std::string, std::function<bool(const std::string&)>> keyCaptures_;
   std::map<std::string, std::function<bool(int, unsigned)>> shortcutCaptures_;
   std::map<std::string, OpenHook> openHooks_;

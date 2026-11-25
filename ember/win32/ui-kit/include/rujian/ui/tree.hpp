@@ -102,6 +102,8 @@ class Tree : public Widget {
   [[nodiscard]] bool isExpanded(const std::string& id) const;
   /** 收起此刻显示着的、已展开的条目里最深的一层（同一层的全部）；没有可收起的返回 false。 */
   bool collapseDeepestLevel();
+  /** 第一层条目的展开箭头（朝下时）最左端离树左边的距离（树外面的文字要与它左对齐时用）。 */
+  [[nodiscard]] static double arrowLeftInset();
   /** 此刻显示的行数（收起的子项不算）。 */
   [[nodiscard]] std::size_t visibleCount() const { return rows_.size(); }
   /** 第 index 个显示的行的条目标识。 */

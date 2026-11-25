@@ -13,7 +13,8 @@
  *       Shift+F10 与菜单键触发右键菜单回调；其余按键先交给“按键处理”回调（重命名、删除、剪切复制粘贴、撤销等由使用方决定）。
  *       拖动：在已选中的行上按下并拖过一小段距离，用选中的行标识调用“开始拖动”回调（真正的拖放由应用完成）。
  *       行内重命名：beginRename 在名称单元格上放一个输入框，回车或失去焦点提交，Esc 取消。
- *       列宽：表头里相邻两列之间有竖线，鼠标在线上变成左右调整光标，拖动它把这条线左右两边的列一宽一窄（名称列在线的左边时它自己变宽或变窄）；调过的列宽按表头文字记住，重新 setColumns 后仍然有效。
+ *       列宽：除最后一列外每列都有自己的宽度（名称列也是），最后一列占满剩余宽度；表头里相邻两列之间有竖线，鼠标在线上变成左右调整光标并停留 200 毫秒后变成聚焦色（与分栏的分隔条一致），拖动它改变线左边那一列的宽度，线右边的列跟着移动，最后一列吸收差值；调过的列宽按表头文字记住，重新 setColumns 后仍然有效。
+ *       靠右对齐的列（如大小）在它不是最后一列时表头与内容都靠右，是最后一列时靠左，这样竖线右边总是紧挨着文字。
  * ------------------------------------------------------------------------
  */
 
@@ -33,13 +34,13 @@ namespace rujian::ui {
 
 class TextInput;
 
-/** 文件列表的一列。第一列是名称列（图标加名称，占满剩余宽度），其余列按给定宽度排。 */
+/** 文件列表的一列。除最后一列外每列都按给定宽度排（名称列是第一列，图标加名称），最后一列占满剩余宽度。 */
 struct FileTableColumn {
   /** 表头文字。 */
   std::string title;
-  /** 列宽（逻辑像素）；名称列忽略它。 */
+  /** 列宽（逻辑像素）；最后一列忽略它，名称列为 0 时用默认宽度。 */
   double width{0};
-  /** 内容靠右对齐（如大小）。 */
+  /** 内容靠右对齐（如大小）；最后一列不受它影响，一律靠左。 */
   bool alignEnd{false};
 };
 
@@ -113,9 +114,10 @@ class FileTable : public Widget {
   bool onMouseMove(const MouseEvent& event) override;
   bool onKeyDown(const KeyEvent& event) override;
   void onStateChanged() override;
+  void onTimer(unsigned id) override;
 
  private:
-  /** 各列的宽度（名称列占满剩余）。 */
+  /** 各列的宽度（最后一列占满剩余）。 */
   [[nodiscard]] std::vector<double> columnWidths() const;
   /** 可见区域：放在滚动区域里时是滚动区域的区域，否则是自己的区域。 */
   [[nodiscard]] Rect viewport() const;
@@ -124,6 +126,8 @@ class FileTable : public Widget {
   /** point 在哪条列分割线上；不在表头里或不在线上为 -1。 */
   [[nodiscard]] int dividerAt(Point point) const;
   void resizeTo(double x);
+  /** 改变鼠标停着的列分割线；停留一会儿后才显示聚焦色。 */
+  void setHoverDivider(int divider);
   [[nodiscard]] Rect headerRect() const;
   [[nodiscard]] Rect rowRectAt(std::size_t index) const;
   [[nodiscard]] int indexAt(Point point) const;
@@ -148,6 +152,9 @@ class FileTable : public Widget {
   /** 用户拖过的列宽，按表头文字记住。 */
   std::map<std::string, double> userWidths_;
   int hoverDivider_{-1};
+  /** 鼠标停着的分割线是否已经停留够久、显示聚焦色。 */
+  bool dividerShown_{false};
+  unsigned dividerTimer_{0};
   /** 正在拖的列分割线；没有为 -1。 */
   int resizeIndex_{-1};
   double resizeStartX_{0};

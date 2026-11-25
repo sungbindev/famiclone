@@ -98,6 +98,12 @@ class DialogWindow {
   /** 把屏幕坐标（设备像素）换成窗口内容的坐标（逻辑像素）。 */
   [[nodiscard]] rujian::ui::Point clientPointFromScreen(int x, int y);
 
+  /**
+   * 把窗口宽度加上 delta（逻辑像素，负数是缩小）：左边缘不动，超出屏幕工作区右边时整体左移，宽度不小于最小宽度、不超过工作区；高度不变。
+   * @return 窗口处在可以调整的状态（没有最大化、最小化）并已调整时为真。
+   */
+  bool resizeWidthBy(double delta);
+
  private:
   void place();
   /** 当前的最小尺寸（逻辑像素的宽、高）：按内容算的方向取内容所需与固定最小值中较大的。 */

@@ -36,7 +36,8 @@
     "iconLock", "iconLockOpen", "iconPencil", "iconPlayerEject", "iconPlayerPause", "iconPlayerPlay", "iconPlayerRecord", "iconPlayerStop", "iconPlus", "iconPower", "iconPrinter",
     "iconRefresh", "iconReload", "iconReplace", "iconRotate", "iconSelectAll", "iconSend", "iconSettings", "iconSparkles", "iconSquare", "iconTrash",
     "iconUnlink", "iconUpload", "iconVolume", "iconVolumeOff",
-    "iconApple", "iconBinary", "iconClipboard", "iconCopy", "iconCut", "iconFile", "iconFileCode", "iconFileText", "iconFileUnknown", "iconFileZip", "iconFolder", "iconFolderPlus", "iconPhoto"
+    "iconApple", "iconBinary", "iconClipboard", "iconCopy", "iconCut", "iconFile", "iconFileCode", "iconFileText", "iconFileUnknown", "iconFileZip", "iconFolder", "iconFolderPlus", "iconPhoto",
+    "iconSquareMinus", "iconLayoutSidebarRightCollapse", "iconLayoutSidebarRightExpand"
   ],
   "extraStyles": [
     "third_party/vscode/base/browser/ui/scrollbar/media/scrollbars.css",

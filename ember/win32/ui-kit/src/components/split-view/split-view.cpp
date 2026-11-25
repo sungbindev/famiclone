@@ -140,6 +140,7 @@ void SplitView::setMain(std::unique_ptr<Widget> main) {
   // 分隔条要始终在最上面，主区加进去后再把它放回末尾
   std::unique_ptr<Widget> splitter = removeChild(splitter_);
   main_ = main ? addChild(std::move(main)) : nullptr;
+  if (main_ != nullptr) main_->setVisible(mainVisible_);
   addChild(std::move(splitter));
   invalidate();
 }
@@ -158,6 +159,21 @@ void SplitView::setSideWidthRange(double minimum, double maximum) {
   changeSideWidth(sideWidth_);
 }
 
+void SplitView::setSideFit(bool fit) {
+  sideScroll_->setFitContent(fit);
+  invalidate();
+}
+
+void SplitView::setMainVisible(bool visible) {
+  if (mainVisible_ == visible) return;
+  mainVisible_ = visible;
+  splitter_->setVisible(visible);
+  if (main_ != nullptr) main_->setVisible(visible);
+  requestLayout();
+  if (host() != nullptr) arrange(bounds());
+  invalidate();
+}
+
 void SplitView::changeSideWidth(double width) {
   sideWidth_ = clampWidth(width);
   if (host() == nullptr) return;
@@ -166,6 +182,7 @@ void SplitView::changeSideWidth(double width) {
 }
 
 Size SplitView::measure(Size available) {
+  if (!mainVisible_) return sideScroll_->measure(Size{available.width, 0});
   const double border = host() != nullptr ? snapBorderWidth(kBorderWidth, host()->scale()) : kBorderWidth;
   const double mainWidth = available.width > 0 ? std::max(0.0, available.width - sideWidth_ - tokens::space_page) : 0.0;
   const Size side = sideScroll_->measure(Size{sideWidth_ - border, 0});
@@ -176,6 +193,10 @@ Size SplitView::measure(Size available) {
 
 void SplitView::arrange(const Rect& bounds) {
   setBounds(bounds);
+  if (!mainVisible_) {
+    sideScroll_->arrange(bounds);
+    return;
+  }
   const double border = snapBorderWidth(kBorderWidth, host()->scale());
   sideScroll_->arrange(Rect{bounds.x, bounds.y, sideWidth_ - border, bounds.height});
   // 分隔条宽 4，两侧各 -2 的外边距，所以中心正好在左栏的右边缘
@@ -187,6 +208,7 @@ void SplitView::arrange(const Rect& bounds) {
 }
 
 void SplitView::paint(Canvas& canvas) {
+  if (!mainVisible_) return;
   const double border = snapBorderWidth(kBorderWidth, host()->scale());
   canvas.fillRect(Rect{bounds().x + sideWidth_ - border, bounds().y, border, bounds().height}, themeTokens(host()->theme()).divider);
 }

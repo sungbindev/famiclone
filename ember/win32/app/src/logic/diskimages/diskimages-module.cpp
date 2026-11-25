@@ -15,10 +15,8 @@ namespace ember::win32::logic {
 
 namespace {
 
-/** 对话框内容区的初始大小与最小大小（逻辑像素）。 */
-constexpr int kDialogWidth = 960;
+/** 对话框内容区的初始高度与最小高度（逻辑像素）；宽度按内容算：只显示资源管理器时就是它的最小宽度，展开镜像内容后窗口会变宽。 */
 constexpr int kDialogHeight = 560;
-constexpr int kDialogMinWidth = 640;
 constexpr int kDialogMinHeight = 360;
 
 constexpr const char* kTitle = "磁盘镜像管理";
@@ -34,10 +32,9 @@ contracts::ShellModule createDiskImagesModule(DiskImagesController& controller) 
   contracts::ShellDialogDefinition dialog;
   dialog.id = kDiskImagesDialogId;
   dialog.title = kTitle;
-  dialog.width = kDialogWidth;
   dialog.height = kDialogHeight;
-  dialog.minWidth = kDialogMinWidth;
   dialog.minHeight = kDialogMinHeight;
+  dialog.fitMinWidth = true;
   dialog.modeless = true;
   module.dialogs.push_back(std::move(dialog));
 

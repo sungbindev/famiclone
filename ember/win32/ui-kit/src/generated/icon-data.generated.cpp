@@ -282,6 +282,18 @@ constexpr IconPath LayoutBottombarCollapsePaths[] = {
     {"M14 8l-2 2l-2 -2", "", "", 1},
 };
 
+constexpr IconPath LayoutSidebarRightCollapsePaths[] = {
+    {"M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12", "", "", 1},
+    {"M15 4v16", "", "", 1},
+    {"M9 10l2 2l-2 2", "", "", 1},
+};
+
+constexpr IconPath LayoutSidebarRightExpandPaths[] = {
+    {"M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12", "", "", 1},
+    {"M15 4v16", "", "", 1},
+    {"M10 10l-2 2l2 2", "", "", 1},
+};
+
 constexpr IconPath LockPaths[] = {
     {"M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6", "", "", 1},
     {"M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0", "", "", 1},
@@ -412,6 +424,11 @@ constexpr IconPath SquarePaths[] = {
     {"M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14", "", "", 1},
 };
 
+constexpr IconPath SquareMinusPaths[] = {
+    {"M9 12h6", "", "", 1},
+    {"M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14", "", "", 1},
+};
+
 constexpr IconPath TrashPaths[] = {
     {"M4 7l16 0", "", "", 1},
     {"M10 11l0 6", "", "", 1},
@@ -499,6 +516,8 @@ constexpr IconData kIcons[] = {
     {HardDiskOnePaths, sizeof(HardDiskOnePaths) / sizeof(IconPath)},
     {InfoCirclePaths, sizeof(InfoCirclePaths) / sizeof(IconPath)},
     {LayoutBottombarCollapsePaths, sizeof(LayoutBottombarCollapsePaths) / sizeof(IconPath)},
+    {LayoutSidebarRightCollapsePaths, sizeof(LayoutSidebarRightCollapsePaths) / sizeof(IconPath)},
+    {LayoutSidebarRightExpandPaths, sizeof(LayoutSidebarRightExpandPaths) / sizeof(IconPath)},
     {LockPaths, sizeof(LockPaths) / sizeof(IconPath)},
     {LockOpenPaths, sizeof(LockOpenPaths) / sizeof(IconPath)},
     {PausePaths, sizeof(PausePaths) / sizeof(IconPath)},
@@ -522,6 +541,7 @@ constexpr IconData kIcons[] = {
     {SettingsPaths, sizeof(SettingsPaths) / sizeof(IconPath)},
     {SparklesPaths, sizeof(SparklesPaths) / sizeof(IconPath)},
     {SquarePaths, sizeof(SquarePaths) / sizeof(IconPath)},
+    {SquareMinusPaths, sizeof(SquareMinusPaths) / sizeof(IconPath)},
     {TrashPaths, sizeof(TrashPaths) / sizeof(IconPath)},
     {UnlinkPaths, sizeof(UnlinkPaths) / sizeof(IconPath)},
     {UploadPaths, sizeof(UploadPaths) / sizeof(IconPath)},

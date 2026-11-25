@@ -33,8 +33,12 @@ using namespace rujian::ui;
 constexpr const char* kRootNone = "未选择镜像目录";
 constexpr const char* kChooseRoot = "选择目录";
 constexpr const char* kChangeRoot = "更改目录";
-constexpr const char* kNoRootNotice = "还没有选择镜像目录。点右上角的“选择目录”，选一个放磁盘镜像的文件夹，里面的镜像会列在这里。";
-constexpr const char* kUnavailableNotice = "镜像目录不存在或无法读取，请点右上角的“更改目录”重新选择。";
+constexpr const char* kExplorerTitle = "资源管理器";
+constexpr const char* kCollapseTip = "折叠一级";
+constexpr const char* kShowImageTip = "显示镜像内容";
+constexpr const char* kHideImageTip = "隐藏镜像内容";
+constexpr const char* kNoRootNotice = "还没有选择镜像目录。点上方的“选择目录”，选一个放磁盘镜像的文件夹，里面的镜像会列在这里。";
+constexpr const char* kUnavailableNotice = "镜像目录不存在或无法读取，请点上方的“更改目录”重新选择。";
 constexpr const char* kEmptyTreeNotice = "目录里是空的。右键点这里可以新建文件夹或空白镜像。";
 constexpr const char* kLoadingNotice = "正在读取…";
 constexpr const char* kNoImageNotice = "从左边选一个磁盘镜像，这里会显示它里面的文件。";
@@ -89,14 +93,22 @@ constexpr int kKeyV = 0x56;
 constexpr int kKeyX = 0x58;
 constexpr int kKeyZ = 0x5A;
 
-/** 上方一条的高度与内边距；右边文件列表上方信息行的高度。 */
-constexpr double kHeaderHeight = 34.0;
+/** 资源管理器上方两行（标题行与目录行）的高度、内边距、标题文字，以及右边镜像信息行的高度（与标题行等高）。 */
+constexpr double kHeaderRowHeight = 32.0;
 constexpr double kHeaderPadding = 10.0;
-constexpr double kInfoHeight = 26.0;
-/** 树的初始宽度与宽度范围。 */
-constexpr double kSideWidth = 340.0;
-constexpr double kSideMinWidth = 160.0;
-constexpr double kSideMaxWidth = 480.0;
+constexpr double kButtonsPadding = 6.0;
+constexpr double kButtonGap = 2.0;
+constexpr double kTitleFontSize = 13.0;
+constexpr int kTitleFontWeight = 600;
+constexpr double kInfoHeight = kHeaderRowHeight;
+/** 资源管理器的初始宽度（只显示它时窗口的最小宽度）、宽度范围，镜像内容展开时窗口增加的宽度，以及镜像内容至少要有的宽度。 */
+constexpr double kSideWidth = 400.0;
+constexpr double kSideMinWidth = 300.0;
+constexpr double kSideMaxWidth = 640.0;
+constexpr double kImagePaneWidth = 580.0;
+constexpr double kImagePaneMinWidth = 300.0;
+/** 文件列表里名称列的初始宽度（最后一列占满剩余）。 */
+constexpr double kNameColumnWidth = 200.0;
 /** 说明块离窗格边缘的距离。 */
 constexpr double kNoticeMargin = 8.0;
 
@@ -149,6 +161,93 @@ class MainPane final : public Widget {
   Notice* notice_{nullptr};
 };
 
+/** 左边的资源管理器：最上面是标题行（标题与两个按钮），下面是镜像目录行（路径与“更改目录”），再下面是放在滚动区域里的树；树没有内容时在它上方盖一块说明。 */
+class ExplorerPane final : public Widget {
+ public:
+  ExplorerPane() {
+    auto title = std::make_unique<Label>();
+    title->setText(kExplorerTitle);
+    title->setWrap(false);
+    title->setFontSize(kTitleFontSize);
+    title->setFontWeight(kTitleFontWeight);
+    title_ = static_cast<Label*>(addChild(std::move(title)));
+    collapse_ = addIconButton(IconId::SquareMinus, kCollapseTip);
+    pane_ = addIconButton(IconId::LayoutSidebarRightExpand, kShowImageTip);
+    auto path = std::make_unique<Label>();
+    path->setWrap(false);
+    path->setMuted(true);
+    path_ = static_cast<Label*>(addChild(std::move(path)));
+    auto change = std::make_unique<Button>(kChooseRoot);
+    change->setCompact(true);
+    change_ = static_cast<Button*>(addChild(std::move(change)));
+    auto scroll = std::make_unique<ScrollArea>();
+    auto tree = std::make_unique<Tree>();
+    tree_ = tree.get();
+    scroll->setContent(std::move(tree));
+    scroll_ = static_cast<ScrollArea*>(addChild(std::move(scroll)));
+    notice_ = static_cast<Notice*>(addChild(std::make_unique<Notice>()));
+    notice_->setVisible(false);
+  }
+
+  [[nodiscard]] Button* collapse() const { return collapse_; }
+  [[nodiscard]] Button* pane() const { return pane_; }
+  [[nodiscard]] Label* path() const { return path_; }
+  [[nodiscard]] Button* change() const { return change_; }
+  [[nodiscard]] Tree* tree() const { return tree_; }
+  [[nodiscard]] State* notice() const { return notice_; }
+
+  [[nodiscard]] Size measure(Size available) override { return available; }
+
+  void arrange(const Rect& bounds) override {
+    setBounds(bounds);
+    // 标题行：按钮靠右（显示镜像内容的按钮在最右，折叠按钮在它左边），标题靠左
+    double right = bounds.right() - kButtonsPadding;
+    for (Button* button : {pane_, collapse_}) {
+      const Size size = button->measure(Size{});
+      right -= size.width;
+      button->arrange(Rect{right, bounds.y + (kHeaderRowHeight - size.height) / 2.0, size.width, size.height});
+      right -= kButtonGap;
+    }
+    const double titleWidth = std::max(0.0, right - bounds.x - kHeaderPadding);
+    const double titleHeight = title_->measure(Size{titleWidth, 0}).height;
+    title_->arrange(Rect{bounds.x + kHeaderPadding, bounds.y + (kHeaderRowHeight - titleHeight) / 2.0, titleWidth, titleHeight});
+    // 镜像目录行：“更改目录”靠右，路径放不下的部分用省略号
+    const double rowY = bounds.y + kHeaderRowHeight;
+    const Size changeSize = change_->measure(Size{});
+    change_->arrange(Rect{bounds.right() - kHeaderPadding - changeSize.width, rowY + (kHeaderRowHeight - changeSize.height) / 2.0, changeSize.width, changeSize.height});
+    const double pathWidth = std::max(0.0, bounds.width - 3 * kHeaderPadding - changeSize.width);
+    const double pathHeight = path_->measure(Size{pathWidth, 0}).height;
+    path_->arrange(Rect{bounds.x + kHeaderPadding, rowY + (kHeaderRowHeight - pathHeight) / 2.0, pathWidth, pathHeight});
+    const Rect treeArea{bounds.x, rowY + kHeaderRowHeight, bounds.width, std::max(0.0, bounds.height - 2 * kHeaderRowHeight)};
+    scroll_->arrange(treeArea);
+    if (notice_->visible()) {
+      const double width = std::max(0.0, treeArea.width - 2 * kNoticeMargin);
+      notice_->arrange(Rect{treeArea.x + kNoticeMargin, treeArea.y + kNoticeMargin, width, notice_->measure(Size{width, 0}).height});
+    }
+  }
+
+ private:
+  /** 标题行上只有图标的按钮：名称在悬停提示里。 */
+  Button* addIconButton(IconId icon, const char* tip) {
+    auto button = std::make_unique<Button>(tip);
+    button->setVariant(ButtonVariant::Ghost);
+    button->setIconOnly(true);
+    button->setCompact(true);
+    button->setIcon(icon);
+    button->setTooltip(tip);
+    return static_cast<Button*>(addChild(std::move(button)));
+  }
+
+  Label* title_{nullptr};
+  Button* collapse_{nullptr};
+  Button* pane_{nullptr};
+  Label* path_{nullptr};
+  Button* change_{nullptr};
+  ScrollArea* scroll_{nullptr};
+  Tree* tree_{nullptr};
+  Notice* notice_{nullptr};
+};
+
 /** 路径里的 / 个数，即这个节点在树里的层级。 */
 int depthOf(const std::string& path) { return static_cast<int>(std::count(path.begin(), path.end(), '/')); }
 
@@ -194,18 +293,17 @@ MenuItem menuItem(const char* id, const char* label, bool disabled = false, cons
 }  // namespace
 
 DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contracts::DiskImagesDragHost& dragHost) : model_(model), dragHost_(dragHost) {
-  auto label = std::make_unique<Label>();
-  label->setWrap(false);
-  label->setMuted(true);
-  rootLabel_ = static_cast<Label*>(addChild(std::move(label)));
-  auto button = std::make_unique<Button>(kChooseRoot);
-  button->setCompact(true);
-  button->setOnClick([this] { model_.chooseRoot(); });
-  rootButton_ = static_cast<Button*>(addChild(std::move(button)));
-
   auto split = std::make_unique<SplitView>();
-  auto tree = std::make_unique<Tree>();
-  tree_ = tree.get();
+  auto explorer = std::make_unique<ExplorerPane>();
+  rootLabel_ = explorer->path();
+  rootButton_ = explorer->change();
+  rootButton_->setOnClick([this] { model_.chooseRoot(); });
+  collapseButton_ = explorer->collapse();
+  collapseButton_->setOnClick([this] { tree_->collapseDeepestLevel(); });
+  paneButton_ = explorer->pane();
+  paneButton_->setOnClick([this] { toggleImagePane(); });
+  treeNotice_ = explorer->notice();
+  tree_ = explorer->tree();
   tree_->setDefaultExpanded(false);
   tree_->setToggleOnClick(true);
   tree_->setOnSelect([this](const std::string& id) {
@@ -215,12 +313,14 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
     // 点文件夹只是选中并展开或收起，不改变右边显示的镜像
     if (!node->directory) model_.selectImage(id);
   });
+  tree_->setOnClearSelection([this] { treeSelected_.clear(); });
   tree_->setOnRename([this](const std::string& id, const std::string& name) { model_.renameItem(id, name); });
   tree_->setOnKey([this](const KeyEvent& event) { return handleTreeKey(event); });
   tree_->setCanDrop([this](const std::string& id, const std::string& target) { return canDropOnFolder(id, target); });
   tree_->setOnDrop([this](const std::string& id, const std::string& target) { model_.moveItems({id}, target); });
   tree_->setOnContextMenu([this](const std::string& id, Point position) { showTreeMenu(id, position); });
-  split->setSide(std::move(tree));
+  split->setSide(std::move(explorer));
+  split->setSideFit(true);
   split->setSideWidth(kSideWidth);
   split->setSideWidthRange(kSideMinWidth, kSideMaxWidth);
   auto pane = std::make_unique<MainPane>();
@@ -229,12 +329,11 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
   table_ = pane->table();
   listNotice_ = pane->notice();
   split->setMain(std::move(pane));
+  // 默认只显示资源管理器，镜像内容由标题行上的按钮展开
+  split->setMainVisible(false);
   split_ = static_cast<SplitView*>(addChild(std::move(split)));
-
-  auto treeNotice = std::make_unique<Notice>();
-  treeNotice->setVisible(false);
-  treeNotice_ = static_cast<State*>(addChild(std::move(treeNotice)));
   menu_ = static_cast<ContextMenu*>(addChild(std::make_unique<ContextMenu>()));
+
 
   table_->setOnActivate([this](const std::string& id) {
     if (id == kParentRowId) {
@@ -261,22 +360,44 @@ DiskImagesContent::~DiskImagesContent() {
 
 void DiskImagesContent::arrange(const Rect& bounds) {
   setBounds(bounds);
-  const double buttonWidth = rootButton_->measure(Size{}).width;
-  const double buttonHeight = rootButton_->measure(Size{}).height;
-  rootButton_->arrange(Rect{bounds.right() - kHeaderPadding - buttonWidth, bounds.y + (kHeaderHeight - buttonHeight) / 2.0, buttonWidth, buttonHeight});
-  const double labelWidth = std::max(0.0, bounds.width - 3 * kHeaderPadding - buttonWidth);
-  const double labelHeight = rootLabel_->measure(Size{labelWidth, 0}).height;
-  rootLabel_->arrange(Rect{bounds.x + kHeaderPadding, bounds.y + (kHeaderHeight - labelHeight) / 2.0, labelWidth, labelHeight});
-  const Rect body{bounds.x, bounds.y + kHeaderHeight, bounds.width, std::max(0.0, bounds.height - kHeaderHeight)};
-  split_->arrange(body);
-  if (treeNotice_->visible()) {
-    const double width = std::max(0.0, split_->sideWidth() - 2 * kNoticeMargin);
-    treeNotice_->arrange(Rect{body.x + kNoticeMargin, body.y + kNoticeMargin, width, treeNotice_->measure(Size{width, 0}).height});
+  // 镜像内容展开时，资源管理器的宽度不能挤得镜像内容低于最小宽度
+  double sideMaximum = kSideMaxWidth;
+  if (imagePaneShown_) {
+    const double gap = split_->sideExtent() - split_->sideWidth();
+    sideMaximum = std::clamp(bounds.width - kImagePaneMinWidth - gap, kSideMinWidth, kSideMaxWidth);
   }
+  split_->setSideWidthRange(kSideMinWidth, sideMaximum);
+  split_->arrange(bounds);
 }
 
-void DiskImagesContent::focusList() {
-  if (host() != nullptr) host()->setFocus(table_, false);
+Size DiskImagesContent::minimumSize() {
+  // 只显示资源管理器时窗口最窄是它的初始宽度；展开镜像内容后要再放得下它
+  const double width = imagePaneShown_ ? split_->sideExtent() + kImagePaneMinWidth : kSideWidth;
+  return Size{width, 0};
+}
+
+void DiskImagesContent::toggleImagePane() {
+  if (imagePaneShown_) {
+    // 窗口缩回去：去掉镜像内容占的宽度
+    const double extent = split_->bounds().width - split_->sideWidth();
+    imagePaneShown_ = false;
+    split_->setMainVisible(false);
+    if (onResizeWindow_) onResizeWindow_(-extent);
+  } else {
+    // 窗口变宽：资源管理器保持现在的宽度，右边多出来的是镜像内容
+    const double current = split_->bounds().width;
+    const bool resized = onResizeWindow_ && onResizeWindow_(kImagePaneWidth);
+    imagePaneShown_ = true;
+    split_->setSideWidth(resized ? current : kSideWidth);
+    split_->setMainVisible(true);
+  }
+  paneButton_->setIcon(imagePaneShown_ ? IconId::LayoutSidebarRightCollapse : IconId::LayoutSidebarRightExpand);
+  paneButton_->setTooltip(imagePaneShown_ ? kHideImageTip : kShowImageTip);
+  requestLayout();
+}
+
+void DiskImagesContent::focusInitial() {
+  if (host() != nullptr) host()->setFocus(tree_, false);
 }
 
 const contracts::DiskTreeNode* DiskImagesContent::findNode(const std::string& path) const {
@@ -405,7 +526,7 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   listScroll_->setVisible(notice.empty() && view.selected);
 
   const bool showModified = std::any_of(view.entries.begin(), view.entries.end(), [](const contracts::DiskEntryRow& row) { return !row.modified.empty(); });
-  std::vector<FileTableColumn> columns{{kColumnName, 0, false}, {kColumnType, 70, false}, {kColumnSize, 90, true}};
+  std::vector<FileTableColumn> columns{{kColumnName, kNameColumnWidth, false}, {kColumnType, 70, false}, {kColumnSize, 90, true}};
   if (showModified) columns.push_back({kColumnModified, 120, false});
   table_->setColumns(std::move(columns));
 
@@ -730,7 +851,7 @@ void DiskImagesContent::startDrag(const std::vector<std::string>& ids) {
 }
 
 std::optional<DiskImagesContent::DropTarget> DiskImagesContent::dropTarget(Point point, bool internal) {
-  if (!listScroll_->bounds().contains(point) || !imageView_.selected || imageView_.failed || imageView_.loading) return std::nullopt;
+  if (!imagePaneShown_ || !listScroll_->bounds().contains(point) || !imageView_.selected || imageView_.failed || imageView_.loading) return std::nullopt;
   const std::optional<std::string> row = table_->rowIdAt(point);
   std::string folder;
   if (row && *row != kParentRowId) {

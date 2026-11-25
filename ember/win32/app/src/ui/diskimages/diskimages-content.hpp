@@ -1,14 +1,15 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：diskimages-content.hpp
- * 说明：“磁盘镜像管理”对话框的内容：上面一条显示镜像目录与“选择目录”按钮，下面左边是镜像目录里的文件与文件夹树（像资源管理器，默认全部收起，显示完整文件名、文件系统格式与大小），右边是所选镜像当前文件夹里的文件列表（名称、类型、大小、修改时间，表头列分割线可拖动调整列宽）。
+ * 说明：“磁盘镜像管理”对话框的内容：左边是资源管理器（标题行有“折叠一级”与“显示/隐藏镜像内容”两个按钮，下面一行显示镜像目录与“选择目录”按钮，再下面是镜像目录里的文件与文件夹树，像资源管理器，默认全部收起，显示完整文件名、文件系统格式与大小）；右边是所选镜像当前文件夹里的文件列表（名称、类型、大小、修改时间，表头列分割线可拖动调整列宽），默认不显示，点“显示镜像内容”后展开，这时资源管理器与镜像内容之间才有分割线。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：文字与镜像里的内容取自模型；对话框里不显示操作结果，结果与错误由控制器用通知给出；做不了的操作（镜像只读、没有子目录的文件系统里新建文件夹等）不去调用模型，在合适的位置弹一个 2 秒的提示。
- *       左边的树是真正的文件管理：单击文件夹选中并展开或收起，单击镜像选中并在右边显示它；F2 重命名、Delete 删除（移进回收站）、Ctrl+X/C/V 剪切复制粘贴，右键菜单还有新建文件夹、新建空白镜像、载入软驱 A、在资源管理器中显示；条目可以拖到文件夹上移动；一律立即生效，不确认。
+ *       左边的树是真正的文件管理：单击文件夹选中并展开或收起，单击镜像选中并在右边显示它，点空白处取消选中；“折叠一级”每点一次只收起最深一层已展开的文件夹；F2 重命名、Delete 删除（移进回收站）、Ctrl+X/C/V 剪切复制粘贴，右键菜单还有新建文件夹、新建空白镜像、载入软驱 A、在资源管理器中显示；条目可以拖到文件夹上移动；一律立即生效，不确认。
  *       文件列表里的重命名、移动、删除等也一律立即生效，不确认，没有全选。
  *       键盘：列表里上下、回车打开文件夹、Backspace 回上一级、F2 重命名、Delete 删除、Ctrl+X/C/V 剪切复制粘贴、Ctrl+Z 撤销（树里也撤销当前镜像里的操作）、Shift+F10 与菜单键打开右键菜单。
+ *       展开与收起镜像内容时窗口跟着变宽与变窄（经 setOnResizeWindow 交给窗口，窗口最大化时不变）；只显示资源管理器时窗口最窄是它的初始宽度。
  *       拖放：文件列表里的条目拖到 Windows 里是导出，拖到列表里的文件夹上是移动；从 Windows 拖进列表是导入（拖在文件夹上导进那个文件夹，否则导进当前文件夹）；拖放由应用层完成，这里只给出 dragOver、dropFiles 等入口。
  * ------------------------------------------------------------------------
  */
@@ -50,11 +51,17 @@ class DiskImagesContent final : public rujian::ui::Widget {
   ~DiskImagesContent() override;
 
   [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override { return available; }
+  [[nodiscard]] rujian::ui::Size minimumSize() override;
   void arrange(const rujian::ui::Rect& bounds) override;
   bool onKeyDown(const rujian::ui::KeyEvent& event) override;
 
-  /** 把键盘焦点放到文件列表上（对话框刚打开时用）。 */
-  void focusList();
+  /** 把键盘焦点放到资源管理器的树上（对话框刚打开时用）。 */
+  void focusInitial();
+  /**
+   * 设置调整窗口宽度的函数：展开镜像内容时传正数（要增加的宽度），收起时传负数；窗口调整了就返回真，不能调整（如最大化）返回假。
+   * 不设置时窗口大小不变。
+   */
+  void setOnResizeWindow(std::function<bool(double delta)> handler) { onResizeWindow_ = std::move(handler); }
 
   /**
    * 拖动经过窗口：返回这里能不能放；窗口坐标（逻辑像素）。
@@ -89,6 +96,8 @@ class DiskImagesContent final : public rujian::ui::Widget {
   void updateTree();
   void updateImage(const contracts::DiskImageView& previous);
   void tryStartRename();
+  /** 展开或收起右边的镜像内容，窗口跟着变宽或变窄。 */
+  void toggleImagePane();
 
   void showTreeMenu(const std::string& id, rujian::ui::Point position);
   /** 树里一个条目对应的目标文件夹：文件夹是它自己，镜像是它所在的文件夹，空串（找不到的条目）是镜像目录本身。 */
@@ -128,6 +137,8 @@ class DiskImagesContent final : public rujian::ui::Widget {
 
   rujian::ui::Label* rootLabel_{nullptr};
   rujian::ui::Button* rootButton_{nullptr};
+  rujian::ui::Button* collapseButton_{nullptr};
+  rujian::ui::Button* paneButton_{nullptr};
   rujian::ui::SplitView* split_{nullptr};
   rujian::ui::Tree* tree_{nullptr};
   rujian::ui::State* treeNotice_{nullptr};
@@ -140,6 +151,10 @@ class DiskImagesContent final : public rujian::ui::Widget {
 
   contracts::DiskTreeView treeView_;
   contracts::DiskImageView imageView_;
+  /** 右边的镜像内容是否展开着。 */
+  bool imagePaneShown_{false};
+  /** 调整窗口宽度的函数，见 setOnResizeWindow。 */
+  std::function<bool(double)> onResizeWindow_;
   /** 树里选中的条目（镜像或文件夹）；选中文件夹不改变右边显示的镜像。 */
   std::string treeSelected_;
   /** 刚选中的镜像还没在树里出现（比如刚重命名），出现后要展开到它。 */

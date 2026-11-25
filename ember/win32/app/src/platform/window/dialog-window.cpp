@@ -235,4 +235,20 @@ rujian::ui::Point DialogWindow::clientPointFromScreen(int x, int y) {
   return rujian::ui::Point{point.x / scale, point.y / scale};
 }
 
+bool DialogWindow::resizeWidthBy(double delta) {
+  HWND hwnd = static_cast<HWND>(window_.nativeHandle());
+  RECT rect{};
+  if (IsZoomed(hwnd) != FALSE || IsIconic(hwnd) != FALSE || GetWindowRect(hwnd, &rect) == FALSE) return false;
+  const double scale = window_.root().scale();
+  RECT work = rect;
+  MONITORINFO monitor{sizeof(monitor)};
+  if (GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor) != FALSE) work = monitor.rcWork;
+  const int minimumWidth = static_cast<int>(std::ceil(minimumSize().first * scale - 1e-6));
+  const int workWidth = static_cast<int>(work.right - work.left);
+  const int width = std::clamp(static_cast<int>(rect.right - rect.left) + static_cast<int>(std::lround(delta * scale)), std::min(minimumWidth, workWidth), workWidth);
+  const int left = std::clamp(static_cast<int>(rect.left), static_cast<int>(work.left), std::max(static_cast<int>(work.left), static_cast<int>(work.right) - width));
+  SetWindowPos(hwnd, nullptr, left, rect.top, width, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE);
+  return true;
+}
+
 }  // namespace ember::win32::platform

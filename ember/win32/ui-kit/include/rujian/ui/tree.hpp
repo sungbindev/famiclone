@@ -12,6 +12,8 @@
  *       点击展开：打开 setToggleOnClick 后，单击有子项的行既选中它也展开或收起，不再用双击。
  *       拖动：设置“放下”回调后，在某一行上按下并拖过一小段距离开始拖动；放在文件夹行上就是放进这个文件夹，放在非文件夹行上是放进它的父文件夹，放在空白处是放进最外层（目标标识为空串）；“能否放下”回调返回假时不标出目标，放下也不调用。
  *       行内重命名：beginRename 在名称上放一个输入框，回车或失去焦点提交，Esc 取消。
+ *       点空白处：在空白处按下并松开会取消选中（调用“取消选中”回调）。
+ *       逐级收起：collapseDeepestLevel 只收起此刻显示着的、已展开的条目里最深的一层，反复调用就一层一层往外收起。
  * ------------------------------------------------------------------------
  */
 
@@ -51,6 +53,8 @@ class Tree : public Widget {
  public:
   /** 选中条目时调用，参数是条目的标识。 */
   using SelectHandler = std::function<void(const std::string&)>;
+  /** 点在空白处取消了选中。 */
+  using ClearHandler = std::function<void()>;
   /** 右键点击或按右键菜单键时调用：id 是条目的标识（点在空白处时为空串），position 是菜单要弹出的位置（窗口坐标）。 */
   using ContextHandler = std::function<void(const std::string& id, Point position)>;
   /** 行内重命名提交：名称没有改变时不调用。 */
@@ -72,6 +76,7 @@ class Tree : public Widget {
   /** 有键盘焦点的条目：移动过焦点的取它，否则取选中项，再否则取第一项；没有条目时为空串。 */
   [[nodiscard]] std::string focusedId() const;
   void setOnSelect(SelectHandler handler);
+  void setOnClearSelection(ClearHandler handler) { onClear_ = std::move(handler); }
   void setOnContextMenu(ContextHandler handler);
   void setOnRename(RenameHandler handler) { onRename_ = std::move(handler); }
   void setOnKey(KeyHandler handler) { onKey_ = std::move(handler); }
@@ -92,6 +97,8 @@ class Tree : public Widget {
   /** 展开或收起一个条目。 */
   void setExpanded(const std::string& id, bool expanded);
   [[nodiscard]] bool isExpanded(const std::string& id) const;
+  /** 收起此刻显示着的、已展开的条目里最深的一层（同一层的全部）；没有可收起的返回 false。 */
+  bool collapseDeepestLevel();
   /** 此刻显示的行数（收起的子项不算）。 */
   [[nodiscard]] std::size_t visibleCount() const { return rows_.size(); }
   /** 第 index 个显示的行的条目标识。 */
@@ -141,6 +148,7 @@ class Tree : public Widget {
   std::string selectedId_;
   std::string focusId_;
   SelectHandler onSelect_;
+  ClearHandler onClear_;
   ContextHandler onContext_;
   RenameHandler onRename_;
   KeyHandler onKey_;

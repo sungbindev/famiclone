@@ -8,6 +8,7 @@
  * 备注：对应组件库的 SplitView，只做 Ember 用到的部分（左栏内容、主区内容、初始宽度、最小宽度、最大宽度）；
  *       左栏表头（标题与右侧操作）暂未支持。左栏右边有一条分割线，分隔条（宽 4）跨在这条线两侧，鼠标移上去停留 200 毫秒后显示聚焦色。
  *       高度由摆放它的区域决定；度量时取左栏与主区中较高的。
+ *       主区可以隐藏：隐藏后左栏占满整个宽度，分割线与分隔条都不出现；左栏可以设成铺满（内容按左栏的高度铺满、不滚动，内容自己带滚动区域时用）。
  * ------------------------------------------------------------------------
  */
 
@@ -40,6 +41,11 @@ class SplitView : public Widget {
   [[nodiscard]] Widget* splitter() const;
   /** 左栏宽度的范围，默认 160 到 480。 */
   void setSideWidthRange(double minimum, double maximum);
+  /** 左栏内容铺满左栏的高度、不滚动（默认关闭）。 */
+  void setSideFit(bool fit);
+  /** 显示或隐藏主区（默认显示）；隐藏时左栏占满整个宽度，分割线与分隔条都不出现。 */
+  void setMainVisible(bool visible);
+  [[nodiscard]] bool mainVisible() const { return mainVisible_; }
 
   [[nodiscard]] Size measure(Size available) override;
   void arrange(const Rect& bounds) override;
@@ -59,6 +65,7 @@ class SplitView : public Widget {
   double sideWidth_{220.0};
   double minimum_{160.0};
   double maximum_{480.0};
+  bool mainVisible_{true};
 };
 
 }  // namespace rujian::ui

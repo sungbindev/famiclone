@@ -216,6 +216,21 @@ bool Tree::isExpanded(const std::string& id) const {
   return found != expanded_.end() ? found->second : defaultExpanded_;
 }
 
+bool Tree::collapseDeepestLevel() {
+  int deepest = -1;
+  for (const std::size_t index : rows_) {
+    if (hasChildren(index) && isExpanded(items_[index].id)) deepest = std::max(deepest, items_[index].depth);
+  }
+  if (deepest < 0) return false;
+  for (const std::size_t index : rows_) {
+    if (items_[index].depth == deepest && hasChildren(index) && isExpanded(items_[index].id)) expanded_[items_[index].id] = false;
+  }
+  rebuildRows();
+  requestLayout();
+  invalidate();
+  return true;
+}
+
 bool Tree::hasChildren(std::size_t itemIndex) const { return itemIndex + 1 < items_.size() && items_[itemIndex + 1].depth > items_[itemIndex].depth; }
 
 void Tree::rebuildRows() {
@@ -331,6 +346,14 @@ bool Tree::onMouseUp(const MouseEvent& event) {
   const int pressed = pressedRow_;
   pressedRow_ = -1;
   invalidate();
+  if (row < 0 && pressed < 0) {
+    // 在空白处按下并松开：取消选中
+    if (!selectedId_.empty()) {
+      selectedId_.clear();
+      if (onClear_) onClear_();
+    }
+    return true;
+  }
   if (row < 0 || row != pressed) return true;
   const std::size_t index = static_cast<std::size_t>(row);
   focusId_ = items_[rows_[index]].id;

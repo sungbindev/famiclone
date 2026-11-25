@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：file-table.cpp
- * 说明：文件列表的实现：行高 22，左右内边距 8（右边多留滚动条的位置），列间距 8；表头文字用表头色，固定在滚动区域顶部；行有悬停、选中、拖放目标三种底色，焦点行画向内的焦点框。
+ * 说明：文件列表的实现：行高 22，左右内边距 8（右边多留滚动条的位置），列间距 16；表头文字用表头色，固定在滚动区域顶部；行有悬停、选中、拖放目标三种底色，焦点行画向内的焦点框。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -38,10 +38,15 @@ constexpr double kRowHeight = tokens::tree_row_height;
 constexpr double kPaddingX = 8.0;
 /** 右边多留的宽度，滚动条盖在内容上，不挡住靠右的文字。 */
 constexpr double kScrollbarRoom = 12.0;
-constexpr double kColumnGap = 8.0;
+/** 相邻两列之间的距离，列分割线在正中，两边的文字离它各 8。 */
+constexpr double kColumnGap = 16.0;
 constexpr double kMinimumNameWidth = 80.0;
-/** 拖动列分割线时，除名称列外每列至少的宽度。 */
+/** 名称列没有给宽度时的默认宽度。 */
+constexpr double kDefaultNameWidth = 220.0;
+/** 拖动列分割线时，除名称列外每列至少的宽度，也是最后一列至少的宽度。 */
 constexpr double kMinimumColumnWidth = 40.0;
+/** 鼠标停在列分割线上多久后变成聚焦色（毫秒），与分栏的分隔条一致。 */
+constexpr unsigned kDividerHoverDelayMilliseconds = 200;
 /** 列分割线两侧可以抓住的范围。 */
 constexpr double kDividerGrab = 4.0;
 /** 表头竖线上下留的空隔。 */
@@ -170,14 +175,27 @@ void FileTable::setDropHighlight(const std::string& id) {
 std::vector<double> FileTable::columnWidths() const {
   std::vector<double> widths(columns_.size(), 0.0);
   if (columns_.empty()) return widths;
+  const std::size_t last = columns_.size() - 1;
+  const double total = bounds().width - kPaddingX - kScrollbarRoom - kColumnGap * static_cast<double>(last);
+  if (last == 0) {
+    widths[0] = std::max(kMinimumNameWidth, total);
+    return widths;
+  }
   double fixed = 0.0;
-  for (std::size_t i = 1; i < columns_.size(); ++i) {
+  for (std::size_t i = 0; i < last; ++i) {
     const auto user = userWidths_.find(columns_[i].title);
-    widths[i] = user != userWidths_.end() ? user->second : columns_[i].width;
+    const double base = columns_[i].width > 0 ? columns_[i].width : (i == 0 ? kDefaultNameWidth : kMinimumColumnWidth);
+    widths[i] = user != userWidths_.end() ? user->second : base;
     fixed += widths[i];
   }
-  const double available = bounds().width - kPaddingX - kScrollbarRoom - kColumnGap * static_cast<double>(columns_.size() - 1);
-  widths[0] = std::max(kMinimumNameWidth, available - fixed);
+  // 窗口太窄时先让名称列变窄，保证最后一列有最小宽度
+  const double shortage = kMinimumColumnWidth - (total - fixed);
+  if (shortage > 0) {
+    const double narrowed = std::max(kMinimumNameWidth, widths[0] - shortage);
+    fixed -= widths[0] - narrowed;
+    widths[0] = narrowed;
+  }
+  widths[last] = std::max(kMinimumColumnWidth, total - fixed);
   return widths;
 }
 
@@ -200,16 +218,34 @@ int FileTable::dividerAt(Point point) const {
 void FileTable::resizeTo(double x) {
   const std::size_t index = static_cast<std::size_t>(resizeIndex_);
   const std::vector<double>& start = resizeStartWidths_;
-  double delta = x - resizeStartX_;
-  if (index == 0) {
-    // 名称列在线的左边：线右移时名称列变宽、第二列变窄
-    delta = std::clamp(delta, kMinimumNameWidth - start[0], start[1] - kMinimumColumnWidth);
-    userWidths_[columns_[1].title] = start[1] - delta;
-  } else {
-    delta = std::clamp(delta, kMinimumColumnWidth - start[index], start[index + 1] - kMinimumColumnWidth);
-    userWidths_[columns_[index].title] = start[index] + delta;
-    userWidths_[columns_[index + 1].title] = start[index + 1] - delta;
+  // 线左边那一列变宽或变窄，线右边的列跟着移动，最后一列吸收差值
+  const double lowest = (index == 0 ? kMinimumNameWidth : kMinimumColumnWidth) - start[index];
+  const double highest = std::max(lowest, start.back() - kMinimumColumnWidth);
+  const double delta = std::clamp(x - resizeStartX_, lowest, highest);
+  userWidths_[columns_[index].title] = start[index] + delta;
+  invalidate();
+}
+
+void FileTable::setHoverDivider(int divider) {
+  if (divider == hoverDivider_) return;
+  hoverDivider_ = divider;
+  dividerShown_ = false;
+  if (host() == nullptr) return;
+  if (dividerTimer_ != 0) {
+    host()->stopTimer(dividerTimer_);
+    dividerTimer_ = 0;
   }
+  if (divider >= 0) {
+    if (host()->animationsEnabled()) dividerTimer_ = host()->startTimer(this, kDividerHoverDelayMilliseconds);
+    else dividerShown_ = true;
+  }
+  invalidate();
+}
+
+void FileTable::onTimer(unsigned id) {
+  if (id != dividerTimer_) return;
+  dividerTimer_ = 0;
+  dividerShown_ = true;
   invalidate();
 }
 
@@ -361,7 +397,7 @@ bool FileTable::onMouseUp(const MouseEvent& event) {
   if (host() != nullptr) host()->releaseMouse(this);
   if (resizeIndex_ >= 0) {
     resizeIndex_ = -1;
-    hoverDivider_ = dividerAt(event.position);
+    setHoverDivider(dividerAt(event.position));
     return true;
   }
   const int pressed = pressedRow_;
@@ -382,8 +418,7 @@ bool FileTable::onMouseMove(const MouseEvent& event) {
     return true;
   }
   if (const int divider = dividerAt(event.position); divider != hoverDivider_) {
-    hoverDivider_ = divider;
-    invalidate();
+    setHoverDivider(divider);
   }
   const int row = indexAt(event.position);
   if (row != hoverRow_) {
@@ -403,7 +438,7 @@ bool FileTable::onMouseMove(const MouseEvent& event) {
 void FileTable::onStateChanged() {
   Widget::onStateChanged();
   if (!hovered() && hoverRow_ != -1) hoverRow_ = -1;
-  if (!hovered() && resizeIndex_ < 0) hoverDivider_ = -1;
+  if (!hovered() && resizeIndex_ < 0) setHoverDivider(-1);
 }
 
 bool FileTable::onKeyDown(const KeyEvent& event) {
@@ -546,7 +581,7 @@ void FileTable::paint(Canvas& canvas) {
       // 正在重命名的行，名称由输入框显示
       const bool editing = c == 0 && item.id == renameId_;
       if (!text.empty() && !editing) {
-        if (columns_[c].alignEnd) {
+        if (columns_[c].alignEnd && c + 1 < columns_.size()) {
           const double natural = host()->measureText(text, cellStyle, 0).width + 1.0;
           if (natural <= textWidth) {
             textX += textWidth - natural;
@@ -582,7 +617,7 @@ void FileTable::paint(Canvas& canvas) {
       // 与名称列的文字对齐：图标的位置留空
       textX += tokens::icon_size + tokens::icon_text_gap;
       textWidth -= tokens::icon_size + tokens::icon_text_gap;
-    } else if (columns_[c].alignEnd) {
+    } else if (columns_[c].alignEnd && c + 1 < columns_.size()) {
       const double natural = host()->measureText(columns_[c].title, headerStyle, 0).width + 1.0;
       if (natural <= textWidth) {
         textX += textWidth - natural;
@@ -592,11 +627,14 @@ void FileTable::paint(Canvas& canvas) {
     canvas.drawText(columns_[c].title, Rect{textX, header.y, std::max(0.0, textWidth), header.height}, headerStyle, VerticalAlign::Center);
     x += widths[c] + kColumnGap;
   }
-  // 相邻两列之间的分割线
+  // 相邻两列之间的分割线：鼠标停够时间或正在拖动时画成聚焦色的粗条
   for (std::size_t c = 0; c + 1 < columns_.size() && c + 1 < widths.size(); ++c) {
-    const bool active = static_cast<int>(c) == hoverDivider_ || static_cast<int>(c) == resizeIndex_;
-    const Color line = colors.text_muted.withOpacity(active ? 0.8 : 0.35);
-    canvas.fillRect(Rect{std::round(dividerX(c, widths)), header.y + kDividerInset, 1.0, header.height - 2 * kDividerInset}, line);
+    const double lineX = std::round(dividerX(c, widths));
+    if (static_cast<int>(c) == resizeIndex_ || (static_cast<int>(c) == hoverDivider_ && dividerShown_)) {
+      canvas.fillRect(Rect{lineX + 0.5 - tokens::space_xs / 2.0, header.y, tokens::space_xs, header.height}, colors.focus_border);
+    } else {
+      canvas.fillRect(Rect{lineX, header.y + kDividerInset, 1.0, header.height - 2 * kDividerInset}, colors.text_muted.withOpacity(0.35));
+    }
   }
 }
 

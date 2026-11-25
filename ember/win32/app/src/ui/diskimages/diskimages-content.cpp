@@ -48,6 +48,8 @@ constexpr const char* kColumnType = "类型";
 constexpr const char* kColumnSize = "大小";
 constexpr const char* kColumnModified = "修改时间";
 constexpr const char* kParentName = "..";
+/** 这个文件系统没有的字段（如 DOS 3.3 没有修改时间、文件夹没有大小）显示的占位文字。 */
+constexpr const char* kNoValue = "-";
 
 constexpr const char* kMenuNewImage = "新建空白镜像";
 constexpr const char* kMenuLoad = "载入软驱 A";
@@ -502,10 +504,8 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   // 有说明时不显示列表（表头与“文件夹是空的”不能压在说明上）；没有说明时表头一直显示
   listScroll_->setVisible(notice.empty());
 
-  const bool showModified = shown && std::any_of(view.entries.begin(), view.entries.end(), [](const contracts::DiskEntryRow& row) { return !row.modified.empty(); });
-  std::vector<FileTableColumn> columns{{kColumnName, kNameColumnWidth, false}, {kColumnType, 70, false}, {kColumnSize, 90, true}};
-  if (showModified) columns.push_back({kColumnModified, 120, false});
-  table_->setColumns(std::move(columns));
+  // 表头四列固定不变，镜像里没有的字段显示“-”
+  table_->setColumns({{kColumnName, kNameColumnWidth, false}, {kColumnType, 70, false}, {kColumnSize, 90, true}, {kColumnModified, 120, false}});
   // 读取中还没有内容，不能显示“这个文件夹是空的”；没选镜像时表头下面是提示
   const char* emptyText = "";
   if (!shown) emptyText = treeUsable ? kNoImageNotice : "";
@@ -526,8 +526,8 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
       row.id = entry.name;
       row.icon = entryIcon(entry);
       row.folder = entry.directory;
-      row.cells = {entry.name, entry.type, entry.size};
-      if (showModified) row.cells.push_back(entry.modified);
+      const auto orDash = [](const std::string& text) { return text.empty() ? std::string(kNoValue) : text; };
+      row.cells = {entry.name, orDash(entry.type), orDash(entry.size), orDash(entry.modified)};
       rows.push_back(std::move(row));
     }
   }

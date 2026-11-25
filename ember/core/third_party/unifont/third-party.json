@@ -1,0 +1,17 @@
+{
+  "name": "GNU Unifont",
+  "version": "15.1.05",
+  "authors": [
+    "Roman Czyborra",
+    "Paul Hardy",
+    "Qianqian Fang",
+    "Andrew Miller",
+    "Johnnie Weaver",
+    "David Corbett",
+    "Rebecca Bettencourt"
+  ],
+  "license": "SIL OFL 1.1",
+  "licenseFile": "LICENSE",
+  "homepage": "https://unifoundry.com/unifont/",
+  "usage": "中华学习机 cec1 没有接 U33、U34 字库芯片时汉字程序读的内置汉字字库，由 tools/dev/gen-cec1-font.mjs 从 unifont_all-15.1.05.hex 转成源码里的数组（core/src/bootstrap/machines/cec1/cec1-font.cpp），按 GB2312 区位重新排列，区位 2-1 的字模留空"
+}

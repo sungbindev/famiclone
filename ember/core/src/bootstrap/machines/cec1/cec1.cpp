@@ -16,6 +16,7 @@
 #include <string>
 #include <variant>
 
+#include "bootstrap/machines/cec1/cec1-font.hpp"
 #include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
 
@@ -142,6 +143,7 @@ std::vector<hw::MemorySpace> Cec1Machine::memorySpaces() const {
       {"board.ram", "主存（64K）", Cec1Board::RAM_SIZE, true},
       {"board.languageCard", "语言卡存储（16K：bank 1 的 4K、bank 2 的 4K 与 $E000-$FFFF 的 8K）", Cec1Board::LANGUAGE_CARD_SIZE, true},
       {"board.rom", "ROM 文件原样：U7（32K）、U35（32K），接了汉字字库时后面是 U33（128K）与 U34（128K），只读", board_.rom().size(), false},
+      {"board.font", "内置汉字字库（256K，只读，没有接 U33、U34 时汉字程序读这份）", cec1_font::FONT_SIZE, false},
   };
 }
 
@@ -159,6 +161,9 @@ void Cec1Machine::readMemory(std::string_view space, std::uint32_t address, std:
     copyFrom(board_.languageCard());
   } else if (space == "board.rom") {
     copyFrom(board_.rom());
+  } else if (space == "board.font") {
+    checkRange(space, cec1_font::FONT_SIZE, address, out.size());
+    std::copy_n(cec1_font::HANZI_FONT.begin() + address, out.size(), out.begin());
   } else {
     unknownSpace(space);
   }
@@ -180,6 +185,8 @@ void Cec1Machine::writeMemory(std::string_view space, std::uint32_t address, std
     copyTo(board_.languageCard());
   } else if (space == "board.rom") {
     throw shared::CoreError(hw::ERROR_SPACE_READ_ONLY, "空间 board.rom 是只读的");
+  } else if (space == "board.font") {
+    throw shared::CoreError(hw::ERROR_SPACE_READ_ONLY, "空间 board.font 是只读的");
   } else {
     unknownSpace(space);
   }
@@ -198,8 +205,10 @@ hw::AddressTarget Cec1Machine::resolve(std::string_view space, std::uint32_t add
       return {"rom", "board.rom", where.offset, "ROM（U7 低 16K 是 LOGO、高 16K 是监控与 CEC-BASIC，U35 低 16K 是汉字表、高 16K 是汉字程序与槽 ROM，U33 与 U34 是汉字字库）"};
     case Cec1Board::Location::Kind::Register:
       return {"register", "board.registers", where.offset, "软开关与 I/O（$C000-$C0FF 与打印机接口卡的状态寄存器）"};
-    case Cec1Board::Location::Kind::Empty:
-      return {"none", "", 0, "没有设备，读到 0"};
+    case Cec1Board::Location::Kind::Font:
+      return {"rom", "board.font", where.offset, "内置汉字字库（没有接 U33、U34 时）"};
+    case Cec1Board::Location::Kind::PrinterRom:
+      return {"none", "", 0, "打印机接口卡的驱动程序（槽 1）"};
     case Cec1Board::Location::Kind::None:
       break;
   }

@@ -16,6 +16,7 @@
 #include <string>
 #include <utility>
 
+#include "bootstrap/machines/cec1/cec1-font.hpp"
 #include "contracts/hardware/button-input.hpp"
 #include "contracts/hardware/hardware-error.hpp"
 #include "shared/errors/core-error.hpp"
@@ -45,6 +46,26 @@ constexpr std::uint16_t PRINTER_STATUS_FIRST = 0xC1C0;
 constexpr std::uint16_t PRINTER_STATUS_LAST = 0xC1C7;
 constexpr std::uint8_t PRINTER_STATUS_ACK = 0;
 constexpr std::uint8_t PRINTER_STATUS_BUSY = 4;
+/**
+ * 打印机接口卡的驱动程序（槽 1 的 $C100 起，PR#1 后输出的字符交给它）：去掉高位、
+ * 等打印机不忙后写 $C090，
+ * 遇到回车再追加一个换行，返回时 A 不变。原卡的驱动 ROM 没有收集到，这是按接口卡的行为重写的。
+ */
+constexpr std::array<std::uint8_t, 26> PRINTER_DRIVER = {
+    0x48,              // C100 PHA
+    0x29, 0x7F,        // C101 AND #$7F
+    0x20, 0x11, 0xC1,  // C103 JSR $C111
+    0xC9, 0x0D,        // C106 CMP #$0D
+    0xD0, 0x05,        // C108 BNE $C10F
+    0xA9, 0x0A,        // C10A LDA #$0A
+    0x20, 0x11, 0xC1,  // C10C JSR $C111
+    0x68,              // C10F PLA
+    0x60,              // C110 RTS
+    0x2C, 0xC4, 0xC1,  // C111 BIT $C1C4
+    0x30, 0xFB,        // C114 BMI $C111
+    0x8D, 0x90, 0xC0,  // C116 STA $C090
+    0x60,              // C119 RTS
+};
 /** 内置串口（槽 2）的状态：位 1 为发送寄存器空。 */
 constexpr std::uint8_t SERIAL_TRANSMIT_READY = 0x02;
 /** 模拟手柄的计时：每个计数占的 CPU 周期数，加上计时开始的固定延迟。 */
@@ -115,8 +136,8 @@ Cec1Board::Location Cec1Board::locateRead(std::uint16_t address) const {
   if (address < EXTENSION_FIRST) return {Kind::Ram, address};
   if (address < WINDOW_FIRST) {
     if (!switches_.ramRead) return {Kind::Ram, address};
-    // 汉字字库 ROM：按 $C0B0 的低 4 位选页；没有接字库时是空座。
-    if (rom_.size() == ROM_SIZE) return {Kind::Empty, 0};
+    // 汉字字库：接了 U33、U34 时按 $C0B0 的低 4 位选页读芯片，没有接时读内置字库。
+    if (rom_.size() == ROM_SIZE) return {Kind::Font, builtinFontOffset(address)};
     return {Kind::Rom, libraryOffset(address)};
   }
   if (address < IO_FIRST) {
@@ -128,6 +149,7 @@ Cec1Board::Location Cec1Board::locateRead(std::uint16_t address) const {
   if (address < HIGH_FIRST) {
     // 打印机接口卡的状态寄存器在槽 1 的 ROM 空间里，内部 ROM 开关为 1 时读不到。
     if (!switches_.internalRom && address >= PRINTER_STATUS_FIRST && address <= PRINTER_STATUS_LAST) return {Kind::Register, static_cast<std::size_t>(address - IO_FIRST)};
+    if (!switches_.internalRom && address >= SLOT_ROM_FIRST && address < SLOT_ROM_FIRST + PRINTER_DRIVER.size()) return {Kind::PrinterRom, static_cast<std::size_t>(address - SLOT_ROM_FIRST)};
     const bool internal = switches_.internalRom || (address >= SLOT_THREE_FIRST && address <= SLOT_THREE_LAST && !switches_.slotThreeRom);
     return {Kind::Rom, (internal ? U7_HIGH : U35_HIGH) + (address - IO_FIRST)};
   }
@@ -143,6 +165,10 @@ std::size_t Cec1Board::libraryOffset(std::uint16_t address) const {
   // 每个字模 32 字节由两片芯片交替给出：偏移除 2 是芯片地址，低位选 U33（偶）或 U34（奇）。
   const std::size_t inBank = static_cast<std::size_t>(switches_.aux & LIBRARY_BANK_MASK) * LIBRARY_BANK_SIZE + (address - EXTENSION_FIRST);
   return ROM_SIZE + (inBank & 1U) * LIBRARY_CHIP_SIZE + (inBank >> 1);
+}
+
+std::size_t Cec1Board::builtinFontOffset(std::uint16_t address) const {
+  return static_cast<std::size_t>(switches_.aux & LIBRARY_BANK_MASK) * LIBRARY_BANK_SIZE + (address - EXTENSION_FIRST);
 }
 
 std::uint8_t Cec1Board::printerStatus(std::uint8_t index) const {
@@ -172,8 +198,10 @@ hw::BusRead Cec1Board::read(std::uint16_t address) {
     case Location::Kind::Register:
       if (where.offset >= 0x100) return hw::driveBus(printerStatus(static_cast<std::uint8_t>(where.offset & 0x0FU)));
       return readIo(static_cast<std::uint8_t>(where.offset), true);
-    case Location::Kind::Empty:
-      return hw::driveBus(0);
+    case Location::Kind::Font:
+      return hw::driveBus(cec1_font::HANZI_FONT[where.offset]);
+    case Location::Kind::PrinterRom:
+      return hw::driveBus(PRINTER_DRIVER[where.offset]);
     case Location::Kind::None:
       break;
   }
@@ -401,14 +429,8 @@ void Cec1Board::accessLanguageCard(std::uint8_t reg) {
   // A1A0 为 00 与 11 读 RAM，01 与 10 读 ROM。
   const unsigned mode = reg & 3U;
   switches_.lcReadRam = mode == 0 || mode == 3;
-  if (odd) {
-    // 连续两次奇数地址的访问才允许写。
-    if (switches_.lcPreWrite) switches_.lcWriteRam = true;
-    switches_.lcPreWrite = true;
-  } else {
-    switches_.lcPreWrite = false;
-    switches_.lcWriteRam = false;
-  }
+  // 写允许就是地址位 0：奇数地址允许写 RAM，偶数地址禁止。
+  switches_.lcWriteRam = odd;
 }
 
 // ---------------------------------------------------------------- 视频与手柄

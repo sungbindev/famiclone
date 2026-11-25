@@ -79,6 +79,19 @@ void ShellController::openDialog(const std::string& dialogId) {
   dialogs_.openDialog(dialogId);
 }
 
+void ShellController::toggleDialog(const std::string& dialogId) {
+  if (registry_.dialogs.find(dialogId) == registry_.dialogs.end()) return;
+  if (dialogs_.isOpen(dialogId)) dialogs_.closeDialog(dialogId);
+  else dialogs_.openDialog(dialogId);
+}
+
+void ShellController::refreshOpenDialogs() {
+  view_.openDialogs.clear();
+  for (const auto& [id, definition] : registry_.dialogs) {
+    if (dialogs_.isOpen(id)) view_.openDialogs.insert(id);
+  }
+}
+
 void ShellController::togglePanel(const std::string& panelId) {
   if (findPanel(panelId) == nullptr) return;
   if (view_.bottomPanelOpen && view_.activePanelId == panelId) {
@@ -110,6 +123,7 @@ void ShellController::runCommand(const std::string& commandId) {
   const auto found = registry_.commands.find(commandId);
   if (found == registry_.commands.end()) return;
   const auto& command = found->second;
+  refreshOpenDialogs();
   if (command.enabled && !command.enabled(view_)) return;
   if (command.run) command.run(*this);
 }
@@ -119,6 +133,7 @@ void ShellController::refreshCommands() { changed(); }
 void ShellController::notify(const std::string& text, contracts::NotificationLevel level, contracts::NotificationAction action) { notifier_.notify(text, level, std::move(action)); }
 
 std::vector<contracts::ShellMenuModel> ShellController::menus() {
+  refreshOpenDialogs();
   std::vector<contracts::ShellMenuModel> result;
   for (const auto& info : contracts::kShellMenus) {
     contracts::ShellMenuModel menu{info.id, info.label, info.mnemonic, {}};

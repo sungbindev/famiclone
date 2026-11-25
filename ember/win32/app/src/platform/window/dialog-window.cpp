@@ -77,6 +77,7 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
   if (options_.fitMinimumWidth || options_.fitMinimumHeight) frameOptions.minimumProvider = [this] { return minimumSize(); };
   frameless_ = std::make_unique<FramelessFrame>(window_.nativeHandle(), std::move(frameOptions), std::move(callbacks));
   window_.setMessageHook([this](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
+    if (messageObserver_ && messageObserver_(message, wParam, lParam, result)) return true;
     if (message == WM_CLOSE) {
       // 不让系统销毁窗口（销毁会让消息循环退出），只请求关闭
       if (options_.onCloseRequested) options_.onCloseRequested();
@@ -135,6 +136,11 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
     return frameless_->handle(message, wParam, lParam, result);
   });
   frameless_->attach();
+  // 没有最大化按钮的窗口也不能靠双击标题栏、贴边拖动最大化
+  if (!options_.maximizable) {
+    HWND hwnd = static_cast<HWND>(window_.nativeHandle());
+    SetWindowLongPtrW(hwnd, GWL_STYLE, GetWindowLongPtrW(hwnd, GWL_STYLE) & ~static_cast<LONG_PTR>(WS_MAXIMIZEBOX));
+  }
   // 非模态对话框自己最小化，要有自己的任务栏按钮才找得回来
   if (options_.modeless) {
     HWND hwnd = static_cast<HWND>(window_.nativeHandle());
@@ -248,6 +254,7 @@ bool DialogWindow::resizeWidthBy(double delta) {
   const int minimumWidth = static_cast<int>(std::ceil(minimumSize().first * scale - 1e-6));
   const int workWidth = static_cast<int>(work.right - work.left);
   const int width = std::clamp(static_cast<int>(rect.right - rect.left) + static_cast<int>(std::lround(delta * scale)), std::min(minimumWidth, workWidth), workWidth);
+  if (widthResizer_ && widthResizer_(width)) return true;
   const int left = std::clamp(static_cast<int>(rect.left), static_cast<int>(work.left), std::max(static_cast<int>(work.left), static_cast<int>(work.right) - width));
   SetWindowPos(hwnd, nullptr, left, rect.top, width, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE);
   return true;

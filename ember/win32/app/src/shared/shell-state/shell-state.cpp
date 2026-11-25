@@ -115,6 +115,7 @@ ShellState parseShellState(const nlohmann::json& raw) {
       if (auto panels = parsePanelList(layout["autoCollapseOffPanels"])) state.layout.autoCollapseOffPanels = std::move(*panels);
     }
     if (layout.contains("alwaysOnTop") && layout["alwaysOnTop"].is_boolean()) state.layout.alwaysOnTop = layout["alwaysOnTop"].get<bool>();
+    if (layout.contains("fileManagerOpen") && layout["fileManagerOpen"].is_boolean()) state.layout.fileManagerOpen = layout["fileManagerOpen"].get<bool>();
     if (layout.contains("keybindings")) state.layout.keybindings = parseKeybindings(layout["keybindings"]);
   }
   if (raw.contains("releaseNotesVersion") && raw["releaseNotesVersion"].is_string() && isVersion(raw["releaseNotesVersion"].get<std::string>())) {
@@ -128,6 +129,7 @@ nlohmann::json toJson(const ShellState& state) {
   nlohmann::json layout{{"selectedMachine", state.layout.selectedMachine ? nlohmann::json(*state.layout.selectedMachine) : nlohmann::json(nullptr)},
                         {"autoCollapseOffPanels", state.layout.autoCollapseOffPanels},
                         {"alwaysOnTop", state.layout.alwaysOnTop},
+                        {"fileManagerOpen", state.layout.fileManagerOpen},
                         {"keybindings", state.layout.keybindings}};
   return {{"window", state.window ? nlohmann::json{{"x", state.window->x}, {"y", state.window->y}} : nlohmann::json(nullptr)},
           {"layout", layout},

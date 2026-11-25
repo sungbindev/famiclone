@@ -16,6 +16,7 @@
 
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -56,6 +57,8 @@ struct ShellViewState {
   bool fullScreen{false};
   /** 窗口是否始终置顶。 */
   bool alwaysOnTop{false};
+  /** 现在打开着的对话框标识；每次渲染菜单与执行命令前由外壳重新取。 */
+  std::set<std::string> openDialogs;
 };
 
 /** 外壳接口：显示区、面板与命令经它调用外壳。 */
@@ -64,6 +67,8 @@ class ShellApi {
   virtual ~ShellApi() = default;
   /** 打开对话框；已打开时聚焦它。 */
   virtual void openDialog(const std::string& dialogId) = 0;
+  /** 对话框开着就关闭，关着就打开。 */
+  virtual void toggleDialog(const std::string& dialogId) = 0;
   /** 点击面板按钮：面板关着就展开并切到该页签，开着而且就是该页签就收起，开着但在别的页签就切过去。 */
   virtual void togglePanel(const std::string& panelId) = 0;
   /** 进入或退出全屏。 */
@@ -100,6 +105,8 @@ struct ShellDialogDefinition {
   bool fitMinHeight{false};
   /** 非模态：打开期间主窗口仍然可用，有最小化按钮（只最小化它自己），不总盖在主窗口上面。 */
   bool modeless{false};
+  /** 停靠在主窗口左边：打开时贴在主窗口左边、上沿对齐、高度同主窗口；拖近主窗口左边时磁吸，吸住后跟随主窗口移动，主窗口置顶时一起置顶；只对非模态对话框有效。 */
+  bool dockLeft{false};
 };
 
 /** 命令：菜单项与快捷键都经命令执行动作。 */

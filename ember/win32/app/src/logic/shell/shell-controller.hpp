@@ -58,6 +58,7 @@ class ShellController final : public contracts::ShellApi, public contracts::Shel
 
   // ---- ShellApi ----
   void openDialog(const std::string& dialogId) override;
+  void toggleDialog(const std::string& dialogId) override;
   void togglePanel(const std::string& panelId) override;
   void toggleFullScreen() override;
   void toggleAlwaysOnTop() override;
@@ -88,6 +89,8 @@ class ShellController final : public contracts::ShellApi, public contracts::Shel
 
  private:
   void changed();
+  /** 重新取现在打开着的对话框，写进视图状态。 */
+  void refreshOpenDialogs();
   [[nodiscard]] bool autoCollapseOn(const std::string& panelId) const;
   [[nodiscard]] const contracts::ShellPanelDefinition* findPanel(const std::string& panelId) const;
 

@@ -437,6 +437,15 @@ int runApplication(const shared::LaunchArguments& launch) {
     dialogs.setKeyCapture(logic::kGamepadSettingsDialogId, [&gamepadSettings](const std::string& code) { return gamepadSettings.keyPressed(code); });
     dialogs.setLogo([] { return std::make_unique<ui::AppLogo>(platform::renderAppIcon); });
     logic::ShellController shell(std::move(registry), windowControl, dialogs, notifier, shellState, droppedFiles);
+    // 媒体库开着与否记到外壳状态里，下次启动沿用（退出时的 closeAll 不触发这个回调，所以不会被当成用户关闭）；对话框开关后菜单里的勾选要重算
+    dialogs.setOnOpenChanged([&shellState, &shell](const std::string& dialogId, bool open) {
+      shell.refreshCommands();
+      if (dialogId != logic::kFileManagerDialogId) return;
+      shared::ShellLayout layout = shellState.get().layout;
+      if (layout.fileManagerOpen == open) return;
+      layout.fileManagerOpen = open;
+      shellState.updateLayout(layout);
+    });
     // 首选项里的“快捷键”页用外壳的快捷键模型；设置快捷键时对话框窗口把按下的键交给它
     dialogs.setBody(logic::kPreferencesDialogId, [&preferencesController, &userDataController, &shell] { return std::make_unique<ui::PreferencesContent>(preferencesController, userDataController, &shell.keybindings()); }, true);
     dialogs.setShortcutCapture(logic::kPreferencesDialogId, [&shell](int virtualKey, unsigned modifiers) { return shell.keybindings().shortcutKeyPressed(virtualKey, modifiers); });
@@ -507,6 +516,8 @@ int runApplication(const shared::LaunchArguments& launch) {
     framePointer = &frame;
     applyBorderColor();
     window.setMessageHook([&](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
+      // 主窗口的位置、大小、最小化、置顶变化时，停靠着的对话框（媒体库）跟着动
+      if (message == WM_WINDOWPOSCHANGED) dialogs.ownerWindowChanged();
       if (frame.handle(message, wParam, lParam, result)) return true;
       if (modes != nullptr && modes->handle(message, wParam, lParam, result)) return true;
       if (screenHost && screenHost->handleMessage(message, wParam, lParam, result)) return true;
@@ -607,6 +618,8 @@ int runApplication(const shared::LaunchArguments& launch) {
       if (showTimer != 0) ui.cancelDelayed(showTimer);
       window.show();
       trackMoves = true;
+      // 上次媒体库是开着的，这次启动同时打开，停靠在主窗口左边，焦点留在主窗口
+      if (shellState.get().layout.fileManagerOpen) dialogs.openDialogInBackground(logic::kFileManagerDialogId);
     };
     showTimer = ui.postDelayed(kThemeWaitMilliseconds, [&] {
       showTimer = 0;

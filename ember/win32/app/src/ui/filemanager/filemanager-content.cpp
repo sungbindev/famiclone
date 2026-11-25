@@ -107,11 +107,10 @@ constexpr double kTitleFontSize = 12.0;
 constexpr int kTitleFontWeight = 600;
 /** 标题首字笔画左边的字面空隙，对齐展开箭头时要扣掉。 */
 constexpr double kTitleBearing = 1.0;
-/** 资源管理器的初始宽度、最小宽度与最大宽度，镜像内容展开时窗口增加的宽度，以及镜像内容至少要有的宽度。 */
-constexpr double kSideWidth = 320.0;
+/** 资源管理器的初始宽度、最小宽度与最大宽度，以及镜像内容的最小宽度（展开时窗口增加的宽度也是它）。 */
+constexpr double kSideWidth = 260.0;
 constexpr double kSideMinWidth = 260.0;
 constexpr double kSideMaxWidth = 640.0;
-constexpr double kImagePaneWidth = 580.0;
 constexpr double kImagePaneMinWidth = 300.0;
 /** 文件列表里名称列的初始宽度（最后一列占满剩余）。 */
 constexpr double kNameColumnWidth = 200.0;
@@ -402,9 +401,9 @@ void FileManagerContent::toggleImagePane() {
     split_->setMainVisible(false);
     if (onResizeWindow_) onResizeWindow_(-extent);
   } else {
-    // 窗口变宽：资源管理器保持现在的宽度，右边多出来的是镜像内容
+    // 窗口变宽：资源管理器保持现在的宽度，右边多出来的是镜像内容，宽度就是它的最小宽度（再加上分隔的空隙）
     const double current = split_->bounds().width;
-    const bool resized = onResizeWindow_ && onResizeWindow_(kImagePaneWidth);
+    const bool resized = onResizeWindow_ && onResizeWindow_(kImagePaneMinWidth + split_->sideExtent() - split_->sideWidth());
     imagePaneShown_ = true;
     split_->setSideWidth(resized ? current : kSideWidth);
     split_->setMainVisible(true);

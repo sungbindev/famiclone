@@ -90,6 +90,12 @@ class DialogWindow {
   /** 窗口句柄（HWND）。 */
   [[nodiscard]] void* handle() const;
 
+  /** 消息观察者：窗口收到的每条消息先交给它，返回 true 表示已处理（result 是窗口过程的返回值），不再往下传；用来挂靠停靠等窗口级行为。销毁窗口前要先清除。 */
+  void setMessageObserver(std::function<bool(unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result)> observer) { messageObserver_ = std::move(observer); }
+
+  /** 设置宽度调整的接管者：resizeWidthBy 算出新宽度（设备像素）后先交给它，返回 true 表示它已经调整了窗口（如停靠时连同主窗一起重新摆放），本窗口不再自己调整。 */
+  void setWidthResizer(std::function<bool(int width)> resizer) { widthResizer_ = std::move(resizer); }
+
   /** 内容。 */
   [[nodiscard]] rujian::ui::DialogFrame& frame() { return *frame_; }
 
@@ -101,6 +107,7 @@ class DialogWindow {
 
   /**
    * 把窗口宽度加上 delta（逻辑像素，负数是缩小）：左边缘不动，超出屏幕工作区右边时整体左移，宽度不小于最小宽度、不超过工作区；高度不变。
+   * 设置了宽度调整的接管者（见 setWidthResizer）时，算出的新宽度先交给它。
    * @return 窗口处在可以调整的状态（没有最大化、最小化）并已调整时为真。
    */
   bool resizeWidthBy(double delta);
@@ -119,6 +126,8 @@ class DialogWindow {
   std::unique_ptr<rujian::ui::Tooltip> tooltip_;
   std::unique_ptr<FramelessFrame> frameless_;
   bool ownerLocked_{false};
+  std::function<bool(unsigned, std::uintptr_t, std::intptr_t, std::intptr_t&)> messageObserver_;
+  std::function<bool(int)> widthResizer_;
   /** 刚吞掉的那些键的标识（扫描码加扩展位），它们的字符与抬起消息也要吞掉；抬起后移出。 */
   std::set<int> swallowedKeys_;
 };

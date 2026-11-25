@@ -123,6 +123,7 @@ add_library(ember_app STATIC
   src/platform/window/dialog-window.cpp
   src/platform/window/frameless-frame.cpp
   src/platform/window/resize-border.cpp
+  src/platform/window/window-dock.cpp
   src/platform/window/window-modes.cpp
   src/platform/window/window-placement.cpp
   src/platform/window/window-shadow.cpp

@@ -1,12 +1,14 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：dialog-host.hpp
- * 说明：对话框的打开者：按外壳登记的对话框标识打开独立的对话框窗口，同一个对话框同时只开一个，再次打开时聚焦已有的。
+ * 说明：对话框的打开者：按外壳登记的对话框标识打开独立的对话框窗口，同一个对话框同时只开一个，再次打开时聚焦已有的；登记了停靠的非模态对话框打开时贴在主窗口左边并跟随主窗口。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-20
  * 备注：对话框的标题与大小来自外壳登记表的 ShellDialogDefinition，正文由界面层经工厂提供；
- *       关闭请求（Esc、关闭按钮、Alt+F4）延后到消息处理之外再销毁窗口；主题随主窗口，由装配代码在主题变化时调用 setTheme。
+ *       关闭请求（Esc、关闭按钮、Alt+F4）延后到消息处理之外再销毁窗口；主题随主窗口，由装配代码在主题变化时调用 setTheme；
+ *       停靠的对话框（ShellDialogDefinition::dockLeft）每个有一个 WindowDock，主窗口的位置、大小、最小化与置顶变化时由装配代码调用 ownerWindowChanged；
+ *       每个对话框打开、关闭（用户或命令关闭，closeAll 不算）后通知 setOnOpenChanged 设置的回调，用来记住对话框是否开着。
  * ------------------------------------------------------------------------
  */
 
@@ -21,6 +23,7 @@
 #include "contracts/shell/shell-model.hpp"
 #include "contracts/shell/shell-registry.hpp"
 #include "platform/window/dialog-window.hpp"
+#include "platform/window/window-dock.hpp"
 #include "rujian/ui/widget.hpp"
 
 namespace ember::win32::bootstrap {
@@ -77,13 +80,29 @@ class DialogHost final : public contracts::ShellDialogOpener {
   /** 打开对话框；没有登记、没有正文工厂时什么都不做，已经打开时聚焦它。 */
   void openDialog(const std::string& dialogId) override;
 
+  /** 打开对话框但不抢焦点，焦点留在主窗口（启动时恢复上次开着的对话框用）；已经打开时什么都不做。 */
+  void openDialogInBackground(const std::string& dialogId);
+
   /** 关闭一个对话框（没有打开时什么都不做）。 */
-  void closeDialog(const std::string& dialogId);
+  void closeDialog(const std::string& dialogId) override;
+
+  /** 对话框是否开着。 */
+  [[nodiscard]] bool isOpen(const std::string& dialogId) const override { return open_.count(dialogId) != 0; }
+
+  /** 主窗口的位置、大小、最小化或置顶变化了：让停靠着的对话框跟随。 */
+  void ownerWindowChanged();
+
+  /** 设置对话框打开、关闭后的回调（参数是对话框标识与是否开着）；closeAll 不触发。 */
+  void setOnOpenChanged(std::function<void(const std::string& dialogId, bool open)> handler) { onOpenChanged_ = std::move(handler); }
 
   /** 马上关闭并销毁全部打开着的对话框：对话框的内容引用着外壳的模型，要在这些模型之前销毁时用。 */
   void closeAll();
 
  private:
+  void openWindow(const std::string& dialogId, bool activate);
+  /** 摘掉并销毁对话框的停靠（窗口先清掉指向它的回调）。 */
+  void releaseDock(const std::string& dialogId);
+
   std::function<void*()> owner_;
   std::function<void(std::function<void()>)> post_;
   bool customFrame_;
@@ -98,6 +117,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
   std::map<std::string, OpenHook> openHooks_;
   /** 打开钩子返回的对象，跟着对话框保存。 */
   std::map<std::string, std::shared_ptr<void>> attachments_;
+  /** 登记了停靠的对话框的停靠对象，先于窗口销毁。 */
+  std::map<std::string, std::unique_ptr<platform::WindowDock>> docks_;
+  std::function<void(const std::string&, bool)> onOpenChanged_;
   std::map<std::string, std::unique_ptr<platform::DialogWindow>> open_;
   std::shared_ptr<bool> alive_{std::make_shared<bool>(true)};
 };

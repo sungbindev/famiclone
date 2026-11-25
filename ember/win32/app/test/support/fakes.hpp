@@ -14,6 +14,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -325,8 +326,19 @@ class FakeShellWindow : public contracts::ShellWindowControl {
 class FakeShellDialogs : public contracts::ShellDialogOpener {
  public:
   std::vector<std::string> opened;
+  std::vector<std::string> closed;
+  /** 现在开着的对话框。 */
+  std::set<std::string> open;
 
-  void openDialog(const std::string& dialogId) override { opened.push_back(dialogId); }
+  void openDialog(const std::string& dialogId) override {
+    opened.push_back(dialogId);
+    open.insert(dialogId);
+  }
+  void closeDialog(const std::string& dialogId) override {
+    closed.push_back(dialogId);
+    open.erase(dialogId);
+  }
+  [[nodiscard]] bool isOpen(const std::string& dialogId) const override { return open.count(dialogId) != 0; }
 };
 
 class FakeNotifier : public contracts::ShellNotifier {
@@ -363,6 +375,7 @@ class FakeShellApi : public contracts::ShellApi {
   int quits{0};
 
   void openDialog(const std::string& dialogId) override { dialogs.push_back(dialogId); }
+  void toggleDialog(const std::string& dialogId) override { dialogs.push_back(dialogId); }
   void togglePanel(const std::string&) override {}
   void toggleFullScreen() override {}
   void toggleAlwaysOnTop() override {}

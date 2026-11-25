@@ -70,11 +70,11 @@ struct Scene {
 
 }  // namespace
 
-TEST(DialogFrame, TitleBarIs32HighAtTheTop) {
+TEST(DialogFrame, TitleBarIs36HighAtTheTop) {
   Scene s;
   const Rect bar = s.frame->titleBarRect();
   EXPECT_DOUBLE_EQ(bar.y, 0.0);
-  EXPECT_DOUBLE_EQ(bar.height, 32.0);
+  EXPECT_DOUBLE_EQ(bar.height, 36.0);
   EXPECT_DOUBLE_EQ(bar.width, 420.0);
 }
 
@@ -86,7 +86,7 @@ TEST(DialogFrame, ControlsAre24SquareAtTheRightWithAGap) {
   EXPECT_DOUBLE_EQ(close.height, 24.0);
   EXPECT_DOUBLE_EQ(close.right(), 420.0 - 4.0);
   EXPECT_DOUBLE_EQ(maximize.right(), close.x - 2.0);
-  EXPECT_DOUBLE_EQ(close.y, (31.0 - 24.0) / 2.0);
+  EXPECT_DOUBLE_EQ(close.y, (35.0 - 24.0) / 2.0);
 }
 
 TEST(DialogFrame, MaximizeControlIsAbsentUnlessMaximizable) {
@@ -111,7 +111,7 @@ TEST(DialogFrame, BodyFillsTheSpaceBetweenTheTitleBarAndTheButtons) {
   Scene s;
   ASSERT_NE(s.frame->content(), nullptr);
   const Rect body = s.frame->content()->bounds();
-  EXPECT_GE(body.y, 32.0 + 10.0 - 0.001);
+  EXPECT_GE(body.y, 36.0 + 10.0 - 0.001);
   EXPECT_DOUBLE_EQ(body.x, 10.0);
   EXPECT_LT(body.bottom(), s.frame->button("ok")->bounds().y);
 }
@@ -127,12 +127,12 @@ TEST(DialogFrame, FilledContentTakesAllOfTheBodyAreaInsideThePaddingAndTheFrameD
   root.layout(kWindow);
   const Rect body = frame->content()->bounds();
   EXPECT_DOUBLE_EQ(body.x, 10.0);
-  EXPECT_DOUBLE_EQ(body.y, 32.0 + 10.0);
+  EXPECT_DOUBLE_EQ(body.y, 36.0 + 10.0);
   EXPECT_DOUBLE_EQ(body.width, 420.0 - 20.0);
   // 正文底边离按钮区上边的距离 = 按钮区上方的留白 6 加正文内边距 10
   EXPECT_DOUBLE_EQ(body.bottom(), frame->button("ok")->bounds().y - 6.0 - 10.0);
   root.mouseWheel(Point{100, 100}, -5.0, 0);
-  EXPECT_DOUBLE_EQ(frame->content()->bounds().y, 32.0 + 10.0);
+  EXPECT_DOUBLE_EQ(frame->content()->bounds().y, 36.0 + 10.0);
 }
 
 TEST(DialogFrame, HitTestSeparatesCaptionFromControls) {
@@ -239,7 +239,7 @@ TEST(DialogFrame, SystemButtonsAre46WideFillTheTitleBarHeightAndSitFlushAtTheRig
   for (const Rect& box : {close, maximize, minimize}) {
     EXPECT_DOUBLE_EQ(box.width, 46.0);
     EXPECT_DOUBLE_EQ(box.y, 0.0);
-    EXPECT_DOUBLE_EQ(box.height, 32.0);
+    EXPECT_DOUBLE_EQ(box.height, 36.0);
   }
   EXPECT_DOUBLE_EQ(close.right(), 420.0);
   EXPECT_DOUBLE_EQ(maximize.right(), close.x);
@@ -276,7 +276,7 @@ TEST(DialogFrame, LogoSitsAtTheLeftOfTheTitleBarAndIsVerticallyCentered) {
   EXPECT_DOUBLE_EQ(raw->bounds().x, 6.0);
   EXPECT_DOUBLE_EQ(raw->bounds().width, 16.0);
   EXPECT_DOUBLE_EQ(raw->bounds().height, 16.0);
-  EXPECT_DOUBLE_EQ(raw->bounds().y, (31.0 - 16.0) / 2.0);
+  EXPECT_DOUBLE_EQ(raw->bounds().y, (35.0 - 16.0) / 2.0);
 }
 
 TEST(DialogFrame, FlushRightFilledContentReachesTheRightEdgeOfTheDialog) {
@@ -297,7 +297,7 @@ TEST(DialogFrame, NaturalHeightAddsTheTitleBarBodyAndFooter) {
   Scene s(true, false);
   const double natural = s.frame->naturalHeight(420, 640);
   const double body = s.frame->content()->bounds().height + 2 * 10.0;
-  EXPECT_NEAR(natural, 32.0 + body + 38.0, 0.6);
+  EXPECT_NEAR(natural, 36.0 + body + 38.0, 0.6);
 }
 
 TEST(DialogFrame, TabMovesThroughTheBodyAndTheButtons) {

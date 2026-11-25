@@ -140,11 +140,14 @@ class ShellWindowControl {
   virtual void quit() = 0;
 };
 
-/** 对话框的打开者：打开（或聚焦已有的）对话框，由界面层实现。 */
+/** 对话框的打开者：打开（或聚焦已有的）对话框、关闭对话框、告知对话框是否开着，由界面层实现。 */
 class ShellDialogOpener {
  public:
   virtual ~ShellDialogOpener() = default;
   virtual void openDialog(const std::string& dialogId) = 0;
+  /** 关闭对话框；没有打开时什么都不做。 */
+  virtual void closeDialog(const std::string& dialogId) = 0;
+  [[nodiscard]] virtual bool isOpen(const std::string& dialogId) const = 0;
 };
 
 /** 通知的发出者，由界面层实现。 */

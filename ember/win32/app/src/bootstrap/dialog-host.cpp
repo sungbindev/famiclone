@@ -11,6 +11,8 @@
 
 #include "bootstrap/dialog-host.hpp"
 
+#include <windows.h>
+
 #include "platform/text/wide-text.hpp"
 #include "rujian/ui/dialog-frame.hpp"
 
@@ -41,10 +43,14 @@ void DialogHost::setTheme(rujian::ui::ThemeName theme) {
   for (auto& entry : open_) entry.second->setTheme(theme);
 }
 
-void DialogHost::openDialog(const std::string& dialogId) {
+void DialogHost::openDialog(const std::string& dialogId) { openWindow(dialogId, true); }
+
+void DialogHost::openDialogInBackground(const std::string& dialogId) { openWindow(dialogId, false); }
+
+void DialogHost::openWindow(const std::string& dialogId, bool activate) {
   const auto existing = open_.find(dialogId);
   if (existing != open_.end()) {
-    existing->second->activate();
+    if (activate) existing->second->activate();
     return;
   }
   const auto definition = definitions_.find(dialogId);
@@ -64,7 +70,10 @@ void DialogHost::openDialog(const std::string& dialogId) {
   frame->setContent(std::move(content));
 
   platform::DialogWindowOptions options;
-  options.owner = owner_();
+  void* const ownerWindow = owner_();
+  // 停靠的对话框跟着主窗口走，没有最小化与最大化按钮
+  const bool docking = definition->second.dockLeft && definition->second.modeless && ownerWindow != nullptr;
+  options.owner = ownerWindow;
   options.title = platform::widen(definition->second.title);
   options.width = definition->second.width;
   options.height = definition->second.height;
@@ -72,8 +81,8 @@ void DialogHost::openDialog(const std::string& dialogId) {
   options.minimumHeight = definition->second.minHeight;
   options.fitMinimumWidth = definition->second.fitMinWidth;
   options.fitMinimumHeight = definition->second.fitMinHeight;
-  options.maximizable = true;
-  options.minimizable = true;
+  options.maximizable = !docking;
+  options.minimizable = !docking;
   options.modeless = definition->second.modeless;
   options.theme = theme_;
   options.customFrame = customFrame_;
@@ -83,9 +92,20 @@ void DialogHost::openDialog(const std::string& dialogId) {
   auto window = std::make_unique<platform::DialogWindow>(std::move(options), std::move(frame));
   platform::DialogWindow* raw = window.get();
   open_.emplace(dialogId, std::move(window));
+  if (docking) {
+    // 在窗口显示之前就贴到主窗口左边，不会先出现在别处
+    auto dock = std::make_unique<platform::WindowDock>(ownerWindow, raw->handle(), [raw] { return raw->root().scale(); });
+    platform::WindowDock* dockPointer = dock.get();
+    dock->dockNow(true);
+    raw->setMessageObserver([dockPointer](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) { return dockPointer->followerMessage(message, wParam, lParam, result); });
+    raw->setWidthResizer([dockPointer](int width) { return dockPointer->resizeFollowerWidth(width); });
+    docks_[dialogId] = std::move(dock);
+  }
   raw->show();
+  // 后台打开：显示会激活新窗口，把焦点还给主窗口
+  if (!activate && ownerWindow != nullptr) SetForegroundWindow(static_cast<HWND>(ownerWindow));
   if (const auto hook = openHooks_.find(dialogId); hook != openHooks_.end()) attachments_[dialogId] = hook->second(*raw, *contentPointer);
-  if (definition->second.modeless) {
+  if (definition->second.modeless && activate) {
     // 非模态对话框没有归属窗口，打开它的菜单关闭后主窗口会重新取得焦点并盖住它：等当前消息处理完再把它带到最前面
     const auto alive = alive_;
     post_([this, alive, dialogId] {
@@ -94,6 +114,7 @@ void DialogHost::openDialog(const std::string& dialogId) {
       if (found != open_.end()) found->second->activate();
     });
   }
+  if (onOpenChanged_) onOpenChanged_(dialogId, true);
 }
 
 void DialogHost::closeDialog(const std::string& dialogId) {
@@ -103,12 +124,30 @@ void DialogHost::closeDialog(const std::string& dialogId) {
     if (!*alive) return;
     // 窗口句柄上挂靠的资源先于窗口销毁
     attachments_.erase(dialogId);
-    open_.erase(dialogId);
+    releaseDock(dialogId);
+    const bool wasOpen = open_.erase(dialogId) != 0;
+    if (wasOpen && onOpenChanged_) onOpenChanged_(dialogId, false);
   });
+}
+
+void DialogHost::releaseDock(const std::string& dialogId) {
+  const auto dock = docks_.find(dialogId);
+  if (dock == docks_.end()) return;
+  // 窗口销毁期间还会收到消息，先清掉指向停靠对象的回调
+  if (const auto window = open_.find(dialogId); window != open_.end()) {
+    window->second->setMessageObserver({});
+    window->second->setWidthResizer({});
+  }
+  docks_.erase(dock);
+}
+
+void DialogHost::ownerWindowChanged() {
+  for (auto& entry : docks_) entry.second->leaderChanged();
 }
 
 void DialogHost::closeAll() {
   attachments_.clear();
+  while (!docks_.empty()) releaseDock(docks_.begin()->first);
   open_.clear();
 }
 

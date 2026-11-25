@@ -45,59 +45,425 @@ loc_b31_C036:
 
 ; NMI 处理（固定在 $C000 窗口的块 31 里）：写 $2003=0 并用 $4014 从 $C0 页做精灵 DMA（未确认：$C000 页是系统跳转表，可能用来把所有精灵移出屏幕）；32 位帧计数 $03CC-$03CF 加 1；$03C7 不为 0 时这一帧还要把 $6800 缓冲里排队的显存任务写进 PPU（用到 $5000=$80 切到块 0，调用 $86F7，之后按 $03C8 恢复 $5000）；最后 $03C9=6 时调用 nmi_call_hook。
 nmi_handler:
-  .byte $48, $08, $A9, $00, $8D, $03, $20, $A9, $C0, $8D, $14, $40, $EE, $CC, $03, $D0
-  .byte $0D, $EE, $CD, $03, $D0, $08
+  .byte $48
+
+sub_b31_C03A:
+  .byte $08
+
+sub_b31_C03B:
+  .byte $A9, $00
+
+sub_b31_C03D:
+  .byte $8D, $03, $20
+
+sub_b31_C040:
+  .byte $A9, $C0
+
+sub_b31_C042:
+  .byte $8D, $14, $40
+
+sub_b31_C045:
+  .byte $EE, $CC, $03
+
+sub_b31_C048:
+  .byte $D0, $0D
+
+sub_b31_C04A:
+  .byte $EE, $CD, $03
+
+sub_b31_C04D:
+  .byte $D0, $08
   .byte $EE, $CE, $03, $D0, $03, $EE, $CF, $03
 loc_b31_C057:
-  .byte $AD, $C7, $03, $D0, $03, $4C, $31, $C1
+  .byte $AD, $C7, $03
+
+sub_b31_C05A:
+  .byte $D0, $03
+
+sub_b31_C05C:
+  .byte $4C, $31, $C1
 loc_b31_C05F:
-  .byte $2C, $02, $20, $30, $FB, $8A, $48, $98, $48, $A5, $FE, $48, $A5, $FF, $48, $A5
-  .byte $26, $48, $A5, $27, $48, $AC, $C5, $03, $A9, $0E, $8D, $C5, $03
+  .byte $2C, $02, $20
+
+sub_b31_C062:
+  .byte $30, $FB
+
+sub_b31_C064:
+  .byte $8A
+
+sub_b31_C065:
+  .byte $48
+
+sub_b31_C066:
+  .byte $98
+
+sub_b31_C067:
+  .byte $48
+
+sub_b31_C068:
+  .byte $A5, $FE
+
+sub_b31_C06A:
+  .byte $48
+
+sub_b31_C06B:
+  .byte $A5, $FF
+
+sub_b31_C06D:
+  .byte $48
+
+sub_b31_C06E:
+  .byte $A5, $26
+
+sub_b31_C070:
+  .byte $48
+
+sub_b31_C071:
+  .byte $A5, $27
+
+sub_b31_C073:
+  .byte $48
+
+sub_b31_C074:
+  .byte $AC, $C5, $03
+
+sub_b31_C077:
+  .byte $A9, $0E
+
+sub_b31_C079:
+  .byte $8D, $C5, $03
 loc_b31_C07C:
-  .byte $A2, $08, $B9, $00, $68, $D0, $44, $8D, $00, $50, $C8, $B9, $00, $68, $8D, $06
-  .byte $20, $C8, $B9, $00, $68, $8D, $06, $20, $AD, $07, $20, $AD, $07, $20, $85, $FE
-  .byte $88, $BE, $00, $68, $8E, $06, $20, $C8, $BE, $00, $68, $8E, $06, $20, $C8, $B9
-  .byte $00, $68, $45, $FE, $C8, $39, $00, $68, $45, $FE, $8D, $07, $20, $C8, $CE, $C7
-  .byte $03, $F0, $51, $CE, $C5, $03, $10, $B8, $4C, $10, $C1
+  .byte $A2, $08
+
+sub_b31_C07E:
+  .byte $B9, $00, $68
+
+sub_b31_C081:
+  .byte $D0, $44, $8D, $00, $50, $C8, $B9, $00, $68, $8D, $06, $20, $C8, $B9, $00, $68
+  .byte $8D, $06, $20, $AD, $07, $20, $AD, $07, $20, $85, $FE, $88, $BE, $00, $68, $8E
+  .byte $06, $20, $C8, $BE, $00, $68, $8E, $06, $20, $C8, $B9, $00, $68, $45, $FE, $C8
+  .byte $39, $00, $68, $45, $FE, $8D, $07, $20, $C8, $CE, $C7, $03, $F0, $51, $CE, $C5
+  .byte $03, $10, $B8, $4C, $10, $C1
 loc_b31_C0C7:
   .byte $30, $11, $09, $80, $AA, $AD, $C5, $03, $38, $E9, $04, $30, $3C, $8D, $C5, $03
   .byte $8A, $A2, $10
 loc_b31_C0DA:
-  .byte $8D, $00, $50, $C8, $B9, $00, $68, $85, $FE, $C8, $B9, $00, $68, $85, $FF, $C8
-  .byte $B9, $00, $68, $85, $26, $C8, $B9, $00, $68, $85, $27, $C8, $98, $48, $20, $42
-  .byte $05, $68, $A8, $CE, $C7, $03, $F0, $0E, $AD, $C5, $03, $38, $E9, $04, $8D, $C5
-  .byte $03, $30, $03, $4C, $7C, $C0
+  .byte $8D, $00, $50
+
+sub_b31_C0DD:
+  .byte $C8
+
+sub_b31_C0DE:
+  .byte $B9, $00, $68
+
+sub_b31_C0E1:
+  .byte $85, $FE
+
+sub_b31_C0E3:
+  .byte $C8
+
+sub_b31_C0E4:
+  .byte $B9, $00, $68
+
+sub_b31_C0E7:
+  .byte $85, $FF
+
+sub_b31_C0E9:
+  .byte $C8
+
+sub_b31_C0EA:
+  .byte $B9, $00, $68
+
+sub_b31_C0ED:
+  .byte $85, $26
+
+sub_b31_C0EF:
+  .byte $C8
+
+sub_b31_C0F0:
+  .byte $B9, $00, $68
+
+sub_b31_C0F3:
+  .byte $85, $27
+
+sub_b31_C0F5:
+  .byte $C8
+
+sub_b31_C0F6:
+  .byte $98
+
+sub_b31_C0F7:
+  .byte $48
+
+sub_b31_C0F8:
+  .byte $20, $42, $05
+
+sub_b31_C0FB:
+  .byte $68
+
+sub_b31_C0FC:
+  .byte $A8
+
+sub_b31_C0FD:
+  .byte $CE, $C7, $03
+
+sub_b31_C100:
+  .byte $F0, $0E
+
+sub_b31_C102:
+  .byte $AD, $C5, $03
+
+sub_b31_C105:
+  .byte $38
+
+sub_b31_C106:
+  .byte $E9, $04
+
+sub_b31_C108:
+  .byte $8D, $C5, $03
+
+sub_b31_C10B:
+  .byte $30, $03
+
+sub_b31_C10D:
+  .byte $4C, $7C, $C0
 loc_b31_C110:
-  .byte $8C, $C5, $03, $A9, $80, $8D, $00, $50, $20, $F7, $86, $AD, $C8, $03, $8D, $00
-  .byte $50, $68, $85, $27, $68, $85, $26, $68, $85, $FF, $68, $85, $FE, $68, $A8, $68
+  .byte $8C, $C5, $03
+
+sub_b31_C113:
+  .byte $A9, $80
+
+sub_b31_C115:
+  .byte $8D, $00, $50
+
+sub_b31_C118:
+  .byte $20, $F7, $86
+
+sub_b31_C11B:
+  .byte $AD, $C8, $03
+
+sub_b31_C11E:
+  .byte $8D, $00, $50
+
+sub_b31_C121:
+  .byte $68
+
+sub_b31_C122:
+  .byte $85, $27
+
+sub_b31_C124:
+  .byte $68
+
+sub_b31_C125:
+  .byte $85, $26
+
+sub_b31_C127:
+  .byte $68
+
+sub_b31_C128:
+  .byte $85, $FF
+
+sub_b31_C12A:
+  .byte $68
+
+sub_b31_C12B:
+  .byte $85, $FE
+
+sub_b31_C12D:
+  .byte $68
+
+sub_b31_C12E:
+  .byte $A8
+
+sub_b31_C12F:
+  .byte $68
+
+sub_b31_C130:
   .byte $AA
 loc_b31_C131:
-  .byte $AD, $C9, $03, $C9, $06, $D0, $03, $20, $F4, $FC
+  .byte $AD, $C9, $03
+
+sub_b31_C134:
+  .byte $C9, $06
+
+sub_b31_C136:
+  .byte $D0, $03, $20, $F4, $FC
 loc_b31_C13B:
-  .byte $28, $68, $40
+  .byte $28
+
+sub_b31_C13C:
+  .byte $68
+
+sub_b31_C13D:
+  .byte $40
 
 sub_b31_C13E:
-  .byte $8D, $2E, $05, $8A, $48, $98, $48, $AD, $2E, $05, $10, $46, $C9, $80, $F0, $45
-  .byte $20, $72, $C2, $09, $80
+  .byte $8D, $2E, $05
+
+sub_b31_C141:
+  .byte $8A
+
+sub_b31_C142:
+  .byte $48
+
+sub_b31_C143:
+  .byte $98
+
+sub_b31_C144:
+  .byte $48
+
+sub_b31_C145:
+  .byte $AD, $2E, $05
+
+sub_b31_C148:
+  .byte $10, $46
+
+sub_b31_C14A:
+  .byte $C9, $80
+
+sub_b31_C14C:
+  .byte $F0, $45
+
+sub_b31_C14E:
+  .byte $20, $72, $C2
+
+sub_b31_C151:
+  .byte $09, $80
 
 sub_b31_C153:
-  .byte $48, $A4, $25, $A6, $24, $20, $01, $C8, $68
+  .byte $48
+
+sub_b31_C154:
+  .byte $A4, $25
+
+sub_b31_C156:
+  .byte $A6, $24
+
+sub_b31_C158:
+  .byte $20, $01, $C8
+
+sub_b31_C15B:
+  .byte $68
 
 sub_b31_C15C:
-  .byte $AC, $C7, $03, $C0, $33, $B0, $F9, $AC, $C6, $03, $99, $00, $68, $C8, $A5, $FE
-  .byte $99, $00, $68, $C8, $A5, $FF, $99, $00, $68, $C8, $A5, $26, $99, $00, $68, $C8
-  .byte $A5, $27, $99, $00, $68, $C8, $8C, $C6, $03, $EE, $C7, $03, $68, $A8, $68, $AA
-  .byte $AD, $2E, $05, $60
+  .byte $AC, $C7, $03
+
+sub_b31_C15F:
+  .byte $C0, $33
+
+sub_b31_C161:
+  .byte $B0, $F9
+
+sub_b31_C163:
+  .byte $AC, $C6, $03
+
+sub_b31_C166:
+  .byte $99, $00, $68
+
+sub_b31_C169:
+  .byte $C8
+
+sub_b31_C16A:
+  .byte $A5, $FE
+
+sub_b31_C16C:
+  .byte $99, $00, $68
+
+sub_b31_C16F:
+  .byte $C8
+
+sub_b31_C170:
+  .byte $A5, $FF
+
+sub_b31_C172:
+  .byte $99, $00, $68
+
+sub_b31_C175:
+  .byte $C8
+
+sub_b31_C176:
+  .byte $A5, $26
+
+sub_b31_C178:
+  .byte $99, $00, $68
+
+sub_b31_C17B:
+  .byte $C8
+
+sub_b31_C17C:
+  .byte $A5, $27
+
+sub_b31_C17E:
+  .byte $99, $00, $68
+
+sub_b31_C181:
+  .byte $C8
+
+sub_b31_C182:
+  .byte $8C, $C6, $03
+
+sub_b31_C185:
+  .byte $EE, $C7, $03
+
+sub_b31_C188:
+  .byte $68
+
+sub_b31_C189:
+  .byte $A8
+
+sub_b31_C18A:
+  .byte $68
+
+sub_b31_C18B:
+  .byte $AA
+
+sub_b31_C18C:
+  .byte $AD, $2E, $05
+
+sub_b31_C18F:
+  .byte $60
 
 sub_b31_C190:
   .byte $8D, $FC, $03, $20, $E0, $C1, $29, $7F, $4C, $53, $C1
 
 sub_b31_C19B:
-  .byte $8E, $35, $05, $A5, $27, $8D, $06, $20, $A5, $26, $8D, $06, $20, $AC, $35, $05
-  .byte $C0, $08, $D0, $0A, $A9, $00
+  .byte $8E, $35, $05
+
+sub_b31_C19E:
+  .byte $A5, $27
+
+sub_b31_C1A0:
+  .byte $8D, $06, $20
+
+sub_b31_C1A3:
+  .byte $A5, $26
+
+sub_b31_C1A5:
+  .byte $8D, $06, $20
+
+sub_b31_C1A8:
+  .byte $AC, $35, $05
+
+sub_b31_C1AB:
+  .byte $C0, $08
+
+sub_b31_C1AD:
+  .byte $D0, $0A
+
+sub_b31_C1AF:
+  .byte $A9, $00
 
 sub_b31_C1B1:
-  .byte $8D, $07, $20, $88, $D0, $FA, $F0, $0F
+  .byte $8D, $07, $20
+
+sub_b31_C1B4:
+  .byte $88
+
+sub_b31_C1B5:
+  .byte $D0, $FA
+
+sub_b31_C1B7:
+  .byte $F0, $0F
 
 sub_b31_C1B9:
   .byte $A0, $00
@@ -106,10 +472,37 @@ sub_b31_C1BB:
   .byte $B1, $FE, $8D, $07, $20, $C8, $C0, $10, $90, $F6, $0E, $35, $05
 
 sub_b31_C1C8:
-  .byte $E6, $27, $A5, $27, $8D, $06, $20, $A5, $26, $8D, $06, $20
+  .byte $E6, $27
+
+sub_b31_C1CA:
+  .byte $A5, $27
+
+sub_b31_C1CC:
+  .byte $8D, $06, $20
+
+sub_b31_C1CF:
+  .byte $A5, $26
+
+sub_b31_C1D1:
+  .byte $8D, $06, $20
 
 sub_b31_C1D4:
-  .byte $B1, $FE, $8D, $07, $20, $C8, $CC, $35, $05, $90, $F5, $60
+  .byte $B1, $FE
+
+sub_b31_C1D6:
+  .byte $8D, $07, $20
+
+sub_b31_C1D9:
+  .byte $C8
+
+sub_b31_C1DA:
+  .byte $CC, $35, $05
+
+sub_b31_C1DD:
+  .byte $90, $F5
+
+sub_b31_C1DF:
+  .byte $60
 
 sub_b31_C1E0:
   .byte $AD, $FB, $03, $29, $7F, $AA, $AD, $FC, $03, $29, $7F, $E0, $23, $D0, $02, $A2
@@ -135,15 +528,59 @@ sub_b31_C24F:
   .byte $FF, $68, $60
 
 sub_b31_C272:
-  .byte $38, $E9, $A0, $B0, $02
+  .byte $38
+
+sub_b31_C273:
+  .byte $E9, $A0
+
+sub_b31_C275:
+  .byte $B0, $02
   .byte $A9, $00
 
 sub_b31_C279:
-  .byte $A0, $00, $84, $FF, $A0, $03
+  .byte $A0, $00
+
+sub_b31_C27B:
+  .byte $84, $FF
+
+sub_b31_C27D:
+  .byte $A0, $03
 
 sub_b31_C27F:
-  .byte $0A, $26, $FF, $88, $D0, $FA, $18, $69, $C0, $85, $FE, $A5, $FF, $69, $99, $85
-  .byte $FF, $A9, $8E, $60
+  .byte $0A
+
+sub_b31_C280:
+  .byte $26, $FF
+
+sub_b31_C282:
+  .byte $88
+
+sub_b31_C283:
+  .byte $D0, $FA
+
+sub_b31_C285:
+  .byte $18
+
+sub_b31_C286:
+  .byte $69, $C0
+
+sub_b31_C288:
+  .byte $85, $FE
+
+sub_b31_C28A:
+  .byte $A5, $FF
+
+sub_b31_C28C:
+  .byte $69, $99
+
+sub_b31_C28E:
+  .byte $85, $FF
+
+sub_b31_C290:
+  .byte $A9, $8E
+
+sub_b31_C292:
+  .byte $60
   .byte $A9, $8E, $8D, $C8, $03, $8D, $00, $50
   .byte $18, $08, $28, $08, $90, $08, $A9, $8E
   .byte $8D, $C8, $03, $8D, $00, $50, $A0, $04
@@ -323,21 +760,63 @@ sub_b31_C72A:
   .byte $8D, $C8, $03, $8D, $00, $50, $60
 
 sub_b31_C801:
-  .byte $98, $0A
+  .byte $98
+
+sub_b31_C802:
+  .byte $0A
 
 sub_b31_C803:
   .byte $8D, $32, $05
 loc_b31_C806:
-  .byte $A5, $E4, $4A
+  .byte $A5, $E4
+
+sub_b31_C808:
+  .byte $4A
 loc_b31_C809:
-  .byte $4A, $4A, $18
+  .byte $4A
+
+sub_b31_C80A:
+  .byte $4A
+
+sub_b31_C80B:
+  .byte $18
 loc_b31_C80C:
-  .byte $6D, $32, $05, $C9, $1E, $90
+  .byte $6D, $32, $05
+
+sub_b31_C80F:
+  .byte $C9, $1E
+
+sub_b31_C811:
+  .byte $90
 loc_b31_C812:
-  .byte $02, $E9, $1E
+  .byte $02
+
+sub_b31_C813:
+  .byte $E9, $1E
 
 sub_b31_C815:
-  .byte $85, $27, $8A, $0A, $0A, $0A, $69, $08, $85, $26, $60
+  .byte $85, $27
+
+sub_b31_C817:
+  .byte $8A
+
+sub_b31_C818:
+  .byte $0A
+
+sub_b31_C819:
+  .byte $0A
+
+sub_b31_C81A:
+  .byte $0A
+
+sub_b31_C81B:
+  .byte $69, $08
+
+sub_b31_C81D:
+  .byte $85, $26
+
+sub_b31_C81F:
+  .byte $60
 loc_b31_C820:
   .byte $4C, $29, $C8
 loc_b31_C823:
@@ -641,21 +1120,88 @@ loc_b31_CC09:
   .byte $D0, $F7, $4C, $00, $03
 
 sub_b31_CC0E:
-  .byte $20, $3C, $CC, $20, $ED, $FD, $4C, $51, $CC
+  .byte $20, $3C, $CC
+
+sub_b31_CC11:
+  .byte $20, $ED, $FD
+
+sub_b31_CC14:
+  .byte $4C, $51, $CC
   .byte $20, $3C, $CC, $20, $0C, $FD, $4C, $51
   .byte $CC
 
 sub_b31_CC20:
-  .byte $20, $3C, $CC, $20, $6A, $FD, $4C, $51, $CC, $20, $D5, $DA, $08, $48, $20, $3C
-  .byte $CC, $AD, $C7, $03, $D0, $FB, $20, $51, $CC, $68, $28, $60
+  .byte $20, $3C, $CC
+
+sub_b31_CC23:
+  .byte $20, $6A, $FD
+
+sub_b31_CC26:
+  .byte $4C, $51, $CC, $20, $D5, $DA, $08, $48, $20, $3C, $CC, $AD, $C7, $03, $D0, $FB
+  .byte $20, $51, $CC, $68, $28, $60
 
 sub_b31_CC3C:
-  .byte $08, $48, $20, $9A, $CC, $A9, $80, $8D, $C8, $03, $8D, $00, $50, $A9, $90, $8D
-  .byte $00, $20, $68, $28, $60
+  .byte $08
+
+sub_b31_CC3D:
+  .byte $48
+
+sub_b31_CC3E:
+  .byte $20, $9A, $CC
+
+sub_b31_CC41:
+  .byte $A9, $80
+
+sub_b31_CC43:
+  .byte $8D, $C8, $03
+
+sub_b31_CC46:
+  .byte $8D, $00, $50
+
+sub_b31_CC49:
+  .byte $A9, $90
+
+sub_b31_CC4B:
+  .byte $8D, $00, $20
+
+sub_b31_CC4E:
+  .byte $68
+
+sub_b31_CC4F:
+  .byte $28
+
+sub_b31_CC50:
+  .byte $60
 
 sub_b31_CC51:
-  .byte $08, $48, $A9, $10, $8D, $00, $20, $AD, $C2, $03, $8D, $C8, $03, $8D, $00, $50
-  .byte $68, $28, $60
+  .byte $08
+
+sub_b31_CC52:
+  .byte $48
+
+sub_b31_CC53:
+  .byte $A9, $10
+
+sub_b31_CC55:
+  .byte $8D, $00, $20
+
+sub_b31_CC58:
+  .byte $AD, $C2, $03
+
+sub_b31_CC5B:
+  .byte $8D, $C8, $03
+
+sub_b31_CC5E:
+  .byte $8D, $00, $50
+
+sub_b31_CC61:
+  .byte $68
+
+sub_b31_CC62:
+  .byte $28
+
+sub_b31_CC63:
+  .byte $60
   .byte $20, $17, $CC, $C9, $80, $D0, $13, $AD
   .byte $FB, $03, $8D, $01, $02, $AD, $FC, $03
   .byte $8D, $02, $02, $A9, $00, $8D, $03, $02
@@ -667,13 +1213,28 @@ loc_b31_CC90:
   .byte $50, $D8
 
 sub_b31_CC9A:
-  .byte $2C, $02, $20, $30, $06
+  .byte $2C, $02, $20
+
+sub_b31_CC9D:
+  .byte $30, $06
 
 sub_b31_CC9F:
-  .byte $2C, $02, $20, $10, $FB, $60
+  .byte $2C, $02, $20
+
+sub_b31_CCA2:
+  .byte $10, $FB
+
+sub_b31_CCA4:
+  .byte $60
 
 sub_b31_CCA5:
-  .byte $2C, $02, $20, $30, $FB, $60
+  .byte $2C, $02, $20
+
+sub_b31_CCA8:
+  .byte $30, $FB
+
+sub_b31_CCAA:
+  .byte $60
   .byte $A9, $A0, $20, $0E, $CC, $4C, $24, $ED
   .byte $A9, $10, $8D, $00, $20, $A9, $00, $85
 
@@ -729,27 +1290,93 @@ loc_b31_CDB4:
   .byte $F0, $FB, $68, $20, $2B, $FB, $20, $25
   .byte $F2, $A9, $01, $8D, $00, $51, $A9, $03
   .byte $8D, $00, $51, $68, $60, $4C, $94, $F1
-  .byte $67, $68, $A8, $A9, $48, $A9, $10
+  .byte $67, $68, $A8, $A9
+
+sub_b31_CE00:
+  .byte $48
+
+sub_b31_CE01:
+  .byte $A9, $10
 loc_b31_CE03:
-  .byte $8D, $00, $20, $AD, $C2, $03, $8D, $C8
-  .byte $03, $8D, $00, $50, $68, $60, $48, $2C
-  .byte $02, $20, $30
+  .byte $8D, $00, $20
+
+sub_b31_CE06:
+  .byte $AD, $C2, $03
+
+sub_b31_CE09:
+  .byte $8D, $C8, $03
+
+sub_b31_CE0C:
+  .byte $8D, $00, $50
+
+sub_b31_CE0F:
+  .byte $68
+
+sub_b31_CE10:
+  .byte $60
+
+sub_b31_CE11:
+  .byte $48
+
+sub_b31_CE12:
+  .byte $2C, $02, $20
+
+sub_b31_CE15:
+  .byte $30
 loc_b31_CE16:
-  .byte $FB, $2C, $02, $20, $10, $FB, $A9, $80
-  .byte $8D, $C8, $03, $8D, $00, $50, $A9, $90
-  .byte $8D, $00, $20, $68, $60
+  .byte $FB
+
+sub_b31_CE17:
+  .byte $2C, $02, $20
+
+sub_b31_CE1A:
+  .byte $10, $FB
+
+sub_b31_CE1C:
+  .byte $A9, $80
+
+sub_b31_CE1E:
+  .byte $8D, $C8, $03
+
+sub_b31_CE21:
+  .byte $8D, $00, $50
+
+sub_b31_CE24:
+  .byte $A9, $90
+
+sub_b31_CE26:
+  .byte $8D, $00, $20
+
+sub_b31_CE29:
+  .byte $68
+
+sub_b31_CE2A:
+  .byte $60
 loc_b31_CE2B:
   .byte $20
 loc_b31_CE2C:
   .byte $00, $CE, $20, $65, $D6, $85, $33, $85
   .byte $D8, $4C, $D2, $D7, $20, $00, $CE, $4C
   .byte $65, $D8, $20, $00, $CE, $4C, $3C, $D4
-  .byte $20, $00, $CE, $4C, $F2, $D4, $20, $11
-  .byte $CE, $4C, $69, $FF
+
+sub_b31_CE44:
+  .byte $20, $00, $CE
+
+sub_b31_CE47:
+  .byte $4C, $F2, $D4, $20, $11, $CE, $4C, $69
+  .byte $FF
 
 sub_b31_CE50:
-  .byte $20, $00, $CE, $20, $24, $ED, $20, $11
-  .byte $CE, $60
+  .byte $20, $00, $CE
+
+sub_b31_CE53:
+  .byte $20, $24, $ED
+
+sub_b31_CE56:
+  .byte $20, $11, $CE
+
+sub_b31_CE59:
+  .byte $60
 loc_b31_CE5A:
   .byte $EA, $EA, $EA, $6C, $FA, $00, $A2, $00
   .byte $BD, $6E, $CE, $20, $0E, $CC, $E8, $E0
@@ -1059,9 +1686,30 @@ sub_b31_D40F:
   .byte $03, $20, $19, $ED
 
 sub_b31_D43C:
-  .byte $20, $FB, $DA, $A2, $DD, $20, $2E, $D5, $86, $B8, $84, $B9, $46, $D8
+  .byte $20, $FB, $DA
+
+sub_b31_D43F:
+  .byte $A2, $DD
+
+sub_b31_D441:
+  .byte $20, $2E, $D5
+
+sub_b31_D444:
+  .byte $86, $B8
+
+sub_b31_D446:
+  .byte $84, $B9
+
+sub_b31_D448:
+  .byte $46, $D8
 data_b31_D44A:
-  .byte $20, $B1, $00, $AA, $F0, $EC, $A2, $FF, $86, $76, $90, $06, $20, $59, $D5, $4C
+  .byte $20, $B1, $00
+
+sub_b31_D44D:
+  .byte $AA
+
+sub_b31_D44E:
+  .byte $F0, $EC, $A2, $FF, $86, $76, $90, $06, $20, $59, $D5, $4C
 loc_b31_D45A:
   .byte $05, $D8
 
@@ -1096,37 +1744,141 @@ loc_b31_D4D2:
   .byte $A4, $6E, $85, $69, $84, $6A, $A4, $0F
 
 sub_b31_D4EA:
-  .byte $B9, $FB, $01, $88, $91, $9B, $D0, $F8, $20, $65, $D6, $A5, $67, $A4, $68, $85
-  .byte $5E, $84, $5F, $18
+  .byte $B9, $FB, $01, $88, $91, $9B, $D0, $F8
+
+sub_b31_D4F2:
+  .byte $20, $65, $D6
+
+sub_b31_D4F5:
+  .byte $A5, $67
+
+sub_b31_D4F7:
+  .byte $A4, $68
+
+sub_b31_D4F9:
+  .byte $85, $5E
+
+sub_b31_D4FB:
+  .byte $84, $5F
+
+sub_b31_D4FD:
+  .byte $18
 
 sub_b31_D4FE:
-  .byte $A0, $01, $B1, $5E, $D0, $0B, $A5, $69, $85, $AF, $A5, $6A
+  .byte $A0, $01
+
+sub_b31_D500:
+  .byte $B1, $5E
+
+sub_b31_D502:
+  .byte $D0, $0B
+
+sub_b31_D504:
+  .byte $A5, $69
+
+sub_b31_D506:
+  .byte $85, $AF
+
+sub_b31_D508:
+  .byte $A5, $6A
 loc_b31_D50A:
-  .byte $85, $B0, $4C, $3C, $D4
+  .byte $85, $B0
+
+sub_b31_D50C:
+  .byte $4C, $3C, $D4
 
 sub_b31_D50F:
   .byte $A0, $04
 
 sub_b31_D511:
-  .byte $C8, $B1, $5E, $D0, $FB, $C8, $98, $65, $5E, $AA, $A0, $00, $91, $5E, $A5, $5F
+  .byte $C8
+
+sub_b31_D512:
+  .byte $B1, $5E
+
+sub_b31_D514:
+  .byte $D0, $FB
+
+sub_b31_D516:
+  .byte $C8
+
+sub_b31_D517:
+  .byte $98
+
+sub_b31_D518:
+  .byte $65, $5E
+
+sub_b31_D51A:
+  .byte $AA
+
+sub_b31_D51B:
+  .byte $A0, $00
+
+sub_b31_D51D:
+  .byte $91, $5E
+
+sub_b31_D51F:
+  .byte $A5, $5F
 data_b31_D521:
   .byte $69
 data_b31_D522:
-  .byte $00, $C8, $91, $5E, $86, $5E, $85, $5F, $90, $D2
+  .byte $00
+
+sub_b31_D523:
+  .byte $C8
+
+sub_b31_D524:
+  .byte $91, $5E
+
+sub_b31_D526:
+  .byte $86, $5E
+
+sub_b31_D528:
+  .byte $85, $5F
+
+sub_b31_D52A:
+  .byte $90, $D2
   .byte $A2, $81
 
 sub_b31_D52E:
-  .byte $86, $33, $20, $20, $CC, $E0, $EF, $90, $02
+  .byte $86, $33
+
+sub_b31_D530:
+  .byte $20, $20, $CC
+
+sub_b31_D533:
+  .byte $E0, $EF
+
+sub_b31_D535:
+  .byte $90, $02
   .byte $A2, $EF
 
 sub_b31_D539:
-  .byte $A9, $00, $9D, $00, $02, $8A, $F0, $0B
+  .byte $A9, $00
+
+sub_b31_D53B:
+  .byte $9D, $00, $02
+
+sub_b31_D53E:
+  .byte $8A
+
+sub_b31_D53F:
+  .byte $F0, $0B
 
 sub_b31_D541:
   .byte $BD, $FF, $01, $29, $7F, $9D, $FF, $01, $CA, $D0, $F5
 
 sub_b31_D54C:
-  .byte $A9, $00, $A2, $FF, $A0, $01, $60
+  .byte $A9, $00
+
+sub_b31_D54E:
+  .byte $A2, $FF
+
+sub_b31_D550:
+  .byte $A0, $01
+
+sub_b31_D552:
+  .byte $60
   .byte $20, $17, $CC, $29, $7F, $60
 
 sub_b31_D559:
@@ -1224,43 +1976,109 @@ sub_b31_D64B:
 
 sub_b31_D665:
   jsr sub_b31_D697
+
+sub_b31_D668:
   lda #$00
+
+sub_b31_D66A:
   bne loc_b31_D696
+
+sub_b31_D66C:
   lda var_0073
+
+sub_b31_D66E:
   ldy var_0074
+
+sub_b31_D670:
   sta var_006F
+
+sub_b31_D672:
   sty var_0070
+
+sub_b31_D674:
   lda var_0069
+
+sub_b31_D676:
   ldy var_006A
+
+sub_b31_D678:
   sta var_006B
+
+sub_b31_D67A:
   sty var_006C
+
+sub_b31_D67C:
   sta var_006D
+
+sub_b31_D67E:
   sty var_006E
+
+sub_b31_D680:
   jsr sub_b31_D849
+
+sub_b31_D683:
   ldx #$55
+
+sub_b31_D685:
   stx var_0052
+
+sub_b31_D687:
   pla
+
+sub_b31_D688:
   tay
+
+sub_b31_D689:
   pla
+
+sub_b31_D68A:
   ldx #$F8
+
+sub_b31_D68C:
   txs
+
+sub_b31_D68D:
   pha
+
+sub_b31_D68E:
   tya
+
+sub_b31_D68F:
   pha
+
+sub_b31_D690:
   lda #$00
+
+sub_b31_D692:
   sta var_007A
+
+sub_b31_D694:
   sta var_0014
 loc_b31_D696:
   rts
 
 sub_b31_D697:
   clc
+
+sub_b31_D698:
   lda var_0067
+
+sub_b31_D69A:
   adc #$FF
+
+sub_b31_D69C:
   sta var_00B8
+
+sub_b31_D69E:
   lda var_0068
+
+sub_b31_D6A0:
   adc #$FF
+
+sub_b31_D6A2:
   sta var_00B9
+
+sub_b31_D6A4:
   rts
   .byte $90, $0A, $F0, $08
   .byte $C9, $C9, $F0, $04, $C9, $2C, $D0, $E5
@@ -1374,11 +2192,29 @@ sub_b31_D842:
   .byte $4C, $C9, $DE
 
 sub_b31_D849:
-  .byte $38, $A5, $67, $E9, $01, $A4, $68, $B0, $01
+  .byte $38
+
+sub_b31_D84A:
+  .byte $A5, $67
+
+sub_b31_D84C:
+  .byte $E9, $01
+
+sub_b31_D84E:
+  .byte $A4, $68
+
+sub_b31_D850:
+  .byte $B0, $01
   .byte $88
 
 sub_b31_D853:
-  .byte $85, $7D, $84, $7E, $60
+  .byte $85, $7D
+
+sub_b31_D855:
+  .byte $84, $7E
+
+sub_b31_D857:
+  .byte $60
 
 sub_b31_D858:
   .byte $20, $7C, $F6, $C9, $83, $F0, $01, $60
@@ -1522,7 +2358,13 @@ sub_b31_DAD5:
   .byte $20, $E7, $E3, $4C, $CF, $DA
 
 sub_b31_DAFB:
-  .byte $A9, $0D, $20, $5C, $DB, $49, $FF
+  .byte $A9, $0D
+
+sub_b31_DAFD:
+  .byte $20, $5C, $DB
+
+sub_b31_DB00:
+  .byte $49, $FF
 
 sub_b31_DB02:
   .byte $60
@@ -1538,20 +2380,77 @@ sub_b31_DB3A:
   .byte $20, $E7, $E3
 
 sub_b31_DB3D:
-  .byte $20, $00, $E6, $AA, $A0, $00, $E8
+  .byte $20, $00, $E6
+
+sub_b31_DB40:
+  .byte $AA
+
+sub_b31_DB41:
+  .byte $A0, $00
+
+sub_b31_DB43:
+  .byte $E8
 
 sub_b31_DB44:
-  .byte $CA, $F0, $BB, $B1, $5E, $20, $5C, $DB, $C8, $C9
+  .byte $CA
+
+sub_b31_DB45:
+  .byte $F0, $BB
+
+sub_b31_DB47:
+  .byte $B1, $5E
+
+sub_b31_DB49:
+  .byte $20, $5C, $DB
+
+sub_b31_DB4C:
+  .byte $C8
+
+sub_b31_DB4D:
+  .byte $C9
 loc_b31_DB4E:
-  .byte $0D, $D0, $F3
+  .byte $0D
+
+sub_b31_DB4F:
+  .byte $D0, $F3
   .byte $20, $00, $DB, $4C, $44, $DB, $A9, $20
   .byte $2C, $A9, $3F
 
 sub_b31_DB5C:
-  .byte $09, $80, $C9, $A0, $90, $02, $EA, $EA
+  .byte $09, $80
+
+sub_b31_DB5E:
+  .byte $C9, $A0
+
+sub_b31_DB60:
+  .byte $90, $02
+
+sub_b31_DB62:
+  .byte $EA
+
+sub_b31_DB63:
+  .byte $EA
 
 sub_b31_DB64:
-  .byte $20, $0E, $CC, $29, $7F, $48, $A5, $F1, $20, $A8, $FC, $68, $60
+  .byte $20, $0E, $CC
+
+sub_b31_DB67:
+  .byte $29, $7F
+
+sub_b31_DB69:
+  .byte $48
+
+sub_b31_DB6A:
+  .byte $A5, $F1
+
+sub_b31_DB6C:
+  .byte $20, $A8, $FC
+
+sub_b31_DB6F:
+  .byte $68
+
+sub_b31_DB70:
+  .byte $60
   .byte $A5, $15, $F0, $12, $30, $04, $A0, $FF
   .byte $D0, $04, $A5, $7B, $A4, $7C, $85, $75
   .byte $84, $76, $4C, $C9, $DE, $68, $24, $D8
@@ -1956,28 +2855,150 @@ loc_b31_E368:
   .byte $86, $9E, $84, $9F, $85, $9D, $60
 
 sub_b31_E3E7:
-  .byte $A2, $22, $86, $0D, $86, $0E, $85, $AB, $84, $AC, $85, $9E, $84, $9F, $A0, $FF
+  .byte $A2, $22
+
+sub_b31_E3E9:
+  .byte $86, $0D
+
+sub_b31_E3EB:
+  .byte $86, $0E
+
+sub_b31_E3ED:
+  .byte $85, $AB
+
+sub_b31_E3EF:
+  .byte $84, $AC
+
+sub_b31_E3F1:
+  .byte $85, $9E
+
+sub_b31_E3F3:
+  .byte $84, $9F
+
+sub_b31_E3F5:
+  .byte $A0, $FF
 
 sub_b31_E3F7:
-  .byte $C8, $B1, $AB, $F0, $0C, $C5, $0D, $F0, $04, $C5, $0E, $D0, $F3
+  .byte $C8
+
+sub_b31_E3F8:
+  .byte $B1, $AB
+
+sub_b31_E3FA:
+  .byte $F0, $0C
+
+sub_b31_E3FC:
+  .byte $C5, $0D
+
+sub_b31_E3FE:
+  .byte $F0, $04
+
+sub_b31_E400:
+  .byte $C5, $0E
+
+sub_b31_E402:
+  .byte $D0, $F3
   .byte $C9, $22, $F0, $01
 
 sub_b31_E408:
-  .byte $18, $84, $9D, $98, $65, $AB, $85, $AD, $A6, $AC, $90, $01
+  .byte $18
+
+sub_b31_E409:
+  .byte $84, $9D
+
+sub_b31_E40B:
+  .byte $98
+
+sub_b31_E40C:
+  .byte $65, $AB
+
+sub_b31_E40E:
+  .byte $85, $AD
+
+sub_b31_E410:
+  .byte $A6, $AC
+
+sub_b31_E412:
+  .byte $90, $01
   .byte $E8
 
 sub_b31_E415:
-  .byte $86, $AE, $A5, $AC, $F0, $04, $C9, $02, $D0, $0B
+  .byte $86, $AE
+
+sub_b31_E417:
+  .byte $A5, $AC
+
+sub_b31_E419:
+  .byte $F0, $04
+
+sub_b31_E41B:
+  .byte $C9, $02
+
+sub_b31_E41D:
+  .byte $D0, $0B
   .byte $98, $20, $D5, $E3, $A6, $AB, $A4, $AC
   .byte $20, $E2, $E5
 
 sub_b31_E42A:
-  .byte $A6, $52, $E0, $5E, $D0, $05
+  .byte $A6, $52
+
+sub_b31_E42C:
+  .byte $E0, $5E
+
+sub_b31_E42E:
+  .byte $D0, $05
   .byte $A2, $BF, $4C, $12, $D4
 
 sub_b31_E435:
-  .byte $A5, $9D, $95, $00, $A5, $9E, $95, $01, $A5, $9F, $95, $02, $A0, $00, $86, $A0
-  .byte $84, $A1, $88, $84, $11, $86, $53, $E8, $E8, $E8, $86, $52, $60
+  .byte $A5, $9D
+
+sub_b31_E437:
+  .byte $95, $00
+
+sub_b31_E439:
+  .byte $A5, $9E
+
+sub_b31_E43B:
+  .byte $95, $01
+
+sub_b31_E43D:
+  .byte $A5, $9F
+
+sub_b31_E43F:
+  .byte $95, $02
+
+sub_b31_E441:
+  .byte $A0, $00
+
+sub_b31_E443:
+  .byte $86, $A0
+
+sub_b31_E445:
+  .byte $84, $A1
+
+sub_b31_E447:
+  .byte $88
+
+sub_b31_E448:
+  .byte $84, $11
+
+sub_b31_E44A:
+  .byte $86, $53
+
+sub_b31_E44C:
+  .byte $E8
+
+sub_b31_E44D:
+  .byte $E8
+
+sub_b31_E44E:
+  .byte $E8
+
+sub_b31_E44F:
+  .byte $86, $52
+
+sub_b31_E451:
+  .byte $60
   .byte $46, $13, $48, $49, $FF, $38, $65, $6F
   .byte $A4, $70, $B0, $01, $88, $C4, $6E, $90
   .byte $11, $D0, $04, $C5, $6D, $90, $0B, $85
@@ -2034,17 +3055,101 @@ sub_b31_E435:
   .byte $E6, $72, $60, $20, $6C, $DD
 
 sub_b31_E600:
-  .byte $A5, $A0, $A4, $A1, $85, $5E, $84, $5F, $20, $35, $E6, $08, $A0, $00, $B1, $5E
-  .byte $48, $C8, $B1, $5E, $AA, $C8, $B1, $5E, $A8, $68, $28, $D0, $13, $C4, $70, $D0
-  .byte $0F
+  .byte $A5, $A0
+
+sub_b31_E602:
+  .byte $A4, $A1
+
+sub_b31_E604:
+  .byte $85, $5E
+
+sub_b31_E606:
+  .byte $84, $5F
+
+sub_b31_E608:
+  .byte $20, $35, $E6
+
+sub_b31_E60B:
+  .byte $08
+
+sub_b31_E60C:
+  .byte $A0, $00
+
+sub_b31_E60E:
+  .byte $B1, $5E
+
+sub_b31_E610:
+  .byte $48
+
+sub_b31_E611:
+  .byte $C8
+
+sub_b31_E612:
+  .byte $B1, $5E
+
+sub_b31_E614:
+  .byte $AA
+
+sub_b31_E615:
+  .byte $C8
+
+sub_b31_E616:
+  .byte $B1, $5E
+
+sub_b31_E618:
+  .byte $A8
+
+sub_b31_E619:
+  .byte $68
+
+sub_b31_E61A:
+  .byte $28
+
+sub_b31_E61B:
+  .byte $D0, $13
+
+sub_b31_E61D:
+  .byte $C4, $70
+
+sub_b31_E61F:
+  .byte $D0, $0F
   .byte $E4, $6F, $D0, $0B, $48, $18, $65, $6F
   .byte $85, $6F, $90, $02, $E6, $70, $68
 
 sub_b31_E630:
-  .byte $86, $5E, $84, $5F, $60
+  .byte $86, $5E
+
+sub_b31_E632:
+  .byte $84, $5F
+
+sub_b31_E634:
+  .byte $60
 
 sub_b31_E635:
-  .byte $C4, $54, $D0, $0C, $C5, $53, $D0, $08, $85, $52, $E9, $03, $85, $53, $A0, $00
+  .byte $C4, $54
+
+sub_b31_E637:
+  .byte $D0, $0C
+
+sub_b31_E639:
+  .byte $C5, $53
+
+sub_b31_E63B:
+  .byte $D0, $08
+
+sub_b31_E63D:
+  .byte $85, $52
+
+sub_b31_E63F:
+  .byte $E9, $03
+
+sub_b31_E641:
+  .byte $85, $53
+
+sub_b31_E643:
+  .byte $A0, $00
+
+sub_b31_E645:
   .byte $60
   .byte $20, $FB, $E6, $8A, $48, $A9, $01, $20
   .byte $DD, $E3, $68, $A0, $00, $91, $9E, $68
@@ -2096,14 +3201,21 @@ sub_b31_E79F:
 
 sub_b31_E7A0:
   lda #$64
+
+sub_b31_E7A2:
   ldy #$EE
+
+sub_b31_E7A4:
   jmp sub_b31_E7BE
   .byte $20, $E3, $E9, $A5, $A2, $49, $FF, $85
   .byte $A2, $45, $AA, $85, $AB, $A5, $9D, $4C
   .byte $C1, $E7
 
 sub_b31_E7B9:
-  .byte $20, $F0, $E8, $90, $3C
+  .byte $20, $F0, $E8
+
+sub_b31_E7BC:
+  .byte $90, $3C
 
 sub_b31_E7BE:
   .byte $20, $E3, $E9
@@ -2113,20 +3225,91 @@ sub_b31_E7C1:
   .byte $4C, $53, $EB
 
 sub_b31_E7C6:
-  .byte $A6, $AC, $86, $92, $A2, $A5, $A5, $A5
+  .byte $A6, $AC
+
+sub_b31_E7C8:
+  .byte $86, $92
+
+sub_b31_E7CA:
+  .byte $A2, $A5
+
+sub_b31_E7CC:
+  .byte $A5, $A5
 
 sub_b31_E7CE:
-  .byte $A8, $F0, $CE, $38, $E5, $9D, $F0, $24, $90, $12, $84, $9D, $A4, $AA, $84, $A2
-  .byte $49, $FF, $69, $00, $A0, $00, $84, $92, $A2, $9D, $D0, $04
+  .byte $A8
+
+sub_b31_E7CF:
+  .byte $F0, $CE
+
+sub_b31_E7D1:
+  .byte $38
+
+sub_b31_E7D2:
+  .byte $E5, $9D
+
+sub_b31_E7D4:
+  .byte $F0, $24
+
+sub_b31_E7D6:
+  .byte $90, $12
+
+sub_b31_E7D8:
+  .byte $84, $9D
+
+sub_b31_E7DA:
+  .byte $A4, $AA
+
+sub_b31_E7DC:
+  .byte $84, $A2
+
+sub_b31_E7DE:
+  .byte $49, $FF
+
+sub_b31_E7E0:
+  .byte $69, $00
+
+sub_b31_E7E2:
+  .byte $A0, $00
+
+sub_b31_E7E4:
+  .byte $84, $92
+
+sub_b31_E7E6:
+  .byte $A2, $9D
+
+sub_b31_E7E8:
+  .byte $D0, $04
 
 sub_b31_E7EA:
-  .byte $A0, $00, $84, $AC
+  .byte $A0, $00
+
+sub_b31_E7EC:
+  .byte $84, $AC
 
 sub_b31_E7EE:
-  .byte $C9, $F9, $30, $C7, $A8, $A5, $AC, $56, $01, $20, $07, $E9
+  .byte $C9, $F9
+
+sub_b31_E7F0:
+  .byte $30, $C7
+
+sub_b31_E7F2:
+  .byte $A8
+
+sub_b31_E7F3:
+  .byte $A5, $AC
+
+sub_b31_E7F5:
+  .byte $56, $01
+
+sub_b31_E7F7:
+  .byte $20, $07, $E9
 
 sub_b31_E7FA:
-  .byte $24, $AB, $10, $57
+  .byte $24, $AB
+
+sub_b31_E7FC:
+  .byte $10, $57
   .byte $A0, $9D, $E0, $A5, $F0, $02, $A0, $A5
   .byte $38, $49, $FF, $65, $92, $85, $AC, $B9
   .byte $04, $00, $F5, $04, $85, $A1, $B9, $03
@@ -2139,25 +3322,164 @@ sub_b31_E829:
   .byte $20, $9E, $E8
 
 sub_b31_E82E:
-  .byte $A0, $00, $98, $18
+  .byte $A0, $00
+
+sub_b31_E830:
+  .byte $98
+
+sub_b31_E831:
+  .byte $18
 
 sub_b31_E832:
-  .byte $A6, $9E, $D0, $4A, $A6, $9F, $86, $9E, $A6, $A0, $86, $9F, $A6, $A1, $86, $A0
-  .byte $A6, $AC, $86, $A1, $84, $AC, $69, $08, $C9, $20, $D0, $E4
+  .byte $A6, $9E
+
+sub_b31_E834:
+  .byte $D0, $4A
+
+sub_b31_E836:
+  .byte $A6, $9F
+
+sub_b31_E838:
+  .byte $86, $9E
+
+sub_b31_E83A:
+  .byte $A6, $A0
+
+sub_b31_E83C:
+  .byte $86, $9F
+
+sub_b31_E83E:
+  .byte $A6, $A1
+
+sub_b31_E840:
+  .byte $86, $A0
+
+sub_b31_E842:
+  .byte $A6, $AC
+
+sub_b31_E844:
+  .byte $86, $A1
+
+sub_b31_E846:
+  .byte $84, $AC
+
+sub_b31_E848:
+  .byte $69, $08
+
+sub_b31_E84A:
+  .byte $C9, $20
+
+sub_b31_E84C:
+  .byte $D0, $E4
   .byte $A9, $00, $85, $9D, $85, $A2, $60
 
 sub_b31_E855:
-  .byte $65, $92, $85, $AC, $A5, $A1, $65, $A9, $85, $A1, $A5, $A0, $65, $A8, $85, $A0
-  .byte $A5, $9F, $65, $A7, $85, $9F, $A5, $9E, $65, $A6, $85, $9E, $4C, $8D, $E8
+  .byte $65, $92
+
+sub_b31_E857:
+  .byte $85, $AC
+
+sub_b31_E859:
+  .byte $A5, $A1
+
+sub_b31_E85B:
+  .byte $65, $A9
+
+sub_b31_E85D:
+  .byte $85, $A1
+
+sub_b31_E85F:
+  .byte $A5, $A0
+
+sub_b31_E861:
+  .byte $65, $A8
+
+sub_b31_E863:
+  .byte $85, $A0
+
+sub_b31_E865:
+  .byte $A5, $9F
+
+sub_b31_E867:
+  .byte $65, $A7
+
+sub_b31_E869:
+  .byte $85, $9F
+
+sub_b31_E86B:
+  .byte $A5, $9E
+
+sub_b31_E86D:
+  .byte $65, $A6
+
+sub_b31_E86F:
+  .byte $85, $9E
+
+sub_b31_E871:
+  .byte $4C, $8D, $E8
 
 sub_b31_E874:
-  .byte $69, $01, $06, $AC, $26, $A1, $26, $A0, $26, $9F, $26, $9E
+  .byte $69, $01
+
+sub_b31_E876:
+  .byte $06, $AC
+
+sub_b31_E878:
+  .byte $26, $A1
+
+sub_b31_E87A:
+  .byte $26, $A0
+
+sub_b31_E87C:
+  .byte $26, $9F
+
+sub_b31_E87E:
+  .byte $26, $9E
 
 sub_b31_E880:
-  .byte $10, $F2, $38, $E5, $9D, $B0, $C7, $49, $FF, $69, $01, $85, $9D
+  .byte $10, $F2
+
+sub_b31_E882:
+  .byte $38
+
+sub_b31_E883:
+  .byte $E5, $9D
+
+sub_b31_E885:
+  .byte $B0, $C7
+
+sub_b31_E887:
+  .byte $49, $FF
+
+sub_b31_E889:
+  .byte $69, $01
+
+sub_b31_E88B:
+  .byte $85, $9D
 
 sub_b31_E88D:
-  .byte $90, $0E, $E6, $9D, $F0, $42, $66, $9E, $66, $9F, $66, $A0, $66, $A1, $66, $AC
+  .byte $90, $0E
+
+sub_b31_E88F:
+  .byte $E6, $9D
+
+sub_b31_E891:
+  .byte $F0, $42
+
+sub_b31_E893:
+  .byte $66, $9E
+
+sub_b31_E895:
+  .byte $66, $9F
+
+sub_b31_E897:
+  .byte $66, $A0
+
+sub_b31_E899:
+  .byte $66, $A1
+
+sub_b31_E89B:
+  .byte $66, $AC
 
 sub_b31_E89D:
   .byte $60
@@ -2171,21 +3493,92 @@ sub_b31_E89D:
   .byte $45, $4C, $12, $D4, $A2, $61
 
 sub_b31_E8DC:
-  .byte $B4, $04, $84, $AC, $B4, $03, $94, $04, $B4, $02, $94, $03, $B4, $01, $94, $02
-  .byte $A4, $A4, $94, $01
+  .byte $B4, $04
+
+sub_b31_E8DE:
+  .byte $84, $AC
+
+sub_b31_E8E0:
+  .byte $B4, $03
+
+sub_b31_E8E2:
+  .byte $94, $04
+
+sub_b31_E8E4:
+  .byte $B4, $02
+
+sub_b31_E8E6:
+  .byte $94, $03
+
+sub_b31_E8E8:
+  .byte $B4, $01
+
+sub_b31_E8EA:
+  .byte $94, $02
+
+sub_b31_E8EC:
+  .byte $A4, $A4
+
+sub_b31_E8EE:
+  .byte $94, $01
 
 sub_b31_E8F0:
-  .byte $69, $08, $30, $E8, $F0, $E6, $E9, $08, $A8, $A5, $AC, $B0, $14
+  .byte $69, $08
+
+sub_b31_E8F2:
+  .byte $30, $E8
+
+sub_b31_E8F4:
+  .byte $F0, $E6
+
+sub_b31_E8F6:
+  .byte $E9, $08
+
+sub_b31_E8F8:
+  .byte $A8
+
+sub_b31_E8F9:
+  .byte $A5, $AC
+
+sub_b31_E8FB:
+  .byte $B0, $14
 
 sub_b31_E8FD:
-  .byte $16, $01, $90, $02
+  .byte $16, $01
+
+sub_b31_E8FF:
+  .byte $90, $02
   .byte $F6, $01
 
 sub_b31_E903:
-  .byte $76, $01, $76, $01
+  .byte $76, $01
+
+sub_b31_E905:
+  .byte $76, $01
 
 sub_b31_E907:
-  .byte $76, $02, $76, $03, $76, $04, $6A, $C8, $D0, $EC, $18, $60
+  .byte $76, $02
+
+sub_b31_E909:
+  .byte $76, $03
+
+sub_b31_E90B:
+  .byte $76, $04
+
+sub_b31_E90D:
+  .byte $6A
+
+sub_b31_E90E:
+  .byte $C8
+
+sub_b31_E90F:
+  .byte $D0, $EC
+
+sub_b31_E911:
+  .byte $18
+
+sub_b31_E912:
+  .byte $60
   .byte $81, $00, $00, $00, $00, $03, $7F, $5E
   .byte $56, $CB, $79, $80, $13, $9B, $0B, $64
   .byte $80, $76, $38, $93, $16, $82, $38, $AA
@@ -2214,9 +3607,76 @@ sub_b31_E907:
   .byte $65, $66, $AC, $98, $4A, $D0, $D6, $60
 
 sub_b31_E9E3:
-  .byte $85, $5E, $84, $5F, $A0, $04, $B1, $5E, $85, $A9, $88, $B1, $5E, $85, $A8, $88
-  .byte $B1, $5E, $85, $A7, $88, $B1, $5E, $85, $AA, $45, $A2, $85, $AB, $A5, $AA, $09
-  .byte $80, $85, $A6, $88, $B1, $5E, $85, $A5, $A5, $9D, $60
+  .byte $85, $5E
+
+sub_b31_E9E5:
+  .byte $84, $5F
+
+sub_b31_E9E7:
+  .byte $A0, $04
+
+sub_b31_E9E9:
+  .byte $B1, $5E
+
+sub_b31_E9EB:
+  .byte $85, $A9
+
+sub_b31_E9ED:
+  .byte $88
+
+sub_b31_E9EE:
+  .byte $B1, $5E
+
+sub_b31_E9F0:
+  .byte $85, $A8
+
+sub_b31_E9F2:
+  .byte $88
+
+sub_b31_E9F3:
+  .byte $B1, $5E
+
+sub_b31_E9F5:
+  .byte $85, $A7
+
+sub_b31_E9F7:
+  .byte $88
+
+sub_b31_E9F8:
+  .byte $B1, $5E
+
+sub_b31_E9FA:
+  .byte $85, $AA
+
+sub_b31_E9FC:
+  .byte $45, $A2
+
+sub_b31_E9FE:
+  .byte $85, $AB
+
+sub_b31_EA00:
+  .byte $A5, $AA
+
+sub_b31_EA02:
+  .byte $09, $80
+
+sub_b31_EA04:
+  .byte $85, $A6
+
+sub_b31_EA06:
+  .byte $88
+
+sub_b31_EA07:
+  .byte $B1, $5E
+
+sub_b31_EA09:
+  .byte $85, $A5
+
+sub_b31_EA0B:
+  .byte $A5, $9D
+
+sub_b31_EA0D:
+  .byte $60
   .byte $A5, $A5, $F0, $1F, $18, $65, $9D, $90
   .byte $04, $30, $1D, $18, $2C, $10, $14, $69
   .byte $80, $85, $9D, $D0, $03, $4C, $52, $E8
@@ -2225,8 +3685,37 @@ sub_b31_E9E3:
   .byte $4C, $D5, $E8
 
 sub_b31_EA39:
-  .byte $20, $63, $EB, $AA, $F0, $10, $18, $69, $02, $B0, $F2, $A2, $00, $86, $AB, $20
-  .byte $CE, $E7, $E6, $9D, $F0, $E7
+  .byte $20, $63, $EB
+
+sub_b31_EA3C:
+  .byte $AA
+
+sub_b31_EA3D:
+  .byte $F0, $10
+
+sub_b31_EA3F:
+  .byte $18
+
+sub_b31_EA40:
+  .byte $69, $02
+
+sub_b31_EA42:
+  .byte $B0, $F2
+
+sub_b31_EA44:
+  .byte $A2, $00
+
+sub_b31_EA46:
+  .byte $86, $AB
+
+sub_b31_EA48:
+  .byte $20, $CE, $E7
+
+sub_b31_EA4B:
+  .byte $E6, $9D
+
+sub_b31_EA4D:
+  .byte $F0, $E7
 
 sub_b31_EA4F:
   .byte $60
@@ -2268,23 +3757,56 @@ sub_b31_EB27:
   .byte $95, $9C, $CA, $D0, $F9, $86, $AC, $60
 
 sub_b31_EB63:
-  .byte $20, $72, $EB, $A2, $06
+  .byte $20, $72, $EB
+
+sub_b31_EB66:
+  .byte $A2, $06
 
 sub_b31_EB68:
-  .byte $B5, $9C, $95, $A4, $CA, $D0, $F9, $86, $AC
+  .byte $B5, $9C
+
+sub_b31_EB6A:
+  .byte $95, $A4
+
+sub_b31_EB6C:
+  .byte $CA
+
+sub_b31_EB6D:
+  .byte $D0, $F9
+
+sub_b31_EB6F:
+  .byte $86, $AC
 
 sub_b31_EB71:
   .byte $60
 
 sub_b31_EB72:
-  .byte $A5, $9D, $F0, $FB, $06, $AC, $90, $F7
+  .byte $A5, $9D
+
+sub_b31_EB74:
+  .byte $F0, $FB
+
+sub_b31_EB76:
+  .byte $06, $AC
+
+sub_b31_EB78:
+  .byte $90, $F7
   .byte $20, $C6, $E8, $D0, $F2, $4C, $8F, $E8
 
 sub_b31_EB82:
   .byte $A5, $9D, $F0, $09, $A5, $A2
 
 sub_b31_EB88:
-  .byte $2A, $A9, $FF, $B0, $02, $A9, $01
+  .byte $2A
+
+sub_b31_EB89:
+  .byte $A9, $FF
+
+sub_b31_EB8B:
+  .byte $B0, $02
+
+sub_b31_EB8D:
+  .byte $A9, $01
 
 sub_b31_EB8F:
   .byte $60
@@ -2301,11 +3823,23 @@ sub_b31_EB93:
 
 sub_b31_EBA0:
   lda #$00
+
+sub_b31_EBA2:
   sta var_00A1
+
+sub_b31_EBA4:
   sta var_00A0
+
+sub_b31_EBA6:
   stx var_009D
+
+sub_b31_EBA8:
   sta var_00AC
+
+sub_b31_EBAA:
   sta var_00A2
+
+sub_b31_EBAC:
   jmp sub_b31_E829
   .byte $46, $A2, $60
 
@@ -2313,31 +3847,144 @@ sub_b31_EBB2:
   .byte $85, $60
 
 sub_b31_EBB4:
-  .byte $84, $61, $A0, $00, $B1, $60, $C8, $AA, $F0, $C4, $B1, $60, $45, $A2, $30, $C2
-  .byte $E4, $9D, $D0, $21, $B1, $60, $09, $80, $C5, $9E, $D0, $19, $C8, $B1, $60, $C5
-  .byte $9F, $D0, $12, $C8, $B1, $60, $C5, $A0, $D0, $0B, $C8, $A9, $7F, $C5, $AC, $B1
-  .byte $60, $E5, $A1, $F0, $28
+  .byte $84, $61
+
+sub_b31_EBB6:
+  .byte $A0, $00
+
+sub_b31_EBB8:
+  .byte $B1, $60
+
+sub_b31_EBBA:
+  .byte $C8
+
+sub_b31_EBBB:
+  .byte $AA
+
+sub_b31_EBBC:
+  .byte $F0, $C4
+
+sub_b31_EBBE:
+  .byte $B1, $60
+
+sub_b31_EBC0:
+  .byte $45, $A2
+
+sub_b31_EBC2:
+  .byte $30, $C2
+
+sub_b31_EBC4:
+  .byte $E4, $9D
+
+sub_b31_EBC6:
+  .byte $D0, $21
+
+sub_b31_EBC8:
+  .byte $B1, $60
+
+sub_b31_EBCA:
+  .byte $09, $80
+
+sub_b31_EBCC:
+  .byte $C5, $9E
+
+sub_b31_EBCE:
+  .byte $D0, $19
+
+sub_b31_EBD0:
+  .byte $C8
+
+sub_b31_EBD1:
+  .byte $B1, $60
+
+sub_b31_EBD3:
+  .byte $C5, $9F
+
+sub_b31_EBD5:
+  .byte $D0, $12
+
+sub_b31_EBD7:
+  .byte $C8
+
+sub_b31_EBD8:
+  .byte $B1, $60
+
+sub_b31_EBDA:
+  .byte $C5, $A0
+
+sub_b31_EBDC:
+  .byte $D0, $0B, $C8, $A9, $7F, $C5, $AC, $B1, $60, $E5, $A1, $F0, $28
 
 sub_b31_EBE9:
-  .byte $A5, $A2, $90, $02, $49, $FF
+  .byte $A5, $A2
+
+sub_b31_EBEB:
+  .byte $90, $02
+
+sub_b31_EBED:
+  .byte $49, $FF
 
 sub_b31_EBEF:
   .byte $4C, $88, $EB
 
 sub_b31_EBF2:
-  .byte $A5, $9D, $F0, $4A, $38, $E9, $A0, $24, $A2, $10, $09
+  .byte $A5, $9D
+
+sub_b31_EBF4:
+  .byte $F0, $4A
+
+sub_b31_EBF6:
+  .byte $38
+
+sub_b31_EBF7:
+  .byte $E9, $A0
+
+sub_b31_EBF9:
+  .byte $24, $A2
+
+sub_b31_EBFB:
+  .byte $10, $09
   .byte $AA, $A9, $FF, $85, $A4, $20, $A4, $E8
   .byte $8A
 
 sub_b31_EC06:
-  .byte $A2, $9D, $C9, $F9, $10, $06
+  .byte $A2, $9D
+
+sub_b31_EC08:
+  .byte $C9, $F9
+
+sub_b31_EC0A:
+  .byte $10, $06
   .byte $20, $F0, $E8, $84, $A4
 
 sub_b31_EC11:
   .byte $60
 
 sub_b31_EC12:
-  .byte $A8, $A5, $A2, $29, $80, $46, $9E, $05, $9E, $85, $9E, $20, $07, $E9, $84, $A4
+  .byte $A8
+
+sub_b31_EC13:
+  .byte $A5, $A2
+
+sub_b31_EC15:
+  .byte $29, $80
+
+sub_b31_EC17:
+  .byte $46, $9E
+
+sub_b31_EC19:
+  .byte $05, $9E
+
+sub_b31_EC1B:
+  .byte $85, $9E
+
+sub_b31_EC1D:
+  .byte $20, $07, $E9
+
+sub_b31_EC20:
+  .byte $84, $A4
+
+sub_b31_EC22:
   .byte $60
   .byte $A5, $9D, $C9, $A0, $B0, $20, $20, $F2
   .byte $EB, $84, $AC, $A5, $A2, $84, $A2, $49
@@ -2395,64 +4042,352 @@ sub_b31_ECD5:
   .byte $A5, $76, $A6, $75
 
 sub_b31_ED24:
-  .byte $85, $9E, $86, $9F, $A2, $90, $38, $20, $A0, $EB, $20, $34, $ED, $4C, $3A, $DB
+  .byte $85, $9E
+
+sub_b31_ED26:
+  .byte $86, $9F
+
+sub_b31_ED28:
+  .byte $A2, $90
+
+sub_b31_ED2A:
+  .byte $38
+
+sub_b31_ED2B:
+  .byte $20, $A0, $EB
+
+sub_b31_ED2E:
+  .byte $20, $34, $ED
+
+sub_b31_ED31:
+  .byte $4C, $3A, $DB
 
 sub_b31_ED34:
-  .byte $A0, $01, $A9, $2D, $88, $24, $A2, $10, $04
+  .byte $A0, $01
+
+sub_b31_ED36:
+  .byte $A9, $2D
+
+sub_b31_ED38:
+  .byte $88
+
+sub_b31_ED39:
+  .byte $24, $A2
+
+sub_b31_ED3B:
+  .byte $10, $04
   .byte $C8, $99, $FF, $00
 
 sub_b31_ED41:
-  .byte $85, $A2, $84, $AD, $C8, $A9, $30, $A6, $9D, $D0, $03
+  .byte $85, $A2
+
+sub_b31_ED43:
+  .byte $84, $AD
+
+sub_b31_ED45:
+  .byte $C8
+
+sub_b31_ED46:
+  .byte $A9, $30
+
+sub_b31_ED48:
+  .byte $A6, $9D
+
+sub_b31_ED4A:
+  .byte $D0, $03
   .byte $4C, $57, $EE
 
 sub_b31_ED4F:
-  .byte $A9, $00, $E0, $80, $F0, $02, $B0, $09
+  .byte $A9, $00
+
+sub_b31_ED51:
+  .byte $E0, $80
+
+sub_b31_ED53:
+  .byte $F0, $02
+
+sub_b31_ED55:
+  .byte $B0, $09
   .byte $A9, $14, $A0, $ED, $20, $7F, $E9, $A9
   .byte $F7
 
 sub_b31_ED60:
-  .byte $85, $99, $A9, $0F, $A0, $ED, $20, $B2, $EB, $F0, $1E, $10, $12
+  .byte $85, $99
+
+sub_b31_ED62:
+  .byte $A9, $0F
+
+sub_b31_ED64:
+  .byte $A0, $ED
+
+sub_b31_ED66:
+  .byte $20, $B2, $EB
+
+sub_b31_ED69:
+  .byte $F0, $1E
+
+sub_b31_ED6B:
+  .byte $10, $12
 
 sub_b31_ED6D:
-  .byte $A9, $0A, $A0, $ED, $20, $B2, $EB, $F0, $02, $10, $0E, $20, $39, $EA, $C6, $99
+  .byte $A9, $0A
+
+sub_b31_ED6F:
+  .byte $A0, $ED
+
+sub_b31_ED71:
+  .byte $20, $B2, $EB
+
+sub_b31_ED74:
+  .byte $F0, $02
+
+sub_b31_ED76:
+  .byte $10, $0E
+
+sub_b31_ED78:
+  .byte $20, $39, $EA
+
+sub_b31_ED7B:
+  .byte $C6, $99
+
+sub_b31_ED7D:
   .byte $D0, $EE
   .byte $20, $55, $EA, $E6, $99, $D0, $DC
 
 sub_b31_ED86:
-  .byte $20, $A0, $E7, $20, $F2, $EB, $A2, $01, $A5, $99, $18, $69, $0A, $30, $09, $C9
-  .byte $0B, $B0, $06, $69, $FF, $AA, $A9, $02, $38, $E9, $02, $85, $9A, $86, $99, $8A
-  .byte $F0, $02, $10, $13
+  .byte $20, $A0, $E7
+
+sub_b31_ED89:
+  .byte $20, $F2, $EB
+
+sub_b31_ED8C:
+  .byte $A2, $01
+
+sub_b31_ED8E:
+  .byte $A5, $99
+
+sub_b31_ED90:
+  .byte $18
+
+sub_b31_ED91:
+  .byte $69, $0A
+
+sub_b31_ED93:
+  .byte $30, $09
+
+sub_b31_ED95:
+  .byte $C9, $0B
+
+sub_b31_ED97:
+  .byte $B0, $06
+
+sub_b31_ED99:
+  .byte $69, $FF
+
+sub_b31_ED9B:
+  .byte $AA
+
+sub_b31_ED9C:
+  .byte $A9, $02
+
+sub_b31_ED9E:
+  .byte $38
+
+sub_b31_ED9F:
+  .byte $E9, $02
+
+sub_b31_EDA1:
+  .byte $85, $9A
+
+sub_b31_EDA3:
+  .byte $86, $99
+
+sub_b31_EDA5:
+  .byte $8A
+
+sub_b31_EDA6:
+  .byte $F0, $02
+
+sub_b31_EDA8:
+  .byte $10, $13
   .byte $A4, $AD, $A9, $2E, $C8, $99, $FF, $00
   .byte $8A, $F0, $06, $A9, $30, $C8, $99, $FF
   .byte $00, $84, $AD
 
 sub_b31_EDBD:
-  .byte $A0, $00, $A2, $80
+  .byte $A0, $00
+
+sub_b31_EDBF:
+  .byte $A2, $80
 
 sub_b31_EDC1:
-  .byte $A5, $A1, $18, $79, $6C, $EE, $85, $A1, $A5, $A0, $79, $6B, $EE, $85, $A0, $A5
-  .byte $9F, $79, $6A, $EE, $85, $9F, $A5, $9E, $79, $69, $EE, $85, $9E, $E8, $B0, $04
-  .byte $10, $DE, $30, $02
+  .byte $A5, $A1
+
+sub_b31_EDC3:
+  .byte $18
+
+sub_b31_EDC4:
+  .byte $79, $6C, $EE
+
+sub_b31_EDC7:
+  .byte $85, $A1
+
+sub_b31_EDC9:
+  .byte $A5, $A0
+
+sub_b31_EDCB:
+  .byte $79, $6B, $EE
+
+sub_b31_EDCE:
+  .byte $85, $A0
+
+sub_b31_EDD0:
+  .byte $A5, $9F
+
+sub_b31_EDD2:
+  .byte $79, $6A, $EE
+
+sub_b31_EDD5:
+  .byte $85, $9F
+
+sub_b31_EDD7:
+  .byte $A5, $9E
+
+sub_b31_EDD9:
+  .byte $79, $69, $EE
+
+sub_b31_EDDC:
+  .byte $85, $9E
+
+sub_b31_EDDE:
+  .byte $E8
+
+sub_b31_EDDF:
+  .byte $B0, $04
+
+sub_b31_EDE1:
+  .byte $10, $DE
+
+sub_b31_EDE3:
+  .byte $30, $02
 
 sub_b31_EDE5:
   .byte $30, $DA
 
 sub_b31_EDE7:
-  .byte $8A, $90, $04, $49, $FF, $69, $0A
+  .byte $8A
+
+sub_b31_EDE8:
+  .byte $90, $04
+
+sub_b31_EDEA:
+  .byte $49, $FF
+
+sub_b31_EDEC:
+  .byte $69, $0A
 
 sub_b31_EDEE:
-  .byte $69, $2F, $C8, $C8, $C8, $C8, $84, $83, $A4, $AD, $C8, $AA, $29, $7F, $99, $FF
-  .byte $00, $C6, $99, $D0, $06, $A9, $2E, $C8, $99, $FF, $00
+  .byte $69, $2F
+
+sub_b31_EDF0:
+  .byte $C8
+
+sub_b31_EDF1:
+  .byte $C8
+
+sub_b31_EDF2:
+  .byte $C8
+
+sub_b31_EDF3:
+  .byte $C8
+
+sub_b31_EDF4:
+  .byte $84, $83
+
+sub_b31_EDF6:
+  .byte $A4, $AD
+
+sub_b31_EDF8:
+  .byte $C8
+
+sub_b31_EDF9:
+  .byte $AA
+
+sub_b31_EDFA:
+  .byte $29, $7F
+
+sub_b31_EDFC:
+  .byte $99, $FF, $00
+
+sub_b31_EDFF:
+  .byte $C6, $99
+
+sub_b31_EE01:
+  .byte $D0, $06
+
+sub_b31_EE03:
+  .byte $A9, $2E
+
+sub_b31_EE05:
+  .byte $C8
+
+sub_b31_EE06:
+  .byte $99, $FF, $00
 
 sub_b31_EE09:
-  .byte $84, $AD, $A4, $83, $8A, $49, $FF, $29, $80, $AA, $C0, $24, $D0, $AA, $A4, $AD
+  .byte $84, $AD
+
+sub_b31_EE0B:
+  .byte $A4, $83
+
+sub_b31_EE0D:
+  .byte $8A
+
+sub_b31_EE0E:
+  .byte $49, $FF
+
+sub_b31_EE10:
+  .byte $29, $80
+
+sub_b31_EE12:
+  .byte $AA
+
+sub_b31_EE13:
+  .byte $C0, $24
+
+sub_b31_EE15:
+  .byte $D0, $AA
+
+sub_b31_EE17:
+  .byte $A4, $AD
 
 sub_b31_EE19:
-  .byte $B9, $FF, $00, $88, $C9, $30, $F0, $F8, $C9, $2E, $F0, $01
+  .byte $B9, $FF, $00
+
+sub_b31_EE1C:
+  .byte $88
+
+sub_b31_EE1D:
+  .byte $C9, $30
+
+sub_b31_EE1F:
+  .byte $F0, $F8
+
+sub_b31_EE21:
+  .byte $C9, $2E
+
+sub_b31_EE23:
+  .byte $F0, $01
   .byte $C8
 
 sub_b31_EE26:
-  .byte $A9, $2B, $A6, $9A, $F0, $2E
+  .byte $A9, $2B
+
+sub_b31_EE28:
+  .byte $A6, $9A
+
+sub_b31_EE2A:
+  .byte $F0, $2E
   .byte $10, $08, $A9, $00, $38, $E5, $9A, $AA
   .byte $A9, $2D, $99, $01, $01, $A9, $45, $99
   .byte $00, $01, $8A, $A2, $2F, $38, $E8, $E9
@@ -2461,7 +4396,19 @@ sub_b31_EE26:
   .byte $01, $F0, $08, $99, $FF, $00
 
 sub_b31_EE5A:
-  .byte $A9, $00, $99, $00, $01, $A9, $00, $A0, $01, $60
+  .byte $A9, $00
+
+sub_b31_EE5C:
+  .byte $99, $00, $01
+
+sub_b31_EE5F:
+  .byte $A9, $00
+
+sub_b31_EE61:
+  .byte $A0, $01
+
+sub_b31_EE63:
+  .byte $60
   .byte $80, $00, $00, $00, $00, $FA, $0A, $1F
   .byte $00, $00, $98, $96, $80, $FF, $F0, $BD
   .byte $C0, $00, $01, $86, $A0, $FF, $FF, $D8
@@ -2867,18 +4814,44 @@ data_b31_F817:
 
 sub_b31_F840:
   sta var_0000
+
+sub_b31_F842:
   pha
+
+sub_b31_F843:
   txa
+
+sub_b31_F844:
   pha
+
+sub_b31_F845:
   tya
+
+sub_b31_F846:
   pha
+
+sub_b31_F847:
   lda var_0000
+
+sub_b31_F849:
   jsr sub_b31_C003
+
+sub_b31_F84C:
   pla
+
+sub_b31_F84D:
   tay
+
+sub_b31_F84E:
   pla
+
+sub_b31_F84F:
   tax
+
+sub_b31_F850:
   pla
+
+sub_b31_F851:
   rts
   .byte $60, $26, $0D, $0D, $0D, $0D, $0D, $0D
   .byte $0D, $0D, $0D, $0D, $0D, $0D, $0D, $0D
@@ -2917,7 +4890,18 @@ sub_b31_F940:
 sub_b31_F948:
   .byte $A2, $03
 loc_b31_F94A:
-  .byte $A9, $A0, $20, $ED, $FD, $CA, $D0, $F8
+  .byte $A9, $A0
+
+sub_b31_F94C:
+  .byte $20, $ED, $FD
+
+sub_b31_F94F:
+  .byte $CA
+
+sub_b31_F950:
+  .byte $D0, $F8
+
+sub_b31_F952:
   .byte $60, $38, $A5, $2F, $A4, $3B, $AA, $10
   .byte $01, $88, $65, $3A, $90, $01, $C8, $60
   .byte $04, $20, $54, $30, $0D, $80, $04, $90
@@ -3012,18 +4996,30 @@ sub_b31_FB31:
 ; 等下一次 VBlank 开始：先等标志变 0，再等它变 1。
 wait_next_vblank:
   bit var_2002
+
+sub_b31_FB38:
   bmi wait_next_vblank
 
 sub_b31_FB3A:
   bit var_2002
+
+sub_b31_FB3D:
   bpl sub_b31_FB3A
+
+sub_b31_FB3F:
   rts
 
 ; 关闭 PPU 的渲染：$2000 与 $2001 都写 0。
 ppu_disable_rendering:
   lda #$00
+
+sub_b31_FB42:
   sta var_2000
+
+sub_b31_FB45:
   sta var_2001
+
+sub_b31_FB48:
   rts
 
 sub_b31_FB49:
@@ -3065,19 +5061,43 @@ sub_b31_FB60:
 
 sub_b31_FBC1:
   pha
+
+sub_b31_FBC2:
   lda #$06
+
+sub_b31_FBC4:
   sta var_0029
+
+sub_b31_FBC6:
   pla
+
+sub_b31_FBC7:
   asl a
+
+sub_b31_FBC8:
   asl a
+
+sub_b31_FBC9:
   asl a
+
+sub_b31_FBCA:
   asl a
+
+sub_b31_FBCB:
   asl a
+
+sub_b31_FBCC:
   sta var_0028
+
+sub_b31_FBCE:
   bcc loc_b31_FBD2
+
+sub_b31_FBD0:
   inc var_0029
 loc_b31_FBD2:
   clc
+
+sub_b31_FBD3:
   rts
   .byte $05, $28, $85, $28, $60
 
@@ -3101,8 +5121,14 @@ sub_b31_FC22:
 
 sub_b31_FC24:
   jsr sub_b31_FBC1
+
+sub_b31_FC27:
   adc var_0020
+
+sub_b31_FC29:
   sta var_0028
+
+sub_b31_FC2B:
   rts
   .byte $60, $20, $00, $FE, $68, $68, $4C, $69
   .byte $FF
@@ -3135,14 +5161,64 @@ sub_b31_FC73:
   .byte $20, $24, $FC
 
 sub_b31_FC76:
-  .byte $A5, $28, $85, $2A, $A5, $29, $85, $2B, $A0, $20, $88, $68, $69, $01, $C5, $23
-  .byte $B0, $0D, $48, $20, $24, $FC
+  .byte $A5, $28
+
+sub_b31_FC78:
+  .byte $85, $2A
+
+sub_b31_FC7A:
+  .byte $A5, $29
+
+sub_b31_FC7C:
+  .byte $85, $2B
+
+sub_b31_FC7E:
+  .byte $A0, $20
+
+sub_b31_FC80:
+  .byte $88
+
+sub_b31_FC81:
+  .byte $68
+
+sub_b31_FC82:
+  .byte $69, $01
+
+sub_b31_FC84:
+  .byte $C5, $23
+
+sub_b31_FC86:
+  .byte $B0, $0D
+
+sub_b31_FC88:
+  .byte $48
+
+sub_b31_FC89:
+  .byte $20, $24, $FC
 
 sub_b31_FC8C:
-  .byte $B1, $28, $91, $2A, $88, $10, $F9, $30, $E1
+  .byte $B1, $28
+
+sub_b31_FC8E:
+  .byte $91, $2A
+
+sub_b31_FC90:
+  .byte $88
+
+sub_b31_FC91:
+  .byte $10, $F9
+
+sub_b31_FC93:
+  .byte $30, $E1
 
 sub_b31_FC95:
-  .byte $A0, $00, $20, $9E, $FC, $B0, $86
+  .byte $A0, $00
+
+sub_b31_FC97:
+  .byte $20, $9E, $FC
+
+sub_b31_FC9A:
+  .byte $B0, $86
   .byte $A4, $24
 
 sub_b31_FC9E:
@@ -3157,10 +5233,20 @@ sub_b31_FCA9:
 
 sub_b31_FCAA:
   sbc #$01
+
+sub_b31_FCAC:
   bne sub_b31_FCAA
+
+sub_b31_FCAE:
   pla
+
+sub_b31_FCAF:
   sbc #$01
+
+sub_b31_FCB1:
   bne sub_b31_FCA9
+
+sub_b31_FCB3:
   rts
   .byte $E6, $42, $D0, $02, $E6, $43
 
@@ -3213,22 +5299,50 @@ loc_b31_FD22:
 
 sub_b31_FD3F:
   txa
+
+sub_b31_FD40:
   pha
+
+sub_b31_FD41:
   tya
+
+sub_b31_FD42:
   pha
+
+sub_b31_FD43:
   lda var_0025
+
+sub_b31_FD45:
   jsr sub_b31_C009
+
+sub_b31_FD48:
   pla
+
+sub_b31_FD49:
   tay
+
+sub_b31_FD4A:
   pla
+
+sub_b31_FD4B:
   tax
+
+sub_b31_FD4C:
   lda #$A0
 
 sub_b31_FD4E:
   sta (var_0028),y
+
+sub_b31_FD50:
   iny
+
+sub_b31_FD51:
   cpy var_0021
+
+sub_b31_FD53:
   bcc sub_b31_FD4E
+
+sub_b31_FD55:
   rts
   .byte $F0, $0A, $E0, $F8, $90, $03, $20, $3A
   .byte $FF, $E8, $D0, $13, $A9, $DC, $20, $ED
@@ -3262,7 +5376,10 @@ sub_b31_FD75:
 
 ; 输出回车（地址与用法同苹果机监控程序的 CROUT，未逐条核对实现）。
 monitor_crout:
-  .byte $A9, $8D, $D0, $5B
+  .byte $A9, $8D
+
+sub_b31_FD90:
+  .byte $D0, $5B
 
 sub_b31_FD92:
   .byte $A4, $3D, $A6, $3C, $20, $8E, $FD, $20, $40, $F9, $A0, $00, $A9, $AD, $4C, $ED
@@ -3295,10 +5412,34 @@ monitor_cout:
   .byte $6C, $36, $00
 
 sub_b31_FDF0:
-  .byte $84, $35, $4C, $FE, $80
+  .byte $84, $35
+
+sub_b31_FDF2:
+  .byte $4C, $FE, $80
 
 sub_b31_FDF5:
-  .byte $EA, $EA, $EA, $48, $20, $00, $80, $68, $A4, $35, $60
+  .byte $EA
+
+sub_b31_FDF6:
+  .byte $EA
+
+sub_b31_FDF7:
+  .byte $EA
+
+sub_b31_FDF8:
+  .byte $48
+
+sub_b31_FDF9:
+  .byte $20, $00, $80
+
+sub_b31_FDFC:
+  .byte $68
+
+sub_b31_FDFD:
+  .byte $A4, $35
+
+sub_b31_FDFF:
+  .byte $60
 
 sub_b31_FE00:
   .byte $C6, $34, $F0, $9F, $CA, $D0, $16, $C9, $BA, $D0, $BB

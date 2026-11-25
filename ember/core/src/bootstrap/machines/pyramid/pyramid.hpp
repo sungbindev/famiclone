@@ -1,13 +1,19 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：pyramid.hpp
- * 说明：主机型号 pec9588（金字塔 PEC-9588 学习机）与 pec586（金字塔 PEC-586(686) 学习机，NTSC）的装配：2K 内部 RAM、2C02 PPU、2A03 APU、精灵 DMA、手柄口、键盘、磁带机、并口打印机与主板。
+ * 说明：主机型号 pec9588（金字塔 PEC-9588 学习机）与 pec586（金字塔 PEC-586(686) 学习机，NTSC）的装配：
+ *       2K 内部 RAM、2C02 PPU、2A03 APU、精灵 DMA、手柄口、键盘、磁带机、并口打印机、主板，
+ *       以及 pec9588 的 5.25 英寸软驱。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-21
- * 备注：时钟与经典 FC 相同（主时钟 21.477272 MHz，CPU 12 分频、PPU 4 分频）；CPU 总线：$0000-$1FFF 内部 RAM（2K 镜像）、$2000-$3FFF PPU、$4000-$4013 与 $4015 APU、$4014 精灵 DMA、
- *       $4016-$4017 手柄口与键盘（写 $4017 同时转给 APU 的帧计数器）、$4020-$FFFF 主板（见 pyramid-board.hpp）；PPU 总线：$0000-$3EFF 由主板译码，调色板在 PPU 内；
- *       整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；磁带机是独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；
+ * 日期：2026-11-25
+ * 备注：时钟与经典 FC 相同（主时钟 21.477272 MHz，CPU 12 分频、PPU 4 分频）；
+ *       CPU 总线：$0000-$1FFF 内部 RAM（2K 镜像）、$2000-$3FFF PPU、$4000-$4013 与 $4015 APU、
+ *       $4014 精灵 DMA、$4016-$4017 手柄口与键盘（写 $4017 同时转给 APU 的帧计数器）、
+ *       $4020-$FFFF 主板（见 pyramid-board.hpp）；PPU 总线：$0000-$3EFF 由主板译码，调色板在 PPU 内；
+ *       整机机型没有卡带，Machine 契约要求的卡槽是一个空的、不挂载的卡槽；
+ *       磁带机与软驱 A 是独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上磁带机；
+ *       只有 pec9588 接软驱：软驱控制器 Disk2 经主板挂在 $5600-$56FF，pec586 没有软驱；
  *       具体实现只在这里创建并连线，模块之间不互相引用。
  * ------------------------------------------------------------------------
  */
@@ -27,12 +33,15 @@
 #include "bootstrap/machines/common/cpu-debug-kit.hpp"
 #include "bootstrap/machines/common/pad-apu-port.hpp"
 #include "bootstrap/machines/pyramid/pyramid-board.hpp"
+#include "contracts/hardware/floppy-activity.hpp"
 #include "contracts/hardware/machine.hpp"
 #include "logic/hardware/apu-2a03/apu-2a03.hpp"
 #include "logic/hardware/bus/mapped-bus.hpp"
 #include "logic/hardware/cartridge-slot/standard-cartridge-slot.hpp"
 #include "logic/hardware/cpu-6502/cpu-6502.hpp"
+#include "logic/hardware/disk2/disk2.hpp"
 #include "logic/hardware/dma-2a03/dma-2a03.hpp"
+#include "logic/hardware/floppy-drive/standard-floppy-drive.hpp"
 #include "logic/hardware/joypad/joypad.hpp"
 #include "logic/hardware/keyboard-pyramid/keyboard-pyramid.hpp"
 #include "logic/hardware/lines/line-output.hpp"
@@ -59,15 +68,24 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   static constexpr contracts::hardware::MasterTime PPU_PHASE_TICKS = 1;
   /** 打印机没有数据多久之后输出当前页（6 秒，主时钟周期数）。 */
   static constexpr contracts::hardware::MasterTime PRINTER_TIMEOUT_TICKS = 6 * 21'477'272;
+  /** 软驱盘片上一个位的时间：4 微秒（主时钟周期数，带小数）。 */
+  static constexpr double DISK_BIT_TICKS = MASTER_CLOCK_HZ * 4e-6;
+  /** 马达关指令之后到真正停转的时间：1 秒（主时钟周期数）。 */
+  static constexpr contracts::hardware::MasterTime DISK_MOTOR_OFF_TICKS = 21'477'272;
 
   /**
    * @param model 主板型号。
    * @param rom 程序 ROM 的内容，大小必须是 512K（不含 iNES 文件头）。
    * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；为空时主机自己带一台（测试用）。
    * @param printerOutput 打印机输出的页交给它，必须活到主机销毁；为空时并口不接打印机。
+   * @param floppyActivity 软驱马达开关变化时通知它，必须活到主机销毁；为空时不通知。
+   *        pec586 没有软驱，不用。
+   * @param floppyDrive 软驱 A：独立于主机的设备，由外面创建并在多台主机之间共用。
+   *        pec9588 创建时接入、销毁时解除，盘片留在里面；为空时主机自己带一个（测试用）。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
-  PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr, contracts::hardware::PrinterOutput* printerOutput = nullptr);
+  PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr, contracts::hardware::PrinterOutput* printerOutput = nullptr,
+                 contracts::hardware::FloppyActivity* floppyActivity = nullptr, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr);
   ~PyramidMachine() override;
 
   PyramidMachine(const PyramidMachine&) = delete;
@@ -96,6 +114,8 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   contracts::hardware::MachineDebugger* debugger() override { return this; }
   contracts::hardware::PrinterControl* printer() override { return printer_.get(); }
   contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
+  [[nodiscard]] unsigned floppyDriveCount() const override { return hasFloppy_ ? 1 : 0; }
+  contracts::hardware::FloppyDrive* floppyDrive(unsigned index) override { return hasFloppy_ && index == 0 ? floppy_.get() : nullptr; }
 
   // 测试与调试用
   [[nodiscard]] logic::hardware::Ppu2c02& ppu() { return ppu_; }
@@ -104,6 +124,7 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   [[nodiscard]] PyramidBoard& board() { return board_; }
   [[nodiscard]] const PyramidBoard& board() const { return board_; }
   [[nodiscard]] logic::hardware::KeyboardPyramid& keyboard() { return keyboard_; }
+  [[nodiscard]] logic::hardware::Disk2& disk2() { return disk2_; }
   /** 2K 内部 RAM。 */
   [[nodiscard]] const contracts::hardware::StorageRegion& internalRam() const { return ram_; }
   /** 不经 CPU 读 CPU 总线，读不改变状态。 */
@@ -176,6 +197,11 @@ class PyramidMachine final : public contracts::hardware::Machine, private contra
   logic::hardware::Pad2a03 pad_;
   /** 磁带机：独立于主机的设备；主机通电时才绑定自己的调度器。 */
   std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_;
+  /** 软驱 A：独立于主机的设备；只有 pec9588 接上它（hasFloppy_）。 */
+  std::shared_ptr<logic::hardware::StandardFloppyDrive> floppy_;
+  bool hasFloppy_;
+  /** 5.25 英寸软驱控制器；pec586 里没有接到总线上。 */
+  logic::hardware::Disk2 disk2_;
   /** $4016-$4017：手柄口与 APU 帧计数器共用，写入同时转给两边。 */
   PadApuPort padApuPort_;
   logic::hardware::KeyboardPyramid keyboard_;

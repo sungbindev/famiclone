@@ -31,7 +31,7 @@ std::unique_ptr<contracts::hardware::Machine> MachineCatalog::createWithRom(cons
   if (machine == "sb97") return std::make_unique<Sb97Machine>(std::move(rom), floppyActivity_.get(), floppyDrive_, tapeDeck_);
   if (machine == "bbg1") return std::make_unique<BbgMachine>(BbgVariant::floppyOne(), std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_, tapeDeck_);
   if (machine == "bbg98") return std::make_unique<BbgMachine>(BbgVariant::model98(), std::move(rom), printerOutput_.get(), floppyActivity_.get(), floppyDrive_, tapeDeck_);
-  if (machine == "pec9588") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec9588, std::move(rom), tapeDeck_, printerOutput_.get());
+  if (machine == "pec9588") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec9588, std::move(rom), tapeDeck_, printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
   if (machine == "pec586") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec586, std::move(rom), tapeDeck_, printerOutput_.get());
   if (machine == "yuxing") return std::make_unique<YuxingMachine>(std::move(rom), tapeDeck_, floppyActivity_.get(), floppyDrive_, printerOutput_.get());
   throw shared::CoreError(contracts::runtime::ERROR_HOST_UNSUPPORTED, "程序里还没有实现整机机型：" + machine);

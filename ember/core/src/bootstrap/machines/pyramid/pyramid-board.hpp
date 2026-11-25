@@ -18,6 +18,9 @@
  *       PEC-586 与 PEC-686F 的程序窗口：上电与复位后整个 $8000-$FFFF 是一块 32K 的“启动映像”（由 ROM 里每 16K 块末尾的两段 1K 拼成，见 pyramid-board.cpp），
  *         reg0 位 4 为 1 时整个窗口换成 ROM 的第 reg0&7 个 32K；位 4 为 0 时 reg0&$70 是 $40 或 $60 就把 $8000-$9FFF 换成 ROM 的第 (reg0&$F)|$20 或 (reg0&$F)|$30 个 8K，其余仍是启动映像；
  *       PPU 地址：$0000-$1FFF 是字符 RAM，$2000-$3EFF 是名称表显存（2K，按 reg0 镜像）；汉字模式下背景的图案读取按名称表地址改写（见 pyramid-text.hpp）；
+ *       $5600-$56FF：接着 5.25 英寸软驱控制器时（只有 PEC-9588），整页是软驱控制器的 16 个寄存器，
+ *         地址的低 4 位是寄存器号，每 16 字节镜像一次（磁盘操作系统用 $5610-$561F），
+ *         见 logic/hardware/disk2/disk2.hpp；写入同时也存进 reg6；调试读不碰软驱控制器；
  *       上电后寄存器为 0，存储清零。
  * ------------------------------------------------------------------------
  */
@@ -32,6 +35,7 @@
 #include "contracts/hardware/bus-device.hpp"
 #include "contracts/hardware/parallel-port.hpp"
 #include "contracts/hardware/tape-deck.hpp"
+#include "logic/hardware/disk2/disk2.hpp"
 #include "logic/hardware/pyramid-text/pyramid-text.hpp"
 
 namespace ember::bootstrap {
@@ -73,9 +77,10 @@ class PyramidBoard final {
    * @param rom 程序 ROM 的内容，大小必须等于 ROM_SIZE（不含 iNES 文件头）。
    * @param tape 磁带机的信号线：$5100 写位 0 驱动输出，读 $5500 位 2 取输入。
    * @param printer 并口打印机，必须活到主板销毁；为空时没有接打印机：数据丢弃、就绪线读 0。
+   * @param disk2 5.25 英寸软驱控制器，必须活到主板销毁；为空时没有接软驱：$5600-$56FF 读到开放总线。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
-  PyramidBoard(Model model, std::vector<std::uint8_t> rom, contracts::hardware::TapeLine& tape, contracts::hardware::ParallelPort* printer = nullptr);
+  PyramidBoard(Model model, std::vector<std::uint8_t> rom, contracts::hardware::TapeLine& tape, contracts::hardware::ParallelPort* printer = nullptr, logic::hardware::Disk2* disk2 = nullptr);
 
   PyramidBoard(const PyramidBoard&) = delete;
   PyramidBoard& operator=(const PyramidBoard&) = delete;
@@ -163,6 +168,7 @@ class PyramidBoard final {
   Model model_;
   contracts::hardware::TapeLine& tape_;
   contracts::hardware::ParallelPort* printer_;
+  logic::hardware::Disk2* disk2_;
 
   CpuSide cpuSide_{*this};
   VideoSide videoSide_{*this};

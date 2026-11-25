@@ -1,5 +1,5 @@
 ; 模块：bank00_system
-; 块 0：键盘、光标与显示等系统例程，系统跳转表的目标
+; 块 0：磁盘操作系统（PEC LM-DOS 3.31）、文字控制台、键盘扫描、读写盘程序（RWTS）与系统跳转表的目标
 
 .setcpu "6502"
 .include "constants.inc"
@@ -7,7 +7,8 @@
 
 .segment "SEG0_0000"
 ; 段 0，bank 0，$8000-$BFFF
-sub_b0_8000:
+; 字符输出的前一级：收到回车时先调用键盘轮询（$C012），再把字符交给 console_out_char；其余字符直接交给它。具体用途未完全确认。
+console_out_prefilter:
   .byte $C9, $8D, $D0, $14, $48, $20, $12, $C0, $C9, $00, $F0, $0B, $C9, $93, $D0, $07
   .byte $20, $12, $C0, $C9, $00
   .byte $F0
@@ -37,7 +38,8 @@ sub_b0_8052:
 loc_b0_805A:
   rts
 
-sub_b0_805B:
+; 把字符 A 写到文字屏幕：可显示字符（$A0 起）写到当前行列，$8D 回车、$8A 换行、$88 退格、$87 响铃。
+console_out_char:
   cmp #$80
   beq sub_b0_801B
   cmp #$A0
@@ -105,7 +107,8 @@ sub_b0_80F0:
   jmp sub_b31_FC73
   .byte $EA, $EA, $4C, $BF, $82, $4C, $B1, $82
 
-sub_b0_80FE:
+; 标准字符输出入口（固定 bank 的 $FDF0 先保存 Y，再跳到这里）：把 A 里的字符交给控制台显示。
+console_cout1:
   cmp #$FF
   bne sub_b0_8108
   lda #$01
@@ -135,7 +138,8 @@ sub_b0_8128:
   jmp sub_b31_FDF5
   .byte $A9, $80, $8D, $C1, $03, $EA
 
-sub_b0_8131:
+; 等待并读一个按键（固定 bank 的 $FD1B 跳到这里），等待时闪烁光标。
+console_keyin:
   txa
   pha
   tya
@@ -152,6 +156,8 @@ sub_b0_8137:
 
 sub_b0_8142:
   jsr sub_b31_C000
+
+sub_b0_8145:
   cmp #$00
   bne sub_b0_814D
   pla
@@ -187,7 +193,8 @@ sub_b0_8168:
 sub_b0_819B:
   jsr monitor_crout
 
-sub_b0_819E:
+; 读一行输入到 $0200 开始的行缓存（固定 bank 的 $FD6A 跳到这里），提示符字符在 $33。
+console_getln:
   lda var_0033
   jsr monitor_cout
   jmp sub_b0_9700
@@ -1976,6 +1983,8 @@ loc_b0_976C:
 sub_b0_9771:
   ldy var_0024
   jsr monitor_rdkey
+
+sub_b0_9776:
   cmp #$9E
   bne sub_b0_97A2
   jsr sub_b0_9ACC
@@ -2797,7 +2806,7 @@ loc_b0_9D9A:
 
 sub_b0_9D9B:
   php
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   lda #$00
   sta var_64CD
   sta var_64C1
@@ -2859,8 +2868,9 @@ data_b0_9E01:
   .byte $60, $AD, $A5, $A9, $AC, $A4, $A9, $60, $4C, $47, $A7, $EA, $EA, $4C, $59, $FA
   .byte $4C, $65, $FF, $4C, $58, $FF, $4C, $65, $FF, $4C, $65, $FF, $65, $FF
 
-sub_b0_9E2F:
-  jsr sub_b0_9E74
+; 磁盘操作系统接管的输入钩子（装在 $38/$39）：先保存现场，再按状态 $64C1 分发。
+dos_keyin_hook:
+  jsr dos_hook_enter
   lda var_64C0
   beq sub_b0_9E41
   pha
@@ -2889,8 +2899,9 @@ sub_b0_9E49:
 sub_b0_9E5D:
   jmp (var_0038)
 
-sub_b0_9E60:
-  jsr sub_b0_9E74
+; 磁盘操作系统接管的输出钩子（装在 $36/$37）：先保存现场，再按状态 $64C1 经下面的分发表调用处理子程序；行缓存里的命令在收到回车时识别。
+dos_cout_hook:
+  jsr dos_hook_enter
   lda var_64C1
   asl a
   tax
@@ -2901,7 +2912,8 @@ sub_b0_9E60:
   lda var_64CB
   rts
 
-sub_b0_9E74:
+; 进入钩子时保存 A、X、Y 与栈指针（$64CB、$64C9、$64CA、$64C8），并把保存的原钩子向量（$64C2-$64C5）放回 $36-$39。
+dos_hook_enter:
   sta var_64CB
   stx var_64C9
   sty var_64CA
@@ -2947,7 +2959,7 @@ sub_b0_9EB8:
   stx var_64CC
   cmp #$8D
   bne loc_b0_9F38
-  jmp sub_b0_9F70
+  jmp dos_parse_command_line
 
 sub_b0_9EC6:
   cmp #$8D
@@ -2971,7 +2983,7 @@ sub_b0_9EE2:
   sec
   lda var_6522
   bne loc_b0_9EEC
-  jsr sub_b0_A5B8
+  jsr dos_is_immediate_mode
 loc_b0_9EEC:
   pla
   bcc loc_b0_9EDB
@@ -2999,7 +3011,7 @@ loc_b0_9F14:
 loc_b0_9F1B:
   lda #$00
   sta var_6526
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   jmp loc_b0_A480
 loc_b0_9F26:
   lda var_0200
@@ -3029,7 +3041,7 @@ sub_b0_9F47:
   stx var_64C9
 
 sub_b0_9F56:
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   ldx var_64C8
   txs
 
@@ -3047,7 +3059,8 @@ sub_b0_9F6B:
   lda #$8D
   jmp sub_b0_9F68
 
-sub_b0_9F70:
+; 收到回车后处理 $0200 里的一行：先核对 $8695 处的校验字节，再把行首的名字与 dos_command_names 逐个比对，找到后按 dos_command_flags 解析文件名与 V、D、S 等选项，最后调用命令的处理程序；解析不合格报 SYNTAX ERROR。
+dos_parse_command_line:
   lda data_b0_8695
   eor #$F5
   bne sub_b0_9F68
@@ -3078,9 +3091,9 @@ sub_b0_9FA7:
   stx var_64CC
 
 sub_b0_9FAA:
-  jsr sub_b0_A17F
+  jsr dos_next_char
   and #$7F
-  eor data_b0_A77A,y
+  eor dos_command_names,y
   iny
   asl a
   beq loc_b0_9FB8
@@ -3090,7 +3103,7 @@ loc_b0_9FB8:
   bcc sub_b0_9FAA
   plp
   beq loc_b0_9FDD
-  lda data_b0_A77A,y
+  lda dos_command_names,y
   bne sub_b0_9F98
 loc_b0_9FC2:
   lda var_0200
@@ -3104,29 +3117,29 @@ loc_b0_9FCD:
   jsr sub_b0_A6C3
   jmp loc_b0_9F38
 loc_b0_9FDA:
-  jmp loc_b0_A61A
+  jmp dos_error_syntax
 loc_b0_9FDD:
   asl var_64CE
   ldy var_64CE
-  jsr sub_b0_A5B8
+  jsr dos_is_immediate_mode
   bcc loc_b0_9FF4
   lda #$02
-  and data_b0_A843,y
+  and dos_command_flags,y
   beq loc_b0_9FF4
   lda #$0F
-  jmp loc_b0_A628
+  jmp dos_error_raise
 loc_b0_9FF4:
   cpy #$06
   bne loc_b0_9FFA
   sty var_0033
 loc_b0_9FFA:
   lda #$20
-  and data_b0_A843,y
+  and dos_command_flags,y
   beq loc_b0_A06A
   jsr sub_b0_A05F
   php
 loc_b0_A005:
-  jsr sub_b0_A17F
+  jsr dos_next_char
   beq loc_b0_A030
   cmp #$BF
   beq loc_b0_A023
@@ -3155,7 +3168,7 @@ loc_b0_A030:
   bne loc_b0_A042
   ldy var_64CE
   lda #$10
-  and data_b0_A843,y
+  and dos_command_flags,y
   beq loc_b0_A049
   ldy #$1E
   php
@@ -3170,7 +3183,7 @@ loc_b0_A049:
   bne loc_b0_A09B
   ldy var_64CE
   lda #$C0
-  and data_b0_A843,y
+  and dos_command_flags,y
   beq loc_b0_A05C
   bpl loc_b0_A09B
 loc_b0_A05C:
@@ -3187,7 +3200,7 @@ loc_b0_A063:
 loc_b0_A06A:
   sta var_64E4
   lda #$0C
-  and data_b0_A843,y
+  and dos_command_flags,y
   beq loc_b0_A09B
   jsr sub_b0_A194
   bcs loc_b0_A098
@@ -3197,7 +3210,7 @@ loc_b0_A06A:
   bcs loc_b0_A093
   ldy var_64CE
   lda #$08
-  and data_b0_A843,y
+  and dos_command_flags,y
   beq loc_b0_A090
   cpx #$08
   bcs loc_b0_A05C
@@ -3207,9 +3220,9 @@ loc_b0_A090:
   bne loc_b0_A09B
 loc_b0_A093:
   lda #$02
-  jmp loc_b0_A628
+  jmp dos_error_raise
 loc_b0_A098:
-  jmp loc_b0_A61A
+  jmp dos_error_syntax
 loc_b0_A09B:
   lda #$00
   sta var_64D4
@@ -3220,7 +3233,7 @@ loc_b0_A09B:
   jsr sub_b0_B3DD
   lda var_64CC
 loc_b0_A0B2:
-  jsr sub_b0_A17F
+  jsr dos_next_char
   bne loc_b0_A0D6
   cmp #$8D
   bne loc_b0_A0B2
@@ -3334,11 +3347,12 @@ sub_b0_A16E:
 sub_b0_A17E:
   rts
 
-sub_b0_A17F:
+; 从 $0200 行缓存取下一个字符，跳过空格；遇到回车或逗号时返回 Z 为 1。
+dos_next_char:
   jsr sub_b0_A16E
   beq sub_b0_A17E
   cmp #$A0
-  beq sub_b0_A17F
+  beq dos_next_char
   rts
 
 sub_b0_A189:
@@ -3354,14 +3368,14 @@ sub_b0_A194:
   lda #$00
   sta var_0044
   sta var_0045
-  jsr sub_b0_A17F
+  jsr dos_next_char
   php
   cmp #$A4
   beq loc_b0_A1DE
   plp
   jmp loc_b0_A1A9
 loc_b0_A1A6:
-  jsr sub_b0_A17F
+  jsr dos_next_char
 loc_b0_A1A9:
   bne loc_b0_A1B1
   ldx var_0044
@@ -3400,7 +3414,7 @@ sub_b0_A1D9:
 loc_b0_A1DE:
   plp
 loc_b0_A1DF:
-  jsr sub_b0_A17F
+  jsr dos_next_char
   beq loc_b0_A1A9
   sec
   sbc #$B0
@@ -3598,7 +3612,7 @@ loc_b0_A352:
   jmp sub_b0_A418
 loc_b0_A35E:
   jsr sub_b0_A32D
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   lda var_64E1
   sta var_00FA
   lda var_64E2
@@ -3676,7 +3690,7 @@ sub_b0_A3CF:
   ldx var_0067
   ldy var_0068
   jsr sub_b0_A418
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   jmp (data_b0_9D72)
   .byte $A9, $01, $20, $58, $A4, $20, $21, $A4, $38, $A5, $4C, $ED, $CF, $64, $AA, $A5
   .byte $4D
@@ -3735,7 +3749,7 @@ loc_b0_A47D:
   jsr sub_b0_A3CF
 loc_b0_A480:
   jsr sub_b0_9F6B
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   jmp (data_b0_9D6A)
   .byte $A5, $4A, $85, $CC, $A5, $4B, $85, $CD, $6C, $68, $9D, $20, $D2, $A3, $20, $6B
   .byte $9F, $20, $47, $A7, $6C, $68, $9D
@@ -3845,7 +3859,7 @@ loc_b0_A567:
   rts
 
 sub_b0_A568:
-  jsr sub_b0_A5B8
+  jsr dos_is_immediate_mode
   bcs loc_b0_A5D3
   lda var_64CB
   sta var_6538
@@ -3855,7 +3869,7 @@ sub_b0_A568:
   sta var_6531
   jmp sub_b0_A602
 loc_b0_A580:
-  jsr sub_b0_A5B8
+  jsr dos_is_immediate_mode
   bcs loc_b0_A5D3
   lda #$06
 loc_b0_A587:
@@ -3868,7 +3882,7 @@ loc_b0_A587:
   beq loc_b0_A567
 loc_b0_A599:
   lda #$05
-  jmp loc_b0_A628
+  jmp dos_error_raise
 loc_b0_A59E:
   cmp #$E0
   bcc loc_b0_A5A4
@@ -3884,7 +3898,8 @@ loc_b0_A5A4:
 loc_b0_A5B5:
   jmp sub_b0_9F56
 
-sub_b0_A5B8:
+; 判断命令是直接输入还是程序里执行的（$76 为 $FF 是直接模式）；直接模式返回进位为 1。
+dos_is_immediate_mode:
   pha
   lda var_6525
   beq loc_b0_A5CC
@@ -3947,25 +3962,27 @@ loc_b0_A614:
   stx var_6538
 loc_b0_A619:
   rts
-loc_b0_A61A:
+; 报 SYNTAX ERROR（错误码 $0B）。
+dos_error_syntax:
   lda #$0B
-  bne loc_b0_A628
+  bne dos_error_raise
 loc_b0_A61E:
   lda #$0C
-  bne loc_b0_A628
+  bne dos_error_raise
 loc_b0_A622:
   lda #$0E
-  bne loc_b0_A628
+  bne dos_error_raise
 loc_b0_A626:
   lda #$0D
-loc_b0_A628:
+; 报错的共同入口：A 是错误码，存到 $64CB，重置状态，再经 dos_print_message 显示错误信息。
+dos_error_raise:
   sta var_64CB
   sta var_67E8
   jsr sub_b0_B3E7
   lda var_03C4
   cmp #$16
   bne loc_b0_A640
-  jsr sub_b0_A747
+  jsr dos_install_hooks
   ldx var_67E9
   txs
   rts
@@ -3976,13 +3993,13 @@ loc_b0_A640:
   bmi loc_b0_A657
 loc_b0_A649:
   ldx #$00
-  jsr sub_b0_A66A
+  jsr dos_print_message
   ldx var_64CB
-  jsr sub_b0_A66A
+  jsr dos_print_message
   jsr sub_b0_9F6B
 loc_b0_A657:
-  jsr sub_b0_A747
-  jsr sub_b0_A5B8
+  jsr dos_install_hooks
+  jsr dos_is_immediate_mode
   ldx var_64CB
   lda #$03
   bcs loc_b0_A667
@@ -3990,7 +4007,8 @@ loc_b0_A657:
 loc_b0_A667:
   jmp (data_b0_9D70)
 
-sub_b0_A66A:
+; 按信息编号查 $A98B 与 $A8BD 的表，把信息逐字符交给输出钩子显示。
+dos_print_message:
   lda data_b0_A98B,x
   tax
 loc_b0_A66E:
@@ -4125,7 +4143,8 @@ loc_b0_A73B:
   rts
   .byte $68, $85, $74, $85, $70, $68, $85, $73, $85, $6F, $60
 
-sub_b0_A747:
+; 把 $9D02-$9D05 里的输入、输出钩子向量装到 $36-$39，原来的向量存到 $64C2-$64C5。
+dos_install_hooks:
   lda var_0039
   cmp data_b0_9D03
   beq loc_b0_A760
@@ -4149,45 +4168,64 @@ loc_b0_A760:
   sta var_0037
 loc_b0_A779:
   rts
-data_b0_A77A:
-  .byte $49, $4E, $49, $D4, $4C, $4F, $41, $C4
-  .byte $53, $41, $56, $C5, $52, $55, $CE, $43
-  .byte $48, $41, $49, $CE, $44, $45, $4C, $45
-  .byte $54, $C5, $4C, $4F, $43, $CB, $55, $4E
-  .byte $4C, $4F, $43, $CB, $43, $4C, $4F, $53
-  .byte $C5, $52, $45, $41, $C4, $45, $58, $45
-  .byte $C3, $57, $52, $49, $54, $C5, $50, $4F
-  .byte $53, $49, $54, $49, $4F, $CE, $4F, $50
-  .byte $45, $CE, $41, $50, $50, $45, $4E, $C4
-  .byte $52, $45, $4E, $41, $4D, $C5, $43, $41
-  .byte $54, $41, $4C, $4F, $C7, $4D, $4F, $CE
-  .byte $4E, $4F, $4D, $4F, $CE, $50, $52, $A3
-  .byte $42, $53, $41, $56, $C5, $42, $4C, $4F
-  .byte $41, $C4, $42, $52, $55, $CE, $56, $45
-  .byte $52, $49, $46, $D9, $4C, $4D, $54, $59
-  .byte $50, $C5, $4C, $4D, $44, $49, $D2, $4C
-  .byte $4D, $52, $55, $CE, $56, $45, $52, $53
-  .byte $49, $4F, $CE, $4C, $4D, $44, $45, $4C
-  .byte $44, $49, $53, $CB, $4C, $4D, $52, $45
-  .byte $41, $C4, $4C, $4D, $57, $52, $49, $54
-  .byte $C5, $4C, $4D, $44, $55, $4D, $D0, $4C
-  .byte $4D, $55, $4E, $44, $49, $D2, $4C, $4D
-  .byte $48, $45, $D8, $4C, $4D, $44, $45, $C3
-  .byte $4C, $4D, $55, $4E, $44, $45, $CC, $4C
-  .byte $4D, $44, $49, $53, $4B, $4D, $41, $D0
+; 命令名表（每个名字最后一个字符最高位为 1）：苹果 DOS 3.3 的 INIT、LOAD、SAVE、RUN、CHAIN、DELETE、LOCK、UNLOCK、CLOSE、READ、EXEC、WRITE、POSITION、OPEN、APPEND、RENAME、CATALOG、MON、NOMON、PR#、BSAVE、BLOAD、BRUN、VERIFY，再加自己的 LMTYPE、LMDIR、LMRUN、VERSION、LMDELDISK、LMREAD、LMWRITE、LMDUMP、LMUNDIR、LMHEX、LMDEC、LMUNDEL、LMDISKMAP（共 37 个）。
+dos_command_names:
+  .byte "INI", $D4, "LOA", $C4, "SAV", $C5, "RU", $CE, "CHAI", $CE, "DELET", $C5, "LOC", $CB, "UN"
+  .byte "LOC", $CB, "CLOS", $C5, "REA", $C4, "EXE", $C3, "WRIT", $C5, "POSITIO", $CE, "OP"
+  .byte "E", $CE, "APPEN", $C4, "RENAM", $C5, "CATALO", $C7, "MO", $CE, "NOMO", $CE, "PR", $A3
+  .byte "BSAV", $C5, "BLOA", $C4, "BRU", $CE, "VERIF", $D9, "LMTYP", $C5, "LMDI", $D2, "L"
+  .byte "MRU", $CE, "VERSIO", $CE, "LMDELDIS", $CB, "LMREA", $C4, "LMWRIT"
+  .byte $C5, "LMDUM", $D0, "LMUNDI", $D2, "LMHE", $D8, "LMDE", $C3, "LMUNDE", $CC, "L"
+  .byte "MDISKMA", 'P' | $80
   .byte $00
-data_b0_A843:
+; 每个命令 2 字节的参数规则（共 37 项，按 dos_command_names 的顺序）：第 1 字节的位表示是否需要文件名、是否允许程序里执行等（INIT 不带文件名），各位的确切含义未完全确认。
+dos_command_flags:
   .byte $40
 data_b0_A844:
-  .byte $70, $A0, $70, $A1, $70, $A0, $70, $20, $70, $20, $70, $20, $70, $20, $70, $60
-  .byte $00, $22, $06, $20, $74, $22, $06, $22, $04, $23, $78, $22, $70, $30, $70, $40
-  .byte $70, $40, $80, $40, $80, $08, $00, $21, $79, $20, $71, $20, $71, $20, $70, $20
-  .byte $70, $20, $71, $20, $71, $40, $00, $40, $70, $00, $77, $00, $77, $00, $76, $40
-  .byte $70, $00, $01, $00, $01, $20, $70, $00
+  .byte $70, $A0
+  .byte $70, $A1
+  .byte $70, $A0
+  .byte $70, $20
+  .byte $70, $20
+  .byte $70, $20
+  .byte $70, $20
+  .byte $70, $60
+  .byte $00, $22
+  .byte $06, $20
+  .byte $74, $22
+  .byte $06, $22
+  .byte $04, $23
+  .byte $78, $22
+  .byte $70, $30
+  .byte $70, $40
+  .byte $70, $40
+  .byte $80, $40
+  .byte $80, $08
+  .byte $00, $21
+  .byte $79, $20
+  .byte $71, $20
+  .byte $71, $20
+  .byte $70, $20
+  .byte $70, $20
+  .byte $71, $20
+  .byte $71, $40
+  .byte $00, $40
+  .byte $70, $00
+  .byte $77, $00
+  .byte $77, $00
+  .byte $76, $40
+  .byte $70, $00
+  .byte $01, $00
+  .byte $01, $20
+  .byte $70, $00
 data_b0_A88C:
-  .byte $20, $D6, $C4, $D3, $CC, $D2, $C2, $C1, $C3, $C9
+  .byte $20
+; 可跟在命令后面的选项字母 V、D、S、L、R、B、A、C、I、O（最高位为 1），程序从 $A88C 开始用 X=10 到 1 倒着比对。
+dos_option_letters:
+  .byte $D6, $C4, $D3, $CC, $D2, $C2, $C1, $C3, $C9
 data_b0_A896:
-  .byte $CF, $40, $20, $10, $08, $04, $02, $01, $C0, $A0, $90
+  .byte $CF
+  .byte $40, $20, $10, $08, $04, $02, $01, $C0, $A0, $90
 data_b0_A8A1:
   .byte $00, $00
 data_b0_A8A3:
@@ -4273,7 +4311,7 @@ loc_b0_AA20:
   bcc loc_b0_AA89
   stx var_64A5
   ldx var_64CE
-  lda data_b0_A843,x
+  lda dos_command_flags,x
   ldx var_64A5
   lsr a
   bcs loc_b0_AA47
@@ -4424,6 +4462,8 @@ loc_b0_AB76:
   jsr sub_b0_B284
 loc_b0_AB79:
   jsr sub_b0_B109
+
+sub_b0_AB7C:
   jsr sub_b0_AB8D
   pha
   jsr sub_b0_B0F6
@@ -5493,7 +5533,7 @@ loc_b0_B32A:
   sta (var_0040),y
 loc_b0_B337:
   lda var_653A
-  jmp loc_b0_A628
+  jmp dos_error_raise
   .byte $AD, $EE, $67, $F0, $08, $EE, $32, $65, $D0, $03, $EE, $33, $65, $A9, $00, $8D
   .byte $EE, $67, $4C, $D6, $A4
 loc_b0_B352:
@@ -5877,7 +5917,7 @@ sub_b0_B737:
   sty var_0048
   sta var_0049
   jsr sub_b0_B89B
-  jsr sub_b0_BC16
+  jsr rwts_entry
   php
   pha
   jsr sub_b0_B8AB
@@ -6004,7 +6044,7 @@ loc_b0_B93C:
 loc_b0_B93F:
   eor var_63FF,y
   tax
-  lda data_b0_BF29,x
+  lda rwts_six_and_two_encode_table,x
   ldx var_0027
   sta var_560D,x
   nop
@@ -6014,12 +6054,14 @@ loc_b0_B93F:
   lda var_0000
   dey
   bne loc_b0_B93C
+
+sub_b0_B959:
   lda var_0026
   nop
 loc_b0_B95C:
   eor var_6300,y
   tax
-  lda data_b0_BF29,x
+  lda rwts_six_and_two_encode_table,x
   ldx var_6490
   sta var_560D,x
   nop
@@ -6031,7 +6073,7 @@ loc_b0_B95C:
   iny
   bne loc_b0_B95C
   tax
-  lda data_b0_BF29,x
+  lda rwts_six_and_two_encode_table,x
   ldx var_0027
   jsr sub_b0_B9A5
   lda #$DE
@@ -6132,7 +6174,7 @@ loc_b0_BA08:
   nop
   nop
   bpl loc_b0_BA08
-  eor sub_b0_BF00,y
+  eor rwts_delay,y
   ldy var_0026
   sta var_6400,y
   bne loc_b0_BA05
@@ -6144,7 +6186,7 @@ loc_b0_BA1C:
   nop
   nop
   bpl loc_b0_BA1C
-  eor sub_b0_BF00,y
+  eor rwts_delay,y
   ldy var_0026
   sta var_6300,y
   iny
@@ -6155,7 +6197,7 @@ loc_b0_BA2F:
   nop
   nop
   bpl loc_b0_BA2F
-  cmp sub_b0_BF00,y
+  cmp rwts_delay,y
   bne loc_b0_BA55
 loc_b0_BA3C:
   lda var_560C,x
@@ -6181,7 +6223,8 @@ loc_b0_BA57:
   clc
   rts
 
-sub_b0_BA59:
+; 在转动的磁道上找地址场：先等到 D5 AA 96，再读出卷号、磁道、扇区与校验（各 4 加 4 编码）。$26/$27 是等待计数，一直读不到时进位置位返回。读数据靠 $560C,X 的最高位等待半字节读完。
+rwts_find_address_field:
   ldy #$FC
   sty var_0026
 loc_b0_BA5D:
@@ -6302,17 +6345,17 @@ loc_b0_BB06:
 loc_b0_BB0B:
   sec
   jsr sub_b0_BB29
-  lda data_b0_BF11,y
-  jsr sub_b0_BF00
+  lda rwts_arm_on_delays,y
+  jsr rwts_delay
   lda var_0027
   clc
   jsr sub_b0_BB2C
-  lda data_b0_BF1D,y
-  jsr sub_b0_BF00
+  lda rwts_arm_off_delays,y
+  jsr rwts_delay
   inc var_0026
   bne loc_b0_BAE8
 loc_b0_BB25:
-  jsr sub_b0_BF00
+  jsr rwts_delay
   clc
 
 sub_b0_BB29:
@@ -6329,7 +6372,8 @@ loc_b0_BB37:
   rts
   .byte $AA, $A0, $A0
 
-sub_b0_BB3B:
+; 格式化时写一个扇区的地址场：Y 个同步字节，D5 AA 96，卷号 $41、磁道 $44、扇区 $3F、它们的异或校验（各 4 加 4 编码），DE AA EB。写保护时进位置位返回。
+rwts_write_address_field:
   sec
   lda var_560D,x
   nop
@@ -6355,17 +6399,17 @@ loc_b0_BB56:
   dey
   bne loc_b0_BB56
   lda #$D5
-  jsr sub_b0_BBD7
+  jsr rwts_write_nibble
   lda #$AA
-  jsr sub_b0_BBD7
+  jsr rwts_write_nibble
   lda #$96
-  jsr sub_b0_BBD7
+  jsr rwts_write_nibble
   lda var_0041
-  jsr sub_b0_BBBE
+  jsr rwts_write_4_and_4
   lda var_0044
-  jsr sub_b0_BBBE
+  jsr rwts_write_4_and_4
   lda var_003F
-  jsr sub_b0_BBBE
+  jsr rwts_write_4_and_4
   lda var_0041
   eor var_0044
   eor var_003F
@@ -6382,11 +6426,11 @@ loc_b0_BB56:
   jsr sub_b0_BBED
   jsr sub_b0_BBD6
   lda #$DE
-  jsr sub_b0_BBD7
+  jsr rwts_write_nibble
   lda #$AA
-  jsr sub_b0_BBD7
+  jsr rwts_write_nibble
   lda #$EB
-  jsr sub_b0_BBD7
+  jsr rwts_write_nibble
   clc
 loc_b0_BBB5:
   lda var_560E,x
@@ -6395,7 +6439,8 @@ loc_b0_BBB5:
   lda var_560C,x
   rts
 
-sub_b0_BBBE:
+; 按 4 加 4 编码写一个字节：先写奇数位（右移后或 $AA），再写偶数位（或 $AA）。
+rwts_write_4_and_4:
   bit var_0000
   pha
   lsr a
@@ -6414,7 +6459,8 @@ sub_b0_BBBE:
 sub_b0_BBD6:
   nop
 
-sub_b0_BBD7:
+; 把 A 写到读头下的数据寄存器并等够一个半字节的时间（写模式下经 $560D 装入，$560C 移出）。
+rwts_write_nibble:
   pha
   nop
   bit var_0000
@@ -6441,7 +6487,8 @@ sub_b0_BBF0:
   .byte $B5, $ED, $E6, $B5, $8D, $C3, $B5, $B0, $03, $CE, $C4, $B5, $A9, $42, $A2, $44
   .byte $60, $84, $48, $85, $49
 
-sub_b0_BC16:
+; 读写盘程序（RWTS）入口：$48 指向参数表，选驱动器、开马达、等转速稳定、寻道、找地址场，再读或写扇区，出错时重试并重新校准。参数表各字节的含义未完全确认。
+rwts_entry:
   ldy #$02
   sty var_6498
   ldy #$04
@@ -6520,14 +6567,14 @@ loc_b0_BC8F:
   bne loc_b0_BCA0
   ldy #$07
 loc_b0_BC97:
-  jsr sub_b0_BF00
+  jsr rwts_delay
   dey
   bne loc_b0_BC97
   ldx var_6488
 loc_b0_BCA0:
   ldy #$04
   lda (var_0048),y
-  jsr sub_b0_BD6A
+  jsr rwts_seek_track
   plp
   bne loc_b0_BCBB
   ldy var_0047
@@ -6556,7 +6603,7 @@ loc_b0_BCCC:
   sty var_6480
 loc_b0_BCD1:
   ldx var_6488
-  jsr sub_b0_BA59
+  jsr rwts_find_address_field
   bcc loc_b0_BCFD
 loc_b0_BCD9:
   dec var_6480
@@ -6565,16 +6612,16 @@ loc_b0_BCDE:
   lda var_6470
   pha
   lda #$60
-  jsr sub_b0_BDA5
+  jsr rwts_store_track
   dec var_6498
   beq loc_b0_BD14
   lda #$04
   sta var_6478
   lda #$00
-  jsr sub_b0_BD6A
+  jsr rwts_seek_track
   pla
 loc_b0_BCF7:
-  jsr sub_b0_BD6A
+  jsr rwts_seek_track
   jmp loc_b0_BCCC
 loc_b0_BCFD:
   ldy var_002E
@@ -6583,7 +6630,7 @@ loc_b0_BCFD:
   lda var_6470
   pha
   tya
-  jsr sub_b0_BDA5
+  jsr rwts_store_track
   pla
   dec var_6478
   bne loc_b0_BCF7
@@ -6615,7 +6662,7 @@ loc_b0_BD36:
   ldy #$05
   lda (var_0048),y
   tay
-  lda data_b0_BEB8,y
+  lda rwts_interleave_table,y
   cmp var_002D
   bne loc_b0_BCD9
   plp
@@ -6643,7 +6690,8 @@ loc_b0_BD61:
   lda #$10
   bcs loc_b0_BD58
 
-sub_b0_BD6A:
+; 读头移到 A 指定的磁道（磁道号按半磁道计时，当前位置存在 $6470 与 $6478 两个表里）；移动过程由 $BF11 与 $BF1D 的延时表加减速。
+rwts_seek_track:
   pha
   ldy #$01
   lda (var_003C),y
@@ -6657,7 +6705,7 @@ sub_b0_BD6A:
 
 sub_b0_BD7B:
   sta var_002A
-  jsr sub_b0_BD9E
+  jsr rwts_slot_index
   lda var_6470,y
   bit var_0035
   bmi loc_b0_BD8A
@@ -6674,7 +6722,8 @@ loc_b0_BD98:
 loc_b0_BD9B:
   jmp loc_b0_BADB
 
-sub_b0_BD9E:
+; X 是槽位乘 16 的值，取高 4 位放到 Y，作为每个驱动器的状态表下标。
+rwts_slot_index:
   txa
   lsr a
   lsr a
@@ -6683,13 +6732,14 @@ sub_b0_BD9E:
   tay
   rts
 
-sub_b0_BDA5:
+; 把 A（磁道号乘 2）存进当前驱动器的磁道记录表（$6470 或 $6478，按 $35 位 7 选）。
+rwts_store_track:
   pha
   ldy #$02
   lda (var_0048),y
   ror a
   ror var_0035
-  jsr sub_b0_BD9E
+  jsr rwts_slot_index
   pla
   asl a
   bit var_0035
@@ -6718,13 +6768,13 @@ loc_b0_BDD5:
   dey
   bne loc_b0_BDD5
   lda #$50
-  jsr sub_b0_BDA5
+  jsr rwts_store_track
   lda #$28
   sta var_0045
 loc_b0_BDE4:
   lda var_0044
-  jsr sub_b0_BD6A
-  jsr sub_b0_BE1D
+  jsr rwts_seek_track
+  jsr rwts_format_track
   lda #$08
   bcs loc_b0_BE14
   lda #$30
@@ -6733,7 +6783,7 @@ loc_b0_BDF5:
   sec
   dec var_6480
   beq loc_b0_BE14
-  jsr sub_b0_BA59
+  jsr rwts_find_address_field
   bcs loc_b0_BDF5
   lda var_002D
   bne loc_b0_BDF5
@@ -6753,7 +6803,8 @@ loc_b0_BE19:
   lda var_5608,x
   rts
 
-sub_b0_BE1D:
+; 格式化当前磁道：为 14 个扇区依次写地址场与空数据场（调用 rwts_write_address_field），再回读校验，不合格时重试并调整同步字节个数（$45）。
+rwts_format_track:
   lda #$00
   sta var_003F
   ldy #$80
@@ -6761,7 +6812,7 @@ sub_b0_BE1D:
 loc_b0_BE25:
   ldy var_0045
 loc_b0_BE27:
-  jsr sub_b0_BB3B
+  jsr rwts_write_address_field
   bcs sub_b0_BE97
   jsr sub_b0_B8F1
   bcs sub_b0_BE97
@@ -6787,7 +6838,7 @@ loc_b0_BE4A:
   nop
   dey
   bne loc_b0_BE4A
-  jsr sub_b0_BA59
+  jsr rwts_find_address_field
   bcs loc_b0_BE81
   lda var_002D
   beq loc_b0_BE77
@@ -6801,7 +6852,7 @@ loc_b0_BE4A:
   sec
   rts
 loc_b0_BE72:
-  jsr sub_b0_BA59
+  jsr rwts_find_address_field
   bcs loc_b0_BE7C
 loc_b0_BE77:
   jsr sub_b0_B9D4
@@ -6810,13 +6861,13 @@ loc_b0_BE7C:
   dec var_6480
   bne loc_b0_BE72
 loc_b0_BE81:
-  jsr sub_b0_BA59
+  jsr rwts_find_address_field
   bcs loc_b0_BE91
   lda var_002D
   cmp #$0D
   bne loc_b0_BE91
   jsr sub_b0_B9D4
-  bcc sub_b0_BE1D
+  bcc rwts_format_track
 loc_b0_BE91:
   dec var_6480
   bne loc_b0_BE81
@@ -6842,14 +6893,16 @@ loc_b0_BE98:
 loc_b0_BEB6:
   clc
   rts
-data_b0_BEB8:
-  .byte $00, $0B, $09, $07, $05, $03, $01, $0C, $0A, $08, $06, $04, $02, $0D, $A0, $00
-  .byte $98, $59, $E5, $BE, $D0, $03, $4C, $8E, $FD, $8D, $FB, $03, $C8, $98, $59, $E5
-  .byte $BE, $8D, $FC, $03, $C8, $A9, $80, $20, $ED, $FD, $4C, $C8, $BE, $36, $2A, $36
-  .byte $6C, $39, $75, $51, $51, $43, $77, $3A, $6D, $44, $25, $45, $76, $43, $41, $27
-  .byte $52, $24, $73, $27, $4F, $26, $26, $1A
+; 逻辑扇区号换物理扇区号的交错表，14 项。
+rwts_interleave_table:
+  .byte $00, $0B, $09, $07, $05, $03, $01, $0C, $0A, $08, $06, $04, $02, $0D
+  .byte $A0, $00, $98, $59, $E5, $BE, $D0, $03, $4C, $8E, $FD, $8D, $FB, $03, $C8, $98
+  .byte $59, $E5, $BE, $8D, $FC, $03, $C8, $A9, $80, $20, $ED, $FD, $4C, $C8, $BE, $36
+  .byte $2A, $36, $6C, $39, $75, $51, $51, $43, $77, $3A, $6D, $44, $25, $45, $76, $43
+  .byte $41, $27, $52, $24, $73, $27, $4F, $26, $26, $1A
 
-sub_b0_BF00:
+; 延时：A 次循环，每次约 150 个周期。
+rwts_delay:
   ldx #$1D
 loc_b0_BF02:
   dex
@@ -6860,13 +6913,16 @@ loc_b0_BF02:
 loc_b0_BF0B:
   sec
   sbc #$01
-  bne sub_b0_BF00
+  bne rwts_delay
   rts
-data_b0_BF11:
+; 读头移动时磁铁吸合的延时表（12 项，加速）。
+rwts_arm_on_delays:
   .byte $01, $30, $28, $24, $20, $1E, $1D, $1C, $1C, $1C, $1C, $1C
-data_b0_BF1D:
+; 读头移动时磁铁释放的延时表（12 项，减速）。
+rwts_arm_off_delays:
   .byte $70, $2C, $26, $22, $1F, $1E, $1D, $1C, $1C, $1C, $1C, $1C
-data_b0_BF29:
+; 6 加 2 编码表：6 位值换成磁盘上的半字节，64 项。
+rwts_six_and_two_encode_table:
   .byte $96, $97, $9A, $9B, $9D, $9E, $9F, $A6, $A7, $AB, $AC, $AD, $AE, $AF, $B2, $B3
   .byte $B4, $B5, $B6, $B7, $B9, $BA, $BB, $BC, $BD, $BE, $BF, $CB, $CD, $CE, $CF, $D3
   .byte $D6, $D7, $D9, $DA, $DB, $DC, $DD, $DE, $DF, $E5, $E6, $E7, $E9, $EA, $EB, $EC

@@ -28,6 +28,10 @@ constexpr std::uint16_t REGISTER_LAST = 0x5FFF;
 constexpr std::uint16_t REGISTER_TAPE_OUTPUT = 0x5100;
 constexpr std::uint16_t REGISTER_STATUS = 0x5500;
 constexpr std::uint16_t REGISTER_TAPE_INPUT_586 = 0x5300;
+/** 软驱控制器占 $5600-$56FF，低 4 位是寄存器号。 */
+constexpr std::uint16_t DISK_FIRST = 0x5600;
+constexpr std::uint16_t DISK_LAST = 0x56FF;
+constexpr std::uint16_t DISK_REGISTER_MASK = 0x000F;
 constexpr std::uint16_t WORK_RAM_FIRST = 0x6000;
 constexpr std::uint16_t WINDOW_FIRST = 0x8000;
 constexpr std::uint16_t PAGE_MASK = 0x1FFF;
@@ -55,8 +59,8 @@ constexpr std::size_t BOOT_CHUNK_B = 0x3C00;
 
 }  // namespace
 
-PyramidBoard::PyramidBoard(Model model, std::vector<std::uint8_t> rom, hw::TapeLine& tape, hw::ParallelPort* printer)
-    : model_(model), tape_(tape), printer_(printer), rom_(std::move(rom)), workRam_(WORK_RAM_SIZE, 0), characterRam_(CHARACTER_RAM_SIZE, 0) {
+PyramidBoard::PyramidBoard(Model model, std::vector<std::uint8_t> rom, hw::TapeLine& tape, hw::ParallelPort* printer, logic::hardware::Disk2* disk2)
+    : model_(model), tape_(tape), printer_(printer), disk2_(disk2), rom_(std::move(rom)), workRam_(WORK_RAM_SIZE, 0), characterRam_(CHARACTER_RAM_SIZE, 0) {
   if (rom_.size() != ROM_SIZE) {
     throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "金字塔学习机的 ROM 必须是 " + std::to_string(ROM_SIZE) + " 字节，收到 " + std::to_string(rom_.size()) + " 字节");
   }
@@ -166,6 +170,12 @@ hw::BusRead PyramidBoard::readCpu(std::uint16_t address, bool sideEffects) {
     case CpuLocation::Kind::WorkRam:
       return hw::driveBus(workRam_[where.offset]);
     case CpuLocation::Kind::Register:
+      if (disk2_ != nullptr && address >= DISK_FIRST && address <= DISK_LAST) {
+        // 调试读不碰软驱控制器：读它会改变读写状态、取走半字节。
+        if (!sideEffects) return hw::releaseBus();
+        const std::optional<std::uint8_t> value = disk2_->read(address & DISK_REGISTER_MASK);
+        return value.has_value() ? hw::driveBus(*value) : hw::releaseBus();
+      }
       if (address == REGISTER_STATUS) {
         const bool tapeLevel = model_ == Model::Pec9588 && sideEffects && tape_.level();
         return hw::driveBus(static_cast<std::uint8_t>(STATUS_BASE | (tapeLevel ? STATUS_TAPE_BIT : 0)));
@@ -192,6 +202,7 @@ void PyramidBoard::writeCpu(std::uint16_t address, std::uint8_t value) {
     case CpuLocation::Kind::Register: {
       const bool strobeWasHigh = (registers_[(REGISTER_TAPE_OUTPUT >> 8) & 7U] & PRINTER_STROBE_BIT) != 0;
       registers_[(address >> 8) & 7U] = value;
+      if (disk2_ != nullptr && address >= DISK_FIRST && address <= DISK_LAST) disk2_->write(address & DISK_REGISTER_MASK, value);
       if (address == REGISTER_TAPE_OUTPUT) {
         tape_.drive((value & (model_ == Model::Pec9588 ? TAPE_OUTPUT_BIT_9588 : TAPE_OUTPUT_BIT_586)) != 0);
         // 选通线从低变高时，打印机取走 $5200 里的数据。

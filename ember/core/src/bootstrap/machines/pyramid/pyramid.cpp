@@ -68,7 +68,8 @@ void PyramidMachine::InputPort::write(std::uint16_t address, std::uint8_t value)
 
 // ---------------------------------------------------------------- 装配
 
-PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck, hw::PrinterOutput* printerOutput)
+PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck, hw::PrinterOutput* printerOutput,
+                               hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
     : cartridgeIrq_(irq_),
       ram_(INTERNAL_RAM_SIZE),
       ramDevice_(ram_),
@@ -82,10 +83,13 @@ PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8
            }()),
       dma_(cpuBus_, scheduler_, rdy_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}),
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
+      floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
+      hasFloppy_(model == PyramidBoard::Model::Pec9588),
+      disk2_(scheduler_, DISK_BIT_TICKS, DISK_MOTOR_OFF_TICKS),
       padApuPort_(pad_, apu_),
       inputPort_(padApuPort_, keyboard_, board_),
       printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),
-      board_(model, std::move(rom), *tapeDeck_, printer_.get()),
+      board_(model, std::move(rom), *tapeDeck_, printer_.get(), hasFloppy_ ? &disk2_ : nullptr),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
   debug_.setVideoPosition([this] { return ppu_.positionAt(scheduler_.now()); });
@@ -100,10 +104,15 @@ PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8
   ppuBus_.mount(0x0000, 0x3EFF, board_.videoSide());
 
   for (unsigned index = 0; index < joypads_.size(); ++index) pad_.port(index).plug(&joypads_[index]);
+  if (hasFloppy_) {
+    disk2_.attachDrive(floppy_.get());
+    floppy_->attach(this, floppyActivity == nullptr ? std::function<void(bool)>() : [floppyActivity](bool on) { floppyActivity->motorChanged(0, on); });
+  }
 }
 
 PyramidMachine::~PyramidMachine() {
-  // 磁带机在主机之外继续存在：只解除绑定的是自己的调度器。
+  // 软驱与磁带机在主机之外继续存在：只解除自己的接入，盘片与磁带留在里面。
+  if (hasFloppy_) floppy_->detach(this);
   try {
     tapeDeck_->unbind(scheduler_);
   } catch (...) {
@@ -125,6 +134,7 @@ void PyramidMachine::powerOn() {
   ppu_.reset(true);
   cartridgeIrq_.set(false);
   board_.reset(true);
+  disk2_.reset(true);
   if (printer_ != nullptr) printer_->reset();
   poweredOn_ = true;
   debug_.clearStopState();
@@ -134,8 +144,9 @@ void PyramidMachine::powerOn() {
 
 void PyramidMachine::powerOff() {
   poweredOn_ = false;
-  // 断电时磁带机停止并断开，磁带留在里面。
+  // 断电时磁带机停止并断开，磁带留在里面；软驱马达停转。
   tapeDeck_->unbind(scheduler_);
+  disk2_.reset(true);
 }
 
 void PyramidMachine::softReset() {
@@ -145,6 +156,7 @@ void PyramidMachine::softReset() {
   dma_.reset(false);
   ppu_.reset(false);
   board_.reset(false);
+  disk2_.reset(false);
   if (printer_ != nullptr) printer_->reset();
   cpu_.reset(false);
   debug_.clearStopState();
@@ -296,6 +308,7 @@ hw::AddressTarget PyramidMachine::resolve(std::string_view space, std::uint32_t 
     const PyramidBoard::CpuLocation where = board_.locate(static_cast<std::uint16_t>(address));
     switch (where.kind) {
       case PyramidBoard::CpuLocation::Kind::Register:
+        if (hasFloppy_ && address >= 0x5600U && address <= 0x56FFU) return {"register", "chip.disk2", address & 0x0FU, "5.25 英寸软驱控制器的寄存器（低 4 位是寄存器号：0-7 相位、8-9 马达、10-11 选驱动器、12-15 读写状态）"};
         return {"register", "board.registers", where.offset, "主板寄存器（$4100-$5FFF 写入 reg[(地址>>8)&7]、$5100 写磁带输出与打印机选通、$5200 写打印机数据、$5300 读 586 的磁带输入与打印机就绪、$5500 读状态与 9588 的磁带输入）"};
       case PyramidBoard::CpuLocation::Kind::Rom:
         return {"rom", "board.rom", where.offset, "程序 ROM"};
@@ -347,6 +360,12 @@ std::vector<hw::StateField> PyramidMachine::readState(std::string_view module) c
     }
     fields.push_back(field("textMode", board_.textMode() ? 1 : 0, "汉字模式：背景图块按单色字模读取"));
     fields.push_back(field("horizontalMirroring", board_.horizontalMirroring() ? 1 : 0, "名称表水平镜像"));
+    if (hasFloppy_) {
+      fields.push_back(field("diskTrack", disk2_.track(), "软驱读头所在的磁道（0 到 40）"));
+      fields.push_back(field("diskMotor", disk2_.motorOn() ? 1 : 0, "软驱马达是否在转（马达关指令之后还转约一秒）"));
+      fields.push_back(field("diskWriteMode", disk2_.writeMode() ? 1 : 0, "软驱控制器是否在写模式（Q7）"));
+      fields.push_back(field("diskLoadMode", disk2_.loadMode() ? 1 : 0, "软驱控制器是否在装入态（Q6）：写模式下装入数据，读模式下检测写保护"));
+    }
     return fields;
   }
   throw shared::CoreError(hw::ERROR_INVALID_STATE, "没有这个状态模块：" + std::string(module));

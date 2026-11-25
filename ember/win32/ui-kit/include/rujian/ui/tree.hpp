@@ -9,7 +9,7 @@
  *       条目按“先序”排成一列并给出层级（depth）：下一项比这一项深，这一项就有子项，子项收起时不显示；每行左边留出展开箭头的位置（没有子项时空着），名称与组件库对齐。
  *       条目放在滚动区域里时，焦点移动会让滚动区域把焦点行滚进可见范围；光标只在鼠标悬停在某一行上时是手形，空白处不变。
  *       键盘：上下移动焦点；右键展开，已展开时移到第一个子项；左键收起，已收起或没有子项时移到父项；回车与空格选中；Shift+F10 与菜单键触发右键菜单回调；其余按键先交给“按键处理”回调（重命名、删除、剪切复制粘贴由使用方决定）。
- *       点击展开：打开 setToggleOnClick 后，单击有子项的行既选中它也展开或收起，不再用双击。
+ *       点击展开：打开 setToggleOnClick 后，单击有子项的行既选中它也展开或收起，不再用双击；打开 setSelectOnMove 后，键盘移动焦点时同时选中。
  *       拖动：设置“放下”回调后，在某一行上按下并拖过一小段距离开始拖动；放在文件夹行上就是放进这个文件夹，放在非文件夹行上是放进它的父文件夹，放在空白处是放进最外层（目标标识为空串）；“能否放下”回调返回假时不标出目标，放下也不调用。
  *       拖动时光标是“移动”（四向箭头），目标不能放时是禁止符，并有一个跟着鼠标的影子（被拖条目的图标与名称，靠近视图边缘时留在视图内）。
  *       行内重命名：beginRename 在名称上放一个输入框，回车或失去焦点提交，Esc 取消。
@@ -87,6 +87,8 @@ class Tree : public Widget {
   void setCanDrop(CanDropHandler handler) { canDrop_ = std::move(handler); }
   /** 单击有子项的行时同时展开或收起它（默认只有点箭头或双击才展开或收起）。 */
   void setToggleOnClick(bool enabled) { toggleOnClick_ = enabled; }
+  /** 键盘移动焦点（上下、Home、End、左右跳到子项或父项）时同时选中这一行（默认只移动焦点，回车与空格才选中）。 */
+  void setSelectOnMove(bool enabled) { selectOnMove_ = enabled; }
 
   /** 开始重命名一个条目（条目没有显示时先展开它的祖先；不存在时什么都不做）。 */
   void beginRename(const std::string& id);
@@ -166,6 +168,7 @@ class Tree : public Widget {
   DropHandler onDrop_;
   CanDropHandler canDrop_;
   bool toggleOnClick_{false};
+  bool selectOnMove_{false};
   int hoverRow_{-1};
   int pressedRow_{-1};
   int rightPressedRow_{-1};

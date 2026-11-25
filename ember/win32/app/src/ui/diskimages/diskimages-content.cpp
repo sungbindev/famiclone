@@ -297,6 +297,7 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
   tree_ = explorer->tree();
   tree_->setDefaultExpanded(false);
   tree_->setToggleOnClick(true);
+  tree_->setSelectOnMove(true);
   tree_->setOnSelect([this](const std::string& id) {
     const contracts::DiskTreeNode* node = findNode(id);
     if (node == nullptr) return;

@@ -331,6 +331,7 @@ void Tree::moveFocus(std::size_t visibleIndex) {
   invalidate();
   // 让外层的滚动区域把焦点行滚进可见范围
   for (Widget* ancestor = parent(); ancestor != nullptr; ancestor = ancestor->parent()) ancestor->onDescendantFocused(this);
+  if (selectOnMove_) choose(visibleIndex);
 }
 
 void Tree::choose(std::size_t visibleIndex) {
@@ -352,6 +353,19 @@ bool Tree::onMouseDown(const MouseEvent& event) {
   const int row = indexAt(event.position);
   if (event.button == MouseButton::Right) {
     rightPressedRow_ = row;
+    // 右键按下时选中那一行（不展开或收起），按在空白处则取消选中，和文件列表一样
+    if (row < 0) {
+      if (!selectedId_.empty()) {
+        selectedId_.clear();
+        invalidate();
+        if (onClear_) onClear_();
+      }
+    } else {
+      const std::size_t index = static_cast<std::size_t>(row);
+      focusId_ = items_[rows_[index]].id;
+      if (selectedId_ != focusId_) choose(index);
+      invalidate();
+    }
     return true;
   }
   if (event.button != MouseButton::Left) return false;

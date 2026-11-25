@@ -288,7 +288,7 @@ void Root::mouseDown(Point position, MouseButton button, unsigned modifiers, uns
     const std::vector<Layer> layers = layers_;
     for (auto it = layers.rbegin(); it != layers.rend(); ++it) it->onOutsidePress(hit);
   }
-  if (button == MouseButton::Left && !onLayer) {
+  if ((button == MouseButton::Left || button == MouseButton::Right) && !onLayer) {
     Widget* focusTarget = hit;
     while (focusTarget != nullptr && !(focusTarget->enabled() && focusTarget->focusable())) focusTarget = focusTarget->parent();
     setFocus(focusTarget, false);

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-controller.cpp
- * 说明：文件管理控制器的实现。
+ * 说明：媒体库控制器的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -28,6 +28,12 @@ constexpr int kDriveA = 0;
 std::string baseName(const std::string& path) {
   const std::size_t slash = path.find_last_of('/');
   return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+/** 文件名的扩展名，保留原来的大小写、不带点；没有扩展名时为空。 */
+std::string fileExtension(const std::string& name) {
+  const std::size_t dot = name.rfind('.');
+  return dot == std::string::npos || dot == 0 ? std::string() : name.substr(dot + 1);
 }
 
 /** 文件名的扩展名，大写、不带点；没有扩展名时为空。 */
@@ -354,6 +360,14 @@ void FileManagerController::fillSingleFile(const contracts::DiskTreeNode& node) 
   image_.readOnlyReason.clear();
   image_.drive = -1;
   image_.undoDepth = 0;
+  if (image_.kind == contracts::kKindUnsupported) {
+    // 不支持的文件：右边只显示说明，没有表头与内容
+    const std::string extension = fileExtension(node.name);
+    image_.failed = true;
+    image_.message = extension.empty() ? "不支持的文件类型" : "不支持的文件类型（." + extension + "）";
+    image_.entries.clear();
+    return;
+  }
   contracts::DiskEntryRow row;
   row.name = node.name;
   row.type = upperExtension(node.name);
@@ -365,7 +379,7 @@ void FileManagerController::syncSingleFile() {
   if (!image_.selected || image_.kind == contracts::kKindFloppy) return;
   const contracts::DiskTreeNode* node = findNode(image_.image);
   if (node == nullptr || node->directory || node->kind != image_.kind) {
-    // 文件被刪掉或换成别的东西了：取消选中
+    // 文件被删掉或换成别的东西了：取消选中
     image_ = contracts::DiskImageView{};
     return;
   }
@@ -428,12 +442,28 @@ void FileManagerController::undo() {
 
 void FileManagerController::cut(const std::vector<std::string>& names) {
   if (!image_.selected || names.empty()) return;
+  // 剪贴板只有一份：新的剪切或复制取代原来的，原来弱化显示的条目恢复正常
   clipboard_ = Clipboard{true, true, image_.image, entryPaths(names)};
+  itemClipboard_ = ItemClipboard{};
+  changed();
 }
 
 void FileManagerController::copy(const std::vector<std::string>& names) {
   if (!image_.selected || names.empty()) return;
   clipboard_ = Clipboard{true, false, image_.image, entryPaths(names)};
+  itemClipboard_ = ItemClipboard{};
+  changed();
+}
+
+std::vector<std::string> FileManagerController::cutNames() const {
+  std::vector<std::string> names;
+  if (!clipboard_.present || !clipboard_.cut || !image_.selected || clipboard_.image != image_.image) return names;
+  for (const std::vector<std::string>& entry : clipboard_.entries) {
+    // 只算当前文件夹里的条目：路径比当前文件夹多一级，前面逐级相同
+    if (entry.size() != image_.directory.size() + 1 || !std::equal(image_.directory.begin(), image_.directory.end(), entry.begin())) continue;
+    names.push_back(entry.back());
+  }
+  return names;
 }
 
 void FileManagerController::paste() {
@@ -442,7 +472,10 @@ void FileManagerController::paste() {
   if (source.cut && source.image == image_.image) {
     // 同一个镜像里剪切再粘贴：移动
     if (!confirmMove(confirmation_, entryNames(source.entries), "当前文件夹")) return;
-    operate("filemanager.move", {{"image", image_.image}, {"entries", source.entries}, {"target", image_.directory}}, [this](const nlohmann::json&) { clipboard_ = Clipboard{}; });
+    operate("filemanager.move", {{"image", image_.image}, {"entries", source.entries}, {"target", image_.directory}}, [this](const nlohmann::json&) {
+      clipboard_ = Clipboard{};
+      changed();
+    });
     return;
   }
   // 剪切到另一个镜像：复制过去再从来源镜像里删掉，也是移动
@@ -451,6 +484,7 @@ void FileManagerController::paste() {
     if (!source.cut) return;
     // 剪切到另一个镜像：复制成功后再从来源镜像里删掉
     clipboard_ = Clipboard{};
+    changed();
     operate("filemanager.remove", {{"image", source.image}, {"entries", source.entries}});
   });
 }
@@ -582,12 +616,14 @@ void FileManagerController::makeItemFolder(const std::string& parent, std::funct
 void FileManagerController::cutItems(const std::vector<std::string>& paths) {
   if (paths.empty()) return;
   itemClipboard_ = ItemClipboard{true, true, paths};
+  clipboard_ = Clipboard{};
   changed();
 }
 
 void FileManagerController::copyItems(const std::vector<std::string>& paths) {
   if (paths.empty()) return;
   itemClipboard_ = ItemClipboard{true, false, paths};
+  clipboard_ = Clipboard{};
   changed();
 }
 

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-model.hpp
- * 说明：文件管理给界面层的模型：左边目录树的内容、右边所选镜像里当前文件夹的内容，和对镜像的操作（重命名、删除、移动、复制、粘贴、新建文件夹、撤销、导入、导出、新建空白镜像、载入软驱、在资源管理器中显示）。
+ * 说明：媒体库给界面层的模型：左边目录树的内容、右边所选镜像里当前文件夹的内容，和对镜像的操作（重命名、删除、移动、复制、粘贴、新建文件夹、撤销、导入、导出、新建空白镜像、载入软驱、在资源管理器中显示）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -37,6 +37,7 @@ inline constexpr const char* kKindFloppy = "floppy";
 inline constexpr const char* kKindCartridge = "cartridge";
 inline constexpr const char* kKindAudio = "audio";
 inline constexpr const char* kKindPicture = "picture";
+inline constexpr const char* kKindUnsupported = "unsupported";
 
 /** 目录树里的一个节点。 */
 struct DiskTreeNode {
@@ -134,7 +135,7 @@ struct DiskExportItem {
   std::vector<std::uint8_t> content;
 };
 
-/** 文件管理的模型。 */
+/** 媒体库的模型。 */
 class FileManagerModel {
  public:
   virtual ~FileManagerModel() = default;
@@ -145,6 +146,8 @@ class FileManagerModel {
   [[nodiscard]] virtual std::vector<DiskBlankKind> blankKinds() const = 0;
   /** 剪贴板里有没有剪切或复制的条目。 */
   [[nodiscard]] virtual bool hasClipboard() const = 0;
+  /** 当前镜像当前文件夹里被剪切、等着粘贴的条目名称（列表里弱化显示）。 */
+  [[nodiscard]] virtual std::vector<std::string> cutNames() const = 0;
 
   /** 选目录：弹出系统的选择文件夹窗口，用户取消时什么都不发生。 */
   virtual void chooseRoot() = 0;
@@ -205,6 +208,8 @@ class FileManagerModel {
   virtual void pasteItems(const std::string& targetFolder) = 0;
   /** 有没有剪切或复制的文件与文件夹。 */
   [[nodiscard]] virtual bool hasItemClipboard() const = 0;
+  /** 目录里被剪切、等着粘贴的文件与文件夹的路径（树里弱化显示）。 */
+  [[nodiscard]] virtual std::vector<std::string> cutItemPaths() const = 0;
   /** 订阅内容变化；返回取消订阅的函数。 */
   [[nodiscard]] virtual std::function<void()> subscribe(std::function<void()> handler) = 0;
 };

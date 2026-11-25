@@ -49,6 +49,8 @@ struct TreeItem {
   std::string trailing;
   /** 是文件夹（空的也算）：拖动时可以放进它里面。 */
   bool folder{false};
+  /** 弱化显示（如已被剪切、等着粘贴到别处）：图标与文字变淡。 */
+  bool dimmed{false};
 };
 
 /** 树。 */
@@ -73,6 +75,8 @@ class Tree : public Widget {
 
   /** 设置全部条目（先序）；选中项不在其中时视为没有选中；展开状态按条目标识保留；正在重命名的条目没了就取消重命名。 */
   void setItems(std::vector<TreeItem> items);
+  /** 把这些条目设为弱化显示，其余恢复正常（如正在被剪切的条目）；重新 setItems 后要再设一次。 */
+  void setDimmedIds(const std::vector<std::string>& ids);
   /** 选中指定条目，空串表示没有选中（不调用回调）。 */
   void setSelectedId(std::string id);
   [[nodiscard]] const std::string& selectedId() const { return selectedId_; }

@@ -54,6 +54,8 @@ struct FileTableRow {
   std::optional<IconId> icon;
   /** 是文件夹：重命名时名称全选，文件只选中扩展名之前的部分。 */
   bool folder{false};
+  /** 弱化显示（如已被剪切、等着粘贴到别处）：图标与文字变淡。 */
+  bool dimmed{false};
   /** 各列的文字，第一个是名称；个数可以少于列数。 */
   std::vector<std::string> cells;
 };
@@ -78,6 +80,8 @@ class FileTable : public Widget {
   void setColumns(std::vector<FileTableColumn> columns);
   /** 设置全部行；仍存在的行保持选中与焦点，不存在的从选中里去掉；正在重命名的行没了就取消重命名。 */
   void setRows(std::vector<FileTableRow> rows);
+  /** 把这些行设为弱化显示，其余恢复正常（如正在被剪切的行）；重新 setRows 后要再设一次。 */
+  void setDimmedIds(const std::vector<std::string>& ids);
   /** 没有行时在中间显示的说明文字。 */
   void setEmptyText(std::string text);
 

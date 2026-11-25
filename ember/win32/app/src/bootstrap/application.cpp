@@ -415,12 +415,12 @@ int runApplication(const shared::LaunchArguments& launch) {
     dialogs.setBody(logic::kMachinesDialogId, [&romController] { return std::make_unique<ui::MachinesContent>(romController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
     dialogs.setBody(logic::kFileManagerDialogId, [&fileManager, &diskDragHost] { return std::make_unique<ui::FileManagerContent>(fileManager, diskDragHost); }, true, true);
-    // 文件管理窗口：打开后焦点放到资源管理器的树上，展开与收起镜像内容时调整窗口宽度，并把窗口登记成拖放目标（从 Windows 拖入文件、窗口内拖动条目到文件夹上）
+    // 媒体库窗口：打开后焦点放到资源管理器的树上，展开与收起镜像内容时调整窗口宽度，并把窗口登记成拖放目标（从 Windows 拖入文件、窗口内拖动条目到文件夹上）
     dialogs.setOpenHook(logic::kFileManagerDialogId, [](platform::DialogWindow& window, rujian::ui::Widget& body) -> std::shared_ptr<void> {
       auto* content = static_cast<ui::FileManagerContent*>(&body);
       content->focusInitial();
       content->setOnResizeWindow([&window](double delta) { return window.resizeWidthBy(delta); });
-      content->setOnRootChanged([&window](const std::string& root) { window.frame().setTitle(root); });
+      content->setOnRootChanged([&window](const std::string& root) { window.frame().setTitleDetail(root); });
       platform::DropCallbacks callbacks;
       callbacks.over = [&window, content](platform::DropKind kind, int x, int y) { return content->dragOver(kind == platform::DropKind::Internal, window.clientPointFromScreen(x, y)); };
       callbacks.drop = [&window, content](platform::DropKind kind, int x, int y, const std::vector<std::string>& paths, std::uint64_t) {

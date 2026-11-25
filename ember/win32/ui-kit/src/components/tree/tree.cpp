@@ -49,6 +49,8 @@ constexpr double kDragThreshold = 4.0;
 constexpr double kEditorExtraWidth = 4.0;
 /** 行的右边留出的空白：左边有对话框正文的内边距，右边留出同样宽的边距，选中底色与焦点框不贴到右边缘。 */
 constexpr double kRowMarginRight = tokens::space_page;
+/** 弱化显示的条目（如被剪切的）的图标与文字透明度。 */
+constexpr double kDimmedOpacity = 0.5;
 /** 拖动影子：离鼠标的偏移、左右内边距、名称最宽、离视图边缘的最小距离。 */
 constexpr double kGhostOffsetX = 14.0;
 constexpr double kGhostOffsetY = 8.0;
@@ -64,6 +66,17 @@ Tree::Tree() {
   editor_->setVisible(false);
   editor_->setOnEnter([this] { commitRename(); });
   editor_->setOnBlur([this] { commitRename(); });
+}
+
+void Tree::setDimmedIds(const std::vector<std::string>& ids) {
+  bool changed = false;
+  for (TreeItem& item : items_) {
+    const bool dimmed = std::find(ids.begin(), ids.end(), item.id) != ids.end();
+    if (item.dimmed == dimmed) continue;
+    item.dimmed = dimmed;
+    changed = true;
+  }
+  if (changed) invalidate();
 }
 
 void Tree::setItems(std::vector<TreeItem> items) {
@@ -542,6 +555,11 @@ void Tree::paint(Canvas& canvas) {
     const Rect row = rowRect(i);
     if (row.bottom() < view.y || row.y > view.bottom()) continue;
     const TreeItem& item = items_[rows_[i]];
+    const double opacity = item.dimmed ? kDimmedOpacity : 1.0;
+    TextStyle itemStyle = style;
+    itemStyle.color = style.color.withOpacity(opacity);
+    TextStyle itemTrailingStyle = trailingStyle;
+    itemTrailingStyle.color = trailingStyle.color.withOpacity(opacity);
     const bool selected = item.id == selectedId_;
     const bool hovered = static_cast<int>(i) == hoverRow_;
     const bool pressed = hovered && static_cast<int>(i) == pressedRow_;
@@ -554,7 +572,7 @@ void Tree::paint(Canvas& canvas) {
     if (hasChildren(rows_[i])) canvas.drawIcon(isExpanded(item.id) ? IconId::ChevronDown : IconId::ChevronRight, arrow, colors.text_muted, tokens::icon_stroke_width);
     double x = arrow.x + tokens::icon_size + tokens::icon_text_gap;
     if (item.icon) {
-      canvas.drawIcon(*item.icon, Rect{x, arrow.y, tokens::icon_size, tokens::icon_size}, colors.text_muted, tokens::icon_stroke_width);
+      canvas.drawIcon(*item.icon, Rect{x, arrow.y, tokens::icon_size, tokens::icon_size}, colors.text_muted.withOpacity(opacity), tokens::icon_stroke_width);
       x += tokens::icon_size + tokens::icon_text_gap;
     }
     double right = row.right() - tokens::tree_padding_x;
@@ -563,10 +581,10 @@ void Tree::paint(Canvas& canvas) {
     if (!item.trailing.empty() && !editing) {
       // 说明文字靠右，名称让出它的宽度
       const double width = std::min(host()->measureText(item.trailing, trailingStyle, 0).width + 1.0, std::max(0.0, (right - x) * 0.5));
-      canvas.drawText(item.trailing, Rect{right - width, row.y, width, row.height}, trailingStyle, VerticalAlign::Center);
+      canvas.drawText(item.trailing, Rect{right - width, row.y, width, row.height}, itemTrailingStyle, VerticalAlign::Center);
       right -= width + kTrailingGap;
     }
-    if (!editing) canvas.drawText(item.label, Rect{x, row.y, std::max(0.0, right - x), row.height}, style, VerticalAlign::Center);
+    if (!editing) canvas.drawText(item.label, Rect{x, row.y, std::max(0.0, right - x), row.height}, itemStyle, VerticalAlign::Center);
     if (focusVisible() && i == focus) canvas.strokeOutline(row, tokens::tree_radius, kFocusOffset, kFocusWidth, colors.focus_border);
   }
   // 拖动的影子：被拖条目的图标与名称，跟着鼠标走

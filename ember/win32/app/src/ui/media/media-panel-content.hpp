@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：media-panel-content.hpp
- * 说明：底部面板“设备”的内容：紧凑的信息行，每个设备一行，没有边框与表格线，鼠标悬停时整行变底色。软驱一行依次是名称（带图标）、盘片、状态、行尾的四个图标按钮（文件管理、写保护、载入镜像、取出）；磁带机一行是名称（带图标）、磁带、位置、状态与行尾的四个图标按钮（播放、录音、停止、取出）；打印机一行是名称（带图标）与状态。
+ * 说明：底部面板“设备”的内容：紧凑的信息行，每个设备一行，没有边框与表格线，鼠标悬停时整行变底色。软驱一行依次是名称（带图标）、盘片、状态、行尾的四个图标按钮（媒体库、写保护、载入镜像、取出）；磁带机一行是名称（带图标）、磁带、位置、状态与行尾的四个图标按钮（播放、录音、停止、取出）；打印机一行是名称（带图标）与状态。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -29,7 +29,7 @@ namespace ember::win32::ui {
 class MediaPanelContent final : public rujian::ui::Widget {
  public:
   /** @param model 介质模块的模型，必须比本控件活得久。
-   *  @param openDiskManager 打开“文件管理”对话框（软驱行的第一个按钮）；不给时这个按钮不可用。 */
+   *  @param openDiskManager 打开“媒体库”对话框（软驱行的第一个按钮）；不给时这个按钮不可用。 */
   explicit MediaPanelContent(contracts::MediaModel& model, std::function<void()> openDiskManager = {});
   ~MediaPanelContent() override;
 

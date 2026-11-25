@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-requests.hpp
- * 说明：filemanager 模块的请求登记：把 filemanager.* 请求名映射到文件管理服务的方法。
+ * 说明：filemanager 模块的请求登记：把 filemanager.* 请求名映射到媒体库服务的方法。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25

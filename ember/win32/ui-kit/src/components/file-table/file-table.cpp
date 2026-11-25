@@ -63,6 +63,8 @@ constexpr double kFocusWidth = 1.0;
 constexpr double kEditorExtraWidth = 4.0;
 /** 行的选中底色与焦点框右边留出的空白，与左边的内边距对称，不贴到右边缘。 */
 constexpr double kRowMarginRight = tokens::space_page;
+/** 弱化显示的行（如被剪切的）的图标与文字透明度。 */
+constexpr double kDimmedOpacity = 0.5;
 /** 没有行时说明文字离表头的距离。 */
 constexpr double kEmptyTextTop = 12.0;
 
@@ -79,6 +81,17 @@ FileTable::FileTable() {
 void FileTable::setColumns(std::vector<FileTableColumn> columns) {
   columns_ = std::move(columns);
   invalidate();
+}
+
+void FileTable::setDimmedIds(const std::vector<std::string>& ids) {
+  bool changed = false;
+  for (FileTableRow& row : rows_) {
+    const bool dimmed = std::find(ids.begin(), ids.end(), row.id) != ids.end();
+    if (row.dimmed == dimmed) continue;
+    row.dimmed = dimmed;
+    changed = true;
+  }
+  if (changed) invalidate();
 }
 
 void FileTable::setRows(std::vector<FileTableRow> rows) {
@@ -571,6 +584,11 @@ void FileTable::paint(Canvas& canvas) {
     const Rect row = rowRectAt(i);
     if (row.bottom() < view.y || row.y > view.bottom()) continue;
     const FileTableRow& item = rows_[i];
+    const double opacity = item.dimmed ? kDimmedOpacity : 1.0;
+    TextStyle rowNameStyle = nameStyle;
+    rowNameStyle.color = nameStyle.color.withOpacity(opacity);
+    TextStyle rowCellStyle = cellStyle;
+    rowCellStyle.color = cellStyle.color.withOpacity(opacity);
     const Rect box{row.x, row.y, std::max(0.0, row.width - kRowMarginRight), row.height};
     const bool hovered = static_cast<int>(i) == hoverRow_;
     Color fill = kTransparent;
@@ -585,7 +603,7 @@ void FileTable::paint(Canvas& canvas) {
       double textX = x;
       double textWidth = width;
       if (c == 0 && item.icon) {
-        canvas.drawIcon(*item.icon, Rect{x, row.y + (row.height - tokens::icon_size) / 2.0, tokens::icon_size, tokens::icon_size}, colors.text_muted, tokens::icon_stroke_width);
+        canvas.drawIcon(*item.icon, Rect{x, row.y + (row.height - tokens::icon_size) / 2.0, tokens::icon_size, tokens::icon_size}, colors.text_muted.withOpacity(opacity), tokens::icon_stroke_width);
         textX += tokens::icon_size + tokens::icon_text_gap;
         textWidth -= tokens::icon_size + tokens::icon_text_gap;
       }
@@ -599,7 +617,7 @@ void FileTable::paint(Canvas& canvas) {
             textWidth = natural;
           }
         }
-        canvas.drawText(text, Rect{textX, row.y, std::max(0.0, textWidth), row.height}, c == 0 ? nameStyle : cellStyle, VerticalAlign::Center);
+        canvas.drawText(text, Rect{textX, row.y, std::max(0.0, textWidth), row.height}, c == 0 ? rowNameStyle : rowCellStyle, VerticalAlign::Center);
       }
       x += width + kColumnGap;
     }

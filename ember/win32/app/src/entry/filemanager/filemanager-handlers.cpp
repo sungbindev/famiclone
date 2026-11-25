@@ -85,7 +85,7 @@ MainRequestHandlers createFileManagerHandlers(FileManagerDependencies dependenci
 
   handlers["filemanager.pickRoot"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
     const ParamReader reader(params, {});
-    const auto picked = dependencies.dialog.pickDirectory({"选择文件管理的目录", "fileManager"});
+    const auto picked = dependencies.dialog.pickDirectory({"选择媒体库的目录", "fileManager"});
     if (!picked) {
       done(contracts::CoreReply::success({{"canceled", true}}));
       return;

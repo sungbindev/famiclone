@@ -56,7 +56,7 @@ MediaPanelContent::MediaPanelContent(contracts::MediaModel& model, std::function
     auto actions = std::make_unique<rujian::ui::Actions>();
     FloppyWidgets widgets;
     // 软驱行和磁带机行都有四个按钮，状态列才左边对齐
-    widgets.manager = addIconButton(*actions, "文件管理", IconId::Folder, [this] {
+    widgets.manager = addIconButton(*actions, "媒体库", IconId::Folder, [this] {
       if (openDiskManager_) openDiskManager_();
     });
     widgets.manager->setEnabled(static_cast<bool>(openDiskManager_));

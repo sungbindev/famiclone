@@ -35,7 +35,7 @@ class ShellStateService {
   /** 记下上次显示更新记录时的应用版本。 */
   virtual void updateReleaseNotesVersion(const std::string& version) = 0;
 
-  /** 记下文件管理的目录；没有值表示取消。 */
+  /** 记下媒体库的目录；没有值表示取消。 */
   virtual void updateFileManagerRoot(const std::optional<std::string>& path) = 0;
 
   /** 立即写盘。 */

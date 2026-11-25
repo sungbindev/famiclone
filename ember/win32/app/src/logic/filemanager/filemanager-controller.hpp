@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-controller.hpp
- * 说明：文件管理对话框的控制器：核心就绪后把保存的目录交给核心并读取目录树，订阅 filemanager.treeChanged、filemanager.imageChanged 与 media.changed 保持最新；
+ * 说明：媒体库对话框的控制器：核心就绪后把保存的目录交给核心并读取目录树，订阅 filemanager.treeChanged、filemanager.imageChanged 与 media.changed 保持最新；
  *       记住选中的文件（磁盘镜像还有当前文件夹），执行对镜像里文件的各种操作，选中卡带、音频、图片时右边只有它自己一行，并保存剪切与复制的条目。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
@@ -28,7 +28,7 @@
 
 namespace ember::win32::logic {
 
-/** 文件管理的控制器。 */
+/** 媒体库的控制器。 */
 class FileManagerController final : public contracts::FileManagerModel {
  public:
   /**
@@ -53,6 +53,8 @@ class FileManagerController final : public contracts::FileManagerModel {
   [[nodiscard]] contracts::DiskImageView image() const override { return image_; }
   [[nodiscard]] std::vector<contracts::DiskBlankKind> blankKinds() const override { return kinds_; }
   [[nodiscard]] bool hasClipboard() const override { return clipboard_.present; }
+  [[nodiscard]] std::vector<std::string> cutNames() const override;
+  [[nodiscard]] std::vector<std::string> cutItemPaths() const override { return itemClipboard_.present && itemClipboard_.cut ? itemClipboard_.paths : std::vector<std::string>{}; }
   void chooseRoot() override;
   void selectImage(const std::string& path) override;
   void openFolder(const std::string& name) override;

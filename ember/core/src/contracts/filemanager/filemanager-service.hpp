@@ -16,7 +16,7 @@
 
 namespace ember::contracts::filemanager {
 
-/** 文件管理服务。 */
+/** 媒体库服务。 */
 class FileManagerService {
  public:
   virtual ~FileManagerService() = default;

@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-module.hpp
- * 说明：文件管理模块在外壳里的登记项：“文件管理”对话框（非模态）、打开它的命令与“文件”菜单里的菜单项，加上常驻部分（读取目录树并保持最新）。
+ * 说明：媒体库模块在外壳里的登记项：“媒体库”对话框（非模态）、打开它的命令与“文件”菜单里的菜单项，加上常驻部分（读取目录树并保持最新）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -16,12 +16,12 @@
 
 namespace ember::win32::logic {
 
-/** “文件管理”对话框的标识。 */
+/** “媒体库”对话框的标识。 */
 inline constexpr const char* kFileManagerDialogId = "filemanager.dialog";
-/** 打开“文件管理”对话框的命令。 */
+/** 打开“媒体库”对话框的命令。 */
 inline constexpr const char* kFileManagerOpenCommand = "filemanager.open";
 
-/** 创建文件管理模块的登记项；控制器必须比登记表活得久。 */
+/** 创建媒体库模块的登记项；控制器必须比登记表活得久。 */
 [[nodiscard]] contracts::ShellModule createFileManagerModule(FileManagerController& controller);
 
 }  // namespace ember::win32::logic

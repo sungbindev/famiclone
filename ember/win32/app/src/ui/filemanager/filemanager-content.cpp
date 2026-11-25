@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-content.cpp
- * 说明：“文件管理”对话框内容的实现。
+ * 说明：“媒体库”对话框内容的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -248,6 +248,7 @@ std::string lowered(std::string text) {
 /** 树里一个节点的图标。 */
 IconId nodeIcon(const contracts::DiskTreeNode& node) {
   if (node.directory) return IconId::Folder;
+  if (node.kind == contracts::kKindUnsupported) return IconId::FileUnknown;
   if (node.kind == contracts::kKindCartridge) return IconId::PlayOne;
   if (node.kind == contracts::kKindAudio) return IconId::DeviceAudioTape;
   if (node.kind == contracts::kKindPicture) return IconId::Photo;
@@ -448,6 +449,9 @@ void FileManagerContent::refresh() {
   const bool shown = imageShown();
   if (!(imageView_ == previous) || treeChanged || shown != shownImage_) updateImage(previous);
   shownImage_ = shown;
+  // 被剪切的条目弱化显示，直到剪贴板被清空或换成别的条目（重建树与列表后要再设一次）
+  tree_->setDimmedIds(model_.cutItemPaths());
+  table_->setDimmedIds(model_.cutNames());
   if (revealPending_ && findNode(treeSelected_) != nullptr) {
     tree_->reveal(treeSelected_);
     revealPending_ = false;

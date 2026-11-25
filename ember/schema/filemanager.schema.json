@@ -1,5 +1,5 @@
 {
-  "$comment": "filemanager 模块：文件管理。外壳设一个目录，核心实时监视（只看受管理的扩展名：软盘镜像、nes、png 与录音机支持的音频，不含 bin），列出目录树里的文件，识别软盘镜像的文件系统（FAT12/16、Apple DOS 3.3、ProDOS；.nib、.woz 只读），并对镜像里的文件做列出、重命名、删除、移动、新建文件夹、导入、导出、撤销，以及新建空白镜像；镜像插在软驱里时改的是软驱里的盘片（立即生效，随后写回文件），否则直接改文件。规则见 docs/04-调试服务.md 第 4.10 节。",
+  "$comment": "filemanager 模块：媒体库。外壳设一个目录，核心实时监视（列出全部文件夹与全部文件，不分扩展名、含隐藏文件，免得文件夹看上去是空的而被误删；其中软盘镜像、nes、png 与录音机支持的音频是支持的种类，其他标为不支持，只能重命名、移动、复制、删除），列出目录树里的文件，识别软盘镜像的文件系统（FAT12/16、Apple DOS 3.3、ProDOS；.nib、.woz 只读），并对镜像里的文件做列出、重命名、删除、移动、新建文件夹、导入、导出、撤销，以及新建空白镜像；镜像插在软驱里时改的是软驱里的盘片（立即生效，随后写回文件），否则直接改文件。规则见 docs/04-调试服务.md 第 4.10 节。",
   "module": "filemanager",
   "types": {
     "ImageNode": {
@@ -9,7 +9,7 @@
         "path": { "type": "string", "description": "相对目录的路径，用 / 分隔，不以 / 开头" },
         "name": { "type": "string", "description": "完整的文件名或文件夹名" },
         "directory": { "type": "boolean", "description": "是否是文件夹" },
-        "kind": { "type": "string", "description": "种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）" },
+        "kind": { "type": "string", "description": "种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）、unsupported（其他文件，包括隐藏文件与符号链接）" },
         "size": { "type": "integer", "minimum": 0, "description": "文件的大小（字节）；文件夹为 0" },
         "scanned": { "type": "boolean", "description": "文件系统格式是否已经识别；还在识别时为 false，format 与 formatName 为空；非软盘文件不用识别，始终为 true" },
         "format": { "type": "string", "description": "格式标识：fat12、fat16、appledos33、prodos，认不出时是 blank（全是 0）、pyramid（金字塔 DOS，待支持）、unknown；文件夹与非软盘文件为空" },
@@ -91,7 +91,7 @@
       "errors": ["filemanager.invalidPath"]
     },
     "tree": {
-      "description": "目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。",
+      "description": "目录里的树：含全部文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件；支持的种类是软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka，其他文件标为 unsupported），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。",
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": {
         "type": "object",
@@ -99,7 +99,7 @@
           "root": { "type": ["string", "null"], "description": "目录的路径，用来显示；没有设置时为 null" },
           "available": { "type": "boolean", "description": "目录是否存在、能否读取" },
           "scanning": { "type": "boolean", "description": "是否还在扫描或识别" },
-          "limited": { "type": "boolean", "description": "镜像太多，只列出了前 5000 个" },
+          "limited": { "type": "boolean", "description": "文件太多，只列出了前 5000 个" },
           "nodes": { "type": "array", "items": { "$ref": "#/types/ImageNode" }, "description": "节点，父文件夹在前，同级按文件夹在前、名称排序" }
         },
         "required": ["root", "available", "scanning", "limited", "nodes"]

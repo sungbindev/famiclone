@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：file-manager.cpp
- * 说明：文件管理服务的实现。
+ * 说明：媒体库服务的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -351,7 +351,12 @@ void FileManager::runScan(const std::string& root) {
       if (item.info.directory) {
         node.kind = "folder";
         node.scanned = true;
-      } else if (const auto kind = api::kindOfExtension(extensionOf(item.info.path)); kind && *kind != api::FileKind::Floppy) {
+      } else if (const auto kind = api::kindOfExtension(extensionOf(item.info.path)); !kind) {
+        // 扩展名不在管理之内的文件也列出来（免得文件夹看上去是空的而被误删），标为不支持
+        node.kind = "unsupported";
+        node.scanned = true;
+        node.formatName = "不支持";
+      } else if (*kind != api::FileKind::Floppy) {
         // 卡带、音频、图片不用识别文件系统，直接给出种类与名称
         node.kind = api::kindId(*kind);
         node.scanned = true;

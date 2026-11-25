@@ -80,7 +80,7 @@ export interface FilemanagerImageNode {
   name: string;
   /** 是否是文件夹 */
   directory: boolean;
-  /** 种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片） */
+  /** 种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）、unsupported（其他文件，包括隐藏文件与符号链接） */
   kind: string;
   /** 文件的大小（字节）；文件夹为 0 */
   size: number;
@@ -845,7 +845,7 @@ export interface FilemanagerTreeResult {
   available: boolean;
   /** 是否还在扫描或识别 */
   scanning: boolean;
-  /** 镜像太多，只列出了前 5000 个 */
+  /** 文件太多，只列出了前 5000 个 */
   limited: boolean;
   /** 节点，父文件夹在前，同级按文件夹在前、名称排序 */
   nodes: FilemanagerImageNode[];
@@ -2544,7 +2544,7 @@ export interface EmberApi {
   readonly filemanager: {
     /** 设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。 */
     setRoot(params: FilemanagerSetRootParams): Promise<FilemanagerSetRootResult>;
-    /** 目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。 */
+    /** 目录里的树：含全部文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件；支持的种类是软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka，其他文件标为 unsupported），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。 */
     tree(): Promise<FilemanagerTreeResult>;
     /** 列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致；镜像插在软驱里时读软驱里的盘片，否则读文件。 */
     list(params: FilemanagerListParams): Promise<FilemanagerListResult>;

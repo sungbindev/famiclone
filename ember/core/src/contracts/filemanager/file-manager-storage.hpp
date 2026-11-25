@@ -22,7 +22,7 @@
 
 namespace ember::contracts::filemanager {
 
-/** 文件管理里的文件种类：软盘镜像、NES 卡带、音频（录音机能载入的格式）、PNG 图片。 */
+/** 媒体库里的文件种类：软盘镜像、NES 卡带、音频（录音机能载入的格式）、PNG 图片。 */
 enum class FileKind { Floppy, Cartridge, Audio, Picture };
 
 /** 各种类的扩展名（小写，不带点）；.bin 不在管理之内。 */
@@ -61,23 +61,10 @@ inline constexpr const char* PICTURE_EXTENSIONS[] = {"png"};
   return "floppy";
 }
 
-/** 全部受管理的扩展名，用顿号连起来，给错误说明用。 */
-[[nodiscard]] inline std::string supportedExtensionsText() {
-  std::string text;
-  const auto append = [&text](const auto& extensions) {
-    for (const char* item : extensions) text += (text.empty() ? "" : "、") + std::string(item);
-  };
-  append(FLOPPY_EXTENSIONS);
-  append(CARTRIDGE_EXTENSIONS);
-  append(AUDIO_EXTENSIONS);
-  append(PICTURE_EXTENSIONS);
-  return text;
-}
-
 /** 镜像文件的大小上限（字节），与软驱载入的上限一致。 */
 inline constexpr std::uintmax_t MAX_IMAGE_SIZE = 16ULL * 1024 * 1024;
 
-/** 扫描得到的一项：受管理的文件（软盘镜像、卡带、音频、图片）或文件夹（空文件夹也列出）。 */
+/** 扫描得到的一项：文件（不分扩展名，含隐藏文件与符号链接）或文件夹（空文件夹也列出）。 */
 struct StoredImageInfo {
   /** 相对目录的路径，用 / 分隔。 */
   std::string path;
@@ -107,7 +94,7 @@ class FileManagerStorage {
   [[nodiscard]] virtual bool isDirectory(const std::string& path) const = 0;
 
   /**
-   * 递归扫描目录：列出全部文件夹（含空的）与受管理扩展名的文件（不跟随符号链接）。
+   * 递归扫描目录：列出全部文件夹（含空的）与全部文件（不分扩展名，含隐藏文件；符号链接与联接点不跟随，按文件列出）。
    * @param limit 最多列出多少个文件；超过时停止并把 limited 置为 true。
    * @param available 目录不存在或不能读取时置为 false，返回空。
    */

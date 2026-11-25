@@ -581,8 +581,8 @@
     },
     {
       "name": "filemanager.tree",
-      "summary": "目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序",
-      "description": "目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。",
+      "summary": "目录里的树：含全部文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件",
+      "description": "目录里的树：含全部文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件；支持的种类是软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka，其他文件标为 unsupported），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。",
       "tags": [
         {
           "name": "filemanager"
@@ -612,7 +612,7 @@
             },
             "limited": {
               "type": "boolean",
-              "description": "镜像太多，只列出了前 5000 个"
+              "description": "文件太多，只列出了前 5000 个"
             },
             "nodes": {
               "type": "array",
@@ -8324,7 +8324,7 @@
           },
           "kind": {
             "type": "string",
-            "description": "种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）"
+            "description": "种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）、unsupported（其他文件，包括隐藏文件与符号链接）"
           },
           "size": {
             "type": "integer",

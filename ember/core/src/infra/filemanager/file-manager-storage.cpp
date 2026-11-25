@@ -101,12 +101,12 @@ fs::path resolveExistingImage(const std::string& root, const std::string& relati
   return full;
 }
 
-/** 目录下存在的受管理的文件（软盘镜像、卡带、音频、图片）：路径要合格、扩展名要在管理之内、规范化后要在目录里。 */
+/** 目录下存在的普通文件（不分扩展名）：路径要合格、规范化后要在目录里。 */
 fs::path resolveExistingFile(const std::string& root, const std::string& relative) {
   requireSafeRelative(relative);
   const fs::path rootPath = toPath(root);
   const fs::path full = rootPath / toPath(relative);
-  if (!kindOf(full) || !isInside(rootPath, full, false)) fail(api::ERROR_INVALID_PATH, "不是目录里的文件：" + relative);
+  if (!isInside(rootPath, full, false)) fail(api::ERROR_INVALID_PATH, "不是目录里的文件：" + relative);
   std::error_code error;
   if (!fs::is_regular_file(full, error) || error) fail(api::ERROR_IMAGE_NOT_FOUND, "找不到文件：" + relative);
   return full;
@@ -128,16 +128,16 @@ void walk(const fs::path& directory, const std::string& prefix, int depth, ScanS
     if (error) break;
     const fs::directory_entry& entry = *iterator;
     std::error_code statusError;
-    // 符号链接与联接点不跟随：它们可能指到目录之外
-    if (entry.is_symlink(statusError) || statusError) continue;
     const std::string name = toUtf8(entry.path().filename());
     const std::string relative = prefix.empty() ? name : prefix + "/" + name;
-    if (entry.is_directory(statusError)) {
+    // 符号链接与联接点不跟随（它们可能指到目录之外），但要列出来，免得文件夹看上去是空的，按不支持的文件显示
+    const bool link = entry.is_symlink(statusError) || statusError;
+    if (!link && entry.is_directory(statusError)) {
       std::vector<api::StoredImageInfo> inner;
       walk(entry.path(), relative, depth + 1, state, inner);
       out.push_back(api::StoredImageInfo{relative, true, 0, 0});
       out.insert(out.end(), inner.begin(), inner.end());
-    } else if (entry.is_regular_file(statusError) && kindOf(entry.path())) {
+    } else {
       if (state.count >= state.limit) {
         state.limited = true;
         return;
@@ -145,9 +145,9 @@ void walk(const fs::path& directory, const std::string& prefix, int depth, ScanS
       ++state.count;
       std::error_code sizeError;
       std::error_code timeError;
-      const std::uintmax_t size = entry.file_size(sizeError);
-      const auto written = entry.last_write_time(timeError);
-      out.push_back(api::StoredImageInfo{relative, false, sizeError ? 0 : size, timeError ? 0 : static_cast<std::int64_t>(written.time_since_epoch().count())});
+      const std::uintmax_t size = link ? 0 : entry.file_size(sizeError);
+      const auto written = link ? fs::file_time_type{} : entry.last_write_time(timeError);
+      out.push_back(api::StoredImageInfo{relative, false, sizeError || link ? 0 : size, timeError || link ? 0 : static_cast<std::int64_t>(written.time_since_epoch().count())});
     }
   }
 }
@@ -204,17 +204,16 @@ bool isReservedName(const std::string& name) {
   return base.size() == 4 && (base.rfind("com", 0) == 0 || base.rfind("lpt", 0) == 0) && base[3] >= '1' && base[3] <= '9';
 }
 
-/** 文件或文件夹的名称：不能为空、太长、含不允许的字符、以空格或点结尾、是设备名；文件还必须有受管理的扩展名。 */
-void requireValidName(const std::string& name, bool file) {
+/** 文件或文件夹的名称：不能为空、太长、含不允许的字符、以空格或点结尾、是设备名。 */
+void requireValidName(const std::string& name) {
   if (name.empty() || name.size() > 255) fail(api::ERROR_INVALID_NAME, "名称不能为空，也不能超过 255 个字节");
   if (name.find_first_of(kForbiddenNameChars) != std::string::npos || std::any_of(name.begin(), name.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; })) {
     fail(api::ERROR_INVALID_NAME, "名称不能包含下面任何字符：\\ / : * ? \" < > |");
   }
   if (name.back() == ' ' || name.back() == '.' || name == "." || name == ".." || isReservedName(name)) fail(api::ERROR_INVALID_NAME, "这个名称不能用：" + name);
-  if (file && !kindOf(toPath(name))) fail(api::ERROR_INVALID_NAME, "文件要保留支持的扩展名（" + api::supportedExtensionsText() + "）");
 }
 
-/** 目录里的一个文件或文件夹：路径合格、在目录里、不是符号链接、存在，文件必须是受管理的种类。 */
+/** 目录里的一个文件或文件夹：路径合格、在目录里、不是符号链接、存在，文件不分扩展名。 */
 fs::path resolveExistingItem(const std::string& root, const std::string& relative, bool& directory) {
   requireSafeRelative(relative);
   const fs::path rootPath = toPath(root);
@@ -225,7 +224,7 @@ fs::path resolveExistingItem(const std::string& root, const std::string& relativ
   if (error || !fs::exists(status)) fail(api::ERROR_ENTRY_NOT_FOUND, "找不到：" + relative);
   if (fs::is_symlink(status)) fail(api::ERROR_INVALID_PATH, "不支持符号链接：" + relative);
   directory = fs::is_directory(status);
-  if (!directory && (!fs::is_regular_file(status) || !kindOf(full))) fail(api::ERROR_INVALID_PATH, "不是受管理的文件：" + relative);
+  if (!directory && !fs::is_regular_file(status)) fail(api::ERROR_INVALID_PATH, "不是普通文件：" + relative);
   return full;
 }
 
@@ -381,7 +380,7 @@ bool FileManagerStorageOnDisk::covers(const std::string& root, const std::string
 std::string FileManagerStorageOnDisk::renameItem(const std::string& root, const std::string& relative, const std::string& newName) {
   bool directory = false;
   const fs::path source = resolveExistingItem(root, relative, directory);
-  requireValidName(newName, !directory);
+  requireValidName(newName);
   const std::string parent = parentOf(relative);
   const std::string current = toUtf8(source.filename());
   if (current == newName) return relative;
@@ -454,7 +453,7 @@ void FileManagerStorageOnDisk::removeItems(const std::string& root, const std::v
 
 std::string FileManagerStorageOnDisk::makeFolder(const std::string& root, const std::string& relativeDirectory, const std::string& baseName) {
   const fs::path directory = resolveDirectory(root, relativeDirectory);
-  requireValidName(baseName, false);
+  requireValidName(baseName);
   std::error_code error;
   for (int number = 1; number <= kMaxCopySuffix; ++number) {
     const std::string name = baseName + (number == 1 ? std::string() : " (" + std::to_string(number) + ")");

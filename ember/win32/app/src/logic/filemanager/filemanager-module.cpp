@@ -21,8 +21,9 @@ constexpr int kDialogHeight = 560;
 constexpr int kDialogMinHeight = 360;
 
 constexpr const char* kTitle = "文件管理";
-/** “文件”菜单里这一项的助记字母。 */
-constexpr const char* kMnemonic = "D";
+/** “文件”菜单里这一项（与打开它的命令）的显示名与助记字母。 */
+constexpr const char* kMenuTitle = "媒体库";
+constexpr const char* kMnemonic = "L";
 
 }  // namespace
 
@@ -42,7 +43,7 @@ contracts::ShellModule createFileManagerModule(FileManagerController& controller
 
   contracts::ShellCommandDefinition open;
   open.id = kFileManagerOpenCommand;
-  open.title = [] { return std::string(kTitle); };
+  open.title = [] { return std::string(kMenuTitle); };
   open.run = [](contracts::ShellApi& shell) { shell.openDialog(kFileManagerDialogId); };
   module.commands.push_back(std::move(open));
 

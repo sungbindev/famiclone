@@ -420,7 +420,7 @@ int runApplication(const shared::LaunchArguments& launch) {
       auto* content = static_cast<ui::FileManagerContent*>(&body);
       content->focusInitial();
       content->setOnResizeWindow([&window](double delta) { return window.resizeWidthBy(delta); });
-      content->setOnRootChanged([&window](const std::string& root) { window.frame().setTitleDetail(root); });
+      content->setOnRootChanged([&window](const std::string& root) { window.frame().setTitle(root); });
       platform::DropCallbacks callbacks;
       callbacks.over = [&window, content](platform::DropKind kind, int x, int y) { return content->dragOver(kind == platform::DropKind::Internal, window.clientPointFromScreen(x, y)); };
       callbacks.drop = [&window, content](platform::DropKind kind, int x, int y, const std::vector<std::string>& paths, std::uint64_t) {

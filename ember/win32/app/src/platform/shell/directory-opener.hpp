@@ -23,4 +23,11 @@ namespace ember::win32::platform {
  */
 [[nodiscard]] std::string openDirectoryInFileManager(const std::filesystem::path& directory);
 
+/**
+ * 在系统的文件管理器里显示一个文件（打开它所在的目录并选中它）。
+ * @param file 文件的完整路径。
+ * @returns 成功时为空文字，否则是错误说明。
+ */
+[[nodiscard]] std::string revealFileInFileManager(const std::filesystem::path& file);
+
 }  // namespace ember::win32::platform

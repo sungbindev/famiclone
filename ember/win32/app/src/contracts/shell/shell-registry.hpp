@@ -98,6 +98,8 @@ struct ShellDialogDefinition {
   /** 最小宽度、最小高度按内容算（刚好装下内容、不换行，见 Widget::minimumSize），不低于上面的 minWidth、minHeight。 */
   bool fitMinWidth{false};
   bool fitMinHeight{false};
+  /** 非模态：打开期间主窗口仍然可用，没有最小化按钮（主窗口最小化时它跟着隐藏）。 */
+  bool modeless{false};
 };
 
 /** 命令：菜单项与快捷键都经命令执行动作。 */

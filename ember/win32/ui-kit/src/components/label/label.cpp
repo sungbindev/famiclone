@@ -52,6 +52,10 @@ void Label::setColorProvider(ColorProvider provider) {
   invalidate();
 }
 
+void Label::setMuted(bool muted) {
+  setColorProvider(muted ? ColorProvider([](ThemeName theme) { return themeTokens(theme).text_muted; }) : ColorProvider());
+}
+
 TextStyle Label::style(Color color) const {
   TextStyle result;
   result.fontSize = fontSize_;

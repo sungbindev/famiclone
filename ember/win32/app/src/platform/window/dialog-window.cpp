@@ -52,7 +52,7 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
   frame_ = frame.get();
   frame_->setSystemButtons(true);
   frame_->setMaximizable(options_.maximizable);
-  frame_->setMinimizable(options_.minimizable);
+  frame_->setMinimizable(options_.minimizable && !options_.modeless);
   frame_->setOnClose([this](rujian::ui::DialogCloseReason) {
     if (options_.onCloseRequested) options_.onCloseRequested();
   });
@@ -195,7 +195,7 @@ void DialogWindow::minimize() {
 }
 
 void DialogWindow::show() {
-  if (options_.owner != nullptr) {
+  if (options_.owner != nullptr && !options_.modeless) {
     EnableWindow(static_cast<HWND>(options_.owner), FALSE);
     ownerLocked_ = true;
   }
@@ -220,5 +220,12 @@ void DialogWindow::applyBorderColor() {
 }
 
 void* DialogWindow::handle() const { return window_.nativeHandle(); }
+
+rujian::ui::Point DialogWindow::clientPointFromScreen(int x, int y) {
+  POINT point{x, y};
+  ScreenToClient(static_cast<HWND>(window_.nativeHandle()), &point);
+  const double scale = window_.root().scale();
+  return rujian::ui::Point{point.x / scale, point.y / scale};
+}
 
 }  // namespace ember::win32::platform

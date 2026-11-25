@@ -126,6 +126,15 @@ class FloppyDrive {
   virtual void applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) = 0;
 
   /**
+   * 主机一侧（磁盘镜像管理）改盘片里的文件：把一段字节写进内存里的镜像，记为已修改（介质服务随即写回文件），盘片更换标志置位让学习机重新读盘。
+   * 没有镜像或超出镜像时丢弃。
+   */
+  virtual void writeFromHost(std::size_t offset, std::span<const std::uint8_t> bytes) = 0;
+
+  /** 镜像内容被主机一侧改动的次数（applyExternalChange 与 writeFromHost 各加一）；控制器据此丢掉自己按镜像编好的缓存。 */
+  [[nodiscard]] virtual std::uint64_t hostChangeCount() const = 0;
+
+  /**
    * 设置修改监听者：已修改区间从空变为非空时在模拟线程上调用一次（区间已经非空时继续写不再通知）。监听者必须很快返回，不能再调用驱动器。
    * 只在驱动器还没有开始被使用时设置（组装阶段）；传空函数表示取消。
    */

@@ -26,6 +26,7 @@ constexpr std::size_t kMaxVersionLength = 64;
 constexpr std::size_t kMaxPanelIdLength = 64;
 constexpr std::size_t kMaxAutoCollapsePanels = 16;
 constexpr std::size_t kMaxKeybindings = 128;
+constexpr std::size_t kMaxPathLength = 1024;
 
 bool isLower(char c) { return c >= 'a' && c <= 'z'; }
 bool isAlpha(char c) { return isLower(c) || (c >= 'A' && c <= 'Z'); }
@@ -52,6 +53,11 @@ bool isRegisteredId(const std::string& text) {
   const std::string name = text.substr(dot + 1);
   if (!isLower(module[0]) || !std::all_of(module.begin(), module.end(), [](char c) { return isLower(c) || isDigit(c) || c == '-'; })) return false;
   return !name.empty() && isAlpha(name[0]) && std::all_of(name.begin(), name.end(), [](char c) { return isAlpha(c) || isDigit(c) || c == '-'; });
+}
+
+/** 目录路径：非空、不超过上限、不含控制字符。 */
+bool isDirectoryPath(const std::string& text) {
+  return !text.empty() && text.size() <= kMaxPathLength && std::none_of(text.begin(), text.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; });
 }
 
 std::optional<int> parseCoordinate(const nlohmann::json& value) {
@@ -114,6 +120,7 @@ ShellState parseShellState(const nlohmann::json& raw) {
   if (raw.contains("releaseNotesVersion") && raw["releaseNotesVersion"].is_string() && isVersion(raw["releaseNotesVersion"].get<std::string>())) {
     state.releaseNotesVersion = raw["releaseNotesVersion"].get<std::string>();
   }
+  if (raw.contains("diskImagesRoot") && raw["diskImagesRoot"].is_string() && isDirectoryPath(raw["diskImagesRoot"].get<std::string>())) state.diskImagesRoot = raw["diskImagesRoot"].get<std::string>();
   return state;
 }
 
@@ -124,7 +131,8 @@ nlohmann::json toJson(const ShellState& state) {
                         {"keybindings", state.layout.keybindings}};
   return {{"window", state.window ? nlohmann::json{{"x", state.window->x}, {"y", state.window->y}} : nlohmann::json(nullptr)},
           {"layout", layout},
-          {"releaseNotesVersion", state.releaseNotesVersion ? nlohmann::json(*state.releaseNotesVersion) : nlohmann::json(nullptr)}};
+          {"releaseNotesVersion", state.releaseNotesVersion ? nlohmann::json(*state.releaseNotesVersion) : nlohmann::json(nullptr)},
+          {"diskImagesRoot", state.diskImagesRoot ? nlohmann::json(*state.diskImagesRoot) : nlohmann::json(nullptr)}};
 }
 
 }  // namespace ember::win32::shared

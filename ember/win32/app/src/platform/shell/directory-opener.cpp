@@ -15,6 +15,7 @@
 #include <shellapi.h>
 
 #include <system_error>
+#include <string>
 
 namespace ember::win32::platform {
 
@@ -25,6 +26,13 @@ std::string openDirectoryInFileManager(const std::filesystem::path& directory) {
   const auto result = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", directory.c_str(), nullptr, nullptr, SW_SHOWNORMAL));
   // ShellExecute 的返回值大于 32 表示成功
   return result > 32 ? std::string{} : "系统没有打开目录（错误码 " + std::to_string(result) + "）";
+}
+
+std::string revealFileInFileManager(const std::filesystem::path& file) {
+  // explorer.exe /select,"路径"：打开所在目录并选中这个文件
+  const std::wstring arguments = L"/select,\"" + file.wstring() + L"\"";
+  const auto result = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", L"explorer.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL));
+  return result > 32 ? std::string{} : "系统没有打开文件管理器（错误码 " + std::to_string(result) + "）";
 }
 
 }  // namespace ember::win32::platform

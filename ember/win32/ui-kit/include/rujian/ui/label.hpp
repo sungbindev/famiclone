@@ -42,6 +42,8 @@ class Label : public Widget {
   void setAlign(TextAlign align);
   /** 文字颜色，默认是正文文字色。 */
   void setColorProvider(ColorProvider provider);
+  /** 用弱化的文字色（次要说明）；取消时回到正文文字色。 */
+  void setMuted(bool muted);
 
   [[nodiscard]] Size measure(Size available) override;
   void paint(Canvas& canvas) override;

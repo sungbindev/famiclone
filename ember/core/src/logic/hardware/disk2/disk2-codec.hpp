@@ -36,6 +36,8 @@
 #include <span>
 #include <vector>
 
+#include "shared/disk/apple-sector-order.hpp"
+
 namespace ember::logic::hardware::disk2 {
 
 /** 读头能走到的最大磁道数，也是磁道缓存的个数（任何格式的磁道数都不超过它）。 */
@@ -93,12 +95,12 @@ inline constexpr Format PYRAMID_FORMAT{40, 14, {0, 11, 9, 7, 5, 3, 1, 12, 10, 8,
  * 苹果 DOS 顺序的盘片：每道 16 个扇区，磁道数由镜像大小定（35 道 143360 字节，40 道 163840 字节）。
  */
 [[nodiscard]] constexpr Format appleDosFormat(unsigned trackCount) {
-  return Format{trackCount, 16, {0, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 15}, 254, 51200, 16, 6, 22};
+  return Format{trackCount, 16, shared::APPLE_DOS_ORDER, 254, 51200, 16, 6, 22};
 }
 
 /** 苹果 ProDOS 顺序的盘片：每道 16 个扇区，磁道数由镜像大小定。 */
 [[nodiscard]] constexpr Format appleProdosFormat(unsigned trackCount) {
-  return Format{trackCount, 16, {0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15}, 254, 51200, 16, 6, 22};
+  return Format{trackCount, 16, shared::APPLE_PRODOS_ORDER, 254, 51200, 16, 6, 22};
 }
 
 /** 从镜像认出盘片格式的函数；认不出（大小不对）返回空。 */

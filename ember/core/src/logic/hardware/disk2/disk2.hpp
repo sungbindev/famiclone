@@ -163,6 +163,8 @@ class Disk2 final : public contracts::hardware::EventListener {
   const std::uint8_t* imageData_{nullptr};
   std::size_t imageSize_{0};
   bool imageInserted_{false};
+  /** 编磁道时驱动器的主机一侧改动次数：变了说明镜像被改过，已编好的磁道作废。 */
+  std::uint64_t hostChanges_{0};
 };
 
 }  // namespace ember::logic::hardware

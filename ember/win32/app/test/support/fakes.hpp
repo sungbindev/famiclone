@@ -137,9 +137,14 @@ class FakeDirectoryOpener : public contracts::DirectoryOpener {
  public:
   std::string error;
   std::vector<std::string> opened;
+  std::vector<std::string> revealed;
 
   [[nodiscard]] std::string open(const std::string& path) override {
     opened.push_back(path);
+    return error;
+  }
+  [[nodiscard]] std::string reveal(const std::string& path) override {
+    revealed.push_back(path);
     return error;
   }
 };
@@ -270,6 +275,7 @@ class FakeShellState : public contracts::ShellStateService {
   }
   void updateWindow(const shared::WindowPlacement& placement) override { state.window = placement; }
   void updateReleaseNotesVersion(const std::string& version) override { state.releaseNotesVersion = version; }
+  void updateDiskImagesRoot(const std::optional<std::string>& path) override { state.diskImagesRoot = path; }
   void flush() override {}
 };
 

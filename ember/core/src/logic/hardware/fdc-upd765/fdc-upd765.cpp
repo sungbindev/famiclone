@@ -86,6 +86,8 @@ class AbsentDrive final : public hw::FloppyDrive {
   [[nodiscard]] hw::FloppyDirtyRange dirtyRange() const override { return {}; }
   void markSaved() override {}
   void applyExternalChange(std::size_t, std::span<const std::uint8_t>) override {}
+  void writeFromHost(std::size_t, std::span<const std::uint8_t>) override {}
+  [[nodiscard]] std::uint64_t hostChangeCount() const override { return 0; }
   void setModifiedListener(std::function<void()>) override {}
   void setWriteProtected(bool) override {}
   hw::FloppyFaults& mutableFaults() override { return faults_; }

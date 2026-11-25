@@ -25,6 +25,7 @@ class FileShellStateService : public contracts::ShellStateService {
   void updateLayout(const shared::ShellLayout& layout) override;
   void updateWindow(const shared::WindowPlacement& placement) override;
   void updateReleaseNotesVersion(const std::string& version) override;
+  void updateDiskImagesRoot(const std::optional<std::string>& path) override;
   void flush() override { store_.flush(); }
 
  private:

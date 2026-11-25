@@ -32,6 +32,8 @@ void DialogHost::setKeyCapture(const std::string& dialogId, std::function<bool(c
 
 void DialogHost::setShortcutCapture(const std::string& dialogId, std::function<bool(int virtualKey, unsigned modifiers)> capture) { shortcutCaptures_[dialogId] = std::move(capture); }
 
+void DialogHost::setOpenHook(const std::string& dialogId, OpenHook hook) { openHooks_[dialogId] = std::move(hook); }
+
 void DialogHost::setTheme(rujian::ui::ThemeName theme) {
   theme_ = theme;
   for (auto& entry : open_) entry.second->setTheme(theme);
@@ -54,7 +56,9 @@ void DialogHost::openDialog(const std::string& dialogId) {
   // 铺满的正文自己负责滚动，滚动条要贴到对话框的右边
   frame->setContentFlushRight(true);
   if (logo_) frame->setLogo(logo_());
-  frame->setContent(body->second());
+  std::unique_ptr<rujian::ui::Widget> content = body->second();
+  rujian::ui::Widget* contentPointer = content.get();
+  frame->setContent(std::move(content));
 
   platform::DialogWindowOptions options;
   options.owner = owner_();
@@ -66,7 +70,8 @@ void DialogHost::openDialog(const std::string& dialogId) {
   options.fitMinimumWidth = definition->second.fitMinWidth;
   options.fitMinimumHeight = definition->second.fitMinHeight;
   options.maximizable = true;
-  options.minimizable = true;
+  options.minimizable = !definition->second.modeless;
+  options.modeless = definition->second.modeless;
   options.theme = theme_;
   options.customFrame = customFrame_;
   options.onCloseRequested = [this, dialogId] { closeDialog(dialogId); };
@@ -76,16 +81,23 @@ void DialogHost::openDialog(const std::string& dialogId) {
   platform::DialogWindow* raw = window.get();
   open_.emplace(dialogId, std::move(window));
   raw->show();
+  if (const auto hook = openHooks_.find(dialogId); hook != openHooks_.end()) attachments_[dialogId] = hook->second(*raw, *contentPointer);
 }
 
 void DialogHost::closeDialog(const std::string& dialogId) {
   // 请求来自窗口自己的消息处理，延后到处理完再销毁窗口
   const auto alive = alive_;
   post_([this, alive, dialogId] {
-    if (*alive) open_.erase(dialogId);
+    if (!*alive) return;
+    // 窗口句柄上挂靠的资源先于窗口销毁
+    attachments_.erase(dialogId);
+    open_.erase(dialogId);
   });
 }
 
-void DialogHost::closeAll() { open_.clear(); }
+void DialogHost::closeAll() {
+  attachments_.clear();
+  open_.clear();
+}
 
 }  // namespace ember::win32::bootstrap

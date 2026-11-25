@@ -23,6 +23,7 @@ add_library(ember_app STATIC
   src/bootstrap/update-apply.cpp
   src/bootstrap/user-data-move.cpp
   src/entry/cartridges/cartridge-handlers.cpp
+  src/entry/diskimages/diskimages-handlers.cpp
   src/entry/machines/machine-handlers.cpp
   src/entry/main-requests/dropped-path.cpp
   src/entry/main-requests/main-request-router.cpp
@@ -39,6 +40,7 @@ add_library(ember_app STATIC
   src/infra/directories/explorer-directory.cpp
   src/infra/directories/explorer-directory-opener.cpp
   src/infra/display/screen-host-adapter.cpp
+  src/infra/dragdrop/ole-disk-drag-host.cpp
   src/infra/dropped-files/memory-dropped-files-service.cpp
   src/infra/help/local-help-viewer.cpp
   src/infra/last-directories/file-last-directories-service.cpp
@@ -55,6 +57,9 @@ add_library(ember_app STATIC
   src/logic/debug/debug-controller.cpp
   src/logic/debug/debug-module.cpp
   src/logic/debug/debug-rules.cpp
+  src/logic/diskimages/diskimages-controller.cpp
+  src/logic/diskimages/diskimages-module.cpp
+  src/logic/diskimages/diskimages-rules.cpp
   src/logic/input/gamepad-settings-controller.cpp
   src/logic/input/input-controller.cpp
   src/logic/input/input-module.cpp
@@ -88,6 +93,7 @@ add_library(ember_app STATIC
   src/platform/dialogs/system-dialogs.cpp
   src/platform/display/screen-shaders.generated.cpp
   src/platform/display/screen-window.cpp
+  src/platform/dragdrop/file-drag.cpp
   src/platform/crypto/signature-verifier.cpp
   src/platform/files/directory-access.cpp
   src/platform/files/json-file-reader.cpp
@@ -132,6 +138,7 @@ add_library(ember_app STATIC
   src/shared/update/update-manifest.cpp
   src/shared/window/window-shadow-image.cpp
   src/ui/media/media-panel-content.cpp
+  src/ui/diskimages/diskimages-content.cpp
   src/ui/input/gamepad-settings-content.cpp
   src/ui/input/pad-layout.cpp
   src/ui/machines/machines-content.cpp

@@ -29,18 +29,6 @@ constexpr double kPositionWidth = 72;
 /** 状态列的宽度（逻辑像素）；能放下最长的“读写中（磁道 79）”（约 100）。 */
 constexpr double kStateWidth = 108;
 
-/** 行尾按钮组里占位用的空白：宽度始终等于参照控件，让软驱行的按钮组与磁带机行等宽，两行的状态列才左边对齐。 */
-class Spacer final : public rujian::ui::Widget {
- public:
-  void setReference(rujian::ui::Widget* reference) { reference_ = reference; }
-  [[nodiscard]] rujian::ui::Size measure(rujian::ui::Size available) override { return reference_ != nullptr ? reference_->measure(available) : rujian::ui::Size{}; }
-  [[nodiscard]] bool stretchesWidth() const override { return false; }
-  [[nodiscard]] bool stretchesHeight() const override { return false; }
-
- private:
-  rujian::ui::Widget* reference_{nullptr};
-};
-
 /** 行尾的只有图标的按钮：名称在悬停提示里。 */
 rujian::ui::Button* addIconButton(rujian::ui::Widget& parent, const char* label, rujian::ui::IconId icon, std::function<void()> onClick) {
   auto button = std::make_unique<rujian::ui::Button>(label);
@@ -55,7 +43,7 @@ rujian::ui::Button* addIconButton(rujian::ui::Widget& parent, const char* label,
 
 }  // namespace
 
-MediaPanelContent::MediaPanelContent(contracts::MediaModel& model) : model_(model) {
+MediaPanelContent::MediaPanelContent(contracts::MediaModel& model, std::function<void()> openDiskManager) : model_(model), openDiskManager_(std::move(openDiskManager)) {
   using rujian::ui::IconId;
   auto list = std::make_unique<rujian::ui::RowList>();
   const contracts::MediaView view = model_.view();
@@ -67,14 +55,16 @@ MediaPanelContent::MediaPanelContent(contracts::MediaModel& model) : model_(mode
     item->addCell({row.state, kStateWidth, true});
     auto actions = std::make_unique<rujian::ui::Actions>();
     FloppyWidgets widgets;
-    // 软驱比磁带机少一个按钮，前面补一个按钮宽的空白，使状态列与磁带机的状态列对齐
-    Spacer* spacer = static_cast<Spacer*>(actions->addChild(std::make_unique<Spacer>()));
+    // 软驱行和磁带机行都有四个按钮，状态列才左边对齐
+    widgets.manager = addIconButton(*actions, "磁盘镜像管理", IconId::Folder, [this] {
+      if (openDiskManager_) openDiskManager_();
+    });
+    widgets.manager->setEnabled(static_cast<bool>(openDiskManager_));
     widgets.writeProtect = addIconButton(*actions, "写保护", IconId::LockOpen, [this, drive] {
       for (const auto& floppy : model_.view().floppies) {
         if (floppy.drive == drive) model_.setWriteProtected(drive, !floppy.writeProtected);
       }
     });
-    spacer->setReference(widgets.writeProtect);
     widgets.insert = addIconButton(*actions, "载入镜像", IconId::FolderOpen, [this, drive] { model_.insertFloppy(drive); });
     widgets.eject = addIconButton(*actions, "取出", IconId::PlayerEject, [this, drive] { model_.ejectFloppy(drive); });
     item->setActions(std::move(actions));

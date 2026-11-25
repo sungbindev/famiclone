@@ -35,6 +35,12 @@ void FileShellStateService::updateReleaseNotesVersion(const std::string& version
   replace(std::move(next));
 }
 
+void FileShellStateService::updateDiskImagesRoot(const std::optional<std::string>& path) {
+  shared::ShellState next = state_;
+  next.diskImagesRoot = path;
+  replace(std::move(next));
+}
+
 void FileShellStateService::replace(shared::ShellState next) {
   state_ = std::move(next);
   store_.write(shared::toJson(state_));

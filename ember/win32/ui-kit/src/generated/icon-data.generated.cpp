@@ -45,6 +45,12 @@ constexpr IconPath AppWindowPaths[] = {
     {"M9 8h.01", "", "", 1},
 };
 
+constexpr IconPath ApplePaths[] = {
+    {"M4 11.319c0 3.102 .444 5.319 2.222 7.978c1.351 1.797 3.156 2.247 5.08 .988c.426 -.268 .97 -.268 1.397 0c1.923 1.26 3.728 .809 5.079 -.988c1.778 -2.66 2.222 -4.876 2.222 -7.977c0 -2.661 -1.99 -5.32 -4.444 -5.32c-1.267 0 -2.41 .693 -3.22 1.44a.5 .5 0 0 1 -.672 0c-.809 -.746 -1.953 -1.44 -3.22 -1.44c-2.454 0 -4.444 2.66 -4.444 5.319", "", "", 1},
+    {"M7 12c0 -1.47 .454 -2.34 1.5 -3", "", "", 1},
+    {"M12 7c0 -1.2 .867 -4 3 -4", "", "", 1},
+};
+
 constexpr IconPath ArrowBackUpPaths[] = {
     {"M9 14l-4 -4l4 -4", "", "", 1},
     {"M5 10h11a4 4 0 1 1 0 8h-1", "", "", 1},
@@ -88,6 +94,13 @@ constexpr IconPath BellPaths[] = {
     {"M9 17v1a3 3 0 0 0 6 0v-1", "", "", 1},
 };
 
+constexpr IconPath BinaryPaths[] = {
+    {"M11 10v-5h-1m8 14v-5h-1", "", "", 1},
+    {"M15 5.5a.5 .5 0 0 1 .5 -.5h2a.5 .5 0 0 1 .5 .5v4a.5 .5 0 0 1 -.5 .5h-2a.5 .5 0 0 1 -.5 -.5l0 -4", "", "", 1},
+    {"M10 14.5a.5 .5 0 0 1 .5 -.5h2a.5 .5 0 0 1 .5 .5v4a.5 .5 0 0 1 -.5 .5h-2a.5 .5 0 0 1 -.5 -.5l0 -4", "", "", 1},
+    {"M6 10h.01m-.01 9h.01", "", "", 1},
+};
+
 constexpr IconPath CategoryPaths[] = {
     {"M4 4h6v6h-6l0 -6", "", "", 1},
     {"M14 4h6v6h-6l0 -6", "", "", 1},
@@ -121,9 +134,26 @@ constexpr IconPath CircleXPaths[] = {
     {"M10 10l4 4m0 -4l-4 4", "", "", 1},
 };
 
+constexpr IconPath ClipboardPaths[] = {
+    {"M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2", "", "", 1},
+    {"M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2", "", "", 1},
+};
+
 constexpr IconPath ClockPaths[] = {
     {"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "", "", 1},
     {"M12 7v5l3 3", "", "", 1},
+};
+
+constexpr IconPath CopyPaths[] = {
+    {"M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667l0 -8.666", "", "", 1},
+    {"M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1", "", "", 1},
+};
+
+constexpr IconPath CutPaths[] = {
+    {"M4 17a3 3 0 1 0 6 0a3 3 0 1 0 -6 0", "", "", 1},
+    {"M14 17a3 3 0 1 0 6 0a3 3 0 1 0 -6 0", "", "", 1},
+    {"M9.15 14.85l8.85 -10.85", "", "", 1},
+    {"M6 4l8.85 10.85", "", "", 1},
 };
 
 constexpr IconPath DeviceAudioTapePaths[] = {
@@ -155,9 +185,36 @@ constexpr IconPath EyeOffPaths[] = {
     {"M3 3l18 18", "", "", 1},
 };
 
+constexpr IconPath FilePaths[] = {
+    {"M14 3v4a1 1 0 0 0 1 1h4", "", "", 1},
+    {"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2", "", "", 1},
+};
+
+constexpr IconPath FileCodePaths[] = {
+    {"M14 3v4a1 1 0 0 0 1 1h4", "", "", 1},
+    {"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2", "", "", 1},
+    {"M10 13l-1 2l1 2", "", "", 1},
+    {"M14 13l1 2l-1 2", "", "", 1},
+};
+
 constexpr IconPath FileExportPaths[] = {
     {"M14 3v4a1 1 0 0 0 1 1h4", "", "", 1},
     {"M11.5 21h-4.5a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v5m-5 6h7m-3 -3l3 3l-3 3", "", "", 1},
+};
+
+constexpr IconPath FileTextPaths[] = {
+    {"M14 3v4a1 1 0 0 0 1 1h4", "", "", 1},
+    {"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2", "", "", 1},
+    {"M9 9l1 0", "", "", 1},
+    {"M9 13l6 0", "", "", 1},
+    {"M9 17l6 0", "", "", 1},
+};
+
+constexpr IconPath FileUnknownPaths[] = {
+    {"M14 3v4a1 1 0 0 0 1 1h4", "", "", 1},
+    {"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2", "", "", 1},
+    {"M12 17v.01", "", "", 1},
+    {"M12 14a1.5 1.5 0 1 0 -1.14 -2.474", "", "", 1},
 };
 
 constexpr IconPath FileUploadPaths[] = {
@@ -167,12 +224,33 @@ constexpr IconPath FileUploadPaths[] = {
     {"M9.5 13.5l2.5 -2.5l2.5 2.5", "", "", 1},
 };
 
+constexpr IconPath FileZipPaths[] = {
+    {"M6 20.735a2 2 0 0 1 -1 -1.735v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2h-1", "", "", 1},
+    {"M11 17a2 2 0 0 1 2 2v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1v-2a2 2 0 0 1 2 -2", "", "", 1},
+    {"M11 5l-1 0", "", "", 1},
+    {"M13 7l-1 0", "", "", 1},
+    {"M11 9l-1 0", "", "", 1},
+    {"M13 11l-1 0", "", "", 1},
+    {"M11 13l-1 0", "", "", 1},
+    {"M13 15l-1 0", "", "", 1},
+};
+
 constexpr IconPath FilterPaths[] = {
     {"M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227", "", "", 1},
 };
 
+constexpr IconPath FolderPaths[] = {
+    {"M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2", "", "", 1},
+};
+
 constexpr IconPath FolderOpenPaths[] = {
     {"M5 19l2.757 -7.351a1 1 0 0 1 .936 -.649h12.307a1 1 0 0 1 .986 1.164l-.996 5.211a2 2 0 0 1 -1.964 1.625h-14.026a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2h4l3 3h7a2 2 0 0 1 2 2v2", "", "", 1},
+};
+
+constexpr IconPath FolderPlusPaths[] = {
+    {"M12 19h-7a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2h4l3 3h7a2 2 0 0 1 2 2v3.5", "", "", 1},
+    {"M16 19h6", "", "", 1},
+    {"M19 16v6", "", "", 1},
 };
 
 constexpr IconPath HandClickPaths[] = {
@@ -224,6 +302,13 @@ constexpr IconPath PausePaths[] = {
 constexpr IconPath PencilPaths[] = {
     {"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4", "", "", 1},
     {"M13.5 6.5l4 4", "", "", 1},
+};
+
+constexpr IconPath PhotoPaths[] = {
+    {"M15 8h.01", "", "", 1},
+    {"M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12", "", "", 1},
+    {"M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5", "", "", 1},
+    {"M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3", "", "", 1},
 };
 
 constexpr IconPath PlayOnePaths[] = {
@@ -374,6 +459,7 @@ constexpr IconData kIcons[] = {
     {AlertCirclePaths, sizeof(AlertCirclePaths) / sizeof(IconPath)},
     {AlertTrianglePaths, sizeof(AlertTrianglePaths) / sizeof(IconPath)},
     {AppWindowPaths, sizeof(AppWindowPaths) / sizeof(IconPath)},
+    {ApplePaths, sizeof(ApplePaths) / sizeof(IconPath)},
     {ArrowBackUpPaths, sizeof(ArrowBackUpPaths) / sizeof(IconPath)},
     {ArrowDownPaths, sizeof(ArrowDownPaths) / sizeof(IconPath)},
     {ArrowLeftPaths, sizeof(ArrowLeftPaths) / sizeof(IconPath)},
@@ -381,6 +467,7 @@ constexpr IconData kIcons[] = {
     {ArrowUpPaths, sizeof(ArrowUpPaths) / sizeof(IconPath)},
     {ArrowsDiffPaths, sizeof(ArrowsDiffPaths) / sizeof(IconPath)},
     {BellPaths, sizeof(BellPaths) / sizeof(IconPath)},
+    {BinaryPaths, sizeof(BinaryPaths) / sizeof(IconPath)},
     {CategoryPaths, sizeof(CategoryPaths) / sizeof(IconPath)},
     {CheckPaths, sizeof(CheckPaths) / sizeof(IconPath)},
     {ChevronDownPaths, sizeof(ChevronDownPaths) / sizeof(IconPath)},
@@ -388,16 +475,26 @@ constexpr IconData kIcons[] = {
     {ChevronUpPaths, sizeof(ChevronUpPaths) / sizeof(IconPath)},
     {CircleCheckPaths, sizeof(CircleCheckPaths) / sizeof(IconPath)},
     {CircleXPaths, sizeof(CircleXPaths) / sizeof(IconPath)},
+    {ClipboardPaths, sizeof(ClipboardPaths) / sizeof(IconPath)},
     {ClockPaths, sizeof(ClockPaths) / sizeof(IconPath)},
+    {CopyPaths, sizeof(CopyPaths) / sizeof(IconPath)},
+    {CutPaths, sizeof(CutPaths) / sizeof(IconPath)},
     {DeviceAudioTapePaths, sizeof(DeviceAudioTapePaths) / sizeof(IconPath)},
     {DeviceFloppyPaths, sizeof(DeviceFloppyPaths) / sizeof(IconPath)},
     {EraserPaths, sizeof(EraserPaths) / sizeof(IconPath)},
     {EyePaths, sizeof(EyePaths) / sizeof(IconPath)},
     {EyeOffPaths, sizeof(EyeOffPaths) / sizeof(IconPath)},
+    {FilePaths, sizeof(FilePaths) / sizeof(IconPath)},
+    {FileCodePaths, sizeof(FileCodePaths) / sizeof(IconPath)},
     {FileExportPaths, sizeof(FileExportPaths) / sizeof(IconPath)},
+    {FileTextPaths, sizeof(FileTextPaths) / sizeof(IconPath)},
+    {FileUnknownPaths, sizeof(FileUnknownPaths) / sizeof(IconPath)},
     {FileUploadPaths, sizeof(FileUploadPaths) / sizeof(IconPath)},
+    {FileZipPaths, sizeof(FileZipPaths) / sizeof(IconPath)},
     {FilterPaths, sizeof(FilterPaths) / sizeof(IconPath)},
+    {FolderPaths, sizeof(FolderPaths) / sizeof(IconPath)},
     {FolderOpenPaths, sizeof(FolderOpenPaths) / sizeof(IconPath)},
+    {FolderPlusPaths, sizeof(FolderPlusPaths) / sizeof(IconPath)},
     {HandClickPaths, sizeof(HandClickPaths) / sizeof(IconPath)},
     {HardDiskOnePaths, sizeof(HardDiskOnePaths) / sizeof(IconPath)},
     {InfoCirclePaths, sizeof(InfoCirclePaths) / sizeof(IconPath)},
@@ -406,6 +503,7 @@ constexpr IconData kIcons[] = {
     {LockOpenPaths, sizeof(LockOpenPaths) / sizeof(IconPath)},
     {PausePaths, sizeof(PausePaths) / sizeof(IconPath)},
     {PencilPaths, sizeof(PencilPaths) / sizeof(IconPath)},
+    {PhotoPaths, sizeof(PhotoPaths) / sizeof(IconPath)},
     {PlayOnePaths, sizeof(PlayOnePaths) / sizeof(IconPath)},
     {PlayerEjectPaths, sizeof(PlayerEjectPaths) / sizeof(IconPath)},
     {PlayerPausePaths, sizeof(PlayerPausePaths) / sizeof(IconPath)},

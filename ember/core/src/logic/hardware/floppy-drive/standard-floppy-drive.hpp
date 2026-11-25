@@ -54,6 +54,8 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   [[nodiscard]] contracts::hardware::FloppyDirtyRange dirtyRange() const override { return dirty_; }
   void markSaved() override { dirty_ = {}; }
   void applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) override;
+  void writeFromHost(std::size_t offset, std::span<const std::uint8_t> bytes) override;
+  [[nodiscard]] std::uint64_t hostChangeCount() const override { return hostChanges_; }
   void setModifiedListener(std::function<void()> listener) override { onModified_ = std::move(listener); }
   void setWriteProtected(bool protect) override { writeProtected_ = protect; }
   contracts::hardware::FloppyFaults& mutableFaults() override { return faults_; }
@@ -87,6 +89,8 @@ class StandardFloppyDrive final : public contracts::hardware::FloppyDrive {
   bool motor_{false};
   bool writeProtected_{false};
   bool changed_{false};
+  /** 主机一侧改动镜像的次数。 */
+  std::uint64_t hostChanges_{0};
   /** 尚未写回文件的字节区间。 */
   contracts::hardware::FloppyDirtyRange dirty_;
   std::function<void()> onModified_;

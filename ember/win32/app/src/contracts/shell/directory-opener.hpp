@@ -26,6 +26,13 @@ class DirectoryOpener {
    * @returns 成功时为空文字，失败时是错误说明。
    */
   [[nodiscard]] virtual std::string open(const std::string& path) = 0;
+
+  /**
+   * 在文件管理器里显示一个文件（打开它所在的目录并选中它）。
+   * @param path UTF-8 的文件完整路径。
+   * @returns 成功时为空文字，失败时是错误说明。
+   */
+  [[nodiscard]] virtual std::string reveal(const std::string& path) = 0;
 };
 
 }  // namespace ember::win32::contracts

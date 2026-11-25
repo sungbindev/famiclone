@@ -64,6 +64,12 @@ class DialogHost final : public contracts::ShellDialogOpener {
   /** 设置一个对话框的快捷键拦截（见 DialogWindowOptions::onShortcutKey）：对话框打开期间按下的键都先经过这里。 */
   void setShortcutCapture(const std::string& dialogId, std::function<bool(int virtualKey, unsigned modifiers)> capture);
 
+  /**
+   * 打开钩子：对话框窗口创建并显示之后调用，参数是窗口与正文；返回的对象跟着对话框保存，关闭时先于窗口销毁（用来给窗口挂靠窗口句柄的资源，如拖放目标）。
+   */
+  using OpenHook = std::function<std::shared_ptr<void>(platform::DialogWindow& window, rujian::ui::Widget& body)>;
+  void setOpenHook(const std::string& dialogId, OpenHook hook);
+
   /** 现在打开着的对话框个数。 */
   [[nodiscard]] std::size_t openCount() const { return open_.size(); }
 
@@ -87,6 +93,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
   std::set<std::string> fillingBodies_;
   std::map<std::string, std::function<bool(const std::string&)>> keyCaptures_;
   std::map<std::string, std::function<bool(int, unsigned)>> shortcutCaptures_;
+  std::map<std::string, OpenHook> openHooks_;
+  /** 打开钩子返回的对象，跟着对话框保存。 */
+  std::map<std::string, std::shared_ptr<void>> attachments_;
   std::map<std::string, std::unique_ptr<platform::DialogWindow>> open_;
   std::shared_ptr<bool> alive_{std::make_shared<bool>(true)};
 };

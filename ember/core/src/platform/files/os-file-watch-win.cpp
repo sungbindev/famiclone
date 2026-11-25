@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：os-file-watch-win.cpp
- * 说明：文件监视的 Windows 实现：在文件所在的目录上用 ReadDirectoryChangesW（重叠 I/O）等变化通知，名字与被监视的文件相同的条目才回调。
+ * 说明：文件监视的 Windows 实现：在文件所在的目录上用 ReadDirectoryChangesW（重叠 I/O）等变化通知，名字与被监视的文件相同的条目才回调；监视整个目录时连同子目录里的任何变化都回调。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
@@ -54,13 +54,17 @@ class Handle {
   HANDLE handle_ = nullptr;
 };
 
-/** 监视一个文件所在的目录。 */
+/** 监视一个文件所在的目录，或整个目录（含子目录）。 */
 class WindowsFileWatcher final : public FileWatcher {
  public:
-  /** 打开目录并启动监视线程；失败时 ok() 为 false。 */
-  WindowsFileWatcher(const std::filesystem::path& file, std::function<void()> onChanged)
-      : name_(file.filename().wstring()), onChanged_(std::move(onChanged)) {
-    std::filesystem::path directory = file.parent_path();
+  /**
+   * 打开目录并启动监视线程；失败时 ok() 为 false。
+   * @param target 要监视的文件；wholeDirectory 为真时是要监视的目录。
+   * @param wholeDirectory 为真时监视目录里（含子目录）任何文件与目录的变化，不看名字。
+   */
+  WindowsFileWatcher(const std::filesystem::path& target, bool wholeDirectory, std::function<void()> onChanged)
+      : name_(wholeDirectory ? std::wstring() : target.filename().wstring()), subtree_(wholeDirectory), onChanged_(std::move(onChanged)) {
+    std::filesystem::path directory = wholeDirectory ? target : target.parent_path();
     if (directory.empty()) directory = ".";
     directory_.set(CreateFileW(directory.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
                                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr));
@@ -87,8 +91,8 @@ class WindowsFileWatcher final : public FileWatcher {
     overlapped_ = {};
     overlapped_.hEvent = changeEvent_.get();
     ResetEvent(changeEvent_.get());
-    const DWORD filter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE;
-    return ReadDirectoryChangesW(directory_.get(), buffer_.data(), BUFFER_SIZE, FALSE, filter, nullptr, &overlapped_, nullptr) != FALSE;
+    const DWORD filter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE | (subtree_ ? FILE_NOTIFY_CHANGE_DIR_NAME : 0);
+    return ReadDirectoryChangesW(directory_.get(), buffer_.data(), BUFFER_SIZE, subtree_ ? TRUE : FALSE, filter, nullptr, &overlapped_, nullptr) != FALSE;
   }
 
   /** 等通知，直到被要求停止。 */
@@ -112,8 +116,9 @@ class WindowsFileWatcher final : public FileWatcher {
     }
   }
 
-  /** 这一批通知里有没有被监视的文件。 */
+  /** 这一批通知里有没有被监视的文件；监视整个目录时任何通知都算。 */
   [[nodiscard]] bool touchesFile(const char* buffer) const {
+    if (subtree_) return true;
     const char* cursor = buffer;
     while (true) {
       const auto* entry = reinterpret_cast<const FILE_NOTIFY_INFORMATION*>(cursor);
@@ -125,6 +130,7 @@ class WindowsFileWatcher final : public FileWatcher {
   }
 
   std::wstring name_;
+  bool subtree_;
   std::function<void()> onChanged_;
   Handle directory_;
   Handle changeEvent_;
@@ -140,7 +146,13 @@ class WindowsFileWatcher final : public FileWatcher {
 class WindowsFileWatchFactory final : public FileWatchFactory {
  public:
   [[nodiscard]] std::unique_ptr<FileWatcher> watch(const std::string& path, std::function<void()> onChanged) override {
-    auto watcher = std::make_unique<WindowsFileWatcher>(std::filesystem::path(std::u8string(path.begin(), path.end())), std::move(onChanged));
+    auto watcher = std::make_unique<WindowsFileWatcher>(std::filesystem::path(std::u8string(path.begin(), path.end())), false, std::move(onChanged));
+    if (!watcher->ok()) return nullptr;
+    return watcher;
+  }
+
+  [[nodiscard]] std::unique_ptr<FileWatcher> watchDirectory(const std::string& path, std::function<void()> onChanged) override {
+    auto watcher = std::make_unique<WindowsFileWatcher>(std::filesystem::path(std::u8string(path.begin(), path.end())), true, std::move(onChanged));
     if (!watcher->ok()) return nullptr;
     return watcher;
   }

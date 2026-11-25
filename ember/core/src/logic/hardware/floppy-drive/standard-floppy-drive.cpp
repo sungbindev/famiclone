@@ -63,6 +63,23 @@ void StandardFloppyDrive::writeByte(std::size_t offset, std::uint8_t value) {
 void StandardFloppyDrive::applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) {
   if ((!inserted_ && !suspended_) || offset > image_.size() || bytes.size() > image_.size() - offset) return;
   std::copy(bytes.begin(), bytes.end(), image_.begin() + static_cast<std::ptrdiff_t>(offset));
+  ++hostChanges_;
+}
+
+void StandardFloppyDrive::writeFromHost(std::size_t offset, std::span<const std::uint8_t> bytes) {
+  if (!inserted_ || bytes.empty() || offset > image_.size() || bytes.size() > image_.size() - offset) return;
+  std::copy(bytes.begin(), bytes.end(), image_.begin() + static_cast<std::ptrdiff_t>(offset));
+  ++hostChanges_;
+  changed_ = true;
+  const std::size_t end = offset + bytes.size();
+  const bool wasClean = dirty_.empty();
+  if (wasClean) {
+    dirty_ = {offset, end};
+  } else {
+    dirty_.begin = std::min(dirty_.begin, offset);
+    dirty_.end = std::max(dirty_.end, end);
+  }
+  if (wasClean && onModified_) onModified_();
 }
 
 void StandardFloppyDrive::insertImage(std::vector<std::uint8_t> image, bool writeProtected, std::string source) {

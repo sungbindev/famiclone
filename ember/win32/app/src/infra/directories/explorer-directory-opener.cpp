@@ -18,4 +18,6 @@ namespace ember::win32::infra {
 
 std::string ExplorerDirectoryOpener::open(const std::string& path) { return platform::openDirectoryInFileManager(platform::pathFromUtf8(path)); }
 
+std::string ExplorerDirectoryOpener::reveal(const std::string& path) { return platform::revealFileInFileManager(platform::pathFromUtf8(path)); }
+
 }  // namespace ember::win32::infra

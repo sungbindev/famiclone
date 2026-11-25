@@ -37,9 +37,11 @@ add_library(rujian_ui STATIC
   src/components/feedback/state.cpp
   src/components/feedback/status-label.cpp
   src/components/field/field.cpp
+  src/components/file-table/file-table.cpp
   src/components/label/label.cpp
   src/components/layout/flex-box.cpp
   src/components/list/list.cpp
+  src/components/menu/context-menu.cpp
   src/components/menu/menu-bar.cpp
   src/components/menu/menu-popup.cpp
   src/components/notification/notification.cpp
@@ -58,6 +60,7 @@ add_library(rujian_ui STATIC
   src/components/tabs/tabs.cpp
   src/components/timeline/timeline-popup.cpp
   src/components/title-bar/title-bar.cpp
+  src/components/tooltip/hint-bubble.cpp
   src/components/tooltip/tooltip.cpp
   src/components/toolbar/toolbar.cpp
   src/components/tree/tree.cpp

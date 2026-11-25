@@ -148,7 +148,11 @@ void Disk2::refreshMedia() {
   if (drive_ == nullptr) return;
   const std::vector<std::uint8_t>& image = drive_->image();
   const bool inserted = drive_->inserted();
-  if (image.data() == imageData_ && image.size() == imageSize_ && inserted == imageInserted_) return;
+  const std::uint64_t hostChanges = drive_->hostChangeCount();
+  const bool sameMedia = image.data() == imageData_ && image.size() == imageSize_ && inserted == imageInserted_;
+  // 主机一侧改了镜像：学习机正在写盘时先不处理（丢掉缓存会丢掉写到一半的磁道），写完后的下一次访问再处理
+  if (sameMedia && (hostChanges == hostChanges_ || q7_)) return;
+  hostChanges_ = hostChanges;
   imageData_ = image.data();
   imageSize_ = image.size();
   imageInserted_ = inserted;

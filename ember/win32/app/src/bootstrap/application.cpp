@@ -30,6 +30,7 @@
 #include "bootstrap/update-apply.hpp"
 #include "bootstrap/user-data-move.hpp"
 #include "entry/cartridges/cartridge-handlers.hpp"
+#include "entry/diskimages/diskimages-handlers.hpp"
 #include "entry/machines/machine-handlers.hpp"
 #include "entry/main-requests/main-request-router.hpp"
 #include "entry/mappers/mapper-handlers.hpp"
@@ -45,6 +46,7 @@
 #include "infra/directories/explorer-directory.hpp"
 #include "infra/directories/explorer-directory-opener.hpp"
 #include "infra/display/screen-host-adapter.hpp"
+#include "infra/dragdrop/ole-disk-drag-host.hpp"
 #include "infra/dropped-files/memory-dropped-files-service.hpp"
 #include "infra/help/archive-help-site.hpp"
 #include "infra/help/local-help-viewer.hpp"
@@ -63,6 +65,8 @@
 #include "infra/user-data/user-data-location-adapter.hpp"
 #include "logic/debug/debug-controller.hpp"
 #include "logic/debug/debug-module.hpp"
+#include "logic/diskimages/diskimages-controller.hpp"
+#include "logic/diskimages/diskimages-module.hpp"
 #include "logic/input/input-controller.hpp"
 #include "logic/media/media-controller.hpp"
 #include "logic/media/media-module.hpp"
@@ -86,6 +90,7 @@
 #include "logic/system/update-controller.hpp"
 #include "platform/dialogs/message-box.hpp"
 #include "platform/dialogs/system-dialogs.hpp"
+#include "platform/dragdrop/file-drag.hpp"
 #include "platform/files/directory-access.hpp"
 #include "platform/files/json-file-reader.hpp"
 #include "platform/files/json-file-store.hpp"
@@ -112,6 +117,7 @@
 #include "shared/update/update-policy.hpp"
 #include "shared/update/update-public-key.hpp"
 #include "ui/media/media-panel-content.hpp"
+#include "ui/diskimages/diskimages-content.hpp"
 #include "ui/input/gamepad-settings-content.hpp"
 #include "ui/machines/machines-content.hpp"
 #include "ui/mappers/mappers-content.hpp"
@@ -376,6 +382,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   router.add(entry::createMachineHandlers({core, fileDialog, romDirectory}));
   router.add(entry::createMapperHandlers({core, fileDialog}));
   router.add(entry::createMediaHandlers({core, fileDialog, droppedFiles, directoryOpener}));
+  router.add(entry::createDiskimagesHandlers({core, fileDialog, droppedFiles, directoryOpener, shellState}));
   router.add(entry::createPreferenceHandlers({fileDialog}));
   router.add(entry::createSystemHandlers({logDirectory, help, updater}));
 
@@ -384,6 +391,8 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::InputController input(core);
     logic::RuntimeController runtime(router, core, shellState);
     logic::MediaController media(router, core);
+    logic::DiskImagesController diskImages(router, core, droppedFiles);
+    infra::OleDiskDragHost diskDragHost;
     logic::PreferencesController preferencesController(router, core);
     logic::RomController romController(router, core);
     logic::UserDataController userDataController(userDataLocation, userDataDirectory, confirmation);
@@ -399,10 +408,25 @@ int runApplication(const shared::LaunchArguments& launch) {
     const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
     const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
-    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
+    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDiskImagesModule(diskImages), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
     dialogs.setBody(logic::kMachinesDialogId, [&romController] { return std::make_unique<ui::MachinesContent>(romController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
+    dialogs.setBody(logic::kDiskImagesDialogId, [&diskImages, &diskDragHost] { return std::make_unique<ui::DiskImagesContent>(diskImages, diskDragHost); }, true);
+    // 磁盘镜像管理窗口：打开后焦点放到文件列表上，并把窗口登记成拖放目标（从 Windows 拖入文件、窗口内拖动条目到文件夹上）
+    dialogs.setOpenHook(logic::kDiskImagesDialogId, [](platform::DialogWindow& window, rujian::ui::Widget& body) -> std::shared_ptr<void> {
+      auto* content = static_cast<ui::DiskImagesContent*>(&body);
+      content->focusList();
+      platform::DropCallbacks callbacks;
+      callbacks.over = [&window, content](platform::DropKind kind, int x, int y) { return content->dragOver(kind == platform::DropKind::Internal, window.clientPointFromScreen(x, y)); };
+      callbacks.drop = [&window, content](platform::DropKind kind, int x, int y, const std::vector<std::string>& paths, std::uint64_t) {
+        const rujian::ui::Point point = window.clientPointFromScreen(x, y);
+        if (kind == platform::DropKind::Internal) content->dropInternal(point);
+        else content->dropFiles(point, paths);
+      };
+      callbacks.leave = [content] { content->dragLeave(); };
+      return std::make_shared<platform::FileDropTarget>(window.handle(), std::move(callbacks));
+    });
     dialogs.setBody(logic::kMappersDialogId, [&mappersController] { return std::make_unique<ui::MappersContent>(mappersController); }, true);
     dialogs.setBody(
         logic::kAboutDialogId, [&aboutController] { return std::make_unique<ui::AboutContent>(aboutController, std::make_unique<ui::AppLogo>(platform::renderAppIcon)); }, true);
@@ -552,7 +576,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     screenWidget = screen.get();
     shellView->setScreen(std::move(screen));
     shellView->setPanelContent(logic::kRuntimePanelId, [&runtime] { return std::make_unique<ui::RuntimePanelContent>(runtime); });
-    shellView->setPanelContent(logic::kMediaPanelId, [&media] { return std::make_unique<ui::MediaPanelContent>(media); });
+    shellView->setPanelContent(logic::kMediaPanelId, [&media, &dialogs] { return std::make_unique<ui::MediaPanelContent>(media, [&dialogs] { dialogs.openDialog(logic::kDiskImagesDialogId); }); });
     shellView->setFocusScreen([screenWidget] { screenWidget->focusScreen(); });
     // 弹层（菜单、通知、提示）盖到画面上时把画面子窗口对应的区域挖掉
     window.root().setLayerRectsHandler([&](const std::vector<rujian::ui::Rect>& rects) {

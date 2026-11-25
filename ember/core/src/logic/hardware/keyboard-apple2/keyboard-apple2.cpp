@@ -40,6 +40,29 @@ int letterIndex(std::string_view code) {
   return -1;
 }
 
+/** 功能键：键码固定，不随 Shift 与 Ctrl 变化。 */
+struct FunctionKey {
+  std::string_view code;
+  std::uint8_t value;
+};
+
+constexpr std::array<FunctionKey, 9> FUNCTION_KEYS{{
+    {"F1", 0x01},  // 字母输入方式
+    {"F2", 0x0C},  // 拼音输入方式
+    {"F3", 0x17},  // 区位输入方式
+    {"F4", 0x14},  // 用户扩充输入方式
+    {"F5", 0x06},  // 用户扩充输入方式
+    {"F6", 0x1F},  // 中文
+    {"F7", 0x11},  // 西文
+    {"F8", 0x16},  // 自检（TEST）
+    {"Pause", 0x03},  // 退出（QUIT）
+}};
+
+const FunctionKey* findFunction(std::string_view code) {
+  const auto found = std::find_if(FUNCTION_KEYS.begin(), FUNCTION_KEYS.end(), [code](const FunctionKey& entry) { return entry.code == code; });
+  return found == FUNCTION_KEYS.end() ? nullptr : &*found;
+}
+
 const KeyEntry* findSymbol(std::string_view code) {
   const auto found = std::find_if(SYMBOL_KEYS.begin(), SYMBOL_KEYS.end(), [code](const KeyEntry& entry) { return entry.code == code; });
   return found == SYMBOL_KEYS.end() ? nullptr : &*found;
@@ -49,6 +72,7 @@ const KeyEntry* findSymbol(std::string_view code) {
 
 int KeyboardApple2::asciiFor(std::string_view code) const {
   const bool control = controlLeft_ || controlRight_;
+  if (const FunctionKey* function = findFunction(code)) return function->value;
   const int letter = letterIndex(code);
   if (letter >= 0) {
     if (control) return letter + 1;
@@ -58,8 +82,12 @@ int KeyboardApple2::asciiFor(std::string_view code) const {
   const KeyEntry* entry = findSymbol(code);
   if (entry == nullptr) return -1;
   int value = shiftDown() ? entry->shifted : entry->plain;
-  // Ctrl 与 @ 到 _ 之间的字符组合产生控制码。
-  if (control && value >= 0x40 && value <= 0x5F) value &= 0x1F;
+  if (control) {
+    // 数字 6 与 Ctrl 产生 $1E；括号、反斜线与（Shift 的）减号产生 $1B-$1D、$1F；
+    // 其余数字与符号不变。
+    if (code == "Digit6") return 0x1E;
+    if (value == '[' || value == '\\' || value == ']' || value == '_') value &= 0x1F;
+  }
   return value;
 }
 

@@ -10,7 +10,7 @@
  *       每帧 262 行（约 60 Hz）；
  *       CPU 总线：整个 $0000-$FFFF 由主板译码（存储、ROM、软开关与 I/O，见 cec1-board.hpp）；
  *       没有 PPU、APU、中断源与卡带：整机机型没有卡带，Machine 契约要求的卡槽是一个空的、
- *       不挂载的卡槽；
+ *       不挂载的卡槽；槽 1 的打印机接口卡接 ESC/P 打印机（没有打印机输出时不接）；
  *       磁带机与软驱 A 是独立于主机的设备，由外面创建并在多台主机之间共用，
  *       软驱接口的盘片是 143360 或 163840 字节的 .dsk 镜像；
  *       具体实现只在这里创建并连线，模块之间不互相引用。
@@ -40,6 +40,7 @@
 #include "logic/hardware/keyboard-apple2/keyboard-apple2.hpp"
 #include "logic/hardware/lines/line-output.hpp"
 #include "logic/hardware/lines/wired-or-line.hpp"
+#include "logic/hardware/printer-escp/printer-escp.hpp"
 #include "logic/hardware/scheduler/master-scheduler.hpp"
 #include "logic/hardware/speaker-1bit/speaker-1bit.hpp"
 #include "logic/hardware/tape-deck/tape-deck.hpp"
@@ -60,19 +61,23 @@ class Cec1Machine final : public contracts::hardware::Machine, private contracts
   static constexpr double DISK_BIT_TICKS = 4.0 * CPU_TICKS_PER_CYCLE;
   /** 马达关指令之后到真正停转的时间：1 秒（主时钟周期数）。 */
   static constexpr contracts::hardware::MasterTime DISK_MOTOR_OFF_TICKS = 14'318'180;
+  /** 打印机一直没有新数据时，把当前页送出去的等待时间：6 秒（主时钟周期数）。 */
+  static constexpr contracts::hardware::MasterTime PRINTER_TIMEOUT_TICKS = 6 * 14'318'180;
 
   /**
    * @param rom ROM 的内容，大小必须是 64K：U7 在前、U35 在后（不含文件头），
-   * 或再接 256K 的汉字字库。
+   * 或再接 256K 的汉字字库（128K 的 U33 在前、128K 的 U34 在后）。
    * @param tapeDeck 磁带机：独立于主机的设备，由外面创建并在多台主机之间共用，主机通电时接上它；
    * 为空时主机自己带一台（测试用）。
    * @param floppyActivity 软驱马达开关变化时通知它，必须活到主机销毁；为空时不通知。
    * @param floppyDrive 软驱 A：独立于主机的设备，由外面创建并在多台主机之间共用，主机创建时接入、
    * 销毁时解除，盘片留在里面；为空时主机自己带一个（测试用）。
+   * @param printerOutput 槽 1 打印机接口卡接的打印机，打印出的页交给它，必须活到主机销毁；
+   * 为空时不接打印机。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
   explicit Cec1Machine(std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck = nullptr, contracts::hardware::FloppyActivity* floppyActivity = nullptr,
-                       std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr);
+                       std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive = nullptr, contracts::hardware::PrinterOutput* printerOutput = nullptr);
   ~Cec1Machine() override;
 
   Cec1Machine(const Cec1Machine&) = delete;
@@ -101,6 +106,7 @@ class Cec1Machine final : public contracts::hardware::Machine, private contracts
   [[nodiscard]] unsigned floppyDriveCount() const override { return 1; }
   contracts::hardware::FloppyDrive* floppyDrive(unsigned index) override { return index == 0 ? floppy_.get() : nullptr; }
   contracts::hardware::TapeControl* tape() override { return tapeDeck_.get(); }
+  contracts::hardware::PrinterControl* printer() override { return printer_.get(); }
 
   // 测试与调试用
   [[nodiscard]] Cec1Board& board() { return board_; }
@@ -159,6 +165,11 @@ class Cec1Machine final : public contracts::hardware::Machine, private contracts
   std::shared_ptr<logic::hardware::TapeDeck> tapeDeck_;
   logic::hardware::KeyboardApple2 keyboard_;
   logic::hardware::Speaker1Bit speaker_;
+  /** 没有接打印机时的并口。 */
+  contracts::hardware::NullParallelPort nullParallel_;
+  /** 槽 1 的打印机；没有打印机输出时为空。 */
+  std::unique_ptr<logic::hardware::PrinterEscp> printer_;
+  contracts::hardware::ParallelPort& parallel_;
   logic::hardware::Disk2 disk_;
   Cec1Board board_;
   logic::hardware::VideoApple2 video_;

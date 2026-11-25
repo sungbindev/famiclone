@@ -11,7 +11,7 @@
 | 步步高 BBG | `machines/bbg/`：BIOS 源码工程、`docs/计划与进度.md`、`docs/DOS反汇编与开发库计划.md`（BBGDOS.SYS 与 COMMAND.CMD 的反汇编及开发库计划） | `docs/BBGDOS源代码/`（`Bios.asm`、`Command.asm`、`Smcdos.asm` 原厂源码，`Bbgdos.sys`、`Command.sys`、`Smdos.sys` 二进制）、`docs/步步高多媒体学生电脑 BIOS系统 DOS系统使用手册（可搜索）.pdf`（系统调用手册）、`study_roms/步步高/`（`bbg1_bios.nes`、`bbg98_bios.nes`）、`floppy-images/bbg/`（系统盘与游戏） |
 | 金字塔 PEC-9588 / PEC-586 / PEC-686F | `machines/pyramid/`：`disassembly/` 反汇编工程、`docs/`（LM-DOS 命令与系统接口）、`README.md` | `study_roms/金字塔/`（卡带映像与修改版模拟器）、`floppy-images/pec9588/`（`blank.dsk`：143360 字节全零的 5.25 英寸空盘，需先 `INIT` 格式化） |
 | 裕兴 | 程序资料在 `vscode/docs/yuxing/`（无机型工程） | `study_roms/裕兴/`（V8.0-C、V8.2-D、V8.3-D、V9.0-98、V9.2-98、V9.2-F 的 NES 文件）、`floppy-images/裕兴/`（学习软件、工具软件、游戏软件） |
-| 中华学习机 CEC-I | `machines/cec/docs/ROM分析.md`（ROM 的结构、地址译码与软开关的推断，无机型工程） | `study_roms/中华学习机/`（1.1a、1.21 两个版本的 U7、U35 芯片文件，以及 `p6.bin`：苹果 Disk II 的 P6 状态机 ROM）、`floppy-images/cec/`（苹果 II 软件与 CEC-I 专用软件的 `.dsk` 软盘镜像，写盘测试要先复制一份） |
+| 中华学习机 CEC-I | `machines/cec/docs/ROM分析.md`（ROM 的结构、地址译码与软开关的推断，以及按手册核对后的结论，无机型工程） | `docs/中华学习机CEC-Ⅰ技术参考手册（硬件）.pdf`（电路、存储器与 MMU 软开关、键盘与字库、打印机接口卡；扫描件）、`docs/中华学习机CEC-Ⅰ技术参考手册（软件）.pdf`（监控、汉字系统与 BASIC；扫描件）、`docs/中华学习机改进系统软件：1.21版的使用介绍.pdf`、`study_roms/中华学习机/`（1.1a、1.21 两个版本的 U7、U35 芯片文件，以及 `p6.bin`：苹果 Disk II 的 P6 状态机 ROM）、`floppy-images/cec/`（苹果 II 软件与 CEC-I 专用软件的 `.dsk`、`.nib`、`.woz` 软盘镜像，写盘测试要先复制一份） |
 | 普里奇 | 无 | `study_roms/普里奇/`、`tapes/`（声像磁带） |
 | 通用 | - | `docs/SH6578 8-bit Educational Computer Chipset.pdf`（SH6578 芯片手册）、`docs/nes-games/`（游戏分类） |
 

@@ -1,26 +1,31 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：cec1-board.hpp
- * 说明：中华学习机 CEC-I 的主板：64K 主存、语言卡的 16K 存储、两块 32K 的 ROM（U7 与 U35），
- *       以及 $C000-$C0FF 的软开关、内置软驱接口与按 ROM 自检程序推断出的 $C0B0 寄存器；
- *       整个 CPU 地址空间都由本板译码。
+ * 说明：中华学习机 CEC-I 的主板：64K 主存、语言卡的 16K 存储、两块 32K 的 ROM（U7 与 U35）、
+ *       可选的汉字字库 ROM（U33 与 U34）、$C000-$C0FF 的软开关、内置软驱接口、
+ *       $C0B0 寄存器与槽 1 的打印机接口卡；整个 CPU 地址空间都由本板译码。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：ROM 文件是 64K：前 32K 是 U7（低 16K 是 LOGO 语言，高 16K 对应 $C000-$FFFF：
  *       $C100-$CFFF 是内部 ROM、$D000-$FFFF 是监控与 CEC-BASIC），
  *       后 32K 是 U35（低 16K 是汉字表，高 16K 对应 $C000-$FFFF：$C300 与 $C600 是槽 ROM、
- *       $D000-$FFFF 是汉字程序）；
+ *       $D000-$FFFF 是汉字程序）；后面可以再接 256K 的汉字字库：先是 128K 的 U33（字模的左半，
+ *       偶地址），再是 128K 的 U34（字模的右半，奇地址），都是芯片里的原始内容；
+ *       辅存就是这些 ROM：辅存的 $0000-$3FFF 与主存是同一块 RAM，$4000-$7FFF 是汉字字库，
+ *       $8000-$BFFF 是代码表，$D000-$FFFF 是汉字程序；
  *       CPU 读的译码（见 locateRead）：
- *         $0000-$7FFF 主存；$8000-$BFFF 主存，辅存读开关（$C002/$C003）为 1 时是 ROM：
- *         $C0B0 的位 5 为 1 读 U7 低 16K（LOGO），为 0 读 U35 低 16K（汉字表），
- *         $4000-$7FFF 在辅存读开关为 1 时读到空座（0）；
+ *         $0000-$3FFF 主存；$4000-$BFFF 主存，辅存读开关（$C002/$C003）为 1 时是 ROM：
+ *         $4000-$7FFF 读汉字字库：$C0B0 的低 4 位选 16K 的页（bank），芯片地址是页号乘 8192 加上
+ *         页内偏移除 2，偶偏移读 U33、奇偏移读 U34，CPU 读到的字节与芯片里的位序相反；
+ *         没有接字库时读到 0；$8000-$BFFF 读 U7 低 16K（LOGO，$C0B0 的位 5 为 1）
+ *         或 U35 低 16K（汉字表，位 5 为 0）；
  *         $C000-$C0FF 软开关与 I/O；$C100-$CFFF：内部 ROM 开关（$C006/$C007）为 1 时读 U7 高 16K，
  *         否则读 U35 高 16K（槽 ROM），其中 $C3xx 在槽 3 开关（$C00A/$C00B）为 0 时也读 U7；
- *         $D000-$FFFF：辅助零页开关（$C008/$C009）为 1 时读 U35 高 16K（汉字程序），
- *         否则语言卡读 RAM 时读语言卡存储，否则读 U7 高 16K；
- *       写：$0000-$BFFF 总是写主存（辅存写开关只记录状态）；
- *       $D000-$FFFF 语言卡写允许时写语言卡存储，其余写入忽略；
+ *         $D000-$FFFF：语言卡读 RAM 时，辅助零页开关（$C008/$C009）为 1 读 U35 高 16K（汉字程序），
+ *         为 0 读语言卡存储；语言卡读 ROM 时辅助零页开关不起作用，读 U7 高 16K；
+ *       写：$0000-$3FFF 写主存；$4000-$BFFF 写主存，但辅存写开关为 1 时写进了 ROM，丢弃；
+ *       $D000-$FFFF 语言卡写允许且辅助零页开关为 0 时写语言卡存储，其余写入忽略；
  *       语言卡（$C080-$C08F，读与写都算访问）：A3 为 0 选 bank 2（$D000-$DFFF），为 1 选 bank 1；
  *       A1A0 为 00 读 RAM 写保护、01 读 ROM、连续两次访问写允许、10 读 ROM 写保护、11 读 RAM、
  *       连续两次访问写允许；
@@ -28,13 +33,17 @@
  *       辅助零页、槽 3 ROM、80 列显示、备用字符集；
  *       $C000 读键盘，$C010 读写清键盘标志，$C011-$C01F 读状态（位 7）；$C020 磁带输出翻转，
  *       $C030 扬声器翻转，$C050-$C057 显示开关，
- *       $C060 磁带输入、$C061-$C063 按键 0 到 2（按键 2 是 Shift）、
+ *       $C060 磁带输入、$C061-$C063 游戏接口的三个按键（按键 0 与 1 是手柄的 A 与 B 和
+ *       两个苹果键，按键 2 是手柄的选择与开始）、
  *       $C064-$C067 模拟手柄 0 到 3 的计时，$C070 触发模拟手柄计时；
  *       $C0E0-$C0EF 内置软驱接口（槽 6）；$C0AE、$C0AF 内置串口（槽 2，状态位 1 恒为发送就绪，
- *       读不到数据）；$C090、$C1C1 打印口（没有接打印机，数据丢弃）；
- *       $C0B0 寄存器：读不驱动数据线；写入的值整个保存，位 5 选 LOGO 或汉字表（见上），
- *       位 4 在复位后为 $10 的含义没有查明，
- *       低 4 位在辅存读开关为 1 时选 $4000-$7FFF 的扩展 ROM 页（本机没有，读 0）。
+ *       读不到数据）；
+ *       $C0B0 寄存器（槽 3 的设备选择区）：读不驱动数据线；写入的值整个保存，复位值 $10，
+ *       位 0 到 3 是字库页，位 4 为 1 允许彩色、为 0 显示单色，位 5 选 LOGO 或汉字表（见上）；
+ *       槽 1 的打印机接口卡：$C090 写数据（同时产生选通，字节交给打印机），
+ *       $C1C0-$C1C7 在内部 ROM 开关为 0 时读状态：地址 0 的位 7 是 Ack，地址 4 的位 7 是忙，
+ *       其余地址的位 7 为 0；接口卡自带的驱动程序 ROM 没有收集到，
+ *       $C100-$C1FF 的其余部分读到 U35 里的内容。
  * ------------------------------------------------------------------------
  */
 
@@ -47,6 +56,7 @@
 
 #include "contracts/hardware/bus-device.hpp"
 #include "contracts/hardware/clock.hpp"
+#include "contracts/hardware/parallel-port.hpp"
 #include "contracts/hardware/tape-deck.hpp"
 #include "logic/hardware/disk2/disk2.hpp"
 #include "logic/hardware/keyboard-apple2/keyboard-apple2.hpp"
@@ -61,10 +71,11 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
   /** ROM 文件的大小：U7 与 U35 各 32K。 */
   static constexpr std::size_t ROM_SIZE = 64 * 1024;
   /**
-   * 可选的汉字字库 ROM（16 个 bank，每个 16K）：接在 ROM 文件的后面时，
-   * 文件是 ROM_SIZE + LIBRARY_SIZE。
+   * 可选的汉字字库 ROM（U33 与 U34 各 128K，合起来是 16 个 16K 的页）：接在 ROM 文件的后面时，
+   * 文件是 ROM_SIZE + LIBRARY_SIZE，U33 在前、U34 在后。
    */
   static constexpr std::size_t LIBRARY_SIZE = 256 * 1024;
+  static constexpr std::size_t LIBRARY_CHIP_SIZE = 128 * 1024;
   static constexpr std::size_t LIBRARY_BANK_SIZE = 16 * 1024;
   /** 主存的大小。 */
   static constexpr std::size_t RAM_SIZE = 64 * 1024;
@@ -97,8 +108,8 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
     bool lcPreWrite{false};
     /** 四个信号输出。 */
     std::array<bool, 4> annunciators{};
-    /** $C0B0 寄存器。 */
-    std::uint8_t aux{0};
+    /** $C0B0 寄存器，复位值 $10。 */
+    std::uint8_t aux{0x10};
   };
 
   /** CPU 地址所在的位置，调试用。 */
@@ -117,11 +128,12 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
    * @param disk 内置软驱接口（槽 6）。
    * @param speaker 扬声器。
    * @param tape 磁带线（$C020 输出、$C060 输入）。
+   * @param parallel 槽 1 打印机接口卡接的并口。
    * @param cpuTicksPerCycle 每个 CPU 周期的主时钟周期数（模拟手柄的计时按 CPU 周期换算）。
    * @throws shared::CoreError hardware.invalidArgument：ROM 大小不对。
    */
   Cec1Board(std::vector<std::uint8_t> rom, const contracts::hardware::Clock& clock, logic::hardware::KeyboardApple2& keyboard, logic::hardware::Disk2& disk, logic::hardware::Speaker1Bit& speaker,
-            contracts::hardware::TapeLine& tape, contracts::hardware::MasterTime cpuTicksPerCycle);
+            contracts::hardware::TapeLine& tape, contracts::hardware::ParallelPort& parallel, contracts::hardware::MasterTime cpuTicksPerCycle);
 
   /**
    * 复位。
@@ -141,7 +153,7 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
 
   /**
    * 模拟手柄与按键：按手柄的按键掩码设置（方向键对应模拟手柄 0 的横向与手柄 1 的纵向，
-   * A 与 B 是按键 0 与 1）。
+   * A 与 B 是按键 0 与 1，选择与开始是按键 2）。
    */
   void setPaddles(std::uint8_t buttons);
 
@@ -171,12 +183,17 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
   [[nodiscard]] std::size_t languageCardOffset(std::uint16_t address) const;
   /** 模拟手柄 n 的计时是否还没结束。 */
   [[nodiscard]] bool paddleTiming(unsigned paddle) const;
+  /** 汉字字库里 $4000-$7FFF 的地址对应的 ROM 文件偏移。 */
+  [[nodiscard]] std::size_t libraryOffset(std::uint16_t address) const;
+  /** 打印机接口卡的状态寄存器（$C1C0-$C1C7）；index 是低 4 位。 */
+  [[nodiscard]] std::uint8_t printerStatus(std::uint8_t index) const;
 
   const contracts::hardware::Clock& clock_;
   logic::hardware::KeyboardApple2& keyboard_;
   logic::hardware::Disk2& disk_;
   logic::hardware::Speaker1Bit& speaker_;
   contracts::hardware::TapeLine& tape_;
+  contracts::hardware::ParallelPort& parallel_;
   contracts::hardware::MasterTime cpuTicksPerCycle_;
 
   std::vector<std::uint8_t> rom_;
@@ -186,9 +203,10 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
 
   /** 磁带输出线当前的电平。 */
   bool tapeOutput_{false};
-  /** 手柄按键：按键 0 与 1，以及四个模拟手柄的值（0 到 255）。 */
+  /** 手柄按键：按键 0 到 2，以及四个模拟手柄的值（0 到 255）。 */
   bool button0_{false};
   bool button1_{false};
+  bool button2_{false};
   std::array<std::uint8_t, 4> paddleValues_{128, 128, 128, 128};
   /** 最近一次触发模拟手柄计时的时间。 */
   contracts::hardware::MasterTime paddleTrigger_{-1'000'000'000};

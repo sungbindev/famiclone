@@ -12,7 +12,7 @@
  *       $40-$7F 闪烁（约每 16 帧翻转一次）、$80-$FF 正常，
  *       $E0-$FF 显示小写字母与符号，其余显示大写字母与符号；
  *       高分辨率：每字节 7 个点（低位在左），位 7 选色组：独立的点按列号奇偶与色组显示为紫、绿、
- *       蓝、橙，相邻的点显示为白；
+ *       蓝、橙，相邻的点显示为白；不允许彩色时低分辨率显示成灰度、高分辨率只有黑白；
  *       帧缓冲的每个苹果点占 2×2 个像素，每像素 4 字节（R、G、B、A）；模块不读总线，
  *       主存与显示开关经 Apple2VideoSource 取得。
  * ------------------------------------------------------------------------
@@ -39,6 +39,8 @@ struct Apple2VideoMode {
   bool page2{false};
   /** 高分辨率（为假时是低分辨率）。 */
   bool hires{false};
+  /** 允许彩色；为假时图形按亮度显示成灰度（高分辨率只有黑与白），文本不受影响。 */
+  bool colorEnabled{true};
 };
 
 /** 视频生成器读取显示开关与主存的来源。 */
@@ -109,6 +111,8 @@ class VideoApple2 final : public contracts::hardware::EventListener {
   contracts::hardware::MasterTime frameTicks_;
   contracts::hardware::EventId event_{contracts::hardware::NO_EVENT};
   contracts::hardware::MasterTime frameStart_{0};
+  /** 本帧是否允许彩色（renderNow 从显示开关读来）。 */
+  bool colorEnabled_{true};
   std::uint64_t frameCount_{0};
   std::vector<std::uint32_t> pixels_;
 };

@@ -35,7 +35,7 @@ std::unique_ptr<contracts::hardware::Machine> MachineCatalog::createWithRom(cons
   if (machine == "pec9588") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec9588, std::move(rom), tapeDeck_, printerOutput_.get(), floppyActivity_.get(), floppyDrive_);
   if (machine == "pec586") return std::make_unique<PyramidMachine>(PyramidBoard::Model::Pec586, std::move(rom), tapeDeck_, printerOutput_.get());
   if (machine == "yuxing") return std::make_unique<YuxingMachine>(std::move(rom), tapeDeck_, floppyActivity_.get(), floppyDrive_, printerOutput_.get());
-  if (machine == "cec1") return std::make_unique<Cec1Machine>(std::move(rom), tapeDeck_, floppyActivity_.get(), floppyDrive_);
+  if (machine == "cec1") return std::make_unique<Cec1Machine>(std::move(rom), tapeDeck_, floppyActivity_.get(), floppyDrive_, printerOutput_.get());
   throw shared::CoreError(contracts::runtime::ERROR_HOST_UNSUPPORTED, "程序里还没有实现整机机型：" + machine);
 }
 

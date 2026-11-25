@@ -20,7 +20,10 @@
  *       对应表是 ROM 里 $BEB8 的交错表）、
  *       苹果 DOS 3.3 与 ProDOS 的磁盘（每道 16 个扇区、35 或 40 道，.dsk 按 DOS 顺序、
  *       .po 按 ProDOS 顺序排扇区，
- *       两种顺序由镜像内容认出）。
+ *       两种顺序由镜像内容认出）；
+ *       另有两种按磁道存放位序列的镜像：.nib 是 35 或 40 个磁道，每道 6656 个半字节（每个半字节
+ *       8 位，同步字节只有 FF，没有多出来的 0 位），.woz 是带磁道表的位序列文件（WOZ1 与 WOZ2，
+ *       只支持 5.25 英寸），读头位置按四分之一磁道查表。
  * ------------------------------------------------------------------------
  */
 
@@ -41,6 +44,18 @@ inline constexpr unsigned TRACK_COUNT = 40;
 inline constexpr std::size_t SECTOR_SIZE = 256;
 /** 每道扇区数的上限。 */
 inline constexpr unsigned MAX_SECTORS_PER_TRACK = 16;
+/** .nib 镜像一个磁道的字节数。 */
+inline constexpr std::size_t NIBBLE_TRACK_BYTES = 6656;
+
+/** 镜像里磁道的存放方式。 */
+enum class Layout : std::uint8_t {
+  /** 按扇区存放，磁道由编码器编出。 */
+  sector,
+  /** .nib：每个磁道直接存半字节。 */
+  nibble,
+  /** .woz：带磁道表的位序列。 */
+  woz,
+};
 
 /** 一种盘片格式。 */
 struct Format {
@@ -62,6 +77,8 @@ struct Format {
    * 每个扇区后面的同步字节个数：要留够，学习机重写一个扇区时写得比原来慢，不能压到下一个地址场。
    */
   std::size_t gapAfterData{50};
+  /** 磁道的存放方式。 */
+  Layout layout{Layout::sector};
 
   /** 一个磁道在镜像里的字节数。 */
   [[nodiscard]] constexpr std::size_t trackBytes() const { return sectorsPerTrack * SECTOR_SIZE; }
@@ -93,9 +110,45 @@ using FormatChooser = std::optional<Format> (*)(std::span<const std::uint8_t> im
 /**
  * 苹果：大小是 143360（35 道）或 163840（40 道）字节，再按内容认出扇区顺序：
  * 第 17 道第 0 扇区（DOS 顺序下的偏移 $11000）是 DOS 3.x 的卷目录表就是 DOS 顺序；
- * 块 2（偏移 $400）是 ProDOS 的卷目录头就是 ProDOS 顺序；两者都不是时按 DOS 顺序。
+ * 块 2（偏移 $400）是 ProDOS 的卷目录头就是 ProDOS 顺序；两者都不是时按 DOS 顺序；
+ * 大小是 232960（35 道）或 266240（40 道）字节的是 .nib；
+ * 开头是 WOZ1 或 WOZ2 且是 5.25 英寸盘的是 .woz。
  */
 [[nodiscard]] std::optional<Format> appleFormatOf(std::span<const std::uint8_t> image);
+
+/** .nib 镜像的格式：每道 6656 字节。 */
+[[nodiscard]] constexpr Format nibbleFormat(unsigned trackCount) {
+  return Format{trackCount, static_cast<unsigned>(NIBBLE_TRACK_BYTES / SECTOR_SIZE), {}, 254, NIBBLE_TRACK_BYTES * 8, 0, 0, 0, Layout::nibble};
+}
+
+/** WOZ 镜像里的一个磁道：位序列在镜像里的偏移与位数。 */
+struct WozTrack {
+  std::size_t offset{0};
+  std::size_t bitCount{0};
+};
+
+/** 解析后的 WOZ 镜像：四分之一磁道到磁道的对应表（-1 表示没有数据）与各磁道。 */
+struct WozImage {
+  std::array<std::int16_t, 160> trackMap{};
+  std::vector<WozTrack> tracks;
+};
+
+/**
+ * 解析 WOZ1 或 WOZ2 镜像（5.25 英寸盘）。
+ * @return 镜像不合格（头不对、不是 5.25 英寸盘、缺少磁道表、磁道超出文件）时返回空。
+ */
+[[nodiscard]] std::optional<WozImage> parseWoz(std::span<const std::uint8_t> image);
+
+/** 半字节换成位序列：每个半字节 8 位，高位在前。 */
+[[nodiscard]] std::vector<std::uint8_t> nibblesToBits(std::span<const std::uint8_t> nibbles);
+
+/**
+ * 位序列换成半字节：从第一个 1 位起每 8 位一个，最多 count 个，不够的用 FF 补齐。
+ */
+[[nodiscard]] std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits, std::size_t count);
+
+/** 取出 WOZ 磁道的位序列（每个元素是 0 或 1）。 */
+[[nodiscard]] std::vector<std::uint8_t> wozTrackBits(std::span<const std::uint8_t> image, const WozTrack& track);
 
 /** 从磁盘上解出的一个扇区。 */
 struct DecodedSector {

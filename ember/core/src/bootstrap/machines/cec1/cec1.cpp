@@ -35,13 +35,16 @@ constexpr std::size_t CPU_SPACE_SIZE = 0x10000;
 
 // ---------------------------------------------------------------- 装配
 
-Cec1Machine::Cec1Machine(std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive)
+Cec1Machine::Cec1Machine(std::vector<std::uint8_t> rom, std::shared_ptr<logic::hardware::TapeDeck> tapeDeck, hw::FloppyActivity* floppyActivity, std::shared_ptr<logic::hardware::StandardFloppyDrive> floppyDrive,
+                         hw::PrinterOutput* printerOutput)
     : cartridgeIrq_(irq_),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       speaker_(MASTER_CLOCK_HZ, logic::hardware::Apu2a03::SAMPLE_RATE),
+      printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),
+      parallel_(printer_ != nullptr ? static_cast<hw::ParallelPort&>(*printer_) : static_cast<hw::ParallelPort&>(nullParallel_)),
       disk_(scheduler_, DISK_BIT_TICKS, DISK_MOTOR_OFF_TICKS, logic::hardware::disk2::appleFormatOf),
-      board_(std::move(rom), scheduler_, keyboard_, disk_, speaker_, *tapeDeck_, CPU_TICKS_PER_CYCLE),
+      board_(std::move(rom), scheduler_, keyboard_, disk_, speaker_, *tapeDeck_, parallel_, CPU_TICKS_PER_CYCLE),
       video_(scheduler_, board_, CPU_TICKS_PER_CYCLE * CYCLES_PER_LINE),
       cpu_(cpuBus_, scheduler_, hw::ClockDomain{CPU_TICKS_PER_CYCLE}, irq_, nmi_, rdy_),
       debug_(cpuBus_, cpu_) {
@@ -138,7 +141,7 @@ std::vector<hw::MemorySpace> Cec1Machine::memorySpaces() const {
       {"cpu", "CPU 总线 $0000-$FFFF：读不产生副作用，软开关与 I/O 读出 0；写经真实的总线，与 CPU 写一样有副作用", CPU_SPACE_SIZE, true},
       {"board.ram", "主存（64K）", Cec1Board::RAM_SIZE, true},
       {"board.languageCard", "语言卡存储（16K：bank 1 的 4K、bank 2 的 4K 与 $E000-$FFFF 的 8K）", Cec1Board::LANGUAGE_CARD_SIZE, true},
-      {"board.rom", "ROM（U7 在前、64K 的 U35 在后，接了汉字字库时后面再接 256K，只读）", board_.rom().size(), false},
+      {"board.rom", "ROM 文件原样：U7（32K）、U35（32K），接了汉字字库时后面是 U33（128K）与 U34（128K），只读", board_.rom().size(), false},
   };
 }
 
@@ -192,9 +195,9 @@ hw::AddressTarget Cec1Machine::resolve(std::string_view space, std::uint32_t add
     case Cec1Board::Location::Kind::LanguageCard:
       return {"ram", "board.languageCard", where.offset, "语言卡存储"};
     case Cec1Board::Location::Kind::Rom:
-      return {"rom", "board.rom", where.offset, "ROM（U7 低 16K 是 LOGO、高 16K 是监控与 CEC-BASIC，U35 低 16K 是汉字表、高 16K 是汉字程序与槽 ROM）"};
+      return {"rom", "board.rom", where.offset, "ROM（U7 低 16K 是 LOGO、高 16K 是监控与 CEC-BASIC，U35 低 16K 是汉字表、高 16K 是汉字程序与槽 ROM，U33 与 U34 是汉字字库）"};
     case Cec1Board::Location::Kind::Register:
-      return {"register", "board.registers", where.offset, "软开关与 I/O（$C000-$C0FF）"};
+      return {"register", "board.registers", where.offset, "软开关与 I/O（$C000-$C0FF 与打印机接口卡的状态寄存器）"};
     case Cec1Board::Location::Kind::Empty:
       return {"none", "", 0, "没有设备，读到 0"};
     case Cec1Board::Location::Kind::None:
@@ -216,12 +219,12 @@ std::vector<hw::StateField> Cec1Machine::readState(std::string_view module) cons
             field("ramRead", state.ramRead ? 1 : 0, "辅存读开关（$C002 关、$C003 开）"),
             field("ramWrite", state.ramWrite ? 1 : 0, "辅存写开关（$C004 关、$C005 开）"),
             field("internalRom", state.internalRom ? 1 : 0, "内部 ROM 开关（$C006 关、$C007 开）"),
-            field("altZeroPage", state.altZeroPage ? 1 : 0, "辅助零页开关（$C008 关、$C009 开），为 1 时 $D000-$FFFF 读汉字程序"),
+            field("altZeroPage", state.altZeroPage ? 1 : 0, "辅助零页开关（$C008 关、$C009 开），为 1 且语言卡读 RAM 时 $D000-$FFFF 读汉字程序"),
             field("slotThreeRom", state.slotThreeRom ? 1 : 0, "槽 3 ROM 开关（$C00A 关、$C00B 开）"),
             field("languageCardReadRam", state.lcReadRam ? 1 : 0, "语言卡读 RAM"),
             field("languageCardWriteRam", state.lcWriteRam ? 1 : 0, "语言卡写允许"),
             field("languageCardBank2", state.lcBank2 ? 1 : 0, "语言卡选 bank 2"),
-            field("aux", state.aux, "$C0B0 寄存器")};
+            field("aux", state.aux, "$C0B0 寄存器：位 0 到 3 字库页，位 4 允许彩色，位 5 选 LOGO 或汉字表")};
   }
   if (module == "disk") {
     return {field("motor", disk_.motorOn() ? 1 : 0, "马达是否在转"),

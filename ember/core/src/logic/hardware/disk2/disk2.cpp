@@ -153,6 +153,11 @@ void Disk2::refreshMedia() {
   imageSize_ = image.size();
   imageInserted_ = inserted;
   format_ = inserted ? chooser_(image) : std::nullopt;
+  woz_.reset();
+  if (format_.has_value() && format_->layout == disk2::Layout::woz) {
+    woz_ = disk2::parseWoz(image);
+    if (!woz_.has_value()) format_.reset();
+  }
   dropCaches();
 }
 
@@ -168,12 +173,20 @@ bool Disk2::spinning() const { return motorOn_ && selected_ == 0 && drive_ != nu
 
 bool Disk2::hasDisk() const { return drive_ != nullptr && drive_->inserted() && format_.has_value(); }
 
-std::vector<std::uint8_t>& Disk2::trackBits(unsigned track) {
-  std::vector<std::uint8_t>& ring = rings_[std::min<unsigned>(track, disk2::TRACK_COUNT)];
+unsigned Disk2::ringIndex() const { return format_.has_value() && format_->layout == disk2::Layout::woz ? halfTrack_ : track(); }
+
+const disk2::WozTrack* Disk2::wozTrackAt(unsigned halfTrack) const {
+  if (!woz_.has_value()) return nullptr;
+  const std::int16_t index = woz_->trackMap[std::min<std::size_t>(halfTrack * 2U, woz_->trackMap.size() - 1)];
+  return index < 0 ? nullptr : &woz_->tracks[static_cast<std::size_t>(index)];
+}
+
+std::vector<std::uint8_t>& Disk2::trackBits(unsigned index) {
+  std::vector<std::uint8_t>& ring = rings_[std::min<unsigned>(index, static_cast<unsigned>(rings_.size() - 1))];
   if (!ring.empty()) return ring;
-  if (!hasDisk()) {
-    // 没有盘片：读头读到杂波，每个磁道一圈固定的随机位。
-    std::uint32_t state = 0x9E3779B9U * (track + 1U);
+  const auto makeNoise = [&ring, index] {
+    // 读头读到杂波：每个磁道一圈固定的随机位。
+    std::uint32_t state = 0x9E3779B9U * (index + 1U);
     ring.resize(NOISE_TRACK_BITS);
     for (auto& bit : ring) {
       state ^= state << 13;
@@ -181,12 +194,31 @@ std::vector<std::uint8_t>& Disk2::trackBits(unsigned track) {
       state ^= state << 5;
       bit = static_cast<std::uint8_t>(state & 1U);
     }
-  } else if (track < format_->trackCount) {
-    const std::span<const std::uint8_t> sectors(drive_->image());
-    ring = disk2::encodeTrack(*format_, track, sectors.subspan(track * format_->trackBytes(), format_->trackBytes()));
-  } else {
-    // 镜像之外的磁道（格式化会写到这里）：什么都没有。
-    ring.assign(format_->trackBits, 0);
+  };
+  if (!hasDisk()) {
+    makeNoise();
+    return ring;
+  }
+  const std::span<const std::uint8_t> image(drive_->image());
+  switch (format_->layout) {
+    case disk2::Layout::sector:
+      if (index < format_->trackCount) {
+        ring = disk2::encodeTrack(*format_, index, image.subspan(index * format_->trackBytes(), format_->trackBytes()));
+      } else {
+        // 镜像之外的磁道（格式化会写到这里）：什么都没有。
+        ring.assign(format_->trackBits, 0);
+      }
+      break;
+    case disk2::Layout::nibble:
+      if (index < format_->trackCount) ring = disk2::nibblesToBits(image.subspan(index * format_->trackBytes(), format_->trackBytes()));
+      else ring.assign(format_->trackBits, 0);
+      break;
+    case disk2::Layout::woz: {
+      const disk2::WozTrack* track = wozTrackAt(index);
+      if (track != nullptr) ring = disk2::wozTrackBits(image, *track);
+      else makeNoise();
+      break;
+    }
   }
   return ring;
 }
@@ -202,7 +234,7 @@ void Disk2::advance() {
     return;
   }
   if (target <= cursor_) return;
-  std::vector<std::uint8_t>& ring = trackBits(track());
+  std::vector<std::uint8_t>& ring = trackBits(ringIndex());
   const auto ringBits = static_cast<std::int64_t>(ring.size());
   // 读模式下隔了超过一圈没有访问：只需要转最后一圈。
   if (!q7_ && target - cursor_ > ringBits) {
@@ -223,7 +255,7 @@ void Disk2::advance() {
       ring[position] = out;
       if (!sessionDirty_) {
         sessionDirty_ = true;
-        sessionTrack_ = track();
+        sessionTrack_ = ringIndex();
       }
       continue;
     }
@@ -248,12 +280,41 @@ std::uint8_t Disk2::readData() {
 void Disk2::finishWrite() {
   if (!sessionDirty_) return;
   sessionDirty_ = false;
-  if (!hasDisk() || sessionTrack_ >= format_->trackCount) return;
-  for (const disk2::DecodedSector& sector : disk2::decodeTrack(*format_, rings_[sessionTrack_])) {
-    if (sector.track != sessionTrack_) continue;
-    const std::size_t base = (static_cast<std::size_t>(sessionTrack_) * format_->sectorsPerTrack + sector.logical) * disk2::SECTOR_SIZE;
-    for (std::size_t index = 0; index < disk2::SECTOR_SIZE; ++index) {
-      if (drive_->readByte(base + index) != sector.data[index]) drive_->writeByte(base + index, sector.data[index]);
+  if (!hasDisk()) return;
+  const std::vector<std::uint8_t>& ring = rings_[sessionTrack_];
+  switch (format_->layout) {
+    case disk2::Layout::sector:
+      if (sessionTrack_ >= format_->trackCount) return;
+      for (const disk2::DecodedSector& sector : disk2::decodeTrack(*format_, ring)) {
+        if (sector.track != sessionTrack_) continue;
+        const std::size_t base = (static_cast<std::size_t>(sessionTrack_) * format_->sectorsPerTrack + sector.logical) * disk2::SECTOR_SIZE;
+        for (std::size_t index = 0; index < disk2::SECTOR_SIZE; ++index) {
+          if (drive_->readByte(base + index) != sector.data[index]) drive_->writeByte(base + index, sector.data[index]);
+        }
+      }
+      break;
+    case disk2::Layout::nibble: {
+      if (sessionTrack_ >= format_->trackCount) return;
+      const std::vector<std::uint8_t> nibbles = disk2::bitsToNibbles(ring, disk2::NIBBLE_TRACK_BYTES);
+      const std::size_t base = static_cast<std::size_t>(sessionTrack_) * disk2::NIBBLE_TRACK_BYTES;
+      for (std::size_t index = 0; index < nibbles.size(); ++index) {
+        if (drive_->readByte(base + index) != nibbles[index]) drive_->writeByte(base + index, nibbles[index]);
+      }
+      break;
+    }
+    case disk2::Layout::woz: {
+      const disk2::WozTrack* track = wozTrackAt(sessionTrack_);
+      if (track == nullptr || ring.size() != track->bitCount) return;
+      // 把位反向填回镜像：最后一个字节里不属于这个磁道的位保持原样。
+      for (std::size_t byte = 0; byte < (track->bitCount + 7) / 8; ++byte) {
+        std::uint8_t value = drive_->readByte(track->offset + byte);
+        for (std::size_t bit = 0; bit < 8 && byte * 8 + bit < track->bitCount; ++bit) {
+          const auto mask = static_cast<std::uint8_t>(0x80U >> bit);
+          value = static_cast<std::uint8_t>(ring[byte * 8 + bit] != 0 ? (value | mask) : (value & ~mask));
+        }
+        if (drive_->readByte(track->offset + byte) != value) drive_->writeByte(track->offset + byte, value);
+      }
+      break;
     }
   }
 }

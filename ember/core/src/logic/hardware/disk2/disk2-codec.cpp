@@ -12,6 +12,8 @@
 #include "logic/hardware/disk2/disk2-codec.hpp"
 
 #include <algorithm>
+#include <iterator>
+#include <string_view>
 
 namespace ember::logic::hardware::disk2 {
 
@@ -146,6 +148,9 @@ std::optional<Format> pyramidFormatOf(std::span<const std::uint8_t> image) {
 }
 
 std::optional<Format> appleFormatOf(std::span<const std::uint8_t> image) {
+  if (parseWoz(image).has_value()) return Format{TRACK_COUNT, 0, {}, 254, 0, 0, 0, 0, Layout::woz};
+  if (image.size() == 35 * NIBBLE_TRACK_BYTES) return nibbleFormat(35);
+  if (image.size() == 40 * NIBBLE_TRACK_BYTES) return nibbleFormat(40);
   unsigned trackCount = 0;
   if (image.size() == APPLE_SIZE_35) trackCount = 35;
   else if (image.size() == APPLE_SIZE_40) trackCount = 40;
@@ -244,6 +249,114 @@ std::vector<DecodedSector> decodeTrack(const Format& format, std::span<const std
     }
   }
   return found;
+}
+
+namespace {
+
+constexpr std::size_t WOZ_HEADER_SIZE = 12;
+/** WOZ 文件头的签名后面的 4 个字节：FF 0A 0D 0A。 */
+constexpr std::uint8_t WOZ_SIGNATURE_TAIL[4] = {0xFF, 0x0A, 0x0D, 0x0A};
+constexpr std::size_t WOZ_TRACK_COUNT = 160;
+constexpr std::uint8_t WOZ_NO_TRACK = 0xFF;
+/** INFO 块里“盘片类型”字段的偏移与 5.25 英寸盘的值。 */
+constexpr std::size_t WOZ_INFO_DISK_TYPE = 1;
+constexpr std::uint8_t WOZ_DISK_TYPE_525 = 1;
+/** WOZ1：每个磁道记录 6656 字节，位序列 6646 字节，随后是已用字节数与位数。 */
+constexpr std::size_t WOZ1_RECORD_SIZE = 6656;
+constexpr std::size_t WOZ1_BITS_BYTES = 6646;
+/** WOZ2：磁道表每项 8 字节（起始块、块数、位数），块是 512 字节。 */
+constexpr std::size_t WOZ2_ENTRY_SIZE = 8;
+constexpr std::size_t WOZ2_BLOCK_SIZE = 512;
+
+std::uint32_t readLittleEndian(std::span<const std::uint8_t> bytes, std::size_t offset, std::size_t width) {
+  std::uint32_t value = 0;
+  for (std::size_t index = 0; index < width; ++index) value |= static_cast<std::uint32_t>(bytes[offset + index]) << (8 * index);
+  return value;
+}
+
+}  // namespace
+
+std::optional<WozImage> parseWoz(std::span<const std::uint8_t> image) {
+  if (image.size() < WOZ_HEADER_SIZE || image[0] != 'W' || image[1] != 'O' || image[2] != 'Z') return std::nullopt;
+  const bool second = image[3] == '2';
+  if (!second && image[3] != '1') return std::nullopt;
+  if (!std::equal(std::begin(WOZ_SIGNATURE_TAIL), std::end(WOZ_SIGNATURE_TAIL), image.begin() + 4)) return std::nullopt;
+
+  std::optional<std::span<const std::uint8_t>> info;
+  std::optional<std::span<const std::uint8_t>> map;
+  std::optional<std::span<const std::uint8_t>> tracks;
+  std::size_t position = WOZ_HEADER_SIZE;
+  while (position + 8 <= image.size()) {
+    const std::size_t size = readLittleEndian(image, position + 4, 4);
+    if (size > image.size() - position - 8) break;
+    const std::span<const std::uint8_t> body = image.subspan(position + 8, size);
+    const std::string_view id(reinterpret_cast<const char*>(image.data() + position), 4);
+    if (id == "INFO") info = body;
+    else if (id == "TMAP") map = body;
+    else if (id == "TRKS") tracks = body;
+    position += 8 + size;
+  }
+  if (!info.has_value() || !map.has_value() || !tracks.has_value() || info->size() <= WOZ_INFO_DISK_TYPE || map->size() < WOZ_TRACK_COUNT) return std::nullopt;
+  if ((*info)[WOZ_INFO_DISK_TYPE] != WOZ_DISK_TYPE_525) return std::nullopt;
+
+  WozImage result;
+  const std::size_t tracksOffset = static_cast<std::size_t>(tracks->data() - image.data());
+  const std::size_t entryCount = second ? std::min<std::size_t>(WOZ_TRACK_COUNT, tracks->size() / WOZ2_ENTRY_SIZE) : std::min<std::size_t>(WOZ_TRACK_COUNT, tracks->size() / WOZ1_RECORD_SIZE);
+  // WOZ2 的磁道表占 160 项，位序列在文件的块里；WOZ1 的每个磁道记录紧挨着。
+  const std::size_t dataStart = second ? WOZ_TRACK_COUNT * WOZ2_ENTRY_SIZE : 0;
+  for (std::size_t index = 0; index < entryCount; ++index) {
+    WozTrack track;
+    if (second) {
+      const std::size_t block = readLittleEndian(*tracks, index * WOZ2_ENTRY_SIZE, 2);
+      track.bitCount = readLittleEndian(*tracks, index * WOZ2_ENTRY_SIZE + 4, 4);
+      track.offset = block * WOZ2_BLOCK_SIZE;
+      if (block == 0) track.bitCount = 0;
+    } else {
+      const std::size_t record = dataStart + index * WOZ1_RECORD_SIZE;
+      track.offset = tracksOffset + record;
+      track.bitCount = std::min<std::size_t>(readLittleEndian(*tracks, record + WOZ1_BITS_BYTES + 2, 2), WOZ1_BITS_BYTES * 8);
+    }
+    // 超出文件的磁道丢掉。
+    if (track.bitCount == 0 || track.offset > image.size() || (track.bitCount + 7) / 8 > image.size() - track.offset) track.bitCount = 0;
+    result.tracks.push_back(track);
+  }
+  for (std::size_t quarter = 0; quarter < WOZ_TRACK_COUNT; ++quarter) {
+    const std::uint8_t index = (*map)[quarter];
+    result.trackMap[quarter] = (index != WOZ_NO_TRACK && index < result.tracks.size() && result.tracks[index].bitCount > 0) ? static_cast<std::int16_t>(index) : std::int16_t{-1};
+  }
+  return result;
+}
+
+std::vector<std::uint8_t> nibblesToBits(std::span<const std::uint8_t> nibbles) {
+  std::vector<std::uint8_t> bits;
+  bits.reserve(nibbles.size() * 8);
+  for (const std::uint8_t value : nibbles) {
+    for (int bit = 7; bit >= 0; --bit) bits.push_back(static_cast<std::uint8_t>((value >> bit) & 1U));
+  }
+  return bits;
+}
+
+std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits, std::size_t count) {
+  std::vector<std::uint8_t> nibbles;
+  nibbles.reserve(count);
+  unsigned shift = 0;
+  for (std::size_t index = 0; index < bits.size() && nibbles.size() < count; ++index) {
+    const unsigned bit = bits[index] != 0 ? 1U : 0U;
+    if (shift == 0 && bit == 0) continue;
+    shift = (shift << 1) | bit;
+    if ((shift & 0x80U) != 0) {
+      nibbles.push_back(static_cast<std::uint8_t>(shift));
+      shift = 0;
+    }
+  }
+  nibbles.resize(count, 0xFF);
+  return nibbles;
+}
+
+std::vector<std::uint8_t> wozTrackBits(std::span<const std::uint8_t> image, const WozTrack& track) {
+  std::vector<std::uint8_t> bits(track.bitCount);
+  for (std::size_t index = 0; index < track.bitCount; ++index) bits[index] = (image[track.offset + index / 8] >> (7 - index % 8)) & 1U;
+  return bits;
 }
 
 }  // namespace ember::logic::hardware::disk2

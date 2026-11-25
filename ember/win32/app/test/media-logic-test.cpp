@@ -500,7 +500,7 @@ TEST(MediaModule, DroppedFilesAreClaimedByExtension) {
   const auto module = logic::createMediaModule(f.controller);
   ASSERT_EQ(module.fileHandlers.size(), 2U);
   EXPECT_EQ(module.fileHandlers[0].id, "media.floppyImage");
-  EXPECT_EQ(module.fileHandlers[0].extensions, (std::vector<std::string>{"img", "ima", "vfd", "dsk", "flp"}));
+  EXPECT_EQ(module.fileHandlers[0].extensions, (std::vector<std::string>{"img", "ima", "vfd", "dsk", "flp", "do", "po", "nib", "woz"}));
   EXPECT_EQ(module.fileHandlers[1].id, "media.tapeSound");
   EXPECT_NE(std::find(module.fileHandlers[1].extensions.begin(), module.fileHandlers[1].extensions.end(), "wav"), module.fileHandlers[1].extensions.end());
   f.attach();

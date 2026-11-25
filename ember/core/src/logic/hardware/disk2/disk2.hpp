@@ -26,7 +26,10 @@
  *       时，
  *       读头读到的是杂波（每个磁道一圈固定的随机位，写入被忽略），程序里的读盘超时计数才会走完、报出读盘错误；
  *       马达关指令之后马达继续转一段时间才真正停转，其间再开马达不必等盘片加速；
- *       只有一个驱动器（驱动器 1）；磁头位置按半个磁道记，奇数位置读到的是下面那个磁道。
+ *       只有一个驱动器（驱动器 1）；磁头位置按半个磁道记，奇数位置读到的是下面那个磁道；
+ *       .nib 镜像的磁道直接由半字节展开，写回时从磁道里读出半字节再存回去；
+ *       .woz 镜像按磁道表找磁道位序列（读头在半磁道位置时查四分之一磁道表的第“位置 × 2”项，
+ *       表里没有数据的位置读到杂波），写回时把磁道的位反向填回镜像（位数不变）。
  * ------------------------------------------------------------------------
  */
 
@@ -107,7 +110,11 @@ class Disk2 final : public contracts::hardware::EventListener {
   /** 放着认得出格式的盘片（否则读头读到杂波）。 */
   [[nodiscard]] bool hasDisk() const;
   /** 磁道上一圈的位（按需编出）；磁道号超过镜像的磁道数时是一圈 0 位；没有盘片时是杂波。 */
-  std::vector<std::uint8_t>& trackBits(unsigned track);
+  std::vector<std::uint8_t>& trackBits(unsigned index);
+  /** 读头当前位置对应的磁道缓存下标：.woz 按半磁道位置，其余按磁道号。 */
+  [[nodiscard]] unsigned ringIndex() const;
+  /** .woz 镜像里读头位置（半磁道为单位）对应的磁道；没有数据时为空。 */
+  [[nodiscard]] const disk2::WozTrack* wozTrackAt(unsigned halfTrack) const;
   /** 让盘片从上次处理到的位转到此刻：读模式下读出半字节，写模式下把位写到磁道上。 */
   void advance();
   /** 读数据寄存器。 */
@@ -144,12 +151,14 @@ class Disk2 final : public contracts::hardware::EventListener {
   /** 写：正在移出的数据与还剩几位。 */
   std::uint8_t shiftReg_{0};
   unsigned shiftLeft_{0};
-  /** 这次写模式里是否已经改写过磁道，以及写的是哪个磁道。 */
+  /** 这次写模式里是否已经改写过磁道，以及写的是哪个磁道缓存（见 ringIndex）。 */
   bool sessionDirty_{false};
   unsigned sessionTrack_{0};
 
-  /** 已编好的磁道，按磁道号。 */
-  std::array<std::vector<std::uint8_t>, disk2::TRACK_COUNT + 1> rings_;
+  /** 已编好的磁道，按磁道缓存下标（.woz 用半磁道位置，其余用磁道号）。 */
+  std::array<std::vector<std::uint8_t>, 2 * disk2::TRACK_COUNT + 1> rings_;
+  /** .woz 镜像的解析结果；不是 .woz 时为空。 */
+  std::optional<disk2::WozImage> woz_;
   /** 编磁道时依据的镜像：数据指针与大小，变了就重新编。 */
   const std::uint8_t* imageData_{nullptr};
   std::size_t imageSize_{0};

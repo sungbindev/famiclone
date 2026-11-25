@@ -35,8 +35,16 @@ constexpr std::uint16_t WINDOW_FIRST = 0x8000;
 constexpr std::uint16_t EXTENSION_FIRST = 0x4000;
 /** $C0B0 的位 5：辅存读开关为 1 时 $8000-$BFFF 读 LOGO（1）还是汉字表（0）。 */
 constexpr std::uint8_t AUX_SELECT_LOGO = 0x20;
-/** $C0B0 的低 4 位：汉字字库的 bank 号。 */
+/** $C0B0 的位 4：允许彩色（1）还是单色（0）。 */
+constexpr std::uint8_t AUX_COLOR_ENABLE = 0x10;
+/** $C0B0 的低 4 位：汉字字库的页（bank）号。 */
 constexpr std::uint8_t LIBRARY_BANK_MASK = 0x0F;
+/** 打印机接口卡（槽 1）：数据寄存器在 $C090，状态在 $C1C0-$C1C7。 */
+constexpr std::uint8_t PRINTER_DATA_REGISTER = 0x90;
+constexpr std::uint16_t PRINTER_STATUS_FIRST = 0xC1C0;
+constexpr std::uint16_t PRINTER_STATUS_LAST = 0xC1C7;
+constexpr std::uint8_t PRINTER_STATUS_ACK = 0;
+constexpr std::uint8_t PRINTER_STATUS_BUSY = 4;
 /** 内置串口（槽 2）的状态：位 1 为发送寄存器空。 */
 constexpr std::uint8_t SERIAL_TRANSMIT_READY = 0x02;
 /** 模拟手柄的计时：每个计数占的 CPU 周期数，加上计时开始的固定延迟。 */
@@ -61,15 +69,25 @@ constexpr std::uint8_t GROUP_SERIAL = 0xA;
 constexpr std::uint8_t GROUP_AUX = 0xB;
 constexpr std::uint8_t GROUP_DISK = 0xE;
 
+/** 把一个字节的位序翻转（位 0 与位 7 互换，依次类推）。 */
+std::uint8_t reverseBits(std::uint8_t value) {
+  std::uint8_t result = 0;
+  for (int bit = 0; bit < 8; ++bit) {
+    result = static_cast<std::uint8_t>((result << 1) | ((value >> bit) & 1U));
+  }
+  return result;
+}
+
 }  // namespace
 
 Cec1Board::Cec1Board(std::vector<std::uint8_t> rom, const hw::Clock& clock, logic::hardware::KeyboardApple2& keyboard, logic::hardware::Disk2& disk, logic::hardware::Speaker1Bit& speaker, hw::TapeLine& tape,
-                     hw::MasterTime cpuTicksPerCycle)
+                     hw::ParallelPort& parallel, hw::MasterTime cpuTicksPerCycle)
     : clock_(clock),
       keyboard_(keyboard),
       disk_(disk),
       speaker_(speaker),
       tape_(tape),
+      parallel_(parallel),
       cpuTicksPerCycle_(cpuTicksPerCycle),
       rom_(std::move(rom)),
       ram_(RAM_SIZE, 0),
@@ -87,6 +105,7 @@ void Cec1Board::reset(bool power) {
   switches_ = Switches{};
   tapeOutput_ = false;
   paddleTrigger_ = -1'000'000'000;
+  if (power) parallel_.reset();
 }
 
 // ---------------------------------------------------------------- 译码
@@ -96,9 +115,9 @@ Cec1Board::Location Cec1Board::locateRead(std::uint16_t address) const {
   if (address < EXTENSION_FIRST) return {Kind::Ram, address};
   if (address < WINDOW_FIRST) {
     if (!switches_.ramRead) return {Kind::Ram, address};
-    // 汉字字库 ROM：按 $C0B0 的低 4 位选 bank；没有接字库时是空座。
+    // 汉字字库 ROM：按 $C0B0 的低 4 位选页；没有接字库时是空座。
     if (rom_.size() == ROM_SIZE) return {Kind::Empty, 0};
-    return {Kind::Rom, ROM_SIZE + static_cast<std::size_t>(switches_.aux & LIBRARY_BANK_MASK) * LIBRARY_BANK_SIZE + (address - EXTENSION_FIRST)};
+    return {Kind::Rom, libraryOffset(address)};
   }
   if (address < IO_FIRST) {
     if (!switches_.ramRead) return {Kind::Ram, address};
@@ -107,12 +126,30 @@ Cec1Board::Location Cec1Board::locateRead(std::uint16_t address) const {
   }
   if (address < SLOT_ROM_FIRST) return {Kind::Register, static_cast<std::size_t>(address - IO_FIRST)};
   if (address < HIGH_FIRST) {
+    // 打印机接口卡的状态寄存器在槽 1 的 ROM 空间里，内部 ROM 开关为 1 时读不到。
+    if (!switches_.internalRom && address >= PRINTER_STATUS_FIRST && address <= PRINTER_STATUS_LAST) return {Kind::Register, static_cast<std::size_t>(address - IO_FIRST)};
     const bool internal = switches_.internalRom || (address >= SLOT_THREE_FIRST && address <= SLOT_THREE_LAST && !switches_.slotThreeRom);
     return {Kind::Rom, (internal ? U7_HIGH : U35_HIGH) + (address - IO_FIRST)};
   }
-  if (switches_.altZeroPage) return {Kind::Rom, U35_HIGH + (address - IO_FIRST)};
-  if (switches_.lcReadRam) return {Kind::LanguageCard, languageCardOffset(address)};
+  // 语言卡读 RAM 时，辅助零页开关把这段空间切到辅存（汉字程序 ROM）；读 ROM 时不起作用。
+  if (switches_.lcReadRam) {
+    if (switches_.altZeroPage) return {Kind::Rom, U35_HIGH + (address - IO_FIRST)};
+    return {Kind::LanguageCard, languageCardOffset(address)};
+  }
   return {Kind::Rom, U7_HIGH + (address - IO_FIRST)};
+}
+
+std::size_t Cec1Board::libraryOffset(std::uint16_t address) const {
+  // 每个字模 32 字节由两片芯片交替给出：偏移除 2 是芯片地址，低位选 U33（偶）或 U34（奇）。
+  const std::size_t inBank = static_cast<std::size_t>(switches_.aux & LIBRARY_BANK_MASK) * LIBRARY_BANK_SIZE + (address - EXTENSION_FIRST);
+  return ROM_SIZE + (inBank & 1U) * LIBRARY_CHIP_SIZE + (inBank >> 1);
+}
+
+std::uint8_t Cec1Board::printerStatus(std::uint8_t index) const {
+  // 状态经一片 8 选 1 的多路器送到数据线位 7：Ack 经反相、忙不反相。
+  if (index == PRINTER_STATUS_ACK) return parallel_.ack() ? 0x00 : 0x80;
+  if (index == PRINTER_STATUS_BUSY) return parallel_.busyN() ? 0x00 : 0x80;
+  return 0x00;
 }
 
 std::size_t Cec1Board::languageCardOffset(std::uint16_t address) const {
@@ -130,8 +167,10 @@ hw::BusRead Cec1Board::read(std::uint16_t address) {
     case Location::Kind::LanguageCard:
       return hw::driveBus(languageCard_[where.offset]);
     case Location::Kind::Rom:
-      return hw::driveBus(rom_[where.offset]);
+      // 字库芯片里的字节与 CPU 读到的位序相反。
+      return hw::driveBus(where.offset >= ROM_SIZE ? reverseBits(rom_[where.offset]) : rom_[where.offset]);
     case Location::Kind::Register:
+      if (where.offset >= 0x100) return hw::driveBus(printerStatus(static_cast<std::uint8_t>(where.offset & 0x0FU)));
       return readIo(static_cast<std::uint8_t>(where.offset), true);
     case Location::Kind::Empty:
       return hw::driveBus(0);
@@ -143,12 +182,14 @@ hw::BusRead Cec1Board::read(std::uint16_t address) {
 
 hw::BusRead Cec1Board::peek(std::uint16_t address) {
   const Location where = locateRead(address);
-  if (where.kind == Location::Kind::Register) return readIo(static_cast<std::uint8_t>(where.offset), false);
+  if (where.kind == Location::Kind::Register && where.offset < 0x100) return readIo(static_cast<std::uint8_t>(where.offset), false);
   return read(address);
 }
 
 void Cec1Board::write(std::uint16_t address, std::uint8_t value) {
   if (address < IO_FIRST) {
+    // 辅存写开关为 1 时，$4000-$BFFF 的写进了辅存里的 ROM，丢弃。
+    if (switches_.ramWrite && address >= EXTENSION_FIRST) return;
     ram_[address] = value;
     return;
   }
@@ -157,7 +198,8 @@ void Cec1Board::write(std::uint16_t address, std::uint8_t value) {
     return;
   }
   if (address < HIGH_FIRST) return;
-  if (switches_.lcWriteRam) languageCard_[languageCardOffset(address)] = value;
+  // 辅助零页开关为 1 时这段空间是辅存里的 ROM，写不进去。
+  if (switches_.lcWriteRam && !switches_.altZeroPage) languageCard_[languageCardOffset(address)] = value;
 }
 
 // ---------------------------------------------------------------- $C000-$C0FF
@@ -237,7 +279,7 @@ hw::BusRead Cec1Board::readIo(std::uint8_t reg, bool side) {
         case 0x2:
           return hw::driveBus((button1_ || keyboard_.solidApple()) ? 0x80 : 0x00);
         case 0x3:
-          return hw::driveBus(keyboard_.shiftDown() ? 0x80 : 0x00);
+          return hw::driveBus(button2_ ? 0x80 : 0x00);
         default:
           return hw::driveBus(paddleTiming((reg & 0x07U) - 4U) ? 0x80 : 0x00);
       }
@@ -289,6 +331,10 @@ void Cec1Board::writeIo(std::uint8_t reg, std::uint8_t value) {
       break;
     case GROUP_AUX:
       if (reg == 0xB0) switches_.aux = value;
+      break;
+    case GROUP_PRINTER:
+      // 打印机接口卡的数据寄存器：写入的同时产生选通脉冲。
+      if (reg == PRINTER_DATA_REGISTER) parallel_.writeData(value);
       break;
     case GROUP_DISK:
       disk_.write(reg & 0x0FU, value);
@@ -373,12 +419,14 @@ logic::hardware::Apple2VideoMode Cec1Board::videoMode() const {
   mode.mixed = switches_.mixed;
   mode.page2 = switches_.page2;
   mode.hires = switches_.hires;
+  mode.colorEnabled = (switches_.aux & AUX_COLOR_ENABLE) != 0;
   return mode;
 }
 
 void Cec1Board::setPaddles(std::uint8_t buttons) {
   button0_ = (buttons & hw::pad_button::A) != 0;
   button1_ = (buttons & hw::pad_button::B) != 0;
+  button2_ = (buttons & (hw::pad_button::SELECT | hw::pad_button::START)) != 0;
   const auto axis = [buttons](std::uint8_t low, std::uint8_t high) { return (buttons & low) != 0 ? PADDLE_LOW : ((buttons & high) != 0 ? PADDLE_HIGH : PADDLE_CENTER); };
   paddleValues_[0] = axis(hw::pad_button::LEFT, hw::pad_button::RIGHT);
   paddleValues_[1] = axis(hw::pad_button::UP, hw::pad_button::DOWN);

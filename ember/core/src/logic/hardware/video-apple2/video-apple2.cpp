@@ -45,6 +45,15 @@ constexpr std::uint32_t rgb(std::uint32_t red, std::uint32_t green, std::uint32_
 constexpr std::uint32_t BLACK = rgb(0, 0, 0);
 constexpr std::uint32_t WHITE = rgb(255, 255, 255);
 
+/** 灰度：用亮度公式算出的灰色。 */
+constexpr std::uint32_t grayOf(std::uint32_t color) {
+  const std::uint32_t red = color & 0xFFU;
+  const std::uint32_t green = (color >> 8) & 0xFFU;
+  const std::uint32_t blue = (color >> 16) & 0xFFU;
+  const std::uint32_t level = (red * 30 + green * 59 + blue * 11) / 100;
+  return rgb(level, level, level);
+}
+
 /** 低分辨率的 16 种颜色。 */
 constexpr std::array<std::uint32_t, 16> LORES_COLORS = {rgb(0, 0, 0),       rgb(227, 30, 96),  rgb(96, 78, 189),   rgb(255, 68, 253), rgb(0, 163, 96),    rgb(156, 156, 156), rgb(20, 207, 253), rgb(208, 195, 255),
                                                         rgb(96, 114, 3),    rgb(255, 106, 60), rgb(156, 156, 156), rgb(255, 160, 208), rgb(20, 245, 60), rgb(208, 221, 141), rgb(114, 255, 208), rgb(255, 255, 255)};
@@ -102,6 +111,7 @@ void VideoApple2::onEvent(hw::MasterTime when, std::uint32_t /*tag*/) {
 
 void VideoApple2::renderNow() {
   const Apple2VideoMode mode = source_.videoMode();
+  colorEnabled_ = mode.colorEnabled;
   const std::uint16_t textPage = mode.page2 ? TEXT_PAGE_2 : TEXT_PAGE_1;
   if (mode.text) {
     renderText(0, TEXT_ROWS - 1, textPage);
@@ -150,8 +160,8 @@ void VideoApple2::renderLores(int lastRow, std::uint16_t pageBase) {
   for (int row = 0; row <= lastRow; ++row) {
     for (int column = 0; column < TEXT_COLUMNS; ++column) {
       const std::uint8_t value = source_.readVideoByte(static_cast<std::uint16_t>(pageBase + textRowOffset(row) + column));
-      const std::uint32_t upper = LORES_COLORS[value & 0x0F];
-      const std::uint32_t lower = LORES_COLORS[value >> 4];
+      const std::uint32_t upper = colorEnabled_ ? LORES_COLORS[value & 0x0F] : grayOf(LORES_COLORS[value & 0x0F]);
+      const std::uint32_t lower = colorEnabled_ ? LORES_COLORS[value >> 4] : grayOf(LORES_COLORS[value >> 4]);
       for (int line = 0; line < GLYPH_HEIGHT; ++line) {
         const std::uint32_t color = line < 4 ? upper : lower;
         for (int dot = 0; dot < GLYPH_WIDTH; ++dot) putDot(column * GLYPH_WIDTH + dot, row * GLYPH_HEIGHT + line, color);
@@ -176,7 +186,7 @@ void VideoApple2::renderHires(int lastLine, std::uint16_t pageBase) {
       const std::size_t index = static_cast<std::size_t>(x + 1);
       std::uint32_t color = BLACK;
       if (lit[index]) {
-        if (lit[index - 1] || lit[index + 1]) {
+        if (lit[index - 1] || lit[index + 1] || !colorEnabled_) {
           color = WHITE;
         } else {
           const bool group = shifted[static_cast<std::size_t>(x / GLYPH_WIDTH)];

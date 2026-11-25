@@ -21,7 +21,7 @@ namespace ember::win32::entry {
 namespace {
 
 /** 软盘镜像常见的扩展名。 */
-const std::vector<std::string> kFloppyExtensions{"img", "ima", "vfd", "dsk", "flp"};
+const std::vector<std::string> kFloppyExtensions{"img", "ima", "vfd", "dsk", "flp", "do", "po", "nib", "woz"};
 /** 磁带可以用的声音文件扩展名（ffmpeg 能解码的常见格式）。 */
 const std::vector<std::string> kSoundExtensions{"m4a", "mp3", "wav", "aac", "flac", "ogg", "opus", "mp4", "mka"};
 

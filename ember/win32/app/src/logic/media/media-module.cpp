@@ -27,7 +27,7 @@ constexpr int kMaxFloppyDrives = 4;
 constexpr int kDropFloppyDrive = 0;
 
 /** 可以拖进窗口的文件扩展名：软盘镜像；磁带的声音文件（ffmpeg 能解码的常见格式）。 */
-const std::vector<std::string> kFloppyExtensions{"img", "ima", "vfd", "dsk", "flp"};
+const std::vector<std::string> kFloppyExtensions{"img", "ima", "vfd", "dsk", "flp", "do", "po", "nib", "woz"};
 const std::vector<std::string> kSoundExtensions{"m4a", "mp3", "wav", "aac", "flac", "ogg", "opus", "mp4", "mka"};
 
 /** 第 drive 个软驱的软盘名状态项。 */

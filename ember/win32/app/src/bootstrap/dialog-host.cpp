@@ -145,6 +145,10 @@ void DialogHost::ownerWindowChanged() {
   for (auto& entry : docks_) entry.second->leaderChanged();
 }
 
+void DialogHost::ownerActivated() {
+  for (auto& entry : docks_) entry.second->leaderActivated();
+}
+
 void DialogHost::closeAll() {
   attachments_.clear();
   while (!docks_.empty()) releaseDock(docks_.begin()->first);

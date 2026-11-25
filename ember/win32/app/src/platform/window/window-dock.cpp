@@ -159,6 +159,17 @@ void WindowDock::leaderChanged() {
   if (IsIconic(follower) == FALSE) align();
 }
 
+void WindowDock::raiseTogether(void* active, void* other) {
+  HWND otherWindow = asWindow(other);
+  if (IsIconic(asWindow(active)) != FALSE || IsIconic(otherWindow) != FALSE) return;
+  adjusting_ = true;
+  SetWindowPos(otherWindow, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  SetWindowPos(asWindow(active), HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  adjusting_ = false;
+}
+
+void WindowDock::leaderActivated() { raiseTogether(leader_, follower_); }
+
 bool WindowDock::resizeFollowerWidth(int width) {
   if (!docked_ || leaderAway() || IsIconic(asWindow(follower_)) != FALSE) return false;
   const RECT leaderRect = windowRect(leader_);
@@ -178,8 +189,12 @@ bool WindowDock::resizeFollowerWidth(int width) {
   return true;
 }
 
-bool WindowDock::followerMessage(unsigned message, std::uintptr_t /*wParam*/, std::intptr_t lParam, std::intptr_t& result) {
+bool WindowDock::followerMessage(unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
   switch (message) {
+    case WM_ACTIVATE:
+      // 激活（不是最小化引起的）时主窗也提到最前面
+      if (LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0) raiseTogether(follower_, leader_);
+      return false;
     case WM_ENTERSIZEMOVE: {
       const RECT start = windowRect(follower_);
       POINT cursor{};

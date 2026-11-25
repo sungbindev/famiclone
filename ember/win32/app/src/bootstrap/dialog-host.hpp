@@ -92,6 +92,9 @@ class DialogHost final : public contracts::ShellDialogOpener {
   /** 主窗口的位置、大小、最小化或置顶变化了：让停靠着的对话框跟随。 */
   void ownerWindowChanged();
 
+  /** 主窗口被激活了：让停靠着的对话框一起提到最前面。 */
+  void ownerActivated();
+
   /** 设置对话框打开、关闭后的回调（参数是对话框标识与是否开着）；closeAll 不触发。 */
   void setOnOpenChanged(std::function<void(const std::string& dialogId, bool open)> handler) { onOpenChanged_ = std::move(handler); }
 

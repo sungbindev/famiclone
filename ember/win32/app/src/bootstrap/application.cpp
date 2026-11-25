@@ -518,6 +518,8 @@ int runApplication(const shared::LaunchArguments& launch) {
     window.setMessageHook([&](unsigned message, std::uintptr_t wParam, std::intptr_t lParam, std::intptr_t& result) {
       // 主窗口的位置、大小、最小化、置顶变化时，停靠着的对话框（媒体库）跟着动
       if (message == WM_WINDOWPOSCHANGED) dialogs.ownerWindowChanged();
+      // 主窗口被激活（含点任务栏按钮）时，停靠着的对话框一起提到最前面
+      if (message == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0) dialogs.ownerActivated();
       if (frame.handle(message, wParam, lParam, result)) return true;
       if (modes != nullptr && modes->handle(message, wParam, lParam, result)) return true;
       if (screenHost && screenHost->handleMessage(message, wParam, lParam, result)) return true;

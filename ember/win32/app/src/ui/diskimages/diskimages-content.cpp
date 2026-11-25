@@ -325,6 +325,7 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
   split->setMain(std::move(pane));
   // 默认只显示资源管理器，镜像内容由标题行上的按钮展开
   split->setMainVisible(false);
+  split->setDividerReserved(true);
   split_ = static_cast<SplitView*>(addChild(std::move(split)));
   menu_ = static_cast<ContextMenu*>(addChild(std::make_unique<ContextMenu>()));
 

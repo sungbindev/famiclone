@@ -46,6 +46,8 @@ class SplitView : public Widget {
   /** 显示或隐藏主区（默认显示）；隐藏时左栏占满整个宽度，分割线与分隔条都不出现。 */
   void setMainVisible(bool visible);
   [[nodiscard]] bool mainVisible() const { return mainVisible_; }
+  /** 隐藏主区时左栏右边是否仍留出分割线的宽度（不画），默认否；开启后展开前后左栏内容的位置不变。 */
+  void setDividerReserved(bool reserved) { dividerReserved_ = reserved; }
 
   [[nodiscard]] Size measure(Size available) override;
   void arrange(const Rect& bounds) override;
@@ -66,6 +68,7 @@ class SplitView : public Widget {
   double minimum_{160.0};
   double maximum_{480.0};
   bool mainVisible_{true};
+  bool dividerReserved_{false};
 };
 
 }  // namespace rujian::ui

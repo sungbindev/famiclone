@@ -194,7 +194,8 @@ Size SplitView::measure(Size available) {
 void SplitView::arrange(const Rect& bounds) {
   setBounds(bounds);
   if (!mainVisible_) {
-    sideScroll_->arrange(bounds);
+    const double reserved = dividerReserved_ && host() != nullptr ? snapBorderWidth(kBorderWidth, host()->scale()) : 0.0;
+    sideScroll_->arrange(Rect{bounds.x, bounds.y, std::max(0.0, bounds.width - reserved), bounds.height});
     return;
   }
   const double border = snapBorderWidth(kBorderWidth, host()->scale());

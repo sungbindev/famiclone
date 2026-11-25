@@ -61,6 +61,8 @@ constexpr double kFocusOffset = -1.0;
 constexpr double kFocusWidth = 1.0;
 /** 行内重命名的输入框比名称单元格多出的右边宽度。 */
 constexpr double kEditorExtraWidth = 4.0;
+/** 行的选中底色与焦点框右边留出的空白，与左边的内边距对称，不贴到右边缘。 */
+constexpr double kRowMarginRight = tokens::space_page;
 /** 没有行时说明文字离表头的距离。 */
 constexpr double kEmptyTextTop = 12.0;
 
@@ -569,12 +571,13 @@ void FileTable::paint(Canvas& canvas) {
     const Rect row = rowRectAt(i);
     if (row.bottom() < view.y || row.y > view.bottom()) continue;
     const FileTableRow& item = rows_[i];
+    const Rect box{row.x, row.y, std::max(0.0, row.width - kRowMarginRight), row.height};
     const bool hovered = static_cast<int>(i) == hoverRow_;
     Color fill = kTransparent;
     if (item.id == dropId_) fill = colors.tree_drop_target_bg;
     else if (selected(i)) fill = hovered ? colors.option_selected_hover_bg : colors.option_selected_bg;
     else if (hovered) fill = colors.option_hover_bg;
-    if (fill != kTransparent) canvas.drawBox(row, BoxStyle{.fill = fill, .radius = tokens::tree_radius});
+    if (fill != kTransparent) canvas.drawBox(box, BoxStyle{.fill = fill, .radius = tokens::tree_radius});
     double x = row.x + kPaddingX;
     for (std::size_t c = 0; c < columns_.size() && c < widths.size(); ++c) {
       const double width = widths[c];
@@ -600,7 +603,7 @@ void FileTable::paint(Canvas& canvas) {
       }
       x += width + kColumnGap;
     }
-    if (focusVisible() && i == focus && renameId_.empty()) canvas.strokeOutline(row, tokens::tree_radius, kFocusOffset, kFocusWidth, colors.focus_border);
+    if (focusVisible() && i == focus && renameId_.empty()) canvas.strokeOutline(box, tokens::tree_radius, kFocusOffset, kFocusWidth, colors.focus_border);
   }
 
   if (rows_.empty() && !emptyText_.empty()) {

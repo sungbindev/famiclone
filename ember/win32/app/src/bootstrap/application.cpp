@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 
+#include "bootstrap/dialog-confirmation.hpp"
 #include "bootstrap/dialog-host.hpp"
 #include "bootstrap/third-party-notices.hpp"
 #include "bootstrap/update-apply.hpp"
@@ -40,7 +41,6 @@
 #include "entry/system/system-handlers.hpp"
 #include "infra/core-client/in-process-core-gateway.hpp"
 #include "infra/core-client/latest-frame-slot.hpp"
-#include "infra/dialogs/message-box-confirmation.hpp"
 #include "infra/dialogs/remembering-file-dialog.hpp"
 #include "infra/input/system-gamepad-reader.hpp"
 #include "infra/directories/explorer-directory.hpp"
@@ -344,7 +344,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   infra::EngineAppUpdater updater(updateEngine, ui);
   infra::UserDataLocationAdapter userDataLocation(resolution, launch.userDataDirectory.has_value(), executable, profileDirectory);
   infra::ExplorerDirectory userDataDirectory(userData);
-  infra::MessageBoxConfirmation confirmation;
+  DialogConfirmation confirmation([&mainWindow]() -> void* { return mainWindow; });
 
   // 随程序嵌进可执行文件的资源包：预装插件释放到用户数据目录下的 bundled-plugins，帮助文档站点由本机服务直接从包里读
   std::unique_ptr<infra::ZipArchive> resources;
@@ -407,6 +407,8 @@ int runApplication(const shared::LaunchArguments& launch) {
     // 边框与阴影：Windows 11 用系统的（圆角、阴影、边框色由 DWM 画），其余系统自绘；环境变量 EMBER_WIN_FRAME=custom 或 system 可以强制选择（开发期验证用）；主窗口与对话框窗口用同一种
     const auto frameChoice = platform::environmentVariable("EMBER_WIN_FRAME");
     const bool customFrame = frameChoice ? *frameChoice == "custom" : platform::FramelessFrame::prefersCustomFrame();
+    confirmation.setCustomFrame(customFrame);
+    confirmation.setLogo([] { return std::make_unique<ui::AppLogo>(platform::renderAppIcon); });
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
     auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDiskImagesModule(diskImages), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
@@ -472,6 +474,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     const auto applyTheme = [&] {
       window.root().setTheme(resolveTheme(themeSource));
       dialogs.setTheme(resolveTheme(themeSource));
+      confirmation.setTheme(resolveTheme(themeSource));
       applyBorderColor();
     };
 

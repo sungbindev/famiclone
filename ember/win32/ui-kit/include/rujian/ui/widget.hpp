@@ -32,8 +32,8 @@ enum Modifier : unsigned { kModifierShift = 1, kModifierCtrl = 2, kModifierAlt =
 /** 鼠标按键。 */
 enum class MouseButton { None, Left, Right, Middle };
 
-/** 鼠标光标样式。 */
-enum class CursorKind { Arrow, IBeam, Hand, SizeWE };
+/** 鼠标光标样式：Move 是拖动移动中（四向箭头），NotAllowed 是拖动到不能放的地方（禁止符）。 */
+enum class CursorKind { Arrow, IBeam, Hand, SizeWE, Move, NotAllowed };
 
 /** 鼠标事件。 */
 struct MouseEvent {

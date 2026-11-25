@@ -22,6 +22,7 @@
 #include "platform/window/frameless-frame.hpp"
 #include "rujian/ui/dialog-frame.hpp"
 #include "rujian/ui/theme.hpp"
+#include "rujian/ui/tooltip.hpp"
 #include "rujian/ui/window.hpp"
 
 namespace ember::win32::platform {
@@ -114,6 +115,8 @@ class DialogWindow {
   DialogWindowOptions options_;
   rujian::ui::HostWindow window_;
   rujian::ui::DialogFrame* frame_{nullptr};
+  /** 悬停提示：对话框里的控件用 setTooltip 设置的提示靠它显示；先于窗口销毁。 */
+  std::unique_ptr<rujian::ui::Tooltip> tooltip_;
   std::unique_ptr<FramelessFrame> frameless_;
   bool ownerLocked_{false};
   /** 刚吞掉的那些键的标识（扫描码加扩展位），它们的字符与抬起消息也要吞掉；抬起后移出。 */

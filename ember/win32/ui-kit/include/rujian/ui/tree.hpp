@@ -11,6 +11,7 @@
  *       键盘：上下移动焦点；右键展开，已展开时移到第一个子项；左键收起，已收起或没有子项时移到父项；回车与空格选中；Shift+F10 与菜单键触发右键菜单回调；其余按键先交给“按键处理”回调（重命名、删除、剪切复制粘贴由使用方决定）。
  *       点击展开：打开 setToggleOnClick 后，单击有子项的行既选中它也展开或收起，不再用双击。
  *       拖动：设置“放下”回调后，在某一行上按下并拖过一小段距离开始拖动；放在文件夹行上就是放进这个文件夹，放在非文件夹行上是放进它的父文件夹，放在空白处是放进最外层（目标标识为空串）；“能否放下”回调返回假时不标出目标，放下也不调用。
+ *       拖动时光标是“移动”（四向箭头），目标不能放时是禁止符，并有一个跟着鼠标的影子（被拖条目的图标与名称，靠近视图边缘时留在视图内）。
  *       行内重命名：beginRename 在名称上放一个输入框，回车或失去焦点提交，Esc 取消。
  *       点空白处：在空白处按下并松开会取消选中（调用“取消选中”回调）。
  *       逐级收起：collapseDeepestLevel 只收起此刻显示着的、已展开的条目里最深的一层，反复调用就一层一层往外收起。
@@ -111,7 +112,10 @@ class Tree : public Widget {
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
   [[nodiscard]] bool focusable() const override { return true; }
-  [[nodiscard]] CursorKind cursor() const override { return hoverRow_ >= 0 ? CursorKind::Hand : CursorKind::Arrow; }
+  [[nodiscard]] CursorKind cursor() const override {
+    if (dragging_) return dropValid_ ? CursorKind::Move : CursorKind::NotAllowed;
+    return hoverRow_ >= 0 ? CursorKind::Hand : CursorKind::Arrow;
+  }
   [[nodiscard]] Rect focusRect() const override;
   bool onMouseDown(const MouseEvent& event) override;
   bool onMouseUp(const MouseEvent& event) override;
@@ -163,8 +167,9 @@ class Tree : public Widget {
   int hoverRow_{-1};
   int pressedRow_{-1};
   int rightPressedRow_{-1};
-  /** 拖动：按下的位置、是否已开始、被拖的条目、此刻标出的目标文件夹与它能否放下。 */
+  /** 拖动：按下的位置、是否已开始、鼠标此刻的位置、被拖的条目、此刻标出的目标文件夹与它能否放下。 */
   Point pressPosition_{};
+  Point dragPoint_{};
   bool dragging_{false};
   std::string dragId_;
   std::string dropFolder_;

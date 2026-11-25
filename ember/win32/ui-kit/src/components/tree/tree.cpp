@@ -47,6 +47,14 @@ constexpr double kContextKeyOffset = 24.0;
 constexpr double kDragThreshold = 4.0;
 /** 行内重命名的输入框比名称区域多出的右边宽度。 */
 constexpr double kEditorExtraWidth = 4.0;
+/** 行的右边留出的空白：左边有对话框正文的内边距，右边留出同样宽的边距，选中底色与焦点框不贴到右边缘。 */
+constexpr double kRowMarginRight = tokens::space_page;
+/** 拖动影子：离鼠标的偏移、左右内边距、名称最宽、离视图边缘的最小距离。 */
+constexpr double kGhostOffsetX = 14.0;
+constexpr double kGhostOffsetY = 8.0;
+constexpr double kGhostPaddingX = 8.0;
+constexpr double kGhostMaxTextWidth = 220.0;
+constexpr double kGhostMargin = 2.0;
 
 }  // namespace
 
@@ -177,6 +185,7 @@ std::string Tree::dropTargetAt(Point point) const {
 }
 
 void Tree::updateDrag(Point point) {
+  dragPoint_ = point;
   dropFolder_ = dropTargetAt(point);
   dropValid_ = !canDrop_ || canDrop_(dragId_, dropFolder_);
   invalidate();
@@ -276,14 +285,14 @@ Size Tree::minimumSize() {
         const double trailing = host()->measureText(item.trailing, trailingStyle, 0).width + 1.0;
         body = std::max(label + kTrailingGap + trailing, 2.0 * trailing);
       }
-      widest = std::max(widest, head + body + tokens::tree_padding_x);
+      widest = std::max(widest, head + body + tokens::tree_padding_x + kRowMarginRight);
     }
     naturalWidth_ = std::ceil(widest);
   }
   return Size{naturalWidth_, 0};
 }
 
-Rect Tree::rowRect(std::size_t visibleIndex) const { return Rect{bounds().x, bounds().y + tokens::tree_row_height * static_cast<double>(visibleIndex), bounds().width, tokens::tree_row_height}; }
+Rect Tree::rowRect(std::size_t visibleIndex) const { return Rect{bounds().x, bounds().y + tokens::tree_row_height * static_cast<double>(visibleIndex), std::max(0.0, bounds().width - kRowMarginRight), tokens::tree_row_height}; }
 
 Rect Tree::arrowRect(std::size_t visibleIndex) const {
   const Rect row = rowRect(visibleIndex);
@@ -539,6 +548,24 @@ void Tree::paint(Canvas& canvas) {
     }
     if (!editing) canvas.drawText(item.label, Rect{x, row.y, std::max(0.0, right - x), row.height}, style, VerticalAlign::Center);
     if (focusVisible() && i == focus) canvas.strokeOutline(row, tokens::tree_radius, kFocusOffset, kFocusWidth, colors.focus_border);
+  }
+  // 拖动的影子：被拖条目的图标与名称，跟着鼠标走
+  const int draggedIndex = dragging_ ? itemIndexOf(dragId_) : -1;
+  if (draggedIndex >= 0) {
+    const TreeItem& dragged = items_[static_cast<std::size_t>(draggedIndex)];
+    const double iconSpace = dragged.icon ? tokens::icon_size + tokens::icon_text_gap : 0.0;
+    const double textWidth = std::min(host()->measureText(dragged.label, style, 0).width + 1.0, kGhostMaxTextWidth);
+    const double width = 2 * kGhostPaddingX + iconSpace + textWidth;
+    const double height = tokens::tree_row_height;
+    const double x = std::max(view.x, std::min(dragPoint_.x + kGhostOffsetX, view.right() - width - kGhostMargin));
+    const double y = std::max(view.y, std::min(dragPoint_.y + kGhostOffsetY, view.bottom() - height - kGhostMargin));
+    canvas.drawBox(Rect{x, y, width, height}, BoxStyle{.fill = colors.menu_background, .radius = tokens::tree_radius, .borderWidth = 1.0, .borderColor = colors.menu_border});
+    double textX = x + kGhostPaddingX;
+    if (dragged.icon) {
+      canvas.drawIcon(*dragged.icon, Rect{textX, y + (height - tokens::icon_size) / 2.0, tokens::icon_size, tokens::icon_size}, colors.text_muted, tokens::icon_stroke_width);
+      textX += tokens::icon_size + tokens::icon_text_gap;
+    }
+    canvas.drawText(dragged.label, Rect{textX, y, textWidth, height}, style, VerticalAlign::Center);
   }
 }
 

@@ -18,6 +18,7 @@ string(TIMESTAMP EMBER_BUILD_CLOCK "%H:%M:%S")
 
 add_library(ember_app STATIC
   src/bootstrap/application.cpp
+  src/bootstrap/dialog-confirmation.cpp
   src/bootstrap/dialog-host.cpp
   src/bootstrap/generated/third-party-notices.generated.cpp
   src/bootstrap/update-apply.cpp
@@ -35,7 +36,6 @@ add_library(ember_app STATIC
   src/entry/system/system-handlers.cpp
   src/infra/core-client/in-process-core-gateway.cpp
   src/infra/core-client/latest-frame-slot.cpp
-  src/infra/dialogs/message-box-confirmation.cpp
   src/infra/dialogs/remembering-file-dialog.cpp
   src/infra/directories/explorer-directory.cpp
   src/infra/directories/explorer-directory-opener.cpp

@@ -63,6 +63,7 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
     ShowWindow(hwnd, IsZoomed(hwnd) != FALSE ? SW_RESTORE : SW_MAXIMIZE);
   });
   window_.root().setContent(std::move(frame));
+  tooltip_ = std::make_unique<rujian::ui::Tooltip>(window_.root());
 
   FramelessCallbacks callbacks;
   callbacks.hitTest = [this](double x, double y) { return frame_->hitTestWindow(rujian::ui::Point{x, y}) == rujian::ui::DialogHit::Caption ? FrameHit::Caption : FrameHit::Client; };

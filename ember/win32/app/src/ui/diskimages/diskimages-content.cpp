@@ -98,7 +98,7 @@ constexpr double kHeaderRowHeight = 32.0;
 constexpr double kHeaderPadding = 10.0;
 constexpr double kButtonsPadding = 6.0;
 constexpr double kButtonGap = 2.0;
-constexpr double kTitleFontSize = 13.0;
+constexpr double kTitleFontSize = 12.0;
 constexpr int kTitleFontWeight = 600;
 constexpr double kInfoHeight = kHeaderRowHeight;
 /** 资源管理器的初始宽度、最小宽度与最大宽度，镜像内容展开时窗口增加的宽度，以及镜像内容至少要有的宽度。 */
@@ -162,7 +162,7 @@ class MainPane final : public Widget {
   Notice* notice_{nullptr};
 };
 
-/** 左边的资源管理器：最上面是标题行（标题、“更改目录”与两个图标按钮），下面是放在滚动区域里的树；树没有内容时在它上方盖一块说明。 */
+/** 左边的资源管理器：最上面是标题行（标题与“选择/更改目录”“折叠一级”“显示/隐藏镜像内容”三个图标按钮），下面是放在滚动区域里的树；树没有内容时在它上方盖一块说明。 */
 class ExplorerPane final : public Widget {
  public:
   ExplorerPane() {
@@ -172,9 +172,7 @@ class ExplorerPane final : public Widget {
     title->setFontSize(kTitleFontSize);
     title->setFontWeight(kTitleFontWeight);
     title_ = static_cast<Label*>(addChild(std::move(title)));
-    auto change = std::make_unique<Button>(kChooseRoot);
-    change->setCompact(true);
-    change_ = static_cast<Button*>(addChild(std::move(change)));
+    change_ = addIconButton(IconId::FolderOpen, kChooseRoot);
     collapse_ = addIconButton(IconId::SquareMinus, kCollapseTip);
     pane_ = addIconButton(IconId::LayoutSidebarRightExpand, kShowImageTip);
     auto scroll = std::make_unique<ScrollArea>();
@@ -197,7 +195,7 @@ class ExplorerPane final : public Widget {
 
   void arrange(const Rect& bounds) override {
     setBounds(bounds);
-    // 标题行：按钮靠右（显示镜像内容的按钮在最右，往左依次是折叠按钮、“更改目录”），标题靠左
+    // 标题行：按钮靠右（显示镜像内容的按钮在最右，往左依次是折叠按钮、选择目录按钮），标题靠左
     double right = bounds.right() - kButtonsPadding;
     for (Button* button : {pane_, collapse_, change_}) {
       const Size size = button->measure(Size{});
@@ -298,10 +296,14 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
     const contracts::DiskTreeNode* node = findNode(id);
     if (node == nullptr) return;
     treeSelected_ = id;
-    // 点文件夹只是选中并展开或收起，不改变右边显示的镜像
+    // 只有选中镜像时右边才显示它的内容；选中文件夹时右边收起内容（模型里仍记着上一个镜像）
     if (!node->directory) model_.selectImage(id);
+    refresh();
   });
-  tree_->setOnClearSelection([this] { treeSelected_.clear(); });
+  tree_->setOnClearSelection([this] {
+    treeSelected_.clear();
+    refresh();
+  });
   tree_->setOnRename([this](const std::string& id, const std::string& name) { model_.renameItem(id, name); });
   tree_->setOnKey([this](const KeyEvent& event) { return handleTreeKey(event); });
   tree_->setCanDrop([this](const std::string& id, const std::string& target) { return canDropOnFolder(id, target); });
@@ -415,7 +417,9 @@ void DiskImagesContent::refresh() {
   }
   if (treeChanged) updateTree();
   else tree_->setSelectedId(treeSelected_);
-  if (!(imageView_ == previous) || treeChanged) updateImage(previous);
+  const bool shown = imageShown();
+  if (!(imageView_ == previous) || treeChanged || shown != shownImage_) updateImage(previous);
+  shownImage_ = shown;
   if (revealPending_ && findNode(treeSelected_) != nullptr) {
     tree_->reveal(treeSelected_);
     revealPending_ = false;
@@ -428,6 +432,7 @@ void DiskImagesContent::updateTree() {
   rootText_ = hasRoot ? treeView_.root : kRootNone;
   if (onRootChanged_) onRootChanged_(rootText_);
   rootButton_->setLabel(hasRoot ? kChangeRoot : kChooseRoot);
+  rootButton_->setTooltip(hasRoot ? kChangeRoot : kChooseRoot);
 
   std::vector<TreeItem> items;
   for (const contracts::DiskTreeNode& node : treeView_.nodes) {
@@ -480,6 +485,7 @@ void DiskImagesContent::updateTree() {
 
 void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   const contracts::DiskImageView& view = imageView_;
+  const bool shown = imageShown();
   // 换了镜像或文件夹：选中与滚动位置重新来
   const bool moved = view.image != previous.image || view.directory != previous.directory;
   if (moved) {
@@ -489,7 +495,7 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   }
 
   std::string info;
-  if (view.selected) {
+  if (shown) {
     info = view.imageName;
     if (!view.formatName.empty()) info += kInfoSeparator + view.formatName;
     if (view.drive >= 0) info += std::string(kInfoSeparator) + kInDrive;
@@ -505,19 +511,17 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   bool error = false;
   // 左边没有可选的镜像时（没设目录、目录读不了或为空），左边已有说明，右边留空
   const bool treeUsable = treeView_.state == contracts::DiskImagesState::Ready && !treeView_.nodes.empty();
-  if (!view.selected) {
+  if (!shown) {
     if (treeUsable) notice = kNoImageNotice;
   } else if (view.failed) {
     notice = view.message;
     error = true;
-  } else if (view.loading) {
-    notice = kLoadingNotice;
   }
   listNotice_->setText(notice);
   listNotice_->setError(error);
   listNotice_->setVisible(!notice.empty());
   // 有说明时不显示列表（表头与“文件夹是空的”不能压在说明上）
-  listScroll_->setVisible(notice.empty() && view.selected);
+  listScroll_->setVisible(notice.empty() && shown);
 
   const bool showModified = std::any_of(view.entries.begin(), view.entries.end(), [](const contracts::DiskEntryRow& row) { return !row.modified.empty(); });
   std::vector<FileTableColumn> columns{{kColumnName, kNameColumnWidth, false}, {kColumnType, 70, false}, {kColumnSize, 90, true}};
@@ -525,14 +529,14 @@ void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
   table_->setColumns(std::move(columns));
 
   std::vector<FileTableRow> rows;
-  if (view.selected && !view.failed && !view.directory.empty()) {
+  if (shown && !view.failed && !view.directory.empty()) {
     FileTableRow parent;
     parent.id = kParentRowId;
     parent.icon = IconId::ArrowUp;
     parent.cells = {kParentName};
     rows.push_back(std::move(parent));
   }
-  if (view.selected && !view.failed) {
+  if (shown && !view.failed) {
     for (const contracts::DiskEntryRow& entry : view.entries) {
       FileTableRow row;
       row.id = entry.name;
@@ -653,7 +657,7 @@ bool DiskImagesContent::handleTreeKey(const KeyEvent& event) {
 }
 
 void DiskImagesContent::showListMenu(const std::vector<std::string>& ids, Point position, bool highlightFirst) {
-  if (!imageView_.selected || imageView_.failed || imageView_.loading) return;
+  if (!imageShown() || imageView_.failed || imageView_.loading) return;
   std::vector<std::string> names;
   for (const std::string& id : ids) {
     if (id != kParentRowId) names.push_back(id);
@@ -764,7 +768,7 @@ void DiskImagesContent::showHint(const Rect& anchor, const std::string& text) {
 
 bool DiskImagesContent::requireModify(const Rect& anchor) {
   if (imageView_.canModify()) return true;
-  if (imageView_.selected && !imageView_.failed && !imageView_.loading) showHint(anchor, imageView_.readOnlyReason.empty() ? std::string(kHintReadOnly) : imageView_.readOnlyReason);
+  if (imageShown() && !imageView_.failed && !imageView_.loading) showHint(anchor, imageView_.readOnlyReason.empty() ? std::string(kHintReadOnly) : imageView_.readOnlyReason);
   return false;
 }
 
@@ -798,12 +802,12 @@ void DiskImagesContent::commandCopy() {
 }
 
 void DiskImagesContent::commandPaste() {
-  if (!imageView_.selected || !model_.hasClipboard() || !requireModify(focusAnchor())) return;
+  if (!imageShown() || !model_.hasClipboard() || !requireModify(focusAnchor())) return;
   model_.paste();
 }
 
 void DiskImagesContent::commandNewFolder() {
-  if (!imageView_.selected || !requireModify(focusAnchor())) return;
+  if (!imageShown() || !requireModify(focusAnchor())) return;
   if (!imageView_.subdirectories) {
     showHint(focusAnchor(), imageView_.formatName + kHintNoFolders);
     return;
@@ -817,7 +821,7 @@ void DiskImagesContent::commandNewFolder() {
 }
 
 void DiskImagesContent::commandUndo() {
-  if (!imageView_.selected) return;
+  if (!imageShown()) return;
   if (imageView_.undoDepth == 0) {
     showHint(focusAnchor(), kHintNothingToUndo);
     return;
@@ -833,7 +837,7 @@ void DiskImagesContent::startDrag(const std::vector<std::string>& ids) {
   for (const std::string& id : ids) {
     if (id != kParentRowId) names.push_back(id);
   }
-  if (names.empty() || !imageView_.selected) return;
+  if (names.empty() || !imageShown()) return;
   ActiveDrag drag{++nextToken_, imageView_.image, imageView_.directory, names};
   const std::weak_ptr<bool> alive = alive_;
   model_.exportEntries(names, [this, alive, drag](std::vector<contracts::DiskExportItem> items) {
@@ -846,7 +850,7 @@ void DiskImagesContent::startDrag(const std::vector<std::string>& ids) {
 }
 
 std::optional<DiskImagesContent::DropTarget> DiskImagesContent::dropTarget(Point point, bool internal) {
-  if (!imagePaneShown_ || !listScroll_->bounds().contains(point) || !imageView_.selected || imageView_.failed || imageView_.loading) return std::nullopt;
+  if (!imagePaneShown_ || !listScroll_->bounds().contains(point) || !imageShown() || imageView_.failed || imageView_.loading) return std::nullopt;
   const std::optional<std::string> row = table_->rowIdAt(point);
   std::string folder;
   if (row && *row != kParentRowId) {

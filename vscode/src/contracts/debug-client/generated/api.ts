@@ -275,7 +275,7 @@ export interface MachinesRomSkipped {
 
 /** 一个机型：标识、显示名称、是否需要 ROM、是否已支持与已添加的 ROM。 */
 export interface MachinesMachineInfo {
-  /** 机型标识：fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing */
+  /** 机型标识：fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1 */
   id: string;
   /** 显示名称 */
   name: string;
@@ -2257,7 +2257,7 @@ export interface EmberApi {
     setState(params: InspectorSetStateParams): Promise<InspectorSetStateResult>;
   };
   readonly machines: {
-    /** 机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing。 */
+    /** 机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1。 */
     list(): Promise<MachinesListResult>;
     /** 读取并检查 ROM 文件，复制进 ROM 目录（新文件写好之后才删旧文件，失败时原有的 ROM 不变）；成功后发 machines.changed。 */
     setRom(params: MachinesSetRomParams): Promise<MachinesSetRomResult>;

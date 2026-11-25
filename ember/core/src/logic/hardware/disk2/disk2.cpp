@@ -31,16 +31,20 @@ constexpr unsigned REGISTER_Q7_HIGH = 15;
 constexpr std::uint8_t WRITE_PROTECT_BIT = 0x80;
 /** 一个数据寄存器移出的位数。 */
 constexpr unsigned BITS_PER_BYTE = 8;
+/** 没有盘片时读头读到的杂波，一圈的位数。 */
+constexpr std::size_t NOISE_TRACK_BITS = 50000;
 
 }  // namespace
 
-Disk2::Disk2(hw::Scheduler& scheduler, double ticksPerBit, hw::MasterTime motorOffDelay) : scheduler_(scheduler), ticksPerBit_(ticksPerBit), motorOffDelay_(motorOffDelay) {}
+Disk2::Disk2(hw::Scheduler& scheduler, double ticksPerBit, hw::MasterTime motorOffDelay, disk2::FormatChooser chooser)
+    : scheduler_(scheduler), ticksPerBit_(ticksPerBit), motorOffDelay_(motorOffDelay), chooser_(chooser) {}
 
 void Disk2::attachDrive(hw::FloppyDrive* drive) {
   drive_ = drive;
   imageData_ = nullptr;
   imageSize_ = 0;
   imageInserted_ = false;
+  format_.reset();
   dropCaches();
 }
 
@@ -148,6 +152,7 @@ void Disk2::refreshMedia() {
   imageData_ = image.data();
   imageSize_ = image.size();
   imageInserted_ = inserted;
+  format_ = inserted ? chooser_(image) : std::nullopt;
   dropCaches();
 }
 
@@ -161,7 +166,7 @@ void Disk2::dropCaches() {
 
 bool Disk2::spinning() const { return motorOn_ && selected_ == 0 && drive_ != nullptr && drive_->exists(); }
 
-bool Disk2::hasDisk() const { return drive_ != nullptr && drive_->inserted() && drive_->image().size() == disk2::IMAGE_SIZE; }
+bool Disk2::hasDisk() const { return drive_ != nullptr && drive_->inserted() && format_.has_value(); }
 
 std::vector<std::uint8_t>& Disk2::trackBits(unsigned track) {
   std::vector<std::uint8_t>& ring = rings_[std::min<unsigned>(track, disk2::TRACK_COUNT)];
@@ -169,19 +174,19 @@ std::vector<std::uint8_t>& Disk2::trackBits(unsigned track) {
   if (!hasDisk()) {
     // 没有盘片：读头读到杂波，每个磁道一圈固定的随机位。
     std::uint32_t state = 0x9E3779B9U * (track + 1U);
-    ring.resize(disk2::TRACK_BITS);
+    ring.resize(NOISE_TRACK_BITS);
     for (auto& bit : ring) {
       state ^= state << 13;
       state ^= state >> 17;
       state ^= state << 5;
       bit = static_cast<std::uint8_t>(state & 1U);
     }
-  } else if (track < disk2::TRACK_COUNT) {
+  } else if (track < format_->trackCount) {
     const std::span<const std::uint8_t> sectors(drive_->image());
-    ring = disk2::encodeTrack(track, sectors.subspan(track * disk2::TRACK_BYTES, disk2::TRACK_BYTES));
+    ring = disk2::encodeTrack(*format_, track, sectors.subspan(track * format_->trackBytes(), format_->trackBytes()));
   } else {
     // 镜像之外的磁道（格式化会写到这里）：什么都没有。
-    ring.assign(disk2::TRACK_BITS, 0);
+    ring.assign(format_->trackBits, 0);
   }
   return ring;
 }
@@ -197,15 +202,16 @@ void Disk2::advance() {
     return;
   }
   if (target <= cursor_) return;
+  std::vector<std::uint8_t>& ring = trackBits(track());
+  const auto ringBits = static_cast<std::int64_t>(ring.size());
   // 读模式下隔了超过一圈没有访问：只需要转最后一圈。
-  if (!q7_ && target - cursor_ > static_cast<std::int64_t>(disk2::TRACK_BITS)) {
-    cursor_ = target - static_cast<std::int64_t>(disk2::TRACK_BITS);
+  if (!q7_ && target - cursor_ > ringBits) {
+    cursor_ = target - ringBits;
     readShift_ = 0;
   }
-  std::vector<std::uint8_t>& ring = trackBits(track());
   const bool writable = q7_ && hasDisk() && !drive_->writeProtected();
   for (; cursor_ < target; ++cursor_) {
-    const auto position = static_cast<std::size_t>(cursor_ % static_cast<std::int64_t>(disk2::TRACK_BITS));
+    const auto position = static_cast<std::size_t>(cursor_ % ringBits);
     if (q7_) {
       std::uint8_t out = 0;
       if (shiftLeft_ > 0) {
@@ -242,10 +248,10 @@ std::uint8_t Disk2::readData() {
 void Disk2::finishWrite() {
   if (!sessionDirty_) return;
   sessionDirty_ = false;
-  if (sessionTrack_ >= disk2::TRACK_COUNT || drive_ == nullptr || !drive_->inserted() || drive_->image().size() != disk2::IMAGE_SIZE) return;
-  for (const disk2::DecodedSector& sector : disk2::decodeTrack(rings_[sessionTrack_])) {
+  if (!hasDisk() || sessionTrack_ >= format_->trackCount) return;
+  for (const disk2::DecodedSector& sector : disk2::decodeTrack(*format_, rings_[sessionTrack_])) {
     if (sector.track != sessionTrack_) continue;
-    const std::size_t base = (static_cast<std::size_t>(sessionTrack_) * disk2::SECTORS_PER_TRACK + sector.logical) * disk2::SECTOR_SIZE;
+    const std::size_t base = (static_cast<std::size_t>(sessionTrack_) * format_->sectorsPerTrack + sector.logical) * disk2::SECTOR_SIZE;
     for (std::size_t index = 0; index < disk2::SECTOR_SIZE; ++index) {
       if (drive_->readByte(base + index) != sector.data[index]) drive_->writeByte(base + index, sector.data[index]);
     }

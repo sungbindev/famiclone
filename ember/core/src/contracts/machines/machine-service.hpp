@@ -20,7 +20,7 @@ class MachineService {
  public:
   virtual ~MachineService() = default;
 
-  /** 机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing。 */
+  /** 机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1。 */
   [[nodiscard]] virtual MachinesListResult list() const = 0;
 
   /**

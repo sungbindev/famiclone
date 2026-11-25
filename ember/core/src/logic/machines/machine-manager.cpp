@@ -36,6 +36,9 @@ constexpr std::size_t BBG98_PRG_SIZE = 2048 * 1024;
 constexpr std::size_t PYRAMID_PRG_SIZE = 512 * 1024;
 /** 裕兴的 ROM：1024KB（V8.0-C、V8.2-D、V8.3-D、V9.0-98 等学习卡都是这个大小）。 */
 constexpr std::size_t YUXING_PRG_SIZE = 1024 * 1024;
+/** 中华学习机 CEC-I 的 ROM：64KB（U7 与 U35 两块 32KB 的芯片依次拼成），后面可以再接 256KB 的汉字字库。 */
+constexpr std::size_t CEC1_PRG_SIZE = 64 * 1024;
+constexpr std::size_t CEC1_LIBRARY_SIZE = 256 * 1024;
 
 /** 路径里最后一段（文件名）；两种分隔符都认。 */
 std::string baseName(const std::string& path) {
@@ -56,7 +59,8 @@ MachineManager::MachineManager(std::shared_ptr<api::RomStorage> storage, std::sh
                {"bbg98", "步步高 98", true, true, BBG98_PRG_SIZE},
                {"pec9588", "金字塔 PEC-9588", true, true, PYRAMID_PRG_SIZE},
                {"pec586", "金字塔 PEC-586(686)", true, true, PYRAMID_PRG_SIZE},
-               {"yuxing", "裕兴", true, true, YUXING_PRG_SIZE}} {}
+               {"yuxing", "裕兴", true, true, YUXING_PRG_SIZE},
+               {"cec1", "中华学习机 CEC-I", true, true, CEC1_PRG_SIZE, CEC1_LIBRARY_SIZE}} {}
 
 const MachineManager::Entry& MachineManager::entry(const std::string& id) const {
   for (const Entry& candidate : entries_) {
@@ -89,9 +93,10 @@ std::string MachineManager::labelOf(const Entry& item, const api::StoredRom& sto
 }
 
 void MachineManager::checkRom(const Entry& item, const std::vector<std::uint8_t>& file) {
-  if (file.size() != item.prgSize) {
-    throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 必须是 " + std::to_string(item.prgSize / 1024) + "KB 的 ROM 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
-  }
+  if (file.size() == item.prgSize || (item.optionalSize != 0 && file.size() == item.prgSize + item.optionalSize)) return;
+  std::string accepted = std::to_string(item.prgSize / 1024) + "KB";
+  if (item.optionalSize != 0) accepted += " 或 " + std::to_string((item.prgSize + item.optionalSize) / 1024) + "KB";
+  throw shared::CoreError(api::ERROR_ROM_INVALID, item.name + " 的 ROM 必须是 " + accepted + " 的 ROM 文件，这个文件是 " + std::to_string(file.size()) + " 字节");
 }
 
 api::MachinesListResult MachineManager::list() const {

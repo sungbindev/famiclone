@@ -14,6 +14,7 @@
 | `machines/sb2000` | 小霸王学习机 SB2000：`bios`（BIOS 源码工程）、`docs`（研究文档） |
 | `machines/bbg` | 步步高学习机的 BIOS 与 DOS 原厂源码、汇编器与分析工具 |
 | `machines/sb97` | SB97 的 BIOS 反汇编工程与分析结论 |
+| `machines/cec` | 中华学习机 CEC-I 的 ROM 分析文档（结构、地址译码与软开关的推断） |
 | `reference` | 真机参考资料：ROM、软盘镜像、磁带、游戏；`machines` 与测试会用到，不随扩展发布；按机型的资料索引见 [reference/README.md](reference/README.md) |
 | `tools` | 各部分脚本共用的入口 `tools/extension.mjs`（引用扩展的编译产物）；扩展自己的维护脚本（工具链、运行库、SB2000 生成文档、打包检查、发布）在 `vscode/tools/` |
 | `docs` | 开发文档，清单见 [01-软件架构设计.md](docs/01-软件架构设计.md) 第 9 节 |

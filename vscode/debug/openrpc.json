@@ -3574,8 +3574,8 @@
     },
     {
       "name": "machines.list",
-      "summary": "机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing",
-      "description": "机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing。",
+      "summary": "机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1",
+      "description": "机型清单，顺序固定为 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1。",
       "tags": [
         {
           "name": "machines"
@@ -6953,7 +6953,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "机型标识：fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing"
+            "description": "机型标识：fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing、cec1"
           },
           "name": {
             "type": "string",

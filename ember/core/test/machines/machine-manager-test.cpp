@@ -135,15 +135,16 @@ std::string skippedReason(const api::MachinesSetRomsResult& result, const std::s
   return {};
 }
 
-TEST(MachineManager, ListsTheEightMachinesInFixedOrder) {
+TEST(MachineManager, ListsTheNineMachinesInFixedOrder) {
   Rig rig;
   const auto machines = rig.manager->list().machines;
-  ASSERT_EQ(machines.size(), 8U);
-  const char* ids[] = {"fc", "sb97", "sb2000", "bbg1", "bbg98", "pec9588", "pec586", "yuxing"};
+  ASSERT_EQ(machines.size(), 9U);
+  const char* ids[] = {"fc", "sb97", "sb2000", "bbg1", "bbg98", "pec9588", "pec586", "yuxing", "cec1"};
   for (std::size_t index = 0; index < machines.size(); ++index) EXPECT_EQ(machines[index].id, ids[index]);
   EXPECT_EQ(machines[5].name, "金字塔 PEC-9588");
   EXPECT_EQ(machines[6].name, "金字塔 PEC-586(686)");
   EXPECT_EQ(machines[7].name, "裕兴");
+  EXPECT_EQ(machines[8].name, "中华学习机 CEC-I");
   for (std::size_t index = 1; index < machines.size(); ++index) {
     EXPECT_TRUE(machines[index].needsRom) << ids[index];
     EXPECT_TRUE(machines[index].supported) << ids[index];

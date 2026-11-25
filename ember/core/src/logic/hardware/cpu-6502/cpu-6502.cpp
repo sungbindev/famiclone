@@ -1,10 +1,10 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：cpu-6502.cpp
- * 说明：经典 FC 的 6502 CPU 核的实现。
+ * 说明：6502 CPU 核的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-25
  * 备注：指令按真机的总线周期逐个执行，包括空读与读改写指令的假写；中断采样沿用“周期结束时采样、倒数第二个周期的结果生效”的模型。
  * ------------------------------------------------------------------------
  */
@@ -458,10 +458,10 @@ void Cpu6502::executeRead(Op op, std::uint8_t value) {
       setZeroNegative(a_);
       break;
     case Op::Adc:
-      addWithCarry(value);
+      adc(value);
       break;
     case Op::Sbc:
-      addWithCarry(static_cast<std::uint8_t>(~value));
+      sbc(value);
       break;
     case Op::Cmp:
       compare(a_, value);
@@ -536,7 +536,7 @@ std::uint8_t Cpu6502::modifyValue(Op op, std::uint8_t value) {
     }
     case Op::Rra: {
       const std::uint8_t result = rotateRight(value);
-      addWithCarry(result);
+      adc(result);
       return result;
     }
     case Op::Dcp: {
@@ -546,7 +546,7 @@ std::uint8_t Cpu6502::modifyValue(Op op, std::uint8_t value) {
     }
     case Op::Isb: {
       const auto result = static_cast<std::uint8_t>(value + 1);
-      addWithCarry(static_cast<std::uint8_t>(~result));
+      sbc(result);
       return result;
     }
     default:
@@ -630,6 +630,46 @@ void Cpu6502::addWithCarry(std::uint8_t value) {
   setFlag(FLAG_OVERFLOW, ((a_ ^ result) & (value ^ result) & 0x80) != 0);
   a_ = result;
   setZeroNegative(a_);
+}
+
+void Cpu6502::adc(std::uint8_t value) {
+  if (!decimalMode_ || !flag(FLAG_DECIMAL)) {
+    addWithCarry(value);
+    return;
+  }
+  // NMOS 6502 的 BCD 加法：Z 标志取二进制和，N 与 V 取修正高半字节之前的值，C 取修正之后的进位。
+  const unsigned carryIn = flag(FLAG_CARRY) ? 1U : 0U;
+  unsigned low = (a_ & 0x0FU) + (value & 0x0FU) + carryIn;
+  if (low > 9U) low += 6U;
+  unsigned high = (static_cast<unsigned>(a_) >> 4) + (static_cast<unsigned>(value) >> 4) + (low > 0x0FU ? 1U : 0U);
+  setFlag(FLAG_ZERO, ((static_cast<unsigned>(a_) + value + carryIn) & 0xFFU) == 0);
+  setFlag(FLAG_NEGATIVE, ((high << 4) & 0x80U) != 0);
+  setFlag(FLAG_OVERFLOW, ((~(a_ ^ value)) & (a_ ^ (high << 4)) & 0x80U) != 0);
+  if (high > 9U) high += 6U;
+  setFlag(FLAG_CARRY, high > 0x0FU);
+  a_ = static_cast<std::uint8_t>(((high << 4) | (low & 0x0FU)) & 0xFFU);
+}
+
+void Cpu6502::sbc(std::uint8_t value) {
+  if (!decimalMode_ || !flag(FLAG_DECIMAL)) {
+    addWithCarry(static_cast<std::uint8_t>(~value));
+    return;
+  }
+  // NMOS 6502 的 BCD 减法：全部标志取二进制相减的结果，只有累加器的值按十进制修正。
+  const unsigned borrow = flag(FLAG_CARRY) ? 0U : 1U;
+  const unsigned difference = static_cast<unsigned>(a_) - value - borrow;
+  const auto binary = static_cast<std::uint8_t>(difference);
+  setFlag(FLAG_CARRY, difference < 0x100U);
+  setFlag(FLAG_OVERFLOW, ((a_ ^ value) & (a_ ^ binary) & 0x80U) != 0);
+  setZeroNegative(binary);
+  int low = static_cast<int>(a_ & 0x0FU) - static_cast<int>(value & 0x0FU) - static_cast<int>(borrow);
+  int high = static_cast<int>(a_ >> 4) - static_cast<int>(value >> 4);
+  if (low < 0) {
+    low -= 6;
+    --high;
+  }
+  if (high < 0) high -= 6;
+  a_ = static_cast<std::uint8_t>(((high << 4) | (low & 0x0F)) & 0xFF);
 }
 
 void Cpu6502::compare(std::uint8_t reg, std::uint8_t value) {

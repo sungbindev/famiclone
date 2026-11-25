@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
- * 备注：清单里的机型顺序固定；机型的“已支持”以程序里实际有这个主机型号为准（目前 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586 与 yuxing）；
+ * 备注：清单里的机型顺序固定；机型的“已支持”以程序里实际有这个主机型号为准（目前 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing 与 cec1）；
  *       ROM 是只含程序的纯 bin 文件，大小等于机型的 ROM 容量，不接受带 iNES 文件头的文件；保存时保持文件原样，开机时原样交给主机。
  *       ROM 的版本按内容的 CRC-32 对照已知 ROM 表（known-roms）认出，从目录添加也靠它认出机型。
  * ------------------------------------------------------------------------
@@ -48,6 +48,8 @@ class MachineManager final : public contracts::machines::MachineService {
     bool supported;
     /** 需要 ROM 的机型：PRG 的字节数。 */
     std::size_t prgSize;
+    /** 可以接在 PRG 后面的可选部分的字节数（中华学习机的汉字字库）；没有时为 0。 */
+    std::size_t optionalSize{0};
   };
 
   [[nodiscard]] const Entry& entry(const std::string& id) const;

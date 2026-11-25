@@ -1,10 +1,11 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：cpu-6502.hpp
- * 说明：经典 FC 的 6502 CPU 核：全部官方指令与 nestest 用到的非官方指令，周期精确，无十进制模式。
+ * 说明：6502 CPU 核：全部官方指令与 nestest 用到的非官方指令，周期精确；
+ *       十进制模式默认关闭（2A03 没有），主机型号用的是完整的 6502 时调用 setDecimalMode 打开。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
- * 日期：2026-11-14
+ * 日期：2026-11-25
  * 备注：每个总线周期（含空读、假写）都经 CpuBus 完成并推进主时钟，总线访问发生在周期的中点；
  *       NMI 与 IRQ 在每个周期结束时采样，用倒数第二个周期的结果决定指令结束后是否响应；RDY 有效时在读周期暂停。
  * ------------------------------------------------------------------------
@@ -50,6 +51,12 @@ class Cpu6502 final : public contracts::hardware::Cpu {
   /** 调试用：设置调用与返回的通知（传空指针取消）；不拥有观察者。 */
   void setCallObserver(contracts::hardware::CallObserver* observer) { callObserver_ = observer; }
 
+  /**
+   * 打开或关闭十进制模式：打开后状态寄存器的 D 位为 1 时，
+   * ADC 与 SBC 按 BCD 运算（NMOS 6502 的标志规则）；默认关闭。
+   */
+  void setDecimalMode(bool enabled) { decimalMode_ = enabled; }
+
  private:
   /** 内存操作的访问方式：决定带索引的寻址是否一定做一次修正前的空读。 */
   enum class Access : std::uint8_t { Read, Write, Modify };
@@ -83,6 +90,10 @@ class Cpu6502 final : public contracts::hardware::Cpu {
   void setFlag(std::uint8_t mask, bool on);
   void setZeroNegative(std::uint8_t value);
   void addWithCarry(std::uint8_t value);
+  /** ADC：十进制模式打开且 D 位为 1 时按 BCD 相加，否则同 addWithCarry。 */
+  void adc(std::uint8_t value);
+  /** SBC：十进制模式打开且 D 位为 1 时按 BCD 相减，否则按补码相加。 */
+  void sbc(std::uint8_t value);
   void compare(std::uint8_t reg, std::uint8_t value);
   std::uint8_t shiftLeft(std::uint8_t value);
   std::uint8_t shiftRight(std::uint8_t value);
@@ -104,6 +115,7 @@ class Cpu6502 final : public contracts::hardware::Cpu {
   /** 状态寄存器，只保存 C、Z、I、D、V、N 六位。 */
   std::uint8_t status_{0};
   std::uint64_t cycles_{0};
+  bool decimalMode_{false};
 
   // 中断采样：每个周期结束时更新，“prev”是上一个周期结束时的值。
   contracts::hardware::InterruptObserver* observer_{nullptr};

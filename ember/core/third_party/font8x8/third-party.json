@@ -1,0 +1,13 @@
+{
+  "name": "font8x8",
+  "version": "",
+  "authors": [
+    "Daniel Hepper",
+    "Marcel Sondaar",
+    "International Business Machines"
+  ],
+  "license": "Public Domain",
+  "licenseFile": "LICENSE",
+  "homepage": "https://github.com/dhepper/font8x8",
+  "usage": "学习机文本屏（苹果 II 类机型）的字模数据，已转成源码里的数组"
+}

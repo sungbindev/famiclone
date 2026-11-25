@@ -1,0 +1,387 @@
+/*
+ * ------------------------------------------------------------------------
+ * 名称：cec1-board.cpp
+ * 说明：中华学习机 CEC-I 主板的实现。
+ * 作者：sungbin
+ * 邮箱：sungbin@3578.cn
+ * 日期：2026-11-25
+ * 备注：无
+ * ------------------------------------------------------------------------
+ */
+
+#include "bootstrap/machines/cec1/cec1-board.hpp"
+
+#include <algorithm>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "contracts/hardware/button-input.hpp"
+#include "contracts/hardware/hardware-error.hpp"
+#include "shared/errors/core-error.hpp"
+
+namespace ember::bootstrap {
+
+namespace hw = contracts::hardware;
+
+namespace {
+
+constexpr std::uint16_t IO_FIRST = 0xC000;
+constexpr std::uint16_t SLOT_ROM_FIRST = 0xC100;
+constexpr std::uint16_t HIGH_FIRST = 0xD000;
+constexpr std::uint16_t SLOT_THREE_FIRST = 0xC300;
+constexpr std::uint16_t SLOT_THREE_LAST = 0xC3FF;
+constexpr std::uint16_t WINDOW_FIRST = 0x8000;
+constexpr std::uint16_t EXTENSION_FIRST = 0x4000;
+/** $C0B0 的位 5：辅存读开关为 1 时 $8000-$BFFF 读 LOGO（1）还是汉字表（0）。 */
+constexpr std::uint8_t AUX_SELECT_LOGO = 0x20;
+/** $C0B0 的低 4 位：汉字字库的 bank 号。 */
+constexpr std::uint8_t LIBRARY_BANK_MASK = 0x0F;
+/** 内置串口（槽 2）的状态：位 1 为发送寄存器空。 */
+constexpr std::uint8_t SERIAL_TRANSMIT_READY = 0x02;
+/** 模拟手柄的计时：每个计数占的 CPU 周期数，加上计时开始的固定延迟。 */
+constexpr std::int64_t PADDLE_CYCLES_PER_COUNT = 11;
+constexpr std::int64_t PADDLE_BASE_CYCLES = 11;
+/** 手柄的方向换成模拟手柄的值。 */
+constexpr std::uint8_t PADDLE_LOW = 0;
+constexpr std::uint8_t PADDLE_CENTER = 128;
+constexpr std::uint8_t PADDLE_HIGH = 255;
+
+/** $C0xx 里各个寄存器组的起点（高 4 位）。 */
+constexpr std::uint8_t GROUP_KEYBOARD = 0x0;
+constexpr std::uint8_t GROUP_STROBE = 0x1;
+constexpr std::uint8_t GROUP_CASSETTE_OUT = 0x2;
+constexpr std::uint8_t GROUP_SPEAKER = 0x3;
+constexpr std::uint8_t GROUP_VIDEO = 0x5;
+constexpr std::uint8_t GROUP_INPUT = 0x6;
+constexpr std::uint8_t GROUP_PADDLE_TRIGGER = 0x7;
+constexpr std::uint8_t GROUP_LANGUAGE_CARD = 0x8;
+constexpr std::uint8_t GROUP_PRINTER = 0x9;
+constexpr std::uint8_t GROUP_SERIAL = 0xA;
+constexpr std::uint8_t GROUP_AUX = 0xB;
+constexpr std::uint8_t GROUP_DISK = 0xE;
+
+}  // namespace
+
+Cec1Board::Cec1Board(std::vector<std::uint8_t> rom, const hw::Clock& clock, logic::hardware::KeyboardApple2& keyboard, logic::hardware::Disk2& disk, logic::hardware::Speaker1Bit& speaker, hw::TapeLine& tape,
+                     hw::MasterTime cpuTicksPerCycle)
+    : clock_(clock),
+      keyboard_(keyboard),
+      disk_(disk),
+      speaker_(speaker),
+      tape_(tape),
+      cpuTicksPerCycle_(cpuTicksPerCycle),
+      rom_(std::move(rom)),
+      ram_(RAM_SIZE, 0),
+      languageCard_(LANGUAGE_CARD_SIZE, 0) {
+  if (rom_.size() != ROM_SIZE && rom_.size() != ROM_SIZE + LIBRARY_SIZE) {
+    throw shared::CoreError(hw::ERROR_INVALID_ARGUMENT, "cec1 的 ROM 必须是 " + std::to_string(ROM_SIZE) + " 或 " + std::to_string(ROM_SIZE + LIBRARY_SIZE) + " 字节，收到 " + std::to_string(rom_.size()) + " 字节");
+  }
+}
+
+void Cec1Board::reset(bool power) {
+  if (power) {
+    std::fill(ram_.begin(), ram_.end(), std::uint8_t{0});
+    std::fill(languageCard_.begin(), languageCard_.end(), std::uint8_t{0});
+  }
+  switches_ = Switches{};
+  tapeOutput_ = false;
+  paddleTrigger_ = -1'000'000'000;
+}
+
+// ---------------------------------------------------------------- 译码
+
+Cec1Board::Location Cec1Board::locateRead(std::uint16_t address) const {
+  using Kind = Location::Kind;
+  if (address < EXTENSION_FIRST) return {Kind::Ram, address};
+  if (address < WINDOW_FIRST) {
+    if (!switches_.ramRead) return {Kind::Ram, address};
+    // 汉字字库 ROM：按 $C0B0 的低 4 位选 bank；没有接字库时是空座。
+    if (rom_.size() == ROM_SIZE) return {Kind::Empty, 0};
+    return {Kind::Rom, ROM_SIZE + static_cast<std::size_t>(switches_.aux & LIBRARY_BANK_MASK) * LIBRARY_BANK_SIZE + (address - EXTENSION_FIRST)};
+  }
+  if (address < IO_FIRST) {
+    if (!switches_.ramRead) return {Kind::Ram, address};
+    const std::size_t base = (switches_.aux & AUX_SELECT_LOGO) != 0 ? U7_LOW : U35_LOW;
+    return {Kind::Rom, base + (address - WINDOW_FIRST)};
+  }
+  if (address < SLOT_ROM_FIRST) return {Kind::Register, static_cast<std::size_t>(address - IO_FIRST)};
+  if (address < HIGH_FIRST) {
+    const bool internal = switches_.internalRom || (address >= SLOT_THREE_FIRST && address <= SLOT_THREE_LAST && !switches_.slotThreeRom);
+    return {Kind::Rom, (internal ? U7_HIGH : U35_HIGH) + (address - IO_FIRST)};
+  }
+  if (switches_.altZeroPage) return {Kind::Rom, U35_HIGH + (address - IO_FIRST)};
+  if (switches_.lcReadRam) return {Kind::LanguageCard, languageCardOffset(address)};
+  return {Kind::Rom, U7_HIGH + (address - IO_FIRST)};
+}
+
+std::size_t Cec1Board::languageCardOffset(std::uint16_t address) const {
+  if (address < 0xE000) return (switches_.lcBank2 ? 0x1000U : 0U) + (address - HIGH_FIRST);
+  return 0x2000U + (address - 0xE000U);
+}
+
+// ---------------------------------------------------------------- 总线
+
+hw::BusRead Cec1Board::read(std::uint16_t address) {
+  const Location where = locateRead(address);
+  switch (where.kind) {
+    case Location::Kind::Ram:
+      return hw::driveBus(ram_[where.offset]);
+    case Location::Kind::LanguageCard:
+      return hw::driveBus(languageCard_[where.offset]);
+    case Location::Kind::Rom:
+      return hw::driveBus(rom_[where.offset]);
+    case Location::Kind::Register:
+      return readIo(static_cast<std::uint8_t>(where.offset), true);
+    case Location::Kind::Empty:
+      return hw::driveBus(0);
+    case Location::Kind::None:
+      break;
+  }
+  return hw::releaseBus();
+}
+
+hw::BusRead Cec1Board::peek(std::uint16_t address) {
+  const Location where = locateRead(address);
+  if (where.kind == Location::Kind::Register) return readIo(static_cast<std::uint8_t>(where.offset), false);
+  return read(address);
+}
+
+void Cec1Board::write(std::uint16_t address, std::uint8_t value) {
+  if (address < IO_FIRST) {
+    ram_[address] = value;
+    return;
+  }
+  if (address < SLOT_ROM_FIRST) {
+    writeIo(static_cast<std::uint8_t>(address - IO_FIRST), value);
+    return;
+  }
+  if (address < HIGH_FIRST) return;
+  if (switches_.lcWriteRam) languageCard_[languageCardOffset(address)] = value;
+}
+
+// ---------------------------------------------------------------- $C000-$C0FF
+
+bool Cec1Board::statusFlag(std::uint8_t reg) const {
+  switch (reg & 0x0FU) {
+    case 0x1:
+      return switches_.lcBank2;
+    case 0x2:
+      return switches_.lcReadRam;
+    case 0x3:
+      return switches_.ramRead;
+    case 0x4:
+      return switches_.ramWrite;
+    case 0x5:
+      return switches_.internalRom;
+    case 0x6:
+      return switches_.altZeroPage;
+    case 0x7:
+      return switches_.slotThreeRom;
+    case 0x8:
+      return switches_.store80;
+    case 0xA:
+      return switches_.text;
+    case 0xB:
+      return switches_.mixed;
+    case 0xC:
+      return switches_.page2;
+    case 0xD:
+      return switches_.hires;
+    case 0xE:
+      return switches_.altCharset;
+    case 0xF:
+      return switches_.column80;
+    default:
+      return false;
+  }
+}
+
+bool Cec1Board::paddleTiming(unsigned paddle) const {
+  const hw::MasterTime limit = (PADDLE_BASE_CYCLES + PADDLE_CYCLES_PER_COUNT * paddleValues_[paddle]) * cpuTicksPerCycle_;
+  return clock_.now() - paddleTrigger_ < limit;
+}
+
+hw::BusRead Cec1Board::readIo(std::uint8_t reg, bool side) {
+  const std::uint8_t group = reg >> 4;
+  switch (group) {
+    case GROUP_KEYBOARD:
+      return hw::driveBus(keyboard_.data());
+    case GROUP_STROBE: {
+      const std::uint8_t key = keyboard_.data() & 0x7FU;
+      if (reg == 0x10) {
+        const bool anyKey = keyboard_.anyKeyDown();
+        if (side) keyboard_.clearStrobe();
+        return hw::driveBus(static_cast<std::uint8_t>(key | (anyKey ? 0x80U : 0U)));
+      }
+      return hw::driveBus(static_cast<std::uint8_t>(key | (statusFlag(reg) ? 0x80U : 0U)));
+    }
+    case GROUP_CASSETTE_OUT:
+      if (side) {
+        tapeOutput_ = !tapeOutput_;
+        tape_.drive(tapeOutput_);
+      }
+      return hw::releaseBus();
+    case GROUP_SPEAKER:
+      if (side) speaker_.toggle(clock_.now());
+      return hw::releaseBus();
+    case GROUP_VIDEO:
+      if (side) accessVideoSwitch(reg);
+      return hw::releaseBus();
+    case GROUP_INPUT: {
+      switch (reg & 0x07U) {
+        case 0x0:
+          return hw::driveBus(side && tape_.level() ? 0x80 : 0x00);
+        case 0x1:
+          return hw::driveBus((button0_ || keyboard_.openApple()) ? 0x80 : 0x00);
+        case 0x2:
+          return hw::driveBus((button1_ || keyboard_.solidApple()) ? 0x80 : 0x00);
+        case 0x3:
+          return hw::driveBus(keyboard_.shiftDown() ? 0x80 : 0x00);
+        default:
+          return hw::driveBus(paddleTiming((reg & 0x07U) - 4U) ? 0x80 : 0x00);
+      }
+    }
+    case GROUP_PADDLE_TRIGGER:
+      if (side) paddleTrigger_ = clock_.now();
+      return hw::releaseBus();
+    case GROUP_LANGUAGE_CARD:
+      if (side) accessLanguageCard(reg);
+      return hw::releaseBus();
+    case GROUP_SERIAL:
+      if (reg == 0xAE) return hw::driveBus(SERIAL_TRANSMIT_READY);
+      if (reg == 0xAF) return hw::driveBus(0);
+      return hw::releaseBus();
+    case GROUP_DISK: {
+      if (!side) return hw::releaseBus();
+      const std::optional<std::uint8_t> value = disk_.read(reg & 0x0FU);
+      return value.has_value() ? hw::driveBus(*value) : hw::releaseBus();
+    }
+    default:
+      return hw::releaseBus();
+  }
+}
+
+void Cec1Board::writeIo(std::uint8_t reg, std::uint8_t value) {
+  const std::uint8_t group = reg >> 4;
+  switch (group) {
+    case GROUP_KEYBOARD:
+      writeSwitch(reg);
+      break;
+    case GROUP_STROBE:
+      if (reg == 0x10) keyboard_.clearStrobe();
+      break;
+    case GROUP_CASSETTE_OUT:
+      tapeOutput_ = !tapeOutput_;
+      tape_.drive(tapeOutput_);
+      break;
+    case GROUP_SPEAKER:
+      speaker_.toggle(clock_.now());
+      break;
+    case GROUP_VIDEO:
+      accessVideoSwitch(reg);
+      break;
+    case GROUP_PADDLE_TRIGGER:
+      paddleTrigger_ = clock_.now();
+      break;
+    case GROUP_LANGUAGE_CARD:
+      accessLanguageCard(reg);
+      break;
+    case GROUP_AUX:
+      if (reg == 0xB0) switches_.aux = value;
+      break;
+    case GROUP_DISK:
+      disk_.write(reg & 0x0FU, value);
+      break;
+    default:
+      break;
+  }
+}
+
+void Cec1Board::writeSwitch(std::uint8_t reg) {
+  const bool on = (reg & 1U) != 0;
+  switch ((reg & 0x0FU) >> 1) {
+    case 0:
+      switches_.store80 = on;
+      break;
+    case 1:
+      switches_.ramRead = on;
+      break;
+    case 2:
+      switches_.ramWrite = on;
+      break;
+    case 3:
+      switches_.internalRom = on;
+      break;
+    case 4:
+      switches_.altZeroPage = on;
+      break;
+    case 5:
+      switches_.slotThreeRom = on;
+      break;
+    case 6:
+      switches_.column80 = on;
+      break;
+    default:
+      switches_.altCharset = on;
+      break;
+  }
+}
+
+void Cec1Board::accessVideoSwitch(std::uint8_t reg) {
+  const bool on = (reg & 1U) != 0;
+  switch ((reg & 0x0FU) >> 1) {
+    case 0:
+      switches_.text = on;
+      break;
+    case 1:
+      switches_.mixed = on;
+      break;
+    case 2:
+      switches_.page2 = on;
+      break;
+    case 3:
+      switches_.hires = on;
+      break;
+    default:
+      switches_.annunciators[((reg & 0x0FU) >> 1) - 4U] = on;
+      break;
+  }
+}
+
+void Cec1Board::accessLanguageCard(std::uint8_t reg) {
+  const bool odd = (reg & 1U) != 0;
+  switches_.lcBank2 = (reg & 0x08U) == 0;
+  // A1A0 为 00 与 11 读 RAM，01 与 10 读 ROM。
+  const unsigned mode = reg & 3U;
+  switches_.lcReadRam = mode == 0 || mode == 3;
+  if (odd) {
+    // 连续两次奇数地址的访问才允许写。
+    if (switches_.lcPreWrite) switches_.lcWriteRam = true;
+    switches_.lcPreWrite = true;
+  } else {
+    switches_.lcPreWrite = false;
+    switches_.lcWriteRam = false;
+  }
+}
+
+// ---------------------------------------------------------------- 视频与手柄
+
+logic::hardware::Apple2VideoMode Cec1Board::videoMode() const {
+  logic::hardware::Apple2VideoMode mode;
+  mode.text = switches_.text;
+  mode.mixed = switches_.mixed;
+  mode.page2 = switches_.page2;
+  mode.hires = switches_.hires;
+  return mode;
+}
+
+void Cec1Board::setPaddles(std::uint8_t buttons) {
+  button0_ = (buttons & hw::pad_button::A) != 0;
+  button1_ = (buttons & hw::pad_button::B) != 0;
+  const auto axis = [buttons](std::uint8_t low, std::uint8_t high) { return (buttons & low) != 0 ? PADDLE_LOW : ((buttons & high) != 0 ? PADDLE_HIGH : PADDLE_CENTER); };
+  paddleValues_[0] = axis(hw::pad_button::LEFT, hw::pad_button::RIGHT);
+  paddleValues_[1] = axis(hw::pad_button::UP, hw::pad_button::DOWN);
+}
+
+}  // namespace ember::bootstrap

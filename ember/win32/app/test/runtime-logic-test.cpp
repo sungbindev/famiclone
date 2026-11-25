@@ -116,7 +116,7 @@ TEST(RuntimeRules, AvailabilityFollowsStateAndSelectedMachine) {
 
 TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   const auto choices = logic::machineChoices(logic::parseMachines(machinesJson()));
-  ASSERT_EQ(choices.size(), 7U);
+  ASSERT_EQ(choices.size(), 8U);
   EXPECT_EQ(choices[0].id, "sb97");
   EXPECT_EQ(choices[0].hint, "未添加 ROM");
   EXPECT_EQ(choices[1].id, "sb2000");
@@ -131,6 +131,8 @@ TEST(RuntimeRules, MachineChoicesExplainWhyAMachineCannotBePicked) {
   EXPECT_EQ(choices[5].label, "金字塔 PEC-586(686)");
   EXPECT_EQ(choices[6].id, "yuxing");
   EXPECT_EQ(choices[6].label, "裕兴");
+  EXPECT_EQ(choices[7].id, "cec1");
+  EXPECT_EQ(choices[7].label, "中华学习机 CEC-I");
   for (const auto& choice : logic::machineChoices({})) EXPECT_EQ(choice.hint, "暂未支持");
 }
 
@@ -590,7 +592,7 @@ TEST(RuntimeModule, RegistersMenusShortcutsAndStatusItemsOfTheSpecification) {
   ASSERT_EQ(menus[1].items.size(), 7U);
   EXPECT_EQ(menus[1].items[0].label, "选择机型");
   EXPECT_FALSE(menus[1].items[0].separatorBefore);
-  ASSERT_EQ(menus[1].items[0].items.size(), 7U);
+  ASSERT_EQ(menus[1].items[0].items.size(), 8U);
   EXPECT_FALSE(menus[1].items[0].items[1].disabled);
   EXPECT_TRUE(menus[1].items[0].items[0].disabled);
   EXPECT_EQ(menus[1].items[0].items[0].hint, "未添加 ROM");

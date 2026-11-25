@@ -1,0 +1,8 @@
+8x8 monochrome bitmap fonts for rendering
+
+Author: Daniel Hepper <daniel@hepper.net>
+
+License: Public Domain
+
+Based on font8x8.h by Marcel Sondaar and International Business Machines
+(public domain VGA fonts), License: Public Domain.

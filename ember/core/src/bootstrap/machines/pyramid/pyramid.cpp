@@ -85,7 +85,7 @@ PyramidMachine::PyramidMachine(PyramidBoard::Model model, std::vector<std::uint8
       tapeDeck_(tapeDeck != nullptr ? std::move(tapeDeck) : std::make_shared<logic::hardware::TapeDeck>()),
       floppy_(floppyDrive != nullptr ? std::move(floppyDrive) : std::make_shared<logic::hardware::StandardFloppyDrive>()),
       hasFloppy_(model == PyramidBoard::Model::Pec9588),
-      disk2_(scheduler_, DISK_BIT_TICKS, DISK_MOTOR_OFF_TICKS),
+      disk2_(scheduler_, DISK_BIT_TICKS, DISK_MOTOR_OFF_TICKS, logic::hardware::disk2::pyramidFormatOf),
       padApuPort_(pad_, apu_),
       inputPort_(padApuPort_, keyboard_, board_),
       printer_(printerOutput != nullptr ? std::make_unique<logic::hardware::PrinterEscp>(scheduler_, *printerOutput, PRINTER_TIMEOUT_TICKS) : nullptr),

@@ -5,8 +5,9 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-14
- * 备注：包含全部官方指令，以及 nestest 用到的非官方指令（LAX、SAX、DCP、ISB、SLO、RLA、SRE、RRA 与各种 NOP 变体、$EB 的 SBC）；
- *       表里其余的操作码按 2 周期的单字节 NOP 处理。无十进制模式。
+ * 备注：包含全部官方指令，以及 nestest 用到的非官方指令（LAX、SAX、DCP、ISB、SLO、RLA、SRE、RRA 与各种 NOP 变体、
+ *       $EB 的 SBC）和 $AB 的 LAX 立即数（A 与 X 都取立即数，学习机的引导程序用到它）；
+ *       表里其余的操作码按 2 周期的单字节 NOP 处理。十进制模式由 CPU 核按设置决定。
  * ------------------------------------------------------------------------
  */
 
@@ -74,7 +75,7 @@ constexpr std::array<OpcodeInfo, 256> makeOpcodeTable() {
       {Tya, Implied}, {Sta, AbsoluteY}, {Txs, Implied}, UNDEF, UNDEF, {Sta, AbsoluteX}, UNDEF, UNDEF,
       // $A0
       {Ldy, Immediate}, {Lda, IndirectX}, {Ldx, Immediate}, {Lax, IndirectX}, {Ldy, ZeroPage}, {Lda, ZeroPage}, {Ldx, ZeroPage}, {Lax, ZeroPage},
-      {Tay, Implied}, {Lda, Immediate}, {Tax, Implied}, UNDEF, {Ldy, Absolute}, {Lda, Absolute}, {Ldx, Absolute}, {Lax, Absolute},
+      {Tay, Implied}, {Lda, Immediate}, {Tax, Implied}, {Lax, Immediate}, {Ldy, Absolute}, {Lda, Absolute}, {Ldx, Absolute}, {Lax, Absolute},
       // $B0
       {Bcs, Relative}, {Lda, IndirectY}, UNDEF, {Lax, IndirectY}, {Ldy, ZeroPageX}, {Lda, ZeroPageX}, {Ldx, ZeroPageY}, {Lax, ZeroPageY},
       {Clv, Implied}, {Lda, AbsoluteY}, {Tsx, Implied}, UNDEF, {Ldy, AbsoluteX}, {Lda, AbsoluteX}, {Ldx, AbsoluteY}, {Lax, AbsoluteY},

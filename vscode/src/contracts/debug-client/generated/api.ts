@@ -72,28 +72,30 @@ export interface DebugConnection {
   connectedAt: string;
 }
 
-/** 镜像目录树里的一个节点：镜像文件或文件夹。 */
-export interface DiskimagesImageNode {
-  /** 相对镜像目录的路径，用 / 分隔，不以 / 开头 */
+/** 目录树里的一个节点：文件（软盘镜像、卡带、音频、图片）或文件夹。 */
+export interface FilemanagerImageNode {
+  /** 相对目录的路径，用 / 分隔，不以 / 开头 */
   path: string;
   /** 完整的文件名或文件夹名 */
   name: string;
   /** 是否是文件夹 */
   directory: boolean;
-  /** 镜像文件的大小（字节）；文件夹为 0 */
+  /** 种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片） */
+  kind: string;
+  /** 文件的大小（字节）；文件夹为 0 */
   size: number;
-  /** 文件系统格式是否已经识别；还在识别时为 false，format 与 formatName 为空 */
+  /** 文件系统格式是否已经识别；还在识别时为 false，format 与 formatName 为空；非软盘文件不用识别，始终为 true */
   scanned: boolean;
-  /** 格式标识：fat12、fat16、appledos33、prodos，认不出时是 blank（全是 0）、pyramid（金字塔 DOS，待支持）、unknown；文件夹为空 */
+  /** 格式标识：fat12、fat16、appledos33、prodos，认不出时是 blank（全是 0）、pyramid（金字塔 DOS，待支持）、unknown；文件夹与非软盘文件为空 */
   format: string;
-  /** 界面显示的格式名称，如 FAT12、Apple DOS 3.3、ProDOS、未识别；文件夹为空 */
+  /** 界面显示的格式名称，如 FAT12、Apple DOS 3.3、ProDOS、未识别；非软盘文件是 NES 卡带、PNG 图片、MP3 音频这样的名称；文件夹为空 */
   formatName: string;
-  /** 镜像里的文件能否修改：认得出的格式为 true，位流格式（.nib、.woz）与认不出的为 false */
+  /** 镜像里的文件能否修改：认得出的格式为 true，位流格式（.nib、.woz）、认不出的与非软盘文件为 false */
   writable: boolean;
 }
 
 /** 一个镜像的文件系统。 */
-export interface DiskimagesFileSystemInfo {
+export interface FilemanagerFileSystemInfo {
   /** 格式标识：fat12、fat16、appledos33、prodos */
   format: string;
   /** 界面显示的格式名称 */
@@ -105,7 +107,7 @@ export interface DiskimagesFileSystemInfo {
 }
 
 /** 镜像里的一个文件或文件夹。 */
-export interface DiskimagesEntryInfo {
+export interface FilemanagerEntryInfo {
   /** 完整名称 */
   name: string;
   /** 是否是文件夹 */
@@ -123,7 +125,7 @@ export interface DiskimagesEntryInfo {
 }
 
 /** 一种能新建的空白镜像。 */
-export interface DiskimagesBlankKind {
+export interface FilemanagerBlankKind {
   /** 标识：fat1440、fat720、fat2880、fat1200、fat360、appledos33、prodos、pyramid */
   id: string;
   /** 界面显示的名称 */
@@ -133,7 +135,7 @@ export interface DiskimagesBlankKind {
 }
 
 /** 导出的一个文件或文件夹。 */
-export interface DiskimagesExportItem {
+export interface FilemanagerExportItem {
   /** 在导出的内容里的路径：第一项是选中条目的 Windows 文件名，其后是它里面的层级 */
   path: string[];
   /** 是否是文件夹（文件夹没有内容） */
@@ -143,7 +145,7 @@ export interface DiskimagesExportItem {
 }
 
 /** 导入一个文件或文件夹的结果。 */
-export interface DiskimagesImportOutcome {
+export interface FilemanagerImportOutcome {
   /** 拖入的文件或文件夹的名称 */
   name: string;
   /** 是否成功 */
@@ -820,24 +822,24 @@ export interface DebugStatusResult {
   connections: DebugConnection[];
 }
 
-/** diskimages.setRoot 的参数。 */
-export interface DiskimagesSetRootParams {
-  /** 镜像目录的路径；null 表示取消 */
+/** filemanager.setRoot 的参数。 */
+export interface FilemanagerSetRootParams {
+  /** 目录的路径；null 表示取消 */
   path: string | null;
 }
 
-/** diskimages.setRoot 的结果。 */
-export interface DiskimagesSetRootResult {
+/** filemanager.setRoot 的结果。 */
+export interface FilemanagerSetRootResult {
   /** 目录是否存在、能否读取 */
   available: boolean;
 }
 
-/** diskimages.tree 的参数。 */
-export type DiskimagesTreeParams = Record<string, never>;
+/** filemanager.tree 的参数。 */
+export type FilemanagerTreeParams = Record<string, never>;
 
-/** diskimages.tree 的结果。 */
-export interface DiskimagesTreeResult {
-  /** 镜像目录的路径，用来显示；没有设置时为 null */
+/** filemanager.tree 的结果。 */
+export interface FilemanagerTreeResult {
+  /** 目录的路径，用来显示；没有设置时为 null */
   root: string | null;
   /** 目录是否存在、能否读取 */
   available: boolean;
@@ -846,22 +848,22 @@ export interface DiskimagesTreeResult {
   /** 镜像太多，只列出了前 5000 个 */
   limited: boolean;
   /** 节点，父文件夹在前，同级按文件夹在前、名称排序 */
-  nodes: DiskimagesImageNode[];
+  nodes: FilemanagerImageNode[];
 }
 
-/** diskimages.list 的参数。 */
-export interface DiskimagesListParams {
+/** filemanager.list 的参数。 */
+export interface FilemanagerListParams {
   /** 镜像的相对路径 */
   image: string;
   /** 镜像里的文件夹路径，逐级的名称；空数组是根目录 */
   directory: string[];
 }
 
-/** diskimages.list 的结果。 */
-export interface DiskimagesListResult {
-  fileSystem: DiskimagesFileSystemInfo;
+/** filemanager.list 的结果。 */
+export interface FilemanagerListResult {
+  fileSystem: FilemanagerFileSystemInfo;
   /** 目录里的条目 */
-  entries: DiskimagesEntryInfo[];
+  entries: FilemanagerEntryInfo[];
   /** 镜像插在哪个软驱里（编号从 0 起）；没有插入时为 null */
   drive: number | null;
   /** 不能修改的原因（位流格式、软驱里的盘片写保护）；可以修改时为 null */
@@ -870,8 +872,8 @@ export interface DiskimagesListResult {
   undoDepth: number;
 }
 
-/** diskimages.rename 的参数。 */
-export interface DiskimagesRenameParams {
+/** filemanager.rename 的参数。 */
+export interface FilemanagerRenameParams {
   /** 镜像的相对路径 */
   image: string;
   /** 条目的路径：从根目录开始逐级的名称 */
@@ -880,22 +882,22 @@ export interface DiskimagesRenameParams {
   name: string;
 }
 
-/** diskimages.rename 的结果。 */
-export type DiskimagesRenameResult = Record<string, never>;
+/** filemanager.rename 的结果。 */
+export type FilemanagerRenameResult = Record<string, never>;
 
-/** diskimages.remove 的参数。 */
-export interface DiskimagesRemoveParams {
+/** filemanager.remove 的参数。 */
+export interface FilemanagerRemoveParams {
   /** 镜像的相对路径 */
   image: string;
   /** 要删除的条目，每项是从根目录开始逐级的名称 */
   entries: string[][];
 }
 
-/** diskimages.remove 的结果。 */
-export type DiskimagesRemoveResult = Record<string, never>;
+/** filemanager.remove 的结果。 */
+export type FilemanagerRemoveResult = Record<string, never>;
 
-/** diskimages.move 的参数。 */
-export interface DiskimagesMoveParams {
+/** filemanager.move 的参数。 */
+export interface FilemanagerMoveParams {
   /** 镜像的相对路径 */
   image: string;
   /** 要移动的条目 */
@@ -904,11 +906,11 @@ export interface DiskimagesMoveParams {
   target: string[];
 }
 
-/** diskimages.move 的结果。 */
-export type DiskimagesMoveResult = Record<string, never>;
+/** filemanager.move 的结果。 */
+export type FilemanagerMoveResult = Record<string, never>;
 
-/** diskimages.copy 的参数。 */
-export interface DiskimagesCopyParams {
+/** filemanager.copy 的参数。 */
+export interface FilemanagerCopyParams {
   /** 来源镜像的相对路径 */
   image: string;
   /** 要复制的条目 */
@@ -919,11 +921,11 @@ export interface DiskimagesCopyParams {
   target: string[];
 }
 
-/** diskimages.copy 的结果。 */
-export type DiskimagesCopyResult = Record<string, never>;
+/** filemanager.copy 的结果。 */
+export type FilemanagerCopyResult = Record<string, never>;
 
-/** diskimages.makeDirectory 的参数。 */
-export interface DiskimagesMakeDirectoryParams {
+/** filemanager.makeDirectory 的参数。 */
+export interface FilemanagerMakeDirectoryParams {
   /** 镜像的相对路径 */
   image: string;
   /** 在哪个文件夹里新建；空数组是根目录 */
@@ -932,37 +934,37 @@ export interface DiskimagesMakeDirectoryParams {
   name: string;
 }
 
-/** diskimages.makeDirectory 的结果。 */
-export type DiskimagesMakeDirectoryResult = Record<string, never>;
+/** filemanager.makeDirectory 的结果。 */
+export type FilemanagerMakeDirectoryResult = Record<string, never>;
 
-/** diskimages.undo 的参数。 */
-export interface DiskimagesUndoParams {
+/** filemanager.undo 的参数。 */
+export interface FilemanagerUndoParams {
   /** 镜像的相对路径 */
   image: string;
 }
 
-/** diskimages.undo 的结果。 */
-export interface DiskimagesUndoResult {
+/** filemanager.undo 的结果。 */
+export interface FilemanagerUndoResult {
   /** 撤销的是哪一步操作，如“删除 HELLO.BAS” */
   description: string;
 }
 
-/** diskimages.readEntries 的参数。 */
-export interface DiskimagesReadEntriesParams {
+/** filemanager.readEntries 的参数。 */
+export interface FilemanagerReadEntriesParams {
   /** 镜像的相对路径 */
   image: string;
   /** 要导出的条目 */
   entries: string[][];
 }
 
-/** diskimages.readEntries 的结果。 */
-export interface DiskimagesReadEntriesResult {
+/** filemanager.readEntries 的结果。 */
+export interface FilemanagerReadEntriesResult {
   /** 导出的内容，文件夹在它里面的文件之前 */
-  items: DiskimagesExportItem[];
+  items: FilemanagerExportItem[];
 }
 
-/** diskimages.importFiles 的参数。 */
-export interface DiskimagesImportFilesParams {
+/** filemanager.importFiles 的参数。 */
+export interface FilemanagerImportFilesParams {
   /** 镜像的相对路径 */
   image: string;
   /** 导入到哪个文件夹；空数组是根目录 */
@@ -971,108 +973,108 @@ export interface DiskimagesImportFilesParams {
   paths: string[];
 }
 
-/** diskimages.importFiles 的结果。 */
-export interface DiskimagesImportFilesResult {
+/** filemanager.importFiles 的结果。 */
+export interface FilemanagerImportFilesResult {
   /** 每个拖入项的结果，顺序同 paths */
-  outcomes: DiskimagesImportOutcome[];
+  outcomes: FilemanagerImportOutcome[];
 }
 
-/** diskimages.createImage 的参数。 */
-export interface DiskimagesCreateImageParams {
-  /** 镜像目录里的相对文件夹路径；空串是镜像目录本身 */
+/** filemanager.createImage 的参数。 */
+export interface FilemanagerCreateImageParams {
+  /** 目录里的相对文件夹路径；空串是目录本身 */
   directory: string;
-  /** 空白镜像的种类，见 diskimages.blankKinds */
+  /** 空白镜像的种类，见 filemanager.blankKinds */
   kind: string;
 }
 
-/** diskimages.createImage 的结果。 */
-export interface DiskimagesCreateImageResult {
+/** filemanager.createImage 的结果。 */
+export interface FilemanagerCreateImageResult {
   /** 新建的镜像的相对路径 */
   path: string;
 }
 
-/** diskimages.renameItem 的参数。 */
-export interface DiskimagesRenameItemParams {
+/** filemanager.renameItem 的参数。 */
+export interface FilemanagerRenameItemParams {
   /** 文件或文件夹的相对路径 */
   path: string;
   /** 新名称 */
   name: string;
 }
 
-/** diskimages.renameItem 的结果。 */
-export interface DiskimagesRenameItemResult {
+/** filemanager.renameItem 的结果。 */
+export interface FilemanagerRenameItemResult {
   /** 重命名之后的相对路径 */
   path: string;
 }
 
-/** diskimages.removeItems 的参数。 */
-export interface DiskimagesRemoveItemsParams {
+/** filemanager.removeItems 的参数。 */
+export interface FilemanagerRemoveItemsParams {
   /** 要删除的文件或文件夹的相对路径 */
   paths: string[];
 }
 
-/** diskimages.removeItems 的结果。 */
-export type DiskimagesRemoveItemsResult = Record<string, never>;
+/** filemanager.removeItems 的结果。 */
+export type FilemanagerRemoveItemsResult = Record<string, never>;
 
-/** diskimages.moveItems 的参数。 */
-export interface DiskimagesMoveItemsParams {
+/** filemanager.moveItems 的参数。 */
+export interface FilemanagerMoveItemsParams {
   /** 要移动的文件或文件夹的相对路径 */
   paths: string[];
-  /** 目标文件夹的相对路径；空串是镜像目录本身 */
+  /** 目标文件夹的相对路径；空串是目录本身 */
   target: string;
 }
 
-/** diskimages.moveItems 的结果。 */
-export interface DiskimagesMoveItemsResult {
+/** filemanager.moveItems 的结果。 */
+export interface FilemanagerMoveItemsResult {
   /** 移动之后的相对路径，顺序同参数 */
   paths: string[];
 }
 
-/** diskimages.copyItems 的参数。 */
-export interface DiskimagesCopyItemsParams {
+/** filemanager.copyItems 的参数。 */
+export interface FilemanagerCopyItemsParams {
   /** 要复制的文件或文件夹的相对路径 */
   paths: string[];
-  /** 目标文件夹的相对路径；空串是镜像目录本身 */
+  /** 目标文件夹的相对路径；空串是目录本身 */
   target: string;
 }
 
-/** diskimages.copyItems 的结果。 */
-export interface DiskimagesCopyItemsResult {
+/** filemanager.copyItems 的结果。 */
+export interface FilemanagerCopyItemsResult {
   /** 复制出来的相对路径，顺序同参数 */
   paths: string[];
 }
 
-/** diskimages.makeFolder 的参数。 */
-export interface DiskimagesMakeFolderParams {
-  /** 在哪个文件夹里新建（相对路径）；空串是镜像目录本身 */
+/** filemanager.makeFolder 的参数。 */
+export interface FilemanagerMakeFolderParams {
+  /** 在哪个文件夹里新建（相对路径）；空串是目录本身 */
   directory: string;
   /** 文件夹的基本名称 */
   name: string;
 }
 
-/** diskimages.makeFolder 的结果。 */
-export interface DiskimagesMakeFolderResult {
+/** filemanager.makeFolder 的结果。 */
+export interface FilemanagerMakeFolderResult {
   /** 新文件夹的相对路径 */
   path: string;
 }
 
-/** diskimages.blankKinds 的参数。 */
-export type DiskimagesBlankKindsParams = Record<string, never>;
+/** filemanager.blankKinds 的参数。 */
+export type FilemanagerBlankKindsParams = Record<string, never>;
 
-/** diskimages.blankKinds 的结果。 */
-export interface DiskimagesBlankKindsResult {
+/** filemanager.blankKinds 的结果。 */
+export interface FilemanagerBlankKindsResult {
   /** 种类，按界面显示的顺序 */
-  kinds: DiskimagesBlankKind[];
+  kinds: FilemanagerBlankKind[];
 }
 
-/** diskimages.imagePath 的参数。 */
-export interface DiskimagesImagePathParams {
+/** filemanager.imagePath 的参数。 */
+export interface FilemanagerImagePathParams {
   /** 镜像的相对路径 */
   image: string;
 }
 
-/** diskimages.imagePath 的结果。 */
-export interface DiskimagesImagePathResult {
+/** filemanager.imagePath 的结果。 */
+export interface FilemanagerImagePathResult {
   /** 完整路径 */
   path: string;
 }
@@ -2201,11 +2203,11 @@ export interface DebugEventsDroppedData {
   count: number;
 }
 
-/** diskimages.treeChanged 事件的数据。 */
-export type DiskimagesTreeChangedData = Record<string, never>;
+/** filemanager.treeChanged 事件的数据。 */
+export type FilemanagerTreeChangedData = Record<string, never>;
 
-/** diskimages.imageChanged 事件的数据。 */
-export interface DiskimagesImageChangedData {
+/** filemanager.imageChanged 事件的数据。 */
+export interface FilemanagerImageChangedData {
   /** 镜像的相对路径 */
   image: string;
 }
@@ -2364,25 +2366,25 @@ export interface RequestMap {
   "debug.subscribe": { params: DebugSubscribeParams; result: DebugSubscribeResult };
   "debug.unsubscribe": { params: DebugUnsubscribeParams; result: DebugUnsubscribeResult };
   "debug.status": { params: DebugStatusParams; result: DebugStatusResult };
-  "diskimages.setRoot": { params: DiskimagesSetRootParams; result: DiskimagesSetRootResult };
-  "diskimages.tree": { params: DiskimagesTreeParams; result: DiskimagesTreeResult };
-  "diskimages.list": { params: DiskimagesListParams; result: DiskimagesListResult };
-  "diskimages.rename": { params: DiskimagesRenameParams; result: DiskimagesRenameResult };
-  "diskimages.remove": { params: DiskimagesRemoveParams; result: DiskimagesRemoveResult };
-  "diskimages.move": { params: DiskimagesMoveParams; result: DiskimagesMoveResult };
-  "diskimages.copy": { params: DiskimagesCopyParams; result: DiskimagesCopyResult };
-  "diskimages.makeDirectory": { params: DiskimagesMakeDirectoryParams; result: DiskimagesMakeDirectoryResult };
-  "diskimages.undo": { params: DiskimagesUndoParams; result: DiskimagesUndoResult };
-  "diskimages.readEntries": { params: DiskimagesReadEntriesParams; result: DiskimagesReadEntriesResult };
-  "diskimages.importFiles": { params: DiskimagesImportFilesParams; result: DiskimagesImportFilesResult };
-  "diskimages.createImage": { params: DiskimagesCreateImageParams; result: DiskimagesCreateImageResult };
-  "diskimages.renameItem": { params: DiskimagesRenameItemParams; result: DiskimagesRenameItemResult };
-  "diskimages.removeItems": { params: DiskimagesRemoveItemsParams; result: DiskimagesRemoveItemsResult };
-  "diskimages.moveItems": { params: DiskimagesMoveItemsParams; result: DiskimagesMoveItemsResult };
-  "diskimages.copyItems": { params: DiskimagesCopyItemsParams; result: DiskimagesCopyItemsResult };
-  "diskimages.makeFolder": { params: DiskimagesMakeFolderParams; result: DiskimagesMakeFolderResult };
-  "diskimages.blankKinds": { params: DiskimagesBlankKindsParams; result: DiskimagesBlankKindsResult };
-  "diskimages.imagePath": { params: DiskimagesImagePathParams; result: DiskimagesImagePathResult };
+  "filemanager.setRoot": { params: FilemanagerSetRootParams; result: FilemanagerSetRootResult };
+  "filemanager.tree": { params: FilemanagerTreeParams; result: FilemanagerTreeResult };
+  "filemanager.list": { params: FilemanagerListParams; result: FilemanagerListResult };
+  "filemanager.rename": { params: FilemanagerRenameParams; result: FilemanagerRenameResult };
+  "filemanager.remove": { params: FilemanagerRemoveParams; result: FilemanagerRemoveResult };
+  "filemanager.move": { params: FilemanagerMoveParams; result: FilemanagerMoveResult };
+  "filemanager.copy": { params: FilemanagerCopyParams; result: FilemanagerCopyResult };
+  "filemanager.makeDirectory": { params: FilemanagerMakeDirectoryParams; result: FilemanagerMakeDirectoryResult };
+  "filemanager.undo": { params: FilemanagerUndoParams; result: FilemanagerUndoResult };
+  "filemanager.readEntries": { params: FilemanagerReadEntriesParams; result: FilemanagerReadEntriesResult };
+  "filemanager.importFiles": { params: FilemanagerImportFilesParams; result: FilemanagerImportFilesResult };
+  "filemanager.createImage": { params: FilemanagerCreateImageParams; result: FilemanagerCreateImageResult };
+  "filemanager.renameItem": { params: FilemanagerRenameItemParams; result: FilemanagerRenameItemResult };
+  "filemanager.removeItems": { params: FilemanagerRemoveItemsParams; result: FilemanagerRemoveItemsResult };
+  "filemanager.moveItems": { params: FilemanagerMoveItemsParams; result: FilemanagerMoveItemsResult };
+  "filemanager.copyItems": { params: FilemanagerCopyItemsParams; result: FilemanagerCopyItemsResult };
+  "filemanager.makeFolder": { params: FilemanagerMakeFolderParams; result: FilemanagerMakeFolderResult };
+  "filemanager.blankKinds": { params: FilemanagerBlankKindsParams; result: FilemanagerBlankKindsResult };
+  "filemanager.imagePath": { params: FilemanagerImagePathParams; result: FilemanagerImagePathResult };
   "input.getBindings": { params: InputGetBindingsParams; result: InputGetBindingsResult };
   "input.setBindings": { params: InputSetBindingsParams; result: InputSetBindingsResult };
   "input.resetBindings": { params: InputResetBindingsParams; result: InputResetBindingsResult };
@@ -2479,10 +2481,10 @@ export interface EventMap {
   "debug.statusChanged": DebugStatusChangedData;
   /** 只发给订阅事件的那条连接：客户端读得太慢，事件队列已满，丢弃了若干条事件；响应不会被丢弃。 */
   "debug.eventsDropped": DebugEventsDroppedData;
-  /** 镜像目录的树变了：文件夹或镜像文件被创建、删除、改名，或格式识别有了新结果；用 diskimages.tree 重新读取。 */
-  "diskimages.treeChanged": DiskimagesTreeChangedData;
+  /** 目录的树变了：文件夹或镜像文件被创建、删除、改名，或格式识别有了新结果；用 filemanager.tree 重新读取。 */
+  "filemanager.treeChanged": FilemanagerTreeChangedData;
   /** 一个镜像的内容变了：管理操作、机器写盘、别的程序改了镜像文件；正在查看它的界面要重新读取。 */
-  "diskimages.imageChanged": DiskimagesImageChangedData;
+  "filemanager.imageChanged": FilemanagerImageChangedData;
   /** 手柄绑定变了（界面修改、恢复默认都会发出）。 */
   "input.bindingsChanged": InputBindingsChangedData;
   /** Family BASIC 键盘的接入状态变了（界面或调试服务设置后发出，没有变化时不发）。 */
@@ -2539,45 +2541,45 @@ export interface EmberApi {
     /** 调试服务的状态：是否开启、是否在监听、端口与当前的连接。 */
     status(): Promise<DebugStatusResult>;
   };
-  readonly diskimages: {
-    /** 设置镜像目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。 */
-    setRoot(params: DiskimagesSetRootParams): Promise<DiskimagesSetRootResult>;
-    /** 镜像目录里的树：含全部文件夹（空文件夹也列出）与支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件，文件夹在前、按名称排序；文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 diskimages.treeChanged。 */
-    tree(): Promise<DiskimagesTreeResult>;
+  readonly filemanager: {
+    /** 设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。 */
+    setRoot(params: FilemanagerSetRootParams): Promise<FilemanagerSetRootResult>;
+    /** 目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。 */
+    tree(): Promise<FilemanagerTreeResult>;
     /** 列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致；镜像插在软驱里时读软驱里的盘片，否则读文件。 */
-    list(params: DiskimagesListParams): Promise<DiskimagesListResult>;
+    list(params: FilemanagerListParams): Promise<FilemanagerListResult>;
     /** 重命名镜像里的条目（不改所在文件夹）；立即生效：镜像插在软驱里时改软驱里的盘片并随后写回文件，否则直接改文件。名称规则按文件系统：FAT 是 8.3，DOS 3.3 最长 30 个字符，ProDOS 最长 15 个字符。 */
-    rename(params: DiskimagesRenameParams): Promise<DiskimagesRenameResult>;
-    /** 删除镜像里的条目，文件夹连同里面的全部内容；立即生效，不确认，可以用 diskimages.undo 撤销。 */
-    remove(params: DiskimagesRemoveParams): Promise<DiskimagesRemoveResult>;
-    /** 把条目移到镜像里的另一个文件夹，名称不变；没有子目录的文件系统（DOS 3.3）返回 diskimages.unsupported。 */
-    move(params: DiskimagesMoveParams): Promise<DiskimagesMoveResult>;
+    rename(params: FilemanagerRenameParams): Promise<FilemanagerRenameResult>;
+    /** 删除镜像里的条目，文件夹连同里面的全部内容；立即生效，不确认，可以用 filemanager.undo 撤销。 */
+    remove(params: FilemanagerRemoveParams): Promise<FilemanagerRemoveResult>;
+    /** 把条目移到镜像里的另一个文件夹，名称不变；没有子目录的文件系统（DOS 3.3）返回 filemanager.unsupported。 */
+    move(params: FilemanagerMoveParams): Promise<FilemanagerMoveResult>;
     /** 把条目（文件夹连同里面的内容）复制到另一个文件夹，可以在同一个镜像里，也可以复制到另一个镜像（用来在两个镜像之间搬文件）；名称不变，目标里已有同名条目时拒绝。 */
-    copy(params: DiskimagesCopyParams): Promise<DiskimagesCopyResult>;
-    /** 在镜像里新建文件夹；没有子目录的文件系统（DOS 3.3）返回 diskimages.unsupported。 */
-    makeDirectory(params: DiskimagesMakeDirectoryParams): Promise<DiskimagesMakeDirectoryResult>;
+    copy(params: FilemanagerCopyParams): Promise<FilemanagerCopyResult>;
+    /** 在镜像里新建文件夹；没有子目录的文件系统（DOS 3.3）返回 filemanager.unsupported。 */
+    makeDirectory(params: FilemanagerMakeDirectoryParams): Promise<FilemanagerMakeDirectoryResult>;
     /** 撤销这个镜像里最近一次管理操作（每个镜像各有一份撤销记录，只在内存里，核心重启后清空）；镜像里被撤销的位置已被别的程序或机器改动过时拒绝，不覆盖那些改动。 */
-    undo(params: DiskimagesUndoParams): Promise<DiskimagesUndoResult>;
-    /** 读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容；总量超过 64 MB 时返回 diskimages.noSpace。 */
-    readEntries(params: DiskimagesReadEntriesParams): Promise<DiskimagesReadEntriesResult>;
+    undo(params: FilemanagerUndoParams): Promise<FilemanagerUndoResult>;
+    /** 读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容；总量超过 64 MB 时返回 filemanager.noSpace。 */
+    readEntries(params: FilemanagerReadEntriesParams): Promise<FilemanagerReadEntriesResult>;
     /** 把 Windows 上的文件与文件夹导入镜像的一个文件夹（文件夹连同里面的文件）；每个拖入的文件或文件夹各给一个结果，某一个失败不影响其他的。路径只来自拖入窗口的文件，界面不能传。 */
-    importFiles(params: DiskimagesImportFilesParams): Promise<DiskimagesImportFilesResult>;
-    /** 在镜像目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”。 */
-    createImage(params: DiskimagesCreateImageParams): Promise<DiskimagesCreateImageResult>;
-    /** 重命名镜像目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。 */
-    renameItem(params: DiskimagesRenameItemParams): Promise<DiskimagesRenameItemResult>;
-    /** 把镜像目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。 */
-    removeItems(params: DiskimagesRemoveItemsParams): Promise<DiskimagesRemoveItemsResult>;
-    /** 把镜像目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。 */
-    moveItems(params: DiskimagesMoveItemsParams): Promise<DiskimagesMoveItemsResult>;
-    /** 把镜像目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。 */
-    copyItems(params: DiskimagesCopyItemsParams): Promise<DiskimagesCopyItemsResult>;
-    /** 在镜像目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。 */
-    makeFolder(params: DiskimagesMakeFolderParams): Promise<DiskimagesMakeFolderResult>;
+    importFiles(params: FilemanagerImportFilesParams): Promise<FilemanagerImportFilesResult>;
+    /** 在目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”。 */
+    createImage(params: FilemanagerCreateImageParams): Promise<FilemanagerCreateImageResult>;
+    /** 重命名目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。 */
+    renameItem(params: FilemanagerRenameItemParams): Promise<FilemanagerRenameItemResult>;
+    /** 把目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。 */
+    removeItems(params: FilemanagerRemoveItemsParams): Promise<FilemanagerRemoveItemsResult>;
+    /** 把目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。 */
+    moveItems(params: FilemanagerMoveItemsParams): Promise<FilemanagerMoveItemsResult>;
+    /** 把目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。 */
+    copyItems(params: FilemanagerCopyItemsParams): Promise<FilemanagerCopyItemsResult>;
+    /** 在目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。 */
+    makeFolder(params: FilemanagerMakeFolderParams): Promise<FilemanagerMakeFolderResult>;
     /** 能新建的空白镜像种类。 */
-    blankKinds(): Promise<DiskimagesBlankKindsResult>;
+    blankKinds(): Promise<FilemanagerBlankKindsResult>;
     /** 镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示；界面不能调用。 */
-    imagePath(params: DiskimagesImagePathParams): Promise<DiskimagesImagePathResult>;
+    imagePath(params: FilemanagerImagePathParams): Promise<FilemanagerImagePathResult>;
   };
   readonly input: {
     /** 读取手柄绑定：两个玩家槽位（对应手柄口 1、2）。 */

@@ -126,7 +126,7 @@ class FloppyDrive {
   virtual void applyExternalChange(std::size_t offset, std::span<const std::uint8_t> bytes) = 0;
 
   /**
-   * 主机一侧（磁盘镜像管理）改盘片里的文件：把一段字节写进内存里的镜像，记为已修改（介质服务随即写回文件），盘片更换标志置位让学习机重新读盘。
+   * 主机一侧（文件管理）改盘片里的文件：把一段字节写进内存里的镜像，记为已修改（介质服务随即写回文件），盘片更换标志置位让学习机重新读盘。
    * 没有镜像或超出镜像时丢弃。
    */
   virtual void writeFromHost(std::size_t offset, std::span<const std::uint8_t> bytes) = 0;

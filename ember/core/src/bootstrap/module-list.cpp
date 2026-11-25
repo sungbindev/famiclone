@@ -13,7 +13,7 @@
 
 #include "bootstrap/modules/cartridges.hpp"
 #include "bootstrap/modules/debug.hpp"
-#include "bootstrap/modules/diskimages.hpp"
+#include "bootstrap/modules/filemanager.hpp"
 #include "bootstrap/modules/input.hpp"
 #include "bootstrap/modules/inspector.hpp"
 #include "bootstrap/modules/machines.hpp"
@@ -40,7 +40,7 @@ constexpr ModuleRegistration MODULES[] = {
     {"cartridges", registerCartridges},
     {"machines", registerMachines},
     {"media", registerMedia},
-    {"diskimages", registerDiskimages},
+    {"filemanager", registerFileManager},
     {"debug", registerDebug},
 };
 

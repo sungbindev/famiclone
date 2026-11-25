@@ -35,9 +35,9 @@ void FileShellStateService::updateReleaseNotesVersion(const std::string& version
   replace(std::move(next));
 }
 
-void FileShellStateService::updateDiskImagesRoot(const std::optional<std::string>& path) {
+void FileShellStateService::updateFileManagerRoot(const std::optional<std::string>& path) {
   shared::ShellState next = state_;
-  next.diskImagesRoot = path;
+  next.fileManagerRoot = path;
   replace(std::move(next));
 }
 

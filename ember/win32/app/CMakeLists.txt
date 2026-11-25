@@ -24,8 +24,9 @@ add_library(ember_app STATIC
   src/bootstrap/update-apply.cpp
   src/bootstrap/user-data-move.cpp
   src/entry/cartridges/cartridge-handlers.cpp
-  src/entry/diskimages/diskimages-handlers.cpp
+  src/entry/filemanager/filemanager-handlers.cpp
   src/entry/machines/machine-handlers.cpp
+  src/entry/main-requests/cartridge-loading.cpp
   src/entry/main-requests/dropped-path.cpp
   src/entry/main-requests/main-request-router.cpp
   src/entry/main-requests/param-reader.cpp
@@ -57,9 +58,9 @@ add_library(ember_app STATIC
   src/logic/debug/debug-controller.cpp
   src/logic/debug/debug-module.cpp
   src/logic/debug/debug-rules.cpp
-  src/logic/diskimages/diskimages-controller.cpp
-  src/logic/diskimages/diskimages-module.cpp
-  src/logic/diskimages/diskimages-rules.cpp
+  src/logic/filemanager/filemanager-controller.cpp
+  src/logic/filemanager/filemanager-module.cpp
+  src/logic/filemanager/filemanager-rules.cpp
   src/logic/input/gamepad-settings-controller.cpp
   src/logic/input/input-controller.cpp
   src/logic/input/input-module.cpp
@@ -138,7 +139,7 @@ add_library(ember_app STATIC
   src/shared/update/update-manifest.cpp
   src/shared/window/window-shadow-image.cpp
   src/ui/media/media-panel-content.cpp
-  src/ui/diskimages/diskimages-content.cpp
+  src/ui/filemanager/filemanager-content.cpp
   src/ui/input/gamepad-settings-content.cpp
   src/ui/input/pad-layout.cpp
   src/ui/machines/machines-content.cpp

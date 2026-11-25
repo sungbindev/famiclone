@@ -35,4 +35,9 @@ std::string revealFileInFileManager(const std::filesystem::path& file) {
   return result > 32 ? std::string{} : "系统没有打开文件管理器（错误码 " + std::to_string(result) + "）";
 }
 
+std::string openFileWithDefaultProgram(const std::filesystem::path& file) {
+  const auto result = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", file.c_str(), nullptr, nullptr, SW_SHOWNORMAL));
+  return result > 32 ? std::string{} : "系统没有打开文件（错误码 " + std::to_string(result) + "）";
+}
+
 }  // namespace ember::win32::platform

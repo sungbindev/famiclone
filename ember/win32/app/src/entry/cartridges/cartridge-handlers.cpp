@@ -11,6 +11,7 @@
 
 #include "entry/cartridges/cartridge-handlers.hpp"
 
+#include "entry/main-requests/cartridge-loading.hpp"
 #include "entry/main-requests/dropped-path.hpp"
 #include "entry/main-requests/param-reader.hpp"
 
@@ -26,14 +27,6 @@ constexpr const char* kDroppedNotFound = "cartridges.droppedNotFound";
 constexpr const char* kRecentNotFound = "cartridges.recentNotFound";
 
 }  // namespace
-
-void loadAndRememberCartridge(contracts::CoreGateway& core, contracts::RecentCartridgesService& recent, const std::string& path, contracts::CoreReplyHandler done) {
-  recent.add(path);
-  core.request("cartridges.load", nlohmann::json{{"path", path}}, [&recent, path, done = std::move(done)](contracts::CoreReply reply) {
-    if (!reply.ok) recent.remove(path);
-    done(std::move(reply));
-  });
-}
 
 MainRequestHandlers createCartridgeHandlers(CartridgeDependencies dependencies) {
   MainRequestHandlers handlers;

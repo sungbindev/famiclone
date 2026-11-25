@@ -33,6 +33,13 @@ class DirectoryOpener {
    * @returns 成功时为空文字，失败时是错误说明。
    */
   [[nodiscard]] virtual std::string reveal(const std::string& path) = 0;
+
+  /**
+   * 用系统默认的程序打开一个文件（如用图片查看程序打开 PNG）。
+   * @param path UTF-8 的文件完整路径。
+   * @returns 成功时为空文字，失败时是错误说明。
+   */
+  [[nodiscard]] virtual std::string openFile(const std::string& path) = 0;
 };
 
 }  // namespace ember::win32::contracts

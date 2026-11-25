@@ -31,7 +31,7 @@
 #include "bootstrap/update-apply.hpp"
 #include "bootstrap/user-data-move.hpp"
 #include "entry/cartridges/cartridge-handlers.hpp"
-#include "entry/diskimages/diskimages-handlers.hpp"
+#include "entry/filemanager/filemanager-handlers.hpp"
 #include "entry/machines/machine-handlers.hpp"
 #include "entry/main-requests/main-request-router.hpp"
 #include "entry/mappers/mapper-handlers.hpp"
@@ -65,8 +65,8 @@
 #include "infra/user-data/user-data-location-adapter.hpp"
 #include "logic/debug/debug-controller.hpp"
 #include "logic/debug/debug-module.hpp"
-#include "logic/diskimages/diskimages-controller.hpp"
-#include "logic/diskimages/diskimages-module.hpp"
+#include "logic/filemanager/filemanager-controller.hpp"
+#include "logic/filemanager/filemanager-module.hpp"
 #include "logic/input/input-controller.hpp"
 #include "logic/media/media-controller.hpp"
 #include "logic/media/media-module.hpp"
@@ -117,7 +117,7 @@
 #include "shared/update/update-policy.hpp"
 #include "shared/update/update-public-key.hpp"
 #include "ui/media/media-panel-content.hpp"
-#include "ui/diskimages/diskimages-content.hpp"
+#include "ui/filemanager/filemanager-content.hpp"
 #include "ui/input/gamepad-settings-content.hpp"
 #include "ui/machines/machines-content.hpp"
 #include "ui/mappers/mappers-content.hpp"
@@ -382,7 +382,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   router.add(entry::createMachineHandlers({core, fileDialog, romDirectory}));
   router.add(entry::createMapperHandlers({core, fileDialog}));
   router.add(entry::createMediaHandlers({core, fileDialog, droppedFiles, directoryOpener}));
-  router.add(entry::createDiskimagesHandlers({core, fileDialog, droppedFiles, directoryOpener, shellState}));
+  router.add(entry::createFileManagerHandlers({core, fileDialog, droppedFiles, directoryOpener, shellState, recentCartridges}));
   router.add(entry::createPreferenceHandlers({fileDialog}));
   router.add(entry::createSystemHandlers({logDirectory, help, updater}));
 
@@ -391,7 +391,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     logic::InputController input(core);
     logic::RuntimeController runtime(router, core, shellState);
     logic::MediaController media(router, core);
-    logic::DiskImagesController diskImages(router, core, droppedFiles, confirmation);
+    logic::FileManagerController fileManager(router, core, droppedFiles, confirmation);
     infra::OleDiskDragHost diskDragHost;
     logic::PreferencesController preferencesController(router, core);
     logic::RomController romController(router, core);
@@ -410,14 +410,14 @@ int runApplication(const shared::LaunchArguments& launch) {
     confirmation.setCustomFrame(customFrame);
     confirmation.setLogo([] { return std::make_unique<ui::AppLogo>(platform::renderAppIcon); });
     DialogHost dialogs([&mainWindow]() -> void* { return mainWindow; }, [&ui](std::function<void()> task) { ui.post(std::move(task)); }, customFrame);
-    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createDiskImagesModule(diskImages), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
+    auto registry = logic::buildShellRegistry({logic::createShellModule(), logic::createRuntimeModule(runtime), logic::createMediaModule(media), logic::createFileManagerModule(fileManager), logic::createDebugModule(debug), logic::createPreferencesModule(preferencesController, userDataController), logic::createInputModule(gamepadSettings), logic::createMachinesModule(romController), logic::createMappersModule(mappersController), logic::createSystemModule(router, updateController, aboutController)});
     dialogs.setDefinitions(registry.dialogs);
     dialogs.setBody(logic::kMachinesDialogId, [&romController] { return std::make_unique<ui::MachinesContent>(romController); }, true);
     dialogs.setBody(logic::kGamepadSettingsDialogId, [&gamepadSettings] { return std::make_unique<ui::GamepadSettingsContent>(gamepadSettings); });
-    dialogs.setBody(logic::kDiskImagesDialogId, [&diskImages, &diskDragHost] { return std::make_unique<ui::DiskImagesContent>(diskImages, diskDragHost); }, true, true);
-    // 磁盘镜像管理窗口：打开后焦点放到资源管理器的树上，展开与收起镜像内容时调整窗口宽度，并把窗口登记成拖放目标（从 Windows 拖入文件、窗口内拖动条目到文件夹上）
-    dialogs.setOpenHook(logic::kDiskImagesDialogId, [](platform::DialogWindow& window, rujian::ui::Widget& body) -> std::shared_ptr<void> {
-      auto* content = static_cast<ui::DiskImagesContent*>(&body);
+    dialogs.setBody(logic::kFileManagerDialogId, [&fileManager, &diskDragHost] { return std::make_unique<ui::FileManagerContent>(fileManager, diskDragHost); }, true, true);
+    // 文件管理窗口：打开后焦点放到资源管理器的树上，展开与收起镜像内容时调整窗口宽度，并把窗口登记成拖放目标（从 Windows 拖入文件、窗口内拖动条目到文件夹上）
+    dialogs.setOpenHook(logic::kFileManagerDialogId, [](platform::DialogWindow& window, rujian::ui::Widget& body) -> std::shared_ptr<void> {
+      auto* content = static_cast<ui::FileManagerContent*>(&body);
       content->focusInitial();
       content->setOnResizeWindow([&window](double delta) { return window.resizeWidthBy(delta); });
       content->setOnRootChanged([&window](const std::string& root) { window.frame().setTitleDetail(root); });
@@ -581,7 +581,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     screenWidget = screen.get();
     shellView->setScreen(std::move(screen));
     shellView->setPanelContent(logic::kRuntimePanelId, [&runtime] { return std::make_unique<ui::RuntimePanelContent>(runtime); });
-    shellView->setPanelContent(logic::kMediaPanelId, [&media, &dialogs] { return std::make_unique<ui::MediaPanelContent>(media, [&dialogs] { dialogs.openDialog(logic::kDiskImagesDialogId); }); });
+    shellView->setPanelContent(logic::kMediaPanelId, [&media, &dialogs] { return std::make_unique<ui::MediaPanelContent>(media, [&dialogs] { dialogs.openDialog(logic::kFileManagerDialogId); }); });
     shellView->setFocusScreen([screenWidget] { screenWidget->focusScreen(); });
     // 弹层（菜单、通知、提示）盖到画面上时把画面子窗口对应的区域挖掉
     window.root().setLayerRectsHandler([&](const std::vector<rujian::ui::Rect>& rects) {

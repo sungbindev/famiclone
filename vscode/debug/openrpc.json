@@ -529,12 +529,12 @@
       "errors": []
     },
     {
-      "name": "diskimages.setRoot",
-      "summary": "设置镜像目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）",
-      "description": "设置镜像目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。",
+      "name": "filemanager.setRoot",
+      "summary": "设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）",
+      "description": "设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -547,9 +547,9 @@
               "string",
               "null"
             ],
-            "description": "镜像目录的路径；null 表示取消"
+            "description": "目录的路径；null 表示取消"
           },
-          "description": "镜像目录的路径；null 表示取消"
+          "description": "目录的路径；null 表示取消"
         }
       ],
       "result": {
@@ -571,21 +571,21 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         }
       ],
       "x-mainOnly": true
     },
     {
-      "name": "diskimages.tree",
-      "summary": "镜像目录里的树：含全部文件夹（空文件夹也列出）与支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件，文件夹在前、按名称排序",
-      "description": "镜像目录里的树：含全部文件夹（空文件夹也列出）与支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件，文件夹在前、按名称排序；文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 diskimages.treeChanged。",
+      "name": "filemanager.tree",
+      "summary": "目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序",
+      "description": "目录里的树：含全部文件夹（空文件夹也列出）与受管理扩展名的文件（软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -600,7 +600,7 @@
                 "string",
                 "null"
               ],
-              "description": "镜像目录的路径，用来显示；没有设置时为 null"
+              "description": "目录的路径，用来显示；没有设置时为 null"
             },
             "available": {
               "type": "boolean",
@@ -618,7 +618,7 @@
               "type": "array",
               "description": "节点，父文件夹在前，同级按文件夹在前、名称排序",
               "items": {
-                "$ref": "#/components/schemas/diskimages.ImageNode"
+                "$ref": "#/components/schemas/filemanager.ImageNode"
               }
             }
           },
@@ -635,12 +635,12 @@
       "errors": []
     },
     {
-      "name": "diskimages.list",
+      "name": "filemanager.list",
       "summary": "列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致",
       "description": "列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致；镜像插在软驱里时读软驱里的盘片，否则读文件。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -678,13 +678,13 @@
           "type": "object",
           "properties": {
             "fileSystem": {
-              "$ref": "#/components/schemas/diskimages.FileSystemInfo"
+              "$ref": "#/components/schemas/filemanager.FileSystemInfo"
             },
             "entries": {
               "type": "array",
               "description": "目录里的条目",
               "items": {
-                "$ref": "#/components/schemas/diskimages.EntryInfo"
+                "$ref": "#/components/schemas/filemanager.EntryInfo"
               }
             },
             "drive": {
@@ -720,62 +720,62 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         }
       ]
     },
     {
-      "name": "diskimages.rename",
+      "name": "filemanager.rename",
       "summary": "重命名镜像里的条目（不改所在文件夹）",
       "description": "重命名镜像里的条目（不改所在文件夹）；立即生效：镜像插在软驱里时改软驱里的盘片并随后写回文件，否则直接改文件。名称规则按文件系统：FAT 是 8.3，DOS 3.3 最长 30 个字符，ProDOS 最长 15 个字符。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -831,90 +831,90 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.exists",
+          "message": "filemanager.exists",
           "data": {
-            "code": "diskimages.exists"
+            "code": "filemanager.exists"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidName",
+          "message": "filemanager.invalidName",
           "data": {
-            "code": "diskimages.invalidName"
+            "code": "filemanager.invalidName"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.remove",
+      "name": "filemanager.remove",
       "summary": "删除镜像里的条目，文件夹连同里面的全部内容",
-      "description": "删除镜像里的条目，文件夹连同里面的全部内容；立即生效，不确认，可以用 diskimages.undo 撤销。",
+      "description": "删除镜像里的条目，文件夹连同里面的全部内容；立即生效，不确认，可以用 filemanager.undo 撤销。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -964,76 +964,76 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.move",
+      "name": "filemanager.move",
       "summary": "把条目移到镜像里的另一个文件夹，名称不变",
-      "description": "把条目移到镜像里的另一个文件夹，名称不变；没有子目录的文件系统（DOS 3.3）返回 diskimages.unsupported。",
+      "description": "把条目移到镜像里的另一个文件夹，名称不变；没有子目录的文件系统（DOS 3.3）返回 filemanager.unsupported。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1098,104 +1098,104 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unsupported",
+          "message": "filemanager.unsupported",
           "data": {
-            "code": "diskimages.unsupported"
+            "code": "filemanager.unsupported"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.exists",
+          "message": "filemanager.exists",
           "data": {
-            "code": "diskimages.exists"
+            "code": "filemanager.exists"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.moveIntoSelf",
+          "message": "filemanager.moveIntoSelf",
           "data": {
-            "code": "diskimages.moveIntoSelf"
+            "code": "filemanager.moveIntoSelf"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.noSpace",
+          "message": "filemanager.noSpace",
           "data": {
-            "code": "diskimages.noSpace"
+            "code": "filemanager.noSpace"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.copy",
+      "name": "filemanager.copy",
       "summary": "把条目（文件夹连同里面的内容）复制到另一个文件夹，可以在同一个镜像里，也可以复制到另一个镜像（用来在两个镜像之间搬文件）",
       "description": "把条目（文件夹连同里面的内容）复制到另一个文件夹，可以在同一个镜像里，也可以复制到另一个镜像（用来在两个镜像之间搬文件）；名称不变，目标里已有同名条目时拒绝。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1271,104 +1271,104 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unsupported",
+          "message": "filemanager.unsupported",
           "data": {
-            "code": "diskimages.unsupported"
+            "code": "filemanager.unsupported"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.exists",
+          "message": "filemanager.exists",
           "data": {
-            "code": "diskimages.exists"
+            "code": "filemanager.exists"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidName",
+          "message": "filemanager.invalidName",
           "data": {
-            "code": "diskimages.invalidName"
+            "code": "filemanager.invalidName"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.noSpace",
+          "message": "filemanager.noSpace",
           "data": {
-            "code": "diskimages.noSpace"
+            "code": "filemanager.noSpace"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.makeDirectory",
+      "name": "filemanager.makeDirectory",
       "summary": "在镜像里新建文件夹",
-      "description": "在镜像里新建文件夹；没有子目录的文件系统（DOS 3.3）返回 diskimages.unsupported。",
+      "description": "在镜像里新建文件夹；没有子目录的文件系统（DOS 3.3）返回 filemanager.unsupported。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1423,104 +1423,104 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unsupported",
+          "message": "filemanager.unsupported",
           "data": {
-            "code": "diskimages.unsupported"
+            "code": "filemanager.unsupported"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.exists",
+          "message": "filemanager.exists",
           "data": {
-            "code": "diskimages.exists"
+            "code": "filemanager.exists"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidName",
+          "message": "filemanager.invalidName",
           "data": {
-            "code": "diskimages.invalidName"
+            "code": "filemanager.invalidName"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.noSpace",
+          "message": "filemanager.noSpace",
           "data": {
-            "code": "diskimages.noSpace"
+            "code": "filemanager.noSpace"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.undo",
+      "name": "filemanager.undo",
       "summary": "撤销这个镜像里最近一次管理操作（每个镜像各有一份撤销记录，只在内存里，核心重启后清空）",
       "description": "撤销这个镜像里最近一次管理操作（每个镜像各有一份撤销记录，只在内存里，核心重启后清空）；镜像里被撤销的位置已被别的程序或机器改动过时拒绝，不覆盖那些改动。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1556,69 +1556,69 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.nothingToUndo",
+          "message": "filemanager.nothingToUndo",
           "data": {
-            "code": "diskimages.nothingToUndo"
+            "code": "filemanager.nothingToUndo"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.undoBlocked",
+          "message": "filemanager.undoBlocked",
           "data": {
-            "code": "diskimages.undoBlocked"
+            "code": "filemanager.undoBlocked"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.readEntries",
+      "name": "filemanager.readEntries",
       "summary": "读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容",
-      "description": "读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容；总量超过 64 MB 时返回 diskimages.noSpace。",
+      "description": "读出条目的内容用来导出：文件给出原样内容与建议的 Windows 文件名（DOS 3.3 与 ProDOS 带类型对应的扩展名），文件夹带着里面的全部内容；总量超过 64 MB 时返回 filemanager.noSpace。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1665,7 +1665,7 @@
               "type": "array",
               "description": "导出的内容，文件夹在它里面的文件之前",
               "items": {
-                "$ref": "#/components/schemas/diskimages.ExportItem"
+                "$ref": "#/components/schemas/filemanager.ExportItem"
               }
             }
           },
@@ -1678,69 +1678,69 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.noSpace",
+          "message": "filemanager.noSpace",
           "data": {
-            "code": "diskimages.noSpace"
+            "code": "filemanager.noSpace"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.corrupt",
+          "message": "filemanager.corrupt",
           "data": {
-            "code": "diskimages.corrupt"
+            "code": "filemanager.corrupt"
           }
         }
       ]
     },
     {
-      "name": "diskimages.importFiles",
+      "name": "filemanager.importFiles",
       "summary": "把 Windows 上的文件与文件夹导入镜像的一个文件夹（文件夹连同里面的文件）",
       "description": "把 Windows 上的文件与文件夹导入镜像的一个文件夹（文件夹连同里面的文件）；每个拖入的文件或文件夹各给一个结果，某一个失败不影响其他的。路径只来自拖入窗口的文件，界面不能传。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1796,7 +1796,7 @@
               "type": "array",
               "description": "每个拖入项的结果，顺序同 paths",
               "items": {
-                "$ref": "#/components/schemas/diskimages.ImportOutcome"
+                "$ref": "#/components/schemas/filemanager.ImportOutcome"
               }
             }
           },
@@ -1809,70 +1809,70 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageUnreadable",
+          "message": "filemanager.imageUnreadable",
           "data": {
-            "code": "diskimages.imageUnreadable"
+            "code": "filemanager.imageUnreadable"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unknownFormat",
+          "message": "filemanager.unknownFormat",
           "data": {
-            "code": "diskimages.unknownFormat"
+            "code": "filemanager.unknownFormat"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.readOnly",
+          "message": "filemanager.readOnly",
           "data": {
-            "code": "diskimages.readOnly"
+            "code": "filemanager.readOnly"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ],
       "x-mainOnly": true
     },
     {
-      "name": "diskimages.createImage",
-      "summary": "在镜像目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”",
-      "description": "在镜像目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”。",
+      "name": "filemanager.createImage",
+      "summary": "在目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”",
+      "description": "在目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1882,21 +1882,21 @@
           "required": true,
           "schema": {
             "type": "string",
-            "description": "镜像目录里的相对文件夹路径；空串是镜像目录本身",
+            "description": "目录里的相对文件夹路径；空串是目录本身",
             "maxLength": 1024
           },
-          "description": "镜像目录里的相对文件夹路径；空串是镜像目录本身"
+          "description": "目录里的相对文件夹路径；空串是目录本身"
         },
         {
           "name": "kind",
           "required": true,
           "schema": {
             "type": "string",
-            "description": "空白镜像的种类，见 diskimages.blankKinds",
+            "description": "空白镜像的种类，见 filemanager.blankKinds",
             "minLength": 1,
             "maxLength": 32
           },
-          "description": "空白镜像的种类，见 diskimages.blankKinds"
+          "description": "空白镜像的种类，见 filemanager.blankKinds"
         }
       ],
       "result": {
@@ -1918,41 +1918,41 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.unsupported",
+          "message": "filemanager.unsupported",
           "data": {
-            "code": "diskimages.unsupported"
+            "code": "filemanager.unsupported"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.renameItem",
-      "summary": "重命名镜像目录里的文件或文件夹（不换所在文件夹）",
-      "description": "重命名镜像目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。",
+      "name": "filemanager.renameItem",
+      "summary": "重命名目录里的文件或文件夹（不换所在文件夹）",
+      "description": "重命名目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -1999,62 +1999,62 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidName",
+          "message": "filemanager.invalidName",
           "data": {
-            "code": "diskimages.invalidName"
+            "code": "filemanager.invalidName"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.exists",
+          "message": "filemanager.exists",
           "data": {
-            "code": "diskimages.exists"
+            "code": "filemanager.exists"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.inUse",
+          "message": "filemanager.inUse",
           "data": {
-            "code": "diskimages.inUse"
+            "code": "filemanager.inUse"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.removeItems",
-      "summary": "把镜像目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认",
-      "description": "把镜像目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。",
+      "name": "filemanager.removeItems",
+      "summary": "把目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认",
+      "description": "把目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -2088,48 +2088,48 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.inUse",
+          "message": "filemanager.inUse",
           "data": {
-            "code": "diskimages.inUse"
+            "code": "filemanager.inUse"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.moveItems",
-      "summary": "把镜像目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝",
-      "description": "把镜像目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。",
+      "name": "filemanager.moveItems",
+      "summary": "把目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝",
+      "description": "把目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 filemanager.inUse。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -2155,10 +2155,10 @@
           "required": true,
           "schema": {
             "type": "string",
-            "description": "目标文件夹的相对路径；空串是镜像目录本身",
+            "description": "目标文件夹的相对路径；空串是目录本身",
             "maxLength": 1024
           },
-          "description": "目标文件夹的相对路径；空串是镜像目录本身"
+          "description": "目标文件夹的相对路径；空串是目录本身"
         }
       ],
       "result": {
@@ -2183,62 +2183,62 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.exists",
+          "message": "filemanager.exists",
           "data": {
-            "code": "diskimages.exists"
+            "code": "filemanager.exists"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.moveIntoSelf",
+          "message": "filemanager.moveIntoSelf",
           "data": {
-            "code": "diskimages.moveIntoSelf"
+            "code": "filemanager.moveIntoSelf"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.inUse",
+          "message": "filemanager.inUse",
           "data": {
-            "code": "diskimages.inUse"
+            "code": "filemanager.inUse"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.copyItems",
-      "summary": "把镜像目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹",
-      "description": "把镜像目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。",
+      "name": "filemanager.copyItems",
+      "summary": "把目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹",
+      "description": "把目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -2264,10 +2264,10 @@
           "required": true,
           "schema": {
             "type": "string",
-            "description": "目标文件夹的相对路径；空串是镜像目录本身",
+            "description": "目标文件夹的相对路径；空串是目录本身",
             "maxLength": 1024
           },
-          "description": "目标文件夹的相对路径；空串是镜像目录本身"
+          "description": "目标文件夹的相对路径；空串是目录本身"
         }
       ],
       "result": {
@@ -2292,48 +2292,48 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.entryNotFound",
+          "message": "filemanager.entryNotFound",
           "data": {
-            "code": "diskimages.entryNotFound"
+            "code": "filemanager.entryNotFound"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.moveIntoSelf",
+          "message": "filemanager.moveIntoSelf",
           "data": {
-            "code": "diskimages.moveIntoSelf"
+            "code": "filemanager.moveIntoSelf"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.makeFolder",
-      "summary": "在镜像目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…",
-      "description": "在镜像目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。",
+      "name": "filemanager.makeFolder",
+      "summary": "在目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…",
+      "description": "在目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -2343,10 +2343,10 @@
           "required": true,
           "schema": {
             "type": "string",
-            "description": "在哪个文件夹里新建（相对路径）；空串是镜像目录本身",
+            "description": "在哪个文件夹里新建（相对路径）；空串是目录本身",
             "maxLength": 1024
           },
-          "description": "在哪个文件夹里新建（相对路径）；空串是镜像目录本身"
+          "description": "在哪个文件夹里新建（相对路径）；空串是目录本身"
         },
         {
           "name": "name",
@@ -2379,41 +2379,41 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidName",
+          "message": "filemanager.invalidName",
           "data": {
-            "code": "diskimages.invalidName"
+            "code": "filemanager.invalidName"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.saveFailed",
+          "message": "filemanager.saveFailed",
           "data": {
-            "code": "diskimages.saveFailed"
+            "code": "filemanager.saveFailed"
           }
         }
       ]
     },
     {
-      "name": "diskimages.blankKinds",
+      "name": "filemanager.blankKinds",
       "summary": "能新建的空白镜像种类",
       "description": "能新建的空白镜像种类。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -2427,7 +2427,7 @@
               "type": "array",
               "description": "种类，按界面显示的顺序",
               "items": {
-                "$ref": "#/components/schemas/diskimages.BlankKind"
+                "$ref": "#/components/schemas/filemanager.BlankKind"
               }
             }
           },
@@ -2440,12 +2440,12 @@
       "errors": []
     },
     {
-      "name": "diskimages.imagePath",
+      "name": "filemanager.imagePath",
       "summary": "镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示",
       "description": "镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示；界面不能调用。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "paramStructure": "by-name",
@@ -2481,23 +2481,23 @@
       "errors": [
         {
           "code": -32000,
-          "message": "diskimages.noRoot",
+          "message": "filemanager.noRoot",
           "data": {
-            "code": "diskimages.noRoot"
+            "code": "filemanager.noRoot"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.invalidPath",
+          "message": "filemanager.invalidPath",
           "data": {
-            "code": "diskimages.invalidPath"
+            "code": "filemanager.invalidPath"
           }
         },
         {
           "code": -32000,
-          "message": "diskimages.imageNotFound",
+          "message": "filemanager.imageNotFound",
           "data": {
-            "code": "diskimages.imageNotFound"
+            "code": "filemanager.imageNotFound"
           }
         }
       ],
@@ -8306,13 +8306,13 @@
         ],
         "additionalProperties": false
       },
-      "diskimages.ImageNode": {
+      "filemanager.ImageNode": {
         "type": "object",
-        "description": "镜像目录树里的一个节点：镜像文件或文件夹。",
+        "description": "目录树里的一个节点：文件（软盘镜像、卡带、音频、图片）或文件夹。",
         "properties": {
           "path": {
             "type": "string",
-            "description": "相对镜像目录的路径，用 / 分隔，不以 / 开头"
+            "description": "相对目录的路径，用 / 分隔，不以 / 开头"
           },
           "name": {
             "type": "string",
@@ -8322,32 +8322,37 @@
             "type": "boolean",
             "description": "是否是文件夹"
           },
+          "kind": {
+            "type": "string",
+            "description": "种类：folder（文件夹）、floppy（软盘镜像）、cartridge（nes 卡带）、audio（录音机支持的音频）、picture（png 图片）"
+          },
           "size": {
             "type": "integer",
-            "description": "镜像文件的大小（字节）；文件夹为 0",
+            "description": "文件的大小（字节）；文件夹为 0",
             "minimum": 0
           },
           "scanned": {
             "type": "boolean",
-            "description": "文件系统格式是否已经识别；还在识别时为 false，format 与 formatName 为空"
+            "description": "文件系统格式是否已经识别；还在识别时为 false，format 与 formatName 为空；非软盘文件不用识别，始终为 true"
           },
           "format": {
             "type": "string",
-            "description": "格式标识：fat12、fat16、appledos33、prodos，认不出时是 blank（全是 0）、pyramid（金字塔 DOS，待支持）、unknown；文件夹为空"
+            "description": "格式标识：fat12、fat16、appledos33、prodos，认不出时是 blank（全是 0）、pyramid（金字塔 DOS，待支持）、unknown；文件夹与非软盘文件为空"
           },
           "formatName": {
             "type": "string",
-            "description": "界面显示的格式名称，如 FAT12、Apple DOS 3.3、ProDOS、未识别；文件夹为空"
+            "description": "界面显示的格式名称，如 FAT12、Apple DOS 3.3、ProDOS、未识别；非软盘文件是 NES 卡带、PNG 图片、MP3 音频这样的名称；文件夹为空"
           },
           "writable": {
             "type": "boolean",
-            "description": "镜像里的文件能否修改：认得出的格式为 true，位流格式（.nib、.woz）与认不出的为 false"
+            "description": "镜像里的文件能否修改：认得出的格式为 true，位流格式（.nib、.woz）、认不出的与非软盘文件为 false"
           }
         },
         "required": [
           "path",
           "name",
           "directory",
+          "kind",
           "size",
           "scanned",
           "format",
@@ -8356,7 +8361,7 @@
         ],
         "additionalProperties": false
       },
-      "diskimages.FileSystemInfo": {
+      "filemanager.FileSystemInfo": {
         "type": "object",
         "description": "一个镜像的文件系统。",
         "properties": {
@@ -8385,7 +8390,7 @@
         ],
         "additionalProperties": false
       },
-      "diskimages.EntryInfo": {
+      "filemanager.EntryInfo": {
         "type": "object",
         "description": "镜像里的一个文件或文件夹。",
         "properties": {
@@ -8430,7 +8435,7 @@
         ],
         "additionalProperties": false
       },
-      "diskimages.BlankKind": {
+      "filemanager.BlankKind": {
         "type": "object",
         "description": "一种能新建的空白镜像。",
         "properties": {
@@ -8454,7 +8459,7 @@
         ],
         "additionalProperties": false
       },
-      "diskimages.ExportItem": {
+      "filemanager.ExportItem": {
         "type": "object",
         "description": "导出的一个文件或文件夹。",
         "properties": {
@@ -8481,7 +8486,7 @@
         ],
         "additionalProperties": false
       },
-      "diskimages.ImportOutcome": {
+      "filemanager.ImportOutcome": {
         "type": "object",
         "description": "导入一个文件或文件夹的结果。",
         "properties": {
@@ -10247,11 +10252,11 @@
       }
     },
     {
-      "name": "diskimages.treeChanged",
-      "description": "镜像目录的树变了：文件夹或镜像文件被创建、删除、改名，或格式识别有了新结果；用 diskimages.tree 重新读取。",
+      "name": "filemanager.treeChanged",
+      "description": "目录的树变了：文件夹或镜像文件被创建、删除、改名，或格式识别有了新结果；用 filemanager.tree 重新读取。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "data": {
@@ -10262,11 +10267,11 @@
       }
     },
     {
-      "name": "diskimages.imageChanged",
+      "name": "filemanager.imageChanged",
       "description": "一个镜像的内容变了：管理操作、机器写盘、别的程序改了镜像文件；正在查看它的界面要重新读取。",
       "tags": [
         {
-          "name": "diskimages"
+          "name": "filemanager"
         }
       ],
       "data": {

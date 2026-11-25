@@ -18,6 +18,7 @@
 #include "contracts/core-gateway/core-gateway.hpp"
 #include "contracts/shell/dropped-files.hpp"
 #include "contracts/shell/file-dialog.hpp"
+#include "entry/main-requests/cartridge-loading.hpp"
 #include "entry/main-requests/main-request-handler.hpp"
 
 namespace ember::win32::entry {
@@ -29,13 +30,6 @@ struct CartridgeDependencies {
   contracts::DroppedFilesService& dropped;
   contracts::RecentCartridgesService& recent;
 };
-
-/**
- * 加载卡带并记入最近打开：先把路径记入清单，再请核心 cartridges.load，加载失败时把它移出清单。
- * @param path 卡带路径。
- * @param done 核心的回复（成功时是 cartridges.load 的结果）。
- */
-void loadAndRememberCartridge(contracts::CoreGateway& core, contracts::RecentCartridgesService& recent, const std::string& path, contracts::CoreReplyHandler done);
 
 /** 创建 cartridges 模块的处理函数。 */
 [[nodiscard]] MainRequestHandlers createCartridgeHandlers(CartridgeDependencies dependencies);

@@ -120,7 +120,7 @@ ShellState parseShellState(const nlohmann::json& raw) {
   if (raw.contains("releaseNotesVersion") && raw["releaseNotesVersion"].is_string() && isVersion(raw["releaseNotesVersion"].get<std::string>())) {
     state.releaseNotesVersion = raw["releaseNotesVersion"].get<std::string>();
   }
-  if (raw.contains("diskImagesRoot") && raw["diskImagesRoot"].is_string() && isDirectoryPath(raw["diskImagesRoot"].get<std::string>())) state.diskImagesRoot = raw["diskImagesRoot"].get<std::string>();
+  if (raw.contains("fileManagerRoot") && raw["fileManagerRoot"].is_string() && isDirectoryPath(raw["fileManagerRoot"].get<std::string>())) state.fileManagerRoot = raw["fileManagerRoot"].get<std::string>();
   return state;
 }
 
@@ -132,7 +132,7 @@ nlohmann::json toJson(const ShellState& state) {
   return {{"window", state.window ? nlohmann::json{{"x", state.window->x}, {"y", state.window->y}} : nlohmann::json(nullptr)},
           {"layout", layout},
           {"releaseNotesVersion", state.releaseNotesVersion ? nlohmann::json(*state.releaseNotesVersion) : nlohmann::json(nullptr)},
-          {"diskImagesRoot", state.diskImagesRoot ? nlohmann::json(*state.diskImagesRoot) : nlohmann::json(nullptr)}};
+          {"fileManagerRoot", state.fileManagerRoot ? nlohmann::json(*state.fileManagerRoot) : nlohmann::json(nullptr)}};
 }
 
 }  // namespace ember::win32::shared

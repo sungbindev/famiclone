@@ -11,12 +11,12 @@
 
 #pragma once
 
-#include "contracts/diskimages/diskimages-model.hpp"
+#include "contracts/filemanager/filemanager-model.hpp"
 
 namespace ember::win32::infra {
 
 /** 用 OLE 拖放实现的磁盘镜像条目拖出。 */
-class OleDiskDragHost final : public contracts::DiskImagesDragHost {
+class OleDiskDragHost final : public contracts::FileManagerDragHost {
  public:
   void startDrag(const std::vector<contracts::DiskExportItem>& items, std::uint64_t token) override;
 };

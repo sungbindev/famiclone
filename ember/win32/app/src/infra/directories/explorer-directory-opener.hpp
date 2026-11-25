@@ -20,6 +20,7 @@ class ExplorerDirectoryOpener : public contracts::DirectoryOpener {
  public:
   [[nodiscard]] std::string open(const std::string& path) override;
   [[nodiscard]] std::string reveal(const std::string& path) override;
+  [[nodiscard]] std::string openFile(const std::string& path) override;
 };
 
 }  // namespace ember::win32::infra

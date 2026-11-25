@@ -30,4 +30,11 @@ namespace ember::win32::platform {
  */
 [[nodiscard]] std::string revealFileInFileManager(const std::filesystem::path& file);
 
+/**
+ * 用系统默认的程序打开一个文件（如用图片查看程序打开 PNG）。
+ * @param file 文件的完整路径。
+ * @returns 成功时为空文字，否则是错误说明。
+ */
+[[nodiscard]] std::string openFileWithDefaultProgram(const std::filesystem::path& file);
+
 }  // namespace ember::win32::platform

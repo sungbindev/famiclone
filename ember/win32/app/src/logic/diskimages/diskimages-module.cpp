@@ -16,10 +16,10 @@ namespace ember::win32::logic {
 namespace {
 
 /** 对话框内容区的初始大小与最小大小（逻辑像素）。 */
-constexpr int kDialogWidth = 720;
-constexpr int kDialogHeight = 440;
-constexpr int kDialogMinWidth = 560;
-constexpr int kDialogMinHeight = 320;
+constexpr int kDialogWidth = 960;
+constexpr int kDialogHeight = 560;
+constexpr int kDialogMinWidth = 640;
+constexpr int kDialogMinHeight = 360;
 
 constexpr const char* kTitle = "磁盘镜像管理";
 /** “文件”菜单里这一项的助记字母。 */

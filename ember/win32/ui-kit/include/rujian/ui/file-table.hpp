@@ -13,12 +13,14 @@
  *       Shift+F10 与菜单键触发右键菜单回调；其余按键先交给“按键处理”回调（重命名、删除、剪切复制粘贴、撤销等由使用方决定）。
  *       拖动：在已选中的行上按下并拖过一小段距离，用选中的行标识调用“开始拖动”回调（真正的拖放由应用完成）。
  *       行内重命名：beginRename 在名称单元格上放一个输入框，回车或失去焦点提交，Esc 取消。
+ *       列宽：表头里相邻两列之间有竖线，鼠标在线上变成左右调整光标，拖动它把这条线左右两边的列一宽一窄（名称列在线的左边时它自己变宽或变窄）；调过的列宽按表头文字记住，重新 setColumns 后仍然有效。
  * ------------------------------------------------------------------------
  */
 
 #pragma once
 
 #include <functional>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -104,6 +106,7 @@ class FileTable : public Widget {
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
   [[nodiscard]] bool focusable() const override { return true; }
+  [[nodiscard]] CursorKind cursor() const override { return hoverDivider_ >= 0 || resizeIndex_ >= 0 ? CursorKind::SizeWE : CursorKind::Arrow; }
   [[nodiscard]] Rect focusRect() const override;
   bool onMouseDown(const MouseEvent& event) override;
   bool onMouseUp(const MouseEvent& event) override;
@@ -116,6 +119,11 @@ class FileTable : public Widget {
   [[nodiscard]] std::vector<double> columnWidths() const;
   /** 可见区域：放在滚动区域里时是滚动区域的区域，否则是自己的区域。 */
   [[nodiscard]] Rect viewport() const;
+  /** 表头里第 index 条列分割线（index 和 index+1 两列之间）的 x（窗口坐标）。 */
+  [[nodiscard]] double dividerX(std::size_t index, const std::vector<double>& widths) const;
+  /** point 在哪条列分割线上；不在表头里或不在线上为 -1。 */
+  [[nodiscard]] int dividerAt(Point point) const;
+  void resizeTo(double x);
   [[nodiscard]] Rect headerRect() const;
   [[nodiscard]] Rect rowRectAt(std::size_t index) const;
   [[nodiscard]] int indexAt(Point point) const;
@@ -137,6 +145,13 @@ class FileTable : public Widget {
   void layoutEditor();
 
   std::vector<FileTableColumn> columns_;
+  /** 用户拖过的列宽，按表头文字记住。 */
+  std::map<std::string, double> userWidths_;
+  int hoverDivider_{-1};
+  /** 正在拖的列分割线；没有为 -1。 */
+  int resizeIndex_{-1};
+  double resizeStartX_{0};
+  std::vector<double> resizeStartWidths_;
   std::vector<FileTableRow> rows_;
   std::string emptyText_;
   std::set<std::string> selection_;

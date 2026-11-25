@@ -30,6 +30,19 @@ std::string baseName(const std::string& path) {
   return slash == std::string::npos ? path : path.substr(slash + 1);
 }
 
+/** path 是 from 本身或在 from 这个文件夹里面时，把前面的 from 换成 to；否则原样返回。 */
+std::string rebase(const std::string& path, const std::string& from, const std::string& to) {
+  if (path == from) return to;
+  if (path.size() > from.size() && path.compare(0, from.size(), from) == 0 && path[from.size()] == '/') return to + path.substr(from.size());
+  return path;
+}
+
+/** path 是 folder 本身或在它里面。 */
+bool isUnder(const std::string& path, const std::string& folder) { return rebase(path, folder, std::string()) != path; }
+
+/** 新建文件夹的基本名称。 */
+constexpr const char* kNewFolderName = "新建文件夹";
+
 }  // namespace
 
 DiskImagesController::DiskImagesController(contracts::RequestBroker& broker, contracts::CoreGateway& core, contracts::DroppedFilesService& dropped) : broker_(broker), core_(core), dropped_(dropped) {}
@@ -124,16 +137,17 @@ void DiskImagesController::start() {
   const auto current = ++treeRequest_;
   // 核心重启之后镜像目录要重新交给它；没有保存过目录时 root 为空，树显示“还没有选择镜像目录”
   ask("diskimages.openRoot", nlohmann::json::object(), [this, current](const contracts::CoreReply& reply) {
-    if (treeRequest_ != current) return;
     if (!reply.ok) {
+      if (treeRequest_ != current) return;
       tree_ = contracts::DiskTreeView{};
       tree_.state = contracts::DiskImagesState::Failed;
       tree_.message = diskErrorText(reply.error.code, reply.error.message);
       changed();
       return;
     }
-    loadTree();
+    // 核心设置目录时会发 treeChanged，树可能已经被它读过：此时不必再读，但空白镜像的种类还要读
     loadKinds();
+    if (treeRequest_ == current) loadTree();
   });
 }
 
@@ -243,6 +257,7 @@ void DiskImagesController::handleCoreStatus(const contracts::CoreStatus& status)
   image_ = contracts::DiskImageView{};
   kinds_.clear();
   clipboard_ = Clipboard{};
+  itemClipboard_ = ItemClipboard{};
   pendingSelect_.clear();
   changed();
 }
@@ -260,6 +275,7 @@ void DiskImagesController::chooseRoot() {
     // 换了镜像目录，原来选中的镜像与剪贴板都作废
     image_ = contracts::DiskImageView{};
     clipboard_ = Clipboard{};
+    itemClipboard_ = ItemClipboard{};
     loadTree();
   });
 }
@@ -409,5 +425,82 @@ void DiskImagesController::loadIntoDrive(const std::string& path) {
 }
 
 void DiskImagesController::reveal(const std::string& path) { operate("diskimages.revealImage", {{"image", path}}); }
+
+// ---------------------------------------------------------------- 镜像目录里的文件与文件夹
+
+void DiskImagesController::followSelection(const std::string& from, const std::string& to) {
+  if (!image_.selected) return;
+  const std::string moved = rebase(image_.image, from, to);
+  if (moved == image_.image) return;
+  image_.image = moved;
+  image_.imageName = baseName(moved);
+  changed();
+}
+
+void DiskImagesController::dropSelectionUnder(const std::vector<std::string>& paths) {
+  if (!image_.selected) return;
+  const bool removed = std::any_of(paths.begin(), paths.end(), [this](const std::string& path) { return isUnder(image_.image, path); });
+  if (!removed) return;
+  ++listRequest_;
+  image_ = contracts::DiskImageView{};
+  changed();
+}
+
+void DiskImagesController::renameItem(const std::string& path, const std::string& newName) {
+  operate("diskimages.renameItem", {{"path", path}, {"name", newName}}, [this, path](const nlohmann::json& result) {
+    const std::string renamed = result.is_object() ? result.value("path", std::string()) : std::string();
+    if (!renamed.empty()) followSelection(path, renamed);
+  });
+}
+
+void DiskImagesController::removeItems(const std::vector<std::string>& paths) {
+  if (paths.empty()) return;
+  operate("diskimages.removeItems", {{"paths", paths}}, [this, paths](const nlohmann::json&) { dropSelectionUnder(paths); });
+}
+
+void DiskImagesController::moveItems(const std::vector<std::string>& paths, const std::string& targetFolder) {
+  if (paths.empty()) return;
+  operate("diskimages.moveItems", {{"paths", paths}, {"target", targetFolder}}, [this, paths](const nlohmann::json& result) {
+    const auto moved = result.is_object() ? result.find("paths") : result.end();
+    if (!result.is_object() || moved == result.end() || !moved->is_array() || moved->size() != paths.size()) return;
+    for (std::size_t i = 0; i < paths.size(); ++i) followSelection(paths[i], (*moved)[i].get<std::string>());
+  });
+}
+
+void DiskImagesController::makeItemFolder(const std::string& parent, std::function<void(const std::string& path)> onCreated) {
+  operate("diskimages.makeFolder", {{"directory", parent}, {"name", kNewFolderName}}, [onCreated = std::move(onCreated)](const nlohmann::json& result) {
+    const std::string path = result.is_object() ? result.value("path", std::string()) : std::string();
+    if (!path.empty() && onCreated) onCreated(path);
+  });
+}
+
+void DiskImagesController::cutItems(const std::vector<std::string>& paths) {
+  if (paths.empty()) return;
+  itemClipboard_ = ItemClipboard{true, true, paths};
+  changed();
+}
+
+void DiskImagesController::copyItems(const std::vector<std::string>& paths) {
+  if (paths.empty()) return;
+  itemClipboard_ = ItemClipboard{true, false, paths};
+  changed();
+}
+
+void DiskImagesController::pasteItems(const std::string& targetFolder) {
+  if (!itemClipboard_.present) return;
+  const ItemClipboard source = itemClipboard_;
+  if (source.cut) {
+    operate("diskimages.moveItems", {{"paths", source.paths}, {"target", targetFolder}}, [this, source](const nlohmann::json& result) {
+      itemClipboard_ = ItemClipboard{};
+      const auto moved = result.is_object() ? result.find("paths") : result.end();
+      if (result.is_object() && moved != result.end() && moved->is_array() && moved->size() == source.paths.size()) {
+        for (std::size_t i = 0; i < source.paths.size(); ++i) followSelection(source.paths[i], (*moved)[i].get<std::string>());
+      }
+      changed();
+    });
+    return;
+  }
+  operate("diskimages.copyItems", {{"paths", source.paths}, {"target", targetFolder}});
+}
 
 }  // namespace ember::win32::logic

@@ -171,7 +171,22 @@ class DiskImagesModel {
   virtual void loadIntoDrive(const std::string& path) = 0;
   /** 在系统的文件管理器里显示镜像文件。 */
   virtual void reveal(const std::string& path) = 0;
-
+  // ---- 镜像目录里的文件与文件夹（左边的树）：作用在磁盘上的真实文件，立即生效，删除是移进回收站 ----
+  /** 重命名文件或文件夹（path 是相对镜像目录的路径）；选中的镜像跟着它走。 */
+  virtual void renameItem(const std::string& path, const std::string& newName) = 0;
+  /** 删除（移进回收站）；选中的镜像被删掉时取消选中。 */
+  virtual void removeItems(const std::vector<std::string>& paths) = 0;
+  /** 移进另一个文件夹（空串是镜像目录本身）。 */
+  virtual void moveItems(const std::vector<std::string>& paths, const std::string& targetFolder) = 0;
+  /** 在文件夹（空串是镜像目录本身）里新建文件夹，名称自动取不重名的；成功后用 onCreated 告诉界面它的路径（好接着重命名）。 */
+  virtual void makeItemFolder(const std::string& parent, std::function<void(const std::string& path)> onCreated) = 0;
+  /** 记下要剪切或复制的文件与文件夹。 */
+  virtual void cutItems(const std::vector<std::string>& paths) = 0;
+  virtual void copyItems(const std::vector<std::string>& paths) = 0;
+  /** 把记下的文件与文件夹放进文件夹（空串是镜像目录本身）：剪切的移动，复制的复制。 */
+  virtual void pasteItems(const std::string& targetFolder) = 0;
+  /** 有没有剪切或复制的文件与文件夹。 */
+  [[nodiscard]] virtual bool hasItemClipboard() const = 0;
   /** 订阅内容变化；返回取消订阅的函数。 */
   [[nodiscard]] virtual std::function<void()> subscribe(std::function<void()> handler) = 0;
 };

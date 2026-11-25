@@ -53,5 +53,7 @@ inline constexpr std::string_view ERROR_IMAGE_EXISTS = "diskimages.imageExists";
 inline constexpr std::string_view ERROR_DROPPED_NOT_FOUND = "diskimages.droppedNotFound";
 /** 无法在文件管理器里显示这个文件。 */
 inline constexpr std::string_view ERROR_REVEAL_UNAVAILABLE = "diskimages.revealUnavailable";
+/** 镜像正插在软驱里（或所在的文件夹里有镜像插在软驱里），不能改名、移动或删除。 */
+inline constexpr std::string_view ERROR_IN_USE = "diskimages.inUse";
 
 }  // namespace ember::contracts::diskimages

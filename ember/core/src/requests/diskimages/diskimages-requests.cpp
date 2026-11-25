@@ -52,6 +52,21 @@ void addDiskimagesRequests(platform::RequestRouter& router, std::shared_ptr<cont
   router.add("diskimages", contract::DISKIMAGES_CREATE_IMAGE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     return nlohmann::json(service->createImage(contract::parseDiskimagesCreateImageParams(params, "params")));
   });
+  router.add("diskimages", contract::DISKIMAGES_RENAME_ITEM_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->renameItem(contract::parseDiskimagesRenameItemParams(params, "params")));
+  });
+  router.add("diskimages", contract::DISKIMAGES_REMOVE_ITEMS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->removeItems(contract::parseDiskimagesRemoveItemsParams(params, "params")));
+  });
+  router.add("diskimages", contract::DISKIMAGES_MOVE_ITEMS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->moveItems(contract::parseDiskimagesMoveItemsParams(params, "params")));
+  });
+  router.add("diskimages", contract::DISKIMAGES_COPY_ITEMS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->copyItems(contract::parseDiskimagesCopyItemsParams(params, "params")));
+  });
+  router.add("diskimages", contract::DISKIMAGES_MAKE_FOLDER_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
+    return nlohmann::json(service->makeFolder(contract::parseDiskimagesMakeFolderParams(params, "params")));
+  });
   router.add("diskimages", contract::DISKIMAGES_BLANK_KINDS_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     static_cast<void>(contract::parseDiskimagesBlankKindsParams(params, "params"));
     return nlohmann::json(service->blankKinds());

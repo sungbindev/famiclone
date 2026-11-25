@@ -1,13 +1,14 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：diskimages-content.hpp
- * 说明：“磁盘镜像管理”对话框的内容：上面一条显示镜像目录与“选择目录”按钮，下面左边是镜像目录里的文件与文件夹树（只读，显示完整文件名、文件系统格式与大小），右边是所选镜像当前文件夹里的文件列表（名称、类型、大小、修改时间）。
+ * 说明：“磁盘镜像管理”对话框的内容：上面一条显示镜像目录与“选择目录”按钮，下面左边是镜像目录里的文件与文件夹树（像资源管理器，默认全部收起，显示完整文件名、文件系统格式与大小），右边是所选镜像当前文件夹里的文件列表（名称、类型、大小、修改时间，表头列分割线可拖动调整列宽）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：文字与镜像里的内容取自模型；对话框里不显示操作结果，结果与错误由控制器用通知给出；做不了的操作（镜像只读、没有子目录的文件系统里新建文件夹等）不去调用模型，在合适的位置弹一个 2 秒的提示。
- *       树里右键只有不改变镜像内容的项（新建空白镜像、载入软驱 A、在资源管理器中显示）；文件列表里的重命名、移动、删除等一律立即生效，不确认，没有全选。
- *       键盘：列表里上下、回车打开文件夹、Backspace 回上一级、F2 重命名、Delete 删除、Ctrl+X/C/V 剪切复制粘贴、Ctrl+Z 撤销、Shift+F10 与菜单键打开右键菜单。
+ *       左边的树是真正的文件管理：单击文件夹选中并展开或收起，单击镜像选中并在右边显示它；F2 重命名、Delete 删除（移进回收站）、Ctrl+X/C/V 剪切复制粘贴，右键菜单还有新建文件夹、新建空白镜像、载入软驱 A、在资源管理器中显示；条目可以拖到文件夹上移动；一律立即生效，不确认。
+ *       文件列表里的重命名、移动、删除等也一律立即生效，不确认，没有全选。
+ *       键盘：列表里上下、回车打开文件夹、Backspace 回上一级、F2 重命名、Delete 删除、Ctrl+X/C/V 剪切复制粘贴、Ctrl+Z 撤销（树里也撤销当前镜像里的操作）、Shift+F10 与菜单键打开右键菜单。
  *       拖放：文件列表里的条目拖到 Windows 里是导出，拖到列表里的文件夹上是移动；从 Windows 拖进列表是导入（拖在文件夹上导进那个文件夹，否则导进当前文件夹）；拖放由应用层完成，这里只给出 dragOver、dropFiles 等入口。
  * ------------------------------------------------------------------------
  */
@@ -90,6 +91,12 @@ class DiskImagesContent final : public rujian::ui::Widget {
   void tryStartRename();
 
   void showTreeMenu(const std::string& id, rujian::ui::Point position);
+  /** 树里一个条目对应的目标文件夹：文件夹是它自己，镜像是它所在的文件夹，空串（找不到的条目）是镜像目录本身。 */
+  [[nodiscard]] std::string folderFor(const std::string& id) const;
+  /** 在树里的文件夹 parent 里新建文件夹，出现在树里后接着重命名。 */
+  void newTreeFolder(const std::string& parent);
+  [[nodiscard]] bool canDropOnFolder(const std::string& id, const std::string& target) const;
+  bool handleTreeKey(const rujian::ui::KeyEvent& event);
   void showListMenu(const std::vector<std::string>& ids, rujian::ui::Point position, bool highlightFirst);
   void runListCommand(const std::string& command);
   bool handleListKey(const rujian::ui::KeyEvent& event);
@@ -133,6 +140,12 @@ class DiskImagesContent final : public rujian::ui::Widget {
 
   contracts::DiskTreeView treeView_;
   contracts::DiskImageView imageView_;
+  /** 树里选中的条目（镜像或文件夹）；选中文件夹不改变右边显示的镜像。 */
+  std::string treeSelected_;
+  /** 刚选中的镜像还没在树里出现（比如刚重命名），出现后要展开到它。 */
+  bool revealPending_{false};
+  /** 刚在树里新建的文件夹，出现后接着重命名。 */
+  std::string pendingTreeRename_;
   /** 新建文件夹之后要接着重命名的名称。 */
   std::string pendingRename_;
   std::optional<ActiveDrag> activeDrag_;

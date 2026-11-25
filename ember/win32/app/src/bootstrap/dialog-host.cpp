@@ -70,7 +70,7 @@ void DialogHost::openDialog(const std::string& dialogId) {
   options.fitMinimumWidth = definition->second.fitMinWidth;
   options.fitMinimumHeight = definition->second.fitMinHeight;
   options.maximizable = true;
-  options.minimizable = !definition->second.modeless;
+  options.minimizable = true;
   options.modeless = definition->second.modeless;
   options.theme = theme_;
   options.customFrame = customFrame_;

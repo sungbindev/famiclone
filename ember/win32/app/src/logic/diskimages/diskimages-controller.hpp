@@ -68,6 +68,14 @@ class DiskImagesController final : public contracts::DiskImagesModel {
   void createImage(const std::string& directory, const std::string& kind) override;
   void loadIntoDrive(const std::string& path) override;
   void reveal(const std::string& path) override;
+  void renameItem(const std::string& path, const std::string& newName) override;
+  void removeItems(const std::vector<std::string>& paths) override;
+  void moveItems(const std::vector<std::string>& paths, const std::string& targetFolder) override;
+  void makeItemFolder(const std::string& parent, std::function<void(const std::string& path)> onCreated) override;
+  void cutItems(const std::vector<std::string>& paths) override;
+  void copyItems(const std::vector<std::string>& paths) override;
+  void pasteItems(const std::string& targetFolder) override;
+  [[nodiscard]] bool hasItemClipboard() const override { return itemClipboard_.present; }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override;
 
  private:
@@ -81,6 +89,10 @@ class DiskImagesController final : public contracts::DiskImagesModel {
 
   void start();
   void loadTree();
+  /** 选中的镜像因为重命名或移动换了路径时，选中项跟着走（from 是旧路径，可以是它所在的文件夹）。 */
+  void followSelection(const std::string& from, const std::string& to);
+  /** 选中的镜像被删除（它本身或它所在的文件夹）时取消选中。 */
+  void dropSelectionUnder(const std::vector<std::string>& paths);
   void loadKinds();
   void loadImage();
   void handleEvent(const std::string& name, const nlohmann::json& data);
@@ -110,6 +122,13 @@ class DiskImagesController final : public contracts::DiskImagesModel {
   contracts::DiskImageView image_;
   std::vector<contracts::DiskBlankKind> kinds_;
   Clipboard clipboard_;
+  /** 镜像目录里剪切或复制的文件与文件夹。 */
+  struct ItemClipboard {
+    bool present{false};
+    bool cut{false};
+    std::vector<std::string> paths;
+  };
+  ItemClipboard itemClipboard_;
   /** 树重新读取后要选中的镜像（刚新建的空白镜像）。 */
   std::string pendingSelect_;
   std::map<int, std::function<void()>> listeners_;

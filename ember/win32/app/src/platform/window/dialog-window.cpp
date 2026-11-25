@@ -52,7 +52,7 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
   frame_ = frame.get();
   frame_->setSystemButtons(true);
   frame_->setMaximizable(options_.maximizable);
-  frame_->setMinimizable(options_.minimizable && !options_.modeless);
+  frame_->setMinimizable(options_.minimizable);
   frame_->setOnClose([this](rujian::ui::DialogCloseReason) {
     if (options_.onCloseRequested) options_.onCloseRequested();
   });
@@ -133,6 +133,11 @@ DialogWindow::DialogWindow(DialogWindowOptions options, std::unique_ptr<rujian::
     return frameless_->handle(message, wParam, lParam, result);
   });
   frameless_->attach();
+  // 非模态对话框自己最小化，要有自己的任务栏按钮才找得回来
+  if (options_.modeless) {
+    HWND hwnd = static_cast<HWND>(window_.nativeHandle());
+    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, GetWindowLongPtrW(hwnd, GWL_EXSTYLE) | WS_EX_APPWINDOW);
+  }
   applyBorderColor();
   place();
 }
@@ -190,8 +195,10 @@ void DialogWindow::place() {
 }
 
 void DialogWindow::minimize() {
-  HWND owner = static_cast<HWND>(options_.owner);
-  if (owner != nullptr && IsWindow(owner) != FALSE) ShowWindow(owner, SW_MINIMIZE);
+  HWND target = static_cast<HWND>(options_.owner);
+  // 非模态对话框只最小化自己，主窗口照常使用
+  if (options_.modeless) target = static_cast<HWND>(window_.nativeHandle());
+  if (target != nullptr && IsWindow(target) != FALSE) ShowWindow(target, SW_MINIMIZE);
 }
 
 void DialogWindow::show() {

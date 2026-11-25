@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：disk-image-storage.hpp
- * 说明：镜像目录里文件存取的磁盘实现：扫描目录、读取镜像、就地改写、新建镜像文件，以及读取拖入的 Windows 文件与文件夹。
+ * 说明：镜像目录里文件存取的磁盘实现：扫描目录、读取镜像、就地改写、新建镜像文件，文件与文件夹的重命名、移动、复制、删除（进回收站）与新建，以及读取拖入的 Windows 文件与文件夹。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -12,13 +12,19 @@
 
 #pragma once
 
+#include <memory>
+
 #include "contracts/diskimages/disk-image-storage.hpp"
+#include "platform/files/trash-bin.hpp"
 
 namespace ember::infra::diskimages {
 
 /** 磁盘上的镜像目录存取。 */
 class DiskImageStorageOnDisk final : public contracts::diskimages::DiskImageStorage {
  public:
+  /** @param trash 删除时用的回收站；为空时直接删除（只用在测试里）。 */
+  explicit DiskImageStorageOnDisk(std::shared_ptr<platform::TrashBin> trash = nullptr);
+
   [[nodiscard]] bool isDirectory(const std::string& path) const override;
   [[nodiscard]] std::vector<contracts::diskimages::StoredImageInfo> scan(const std::string& root, std::size_t limit, bool& limited, bool& available) const override;
   [[nodiscard]] std::vector<std::uint8_t> read(const std::string& root, const std::string& relative) const override;
@@ -27,6 +33,15 @@ class DiskImageStorageOnDisk final : public contracts::diskimages::DiskImageStor
   [[nodiscard]] std::string absolutePath(const std::string& root, const std::string& relative) const override;
   [[nodiscard]] bool samePath(const std::string& a, const std::string& b) const override;
   [[nodiscard]] contracts::diskimages::HostItem readHostItem(const std::string& path) const override;
+  [[nodiscard]] bool covers(const std::string& root, const std::string& relative, const std::string& absolute) const override;
+  [[nodiscard]] std::string renameItem(const std::string& root, const std::string& relative, const std::string& newName) override;
+  [[nodiscard]] std::vector<std::string> moveItems(const std::string& root, const std::vector<std::string>& relatives, const std::string& targetDirectory) override;
+  [[nodiscard]] std::vector<std::string> copyItems(const std::string& root, const std::vector<std::string>& relatives, const std::string& targetDirectory) override;
+  void removeItems(const std::string& root, const std::vector<std::string>& relatives) override;
+  [[nodiscard]] std::string makeFolder(const std::string& root, const std::string& relativeDirectory, const std::string& baseName) override;
+
+ private:
+  std::shared_ptr<platform::TrashBin> trash_;
 };
 
 }  // namespace ember::infra::diskimages

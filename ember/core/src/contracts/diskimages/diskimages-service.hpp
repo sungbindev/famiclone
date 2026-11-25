@@ -39,6 +39,12 @@ class DiskImageService {
   [[nodiscard]] virtual DiskimagesReadEntriesResult readEntries(const DiskimagesReadEntriesParams& params) = 0;
   virtual DiskimagesImportFilesResult importFiles(const DiskimagesImportFilesParams& params) = 0;
   virtual DiskimagesCreateImageResult createImage(const DiskimagesCreateImageParams& params) = 0;
+  /** 镜像目录里文件与文件夹的操作（作用在磁盘上的文件，不是镜像内部）。 */
+  virtual DiskimagesRenameItemResult renameItem(const DiskimagesRenameItemParams& params) = 0;
+  virtual DiskimagesRemoveItemsResult removeItems(const DiskimagesRemoveItemsParams& params) = 0;
+  virtual DiskimagesMoveItemsResult moveItems(const DiskimagesMoveItemsParams& params) = 0;
+  virtual DiskimagesCopyItemsResult copyItems(const DiskimagesCopyItemsParams& params) = 0;
+  virtual DiskimagesMakeFolderResult makeFolder(const DiskimagesMakeFolderParams& params) = 0;
   [[nodiscard]] virtual DiskimagesBlankKindsResult blankKinds() = 0;
   [[nodiscard]] virtual DiskimagesImagePathResult imagePath(const DiskimagesImagePathParams& params) = 0;
 };

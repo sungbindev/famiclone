@@ -168,7 +168,7 @@ if ([W32]::GetForegroundWindow() -ne $target) {
   Start-Sleep -Milliseconds 300
 }
 Write-Output ('RESULT foreground ' + ([W32]::GetForegroundWindow() -eq $target))
-$vk = @{ F7=0x76; F8=0x77; F9=0x78; F11=0x7A; ESC=0x1B; ENTER=0x0D; DOWN=0x28; UP=0x26; COMMA=0xBC; CTRL=0x11; ALT=0x12; SHIFT=0x10 }
+$vk = @{ F2=0x71; F7=0x76; F8=0x77; F9=0x78; F11=0x7A; ESC=0x1B; ENTER=0x0D; DOWN=0x28; UP=0x26; COMMA=0xBC; CTRL=0x11; ALT=0x12; SHIFT=0x10 }
 function Press($code, $mods) {
   foreach ($m in $mods) { [W32]::keybd_event([byte]$vk[$m], 0, 0, [UIntPtr]::Zero) }
   $scan = [byte][W32]::MapVirtualKeyW([uint32]$code, 0)
@@ -186,7 +186,7 @@ function Get-Scale { $r = Get-Rect; ($r.Right - $r.Left) / ${WINDOW_LOGICAL.widt
  * 在窗口上依次执行步骤，返回每个 RESULT 行解析成的对象。
  * 步骤写法（坐标是窗口的逻辑像素）：click:x:y、move:x:y、key:名称（F7、F8、F9、F11、ESC、ENTER、UP、DOWN）、chord:修饰键:名称（如 chord:CTRL:COMMA）、type:文字（逐个字母按键）、wait:毫秒、
  * count:名称:x1:y1:x2:y2（统计区域里的亮像素数）、style:名称（读窗口的置顶状态、宽高与位置）、close（正常关闭窗口）；
- * 对话框：dlgfind:名称（找本进程的对话框并返回是否找到）、dlgwidth:逻辑宽度（告诉脚本对话框的逻辑宽度，用来换算缩放）、dclick:x:y（点对话框里的位置，逻辑像素）、dlgvisible:名称、dshot:路径（把找到的对话框截成 PNG，路径里的盘符冒号照常写）。
+ * 对话框：dlgfind:名称（找本进程的对话框并返回是否找到）、dlgwidth:逻辑宽度（告诉脚本对话框的逻辑宽度，用来换算缩放）、dclick:x:y（点对话框里的位置，逻辑像素）、drclick:x:y（右键点对话框里的位置）、ddrag:x1:y1:x2:y2（在对话框里从一点按住拖到另一点再松开）、dlgvisible:名称、dshot:路径（把找到的对话框截成 PNG，路径里的盘符冒号照常写）。
  * @param {number} pid 进程号。
  * @param {string[]} steps 步骤。
  * @returns {Map<string, string>} 名称对应的结果文字。
@@ -228,6 +228,19 @@ foreach ($step in $steps) {
       $dr = New-Object W32+RECT; [void][W32]::GetWindowRect($dlg, [ref]$dr)
       $ds = ($dr.Right - $dr.Left) / $dlgWidth
       [void][W32]::SetCursorPos($dr.Left + [int]([double]$p[1] * $ds), $dr.Top + [int]([double]$p[2] * $ds)); Start-Sleep -Milliseconds 80; [W32]::mouse_event(2,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 60; [W32]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+    }
+    'drclick' {
+      $dr = New-Object W32+RECT; [void][W32]::GetWindowRect($dlg, [ref]$dr)
+      $ds = ($dr.Right - $dr.Left) / $dlgWidth
+      [void][W32]::SetCursorPos($dr.Left + [int]([double]$p[1] * $ds), $dr.Top + [int]([double]$p[2] * $ds)); Start-Sleep -Milliseconds 80; [W32]::mouse_event(8,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 60; [W32]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
+    }
+    'ddrag' {
+      $dr = New-Object W32+RECT; [void][W32]::GetWindowRect($dlg, [ref]$dr)
+      $ds = ($dr.Right - $dr.Left) / $dlgWidth
+      $x1 = [double]$p[1] * $ds; $y1 = [double]$p[2] * $ds; $x2 = [double]$p[3] * $ds; $y2 = [double]$p[4] * $ds
+      [void][W32]::SetCursorPos($dr.Left + [int]$x1, $dr.Top + [int]$y1); Start-Sleep -Milliseconds 120; [W32]::mouse_event(2,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 80
+      for ($i = 1; $i -le 8; $i++) { [void][W32]::SetCursorPos($dr.Left + [int]($x1 + ($x2 - $x1) * $i / 8), $dr.Top + [int]($y1 + ($y2 - $y1) * $i / 8)); Start-Sleep -Milliseconds 40 }
+      Start-Sleep -Milliseconds 80; [W32]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
     }
     'shot' {
       $r = Get-Rect; $w = $r.Right - $r.Left; $hgt = $r.Bottom - $r.Top

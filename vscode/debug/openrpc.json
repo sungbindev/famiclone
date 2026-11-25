@@ -581,8 +581,8 @@
     },
     {
       "name": "diskimages.tree",
-      "summary": "镜像目录里的树：只含支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件与含有镜像的文件夹，文件夹在前、按名称排序",
-      "description": "镜像目录里的树：只含支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件与含有镜像的文件夹，文件夹在前、按名称排序；文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 diskimages.treeChanged。",
+      "summary": "镜像目录里的树：含全部文件夹（空文件夹也列出）与支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件，文件夹在前、按名称排序",
+      "description": "镜像目录里的树：含全部文件夹（空文件夹也列出）与支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件，文件夹在前、按名称排序；文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 diskimages.treeChanged。",
       "tags": [
         {
           "name": "diskimages"
@@ -1935,6 +1935,467 @@
           "message": "diskimages.unsupported",
           "data": {
             "code": "diskimages.unsupported"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.saveFailed",
+          "data": {
+            "code": "diskimages.saveFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "diskimages.renameItem",
+      "summary": "重命名镜像目录里的文件或文件夹（不换所在文件夹）",
+      "description": "重命名镜像目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。",
+      "tags": [
+        {
+          "name": "diskimages"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "文件或文件夹的相对路径",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "description": "文件或文件夹的相对路径"
+        },
+        {
+          "name": "name",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "新名称",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": "新名称"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "重命名之后的相对路径"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "diskimages.noRoot",
+          "data": {
+            "code": "diskimages.noRoot"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidPath",
+          "data": {
+            "code": "diskimages.invalidPath"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.entryNotFound",
+          "data": {
+            "code": "diskimages.entryNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidName",
+          "data": {
+            "code": "diskimages.invalidName"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.exists",
+          "data": {
+            "code": "diskimages.exists"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.inUse",
+          "data": {
+            "code": "diskimages.inUse"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.saveFailed",
+          "data": {
+            "code": "diskimages.saveFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "diskimages.removeItems",
+      "summary": "把镜像目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认",
+      "description": "把镜像目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。",
+      "tags": [
+        {
+          "name": "diskimages"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "paths",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "要删除的文件或文件夹的相对路径",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "description": "要删除的文件或文件夹的相对路径"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "diskimages.noRoot",
+          "data": {
+            "code": "diskimages.noRoot"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidPath",
+          "data": {
+            "code": "diskimages.invalidPath"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.entryNotFound",
+          "data": {
+            "code": "diskimages.entryNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.inUse",
+          "data": {
+            "code": "diskimages.inUse"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.saveFailed",
+          "data": {
+            "code": "diskimages.saveFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "diskimages.moveItems",
+      "summary": "把镜像目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝",
+      "description": "把镜像目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。",
+      "tags": [
+        {
+          "name": "diskimages"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "paths",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "要移动的文件或文件夹的相对路径",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "description": "要移动的文件或文件夹的相对路径"
+        },
+        {
+          "name": "target",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "目标文件夹的相对路径；空串是镜像目录本身",
+            "maxLength": 1024
+          },
+          "description": "目标文件夹的相对路径；空串是镜像目录本身"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "paths": {
+              "type": "array",
+              "description": "移动之后的相对路径，顺序同参数",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "paths"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "diskimages.noRoot",
+          "data": {
+            "code": "diskimages.noRoot"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidPath",
+          "data": {
+            "code": "diskimages.invalidPath"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.entryNotFound",
+          "data": {
+            "code": "diskimages.entryNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.exists",
+          "data": {
+            "code": "diskimages.exists"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.moveIntoSelf",
+          "data": {
+            "code": "diskimages.moveIntoSelf"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.inUse",
+          "data": {
+            "code": "diskimages.inUse"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.saveFailed",
+          "data": {
+            "code": "diskimages.saveFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "diskimages.copyItems",
+      "summary": "把镜像目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹",
+      "description": "把镜像目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。",
+      "tags": [
+        {
+          "name": "diskimages"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "paths",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "description": "要复制的文件或文件夹的相对路径",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "description": "要复制的文件或文件夹的相对路径"
+        },
+        {
+          "name": "target",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "目标文件夹的相对路径；空串是镜像目录本身",
+            "maxLength": 1024
+          },
+          "description": "目标文件夹的相对路径；空串是镜像目录本身"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "paths": {
+              "type": "array",
+              "description": "复制出来的相对路径，顺序同参数",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "paths"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "diskimages.noRoot",
+          "data": {
+            "code": "diskimages.noRoot"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidPath",
+          "data": {
+            "code": "diskimages.invalidPath"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.entryNotFound",
+          "data": {
+            "code": "diskimages.entryNotFound"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.moveIntoSelf",
+          "data": {
+            "code": "diskimages.moveIntoSelf"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.saveFailed",
+          "data": {
+            "code": "diskimages.saveFailed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "diskimages.makeFolder",
+      "summary": "在镜像目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…",
+      "description": "在镜像目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。",
+      "tags": [
+        {
+          "name": "diskimages"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "directory",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "在哪个文件夹里新建（相对路径）；空串是镜像目录本身",
+            "maxLength": 1024
+          },
+          "description": "在哪个文件夹里新建（相对路径）；空串是镜像目录本身"
+        },
+        {
+          "name": "name",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "文件夹的基本名称",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": "文件夹的基本名称"
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "新文件夹的相对路径"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "errors": [
+        {
+          "code": -32000,
+          "message": "diskimages.noRoot",
+          "data": {
+            "code": "diskimages.noRoot"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidPath",
+          "data": {
+            "code": "diskimages.invalidPath"
+          }
+        },
+        {
+          "code": -32000,
+          "message": "diskimages.invalidName",
+          "data": {
+            "code": "diskimages.invalidName"
           }
         },
         {
@@ -7847,7 +8308,7 @@
       },
       "diskimages.ImageNode": {
         "type": "object",
-        "description": "镜像目录树里的一个节点：镜像文件或含有镜像的文件夹。",
+        "description": "镜像目录树里的一个节点：镜像文件或文件夹。",
         "properties": {
           "path": {
             "type": "string",

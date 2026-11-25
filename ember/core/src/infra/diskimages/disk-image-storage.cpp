@@ -124,10 +124,8 @@ void walk(const fs::path& directory, const std::string& prefix, int depth, ScanS
     if (entry.is_directory(statusError)) {
       std::vector<api::StoredImageInfo> inner;
       walk(entry.path(), relative, depth + 1, state, inner);
-      if (!inner.empty()) {
-        out.push_back(api::StoredImageInfo{relative, true, 0, 0});
-        out.insert(out.end(), inner.begin(), inner.end());
-      }
+      out.push_back(api::StoredImageInfo{relative, true, 0, 0});
+      out.insert(out.end(), inner.begin(), inner.end());
     } else if (entry.is_regular_file(statusError) && isSupportedExtension(entry.path())) {
       if (state.count >= state.limit) {
         state.limited = true;
@@ -183,7 +181,78 @@ api::HostItem readHost(const fs::path& path, int depth, HostBudget& budget) {
   return item;
 }
 
+/** 文件名里不允许的字符。 */
+constexpr const char* kForbiddenNameChars = "<>:\"/\\|?*";
+/** 重名时可以试的最大序号。 */
+constexpr int kMaxCopySuffix = 9999;
+
+/** Windows 保留的设备名（不含扩展名）。 */
+bool isReservedName(const std::string& name) {
+  const std::string base = lowered(name.substr(0, name.find('.')));
+  if (base == "con" || base == "prn" || base == "aux" || base == "nul") return true;
+  return base.size() == 4 && (base.rfind("com", 0) == 0 || base.rfind("lpt", 0) == 0) && base[3] >= '1' && base[3] <= '9';
+}
+
+/** 文件或文件夹的名称：不能为空、太长、含不允许的字符、以空格或点结尾、是设备名；镜像文件还必须有支持的扩展名。 */
+void requireValidName(const std::string& name, bool file) {
+  if (name.empty() || name.size() > 255) fail(api::ERROR_INVALID_NAME, "名称不能为空，也不能超过 255 个字节");
+  if (name.find_first_of(kForbiddenNameChars) != std::string::npos || std::any_of(name.begin(), name.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; })) {
+    fail(api::ERROR_INVALID_NAME, "名称不能包含下面任何字符：\\ / : * ? \" < > |");
+  }
+  if (name.back() == ' ' || name.back() == '.' || name == "." || name == ".." || isReservedName(name)) fail(api::ERROR_INVALID_NAME, "这个名称不能用：" + name);
+  if (file && !isSupportedExtension(toPath(name))) fail(api::ERROR_INVALID_NAME, "镜像文件要保留支持的扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）");
+}
+
+/** 镜像目录里的一个文件或文件夹：路径合格、在目录里、不是符号链接、存在，文件必须是支持的镜像。 */
+fs::path resolveExistingItem(const std::string& root, const std::string& relative, bool& directory) {
+  requireSafeRelative(relative);
+  const fs::path rootPath = toPath(root);
+  const fs::path full = rootPath / toPath(relative);
+  if (!isInside(rootPath, full, false)) fail(api::ERROR_INVALID_PATH, "不是镜像目录里的文件或文件夹：" + relative);
+  std::error_code error;
+  const fs::file_status status = fs::symlink_status(full, error);
+  if (error || !fs::exists(status)) fail(api::ERROR_ENTRY_NOT_FOUND, "找不到：" + relative);
+  if (fs::is_symlink(status)) fail(api::ERROR_INVALID_PATH, "不支持符号链接：" + relative);
+  directory = fs::is_directory(status);
+  if (!directory && (!fs::is_regular_file(status) || !isSupportedExtension(full))) fail(api::ERROR_INVALID_PATH, "不是镜像文件：" + relative);
+  return full;
+}
+
+/** 镜像目录里的一个文件夹，空串是镜像目录本身。 */
+fs::path resolveDirectory(const std::string& root, const std::string& relative) {
+  const fs::path rootPath = toPath(root);
+  if (relative.empty()) return rootPath;
+  requireSafeRelative(relative);
+  const fs::path full = rootPath / toPath(relative);
+  std::error_code error;
+  if (!isInside(rootPath, full, true) || !fs::is_directory(full, error) || error) fail(api::ERROR_INVALID_PATH, "不是镜像目录里的文件夹：" + relative);
+  return full;
+}
+
+std::string joinRelative(const std::string& directory, const std::string& name) { return directory.empty() ? name : directory + "/" + name; }
+
+/** 父文件夹的相对路径（空串是镜像目录本身）。 */
+std::string parentOf(const std::string& relative) {
+  const std::size_t slash = relative.find_last_of('/');
+  return slash == std::string::npos ? std::string() : relative.substr(0, slash);
+}
+
+/** 复制时重名的新名称：“名 - 副本.扩展名”“名 - 副本 (2).扩展名”… */
+std::string uniqueCopyName(const fs::path& directory, const std::string& name, bool file) {
+  const fs::path original = toPath(name);
+  const std::string stem = file ? toUtf8(original.stem()) : name;
+  const std::string extension = file ? toUtf8(original.extension()) : std::string();
+  std::error_code error;
+  for (int number = 1; number <= kMaxCopySuffix; ++number) {
+    const std::string candidate = stem + " - 副本" + (number == 1 ? std::string() : " (" + std::to_string(number) + ")") + extension;
+    if (!fs::exists(directory / toPath(candidate), error)) return candidate;
+  }
+  fail(api::ERROR_SAVE_FAILED, "同名的副本太多：" + name);
+}
+
 }  // namespace
+
+DiskImageStorageOnDisk::DiskImageStorageOnDisk(std::shared_ptr<platform::TrashBin> trash) : trash_(std::move(trash)) {}
 
 bool DiskImageStorageOnDisk::isDirectory(const std::string& path) const {
   std::error_code error;
@@ -287,6 +356,103 @@ bool DiskImageStorageOnDisk::samePath(const std::string& a, const std::string& b
 api::HostItem DiskImageStorageOnDisk::readHostItem(const std::string& path) const {
   HostBudget budget;
   return readHost(toPath(path), 0, budget);
+}
+
+bool DiskImageStorageOnDisk::covers(const std::string& root, const std::string& relative, const std::string& absolute) const {
+  bool directory = false;
+  try {
+    return isInside(resolveExistingItem(root, relative, directory), toPath(absolute), true);
+  } catch (const shared::CoreError&) {
+    return false;
+  }
+}
+
+std::string DiskImageStorageOnDisk::renameItem(const std::string& root, const std::string& relative, const std::string& newName) {
+  bool directory = false;
+  const fs::path source = resolveExistingItem(root, relative, directory);
+  requireValidName(newName, !directory);
+  const std::string parent = parentOf(relative);
+  const std::string current = toUtf8(source.filename());
+  if (current == newName) return relative;
+  const fs::path target = source.parent_path() / toPath(newName);
+  std::error_code error;
+  // 只改大小写时目标“已存在”的就是它自己
+  if (fs::exists(target, error) && !fs::equivalent(source, target, error)) fail(api::ERROR_EXISTS, "已经有同名的文件或文件夹：" + newName);
+  fs::rename(source, target, error);
+  if (error) fail(api::ERROR_SAVE_FAILED, "无法重命名：" + current);
+  return joinRelative(parent, newName);
+}
+
+std::vector<std::string> DiskImageStorageOnDisk::moveItems(const std::string& root, const std::vector<std::string>& relatives, const std::string& targetDirectory) {
+  const fs::path target = resolveDirectory(root, targetDirectory);
+  std::vector<std::pair<fs::path, std::string>> plan;
+  std::vector<std::string> results;
+  std::error_code error;
+  for (const std::string& relative : relatives) {
+    bool directory = false;
+    const fs::path source = resolveExistingItem(root, relative, directory);
+    const std::string name = toUtf8(source.filename());
+    results.push_back(joinRelative(targetDirectory, name));
+    if (parentOf(relative) == targetDirectory) continue;
+    if (directory && isInside(source, target, true)) fail(api::ERROR_MOVE_INTO_SELF, "不能把文件夹移到它自己里面：" + name);
+    if (fs::exists(target / toPath(name), error)) fail(api::ERROR_EXISTS, "目标文件夹里已经有同名的文件或文件夹：" + name);
+    plan.emplace_back(source, name);
+  }
+  for (const auto& [source, name] : plan) {
+    fs::rename(source, target / toPath(name), error);
+    if (error) fail(api::ERROR_SAVE_FAILED, "无法移动：" + name);
+  }
+  return results;
+}
+
+std::vector<std::string> DiskImageStorageOnDisk::copyItems(const std::string& root, const std::vector<std::string>& relatives, const std::string& targetDirectory) {
+  const fs::path target = resolveDirectory(root, targetDirectory);
+  std::vector<std::string> results;
+  std::error_code error;
+  for (const std::string& relative : relatives) {
+    bool directory = false;
+    const fs::path source = resolveExistingItem(root, relative, directory);
+    const std::string name = toUtf8(source.filename());
+    if (directory && isInside(source, target, true)) fail(api::ERROR_MOVE_INTO_SELF, "不能把文件夹复制到它自己里面：" + name);
+    const std::string copyName = fs::exists(target / toPath(name), error) ? uniqueCopyName(target, name, !directory) : name;
+    const fs::path destination = target / toPath(copyName);
+    if (directory) fs::copy(source, destination, fs::copy_options::recursive | fs::copy_options::skip_symlinks, error);
+    else fs::copy_file(source, destination, fs::copy_options::none, error);
+    if (error) fail(api::ERROR_SAVE_FAILED, "无法复制：" + name);
+    results.push_back(joinRelative(targetDirectory, copyName));
+  }
+  return results;
+}
+
+void DiskImageStorageOnDisk::removeItems(const std::string& root, const std::vector<std::string>& relatives) {
+  std::vector<std::string> paths;
+  for (const std::string& relative : relatives) {
+    bool directory = false;
+    paths.push_back(toUtf8(resolveExistingItem(root, relative, directory)));
+  }
+  if (trash_ != nullptr) {
+    if (!trash_->moveToTrash(paths)) fail(api::ERROR_SAVE_FAILED, "无法移进回收站");
+    return;
+  }
+  std::error_code error;
+  for (const std::string& path : paths) {
+    fs::remove_all(toPath(path), error);
+    if (error) fail(api::ERROR_SAVE_FAILED, "无法删除：" + path);
+  }
+}
+
+std::string DiskImageStorageOnDisk::makeFolder(const std::string& root, const std::string& relativeDirectory, const std::string& baseName) {
+  const fs::path directory = resolveDirectory(root, relativeDirectory);
+  requireValidName(baseName, false);
+  std::error_code error;
+  for (int number = 1; number <= kMaxCopySuffix; ++number) {
+    const std::string name = baseName + (number == 1 ? std::string() : " (" + std::to_string(number) + ")");
+    const fs::path path = directory / toPath(name);
+    if (fs::exists(path, error)) continue;
+    if (!fs::create_directory(path, error) || error) fail(api::ERROR_SAVE_FAILED, "无法新建文件夹：" + name);
+    return joinRelative(relativeDirectory, name);
+  }
+  fail(api::ERROR_SAVE_FAILED, "同名的文件夹太多：" + baseName);
 }
 
 }  // namespace ember::infra::diskimages

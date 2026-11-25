@@ -35,7 +35,7 @@ constexpr const char* kChooseRoot = "选择目录";
 constexpr const char* kChangeRoot = "更改目录";
 constexpr const char* kNoRootNotice = "还没有选择镜像目录。点右上角的“选择目录”，选一个放磁盘镜像的文件夹，里面的镜像会列在这里。";
 constexpr const char* kUnavailableNotice = "镜像目录不存在或无法读取，请点右上角的“更改目录”重新选择。";
-constexpr const char* kEmptyTreeNotice = "目录里没有磁盘镜像。右键点目录可以新建空白镜像。";
+constexpr const char* kEmptyTreeNotice = "目录里是空的。右键点这里可以新建文件夹或空白镜像。";
 constexpr const char* kLoadingNotice = "正在读取…";
 constexpr const char* kNoImageNotice = "从左边选一个磁盘镜像，这里会显示它里面的文件。";
 constexpr const char* kEmptyFolder = "这个文件夹是空的";
@@ -94,7 +94,7 @@ constexpr double kHeaderHeight = 34.0;
 constexpr double kHeaderPadding = 10.0;
 constexpr double kInfoHeight = 26.0;
 /** 树的初始宽度与宽度范围。 */
-constexpr double kSideWidth = 240.0;
+constexpr double kSideWidth = 340.0;
 constexpr double kSideMinWidth = 160.0;
 constexpr double kSideMaxWidth = 480.0;
 /** 说明块离窗格边缘的距离。 */
@@ -206,17 +206,19 @@ DiskImagesContent::DiskImagesContent(contracts::DiskImagesModel& model, contract
   auto split = std::make_unique<SplitView>();
   auto tree = std::make_unique<Tree>();
   tree_ = tree.get();
-  tree_->setDefaultExpanded(true);
+  tree_->setDefaultExpanded(false);
+  tree_->setToggleOnClick(true);
   tree_->setOnSelect([this](const std::string& id) {
     const contracts::DiskTreeNode* node = findNode(id);
     if (node == nullptr) return;
-    // 点文件夹不改变选中的镜像：展开与收起用箭头、双击或左右键
-    if (node->directory) {
-      tree_->setSelectedId(imageView_.selected ? imageView_.image : std::string());
-      return;
-    }
-    model_.selectImage(id);
+    treeSelected_ = id;
+    // 点文件夹只是选中并展开或收起，不改变右边显示的镜像
+    if (!node->directory) model_.selectImage(id);
   });
+  tree_->setOnRename([this](const std::string& id, const std::string& name) { model_.renameItem(id, name); });
+  tree_->setOnKey([this](const KeyEvent& event) { return handleTreeKey(event); });
+  tree_->setCanDrop([this](const std::string& id, const std::string& target) { return canDropOnFolder(id, target); });
+  tree_->setOnDrop([this](const std::string& id, const std::string& target) { model_.moveItems({id}, target); });
   tree_->setOnContextMenu([this](const std::string& id, Point position) { showTreeMenu(id, position); });
   split->setSide(std::move(tree));
   split->setSideWidth(kSideWidth);
@@ -290,9 +292,20 @@ void DiskImagesContent::refresh() {
   const bool treeChanged = !(tree == treeView_);
   treeView_ = tree;
   imageView_ = model_.image();
+  // 模型换了选中的镜像（新建、重命名后）：树里跟着选中，并展开到它
+  if (imageView_.selected && imageView_.image != previous.image) {
+    treeSelected_ = imageView_.image;
+    revealPending_ = true;
+  } else if (!imageView_.selected && previous.selected && treeSelected_ == previous.image) {
+    treeSelected_.clear();
+  }
   if (treeChanged) updateTree();
-  else tree_->setSelectedId(imageView_.selected ? imageView_.image : std::string());
+  else tree_->setSelectedId(treeSelected_);
   if (!(imageView_ == previous) || treeChanged) updateImage(previous);
+  if (revealPending_ && findNode(treeSelected_) != nullptr) {
+    tree_->reveal(treeSelected_);
+    revealPending_ = false;
+  }
   requestLayout();
 }
 
@@ -309,10 +322,11 @@ void DiskImagesContent::updateTree() {
     item.depth = depthOf(node.path);
     item.icon = nodeIcon(node);
     item.trailing = node.detail;
+    item.folder = node.directory;
     items.push_back(std::move(item));
   }
   tree_->setItems(std::move(items));
-  tree_->setSelectedId(imageView_.selected ? imageView_.image : std::string());
+  tree_->setSelectedId(treeSelected_);
 
   std::string notice;
   bool error = false;
@@ -338,6 +352,15 @@ void DiskImagesContent::updateTree() {
   treeNotice_->setText(notice);
   treeNotice_->setError(error);
   treeNotice_->setVisible(!notice.empty());
+
+  // 刚新建的文件夹出现在树里之后，选中它并接着重命名
+  if (!pendingTreeRename_.empty() && findNode(pendingTreeRename_) != nullptr) {
+    const std::string path = pendingTreeRename_;
+    pendingTreeRename_.clear();
+    treeSelected_ = path;
+    tree_->setSelectedId(path);
+    tree_->beginRename(path);
+  }
 }
 
 void DiskImagesContent::updateImage(const contracts::DiskImageView& previous) {
@@ -422,27 +445,95 @@ void DiskImagesContent::tryStartRename() {
 // ---------------------------------------------------------------- 右键菜单
 
 void DiskImagesContent::showTreeMenu(const std::string& id, Point position) {
+  if (treeView_.state != contracts::DiskImagesState::Ready) return;
   const contracts::DiskTreeNode* node = findNode(id);
+  const bool isFile = node != nullptr && !node->directory;
+  // 新建与粘贴的目标文件夹：点在文件夹上是它自己，点在镜像上是它所在的文件夹，点在空白处是镜像目录本身
+  const std::string folder = folderFor(id);
   std::vector<MenuItem> items;
-  std::string directory;
-  if (node != nullptr && !node->directory) {
+  if (isFile) {
     items.push_back(menuItem(kCommandLoad, kMenuLoad, false, "", IconId::DeviceFloppy));
     items.push_back(menuItem(kCommandReveal, kMenuReveal, false, "", IconId::FolderOpen));
-  } else {
-    // 点在文件夹上是在这个文件夹里新建，点在空白处是在镜像目录本身里新建
-    if (node != nullptr) directory = node->path;
-    if (treeView_.state != contracts::DiskImagesState::Ready) return;
-    MenuItem submenu = menuItem("new", kMenuNewImage, model_.blankKinds().empty(), "", IconId::FolderPlus);
-    for (const contracts::DiskBlankKind& kind : model_.blankKinds()) submenu.items.push_back(menuItem((std::string(kCommandNewPrefix) + kind.id).c_str(), kind.title.c_str()));
-    items.push_back(std::move(submenu));
+  }
+  MenuItem submenu = menuItem("new", kMenuNewImage, model_.blankKinds().empty(), "", IconId::FolderPlus, isFile);
+  for (const contracts::DiskBlankKind& kind : model_.blankKinds()) submenu.items.push_back(menuItem((std::string(kCommandNewPrefix) + kind.id).c_str(), kind.title.c_str()));
+  items.push_back(std::move(submenu));
+  items.push_back(menuItem(kCommandNewFolder, kMenuNewFolder, false, "", IconId::FolderPlus));
+  if (node != nullptr) {
+    items.push_back(menuItem(kCommandCut, kMenuCut, false, "Ctrl+X", IconId::Cut, true));
+    items.push_back(menuItem(kCommandCopy, kMenuCopy, false, "Ctrl+C", IconId::Copy));
+  }
+  items.push_back(menuItem(kCommandPaste, kMenuPaste, !model_.hasItemClipboard(), "Ctrl+V", IconId::Clipboard, node == nullptr));
+  if (node != nullptr) {
+    items.push_back(menuItem(kCommandRename, kMenuRename, false, "F2", IconId::Pencil, true));
+    items.push_back(menuItem(kCommandDelete, kMenuDelete, false, "Delete", IconId::Trash));
   }
   const std::weak_ptr<bool> alive = alive_;
-  menu_->open(position, std::move(items), [this, alive, id, directory](const std::string& command) {
+  menu_->open(position, std::move(items), [this, alive, id, folder](const std::string& command) {
     if (alive.expired() || !*alive.lock()) return;
     if (command == kCommandLoad) model_.loadIntoDrive(id);
     else if (command == kCommandReveal) model_.reveal(id);
-    else if (command.rfind(kCommandNewPrefix, 0) == 0) model_.createImage(directory, command.substr(std::string(kCommandNewPrefix).size()));
+    else if (command.rfind(kCommandNewPrefix, 0) == 0) model_.createImage(folder, command.substr(std::string(kCommandNewPrefix).size()));
+    else if (command == kCommandNewFolder) newTreeFolder(folder);
+    else if (command == kCommandCut) model_.cutItems({id});
+    else if (command == kCommandCopy) model_.copyItems({id});
+    else if (command == kCommandPaste) model_.pasteItems(folder);
+    else if (command == kCommandRename) tree_->beginRename(id);
+    else if (command == kCommandDelete) model_.removeItems({id});
   });
+}
+
+std::string DiskImagesContent::folderFor(const std::string& id) const {
+  const contracts::DiskTreeNode* node = findNode(id);
+  if (node == nullptr) return {};
+  if (node->directory) return node->path;
+  const std::size_t slash = node->path.find_last_of('/');
+  return slash == std::string::npos ? std::string() : node->path.substr(0, slash);
+}
+
+void DiskImagesContent::newTreeFolder(const std::string& parent) {
+  const std::weak_ptr<bool> alive = alive_;
+  model_.makeItemFolder(parent, [this, alive](const std::string& path) {
+    if (alive.expired() || !*alive.lock()) return;
+    pendingTreeRename_ = path;
+  });
+}
+
+bool DiskImagesContent::canDropOnFolder(const std::string& id, const std::string& target) const {
+  // 放回它原来所在的文件夹、放进它自己或它里面都不行
+  if (target == id || folderFor(id) == target) return false;
+  return target.size() <= id.size() || target.compare(0, id.size(), id) != 0 || target[id.size()] != '/';
+}
+
+bool DiskImagesContent::handleTreeKey(const KeyEvent& event) {
+  if ((event.modifiers & kModifierAlt) != 0) return false;
+  const bool ctrl = (event.modifiers & kModifierCtrl) != 0;
+  const bool shift = (event.modifiers & kModifierShift) != 0;
+  const std::string id = tree_->focusedId();
+  switch (event.virtualKey) {
+    case kKeyF2:
+      if (ctrl || shift || id.empty()) return false;
+      tree_->beginRename(id);
+      return true;
+    case kKeyDelete:
+      if (id.empty()) return false;
+      model_.removeItems({id});
+      return true;
+    case kKeyX:
+      if (!ctrl || shift || id.empty()) return false;
+      model_.cutItems({id});
+      return true;
+    case kKeyC:
+      if (!ctrl || shift || id.empty()) return false;
+      model_.copyItems({id});
+      return true;
+    case kKeyV:
+      if (!ctrl || shift || !model_.hasItemClipboard()) return false;
+      model_.pasteItems(folderFor(id));
+      return true;
+    default:
+      return false;
+  }
 }
 
 void DiskImagesContent::showListMenu(const std::vector<std::string>& ids, Point position, bool highlightFirst) {

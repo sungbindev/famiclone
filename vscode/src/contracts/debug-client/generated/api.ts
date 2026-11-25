@@ -72,7 +72,7 @@ export interface DebugConnection {
   connectedAt: string;
 }
 
-/** 镜像目录树里的一个节点：镜像文件或含有镜像的文件夹。 */
+/** 镜像目录树里的一个节点：镜像文件或文件夹。 */
 export interface DiskimagesImageNode {
   /** 相对镜像目录的路径，用 / 分隔，不以 / 开头 */
   path: string;
@@ -988,6 +988,71 @@ export interface DiskimagesCreateImageParams {
 /** diskimages.createImage 的结果。 */
 export interface DiskimagesCreateImageResult {
   /** 新建的镜像的相对路径 */
+  path: string;
+}
+
+/** diskimages.renameItem 的参数。 */
+export interface DiskimagesRenameItemParams {
+  /** 文件或文件夹的相对路径 */
+  path: string;
+  /** 新名称 */
+  name: string;
+}
+
+/** diskimages.renameItem 的结果。 */
+export interface DiskimagesRenameItemResult {
+  /** 重命名之后的相对路径 */
+  path: string;
+}
+
+/** diskimages.removeItems 的参数。 */
+export interface DiskimagesRemoveItemsParams {
+  /** 要删除的文件或文件夹的相对路径 */
+  paths: string[];
+}
+
+/** diskimages.removeItems 的结果。 */
+export type DiskimagesRemoveItemsResult = Record<string, never>;
+
+/** diskimages.moveItems 的参数。 */
+export interface DiskimagesMoveItemsParams {
+  /** 要移动的文件或文件夹的相对路径 */
+  paths: string[];
+  /** 目标文件夹的相对路径；空串是镜像目录本身 */
+  target: string;
+}
+
+/** diskimages.moveItems 的结果。 */
+export interface DiskimagesMoveItemsResult {
+  /** 移动之后的相对路径，顺序同参数 */
+  paths: string[];
+}
+
+/** diskimages.copyItems 的参数。 */
+export interface DiskimagesCopyItemsParams {
+  /** 要复制的文件或文件夹的相对路径 */
+  paths: string[];
+  /** 目标文件夹的相对路径；空串是镜像目录本身 */
+  target: string;
+}
+
+/** diskimages.copyItems 的结果。 */
+export interface DiskimagesCopyItemsResult {
+  /** 复制出来的相对路径，顺序同参数 */
+  paths: string[];
+}
+
+/** diskimages.makeFolder 的参数。 */
+export interface DiskimagesMakeFolderParams {
+  /** 在哪个文件夹里新建（相对路径）；空串是镜像目录本身 */
+  directory: string;
+  /** 文件夹的基本名称 */
+  name: string;
+}
+
+/** diskimages.makeFolder 的结果。 */
+export interface DiskimagesMakeFolderResult {
+  /** 新文件夹的相对路径 */
   path: string;
 }
 
@@ -2311,6 +2376,11 @@ export interface RequestMap {
   "diskimages.readEntries": { params: DiskimagesReadEntriesParams; result: DiskimagesReadEntriesResult };
   "diskimages.importFiles": { params: DiskimagesImportFilesParams; result: DiskimagesImportFilesResult };
   "diskimages.createImage": { params: DiskimagesCreateImageParams; result: DiskimagesCreateImageResult };
+  "diskimages.renameItem": { params: DiskimagesRenameItemParams; result: DiskimagesRenameItemResult };
+  "diskimages.removeItems": { params: DiskimagesRemoveItemsParams; result: DiskimagesRemoveItemsResult };
+  "diskimages.moveItems": { params: DiskimagesMoveItemsParams; result: DiskimagesMoveItemsResult };
+  "diskimages.copyItems": { params: DiskimagesCopyItemsParams; result: DiskimagesCopyItemsResult };
+  "diskimages.makeFolder": { params: DiskimagesMakeFolderParams; result: DiskimagesMakeFolderResult };
   "diskimages.blankKinds": { params: DiskimagesBlankKindsParams; result: DiskimagesBlankKindsResult };
   "diskimages.imagePath": { params: DiskimagesImagePathParams; result: DiskimagesImagePathResult };
   "input.getBindings": { params: InputGetBindingsParams; result: InputGetBindingsResult };
@@ -2472,7 +2542,7 @@ export interface EmberApi {
   readonly diskimages: {
     /** 设置镜像目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。 */
     setRoot(params: DiskimagesSetRootParams): Promise<DiskimagesSetRootResult>;
-    /** 镜像目录里的树：只含支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件与含有镜像的文件夹，文件夹在前、按名称排序；文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 diskimages.treeChanged。 */
+    /** 镜像目录里的树：含全部文件夹（空文件夹也列出）与支持扩展名（img、ima、vfd、dsk、flp、do、po、nib、woz）的镜像文件，文件夹在前、按名称排序；文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 diskimages.treeChanged。 */
     tree(): Promise<DiskimagesTreeResult>;
     /** 列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致；镜像插在软驱里时读软驱里的盘片，否则读文件。 */
     list(params: DiskimagesListParams): Promise<DiskimagesListResult>;
@@ -2494,6 +2564,16 @@ export interface EmberApi {
     importFiles(params: DiskimagesImportFilesParams): Promise<DiskimagesImportFilesResult>;
     /** 在镜像目录的一个文件夹里新建空白镜像，文件名自动取不重名的“新建磁盘镜像.扩展名”。 */
     createImage(params: DiskimagesCreateImageParams): Promise<DiskimagesCreateImageResult>;
+    /** 重命名镜像目录里的文件或文件夹（不换所在文件夹）；镜像文件的新名称必须保留支持的扩展名；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。 */
+    renameItem(params: DiskimagesRenameItemParams): Promise<DiskimagesRenameItemResult>;
+    /** 把镜像目录里的文件或文件夹（连同里面的内容）移进系统回收站，立即生效，不确认；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。 */
+    removeItems(params: DiskimagesRemoveItemsParams): Promise<DiskimagesRemoveItemsResult>;
+    /** 把镜像目录里的文件或文件夹移进另一个文件夹，名称不变，目标里已有同名项时拒绝；镜像正插在软驱里（文件夹里有镜像插在软驱里）时返回 diskimages.inUse。 */
+    moveItems(params: DiskimagesMoveItemsParams): Promise<DiskimagesMoveItemsResult>;
+    /** 把镜像目录里的文件或文件夹（连同里面的内容）复制进另一个文件夹；重名时名称后加“ - 副本”“ - 副本 (2)”…。 */
+    copyItems(params: DiskimagesCopyItemsParams): Promise<DiskimagesCopyItemsResult>;
+    /** 在镜像目录里的文件夹中新建子文件夹，名称取 name，重名时依次加“ (2)”“ (3)”…。 */
+    makeFolder(params: DiskimagesMakeFolderParams): Promise<DiskimagesMakeFolderResult>;
     /** 能新建的空白镜像种类。 */
     blankKinds(): Promise<DiskimagesBlankKindsResult>;
     /** 镜像文件在磁盘上的完整路径，给外壳用：载入软驱、在文件管理器里显示；界面不能调用。 */

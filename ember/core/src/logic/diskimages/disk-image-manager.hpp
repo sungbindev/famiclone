@@ -72,6 +72,11 @@ class DiskImageManager final : public contracts::diskimages::DiskImageService {
   [[nodiscard]] contracts::diskimages::DiskimagesReadEntriesResult readEntries(const contracts::diskimages::DiskimagesReadEntriesParams& params) override;
   contracts::diskimages::DiskimagesImportFilesResult importFiles(const contracts::diskimages::DiskimagesImportFilesParams& params) override;
   contracts::diskimages::DiskimagesCreateImageResult createImage(const contracts::diskimages::DiskimagesCreateImageParams& params) override;
+  contracts::diskimages::DiskimagesRenameItemResult renameItem(const contracts::diskimages::DiskimagesRenameItemParams& params) override;
+  contracts::diskimages::DiskimagesRemoveItemsResult removeItems(const contracts::diskimages::DiskimagesRemoveItemsParams& params) override;
+  contracts::diskimages::DiskimagesMoveItemsResult moveItems(const contracts::diskimages::DiskimagesMoveItemsParams& params) override;
+  contracts::diskimages::DiskimagesCopyItemsResult copyItems(const contracts::diskimages::DiskimagesCopyItemsParams& params) override;
+  contracts::diskimages::DiskimagesMakeFolderResult makeFolder(const contracts::diskimages::DiskimagesMakeFolderParams& params) override;
   [[nodiscard]] contracts::diskimages::DiskimagesBlankKindsResult blankKinds() override;
   [[nodiscard]] contracts::diskimages::DiskimagesImagePathResult imagePath(const contracts::diskimages::DiskimagesImagePathParams& params) override;
 
@@ -117,6 +122,10 @@ class DiskImageManager final : public contracts::diskimages::DiskImageService {
   void apply(const std::string& image, const std::string& description, const std::function<void(contracts::diskimages::DiskFileSystem&)>& operation);
   void writeChanges(const std::string& root, const std::string& image, const Source& source, const std::vector<Change>& changes, bool restore);
   void publishImageChanged(const std::string& image);
+  /** 镜像或文件夹里有镜像插在软驱里时抛出 diskimages.inUse。 */
+  void requireNotInDrive(const std::string& root, const std::string& relative);
+  /** 丢弃一个路径（及其下的镜像）的撤销记录：文件换了位置或没了。 */
+  void forgetUndo(const std::string& path);
   void publishTreeChanged();
   void logError(const std::string& code, const std::string& message, const std::string& image);
 

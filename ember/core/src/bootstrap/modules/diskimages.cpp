@@ -20,13 +20,14 @@
 #include "infra/diskimages/disk-image-storage.hpp"
 #include "logic/diskimages/disk-image-manager.hpp"
 #include "platform/files/os-file-watch.hpp"
+#include "platform/files/trash-bin.hpp"
 #include "requests/diskimages/diskimages-requests.hpp"
 
 namespace ember::bootstrap {
 
 void registerDiskimages(ModuleRegistry& registry) {
   auto service = std::make_shared<logic::diskimages::DiskImageManager>(
-      std::make_shared<infra::diskimages::DiskImageStorageOnDisk>(), platform::createOsFileWatchFactory(), registry.services.require<contracts::runtime::RuntimeService>(),
+      std::make_shared<infra::diskimages::DiskImageStorageOnDisk>(platform::createOsTrashBin()), platform::createOsFileWatchFactory(), registry.services.require<contracts::runtime::RuntimeService>(),
       std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>>{registry.services.require<contracts::hardware::FloppyDrive>()}, std::make_shared<AppleBitstreamDecoder>(), registry.events,
       registry.errors);
   registry.services.provide<contracts::diskimages::DiskImageService>(service);

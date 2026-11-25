@@ -675,6 +675,78 @@ api::DiskimagesBlankKindsResult DiskImageManager::blankKinds() {
   return result;
 }
 
+// ---------------------------------------------------------------- 镜像目录里的文件与文件夹
+
+void DiskImageManager::requireNotInDrive(const std::string& root, const std::string& relative) {
+  bool inUse = false;
+  try {
+    runtime_->runOnSimulation([&] {
+      for (const std::shared_ptr<hw::FloppyDrive>& drive : drives_) {
+        const bool holds = drive->inserted() || drive->mediaSuspended();
+        if (holds && !drive->source().empty() && storage_->covers(root, relative, drive->source())) {
+          inUse = true;
+          return;
+        }
+      }
+    });
+  } catch (const shared::CoreError& error) {
+    // 运行服务已经停止：软驱里没有盘片
+    if (error.code() != shared::ERROR_UNAVAILABLE) throw;
+  }
+  if (inUse) fail(api::ERROR_IN_USE, "镜像正插在软驱里，先从软驱里弹出它再操作");
+}
+
+void DiskImageManager::forgetUndo(const std::string& path) {
+  std::lock_guard lock(stateMutex_);
+  for (auto it = undo_.begin(); it != undo_.end();) it = (it->first == path || it->first.rfind(path + "/", 0) == 0) ? undo_.erase(it) : std::next(it);
+}
+
+api::DiskimagesRenameItemResult DiskImageManager::renameItem(const api::DiskimagesRenameItemParams& params) {
+  std::lock_guard edit(editMutex_);
+  const std::string root = currentRoot();
+  requireNotInDrive(root, params.path);
+  const std::string path = storage_->renameItem(root, params.path, params.name);
+  if (path != params.path) forgetUndo(params.path);
+  requestScan();
+  return api::DiskimagesRenameItemResult{path};
+}
+
+api::DiskimagesRemoveItemsResult DiskImageManager::removeItems(const api::DiskimagesRemoveItemsParams& params) {
+  std::lock_guard edit(editMutex_);
+  const std::string root = currentRoot();
+  for (const std::string& path : params.paths) requireNotInDrive(root, path);
+  storage_->removeItems(root, params.paths);
+  for (const std::string& path : params.paths) forgetUndo(path);
+  requestScan();
+  return {};
+}
+
+api::DiskimagesMoveItemsResult DiskImageManager::moveItems(const api::DiskimagesMoveItemsParams& params) {
+  std::lock_guard edit(editMutex_);
+  const std::string root = currentRoot();
+  for (const std::string& path : params.paths) requireNotInDrive(root, path);
+  api::DiskimagesMoveItemsResult result;
+  result.paths = storage_->moveItems(root, params.paths, params.target);
+  for (const std::string& path : params.paths) forgetUndo(path);
+  requestScan();
+  return result;
+}
+
+api::DiskimagesCopyItemsResult DiskImageManager::copyItems(const api::DiskimagesCopyItemsParams& params) {
+  std::lock_guard edit(editMutex_);
+  api::DiskimagesCopyItemsResult result;
+  result.paths = storage_->copyItems(currentRoot(), params.paths, params.target);
+  requestScan();
+  return result;
+}
+
+api::DiskimagesMakeFolderResult DiskImageManager::makeFolder(const api::DiskimagesMakeFolderParams& params) {
+  std::lock_guard edit(editMutex_);
+  const std::string path = storage_->makeFolder(currentRoot(), params.directory, params.name);
+  requestScan();
+  return api::DiskimagesMakeFolderResult{path};
+}
+
 api::DiskimagesImagePathResult DiskImageManager::imagePath(const api::DiskimagesImagePathParams& params) { return api::DiskimagesImagePathResult{storage_->absolutePath(currentRoot(), params.image)}; }
 
 // ---------------------------------------------------------------- 事件与日志

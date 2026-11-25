@@ -525,6 +525,8 @@ void FileManagerContent::updateImage(const contracts::DiskImageView& previous) {
     table_->setSelection({});
     listScroll_->setScrollTop(0);
   }
+  // 读取中先保持右边原样，读完再换，避免先闪一个空表头
+  if (shown && view.loading) return;
 
   // 左边没有可选的镜像时（没设目录、目录读不了或为空），左边已有说明，右边只留表头
   const bool treeUsable = treeView_.state == contracts::FileManagerState::Ready && !treeView_.nodes.empty();

@@ -1,0 +1,11 @@
+
+OBJS=aftp.o pro.o dos.o
+
+aftp: $(OBJS)
+	gcc -o aftp $(OBJS)
+
+.c.o:
+	gcc -c $<
+
+clean:
+	rm -f $(OBJS) aftp

@@ -1,0 +1,8 @@
+
+This is a quick (read: one night run) hack of the aftp program from
+Galen C. Hunt's emulator to make it compile on a unix system, and to
+allow it to access dsk/do, po, and xgs img files.
+
+best of luck,
+andru luvisi
+

@@ -13,6 +13,7 @@
  *       Esc $1B，Tab $09；
  *       功能键的键码固定：F1 $01（字母方式）、F2 $0C（拼音）、F3 $17（区位）、F4 $14、F5 $06
  *       （用户扩充）、F6 $1F（中文）、F7 $11（西文）、F8 $16（自检 TEST）、Pause $03（QUIT）；
+ *       F7 也可以经 westernKeyDown 读到；
  *       Alt（左）与 Alt（右）是按键输入 0 与 1（开苹果与关苹果），Shift 也可以经 shiftDown 读到；
  *       按键按着不放时，输入事件重复到来，每次都重新锁存一次，起到自动重复的作用；
  *       本模块不挂总线，由主机装配里的主板接到 $C000 一带。
@@ -56,6 +57,9 @@ class KeyboardApple2 final {
 
   /** Shift 是否按着。 */
   [[nodiscard]] bool shiftDown() const { return shiftLeft_ || shiftRight_; }
+
+  /** “西文”键（F7）是否按着：复位时连着 $C063 读到，1.21 的 ROM 据此冷启动。 */
+  [[nodiscard]] bool westernKeyDown() const;
 
   /** 大小写锁定是否打开。 */
   [[nodiscard]] bool capsLock() const { return capsLock_; }

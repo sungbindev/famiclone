@@ -42,13 +42,15 @@ constexpr std::uint8_t AUX_COLOR_ENABLE = 0x10;
 constexpr std::uint8_t LIBRARY_BANK_MASK = 0x0F;
 /** 打印机接口卡（槽 1）：数据寄存器在 $C090，状态在 $C1C0-$C1C7。 */
 constexpr std::uint8_t PRINTER_DATA_REGISTER = 0x90;
+/** Ember 的扩展：写到这里的是文本，由文本适配排成位图行（虚拟打印机只会画位图）。 */
+constexpr std::uint8_t PRINTER_TEXT_REGISTER = 0x91;
 constexpr std::uint16_t PRINTER_STATUS_FIRST = 0xC1C0;
 constexpr std::uint16_t PRINTER_STATUS_LAST = 0xC1C7;
 constexpr std::uint8_t PRINTER_STATUS_ACK = 0;
 constexpr std::uint8_t PRINTER_STATUS_BUSY = 4;
 /**
  * 打印机接口卡的驱动程序（槽 1 的 $C100 起，PR#1 后输出的字符交给它）：去掉高位、
- * 等打印机不忙后写 $C090，
+ * 等打印机不忙后写 $C091（文本口，见 PRINTER_TEXT_REGISTER），
  * 遇到回车再追加一个换行，返回时 A 不变。原卡的驱动 ROM 没有收集到，这是按接口卡的行为重写的。
  */
 constexpr std::array<std::uint8_t, 26> PRINTER_DRIVER = {
@@ -63,7 +65,7 @@ constexpr std::array<std::uint8_t, 26> PRINTER_DRIVER = {
     0x60,              // C110 RTS
     0x2C, 0xC4, 0xC1,  // C111 BIT $C1C4
     0x30, 0xFB,        // C114 BMI $C111
-    0x8D, 0x90, 0xC0,  // C116 STA $C090
+    0x8D, 0x91, 0xC0,  // C116 STA $C091
     0x60,              // C119 RTS
 };
 /** 内置串口（槽 2）的状态：位 1 为发送寄存器空。 */
@@ -109,6 +111,7 @@ Cec1Board::Cec1Board(std::vector<std::uint8_t> rom, const hw::Clock& clock, logi
       speaker_(speaker),
       tape_(tape),
       parallel_(parallel),
+      text_(parallel),
       cpuTicksPerCycle_(cpuTicksPerCycle),
       rom_(std::move(rom)),
       ram_(RAM_SIZE, 0),
@@ -126,7 +129,10 @@ void Cec1Board::reset(bool power) {
   switches_ = Switches{};
   tapeOutput_ = false;
   paddleTrigger_ = -1'000'000'000;
-  if (power) parallel_.reset();
+  if (power) {
+    parallel_.reset();
+    text_.clear();
+  }
 }
 
 // ---------------------------------------------------------------- 译码
@@ -307,7 +313,7 @@ hw::BusRead Cec1Board::readIo(std::uint8_t reg, bool side) {
         case 0x2:
           return hw::driveBus((button1_ || keyboard_.solidApple()) ? 0x80 : 0x00);
         case 0x3:
-          return hw::driveBus(button2_ ? 0x80 : 0x00);
+          return hw::driveBus((button2_ || keyboard_.westernKeyDown()) ? 0x80 : 0x00);
         default:
           return hw::driveBus(paddleTiming((reg & 0x07U) - 4U) ? 0x80 : 0x00);
       }
@@ -363,6 +369,7 @@ void Cec1Board::writeIo(std::uint8_t reg, std::uint8_t value) {
     case GROUP_PRINTER:
       // 打印机接口卡的数据寄存器：写入的同时产生选通脉冲。
       if (reg == PRINTER_DATA_REGISTER) parallel_.writeData(value);
+      else if (reg == PRINTER_TEXT_REGISTER) text_.write(value);
       break;
     case GROUP_DISK:
       disk_.write(reg & 0x0FU, value);

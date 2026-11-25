@@ -133,6 +133,8 @@ bool KeyboardApple2::setKey(std::string_view code, bool down) {
   return true;
 }
 
+bool KeyboardApple2::westernKeyDown() const { return std::find(down_.begin(), down_.end(), "F7") != down_.end(); }
+
 void KeyboardApple2::releaseAll() {
   down_.clear();
   shiftLeft_ = false;

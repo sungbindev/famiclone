@@ -35,13 +35,14 @@
  *       $C000 读键盘，$C010 读写清键盘标志，$C011-$C01F 读状态（位 7）；$C020 磁带输出翻转，
  *       $C030 扬声器翻转，$C050-$C057 显示开关，
  *       $C060 磁带输入、$C061-$C063 游戏接口的三个按键（按键 0 与 1 是手柄的 A 与 B 和
- *       两个苹果键，按键 2 是手柄的选择与开始）、
+ *       两个苹果键，按键 2 是手柄的选择与开始或按着的“西文”键，1.21 的复位程序据此冷启动）、
  *       $C064-$C067 模拟手柄 0 到 3 的计时，$C070 触发模拟手柄计时；
  *       $C0E0-$C0EF 内置软驱接口（槽 6）；$C0AE、$C0AF 内置串口（槽 2，状态位 1 恒为发送就绪，
  *       读不到数据）；
  *       $C0B0 寄存器（槽 3 的设备选择区）：读不驱动数据线；写入的值整个保存，复位值 $10，
  *       位 0 到 3 是字库页，位 4 为 1 允许彩色、为 0 显示单色，位 5 选 LOGO 或汉字表（见上）；
- *       槽 1 的打印机接口卡：$C090 写数据（同时产生选通，字节交给打印机），
+ *       槽 1 的打印机接口卡：$C090 写数据（同时产生选通，字节原样交给打印机），
+ *       $C091 是 Ember 的扩展文本口（字节交给文本适配排成位图行再交给打印机），
  *       $C1C0-$C1C7 在内部 ROM 开关为 0 时读状态：地址 0 的位 7 是 Ack，地址 4 的位 7 是忙，
  *       其余地址的位 7 为 0；$C100 起的 26 字节是按接口卡行为重写的驱动程序（PR#1 用：
  *       等不忙、写 $C090、回车后追加换行），原卡的驱动 ROM 没有收集到，
@@ -62,6 +63,7 @@
 #include "contracts/hardware/tape-deck.hpp"
 #include "logic/hardware/disk2/disk2.hpp"
 #include "logic/hardware/keyboard-apple2/keyboard-apple2.hpp"
+#include "logic/hardware/printer-text/printer-text.hpp"
 #include "logic/hardware/speaker-1bit/speaker-1bit.hpp"
 #include "logic/hardware/video-apple2/video-apple2.hpp"
 
@@ -201,6 +203,8 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
   logic::hardware::Speaker1Bit& speaker_;
   contracts::hardware::TapeLine& tape_;
   contracts::hardware::ParallelPort& parallel_;
+  /** 把 $C091 收到的文本排成位图行再送给并口。 */
+  logic::hardware::PrinterText text_;
   contracts::hardware::MasterTime cpuTicksPerCycle_;
 
   std::vector<std::uint8_t> rom_;

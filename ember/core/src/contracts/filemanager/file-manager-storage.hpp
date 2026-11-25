@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：file-manager-storage.hpp
- * 说明：filemanager 契约：目录里的文件存取：扫描目录、读取镜像、就地改写镜像里的一段字节、新建镜像文件，对镜像文件与文件夹做重命名、移动、复制、删除（进回收站）与新建文件夹，以及读取拖入的 Windows 文件与文件夹。
+ * 说明：filemanager 契约：目录里的文件存取：按文件夹列出目录内容、读取镜像、就地改写镜像里的一段字节、新建镜像文件，对镜像文件与文件夹做重命名、移动、复制、删除（进回收站）与新建文件夹，以及读取拖入的 Windows 文件与文件夹。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -64,7 +64,7 @@ inline constexpr const char* PICTURE_EXTENSIONS[] = {"png"};
 /** 镜像文件的大小上限（字节），与软驱载入的上限一致。 */
 inline constexpr std::uintmax_t MAX_IMAGE_SIZE = 16ULL * 1024 * 1024;
 
-/** 扫描得到的一项：文件（不分扩展名，含隐藏文件与符号链接）或文件夹（空文件夹也列出）。 */
+/** 列出的一项：文件（不分扩展名，含隐藏文件与符号链接）或文件夹（空文件夹也列出）。 */
 struct StoredImageInfo {
   /** 相对目录的路径，用 / 分隔。 */
   std::string path;
@@ -94,11 +94,15 @@ class FileManagerStorage {
   [[nodiscard]] virtual bool isDirectory(const std::string& path) const = 0;
 
   /**
-   * 递归扫描目录：列出全部文件夹（含空的）与全部文件（不分扩展名，含隐藏文件；符号链接与联接点不跟随，按文件列出）。
-   * @param limit 最多列出多少个文件；超过时停止并把 limited 置为 true。
-   * @param available 目录不存在或不能读取时置为 false，返回空。
+   * 列出目录里一个文件夹的直接内容（不递归，不读文件内容）：全部子文件夹（含空的）与全部文件（不分扩展名，含隐藏文件；符号链接与联接点不跟随，按文件列出）。
+   * @param relativeDirectory 目录里的相对文件夹路径；空串是目录本身。
+   * @param available 目录本身不存在或不能读取时置为 false，返回空。
+   * @throws shared::CoreError filemanager.invalidPath（relativeDirectory 不合格或不是目录里的文件夹）。
    */
-  [[nodiscard]] virtual std::vector<StoredImageInfo> scan(const std::string& root, std::size_t limit, bool& limited, bool& available) const = 0;
+  [[nodiscard]] virtual std::vector<StoredImageInfo> list(const std::string& root, const std::string& relativeDirectory, bool& available) const = 0;
+
+  /** 一个文件的大小与修改时间戳；路径不合格、不存在或不是普通文件时为空。 */
+  [[nodiscard]] virtual std::optional<StoredImageInfo> stat(const std::string& root, const std::string& relative) const = 0;
 
   /**
    * 读取整个镜像。

@@ -19,8 +19,7 @@ void addFileManagerRequests(platform::RequestRouter& router, std::shared_ptr<con
     return nlohmann::json(service->setRoot(contract::parseFilemanagerSetRootParams(params, "params")));
   });
   router.add("filemanager", contract::FILEMANAGER_TREE_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
-    static_cast<void>(contract::parseFilemanagerTreeParams(params, "params"));
-    return nlohmann::json(service->tree());
+    return nlohmann::json(service->tree(contract::parseFilemanagerTreeParams(params, "params")));
   });
   router.add("filemanager", contract::FILEMANAGER_LIST_REQUEST, [service](const nlohmann::json& params, const platform::CancellationToken&) {
     return nlohmann::json(service->list(contract::parseFilemanagerListParams(params, "params")));

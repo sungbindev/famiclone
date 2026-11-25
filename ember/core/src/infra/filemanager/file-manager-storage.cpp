@@ -25,8 +25,6 @@ namespace fs = std::filesystem;
 
 namespace {
 
-/** 扫描时文件夹的最大深度。 */
-constexpr int MAX_SCAN_DEPTH = 32;
 /** 读取拖入内容的上限：层数、个数、总字节数。 */
 constexpr int MAX_HOST_DEPTH = 16;
 constexpr std::size_t MAX_HOST_ITEMS = 5000;
@@ -110,46 +108,6 @@ fs::path resolveExistingFile(const std::string& root, const std::string& relativ
   std::error_code error;
   if (!fs::is_regular_file(full, error) || error) fail(api::ERROR_IMAGE_NOT_FOUND, "找不到文件：" + relative);
   return full;
-}
-
-/** 一次扫描的累计。 */
-struct ScanState {
-  std::size_t limit{0};
-  std::size_t count{0};
-  bool limited{false};
-};
-
-void walk(const fs::path& directory, const std::string& prefix, int depth, ScanState& state, std::vector<api::StoredImageInfo>& out) {
-  if (depth > MAX_SCAN_DEPTH || state.limited) return;
-  std::error_code error;
-  fs::directory_iterator iterator(directory, fs::directory_options::skip_permission_denied, error);
-  if (error) return;
-  for (; iterator != fs::directory_iterator(); iterator.increment(error)) {
-    if (error) break;
-    const fs::directory_entry& entry = *iterator;
-    std::error_code statusError;
-    const std::string name = toUtf8(entry.path().filename());
-    const std::string relative = prefix.empty() ? name : prefix + "/" + name;
-    // 符号链接与联接点不跟随（它们可能指到目录之外），但要列出来，免得文件夹看上去是空的，按不支持的文件显示
-    const bool link = entry.is_symlink(statusError) || statusError;
-    if (!link && entry.is_directory(statusError)) {
-      std::vector<api::StoredImageInfo> inner;
-      walk(entry.path(), relative, depth + 1, state, inner);
-      out.push_back(api::StoredImageInfo{relative, true, 0, 0});
-      out.insert(out.end(), inner.begin(), inner.end());
-    } else {
-      if (state.count >= state.limit) {
-        state.limited = true;
-        return;
-      }
-      ++state.count;
-      std::error_code sizeError;
-      std::error_code timeError;
-      const std::uintmax_t size = link ? 0 : entry.file_size(sizeError);
-      const auto written = link ? fs::file_time_type{} : entry.last_write_time(timeError);
-      out.push_back(api::StoredImageInfo{relative, false, sizeError || link ? 0 : size, timeError || link ? 0 : static_cast<std::int64_t>(written.time_since_epoch().count())});
-    }
-  }
 }
 
 /** 读取拖入内容时的累计。 */
@@ -269,16 +227,48 @@ bool FileManagerStorageOnDisk::isDirectory(const std::string& path) const {
   return fs::is_directory(toPath(path), error) && !error;
 }
 
-std::vector<api::StoredImageInfo> FileManagerStorageOnDisk::scan(const std::string& root, std::size_t limit, bool& limited, bool& available) const {
-  limited = false;
+std::vector<api::StoredImageInfo> FileManagerStorageOnDisk::list(const std::string& root, const std::string& relativeDirectory, bool& available) const {
   available = isDirectory(root);
   std::vector<api::StoredImageInfo> result;
   if (!available) return result;
-  ScanState state;
-  state.limit = limit;
-  walk(toPath(root), {}, 0, state, result);
-  limited = state.limited;
+  const fs::path directory = resolveDirectory(root, relativeDirectory);
+  std::error_code error;
+  fs::directory_iterator iterator(directory, fs::directory_options::skip_permission_denied, error);
+  if (error) return result;
+  for (; iterator != fs::directory_iterator(); iterator.increment(error)) {
+    if (error) break;
+    const fs::directory_entry& entry = *iterator;
+    std::error_code statusError;
+    const std::string relative = joinRelative(relativeDirectory, toUtf8(entry.path().filename()));
+    // 符号链接与联接点不跟随（它们可能指到目录之外），但要列出来，免得文件夹看上去是空的，按不支持的文件显示
+    const bool link = entry.is_symlink(statusError) || statusError;
+    if (!link && entry.is_directory(statusError)) {
+      result.push_back(api::StoredImageInfo{relative, true, 0, 0});
+      continue;
+    }
+    std::error_code sizeError;
+    std::error_code timeError;
+    const std::uintmax_t size = link ? 0 : entry.file_size(sizeError);
+    const auto written = link ? fs::file_time_type{} : entry.last_write_time(timeError);
+    result.push_back(api::StoredImageInfo{relative, false, sizeError || link ? 0 : size, timeError || link ? 0 : static_cast<std::int64_t>(written.time_since_epoch().count())});
+  }
   return result;
+}
+
+std::optional<api::StoredImageInfo> FileManagerStorageOnDisk::stat(const std::string& root, const std::string& relative) const {
+  try {
+    requireSafeRelative(relative);
+  } catch (const shared::CoreError&) {
+    return std::nullopt;
+  }
+  const fs::path full = toPath(root) / toPath(relative);
+  std::error_code error;
+  if (!fs::is_regular_file(full, error) || error) return std::nullopt;
+  const std::uintmax_t size = fs::file_size(full, error);
+  if (error) return std::nullopt;
+  const auto written = fs::last_write_time(full, error);
+  if (error) return std::nullopt;
+  return api::StoredImageInfo{relative, false, size, static_cast<std::int64_t>(written.time_since_epoch().count())};
 }
 
 std::vector<std::uint8_t> FileManagerStorageOnDisk::read(const std::string& root, const std::string& relative) const {

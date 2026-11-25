@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：对应组件库的 Tree，只做 Ember 用到的部分（条目、层级、展开与收起、选中条目与选中回调、图标、行尾文字、右键菜单回调、行内重命名、按键回调、拖动移动）；数量没用到，不做。
- *       条目按“先序”排成一列并给出层级（depth）：下一项比这一项深，这一项就有子项，子项收起时不显示；每行左边留出展开箭头的位置（没有子项时空着），名称与组件库对齐。
+ *       条目按“先序”排成一列并给出层级（depth）：下一项比这一项深，这一项就有子项（或标为 expandable，子项还没读出来），子项收起时不显示；每行左边留出展开箭头的位置（没有子项时空着），名称与组件库对齐。
  *       条目放在滚动区域里时，焦点移动会让滚动区域把焦点行滚进可见范围；光标只在鼠标悬停在某一行上时是手形，空白处不变。
  *       键盘：上下移动焦点；右键展开，已展开时移到第一个子项；左键收起，已收起或没有子项时移到父项；回车与空格选中；Shift+F10 与菜单键触发右键菜单回调；其余按键先交给“按键处理”回调（重命名、删除、剪切复制粘贴由使用方决定）。
  *       点击展开：打开 setToggleOnClick 后，单击有子项的行既选中它也展开或收起，不再用双击；打开 setSelectOnMove 后，键盘移动焦点时同时选中。
@@ -49,6 +49,8 @@ struct TreeItem {
   std::string trailing;
   /** 是文件夹（空的也算）：拖动时可以放进它里面。 */
   bool folder{false};
+  /** 子项还没有读出来（按需读取）：后面没有更深的条目也显示展开箭头，展开时调用“展开”回调。 */
+  bool expandable{false};
   /** 弱化显示（如已被剪切、等着粘贴到别处）：图标与文字变淡。 */
   bool dimmed{false};
 };
@@ -70,6 +72,8 @@ class Tree : public Widget {
   using DropHandler = std::function<void(const std::string& id, const std::string& targetFolder)>;
   /** 拖动经过时询问能不能放进这个文件夹。 */
   using CanDropHandler = std::function<bool(const std::string& id, const std::string& targetFolder)>;
+  /** 一个条目从收起变成展开时调用（点击、键盘或 setExpanded）：参数是条目的标识，使用方可以按需读出它的子项。 */
+  using ExpandHandler = std::function<void(const std::string& id)>;
 
   Tree();
 
@@ -89,6 +93,7 @@ class Tree : public Widget {
   void setOnKey(KeyHandler handler) { onKey_ = std::move(handler); }
   void setOnDrop(DropHandler handler) { onDrop_ = std::move(handler); }
   void setCanDrop(CanDropHandler handler) { canDrop_ = std::move(handler); }
+  void setOnExpand(ExpandHandler handler) { onExpand_ = std::move(handler); }
   /** 单击有子项的行时同时展开或收起它（默认只有点箭头或双击才展开或收起）。 */
   void setToggleOnClick(bool enabled) { toggleOnClick_ = enabled; }
   /** 键盘移动焦点（上下、Home、End、左右跳到子项或父项）时同时选中这一行（默认只移动焦点，回车与空格才选中）。 */
@@ -171,6 +176,7 @@ class Tree : public Widget {
   KeyHandler onKey_;
   DropHandler onDrop_;
   CanDropHandler canDrop_;
+  ExpandHandler onExpand_;
   bool toggleOnClick_{false};
   bool selectOnMove_{false};
   int hoverRow_{-1};

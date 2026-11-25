@@ -72,7 +72,7 @@ export interface DebugConnection {
   connectedAt: string;
 }
 
-/** 目录树里的一个节点：文件（软盘镜像、卡带、音频、图片）或文件夹。 */
+/** 目录树里的一个节点：文件（软盘镜像、卡带、音频、图片、不支持的文件）或文件夹。 */
 export interface FilemanagerImageNode {
   /** 相对目录的路径，用 / 分隔，不以 / 开头 */
   path: string;
@@ -84,14 +84,8 @@ export interface FilemanagerImageNode {
   kind: string;
   /** 文件的大小（字节）；文件夹为 0 */
   size: number;
-  /** 文件系统格式是否已经识别；还在识别时为 false，format 与 formatName 为空；非软盘文件不用识别，始终为 true */
-  scanned: boolean;
-  /** 格式标识：fat12、fat16、appledos33、prodos，认不出时是 blank（全是 0）、pyramid（金字塔 DOS，待支持）、unknown；文件夹与非软盘文件为空 */
-  format: string;
-  /** 界面显示的格式名称，如 FAT12、Apple DOS 3.3、ProDOS、未识别；非软盘文件是 NES 卡带、PNG 图片、MP3 音频这样的名称；文件夹为空 */
+  /** 界面显示的文件种类名称：NES 卡带、PNG 图片、MP3 音频这样的名称，不支持的文件是“不支持”；文件夹与软盘镜像为空（软盘镜像的文件系统格式在 filemanager.list 的 fileSystem 里） */
   formatName: string;
-  /** 镜像里的文件能否修改：认得出的格式为 true，位流格式（.nib、.woz）、认不出的与非软盘文件为 false */
-  writable: boolean;
 }
 
 /** 一个镜像的文件系统。 */
@@ -835,7 +829,10 @@ export interface FilemanagerSetRootResult {
 }
 
 /** filemanager.tree 的参数。 */
-export type FilemanagerTreeParams = Record<string, never>;
+export interface FilemanagerTreeParams {
+  /** 目录里的相对文件夹路径；空串是目录本身 */
+  directory: string;
+}
 
 /** filemanager.tree 的结果。 */
 export interface FilemanagerTreeResult {
@@ -843,11 +840,7 @@ export interface FilemanagerTreeResult {
   root: string | null;
   /** 目录是否存在、能否读取 */
   available: boolean;
-  /** 是否还在扫描或识别 */
-  scanning: boolean;
-  /** 文件太多，只列出了前 5000 个 */
-  limited: boolean;
-  /** 节点，父文件夹在前，同级按文件夹在前、名称排序 */
+  /** 这个文件夹里的节点，文件夹在前、名称排序；path 是节点相对目录的完整路径 */
   nodes: FilemanagerImageNode[];
 }
 
@@ -2481,7 +2474,7 @@ export interface EventMap {
   "debug.statusChanged": DebugStatusChangedData;
   /** 只发给订阅事件的那条连接：客户端读得太慢，事件队列已满，丢弃了若干条事件；响应不会被丢弃。 */
   "debug.eventsDropped": DebugEventsDroppedData;
-  /** 目录的树变了：文件夹或镜像文件被创建、删除、改名，或格式识别有了新结果；用 filemanager.tree 重新读取。 */
+  /** 目录的树变了：文件夹或文件被创建、删除、改名；用 filemanager.tree 重新读取已经展开的文件夹。 */
   "filemanager.treeChanged": FilemanagerTreeChangedData;
   /** 一个镜像的内容变了：管理操作、机器写盘、别的程序改了镜像文件；正在查看它的界面要重新读取。 */
   "filemanager.imageChanged": FilemanagerImageChangedData;
@@ -2544,8 +2537,8 @@ export interface EmberApi {
   readonly filemanager: {
     /** 设置目录并开始监视与扫描（目录里的镜像文件与文件夹有变化时核心自己重新扫描）；path 为 null 表示取消。路径只来自用户在系统窗口里选的文件夹，界面不能传。 */
     setRoot(params: FilemanagerSetRootParams): Promise<FilemanagerSetRootResult>;
-    /** 目录里的树：含全部文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件；支持的种类是软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka，其他文件标为 unsupported），文件夹在前、按名称排序；软盘镜像的文件系统格式在后台逐个识别，没识别完的 scanned 为 false，识别完发 filemanager.treeChanged。 */
-    tree(): Promise<FilemanagerTreeResult>;
+    /** 目录里一个文件夹的直接内容：全部子文件夹（空文件夹也列出）与全部文件（不分扩展名，含隐藏文件；支持的种类是软盘镜像 img、ima、vfd、dsk、flp、do、po、nib、woz，nes 卡带，png 图片，以及录音机支持的音频 m4a、mp3、wav、aac、flac、ogg、opus、mp4、mka，其他文件标为 unsupported），文件夹在前、按名称排序；只读这一层的文件名、大小与种类，不读文件内容，不递归。 */
+    tree(params: FilemanagerTreeParams): Promise<FilemanagerTreeResult>;
     /** 列出镜像里一个文件夹的内容（directory 为空是根目录），顺序与磁盘上的目录一致；镜像插在软驱里时读软驱里的盘片，否则读文件。 */
     list(params: FilemanagerListParams): Promise<FilemanagerListResult>;
     /** 重命名镜像里的条目（不改所在文件夹）；立即生效：镜像插在软驱里时改软驱里的盘片并随后写回文件，否则直接改文件。名称规则按文件系统：FAT 是 8.3，DOS 3.3 最长 30 个字符，ProDOS 最长 15 个字符。 */

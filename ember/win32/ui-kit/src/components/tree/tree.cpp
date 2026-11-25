@@ -229,10 +229,12 @@ void Tree::setDefaultExpanded(bool expanded) {
 }
 
 void Tree::setExpanded(const std::string& id, bool expanded) {
+  const bool opened = expanded && !isExpanded(id);
   expanded_[id] = expanded;
   rebuildRows();
   requestLayout();
   invalidate();
+  if (opened && onExpand_) onExpand_(id);
 }
 
 bool Tree::isExpanded(const std::string& id) const {
@@ -255,7 +257,7 @@ bool Tree::collapseDeepestLevel() {
   return true;
 }
 
-bool Tree::hasChildren(std::size_t itemIndex) const { return itemIndex + 1 < items_.size() && items_[itemIndex + 1].depth > items_[itemIndex].depth; }
+bool Tree::hasChildren(std::size_t itemIndex) const { return items_[itemIndex].expandable || (itemIndex + 1 < items_.size() && items_[itemIndex + 1].depth > items_[itemIndex].depth); }
 
 void Tree::rebuildRows() {
   naturalWidth_ = -1.0;
@@ -506,7 +508,7 @@ bool Tree::onKeyDown(const KeyEvent& event) {
       if (!isExpanded(item.id)) {
         focusId_ = item.id;
         setExpanded(item.id, true);
-      } else if (current + 1 < rows_.size()) {
+      } else if (current + 1 < rows_.size() && items_[rows_[current + 1]].depth > item.depth) {
         moveFocus(current + 1);
       }
       return true;

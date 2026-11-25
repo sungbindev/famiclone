@@ -106,7 +106,7 @@ std::function<void()> FileManagerController::attach(contracts::ShellApi& shell) 
     stops_.clear();
     shell_ = nullptr;
     ++generation_;
-    ++treeRequest_;
+    ++treeEpoch_;
     ++listRequest_;
   };
   stopAll();
@@ -182,56 +182,113 @@ std::vector<std::vector<std::string>> FileManagerController::entryPaths(const st
 
 void FileManagerController::start() {
   if (shell_ == nullptr) return;
-  const auto current = ++treeRequest_;
+  const auto epoch = ++treeEpoch_;
+  folders_.clear();
+  folderRequests_.clear();
   // 核心重启之后目录要重新交给它；没有保存过目录时 root 为空，树显示“还没有选择目录”
-  ask("filemanager.openRoot", nlohmann::json::object(), [this, current](const contracts::CoreReply& reply) {
+  ask("filemanager.openRoot", nlohmann::json::object(), [this, epoch](const contracts::CoreReply& reply) {
     if (!reply.ok) {
-      if (treeRequest_ != current) return;
+      if (treeEpoch_ != epoch) return;
       tree_ = contracts::DiskTreeView{};
       tree_.state = contracts::FileManagerState::Failed;
       tree_.message = diskErrorText(reply.error.code, reply.error.message);
       changed();
       return;
     }
-    // 核心设置目录时会发 treeChanged，树可能已经被它读过：此时不必再读，但空白镜像的种类还要读
+    // 核心设置目录时会发 treeChanged，目录本身可能已经被它读过：此时不必再读，但空白镜像的种类还要读
     loadKinds();
-    if (treeRequest_ == current) loadTree();
+    if (treeEpoch_ == epoch && folderRequests_.find(std::string()) == folderRequests_.end()) loadFolder(std::string());
   });
 }
 
-void FileManagerController::loadTree() {
+void FileManagerController::reloadFolders() {
   if (shell_ == nullptr) return;
-  const auto current = ++treeRequest_;
-  ask("filemanager.tree", nlohmann::json::object(), [this, current](const contracts::CoreReply& reply) {
-    if (treeRequest_ != current) return;
+  std::vector<std::string> folders{std::string()};
+  for (const auto& [folder, nodes] : folders_) {
+    if (!folder.empty()) folders.push_back(folder);
+  }
+  for (const std::string& folder : folders) loadFolder(folder);
+}
+
+void FileManagerController::loadFolder(const std::string& folder) {
+  if (shell_ == nullptr) return;
+  const auto epoch = treeEpoch_;
+  const auto current = ++folderRequests_[folder];
+  ask("filemanager.tree", {{"directory", folder}}, [this, folder, epoch, current](const contracts::CoreReply& reply) {
+    if (treeEpoch_ != epoch || folderRequests_[folder] != current) return;
+    applyFolder(folder, reply);
+  });
+}
+
+void FileManagerController::applyFolder(const std::string& folder, const contracts::CoreReply& reply) {
+  const auto parsed = reply.ok ? parseTree(reply.result) : std::nullopt;
+  if (folder.empty()) {
     contracts::DiskTreeView view;
-    const auto parsed = reply.ok ? parseTree(reply.result) : std::nullopt;
     if (!parsed) {
       view.state = contracts::FileManagerState::Failed;
       view.message = reply.ok ? "读到的目录内容不合格" : diskErrorText(reply.error.code, reply.error.message);
+      folders_.clear();
     } else if (parsed->root.empty()) {
       view.state = contracts::FileManagerState::NoRoot;
+      folders_.clear();
     } else if (!parsed->available) {
       view.state = contracts::FileManagerState::Unavailable;
       view.root = parsed->root;
+      folders_.clear();
     } else {
       view.state = contracts::FileManagerState::Ready;
       view.root = parsed->root;
-      view.limited = parsed->limited;
-      view.nodes = parsed->nodes;
+      folders_[folder] = parsed->nodes;
+      appendFolder(folder, view.nodes);
     }
     if (view == tree_) return;
     tree_ = std::move(view);
-    syncSingleFile();
-    changed();
-    // 刚新建的镜像出现在树里之后选中它
-    if (pendingSelect_.empty()) return;
-    const std::string path = pendingSelect_;
-    const contracts::DiskTreeNode* node = findNode(path);
-    if (node == nullptr || node->directory) return;
-    pendingSelect_.clear();
-    selectImage(path);
-  });
+  } else {
+    // 这个文件夹没了（被删除、改名或移走）：不再读它
+    if (!parsed || !parsed->available) folders_.erase(folder);
+    else folders_[folder] = parsed->nodes;
+    std::vector<contracts::DiskTreeNode> nodes;
+    appendFolder(std::string(), nodes);
+    if (nodes == tree_.nodes) return;
+    tree_.nodes = std::move(nodes);
+  }
+  syncSingleFile();
+  changed();
+  // 刚新建的镜像出现在树里之后选中它
+  if (pendingSelect_.empty()) return;
+  const std::string path = pendingSelect_;
+  const contracts::DiskTreeNode* node = findNode(path);
+  if (node == nullptr || node->directory) return;
+  pendingSelect_.clear();
+  selectImage(path);
+}
+
+void FileManagerController::appendFolder(const std::string& folder, std::vector<contracts::DiskTreeNode>& out) const {
+  const auto found = folders_.find(folder);
+  if (found == folders_.end()) return;
+  for (const contracts::DiskTreeNode& node : found->second) {
+    out.push_back(node);
+    if (node.directory) appendFolder(node.path, out);
+  }
+}
+
+void FileManagerController::expandFolder(const std::string& path) {
+  if (tree_.state != contracts::FileManagerState::Ready || folders_.find(path) != folders_.end()) return;
+  loadFolder(path);
+}
+
+void FileManagerController::showFolder(const std::string& folder) {
+  if (tree_.state != contracts::FileManagerState::Ready) return;
+  std::string prefix;
+  std::size_t start = 0;
+  while (!folder.empty()) {
+    const std::size_t slash = folder.find('/', start);
+    prefix = folder.substr(0, slash);
+    if (prefix != folder && folders_.find(prefix) == folders_.end()) loadFolder(prefix);
+    if (slash == std::string::npos) break;
+    start = slash + 1;
+  }
+  loadFolder(folder);
 }
 
 void FileManagerController::loadKinds() {
@@ -286,7 +343,7 @@ void FileManagerController::loadImage() {
 
 void FileManagerController::handleEvent(const std::string& name, const nlohmann::json& data) {
   if (name == "filemanager.treeChanged") {
-    loadTree();
+    reloadFolders();
   } else if (name == "filemanager.imageChanged") {
     if (image_.selected && data.is_object() && data.value("image", std::string()) == image_.image) loadImage();
   } else if (name == "media.changed") {
@@ -300,9 +357,11 @@ void FileManagerController::handleCoreStatus(const contracts::CoreStatus& status
     start();
     return;
   }
-  ++treeRequest_;
+  ++treeEpoch_;
   ++listRequest_;
   tree_ = contracts::DiskTreeView{};
+  folders_.clear();
+  folderRequests_.clear();
   image_ = contracts::DiskImageView{};
   kinds_.clear();
   clipboard_ = Clipboard{};
@@ -325,7 +384,10 @@ void FileManagerController::chooseRoot() {
     image_ = contracts::DiskImageView{};
     clipboard_ = Clipboard{};
     itemClipboard_ = ItemClipboard{};
-    loadTree();
+    ++treeEpoch_;
+    folders_.clear();
+    folderRequests_.clear();
+    loadFolder(std::string());
   });
 }
 
@@ -378,6 +440,10 @@ void FileManagerController::fillSingleFile(const contracts::DiskTreeNode& node) 
 void FileManagerController::syncSingleFile() {
   if (!image_.selected || image_.kind == contracts::kKindFloppy) return;
   const contracts::DiskTreeNode* node = findNode(image_.image);
+  // 所在的文件夹还没读出来（刚移进去）时还不能说它没了
+  const std::size_t slash = image_.image.find_last_of('/');
+  const std::string parent = slash == std::string::npos ? std::string() : image_.image.substr(0, slash);
+  if (node == nullptr && folders_.find(parent) == folders_.end()) return;
   if (node == nullptr || node->directory || node->kind != image_.kind) {
     // 文件被删掉或换成别的东西了：取消选中
     image_ = contracts::DiskImageView{};
@@ -530,12 +596,12 @@ void FileManagerController::exportEntries(const std::vector<std::string>& names,
 }
 
 void FileManagerController::createImage(const std::string& directory, const std::string& kind) {
-  operate("filemanager.createImage", {{"directory", directory}, {"kind", kind}}, [this](const nlohmann::json& result) {
+  operate("filemanager.createImage", {{"directory", directory}, {"kind", kind}}, [this, directory](const nlohmann::json& result) {
     const std::string path = result.is_object() ? result.value("path", std::string()) : std::string();
     if (path.empty()) return;
     notifySuccess("已新建磁盘镜像：" + baseName(path));
     pendingSelect_ = path;
-    loadTree();
+    showFolder(directory);
   });
 }
 
@@ -563,6 +629,9 @@ void FileManagerController::followSelection(const std::string& from, const std::
   if (moved == image_.image) return;
   image_.image = moved;
   image_.imageName = baseName(moved);
+  // 移进的文件夹可能还没读过：读出来，树里才找得到它
+  const std::size_t slash = moved.find_last_of('/');
+  showFolder(slash == std::string::npos ? std::string() : moved.substr(0, slash));
   changed();
 }
 
@@ -599,7 +668,8 @@ void FileManagerController::removeItems(const std::vector<std::string>& paths) {
 void FileManagerController::moveItems(const std::vector<std::string>& paths, const std::string& targetFolder) {
   if (paths.empty()) return;
   if (!confirmMove(confirmation_, itemNames(paths), folderPhrase(targetFolder))) return;
-  operate("filemanager.moveItems", {{"paths", paths}, {"target", targetFolder}}, [this, paths](const nlohmann::json& result) {
+  operate("filemanager.moveItems", {{"paths", paths}, {"target", targetFolder}}, [this, paths, targetFolder](const nlohmann::json& result) {
+    showFolder(targetFolder);
     const auto moved = result.is_object() ? result.find("paths") : result.end();
     if (!result.is_object() || moved == result.end() || !moved->is_array() || moved->size() != paths.size()) return;
     for (std::size_t i = 0; i < paths.size(); ++i) followSelection(paths[i], (*moved)[i].get<std::string>());
@@ -607,9 +677,11 @@ void FileManagerController::moveItems(const std::vector<std::string>& paths, con
 }
 
 void FileManagerController::makeItemFolder(const std::string& parent, std::function<void(const std::string& path)> onCreated) {
-  operate("filemanager.makeFolder", {{"directory", parent}, {"name", kNewFolderName}}, [onCreated = std::move(onCreated)](const nlohmann::json& result) {
+  operate("filemanager.makeFolder", {{"directory", parent}, {"name", kNewFolderName}}, [this, parent, onCreated = std::move(onCreated)](const nlohmann::json& result) {
     const std::string path = result.is_object() ? result.value("path", std::string()) : std::string();
-    if (!path.empty() && onCreated) onCreated(path);
+    if (path.empty()) return;
+    showFolder(parent);
+    if (onCreated) onCreated(path);
   });
 }
 
@@ -632,8 +704,9 @@ void FileManagerController::pasteItems(const std::string& targetFolder) {
   const ItemClipboard source = itemClipboard_;
   if (source.cut) {
     if (!confirmMove(confirmation_, itemNames(source.paths), folderPhrase(targetFolder))) return;
-    operate("filemanager.moveItems", {{"paths", source.paths}, {"target", targetFolder}}, [this, source](const nlohmann::json& result) {
+    operate("filemanager.moveItems", {{"paths", source.paths}, {"target", targetFolder}}, [this, source, targetFolder](const nlohmann::json& result) {
       itemClipboard_ = ItemClipboard{};
+      showFolder(targetFolder);
       const auto moved = result.is_object() ? result.find("paths") : result.end();
       if (result.is_object() && moved != result.end() && moved->is_array() && moved->size() == source.paths.size()) {
         for (std::size_t i = 0; i < source.paths.size(); ++i) followSelection(source.paths[i], (*moved)[i].get<std::string>());
@@ -642,7 +715,7 @@ void FileManagerController::pasteItems(const std::string& targetFolder) {
     });
     return;
   }
-  operate("filemanager.copyItems", {{"paths", source.paths}, {"target", targetFolder}});
+  operate("filemanager.copyItems", {{"paths", source.paths}, {"target", targetFolder}}, [this, targetFolder](const nlohmann::json&) { showFolder(targetFolder); });
 }
 
 }  // namespace ember::win32::logic

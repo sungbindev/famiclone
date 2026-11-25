@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iterator>
+#include <optional>
 
 #include "contracts/filemanager/filemanager-error.hpp"
 #include "logic/filemanager/disk-image-opener.hpp"
@@ -27,8 +28,6 @@ namespace hw = contracts::hardware;
 
 namespace {
 
-/** 树里最多列出的镜像文件个数。 */
-constexpr std::size_t MAX_IMAGES = 5000;
 /** 每个镜像最多记的撤销步数与字节数。 */
 constexpr std::size_t MAX_UNDO_STEPS = 100;
 constexpr std::size_t MAX_UNDO_BYTES = 32U * 1024U * 1024U;
@@ -38,10 +37,8 @@ constexpr std::size_t MAX_EXPORT_BYTES = 64U * 1024U * 1024U;
 constexpr int MAX_EXPORT_DEPTH = 32;
 /** 两处改动之间相隔不超过这么多个相同的字节时合成一处，少做几次写入。 */
 constexpr std::size_t MERGE_GAP = 16;
-/** 文件监视来了通知后等多久再扫描，让一阵连续的变化合成一次扫描。 */
+/** 文件监视来了通知后等多久再刷新，让一阵连续的变化合成一次刷新。 */
 constexpr std::chrono::milliseconds SCAN_DELAY{150};
-/** 格式识别每识别这么多个镜像通知一次界面。 */
-constexpr std::size_t PUBLISH_BATCH = 8;
 constexpr const char* BLANK_IMAGE_NAME = "新建磁盘镜像";
 
 [[noreturn]] void fail(std::string_view code, const std::string& message) { throw shared::CoreError(code, message); }
@@ -60,7 +57,7 @@ std::string baseNameOf(const std::string& path) {
   return slash == std::string::npos ? path : path.substr(slash + 1);
 }
 
-/** 非软盘文件在树里显示的格式名称：NES 卡带、PNG 图片、MP3 音频。 */
+/** 非软盘文件在树里的种类名称：NES 卡带、PNG 图片、MP3 音频。 */
 std::string fileLabel(api::FileKind kind, const std::string& extension) {
   std::string upper = extension;
   for (char& c : upper) {
@@ -223,7 +220,7 @@ void FileManager::shutdown() {
   if (scanThread_.joinable()) scanThread_.join();
 }
 
-// ---------------------------------------------------------------- 目录与扫描
+// ---------------------------------------------------------------- 目录与监视
 
 api::FilemanagerSetRootResult FileManager::setRoot(const api::FilemanagerSetRootParams& params) {
   const std::string path = params.path.value_or(std::string());
@@ -239,28 +236,53 @@ api::FilemanagerSetRootResult FileManager::setRoot(const api::FilemanagerSetRoot
     oldWatcher = std::move(watcher_);
     watcher_ = std::move(newWatcher);
     root_ = path;
-    available_ = available;
-    limited_ = false;
-    nodes_.clear();
-    formats_.clear();
-    stamps_.clear();
+    openedStamps_.clear();
     undo_.clear();
     undoBytes_ = 0;
   }
   oldWatcher.reset();
   publishTreeChanged();
-  requestScan();
   return api::FilemanagerSetRootResult{available};
 }
 
-api::FilemanagerTreeResult FileManager::tree() {
+api::FilemanagerTreeResult FileManager::tree(const api::FilemanagerTreeParams& params) {
   api::FilemanagerTreeResult result;
-  std::lock_guard lock(stateMutex_);
-  if (!root_.empty()) result.root = root_;
-  result.available = available_;
-  result.scanning = scanning_;
-  result.limited = limited_;
-  result.nodes = nodes_;
+  std::string root;
+  {
+    std::lock_guard lock(stateMutex_);
+    root = root_;
+  }
+  if (root.empty()) return result;
+  result.root = root;
+  bool available = false;
+  std::vector<api::StoredImageInfo> infos = storage_->list(root, params.directory, available);
+  result.available = available;
+  // 文件夹在前、名称不分大小写排序
+  std::sort(infos.begin(), infos.end(), [](const api::StoredImageInfo& a, const api::StoredImageInfo& b) {
+    if (a.directory != b.directory) return a.directory;
+    const std::string left = lowerAscii(baseNameOf(a.path));
+    const std::string right = lowerAscii(baseNameOf(b.path));
+    return left != right ? left < right : a.path < b.path;
+  });
+  for (const api::StoredImageInfo& info : infos) {
+    api::ImageNode node;
+    node.path = info.path;
+    node.name = baseNameOf(info.path);
+    node.directory = info.directory;
+    node.size = static_cast<std::int64_t>(info.size);
+    if (info.directory) {
+      node.kind = "folder";
+    } else if (const auto kind = api::kindOfExtension(extensionOf(info.path)); !kind) {
+      // 扩展名不在管理之内的文件也列出来（免得文件夹看上去是空的而被误删），标为不支持
+      node.kind = "unsupported";
+      node.formatName = "不支持";
+    } else {
+      node.kind = api::kindId(*kind);
+      // 软盘镜像的格式要读内容才知道，打开它（filemanager.list）时才识别
+      if (*kind != api::FileKind::Floppy) node.formatName = fileLabel(*kind, extensionOf(info.path));
+    }
+    result.nodes.push_back(std::move(node));
+  }
   return result;
 }
 
@@ -277,7 +299,7 @@ void FileManager::scanLoop() {
   while (true) {
     wake_.wait(lock, [this] { return stopping_ || scanRequested_; });
     if (stopping_) return;
-    // 稍等一下，让连续的变化合成一次扫描
+    // 稍等一下，让连续的变化合成一次刷新
     wake_.wait_for(lock, SCAN_DELAY, [this] { return stopping_; });
     if (stopping_) return;
     scanRequested_ = false;
@@ -288,155 +310,43 @@ void FileManager::scanLoop() {
       root = root_;
     }
     try {
-      runScan(root);
+      runRefresh(root);
     } catch (const std::exception& error) {
-      logError(std::string(shared::ERROR_INTERNAL), std::string("扫描目录失败：") + error.what(), {});
+      logError(std::string(shared::ERROR_INTERNAL), std::string("刷新目录失败：") + error.what(), {});
     }
     lock.lock();
   }
 }
 
-void FileManager::runScan(const std::string& root) {
-  bool limited = false;
-  bool available = false;
-  std::vector<api::StoredImageInfo> infos;
-  if (!root.empty()) infos = storage_->scan(root, MAX_IMAGES, limited, available);
-  // 文件夹在前、名称不分大小写排序，父文件夹排在它里面的内容之前
-  struct Keyed {
-    api::StoredImageInfo info;
-    std::vector<std::string> names;
-    std::vector<bool> directoryAt;
-  };
-  std::vector<Keyed> keyed;
-  keyed.reserve(infos.size());
-  for (api::StoredImageInfo& info : infos) {
-    Keyed item;
-    std::size_t start = 0;
-    while (true) {
-      const std::size_t slash = info.path.find('/', start);
-      item.names.push_back(info.path.substr(start, slash == std::string::npos ? std::string::npos : slash - start));
-      item.directoryAt.push_back(slash != std::string::npos || info.directory);
-      if (slash == std::string::npos) break;
-      start = slash + 1;
-    }
-    item.info = std::move(info);
-    keyed.push_back(std::move(item));
-  }
-  std::sort(keyed.begin(), keyed.end(), [](const Keyed& a, const Keyed& b) {
-    const std::size_t common = std::min(a.names.size(), b.names.size());
-    for (std::size_t i = 0; i < common; ++i) {
-      if (a.names[i] == b.names[i]) continue;
-      if (a.directoryAt[i] != b.directoryAt[i]) return a.directoryAt[i];
-      const std::string left = lowerAscii(a.names[i]);
-      const std::string right = lowerAscii(b.names[i]);
-      return left != right ? left < right : a.names[i] < b.names[i];
-    }
-    return a.names.size() < b.names.size();
-  });
-
-  std::vector<std::string> changedImages;
-  std::vector<std::pair<std::string, std::pair<std::uint64_t, std::int64_t>>> pending;
+void FileManager::runRefresh(const std::string& root) {
+  // 打开过的镜像在磁盘上变了（别的程序改了文件）：通知界面重新读取它；文件没了就不再关注
+  std::vector<std::string> opened;
   {
     std::lock_guard lock(stateMutex_);
     if (root != root_) return;
-    std::map<std::string, std::pair<std::uint64_t, std::int64_t>> newStamps;
-    std::vector<api::ImageNode> nodes;
-    nodes.reserve(keyed.size());
-    for (const Keyed& item : keyed) {
-      api::ImageNode node;
-      node.path = item.info.path;
-      node.name = item.names.back();
-      node.directory = item.info.directory;
-      node.size = static_cast<std::int64_t>(item.info.size);
-      if (item.info.directory) {
-        node.kind = "folder";
-        node.scanned = true;
-      } else if (const auto kind = api::kindOfExtension(extensionOf(item.info.path)); !kind) {
-        // 扩展名不在管理之内的文件也列出来（免得文件夹看上去是空的而被误删），标为不支持
-        node.kind = "unsupported";
-        node.scanned = true;
-        node.formatName = "不支持";
-      } else if (*kind != api::FileKind::Floppy) {
-        // 卡带、音频、图片不用识别文件系统，直接给出种类与名称
-        node.kind = api::kindId(*kind);
-        node.scanned = true;
-        node.formatName = fileLabel(*kind, extensionOf(item.info.path));
-      } else {
-        node.kind = api::kindId(api::FileKind::Floppy);
-        const std::pair<std::uint64_t, std::int64_t> stamp{item.info.size, item.info.stamp};
-        newStamps[node.path] = stamp;
-        if (const auto old = stamps_.find(node.path); old != stamps_.end() && old->second != stamp) changedImages.push_back(node.path);
-        const auto cached = formats_.find(node.path);
-        if (cached != formats_.end() && cached->second.size == stamp.first && cached->second.stamp == stamp.second) {
-          node.scanned = true;
-          node.format = cached->second.format;
-          node.formatName = cached->second.formatName;
-          node.writable = cached->second.writable;
-        } else {
-          pending.emplace_back(node.path, stamp);
-        }
+    for (const auto& [path, stamp] : openedStamps_) opened.push_back(path);
+  }
+  std::vector<std::pair<std::string, std::optional<api::StoredImageInfo>>> current;
+  for (const std::string& path : opened) current.emplace_back(path, storage_->stat(root, path));
+  std::vector<std::string> changedImages;
+  {
+    std::lock_guard lock(stateMutex_);
+    if (root != root_) return;
+    for (const auto& [path, info] : current) {
+      const auto old = openedStamps_.find(path);
+      if (old == openedStamps_.end()) continue;
+      if (!info) {
+        openedStamps_.erase(old);
+        continue;
       }
-      nodes.push_back(std::move(node));
+      const std::pair<std::uint64_t, std::int64_t> stamp{info->size, info->stamp};
+      if (old->second == stamp) continue;
+      old->second = stamp;
+      changedImages.push_back(path);
     }
-    for (auto it = formats_.begin(); it != formats_.end();) it = newStamps.count(it->first) != 0 ? std::next(it) : formats_.erase(it);
-    stamps_ = std::move(newStamps);
-    nodes_ = std::move(nodes);
-    available_ = available;
-    limited_ = limited;
-    scanning_ = !pending.empty();
   }
   publishTreeChanged();
   for (const std::string& image : changedImages) publishImageChanged(image);
-
-  // 逐个识别还不认识的镜像：读出来按内容认格式
-  std::size_t sincePublish = 0;
-  bool finished = true;
-  for (const auto& [path, stamp] : pending) {
-    {
-      std::lock_guard lock(signalMutex_);
-      if (stopping_ || scanRequested_) {
-        finished = false;
-        break;
-      }
-    }
-    CachedFormat format;
-    format.size = stamp.first;
-    format.stamp = stamp.second;
-    format.format = "unknown";
-    format.formatName = "未识别";
-    try {
-      std::vector<std::uint8_t> bytes = storage_->read(root, path);
-      const IdentifiedImage identified = identifyImage(bytes, extensionOf(path), decoder_.get());
-      format.format = identified.formatId;
-      format.formatName = identified.formatName;
-      format.writable = identified.fileSystem != nullptr && identified.fileSystem->traits().writable;
-    } catch (const shared::CoreError&) {
-      // 读不出来（被占用、被删除）：按未识别，下一次变化时再试
-    }
-    {
-      std::lock_guard lock(stateMutex_);
-      if (root != root_) return;
-      formats_[path] = format;
-      const auto node = std::find_if(nodes_.begin(), nodes_.end(), [&path](const api::ImageNode& item) { return item.path == path; });
-      if (node != nodes_.end()) {
-        node->scanned = true;
-        node->format = format.format;
-        node->formatName = format.formatName;
-        node->writable = format.writable;
-      }
-    }
-    if (++sincePublish >= PUBLISH_BATCH) {
-      sincePublish = 0;
-      publishTreeChanged();
-    }
-  }
-  if (!pending.empty()) {
-    if (finished) {
-      std::lock_guard lock(stateMutex_);
-      if (root == root_) scanning_ = false;
-    }
-    publishTreeChanged();
-  }
 }
 
 // ---------------------------------------------------------------- 读
@@ -479,6 +389,11 @@ std::unique_ptr<api::DiskFileSystem> FileManager::openFileSystem(std::vector<std
 
 api::FilemanagerListResult FileManager::list(const api::FilemanagerListParams& params) {
   const std::string root = currentRoot();
+  // 先记下镜像文件现在的戳，读完之后它再变就会被监视发现
+  if (const auto info = storage_->stat(root, params.image)) {
+    std::lock_guard lock(stateMutex_);
+    openedStamps_[params.image] = {info->size, info->stamp};
+  }
   Source source = loadSource(root, params.image);
   const std::unique_ptr<api::DiskFileSystem> fileSystem = openFileSystem(source.bytes, params.image);
   api::FilemanagerListResult result;

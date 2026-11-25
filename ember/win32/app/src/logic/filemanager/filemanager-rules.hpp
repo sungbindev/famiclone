@@ -28,15 +28,10 @@ namespace ember::win32::logic {
 /** 文件大小的文字：带千位分隔，占用空间而不是准确字节数时前面加“≈”。 */
 [[nodiscard]] std::string entrySizeText(std::uint64_t bytes, bool allocated);
 
-/** 树里一个镜像行尾的说明：文件系统格式与大小；还在识别时是“识别中…”。 */
-[[nodiscard]] std::string treeDetailText(bool scanned, const std::string& formatName, std::uint64_t size);
-
-/** filemanager.tree 的结果。 */
+/** filemanager.tree 的结果：一个文件夹里的直接内容。 */
 struct ParsedTree {
   std::string root;
   bool available{false};
-  bool scanning{false};
-  bool limited{false};
   std::vector<contracts::DiskTreeNode> nodes;
 };
 

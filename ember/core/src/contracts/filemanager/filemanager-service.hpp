@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：filemanager-service.hpp
- * 说明：filemanager 模块的服务接口：目录的设置与树（含软盘镜像、nes 卡带、png 图片、音频）、镜像里文件的列出、重命名、删除、移动、新建文件夹、导入、导出、撤销，空白镜像的新建。
+ * 说明：filemanager 模块的服务接口：目录的设置与按文件夹读取的树（含软盘镜像、nes 卡带、png 图片、音频）、镜像里文件的列出、重命名、删除、移动、新建文件夹、导入、导出、撤销，空白镜像的新建。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -24,8 +24,8 @@ class FileManagerService {
   /** 设置目录并开始监视与扫描；path 为空表示取消。@throws shared::CoreError filemanager.invalidPath。 */
   virtual FilemanagerSetRootResult setRoot(const FilemanagerSetRootParams& params) = 0;
 
-  /** 目录里的树。 */
-  [[nodiscard]] virtual FilemanagerTreeResult tree() = 0;
+  /** 目录里一个文件夹的直接内容。@throws shared::CoreError filemanager.invalidPath。 */
+  [[nodiscard]] virtual FilemanagerTreeResult tree(const FilemanagerTreeParams& params) = 0;
 
   /** 列出镜像里一个文件夹的内容。@throws shared::CoreError filemanager.* 的错误，见 schema/filemanager.schema.json。 */
   [[nodiscard]] virtual FilemanagerListResult list(const FilemanagerListParams& params) = 0;

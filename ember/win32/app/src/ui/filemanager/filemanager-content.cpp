@@ -252,9 +252,7 @@ IconId nodeIcon(const contracts::DiskTreeNode& node) {
   if (node.kind == contracts::kKindCartridge) return IconId::PlayOne;
   if (node.kind == contracts::kKindAudio) return IconId::DeviceAudioTape;
   if (node.kind == contracts::kKindPicture) return IconId::Photo;
-  if (node.format == "appledos33" || node.format == "prodos") return IconId::Apple;
-  if (node.format.empty() || node.format.rfind("fat", 0) == 0) return IconId::DeviceFloppy;
-  return IconId::FileUnknown;
+  return IconId::DeviceFloppy;
 }
 
 /** 文件列表里一行的图标：文件夹，或按类型文字（扩展名、类型名）分的几类。 */
@@ -334,6 +332,7 @@ FileManagerContent::FileManagerContent(contracts::FileManagerModel& model, contr
     refresh();
   });
   tree_->setOnRename([this](const std::string& id, const std::string& name) { model_.renameItem(id, name); });
+  tree_->setOnExpand([this](const std::string& id) { model_.expandFolder(id); });
   tree_->setOnKey([this](const KeyEvent& event) { return handleTreeKey(event); });
   tree_->setCanDrop([this](const std::string& id, const std::string& target) { return canDropOnFolder(id, target); });
   tree_->setOnDrop([this](const std::string& id, const std::string& target) { model_.moveItems({id}, target); });
@@ -473,8 +472,9 @@ void FileManagerContent::updateTree() {
     item.label = node.name;
     item.depth = depthOf(node.path);
     item.icon = nodeIcon(node);
-    item.trailing = node.detail;
     item.folder = node.directory;
+    // 文件夹里面要展开时才读，没读过也要显示展开箭头
+    item.expandable = node.directory;
     items.push_back(std::move(item));
   }
   tree_->setItems(std::move(items));

@@ -50,22 +50,16 @@ struct DiskTreeNode {
   std::string kind;
   /** 文件大小（字节）；文件夹为 0。 */
   std::uint64_t size{0};
-  /** 文件系统格式标识（fat12、fat16、appledos33、prodos、blank、pyramid、unknown）；文件夹、非软盘文件与还没识别的为空。 */
-  std::string format;
-  /** 行尾的说明：格式与大小，如“FAT12 · 1.44 MB”“NES 卡带 · 40 KB”；软盘镜像还在识别时是“识别中…”；文件夹为空。 */
-  std::string detail;
   bool operator==(const DiskTreeNode&) const = default;
 };
 
-/** 目录树此刻要显示的内容。 */
+/** 目录树此刻要显示的内容：已经读出来的文件夹（目录本身与展开过的文件夹）里的节点。 */
 struct DiskTreeView {
   FileManagerState state{FileManagerState::Loading};
   std::string message;
   /** 目录的完整路径，用来显示。 */
   std::string root;
-  /** 镜像太多，只列出了一部分。 */
-  bool limited{false};
-  /** 节点：父文件夹在前，同级文件夹在前。 */
+  /** 节点：先序（文件夹后面紧跟它里面的节点），同级文件夹在前；没读出来的文件夹里面没有节点。 */
   std::vector<DiskTreeNode> nodes;
   bool operator==(const DiskTreeView&) const = default;
 };
@@ -151,6 +145,8 @@ class FileManagerModel {
 
   /** 选目录：弹出系统的选择文件夹窗口，用户取消时什么都不发生。 */
   virtual void chooseRoot() = 0;
+  /** 树里展开了一个文件夹：还没读过它里面的内容就去读（读完后节点才会出现在树里）。 */
+  virtual void expandFolder(const std::string& path) = 0;
   /** 选中一个镜像（路径不是镜像时什么都不做）；开始读取它的内容。 */
   virtual void selectImage(const std::string& path) = 0;
   /** 进入当前文件夹里的一个文件夹。 */

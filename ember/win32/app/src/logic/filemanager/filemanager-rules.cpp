@@ -87,28 +87,19 @@ std::string entrySizeText(std::uint64_t bytes, bool allocated) {
   return allocated ? "≈" + grouped : grouped;
 }
 
-std::string treeDetailText(bool scanned, const std::string& formatName, std::uint64_t size) {
-  if (!scanned) return "识别中…";
-  return formatName.empty() ? imageSizeText(size) : formatName + " · " + imageSizeText(size);
-}
-
 std::optional<ParsedTree> parseTree(const nlohmann::json& result) {
   if (!result.is_object()) return std::nullopt;
   ParsedTree tree;
   if (const auto root = result.find("root"); root != result.end() && root->is_string()) tree.root = root->get<std::string>();
-  if (!readBool(result, "available", tree.available) || !readBool(result, "scanning", tree.scanning) || !readBool(result, "limited", tree.limited)) return std::nullopt;
+  if (!readBool(result, "available", tree.available)) return std::nullopt;
   const auto nodes = result.find("nodes");
   if (nodes == result.end() || !nodes->is_array()) return std::nullopt;
   for (const nlohmann::json& item : *nodes) {
     if (!item.is_object()) return std::nullopt;
     contracts::DiskTreeNode node;
-    std::string formatName;
-    bool scanned = false;
-    if (!readString(item, "path", node.path) || !readString(item, "name", node.name) || !readBool(item, "directory", node.directory) || !readString(item, "kind", node.kind) || !readInteger(item, "size", node.size) ||
-        !readBool(item, "scanned", scanned) || !readString(item, "format", node.format) || !readString(item, "formatName", formatName)) {
+    if (!readString(item, "path", node.path) || !readString(item, "name", node.name) || !readBool(item, "directory", node.directory) || !readString(item, "kind", node.kind) || !readInteger(item, "size", node.size)) {
       return std::nullopt;
     }
-    if (!node.directory) node.detail = treeDetailText(scanned, formatName, node.size);
     tree.nodes.push_back(std::move(node));
   }
   return tree;

@@ -1,16 +1,16 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：file-manager.hpp
- * 说明：媒体库服务的实现：监视目录并在后台扫描与识别镜像，列出镜像里的文件，重命名、删除、移动、新建文件夹、导入、导出与撤销，新建空白镜像。
+ * 说明：媒体库服务的实现：监视目录并按文件夹列出内容，列出镜像里的文件，重命名、删除、移动、新建文件夹、导入、导出与撤销，新建空白镜像。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：修改类操作的做法：读出镜像（插在软驱里的读软驱里的盘片，否则读文件）→ 在副本上用文件系统改 → 比较改动前后的字节 → 只把有差别的区间写回
  *       （软驱里的盘片经 FloppyDrive::writeFromHost，由介质服务随后写回文件；否则直接改文件）；这样机器在别处写的内容不会被覆盖；
  *       每次成功的修改记一步撤销（改动的区间与改前、改后的字节，只在内存里），撤销前要核对这些位置没有被别人改过；
- *       目录靠文件监视（FileWatchFactory::watchDirectory）发现变化，扫描与格式识别在后台线程里做，识别结果按（路径、大小、修改时间）缓存；
+ *       目录靠文件监视（FileWatchFactory::watchDirectory）发现变化，监视来了通知后由后台线程去抖动一下，再核对打开过（list）的镜像的大小与修改时间、发 filemanager.treeChanged；树由界面按文件夹读取（tree），不在核心里缓存，也不读文件内容；
  *       模拟线程上的访问（找软驱里的盘片、写盘片）经 RuntimeService::runOnSimulation；
- *       锁的顺序：editMutex_（一次修改的全程）→ stateMutex_（目录树与缓存，持有时不做文件读写）；通知后台线程用单独的 signalMutex_，文件监视的回调只碰它。
+ *       锁的顺序：editMutex_（一次修改的全程）→ stateMutex_（目录、打开过的镜像戳与撤销记录，持有时不做文件读写）；通知后台线程用单独的 signalMutex_，文件监视的回调只碰它。
  * ------------------------------------------------------------------------
  */
 
@@ -61,7 +61,7 @@ class FileManager final : public contracts::filemanager::FileManagerService {
   void shutdown();
 
   contracts::filemanager::FilemanagerSetRootResult setRoot(const contracts::filemanager::FilemanagerSetRootParams& params) override;
-  [[nodiscard]] contracts::filemanager::FilemanagerTreeResult tree() override;
+  [[nodiscard]] contracts::filemanager::FilemanagerTreeResult tree(const contracts::filemanager::FilemanagerTreeParams& params) override;
   [[nodiscard]] contracts::filemanager::FilemanagerListResult list(const contracts::filemanager::FilemanagerListParams& params) override;
   contracts::filemanager::FilemanagerRenameResult rename(const contracts::filemanager::FilemanagerRenameParams& params) override;
   contracts::filemanager::FilemanagerRemoveResult remove(const contracts::filemanager::FilemanagerRemoveParams& params) override;
@@ -105,15 +105,6 @@ class FileManager final : public contracts::filemanager::FileManagerService {
     std::size_t bytes{0};
   };
 
-  /** 已识别的格式（按路径、大小、修改时间缓存）。 */
-  struct CachedFormat {
-    std::uint64_t size{0};
-    std::int64_t stamp{0};
-    std::string format;
-    std::string formatName;
-    bool writable{false};
-  };
-
   [[nodiscard]] std::string currentRoot();
   [[nodiscard]] Source loadSource(const std::string& root, const std::string& image);
   /** 读出镜像并认出文件系统；认不出时抛出 filemanager.unknownFormat。 */
@@ -129,9 +120,10 @@ class FileManager final : public contracts::filemanager::FileManagerService {
   void publishTreeChanged();
   void logError(const std::string& code, const std::string& message, const std::string& image);
 
+  /** 监视来了通知后的刷新：核对打开过的镜像的戳，发树与镜像变了的事件。 */
   void requestScan();
   void scanLoop();
-  void runScan(const std::string& root);
+  void runRefresh(const std::string& root);
 
   std::shared_ptr<contracts::filemanager::FileManagerStorage> storage_;
   std::shared_ptr<platform::FileWatchFactory> watchFactory_;
@@ -143,16 +135,11 @@ class FileManager final : public contracts::filemanager::FileManagerService {
 
   /** 一次修改的全程（读、改、写回、记撤销）。 */
   std::mutex editMutex_;
-  /** 目录树、缓存与撤销记录。 */
+  /** 目录、打开过的镜像戳与撤销记录。 */
   std::mutex stateMutex_;
   std::string root_;
-  bool available_{false};
-  bool limited_{false};
-  bool scanning_{false};
-  std::vector<contracts::filemanager::ImageNode> nodes_;
-  std::map<std::string, CachedFormat> formats_;
-  /** 上一次扫描里每个镜像文件的（大小，修改时间），用来发现被改动的镜像。 */
-  std::map<std::string, std::pair<std::uint64_t, std::int64_t>> stamps_;
+  /** 打开过（list）的镜像文件的（大小，修改时间），用来发现被别的程序改动的镜像。 */
+  std::map<std::string, std::pair<std::uint64_t, std::int64_t>> openedStamps_;
   std::map<std::string, std::vector<UndoStep>> undo_;
   std::size_t undoBytes_{0};
   std::unique_ptr<platform::FileWatcher> watcher_;

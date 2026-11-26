@@ -2,7 +2,7 @@
 
 ## 目标
 
-1. 以 `reference/floppy-images/bbg/BBGDOS.IMG`（BBGDOS 3.0 系统盘）里的启动扇区、`BBGDOS.SYS`、`COMMAND.CMD` 为准，用 FC Dev 的反汇编工程还原成可重新汇编、逐字节一致的 ca65 源码，按功能分模块，符号有含义、例程有注释。
+1. 以 `BBGDOS.IMG`（BBGDOS 3.0 系统盘）里的启动扇区、`BBGDOS.SYS`、`COMMAND.CMD` 为准，用 FC Dev 的反汇编工程还原成可重新汇编、逐字节一致的 ca65 源码，按功能分模块，符号有含义、例程有注释。
 2. 从反汇编结果取得全部系统 API（原厂源码只作参考），包括 BIOS 调用、外设调用、文件调用、DOS 调用，以及它们的子功能、出错码、数据结构，写成带详细注释的符号定义文件（`.inc`，供智能感知使用）和接口文档。
 3. 在符号文件之上做汇编开发库，供编写 BBGDOS 下的 `.CMD`、`.EXC` 程序使用；C 语言函数库与头文件在汇编库完成后另行启动，不在本计划范围内。
 
@@ -11,11 +11,11 @@
 | 对象 | 位置 | 大小 | 装入与入口 | 状态 |
 | --- | --- | --- | --- | --- |
 | 启动扇区 | `BBGDOS.IMG` 第 0 扇区 | 512 字节 | BIOS 读到 `$0400`，校验偏移 3 的 `SMDOS1.0`，从 `$0400 + 偏移 1 的字节 + 2`（即偏移 `$3E`）执行 | 只有二进制 |
-| `BBGDOS.SYS` | `BBGDOS.IMG` 根目录，1998-01-11 | 14822 字节 | 文件头无装入地址，`Bios.asm` 的 `SMDOS_Begin` 是 `$7C00`，首条指令 `JMP $7C96` | 只有二进制，与 `reference/docs/BBGDOS源代码/Bbgdos.sys` 逐字节相同 |
+| `BBGDOS.SYS` | `BBGDOS.IMG` 根目录，1998-01-11 | 14822 字节 | 文件头无装入地址，`Bios.asm` 的 `SMDOS_Begin` 是 `$7C00`，首条指令 `JMP $7C96` | 只有二进制，与 BBGDOS 源代码里的 `Bbgdos.sys` 逐字节相同 |
 | `COMMAND.CMD` | `BBGDOS.IMG` 根目录，1998-01-13 | 15277 字节 | 前 2 字节是装入地址 `$8000`，其余 15275 字节装入 `$8000-$BBAA`，入口 `JMP $BA3D` | 只有二进制，与 `Command.sys`、`Command.asm` 都不是同一版本 |
-| 原厂 BIOS 源码 | `reference/docs/BBGDOS源代码/Bios.asm`，已移植为 `machines/bbg/src/bios/bios.s` | 7412 行 | `$C000-$FFFF` | 只作参考：工程版，与发布版 ROM 不是同一次构建，内容不一定准确 |
+| 原厂 BIOS 源码 | `Bios.asm`，已移植为 `machines/bbg/src/bios/bios.s` | 7412 行 | `$C000-$FFFF` | 只作参考：工程版，与发布版 ROM 不是同一次构建，内容不一定准确 |
 | 发布版 BIOS | `ember/roms/bbg1_bios.bin`（128KB）、`bbg98_bios.bin`（2MB） | 固定页 16KB 是代码，其余是字库 | `$C000-$FFFF` | 只有二进制，BIOS 接口以它的反汇编为准；`bbg98_bios.bin` 只提取功能号分发表 |
-| 使用手册 | `reference/docs/步步高多媒体学生电脑 BIOS系统 DOS系统使用手册（可搜索）.pdf` | | | 系统篇第二至六章是 BIOS、外设、文件、DOS 调用与严重错误接口，数据定义技术手册有 CMD 与 EXC 文件格式 |
+| 使用手册 | `步步高多媒体学生电脑 BIOS系统 DOS系统使用手册（可搜索）.pdf` | | | 系统篇第二至六章是 BIOS、外设、文件、DOS 调用与严重错误接口，数据定义技术手册有 CMD 与 EXC 文件格式 |
 | 已还原的符号 | `machines/bbg/src/include/tvdef.inc` | 56 个 BIOS 功能号、24 个文件功能号、17 个 DOS 功能号 | | `DosGetDOSVersion`、`StackTooDepth` 是推测值，三个 BIOS 功能号手册未列 |
 
 原厂源码（`Bios.asm`、`Command.asm`、`Smcdos.asm`）只用来提示名称与用途，与二进制不一致时一律以反汇编的结果为准；命名与注释的依据是代码行为、手册与运行观察。

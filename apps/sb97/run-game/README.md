@@ -38,7 +38,7 @@ GAME MARIO.NES
 
 - 产物是 `build/sb97/GAME.EXE`（32768 字节）。
 - `fcdev.json` 的 `diskName` 设为 `sb97-run-game.img`，同时生成软盘镜像 `build/sb97/sb97-run-game.img`（1.44MB FAT12），里面有 `GAME.EXE` 与 `disk/` 目录下的全部文件：目前是使用说明 `disk/README.TXT`（UTF-8 带 BOM、CRLF），在 Windows 下用 WinImage 等软件打开镜像可直接查看；文件名须是 8.3 名字，不能有子目录。
-- 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库。
+- 要测试游戏，把游戏文件放进 `disk/`（例如把 `mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库。
 
 `build/` 不入库。
 

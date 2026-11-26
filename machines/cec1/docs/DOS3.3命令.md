@@ -1,6 +1,6 @@
 # Apple DOS 3.3 命令
 
-中华学习机 CEC-I 兼容苹果 II，软驱可以启动 Apple DOS 3.3 系统盘（参考盘见 [floppy-images/cec1](../../../reference/floppy-images/cec1/)）。本文记录 DOS 3.3 的命令格式与作用，以及启动时屏幕上的提示。
+中华学习机 CEC-I 兼容苹果 II，软驱可以启动 Apple DOS 3.3 系统盘。本文记录 DOS 3.3 的命令格式与作用，以及启动时屏幕上的提示。
 
 ## 启动画面
 

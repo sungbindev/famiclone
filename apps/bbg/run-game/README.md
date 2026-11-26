@@ -40,7 +40,7 @@ GAME MARIO.NES
 
 - 产物是 `build/bbg/GAME.CMD`。
 - `fcdev.json` 的 `diskImage` 指向系统盘镜像 `apps/bbg/BBGDOS.IMG`，`fcdev.json` 的 `diskName` 设为 `bbg-run-game.img`，同时生成软盘镜像 `build/bbg/bbg-run-game.img`：系统盘的全部内容加上 `GAME.CMD` 与 `disk/` 目录下的全部文件；文件名须是 8.3 名字，不能有子目录。
-- 要测试游戏，把游戏文件放进 `disk/`（例如把 `reference/mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库，目录里没有入库的文件。
+- 要测试游戏，把游戏文件放进 `disk/`（例如把 `mario.nes` 复制成 `disk/MARIO.NES`）后重新构建；`disk/*.nes` 不入库，目录里没有入库的文件。
 
 `build/` 不入库。
 

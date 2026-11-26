@@ -1,6 +1,6 @@
 # 金字塔 PEC-9588 反汇编工程
 
-金字塔学习机 PEC-9588 的 NES 卡带映像 `reference/study_roms/金字塔/PEC-9588.NES` 的反汇编工程。
+金字塔学习机 PEC-9588 的 NES 卡带映像 `PEC-9588.NES` 的反汇编工程。
 
 ## 状态
 

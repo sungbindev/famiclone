@@ -417,7 +417,7 @@
 
               <ul>
 
-                <li>DOS 把文件原样装进工作 RAM <code>$6000</code> 起，再从 <code>$6000</code> 开始执行；文件没有头，也没有签名。官方软盘里的程序（<code>reference/floppy-images/裕兴</code>）都是这样，有的第一条指令是 <code>JMP</code>，有的直接是代码。
+                <li>DOS 把文件原样装进工作 RAM <code>$6000</code> 起，再从 <code>$6000</code> 开始执行；文件没有头，也没有签名。官方软盘里的程序都是这样，有的第一条指令是 <code>JMP</code>，有的直接是代码。
                 </li>
 
                 <li>官方程序偏移 3 起常有一段标题文字（如“裕兴加载V1.1”），它只是文字，不是 DOS 要求的内容；目标的 <code>crt0.s</code> 没有这一段。

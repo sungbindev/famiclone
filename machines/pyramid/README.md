@@ -12,6 +12,6 @@
 
 ## 映像
 
-- 反汇编来源：`reference/study_roms/金字塔/PEC-9588.NES`，524304 字节，含 16 字节 iNES 文件头。
+- 反汇编来源：`PEC-9588.NES`，524304 字节，含 16 字节 iNES 文件头。
 - 模拟器固件：`ember/roms/pec9588.bin`，524288 字节，不含文件头；FC Dev 构建的产物与它一致。
-- 同系列映像 `PEC-586.NES`、`PEC-686F.NES`（在 `reference/study_roms/金字塔/` 中）以及 `ember/roms/` 下的 `pec586.bin`、`pec686f.bin` 还没有建立工程。
+- 同系列映像 `PEC-586.NES`、`PEC-686F.NES` 以及 `ember/roms/` 下的 `pec586.bin`、`pec686f.bin` 还没有建立工程。

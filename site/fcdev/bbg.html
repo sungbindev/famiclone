@@ -437,7 +437,7 @@
                 <li>在 DOS 提示符下输入主名运行，不用写扩展名（<code>hello</code>，<code>.CMD</code> 已验证）；手册说 <code>.EXC</code>（多页程序，目标不生成）也能这样运行，没有验证。
                 </li>
 
-                <li>官方系统盘里的汇编示例（<code>TSTPUTC.ASM</code> 等，在 <code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 里）也是装入 <code>$8000</code> 或 <code>$6500</code>，文件的第一条指令是 <code>JMP</code>。
+                <li>官方系统盘里的汇编示例（<code>TSTPUTC.ASM</code> 等，在 <code>系统类/DOS.IMG</code> 里）也是装入 <code>$8000</code> 或 <code>$6500</code>，文件的第一条指令是 <code>JMP</code>。
                 </li>
 
               </ul>
@@ -1030,7 +1030,7 @@
                 <li>没有设置 <code>diskImage</code> 时构建只生成程序，不生成镜像；要运行时才报“没有设置 diskImage”。
                 </li>
 
-                <li>步步高的系统盘大多是装满的：<code>reference/floppy-images/bbg/系统类/DOS.IMG</code> 没有空闲簇，放不下任何文件，运行会报“剩余空间不足”。同一目录里的 <code>001-3.IMG</code> 剩余约 592KB，没有 <code>AUTOEXEC.BAT</code>，开机后先问日期与时间，适合当底盘。
+                <li>步步高的系统盘大多是装满的：<code>系统类/DOS.IMG</code> 没有空闲簇，放不下任何文件，运行会报“剩余空间不足”。同一目录里的 <code>001-3.IMG</code> 剩余约 592KB，没有 <code>AUTOEXEC.BAT</code>，开机后先问日期与时间，适合当底盘。
                 </li>
 
                 <li>系统盘里有 <code>AUTOEXEC.BAT</code> 时，DOS 开机后先运行它，不问日期与时间；批处理最后要停在命令提示符（<code>bbgcdos/z4</code>、<code>pinyin</code>、<code>tishi</code> 这样的可以，会启动一个不返回的程序的不行）。

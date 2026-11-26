@@ -32,7 +32,8 @@
  *       按硬件手册，不需要连续两次访问；
  *       软开关：$C000-$C00F 写：偶数地址关、奇数地址开：80 列存储、辅存读、辅存写、内部 ROM、
  *       辅助零页、槽 3 ROM、80 列显示、备用字符集；
- *       $C000 读键盘，$C010 读写清键盘标志，$C011-$C01F 读状态（位 7）；$C020 磁带输出翻转，
+ *       $C000 读键盘，$C010 读写清键盘标志，$C011-$C01F 读状态（位 7），
+ *       其中 $C019 的位 7 在垂直消隐期间为 0、显示期间为 1；$C020 磁带输出翻转，
  *       $C030 扬声器翻转，$C050-$C057 显示开关，
  *       $C060 磁带输入、$C061-$C063 游戏接口的三个按键（按键 0 与 1 是手柄的 A 与 B 和
  *       两个苹果键，按键 2 是手柄的选择与开始或按着的“西文”键，1.21 的复位程序据此冷启动）、
@@ -158,6 +159,9 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
   [[nodiscard]] logic::hardware::Apple2VideoMode videoMode() const override;
   [[nodiscard]] std::uint8_t readVideoByte(std::uint16_t address) const override { return ram_[address]; }
 
+  /** 接上视频生成器，$C019 的垂直消隐位从它取；必须活到本对象销毁。 */
+  void setVideo(const logic::hardware::VideoApple2& video) { video_ = &video; }
+
   /**
    * 模拟手柄与按键：按手柄的按键掩码设置（方向键对应模拟手柄 0 的横向与手柄 1 的纵向，
    * A 与 B 是按键 0 与 1，选择与开始是按键 2）。
@@ -206,6 +210,7 @@ class Cec1Board final : public contracts::hardware::BusDevice, public logic::har
   /** 把 $C091 收到的文本排成位图行再送给并口。 */
   logic::hardware::PrinterText text_;
   contracts::hardware::MasterTime cpuTicksPerCycle_;
+  const logic::hardware::VideoApple2* video_{nullptr};
 
   std::vector<std::uint8_t> rom_;
   std::vector<std::uint8_t> ram_;

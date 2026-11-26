@@ -51,6 +51,7 @@ Cec1Machine::Cec1Machine(std::vector<std::uint8_t> rom, std::shared_ptr<logic::h
       debug_(cpuBus_, cpu_) {
   // 完整的 6502：ADC 与 SBC 支持十进制模式。
   cpu_.setDecimalMode(true);
+  board_.setVideo(video_);
   debug_.setVideoPosition([this] { return hw::VideoPosition{video_.frameCount(), video_.scanline(), 0}; });
   cpuBus_.mount(0x0000, 0xFFFF, board_);
   disk_.attachDrive(floppy_.get());

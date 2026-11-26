@@ -63,6 +63,8 @@ class VideoApple2 final : public contracts::hardware::EventListener {
   static constexpr std::uint32_t FRAME_HEIGHT = 384;
   /** 每帧的扫描线数与每行的主时钟周期数（用来换算当前的扫描线）。 */
   static constexpr int SCANLINES_PER_FRAME = 262;
+  /** 每帧显示画面的扫描线数，其后是垂直消隐。 */
+  static constexpr int DISPLAY_SCANLINES = 192;
 
   /**
    * @param scheduler 调度器：每帧结束时的事件登记在它上面。
@@ -88,6 +90,9 @@ class VideoApple2 final : public contracts::hardware::EventListener {
 
   /** 当前的扫描线（0 到 261），调试用。 */
   [[nodiscard]] int scanline() const;
+
+  /** 当前是否在垂直消隐期间（扫描线 192 到 261）。 */
+  [[nodiscard]] bool inVerticalBlank() const { return scanline() >= DISPLAY_SCANLINES; }
 
   /** 低分辨率图形的 16 种颜色，每项内存顺序 R、G、B、A。 */
   [[nodiscard]] static std::vector<std::uint32_t> loresColors();

@@ -256,6 +256,8 @@ bool Cec1Board::statusFlag(std::uint8_t reg) const {
       return switches_.slotThreeRom;
     case 0x8:
       return switches_.store80;
+    case 0x9:
+      return video_ != nullptr && !video_->inVerticalBlank();
     case 0xA:
       return switches_.text;
     case 0xB:

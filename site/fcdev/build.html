@@ -211,6 +211,14 @@
                   </li>
                 </ul>
               </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">中华学习机（CEC-I）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="cec1.html">中华学习机开发指南</a>
+                  </li>
+                </ul>
+              </div>
             </details>
           </nav>
         </aside>
@@ -640,7 +648,7 @@
                       <td>无
                       </td>
 
-                      <td>构建时生成的磁盘镜像文件名，只对声明了磁盘能力的目标有效：写了就生成镜像（文件名不带 <code>.img</code> 时自动补上，不能含路径分隔符），不写就不生成，见 4.5
+                      <td>构建时生成的磁盘镜像文件名，只对声明了磁盘能力的目标有效：写了就生成镜像（文件名不带 <code>.img</code> 或 <code>.dsk</code> 时自动补 <code>.img</code>，不能含路径分隔符），不写就不生成，见 4.5
                       </td>
 
                     </tr>
@@ -704,7 +712,7 @@
                       <td>无
                       </td>
 
-                      <td>磁盘镜像文件路径：运行方案是 <code>firmware</code> 的目标（<code>rom</code>）运行时把它放进软驱 0，见 <a href="rom.html">rom/01-开发指南</a>；磁盘能力声明了 <code>baseImage</code> 的目标（<code>bbg</code>）把它当系统盘，构建磁盘镜像时在其上添加文件，见 4.5
+                      <td>磁盘镜像文件路径：运行方案是 <code>firmware</code> 的目标（<code>rom</code>）运行时把它放进软驱 0，见 <a href="rom.html">rom/01-开发指南</a>；磁盘能力声明了 <code>baseImage</code> 的目标（<code>bbg</code>、<code>cec1</code>）把它当系统盘，构建磁盘镜像时在其上添加文件，见 4.5
                       </td>
 
                     </tr>
@@ -961,7 +969,7 @@
               <h3 id="45-磁盘镜像">4.5 磁盘镜像
               </h3>
 
-              <p>目标声明了磁盘能力（<code>target.json</code> 的 <code>disk</code>，目前是 <code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 与 <code>bbg</code>）且 <code>fcdev.json</code> 配置了 <code>diskName</code> 时，每次构建成功后都会生成 1.44MB 的 FAT12 磁盘镜像：
+              <p>目标声明了磁盘能力（<code>target.json</code> 的 <code>disk</code>，目前是 <code>sb2000</code>、<code>sb97</code>、<code>yuxing</code>、<code>bbg</code> 与 <code>cec1</code>）且 <code>fcdev.json</code> 配置了 <code>diskName</code> 时，每次构建成功后都会生成 1.44MB 的 FAT12 磁盘镜像（<code>cec1</code> 是 Apple DOS 3.3 的 140KB 镜像，见下）：
               </p>
 
               <ul>
@@ -979,6 +987,9 @@
                 </li>
 
                 <li>步步高（<code>bbg</code>）的 DOS 在软盘上，镜像不是空白的 1.44MB 盘，而是复制 <code>fcdev.json</code> 的 <code>diskImage</code>（带 DOS 的系统盘镜像）后在根目录加入程序与 <code>disk</code> 目录里的文件：系统盘的引导扇区、卷标与原有文件不变，同名文件被替换，空间或根目录项不够报错；没有设置 <code>diskImage</code> 时构建只生成产物，运行时才报错。细节见 <a href="bbg.html">bbg/01-开发指南</a>。
+                </li>
+
+                <li>中华学习机（<code>cec1</code>）的 DOS 3.3 也在软盘上，镜像复制 <code>fcdev.json</code> 的 <code>diskImage</code>（DOS 3.3 系统盘，<code>.dsk</code>，DOS 扇区顺序）后加入程序（二进制文件）与 <code>disk</code> 目录里的文件（文本文件）；同名的锁定文件不替换，报错。细节见 <a href="cec1.html">cec1/01-开发指南</a>。
                 </li>
 
                 <li>不支持磁盘镜像的目标（<code>nes</code>）不生成镜像，<code>disk</code> 目录也不会被读取。

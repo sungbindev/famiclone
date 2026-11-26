@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // 名称：program-packager.test.ts
-// 说明：测试打包器：文件头模式、flat-exe 的文件头与大小校验、iNES 校验、磁盘打包器。
+// 说明：测试打包器：文件头模式、flat-exe 的文件头与大小校验、iNES 校验、
+//       DOS 3.3 二进制文件头、磁盘打包器。
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
@@ -8,8 +9,15 @@
 // ------------------------------------------------------------------------
 
 import { describe, expect, it } from 'vitest';
+import { listDos33 } from '../../../src/shared/packaging/dos33-image';
 import { buildFat12Image, listFat12 } from '../../../src/shared/packaging/fat12-image';
 import { packageDisk, packageProgram, parseHeaderPattern } from '../../../src/shared/packaging/program-packager';
+import { createBlankDos33Image } from '../../support/dos33-fixtures';
+
+/** 只带目标专用选项、没有底固件的打包上下文。 */
+function loadAddressContext(targetOptions: Record<string, unknown>) {
+  return { targetOptions, readBase: () => undefined };
+}
 
 describe('打包器', () => {
   it('未知打包器报错', () => {
@@ -109,5 +117,28 @@ describe('打包器', () => {
     const image = packageDisk('fat-floppy-overlay', [{ name: 'a.cmd', data: Uint8Array.from([1, 2, 3]) }], { base });
     expect(listFat12(image).map((entry) => entry.name)).toEqual(['SYSTEM.SYS', 'A.CMD']);
     expect(() => packageDisk('fat-floppy-overlay', [])).toThrow(expect.objectContaining({ code: 'DISK_BASE_MISSING', hint: expect.stringContaining('diskImage') }));
+  });
+
+  describe('dos33-binary', () => {
+    it('给链接输出加 4 字节文件头：装入地址与长度，低字节在前', () => {
+      const result = packageProgram('dos33-binary', Uint8Array.from([0xd8, 0x60]), { addressOption: 'loadAddress' }, loadAddressContext({ loadAddress: 0x6000 }));
+      expect(Array.from(result)).toEqual([0x00, 0x60, 0x02, 0x00, 0xd8, 0x60]);
+      const big = packageProgram('dos33-binary', new Uint8Array(0x1234), {}, loadAddressContext({ loadAddress: 0x0800 }));
+      expect(Array.from(big.subarray(0, 4))).toEqual([0x00, 0x08, 0x34, 0x12]);
+    });
+
+    it('地址选项不是地址、程序为空或超出 64K 时报错', () => {
+      expect(() => packageProgram('dos33-binary', new Uint8Array(1), {}, loadAddressContext({}))).toThrow(expect.objectContaining({ code: 'PACKAGER_OPTION_INVALID' }));
+      expect(() => packageProgram('dos33-binary', new Uint8Array(1), { addressOption: 7 }, loadAddressContext({ loadAddress: 0x6000 }))).toThrow(expect.objectContaining({ code: 'PACKAGER_OPTION_INVALID' }));
+      expect(() => packageProgram('dos33-binary', new Uint8Array(0), {}, loadAddressContext({ loadAddress: 0x6000 }))).toThrow(expect.objectContaining({ code: 'PACKAGE_SIZE_MISMATCH' }));
+      expect(() => packageProgram('dos33-binary', new Uint8Array(0x2001), {}, loadAddressContext({ loadAddress: 0xe000 }))).toThrow(expect.objectContaining({ code: 'PACKAGE_TOO_LARGE' }));
+    });
+  });
+
+  it('dos33-floppy-overlay 在 DOS 3.3 底盘上添加文件，没有底盘镜像时报错并提示 diskImage', () => {
+    const base = createBlankDos33Image();
+    const image = packageDisk('dos33-floppy-overlay', [{ name: 'demo', data: Uint8Array.from([0, 0x60, 1, 0, 0x60]), program: true }], { base });
+    expect(listDos33(image)).toEqual([{ name: 'DEMO', type: 4, sectors: 2 }]);
+    expect(() => packageDisk('dos33-floppy-overlay', [])).toThrow(expect.objectContaining({ code: 'DISK_BASE_MISSING', hint: expect.stringContaining('diskImage') }));
   });
 });

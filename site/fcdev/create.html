@@ -211,6 +211,14 @@
                   </li>
                 </ul>
               </div>
+              <div class="site-nav__group">
+                <p class="site-nav__group-title">中华学习机（CEC-I）
+                </p>
+                <ul class="site-nav__list">
+                  <li><a class="site-nav__link" href="cec1.html">中华学习机开发指南</a>
+                  </li>
+                </ul>
+              </div>
             </details>
           </nav>
         </aside>
@@ -257,7 +265,7 @@
 
               <ol>
 
-                <li>选目标与语言：NES、SB2000（学习机）、SB97（小霸王 97）、裕兴（学习机）或步步高（学生电脑），C 或汇编（SB97、裕兴与步步高只有汇编）。
+                <li>选目标与语言：NES、SB2000（学习机）、SB97（小霸王 97）、裕兴（学习机）、步步高（学生电脑）或中华学习机（CEC-I），C 或汇编（SB97、裕兴、步步高与 CEC-I 只有汇编）。
                 </li>
 
                 <li>选一个空目录作为项目目录；不存在的目录请先创建。
@@ -268,7 +276,7 @@
 
               </ol>
 
-              <p>工具 <code>fcdev_new_project</code> 的参数是 <code>directory</code>（工作区里的目录，相对路径相对第一个工作区文件夹）、<code>target</code>（<code>nes</code>、<code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 或 <code>bbg</code>）、<code>language</code>（<code>c</code> 或 <code>asm</code>），调用前会弹出确认。
+              <p>工具 <code>fcdev_new_project</code> 的参数是 <code>directory</code>（工作区里的目录，相对路径相对第一个工作区文件夹）、<code>target</code>（<code>nes</code>、<code>sb2000</code>、<code>sb97</code>、<code>yuxing</code>、<code>bbg</code> 或 <code>cec1</code>）、<code>language</code>（<code>c</code> 或 <code>asm</code>），调用前会弹出确认。
               </p>
 
               <ul>
@@ -297,7 +305,7 @@
 
               <ul>
 
-                <li>程序名固定为 <code>hello</code>，同时是 <code>fcdev.json</code> 的 <code>name</code>，也是 DOS 里要输入的命令。
+                <li>程序名默认是 <code>hello</code>，同时是 <code>fcdev.json</code> 的 <code>name</code>，也是 DOS 里要输入的命令；模板的 <code>template.json</code> 里可以用 <code>programName</code> 改（<code>cec1-asm</code> 用 <code>demo</code>，因为 DOS 3.3 系统盘的启动程序常常叫 HELLO 并被锁定）。
                 </li>
 
                 <li><code>.gitignore</code> 在模板里叫 <code>gitignore</code>（不带点），生成项目时改名。
@@ -311,7 +319,7 @@
               <h2 id="3-模板">3. 模板
               </h2>
 
-              <p>七个模板（<code>rom</code> 目标没有模板，整机 ROM 工程的 <code>fcdev.json</code> 手写，见 <a href="rom.html">rom/01-开发指南</a>），放在扩展目录的 <code>templates/&lt;目标&gt;-&lt;语言&gt;/</code> 下，含 <code>template.json</code>（目标、语言、显示名）、<code>README.md</code>、<code>src</code>，<code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 的模板还有 <code>disk</code>；以 <code>_</code> 开头的目录（<code>_common</code>）放公共文件：
+              <p>八个模板（<code>rom</code> 目标没有模板，整机 ROM 工程的 <code>fcdev.json</code> 手写，见 <a href="rom.html">rom/01-开发指南</a>），放在扩展目录的 <code>templates/&lt;目标&gt;-&lt;语言&gt;/</code> 下，含 <code>template.json</code>（目标、语言、显示名、可选的程序名）、<code>README.md</code>、<code>src</code>，<code>sb2000</code>、<code>sb97</code>、<code>yuxing</code> 的模板还有 <code>disk</code>；以 <code>_</code> 开头的目录（<code>_common</code>）放公共文件：
               </p>
 
               <div class="table-wrap">
@@ -399,6 +407,16 @@
                       </td>
 
                       <td>用 DOS 的显示字符功能显示两行英文，按任意键后返回 DOS，<code>.include &quot;bbg.inc&quot;</code>，导出 <code>_main</code>；步步高没有 C 运行库，所以没有 C 模板；没有 <code>disk</code> 目录（磁盘镜像建在用户指定的系统盘上，空间有限），<code>fcdev.json</code> 里运行时要加 <code>firmware</code> 与 <code>diskImage</code>
+                      </td>
+
+                    </tr>
+
+                    <tr>
+
+                      <td><code>cec1-asm</code>
+                      </td>
+
+                      <td>用监控程序清屏，显示两行英文，按任意键后回到 DOS 3.3 的命令行，<code>.include &quot;cec1.inc&quot;</code>，导出 <code>_main</code>；程序名是 <code>demo</code>；CEC-I 没有 C 运行库，所以没有 C 模板；没有 <code>disk</code> 目录（磁盘镜像建在用户指定的 DOS 3.3 系统盘上），<code>fcdev.json</code> 里运行时要加 <code>firmware</code> 与 <code>diskImage</code>
                       </td>
 
                     </tr>

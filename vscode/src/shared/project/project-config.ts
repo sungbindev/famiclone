@@ -43,7 +43,10 @@ export interface ProjectConfig {
   readonly outDir: string;
   /** 是否优化。 */
   readonly optimize: boolean;
-  /** 磁盘镜像文件名（已补 .img），只对有磁盘能力的目标有效；没有设置时不生成镜像。 */
+  /**
+   * 磁盘镜像文件名（没有 .img 或 .dsk 扩展名时已补 .img），
+   * 只对有磁盘能力的目标有效；没有设置时不生成镜像。
+   */
   readonly diskName: string | undefined;
   /** 预定义宏。 */
   readonly define: Readonly<Record<string, string | number>>;
@@ -81,19 +84,19 @@ const DISK_NAME_FORBIDDEN = /[\\/:*?"<>|]/;
  * 校验镜像文件名并补全扩展名。
  * @param name 配置里的 diskName；没有设置时为 undefined。
  * @param where 出错提示里的配置文件位置。
- * @returns 带 .img 扩展名的文件名；没有设置时为 undefined。
+ * @returns 带 .img 或 .dsk 扩展名的文件名（都没有时补 .img）；没有设置时为 undefined。
  * @throws FcdevError 文件名为空，或含路径分隔符等不允许的字符。
  */
 function normalizeDiskName(name: string | undefined, where: string): string | undefined {
   if (name === undefined) return undefined;
   const trimmed = name.trim();
-  if (trimmed === '' || trimmed === '.img' || trimmed === '.' || trimmed === '..' || DISK_NAME_FORBIDDEN.test(trimmed)) {
+  if (trimmed === '' || trimmed === '.img' || trimmed === '.dsk' || trimmed === '.' || trimmed === '..' || DISK_NAME_FORBIDDEN.test(trimmed)) {
     throw new FcdevError(`${where} 中的 diskName 必须是镜像文件名，不能为空，也不能含路径分隔符等字符：${name}`, {
       code: 'CONFIG_INVALID',
       hint: '例如 "diskName": "sb97-run-game.img"，镜像放在产物旁边'
     });
   }
-  return /\.img$/i.test(trimmed) ? trimmed : `${trimmed}.img`;
+  return /\.(img|dsk)$/i.test(trimmed) ? trimmed : `${trimmed}.img`;
 }
 
 /**

@@ -68,6 +68,21 @@ describe('目标定义的解析', () => {
     const options = { size: { type: 'number', default: 1, links: ['a.o'] } };
     expect(() => parseTarget(validTarget({ options }), DIR)).toThrow(/links/);
   });
+
+  it('extension 可以是空字符串（没有扩展名），不是字符串时报错', () => {
+    expect(parseTarget(validTarget({ extension: '' }), DIR).extension).toBe('');
+    expect(() => parseTarget(validTarget({ extension: undefined }), DIR)).toThrow(/extension/);
+  });
+
+  it('地址选项：缺省值是范围内的数字，linkSymbol 与范围只用在数字与地址选项上', () => {
+    const option = { type: 'address', default: 0x6000, min: 0x800, max: 0x8fff, linkSymbol: 'LOAD_ADDRESS' };
+    expect(parseTarget(validTarget({ options: { loadAddress: option } }), DIR).options.loadAddress).toEqual({ type: 'address', default: 0x6000, links: [], linkSymbol: 'LOAD_ADDRESS', min: 0x800, max: 0x8fff });
+    expect(() => parseTarget(validTarget({ options: { loadAddress: { ...option, default: '$6000' } } }), DIR)).toThrow(/定义不合法/);
+    expect(() => parseTarget(validTarget({ options: { loadAddress: { ...option, default: 0x9000 } } }), DIR)).toThrow(/缺省值/);
+    expect(() => parseTarget(validTarget({ options: { size: { type: 'boolean', default: true, linkSymbol: 'X' } } }), DIR)).toThrow(/linkSymbol/);
+    expect(() => parseTarget(validTarget({ options: { loadAddress: { ...option, linkSymbol: '1bad' } } }), DIR)).toThrow(/linkSymbol/);
+    expect(() => parseTarget(validTarget({ options: { size: { type: 'number', default: 1, max: 5 } } }), DIR)).toThrow(/max/);
+  });
 });
 
 describe('目标定义的取值规则', () => {
@@ -83,6 +98,18 @@ describe('目标定义的取值规则', () => {
     expect(resolveTargetOptions(target, { font: false })).toEqual({ font: false });
     expect(() => resolveTargetOptions(target, { color: 1 })).toThrow(expect.objectContaining({ code: 'TARGET_OPTION_UNKNOWN' }));
     expect(() => resolveTargetOptions(target, { font: 'no' })).toThrow(expect.objectContaining({ code: 'TARGET_OPTION_INVALID' }));
+  });
+
+  it('地址选项接受数字与 "$6000"、"0x6000"、十进制字符串，超出范围或格式不对报错', () => {
+    const option = { type: 'address', default: 0x6000, min: 0x800, max: 0x8fff, linkSymbol: 'LOAD_ADDRESS' };
+    const target = parseTarget(validTarget({ options: { loadAddress: option } }), DIR);
+    expect(resolveTargetOptions(target, {})).toEqual({ loadAddress: 0x6000 });
+    for (const value of [0x800, '$0800', '0x0800', '2048', ' $0800 ']) {
+      expect(resolveTargetOptions(target, { loadAddress: value })).toEqual({ loadAddress: 0x800 });
+    }
+    for (const value of [0x7ff, 0x9000, '$7FF', 'abc', '$', true, 1.5, -1]) {
+      expect(() => resolveTargetOptions(target, { loadAddress: value })).toThrow(expect.objectContaining({ code: 'TARGET_OPTION_INVALID' }));
+    }
   });
 
   describe('banked 多页定义', () => {
@@ -110,6 +137,14 @@ describe('目标定义的取值规则', () => {
 describe('程序名规则', () => {
   it('没有规则时原样返回', () => {
     expect(applyNameRule('my-long-program-name', null)).toBe('my-long-program-name');
+  });
+
+  it('DOS 3.3 规则：字母开头，只用字母与数字，最多 30 个字符，转大写，不符合时报错', () => {
+    expect(applyNameRule('Demo1', 'dos33')).toBe('DEMO1');
+    expect(applyNameRule('a'.repeat(30), 'dos33')).toBe('A'.repeat(30));
+    for (const name of ['1demo', 'my-demo', 'a.b', 'a'.repeat(31), '']) {
+      expect(() => applyNameRule(name, 'dos33')).toThrow(expect.objectContaining({ code: 'NAME_INVALID' }));
+    }
   });
 
   it('DOS 8.3 规则转大写', () => {

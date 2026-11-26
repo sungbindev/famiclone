@@ -9,7 +9,7 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 - 任务类型 `fcdev`：为每个含 `fcdev.json` 的项目提供构建、运行两个任务，在“终端 → 运行任务”里选用；错误通过问题匹配器 `$fcdev` 出现在“问题”面板。学习机目标在 `fcdev.json` 里写了 `diskName` 时，构建同时生成这个文件名的软盘镜像，里面有程序和项目 `disk` 目录下的全部文件；不写不生成。
 - 命令：“FCDEV：构建项目”“构建当前文件”“构建当前目录”“运行”“调试运行”“显示项目信息”“新建项目”。
 - 运行与调试运行需要 Ember：在用户设置 `fcdev.emulator.path` 里指向 `Ember.exe`。扩展不自带 Ember，没设置时会提示来设置。
-- 学习机（SB2000、SB97、裕兴、步步高）目标需要 BIOS：在项目的 `fcdev.json` 里用 `firmware` 指向它；步步高的 DOS 在软盘上，还要用 `diskImage` 指向带 DOS 的系统盘镜像。
+- 学习机（SB2000、SB97、裕兴、步步高、CEC-I）目标需要 BIOS：在项目的 `fcdev.json` 里用 `firmware` 指向它；步步高与 CEC-I 的 DOS 在软盘上，还要用 `diskImage` 指向带 DOS 的系统盘镜像（CEC-I 用 Apple DOS 3.3 的 `.dsk`）。
 - 整机 ROM 工程（`rom` 目标）：用 `firmware` 指向完整的固件当底，构建时把 BIOS 源码的链接结果覆盖进去，`diskImage` 挂软盘镜像。
 
 ### 调试
@@ -37,7 +37,7 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 
 ### 新建项目
 
-命令“FCDEV：新建项目”选目标（NES、SB2000、SB97、裕兴、步步高）与语言（C、汇编；SB97、裕兴与步步高只有汇编），在空目录里生成项目、示例程序与构建任务。
+命令“FCDEV：新建项目”选目标（NES、SB2000、SB97、裕兴、步步高、CEC-I）与语言（C、汇编；SB97、裕兴、步步高与 CEC-I 只有汇编），在空目录里生成项目、示例程序与构建任务。
 
 ### 6502 反汇编
 
@@ -51,7 +51,7 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 - 分析：`disasm_trace`（从入口追踪并自动命名）、`disasm_list`、`disasm_view`（带符号与注释的反汇编）、`disasm_xrefs`、`disasm_routine`、`disasm_callgraph`、`disasm_detect`、`disasm_reference`。
 - 编辑：`disasm_apply`（批量命名、标注区域、加注释，整批生效或整批不改）、`disasm_symbols`、`disasm_import_record`（把模拟器记录的指令轨迹、调用记录或 CDL 导入工程）。
 - 生成与校验：`disasm_generate`、`disasm_verify`（重新汇编后与原映像逐字节比较）、`disasm_build`。
-- 模拟器（Ember）：`emu_launch`（启动）、`emu_connect`（连接已运行的）、`emu_status`、`emu_load`（载入 NES 文件或整机，也可只预览 NES 文件头与匹配的插件）、`emu_run`（可按帧、CPU 周期、指令、扫描线运行）、`emu_break`（断点，支持条件、启用与禁用，以及中断、复位断点）、`emu_step`、`emu_inspect`（读写内存、寄存器、单步核对、解析 bank、调用栈、调色板）、`emu_screen`（截图）、`emu_input`（按键、手柄、鼠标）、`emu_record`（指令跟踪、CDL、调用记录，跟踪可环形记录、边记边读）、`emu_profile`（子程序周期统计）、`emu_events`（PPU 与 mapper 寄存器读写、中断的扫描位置）、`emu_speed`（运行速度与声音方式）。让程序跑起来、记录执行过的地址再导入工程，可以补上静态追踪找不到的代码。
+- 模拟器（Ember）：`emu_launch`（启动）、`emu_connect`（连接已运行的）、`emu_status`、`emu_load`（载入 NES 文件或整机，也可只预览 NES 文件头与匹配的插件）、`emu_run`（可按帧、CPU 周期、指令、扫描线运行）、`emu_break`（断点，支持条件、启用与禁用，以及中断、复位断点）、`emu_step`、`emu_inspect`（读写内存、寄存器、单步核对、解析 bank、调用栈、调色板）、`emu_screen`（截图）、`emu_input`（按键可以用 `text` 一次输入一段文字、手柄、鼠标）、`emu_record`（指令跟踪、CDL、调用记录，跟踪可环形记录、边记边读）、`emu_profile`（子程序周期统计）、`emu_events`（PPU 与 mapper 寄存器读写、中断的扫描位置）、`emu_speed`（运行速度与声音方式）。让程序跑起来、记录执行过的地址再导入工程，可以补上静态追踪找不到的代码。
 - FC Dev：`fcdev_build`、`fcdev_run`、`fcdev_info`、`fcdev_new_project`、`fcdev_api`、`fcdev_docs`。
 
 会修改工程文件、写生成文件、运行汇编链接、启动 Ember、写模拟器内存或寄存器的调用，执行前会请你确认。工程目录必须在工作区里；要反汇编的映像、载入的文件、记录文件可以在工作区外，确认里会写出路径。截图作为图像返回，需要较新的 VS Code；较旧的版本用 `file` 参数保存成文件。停用扩展时会关闭模拟器会话并结束工具启动的 Ember。
@@ -65,7 +65,7 @@ NES、小霸王学习机（SB2000）等 6502 兼容机的 VS Code 开发工具�
 
 ### 使用文档
 
-命令“FCDEV：打开使用文档”列出随扩展发布的文档：构建、模拟器与调试、反汇编、新建项目、NES、SB97、裕兴、步步高、SB2000 与整机 ROM 工程的开发指南、系统调用手册、硬件说明与 C 接口参考。
+命令“FCDEV：打开使用文档”列出随扩展发布的文档：构建、模拟器与调试、反汇编、新建项目、NES、SB97、裕兴、步步高、CEC-I、SB2000 与整机 ROM 工程的开发指南、系统调用手册、硬件说明与 C 接口参考。
 
 ## 设置
 

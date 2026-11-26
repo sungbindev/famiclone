@@ -11,9 +11,14 @@
 //       偏移（默认 0），maxSize 为映像大小上限，size 为映像必须正好等于的大小。
 //       rom-overlay 的偏移与大小取自目标专用选项 offset、size（0 表示不限）：有底固件时，把链接
 //       输出覆盖到底固件的 offset 处；没有底固件时，链接输出就是整块固件。
+//       dos33-binary 给链接输出加 Apple DOS 3.3 二进制文件的 4 字节文件头（装入地址与
+//       长度，低字节在前），地址取目标专用选项，选项名由打包选项 addressOption
+//       指定（默认 loadAddress）；
+//       dos33-floppy-overlay 在 DOS 3.3 的 .dsk 底盘上添加文件。
 // ------------------------------------------------------------------------
 
 import { FcdevError } from '../errors/fcdev-error';
+import { overlayDos33Image } from './dos33-image';
 import { buildFat12Image, type DiskFile } from './fat12-image';
 import { overlayFat12Image } from './fat12-overlay';
 
@@ -158,11 +163,37 @@ function packRomOverlay(image: Uint8Array, _options: PackagerOptions, context: P
   return result;
 }
 
+/**
+ * 给链接输出加 DOS 3.3 二进制文件的文件头：装入地址与长度，各 2 字节，低字节在前。
+ * @param image 链接输出，第一个字节就是装入地址上的内容。
+ * @param options 打包选项：addressOption 是保存装入地址的目标专用选项名，默认 loadAddress。
+ * @param context 目标专用选项。
+ * @returns 要写出的内容。
+ * @throws FcdevError 选项不合法，或程序为空、超出 64K。
+ */
+function packDos33Binary(image: Uint8Array, options: PackagerOptions, context: PackagerContext): Uint8Array {
+  const { addressOption = 'loadAddress' } = options;
+  if (typeof addressOption !== 'string') throw new FcdevError('addressOption 选项必须是字符串', { code: 'PACKAGER_OPTION_INVALID' });
+  const address = context.targetOptions[addressOption];
+  if (typeof address !== 'number' || !Number.isInteger(address) || address < 0 || address > 0xffff) {
+    throw new FcdevError(`目标选项 ${addressOption} 必须是 0 到 65535 的装入地址`, { code: 'PACKAGER_OPTION_INVALID' });
+  }
+  if (image.length === 0) throw new FcdevError('程序是空的', { code: 'PACKAGE_SIZE_MISMATCH' });
+  if (address + image.length > 0x10000) {
+    throw new FcdevError(`程序 ${image.length} 字节，从 ${address} 装入会超出 64K`, { code: 'PACKAGE_TOO_LARGE' });
+  }
+  const result = new Uint8Array(4 + image.length);
+  result.set([address & 0xff, address >> 8, image.length & 0xff, image.length >> 8], 0);
+  result.set(image, 4);
+  return result;
+}
+
 /** 已登记的程序打包器。 */
 const PROGRAM_PACKAGERS: Readonly<Record<string, (image: Uint8Array, options: PackagerOptions, context: PackagerContext) => Uint8Array>> = {
   'flat-exe': packFlatBinary,
   ines: packInes,
-  'rom-overlay': packRomOverlay
+  'rom-overlay': packRomOverlay,
+  'dos33-binary': packDos33Binary
 };
 
 /** 磁盘打包器的选项。 */
@@ -184,6 +215,15 @@ const DISK_PACKAGERS: Readonly<Record<string, (files: readonly DiskFile[], optio
       });
     }
     return overlayFat12Image(options.base, files);
+  },
+  'dos33-floppy-overlay': (files, options) => {
+    if (options.base === undefined) {
+      throw new FcdevError('这个目标的磁盘镜像要在 DOS 3.3 系统盘镜像上添加文件，没有给底盘镜像', {
+        code: 'DISK_BASE_MISSING',
+        hint: '在 fcdev.json 里用 diskImage 指向带 DOS 3.3 的 .dsk 镜像'
+      });
+    }
+    return overlayDos33Image(options.base, files);
   }
 };
 

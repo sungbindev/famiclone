@@ -212,6 +212,22 @@ describe('模拟器操作：检查、截图与输入', () => {
       { method: 'input.releaseAll', params: {} }
     ]);
   });
+
+  it('输入文字：逐字符点键，大写与符号先按 Shift，enter 在最后再按回车；有不支持的字符时一个键都不按', async () => {
+    const client = createFakeClient({ 'input.key': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'inspector.getState': CPU_STATE });
+    await harness.connect(client);
+    const result = await harness.run('input', { kind: 'key', text: 'Ab 1:', enter: true, downFrames: 3, upFrames: 2 });
+    assert.equal(result.keys, 6);
+    assert.deepEqual(client.calls.filter((call) => call.method === 'input.key').map((call) => `${(call.params as { code: string }).code}${(call.params as { down: boolean }).down ? '+' : '-'}`), [
+      'ShiftLeft+', 'KeyA+', 'KeyA-', 'ShiftLeft-', 'KeyB+', 'KeyB-', 'Space+', 'Space-', 'Digit1+', 'Digit1-',
+      'ShiftLeft+', 'Semicolon+', 'Semicolon-', 'ShiftLeft-', 'Enter+', 'Enter-'
+    ]);
+    assert.deepEqual(client.calls.find((call) => call.method === 'runtime.run')?.params, { frames: 3, wait: true });
+    client.calls.length = 0;
+    await assert.rejects(harness.run('input', { kind: 'key', text: 'A中' }), hasCode('EMULATOR_PARAM_INVALID'));
+    await assert.rejects(harness.run('input', { kind: 'key', text: 'A', code: 'KeyA' }), hasCode('EMULATOR_PARAM_INVALID'));
+    assert.deepEqual(client.calls, []);
+  });
 });
 
 describe('模拟器操作：记录', () => {

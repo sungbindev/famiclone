@@ -1,5 +1,5 @@
 // ------------------------------------------------------------------------
-// 名称：sb2000-session.ts
+// 名称：machine-session.ts
 // 说明：整机（学习机 SB2000、小霸王 97、裕兴、步步高）在 Ember 里的启动与操作：经调试服务添加固件、
 //       放入磁盘镜像、整机开机，并在 DOS 里输入程序名运行；还有按键与运行帧数的小工具。
 // 作者：sungbin
@@ -66,6 +66,15 @@ const YUXING_EXTENSION_CODES = ['Period', 'KeyE', 'KeyX', 'KeyE'];
 /** 步步高软驱一号的机型标识。 */
 export const BBG_MACHINE = 'bbg1';
 
+/** 中华学习机 CEC-I 的机型标识。 */
+export const CEC1_MACHINE = 'cec1';
+
+/** CEC-I 开机到 DOS 3.3 系统盘启动完、停在命令行等键所需的帧数（实测约 670 帧，留余量）。 */
+const CEC1_DOS_FRAMES = 900;
+
+/** CEC-I 的 DOS 运行二进制程序的命令“BRUN ”对应的键位。 */
+const CEC1_RUN_COMMAND_CODES = ['KeyB', 'KeyR', 'KeyU', 'KeyN', 'Space'];
+
 /** 步步高开机到 BBGDOS 读键盘（有自动批处理的系统盘要等批处理跑完）所需的帧数。 */
 const BBG_DOS_FRAMES = 1200;
 
@@ -91,7 +100,7 @@ const RUN_TIMEOUT_MS = 120_000;
 export function keyCodeOf(char: string): string {
   if (/^[a-z]$/i.test(char)) return `Key${char.toUpperCase()}`;
   if (/^\d$/.test(char)) return `Digit${char}`;
-  throw new FcdevError(`无法在 SB-DOS 里输入字符“${char}”`, {
+  throw new FcdevError(`无法在 DOS 命令行里输入字符“${char}”`, {
     code: 'DOS_KEY_UNSUPPORTED',
     hint: '程序名只能用字母与数字（用 fcdev.json 的 name 改名）'
   });
@@ -123,8 +132,8 @@ export async function tapKey(client: DebugSession, code: string, downFrames = KE
 
 /** 整机开机的输入。 */
 export interface BootMachineInput {
-  /** 机型，缺省学习机。 */
-  readonly machine?: string | undefined;
+  /** 机型。 */
+  readonly machine: string;
   /** 固件（BIOS）文件。 */
   readonly firmware?: string | undefined;
   /** 磁盘镜像。 */
@@ -138,7 +147,7 @@ export interface BootMachineInput {
  * @param input 机型、固件与磁盘镜像；固件与镜像都可以不给。
  * @throws FcdevError 文件不存在，或 Ember 拒绝固件、镜像。
  */
-export async function bootMachine(files: FileSystem, client: DebugSession, { machine = SB2000_MACHINE, firmware, diskImage }: BootMachineInput): Promise<void> {
+export async function bootMachine(files: FileSystem, client: DebugSession, { machine, firmware, diskImage }: BootMachineInput): Promise<void> {
   if (firmware !== undefined && files.kindOf(firmware) !== 'file') {
     throw new FcdevError(`找不到固件：${firmware}`, { code: 'FIRMWARE_MISSING', hint: '在 fcdev.json 的 firmware 里指向学习机的 BIOS 文件' });
   }
@@ -159,17 +168,26 @@ export async function bootMachine(files: FileSystem, client: DebugSession, { mac
 }
 
 /**
- * 在 DOS 里运行程序：学习机开机运行 900 帧，直接按两次回车跳过日期与时间；SB97 开机后
- * 按空格跳过开机画面，等菜单稳定后按左键选中 DOS，回车进入；裕兴开机后按空格进主菜单，选中
+ * 在 DOS 里运行程序：小霸王学习机 SB2000 开机运行 900 帧，直接按两次回车跳过日期与时间；
+ * SB97 开机后按空格跳过开机画面，等菜单稳定后按左键选中 DOS，回车进入；裕兴开机后按空格进
+ * 主菜单，选中
  * “学DOS”回车，等动画后按空格，选中“三.DOS系统操作”回车进入；步步高开机运行 1200 帧（系统盘的
- * 批处理跑完），按两次回车跳过可能出现的日期与时间。再输入程序名回车（裕兴的 DOS 必须带
+ * 批处理跑完），按两次回车跳过可能出现的日期与时间；中华学习机 CEC-I 开机运行 900 帧，等 DOS 3.3
+ * 从系统盘启动完，再输入 BRUN 加程序名。再输入程序名回车（裕兴的 DOS 必须带
  * 扩展名，这里补上 .EXE）。返回时程序刚被启动，机器仍是暂停的。
  * @param client 已连接的调试会话。
  * @param programName 程序名（不含扩展名）。
- * @param machine 机型，默认学习机；不是 SB97、裕兴与步步高的都按学习机的流程。
- * @throws FcdevError 程序名里有无法输入的字符。
+ * @param machine 机型；只支持 SB2000、SB97、裕兴、步步高与 CEC-I。
+ * @throws FcdevError 机型没有进入 DOS 的流程（DOS_MACHINE_UNSUPPORTED），
+ *   或程序名里有无法输入的字符。
  */
-export async function enterProgram(client: DebugSession, programName: string, machine: string = SB2000_MACHINE): Promise<void> {
+export async function enterProgram(client: DebugSession, programName: string, machine: string): Promise<void> {
+  if (![SB2000_MACHINE, SB97_MACHINE, YUXING_MACHINE, BBG_MACHINE, CEC1_MACHINE].includes(machine)) {
+    throw new FcdevError(`机型 ${machine} 没有自动进入 DOS 并运行程序的流程`, {
+      code: 'DOS_MACHINE_UNSUPPORTED',
+      hint: '不给 program，只开机，再用 emu_input 手动操作'
+    });
+  }
   const codes = [...programName].map(keyCodeOf);
   if (machine === YUXING_MACHINE) {
     await runFrames(client, YUXING_LOGO_FRAMES);
@@ -197,6 +215,10 @@ export async function enterProgram(client: DebugSession, programName: string, ma
     await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
     await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);
     await runFrames(client, BBG_PROMPT_FRAMES);
+  } else if (machine === CEC1_MACHINE) {
+    // DOS 3.3 启动完直接停在命令行，没有日期与时间的提示
+    await runFrames(client, CEC1_DOS_FRAMES);
+    codes.unshift(...CEC1_RUN_COMMAND_CODES);
   } else {
     await runFrames(client, DOS_PROMPT_FRAMES);
     await tapKey(client, 'Enter', DOS_KEY_FRAMES, DOS_KEY_FRAMES);

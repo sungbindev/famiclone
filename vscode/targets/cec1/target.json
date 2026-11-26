@@ -1,0 +1,38 @@
+{
+  "name": "cec1",
+  "title": "中华学习机 CEC-I（Apple DOS 3.3）",
+  "cpu": "6502",
+  "cc65Target": "none",
+  "linkConfig": "link.cfg",
+  "startup": ["lib/crt0.o"],
+  "libraries": ["lib/cec1.lib"],
+  "include": [],
+  "asminclude": ["asminc"],
+  "defines": {
+    "__CEC1__": 1
+  },
+  "packager": "dos33-binary",
+  "packagerOptions": {
+    "addressOption": "loadAddress"
+  },
+  "options": {
+    "loadAddress": {
+      "type": "address",
+      "default": 24576,
+      "min": 2048,
+      "max": 36863,
+      "linkSymbol": "LOAD_ADDRESS"
+    }
+  },
+  "extension": "",
+  "nameRule": "dos33",
+  "disk": {
+    "packager": "dos33-floppy-overlay",
+    "baseImage": true
+  },
+  "run": {
+    "emulator": "ember",
+    "mode": "firmware-disk",
+    "machine": "cec1"
+  }
+}

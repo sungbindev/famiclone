@@ -13,12 +13,18 @@ export type TargetOptionValue = boolean | string | number;
 
 /** 目标专用选项的定义。 */
 export interface TargetOptionSpec {
-  /** 取值类型。 */
-  readonly type: 'boolean' | 'string' | 'number';
+  /** 取值类型；address 是 16 位地址，写数字或 "$6000"、"0x6000" 字符串，解析后是数字。 */
+  readonly type: 'boolean' | 'string' | 'number' | 'address';
   /** 缺省值。 */
   readonly default: TargetOptionValue;
   /** 布尔选项为 true 时额外链接的文件（路径值）。 */
   readonly links: readonly string[];
+  /** 数字与地址选项：链接时用 ld65 的 -D 定义的符号名，链接配置里可以引用它；没有时为 null。 */
+  readonly linkSymbol: string | null;
+  /** 地址选项的最小值；没有时为 null。 */
+  readonly min: number | null;
+  /** 地址选项的最大值；没有时为 null。 */
+  readonly max: number | null;
 }
 
 /** 多页（换页）程序的定义。 */
@@ -73,7 +79,7 @@ export interface Target {
   readonly packager: string;
   /** 打包器选项。 */
   readonly packagerOptions: Readonly<Record<string, unknown>>;
-  /** 产物扩展名。 */
+  /** 产物扩展名，含点；可以为空（如 DOS 3.3 的文件没有扩展名）。 */
   readonly extension: string;
   /** 程序名规则；null 表示不限制。 */
   readonly nameRule: string | null;

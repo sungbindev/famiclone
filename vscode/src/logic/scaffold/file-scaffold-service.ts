@@ -77,7 +77,7 @@ export class FileScaffoldService implements ScaffoldService {
     for (const [from, to] of COMMON_FILES) {
       this.fileSystem.writeBytes(path.join(directory, to), this.fileSystem.readBytes(path.join(this.resources.templatesDirectory, '_common', from)));
     }
-    this.fileSystem.writeText(path.join(directory, 'fcdev.json'), buildProjectConfigText(template.target));
+    this.fileSystem.writeText(path.join(directory, 'fcdev.json'), buildProjectConfigText(template.target, template.programName));
     this.fileSystem.ensureDirectory(path.join(directory, '.vscode'));
     this.fileSystem.writeText(path.join(directory, '.vscode', 'tasks.json'), buildTasksText());
     return { directory, template, files: this.listFiles(directory) };

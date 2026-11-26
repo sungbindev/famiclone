@@ -22,7 +22,7 @@ import { EmberConnector } from '../vscode/out/logic/debug-client/ember-connector
 import { launchEmulator as launchWithEnvironment } from '../vscode/out/logic/emulator/emulator-launcher.js';
 import { FileProjectConfigReader } from '../vscode/out/logic/project/file-project-config-reader.js';
 import { FileTargetRepository } from '../vscode/out/logic/targets/file-target-repository.js';
-import { enterProgram, runFrames, tapKey } from '../vscode/out/logic/emulator/sb2000-session.js';
+import { enterProgram, runFrames, tapKey } from '../vscode/out/logic/emulator/machine-session.js';
 import { packageDisk } from '../vscode/out/shared/packaging/program-packager.js';
 
 export { OPCODE_TABLE } from '../vscode/out/shared/disassembly/cpu/opcodes.js';

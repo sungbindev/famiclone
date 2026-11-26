@@ -12,7 +12,8 @@
 | `EMULATOR_NOT_READY` | 启动后调试服务没有在时限内就绪 | 重试一次 `emu_launch`；仍失败就汇报，并附 `hint` |
 | `EMULATOR_PARAM_INVALID` | 参数缺少或组合不对 | 按 `hint` 改正参数后重试一次 |
 | `EMULATOR_REQUEST_FAILED` | Ember 拒绝了请求 | 读错误里的 Ember 返回信息，改正参数后重试一次；信息指向内存地址或机器状态时，先 `emu_status` 看机器是否已通电 |
-| `DOS_KEY_UNSUPPORTED` | 程序名里有无法在 SB-DOS 输入的字符 | 程序名只用字母与数字；FC Dev 项目改 `fcdev.json` 的 `name` 后重新 `fcdev_build` |
+| `DOS_KEY_UNSUPPORTED` | 程序名里有无法在 DOS 命令行输入的字符 | 程序名只用字母与数字；FC Dev 项目改 `fcdev.json` 的 `name` 后重新 `fcdev_build` |
+| `DOS_MACHINE_UNSUPPORTED` | `emu_load` 的 `program` 用在没有自动进入 DOS 流程的机型上（机器已开机） | 不给 `program`，开机后用 `emu_input` 手动操作 |
 | `EMULATOR_LOAD_FAILED` | Ember 添加固件、开机或放入磁盘镜像失败 | 读错误里的具体步骤与原因；固件、镜像的文件内容有问题时汇报给用户，不换文件碰运气 |
 
 ## 必须汇报给用户的

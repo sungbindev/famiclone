@@ -246,6 +246,20 @@ function resolveLinkSetup(plan: BuildPlan, dependencies: BuilderDependencies): {
 }
 
 /**
+ * 目标选项里要传给链接器的符号（ld65 的 -D），值取这次构建的选项值。
+ * @param plan 构建计划。
+ * @returns 符号名到数值。
+ */
+function linkDefines(plan: BuildPlan): Record<string, number> {
+  const defines: Record<string, number> = {};
+  for (const [key, spec] of Object.entries(plan.target.options)) {
+    const value = plan.targetOptions[key];
+    if (spec.linkSymbol !== null && typeof value === 'number') defines[spec.linkSymbol] = value;
+  }
+  return defines;
+}
+
+/**
  * 读取底固件，供打包器把链接输出覆盖进去。
  * @param fileSystem 文件系统。
  * @param firmware fcdev.json 的 firmware（绝对路径）；没有配置时为 undefined。
@@ -336,7 +350,8 @@ export async function buildProgram(plan: BuildPlan, dependencies: BuilderDepende
       debugFile: path.join(plan.objectDir, `${plan.programName}.dbg`),
       objects: [...toTargetPaths(target.startup), ...objects, ...toTargetPaths(optionObjects)],
       libraries: toTargetPaths(target.libraries),
-      forceImports: target.forceImports
+      forceImports: target.forceImports,
+      defines: linkDefines(plan)
     }),
     reporter,
     `链接失败：${plan.programName}`

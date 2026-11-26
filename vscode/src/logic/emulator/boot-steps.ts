@@ -14,7 +14,7 @@ import type { DebugSession } from '../../contracts/debug-client/debug-session';
 import type { FileSystem } from '../../contracts/files/file-system';
 import { FcdevError } from '../../shared/errors/fcdev-error';
 import type { BootStep } from '../../shared/targets/target-profile';
-import { bootMachine, keyCodeOf, runFrames, tapKey } from './sb2000-session';
+import { bootMachine, keyCodeOf, runFrames, tapKey } from './machine-session';
 
 /**
  * 把文字里的 {名字} 换成参数。
@@ -82,7 +82,8 @@ export async function runBootSteps(files: FileSystem, client: DebugSession, step
       case 'machine': {
         const firmware = params.firmware === undefined ? undefined : requireFile(files, params.firmware, 'firmware', 'machine');
         const diskImage = params.diskImage === undefined ? undefined : requireFile(files, params.diskImage, 'diskImage', 'machine');
-        await bootMachine(files, client, { machine: typeof step.machine === 'string' ? step.machine : undefined, firmware, diskImage });
+        if (typeof step.machine !== 'string') throw new FcdevError('启动步骤 machine 要写机型', { code: 'EMULATOR_PARAM_INVALID' });
+        await bootMachine(files, client, { machine: step.machine, firmware, diskImage });
         break;
       }
       case 'run':

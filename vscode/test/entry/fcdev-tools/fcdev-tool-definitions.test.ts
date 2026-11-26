@@ -54,7 +54,7 @@ function createServices(overrides: Partial<FcdevToolServices> = {}): FcdevToolSe
     },
     scaffold: {
       listTemplates: vi.fn(),
-      create: vi.fn((input) => ({ directory: input.directory, template: { name: `${input.target}-${input.language}`, target: input.target, language: input.language, title: 't' }, files: ['fcdev.json', 'src/hello.c'] }))
+      create: vi.fn((input) => ({ directory: input.directory, template: { name: `${input.target}-${input.language}`, target: input.target, language: input.language, title: 't', programName: 'hello' }, files: ['fcdev.json', 'src/hello.c'] }))
     },
     describer: {
       describe: vi.fn(({ cwd }) => ({

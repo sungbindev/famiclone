@@ -14,8 +14,9 @@ import * as path from 'node:path';
 import type { InputMouseParams, InspectorStateField } from '../../contracts/debug-client/generated/api';
 import type { OperationContext } from './operation-context';
 import { invalidParam, optionalAddress, optionalArray, optionalBoolean, optionalEnum, optionalInteger, optionalString, requireString, toAddress } from './params';
+import { typeText } from './key-text';
 import { cpuState } from './program-operations';
-import { runFrames, tapKey } from './sb2000-session';
+import { runFrames, tapKey } from './machine-session';
 
 /** 一次最多读出的内存字节数。 */
 const MAX_READ = 4096;
@@ -197,7 +198,9 @@ function padMask(value: unknown): number {
 /**
  * 输入：按键、手柄、鼠标、Family BASIC 键盘的接入，以及全部松开。
  * @param context 上下文。
- * @param params kind：key、pad、mouse、familyKeyboard、releaseAll；其余参数见各项。
+ * @param params kind：key、pad、mouse、familyKeyboard、releaseAll；其余参数见各项；
+ *   key 给 code 点一个键，或给 text 输入一段文字（enter 为 true 时输完再按一次回车，
+ *   帧数默认都是 8）。
  * @returns 结果；按键与手柄会运行帧数让机器读到。
  */
 export async function input(context: OperationContext, params: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -209,6 +212,14 @@ export async function input(context: OperationContext, params: Record<string, un
 
   switch (kind) {
     case 'key': {
+      const text = optionalString(params, 'text');
+      if (text !== undefined) {
+        if (params.code !== undefined) invalidParam('text 与 code 只能给一个');
+        // 命令行里输入文字，帧数短于 8 会丢键，所以 upFrames 缺省也是 8
+        const textUpFrames = optionalInteger(params, 'upFrames', { min: 1, max: 600 }) ?? 8;
+        const keys = await typeText(client, optionalBoolean(params, 'enter', false) ? `${text}\n` : text, downFrames, textUpFrames);
+        return { kind, text, keys, cpu: await cpuState(client) };
+      }
       const code = requireString(params, 'code');
       const action = optionalEnum(params, 'action', ['tap', 'down', 'up'], 'tap');
       if (action === 'tap') await tapKey(client, code, downFrames, upFrames);

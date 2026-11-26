@@ -29,7 +29,7 @@ import { EmberConnector } from '../../src/logic/debug-client/ember-connector';
 import { CoreEmulatorOperations } from '../../src/logic/emulator/core-emulator-operations';
 import { launchEmulator } from '../../src/logic/emulator/emulator-launcher';
 import { EmulatorProgramRunner } from '../../src/logic/emulator/emulator-program-runner';
-import { enterProgram, runFrames, tapKey } from '../../src/logic/emulator/sb2000-session';
+import { enterProgram, runFrames, tapKey } from '../../src/logic/emulator/machine-session';
 import { FileTargetProfileReader } from '../../src/logic/targets/file-target-profile-reader';
 import { packageDisk } from '../../src/shared/packaging/program-packager';
 import { createRealBuildEnvironment, EXTENSION_DIRECTORY, HAS_TOOLCHAIN, writeTestFile, type TempDir } from './build-fixtures';
@@ -442,7 +442,7 @@ export async function startSb2000Program(temp: TempDir, { sources, extraFiles = 
   assert.ok(client !== null && pid !== undefined, 'Ember 没有给出调试连接');
   const session = new Sb2000Session({ client, pid, port: emulator.port, symbols, imageFile: image, processes: emulator.processes });
   try {
-    await enterProgram(client, PROGRAM_NAME);
+    await enterProgram(client, PROGRAM_NAME, 'sb2000');
     // 断点要在输入完程序名之后再设：设早了会打断按键所需的帧数
     await client.request('inspector.addBreakpoint', { kind: 'write', address: symbols.sb_test_stop ?? 0 }, { timeoutMs: RUN_TIMEOUT_MS });
   } catch (error) {

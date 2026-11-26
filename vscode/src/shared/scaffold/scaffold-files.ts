@@ -4,9 +4,10 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-22
-// 备注：模板是 templates/<目标>-<语言>/ 目录，含 template.json（目标、语言、显示名）、
-//       README.md 与 src；以 _ 开头的目录是公共文件，不是模板；
-//       程序名固定为 hello，也是 DOS 里要输入的命令。
+// 备注：模板是 templates/<目标>-<语言>/ 目录，含 template.json（目标、语言、显示名、
+//       可选的程序名）、README.md 与 src；以 _ 开头的目录是公共文件，不是模板；
+//       程序名默认是 hello（也是 DOS 里要输入的命令），
+//       模板的 template.json 里可以用 programName 改。
 // ------------------------------------------------------------------------
 
 import { FcdevError } from '../errors/fcdev-error';
@@ -21,7 +22,7 @@ export type TemplateLanguage = (typeof LANGUAGES)[number];
 /** 语言的显示名。 */
 export const LANGUAGE_LABELS: Readonly<Record<TemplateLanguage, string>> = { c: 'C 语言（cc65）', asm: '汇编（ca65）' };
 
-/** 项目里 hello 程序的名字，同时是 fcdev.json 的 name，也是 DOS 里要输入的命令。 */
+/** 项目里程序的默认名字，同时是 fcdev.json 的 name，也是 DOS 里要输入的命令。 */
 export const PROGRAM_NAME = 'hello';
 
 /** 一个项目模板。 */
@@ -34,6 +35,8 @@ export interface ProjectTemplate {
   readonly language: TemplateLanguage;
   /** 目标的显示名。 */
   readonly title: string;
+  /** 生成的项目里的程序名，写进 fcdev.json 的 name。 */
+  readonly programName: string;
 }
 
 /**
@@ -56,16 +59,20 @@ export function parseTemplateManifest(raw: unknown, name: string): ProjectTempla
   if (!isRecord(raw) || typeof raw.target !== 'string' || !isTemplateLanguage(raw.language) || typeof raw.title !== 'string' || name !== `${raw.target}-${raw.language}`) {
     throw new FcdevError(`模板 ${name} 的 template.json 不合法`, { code: 'TEMPLATE_INVALID' });
   }
-  return { name, target: raw.target, language: raw.language, title: raw.title };
+  if (raw.programName !== undefined && (typeof raw.programName !== 'string' || raw.programName === '')) {
+    throw new FcdevError(`模板 ${name} 的 template.json 里 programName 必须是非空字符串`, { code: 'TEMPLATE_INVALID' });
+  }
+  return { name, target: raw.target, language: raw.language, title: raw.title, programName: raw.programName ?? PROGRAM_NAME };
 }
 
 /**
  * 生成 fcdev.json 的内容。
  * @param target 目标名。
+ * @param programName 程序名，默认 hello。
  * @returns 文件文本。
  */
-export function buildProjectConfigText(target: string): string {
-  return `${JSON.stringify({ target, name: PROGRAM_NAME }, null, 2)}\n`;
+export function buildProjectConfigText(target: string, programName: string = PROGRAM_NAME): string {
+  return `${JSON.stringify({ target, name: programName }, null, 2)}\n`;
 }
 
 /**

@@ -1,0 +1,8 @@
+{
+  "libraries": {
+    "lib/cec1.lib": ["src/lib/"]
+  },
+  "objects": {
+    "lib/crt0.o": "src/crt0.s"
+  }
+}

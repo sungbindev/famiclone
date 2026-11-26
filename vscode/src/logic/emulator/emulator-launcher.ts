@@ -16,7 +16,7 @@ import type { DebugSession } from '../../contracts/debug-client/debug-session';
 import type { EmulatorEnvironment } from '../../contracts/emulator/emulator-environment';
 import { DEFAULT_DEBUG_PORT } from '../../contracts/emulator/emulator-settings';
 import { FcdevError } from '../../shared/errors/fcdev-error';
-import { bootMachine, enterProgram } from './sb2000-session';
+import { bootMachine, enterProgram } from './machine-session';
 
 /** 等待调试服务就绪的上限，单位毫秒。 */
 const READY_TIMEOUT_MS = 30_000;

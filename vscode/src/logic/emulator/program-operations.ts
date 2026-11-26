@@ -15,7 +15,7 @@ import { selectProfileInput } from '../../shared/targets/target-profile';
 import { runBootSteps } from './boot-steps';
 import type { OperationContext } from './operation-context';
 import { invalidParam, optionalAddress, optionalBoolean, optionalEnum, optionalInteger, optionalString } from './params';
-import { bootMachine, enterProgram } from './sb2000-session';
+import { bootMachine, enterProgram } from './machine-session';
 
 /** 一次运行请求等待的上限，单位毫秒。 */
 const RUN_TIMEOUT_MS = 600_000;
@@ -82,7 +82,7 @@ export async function load(context: OperationContext, params: Record<string, unk
     const absolute = path.resolve(file);
     if (env.files.kindOf(absolute) !== 'file') throw new FcdevError(`找不到要载入的文件：${absolute}`, { code: 'EMULATOR_FILE_MISSING' });
     await client.request('cartridges.load', { path: absolute, powerOn: optionalBoolean(params, 'powerOn', true), resume: false });
-  } else {
+  } else if (machine !== undefined) {
     const firmware = optionalString(params, 'firmware');
     const diskImage = optionalString(params, 'diskImage');
     await bootMachine(env.files, client, {

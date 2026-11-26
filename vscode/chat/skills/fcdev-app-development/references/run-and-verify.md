@@ -1,6 +1,6 @@
 # 运行与核对 FC Dev 项目的程序
 
-运行 FC Dev 项目的 NES、SB2000、SB97、裕兴或步步高程序，并用画面、内存与寄存器核对结果时使用。模拟器工具的用法与报错处理在 skill `ember-emulator`，本文只写 FC Dev 项目特有的做法。
+运行 FC Dev 项目的 NES、SB2000、SB97、裕兴、步步高或 CEC-I 程序，并用画面、内存与寄存器核对结果时使用。模拟器工具的用法与报错处理在 skill `ember-emulator`，本文只写 FC Dev 项目特有的做法。
 
 ## 运行方式
 
@@ -11,6 +11,7 @@
 | `sb97` | 同 `sb2000`，`firmware` 是 SB97 的 ROM；不给 `debug` 时开机后按空格、等菜单稳定再按左键选中 DOS、回车进入，再输入程序名 |
 | `yuxing` | 同 `sb2000`，`firmware` 是裕兴学习卡的 ROM；不给 `debug` 时开机后按空格进主菜单，选中“学DOS”回车，等动画后按空格，选中“三.DOS系统操作”回车进入，再输入程序名加 `.EXE`（DOS 必须写扩展名） |
 | `bbg` | 同 `sb2000`，`firmware` 是软驱一号的 ROM，`diskImage` 是带 DOS 的系统盘镜像（没有时在运行时报“没有设置 diskImage”）；不给 `debug` 时开机运行 1200 帧等系统盘启动，按两次回车跳过可能出现的日期与时间，再输入程序名（不加扩展名） |
+| `cec1` | 同 `sb2000`，`firmware` 是 CEC-I 的 ROM，`diskImage` 是 DOS 3.3 系统盘 `.dsk`（没有时在运行时报“没有设置 diskImage”）；不给 `debug` 时开机运行 900 帧等系统盘启动到命令行（没有日期与时间的提示），输入 `BRUN `、程序名并回车，程序用 `BRUN` 运行，返回时回到 `]` 提示符 |
 | `rom` | 把构建出的整块固件当作 `targetOptions.machine` 机型的 BIOS，`diskImage` 有值就挂到软驱 0，开机后直接运行，不输入程序名；给 `debug` 时停在开机状态；没有 `machine` 时在构建之前报错 |
 
 - 给 `debug` 的 `fcdev_run` 与 `emu_launch` 用同一个调试端口。要用 `emu_*` 工具核对时，不用 `fcdev_run` 的 `debug`，改用 `fcdev_build` 加 `emu_launch` 加 `emu_load`，只有一条路径，不会端口冲突。
@@ -31,7 +32,7 @@
 2. `fcdev_build`（要拿到磁盘镜像时 `fcdev.json` 里要配置 `diskName`）；磁盘镜像路径取自输出。
 3. 按 skill `ember-emulator` 的“起步”，再 `emu_load`：`machine: "sb2000"`、`firmware`、`diskImage`、`program`（程序名）。
 4. `emu_run` 60 帧，`emu_screen` 一张，与预期对照。
-5. 需要输入时用 `emu_input` 的 `kind: "key"`（SB-DOS 里输入字符时 `downFrames` 与 `upFrames` 都给 8）或 `kind: "pad"`。
+5. 需要输入时用 `emu_input` 的 `kind: "key"`（输入文字用 `text`，一次输完一行，帧数默认 8；单个键用 `code`）或 `kind: "pad"`。
 6. 程序返回 DOS 会清屏：要看输出的程序在返回前要等键；核对时也可以在返回前的指令地址设执行断点，命中后读屏幕或内存。
 
 ## 定位符号地址

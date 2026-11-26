@@ -1,6 +1,6 @@
 # 机型与开机后的操作
 
-载入整机，或在整机里操作开机后的画面时使用。机型标识：`fc`、`sb97`、`sb2000`、`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`。
+载入整机，或在整机里操作开机后的画面时使用。机型标识：`fc`、`sb97`、`sb2000`、`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`、`cec1`。
 
 ## NES 卡带（机型 `fc`）
 
@@ -19,8 +19,8 @@
 1. `emu_load` 不给 `program`。
 2. `emu_run` 900 帧，`emu_screen` 确认画面在询问日期。
 3. `emu_input` 的 `kind: "key"`、`code: "Enter"`、`downFrames: 8`、`upFrames: 8`，做两次。
-4. 逐个字符输入程序名：字母用 `KeyA` 到 `KeyZ`，数字用 `Digit0` 到 `Digit9`，每次 `downFrames` 与 `upFrames` 都是 8。
-5. 输入 `Enter` 运行。
+4. 输入程序名：`emu_input` 的 `kind: "key"`、`text` 给程序名，一次调用输完（`downFrames` 与 `upFrames` 默认都是 8）。
+5. 输入 `Enter` 运行；也可以在第 4 步加 `enter: true` 一起完成。
 
 ### 要点
 
@@ -35,7 +35,7 @@
 
 - 菜单没稳定前按的左键会丢，所以要等满 300 帧。
 - SB97 的 DOS 程序不能返回 DOS，运行后画面停在程序的输出上。
-- 需要给程序传参数时（如 `RUN MARIO`），不给 `program`，按上面的步骤手动操作，再逐个字符输入命令行（空格用 `Space`，点用 `Period`）。
+- 需要给程序传参数时（如 `RUN MARIO`），不给 `program`，按上面的步骤手动操作，再用 `emu_input` 的 `text` 输入命令行（如 `text: "RUN MARIO"`、`enter: true`）。
 
 ## 裕兴程序（机型 `yuxing`）
 
@@ -54,9 +54,18 @@
 - 运行程序不用写扩展名（`hello`），程序用 DOS 调用“程序结束返回”后回到 `A:\>` 提示符。
 - 系统盘里的 AUTOEXEC.BAT 最后启动一个不返回的程序时，提示符出不来，输入的程序名会丢；换一张系统盘。
 
+## 中华学习机 CEC-I 程序（机型 `cec1`）
+
+`emu_load` 的 `machine: "cec1"`、`firmware`（64KB 的 ROM 文件）、`diskImage`（Apple DOS 3.3 系统盘，`.dsk`）、`program` 会依次做：开机运行 900 帧（DOS 3.3 从系统盘启动到命令行约 670 帧），输入 `BRUN `、程序名，回车。按键都是按下 8 帧、松开 8 帧。返回时程序刚启动，机器暂停。
+
+- 系统盘启动后没有日期与时间的提示，不按回车；命令行的提示符是 `]`。
+- 程序名只用字母与数字，键盘上电时大写锁定是开的，字母一律是大写；FC Dev 项目的程序用 `BRUN` 运行，返回时回到 `]` 提示符。
+- 需要输入其他命令（`CATALOG`、`BRUN FPBASIC` 等）时不给 `program`，开机运行 900 帧后用 `emu_input` 的 `text`（`enter: true`）输入；输入后要等磁盘读完，再 `emu_run` 几百帧才看得到结果。
+- DOS 3.3 的文件类型决定用哪个命令：二进制文件（目录里的 B）用 `BRUN`，用 `RUN` 报 FILE TYPE MISMATCH；文件不存在报 FILE NOT FOUND，先用 `CATALOG` 核对文件名。
+
 ## 其他整机（`bbg1` 只开机、`bbg98`、`pec9588`、`pec586`）
 
-载入：`emu_load` 的 `machine`、`firmware`，需要软盘时加 `diskImage`；不给 `program`。开机后的菜单、按键与等待时间因机型而异，本文不记录没有验证过的步骤。操作步骤按下面的顺序取得：
+载入：`emu_load` 的 `machine`、`firmware`，需要软盘时加 `diskImage`；不给 `program`（没有自动进入 DOS 流程的机型给了 `program` 会报 `DOS_MACHINE_UNSUPPORTED`）。开机后的菜单、按键与等待时间因机型而异，本文不记录没有验证过的步骤。操作步骤按下面的顺序取得：
 
 1. 用户给出的步骤：整理成“第几步、按键或动作、等待帧数、预期画面”的表，按表逐步做。
 2. 项目 README 里写的步骤。

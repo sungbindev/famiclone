@@ -21,8 +21,11 @@ describe('模板清单', () => {
       name: 'nes-c',
       target: 'nes',
       language: 'c',
-      title: '红白机'
+      title: '红白机',
+      programName: 'hello'
     });
+    expect(parseTemplateManifest({ target: 'cec1', language: 'asm', title: 'x', programName: 'demo' }, 'cec1-asm').programName).toBe('demo');
+    expect(() => parseTemplateManifest({ target: 'cec1', language: 'asm', title: 'x', programName: '' }, 'cec1-asm')).toThrow(/programName/);
     expect(() => parseTemplateManifest({ target: 'nes', language: 'c', title: 'x' }, 'nes-asm')).toThrow(expect.objectContaining({ code: 'TEMPLATE_INVALID' }));
     expect(() => parseTemplateManifest({ target: 'nes', language: 'rust', title: 'x' }, 'nes-rust')).toThrow(/不合法/);
     expect(() => parseTemplateManifest([], 'nes-c')).toThrow(/不合法/);
@@ -30,8 +33,9 @@ describe('模板清单', () => {
 });
 
 describe('生成的文件内容', () => {
-  it('fcdev.json 写目标与程序名 hello', () => {
+  it('fcdev.json 写目标与程序名，默认 hello，模板可以指定', () => {
     expect(JSON.parse(buildProjectConfigText('nes'))).toEqual({ target: 'nes', name: 'hello' });
+    expect(JSON.parse(buildProjectConfigText('cec1', 'demo'))).toEqual({ target: 'cec1', name: 'demo' });
   });
 
   it('tasks.json 有默认构建任务与运行任务', () => {

@@ -16,13 +16,16 @@ import type { BankedSpec, RunMode, Target, TargetOptionSpec, TargetOptionValue }
 const RUN_MODES: readonly string[] = ['rom', 'firmware-disk', 'firmware'];
 
 /** 目标专用选项允许的类型。 */
-const OPTION_TYPES: readonly string[] = ['boolean', 'string', 'number'];
+const OPTION_TYPES: readonly string[] = ['boolean', 'string', 'number', 'address'];
 
 /** 源文件转码支持的目标编码。 */
 const SOURCE_CHARSETS: readonly string[] = ['gb2312'];
 
-/** 目标定义里必须是非空字符串的字段。 */
-const REQUIRED_STRING_FIELDS = ['name', 'title', 'cpu', 'cc65Target', 'linkConfig', 'packager', 'extension'] as const;
+/** 目标定义里必须是非空字符串的字段（extension 可以为空字符串，单独校验）。 */
+const REQUIRED_STRING_FIELDS = ['name', 'title', 'cpu', 'cc65Target', 'linkConfig', 'packager'] as const;
+
+/** 16 位地址的上限。 */
+const ADDRESS_LIMIT = 0xffff;
 
 /**
  * 抛出目标定义不合法的错误。
@@ -96,16 +99,38 @@ function parseBanked(raw: unknown, name: string, options: Record<string, TargetO
 function parseOptions(raw: unknown, name: string): Record<string, TargetOptionSpec> {
   const options: Record<string, TargetOptionSpec> = {};
   for (const [key, spec] of Object.entries(raw ?? {})) {
-    if (!isRecord(spec) || typeof spec.type !== 'string' || !OPTION_TYPES.includes(spec.type) || typeof spec.default !== spec.type) {
+    // address 选项的缺省值写成数字
+    const defaultType = isRecord(spec) && spec.type === 'address' ? 'number' : isRecord(spec) ? spec.type : undefined;
+    if (!isRecord(spec) || typeof spec.type !== 'string' || !OPTION_TYPES.includes(spec.type) || typeof spec.default !== defaultType) {
       invalid(`目标 ${name} 的选项 ${key} 定义不合法`);
     }
     if (spec.links !== undefined && (spec.type !== 'boolean' || !isStringArray(spec.links))) {
       invalid(`目标 ${name} 的选项 ${key} 的 links 只能用于布尔选项，且必须是字符串数组`);
     }
+    if (spec.linkSymbol !== undefined && ((spec.type !== 'number' && spec.type !== 'address') || typeof spec.linkSymbol !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(spec.linkSymbol))) {
+      invalid(`目标 ${name} 的选项 ${key} 的 linkSymbol 只能用于数字与地址选项，且必须是符号名`);
+    }
+    const bound = (field: 'min' | 'max'): number | null => {
+      const value = spec[field];
+      if (value === undefined) return null;
+      if (spec.type !== 'address' || typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > ADDRESS_LIMIT) {
+        return invalid(`目标 ${name} 的选项 ${key} 的 ${field} 只能用于地址选项，且必须是 0 到 65535 的整数`);
+      }
+      return value;
+    };
+    const min = bound('min');
+    const max = bound('max');
+    if (spec.type === 'address') {
+      const value = spec.default as number;
+      if (!Number.isInteger(value) || value < (min ?? 0) || value > (max ?? ADDRESS_LIMIT)) invalid(`目标 ${name} 的选项 ${key} 的缺省值不是范围内的地址`);
+    }
     options[key] = {
       type: spec.type as TargetOptionSpec['type'],
       default: spec.default as TargetOptionValue,
-      links: (spec.links as string[] | undefined) ?? []
+      links: (spec.links as string[] | undefined) ?? [],
+      linkSymbol: (spec.linkSymbol as string | undefined) ?? null,
+      min,
+      max
     };
   }
   return options;
@@ -126,6 +151,7 @@ export function parseTarget(raw: unknown, dir: string): Target {
   }
   const name = raw.name as string;
   if (name !== fallbackName) invalid(`目标目录 ${fallbackName} 与 target.json 中的 name（${name}）不一致`);
+  if (typeof raw.extension !== 'string') invalid(`目标 ${fallbackName} 缺少字符串字段 extension（没有扩展名时写空字符串）`);
 
   const run = raw.run ?? null;
   if (run !== null && (!isRecord(run) || typeof run.emulator !== 'string' || typeof run.mode !== 'string' || !RUN_MODES.includes(run.mode))) {

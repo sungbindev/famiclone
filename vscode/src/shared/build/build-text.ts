@@ -56,6 +56,8 @@ export interface LinkerInput {
   readonly libraries: readonly string[];
   /** 强制引入的符号。 */
   readonly forceImports?: readonly string[];
+  /** 链接时定义的符号（ld65 的 -D），链接配置里可以引用。 */
+  readonly defines?: Readonly<Record<string, number>>;
 }
 
 /** 模板里内存区的展开位置。 */
@@ -142,7 +144,7 @@ export function buildAssemblerArguments(settings: CompileSettings, files: ToolFi
 
 /**
  * ld65 链接的参数。
- * @param input 链接配置、输出文件、目标文件、库与强制引入的符号。
+ * @param input 链接配置、输出文件、目标文件、库、强制引入的符号与链接时定义的符号。
  * @returns 参数列表。
  */
 export function buildLinkerArguments(input: LinkerInput): string[] {
@@ -151,6 +153,7 @@ export function buildLinkerArguments(input: LinkerInput): string[] {
     '-m', input.mapFile,
     '--dbgfile', input.debugFile,
     '-o', input.binaryFile,
+    ...Object.entries(input.defines ?? {}).flatMap(([name, value]) => ['-D', `${name}=${value}`]),
     ...(input.forceImports ?? []).flatMap((symbol) => ['-u', symbol]),
     ...input.objects,
     ...input.libraries

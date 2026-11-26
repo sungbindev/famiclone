@@ -1,6 +1,6 @@
 ---
 name: ember-emulator
-description: '用 emu_* 工具操作 Ember 模拟器时使用：启动或连接模拟器，载入 NES 文件或整机（SB2000、SB97、裕兴、步步高等）与软盘镜像，运行、单步、断点、读写内存、截图、按键与手柄输入、记录运行数据；给出任务判定、固定的起步顺序、各类载入的参数、观察与核对循环、收尾步骤，以及 emu_* 报错的处理表。'
+description: '用 emu_* 工具操作 Ember 模拟器时使用：启动或连接模拟器，载入 NES 文件或整机（SB2000、SB97、裕兴、步步高、中华学习机等）与软盘镜像，运行、单步、断点、读写内存、截图、按键与手柄输入、记录运行数据；给出任务判定、固定的起步顺序、各类载入的参数、观察与核对循环、收尾步骤，以及 emu_* 报错的处理表。'
 user-invocable: false
 ---
 
@@ -24,9 +24,9 @@ user-invocable: false
 | --- | --- |
 | 运行 FC Dev 项目的程序，只需要打开窗口看看 | `fcdev_run`，不给 `debug`；Ember 窗口留给用户，之后工具不能再控制它 |
 | 运行并核对 FC Dev 项目的 NES 程序 | `fcdev_build`，再走“起步”与“载入”的 NES 一行，然后“观察与核对” |
-| 运行并核对 FC Dev 项目的 SB2000、SB97、裕兴或步步高程序 | `fcdev_build`（`fcdev.json` 配置了 `diskName` 时磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
+| 运行并核对 FC Dev 项目的 SB2000、SB97、裕兴、步步高或 CEC-I 程序 | `fcdev_build`（`fcdev.json` 配置了 `diskName` 时磁盘镜像随构建生成），再走“起步”与“载入”的对应一行，然后“观察与核对” |
 | 载入不属于 FC Dev 项目的 NES 文件 | “起步”，再 `emu_load` 的 `file` |
-| 载入整机加软盘镜像（SB2000、SB97、步步高、金字塔、裕兴） | “起步”，再 `emu_load` 的 `machine`，开机后的操作读 [machines.md](references/machines.md) |
+| 载入整机加软盘镜像（SB2000、SB97、步步高、金字塔、裕兴、CEC-I） | “起步”，再 `emu_load` 的 `machine`，开机后的操作读 [machines.md](references/machines.md) |
 | 为反汇编记录运行数据 | 读 skill `disassemble-6502` 的 `references/records.md`，它先走本 skill 的“起步”与“载入” |
 
 ## 起步
@@ -56,11 +56,12 @@ user-invocable: false
 | SB97 程序 | `machine: "sb97"`、`firmware`（ROM 文件）、`diskImage`、`program` | 已自动开机、进入 DOS、输入程序名并回车，程序刚启动，暂停 |
 | 裕兴程序 | `machine: "yuxing"`、`firmware`（ROM 文件）、`diskImage`、`program` | 已自动开机、经主菜单与“学DOS”进入 DOS、输入程序名加 `.EXE` 并回车，程序刚启动，暂停 |
 | 步步高程序 | `machine: "bbg1"`、`firmware`（ROM 文件）、`diskImage`（带 DOS 的系统盘镜像）、`program` | 已自动开机、等系统盘启动、跳过日期与时间、输入程序名（不加扩展名）并回车，程序刚启动，暂停 |
+| CEC-I 程序 | `machine: "cec1"`、`firmware`（ROM 文件）、`diskImage`（DOS 3.3 系统盘 `.dsk`）、`program` | 已自动开机、等 DOS 3.3 从系统盘启动到命令行、输入 `BRUN 程序名` 并回车，程序刚启动，暂停 |
 | 其他整机，或只开机 | `machine`、`firmware`，可加 `diskImage`；不给 `program` | 已通电，暂停在开机状态，之后的操作读 [machines.md](references/machines.md) |
 
-- 机型标识只有这些：`fc`、`sb97`、`sb2000`、`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`。
+- 机型标识只有这些：`fc`、`sb97`、`sb2000`、`bbg1`、`bbg98`、`pec9588`、`pec586`、`yuxing`、`cec1`。
 - 整机必须给 `firmware`。路径取自用户的话、`fcdev.json` 的 `firmware`（相对 `fcdev.json` 所在目录）或项目 README；都没有时问用户，不搜索磁盘。
-- SB2000、SB97、裕兴、步步高的磁盘镜像由 `fcdev_build` 生成（步步高要先在 `fcdev.json` 里用 `diskImage` 指定系统盘镜像），镜像路径取自它的输出；不猜扩展名。
+- SB2000、SB97、裕兴、步步高、CEC-I 的磁盘镜像由 `fcdev_build` 生成（步步高与 CEC-I 要先在 `fcdev.json` 里用 `diskImage` 指定系统盘镜像），镜像路径取自它的输出；不猜扩展名。
 - `file`、`firmware`、`diskImage` 在工作区之外时会弹确认，直接调用即可。
 
 ## 观察与核对
@@ -83,7 +84,7 @@ user-invocable: false
 | `powerOff` | 机器断电，用 `emu_status` 看状态，汇报程序关机 |
 | `interrupted`、`error` | 汇报返回的 `state` 与 CPU 状态，不重试 |
 
-- 输入的帧数：`emu_input` 的按键与手柄默认按下 8 帧、松开 4 帧；在 SB-DOS 命令行里输入字符时 `downFrames` 与 `upFrames` 都给 8，更短会丢键。
+- 输入的帧数：`emu_input` 的按键与手柄默认按下 8 帧、松开 4 帧；命令行里输入文字用 `text`（一次调用输完一行，默认按下与松开都是 8 帧，更短会丢键），不要逐个字符调用。
 - 手柄按键掩码：A 为 1、B 为 2、选择为 4、开始为 8、上为 16、下为 32、左为 64、右为 128，也可以写按键名数组。
 - 键盘按键的 `code` 是 `KeyboardEvent.code`，如 `Enter`、`Space`、`ArrowLeft`、`KeyA`、`Digit1`。
 

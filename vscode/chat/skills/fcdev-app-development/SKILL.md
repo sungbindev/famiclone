@@ -6,7 +6,7 @@ user-invocable: false
 
 # FC Dev 程序开发
 
-FC Dev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有六个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）、`yuxing`（裕兴学习机的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向学习卡的 ROM，DOS 里运行要写扩展名）、`bbg`（步步高学生电脑的 BBGDOS，只有汇编，产物 `.CMD`，运行需要 `firmware` 指向软驱一号的 ROM 且 `diskImage` 指向带 DOS 的系统盘镜像，磁盘镜像建在它上面）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 FC Dev 写目标机的程序”，不涉及修改 FC Dev 自己的源码。
+FC Dev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 C 或 ca65 汇编构建成 6502 兼容机的程序，运行与调试用模拟器 Ember（不随扩展发布，位置由用户设置 `fcdev.emulator.path` 指定）。目标有七个：`nes`（产物 `.nes`）、`sb2000`（小霸王学习机的 SB-DOS，产物 `.EXE`，运行需要 `fcdev.json` 的 `firmware` 指向 BIOS）、`sb97`（小霸王 97 的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向 ROM）、`yuxing`（裕兴学习机的 DOS，只有汇编，产物 `.EXE`，运行需要 `firmware` 指向学习卡的 ROM，DOS 里运行要写扩展名）、`bbg`（步步高学生电脑的 BBGDOS，只有汇编，产物 `.CMD`，运行需要 `firmware` 指向软驱一号的 ROM 且 `diskImage` 指向带 DOS 的系统盘镜像，磁盘镜像建在它上面）、`cec1`（中华学习机 CEC-I 的 Apple DOS 3.3，只有汇编，产物是没有扩展名的 DOS 3.3 二进制文件，用 `BRUN` 运行，运行需要 `firmware` 指向 ROM 且 `diskImage` 指向 DOS 3.3 系统盘镜像，磁盘镜像建在它上面，程序名不要用 `hello`）与 `rom`（整机 ROM 工程：各机型的 BIOS 与固件源码，只有汇编，产物 `.bin` 是整块固件，机型、底固件与软盘镜像写在 `fcdev.json` 里，没有新建项目模板）。本 Skill 面向“用 FC Dev 写目标机的程序”，不涉及修改 FC Dev 自己的源码。
 
 ## 必须先读取的参考文件
 
@@ -27,12 +27,12 @@ FC Dev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 
 
 | 情形 | 流程 |
 | --- | --- |
-| 要新建 NES、SB2000、SB97、裕兴或步步高程序，目录里还没有 `fcdev.json` | 流程 1 |
+| 要新建 NES、SB2000、SB97、裕兴、步步高或 CEC-I 程序，目录里还没有 `fcdev.json` | 流程 1 |
 | 要在已有的 FC Dev 项目里写或改程序 | 流程 2 |
 | 只要构建（配置了 `diskName` 的学习机目标会同时生成磁盘镜像） | 流程 3 |
 | 要运行、看画面、调试、核对结果 | 流程 4 |
 | 构建失败、运行不对、找不到命令 | 流程 5 |
-| 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`、`sb97`、`yuxing`、`bbg`、`rom`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
+| 项目里没有 `fcdev.json`，或目标不是 `nes`、`sb2000`、`sb97`、`yuxing`、`bbg`、`cec1`、`rom`（如直接用 ca65 与 ld65 构建的整机程序） | 不用 `fcdev_build`：构建命令取自项目的 README 或构建脚本，在终端运行；运行与验证走 skill `ember-emulator` |
 
 ## 流程 1：新建项目
 
@@ -56,7 +56,7 @@ FC Dev 是 VS Code 扩展（`sungbin.fcdev`）：用随扩展发布的 cc65 把 
 
 ## 流程 3：构建
 
-1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`、`yuxing`）在项目 `fcdev.json` 配置了 `diskName` 时同时生成磁盘镜像，没有配置不生成；`bbg` 还要 `fcdev.json` 里有 `diskImage` 才生成。
+1. `fcdev_build`：`path` 取项目的 `src` 目录，要构建单个文件时给文件路径；学习机目标（`sb2000`、`sb97`、`yuxing`）在项目 `fcdev.json` 配置了 `diskName` 时同时生成磁盘镜像，没有配置不生成；`bbg` 与 `cec1` 还要 `fcdev.json` 里有 `diskImage` 才生成。
 2. 完成标准：返回产物路径、大小与重新编译的文件数；磁盘镜像的路径取自输出，不猜扩展名。
 3. 汇报时把工具输出里的错误行原样给用户，不改写。
 

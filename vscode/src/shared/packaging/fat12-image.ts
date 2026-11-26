@@ -32,6 +32,11 @@ export interface DiskFile {
   readonly data: Uint8Array;
   /** 修改时间；不给时用 1998-01-01。 */
   readonly mtime?: Date;
+  /**
+   * 是这次构建出的程序（其他是项目 disk 目录里的文件）；
+   * 类型分明的磁盘格式（如 DOS 3.3）用它分开存放。
+   */
+  readonly program?: boolean;
 }
 
 /** 镜像根目录里的一个文件。 */

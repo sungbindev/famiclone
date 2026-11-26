@@ -100,7 +100,7 @@ export function buildDiskImage(fileSystem: FileSystem, plan: BuildPlan, result: 
     });
   }
   const files: DiskFile[] = [
-    { name: outputName, data: fileSystem.readBytes(result.outputFile), ...(modified === undefined ? {} : { mtime: new Date(modified) }) },
+    { name: outputName, data: fileSystem.readBytes(result.outputFile), program: true, ...(modified === undefined ? {} : { mtime: new Date(modified) }) },
     ...extraFiles
   ];
   const image = packageDisk(plan.target.disk.packager, files, { label: DISK_LABEL, ...(base === undefined ? {} : { base }) });

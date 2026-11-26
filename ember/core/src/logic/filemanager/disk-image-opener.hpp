@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：识别按内容，扩展名只作顺序偏好与位流格式的判断：.nib、.woz 经解码器解成扇区镜像后只读打开；
- *       认不出文件系统时给出说明：全是 0 的是“空白（未格式化）”，143360 字节且不是苹果格式的当作金字塔 DOS（暂不解析，等目录格式查明后再支持），其余是“未识别”。
+ *       认不出文件系统时给出说明：全是 0 的是“空白（未格式化）”，143360 字节且不是苹果格式的、
+ *       以及磁道上全是金字塔扇区（0 至 13 号）的位流镜像当作金字塔 DOS（暂不解析，等目录格式查明后再支持），其余是“未识别”。
  * ------------------------------------------------------------------------
  */
 
@@ -54,7 +55,7 @@ struct BlankImageKind {
 [[nodiscard]] const std::vector<BlankImageKind>& blankImageKinds();
 
 /**
- * 生成空白镜像的内容（已格式化，ProDOS 的卷名是 BLANK；金字塔的是全 0，要在机器里格式化）。
+ * 生成空白镜像的内容（已格式化，ProDOS 的卷名是 BLANK；金字塔的是 266240 字节全 0 的 .nib，要在机器里格式化）。
  * @throws shared::CoreError filemanager.unsupported：没有这种空白镜像。
  */
 [[nodiscard]] std::vector<std::uint8_t> createBlankImage(const std::string& kindId);

@@ -22,8 +22,8 @@
  *       .po 按 ProDOS 顺序排扇区，
  *       两种顺序由镜像内容认出）；
  *       另有两种按磁道存放位序列的镜像：.nib 是 35 或 40 个磁道，每道 6656 个半字节（每个半字节
- *       8 位，同步字节只有 FF，没有多出来的 0 位），.woz 是带磁道表的位序列文件（WOZ1 与 WOZ2，
- *       只支持 5.25 英寸），读头位置按四分之一磁道查表。
+ *       8 位，同步字节只有 FF，没有多出来的 0 位；金字塔只认 40 个磁道的），
+ *       .woz 是带磁道表的位序列文件（WOZ1 与 WOZ2，只支持 5.25 英寸），读头位置按四分之一磁道查表。
  * ------------------------------------------------------------------------
  */
 
@@ -106,7 +106,10 @@ inline constexpr Format PYRAMID_FORMAT{40, 14, {0, 11, 9, 7, 5, 3, 1, 12, 10, 8,
 /** 从镜像认出盘片格式的函数；认不出（大小不对）返回空。 */
 using FormatChooser = std::optional<Format> (*)(std::span<const std::uint8_t> image);
 
-/** 金字塔：大小正好是 143360 字节就是 PYRAMID_FORMAT。 */
+/**
+ * 金字塔：大小正好是 143360 字节就是 PYRAMID_FORMAT（按扇区存放的 .dsk）；
+ * 大小是 266240 字节（40 道，每道 6656 个半字节）的是 .nib。
+ */
 [[nodiscard]] std::optional<Format> pyramidFormatOf(std::span<const std::uint8_t> image);
 
 /**
@@ -141,13 +144,13 @@ struct WozImage {
  */
 [[nodiscard]] std::optional<WozImage> parseWoz(std::span<const std::uint8_t> image);
 
-/** 半字节换成位序列：每个半字节 8 位，高位在前。 */
+/** 半字节换成位序列：每个半字节 8 位，高位在前；FF 当作同步字节，后面再跟两个 0 位。 */
 [[nodiscard]] std::vector<std::uint8_t> nibblesToBits(std::span<const std::uint8_t> nibbles);
 
 /**
- * 位序列换成半字节：从第一个 1 位起每 8 位一个，最多 count 个，不够的用 FF 补齐。
+ * 位序列换成半字节：从第一个 1 位起每 8 位一个，到位序列结束为止（末尾不足 8 位的丢弃）。
  */
-[[nodiscard]] std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits, std::size_t count);
+[[nodiscard]] std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits);
 
 /** 取出 WOZ 磁道的位序列（每个元素是 0 或 1）。 */
 [[nodiscard]] std::vector<std::uint8_t> wozTrackBits(std::span<const std::uint8_t> image, const WozTrack& track);

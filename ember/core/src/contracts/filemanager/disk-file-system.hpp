@@ -132,6 +132,14 @@ class AppleBitstreamDecoder {
    * @return 每道 16 个扇区、35 或 40 道的 DOS 顺序镜像（磁道上解不出的扇区填 0）；解不出来时为空。
    */
   [[nodiscard]] virtual std::optional<std::vector<std::uint8_t>> decode(std::span<const std::uint8_t> image, std::string_view extension) const = 0;
+
+  /**
+   * 位流格式的镜像是不是金字塔 PEC-9588 的盘：磁道上解得出扇区，
+   * 并且扇区号都小于 14（金字塔每道 14 个扇区，苹果的盘有 14、15 号扇区）。
+   * @param image 镜像文件的内容。
+   * @param extension 小写扩展名，不带点：nib 或 woz。
+   */
+  [[nodiscard]] virtual bool isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const = 0;
 };
 
 }  // namespace ember::contracts::filemanager

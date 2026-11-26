@@ -14,7 +14,7 @@ import * as path from 'node:path';
 import type { InputMouseParams, InspectorStateField } from '../../contracts/debug-client/generated/api';
 import type { OperationContext } from './operation-context';
 import { invalidParam, optionalAddress, optionalArray, optionalBoolean, optionalEnum, optionalInteger, optionalString, requireString, toAddress } from './params';
-import { typeText } from './key-text';
+import { isUppercaseDefault, keyStrokesOf, typeText } from './key-text';
 import { cpuState } from './program-operations';
 import { runFrames, tapKey } from './machine-session';
 
@@ -217,7 +217,11 @@ export async function input(context: OperationContext, params: Record<string, un
         if (params.code !== undefined) invalidParam('text 与 code 只能给一个');
         // 命令行里输入文字，帧数短于 8 会丢键，所以 upFrames 缺省也是 8
         const textUpFrames = optionalInteger(params, 'upFrames', { min: 1, max: 600 }) ?? 8;
-        const keys = await typeText(client, optionalBoolean(params, 'enter', false) ? `${text}\n` : text, downFrames, textUpFrames);
+        const typed = optionalBoolean(params, 'enter', false) ? `${text}\n` : text;
+        // 先检查整段文字，有无法输入的字符时不碰模拟器
+        keyStrokesOf(typed);
+        const { machine } = await client.request('runtime.status', {});
+        const keys = await typeText(client, typed, downFrames, textUpFrames, isUppercaseDefault(machine));
         return { kind, text, keys, cpu: await cpuState(client) };
       }
       const code = requireString(params, 'code');

@@ -1,5 +1,9 @@
 # 更新记录
 
+## 未发布
+
+- 模拟器工具：`emu_input` 的 `text` 按机型输对字母的大小写：金字塔（PEC-9588、PEC-586）与中华学习机 CEC-I 的键盘上电默认大写、按 Shift 才出小写，输入的大写字母不再变成小写，LM-DOS 命令不再报 `?SYNTAX ERROR`；其他机型不变。
+
 ## 0.14.0
 
 - 目标：新增中华学习机 CEC-I 目标 `cec1`（汇编），构建出在 Apple DOS 3.3 下用 `BRUN` 运行的二进制文件，并放进 DOS 3.3 系统盘镜像；装入地址默认 `$6000`，可以在 `fcdev.json` 的 `targetOptions.loadAddress` 里改；自带显示与键盘的运行库，运行时在 Ember 里自动开机、启动 DOS 并输入 `BRUN 程序名`。新建项目新增 `cec1-asm` 模板。

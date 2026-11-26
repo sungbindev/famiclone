@@ -30,6 +30,8 @@ namespace api = contracts::filemanager;
 namespace {
 
 constexpr std::size_t PYRAMID_IMAGE_SIZE = 143360;
+/** 金字塔 .nib 镜像的大小：40 道，每道 6656 个半字节。 */
+constexpr std::size_t PYRAMID_NIB_IMAGE_SIZE = 40 * 6656;
 constexpr std::size_t FAT_SECTOR_SIZE = 512;
 
 /** 自己持有镜像字节的文件系统：位流格式解码出来的镜像没有别的主人。 */
@@ -149,9 +151,13 @@ IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view
           return result;
         }
       }
+      if (decoder->isPyramidDisk(image, extension)) {
+        result.formatId = "pyramid";
+        result.formatName = "金字塔 DOS（待支持）";
+        return result;
+      }
     }
-    result.formatId = "unknown";
-    result.formatName = "未识别";
+    describeUnopenable(image, result);
     return result;
   }
   const AppleIdentity apple = identifyApple(image, extension);
@@ -175,7 +181,7 @@ const std::vector<BlankImageKind>& blankImageKinds() {
     for (const FatBlankParameters& parameters : FAT_BLANKS) result.push_back(BlankImageKind{parameters.id, parameters.title, "img"});
     result.push_back(BlankImageKind{"appledos33", "5.25 英寸 140 KB（Apple DOS 3.3）", "dsk"});
     result.push_back(BlankImageKind{"prodos", "5.25 英寸 140 KB（ProDOS）", "po"});
-    result.push_back(BlankImageKind{"pyramid", "5.25 英寸 140 KB（金字塔 PEC-9588，空白，要在机器里 INIT）", "dsk"});
+    result.push_back(BlankImageKind{"pyramid", "5.25 英寸 140 KB（金字塔 PEC-9588，空白，要在机器里 INIT）", "nib"});
     return result;
   }();
   return kinds;
@@ -185,9 +191,9 @@ std::vector<std::uint8_t> createBlankImage(const std::string& kindId) {
   for (const FatBlankParameters& parameters : FAT_BLANKS) {
     if (kindId == parameters.id) return createFatBlank(parameters);
   }
+  if (kindId == "pyramid") return std::vector<std::uint8_t>(PYRAMID_NIB_IMAGE_SIZE, 0);
   constexpr unsigned tracks = 35;
   std::vector<std::uint8_t> image(PYRAMID_IMAGE_SIZE, 0);
-  if (kindId == "pyramid") return image;
   std::vector<std::uint8_t> linear(PYRAMID_IMAGE_SIZE, 0);
   if (kindId == "appledos33") {
     AppleDosFileSystem::format(linear, tracks);

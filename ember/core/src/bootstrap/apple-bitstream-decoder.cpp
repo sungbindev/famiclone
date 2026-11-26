@@ -26,10 +26,11 @@ constexpr std::size_t QUARTER_TRACKS_PER_TRACK = 4;
 /** 35 道盘与 40 道盘。 */
 constexpr unsigned STANDARD_TRACKS = 35;
 constexpr unsigned EXTENDED_TRACKS = 40;
+/** 金字塔的盘每道 14 个扇区，扇区号从 0 到 13。 */
+constexpr unsigned PYRAMID_SECTORS_PER_TRACK = 14;
 
-}  // namespace
-
-std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decode(std::span<const std::uint8_t> image, std::string_view extension) const {
+/** 把镜像拆成每个磁道一圈位（每个元素是 0 或 1）；大小或格式不对时为空。 */
+std::optional<std::vector<std::vector<std::uint8_t>>> readTrackBits(std::span<const std::uint8_t> image, std::string_view extension) {
   unsigned tracks = 0;
   std::vector<std::vector<std::uint8_t>> trackBits;
   if (extension == "nib") {
@@ -52,15 +53,39 @@ std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decode(std::span
   } else {
     return std::nullopt;
   }
+  return trackBits;
+}
+
+}  // namespace
+
+std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decode(std::span<const std::uint8_t> image, std::string_view extension) const {
+  const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
+  if (!trackBits) return std::nullopt;
+  const auto tracks = static_cast<unsigned>(trackBits->size());
   const disk2::Format format = disk2::appleDosFormat(tracks);
   std::vector<std::uint8_t> result(static_cast<std::size_t>(tracks) * disk2::MAX_SECTORS_PER_TRACK * disk2::SECTOR_SIZE, 0);
   for (unsigned track = 0; track < tracks; ++track) {
-    for (const disk2::DecodedSector& sector : disk2::decodeTrack(format, trackBits[track])) {
+    for (const disk2::DecodedSector& sector : disk2::decodeTrack(format, (*trackBits)[track])) {
       if (sector.logical >= disk2::MAX_SECTORS_PER_TRACK) continue;
       std::copy(sector.data.begin(), sector.data.end(), result.begin() + static_cast<std::ptrdiff_t>((static_cast<std::size_t>(track) * disk2::MAX_SECTORS_PER_TRACK + sector.logical) * disk2::SECTOR_SIZE));
     }
   }
   return result;
+}
+
+bool AppleBitstreamDecoder::isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const {
+  const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
+  if (!trackBits) return false;
+  // 按苹果的 16 个扇区解：金字塔的盘只出现 0 到 13 号扇区，出现 14、15 号扇区就是苹果的盘
+  const disk2::Format format = disk2::appleDosFormat(static_cast<unsigned>(trackBits->size()));
+  bool found = false;
+  for (const std::vector<std::uint8_t>& bits : *trackBits) {
+    for (const disk2::DecodedSector& sector : disk2::decodeTrack(format, bits)) {
+      if (sector.physical >= PYRAMID_SECTORS_PER_TRACK) return false;
+      found = true;
+    }
+  }
+  return found;
 }
 
 }  // namespace ember::bootstrap

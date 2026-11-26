@@ -120,7 +120,7 @@ export interface FilemanagerEntryInfo {
 
 /** 一种能新建的空白镜像。 */
 export interface FilemanagerBlankKind {
-  /** 标识：fat1440、fat720、fat2880、fat1200、fat360、appledos33、prodos、pyramid */
+  /** 标识：fat1440、fat720、fat2880、fat1200、fat360、appledos33、prodos、pyramid（金字塔 PEC-9588，扩展名 nib，266240 字节全 0，要在机器里 INIT） */
   id: string;
   /** 界面显示的名称 */
   title: string;

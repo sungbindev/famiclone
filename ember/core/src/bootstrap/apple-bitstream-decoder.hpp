@@ -19,6 +19,7 @@ namespace ember::bootstrap {
 class AppleBitstreamDecoder final : public contracts::filemanager::AppleBitstreamDecoder {
  public:
   [[nodiscard]] std::optional<std::vector<std::uint8_t>> decode(std::span<const std::uint8_t> image, std::string_view extension) const override;
+  [[nodiscard]] bool isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const override;
 };
 
 }  // namespace ember::bootstrap

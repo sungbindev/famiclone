@@ -260,7 +260,10 @@ void Disk2::advance() {
       if (!sessionDirty_) {
         sessionDirty_ = true;
         sessionTrack_ = ringIndex();
+        sessionStart_ = position;
+        sessionBits_ = 0;
       }
+      ++sessionBits_;
       continue;
     }
     // 读：数据寄存器从第一个 1 位起收满 8 位，读完的半字节最高位是 1。
@@ -299,7 +302,17 @@ void Disk2::finishWrite() {
       break;
     case disk2::Layout::nibble: {
       if (sessionTrack_ >= format_->trackCount) return;
-      const std::vector<std::uint8_t> nibbles = disk2::bitsToNibbles(ring, disk2::NIBBLE_TRACK_BYTES);
+      // 从开始写的位置起转成半字节：写入的内容可能跨过磁道数组的分界，从头转会把它一分为二
+      std::vector<std::uint8_t> rotated(ring.begin() + static_cast<std::ptrdiff_t>(sessionStart_), ring.end());
+      rotated.insert(rotated.end(), ring.begin(), ring.begin() + static_cast<std::ptrdiff_t>(sessionStart_));
+      const std::span<const std::uint8_t> rotatedBits(rotated);
+      const std::size_t writtenBits = std::min(sessionBits_, rotated.size());
+      // 写入的内容里字节之间有空位，转出的半字节比原来少：用 FF 补在写入内容之后，不把它和后面的扫区拆开
+      std::vector<std::uint8_t> nibbles = disk2::bitsToNibbles(rotatedBits.first(writtenBits));
+      const std::vector<std::uint8_t> rest = disk2::bitsToNibbles(rotatedBits.subspan(writtenBits));
+      nibbles.resize(std::max(nibbles.size(), disk2::NIBBLE_TRACK_BYTES > rest.size() ? disk2::NIBBLE_TRACK_BYTES - rest.size() : std::size_t{0}), 0xFF);
+      nibbles.insert(nibbles.end(), rest.begin(), rest.end());
+      nibbles.resize(disk2::NIBBLE_TRACK_BYTES, 0xFF);
       const std::size_t base = static_cast<std::size_t>(sessionTrack_) * disk2::NIBBLE_TRACK_BYTES;
       for (std::size_t index = 0; index < nibbles.size(); ++index) {
         if (drive_->readByte(base + index) != nibbles[index]) drive_->writeByte(base + index, nibbles[index]);

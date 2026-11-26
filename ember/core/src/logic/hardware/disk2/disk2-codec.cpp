@@ -143,8 +143,9 @@ std::vector<std::uint8_t> readNibbles(std::span<const std::uint8_t> bits) {
 }  // namespace
 
 std::optional<Format> pyramidFormatOf(std::span<const std::uint8_t> image) {
-  if (image.size() != PYRAMID_FORMAT.imageSize()) return std::nullopt;
-  return PYRAMID_FORMAT;
+  if (image.size() == PYRAMID_FORMAT.imageSize()) return PYRAMID_FORMAT;
+  if (image.size() == PYRAMID_FORMAT.trackCount * NIBBLE_TRACK_BYTES) return nibbleFormat(PYRAMID_FORMAT.trackCount);
+  return std::nullopt;
 }
 
 std::optional<Format> appleFormatOf(std::span<const std::uint8_t> image) {
@@ -329,19 +330,24 @@ std::optional<WozImage> parseWoz(std::span<const std::uint8_t> image) {
 
 std::vector<std::uint8_t> nibblesToBits(std::span<const std::uint8_t> nibbles) {
   std::vector<std::uint8_t> bits;
-  bits.reserve(nibbles.size() * 8);
+  bits.reserve(nibbles.size() * 10);
   for (const std::uint8_t value : nibbles) {
     for (int bit = 7; bit >= 0; --bit) bits.push_back(static_cast<std::uint8_t>((value >> bit) & 1U));
+    // 同步字节：FF 后面跟两个 0 位，读头靠它在连续的 FF 之后对准半字节的边界
+    if (value == 0xFF) {
+      bits.push_back(0);
+      bits.push_back(0);
+    }
   }
   return bits;
 }
 
-std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits, std::size_t count) {
+std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits) {
   std::vector<std::uint8_t> nibbles;
-  nibbles.reserve(count);
+  nibbles.reserve(bits.size() / 8);
   unsigned shift = 0;
-  for (std::size_t index = 0; index < bits.size() && nibbles.size() < count; ++index) {
-    const unsigned bit = bits[index] != 0 ? 1U : 0U;
+  for (const std::uint8_t value : bits) {
+    const unsigned bit = value != 0 ? 1U : 0U;
     if (shift == 0 && bit == 0) continue;
     shift = (shift << 1) | bit;
     if ((shift & 0x80U) != 0) {
@@ -349,7 +355,6 @@ std::vector<std::uint8_t> bitsToNibbles(std::span<const std::uint8_t> bits, std:
       shift = 0;
     }
   }
-  nibbles.resize(count, 0xFF);
   return nibbles;
 }
 

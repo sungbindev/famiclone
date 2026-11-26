@@ -39,7 +39,7 @@
 
 | `kind` | 参数 | 说明 |
 | --- | --- | --- |
-| `key` | `code`（点一个键）或 `text`（输入一段文字），二选一；`action`（`tap` 默认、`down`、`up`，只对 `code` 有效）；`enter`（只对 `text`：输完再按一次回车）；`downFrames`（默认 8）、`upFrames`（`code` 默认 4，`text` 默认 8） | `tap` 会按下、运行 `downFrames` 帧、松开、再运行 `upFrames` 帧；`text` 按美式键盘布局逐字符点键，与机型无关，大写与 `!@#` 等符号自动按 Shift，`\n` 是回车，其余字符报错且一个键都不按；机器要已载入并通电 |
+| `key` | `code`（点一个键）或 `text`（输入一段文字），二选一；`action`（`tap` 默认、`down`、`up`，只对 `code` 有效）；`enter`（只对 `text`：输完再按一次回车）；`downFrames`（默认 8）、`upFrames`（`code` 默认 4，`text` 默认 8） | `tap` 会按下、运行 `downFrames` 帧、松开、再运行 `upFrames` 帧；`text` 按美式键盘布局逐字符点键，字母的 Shift 按机型自动处理（一般机型默认小写、大写按 Shift；金字塔 `pec9588`/`pec586` 与 `cec1` 默认大写、小写才按 Shift），`!@#` 等符号都按 Shift，`\n` 是回车，其余字符报错且一个键都不按；机器要已载入并通电 |
 | `pad` | `port`（默认 0）；`buttons`（掩码 0 到 255，或 `a`、`b`、`select`、`start`、`up`、`down`、`left`、`right` 数组）；`hold`（只按下不松开）；`downFrames`、`upFrames` | 掩码：A 为 1、B 为 2、选择为 4、开始为 8、上为 16、下为 32、左为 64、右为 128 |
 | `mouse` | `event`（`move`、`down`、`up`、`wheel`、`leave`）；`x`、`y`、`dx`、`dy`、`buttons`（1 左、2 右、4 中）、`wheel` | 只在机器带鼠标时有效 |
 | `familyKeyboard` | `connected`（默认 `true`） | 接入或断开 Family BASIC 键盘 |

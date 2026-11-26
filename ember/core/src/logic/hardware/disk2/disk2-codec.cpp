@@ -143,8 +143,17 @@ std::vector<std::uint8_t> readNibbles(std::span<const std::uint8_t> bits) {
 }  // namespace
 
 std::optional<Format> pyramidFormatOf(std::span<const std::uint8_t> image) {
-  if (image.size() != PYRAMID_FORMAT.imageSize()) return std::nullopt;
-  return PYRAMID_FORMAT;
+  if (image.size() == PYRAMID_FORMAT.imageSize()) return PYRAMID_FORMAT;
+  // .nib 原始磁道镜像（BMOW Floppy Emu 一类虚拟软驱用的 232960 或 266240 字节）：磁道直接由半字节展开；
+  // 每道扇区数仍按金字塔的 14（不是半字节数折算的 26），地址场的扇区号才被认可；
+  // 交错表也是金字塔的，写回解出的扇区与调试查看都按它把物理扇区号换成逻辑号。
+  if (image.size() == 35 * NIBBLE_TRACK_BYTES || image.size() == 40 * NIBBLE_TRACK_BYTES) {
+    Format format = nibbleFormat(static_cast<unsigned>(image.size() / NIBBLE_TRACK_BYTES));
+    format.sectorsPerTrack = PYRAMID_FORMAT.sectorsPerTrack;
+    format.logicalToPhysical = PYRAMID_FORMAT.logicalToPhysical;
+    return format;
+  }
+  return std::nullopt;
 }
 
 std::optional<Format> appleFormatOf(std::span<const std::uint8_t> image) {

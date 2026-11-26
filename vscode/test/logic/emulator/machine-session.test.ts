@@ -9,7 +9,7 @@
 // ------------------------------------------------------------------------
 
 import { describe, expect, it } from 'vitest';
-import { keyStrokesOf, typeText } from '../../../src/logic/emulator/key-text';
+import { keyStrokesOf, typeText, uppercaseByDefault } from '../../../src/logic/emulator/key-text';
 import { enterProgram } from '../../../src/logic/emulator/machine-session';
 import { createFakeClient } from '../../support/emulator-fixtures';
 
@@ -82,6 +82,26 @@ describe('文字转按键', () => {
     expect(await typeText(client, 'A!', 3, 2)).toBe(2);
     expect(keysOf(client)).toEqual(['ShiftLeft+', 'KeyA+', 'KeyA-', 'ShiftLeft-', 'ShiftLeft+', 'Digit1+', 'Digit1-', 'ShiftLeft-']);
     expect(client.calls.filter((call) => call.method === 'runtime.run').map((call) => (call.params as { frames: number }).frames)).toEqual([3, 2, 3, 2]);
+  });
+
+  it('默认大写的机型：金字塔与 CEC-I 大写不按 Shift，小写才按 Shift，符号不变', () => {
+    expect(uppercaseByDefault('cec1')).toBe(true);
+    expect(uppercaseByDefault('pec9588')).toBe(true);
+    expect(uppercaseByDefault('pec586')).toBe(true);
+    expect(uppercaseByDefault('sb2000')).toBe(false);
+    expect(uppercaseByDefault(undefined)).toBe(false);
+    expect(keyStrokesOf('CATALOG', true).every((stroke) => !stroke.shift)).toBe(true);
+    expect(keyStrokesOf('aB!', true)).toEqual([
+      { code: 'KeyA', shift: true },
+      { code: 'KeyB', shift: false },
+      { code: 'Digit1', shift: true }
+    ]);
+  });
+
+  it('默认大写的机型输入文字：小写字母按 Shift，大写直接点键', async () => {
+    const client = createClient();
+    expect(await typeText(client, 'Ab', 3, 2, true)).toBe(2);
+    expect(keysOf(client)).toEqual(['KeyA+', 'KeyA-', 'ShiftLeft+', 'KeyB+', 'KeyB-', 'ShiftLeft-']);
   });
 
   it('有不支持的字符时一个键都不按', async () => {

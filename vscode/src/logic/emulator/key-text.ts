@@ -5,8 +5,10 @@
 // 作者：sungbin
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-26
-// 备注：键位取 KeyboardEvent.code，由 Ember 里各机型的键盘模块换成各自的键码或扫描码；大写字母与
-//       需要 Shift 的符号靠先按下 ShiftLeft 实现，机器是否区分大小写由机型的键盘决定。
+// 备注：键位取 KeyboardEvent.code，由 Ember 里各机型的键盘模块换成各自的键码或扫描码。字母的大小写
+//       分两类机器：PC 习惯的机器（SB2000、SB97、裕兴、步步高等）默认小写，大写要按 Shift；金字塔与
+//       CEC-I 这类 Apple II 系的机器默认大写（上电时大写锁定开着），按 Shift 才是小写，text 输入按
+//       机型自动反转。需要 Shift 的符号（!@# 等）两类机器都要按 Shift。
 // ------------------------------------------------------------------------
 
 import type { DebugSession } from '../../contracts/debug-client/debug-session';
@@ -17,6 +19,18 @@ import { tapKey } from './machine-session';
 export interface KeyStroke {
   readonly code: string;
   readonly shift: boolean;
+}
+
+/** 字母默认大写、按 Shift 才小写的机型（Apple II 系：金字塔与中华学习机 CEC-I）。 */
+const UPPERCASE_DEFAULT_MACHINES: readonly string[] = ['cec1', 'pec9588', 'pec586'];
+
+/**
+ * 机型的字母是不是默认大写（按 Shift 才小写）。
+ * @param machine 机型标识（runtime.status 的 machine）；没有主机时为 undefined，按 PC 习惯处理。
+ * @returns 默认大写时为 true。
+ */
+export function uppercaseByDefault(machine: string | undefined): boolean {
+  return machine !== undefined && UPPERCASE_DEFAULT_MACHINES.includes(machine);
 }
 
 /** 用来按住的 Shift 键位。 */
@@ -38,11 +52,12 @@ const SHIFTED_SYMBOLS: Readonly<Record<string, string>> = {
 /**
  * 一个字符对应的按键。
  * @param char 一个字符。
+ * @param upperDefault 字母默认大写（按 Shift 才小写）的机型。
  * @returns 按键；没有对应的键位时为 undefined。
  */
-function keyStrokeOf(char: string): KeyStroke | undefined {
-  if (/^[a-z]$/.test(char)) return { code: `Key${char.toUpperCase()}`, shift: false };
-  if (/^[A-Z]$/.test(char)) return { code: `Key${char}`, shift: true };
+function keyStrokeOf(char: string, upperDefault: boolean): KeyStroke | undefined {
+  if (/^[a-z]$/.test(char)) return { code: `Key${char.toUpperCase()}`, shift: upperDefault };
+  if (/^[A-Z]$/.test(char)) return { code: `Key${char}`, shift: !upperDefault };
   if (/^\d$/.test(char)) return { code: `Digit${char}`, shift: false };
   const plain = PLAIN_SYMBOLS[char];
   if (plain !== undefined) return { code: plain, shift: false };
@@ -53,14 +68,15 @@ function keyStrokeOf(char: string): KeyStroke | undefined {
 /**
  * 把文字转成按键序列；回车符 \r 忽略，换行 \n 是 Enter。
  * @param text 要输入的文字。
+ * @param upperDefault 字母默认大写（按 Shift 才小写）的机型；缺省按 PC 习惯（默认小写）。
  * @returns 按键序列。
  * @throws FcdevError 有无法输入的字符（不在美式键盘上的字符），参数错误。
  */
-export function keyStrokesOf(text: string): KeyStroke[] {
+export function keyStrokesOf(text: string, upperDefault = false): KeyStroke[] {
   const strokes: KeyStroke[] = [];
   for (const char of text) {
     if (char === '\r') continue;
-    const stroke = keyStrokeOf(char);
+    const stroke = keyStrokeOf(char, upperDefault);
     if (stroke === undefined) invalidParam(`无法输入字符“${char}”`, '只支持美式键盘上的字母、数字、空格、标点、换行与制表符；其他按键用 code 单独输入');
     strokes.push(stroke);
   }
@@ -73,11 +89,12 @@ export function keyStrokesOf(text: string): KeyStroke[] {
  * @param text 要输入的文字。
  * @param downFrames 每个键按下后运行的帧数。
  * @param upFrames 每个键松开后运行的帧数。
+ * @param upperDefault 字母默认大写（按 Shift 才小写）的机型；缺省按 PC 习惯（默认小写）。
  * @returns 输入的按键数。
  * @throws FcdevError 有无法输入的字符；此时一个键都没有按。
  */
-export async function typeText(client: DebugSession, text: string, downFrames: number, upFrames: number): Promise<number> {
-  const strokes = keyStrokesOf(text);
+export async function typeText(client: DebugSession, text: string, downFrames: number, upFrames: number, upperDefault = false): Promise<number> {
+  const strokes = keyStrokesOf(text, upperDefault);
   for (const { code, shift } of strokes) {
     if (!shift) {
       await tapKey(client, code, downFrames, upFrames);

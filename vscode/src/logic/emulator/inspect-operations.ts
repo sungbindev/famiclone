@@ -14,7 +14,7 @@ import * as path from 'node:path';
 import type { InputMouseParams, InspectorStateField } from '../../contracts/debug-client/generated/api';
 import type { OperationContext } from './operation-context';
 import { invalidParam, optionalAddress, optionalArray, optionalBoolean, optionalEnum, optionalInteger, optionalString, requireString, toAddress } from './params';
-import { typeText } from './key-text';
+import { typeText, uppercaseByDefault } from './key-text';
 import { cpuState } from './program-operations';
 import { runFrames, tapKey } from './machine-session';
 
@@ -217,7 +217,9 @@ export async function input(context: OperationContext, params: Record<string, un
         if (params.code !== undefined) invalidParam('text 与 code 只能给一个');
         // 命令行里输入文字，帧数短于 8 会丢键，所以 upFrames 缺省也是 8
         const textUpFrames = optionalInteger(params, 'upFrames', { min: 1, max: 600 }) ?? 8;
-        const keys = await typeText(client, optionalBoolean(params, 'enter', false) ? `${text}\n` : text, downFrames, textUpFrames);
+        // 金字塔与 CEC-I 默认大写、按 Shift 才小写，字母的 Shift 规则按机型反转
+        const status = await client.request('runtime.status', {}) as { machine?: string };
+        const keys = await typeText(client, optionalBoolean(params, 'enter', false) ? `${text}\n` : text, downFrames, textUpFrames, uppercaseByDefault(status.machine));
         return { kind, text, keys, cpu: await cpuState(client) };
       }
       const code = requireString(params, 'code');

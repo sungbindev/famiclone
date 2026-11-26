@@ -1677,7 +1677,7 @@
         ],
         "toolReferenceName": "emu_input",
         "displayName": "输入",
-        "modelDescription": "给模拟器输入，按键与手柄会运行 downFrames 帧后松开再运行 upFrames 帧（机器要先载入并通电）。kind 为 key（code 取 KeyboardEvent.code 如 Enter、KeyA，action 取 tap 默认、down、up；或给 text 一次输入一段文字，按美式键盘布局逐字符点键，大写与 !@# 等符号自动按 Shift，换行是回车，enter 为 true 时输完再按一次回车，text 的 downFrames 与 upFrames 默认都是 8）、pad（port 默认 0；buttons 是掩码 0 到 255，或按键名数组 a、b、select、start、up、down、left、right；hold 为 true 时只按下不松开）、mouse（event 取 move、down、up、wheel、leave，另有 x、y、dx、dy、buttons、wheel）、familyKeyboard（connected 接入或断开 Family BASIC 键盘）、releaseAll（松开全部按键与手柄）。",
+        "modelDescription": "给模拟器输入，按键与手柄会运行 downFrames 帧后松开再运行 upFrames 帧（机器要先载入并通电）。kind 为 key（code 取 KeyboardEvent.code 如 Enter、KeyA，action 取 tap 默认、down、up；或给 text 一次输入一段文字，按美式键盘布局逐字符点键，字母的 Shift 按机型自动处理：一般机型默认小写、大写按 Shift，金字塔与 cec1 默认大写、小写才按 Shift；!@# 等符号都按 Shift。换行是回车，enter 为 true 时输完再按一次回车，text 的 downFrames 与 upFrames 默认都是 8）、pad（port 默认 0；buttons 是掩码 0 到 255，或按键名数组 a、b、select、start、up、down、left、right；hold 为 true 时只按下不松开）、mouse（event 取 move、down、up、wheel、leave，另有 x、y、dx、dy、buttons、wheel）、familyKeyboard（connected 接入或断开 Family BASIC 键盘）、releaseAll（松开全部按键与手柄）。",
         "userDescription": "按键、手柄、鼠标，接入或断开 Family BASIC 键盘。",
         "canBeReferencedInPrompt": true,
         "inputSchema": {
@@ -1702,7 +1702,7 @@
             "text": {
               "type": "string",
               "minLength": 1,
-              "description": "key 要输入的一段文字（美式键盘布局，与机型无关），与 code 只能给一个；downFrames、upFrames 对每个字符生效，默认都是 8"
+              "description": "key 要输入的一段文字（美式键盘布局；字母大小写按机型自动处理，金字塔与 cec1 默认大写、小写才按 Shift），与 code 只能给一个；downFrames、upFrames 对每个字符生效，默认都是 8"
             },
             "enter": {
               "type": "boolean",

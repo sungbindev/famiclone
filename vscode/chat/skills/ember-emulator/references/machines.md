@@ -65,7 +65,11 @@
 
 ## 其他整机（`bbg1` 只开机、`bbg98`、`pec9588`、`pec586`）
 
-载入：`emu_load` 的 `machine`、`firmware`，需要软盘时加 `diskImage`；不给 `program`（没有自动进入 DOS 流程的机型给了 `program` 会报 `DOS_MACHINE_UNSUPPORTED`）。开机后的菜单、按键与等待时间因机型而异，本文不记录没有验证过的步骤。操作步骤按下面的顺序取得：
+载入：`emu_load` 的 `machine`、`firmware`，需要软盘时加 `diskImage`；不给 `program`（没有自动进入 DOS 流程的机型给了 `program` 会报 `DOS_MACHINE_UNSUPPORTED`）。
+
+- 金字塔（`pec9588`、`pec586`）与 CEC-I 一样是 Apple II 系：BASIC 默认大写、按住 Shift 才出小写（上电时大写锁定开着）。`emu_input` 的 `text` 已按机型反转字母的 Shift，直接给 `text: "CATALOG"` 就是大写；用 `code` 单独点字母键得到的是小写。PEC-9588 进 BASIC 的已验证步骤：开机运行 300 帧到版权画面，按回车进“系统主菜单”，按 `6`（磁盘操作系统），运行 300 帧到 `]` 提示符。
+
+开机后的菜单、按键与等待时间因机型而异，本文不记录没有验证过的步骤。操作步骤按下面的顺序取得：
 
 1. 用户给出的步骤：整理成“第几步、按键或动作、等待帧数、预期画面”的表，按表逐步做。
 2. 项目 README 里写的步骤。

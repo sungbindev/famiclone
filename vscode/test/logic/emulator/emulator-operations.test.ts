@@ -226,7 +226,21 @@ describe('模拟器操作：检查、截图与输入', () => {
     client.calls.length = 0;
     await assert.rejects(harness.run('input', { kind: 'key', text: 'A中' }), hasCode('EMULATOR_PARAM_INVALID'));
     await assert.rejects(harness.run('input', { kind: 'key', text: 'A', code: 'KeyA' }), hasCode('EMULATOR_PARAM_INVALID'));
-    assert.deepEqual(client.calls, []);
+    assert.deepEqual(client.calls.filter((call) => call.method === 'input.key'), []);
+  });
+
+  it('输入文字：金字塔与 CEC-I 默认大写，大写不按 Shift、小写才按 Shift', async () => {
+    for (const machine of ['cec1', 'pec9588']) {
+      const client = createFakeClient({
+        'runtime.status': { ...STATUS, machine },
+        'input.key': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'inspector.getState': CPU_STATE
+      });
+      await harness.connect(client);
+      await harness.run('input', { kind: 'key', text: 'Ab' });
+      assert.deepEqual(client.calls.filter((call) => call.method === 'input.key').map((call) => `${(call.params as { code: string }).code}${(call.params as { down: boolean }).down ? '+' : '-'}`), [
+        'KeyA+', 'KeyA-', 'ShiftLeft+', 'KeyB+', 'KeyB-', 'ShiftLeft-'
+      ]);
+    }
   });
 });
 

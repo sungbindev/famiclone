@@ -82,8 +82,8 @@ struct Format {
   /** 磁道的存放方式。 */
   Layout layout{Layout::sector};
 
-  /** 一个磁道在镜像里的字节数。 */
-  [[nodiscard]] constexpr std::size_t trackBytes() const { return sectorsPerTrack * SECTOR_SIZE; }
+  /** 一个磁道在镜像里的字节数：.nib 按半字节数（6656），其余按每道扇区数 × 256。 */
+  [[nodiscard]] constexpr std::size_t trackBytes() const { return layout == Layout::nibble ? NIBBLE_TRACK_BYTES : sectorsPerTrack * SECTOR_SIZE; }
   /** 镜像的大小（字节）。 */
   [[nodiscard]] constexpr std::size_t imageSize() const { return trackCount * trackBytes(); }
 };
@@ -106,7 +106,10 @@ inline constexpr Format PYRAMID_FORMAT{40, 14, {0, 11, 9, 7, 5, 3, 1, 12, 10, 8,
 /** 从镜像认出盘片格式的函数；认不出（大小不对）返回空。 */
 using FormatChooser = std::optional<Format> (*)(std::span<const std::uint8_t> image);
 
-/** 金字塔：大小正好是 143360 字节就是 PYRAMID_FORMAT。 */
+/**
+ * 金字塔：大小正好是 143360 字节就是 PYRAMID_FORMAT；
+ * 大小是 232960（35 道）或 266240（40 道）字节的是 .nib（原始磁道镜像，供虚拟软驱使用）。
+ */
 [[nodiscard]] std::optional<Format> pyramidFormatOf(std::span<const std::uint8_t> image);
 
 /**

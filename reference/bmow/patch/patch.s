@@ -84,6 +84,44 @@ T_size9:
 T_size_nib:
     jmp   0xCA62
 
+; ---- T_clampA / T_clampB：NIB 读头位置限幅（四分之一磁道单位）----
+; 原固件 NIB 路径把读头钳在 140（35 道×4），超出写 139；WOZ 等类型走 160/159（40 道）。
+; 金字塔 40 道盘需要读到 35–39 道：模式 9 改走 160/159 限幅（复用原 WOZ 限幅入口，
+; 它们自己再查 <160 则继续、否则写 159）；其余模式原 140/139 逻辑不变。
+; 下溢（位置绕回 ≥251）归零的回零校准在别处，不动。
+
+; 补丁点 0x8C62（主循环路径，原 ld r18,Z ; cpi r18,0x8C）
+T_clampA:
+    ld    r18, Z
+    push  r24
+    lds   r24, 0x33FE
+    cpi   r24, 9
+    pop   r24
+    breq  T_clampA9
+    cpi   r18, 0x8C         ; 原判定：≥140？
+    brcc  T_clampA_ge
+    jmp   0x8B76            ; <140 → 原继续路径
+T_clampA_ge:
+    jmp   0x8C6A            ; ≥140 → 原类型分发（WOZ/17/18→160 限幅，否则写 139）
+T_clampA9:
+    jmp   0x937E            ; 模式 9：160/159 限幅
+
+; 补丁点 0x47C8（定时器中断路径，原 ld r24,Z ; cpi r24,0x8C）
+T_clampB:
+    ld    r24, Z
+    push  r18
+    lds   r18, 0x33FE
+    cpi   r18, 9
+    pop   r18
+    breq  T_clampB9
+    cpi   r24, 0x8C
+    brcc  T_clampB_ge
+    jmp   0x4612            ; <140 → 原继续路径
+T_clampB_ge:
+    jmp   0x47D0            ; ≥140 → 原类型分发
+T_clampB9:
+    jmp   0x4820            ; 模式 9：160/159 限幅
+
 ; ================= 菜单扩第 7 项（模式 9）=================
 ; 第 7 项名称与字库放高 flash（RAMPZ=1），用克隆的远地址绘制器显示。
 ; 名称 "9 Pyramid 40-track" 在 0x13400，绘制用 +1 处 0x13401（低 16 位 0x3401）。

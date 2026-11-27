@@ -33,7 +33,7 @@ for (const line of nm.split(/\r?\n/)) {
   const m = line.match(/^([0-9a-fA-F]+)\s+[Tt]\s+(\S+)/);
   if (m) sym[m[2]] = parseInt(m[1], 16);
 }
-const need = ['T_disp', 'T_emu', 'T_compat', 'T_init', 'T_size', 'T_menu', 'T_lookup', 'draw_far'];
+const need = ['T_disp', 'T_emu', 'T_compat', 'T_init', 'T_size', 'T_menu', 'T_lookup', 'draw_far', 'T_clampA', 'T_clampB'];
 for (const s of need) {
   if (!(s in sym)) throw new Error('缺少符号 ' + s);
 }
@@ -77,6 +77,10 @@ const patches = [
   { at: 0x3114, bytes: Buffer.from([0xEE]), expect: [0xED], desc: '菜单行 1、2 存槽：subi 0x2D → 0x2E（槽 = 0x3D2+行）' },
   { at: 0x31C8, bytes: Buffer.from([0xEF]), expect: [0xEE], desc: 'PREV 读上一槽：subi 0x2E → 0x2F（读 0x3D1+下标）' },
   { at: 0x31FC, bytes: Buffer.from([0xEE]), expect: [0xED], desc: 'NEXT 读下一槽：subi 0x2D → 0x2E（ldd Z+1 落在 0x3D3+下标）' },
+  // NIB 读头限幅：原固件钳在 140 四分之一磁道（35 道），模式 9 改走 160/159（40 道）限幅，
+  // 否则金字塔 40 道盘的 35–39 道读写全落在 34 道附近（I/O ERROR、写坏盘）。
+  { at: 0x8C62, bytes: jmp(sym.T_clampA), expect: [0x20, 0x81, 0x2C, 0x38], desc: 'NIB 读头限幅（主循环）：模式 9 改 40 道' },
+  { at: 0x47C8, bytes: jmp(sym.T_clampB), expect: [0x80, 0x81, 0x8C, 0x38], desc: 'NIB 读头限幅（定时器中断）：模式 9 改 40 道' },
 ];
 const changed = [];   // 记录所有被改动的字节偏移
 const mark = (at, len) => { for (let i = 0; i < len; i++) changed.push(at + i); };

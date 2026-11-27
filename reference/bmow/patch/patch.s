@@ -94,14 +94,23 @@ T_size_nib:
     .equ COUNT_RAM,  0x3B06
 
 ; ---- T_menu：菜单构建循环（补丁点 0x3142，原 cp/cpc/brne）----
-; 把模式 9 插到菜单第 3 位（下标 3，行 3）：原循环绘前 2 项（下标 1、2，
-; 即表项 0、1），到 r29==3 时先绘模式 9（下标 3），再把原表项 2..5 绘到
-; 下标 4..7。共 7 项。r29 = 当前显示行（1 起）。
+; 把模式 9 插到菜单第 3 位：原循环绘前 2 项（行 1、2，表项 0、1）后
+; r29==3，此时插入模式 9（行 3），再把表项 2..5 绘于行 4..7，共 7 项。
+; 循环变量只用绘制函数保留的寄存器：r16:r17 表指针、r14:r15 表尾、
+; r29 行号、r28 模式号（r18–r27、r30:r31 会被绘制函数破坏，不能跨 call 存值）。
 T_menu:
-    cp    r14, r16
+    cpi   r29, 3
+    brne  T_menu_norm       ; 未到插入点 → 走原表尾判断
+    rjmp  T_menu_ins        ; 到插入点（短跳板）
+T_menu_norm:
+    cp    r14, r16          ; 原表尾判断
     cpc   r15, r17
-    brne  T_menu_loop       ; 未到表尾 → 回循环
-    ; 表项 0、1 已绘于下标 1、2（r29==3）。插入模式 9 于下标 3。
+    brne  T_menu_back
+    jmp   0x3148            ; 表扫完（未插入的兑底）→ 原收尾
+T_menu_back:
+    jmp   0x30FA            ; 回原循环
+T_menu_ins:
+    ; 表项 0、1 已绘于行 1、2。插入模式 9 于行 3（数组下标 3）。
     ldi   r28, 9
     sts   0x3D5, r28        ; array[3] = 9
     ldi   r22, 3
@@ -122,48 +131,62 @@ T_menu_sel9:
     ldi   r24, 3
     sts   0x3D2, r24        ; 当前模式 9 → 选中下标 3
 T_menu_shift:
-    ; 原表项 2..5（名表 0x61B 起，步长 23）绘于下标 4..7
-    ldi   r30, 0x1B         ; Z = 0x61B
-    ldi   r31, 0x06
-    ldi   r20, 4            ; 行 4
+    ; 表项 2..5（0x61B 起，步长 23）绘于行 4 起。
+    ; 此刻 r16:r17 正指向表项 2（0x61B），r14:r15 是表尾 0x677。
+    ; 与原循环一致：模式 7 需 0x3413!=0、模式 8 需 0x3413>=2，否则跳过不占行。
+    ldi   r29, 4            ; 行 4
 T_menu_sl:
-    mov   r22, r20
-    ldi   r24, 0
-    call  0xE4C2            ; 光标行 r20 列 0
+    movw  r30, r16
     lpm   r28, Z            ; 表项首字符 = 模式号 ASCII
     subi  r28, 0x30
-    mov   r24, r20
-    ldi   r25, 0
-    subi  r24, 0x2E         ; Z = 0x3D2 + 行
-    sbci  r25, 0xFC
+    cpi   r28, 7
+    breq  T_menu_g7
+    cpi   r28, 8
+    breq  T_menu_g8
+T_menu_draw:
+    mov   r30, r29
+    ldi   r31, 0
+    subi  r30, 0x2E         ; Z = 0x3D2 + 行
+    sbci  r31, 0xFC
     st    Z, r28            ; array[行] = 模式号
+    mov   r22, r29
+    ldi   r24, 0
+    call  0xE4C2            ; 光标行 r29 列 0
     ldi   r22, 1
     lds   r24, 0x33FE
     cp    r24, r28
     breq  T_menu_shsel
     ldi   r22, 0
 T_menu_shsel:
-    movw  r24, r30          ; 名称地址 = 表项
+    movw  r24, r16          ; 名称地址 = 表项 + 1
     adiw  r24, 1
     call  0xE902            ; 原绘制器（低 flash）
     lds   r24, 0x33FE
     cp    r24, r28
-    brne  T_menu_shnext
-    sts   0x3D2, r20        ; 当前模式 → 选中下标 = 行
+    brne  T_menu_rowinc
+    sts   0x3D2, r29        ; 当前模式 → 选中下标 = 行
+T_menu_rowinc:
+    subi  r29, 0xFF         ; 行++（绘制了才占行）
 T_menu_shnext:
-    adiw  r30, 0x17         ; 下一表项（+23）
-    subi  r20, 0xFF         ; 行++
-    cpi   r20, 8
-    brne  T_menu_sl         ; 行 4..7
-    ldi   r24, 7
-    sts   COUNT_RAM, r24    ; 项数 = 7
+    subi  r16, 0xE9         ; 表指针 +23
+    sbci  r17, 0xFF
+    cp    r16, r14
+    cpc   r17, r15
+    brne  T_menu_sl         ; 未到表尾 → 下一项
+    subi  r29, 0x01         ; 项数 = 实际绘制的最后一行
+    sts   COUNT_RAM, r29
     jmp   0x314E            ; 收尾 pop/ret
-T_menu_loop:
-    cpi   r29, 3
-    brne  T_menu_orig       ; 未绘完前 2 项 → 回原循环
-    rjmp  T_menu            ; 绘完前 2 项 → 插入模式 9（短跳板）
-T_menu_orig:
-    jmp   0x30FA
+T_menu_g7:
+    lds   r24, 0x3413
+    and   r24, r24
+    brne  T_menu_draw
+    rjmp  T_menu_shnext     ; 硬件缺失 → 跳过
+T_menu_g8:
+    lds   r24, 0x3413
+    cpi   r24, 2
+    brcc  T_menu_draw
+    rjmp  T_menu_shnext     ; 硬件缺失 → 跳过
+
 
 ; ---- T_lookup：选模式后状态栏名称查找循环尾（补丁点 0x32B4）----
 ; 原循环扫 6 项首字符匹配模式号；扫完未中且模式==9 → 远地址绘名称。

@@ -1,0 +1,4 @@
+# 构建中间产物，可由 build.mjs 再生
+*.o
+*.elf
+patch.bin

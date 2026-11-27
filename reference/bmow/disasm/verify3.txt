@@ -1,0 +1,146 @@
+===== C900-C970 size detect precise =====
+    c900:	90 43       	sbci	r25, 0x30	; 48
+    c902:	a2 40       	sbci	r26, 0x02	; 2
+    c904:	b1 09       	sbc	r27, r1
+    c906:	81 15       	cp	r24, r1
+    c908:	90 45       	sbci	r25, 0x50	; 80
+    c90a:	a1 05       	cpc	r26, r1
+    c90c:	b1 05       	cpc	r27, r1
+    c90e:	08 f4       	brcc	.+2      	;  0xc912
+    c910:	4a c0       	rjmp	.+148    	;  0xc9a6
+    c912:	41 14       	cp	r4, r1
+    c914:	2e e8       	ldi	r18, 0x8E	; 142
+    c916:	52 06       	cpc	r5, r18
+    c918:	23 e0       	ldi	r18, 0x03	; 3
+    c91a:	62 06       	cpc	r6, r18
+    c91c:	71 04       	cpc	r7, r1
+    c91e:	09 f4       	brne	.+2      	;  0xc922
+    c920:	a0 c0       	rjmp	.+320    	;  0xca62
+    c922:	41 14       	cp	r4, r1
+    c924:	f0 e8       	ldi	r31, 0x80	; 128
+    c926:	5f 06       	cpc	r5, r31
+    c928:	fc e0       	ldi	r31, 0x0C	; 12
+    c92a:	6f 06       	cpc	r6, r31
+    c92c:	71 04       	cpc	r7, r1
+    c92e:	09 f4       	brne	.+2      	;  0xc932
+    c930:	86 c0       	rjmp	.+268    	;  0xca3e
+    c932:	d3 01       	movw	r26, r6
+    c934:	c2 01       	movw	r24, r4
+    c936:	85 55       	subi	r24, 0x55	; 85
+    c938:	92 40       	sbci	r25, 0x02	; 2
+    c93a:	a1 09       	sbc	r26, r1
+    c93c:	b1 09       	sbc	r27, r1
+    c93e:	8b 3a       	cpi	r24, 0xAB	; 171
+    c940:	9d 46       	sbci	r25, 0x6D	; 109
+    c942:	a7 41       	sbci	r26, 0x17	; 23
+    c944:	b1 05       	cpc	r27, r1
+    c946:	08 f4       	brcc	.+2      	;  0xc94a
+    c948:	8e c0       	rjmp	.+284    	;  0xca66
+    c94a:	20 e3       	ldi	r18, 0x30	; 48
+    c94c:	52 1a       	sub	r5, r18
+    c94e:	22 e0       	ldi	r18, 0x02	; 2
+    c950:	62 0a       	sbc	r6, r18
+    c952:	71 08       	sbc	r7, r1
+    c954:	41 14       	cp	r4, r1
+    c956:	80 ed       	ldi	r24, 0xD0	; 208
+    c958:	58 06       	cpc	r5, r24
+    c95a:	8d e3       	ldi	r24, 0x3D	; 61
+    c95c:	68 06       	cpc	r6, r24
+    c95e:	71 04       	cpc	r7, r1
+    c960:	48 f4       	brcc	.+18     	;  0xc974
+    c962:	19 e1       	ldi	r17, 0x19	; 25
+    c964:	08 c0       	rjmp	.+16     	;  0xc976
+    c966:	41 14       	cp	r4, r1
+    c968:	f0 e8       	ldi	r31, 0x80	; 128
+    c96a:	5f 06       	cpc	r5, r31
+    c96c:	f6 e1       	ldi	r31, 0x16	; 22
+    c96e:	6f 06       	cpc	r6, r31
+===== CA62-CAA0 NIB accept path =====
+    ca62:	13 e1       	ldi	r17, 0x13	; 19
+    ca64:	88 cf       	rjmp	.-240    	;  0xc976
+    ca66:	b6 01       	movw	r22, r12
+    ca68:	c8 01       	movw	r24, r16
+    ca6a:	0e 94 a7 7b 	call	0xf74e	;  0xf74e
+    ca6e:	19 82       	std	Y+1, r1	; 0x01
+    ca70:	1c 82       	std	Y+4, r1	; 0x04
+    ca72:	41 e0       	ldi	r20, 0x01	; 1
+    ca74:	b6 01       	movw	r22, r12
+    ca76:	ce 01       	movw	r24, r28
+    ca78:	01 96       	adiw	r24, 0x01	; 1
+    ca7a:	5c 01       	movw	r10, r24
+    ca7c:	0e 94 4b 82 	call	0x10496	;  0x10496
+    ca80:	81 11       	cpse	r24, r1
+    ca82:	22 c0       	rjmp	.+68     	;  0xcac8
+    ca84:	8c 81       	ldd	r24, Y+4	; 0x04
+    ca86:	88 23       	and	r24, r24
+    ca88:	09 f4       	brne	.+2      	;  0xca8c
+    ca8a:	5f cf       	rjmp	.-322    	;  0xc94a
+    ca8c:	c5 01       	movw	r24, r10
+    ca8e:	0e 94 3e 7f 	call	0xfe7c	;  0xfe7c
+    ca92:	5b cf       	rjmp	.-330    	;  0xc94a
+    ca94:	fe 01       	movw	r30, r28
+    ca96:	ee 0d       	add	r30, r14
+    ca98:	ff 1d       	adc	r31, r15
+    ca9a:	83 8d       	ldd	r24, Z+27	; 0x1b
+    ca9c:	8a 35       	cpi	r24, 0x5A	; 90
+    ca9e:	09 f6       	brne	.-126    	;  0xca22
+===== 30E4-30FA menu end ptr load =====
+    30e4:	6e 2d       	mov	r22, r14
+    30e6:	81 e0       	ldi	r24, 0x01	; 1
+    30e8:	0e 94 52 72 	call	0xe4a4	;  0xe4a4
+    30ec:	0d ee       	ldi	r16, 0xED	; 237
+    30ee:	15 e0       	ldi	r17, 0x05	; 5
+    30f0:	97 e7       	ldi	r25, 0x77	; 119
+    30f2:	e9 2e       	mov	r14, r25
+    30f4:	96 e0       	ldi	r25, 0x06	; 6
+    30f6:	f9 2e       	mov	r15, r25
+    30f8:	d1 e0       	ldi	r29, 0x01	; 1
+===== data 0x677-0x6C0 (mode table tail) =====
+0677: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+0687: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+0697: 00 00 E0 E0 E0 00 00 00 00 00 00 00 00 00 00 00  ................
+06A7: 00 00 00 E0 E0 E0 E0 E0 E0 00 E0 E0 E0 E0 E0 E0  ................
+06B7: 70 FC FE 8F 07 07 07 07 FF FF FF 00 FF FF FF 07  p...............
+===== direct lds/sts refs to RAM 0x3B00-0x3B30 =====
+  00337C lds r24, 0x3B05
+  003C74 sts r1, 0x3B05
+  003DBA lds r25, 0x3B05
+  004398 lds r24, 0x3B05
+  00897C sts r24, 0x3B05
+  009158 sts r25, 0x3B05
+  00F550 sts r13, 0x3B00
+  00F554 sts r14, 0x3B01
+  00F558 sts r15, 0x3B02
+  00FAE0 lds r19, 0x3B00
+  00FAE4 lds r20, 0x3B01
+  00FAE8 lds r21, 0x3B02
+  010090 lds r25, 0x3B00
+  010094 lds r26, 0x3B01
+  010098 lds r27, 0x3B02
+  010228 lds r21, 0x3B00
+  01022C lds r22, 0x3B01
+  010230 lds r23, 0x3B02
+  010600 lds r21, 0x3B00
+  010604 lds r22, 0x3B01
+  010608 lds r23, 0x3B02
+  010688 lds r25, 0x3B00
+  01068C lds r26, 0x3B01
+  010690 lds r27, 0x3B02
+  0106CE sts r13, 0x3B00
+  0106D2 sts r14, 0x3B01
+  0106D6 sts r15, 0x3B02
+  010892 lds r9, 0x3B00
+  010896 lds r10, 0x3B01
+  01089A lds r11, 0x3B02
+  01090C lds r9, 0x3B00
+  010910 lds r10, 0x3B01
+  010914 lds r11, 0x3B02
+  010E64 sts r25, 0x3B00
+  010E68 sts r26, 0x3B01
+  010E6C sts r27, 0x3B02
+  012202 sts r25, 0x3B04
+  012206 sts r24, 0x3B03
+  012210 lds r30, 0x3B03
+  012214 lds r31, 0x3B04
+===== ldi pairs loading 0x0677 (menu table end) =====
+  002A4C ldi r16,0x77 ; ldi r17,0x06

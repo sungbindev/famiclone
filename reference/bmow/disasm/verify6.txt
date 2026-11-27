@@ -1,0 +1,85 @@
+===== 10496-104A6 func 0x10496 (file read?) =====
+   10496:	fb 01       	movw	r30, r22
+   10498:	24 2f       	mov	r18, r20
+   1049a:	60 91 f6 38 	lds	r22, 0x38F6	;  0x8038f6
+   1049e:	70 91 f7 38 	lds	r23, 0x38F7	;  0x8038f7
+   104a2:	af 01       	movw	r20, r30
+   104a4:	2c cf       	rjmp	.-424    	;  0x102fe
+===== F8D2-F920 func 0xF8D2 =====
+    f8d2:	2f 92       	push	r2
+    f8d4:	3f 92       	push	r3
+    f8d6:	4f 92       	push	r4
+    f8d8:	5f 92       	push	r5
+    f8da:	6f 92       	push	r6
+    f8dc:	7f 92       	push	r7
+    f8de:	8f 92       	push	r8
+    f8e0:	9f 92       	push	r9
+    f8e2:	af 92       	push	r10
+    f8e4:	bf 92       	push	r11
+    f8e6:	cf 92       	push	r12
+    f8e8:	df 92       	push	r13
+    f8ea:	ef 92       	push	r14
+    f8ec:	ff 92       	push	r15
+    f8ee:	0f 93       	push	r16
+    f8f0:	1f 93       	push	r17
+    f8f2:	cf 93       	push	r28
+    f8f4:	df 93       	push	r29
+    f8f6:	00 d0       	rcall	.+0      	;  0xf8f8
+    f8f8:	00 d0       	rcall	.+0      	;  0xf8fa
+    f8fa:	1f 92       	push	r1
+    f8fc:	cd b7       	in	r28, 0x3d	; 61
+    f8fe:	de b7       	in	r29, 0x3e	; 62
+    f900:	8c 01       	movw	r16, r24
+    f902:	5b 01       	movw	r10, r22
+    f904:	3a 01       	movw	r6, r20
+    f906:	dc 01       	movw	r26, r24
+    f908:	13 96       	adiw	r26, 0x03	; 3
+    f90a:	2c 91       	ld	r18, X
+    f90c:	22 23       	and	r18, r18
+    f90e:	21 f0       	breq	.+8      	;  0xf918
+    f910:	fc 01       	movw	r30, r24
+    f912:	91 81       	ldd	r25, Z+1	; 0x01
+    f914:	90 fd       	sbrc	r25, 0
+    f916:	1a c0       	rjmp	.+52     	;  0xf94c
+    f918:	8f ef       	ldi	r24, 0xFF	; 255
+    f91a:	9f ef       	ldi	r25, 0xFF	; 255
+    f91c:	0f 90       	pop	r0
+    f91e:	0f 90       	pop	r0
+===== 317A-31A2 mode handler start =====
+    317a:	ef 92       	push	r14
+    317c:	ff 92       	push	r15
+    317e:	0f 93       	push	r16
+    3180:	1f 93       	push	r17
+    3182:	cf 93       	push	r28
+    3184:	df 93       	push	r29
+    3186:	c0 91 fe 33 	lds	r28, 0x33FE	;  0x8033fe
+    318a:	c5 30       	cpi	r28, 0x05	; 5
+    318c:	09 f4       	brne	.+2      	;  0x3190
+    318e:	ed c0       	rjmp	.+474    	;  0x336a
+    3190:	41 e0       	ldi	r20, 0x01	; 1
+    3192:	60 e4       	ldi	r22, 0x40	; 64
+    3194:	72 e0       	ldi	r23, 0x02	; 2
+    3196:	8f ed       	ldi	r24, 0xDF	; 223
+    3198:	93 e3       	ldi	r25, 0x33	; 51
+    319a:	0e 94 4b 82 	call	0x10496	;  0x10496
+    319e:	81 11       	cpse	r24, r1
+    31a0:	c1 c0       	rjmp	.+386    	;  0x3324
+===== callers of 0x317A and 0x10496 =====
+  002684 call 0x10496
+  0026AA call 0x10496
+  00319A call 0x10496
+  005CC8 call 0x10496
+  005D02 call 0x10496
+  00932C call 0x10496
+  00AF00 call 0x10496
+  00AFC4 call 0x10496
+  00B260 call 0x10496
+  00BF58 call 0x10496
+  00CA7C call 0x10496
+  00CAB0 call 0x10496
+  00D4A8 call 0x10496
+  00DD8C call 0x10496
+  00E0D2 call 0x10496
+  00E24E call 0x10496
+  00E3AA call 0x10496
+===== ldi pairs loading 0x2D24 (emumode.txt lo16) =====

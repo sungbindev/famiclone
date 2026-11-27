@@ -1,0 +1,68 @@
+===== EMUMODE strings in image =====
+  0x12D24: "emumode.txt"
+===== sts 0x38F6/0x38F7 sites =====
+  0104BA sts r17, 0x38F7
+  0104BE sts r16, 0x38F6
+  01055C sts r17, 0x38F7
+  010560 sts r16, 0x38F6
+  0105B8 sts r29, 0x38F7
+  0105BC sts r28, 0x38F6
+===== context before 0104BA =====
+   104aa:	cf 93       	push	r28
+   104ac:	df 93       	push	r29
+   104ae:	ec 01       	movw	r28, r24
+   104b0:	8c 01       	movw	r16, r24
+   104b2:	0e 5d       	subi	r16, 0xDE	; 222
+   104b4:	1f 4f       	sbci	r17, 0xFF	; 255
+   104b6:	66 23       	and	r22, r22
+   104b8:	21 f0       	breq	.+8      	;  0x104c2
+   104ba:	10 93 f7 38 	sts	0x38F7, r17	;  0x8038f7
+===== context before 0104BE =====
+   104ae:	ec 01       	movw	r28, r24
+   104b0:	8c 01       	movw	r16, r24
+   104b2:	0e 5d       	subi	r16, 0xDE	; 222
+   104b4:	1f 4f       	sbci	r17, 0xFF	; 255
+   104b6:	66 23       	and	r22, r22
+   104b8:	21 f0       	breq	.+8      	;  0x104c2
+   104ba:	10 93 f7 38 	sts	0x38F7, r17	;  0x8038f7
+   104be:	00 93 f6 38 	sts	0x38F6, r16	;  0x8038f6
+===== context before 01055C =====
+   1054c:	f6 01       	movw	r30, r12
+   1054e:	d8 01       	movw	r26, r16
+   10550:	01 90       	ld	r0, Z+
+   10552:	0d 92       	st	X+, r0
+   10554:	8a 95       	dec	r24
+   10556:	e1 f7       	brne	.-8      	;  0x10550
+   10558:	ee 20       	and	r14, r14
+   1055a:	21 f0       	breq	.+8      	;  0x10564
+   1055c:	10 93 f7 38 	sts	0x38F7, r17	;  0x8038f7
+===== context before 010560 =====
+   10550:	01 90       	ld	r0, Z+
+   10552:	0d 92       	st	X+, r0
+   10554:	8a 95       	dec	r24
+   10556:	e1 f7       	brne	.-8      	;  0x10550
+   10558:	ee 20       	and	r14, r14
+   1055a:	21 f0       	breq	.+8      	;  0x10564
+   1055c:	10 93 f7 38 	sts	0x38F7, r17	;  0x8038f7
+   10560:	00 93 f6 38 	sts	0x38F6, r16	;  0x8038f6
+===== context before 0105B8 =====
+   105a8:	1f 4f       	sbci	r17, 0xFF	; 255
+   105aa:	41 e0       	ldi	r20, 0x01	; 1
+   105ac:	be 01       	movw	r22, r28
+   105ae:	c8 01       	movw	r24, r16
+   105b0:	2c d4       	rcall	.+2136   	;  0x10e0a
+   105b2:	88 23       	and	r24, r24
+   105b4:	71 f0       	breq	.+28     	;  0x105d2
+   105b6:	a2 96       	adiw	r28, 0x22	; 34
+   105b8:	d0 93 f7 38 	sts	0x38F7, r29	;  0x8038f7
+===== context before 0105BC =====
+   105ac:	be 01       	movw	r22, r28
+   105ae:	c8 01       	movw	r24, r16
+   105b0:	2c d4       	rcall	.+2136   	;  0x10e0a
+   105b2:	88 23       	and	r24, r24
+   105b4:	71 f0       	breq	.+28     	;  0x105d2
+   105b6:	a2 96       	adiw	r28, 0x22	; 34
+   105b8:	d0 93 f7 38 	sts	0x38F7, r29	;  0x8038f7
+   105bc:	c0 93 f6 38 	sts	0x38F6, r28	;  0x8038f6
+===== callers of 0x317A =====
+  003758 rcall 0x317A

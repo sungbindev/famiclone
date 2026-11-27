@@ -1,0 +1,7 @@
+===== ldi pair lo=0x24 hi=0xAD =====
+===== ldi pair lo=0x24 hi=0x2D =====
+===== ldi pair lo=0x92 hi=0x96 =====
+===== ldi pair lo=0x10 hi=0xAD =====
+===== ldi pair lo=0x10 hi=0x2D =====
+===== branches to 0x3758 =====
+  0036FA branch

@@ -7,7 +7,9 @@ BMOW Floppy Emu Model B 统一固件 `femu.bin`（250225A）的反汇编工程�
 | 路径 | 内容 |
 | --- | --- |
 | `femu_full.lst` | 全量反汇编清单（avr-objdump，0x0–0x12F00，AVR 程序与数据段） |
+| `verify*.txt`、`mode-sites.txt` | 实施前核实的反汇编摘录（main 全段、菜单循环、模式读取点上下文、size 判定、字符串绘制器等） |
 | `../bin/femu.bin` | 官方固件映像（AVR 0x0–0x1FFFF + CPLD XVF 0x20000–0x2D028） |
+| `../patch/` | 新增模式 9 的补丁工程（patch.s、build.mjs、README.md），产物在 `../build/femu.bin` |
 | `../tools/` | avr-gcc 工具链与检索脚本 |
 
 ## 反汇编命令

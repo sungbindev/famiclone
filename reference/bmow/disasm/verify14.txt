@@ -1,0 +1,67 @@
+===== refs to 0x307E =====
+  0031A2 rcall 0x0x307E
+  0031D2 rcall 0x0x307E
+===== refs to 0x317A =====
+  003758 rcall 0x0x317A
+===== refs to 0x3190 =====
+  00318C br* 0x0x3190
+  00337A rjmp 0x0x3190
+  003384 rjmp 0x0x3190
+  00338E rjmp 0x0x3190
+===== refs to 0x377E =====
+  003DB6 rcall 0x0x377E
+  0091EA call 0x0x377E
+  00B998 call 0x0x377E
+  00C08E call 0x0x377E
+  00C3BC call 0x0x377E
+===== data 0xC8-0x160 (settings menu names) =====
+00C8: Settings.Setting
+00D8: s.  Turn off com
+00E8: puter.switch to 
+00F8: OTHER.switch to 
+0108: 3.5.Set Universa
+0118: l Adapter.     p
+0128: lease wait.   10
+0138: 1010101010....  
+0148:  010101010101010
+0158: .    UPDATING CP
+===== func 0x27DA head =====
+    27da:	2f 92       	push	r2
+    27dc:	3f 92       	push	r3
+    27de:	4f 92       	push	r4
+    27e0:	5f 92       	push	r5
+    27e2:	6f 92       	push	r6
+    27e4:	7f 92       	push	r7
+    27e6:	8f 92       	push	r8
+    27e8:	9f 92       	push	r9
+    27ea:	af 92       	push	r10
+    27ec:	bf 92       	push	r11
+    27ee:	cf 92       	push	r12
+    27f0:	df 92       	push	r13
+    27f2:	ef 92       	push	r14
+    27f4:	ff 92       	push	r15
+    27f6:	0f 93       	push	r16
+    27f8:	1f 93       	push	r17
+    27fa:	cf 93       	push	r28
+    27fc:	df 93       	push	r29
+    27fe:	00 d0       	rcall	.+0      	;  0x2800
+    2800:	00 d0       	rcall	.+0      	;  0x2802
+    2802:	cd b7       	in	r28, 0x3d	; 61
+    2804:	de b7       	in	r29, 0x3e	; 62
+    2806:	0e 94 d8 75 	call	0xebb0	;  0xebb0
+    280a:	80 91 ee 38 	lds	r24, 0x38EE	;  0x8038ee
+    280e:	81 11       	cpse	r24, r1
+    2810:	5d c0       	rjmp	.+186    	;  0x28cc
+    2812:	26 e1       	ldi	r18, 0x16	; 22
+    2814:	2a 83       	std	Y+2, r18	; 0x02
+    2816:	86 e0       	ldi	r24, 0x06	; 6
+    2818:	36 e7       	ldi	r19, 0x76	; 118
+    281a:	3b 83       	std	Y+3, r19	; 0x03
+    281c:	33 e0       	ldi	r19, 0x03	; 3
+    281e:	f3 2e       	mov	r15, r19
+    2820:	61 e0       	ldi	r22, 0x01	; 1
+    2822:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2826:	60 e0       	ldi	r22, 0x00	; 0
+    2828:	87 ef       	ldi	r24, 0xF7	; 247
+    282a:	92 e0       	ldi	r25, 0x02	; 2
+    282c:	0e 94 81 74 	call	0xe902	;  0xe902

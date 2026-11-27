@@ -1,0 +1,114 @@
+===== 2A40-2B10 second table-end ref 0x2A4C =====
+    2a40:	af e0       	ldi	r26, 0x0F	; 15
+    2a42:	fa 2e       	mov	r15, r26
+    2a44:	62 e0       	ldi	r22, 0x02	; 2
+    2a46:	8f 2d       	mov	r24, r15
+    2a48:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2a4c:	07 e7       	ldi	r16, 0x77	; 119
+    2a4e:	16 e0       	ldi	r17, 0x06	; 6
+    2a50:	47 eb       	ldi	r20, 0xB7	; 183
+    2a52:	56 e0       	ldi	r21, 0x06	; 6
+    2a54:	5c 83       	std	Y+4, r21	; 0x04
+    2a56:	4b 83       	std	Y+3, r20	; 0x03
+    2a58:	68 01       	movw	r12, r16
+    2a5a:	f6 01       	movw	r30, r12
+    2a5c:	64 91       	lpm	r22, Z
+    2a5e:	62 95       	swap	r22
+    2a60:	60 7f       	andi	r22, 0xF0	; 240
+    2a62:	81 e0       	ldi	r24, 0x01	; 1
+    2a64:	0e 94 52 72 	call	0xe4a4	;  0xe4a4
+    2a68:	ff ef       	ldi	r31, 0xFF	; 255
+    2a6a:	cf 1a       	sub	r12, r31
+    2a6c:	df 0a       	sbc	r13, r31
+    2a6e:	2b 81       	ldd	r18, Y+3	; 0x03
+    2a70:	3c 81       	ldd	r19, Y+4	; 0x04
+    2a72:	2c 15       	cp	r18, r12
+    2a74:	3d 05       	cpc	r19, r13
+    2a76:	89 f7       	brne	.-30     	;  0x2a5a
+    2a78:	63 e0       	ldi	r22, 0x03	; 3
+    2a7a:	8f 2d       	mov	r24, r15
+    2a7c:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2a80:	f8 01       	movw	r30, r16
+    2a82:	64 91       	lpm	r22, Z
+    2a84:	e0 5c       	subi	r30, 0xC0	; 192
+    2a86:	ff 4f       	sbci	r31, 0xFF	; 255
+    2a88:	84 91       	lpm	r24, Z
+    2a8a:	62 95       	swap	r22
+    2a8c:	6f 70       	andi	r22, 0x0F	; 15
+    2a8e:	20 e1       	ldi	r18, 0x10	; 16
+    2a90:	82 9f       	mul	r24, r18
+    2a92:	f0 01       	movw	r30, r0
+    2a94:	11 24       	eor	r1, r1
+    2a96:	6e 2b       	or	r22, r30
+    2a98:	81 e0       	ldi	r24, 0x01	; 1
+    2a9a:	0e 94 52 72 	call	0xe4a4	;  0xe4a4
+    2a9e:	0f 5f       	subi	r16, 0xFF	; 255
+    2aa0:	1f 4f       	sbci	r17, 0xFF	; 255
+    2aa2:	4b 81       	ldd	r20, Y+3	; 0x03
+    2aa4:	5c 81       	ldd	r21, Y+4	; 0x04
+    2aa6:	40 17       	cp	r20, r16
+    2aa8:	51 07       	cpc	r21, r17
+    2aaa:	51 f7       	brne	.-44     	;  0x2a80
+    2aac:	64 e0       	ldi	r22, 0x04	; 4
+    2aae:	8f 2d       	mov	r24, r15
+    2ab0:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2ab4:	07 ef       	ldi	r16, 0xF7	; 247
+    2ab6:	16 e0       	ldi	r17, 0x06	; 6
+    2ab8:	eb 81       	ldd	r30, Y+3	; 0x03
+    2aba:	fc 81       	ldd	r31, Y+4	; 0x04
+    2abc:	64 91       	lpm	r22, Z
+    2abe:	e0 5c       	subi	r30, 0xC0	; 192
+    2ac0:	ff 4f       	sbci	r31, 0xFF	; 255
+    2ac2:	84 91       	lpm	r24, Z
+    2ac4:	62 95       	swap	r22
+    2ac6:	6f 70       	andi	r22, 0x0F	; 15
+    2ac8:	20 e1       	ldi	r18, 0x10	; 16
+    2aca:	82 9f       	mul	r24, r18
+    2acc:	f0 01       	movw	r30, r0
+    2ace:	11 24       	eor	r1, r1
+    2ad0:	6e 2b       	or	r22, r30
+    2ad2:	81 e0       	ldi	r24, 0x01	; 1
+    2ad4:	0e 94 52 72 	call	0xe4a4	;  0xe4a4
+    2ad8:	4b 81       	ldd	r20, Y+3	; 0x03
+    2ada:	5c 81       	ldd	r21, Y+4	; 0x04
+    2adc:	4f 5f       	subi	r20, 0xFF	; 255
+    2ade:	5f 4f       	sbci	r21, 0xFF	; 255
+    2ae0:	5c 83       	std	Y+4, r21	; 0x04
+    2ae2:	4b 83       	std	Y+3, r20	; 0x03
+    2ae4:	47 5f       	subi	r20, 0xF7	; 247
+    2ae6:	56 40       	sbci	r21, 0x06	; 6
+    2ae8:	39 f7       	brne	.-50     	;  0x2ab8
+    2aea:	65 e0       	ldi	r22, 0x05	; 5
+    2aec:	8f 2d       	mov	r24, r15
+    2aee:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2af2:	f8 01       	movw	r30, r16
+    2af4:	64 91       	lpm	r22, Z
+    2af6:	70 e0       	ldi	r23, 0x00	; 0
+    2af8:	75 95       	asr	r23
+    2afa:	67 95       	ror	r22
+    2afc:	75 95       	asr	r23
+    2afe:	67 95       	ror	r22
+    2b00:	75 95       	asr	r23
+    2b02:	67 95       	ror	r22
+    2b04:	75 95       	asr	r23
+    2b06:	67 95       	ror	r22
+    2b08:	81 e0       	ldi	r24, 0x01	; 1
+    2b0a:	0e 94 52 72 	call	0xe4a4	;  0xe4a4
+    2b0e:	0f 5f       	subi	r16, 0xFF	; 255
+===== 3390-33B0 name lookup result mul23 =====
+    3390:	47 e1       	ldi	r20, 0x17	; 23
+    3392:	42 9f       	mul	r20, r18
+    3394:	c0 01       	movw	r24, r0
+    3396:	43 9f       	mul	r20, r19
+    3398:	90 0d       	add	r25, r0
+    339a:	11 24       	eor	r1, r1
+    339c:	60 e0       	ldi	r22, 0x00	; 0
+    339e:	82 51       	subi	r24, 0x12	; 18
+    33a0:	9a 4f       	sbci	r25, 0xFA	; 250
+    33a2:	0e 94 81 74 	call	0xe902	;  0xe902
+    33a6:	8c cf       	rjmp	.-232    	;  0x32c0
+    33a8:	8e ef       	ldi	r24, 0xFE	; 254
+    33aa:	90 e0       	ldi	r25, 0x00	; 0
+    33ac:	0e 94 81 74 	call	0xe902	;  0xe902
+===== direct lds/sts refs to RAM 0x3B06-0x3C00 =====
+  total: 0

@@ -1,0 +1,60 @@
+===== ldi 0x24/0x2D pairs =====
+===== context 0x3700-0x377E (caller of 0x317A) =====
+    3700:	79 f1       	breq	.+94     	;  0x3760
+    3702:	60 f1       	brcs	.+88     	;  0x375c
+    3704:	c5 30       	cpi	r28, 0x05	; 5
+    3706:	89 f4       	brne	.+34     	;  0x372a
+    3708:	0f b6       	in	r0, 0x3f	; 63
+    370a:	f8 94       	cli
+    370c:	a8 95       	wdr
+    370e:	b0 92 60 00 	sts	0x0060, r11	;  0x800060
+    3712:	0f be       	out	0x3f, r0	; 63
+    3714:	00 93 60 00 	sts	0x0060, r16	;  0x800060
+    3718:	8f e7       	ldi	r24, 0x7F	; 127
+    371a:	9a e1       	ldi	r25, 0x1A	; 26
+    371c:	26 e0       	ldi	r18, 0x06	; 6
+    371e:	81 50       	subi	r24, 0x01	; 1
+    3720:	90 40       	sbci	r25, 0x00	; 0
+    3722:	20 40       	sbci	r18, 0x00	; 0
+    3724:	e1 f7       	brne	.-8      	;  0x371e
+    3726:	00 c0       	rjmp	.+0      	;  0x3728
+    3728:	00 00       	nop
+    372a:	2c 2f       	mov	r18, r28
+    372c:	41 2f       	mov	r20, r17
+    372e:	60 e0       	ldi	r22, 0x00	; 0
+    3730:	c7 01       	movw	r24, r14
+    3732:	3f de       	rcall	.-898    	;  0x33b2
+    3734:	a3 cf       	rjmp	.-186    	;  0x367c
+    3736:	cc 23       	and	r28, r28
+    3738:	29 f0       	breq	.+10     	;  0x3744
+    373a:	c1 30       	cpi	r28, 0x01	; 1
+    373c:	b1 f7       	brne	.-20     	;  0x372a
+    373e:	ca da       	rcall	.-2668   	;  0x2cd4
+    3740:	f4 cf       	rjmp	.-24     	;  0x372a
+    3742:	8c 2f       	mov	r24, r28
+    3744:	df 91       	pop	r29
+    3746:	cf 91       	pop	r28
+    3748:	1f 91       	pop	r17
+    374a:	0f 91       	pop	r16
+    374c:	ff 90       	pop	r15
+    374e:	ef 90       	pop	r14
+    3750:	df 90       	pop	r13
+    3752:	cf 90       	pop	r12
+    3754:	bf 90       	pop	r11
+    3756:	08 95       	ret
+    3758:	10 dd       	rcall	.-1504   	;  0x317a
+    375a:	e7 cf       	rjmp	.-50     	;  0x372a
+    375c:	59 db       	rcall	.-2382   	;  0x2e10
+    375e:	e5 cf       	rjmp	.-54     	;  0x372a
+    3760:	20 91 ed 38 	lds	r18, 0x38ED	;  0x8038ed
+    3764:	42 e0       	ldi	r20, 0x02	; 2
+    3766:	61 e0       	ldi	r22, 0x01	; 1
+    3768:	8b ea       	ldi	r24, 0xAB	; 171
+    376a:	95 e0       	ldi	r25, 0x05	; 5
+    376c:	66 df       	rcall	.-308    	;  0x363a
+    376e:	80 93 ed 38 	sts	0x38ED, r24	;  0x8038ed
+    3772:	68 2f       	mov	r22, r24
+    3774:	83 e0       	ldi	r24, 0x03	; 3
+    3776:	90 e0       	ldi	r25, 0x00	; 0
+    3778:	0e 94 d4 95 	call	0x12ba8	;  0x12ba8
+    377c:	d6 cf       	rjmp	.-84     	;  0x372a

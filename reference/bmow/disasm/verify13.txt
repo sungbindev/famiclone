@@ -1,0 +1,72 @@
+string 0x1EA: "ST ADJUSTMENT"
+string 0x1F7: ""
+string 0x240: "en"
+string 0x2CE: "Apple II 5.25 Floppy"
+===== ldi r22,0x40 ; ldi r23,0x02 sites =====
+  003192
+        3192:	60 e4       	ldi	r22, 0x40	; 64
+        3194:	72 e0       	ldi	r23, 0x02	; 2
+        3196:	8f ed       	ldi	r24, 0xDF	; 223
+        3198:	93 e3       	ldi	r25, 0x33	; 51
+        319a:	0e 94 4b 82 	call	0x10496	;  0x10496
+        319e:	81 11       	cpse	r24, r1
+        31a0:	c1 c0       	rjmp	.+386    	;  0x3324
+===== func head 0x2600-0x2680 =====
+    2600:	20 40       	sbci	r18, 0x00	; 0
+    2602:	e1 f7       	brne	.-8      	;  0x25fc
+    2604:	00 c0       	rjmp	.+0      	;  0x2606
+    2606:	00 00       	nop
+    2608:	85 b1       	in	r24, 0x05	; 5
+    260a:	89 27       	eor	r24, r25
+    260c:	85 b9       	out	0x05, r24	; 5
+    260e:	f3 cf       	rjmp	.-26     	;  0x25f6
+    2610:	95 e0       	ldi	r25, 0x05	; 5
+    2612:	d9 2e       	mov	r13, r25
+    2614:	24 e0       	ldi	r18, 0x04	; 4
+    2616:	c2 2e       	mov	r12, r18
+    2618:	32 e0       	ldi	r19, 0x02	; 2
+    261a:	f3 2e       	mov	r15, r19
+    261c:	99 cf       	rjmp	.-206    	;  0x2550
+    261e:	81 ec       	ldi	r24, 0xC1	; 193
+    2620:	93 e0       	ldi	r25, 0x03	; 3
+    2622:	0e 94 81 74 	call	0xe902	;  0xe902
+    2626:	8a cf       	rjmp	.-236    	;  0x253c
+    2628:	62 e0       	ldi	r22, 0x02	; 2
+    262a:	80 e0       	ldi	r24, 0x00	; 0
+    262c:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2630:	60 e0       	ldi	r22, 0x00	; 0
+    2632:	cc 23       	and	r28, r28
+    2634:	29 f0       	breq	.+10     	;  0x2640
+    2636:	8b ea       	ldi	r24, 0xAB	; 171
+    2638:	93 e0       	ldi	r25, 0x03	; 3
+    263a:	0e 94 81 74 	call	0xe902	;  0xe902
+    263e:	7e cf       	rjmp	.-260    	;  0x253c
+    2640:	85 e9       	ldi	r24, 0x95	; 149
+    2642:	93 e0       	ldi	r25, 0x03	; 3
+    2644:	0e 94 81 74 	call	0xe902	;  0xe902
+    2648:	63 e0       	ldi	r22, 0x03	; 3
+    264a:	80 e0       	ldi	r24, 0x00	; 0
+    264c:	0e 94 61 72 	call	0xe4c2	;  0xe4c2
+    2650:	60 e0       	ldi	r22, 0x00	; 0
+    2652:	8f e7       	ldi	r24, 0x7F	; 127
+    2654:	93 e0       	ldi	r25, 0x03	; 3
+    2656:	0e 94 81 74 	call	0xe902	;  0xe902
+    265a:	70 cf       	rjmp	.-288    	;  0x253c
+    265c:	1f 93       	push	r17
+    265e:	cf 93       	push	r28
+    2660:	df 93       	push	r29
+    2662:	11 b8       	out	0x01, r1	; 1
+    2664:	2f ef       	ldi	r18, 0xFF	; 255
+    2666:	39 e6       	ldi	r19, 0x69	; 105
+    2668:	98 e1       	ldi	r25, 0x18	; 24
+    266a:	21 50       	subi	r18, 0x01	; 1
+    266c:	30 40       	sbci	r19, 0x00	; 0
+    266e:	90 40       	sbci	r25, 0x00	; 0
+    2670:	e1 f7       	brne	.-8      	;  0x266a
+    2672:	00 c0       	rjmp	.+0      	;  0x2674
+    2674:	00 00       	nop
+    2676:	88 23       	and	r24, r24
+    2678:	99 f0       	breq	.+38     	;  0x26a0
+    267a:	41 e0       	ldi	r20, 0x01	; 1
+    267c:	67 ef       	ldi	r22, 0xF7	; 247
+    267e:	71 e0       	ldi	r23, 0x01	; 1

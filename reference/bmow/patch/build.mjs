@@ -88,11 +88,11 @@ const patches = [
   // 偶发 I/O ERROR，重试即成功。改为有界宽限（最多 200 半字节≈6.4ms），窗口耗尽
   // 仍走原故障路径报错，不掩盖持续性错误。替换 0x4B8C 的 lds r19,0x35EB（4 字节）。
   { at: 0x4B8C, bytes: jmp(sym.T_wstart), expect: [0x30, 0x91, 0xEB, 0x35], desc: '写会话启动：收尾未完成时有界宽限重试，超时仍报原错误' },
-  // 诊断计数器（只加观察不改写行为）：各拒写出口计数，主循环把计数画到屏幕行 7（像素列）。
+  // 诊断计数器（只加观察不改写行为）：各拒写出口计数，主循环把计数画到屏幕空行 1（像素列）。
   { at: 0x4D6C, bytes: Buffer.concat([jmp(sym.T_cntP), Buffer.from([0, 0])]), expect: [0x81, 0xE0, 0x80, 0x93, 0x1F, 0x38], desc: '诊断：相位拒写计数 P（尾部 2 字节 nop 填充，不会执行）' },
   { at: 0x4B74, bytes: jmp(sym.T_chk), expect: [0x30, 0x91, 0x00, 0x34], desc: '诊断：写保护/残留故障检查复现并计数 W/S' },
   { at: 0x653E, bytes: jmp(sym.T_cntC), expect: [0x6F, 0x92, 0x7F, 0x92], desc: '诊断：磁道提交计数 C' },
-  { at: 0x7DAE, bytes: jmp(sym.T_diag), expect: [0x80, 0x91, 0x12, 0x34], desc: '诊断：主循环计数变化或周期刷新屏幕行 7' },
+  { at: 0x7DAE, bytes: jmp(sym.T_diag), expect: [0x80, 0x91, 0x12, 0x34], desc: '诊断：主循环计数变化或周期刷新屏幕行 1' },
 ];
 const changed = [];   // 记录所有被改动的字节偏移
 const mark = (at, len) => { for (let i = 0; i < len; i++) changed.push(at + i); };

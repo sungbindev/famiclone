@@ -89,6 +89,9 @@ T_size_nib:
 ; 名称 "9 Pyramid 40-track" 在 0x13400，绘制用 +1 处 0x13401（低 16 位 0x3401）。
 ; 克隆绘制器在 0x13900（由 build.mjs 从 0xE902 变换生成）。
 ; 菜单项数计数器从 RAM 0x3D9 迁到 0x3B06（0x3D9 让给第 7 项的数组槽）。
+; 槽位新基址：槽(行) = 0x3D2+行（行 1–7 → 0x3D3–0x3D9）。原循环存行 1、2（0x3114）与
+; PREV（0x31C8）/NEXT（0x31FC）读槽的 subi 立即数在 build.mjs 里同步改基址，
+; 否则行 2 槽被插入项覆盖、按键读错槽（NEXT 跳项、PREV 读到 0x3DA 死机）。
     .equ ITEM7_NAME, 0x3401
     .equ CLONE,      0x13900
     .equ COUNT_RAM,  0x3B06

@@ -68,14 +68,26 @@ const patches = [
   { at: 0x5C34, bytes: jmp(sym.T_compat), desc: '模式兼容检查：模式 9 类型 15..24 合法' },
   { at: 0x6414, bytes: jmp(sym.T_init),   desc: '磁盘初始化：模式 9 置 5.25 标志' },
   { at: 0xC912, bytes: jmp(sym.T_size),   desc: 'NIB 大小识别：模式 9 认 266240' },
-  { at: 0x3DAE, bytes: Buffer.from([0x8A]), desc: 'main 模式范围 cpi 9 → cpi 10' },
+  { at: 0x3DAE, bytes: Buffer.from([0x8A]), expect: [0x89], desc: 'main 模式范围 cpi 9 → cpi 10' },
   { at: 0x3142, bytes: jmp(sym.T_menu),   desc: '菜单构建循环出口：追加第 7 项（模式 9）' },
-  { at: 0x31F2, bytes: Buffer.from([0x80, 0x91, 0x06, 0x3B]), desc: '菜单项数读取改到 RAM 0x3B06' },
+  { at: 0x31F2, bytes: Buffer.from([0x80, 0x91, 0x06, 0x3B]), expect: [0x80, 0x91, 0xD9, 0x03], desc: '菜单项数读取改到 RAM 0x3B06' },
   { at: 0x32B4, bytes: jmp(sym.T_lookup), desc: '状态栏名称查找：模式 9 远地址绘名称' },
+  // 菜单槽位新基址 0x3D2+行号（行 1–7 → 0x3D3–0x3D9）：原循环存行 1、2 与 PREV/NEXT 读槽的
+  // subi 立即数同步改基址，否则行 2 槽被插入项覆盖、按键读错槽（跳项/读到 0x3DA 死机）。
+  { at: 0x3114, bytes: Buffer.from([0xEE]), expect: [0xED], desc: '菜单行 1、2 存槽：subi 0x2D → 0x2E（槽 = 0x3D2+行）' },
+  { at: 0x31C8, bytes: Buffer.from([0xEF]), expect: [0xEE], desc: 'PREV 读上一槽：subi 0x2E → 0x2F（读 0x3D1+下标）' },
+  { at: 0x31FC, bytes: Buffer.from([0xEE]), expect: [0xED], desc: 'NEXT 读下一槽：subi 0x2D → 0x2E（ldd Z+1 落在 0x3D3+下标）' },
 ];
 const changed = [];   // 记录所有被改动的字节偏移
 const mark = (at, len) => { for (let i = 0; i < len; i++) changed.push(at + i); };
 for (const p of patches) {
+  if (p.expect) {
+    for (let i = 0; i < p.expect.length; i++) {
+      if (orig[p.at + i] !== p.expect[i]) {
+        throw new Error(`补丁点 0x${p.at.toString(16)} 原字节不是预期值：0x${orig[p.at + i].toString(16)} ≠ 0x${p.expect[i].toString(16)}`);
+      }
+    }
+  }
   p.bytes.copy(out, p.at);
   mark(p.at, p.bytes.length);
 }

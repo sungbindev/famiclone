@@ -93,42 +93,76 @@ T_size_nib:
     .equ CLONE,      0x13900
     .equ COUNT_RAM,  0x3B06
 
-; ---- T_menu：菜单构建循环出口（补丁点 0x3142，原 cp/cpc/brne）----
-; 6 项表扫完后追加第 7 项（模式 9），再走收尾。r29 = 已绘项数+1。
+; ---- T_menu：菜单构建循环（补丁点 0x3142，原 cp/cpc/brne）----
+; 把模式 9 插到菜单第 3 位（下标 3，行 3）：原循环绘前 2 项（下标 1、2，
+; 即表项 0、1），到 r29==3 时先绘模式 9（下标 3），再把原表项 2..5 绘到
+; 下标 4..7。共 7 项。r29 = 当前显示行（1 起）。
 T_menu:
     cp    r14, r16
     cpc   r15, r17
     brne  T_menu_loop       ; 未到表尾 → 回循环
-    ; 数组[r29] = 9（Z = 0x3D2 + r29）
-    mov   r30, r29
-    ldi   r31, 0
-    subi  r30, 0x2D
-    sbci  r31, 0xFC
+    ; 表项 0、1 已绘于下标 1、2（r29==3）。插入模式 9 于下标 3。
     ldi   r28, 9
-    st    Z, r28
-    ; 光标行 r29 列 0
-    mov   r22, r29
+    sts   0x3D5, r28        ; array[3] = 9
+    ldi   r22, 3
     ldi   r24, 0
-    call  0xE4C2
-    ; 选中标志
+    call  0xE4C2            ; 光标行 3 列 0
     ldi   r22, 1
     lds   r24, 0x33FE
     cpi   r24, 9
-    breq  T_menu_sel
+    breq  T_menu_sel9
     ldi   r22, 0
-T_menu_sel:
+T_menu_sel9:
     ldi   r24, lo8(ITEM7_NAME)
     ldi   r25, hi8(ITEM7_NAME)
     call  draw_far
-    ; 当前模式==9 → 记下选中下标
     lds   r24, 0x33FE
     cpi   r24, 9
-    brne  T_menu_cnt
-    sts   0x3D2, r29
-T_menu_cnt:
-    sts   COUNT_RAM, r29    ; 项数 = r29（追加一项后未自增）
+    brne  T_menu_shift
+    ldi   r24, 3
+    sts   0x3D2, r24        ; 当前模式 9 → 选中下标 3
+T_menu_shift:
+    ; 原表项 2..5（名表 0x61B 起，步长 23）绘于下标 4..7
+    ldi   r30, 0x1B         ; Z = 0x61B
+    ldi   r31, 0x06
+    ldi   r20, 4            ; 行 4
+T_menu_sl:
+    mov   r22, r20
+    ldi   r24, 0
+    call  0xE4C2            ; 光标行 r20 列 0
+    lpm   r28, Z            ; 表项首字符 = 模式号 ASCII
+    subi  r28, 0x30
+    mov   r24, r20
+    ldi   r25, 0
+    subi  r24, 0x2E         ; Z = 0x3D2 + 行
+    sbci  r25, 0xFC
+    st    Z, r28            ; array[行] = 模式号
+    ldi   r22, 1
+    lds   r24, 0x33FE
+    cp    r24, r28
+    breq  T_menu_shsel
+    ldi   r22, 0
+T_menu_shsel:
+    movw  r24, r30          ; 名称地址 = 表项
+    adiw  r24, 1
+    call  0xE902            ; 原绘制器（低 flash）
+    lds   r24, 0x33FE
+    cp    r24, r28
+    brne  T_menu_shnext
+    sts   0x3D2, r20        ; 当前模式 → 选中下标 = 行
+T_menu_shnext:
+    adiw  r30, 0x17         ; 下一表项（+23）
+    subi  r20, 0xFF         ; 行++
+    cpi   r20, 8
+    brne  T_menu_sl         ; 行 4..7
+    ldi   r24, 7
+    sts   COUNT_RAM, r24    ; 项数 = 7
     jmp   0x314E            ; 收尾 pop/ret
 T_menu_loop:
+    cpi   r29, 3
+    brne  T_menu_orig       ; 未绘完前 2 项 → 回原循环
+    rjmp  T_menu            ; 绘完前 2 项 → 插入模式 9（短跳板）
+T_menu_orig:
     jmp   0x30FA
 
 ; ---- T_lookup：选模式后状态栏名称查找循环尾（补丁点 0x32B4）----

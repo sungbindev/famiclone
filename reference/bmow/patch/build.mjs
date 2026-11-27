@@ -33,7 +33,7 @@ for (const line of nm.split(/\r?\n/)) {
   const m = line.match(/^([0-9a-fA-F]+)\s+[Tt]\s+(\S+)/);
   if (m) sym[m[2]] = parseInt(m[1], 16);
 }
-const need = ['T_disp', 'T_emu', 'T_compat', 'T_init', 'T_size', 'T_menu', 'T_lookup', 'draw_far', 'T_clampA', 'T_clampB'];
+const need = ['T_disp', 'T_emu', 'T_compat', 'T_init', 'T_size', 'T_menu', 'T_lookup', 'draw_far', 'T_clampA', 'T_clampB', 'T_wstart'];
 for (const s of need) {
   if (!(s in sym)) throw new Error('缺少符号 ' + s);
 }
@@ -81,6 +81,11 @@ const patches = [
   // 否则金字塔 40 道盘的 35–39 道读写全落在 34 道附近（I/O ERROR、写坏盘）。
   { at: 0x8C62, bytes: jmp(sym.T_clampA), expect: [0x20, 0x81, 0x2C, 0x38], desc: 'NIB 读头限幅（主循环）：模式 9 改 40 道' },
   { at: 0x47C8, bytes: jmp(sym.T_clampB), expect: [0x80, 0x81, 0x8C, 0x38], desc: 'NIB 读头限幅（定时器中断）：模式 9 改 40 道' },
+  // 写会话启动竞态（2026-11-27 真机取证）：0x35EB 位 2 在写会话启动时置位、主循环收尾时清零；
+  // 新会话首半字节处若上一段收尾未完成，原固件置故障标志 0x381F 中止整段写入 →
+  // 偶发 I/O ERROR，重试即成功。改为有界宽限（最多 200 半字节≈6.4ms），窗口耗尽
+  // 仍走原故障路径报错，不掩盖持续性错误。替换 0x4B8C 的 lds r19,0x35EB（4 字节）。
+  { at: 0x4B8C, bytes: jmp(sym.T_wstart), expect: [0x30, 0x91, 0xEB, 0x35], desc: '写会话启动：收尾未完成时有界宽限重试，超时仍报原错误' },
 ];
 const changed = [];   // 记录所有被改动的字节偏移
 const mark = (at, len) => { for (let i = 0; i < len; i++) changed.push(at + i); };

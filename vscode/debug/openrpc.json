@@ -691,7 +691,7 @@
             },
             "capacity": {
               "type": "integer",
-              "description": "文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 按扇区、ProDOS 按块算",
+              "description": "文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 与金字塔 DOS 按扇区、ProDOS 按块算",
               "minimum": 0
             },
             "freeSpace": {
@@ -8373,7 +8373,7 @@
         "properties": {
           "format": {
             "type": "string",
-            "description": "格式标识：fat12、fat16、appledos33、prodos"
+            "description": "格式标识：fat12、fat16、appledos33、prodos、pyramid（金字塔 PEC-9588，只读）"
           },
           "formatName": {
             "type": "string",
@@ -8410,7 +8410,7 @@
           },
           "type": {
             "type": "string",
-            "description": "类型文字：FAT 是扩展名，DOS 3.3 与 ProDOS 是类型名，文件夹是“文件夹”"
+            "description": "类型文字：FAT 是扩展名，DOS 3.3、金字塔 DOS 与 ProDOS 是类型名，文件夹是“文件夹”"
           },
           "size": {
             "type": "integer",
@@ -8419,7 +8419,7 @@
           },
           "sizeIsAllocated": {
             "type": "boolean",
-            "description": "大小是占用的空间而不是准确的字节数（DOS 3.3 只知道占用的扇区数）"
+            "description": "大小是占用的空间而不是准确的字节数（DOS 3.3 与金字塔 DOS 只知道占用的扇区数）"
           },
           "modified": {
             "type": "string",

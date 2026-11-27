@@ -12,75 +12,23 @@
 #include "logic/filemanager/apple-dos-file-system.hpp"
 
 #include <algorithm>
-#include <cstdio>
 
 #include "contracts/filemanager/filemanager-error.hpp"
 #include "logic/filemanager/disk-text.hpp"
+#include "logic/filemanager/dos-catalog.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace ember::logic::filemanager {
 
 namespace api = contracts::filemanager;
+using namespace dos_catalog;
 
 namespace {
 
-constexpr unsigned VTOC_TRACK = 17;
-constexpr std::size_t CATALOG_ENTRY_SIZE = 35;
-constexpr std::size_t CATALOG_FIRST_ENTRY = 0x0B;
-constexpr std::size_t CATALOG_ENTRIES_PER_SECTOR = 7;
-constexpr std::size_t NAME_OFFSET = 3;
-constexpr std::size_t NAME_LENGTH = 30;
-constexpr std::size_t PAIRS_PER_LIST = 122;
-constexpr std::size_t LIST_FIRST_PAIR = 0x0C;
-constexpr std::uint8_t ENTRY_DELETED = 0xFF;
-constexpr std::uint8_t LOCKED_FLAG = 0x80;
-/** 目录链与列表链的最大长度，防止损坏的盘里出现循环。 */
-constexpr std::size_t MAX_CHAIN = 1000;
 /** 没有扩展名的文件包成 B 型时头里记的装入地址。 */
 constexpr std::uint32_t DEFAULT_LOAD_ADDRESS = 0x0800;
 
 [[noreturn]] void fail(std::string_view code, const std::string& message) { throw shared::CoreError(code, message); }
-
-/** 文件类型的显示名称。 */
-std::string typeName(std::uint8_t type) {
-  switch (type & 0x7FU) {
-    case 0x00: return "文本";
-    case 0x01: return "整数 BASIC";
-    case 0x02: return "Applesoft";
-    case 0x04: return "二进制";
-    case 0x08: return "S 型";
-    case 0x10: return "可重定位";
-    case 0x20: return "A 型";
-    case 0x40: return "B 型";
-    default: {
-      char text[8];
-      std::snprintf(text, sizeof(text), "$%02X", type & 0x7FU);
-      return text;
-    }
-  }
-}
-
-/** 导出时文件名的扩展名。 */
-const char* typeExtension(std::uint8_t type) {
-  switch (type & 0x7FU) {
-    case 0x00: return ".TXT";
-    case 0x01: return ".INT";
-    case 0x02: return ".BAS";
-    case 0x04: return ".BIN";
-    default: return ".DAT";
-  }
-}
-
-/** 目录项里的名称，去掉高位与末尾的空格。 */
-std::string entryName(const std::uint8_t* entry) {
-  std::string name;
-  for (std::size_t i = 0; i < NAME_LENGTH; ++i) {
-    const auto c = static_cast<char>(entry[NAME_OFFSET + i] & 0x7FU);
-    name.push_back(c >= 0x20 && c < 0x7F ? c : '?');
-  }
-  while (!name.empty() && name.back() == ' ') name.pop_back();
-  return name;
-}
 
 /** 校验并规整用户给的名称：1 到 30 个可见 ASCII 字符，不含逗号，转成大写。 */
 std::string normalizeName(const std::string& input) {

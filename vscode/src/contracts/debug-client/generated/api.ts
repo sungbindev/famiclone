@@ -90,7 +90,7 @@ export interface FilemanagerImageNode {
 
 /** 一个镜像的文件系统。 */
 export interface FilemanagerFileSystemInfo {
-  /** 格式标识：fat12、fat16、appledos33、prodos */
+  /** 格式标识：fat12、fat16、appledos33、prodos、pyramid（金字塔 PEC-9588，只读） */
   format: string;
   /** 界面显示的格式名称 */
   formatName: string;
@@ -106,11 +106,11 @@ export interface FilemanagerEntryInfo {
   name: string;
   /** 是否是文件夹 */
   directory: boolean;
-  /** 类型文字：FAT 是扩展名，DOS 3.3 与 ProDOS 是类型名，文件夹是“文件夹” */
+  /** 类型文字：FAT 是扩展名，DOS 3.3、金字塔 DOS 与 ProDOS 是类型名，文件夹是“文件夹” */
   type: string;
   /** 大小（字节）；文件夹为 0 */
   size: number;
-  /** 大小是占用的空间而不是准确的字节数（DOS 3.3 只知道占用的扇区数） */
+  /** 大小是占用的空间而不是准确的字节数（DOS 3.3 与金字塔 DOS 只知道占用的扇区数） */
   sizeIsAllocated: boolean;
   /** 修改时间，形如 2026-11-25 14:30；文件系统没有时间时为空 */
   modified: string;
@@ -855,7 +855,7 @@ export interface FilemanagerListParams {
 /** filemanager.list 的结果。 */
 export interface FilemanagerListResult {
   fileSystem: FilemanagerFileSystemInfo;
-  /** 文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 按扇区、ProDOS 按块算 */
+  /** 文件系统能存放文件内容的全部空间（字节）：FAT 按簇、DOS 3.3 与金字塔 DOS 按扇区、ProDOS 按块算 */
   capacity: number;
   /** 现在还空着的空间（字节） */
   freeSpace: number;

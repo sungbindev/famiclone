@@ -73,6 +73,21 @@ std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decode(std::span
   return result;
 }
 
+std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decodePyramid(std::span<const std::uint8_t> image, std::string_view extension) const {
+  const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
+  if (!trackBits || trackBits->size() != disk2::PYRAMID_FORMAT.trackCount) return std::nullopt;
+  const auto tracks = static_cast<unsigned>(trackBits->size());
+  std::vector<std::uint8_t> result(static_cast<std::size_t>(tracks) * disk2::PYRAMID_FORMAT.trackBytes(), 0);
+  for (unsigned track = 0; track < tracks; ++track) {
+    for (const disk2::DecodedSector& sector : disk2::decodeTrack(disk2::PYRAMID_FORMAT, (*trackBits)[track])) {
+      if (sector.logical >= disk2::PYRAMID_FORMAT.sectorsPerTrack) continue;
+      std::copy(sector.data.begin(), sector.data.end(),
+                result.begin() + static_cast<std::ptrdiff_t>((static_cast<std::size_t>(track) * disk2::PYRAMID_FORMAT.sectorsPerTrack + sector.logical) * disk2::SECTOR_SIZE));
+    }
+  }
+  return result;
+}
+
 bool AppleBitstreamDecoder::isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const {
   const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
   if (!trackBits) return false;

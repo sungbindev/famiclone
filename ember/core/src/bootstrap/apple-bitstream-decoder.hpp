@@ -5,7 +5,8 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
- * 备注：媒体库（业务模块）不能引用硬件模块的实现，所以由组装根创建这个适配器注入；解码按 DOS 顺序排列扇区，磁道上解不出的扇区（防拷贝的特殊磁道等）填 0。
+ * 备注：媒体库（业务模块）不能引用硬件模块的实现，所以由组装根创建这个适配器注入；苹果的解码按 DOS 顺序排列扇区，
+ *       金字塔的解码按逻辑扇区号排列（每道 14 个扇区），磁道上解不出的扇区（防拷贝的特殊磁道等）填 0。
  * ------------------------------------------------------------------------
  */
 
@@ -19,6 +20,7 @@ namespace ember::bootstrap {
 class AppleBitstreamDecoder final : public contracts::filemanager::AppleBitstreamDecoder {
  public:
   [[nodiscard]] std::optional<std::vector<std::uint8_t>> decode(std::span<const std::uint8_t> image, std::string_view extension) const override;
+  [[nodiscard]] std::optional<std::vector<std::uint8_t>> decodePyramid(std::span<const std::uint8_t> image, std::string_view extension) const override;
   [[nodiscard]] bool isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const override;
 };
 

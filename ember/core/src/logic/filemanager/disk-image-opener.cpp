@@ -21,6 +21,7 @@
 #include "logic/filemanager/disk-text.hpp"
 #include "logic/filemanager/fat-file-system.hpp"
 #include "logic/filemanager/prodos-file-system.hpp"
+#include "logic/filemanager/pyramid-file-system.hpp"
 #include "shared/errors/core-error.hpp"
 
 namespace ember::logic::filemanager {
@@ -71,7 +72,7 @@ void describeUnopenable(const std::vector<std::uint8_t>& image, IdentifiedImage&
     result.formatName = "空白（未格式化）";
   } else if (image.size() == PYRAMID_IMAGE_SIZE) {
     result.formatId = "pyramid";
-    result.formatName = "金字塔 DOS（待支持）";
+    result.formatName = "金字塔 DOS（认不出目录）";
   } else {
     result.formatId = "unknown";
     result.formatName = "未识别";
@@ -139,6 +140,22 @@ IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view
   IdentifiedImage result;
   if (extension == "nib" || extension == "woz") {
     if (decoder != nullptr) {
+      // 先认金字塔的盘：它的扇区号都小于 16、卷目录表也像 DOS 3.3，按苹果格式解会误认成空目录的苹果盘
+      if (decoder->isPyramidDisk(image, extension)) {
+        if (std::optional<std::vector<std::uint8_t>> decoded = decoder->decodePyramid(image, extension)) {
+          auto owner = std::make_unique<OwningFileSystem>(std::move(*decoded));
+          if (std::unique_ptr<PyramidFileSystem> inner = PyramidFileSystem::open(owner->bytes())) {
+            result.formatId = inner->traits().formatId;
+            result.formatName = inner->traits().formatName;
+            owner->attach(std::move(inner));
+            result.fileSystem = std::move(owner);
+            return result;
+          }
+        }
+        result.formatId = "pyramid";
+        result.formatName = "金字塔 DOS（认不出目录）";
+        return result;
+      }
       if (std::optional<std::vector<std::uint8_t>> decoded = decoder->decode(image, extension)) {
         const AppleIdentity identity = identifyApple(*decoded, "dsk");
         if (identity.kind != AppleKind::None) {
@@ -151,11 +168,6 @@ IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view
           return result;
         }
       }
-      if (decoder->isPyramidDisk(image, extension)) {
-        result.formatId = "pyramid";
-        result.formatName = "金字塔 DOS（待支持）";
-        return result;
-      }
     }
     describeUnopenable(image, result);
     return result;
@@ -165,6 +177,9 @@ IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view
     result.fileSystem = openApple(image, apple, true);
   } else if (std::unique_ptr<FatFileSystem> fat = FatFileSystem::open(image)) {
     result.fileSystem = std::move(fat);
+  } else if (image.size() == PYRAMID_IMAGE_SIZE) {
+    // 金字塔的 .dsk：扇区已按逻辑扇区号排列，只读打开
+    result.fileSystem = PyramidFileSystem::open(image);
   }
   if (result.fileSystem == nullptr) {
     describeUnopenable(image, result);

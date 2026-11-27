@@ -21,7 +21,9 @@ const run = (exe, args) => execFileSync(exe, args, { encoding: 'utf8' });
 const obj = join(here, 'patch.o');
 const elf = join(here, 'patch.elf');
 const blob = join(here, 'patch.bin');
-run(tool('avr-as'), ['-mmcu=atmega1284', '-o', obj, join(here, 'patch.s')]);
+// avr-as 的宏展开会把输入路径里的反斜杠当转义处理（带宏的源文件用绝对 Windows 路径会报错），
+// 所以汇编时切到补丁目录、用相对文件名。
+execFileSync(tool('avr-as'), ['-mmcu=atmega1284', '-o', 'patch.o', 'patch.s'], { encoding: 'utf8', cwd: here });
 run(tool('avr-ld'), ['-m', 'avr51', '-T', join(here, 'patch.ld'), '-o', elf, obj]);
 run(tool('avr-objcopy'), ['-O', 'binary', '-j', '.text', elf, blob]);
 const code = readFileSync(blob);
@@ -33,7 +35,7 @@ for (const line of nm.split(/\r?\n/)) {
   const m = line.match(/^([0-9a-fA-F]+)\s+[Tt]\s+(\S+)/);
   if (m) sym[m[2]] = parseInt(m[1], 16);
 }
-const need = ['T_disp', 'T_emu', 'T_compat', 'T_init', 'T_size', 'T_menu', 'T_lookup', 'draw_far', 'T_clampA', 'T_clampB', 'T_wstart'];
+const need = ['T_disp', 'T_emu', 'T_compat', 'T_init', 'T_size', 'T_menu', 'T_lookup', 'draw_far', 'T_clampA', 'T_clampB', 'T_wstart', 'T_cntP', 'T_chk', 'T_cntC', 'T_diag'];
 for (const s of need) {
   if (!(s in sym)) throw new Error('缺少符号 ' + s);
 }
@@ -86,6 +88,11 @@ const patches = [
   // 偶发 I/O ERROR，重试即成功。改为有界宽限（最多 200 半字节≈6.4ms），窗口耗尽
   // 仍走原故障路径报错，不掩盖持续性错误。替换 0x4B8C 的 lds r19,0x35EB（4 字节）。
   { at: 0x4B8C, bytes: jmp(sym.T_wstart), expect: [0x30, 0x91, 0xEB, 0x35], desc: '写会话启动：收尾未完成时有界宽限重试，超时仍报原错误' },
+  // 诊断计数器（只加观察不改写行为）：各拒写出口计数，主循环把计数画到屏幕行 7（像素列）。
+  { at: 0x4D6C, bytes: Buffer.concat([jmp(sym.T_cntP), Buffer.from([0, 0])]), expect: [0x81, 0xE0, 0x80, 0x93, 0x1F, 0x38], desc: '诊断：相位拒写计数 P（尾部 2 字节 nop 填充，不会执行）' },
+  { at: 0x4B74, bytes: jmp(sym.T_chk), expect: [0x30, 0x91, 0x00, 0x34], desc: '诊断：写保护/残留故障检查复现并计数 W/S' },
+  { at: 0x653E, bytes: jmp(sym.T_cntC), expect: [0x6F, 0x92, 0x7F, 0x92], desc: '诊断：磁道提交计数 C' },
+  { at: 0x7DAE, bytes: jmp(sym.T_diag), expect: [0x80, 0x91, 0x12, 0x34], desc: '诊断：主循环计数变化或周期刷新屏幕行 7' },
 ];
 const changed = [];   // 记录所有被改动的字节偏移
 const mark = (at, len) => { for (let i = 0; i < len; i++) changed.push(at + i); };
@@ -133,16 +140,26 @@ ldiPair(nonOledBase).copy(clone, 0xEA44 - DRAWER_SRC);
 clone.copy(out, CLONE_AT);
 mark(CLONE_AT, clone.length);
 
+// 诊断字符串：7 组（P W S G R B C）× "X0"–"X9"（各 3 字节含结尾 0）= 210 字节 @0x13C00
+const DIAG_AT = 0x13C00;
+const diag = Buffer.alloc(210);
+'PWSGRBC'.split('').forEach((label, k) => {
+  for (let v = 0; v < 10; v++) diag.write(label + v + '\0', k * 30 + v * 3, 'ascii');
+});
+diag.copy(out, DIAG_AT);
+mark(DIAG_AT, diag.length);
+
 // 布局不重叠断言
 if (codeBase + code.length > ITEM7_AT) throw new Error('蹦床代码与第 7 项数据重叠');
 if (ITEM7_AT + item7.length > FONT_AT) throw new Error('第 7 项与字库副本重叠');
 if (FONT_AT + font.length > CLONE_AT) throw new Error('字库副本与克隆绘制器重叠');
+if (CLONE_AT + clone.length > DIAG_AT) throw new Error('克隆绘制器与诊断字符串重叠');
 
 // 4. 校验
 const errors = [];
 if (out.length !== orig.length) errors.push(`长度变化：${orig.length} → ${out.length}`);
 // 所有写入区（蹦床/第 7 项/字库副本/克隆）原本必须全 0
-for (const [base, len, name] of [[codeBase, code.length, '蹦床'], [ITEM7_AT, item7.length, '第7项'], [FONT_AT, font.length, '字库'], [CLONE_AT, clone.length, '克隆']]) {
+for (const [base, len, name] of [[codeBase, code.length, '蹦床'], [ITEM7_AT, item7.length, '第7项'], [FONT_AT, font.length, '字库'], [CLONE_AT, clone.length, '克隆'], [DIAG_AT, diag.length, '诊断字符串']]) {
   for (let i = base; i < base + len; i++) {
     if (orig[i] !== 0) { errors.push(`${name}区 0x${i.toString(16)} 原本非 0（0x${orig[i].toString(16)}）`); break; }
   }

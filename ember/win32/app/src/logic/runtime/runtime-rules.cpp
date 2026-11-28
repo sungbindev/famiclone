@@ -173,7 +173,7 @@ std::vector<MachineChoice> machineChoices(const std::vector<MachineEntry>& machi
     bool separatorBefore;
   };
   static constexpr Choice kChoices[] = {{"sb97", "小霸王 97", false},  {"sb2000", "小霸王 2000", false},          {"bbg1", "步步高 软驱一号", true},
-                                        {"bbg98", "步步高 98", false}, {"pec9588", "金字塔 PEC-9588", true}, {"pec586", "金字塔 PEC-586(686)", false}, {"yuxing", "裕兴", true},
+                                        {"bbg98", "步步高 98", false}, {"pec586", "金字塔 PEC-586(686)", true}, {"pec9588", "金字塔 PEC-9588", false}, {"yuxing", "裕兴", true},
                                         {"cec1", "中华学习机 CEC-I", true}};
   std::vector<MachineChoice> result;
   for (const auto& choice : kChoices) {

@@ -369,7 +369,12 @@ void ShellView::handleMouseDown(Point position) {
   // 不算点在面板之外的：面板本身、标题栏（含菜单）、弹层、系统栏里的面板按钮
   if (frame.bottomRegion()->visible() && frame.bottomRegion()->bounds().contains(position)) return;
   if (frame.titleBar()->visible() && frame.titleBar()->bounds().contains(position)) return;
-  for (const Rect& rect : layerRects_) {
+  // 弹层的区域点击时现查：独立小窗口弹层（菜单、时间轴等）与通知、悬停提示的区域都算弹层，点在上面不算点在面板之外
+  std::vector<Rect> rects;
+  for (Widget* layer : root_.floatingLayers()) layer->layerRects(rects);
+  center_->layerRects(rects);
+  if (tooltip_ != nullptr) tooltip_->layerRects(rects);
+  for (const Rect& rect : rects) {
     if (rect.contains(position)) return;
   }
   for (const Widget* button : panelButtons_) {

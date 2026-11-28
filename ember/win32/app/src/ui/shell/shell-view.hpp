@@ -66,8 +66,6 @@ class ShellView final : public contracts::ShellNotifier {
   void handleMouseDown(rujian::ui::Point position);
   /** 在窗口里松开了鼠标：焦点还给画面区（焦点在文字输入控件上、菜单打开着时不还）。 */
   void handleMouseUp();
-  /** 弹层此刻盖住的区域（窗口坐标）：点在弹层上不算点在面板之外。 */
-  void setLayerRects(std::vector<rujian::ui::Rect> rects) { layerRects_ = std::move(rects); }
 
   /** 全屏时只显示画面。 */
   void setFullScreen(bool fullScreen);
@@ -95,7 +93,6 @@ class ShellView final : public contracts::ShellNotifier {
   rujian::ui::MenuBar* menuBar_{nullptr};
   std::map<std::string, WidgetFactory> panelFactories_;
   std::function<void()> focusScreen_;
-  std::vector<rujian::ui::Rect> layerRects_;
   /** 系统栏左侧的面板按钮（点它们不算点在面板之外）。 */
   std::vector<rujian::ui::Widget*> panelButtons_;
   /** 每一部分上一次重建时的内容签名，没变就不重建。 */

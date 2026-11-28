@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
- * 备注：弹层宽度最大 640 逻辑像素，弹层可用范围更窄时让出两边的边距；位置在锚点上方，放不下时翻到下方，水平方向与锚点左对齐并限制在弹层可用范围内。
+ * 备注：弹层宽度最大 640 逻辑像素，弹层可用范围更窄时让出两边的边距；位置在锚点上方，放不下时翻到下方，水平方向在宿主窗口中间并限制在弹层可用范围内。
  * ------------------------------------------------------------------------
  */
 
@@ -123,7 +123,9 @@ void TimelinePopup::place(const Rect& anchor) {
   const double above = anchor.y - viewport.y - kViewportMargin;
   const bool placeAbove = above >= size.height || above >= below;
   const double top = placeAbove ? anchor.y - kPopupGap - size.height : anchor.bottom() + kPopupGap;
-  const double left = std::max(std::min(anchor.x, viewport.right() - kViewportMargin - width), viewport.x + kViewportMargin);
+  // 水平方向在宿主窗口中间，超出弹层可用范围时收进范围内
+  const double center = host()->viewportSize().width / 2.0 - width / 2.0;
+  const double left = std::max(std::min(center, viewport.right() - kViewportMargin - width), viewport.x + kViewportMargin);
   arrange(Rect{left, top, width, size.height});
 }
 

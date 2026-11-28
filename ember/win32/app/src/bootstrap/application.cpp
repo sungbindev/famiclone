@@ -595,7 +595,7 @@ int runApplication(const shared::LaunchArguments& launch) {
     shellView->setPanelContent(logic::kRuntimePanelId, [&runtime] { return std::make_unique<ui::RuntimePanelContent>(runtime); });
     shellView->setPanelContent(logic::kMediaPanelId, [&media, &dialogs] { return std::make_unique<ui::MediaPanelContent>(media, [&dialogs] { dialogs.openDialog(logic::kFileManagerDialogId); }); });
     shellView->setFocusScreen([screenWidget] { screenWidget->focusScreen(); });
-    // 弹层（菜单、通知、提示）盖到画面上时把画面子窗口对应的区域挖掉
+    // 画在窗口里的弹层（通知、悬停提示）盖到画面上时把画面子窗口对应的区域挖掉；独立小窗口弹层自己盖在画面上，不计入
     window.root().setLayerRectsHandler([&](const std::vector<rujian::ui::Rect>& rects) {
       const double layerScale = window.root().scale();
       std::vector<shared::ScreenRect> holes;
@@ -605,7 +605,6 @@ int runApplication(const shared::LaunchArguments& launch) {
         holes.push_back(shared::ScreenRect{left, top, static_cast<int>(std::ceil(rect.right() * layerScale)) - left, static_cast<int>(std::ceil(rect.bottom() * layerScale)) - top});
       }
       screenHost->setHoles(holes);
-      shellView->setLayerRects(rects);
     });
     shell.setWindowState(false, windowModes->alwaysOnTop());
     shell.attachModules();

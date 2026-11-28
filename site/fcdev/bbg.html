@@ -270,7 +270,7 @@
             </nav>
             <article class="doc"><!-- 本文件由 npm run help:build 从 vscode/docs/bbg/01-开发指南.md 导入，不要手改 -->
 
-              <p>用 FC Dev 为步步高多媒体学生电脑（BBGDOS）开发程序：构建出能在 DOS 提示符下运行的 <code>.CMD</code>。步步高目标只支持 ca65 汇编，没有 C 运行库。目标的定义与启动代码随 <code>fcdev</code> 包安装，在包里的 <code>targets/bbg/</code> 下。本文只写已经在 Ember 里用软驱一号的 ROM（<code>ember/roms/bbg1_bios.bin</code>）验证过的用法，没验证的在第 7 节列出。
+              <p>用 FC Dev 为步步高多媒体学生电脑（BBGDOS）开发程序：构建出能在 DOS 提示符下运行的 <code>.CMD</code>。步步高目标只支持 ca65 汇编，没有 C 运行库。目标的定义与启动代码随 <code>fcdev</code> 包安装，在包里的 <code>targets/bbg/</code> 下。本文只写已经在 Ember 里用软驱一号的 ROM（<code>ember/roms/bbg1_bios.rom</code>）验证过的用法，没验证的在第 7 节列出。
               </p>
 
               <h2 id="1-目标定义">1. 目标定义
@@ -410,7 +410,7 @@
                       <td>运行方案
                       </td>
 
-                      <td><code>firmware-disk</code>，机型 <code>bbg1</code>，需要固件（<code>ember/roms/bbg1_bios.bin</code> 那样的 128KB ROM 文件）
+                      <td><code>firmware-disk</code>，机型 <code>bbg1</code>，需要固件（<code>ember/roms/bbg1_bios.rom</code> 那样的 128KB ROM 文件）
                       </td>
 
                     </tr>
@@ -1086,7 +1086,7 @@
                 <li>零页与内部 RAM 里 DOS、BIOS 占用的单元。
                 </li>
 
-                <li>真机运行：只在 Ember 里验证过；BIOS 源码是工程版，与 <code>bbg1_bios.bin</code> 不是同一次构建，大同小异。
+                <li>真机运行：只在 Ember 里验证过；BIOS 源码是工程版，与 <code>bbg1_bios.rom</code> 不是同一次构建，大同小异。
                 </li>
 
               </ul>

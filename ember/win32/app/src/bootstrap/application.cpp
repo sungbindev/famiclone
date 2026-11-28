@@ -345,7 +345,9 @@ int runApplication(const shared::LaunchArguments& launch) {
   };
   infra::SignedExeUpdateEngine updateEngine(std::move(updateOptions), ui, updateTransport);
   infra::EngineAppUpdater updater(updateEngine, ui);
-  infra::HttpRomArchive romArchive({kRomPackUrl, userData / "roms-download"}, ui);
+  // ROM 包经资源包契约开包，zip 实现只在这里创建注入，machines 模块不引用它
+  infra::HttpRomArchive romArchive({kRomPackUrl, userData / "roms-download"}, ui,
+                                   [](const unsigned char* data, std::size_t size) -> std::unique_ptr<contracts::ResourceArchive> { return std::make_unique<infra::ZipArchive>(data, size); });
   infra::UserDataLocationAdapter userDataLocation(resolution, launch.userDataDirectory.has_value(), executable, profileDirectory);
   infra::ExplorerDirectory userDataDirectory(userData);
   DialogConfirmation confirmation([&mainWindow]() -> void* { return mainWindow; });

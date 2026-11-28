@@ -16,7 +16,6 @@
 #include <system_error>
 #include <vector>
 
-#include "infra/resources/zip-archive.hpp"
 #include "platform/network/https-client.hpp"
 #include "platform/text/wide-text.hpp"
 
@@ -39,7 +38,7 @@ bool plainRomName(const std::string& name) {
 
 }  // namespace
 
-HttpRomArchive::HttpRomArchive(Options options, platform::UiThread& ui) : options_(std::move(options)), ui_(ui) {}
+HttpRomArchive::HttpRomArchive(Options options, platform::UiThread& ui, contracts::ResourceArchiveOpener openArchive) : options_(std::move(options)), ui_(ui), openArchive_(std::move(openArchive)) {}
 
 HttpRomArchive::~HttpRomArchive() {
   *alive_ = false;
@@ -99,9 +98,9 @@ void HttpRomArchive::run(std::function<void(const contracts::RomArchiveResult&)>
   std::ifstream stream(pack, std::ios::binary);
   const std::vector<unsigned char> data((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
   stream.close();
-  std::unique_ptr<ZipArchive> archive;
+  std::unique_ptr<contracts::ResourceArchive> archive;
   try {
-    archive = std::make_unique<ZipArchive>(data.data(), data.size());
+    archive = openArchive_(data.data(), data.size());
   } catch (const std::runtime_error& problem) {
     fail(std::string("ROM 包的格式不对：") + problem.what());
     return;

@@ -12,6 +12,8 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -30,5 +32,11 @@ class ResourceArchive {
   /** 整个包的指纹，包的内容变了它就变，用来判断是否需要重新解压。 */
   [[nodiscard]] virtual std::string fingerprint() const = 0;
 };
+
+/**
+ * 从内存打开一个资源包（zip）：返回的包引用这块内存，调用方保证它在包存活期间不变；不是合格的 zip 时抛 std::runtime_error。
+ * 别的模块经它开包，不引用具体实现；具体实现由组装根注入。
+ */
+using ResourceArchiveOpener = std::function<std::unique_ptr<ResourceArchive>(const unsigned char* data, std::size_t size)>;
 
 }  // namespace ember::win32::contracts

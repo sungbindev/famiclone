@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "contracts/machines/rom-archive-source.hpp"
+#include "contracts/resources/resource-archive.hpp"
 #include "platform/threading/ui-thread.hpp"
 
 namespace ember::win32::infra {
@@ -32,7 +33,8 @@ class HttpRomArchive final : public contracts::RomArchiveSource {
     std::filesystem::path staging;
   };
 
-  HttpRomArchive(Options options, platform::UiThread& ui);
+  /** @param openArchive 开包的工厂（资源包契约的实现，组装根注入）；本模块不引用 zip 实现。 */
+  HttpRomArchive(Options options, platform::UiThread& ui, contracts::ResourceArchiveOpener openArchive);
   ~HttpRomArchive() override;
   HttpRomArchive(const HttpRomArchive&) = delete;
   HttpRomArchive& operator=(const HttpRomArchive&) = delete;
@@ -47,6 +49,7 @@ class HttpRomArchive final : public contracts::RomArchiveSource {
 
   Options options_;
   platform::UiThread& ui_;
+  contracts::ResourceArchiveOpener openArchive_;
   std::shared_ptr<bool> alive_{std::make_shared<bool>(true)};
   std::atomic<bool> cancel_{false};
   std::thread worker_;

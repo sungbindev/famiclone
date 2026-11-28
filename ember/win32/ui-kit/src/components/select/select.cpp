@@ -181,7 +181,7 @@ class SelectRows final : public Widget {
   int downIndex_{-1};
 };
 
-/** 显示在窗口弹层上的下拉弹层：外框（阴影、底色、边框）加一个滚动区域，滚动区域里是选项列表；键盘操作由触发器转发进来。 */
+/** 显示成独立小窗口的下拉弹层：外框（阴影、底色、边框）加一个滚动区域，滚动区域里是选项列表；键盘操作由触发器转发进来。 */
 class SelectPopup final : public Widget {
  public:
   SelectPopup(Select& owner, std::vector<Select::Entry> entries, int selected, int active, bool highlight) : owner_(owner) {
@@ -196,21 +196,21 @@ class SelectPopup final : public Widget {
   [[nodiscard]] const Select::Entry& entry(std::size_t index) const { return rows_->entry(index); }
   [[nodiscard]] int active() const { return rows_->active(); }
 
-  /** 按触发器的位置与窗口大小算出弹层的位置与大小并摆放。 */
+  /** 按触发器的位置与弹层可用范围算出弹层的位置与大小并摆放。 */
   void place(const Rect& trigger) {
     const double border = snapBorderWidth(kBorderWidth, host()->scale());
     const double natural = rows_->measure(Size{0, 0}).height + 2 * border;
-    const Size viewport = host()->viewportSize();
-    const double below = viewport.height - trigger.bottom() - kViewportMargin;
-    const double above = trigger.y - kViewportMargin;
+    const Rect viewport = host()->layerViewport();
+    const double below = viewport.bottom() - trigger.bottom() - kViewportMargin;
+    const double above = trigger.y - viewport.y - kViewportMargin;
     const double wanted = std::min(natural, kMaxPopupHeight);
     const bool placeBelow = below >= wanted || below >= above;
     const double maxHeight = std::max(std::min(kMaxPopupHeight, placeBelow ? below : above), 0.0);
     const double height = std::min(natural, maxHeight);
-    // 宽度：最窄与触发器同宽，按最长的选项撑宽，不超出窗口
+    // 宽度：最窄与触发器同宽，按最长的选项撑宽，不超出弹层可用范围
     const double content = rows_->naturalWidth() + 2 * border;
     const double width = std::min(std::max(content, trigger.width), std::max(viewport.width - 2 * kViewportMargin, 0.0));
-    const double left = std::max(std::min(trigger.x, viewport.width - kViewportMargin - width), kViewportMargin);
+    const double left = std::max(std::min(trigger.x, viewport.right() - kViewportMargin - width), viewport.x + kViewportMargin);
     const double top = placeBelow ? trigger.bottom() + kPopupGap : trigger.y - kPopupGap - height;
     arrange(Rect{left, top, width, height});
     scrollToActive();
@@ -389,7 +389,7 @@ void Select::openPopup(bool byKeyboard) {
   popup_ = std::make_unique<SelectPopup>(*this, std::move(entries), selected, std::max(selected, 0), byKeyboard);
   host()->showLayer(popup_.get(), [this](Widget* hit) {
     if (hit != this) closePopup();
-  });
+  }, true);
   popup_->place(bounds());
   invalidate();
 }

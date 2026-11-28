@@ -113,22 +113,22 @@ double MenuPopup::naturalWidth() {
 Size MenuPopup::measure(Size /*available*/) { return Size{naturalWidth(), naturalHeight()}; }
 
 void MenuPopup::placeBelow(const Rect& anchor) {
-  const Size viewport = host()->viewportSize();
+  const Rect viewport = host()->layerViewport();
   const Size size = measure(Size{});
-  const double below = viewport.height - anchor.bottom() - kViewportMargin;
-  const double above = anchor.y - kViewportMargin;
+  const double below = viewport.bottom() - anchor.bottom() - kViewportMargin;
+  const double above = anchor.y - viewport.y - kViewportMargin;
   const bool placeBelow = below >= size.height || below >= above;
   const double height = std::min(size.height, std::max(placeBelow ? below : above, 0.0));
-  const double left = std::max(kViewportMargin, std::min(anchor.x, viewport.width - kViewportMargin - size.width));
+  const double left = std::max(viewport.x + kViewportMargin, std::min(anchor.x, viewport.right() - kViewportMargin - size.width));
   arrange(Rect{left, placeBelow ? anchor.bottom() + kPopupGap : anchor.y - kPopupGap - height, size.width, height});
 }
 
 void MenuPopup::placeBeside(const Rect& parentItem) {
-  const Size viewport = host()->viewportSize();
+  const Rect viewport = host()->layerViewport();
   const Size size = measure(Size{});
   const double height = std::min(size.height, std::max(viewport.height - 2 * kViewportMargin, 0.0));
-  const double roomRight = viewport.width - kViewportMargin - parentItem.right();
-  const double roomLeft = parentItem.x - kViewportMargin;
+  const double roomRight = viewport.right() - kViewportMargin - parentItem.right();
+  const double roomLeft = parentItem.x - viewport.x - kViewportMargin;
   double width = size.width;
   double left = parentItem.right();
   if (size.width <= roomRight) {
@@ -136,13 +136,13 @@ void MenuPopup::placeBeside(const Rect& parentItem) {
   } else if (size.width <= roomLeft) {
     left = parentItem.x - size.width;
   } else {
-    // 两侧都放不下：向左滑到窗口右边缘，盖住父菜单的一部分，但父菜单左侧至少露出 kParentVisibleWidth；还放不下就缩窄（名称放不下的部分用省略号）
-    const double maxRight = viewport.width - kViewportMargin;
+    // 工作区两侧都放不下（屏幕极窄）：向左滑到工作区右边缘，盖住父菜单的一部分，但父菜单左侧至少露出 kParentVisibleWidth；还放不下就缩窄（名称放不下的部分用省略号）
+    const double maxRight = viewport.right() - kViewportMargin;
     left = std::max(parentItem.x + kParentVisibleWidth, maxRight - size.width);
     width = std::max(std::min(size.width, maxRight - left), kMinimumSubmenuWidth);
   }
-  const double top = std::max(kViewportMargin, std::min(parentItem.y, viewport.height - kViewportMargin - height));
-  arrange(Rect{std::max(kViewportMargin, left), top, width, height});
+  const double top = std::max(viewport.y + kViewportMargin, std::min(parentItem.y, viewport.bottom() - kViewportMargin - height));
+  arrange(Rect{std::max(viewport.x + kViewportMargin, left), top, width, height});
 }
 
 Rect MenuPopup::itemRect(std::size_t index) const {
@@ -185,7 +185,7 @@ void MenuPopup::openSub(std::size_t index, bool focusFirst) {
   std::vector<std::size_t> childPath = path_;
   childPath.push_back(index);
   sub_ = std::make_unique<MenuPopup>(owner_, items_[index].items, std::move(childPath), this);
-  host()->showLayer(sub_.get(), [this](Widget* hit) { owner_.menuOutsidePress(hit); });
+  host()->showLayer(sub_.get(), [this](Widget* hit) { owner_.menuOutsidePress(hit); }, true);
   sub_->placeBeside(itemRect(index));
   if (focusFirst) sub_->setActive(0);
   invalidate();

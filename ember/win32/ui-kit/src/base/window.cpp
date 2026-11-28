@@ -6,6 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：Windows 7 没有 GetDpiForWindow，按“动态查找该函数，找不到就用系统 DPI”处理。
+ *       声明为 floating 的弹层显示成独立的分层小窗口（不抢焦点、点击透明像素穿透），鼠标消息转回同一个 Root。
  * ------------------------------------------------------------------------
  */
 
@@ -78,6 +79,31 @@ void flushComposition() {
   if (flush != nullptr) flush();
 }
 
+/** 弹层小窗口的窗口类名。 */
+constexpr wchar_t kLayerClass[] = L"RujianUiLayerWindow";
+
+/** 一组阴影伸到盒子外的最大距离（逻辑像素）；模糊的可见范围约为模糊半径的 1.25 倍。 */
+double shadowReach(const ShadowList& shadows) {
+  double reach = 0.0;
+  for (int i = 0; i < shadows.count; ++i) {
+    const Shadow& shadow = shadows.items[static_cast<std::size_t>(i)];
+    if (shadow.inset) continue;
+    reach = std::max(reach, shadow.spread + 1.25 * shadow.blur + std::max(std::abs(shadow.offsetX), std::abs(shadow.offsetY)));
+  }
+  return reach;
+}
+
+/** 控件要求的光标样式对应的系统光标。 */
+HCURSOR cursorFor(CursorKind kind) {
+  int id = kCursorArrow;
+  if (kind == CursorKind::IBeam) id = kCursorIBeam;
+  else if (kind == CursorKind::Hand) id = kCursorHand;
+  else if (kind == CursorKind::SizeWE) id = kCursorSizeWE;
+  else if (kind == CursorKind::Move) id = kCursorMove;
+  else if (kind == CursorKind::NotAllowed) id = kCursorNotAllowed;
+  return LoadCursorW(nullptr, MAKEINTRESOURCEW(id));
+}
+
 }  // namespace
 
 struct HostWindow::Impl {
@@ -92,6 +118,52 @@ struct HostWindow::Impl {
   wchar_t highSurrogate{0};
   /** 应用的消息钩子，空表示没有。 */
   HostWindow::MessageHook hook;
+
+  /**
+   * 一个弹层的独立小窗口：逐像素透明度的分层窗口（UpdateLayeredWindow 呈现），归属于宿主窗口，
+   * 不抢键盘焦点、不进任务栏；内容画进内存位图后整幅呈现，圆角与阴影外的透明像素点击穿透。
+   * 鼠标消息换算成宿主窗口坐标后转给同一个 Root，命中、焦点、弹层外按下的分发逻辑不变。
+   */
+  struct LayerWindow {
+    Impl* owner{nullptr};
+    Widget* widget{nullptr};
+    HWND hwnd{nullptr};
+    HDC memory{nullptr};
+    HBITMAP bitmap{nullptr};
+    HGDIOBJ originalBitmap{nullptr};
+    SIZE pixels{};
+    Microsoft::WRL::ComPtr<ID2D1DCRenderTarget> target;
+    bool trackingLeave{false};
+
+    ~LayerWindow() {
+      if (hwnd != nullptr && IsWindow(hwnd) != FALSE) {
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+        DestroyWindow(hwnd);
+      }
+      target.Reset();
+      if (bitmap != nullptr) {
+        if (memory != nullptr && originalBitmap != nullptr) SelectObject(memory, originalBitmap);
+        DeleteObject(bitmap);
+      }
+      if (memory != nullptr) DeleteDC(memory);
+    }
+
+    /** 弹层控件还在显示中（控件可能已销毁，窗口到下一次同步才移除）。 */
+    [[nodiscard]] bool alive() const {
+      const std::vector<Widget*> floating = owner->root.floatingLayers();
+      return std::ranges::find(floating, widget) != floating.end();
+    }
+
+    /** 把小窗口客户区里的事件坐标换成宿主窗口的逻辑坐标。 */
+    [[nodiscard]] Point toRoot(LPARAM lParam) const {
+      POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+      MapWindowPoints(hwnd, owner->hwnd, &point, 1);
+      return Point{point.x / owner->scale(), point.y / owner->scale()};
+    }
+  };
+
+  /** 显示中的弹层小窗口；声明在 root 之后，先于 root 销毁。 */
+  std::vector<std::unique_ptr<LayerWindow>> layerWindows;
 
   explicit Impl(ThemeName theme) : root(theme, 1.0) {}
 
@@ -111,7 +183,192 @@ struct HostWindow::Impl {
     root.setDoubleClick(GetDoubleClickTime(), GetSystemMetrics(SM_CXDOUBLECLK) / 2.0 / scale());
     target.Reset();
     back.Reset();
+    for (const auto& layer : layerWindows) layer->target.Reset();
     root.layout(clientLogicalSize());
+  }
+
+  // ---- 弹层的独立小窗口 ----
+
+  /** 为弹层准备内存位图与渲染目标（大小变了就重建）。 */
+  void ensureLayerSurface(LayerWindow& layer, SIZE size) {
+    if (layer.memory != nullptr && layer.target && layer.pixels.cx == size.cx && layer.pixels.cy == size.cy) return;
+    layer.target.Reset();
+    if (layer.memory == nullptr) layer.memory = CreateCompatibleDC(nullptr);
+    if (layer.bitmap != nullptr) {
+      if (layer.originalBitmap != nullptr) SelectObject(layer.memory, layer.originalBitmap);
+      DeleteObject(layer.bitmap);
+      layer.bitmap = nullptr;
+      layer.originalBitmap = nullptr;
+    }
+    BITMAPINFO info{};
+    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info.bmiHeader.biWidth = size.cx;
+    info.bmiHeader.biHeight = -size.cy;  // 行序从上到下，与 UpdateLayeredWindow 一致
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    void* bits = nullptr;
+    layer.bitmap = CreateDIBSection(layer.memory, &info, DIB_RGB_COLORS, &bits, nullptr, 0);
+    if (layer.bitmap != nullptr) layer.originalBitmap = SelectObject(layer.memory, layer.bitmap);
+    layer.pixels = size;
+    const auto dpi = static_cast<FLOAT>(kBaseDpi * scale());
+    const D2D1_RENDER_TARGET_PROPERTIES properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi, dpi);
+    Graphics::shared().d2d()->CreateDCRenderTarget(&properties, &layer.target);
+    const RECT rect{0, 0, size.cx, size.cy};
+    if (layer.target) layer.target->BindDC(layer.memory, &rect);
+  }
+
+  /** 把弹层画进小窗口的内存位图：平移量取整到设备像素，控件边缘的像素对齐不变。 */
+  void drawLayer(LayerWindow& layer, SIZE size, Point origin) {
+    ensureLayerSurface(layer, size);
+    if (!layer.target) return;
+    layer.target->SetTransform(D2D1::Matrix3x2F::Translation(static_cast<FLOAT>(-origin.x), static_cast<FLOAT>(-origin.y)));
+    layer.target->BeginDraw();
+    layer.target->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
+    {
+      D2DCanvas canvas(layer.target.Get(), scale(), Graphics::shared());
+      root.paintLayer(layer.widget, canvas);
+    }
+    if (FAILED(layer.target->EndDraw())) layer.target.Reset();
+  }
+
+  /** 同步弹层小窗口：按显示顺序建窗口、摆位置、重画，关掉的移除；每次宿主窗口绘制后调用。 */
+  void syncLayers() {
+    const std::vector<Widget*> floating = root.floatingLayers();
+    for (auto it = layerWindows.begin(); it != layerWindows.end();) {
+      if (std::ranges::find(floating, (*it)->widget) == floating.end()) it = layerWindows.erase(it);
+      else ++it;
+    }
+    if (IsWindowVisible(hwnd) == FALSE) return;
+    // 窗口比弹层盒子四周各大出一圈，阴影才不被裁掉
+    const auto& colors = themeTokens(root.theme());
+    const double margin = std::ceil(std::max(shadowReach(colors.menu_shadow), shadowReach(colors.layer_shadow))) + 2.0;
+    const double currentScale = scale();
+    for (Widget* widget : floating) {
+      LayerWindow* layer = nullptr;
+      for (const auto& item : layerWindows) {
+        if (item->widget == widget) layer = item.get();
+      }
+      if (layer == nullptr) {
+        static const ATOM registered = [] {
+          WNDCLASSEXW windowClass{sizeof(windowClass)};
+          windowClass.lpfnWndProc = &Impl::layerProcedure;
+          windowClass.hInstance = GetModuleHandleW(nullptr);
+          windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(kCursorArrow));
+          windowClass.lpszClassName = kLayerClass;
+          return RegisterClassExW(&windowClass);
+        }();
+        if (registered == 0) continue;
+        auto owned = std::make_unique<LayerWindow>();
+        owned->owner = this;
+        owned->widget = widget;
+        owned->hwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, kLayerClass, L"", WS_POPUP, 0, 0, 1, 1, hwnd, nullptr, GetModuleHandleW(nullptr), owned.get());
+        if (owned->hwnd == nullptr) continue;
+        layer = owned.get();
+        layerWindows.push_back(std::move(owned));
+      }
+      const Rect box = widget->bounds();
+      if (box.width <= 0 || box.height <= 0) {
+        ShowWindow(layer->hwnd, SW_HIDE);
+        continue;
+      }
+      const LONG left = static_cast<LONG>(std::floor((box.x - margin) * currentScale));
+      const LONG top = static_cast<LONG>(std::floor((box.y - margin) * currentScale));
+      SIZE size{static_cast<LONG>(std::ceil((box.right() + margin) * currentScale)) - left, static_cast<LONG>(std::ceil((box.bottom() + margin) * currentScale)) - top};
+      POINT position{left, top};
+      ClientToScreen(hwnd, &position);
+      drawLayer(*layer, size, Point{left / currentScale, top / currentScale});
+      BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+      POINT source{0, 0};
+      UpdateLayeredWindow(layer->hwnd, nullptr, &position, &size, layer->memory, &source, 0, &blend, ULW_ALPHA);
+      if (IsWindowVisible(layer->hwnd) == FALSE) ShowWindow(layer->hwnd, SW_SHOWNOACTIVATE);
+      // 按显示顺序保持前后关系：后显示的弹层（如子菜单）盖在先显示的上面
+      SetWindowPos(layer->hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+  }
+
+  /** 弹层小窗口的窗口过程：鼠标消息换算成宿主窗口坐标后转给同一个 Root。 */
+  static LRESULT CALLBACK layerProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if (message == WM_NCCREATE) {
+      const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+      auto* self = static_cast<LayerWindow*>(create->lpCreateParams);
+      self->hwnd = hwnd;
+      SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+    }
+    auto* self = reinterpret_cast<LayerWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    if (self == nullptr) return DefWindowProcW(hwnd, message, wParam, lParam);
+    Impl* impl = self->owner;
+    switch (message) {
+      case WM_NCHITTEST: {
+        // 盒子外（阴影、圆角外的透明像素）点击穿透，交给下面的窗口
+        POINT point{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+        ScreenToClient(impl->hwnd, &point);
+        const Point logical{point.x / impl->scale(), point.y / impl->scale()};
+        if (self->alive() && self->widget->bounds().contains(logical)) return HTCLIENT;
+        return HTTRANSPARENT;
+      }
+      case WM_MOUSEACTIVATE:
+        return MA_NOACTIVATE;
+      case WM_ERASEBKGND:
+        return 1;
+      case WM_PAINT: {
+        PAINTSTRUCT ps;
+        BeginPaint(hwnd, &ps);
+        EndPaint(hwnd, &ps);
+        return 0;
+      }
+      case WM_MOUSEMOVE:
+        if (!self->trackingLeave) {
+          TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE, hwnd, 0};
+          TrackMouseEvent(&track);
+          self->trackingLeave = true;
+        }
+        impl->root.mouseMove(self->toRoot(lParam), currentModifiers());
+        return 0;
+      case WM_MOUSELEAVE:
+        self->trackingLeave = false;
+        impl->root.mouseLeave();
+        return 0;
+      case WM_LBUTTONDOWN:
+      case WM_RBUTTONDOWN:
+      case WM_MBUTTONDOWN: {
+        const Point logical = self->toRoot(lParam);
+        // 应用的钩子也要收到按下（坐标换成宿主窗口的客户区坐标），外壳的点击副作用与点在窗口里时一致
+        if (impl->hook) {
+          std::intptr_t result = 0;
+          const LPARAM translated = MAKELPARAM(std::lround(logical.x * impl->scale()), std::lround(logical.y * impl->scale()));
+          if (impl->hook(message, wParam, translated, result)) return static_cast<LRESULT>(result);
+        }
+        SetCapture(hwnd);
+        impl->root.mouseDown(logical, message == WM_LBUTTONDOWN ? MouseButton::Left : (message == WM_RBUTTONDOWN ? MouseButton::Right : MouseButton::Middle), currentModifiers(), static_cast<unsigned>(GetMessageTime()));
+        return 0;
+      }
+      case WM_LBUTTONUP:
+      case WM_RBUTTONUP:
+      case WM_MBUTTONUP: {
+        const Point logical = self->toRoot(lParam);
+        if (impl->hook) {
+          std::intptr_t result = 0;
+          const LPARAM translated = MAKELPARAM(std::lround(logical.x * impl->scale()), std::lround(logical.y * impl->scale()));
+          if (impl->hook(message, wParam, translated, result)) {
+            if (GetCapture() == hwnd) ReleaseCapture();
+            return static_cast<LRESULT>(result);
+          }
+        }
+        impl->root.mouseUp(logical, message == WM_LBUTTONUP ? MouseButton::Left : (message == WM_RBUTTONUP ? MouseButton::Right : MouseButton::Middle), currentModifiers());
+        if (GetCapture() == hwnd) ReleaseCapture();
+        return 0;
+      }
+      case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT) {
+          SetCursor(cursorFor(impl->root.cursor()));
+          return TRUE;
+        }
+        break;
+      default:
+        break;
+    }
+    return DefWindowProcW(hwnd, message, wParam, lParam);
   }
 
   /** 输入法：焦点控件需要文字输入时开启，候选窗和组合窗贴着文字光标。 */
@@ -214,12 +471,15 @@ struct HostWindow::Impl {
       resetTargets();
       return;
     }
-    if (!back) return;
-    Microsoft::WRL::ComPtr<ID2D1Bitmap> frame;
-    if (FAILED(back->GetBitmap(&frame))) return;
-    target->BeginDraw();
-    target->DrawBitmap(frame.Get());
-    if (target->EndDraw() == D2DERR_RECREATE_TARGET) resetTargets();
+    if (back) {
+      Microsoft::WRL::ComPtr<ID2D1Bitmap> frame;
+      if (SUCCEEDED(back->GetBitmap(&frame))) {
+        target->BeginDraw();
+        target->DrawBitmap(frame.Get());
+        if (target->EndDraw() == D2DERR_RECREATE_TARGET) resetTargets();
+      }
+    }
+    syncLayers();
   }
 
   /**
@@ -264,6 +524,8 @@ struct HostWindow::Impl {
   LRESULT handle(UINT message, WPARAM wParam, LPARAM lParam) {
     // 尺寸改变后要最先把新大小画满，在应用的钩子（边框、阴影的同步较慢）之前
     if (message == WM_WINDOWPOSCHANGED && (reinterpret_cast<const WINDOWPOS*>(lParam)->flags & SWP_NOSIZE) == 0) resizeTarget();
+    // 窗口移动时弹层的屏幕位置作废，通知它们自己关闭
+    if (message == WM_WINDOWPOSCHANGED && (reinterpret_cast<const WINDOWPOS*>(lParam)->flags & SWP_NOMOVE) == 0) root.dismissLayers();
     if (hook) {
       std::intptr_t result = 0;
       if (hook(message, wParam, lParam, result)) return static_cast<LRESULT>(result);
@@ -344,14 +606,7 @@ struct HostWindow::Impl {
       }
       case WM_SETCURSOR:
         if (LOWORD(lParam) == HTCLIENT) {
-          const CursorKind kind = root.cursor();
-          int cursorId = kCursorArrow;
-          if (kind == CursorKind::IBeam) cursorId = kCursorIBeam;
-          else if (kind == CursorKind::Hand) cursorId = kCursorHand;
-          else if (kind == CursorKind::SizeWE) cursorId = kCursorSizeWE;
-          else if (kind == CursorKind::Move) cursorId = kCursorMove;
-          else if (kind == CursorKind::NotAllowed) cursorId = kCursorNotAllowed;
-          SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(cursorId)));
+          SetCursor(cursorFor(root.cursor()));
           return TRUE;
         }
         break;
@@ -432,6 +687,17 @@ HostWindow::HostWindow(const Options& options) : impl_(std::make_unique<Impl>(op
     else SetTimer(hwnd, kCaretTimer, blink, nullptr);
   });
   impl_->root.setTimerHandlers([hwnd = impl_->hwnd](unsigned id, unsigned milliseconds) { SetTimer(hwnd, id, milliseconds, nullptr); }, [hwnd = impl_->hwnd](unsigned id) { KillTimer(hwnd, id); });
+  // 声明为独立窗口的弹层由本窗口画到自己的小窗口上，可用范围是所在显示器的工作区（窗口坐标，可超出窗口）
+  impl_->root.setExternalLayersEnabled(true);
+  impl_->root.setLayerViewportProvider([impl = impl_.get()] {
+    MONITORINFO monitor{sizeof(monitor)};
+    if (GetMonitorInfoW(MonitorFromWindow(impl->hwnd, MONITOR_DEFAULTTONEAREST), &monitor) == FALSE) return Rect{0, 0, impl->root.size().width, impl->root.size().height};
+    POINT origin{0, 0};
+    ClientToScreen(impl->hwnd, &origin);
+    const double layerScale = impl->scale();
+    return Rect{(monitor.rcWork.left - origin.x) / layerScale, (monitor.rcWork.top - origin.y) / layerScale, (monitor.rcWork.right - monitor.rcWork.left) / layerScale,
+                (monitor.rcWork.bottom - monitor.rcWork.top) / layerScale};
+  });
   impl_->applyDpi();
 }
 

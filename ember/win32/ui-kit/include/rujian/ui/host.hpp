@@ -74,16 +74,26 @@ class Host {
   /** 控件离开控件树（被移除或销毁）时由控件调用，宿主据此清理对它的引用。 */
   virtual void widgetLeft(Widget* widget) = 0;
 
-  /** 窗口内容区的大小（逻辑像素），弹层据此避开窗口边缘。 */
+  /** 窗口内容区的大小（逻辑像素）。 */
   [[nodiscard]] virtual Size viewportSize() const = 0;
+
+  /**
+   * 弹层可以使用的范围（窗口坐标）：宿主支持把弹层显示成独立小窗口时是所在显示器的工作区
+   * （可以超出窗口，x、y 可以为负），否则就是窗口内容区；菜单、下拉等弹层据此避让边缘。
+   */
+  [[nodiscard]] virtual Rect layerViewport() const {
+    const Size size = viewportSize();
+    return Rect{0, 0, size.width, size.height};
+  }
 
   /**
    * 在内容之上显示一个弹层：弹层由调用方拥有（宿主只引用），自己摆放到窗口坐标里；
    * 弹层盖住的区域里，鼠标事件先给弹层，在弹层上按下鼠标不改变键盘焦点。
    * @param layer 弹层控件的根，不能已经在控件树里。
    * @param onOutsidePress 在弹层之外按下鼠标（或窗口大小变化）时回调，参数是被按到的控件（窗口大小变化时为空）；弹层自己决定是否关闭。
+   * @param floating 弹层是否显示成独立的小窗口（不受窗口边界裁剪，可以伸出窗口之外）；宿主不支持时仍画在窗口里。
    */
-  virtual void showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) = 0;
+  virtual void showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress, bool floating = false) = 0;
 
   /** 关闭弹层；弹层不在显示时无效。 */
   virtual void hideLayer(Widget* layer) = 0;

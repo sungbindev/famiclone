@@ -58,15 +58,15 @@ void HintBubble::show(const Rect& anchor, const std::string& text, unsigned mill
   const double height = owner_.measureText(text_, bubbleStyle(kTransparent, true), inner + 0.5).height;
   const Size box{inner + 2 * tokens::tooltip_padding_x + 2 * border, height + 2 * tokens::tooltip_padding_y + 2 * border};
   if (!shown_) {
-    owner_.showLayer(this, [this](Widget*) { hide(); });
+    owner_.showLayer(this, [this](Widget*) { hide(); }, true);
     shown_ = true;
   }
   if (timer_ != 0) owner_.stopTimer(timer_);
   timer_ = owner_.startTimer(this, milliseconds);
-  const Size viewport = owner_.viewportSize();
-  const bool fitsBelow = anchor.bottom() + kGap + box.height + kViewportMargin <= viewport.height;
-  const double top = fitsBelow ? anchor.bottom() + kGap : std::max(kViewportMargin, anchor.y - kGap - box.height);
-  const double left = std::max(kViewportMargin, std::min(anchor.x, viewport.width - kViewportMargin - box.width));
+  const Rect viewport = owner_.layerViewport();
+  const bool fitsBelow = anchor.bottom() + kGap + box.height + kViewportMargin <= viewport.bottom();
+  const double top = fitsBelow ? anchor.bottom() + kGap : std::max(viewport.y + kViewportMargin, anchor.y - kGap - box.height);
+  const double left = std::max(viewport.x + kViewportMargin, std::min(anchor.x, viewport.right() - kViewportMargin - box.width));
   arrange(Rect{left, top, box.width, box.height});
   invalidate();
 }

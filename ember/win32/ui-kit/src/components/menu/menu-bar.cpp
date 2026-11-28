@@ -132,7 +132,7 @@ void MenuBar::openAt(std::size_t index, int itemIndex) {
   openId_ = menus_[index].id;
   popup_ = std::make_unique<MenuPopup>(*this, menus_[index].items);
   popup_->setMinWidth(buttonRect(index).width);
-  host()->showLayer(popup_.get(), [this](Widget* hit) { menuOutsidePress(hit); });
+  host()->showLayer(popup_.get(), [this](Widget* hit) { menuOutsidePress(hit); }, true);
   popup_->placeBelow(buttonRect(index));
   popup_->setActive(itemIndex);
   invalidate();

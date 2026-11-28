@@ -55,8 +55,8 @@ class Root final : public Host {
   void setInvalidateHandler(std::function<void()> handler) { invalidateHandler_ = std::move(handler); }
 
   /**
-   * 设置弹层盖住的区域变化时的回调（每次绘制后比较）：参数是全部弹层此刻盖住的区域（窗口坐标）；
-   * 窗口借此把压在控件之上的原生子窗口挖掉对应的区域。
+   * 设置弹层盖住的区域变化时的回调（每次绘制后比较）：参数是画在本窗口里的弹层此刻盖住的区域（窗口坐标，
+   * 开启独立小窗口呈现时不含由小窗口呈现的弹层）；窗口借此把压在控件之上的原生子窗口挖掉对应的区域。
    */
   void setLayerRectsHandler(std::function<void(const std::vector<Rect>&)> handler) { layerRectsHandler_ = std::move(handler); }
 
@@ -154,8 +154,22 @@ class Root final : public Host {
   }
   void widgetLeft(Widget* widget) override;
   [[nodiscard]] Size viewportSize() const override { return size_; }
-  void showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) override;
+  [[nodiscard]] Rect layerViewport() const override;
+  /** 设置弹层可用范围的提供者（窗口用它给出所在显示器的工作区，窗口坐标）；不设置时用窗口内容区。 */
+  void setLayerViewportProvider(std::function<Rect()> provider) { layerViewportProvider_ = std::move(provider); }
+  void showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress, bool floating = false) override;
   void hideLayer(Widget* layer) override;
+
+  /**
+   * 独立小窗口呈现开关：开启后（窗口宿主用），声明为 floating 的弹层不再画进本窗口的画面，
+   * 也不计入弹层盖住的区域，由窗口用 floatingLayers 与 paintLayer 画到各自的小窗口上；
+   * 关闭时（离屏绘制、测试）floating 弹层与普通弹层一样画在窗口里。
+   */
+  void setExternalLayersEnabled(bool enabled) { externalLayers_ = enabled; }
+  /** 声明为 floating 且正在显示的弹层，按显示顺序（后显示的在上）。 */
+  [[nodiscard]] std::vector<Widget*> floatingLayers() const;
+  /** 把一个弹层画到给它的画布上（坐标仍是窗口坐标，画布自己平移）；不是显示中的弹层时什么也不画。 */
+  void paintLayer(Widget* layer, Canvas& canvas);
   unsigned startTimer(Widget* owner, unsigned milliseconds) override;
   void stopTimer(unsigned id) override;
   [[nodiscard]] bool animationsEnabled() const override { return animations_; }
@@ -176,6 +190,7 @@ class Root final : public Host {
   struct Layer {
     Widget* widget;
     std::function<void(Widget* hit)> onOutsidePress;
+    bool floating;
   };
 
   /** 点所在的最深控件：先找弹层（从上到下），再找内容。 */
@@ -211,6 +226,8 @@ class Root final : public Host {
   MouseButton lastClickButton_{MouseButton::None};
   int clickCount_{0};
   std::vector<Layer> layers_;
+  bool externalLayers_{false};
+  std::function<Rect()> layerViewportProvider_;
   std::map<unsigned, Widget*> timers_;
   unsigned nextTimer_{100};
   bool animations_{true};

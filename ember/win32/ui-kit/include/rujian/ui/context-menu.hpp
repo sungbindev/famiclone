@@ -33,7 +33,7 @@ class ContextMenu final : public Widget, public MenuPopupOwner {
   ~ContextMenu() override;
 
   /**
-   * 在窗口坐标 position 弹出菜单，放不下时翻到上方或左移。
+   * 在窗口坐标 position 弹出菜单（独立小窗口），弹层可用范围内放不下时翻到上方或左移。
    * @param highlightFirst 是否高亮第一项（用键盘打开时为真，鼠标右键打开时为假）。
    */
   void open(Point position, std::vector<MenuItem> items, Handler onChoose, bool highlightFirst = false);

@@ -51,7 +51,7 @@ void ContextMenu::open(Point position, std::vector<MenuItem> items, Handler onCh
   host()->setFocus(this, true);
   popup_ = std::make_unique<MenuPopup>(*this, items_);
   popup_->setMinWidth(kMinimumWidth);
-  host()->showLayer(popup_.get(), [this](Widget* hit) { menuOutsidePress(hit); });
+  host()->showLayer(popup_.get(), [this](Widget* hit) { menuOutsidePress(hit); }, true);
   popup_->placeBelow(Rect{position.x, position.y, 0, 0});
   popup_->setActive(highlightFirst ? 0 : -1);
 }

@@ -105,19 +105,44 @@ void Root::dismissLayers() {
 
 void Root::paint(Canvas& canvas) {
   if (content_) content_->paintTree(canvas);
-  for (const Layer& layer : layers_) layer.widget->paintTree(canvas);
+  // 由独立小窗口呈现的弹层不画进本窗口，由窗口把它们画到各自的窗口上
+  for (const Layer& layer : layers_) {
+    if (externalLayers_ && layer.floating) continue;
+    layer.widget->paintTree(canvas);
+  }
   if (!layerRectsHandler_) return;
   std::vector<Rect> rects;
-  for (const Layer& layer : layers_) layer.widget->layerRects(rects);
+  for (const Layer& layer : layers_) {
+    if (externalLayers_ && layer.floating) continue;
+    layer.widget->layerRects(rects);
+  }
   if (rects == lastLayerRects_) return;
   lastLayerRects_ = rects;
   layerRectsHandler_(rects);
 }
 
-void Root::showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress) {
+Rect Root::layerViewport() const {
+  if (layerViewportProvider_) return layerViewportProvider_();
+  return Rect{0, 0, size_.width, size_.height};
+}
+
+std::vector<Widget*> Root::floatingLayers() const {
+  std::vector<Widget*> result;
+  for (const Layer& layer : layers_) {
+    if (layer.floating) result.push_back(layer.widget);
+  }
+  return result;
+}
+
+void Root::paintLayer(Widget* layer, Canvas& canvas) {
+  const auto found = std::ranges::find_if(layers_, [layer](const Layer& item) { return item.widget == layer; });
+  if (found != layers_.end()) found->widget->paintTree(canvas);
+}
+
+void Root::showLayer(Widget* layer, std::function<void(Widget* hit)> onOutsidePress, bool floating) {
   if (layer == nullptr || std::ranges::any_of(layers_, [layer](const Layer& item) { return item.widget == layer; })) return;
   layer->attach(this);
-  layers_.push_back(Layer{layer, std::move(onOutsidePress)});
+  layers_.push_back(Layer{layer, std::move(onOutsidePress), floating});
   invalidate();
 }
 

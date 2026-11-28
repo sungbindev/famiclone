@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
- * 备注：弹层宽度最大 640 逻辑像素，窗口更窄时让出两边的边距；位置在锚点上方，放不下时翻到下方，水平方向与锚点左对齐并限制在窗口内。
+ * 备注：弹层宽度最大 640 逻辑像素，弹层可用范围更窄时让出两边的边距；位置在锚点上方，放不下时翻到下方，水平方向与锚点左对齐并限制在弹层可用范围内。
  * ------------------------------------------------------------------------
  */
 
@@ -116,14 +116,14 @@ Size TimelinePopup::measure(Size /*available*/) {
 }
 
 void TimelinePopup::place(const Rect& anchor) {
-  const Size viewport = host()->viewportSize();
+  const Rect viewport = host()->layerViewport();
   const Size size = measure(Size{});
   const double width = std::min(size.width, std::max(viewport.width - 2 * kViewportMargin, 0.0));
-  const double below = viewport.height - anchor.bottom() - kViewportMargin;
-  const double above = anchor.y - kViewportMargin;
+  const double below = viewport.bottom() - anchor.bottom() - kViewportMargin;
+  const double above = anchor.y - viewport.y - kViewportMargin;
   const bool placeAbove = above >= size.height || above >= below;
   const double top = placeAbove ? anchor.y - kPopupGap - size.height : anchor.bottom() + kPopupGap;
-  const double left = std::max(std::min(anchor.x, viewport.width - kViewportMargin - width), kViewportMargin);
+  const double left = std::max(std::min(anchor.x, viewport.right() - kViewportMargin - width), viewport.x + kViewportMargin);
   arrange(Rect{left, top, width, size.height});
 }
 
@@ -137,7 +137,7 @@ void TimelinePopup::open(Widget& owner, const Rect& anchor) {
       if (widget == owner_) return;
     }
     dismiss();
-  });
+  }, true);
   open_ = true;
   place(anchor);
   shared->setFocus(this, false);

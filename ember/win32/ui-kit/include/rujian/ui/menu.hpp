@@ -6,7 +6,8 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
  * 备注：对应组件库的 MenuBar、MenuPopup 与 MenuItem。键盘焦点留在打开菜单的控件（菜单栏）上，按键由它转给弹层处理；
- *       弹层经 Host::showLayer 显示，子菜单是各自的弹层。弹层高度放不下时不滚动（Ember 的菜单项都不多），见 08 第 10 节。
+ *       弹层经 Host::showLayer 显示成独立小窗口（不受窗口边界裁剪），子菜单是各自的弹层，定位边界是 Host::layerViewport；
+ *       弹层高度放不下时不滚动（Ember 的菜单项都不多），见 08 第 10 节。
  * ------------------------------------------------------------------------
  */
 
@@ -73,9 +74,9 @@ class MenuPopup final : public Widget {
 
   /** 最小宽度（含边框）。 */
   void setMinWidth(double minWidth);
-  /** 作为顶层菜单显示在触发器下方左对齐，放不下时翻到上方；必须先 showLayer。 */
+  /** 作为顶层菜单显示在触发器下方左对齐，弹层可用范围内放不下时翻到上方；必须先 showLayer。 */
   void placeBelow(const Rect& anchor);
-  /** 作为子菜单显示在父项右侧（放不下改到左侧，两侧都放不下时盖住父菜单的一部分并缩窄）；必须先 showLayer。 */
+  /** 作为子菜单显示在父项右侧（弹层可用范围内放不下改到左侧，两侧都放不下时盖住父菜单的一部分并缩窄）；必须先 showLayer。 */
   void placeBeside(const Rect& parentItem);
 
   /** 键盘高亮的项，-1 表示没有。 */

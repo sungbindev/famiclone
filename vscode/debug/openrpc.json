@@ -8373,7 +8373,7 @@
         "properties": {
           "format": {
             "type": "string",
-            "description": "格式标识：fat12、fat16、appledos33、prodos、pyramid（金字塔 PEC-9588，只读）"
+            "description": "格式标识：fat12、fat16、appledos33、prodos、pascal（Apple Pascal，只读）、pyramid（金字塔 PEC-9588，只读）"
           },
           "formatName": {
             "type": "string",
@@ -8410,7 +8410,7 @@
           },
           "type": {
             "type": "string",
-            "description": "类型文字：FAT 是扩展名，DOS 3.3、金字塔 DOS 与 ProDOS 是类型名，文件夹是“文件夹”"
+            "description": "类型文字：FAT 是扩展名，DOS 3.3、金字塔 DOS、ProDOS 与 Apple Pascal 是类型名，文件夹是“文件夹”"
           },
           "size": {
             "type": "integer",
@@ -9633,7 +9633,7 @@
           },
           "modified": {
             "type": "boolean",
-            "description": "镜像是否有尚未写回文件的修改（学习机写盘后置位，核心自动写回后清除）"
+            "description": "镜像是否有未能写回文件的修改：自动写回开着时只有写回失败、修改滞留内存才为真（正常写回过程中不置位）；关闭自动写回时为尚未写回的修改"
           },
           "size": {
             "type": "integer",

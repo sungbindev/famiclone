@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：disk-file-system.hpp
- * 说明：filemanager 契约：磁盘镜像里的文件系统。把一个镜像（内存里的字节数组）当作文件系统，列目录、重命名、删除、移动、新建文件夹、读写文件；FAT、Apple DOS 3.3、ProDOS、金字塔 DOS（只读）各有实现。
+ * 说明：filemanager 契约：磁盘镜像里的文件系统。把一个镜像（内存里的字节数组）当作文件系统，列目录、重命名、删除、移动、新建文件夹、读写文件；FAT、Apple DOS 3.3、ProDOS、Apple Pascal（只读）、金字塔 DOS（只读）各有实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -31,7 +31,7 @@ struct DiskEntry {
   /** 显示的完整名称（UTF-8）。 */
   std::string name;
   bool directory{false};
-  /** 类型文字：FAT 是扩展名、DOS 3.3、金字塔 DOS 与 ProDOS 是类型名，文件夹是“文件夹”。 */
+  /** 类型文字：FAT 是扩展名、DOS 3.3、金字塔 DOS、ProDOS 与 Apple Pascal 是类型名，文件夹是“文件夹”。 */
   std::string type;
   /** 大小（字节）；文件夹为 0。 */
   std::int64_t size{0};
@@ -45,7 +45,7 @@ struct DiskEntry {
 
 /** 一个文件系统的特性。 */
 struct FileSystemTraits {
-  /** 格式标识：fat12、fat16、appledos33、prodos、pyramid。 */
+  /** 格式标识：fat12、fat16、appledos33、prodos、pascal、pyramid。 */
   std::string formatId;
   /** 界面显示的格式名称，如 FAT12、Apple DOS 3.3、ProDOS。 */
   std::string formatName;

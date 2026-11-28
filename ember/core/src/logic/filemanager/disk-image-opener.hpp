@@ -6,9 +6,9 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：识别按内容，扩展名只作顺序偏好与位流格式的判断：.nib、.woz 先认金字塔的盘（磁道上全是 0 至 13 号扇区），
- *       按金字塔格式解码后只读打开，否则经解码器按苹果格式解成扇区镜像只读打开；
- *       143360 字节的 .dsk 不是苹果格式时按金字塔 DOS 只读打开；
- *       认不出文件系统时给出说明：全是 0 的是“空白（未格式化）”，金字塔的盘认不出目录时是“金字塔 DOS（认不出目录）”，其余是“未识别”。
+ *       按金字塔格式解码后只读打开（认不出目录时标“金字塔 DOS（认不出目录）”），否则经解码器按苹果格式解成扇区镜像只读打开；
+ *       苹果格式含 DOS 3.3、ProDOS 与 Apple Pascal（只读）；143360 字节的 .dsk 不是苹果格式时按金字塔 DOS 只读打开；
+ *       认不出文件系统时给出说明：全是 0 的是“空白（未格式化）”，其余是“未识别”，不凭大小猜格式。
  * ------------------------------------------------------------------------
  */
 
@@ -28,7 +28,7 @@ namespace ember::logic::filemanager {
 struct IdentifiedImage {
   /** 文件系统；认不出时为空。 */
   std::unique_ptr<contracts::filemanager::DiskFileSystem> fileSystem;
-  /** 格式标识：fat12、fat16、appledos33、prodos、pyramid；认不出文件系统时是 pyramid（认不出目录）、blank、unknown。 */
+  /** 格式标识：fat12、fat16、appledos33、prodos、pascal、pyramid；认不出文件系统时是 blank、unknown（位流金字塔盘认不出目录时是 pyramid）。 */
   std::string formatId;
   /** 界面显示的格式名称。 */
   std::string formatName;

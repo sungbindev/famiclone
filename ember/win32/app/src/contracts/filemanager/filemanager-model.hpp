@@ -107,7 +107,7 @@ struct DiskImageView {
   bool subdirectories{false};
   /** 文件系统能不能修改（.nib、.woz 只能看）。 */
   bool writable{false};
-  /** 此刻不能修改的原因（位流格式、软驱里的盘片写保护或被取出）；可以修改时为空。 */
+  /** 此刻不能修改的原因（位流格式、只读的文件系统、软驱里的盘片写保护或被取出）；可以修改时为空。 */
   std::string readOnlyReason;
   /** 镜像插在哪个软驱里（编号从 0 起）；没有插入为 -1。 */
   int drive{-1};

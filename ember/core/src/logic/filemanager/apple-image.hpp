@@ -1,13 +1,13 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：apple-image.hpp
- * 说明：苹果软盘镜像的扇区顺序：把镜像文件里按 DOS 顺序或 ProDOS 顺序排列的扇区，展开成文件系统要的线性字节数组，改完再写回；识别镜像里是 DOS 3.3 还是 ProDOS。
+ * 说明：苹果软盘镜像的扇区顺序：把镜像文件里按 DOS 顺序或 ProDOS 顺序排列的扇区，展开成文件系统要的线性字节数组，改完再写回；识别镜像里是 DOS 3.3、ProDOS 还是 Apple Pascal。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
  * 备注：线性数组里第 track 道的第 k 个扇区在 (track × 16 + k) × 256；DOS 3.3 的 k 是 DOS 逻辑扇区号，ProDOS 的 k 是 ProDOS 逻辑扇区号（相邻两个扇区组成一块，块 b 在 b × 512）；
  *       镜像文件的顺序（.dsk、.do 是 DOS 顺序，.po 是 ProDOS 顺序）与文件系统的顺序可以不同（ProDOS 的盘存成 .dsk），换算经物理扇区号；
- *       只处理 35 道与 40 道的 16 扇区盘。
+ *       只处理 35 道与 40 道的 16 扇区容器；盘真实的道数按卷目录里的记载（DOS 3.3 的 VTOC 磁道数、ProDOS 与 Pascal 的总块数），可以小于容器的道数。
  * ------------------------------------------------------------------------
  */
 
@@ -29,7 +29,7 @@ inline constexpr std::size_t APPLE_SECTOR_SIZE = 256;
 inline constexpr std::size_t APPLE_SECTORS = 16;
 
 /** 镜像里文件系统的种类。 */
-enum class AppleKind { None, Dos33, ProDos };
+enum class AppleKind { None, Dos33, ProDos, Pascal };
 
 /** 识别结果。 */
 struct AppleIdentity {
@@ -43,7 +43,7 @@ struct AppleIdentity {
 [[nodiscard]] unsigned appleTrackCount(std::size_t imageSize);
 
 /**
- * 识别镜像里的文件系统与扇区顺序：先按扩展名偏好的顺序，再按另一种顺序，各试 ProDOS 与 DOS 3.3；都不是时 kind 为 None。
+ * 识别镜像里的文件系统与扇区顺序：先按扩展名偏好的顺序，再按另一种顺序，各试 ProDOS、DOS 3.3 与 Apple Pascal；都不是时 kind 为 None。
  * @param extension 小写扩展名，不带点；po 偏好 ProDOS 顺序，其余偏好 DOS 顺序。
  */
 [[nodiscard]] AppleIdentity identifyApple(const std::vector<std::uint8_t>& image, std::string_view extension);

@@ -406,8 +406,10 @@ api::FilemanagerListResult FileManager::list(const api::FilemanagerListParams& p
     result.entries.push_back(api::EntryInfo{entry.name, entry.directory, entry.type, entry.size, entry.sizeIsAllocated, entry.modified, entry.locked});
   }
   if (source.drive >= 0) result.drive = source.drive;
-  if (!traits.writable) result.readOnlyReason = "位流格式（.nib、.woz）的镜像只能查看，不能修改";
-  else if (source.drive >= 0 && source.suspended) result.readOnlyReason = "软驱里的盘片被取出，暂时不能修改";
+  if (!traits.writable) {
+    const std::string extension = extensionOf(params.image);
+    result.readOnlyReason = (extension == "nib" || extension == "woz") ? "位流格式（.nib、.woz）的镜像只能查看，不能修改" : traits.formatName + " 的镜像只能查看，不能修改";
+  } else if (source.drive >= 0 && source.suspended) result.readOnlyReason = "软驱里的盘片被取出，暂时不能修改";
   else if (source.drive >= 0 && source.writeProtected) result.readOnlyReason = "软驱里的盘片已写保护，不能修改";
   {
     std::lock_guard lock(stateMutex_);

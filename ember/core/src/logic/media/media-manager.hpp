@@ -14,6 +14,7 @@
  *       文件大小与盘片不同或读不出来（别的程序正在保存的中间状态）时忽略，等下一次变化；
  *       所有读写镜像文件的动作都在模拟线程上进行，彼此按顺序执行，不会用旧内容覆盖新内容；
  *       写回失败时区间保留，发 media.floppySaveFailed（成功前只发一次）并写错误日志，后台线程之后每隔重试间隔重试一次；
+ *       状态里的 modified 只在自动写回失败、修改滞留内存时为真（正常写回过程中不置位）；关闭自动写回时是尚未写回的修改；
  *       取出与换盘前、核心停止（shutdown）时也先把未写回的修改写回；
  *       磁带载入后（录音结束后录好的文件也算）用一个后台线程读一遍声音得出时间轴（读的是独立打开的另一份来源，不碰磁带机），结果只存在内存里；
  *       在已有的磁带上录音时，复制录音位置之前内容的去向由存取服务在请求线程里创建（不占模拟线程），录音结束时去向把后面的内容接上并替换磁带文件；
@@ -183,6 +184,8 @@ class MediaManager final : public contracts::media::MediaService, public contrac
   std::shared_ptr<platform::FileWatchFactory> watchFactory_;
   bool autoSave_;
   std::chrono::milliseconds retryInterval_;
+  /** 各驱动器上一次自动写回是否失败：失败期间状态里的 modified 为真，写回成功清除。 */
+  std::unique_ptr<std::atomic<bool>[]> saveFailed_;
   std::shared_ptr<ChangeSignal> signal_ = std::make_shared<ChangeSignal>();
   /** 各驱动器镜像文件的监视（由 watchMutex_ 保护）。 */
   std::mutex watchMutex_;

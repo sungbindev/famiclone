@@ -31,14 +31,14 @@ std::string baseName(const std::string& path) {
   return position == std::string::npos ? path : path.substr(position + 1);
 }
 
-/** 驱动器当前的状态。 */
-api::FloppyStatus statusOf(std::int64_t index, const hw::FloppyDrive& drive) {
+/** 驱动器当前的状态；failed 为真时 modified 才置位（自动写回正常时不报瞬间的未写回字节）。 */
+api::FloppyStatus statusOf(std::int64_t index, const hw::FloppyDrive& drive, bool failed) {
   api::FloppyStatus status;
   status.drive = index;
   status.inserted = drive.inserted();
   if (drive.inserted() || drive.mediaSuspended()) status.fileName = baseName(drive.source());
   status.writeProtected = drive.writeProtected();
-  status.modified = drive.modified();
+  status.modified = drive.modified() && failed;
   status.size = static_cast<std::int64_t>(drive.image().size());
   status.cylinder = drive.cylinder();
   status.motor = drive.motorRunning();
@@ -89,7 +89,8 @@ MediaManager::MediaManager(std::shared_ptr<api::FloppyImageStore> store, std::sh
       errors_(std::move(errors)),
       watchFactory_(std::move(watchFactory)),
       autoSave_(autoSave),
-      retryInterval_(retryInterval) {
+      retryInterval_(retryInterval),
+      saveFailed_(std::make_unique<std::atomic<bool>[]>(drives_.size())) {
   timeline_.state = "none";
   watchers_.resize(drives_.size());
   if (!autoSave_) return;
@@ -137,7 +138,7 @@ api::FloppyStatus MediaManager::withDrive(std::int64_t drive, Action action) {
   runtime_->runOnSimulation([&] {
     hw::FloppyDrive& unit = *drives_[static_cast<std::size_t>(drive)];
     action(unit);
-    status = statusOf(drive, unit);
+    status = statusOf(drive, unit, !autoSave_ || saveFailed_[static_cast<std::size_t>(drive)].load());
   });
   return *status;
 }
@@ -249,6 +250,7 @@ bool MediaManager::writeBack(std::size_t index) {
   if (range.empty()) return false;
   store_->writeAt(drive.source(), range.begin, std::span<const std::uint8_t>(drive.image()).subspan(range.begin, range.end - range.begin));
   drive.markSaved();
+  saveFailed_[index].store(false);
   return true;
 }
 
@@ -346,6 +348,7 @@ void MediaManager::autoSaveDrive(std::size_t index, bool& failed) {
   } catch (const shared::CoreError& error) {
     // 运行服务已经停止；不算写回失败。
     if (error.code() == shared::ERROR_UNAVAILABLE) return;
+    saveFailed_[index].store(true);
     if (failed) return;
     failed = true;
     if (errors_ != nullptr) errors_->write({"media", error.code(), error.what(), nlohmann::json{{"drive", index}}});
@@ -362,7 +365,7 @@ api::MediaFloppyWriteProtectResult MediaManager::floppyWriteProtect(const api::M
 api::MediaFloppyStatusResult MediaManager::floppyStatus() {
   api::MediaFloppyStatusResult result;
   runtime_->runOnSimulation([&] {
-    for (std::size_t index = 0; index < drives_.size(); ++index) result.drives.push_back(statusOf(static_cast<std::int64_t>(index), *drives_[index]));
+    for (std::size_t index = 0; index < drives_.size(); ++index) result.drives.push_back(statusOf(static_cast<std::int64_t>(index), *drives_[index], !autoSave_ || saveFailed_[index].load()));
   });
   return result;
 }

@@ -20,6 +20,7 @@
 #include "logic/filemanager/apple-image.hpp"
 #include "logic/filemanager/disk-text.hpp"
 #include "logic/filemanager/fat-file-system.hpp"
+#include "logic/filemanager/pascal-file-system.hpp"
 #include "logic/filemanager/prodos-file-system.hpp"
 #include "logic/filemanager/pyramid-file-system.hpp"
 #include "shared/errors/core-error.hpp"
@@ -62,17 +63,15 @@ class OwningFileSystem final : public api::DiskFileSystem {
 /** 打开苹果格式的文件系统。 */
 std::unique_ptr<api::DiskFileSystem> openApple(std::vector<std::uint8_t>& image, const AppleIdentity& identity, bool writable) {
   if (identity.kind == AppleKind::ProDos) return ProDosFileSystem::open(image, identity, writable);
+  if (identity.kind == AppleKind::Pascal) return PascalFileSystem::open(image, identity);
   return AppleDosFileSystem::open(image, identity, writable);
 }
 
-/** 认不出文件系统时的格式说明。 */
+/** 认不出文件系统时的格式说明：不凭大小猜格式（苹果 35 道盘与金字塔盘都是 143360 字节）。 */
 void describeUnopenable(const std::vector<std::uint8_t>& image, IdentifiedImage& result) {
   if (!image.empty() && std::all_of(image.begin(), image.end(), [](std::uint8_t byte) { return byte == 0; })) {
     result.formatId = "blank";
     result.formatName = "空白（未格式化）";
-  } else if (image.size() == PYRAMID_IMAGE_SIZE) {
-    result.formatId = "pyramid";
-    result.formatName = "金字塔 DOS（认不出目录）";
   } else {
     result.formatId = "unknown";
     result.formatName = "未识别";

@@ -90,7 +90,7 @@ export interface FilemanagerImageNode {
 
 /** 一个镜像的文件系统。 */
 export interface FilemanagerFileSystemInfo {
-  /** 格式标识：fat12、fat16、appledos33、prodos、pyramid（金字塔 PEC-9588，只读） */
+  /** 格式标识：fat12、fat16、appledos33、prodos、pascal（Apple Pascal，只读）、pyramid（金字塔 PEC-9588，只读） */
   format: string;
   /** 界面显示的格式名称 */
   formatName: string;
@@ -106,7 +106,7 @@ export interface FilemanagerEntryInfo {
   name: string;
   /** 是否是文件夹 */
   directory: boolean;
-  /** 类型文字：FAT 是扩展名，DOS 3.3、金字塔 DOS 与 ProDOS 是类型名，文件夹是“文件夹” */
+  /** 类型文字：FAT 是扩展名，DOS 3.3、金字塔 DOS、ProDOS 与 Apple Pascal 是类型名，文件夹是“文件夹” */
   type: string;
   /** 大小（字节）；文件夹为 0 */
   size: number;
@@ -524,7 +524,7 @@ export interface MediaFloppyStatus {
   fileName?: string;
   /** 盘片是否写保护 */
   writeProtected: boolean;
-  /** 镜像是否有尚未写回文件的修改（学习机写盘后置位，核心自动写回后清除） */
+  /** 镜像是否有未能写回文件的修改：自动写回开着时只有写回失败、修改滞留内存才为真（正常写回过程中不置位）；关闭自动写回时为尚未写回的修改 */
   modified: boolean;
   /** 镜像的大小（字节）；没有盘片时为 0 */
   size: number;

@@ -411,10 +411,12 @@ TEST(MediaManagerAutoSave, GuestWritesGoIntoTheFileByThemselvesWithoutAnyone) {
   const auto path = rig.write("sys.img", makeImage());
   rig.manager->floppyInsert(Rig::insertParams(path));
   writeDisk(rig, 1000, 0xEE);
-  EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; })) << "不点保存，改动一出现就写进文件并清除“已修改”";
+  EXPECT_FALSE(rig.manager->floppyStatus().drives[0].modified) << "自动写回正常时不报“已修改”，哪怕还有字节没写进文件";
+  EXPECT_TRUE(waitUntil([&] { const auto bytes = readFile(path); return bytes.size() > 1000 && bytes[1000] == 0xEE; })) << "不点保存，改动一出现就写进文件";
   const auto bytes = readFile(path);
   ASSERT_EQ(bytes.size(), 1440U * 1024U);
   EXPECT_EQ(bytes[1000], 0xEE);
+  EXPECT_FALSE(rig.manager->floppyStatus().drives[0].modified);
   EXPECT_EQ(bytes[1001], patternAt(1001)) << "只改写过的那一段，其余字节不变";
   EXPECT_EQ(bytes[999], patternAt(999));
   EXPECT_EQ(rig.events->count("media.floppySaveFailed"), 0);
@@ -426,7 +428,7 @@ TEST(MediaManagerAutoSave, EveryWriteIsEventuallyInTheFileEvenWhenTheyKeepComing
   const auto path = rig.write("sys.img", makeImage());
   rig.manager->floppyInsert(Rig::insertParams(path));
   for (std::size_t index = 0; index < 50; ++index) writeDisk(rig, 3000 + index * 7000, 0xA7);
-  EXPECT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; }));
+  EXPECT_TRUE(waitUntil([&] { const auto bytes = readFile(path); return bytes.size() > 3000 + 49 * 7000 && bytes[3000 + 49 * 7000] == 0xA7; }));
   const auto bytes = readFile(path);
   for (std::size_t index = 0; index < 50; ++index) EXPECT_EQ(bytes[3000 + index * 7000], 0xA7) << index;
 }
@@ -451,7 +453,7 @@ TEST(MediaManagerAutoSync, OurOwnWritesComingBackAsFileChangesChangeNothing) {
   const auto path = rig.write("sys.img", makeImage());
   rig.manager->floppyInsert(Rig::insertParams(path));
   writeDisk(rig, 1000, 0xEE);
-  ASSERT_TRUE(waitUntil([&] { return !rig.manager->floppyStatus().drives[0].modified; }));
+  ASSERT_TRUE(waitUntil([&] { const auto bytes = readFile(path); return bytes.size() > 1000 && bytes[1000] == 0xEE; }));
   watch->trigger(path);
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
   EXPECT_EQ(readDisk(rig, 1000), 0xEE);

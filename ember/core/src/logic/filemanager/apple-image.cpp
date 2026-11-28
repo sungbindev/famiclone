@@ -51,12 +51,18 @@ std::size_t imageOffset(unsigned track, unsigned k, AppleOrder fileOrder, AppleO
   return (static_cast<std::size_t>(track) * APPLE_SECTORS + fileSector) * APPLE_SECTOR_SIZE;
 }
 
-bool dosVtocOk(const std::vector<std::uint8_t>& image, AppleOrder fileOrder, unsigned tracks) {
+/** DOS 3.3 的卷目录表；tracks 给出盘真实的磁道数（35 道的盘可以存放在 40 道的镜像容器里，多出的道不属于文件系统）。 */
+bool dosVtocOk(const std::vector<std::uint8_t>& image, AppleOrder fileOrder, unsigned containerTracks, unsigned& tracks) {
   const std::uint8_t* sector = image.data() + imageOffset(VTOC_TRACK, 0, fileOrder, AppleOrder::Dos);
-  return sector[1] == VTOC_TRACK && sector[0x27] == 122 && sector[0x34] == tracks && sector[0x35] == APPLE_SECTORS;
+  if (sector[1] != VTOC_TRACK || sector[0x27] != 122 || sector[0x35] != APPLE_SECTORS) return false;
+  const unsigned declared = sector[0x34];
+  if (declared <= VTOC_TRACK || declared > containerTracks) return false;
+  tracks = declared;
+  return true;
 }
 
-bool proDosHeaderOk(const std::vector<std::uint8_t>& image, AppleOrder fileOrder, unsigned tracks) {
+/** ProDOS 的卷目录头；tracks 按总块数换算（每道 8 块），不超过容器的道数。 */
+bool proDosHeaderOk(const std::vector<std::uint8_t>& image, AppleOrder fileOrder, unsigned containerTracks, unsigned& tracks) {
   std::array<std::uint8_t, PRODOS_BLOCK_SIZE> block{};
   const unsigned track = PRODOS_KEY_BLOCK / 8;
   const unsigned first = 2 * (PRODOS_KEY_BLOCK % 8);
@@ -66,8 +72,33 @@ bool proDosHeaderOk(const std::vector<std::uint8_t>& image, AppleOrder fileOrder
   std::copy(high, high + APPLE_SECTOR_SIZE, block.begin() + APPLE_SECTOR_SIZE);
   const unsigned nameLength = block[4] & 0x0FU;
   const std::uint32_t totalBlocks = readLe16(block.data() + 0x29);
-  return block[0] == 0 && block[1] == 0 && readLe16(block.data() + 2) == PRODOS_KEY_BLOCK + 1 && (block[4] >> 4) == 0xF && nameLength >= 1 && block[0x23] == 0x27 && block[0x24] == 0x0D &&
-         totalBlocks >= 1 && totalBlocks <= tracks * 8;
+  if (!(block[0] == 0 && block[1] == 0 && readLe16(block.data() + 2) == PRODOS_KEY_BLOCK + 1 && (block[4] >> 4) == 0xF && nameLength >= 1 && block[0x23] == 0x27 && block[0x24] == 0x0D &&
+        totalBlocks >= 1 && totalBlocks <= containerTracks * 8))
+    return false;
+  tracks = (totalBlocks + 7) / 8;
+  return true;
+}
+
+/** Apple Pascal 的卷目录头：也在块 2（Pascal 与 ProDOS 的块排列相同）；卷头 22 字节，后面是 26 字节一项的目录，目录占块 2 到 5。 */
+bool pascalHeaderOk(const std::vector<std::uint8_t>& image, AppleOrder fileOrder, unsigned containerTracks, unsigned& tracks) {
+  std::array<std::uint8_t, PRODOS_BLOCK_SIZE> block{};
+  const unsigned track = PRODOS_KEY_BLOCK / 8;
+  const unsigned first = 2 * (PRODOS_KEY_BLOCK % 8);
+  const std::uint8_t* low = image.data() + imageOffset(track, first, fileOrder, AppleOrder::ProDos);
+  const std::uint8_t* high = image.data() + imageOffset(track, first + 1, fileOrder, AppleOrder::ProDos);
+  std::copy(low, low + APPLE_SECTOR_SIZE, block.begin());
+  std::copy(high, high + APPLE_SECTOR_SIZE, block.begin() + APPLE_SECTOR_SIZE);
+  if (readLe16(block.data()) != 0 || readLe16(block.data() + 2) != 6 || readLe16(block.data() + 4) != 0) return false;
+  const unsigned nameLength = block[6];
+  const std::uint32_t totalBlocks = readLe16(block.data() + 0x0E);
+  const std::uint32_t fileCount = readLe16(block.data() + 0x10);
+  if (nameLength < 1 || nameLength > 7 || fileCount > 77 || totalBlocks < 1 || totalBlocks > containerTracks * 8) return false;
+  for (unsigned i = 0; i < nameLength; ++i) {
+    const std::uint8_t byte = block[7 + i];
+    if (byte < 0x20 || byte > 0x7E) return false;
+  }
+  tracks = (totalBlocks + 7) / 8;
+  return true;
 }
 
 }  // namespace
@@ -79,13 +110,15 @@ unsigned appleTrackCount(std::size_t imageSize) {
 }
 
 AppleIdentity identifyApple(const std::vector<std::uint8_t>& image, std::string_view extension) {
-  const unsigned tracks = appleTrackCount(image.size());
-  if (tracks == 0) return {};
+  const unsigned containerTracks = appleTrackCount(image.size());
+  if (containerTracks == 0) return {};
   const AppleOrder preferred = extension == "po" ? AppleOrder::ProDos : AppleOrder::Dos;
   const AppleOrder other = preferred == AppleOrder::Dos ? AppleOrder::ProDos : AppleOrder::Dos;
   for (const AppleOrder order : {preferred, other}) {
-    if (proDosHeaderOk(image, order, tracks)) return AppleIdentity{AppleKind::ProDos, order, tracks};
-    if (dosVtocOk(image, order, tracks)) return AppleIdentity{AppleKind::Dos33, order, tracks};
+    unsigned tracks = 0;
+    if (proDosHeaderOk(image, order, containerTracks, tracks)) return AppleIdentity{AppleKind::ProDos, order, tracks};
+    if (dosVtocOk(image, order, containerTracks, tracks)) return AppleIdentity{AppleKind::Dos33, order, tracks};
+    if (pascalHeaderOk(image, order, containerTracks, tracks)) return AppleIdentity{AppleKind::Pascal, order, tracks};
   }
   return {};
 }

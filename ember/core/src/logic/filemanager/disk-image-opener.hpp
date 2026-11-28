@@ -38,9 +38,9 @@ struct IdentifiedImage {
  * 认出镜像的文件系统并打开。
  * @param image 镜像字节，文件系统直接改它（位流格式除外，它们解码后只读）；必须活得比结果久。
  * @param extension 小写扩展名，不带点。
- * @param decoder 位流格式的解码器；为空时 .nib 与 .woz 认不出。
+ * @param codec 位流格式的编解码器；为空时 .nib 与 .woz 认不出。
  */
-[[nodiscard]] IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view extension, const contracts::filemanager::AppleBitstreamDecoder* decoder);
+[[nodiscard]] IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view extension, const contracts::filemanager::FloppyBitstreamCodec* codec);
 
 /** 一种能新建的空白镜像。 */
 struct BlankImageKind {
@@ -56,9 +56,11 @@ struct BlankImageKind {
 [[nodiscard]] const std::vector<BlankImageKind>& blankImageKinds();
 
 /**
- * 生成空白镜像的内容（已格式化，ProDOS 的卷名是 BLANK；金字塔的是 266240 字节全 0 的 .nib，要在机器里格式化）。
- * @throws shared::CoreError filemanager.unsupported：没有这种空白镜像。
+ * 生成空白镜像的内容（都已格式化，ProDOS 的卷名是 BLANK；金字塔的是已格式化的 266240 字节 .nib）。
+ * @param kindId 空白镜像的种类标识。
+ * @param codec 位流编解码器，金字塔的 .nib 用它把格式化好的扇区镜像编成半字节；其他种类不用，可为空。
+ * @throws shared::CoreError filemanager.unsupported：没有这种空白镜像，或金字塔种类没有给编解码器。
  */
-[[nodiscard]] std::vector<std::uint8_t> createBlankImage(const std::string& kindId);
+[[nodiscard]] std::vector<std::uint8_t> createBlankImage(const std::string& kindId, const contracts::filemanager::FloppyBitstreamCodec* codec);
 
 }  // namespace ember::logic::filemanager

@@ -190,13 +190,13 @@ void importItem(api::DiskFileSystem& fileSystem, const api::EntryPath& directory
 }  // namespace
 
 FileManager::FileManager(std::shared_ptr<api::FileManagerStorage> storage, std::shared_ptr<platform::FileWatchFactory> watchFactory, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
-                                   std::vector<std::shared_ptr<hw::FloppyDrive>> drives, std::shared_ptr<api::AppleBitstreamDecoder> decoder, std::shared_ptr<platform::EventSink> events,
+                                   std::vector<std::shared_ptr<hw::FloppyDrive>> drives, std::shared_ptr<api::FloppyBitstreamCodec> codec, std::shared_ptr<platform::EventSink> events,
                                    std::shared_ptr<platform::ErrorLog> errors)
     : storage_(std::move(storage)),
       watchFactory_(std::move(watchFactory)),
       runtime_(std::move(runtime)),
       drives_(std::move(drives)),
-      decoder_(std::move(decoder)),
+      codec_(std::move(codec)),
       events_(std::move(events)),
       errors_(std::move(errors)) {
   scanThread_ = std::thread([this] { scanLoop(); });
@@ -382,7 +382,7 @@ FileManager::Source FileManager::loadSource(const std::string& root, const std::
 }
 
 std::unique_ptr<api::DiskFileSystem> FileManager::openFileSystem(std::vector<std::uint8_t>& bytes, const std::string& image) {
-  IdentifiedImage identified = identifyImage(bytes, extensionOf(image), decoder_.get());
+  IdentifiedImage identified = identifyImage(bytes, extensionOf(image), codec_.get());
   if (identified.fileSystem == nullptr) fail(api::ERROR_UNKNOWN_FORMAT, "不认识这个镜像的格式（" + identified.formatName + "），无法查看");
   return std::move(identified.fileSystem);
 }
@@ -615,7 +615,7 @@ api::FilemanagerCreateImageResult FileManager::createImage(const api::Filemanage
   const std::vector<BlankImageKind>& kinds = blankImageKinds();
   const auto kind = std::find_if(kinds.begin(), kinds.end(), [&params](const BlankImageKind& item) { return item.id == params.kind; });
   if (kind == kinds.end()) fail(api::ERROR_UNSUPPORTED, "没有这种空白镜像：" + params.kind);
-  const std::string path = storage_->create(root, params.directory, BLANK_IMAGE_NAME, kind->extension, createBlankImage(kind->id));
+  const std::string path = storage_->create(root, params.directory, BLANK_IMAGE_NAME, kind->extension, createBlankImage(kind->id, codec_.get()));
   requestScan();
   return api::FilemanagerCreateImageResult{path};
 }

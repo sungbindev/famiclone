@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：apple-bitstream-decoder.cpp
- * 说明：位流格式苹果软盘镜像的解码器的实现。
+ * 名称：floppy-bitstream-codec.cpp
+ * 说明：位流格式软盘镜像的编解码器的实现。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-25
@@ -9,7 +9,7 @@
  * ------------------------------------------------------------------------
  */
 
-#include "bootstrap/apple-bitstream-decoder.hpp"
+#include "bootstrap/floppy-bitstream-codec.hpp"
 
 #include <algorithm>
 
@@ -58,7 +58,7 @@ std::optional<std::vector<std::vector<std::uint8_t>>> readTrackBits(std::span<co
 
 }  // namespace
 
-std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decode(std::span<const std::uint8_t> image, std::string_view extension) const {
+std::optional<std::vector<std::uint8_t>> FloppyBitstreamCodec::decode(std::span<const std::uint8_t> image, std::string_view extension) const {
   const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
   if (!trackBits) return std::nullopt;
   const auto tracks = static_cast<unsigned>(trackBits->size());
@@ -73,7 +73,7 @@ std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decode(std::span
   return result;
 }
 
-std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decodePyramid(std::span<const std::uint8_t> image, std::string_view extension) const {
+std::optional<std::vector<std::uint8_t>> FloppyBitstreamCodec::decodePyramid(std::span<const std::uint8_t> image, std::string_view extension) const {
   const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
   if (!trackBits || trackBits->size() != disk2::PYRAMID_FORMAT.trackCount) return std::nullopt;
   const auto tracks = static_cast<unsigned>(trackBits->size());
@@ -88,7 +88,7 @@ std::optional<std::vector<std::uint8_t>> AppleBitstreamDecoder::decodePyramid(st
   return result;
 }
 
-bool AppleBitstreamDecoder::isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const {
+bool FloppyBitstreamCodec::isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const {
   const std::optional<std::vector<std::vector<std::uint8_t>>> trackBits = readTrackBits(image, extension);
   if (!trackBits) return false;
   // 按苹果的 16 个扇区解：金字塔的盘只出现 0 到 13 号扇区，出现 14、15 号扇区就是苹果的盘
@@ -101,6 +101,20 @@ bool AppleBitstreamDecoder::isPyramidDisk(std::span<const std::uint8_t> image, s
     }
   }
   return found;
+}
+
+std::optional<std::vector<std::uint8_t>> FloppyBitstreamCodec::encodePyramidNib(std::span<const std::uint8_t> image) const {
+  if (image.size() != disk2::PYRAMID_FORMAT.imageSize()) return std::nullopt;
+  std::vector<std::uint8_t> result;
+  result.reserve(disk2::PYRAMID_FORMAT.trackCount * disk2::NIBBLE_TRACK_BYTES);
+  for (unsigned track = 0; track < disk2::PYRAMID_FORMAT.trackCount; ++track) {
+    const std::vector<std::uint8_t> bits = disk2::encodeTrack(disk2::PYRAMID_FORMAT, track, image.subspan(static_cast<std::size_t>(track) * disk2::PYRAMID_FORMAT.trackBytes(), disk2::PYRAMID_FORMAT.trackBytes()));
+    const std::vector<std::uint8_t> nibbles = disk2::bitsToNibbles(bits);
+    result.insert(result.end(), nibbles.begin(), nibbles.end());
+    // 一圈不满 6656 个半字节时用同步字节补齐
+    result.resize(result.size() + (disk2::NIBBLE_TRACK_BYTES > nibbles.size() ? disk2::NIBBLE_TRACK_BYTES - nibbles.size() : 0), 0xFF);
+  }
+  return result;
 }
 
 }  // namespace ember::bootstrap

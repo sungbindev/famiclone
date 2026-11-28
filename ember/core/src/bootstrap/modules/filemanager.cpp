@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-#include "bootstrap/apple-bitstream-decoder.hpp"
+#include "bootstrap/floppy-bitstream-codec.hpp"
 #include "contracts/hardware/floppy-drive.hpp"
 #include "contracts/runtime/runtime-service.hpp"
 #include "infra/filemanager/file-manager-storage.hpp"
@@ -28,7 +28,7 @@ namespace ember::bootstrap {
 void registerFileManager(ModuleRegistry& registry) {
   auto service = std::make_shared<logic::filemanager::FileManager>(
       std::make_shared<infra::filemanager::FileManagerStorageOnDisk>(platform::createOsTrashBin()), platform::createOsFileWatchFactory(), registry.services.require<contracts::runtime::RuntimeService>(),
-      std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>>{registry.services.require<contracts::hardware::FloppyDrive>()}, std::make_shared<AppleBitstreamDecoder>(), registry.events,
+      std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>>{registry.services.require<contracts::hardware::FloppyDrive>()}, std::make_shared<FloppyBitstreamCodec>(), registry.events,
       registry.errors);
   registry.services.provide<contracts::filemanager::FileManagerService>(service);
   requests::filemanager::addFileManagerRequests(registry.requests, service);

@@ -45,12 +45,12 @@ class FileManager final : public contracts::filemanager::FileManagerService {
    * @param watchFactory 监视目录的工厂；为空或不支持时目录变化不会自动同步。
    * @param runtime 运行服务：在模拟线程上访问软驱。
    * @param drives 软驱（按编号排列），与介质服务共用。
-   * @param decoder 位流格式（.nib、.woz）的解码器；为空时这两种镜像认不出。
+   * @param codec 位流格式（.nib、.woz）的编解码器；为空时这两种镜像认不出，也不能新建金字塔镜像。
    * @param events 事件发布。
    * @param errors 错误日志，可以为空。
    */
   FileManager(std::shared_ptr<contracts::filemanager::FileManagerStorage> storage, std::shared_ptr<platform::FileWatchFactory> watchFactory, std::shared_ptr<contracts::runtime::RuntimeService> runtime,
-                   std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> drives, std::shared_ptr<contracts::filemanager::AppleBitstreamDecoder> decoder, std::shared_ptr<platform::EventSink> events,
+                   std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> drives, std::shared_ptr<contracts::filemanager::FloppyBitstreamCodec> codec, std::shared_ptr<platform::EventSink> events,
                    std::shared_ptr<platform::ErrorLog> errors);
   ~FileManager() override;
 
@@ -129,7 +129,7 @@ class FileManager final : public contracts::filemanager::FileManagerService {
   std::shared_ptr<platform::FileWatchFactory> watchFactory_;
   std::shared_ptr<contracts::runtime::RuntimeService> runtime_;
   std::vector<std::shared_ptr<contracts::hardware::FloppyDrive>> drives_;
-  std::shared_ptr<contracts::filemanager::AppleBitstreamDecoder> decoder_;
+  std::shared_ptr<contracts::filemanager::FloppyBitstreamCodec> codec_;
   std::shared_ptr<platform::EventSink> events_;
   std::shared_ptr<platform::ErrorLog> errors_;
 

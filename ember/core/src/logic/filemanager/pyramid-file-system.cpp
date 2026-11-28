@@ -51,6 +51,34 @@ PyramidFileSystem::PyramidFileSystem(std::vector<std::uint8_t>& image) : image_(
   traits_.subdirectories = false;
 }
 
+void PyramidFileSystem::format(std::vector<std::uint8_t>& image) {
+  std::fill(image.begin(), image.end(), static_cast<std::uint8_t>(0));
+  const auto sector = [&](unsigned track, unsigned index) { return image.data() + (static_cast<std::size_t>(track) * PYRAMID_SECTORS + index) * SECTOR_SIZE; };
+  // 卷目录表：结构同 DOS 3.3，每道扇区数字节沿用 16 的写法，磁道数 40，目录从 17 道 13 扇区开始
+  std::uint8_t* table = sector(VTOC_TRACK, 0);
+  table[1] = VTOC_TRACK;
+  table[2] = PYRAMID_SECTORS - 1;
+  table[3] = 3;
+  table[6] = 254;
+  table[0x27] = PAIRS_PER_LIST;
+  table[0x30] = 1;
+  table[0x34] = PYRAMID_TRACKS;
+  table[0x35] = 16;
+  table[0x37] = 1;
+  // 空闲位图：每道只看前 14 位；系统占用 0 到 2 道与目录道
+  for (unsigned track = 0; track < PYRAMID_TRACKS; ++track) {
+    const bool used = track <= 2 || track == VTOC_TRACK;
+    table[0x38 + 4 * track] = used ? 0x00 : 0x3F;
+    table[0x38 + 4 * track + 1] = used ? 0x00 : 0xFF;
+  }
+  // 目录扇区从 13 到 1 依次链接，最后一个的下一个是 0
+  for (unsigned index = PYRAMID_SECTORS - 1; index >= 1; --index) {
+    std::uint8_t* catalog = sector(VTOC_TRACK, index);
+    catalog[1] = index > 1 ? VTOC_TRACK : 0;
+    catalog[2] = index > 1 ? static_cast<std::uint8_t>(index - 1) : 0;
+  }
+}
+
 const std::uint8_t* PyramidFileSystem::sectorAt(unsigned track, unsigned sector) const {
   if (track >= PYRAMID_TRACKS || sector >= PYRAMID_SECTORS) fail(api::ERROR_CORRUPT, "磁盘的磁道扇区号超出范围，文件系统已损坏");
   return image_.data() + (static_cast<std::size_t>(track) * PYRAMID_SECTORS + sector) * SECTOR_SIZE;

@@ -8,7 +8,7 @@
  * 备注：实现直接改它持有引用的字节数组，不负责把改动写回文件或软驱，由管理模块比较改动前后的字节后统一写回；
  *       条目用名称路径表示（从镜像根目录开始逐级的名称，不含路径分隔符），名称比较不分大小写；
  *       不支持的操作（如 DOS 3.3 没有子目录）抛出 filemanager.unsupported，说明简短、面向用户；错误码见 filemanager-error.hpp；
- *       位流格式（.nib、.woz）经 AppleBitstreamDecoder 解成扇区镜像后只读打开，实现在硬件模块，由组装根注入，业务逻辑不引用硬件实现。
+ *       位流格式（.nib、.woz）经 FloppyBitstreamCodec 解成扇区镜像后只读打开，实现在硬件模块，由组装根注入，业务逻辑不引用硬件实现。
  * ------------------------------------------------------------------------
  */
 
@@ -121,10 +121,10 @@ class DiskFileSystem {
   virtual std::string writeFile(const EntryPath& directory, const std::string& windowsName, std::span<const std::uint8_t> content) = 0;
 };
 
-/** 位流格式镜像（.nib、.woz）的解码：解成按逻辑扇区号排列的扇区镜像，供只读查看。 */
-class AppleBitstreamDecoder {
+/** 位流格式镜像（.nib、.woz）的解码与编码：解成按逻辑扇区号排列的扇区镜像供只读查看，或把金字塔扇区镜像编成 .nib 供新建空白盘；苹果与金字塔的盘用同一套半字节编码，差别只在盘片格式参数。 */
+class FloppyBitstreamCodec {
  public:
-  virtual ~AppleBitstreamDecoder() = default;
+  virtual ~FloppyBitstreamCodec() = default;
 
   /**
    * @param image 镜像文件的内容。
@@ -148,6 +148,13 @@ class AppleBitstreamDecoder {
    * @param extension 小写扩展名，不带点：nib 或 woz。
    */
   [[nodiscard]] virtual bool isPyramidDisk(std::span<const std::uint8_t> image, std::string_view extension) const = 0;
+
+  /**
+   * 把按逻辑扇区号排列的金字塔盘镜像（143360 字节）编成 .nib（40 道，每道 6656 个半字节），新建空白盘用。
+   * @param image 按逻辑扇区号排列的镜像。
+   * @return 266240 字节的 .nib；大小不是 143360 时为空。
+   */
+  [[nodiscard]] virtual std::optional<std::vector<std::uint8_t>> encodePyramidNib(std::span<const std::uint8_t> image) const = 0;
 };
 
 }  // namespace ember::contracts::filemanager

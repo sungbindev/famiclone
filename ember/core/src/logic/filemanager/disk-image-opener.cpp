@@ -32,8 +32,6 @@ namespace api = contracts::filemanager;
 namespace {
 
 constexpr std::size_t PYRAMID_IMAGE_SIZE = 143360;
-/** 金字塔 .nib 镜像的大小：40 道，每道 6656 个半字节。 */
-constexpr std::size_t PYRAMID_NIB_IMAGE_SIZE = 40 * 6656;
 constexpr std::size_t FAT_SECTOR_SIZE = 512;
 
 /** 自己持有镜像字节的文件系统：位流格式解码出来的镜像没有别的主人。 */
@@ -135,13 +133,13 @@ std::vector<std::uint8_t> createFatBlank(const FatBlankParameters& parameters) {
 
 }  // namespace
 
-IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view extension, const api::AppleBitstreamDecoder* decoder) {
+IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view extension, const api::FloppyBitstreamCodec* codec) {
   IdentifiedImage result;
   if (extension == "nib" || extension == "woz") {
-    if (decoder != nullptr) {
+    if (codec != nullptr) {
       // 先认金字塔的盘：它的扇区号都小于 16、卷目录表也像 DOS 3.3，按苹果格式解会误认成空目录的苹果盘
-      if (decoder->isPyramidDisk(image, extension)) {
-        if (std::optional<std::vector<std::uint8_t>> decoded = decoder->decodePyramid(image, extension)) {
+      if (codec->isPyramidDisk(image, extension)) {
+        if (std::optional<std::vector<std::uint8_t>> decoded = codec->decodePyramid(image, extension)) {
           auto owner = std::make_unique<OwningFileSystem>(std::move(*decoded));
           if (std::unique_ptr<PyramidFileSystem> inner = PyramidFileSystem::open(owner->bytes())) {
             result.formatId = inner->traits().formatId;
@@ -155,7 +153,7 @@ IdentifiedImage identifyImage(std::vector<std::uint8_t>& image, std::string_view
         result.formatName = "金字塔 DOS（认不出目录）";
         return result;
       }
-      if (std::optional<std::vector<std::uint8_t>> decoded = decoder->decode(image, extension)) {
+      if (std::optional<std::vector<std::uint8_t>> decoded = codec->decode(image, extension)) {
         const AppleIdentity identity = identifyApple(*decoded, "dsk");
         if (identity.kind != AppleKind::None) {
           auto owner = std::make_unique<OwningFileSystem>(std::move(*decoded));
@@ -195,17 +193,25 @@ const std::vector<BlankImageKind>& blankImageKinds() {
     for (const FatBlankParameters& parameters : FAT_BLANKS) result.push_back(BlankImageKind{parameters.id, parameters.title, "img"});
     result.push_back(BlankImageKind{"appledos33", "5.25 英寸 140 KB（Apple DOS 3.3）", "dsk"});
     result.push_back(BlankImageKind{"prodos", "5.25 英寸 140 KB（ProDOS）", "po"});
-    result.push_back(BlankImageKind{"pyramid", "5.25 英寸 140 KB（金字塔 PEC-9588，空白，要在机器里 INIT）", "nib"});
+    result.push_back(BlankImageKind{"pyramid", "5.25 英寸 140 KB（金字塔 PEC-9588）", "nib"});
     return result;
   }();
   return kinds;
 }
 
-std::vector<std::uint8_t> createBlankImage(const std::string& kindId) {
+std::vector<std::uint8_t> createBlankImage(const std::string& kindId, const api::FloppyBitstreamCodec* codec) {
   for (const FatBlankParameters& parameters : FAT_BLANKS) {
     if (kindId == parameters.id) return createFatBlank(parameters);
   }
-  if (kindId == "pyramid") return std::vector<std::uint8_t>(PYRAMID_NIB_IMAGE_SIZE, 0);
+  if (kindId == "pyramid") {
+    // 先格式化成空盘再编成 .nib，建好就能直接用，不用在机器里 INIT
+    if (codec == nullptr) throw shared::CoreError(api::ERROR_UNSUPPORTED, "没有位流编解码器，不能新建金字塔镜像");
+    std::vector<std::uint8_t> linear(PYRAMID_IMAGE_SIZE, 0);
+    PyramidFileSystem::format(linear);
+    std::optional<std::vector<std::uint8_t>> nib = codec->encodePyramidNib(linear);
+    if (!nib) throw shared::CoreError(api::ERROR_UNSUPPORTED, "金字塔镜像编码失败");
+    return std::move(*nib);
+  }
   constexpr unsigned tracks = 35;
   std::vector<std::uint8_t> image(PYRAMID_IMAGE_SIZE, 0);
   std::vector<std::uint8_t> linear(PYRAMID_IMAGE_SIZE, 0);

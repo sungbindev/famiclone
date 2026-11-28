@@ -34,6 +34,9 @@ class PyramidFileSystem final : public contracts::filemanager::DiskFileSystem {
    */
   [[nodiscard]] static std::unique_ptr<PyramidFileSystem> open(std::vector<std::uint8_t>& image);
 
+  /** 把 143360 字节的镜像格式化成空的金字塔盘：卷目录表、目录链与空闲位图，数据扇区清零（同机器里 INIT 后的结果）。 */
+  static void format(std::vector<std::uint8_t>& image);
+
   [[nodiscard]] const contracts::filemanager::FileSystemTraits& traits() const override { return traits_; }
   [[nodiscard]] contracts::filemanager::FileSystemSpace space() override;
   [[nodiscard]] std::vector<contracts::filemanager::DiskEntry> list(const contracts::filemanager::EntryPath& directory) override;

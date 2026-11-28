@@ -164,6 +164,8 @@ struct HostWindow::Impl {
 
   /** 显示中的弹层小窗口；声明在 root 之后，先于 root 销毁。 */
   std::vector<std::unique_ptr<LayerWindow>> layerWindows;
+  /** 上一次排好前后关系的弹层顺序；没变就不动 Z 序，免得反复提顶让重叠的边缘闪烁。 */
+  std::vector<Widget*> layerOrder;
 
   explicit Impl(ThemeName theme) : root(theme, 1.0) {}
 
@@ -240,6 +242,8 @@ struct HostWindow::Impl {
       else ++it;
     }
     if (IsWindowVisible(hwnd) == FALSE) return;
+    // 弹层集合或顺序变了才重排前后关系；窗口刚重新显示时也要重排
+    bool zOrderDirty = floating != layerOrder;
     // 窗口比弹层盒子四周各大出一圈，阴影才不被裁掉
     const auto& colors = themeTokens(root.theme());
     const double margin = std::ceil(std::max(shadowReach(colors.menu_shadow), shadowReach(colors.layer_shadow))) + 2.0;
@@ -281,9 +285,23 @@ struct HostWindow::Impl {
       BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
       POINT source{0, 0};
       UpdateLayeredWindow(layer->hwnd, nullptr, &position, &size, layer->memory, &source, 0, &blend, ULW_ALPHA);
-      if (IsWindowVisible(layer->hwnd) == FALSE) ShowWindow(layer->hwnd, SW_SHOWNOACTIVATE);
-      // 按显示顺序保持前后关系：后显示的弹层（如子菜单）盖在先显示的上面
-      SetWindowPos(layer->hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+      if (IsWindowVisible(layer->hwnd) == FALSE) {
+        ShowWindow(layer->hwnd, SW_SHOWNOACTIVATE);
+        zOrderDirty = true;
+      }
+    }
+    if (zOrderDirty) {
+      // 按显示顺序保持前后关系（后显示的弹层盖在先显示的上面）：批量原子提交，不出现“先提父菜单再提子菜单”的瞬间倒换
+      HDWP defer = BeginDeferWindowPos(static_cast<int>(floating.size()));
+      for (Widget* widget : floating) {
+        for (const auto& item : layerWindows) {
+          if (item->widget != widget) continue;
+          if (defer != nullptr) defer = DeferWindowPos(defer, item->hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+          else SetWindowPos(item->hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+      }
+      if (defer != nullptr) EndDeferWindowPos(defer);
+      layerOrder = floating;
     }
   }
 

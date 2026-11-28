@@ -605,12 +605,13 @@ void FileManagerController::exportEntries(const std::vector<std::string>& names,
   });
 }
 
-void FileManagerController::createImage(const std::string& directory, const std::string& kind) {
-  operate("filemanager.createImage", {{"directory", directory}, {"kind", kind}}, [this, directory](const nlohmann::json& result) {
+void FileManagerController::createImage(const std::string& directory, const std::string& kind, std::function<void(const std::string& path)> onCreated) {
+  operate("filemanager.createImage", {{"directory", directory}, {"kind", kind}}, [this, directory, onCreated = std::move(onCreated)](const nlohmann::json& result) {
     const std::string path = result.is_object() ? result.value("path", std::string()) : std::string();
     if (path.empty()) return;
     notifySuccess("已新建磁盘镜像：" + baseName(path));
     pendingSelect_ = path;
+    if (onCreated) onCreated(path);
     showFolder(directory);
   });
 }

@@ -181,8 +181,8 @@ class FileManagerModel {
   /** 读出当前文件夹里条目的内容用来拖出；读好后在界面线程调用 done，失败时用通知提示并以空列表调用。 */
   virtual void exportEntries(const std::vector<std::string>& names, std::function<void(std::vector<DiskExportItem> items)> done) = 0;
 
-  /** 在目录里的文件夹（相对路径，空串是目录本身）新建一个空白镜像并选中它。 */
-  virtual void createImage(const std::string& directory, const std::string& kind) = 0;
+  /** 在目录里的文件夹（相对路径，空串是目录本身）新建一个空白镜像并选中它；成功后用 onCreated 告诉界面它的路径（好接着重命名）。 */
+  virtual void createImage(const std::string& directory, const std::string& kind, std::function<void(const std::string& path)> onCreated = {}) = 0;
   /** 把镜像载入软驱 A。 */
   virtual void loadIntoDrive(const std::string& path) = 0;
   /** 在系统的文件管理器里显示文件。 */

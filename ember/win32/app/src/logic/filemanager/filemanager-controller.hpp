@@ -70,7 +70,7 @@ class FileManagerController final : public contracts::FileManagerModel {
   void paste() override;
   void importPaths(const std::vector<std::string>& paths, const std::string& folder) override;
   void exportEntries(const std::vector<std::string>& names, std::function<void(std::vector<contracts::DiskExportItem> items)> done) override;
-  void createImage(const std::string& directory, const std::string& kind) override;
+  void createImage(const std::string& directory, const std::string& kind, std::function<void(const std::string& path)> onCreated = {}) override;
   void loadIntoDrive(const std::string& path) override;
   void reveal(const std::string& path) override;
   void runCartridge(const std::string& path) override;

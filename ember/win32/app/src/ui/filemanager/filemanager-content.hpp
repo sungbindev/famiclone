@@ -171,7 +171,7 @@ class FileManagerContent final : public rujian::ui::Widget {
   bool shownImage_{false};
   /** 刚选中的镜像还没在树里出现（比如刚重命名），出现后要展开到它。 */
   bool revealPending_{false};
-  /** 刚在树里新建的文件夹，出现后接着重命名。 */
+  /** 刚在树里新建的文件夹或磁盘镜像，出现后接着重命名。 */
   std::string pendingTreeRename_;
   /** 新建文件夹之后要接着重命名的名称。 */
   std::string pendingRename_;

@@ -504,7 +504,7 @@ void FileManagerContent::updateTree() {
   treeNotice_->setError(error);
   treeNotice_->setVisible(!notice.empty());
 
-  // 刚新建的文件夹出现在树里之后，选中它并接着重命名
+  // 刚新建的文件夹或磁盘镜像出现在树里之后，选中它并接着重命名
   if (!pendingTreeRename_.empty() && findNode(pendingTreeRename_) != nullptr) {
     const std::string path = pendingTreeRename_;
     pendingTreeRename_.clear();
@@ -614,8 +614,12 @@ void FileManagerContent::showTreeMenu(const std::string& id, Point position) {
   menu_->open(position, std::move(items), [this, alive, id, folder](const std::string& command) {
     if (alive.expired() || !*alive.lock()) return;
     if (runFileAction(model_, command, id)) return;
-    if (command.rfind(kCommandNewPrefix, 0) == 0) model_.createImage(folder, command.substr(std::string(kCommandNewPrefix).size()));
-    else if (command == kCommandNewFolder) newTreeFolder(folder);
+    if (command.rfind(kCommandNewPrefix, 0) == 0) {
+      model_.createImage(folder, command.substr(std::string(kCommandNewPrefix).size()), [this, alive](const std::string& path) {
+        if (alive.expired() || !*alive.lock()) return;
+        pendingTreeRename_ = path;
+      });
+    } else if (command == kCommandNewFolder) newTreeFolder(folder);
     else if (command == kCommandCut) model_.cutItems({id});
     else if (command == kCommandCopy) model_.copyItems({id});
     else if (command == kCommandPaste) model_.pasteItems(folder);

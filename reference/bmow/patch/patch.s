@@ -130,17 +130,8 @@ T_clampB9:
 ; 窗口内收尾完成→正常启动并清零计数；窗口耗尽→清零计数并走原故障路径，
 ; 持续性错误照样报告，不掩盖。此处 r24:r25=6656、r18=类型号是活寄存器，
 ; 临时用 r24 必须 push/pop；r19 本就是此处的临时寄存器。pop 不改标志。
-; 诊断计数器（空闲 RAM，封顶 9）：P=相位拒写 W=写保护 S=残留故障 G=宽限超时
-; R=宽限重试 B=会话启动 C=磁道提交；影子 0x3B0F，初始化标志 0x3B10。
-.macro CNTINC addr
-    push  r24
-    lds   r24, \addr
-    cpi   r24, 9
-    brsh  9f
-    subi  r24, 0xFF
-    sts   \addr, r24
-9:  pop   r24
-.endm
+; 2026-11-28 真机诊断结论：偶发失败的另一种形态（捕获静默丢数）与守卫无关，
+; 属原固件 NIB 捕获实时时序缺陷，用户决定多保存几次规避；诊断计数已全部移除。
 
 T_wstart:
     lds   r19, 0x35EB
@@ -153,169 +144,17 @@ T_wstart:
     cpi   r24, 200
     pop   r24
     brcc  T_ws_fault        ; 窗口耗尽 → 原故障路径
-    ; R：宽限重试计数
-    CNTINC 0x3B0C
     jmp   0x4CAA            ; 干净尾声，丢本半字节，下个再试
 T_ws_go:
     push  r24
     clr   r24
     sts   0x3B07, r24       ; 正常启动：清零宽限计数
     pop   r24
-    ; B：会话启动计数
-    CNTINC 0x3B0D
     jmp   0x4B94            ; 原会话启动路径
 T_ws_fault:
     ldi   r19, 0
     sts   0x3B07, r19       ; 清零计数，下次重新给窗口
-    ; G：宽限超时计数
-    CNTINC 0x3B0B
     jmp   0x5064            ; 原故障路径：置 0x381F，中止并报错
-
-; ================= 诊断：拒写计数与屏幕显示 =================
-; 只加观察，不改任何写行为。中断里的钩子只加计数（约 20 周期）；
-; 显示在主循环钩子里做，计数变化才重画，避免在中断里碰屏幕。
-
-; ---- T_cntP：相位拒写（补丁点 0x4D6C，原 ldi r24,1 ; sts 0x381F 共 6 字节）----
-T_cntP:
-    CNTINC 0x3B08
-    ldi   r24, 1
-    sts   0x381F, r24
-    jmp   0x4D72            ; 原 rjmp 0x4CA2
-
-; ---- T_chk：写保护/残留故障检查（补丁点 0x4B74，原 lds r19,0x3400）----
-; 复现原 0x4B74–0x4B82 的两道 cpse 检查，拒写分支各自计数后走原出口 0x4CA2。
-T_chk:
-    lds   r19, 0x3400
-    cp    r19, r1
-    brne  T_chk_wp          ; 写保护标志非 0 → 拒写
-    lds   r19, 0x381F
-    cp    r19, r1
-    brne  T_chk_sticky      ; 残留故障标志非 0 → 拒写
-    jmp   0x4B84            ; 两道都过 → 原继续路径
-T_chk_wp:
-    CNTINC 0x3B09
-    jmp   0x4CA2
-T_chk_sticky:
-    CNTINC 0x3B0A
-    jmp   0x4CA2
-
-; ---- T_cntC：磁道提交计数（补丁点 0x653E，原 push r6 ; push r7）----
-T_cntC:
-    CNTINC 0x3B0E
-    push  r6
-    push  r7
-    jmp   0x6542            ; 原 push r8 起
-
-; ---- T_diag：主循环显示（补丁点 0x7DAE，原 lds r24,0x3412）----
-; 七个计数画在行 1（文件名行 0 与类型行 2 之间的空行，不新增显示高度）。
-; 光标函数的列是像素（0–127），每个 "X0" 标签约 12 像素宽，列距取 16：0/16/32/48/64/80/96。
-; 首屏强制画一次（影子初始化 0xFF）；此后总和变化立即重画，另每 65536 次主循环
-; 强制重画一次（16 位计数 0x3B11:0x3B12），防止固件自身的清行/活动刷新把字抹掉。
-; 字符串 "X0"–"X9" 在高 flash 0x13C00（每组 30 字节，组序 P W S G R B C）。
-; 主循环活寄存器 r2–r12 全部 push/pop；绘制函数保留 r13–r17/r28/r29。
-.macro DIAGONE counter, k, row, col
-    ldi   r22, \row
-    ldi   r24, \col
-    call  0xE4C2            ; 设光标
-    lds   r24, \counter
-    cpi   r24, 10
-    brlo  8f
-    ldi   r24, 9            ; 残值≥10 按 9 显示
-8:  mov   r19, r24
-    add   r19, r24
-    add   r19, r24          ; ×3
-    ldi   r24, lo8(0x3C00 + \k * 30)
-    ldi   r25, hi8(0x3C00 + \k * 30)
-    add   r24, r19
-    adc   r25, r1
-    ldi   r22, 0
-    call  draw_far
-.endm
-
-T_diag:
-    push  r2
-    push  r3
-    push  r4
-    push  r5
-    push  r6
-    push  r7
-    push  r8
-    push  r9
-    push  r10
-    push  r11
-    push  r12
-    ; 首次：初始化计数器（这些 RAM 不在启动清零范围）
-    lds   r19, 0x3B10
-    cpi   r19, 0x5A
-    breq  T_diag_sum
-    ldi   r19, 0x5A
-    sts   0x3B10, r19
-    clr   r19
-    sts   0x3B08, r19
-    sts   0x3B09, r19
-    sts   0x3B0A, r19
-    sts   0x3B0B, r19
-    sts   0x3B0C, r19
-    sts   0x3B0D, r19
-    sts   0x3B0E, r19
-    ldi   r19, 0xFF
-    sts   0x3B0F, r19       ; 影子=0xFF：首趟总和(0)≠影子 → 立即画出全 0
-    clr   r19
-    sts   0x3B11, r19       ; 趟计数（16 位）清零，每 65536 趟强制重画
-    sts   0x3B12, r19
-T_diag_sum:
-    clr   r18
-    lds   r19, 0x3B08
-    add   r18, r19
-    lds   r19, 0x3B09
-    add   r18, r19
-    lds   r19, 0x3B0A
-    add   r18, r19
-    lds   r19, 0x3B0B
-    add   r18, r19
-    lds   r19, 0x3B0C
-    add   r18, r19
-    lds   r19, 0x3B0D
-    add   r18, r19
-    lds   r19, 0x3B0E
-    add   r18, r19
-    lds   r19, 0x3B0F
-    cp    r18, r19
-    brne  T_diag_draw       ; 总和变化 → 立即重画
-    lds   r19, 0x3B11
-    lds   r20, 0x3B12
-    subi  r19, 0xFF         ; 趟计数++（16 位）
-    sbci  r20, 0xFF
-    sts   0x3B11, r19
-    sts   0x3B12, r20
-    cp    r19, r1
-    cpc   r20, r1
-    breq  T_diag_draw       ; 计满 65536 趟 → 周期重画，防固件刷新抹掉
-    jmp   T_diag_done
-T_diag_draw:
-    sts   0x3B0F, r18
-    ; 行 1（空行）：P W S G R B C，列按像素 0/16/32/48/64/80/96
-    DIAGONE 0x3B08, 0, 1, 0
-    DIAGONE 0x3B09, 1, 1, 16
-    DIAGONE 0x3B0A, 2, 1, 32
-    DIAGONE 0x3B0B, 3, 1, 48
-    DIAGONE 0x3B0C, 4, 1, 64
-    DIAGONE 0x3B0D, 5, 1, 80
-    DIAGONE 0x3B0E, 6, 1, 96
-T_diag_done:
-    lds   r24, 0x3412       ; 被替换的原指令
-    pop   r12
-    pop   r11
-    pop   r10
-    pop   r9
-    pop   r8
-    pop   r7
-    pop   r6
-    pop   r5
-    pop   r4
-    pop   r3
-    pop   r2
-    jmp   0x7DB2            ; 原 cpse r24,r1 起
 
 ; ================= 菜单扩第 7 项（模式 9）=================
 ; 第 7 项名称与字库放高 flash（RAMPZ=1），用克隆的远地址绘制器显示。

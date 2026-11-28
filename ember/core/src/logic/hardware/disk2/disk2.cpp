@@ -214,8 +214,16 @@ std::vector<std::uint8_t>& Disk2::trackBits(unsigned index) {
       }
       break;
     case disk2::Layout::nibble:
-      if (index < format_->trackCount) ring = disk2::nibblesToBits(image.subspan(index * format_->trackBytes(), format_->trackBytes()));
-      else ring.assign(format_->trackBits, 0);
+      if (index < format_->trackCount) {
+        ring = disk2::nibblesToBits(image.subspan(index * format_->trackBytes(), format_->trackBytes()));
+        // 一圈的位数固定：同步字节 FF 展开成 10 位会让解出的位序列比一圈长，多出的只是间隙填充，
+        // 截到一圈；不足一圈时按同步字节的样子（FF 加两个 0 位）补齐。这样固定时长的格式化写入
+        // 能像真机一样覆盖整圈，不会留下旧扇区。
+        if (ring.size() > format_->trackBits) ring.resize(format_->trackBits);
+        else while (ring.size() < format_->trackBits) ring.push_back(ring.size() % 10 < 8 ? 1 : 0);
+      } else {
+        ring.assign(format_->trackBits, 0);
+      }
       break;
     case disk2::Layout::woz: {
       const disk2::WozTrack* track = wozTrackAt(index);

@@ -121,9 +121,13 @@ using FormatChooser = std::optional<Format> (*)(std::span<const std::uint8_t> im
  */
 [[nodiscard]] std::optional<Format> appleFormatOf(std::span<const std::uint8_t> image);
 
-/** .nib 镜像的格式：每道 6656 字节。 */
-[[nodiscard]] constexpr Format nibbleFormat(unsigned trackCount) {
-  return Format{trackCount, static_cast<unsigned>(NIBBLE_TRACK_BYTES / SECTOR_SIZE), {}, 254, NIBBLE_TRACK_BYTES * 8, 0, 0, 0, Layout::nibble};
+/**
+ * .nib 镜像的格式：每道 6656 字节；revolutionBits 是一圈的位数（与同格式按扇区存放的镜像一致）。
+ * 半字节里的同步字节 FF 读出时占 10 位，解出的位序列会比一圈长，磁道缓存按 revolutionBits 截齐，
+ * 多出的部分只是间隙填充，这样固定时长的格式化写入才能像真机一样覆盖整圈。
+ */
+[[nodiscard]] constexpr Format nibbleFormat(unsigned trackCount, std::size_t revolutionBits) {
+  return Format{trackCount, static_cast<unsigned>(NIBBLE_TRACK_BYTES / SECTOR_SIZE), {}, 254, revolutionBits, 0, 0, 0, Layout::nibble};
 }
 
 /** WOZ 镜像里的一个磁道：位序列在镜像里的偏移与位数。 */

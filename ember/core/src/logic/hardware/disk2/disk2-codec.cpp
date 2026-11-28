@@ -144,14 +144,14 @@ std::vector<std::uint8_t> readNibbles(std::span<const std::uint8_t> bits) {
 
 std::optional<Format> pyramidFormatOf(std::span<const std::uint8_t> image) {
   if (image.size() == PYRAMID_FORMAT.imageSize()) return PYRAMID_FORMAT;
-  if (image.size() == PYRAMID_FORMAT.trackCount * NIBBLE_TRACK_BYTES) return nibbleFormat(PYRAMID_FORMAT.trackCount);
+  if (image.size() == PYRAMID_FORMAT.trackCount * NIBBLE_TRACK_BYTES) return nibbleFormat(PYRAMID_FORMAT.trackCount, PYRAMID_FORMAT.trackBits);
   return std::nullopt;
 }
 
 std::optional<Format> appleFormatOf(std::span<const std::uint8_t> image) {
   if (parseWoz(image).has_value()) return Format{TRACK_COUNT, 0, {}, 254, 0, 0, 0, 0, Layout::woz};
-  if (image.size() == 35 * NIBBLE_TRACK_BYTES) return nibbleFormat(35);
-  if (image.size() == 40 * NIBBLE_TRACK_BYTES) return nibbleFormat(40);
+  if (image.size() == 35 * NIBBLE_TRACK_BYTES) return nibbleFormat(35, appleDosFormat(35).trackBits);
+  if (image.size() == 40 * NIBBLE_TRACK_BYTES) return nibbleFormat(40, appleDosFormat(40).trackBits);
   unsigned trackCount = 0;
   if (image.size() == APPLE_SIZE_35) trackCount = 35;
   else if (image.size() == APPLE_SIZE_40) trackCount = 40;

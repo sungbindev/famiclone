@@ -76,7 +76,7 @@ class MenuPopup final : public Widget {
   void setMinWidth(double minWidth);
   /** 作为顶层菜单显示在触发器下方左对齐，弹层可用范围内放不下时翻到上方；必须先 showLayer。 */
   void placeBelow(const Rect& anchor);
-  /** 作为子菜单显示在父项右侧（弹层可用范围内放不下改到左侧，两侧都放不下时盖住父菜单的一部分并缩窄）；必须先 showLayer。 */
+  /** 作为子菜单贴着父弹层外框的右侧显示（不盖住父弹层；右侧放不下改到左侧并缩窄到放得下，两侧都放不下才盖住父弹层的一部分）；必须先 showLayer。 */
   void placeBeside(const Rect& parentItem);
 
   /** 键盘高亮的项，-1 表示没有。 */

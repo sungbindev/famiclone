@@ -127,19 +127,29 @@ void MenuPopup::placeBeside(const Rect& parentItem) {
   const Rect viewport = host()->layerViewport();
   const Size size = measure(Size{});
   const double height = std::min(size.height, std::max(viewport.height - 2 * kViewportMargin, 0.0));
-  const double roomRight = viewport.right() - kViewportMargin - parentItem.right();
-  const double roomLeft = parentItem.x - viewport.x - kViewportMargin;
+  // 贴着父弹层的外框摆放（不是父项的区域，父项在弹层内还有内边距），不盖住父弹层的边框
+  const double parentRight = parent_ != nullptr ? parent_->bounds().right() : parentItem.right();
+  const double parentLeft = parent_ != nullptr ? parent_->bounds().x : parentItem.x;
+  // 不压到父弹层上：先放右侧（右边到工作区边缘），放不下换左侧（左边到工作区边缘）并缩窄到放得下（不小于 120，名称放不下的部分用省略号）
+  const double roomRight = std::max(viewport.right() - kViewportMargin - parentRight, 0.0);
+  const double roomLeft = std::max(parentLeft - viewport.x - kViewportMargin, 0.0);
   double width = size.width;
-  double left = parentItem.right();
+  double left = parentRight;
   if (size.width <= roomRight) {
-    left = parentItem.right();
-  } else if (size.width <= roomLeft) {
-    left = parentItem.x - size.width;
+    left = parentRight;
+  } else if (roomLeft >= kMinimumSubmenuWidth) {
+    left = parentLeft - std::min(size.width, roomLeft);
+    width = std::min(size.width, roomLeft);
   } else {
-    // 工作区两侧都放不下（屏幕极窄）：向左滑到工作区右边缘，盖住父菜单的一部分，但父菜单左侧至少露出 kParentVisibleWidth；还放不下就缩窄（名称放不下的部分用省略号）
-    const double maxRight = viewport.right() - kViewportMargin;
-    left = std::max(parentItem.x + kParentVisibleWidth, maxRight - size.width);
-    width = std::max(std::min(size.width, maxRight - left), kMinimumSubmenuWidth);
+    // 两侧都放不下（屏幕极窄）：放空间大的一侧并缩窄，实在没有空间才盖住父弹层的一部分（父弹层左侧至少露出 kParentVisibleWidth）
+    if (roomRight >= roomLeft) {
+      left = parentRight;
+      width = std::max(std::min(size.width, roomRight), kMinimumSubmenuWidth);
+    } else {
+      const double maxRight = viewport.right() - kViewportMargin;
+      left = std::max(parentLeft + kParentVisibleWidth, maxRight - size.width);
+      width = std::max(std::min(size.width, maxRight - left), kMinimumSubmenuWidth);
+    }
   }
   const double top = std::max(viewport.y + kViewportMargin, std::min(parentItem.y, viewport.bottom() - kViewportMargin - height));
   arrange(Rect{std::max(viewport.x + kViewportMargin, left), top, width, height});

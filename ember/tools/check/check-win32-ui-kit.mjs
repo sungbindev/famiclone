@@ -102,10 +102,8 @@ export function checkUiKit(root) {
  */
 async function checkGenerated() {
   const problems = [];
-  const tokens = await import('../../win32/ui-kit/tools/gen-tokens.mjs');
   const icons = await import('../../win32/ui-kit/tools/gen-icons.mjs');
   const fonts = await import('../../win32/ui-kit/tools/gen-fonts.mjs');
-  if (!existsSync(tokens.OUTPUT_FILE) || readFileSync(tokens.OUTPUT_FILE, 'utf8') !== tokens.generate()) problems.push('tokens.generated.hpp 与生成结果不一致，运行 node win32/ui-kit/tools/gen-tokens.mjs');
   const { id, data, rules } = icons.generate();
   const iconFiles = [[icons.ID_FILE, id], [icons.DATA_FILE, data], [icons.RULES_FILE, rules]];
   if (iconFiles.some(([file, text]) => !existsSync(file) || readFileSync(file, 'utf8') !== text)) problems.push('图标文件与生成结果不一致，运行 node win32/ui-kit/tools/gen-icons.mjs');

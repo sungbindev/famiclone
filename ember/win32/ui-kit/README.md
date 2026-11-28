@@ -7,10 +7,10 @@
 | 目录 | 内容 |
 | --- | --- |
 | `include/rujian/ui/` | 公共头文件：颜色、几何、文字样式、画布接口、控件基类、宿主、根容器、窗口宿主、离屏绘制、各控件 |
-| `src/base/` | 绘制（Direct2D 画布）、文字排版（DirectWrite）、图标几何、控件树与输入分发、窗口、离屏绘制；不引用控件 |
+| `src/base/` | 绘制（Direct2D 画布）、文字排版（DirectWrite）、图标几何、控件树与输入分发、窗口、离屏绘制；令牌 `tokens.hpp` 也在这里（手写维护）；不引用控件 |
 | `src/components/<控件>/` | 一个控件或一族控件一个目录；只引用公共头文件、`base/theme-tokens.hpp` 与自己目录里的文件，不直接用系统图形头文件 |
-| `src/generated/` | 令牌与图标生成的代码，不手写、不手改，已提交 |
-| `tools/` | 令牌与图标生成器、与网页版对照的工具（`reference`） |
+| `src/generated/` | 图标与字体生成的代码，不手写、不手改，已提交 |
+| `tools/` | 图标与字体生成器、与网页版对照的工具（`reference`） |
 | `gallery/` | 预览程序 `rujian-ui-gallery`，窗口模式用来目测，`--render` 模式离屏绘制成 PNG |
 | `test/` | GoogleTest 单元测试（构建时开启 `EMBER_BUILD_TESTS`） |
 
@@ -20,14 +20,13 @@
 
 | 命令 | 用途 |
 | --- | --- |
-| `node win32/ui-kit/tools/gen-tokens.mjs` | 从 rujian-ui-kit 的令牌与主题生成 `src/generated/tokens.generated.hpp`；`--check` 只检查一致 |
 | `node win32/ui-kit/tools/gen-icons.mjs` | 生成 `include/rujian/ui/icon-id.hpp` 与 `src/generated/icon-data.generated.cpp`；`--check` 只检查一致 |
 | `node win32/ui-kit/tools/gen-fonts.mjs` | 把 rujian-ui-kit 的 Quicksand（WOFF2）解码成 TrueType，生成 `src/generated/font-data.generated.cpp`；`--check` 只检查一致 |
 | `npm run win32:test` | 构建并运行测试；用 `-- -R ^Root\.` 只运行名称匹配的用例 |
 | `npm run win32:check` | 结构检查与 Windows 7 导入表审计 |
 | `npm run win32:reference` | 与网页版逐像素对照（需先 `win32:test` 构建画廊） |
 
-组件库源码的位置默认是 `../../rujian-ui-kit`，用环境变量 `EMBER_UI_KIT_SOURCE` 修改。
+令牌在 `src/base/tokens.hpp` 里手写维护，不依赖网页版组件库（初值按它的令牌求值而来，之后本库自己改，如菜单底色更不透明、通知更窄）。图标与字体生成器、网页版对照还需要组件库源码，位置默认是 `../../rujian-ui-kit`，用环境变量 `EMBER_UI_KIT_SOURCE` 修改。
 
 ## 使用方式
 

@@ -1,11 +1,11 @@
 /*
  * ------------------------------------------------------------------------
- * 名称：tokens.generated.hpp
- * 说明：设计令牌的最终取值，由 tools/gen-tokens.mjs 从 rujian-ui-kit 的令牌与主题生成：长度、数字、时间等是常量，颜色与阴影按主题放在 ThemeTokens 里。
+ * 名称：tokens.hpp
+ * 说明：设计令牌的取值：长度、数字、时间等是常量，颜色与阴影按主题放在 ThemeTokens 里。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：不要手改；令牌或组件引用变化后重新运行生成器，npm run win32:check 会检查这份文件与生成结果一致。
+ * 备注：手写维护，不依赖网页版组件库；初值按 rujian-ui-kit 的令牌求值而来，之后本库自己改（如菜单底色更不透明、通知更窄），不随它变。
  * ------------------------------------------------------------------------
  */
 
@@ -133,7 +133,7 @@ inline constexpr double menubar_button_radius = 6.0;
 inline constexpr double motion_duration_ms = 180.0;
 inline constexpr double notice_offset_bottom = 10.0;
 inline constexpr double notice_toast_lines = 3.0;
-inline constexpr double notice_width = 340.0;
+inline constexpr double notice_width = 227.0;
 inline constexpr double notice_z_index = 2.0;
 inline constexpr double notification_badge_font_size = 11.0;
 inline constexpr double notification_center_empty_font_size = 11.0;

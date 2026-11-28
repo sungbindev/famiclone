@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：win32-ui-kit-tools.test.ts
- * 说明：Win32 控件库的 Node 工具测试：CSS 解析与求值、令牌与图标生成结果和已提交文件一致、PNG 解码、截图对照函数。
+ * 说明：Win32 控件库的 Node 工具测试：CSS 解析与求值、图标生成结果和已提交文件一致、PNG 解码、截图对照函数。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -22,7 +22,6 @@ import { CssValueError, Evaluator, parseRules, parseValue, splitTopLevel, stripC
 import { DATA_FILE, generate as generateIcons, ID_FILE, RULES_FILE } from '../win32/ui-kit/tools/gen-icons.mjs';
 import { FONT_DATA_FILE, generate as generateFonts } from '../win32/ui-kit/tools/gen-fonts.mjs';
 import { decodeWoff2 } from '../win32/ui-kit/tools/lib/woff2.mjs';
-import { generate as generateTokens, OUTPUT_FILE } from '../win32/ui-kit/tools/gen-tokens.mjs';
 
 const directories: string[] = [];
 
@@ -146,10 +145,6 @@ describe('CSS 求值', () => {
 });
 
 describe('生成结果与已提交文件', () => {
-  it('令牌头文件与生成结果一致', () => {
-    expect(readFileSync(OUTPUT_FILE, 'utf8')).toBe(generateTokens());
-  });
-
   it('图标编号与路径数据与生成结果一致', () => {
     const { id, data, rules, count } = generateIcons();
     expect(readFileSync(ID_FILE, 'utf8')).toBe(id);
@@ -163,13 +158,6 @@ describe('生成结果与已提交文件', () => {
     expect(rules).toContain('{"^保存", IconId::DeviceFloppy, false},');
     expect(rules).toContain('{"^下一步", IconId::ArrowRight, true},');
     expect(rules.indexOf('"^取消生成"')).toBeLessThan(rules.indexOf('"^(取消|关闭)"'));
-  });
-
-  it('生成的令牌含按钮用到的尺寸与两个主题', () => {
-    const text = generateTokens();
-    expect(text).toContain('inline constexpr double btn_height = 22.0;');
-    expect(text).toContain('inline constexpr ThemeTokens dark{');
-    expect(text).toContain('inline constexpr ThemeTokens light{');
   });
 });
 

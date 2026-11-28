@@ -5,13 +5,13 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：令牌由 tools/gen-tokens.mjs 生成；控件只经这里取令牌，不直接引用生成文件。
+ * 备注：令牌在 base/tokens.hpp 里手写维护；控件只经这里取令牌，不直接引用令牌文件。
  * ------------------------------------------------------------------------
  */
 
 #pragma once
 
-#include "generated/tokens.generated.hpp"
+#include "base/tokens.hpp"
 #include "rujian/ui/theme.hpp"
 
 namespace rujian::ui {

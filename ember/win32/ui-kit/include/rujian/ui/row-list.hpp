@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：row-list.hpp
- * 说明：信息行列表：每行是“前导文字、主文字、若干信息列、行尾操作”排成一行，鼠标移上去与按下时底色变化。
+ * 说明：信息行列表：每行是“前导文字、主文字、若干信息列、行尾操作”排成一行，鼠标移上去时底色变化，按下时不变（行不是按钮）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -83,7 +83,7 @@ class RowListItem : public Widget {
   [[nodiscard]] Size measure(Size available) override;
   void arrange(const Rect& bounds) override;
   void paint(Canvas& canvas) override;
-  /** 按下时底色变深（行本身不响应点击；可点击的列在抬起时回调）。 */
+  /** 按下时行的底色不变（行不是按钮，也不响应点击）；可点击的列按下时列底色变深，在抬起时回调。 */
   bool onMouseDown(const MouseEvent& event) override;
   bool onMouseUp(const MouseEvent& event) override;
   bool onMouseMove(const MouseEvent& event) override;

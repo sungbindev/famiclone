@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
- * 备注：文字行高取正文行高倍数；悬停与按下的底色取行列表令牌，圆角取行圆角。
+ * 备注：文字行高取正文行高倍数；行只有悬停底色（行不是按钮，按下不变），可点击列的悬停与按下另有列底色；圆角取行圆角。
  * ------------------------------------------------------------------------
  */
 
@@ -202,8 +202,8 @@ int RowListItem::cellAt(Point point) const {
 
 void RowListItem::paint(Canvas& canvas) {
   const auto& colors = themeTokens(host()->theme());
-  if (pressed()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_active_bg, .radius = tokens::row_list_radius});
-  else if (hovered()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_hover_bg, .radius = tokens::row_list_radius});
+  // 行不是按钮：只有悬停底色，按下时不变
+  if (hovered()) canvas.drawBox(bounds(), BoxStyle{.fill = colors.row_list_hover_bg, .radius = tokens::row_list_radius});
   // 可点击的列：悬停时在行底色上再加一块列底色，按下时更深
   if (hoverCell_ >= 0) {
     const bool down = pressed() && pressedCell_ == hoverCell_;

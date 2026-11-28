@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：publish-update.mjs
- * 说明：发布升级文件（npm run update:publish）：用私钥给 build/ember/release/Ember-<版本号>.exe 生成签名清单 latest.json，再复制程序文件、下载用的 Ember-<版本号>.zip，最后复制 latest.json 到仓库的 updates/ember/windows/。
+ * 说明：发布升级文件（npm run update:publish）：用私钥给 build/ember/release/Ember-<版本号>.exe 生成签名清单 latest.json，再复制程序文件、下载用的 Ember-<版本号>.zip，最后复制 latest.json 到仓库的 updates/ember/windows/；复制完成后自动构建站点（site 的 npm run build，首页下载地址指向刚复制的压缩包）。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-21
@@ -12,6 +12,7 @@
  * ------------------------------------------------------------------------
  */
 
+import { execFileSync } from 'node:child_process';
 import { createPublicKey, createVerify } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -71,7 +72,12 @@ function main() {
     console.log(`${dryRun ? '（仅检查）' : '复制'} ${file}`);
     if (!dryRun) copyFileSync(join(RELEASE_BUILD_DIRECTORY, file), join(feedDirectory, file));
   }
-  console.log(dryRun ? '检查完成，没有写仓库。' : '发布文件已写入仓库：提交并推送后才会在 fcdev.cn 上生效。');
+  if (!dryRun) {
+    // 升级文件就位后接着构建站点：首页的下载地址指向刚复制的压缩包，不用再单独构建
+    console.log('构建站点…');
+    execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], { cwd: join(root, '..', 'site'), stdio: 'inherit', shell: process.platform === 'win32' });
+  }
+  console.log(dryRun ? '检查完成，没有写仓库。' : '发布文件已写入仓库，站点已构建：提交并推送后才会在 fcdev.cn 上生效。');
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

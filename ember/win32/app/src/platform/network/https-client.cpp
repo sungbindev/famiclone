@@ -57,6 +57,16 @@ std::string describeError(DWORD code) {
   return text;
 }
 
+/** 系统的代理开关是否打开（注册表 HKCU 的 Internet Settings\ProxyEnable）。
+ * WinHttpGetIEProxyConfigForCurrentUser 不看这个开关，代理关掉后地址仍会返回，
+ * 这里先查开关，关着时忽略残留的代理地址直连，与浏览器的行为一致。 */
+bool proxyEnabled() {
+  DWORD enabled = 0;
+  DWORD size = sizeof(enabled);
+  const LSTATUS status = RegGetValueW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", L"ProxyEnable", RRF_RT_REG_DWORD, nullptr, &enabled, &size);
+  return status == ERROR_SUCCESS && enabled != 0;
+}
+
 /** 一次请求：连接、发出、收到响应头；成功时 request 可以读正文。 */
 struct Request {
   Handle session;
@@ -83,10 +93,11 @@ Request open(const std::string& url) {
   const std::wstring path = std::wstring(parts.lpszUrlPath, parts.dwUrlPathLength) + std::wstring(parts.lpszExtraInfo, parts.dwExtraInfoLength);
   const bool secure = parts.nScheme == INTERNET_SCHEME_HTTPS;
 
-  // 代理：有 IE 里设置的代理服务器就用它，否则直连；本机回环地址（只用于本机的测试与调试）一律直连
+  // 代理：IE 里设置的代理开着就用它，否则直连（开关关着时代理地址可能还有残留，不能走）；
+  // 本机回环地址（只用于本机的测试与调试）一律直连
   WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxyConfig{};
   std::wstring proxy;
-  if (host != L"127.0.0.1" && WinHttpGetIEProxyConfigForCurrentUser(&proxyConfig) != FALSE) {
+  if (host != L"127.0.0.1" && proxyEnabled() && WinHttpGetIEProxyConfigForCurrentUser(&proxyConfig) != FALSE) {
     if (proxyConfig.lpszProxy != nullptr) proxy = proxyConfig.lpszProxy;
     if (proxyConfig.lpszAutoConfigUrl != nullptr) GlobalFree(proxyConfig.lpszAutoConfigUrl);
     if (proxyConfig.lpszProxy != nullptr) GlobalFree(proxyConfig.lpszProxy);

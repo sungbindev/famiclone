@@ -46,6 +46,7 @@ add_library(ember_app STATIC
   src/infra/help/local-help-viewer.cpp
   src/infra/last-directories/file-last-directories-service.cpp
   src/infra/links/shell-external-links.cpp
+  src/infra/machines/http-rom-archive.cpp
   src/infra/plugins/bundled-plugins.cpp
   src/infra/resources/zip-archive.cpp
   src/infra/recent-cartridges/file-recent-cartridges-service.cpp

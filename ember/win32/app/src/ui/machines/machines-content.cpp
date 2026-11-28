@@ -32,6 +32,8 @@ constexpr const char* kRomReplace = "替换";
 constexpr const char* kRomRemove = "移除";
 constexpr const char* kRomOpenDirectory = "打开 ROM 目录";
 constexpr const char* kRomAddFromDirectory = "从目录添加 ROM";
+constexpr const char* kRomDownload = "下载 ROM";
+constexpr const char* kRomDownloading = "正在下载 ROM…";
 
 /** 滚动区内容右边的留白（滚动条贴着对话框的右边，内容自己空出来）。 */
 constexpr double kPaneRightPadding = 10;
@@ -78,7 +80,7 @@ void MachinesContent::arrange(const Rect& bounds) {
 }
 
 std::string MachinesContent::signatureOf(const contracts::RomView& view) {
-  std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message + '\x1e';
+  std::string signature = std::to_string(static_cast<int>(view.load)) + '\x1f' + view.message + '\x1f' + (view.downloading ? 'd' : '-') + '\x1e';
   for (const contracts::RomRow& row : view.rows) signature += row.machine + '\x1f' + row.name + '\x1f' + row.status + '\x1f' + (row.hasRom ? 'b' : '-') + (row.supported ? 's' : '-') + '\x1e';
   return signature;
 }
@@ -95,6 +97,7 @@ void MachinesContent::rebuild(const contracts::RomView& view) {
   romRows_.clear();
   openDirectory_ = nullptr;
   addFromDirectory_ = nullptr;
+  download_ = nullptr;
   listPanel_ = nullptr;
 
   auto stack = std::make_unique<Stack>();
@@ -111,6 +114,10 @@ void MachinesContent::rebuild(const contracts::RomView& view) {
   auto addFromDirectory = std::make_unique<Button>(kRomAddFromDirectory);
   addFromDirectory->setOnClick([this] { rom_.chooseDirectory(); });
   addFromDirectory_ = static_cast<Button*>(toolbar->addChild(std::move(addFromDirectory)));
+  auto download = std::make_unique<Button>(view.downloading ? kRomDownloading : kRomDownload);
+  download->setEnabled(!view.downloading);
+  download->setOnClick([this] { rom_.download(); });
+  download_ = static_cast<Button*>(toolbar->addChild(std::move(download)));
   stack->addChild(std::move(toolbar));
   if (view.load == contracts::MachinesLoad::Failed) stack->addChild(errorState(view.message));
   if (!view.rows.empty()) {

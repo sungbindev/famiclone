@@ -154,6 +154,19 @@
       "params": { "type": "object", "properties": {}, "required": [] },
       "result": { "type": "object", "properties": {}, "required": [] },
       "errors": ["machines.romDirectoryUnavailable"]
+    },
+    "downloadRoms": {
+      "description": "从固定地址下载 ROM 包（与应用升级同域名，https://fcdev.cn/updates/ember/roms.zip），解包后交给 machines.setRoms 按内容认出机型并给还没有 ROM 的机型添加；地址由外壳决定，界面不能指定；完成后删除临时文件。",
+      "params": { "type": "object", "properties": {}, "required": [] },
+      "result": {
+        "type": "object",
+        "properties": {
+          "added": { "type": "array", "items": { "$ref": "#/types/MachineInfo" }, "description": "添加了 ROM 的机型项" },
+          "skipped": { "type": "array", "items": { "$ref": "#/types/RomSkipped" }, "description": "没有添加的文件" }
+        },
+        "required": ["added", "skipped"]
+      },
+      "errors": ["machines.downloadFailed", "machines.fileNotFound", "machines.fileUnreadable", "machines.romAccessFailed"]
     }
   },
   "events": {

@@ -95,12 +95,31 @@ std::optional<RomImport> parseRomImport(const nlohmann::json& result) {
   return summary;
 }
 
+namespace {
+
+/** 添加结果通知的后缀：已有 ROM 未改动与认不出的文件数（没有对应情况时不写）。 */
+std::string importSuffix(const RomImport& import) {
+  std::string text;
+  if (import.kept > 0) text += "；" + std::to_string(import.kept) + " 个文件的机型已有 ROM，未改动";
+  if (import.unrecognized > 0) text += "；" + std::to_string(import.unrecognized) + " 个文件认不出是哪个机型的 ROM，已跳过";
+  return text;
+}
+
+}  // namespace
+
 std::pair<std::string, contracts::NotificationLevel> romImportNotice(const RomImport& import) {
   std::string text;
   if (import.added > 0) text = "已从目录添加 " + std::to_string(import.added) + " 个机型的 ROM";
   else text = "目录里没有可添加的 ROM";
-  if (import.kept > 0) text += "；" + std::to_string(import.kept) + " 个文件的机型已有 ROM，未改动";
-  if (import.unrecognized > 0) text += "；" + std::to_string(import.unrecognized) + " 个文件认不出是哪个机型的 ROM，已跳过";
+  text += importSuffix(import);
+  return {text, import.added > 0 ? contracts::NotificationLevel::Success : contracts::NotificationLevel::Warning};
+}
+
+std::pair<std::string, contracts::NotificationLevel> romDownloadNotice(const RomImport& import) {
+  std::string text;
+  if (import.added > 0) text = "已下载并添加 " + std::to_string(import.added) + " 个机型的 ROM";
+  else text = "ROM 包里没有可添加的 ROM";
+  text += importSuffix(import);
   return {text, import.added > 0 ? contracts::NotificationLevel::Success : contracts::NotificationLevel::Warning};
 }
 

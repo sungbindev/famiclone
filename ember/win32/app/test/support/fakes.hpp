@@ -14,6 +14,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -22,6 +23,7 @@
 #include "contracts/cartridges/recent-cartridges-service.hpp"
 #include "contracts/core-gateway/core-gateway.hpp"
 #include "contracts/logging/error-logger.hpp"
+#include "contracts/machines/rom-archive-source.hpp"
 #include "contracts/shell/file-dialog.hpp"
 #include "contracts/shell/confirmation.hpp"
 #include "contracts/shell/directory-opener.hpp"
@@ -131,6 +133,20 @@ class FakeDirectory : public contracts::OpenableDirectory {
     ++opened;
     return error;
   }
+};
+
+/** 假的 ROM 包来源：记下调用，按事先设好的结果同步回复；没设时不回复。 */
+class FakeRomArchive : public contracts::RomArchiveSource {
+ public:
+  std::optional<contracts::RomArchiveResult> result;
+  int fetches{0};
+  int discards{0};
+
+  void fetch(std::function<void(const contracts::RomArchiveResult&)> done) override {
+    ++fetches;
+    if (result) done(*result);
+  }
+  void discard() override { ++discards; }
 };
 
 /** 假的目录打开者：记下打开的路径。 */

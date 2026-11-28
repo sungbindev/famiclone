@@ -27,6 +27,8 @@ std::function<void()> RomController::attach(contracts::ShellApi& shell) {
     shell_ = nullptr;
     ++generation_;
     ++loadRequest_;
+    // 断开外壳后未回来的下载回复被丢弃，下载中的标记一并清掉
+    downloading_ = false;
   };
   stopAll();
   shell_ = &shell;
@@ -40,6 +42,7 @@ contracts::RomView RomController::view() const {
   contracts::RomView result;
   result.load = load_;
   result.message = message_;
+  result.downloading = downloading_;
   if (load_ == contracts::MachinesLoad::Ready) result.rows = buildRomRows(machines_);
   return result;
 }
@@ -147,6 +150,24 @@ void RomController::chooseDirectory() {
     const auto summary = parseRomImport(reply.result);
     if (!summary) return;
     const auto notice = romImportNotice(*summary);
+    shell_->notify(notice.first, notice.second);
+  });
+}
+
+void RomController::download() {
+  if (shell_ == nullptr || downloading_) return;
+  downloading_ = true;
+  changed();
+  ask("machines.downloadRoms", nlohmann::json::object(), [this](const contracts::CoreReply& reply) {
+    downloading_ = false;
+    changed();
+    if (!reply.ok) {
+      report(machineErrorText(reply.error));
+      return;
+    }
+    const auto summary = parseRomImport(reply.result);
+    if (!summary) return;
+    const auto notice = romDownloadNotice(*summary);
     shell_->notify(notice.first, notice.second);
   });
 }

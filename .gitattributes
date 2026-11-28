@@ -8,4 +8,5 @@
 *.img binary
 *.png binary
 *.tgz binary
+*.zip binary
 README.TXT -text

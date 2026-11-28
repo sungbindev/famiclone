@@ -54,6 +54,7 @@
 #include "infra/last-directories/file-last-directories-service.hpp"
 #include "infra/links/shell-external-links.hpp"
 #include "infra/logging/file-error-logger-adapter.hpp"
+#include "infra/machines/http-rom-archive.hpp"
 #include "infra/plugins/bundled-plugins.hpp"
 #include "infra/recent-cartridges/file-recent-cartridges-service.hpp"
 #include "infra/resources/zip-archive.hpp"
@@ -148,6 +149,8 @@ constexpr const char* kMainErrorCode = "shell.mainError";
 constexpr const char* kUpdateFeedUrl = "https://fcdev.cn/updates/ember/windows";
 /** 环境变量 EMBER_UPDATE_FEED_URL 可以改用别的升级地址（只接受 https 或指向 127.0.0.1 的 http，本地演练升级流程用；签名照常校验，换了地址也无法让程序接受没签名的文件）。 */
 constexpr const char* kUpdateFeedOverrideVariable = "EMBER_UPDATE_FEED_URL";
+/** ROM 包的下载地址：与升级同域名，仓库的 updates/ember/roms.zip（里面是各机型的 .rom 文件）；只写在这里，界面与首选项都不能指定。 */
+constexpr const char* kRomPackUrl = "https://fcdev.cn/updates/ember/roms.zip";
 /** 自动检查更新与启动的间隔（毫秒）。 */
 constexpr unsigned kAutoUpdateDelayMilliseconds = 5000;
 /** 是否开启升级：只有发布配置（npm run package:win）才开启，开发与测试的构建不升级。 */
@@ -342,6 +345,7 @@ int runApplication(const shared::LaunchArguments& launch) {
   };
   infra::SignedExeUpdateEngine updateEngine(std::move(updateOptions), ui, updateTransport);
   infra::EngineAppUpdater updater(updateEngine, ui);
+  infra::HttpRomArchive romArchive({kRomPackUrl, userData / "roms-download"}, ui);
   infra::UserDataLocationAdapter userDataLocation(resolution, launch.userDataDirectory.has_value(), executable, profileDirectory);
   infra::ExplorerDirectory userDataDirectory(userData);
   DialogConfirmation confirmation([&mainWindow]() -> void* { return mainWindow; });
@@ -379,7 +383,7 @@ int runApplication(const shared::LaunchArguments& launch) {
 
   entry::MainRequestRouter router(core, logger);
   router.add(entry::createCartridgeHandlers({core, fileDialog, droppedFiles, recentCartridges}));
-  router.add(entry::createMachineHandlers({core, fileDialog, romDirectory}));
+  router.add(entry::createMachineHandlers({core, fileDialog, romDirectory, romArchive}));
   router.add(entry::createMapperHandlers({core, fileDialog}));
   router.add(entry::createMediaHandlers({core, fileDialog, droppedFiles, directoryOpener}));
   router.add(entry::createFileManagerHandlers({core, fileDialog, droppedFiles, directoryOpener, shellState, recentCartridges}));

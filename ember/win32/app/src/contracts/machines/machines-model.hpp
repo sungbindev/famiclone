@@ -48,6 +48,8 @@ struct RomView {
   std::string message;
   /** 需要 ROM 的机型（经典 FC 不需要，不在其中）。 */
   std::vector<RomRow> rows;
+  /** 是否正在下载 ROM 包：下载中“下载 ROM”按钮置灰并显示进度文字。 */
+  bool downloading{false};
   bool operator==(const RomView&) const = default;
 };
 
@@ -62,6 +64,8 @@ class RomModel {
   virtual void choose(const std::string& machine) = 0;
   /** 从目录添加 ROM：弹出系统选择文件夹窗口，按内容认出目录里各个 ROM 属于哪个机型，给没有 ROM 的机型添加；用户取消时什么都不发生，结果与错误用通知给出。 */
   virtual void chooseDirectory() = 0;
+  /** 下载 ROM：从固定地址下载 ROM 包并解包，按内容给没有 ROM 的机型添加；下载中重复调用无效，结果与错误用通知给出。 */
+  virtual void download() = 0;
   /** 移除机型的 ROM，不弹确认框。 */
   virtual void remove(const std::string& machine) = 0;
   /** 用系统的文件管理器打开 ROM 目录。 */

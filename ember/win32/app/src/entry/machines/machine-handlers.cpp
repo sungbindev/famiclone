@@ -53,6 +53,22 @@ MainRequestHandlers createMachineHandlers(MachineDependencies dependencies) {
     done(error.empty() ? contracts::CoreReply::success(nlohmann::json::object()) : contracts::CoreReply::failure("machines.romDirectoryUnavailable", "无法打开 ROM 目录：" + error));
   };
 
+  handlers["machines.downloadRoms"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
+    const ParamReader reader(params, {});
+    // 下载解包在工作线程，结果回到界面线程；无论成功失败都删临时文件
+    dependencies.romArchive.fetch([dependencies, done](const contracts::RomArchiveResult& result) {
+      if (!result.ok) {
+        dependencies.romArchive.discard();
+        done(contracts::CoreReply::failure("machines.downloadFailed", result.error));
+        return;
+      }
+      dependencies.core.request("machines.setRoms", nlohmann::json{{"path", result.directory}}, [dependencies, done](contracts::CoreReply reply) {
+        dependencies.romArchive.discard();
+        done(std::move(reply));
+      });
+    });
+  };
+
   return handlers;
 }
 

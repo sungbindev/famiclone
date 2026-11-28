@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  * 名称：main-request-test.cpp
- * 说明：请求路由与外壳自己处理的 15 个请求的测试：路由的拒绝规则、参数校验、取消与失败的结果形状、先记入再加载、拖入文件的核对。
+ * 说明：请求路由与外壳自己处理的 16 个请求的测试：路由的拒绝规则、参数校验、取消与失败的结果形状、先记入再加载、拖入文件的核对。
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-19
@@ -33,6 +33,7 @@ struct Fixture {
   test::FakeFileDialog dialog;
   test::FakeDirectory logDirectory;
   test::FakeDirectory romDirectory;
+  test::FakeRomArchive romArchive;
   test::FakeDirectoryOpener directories;
   test::FakeRecentCartridges recent;
   test::FakeErrorLogger logger;
@@ -43,7 +44,7 @@ struct Fixture {
 
   Fixture() {
     router.add(entry::createCartridgeHandlers({core, dialog, dropped, recent}));
-    router.add(entry::createMachineHandlers({core, dialog, romDirectory}));
+    router.add(entry::createMachineHandlers({core, dialog, romDirectory, romArchive}));
     router.add(entry::createMapperHandlers({core, dialog}));
     router.add(entry::createMediaHandlers({core, dialog, dropped, directories}));
     router.add(entry::createPreferenceHandlers({dialog}));

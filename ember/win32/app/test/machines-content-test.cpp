@@ -31,6 +31,7 @@ class FakeRom final : public contracts::RomModel {
   [[nodiscard]] contracts::RomView view() const override { return current; }
   void choose(const std::string& machine) override { calls.push_back("choose " + machine); }
   void chooseDirectory() override { calls.push_back("chooseDirectory"); }
+  void download() override { calls.push_back("download"); }
   void remove(const std::string& machine) override { calls.push_back("remove " + machine); }
   void openDirectory() override { calls.push_back("openDirectory"); }
   [[nodiscard]] std::function<void()> subscribe(std::function<void()> handler) override {

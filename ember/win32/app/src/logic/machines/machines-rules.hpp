@@ -62,6 +62,8 @@ struct RomImport {
 [[nodiscard]] std::optional<RomImport> parseRomImport(const nlohmann::json& result);
 /** 从目录添加后给用户的通知文字：有添加是成功，一个也没有添加是警告。 */
 [[nodiscard]] std::pair<std::string, contracts::NotificationLevel> romImportNotice(const RomImport& import);
+/** 下载 ROM 后给用户的通知文字：有添加是成功，一个也没有添加是警告；后缀与从目录添加一致。 */
+[[nodiscard]] std::pair<std::string, contracts::NotificationLevel> romDownloadNotice(const RomImport& import);
 
 /** 从请求失败的原因里取出给用户看的说明；没有说明时为“操作失败。”。 */
 [[nodiscard]] std::string machineErrorText(const contracts::CoreError& error);

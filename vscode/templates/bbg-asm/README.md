@@ -16,7 +16,7 @@
 {
   "target": "bbg",
   "name": "hello",
-  "firmware": "D:/rom/bbg1_bios.bin",
+  "firmware": "D:/rom/bbg1_bios.rom",
   "diskImage": "D:/disk/001-3.IMG"
 }
 ```

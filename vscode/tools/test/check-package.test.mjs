@@ -140,11 +140,11 @@ test('测试、源码、密钥、Ember 与 BIOS 文件不该出现在包里', ()
     entries['extension/src/a.ts'] = '';
     entries['extension/keys/signing.pem'] = '';
     entries['extension/bin/Ember.exe'] = '';
-    entries['extension/roms/sb2000_bios.bin'] = '';
+    entries['extension/roms/sb2000_bios.rom'] = '';
     entries['extension/roms/game.nes'] = '';
     entries['extension/targets/bbg/src/lib/bios/bbg-bios-version.s'] = '';
   });
-  for (const name of ['test/a.test.ts', 'src/a.ts', 'keys/signing.pem', 'bin/Ember.exe', 'roms/sb2000_bios.bin', 'roms/game.nes']) {
+  for (const name of ['test/a.test.ts', 'src/a.ts', 'keys/signing.pem', 'bin/Ember.exe', 'roms/sb2000_bios.rom', 'roms/game.nes']) {
     assert.ok(
       errors.some((error) => error.includes(`不应包含 ${name}`)),
       name

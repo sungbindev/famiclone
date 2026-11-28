@@ -64,7 +64,7 @@
       "errors": ["machines.notFound", "machines.romNotNeeded", "machines.unsupported", "machines.fileNotFound", "machines.fileUnreadable", "machines.romInvalid", "machines.romAccessFailed"]
     },
     "setRoms": {
-      "description": "读取目录里的 .bin 文件（不含子目录，按文件名排序），按内容的校验值认出各是哪个机型的 ROM，把还没有 ROM 的机型的 ROM 添加进来；已有 ROM 的机型保持不变，认不出的文件跳过；有添加时发 machines.changed。",
+      "description": "读取目录里的 .rom 文件（不含子目录，按文件名排序），按内容的校验值认出各是哪个机型的 ROM，把还没有 ROM 的机型的 ROM 添加进来；已有 ROM 的机型保持不变，认不出的文件跳过；有添加时发 machines.changed。",
       "mainOnly": true,
       "params": {
         "type": "object",
@@ -119,7 +119,7 @@
   },
   "mainRequests": {
     "openRom": {
-      "description": "弹出系统文件选择窗口（只显示 .bin），把用户选定的文件交给 machines.setRom；用户取消选择时 canceled 为 true，不是错误。",
+      "description": "弹出系统文件选择窗口（只显示 .rom），把用户选定的文件交给 machines.setRom；用户取消选择时 canceled 为 true，不是错误。",
       "params": {
         "type": "object",
         "properties": { "machine": { "type": "string", "minLength": 1, "description": "机型标识" } },

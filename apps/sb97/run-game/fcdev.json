@@ -2,5 +2,5 @@
   "target": "sb97",
   "name": "game",
   "diskName": "sb97-run-game.img",
-  "firmware": "../../../ember/roms/sb97.bin"
+  "firmware": "../../../ember/roms/sb97.rom"
 }

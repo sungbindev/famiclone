@@ -46,7 +46,7 @@ GAME MARIO.NES
 
 ## 在模拟器里运行
 
-设置 `fcdev.emulator.path` 指向 Ember 后，任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.bin` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
+设置 `fcdev.emulator.path` 指向 Ember 后，任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/bbg1_bios.rom` 开机，挂载镜像，等系统盘启动后输入 `game`（不带参数，显示游戏菜单）。要运行游戏，在 `A:\>` 提示符下手动输入 `GAME MARIO`。
 
 ## 原理
 

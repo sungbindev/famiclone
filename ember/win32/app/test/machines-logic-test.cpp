@@ -58,7 +58,7 @@ TEST(MachinesRules, BadShapesAreRejectedOrSkipped) {
 
 TEST(MachinesRules, RomImportCountsAddedUnrecognizedAndKeptFiles) {
   const json result = {{"added", json::array({machine("sb2000", "小霸王 2000", true, true), machine("yuxing", "裕兴", true, true)})},
-                       {"skipped", json::array({{{"fileName", "a.bin"}, {"reason", "unrecognized"}}, {{"fileName", "b.bin"}, {"reason", "exists"}}, {{"fileName", "c.bin"}, {"reason", "duplicate"}}, 5})}};
+                       {"skipped", json::array({{{"fileName", "a.rom"}, {"reason", "unrecognized"}}, {{"fileName", "b.rom"}, {"reason", "exists"}}, {{"fileName", "c.rom"}, {"reason", "duplicate"}}, 5})}};
   const auto summary = logic::parseRomImport(result);
   ASSERT_TRUE(summary.has_value());
   EXPECT_EQ(*summary, (logic::RomImport{2, 1, 2}));
@@ -136,11 +136,11 @@ TEST(RomController, ReadFailureShowsTheCoreMessage) {
 TEST(RomController, ChooseAddsOrReplacesAndNotifiesWithTheFileName) {
   RomFixture f;
   f.attach();
-  f.reply("machines.openRom", {{"canceled", false}, {"machine", machine("sb97", "小霸王 97", true, true, {{"fileName", "SB97.BIN"}, {"size", 524288}})}});
+  f.reply("machines.openRom", {{"canceled", false}, {"machine", machine("sb97", "小霸王 97", true, true, {{"fileName", "SB97.ROM"}, {"size", 524288}})}});
   f.controller.choose("sb97");
   EXPECT_EQ(f.last("machines.openRom")->params, (json{{"machine", "sb97"}}));
   ASSERT_EQ(f.shell.notices.size(), 1U);
-  EXPECT_EQ(f.shell.notices[0].first, "已添加 小霸王 97 的 ROM：SB97.BIN");
+  EXPECT_EQ(f.shell.notices[0].first, "已添加 小霸王 97 的 ROM：SB97.ROM");
   EXPECT_EQ(f.shell.notices[0].second, contracts::NotificationLevel::Success);
   f.reply("machines.openRom", {{"canceled", false}, {"machine", machine("sb2000", "小霸王 2000", true, true, {{"fileName", "NEW.NES"}, {"size", 524304}})}});
   f.controller.choose("sb2000");
@@ -166,7 +166,7 @@ TEST(RomController, ChooseDirectorySummarizesTheImportAndCancelIsSilent) {
   f.reply("machines.openRoms", {{"canceled", true}});
   f.controller.chooseDirectory();
   EXPECT_TRUE(f.shell.notices.empty());
-  f.reply("machines.openRoms", {{"canceled", false}, {"added", json::array({machine("sb2000", "小霸王 2000", true, true)})}, {"skipped", json::array({{{"fileName", "x.bin"}, {"reason", "unrecognized"}}})}});
+  f.reply("machines.openRoms", {{"canceled", false}, {"added", json::array({machine("sb2000", "小霸王 2000", true, true)})}, {"skipped", json::array({{{"fileName", "x.rom"}, {"reason", "unrecognized"}}})}});
   f.controller.chooseDirectory();
   ASSERT_EQ(f.shell.notices.size(), 1U);
   EXPECT_EQ(f.shell.notices[0].first, "已从目录添加 1 个机型的 ROM；1 个文件认不出是哪个机型的 ROM，已跳过");
@@ -195,7 +195,7 @@ TEST(RomController, RemoveNotifiesAndOpenDirectoryReportsFailure) {
 TEST(RomController, MachinesChangedReloadsAndCoreRestartClears) {
   RomFixture f;
   f.attach();
-  f.reply("machines.list", {{"machines", json::array({machine("sb97", "小霸王 97", true, true, {{"fileName", "A.BIN"}, {"size", 524288}})})}});
+  f.reply("machines.list", {{"machines", json::array({machine("sb97", "小霸王 97", true, true, {{"fileName", "A.ROM"}, {"size", 524288}})})}});
   f.core.emitEvent("machines.changed", {{"machine", "sb97"}});
   ASSERT_EQ(f.controller.view().rows.size(), 1U);
   EXPECT_TRUE(f.controller.view().rows[0].hasRom);

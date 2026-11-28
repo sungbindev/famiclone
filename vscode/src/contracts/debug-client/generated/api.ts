@@ -2669,7 +2669,7 @@ export interface EmberApi {
     list(): Promise<MachinesListResult>;
     /** 读取并检查 ROM 文件，复制进 ROM 目录（新文件写好之后才删旧文件，失败时原有的 ROM 不变）；成功后发 machines.changed。 */
     setRom(params: MachinesSetRomParams): Promise<MachinesSetRomResult>;
-    /** 读取目录里的 .bin 文件（不含子目录，按文件名排序），按内容的校验值认出各是哪个机型的 ROM，把还没有 ROM 的机型的 ROM 添加进来；已有 ROM 的机型保持不变，认不出的文件跳过；有添加时发 machines.changed。 */
+    /** 读取目录里的 .rom 文件（不含子目录，按文件名排序），按内容的校验值认出各是哪个机型的 ROM，把还没有 ROM 的机型的 ROM 添加进来；已有 ROM 的机型保持不变，认不出的文件跳过；有添加时发 machines.changed。 */
     setRoms(params: MachinesSetRomsParams): Promise<MachinesSetRomsResult>;
     /** 删除机型的 ROM 文件；没有 ROM 时没有效果也不报错；删除后发 machines.changed。 */
     removeRom(params: MachinesRemoveRomParams): Promise<MachinesRemoveRomResult>;

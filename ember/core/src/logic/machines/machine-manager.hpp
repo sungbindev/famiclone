@@ -6,7 +6,7 @@
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-15
  * 备注：清单里的机型顺序固定；机型的“已支持”以程序里实际有这个主机型号为准（目前 fc、sb97、sb2000、bbg1、bbg98、pec9588、pec586、yuxing 与 cec1）；
- *       ROM 是只含程序的纯 bin 文件，大小等于机型的 ROM 容量，不接受带 iNES 文件头的文件；保存时保持文件原样，开机时原样交给主机。
+ *       ROM 是只含程序的纯二进制文件（.rom），大小等于机型的 ROM 容量，不接受带 iNES 文件头的文件；保存时保持文件原样，开机时原样交给主机。
  *       ROM 的版本按内容的 CRC-32 对照已知 ROM 表（known-roms）认出，从目录添加也靠它认出机型。
  * ------------------------------------------------------------------------
  */
@@ -54,7 +54,7 @@ class MachineManager final : public contracts::machines::MachineService {
 
   [[nodiscard]] const Entry& entry(const std::string& id) const;
   [[nodiscard]] contracts::machines::MachineInfo info(const Entry& item) const;
-  /** 检查 ROM 文件的大小符合机型（ROM 是不带文件头的纯 bin）；@throws shared::CoreError machines.romInvalid。 */
+  /** 检查 ROM 文件的大小符合机型（ROM 是不带文件头的纯二进制）；@throws shared::CoreError machines.romInvalid。 */
   static void checkRom(const Entry& item, const std::vector<std::uint8_t>& file);
   /** 机型已保存的 ROM 的版本：读不出内容时用文件名。 */
   [[nodiscard]] std::string labelOf(const Entry& item, const contracts::machines::StoredRom& stored) const;

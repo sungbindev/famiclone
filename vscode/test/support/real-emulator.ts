@@ -8,7 +8,7 @@
 // 备注：测试程序放在 test/fixtures/sb2000/，用 sb-test.h 记录检查结果；整机经调试服务启动（固件、软
 //       盘镜像、开机），在 SB-DOS 里输入程序名运行，再对停靠标志 sb_test_stop 设写断点，运行到
 //       sb_test_sync、sb_test_done。需要 Ember（环境变量 FCDEV_TEST_EMULATOR）与 cc65；固件取环境变
-//       量FCDEV_TEST_FIRMWARE，没有时用仓库里的 ember/roms/sb2000_bios.bin；缺一由调用者跳过，设置
+//       量FCDEV_TEST_FIRMWARE，没有时用仓库里的 ember/roms/sb2000_bios.rom；缺一由调用者跳过，设置
 //       FCDEV_SKIP_GUI_TESTS=1 也跳过。调试端口自动选空闲端口，只结束自己启动的 Ember。
 // ------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ import { FakeSettings } from './emulator-fixtures';
 const FIXTURE_DIR = path.join(EXTENSION_DIRECTORY, 'test', 'fixtures', 'sb2000');
 
 /** 仓库里的学习机 BIOS，没有设置 FCDEV_TEST_FIRMWARE 时使用。 */
-const REPOSITORY_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'sb2000_bios.bin');
+const REPOSITORY_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'sb2000_bios.rom');
 
 /** 物理键位（KeyboardEvent.code）：测试里用到的按键。 */
 export const KEY: Readonly<Record<string, string>> = {
@@ -456,7 +456,7 @@ export async function startSb2000Program(temp: TempDir, { sources, extraFiles = 
 const BBG_FIXTURE_DIR = path.join(EXTENSION_DIRECTORY, 'test', 'fixtures', 'bbg');
 
 /** 仓库里的步步高软驱一号 BIOS，没有设置 FCDEV_TEST_BBG_FIRMWARE 时使用。 */
-const REPOSITORY_BBG_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'bbg1_bios.bin');
+const REPOSITORY_BBG_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'bbg1_bios.rom');
 
 /** 仓库里的步步高系统盘（BBGDOS 3.0），测试程序放在它的副本上。 */
 const REPOSITORY_BBG_SYSTEM_DISK = path.resolve(EXTENSION_DIRECTORY, '..', 'reference', 'floppy-images', 'bbg', 'BBGDOS.IMG');

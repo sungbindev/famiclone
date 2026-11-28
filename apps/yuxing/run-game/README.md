@@ -46,7 +46,7 @@ GAME.EXE
 
 ## 在模拟器里运行
 
-设置 `fcdev.emulator.path` 指向 Ember 后，任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/yuxing_v8.2-d.bin` 开机，挂载镜像，经主菜单进入 DOS 并输入 `GAME.EXE`。这套自动步骤只适用于 V8.x 的学习卡；V9.0-98 要手动进 DOS：开机后右键选中第一项，下键两次选“学DOS”，回车，动画播完后按空格，下键两次选“三.DOS系统操作”，回车，再输入 `GAME.EXE`。
+设置 `fcdev.emulator.path` 指向 Ember 后，任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/yuxing_v8.2-d.rom` 开机，挂载镜像，经主菜单进入 DOS 并输入 `GAME.EXE`。这套自动步骤只适用于 V8.x 的学习卡；V9.0-98 要手动进 DOS：开机后右键选中第一项，下键两次选“学DOS”，回车，动画播完后按空格，下键两次选“三.DOS系统操作”，回车，再输入 `GAME.EXE`。
 
 ## 原理
 

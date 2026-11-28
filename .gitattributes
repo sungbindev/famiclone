@@ -4,6 +4,7 @@
 *.o binary
 *.chr binary
 *.nes binary
+*.rom binary
 *.img binary
 *.png binary
 *.tgz binary

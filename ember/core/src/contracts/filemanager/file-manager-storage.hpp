@@ -25,7 +25,7 @@ namespace ember::contracts::filemanager {
 /** 媒体库里的文件种类：软盘镜像、NES 卡带、音频（录音机能载入的格式）、PNG 图片。 */
 enum class FileKind { Floppy, Cartridge, Audio, Picture };
 
-/** 各种类的扩展名（小写，不带点）；.bin 不在管理之内。 */
+/** 各种类的扩展名（小写，不带点）；.rom 不在管理之内。 */
 inline constexpr const char* FLOPPY_EXTENSIONS[] = {"img", "ima", "vfd", "dsk", "flp", "do", "po", "nib", "woz"};
 inline constexpr const char* CARTRIDGE_EXTENSIONS[] = {"nes"};
 inline constexpr const char* AUDIO_EXTENSIONS[] = {"m4a", "mp3", "wav", "aac", "flac", "ogg", "opus", "mp4", "mka"};

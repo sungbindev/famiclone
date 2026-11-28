@@ -16,7 +16,7 @@ DOS 3.3 在软盘上，所以软盘镜像要建在一张带 DOS 3.3 的系统盘
 {
   "target": "cec1",
   "name": "demo",
-  "firmware": "D:/rom/cec1_v1.21.bin",
+  "firmware": "D:/rom/cec1_v1.21.rom",
   "diskImage": "D:/disk/DOS33.DSK"
 }
 ```

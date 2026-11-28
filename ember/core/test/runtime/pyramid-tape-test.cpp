@@ -108,14 +108,14 @@ void lessonTapeDrivesTheLessonScreen(const char* machineId, const char* romFile,
   EXPECT_TRUE(bench.errors->entries.empty());
 }
 
-TEST(PyramidTape, Pec9588RealSoundAndPictureTapeDrivesTheLessonScreenOfMenuItemEight) { lessonTapeDrivesTheLessonScreen("pec9588", "pec9588.bin", "Enter", "Digit8", "pec9588-8", 3600); }
+TEST(PyramidTape, Pec9588RealSoundAndPictureTapeDrivesTheLessonScreenOfMenuItemEight) { lessonTapeDrivesTheLessonScreen("pec9588", "pec9588.rom", "Enter", "Digit8", "pec9588-8", 3600); }
 
-TEST(PyramidTape, Pec586RealSoundAndPictureTapeDrivesTheLessonScreenOfMenuItemD) { lessonTapeDrivesTheLessonScreen("pec586", "pec586.bin", "Space", "KeyD", "pec586-d", 5400); }
+TEST(PyramidTape, Pec586RealSoundAndPictureTapeDrivesTheLessonScreenOfMenuItemD) { lessonTapeDrivesTheLessonScreen("pec586", "pec586.rom", "Space", "KeyD", "pec586-d", 5400); }
 
 TEST(PyramidTape, TheLeftChannelOfAStereoTapeReachesTheSpeaker) {
   auto deck = std::make_shared<ember::logic::hardware::TapeDeck>();
-  const auto rom = readMachineRom("pec9588.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.bin";
+  const auto rom = readMachineRom("pec9588.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.rom";
   ember::bootstrap::PyramidMachine machine(ember::bootstrap::PyramidBoard::Model::Pec9588, rom, deck);
   machine.powerOn();
   deck->load(std::make_unique<LeftToneSource>(16000, 96000), "tone");

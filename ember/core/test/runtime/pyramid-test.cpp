@@ -62,8 +62,8 @@ std::uint8_t shadowRegister(RealRomBench& bench) {
 }
 
 TEST(Pyramid, Pec9588BootsAndRunsFromTheCopiedRamProgram) {
-  const auto rom = readMachineRom("pec9588.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.bin";
+  const auto rom = readMachineRom("pec9588.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.rom";
   RealRomBench bench;
   bench.bootMachine("pec9588", rom);
   ASSERT_TRUE(bench.run(120));
@@ -83,8 +83,8 @@ TEST(Pyramid, Pec9588BootsAndRunsFromTheCopiedRamProgram) {
 }
 
 TEST(Pyramid, AKeyPressLeavesTheSplashAndTheMainMenuIsReadableInTextMode) {
-  const auto rom = readMachineRom("pec9588.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.bin";
+  const auto rom = readMachineRom("pec9588.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.rom";
   RealRomBench bench;
   bench.bootMachine("pec9588", rom);
   ASSERT_TRUE(bench.run(300));
@@ -100,8 +100,8 @@ TEST(Pyramid, AKeyPressLeavesTheSplashAndTheMainMenuIsReadableInTextMode) {
 }
 
 TEST(Pyramid, TheMenuKeysStartDifferentPrograms) {
-  const auto rom = readMachineRom("pec9588.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.bin";
+  const auto rom = readMachineRom("pec9588.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.rom";
   std::vector<rt::FrameImage> screens;
   for (const char* key : {"Digit1", "Digit4", "Digit5", "Digit7", "Digit8"}) {
     RealRomBench bench;
@@ -120,8 +120,8 @@ TEST(Pyramid, TheMenuKeysStartDifferentPrograms) {
 }
 
 TEST(Pyramid, TheKeyboardBelongsToTheMachineAndTheMachineHasNoMouse) {
-  const auto rom = readMachineRom("pec9588.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.bin";
+  const auto rom = readMachineRom("pec9588.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/pec9588.rom";
   RealRomBench bench;
   bench.bootMachine("pec9588", rom);
   ASSERT_TRUE(bench.run(2));
@@ -168,6 +168,6 @@ TEST_P(Pec586Roms, AKeyPressLeavesTheSplashForAMenuInTextMode) {
   EXPECT_TRUE(bench.errors->entries.empty());
 }
 
-INSTANTIATE_TEST_SUITE_P(Pyramid, Pec586Roms, ::testing::Values("pec586.bin", "pec686f.bin"));
+INSTANTIATE_TEST_SUITE_P(Pyramid, Pec586Roms, ::testing::Values("pec586.rom", "pec686f.rom"));
 
 }  // namespace

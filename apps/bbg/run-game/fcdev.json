@@ -3,6 +3,6 @@
   "name": "game",
   "diskName": "bbg-run-game.img",
   "linkConfig": "link.cfg",
-  "firmware": "../../../ember/roms/bbg1_bios.bin",
+  "firmware": "../../../ember/roms/bbg1_bios.rom",
   "diskImage": "../BBGDOS.IMG"
 }

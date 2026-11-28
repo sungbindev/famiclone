@@ -1,6 +1,6 @@
 # SB2000 BIOS 源码工程
 
-SB2000 BIOS 的 ca65 汇编源码，是 FC Dev 的整机 ROM 工程（`rom` 目标）。用 FC Dev 构建，产物与原始 BIOS（`../../ember/roms/sb2000_bios.bin`）逐字节一致。
+SB2000 BIOS 的 ca65 汇编源码，是 FC Dev 的整机 ROM 工程（`rom` 目标）。用 FC Dev 构建，产物与原始 BIOS（`../../ember/roms/sb2000_bios.rom`）逐字节一致。
 
 > 状态：整理中（阶段 S2）。文件已按功能分目录，符号定义按功能拆分，例程与变量都有含义的名字；还剩无标签数据块的格式说明和收尾工作（S2.3）。
 
@@ -34,7 +34,7 @@ sb2000/
 
 ## 构建
 
-在 VS Code 中打开本目录，运行 FC Dev 的构建（或工具 `fcdev_build`）。产物为 `build/rom/sb2000.bin`，共 524288 字节，与 `ember/roms/sb2000_bios.bin` 逐字节一致。
+在 VS Code 中打开本目录，运行 FC Dev 的构建（或工具 `fcdev_build`）。产物为 `build/rom/sb2000.bin`，共 524288 字节，与 `ember/roms/sb2000_bios.rom` 逐字节一致。
 
 运行：FC Dev 的运行任务把产物作为 SB2000 的固件开机（需要在用户设置 `fcdev.emulator.path` 中指向 Ember）。
 

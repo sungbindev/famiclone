@@ -1,7 +1,7 @@
 {
   "version": 1,
   "image": {
-    "path": "../../../../ember/roms/bbg1_bios.bin",
+    "path": "../../../../ember/roms/bbg1_bios.rom",
     "size": 131072,
     "sha256": "7b34552df6f043be78db4fb542c256fa88189ab92777d5218f8f1f9880f54721"
   },

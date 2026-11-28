@@ -19,11 +19,11 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { debugCall, drive, dropFiles, parseArguments, projectRoot, removeUserData, sleep, startApp } from './win32-dev-support.mjs';
 
 /** 测试用的学习机 ROM（仓库里的文件）：程序不自带 ROM，冒烟时复制进实例的 ROM 目录。 */
-const TEST_ROM = join(projectRoot, 'roms', 'sb2000_bios.bin');
+const TEST_ROM = join(projectRoot, 'roms', 'sb2000_bios.rom');
 
 /** 把测试用的 ROM 放进实例的用户数据目录，等于用户在首选项里添加了它。 */
 function addTestRom(app) {
-  const target = join(app.userData, 'roms', 'sb2000', 'SB2K_ROM.bin');
+  const target = join(app.userData, 'roms', 'sb2000', 'SB2K_ROM.rom');
   mkdirSync(dirname(target), { recursive: true });
   copyFileSync(TEST_ROM, target);
 }

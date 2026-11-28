@@ -77,7 +77,7 @@ std::vector<std::string> DiskRomStorage::listSources(const std::string& director
     if (!item->is_regular_file(entryError) || entryError) continue;
     std::string extension = fileNameOf(item->path().extension());
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char letter) { return static_cast<char>(std::tolower(letter)); });
-    if (extension == ".bin") files.push_back(item->path());
+    if (extension == ".rom") files.push_back(item->path());
   }
   if (error) throw shared::CoreError(api::ERROR_FILE_UNREADABLE, "无法读取目录：" + directory);
   std::sort(files.begin(), files.end());

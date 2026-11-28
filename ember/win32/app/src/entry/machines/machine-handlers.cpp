@@ -21,7 +21,7 @@ MainRequestHandlers createMachineHandlers(MachineDependencies dependencies) {
   handlers["machines.openRom"] = [dependencies](const nlohmann::json& params, contracts::CoreReplyHandler done) {
     const ParamReader reader(params, {"machine"});
     const std::string machine = reader.requiredString("machine");
-    const auto path = dependencies.dialog.pickFile({"添加 ROM", {{"ROM 文件", {"bin"}}}, "rom"});
+    const auto path = dependencies.dialog.pickFile({"添加 ROM", {{"ROM 文件", {"rom"}}}, "rom"});
     if (!path) {
       done(contracts::CoreReply::success({{"canceled", true}}));
       return;

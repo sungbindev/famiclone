@@ -13,7 +13,7 @@
 扩展不提供模拟器与 ROM。先在设置 `fcdev.emulator.path` 里指定模拟器 Ember 的位置，再在 `fcdev.json` 里用 `firmware` 指定裕兴学习卡的 ROM 文件（V8.0-C、V8.2-D、V8.3-D、V9.0-98 任选一个；目前只用 V8.2-D 验证过）：
 
 ```json
-{ "target": "yuxing", "name": "hello", "firmware": "D:/rom/yuxing_v8.2-d.bin" }
+{ "target": "yuxing", "name": "hello", "firmware": "D:/rom/yuxing_v8.2-d.rom" }
 ```
 
 然后运行任务“FCDEV：运行”：Ember 自动开机，经开机画面和主菜单进入“学 DOS”里的 DOS 命令行，输入 `hello.exe`。

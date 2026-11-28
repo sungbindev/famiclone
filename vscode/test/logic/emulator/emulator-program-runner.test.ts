@@ -133,7 +133,7 @@ describe('构建并运行', () => {
   it('SB97 程序：按目标的机型开机，先选中 DOS 再输入程序名；构建已生成镜像时不再另外生成', async () => {
     const exe = writeTestFile(temp.dir, 'hello.exe', 'x');
     writeTestFile(temp.dir, 'hello.img', 'x');
-    const firmware = writeTestFile(temp.dir, 'sb97.bin', 'x');
+    const firmware = writeTestFile(temp.dir, 'sb97.rom', 'x');
     const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'input.key': {}, 'runtime.resume': {} });
     connector.next = client;
     const build = new FakeBuildService('firmware-disk', firmware, exe, 'sb97', true);
@@ -162,7 +162,7 @@ describe('构建并运行', () => {
   it('步步高程序：等系统盘启动后按两次回车跳过日期与时间，输入不带扩展名的程序名', async () => {
     const exe = writeTestFile(temp.dir, 'hello.cmd', 'x');
     writeTestFile(temp.dir, 'hello.img', 'x');
-    const firmware = writeTestFile(temp.dir, 'bbg1_bios.bin', 'x');
+    const firmware = writeTestFile(temp.dir, 'bbg1_bios.rom', 'x');
     const client = createFakeClient({ 'machines.setRom': {}, 'machines.boot': {}, 'media.floppyInsert': {}, 'runtime.run': { stopped: 'completed', frames: 1, cycles: 1 }, 'input.key': {}, 'runtime.resume': {} });
     connector.next = client;
     await createRunner(new FakeBuildService('firmware-disk', firmware, exe, 'bbg1', true)).run({ build: { cwd: temp.dir }, debug: false });

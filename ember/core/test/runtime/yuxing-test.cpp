@@ -81,11 +81,11 @@ TEST_P(YuxingRoms, BootsToAScreenWithContentAndNoErrors) {
   EXPECT_GT(contentPixels(bench.runtime->captureFrame()), 1000U);
 }
 
-INSTANTIATE_TEST_SUITE_P(Roms, YuxingRoms, ::testing::Values("yuxing_v8.0-c.bin", "yuxing_v8.2-d.bin", "yuxing_v8.3-d.bin", "yuxing_v9.0-98.bin"));
+INSTANTIATE_TEST_SUITE_P(Roms, YuxingRoms, ::testing::Values("yuxing_v8.0-c.rom", "yuxing_v8.2-d.rom", "yuxing_v8.3-d.rom", "yuxing_v9.0-98.rom"));
 
 TEST(Yuxing, TheKeyboardBelongsToTheMachineAndTheMachineHasAMouse) {
-  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  const auto rom = readMachineRom("yuxing_v9.0-98.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(2));
@@ -103,8 +103,8 @@ TEST(Yuxing, TheKeyboardBelongsToTheMachineAndTheMachineHasAMouse) {
 }
 
 TEST(Yuxing, TheArrowKeysMoveTheSelectionOfTheMainMenu) {
-  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  const auto rom = readMachineRom("yuxing_v9.0-98.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(600));
@@ -121,8 +121,8 @@ TEST(Yuxing, TheArrowKeysMoveTheSelectionOfTheMainMenu) {
 }
 
 TEST(Yuxing, MouseMovementMovesTheCursorOfTheMainMenu) {
-  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  const auto rom = readMachineRom("yuxing_v9.0-98.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(600));
@@ -142,9 +142,9 @@ TEST(Yuxing, MouseMovementMovesTheCursorOfTheMainMenu) {
 }
 
 TEST(Yuxing, TheFloppyDriveReadsARealDiskInTheDiskManager) {
-  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
+  const auto rom = readMachineRom("yuxing_v9.0-98.rom");
   const auto disk = ember::test::readReferenceFile("floppy-images/裕兴/工具软件/磁盘处理(98-F).IMG");
-  if (rom.empty() || disk.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin 或软盘镜像";
+  if (rom.empty() || disk.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom 或软盘镜像";
   // 同样的操作：进入“磁盘管理”，按回车列目录；有盘时列出文件，没有盘时报“磁盘格式错”。
   const auto listing = [&](bool withDisk) {
     RealRomBench bench;
@@ -165,8 +165,8 @@ TEST(Yuxing, TheFloppyDriveReadsARealDiskInTheDiskManager) {
 }
 
 TEST(Yuxing, TheDiskOperationScreenOfV83HasNoWhiteBlockInTheTopLeftCorner) {
-  const auto rom = readMachineRom("yuxing_v8.3-d.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.3-d.bin";
+  const auto rom = readMachineRom("yuxing_v8.3-d.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.3-d.rom";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(600));
@@ -185,9 +185,9 @@ TEST(Yuxing, TheDiskOperationScreenOfV83HasNoWhiteBlockInTheTopLeftCorner) {
 }
 
 TEST(Yuxing, RealSoundAndPictureTapeDrivesTheLessonScreenOfTheSoundAndPictureCard) {
-  const auto rom = readMachineRom("yuxing_v8.0-c.bin");
+  const auto rom = readMachineRom("yuxing_v8.0-c.rom");
   const auto tape = ember::test::firstTape();
-  if (rom.empty() || tape.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.0-c.bin 或声像磁带";
+  if (rom.empty() || tape.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.0-c.rom 或声像磁带";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(600));
@@ -214,8 +214,8 @@ TEST(Yuxing, RealSoundAndPictureTapeDrivesTheLessonScreenOfTheSoundAndPictureCar
 }  // namespace
 
 TEST(Yuxing, TheSystemCheckMenuLeavesNoStrayTileInTheMessageRow) {
-  const auto rom = readMachineRom("yuxing_v9.0-98.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  const auto rom = readMachineRom("yuxing_v9.0-98.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(600));
@@ -234,8 +234,8 @@ TEST(Yuxing, TheSystemCheckMenuLeavesNoStrayTileInTheMessageRow) {
 }
 
 TEST(Yuxing, TheV83CardRunsWithTheSmallMemoryOfItsRevision) {
-  const auto rom = readMachineRom("yuxing_v8.3-d.bin");
-  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.3-d.bin";
+  const auto rom = readMachineRom("yuxing_v8.3-d.rom");
+  if (rom.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v8.3-d.rom";
   RealRomBench bench;
   bench.bootMachine("yuxing", rom);
   ASSERT_TRUE(bench.run(2));

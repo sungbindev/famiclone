@@ -6,7 +6,7 @@
 
 用 FC Dev 扩展的 `rom` 目标（说明见扩展使用文档“整机 ROM 工程开发指南”）。配置在 `fcdev.json`：
 
-- `firmware`：完整的 128KB 固件 `ember/roms/bbg1_bios.bin` 当底。BIOS 源码只对应最后 16KB（`$C000-$FFFF`），前 112KB 是字库点阵，取自底固件。
+- `firmware`：完整的 128KB 固件 `ember/roms/bbg1_bios.rom` 当底。BIOS 源码只对应最后 16KB（`$C000-$FFFF`），前 112KB 是字库点阵，取自底固件。
 - `targetOptions`：`machine` 为 `bbg1`，`offset` 为 114688（BIOS 在固件里的偏移），`size` 为 131072。
 - `diskImage`：运行时放进软驱的系统盘 `DOS.IMG`。
 
@@ -19,7 +19,7 @@ ca65 --cpu 6502 -I src/include -g src/bios/bios.s -o build/bios.o
 ld65 -C link.cfg -m build/bios.map -o build/bios.bin build/bios.o
 ```
 
-汇编与链接都无错误即为通过。结果不与 `bbg1_bios.bin` 逐字节比对，原版源码与 ROM 不是同一次构建。
+汇编与链接都无错误即为通过。结果不与 `bbg1_bios.rom` 逐字节比对，原版源码与 ROM 不是同一次构建。
 
 ## 目录
 

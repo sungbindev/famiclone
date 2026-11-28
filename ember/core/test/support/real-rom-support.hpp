@@ -50,7 +50,7 @@ inline std::vector<std::uint8_t> readReferenceFile(const std::string& relative) 
   return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
-/** 读 ember/roms 里没有文件头的纯 ROM（如 pec9588.bin）；找不到时为空。 */
+/** 读 ember/roms 里没有文件头的纯 ROM（如 pec9588.rom）；找不到时为空。 */
 inline std::vector<std::uint8_t> readMachineRom(const std::string& fileName) {
   std::filesystem::path directory = std::filesystem::current_path();
   for (int level = 0; level < 8; ++level) {

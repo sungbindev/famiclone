@@ -1,7 +1,7 @@
 {
   "version": 1,
   "image": {
-    "path": "../../../ember/roms/sb97.bin",
+    "path": "../../../ember/roms/sb97.rom",
     "size": 1048576,
     "sha256": "0992ecd49b1af200ba5df822cac30b53d982933242370e5830c7cc2a7b63521b"
   },

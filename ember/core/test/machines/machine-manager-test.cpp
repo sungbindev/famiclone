@@ -156,40 +156,40 @@ TEST(MachineManager, ListsTheNineMachinesInFixedOrder) {
 
 TEST(MachineManager, SettingARomKeepsItAndPublishesAChange) {
   Rig rig;
-  const auto path = rig.write("SB2K_ROM.bin", romFile());
+  const auto path = rig.write("SB2K_ROM.rom", romFile());
   const auto result = rig.manager->setRom(rig.setParams("sb2000", path));
   ASSERT_TRUE(result.machine.rom.has_value());
-  EXPECT_EQ(result.machine.rom->fileName, "SB2K_ROM.bin");
+  EXPECT_EQ(result.machine.rom->fileName, "SB2K_ROM.rom");
   EXPECT_EQ(result.machine.rom->size, static_cast<std::int64_t>(512 * 1024));
-  EXPECT_EQ(result.machine.rom->label, "SB2K_ROM.bin") << "认不出的 ROM 显示文件名";
+  EXPECT_EQ(result.machine.rom->label, "SB2K_ROM.rom") << "认不出的 ROM 显示文件名";
   EXPECT_EQ(rig.events->count("machines.changed"), 1);
   EXPECT_EQ(rig.events->last("machines.changed")["machine"], "sb2000");
   EXPECT_TRUE(rig.find("sb2000").rom.has_value());
-  EXPECT_TRUE(std::filesystem::exists(rig.dir.path() / "roms" / "sb2000" / "SB2K_ROM.bin"));
+  EXPECT_TRUE(std::filesystem::exists(rig.dir.path() / "roms" / "sb2000" / "SB2K_ROM.rom"));
 }
 
 TEST(MachineManager, ReplacingARomDeletesTheOldFile) {
   Rig rig;
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("first.bin", romFile())));
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("second.bin", romFile())));
-  EXPECT_EQ(rig.find("sb2000").rom->fileName, "second.bin");
-  EXPECT_FALSE(std::filesystem::exists(rig.dir.path() / "roms" / "sb2000" / "first.bin"));
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("first.rom", romFile())));
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("second.rom", romFile())));
+  EXPECT_EQ(rig.find("sb2000").rom->fileName, "second.rom");
+  EXPECT_FALSE(std::filesystem::exists(rig.dir.path() / "roms" / "sb2000" / "first.rom"));
   EXPECT_EQ(rig.events->count("machines.changed"), 2);
 }
 
 TEST(MachineManager, SettingARomRejectsBadInputAndKeepsTheOldOne) {
   Rig rig;
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.bin", romFile())));
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("nope", rig.write("a.bin", romFile()))); }), api::ERROR_NOT_FOUND);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("fc", rig.write("b.bin", romFile()))); }), api::ERROR_ROM_NOT_NEEDED);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb97", rig.write("c.bin", romFile()))); }), api::ERROR_ROM_INVALID) << "sb97 要 1024KB，512KB 的不行";
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", (rig.dir.path() / "missing.bin").string())); }), api::ERROR_FILE_NOT_FOUND);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("small.bin", romFile(16)))); }), api::ERROR_ROM_INVALID);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("text.bin", std::vector<std::uint8_t>(100, 'x')))); }), api::ERROR_ROM_INVALID);
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.rom", romFile())));
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("nope", rig.write("a.rom", romFile()))); }), api::ERROR_NOT_FOUND);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("fc", rig.write("b.rom", romFile()))); }), api::ERROR_ROM_NOT_NEEDED);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb97", rig.write("c.rom", romFile()))); }), api::ERROR_ROM_INVALID) << "sb97 要 1024KB，512KB 的不行";
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", (rig.dir.path() / "missing.rom").string())); }), api::ERROR_FILE_NOT_FOUND);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("small.rom", romFile(16)))); }), api::ERROR_ROM_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("text.rom", std::vector<std::uint8_t>(100, 'x')))); }), api::ERROR_ROM_INVALID);
   auto truncated = romFile();
   truncated.resize(1000);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("cut.bin", truncated))); }), api::ERROR_ROM_INVALID);
-  EXPECT_EQ(rig.find("sb2000").rom->fileName, "good.bin") << "失败时原有的 ROM 不变";
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("cut.rom", truncated))); }), api::ERROR_ROM_INVALID);
+  EXPECT_EQ(rig.find("sb2000").rom->fileName, "good.rom") << "失败时原有的 ROM 不变";
   EXPECT_EQ(rig.events->count("machines.changed"), 1);
 }
 
@@ -201,27 +201,27 @@ TEST(MachineManager, ARomMustBeExactlyTheMachinesSizeAndHasNoHeader) {
   longFile.push_back(0);
   auto withHeader = romFile();
   withHeader.insert(withHeader.begin(), {'N', 'E', 'S', 0x1A, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("short.bin", shortFile))); }), api::ERROR_ROM_INVALID);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("long.bin", longFile))); }), api::ERROR_ROM_INVALID);
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("header.bin", withHeader))); }), api::ERROR_ROM_INVALID) << "带 iNES 文件头的文件不再接受";
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("bbg1", rig.write("wrong-machine.bin", romFile()))); }), api::ERROR_ROM_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("short.rom", shortFile))); }), api::ERROR_ROM_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("long.rom", longFile))); }), api::ERROR_ROM_INVALID);
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("sb2000", rig.write("header.rom", withHeader))); }), api::ERROR_ROM_INVALID) << "带 iNES 文件头的文件不再接受";
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("bbg1", rig.write("wrong-machine.rom", romFile()))); }), api::ERROR_ROM_INVALID);
   EXPECT_FALSE(rig.find("sb2000").rom.has_value());
 }
 
 TEST(MachineManager, ARomBootsAndTheStatusCarriesItsLabel) {
   Rig rig;
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("SB2K_ROM.bin", romFile())));
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("SB2K_ROM.rom", romFile())));
   api::MachinesBootParams params;
   params.machine = "sb2000";
   rig.manager->boot(params);
   ASSERT_TRUE(waitFor([&] { return rig.frames->count() >= 5; }));
   EXPECT_EQ(rig.runtime->status().machine, "sb2000");
-  EXPECT_EQ(rig.runtime->status().romLabel, "SB2K_ROM.bin");
+  EXPECT_EQ(rig.runtime->status().romLabel, "SB2K_ROM.rom");
 }
 
 TEST(MachineManager, RemovingARomIsIdempotent) {
   Rig rig;
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.bin", romFile())));
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.rom", romFile())));
   api::MachinesRemoveRomParams params;
   params.machine = "sb2000";
   EXPECT_FALSE(rig.manager->removeRom(params).machine.rom.has_value());
@@ -250,7 +250,7 @@ TEST(MachineManager, BootNeedsAMachineWithARom) {
 
 TEST(MachineManager, ASb97RomOfOneMegabyteIsAcceptedAndBoots) {
   Rig rig;
-  const auto result = rig.manager->setRom(rig.setParams("sb97", rig.write("SB97.bin", romFile(64))));
+  const auto result = rig.manager->setRom(rig.setParams("sb97", rig.write("SB97.rom", romFile(64))));
   ASSERT_TRUE(result.machine.rom.has_value());
   EXPECT_EQ(result.machine.rom->size, static_cast<std::int64_t>(1024 * 1024));
   api::MachinesBootParams params;
@@ -263,8 +263,8 @@ TEST(MachineManager, ASb97RomOfOneMegabyteIsAcceptedAndBoots) {
 
 TEST(MachineManager, AYuxingRomOfOneMegabyteIsAcceptedAndBoots) {
   Rig rig;
-  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("yuxing", rig.write("small.bin", romFile()))); }), api::ERROR_ROM_INVALID) << "裕兴要 1024KB，512KB 的不行";
-  const auto result = rig.manager->setRom(rig.setParams("yuxing", rig.write("YX.bin", romFile(64))));
+  EXPECT_EQ(errorCodeOf([&] { rig.manager->setRom(rig.setParams("yuxing", rig.write("small.rom", romFile()))); }), api::ERROR_ROM_INVALID) << "裕兴要 1024KB，512KB 的不行";
+  const auto result = rig.manager->setRom(rig.setParams("yuxing", rig.write("YX.rom", romFile(64))));
   ASSERT_TRUE(result.machine.rom.has_value());
   EXPECT_EQ(result.machine.rom->size, static_cast<std::int64_t>(1024 * 1024));
   api::MachinesBootParams params;
@@ -277,7 +277,7 @@ TEST(MachineManager, AYuxingRomOfOneMegabyteIsAcceptedAndBoots) {
 
 TEST(MachineManager, BootRunsTheMachineWithoutACartridge) {
   Rig rig;
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.bin", romFile())));
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.rom", romFile())));
   api::MachinesBootParams params;
   params.machine = "sb2000";
   const auto result = rig.manager->boot(params);
@@ -295,7 +295,7 @@ TEST(MachineManager, BootRunsTheMachineWithoutACartridge) {
 
 TEST(MachineManager, BootCanLeaveTheMachinePoweredOff) {
   Rig rig;
-  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.bin", romFile())));
+  rig.manager->setRom(rig.setParams("sb2000", rig.write("good.rom", romFile())));
   api::MachinesBootParams params;
   params.machine = "sb2000";
   params.powerOn = false;
@@ -314,60 +314,60 @@ TEST(KnownRoms, IdentifiesRomsByContentAndLabelsThemWithVersionOrModel) {
   ASSERT_TRUE(yuxing.has_value());
   EXPECT_EQ(yuxing->machine, "yuxing");
   EXPECT_EQ(yuxing->version, "V9.0-98");
-  EXPECT_EQ(romLabel(0x6085FEE8U, "yx-v9.0-98.bin"), "V9.0-98");
+  EXPECT_EQ(romLabel(0x6085FEE8U, "yx-v9.0-98.rom"), "V9.0-98");
   EXPECT_EQ(findKnownRom(0x05F958C4U)->machine, "pec586");
-  EXPECT_EQ(romLabel(0x05F958C4U, "x.bin"), "PEC-686F");
+  EXPECT_EQ(romLabel(0x05F958C4U, "x.rom"), "PEC-686F");
   EXPECT_EQ(findKnownRom(0xE07BD2C3U)->machine, "sb2000");
-  EXPECT_EQ(romLabel(0xE07BD2C3U, "sb2000_bios.bin"), "SB2000") << "只有一种 ROM 的机型显示型号名";
-  EXPECT_EQ(romLabel(0x8C8FE800U, "bbg98_bios.bin"), "98型");
-  EXPECT_EQ(romLabel(0xB3D11A3CU, "bbg1_bios.bin"), "软驱一号");
+  EXPECT_EQ(romLabel(0xE07BD2C3U, "sb2000_bios.rom"), "SB2000") << "只有一种 ROM 的机型显示型号名";
+  EXPECT_EQ(romLabel(0x8C8FE800U, "bbg98_bios.rom"), "98型");
+  EXPECT_EQ(romLabel(0xB3D11A3CU, "bbg1_bios.rom"), "软驱一号");
   EXPECT_FALSE(findKnownRom(0x12345678U).has_value());
-  EXPECT_EQ(romLabel(0x12345678U, "other.bin"), "other.bin");
+  EXPECT_EQ(romLabel(0x12345678U, "other.rom"), "other.rom");
 }
 
 TEST(MachineManager, AddingFromADirectoryIdentifiesRomsByContent) {
-  const auto sb2000 = realRom("sb2000_bios.bin");
-  const auto yuxing90 = realRom("yuxing_v9.0-98.bin");
-  const auto yuxing80 = realRom("yuxing_v8.0-c.bin");
+  const auto sb2000 = realRom("sb2000_bios.rom");
+  const auto yuxing90 = realRom("yuxing_v9.0-98.rom");
+  const auto yuxing80 = realRom("yuxing_v8.0-c.rom");
   if (sb2000.empty() || yuxing90.empty() || yuxing80.empty()) GTEST_SKIP() << "没有找到 ember/roms 里的真实 ROM";
   Rig rig;
-  rig.put("pack/random-name.bin", sb2000);
-  rig.put("pack/yx-a.bin", yuxing80);
-  rig.put("pack/yx-b.BIN", yuxing90);
-  rig.put("pack/junk.bin", romFile());
+  rig.put("pack/random-name.rom", sb2000);
+  rig.put("pack/yx-a.rom", yuxing80);
+  rig.put("pack/yx-b.ROM", yuxing90);
+  rig.put("pack/junk.rom", romFile());
   rig.put("pack/notes.txt", {1, 2, 3});
   rig.put("pack/game.nes", sb2000);
   const auto result = rig.manager->setRoms(rig.setRomsParams());
   ASSERT_EQ(result.added.size(), 2U);
   EXPECT_EQ(result.added[0].id, "sb2000");
   EXPECT_EQ(result.added[1].id, "yuxing");
-  EXPECT_EQ(result.added[1].rom->fileName, "yx-a.bin") << "同一机型的多个文件取文件名排在最前的";
+  EXPECT_EQ(result.added[1].rom->fileName, "yx-a.rom") << "同一机型的多个文件取文件名排在最前的";
   EXPECT_EQ(result.added[1].rom->label, "V8.0-C");
-  EXPECT_EQ(skippedReason(result, "yx-b.BIN"), "duplicate");
-  EXPECT_EQ(skippedReason(result, "junk.bin"), "unrecognized");
+  EXPECT_EQ(skippedReason(result, "yx-b.ROM"), "duplicate");
+  EXPECT_EQ(skippedReason(result, "junk.rom"), "unrecognized");
   EXPECT_EQ(result.skipped.size(), 2U) << "txt 与 nes 不在候选里";
-  EXPECT_EQ(rig.find("sb2000").rom->fileName, "random-name.bin");
+  EXPECT_EQ(rig.find("sb2000").rom->fileName, "random-name.rom");
   EXPECT_EQ(rig.events->count("machines.changed"), 2);
 }
 
 TEST(MachineManager, AddingFromADirectoryKeepsMachinesThatAlreadyHaveARom) {
-  const auto yuxing90 = realRom("yuxing_v9.0-98.bin");
-  if (yuxing90.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  const auto yuxing90 = realRom("yuxing_v9.0-98.rom");
+  if (yuxing90.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom";
   Rig rig;
-  rig.manager->setRom(rig.setParams("yuxing", rig.write("mine.bin", romFile(64))));
-  rig.put("pack/yx.bin", yuxing90);
+  rig.manager->setRom(rig.setParams("yuxing", rig.write("mine.rom", romFile(64))));
+  rig.put("pack/yx.rom", yuxing90);
   const auto result = rig.manager->setRoms(rig.setRomsParams());
   EXPECT_TRUE(result.added.empty());
-  EXPECT_EQ(skippedReason(result, "yx.bin"), "exists");
-  EXPECT_EQ(rig.find("yuxing").rom->fileName, "mine.bin");
+  EXPECT_EQ(skippedReason(result, "yx.rom"), "exists");
+  EXPECT_EQ(rig.find("yuxing").rom->fileName, "mine.rom");
   EXPECT_EQ(rig.events->count("machines.changed"), 1);
 }
 
 TEST(MachineManager, ABootedRomCarriesItsVersionLabel) {
-  const auto yuxing90 = realRom("yuxing_v9.0-98.bin");
-  if (yuxing90.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.bin";
+  const auto yuxing90 = realRom("yuxing_v9.0-98.rom");
+  if (yuxing90.empty()) GTEST_SKIP() << "没有找到 ember/roms/yuxing_v9.0-98.rom";
   Rig rig;
-  rig.manager->setRom(rig.setParams("yuxing", rig.write("anything.bin", yuxing90)));
+  rig.manager->setRom(rig.setParams("yuxing", rig.write("anything.rom", yuxing90)));
   EXPECT_EQ(rig.find("yuxing").rom->label, "V9.0-98");
   api::MachinesBootParams params;
   params.machine = "yuxing";
@@ -381,7 +381,7 @@ TEST(MachineManager, AddingFromADirectoryReportsAMissingOrNonDirectoryPath) {
   api::MachinesSetRomsParams params;
   params.path = (rig.dir.path() / "nowhere").string();
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setRoms(params); }), api::ERROR_FILE_NOT_FOUND);
-  params.path = rig.write("file.bin", romFile());
+  params.path = rig.write("file.rom", romFile());
   EXPECT_EQ(errorCodeOf([&] { rig.manager->setRoms(params); }), api::ERROR_FILE_UNREADABLE);
   EXPECT_EQ(rig.events->count("machines.changed"), 0);
 }

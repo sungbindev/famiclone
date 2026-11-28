@@ -7,7 +7,7 @@
 // 邮箱：sungbin@3578.cn
 // 日期：2026-11-26
 // 备注：需要环境变量 FCDEV_TEST_EMULATOR 指向 Ember、cc65 工具链、CEC-I 的 ROM（环境变量
-//       FCDEV_TEST_CEC1_FIRMWARE，没有时用仓库里的 ember/roms/cec1_v1.21.bin）与仓库里的
+//       FCDEV_TEST_CEC1_FIRMWARE，没有时用仓库里的 ember/roms/cec1_v1.21.rom）与仓库里的
 //       DOS 3.3 系统盘（reference/floppy-images/cec1/DOS33.DSK），缺一就跳过，设置
 //       FCDEV_SKIP_GUI_TESTS=1 也会跳过；只结束自己启动的 Ember。
 // ------------------------------------------------------------------------
@@ -23,7 +23,7 @@ import { createRealBuildEnvironment, createTempDir, EXTENSION_DIRECTORY, writeTe
 import { CAN_RUN_REAL_EMBER, cleanUserData, createRealEmulator, REAL_EMBER, type RealEmulator } from '../support/real-emulator';
 
 /** 仓库里的 CEC-I ROM（1.21 版），没有设置 FCDEV_TEST_CEC1_FIRMWARE 时使用。 */
-const REPOSITORY_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'cec1_v1.21.bin');
+const REPOSITORY_FIRMWARE = path.resolve(EXTENSION_DIRECTORY, '..', 'ember', 'roms', 'cec1_v1.21.rom');
 
 /** 仓库里的 Apple DOS 3.3 系统盘，测试程序放在它的副本上。 */
 const SYSTEM_DISK = path.resolve(EXTENSION_DIRECTORY, '..', 'reference', 'floppy-images', 'cec1', 'DOS33.DSK');

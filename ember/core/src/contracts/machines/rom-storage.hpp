@@ -40,7 +40,7 @@ class RomStorage {
   [[nodiscard]] virtual std::vector<std::uint8_t> readSource(const std::string& path) const = 0;
 
   /**
-   * 列出用户选定的目录里可能是 ROM 的文件：扩展名是 .bin（不分大小写）的普通文件，不含子目录，按文件名排序。
+   * 列出用户选定的目录里可能是 ROM 的文件：扩展名是 .rom（不分大小写）的普通文件，不含子目录，按文件名排序。
    * @param directory 目录路径（UTF-8）。
    * @return 文件的完整路径（UTF-8）。
    * @throws shared::CoreError machines.fileNotFound：目录不存在；machines.fileUnreadable：不是目录或读取失败。

@@ -30,7 +30,7 @@ class MachineService {
   virtual MachinesSetRomResult setRom(const MachinesSetRomParams& params) = 0;
 
   /**
-   * 读取目录里的 .bin 文件，按内容认出各是哪个机型的 ROM，给还没有 ROM 的机型添加；已有 ROM 的机型保持不变，认不出的文件跳过；每添加一个机型发一次 machines.changed。
+   * 读取目录里的 .rom 文件，按内容认出各是哪个机型的 ROM，给还没有 ROM 的机型添加；已有 ROM 的机型保持不变，认不出的文件跳过；每添加一个机型发一次 machines.changed。
    * @throws shared::CoreError machines.fileNotFound、machines.fileUnreadable、machines.romAccessFailed。
    */
   virtual MachinesSetRomsResult setRoms(const MachinesSetRomsParams& params) = 0;

@@ -21,7 +21,7 @@ namespace ember::logic::machines {
 
 /** 表里的一个 ROM。 */
 struct KnownRom {
-  /** ROM（纯 bin 文件）内容的 CRC-32。 */
+  /** ROM（纯二进制文件）内容的 CRC-32。 */
   std::uint32_t crc32;
   /** 机型标识。 */
   std::string_view machine;

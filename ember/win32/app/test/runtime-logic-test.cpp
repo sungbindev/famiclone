@@ -39,7 +39,7 @@ json machinesJson() {
   return {{"machines",
            json::array({{{"id", "fc"}, {"name", "经典 FC"}, {"needsRom", false}, {"supported", true}},
                         {{"id", "sb97"}, {"name", "小霸王 97"}, {"needsRom", true}, {"supported", true}},
-                        {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"fileName", "SB2K_ROM.bin"}, {"size", 524288}, {"label", "SB2K_ROM.bin"}}}},
+                        {{"id", "sb2000"}, {"name", "小霸王 2000"}, {"needsRom", true}, {"supported", true}, {"rom", {{"fileName", "SB2K_ROM.rom"}, {"size", 524288}, {"label", "SB2K_ROM.rom"}}}},
                         {{"id", "bbg1"}, {"name", "步步高 软驱一号"}, {"needsRom", true}, {"supported", false}}})}};
 }
 
@@ -82,7 +82,7 @@ TEST(RuntimeRules, RomVersionFollowsTheRunningRomOrTheSelectedMachinesRom) {
   classic["romLabel"] = "x";
   EXPECT_FALSE(logic::romVersionText(logic::parseRuntimeStatus(classic), "sb2000", machines).has_value());
   const auto none = logic::parseRuntimeStatus(statusJson("off", "paused"));
-  EXPECT_EQ(logic::romVersionText(none, "sb2000", machines), "SB2K_ROM.bin") << "没有开机时是已选机型已添加的 ROM";
+  EXPECT_EQ(logic::romVersionText(none, "sb2000", machines), "SB2K_ROM.rom") << "没有开机时是已选机型已添加的 ROM";
   EXPECT_FALSE(logic::romVersionText(none, "sb97", machines).has_value());
   EXPECT_FALSE(logic::romVersionText(none, "fc", machines).has_value());
   EXPECT_FALSE(logic::romVersionText(std::nullopt, "sb2000", machines).has_value());
@@ -239,7 +239,7 @@ TEST(RuntimeController, MachinesAreReadAgainAfterTheRomChanges) {
   f.attach();
   EXPECT_FALSE(logic::machineChoices(f.controller.machines())[0].hint.empty());
   auto machines = machinesJson();
-  machines["machines"][1]["rom"] = {{"name", "SB97.bin"}};
+  machines["machines"][1]["rom"] = {{"name", "SB97.rom"}};
   f.reply("machines.list", machines);
   f.core.emitEvent("machines.changed", json::object());
   EXPECT_TRUE(logic::machineChoices(f.controller.machines())[0].hint.empty());

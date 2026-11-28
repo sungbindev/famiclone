@@ -2,6 +2,6 @@
   "target": "bbg",
   "name": "filetest",
   "diskName": "bbg-filetest.img",
-  "firmware": "../../../ember/roms/bbg1_bios.bin",
+  "firmware": "../../../ember/roms/bbg1_bios.rom",
   "diskImage": "../BBGDOS.IMG"
 }

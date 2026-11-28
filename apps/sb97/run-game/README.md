@@ -44,7 +44,7 @@ GAME MARIO.NES
 
 ## 在模拟器里运行
 
-任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.bin` 开机，挂载镜像，进入 DOS 并输入 `game`（不带参数，显示游戏菜单）。要运行带参数的游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `GAME MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
+任务“FCDEV：运行”会用 `fcdev.json` 里 `firmware` 指向的 `ember/roms/sb97.rom` 开机，挂载镜像，进入 DOS 并输入 `game`（不带参数，显示游戏菜单）。要运行带参数的游戏，手动操作：开机后按任意键，等菜单出现后按左键把焦点移到 DOS，回车进入 DOS，再输入 `GAME MARIO`。设置 `fcdev.emulator.path` 指向 Ember 后才能运行。
 
 ## 原理
 

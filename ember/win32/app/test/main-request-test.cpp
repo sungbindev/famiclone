@@ -236,13 +236,13 @@ TEST(CartridgeHandlers, OpenRecentLoadsByIdAndRejectsUnknownIds) {
 
 TEST(MachineHandlers, OpenRomPassesTheMachineAndThePickedFileToTheCore) {
   Fixture f;
-  f.dialog.results.push_back("D:\\rom\\sb2000_bios.bin");
+  f.dialog.results.push_back("D:\\rom\\sb2000_bios.rom");
   f.core.replies["machines.setRom"] = [](const json&) { return contracts::CoreReply::success({{"machine", {{"id", "sb2000"}}}}); };
   const auto reply = f.call("machines.openRom", {{"machine", "sb2000"}});
   ASSERT_TRUE(reply.ok);
   EXPECT_EQ(reply.result["canceled"], false);
   EXPECT_EQ(reply.result["machine"]["id"], "sb2000");
-  EXPECT_EQ(f.core.calls[0].params, json({{"machine", "sb2000"}, {"path", "D:\\rom\\sb2000_bios.bin"}}));
+  EXPECT_EQ(f.core.calls[0].params, json({{"machine", "sb2000"}, {"path", "D:\\rom\\sb2000_bios.rom"}}));
   EXPECT_EQ(f.dialog.fileCalls[0].purpose, "rom");
   EXPECT_EQ(f.dialog.fileCalls[0].filters[0].extensions, (std::vector<std::string>{"bin"}));
 }
@@ -250,7 +250,7 @@ TEST(MachineHandlers, OpenRomPassesTheMachineAndThePickedFileToTheCore) {
 TEST(MachineHandlers, OpenRomsPassesThePickedDirectoryToTheCoreAndReturnsTheSummary) {
   Fixture f;
   f.dialog.results.push_back("D:\\rom");
-  f.core.replies["machines.setRoms"] = [](const json&) { return contracts::CoreReply::success({{"added", json::array({{{"id", "sb2000"}}})}, {"skipped", json::array({{{"fileName", "a.bin"}, {"reason", "unrecognized"}}})}}); };
+  f.core.replies["machines.setRoms"] = [](const json&) { return contracts::CoreReply::success({{"added", json::array({{{"id", "sb2000"}}})}, {"skipped", json::array({{{"fileName", "a.rom"}, {"reason", "unrecognized"}}})}}); };
   const auto reply = f.call("machines.openRoms");
   ASSERT_TRUE(reply.ok);
   EXPECT_EQ(reply.result["canceled"], false);
@@ -272,7 +272,7 @@ TEST(MachineHandlers, OpenRomsCanceledAndFailed) {
 TEST(MachineHandlers, OpenRomCanceledAndFailedRom) {
   Fixture f;
   EXPECT_EQ(f.call("machines.openRom", {{"machine", "fc"}}).result, json({{"canceled", true}}));
-  f.dialog.results.push_back("D:\\x.bin");
+  f.dialog.results.push_back("D:\\x.rom");
   f.core.replies["machines.setRom"] = [](const json&) { return contracts::CoreReply::failure("machines.romInvalid", "无效"); };
   EXPECT_EQ(f.call("machines.openRom", {{"machine", "fc"}}).error.code, "machines.romInvalid");
 }

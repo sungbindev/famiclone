@@ -114,7 +114,7 @@ TEST(MachinesContent, ButtonsAndTheLinkCallTheModel) {
 TEST(MachinesContent, RowsFollowTheModel) {
   Scene s;
   s.open();
-  s.rom.current.rows = {{"sb97", "小霸王 97", "A.BIN（512 KB）", true, true}};
+  s.rom.current.rows = {{"sb97", "小霸王 97", "A.ROM（512 KB）", true, true}};
   s.rom.notify();
   ASSERT_EQ(s.content->romRows().size(), 1U);
   EXPECT_NE(s.content->romRows()[0].replace, nullptr);

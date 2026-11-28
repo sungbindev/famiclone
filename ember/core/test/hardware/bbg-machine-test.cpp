@@ -5,7 +5,7 @@
  * 作者：sungbin
  * 邮箱：sungbin@3578.cn
  * 日期：2026-11-16
- * 备注：真实 BIOS 在仓库的 ember/roms/bbg1_bios.bin（128KB）与 bbg98_bios.bin（2048KB），都是没有文件头的纯 BIOS，文件不存在时跳过冒烟测试；
+ * 备注：真实 BIOS 在仓库的 ember/roms/bbg1_bios.rom（128KB）与 bbg98_bios.rom（2048KB），都是没有文件头的纯 BIOS，文件不存在时跳过冒烟测试；
  *       设置环境变量 EMBER_BBG_DUMP 为一个文件路径时，冒烟测试把开机后的画面写成以它为前缀的 PPM 文件，供人工查看。
  * ------------------------------------------------------------------------
  */
@@ -480,11 +480,11 @@ void bootRealBios(const char* file, const BbgVariant& variant, const char* label
   if (const std::string dump = dumpPath(); !dump.empty()) dumpFrame(picture, dump + "." + label + ".ppm");
 }
 
-TEST(BbgMachine, RealBios10BootsToAPicture) { bootRealBios("bbg1_bios.bin", BbgVariant::floppyOne(), "bios10", 300, nullptr); }
+TEST(BbgMachine, RealBios10BootsToAPicture) { bootRealBios("bbg1_bios.rom", BbgVariant::floppyOne(), "bios10", 300, nullptr); }
 
-TEST(BbgMachine, RealBios20BootsToAPicture) { bootRealBios("bbg98_bios.bin", BbgVariant::model98(), "bios20", 300, nullptr); }
+TEST(BbgMachine, RealBios20BootsToAPicture) { bootRealBios("bbg98_bios.rom", BbgVariant::model98(), "bios20", 300, nullptr); }
 
-TEST(BbgMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbg1_bios.bin", BbgVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
+TEST(BbgMachine, RealBios10BootsTheDosDisk) { bootRealBios("bbg1_bios.rom", BbgVariant::floppyOne(), "bios10-dos", 2500, u8"dos启动盘.IMG"); }
 
 // ---------------------------------------------------------------- 格式化软盘
 
@@ -572,7 +572,7 @@ void expectFormatted(const std::vector<std::uint8_t>& formatted) {
 
 TEST(BbgMachine, RealBios20FormatsAFloppyDisk) {
   std::vector<std::uint8_t> image = realFloppy(std::filesystem::path(u8"reference/floppy-images/bbg") / std::u8string(u8"dos启动盘.IMG"));
-  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg98_bios.bin", BbgVariant::model98(), std::move(image), "bios20-format");
+  const std::vector<std::uint8_t> formatted = formatTheFloppy("bbg98_bios.rom", BbgVariant::model98(), std::move(image), "bios20-format");
   if (formatted.empty()) GTEST_SKIP() << "没有找到 BIOS 或盘片镜像";
   expectFormatted(formatted);
 }

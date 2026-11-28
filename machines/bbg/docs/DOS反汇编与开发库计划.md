@@ -14,7 +14,7 @@
 | `BBGDOS.SYS` | `BBGDOS.IMG` 根目录，1998-01-11 | 14822 字节 | 文件头无装入地址，`Bios.asm` 的 `SMDOS_Begin` 是 `$7C00`，首条指令 `JMP $7C96` | 只有二进制，与 BBGDOS 源代码里的 `Bbgdos.sys` 逐字节相同 |
 | `COMMAND.CMD` | `BBGDOS.IMG` 根目录，1998-01-13 | 15277 字节 | 前 2 字节是装入地址 `$8000`，其余 15275 字节装入 `$8000-$BBAA`，入口 `JMP $BA3D` | 只有二进制，与 `Command.sys`、`Command.asm` 都不是同一版本 |
 | 原厂 BIOS 源码 | `Bios.asm`，已移植为 `machines/bbg/src/bios/bios.s` | 7412 行 | `$C000-$FFFF` | 只作参考：工程版，与发布版 ROM 不是同一次构建，内容不一定准确 |
-| 发布版 BIOS | `ember/roms/bbg1_bios.bin`（128KB）、`bbg98_bios.bin`（2MB） | 固定页 16KB 是代码，其余是字库 | `$C000-$FFFF` | 只有二进制，BIOS 接口以它的反汇编为准；`bbg98_bios.bin` 只提取功能号分发表 |
+| 发布版 BIOS | `ember/roms/bbg1_bios.rom`（128KB）、`bbg98_bios.rom`（2MB） | 固定页 16KB 是代码，其余是字库 | `$C000-$FFFF` | 只有二进制，BIOS 接口以它的反汇编为准；`bbg98_bios.rom` 只提取功能号分发表 |
 | 使用手册 | `步步高多媒体学生电脑 BIOS系统 DOS系统使用手册（可搜索）.pdf` | | | 系统篇第二至六章是 BIOS、外设、文件、DOS 调用与严重错误接口，数据定义技术手册有 CMD 与 EXC 文件格式 |
 | 已还原的符号 | `machines/bbg/src/include/tvdef.inc` | 56 个 BIOS 功能号、24 个文件功能号、17 个 DOS 功能号 | | `DosGetDOSVersion`、`StackTooDepth` 是推测值，三个 BIOS 功能号手册未列 |
 
@@ -42,7 +42,7 @@
 | FC Dev 没有内置的 BBG 目标 | `disasm_open` 对这个机型只能用 `format: "flat"`，符号集和硬件寄存器要自备 | 以 `tvdef.inc` 为起点，经反汇编核对后整理 `.inc`，用 `symbolSets` 导入 |
 | 运行记录对 `bbg1` 是否可用未验证 | 技能文档只说明了 NES 与 SB2000 的记录闭环 | 阶段 0 实测 `cdl`、`instruction`、`callLog` 三种记录对 RAM 中的代码是否生效；不可用时用断点与内存读取代替，在报告中写明 |
 | 分发表在 RAM 中 | DOS 调用 `$580C`、文件调用 `$5803` 的分发表可能是初始化时才写入的 | 静态追踪找不到的目标用 `callLog` 或断点补全，剩余项在注释中写明原因 |
-| BIOS 接口只能来自发布版 ROM | 原厂 `Bios.asm` 与 ROM 不是同一次构建，功能号集合与寄存器约定可能不同 | 阶段 1 反汇编 `bbg1_bios.bin` 的固定页，接口以它为准；`bbg98_bios.bin` 提取分发表，每个功能号标注存在于哪个版本 |
+| BIOS 接口只能来自发布版 ROM | 原厂 `Bios.asm` 与 ROM 不是同一次构建，功能号集合与寄存器约定可能不同 | 阶段 1 反汇编 `bbg1_bios.rom` 的固定页，接口以它为准；`bbg98_bios.rom` 提取分发表，每个功能号标注存在于哪个版本 |
 | 手册与实现不一致 | 手册编号有错位（如 `DosGetSetInitScrn`），OCR 文本有错字；`apps/bbg/run-game` 的目录枚举（`FileFirst`、`FileNext`）参数约定至今没有查清 | 以反汇编结果与模拟器实测为准，差异记入“手册差异表”；目录枚举作为文件调用阶段的第一个验证用例 |
 
 ## 工程布局
@@ -62,7 +62,7 @@ machines/bbg/
   tools/                    提取系统文件、读 Ember 内存、生成符号参考文档的脚本
   build/image/              提取出的启动扇区、BBGDOS.SYS、COMMAND.CMD（不进 Git）
   disasm/
-    bios-rom/               发布版 BIOS 固定页（bbg1_bios.bin 的 $C000-$FFFF）工程
+    bios-rom/               发布版 BIOS 固定页（bbg1_bios.rom 的 $C000-$FFFF）工程
     boot-sector/            启动扇区工程
     bbgdos/                 BBGDOS.SYS 工程
     command/                COMMAND.CMD 工程
@@ -95,8 +95,8 @@ machines/bbg/
 
 | 阶段 | 内容 | 完成标准 |
 | --- | --- | --- |
-| 0 资料基线与探针 | 提取三个对象并记录大小与哈希；Ember 载入 `bbg1` 加 `bbg1_bios.bin` 加 `BBGDOS.IMG` 开机到 `A:\>`，读 64KB 与各页，确定 `BBGDOS.SYS` 的装入与搬运布局；试验 `disasm_open` 的 flat 与 `segments`、模块目录名、三种运行记录的可用性 | 布局表写入本文件；四项探针（flat 打开、模块目录、记录可用性、模拟器核对手段）各有“可用”或“不可用及替代做法”的结论 |
-| 1 BIOS 接口基线 | 按八步流程反汇编 `bbg1_bios.bin` 的固定页，分发表与每个 BIOS 功能的实现都来自反汇编；提取 `bbg98_bios.bin` 的分发表对照；整理固定地址变量与硬件寄存器；原厂源码与手册只用来提示名称 | 八步标准达标；`bios-calls.inc`、`system-memory.inc`、`hardware.inc` 完成；每个 BIOS 功能号有名称、入口寄存器、出口、副作用、存在的 BIOS 版本，与手册不符的列入差异表 |
+| 0 资料基线与探针 | 提取三个对象并记录大小与哈希；Ember 载入 `bbg1` 加 `bbg1_bios.rom` 加 `BBGDOS.IMG` 开机到 `A:\>`，读 64KB 与各页，确定 `BBGDOS.SYS` 的装入与搬运布局；试验 `disasm_open` 的 flat 与 `segments`、模块目录名、三种运行记录的可用性 | 布局表写入本文件；四项探针（flat 打开、模块目录、记录可用性、模拟器核对手段）各有“可用”或“不可用及替代做法”的结论 |
+| 1 BIOS 接口基线 | 按八步流程反汇编 `bbg1_bios.rom` 的固定页，分发表与每个 BIOS 功能的实现都来自反汇编；提取 `bbg98_bios.rom` 的分发表对照；整理固定地址变量与硬件寄存器；原厂源码与手册只用来提示名称 | 八步标准达标；`bios-calls.inc`、`system-memory.inc`、`hardware.inc` 完成；每个 BIOS 功能号有名称、入口寄存器、出口、副作用、存在的 BIOS 版本，与手册不符的列入差异表 |
 | 2 启动扇区 | 作为试点跑通八步流程：反汇编启动扇区，弄清它如何读 FAT、找到并装入 `BBGDOS.SYS` | 八步完成标准全部达标；`disasm_verify` 为 `ok` |
 | 3 `COMMAND.CMD` | 单段 `$8000`，先反汇编它：它是 DOS 调用与文件调用的使用者，31 处 DOS 调用能最快确认调用约定；再用 `bbg` 目标回读构建 | 八步标准达标；用 `bbg` 目标构建出的 `.CMD` 与 `COMMAND.CMD` 逐字节一致 |
 | 4 `BBGDOS.SYS` | 核心工作。按子系统分批：初始化与入口表安装、DOS 调用分发、文件调用分发、文件系统（FAT12、目录、通道）、内存页管理、程序装载（CMD 与 EXC）、显示与键盘、严重错误处理、对 BIOS 的扩展功能 | 八步标准达标；用 ca65 与 ld65 按 `$7C00` 构建，与 `BBGDOS.SYS` 逐字节一致 |
@@ -138,7 +138,7 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 
 - 没有在模拟器里运行核对的结论，接口文档的“验证状态”一栏写“未验证”，不写成已验证。
 - 资料之间不一致时，以模拟器实测为准，在差异表里写明。
-- 只关闭自己启动的 Ember；调试 BBG 时用 `emu_load` 的 `machine: "bbg1"`，`firmware` 为 `ember/roms/bbg1_bios.bin`，`diskImage` 为 `BBGDOS.IMG`。
+- 只关闭自己启动的 Ember；调试 BBG 时用 `emu_load` 的 `machine: "bbg1"`，`firmware` 为 `ember/roms/bbg1_bios.rom`，`diskImage` 为 `BBGDOS.IMG`。
 
 ## 已确定的范围
 
@@ -154,7 +154,7 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 | `BBGDOS.SYS` | 文件偏移 0 起整块连续装入 `$7C00-$B5E5`，一个段。`$7C00-$7DFF` 是常驻的初始化与入口桩模板：初始化时把 `$7C24` 起的 25 字节、`$7C3D` 起的 45 字节复制到 BIOS 功能 15 申请的低端内存，作为 `$5803`、`$580C` 的桩，并修改桩里的页号地址。`$8000-$B5E5` 原样位于 DRAM 页 1，运行时由桩切到 `$8000` 窗口 |
 | `COMMAND.CMD` | 前 2 字节装入地址 `$8000`，其余装入当前空闲页的 `$8000-$BBAA`；DOS 调用时窗口里是 DOS 页，COMMAND 的页被换出 |
 | 启动扇区 | BIOS 读到 `$0400`，从 `$043E` 起执行 |
-| `bbg1_bios.bin` | 固定页文件偏移 114688 起 16KB 映射到 `$C000-$FFFF`；其中 `$C000-$C228`（553 字节）在复位时复制到 `$5800` 运行，是入口表、NMI、IRQ 与页切换代码 |
+| `bbg1_bios.rom` | 固定页文件偏移 114688 起 16KB 映射到 `$C000-$FFFF`；其中 `$C000-$C228`（553 字节）在复位时复制到 `$5800` 运行，是入口表、NMI、IRQ 与页切换代码 |
 
 探针结论：
 
@@ -170,7 +170,7 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
 | 阶段 | 状态 |
 | --- | --- |
 | 0 资料基线与探针 | 完成 |
-| 1 BIOS 接口基线 | 部分：`bios-rom` 工程已追踪、分 12 个模块、43 个分发项与入口向量已命名，回读一致；`bios-calls.inc` 已写，硬件寄存器与系统变量文件未写；`bbg98_bios.bin` 未分析 |
+| 1 BIOS 接口基线 | 部分：`bios-rom` 工程已追踪、分 12 个模块、43 个分发项与入口向量已命名，回读一致；`bios-calls.inc` 已写，硬件寄存器与系统变量文件未写；`bbg98_bios.rom` 未分析 |
 | 2 启动扇区 | 完成 |
 | 3 `COMMAND.CMD` | 部分：已追踪、分 10 个模块、19 个内部命令入口命名并写说明，回读一致；其余例程与变量仍是自动名 |
 | 4 `BBGDOS.SYS` | 完成：已追踪、分 11 个模块，回读一致；全部符号已有语义名（自动名 0 个，其中零页 `$E5-$FF`、`$0400` 文件调用块、`.EXC` 文件头与段表、`$6000` 起的 BIOS 与 CONFIG.SYS 工作区都已命名），全部例程有说明；覆盖 DOS 17 个功能、文件调用 25 项、磁盘 I/O、FAT12/16 与目录、文件读写与簇链、路径解析、程序装入（`.CMD`、`.EXC` 各类段）、屏幕与启动配置（CONFIG.SYS 的 DEVICE、SHELL）、严重错误处理；还补出此前没有追踪到的 CONFIG.SYS 解析代码与一个没有被引用的例程；个别 BIOS 功能（`$25`、`$13`、`$34` 等）的含义标了“未确认” |
@@ -193,7 +193,7 @@ C 语言函数库与头文件：阶段 7 完成后另行立项。
   - `$B965` 起约 178 字节是运行时被复制到 `$604D` 的常驻代码，按映像地址反汇编会得到错误的绝对地址，需要单独处理或只作为带说明的数据；
   - `shell-main` 与 `messages` 模块里还有没追踪到的代码（`$B480` 起约 40 字节、`$884B` 起约 40 字节、`$B65D`、`$B966` 起等），要转成代码区并重新追踪。
 - `bios-rom`：1040 个自动符号换成语义名并补注释；先查 `bios-rom/src/main.s` 是否是过期的单文件残留。
-- `bbg98_bios.bin`（BIOS 的另一个版本）未分析。
+- `bbg98_bios.rom`（BIOS 的另一个版本）未分析。
 - `bbgdos` 里含义标了“未确认”的 BIOS 功能（`$25`、`$13`、`$34`、`$3C` 等）要在 Ember 里实测后核对注释。
 
 反汇编的注意事项：设置区域并追踪之后要用 `disasm_list` 看 `unknown`，追踪可能把原有的代码区变成未识别，需要重新标成代码再追踪；不要读 `src/main.s`；统计自动符号与缺注释例程直接读 `disasm.json` 比分页列表省事。

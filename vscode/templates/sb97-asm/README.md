@@ -13,7 +13,7 @@
 扩展不提供模拟器与 ROM。先在设置 `fcdev.emulator.path` 里指定模拟器 Ember 的位置，再在 `fcdev.json` 里用 `firmware` 指定 SB97 的 ROM 文件：
 
 ```json
-{ "target": "sb97", "name": "hello", "firmware": "D:/rom/sb97.bin" }
+{ "target": "sb97", "name": "hello", "firmware": "D:/rom/sb97.rom" }
 ```
 
 然后运行任务“FCDEV：运行”：Ember 自动开机、进入 DOS 并输入 `hello`。

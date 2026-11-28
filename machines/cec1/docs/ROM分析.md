@@ -12,7 +12,7 @@
 | `1.1a-U35.bin`、`1.21-U35.bin` | 32KB | 汉字系统 ROM U35：低 16K 是汉字表（含拼音表），高 16K 是 `$C000-$FFFF` 的汉字程序与槽 ROM |
 | `p6.bin` | 256KB | 只有前 256 字节有内容，其余全是 `$FF`：苹果 Disk II 的 P6 状态机 ROM（开头 `18 D8 18 08 0A 0A 0A 0A`），Ember 直接按位模拟，不使用它 |
 
-两个版本大小相同，结构相同，差别在 U7 的 LOGO、BASIC 与内部 ROM 的少量字节，以及 U35 复位向量：1.1a 的复位向量是 `$FFE0`，1.21 是 `$FFF0`，都是 `JMP ($03F2)`。Ember 的 ROM 文件把 U7 放在前、U35 放在后，拼成 64KB（`ember/roms/cec1_v1.1a.bin`、`cec1_v1.21.bin`）。
+两个版本大小相同，结构相同，差别在 U7 的 LOGO、BASIC 与内部 ROM 的少量字节，以及 U35 复位向量：1.1a 的复位向量是 `$FFE0`，1.21 是 `$FFF0`，都是 `JMP ($03F2)`。Ember 的 ROM 文件把 U7 放在前、U35 放在后，拼成 64KB（`ember/roms/cec1_v1.1a.rom`、`cec1_v1.21.rom`）。
 
 主板上一共有六块 ROM，这个目录只有前两块：
 

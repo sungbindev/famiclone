@@ -2,5 +2,5 @@
   "target": "sb2000",
   "name": "game",
   "diskName": "sb2000-run-game.img",
-  "firmware": "../../../ember/roms/sb2000_bios.bin"
+  "firmware": "../../../ember/roms/sb2000_bios.rom"
 }
